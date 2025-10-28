@@ -1,0 +1,25 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8909f92dca58941be8a4545ccb059a11, type: 3}
+  m_Name: Info_Sigils
+  m_EditorClassIdentifier: 
+  id: res.Sigils
+  category: 1
+  title: Sigils
+  subtitle: Resource
+  body: 'Comes from: Workshop
+
+    Used for: Apply temp run modifiers, Enhance abilities
+
+    Related
+    site effect: +25% sigil power (uses: 3)'
+  icon: {fileID: 21300000, guid: 9577df180274c0846bb38a79770cea22, type: 3}

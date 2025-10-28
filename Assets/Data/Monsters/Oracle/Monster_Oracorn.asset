@@ -1,0 +1,42 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 32ffc26ed7d444b02a9332ce4279b117, type: 3}
+  m_Name: Monster_Oracorn
+  m_EditorClassIdentifier: 
+  id: M-053
+  displayName: Oracorn
+  type: 10
+  icon: {fileID: 21300000, guid: 88b58625dec45f94480927640c08807e, type: 3}
+  backIcon: {fileID: 21300000, guid: 937fa09630d884a41b745bc079f1806b, type: 3}
+  shinyIcon: {fileID: 21300000, guid: 17c5106b78310894e8559eb18c3163d2, type: 3}
+  shinyBackIcon: {fileID: 21300000, guid: 69bf2b49ba60c9a448e6f844a4938ccd, type: 3}
+  canBeStarter: 0
+  starterWeight: 1
+  baseHP: 60
+  baseAttack: 60
+  baseDefense: 60
+  baseSpeed: 120
+  fatigueRatePerHour: 0.03
+  baseTrainingXPPerHour: 86
+  evolutionStage: 1
+  evolutionLevel: 0
+  evolutionForm: {fileID: 0}
+  uncatchable: 0
+  isBoss: 0
+  bossJobDebuffs: []
+  bossWeight: 1
+  spawnWeight: 0.5
+  jobSkill: 2.8
+  rarity: 5
+  tagTrack: {fileID: 11400000, guid: 1f47a409efd38654ea33b6aaaf8de1b0, type: 2}
+  description: "Said to appear only to those chosen by fate, Oracorn\u2019s horn
+    glows with visions of destiny. Its presence is believed to guide entire civilizations."

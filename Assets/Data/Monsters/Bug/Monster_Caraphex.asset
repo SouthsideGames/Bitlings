@@ -1,0 +1,42 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 32ffc26ed7d444b02a9332ce4279b117, type: 3}
+  m_Name: Monster_Caraphex
+  m_EditorClassIdentifier: 
+  id: M-034
+  displayName: Caraphex
+  type: 11
+  icon: {fileID: 21300000, guid: 41f740173aef03848963d8e9d1726e54, type: 3}
+  backIcon: {fileID: 21300000, guid: 4e8635b01e6e05846b53bf7788aaa63e, type: 3}
+  shinyIcon: {fileID: 21300000, guid: 7448d0da98a7743fda2a126ca50ac9df, type: 3}
+  shinyBackIcon: {fileID: 21300000, guid: 97c08fab5be35419e9e757c5a3679005, type: 3}
+  canBeStarter: 0
+  starterWeight: 1
+  baseHP: 60
+  baseAttack: 60
+  baseDefense: 48
+  baseSpeed: 72
+  fatigueRatePerHour: 0.03
+  baseTrainingXPPerHour: 55
+  evolutionStage: 2
+  evolutionLevel: 0
+  evolutionForm: {fileID: 0}
+  uncatchable: 0
+  isBoss: 0
+  bossJobDebuffs: []
+  bossWeight: 1
+  spawnWeight: 0
+  jobSkill: 1.2
+  rarity: 2
+  tagTrack: {fileID: 11400000, guid: 104433c896724d345b136cb534f1a30e, type: 2}
+  description: Its shell hardens into a gleaming carapace. Caraphex is known to gather
+    in swarms, overwhelming much larger foes with sheer numbers.

@@ -1,0 +1,42 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 32ffc26ed7d444b02a9332ce4279b117, type: 3}
+  m_Name: Monster_Umbryss
+  m_EditorClassIdentifier: 
+  id: M-046
+  displayName: Umbryss
+  type: 15
+  icon: {fileID: 8644608577048307198, guid: b33afc29d172e954aa897586b2445f66, type: 3}
+  backIcon: {fileID: 3615147600836554367, guid: a01b422c048a2d64288c3548b6c006eb, type: 3}
+  shinyIcon: {fileID: -801612624374383581, guid: 0e67d02d7d3a44635a3295f94ce5e2d9, type: 3}
+  shinyBackIcon: {fileID: -6488103128992921508, guid: 155cfff1e2cd0465ab519d85407c900f, type: 3}
+  canBeStarter: 0
+  starterWeight: 1
+  baseHP: 70
+  baseAttack: 84
+  baseDefense: 56
+  baseSpeed: 70
+  fatigueRatePerHour: 0.03
+  baseTrainingXPPerHour: 71
+  evolutionStage: 2
+  evolutionLevel: 0
+  evolutionForm: {fileID: 0}
+  uncatchable: 0
+  isBoss: 0
+  bossJobDebuffs: []
+  bossWeight: 1
+  spawnWeight: 0
+  jobSkill: 2.5
+  rarity: 4
+  tagTrack: {fileID: 11400000, guid: b8bfbe3303f1eff47b9ad96531fdc225, type: 2}
+  description: Born from the deepest shadows, Umbryss is said to blot out the light
+    around it. Legends claim entire nights have fallen early at its passing.

@@ -1,0 +1,42 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 32ffc26ed7d444b02a9332ce4279b117, type: 3}
+  m_Name: Monster_Murkshade
+  m_EditorClassIdentifier: 
+  id: M-041
+  displayName: Murkshade
+  type: 13
+  icon: {fileID: 21300000, guid: df388733627ed1c4e8cd13cc018195ed, type: 3}
+  backIcon: {fileID: 21300000, guid: 26a449f23959da240b55ce256a4b6bbe, type: 3}
+  shinyIcon: {fileID: 21300000, guid: da476f8300a140e499a0ea3e2c146caf, type: 3}
+  shinyBackIcon: {fileID: 21300000, guid: 74455f7c4dd87c54f8dea3257edee14c, type: 3}
+  canBeStarter: 1
+  starterWeight: 10
+  baseHP: 40
+  baseAttack: 50
+  baseDefense: 30
+  baseSpeed: 80
+  fatigueRatePerHour: 0.03
+  baseTrainingXPPerHour: 46
+  evolutionStage: 1
+  evolutionLevel: 0
+  evolutionForm: {fileID: 0}
+  uncatchable: 0
+  isBoss: 0
+  bossJobDebuffs: []
+  bossWeight: 1
+  spawnWeight: 7
+  jobSkill: 1
+  rarity: 0
+  tagTrack: {fileID: 11400000, guid: 4654788ab19f32e4da5d5ed1832fdd41, type: 2}
+  description: A drifting cloud of cursed smoke. Murkshade fades in and out of sight,
+    its glowing eyes the last thing seen before it vanishes.

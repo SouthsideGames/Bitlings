@@ -1,0 +1,22 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f20bab18404ea3347afe5949d88f0464, type: 3}
+  m_Name: TagTrack_Oracorn
+  m_EditorClassIdentifier: 
+  maxLevel: 15
+  tags:
+  - {fileID: 11400000, guid: 858af4dec1d83554a96d92b7237eb07c, type: 2}
+  - {fileID: 11400000, guid: 66a35b53d4de8b54a83ba2cf40c12355, type: 2}
+  - {fileID: 11400000, guid: 97a3fa25b815f9449853eeea3a8999ac, type: 2}
+  - {fileID: 11400000, guid: e9587603369fc1f42a111e7f385d18fb, type: 2}
+  - {fileID: 11400000, guid: a5a65832e65d75040ad9536d370ae563, type: 2}
+  unlockLevels: 0100000004000000080000000c0000000f000000

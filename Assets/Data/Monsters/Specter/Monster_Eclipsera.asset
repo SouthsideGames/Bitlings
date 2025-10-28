@@ -1,0 +1,42 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 32ffc26ed7d444b02a9332ce4279b117, type: 3}
+  m_Name: Monster_Eclipsera
+  m_EditorClassIdentifier: 
+  id: M-043
+  displayName: Eclipsera
+  type: 13
+  icon: {fileID: 21300000, guid: 4a131ec29e81fa4449f2e56fe258e63b, type: 3}
+  backIcon: {fileID: 21300000, guid: 24f1cacb4e101b74c9f42e3150f4698b, type: 3}
+  shinyIcon: {fileID: 21300000, guid: f1b04d79e8e03c545a0d4e49b51a0f78, type: 3}
+  shinyBackIcon: {fileID: 21300000, guid: 9d54aab5727b0f947ab8e7e81232791f, type: 3}
+  canBeStarter: 0
+  starterWeight: 1
+  baseHP: 56
+  baseAttack: 70
+  baseDefense: 42
+  baseSpeed: 112
+  fatigueRatePerHour: 0.03
+  baseTrainingXPPerHour: 80
+  evolutionStage: 1
+  evolutionLevel: 0
+  evolutionForm: {fileID: 0}
+  uncatchable: 0
+  isBoss: 0
+  bossJobDebuffs: []
+  bossWeight: 1
+  spawnWeight: 0.8
+  jobSkill: 2.6
+  rarity: 4
+  tagTrack: {fileID: 11400000, guid: 455d8bcd353d9cb44818d9db48b81235, type: 2}
+  description: Said to appear only under eclipses, Eclipsera drifts through the skies
+    like a silent omen. Legends whisper that its gaze can pierce both time and soul.

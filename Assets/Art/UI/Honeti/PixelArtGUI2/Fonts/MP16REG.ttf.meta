@@ -1,0 +1,28 @@
+fileFormatVersion: 2
+guid: 7cc355d86f34ee04aba49731972ee93e
+TrueTypeFontImporter:
+  externalObjects: {}
+  serializedVersion: 4
+  fontSize: 16
+  forceTextureCase: -2
+  characterSpacing: 0
+  characterPadding: 1
+  includeFontData: 1
+  fontNames:
+  - Mister Pixel 16 pt - Regular
+  fallbackFontReferences: []
+  customCharacters: 
+  fontRenderingMode: 0
+  ascentCalculationMode: 1
+  useLegacyBoundsCalculation: 0
+  shouldRoundAdvanceValue: 1
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 206965
+  packageName: Pixel Art Full GUI / UI Kit 2 - 200+ icons, over 650 PNG!
+  packageVersion: 1.1.1
+  assetPath: Assets/Honeti/PixelArtGUI2/Fonts/MP16REG.ttf
+  uploadId: 728201

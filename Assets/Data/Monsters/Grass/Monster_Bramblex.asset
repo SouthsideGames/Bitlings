@@ -1,0 +1,42 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 32ffc26ed7d444b02a9332ce4279b117, type: 3}
+  m_Name: Monster_Bramblex
+  m_EditorClassIdentifier: 
+  id: M-010
+  displayName: Bramblex
+  type: 3
+  icon: {fileID: 21300000, guid: 9704f5990e550a64c8ba443c917158b7, type: 3}
+  backIcon: {fileID: 21300000, guid: a2fe7d4d68def674cb5b671af6de3f5b, type: 3}
+  shinyIcon: {fileID: 21300000, guid: 0c517c3760a9b8b47928b185c9b1b681, type: 3}
+  shinyBackIcon: {fileID: 21300000, guid: 4c990a735b732a44d9883603b11e3c01, type: 3}
+  canBeStarter: 0
+  starterWeight: 1
+  baseHP: 72
+  baseAttack: 48
+  baseDefense: 84
+  baseSpeed: 36
+  fatigueRatePerHour: 0.03
+  baseTrainingXPPerHour: 49
+  evolutionStage: 1
+  evolutionLevel: 0
+  evolutionForm: {fileID: 0}
+  uncatchable: 0
+  isBoss: 0
+  bossJobDebuffs: []
+  bossWeight: 1
+  spawnWeight: 2.5
+  jobSkill: 1.7
+  rarity: 2
+  tagTrack: {fileID: 11400000, guid: 25e31dd427fe43144a2ce73ddd38c888, type: 2}
+  description: Covered in thorny leaves, Bramblex defends its territory fiercely.
+    In the Bitling world, its presence keeps larger predators at bay.

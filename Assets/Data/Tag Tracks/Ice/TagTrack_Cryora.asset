@@ -1,0 +1,21 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f20bab18404ea3347afe5949d88f0464, type: 3}
+  m_Name: TagTrack_Cryora
+  m_EditorClassIdentifier: 
+  maxLevel: 15
+  tags:
+  - {fileID: 11400000, guid: 905044473e6638947a03dc9bfcdd3b63, type: 2}
+  - {fileID: 11400000, guid: e5183f123300a48c39190fad34fa172c, type: 2}
+  - {fileID: 11400000, guid: e808df5c3566fbb4b9363c77e6c33fae, type: 2}
+  - {fileID: 11400000, guid: 9b3538d166353ff4cb3a58bd37cd7f90, type: 2}
+  unlockLevels: 02000000060000000a0000000e000000

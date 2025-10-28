@@ -1,0 +1,42 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 32ffc26ed7d444b02a9332ce4279b117, type: 3}
+  m_Name: Monster_Burrowel
+  m_EditorClassIdentifier: 
+  id: M-026
+  displayName: Burrowel
+  type: 8
+  icon: {fileID: 21300000, guid: e5e6699b26c4c0e4e98ce838ac0bfa55, type: 3}
+  backIcon: {fileID: 21300000, guid: c03d7845db0869f44b0420d45f9b1014, type: 3}
+  shinyIcon: {fileID: 21300000, guid: f2ac49e3d87dd45349dee3fd7c32f860, type: 3}
+  shinyBackIcon: {fileID: 21300000, guid: 6d7b5c76e347c40ed9a17097507b099b, type: 3}
+  canBeStarter: 0
+  starterWeight: 1
+  baseHP: 96
+  baseAttack: 48
+  baseDefense: 72
+  baseSpeed: 24
+  fatigueRatePerHour: 0.03
+  baseTrainingXPPerHour: 40
+  evolutionStage: 2
+  evolutionLevel: 28
+  evolutionForm: {fileID: 11400000, guid: a674e2f95a8a54274b9d1b83db9bee90, type: 2}
+  uncatchable: 0
+  isBoss: 0
+  bossJobDebuffs: []
+  bossWeight: 1
+  spawnWeight: 2.5
+  jobSkill: 1.2
+  rarity: 2
+  tagTrack: {fileID: 11400000, guid: ba6be16405aee3946b31ab90ba5bc55a, type: 2}
+  description: Its claws can tear through packed earth with ease. Burrowel digs networks
+    of tunnels that shelter whole colonies of Bitlings.

@@ -1,0 +1,42 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 32ffc26ed7d444b02a9332ce4279b117, type: 3}
+  m_Name: Monster_Zynx
+  m_EditorClassIdentifier: 
+  id: M-016
+  displayName: Zynx
+  type: 4
+  icon: {fileID: 21300000, guid: b6ac4cd47c9dd433db3868d7fccaf473, type: 3}
+  backIcon: {fileID: 21300000, guid: 7e90f42e827784d21b29244635c656db, type: 3}
+  shinyIcon: {fileID: 21300000, guid: 286a484658da5bf42a65458b11bf5f4d, type: 3}
+  shinyBackIcon: {fileID: 21300000, guid: c3495849c93b2d649a85a689cb474adf, type: 3}
+  canBeStarter: 1
+  starterWeight: 10
+  baseHP: 40
+  baseAttack: 60
+  baseDefense: 30
+  baseSpeed: 70
+  fatigueRatePerHour: 0.03
+  baseTrainingXPPerHour: 45
+  evolutionStage: 1
+  evolutionLevel: 18
+  evolutionForm: {fileID: 11400000, guid: 17383455d5bb34d4a97a0088c0e377b0, type: 2}
+  uncatchable: 0
+  isBoss: 0
+  bossJobDebuffs: []
+  bossWeight: 1
+  spawnWeight: 6
+  jobSkill: 1
+  rarity: 0
+  tagTrack: {fileID: 11400000, guid: aec0788e038b0434bb72339bd2a01cdd, type: 2}
+  description: Zynx leaps unpredictably, its fur sparking with static. In the Bitling
+    world, it is known to cling to power lines for warmth.

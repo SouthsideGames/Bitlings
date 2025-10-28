@@ -1,0 +1,224 @@
+# 🧪 Bitlings Internal QA Test Checklist
+
+_Comprehensive testing guide for your pre-release mobile build (Google Play / App Store)._
+
+---
+
+## 🟢 1. General Setup & Startup
+
+| ✅  | Test                                          | Tip                                                          |
+| --- | --------------------------------------------- | ------------------------------------------------------------ |
+| [ ] | Game boots from title screen with no errors   | Watch console for missing references or NullRefs on startup. |
+| [ ] | Intro panel opens first, all others hidden    | Ensure PanelManager initializes all inactive.                |
+| [ ] | “Press to Continue” animation plays correctly | Confirm LeanTween flashing loop stops after tap.             |
+| [ ] | Starter selection appears only on first run   | Delete save and recheck first-time flow.                     |
+| [ ] | Home panel loads after starter chosen         | Verify `PanelId.Home` routing.                               |
+
+💡 **Tip:** Play from a fresh install and verify SaveManager’s first-run setup creates `idle_mon_save.json`.
+
+---
+
+## 🟣 2. Save System & Persistence
+
+| ✅  | Test                                       | Tip                                                 |
+| --- | ------------------------------------------ | --------------------------------------------------- |
+| [ ] | Restart resumes same progress              | Levels, XP, coins, and timers persist.              |
+| [ ] | Timed buffs persist after app close        | Force-close mid-boost, reopen, check timers resume. |
+| [ ] | Job sites retain workers and stored output | Especially after 1h+ idle or device time change.    |
+| [ ] | JSON save + backup both created            | Check `idle_mon_save.json` and backup path.         |
+| [ ] | Expired buffs correctly removed on load    | CaptureBand and LuckBooster expiration logic.       |
+
+💡 **Tip:** Move device clock forward to simulate idle time; confirm resources increment correctly.
+
+---
+
+## 🔵 3. Monster System
+
+| ✅  | Test                                     | Tip                                       |
+| --- | ---------------------------------------- | ----------------------------------------- |
+| [ ] | All owned monsters load correctly        | No missing icons or broken stat displays. |
+| [ ] | Type, rarity, and stats display properly | “TYPE:” label white, type color text.     |
+| [ ] | View Details opens correct monster info  | Matches MonsterLibrary data.              |
+| [ ] | Sorting by name, type, or ID works       | No null sorting crashes.                  |
+| [ ] | Team slots persist across sessions       | Add/replace → reload.                     |
+
+💡 **Tip:** Add/remove repeatedly to catch duplicate or stale references.
+
+---
+
+## 🔴 4. Battle System
+
+| ✅  | Test                                       | Tip                                    |
+| --- | ------------------------------------------ | -------------------------------------- |
+| [ ] | Wild battle triggers from Encounter button | Proper random spawn, no stuck UI.      |
+| [ ] | Battle log text updates each turn          | Shows attacks, crits, KOs clearly.     |
+| [ ] | Crits trigger SFX and higher damage        | Confirm crit chance values work.       |
+| [ ] | Player/enemy turns alternate properly      | No double or skipped turns.            |
+| [ ] | Bench swap works mid-battle                | Swapped monster resumes next turn.     |
+| [ ] | Victory rewards XP + Coins                 | Matches battle duration/time survived. |
+| [ ] | Defeat safely returns to panel             | No soft locks.                         |
+
+💡 **Tip:** Use different types to verify passive weaknesses/resists.
+
+---
+
+## 🟡 5. Evolution System
+
+| ✅  | Test                             | Tip                                       |
+| --- | -------------------------------- | ----------------------------------------- |
+| [ ] | Evolves at correct level         | Use Training for quick XP.                |
+| [ ] | Evolution panel appears once     | `GameEvents.EvolutionOffered` fires once. |
+| [ ] | Evolved monster replaces old one | No duplicates in team list.               |
+| [ ] | Stats increase post-evolution    | Check multiplier applied.                 |
+| [ ] | Shiny retains shiny sprite       | Verify both variants.                     |
+
+💡 **Tip:** Evolve while in job/training → ensure updates globally.
+
+---
+
+## 🟤 6. Training System (Idle XP)
+
+| ✅  | Test                                 | Tip                            |
+| --- | ------------------------------------ | ------------------------------ |
+| [ ] | Assign monster to training slot      | Slot highlights, name appears. |
+| [ ] | XP increments passively              | TrainingManager tick working.  |
+| [ ] | Tap Boost multiplies XP              | Visible animation/value spike. |
+| [ ] | Training persists after reload       | XP saved properly.             |
+| [ ] | Offline catch-up awards XP correctly | Change device time forward.    |
+
+💡 **Tip:** Watch for negative XP or NaN in console.
+
+---
+
+## 🟠 7. Job Sites & Resource Production
+
+| ✅  | Test                                | Tip                                    |
+| --- | ----------------------------------- | -------------------------------------- |
+| [ ] | JobSite buttons open correct panels | Verify name, icon, type.               |
+| [ ] | Only unlocked sites appear          | Based on owned monster types.          |
+| [ ] | Eligible monsters assignable        | Eligibility matches MonsterType array. |
+| [ ] | Output accumulates idle             | 1h+ idle test.                         |
+| [ ] | Storage cap respected               | No overflow after full.                |
+| [ ] | Worker count updates (1-3 slots)    | Test quick assign/remove.              |
+
+💡 **Tip:** Test multiple monster types for correct eligibility filters.
+
+---
+
+## 🟢 8. Economy & Currency
+
+| ✅  | Test                                | Tip                           |
+| --- | ----------------------------------- | ----------------------------- |
+| [ ] | Coin gains appear immediately       | After battle/job collection.  |
+| [ ] | Resource spends update UI instantly | Buy Lure/Band, verify counts. |
+| [ ] | Negative balances impossible        | Try spending with 0.          |
+| [ ] | Balances match after save/load      | No rounding drift.            |
+
+💡 **Tip:** Add debug logs in `ResourceBank` to verify transaction accuracy.
+
+---
+
+## 🟣 9. Items & Boosters
+
+| ✅  | Test                                    | Tip                             |
+| --- | --------------------------------------- | ------------------------------- |
+| [ ] | Lures filter encounter spawns           | Test 3+ types, confirm results. |
+| [ ] | Capture Band bonus active full duration | Use short timer for validation. |
+| [ ] | Luck Booster increases shiny rate       | Confirm spawn odds visually.    |
+| [ ] | Timers persist across app restarts      | Close mid-timer, reopen.        |
+| [ ] | Countdown updates in UI                 | Timer ticks smoothly.           |
+
+💡 **Tip:** Stack Lure + Band + Luck → ensure no double-stack bugs.
+
+---
+
+## 🔵 10. Sanctum System
+
+| ✅  | Test                                    | Tip                                  |
+| --- | --------------------------------------- | ------------------------------------ |
+| [ ] | Sanctum UI lists upgrades               | All icons, texts visible.            |
+| [ ] | Blessing Token balance correct          | Spend → decreases, earn → increases. |
+| [ ] | Ritual duration applies properly        | Duration countdown accurate.         |
+| [ ] | Shiny duration reduction capped at -10% | Confirm formula limit.               |
+
+💡 **Tip:** Log final ritual time in console for accuracy.
+
+---
+
+## 🟠 11. Tutorial Flow
+
+| ✅  | Test                                | Tip                                                        |
+| --- | ----------------------------------- | ---------------------------------------------------------- |
+| [ ] | Welcome popup only on first load    | Delete save, verify.                                       |
+| [ ] | First Battle triggers next tutorial | Proper step chain.                                         |
+| [ ] | All steps follow correct order      | Jobs → Lure → Band → Luck → Sanctum → Upgrades → Settings. |
+| [ ] | Tutorial not repeated once done     | Flag stored in SaveManager.                                |
+
+💡 **Tip:** Ensure popups never overlap or block panel transitions.
+
+---
+
+## 🟣 12. Audio & Feedback
+
+| ✅  | Test                    | Tip                                         |
+| --- | ----------------------- | ------------------------------------------- |
+| [ ] | Volume sliders work     | Master/Music/SFX persist.                   |
+| [ ] | SFX trigger correctly   | Click, capture, shiny, level-up, evolution. |
+| [ ] | Mute toggles functional | MuteAll, Music, SFX.                        |
+
+💡 **Tip:** Drop volumes to -80dB and confirm total silence.
+
+---
+
+## 🟡 13. UI/UX Polish
+
+| ✅  | Test                           | Tip                                |
+| --- | ------------------------------ | ---------------------------------- |
+| [ ] | Panels transition smoothly     | LeanTween plays once.              |
+| [ ] | SafeArea fits all devices      | Test notched + rotated.            |
+| [ ] | TMP text scales correctly      | Check high/low DPI devices.        |
+| [ ] | Bottom buttons route correctly | Monsters, Jobs, Sanctum, Settings. |
+
+💡 **Tip:** Rotate device mid-animation to test responsiveness.
+
+---
+
+## 🔴 14. Performance & Stability
+
+| ✅  | Test                               | Tip                       |
+| --- | ---------------------------------- | ------------------------- |
+| [ ] | No GC spikes in idle updates       | Profiler check.           |
+| [ ] | LeanTween tweens cancel on disable | No memory leaks.          |
+| [ ] | Battery usage stable               | Long mobile test session. |
+| [ ] | Game stable for 30+ min session    | No stutters or crashes.   |
+
+💡 **Tip:** Keep background apps open while testing for memory resilience.
+
+---
+
+## ⚫ 15. Edge Cases & Error Handling
+
+| ✅  | Test                         | Tip                            |
+| --- | ---------------------------- | ------------------------------ |
+| [ ] | No soft lock when team wiped | Empty bench → graceful defeat. |
+| [ ] | No double rewards on reopen  | Tap spam safe.                 |
+| [ ] | No negative XP or overflow   | Check capped properly.         |
+| [ ] | Shiny capture count accurate | Duplicates handled safely.     |
+
+💡 **Tip:** Spam capture button mid-animation to test race conditions.
+
+---
+
+## 🧭 Final QA Tips
+
+- Use **Console collapse off** to spot repeating logs.
+- Keep **Profiler open** to track CPU/memory during idle.
+- After each test, reload scene to ensure persistence integrity.
+- On Android, use **Logcat** for crash traces.
+- Export this checklist to a GitHub issue board for team QA tracking.
+
+---
+
+**Version:** QA Master Checklist v1.0  
+**Project:** Bitlings (Mobile Idle RPG)  
+**Last Updated:** _(Add Date Here)_

@@ -1,0 +1,42 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 32ffc26ed7d444b02a9332ce4279b117, type: 3}
+  m_Name: Monster_Volcranox
+  m_EditorClassIdentifier: 
+  id: M-005
+  displayName: Volcranox
+  type: 1
+  icon: {fileID: 21300000, guid: 4db341f17ae9cdf4ea420bf3e462aa98, type: 3}
+  backIcon: {fileID: 21300000, guid: 296252648303af442a3d71026e859834, type: 3}
+  shinyIcon: {fileID: -801612624374383581, guid: 2277c2dbce3c04bfda0b083544faa5e6, type: 3}
+  shinyBackIcon: {fileID: -6488103128992921508, guid: 867204279608d47a38a861673866ee32, type: 3}
+  canBeStarter: 0
+  starterWeight: 1
+  baseHP: 52
+  baseAttack: 91
+  baseDefense: 52
+  baseSpeed: 65
+  fatigueRatePerHour: 0.03
+  baseTrainingXPPerHour: 40
+  evolutionStage: 1
+  evolutionLevel: 0
+  evolutionForm: {fileID: 0}
+  uncatchable: 0
+  isBoss: 0
+  bossJobDebuffs: []
+  bossWeight: 1
+  spawnWeight: 1.5
+  jobSkill: 2.4
+  rarity: 3
+  tagTrack: {fileID: 11400000, guid: 385ca0c0ca477c940a4683bdc6429b47, type: 2}
+  description: "Its rocky body cracks with flowing magma. Volcranox\u2019s fiery
+    core fuels its rage, said to burn hotter than a collapsing star."

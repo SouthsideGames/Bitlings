@@ -1,0 +1,42 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 32ffc26ed7d444b02a9332ce4279b117, type: 3}
+  m_Name: Monster_Tuskram
+  m_EditorClassIdentifier: 
+  id: M-029
+  displayName: Tuskram
+  type: 12
+  icon: {fileID: 21300000, guid: 965c787a3d76739419a742d722592206, type: 3}
+  backIcon: {fileID: 21300000, guid: 4ef0ec67af12df341bbba8f0434a37e2, type: 3}
+  shinyIcon: {fileID: 21300000, guid: a6f473f7e44533b428f530307f891db9, type: 3}
+  shinyBackIcon: {fileID: 21300000, guid: 308177abdabae3749a32447c82368c95, type: 3}
+  canBeStarter: 1
+  starterWeight: 7
+  baseHP: 88
+  baseAttack: 44
+  baseDefense: 66
+  baseSpeed: 22
+  fatigueRatePerHour: 0.03
+  baseTrainingXPPerHour: 38
+  evolutionStage: 1
+  evolutionLevel: 24
+  evolutionForm: {fileID: 11400000, guid: 3af5b09f26ccd7c4b894df9413c3708d, type: 2}
+  uncatchable: 0
+  isBoss: 0
+  bossJobDebuffs: []
+  bossWeight: 1
+  spawnWeight: 5
+  jobSkill: 1.1
+  rarity: 1
+  tagTrack: {fileID: 11400000, guid: f5749253492007d4da6bdde4ae358608, type: 2}
+  description: Tuskram charges headfirst into obstacles to clear paths. Its rocky
+    hide protects it from injury as it batters through stone.

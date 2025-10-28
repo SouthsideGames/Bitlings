@@ -1,0 +1,42 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 32ffc26ed7d444b02a9332ce4279b117, type: 3}
+  m_Name: Monster_Wraithor
+  m_EditorClassIdentifier: 
+  id: M-042
+  displayName: Wraithor
+  type: 13
+  icon: {fileID: 21300000, guid: ac50bb944382a7a4da96c2f6e3e0faee, type: 3}
+  backIcon: {fileID: 21300000, guid: 7c8cb506a237c3247aa0bfaa4713041e, type: 3}
+  shinyIcon: {fileID: 21300000, guid: fd9202dfe669e7a45a1332d62facf053, type: 3}
+  shinyBackIcon: {fileID: 21300000, guid: 8b4188389e9a4f748ac82a90dfa0ac15, type: 3}
+  canBeStarter: 0
+  starterWeight: 1
+  baseHP: 52
+  baseAttack: 65
+  baseDefense: 39
+  baseSpeed: 104
+  fatigueRatePerHour: 0.03
+  baseTrainingXPPerHour: 71
+  evolutionStage: 1
+  evolutionLevel: 0
+  evolutionForm: {fileID: 0}
+  uncatchable: 0
+  isBoss: 0
+  bossJobDebuffs: []
+  bossWeight: 1
+  spawnWeight: 1.5
+  jobSkill: 2.2
+  rarity: 3
+  tagTrack: {fileID: 11400000, guid: 0e6dd1101493db34c8a0f4b1f1a8d39b, type: 2}
+  description: Its form flickers like a tattered veil. Wraithor slips through walls
+    and shadows, striking unseen before vanishing without a trace.

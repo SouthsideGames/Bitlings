@@ -1,0 +1,22 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f20bab18404ea3347afe5949d88f0464, type: 3}
+  m_Name: TagTrack_Caelmir
+  m_EditorClassIdentifier: 
+  maxLevel: 15
+  tags:
+  - {fileID: 11400000, guid: 05b9f11668190894dbaad36857905f59, type: 2}
+  - {fileID: 11400000, guid: 00df5395a2f6b6642975a15542f47ed9, type: 2}
+  - {fileID: 11400000, guid: 659a49ee485d185478f3d9c8f32901f5, type: 2}
+  - {fileID: 11400000, guid: 2826d629d79281c44881b146d0227040, type: 2}
+  - {fileID: 11400000, guid: 218ad8c0aceb24e059ed0d1c46cf15bf, type: 2}
+  unlockLevels: 0100000003000000060000000a0000000f000000

@@ -1,0 +1,42 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 32ffc26ed7d444b02a9332ce4279b117, type: 3}
+  m_Name: Monster_Sylvire
+  m_EditorClassIdentifier: 
+  id: M-008
+  displayName: Sylvire
+  type: 3
+  icon: {fileID: 21300000, guid: 4d21de2a0c99cdf4da8da86f48d945b8, type: 3}
+  backIcon: {fileID: 21300000, guid: 7ed2d2ff399201649813b9642fc82b3e, type: 3}
+  shinyIcon: {fileID: 21300000, guid: 78181fd7ba990da4ca2736f26ae658b8, type: 3}
+  shinyBackIcon: {fileID: 21300000, guid: b2efe158de74055478fbc5e02f86352b, type: 3}
+  canBeStarter: 0
+  starterWeight: 1
+  baseHP: 70
+  baseAttack: 44
+  baseDefense: 76
+  baseSpeed: 30
+  fatigueRatePerHour: 0.03
+  baseTrainingXPPerHour: 36
+  evolutionStage: 3
+  evolutionLevel: 0
+  evolutionForm: {fileID: 0}
+  uncatchable: 0
+  isBoss: 0
+  bossJobDebuffs: []
+  bossWeight: 1
+  spawnWeight: 0
+  jobSkill: 1.2
+  rarity: 0
+  tagTrack: {fileID: 11400000, guid: 1746e3824fd18714686d9823702e7c69, type: 2}
+  description: Sylvire spreads roots as it rests, enriching the soil. In the Bitling
+    world, areas they inhabit quickly become lush and overgrown.
