@@ -17,7 +17,6 @@ public class OwnedMonsterData
     public string ownedUID;
     public bool isShiny = false;
     public int shinyTier = 0;
-    public List<TagSO> activeTags = new List<TagSO>();
     
 }
 
@@ -79,7 +78,6 @@ public class PlayerManager
     public List<LuckBoostData> activeLuckBoosts = new List<LuckBoostData>();
     public List<JobStorageUpgrade> jobStorageUpgrades = new List<JobStorageUpgrade>();
     public List<ShinyBoostData> activeShinyBoosts = new List<ShinyBoostData>();
-    public List<MonsterTagRecord> tagProgress = new List<MonsterTagRecord>();
 
     public List<string> ownedIdsList = new List<string>();
     [NonSerialized] public HashSet<string> ownedIds = new HashSet<string>();

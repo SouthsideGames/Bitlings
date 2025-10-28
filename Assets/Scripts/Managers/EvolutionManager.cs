@@ -71,6 +71,7 @@ public static class EvolutionManager
         SaveManager.Save();
         GameEvents.OnTeamChanged?.Invoke();
         GameEvents.MonsterEvolved?.Invoke(newId);
+        TitlesAdapter.OnMonsterEvolved(newId);
         return true;
     }
 

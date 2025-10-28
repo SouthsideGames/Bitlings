@@ -48,12 +48,13 @@ public class ResourceManager : MonoBehaviour
     {
         if (amount == 0) return;
 
-        ResourceBank.Add(type, amount); // Expected to Save() + emit OnResourcesChanged
+        ResourceBank.Add(type, amount); 
 
         if (type == ResourceType.Coins)
             MirrorBankCoinsIntoLegacy();
 
         GameEvents.OnResourcesChanged?.Invoke();
+        GameEvents.ResourceAdded?.Invoke(type, amount);
     }
 
     /// <summary> Attempts to spend; returns false if insufficient. Mirrors coins on success. </summary>
@@ -149,5 +150,37 @@ public class ResourceManager : MonoBehaviour
             SaveManager.Data.coins = coins;
             SaveManager.Save(); // small write; maintains legacy consumers
         }
+    }
+
+    public int AddCoins(int baseCoins)
+    {
+        int amt = Mathf.Max(0, baseCoins);
+        if (amt == 0) return 0;
+        Add(ResourceType.Coins, amt); // mirrors legacy via Add()
+        return amt;
+    }
+
+    // --- Titles-aware coin award (manual/idle battles) ---
+    public int AddCoinsWithTitles(int baseCoins, string leadMonsterId, MonsterDataSO wild, int wildLevel)
+    {
+        int scaled = Mathf.Max(0, baseCoins);
+        if (!string.IsNullOrEmpty(leadMonsterId))
+        {
+            float cm = TitlesAdapter.GetCoinMultOnVictory(leadMonsterId, wild, wildLevel);
+            if (cm > 0f) scaled = Mathf.RoundToInt(scaled * cm);
+        }
+        return AddCoins(scaled);
+    }
+
+    // --- Titles-aware coin award (contextless, e.g. after capture) ---
+    public int AddCoinsWithTitles(int baseCoins, string leadMonsterId)
+    {
+        int scaled = Mathf.Max(0, baseCoins);
+        if (!string.IsNullOrEmpty(leadMonsterId))
+        {
+            float cm = TitlesAdapter.GetCoinMultOnVictory(leadMonsterId, null, 0);
+            if (cm > 0f) scaled = Mathf.RoundToInt(scaled * cm);
+        }
+        return AddCoins(scaled);
     }
 }

@@ -70,10 +70,6 @@ public sealed class JobManager : MonoBehaviour
     [SerializeField] private float shiny2Bonus = 0.07f;
     [SerializeField] private float shiny3Bonus = 0.12f;
 
-    [Header("Tag Mastery")]
-    [Tooltip("XP per in-game hour a monster earns while actively assigned to a site.")]
-    [SerializeField, Min(0f)] private float jobXpPerHourWhileAssigned = 25f;
-
 #if UNITY_EDITOR
     [Header("Debug (Editor Only)")]
     [SerializeField] private bool logProductionBreakdown = false;
@@ -201,13 +197,6 @@ public sealed class JobManager : MonoBehaviour
             // Base rate before fatigue
             float grossRateHr = ComputeRatePerHour(s);
 
-            // Tag mastery XP while assigned
-            if (jobXpPerHourWhileAssigned > 0f && s.workers != null)
-            {
-                float xpGain = jobXpPerHourWhileAssigned * dtHours;
-                ForEachWorkerId(s.workers, (wid) => TagSave.AddXp(wid, s.config.jobType, xpGain));
-            }
-
             // Fatigue
             ApplyFatigue(dtHours, s);
 
@@ -237,7 +226,7 @@ public sealed class JobManager : MonoBehaviour
     {
         if (HasAnyWorker(s.workers))
         {
-            // Average per-worker fatigue rate, scaled by tag multipliers
+            // Average per-worker fatigue rate based only on worker defs.
             int count = 0;
             float totalRate = 0f;
 
@@ -247,9 +236,7 @@ public sealed class JobManager : MonoBehaviour
                 if (w?.def == null) continue;
                 count++;
 
-                string wid = GetBestId(w);
-                float fatigueMul = TagRuntime.GetJobFatigueMultiplier(wid, s.config.jobType);
-                float perWorkerRate = Mathf.Max(0f, w.def.fatigueRatePerHour) * Mathf.Max(0f, fatigueMul);
+                float perWorkerRate = Mathf.Max(0f, w.def.fatigueRatePerHour);
                 totalRate += perWorkerRate;
             }
 
@@ -261,19 +248,17 @@ public sealed class JobManager : MonoBehaviour
         }
         else if (s.fatigue01 > 0f)
         {
-            // Rest decay when empty
-            float decayMul = TagRuntime.GetFatigueDecayMultiplierForSite(s.config.jobType, GetTeamIdsOrEmpty());
-            s.fatigue01 = Mathf.Max(0f, s.fatigue01 - siteRestDecayPerHour * Mathf.Max(0f, decayMul) * dtHours);
+            // Rest decay when empty (no tag multipliers)
+            s.fatigue01 = Mathf.Max(0f, s.fatigue01 - siteRestDecayPerHour * dtHours);
         }
     }
 
     private float ComputeRatePerHour(JobSiteState s)
     {
-        // NEW: require at least one worker
+        // Require at least one worker
         if (!HasAnyWorker(s.workers))
             return 0f;
 
-        // existing logic...
         float sum = 0f;
         for (int i = 0; i < s.workers.Count; i++)
         {
@@ -286,13 +271,14 @@ public sealed class JobManager : MonoBehaviour
                 * JobBalance.AffinityMult(s.config.jobType, w.def.type);
 
             string wid = GetBestId(w);
-            mult *= TagRuntime.GetJobOutputMultiplier(wid, s.config.jobType, workingHere: true);
-            mult *= GetPerResourceWorkerMul(wid, s.config, here: true);
 
+            // No tag multipliers; keep hook for per-resource in case you add other systems later
+            mult *= GetPerResourceWorkerMul(wid, s.config, here: true);
+            mult *= TitlesAdapter.GetJobRateMult(wid, s.config.jobType);
             sum += mult;
         }
 
-        // keep your original “1 + sum/3” scaling for staffed sites
+        // “1 + sum/3” scaling for staffed sites
         float normalized = 1f + (sum / 3f);
         float perHour = s.config.baseRatePerHour * normalized;
 
@@ -304,7 +290,6 @@ public sealed class JobManager : MonoBehaviour
 
         return perHour * shinyAura * shinySet;
     }
-
 
     // ---------------------------- Assignment API ----------------------------
     public bool TryAssignWorkerAt(JobType job, int slotIndex, MonsterDataSO monster, string ownedId = null)
@@ -645,7 +630,6 @@ public sealed class JobManager : MonoBehaviour
         if (targets.Count == 0) return;
 
         float perSiteMax = Mathf.Max(0f, maxReliefPerHourPerSite * dtHours);
-        var teamIds = GetTeamIdsOrEmpty();
 
         int idx = 0;
         int guard = 0;
@@ -658,8 +642,6 @@ public sealed class JobManager : MonoBehaviour
             if (remainingCap > 0f)
             {
                 float reliefStep = Mathf.Min(remainingCap, reliefPerCharge);
-                reliefStep = Mathf.Min(remainingCap, reliefStep * Mathf.Max(0f, TagRuntime.GetFatigueDecayMultiplierForSite(s.config.jobType, teamIds)));
-
                 s.fatigue01 = Mathf.Max(0f, s.fatigue01 - reliefStep);
                 available--;
                 if (available <= 0) break;
@@ -723,19 +705,11 @@ public sealed class JobManager : MonoBehaviour
             catch { extra = 0; }
         }
 
-        // tag-based storage cap multiplier from current workers
-        float capMul = 1f;
+        // No tag-based cap multiplier
         var st = FindState(site.jobType);
-        if (st != null)
-        {
-            var ids = CollectWorkerIds(st.workers);
-            capMul = TagRuntime.GetStorageCapMultiplier(site.jobType, ids);
-        }
-
-        // scale by job level
         float levelMul = (st != null) ? JobLeveling.StorageMultForLevel(st.level) : 1f;
 
-        return Mathf.Max(0, Mathf.RoundToInt((baseCap + extra) * capMul * levelMul));
+        return Mathf.Max(0, Mathf.RoundToInt((baseCap + extra) * levelMul));
     }
 
     public (JobType job, float hours) GetCurrentJobAndHours(string monsterId)
@@ -764,16 +738,8 @@ public sealed class JobManager : MonoBehaviour
 
     private static float GetPerResourceWorkerMul(string workerId, JobSiteSO site, bool here)
     {
-        if (string.IsNullOrEmpty(workerId) || site == null) return 1f;
-
-        return site.produces switch
-        {
-            ResourceType.Coins     => TagRuntime.GetJobCoinsMultiplier(workerId, site.jobType, here),
-            ResourceType.Energy    => TagRuntime.GetJobEnergyMultiplier(workerId, site.jobType, here),
-            ResourceType.Medkits   => TagRuntime.GetJobMedkitsMultiplier(workerId, site.jobType, here),
-            ResourceType.Materials => TagRuntime.GetJobMaterialsMultiplier(workerId, site.jobType, here),
-            _ => 1f
-        };
+        // Tag multipliers removed; return neutral multiplier.
+        return 1f;
     }
 
     private static bool HasAnyWorker(List<WorkerRef> workers)

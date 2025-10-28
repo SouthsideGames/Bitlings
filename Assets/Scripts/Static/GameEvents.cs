@@ -26,5 +26,13 @@ public static class GameEvents
     public static Action<string, string, int, int> ShowRewardPopup;
 
     // NEW: battle result broadcast
-    public static Action<BattleResult> BattleFinished; // add this
+    public static Action<BattleResult> BattleFinished;
+
+    // Resources
+    public static Action<ResourceType, int> ResourceAdded;    // fires whenever ResourceManager adds
+    public static Action<ResourceType, int> ResourceRemoved;  // optional if you’ll ever spend/remove
+    public static Action EnergyChanged;                       // used by encounter/idle energy UI
+
+    // Idle loop
+    public static Action<int> IdleBatchCompleted; 
 }

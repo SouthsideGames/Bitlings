@@ -18,7 +18,6 @@ public class PostBattleSummaryPanelUI : MonoBehaviour
 
     [Header("Anim")]
     [SerializeField] private float fadeIn = 0.18f;
-    [SerializeField] private float fadeOut = 0.15f;
     [SerializeField] private float popIn = 0.22f;
 
     public Action OnClosed;

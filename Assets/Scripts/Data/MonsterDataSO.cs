@@ -60,8 +60,9 @@ public class MonsterDataSO : ScriptableObject
     public Rarity rarity = Rarity.Common;
 
 
-    [Header("Tags")]
-    public MonsterTagTrackSO tagTrack;
+    [Header("Titles")]
+    public TitleTrackSO titleTrack;
+    public TitleSO[] defaultAlwaysOnTitles;
 
     [Header("Description")]
     [TextArea(3, 10)] public string description;

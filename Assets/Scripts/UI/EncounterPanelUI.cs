@@ -49,7 +49,7 @@ public class EncounterPanelUI : MonoBehaviour
         if (EncounterManager.I != null)
         {
             EncounterManager.I.OnStateChanged  += OnEncounterStateChanged;
-            EncounterManager.I.OnEnergyChanged += RefreshEnergy;
+            GameEvents.EnergyChanged += RefreshEnergy;
         }
 
         if (!IsInBattle())
@@ -65,7 +65,7 @@ public class EncounterPanelUI : MonoBehaviour
         if (EncounterManager.I != null)
         {
             EncounterManager.I.OnStateChanged  -= OnEncounterStateChanged;
-            EncounterManager.I.OnEnergyChanged -= RefreshEnergy;
+             GameEvents.EnergyChanged -= RefreshEnergy;
         }
 
         if (encounterBtn) encounterBtn.onClick.RemoveAllListeners();

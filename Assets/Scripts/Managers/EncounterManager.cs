@@ -11,7 +11,6 @@ public class EncounterManager : MonoBehaviour
     [Obsolete("UI no longer renders inline status. Use BattleLogger instead.")]
     public event Action<string> OnStatus;
     public event Action OnStateChanged;
-    public event Action OnEnergyChanged;
 
     [Header("Refs")]
     [SerializeField] private BattleManager battleManager;
@@ -147,7 +146,7 @@ public class EncounterManager : MonoBehaviour
                 SaveManager.Data.encounterMax);
 
         SaveManager.Save();
-        OnEnergyChanged?.Invoke();
+        GameEvents.EnergyChanged?.Invoke();
         OnStateChanged?.Invoke();
     }
 
@@ -157,7 +156,7 @@ public class EncounterManager : MonoBehaviour
         SaveManager.Data.encounterPoints -= SaveManager.Data.encounterCost;
         if (SaveManager.Data.encounterPoints < 0) SaveManager.Data.encounterPoints = 0;
         SaveManager.Save();
-        OnEnergyChanged?.Invoke();
+        GameEvents.EnergyChanged?.Invoke();
         OnStateChanged?.Invoke();
         return true;
     }
@@ -173,7 +172,7 @@ public class EncounterManager : MonoBehaviour
             if (SaveManager.Data.encounterPoints < SaveManager.Data.encounterMax)
                 SaveManager.Data.encounterPoints = SaveManager.Data.encounterMax;
             SaveManager.Save();
-            OnEnergyChanged?.Invoke();
+            GameEvents.EnergyChanged?.Invoke();
         }
 
         OnStateChanged?.Invoke();
@@ -314,17 +313,25 @@ public class EncounterManager : MonoBehaviour
 
     void OnBattleEnded(BattleResult result)
     {
+        // NOTE: result.coinsGained should already include Title multipliers from BattleManager.
+        // Apply any local/global (non-title) encounter multipliers here if you use them.
         int coins = ApplyCoinsGainedMultiplier(result.coinsGained);
+        coins = Mathf.Max(0, coins);
 
+        // Status line reflects the final amount actually added
         EmitStatus(result.victory ? $"Victory! +{coins} coins" : "Defeat.");
 
-        ResourceManager.I.Add(ResourceType.Coins, coins);
+        // Route through ResourceManager bank (keeps UI + legacy mirror in sync)
+        if (coins > 0)
+            ResourceManager.I.Add(ResourceType.Coins, coins);
 
         OnStateChanged?.Invoke();
 
+        // Boss defeat signal
         if (result.victory && _currentEncounterIsBoss && _currentBossUsed != null)
             GameEvents.BossDefeated?.Invoke(_currentBossUsed.id);
 
+        // Cadence / last-boss bookkeeping
         if (SaveManager.Data != null)
         {
             AfterBattleCadenceUpdate(
@@ -335,6 +342,7 @@ public class EncounterManager : MonoBehaviour
             );
         }
 
+        // Capture flow (block for bosses/uncatchables)
         if (result.victory)
         {
             if (_currentEncounterIsBoss || (result.wildDef != null && result.wildDef.uncatchable))
@@ -347,35 +355,27 @@ public class EncounterManager : MonoBehaviour
             }
         }
 
+        // Persist non-resource state changes (coins already mirrored/saved by ResourceManager)
         SaveManager.Save();
 
-        // NEW: close encounter lifecycle in the log
+        // Close out encounter in log + continue post-result UI flow
         BattleLogger.EndEncounter(result.victory);
 
         if (postResultCo != null) { StopCoroutine(postResultCo); postResultCo = null; }
         postResultCo = StartCoroutine(PostResultFlow(result.victory));
     }
 
+
     string GetLastStatus() => null; // UI kept this before; retained for compatibility with AppendLine usage.
     string AppendLine(string a, string b) => string.IsNullOrEmpty(a) ? b : (a + "\n" + b);
 
-    private int ApplyCoinsGainedMultiplier(int baseCoins)
+   private int ApplyCoinsGainedMultiplier(int baseCoins)
     {
         if (baseCoins <= 0) return 0;
-        var team = SaveManager.Data?.team;
-        if (team == null || team.Count == 0) return baseCoins;
 
-        var ids = new List<string>(team.Count);
-        for (int i = 0; i < team.Count; i++)
-        {
-            var om = team[i];
-            if (om != null && !string.IsNullOrEmpty(om.monsterId))
-                ids.Add(om.monsterId);
-        }
-        if (ids.Count == 0) return baseCoins;
+        const float MULT = 1f;
 
-        float mul = TagRuntime.GetCoinsGainedMultiplier(ids);
-        int scaled = Mathf.Max(0, Mathf.FloorToInt(baseCoins * mul));
+        int scaled = Mathf.Max(0, Mathf.FloorToInt(baseCoins * MULT));
         return scaled;
     }
 
@@ -420,9 +420,6 @@ public class EncounterManager : MonoBehaviour
         }
     }
 
-    // ==========================
-    // ===== UPDATED TryCatch ===
-    // ==========================
     void TryCatch(MonsterDataSO wild, int wildLevel)
     {
         if (wild != null && wild.uncatchable)
@@ -443,10 +440,20 @@ public class EncounterManager : MonoBehaviour
             }
         }
 
+        // Lead & systems-based bonuses
         OwnedMonsterData lead = (SaveManager.Data.team != null && SaveManager.Data.team.Count > 0)
             ? SaveManager.Data.team[0]
             : null;
+
         chance *= ShinySystems.LeadCaptureMult(lead);
+
+        // Title-based capture chance multiplier (lead’s title)
+        if (lead != null && !string.IsNullOrEmpty(lead.monsterId))
+        {
+            float titleMult = TitlesAdapter.GetCaptureChanceMult(lead.monsterId);
+            if (titleMult > 0f) chance *= titleMult;
+        }
+
         chance = Mathf.Clamp01(chance);
 
         bool caught = Random.value < chance;
@@ -475,6 +482,9 @@ public class EncounterManager : MonoBehaviour
             isShiny   = isShinyCatch,
             ownedUID  = Guid.NewGuid().ToString("N")
         };
+
+        // Notify titles about the successful capture (before duplicate resolution)
+        TitlesAdapter.OnMonsterCaptured(caughtMon.monsterId, wild.type, caughtMon.level, isShinyCatch);
 
         // Apply duplicate policy (respects settings toggle)
         string duplicateNote;
@@ -529,6 +539,7 @@ public class EncounterManager : MonoBehaviour
 
         SaveManager.Save();
     }
+
 
     // ===== LURES / LUCK / SHINY (unchanged) =====
 
@@ -823,7 +834,7 @@ public class EncounterManager : MonoBehaviour
         SaveManager.Data.encounterPoints -= SaveManager.Data.encounterCost;
         if (SaveManager.Data.encounterPoints < 0) SaveManager.Data.encounterPoints = 0;
         SaveManager.Save();
-        OnEnergyChanged?.Invoke();
+        GameEvents.EnergyChanged?.Invoke();
         OnStateChanged?.Invoke();
         return true;
     }
@@ -872,6 +883,11 @@ public class EncounterManager : MonoBehaviour
             changed = true;
         }
         if (changed) SaveManager.Save();
+    }
+
+    public void RequestStateRefresh()
+    {
+        OnStateChanged?.Invoke();
     }
 
 }

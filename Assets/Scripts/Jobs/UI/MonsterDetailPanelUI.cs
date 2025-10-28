@@ -45,7 +45,6 @@ public class MonsterDetailPanelUI : MonoBehaviour
 
     [Header("Tags")]
     [SerializeField] private Button tagButton;
-    [SerializeField] private TagDetailPanelUI tagDetailPanel;
 
     [Header("Type Matchups (Icons Only)")]
     [SerializeField] private Transform strongIconHolder;
@@ -99,8 +98,6 @@ public class MonsterDetailPanelUI : MonoBehaviour
     // Visibility + reentrancy
     bool _visible;
     static bool _openingOrOpen;
-    static float _lastOpenTime;
-    const float OPEN_COOLDOWN = 0.10f;
     Coroutine _openRoutine;
 
     static readonly Dictionary<MonsterType, Color> TYPE_COLORS = new()
@@ -166,16 +163,6 @@ public class MonsterDetailPanelUI : MonoBehaviour
         {
             removeButton.onClick.RemoveAllListeners();
             removeButton.onClick.AddListener(RemoveFromTeam);
-        }
-
-        if (tagButton)
-        {
-            tagButton.onClick.RemoveAllListeners();
-            tagButton.onClick.AddListener(() =>
-            {
-                if (current != null)
-                    tagDetailPanel?.Show(current.id, current);
-            });
         }
     }
 

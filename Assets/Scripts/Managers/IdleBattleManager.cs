@@ -105,10 +105,12 @@ public class IdleBattleManager : MonoBehaviour
     private void RunBatchEncounters(int count)
     {
         ResourceBank.BeginBatch();
-        var s = IdleBattleStore.Load();
-        var rng = new System.Random(SeedForSession(s));
+
+        var s     = IdleBattleStore.Load();
+        var rng   = new System.Random(SeedForSession(s));
         var teamP = JobIdlePassives.ComputeForActiveTeam();
 
+        // Collect up to 3 team monster IDs (lead first)
         var team = SaveManager.Data?.team;
         var teamIds = new List<string>();
         if (team != null)
@@ -122,49 +124,77 @@ public class IdleBattleManager : MonoBehaviour
             }
         }
 
-        float tagCoinMul = teamIds.Count > 0 ? TagRuntime.GetCoinsGainedMultiplier(teamIds) : 1f;
-        int baseCost = Mathf.Max(1, SaveManager.Data.encounterCost);
+        // Neutral global mul (TagRuntime removed; per-site/team multipliers already handled elsewhere)
+        float coinMul = 1f;
+
+        int baseCost      = Mathf.Max(1, SaveManager.Data.encounterCost);
         int effectiveCost = Mathf.Max(1, Mathf.RoundToInt(baseCost * Mathf.Clamp(teamP.energyCostMul, 0.5f, 1f)));
 
         for (int i = 0; i < count; i++)
         {
             if (!SpendEnergyIfPossible(effectiveCost)) break;
+
+            // Live-refresh the encounter/energy UI for each spend
             s.totalEnergySpent += effectiveCost;
+            encounterManager?.RequestStateRefresh();
 
             var wild = encounterManager != null
                 ? encounterManager.PickWildConsideringLures()
                 : null;
             if (wild == null) continue;
 
-            int wildLevel = RollWildLevel();
-            bool shiny = RollShiny(wild, rng);
-            int avgLv = GetAverageTeamLevel();
+            int  wildLevel = RollWildLevel();
+            bool shiny     = RollShiny(wild, rng);
+            int  avgLv     = GetAverageTeamLevel();
 
             var hb = HeadlessBattle.Resolve(new HeadlessBattle.Input
             {
-                avgTeamLevel = avgLv,
-                wildLevel = wildLevel,
-                baseCoinPerWin = config.baseCoinPerWin,
+                avgTeamLevel     = avgLv,
+                wildLevel        = wildLevel,
+                baseCoinPerWin   = config.baseCoinPerWin,
                 rewardMultiplier = config.rewardMultiplier,
-                rngSeed = rng.Next(),
-                offenseMul = teamP.offenseMul,
-                defenseMul = teamP.defenseMul,
-                earlyEdge = teamP.earlyEdge,
-                coinMul = teamP.coinMul
+                rngSeed          = rng.Next(),
+                offenseMul       = teamP.offenseMul,
+                defenseMul       = teamP.defenseMul,
+                earlyEdge        = teamP.earlyEdge,
+                coinMul          = teamP.coinMul
             });
 
-            int coins = Mathf.Max(0, Mathf.FloorToInt(hb.coins * Mathf.Max(0f, tagCoinMul)));
+            // Base coins from headless result + neutral mul
+            int coinsBase = Mathf.Max(0, Mathf.FloorToInt(hb.coins * Mathf.Max(0f, coinMul)));
 
-            if (hb.victory && coins > 0)
-                ResourceManager.I.Add(ResourceType.Coins, coins);
+            // Titles-aware coin grant via ResourceManager (uses lead monster if present)
+            int awarded = 0;
+            if (hb.victory && coinsBase > 0)
+            {
+                string leadId = (teamIds.Count > 0) ? teamIds[0] : null;
+                awarded = ResourceManager.I.AddCoinsWithTitles(coinsBase, leadId, wild, wildLevel);
+            }
 
-            AddToLogMerged(s.log, wild.id, coins, shiny);
+            // Log with the actual awarded amount (post-titles), keep shiny flag
+            AddToLogMerged(s.log, wild.id, awarded, shiny);
+
+            // Broadcast a compact battle result for observers (UI/analytics/achievements)
+            GameEvents.BattleFinished?.Invoke(new BattleResult
+            {
+                victory      = hb.victory,
+                coinsGained  = awarded, // already titles-scaled + actually banked
+                wildDef      = wild,
+                wildLevel    = wildLevel
+                // (add any other fields your BattleResult supports; these are the core ones)
+            });
         }
 
         TrimLog(s.log, config.encounterLogMaxEntries);
         IdleBattleStore.Save(s);
+
+        // Final UI refresh at the end of the batch (covers partial loops / last update)
+        encounterManager?.RequestStateRefresh();
+
         ResourceBank.EndBatch();
     }
+
+
 
     private static bool SpendEnergyIfPossible(int cost)
     {

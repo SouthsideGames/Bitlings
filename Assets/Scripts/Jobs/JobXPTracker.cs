@@ -25,7 +25,6 @@ public class JobXpTracker : MonoBehaviour
             foreach (var w in state.workers)
             {
                 if (w == null || string.IsNullOrEmpty(w.monsterId) || w.def == null) continue;
-                MonsterJobProgress.AddJobXp(w.monsterId, xpGain, w.def);
             }
         }
     }

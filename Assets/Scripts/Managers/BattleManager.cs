@@ -47,7 +47,7 @@ public class BattleManager : MonoBehaviour
     [SerializeField] private TextMeshProUGUI playerDEFText;
     [SerializeField] private TextMeshProUGUI playerSPDText;
 
-    [Header("Bench UI")]            
+    [Header("Bench UI")]
     [SerializeField] private Button benchBtn1;
     [SerializeField] private Button benchBtn2;
     [SerializeField] private Image benchImg1;
@@ -102,15 +102,13 @@ public class BattleManager : MonoBehaviour
     private bool playerTookFirstIncomingThisBattle = false;
     private bool playerLandedFirstHitThisBattle = false;
 
-    private bool  firstKOTakenProcessed = false;
     private int   tempDmgBuffTurns = 0;
     private float tempDmgBuffPct   = 0f;
     private int   playerNoDmgTurns = 0;
     private int   playerNoCritTurns = 0;
-    private int wildWeakenTurns = 0;
+    private int wildWeakenTurns = 0; // retained for future systems; unused now
     private float wildWeakenPct = 0f;
 
-    private bool firstKODealtProcessed = false;
 
     void Start()
     {
@@ -133,7 +131,7 @@ public class BattleManager : MonoBehaviour
         Begin(wild, level, onEnded);
     }
 
-   public void Begin(MonsterDataSO wild, int level, Action<BattleResult> onEnded)
+    public void Begin(MonsterDataSO wild, int level, Action<BattleResult> onEnded)
     {
         var roster = SaveManager.Data.team;
         if (roster == null || roster.Count == 0) return;
@@ -142,8 +140,6 @@ public class BattleManager : MonoBehaviour
         playerNoCritTurns = 0;
         wildWeakenTurns = 0;
         wildWeakenPct = 0f;
-
-        TagRuntime.ResetBattleState();
 
         // Don't set inBattle yet — we start only after panels reveal.
         inBattle = false;
@@ -218,8 +214,6 @@ public class BattleManager : MonoBehaviour
         playerTookFirstIncomingThisBattle = false;
         playerLandedFirstHitThisBattle = false;
 
-        firstKOTakenProcessed = false;
-        firstKODealtProcessed = false;
         tempDmgBuffTurns = 0;
         tempDmgBuffPct   = 0f;
 
@@ -255,37 +249,10 @@ public class BattleManager : MonoBehaviour
             playerCG.alpha = 0f; playerCG.blocksRaycasts = false; playerCG.interactable = false;
         }
 
-        // Prep battle-start one-turn buff now (safe before loop)
-        {
-            var ctx = new TagRuntime.TagContext
-            {
-                turnIndex = Mathf.Max(1, roundIndex),
-                battleTurnsElapsed = Mathf.Max(0, roundIndex - 1),
-                selfHp01 = teamHP[activeIndex] / Mathf.Max(1f, GetActiveMaxHP(teamMaxHP[activeIndex])),
-                enemyHp01 = wildHP / Mathf.Max(1f, wildMaxHP),
-                enemyIsBoss = (wildDef && wildDef.isBoss),
-            };
-            float mul = TagRuntime.EvaluateConditionalMultiplier(
-                teamIds[activeIndex],
-                new[] { TagTrigger.OnBattleStart },
-                ctx,
-                teamDefs[activeIndex],
-                wildDef
-            );
-            if (mul > 1f)
-            {
-                float addPct = Mathf.Max(0f, mul - 1f);
-                tempDmgBuffPct += addPct;
-                tempDmgBuffTurns = Math.Max(tempDmgBuffTurns, 1);
-                BattleLogger.Log($"{GetName(activeIndex)} focuses at battle start (+{Mathf.RoundToInt(addPct * 100f)}% dmg next turn).", LogScope.Battle);
-            }
-        }
-
         // Fade panels in, then actually start the battle + TurnLoop
         if (turnCR != null) StopCoroutine(turnCR);
         turnCR = StartCoroutine(Co_RevealPanelsThenStart(wildCG, playerCG, 0.28f)); // 0.28s default fade
     }
-
 
     private IEnumerator TurnLoop()
     {
@@ -309,62 +276,9 @@ public class BattleManager : MonoBehaviour
 
             BattleLogger.Log($"— Round {round} —", LogScope.Battle);
 
-            // True round-start tick → OnEachRound > 1 gives 1-turn damage buff
-            {
-                var ctx = new TagRuntime.TagContext
-                {
-                    turnIndex = Mathf.Max(1, roundIndex),
-                    battleTurnsElapsed = Mathf.Max(0, roundIndex - 1),
-                    selfHp01  = teamHP[activeIndex] / Mathf.Max(1f, GetActiveMaxHP(teamMaxHP[activeIndex])),
-                    enemyHp01 = wildHP / Mathf.Max(1f, wildMaxHP),
-                    enemyIsBoss = (wildDef && wildDef.isBoss),
-                };
-
-                float roundMul = TagRuntime.EvaluateConditionalMultiplier(
-                    teamIds[activeIndex],
-                    new[] { TagTrigger.OnEachRound },
-                    ctx,
-                    teamDefs[activeIndex],
-                    wildDef
-                );
-                if (roundMul > 1f)
-                {
-                    float addPct = roundMul - 1f;
-                    tempDmgBuffPct  += addPct;
-                    tempDmgBuffTurns = Math.Max(tempDmgBuffTurns, 1);
-                    BattleLogger.Log($"{GetName(activeIndex)} rallies at round start (+{Mathf.RoundToInt(addPct*100f)}% dmg this turn).", LogScope.Battle);
-                }
-            }
-
-            // OnBattleLength at round start → one-turn damage buff
-            {
-                var ctx = new TagRuntime.TagContext
-                {
-                    turnIndex = Mathf.Max(1, roundIndex),
-                    battleTurnsElapsed = Mathf.Max(0, roundIndex - 1),
-                    selfHp01  = teamHP[activeIndex] / Mathf.Max(1f, GetActiveMaxHP(teamMaxHP[activeIndex])),
-                    enemyHp01 = wildHP / Mathf.Max(1f, wildMaxHP),
-                    enemyIsBoss = (wildDef && wildDef.isBoss),
-                };
-                float mul = TagRuntime.EvaluateConditionalMultiplier(
-                    teamIds[activeIndex],
-                    new[] { TagTrigger.OnBattleLength },
-                    ctx,
-                    teamDefs[activeIndex],
-                    wildDef
-                );
-                if (mul > 1f)
-                {
-                    float addPct = Mathf.Max(0f, mul - 1f);
-                    tempDmgBuffPct  += addPct;
-                    tempDmgBuffTurns = Math.Max(tempDmgBuffTurns, 1);
-                    BattleLogger.Log($"{GetName(activeIndex)} adapts to the battle length (+{Mathf.RoundToInt(addPct*100f)}% dmg next turn).", LogScope.Battle);
-                }
-            }
-
             yield return Wait(beginRoundDelay);
 
-            // ── Speed / Initiative (tag-aware via OnSpeedCheck)
+            // ── Speed / Initiative (job and temp-buff aware)
             int pSpeed = BattleCalc.CalcSpeed(teamDefs[activeIndex], teamLevels[activeIndex]);
             if (BattleTempBuffs.I != null)
                 pSpeed = BattleTempBuffs.I.ApplyPlayerSpeedBonus(pSpeed);
@@ -374,20 +288,6 @@ public class BattleManager : MonoBehaviour
                 pSpeed = Mathf.Max(1, Mathf.RoundToInt(pSpeed * (1f + ctxSpeed.speedBonusPctFirstTurns)));
 
             int wSpeed = BattleCalc.CalcSpeed(wildDef, wildLevel);
-
-            // Tag-driven speed check bonuses (apply % to computed speed)
-            {
-                var spdCtx = new TagRuntime.TagContext
-                {
-                    turnIndex = Mathf.Max(1, roundIndex),
-                    battleTurnsElapsed = Mathf.Max(0, roundIndex - 1),
-                    selfHp01  = teamHP[activeIndex] / Mathf.Max(1f, GetActiveMaxHP(teamMaxHP[activeIndex])),
-                    enemyHp01 = wildHP / Mathf.Max(1f, wildMaxHP),
-                    enemyIsBoss = (wildDef && wildDef.isBoss),
-                };
-                pSpeed = TagRuntime.ApplySpeedCheckBonus(teamIds[activeIndex], spdCtx, teamDefs[activeIndex], wildDef, pSpeed);
-                wSpeed = TagRuntime.ApplySpeedCheckBonus(null, spdCtx, wildDef, teamDefs[activeIndex], wSpeed);
-            }
 
             bool playerFirst = pSpeed >= wSpeed;
             playerActsFirstThisRound = playerFirst;
@@ -416,15 +316,7 @@ public class BattleManager : MonoBehaviour
                     if (jobCtx[activeIndex].dmgReduceBuffTurns > 0)  jobCtx[activeIndex].dmgReduceBuffTurns--;
                 }
 
-                // Survive-round coin drip (tag-scaled internally)
-                int gained = TagRuntime.CoinsForSurviveRounds(teamIds[activeIndex], roundsSurvived: Mathf.Max(0, roundIndex));
-                if (gained > 0)
-                {
-                    ResourceManager.I.Add(ResourceType.Coins, gained);
-                    BattleLogger.Log($"+{gained} coins for surviving {roundIndex} rounds!", LogScope.Battle);
-                }
-
-                TagRuntime.TickEndOfRound(teamIds[activeIndex]);
+                // (Removed) tag-driven survive-round coin drip
 
                 yield return Wait(endRoundDelay);
             }
@@ -439,34 +331,6 @@ public class BattleManager : MonoBehaviour
 
         playerAttacksThisTurn++;
 
-        // Every 3rd player turn → one-turn damage buff (OnEvery3Turns)
-        if (((roundIndex + 1) % 3) == 0)
-        {
-            var cadenceCtx = new TagRuntime.TagContext
-            {
-                turnIndex = Mathf.Max(1, roundIndex),
-                battleTurnsElapsed = Mathf.Max(0, roundIndex - 1),
-                selfHp01  = teamHP[activeIndex] / Mathf.Max(1f, GetActiveMaxHP(teamMaxHP[activeIndex])),
-                enemyHp01 = wildHP / Mathf.Max(1f, wildMaxHP),
-                enemyIsBoss = (wildDef && wildDef.isBoss),
-                everyNthTurnN = 3
-            };
-            float tMul = TagRuntime.EvaluateConditionalMultiplier(
-                teamIds[activeIndex],
-                new[] { TagTrigger.OnEvery3Turns },
-                cadenceCtx,
-                teamDefs[activeIndex],
-                wildDef
-            );
-            if (tMul > 1f)
-            {
-                float addPct = Mathf.Max(0f, tMul - 1f);
-                tempDmgBuffPct  += addPct;
-                tempDmgBuffTurns = Math.Max(tempDmgBuffTurns, 1);
-                BattleLogger.Log($"{GetName(activeIndex)} is charged (+{Mathf.RoundToInt(addPct*100f)}% dmg this turn).", LogScope.Battle);
-            }
-        }
-
         var ctx = (jobCtx != null) ? jobCtx[activeIndex] : null;
 
         int flat = 0;
@@ -478,6 +342,13 @@ public class BattleManager : MonoBehaviour
         float atk = BattleCalc.CalcBaseAttack(teamDefs[activeIndex], teamLevels[activeIndex], flat, temp);
         if (ctx != null && ctx.attackBonusPct > 0f) atk *= (1f + ctx.attackBonusPct);
 
+        if (teamIds != null && activeIndex >= 0 && activeIndex < teamIds.Length)
+        {
+            var tmods = TitlesAdapter.GetBattleStatMods(teamIds[activeIndex]);
+            atk = Mathf.Max(1f, atk + Mathf.Max(0, tmods.atkFlat));
+            atk *= (1f + Mathf.Max(0f, tmods.atkPct));
+        }
+
         float tap = TapBoost.I ? TapBoost.I.CurrentMultiplier : 1f;
         atk *= Mathf.Max(1f, tap);
 
@@ -487,92 +358,19 @@ public class BattleManager : MonoBehaviour
             playerCrit += ctx.critChanceFlat;
             if (ctx.critBuffTurns > 0) playerCrit += ctx.critChanceBonusFirstTurns;
         }
-
-        var tagCtx = new TagRuntime.TagContext
-        {
-            turnIndex = Mathf.Max(1, roundIndex),
-            battleTurnsElapsed = Mathf.Max(0, roundIndex - 1),
-            actsFirstThisRound = playerActsFirstThisRound,
-            isFirstAttackThisBattle = !playerDidFirstAttackThisBattle,
-            isFirstHitThisBattle = !playerLandedFirstHitThisBattle,
-            isFirstIncomingThisBattle = !playerTookFirstIncomingThisBattle,
-            allyJustKOd = false,
-            enemyJustKOd = false,
-            tookCritThisTurn = false,
-            blockedOrResistedThisTurn = false,
-            attacksThisTurn = playerAttacksThisTurn,
-            selfHp01  = teamHP[activeIndex] / Mathf.Max(1f, teamMaxHP[activeIndex]),
-            enemyHp01 = wildHP / Mathf.Max(1f, wildMaxHP),
-            enemyIsBoss = (wildDef && wildDef.isBoss),
-            hasStatusAny = false,
-            siteJob = (ctx != null) ? ctx.job : JobType.None,
-            workingHere = (ctx != null && ctx.job != JobType.None),
-            roundsSurvived = Mathf.Max(0, roundIndex - 1),
-            everyNthTurnN = 3
-        };
-
-        playerCrit += TagRuntime.GetOutgoingCritChanceBonus(
-            teamIds[activeIndex],
-            tagCtx,
-            teamDefs[activeIndex],
-            wildDef
-        );
         playerCrit = Mathf.Clamp01(playerCrit);
 
-        if (TagRuntime.ForbidOutgoingCrits(teamIds[activeIndex], tagCtx, teamDefs[activeIndex], wildDef))
-            playerCrit = 0f;
-
-        float playerMomentMul = TagRuntime.EvaluateConditionalMultiplier(
-            teamIds[activeIndex],
-            new[]
-            {
-                TagTrigger.OnAttack,
-                TagTrigger.OnFirst2Turns,
-                TagTrigger.OnFirst3Turns,
-                TagTrigger.OnActFirst,
-                TagTrigger.OnEvery3rdAttack,
-                TagTrigger.OnFirstAttack,
-                TagTrigger.OnFirstHit,
-                TagTrigger.OnEveryOtherTurn,
-                TagTrigger.OnBattleCondition,
-                TagTrigger.OnOutgoingDamage,
-                TagTrigger.OnEachRound,
-                TagTrigger.OnEveryOddTurn,
-                TagTrigger.OnHP,
-                TagTrigger.OnEnemyBelow50,
-                TagTrigger.OnEnemyBelow20,
-            },
-            tagCtx,
-            teamDefs[activeIndex],
-            wildDef
-        );
-
+        // One-turn temp damage buff (currently only via other systems; value may be zero)
         if (tempDmgBuffTurns > 0 && tempDmgBuffPct > 0f)
         {
-            playerMomentMul *= (1f + tempDmgBuffPct);
+            atk *= (1f + tempDmgBuffPct);
             BattleLogger.Log($"+{Mathf.RoundToInt(tempDmgBuffPct * 100f)}% damage buff active.", LogScope.Battle);
             tempDmgBuffTurns--;
             if (tempDmgBuffTurns <= 0) tempDmgBuffPct = 0f;
         }
 
-        float momentumBonus = TagRuntime.GetConsecutiveHitDamageBonus(
-            teamIds[activeIndex],
-            tagCtx,
-            teamDefs[activeIndex],
-            wildDef
-        );
-        if (momentumBonus > 0f)
-        {
-            atk *= (1f + momentumBonus);
-            BattleLogger.Log($"{GetName(activeIndex)} gains momentum (+{Mathf.RoundToInt(momentumBonus * 100f)}% dmg)!", LogScope.Battle);
-        }
-
-        int defenseIgnore = TagRuntime.GetDefenseIgnoreFlat(
-            teamIds[activeIndex],
-            tagCtx,
-            teamDefs[activeIndex],
-            wildDef
-        );
+        // No tag-based defense ignore; set to 0
+        int defenseIgnore = 0;
 
         var dr = BattleCalc.ResolveHit(
             teamIds[activeIndex], teamDefs[activeIndex], teamLevels[activeIndex],
@@ -580,19 +378,7 @@ public class BattleManager : MonoBehaviour
             atk, playerCrit, critMultiplier, -defenseIgnore
         );
 
-        if (dr.crit)
-        {
-            float critBonusPct = TagRuntime.GetCritDealtDamageBonus(
-                teamIds[activeIndex], tagCtx, teamDefs[activeIndex], wildDef);
-            if (critBonusPct > 0f)
-            {
-                dr.damage = Mathf.Max(1, Mathf.RoundToInt(dr.damage * (1f + critBonusPct)));
-            }
-        }
-
-        if (playerMomentMul != 1f)
-            dr.damage = Mathf.Max(1, Mathf.RoundToInt(dr.damage * playerMomentMul));
-
+        // Job: first outgoing damage bonus (once)
         var jCtx = (jobCtx != null) ? jobCtx[activeIndex] : null;
         if (jCtx != null && !jCtx.usedFirstOutgoing && jCtx.firstOutgoingBonus > 0f)
         {
@@ -605,179 +391,12 @@ public class BattleManager : MonoBehaviour
         wildHP = Mathf.Max(0f, wildHP - dr.damage);
         PushHPBars();
 
-        bool landed = dr.damage > 0;
-        TagRuntime.RegisterHitResult(teamIds[activeIndex], landed);
-
         if (!playerLandedFirstHitThisBattle && dr.damage > 0)
         {
             playerLandedFirstHitThisBattle = true;
-
-            var firstHitCtx = new TagRuntime.TagContext
-            {
-                turnIndex = Mathf.Max(1, roundIndex),
-                battleTurnsElapsed = Mathf.Max(0, roundIndex - 1),
-                actsFirstThisRound = playerActsFirstThisRound,
-                selfHp01  = teamHP[activeIndex] / Mathf.Max(1f, teamMaxHP[activeIndex]),
-                enemyHp01 = wildHP / Mathf.Max(1f, wildMaxHP),
-                enemyIsBoss = (wildDef && wildDef.isBoss),
-                attacksThisTurn = playerAttacksThisTurn,
-                isFirstHitThisBattle = true
-            };
-
-            TagRuntime.EvaluateConditionalMultiplier(
-                teamIds[activeIndex],
-                new[] { TagTrigger.OnFirstHit },
-                firstHitCtx,
-                teamDefs[activeIndex],
-                wildDef
-            );
         }
 
-        if (dr.damage > 0)
-        {
-            float lsPct = TagRuntime.GetLifestealPct(
-                teamIds[activeIndex], tagCtx, teamDefs[activeIndex], wildDef);
-            if (lsPct > 0f)
-            {
-                float heal = Mathf.RoundToInt(dr.damage * lsPct);
-                TryAddHPToActive(heal);
-                if (heal > 0) BattleLogger.Log($"{GetName(activeIndex)} lifesteals {Mathf.RoundToInt(lsPct * 100f)}% (+{Mathf.RoundToInt(heal)} HP)", LogScope.Battle);
-            }
-        }
-
-        if (dr.crit)
-        {
-            int wTurns;
-            float wPct = TagRuntime.GetWeakenOnCritPct(
-                teamIds[activeIndex],
-                tagCtx,
-                teamDefs[activeIndex],
-                wildDef,
-                out wTurns
-            );
-            if (wPct > 0f)
-            {
-                wildWeakenPct = Mathf.Max(wildWeakenPct, wPct);
-                wildWeakenTurns = Math.Max(wildWeakenTurns, (wTurns <= 0 ? 1 : wTurns));
-                BattleLogger.Log($"{(wildDef ? wildDef.displayName : "Foe")} is hexed: -{Mathf.RoundToInt(wPct * 100f)}% damage for {wildWeakenTurns} turn{(wildWeakenTurns>1?"s":"")}.", LogScope.Battle);
-            }
-        }
-
-        // ── Multi-hit follow-ups (OnMultiHit) ───────────────────────────────────
-        {
-            var mhCtx = new TagRuntime.TagContext
-            {
-                turnIndex = Mathf.Max(1, roundIndex),
-                battleTurnsElapsed = Mathf.Max(0, roundIndex - 1),
-                actsFirstThisRound = playerActsFirstThisRound,
-                selfHp01  = teamHP[activeIndex] / Mathf.Max(1f, GetActiveMaxHP(teamMaxHP[activeIndex])),
-                enemyHp01 = wildHP / Mathf.Max(1f, wildMaxHP),
-                enemyIsBoss = (wildDef && wildDef.isBoss),
-                attacksThisTurn = playerAttacksThisTurn,
-            };
-
-            float hitBudget = TagRuntime.EvaluateConditionalMultiplier(
-                teamIds[activeIndex],
-                new[] { TagTrigger.OnMultiHit },
-                mhCtx,
-                teamDefs[activeIndex],
-                wildDef
-            );
-
-            if (hitBudget >= 2f && wildHP > 0f)
-            {
-                int fullExtraHits = Mathf.FloorToInt(hitBudget) - 1;
-                float frac = hitBudget - Mathf.Floor(hitBudget);
-
-                System.Action<float> doExtra = (scalar) =>
-                {
-                    if (wildHP <= 0f) return;
-
-                    playerAttacksThisTurn++;
-
-                    var perHitCtx = new TagRuntime.TagContext
-                    {
-                        turnIndex = Mathf.Max(1, roundIndex),
-                        battleTurnsElapsed = Mathf.Max(0, roundIndex - 1),
-                        actsFirstThisRound = playerActsFirstThisRound,
-                        selfHp01  = teamHP[activeIndex] / Mathf.Max(1f, GetActiveMaxHP(teamMaxHP[activeIndex])),
-                        enemyHp01 = wildHP / Mathf.Max(1f, wildMaxHP),
-                        enemyIsBoss = (wildDef && wildDef.isBoss),
-                        attacksThisTurn = playerAttacksThisTurn,
-                    };
-
-                    float perHitMul = TagRuntime.EvaluateConditionalMultiplier(
-                        teamIds[activeIndex],
-                        new[]
-                        {
-                            TagTrigger.OnAttack,
-                            TagTrigger.OnEvery3rdAttack,
-                            TagTrigger.OnEveryOtherTurn,
-                            TagTrigger.OnOutgoingDamage,
-                            TagTrigger.OnHP,
-                            TagTrigger.OnEnemyBelow50,
-                            TagTrigger.OnEnemyBelow20,
-                        },
-                        perHitCtx,
-                        teamDefs[activeIndex],
-                        wildDef
-                    );
-
-                    float atkThisHit = Mathf.Max(1f, atk) * Mathf.Max(0f, scalar) * Mathf.Max(0.0001f, perHitMul);
-
-                    float pc = Mathf.Clamp01(playerCrit);
-                    if (TagRuntime.ForbidOutgoingCrits(teamIds[activeIndex], perHitCtx, teamDefs[activeIndex], wildDef)) pc = 0f;
-
-                    int defenseIgnore2 = TagRuntime.GetDefenseIgnoreFlat(teamIds[activeIndex], perHitCtx, teamDefs[activeIndex], wildDef);
-
-                    var dr2 = BattleCalc.ResolveHit(
-                        teamIds[activeIndex], teamDefs[activeIndex], teamLevels[activeIndex],
-                        null, wildDef, wildLevel,
-                        atkThisHit, pc, critMultiplier, -defenseIgnore2
-                    );
-
-                    bool lethal2 = dr2.damage >= wildHP;
-
-                    if (dr2.damage > 0)
-                    {
-                        float lsPct2 = TagRuntime.GetLifestealPct(teamIds[activeIndex], perHitCtx, teamDefs[activeIndex], wildDef);
-                        if (lsPct2 > 0f)
-                        {
-                            float heal2 = Mathf.RoundToInt(dr2.damage * lsPct2);
-                            TryAddHPToActive(heal2);
-                            if (heal2 > 0) BattleLogger.Log($"{GetName(activeIndex)} lifesteals {Mathf.RoundToInt(lsPct2*100f)}% (+{Mathf.RoundToInt(heal2)} HP).", LogScope.Battle);
-                        }
-                    }
-
-                    wildHP = Mathf.Max(0f, wildHP - dr2.damage);
-                    PushHPBars();
-
-                    BattleLogger.Log($"{GetName(activeIndex)} follows up for {dr2.damage}!", LogScope.Battle);
-                    if (showEffectivenessText)
-                    {
-                        if (dr2.effectiveness > 1.25f) BattleLogger.Log("It's super effective!", LogScope.Battle);
-                        else if (dr2.effectiveness < 0.85f) BattleLogger.Log("It's not very effective...", LogScope.Battle);
-                    }
-                    if (dr2.crit) BattleLogger.Log("Critical hit!", LogScope.Battle);
-
-                    if (lethal2)
-                    {
-                        var koCtx2 = perHitCtx; koCtx2.enemyJustKOd = true;
-                        float healPct2 = TagRuntime.GetSelfHealPctOnEnemyKO(teamIds[activeIndex], koCtx2, teamDefs[activeIndex], wildDef);
-                        if (healPct2 > 0f)
-                        {
-                            float healAmt2 = GetActiveMaxHP(teamMaxHP[activeIndex]) * healPct2;
-                            TryAddHPToActive(healAmt2);
-                            BattleLogger.Log($"{GetName(activeIndex)} heals {Mathf.RoundToInt(healPct2 * 100f)}% on KO!", LogScope.Battle);
-                        }
-                    }
-                };
-
-                for (int i = 0; i < fullExtraHits && wildHP > 0f; i++) doExtra(1f);
-                if (frac > 0.001f && wildHP > 0f) doExtra(frac);
-            }
-        }
-        // ─────────────────────────────────────────────────────────────────────
+        // (Removed) tag-driven lifesteal, weaken-on-crit, multi-hit, KO heal, etc.
 
         BattleLogger.Log($"{GetName(activeIndex)} attacks for {dr.damage}!", LogScope.Battle);
 
@@ -837,59 +456,14 @@ public class BattleManager : MonoBehaviour
             atk, wildCritChance, critMultiplier, flatDefBonus
         );
 
-        var tagCtxIncoming = new TagRuntime.TagContext
-        {
-            turnIndex = Mathf.Max(1, roundIndex),
-            battleTurnsElapsed = Mathf.Max(0, roundIndex - 1),
-            actsFirstThisRound = false,
-            isFirstAttackThisBattle   = !playerDidFirstAttackThisBattle,
-            isFirstHitThisBattle      = !playerLandedFirstHitThisBattle,
-            isFirstIncomingThisBattle = !playerTookFirstIncomingThisBattle,
-            tookCritThisTurn = dr.crit,
-            blockedOrResistedThisTurn = (dr.effectiveness < 1f),
-            attacksThisTurn = enemyAttacksThisTurn,
-            selfHp01  = teamHP[activeIndex] / Mathf.Max(1f, teamMaxHP[activeIndex]),
-            enemyHp01 = wildHP / Mathf.Max(1f, wildMaxHP),
-            enemyIsBoss = (wildDef && wildDef.isBoss),
-            siteJob = (ctx != null) ? ctx.job : JobType.None,
-            workingHere = (ctx != null && ctx.job != JobType.None),
-            roundsSurvived = Mathf.Max(0, roundIndex - 1),
-            everyNthTurnN = 3
-        };
+        // Incoming damage scalar (job-based only; tag-based removed)
+        float incomingScalar = 1f;
 
-        // Negate incoming crit (tag-driven)
-        if (dr.crit && TagRuntime.TryConsumeNegateIncomingCrit(teamIds[activeIndex], tagCtxIncoming, wildDef, teamDefs[activeIndex]))
+        if (teamIds != null && activeIndex >= 0 && activeIndex < teamIds.Length)
         {
-            dr.crit = false;
-            dr.damage = Mathf.Max(1, Mathf.RoundToInt(dr.damage / Mathf.Max(1e-3f, critMultiplier)));
-            BattleLogger.Log($"{GetName(activeIndex)} negated the critical hit!", LogScope.Battle);
+            var tmods = TitlesAdapter.GetBattleStatMods(teamIds[activeIndex]);
+            if (tmods.defPct > 0f) incomingScalar *= (1f - Mathf.Clamp01(tmods.defPct));
         }
-
-        if (dr.crit)
-        {
-            float critReduce = TagRuntime.GetIncomingCritDamageReducePct(teamIds[activeIndex], tagCtxIncoming, wildDef, teamDefs[activeIndex]);
-            if (critReduce > 0f)
-                dr.damage = Mathf.Max(1, Mathf.RoundToInt(dr.damage * (1f - critReduce)));
-        }
-
-        float incomingMomentMul = TagRuntime.EvaluateConditionalMultiplier(
-            teamIds[activeIndex],
-            new[]
-            {
-                TagTrigger.OnIncomingDamage,
-                TagTrigger.OnFirstIncoming,
-                TagTrigger.OnIncomingCrit,
-                TagTrigger.OnFirst3Turns,
-                TagTrigger.OnEveryOtherTurn,
-                TagTrigger.OnBlockOrResist,
-                TagTrigger.OnHP
-            },
-            tagCtxIncoming,
-            attackerDef: wildDef,
-            defenderDef: teamDefs[activeIndex]
-        );
-
-        float incomingScalar = incomingMomentMul;
 
         if (ctx != null && !ctx.usedFirstIncoming && ctx.firstIncomingReduce > 0f)
         { ctx.usedFirstIncoming = true; incomingScalar *= (1f - ctx.firstIncomingReduce); }
@@ -898,12 +472,8 @@ public class BattleManager : MonoBehaviour
         if (ctx != null && ctx.defenseBonusPct > 0f)     incomingScalar *= (1f - ctx.defenseBonusPct);
         if (ctx != null && ctx.dmgReduceBuffTurns > 0 && ctx.dmgReduceFirstTurns > 0f)
             incomingScalar *= (1f - ctx.dmgReduceFirstTurns);
-        {
-            float swapDef = TagRuntime.GetSwapDefenseBonusPct(teamIds[activeIndex]);
-            if (swapDef > 0f) incomingScalar *= (1f - swapDef);
-        }
 
-        // Apply Hex Consultant weaken to enemy damage (if active), then tick down
+        // (Removed) weaken-from-tags; retains fields but unused now
         if (wildWeakenTurns > 0 && wildWeakenPct > 0f)
         {
             incomingScalar *= (1f - wildWeakenPct);
@@ -914,18 +484,7 @@ public class BattleManager : MonoBehaviour
 
         int dmg = Mathf.Max(1, Mathf.RoundToInt(dr.damage * incomingScalar));
 
-        int flatReduce = TagRuntime.GetIncomingDamageFlatReduce(
-            teamIds[activeIndex],
-            tagCtxIncoming,
-            wildDef,
-            teamDefs[activeIndex]
-        );
-        if (flatReduce != 0)
-        {
-            dmg = Mathf.Max(1, dmg - flatReduce);
-            if (flatReduce > 0)
-                BattleLogger.Log($"{GetName(activeIndex)} blocks {flatReduce} damage!", LogScope.Battle);
-        }
+        // (Removed) flat damage reduce from tags
 
         // Shield
         if (shieldHP != null && shieldHP.Length > activeIndex && shieldHP[activeIndex] > 0f)
@@ -939,52 +498,9 @@ public class BattleManager : MonoBehaviour
         teamHP[activeIndex] = Mathf.Max(0f, teamHP[activeIndex] - dmg);
         ClampAndPushActiveHP();
 
-        // Arm Resolve (OnFirstKOTaken) if we just went to 0
-        if (teamHP[activeIndex] <= 0.01f && !firstKOTakenProcessed)
-        {
-            var koCtx = new TagRuntime.TagContext
-            {
-                allyJustKOd = true,
-                turnIndex = Mathf.Max(1, roundIndex),
-                battleTurnsElapsed = Mathf.Max(0, roundIndex - 1)
-            };
-            float mul = TagRuntime.EvaluateConditionalMultiplier(
-                teamIds[activeIndex],
-                new[] { TagTrigger.OnFirstKOTaken },
-                koCtx,
-                teamDefs[activeIndex],
-                wildDef
-            );
-            if (mul > 1f)
-            {
-                tempDmgBuffPct   = Mathf.Max(0f, mul - 1f);
-                tempDmgBuffTurns = 1;
-                firstKOTakenProcessed = true;
-                BattleLogger.Log($"Resolve readied: +{Mathf.RoundToInt(tempDmgBuffPct * 100f)}% damage next turn.", LogScope.Battle);
-            }
+        // (Removed) tag-based first-KO resolve and OnAllyKO triggers
 
-            // Trigger OnAllyKO for surviving teammates + OnDeath heal payload
-            TriggerOnAllyKO_ForSurvivors(activeIndex);
-        }
-
-        // HP threshold (crisis heal)
-        if (teamHP[activeIndex] > 0f)
-        {
-            var ctxHP = new TagRuntime.TagContext
-            {
-                selfHp01  = teamHP[activeIndex] / Mathf.Max(1f, GetActiveMaxHP(teamMaxHP[activeIndex])),
-                enemyHp01 = wildHP / Mathf.Max(1f, wildMaxHP),
-                turnIndex = Mathf.Max(1, roundIndex),
-                battleTurnsElapsed = Mathf.Max(0, roundIndex - 1),
-            };
-            float healPct = TagRuntime.TryConsumeHpThresholdHealPct(teamIds[activeIndex], ctxHP);
-            if (healPct > 0f)
-            {
-                float healAmt = GetActiveMaxHP(teamMaxHP[activeIndex]) * healPct;
-                TryAddHPToActive(healAmt);
-                BattleLogger.Log($"{GetName(activeIndex)} crisis heals {Mathf.RoundToInt(healPct * 100f)}% HP!", LogScope.Battle);
-            }
-        }
+        // (Removed) HP threshold crisis heal from tags
 
         string foeName = wildDef ? wildDef.displayName : "Foe";
         BattleLogger.Log($"{foeName} hits {GetName(activeIndex)} for {dmg}!", LogScope.Battle);
@@ -1028,92 +544,6 @@ public class BattleManager : MonoBehaviour
         yield break;
     }
 
-    private void TriggerOnAllyKO_ForSurvivors(int fallenIdx)
-    {
-        // Fallen ally may carry an OnDeath heal payload for the team.
-        // Interpret mul > 1 as (mul - 1) % Max HP heal to all surviving allies.
-        {
-            var deathCtx = new TagRuntime.TagContext
-            {
-                turnIndex = Mathf.Max(1, roundIndex),
-                battleTurnsElapsed = Mathf.Max(0, roundIndex - 1),
-                selfHp01  = 0f,
-                enemyHp01 = wildHP / Mathf.Max(1f, wildMaxHP),
-                enemyIsBoss = (wildDef && wildDef.isBoss),
-            };
-
-            float deathMul = TagRuntime.EvaluateConditionalMultiplier(
-                teamIds[fallenIdx],
-                new[] { TagTrigger.OnDeath },
-                deathCtx,
-                teamDefs[fallenIdx],
-                wildDef
-            );
-
-            if (deathMul > 1f)
-            {
-                float healPct = deathMul - 1f;
-                for (int i = 0; i < teamCount; i++)
-                {
-                    if (i == fallenIdx) continue;
-                    if (teamHP[i] <= 0f) continue;
-
-                    float maxI = (i == activeIndex) ? GetActiveMaxHP(teamMaxHP[i]) : teamMaxHP[i];
-                    float heal  = Mathf.Max(0f, maxI * healPct);
-
-                    if (i == activeIndex)
-                        TryAddHPToActive(heal);
-                    else
-                        teamHP[i] = Mathf.Min(teamMaxHP[i], teamHP[i] + heal);
-
-                    BattleLogger.Log($"{GetName(i)} is healed {Mathf.RoundToInt(healPct*100f)}% by {GetName(fallenIdx)}'s sacrifice.", LogScope.Battle);
-                }
-                ClampAndPushActiveHP();
-                PushHPBars();
-            }
-        }
-
-        // Now fire OnAllyKO on surviving teammates (buffs; store on bench)
-        var ctx = new TagRuntime.TagContext
-        {
-            turnIndex = Mathf.Max(1, roundIndex),
-            battleTurnsElapsed = Mathf.Max(0, roundIndex - 1),
-            selfHp01  = 0f,
-            enemyHp01 = wildHP / Mathf.Max(1f, wildMaxHP),
-            enemyIsBoss = (wildDef && wildDef.isBoss),
-            allyJustKOd = true
-        };
-
-        for (int i = 0; i < teamCount; i++)
-        {
-            if (i == fallenIdx) continue;
-            if (teamHP[i] <= 0f) continue;
-
-            float mul = TagRuntime.EvaluateConditionalMultiplier(
-                teamIds[i],
-                new[] { TagTrigger.OnAllyKO },
-                ctx,
-                teamDefs[i],
-                wildDef
-            );
-            if (mul > 1f)
-            {
-                float addPct = Mathf.Max(0f, mul - 1f);
-                if (i == activeIndex)
-                {
-                    tempDmgBuffPct  += addPct;
-                    tempDmgBuffTurns = Math.Max(tempDmgBuffTurns, 1);
-                }
-                else
-                {
-                    teamPendingBuffPct[i]  += addPct;
-                    teamPendingBuffTurns[i] = Math.Max(teamPendingBuffTurns[i], 1);
-                }
-                BattleLogger.Log($"{GetName(i)} steels themselves (+{Mathf.RoundToInt(addPct*100f)}% dmg next action) after an ally falls.", LogScope.Battle);
-            }
-        }
-    }
-
     private bool CheckEnd()
     {
         if (IsWildKO())
@@ -1141,14 +571,25 @@ public class BattleManager : MonoBehaviour
         float survived = Mathf.Max(0f, Time.unscaledTime - startTime);
 
         int coins = BattleRewards.CoinsFor(victory, wildLevel, survived);
-        float coinMul = TagRuntime.GetCoinsGainedMultiplier(teamIds);
-        coins = Mathf.RoundToInt(coins * Mathf.Max(0f, coinMul));
+
+        if (teamIds != null && activeIndex >= 0 && activeIndex < teamIds.Length)
+        {
+            float cm = TitlesAdapter.GetCoinMultOnVictory(teamIds[activeIndex], wildDef, wildLevel);
+            if (cm > 0f) coins = Mathf.Max(0, Mathf.RoundToInt(coins * cm));
+        }
+
+        // coins stays as computed
+        if (coins < 0) coins = 0;
 
         if (victory)
         {
-            float xpMul = TagRuntime.GetBattleXPMultiplier(teamIds);
-            BattleRewards.GrantVictoryXPAndEvo(activeIndex, wildLevel, MonsterLibraryLocator.Lib, xpMul);
+            float xpMul = 1f;
+            if (teamIds != null && activeIndex >= 0 && activeIndex < teamIds.Length)
+                xpMul = TitlesAdapter.GetXPMultOnVictory(teamIds[activeIndex], wildDef, wildLevel);
+
+                BattleRewards.GrantVictoryXPAndEvo(activeIndex, wildLevel, MonsterLibraryLocator.Lib, Mathf.Max(0f, xpMul));
         }
+
 
         var teamList = SaveManager.Data.team;
         for (int i = 0; i < teamCount && i < teamList.Count; i++)
@@ -1176,6 +617,9 @@ public class BattleManager : MonoBehaviour
         };
 
         SetCombatPanels(false);
+        if (teamIds != null && activeIndex >= 0 && activeIndex < teamIds.Length)
+            TitlesAdapter.OnBattleEnd(teamIds[activeIndex], victory, wildDef, wildLevel);
+
         onEnd?.Invoke(result);
 
         // Use the actual getter name:
@@ -1289,7 +733,7 @@ public class BattleManager : MonoBehaviour
         ClampAndPushActiveHP();
         RefreshBenchUI();
 
-        TagRuntime.NotifySwapIn(teamIds[activeIndex]);
+        // (Removed) tag-driven swap-in effects
 
         if (teamPendingBuffPct != null && teamPendingBuffTurns != null)
         {
@@ -1305,32 +749,7 @@ public class BattleManager : MonoBehaviour
 
         BattleLogger.Log($"Swapped to {GetName(activeIndex)}!", LogScope.Battle);
 
-        var swapCtx = new TagRuntime.TagContext
-        {
-            turnIndex = Mathf.Max(1, roundIndex),
-            battleTurnsElapsed = Mathf.Max(0, roundIndex - 1),
-            selfHp01  = teamHP[activeIndex] / Mathf.Max(1f, GetActiveMaxHP(teamMaxHP[activeIndex])),
-            enemyHp01 = wildHP / Mathf.Max(1f, wildMaxHP),
-            enemyIsBoss = (wildDef && wildDef.isBoss),
-        };
-
-        // Only evaluate the healing trigger here (not OnSwapIn) so DEF-on-swap tags don't become heals
-        float swapMul = TagRuntime.EvaluateConditionalMultiplier(
-            teamIds[activeIndex],
-            new[] { TagTrigger.OnRescueHealBelow40 },
-            swapCtx,
-            teamDefs[activeIndex],
-            wildDef
-        );
-
-        if (swapMul > 1f)
-        {
-            float healPct = swapMul - 1f;
-            float healAmt = GetActiveMaxHP(teamMaxHP[activeIndex]) * healPct;
-            TryAddHPToActive(healAmt);
-            if (healAmt > 0) BattleLogger.Log($"{GetName(activeIndex)} rallies on swap (+{Mathf.RoundToInt(healPct * 100f)}% HP)", LogScope.Battle);
-        }
-
+        // (Removed) tag-driven rescue heal on swap
         Punch(playerIcon);
     }
 
@@ -1356,7 +775,7 @@ public class BattleManager : MonoBehaviour
                 ClampAndPushActiveHP();
                 RefreshBenchUI();
 
-                TagRuntime.NotifySwapIn(teamIds[activeIndex]);
+                // (Removed) tag-driven swap-in effects
 
                 if (teamPendingBuffPct != null && teamPendingBuffPct[activeIndex] > 0f)
                 {
@@ -1369,30 +788,7 @@ public class BattleManager : MonoBehaviour
 
                 BattleLogger.Log($"Auto-swapped to {GetName(activeIndex)}!", LogScope.Battle);
 
-                var swapCtx = new TagRuntime.TagContext
-                {
-                    turnIndex = Mathf.Max(1, roundIndex),
-                    battleTurnsElapsed = Mathf.Max(0, roundIndex - 1),
-                    selfHp01  = teamHP[activeIndex] / Mathf.Max(1f, GetActiveMaxHP(teamMaxHP[activeIndex])),
-                    enemyHp01 = wildHP / Mathf.Max(1f, wildMaxHP),
-                    enemyIsBoss = (wildDef && wildDef.isBoss),
-                };
-
-                float swapMul = TagRuntime.EvaluateConditionalMultiplier(
-                    teamIds[activeIndex],
-                    new[] { TagTrigger.OnRescueHealBelow40 },
-                    swapCtx,
-                    teamDefs[activeIndex],
-                    wildDef
-                );
-
-                if (swapMul > 1f)
-                {
-                    float healPct = swapMul - 1f;
-                    float healAmt = GetActiveMaxHP(teamMaxHP[activeIndex]) * healPct;
-                    TryAddHPToActive(healAmt);
-                    if (healAmt > 0) BattleLogger.Log($"{GetName(activeIndex)} rallies on swap (+{Mathf.RoundToInt(healPct * 100f)}% HP)", LogScope.Battle);
-                }
+                // (Removed) tag-driven rescue heal on swap
 
                 return true;
             }
@@ -1503,74 +899,9 @@ public class BattleManager : MonoBehaviour
         playerNoDmgTurns = dealtDamageThisTurn ? 0 : Mathf.Min(playerNoDmgTurns + 1, 99);
         playerNoCritTurns = critThisTurn ? 0 : Mathf.Min(playerNoCritTurns + 1, 99);
 
-        var ctx = new TagRuntime.TagContext
-        {
-            turnIndex = Mathf.Max(1, roundIndex),
-            battleTurnsElapsed = Mathf.Max(0, roundIndex - 1),
-            actsFirstThisRound = playerActsFirstThisRound,
-            selfHp01 = teamHP[activeIndex] / Mathf.Max(1f, GetActiveMaxHP(teamMaxHP[activeIndex])),
-            enemyHp01 = wildHP / Mathf.Max(1f, wildMaxHP),
-            enemyIsBoss = (wildDef && wildDef.isBoss),
-        };
-
-        float endMul = TagRuntime.EvaluateConditionalMultiplier(
-             teamIds[activeIndex],
-             new[] { TagTrigger.OnEndTurn },
-             ctx,
-             teamDefs[activeIndex],
-             wildDef
-         );
-
-        // Convert OnEndTurn > 1 into a one-turn outgoing damage buff for next turn.
-        if (endMul > 1f)
-        {
-            float addPct = Mathf.Max(0f, endMul - 1f);
-            tempDmgBuffPct += addPct;
-            tempDmgBuffTurns = Math.Max(tempDmgBuffTurns, 1);
-            BattleLogger.Log($"{GetName(activeIndex)} readies +{Mathf.RoundToInt(addPct * 100f)}% damage next turn (End Turn).", LogScope.Battle);
-        }
-
-        float regenMul = TagRuntime.EvaluateConditionalMultiplier(
-            teamIds[activeIndex],
-            new[] { TagTrigger.OnEndTurnRegen },
-            ctx,
-            teamDefs[activeIndex],
-            wildDef
-        );
-
-        float regenPct = Mathf.Max(0f, (regenMul - 1f));
-        if (regenPct > 0f)
-        {
-            float healAmt = GetActiveMaxHP(teamMaxHP[activeIndex]) * regenPct;
-            TryAddHPToActive(healAmt);
-            BattleLogger.Log($"{GetName(activeIndex)} regenerates +{Mathf.RoundToInt(regenPct * 100f)}% HP at end of turn.", LogScope.Battle);
-        }
-
-        if (playerNoDmgTurns >= 2)
-        {
-            TagRuntime.EvaluateConditionalMultiplier(
-                teamIds[activeIndex],
-                new[] { TagTrigger.OnNoDamageDealt2T },
-                ctx,
-                teamDefs[activeIndex],
-                wildDef
-            );
-            playerNoDmgTurns = 0;
-        }
-
-        if (playerNoCritTurns >= 2)
-        {
-            TagRuntime.EvaluateConditionalMultiplier(
-                teamIds[activeIndex],
-                new[] { TagTrigger.OnNoCritsFor2Turns },
-                ctx,
-                teamDefs[activeIndex],
-                wildDef
-            );
-            playerNoCritTurns = 0;
-        }
+        // (Removed) tag-driven end turn effects and regen
     }
-    
+
     private void UpdateWildInfoUI()
     {
         if (!wildDef) return;
@@ -1595,74 +926,121 @@ public class BattleManager : MonoBehaviour
     private void UpdatePlayerInfoUI()
     {
         if (activeIndex < 0 || teamDefs == null || activeIndex >= teamDefs.Length) return;
+
         var def = teamDefs[activeIndex];
         if (!def) return;
 
-        int lvl = teamLevels[activeIndex];
+        int lvl = teamLevels != null && activeIndex < teamLevels.Length ? teamLevels[activeIndex] : 1;
 
-        // Base stats
+        // ──────────────────────────────────────────────
+        // Base stats (pre-mod)
+        // ──────────────────────────────────────────────
         int baseHP  = Mathf.RoundToInt(BattleCalc.CalcHP(def, lvl));
         int baseATK = Mathf.RoundToInt(BattleCalc.CalcBaseAttack(def, lvl, 0, 0));
         int baseDEF = BattleCalc.CalcDefense(def, lvl);
         int baseSPD = BattleCalc.CalcSpeed(def, lvl);
 
+        // ──────────────────────────────────────────────
         // Temp buffs (flat)
-        int tempHPFlat   = BattleTempBuffs.I ? BattleTempBuffs.I.GetPlayerHPBonus() : 0;
-        int tempATKFlat  = BattleTempBuffs.I ? BattleTempBuffs.I.GetPlayerAtkBonus() : 0;
-        int tempDEFFlat  = BattleTempBuffs.I ? BattleTempBuffs.I.GetPlayerDefenseBonus() : 0;
-        int tempSPDFlat  = BattleTempBuffs.I ? BattleTempBuffs.I.GetPlayerSpeedFlatBonus() : 0; // ← your API
+        // ──────────────────────────────────────────────
+        int tempHPFlat  = BattleTempBuffs.I ? BattleTempBuffs.I.GetPlayerHPBonus()        : 0;
+        int tempATKFlat = BattleTempBuffs.I ? BattleTempBuffs.I.GetPlayerAtkBonus()       : 0;
+        int tempDEFFlat = BattleTempBuffs.I ? BattleTempBuffs.I.GetPlayerDefenseBonus()   : 0;
+        int tempSPDFlat = BattleTempBuffs.I ? BattleTempBuffs.I.GetPlayerSpeedFlatBonus() : 0;
 
-        // Optional timers
-        string tAtk  = (BattleTempBuffs.I && BattleTempBuffs.I.IsAtkBonusActive())  ? $" {BattleTempBuffs.I.GetAtkBonusRemainingSeconds():0.0}s"  : "";
-        string tHP   = (BattleTempBuffs.I && BattleTempBuffs.I.IsHPBonusActive())   ? $" {BattleTempBuffs.I.GetHPBonusRemainingSeconds():0.0}s"   : "";
-        string tDef  = (BattleTempBuffs.I && BattleTempBuffs.I.IsDefenseBonusActive()) ? $" {BattleTempBuffs.I.GetDefenseBonusRemainingSeconds():0.0}s" : "";
-        string tSpd  = (BattleTempBuffs.I && BattleTempBuffs.I.IsSpeedBonusActive())   ? $" {BattleTempBuffs.I.GetSpeedBonusRemainingSeconds():0.0}s"   : "";
+        // Optional timers (show as suffixes if your API exposes them; safe to leave empty)
+        string tHP  = "";
+        string tAtk = "";
+        string tDef = "";
+        string tSpd = "";
+
         bool resistOn = BattleTempBuffs.I && BattleTempBuffs.I.IsTypeResistActive();
 
-        // Equipped flat ATK bonus
+        // ──────────────────────────────────────────────
+        // Equipped flat ATK (from roster)
+        // ──────────────────────────────────────────────
         int equippedFlatATK = 0;
         var roster = SaveManager.Data?.team;
-        if (roster != null && activeIndex < roster.Count)
+        if (roster != null && activeIndex < roster.Count && roster[activeIndex] != null)
             equippedFlatATK = Mathf.Max(0, roster[activeIndex].flatAtkBonus);
 
-        // Job context
+        // ──────────────────────────────────────────────
+        // Job context (already baked into teamMaxHP etc. in your pipeline)
+        // ──────────────────────────────────────────────
         var jc = (jobCtx != null && activeIndex < jobCtx.Length) ? jobCtx[activeIndex] : null;
 
-        // Current/max HP with existing job % already baked into teamMaxHP
-        float maxHPBase = teamMaxHP != null ? teamMaxHP[activeIndex] : baseHP;
+        // ──────────────────────────────────────────────
+        // Title mods (flat + %)
+        // ──────────────────────────────────────────────
+        TitleStatMods tmods = default;
+        if (teamIds != null && activeIndex >= 0 && activeIndex < teamIds.Length && !string.IsNullOrEmpty(teamIds[activeIndex]))
+            tmods = TitlesAdapter.GetBattleStatMods(teamIds[activeIndex]);
+
+        // Apply Title FLATs to base lines we’ll display
+        baseATK = Mathf.Max(1, baseATK + Mathf.Max(0, tmods.atkFlat));
+        baseDEF = Mathf.Max(0, baseDEF + Mathf.Max(0, tmods.defFlat));
+        baseSPD = Mathf.Max(1, baseSPD + Mathf.Max(0, tmods.spdFlat));
+        // Note: HP flat handled by your temp system; Title gives % to max HP below.
+
+        // ──────────────────────────────────────────────
+        // Current/max HP with job %, then Title HP%
+        // ──────────────────────────────────────────────
+        float maxHPBase = (teamMaxHP != null && activeIndex < teamMaxHP.Length) ? teamMaxHP[activeIndex] : baseHP;
         float curMaxHP  = GetActiveMaxHP(maxHPBase); // adds temp flat HP
-        int curHPDisp   = Mathf.RoundToInt(Mathf.Clamp(teamHP[activeIndex], 0f, curMaxHP));
+        if (tmods.hpPct > 0f) curMaxHP *= (1f + tmods.hpPct); // Title % Max HP
 
-        // Helpers
-        string SegIfFlat(string label, int v, string time)   => (v != 0) ? $" [{label}+{v}{time}]" : "";
-        string SegIfPct (string label, float v, string tail) => (v != 0f) ? $" [{label}+{Mathf.RoundToInt(v*100f)}%{tail}]" : "";
-        string MinusPct (float v)                            => (v > 0f) ? $" [−{Mathf.RoundToInt(v*100f)}% dmg]" : "";
+        float curHPRaw = (teamHP != null && activeIndex < teamHP.Length) ? teamHP[activeIndex] : curMaxHP;
+        int   curHPDisp = Mathf.RoundToInt(Mathf.Clamp(curHPRaw, 0f, curMaxHP));
 
-        // Identity
+        // ──────────────────────────────────────────────
+        // Small helpers for badge segments
+        // ──────────────────────────────────────────────
+        string SegIfFlat(string label, int v, string time)   => (v != 0)  ? $" [{label}+{v}{time}]" : "";
+        string SegIfPct (string label, float v, string tail) => (v != 0f) ? $" [{label}+{Mathf.RoundToInt(v * 100f)}%{tail}]" : "";
+        string MinusPct (float v)                            => (v > 0f)  ? $" [−{Mathf.RoundToInt(v * 100f)}% dmg]" : "";
+
+        // ──────────────────────────────────────────────
+        // Identity block
+        // ──────────────────────────────────────────────
         if (playerIdText)     playerIdText.text     = $"ID: {def.id}";
         if (playerTypeText)   playerTypeText.text   = $"TYPE: {def.type}";
         if (playerRarityText) playerRarityText.text = $"RARITY: {def.rarity}";
         if (playerLevelText)  playerLevelText.text  = $"LVL: {lvl}";
 
+        // ──────────────────────────────────────────────
         // HP line
-        float gymPct = (jc != null) ? jc.maxHpBonusPct : 0f; // already applied, badge for clarity
+        // (Job max HP% already baked; we just show a badge. Then Title %.)
+        // ──────────────────────────────────────────────
+        float jobHpPct = (jc != null) ? jc.maxHpBonusPct : 0f; // badge only
         string hpLine = $"HP: {curHPDisp}/{Mathf.RoundToInt(curMaxHP)}";
-        hpLine += SegIfFlat("Temp", tempHPFlat, tHP);
-        hpLine += SegIfPct ("Gym",  gymPct, "");
+        hpLine += SegIfFlat("Temp",  tempHPFlat, tHP);
+        hpLine += SegIfPct ("Job",   jobHpPct,   "");
+        hpLine += SegIfPct ("Title", tmods.hpPct, "");
         if (playerHPText) playerHPText.text = hpLine;
 
-        // ATK line
-        float jobAtkPct = (jc != null) ? jc.attackBonusPct : 0f;
-        float turnBuffPct = (tempDmgBuffTurns > 0 && tempDmgBuffPct > 0f) ? tempDmgBuffPct : 0f;
+        // ──────────────────────────────────────────────
+        // ATK line (equip & temp flats; then Job/Turn/Title %)
+        // ──────────────────────────────────────────────
+        float jobAtkPct   = (jc != null) ? jc.attackBonusPct : 0f;
+        float turnBuffPct = 0f; // keep placeholder for your future turn-buff logic
+
         int atkShown = Mathf.Max(1, Mathf.RoundToInt(baseATK + equippedFlatATK + tempATKFlat));
-        string atkLine = $"ATK: {atkShown}";
+        // Apply Title % to the displayed number (kept separate as a badge for clarity)
+        int atkShownWithTitle = Mathf.Max(1, Mathf.RoundToInt(atkShown * (1f + Mathf.Max(0f, tmods.atkPct))));
+
+        string atkLine = $"ATK: {atkShownWithTitle}";
         atkLine += SegIfFlat("Equip", equippedFlatATK, "");
-        atkLine += SegIfFlat("Temp",  tempATKFlat, tAtk);
-        atkLine += SegIfPct ("Job",   jobAtkPct, "");
-        atkLine += SegIfPct ("Turn",  turnBuffPct, ""); // one-turn buff from tags
+        atkLine += SegIfFlat("Temp",  tempATKFlat,     tAtk);
+        atkLine += SegIfPct ("Job",   jobAtkPct,       "");
+        atkLine += SegIfPct ("Turn",  turnBuffPct,     "");
+        atkLine += SegIfPct ("Title", tmods.atkPct,    "");
         if (playerATKText) playerATKText.text = atkLine;
 
-        // DEF line (+ total dmg reduction badges)
+        // ──────────────────────────────────────────────
+        // DEF line (+ total damage reduction badges)
+        // Title DEF% is represented as additional damage reduction badge
+        // and we also show flat temp DEF.
+        // ──────────────────────────────────────────────
         float dmgReducePct = 0f;
         if (jc != null)
         {
@@ -1672,26 +1050,34 @@ public class BattleManager : MonoBehaviour
             if (jc.defenseBonusPct > 0f)
                 dmgReducePct += jc.defenseBonusPct;
         }
+        // Treat Title DEF% as mitigation badge for UI clarity
+        if (tmods.defPct > 0f) dmgReducePct += tmods.defPct;
+
         int defShown = Mathf.Max(0, baseDEF + tempDEFFlat);
         string defLine = $"DEF: {defShown}";
-        defLine += SegIfFlat("Temp", tempDEFFlat, tDef);
+        defLine += SegIfFlat("Temp",  tempDEFFlat, tDef);
         defLine += MinusPct(dmgReducePct);
         if (playerDEFText) playerDEFText.text = defLine;
 
-        // SPD line (flat temp + first-turn job speed with remaining turns)
-        int spdShown = Mathf.Max(1, baseSPD + tempSPDFlat);
-        string spdLine = $"SPD: {spdShown}";
-        spdLine += SegIfFlat("Temp", tempSPDFlat, tSpd);
+        // ──────────────────────────────────────────────
+        // SPD line (temp flat; then Job/Title %)
+        // ──────────────────────────────────────────────
+        int spdFlatTotal = Mathf.Max(0, tempSPDFlat); // (Title flat already added to baseSPD)
+        int spdShown = Mathf.Max(1, baseSPD + spdFlatTotal);
+        int spdShownWithTitle = Mathf.Max(1, Mathf.RoundToInt(spdShown * (1f + Mathf.Max(0f, tmods.spdPct))));
+
+        string spdLine = $"SPD: {spdShownWithTitle}";
+        spdLine += SegIfFlat("Temp",  tempSPDFlat, tSpd);
         if (jc != null && jc.speedBuffTurns > 0 && jc.speedBonusPctFirstTurns > 0f)
             spdLine += SegIfPct("Job", jc.speedBonusPctFirstTurns, $" ({jc.speedBuffTurns}t)");
+        spdLine += SegIfPct("Title", tmods.spdPct, "");
         if (playerSPDText) playerSPDText.text = spdLine;
 
-        // Optional active tags line (append to rarity or type if you prefer)
+        // ──────────────────────────────────────────────
+        // Optional active resist badge
+        // ──────────────────────────────────────────────
         if (resistOn && playerRarityText)
-        {
-            // Append a compact badge so we don’t add more fields to your layout
             playerRarityText.text += " [Resist]";
-        }
     }
 
 
@@ -1702,7 +1088,7 @@ public class BattleManager : MonoBehaviour
         if (playerIcon)      playerIcon.sprite = def ? (def.backIcon ? def.backIcon : def.icon) : null;
         if (playerNameText)  playerNameText.text = def ? def.displayName : "";
         if (playerLevelText) playerLevelText.text = $"Lv {lvl}";
-        UpdatePlayerInfoUI(); // ← add this line
+        UpdatePlayerInfoUI();
     }
 
     private WaitForSecondsRealtime Wait(float t)
@@ -1819,9 +1205,12 @@ public class BattleManager : MonoBehaviour
 
         PostBattleSummaryManager.I?.NotifyBattleStart();
 
+        if (activeIndex >= 0 && teamIds != null && activeIndex < teamIds.Length)
+            TitlesAdapter.OnBattleStart(teamIds[activeIndex], wildDef, wildLevel);
+
         if (turnCR != null) StopCoroutine(turnCR);
         turnCR = StartCoroutine(TurnLoop());
-        yield break;
+        yield break; 
     }
 
 }
