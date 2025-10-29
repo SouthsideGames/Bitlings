@@ -7,11 +7,11 @@ public struct TitleStatMods
 {
     public float hpPct;   // +% Max HP (e.g., 0.10 = +10%)
     public float atkPct;  // +% ATK
-    public float defPct;  // +% DEF (post-curve, pre-mitigation helper)
-    public float spdPct;  // +% SPD (applied to derived calc)
-    public int atkFlat; // +flat ATK (optional)
-    public int defFlat; // +flat DEF (optional)
-    public int spdFlat; // +flat SPD (optional)
+    public float defPct;  // +% DEF
+    public float spdPct;  // +% SPD
+    public int atkFlat;   // +flat ATK (optional)
+    public int defFlat;   // +flat DEF (optional)
+    public int spdFlat;   // +flat SPD (optional)
 }
 
 public struct TitleDamageFilter
@@ -31,8 +31,8 @@ public static class TitlesAdapter
         "TitlesManager"
     };
 
-    static Type _titleType;
-    static object _titleSingleton;
+    static Type   _titleType;
+    static object _titleSingleton; // cached scene instance (MonoBehaviour) or runtime singleton
 
     static TitlesAdapter()
     {
@@ -41,9 +41,8 @@ public static class TitlesAdapter
             _titleType = Type.GetType(name) ?? FindInAllAssemblies(name);
             if (_titleType != null)
             {
-                _titleSingleton = _titleType.GetField("I", BindingFlags.Public | BindingFlags.Static)?.GetValue(null)
-                                  ?? _titleType.GetProperty("I", BindingFlags.Public | BindingFlags.Static)?.GetValue(null, null)
-                                  ?? _titleType.GetProperty("Instance", BindingFlags.Public | BindingFlags.Static)?.GetValue(null, null);
+                // Try common singleton patterns: public static I / Instance
+                _titleSingleton = GetStaticSingleton(_titleType);
                 break;
             }
         }
@@ -56,11 +55,55 @@ public static class TitlesAdapter
         {
             try
             {
-                var t = asms[i].GetType(typeName);
+                var t = asms[i].GetType(typeName, throwOnError: false);
                 if (t != null) return t;
             }
             catch { }
         }
+        return null;
+    }
+
+    private static object GetStaticSingleton(Type t)
+    {
+        try
+        {
+            var fI  = t.GetField("I",         BindingFlags.Public | BindingFlags.Static);
+            var pI  = t.GetProperty("I",      BindingFlags.Public | BindingFlags.Static);
+            var pIn = t.GetProperty("Instance", BindingFlags.Public | BindingFlags.Static);
+
+            return (object)(fI?.GetValue(null) ??
+                            pI?.GetValue(null, null) ??
+                            pIn?.GetValue(null, null));
+        }
+        catch { return null; }
+    }
+
+    /// <summary>
+    /// Ensure we have a reference to the **scene** instance of the title runtime.
+    /// Never constructs a MonoBehaviour. Returns null and logs if not found.
+    /// </summary>
+    private static object ResolveSceneSingleton()
+    {
+        // 1) Re-check static singleton fields/properties in case they were set after static ctor
+        var inst = GetStaticSingleton(_titleType);
+        if (inst != null) { _titleSingleton = inst; return inst; }
+
+        // 2) Search scene for a component of that type
+        try
+        {
+            // Non-generic overload returns UnityEngine.Object[]
+#if UNITY_2022_3_OR_NEWER
+            var found = UnityEngine.Object.FindObjectsByType(_titleType, FindObjectsInactive.Exclude, FindObjectsSortMode.None);
+            if (found != null && found.Length > 0) { _titleSingleton = found[0]; return _titleSingleton; }
+#else
+            var found = UnityEngine.Object.FindObjectsOfType(_titleType);
+            if (found != null && found.Length > 0) { _titleSingleton = found[0]; return _titleSingleton; }
+#endif
+        }
+        catch { /* ignore and fall through */ }
+
+        Debug.LogError($"[TitlesAdapter] Could not locate a scene instance of '{_titleType?.Name}'. " +
+                       $"Add a GameObject with '{_titleType?.Name}' attached, or expose a public static singleton (I/Instance).");
         return null;
     }
 
@@ -72,9 +115,26 @@ public static class TitlesAdapter
         var mi = _titleType.GetMethod(method, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static);
         if (mi == null) return false;
 
-        var target = mi.IsStatic ? null : (_titleSingleton ?? Activator.CreateInstance(_titleType));
-        try { result = mi.Invoke(target, args); return true; }
-        catch (Exception e) { Debug.LogWarning($"[TitlesAdapter] {method} failed: {e.Message}"); return false; }
+        object target = null;
+
+        if (!mi.IsStatic)
+        {
+            // IMPORTANT: Never new/Activator.CreateInstance a MonoBehaviour!
+            // Use cached singleton if any; else resolve from scene.
+            target = _titleSingleton ?? ResolveSceneSingleton();
+            if (target == null) return false;
+        }
+
+        try
+        {
+            result = mi.Invoke(target, args);
+            return true;
+        }
+        catch (Exception e)
+        {
+            Debug.LogWarning($"[TitlesAdapter] {method} failed: {e.Message}");
+            return false;
+        }
     }
 
     // ─────────────────────────────────────────────────────────────────────────────
@@ -106,9 +166,6 @@ public static class TitlesAdapter
             return tsm;
         return default;
     }
-
-    // If your title system exposes specific getters (e.g., GetHpPct, etc.), we’ll still be fine with the above.
-    // Otherwise you can map your return type to TitleStatMods via your reflection method.
 
     // ─────────────────────────────────────────────────────────────────────────────
     // Multipliers
@@ -181,7 +238,6 @@ public static class TitlesAdapter
     public static Dictionary<JobType, float> BuildJobAuras(System.Collections.IEnumerable teamEnumerable)
     {
         var result = new Dictionary<JobType, float>(16);
-        // init to 0 for all jobs so TryGetValue always works
         foreach (JobType jt in Enum.GetValues(typeof(JobType)))
             if (!result.ContainsKey(jt)) result[jt] = 0f;
 
@@ -189,7 +245,6 @@ public static class TitlesAdapter
 
         foreach (var entry in teamEnumerable)
         {
-            // Try to read entry.monsterId and entry.level via reflection (robust to your save type)
             string id = ReadString(entry, "monsterId");
             if (string.IsNullOrEmpty(id)) continue;
 
@@ -201,7 +256,7 @@ public static class TitlesAdapter
             {
                 float aura = 0f;
                 try { aura = Mathf.Max(0f, GetJobAuraPercent(id, def, level, jt)); } catch { aura = 0f; }
-                if (aura > 0f) result[jt] += aura; // sum percent bonuses
+                if (aura > 0f) result[jt] += aura;
             }
         }
 
@@ -244,7 +299,7 @@ public static class TitlesAdapter
             try
             {
                 var et = entry.GetType();
-                id = (string)(et.GetField("monsterId")?.GetValue(entry) ?? et.GetProperty("monsterId")?.GetValue(entry, null));
+                id    = (string)(et.GetField("monsterId")?.GetValue(entry) ?? et.GetProperty("monsterId")?.GetValue(entry, null));
                 level = Convert.ToInt32(et.GetField("level")?.GetValue(entry) ?? et.GetProperty("level")?.GetValue(entry, null) ?? 1);
             }
             catch { id = null; level = 1; }
@@ -260,39 +315,29 @@ public static class TitlesAdapter
 
     public static TitleStatMods GetConditionalBattleMods(string id, float hpPct, int alliesAlive, int winStreak)
     {
-        // Prefer a strongly-typed TitleContext ctor if you have it
         TitleContext ctx = new TitleContext(id, hpPct, alliesAlive, winStreak);
 
-        // If your runtime exposes a direct conditional evaluator, call it:
         if (TryInvoke("GetConditionalBattleMods", new object[] { ctx }, out var res) && res is TitleStatMods tsm)
             return tsm;
 
-        // Fallback: some runtimes may expose a generic router
         if (TryInvoke("GetConditionalBattleModsRouter", new object[] { id, hpPct, alliesAlive, winStreak }, out res) && res is TitleStatMods tsm2)
             return tsm2;
 
-        // If no runtime handler, no-op
         return default;
     }
 
-    // ----- Effectiveness (attacker-side); already present, keep as-is -----
-
-    // ----- DamageFilter (typed) -----
     public static TitleDamageFilter GetDamageFilter(string ownedId, MonsterDataSO def, int level)
     {
-        // Preferred: runtime returns a typed TitleDamageFilter
         if (TryInvoke("GetDamageFilter", new object[] { ownedId, def, level }, out var res))
         {
             if (res is TitleDamageFilter typed) return typed;
 
-            // Graceful unbox if runtime returns an anonymous/boxed object with fields
-            // (cannotBeCrit, percentReduce, flatReduce)
             try
             {
-                var t    = res.GetType();
-                var cbc  = t.GetField("cannotBeCrit")  ?.GetValue(res) as bool?  ?? false;
-                var pr   = t.GetField("percentReduce")?.GetValue(res) as float? ?? 0f;
-                var fr   = t.GetField("flatReduce")    ?.GetValue(res) as int?   ?? 0;
+                var t   = res.GetType();
+                var cbc = t.GetField("cannotBeCrit") ?.GetValue(res) as bool?  ?? false;
+                var pr  = t.GetField("percentReduce")?.GetValue(res) as float? ?? 0f;
+                var fr  = t.GetField("flatReduce")   ?.GetValue(res) as int?   ?? 0;
                 return new TitleDamageFilter { cannotBeCrit = cbc, percentReduce = Mathf.Max(0f, pr), flatReduce = Mathf.Max(0, fr) };
             }
             catch { /* fall through */ }
@@ -300,7 +345,4 @@ public static class TitlesAdapter
 
         return default;
     }
-
-
-
 }
