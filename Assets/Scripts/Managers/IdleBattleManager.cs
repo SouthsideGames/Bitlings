@@ -124,8 +124,8 @@ public class IdleBattleManager : MonoBehaviour
             }
         }
 
-        // Neutral global mul (TagRuntime removed; per-site/team multipliers already handled elsewhere)
-        float coinMul = 1f;
+        // Titles-independent global neutral mul (keep for future if needed)
+        float coinMulNeutral = 1f;
 
         int baseCost      = Mathf.Max(1, SaveManager.Data.encounterCost);
         int effectiveCost = Mathf.Max(1, Mathf.RoundToInt(baseCost * Mathf.Clamp(teamP.energyCostMul, 0.5f, 1f)));
@@ -147,6 +147,51 @@ public class IdleBattleManager : MonoBehaviour
             bool shiny     = RollShiny(wild, rng);
             int  avgLv     = GetAverageTeamLevel();
 
+            // ─────────────────────────────────────────────────────────
+            // Titles: fold the lead monster’s Title effects into headless odds
+            // ─────────────────────────────────────────────────────────
+            string leadId = (teamIds.Count > 0) ? teamIds[0] : null;
+            MonsterDataSO leadDef = null;
+            int leadLevel = 1;
+
+            if (!string.IsNullOrEmpty(leadId))
+            {
+                // Try to resolve def/level from team
+                leadDef = MonsterLibraryLocator.GetById(leadId);
+                var roster = SaveManager.Data?.team;
+                if (roster != null && roster.Count > 0 && roster[0] != null && roster[0].monsterId == leadId)
+                    leadLevel = Mathf.Max(1, roster[0].level);
+            }
+
+            // Title stat mods (ATK/DEF%) → map to offense/defense multipliers
+            float titleOffMul = 1f;
+            float titleDefMul = 1f;
+            if (!string.IsNullOrEmpty(leadId))
+            {
+                var mods = TitlesAdapter.GetBattleStatMods(leadId);
+                if (mods.atkPct > 0f) titleOffMul *= (1f + mods.atkPct);
+                if (mods.defPct > 0f) titleDefMul *= (1f + mods.defPct);
+
+                // EffectivenessMod → boost offense odds
+                try
+                {
+                    float effMul = TitlesAdapter.GetEffectivenessMult(leadId, leadDef, leadLevel);
+                    if (effMul > 0f) titleOffMul *= effMul;
+                }
+                catch { /* safe no-op */ }
+
+                // DamageFilter → percent reduce → strengthen defense odds
+                try
+                {
+                    var dfBox = TitlesAdapter.GetDamageFilter(leadId, leadDef, leadLevel);
+                    DamageFilterView df;
+                    if (TryUnboxDamageFilter(dfBox, out df) && df.percentReduce > 0f)
+                        titleDefMul *= (1f + Mathf.Clamp01(df.percentReduce));
+                }
+                catch { /* safe no-op */ }
+            }
+
+            // Compose inputs: Jobs/Idle multipliers from teamP, plus Title multipliers we just computed.
             var hb = HeadlessBattle.Resolve(new HeadlessBattle.Input
             {
                 avgTeamLevel     = avgLv,
@@ -154,21 +199,25 @@ public class IdleBattleManager : MonoBehaviour
                 baseCoinPerWin   = config.baseCoinPerWin,
                 rewardMultiplier = config.rewardMultiplier,
                 rngSeed          = rng.Next(),
-                offenseMul       = teamP.offenseMul,
-                defenseMul       = teamP.defenseMul,
+
+                // Fold in titles
+                offenseMul       = teamP.offenseMul * Mathf.Max(0.1f, titleOffMul),
+                defenseMul       = teamP.defenseMul * Mathf.Max(0.1f, titleDefMul),
+
+                // jobs/idle only (Title coin mult is applied later in ResourceManager)
                 earlyEdge        = teamP.earlyEdge,
                 coinMul          = teamP.coinMul
             });
 
             // Base coins from headless result + neutral mul
-            int coinsBase = Mathf.Max(0, Mathf.FloorToInt(hb.coins * Mathf.Max(0f, coinMul)));
+            int coinsBase = Mathf.Max(0, Mathf.FloorToInt(hb.coins * Mathf.Max(0f, coinMulNeutral)));
 
             // Titles-aware coin grant via ResourceManager (uses lead monster if present)
             int awarded = 0;
             if (hb.victory && coinsBase > 0)
             {
-                string leadId = (teamIds.Count > 0) ? teamIds[0] : null;
-                awarded = ResourceManager.I.AddCoinsWithTitles(coinsBase, leadId, wild, wildLevel);
+                string leadIdForGrant = (teamIds.Count > 0) ? teamIds[0] : null;
+                awarded = ResourceManager.I.AddCoinsWithTitles(coinsBase, leadIdForGrant, wild, wildLevel);
             }
 
             // Log with the actual awarded amount (post-titles), keep shiny flag
@@ -181,7 +230,6 @@ public class IdleBattleManager : MonoBehaviour
                 coinsGained  = awarded, // already titles-scaled + actually banked
                 wildDef      = wild,
                 wildLevel    = wildLevel
-                // (add any other fields your BattleResult supports; these are the core ones)
             });
         }
 
@@ -193,8 +241,6 @@ public class IdleBattleManager : MonoBehaviour
 
         ResourceBank.EndBatch();
     }
-
-
 
     private static bool SpendEnergyIfPossible(int cost)
     {
@@ -345,4 +391,30 @@ public class IdleBattleManager : MonoBehaviour
 
     public void Dev_OpenSummary() => ForceOpenSummary();
     public void Dev_ClearIdleLog() => IdleBattleStore.ClearLog();
+
+    // Put near other small helpers
+    private struct DamageFilterView { public bool cannotBeCrit; public float percentReduce; public int flatReduce; }
+
+    private static bool TryUnboxDamageFilter(object boxed, out DamageFilterView view)
+    {
+        view = default;
+        if (boxed == null) return false;
+        var t = boxed.GetType();
+
+        var fNoCrit = t.GetField("cannotBeCrit");
+        var fPct    = t.GetField("percentReduce");
+        var fFlat   = t.GetField("flatReduce");
+
+        bool ok = true;
+        bool noCrit = false; float pct = 0f; int flat = 0;
+
+        if (fNoCrit != null && fNoCrit.FieldType == typeof(bool)) noCrit = (bool)fNoCrit.GetValue(boxed); else ok = false;
+        if (fPct    != null && fPct.FieldType    == typeof(float)) pct    = (float)fPct.GetValue(boxed);   else ok = false;
+        if (fFlat   != null && fFlat.FieldType   == typeof(int))   flat   = (int)fFlat.GetValue(boxed);    else ok = false;
+
+        if (!ok) return false;
+        view = new DamageFilterView { cannotBeCrit = noCrit, percentReduce = pct, flatReduce = flat };
+        return true;
+    }
+
 }

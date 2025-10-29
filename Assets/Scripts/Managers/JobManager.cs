@@ -80,6 +80,8 @@ public sealed class JobManager : MonoBehaviour
 
     private readonly Dictionary<string, MonsterDataSO> _idToDef = new();
     private readonly Dictionary<string, long> _assignedUnix = new();
+    private Dictionary<JobType, float> _auraByJob = new Dictionary<JobType, float>(16);
+
     private float _accum;
 
     // Settings mirrors (live-loaded from SettingsManager JSON)
@@ -187,6 +189,9 @@ public sealed class JobManager : MonoBehaviour
     {
         float dtHours = dtSeconds / 3600f;
 
+        try { _auraByJob = TitlesAdapter.BuildJobAuras(SaveManager.Data?.team) ?? new Dictionary<JobType,float>(); }
+        catch { _auraByJob = new Dictionary<JobType,float>(); }
+
         if (autoBenchEnabled) AutoBenchSweep(autoBenchHPThreshold01);
 
         for (int si = 0; si < States.Count; si++)
@@ -194,13 +199,10 @@ public sealed class JobManager : MonoBehaviour
             var s = States[si];
             if (s?.config == null) continue;
 
-            // Base rate before fatigue
             float grossRateHr = ComputeRatePerHour(s);
 
-            // Fatigue
             ApplyFatigue(dtHours, s);
 
-            // Final rate after fatigue
             float finalRateHr = grossRateHr * Mathf.Clamp01(1f - s.fatigue01);
             s.cachedRatePerHour = finalRateHr;
 
@@ -226,7 +228,7 @@ public sealed class JobManager : MonoBehaviour
     {
         if (HasAnyWorker(s.workers))
         {
-            // Average per-worker fatigue rate based only on worker defs.
+            // Average per-worker fatigue rate with Titles multiplier.
             int count = 0;
             float totalRate = 0f;
 
@@ -236,7 +238,14 @@ public sealed class JobManager : MonoBehaviour
                 if (w?.def == null) continue;
                 count++;
 
-                float perWorkerRate = Mathf.Max(0f, w.def.fatigueRatePerHour);
+                string wid = GetBestId(w);
+                int lvl = GetOwnedLevelOr1(wid, w.def);
+
+                float titleMul = 1f;
+                try { titleMul = Mathf.Max(0f, TitlesAdapter.GetJobFatigueMult(wid, w.def, lvl, s.config.jobType)); }
+                catch { titleMul = 1f; }
+
+                float perWorkerRate = Mathf.Max(0f, w.def.fatigueRatePerHour) * Mathf.Max(0f, titleMul);
                 totalRate += perWorkerRate;
             }
 
@@ -248,7 +257,7 @@ public sealed class JobManager : MonoBehaviour
         }
         else if (s.fatigue01 > 0f)
         {
-            // Rest decay when empty (no tag multipliers)
+            // Rest decay when empty (titles do not modify this).
             s.fatigue01 = Mathf.Max(0f, s.fatigue01 - siteRestDecayPerHour * dtHours);
         }
     }
@@ -260,6 +269,7 @@ public sealed class JobManager : MonoBehaviour
             return 0f;
 
         float sum = 0f;
+
         for (int i = 0; i < s.workers.Count; i++)
         {
             var w = s.workers[i];
@@ -271,10 +281,14 @@ public sealed class JobManager : MonoBehaviour
                 * JobBalance.AffinityMult(s.config.jobType, w.def.type);
 
             string wid = GetBestId(w);
+            int lvl = GetOwnedLevelOr1(wid, w.def);
 
-            // No tag multipliers; keep hook for per-resource in case you add other systems later
+            // Neutral resource hook (tags removed)
             mult *= GetPerResourceWorkerMul(wid, s.config, here: true);
-            mult *= TitlesAdapter.GetJobRateMult(wid, s.config.jobType);
+
+            // Titles: per-worker production multiplier
+            try { mult *= Mathf.Max(0f, TitlesAdapter.GetJobRateMult(wid, s.config.jobType)); } catch { }
+
             sum += mult;
         }
 
@@ -282,14 +296,22 @@ public sealed class JobManager : MonoBehaviour
         float normalized = 1f + (sum / 3f);
         float perHour = s.config.baseRatePerHour * normalized;
 
+        // Boss/global
         perHour *= BossDebuffSystem.GetMultiplier(s.config.jobType, SaveManager.NowUnix());
 
+        // Titles site-wide aura: multiply by (1 + auraPct)
+        float auraPct = 0f;
+        if (_auraByJob != null) _auraByJob.TryGetValue(s.config.jobType, out auraPct);
+        if (auraPct > 0f) perHour *= (1f + auraPct);
+
+        // Shiny stacking
         float shinyAura = ShinySystems.SiteShinyAuraMult(s.workers);
-        int shinyCount = CountShinies(s.workers);
-        float shinySet = 1f + (shinyCount >= 3 ? shiny3Bonus : (shinyCount == 2 ? shiny2Bonus : (shinyCount == 1 ? shiny1Bonus : 0f)));
+        int shinyCount  = CountShinies(s.workers);
+        float shinySet  = 1f + (shinyCount >= 3 ? shiny3Bonus : (shinyCount == 2 ? shiny2Bonus : (shinyCount == 1 ? shiny1Bonus : 0f)));
 
         return perHour * shinyAura * shinySet;
     }
+
 
     // ---------------------------- Assignment API ----------------------------
     public bool TryAssignWorkerAt(JobType job, int slotIndex, MonsterDataSO monster, string ownedId = null)
@@ -697,20 +719,31 @@ public sealed class JobManager : MonoBehaviour
     {
         if (site == null) return 0;
 
+        // Base capacity from the site definition
         int baseCap = site.storageCap;
-        int extra = 0;
+
+        // Extra saved capacity (e.g., from upgrades in your SaveManager)
+        int extraFromSave = 0;
         if (SaveManager.Data != null)
         {
-            try { extra = SaveManager.Data.GetJobStorageExtra(site.jobType); }
-            catch { extra = 0; }
+            try { extraFromSave = SaveManager.Data.GetJobStorageExtra(site.jobType); }
+            catch { extraFromSave = 0; }
         }
 
-        // No tag-based cap multiplier
+        // Titles: flat capacity bonus summed across the current team
+        int flatFromTitles = 0;
+        try { flatFromTitles = Mathf.Max(0, TitlesAdapter.GetJobCapacityBonus(site.jobType)); }
+        catch { flatFromTitles = 0; }
+
+        // Level multiplier from the site's current level
         var st = FindState(site.jobType);
         float levelMul = (st != null) ? JobLeveling.StorageMultForLevel(st.level) : 1f;
 
-        return Mathf.Max(0, Mathf.RoundToInt((baseCap + extra) * levelMul));
+        // Apply level multiplier after summing flats
+        int preMultFlat = Mathf.Max(0, baseCap + extraFromSave + flatFromTitles);
+        return Mathf.Max(0, Mathf.RoundToInt(preMultFlat * levelMul));
     }
+
 
     public (JobType job, float hours) GetCurrentJobAndHours(string monsterId)
     {
@@ -738,7 +771,7 @@ public sealed class JobManager : MonoBehaviour
 
     private static float GetPerResourceWorkerMul(string workerId, JobSiteSO site, bool here)
     {
-        // Tag multipliers removed; return neutral multiplier.
+        // No tag multipliers; neutral hook.
         return 1f;
     }
 
@@ -971,4 +1004,31 @@ public sealed class JobManager : MonoBehaviour
             $"Fatigue={(1f - Mathf.Clamp01(fatigue01)):P0} | Final={finalRateHr:F1}/hr");
     }
 #endif
+
+    // ---------------------------- Local helpers ----------------------------
+    private static int GetOwnedLevelOr1(string ownedOrDefId, MonsterDataSO fallbackDef)
+    {
+        if (string.IsNullOrEmpty(ownedOrDefId)) return 1;
+        var owned = SaveManager.Data?.owned;
+        if (owned != null)
+        {
+            for (int i = 0; i < owned.Count; i++)
+            {
+                var om = owned[i];
+                if (om != null && om.monsterId == ownedOrDefId)
+                    return Mathf.Max(1, om.level);
+            }
+        }
+        var team = SaveManager.Data?.team;
+        if (team != null)
+        {
+            for (int i = 0; i < team.Count; i++)
+            {
+                var e = team[i];
+                if (e != null && (e.monsterId == ownedOrDefId))
+                    return Mathf.Max(1, e.level);
+            }
+        }
+        return 1;
+    }
 }

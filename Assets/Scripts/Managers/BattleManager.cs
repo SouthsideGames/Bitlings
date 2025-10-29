@@ -203,7 +203,10 @@ public class BattleManager : MonoBehaviour
             }
 
             if (jobCtx[i].startShieldPctMaxHp > 0f)
-                shieldHP[i] = teamMaxHP[i] * jobCtx[i].startShieldPctMaxHp;
+            {
+                float curMaxWithTitles = GetFinalMaxHPForIndex(i);
+                shieldHP[i] = curMaxWithTitles * jobCtx[i].startShieldPctMaxHp;
+            }
         }
 
         roundIndex = 0;
@@ -279,13 +282,24 @@ public class BattleManager : MonoBehaviour
             yield return Wait(beginRoundDelay);
 
             // ── Speed / Initiative (job and temp-buff aware)
-            int pSpeed = BattleCalc.CalcSpeed(teamDefs[activeIndex], teamLevels[activeIndex]);
+
+            
+           int pSpeed = BattleCalc.CalcSpeed(teamDefs[activeIndex], teamLevels[activeIndex], teamIds[activeIndex]); // title-aware
             if (BattleTempBuffs.I != null)
                 pSpeed = BattleTempBuffs.I.ApplyPlayerSpeedBonus(pSpeed);
 
+            // Job first-turns SPD bonus
             var ctxSpeed = jobCtx != null ? jobCtx[activeIndex] : null;
             if (ctxSpeed != null && ctxSpeed.speedBuffTurns > 0 && ctxSpeed.speedBonusPctFirstTurns != 0f)
                 pSpeed = Mathf.Max(1, Mathf.RoundToInt(pSpeed * (1f + ctxSpeed.speedBonusPctFirstTurns)));
+
+            // Conditional Title boost via router
+            var titleCtx = BuildTitleContextForActive();
+            float spdF = TitlesAdapter.GetStatValue(teamIds[activeIndex], teamDefs[activeIndex], teamLevels[activeIndex], "SPD", titleCtx, pSpeed);
+            pSpeed = Mathf.Max(1, Mathf.RoundToInt(spdF));
+
+
+
 
             int wSpeed = BattleCalc.CalcSpeed(wildDef, wildLevel);
 
@@ -331,27 +345,29 @@ public class BattleManager : MonoBehaviour
 
         playerAttacksThisTurn++;
 
-        var ctx = (jobCtx != null) ? jobCtx[activeIndex] : null;
+        var jobContext = (jobCtx != null) ? jobCtx[activeIndex] : null;
 
-        int flat = 0;
+      int flat = 0;
         var roster = SaveManager.Data?.team;
         if (roster != null && activeIndex < roster.Count) flat = Mathf.Max(0, roster[activeIndex].flatAtkBonus);
 
         int temp = BattleTempBuffs.I ? BattleTempBuffs.I.GetPlayerAtkBonus() : 0;
 
-        float atk = BattleCalc.CalcBaseAttack(teamDefs[activeIndex], teamLevels[activeIndex], flat, temp);
-        if (ctx != null && ctx.attackBonusPct > 0f) atk *= (1f + ctx.attackBonusPct);
+        float atkBase = BattleCalc.CalcBaseAttack(teamDefs[activeIndex], teamLevels[activeIndex], flat, temp);
 
-        if (teamIds != null && activeIndex >= 0 && activeIndex < teamIds.Length)
-        {
-            var tmods = TitlesAdapter.GetBattleStatMods(teamIds[activeIndex]);
-            atk = Mathf.Max(1f, atk + Mathf.Max(0, tmods.atkFlat));
-            atk *= (1f + Mathf.Max(0f, tmods.atkPct));
-        }
+        // Job % ATK
+        var ctx = (jobCtx != null) ? jobCtx[activeIndex] : null;
+        if (ctx != null && ctx.attackBonusPct > 0f) atkBase *= (1f + ctx.attackBonusPct);
 
+        // Conditional Title ATK via router
+        var titleCtx = BuildTitleContextForActive();
+        float atk = TitlesAdapter.GetStatValue(teamIds[activeIndex], teamDefs[activeIndex], teamLevels[activeIndex], "ATK", titleCtx, atkBase);
+
+        // Tap multiplier
         float tap = TapBoost.I ? TapBoost.I.CurrentMultiplier : 1f;
         atk *= Mathf.Max(1f, tap);
 
+        // Crit chance (job buffs)
         float playerCrit = critChancePlayer;
         if (ctx != null)
         {
@@ -360,7 +376,7 @@ public class BattleManager : MonoBehaviour
         }
         playerCrit = Mathf.Clamp01(playerCrit);
 
-        // One-turn temp damage buff (currently only via other systems; value may be zero)
+        // One-turn temp damage buff
         if (tempDmgBuffTurns > 0 && tempDmgBuffPct > 0f)
         {
             atk *= (1f + tempDmgBuffPct);
@@ -369,14 +385,18 @@ public class BattleManager : MonoBehaviour
             if (tempDmgBuffTurns <= 0) tempDmgBuffPct = 0f;
         }
 
-        // No tag-based defense ignore; set to 0
+        // Resolve
         int defenseIgnore = 0;
-
         var dr = BattleCalc.ResolveHit(
             teamIds[activeIndex], teamDefs[activeIndex], teamLevels[activeIndex],
             null, wildDef, wildLevel,
             atk, playerCrit, critMultiplier, -defenseIgnore
         );
+
+        // Outgoing effectiveness (Titles — EffectivenessMod)
+        float effMul = TitlesAdapter.GetEffectivenessMult(teamIds[activeIndex], teamDefs[activeIndex], teamLevels[activeIndex]);
+        if (!Mathf.Approximately(effMul, 1f))
+            dr.damage = Mathf.Max(1, Mathf.RoundToInt(dr.damage * effMul));
 
         // Job: first outgoing damage bonus (once)
         var jCtx = (jobCtx != null) ? jobCtx[activeIndex] : null;
@@ -385,6 +405,7 @@ public class BattleManager : MonoBehaviour
             jCtx.usedFirstOutgoing = true;
             dr.damage = Mathf.Max(1, Mathf.RoundToInt(dr.damage * (1f + jCtx.firstOutgoingBonus)));
         }
+
 
         bool lethal = dr.damage >= wildHP;
 
@@ -416,7 +437,7 @@ public class BattleManager : MonoBehaviour
             bool canHeal = (jCtx2.regenTurns == int.MaxValue) || (jCtx2.regenTurns > 0);
             if (canHeal)
             {
-                float healAmt = teamMaxHP[activeIndex] * jCtx2.endTurnHealPct;
+                float healAmt = GetFinalMaxHPForIndex(activeIndex) * jCtx2.endTurnHealPct;
                 TryAddHPToActive(healAmt);
                 if (jCtx2.regenTurns != int.MaxValue) jCtx2.regenTurns--;
                 BattleLogger.Log($"{GetName(activeIndex)} regenerates {Mathf.RoundToInt(healAmt)} HP.", LogScope.Battle);
@@ -437,18 +458,20 @@ public class BattleManager : MonoBehaviour
         float atk = Mathf.Max(1f, wildAttackPerTurn);
 
         int flatDefBonus = BattleTempBuffs.I ? BattleTempBuffs.I.GetPlayerDefenseBonus() : 0;
-        var ctx = (jobCtx != null) ? jobCtx[activeIndex] : null;
-
+        var ctx   = (jobCtx != null) ? jobCtx[activeIndex] : null;
         float preHP = teamHP[activeIndex];
 
+        // Defender Titles damage filter (cannot be crit, % reduce, flat)
+        var df = TitlesAdapter.GetDamageFilter(teamIds[activeIndex], teamDefs[activeIndex], teamLevels[activeIndex]);
+
+        // Player crit resist (Jobs) + cannotBeCrit (Titles)
         float playerCritResist = 0f;
         if (ctx != null)
         {
             playerCritResist += ctx.critResistFlat;
             if (ctx.critResistBuffTurns > 0) playerCritResist += ctx.critResistBonusFirstTurns;
         }
-
-        float wildCritChance = Mathf.Clamp01(critChanceWild - playerCritResist);
+        float wildCritChance = df.cannotBeCrit ? 0f : Mathf.Clamp01(critChanceWild - playerCritResist);
 
         var dr = BattleCalc.ResolveHit(
             null, wildDef, wildLevel,
@@ -456,24 +479,33 @@ public class BattleManager : MonoBehaviour
             atk, wildCritChance, critMultiplier, flatDefBonus
         );
 
-        // Incoming damage scalar (job-based only; tag-based removed)
-        float incomingScalar = 1f;
-
-        if (teamIds != null && activeIndex >= 0 && activeIndex < teamIds.Length)
+        // If runtime forced "cannot be crit" and RNG still flagged crit (edge), re-resolve without crit.
+        if (df.cannotBeCrit && dr.crit)
         {
-            var tmods = TitlesAdapter.GetBattleStatMods(teamIds[activeIndex]);
-            if (tmods.defPct > 0f) incomingScalar *= (1f - Mathf.Clamp01(tmods.defPct));
+            dr = BattleCalc.ResolveHit(
+                null, wildDef, wildLevel,
+                teamIds[activeIndex], teamDefs[activeIndex], teamLevels[activeIndex],
+                atk, 0f, critMultiplier, flatDefBonus
+            );
         }
 
+        // Incoming damage scalar (ConditionalBooster + Jobs)
+        float incomingScalar = 1f;
+
+        // ConditionalBooster: DEF% mitigation
+        var cmods = GetConditionalModsForActive();
+        if (cmods.defPct > 0f) incomingScalar *= (1f - Mathf.Clamp01(cmods.defPct));
+
+        // Job-based reductions
         if (ctx != null && !ctx.usedFirstIncoming && ctx.firstIncomingReduce > 0f)
         { ctx.usedFirstIncoming = true; incomingScalar *= (1f - ctx.firstIncomingReduce); }
 
         if (ctx != null && ctx.baseDamageReducePct > 0f) incomingScalar *= (1f - ctx.baseDamageReducePct);
-        if (ctx != null && ctx.defenseBonusPct > 0f)     incomingScalar *= (1f - ctx.defenseBonusPct);
+        if (ctx != null && ctx.defenseBonusPct    > 0f) incomingScalar *= (1f - ctx.defenseBonusPct);
         if (ctx != null && ctx.dmgReduceBuffTurns > 0 && ctx.dmgReduceFirstTurns > 0f)
             incomingScalar *= (1f - ctx.dmgReduceFirstTurns);
 
-        // (Removed) weaken-from-tags; retains fields but unused now
+        // Optional weaken remains
         if (wildWeakenTurns > 0 && wildWeakenPct > 0f)
         {
             incomingScalar *= (1f - wildWeakenPct);
@@ -482,9 +514,12 @@ public class BattleManager : MonoBehaviour
             if (wildWeakenTurns <= 0) wildWeakenPct = 0f;
         }
 
+        // Apply scalar first
         int dmg = Mathf.Max(1, Mathf.RoundToInt(dr.damage * incomingScalar));
 
-        // (Removed) flat damage reduce from tags
+        // Titles: % reduce then flat reduce
+        if (df.percentReduce > 0f) dmg = Mathf.Max(1, Mathf.RoundToInt(dmg * (1f - Mathf.Clamp01(df.percentReduce))));
+        if (df.flatReduce    > 0 ) dmg = Mathf.Max(1, dmg - df.flatReduce);
 
         // Shield
         if (shieldHP != null && shieldHP.Length > activeIndex && shieldHP[activeIndex] > 0f)
@@ -497,10 +532,6 @@ public class BattleManager : MonoBehaviour
 
         teamHP[activeIndex] = Mathf.Max(0f, teamHP[activeIndex] - dmg);
         ClampAndPushActiveHP();
-
-        // (Removed) tag-based first-KO resolve and OnAllyKO triggers
-
-        // (Removed) HP threshold crisis heal from tags
 
         string foeName = wildDef ? wildDef.displayName : "Foe";
         BattleLogger.Log($"{foeName} hits {GetName(activeIndex)} for {dmg}!", LogScope.Battle);
@@ -517,7 +548,7 @@ public class BattleManager : MonoBehaviour
         // Rescue heal (job-based)
         if (ctx != null && !ctx.rescueUsed && ctx.rescueHealPct > 0f && teamHP[activeIndex] > 0f)
         {
-            float curMax = GetActiveMaxHP(teamMaxHP[activeIndex]);
+            float curMax = GetFinalMaxHPForIndex(activeIndex);
             float thresholdHP = curMax * (ctx.rescueThreshold > 0f ? ctx.rescueThreshold : 0.4f);
             if (preHP > thresholdHP && teamHP[activeIndex] <= thresholdHP)
             {
@@ -531,7 +562,7 @@ public class BattleManager : MonoBehaviour
         // Enrage @ 50% (job)
         if (ctx != null && !ctx.surgeApplied)
         {
-            float curMax = GetActiveMaxHP(teamMaxHP[activeIndex]);
+            float curMax = GetFinalMaxHPForIndex(activeIndex);
             if (teamHP[activeIndex] <= curMax * 0.5f && ctx.surgeAtkBonusPct > 0f)
             {
                 ctx.surgeApplied = true;
@@ -543,6 +574,7 @@ public class BattleManager : MonoBehaviour
         Punch(wildIcon);
         yield break;
     }
+
 
     private bool CheckEnd()
     {
@@ -631,7 +663,7 @@ public class BattleManager : MonoBehaviour
 
     private void ClampAndPushActiveHP()
     {
-        float curMax = GetActiveMaxHP(teamMaxHP[activeIndex]);
+        float curMax = GetFinalMaxHPForIndex(activeIndex);
         teamHP[activeIndex] = Mathf.Min(teamHP[activeIndex], curMax);
 
         if (playerHPBar)
@@ -657,7 +689,7 @@ public class BattleManager : MonoBehaviour
         }
         if (playerHPBar)
         {
-            float curMax = GetActiveMaxHP(teamMaxHP[activeIndex]);
+            float curMax = GetFinalMaxHPForIndex(activeIndex);
             playerHPBar.maxValue = curMax;
             playerHPBar.value = Mathf.Clamp(teamHP[activeIndex], 0f, curMax);
         }
@@ -820,7 +852,7 @@ public class BattleManager : MonoBehaviour
 
     public void TryAddHPToActive(float amount)
     {
-        float curMax = GetActiveMaxHP(teamMaxHP[activeIndex]);
+        float curMax = GetFinalMaxHPForIndex(activeIndex);
         teamHP[activeIndex] = Mathf.Clamp(teamHP[activeIndex] + amount, 0f, curMax);
         ClampAndPushActiveHP();
     }
@@ -856,7 +888,7 @@ public class BattleManager : MonoBehaviour
                 break;
             case JobType.Harbor:
                 if (c.startShieldPctMaxHp > 0f && teamMaxHP != null && idx < teamMaxHP.Length)
-                    tags.Add($"Harbor shield {HpVal(teamMaxHP[idx] * c.startShieldPctMaxHp)}");
+                    tags.Add($"Harbor shield {HpVal(GetFinalMaxHPForIndex(idx) * c.startShieldPctMaxHp)}");
                 if (c.endTurnHealPct > 0f && c.regenTurns > 0) tags.Add($"Harbor +{Pct(c.endTurnHealPct)} HP (2t)");
                 break;
             case JobType.CryoLab:
@@ -877,7 +909,7 @@ public class BattleManager : MonoBehaviour
                 break;
             case JobType.Sanctum:
                 if (c.startShieldPctMaxHp > 0f && teamMaxHP != null && idx < teamMaxHP.Length)
-                    tags.Add($"Sanctum shield {HpVal(teamMaxHP[idx] * c.startShieldPctMaxHp)}");
+                    tags.Add($"Sanctum shield {HpVal(GetFinalMaxHPForIndex(idx) * c.startShieldPctMaxHp)}");
                 if (c.dmgReduceBuffTurns > 0 && c.dmgReduceFirstTurns > 0f) tags.Add($"Sanctum −{Pct(c.dmgReduceFirstTurns)} dmg (2t)");
                 break;
             case JobType.Clinic:
@@ -976,6 +1008,10 @@ public class BattleManager : MonoBehaviour
         if (teamIds != null && activeIndex >= 0 && activeIndex < teamIds.Length && !string.IsNullOrEmpty(teamIds[activeIndex]))
             tmods = TitlesAdapter.GetBattleStatMods(teamIds[activeIndex]);
 
+        // Also fetch conditional mods for display parity
+        var cmodsDisp = GetConditionalModsForActive();
+
+
         // Apply Title FLATs to base lines we’ll display
         baseATK = Mathf.Max(1, baseATK + Mathf.Max(0, tmods.atkFlat));
         baseDEF = Mathf.Max(0, baseDEF + Mathf.Max(0, tmods.defFlat));
@@ -1022,18 +1058,19 @@ public class BattleManager : MonoBehaviour
         // ATK line (equip & temp flats; then Job/Turn/Title %)
         // ──────────────────────────────────────────────
         float jobAtkPct   = (jc != null) ? jc.attackBonusPct : 0f;
-        float turnBuffPct = 0f; // keep placeholder for your future turn-buff logic
+        float turnBuffPct = 0f; // placeholder for any per-turn logic
 
         int atkShown = Mathf.Max(1, Mathf.RoundToInt(baseATK + equippedFlatATK + tempATKFlat));
-        // Apply Title % to the displayed number (kept separate as a badge for clarity)
-        int atkShownWithTitle = Mathf.Max(1, Mathf.RoundToInt(atkShown * (1f + Mathf.Max(0f, tmods.atkPct))));
+        // Apply Title% + Conditional% to the displayed number
+        int atkShownWithMods = Mathf.Max(1, Mathf.RoundToInt(atkShown * (1f + Mathf.Max(0f, tmods.atkPct + cmodsDisp.atkPct))));
 
-        string atkLine = $"ATK: {atkShownWithTitle}";
+        string atkLine = $"ATK: {atkShownWithMods}";
         atkLine += SegIfFlat("Equip", equippedFlatATK, "");
         atkLine += SegIfFlat("Temp",  tempATKFlat,     tAtk);
         atkLine += SegIfPct ("Job",   jobAtkPct,       "");
         atkLine += SegIfPct ("Turn",  turnBuffPct,     "");
         atkLine += SegIfPct ("Title", tmods.atkPct,    "");
+        atkLine += SegIfPct ("Cond",  cmodsDisp.atkPct,"");
         if (playerATKText) playerATKText.text = atkLine;
 
         // ──────────────────────────────────────────────
@@ -1041,7 +1078,7 @@ public class BattleManager : MonoBehaviour
         // Title DEF% is represented as additional damage reduction badge
         // and we also show flat temp DEF.
         // ──────────────────────────────────────────────
-        float dmgReducePct = 0f;
+       float dmgReducePct = 0f;
         if (jc != null)
         {
             dmgReducePct += Mathf.Max(0f, jc.baseDamageReducePct);
@@ -1050,8 +1087,9 @@ public class BattleManager : MonoBehaviour
             if (jc.defenseBonusPct > 0f)
                 dmgReducePct += jc.defenseBonusPct;
         }
-        // Treat Title DEF% as mitigation badge for UI clarity
-        if (tmods.defPct > 0f) dmgReducePct += tmods.defPct;
+        // Title + Conditional DEF% as mitigation badges
+        if (tmods.defPct > 0f)    dmgReducePct += tmods.defPct;
+        if (cmodsDisp.defPct > 0f) dmgReducePct += cmodsDisp.defPct;
 
         int defShown = Mathf.Max(0, baseDEF + tempDEFFlat);
         string defLine = $"DEF: {defShown}";
@@ -1062,16 +1100,18 @@ public class BattleManager : MonoBehaviour
         // ──────────────────────────────────────────────
         // SPD line (temp flat; then Job/Title %)
         // ──────────────────────────────────────────────
-        int spdFlatTotal = Mathf.Max(0, tempSPDFlat); // (Title flat already added to baseSPD)
+        int spdFlatTotal = Mathf.Max(0, tempSPDFlat + Mathf.Max(0, cmodsDisp.spdFlat)); // (Title flat already in baseSPD)
         int spdShown = Mathf.Max(1, baseSPD + spdFlatTotal);
-        int spdShownWithTitle = Mathf.Max(1, Mathf.RoundToInt(spdShown * (1f + Mathf.Max(0f, tmods.spdPct))));
+        int spdShownWithMods = Mathf.Max(1, Mathf.RoundToInt(spdShown * (1f + Mathf.Max(0f, tmods.spdPct + cmodsDisp.spdPct))));
 
-        string spdLine = $"SPD: {spdShownWithTitle}";
+        string spdLine = $"SPD: {spdShownWithMods}";
         spdLine += SegIfFlat("Temp",  tempSPDFlat, tSpd);
         if (jc != null && jc.speedBuffTurns > 0 && jc.speedBonusPctFirstTurns > 0f)
             spdLine += SegIfPct("Job", jc.speedBonusPctFirstTurns, $" ({jc.speedBuffTurns}t)");
         spdLine += SegIfPct("Title", tmods.spdPct, "");
+        spdLine += SegIfPct("Cond",  cmodsDisp.spdPct, "");
         if (playerSPDText) playerSPDText.text = spdLine;
+
 
         // ──────────────────────────────────────────────
         // Optional active resist badge
@@ -1120,7 +1160,7 @@ public class BattleManager : MonoBehaviour
         if (teamIdx < 0 || teamIdx >= teamCount) { label.gameObject.SetActive(false); return; }
 
         float cur = Mathf.Max(0f, teamHP[teamIdx]);
-        float max = Mathf.Max(1f, GetActiveMaxHP(teamMaxHP[teamIdx]));
+        float max = Mathf.Max(1f, GetFinalMaxHPForIndex(teamIdx));
         int icur = Mathf.CeilToInt(cur);
         int imax = Mathf.CeilToInt(max);
 
@@ -1188,7 +1228,7 @@ public class BattleManager : MonoBehaviour
     private IEnumerator Co_StartBattleNow()
     {
         // Mark battle started only after panels are visible
-        inBattle  = true;
+        inBattle = true;
         startTime = Time.unscaledTime;
 
         // Centralized logging
@@ -1210,7 +1250,221 @@ public class BattleManager : MonoBehaviour
 
         if (turnCR != null) StopCoroutine(turnCR);
         turnCR = StartCoroutine(TurnLoop());
-        yield break; 
+        yield break;
     }
+    
+    private TitleStatMods GetTitleModsForIndex(int idx)
+    {
+        if (teamIds != null && idx >= 0 && idx < teamIds.Length && !string.IsNullOrEmpty(teamIds[idx]))
+            return TitlesAdapter.GetBattleStatMods(teamIds[idx]);
+        return default;
+    }
+
+    // Returns the *true* current max HP cap used for clamps/heals/etc.
+    // Includes temp HP and Title HP%.
+    public float GetActiveMaxHP(float baseMax, int idx = -1)
+    {
+        float v = Mathf.Max(1f, baseMax);
+
+        // temp flat HP
+        int hpBuff = BattleTempBuffs.I ? BattleTempBuffs.I.GetPlayerHPBonus() : 0;
+        v = Mathf.Max(1f, v + hpBuff);
+ 
+        // Title % Max HP (only if we know which teammate)
+        if (idx >= 0)
+        {
+            var tmods = GetTitleModsForIndex(idx);
+            if (tmods.hpPct > 0f) v *= (1f + tmods.hpPct);
+        }
+        return v;
+    }
+
+    // Convenience: final max HP for a team index using stored teamMaxHP[idx]
+    private float GetFinalMaxHPForIndex(int idx)
+    {
+        if (teamMaxHP == null || idx < 0 || idx >= teamMaxHP.Length) return 1f;
+        return GetActiveMaxHP(teamMaxHP[idx], idx);
+    }
+
+    // Helpers you can place in BattleManager
+    private TitleStatMods GetConditionalModsForActive()
+    {
+        if (teamIds == null || activeIndex < 0 || activeIndex >= teamIds.Length) return default;
+
+        string ownedId = teamIds[activeIndex];
+        var    def     = teamDefs[activeIndex];
+        int    lvl     = teamLevels[activeIndex];
+
+        // Build TitleContext using the field names in TitleContext.cs (selfHp01, allyCount, winStreak)
+        float curMax = GetFinalMaxHPForIndex(activeIndex);
+        float hp01   = curMax > 0.01f ? Mathf.Clamp01(teamHP[activeIndex] / curMax) : 0f;
+
+        int alliesAlive = 0;
+        for (int i = 0; i < teamCount; i++)
+            if (i != activeIndex && teamHP[i] > 0.01f) alliesAlive++;
+
+        int winStreak = (EncounterManager.I != null) ? EncounterManager.I.CurrentWinStreak : 0;
+
+        TitleContext ctx = TitleContext.Empty;
+        ctx.selfHp01  = hp01;
+        ctx.alliesAlive = alliesAlive;
+        ctx.winStreak = winStreak;
+
+        // Pull conditional values (use these statKind keys in your TitleRuntime router)
+        TitleStatMods mods = default;
+        mods.atkFlat = Mathf.RoundToInt(TitlesAdapter.GetStatValue(ownedId, def, lvl, "atkFlat",  ctx, 0f));
+        mods.atkPct  = TitlesAdapter.GetStatValue(ownedId, def, lvl, "atkPct",   ctx, 0f);
+
+        mods.defFlat = Mathf.RoundToInt(TitlesAdapter.GetStatValue(ownedId, def, lvl, "defFlat",  ctx, 0f));
+        mods.defPct  = TitlesAdapter.GetStatValue(ownedId, def, lvl, "defPct",   ctx, 0f);
+
+        mods.spdFlat = Mathf.RoundToInt(TitlesAdapter.GetStatValue(ownedId, def, lvl, "spdFlat",  ctx, 0f));
+        mods.spdPct  = TitlesAdapter.GetStatValue(ownedId, def, lvl, "spdPct",   ctx, 0f);
+
+        mods.hpPct   = TitlesAdapter.GetStatValue(ownedId, def, lvl, "hpPct",    ctx, 0f);
+
+        return mods;
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────────
+    // Conditional Titles glue
+    // ─────────────────────────────────────────────────────────────────────────────
+
+    private int GetAlliesAliveNotIncludingActive()
+    {
+        int alive = 0;
+        for (int i = 0; i < teamCount; i++)
+            if (i != activeIndex && teamHP[i] > 0.01f) alive++;
+        return alive;
+    }
+
+    // Try to read win streak from EncounterManager via common names; fallback 0.
+    private int GetWinStreakSafe()
+    {
+        try
+        {
+            var em = EncounterManager.I;
+            if (em == null) return 0;
+
+            var t = em.GetType();
+            // Try property "CurrentWinStreak", then "WinStreak"
+            var p = t.GetProperty("CurrentWinStreak") ?? t.GetProperty("WinStreak");
+            if (p != null && p.PropertyType == typeof(int)) return (int)p.GetValue(em);
+
+            // Try method "GetWinStreak()"
+            var m = t.GetMethod("GetWinStreak", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance);
+            if (m != null && m.ReturnType == typeof(int)) return (int)m.Invoke(em, null);
+        }
+        catch { }
+        return 0;
+    }
+
+    // Build the TitleContext used by your Titles system.
+    // (Class/struct TitleContext is provided by your Titles package.)
+    private TitleContext BuildTitleContextForActive()
+    {
+        // hpPct: 0..1 current HP, alliesAlive: bench count alive, winStreak: from EncounterManager
+        float curMax = GetFinalMaxHPForIndex(activeIndex);
+        float hpPct = curMax > 0.01f ? Mathf.Clamp01(teamHP[activeIndex] / curMax) : 0f;
+        int alliesAlive = GetAlliesAliveNotIncludingActive();
+        int streak = GetWinStreakSafe();
+
+        var ctx = new TitleContext
+        {
+            selfHp01 = hpPct,
+            alliesAlive = alliesAlive,
+            winStreak = streak
+        };
+        return ctx;
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────────
+    // DamageFilter unbox (because TitlesAdapter returns it boxed as object)
+    // Expected fields: bool cannotBeCrit; float percentReduce (0..1); int flatReduce (>=0)
+    // ─────────────────────────────────────────────────────────────────────────────
+
+    private struct DamageFilterView
+    {
+        public bool cannotBeCrit;
+        public float percentReduce; // 0..1
+        public int flatReduce;      // >=0
+    }
+
+    private bool TryUnboxDamageFilter(object boxed, out DamageFilterView view)
+    {
+        view = default;
+        if (boxed == null) return false;
+        var t = boxed.GetType();
+
+        bool ok = true;
+        try
+        {
+            // supports both fields and properties
+            bool GetBool(string name, bool def)
+            {
+                var f = t.GetField(name) ?? (object)t.GetProperty(name);
+                if (f is System.Reflection.FieldInfo fi) return (bool)fi.GetValue(boxed);
+                if (f is System.Reflection.PropertyInfo pi) return (bool)pi.GetValue(boxed);
+                return def;
+            }
+            float GetFloat(string name, float def)
+            {
+                var f = t.GetField(name) ?? (object)t.GetProperty(name);
+                if (f is System.Reflection.FieldInfo fi) return Convert.ToSingle(fi.GetValue(boxed));
+                if (f is System.Reflection.PropertyInfo pi) return Convert.ToSingle(pi.GetValue(boxed));
+                return def;
+            }
+            int GetInt(string name, int def)
+            {
+                var f = t.GetField(name) ?? (object)t.GetProperty(name);
+                if (f is System.Reflection.FieldInfo fi) return Convert.ToInt32(fi.GetValue(boxed));
+                if (f is System.Reflection.PropertyInfo pi) return Convert.ToInt32(pi.GetValue(boxed));
+                return def;
+            }
+
+            view.cannotBeCrit  = GetBool("cannotBeCrit", false);
+            view.percentReduce = Mathf.Clamp01(GetFloat("percentReduce", 0f));
+            view.flatReduce    = Mathf.Max(0, GetInt("flatReduce", 0));
+            return true;
+        }
+        catch { ok = false; }
+
+        return ok;
+    }
+
+    // Helper to unbox a defender damage filter object from TitlesAdapter.GetDamageFilter
+    private static void UnboxDamageFilter(object box, out bool cannotBeCrit, out float percentReduce, out int flatReduce)
+    {
+        cannotBeCrit = false;
+        percentReduce = 0f;
+        flatReduce = 0;
+
+        if (box == null) return;
+
+        var t = box.GetType();
+        var f1 = t.GetField("cannotBeCrit");    var p1 = t.GetProperty("cannotBeCrit");
+        var f2 = t.GetField("percentReduce");   var p2 = t.GetProperty("percentReduce");
+        var f3 = t.GetField("flatReduce");      var p3 = t.GetProperty("flatReduce");
+
+        try
+        {
+            if (f1 != null) cannotBeCrit  = (bool) (f1.GetValue(box) ?? false);
+            else if (p1 != null) cannotBeCrit = (bool) (p1.GetValue(box, null) ?? false);
+        } catch {}
+
+        try
+        {
+            if (f2 != null) percentReduce = Mathf.Max(0f, (float) (f2.GetValue(box) ?? 0f));
+            else if (p2 != null) percentReduce = Mathf.Max(0f, (float) (p2.GetValue(box, null) ?? 0f));
+        } catch {}
+
+        try
+        {
+            if (f3 != null) flatReduce    = Mathf.Max(0, (int) (f3.GetValue(box) ?? 0));
+            else if (p3 != null) flatReduce = Mathf.Max(0, (int) (p3.GetValue(box, null) ?? 0));
+        } catch {}
+    }
+
+
 
 }

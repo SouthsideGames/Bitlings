@@ -8,8 +8,9 @@ public class EncounterPanelUI : MonoBehaviour
     [Header("Refs")]
     [SerializeField] private Button encounterBtn;
     [SerializeField] private TextMeshProUGUI energyLabel;
-    [SerializeField] private TextMeshProUGUI energyEtaLabel; 
-    [SerializeField, Min(1f)] private float energySecondsPerPoint = 1200f; 
+    [SerializeField] private TextMeshProUGUI energyEtaLabel;
+    [SerializeField, Min(1f)] private float energySecondsPerPoint = 1200f;
+    [SerializeField] private TextMeshProUGUI winStreakText;
 
     [Header("Blinder")]
     [SerializeField] private CanvasGroup blinderGroup;             
@@ -40,6 +41,10 @@ public class EncounterPanelUI : MonoBehaviour
 
     void OnEnable()
     {
+        RefreshWinStreak();
+        if (EncounterManager.I != null)
+            EncounterManager.I.OnStateChanged += RefreshWinStreak;
+
         if (encounterBtn)
         {
             encounterBtn.onClick.RemoveAllListeners();
@@ -58,15 +63,22 @@ public class EncounterPanelUI : MonoBehaviour
             ShowBlinder(false, instant: true);
 
         RefreshAll();
+
+        GameEvents.BattleFinished += OnBattleFinished;
     }
 
     void OnDisable()
     {
         if (EncounterManager.I != null)
         {
-            EncounterManager.I.OnStateChanged  -= OnEncounterStateChanged;
-             GameEvents.EnergyChanged -= RefreshEnergy;
+            EncounterManager.I.OnStateChanged -= OnEncounterStateChanged;
+            GameEvents.EnergyChanged -= RefreshEnergy;
         }
+        
+        if (EncounterManager.I != null)
+            EncounterManager.I.OnStateChanged -= RefreshWinStreak;
+
+        GameEvents.BattleFinished -= OnBattleFinished;
 
         if (encounterBtn) encounterBtn.onClick.RemoveAllListeners();
         if (_fadeCo != null) StopCoroutine(_fadeCo);
@@ -282,4 +294,21 @@ public class EncounterPanelUI : MonoBehaviour
     }
 
     public void OnClickToggleAuto() => EncounterManager.I?.ToggleAutoMode();
+
+     void OnBattleFinished(BattleResult _)
+    {
+        RefreshWinStreak();
+    }
+
+    void RefreshWinStreak()
+    {
+        if (!winStreakText) return;
+        int streak = (EncounterManager.I != null) ? EncounterManager.I.CurrentWinStreak : 0;
+
+        // If you want to hide at zero, uncomment the next two lines:
+        // winStreakText.gameObject.SetActive(streak > 0);
+        // if (streak <= 0) return;
+
+        winStreakText.text = $"Streak: {streak}";
+    }
 }

@@ -268,5 +268,22 @@ public sealed class TitleManager : MonoBehaviour
         return sum;
     }
 
+    // router so adapter can use a string for StatKind
+    public float GetStatValueRouter(string monsterId, MonsterDataSO def, int level, string statKind, TitleContext ctx, float baseValue)
+    {
+        // StatKind enum is in your Titles code; do a safe parse:
+        if (!System.Enum.TryParse<StatKind>(statKind, out var kind))
+            return baseValue;
+        return GetStatValue(monsterId, def, level, kind, in ctx, baseValue);
+    }
+
+    // box the struct so reflection callers don’t need the value-type signature
+    public object GetDamageFilterBoxed(string monsterId, MonsterDataSO def, int level)
+    {
+        var f = GetDamageFilterFor(monsterId, def, level);
+        return f; // boxed TitleManager.DamageFilter
+    }
+
+
     
 }

@@ -60,4 +60,6 @@ public class JobSiteView : MonoBehaviour
         if (fatigueText)
             fatigueText.text = $"{Mathf.RoundToInt((st?.fatigue01 ?? 0f) * 100f)}%";
     }
+
+    
 }

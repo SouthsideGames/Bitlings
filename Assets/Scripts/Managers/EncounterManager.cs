@@ -36,6 +36,9 @@ public class EncounterManager : MonoBehaviour
     private Coroutine postResultCo;
     private Coroutine autoLoopCo;
 
+    private int _currentWinStreak = 0;
+    public int CurrentWinStreak => _currentWinStreak;
+
     void Awake()
     {
         if (I != null && I != this) { Destroy(gameObject); return; }
@@ -69,6 +72,7 @@ public class EncounterManager : MonoBehaviour
         autoMode = false;
         nextEncounterFree = false;
         autoRunPaidEnergy = false;
+        _currentWinStreak = 0;
 
         ResourceBank.EnsureSize();
 
@@ -354,6 +358,17 @@ public class EncounterManager : MonoBehaviour
                 TryCatch(result.wildDef, result.wildLevel);
             }
         }
+
+        if (result.victory)
+        {
+            _currentWinStreak = Mathf.Max(0, _currentWinStreak + 1);
+        }
+        else
+        {
+            _currentWinStreak = 0;
+        }
+
+        OnStateChanged?.Invoke();
 
         // Persist non-resource state changes (coins already mirrored/saved by ResourceManager)
         SaveManager.Save();
