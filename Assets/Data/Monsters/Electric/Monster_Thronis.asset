@@ -15,6 +15,7 @@ MonoBehaviour:
   id: M-019
   displayName: Thronis
   type: 4
+  typeIcon: {fileID: 21300000, guid: 3222076e383d35c4caf42204f19699c2, type: 3}
   icon: {fileID: 21300000, guid: 54a6fb5123cda4bf8a658b1da8a2f36d, type: 3}
   backIcon: {fileID: 21300000, guid: c3653af337d204bbfb831153f7e8531f, type: 3}
   shinyIcon: {fileID: 21300000, guid: 1c8963dd6d43e9245848d5fd6440b6c9, type: 3}
@@ -37,6 +38,7 @@ MonoBehaviour:
   spawnWeight: 1.5
   jobSkill: 2.2
   rarity: 3
-  tagTrack: {fileID: 11400000, guid: dfb6c8b4c3da9cc42806e7513c65d103, type: 2}
+  titleTrack: {fileID: 0}
+  defaultAlwaysOnTitles: []
   description: With a body plated like armor and a crown of living lightning, Thronis
     commands respect. Sparks scatter from its steps as it moves.

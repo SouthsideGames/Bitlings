@@ -15,6 +15,7 @@ MonoBehaviour:
   id: M-063
   displayName: Caelmir
   type: 9
+  typeIcon: {fileID: 21300000, guid: a40ec02d4cbe32b4ca6c19d8846b1bce, type: 3}
   icon: {fileID: 21300000, guid: ebc79a6da17fd7d4bb7488d462ee05bd, type: 3}
   backIcon: {fileID: 21300000, guid: 385321d9c876f724297bee5598bd9c61, type: 3}
   shinyIcon: {fileID: 21300000, guid: ca4f10e4218b6bc428629d82ca5bb0c0, type: 3}
@@ -37,6 +38,7 @@ MonoBehaviour:
   spawnWeight: 0
   jobSkill: 2.9
   rarity: 4
-  tagTrack: {fileID: 11400000, guid: 8c78b9afde078654eb6cfbad7e533951, type: 2}
+  titleTrack: {fileID: 0}
+  defaultAlwaysOnTitles: []
   description: "Said to descend when storms split the heavens. Zephyros\u2019s wings
     generate winds so fierce they can level forests in moments."

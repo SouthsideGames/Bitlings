@@ -15,6 +15,7 @@ MonoBehaviour:
   id: M-057
   displayName: Masklair
   type: 6
+  typeIcon: {fileID: 21300000, guid: f05da849a1c8472468f431123a2a2c55, type: 3}
   icon: {fileID: 21300000, guid: da57a89994a846c468d6702a6f086cb4, type: 3}
   backIcon: {fileID: 21300000, guid: a2c222b4924a1734c861ac982286f54d, type: 3}
   shinyIcon: {fileID: 21300000, guid: 5a4cc71965aaeee4eb9a28457aae3480, type: 3}
@@ -37,6 +38,7 @@ MonoBehaviour:
   spawnWeight: 1.5
   jobSkill: 2.2
   rarity: 3
-  tagTrack: {fileID: 11400000, guid: 381beec714be34a4c93f333565c2016f, type: 2}
+  titleTrack: {fileID: 0}
+  defaultAlwaysOnTitles: []
   description: With its mask and cape, Masklair fights like a champion of the shadows.
     It thrives in duels, feeding on the clash of wills as much as the clash of blades.

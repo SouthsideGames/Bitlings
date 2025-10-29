@@ -15,6 +15,7 @@ MonoBehaviour:
   id: M-013
   displayName: Mawric
   type: 2
+  typeIcon: {fileID: 21300000, guid: 85eb7ffaf6611914b8661dbe382134a0, type: 3}
   icon: {fileID: 21300000, guid: c155da2b278a05346879846223cb376a, type: 3}
   backIcon: {fileID: 21300000, guid: 9a7e14f5b3cdedd499d92093eb111504, type: 3}
   shinyIcon: {fileID: 21300000, guid: 525b1043849ac4834aeb2ae4d61d6975, type: 3}
@@ -37,6 +38,7 @@ MonoBehaviour:
   spawnWeight: 0
   jobSkill: 1.2
   rarity: 0
-  tagTrack: {fileID: 11400000, guid: 76c6b7dded0c06c45ba9410e32192965, type: 2}
+  titleTrack: {fileID: 0}
+  defaultAlwaysOnTitles: []
   description: It can swallow prey nearly its own size. Mawric lurks where rivers
     run deep, feared for pulling Bitlings into the dark below.

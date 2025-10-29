@@ -15,6 +15,7 @@ MonoBehaviour:
   id: M-055
   displayName: Shieldrax
   type: 6
+  typeIcon: {fileID: 21300000, guid: f05da849a1c8472468f431123a2a2c55, type: 3}
   icon: {fileID: 21300000, guid: 46493ad440305f44d986a91861ebdaf1, type: 3}
   backIcon: {fileID: 21300000, guid: 3b301f9884a2011438e174b152088386, type: 3}
   shinyIcon: {fileID: 21300000, guid: 43a79926b05fca847ab514ad5164395f, type: 3}
@@ -37,6 +38,7 @@ MonoBehaviour:
   spawnWeight: 2.5
   jobSkill: 1.9
   rarity: 1
-  tagTrack: {fileID: 11400000, guid: 3dbb0a98b0c268b42994f28fe39a6ea5, type: 2}
+  titleTrack: {fileID: 0}
+  defaultAlwaysOnTitles: []
   description: Its claws harden into shield-like plates. Shieldrax challenges opponents
     head-on, slamming its armored fists together before battle.

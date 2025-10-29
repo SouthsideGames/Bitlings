@@ -15,6 +15,7 @@ MonoBehaviour:
   id: M-052
   displayName: Prophex
   type: 10
+  typeIcon: {fileID: 21300000, guid: e89bfea571c14724aa8f62314afa770b, type: 3}
   icon: {fileID: 21300000, guid: da6cc47de0ae19e4fa4eb152367924b5, type: 3}
   backIcon: {fileID: 21300000, guid: fe7ffe8066df7a346b0ca23653780a01, type: 3}
   shinyIcon: {fileID: 21300000, guid: b17a9d556cae6784fadb5d5b29ab591d, type: 3}
@@ -37,6 +38,7 @@ MonoBehaviour:
   spawnWeight: 1.5
   jobSkill: 2.2
   rarity: 3
-  tagTrack: {fileID: 11400000, guid: 5db11a46ef3bbef4689729ba5718dcd3, type: 2}
+  titleTrack: {fileID: 0}
+  defaultAlwaysOnTitles: []
   description: "Its visions pierce into the darkest corners of fate. Prophex\u2019s
     warnings are often riddles, whispered moments before disaster strikes."

@@ -15,6 +15,7 @@ MonoBehaviour:
   id: M-064
   displayName: Pyrranth
   type: 1
+  typeIcon: {fileID: 21300000, guid: f62ba72457a83394cb27be8b0d0011db, type: 3}
   icon: {fileID: 21300000, guid: 1873dd3e07d3fd9429150720899a966d, type: 3}
   backIcon: {fileID: 21300000, guid: e09a2731b33d54047adce1c97d1660e3, type: 3}
   shinyIcon: {fileID: 21300000, guid: 36b26588093641f438d92b17eaf2be6e, type: 3}
@@ -37,6 +38,7 @@ MonoBehaviour:
   spawnWeight: 0
   jobSkill: 2.7
   rarity: 4
-  tagTrack: {fileID: 11400000, guid: 635ec52b575d97f41bfeb3e0c0e47455, type: 2}
+  titleTrack: {fileID: 0}
+  defaultAlwaysOnTitles: []
   description: "Its body radiates the heat of molten rock. Pyrranth\u2019s horn glows
     white-hot in battle, able to pierce armor as if it were wax."

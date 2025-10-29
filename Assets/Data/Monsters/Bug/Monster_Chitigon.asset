@@ -15,6 +15,7 @@ MonoBehaviour:
   id: M-065
   displayName: Chitigon
   type: 11
+  typeIcon: {fileID: 21300000, guid: e7944f80be5333544ad4fc96dbaec3e6, type: 3}
   icon: {fileID: 21300000, guid: 8a9cf704562e3cb4eb19af085bb43108, type: 3}
   backIcon: {fileID: 21300000, guid: 3887ea960de68ca4cb534612791be3d2, type: 3}
   shinyIcon: {fileID: 21300000, guid: a1e60953a367eaa41b61026019e46374, type: 3}
@@ -37,6 +38,7 @@ MonoBehaviour:
   spawnWeight: 0
   jobSkill: 2.6
   rarity: 4
-  tagTrack: {fileID: 11400000, guid: ec1c8997973307649a66c091a216d515, type: 2}
+  titleTrack: {fileID: 0}
+  defaultAlwaysOnTitles: []
   description: Forged of steel-like chitin, Chitigon commands lesser swarms with
     piercing screeches. Its strikes are said to split stone.

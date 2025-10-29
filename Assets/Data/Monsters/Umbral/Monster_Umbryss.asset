@@ -15,6 +15,7 @@ MonoBehaviour:
   id: M-046
   displayName: Umbryss
   type: 15
+  typeIcon: {fileID: 21300000, guid: 5e2d5499617378b40971a6d461eb2727, type: 3}
   icon: {fileID: 8644608577048307198, guid: b33afc29d172e954aa897586b2445f66, type: 3}
   backIcon: {fileID: 3615147600836554367, guid: a01b422c048a2d64288c3548b6c006eb, type: 3}
   shinyIcon: {fileID: -801612624374383581, guid: 0e67d02d7d3a44635a3295f94ce5e2d9, type: 3}
@@ -37,6 +38,7 @@ MonoBehaviour:
   spawnWeight: 0
   jobSkill: 2.5
   rarity: 4
-  tagTrack: {fileID: 11400000, guid: b8bfbe3303f1eff47b9ad96531fdc225, type: 2}
+  titleTrack: {fileID: 0}
+  defaultAlwaysOnTitles: []
   description: Born from the deepest shadows, Umbryss is said to blot out the light
     around it. Legends claim entire nights have fallen early at its passing.

@@ -15,6 +15,7 @@ MonoBehaviour:
   id: M-034
   displayName: Caraphex
   type: 11
+  typeIcon: {fileID: 21300000, guid: e7944f80be5333544ad4fc96dbaec3e6, type: 3}
   icon: {fileID: 21300000, guid: 41f740173aef03848963d8e9d1726e54, type: 3}
   backIcon: {fileID: 21300000, guid: 4e8635b01e6e05846b53bf7788aaa63e, type: 3}
   shinyIcon: {fileID: 21300000, guid: 7448d0da98a7743fda2a126ca50ac9df, type: 3}
@@ -37,6 +38,7 @@ MonoBehaviour:
   spawnWeight: 0
   jobSkill: 1.2
   rarity: 2
-  tagTrack: {fileID: 11400000, guid: 104433c896724d345b136cb534f1a30e, type: 2}
+  titleTrack: {fileID: 0}
+  defaultAlwaysOnTitles: []
   description: Its shell hardens into a gleaming carapace. Caraphex is known to gather
     in swarms, overwhelming much larger foes with sheer numbers.

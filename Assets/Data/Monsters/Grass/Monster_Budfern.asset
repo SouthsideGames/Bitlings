@@ -15,6 +15,7 @@ MonoBehaviour:
   id: M-006
   displayName: Budfern
   type: 3
+  typeIcon: {fileID: 21300000, guid: 2ec966d8a0664734c8cb549a6f2c9b49, type: 3}
   icon: {fileID: 21300000, guid: 345c50099b8d70d4393d1fc536f5643a, type: 3}
   backIcon: {fileID: 21300000, guid: 51f92782a610dce418e49405bcb5f5b4, type: 3}
   shinyIcon: {fileID: 21300000, guid: 257f0dc8b42d86c4cab683288ee2264d, type: 3}
@@ -37,6 +38,7 @@ MonoBehaviour:
   spawnWeight: 7
   jobSkill: 1
   rarity: 0
-  tagTrack: {fileID: 11400000, guid: c9089b6ce79ddf049b9a1348612f2e40, type: 2}
+  titleTrack: {fileID: 0}
+  defaultAlwaysOnTitles: []
   description: Its leafy body helps it blend into undergrowth. Budfern sways with
     the breeze, hiding from predators in the Bitling world.

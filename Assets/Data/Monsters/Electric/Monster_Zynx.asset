@@ -15,6 +15,7 @@ MonoBehaviour:
   id: M-016
   displayName: Zynx
   type: 4
+  typeIcon: {fileID: 21300000, guid: 3222076e383d35c4caf42204f19699c2, type: 3}
   icon: {fileID: 21300000, guid: b6ac4cd47c9dd433db3868d7fccaf473, type: 3}
   backIcon: {fileID: 21300000, guid: 7e90f42e827784d21b29244635c656db, type: 3}
   shinyIcon: {fileID: 21300000, guid: 286a484658da5bf42a65458b11bf5f4d, type: 3}
@@ -37,6 +38,7 @@ MonoBehaviour:
   spawnWeight: 6
   jobSkill: 1
   rarity: 0
-  tagTrack: {fileID: 11400000, guid: aec0788e038b0434bb72339bd2a01cdd, type: 2}
+  titleTrack: {fileID: 0}
+  defaultAlwaysOnTitles: []
   description: Zynx leaps unpredictably, its fur sparking with static. In the Bitling
     world, it is known to cling to power lines for warmth.

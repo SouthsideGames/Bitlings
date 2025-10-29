@@ -15,6 +15,7 @@ MonoBehaviour:
   id: M-001
   displayName: Cindrax
   type: 1
+  typeIcon: {fileID: 21300000, guid: f62ba72457a83394cb27be8b0d0011db, type: 3}
   icon: {fileID: 21300000, guid: 1226e2155d87cc54bad061c817a6faa8, type: 3}
   backIcon: {fileID: 21300000, guid: 04821365fb0f84d479662d5d54b3f8dd, type: 3}
   shinyIcon: {fileID: 21300000, guid: f572bf755d8964f448047b5c96414851, type: 3}
@@ -37,6 +38,7 @@ MonoBehaviour:
   spawnWeight: 2.5
   jobSkill: 1.8
   rarity: 2
-  tagTrack: {fileID: 11400000, guid: f5b626e1fee94fc49b3b89fb68182ea3, type: 2}
+  titleTrack: {fileID: 0}
+  defaultAlwaysOnTitles: []
   description: Cindrax gather near volcanic vents, where their flickering flames
     are said to spark new life in the Bitling world.

@@ -15,6 +15,7 @@ MonoBehaviour:
   id: M-053
   displayName: Oracorn
   type: 10
+  typeIcon: {fileID: 21300000, guid: e89bfea571c14724aa8f62314afa770b, type: 3}
   icon: {fileID: 21300000, guid: 88b58625dec45f94480927640c08807e, type: 3}
   backIcon: {fileID: 21300000, guid: 937fa09630d884a41b745bc079f1806b, type: 3}
   shinyIcon: {fileID: 21300000, guid: 17c5106b78310894e8559eb18c3163d2, type: 3}
@@ -37,6 +38,7 @@ MonoBehaviour:
   spawnWeight: 0.5
   jobSkill: 2.8
   rarity: 5
-  tagTrack: {fileID: 11400000, guid: 1f47a409efd38654ea33b6aaaf8de1b0, type: 2}
+  titleTrack: {fileID: 0}
+  defaultAlwaysOnTitles: []
   description: "Said to appear only to those chosen by fate, Oracorn\u2019s horn
     glows with visions of destiny. Its presence is believed to guide entire civilizations."

@@ -14,7 +14,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   id: M-048
   displayName: Scaelorn
-  type: 13
+  type: 14
+  typeIcon: {fileID: 21300000, guid: 12d385ecbdfdfef4a8dc4ea4e25a001d, type: 3}
   icon: {fileID: 21300000, guid: 2454d544c00e07b4cb9c79d03a8650fd, type: 3}
   backIcon: {fileID: 21300000, guid: 9533ae198e9d66d4d9319ef54b6a95b1, type: 3}
   shinyIcon: {fileID: 21300000, guid: dd56dd2ecadae2d47942171ced43623e, type: 3}
@@ -37,6 +38,7 @@ MonoBehaviour:
   spawnWeight: 1.5
   jobSkill: 2.2
   rarity: 2
-  tagTrack: {fileID: 11400000, guid: 2a15596940d8fe64daab6a580f1e84f8, type: 2}
+  titleTrack: {fileID: 0}
+  defaultAlwaysOnTitles: []
   description: Its scales harden into jagged armor as it matures. Scaelorn is feared
     for ambushing travelers, swooping down with bladed claws.

@@ -15,6 +15,7 @@ MonoBehaviour:
   id: M-014
   displayName: Phobrak
   type: 2
+  typeIcon: {fileID: 21300000, guid: 85eb7ffaf6611914b8661dbe382134a0, type: 3}
   icon: {fileID: 21300000, guid: ab99683266fdd784db041d5ee8efbaa4, type: 3}
   backIcon: {fileID: 21300000, guid: fa68ddcb87a369c489261be31ec3d0ce, type: 3}
   shinyIcon: {fileID: 21300000, guid: 505f3e3c57b274e8c82c2d01d64ec804, type: 3}
@@ -37,6 +38,7 @@ MonoBehaviour:
   spawnWeight: 2.5
   jobSkill: 1.9
   rarity: 2
-  tagTrack: {fileID: 11400000, guid: df3637f42275a134ebd21d6e73ed2998, type: 2}
+  titleTrack: {fileID: 0}
+  defaultAlwaysOnTitles: []
   description: Its many arms writhe constantly, giving off a faint glow. Phobrak
     drifts through dark waters, said to pull travelers into the deep.

@@ -15,6 +15,7 @@ MonoBehaviour:
   id: M-041
   displayName: Murkshade
   type: 13
+  typeIcon: {fileID: 21300000, guid: a4dc8fe6005f03240b2a907edb679f02, type: 3}
   icon: {fileID: 21300000, guid: df388733627ed1c4e8cd13cc018195ed, type: 3}
   backIcon: {fileID: 21300000, guid: 26a449f23959da240b55ce256a4b6bbe, type: 3}
   shinyIcon: {fileID: 21300000, guid: da476f8300a140e499a0ea3e2c146caf, type: 3}
@@ -37,6 +38,7 @@ MonoBehaviour:
   spawnWeight: 7
   jobSkill: 1
   rarity: 0
-  tagTrack: {fileID: 11400000, guid: 4654788ab19f32e4da5d5ed1832fdd41, type: 2}
+  titleTrack: {fileID: 0}
+  defaultAlwaysOnTitles: []
   description: A drifting cloud of cursed smoke. Murkshade fades in and out of sight,
     its glowing eyes the last thing seen before it vanishes.

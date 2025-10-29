@@ -15,6 +15,7 @@ MonoBehaviour:
   id: M-040
   displayName: Obliviron
   type: 16
+  typeIcon: {fileID: 21300000, guid: bd1a1c79118e35a4da2783a3618d122e, type: 3}
   icon: {fileID: 21300000, guid: 0f2298c514247d44b9a96b96af6d5d82, type: 3}
   backIcon: {fileID: 21300000, guid: 2ea653cae2d80104593300ee8de92377, type: 3}
   shinyIcon: {fileID: 21300000, guid: ae3a772aa98854b57880de5fd5d0eb11, type: 3}
@@ -37,6 +38,7 @@ MonoBehaviour:
   spawnWeight: 0.5
   jobSkill: 2.8
   rarity: 5
-  tagTrack: {fileID: 11400000, guid: 860b961c3ab50504eb3da4749396f395, type: 2}
+  titleTrack: {fileID: 0}
+  defaultAlwaysOnTitles: []
   description: Forged from forgotten alloys, Obliviron is said to be indestructible.
     Legends claim its armored body has withstood centuries without a single crack.

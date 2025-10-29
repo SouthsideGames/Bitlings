@@ -15,6 +15,7 @@ MonoBehaviour:
   id: M-035
   displayName: Crestail
   type: 9
+  typeIcon: {fileID: 21300000, guid: a40ec02d4cbe32b4ca6c19d8846b1bce, type: 3}
   icon: {fileID: 21300000, guid: 54efb5850660cfa4f96c0ade1974e277, type: 3}
   backIcon: {fileID: 21300000, guid: c1b8687aee6a3764f9c7557db8393080, type: 3}
   shinyIcon: {fileID: 21300000, guid: fede27bc3ac3a4522931ce994a706be4, type: 3}
@@ -37,6 +38,7 @@ MonoBehaviour:
   spawnWeight: 7
   jobSkill: 1
   rarity: 0
-  tagTrack: {fileID: 11400000, guid: 297efcf65fc62ff439c42aabdbfb1a0d, type: 2}
+  titleTrack: {fileID: 0}
+  defaultAlwaysOnTitles: []
   description: Its fiery crest flares as it takes flight. Crestall darts through
     the skies in bursts of speed, often racing the wind itself.

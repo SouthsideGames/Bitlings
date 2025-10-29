@@ -15,6 +15,7 @@ MonoBehaviour:
   id: M-023
   displayName: Glacirn
   type: 5
+  typeIcon: {fileID: 21300000, guid: 1a0523f8755ad1f4485d1c7613888105, type: 3}
   icon: {fileID: 21300000, guid: 6953f3874cb7a4950b523c7d9e4f4f71, type: 3}
   backIcon: {fileID: 21300000, guid: 947b6658c8c13419caaad89d3e754b36, type: 3}
   shinyIcon: {fileID: 21300000, guid: 8a7e12eb86593984996f719c257400fb, type: 3}
@@ -37,6 +38,7 @@ MonoBehaviour:
   spawnWeight: 2.5
   jobSkill: 1.8
   rarity: 2
-  tagTrack: {fileID: 11400000, guid: c056eb4b174a7a443abea708f2f3a244, type: 2}
+  titleTrack: {fileID: 0}
+  defaultAlwaysOnTitles: []
   description: Its jagged body bristles with icy spines. Glacirn rolls across frozen
     plains, scattering shards that can pierce even steel.

@@ -15,6 +15,7 @@ MonoBehaviour:
   id: M-024
   displayName: Grubble
   type: 8
+  typeIcon: {fileID: 21300000, guid: b1c9dc482ebfb5046ba40b33bd731783, type: 3}
   icon: {fileID: 21300000, guid: 1688c27cfb18f914691095bf29de0147, type: 3}
   backIcon: {fileID: 21300000, guid: e6007203fd0e68a43bfac13360c16266, type: 3}
   shinyIcon: {fileID: 21300000, guid: 578fc5efbadfa47c593cb4f0152e8fce, type: 3}
@@ -37,6 +38,7 @@ MonoBehaviour:
   spawnWeight: 7
   jobSkill: 1
   rarity: 0
-  tagTrack: {fileID: 11400000, guid: 70dfb69cc5bbe2c4e817f71510cd056e, type: 2}
+  titleTrack: {fileID: 0}
+  defaultAlwaysOnTitles: []
   description: Grubble spends most of its time half-buried in dirt. It shakes the
     ground as it digs, loosening soil for other Bitlings to burrow through.

@@ -15,6 +15,7 @@ MonoBehaviour:
   id: M-028
   displayName: Bouldit
   type: 12
+  typeIcon: {fileID: 21300000, guid: b7f6f5a14fb5e6243b5df871e57d7d1b, type: 3}
   icon: {fileID: 21300000, guid: 340847cd1aaf6774094ffbae167d396d, type: 3}
   backIcon: {fileID: 21300000, guid: b0aec7b454ab9264397316ef8480aebf, type: 3}
   shinyIcon: {fileID: 21300000, guid: 0e3a3cf65cd610c4997601021b494721, type: 3}
@@ -37,6 +38,7 @@ MonoBehaviour:
   spawnWeight: 7
   jobSkill: 1
   rarity: 0
-  tagTrack: {fileID: 11400000, guid: 77a8508eb8f7e9a4299d206a7b446e89, type: 2}
+  titleTrack: {fileID: 0}
+  defaultAlwaysOnTitles: []
   description: Bouldit plods slowly across rocky fields. When it rests, its body
     is indistinguishable from an ordinary boulder.

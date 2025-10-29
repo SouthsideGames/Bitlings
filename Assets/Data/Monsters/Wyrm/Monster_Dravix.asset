@@ -14,7 +14,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   id: M-047
   displayName: Dravix
-  type: 13
+  type: 14
+  typeIcon: {fileID: 21300000, guid: 12d385ecbdfdfef4a8dc4ea4e25a001d, type: 3}
   icon: {fileID: 21300000, guid: 27aa3d407df8a2743ad4477ea3980840, type: 3}
   backIcon: {fileID: 21300000, guid: 80205622ed7e2404db881414579a263d, type: 3}
   shinyIcon: {fileID: 21300000, guid: 6384cc5a1af6d544f9cb29bcf77acf2d, type: 3}
@@ -37,6 +38,7 @@ MonoBehaviour:
   spawnWeight: 6
   jobSkill: 1
   rarity: 0
-  tagTrack: {fileID: 11400000, guid: b6d9f7df3b6488540863e44399e8ad10, type: 2}
+  titleTrack: {fileID: 0}
+  defaultAlwaysOnTitles: []
   description: Dravix clings to cliffs with its claws. Its wings are not strong enough
     for long flights, so it glides between rocky ledges in search of prey.

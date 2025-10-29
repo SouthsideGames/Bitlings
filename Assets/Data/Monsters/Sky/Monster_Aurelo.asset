@@ -15,6 +15,7 @@ MonoBehaviour:
   id: M-036
   displayName: Aurelo
   type: 9
+  typeIcon: {fileID: 21300000, guid: a40ec02d4cbe32b4ca6c19d8846b1bce, type: 3}
   icon: {fileID: 21300000, guid: 0fa821f62be7e0a42ae3f39f5e2b10d3, type: 3}
   backIcon: {fileID: 21300000, guid: 4d50d00f0abc9f449ae6f588d56beeeb, type: 3}
   shinyIcon: {fileID: 21300000, guid: fa1e19c2614814de8aaf1780248c942d, type: 3}
@@ -37,6 +38,7 @@ MonoBehaviour:
   spawnWeight: 5
   jobSkill: 1.2
   rarity: 1
-  tagTrack: {fileID: 11400000, guid: cf8a6addf12a7ef4f86e77c70fc1674a, type: 2}
+  titleTrack: {fileID: 0}
+  defaultAlwaysOnTitles: []
   description: Aurelo flits restlessly through the skies. It calls to others with
     high chirps that echo across valleys.

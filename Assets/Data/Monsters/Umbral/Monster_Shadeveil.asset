@@ -15,6 +15,7 @@ MonoBehaviour:
   id: M-045
   displayName: Shadeveil
   type: 15
+  typeIcon: {fileID: 21300000, guid: 5e2d5499617378b40971a6d461eb2727, type: 3}
   icon: {fileID: 8644608577048307198, guid: db2f6359eefded641a51c42c68fcc6f5, type: 3}
   backIcon: {fileID: 3615147600836554367, guid: 73c21d72c8747b14fba4e57a8ca6c8ee, type: 3}
   shinyIcon: {fileID: -801612624374383581, guid: 1af389bc46fa0442d90b3e0b7dea48c0, type: 3}
@@ -37,6 +38,7 @@ MonoBehaviour:
   spawnWeight: 1.5
   jobSkill: 2
   rarity: 3
-  tagTrack: {fileID: 11400000, guid: bb8ec83f75846c445bee70d3dfbff760, type: 2}
+  titleTrack: {fileID: 0}
+  defaultAlwaysOnTitles: []
   description: Its body is shrouded in ever-shifting wisps. Shadeveil drifts silently
     through ruins, its laughter echoing long after it fades.

@@ -15,6 +15,7 @@ MonoBehaviour:
   id: M-062
   displayName: Auracryst
   type: 4
+  typeIcon: {fileID: 21300000, guid: 3222076e383d35c4caf42204f19699c2, type: 3}
   icon: {fileID: 21300000, guid: 717aa559265ca164e838f9fc3146a7e2, type: 3}
   backIcon: {fileID: 21300000, guid: 37bfa13a11a486e45af846aef283686f, type: 3}
   shinyIcon: {fileID: 21300000, guid: fb9db913bd80cb349883916b3900c82b, type: 3}
@@ -37,6 +38,7 @@ MonoBehaviour:
   spawnWeight: 0
   jobSkill: 2.8
   rarity: 4
-  tagTrack: {fileID: 11400000, guid: 6f338de4a8fd75045b3c38cfb8093aa0, type: 2}
+  titleTrack: {fileID: 0}
+  defaultAlwaysOnTitles: []
   description: Its wings shimmer with crystalline lightning. Auracryst soars among
     stormclouds, drawing entire skies into its control.

@@ -14,7 +14,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   id: M-050
   displayName: Ignyros
-  type: 13
+  type: 14
+  typeIcon: {fileID: 21300000, guid: 12d385ecbdfdfef4a8dc4ea4e25a001d, type: 3}
   icon: {fileID: 21300000, guid: 70b88ca745341204fb4697ad392b176e, type: 3}
   backIcon: {fileID: 21300000, guid: 159f877747b45744787050a60c5563f4, type: 3}
   shinyIcon: {fileID: 21300000, guid: 335dff3eab02f684387d5c9c93cf019b, type: 3}
@@ -37,6 +38,7 @@ MonoBehaviour:
   spawnWeight: 1
   jobSkill: 2.5
   rarity: 4
-  tagTrack: {fileID: 11400000, guid: 8940c1c8ab9c97548bd2f6d596c70da2, type: 2}
+  titleTrack: {fileID: 0}
+  defaultAlwaysOnTitles: []
   description: "Forged in the heart of the earth, its scales shine like metal. Ignyros\u2019s
     tail flame never dies, said to be the spark of the world\u2019s first fire."

@@ -15,6 +15,7 @@ MonoBehaviour:
   id: M-003
   displayName: Scorchal
   type: 1
+  typeIcon: {fileID: 21300000, guid: f62ba72457a83394cb27be8b0d0011db, type: 3}
   icon: {fileID: 21300000, guid: 0cefc01776e6aa241b31e0183462edd9, type: 3}
   backIcon: {fileID: 21300000, guid: d939207a7339a4f4d804a9a636c18cf3, type: 3}
   shinyIcon: {fileID: 21300000, guid: 1f6e5e99e4d52443d8d2ff4497e15c9d, type: 3}
@@ -37,6 +38,7 @@ MonoBehaviour:
   spawnWeight: 3.5
   jobSkill: 1.2
   rarity: 0
-  tagTrack: {fileID: 11400000, guid: 4f002f9e0e5b9814ea5af8c0a5ae7362, type: 2}
+  titleTrack: {fileID: 0}
+  defaultAlwaysOnTitles: []
   description: The flames on its back grow wilder as it matures. Scorchal is known
     to challenge others with bursts of fire to prove its strength.

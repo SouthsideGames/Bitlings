@@ -15,6 +15,7 @@ MonoBehaviour:
   id: M-042
   displayName: Wraithor
   type: 13
+  typeIcon: {fileID: 21300000, guid: a4dc8fe6005f03240b2a907edb679f02, type: 3}
   icon: {fileID: 21300000, guid: ac50bb944382a7a4da96c2f6e3e0faee, type: 3}
   backIcon: {fileID: 21300000, guid: 7c8cb506a237c3247aa0bfaa4713041e, type: 3}
   shinyIcon: {fileID: 21300000, guid: fd9202dfe669e7a45a1332d62facf053, type: 3}
@@ -37,6 +38,7 @@ MonoBehaviour:
   spawnWeight: 1.5
   jobSkill: 2.2
   rarity: 3
-  tagTrack: {fileID: 11400000, guid: 0e6dd1101493db34c8a0f4b1f1a8d39b, type: 2}
+  titleTrack: {fileID: 0}
+  defaultAlwaysOnTitles: []
   description: Its form flickers like a tattered veil. Wraithor slips through walls
     and shadows, striking unseen before vanishing without a trace.

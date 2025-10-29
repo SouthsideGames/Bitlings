@@ -25,7 +25,7 @@ public static class TitleUtility
                 return ctx.selfHp01 >= Mathf.Clamp01(t.threshold01);
 
             case ConditionKind.AllyCountBelow:
-                return ctx.allyCount < Mathf.Max(0, t.countN);
+                return ctx.alliesAlive < Mathf.Max(0, t.countN);
 
             case ConditionKind.WinStreakAbove:
                 return ctx.winStreak > Mathf.Max(0, t.countN);

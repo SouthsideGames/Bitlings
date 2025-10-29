@@ -15,6 +15,7 @@ MonoBehaviour:
   id: M-022
   displayName: Cryora
   type: 5
+  typeIcon: {fileID: 21300000, guid: 1a0523f8755ad1f4485d1c7613888105, type: 3}
   icon: {fileID: 21300000, guid: d01017f1acdc84a79af46dff25064211, type: 3}
   backIcon: {fileID: 21300000, guid: 6a2e386a0cce649c8850a92afc9d3726, type: 3}
   shinyIcon: {fileID: 21300000, guid: 8e7af12642f37824fad5e9da0cdbc284, type: 3}
@@ -37,6 +38,7 @@ MonoBehaviour:
   spawnWeight: 0
   jobSkill: 1.2
   rarity: 1
-  tagTrack: {fileID: 11400000, guid: d3957edcd071735459cda23ca6bf9e30, type: 2}
+  titleTrack: {fileID: 0}
+  defaultAlwaysOnTitles: []
   description: Its icy petals spin gracefully in the wind. Cryora is revered in the
     Bitling world, said to bring serene snowfalls wherever it drifts.

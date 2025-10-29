@@ -15,6 +15,7 @@ MonoBehaviour:
   id: M-044
   displayName: Maskra
   type: 15
+  typeIcon: {fileID: 21300000, guid: 5e2d5499617378b40971a6d461eb2727, type: 3}
   icon: {fileID: 21300000, guid: 93f44a494c459a945bd3c1f65ea7aa47, type: 3}
   backIcon: {fileID: 21300000, guid: 414e4c75dd2fb9b49bc56fa45502efbd, type: 3}
   shinyIcon: {fileID: 21300000, guid: 62510e81a9bf34582976043f5834dce7, type: 3}
@@ -37,6 +38,7 @@ MonoBehaviour:
   spawnWeight: 6
   jobSkill: 1
   rarity: 0
-  tagTrack: {fileID: 11400000, guid: 6de35ab3888d47549845dc0a379dddd8, type: 2}
+  titleTrack: {fileID: 0}
+  defaultAlwaysOnTitles: []
   description: The mask it wears is fused to its body. Maskra lurks at the edge of
     torchlight, its eyes glinting before it slips back into darkness.

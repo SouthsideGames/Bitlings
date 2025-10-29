@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -14,9 +15,7 @@ public sealed class TitleManager : MonoBehaviour
 
     private void Awake()
     {
-        if (I != null && I != this) { Destroy(gameObject); return; }
         I = this;
-
         BuildIndex();
     }
 
@@ -108,7 +107,6 @@ public sealed class TitleManager : MonoBehaviour
         return true;
     }
 
-
     /// <summary>Clear selection for a given tier.</summary>
     public bool Unequip(string monsterId, MonsterDataSO def, int tierIndex)
     {
@@ -123,7 +121,6 @@ public sealed class TitleManager : MonoBehaviour
         TitleSaveStore.Save();
         return true;
     }
-
 
     /// <summary>Returns the equipped TitleSO for each unlocked tier (or null/empty if none).</summary>
     public List<TitleSO> GetEquippedList(string monsterId, MonsterDataSO def, int level)
@@ -207,28 +204,43 @@ public sealed class TitleManager : MonoBehaviour
     }
 
     // --- Damage filter (incoming) ---
-    public struct DamageFilter
+    // Adapter expects fields named: cannotBeCrit, percentReduce, flatReduce
+    public struct TitleDamageFilter
     {
-        public int flatReduce;         // subtract after defense
-        public float percentMultiplier;// multiply after flat
-        public bool cannotBeCrit;      // true => negate crits
+        public bool  cannotBeCrit;     // true => negate crits
+        public float percentReduce;    // 0.15 => reduce 15% after DEF (scalar applied later)
+        public int   flatReduce;       // subtract after % reduce
     }
 
-    public DamageFilter GetDamageFilterFor(string monsterId, MonsterDataSO def, int level)
+    // This signature matches TitlesAdapter.GetDamageFilter(...) reflection call.
+    public TitleDamageFilter GetDamageFilter(string monsterId, MonsterDataSO def, int level)
     {
+        // If you already authored DamageFilterTitleSO assets:
         var titles = GetEquippedList(monsterId, def, level);
-        var f = new DamageFilter { flatReduce = 0, percentMultiplier = 1f, cannotBeCrit = false };
+        var f = new TitleDamageFilter { cannotBeCrit = false, percentReduce = 0f, flatReduce = 0 };
 
         for (int i = 0; i < titles.Count; i++)
         {
             var t = titles[i] as DamageFilterTitleSO;
             if (!t) continue;
 
-            f.flatReduce += Mathf.Max(0, t.flatReduce);
-            f.percentMultiplier *= Mathf.Max(0f, t.percentMultiplier);
+            // Your DamageFilterTitleSO uses percentMultiplier (1.0 baseline).
+            // Convert to percentReduce: e.g., 0.80 multiplier => 20% reduce.
+            float pctReduceFromMult = Mathf.Clamp01(1f - Mathf.Max(0f, t.percentMultiplier));
+
+            f.flatReduce   += Mathf.Max(0, t.flatReduce);
+            f.percentReduce = Mathf.Clamp01(f.percentReduce + pctReduceFromMult); // additive reduce caps at 100%
             if (t.cannotBeCrit) f.cannotBeCrit = true;
         }
+
         return f;
+    }
+
+    // Keep the boxed variant for any older callers (harmless).
+    public object GetDamageFilterBoxed(string monsterId, MonsterDataSO def, int level)
+    {
+        var f = GetDamageFilter(monsterId, def, level);
+        return f; // boxed TitleManager.TitleDamageFilter
     }
 
     // --- Job boosters (while assigned) ---
@@ -244,7 +256,7 @@ public sealed class TitleManager : MonoBehaviour
         return mul;
     }
 
-    public float GetJobAuraPercent(string monsterId, MonsterDataSO def, int level)
+    public float GetJobAuraPercent(string monsterId, MonsterDataSO def, int level, JobType site)
     {
         var titles = GetEquippedList(monsterId, def, level);
         float sum = 0f;
@@ -256,7 +268,8 @@ public sealed class TitleManager : MonoBehaviour
         return sum;
     }
 
-    public int GetJobCapacityBonusFlat(string monsterId, MonsterDataSO def, int level)
+    // Adapter calls 4-arg version; include site even if you don't use it yet.
+    public int GetJobCapacityBonusFlat(string monsterId, MonsterDataSO def, int level, JobType site)
     {
         var titles = GetEquippedList(monsterId, def, level);
         int sum = 0;
@@ -268,22 +281,120 @@ public sealed class TitleManager : MonoBehaviour
         return sum;
     }
 
+    // ─────────────────────────────────────────────────────────────────────
+    // NEW: Hooks the adapter expects (coin/xp/capture/job rate)
+    // ─────────────────────────────────────────────────────────────────────
+
+    public float GetCoinMultOnVictory(string monsterId, MonsterDataSO wild, int wildLevel)
+    {
+        var titles = GetEquippedList(monsterId, def: wild /* not used */, level: Mathf.Max(1, wildLevel));
+        float mul = 1f;
+
+        for (int i = 0; i < titles.Count; i++)
+        {
+            var t = titles[i];
+            if (!t) continue;
+
+            // Direct type support if you authored a specific SO
+            if (t is CoinBonusOnVictoryTitleSO cb) { mul *= Mathf.Max(0f, cb.coinMultiplier); continue; }
+
+            // Reflection fallback for flexible authoring:
+            if (TryReadFloat(t, out var v, "coinMultiplier", "coinMultOnVictory", "victoryCoinMult", "coinsMult"))
+                mul *= Mathf.Max(0f, v);
+        }
+        return Mathf.Max(0f, mul);
+    }
+
+    public float GetXPMultOnVictory(string monsterId, MonsterDataSO wild, int wildLevel)
+    {
+        var titles = GetEquippedList(monsterId, def: wild /* not used */, level: Mathf.Max(1, wildLevel));
+        float mul = 1f;
+
+        for (int i = 0; i < titles.Count; i++)
+        {
+            var t = titles[i];
+            if (!t) continue;
+
+            if (t is XPBonusOnVictoryTitleSO xb) { mul *= Mathf.Max(0f, xb.xpMultiplier); continue; }
+
+            if (TryReadFloat(t, out var v, "xpMultiplier", "xpMultOnVictory", "victoryXpMult", "expMultiplier"))
+                mul *= Mathf.Max(0f, v);
+        }
+        return Mathf.Max(0f, mul);
+    }
+
+    public float GetCaptureChanceMult(string monsterId)
+    {
+        // Use lead monster's titles; level isn't relevant, but pass something sane
+        var def = MonsterLibraryLocator.GetById(monsterId);
+        int lvl = 1;
+        var titles = GetEquippedList(monsterId, def, lvl);
+
+        float mul = 1f;
+        for (int i = 0; i < titles.Count; i++)
+        {
+            var t = titles[i];
+            if (!t) continue;
+
+            if (t is CaptureChanceTitleSO cc) { mul *= Mathf.Max(0f, cc.chanceMultiplier); continue; }
+
+            if (TryReadFloat(t, out var v, "captureChanceMultiplier", "captureMult", "captureChanceMult"))
+                mul *= Mathf.Max(0f, v);
+        }
+        return Mathf.Max(0f, mul);
+    }
+
+    public float GetJobRateMult(string monsterId, JobType site)
+    {
+        var def = MonsterLibraryLocator.GetById(monsterId);
+        int lvl = 1;
+        var titles = GetEquippedList(monsterId, def, lvl);
+
+        float mul = 1f;
+        for (int i = 0; i < titles.Count; i++)
+        {
+            var t = titles[i];
+            if (!t) continue;
+
+            if (t is JobRateBoosterTitleSO jr) { mul *= Mathf.Max(0f, jr.rateMultiplier); continue; }
+
+            if (TryReadFloat(t, out var v, "rateMultiplier", "jobRateMultiplier", "productionMultiplier", "jobProdMult"))
+                mul *= Mathf.Max(0f, v);
+        }
+        return Mathf.Max(0f, mul);
+    }
+
     // router so adapter can use a string for StatKind
     public float GetStatValueRouter(string monsterId, MonsterDataSO def, int level, string statKind, TitleContext ctx, float baseValue)
     {
-        // StatKind enum is in your Titles code; do a safe parse:
-        if (!System.Enum.TryParse<StatKind>(statKind, out var kind))
+        if (!Enum.TryParse<StatKind>(statKind, out var kind))
             return baseValue;
         return GetStatValue(monsterId, def, level, kind, in ctx, baseValue);
     }
 
-    // box the struct so reflection callers don’t need the value-type signature
-    public object GetDamageFilterBoxed(string monsterId, MonsterDataSO def, int level)
+    // ─────────────────────────────────────────────────────────────────────
+    // Small reflection helper to read flexible field/property names
+    // ─────────────────────────────────────────────────────────────────────
+    private static bool TryReadFloat(object obj, out float value, params string[] names)
     {
-        var f = GetDamageFilterFor(monsterId, def, level);
-        return f; // boxed TitleManager.DamageFilter
+        value = 0f;
+        if (obj == null || names == null) return false;
+        var t = obj.GetType();
+
+        for (int i = 0; i < names.Length; i++)
+        {
+            var f = t.GetField(names[i]);
+            if (f != null)
+            {
+                try { value = Convert.ToSingle(f.GetValue(obj)); return true; } catch { }
+            }
+
+            var p = t.GetProperty(names[i]);
+            if (p != null)
+            {
+                try { value = Convert.ToSingle(p.GetValue(obj, null)); return true; } catch { }
+            }
+        }
+        return false;
     }
-
-
-    
 }

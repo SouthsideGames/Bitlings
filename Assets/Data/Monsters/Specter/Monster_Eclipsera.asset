@@ -15,6 +15,7 @@ MonoBehaviour:
   id: M-043
   displayName: Eclipsera
   type: 13
+  typeIcon: {fileID: 21300000, guid: a4dc8fe6005f03240b2a907edb679f02, type: 3}
   icon: {fileID: 21300000, guid: 4a131ec29e81fa4449f2e56fe258e63b, type: 3}
   backIcon: {fileID: 21300000, guid: 24f1cacb4e101b74c9f42e3150f4698b, type: 3}
   shinyIcon: {fileID: 21300000, guid: f1b04d79e8e03c545a0d4e49b51a0f78, type: 3}
@@ -37,6 +38,7 @@ MonoBehaviour:
   spawnWeight: 0.8
   jobSkill: 2.6
   rarity: 4
-  tagTrack: {fileID: 11400000, guid: 455d8bcd353d9cb44818d9db48b81235, type: 2}
+  titleTrack: {fileID: 0}
+  defaultAlwaysOnTitles: []
   description: Said to appear only under eclipses, Eclipsera drifts through the skies
     like a silent omen. Legends whisper that its gaze can pierce both time and soul.

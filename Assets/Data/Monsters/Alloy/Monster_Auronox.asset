@@ -15,6 +15,7 @@ MonoBehaviour:
   id: M-039
   displayName: Auronox
   type: 16
+  typeIcon: {fileID: 21300000, guid: bd1a1c79118e35a4da2783a3618d122e, type: 3}
   icon: {fileID: 21300000, guid: 81e894dbacd34e34fb25150851e7ebb3, type: 3}
   backIcon: {fileID: 21300000, guid: 48bb8762eee4532418b9ff679a59fe78, type: 3}
   shinyIcon: {fileID: 21300000, guid: ecdf56717301e43139fddd45c73511f3, type: 3}
@@ -37,6 +38,7 @@ MonoBehaviour:
   spawnWeight: 1.5
   jobSkill: 2.2
   rarity: 3
-  tagTrack: {fileID: 11400000, guid: 1d59dcda51011db40b178fe3874660f5, type: 2}
+  titleTrack: {fileID: 0}
+  defaultAlwaysOnTitles: []
   description: "Its golden frame hums with ancient energy. Auronox\u2019s central
     eye never blinks, watching tirelessly as its gears rotate in silent rhythm."

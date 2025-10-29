@@ -15,6 +15,7 @@ MonoBehaviour:
   id: M-060
   displayName: Carnivolt
   type: 7
+  typeIcon: {fileID: 21300000, guid: 16b4e9b3df396ae4099b8006cc5c6206, type: 3}
   icon: {fileID: 21300000, guid: e03c8ad16c5f9ac4ca8abf96c092158f, type: 3}
   backIcon: {fileID: 21300000, guid: fae1344ba7806f440b13720981512a24, type: 3}
   shinyIcon: {fileID: 21300000, guid: ec77710b8aacb41f4b51b5b4551f35e2, type: 3}
@@ -37,6 +38,7 @@ MonoBehaviour:
   spawnWeight: 0.5
   jobSkill: 2.8
   rarity: 5
-  tagTrack: {fileID: 11400000, guid: 1e81e1bdafc074d40bbc0b320c4e3327, type: 2}
+  titleTrack: {fileID: 0}
+  defaultAlwaysOnTitles: []
   description: "A twisted jester of the shadows. Carnivolt\u2019s laughter echoes
     through the dark, driving those who hear it into madness."

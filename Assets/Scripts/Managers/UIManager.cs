@@ -22,7 +22,7 @@ public enum PanelId
     RewardPopup,
     MonsterDetail,
     Evolution,
-    TagDetail,
+    TitleDetail,
     StarterPicker,
     Forge,
     HowToPlay,

@@ -15,6 +15,7 @@ MonoBehaviour:
   id: M-054
   displayName: Scravix
   type: 6
+  typeIcon: {fileID: 21300000, guid: f05da849a1c8472468f431123a2a2c55, type: 3}
   icon: {fileID: 21300000, guid: 3575cf33271b02642a7d1ee739c6ce04, type: 3}
   backIcon: {fileID: 21300000, guid: bd08bae856fc10a409ceeff4ef761dc7, type: 3}
   shinyIcon: {fileID: 21300000, guid: 7fe510f34b8d12242a8e9d08ca25d7e3, type: 3}
@@ -37,6 +38,7 @@ MonoBehaviour:
   spawnWeight: 6
   jobSkill: 1
   rarity: 0
-  tagTrack: {fileID: 11400000, guid: 8ef504820f0fb95438e37677d425aabf, type: 2}
+  titleTrack: {fileID: 0}
+  defaultAlwaysOnTitles: []
   description: Scravix fights with its claws even against much larger foes. It practices
     endlessly by scratching patterns into stone.

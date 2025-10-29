@@ -6,13 +6,13 @@ using UnityEngine.UI;
 
 public sealed class TitleButtonUI : MonoBehaviour
 {
-    [Header("Wire These In Inspector")]
+    [Header("Wire These In Inspector (optional)")]
     [SerializeField] private Button button;
     [SerializeField] private TMP_Text label;
-    [SerializeField] private TitleAssignPanelUI titleAssignPanel;
+    [SerializeField] private TitleAssignPanelUI titleAssignPanel; // optional: auto-locates if null
 
     // Current monster context (provided by Monster Detail)
-    private string _ownedMonsterId;     // OwnedMonsterData.monsterId (your save-owned GUID/ID)
+    private string _ownedMonsterId;     // OwnedMonsterData.monsterId (save-owned GUID/ID)
     private MonsterDataSO _monsterDef;  // Definition
     private int _level;
 
@@ -78,6 +78,8 @@ public sealed class TitleButtonUI : MonoBehaviour
         label.text = TrimToLength(sb.ToString(), 32);
     }
 
+    public void ForceRefresh() => RefreshLabel();
+
     private static string TrimToLength(string s, int max)
     {
         if (string.IsNullOrEmpty(s)) return s;
@@ -85,14 +87,29 @@ public sealed class TitleButtonUI : MonoBehaviour
         return s.Substring(0, Mathf.Max(0, max - 1)) + "…";
     }
 
-    private void OpenPanel()
+    public void OpenPanel()
     {
-        if (titleAssignPanel == null || string.IsNullOrEmpty(_ownedMonsterId) || _monsterDef == null)
+        // Need a valid context
+        if (string.IsNullOrEmpty(_ownedMonsterId) || _monsterDef == null)
             return;
 
-        // ✅ Call the 3-arg Open your panel defines
-        titleAssignPanel.Open(_ownedMonsterId, _monsterDef, _level);
-    }
+        // Ensure we have a TitleAssignPanelUI reference. If not wired in Inspector, locate it under the TitleDetail root.
+        if (titleAssignPanel == null)
+        {
+            var root = UIManager.I ? UIManager.I.GetRoot(PanelId.TitleDetail) : null;
+            if (root != null)
+                titleAssignPanel = root.GetComponentInChildren<TitleAssignPanelUI>(true);
+        }
 
-    public void ForceRefresh() => RefreshLabel();
+        if (titleAssignPanel == null)
+        {
+            Debug.LogWarning("[TitleButtonUI] TitleAssignPanelUI not found. Add it to the TitleDetail panel root.");
+            return;
+        }
+
+        // Pass context into the panel
+        titleAssignPanel.Open(_ownedMonsterId, _monsterDef, _level);
+
+        UIManager.I?.Show(PanelId.TitleDetail);
+    }
 }
