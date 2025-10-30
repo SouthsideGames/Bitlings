@@ -17,6 +17,9 @@ public class TitleAssignPanelUI : MonoBehaviour
 
     public static System.Action<string> OnTitlesChanged;
 
+    
+    
+
     public void Open(string ownedId, MonsterDataSO def, int level)
     {
         monsterOwnedId = ownedId;

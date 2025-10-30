@@ -16,5 +16,5 @@ MonoBehaviour:
   displayName: Titanblood
   description: Permanently increases ATK and DEF by +20%.
   stat: 1
-  operation: 0
+  operation: 3
   value: 0.2

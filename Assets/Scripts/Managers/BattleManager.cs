@@ -109,6 +109,10 @@ public class BattleManager : MonoBehaviour
     private int wildWeakenTurns = 0; // retained for future systems; unused now
     private float wildWeakenPct = 0f;
 
+    private static readonly Color StatNeutral = Color.white;
+    private static readonly Color StatBuff    = new Color(0.35f, 1f, 0.35f);
+    private static readonly Color StatNerf    = new Color(1f, 0.35f, 0.35f);
+
 
     void Start()
     {
@@ -329,8 +333,6 @@ public class BattleManager : MonoBehaviour
                     if (jobCtx[activeIndex].critResistBuffTurns > 0) jobCtx[activeIndex].critResistBuffTurns--;
                     if (jobCtx[activeIndex].dmgReduceBuffTurns > 0)  jobCtx[activeIndex].dmgReduceBuffTurns--;
                 }
-
-                // (Removed) tag-driven survive-round coin drip
 
                 yield return Wait(endRoundDelay);
             }
@@ -962,163 +964,79 @@ public class BattleManager : MonoBehaviour
         var def = teamDefs[activeIndex];
         if (!def) return;
 
-        int lvl = teamLevels != null && activeIndex < teamLevels.Length ? teamLevels[activeIndex] : 1;
+        int lvl = (teamLevels != null && activeIndex < teamLevels.Length) ? teamLevels[activeIndex] : 1;
 
-        // ──────────────────────────────────────────────
-        // Base stats (pre-mod)
-        // ──────────────────────────────────────────────
+        // ── PURE BASE (no titles/conditionals applied) ───────────────────────
         int baseHP  = Mathf.RoundToInt(BattleCalc.CalcHP(def, lvl));
         int baseATK = Mathf.RoundToInt(BattleCalc.CalcBaseAttack(def, lvl, 0, 0));
         int baseDEF = BattleCalc.CalcDefense(def, lvl);
         int baseSPD = BattleCalc.CalcSpeed(def, lvl);
 
-        // ──────────────────────────────────────────────
-        // Temp buffs (flat)
-        // ──────────────────────────────────────────────
+        // ── TEMP / EQUIP FLATS (visible in UI as part of the "base+flats") ──
         int tempHPFlat  = BattleTempBuffs.I ? BattleTempBuffs.I.GetPlayerHPBonus()        : 0;
         int tempATKFlat = BattleTempBuffs.I ? BattleTempBuffs.I.GetPlayerAtkBonus()       : 0;
         int tempDEFFlat = BattleTempBuffs.I ? BattleTempBuffs.I.GetPlayerDefenseBonus()   : 0;
         int tempSPDFlat = BattleTempBuffs.I ? BattleTempBuffs.I.GetPlayerSpeedFlatBonus() : 0;
 
-        // Optional timers (show as suffixes if your API exposes them; safe to leave empty)
-        string tHP  = "";
-        string tAtk = "";
-        string tDef = "";
-        string tSpd = "";
-
-        bool resistOn = BattleTempBuffs.I && BattleTempBuffs.I.IsTypeResistActive();
-
-        // ──────────────────────────────────────────────
-        // Equipped flat ATK (from roster)
-        // ──────────────────────────────────────────────
         int equippedFlatATK = 0;
         var roster = SaveManager.Data?.team;
         if (roster != null && activeIndex < roster.Count && roster[activeIndex] != null)
             equippedFlatATK = Mathf.Max(0, roster[activeIndex].flatAtkBonus);
 
-        // ──────────────────────────────────────────────
-        // Job context (already baked into teamMaxHP etc. in your pipeline)
-        // ──────────────────────────────────────────────
-        var jc = (jobCtx != null && activeIndex < jobCtx.Length) ? jobCtx[activeIndex] : null;
-
-        // ──────────────────────────────────────────────
-        // Title mods (flat + %)
-        // ──────────────────────────────────────────────
-        TitleStatMods tmods = default;
-        if (teamIds != null && activeIndex >= 0 && activeIndex < teamIds.Length && !string.IsNullOrEmpty(teamIds[activeIndex]))
-            tmods = TitlesAdapter.GetBattleStatMods(teamIds[activeIndex]);
-
-        // Also fetch conditional mods for display parity
-        var cmodsDisp = GetConditionalModsForActive();
+        // ── CONTEXT for conditional titles (safe defaults if you don’t track all fields here)
+       var ctx = TitleContext.Empty;
+            ctx.ownedId = (teamIds != null && activeIndex < teamIds.Length) ? teamIds[activeIndex] : "";
 
 
-        // Apply Title FLATs to base lines we’ll display
-        baseATK = Mathf.Max(1, baseATK + Mathf.Max(0, tmods.atkFlat));
-        baseDEF = Mathf.Max(0, baseDEF + Mathf.Max(0, tmods.defFlat));
-        baseSPD = Mathf.Max(1, baseSPD + Mathf.Max(0, tmods.spdFlat));
-        // Note: HP flat handled by your temp system; Title gives % to max HP below.
+        // If you want live HP% to affect conditionals (e.g., HealthBelow%), feed it:
+        float maxHPForCtx = Mathf.Max(1f, baseHP + tempHPFlat);
+        float currentHP   = (teamHP != null && activeIndex < teamHP.Length) ? teamHP[activeIndex] : maxHPForCtx;
+        ctx.selfHp01 = Mathf.Clamp01(currentHP / maxHPForCtx);
 
-        // ──────────────────────────────────────────────
-        // Current/max HP with job %, then Title HP%
-        // ──────────────────────────────────────────────
-        float maxHPBase = (teamMaxHP != null && activeIndex < teamMaxHP.Length) ? teamMaxHP[activeIndex] : baseHP;
-        float curMaxHP  = GetActiveMaxHP(maxHPBase); // adds temp flat HP
-        if (tmods.hpPct > 0f) curMaxHP *= (1f + tmods.hpPct); // Title % Max HP
-
-        float curHPRaw = (teamHP != null && activeIndex < teamHP.Length) ? teamHP[activeIndex] : curMaxHP;
-        int   curHPDisp = Mathf.RoundToInt(Mathf.Clamp(curHPRaw, 0f, curMaxHP));
-
-        // ──────────────────────────────────────────────
-        // Small helpers for badge segments
-        // ──────────────────────────────────────────────
-        string SegIfFlat(string label, int v, string time)   => (v != 0)  ? $" [{label}+{v}{time}]" : "";
-        string SegIfPct (string label, float v, string tail) => (v != 0f) ? $" [{label}+{Mathf.RoundToInt(v * 100f)}%{tail}]" : "";
-        string MinusPct (float v)                            => (v > 0f)  ? $" [−{Mathf.RoundToInt(v * 100f)}% dmg]" : "";
-
-        // ──────────────────────────────────────────────
-        // Identity block
-        // ──────────────────────────────────────────────
+        // ── Identity block ───────────────────────────────────────────────────
         if (playerIdText)     playerIdText.text     = $"ID: {def.id}";
         if (playerTypeText)   playerTypeText.text   = $"TYPE: {def.type}";
         if (playerRarityText) playerRarityText.text = $"RARITY: {def.rarity}";
         if (playerLevelText)  playerLevelText.text  = $"LVL: {lvl}";
 
-        // ──────────────────────────────────────────────
-        // HP line
-        // (Job max HP% already baked; we just show a badge. Then Title %.)
-        // ──────────────────────────────────────────────
-        float jobHpPct = (jc != null) ? jc.maxHpBonusPct : 0f; // badge only
-        string hpLine = $"HP: {curHPDisp}/{Mathf.RoundToInt(curMaxHP)}";
-        hpLine += SegIfFlat("Temp",  tempHPFlat, tHP);
-        hpLine += SegIfPct ("Job",   jobHpPct,   "");
-        hpLine += SegIfPct ("Title", tmods.hpPct, "");
-        if (playerHPText) playerHPText.text = hpLine;
+        // ── HP: compare Base Max HP vs Final Max HP (titles/conditionals applied) ─
+        // Base side: include temp flat HP so it shows as part of “base” in the delta.
+        int hpBaseForDisplay  = Mathf.Max(1, baseHP + tempHPFlat);
+        float hpFinalF = TitlesAdapter.GetStatValue(
+            ctx.ownedId, def, lvl, "HP", ctx, hpBaseForDisplay
+        );
+        int hpFinal = Mathf.Max(1, Mathf.RoundToInt(hpFinalF));
+        if (playerHPText) SetColoredStat(playerHPText, "HP", hpBaseForDisplay, hpFinal);
 
-        // ──────────────────────────────────────────────
-        // ATK line (equip & temp flats; then Job/Turn/Title %)
-        // ──────────────────────────────────────────────
-        float jobAtkPct   = (jc != null) ? jc.attackBonusPct : 0f;
-        float turnBuffPct = 0f; // placeholder for any per-turn logic
+        // ── ATK: (base + equip + temp flats) then apply titles/conditionals ──
+        int atkBaseForDisplay = Mathf.Max(1, baseATK + equippedFlatATK + tempATKFlat);
+        float atkFinalF = TitlesAdapter.GetStatValue(
+            ctx.ownedId, def, lvl, "Attack", ctx, atkBaseForDisplay
+        );
+        int atkFinal = Mathf.Max(1, Mathf.RoundToInt(atkFinalF));
+        if (playerATKText) SetColoredStat(playerATKText, "ATK", atkBaseForDisplay, atkFinal);
 
-        int atkShown = Mathf.Max(1, Mathf.RoundToInt(baseATK + equippedFlatATK + tempATKFlat));
-        // Apply Title% + Conditional% to the displayed number
-        int atkShownWithMods = Mathf.Max(1, Mathf.RoundToInt(atkShown * (1f + Mathf.Max(0f, tmods.atkPct + cmodsDisp.atkPct))));
+        // ── DEF: (base + temp flats) then apply titles/conditionals ──────────
+        int defBaseForDisplay = Mathf.Max(0, baseDEF + tempDEFFlat);
+        float defFinalF = TitlesAdapter.GetStatValue(
+            ctx.ownedId, def, lvl, "Defense", ctx, defBaseForDisplay
+        );
+        int defFinal = Mathf.Max(0, Mathf.RoundToInt(defFinalF));
+        if (playerDEFText) SetColoredStat(playerDEFText, "DEF", defBaseForDisplay, defFinal);
 
-        string atkLine = $"ATK: {atkShownWithMods}";
-        atkLine += SegIfFlat("Equip", equippedFlatATK, "");
-        atkLine += SegIfFlat("Temp",  tempATKFlat,     tAtk);
-        atkLine += SegIfPct ("Job",   jobAtkPct,       "");
-        atkLine += SegIfPct ("Turn",  turnBuffPct,     "");
-        atkLine += SegIfPct ("Title", tmods.atkPct,    "");
-        atkLine += SegIfPct ("Cond",  cmodsDisp.atkPct,"");
-        if (playerATKText) playerATKText.text = atkLine;
+        // ── SPD: (base + temp flats) then apply titles/conditionals ──────────
+        int spdBaseForDisplay = Mathf.Max(1, baseSPD + tempSPDFlat);
+        float spdFinalF = TitlesAdapter.GetStatValue(
+            ctx.ownedId, def, lvl, "Speed", ctx, spdBaseForDisplay
+        );
+        int spdFinal = Mathf.Max(1, Mathf.RoundToInt(spdFinalF));
+        if (playerSPDText) SetColoredStat(playerSPDText, "SPD", spdBaseForDisplay, spdFinal);
 
-        // ──────────────────────────────────────────────
-        // DEF line (+ total damage reduction badges)
-        // Title DEF% is represented as additional damage reduction badge
-        // and we also show flat temp DEF.
-        // ──────────────────────────────────────────────
-       float dmgReducePct = 0f;
-        if (jc != null)
-        {
-            dmgReducePct += Mathf.Max(0f, jc.baseDamageReducePct);
-            if (jc.dmgReduceBuffTurns > 0 && jc.dmgReduceFirstTurns > 0f)
-                dmgReducePct += jc.dmgReduceFirstTurns;
-            if (jc.defenseBonusPct > 0f)
-                dmgReducePct += jc.defenseBonusPct;
-        }
-        // Title + Conditional DEF% as mitigation badges
-        if (tmods.defPct > 0f)    dmgReducePct += tmods.defPct;
-        if (cmodsDisp.defPct > 0f) dmgReducePct += cmodsDisp.defPct;
-
-        int defShown = Mathf.Max(0, baseDEF + tempDEFFlat);
-        string defLine = $"DEF: {defShown}";
-        defLine += SegIfFlat("Temp",  tempDEFFlat, tDef);
-        defLine += MinusPct(dmgReducePct);
-        if (playerDEFText) playerDEFText.text = defLine;
-
-        // ──────────────────────────────────────────────
-        // SPD line (temp flat; then Job/Title %)
-        // ──────────────────────────────────────────────
-        int spdFlatTotal = Mathf.Max(0, tempSPDFlat + Mathf.Max(0, cmodsDisp.spdFlat)); // (Title flat already in baseSPD)
-        int spdShown = Mathf.Max(1, baseSPD + spdFlatTotal);
-        int spdShownWithMods = Mathf.Max(1, Mathf.RoundToInt(spdShown * (1f + Mathf.Max(0f, tmods.spdPct + cmodsDisp.spdPct))));
-
-        string spdLine = $"SPD: {spdShownWithMods}";
-        spdLine += SegIfFlat("Temp",  tempSPDFlat, tSpd);
-        if (jc != null && jc.speedBuffTurns > 0 && jc.speedBonusPctFirstTurns > 0f)
-            spdLine += SegIfPct("Job", jc.speedBonusPctFirstTurns, $" ({jc.speedBuffTurns}t)");
-        spdLine += SegIfPct("Title", tmods.spdPct, "");
-        spdLine += SegIfPct("Cond",  cmodsDisp.spdPct, "");
-        if (playerSPDText) playerSPDText.text = spdLine;
-
-
-        // ──────────────────────────────────────────────
-        // Optional active resist badge
-        // ──────────────────────────────────────────────
-        if (resistOn && playerRarityText)
-            playerRarityText.text += " [Resist]";
+        // Optional: tack on a resist badge if you like
+        bool resistOn = BattleTempBuffs.I && BattleTempBuffs.I.IsTypeResistActive();
+        if (resistOn && playerRarityText) playerRarityText.text += " [Resist]";
     }
+
 
 
     private void ApplyActiveToUI()
@@ -1442,27 +1360,47 @@ public class BattleManager : MonoBehaviour
         if (box == null) return;
 
         var t = box.GetType();
-        var f1 = t.GetField("cannotBeCrit");    var p1 = t.GetProperty("cannotBeCrit");
-        var f2 = t.GetField("percentReduce");   var p2 = t.GetProperty("percentReduce");
-        var f3 = t.GetField("flatReduce");      var p3 = t.GetProperty("flatReduce");
+        var f1 = t.GetField("cannotBeCrit"); var p1 = t.GetProperty("cannotBeCrit");
+        var f2 = t.GetField("percentReduce"); var p2 = t.GetProperty("percentReduce");
+        var f3 = t.GetField("flatReduce"); var p3 = t.GetProperty("flatReduce");
 
         try
         {
-            if (f1 != null) cannotBeCrit  = (bool) (f1.GetValue(box) ?? false);
-            else if (p1 != null) cannotBeCrit = (bool) (p1.GetValue(box, null) ?? false);
-        } catch {}
+            if (f1 != null) cannotBeCrit = (bool)(f1.GetValue(box) ?? false);
+            else if (p1 != null) cannotBeCrit = (bool)(p1.GetValue(box, null) ?? false);
+        }
+        catch { }
 
         try
         {
-            if (f2 != null) percentReduce = Mathf.Max(0f, (float) (f2.GetValue(box) ?? 0f));
-            else if (p2 != null) percentReduce = Mathf.Max(0f, (float) (p2.GetValue(box, null) ?? 0f));
-        } catch {}
+            if (f2 != null) percentReduce = Mathf.Max(0f, (float)(f2.GetValue(box) ?? 0f));
+            else if (p2 != null) percentReduce = Mathf.Max(0f, (float)(p2.GetValue(box, null) ?? 0f));
+        }
+        catch { }
 
         try
         {
-            if (f3 != null) flatReduce    = Mathf.Max(0, (int) (f3.GetValue(box) ?? 0));
-            else if (p3 != null) flatReduce = Mathf.Max(0, (int) (p3.GetValue(box, null) ?? 0));
-        } catch {}
+            if (f3 != null) flatReduce = Mathf.Max(0, (int)(f3.GetValue(box) ?? 0));
+            else if (p3 != null) flatReduce = Mathf.Max(0, (int)(p3.GetValue(box, null) ?? 0));
+        }
+        catch { }
+    }
+    
+    private void SetColoredStat(TextMeshProUGUI label, string name, int baseVal, int finalVal)
+    {
+        if (!label) return;
+
+        int delta = finalVal - baseVal;
+        if (delta == 0)
+        {
+            label.text  = $"{name}: {finalVal}";
+            label.color = StatNeutral;
+            return;
+        }
+
+        string sign = delta > 0 ? "+" : "";
+        label.text  = $"{name}: {finalVal} ({sign}{delta})";
+        label.color = delta > 0 ? StatBuff : StatNerf;
     }
 
 

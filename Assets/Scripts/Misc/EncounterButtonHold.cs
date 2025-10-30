@@ -6,18 +6,9 @@ public class EncounterButtonHold : MonoBehaviour, IPointerDownHandler, IPointerU
     [Tooltip("Hold duration to trigger AUTO toggle.")]
     public float holdSeconds = 0.6f;
 
-    [Tooltip("Optional. If not set, the component will search in parents at runtime.")]
-    [SerializeField] private EncounterPanelUI panel;
-
-    bool pressed;
-    float pressedAt;
-    bool firedHold;
-
-    void Awake()
-    {
-        // Auto-find the panel if not assigned
-        if (!panel) panel = GetComponentInParent<EncounterPanelUI>(true);
-    }
+    private bool pressed;
+    private float pressedAt;
+    private bool firedHold;
 
     public void OnPointerDown(PointerEventData eventData)
     {
@@ -31,26 +22,54 @@ public class EncounterButtonHold : MonoBehaviour, IPointerDownHandler, IPointerU
         if (!pressed) return;
         pressed = false;
 
-        // If we already fired the hold action, don't also tap-start
+        // If we already fired the hold action, skip tap-start
         if (firedHold) return;
 
-        // Prefer the panel handler; fallback to manager if panel missing
-        if (panel)
+        // SAFETY CHECK: prevent encounter if no monsters on team
+        var data = SaveManager.Data;
+        if (data == null || data.team == null || data.team.Count == 0)
         {
-            // Call the public handler in EncounterPanelUI
-            var method = panel.GetType().GetMethod("OnClickStartEncounter",
-                System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic);
-            if (method != null) method.Invoke(panel, null);
+            Debug.LogWarning("[EncounterButtonHold] Cannot start encounter — team is empty.");
+            return;
         }
-        else
+
+        // Count valid monsters only (non-null entries with a monsterId)
+        bool hasValidMonster = false;
+        for (int i = 0; i < data.team.Count; i++)
         {
-            EncounterManager.I?.RequestEncounterTap();
+            var entry = data.team[i];
+            if (entry != null && !string.IsNullOrEmpty(entry.monsterId))
+            {
+                hasValidMonster = true;
+                break;
+            }
         }
+
+        if (!hasValidMonster)
+        {
+            Debug.LogWarning("[EncounterButtonHold] Cannot start encounter — no valid monsters assigned.");
+            return;
+        }
+
+        // Tap = Start Encounter
+        if (EncounterManager.I == null)
+        {
+            Debug.LogWarning("[EncounterButtonHold] EncounterManager not present.");
+            return;
+        }
+        EncounterManager.I.RequestEncounterTap();
     }
 
     public void OnPointerExit(PointerEventData eventData)
     {
         pressed = false;
+    }
+
+    private void OnDisable()
+    {
+        // Reset any partial press when the object is disabled
+        pressed = false;
+        firedHold = false;
     }
 
     void Update()
@@ -62,17 +81,8 @@ public class EncounterButtonHold : MonoBehaviour, IPointerDownHandler, IPointerU
             firedHold = true;
             pressed = false;
 
-            // Prefer panel toggle; fallback to manager
-            if (panel)
-            {
-                var method = panel.GetType().GetMethod("OnClickToggleAuto",
-                    System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic);
-                if (method != null) method.Invoke(panel, null);
-            }
-            else
-            {
-                EncounterManager.I?.ToggleAutoMode();
-            }
+            // Hold = Toggle Auto Mode
+            EncounterManager.I?.ToggleAutoMode();
         }
     }
 }

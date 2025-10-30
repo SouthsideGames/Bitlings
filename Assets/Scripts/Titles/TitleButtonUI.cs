@@ -6,94 +6,207 @@ using UnityEngine.UI;
 
 public sealed class TitleButtonUI : MonoBehaviour
 {
-    [Header("Wire These In Inspector (optional)")]
-    [SerializeField] private Button button;
-    [SerializeField] private TMP_Text label;
-    [SerializeField] private TitleAssignPanelUI titleAssignPanel; // optional: auto-locates if null
+    [Header("Wiring")]
+    [SerializeField] private Button button;                 // main Title button
+    [SerializeField] private TMP_Text label;                // text on main Title button
+    [SerializeField] private TitleAssignPanelUI titleAssignPanel;
 
-    // Current monster context (provided by Monster Detail)
-    private string _ownedMonsterId;     // OwnedMonsterData.monsterId (save-owned GUID/ID)
-    private MonsterDataSO _monsterDef;  // Definition
+    [Header("New Title Badge/Button")]
+    [Tooltip("A small badge/button (e.g., 'New!') that appears when a new title is unlocked for this monster.")]
+    [SerializeField] private Button newTitleBtn;
+
+    // Current monster context
+    private string _ownedMonsterId;
+    private MonsterDataSO _monsterDef;
     private int _level;
+
+    // --------- Global notification plumbing ----------
+    private const string PPREFIX = "TitleNewBadgeSeen_"; // PlayerPrefs key prefix
+
+    private static event System.Action<string> OnGlobalNewTitleUnlocked; // ownedId
+    private static readonly HashSet<string> _pendingOwnedIds = new();    // pending badges (session)
+
+    /// <summary>
+    /// Call this from your unlock code when a title is newly unlocked for a specific owned monster.
+    /// Example: TitleButtonUI.NotifyNewTitleUnlocked(ownedId);
+    /// </summary>
+    public static void NotifyNewTitleUnlocked(string ownedMonsterId)
+    {
+        if (string.IsNullOrEmpty(ownedMonsterId)) return;
+        _pendingOwnedIds.Add(ownedMonsterId);
+        OnGlobalNewTitleUnlocked?.Invoke(ownedMonsterId);
+    }
+    // -------------------------------------------------
 
     private void Reset()
     {
         if (!button) button = GetComponent<Button>();
         if (!label)  label  = GetComponentInChildren<TMP_Text>(true);
+        // newTitleBtn is optional—wire in inspector
     }
 
     private void Awake()
     {
         if (button != null) button.onClick.AddListener(OpenPanel);
+
+        // live label updates when titles change
+        TitleAssignPanelUI.OnTitlesChanged -= HandleTitlesChanged;
+        TitleAssignPanelUI.OnTitlesChanged += HandleTitlesChanged;
+
+        // new-unlock signal
+        OnGlobalNewTitleUnlocked -= HandleGlobalNewTitleUnlocked;
+        OnGlobalNewTitleUnlocked += HandleGlobalNewTitleUnlocked;
+
+        // clicking the badge clears it (until another unlock happens)
+        if (newTitleBtn != null)
+        {
+            newTitleBtn.onClick.RemoveAllListeners();
+            newTitleBtn.onClick.AddListener(ClearNewBadgeForThisMonster);
+        }
+    }
+
+    private void OnDestroy()
+    {
+        TitleAssignPanelUI.OnTitlesChanged -= HandleTitlesChanged;
+        OnGlobalNewTitleUnlocked -= HandleGlobalNewTitleUnlocked;
     }
 
     private void OnEnable()
     {
         RefreshLabel();
+        RefreshNewBadge();
     }
 
-    /// <summary>
-    /// Bind this button to the monster shown in Monster Detail.
-    /// Call this whenever the detail panel changes selection.
-    /// </summary>
     public void Bind(string ownedMonsterId, MonsterDataSO def, int level)
     {
         _ownedMonsterId = ownedMonsterId;
         _monsterDef     = def;
         _level          = Mathf.Max(1, level);
+
         RefreshLabel();
+        RefreshNewBadge();
     }
 
-    private void RefreshLabel()
+    // ─────────────────────────────────────────────────────────────
+    // Label logic: show first equipped titleId, else UNEMPLOYED
+    // ─────────────────────────────────────────────────────────────
+    private void HandleTitlesChanged(string ownedId)
+    {
+        if (!string.IsNullOrEmpty(_ownedMonsterId) && ownedId == _ownedMonsterId)
+        {
+            RefreshLabel();
+            // Changing equipment isn't necessarily a new unlock, so we DO NOT auto-clear the badge here.
+        }
+    }
+
+    public void RefreshLabel()
     {
         if (label == null)
             return;
 
         if (string.IsNullOrEmpty(_ownedMonsterId) || _monsterDef == null)
         {
-            label.text = "Titles";
+            label.text = "UNEMPLOYED";
             return;
         }
 
         List<TitleSO> equipped = TitleManager.I.GetEquippedList(_ownedMonsterId, _monsterDef, _level);
 
-        if (equipped == null || equipped.Count == 0)
+        if (equipped != null)
         {
-            label.text = "Set Title";
+            for (int i = 0; i < equipped.Count; i++)
+            {
+                var t = equipped[i];
+                if (t != null)
+                {
+                    label.text = !string.IsNullOrEmpty(t.titleId) ? t.titleId : "UNEMPLOYED";
+                    return;
+                }
+            }
+        }
+
+        label.text = "UNEMPLOYED";
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // New badge logic
+    // ─────────────────────────────────────────────────────────────
+    private void HandleGlobalNewTitleUnlocked(string ownedId)
+    {
+        if (string.IsNullOrEmpty(_ownedMonsterId) || newTitleBtn == null) return;
+
+        // Only show for the monster bound here
+        if (ownedId == _ownedMonsterId)
+        {
+            // mark as pending this session
+            _pendingOwnedIds.Add(ownedId);
+            // clear "seen" so it shows again if they had previously dismissed
+            PlayerPrefs.DeleteKey(PPREFIX + ownedId);
+
+            ShowNewBadge(true);
+        }
+    }
+
+    private void RefreshNewBadge()
+    {
+        if (newTitleBtn == null)
+            return;
+
+        if (string.IsNullOrEmpty(_ownedMonsterId))
+        {
+            ShowNewBadge(false);
             return;
         }
 
-        var sb = new StringBuilder();
-        int show = Mathf.Min(3, equipped.Count);
-        for (int i = 0; i < show; i++)
-        {
-            if (i > 0) sb.Append(" • ");
-            sb.Append(equipped[i] ? equipped[i].displayName : "Unknown");
-        }
-        if (equipped.Count > show)
-        {
-            sb.Append(" +").Append(equipped.Count - show);
-        }
+        // If we have a pending in this session OR no "seen" flag stored, show; else hide.
+        bool sessionPending = _pendingOwnedIds.Contains(_ownedMonsterId);
+        bool seenFlag = PlayerPrefs.GetInt(PPREFIX + _ownedMonsterId, 0) == 1;
 
-        label.text = TrimToLength(sb.ToString(), 32);
+        bool shouldShow = sessionPending && !seenFlag;
+        ShowNewBadge(shouldShow);
     }
 
-    public void ForceRefresh() => RefreshLabel();
-
-    private static string TrimToLength(string s, int max)
+    private void ShowNewBadge(bool visible)
     {
-        if (string.IsNullOrEmpty(s)) return s;
-        if (s.Length <= max) return s;
-        return s.Substring(0, Mathf.Max(0, max - 1)) + "…";
+        if (!newTitleBtn) return;
+
+        if (visible && !newTitleBtn.gameObject.activeSelf)
+        {
+            newTitleBtn.gameObject.SetActive(true);
+
+            // Optional little pop
+            var t = newTitleBtn.transform;
+            t.localScale = Vector3.one * 0.85f;
+            LeanTween.scale(t.gameObject, Vector3.one, 0.12f).setEaseOutBack();
+        }
+        else if (!visible && newTitleBtn.gameObject.activeSelf)
+        {
+            newTitleBtn.gameObject.SetActive(false);
+        }
     }
 
-    public void OpenPanel()
+    private void ClearNewBadgeForThisMonster()
     {
-        // Need a valid context
+        if (string.IsNullOrEmpty(_ownedMonsterId) || newTitleBtn == null) return;
+
+        // mark as seen for this monster
+        PlayerPrefs.SetInt(PPREFIX + _ownedMonsterId, 1);
+        PlayerPrefs.Save();
+
+        // no longer pending this session
+        _pendingOwnedIds.Remove(_ownedMonsterId);
+
+        ShowNewBadge(false);
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // Open panel
+    // ─────────────────────────────────────────────────────────────
+    private void OpenPanel()
+    {
         if (string.IsNullOrEmpty(_ownedMonsterId) || _monsterDef == null)
             return;
 
-        // Ensure we have a TitleAssignPanelUI reference. If not wired in Inspector, locate it under the TitleDetail root.
         if (titleAssignPanel == null)
         {
             var root = UIManager.I ? UIManager.I.GetRoot(PanelId.TitleDetail) : null;
@@ -107,9 +220,6 @@ public sealed class TitleButtonUI : MonoBehaviour
             return;
         }
 
-        // Pass context into the panel
         titleAssignPanel.Open(_ownedMonsterId, _monsterDef, _level);
-
-        UIManager.I?.Show(PanelId.TitleDetail);
     }
 }

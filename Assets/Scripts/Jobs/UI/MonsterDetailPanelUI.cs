@@ -43,8 +43,8 @@ public class MonsterDetailPanelUI : MonoBehaviour
     [Header("Visibility")]
     [SerializeField] private CanvasGroup canvasGroup;
 
-    [Header("Tags")]
-    [SerializeField] private Button tagButton;
+    [Header("Titles (Tag Button hosts TitleButtonUI)")]
+    [SerializeField] private TitleButtonUI titleButton; // Drag the Tag button's TitleButtonUI here
 
     [Header("Type Matchups (Icons Only)")]
     [SerializeField] private Transform strongIconHolder;
@@ -70,21 +70,17 @@ public class MonsterDetailPanelUI : MonoBehaviour
 
     // ===== Build Safe Mode (Isolation) =====
     [Header("Build Safe Mode (Isolation)")]
-    [SerializeField] private bool safeSkipStats = true;       // start TRUE
-    [SerializeField] private bool safeSkipEvolution = false;  // start FALSE
-    [SerializeField] private bool safeSkipTypeIcons = true;   // start TRUE
-    [SerializeField] private bool safeSkipDescription = true; // start TRUE
-    [SerializeField] private bool safeSkipMonsterIcon = true; 
-    [SerializeField]   private bool buildVerboseLogging;// start TRUE
+    [SerializeField] private bool safeSkipStats = true;
+    [SerializeField] private bool safeSkipEvolution = false;
+    [SerializeField] private bool safeSkipTypeIcons = true;
+    [SerializeField] private bool safeSkipDescription = true;
+    [SerializeField] private bool safeSkipMonsterIcon = true;
+    [SerializeField] private bool buildVerboseLogging;
 
-    // staging state (no need to expose)
     enum RenderStage { None, Header, StatsEvo, Description, TypeIcons, Done }
     RenderStage _stage = RenderStage.None;
     Coroutine _stageCR;
 
-    // ─────────────────────────────────────────────────────────────
-    // State
-    // ─────────────────────────────────────────────────────────────
     private MonsterDetailMode _mode = MonsterDetailMode.StarterSelect;
     private MonsterDataSO current;
     private OwnedMonsterData _currentOwned;
@@ -95,7 +91,6 @@ public class MonsterDetailPanelUI : MonoBehaviour
     private int _teamSlotIndex = -1;
     private Action _onRemoved;
 
-    // Visibility + reentrancy
     bool _visible;
     static bool _openingOrOpen;
     Coroutine _openRoutine;
@@ -154,19 +149,24 @@ public class MonsterDetailPanelUI : MonoBehaviour
         if (confirmButton) { confirmButton.onClick.RemoveAllListeners(); confirmButton.onClick.AddListener(Confirm); }
         if (cancelButton)  { cancelButton.onClick.RemoveAllListeners();  cancelButton.onClick.AddListener(Cancel);  }
         if (closeButton)   { closeButton.onClick.RemoveAllListeners();   closeButton.onClick.AddListener(Hide);     }
-
         if (slot1Button) { slot1Button.onClick.RemoveAllListeners(); slot1Button.onClick.AddListener(() => AssignToSlot(0)); }
         if (slot2Button) { slot2Button.onClick.RemoveAllListeners(); slot2Button.onClick.AddListener(() => AssignToSlot(1)); }
         if (slot3Button) { slot3Button.onClick.RemoveAllListeners(); slot3Button.onClick.AddListener(() => AssignToSlot(2)); }
+        if (removeButton) { removeButton.onClick.RemoveAllListeners(); removeButton.onClick.AddListener(RemoveFromTeam); }
 
-        if (removeButton)
-        {
-            removeButton.onClick.RemoveAllListeners();
-            removeButton.onClick.AddListener(RemoveFromTeam);
-        }
+        ResolveTitleButton();
+
+        // Keep the title button text hot while panel lives
+        TitleAssignPanelUI.OnTitlesChanged -= HandleTitlesChanged;
+        TitleAssignPanelUI.OnTitlesChanged += HandleTitlesChanged;
     }
 
     void OnDisable() => ResetVisualsImmediate();
+
+    private void OnDestroy()
+    {
+        TitleAssignPanelUI.OnTitlesChanged -= HandleTitlesChanged;
+    }
 
     // ─────────────────────────────────────────────────────────────
     // PUBLIC API
@@ -181,6 +181,9 @@ public class MonsterDetailPanelUI : MonoBehaviour
         current   = monster;
         onConfirm = onConfirmCallback;
         onCancel  = onCancelCallback;
+
+        // Hide title button in starter flow
+        if (titleButton) titleButton.gameObject.SetActive(false);
 
         SafeOpen(monster);
     }
@@ -210,6 +213,7 @@ public class MonsterDetailPanelUI : MonoBehaviour
         onConfirm = null;
         onCancel  = null;
 
+        UpdateTitleButtonBinding(); // <— bind the Tag/Title button
         SafeOpen(current);
     }
 
@@ -233,6 +237,7 @@ public class MonsterDetailPanelUI : MonoBehaviour
         onConfirm = null;
         onCancel  = null;
 
+        UpdateTitleButtonBinding(); // <— bind the Tag/Title button
         SafeOpen(current);
     }
 
@@ -270,7 +275,7 @@ public class MonsterDetailPanelUI : MonoBehaviour
     // ─────────────────────────────────────────────────────────────
     // Open flow (guard + next frame)
     // ─────────────────────────────────────────────────────────────
-   void SafeOpen(MonsterDataSO monster)
+    void SafeOpen(MonsterDataSO monster)
     {
         if (monster == null) return;
 
@@ -287,7 +292,6 @@ public class MonsterDetailPanelUI : MonoBehaviour
         _stage = RenderStage.Header;        // start staged flow
         _stageCR = StartCoroutine(CoRenderStaged(monster));
     }
-
 
     IEnumerator CoOpenNextFrame(MonsterDataSO monster)
     {
@@ -434,12 +438,10 @@ public class MonsterDetailPanelUI : MonoBehaviour
         // ──────────────── Open & Fade ────────────────
         TryStep("Open & Fade", () =>
         {
-            // Ensure active before fading (SafeOpen already called OpenSelf, but this is safe)
             OpenSelf();
 
             if (canvasGroup)
             {
-                // In case SafeOpen pre-set alpha to 0, just fade to 1.
                 if (canvasGroup.alpha < 1f)
                     LeanTween.alphaCanvas(canvasGroup, 1f, 0.15f);
             }
@@ -447,7 +449,6 @@ public class MonsterDetailPanelUI : MonoBehaviour
 
         LogStep("END Show");
     }
-
 
     // ─────────────────────────────────────────────────────────────
     // Button handlers
@@ -598,8 +599,10 @@ public class MonsterDetailPanelUI : MonoBehaviour
 
         if (backgroundImage) backgroundImage.color = Color.white;
 
-        // Only hard toggle if no UI router
         if (!UIManager.I) gameObject.SetActive(false);
+
+        // Hide the Tag/Title button on reset
+        if (titleButton) titleButton.gameObject.SetActive(false);
 
         _visible = UIManager.I && selfPanelId != PanelId.None ? _visible : false;
     }
@@ -673,7 +676,6 @@ public class MonsterDetailPanelUI : MonoBehaviour
         catch (Exception ex)
         {
             Debug.LogError($"[MonsterDetailPanelUI] Exception at step '{label}' (monster={(current ? current.id : "null")}): {ex}");
-            // Do NOT rethrow; keep UI responsive and avoid lockups.
         }
     }
 
@@ -690,116 +692,157 @@ public class MonsterDetailPanelUI : MonoBehaviour
         return 1;
     }
 
-    System.Collections.IEnumerator CoRenderStaged(MonsterDataSO monster)
-{
-    // FRAME 1: header only (zero risk)
-    if (_stage == RenderStage.Header)
+    IEnumerator CoRenderStaged(MonsterDataSO monster)
     {
-        TryStep("Header & Static Fields", () =>
+        // FRAME 1: header only (zero risk)
+        if (_stage == RenderStage.Header)
         {
-            if (!safeSkipMonsterIcon && icon) icon.sprite = monster ? monster.icon : null;
-            if (idText)   idText.text = monster ? $"ID: {monster.id}" : "ID: -";
-            if (nameText) nameText.text = monster ? monster.displayName : "-";
-            if (typeText)
+            TryStep("Header & Static Fields", () =>
             {
-                string typeName = monster ? monster.type.ToString() : "-";
-                string typeHex = "CCCCCC";
-                if (monster && TYPE_COLORS.TryGetValue(monster.type, out var tc))
-                    typeHex = ColorUtility.ToHtmlStringRGB(tc);
-                typeText.color = Color.white;
-                typeText.richText = true;
-                typeText.text = $"<color=#FFFFFF>TYPE:</color> <color=#{typeHex}>{typeName}</color>";
-            }
-            if (rarityText)
-            {
-                rarityText.text = monster ? $"{monster.rarity}" : "-";
-                if (monster && RARITY_COLORS.TryGetValue(monster.rarity, out var rc))
+                if (!safeSkipMonsterIcon && icon) icon.sprite = monster ? monster.icon : null;
+                if (idText) idText.text = monster ? $"ID: {monster.id}" : "ID: -";
+                if (nameText) nameText.text = monster ? monster.displayName : "-";
+                if (typeText)
                 {
-                    rarityText.color = rc; ApplyRarityBackground(rc);
+                    string typeName = monster ? monster.type.ToString() : "-";
+                    string typeHex = "CCCCCC";
+                    if (monster && TYPE_COLORS.TryGetValue(monster.type, out var tc))
+                        typeHex = ColorUtility.ToHtmlStringRGB(tc);
+                    typeText.color = Color.white;
+                    typeText.richText = true;
+                    typeText.text = $"<color=#FFFFFF>TYPE:</color> <color=#{typeHex}>{typeName}</color>";
                 }
-                else ApplyRarityBackground(Color.white);
-            }
-            // holder visibility
-            bool isAssign    = (_mode == MonsterDetailMode.AssignToTeam);
-            bool isTeamView  = isAssign && _teamSlotIndex >= 0;
-            bool isOwnedPick = isAssign && _teamSlotIndex < 0;
-            if (starterButtonsHolder) starterButtonsHolder.SetActive(!isAssign);
-            if (slotButtonsHolder)    slotButtonsHolder.SetActive(isOwnedPick);
-            if (teamHolder)           teamHolder.SetActive(isTeamView);
-            if (closeButton)          closeButton.gameObject.SetActive(isAssign);
-            OpenSelf();
-            if (canvasGroup) LeanTween.alphaCanvas(canvasGroup, 1f, 0.15f);
-        });
-        _stage = RenderStage.StatsEvo;
-        yield return null;
-    }
+                if (rarityText)
+                {
+                    rarityText.text = monster ? $"{monster.rarity}" : "-";
+                    if (monster && RARITY_COLORS.TryGetValue(monster.rarity, out var rc))
+                    {
+                        rarityText.color = rc; ApplyRarityBackground(rc);
+                    }
+                    else ApplyRarityBackground(Color.white);
+                }
+                // holder visibility
+                bool isAssign    = (_mode == MonsterDetailMode.AssignToTeam);
+                bool isTeamView  = isAssign && _teamSlotIndex >= 0;
+                bool isOwnedPick = isAssign && _teamSlotIndex < 0;
+                if (starterButtonsHolder) starterButtonsHolder.SetActive(!isAssign);
+                if (slotButtonsHolder)    slotButtonsHolder.SetActive(isOwnedPick);
+                if (teamHolder)           teamHolder.SetActive(isTeamView);
+                if (closeButton)          closeButton.gameObject.SetActive(isAssign);
 
-    // FRAME 2: stats/evo (guarded)
-    if (_stage == RenderStage.StatsEvo)
-    {
-        TryStep("Stats & Evo", () =>
+                // Bind/mask Title button based on mode/ownership
+                UpdateTitleButtonBinding();
+
+                OpenSelf();
+                if (canvasGroup) LeanTween.alphaCanvas(canvasGroup, 1f, 0.15f);
+            });
+            _stage = RenderStage.StatsEvo;
+            yield return null;
+        }
+
+        // FRAME 2: stats/evo (guarded)
+        if (_stage == RenderStage.StatsEvo)
         {
-            int dispLvl = GetDisplayLevel();
-            if (lvlText) lvlText.text = $"LVL: {dispLvl}";
-
-            if (!safeSkipStats && current)
+            TryStep("Stats & Evo", () =>
             {
-                int hpL=0, atkL=0, defL=Mathf.RoundToInt(current.baseDefense); float spd=current.baseSpeed;
-                try { hpL  = Mathf.RoundToInt(BattleCalc.CalcHP(current, dispLvl)); } catch (System.Exception e) { Debug.LogError($"HP calc {current?.id}: {e}"); }
-                try { atkL = Mathf.RoundToInt(BattleCalc.CalcBaseAttack(current, dispLvl, 0, 0)); } catch (System.Exception e) { Debug.LogError($"ATK calc {current?.id}: {e}"); }
-                if (hpText)  hpText.text  = $"HP: {hpL}";
-                if (atkText) atkText.text = $"ATK: {atkL}";
-                if (defText) defText.text = $"DEF: {defL}";
-                if (spdText) spdText.text = $"SPD: {spd:0.##}";
-            }
-            else
+                int dispLvl = GetDisplayLevel();
+                if (lvlText) lvlText.text = $"LVL: {dispLvl}";
+
+                if (!safeSkipStats && current)
+                {
+                    int hpL = 0, atkL = 0, defL = Mathf.RoundToInt(current.baseDefense); float spd = current.baseSpeed;
+                    try { hpL = Mathf.RoundToInt(BattleCalc.CalcHP(current, dispLvl)); } catch (Exception e) { Debug.LogError($"HP calc {current?.id}: {e}"); }
+                    try { atkL = Mathf.RoundToInt(BattleCalc.CalcBaseAttack(current, dispLvl, 0, 0)); } catch (Exception e) { Debug.LogError($"ATK calc {current?.id}: {e}"); }
+                    if (hpText)  hpText.text  = $"HP: {hpL}";
+                    if (atkText) atkText.text = $"ATK: {atkL}";
+                    if (defText) defText.text = $"DEF: {defL}";
+                    if (spdText) spdText.text = $"SPD: {spd:0.##}";
+                }
+                else
+                {
+                    if (hpText)  hpText.text  = "HP: —";
+                    if (atkText) atkText.text = "ATK: —";
+                    if (defText) defText.text = current ? $"DEF: {Mathf.RoundToInt(current.baseDefense)}" : "DEF: —";
+                    if (spdText) spdText.text = current ? $"SPD: {current.baseSpeed:0.##}" : "SPD: —";
+                }
+
+                if (evoText) evoText.text = (!safeSkipEvolution) ? BuildEvolutionLine(current) : "EVO: —";
+            });
+            _stage = RenderStage.Description;
+            yield return null;
+        }
+
+        // FRAME 3: description (TMP worst-case)
+        if (_stage == RenderStage.Description)
+        {
+            TryStep("Description", () =>
             {
-                if (hpText)  hpText.text  = "HP: —";
-                if (atkText) atkText.text = "ATK: —";
-                if (defText) defText.text = current ? $"DEF: {Mathf.RoundToInt(current.baseDefense)}" : "DEF: —";
-                if (spdText) spdText.text = current ? $"SPD: {current.baseSpeed:0.##}" : "SPD: —";
-            }
+                if (!safeSkipDescription && descText)
+                    descText.text = current ? current.description : "";
+                else if (descText) descText.text = "";
+            });
+            _stage = RenderStage.TypeIcons;
+            yield return null;
+        }
 
-            if (evoText) evoText.text = (!safeSkipEvolution) ? BuildEvolutionLine(current) : "EVO: —";
-        });
-        _stage = RenderStage.Description;
-        yield return null;
-    }
-
-    // FRAME 3: description (TMP worst-case)
-    if (_stage == RenderStage.Description)
-    {
-        TryStep("Description", () =>
+        // FRAME 4: type icons (sprite lookups)
+        if (_stage == RenderStage.TypeIcons)
         {
-            if (!safeSkipDescription && descText)
-                descText.text = current ? current.description : "";
-            else if (descText) descText.text = "";
-        });
-        _stage = RenderStage.TypeIcons;
-        yield return null;
+            TryStep("Type Matchup Icons", () =>
+            {
+                ClearIcons(strongIconHolder);
+                ClearIcons(weakIconHolder);
+                if (safeSkipTypeIcons || current == null) return;
+
+                List<MonsterType> strong = null, weak = null;
+                try { strong = BattleTypeChart.GetStrongAgainst(current.type); } catch (Exception ex) { Debug.LogError($"Strong({current.type}) fail: {ex}"); }
+                try { weak = BattleTypeChart.GetWeakAgainst(current.type); } catch (Exception ex) { Debug.LogError($"Weak({current.type}) fail: {ex}"); }
+
+                if (strong != null) foreach (var t in strong) CreateTypeIcon(t, strongIconHolder, true);
+                if (weak   != null) foreach (var t in weak)   CreateTypeIcon(t, weakIconHolder, true);
+            });
+            _stage = RenderStage.Done;
+        }
+
+        LogStep("END Show (staged)");
+        _stageCR = null;
     }
 
-    // FRAME 4: type icons (sprite lookups)
-    if (_stage == RenderStage.TypeIcons)
+
+    // ─────────────────────────────────────────────────────────────
+    // Titles wiring
+    // ─────────────────────────────────────────────────────────────
+    private void ResolveTitleButton()
     {
-        TryStep("Type Matchup Icons", () =>
-        {
-            ClearIcons(strongIconHolder);
-            ClearIcons(weakIconHolder);
-            if (safeSkipTypeIcons || current == null) return;
-
-            System.Collections.Generic.List<MonsterType> strong=null, weak=null;
-            try { strong = BattleTypeChart.GetStrongAgainst(current.type); } catch (System.Exception ex) { Debug.LogError($"Strong({current.type}) fail: {ex}"); }
-            try { weak   = BattleTypeChart.GetWeakAgainst(current.type);   } catch (System.Exception ex) { Debug.LogError($"Weak({current.type}) fail: {ex}"); }
-
-            if (strong != null) foreach (var t in strong) CreateTypeIcon(t, strongIconHolder, true);
-            if (weak   != null) foreach (var t in weak)   CreateTypeIcon(t,   weakIconHolder, true);
-        });
-        _stage = RenderStage.Done;
+        if (titleButton) return;
+        titleButton = GetComponentInChildren<TitleButtonUI>(true);
     }
 
-    LogStep("END Show (staged)");
-    _stageCR = null;
-}
+    private void UpdateTitleButtonBinding()
+    {
+        if (!titleButton) return;
 
+        bool canBind = (_mode == MonsterDetailMode.AssignToTeam)
+                       && _currentOwned != null
+                       && !string.IsNullOrEmpty(_currentOwned.monsterId)
+                       && current != null;
+
+        titleButton.gameObject.SetActive(canBind);
+        if (!canBind) return;
+
+        int lvl = GetDisplayLevel();
+        titleButton.Bind(_currentOwned.monsterId, current, lvl);
+        titleButton.RefreshLabel(); // ensure label shows titleId or UNEMPLOYED immediately
+    }
+
+    private void HandleTitlesChanged(string ownedId)
+    {
+        // Only refresh if this panel is showing the same owned monster
+        if (_currentOwned != null && !string.IsNullOrEmpty(_currentOwned.monsterId) && _currentOwned.monsterId == ownedId)
+        {
+            UpdateTitleButtonBinding();
+        }
+    }
+
+    
 }

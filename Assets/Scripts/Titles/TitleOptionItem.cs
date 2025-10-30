@@ -9,20 +9,31 @@ public sealed class TitleOptionItem : MonoBehaviour
     [SerializeField] private Image icon;
     [SerializeField] private TextMeshProUGUI nameText;
     [SerializeField] private TextMeshProUGUI unlockText;
-    [SerializeField] private Button actionBtn;
-    [SerializeField] private TextMeshProUGUI actionBtnLabel;
+
+    [Header("Action Button")]
+    [SerializeField] private Button assignBtn; 
+    [SerializeField] private Sprite assignedActionSprite;
+    [SerializeField] private Sprite unassignedActionSprite;
 
     // Context
     private string _ownedId;
     private MonsterDataSO _def;
     private int _level;
     private int _tierIndex;
-    private TitleSO _option;         // the title represented by this row
-    private TitleSO _equippedInTier; // current equipped title for this tier (can be null)
+    private TitleSO _option;         
+    private TitleSO _equippedInTier; 
     private int _levelRequired;
-    private Action _onChanged;       // notify panel to refresh & TitleButtonUI to update
+    private Action _onChanged;
+    private TextMeshProUGUI assignBtnLabel;
+    private Image assignBtnImage;       
 
-    // Optional: if you want to set sprite later
+    private void Awake()
+    {
+        assignBtnLabel = assignBtn.GetComponentInChildren<TextMeshProUGUI>();
+        assignBtnImage = assignBtn.GetComponent<Image>();
+
+    }
+
     public void SetIcon(Sprite s)
     {
         if (!icon) return;
@@ -49,26 +60,21 @@ public sealed class TitleOptionItem : MonoBehaviour
         _equippedInTier  = equippedInTier;
         _onChanged       = onChanged;
 
-        // Name
-        if (nameText)
-            nameText.text = option ? option.displayName : "(null)";
+        if (nameText) nameText.text = option ? option.displayName : "(null)";
 
-        // Unlock text + button state
         bool tierUnlocked = _level >= _levelRequired;
-        if (unlockText)
-            unlockText.text = tierUnlocked ? "Unlocked" : $"Lvl ≥ {_levelRequired}";
+        if (unlockText) unlockText.text = tierUnlocked ? "Unlocked" : $"Lvl ≥ {_levelRequired}";
 
-        // Button label & interactivity
-        bool isThisEquipped = (_equippedInTier != null && _equippedInTier == _option);
-        if (actionBtnLabel)
-            actionBtnLabel.text = isThisEquipped ? "Remove" : "Assign";
+        bool isThisEquipped = _equippedInTier != null && _equippedInTier == _option;
 
-        // If tier is locked, disable; if unlocked, allow Assign/Remove.
-        if (actionBtn)
+        if (assignBtnLabel) assignBtnLabel.text = isThisEquipped ? "Remove" : "Assign";
+        if (assignBtnImage) assignBtnImage.sprite = isThisEquipped ? assignedActionSprite : unassignedActionSprite;
+
+        if (assignBtn)
         {
-            actionBtn.onClick.RemoveAllListeners();
-            actionBtn.interactable = tierUnlocked && _option != null;
-            actionBtn.onClick.AddListener(OnActionClicked);
+            assignBtn.onClick.RemoveAllListeners();
+            assignBtn.interactable = tierUnlocked && _option != null;
+            assignBtn.onClick.AddListener(OnActionClicked);
         }
     }
 
@@ -76,18 +82,12 @@ public sealed class TitleOptionItem : MonoBehaviour
     {
         if (_option == null || _def == null) return;
 
-        bool isThisEquipped = (_equippedInTier != null && _equippedInTier == _option);
+        bool isThisEquipped = _equippedInTier != null && _equippedInTier == _option;
 
         if (isThisEquipped)
-        {
-            // Remove
             TitleManager.I.Unequip(_ownedId, _def, _tierIndex);
-        }
         else
-        {
-            // Assign
             TitleManager.I.Equip(_ownedId, _def, _tierIndex, _option);
-        }
 
         TitleAssignPanelUI.OnTitlesChanged?.Invoke(_ownedId);
         _onChanged?.Invoke();
