@@ -31,6 +31,7 @@ public class MonsterDataSO : ScriptableObject
     [Tooltip("Percent (0..1) of site fatigue added per hour when this monster works. 0.03 = 3%/hr.")]
     [Range(0f, 0.20f)]
     public float fatigueRatePerHour = 0.03f;
+    [Range(0f, 48f)] public float fatigueCooldownHours = 8f;
 
     [Header("Training")]
     public int baseTrainingXPPerHour = 30;

@@ -1,6 +1,6 @@
 using UnityEngine;
 
-[CreateAssetMenu(fileName = "JobRateBooster", menuName = "Titles/Job Rate Booster", order = 103)]
+[CreateAssetMenu(fileName = "JobRateBooster", menuName = "Data/Titles/Job Rate Booster", order = 103)]
 public class JobRateBoosterTitleSO : TitleSO
 {
     [Header("Jobs")]

@@ -4,12 +4,40 @@ using System.IO;
 using System.Text;
 using System.Collections.Generic;
 
+#region Job runtime sidecar (used by JobManager)
+
+[Serializable]
+public class JobRuntimeSite
+{
+    public JobType job;
+    public float[] slotFatigue01;
+    public long[]  slotCooldownUntilUnix;
+}
+
+[Serializable]
+public class MonsterCooldownKV
+{
+    public string id;
+    public long until;
+}
+
+[Serializable]
+public class JobRuntimeSave
+{
+    public List<JobRuntimeSite> sites = new();
+    public List<MonsterCooldownKV> cooldowns = new();
+    public long savedAtUnix;
+}
+
+#endregion
+
 public static class SaveManager
 {
     public static PlayerManager Data;
 
-    public static string SavePath   => Path.Combine(Application.persistentDataPath, "idle_mon_save.json");
-    public static string BackupPath => Path.Combine(Application.persistentDataPath, "idle_mon_save.bak");
+    public static string SavePath      => Path.Combine(Application.persistentDataPath, "idle_mon_save.json");
+    public static string BackupPath    => Path.Combine(Application.persistentDataPath, "idle_mon_save.bak");
+    public static string JobRuntimePath=> Path.Combine(Application.persistentDataPath, "idle_job_runtime.json");
 
     // ─────────────────────────────────────────────────────────────────────────────
     // Lifecycle
@@ -40,7 +68,7 @@ public static class SaveManager
     {
         try
         {
-            // Keep mirror lists in sync for JSON
+            // Keep mirrors in sync for JSON
             if (Data.ownedIds != null)
             {
                 Data.ownedIdsList ??= new List<string>();
@@ -64,6 +92,7 @@ public static class SaveManager
                 foreach (var j in Data.unlockedJobSites) Data.unlockedJobSitesList.Add(j);
             }
 
+            // Update last saved time safely (never go backwards far)
             long now = NowUnix();
             if (Data.lastSavedUnix > 0 && now + 300 < Data.lastSavedUnix) now = Data.lastSavedUnix;
             Data.lastSavedUnix = Math.Max(Data.lastSavedUnix, now);
@@ -82,15 +111,16 @@ public static class SaveManager
     {
         try { if (File.Exists(SavePath)) File.Delete(SavePath); } catch { }
         try { if (File.Exists(BackupPath)) File.Delete(BackupPath); } catch { }
+        try { if (File.Exists(JobRuntimePath)) File.Delete(JobRuntimePath); } catch { }
 
         Data = NewFreshPlayer();
-
         Save();
 
         GameEvents.OnJobsChanged?.Invoke();
         if (JobManager.I)
         {
             JobManager.I.LoadAssignmentsFromSave();
+            JobManager.I.ProcessOfflineAllSites();
             JobManager.I.RefreshAllJobSiteViewsInScene();
         }
 
@@ -151,21 +181,21 @@ public static class SaveManager
     static void EnsureDefaults()
     {
         // Base collections
-        Data.owned            ??= new List<OwnedMonsterData>();
-        Data.team             ??= new List<OwnedMonsterData>();
-        Data.activeLures      ??= new List<LureBiasData>();
+        Data.owned ??= new List<OwnedMonsterData>();
+        Data.team ??= new List<OwnedMonsterData>();
+        Data.activeLures ??= new List<LureBiasData>();
         Data.activeCaptureBands ??= new List<CaptureBandData>();
         Data.activeLuckBoosts ??= new List<LuckBoostData>();
-        Data.jobAssignments   ??= new List<JobAssignment>();
-        Data.jobProgress      ??= new List<JobProgress>();
+        Data.jobAssignments ??= new List<JobAssignment>();
+        Data.jobProgress ??= new List<JobProgress>();
         Data.jobStorageUpgrades ??= new List<JobStorageUpgrade>();
 
         // Identity
         if (string.IsNullOrEmpty(Data.playerId)) Data.playerId = Guid.NewGuid().ToString("N");
 
         // Encounter economy
-        if (Data.encounterMax   <= 0) Data.encounterMax   = 50;
-        if (Data.encounterCost  <= 0) Data.encounterCost  = 5;
+        if (Data.encounterMax <= 0) Data.encounterMax = 50;
+        if (Data.encounterCost <= 0) Data.encounterCost = 5;
         if (Data.encounterPoints < 0) Data.encounterPoints = 0;
         if (Data.lastEncounterResetYMD == 0) Data.lastEncounterResetYMD = TodayYMD();
 
@@ -175,10 +205,10 @@ public static class SaveManager
         while (Data.resourceCounts.Count < need) Data.resourceCounts.Add(0);
 
         // Mirrors for hashsets/lists
-        Data.ownedIds        ??= new HashSet<string>();
-        Data.ownedIdsList    ??= new List<string>();
-        Data.seenTypes       ??= new HashSet<MonsterType>();
-        Data.seenTypesList   ??= new List<MonsterType>();
+        Data.ownedIds ??= new HashSet<string>();
+        Data.ownedIdsList ??= new List<string>();
+        Data.seenTypes ??= new HashSet<MonsterType>();
+        Data.seenTypesList ??= new List<MonsterType>();
         Data.unlockedJobSites ??= new HashSet<JobType>();
         Data.unlockedJobSitesList ??= new List<JobType>();
 
@@ -198,7 +228,7 @@ public static class SaveManager
 
         // Settings
         Data.settings ??= new SettingsState();
-        // (Your SettingsState should include bool autoConvertDuplicates = true by default.)
+        // (Your SettingsState should contain fields like autoBenchEnabled, autoClinicReliefEnabled, etc.)
 
         // Normalize team & owned and ensure cross-consistency
         NormalizeOwnedEntries(Data.owned);
@@ -217,11 +247,7 @@ public static class SaveManager
             for (int k = 0; k < Data.owned.Count; k++)
             {
                 var o = Data.owned[k];
-                if (o != null && o.monsterId == t.monsterId)
-                {
-                    found = true;
-                    break;
-                }
+                if (o != null && o.monsterId == t.monsterId) { found = true; break; }
             }
 
             if (!found)
@@ -230,10 +256,10 @@ public static class SaveManager
                 Data.owned.Add(new OwnedMonsterData
                 {
                     monsterId = t.monsterId,
-                    level     = Mathf.Max(1, t.level),
+                    level = Mathf.Max(1, t.level),
                     currentHP = -1,
                     currentXP = Mathf.Max(0, t.currentXP),
-                    ownedUID  = string.IsNullOrEmpty(t.ownedUID) ? Guid.NewGuid().ToString("N") : t.ownedUID
+                    ownedUID = string.IsNullOrEmpty(t.ownedUID) ? Guid.NewGuid().ToString("N") : t.ownedUID
                 });
             }
         }
@@ -418,10 +444,10 @@ public static class SaveManager
             var om = new OwnedMonsterData
             {
                 monsterId = monsterId,
-                level     = Mathf.Max(1, level),
+                level = Mathf.Max(1, level),
                 currentHP = -1,
                 currentXP = 0,
-                ownedUID  = Guid.NewGuid().ToString("N")
+                ownedUID = Guid.NewGuid().ToString("N")
             };
             Data.owned.Add(om);
         }
@@ -444,10 +470,10 @@ public static class SaveManager
             Data.team.Add(new OwnedMonsterData
             {
                 monsterId = monsterId,
-                level     = Mathf.Max(1, level),
+                level = Mathf.Max(1, level),
                 currentHP = -1,
                 currentXP = 0,
-                ownedUID  = Guid.NewGuid().ToString("N")
+                ownedUID = Guid.NewGuid().ToString("N")
             });
             if (string.IsNullOrEmpty(Data.trainingMonsterId)) Data.trainingMonsterId = monsterId;
         }
@@ -467,5 +493,37 @@ public static class SaveManager
         catch { }
 
         Save();
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────────
+    // Job runtime sidecar I/O (slot fatigue + cooldown)
+    // ─────────────────────────────────────────────────────────────────────────────
+
+    public static void SaveJobRuntime(JobRuntimeSave blob)
+    {
+        try
+        {
+            var json = JsonUtility.ToJson(blob ?? new JobRuntimeSave(), prettyPrint: true);
+            AtomicWrite(JobRuntimePath, json);
+        }
+        catch (Exception e)
+        {
+            Debug.LogWarning($"SaveJobRuntime failed: {e.Message}");
+        }
+    }
+
+    public static JobRuntimeSave LoadJobRuntime()
+    {
+        try
+        {
+            if (!File.Exists(JobRuntimePath)) return null;
+            var json = File.ReadAllText(JobRuntimePath, Encoding.UTF8);
+            if (string.IsNullOrWhiteSpace(json)) return null;
+            return JsonUtility.FromJson<JobRuntimeSave>(json);
+        }
+        catch
+        {
+            return null;
+        }
     }
 }

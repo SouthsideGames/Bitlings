@@ -1,6 +1,6 @@
 using UnityEngine;
 
-[CreateAssetMenu(fileName = "CaptureChance", menuName = "Titles/Capture Chance Boost", order = 102)]
+[CreateAssetMenu(fileName = "CaptureChance", menuName = "Data/Titles/Capture Chance Boost", order = 102)]
 public class CaptureChanceTitleSO : TitleSO
 {
     [Header("Capture")]

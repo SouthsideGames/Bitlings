@@ -61,14 +61,9 @@ public sealed class TitleManager : MonoBehaviour
         {
             var tier = tiers[i];
             if (level >= Mathf.Max(1, tier.levelRequired))
-            {
-                // copy the list (avoid mutating the asset)
                 result.Add(new List<TitleSO>(tier.unlockChoices ?? new List<TitleSO>()));
-            }
             else
-            {
-                result.Add(new List<TitleSO>()); // locked tier (empty)
-            }
+                result.Add(new List<TitleSO>()); // locked
         }
         return result;
     }
@@ -79,35 +74,33 @@ public sealed class TitleManager : MonoBehaviour
     // Public: Equip / Get Equipped
     // ─────────────────────────────────────────────────────────────────────
 
-    /// <summary>Equip a title in a specific tier. Enforces maxSelectable (usually 1).</summary>
+    /// <summary>Equip a title in a specific tier. Enforces maxSelectable (currently 1 total).</summary>
     public bool Equip(string monsterId, MonsterDataSO def, int tierIndex, TitleSO choose)
     {
         if (string.IsNullOrEmpty(monsterId) || !def || !def.titleTrack) return false;
         var tiers = def.titleTrack.tiers;
         if (tiers == null || tierIndex < 0 || tierIndex >= tiers.Count) return false;
-        if (choose == null) return false;
+        if (!choose) return false;
 
-        // Make sure it's part of that tier's options
+        // Must be among that tier's choices
         var tier = tiers[tierIndex];
         if (tier.unlockChoices == null || !tier.unlockChoices.Contains(choose)) return false;
 
         var save = TitleSaveStore.GetOrCreateEquip(monsterId);
 
-        // Only ONE active title total — clear all previous selections
+        // Only ONE active title total — clear prior picks
         save.tierSelections.Clear();
 
-        // Resize to total tier count
-        for (int i = 0; i < tiers.Count; i++)
-            save.tierSelections.Add("");
+        // Resize to tiers
+        for (int i = 0; i < tiers.Count; i++) save.tierSelections.Add("");
 
-        // Assign the new one
+        // Assign
         save.tierSelections[tierIndex] = choose.titleId;
 
         TitleSaveStore.Save();
         return true;
     }
 
-    /// <summary>Clear selection for a given tier.</summary>
     public bool Unequip(string monsterId, MonsterDataSO def, int tierIndex)
     {
         if (string.IsNullOrEmpty(monsterId) || !def || !def.titleTrack) return false;
@@ -122,15 +115,13 @@ public sealed class TitleManager : MonoBehaviour
         return true;
     }
 
-    /// <summary>Returns the equipped TitleSO for each unlocked tier (or null/empty if none).</summary>
+    /// <summary>Returns always-on titles + equipped (per unlocked tier). Null for locked/no pick.</summary>
     public List<TitleSO> GetEquippedList(string monsterId, MonsterDataSO def, int level)
     {
         var res = new List<TitleSO>();
         if (string.IsNullOrEmpty(monsterId) || !def || !def.titleTrack)
         {
-            // still include Always-On titles if present
-            if (def && def.defaultAlwaysOnTitles != null)
-                res.AddRange(def.defaultAlwaysOnTitles);
+            if (def && def.defaultAlwaysOnTitles != null) res.AddRange(def.defaultAlwaysOnTitles);
             return res;
         }
 
@@ -143,32 +134,25 @@ public sealed class TitleManager : MonoBehaviour
 
         var save = TitleSaveStore.GetOrCreateEquip(monsterId);
 
-        // Always-on first
-        if (def.defaultAlwaysOnTitles != null)
-            res.AddRange(def.defaultAlwaysOnTitles);
+        if (def.defaultAlwaysOnTitles != null) res.AddRange(def.defaultAlwaysOnTitles);
 
-        // Then add equipped per tier (if unlocked by level)
         for (int i = 0; i < tiers.Count; i++)
         {
             var tier = tiers[i];
             if (level < Mathf.Max(1, tier.levelRequired)) { res.Add(null); continue; }
 
             string tid = (i < save.tierSelections.Count) ? save.tierSelections[i] : "";
-            if (!string.IsNullOrEmpty(tid) && _idToTitle.TryGetValue(tid, out var t))
-                res.Add(t);
-            else
-                res.Add(null);
+            if (!string.IsNullOrEmpty(tid) && _idToTitle.TryGetValue(tid, out var t)) res.Add(t);
+            else res.Add(null);
         }
         return res;
     }
 
     // ─────────────────────────────────────────────────────────────────────
-    // Public: Evaluation helpers (to call from Battle/Jobs)
-    // These read the monster's active titles (always-on + equipped) and
-    // compute aggregate effects for the requested category.
+    // Evaluation helpers
     // ─────────────────────────────────────────────────────────────────────
 
-    // --- Stat aggregation (flat or % depending on Op) ---
+    // Single/Conditional/Dual stat application
     public float GetStatValue(string monsterId, MonsterDataSO def, int level, StatKind stat, in TitleContext ctx, float baseValue)
     {
         var titles = GetEquippedList(monsterId, def, level);
@@ -178,65 +162,42 @@ public sealed class TitleManager : MonoBehaviour
         {
             var t = titles[i];
 
-            // Single-stat booster
             if (t is StatBoosterTitleSO sb && sb.stat == stat)
-            {
                 current = TitleUtility.ApplyOp(current, sb.operation, sb.value);
-                continue;
-            }
 
-            // Conditional single-stat booster
-            if (t is ConditionalBoosterTitleSO cb && cb.stat == stat)
+            else if (t is ConditionalBoosterTitleSO cb && cb.stat == stat)
             {
                 if (TitleUtility.CheckCondition(cb, ctx))
                     current = TitleUtility.ApplyOp(current, cb.operation, cb.value);
-                continue;
             }
-
-            // NEW: Dual-stat booster (applies only when we are evaluating the matching stat)
-            if (t is DualStatBoosterTitleSO dsb && dsb.enabled)
+            else if (t is DualStatBoosterTitleSO dsb && dsb.enabled)
             {
-                if (dsb.statA == stat)
-                    current = TitleUtility.ApplyOp(current, dsb.opA, dsb.valueA);
-
-                if (dsb.statB == stat)
-                    current = TitleUtility.ApplyOp(current, dsb.opB, dsb.valueB);
-
-                continue;
+                if (dsb.statA == stat) current = TitleUtility.ApplyOp(current, dsb.opA, dsb.valueA);
+                if (dsb.statB == stat) current = TitleUtility.ApplyOp(current, dsb.opB, dsb.valueB);
             }
         }
-
         return current;
     }
 
-
-
-    // --- Effectiveness mod (multiply your type chart result) ---
     public float GetEffectivenessMultiplier(string monsterId, MonsterDataSO def, int level)
     {
         var titles = GetEquippedList(monsterId, def, level);
         float mul = 1f;
         for (int i = 0; i < titles.Count; i++)
-        {
-            var t = titles[i] as EffectivenessModTitleSO;
-            if (t) mul *= Mathf.Max(0f, t.effectivenessMultiplier);
-        }
+            if (titles[i] is EffectivenessModTitleSO em) mul *= Mathf.Max(0f, em.effectivenessMultiplier);
         return mul;
     }
 
-    // --- Damage filter (incoming) ---
-    // Adapter expects fields named: cannotBeCrit, percentReduce, flatReduce
+    // Adapter expects fields: cannotBeCrit, percentReduce, flatReduce
     public struct TitleDamageFilter
     {
-        public bool  cannotBeCrit;     // true => negate crits
-        public float percentReduce;    // 0.15 => reduce 15% after DEF (scalar applied later)
-        public int   flatReduce;       // subtract after % reduce
+        public bool  cannotBeCrit;
+        public float percentReduce;   // 0.20 = 20% less damage after DEF
+        public int   flatReduce;      // subtract after % reduce
     }
 
-    // This signature matches TitlesAdapter.GetDamageFilter(...) reflection call.
     public TitleDamageFilter GetDamageFilter(string monsterId, MonsterDataSO def, int level)
     {
-        // If you already authored DamageFilterTitleSO assets:
         var titles = GetEquippedList(monsterId, def, level);
         var f = new TitleDamageFilter { cannotBeCrit = false, percentReduce = 0f, flatReduce = 0 };
 
@@ -245,36 +206,33 @@ public sealed class TitleManager : MonoBehaviour
             var t = titles[i] as DamageFilterTitleSO;
             if (!t) continue;
 
-            // Your DamageFilterTitleSO uses percentMultiplier (1.0 baseline).
-            // Convert to percentReduce: e.g., 0.80 multiplier => 20% reduce.
-            float pctReduceFromMult = Mathf.Clamp01(1f - Mathf.Max(0f, t.percentMultiplier));
-
+            // Convert 1.0-baseline multiplier to a percent reduction amount.
+            float reduceFromMult = Mathf.Clamp01(1f - Mathf.Max(0f, t.percentMultiplier));
             f.flatReduce   += Mathf.Max(0, t.flatReduce);
-            f.percentReduce = Mathf.Clamp01(f.percentReduce + pctReduceFromMult); // additive reduce caps at 100%
+            f.percentReduce = Mathf.Clamp01(f.percentReduce + reduceFromMult);
             if (t.cannotBeCrit) f.cannotBeCrit = true;
         }
-
         return f;
     }
 
-    // Keep the boxed variant for any older callers (harmless).
-    public object GetDamageFilterBoxed(string monsterId, MonsterDataSO def, int level)
-    {
-        var f = GetDamageFilter(monsterId, def, level);
-        return f; // boxed TitleManager.TitleDamageFilter
-    }
+    public object GetDamageFilterBoxed(string monsterId, MonsterDataSO def, int level) => GetDamageFilter(monsterId, def, level);
 
     // --- Job boosters (while assigned) ---
+    // Original 3-arg signature
     public float GetJobFatigueMultiplier(string monsterId, MonsterDataSO def, int level)
     {
         var titles = GetEquippedList(monsterId, def, level);
         float mul = 1f;
         for (int i = 0; i < titles.Count; i++)
-        {
-            var t = titles[i] as JobFatigueBoosterTitleSO;
-            if (t) mul *= Mathf.Max(0f, t.fatigueMultiplier);
-        }
+            if (titles[i] is JobFatigueBoosterTitleSO jb) mul *= Mathf.Max(0f, jb.fatigueMultiplier);
         return mul;
+    }
+
+    // NEW: 4-arg overload to match TitlesAdapter (fixes the warning)
+    public float GetJobFatigueMultiplier(string monsterId, MonsterDataSO def, int level, JobType site)
+    {
+        // If you later want site-specific fatigue tuning, use `site` here.
+        return GetJobFatigueMultiplier(monsterId, def, level);
     }
 
     public float GetJobAuraPercent(string monsterId, MonsterDataSO def, int level, JobType site)
@@ -282,45 +240,30 @@ public sealed class TitleManager : MonoBehaviour
         var titles = GetEquippedList(monsterId, def, level);
         float sum = 0f;
         for (int i = 0; i < titles.Count; i++)
-        {
-            var t = titles[i] as JobAuraTitleSO;
-            if (t) sum += Mathf.Max(0f, t.siteAuraPercent);
-        }
+            if (titles[i] is JobAuraTitleSO ja) sum += Mathf.Max(0f, ja.siteAuraPercent);
         return sum;
     }
 
-    // Adapter calls 4-arg version; include site even if you don't use it yet.
     public int GetJobCapacityBonusFlat(string monsterId, MonsterDataSO def, int level, JobType site)
     {
         var titles = GetEquippedList(monsterId, def, level);
         int sum = 0;
         for (int i = 0; i < titles.Count; i++)
-        {
-            var t = titles[i] as JobCapacityBoosterTitleSO;
-            if (t) sum += Mathf.Max(0, t.capacityBonusFlat);
-        }
+            if (titles[i] is JobCapacityBoosterTitleSO jc) sum += Mathf.Max(0, jc.capacityBonusFlat);
         return sum;
     }
 
-    // ─────────────────────────────────────────────────────────────────────
-    // NEW: Hooks the adapter expects (coin/xp/capture/job rate)
-    // ─────────────────────────────────────────────────────────────────────
-
+    // --- Victory / capture / job rate hooks used via TitlesAdapter ---
     public float GetCoinMultOnVictory(string monsterId, MonsterDataSO wild, int wildLevel)
     {
-        var titles = GetEquippedList(monsterId, def: wild /* not used */, level: Mathf.Max(1, wildLevel));
+        var titles = GetEquippedList(monsterId, def: wild, level: Mathf.Max(1, wildLevel));
         float mul = 1f;
-
         for (int i = 0; i < titles.Count; i++)
         {
             var t = titles[i];
             if (!t) continue;
-
-            // Direct type support if you authored a specific SO
-            if (t is CoinBonusOnVictoryTitleSO cb) { mul *= Mathf.Max(0f, cb.coinMultiplier); continue; }
-
-            // Reflection fallback for flexible authoring:
-            if (TryReadFloat(t, out var v, "coinMultiplier", "coinMultOnVictory", "victoryCoinMult", "coinsMult"))
+            if (t is CoinBonusOnVictoryTitleSO cb) mul *= Mathf.Max(0f, cb.coinMultiplier);
+            else if (TryReadFloat(t, out var v, "coinMultiplier", "coinMultOnVictory", "victoryCoinMult", "coinsMult"))
                 mul *= Mathf.Max(0f, v);
         }
         return Mathf.Max(0f, mul);
@@ -328,17 +271,14 @@ public sealed class TitleManager : MonoBehaviour
 
     public float GetXPMultOnVictory(string monsterId, MonsterDataSO wild, int wildLevel)
     {
-        var titles = GetEquippedList(monsterId, def: wild /* not used */, level: Mathf.Max(1, wildLevel));
+        var titles = GetEquippedList(monsterId, def: wild, level: Mathf.Max(1, wildLevel));
         float mul = 1f;
-
         for (int i = 0; i < titles.Count; i++)
         {
             var t = titles[i];
             if (!t) continue;
-
-            if (t is XPBonusOnVictoryTitleSO xb) { mul *= Mathf.Max(0f, xb.xpMultiplier); continue; }
-
-            if (TryReadFloat(t, out var v, "xpMultiplier", "xpMultOnVictory", "victoryXpMult", "expMultiplier"))
+            if (t is XPBonusOnVictoryTitleSO xb) mul *= Mathf.Max(0f, xb.xpMultiplier);
+            else if (TryReadFloat(t, out var v, "xpMultiplier", "xpMultOnVictory", "victoryXpMult", "expMultiplier"))
                 mul *= Mathf.Max(0f, v);
         }
         return Mathf.Max(0f, mul);
@@ -346,7 +286,6 @@ public sealed class TitleManager : MonoBehaviour
 
     public float GetCaptureChanceMult(string monsterId)
     {
-        // Use lead monster's titles; level isn't relevant, but pass something sane
         var def = MonsterLibraryLocator.GetById(monsterId);
         int lvl = 1;
         var titles = GetEquippedList(monsterId, def, lvl);
@@ -356,10 +295,8 @@ public sealed class TitleManager : MonoBehaviour
         {
             var t = titles[i];
             if (!t) continue;
-
-            if (t is CaptureChanceTitleSO cc) { mul *= Mathf.Max(0f, cc.chanceMultiplier); continue; }
-
-            if (TryReadFloat(t, out var v, "captureChanceMultiplier", "captureMult", "captureChanceMult"))
+            if (t is CaptureChanceTitleSO cc) mul *= Mathf.Max(0f, cc.chanceMultiplier);
+            else if (TryReadFloat(t, out var v, "captureChanceMultiplier", "captureMult", "captureChanceMult"))
                 mul *= Mathf.Max(0f, v);
         }
         return Mathf.Max(0f, mul);
@@ -376,16 +313,14 @@ public sealed class TitleManager : MonoBehaviour
         {
             var t = titles[i];
             if (!t) continue;
-
-            if (t is JobRateBoosterTitleSO jr) { mul *= Mathf.Max(0f, jr.rateMultiplier); continue; }
-
-            if (TryReadFloat(t, out var v, "rateMultiplier", "jobRateMultiplier", "productionMultiplier", "jobProdMult"))
+            if (t is JobRateBoosterTitleSO jr) mul *= Mathf.Max(0f, jr.rateMultiplier);
+            else if (TryReadFloat(t, out var v, "rateMultiplier", "jobRateMultiplier", "productionMultiplier", "jobProdMult"))
                 mul *= Mathf.Max(0f, v);
         }
         return Mathf.Max(0f, mul);
     }
 
-    // router so adapter can use a string for StatKind
+    // Router for adapter
     public float GetStatValueRouter(string monsterId, MonsterDataSO def, int level, string statKind, TitleContext ctx, float baseValue)
     {
         if (!Enum.TryParse<StatKind>(statKind, out var kind))
@@ -393,9 +328,7 @@ public sealed class TitleManager : MonoBehaviour
         return GetStatValue(monsterId, def, level, kind, in ctx, baseValue);
     }
 
-    // ─────────────────────────────────────────────────────────────────────
-    // Small reflection helper to read flexible field/property names
-    // ─────────────────────────────────────────────────────────────────────
+    // Small reflection helper (flexible field/property names)
     private static bool TryReadFloat(object obj, out float value, params string[] names)
     {
         value = 0f;
@@ -409,7 +342,6 @@ public sealed class TitleManager : MonoBehaviour
             {
                 try { value = Convert.ToSingle(f.GetValue(obj)); return true; } catch { }
             }
-
             var p = t.GetProperty(names[i]);
             if (p != null)
             {
@@ -418,6 +350,4 @@ public sealed class TitleManager : MonoBehaviour
         }
         return false;
     }
-
-    
 }

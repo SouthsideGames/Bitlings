@@ -9,10 +9,10 @@ MonoBehaviour:
   m_GameObject: {fileID: 0}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: af7b65046e5bb554c808c8500b10fe7d, type: 3}
-  m_Name: TitleTrack
+  m_Script: {fileID: 11500000, guid: f84cb6da77f7db64b94e2034c36a5a24, type: 3}
+  m_Name: TeamMotivator
   m_EditorClassIdentifier: 
-  tiers:
-  - levelRequired: 0
-    unlockChoices:
-    - {fileID: 11400000, guid: 094d6e36ee416d942be2bdf9e3a16a97, type: 2}
+  titleId: T-007
+  displayName: Team Motivaor
+  description: Grants a +20% site-wide production aura for your job site.
+  siteAuraPercent: 2

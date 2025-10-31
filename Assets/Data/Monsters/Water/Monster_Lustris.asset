@@ -27,6 +27,7 @@ MonoBehaviour:
   baseDefense: 60
   baseSpeed: 30
   fatigueRatePerHour: 0.03
+  fatigueCooldownHours: 8
   baseTrainingXPPerHour: 34
   evolutionStage: 1
   evolutionLevel: 14
