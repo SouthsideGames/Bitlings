@@ -177,18 +177,39 @@ public sealed class TitleManager : MonoBehaviour
         for (int i = 0; i < titles.Count; i++)
         {
             var t = titles[i];
+
+            // Single-stat booster
             if (t is StatBoosterTitleSO sb && sb.stat == stat)
             {
                 current = TitleUtility.ApplyOp(current, sb.operation, sb.value);
+                continue;
             }
-            else if (t is ConditionalBoosterTitleSO cb && cb.stat == stat)
+
+            // Conditional single-stat booster
+            if (t is ConditionalBoosterTitleSO cb && cb.stat == stat)
             {
                 if (TitleUtility.CheckCondition(cb, ctx))
                     current = TitleUtility.ApplyOp(current, cb.operation, cb.value);
+                continue;
+            }
+
+            // NEW: Dual-stat booster (applies only when we are evaluating the matching stat)
+            if (t is DualStatBoosterTitleSO dsb && dsb.enabled)
+            {
+                if (dsb.statA == stat)
+                    current = TitleUtility.ApplyOp(current, dsb.opA, dsb.valueA);
+
+                if (dsb.statB == stat)
+                    current = TitleUtility.ApplyOp(current, dsb.opB, dsb.valueB);
+
+                continue;
             }
         }
+
         return current;
     }
+
+
 
     // --- Effectiveness mod (multiply your type chart result) ---
     public float GetEffectivenessMultiplier(string monsterId, MonsterDataSO def, int level)
@@ -397,4 +418,6 @@ public sealed class TitleManager : MonoBehaviour
         }
         return false;
     }
+
+    
 }

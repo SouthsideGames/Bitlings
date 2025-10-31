@@ -38,7 +38,7 @@ MonoBehaviour:
   spawnWeight: 5
   jobSkill: 1.2
   rarity: 1
-  titleTrack: {fileID: 0}
+  titleTrack: {fileID: 11400000, guid: 4d17f3173a6e3724cbafc9ee10fedd28, type: 2}
   defaultAlwaysOnTitles: []
   description: Aurelo flits restlessly through the skies. It calls to others with
     high chirps that echo across valleys.
