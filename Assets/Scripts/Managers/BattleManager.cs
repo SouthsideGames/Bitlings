@@ -72,6 +72,7 @@ public class BattleManager : MonoBehaviour
 
     [Header("Debug")]
     [SerializeField] private bool debugIncomingMitigation = false;
+    [SerializeField] private bool debugEffectivenessOutgoing = false;
 
 
     private MonsterDataSO wildDef;
@@ -349,29 +350,22 @@ public class BattleManager : MonoBehaviour
 
         playerAttacksThisTurn++;
 
-        var jobContext = (jobCtx != null) ? jobCtx[activeIndex] : null;
-
+        // --- Base ATK (no active boosts here) ---
         int flat = 0;
         var roster = SaveManager.Data?.team;
         if (roster != null && activeIndex < roster.Count) flat = Mathf.Max(0, roster[activeIndex].flatAtkBonus);
 
-        int temp = BattleTempBuffs.I ? BattleTempBuffs.I.GetPlayerAtkBonus() : 0;
+        int tempFlat = BattleTempBuffs.I ? BattleTempBuffs.I.GetPlayerAtkBonus() : 0;
+        float atkBase = BattleCalc.CalcBaseAttack(teamDefs[activeIndex], teamLevels[activeIndex], flat, tempFlat);
 
-        float atkBase = BattleCalc.CalcBaseAttack(teamDefs[activeIndex], teamLevels[activeIndex], flat, temp);
-
-        // Job % ATK
-        var ctx = (jobCtx != null) ? jobCtx[activeIndex] : null;
-        if (ctx != null && ctx.attackBonusPct > 0f) atkBase *= (1f + ctx.attackBonusPct);
-
-        // Conditional Title ATK via router (explicit "ATK")
+        // Conditional Title ATK via router (explicit "ATK"); still part of base, not an "active" boost
         var titleCtx = BuildTitleContextForActive();
-        float atk = TitlesAdapter.GetStatValue(teamIds[activeIndex], teamDefs[activeIndex], teamLevels[activeIndex], "ATK", titleCtx, atkBase);
-
-        // Tap multiplier
-        float tap = TapBoost.I ? TapBoost.I.CurrentMultiplier : 1f;
-        atk *= Mathf.Max(1f, tap);
+        float atkNoActives = TitlesAdapter.GetStatValue(
+            teamIds[activeIndex], teamDefs[activeIndex], teamLevels[activeIndex], "ATK", titleCtx, atkBase
+        );
 
         // Crit chance (job buffs)
+        var ctx = (jobCtx != null) ? jobCtx[activeIndex] : null;
         float playerCrit = critChancePlayer;
         if (ctx != null)
         {
@@ -380,45 +374,91 @@ public class BattleManager : MonoBehaviour
         }
         playerCrit = Mathf.Clamp01(playerCrit);
 
-        // One-turn temp damage buff
-        if (tempDmgBuffTurns > 0 && tempDmgBuffPct > 0f)
-        {
-            atk *= (1f + tempDmgBuffPct);
-            BattleLogger.Log($"+{Mathf.RoundToInt(tempDmgBuffPct * 100f)}% damage buff active.", LogScope.Battle);
-            tempDmgBuffTurns--;
-            if (tempDmgBuffTurns <= 0) tempDmgBuffPct = 0f;
-        }
-
-        // Resolve (attacker ID present; defender ID null)
+        // Resolve using BASE (no actives, no job damage scalers yet)
         int defenseIgnore = 0;
         var dr = BattleCalc.ResolveHit(
             teamIds[activeIndex], teamDefs[activeIndex], teamLevels[activeIndex],
             null, wildDef, wildLevel,
-            atk, playerCrit, critMultiplier, -defenseIgnore
+            atkNoActives, playerCrit, critMultiplier, -defenseIgnore
         );
 
-        // Outgoing effectiveness (additional Titles scalar if you use it)
-        float effMul = TitlesAdapter.GetEffectivenessMult(teamIds[activeIndex], teamDefs[activeIndex], teamLevels[activeIndex]);
-        if (!Mathf.Approximately(effMul, 1f))
-            dr.damage = Mathf.Max(1, Mathf.RoundToInt(dr.damage * effMul));
+        // ─────────────────────────────────────────────────────────────
+        // Order: Type effectiveness (inside ResolveHit) → Job passives → Title boosts → Active boosts
+        // ─────────────────────────────────────────────────────────────
 
-        // Job: first outgoing damage bonus (once)
-        var jCtx = (jobCtx != null) ? jobCtx[activeIndex] : null;
-        if (jCtx != null && !jCtx.usedFirstOutgoing && jCtx.firstOutgoingBonus > 0f)
+        // (1) JOB PASSIVES → as damage scalers (not in base ATK)
+        if (ctx != null && ctx.attackBonusPct > 0f)
+            dr.damage = Mathf.Max(1, Mathf.RoundToInt(dr.damage * (1f + ctx.attackBonusPct)));
+
+        if (ctx != null && !ctx.usedFirstOutgoing && ctx.firstOutgoingBonus > 0f)
         {
-            jCtx.usedFirstOutgoing = true;
-            dr.damage = Mathf.Max(1, Mathf.RoundToInt(dr.damage * (1f + jCtx.firstOutgoingBonus)));
+            ctx.usedFirstOutgoing = true;
+            dr.damage = Mathf.Max(1, Mathf.RoundToInt(dr.damage * (1f + ctx.firstOutgoingBonus)));
         }
 
-        bool lethal = dr.damage >= wildHP;
+        // (2) TITLE BOOSTS → effectiveness mods (Multiply first, then Add)
+        float effMul = TitlesAdapter.GetEffectivenessMult(teamIds[activeIndex], teamDefs[activeIndex], teamLevels[activeIndex]);
+        if (!Mathf.Approximately(effMul, 1f))
+        {
+            int before = dr.damage;
+            dr.damage = Mathf.Max(1, Mathf.RoundToInt(dr.damage * effMul));
 
+            if (debugEffectivenessOutgoing)
+            {
+                string msg = $"[EffectivenessModTitle] MULT x{effMul:0.00}: {before} → {dr.damage}";
+                try { BattleLogger.Log(msg, LogScope.Battle); } catch { }
+                Debug.Log(msg);
+            }
+        }
+
+        float effAdd = TitlesAdapter.GetEffectivenessAdd(teamIds[activeIndex], teamDefs[activeIndex], teamLevels[activeIndex]);
+        if (!Mathf.Approximately(effAdd, 0f) && dr.effectiveness > 0.0001f)
+        {
+            int before = dr.damage;
+            float scale = (dr.effectiveness + effAdd) / dr.effectiveness;
+            dr.damage = Mathf.Max(1, Mathf.RoundToInt(dr.damage * scale));
+
+            if (debugEffectivenessOutgoing)
+            {
+                string msg = $"[EffectivenessModTitle] ADD +{effAdd:0.00} (E={dr.effectiveness:0.00}) → x{scale:0.00}: {before} → {dr.damage}";
+                try { BattleLogger.Log(msg, LogScope.Battle); } catch { }
+                Debug.Log(msg);
+            }
+        }
+
+        // (3) ACTIVE BOOSTS → Tap + Temp LAST
+        float tap = TapBoost.I ? TapBoost.I.CurrentMultiplier : 1f;
+        if (tap > 1f)
+        {
+            int before = dr.damage;
+            dr.damage = Mathf.Max(1, Mathf.RoundToInt(dr.damage * tap));
+            if (debugEffectivenessOutgoing)
+            {
+                string msg = $"[ActiveBoost] Tap x{tap:0.00}: {before} → {dr.damage}";
+                try { BattleLogger.Log(msg, LogScope.Battle); } catch { }
+                Debug.Log(msg);
+            }
+        }
+
+        if (tempDmgBuffTurns > 0 && tempDmgBuffPct > 0f)
+        {
+            int before = dr.damage;
+            dr.damage = Mathf.Max(1, Mathf.RoundToInt(dr.damage * (1f + tempDmgBuffPct)));
+            BattleLogger.Log($"+{Mathf.RoundToInt(tempDmgBuffPct * 100f)}% damage buff active.", LogScope.Battle);
+            tempDmgBuffTurns--;
+            if (tempDmgBuffTurns <= 0) tempDmgBuffPct = 0f;
+
+            if (debugEffectivenessOutgoing)
+                Debug.Log($"[ActiveBoost] TempDmg applied: {before} → {dr.damage}");
+        }
+
+        // Apply damage
+        bool lethal = dr.damage >= wildHP;
         wildHP = Mathf.Max(0f, wildHP - dr.damage);
         PushHPBars();
 
         if (!playerLandedFirstHitThisBattle && dr.damage > 0)
-        {
             playerLandedFirstHitThisBattle = true;
-        }
 
         BattleLogger.Log($"{GetName(activeIndex)} attacks for {dr.damage}!", LogScope.Battle);
 
@@ -431,7 +471,7 @@ public class BattleManager : MonoBehaviour
 
         if (!playerDidFirstAttackThisBattle) playerDidFirstAttackThisBattle = true;
 
-        // End-turn regen from jobs
+        // End-turn regen (jobs)
         var jCtx2 = (jobCtx != null) ? jobCtx[activeIndex] : null;
         if (jCtx2 != null && jCtx2.endTurnHealPct > 0f)
         {
@@ -450,8 +490,11 @@ public class BattleManager : MonoBehaviour
         yield break;
     }
 
-   private IEnumerator EnemyTurn()
+
+    private IEnumerator EnemyTurn()
     {
+        if (debugIncomingMitigation) Debug.Log("[Mitigation] EnemyTurn started — debugIncomingMitigation = TRUE");
+
         if (teamHP[activeIndex] <= 0.01f && !AutoSwapToAlive()) yield break;
 
         enemyAttacksThisTurn++;
@@ -459,7 +502,7 @@ public class BattleManager : MonoBehaviour
         float atk = Mathf.Max(1f, wildAttackPerTurn);
 
         int flatDefBonus = BattleTempBuffs.I ? BattleTempBuffs.I.GetPlayerDefenseBonus() : 0;
-        var ctx   = (jobCtx != null) ? jobCtx[activeIndex] : null;
+        var ctx = (jobCtx != null) ? jobCtx[activeIndex] : null;
         float preHP = teamHP[activeIndex];
 
         // Defender Titles damage filter (cannot be crit, % reduce, flat)
@@ -522,8 +565,20 @@ public class BattleManager : MonoBehaviour
             if (wildWeakenTurns <= 0) wildWeakenPct = 0f;
         }
 
-        // ── Stage 1: apply scalar first
+        // ── Stage 1: apply job/conditional scalar first
         int dmg_afterScalar = Mathf.Max(1, Mathf.RoundToInt(dr.damage * incomingScalar));
+
+        // ── Stage 1.5: incoming effectiveness titles (defensive) BEFORE %/flat filters
+        float incomingEffMul = TitleManager.I
+            ? Mathf.Max(0f, TitleManager.I.GetIncomingEffectivenessMultiplier(teamIds[activeIndex], teamDefs[activeIndex], teamLevels[activeIndex]))
+            : 1f;
+        if (!Mathf.Approximately(incomingEffMul, 1f))
+        {
+            int beforeInc = dmg_afterScalar;
+            dmg_afterScalar = Mathf.Max(1, Mathf.RoundToInt(dmg_afterScalar * incomingEffMul));
+            if (debugIncomingMitigation)
+                MitLog($"  • After Title Incoming-Effectiveness x{incomingEffMul:0.00}: {beforeInc} → {dmg_afterScalar}");
+        }
 
         // ── Stage 2: Titles — % reduce then flat reduce
         float percentReduce = Mathf.Clamp01(df.percentReduce);
@@ -567,24 +622,29 @@ public class BattleManager : MonoBehaviour
 
         if (!playerTookFirstIncomingThisBattle) playerTookFirstIncomingThisBattle = true;
 
-        // ── DEBUG: print a structured mitigation breakdown
+        // ── DEBUG: structured mitigation breakdown
         if (debugIncomingMitigation)
         {
-            int dmg_noTitlesNoJobs = baseRawDamage; // ResolveHit() result before any scalars
-            int dmg_afterJobs      = Mathf.Max(1, Mathf.RoundToInt(baseRawDamage * incomingScalar));
-            int shieldAbsInt       = Mathf.RoundToInt(shieldAbsorbF);
+            MitLogOncePerTurnHeader(critRolled, critNegatedByTitle);
 
-            BattleLogger.Log(
-                $"[Mitigation] {GetName(activeIndex)}\n" +
-                $"  • Rolled Crit: {(critRolled ? "Yes" : "No")}  |  Negated by Title: {(critNegatedByTitle ? "Yes" : "No")}\n" +
+            int dmg_noTitlesNoJobs = baseRawDamage;
+            int dmg_afterJobsOnly  = Mathf.Max(1, Mathf.RoundToInt(baseRawDamage * incomingScalar));
+            int shieldAbsInt       = Mathf.RoundToInt(shieldAbsorbF);
+            int jobsPctOff         = Mathf.RoundToInt((1f - incomingScalar) * 100f);
+            int titlePctOff        = Mathf.RoundToInt(percentReduce * 100f);
+            int shieldBeforeInt    = Mathf.RoundToInt(shieldBefore);
+
+            var text =
                 $"  • Base: {dmg_noTitlesNoJobs}\n" +
-                $"  • After Job/Conditional scalar ({Mathf.RoundToInt((1f-incomingScalar)*100f)}% off): {dmg_afterJobs}\n" +
-                $"  • After Title % ({Mathf.RoundToInt(percentReduce*100f)}% off): {dmg_afterPercent}\n" +
+                $"  • After Job/Conditional scalar ({jobsPctOff}% off): {dmg_afterJobsOnly}\n" +
+                (Mathf.Approximately(incomingEffMul, 1f) ? "" :
+                $"  • After Title Incoming-Effectiveness x{incomingEffMul:0.00}: {dmg_afterJobsOnly} → {dmg_afterScalar}\n") +
+                $"  • After Title % ({titlePctOff}% off): {dmg_afterPercent}\n" +
                 $"  • After Title Flat (-{flatReduce}): {dmg_afterFlat}\n" +
-                $"  • Shield Absorb (-{shieldAbsInt}, was {Mathf.RoundToInt(shieldBefore)}): {dmg_afterFlat - shieldAbsInt}\n" +
-                $"  ⇒ Final Applied: {dmg_final}",
-                LogScope.Battle
-            );
+                $"  • Shield Absorb (-{shieldAbsInt}, was {shieldBeforeInt}): {dmg_afterFlat - shieldAbsInt}\n" +
+                $"  ⇒ Final Applied: {dmg_final}";
+
+            MitLog(text);
         }
 
         // Rescue heal (job-based)
@@ -616,6 +676,7 @@ public class BattleManager : MonoBehaviour
         Punch(wildIcon);
         yield break;
     }
+
 
 
     private bool CheckEnd()
@@ -1420,5 +1481,15 @@ public class BattleManager : MonoBehaviour
             ClampAndPushActiveHP();
             RefreshBenchUI();     
         }
+    }
+
+    private void MitLog(string text)
+    {
+        try { BattleLogger.Log(text, LogScope.Battle); } catch { /* ignore */ }
+        Debug.Log(text);
+    }
+    private void MitLogOncePerTurnHeader(bool critRolled, bool critNegated)
+    {
+        MitLog($"[Mitigation] {GetName(activeIndex)} | Crit Rolled: {(critRolled ? "Yes" : "No")} | Negated by Title: {(critNegated ? "Yes" : "No")}");
     }
 }

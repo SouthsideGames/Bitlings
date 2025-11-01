@@ -345,7 +345,7 @@ public static class TitlesAdapter
 
         return default;
     }
-    
+
     // Defender-side type effectiveness multiplier
     public static float GetIncomingEffectivenessMult(string ownedId, MonsterDataSO def, int level)
     {
@@ -353,4 +353,13 @@ public static class TitlesAdapter
             return Mathf.Max(0f, f);
         return 1f;
     }
+    
+    // Add to TitlesAdapter
+    public static float GetEffectivenessAdd(string ownedId, MonsterDataSO def, int level)
+    {
+        if (TryInvoke("GetEffectivenessAdd", new object[] { ownedId, def, level }, out var res) && res is float f)
+            return f;
+        return 0f;
+    }
+
 }

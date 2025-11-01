@@ -10,6 +10,9 @@ public sealed class TitleManager : MonoBehaviour
     [Tooltip("If null, manager will scan Resources for all TitleSO assets on Awake.")]
     [SerializeField] private List<TitleSO> preloadTitles = new List<TitleSO>();
 
+    [Header("Debug")]
+    [SerializeField] private bool debugEffectiveness = false;
+
     // id -> TitleSO
     private readonly Dictionary<string, TitleSO> _idToTitle = new Dictionary<string, TitleSO>();
 
@@ -218,10 +221,56 @@ public sealed class TitleManager : MonoBehaviour
     {
         var titles = GetEquippedList(monsterId, def, level);
         float mul = 1f;
+
         for (int i = 0; i < titles.Count; i++)
-            if (titles[i] is EffectivenessModTitleSO em) mul *= Mathf.Max(0f, em.effectivenessMultiplier);
+        {
+            var t = titles[i] as EffectivenessModTitleSO;
+            if (!t || t.mode != EffectivenessMode.Multiply) continue;
+
+            float before = mul;
+            mul *= Mathf.Max(0f, t.amount);
+
+            if (debugEffectiveness)
+            {
+                string msg = $"[EffectivenessMod] {monsterId} MULT x{t.amount:0.00}: {before:0.00} → {mul:0.00}";
+                try { BattleLogger.Log(msg, LogScope.Battle); } catch { }
+                Debug.Log(msg);
+            }
+        }
+
+        if (debugEffectiveness)
+        {
+            string summary = $"[EffectivenessMod] FINAL MULT for {monsterId} = x{mul:0.00}";
+            try { BattleLogger.Log(summary, LogScope.Battle); } catch { }
+            Debug.Log(summary);
+        }
+
         return mul;
     }
+
+    public float GetEffectivenessAdd(string monsterId, MonsterDataSO def, int level)
+    {
+        var titles = GetEquippedList(monsterId, def, level);
+        float add = 0f;
+
+        for (int i = 0; i < titles.Count; i++)
+        {
+            var t = titles[i] as EffectivenessModTitleSO;
+            if (!t || t.mode != EffectivenessMode.Add) continue;
+            add += t.amount;
+        }
+
+        if (debugEffectiveness && Mathf.Abs(add) > 0.0001f)
+        {
+            string msg = $"[EffectivenessMod] FINAL ADD for {monsterId} = +{add:0.00} effectiveness";
+            try { BattleLogger.Log(msg, LogScope.Battle); } catch { }
+            Debug.Log(msg);
+        }
+
+        return add;
+    }
+
+
 
     // Adapter expects fields: cannotBeCrit, percentReduce, flatReduce
     public struct TitleDamageFilter

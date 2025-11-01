@@ -15,4 +15,5 @@ MonoBehaviour:
   titleId: T-600
   displayName: EFFECT Bo
   description: "\t\t\t\t"
-  effectivenessMultiplier: 2
+  mode: 0
+  amount: 0.25
