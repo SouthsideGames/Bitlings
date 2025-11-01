@@ -91,6 +91,12 @@ public class PostBattleSummaryManager : MonoBehaviour
 
     public void TryFlush() => TryShowNext();
 
+    // In PostBattleSummaryManager
+    public void FlushNowIfPossible()
+    {
+        TryShowNext();
+    }
+
     void TryShowNext()
     {
         if (_panelOpen || _battleInProgress || _autoBattling) return;
