@@ -82,6 +82,9 @@ public class EncounterManager : MonoBehaviour
 
         ResourceBank.EnsureSize();
 
+        // Ensure summary manager starts in manual mode (panels allowed)
+        PostBattleSummaryManager.I?.SetAutoBattling(false);
+
         EmitStatus("Tap ENCOUNTER to begin. Hold to toggle AUTO.", LogScope.System);
         OnStateChanged?.Invoke();
 
@@ -128,6 +131,9 @@ public class EncounterManager : MonoBehaviour
             if (autoLoopCo != null) { StopCoroutine(autoLoopCo); autoLoopCo = null; }
             autoLoopCo = StartCoroutine(AutoLoop());
 
+            // While AUTO is on, hold summaries in the queue.
+            PostBattleSummaryManager.I?.SetAutoBattling(true);
+
             if (!inBattle)
                 EmitStatus("AUTO mode ON. Battling until defeat…", LogScope.System);
             else
@@ -139,10 +145,13 @@ public class EncounterManager : MonoBehaviour
 
             if (autoLoopCo != null) { StopCoroutine(autoLoopCo); autoLoopCo = null; }
 
+            // AUTO off → allow summaries to display, and flush immediately.
+            PostBattleSummaryManager.I?.SetAutoBattling(false);
+            PostBattleSummaryManager.I?.FlushNowIfPossible();
+
             EmitStatus("AUTO mode OFF. Tap ENCOUNTER for the next fight.", LogScope.System);
         }
 
-        PostBattleSummaryManager.I?.SetAutoBattling(autoMode);
         OnStateChanged?.Invoke();
     }
 
@@ -228,7 +237,10 @@ public class EncounterManager : MonoBehaviour
 
         if (autoLoopCo != null) { StopCoroutine(autoLoopCo); autoLoopCo = null; }
 
+        // Out of energy → pop queued summaries now.
         PostBattleSummaryManager.I?.NotifyEnergyDepleted();
+        PostBattleSummaryManager.I?.SetAutoBattling(false);
+        PostBattleSummaryManager.I?.FlushNowIfPossible();
 
         EmitStatus("AUTO stopped: no energy.", LogScope.System);
         OnStateChanged?.Invoke();
@@ -413,10 +425,13 @@ public class EncounterManager : MonoBehaviour
             if (autoMode)
             {
                 EmitStatus("Defeat. Retrying (AUTO)…", LogScope.System);
+                // AUTO remains on; summaries continue queuing.
             }
             else
             {
                 EmitStatus("Tap ENCOUNTER for the next fight.", LogScope.System);
+                // Manual play → allow queued summary to pop immediately.
+                PostBattleSummaryManager.I?.FlushNowIfPossible();
             }
             yield break;
         }
@@ -424,6 +439,7 @@ public class EncounterManager : MonoBehaviour
         // WIN
         if (autoMode)
         {
+            // While AUTO: keep panels queued; spend energy or stop if none left.
             if (!autoRunPaidEnergy)
             {
                 if (!HasEnergy()) { StopAuto_NoEnergy(); yield break; }
@@ -437,6 +453,9 @@ public class EncounterManager : MonoBehaviour
             nextEncounterFree = true; // manual: next fight is free on win
             OnStateChanged?.Invoke();
             EmitStatus("Tap NEXT for another battle (free).", LogScope.System);
+
+            // Manual play → pop the queued summary right now.
+            PostBattleSummaryManager.I?.FlushNowIfPossible();
         }
     }
 
