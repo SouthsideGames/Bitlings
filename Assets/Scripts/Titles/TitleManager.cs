@@ -195,12 +195,12 @@ public sealed class TitleManager : MonoBehaviour
                 if (TitleUtility.CheckCondition(cb, ctx))
                     current = TitleUtility.ApplyOp(current, cb.operation, cb.value);
             }
-            else if (t is DualStatBoosterTitleSO dsb && dsb.enabled)
+            else if (t is DuoStatBoosterTitleSO dsb && dsb.enabled)
             {
                 if (dsb.statA == stat) current = TitleUtility.ApplyOp(current, dsb.opA, dsb.valueA);
                 if (dsb.statB == stat) current = TitleUtility.ApplyOp(current, dsb.opB, dsb.valueB);
             }
-            else if (t is DualConditionalBoosterTitleSO dcb)
+            else if (t is DuoConditionalStatBoosterTitleSO dcb)
             {
                 if (TitleUtility.CheckCondition(dcb.condition, dcb.threshold01, dcb.countN, in ctx))
                 {
@@ -321,10 +321,13 @@ public sealed class TitleManager : MonoBehaviour
     // Router for adapter
     public float GetStatValueRouter(string monsterId, MonsterDataSO def, int level, string statKind, TitleContext ctx, float baseValue)
     {
-        if (!Enum.TryParse<StatKind>(statKind, out var kind))
+        var norm = NormalizeStatKey(statKind);
+        if (!Enum.TryParse<StatKind>(norm, ignoreCase: true, out var kind))
             return baseValue;
+
         return GetStatValue(monsterId, def, level, kind, in ctx, baseValue);
     }
+
 
     // Small reflection helper (flexible field/property names)
     private static bool TryReadFloat(object obj, out float value, params string[] names)
@@ -423,6 +426,27 @@ public sealed class TitleManager : MonoBehaviour
         // Also nudge any job UI that keys off this generic event
         GameEvents.OnJobsChanged?.Invoke();
     }
+
+    private static string NormalizeStatKey(string key)
+    {
+        if (string.IsNullOrEmpty(key)) return key;
+        switch (key.Trim().ToUpperInvariant())
+        {
+            case "ATK": return "Attack";
+            case "DEF": return "Defense";
+            case "SPD": return "Speed";
+            case "HP": return "HP";
+            default: return key; // "Attack","Defense","Speed" already fine
+        }
+    }
+    
+    // Optional: lifecycle endpoints the adapter may call
+    public void OnBattleStart(string activeMonsterId, MonsterDataSO wild, int wildLevel) { }
+    public void OnBattleEnd(string activeMonsterId, bool victory, MonsterDataSO wild, int wildLevel) { }
+    public void OnMonsterLeveled(string monsterId, int newLevel) { }
+    public void OnMonsterCaptured(string monsterId, MonsterType type, int level, bool isShiny) { }
+    public void OnMonsterEvolved(string newMonsterId) { }
+
 
 
 }

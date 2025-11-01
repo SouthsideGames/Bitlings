@@ -123,6 +123,16 @@ public class BattleManager : MonoBehaviour
         SetCombatPanels(false);
     }
 
+    void OnEnable()
+    {
+        GameEvents.BattleFinished += HandleBattleFinishedUIRefresh;
+    }
+
+    void OnDisable()
+    {
+        GameEvents.BattleFinished -= HandleBattleFinishedUIRefresh;
+    }
+
     void OnDestroy()
     {
         if (benchBtn1) benchBtn1.onClick.RemoveAllListeners();
@@ -954,6 +964,10 @@ public class BattleManager : MonoBehaviour
         float currentHP   = (teamHP != null && activeIndex < teamHP.Length) ? teamHP[activeIndex] : maxHPForCtx;
         ctx.selfHp01 = Mathf.Clamp01(currentHP / maxHPForCtx);
 
+        ctx.alliesAlive = GetAlliesAliveNotIncludingActive();
+        ctx.winStreak   = GetWinStreakSafe();
+
+
         // Conditional-only mod snapshot (for {cond ±X} tags)
         var cmods = GetConditionalModsForActive();
 
@@ -1351,5 +1365,15 @@ public class BattleManager : MonoBehaviour
         if (delta == 0) return "";
         string sign = delta > 0 ? "+" : "";
         return $" {{cond {sign}{delta}}}";
+    }
+
+    private void HandleBattleFinishedUIRefresh(BattleResult _)
+    {
+        if (playerPanel != null && playerPanel.activeInHierarchy)
+        {
+            ApplyActiveToUI();
+            ClampAndPushActiveHP();
+            RefreshBenchUI();     
+        }
     }
 }

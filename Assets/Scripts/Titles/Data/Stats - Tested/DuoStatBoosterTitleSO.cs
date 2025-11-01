@@ -1,7 +1,7 @@
 using UnityEngine;
 
 [CreateAssetMenu(fileName = "DualStatBoosterTitle",menuName = "Data/Titles/Dual Stat Booster",order = 210)]
-public sealed class DualStatBoosterTitleSO : TitleSO
+public sealed class DuoStatBoosterTitleSO : TitleSO
 {
     [Header("Primary Effect")]
     public StatKind statA = StatKind.Attack;

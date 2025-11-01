@@ -29,19 +29,13 @@ public static class GameEvents
     public static Action<BattleResult> BattleFinished;
 
     // Resources
-    public static Action<ResourceType, int> ResourceAdded;    // fires whenever ResourceManager adds
-    public static Action<ResourceType, int> ResourceRemoved;  // optional if you’ll ever spend/remove
-    public static Action EnergyChanged;                       // used by encounter/idle energy UI
+    public static Action<ResourceType, int> ResourceAdded;  
+    public static Action<ResourceType, int> ResourceRemoved; 
+    public static Action EnergyChanged;                       
 
     // Idle loop
     public static Action<int> IdleBatchCompleted;
-
-    /// <summary>Fired after the active monster changes. Args: oldIndex, newIndex.</summary>
-    public static event Action<int, int> ActiveMonsterSwapped;
-
-    public static void RaiseActiveMonsterSwapped(int oldIndex, int newIndex)
-        => ActiveMonsterSwapped?.Invoke(oldIndex, newIndex);
         
-    public static System.Action<int> WinStreakChanged;
-    public static void RaiseWinStreakChanged(int value) => WinStreakChanged?.Invoke(value);  
+    public static Action<int> WinStreakChanged;
+
 }
