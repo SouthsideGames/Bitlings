@@ -1,3 +1,4 @@
+// EncounterManager.cs
 using UnityEngine;
 using System.Collections;
 using System.Collections.Generic;
@@ -36,9 +37,6 @@ public class EncounterManager : MonoBehaviour
     private Coroutine postResultCo;
     private Coroutine autoLoopCo;
 
-    // ─────────────────────────────────────────────────────────────────────────────
-    // Win streak
-    // ─────────────────────────────────────────────────────────────────────────────
     private int _currentWinStreak = 0;
     public int CurrentWinStreak => _currentWinStreak;
 
@@ -47,7 +45,6 @@ public class EncounterManager : MonoBehaviour
         if (I != null && I != this) { Destroy(gameObject); return; }
         I = this;
 
-        // Load win streak from save if the field exists, else start at 0
         _currentWinStreak = LoadWinStreakOr(0);
         _currentWinStreak = Mathf.Max(0, _currentWinStreak);
     }
@@ -82,15 +79,17 @@ public class EncounterManager : MonoBehaviour
 
         ResourceBank.EnsureSize();
 
-        // Ensure summary manager starts in manual mode (panels allowed)
+        // Summaries allowed initially (manual)
         PostBattleSummaryManager.I?.SetAutoBattling(false);
 
         EmitStatus("Tap ENCOUNTER to begin. Hold to toggle AUTO.", LogScope.System);
         OnStateChanged?.Invoke();
 
         NormalizeTeamHPIfUninitialized();
-        // Announce current win streak at boot so any listeners sync labels.
         GameEvents.WinStreakChanged?.Invoke(_currentWinStreak);
+
+        // Ensure Next button starts hidden
+        BattleEndUI.I?.ShowNextButton(false);
     }
 
     // ---------------- PUBLIC API (called from UI) ----------------
@@ -119,7 +118,6 @@ public class EncounterManager : MonoBehaviour
     {
         autoMode = !autoMode;
 
-        // Idle Battles integration
         if (autoMode) IdleBattleManager.I?.EnableAuto();
         else IdleBattleManager.I?.DisableAuto();
 
@@ -131,8 +129,9 @@ public class EncounterManager : MonoBehaviour
             if (autoLoopCo != null) { StopCoroutine(autoLoopCo); autoLoopCo = null; }
             autoLoopCo = StartCoroutine(AutoLoop());
 
-            // While AUTO is on, hold summaries in the queue.
+            // While AUTO is on, hold summaries in the queue and hide Next button
             PostBattleSummaryManager.I?.SetAutoBattling(true);
+            BattleEndUI.I?.ShowNextButton(false);
 
             if (!inBattle)
                 EmitStatus("AUTO mode ON. Battling until defeat…", LogScope.System);
@@ -145,9 +144,8 @@ public class EncounterManager : MonoBehaviour
 
             if (autoLoopCo != null) { StopCoroutine(autoLoopCo); autoLoopCo = null; }
 
-            // AUTO off → allow summaries to display, and flush immediately.
+            // AUTO off → allow summaries; do NOT auto-flush here. Player will press Next on the result just finished (if any).
             PostBattleSummaryManager.I?.SetAutoBattling(false);
-            PostBattleSummaryManager.I?.FlushNowIfPossible();
 
             EmitStatus("AUTO mode OFF. Tap ENCOUNTER for the next fight.", LogScope.System);
         }
@@ -156,7 +154,6 @@ public class EncounterManager : MonoBehaviour
     }
 
     // ---------------- ENERGY ----------------
-
     public void AddEnergy(int amount, bool allowOvercap = true)
     {
         SaveManager.Data.encounterPoints += amount;
@@ -194,7 +191,6 @@ public class EncounterManager : MonoBehaviour
             SaveManager.Save();
             GameEvents.EnergyChanged?.Invoke();
         }
-
         OnStateChanged?.Invoke();
     }
 
@@ -240,10 +236,12 @@ public class EncounterManager : MonoBehaviour
         // Out of energy → pop queued summaries now.
         PostBattleSummaryManager.I?.NotifyEnergyDepleted();
         PostBattleSummaryManager.I?.SetAutoBattling(false);
-        PostBattleSummaryManager.I?.FlushNowIfPossible();
 
         EmitStatus("AUTO stopped: no energy.", LogScope.System);
         OnStateChanged?.Invoke();
+
+        // No Next button in this path; summary will show immediately.
+        BattleEndUI.I?.ShowNextButton(false);
     }
 
     // ---------------- ENCOUNTER FLOW ----------------
@@ -322,11 +320,13 @@ public class EncounterManager : MonoBehaviour
         else
             EmitStatus($"Encounter! A wild {wild.displayName} (Lv {wildLevel}) appears.{(p.flatAtkBonus > 0 ? $" (+ATK {p.flatAtkBonus})" : "")}");
 
-        // mark encounter lifecycle for the log
         BattleLogger.BeginEncounter(_currentEncounterIsBoss ? $"BOSS: {wild.displayName} Lv{wildLevel}" : $"{wild.displayName} Lv{wildLevel}");
 
         if (_currentEncounterIsBoss && _currentBossUsed != null)
             GameEvents.BossSpawned?.Invoke(_currentBossUsed.id, _currentBossUsed);
+
+        // Hide any lingering Next button as a new fight starts
+        BattleEndUI.I?.ShowNextButton(false);
 
         inBattle = true;
         OnStateChanged?.Invoke();
@@ -336,22 +336,17 @@ public class EncounterManager : MonoBehaviour
 
     void OnBattleEnded(BattleResult result)
     {
-        // Apply any local/global (non-title) encounter multipliers here
         int finalCoins = ApplyCoinsGainedMultiplier(result.coinsGained);
         finalCoins = Mathf.Max(0, finalCoins);
 
-        // Route coins through ResourceManager (this actually adds them)
         if (finalCoins > 0)
             ResourceManager.I.Add(ResourceType.Coins, finalCoins);
 
-        // Emit a human-readable status with the final actually-banked coins
         EmitStatus(result.victory ? $"Victory! +{finalCoins} coins" : "Defeat.");
 
-        // Boss defeat signal
         if (result.victory && _currentEncounterIsBoss && _currentBossUsed != null)
             GameEvents.BossDefeated?.Invoke(_currentBossUsed.id);
 
-        // Cadence / last-boss bookkeeping
         if (SaveManager.Data != null)
         {
             AfterBattleCadenceUpdate(
@@ -362,7 +357,6 @@ public class EncounterManager : MonoBehaviour
             );
         }
 
-        // Attempt capture (except bosses/uncatchables) on victory
         if (result.victory)
         {
             if (_currentEncounterIsBoss || (result.wildDef != null && result.wildDef.uncatchable))
@@ -375,7 +369,6 @@ public class EncounterManager : MonoBehaviour
             }
         }
 
-        // Win streak update (+ event + save-back if supported)
         if (result.victory) SetWinStreak(_currentWinStreak + 1);
         else                SetWinStreak(0);
 
@@ -383,32 +376,26 @@ public class EncounterManager : MonoBehaviour
 
         OnStateChanged?.Invoke();
 
-        // Persist non-resource state changes; coins are already saved by ResourceManager
         SaveManager.Save();
 
-        // Broadcast a normalized battle finished event with the real coin value we credited
         var finished = result;
         finished.coinsGained = finalCoins;
         GameEvents.BattleFinished?.Invoke(finished);
 
-        // Close out encounter in log
         BattleLogger.EndEncounter(result.victory);
 
-        // Continue post-result flow
         if (postResultCo != null) { StopCoroutine(postResultCo); postResultCo = null; }
         postResultCo = StartCoroutine(PostResultFlow(result.victory));
     }
 
-    string GetLastStatus() => null; // kept for AppendLine compatibility
+    string GetLastStatus() => null;
     string AppendLine(string a, string b) => string.IsNullOrEmpty(a) ? b : (a + "\n" + b);
 
     private int ApplyCoinsGainedMultiplier(int baseCoins)
     {
         if (baseCoins <= 0) return 0;
-
         const float MULT = 1f;
-        int scaled = Mathf.Max(0, Mathf.FloorToInt(baseCoins * MULT));
-        return scaled;
+        return Mathf.Max(0, Mathf.FloorToInt(baseCoins * MULT));
     }
 
     IEnumerator PostResultFlow(bool victory)
@@ -425,13 +412,14 @@ public class EncounterManager : MonoBehaviour
             if (autoMode)
             {
                 EmitStatus("Defeat. Retrying (AUTO)…", LogScope.System);
-                // AUTO remains on; summaries continue queuing.
+                // No Next button in AUTO
+                BattleEndUI.I?.ShowNextButton(false);
             }
             else
             {
-                EmitStatus("Tap ENCOUNTER for the next fight.", LogScope.System);
-                // Manual play → allow queued summary to pop immediately.
-                PostBattleSummaryManager.I?.FlushNowIfPossible();
+                EmitStatus("Tap NEXT to view the summary.", LogScope.System);
+                // Manual: Show Next button now (user will trigger summary)
+                BattleEndUI.I?.ShowNextButton(true);
             }
             yield break;
         }
@@ -439,147 +427,42 @@ public class EncounterManager : MonoBehaviour
         // WIN
         if (autoMode)
         {
-            // While AUTO: keep panels queued; spend energy or stop if none left.
+            // AUTO keeps chaining; no Next button; summaries remain queued.
             if (!autoRunPaidEnergy)
             {
                 if (!HasEnergy()) { StopAuto_NoEnergy(); yield break; }
                 if (!SpendEnergy()) { StopAuto_NoEnergy(); yield break; }
                 autoRunPaidEnergy = true;
             }
-            StartEncounter(false); // wins chain for free during AUTO
+            BattleEndUI.I?.ShowNextButton(false);
+            StartEncounter(false);
         }
         else
         {
-            nextEncounterFree = true; // manual: next fight is free on win
+            nextEncounterFree = true;
             OnStateChanged?.Invoke();
-            EmitStatus("Tap NEXT for another battle (free).", LogScope.System);
+            EmitStatus("Tap NEXT to view the summary.", LogScope.System);
 
-            // Manual play → pop the queued summary right now.
-            PostBattleSummaryManager.I?.FlushNowIfPossible();
+            // Manual: Show Next button. User decides when to open the summary.
+            BattleEndUI.I?.ShowNextButton(true);
         }
     }
 
-    void TryCatch(MonsterDataSO wild, int wildLevel)
+    // Called by BattleEndUI when player taps NEXT (manual flow only)
+    public void OnUserPressedNextFromBattle()
     {
-        if (wild != null && wild.uncatchable)
+        if (autoMode)
         {
-            EmitStatus(AppendLine(GetLastStatus(), "(This Bitling can’t be captured.)"));
+            // Shouldn’t happen (button hidden), but just in case:
             return;
         }
 
-        int taps = TapBoost.I ? TapBoost.I.TapsThisEncounter : 0;
-        float chance = 0.25f + (taps * 0.02f) + (SaveManager.Data.tapLevel * 0.01f);
-
-        if (SaveManager.Data?.activeCaptureBands != null)
-        {
-            foreach (var band in SaveManager.Data.activeCaptureBands)
-            {
-                if (band != null && band.expireUnix > SaveManager.NowUnix())
-                    chance *= (1f + Mathf.Max(0f, band.bonus));
-            }
-        }
-
-        // Lead & systems-based bonuses
-        OwnedMonsterData lead = (SaveManager.Data.team != null && SaveManager.Data.team.Count > 0)
-            ? SaveManager.Data.team[0]
-            : null;
-
-        chance *= ShinySystems.LeadCaptureMult(lead);
-
-        // Title-based capture chance multiplier (lead’s title)
-        if (lead != null && !string.IsNullOrEmpty(lead.monsterId))
-        {
-            float titleMult = TitlesAdapter.GetCaptureChanceMult(lead.monsterId);
-            if (titleMult > 0f) chance *= titleMult;
-        }
-
-        chance = Mathf.Clamp01(chance);
-
-        bool caught = Random.value < chance;
-        int pct = Mathf.RoundToInt(chance * 100f);
-
-        if (!caught)
-        {
-            EmitStatus($"{wild.displayName} fled. ({pct}%)");
-            return;
-        }
-
-        // ===== Successful capture path =====
-
-        // Shiny roll
-        float baseShinyOdds = 1f / 512f;
-        float shinyBoost = GetActiveShinyBoostMult();
-        float shinyP = Mathf.Clamp01(baseShinyOdds * shinyBoost);
-        bool isShinyCatch = Random.value < shinyP;
-
-        // Build the OwnedMonsterData with recalc sentinel for HP
-        var caughtMon = new OwnedMonsterData
-        {
-            monsterId = wild.id,
-            level     = Mathf.Max(1, wildLevel - 1),
-            currentHP = -1, // let HP be recalculated by your normalization
-            isShiny   = isShinyCatch,
-            ownedUID  = Guid.NewGuid().ToString("N")
-        };
-
-        // Notify titles about the successful capture (before duplicate resolution)
-        TitlesAdapter.OnMonsterCaptured(caughtMon.monsterId, wild.type, caughtMon.level, isShinyCatch);
-
-        // Apply duplicate policy (respects settings toggle)
-        string duplicateNote;
-        bool added = DuplicateResolver.TryApplyOnCatch(caughtMon, wild, wildLevel, out duplicateNote);
-
-        // If we truly added a new owned entry, auto-add to team if there is space
-        if (added && SaveManager.Data.team.Count < 3)
-        {
-            SaveManager.Data.team.Add(new OwnedMonsterData
-            {
-                monsterId = caughtMon.monsterId,
-                level     = caughtMon.level,
-                currentHP = caughtMon.currentHP,
-                isShiny   = caughtMon.isShiny,
-                ownedUID  = caughtMon.ownedUID
-            });
-
-            if (isShinyCatch)
-                EmitStatus($"✨ Caught SHINY {wild.displayName}! ({pct}%) → Joined your team.");
-            else
-                EmitStatus($"Caught {wild.displayName}! ({pct}%) → Joined your team.");
-        }
-        else
-        {
-            // Either duplicate converted to XP OR it was added but team is full
-            if (added)
-            {
-                // Added to collection (team full)
-                if (isShinyCatch)
-                    EmitStatus($"✨ Caught SHINY {wild.displayName}! ({pct}%) → Sent to collection.");
-                else
-                    EmitStatus($"Caught {wild.displayName}! ({pct}%) → Sent to collection.");
-            }
-            else
-            {
-                // Converted to XP (single-keeper policy)
-                if (!string.IsNullOrEmpty(duplicateNote))
-                {
-                    if (isShinyCatch)
-                        EmitStatus($"✨ Caught SHINY {wild.displayName}! ({pct}%)\n{duplicateNote}");
-                    else
-                        EmitStatus($"Caught {wild.displayName}! ({pct}%)\n{duplicateNote}");
-                }
-                else
-                {
-                    EmitStatus(isShinyCatch
-                        ? $"✨ Caught SHINY {wild.displayName}! ({pct}%)"
-                        : $"Caught {wild.displayName}! ({pct}%)");
-                }
-            }
-        }
-
-        SaveManager.Save();
+        // Allow summaries and flush the next queued summary immediately
+        PostBattleSummaryManager.I?.SetAutoBattling(false);
+        PostBattleSummaryManager.I?.FlushNowIfPossible();
     }
 
-    // ===== LURES / LUCK / SHINY =====
+    // ==== Lures/Luck/Shiny (unchanged) ====
 
     public IReadOnlyList<LureBiasData> ActiveLures => SaveManager.Data?.activeLures;
 
@@ -797,8 +680,6 @@ public class EncounterManager : MonoBehaviour
         return items[items.Count - 1];
     }
 
-    // ------------- BOSS HELPERS -------------
-
     private bool ShouldSpawnBoss(int encountersSinceBoss, int bossEveryN)
     {
         if (bossEveryN < 1) bossEveryN = 10;
@@ -883,17 +764,15 @@ public class EncounterManager : MonoBehaviour
         return true;
     }
 
-    // ---- State getters for UI ----
     public bool IsInBattle => inBattle;
     public bool IsAutoMode => autoMode;
     public bool NextEncounterIsFree => nextEncounterFree;
 
-    // ---- helpers ----
     void EmitStatus(string msg, LogScope scope = LogScope.Encounter)
     {
         if (!string.IsNullOrEmpty(msg))
-            BattleLogger.Log(msg, scope); // mirror to centralized log
-        OnStatus?.Invoke(msg);           // legacy listeners
+            BattleLogger.Log(msg, scope);
+        OnStatus?.Invoke(msg);
     }
 
     void NormalizeTeamHPIfUninitialized()
@@ -908,7 +787,6 @@ public class EncounterManager : MonoBehaviour
             var om = team[i];
             if (om == null || string.IsNullOrEmpty(om.monsterId)) continue;
 
-            // Only normalize when HP is uninitialized (=-1). 
             if (om.currentHP >= 0) continue;
 
             var def = lib.GetById(om.monsterId);
@@ -927,9 +805,6 @@ public class EncounterManager : MonoBehaviour
         OnStateChanged?.Invoke();
     }
 
-    // ─────────────────────────────────────────────────────────────────────────────
-    // Win Streak helpers (persist if save supports it)
-    // ─────────────────────────────────────────────────────────────────────────────
     private int LoadWinStreakOr(int fallback)
     {
         var data = SaveManager.Data;
@@ -974,11 +849,9 @@ public class EncounterManager : MonoBehaviour
         _currentWinStreak = v;
         SaveWinStreakIfPossible(v);
         GameEvents.WinStreakChanged?.Invoke(_currentWinStreak);
-        // If your EncounterPanel pulls CurrentWinStreak in Refresh(), ping it:
         RequestStateRefresh();
     }
 
-    // EncounterManager.cs  — add anywhere in the class
     private void ReconcileHPWithCurrentWinStreak()
     {
         var data = SaveManager.Data;
@@ -994,23 +867,18 @@ public class EncounterManager : MonoBehaviour
             var def = lib.GetById(owned.monsterId);
             if (!def) continue;
 
-            // Base max HP at level
             int baseMaxHP = Mathf.RoundToInt(BattleCalc.CalcHP(def, Mathf.Max(1, owned.level)));
             float baseMaxF = Mathf.Max(1f, baseMaxHP);
 
-            // Build a minimal TitleContext reflecting the NEW streak
             var ctx = TitleContext.Empty;
             ctx.winStreak = _currentWinStreak;
 
-            // Give titles that care about selfHp01 a sane value (approx from current vs base)
             float curHPf = Mathf.Max(0f, owned.currentHP);
             ctx.selfHp01 = Mathf.Clamp01(curHPf / baseMaxF);
 
-            // Final max HP with titles/conditionals at the current (new) streak
             float finalMaxF = TitlesAdapter.GetStatValue(owned.monsterId, def, owned.level, "HP", ctx, baseMaxF);
             int finalMax = Mathf.Max(1, Mathf.RoundToInt(finalMaxF));
 
-            // Clamp down if the stored HP is now above the allowed max (don’t heal KOs)
             if (owned.currentHP > finalMax)
             {
                 owned.currentHP = finalMax;
