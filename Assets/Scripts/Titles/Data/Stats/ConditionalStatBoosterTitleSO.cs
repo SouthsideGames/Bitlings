@@ -1,7 +1,7 @@
 using UnityEngine;
 
-[CreateAssetMenu(menuName = "Data/Titles/Conditional Stat Booster", fileName = "ConditionalBoosterTitle")]
-public sealed class ConditionalBoosterTitleSO : TitleSO
+[CreateAssetMenu(menuName = "Data/Titles/Conditional Stat Booster", fileName = "ConditionalStatBoosterTitle")]
+public sealed class ConditionalStatBoosterTitleSO : TitleSO
 {
     [Header("Condition")]
     public ConditionKind condition = ConditionKind.HealthBelowPercent;

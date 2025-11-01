@@ -6,15 +6,15 @@ public static class TitleUtility
     {
         switch (op)
         {
-            case OpKind.Add:      return current + value;
+            case OpKind.Add: return current + value;
             case OpKind.Subtract: return current - value;
             case OpKind.Multiply: return current * value;
-            case OpKind.Divide:   return value == 0f ? current : current / value;
-            default:              return current;
+            case OpKind.Divide: return value == 0f ? current : current / value;
+            default: return current;
         }
     }
 
-    public static bool CheckCondition(ConditionalBoosterTitleSO t, in TitleContext ctx)
+    public static bool CheckCondition(ConditionalStatBoosterTitleSO t, in TitleContext ctx)
     {
         switch (t.condition)
         {
@@ -28,10 +28,23 @@ public static class TitleUtility
                 return ctx.alliesAlive < Mathf.Max(0, t.countN);
 
             case ConditionKind.WinStreakAbove:
-                return ctx.winStreak > Mathf.Max(0, t.countN);
+                return ctx.winStreak >= Mathf.Max(0, t.countN);
 
             default:
                 return false;
+        }
+    }
+    
+    public static bool CheckCondition(ConditionKind kind, float threshold01, int countN, in TitleContext ctx)
+    {
+        switch (kind)
+        {
+            case ConditionKind.HealthBelowPercent:  return ctx.selfHp01 <= Mathf.Clamp01(threshold01);
+            case ConditionKind.HealthAbovePercent:  return ctx.selfHp01 >= Mathf.Clamp01(threshold01);
+            case ConditionKind.AllyCountBelow:      return ctx.alliesAlive < Mathf.Max(0, countN);
+            case ConditionKind.WinStreakAbove:      // Use ≥ if you prefer “at least”
+                return ctx.winStreak > Mathf.Max(0, countN);
+            default: return false;
         }
     }
 }

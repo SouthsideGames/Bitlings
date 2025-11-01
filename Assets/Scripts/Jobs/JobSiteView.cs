@@ -30,7 +30,7 @@ public class JobSiteView : MonoBehaviour
     [SerializeField] private TextMeshProUGUI slot3RateText;
 
     [Header("Debug")]
-    [SerializeField] private bool showMultiplierDebug = false;  // shows “×0.50” next to rate if true
+    [SerializeField] private bool showMultiplierDebug = false;  // kept for future use
 
     void Awake()
     {
@@ -81,9 +81,16 @@ public class JobSiteView : MonoBehaviour
         if (allowReliefToggle) allowReliefToggle.SetIsOnWithoutNotify(st.allowClinicRelief);
 
         int cap = Mathf.Clamp(st.config.maxWorkers, 1, 3);
+
+        // Show/hide by site cap
         SetSlotVisible(slot1Group, cap >= 1);
         SetSlotVisible(slot2Group, cap >= 2);
         SetSlotVisible(slot3Group, cap >= 3);
+
+        // Render each slot and set alpha to 0 if no worker assigned
+        RenderAndAlpha(st, 0, slot1Group, slot1CDText, slot1RateText);
+        RenderAndAlpha(st, 1, slot2Group, slot2CDText, slot2RateText);
+        RenderAndAlpha(st, 2, slot3Group, slot3CDText, slot3RateText);
     }
 
     private JobSiteState GetRuntimeState(JobType job)
@@ -97,92 +104,97 @@ public class JobSiteView : MonoBehaviour
         return null;
     }
 
-    private void RenderSlot(JobSiteState st, int slotIndex, TextMeshProUGUI cdText, TextMeshProUGUI rateText, TextMeshProUGUI dbgText)
+    private void RenderAndAlpha(JobSiteState st, int slotIndex, CanvasGroup group, TextMeshProUGUI cdText, TextMeshProUGUI rateText)
     {
+        int cap = Mathf.Clamp(st.config.maxWorkers, 1, 3);
+        if (slotIndex < 0 || slotIndex >= cap)
+        {
+            // beyond cap: hide slot entirely
+            SetSlotVisible(group, false);
+            if (cdText) cdText.text = "";
+            if (rateText) rateText.text = "";
+            return;
+        }
+
+        // Worker present?
+        WorkerRef w = (st.workers != null && slotIndex < st.workers.Count) ? st.workers[slotIndex] : null;
+        bool hasWorker = (w != null && w.def != null);
+
+        if (!hasWorker)
+        {
+            // Empty slot: alpha 0 and show "-" for texts
+            SetGroupAlpha(group, 0f, interactable: false, blocksRaycasts: false);
+            if (cdText) cdText.text = "-";
+            if (rateText) rateText.text = "-";
+            return;
+        }
+
+        // Has worker: alpha 1 and render normal labels
+        SetGroupAlpha(group, 1f, interactable: true, blocksRaycasts: true);
+        RenderSlot(st, slotIndex, cdText, rateText);
+    }
+
+    private void RenderSlot(JobSiteState st, int slotIndex, TextMeshProUGUI cdText, TextMeshProUGUI rateText)
+    {
+        // Guard
         int cap = Mathf.Clamp(st.config.maxWorkers, 1, 3);
         if (slotIndex < 0 || slotIndex >= cap)
         {
             if (cdText) cdText.text = "";
             if (rateText) rateText.text = "";
-            if (dbgText) dbgText.text = "";
             return;
         }
 
         // Current fatigue (0..1)
         float f = (st.slotFatigue01 != null && slotIndex < st.slotFatigue01.Length) ? Mathf.Clamp01(st.slotFatigue01[slotIndex]) : 0f;
 
-        // Monster assigned?
+        // Worker (we already checked presence in caller)
         WorkerRef w = (st.workers != null && slotIndex < st.workers.Count) ? st.workers[slotIndex] : null;
-        bool hasWorker = (w != null && w.def != null);
 
-        // Cooldown remaining (if any)
+        // Cooldown remaining (if any) — only shown while working
         long now = SaveManager.NowUnix();
         long untilUnix = (st.slotCooldownUntilUnix != null && slotIndex < st.slotCooldownUntilUnix.Length) ? st.slotCooldownUntilUnix[slotIndex] : 0L;
-        bool resting = (!hasWorker && untilUnix > now);
-        long restRemain = resting ? (untilUnix - now) : 0L;
 
-        // Compute effective fatigue rate per hour (base × multiplier)
+        // Effective fatigue rate per hour (base × multiplier)
         float ratePerHour = 0f;
-        float usedMul = 1f;
-
-        if (hasWorker)
+        if (w != null && w.def != null)
         {
             ratePerHour = Mathf.Max(0f, w.def.fatigueRatePerHour);
 
             string wid = GetBestId(w);
             int lvl = GetOwnedLevelOr1(wid, w.def);
 
-            // Reflection path (adapter)
-            float mulA = 1f;
-            try { mulA = Mathf.Max(0f, TitlesAdapter.GetJobFatigueMult(wid, w.def, lvl, st.config.jobType)); } catch { mulA = 1f; }
+            float mul = 1f;
+            try { mul = Mathf.Max(0f, TitlesAdapter.GetJobFatigueMult(wid, w.def, lvl, st.config.jobType)); }
+            catch { mul = 1f; }
 
-            // Direct path (manager) — safety net if reflection fails/binds wrong overload
-            float mulB = 1f;
+            // Safety-net through manager (if desired)
             try
             {
                 if (TitleManager.I != null)
-                    mulB = Mathf.Max(0f, TitleManager.I.GetJobFatigueMultiplier(wid, w.def, lvl, st.config.jobType));
+                    mul = Mathf.Min(mul, Mathf.Max(0f, TitleManager.I.GetJobFatigueMultiplier(wid, w.def, lvl, st.config.jobType)));
             }
-            catch { mulB = 1f; }
+            catch { }
 
-            // Prefer the *smaller* (more reduction) but never below 0
-            usedMul = Mathf.Max(0f, Mathf.Min(mulA, mulB));
-
-            ratePerHour *= usedMul;
+            ratePerHour *= mul;
         }
 
-        // Text: fatigue rate per hour as a percentage (show one decimal to catch 1.5% cases)
-        if (rateText)
-        {
-            if (hasWorker && ratePerHour > 0f) rateText.text = $"{ratePerHour * 100f:0.#}% / hr";
-            else rateText.text = "";
-        }
+        // Rate text (one decimal place to display 1.5% cases)
+        if (rateText) rateText.text = (ratePerHour > 0f) ? $"{ratePerHour * 100f:0.#}% / hr" : "-";
 
-        // Optional debug: show the multiplier (helps verify titles are applied)
-        if (dbgText)
-        {
-            dbgText.gameObject.SetActive(showMultiplierDebug && hasWorker);
-            if (showMultiplierDebug && hasWorker) dbgText.text = $"×{usedMul:0.##}";
-            else if (!showMultiplierDebug) dbgText.text = "";
-        }
-
-        // Text: "Resting in ..." (while working) OR "Resting ..." (cooldown)
+        // "Resting in ..." while working (we only show this for assigned workers)
         if (cdText)
         {
-            if (hasWorker && ratePerHour > 0f)
+            if (ratePerHour > 0f)
             {
                 float remain01 = Mathf.Clamp01(1f - f);
                 float hrs = (ratePerHour > 0f) ? (remain01 / ratePerHour) : 0f;
                 long secs = Math.Max(0L, (long)Math.Round(hrs * 3600f));
                 cdText.text = $"Resting in {FormatHm(secs)}";
             }
-            else if (resting)
-            {
-                cdText.text = $"Resting {FormatHm(restRemain)}";
-            }
             else
             {
-                cdText.text = "";
+                cdText.text = "-";
             }
         }
     }
@@ -190,10 +202,20 @@ public class JobSiteView : MonoBehaviour
     private static void SetSlotVisible(CanvasGroup cg, bool vis)
     {
         if (!cg) return;
-        cg.alpha = vis ? 1f : 0f;
-        cg.interactable = vis;
-        cg.blocksRaycasts = vis;
-        if (cg.gameObject.activeSelf != vis) cg.gameObject.SetActive(vis);
+        cg.gameObject.SetActive(vis);
+        if (!vis) return;
+        // When visible by cap, default alpha 1 (specific slot alpha handled elsewhere)
+        cg.alpha = 1f;
+        cg.interactable = true;
+        cg.blocksRaycasts = true;
+    }
+
+    private static void SetGroupAlpha(CanvasGroup cg, float a, bool interactable, bool blocksRaycasts)
+    {
+        if (!cg) return;
+        cg.alpha = Mathf.Clamp01(a);
+        cg.interactable = interactable;
+        cg.blocksRaycasts = blocksRaycasts;
     }
 
     private static string GetBestId(WorkerRef w)

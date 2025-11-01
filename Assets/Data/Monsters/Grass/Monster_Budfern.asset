@@ -27,6 +27,7 @@ MonoBehaviour:
   baseDefense: 70
   baseSpeed: 30
   fatigueRatePerHour: 0.03
+  fatigueCooldownHours: 8
   baseTrainingXPPerHour: 35
   evolutionStage: 1
   evolutionLevel: 14
@@ -38,7 +39,7 @@ MonoBehaviour:
   spawnWeight: 7
   jobSkill: 1
   rarity: 0
-  titleTrack: {fileID: 0}
+  titleTrack: {fileID: 11400000, guid: 4d17f3173a6e3724cbafc9ee10fedd28, type: 2}
   defaultAlwaysOnTitles: []
   description: Its leafy body helps it blend into undergrowth. Budfern sways with
     the breeze, hiding from predators in the Bitling world.

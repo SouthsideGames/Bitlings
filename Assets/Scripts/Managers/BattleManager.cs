@@ -79,7 +79,6 @@ public class BattleManager : MonoBehaviour
     private MonsterDataSO[] teamDefs;
     private int[] teamLevels;
     private float[] teamMaxHP, teamHP;
-
     private string[] teamIds;
 
     private JobBattlePassives.Ctx[] jobCtx;
@@ -113,7 +112,6 @@ public class BattleManager : MonoBehaviour
     private static readonly Color StatBuff    = new Color(0.35f, 1f, 0.35f);
     private static readonly Color StatNerf    = new Color(1f, 0.35f, 0.35f);
 
-
     void Start()
     {
         if (benchBtn1) benchBtn1.onClick.AddListener(() => ClickBench(0));
@@ -124,12 +122,14 @@ public class BattleManager : MonoBehaviour
 
         SetCombatPanels(false);
     }
+
     void OnDestroy()
     {
         if (benchBtn1) benchBtn1.onClick.RemoveAllListeners();
         if (benchBtn2) benchBtn2.onClick.RemoveAllListeners();
     }
 
+    // Legacy alias
     public void BeginBattle(MonsterDataSO wild, int level, Action<BattleResult> onEnded)
     {
         Begin(wild, level, onEnded);
@@ -145,7 +145,6 @@ public class BattleManager : MonoBehaviour
         wildWeakenTurns = 0;
         wildWeakenPct = 0f;
 
-        // Don't set inBattle yet — we start only after panels reveal.
         inBattle = false;
         onEnd = onEnded;
 
@@ -234,9 +233,6 @@ public class BattleManager : MonoBehaviour
         ClampAndPushActiveHP();
         RefreshBenchUI();
 
-        // ─────────────────────────────────────────────────────────────
-        // Panels: activate but invisible (fade in first, then start battle)
-        // ─────────────────────────────────────────────────────────────
         if (wildPanel)   wildPanel.SetActive(true);
         if (playerPanel) playerPanel.SetActive(true);
 
@@ -256,9 +252,8 @@ public class BattleManager : MonoBehaviour
             playerCG.alpha = 0f; playerCG.blocksRaycasts = false; playerCG.interactable = false;
         }
 
-        // Fade panels in, then actually start the battle + TurnLoop
         if (turnCR != null) StopCoroutine(turnCR);
-        turnCR = StartCoroutine(Co_RevealPanelsThenStart(wildCG, playerCG, 0.28f)); // 0.28s default fade
+        turnCR = StartCoroutine(Co_RevealPanelsThenStart(wildCG, playerCG, 0.28f));
     }
 
     private IEnumerator TurnLoop()
@@ -285,25 +280,19 @@ public class BattleManager : MonoBehaviour
 
             yield return Wait(beginRoundDelay);
 
-            // ── Speed / Initiative (job and temp-buff aware)
-
-            
-           int pSpeed = BattleCalc.CalcSpeed(teamDefs[activeIndex], teamLevels[activeIndex], teamIds[activeIndex]); // title-aware
+            // ── Speed / Initiative (job + titles + temp buffs)
+            int pSpeed = BattleCalc.CalcSpeed(teamDefs[activeIndex], teamLevels[activeIndex], teamIds[activeIndex]);
             if (BattleTempBuffs.I != null)
                 pSpeed = BattleTempBuffs.I.ApplyPlayerSpeedBonus(pSpeed);
 
-            // Job first-turns SPD bonus
             var ctxSpeed = jobCtx != null ? jobCtx[activeIndex] : null;
             if (ctxSpeed != null && ctxSpeed.speedBuffTurns > 0 && ctxSpeed.speedBonusPctFirstTurns != 0f)
                 pSpeed = Mathf.Max(1, Mathf.RoundToInt(pSpeed * (1f + ctxSpeed.speedBonusPctFirstTurns)));
 
-            // Conditional Title boost via router
+            // Conditional Title boost via router (explicit "SPD")
             var titleCtx = BuildTitleContextForActive();
             float spdF = TitlesAdapter.GetStatValue(teamIds[activeIndex], teamDefs[activeIndex], teamLevels[activeIndex], "SPD", titleCtx, pSpeed);
             pSpeed = Mathf.Max(1, Mathf.RoundToInt(spdF));
-
-
-
 
             int wSpeed = BattleCalc.CalcSpeed(wildDef, wildLevel);
 
@@ -325,7 +314,6 @@ public class BattleManager : MonoBehaviour
 
             if (!IsWildKO() && !IsTeamKO())
             {
-                // Tick down job-limited buffs
                 if (jobCtx != null && jobCtx[activeIndex] != null)
                 {
                     if (jobCtx[activeIndex].speedBuffTurns > 0)      jobCtx[activeIndex].speedBuffTurns--;
@@ -349,7 +337,7 @@ public class BattleManager : MonoBehaviour
 
         var jobContext = (jobCtx != null) ? jobCtx[activeIndex] : null;
 
-      int flat = 0;
+        int flat = 0;
         var roster = SaveManager.Data?.team;
         if (roster != null && activeIndex < roster.Count) flat = Mathf.Max(0, roster[activeIndex].flatAtkBonus);
 
@@ -361,7 +349,7 @@ public class BattleManager : MonoBehaviour
         var ctx = (jobCtx != null) ? jobCtx[activeIndex] : null;
         if (ctx != null && ctx.attackBonusPct > 0f) atkBase *= (1f + ctx.attackBonusPct);
 
-        // Conditional Title ATK via router
+        // Conditional Title ATK via router (explicit "ATK")
         var titleCtx = BuildTitleContextForActive();
         float atk = TitlesAdapter.GetStatValue(teamIds[activeIndex], teamDefs[activeIndex], teamLevels[activeIndex], "ATK", titleCtx, atkBase);
 
@@ -387,7 +375,7 @@ public class BattleManager : MonoBehaviour
             if (tempDmgBuffTurns <= 0) tempDmgBuffPct = 0f;
         }
 
-        // Resolve
+        // Resolve (attacker ID present; defender ID null)
         int defenseIgnore = 0;
         var dr = BattleCalc.ResolveHit(
             teamIds[activeIndex], teamDefs[activeIndex], teamLevels[activeIndex],
@@ -395,7 +383,7 @@ public class BattleManager : MonoBehaviour
             atk, playerCrit, critMultiplier, -defenseIgnore
         );
 
-        // Outgoing effectiveness (Titles — EffectivenessMod)
+        // Outgoing effectiveness (additional Titles scalar if you use it)
         float effMul = TitlesAdapter.GetEffectivenessMult(teamIds[activeIndex], teamDefs[activeIndex], teamLevels[activeIndex]);
         if (!Mathf.Approximately(effMul, 1f))
             dr.damage = Mathf.Max(1, Mathf.RoundToInt(dr.damage * effMul));
@@ -408,7 +396,6 @@ public class BattleManager : MonoBehaviour
             dr.damage = Mathf.Max(1, Mathf.RoundToInt(dr.damage * (1f + jCtx.firstOutgoingBonus)));
         }
 
-
         bool lethal = dr.damage >= wildHP;
 
         wildHP = Mathf.Max(0f, wildHP - dr.damage);
@@ -418,8 +405,6 @@ public class BattleManager : MonoBehaviour
         {
             playerLandedFirstHitThisBattle = true;
         }
-
-        // (Removed) tag-driven lifesteal, weaken-on-crit, multi-hit, KO heal, etc.
 
         BattleLogger.Log($"{GetName(activeIndex)} attacks for {dr.damage}!", LogScope.Battle);
 
@@ -475,6 +460,7 @@ public class BattleManager : MonoBehaviour
         }
         float wildCritChance = df.cannotBeCrit ? 0f : Mathf.Clamp01(critChanceWild - playerCritResist);
 
+        // Resolve (defender ID present)
         var dr = BattleCalc.ResolveHit(
             null, wildDef, wildLevel,
             teamIds[activeIndex], teamDefs[activeIndex], teamLevels[activeIndex],
@@ -577,7 +563,6 @@ public class BattleManager : MonoBehaviour
         yield break;
     }
 
-
     private bool CheckEnd()
     {
         if (IsWildKO())
@@ -612,7 +597,6 @@ public class BattleManager : MonoBehaviour
             if (cm > 0f) coins = Mathf.Max(0, Mathf.RoundToInt(coins * cm));
         }
 
-        // coins stays as computed
         if (coins < 0) coins = 0;
 
         if (victory)
@@ -621,9 +605,8 @@ public class BattleManager : MonoBehaviour
             if (teamIds != null && activeIndex >= 0 && activeIndex < teamIds.Length)
                 xpMul = TitlesAdapter.GetXPMultOnVictory(teamIds[activeIndex], wildDef, wildLevel);
 
-                BattleRewards.GrantVictoryXPAndEvo(activeIndex, wildLevel, MonsterLibraryLocator.Lib, Mathf.Max(0f, xpMul));
+            BattleRewards.GrantVictoryXPAndEvo(activeIndex, wildLevel, MonsterLibraryLocator.Lib, Mathf.Max(0f, xpMul));
         }
-
 
         var teamList = SaveManager.Data.team;
         for (int i = 0; i < teamCount && i < teamList.Count; i++)
@@ -656,7 +639,6 @@ public class BattleManager : MonoBehaviour
 
         onEnd?.Invoke(result);
 
-        // Use the actual getter name:
         bool isAuto = EncounterManager.I && EncounterManager.I.IsAutoMode;
         PostBattleSummaryManager.I?.NotifyBattleEnd(result, isAuto);
 
@@ -767,14 +749,12 @@ public class BattleManager : MonoBehaviour
         ClampAndPushActiveHP();
         RefreshBenchUI();
 
-        // (Removed) tag-driven swap-in effects
-
         if (teamPendingBuffPct != null && teamPendingBuffTurns != null)
         {
             if (teamPendingBuffPct[activeIndex] > 0f)
             {
                 tempDmgBuffPct   += teamPendingBuffPct[activeIndex];
-                tempDmgBuffTurns  = Math.Max(tempDmgBuffTurns, teamPendingBuffTurns[activeIndex]);
+                tempDmgBuffTurns  = Mathf.Max(tempDmgBuffTurns, teamPendingBuffTurns[activeIndex]);
                 BattleLogger.Log($"{GetName(activeIndex)} carries over +{Mathf.RoundToInt(teamPendingBuffPct[activeIndex] * 100f)}% damage from bench.", LogScope.Battle);
                 teamPendingBuffPct[activeIndex] = 0f;
                 teamPendingBuffTurns[activeIndex] = 0;
@@ -782,8 +762,6 @@ public class BattleManager : MonoBehaviour
         }
 
         BattleLogger.Log($"Swapped to {GetName(activeIndex)}!", LogScope.Battle);
-
-        // (Removed) tag-driven rescue heal on swap
         Punch(playerIcon);
     }
 
@@ -809,21 +787,16 @@ public class BattleManager : MonoBehaviour
                 ClampAndPushActiveHP();
                 RefreshBenchUI();
 
-                // (Removed) tag-driven swap-in effects
-
                 if (teamPendingBuffPct != null && teamPendingBuffPct[activeIndex] > 0f)
                 {
                     tempDmgBuffPct   += teamPendingBuffPct[activeIndex];
-                    tempDmgBuffTurns  = Math.Max(tempDmgBuffTurns, teamPendingBuffTurns[activeIndex]);
+                    tempDmgBuffTurns  = Mathf.Max(tempDmgBuffTurns, teamPendingBuffTurns[activeIndex]);
                     BattleLogger.Log($"{GetName(activeIndex)} carries over +{Mathf.RoundToInt(teamPendingBuffPct[activeIndex] * 100f)}% damage from bench.", LogScope.Battle);
                     teamPendingBuffPct[activeIndex] = 0f;
                     teamPendingBuffTurns[activeIndex] = 0;
                 }
 
                 BattleLogger.Log($"Auto-swapped to {GetName(activeIndex)}!", LogScope.Battle);
-
-                // (Removed) tag-driven rescue heal on swap
-
                 return true;
             }
         }
@@ -844,12 +817,6 @@ public class BattleManager : MonoBehaviour
         if (!g) return;
         var rt = g.rectTransform;
         LeanTween.scale(rt, Vector3.one * 1.06f, 0.08f).setLoopPingPong(1);
-    }
-
-    public float GetActiveMaxHP(float baseMax)
-    {
-        int hpBuff = BattleTempBuffs.I ? BattleTempBuffs.I.GetPlayerHPBonus() : 0;
-        return Mathf.Max(1f, baseMax + hpBuff);
     }
 
     public void TryAddHPToActive(float amount)
@@ -932,21 +899,17 @@ public class BattleManager : MonoBehaviour
     {
         playerNoDmgTurns = dealtDamageThisTurn ? 0 : Mathf.Min(playerNoDmgTurns + 1, 99);
         playerNoCritTurns = critThisTurn ? 0 : Mathf.Min(playerNoCritTurns + 1, 99);
-
-        // (Removed) tag-driven end turn effects and regen
     }
 
     private void UpdateWildInfoUI()
     {
         if (!wildDef) return;
 
-        // Calculate current stats
         int dispHP  = Mathf.RoundToInt(BattleCalc.CalcHP(wildDef, wildLevel));
         int dispATK = Mathf.RoundToInt(BattleCalc.CalcBaseAttack(wildDef, wildLevel, 0, 0));
         int dispDEF = BattleCalc.CalcDefense(wildDef, wildLevel);
         int dispSPD = BattleCalc.CalcSpeed(wildDef, wildLevel);
 
-        // Format exactly as you described
         if (wildIdText)     wildIdText.text     = $"ID: {wildDef.id}";
         if (wildTypeText)   wildTypeText.text   = $"TYPE: {wildDef.type}";
         if (wildRarityText) wildRarityText.text = $"RARITY: {wildDef.rarity}";
@@ -966,13 +929,13 @@ public class BattleManager : MonoBehaviour
 
         int lvl = (teamLevels != null && activeIndex < teamLevels.Length) ? teamLevels[activeIndex] : 1;
 
-        // ── PURE BASE (no titles/conditionals applied) ───────────────────────
+        // PURE BASE
         int baseHP  = Mathf.RoundToInt(BattleCalc.CalcHP(def, lvl));
         int baseATK = Mathf.RoundToInt(BattleCalc.CalcBaseAttack(def, lvl, 0, 0));
         int baseDEF = BattleCalc.CalcDefense(def, lvl);
         int baseSPD = BattleCalc.CalcSpeed(def, lvl);
 
-        // ── TEMP / EQUIP FLATS (visible in UI as part of the "base+flats") ──
+        // TEMP / EQUIP FLATS
         int tempHPFlat  = BattleTempBuffs.I ? BattleTempBuffs.I.GetPlayerHPBonus()        : 0;
         int tempATKFlat = BattleTempBuffs.I ? BattleTempBuffs.I.GetPlayerAtkBonus()       : 0;
         int tempDEFFlat = BattleTempBuffs.I ? BattleTempBuffs.I.GetPlayerDefenseBonus()   : 0;
@@ -983,61 +946,67 @@ public class BattleManager : MonoBehaviour
         if (roster != null && activeIndex < roster.Count && roster[activeIndex] != null)
             equippedFlatATK = Mathf.Max(0, roster[activeIndex].flatAtkBonus);
 
-        // ── CONTEXT for conditional titles (safe defaults if you don’t track all fields here)
-       var ctx = TitleContext.Empty;
-            ctx.ownedId = (teamIds != null && activeIndex < teamIds.Length) ? teamIds[activeIndex] : "";
+        // Title context (conditionals)
+        var ctx = TitleContext.Empty;
+        ctx.ownedId = (teamIds != null && activeIndex < teamIds.Length) ? teamIds[activeIndex] : "";
 
-
-        // If you want live HP% to affect conditionals (e.g., HealthBelow%), feed it:
         float maxHPForCtx = Mathf.Max(1f, baseHP + tempHPFlat);
         float currentHP   = (teamHP != null && activeIndex < teamHP.Length) ? teamHP[activeIndex] : maxHPForCtx;
         ctx.selfHp01 = Mathf.Clamp01(currentHP / maxHPForCtx);
 
-        // ── Identity block ───────────────────────────────────────────────────
+        // Conditional-only mod snapshot (for {cond ±X} tags)
+        var cmods = GetConditionalModsForActive();
+
+        // Identity block
         if (playerIdText)     playerIdText.text     = $"ID: {def.id}";
         if (playerTypeText)   playerTypeText.text   = $"TYPE: {def.type}";
         if (playerRarityText) playerRarityText.text = $"RARITY: {def.rarity}";
         if (playerLevelText)  playerLevelText.text  = $"LVL: {lvl}";
 
-        // ── HP: compare Base Max HP vs Final Max HP (titles/conditionals applied) ─
-        // Base side: include temp flat HP so it shows as part of “base” in the delta.
+        // HP — Base Max vs Final Max (titles/conditionals applied)
         int hpBaseForDisplay  = Mathf.Max(1, baseHP + tempHPFlat);
-        float hpFinalF = TitlesAdapter.GetStatValue(
-            ctx.ownedId, def, lvl, "HP", ctx, hpBaseForDisplay
-        );
+        float hpFinalF = TitlesAdapter.GetStatValue(ctx.ownedId, def, lvl, "HP", ctx, hpBaseForDisplay);
         int hpFinal = Mathf.Max(1, Mathf.RoundToInt(hpFinalF));
-        if (playerHPText) SetColoredStat(playerHPText, "HP", hpBaseForDisplay, hpFinal);
+        if (playerHPText)
+        {
+            SetColoredStat(playerHPText, "HP", hpBaseForDisplay, hpFinal);
+            playerHPText.text += CondTag(hpBaseForDisplay, 0, cmods.hpPct);
+        }
 
-        // ── ATK: (base + equip + temp flats) then apply titles/conditionals ──
+        // ATK — (base + equip + temp) then titles/conditionals
         int atkBaseForDisplay = Mathf.Max(1, baseATK + equippedFlatATK + tempATKFlat);
-        float atkFinalF = TitlesAdapter.GetStatValue(
-            ctx.ownedId, def, lvl, "Attack", ctx, atkBaseForDisplay
-        );
+        float atkFinalF = TitlesAdapter.GetStatValue(ctx.ownedId, def, lvl, "Attack", ctx, atkBaseForDisplay);
         int atkFinal = Mathf.Max(1, Mathf.RoundToInt(atkFinalF));
-        if (playerATKText) SetColoredStat(playerATKText, "ATK", atkBaseForDisplay, atkFinal);
+        if (playerATKText)
+        {
+            SetColoredStat(playerATKText, "ATK", atkBaseForDisplay, atkFinal);
+            playerATKText.text += CondTag(atkBaseForDisplay, cmods.atkFlat, cmods.atkPct);
+        }
 
-        // ── DEF: (base + temp flats) then apply titles/conditionals ──────────
+        // DEF — (base + temp) then titles/conditionals
         int defBaseForDisplay = Mathf.Max(0, baseDEF + tempDEFFlat);
-        float defFinalF = TitlesAdapter.GetStatValue(
-            ctx.ownedId, def, lvl, "Defense", ctx, defBaseForDisplay
-        );
+        float defFinalF = TitlesAdapter.GetStatValue(ctx.ownedId, def, lvl, "Defense", ctx, defBaseForDisplay);
         int defFinal = Mathf.Max(0, Mathf.RoundToInt(defFinalF));
-        if (playerDEFText) SetColoredStat(playerDEFText, "DEF", defBaseForDisplay, defFinal);
+        if (playerDEFText)
+        {
+            SetColoredStat(playerDEFText, "DEF", defBaseForDisplay, defFinal);
+            playerDEFText.text += CondTag(defBaseForDisplay, cmods.defFlat, cmods.defPct);
+        }
 
-        // ── SPD: (base + temp flats) then apply titles/conditionals ──────────
+        // SPD — (base + temp) then titles/conditionals
         int spdBaseForDisplay = Mathf.Max(1, baseSPD + tempSPDFlat);
-        float spdFinalF = TitlesAdapter.GetStatValue(
-            ctx.ownedId, def, lvl, "Speed", ctx, spdBaseForDisplay
-        );
+        float spdFinalF = TitlesAdapter.GetStatValue(ctx.ownedId, def, lvl, "Speed", ctx, spdBaseForDisplay);
         int spdFinal = Mathf.Max(1, Mathf.RoundToInt(spdFinalF));
-        if (playerSPDText) SetColoredStat(playerSPDText, "SPD", spdBaseForDisplay, spdFinal);
+        if (playerSPDText)
+        {
+            SetColoredStat(playerSPDText, "SPD", spdBaseForDisplay, spdFinal);
+            playerSPDText.text += CondTag(spdBaseForDisplay, cmods.spdFlat, cmods.spdPct);
+        }
 
-        // Optional: tack on a resist badge if you like
+        // Optional active resist badge
         bool resistOn = BattleTempBuffs.I && BattleTempBuffs.I.IsTypeResistActive();
         if (resistOn && playerRarityText) playerRarityText.text += " [Resist]";
     }
-
-
 
     private void ApplyActiveToUI()
     {
@@ -1084,7 +1053,6 @@ public class BattleManager : MonoBehaviour
 
         label.gameObject.SetActive(true);
         label.text = $"{icur}/{imax}";
-        // Optional dim when fainted:
         label.alpha = cur > 0f ? 1f : 0.35f;
     }
 
@@ -1107,7 +1075,6 @@ public class BattleManager : MonoBehaviour
         float dur = Mathf.Max(0f, duration);
         bool usedTween = false;
 
-        // Tween alpha if LeanTween available
         if (wildCG)
         {
             LeanTween.alphaCanvas(wildCG, 1f, dur);
@@ -1145,11 +1112,9 @@ public class BattleManager : MonoBehaviour
 
     private IEnumerator Co_StartBattleNow()
     {
-        // Mark battle started only after panels are visible
         inBattle = true;
         startTime = Time.unscaledTime;
 
-        // Centralized logging
         var vsName = wildDef ? $"{wildDef.displayName} (Lv {wildLevel})" : "Unknown";
         BattleLogger.BeginBattle(vsName);
         BattleLogger.Log(wildDef ? $"A wild {wildDef.displayName} (Lv {wildLevel}) appeared!" : "A wild foe appeared!", LogScope.Battle);
@@ -1178,17 +1143,13 @@ public class BattleManager : MonoBehaviour
         return default;
     }
 
-    // Returns the *true* current max HP cap used for clamps/heals/etc.
-    // Includes temp HP and Title HP%.
     public float GetActiveMaxHP(float baseMax, int idx = -1)
     {
         float v = Mathf.Max(1f, baseMax);
 
-        // temp flat HP
         int hpBuff = BattleTempBuffs.I ? BattleTempBuffs.I.GetPlayerHPBonus() : 0;
         v = Mathf.Max(1f, v + hpBuff);
  
-        // Title % Max HP (only if we know which teammate)
         if (idx >= 0)
         {
             var tmods = GetTitleModsForIndex(idx);
@@ -1197,14 +1158,12 @@ public class BattleManager : MonoBehaviour
         return v;
     }
 
-    // Convenience: final max HP for a team index using stored teamMaxHP[idx]
     private float GetFinalMaxHPForIndex(int idx)
     {
         if (teamMaxHP == null || idx < 0 || idx >= teamMaxHP.Length) return 1f;
         return GetActiveMaxHP(teamMaxHP[idx], idx);
     }
 
-    // Helpers you can place in BattleManager
     private TitleStatMods GetConditionalModsForActive()
     {
         if (teamIds == null || activeIndex < 0 || activeIndex >= teamIds.Length) return default;
@@ -1213,7 +1172,6 @@ public class BattleManager : MonoBehaviour
         var    def     = teamDefs[activeIndex];
         int    lvl     = teamLevels[activeIndex];
 
-        // Build TitleContext using the field names in TitleContext.cs (selfHp01, allyCount, winStreak)
         float curMax = GetFinalMaxHPForIndex(activeIndex);
         float hp01   = curMax > 0.01f ? Mathf.Clamp01(teamHP[activeIndex] / curMax) : 0f;
 
@@ -1228,7 +1186,6 @@ public class BattleManager : MonoBehaviour
         ctx.alliesAlive = alliesAlive;
         ctx.winStreak = winStreak;
 
-        // Pull conditional values (use these statKind keys in your TitleRuntime router)
         TitleStatMods mods = default;
         mods.atkFlat = Mathf.RoundToInt(TitlesAdapter.GetStatValue(ownedId, def, lvl, "atkFlat",  ctx, 0f));
         mods.atkPct  = TitlesAdapter.GetStatValue(ownedId, def, lvl, "atkPct",   ctx, 0f);
@@ -1244,10 +1201,6 @@ public class BattleManager : MonoBehaviour
         return mods;
     }
 
-    // ─────────────────────────────────────────────────────────────────────────────
-    // Conditional Titles glue
-    // ─────────────────────────────────────────────────────────────────────────────
-
     private int GetAlliesAliveNotIncludingActive()
     {
         int alive = 0;
@@ -1256,7 +1209,6 @@ public class BattleManager : MonoBehaviour
         return alive;
     }
 
-    // Try to read win streak from EncounterManager via common names; fallback 0.
     private int GetWinStreakSafe()
     {
         try
@@ -1265,11 +1217,9 @@ public class BattleManager : MonoBehaviour
             if (em == null) return 0;
 
             var t = em.GetType();
-            // Try property "CurrentWinStreak", then "WinStreak"
             var p = t.GetProperty("CurrentWinStreak") ?? t.GetProperty("WinStreak");
             if (p != null && p.PropertyType == typeof(int)) return (int)p.GetValue(em);
 
-            // Try method "GetWinStreak()"
             var m = t.GetMethod("GetWinStreak", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance);
             if (m != null && m.ReturnType == typeof(int)) return (int)m.Invoke(em, null);
         }
@@ -1277,11 +1227,8 @@ public class BattleManager : MonoBehaviour
         return 0;
     }
 
-    // Build the TitleContext used by your Titles system.
-    // (Class/struct TitleContext is provided by your Titles package.)
     private TitleContext BuildTitleContextForActive()
     {
-        // hpPct: 0..1 current HP, alliesAlive: bench count alive, winStreak: from EncounterManager
         float curMax = GetFinalMaxHPForIndex(activeIndex);
         float hpPct = curMax > 0.01f ? Mathf.Clamp01(teamHP[activeIndex] / curMax) : 0f;
         int alliesAlive = GetAlliesAliveNotIncludingActive();
@@ -1295,11 +1242,6 @@ public class BattleManager : MonoBehaviour
         };
         return ctx;
     }
-
-    // ─────────────────────────────────────────────────────────────────────────────
-    // DamageFilter unbox (because TitlesAdapter returns it boxed as object)
-    // Expected fields: bool cannotBeCrit; float percentReduce (0..1); int flatReduce (>=0)
-    // ─────────────────────────────────────────────────────────────────────────────
 
     private struct DamageFilterView
     {
@@ -1317,7 +1259,6 @@ public class BattleManager : MonoBehaviour
         bool ok = true;
         try
         {
-            // supports both fields and properties
             bool GetBool(string name, bool def)
             {
                 var f = t.GetField(name) ?? (object)t.GetProperty(name);
@@ -1350,7 +1291,6 @@ public class BattleManager : MonoBehaviour
         return ok;
     }
 
-    // Helper to unbox a defender damage filter object from TitlesAdapter.GetDamageFilter
     private static void UnboxDamageFilter(object box, out bool cannotBeCrit, out float percentReduce, out int flatReduce)
     {
         cannotBeCrit = false;
@@ -1385,7 +1325,7 @@ public class BattleManager : MonoBehaviour
         }
         catch { }
     }
-    
+
     private void SetColoredStat(TextMeshProUGUI label, string name, int baseVal, int finalVal)
     {
         if (!label) return;
@@ -1403,6 +1343,13 @@ public class BattleManager : MonoBehaviour
         label.color = delta > 0 ? StatBuff : StatNerf;
     }
 
-
-
+    // Shows conditional-only contribution as a suffix, e.g. " {cond +12}"
+    private string CondTag(int baseVal, int flat, float pct)
+    {
+        float raw = flat + (baseVal * pct);
+        int delta = Mathf.RoundToInt(raw);
+        if (delta == 0) return "";
+        string sign = delta > 0 ? "+" : "";
+        return $" {{cond {sign}{delta}}}";
+    }
 }

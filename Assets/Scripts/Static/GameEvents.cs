@@ -34,5 +34,14 @@ public static class GameEvents
     public static Action EnergyChanged;                       // used by encounter/idle energy UI
 
     // Idle loop
-    public static Action<int> IdleBatchCompleted; 
+    public static Action<int> IdleBatchCompleted;
+
+    /// <summary>Fired after the active monster changes. Args: oldIndex, newIndex.</summary>
+    public static event Action<int, int> ActiveMonsterSwapped;
+
+    public static void RaiseActiveMonsterSwapped(int oldIndex, int newIndex)
+        => ActiveMonsterSwapped?.Invoke(oldIndex, newIndex);
+        
+    public static System.Action<int> WinStreakChanged;
+    public static void RaiseWinStreakChanged(int value) => WinStreakChanged?.Invoke(value);  
 }

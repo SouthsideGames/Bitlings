@@ -31,7 +31,7 @@ public static class TitlesAdapter
         "TitlesManager"
     };
 
-    static Type   _titleType;
+    static Type _titleType;
     static object _titleSingleton; // cached scene instance (MonoBehaviour) or runtime singleton
 
     static TitlesAdapter()
@@ -67,8 +67,8 @@ public static class TitlesAdapter
     {
         try
         {
-            var fI  = t.GetField("I",         BindingFlags.Public | BindingFlags.Static);
-            var pI  = t.GetProperty("I",      BindingFlags.Public | BindingFlags.Static);
+            var fI = t.GetField("I", BindingFlags.Public | BindingFlags.Static);
+            var pI = t.GetProperty("I", BindingFlags.Public | BindingFlags.Static);
             var pIn = t.GetProperty("Instance", BindingFlags.Public | BindingFlags.Static);
 
             return (object)(fI?.GetValue(null) ??
@@ -299,7 +299,7 @@ public static class TitlesAdapter
             try
             {
                 var et = entry.GetType();
-                id    = (string)(et.GetField("monsterId")?.GetValue(entry) ?? et.GetProperty("monsterId")?.GetValue(entry, null));
+                id = (string)(et.GetField("monsterId")?.GetValue(entry) ?? et.GetProperty("monsterId")?.GetValue(entry, null));
                 level = Convert.ToInt32(et.GetField("level")?.GetValue(entry) ?? et.GetProperty("level")?.GetValue(entry, null) ?? 1);
             }
             catch { id = null; level = 1; }
@@ -334,15 +334,23 @@ public static class TitlesAdapter
 
             try
             {
-                var t   = res.GetType();
-                var cbc = t.GetField("cannotBeCrit") ?.GetValue(res) as bool?  ?? false;
-                var pr  = t.GetField("percentReduce")?.GetValue(res) as float? ?? 0f;
-                var fr  = t.GetField("flatReduce")   ?.GetValue(res) as int?   ?? 0;
+                var t = res.GetType();
+                var cbc = t.GetField("cannotBeCrit")?.GetValue(res) as bool? ?? false;
+                var pr = t.GetField("percentReduce")?.GetValue(res) as float? ?? 0f;
+                var fr = t.GetField("flatReduce")?.GetValue(res) as int? ?? 0;
                 return new TitleDamageFilter { cannotBeCrit = cbc, percentReduce = Mathf.Max(0f, pr), flatReduce = Mathf.Max(0, fr) };
             }
             catch { /* fall through */ }
         }
 
         return default;
+    }
+    
+    // Defender-side type effectiveness multiplier
+    public static float GetIncomingEffectivenessMult(string ownedId, MonsterDataSO def, int level)
+    {
+        if (TryInvoke("GetIncomingEffectivenessMultiplier", new object[] { ownedId, def, level }, out var res) && res is float f)
+            return Mathf.Max(0f, f);
+        return 1f;
     }
 }

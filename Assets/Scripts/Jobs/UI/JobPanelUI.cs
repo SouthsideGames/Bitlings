@@ -37,6 +37,10 @@ public class JobPanelUI : MonoBehaviour
     [SerializeField] private Color rateUp     = new Color(0.22f, 0.85f, 0.35f); // boost
     [SerializeField] private Color rateDown   = new Color(0.90f, 0.30f, 0.30f); // penalty
 
+    [Header("Capacity Delta Colors")]
+    [SerializeField] private Color capUpColor   = new Color(0.22f, 0.85f, 0.35f); // green
+    [SerializeField] private Color capDownColor = new Color(0.90f, 0.30f, 0.30f); // red
+
     void OnEnable()
     {
         JobManager.I?.ProcessOfflineAllSites();
@@ -44,12 +48,14 @@ public class JobPanelUI : MonoBehaviour
         Refresh();
         GameEvents.OnJobsChanged += Refresh;
         GameEvents.OnResourcesChanged += Refresh;
+        GameEvents.JobGlobalModsChanged += Refresh; // titles/aura/cap changes
     }
 
     void OnDisable()
     {
         GameEvents.OnJobsChanged -= Refresh;
         GameEvents.OnResourcesChanged -= Refresh;
+        GameEvents.JobGlobalModsChanged -= Refresh;
     }
 
     public void Refresh()
@@ -58,39 +64,73 @@ public class JobPanelUI : MonoBehaviour
 
         foreach (var t in tiles)
         {
-            var s = JobManager.I.States.Find(x => x.config.jobType == t.job);
+            var s = JobManager.I.States.Find(x => x.config != null && x.config.jobType == t.job);
             if (s == null || s.config == null) continue;
 
             // Title: "Quarry (2/3)"
             if (t.title) t.title.text = $"{t.job} ({CountWorkers(s)}/{s.config.maxWorkers})";
 
-            // Stored: "Stored: 52/200"
-            int cap = JobManager.I.GetEffectiveStorageCap(s.config);
-            int storedWhole = Mathf.FloorToInt(s.storedAmount);
-            if (t.stored) t.stored.text = $"Stored: {storedWhole}/{cap}";
+            // ─────────────────────────────────────────────────────────────
+            // Capacity text with colored delta (titles vs. no titles)
+            // ─────────────────────────────────────────────────────────────
+            // Effective cap from manager (includes titles + level mult)
+            int capWithTitles = JobManager.I.GetEffectiveStorageCap(s.config);
 
-            // Rate with delta & color
+            // Build cap WITHOUT titles (still includes level multiplier & save bonus)
+            int baseCap = s.config.storageCap;
+
+            int extraFromSave = 0;
+            if (SaveManager.Data != null)
+            {
+                try { extraFromSave = SaveManager.Data.GetJobStorageExtra(s.config.jobType); }
+                catch { extraFromSave = 0; }
+            }
+
+            // No-titles, pre-mult
+            int preMultNoTitles = Mathf.Max(0, baseCap + extraFromSave);
+
+            // Same level multiplier manager uses
+            float lvlMul = JobLeveling.StorageMultForLevel(s.level);
+
+            int capNoTitles = Mathf.Max(0, Mathf.RoundToInt(preMultNoTitles * lvlMul));
+
+            // Delta is how much titles added after level mult
+            int deltaCap = capWithTitles - capNoTitles;
+
+            int storedWhole = Mathf.FloorToInt(s.storedAmount);
+            if (t.stored)
+            {
+                if (deltaCap == 0)
+                {
+                    t.stored.text = $"Stored: {storedWhole}/{capWithTitles}";
+                }
+                else
+                {
+                    var c = deltaCap > 0 ? capUpColor : capDownColor;
+                    string hex = ColorUtility.ToHtmlStringRGB(c);
+                    string sign = deltaCap > 0 ? "+" : ""; // negatives already have '-'
+                    t.stored.text = $"Stored: {storedWhole}/{capWithTitles} <color=#{hex}>({sign}{deltaCap})</color>";
+                }
+            }
+
+            // ─────────────────────────────────────────────────────────────
+            // Rate with delta & color (base vs. boosted by titles/auras)
+            // ─────────────────────────────────────────────────────────────
             if (t.rate)
             {
-                // base = no titles (still includes shinies, species, rarity, evo, affinity, boss debuff)
                 float baseHr    = ComputeRatePerHour_NoTitles(s);
-
-                // boosted = with titles (per-worker multipliers + site aura titles)
                 float boostedHr = ComputeRatePerHour_WithTitles(s);
 
-                // Show integer-ish per hour as your old UI did
                 int shown = Mathf.FloorToInt(boostedHr);
                 float deltaPct = 0f;
                 if (baseHr > 0.0001f)
                     deltaPct = (boostedHr / baseHr - 1f) * 100f;
 
-                // Text: "123/hr  (+15%)"
                 if (Mathf.Abs(deltaPct) >= 0.5f)
                     t.rate.text = $"{shown}/hr  {(deltaPct >= 0 ? "+" : string.Empty)}{deltaPct:0}%";
                 else
                     t.rate.text = $"{shown}/hr";
 
-                // Colorize
                 if (deltaPct > 0.5f)       t.rate.color = rateUp;
                 else if (deltaPct < -0.5f) t.rate.color = rateDown;
                 else                       t.rate.color = rateNeutral;
@@ -109,7 +149,7 @@ public class JobPanelUI : MonoBehaviour
             }
 
             // FULL badge (optional)
-            if (t.fullBadge) t.fullBadge.SetActive(cap > 0 && storedWhole >= cap);
+            if (t.fullBadge) t.fullBadge.SetActive(capWithTitles > 0 && storedWhole >= capWithTitles);
 
             // Slots
             int max = t.slots != null ? t.slots.Length : 0;
@@ -138,9 +178,7 @@ public class JobPanelUI : MonoBehaviour
     }
 
     // ─────────────────────────────────────────────────────────────────────────────
-    // Rate computation (duplicated from JobManager.ComputeRatePerHour, but with toggles)
-    // base: excludes titles entirely; boosted: includes job-auras and per-worker title multipliers
-    // Both include shinies, species multipliers, boss debuff, and use *current working slots* fatigue impact.
+    // Rate computation (base vs boosted)
     // ─────────────────────────────────────────────────────────────────────────────
 
     private float ComputeRatePerHour_NoTitles(JobSiteState s)
@@ -159,7 +197,6 @@ public class JobPanelUI : MonoBehaviour
                        * JobBalance.AffinityMult(s.config.jobType, w.def.type);
 
             // EXCLUDE per-worker title rate mult here
-
             sum += mult;
         }
 
@@ -218,7 +255,7 @@ public class JobPanelUI : MonoBehaviour
         try
         {
             var auras = TitlesAdapter.BuildJobAuras(SaveManager.Data?.team);
-            if (auras != null && auras.TryGetValue(s.config.jobType, out float auraPct) && auraPct != 0f)
+            if (auras != null && auras.TryGetValue(s.config.jobType, out float auraPct) && Math.Abs(auraPct) > 0.0001f)
                 perHour *= (1f + auraPct);
         }
         catch { }
@@ -250,7 +287,7 @@ public class JobPanelUI : MonoBehaviour
     }
 
     // ─────────────────────────────────────────────────────────────────────────────
-    // Helpers (mirrors from JobManager to keep this self-contained)
+    // Helpers (mirror manager to keep UI self-contained)
     // ─────────────────────────────────────────────────────────────────────────────
 
     private int CountWorkers(JobSiteState s)

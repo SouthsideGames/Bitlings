@@ -65,7 +65,7 @@ public static class BattleCalc
         {
             var t = TitlesAdapter.GetBattleStatMods(ownedId);
             if (t.atkFlat != 0) atk += t.atkFlat;
-            if (t.atkPct != 0f)  atk *= (1f + t.atkPct);
+            if (t.atkPct  != 0f) atk *= (1f + t.atkPct);
         }
         return Mathf.Max(1f, atk);
     }
@@ -77,7 +77,7 @@ public static class BattleCalc
         {
             var t = TitlesAdapter.GetBattleStatMods(ownedId);
             if (t.spdFlat != 0) spd += t.spdFlat;
-            if (t.spdPct != 0f)  spd = Mathf.RoundToInt(spd * (1f + t.spdPct));
+            if (t.spdPct  != 0f)  spd = Mathf.RoundToInt(spd * (1f + t.spdPct));
         }
         return Mathf.Max(1, spd);
     }
@@ -96,6 +96,7 @@ public static class BattleCalc
 
     // ─────────────────────────────────────────────────────────────────────────────
     // Convenience: ID-less damage calc (unchanged)
+    // (No defender title hooks here; keep it simple for legacy callers)
     // ─────────────────────────────────────────────────────────────────────────────
 
     public static DamageResult CalcDamage(
@@ -184,22 +185,43 @@ public static class BattleCalc
         float eff = BattleTypeChart.GetMultiplier(atkType, defType);
         if (float.IsNaN(eff) || float.IsInfinity(eff)) eff = 1f;
 
-        // Titles can multiply effectiveness for the attacker
+        // Attacker-side title effectiveness multiplier
         if (!string.IsNullOrEmpty(attackerMonsterId))
         {
-            float titleEffMul = TitlesAdapter.GetEffectivenessMult(attackerMonsterId, atkDef, atkLevel);
-            if (!float.IsNaN(titleEffMul) && !float.IsInfinity(titleEffMul) && titleEffMul > 0f)
-                eff *= titleEffMul;
+            try
+            {
+                float outMul = TitlesAdapter.GetEffectivenessMult(attackerMonsterId, atkDef, atkLevel);
+                if (!float.IsNaN(outMul) && !float.IsInfinity(outMul) && outMul > 0f) eff *= outMul;
+            }
+            catch { /* keep resilient */ }
         }
 
-        // Defender filter may block crit / add DR
+        // Defender-side incoming effectiveness multiplier (e.g., nullify or weaken type)
+        if (!string.IsNullOrEmpty(defenderMonsterId))
+        {
+            try
+            {
+                float inMul = TitlesAdapter.GetIncomingEffectivenessMult(defenderMonsterId, defDef, defLevel);
+                if (!float.IsNaN(inMul) && !float.IsInfinity(inMul) && inMul >= 0f) eff *= inMul;
+            }
+            catch { /* default to 1f if not implemented */ }
+        }
+
+        // Read defender damage filter (cannotBeCrit / %DR / flat DR)
         bool blockCrit = false;
-        float percentDR = 0f; // 0.10 => 10% less after-defense damage
-        float flatDR    = 0f; // subtract after percent
+        float percentDR = 0f;
+        int   flatDR    = 0;
 
         if (!string.IsNullOrEmpty(defenderMonsterId))
         {
-            TryReadDamageFilter(TitlesAdapter.GetDamageFilter(defenderMonsterId, defDef, defLevel), out flatDR, out percentDR, out blockCrit);
+            try
+            {
+                var df = TitlesAdapter.GetDamageFilter(defenderMonsterId, defDef, defLevel);
+                blockCrit   = df.cannotBeCrit;
+                percentDR   = Mathf.Clamp01(df.percentReduce);
+                flatDR      = Mathf.Max(0, df.flatReduce);
+            }
+            catch { /* safe no-op */ }
         }
 
         bool defenderIsRock = defDef && defDef.type == MonsterType.Rock;
@@ -207,18 +229,19 @@ public static class BattleCalc
 
         float preMit = baseDamage * Mathf.Max(0.25f, eff) * (crit ? critMultiplier : 1f);
 
-        // Title-aware defense value if defender ID is present
+        // Title-aware defense if we have a defender ID
         int defense = string.IsNullOrEmpty(defenderMonsterId)
             ? CalcDefense(defDef, defLevel)
             : CalcDefense(defDef, defLevel, defenderMonsterId);
 
         defense += Mathf.Max(0, defenderFlatDefenseBonus);
+
         float mitFactor = 100f / (100f + Mathf.Max(0, defense));
         float afterDefense = preMit * mitFactor;
 
-        // Apply defender title DR (percent then flat)
-        if (percentDR > 0f) afterDefense *= Mathf.Max(0f, 1f - percentDR);
-        if (flatDR    > 0f) afterDefense -= flatDR;
+        // Apply defender title DR: percent first, then flat
+        if (percentDR > 0f) afterDefense *= (1f - percentDR);
+        if (flatDR    > 0 ) afterDefense -= flatDR;
 
         int dealt = Mathf.Max(1, Mathf.RoundToInt(afterDefense));
 
@@ -228,54 +251,5 @@ public static class BattleCalc
             crit = crit,
             effectiveness = eff
         };
-    }
-
-    // ─────────────────────────────────────────────────────────────────────────────
-    // Helpers
-    // ─────────────────────────────────────────────────────────────────────────────
-
-    private static void TryReadDamageFilter(object boxed,
-                                            out float flatDR,
-                                            out float percentDR,
-                                            out bool blockCrit)
-    {
-        flatDR = 0f; percentDR = 0f; blockCrit = false;
-        if (boxed == null) return;
-
-        var t = boxed.GetType();
-        try
-        {
-            // Try common field/property names flexibly
-            flatDR    = ReadFloat(t, boxed, "flatDR", "FlatDR", "flat", "Flat", "flatReduction");
-            percentDR = ReadFloat(t, boxed, "percentDR", "PercentDR", "pct", "Pct", "reductionPct", "Percent");
-            blockCrit = ReadBool (t, boxed, "blockCrit", "NoCrit", "noCrit", "BlockCrit");
-        }
-        catch { /* safe no-op */ }
-        flatDR    = Mathf.Max(0f, flatDR);
-        percentDR = Mathf.Clamp01(percentDR);
-    }
-
-    private static float ReadFloat(System.Type t, object o, params string[] names)
-    {
-        for (int i = 0; i < names.Length; i++)
-        {
-            var f = t.GetField(names[i]);
-            if (f != null && f.FieldType == typeof(float)) return (float)f.GetValue(o);
-            var p = t.GetProperty(names[i]);
-            if (p != null && p.PropertyType == typeof(float)) return (float)p.GetValue(o, null);
-        }
-        return 0f;
-    }
-
-    private static bool ReadBool(System.Type t, object o, params string[] names)
-    {
-        for (int i = 0; i < names.Length; i++)
-        {
-            var f = t.GetField(names[i]);
-            if (f != null && f.FieldType == typeof(bool)) return (bool)f.GetValue(o);
-            var p = t.GetProperty(names[i]);
-            if (p != null && p.PropertyType == typeof(bool)) return (bool)p.GetValue(o, null);
-        }
-        return false;
     }
 }

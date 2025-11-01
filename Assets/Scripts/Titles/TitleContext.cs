@@ -1,55 +1,104 @@
+// Assets/Scripts/Titles/TitleContext.cs
+using System;
 using UnityEngine;
 
 /// <summary>
-/// Context snapshot passed to TitleRuntime to evaluate ConditionalBoosters
-/// such as HealthBelow%, HealthAbove%, AllyCountBelow, and WinStreakAbove.
+/// Context passed to the title system when evaluating stat changes.
+/// The key addition is <see cref="isBattle"/> which lets you gate
+/// conditional/battle-only effects so they never leak into menus.
 /// </summary>
-[System.Serializable]
+[Serializable]
 public struct TitleContext
 {
-    
+    /// <summary>Owned monster unique id (if applicable). Optional.</summary>
     public string ownedId;
 
-    // Battle-facing context
-    public float selfHp01;   // Current HP as 0–1 percent of max
-    public int alliesAlive;  // Count of living allies (excluding self)
-    public int winStreak;    // Current win streak from EncounterManager
+    /// <summary>Self HP in 0..1 (current / max). Use 0 if unknown.</summary>
+    [Range(0f, 1f)] public float selfHp01;
 
-    // Optional expansion: useful for future conditions
-    public int turnIndex;    // Which turn we’re on (optional, default 0)
-    public bool isBossFight; // True if current encounter is a boss
+    /// <summary>How many allies are alive (excluding self) for conditional checks.</summary>
+    public int alliesAlive;
 
-    // ────────────────────────────────────────────────
-    // Constructors
-    // ────────────────────────────────────────────────
+    /// <summary>Current encounter win streak (0 if none/unknown).</summary>
+    public int winStreak;
 
-    public TitleContext(string ownedId, float hpPct, int alliesAlive, int winStreak, int turnIndex = 0, bool isBoss = false)
-    {
-        this.ownedId = ownedId;
-        this.selfHp01 = Mathf.Clamp01(hpPct);
-        this.alliesAlive = Mathf.Max(0, alliesAlive);
-        this.winStreak = Mathf.Max(0, winStreak);
-        this.turnIndex = Mathf.Max(0, turnIndex);
-        this.isBossFight = isBoss;
-    }
+    /// <summary>
+    /// True only during battle turns. TitleManager/Titles should check this
+    /// to ensure conditional boosts (like win streak, HP thresholds, allies alive)
+    /// apply only in battle and never affect out-of-battle UI/storage.
+    /// </summary>
+    public bool isBattle;
 
-    // Default empty context
+    // ─────────────────────────────────────────────────────────────────────────────
+    // Factories
+    // ─────────────────────────────────────────────────────────────────────────────
+
+    /// <summary>Convenient "no battle" context for menus/collection screens.</summary>
     public static TitleContext Empty => new TitleContext
     {
-        ownedId = "",
-        selfHp01 = 1f,
+        ownedId     = "",
+        selfHp01    = 0f,
         alliesAlive = 0,
-        winStreak = 0,
-        turnIndex = 0,
-        isBossFight = false
+        winStreak   = 0,
+        isBattle    = false
     };
 
-    // ────────────────────────────────────────────────
-    // Helper methods
-    // ────────────────────────────────────────────────
+    /// <summary>
+    /// Minimal constructor (kept for backward compatibility with older calls that
+    /// passed just (hpPct, allies, streak) without an ownedId). Assumes battle context.
+    /// </summary>
+    public TitleContext(float hpPct, int alliesAlive, int winStreak)
+    {
+        this.ownedId     = "";
+        this.selfHp01    = Mathf.Clamp01(hpPct);
+        this.alliesAlive = Mathf.Max(0, alliesAlive);
+        this.winStreak   = Mathf.Max(0, winStreak);
+        this.isBattle    = true;
+    }
 
-    public bool IsHealthBelow(float threshold01) => selfHp01 < threshold01;
-    public bool IsHealthAbove(float threshold01) => selfHp01 > threshold01;
-    public bool IsAllyCountBelow(int count)      => alliesAlive < count;
-    public bool IsWinStreakAbove(int count)      => winStreak > count;
+    /// <summary>
+    /// Back-compat convenience used in some adapters:
+    /// TitleContext ctx = new TitleContext(ownedId, hpPct, alliesAlive, winStreak);
+    /// Sets isBattle=true by default (battle evaluation).
+    /// </summary>
+    public TitleContext(string ownedId, float hpPct, int alliesAlive, int winStreak)
+    {
+        this.ownedId     = ownedId ?? "";
+        this.selfHp01    = Mathf.Clamp01(hpPct);
+        this.alliesAlive = Mathf.Max(0, alliesAlive);
+        this.winStreak   = Mathf.Max(0, winStreak);
+        this.isBattle    = true;
+    }
+
+    /// <summary>
+    /// Full constructor allowing explicit control of the battle flag.
+    /// </summary>
+    public TitleContext(string ownedId, float hpPct, int alliesAlive, int winStreak, bool isBattle)
+    {
+        this.ownedId     = ownedId ?? "";
+        this.selfHp01    = Mathf.Clamp01(hpPct);
+        this.alliesAlive = Mathf.Max(0, alliesAlive);
+        this.winStreak   = Mathf.Max(0, winStreak);
+        this.isBattle    = isBattle;
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────────
+    // Helpers
+    // ─────────────────────────────────────────────────────────────────────────────
+
+    /// <summary>Returns a copy with isBattle forced to true.</summary>
+    public TitleContext AsBattle()
+    {
+        var c = this;
+        c.isBattle = true;
+        return c;
+    }
+
+    /// <summary>Returns a copy with isBattle forced to false (menu/simulation).</summary>
+    public TitleContext AsMenu()
+    {
+        var c = this;
+        c.isBattle = false;
+        return c;
+    }
 }

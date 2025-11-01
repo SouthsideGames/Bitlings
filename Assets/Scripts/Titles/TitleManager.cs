@@ -70,8 +70,21 @@ public sealed class TitleManager : MonoBehaviour
 
     public int GetTierCount(MonsterDataSO def) => def && def.titleTrack ? def.titleTrack.tiers?.Count ?? 0 : 0;
 
+    // Convenience for UI
+    public string GetEquippedTitleIdForTier(string monsterId, MonsterDataSO def, int tierIndex)
+    {
+        if (string.IsNullOrEmpty(monsterId) || !def || !def.titleTrack) return "";
+        var tiers = def.titleTrack.tiers;
+        if (tiers == null || tierIndex < 0 || tierIndex >= tiers.Count) return "";
+
+        var save = TitleSaveStore.GetOrCreateEquip(monsterId);
+        if (tierIndex >= save.tierSelections.Count) return "";
+        return save.tierSelections[tierIndex];
+    }
+
     // ─────────────────────────────────────────────────────────────────────
     // Public: Equip / Get Equipped
+    // (Fires JobGlobalModsChanged for UI/logic that depends on titles)
     // ─────────────────────────────────────────────────────────────────────
 
     /// <summary>Equip a title in a specific tier. Enforces maxSelectable (currently 1 total).</summary>
@@ -94,11 +107,20 @@ public sealed class TitleManager : MonoBehaviour
         // Resize to tiers
         for (int i = 0; i < tiers.Count; i++) save.tierSelections.Add("");
 
-        // Assign
+        // If already the same selection, no-op (but still ensure list length)
+        bool changed = save.tierSelections[tierIndex] != choose.titleId;
         save.tierSelections[tierIndex] = choose.titleId;
 
         TitleSaveStore.Save();
+        if (changed) RaiseTitleChange();
         return true;
+    }
+
+    public bool EquipById(string monsterId, MonsterDataSO def, int tierIndex, string titleId)
+    {
+        if (string.IsNullOrEmpty(titleId)) return false;
+        if (!_idToTitle.TryGetValue(titleId, out var so) || !so) return false;
+        return Equip(monsterId, def, tierIndex, so);
     }
 
     public bool Unequip(string monsterId, MonsterDataSO def, int tierIndex)
@@ -110,8 +132,11 @@ public sealed class TitleManager : MonoBehaviour
         var save = TitleSaveStore.GetOrCreateEquip(monsterId);
         while (save.tierSelections.Count < tiers.Count) save.tierSelections.Add("");
 
+        bool changed = !string.IsNullOrEmpty(save.tierSelections[tierIndex]);
         save.tierSelections[tierIndex] = "";
+
         TitleSaveStore.Save();
+        if (changed) RaiseTitleChange();
         return true;
     }
 
@@ -165,7 +190,7 @@ public sealed class TitleManager : MonoBehaviour
             if (t is StatBoosterTitleSO sb && sb.stat == stat)
                 current = TitleUtility.ApplyOp(current, sb.operation, sb.value);
 
-            else if (t is ConditionalBoosterTitleSO cb && cb.stat == stat)
+            else if (t is ConditionalStatBoosterTitleSO cb && cb.stat == stat)
             {
                 if (TitleUtility.CheckCondition(cb, ctx))
                     current = TitleUtility.ApplyOp(current, cb.operation, cb.value);
@@ -174,6 +199,16 @@ public sealed class TitleManager : MonoBehaviour
             {
                 if (dsb.statA == stat) current = TitleUtility.ApplyOp(current, dsb.opA, dsb.valueA);
                 if (dsb.statB == stat) current = TitleUtility.ApplyOp(current, dsb.opB, dsb.valueB);
+            }
+            else if (t is DualConditionalBoosterTitleSO dcb)
+            {
+                if (TitleUtility.CheckCondition(dcb.condition, dcb.threshold01, dcb.countN, in ctx))
+                {
+                    if (dcb.statA == stat)
+                        current = TitleUtility.ApplyOp(current, dcb.opA, dcb.valueA);
+                    if (dcb.statB == stat)
+                        current = TitleUtility.ApplyOp(current, dcb.opB, dcb.valueB);
+                }
             }
         }
         return current;
@@ -191,9 +226,9 @@ public sealed class TitleManager : MonoBehaviour
     // Adapter expects fields: cannotBeCrit, percentReduce, flatReduce
     public struct TitleDamageFilter
     {
-        public bool  cannotBeCrit;
+        public bool cannotBeCrit;
         public float percentReduce;   // 0.20 = 20% less damage after DEF
-        public int   flatReduce;      // subtract after % reduce
+        public int flatReduce;        // subtract after % reduce
     }
 
     public TitleDamageFilter GetDamageFilter(string monsterId, MonsterDataSO def, int level)
@@ -208,7 +243,7 @@ public sealed class TitleManager : MonoBehaviour
 
             // Convert 1.0-baseline multiplier to a percent reduction amount.
             float reduceFromMult = Mathf.Clamp01(1f - Mathf.Max(0f, t.percentMultiplier));
-            f.flatReduce   += Mathf.Max(0, t.flatReduce);
+            f.flatReduce += Mathf.Max(0, t.flatReduce);
             f.percentReduce = Mathf.Clamp01(f.percentReduce + reduceFromMult);
             if (t.cannotBeCrit) f.cannotBeCrit = true;
         }
@@ -218,7 +253,6 @@ public sealed class TitleManager : MonoBehaviour
     public object GetDamageFilterBoxed(string monsterId, MonsterDataSO def, int level) => GetDamageFilter(monsterId, def, level);
 
     // --- Job boosters (while assigned) ---
-    // Original 3-arg signature
     public float GetJobFatigueMultiplier(string monsterId, MonsterDataSO def, int level)
     {
         var titles = GetEquippedList(monsterId, def, level);
@@ -228,7 +262,7 @@ public sealed class TitleManager : MonoBehaviour
         return mul;
     }
 
-    // NEW: 4-arg overload to match TitlesAdapter (fixes the warning)
+    // 4-arg overload (kept for API parity with adapter)
     public float GetJobFatigueMultiplier(string monsterId, MonsterDataSO def, int level, JobType site)
     {
         // If you later want site-specific fatigue tuning, use `site` here.
@@ -240,7 +274,11 @@ public sealed class TitleManager : MonoBehaviour
         var titles = GetEquippedList(monsterId, def, level);
         float sum = 0f;
         for (int i = 0; i < titles.Count; i++)
-            if (titles[i] is JobAuraTitleSO ja) sum += Mathf.Max(0f, ja.siteAuraPercent);
+            if (titles[i] is JobAuraTitleSO ja)
+            {
+                // If you later add per-site restriction to aura, check `site` here.
+                sum += Mathf.Max(0f, ja.siteAuraPercent);
+            }
         return sum;
     }
 
@@ -251,55 +289,6 @@ public sealed class TitleManager : MonoBehaviour
         for (int i = 0; i < titles.Count; i++)
             if (titles[i] is JobCapacityBoosterTitleSO jc) sum += Mathf.Max(0, jc.capacityBonusFlat);
         return sum;
-    }
-
-    // --- Victory / capture / job rate hooks used via TitlesAdapter ---
-    public float GetCoinMultOnVictory(string monsterId, MonsterDataSO wild, int wildLevel)
-    {
-        var titles = GetEquippedList(monsterId, def: wild, level: Mathf.Max(1, wildLevel));
-        float mul = 1f;
-        for (int i = 0; i < titles.Count; i++)
-        {
-            var t = titles[i];
-            if (!t) continue;
-            if (t is CoinBonusOnVictoryTitleSO cb) mul *= Mathf.Max(0f, cb.coinMultiplier);
-            else if (TryReadFloat(t, out var v, "coinMultiplier", "coinMultOnVictory", "victoryCoinMult", "coinsMult"))
-                mul *= Mathf.Max(0f, v);
-        }
-        return Mathf.Max(0f, mul);
-    }
-
-    public float GetXPMultOnVictory(string monsterId, MonsterDataSO wild, int wildLevel)
-    {
-        var titles = GetEquippedList(monsterId, def: wild, level: Mathf.Max(1, wildLevel));
-        float mul = 1f;
-        for (int i = 0; i < titles.Count; i++)
-        {
-            var t = titles[i];
-            if (!t) continue;
-            if (t is XPBonusOnVictoryTitleSO xb) mul *= Mathf.Max(0f, xb.xpMultiplier);
-            else if (TryReadFloat(t, out var v, "xpMultiplier", "xpMultOnVictory", "victoryXpMult", "expMultiplier"))
-                mul *= Mathf.Max(0f, v);
-        }
-        return Mathf.Max(0f, mul);
-    }
-
-    public float GetCaptureChanceMult(string monsterId)
-    {
-        var def = MonsterLibraryLocator.GetById(monsterId);
-        int lvl = 1;
-        var titles = GetEquippedList(monsterId, def, lvl);
-
-        float mul = 1f;
-        for (int i = 0; i < titles.Count; i++)
-        {
-            var t = titles[i];
-            if (!t) continue;
-            if (t is CaptureChanceTitleSO cc) mul *= Mathf.Max(0f, cc.chanceMultiplier);
-            else if (TryReadFloat(t, out var v, "captureChanceMultiplier", "captureMult", "captureChanceMult"))
-                mul *= Mathf.Max(0f, v);
-        }
-        return Mathf.Max(0f, mul);
     }
 
     public float GetJobRateMult(string monsterId, JobType site)
@@ -313,9 +302,18 @@ public sealed class TitleManager : MonoBehaviour
         {
             var t = titles[i];
             if (!t) continue;
-            if (t is JobRateBoosterTitleSO jr) mul *= Mathf.Max(0f, jr.rateMultiplier);
+
+            if (t is ConditionalJobRateBoosterTitleSO jr)
+            {
+                // If jr.restrictTo != None, only apply when matching the site
+                if (jr.restrictTo == JobType.None || jr.restrictTo == site)
+                    mul *= Mathf.Max(0f, jr.rateMultiplier);
+            }
             else if (TryReadFloat(t, out var v, "rateMultiplier", "jobRateMultiplier", "productionMultiplier", "jobProdMult"))
+            {
+                // Reflection path can't check restrictTo; prefer strong type where possible
                 mul *= Mathf.Max(0f, v);
+            }
         }
         return Mathf.Max(0f, mul);
     }
@@ -350,4 +348,81 @@ public sealed class TitleManager : MonoBehaviour
         }
         return false;
     }
+
+    public float GetIncomingEffectivenessMultiplier(string monsterId, MonsterDataSO def, int level)
+    {
+        var titles = GetEquippedList(monsterId, def, level);
+        float mul = 1f;
+        for (int i = 0; i < titles.Count; i++)
+        {
+            var t = titles[i] as EffectivenessNullifyTitleSO;
+            if (t)
+            {
+                // Stack multiplicatively (so multiple resistances combine)
+                mul *= Mathf.Max(0f, t.incomingEffectivenessMultiplier);
+            }
+        }
+        return mul;
+    }
+
+    // ─────────────────────────────────────────────────────────────────────
+    // UI-friendly wrappers that ALWAYS raise the event on change
+    // ─────────────────────────────────────────────────────────────────────
+
+    public bool AssignTitleToMonster(string monsterId, MonsterDataSO def, int tierIndex, TitleSO choose)
+    {
+        bool ok = Equip(monsterId, def, tierIndex, choose); // Equip already calls RaiseTitleChange if changed
+        return ok;
+    }
+
+    public bool RemoveTitleFromMonster(string monsterId, MonsterDataSO def, int tierIndex)
+    {
+        bool ok = Unequip(monsterId, def, tierIndex); // Unequip already calls RaiseTitleChange if changed
+        return ok;
+    }
+
+    public bool ToggleTitleOnMonster(string monsterId, MonsterDataSO def, int tierIndex, TitleSO choose)
+    {
+        if (string.IsNullOrEmpty(monsterId) || !def || choose == null) return false;
+        string current = GetEquippedTitleIdForTier(monsterId, def, tierIndex);
+        if (current == choose.titleId) return Unequip(monsterId, def, tierIndex);
+        return Equip(monsterId, def, tierIndex, choose);
+    }
+
+    public void ClearAllFor(string monsterId)
+    {
+        if (string.IsNullOrEmpty(monsterId)) return;
+
+        var save = TitleSaveStore.GetOrCreateEquip(monsterId);
+        if (save.tierSelections == null || save.tierSelections.Count == 0) return;
+
+        bool changed = false;
+        for (int i = 0; i < save.tierSelections.Count; i++)
+        {
+            if (!string.IsNullOrEmpty(save.tierSelections[i]))
+            {
+                save.tierSelections[i] = "";
+                changed = true;
+            }
+        }
+
+        if (changed)
+        {
+            TitleSaveStore.Save();
+            RaiseTitleChange();
+        }
+    }
+
+    // ─────────────────────────────────────────────────────────────────────
+    // Events: notify the game that title-driven job math changed
+    // ─────────────────────────────────────────────────────────────────────
+    private void RaiseTitleChange()
+    {
+        // Titles can affect job auras, per-worker rate, fatigue, etc.
+        GameEvents.JobGlobalModsChanged?.Invoke();
+        // Also nudge any job UI that keys off this generic event
+        GameEvents.OnJobsChanged?.Invoke();
+    }
+
+
 }

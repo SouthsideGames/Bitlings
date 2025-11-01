@@ -1,7 +1,7 @@
 using UnityEngine;
 
-[CreateAssetMenu(fileName = "JobRateBooster", menuName = "Data/Titles/Job Rate Booster", order = 103)]
-public class JobRateBoosterTitleSO : TitleSO
+[CreateAssetMenu(fileName = "ConditionalJobRateBooster", menuName = "Data/Titles/Conditional Job Rate Booster", order = 103)]
+public class ConditionalJobRateBoosterTitleSO : TitleSO
 {
     [Header("Jobs")]
     [Tooltip("Production rate multiplier while this monster is assigned to any job site (e.g., 1.15 = +15%).")]

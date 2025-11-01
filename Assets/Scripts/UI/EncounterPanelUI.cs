@@ -53,7 +53,7 @@ public class EncounterPanelUI : MonoBehaviour
 
         if (EncounterManager.I != null)
         {
-            EncounterManager.I.OnStateChanged  += OnEncounterStateChanged;
+            EncounterManager.I.OnStateChanged += OnEncounterStateChanged;
             GameEvents.EnergyChanged += RefreshEnergy;
         }
 
@@ -65,6 +65,8 @@ public class EncounterPanelUI : MonoBehaviour
         RefreshAll();
 
         GameEvents.BattleFinished += OnBattleFinished;
+        GameEvents.WinStreakChanged += Handle; 
+        UpdateNow();
     }
 
     void OnDisable()
@@ -79,6 +81,7 @@ public class EncounterPanelUI : MonoBehaviour
             EncounterManager.I.OnStateChanged -= RefreshWinStreak;
 
         GameEvents.BattleFinished -= OnBattleFinished;
+        GameEvents.WinStreakChanged -= Handle; 
 
         if (encounterBtn) encounterBtn.onClick.RemoveAllListeners();
         if (_fadeCo != null) StopCoroutine(_fadeCo);
@@ -99,6 +102,14 @@ public class EncounterPanelUI : MonoBehaviour
     {
         RefreshButtonAndLabel();
         RefreshEnergy();
+    }
+
+    private void Handle(int value) => UpdateNow();
+
+    private void UpdateNow()
+    {
+        if (!winStreakText) return;
+        int v = EncounterManager.I ? EncounterManager.I.CurrentWinStreak : 0;
     }
 
     void RefreshButtonAndLabel()
