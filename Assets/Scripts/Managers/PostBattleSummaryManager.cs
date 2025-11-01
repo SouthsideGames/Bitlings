@@ -28,6 +28,13 @@ public class PostBattleSummaryManager : MonoBehaviour
         public string capturedId;
         public int capturedLvl;
         public List<string> levelUpLines;
+
+        // New breakdown fields
+        public int coinsBase;
+        public int coinsTitleBonus;
+        public int xpBase;
+        public int xpTitleBonus;
+        public List<string> xpDetailLines;
     }
 
     public void NotifyBattleStart() => _battleInProgress = true;
@@ -40,7 +47,12 @@ public class PostBattleSummaryManager : MonoBehaviour
         bool captured = false,
         string capturedMonsterId = null,
         int capturedLevel = 0,
-        List<string> levelUpSummaries = null
+        List<string> levelUpSummaries = null,
+        int coinsBase = 0,
+        int coinsTitleBonus = 0,
+        int xpBase = 0,
+        int xpTitleBonus = 0,
+        List<string> xpDetailLines = null
     )
     {
         _battleInProgress = false;
@@ -54,7 +66,12 @@ public class PostBattleSummaryManager : MonoBehaviour
             captured = captured,
             capturedId = capturedMonsterId,
             capturedLvl = capturedLevel,
-            levelUpLines = levelUpSummaries
+            levelUpLines = levelUpSummaries,
+            coinsBase = coinsBase,
+            coinsTitleBonus = coinsTitleBonus,
+            xpBase = xpBase,
+            xpTitleBonus = xpTitleBonus,
+            xpDetailLines = xpDetailLines
         });
 
         TryShowNext();
@@ -86,9 +103,7 @@ public class PostBattleSummaryManager : MonoBehaviour
 
         var q = _pending.Dequeue();
 
-        // Just show the panel (no GetRoot, no lookup)
         UIManager.I?.Show(PanelId.PostBattleSummary);
-
         _panelOpen = true;
 
         postBattleSummaryPanelUI.OnClosed = () =>
@@ -97,7 +112,21 @@ public class PostBattleSummaryManager : MonoBehaviour
             LeanTween.delayedCall(gameObject, 0.05f, TryShowNext);
         };
 
-        postBattleSummaryPanelUI.Set(q.r, q.xp, q.leveled, q.captured, q.capturedId, q.capturedLvl, q.levelUpLines);
+        postBattleSummaryPanelUI.Set(
+            q.r,
+            q.xp,
+            q.leveled,
+            q.captured,
+            q.capturedId,
+            q.capturedLvl,
+            q.levelUpLines,
+            q.coinsBase,
+            q.coinsTitleBonus,
+            q.xpBase,
+            q.xpTitleBonus,
+            q.xpDetailLines
+        );
+
         postBattleSummaryPanelUI.Show();
     }
 }

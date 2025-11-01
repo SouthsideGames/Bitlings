@@ -705,25 +705,51 @@ public class BattleManager : MonoBehaviour
 
         float survived = Mathf.Max(0f, Time.unscaledTime - startTime);
 
-        int coins = BattleRewards.CoinsFor(victory, wildLevel, survived);
+        // ── COINS: base, then apply Title multiplier (title-only bonus)
+        int baseCoins = BattleRewards.CoinsFor(victory, wildLevel, survived);
+        int finalCoins = baseCoins;
+        int coinTitleBonus = 0;
 
-        if (teamIds != null && activeIndex >= 0 && activeIndex < teamIds.Length)
+        if (victory && teamIds != null && activeIndex >= 0 && activeIndex < teamIds.Length)
         {
             float cm = TitlesAdapter.GetCoinMultOnVictory(teamIds[activeIndex], wildDef, wildLevel);
-            if (cm > 0f) coins = Mathf.Max(0, Mathf.RoundToInt(coins * cm));
+            if (cm > 0f)
+            {
+                finalCoins = Mathf.Max(0, Mathf.RoundToInt(baseCoins * cm));
+                coinTitleBonus = Mathf.Max(0, finalCoins - baseCoins);
+            }
         }
+        if (finalCoins < 0) finalCoins = 0;
 
-        if (coins < 0) coins = 0;
+        // ── XP: compute base vs shiny/training vs title
+        int xpBaseTimesTraining = 0;
+        int xpTitleBonus = 0;
+        int xpTotal = 0;
 
         if (victory)
         {
-            float xpMul = 1f;
-            if (teamIds != null && activeIndex >= 0 && activeIndex < teamIds.Length)
-                xpMul = TitlesAdapter.GetXPMultOnVictory(teamIds[activeIndex], wildDef, wildLevel);
+            // Base raw XP per your rules (5 + 2*wildLevel), then shiny/training mult, then title mult
+            int baseRaw = Mathf.Max(0, 5 + 2 * wildLevel); // mirrors BattleRewards base
+            var data = SaveManager.Data;
+            var m = (data != null && data.team != null && activeIndex >= 0 && activeIndex < data.team.Count) ? data.team[activeIndex] : default;
 
-            BattleRewards.GrantVictoryXPAndEvo(activeIndex, wildLevel, MonsterLibraryLocator.Lib, Mathf.Max(0f, xpMul));
+            float shinyMul = ShinySystems.TrainingXpMult(m); // same factor BattleRewards uses
+            int baseAfterShiny = Mathf.RoundToInt(baseRaw * shinyMul);
+
+            float titleXPMul = 1f;
+            if (teamIds != null && activeIndex >= 0 && activeIndex < teamIds.Length)
+                titleXPMul = Mathf.Max(0f, TitlesAdapter.GetXPMultOnVictory(teamIds[activeIndex], wildDef, wildLevel));
+
+            xpTotal = Mathf.RoundToInt(baseAfterShiny * titleXPMul);
+            xpBaseTimesTraining = baseAfterShiny;
+            xpTitleBonus = Mathf.Max(0, xpTotal - baseAfterShiny);
+
+            // Now actually grant & save through the normal path (persists XP/level)
+            float passMulToRewards = titleXPMul; // Rewards already applies shiny/training inside
+            BattleRewards.GrantVictoryXPAndEvo(activeIndex, wildLevel, MonsterLibraryLocator.Lib, Mathf.Max(0f, passMulToRewards));
         }
 
+        // Write HP back to save
         var teamList = SaveManager.Data.team;
         for (int i = 0; i < teamCount && i < teamList.Count; i++)
         {
@@ -732,18 +758,19 @@ public class BattleManager : MonoBehaviour
             teamList[i] = owned;
         }
 
+        // Clear temps
         BattleTempBuffs.I?.ClearPlayerAtkBonus();
         BattleTempBuffs.I?.ClearPlayerSpeedBonus();
         BattleTempBuffs.I?.ClearPlayerHPBonus();
         BattleTempBuffs.I?.ClearPlayerDefenseBonus();
 
-        BattleLogger.Log($"Battle ends: {(victory ? "Victory" : "Defeat")} (+{coins} coins).", LogScope.Battle);
+        BattleLogger.Log($"Battle ends: {(victory ? "Victory" : "Defeat")} (+{finalCoins} coins).", LogScope.Battle);
         BattleLogger.EndBattle(victory);
 
         var result = new BattleResult
         {
             victory = victory,
-            coinsGained = coins,
+            coinsGained = finalCoins,
             wildDef = wildDef,
             wildLevel = wildLevel,
             secondsSurvived = survived
@@ -755,11 +782,45 @@ public class BattleManager : MonoBehaviour
 
         onEnd?.Invoke(result);
 
+        // Build optional XP detail line for the active monster
+        var xpLines = new List<string>();
+        try
+        {
+            var data = SaveManager.Data;
+            if (data != null && data.team != null && activeIndex >= 0 && activeIndex < data.team.Count)
+            {
+                var def = teamDefs[activeIndex];
+                var owned = data.team[activeIndex];
+
+                // We don’t know the exact before/after snapshot here without tracking pre-battle values,
+                // but we can still show a nice single-line breakdown with title bonus in green:
+                // e.g. "Cindrax Lv5 → +36 (<color=#3CDE74>+6</color>) XP"
+                string nm = def ? def.displayName : (owned.monsterId ?? "Ally");
+                xpLines.Add($"{nm} Lv{owned.level} → +{Mathf.Max(0, xpBaseTimesTraining + xpTitleBonus)} (<color=#3CDE74>+{xpTitleBonus}</color>) XP");
+            }
+        }
+        catch { /* non-fatal UI sugar */ }
+
         bool isAuto = EncounterManager.I && EncounterManager.I.IsAutoMode;
-        PostBattleSummaryManager.I?.NotifyBattleEnd(result, isAuto);
+        PostBattleSummaryManager.I?.NotifyBattleEnd(
+            result,
+            isAuto,
+            xpTotal,
+            monstersLeveledUp: 0,
+            captured: false,
+            capturedMonsterId: null,
+            capturedLevel: 0,
+            levelUpSummaries: null,
+            coinsBase: baseCoins,
+            coinsTitleBonus: coinTitleBonus,
+            xpBase: xpBaseTimesTraining,
+            xpTitleBonus: xpTitleBonus,
+            xpDetailLines: xpLines
+        );
 
         GameEvents.BattleFinished?.Invoke(result);
     }
+
 
     private void ClampAndPushActiveHP()
     {
