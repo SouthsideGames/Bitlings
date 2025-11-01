@@ -135,4 +135,8 @@ public class PostBattleSummaryManager : MonoBehaviour
 
         postBattleSummaryPanelUI.Show();
     }
+
+    // Inside PostBattleSummaryManager class
+    public void FlushNowIfPossible() => TryShowNext();
+
 }
