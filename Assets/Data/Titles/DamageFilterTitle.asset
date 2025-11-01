@@ -12,9 +12,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 04f078adfdffba749b6bd9d362f129e9, type: 3}
   m_Name: DamageFilterTitle
   m_EditorClassIdentifier: 
-  titleId: 
-  displayName: 
-  description: 
+  titleId: T-900
+  displayName: Debuff
+  description: "\t"
   flatReduce: 0
-  percentMultiplier: 1
+  percentMultiplier: 0.5
   cannotBeCrit: 0

@@ -70,6 +70,10 @@ public class BattleManager : MonoBehaviour
     [SerializeField, Min(0.25f)] private float battleSpeed = 1f; // 1x, 2x, 3x
     public float BattleSpeed => battleSpeed;
 
+    [Header("Debug")]
+    [SerializeField] private bool debugIncomingMitigation = false;
+
+
     private MonsterDataSO wildDef;
     private int wildLevel;
     private float wildMaxHP, wildHP;
@@ -446,7 +450,7 @@ public class BattleManager : MonoBehaviour
         yield break;
     }
 
-    private IEnumerator EnemyTurn()
+   private IEnumerator EnemyTurn()
     {
         if (teamHP[activeIndex] <= 0.01f && !AutoSwapToAlive()) yield break;
 
@@ -477,9 +481,15 @@ public class BattleManager : MonoBehaviour
             atk, wildCritChance, critMultiplier, flatDefBonus
         );
 
+        // ── DEBUG capture BEFORE any filters
+        int  baseRawDamage      = dr.damage;
+        bool critRolled         = dr.crit;
+        bool critNegatedByTitle = false;
+
         // If runtime forced "cannot be crit" and RNG still flagged crit (edge), re-resolve without crit.
         if (df.cannotBeCrit && dr.crit)
         {
+            critNegatedByTitle = true;
             dr = BattleCalc.ResolveHit(
                 null, wildDef, wildLevel,
                 teamIds[activeIndex], teamDefs[activeIndex], teamLevels[activeIndex],
@@ -512,27 +522,41 @@ public class BattleManager : MonoBehaviour
             if (wildWeakenTurns <= 0) wildWeakenPct = 0f;
         }
 
-        // Apply scalar first
-        int dmg = Mathf.Max(1, Mathf.RoundToInt(dr.damage * incomingScalar));
+        // ── Stage 1: apply scalar first
+        int dmg_afterScalar = Mathf.Max(1, Mathf.RoundToInt(dr.damage * incomingScalar));
 
-        // Titles: % reduce then flat reduce
-        if (df.percentReduce > 0f) dmg = Mathf.Max(1, Mathf.RoundToInt(dmg * (1f - Mathf.Clamp01(df.percentReduce))));
-        if (df.flatReduce    > 0 ) dmg = Mathf.Max(1, dmg - df.flatReduce);
+        // ── Stage 2: Titles — % reduce then flat reduce
+        float percentReduce = Mathf.Clamp01(df.percentReduce);
+        int   flatReduce    = Mathf.Max(0, df.flatReduce);
 
-        // Shield
-        if (shieldHP != null && shieldHP.Length > activeIndex && shieldHP[activeIndex] > 0f)
+        int dmg_afterPercent = (percentReduce > 0f)
+            ? Mathf.Max(1, Mathf.RoundToInt(dmg_afterScalar * (1f - percentReduce)))
+            : dmg_afterScalar;
+
+        int dmg_afterFlat = (flatReduce > 0)
+            ? Mathf.Max(1, dmg_afterPercent - flatReduce)
+            : dmg_afterPercent;
+
+        // ── Stage 3: Shield (absorbs after titles’ reductions)
+        float shieldBefore  = (shieldHP != null && shieldHP.Length > activeIndex) ? shieldHP[activeIndex] : 0f;
+        float shieldAbsorbF = 0f;
+
+        int dmg_final = dmg_afterFlat;
+        if (shieldBefore > 0f)
         {
-            float absorbed = Mathf.Min(shieldHP[activeIndex], dmg);
-            shieldHP[activeIndex] -= absorbed;
-            dmg -= Mathf.RoundToInt(absorbed);
-            if (absorbed > 0f) BattleLogger.Log($"{GetName(activeIndex)}'s shield absorbed {Mathf.RoundToInt(absorbed)}!", LogScope.Battle);
+            shieldAbsorbF = Mathf.Min(shieldBefore, dmg_final);
+            shieldHP[activeIndex] = Mathf.Max(0f, shieldBefore - shieldAbsorbF);
+            dmg_final = Mathf.Max(1, dmg_final - Mathf.RoundToInt(shieldAbsorbF));
+            if (shieldAbsorbF > 0f)
+                BattleLogger.Log($"{GetName(activeIndex)}'s shield absorbed {Mathf.RoundToInt(shieldAbsorbF)}!", LogScope.Battle);
         }
 
-        teamHP[activeIndex] = Mathf.Max(0f, teamHP[activeIndex] - dmg);
+        // ── Apply to HP
+        teamHP[activeIndex] = Mathf.Max(0f, teamHP[activeIndex] - dmg_final);
         ClampAndPushActiveHP();
 
         string foeName = wildDef ? wildDef.displayName : "Foe";
-        BattleLogger.Log($"{foeName} hits {GetName(activeIndex)} for {dmg}!", LogScope.Battle);
+        BattleLogger.Log($"{foeName} hits {GetName(activeIndex)} for {dmg_final}!", LogScope.Battle);
 
         if (showEffectivenessText)
         {
@@ -542,6 +566,26 @@ public class BattleManager : MonoBehaviour
         if (dr.crit) BattleLogger.Log("Critical hit!", LogScope.Battle);
 
         if (!playerTookFirstIncomingThisBattle) playerTookFirstIncomingThisBattle = true;
+
+        // ── DEBUG: print a structured mitigation breakdown
+        if (debugIncomingMitigation)
+        {
+            int dmg_noTitlesNoJobs = baseRawDamage; // ResolveHit() result before any scalars
+            int dmg_afterJobs      = Mathf.Max(1, Mathf.RoundToInt(baseRawDamage * incomingScalar));
+            int shieldAbsInt       = Mathf.RoundToInt(shieldAbsorbF);
+
+            BattleLogger.Log(
+                $"[Mitigation] {GetName(activeIndex)}\n" +
+                $"  • Rolled Crit: {(critRolled ? "Yes" : "No")}  |  Negated by Title: {(critNegatedByTitle ? "Yes" : "No")}\n" +
+                $"  • Base: {dmg_noTitlesNoJobs}\n" +
+                $"  • After Job/Conditional scalar ({Mathf.RoundToInt((1f-incomingScalar)*100f)}% off): {dmg_afterJobs}\n" +
+                $"  • After Title % ({Mathf.RoundToInt(percentReduce*100f)}% off): {dmg_afterPercent}\n" +
+                $"  • After Title Flat (-{flatReduce}): {dmg_afterFlat}\n" +
+                $"  • Shield Absorb (-{shieldAbsInt}, was {Mathf.RoundToInt(shieldBefore)}): {dmg_afterFlat - shieldAbsInt}\n" +
+                $"  ⇒ Final Applied: {dmg_final}",
+                LogScope.Battle
+            );
+        }
 
         // Rescue heal (job-based)
         if (ctx != null && !ctx.rescueUsed && ctx.rescueHealPct > 0f && teamHP[activeIndex] > 0f)
@@ -572,6 +616,7 @@ public class BattleManager : MonoBehaviour
         Punch(wildIcon);
         yield break;
     }
+
 
     private bool CheckEnd()
     {

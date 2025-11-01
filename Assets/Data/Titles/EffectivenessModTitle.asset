@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 60ee83a8470c1504381d0177dd08f358, type: 3}
   m_Name: EffectivenessModTitle
   m_EditorClassIdentifier: 
-  titleId: 
-  displayName: 
-  description: 
-  effectivenessMultiplier: 1
+  titleId: T-600
+  displayName: EFFECT Bo
+  description: "\t\t\t\t"
+  effectivenessMultiplier: 2
