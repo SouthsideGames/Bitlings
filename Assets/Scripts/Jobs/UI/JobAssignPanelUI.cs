@@ -16,6 +16,9 @@ public class JobAssignPanelUI : MonoBehaviour
     [SerializeField] private Button confirmBtn;
     [SerializeField] private Button removeBtn;
 
+// Cache of site eligibility pulled when panel opens
+    private MonsterType[] _eligibleCache;
+
     private JobType _job;
     private int _slotIndex;
     private WorkerRef _currentWorker;
