@@ -331,6 +331,14 @@ public class EncounterManager : MonoBehaviour
         inBattle = true;
         OnStateChanged?.Invoke();
 
+        if (!battleManager)
+        {
+            EmitStatus("No BattleManager assigned.", LogScope.System);
+            inBattle = false;
+            OnStateChanged?.Invoke();
+            return;
+        }
+
         battleManager.Begin(wild, wildLevel, OnBattleEnded);
     }
 
@@ -621,6 +629,24 @@ public class EncounterManager : MonoBehaviour
         }
     }
 
+    private CaptureBandData CurrentCaptureBand
+    {
+        get
+        {
+            var list = SaveManager.Data?.activeCaptureBands;
+            if (list == null || list.Count == 0) return null;
+            var cur = list[0];
+            if (cur != null && cur.expireUnix <= SaveManager.NowUnix())
+            {
+                list.Clear();
+                SaveManager.Save();
+                GameEvents.OnResourcesChanged?.Invoke();
+                return null;
+            }
+            return cur;
+        }
+    }
+
     private float GetActiveLuckBonus01()
     {
         var cur = CurrentLuck;
@@ -633,6 +659,13 @@ public class EncounterManager : MonoBehaviour
         var cur = CurrentShinyBoost;
         if (cur == null) return 1f;
         return Mathf.Max(1f, cur.bonus);
+    }
+
+    private float GetActiveCaptureBonus01()
+    {
+        var cur = CurrentCaptureBand;
+        if (cur == null) return 0f;
+        return Mathf.Clamp01(cur.bonus);
     }
 
     public long GetLureSecondsRemaining()
@@ -884,6 +917,108 @@ public class EncounterManager : MonoBehaviour
                 owned.currentHP = finalMax;
                 team[i] = owned;
             }
+        }
+    }
+
+    // ====== Capture logic (complete) ======
+    void TryCatch(MonsterDataSO def, int level)
+    {
+        if (!def) return;
+        var data = SaveManager.Data;
+        var lib  = MonsterLibraryLocator.Lib;
+        if (data == null || !lib) return;
+
+        // Safety: block if flagged uncatchable (already guarded above, but keep here)
+        if (def.uncatchable)
+        {
+            EmitStatus("(Capture skipped — uncatchable.)", LogScope.Encounter);
+            return;
+        }
+
+        // 1) Build a base catch chance from spawn weight (no extra per-monster field required)
+        //    We normalize the monster's spawnWeight within the library’s min/max weight range,
+        //    then map to a base percentage in [15%, 65%].
+        float minW = float.MaxValue, maxW = 0f;
+        for (int i = 0; i < lib.monsters.Length; i++)
+        {
+            var m = lib.monsters[i];
+            if (!m) continue;
+            float w = Mathf.Max(0f, m.spawnWeight);
+            if (w < minW) minW = w;
+            if (w > maxW) maxW = w;
+        }
+        if (minW == float.MaxValue || maxW <= 0f || minW >= maxW)
+        {
+            // Degenerate library weights → use a conservative base
+            minW = 0f; maxW = 1f;
+        }
+
+        float t = Mathf.Clamp01((Mathf.Max(0f, def.spawnWeight) - minW) / Mathf.Max(0.0001f, (maxW - minW)));
+        float baseChance = Mathf.Lerp(0.15f, 0.65f, t); // common-ish → rarer get closer to 0.15; frequent get up to ~0.65
+
+        // 2) Modifiers
+        // Capture band: direct additive up to +25% typical (band.bonus is clamped 0..1 already)
+        float bandBonus = GetActiveCaptureBonus01() * 0.25f;
+
+        // Luck: scale rarer catches more (reuse scarcity measure: 1 means rarest, 0 means most common)
+        float scarcity01 = 1f - t;
+        float luckBonus  = GetActiveLuckBonus01() * 0.20f * Mathf.Clamp01(scarcity01 * 1.25f);
+
+        // Lure: small nudge if the lure type matches the wild type
+        float lureBonus = 0f;
+        var lure = CurrentLure;
+        if (lure != null && lure.type == def.type) lureBonus = Mathf.Clamp01(lure.bonus) * 0.10f;
+
+        // Win-streak “confidence” micro-bonus (keeps it light, not abusable)
+        float streakBonus = Mathf.Clamp01(CurrentWinStreak / 20f) * 0.05f;
+
+        float finalChance = Mathf.Clamp01(baseChance + bandBonus + luckBonus + lureBonus + streakBonus);
+
+        // 3) Roll
+        float roll = Random.value; // 0..1
+        bool success = (roll <= finalChance);
+
+        // 4) Apply and log
+        if (success)
+        {
+            // Add to owned list (a fresh copy)
+            var om = new OwnedMonsterData
+            {
+                monsterId = def.id,
+                level = Mathf.Max(1, level),
+                currentHP = -1, // sentinel to recalc on open
+                currentXP = 0,
+                ownedUID = Guid.NewGuid().ToString("N")
+            };
+            data.owned ??= new List<OwnedMonsterData>();
+            data.owned.Add(om);
+
+            // Track species/type for codex/etc.
+            data.ownedIds ??= new HashSet<string>();
+            data.ownedIds.Add(def.id);
+            data.seenTypes ??= new HashSet<MonsterType>();
+            data.seenTypes.Add(def.type);
+
+            SaveManager.Save();
+
+            // Notify UI/resource listeners if you hook any unlock popups off this
+            GameEvents.OnResourcesChanged?.Invoke();
+
+            BattleLogger.Log(
+                $"🎉 Capture success! {def.displayName} (Lv {level}) joined your roster. " +
+                $"[p={Mathf.RoundToInt(finalChance * 100f)}%]",
+                LogScope.Encounter);
+
+            EmitStatus($"Captured {def.displayName}! (Lv {level})", LogScope.Encounter);
+        }
+        else
+        {
+            BattleLogger.Log(
+                $"Capture failed on {def.displayName} (Lv {level}). " +
+                $"[p={Mathf.RoundToInt(finalChance * 100f)}%, roll={Mathf.RoundToInt(roll * 100f)}%]",
+                LogScope.Encounter);
+
+            EmitStatus($"Capture failed. {def.displayName} escaped.", LogScope.Encounter);
         }
     }
 }

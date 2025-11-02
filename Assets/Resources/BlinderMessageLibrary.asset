@@ -9,12 +9,9 @@ MonoBehaviour:
   m_GameObject: {fileID: 0}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: eeb3a7895245b5f45afcf7b4e0f2c015, type: 3}
-  m_Name: Titanblood
+  m_Script: {fileID: 11500000, guid: 9d6d0954545562c449e4c992b9dd5203, type: 3}
+  m_Name: BlinderMessageLibrary
   m_EditorClassIdentifier: 
-  titleId: T-001
-  displayName: Titanblood
-  description: Permanently increases ATK and DEF by +20%.
-  stat: 1
-  operation: 3
-  value: 0.2
+  defaultPack: {fileID: 11400000, guid: acdaed34360255544864872536cc7b71, type: 2}
+  packs:
+  - {fileID: 11400000, guid: d609f7fee1203ab4cbeb920d9669ff5e, type: 2}
