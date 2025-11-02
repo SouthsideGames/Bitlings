@@ -249,4 +249,28 @@ public static class JobBalance
             if (kv.Value != null && kv.Value.Contains(type))
                 yield return kv.Key;
     }
+
+    public static bool IsTypeAllowedStrict(JobType job, MonsterType type)
+    {
+        return _bestTypes != null
+            && _bestTypes.TryGetValue(job, out var set)
+            && set != null
+            && set.Contains(type);
+    }
+
+    public static bool TryGetAllowedTypes(JobType job, out HashSet<MonsterType> set)
+    {
+        if (_bestTypes != null && _bestTypes.TryGetValue(job, out var s) && s != null)
+        {
+            set = s;
+            return true;
+        }
+        set = null;
+        return false;
+    }
+
+    public static MonsterType[] AllowedTypesFor(JobType job)
+    {
+        return TryGetAllowedTypes(job, out var set) ? new List<MonsterType>(set).ToArray() : System.Array.Empty<MonsterType>();
+    }
 }

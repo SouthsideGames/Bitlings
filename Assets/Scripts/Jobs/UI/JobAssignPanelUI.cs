@@ -22,9 +22,6 @@ public class JobAssignPanelUI : MonoBehaviour
     private MonsterDataSO _pendingDef;
     private string _pendingId;
 
-    // Cache eligible types for the opened site
-    private MonsterType[] _eligibleCache;
-
     public void Open(JobType job, int slotIndex)
     {
         _job = job;
@@ -35,12 +32,9 @@ public class JobAssignPanelUI : MonoBehaviour
         if (s != null && slotIndex >= 0 && slotIndex < s.workers.Count)
             _currentWorker = s.workers[slotIndex];
 
-        // cache eligible types for this site (allow-all if null/empty)
-        _eligibleCache = s?.config?.eligibleTypes;
-
         // reset pending selection
         _pendingDef = null;
-        _pendingId = null;
+        _pendingId  = null;
 
         if (currentImage)
         {
@@ -84,36 +78,119 @@ public class JobAssignPanelUI : MonoBehaviour
             Destroy(listContent.GetChild(i).gameObject);
 
         var data = SaveManager.Data;
-        if (data == null || data.owned == null || monsterButtonPrefab == null) return;
-
-        var entries = new List<(MonsterDataSO def, string id, float score)>();
-        foreach (var o in data.owned)
+        if (data == null || data.owned == null)
         {
-            if (string.IsNullOrEmpty(o?.monsterId)) continue;
-            var def = MonsterLibraryLocator.GetById(o.monsterId);
+            Debug.LogWarning("[JobAssignPanelUI] No save data or owned list.");
+            return;
+        }
+        if (monsterButtonPrefab == null)
+        {
+            Debug.LogError("[JobAssignPanelUI] monsterButtonPrefab is not assigned.");
+            return;
+        }
+
+        // 1) De-dupe owned list to enforce: at most one normal + one shiny per species.
+        //    If duplicates exist, keep the 'best' entry (higher level, then XP, then shinyTier).
+        int rawOwnedCount = data.owned.Count;
+
+        // key = speciesId + "|S" (shiny) or "|N" (normal)
+        var bestByKey = new Dictionary<string, OwnedMonsterData>(64);
+        for (int i = 0; i < data.owned.Count; i++)
+        {
+            var o = data.owned[i];
+            if (o == null || string.IsNullOrEmpty(o.monsterId)) continue;
+
+            // ensure a unique ownedUID (used for assignments/cooldowns)
+            if (string.IsNullOrEmpty(o.ownedUID))
+                o.ownedUID = System.Guid.NewGuid().ToString("N");
+
+            string key = o.monsterId + (o.isShiny ? "|S" : "|N");
+            if (!bestByKey.TryGetValue(key, out var cur))
+            {
+                bestByKey[key] = o;
+            }
+            else
+            {
+                // choose the better entry
+                bool better =
+                    o.level > cur.level ||
+                    (o.level == cur.level && o.currentXP > cur.currentXP) ||
+                    (o.level == cur.level && o.currentXP == cur.currentXP && o.shinyTier > cur.shinyTier);
+
+                if (better) bestByKey[key] = o;
+            }
+        }
+
+        // 2) Build eligible entries from the de-duped set
+        var entries = new List<(MonsterDataSO def, string ownedUid, float score)>();
+        int eligibleCount = 0;
+        foreach (var kv in bestByKey)
+        {
+            var owned = kv.Value;
+            var def = MonsterLibraryLocator.GetById(owned.monsterId);
             if (!def) continue;
 
-            // Eligibility filter: block monsters whose type isn't in site's allowed list (unless list is empty)
-            bool allowed = (_eligibleCache == null || _eligibleCache.Length == 0);
-            if (!allowed)
-            {
-                for (int i = 0; i < _eligibleCache.Length; i++)
-                {
-                    if (_eligibleCache[i] == def.type) { allowed = true; break; }
-                }
-            }
+            // Ask JobManager (single source of truth) if this type can work here.
+            bool allowed = JobManager.I == null ? true : JobManager.I.IsTypeEligibleFor(_job, def.type);
             if (!allowed) continue;
 
+            eligibleCount++;
             float score = EffectivenessScore(_job, def);
-            entries.Add((def, o.monsterId, score));
+            entries.Add((def, owned.ownedUID, score));
         }
+
+        // Highest score first
         entries.Sort((a, b) => b.score.CompareTo(a.score));
+
+        // 3) Debug that matches what you actually see
+        Debug.Log($"[JobAssignPanelUI] Job={_job} RawOwned={rawOwnedCount} DistinctOwned={bestByKey.Count} Eligible={eligibleCount}");
+
+        // 4) UI rows
+        if (entries.Count == 0)
+        {
+            var placeholder = new GameObject("NoEligibleHint", typeof(RectTransform));
+            placeholder.transform.SetParent(listContent, false);
+            var text = placeholder.AddComponent<TextMeshProUGUI>();
+            text.text = "No eligible workers";
+            text.alignment = TextAlignmentOptions.Center;
+            text.enableAutoSizing = true;
+            text.fontSizeMin = 18;
+            text.fontSizeMax = 28;
+            var rt = (RectTransform)placeholder.transform;
+            rt.anchorMin = new Vector2(0, 1);
+            rt.anchorMax = new Vector2(1, 1);
+            rt.pivot = new Vector2(0.5f, 1f);
+            rt.sizeDelta = new Vector2(0, 80);
+            return;
+        }
 
         foreach (var e in entries)
         {
             var go = Instantiate(monsterButtonPrefab, listContent);
             var ui = go.GetComponent<JobMonsterEntryUI>();
-            if (!ui) continue;
+
+            if (!ui)
+            {
+                var btn = go.GetComponent<Button>();
+                var label = go.GetComponentInChildren<TextMeshProUGUI>();
+                if (label) label.text = e.def.displayName;
+                if (btn)
+                {
+                    btn.onClick.RemoveAllListeners();
+                    btn.onClick.AddListener(() =>
+                    {
+                        _pendingDef = e.def;
+                        _pendingId  = e.ownedUid;
+
+                        if (currentImage)
+                        {
+                            currentImage.sprite = _pendingDef.icon ? _pendingDef.icon : emptySlotSprite;
+                            currentImage.color  = _pendingDef.icon ? Color.white : new Color(1, 1, 1, 0.6f);
+                        }
+                    });
+                }
+                continue;
+            }
 
             if (ui.icon)
             {
@@ -122,77 +199,43 @@ public class JobAssignPanelUI : MonoBehaviour
             }
             if (ui.nameText)  ui.nameText.text  = e.def.displayName;
             if (ui.scoreText) ui.scoreText.text = $"x{e.score:0.##}";
-            if( ui.typeIcon) ui.typeIcon.sprite = e.def.typeIcon;
+            if (ui.typeIcon)  ui.typeIcon.sprite = e.def.typeIcon;
 
             ui.button.onClick.RemoveAllListeners();
             ui.button.onClick.AddListener(() =>
             {
                 _pendingDef = e.def;
-                _pendingId  = e.id;
+                _pendingId  = e.ownedUid;
 
                 if (currentImage)
                 {
                     currentImage.sprite = _pendingDef.icon ? _pendingDef.icon : emptySlotSprite;
-                    currentImage.color  = _pendingDef.icon ? Color.white : new Color(1f,1f,1f,0.6f);
+                    currentImage.color  = _pendingDef.icon ? Color.white : new Color(1, 1, 1, 0.6f);
                 }
             });
         }
     }
 
+
     float EffectivenessScore(JobType job, MonsterDataSO def)
     {
-        // Lightweight scoring; keep your existing mapping if you have one elsewhere.
-        // This retains your prior behavior (shows strongest options first).
-        float baseScore = 1f;
-        if (def == null) return baseScore;
-
-        // Example: nudge by rarity/tier if present
-        baseScore += def.rarity switch
-        {
-            Rarity.Common => 0f,
-            Rarity.Rare => 0.2f,
-            Rarity.Epic => 0.45f,
-            Rarity.Legendary => 0.7f,
-            _ => 0f
-        };
-
-        // Example tie-breaker by attack/hp if your MonsterDataSO has those
-        baseScore += def.attack * 0.01f + def.maxHP * 0.005f;
-
-        return baseScore;
+        return def.jobSkill
+             * JobBalance.RarityMult(def.rarity)
+             * JobBalance.EvolutionMult(def.evolutionStage)
+             * JobBalance.AffinityMult(job, def.type);
     }
 
     void OnConfirm()
     {
-        if (JobManager.I == null)
+        if (JobManager.I == null) { Close(); return; }
+        if (_pendingDef == null) { Close(); return; }
+
+        // Re-check eligibility on confirm (defensive)
+        if (!JobManager.I.IsTypeEligibleFor(_job, _pendingDef.type))
         {
+            Debug.LogWarning($"[JobAssignPanelUI] {_pendingDef.displayName} not eligible for {_job}.");
             Close();
             return;
-        }
-
-        if (_pendingDef == null)
-        {
-            Close();
-            return;
-        }
-
-        // Double-check eligibility in case something slipped through
-        if (_pendingDef != null)
-        {
-            bool allowed = (_eligibleCache == null || _eligibleCache.Length == 0);
-            if (!allowed)
-            {
-                for (int i = 0; i < _eligibleCache.Length; i++)
-                {
-                    if (_eligibleCache[i] == _pendingDef.type) { allowed = true; break; }
-                }
-            }
-            if (!allowed)
-            {
-                // optional: show toast/error sfx here
-                Close();
-                return;
-            }
         }
 
         JobManager.I.RemoveFromAnyJob(_pendingId);
@@ -219,8 +262,8 @@ public class JobAssignPanelUI : MonoBehaviour
         CloseSelf();
 
         // Ask Jobs panel to refresh (non-blocking)
-        var jobsPanel = FindAnyObjectByType<JobSiteView>(FindObjectsInactive.Include);
-        if (jobsPanel) jobsPanel.RefreshAll();
+        var jobsUI = FindFirstObjectByType<JobPanelUI>();
+        if (jobsUI) jobsUI.SendMessage("Refresh", SendMessageOptions.DontRequireReceiver);
     }
 
     // --- UIManager glue ---
