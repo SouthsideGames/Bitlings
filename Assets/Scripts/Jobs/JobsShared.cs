@@ -1,3 +1,4 @@
+// Assets/Scripts/Jobs/JobShared.cs
 using System.Collections.Generic;
 using UnityEngine;
 using System.Linq;
@@ -93,10 +94,10 @@ public static class JobOutput
         JobType.CryoLab      => new SiteEffect { kind = SiteEffectKind.CaptureBonus,       value = 0.10f, uses = 3, target = null },
         JobType.WyrmDen      => new SiteEffect { kind = SiteEffectKind.RarityBonus,        value = 0.05f, uses = 3, target = null },
         JobType.Containment  => new SiteEffect { kind = SiteEffectKind.StatBoostSpeed,     value = 0.15f, uses = 1,  target = null },
-        JobType.ShadowMarket => new SiteEffect { kind = SiteEffectKind.ShinyOrbs,       value = 0.10f, uses = 1,  target = null },
-        JobType.Mine         => new SiteEffect { kind = SiteEffectKind.StatBoostAttack,    value = 5f,   uses = 1,  target = null },
-        JobType.Observatory  => new SiteEffect { kind = SiteEffectKind.StatBoostHP,        value = 10f,  uses = 1,  target = null },
-        JobType.Workshop     => new SiteEffect { kind = SiteEffectKind.Sigils,              value = 0.25f, uses = 3,  target = null },
+        JobType.ShadowMarket => new SiteEffect { kind = SiteEffectKind.ShinyOrbs,          value = 0.10f, uses = 1,  target = null },
+        JobType.Mine         => new SiteEffect { kind = SiteEffectKind.StatBoostAttack,    value = 5f,    uses = 1,  target = null },
+        JobType.Observatory  => new SiteEffect { kind = SiteEffectKind.StatBoostHP,        value = 10f,   uses = 1,  target = null },
+        JobType.Workshop     => new SiteEffect { kind = SiteEffectKind.Sigils,             value = 0.25f, uses = 3,  target = null },
         _ => null
     };
 }
@@ -118,11 +119,11 @@ public static class JobBalance
         { JobType.Harbor,        2f },
         { JobType.CryoLab,       2f },
         { JobType.Observatory,   1f },
-        { JobType.Containment, 0.5f },
-        { JobType.WyrmDen,     0.5f },
+        { JobType.Containment,  0.5f },
+        { JobType.WyrmDen,      0.5f },
         { JobType.ShadowMarket,  1f },
-        { JobType.Sanctum,     0.25f },
-        { JobType.Clinic,      0.25f }
+        { JobType.Sanctum,      0.25f },
+        { JobType.Clinic,       0.25f }
     };
 
     private static readonly Dictionary<JobType, HashSet<MonsterType>> _bestTypes = new() {
@@ -130,7 +131,7 @@ public static class JobBalance
         { JobType.Quarry,       new() { MonsterType.Ground, MonsterType.Rock } },
         { JobType.Mine,         new() { MonsterType.Rock } },
         { JobType.PowerPlant,   new() { MonsterType.Electric } },
-        { JobType.Grove,        new() { MonsterType.Grass, MonsterType.Bug} },
+        { JobType.Grove,        new() { MonsterType.Grass, MonsterType.Bug } },
         { JobType.Forge,        new() { MonsterType.Fire, MonsterType.Alloy } },
         { JobType.Workshop,     new() { MonsterType.Alloy } },
         { JobType.Harbor,       new() { MonsterType.Water, MonsterType.Sky } },
@@ -160,11 +161,11 @@ public static class JobBalance
 
     public static float RarityMult(Rarity r) => r switch
     {
-        Rarity.Uncommon => 1.10f,
-        Rarity.Rare => 1.25f,
-        Rarity.Epic => 1.50f,
+        Rarity.Uncommon  => 1.10f,
+        Rarity.Rare      => 1.25f,
+        Rarity.Epic      => 1.50f,
         Rarity.Legendary => 1.80f,
-        Rarity.Mythic => 2.20f,
+        Rarity.Mythic    => 2.20f,
         _ => 1f
     };
 
@@ -196,7 +197,6 @@ public static class JobBalance
         carryProgress = raw - whole;
         return whole;
     }
-    
 
     public static int GetActiveWorkers(JobType job)
     {
@@ -213,7 +213,6 @@ public static class JobBalance
         }
         return active;
     }
-
 
     public static float GetWyrmDenRarityWeightMult(Rarity r)
     {
@@ -235,5 +234,19 @@ public static class JobBalance
         if (mult > hardCap) mult = hardCap;
         if (mult < 0f)      mult = 0f;
         return mult;
+    }
+
+    /// <summary>
+    /// Which job sites unlock when the player first sees/captures a monster of this type.
+    /// Used by JobManager.TryUnlockSitesForType(type).
+    /// </summary>
+    public static IEnumerable<JobType> JobsUnlockedByType(MonsterType type)
+    {
+        if (_bestTypes == null || _bestTypes.Count == 0)
+            yield break;
+
+        foreach (var kv in _bestTypes)
+            if (kv.Value != null && kv.Value.Contains(type))
+                yield return kv.Key;
     }
 }

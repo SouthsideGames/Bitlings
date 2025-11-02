@@ -230,8 +230,10 @@ public class StarterSelector : MonoBehaviour
 
             if (SaveManager.Data != null)
             {
+                // Mark chosen BEFORE events so listeners can read the flag/state.
                 SaveManager.Data.hasChosenStarter = true;
 
+                // Ensure new team member(s) have valid HP
                 var lib  = MonsterLibraryLocator.Lib;
                 var team = SaveManager.Data.team;
                 if (lib && team != null && team.Count > 0)
@@ -251,7 +253,32 @@ public class StarterSelector : MonoBehaviour
                     }
                 }
 
+                // Persist before events/UI
                 SaveManager.Save();
+
+                // Notify systems (JobManager listens here to unlock by type)
+                try { GameEvents.StarterChosen?.Invoke(pick.type); } catch (Exception e) { Debug.LogWarning($"[StarterSelector] StarterChosen listeners threw: {e}"); }
+
+                // Optional: recompute unlocks from seen/owned types if JobManager exposes it
+                try { JobManager.I?.RecalculateUnlocksFromSeenTypes(); } catch { /* it's fine if this doesn't exist */ }
+
+                // 🔁 Force the jobs UI to refresh immediately so unlocked sites appear now
+                if (JobManager.I != null)
+                {
+                    try
+                    {
+                        JobManager.I.RefreshAllJobSiteViewsInScene();
+                        Debug.Log("[StarterSelector] Forced job site UI refresh after starter selection.");
+                    }
+                    catch (Exception e)
+                    {
+                        Debug.LogWarning($"[StarterSelector] RefreshAllJobSiteViewsInScene threw: {e}");
+                    }
+                }
+
+                // Broadcast UI change events so any listeners update too
+                try { GameEvents.OnJobsChanged?.Invoke(); } catch { }
+                try { GameEvents.OnTeamChanged?.Invoke(); } catch { }
             }
 
             StartCoroutine(RouteNextFrame());

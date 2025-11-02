@@ -1,9 +1,9 @@
-// EncounterManager.cs
 using UnityEngine;
 using System.Collections;
 using System.Collections.Generic;
 using Random = UnityEngine.Random;
 using System;
+using System.Reflection;
 
 public class EncounterManager : MonoBehaviour
 {
@@ -15,6 +15,11 @@ public class EncounterManager : MonoBehaviour
 
     [Header("Refs")]
     [SerializeField] private BattleManager battleManager;
+
+    // Optional: assign your blinders overlay (lives under the Encounter panel)
+    // Expect it to expose Show() / Hide(). If you use a different API, just adjust the two calls.
+    [SerializeField] private MonoBehaviour blindersBehaviour; // must have Show()/Hide()
+    MethodInfo _blindersShow, _blindersHide;
 
     [Header("Boss Settings")]
     [Tooltip("0 = use PlayerData.bossEveryN")]
@@ -37,9 +42,7 @@ public class EncounterManager : MonoBehaviour
     private Coroutine postResultCo;
     private Coroutine autoLoopCo;
 
-    // ─────────────────────────────────────────────────────────────────────────────
-    // Win streak
-    // ─────────────────────────────────────────────────────────────────────────────
+    // ── Win streak (persist if present on save) ─────────────────────────────────
     private int _currentWinStreak = 0;
     public int CurrentWinStreak => _currentWinStreak;
 
@@ -48,7 +51,14 @@ public class EncounterManager : MonoBehaviour
         if (I != null && I != this) { Destroy(gameObject); return; }
         I = this;
 
-        // Load win streak from save if the field exists, else start at 0
+        // cache blinders reflection (so it’s a soft-optional dependency)
+        if (blindersBehaviour)
+        {
+            var t = blindersBehaviour.GetType();
+            _blindersShow = t.GetMethod("Show", BindingFlags.Public | BindingFlags.Instance);
+            _blindersHide = t.GetMethod("Hide", BindingFlags.Public | BindingFlags.Instance);
+        }
+
         _currentWinStreak = LoadWinStreakOr(0);
         _currentWinStreak = Mathf.Max(0, _currentWinStreak);
     }
@@ -83,18 +93,17 @@ public class EncounterManager : MonoBehaviour
 
         ResourceBank.EnsureSize();
 
-        // Summaries allowed initially (manual)
+        // Manual mode by default → summaries are allowed to pop immediately
         PostBattleSummaryManager.I?.SetAutoBattling(false);
 
         EmitStatus("Tap ENCOUNTER to begin. Hold to toggle AUTO.", LogScope.System);
         OnStateChanged?.Invoke();
 
         NormalizeTeamHPIfUninitialized();
-        // Announce current win streak at boot so any listeners sync labels.
         GameEvents.WinStreakChanged?.Invoke(_currentWinStreak);
 
-        // Ensure Next button starts hidden
-        BattleEndUI.I?.ShowNextButton(false);
+        // Ensure blinders start UP on the Encounter panel
+        Blinders_Show();
     }
 
     // ---------------- PUBLIC API (called from UI) ----------------
@@ -123,7 +132,6 @@ public class EncounterManager : MonoBehaviour
     {
         autoMode = !autoMode;
 
-        // Idle Battles integration
         if (autoMode) IdleBattleManager.I?.EnableAuto();
         else IdleBattleManager.I?.DisableAuto();
 
@@ -135,9 +143,8 @@ public class EncounterManager : MonoBehaviour
             if (autoLoopCo != null) { StopCoroutine(autoLoopCo); autoLoopCo = null; }
             autoLoopCo = StartCoroutine(AutoLoop());
 
-            // While AUTO is on, hold summaries in the queue and hide Next button
+            // While AUTO is on, summaries queue up and won’t pop until energy depletes.
             PostBattleSummaryManager.I?.SetAutoBattling(true);
-            BattleEndUI.I?.ShowNextButton(false);
 
             if (!inBattle)
                 EmitStatus("AUTO mode ON. Battling until defeat…", LogScope.System);
@@ -150,7 +157,7 @@ public class EncounterManager : MonoBehaviour
 
             if (autoLoopCo != null) { StopCoroutine(autoLoopCo); autoLoopCo = null; }
 
-            // AUTO off → allow summaries; do NOT auto-flush here.
+            // AUTO off → allow summaries to appear for subsequent battles
             PostBattleSummaryManager.I?.SetAutoBattling(false);
 
             EmitStatus("AUTO mode OFF. Tap ENCOUNTER for the next fight.", LogScope.System);
@@ -198,7 +205,6 @@ public class EncounterManager : MonoBehaviour
             SaveManager.Save();
             GameEvents.EnergyChanged?.Invoke();
         }
-
         OnStateChanged?.Invoke();
     }
 
@@ -241,15 +247,15 @@ public class EncounterManager : MonoBehaviour
 
         if (autoLoopCo != null) { StopCoroutine(autoLoopCo); autoLoopCo = null; }
 
-        // Out of energy → pop queued summaries now.
+        // Out of energy → let summaries pop now.
         PostBattleSummaryManager.I?.NotifyEnergyDepleted();
         PostBattleSummaryManager.I?.SetAutoBattling(false);
 
         EmitStatus("AUTO stopped: no energy.", LogScope.System);
         OnStateChanged?.Invoke();
 
-        // No Next button in this path; summary will show immediately.
-        BattleEndUI.I?.ShowNextButton(false);
+        // Show blinders on the encounter screen (the summary will be on top of another panel)
+        Blinders_Show();
     }
 
     // ---------------- ENCOUNTER FLOW ----------------
@@ -328,14 +334,14 @@ public class EncounterManager : MonoBehaviour
         else
             EmitStatus($"Encounter! A wild {wild.displayName} (Lv {wildLevel}) appears.{(p.flatAtkBonus > 0 ? $" (+ATK {p.flatAtkBonus})" : "")}");
 
-        // mark encounter lifecycle for the log
+        // Log lifecycle
         BattleLogger.BeginEncounter(_currentEncounterIsBoss ? $"BOSS: {wild.displayName} Lv{wildLevel}" : $"{wild.displayName} Lv{wildLevel}");
 
         if (_currentEncounterIsBoss && _currentBossUsed != null)
             GameEvents.BossSpawned?.Invoke(_currentBossUsed.id, _currentBossUsed);
 
-        // Hide any lingering Next button as a new fight starts
-        BattleEndUI.I?.ShowNextButton(false);
+        // Battle starts → lower the blinders
+        Blinders_Hide();
 
         inBattle = true;
         OnStateChanged?.Invoke();
@@ -345,6 +351,8 @@ public class EncounterManager : MonoBehaviour
             EmitStatus("No BattleManager assigned.", LogScope.System);
             inBattle = false;
             OnStateChanged?.Invoke();
+            // Make sure blinders are up again in this error state
+            Blinders_Show();
             return;
         }
 
@@ -411,7 +419,7 @@ public class EncounterManager : MonoBehaviour
         // Close out encounter in log
         BattleLogger.EndEncounter(result.victory);
 
-        // Continue post-result flow
+        // Continue post-result flow (this handles AUTO chaining vs. summary popup)
         if (postResultCo != null) { StopCoroutine(postResultCo); postResultCo = null; }
         postResultCo = StartCoroutine(PostResultFlow(result.victory));
     }
@@ -422,10 +430,8 @@ public class EncounterManager : MonoBehaviour
     private int ApplyCoinsGainedMultiplier(int baseCoins)
     {
         if (baseCoins <= 0) return 0;
-
         const float MULT = 1f;
-        int scaled = Mathf.Max(0, Mathf.FloorToInt(baseCoins * MULT));
-        return scaled;
+        return Mathf.Max(0, Mathf.FloorToInt(baseCoins * MULT));
     }
 
     IEnumerator PostResultFlow(bool victory)
@@ -433,6 +439,7 @@ public class EncounterManager : MonoBehaviour
         yield return new WaitForSeconds(postResultDelay);
         inBattle = false;
 
+        // Always clear “pay-once per auto-chain” flag after a battle ends
         if (!victory)
         {
             nextEncounterFree = false;
@@ -441,56 +448,42 @@ public class EncounterManager : MonoBehaviour
 
             if (autoMode)
             {
+                // AUTO: keep chugging; summaries stay queued until energy ends or AUTO is turned off.
                 EmitStatus("Defeat. Retrying (AUTO)…", LogScope.System);
-                // No Next button in AUTO
-                BattleEndUI.I?.ShowNextButton(false);
+                // No summary popup now — leave it queued.
+                yield break;
             }
-            else
-            {
-                EmitStatus("Tap NEXT to view the summary.", LogScope.System);
-                // Manual: Show Next button now (user will trigger summary)
-                BattleEndUI.I?.ShowNextButton(true);
-            }
+
+            // MANUAL: immediately show summary.
+            EmitStatus("Battle finished. Showing summary…", LogScope.System);
+            PostBattleSummaryManager.I?.SetAutoBattling(false);
+            PostBattleSummaryManager.I?.FlushNowIfPossible();   // <-- show now
             yield break;
         }
 
-        // WIN
+        // ===== Victory =====
         if (autoMode)
         {
-            // AUTO keeps chaining; no Next button; summaries remain queued.
+            // AUTO: do not show summary; keep chaining battles using the paid energy from before.
             if (!autoRunPaidEnergy)
             {
                 if (!HasEnergy()) { StopAuto_NoEnergy(); yield break; }
                 if (!SpendEnergy()) { StopAuto_NoEnergy(); yield break; }
                 autoRunPaidEnergy = true;
             }
-            BattleEndUI.I?.ShowNextButton(false);
-            StartEncounter(false); // wins chain for free during AUTO
-        }
-        else
-        {
-            nextEncounterFree = true; // manual: next fight is free on win
-            OnStateChanged?.Invoke();
-            EmitStatus("Tap NEXT to view the summary.", LogScope.System);
-
-            // Manual: Show Next button. User decides when to open the summary.
-            BattleEndUI.I?.ShowNextButton(true);
-        }
-    }
-
-    // Called by BattleEndUI when player taps NEXT (manual flow only)
-    public void OnUserPressedNextFromBattle()
-    {
-        if (autoMode)
-        {
-            // Shouldn’t happen (button hidden), but just in case:
-            return;
+            StartEncounter(false); // chain for free during AUTO
+            yield break;
         }
 
-        // Allow summaries and flush the next queued summary immediately
+        // MANUAL: show summary immediately, then return to Encounter panel (with blinders up).
+        nextEncounterFree = true;                  // your “next is free” rule still applies
+        OnStateChanged?.Invoke();
+        EmitStatus("Battle finished. Showing summary…", LogScope.System);
+
         PostBattleSummaryManager.I?.SetAutoBattling(false);
-        PostBattleSummaryManager.I?.FlushNowIfPossible();
+        PostBattleSummaryManager.I?.FlushNowIfPossible();       // <-- show now
     }
+
 
     // ===== LURES / LUCK / SHINY / CAPTURE BAND =====
 
@@ -865,9 +858,7 @@ public class EncounterManager : MonoBehaviour
         OnStateChanged?.Invoke();
     }
 
-    // ─────────────────────────────────────────────────────────────────────────────
-    // Win Streak helpers (persist if save supports it)
-    // ─────────────────────────────────────────────────────────────────────────────
+    // ── Win Streak (persist if save supports it) ────────────────────────────────
     private int LoadWinStreakOr(int fallback)
     {
         var data = SaveManager.Data;
@@ -912,11 +903,9 @@ public class EncounterManager : MonoBehaviour
         _currentWinStreak = v;
         SaveWinStreakIfPossible(v);
         GameEvents.WinStreakChanged?.Invoke(_currentWinStreak);
-        // If your EncounterPanel pulls CurrentWinStreak in Refresh(), ping it:
         RequestStateRefresh();
     }
 
-    // EncounterManager.cs  — add anywhere in the class
     private void ReconcileHPWithCurrentWinStreak()
     {
         var data = SaveManager.Data;
@@ -932,23 +921,18 @@ public class EncounterManager : MonoBehaviour
             var def = lib.GetById(owned.monsterId);
             if (!def) continue;
 
-            // Base max HP at level
             int baseMaxHP = Mathf.RoundToInt(BattleCalc.CalcHP(def, Mathf.Max(1, owned.level)));
             float baseMaxF = Mathf.Max(1f, baseMaxHP);
 
-            // Build a minimal TitleContext reflecting the NEW streak
             var ctx = TitleContext.Empty;
             ctx.winStreak = _currentWinStreak;
 
-            // Give titles that care about selfHp01 a sane value (approx from current vs base)
             float curHPf = Mathf.Max(0f, owned.currentHP);
             ctx.selfHp01 = Mathf.Clamp01(curHPf / baseMaxF);
 
-            // Final max HP with titles/conditionals at the current (new) streak
             float finalMaxF = TitlesAdapter.GetStatValue(owned.monsterId, def, owned.level, "HP", ctx, baseMaxF);
             int finalMax = Mathf.Max(1, Mathf.RoundToInt(finalMaxF));
 
-            // Clamp down if the stored HP is now above the allowed max (don’t heal KOs)
             if (owned.currentHP > finalMax)
             {
                 owned.currentHP = finalMax;
@@ -957,7 +941,7 @@ public class EncounterManager : MonoBehaviour
         }
     }
 
-    // ====== Capture logic (complete) ======
+    // ====== Capture logic ======
     void TryCatch(MonsterDataSO def, int level)
     {
         if (!def) return;
@@ -965,14 +949,13 @@ public class EncounterManager : MonoBehaviour
         var lib  = MonsterLibraryLocator.Lib;
         if (data == null || !lib) return;
 
-        // Safety: block if flagged uncatchable (already guarded above, but keep here)
         if (def.uncatchable)
         {
             EmitStatus("(Capture skipped — uncatchable.)", LogScope.Encounter);
             return;
         }
 
-        // 1) Base catch chance from spawn weight mapped to [15%, 65%]
+        // Base chance from spawn weight → [15%, 65%]
         float minW = float.MaxValue, maxW = 0f;
         for (int i = 0; i < lib.monsters.Length; i++)
         {
@@ -985,62 +968,55 @@ public class EncounterManager : MonoBehaviour
         if (minW == float.MaxValue || maxW <= 0f || minW >= maxW) { minW = 0f; maxW = 1f; }
 
         float t = Mathf.Clamp01((Mathf.Max(0f, def.spawnWeight) - minW) / Mathf.Max(0.0001f, (maxW - minW)));
-        float baseChance = Mathf.Lerp(0.15f, 0.65f, t); // frequent→higher, rare→lower
+        float baseChance = Mathf.Lerp(0.15f, 0.65f, t);
 
-        // 2) Modifiers
-        float bandBonus = GetActiveCaptureBonus01() * 0.25f; // up to +25%
-        float scarcity01 = 1f - t;                            // 1 = rare
+        float bandBonus = GetActiveCaptureBonus01() * 0.25f;
+        float scarcity01 = 1f - t;
         float luckBonus  = GetActiveLuckBonus01() * 0.20f * Mathf.Clamp01(scarcity01 * 1.25f);
-        float lureBonus  = 0f;
-        var lure = CurrentLure;
-        if (lure != null && lure.type == def.type) lureBonus = Mathf.Clamp01(lure.bonus) * 0.10f;
+        float lureBonus  = 0f; var lure = CurrentLure; if (lure != null && lure.type == def.type) lureBonus = Mathf.Clamp01(lure.bonus) * 0.10f;
         float streakBonus = Mathf.Clamp01(CurrentWinStreak / 20f) * 0.05f;
 
         float finalChance = Mathf.Clamp01(baseChance + bandBonus + luckBonus + lureBonus + streakBonus);
 
-        // 3) Roll
         float roll = Random.value;
         bool success = (roll <= finalChance);
 
-        // 4) Apply and log
         if (success)
         {
-            // Add to owned list (fresh copy)
             var om = new OwnedMonsterData
             {
                 monsterId = def.id,
                 level = Mathf.Max(1, level),
-                currentHP = -1, // sentinel to recalc on open
+                currentHP = -1,
                 currentXP = 0,
                 ownedUID = Guid.NewGuid().ToString("N")
             };
             data.owned ??= new List<OwnedMonsterData>();
             data.owned.Add(om);
 
-            // Track species/type for codex/etc.
-            data.ownedIds ??= new HashSet<string>();
-            data.ownedIds.Add(def.id);
-            data.seenTypes ??= new HashSet<MonsterType>();
-            data.seenTypes.Add(def.type);
+            data.ownedIds ??= new HashSet<string>(); data.ownedIds.Add(def.id);
+            data.seenTypes ??= new HashSet<MonsterType>(); data.seenTypes.Add(def.type);
 
             SaveManager.Save();
             GameEvents.OnResourcesChanged?.Invoke();
 
-            BattleLogger.Log(
-                $"🎉 Capture success! {def.displayName} (Lv {level}) joined your roster. " +
-                $"[p={Mathf.RoundToInt(finalChance * 100f)}%]",
-                LogScope.Encounter);
-
+            BattleLogger.Log($"🎉 Capture success! {def.displayName} (Lv {level}) joined your roster. [p={Mathf.RoundToInt(finalChance * 100f)}%]", LogScope.Encounter);
             EmitStatus($"Captured {def.displayName}! (Lv {level})", LogScope.Encounter);
         }
         else
         {
-            BattleLogger.Log(
-                $"Capture failed on {def.displayName} (Lv {level}). " +
-                $"[p={Mathf.RoundToInt(finalChance * 100f)}%, roll={Mathf.RoundToInt(roll * 100f)}%]",
-                LogScope.Encounter);
-
+            BattleLogger.Log($"Capture failed on {def.displayName} (Lv {level}). [p={Mathf.RoundToInt(finalChance * 100f)}%, roll={Mathf.RoundToInt(roll * 100f)}%]", LogScope.Encounter);
             EmitStatus($"Capture failed. {def.displayName} escaped.", LogScope.Encounter);
         }
+    }
+
+    // ── Blinders helpers (soft-optional) ────────────────────────────────────────
+    void Blinders_Show()
+    {
+        try { _blindersShow?.Invoke(blindersBehaviour, null); } catch { }
+    }
+    void Blinders_Hide()
+    {
+        try { _blindersHide?.Invoke(blindersBehaviour, null); } catch { }
     }
 }

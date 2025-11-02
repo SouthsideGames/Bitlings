@@ -125,25 +125,6 @@ public class MonsterDetailPanelUI : MonoBehaviour
         { Rarity.Mythic,    new Color32(255,235, 59,255) },
     };
 
-    static readonly Dictionary<JobType, HashSet<MonsterType>> BEST_TYPES = new()
-    {
-        { JobType.Gym,          new() { MonsterType.Clash } },
-        { JobType.Quarry,       new() { MonsterType.Ground, MonsterType.Rock } },
-        { JobType.Mine,         new() { MonsterType.Rock } },
-        { JobType.PowerPlant,   new() { MonsterType.Electric } },
-        { JobType.Grove,        new() { MonsterType.Grass, MonsterType.Bug } },
-        { JobType.Forge,        new() { MonsterType.Fire, MonsterType.Alloy } },
-        { JobType.Workshop,     new() { MonsterType.Alloy } },
-        { JobType.Harbor,       new() { MonsterType.Water, MonsterType.Sky } },
-        { JobType.CryoLab,      new() { MonsterType.Ice } },
-        { JobType.Observatory,  new() { MonsterType.Oracle } },
-        { JobType.Containment,  new() { MonsterType.Corrupt } },
-        { JobType.WyrmDen,      new() { MonsterType.Wyrm } },
-        { JobType.ShadowMarket, new() { MonsterType.Umbral, MonsterType.Specter } },
-        { JobType.Sanctum,      new() { MonsterType.Specter } },
-        { JobType.Clinic,       new() { MonsterType.Sky } },
-    };
-
     void Awake()
     {
         if (confirmButton) { confirmButton.onClick.RemoveAllListeners(); confirmButton.onClick.AddListener(Confirm); }
@@ -391,16 +372,8 @@ public class MonsterDetailPanelUI : MonoBehaviour
             else if (descText) descText.text = "";
         });
 
-        TryStep("Job Sites", () =>
-        {
-            if (jobSiteText)
-            {
-                var jobs = SitesForType(monster ? monster.type : default);
-                jobSiteText.text = jobs.Count > 0
-                    ? $"Job Site: {string.Join(", ", jobs.Select(NiceJobName))}"
-                    : "Job Site: —";
-            }
-        });
+        // 🔹 Use canonical source to render job sites
+        TryStep("Job Sites", () => RenderJobSites(monster));
 
         TryStep("Type Matchup Icons", () =>
         {
@@ -525,22 +498,6 @@ public class MonsterDetailPanelUI : MonoBehaviour
     // ─────────────────────────────────────────────────────────────
     // Helpers
     // ─────────────────────────────────────────────────────────────
-    List<JobType> SitesForType(MonsterType t)
-    {
-        var outList = new List<JobType>(2);
-        foreach (var kv in BEST_TYPES)
-            if (kv.Value.Contains(t)) outList.Add(kv.Key);
-        return outList;
-    }
-
-    string NiceJobName(JobType jt)
-    {
-        var s = jt.ToString();
-        for (int i = 1; i < s.Length; i++)
-            if (char.IsUpper(s[i]) && !char.IsUpper(s[i - 1])) s = s.Insert(i, " ");
-        return s;
-    }
-
     void OpenSelf()
     {
         if (_visible) return;
@@ -733,6 +690,9 @@ public class MonsterDetailPanelUI : MonoBehaviour
                 // Bind/mask Title button based on mode/ownership
                 UpdateTitleButtonBinding();
 
+                // 🔹 Fill Job Site line immediately in staged flow
+                RenderJobSites(monster);
+
                 OpenSelf();
                 if (canvasGroup) LeanTween.alphaCanvas(canvasGroup, 1f, 0.15f);
             });
@@ -808,7 +768,6 @@ public class MonsterDetailPanelUI : MonoBehaviour
         _stageCR = null;
     }
 
-
     // ─────────────────────────────────────────────────────────────
     // Titles wiring
     // ─────────────────────────────────────────────────────────────
@@ -844,5 +803,19 @@ public class MonsterDetailPanelUI : MonoBehaviour
         }
     }
 
-    
+    // ─────────────────────────────────────────────────────────────
+    // Job Site rendering (single source of truth via JobBalance)
+    // ─────────────────────────────────────────────────────────────
+    void RenderJobSites(MonsterDataSO monster)
+    {
+        if (!jobSiteText) return;
+
+        var jobs = (monster != null)
+            ? JobBalance.JobsUnlockedByType(monster.type).ToList()
+            : new List<JobType>();
+
+        jobSiteText.text = (jobs.Count > 0)
+            ? $"Job Site: {string.Join(", ", jobs.Select(JobStrings.SiteName))}"
+            : "Job Site: —";
+    }
 }

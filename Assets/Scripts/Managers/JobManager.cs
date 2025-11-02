@@ -123,6 +123,8 @@ public sealed class JobManager : MonoBehaviour
         if (simulateOfflineOnLoad) ResolveOfflineIfAny();
 
         RefreshAllJobSiteViewsInScene();
+
+        Debug.Log("[JobManager] Subscribed to StarterChosen and MonsterCaptured events.");
     }
 
     private void OnEnable()
@@ -719,9 +721,13 @@ public sealed class JobManager : MonoBehaviour
 
     private void OnStarterChosen(MonsterType type)
     {
-        RegisterSeenType(type);
+        Debug.Log($"[JobManager] StarterChosen event received. Type = {type}");
         TryUnlockSitesForType(type);
+        RecalculateUnlocksFromSeenTypes();
+        Debug.Log($"[JobManager] After starter unlock, total unlocked sites: " +
+                $"{string.Join(", ", SaveManager.Data?.unlockedJobSites ?? new HashSet<JobType>())}");
     }
+
 
     private void OnMonsterCaptured(string monsterId, MonsterType type)
     {
@@ -753,26 +759,37 @@ public sealed class JobManager : MonoBehaviour
 
     private void TryUnlockSitesForType(MonsterType type)
     {
-        if (!lockSitesUntilEligible || SaveManager.Data == null) { Debug.Log("[Jobs] Unlocks disabled or no save."); return; }
-        if (jobSites == null || jobSites.Count == 0) { Debug.LogWarning("[Jobs] No jobSites configured."); return; }
+        if (!lockSitesUntilEligible || SaveManager.Data == null)
+        {
+            Debug.Log("[JobManager] Unlock skipped (disabled or no save).");
+            return;
+        }
+
+        SaveManager.Data.unlockedJobSites ??= new HashSet<JobType>();
 
         bool changed = false;
+        Debug.Log($"[JobManager] Checking which jobs {type} can unlock...");
 
-        foreach (var site in jobSites)
+        foreach (var job in JobBalance.JobsUnlockedByType(type))
         {
-            if (!site) continue;
-
-            bool eligible = site.eligibleTypes != null && Array.IndexOf(site.eligibleTypes, type) >= 0;
-            if (!eligible) continue;
-
-            if (SaveManager.Data.unlockedJobSites.Add(site.jobType)) changed = true;
+            Debug.Log($"[JobManager] {type} is compatible with job: {job}");
+            if (SaveManager.Data.unlockedJobSites.Add(job))
+            {
+                Debug.Log($"[JobManager] UNLOCKED new job site: {job}");
+                changed = true;
+            }
         }
 
         if (changed)
         {
+            Debug.Log("[JobManager] Job unlocks changed — saving and refreshing UI.");
             SaveManager.Save();
             RefreshAllJobSiteViewsInScene();
             GameEvents.OnJobsChanged?.Invoke();
+        }
+        else
+        {
+            Debug.Log($"[JobManager] No new job sites unlocked for type {type}.");
         }
     }
 
