@@ -292,8 +292,9 @@ public static class SaveManager
             if (om.level <= 0) om.level = 1;
             if (om.currentXP < 0) om.currentXP = 0;
 
-            // Sentinel: -1 means “recalc health on next open”
-            if (om.currentHP == 0) om.currentHP = -1;
+            // ✅ Keep 0 HP as "downed" so the player must heal or bench them.
+            //    Only coerce values less than -1 up to the -1 sentinel.
+            if (om.currentHP < -1) om.currentHP = -1;
 
             // Ensure a stable UID for references
             if (string.IsNullOrEmpty(om.ownedUID))
@@ -304,7 +305,6 @@ public static class SaveManager
                 Data.ownedIds.Add(om.monsterId);
         }
     }
-
     static void EnsureTrainingDefaults()
     {
         if (Data?.owned == null) return;
