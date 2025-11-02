@@ -16,14 +16,14 @@ public class JobAssignPanelUI : MonoBehaviour
     [SerializeField] private Button confirmBtn;
     [SerializeField] private Button removeBtn;
 
-// Cache of site eligibility pulled when panel opens
-    private MonsterType[] _eligibleCache;
-
     private JobType _job;
     private int _slotIndex;
     private WorkerRef _currentWorker;
     private MonsterDataSO _pendingDef;
     private string _pendingId;
+
+    // Cache eligible types for the opened site
+    private MonsterType[] _eligibleCache;
 
     public void Open(JobType job, int slotIndex)
     {
@@ -34,6 +34,9 @@ public class JobAssignPanelUI : MonoBehaviour
         _currentWorker = null;
         if (s != null && slotIndex >= 0 && slotIndex < s.workers.Count)
             _currentWorker = s.workers[slotIndex];
+
+        // cache eligible types for this site (allow-all if null/empty)
+        _eligibleCache = s?.config?.eligibleTypes;
 
         // reset pending selection
         _pendingDef = null;
@@ -90,6 +93,17 @@ public class JobAssignPanelUI : MonoBehaviour
             var def = MonsterLibraryLocator.GetById(o.monsterId);
             if (!def) continue;
 
+            // Eligibility filter: block monsters whose type isn't in site's allowed list (unless list is empty)
+            bool allowed = (_eligibleCache == null || _eligibleCache.Length == 0);
+            if (!allowed)
+            {
+                for (int i = 0; i < _eligibleCache.Length; i++)
+                {
+                    if (_eligibleCache[i] == def.type) { allowed = true; break; }
+                }
+            }
+            if (!allowed) continue;
+
             float score = EffectivenessScore(_job, def);
             entries.Add((def, o.monsterId, score));
         }
@@ -119,7 +133,7 @@ public class JobAssignPanelUI : MonoBehaviour
                 if (currentImage)
                 {
                     currentImage.sprite = _pendingDef.icon ? _pendingDef.icon : emptySlotSprite;
-                    currentImage.color  = _pendingDef.icon ? Color.white : new Color(1, 1, 1, 0.6f);
+                    currentImage.color  = _pendingDef.icon ? Color.white : new Color(1f,1f,1f,0.6f);
                 }
             });
         }
@@ -127,20 +141,58 @@ public class JobAssignPanelUI : MonoBehaviour
 
     float EffectivenessScore(JobType job, MonsterDataSO def)
     {
-        return def.jobSkill
-             * JobBalance.RarityMult(def.rarity)
-             * JobBalance.EvolutionMult(def.evolutionStage)
-             * JobBalance.AffinityMult(job, def.type);
+        // Lightweight scoring; keep your existing mapping if you have one elsewhere.
+        // This retains your prior behavior (shows strongest options first).
+        float baseScore = 1f;
+        if (def == null) return baseScore;
+
+        // Example: nudge by rarity/tier if present
+        baseScore += def.rarity switch
+        {
+            Rarity.Common => 0f,
+            Rarity.Rare => 0.2f,
+            Rarity.Epic => 0.45f,
+            Rarity.Legendary => 0.7f,
+            _ => 0f
+        };
+
+        // Example tie-breaker by attack/hp if your MonsterDataSO has those
+        baseScore += def.attack * 0.01f + def.maxHP * 0.005f;
+
+        return baseScore;
     }
 
     void OnConfirm()
     {
-        if (JobManager.I == null) { Close(); return; }
+        if (JobManager.I == null)
+        {
+            Close();
+            return;
+        }
 
         if (_pendingDef == null)
         {
             Close();
             return;
+        }
+
+        // Double-check eligibility in case something slipped through
+        if (_pendingDef != null)
+        {
+            bool allowed = (_eligibleCache == null || _eligibleCache.Length == 0);
+            if (!allowed)
+            {
+                for (int i = 0; i < _eligibleCache.Length; i++)
+                {
+                    if (_eligibleCache[i] == _pendingDef.type) { allowed = true; break; }
+                }
+            }
+            if (!allowed)
+            {
+                // optional: show toast/error sfx here
+                Close();
+                return;
+            }
         }
 
         JobManager.I.RemoveFromAnyJob(_pendingId);
@@ -167,8 +219,8 @@ public class JobAssignPanelUI : MonoBehaviour
         CloseSelf();
 
         // Ask Jobs panel to refresh (non-blocking)
-        var jobsUI = FindFirstObjectByType<JobPanelUI>();
-        if (jobsUI) jobsUI.SendMessage("Refresh", SendMessageOptions.DontRequireReceiver);
+        var jobsPanel = FindAnyObjectByType<JobSiteView>(FindObjectsInactive.Include);
+        if (jobsPanel) jobsPanel.RefreshAll();
     }
 
     // --- UIManager glue ---
