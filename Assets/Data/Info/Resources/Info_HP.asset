@@ -18,8 +18,8 @@ MonoBehaviour:
   subtitle: Resource
   body: 'Comes from: Observatory
 
-    Used for: Temp HP increase, Craft advanced
-    items
+    Used for: Temp HP increase during encounters
 
-    Related site effect: +10 HP (uses: 1)'
+    Related
+    site effect: +10 HP (uses: 1)'
   icon: {fileID: 21300000, guid: 68cb970f21d581a4c9199025cdde3b18, type: 3}

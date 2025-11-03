@@ -16,9 +16,7 @@ public class EncounterManager : MonoBehaviour
     [Header("Refs")]
     [SerializeField] private BattleManager battleManager;
 
-    // Optional: assign your blinders overlay (lives under the Encounter panel)
-    // Expect it to expose Show() / Hide(). If you use a different API, just adjust the two calls.
-    [SerializeField] private MonoBehaviour blindersBehaviour; // must have Show()/Hide()
+    [SerializeField] private MonoBehaviour blindersBehaviour;
     MethodInfo _blindersShow, _blindersHide;
 
     [Header("Boss Settings")]
@@ -31,6 +29,24 @@ public class EncounterManager : MonoBehaviour
     [SerializeField] private float postResultDelay = 0.8f;
     [SerializeField] private float autoPollSeconds = 0.25f;
 
+    // ───────────────────────── Energy (regen over time) ─────────────────────────
+    [Header("Energy (Regen)")]
+    [Tooltip("If SaveManager.Data has encounterMax/Cost, those win; otherwise these are used.")]
+    [SerializeField, Min(1)] private int fallbackEncounterMax = 10;
+    [SerializeField, Min(1)] private int fallbackEncounterCost = 1;
+    [Tooltip("Seconds required to regenerate 1 energy point.")]
+    [SerializeField, Min(1f)] private float energySecondsPerPoint = 3600f;
+
+    const string PP_ENERGY_POINTS = "ENERGY_points";
+    const string PP_ENERGY_LAST   = "ENERGY_lastUnix";
+    const string PP_ENERGY_REM    = "ENERGY_remainder";
+
+    int   _energyPoints;
+    long  _energyLastUnix;
+    float _energyRemainderSecs;
+    float _tickAccum;
+
+    // ───────────────────────── Runtime ─────────────────────────
     private bool _currentEncounterIsBoss = false;
     private MonsterDataSO _currentBossUsed = null;
 
@@ -46,12 +62,14 @@ public class EncounterManager : MonoBehaviour
     private int _currentWinStreak = 0;
     public int CurrentWinStreak => _currentWinStreak;
 
+    // ===========================================================================
+
     void Awake()
     {
         if (I != null && I != this) { Destroy(gameObject); return; }
         I = this;
 
-        // cache blinders reflection (so it’s a soft-optional dependency)
+        // cache blinders reflection (soft-optional dependency)
         if (blindersBehaviour)
         {
             var t = blindersBehaviour.GetType();
@@ -61,6 +79,11 @@ public class EncounterManager : MonoBehaviour
 
         _currentWinStreak = LoadWinStreakOr(0);
         _currentWinStreak = Mathf.Max(0, _currentWinStreak);
+
+        // energy: load + offline regen
+        LoadEnergy();
+        ApplyOfflineRegen();
+        MirrorEnergyIntoSaveData(); // keep SaveManager.Data.encounterPoints in sync if present
     }
 
     void OnDisable()
@@ -84,8 +107,6 @@ public class EncounterManager : MonoBehaviour
         SaveManager.Data.EnsureTransientSets();
         GlobalEffects.RecalcShinySynergy();
 
-        EnsureDailyEnergyReset();
-
         inBattle = false;
         autoMode = false;
         nextEncounterFree = false;
@@ -104,9 +125,19 @@ public class EncounterManager : MonoBehaviour
 
         // Ensure blinders start UP on the Encounter panel
         Blinders_Show();
+
+        // initial UI update with correct energy mirrored
+        MirrorEnergyIntoSaveData();
+        GameEvents.EnergyChanged?.Invoke();
+        OnStateChanged?.Invoke();
     }
 
-    // ---------------- PUBLIC API (called from UI) ----------------
+    void Update()
+    {
+        TickEnergyRuntime();
+    }
+
+    // ============================ PUBLIC API (UI) ===============================
 
     public void RequestEncounterTap()
     {
@@ -122,7 +153,7 @@ public class EncounterManager : MonoBehaviour
 
         if (!HasEnergy())
         {
-            EmitStatus("Out of energy! Come back tomorrow or earn more.", LogScope.System);
+            EmitStatus("Out of energy!", LogScope.System);
             return;
         }
         StartEncounter(spendEnergy: true);
@@ -166,49 +197,153 @@ public class EncounterManager : MonoBehaviour
         OnStateChanged?.Invoke();
     }
 
-    // ---------------- ENERGY ----------------
+    // =============================== ENERGY ====================================
 
+    public int  GetEnergyPoints()      => _energyPoints;
+    public int  GetEncounterMax()      => (SaveManager.Data != null && SaveManager.Data.encounterMax > 0)
+                                            ? SaveManager.Data.encounterMax : fallbackEncounterMax;
+    public int  GetEncounterCost()     => (SaveManager.Data != null && SaveManager.Data.encounterCost > 0)
+                                            ? SaveManager.Data.encounterCost : fallbackEncounterCost;
+    public bool HasEnergy()            => _energyPoints >= GetEncounterCost();
+
+    // Exact time until full (accounts for current partial remainder)
+    public int GetSecondsUntilFull()
+    {
+        int max = GetEncounterMax();
+        if (_energyPoints >= max) return 0;
+        int missing = max - _energyPoints;
+        double total = (missing * energySecondsPerPoint) - _energyRemainderSecs;
+        return Mathf.Max(0, (int)Math.Ceiling(total));
+    }
+
+    // Utility for scripts that just want to add energy (e.g., rewards)
     public void AddEnergy(int amount, bool allowOvercap = true)
     {
-        SaveManager.Data.encounterPoints += amount;
-        if (!allowOvercap)
-            SaveManager.Data.encounterPoints = Mathf.Min(
-                SaveManager.Data.encounterPoints,
-                SaveManager.Data.encounterMax);
-
-        SaveManager.Save();
+        int max = GetEncounterMax();
+        _energyPoints += amount;
+        if (!allowOvercap) _energyPoints = Mathf.Min(_energyPoints, max);
+        ClampEnergy();
+        SaveEnergy();
+        MirrorEnergyIntoSaveData();
         GameEvents.EnergyChanged?.Invoke();
         OnStateChanged?.Invoke();
     }
 
+    // Spends energy and resets the regen timer (your “timer restarts” spec)
     public bool SpendEnergy()
     {
-        if (!HasEnergy()) return false;
-        SaveManager.Data.encounterPoints -= SaveManager.Data.encounterCost;
-        if (SaveManager.Data.encounterPoints < 0) SaveManager.Data.encounterPoints = 0;
-        SaveManager.Save();
+        int cost = GetEncounterCost();
+        if (_energyPoints < cost) return false;
+
+        _energyPoints -= cost;
+        ClampEnergy();
+
+        // reset countdown
+        _energyLastUnix = NowUnix();
+        _energyRemainderSecs = 0f;
+
+        SaveEnergy();
+        MirrorEnergyIntoSaveData();
         GameEvents.EnergyChanged?.Invoke();
         OnStateChanged?.Invoke();
         return true;
     }
 
-    public bool HasEnergy() => SaveManager.Data.encounterPoints >= SaveManager.Data.encounterCost;
+    // For external callers that just want a try-spend
+    public bool SpendEnergyIfPossible() => SpendEnergy();
 
-    void EnsureDailyEnergyReset()
+    // ---- core storage / runtime ticking ----
+    void LoadEnergy()
     {
-        int today = SaveManager.TodayYMD();
-        if (SaveManager.Data.lastEncounterResetYMD != today)
-        {
-            SaveManager.Data.lastEncounterResetYMD = today;
-            if (SaveManager.Data.encounterPoints < SaveManager.Data.encounterMax)
-                SaveManager.Data.encounterPoints = SaveManager.Data.encounterMax;
-            SaveManager.Save();
-            GameEvents.EnergyChanged?.Invoke();
-        }
-        OnStateChanged?.Invoke();
+        int max = GetEncounterMax();
+
+        // default to full when first run or missing keys
+        int def = Mathf.Clamp(max, 1, 9999);
+        _energyPoints        = PlayerPrefs.GetInt(PP_ENERGY_POINTS, def);
+        string lastStr       = PlayerPrefs.GetString(PP_ENERGY_LAST, NowUnix().ToString());
+        _energyLastUnix      = long.Parse(lastStr);
+        _energyRemainderSecs = PlayerPrefs.GetFloat(PP_ENERGY_REM, 0f);
+
+        ClampEnergy();
+        _energyRemainderSecs = Mathf.Clamp(_energyRemainderSecs, 0f, Mathf.Max(0f, energySecondsPerPoint - 0.001f));
     }
 
-    // ---------------- AUTO LOOP ----------------
+    void SaveEnergy()
+    {
+        PlayerPrefs.SetInt(PP_ENERGY_POINTS, _energyPoints);
+        PlayerPrefs.SetString(PP_ENERGY_LAST, _energyLastUnix.ToString());
+        PlayerPrefs.SetFloat(PP_ENERGY_REM, _energyRemainderSecs);
+        PlayerPrefs.Save();
+    }
+
+    void ClampEnergy()
+    {
+        int max = GetEncounterMax();
+        _energyPoints = Mathf.Clamp(_energyPoints, 0, Mathf.Max(1, max));
+    }
+
+    void ApplyOfflineRegen()
+    {
+        int max = GetEncounterMax();
+        if (_energyPoints >= max) { _energyRemainderSecs = 0f; return; }
+
+        long elapsed = NowUnix() - _energyLastUnix;
+        if (elapsed <= 0) return;
+
+        double total = _energyRemainderSecs + elapsed;
+        int gained = (int)Math.Floor(total / energySecondsPerPoint);
+        _energyRemainderSecs = (float)(total - (gained * energySecondsPerPoint));
+
+        if (gained > 0)
+        {
+            _energyPoints = Mathf.Min(max, _energyPoints + gained);
+            if (_energyPoints >= max) _energyRemainderSecs = 0f;
+
+            MirrorEnergyIntoSaveData();
+            SaveEnergy();
+            GameEvents.EnergyChanged?.Invoke();
+        }
+
+        // move “last” to now so future elapsed is clean
+        _energyLastUnix = NowUnix();
+        SaveEnergy();
+    }
+
+    void TickEnergyRuntime()
+    {
+        int max = GetEncounterMax();
+        if (_energyPoints >= max) return;
+
+        _tickAccum += Time.unscaledDeltaTime;
+        if (_tickAccum < 1f) return;
+        _tickAccum = 0f;
+
+        _energyRemainderSecs += 1f;
+        if (_energyRemainderSecs >= energySecondsPerPoint)
+        {
+            _energyRemainderSecs -= energySecondsPerPoint;
+            _energyPoints = Mathf.Min(max, _energyPoints + 1);
+            if (_energyPoints >= max) _energyRemainderSecs = 0f;
+
+            MirrorEnergyIntoSaveData();
+            SaveEnergy();
+            GameEvents.EnergyChanged?.Invoke();
+            OnStateChanged?.Invoke();
+        }
+    }
+
+    void MirrorEnergyIntoSaveData()
+    {
+        if (SaveManager.Data == null) return;
+        // Keep SaveManager’s encounterPoints in sync for any legacy UI that reads it
+        SaveManager.Data.encounterPoints = _energyPoints;
+        // Do NOT touch encounterMax/Cost (they may be tuned elsewhere)
+        SaveManager.Save();
+    }
+
+    static long NowUnix() => DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+
+    // ============================== AUTO LOOP ==================================
 
     IEnumerator AutoLoop()
     {
@@ -258,7 +393,7 @@ public class EncounterManager : MonoBehaviour
         Blinders_Show();
     }
 
-    // ---------------- ENCOUNTER FLOW ----------------
+    // ============================= ENCOUNTER FLOW ===============================
 
     void StartEncounter(bool spendEnergy)
     {
@@ -281,7 +416,7 @@ public class EncounterManager : MonoBehaviour
             if (!SpendEnergy())
             {
                 StopAuto_NoEnergy();
-                EmitStatus("Out of energy! Come back tomorrow or earn more.", LogScope.System);
+                EmitStatus("Out of energy!", LogScope.System);
                 return;
             }
         }
@@ -484,8 +619,7 @@ public class EncounterManager : MonoBehaviour
         PostBattleSummaryManager.I?.FlushNowIfPossible();       // <-- show now
     }
 
-
-    // ===== LURES / LUCK / SHINY / CAPTURE BAND =====
+    // ================= LURES / LUCK / SHINY / CAPTURE BAND =====================
 
     public IReadOnlyList<LureBiasData> ActiveLures => SaveManager.Data?.activeLures;
 
@@ -788,25 +922,10 @@ public class EncounterManager : MonoBehaviour
         }
     }
 
-    // =======================
-    // ==== Idle helpers =====
-    // =======================
+    // ===================== Idle helpers / State getters =========================
 
-    public int GetEnergyPoints() => SaveManager.Data.encounterPoints;
-    public int GetEncounterCost() => Mathf.Max(1, SaveManager.Data.encounterCost);
-    public int GetEncounterMax() => SaveManager.Data.encounterMax;
+    // Maintained for compatibility (now backed by the regen system)
     public long GetLastSavedUnix() => SaveManager.Data.lastSavedUnix;
-
-    public bool SpendEnergyIfPossible()
-    {
-        if (SaveManager.Data.encounterPoints < SaveManager.Data.encounterCost) return false;
-        SaveManager.Data.encounterPoints -= SaveManager.Data.encounterCost;
-        if (SaveManager.Data.encounterPoints < 0) SaveManager.Data.encounterPoints = 0;
-        SaveManager.Save();
-        GameEvents.EnergyChanged?.Invoke();
-        OnStateChanged?.Invoke();
-        return true;
-    }
 
     public bool IsAutoModeAllowedInBackground()
     {
@@ -839,7 +958,7 @@ public class EncounterManager : MonoBehaviour
             var om = team[i];
             if (om == null || string.IsNullOrEmpty(om.monsterId)) continue;
 
-            // Only normalize when HP is uninitialized (=-1). 
+            // Only normalize when HP is uninitialized (=-1).
             if (om.currentHP >= 0) continue;
 
             var def = lib.GetById(om.monsterId);

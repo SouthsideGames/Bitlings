@@ -192,22 +192,24 @@ public class EncounterPanelUI : MonoBehaviour
 
         int cur  = GetEnergyPoints();
         int max  = GetEncounterMax();
-        int need = Mathf.Max(0, max - cur);
 
-        if (need <= 0)
+        if (cur >= max)
         {
             energyEtaLabel.text = "Energy full";
             return;
         }
 
-        double totalSec = need * Mathf.Max(1f, energySecondsPerPoint);
-        int hours   = (int)(totalSec / 3600.0);
-        int minutes = (int)((totalSec % 3600.0) / 60.0);
+        int seconds = EncounterManager.I != null
+            ? EncounterManager.I.GetSecondsUntilFull()
+            : (int)((max - cur) * Mathf.Max(1f, energySecondsPerPoint)); // fallback
+
+        int hours = seconds / 3600;
+        int minutes = (seconds % 3600) / 60;
 
         energyEtaLabel.text = (hours > 0)
             ? $"Full in ~ {hours}h {minutes:D2}m"
             : $"Full in ~ {minutes}m";
-    }
+}
 
     // ─────────────────────────────────────────────────────────────
     // Blinder Flow

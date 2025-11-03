@@ -74,7 +74,6 @@ public class BattleManager : MonoBehaviour
     [SerializeField] private bool debugIncomingMitigation = false;
     [SerializeField] private bool debugEffectivenessOutgoing = false;
 
-
     private MonsterDataSO wildDef;
     private int wildLevel;
     private float wildMaxHP, wildHP;
@@ -98,11 +97,6 @@ public class BattleManager : MonoBehaviour
     private float startTime;
     private Coroutine turnCR;
 
-    private int roundIndex = 0;
-    private int playerAttacksThisTurn = 0;
-    private int enemyAttacksThisTurn  = 0;
-    private bool playerActsFirstThisRound = true;
-    private bool playerDidFirstAttackThisBattle = false;
     private bool playerTookFirstIncomingThisBattle = false;
     private bool playerLandedFirstHitThisBattle = false;
 
@@ -227,11 +221,6 @@ public class BattleManager : MonoBehaviour
             }
         }
 
-        roundIndex = 0;
-        playerAttacksThisTurn = 0;
-        enemyAttacksThisTurn  = 0;
-        playerActsFirstThisRound = true;
-        playerDidFirstAttackThisBattle = false;
         playerTookFirstIncomingThisBattle = false;
         playerLandedFirstHitThisBattle = false;
 
@@ -286,33 +275,33 @@ public class BattleManager : MonoBehaviour
                 break;
             }
 
-            round++;
-            roundIndex = round;
-            playerAttacksThisTurn = 0;
-            enemyAttacksThisTurn  = 0;
 
             BattleLogger.Log($"— Round {round} —", LogScope.Battle);
 
             yield return Wait(beginRoundDelay);
 
-            // ── Speed / Initiative (job + titles + temp buffs)
-            int pSpeed = BattleCalc.CalcSpeed(teamDefs[activeIndex], teamLevels[activeIndex], teamIds[activeIndex]);
-            if (BattleTempBuffs.I != null)
-                pSpeed = BattleTempBuffs.I.ApplyPlayerSpeedBonus(pSpeed);
+            // ── Speed / Initiative in order: Base → Job → Titles → Boosters
+            int pSpeedBase = BattleCalc.CalcSpeed(teamDefs[activeIndex], teamLevels[activeIndex]);
 
-            var ctxSpeed = jobCtx != null ? jobCtx[activeIndex] : null;
-            if (ctxSpeed != null && ctxSpeed.speedBuffTurns > 0 && ctxSpeed.speedBonusPctFirstTurns != 0f)
-                pSpeed = Mathf.Max(1, Mathf.RoundToInt(pSpeed * (1f + ctxSpeed.speedBonusPctFirstTurns)));
+            // Job first
+            var jSpeed = jobCtx != null ? jobCtx[activeIndex] : null;
+            if (jSpeed != null && jSpeed.speedBuffTurns > 0 && jSpeed.speedBonusPctFirstTurns != 0f)
+                pSpeedBase = Mathf.Max(1, Mathf.RoundToInt(pSpeedBase * (1f + jSpeed.speedBonusPctFirstTurns)));
 
-            // Conditional Title boost via router (explicit "SPD")
+            // Titles second
             var titleCtx = BuildTitleContextForActive();
-            float spdF = TitlesAdapter.GetStatValue(teamIds[activeIndex], teamDefs[activeIndex], teamLevels[activeIndex], "SPD", titleCtx, pSpeed);
-            pSpeed = Mathf.Max(1, Mathf.RoundToInt(spdF));
+            float pSpeedAfterTitlesF = TitlesAdapter.GetStatValue(
+                teamIds[activeIndex], teamDefs[activeIndex], teamLevels[activeIndex], "SPD", titleCtx, pSpeedBase
+            );
+            int pSpeedAfterTitles = Mathf.Max(1, Mathf.RoundToInt(pSpeedAfterTitlesF));
+
+            // Boosters last (flat)
+            int tempSPDFlat = BattleTempBuffs.I ? BattleTempBuffs.I.GetPlayerSpeedFlatBonus() : 0;
+            int pSpeed = Mathf.Max(1, pSpeedAfterTitles + Mathf.Max(0, tempSPDFlat));
 
             int wSpeed = BattleCalc.CalcSpeed(wildDef, wildLevel);
 
             bool playerFirst = pSpeed >= wSpeed;
-            playerActsFirstThisRound = playerFirst;
             if (playerFirst) BattleLogger.Log($"{GetName(activeIndex)} acts first!", LogScope.Battle);
             else             BattleLogger.Log($"{(wildDef ? wildDef.displayName : "Foe")} acts first!", LogScope.Battle);
 
@@ -348,56 +337,77 @@ public class BattleManager : MonoBehaviour
     {
         if (teamHP[activeIndex] <= 0.01f && !AutoSwapToAlive()) yield break;
 
-        playerAttacksThisTurn++;
-
-        // --- Base ATK (no active boosts here) ---
-        int flat = 0;
+        // ─────────────────────────────────────────────────────────────
+        // 1) BASE ATTACK (no temporary/booster flats here)
+        // ─────────────────────────────────────────────────────────────
+        int equipFlat = 0;
         var roster = SaveManager.Data?.team;
-        if (roster != null && activeIndex < roster.Count) flat = Mathf.Max(0, roster[activeIndex].flatAtkBonus);
+        if (roster != null && activeIndex < roster.Count && roster[activeIndex] != null)
+            equipFlat = Mathf.Max(0, roster[activeIndex].flatAtkBonus);
 
-        int tempFlat = BattleTempBuffs.I ? BattleTempBuffs.I.GetPlayerAtkBonus() : 0;
-        float atkBase = BattleCalc.CalcBaseAttack(teamDefs[activeIndex], teamLevels[activeIndex], flat, tempFlat);
-
-        // Conditional Title ATK via router (explicit "ATK"); still part of base, not an "active" boost
-        var titleCtx = BuildTitleContextForActive();
-        float atkNoActives = TitlesAdapter.GetStatValue(
-            teamIds[activeIndex], teamDefs[activeIndex], teamLevels[activeIndex], "ATK", titleCtx, atkBase
+        float atkBaseF = BattleCalc.CalcBaseAttack(
+            teamDefs[activeIndex],
+            teamLevels[activeIndex],
+            equipFlat,
+            /*tempFlat*/ 0
         );
+        int atkBase = Mathf.Max(1, Mathf.RoundToInt(atkBaseF));
 
-        // Crit chance (job buffs)
-        var ctx = (jobCtx != null) ? jobCtx[activeIndex] : null;
+        // Precompute a multiplier so boosters apply LAST
+        int tempFlatFromBoosters = BattleTempBuffs.I ? BattleTempBuffs.I.GetPlayerAtkBonus() : 0;
+        float atkWithBoosterF = BattleCalc.CalcBaseAttack(
+            teamDefs[activeIndex],
+            teamLevels[activeIndex],
+            equipFlat,
+            /*tempFlat*/ tempFlatFromBoosters
+        );
+        float atkBoosterMult = Mathf.Max(0.01f, atkWithBoosterF / Mathf.Max(1f, atkBase));
+
+        // Titles context (for stat scaling after jobs)
+        var titleCtx = BuildTitleContextForActive();
+
+        // Crit chance (jobs may add crit flat or “first N turns” bonus)
+        var jctx = (jobCtx != null) ? jobCtx[activeIndex] : null;
         float playerCrit = critChancePlayer;
-        if (ctx != null)
+        if (jctx != null)
         {
-            playerCrit += ctx.critChanceFlat;
-            if (ctx.critBuffTurns > 0) playerCrit += ctx.critChanceBonusFirstTurns;
+            playerCrit += jctx.critChanceFlat;
+            if (jctx.critBuffTurns > 0)
+                playerCrit += jctx.critChanceBonusFirstTurns;
         }
         playerCrit = Mathf.Clamp01(playerCrit);
 
-        // Resolve using BASE (no actives, no job damage scalers yet)
-        int defenseIgnore = 0;
+        // Resolve with BASE ONLY (no jobs/titles/boosters yet)
         var dr = BattleCalc.ResolveHit(
             teamIds[activeIndex], teamDefs[activeIndex], teamLevels[activeIndex],
-            null, wildDef, wildLevel,
-            atkNoActives, playerCrit, critMultiplier, -defenseIgnore
+            /*defenderId*/ null, wildDef, wildLevel,
+            /*attack*/ atkBase,
+            /*critChance*/ playerCrit,
+            /*critMult*/ critMultiplier,
+            /*flatDefBonus*/ 0
         );
 
         // ─────────────────────────────────────────────────────────────
-        // Order: Type effectiveness (inside ResolveHit) → Job passives → Title boosts → Active boosts
+        // 2) JOB PASSIVES (damage multipliers etc.)
         // ─────────────────────────────────────────────────────────────
+        if (jctx != null && jctx.attackBonusPct > 0f)
+            dr.damage = Mathf.Max(1, Mathf.RoundToInt(dr.damage * (1f + jctx.attackBonusPct)));
 
-        // (1) JOB PASSIVES → as damage scalers (not in base ATK)
-        if (ctx != null && ctx.attackBonusPct > 0f)
-            dr.damage = Mathf.Max(1, Mathf.RoundToInt(dr.damage * (1f + ctx.attackBonusPct)));
-
-        if (ctx != null && !ctx.usedFirstOutgoing && ctx.firstOutgoingBonus > 0f)
+        if (jctx != null && !jctx.usedFirstOutgoing && jctx.firstOutgoingBonus > 0f)
         {
-            ctx.usedFirstOutgoing = true;
-            dr.damage = Mathf.Max(1, Mathf.RoundToInt(dr.damage * (1f + ctx.firstOutgoingBonus)));
+            jctx.usedFirstOutgoing = true;
+            dr.damage = Mathf.Max(1, Mathf.RoundToInt(dr.damage * (1f + jctx.firstOutgoingBonus)));
         }
 
-        // (2) TITLE BOOSTS → effectiveness mods (Multiply first, then Add)
-        float effMul = TitlesAdapter.GetEffectivenessMult(teamIds[activeIndex], teamDefs[activeIndex], teamLevels[activeIndex]);
+        if (jctx != null && jctx.surgeApplied && jctx.surgeAtkBonusPct > 0f)
+            dr.damage = Mathf.Max(1, Mathf.RoundToInt(dr.damage * (1f + jctx.surgeAtkBonusPct)));
+
+        // ─────────────────────────────────────────────────────────────
+        // 3) TITLES (effectiveness: multiply then add)
+        // ─────────────────────────────────────────────────────────────
+        float effMul = TitlesAdapter.GetEffectivenessMult(
+            teamIds[activeIndex], teamDefs[activeIndex], teamLevels[activeIndex]
+        );
         if (!Mathf.Approximately(effMul, 1f))
         {
             int before = dr.damage;
@@ -411,7 +421,9 @@ public class BattleManager : MonoBehaviour
             }
         }
 
-        float effAdd = TitlesAdapter.GetEffectivenessAdd(teamIds[activeIndex], teamDefs[activeIndex], teamLevels[activeIndex]);
+        float effAdd = TitlesAdapter.GetEffectivenessAdd(
+            teamIds[activeIndex], teamDefs[activeIndex], teamLevels[activeIndex]
+        );
         if (!Mathf.Approximately(effAdd, 0f) && dr.effectiveness > 0.0001f)
         {
             int before = dr.damage;
@@ -426,41 +438,36 @@ public class BattleManager : MonoBehaviour
             }
         }
 
-        // (3) ACTIVE BOOSTS → Tap + Temp LAST
+        // ─────────────────────────────────────────────────────────────
+        // 4) BOOSTERS LAST (tap/temp % buffs; then the ATK flat-as-multiplier)
+        // ─────────────────────────────────────────────────────────────
         float tap = TapBoost.I ? TapBoost.I.CurrentMultiplier : 1f;
-        if (tap > 1f)
-        {
-            int before = dr.damage;
+        if (!Mathf.Approximately(tap, 1f))
             dr.damage = Mathf.Max(1, Mathf.RoundToInt(dr.damage * tap));
-            if (debugEffectivenessOutgoing)
-            {
-                string msg = $"[ActiveBoost] Tap x{tap:0.00}: {before} → {dr.damage}";
-                try { BattleLogger.Log(msg, LogScope.Battle); } catch { }
-                Debug.Log(msg);
-            }
-        }
 
         if (tempDmgBuffTurns > 0 && tempDmgBuffPct > 0f)
         {
-            int before = dr.damage;
             dr.damage = Mathf.Max(1, Mathf.RoundToInt(dr.damage * (1f + tempDmgBuffPct)));
             BattleLogger.Log($"+{Mathf.RoundToInt(tempDmgBuffPct * 100f)}% damage buff active.", LogScope.Battle);
             tempDmgBuffTurns--;
             if (tempDmgBuffTurns <= 0) tempDmgBuffPct = 0f;
-
-            if (debugEffectivenessOutgoing)
-                Debug.Log($"[ActiveBoost] TempDmg applied: {before} → {dr.damage}");
         }
 
-        // Apply damage
-        bool lethal = dr.damage >= wildHP;
+        if (!Mathf.Approximately(atkBoosterMult, 1f))
+            dr.damage = Mathf.Max(1, Mathf.RoundToInt(dr.damage * atkBoosterMult));
+
+        // ─────────────────────────────────────────────────────────────
+        // Apply damage & log
+        // ─────────────────────────────────────────────────────────────
+        bool lethal = dr.damage >= Mathf.RoundToInt(wildHP);
         wildHP = Mathf.Max(0f, wildHP - dr.damage);
         PushHPBars();
 
         if (!playerLandedFirstHitThisBattle && dr.damage > 0)
             playerLandedFirstHitThisBattle = true;
 
-        BattleLogger.Log($"{GetName(activeIndex)} attacks for {dr.damage}!", LogScope.Battle);
+        string foeName = wildDef ? wildDef.displayName : "Foe";
+        BattleLogger.Log($"{GetName(activeIndex)} hits {foeName} for {dr.damage}!", LogScope.Battle);
 
         if (showEffectivenessText)
         {
@@ -469,18 +476,16 @@ public class BattleManager : MonoBehaviour
         }
         if (dr.crit) BattleLogger.Log("Critical hit!", LogScope.Battle);
 
-        if (!playerDidFirstAttackThisBattle) playerDidFirstAttackThisBattle = true;
-
-        // End-turn regen (jobs)
-        var jCtx2 = (jobCtx != null) ? jobCtx[activeIndex] : null;
-        if (jCtx2 != null && jCtx2.endTurnHealPct > 0f)
+        // End-of-player-turn job regen (if any)
+        var j2 = (jobCtx != null) ? jobCtx[activeIndex] : null;
+        if (j2 != null && j2.endTurnHealPct > 0f)
         {
-            bool canHeal = (jCtx2.regenTurns == int.MaxValue) || (jCtx2.regenTurns > 0);
+            bool canHeal = (j2.regenTurns == int.MaxValue) || (j2.regenTurns > 0);
             if (canHeal)
             {
-                float healAmt = GetFinalMaxHPForIndex(activeIndex) * jCtx2.endTurnHealPct;
+                float healAmt = GetFinalMaxHPForIndex(activeIndex) * j2.endTurnHealPct;
                 TryAddHPToActive(healAmt);
-                if (jCtx2.regenTurns != int.MaxValue) jCtx2.regenTurns--;
+                if (j2.regenTurns != int.MaxValue) j2.regenTurns--;
                 BattleLogger.Log($"{GetName(activeIndex)} regenerates {Mathf.RoundToInt(healAmt)} HP.", LogScope.Battle);
             }
         }
@@ -490,18 +495,17 @@ public class BattleManager : MonoBehaviour
         yield break;
     }
 
-
     private IEnumerator EnemyTurn()
     {
         if (debugIncomingMitigation) Debug.Log("[Mitigation] EnemyTurn started — debugIncomingMitigation = TRUE");
 
         if (teamHP[activeIndex] <= 0.01f && !AutoSwapToAlive()) yield break;
 
-        enemyAttacksThisTurn++;
+        int enemyAtk = Mathf.Max(1, Mathf.RoundToInt(wildAttackPerTurn));
 
-        float atk = Mathf.Max(1f, wildAttackPerTurn);
+        // Booster DEF flat APPLIES LAST (not in ResolveHit)
+        int defFlatBooster = BattleTempBuffs.I ? BattleTempBuffs.I.GetPlayerDefenseBonus() : 0;
 
-        int flatDefBonus = BattleTempBuffs.I ? BattleTempBuffs.I.GetPlayerDefenseBonus() : 0;
         var ctx = (jobCtx != null) ? jobCtx[activeIndex] : null;
         float preHP = teamHP[activeIndex];
 
@@ -517,11 +521,11 @@ public class BattleManager : MonoBehaviour
         }
         float wildCritChance = df.cannotBeCrit ? 0f : Mathf.Clamp01(critChanceWild - playerCritResist);
 
-        // Resolve (defender ID present)
+        // Resolve (defender ID present) with NO flatDefBonus here
         var dr = BattleCalc.ResolveHit(
             null, wildDef, wildLevel,
             teamIds[activeIndex], teamDefs[activeIndex], teamLevels[activeIndex],
-            atk, wildCritChance, critMultiplier, flatDefBonus
+            enemyAtk, wildCritChance, critMultiplier, /*flatDefBonus*/ 0
         );
 
         // ── DEBUG capture BEFORE any filters
@@ -536,7 +540,7 @@ public class BattleManager : MonoBehaviour
             dr = BattleCalc.ResolveHit(
                 null, wildDef, wildLevel,
                 teamIds[activeIndex], teamDefs[activeIndex], teamLevels[activeIndex],
-                atk, 0f, critMultiplier, flatDefBonus
+                enemyAtk, 0f, critMultiplier, /*flatDefBonus*/ 0
             );
         }
 
@@ -569,9 +573,9 @@ public class BattleManager : MonoBehaviour
         int dmg_afterScalar = Mathf.Max(1, Mathf.RoundToInt(dr.damage * incomingScalar));
 
         // ── Stage 1.5: incoming effectiveness titles (defensive) BEFORE %/flat filters
-        float incomingEffMul = TitleManager.I
-            ? Mathf.Max(0f, TitleManager.I.GetIncomingEffectivenessMultiplier(teamIds[activeIndex], teamDefs[activeIndex], teamLevels[activeIndex]))
-            : 1f;
+        float incomingEffMul = TitlesAdapter.GetIncomingEffectivenessMult(
+            teamIds[activeIndex], teamDefs[activeIndex], teamLevels[activeIndex]
+        );
         if (!Mathf.Approximately(incomingEffMul, 1f))
         {
             int beforeInc = dmg_afterScalar;
@@ -588,11 +592,10 @@ public class BattleManager : MonoBehaviour
             ? Mathf.Max(1, Mathf.RoundToInt(dmg_afterScalar * (1f - percentReduce)))
             : dmg_afterScalar;
 
-        int dmg_afterFlat = (flatReduce > 0)
-            ? Mathf.Max(1, dmg_afterPercent - flatReduce)
-            : dmg_afterPercent;
+        // ── Stage 3: BOOSTER DEF FLAT LAST (applied together with title flat reduce)
+        int dmg_afterFlat = Mathf.Max(1, dmg_afterPercent - (flatReduce + Mathf.Max(0, defFlatBooster)));
 
-        // ── Stage 3: Shield (absorbs after titles’ reductions)
+        // ── Stage 4: Shield (absorbs after titles/boosters reductions)
         float shieldBefore  = (shieldHP != null && shieldHP.Length > activeIndex) ? shieldHP[activeIndex] : 0f;
         float shieldAbsorbF = 0f;
 
@@ -618,7 +621,7 @@ public class BattleManager : MonoBehaviour
             if (dr.effectiveness > 1.25f) BattleLogger.Log("It's super effective!", LogScope.Battle);
             else if (dr.effectiveness < 0.85f) BattleLogger.Log("It's not very effective...", LogScope.Battle);
         }
-        if (dr.crit) BattleLogger.Log("Critical hit!", LogScope.Battle);
+        if (dr.crit && !df.cannotBeCrit) BattleLogger.Log("Critical hit!", LogScope.Battle);
 
         if (!playerTookFirstIncomingThisBattle) playerTookFirstIncomingThisBattle = true;
 
@@ -638,10 +641,10 @@ public class BattleManager : MonoBehaviour
                 $"  • Base: {dmg_noTitlesNoJobs}\n" +
                 $"  • After Job/Conditional scalar ({jobsPctOff}% off): {dmg_afterJobsOnly}\n" +
                 (Mathf.Approximately(incomingEffMul, 1f) ? "" :
-                $"  • After Title Incoming-Effectiveness x{incomingEffMul:0.00}: {dmg_afterJobsOnly} → {dmg_afterScalar}\n") +
+                $"  • After Title Incoming-Effectiveness x{incomingEffMul:0.00}\n") +
                 $"  • After Title % ({titlePctOff}% off): {dmg_afterPercent}\n" +
-                $"  • After Title Flat (-{flatReduce}): {dmg_afterFlat}\n" +
-                $"  • Shield Absorb (-{shieldAbsInt}, was {shieldBeforeInt}): {dmg_afterFlat - shieldAbsInt}\n" +
+                $"  • After Title Flat+Booster (-{flatReduce + Mathf.Max(0, defFlatBooster)}): {dmg_afterFlat}\n" +
+                $"  • Shield Absorb (-{shieldAbsInt}, was {shieldBeforeInt})\n" +
                 $"  ⇒ Final Applied: {dmg_final}";
 
             MitLog(text);
@@ -677,8 +680,6 @@ public class BattleManager : MonoBehaviour
         yield break;
     }
 
-
-
     private bool CheckEnd()
     {
         if (IsWildKO())
@@ -713,12 +714,15 @@ public class BattleManager : MonoBehaviour
         if (victory && teamIds != null && activeIndex >= 0 && activeIndex < teamIds.Length)
         {
             float cm = TitlesAdapter.GetCoinMultOnVictory(teamIds[activeIndex], wildDef, wildLevel);
+            Debug.Log($"[TitleVictory] Coin mult={cm:0.##}");
+
             if (cm > 0f)
             {
                 finalCoins = Mathf.Max(0, Mathf.RoundToInt(baseCoins * cm));
                 coinTitleBonus = Mathf.Max(0, finalCoins - baseCoins);
             }
         }
+        
         if (finalCoins < 0) finalCoins = 0;
 
         // ── XP: compute base vs shiny/training vs title
@@ -729,11 +733,11 @@ public class BattleManager : MonoBehaviour
         if (victory)
         {
             // Base raw XP per your rules (5 + 2*wildLevel), then shiny/training mult, then title mult
-            int baseRaw = Mathf.Max(0, 5 + 2 * wildLevel); // mirrors BattleRewards base
+            int baseRaw = Mathf.Max(0, 5 + 2 * wildLevel);
             var data = SaveManager.Data;
             var m = (data != null && data.team != null && activeIndex >= 0 && activeIndex < data.team.Count) ? data.team[activeIndex] : default;
 
-            float shinyMul = ShinySystems.TrainingXpMult(m); // same factor BattleRewards uses
+            float shinyMul = ShinySystems.TrainingXpMult(m);
             int baseAfterShiny = Mathf.RoundToInt(baseRaw * shinyMul);
 
             float titleXPMul = 1f;
@@ -750,7 +754,7 @@ public class BattleManager : MonoBehaviour
         }
 
         // Write HP back to save
-       var teamList  = SaveManager.Data.team ?? new List<OwnedMonsterData>();
+        var teamList  = SaveManager.Data.team ?? new List<OwnedMonsterData>();
         var ownedList = SaveManager.Data.owned ?? new List<OwnedMonsterData>();
 
         // 1) Persist post-battle HP into TEAM entries
@@ -778,7 +782,7 @@ public class BattleManager : MonoBehaviour
                 var o = ownedList[j];
                 if (!string.IsNullOrEmpty(o.monsterId) && o.monsterId == t.monsterId)
                 {
-                    o.currentHP  = Mathf.Max(0, t.currentHP); // <-- the fix: OWNED gets true post-battle HP
+                    o.currentHP  = Mathf.Max(0, t.currentHP); // OWNED gets true post-battle HP
                     o.lastHPUnix = nowUnix;                    // for regen timing
                     ownedList[j] = o;
                     break;
@@ -843,10 +847,6 @@ public class BattleManager : MonoBehaviour
             {
                 var def = teamDefs[activeIndex];
                 var owned = data.team[activeIndex];
-
-                // We don’t know the exact before/after snapshot here without tracking pre-battle values,
-                // but we can still show a nice single-line breakdown with title bonus in green:
-                // e.g. "Cindrax Lv5 → +36 (<color=#3CDE74>+6</color>) XP"
                 string nm = def ? def.displayName : (owned.monsterId ?? "Ally");
                 xpLines.Add($"{nm} Lv{owned.level} → +{Mathf.Max(0, xpBaseTimesTraining + xpTitleBonus)} (<color=#3CDE74>+{xpTitleBonus}</color>) XP");
             }
@@ -872,7 +872,6 @@ public class BattleManager : MonoBehaviour
 
         GameEvents.BattleFinished?.Invoke(result);
     }
-
 
     private void ClampAndPushActiveHP()
     {
@@ -1186,7 +1185,6 @@ public class BattleManager : MonoBehaviour
         ctx.alliesAlive = GetAlliesAliveNotIncludingActive();
         ctx.winStreak   = GetWinStreakSafe();
 
-
         // Conditional-only mod snapshot (for {cond ±X} tags)
         var cmods = GetConditionalModsForActive();
 
@@ -1380,14 +1378,17 @@ public class BattleManager : MonoBehaviour
     {
         float v = Mathf.Max(1f, baseMax);
 
-        int hpBuff = BattleTempBuffs.I ? BattleTempBuffs.I.GetPlayerHPBonus() : 0;
-        v = Mathf.Max(1f, v + hpBuff);
- 
+        // Titles first (percent)
         if (idx >= 0)
         {
             var tmods = GetTitleModsForIndex(idx);
             if (tmods.hpPct > 0f) v *= (1f + tmods.hpPct);
         }
+
+        // Boosters last (flat)
+        int hpBuff = BattleTempBuffs.I ? BattleTempBuffs.I.GetPlayerHPBonus() : 0;
+        v = Mathf.Max(1f, v + hpBuff);
+
         return v;
     }
 

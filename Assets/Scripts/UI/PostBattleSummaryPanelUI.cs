@@ -38,11 +38,6 @@ public class PostBattleSummaryPanelUI : MonoBehaviour
         if (root) root.localScale = Vector3.one * 0.96f;
     }
 
-    /// <summary>
-    /// Sets all summary values.
-    /// coinsBase/coinsTitleBonus and xpBase/xpTitleBonus are the breakdowns we render.
-    /// xpDetailLines are per-monster progress lines (optional).
-    /// </summary>
     public void Set(
         BattleResult r,
         int xpGained = 0,
@@ -60,27 +55,21 @@ public class PostBattleSummaryPanelUI : MonoBehaviour
     {
         if (titleLabel) titleLabel.text = r.victory ? "Victory!" : "Defeat";
 
-        // Coins: “+<total>” with green “(+bonus)”
-        int totalCoins = Mathf.Max(0, coinsBase + coinsTitleBonus);
+        // ─────────────── Coins line ───────────────
+        int coinsTotal = Mathf.Max(0, coinsBase + coinsTitleBonus);
         if (coinsLabel)
         {
-            if (coinsTitleBonus > 0)
-                coinsLabel.text = $"+{totalCoins} Coins <color={GREEN}>(+{coinsTitleBonus})</color>";
-            else
-                coinsLabel.text = $"+{totalCoins} Coins";
+            coinsLabel.text = BuildRewardLine("Coins", coinsBase, coinsTitleBonus, coinsTotal);
         }
 
-        // XP: “+<total> XP” with green bonus
-        int totalXP = Mathf.Max(0, xpBase + xpTitleBonus);
+        // ─────────────── XP line ───────────────
+        int xpTotal = Mathf.Max(0, xpBase + xpTitleBonus);
         if (xpLabel)
         {
-            if (xpTitleBonus > 0)
-                xpLabel.text = $"+{totalXP} XP <color={GREEN}>(+{xpTitleBonus})</color>";
-            else
-                xpLabel.text = $"+{totalXP} XP";
+            xpLabel.text = BuildRewardLine("XP", xpBase, xpTitleBonus, xpTotal);
         }
 
-        // Level-up banner (unchanged behavior, but included for completeness)
+        // Level-up banner
         if (levelupsLabel)
         {
             if (monstersLeveledUp > 0)
@@ -102,7 +91,7 @@ public class PostBattleSummaryPanelUI : MonoBehaviour
             else levelupsLabel.text = "No level ups";
         }
 
-        // Capture text (unchanged)
+        // Capture text
         if (captureLabel)
         {
             if (captured)
@@ -137,5 +126,30 @@ public class PostBattleSummaryPanelUI : MonoBehaviour
     {
         LeanTween.alphaCanvas(cg, 1f, fadeIn).setEaseOutSine();
         if (root) LeanTween.scale(root, Vector3.one, popIn).setEaseOutBack();
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────────
+
+    private string BuildRewardLine(string label, int baseValue, int titleBonus, int total)
+    {
+        // If no title bonus affected the reward, show: "Coins: 10"
+        if (titleBonus <= 0 || baseValue <= 0)
+        {
+            return $"{label}: {Mathf.Max(0, baseValue)}";
+        }
+
+        float multiplier = total > 0 && baseValue > 0 ? (float)total / baseValue : 1f;
+        string multText = FormatMultiplier(multiplier);
+
+        return $"{label}: {baseValue} ({multText}) = <color={GREEN}>{total}</color>";
+    }
+
+    private string FormatMultiplier(float m)
+    {
+        float rounded = Mathf.Round(m);
+        if (Mathf.Abs(rounded - m) < 0.001f)
+            return $"x{rounded:0}";
+
+        return $"x{m:0.##}";
     }
 }

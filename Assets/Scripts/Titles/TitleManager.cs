@@ -488,6 +488,64 @@ public sealed class TitleManager : MonoBehaviour
             default: return key; // "Attack","Defense","Speed" already fine
         }
     }
+
+    public float GetCoinMultOnVictory(string monsterId, MonsterDataSO wild, int wildLevel)
+    {
+        // Default neutral
+        float mul = 1f;
+
+        // Def/level may be null/1 here; we only need the monsterId to read equips
+        var def = MonsterLibraryLocator.GetById(monsterId);
+        int lvl = 1;
+
+        var titles = GetEquippedList(monsterId, def, lvl);
+        for (int i = 0; i < titles.Count; i++)
+        {
+            var t = titles[i];
+            if (!t) continue;
+
+            // Strongly-typed path
+            if (t is CoinBonusOnVictoryTitleSO coin)
+            {
+                mul *= Mathf.Max(0f, coin.coinMultiplier);
+                continue;
+            }
+
+            // Flexible reflection fallback (if you later add variants)
+            if (TryReadFloat(t, out var v, "coinMultiplier", "coinsMultiplier", "rewardCoinMult"))
+                mul *= Mathf.Max(0f, v);
+        }
+
+        return Mathf.Max(0f, mul);
+    }
+
+    public float GetXPMultOnVictory(string monsterId, MonsterDataSO wild, int wildLevel)
+    {
+        float mul = 1f;
+
+        var def = MonsterLibraryLocator.GetById(monsterId);
+        int lvl = 1;
+
+        var titles = GetEquippedList(monsterId, def, lvl);
+        for (int i = 0; i < titles.Count; i++)
+        {
+            var t = titles[i];
+            if (!t) continue;
+
+            if (t is XPBonusOnVictoryTitleSO xp)
+            {
+                mul *= Mathf.Max(0f, xp.xpMultiplier);
+                continue;
+            }
+
+            if (TryReadFloat(t, out var v, "xpMultiplier", "experienceMultiplier", "rewardXPMult"))
+                mul *= Mathf.Max(0f, v);
+        }
+
+        return Mathf.Max(0f, mul);
+    }
+
+    
     
     // Optional: lifecycle endpoints the adapter may call
     public void OnBattleStart(string activeMonsterId, MonsterDataSO wild, int wildLevel) { }

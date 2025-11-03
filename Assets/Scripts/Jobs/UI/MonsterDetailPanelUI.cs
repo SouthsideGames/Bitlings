@@ -77,9 +77,9 @@ public class MonsterDetailPanelUI : MonoBehaviour
     [SerializeField] private bool safeSkipMonsterIcon = true;
     [SerializeField] private bool buildVerboseLogging;
 
-    enum RenderStage { None, Header, StatsEvo, Description, TypeIcons, Done }
-    RenderStage _stage = RenderStage.None;
-    Coroutine _stageCR;
+    private enum RenderStage { None, Header, StatsEvo, Description, TypeIcons, Done }
+    private RenderStage _stage = RenderStage.None;
+    private Coroutine _stageCR;
 
     private MonsterDetailMode _mode = MonsterDetailMode.StarterSelect;
     private MonsterDataSO current;
@@ -91,11 +91,9 @@ public class MonsterDetailPanelUI : MonoBehaviour
     private int _teamSlotIndex = -1;
     private Action _onRemoved;
 
-    bool _visible;
-    static bool _openingOrOpen;
-    Coroutine _openRoutine;
+    private bool _visible;
 
-    static readonly Dictionary<MonsterType, Color> TYPE_COLORS = new()
+    private static readonly Dictionary<MonsterType, Color> TYPE_COLORS = new()
     {
         { MonsterType.Fire,     new Color32(230, 74,  25,255) },
         { MonsterType.Water,    new Color32( 30,136, 229,255) },
@@ -115,7 +113,7 @@ public class MonsterDetailPanelUI : MonoBehaviour
         { MonsterType.Alloy,    new Color32(158,158, 158,255) },
     };
 
-    static readonly Dictionary<Rarity, Color> RARITY_COLORS = new()
+    private static readonly Dictionary<Rarity, Color> RARITY_COLORS = new()
     {
         { Rarity.Common,    new Color32(176,176,176,255) },
         { Rarity.Uncommon,  new Color32( 76,175, 80,255) },
@@ -125,15 +123,15 @@ public class MonsterDetailPanelUI : MonoBehaviour
         { Rarity.Mythic,    new Color32(255,235, 59,255) },
     };
 
-    void Awake()
+    private void Awake()
     {
         if (confirmButton) { confirmButton.onClick.RemoveAllListeners(); confirmButton.onClick.AddListener(Confirm); }
         if (cancelButton)  { cancelButton.onClick.RemoveAllListeners();  cancelButton.onClick.AddListener(Cancel);  }
         if (closeButton)   { closeButton.onClick.RemoveAllListeners();   closeButton.onClick.AddListener(Hide);     }
-        if (slot1Button) { slot1Button.onClick.RemoveAllListeners(); slot1Button.onClick.AddListener(() => AssignToSlot(0)); }
-        if (slot2Button) { slot2Button.onClick.RemoveAllListeners(); slot2Button.onClick.AddListener(() => AssignToSlot(1)); }
-        if (slot3Button) { slot3Button.onClick.RemoveAllListeners(); slot3Button.onClick.AddListener(() => AssignToSlot(2)); }
-        if (removeButton) { removeButton.onClick.RemoveAllListeners(); removeButton.onClick.AddListener(RemoveFromTeam); }
+        if (slot1Button)   { slot1Button.onClick.RemoveAllListeners();   slot1Button.onClick.AddListener(() => AssignToSlot(0)); }
+        if (slot2Button)   { slot2Button.onClick.RemoveAllListeners();   slot2Button.onClick.AddListener(() => AssignToSlot(1)); }
+        if (slot3Button)   { slot3Button.onClick.RemoveAllListeners();   slot3Button.onClick.AddListener(() => AssignToSlot(2)); }
+        if (removeButton)  { removeButton.onClick.RemoveAllListeners();  removeButton.onClick.AddListener(RemoveFromTeam); }
 
         ResolveTitleButton();
 
@@ -142,7 +140,7 @@ public class MonsterDetailPanelUI : MonoBehaviour
         TitleAssignPanelUI.OnTitlesChanged += HandleTitlesChanged;
     }
 
-    void OnDisable() => ResetVisualsImmediate();
+    private void OnDisable() => ResetVisualsImmediate();
 
     private void OnDestroy()
     {
@@ -190,11 +188,11 @@ public class MonsterDetailPanelUI : MonoBehaviour
             currentXP = owned.currentXP
         };
 
-        current = MonsterLibraryLocator.GetById(owned.monsterId);
+        current   = MonsterLibraryLocator.GetById(owned.monsterId);
         onConfirm = null;
         onCancel  = null;
 
-        UpdateTitleButtonBinding(); // <— bind the Tag/Title button
+        UpdateTitleButtonBinding(); // bind the Title button
         SafeOpen(current);
     }
 
@@ -214,27 +212,18 @@ public class MonsterDetailPanelUI : MonoBehaviour
             currentXP = member.currentXP
         };
 
-        current = MonsterLibraryLocator.GetById(member.monsterId);
+        current   = MonsterLibraryLocator.GetById(member.monsterId);
         onConfirm = null;
         onCancel  = null;
 
-        UpdateTitleButtonBinding(); // <— bind the Tag/Title button
+        UpdateTitleButtonBinding(); // bind the Title button
         SafeOpen(current);
     }
 
     public void Hide()
     {
-        // Clear reentrancy guard so a quick re-open works.
-        _openingOrOpen = false;
-
         TryStep("Hide", () =>
         {
-            if (_openRoutine != null)
-            {
-                StopCoroutine(_openRoutine);
-                _openRoutine = null;
-            }
-
             if (canvasGroup)
             {
                 LeanTween.alphaCanvas(canvasGroup, 0f, 0.12f).setOnComplete(() =>
@@ -254,9 +243,9 @@ public class MonsterDetailPanelUI : MonoBehaviour
     }
 
     // ─────────────────────────────────────────────────────────────
-    // Open flow (guard + next frame)
+    // Open flow (staged)
     // ─────────────────────────────────────────────────────────────
-    void SafeOpen(MonsterDataSO monster)
+    private void SafeOpen(MonsterDataSO monster)
     {
         if (monster == null) return;
 
@@ -267,417 +256,20 @@ public class MonsterDetailPanelUI : MonoBehaviour
             OpenSelf();
         }
 
-        if (_openRoutine != null) { StopCoroutine(_openRoutine); _openRoutine = null; }
-        if (_stageCR != null)     { StopCoroutine(_stageCR);     _stageCR = null;     }
+        if (_stageCR != null)
+        {
+            StopCoroutine(_stageCR);
+            _stageCR = null;
+        }
 
-        _stage = RenderStage.Header;        // start staged flow
+        _stage = RenderStage.Header; // start staged flow
         _stageCR = StartCoroutine(CoRenderStaged(monster));
     }
 
-    IEnumerator CoOpenNextFrame(MonsterDataSO monster)
-    {
-        yield return null; // let other UI events settle
-
-        try
-        {
-            RenderAllAndOpen(monster);
-        }
-        catch (Exception e)
-        {
-            Debug.LogError($"[MonsterDetailPanelUI] Show failed for '{monster?.id}': {e}");
-            _openingOrOpen = false;
-        }
-        finally
-        {
-            _openRoutine = null;
-        }
-    }
-
     // ─────────────────────────────────────────────────────────────
-    // Internal render + open
+    // Internal staged render
     // ─────────────────────────────────────────────────────────────
-    void RenderAllAndOpen(MonsterDataSO monster)
-    {
-        LogStep("BEGIN Show");
-
-        bool isAssign    = (_mode == MonsterDetailMode.AssignToTeam);
-        bool isTeamView  = isAssign && _teamSlotIndex >= 0;
-        bool isOwnedPick = isAssign && _teamSlotIndex < 0;
-
-        if (starterButtonsHolder) starterButtonsHolder.SetActive(!isAssign);
-        if (slotButtonsHolder)    slotButtonsHolder.SetActive(isOwnedPick);
-        if (teamHolder)           teamHolder.SetActive(isTeamView);
-
-        if (closeButton) closeButton.gameObject.SetActive(isAssign);
-
-        // Disable slot buttons if KO (prevents clicks even if list allowed opening)
-        SetSlotButtonsInteractable(isOwnedPick && !IsKO());
-
-        TryStep("Header & Static Fields", () =>
-        {
-            if (!safeSkipMonsterIcon && icon) icon.sprite = monster ? monster.icon : null;
-            if (idText)   idText.text = monster ? $"ID: {monster.id}" : "ID: -";
-            if (nameText) nameText.text = monster ? monster.displayName : "-";
-        });
-
-        TryStep("Type & Rarity", () =>
-        {
-            if (typeText)
-            {
-                string labelHex = "FFFFFF";
-                string typeName = monster ? monster.type.ToString() : "-";
-                string typeHex  = "CCCCCC";
-                if (monster && TYPE_COLORS.TryGetValue(monster.type, out var tc))
-                    typeHex = ColorUtility.ToHtmlStringRGB(tc);
-
-                typeText.color = Color.white;
-                typeText.richText = true;
-                typeText.text = $"<color=#{labelHex}>TYPE:</color> <color=#{typeHex}>{typeName}</color>";
-            }
-
-            if (rarityText)
-            {
-                rarityText.text = monster ? $"{monster.rarity}" : "-";
-                if (monster && RARITY_COLORS.TryGetValue(monster.rarity, out var rc))
-                {
-                    rarityText.color = rc;
-                    ApplyRarityBackground(rc);
-                }
-                else
-                {
-                    ApplyRarityBackground(Color.white);
-                }
-            }
-        });
-
-        TryStep("Stats & Evo", () =>
-        {
-            int dispLvl = GetDisplayLevel();
-
-            // max stats
-            int maxHP   = current ? Mathf.RoundToInt(BattleCalc.CalcHP(current, dispLvl)) : 0;
-            int atkL    = current ? Mathf.RoundToInt(BattleCalc.CalcBaseAttack(current, dispLvl, 0, 0)) : 0;
-            int defL    = current ? Mathf.RoundToInt(current.baseDefense) : 0;
-            float spd   = current ? current.baseSpeed : 0f;
-
-            // current HP (assign mode shows real current)
-            int curHP = maxHP;
-            if (_mode == MonsterDetailMode.AssignToTeam && _currentOwned != null && !string.IsNullOrEmpty(_currentOwned.monsterId))
-                curHP = Mathf.Clamp(_currentOwned.currentHP < 0 ? maxHP : _currentOwned.currentHP, 0, maxHP);
-
-            if (lvlText) lvlText.text = $"LVL: {dispLvl}";
-            if (hpText)
-            {
-                if (_mode == MonsterDetailMode.AssignToTeam)
-                {
-                    // Show KO label if 0
-                    hpText.text = curHP == 0 ? $"HP: 0 / {maxHP}  (KO)" : $"HP: {curHP} / {maxHP}";
-                }
-                else
-                {
-                    hpText.text = $"HP: {maxHP}";
-                }
-            }
-            if (atkText) atkText.text = $"ATK: {atkL}";
-            if (defText) defText.text = current ? $"DEF: {defL}" : "DEF: —";
-            if (spdText) spdText.text = $"SPD: {spd:0.##}";
-
-            if (evoText) evoText.text = BuildEvolutionLine(current);
-        });
-
-        TryStep("Description", () =>
-        {
-            if (!safeSkipDescription && descText)
-                descText.text = monster ? monster.description : "";
-            else if (descText) descText.text = "";
-        });
-
-        // 🔹 Use canonical source to render job sites
-        TryStep("Job Sites", () => RenderJobSites(monster));
-
-        TryStep("Type Matchup Icons", () =>
-        {
-            if (safeSkipTypeIcons || monster == null)
-            {
-                ClearIcons(strongIconHolder);
-                ClearIcons(weakIconHolder);
-                return;
-            }
-
-            List<MonsterType> strong = null;
-            List<MonsterType> weak   = null;
-
-            try { strong = BattleTypeChart.GetStrongAgainst(monster.type); }
-            catch (Exception ex)
-            {
-                Debug.LogError($"[DetailPanel] GetStrongAgainst({monster.type}) failed: {ex}");
-            }
-
-            try { weak = BattleTypeChart.GetWeakAgainst(monster.type); }
-            catch (Exception ex)
-            {
-                Debug.LogError($"[DetailPanel] GetWeakAgainst({monster.type}) failed: {ex}");
-            }
-
-            ClearIcons(strongIconHolder);
-            ClearIcons(weakIconHolder);
-
-            if (strong != null)
-                foreach (var t in strong) CreateTypeIcon(t, strongIconHolder, true);
-            if (weak != null)
-                foreach (var t in weak)   CreateTypeIcon(t,   weakIconHolder, true);
-        });
-
-        // ──────────────── Open & Fade ────────────────
-        TryStep("Open & Fade", () =>
-        {
-            OpenSelf();
-
-            if (canvasGroup)
-            {
-                if (canvasGroup.alpha < 1f)
-                    LeanTween.alphaCanvas(canvasGroup, 1f, 0.15f);
-            }
-        });
-
-        LogStep("END Show");
-    }
-
-    // ─────────────────────────────────────────────────────────────
-    // Button handlers
-    // ─────────────────────────────────────────────────────────────
-    void Confirm()
-    {
-        TryStep("Confirm", () =>
-        {
-            if (_mode == MonsterDetailMode.AssignToTeam)
-            {
-                Hide();
-                return;
-            }
-
-            if (current == null) { Hide(); return; }
-            var cb = onConfirm;
-            Hide();
-            cb?.Invoke(current);
-        });
-    }
-
-    void Cancel()
-    {
-        TryStep("Cancel", () =>
-        {
-            onCancel?.Invoke();
-            Hide();
-        });
-    }
-
-    void AssignToSlot(int slotIndex)
-    {
-        if (_mode != MonsterDetailMode.AssignToTeam || _currentOwned == null || string.IsNullOrEmpty(_currentOwned.monsterId))
-        {
-            Hide();
-            return;
-        }
-
-        // Hard stop: cannot assign KO'd monster
-        if (_currentOwned.currentHP == 0)
-        {
-            Debug.LogWarning("[MonsterDetailPanel] Cannot assign a KO'd monster. Heal or wait for regen first.");
-            Hide();
-            return;
-        }
-
-        var team = SaveManager.Data.team ?? new List<OwnedMonsterData>();
-        while (team.Count < 3) team.Add(new OwnedMonsterData());
-
-        team[slotIndex] = new OwnedMonsterData
-        {
-            monsterId = _currentOwned.monsterId,
-            level     = _currentOwned.level,
-            currentHP = -1, // uninitialized -> will be set on battle start or regen system
-            currentXP = _currentOwned.currentXP
-        };
-
-        SaveManager.Data.team = team;
-        SaveManager.Save();
-        GameEvents.OnTeamChanged?.Invoke();
-
-        Hide();
-    }
-
-    void RemoveFromTeam()
-    {
-        if (_teamSlotIndex < 0) { Hide(); return; }
-
-        var team = SaveManager.Data.team ?? new List<OwnedMonsterData>();
-        while (team.Count < 3) team.Add(new OwnedMonsterData());
-
-        team[_teamSlotIndex] = new OwnedMonsterData();
-
-        SaveManager.Data.team = team;
-        SaveManager.Save();
-        GameEvents.OnTeamChanged?.Invoke();
-
-        _onRemoved?.Invoke();
-        Hide();
-    }
-
-    // ─────────────────────────────────────────────────────────────
-    // Helpers
-    // ─────────────────────────────────────────────────────────────
-    void OpenSelf()
-    {
-        if (_visible) return;
-
-        if (UIManager.I && selfPanelId != PanelId.None)
-            UIManager.I.Show(selfPanelId);
-        else
-            gameObject.SetActive(true);
-
-        _visible = true;
-    }
-
-    void CloseSelf()
-    {
-        if (!_visible) { _openingOrOpen = false; return; }
-
-        if (UIManager.I && selfPanelId != PanelId.None)
-            UIManager.I.Hide(selfPanelId);
-        else
-            gameObject.SetActive(false);
-
-        _visible = false;
-        _openingOrOpen = false; // clear reentrancy guard
-    }
-
-    void ApplyRarityBackground(Color baseColor)
-    {
-        if (!backgroundImage) return;
-        var c = baseColor; c.a = rarityBackgroundAlpha;
-        backgroundImage.color = c;
-    }
-
-    void ResetVisualsImmediate()
-    {
-        if (canvasGroup) canvasGroup.alpha = 0f;
-        current   = null;
-        onConfirm = null;
-        onCancel  = null;
-        _currentOwned = null;
-        _mode = MonsterDetailMode.StarterSelect;
-
-        _teamSlotIndex = -1;
-        _onRemoved = null;
-
-        if (icon) icon.sprite = null;
-        if (jobSiteText) jobSiteText.text = string.Empty;
-
-        ClearIcons(strongIconHolder);
-        ClearIcons(weakIconHolder);
-
-        if (starterButtonsHolder) starterButtonsHolder.SetActive(false);
-        if (slotButtonsHolder)    slotButtonsHolder.SetActive(false);
-        if (teamHolder)           teamHolder.SetActive(false);
-
-        if (lvlText) lvlText.text = string.Empty;
-
-        if (backgroundImage) backgroundImage.color = Color.white;
-
-        if (!UIManager.I) gameObject.SetActive(false);
-
-        // Hide the Tag/Title button on reset
-        if (titleButton) titleButton.gameObject.SetActive(false);
-
-        _visible = UIManager.I && selfPanelId != PanelId.None ? _visible : false;
-    }
-
-    void ShowTypeMatchups(MonsterType type)
-    {
-        if (!strongIconHolder || !weakIconHolder || !typeIconPrefab) return;
-
-        ClearIcons(strongIconHolder);
-        ClearIcons(weakIconHolder);
-
-        if (type == default) return;
-
-        var strong = BattleTypeChart.GetStrongAgainst(type);
-        var weak   = BattleTypeChart.GetWeakAgainst(type);
-
-        foreach (var t in strong) CreateTypeIcon(t, strongIconHolder, true);
-        foreach (var t in weak)   CreateTypeIcon(t,   weakIconHolder, true);
-    }
-
-    void ClearIcons(Transform holder)
-    {
-        if (!holder) return;
-        for (int i = holder.childCount - 1; i >= 0; i--)
-            Destroy(holder.GetChild(i).gameObject);
-    }
-
-    void CreateTypeIcon(MonsterType type, Transform parent, bool animate)
-    {
-        var go = Instantiate(typeIconPrefab, parent);
-        var img = go.GetComponent<Image>();
-        if (img && typeIconLibrary) img.sprite = typeIconLibrary.GetIcon(type);
-
-        if (animate)
-        {
-            go.transform.localScale = Vector3.zero;
-            LeanTween.scale(go, Vector3.one, 0.15f).setEaseOutBack();
-        }
-    }
-
-    string BuildEvolutionLine(MonsterDataSO m)
-    {
-        if (!m) return "EVO: —";
-
-        if (!m.evolutionForm || m.evolutionLevel <= 0)
-            return "EVO: —";
-
-        string nextName = m.evolutionForm ? m.evolutionForm.displayName : "???";
-        int lvl = Mathf.Max(1, m.evolutionLevel);
-
-        int curHpAtEvo  = Mathf.RoundToInt(BattleCalc.CalcHP(m, lvl));
-        int nxtHpAtEvo  = Mathf.RoundToInt(BattleCalc.CalcHP(m.evolutionForm, lvl));
-        int curAtkAtEvo = Mathf.RoundToInt(BattleCalc.CalcBaseAttack(m, lvl, 0, 0));
-        int nxtAtkAtEvo = Mathf.RoundToInt(BattleCalc.CalcBaseAttack(m.evolutionForm, lvl, 0, 0));
-
-        int dHp  = nxtHpAtEvo  - curHpAtEvo;
-        int dAtk = nxtAtkAtEvo - curAtkAtEvo;
-
-        string deltas = $" (+{dHp} HP, +{dAtk} ATK)";
-        return $"EVO: Lv {lvl} → {nextName}{(dHp > 0 || dAtk > 0 ? deltas : "")}";
-    }
-
-    void TryStep(string label, Action step)
-    {
-        try
-        {
-            LogStep(label + " START");
-            step?.Invoke();
-            LogStep(label + " END");
-        }
-        catch (Exception ex)
-        {
-            Debug.LogError($"[MonsterDetailPanelUI] Exception at step '{label}' (monster={(current ? current.id : "null")}): {ex}");
-        }
-    }
-
-    void LogStep(string msg)
-    {
-        if (!buildVerboseLogging) return;
-        Debug.Log($"[MonsterDetailPanelUI] {msg} (monster={(current ? current.id : "null")})");
-    }
-
-    int GetDisplayLevel()
-    {
-        if (_mode == MonsterDetailMode.AssignToTeam && _currentOwned != null && _currentOwned.level > 0)
-            return _currentOwned.level;
-        return 1;
-    }
-
-    IEnumerator CoRenderStaged(MonsterDataSO monster)
+    private IEnumerator CoRenderStaged(MonsterDataSO monster)
     {
         // FRAME 1: header only (zero risk)
         if (_stage == RenderStage.Header)
@@ -685,27 +277,34 @@ public class MonsterDetailPanelUI : MonoBehaviour
             TryStep("Header & Static Fields", () =>
             {
                 if (!safeSkipMonsterIcon && icon) icon.sprite = monster ? monster.icon : null;
-                if (idText) idText.text = monster ? $"ID: {monster.id}" : "ID: -";
+                if (idText)   idText.text   = monster ? $"ID: {monster.id}" : "ID: -";
                 if (nameText) nameText.text = monster ? monster.displayName : "-";
+
                 if (typeText)
                 {
                     string typeName = monster ? monster.type.ToString() : "-";
-                    string typeHex = "CCCCCC";
+                    string typeHex  = "CCCCCC";
                     if (monster && TYPE_COLORS.TryGetValue(monster.type, out var tc))
                         typeHex = ColorUtility.ToHtmlStringRGB(tc);
                     typeText.color = Color.white;
                     typeText.richText = true;
                     typeText.text = $"<color=#FFFFFF>TYPE:</color> <color=#{typeHex}>{typeName}</color>";
                 }
+
                 if (rarityText)
                 {
                     rarityText.text = monster ? $"{monster.rarity}" : "-";
                     if (monster && RARITY_COLORS.TryGetValue(monster.rarity, out var rc))
                     {
-                        rarityText.color = rc; ApplyRarityBackground(rc);
+                        rarityText.color = rc;
+                        ApplyRarityBackground(rc);
                     }
-                    else ApplyRarityBackground(Color.white);
+                    else
+                    {
+                        ApplyRarityBackground(Color.white);
+                    }
                 }
+
                 // holder visibility
                 bool isAssign    = (_mode == MonsterDetailMode.AssignToTeam);
                 bool isTeamView  = isAssign && _teamSlotIndex >= 0;
@@ -721,12 +320,13 @@ public class MonsterDetailPanelUI : MonoBehaviour
                 // Bind/mask Title button based on mode/ownership
                 UpdateTitleButtonBinding();
 
-                // 🔹 Fill Job Site line immediately in staged flow
+                // Job Sites (canonical source)
                 RenderJobSites(monster);
 
                 OpenSelf();
                 if (canvasGroup) LeanTween.alphaCanvas(canvasGroup, 1f, 0.15f);
             });
+
             _stage = RenderStage.StatsEvo;
             yield return null;
         }
@@ -775,6 +375,7 @@ public class MonsterDetailPanelUI : MonoBehaviour
 
                 if (evoText) evoText.text = (!safeSkipEvolution) ? BuildEvolutionLine(current) : "EVO: —";
             });
+
             _stage = RenderStage.Description;
             yield return null;
         }
@@ -808,11 +409,229 @@ public class MonsterDetailPanelUI : MonoBehaviour
                 if (strong != null) foreach (var t in strong) CreateTypeIcon(t, strongIconHolder, true);
                 if (weak   != null) foreach (var t in weak)   CreateTypeIcon(t,   weakIconHolder, true);
             });
+
             _stage = RenderStage.Done;
         }
 
         LogStep("END Show (staged)");
         _stageCR = null;
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // Button handlers
+    // ─────────────────────────────────────────────────────────────
+    private void Confirm()
+    {
+        TryStep("Confirm", () =>
+        {
+            if (_mode == MonsterDetailMode.AssignToTeam)
+            {
+                Hide();
+                return;
+            }
+
+            if (current == null) { Hide(); return; }
+            var cb = onConfirm;
+            Hide();
+            cb?.Invoke(current);
+        });
+    }
+
+    private void Cancel()
+    {
+        TryStep("Cancel", () =>
+        {
+            onCancel?.Invoke();
+            Hide();
+        });
+    }
+
+    private void AssignToSlot(int slotIndex)
+    {
+        if (_mode != MonsterDetailMode.AssignToTeam || _currentOwned == null || string.IsNullOrEmpty(_currentOwned.monsterId))
+        {
+            Hide();
+            return;
+        }
+
+        // Hard stop: cannot assign KO'd monster
+        if (_currentOwned.currentHP == 0)
+        {
+            Debug.LogWarning("[MonsterDetailPanel] Cannot assign a KO'd monster. Heal or wait for regen first.");
+            Hide();
+            return;
+        }
+
+        var team = SaveManager.Data.team ?? new List<OwnedMonsterData>();
+        while (team.Count < 3) team.Add(new OwnedMonsterData());
+
+        team[slotIndex] = new OwnedMonsterData
+        {
+            monsterId = _currentOwned.monsterId,
+            level     = _currentOwned.level,
+            currentHP = -1, // uninitialized -> will be set on battle start or regen system
+            currentXP = _currentOwned.currentXP
+        };
+
+        SaveManager.Data.team = team;
+        SaveManager.Save();
+        GameEvents.OnTeamChanged?.Invoke();
+
+        Hide();
+    }
+
+    private void RemoveFromTeam()
+    {
+        if (_teamSlotIndex < 0) { Hide(); return; }
+
+        var team = SaveManager.Data.team ?? new List<OwnedMonsterData>();
+        while (team.Count < 3) team.Add(new OwnedMonsterData());
+
+        team[_teamSlotIndex] = new OwnedMonsterData();
+
+        SaveManager.Data.team = team;
+        SaveManager.Save();
+        GameEvents.OnTeamChanged?.Invoke();
+
+        _onRemoved?.Invoke();
+        Hide();
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // Helpers
+    // ─────────────────────────────────────────────────────────────
+    private void OpenSelf()
+    {
+        if (_visible) return;
+
+        if (UIManager.I && selfPanelId != PanelId.None)
+            UIManager.I.Show(selfPanelId);
+        else
+            gameObject.SetActive(true);
+
+        _visible = true;
+    }
+
+    private void CloseSelf()
+    {
+        if (!_visible) return;
+
+        if (UIManager.I && selfPanelId != PanelId.None)
+            UIManager.I.Hide(selfPanelId);
+        else
+            gameObject.SetActive(false);
+
+        _visible = false;
+    }
+
+    private void ApplyRarityBackground(Color baseColor)
+    {
+        if (!backgroundImage) return;
+        var c = baseColor; c.a = rarityBackgroundAlpha;
+        backgroundImage.color = c;
+    }
+
+    private void ResetVisualsImmediate()
+    {
+        if (canvasGroup) canvasGroup.alpha = 0f;
+        current   = null;
+        onConfirm = null;
+        onCancel  = null;
+        _currentOwned = null;
+        _mode = MonsterDetailMode.StarterSelect;
+
+        _teamSlotIndex = -1;
+        _onRemoved = null;
+
+        if (icon) icon.sprite = null;
+        if (jobSiteText) jobSiteText.text = string.Empty;
+
+        ClearIcons(strongIconHolder);
+        ClearIcons(weakIconHolder);
+
+        if (starterButtonsHolder) starterButtonsHolder.SetActive(false);
+        if (slotButtonsHolder)    slotButtonsHolder.SetActive(false);
+        if (teamHolder)           teamHolder.SetActive(false);
+
+        if (lvlText) lvlText.text = string.Empty;
+
+        if (backgroundImage) backgroundImage.color = Color.white;
+
+        if (!UIManager.I) gameObject.SetActive(false);
+
+        // Hide the Title button on reset
+        if (titleButton) titleButton.gameObject.SetActive(false);
+
+        _visible = UIManager.I && selfPanelId != PanelId.None ? _visible : false;
+    }
+
+    private void ClearIcons(Transform holder)
+    {
+        if (!holder) return;
+        for (int i = holder.childCount - 1; i >= 0; i--)
+            Destroy(holder.GetChild(i).gameObject);
+    }
+
+    private void CreateTypeIcon(MonsterType type, Transform parent, bool animate)
+    {
+        var go = Instantiate(typeIconPrefab, parent);
+        var img = go.GetComponent<Image>();
+        if (img && typeIconLibrary) img.sprite = typeIconLibrary.GetIcon(type);
+
+        if (animate)
+        {
+            go.transform.localScale = Vector3.zero;
+            LeanTween.scale(go, Vector3.one, 0.15f).setEaseOutBack();
+        }
+    }
+
+    private string BuildEvolutionLine(MonsterDataSO m)
+    {
+        if (!m) return "EVO: —";
+
+        if (!m.evolutionForm || m.evolutionLevel <= 0)
+            return "EVO: —";
+
+        string nextName = m.evolutionForm ? m.evolutionForm.displayName : "???";
+        int lvl = Mathf.Max(1, m.evolutionLevel);
+
+        int curHpAtEvo  = Mathf.RoundToInt(BattleCalc.CalcHP(m, lvl));
+        int nxtHpAtEvo  = Mathf.RoundToInt(BattleCalc.CalcHP(m.evolutionForm, lvl));
+        int curAtkAtEvo = Mathf.RoundToInt(BattleCalc.CalcBaseAttack(m, lvl, 0, 0));
+        int nxtAtkAtEvo = Mathf.RoundToInt(BattleCalc.CalcBaseAttack(m.evolutionForm, lvl, 0, 0));
+
+        int dHp  = nxtHpAtEvo  - curHpAtEvo;
+        int dAtk = nxtAtkAtEvo - curAtkAtEvo;
+
+        string deltas = $" (+{dHp} HP, +{dAtk} ATK)";
+        return $"EVO: Lv {lvl} → {nextName}{(dHp > 0 || dAtk > 0 ? deltas : "")}";
+    }
+
+    private void TryStep(string label, Action step)
+    {
+        try
+        {
+            LogStep(label + " START");
+            step?.Invoke();
+            LogStep(label + " END");
+        }
+        catch (Exception ex)
+        {
+            Debug.LogError($"[MonsterDetailPanelUI] Exception at step '{label}' (monster={(current ? current.id : "null")}): {ex}");
+        }
+    }
+
+    private void LogStep(string msg)
+    {
+        if (!buildVerboseLogging) return;
+        Debug.Log($"[MonsterDetailPanelUI] {msg} (monster={(current ? current.id : "null")})");
+    }
+
+    private int GetDisplayLevel()
+    {
+        if (_mode == MonsterDetailMode.AssignToTeam && _currentOwned != null && _currentOwned.level > 0)
+            return _currentOwned.level;
+        return 1;
     }
 
     // ─────────────────────────────────────────────────────────────
@@ -844,7 +663,9 @@ public class MonsterDetailPanelUI : MonoBehaviour
     private void HandleTitlesChanged(string ownedId)
     {
         // Only refresh if this panel is showing the same owned monster
-        if (_currentOwned != null && !string.IsNullOrEmpty(_currentOwned.monsterId) && _currentOwned.monsterId == ownedId)
+        if (_currentOwned != null
+            && !string.IsNullOrEmpty(_currentOwned.monsterId)
+            && _currentOwned.monsterId == ownedId)
         {
             UpdateTitleButtonBinding();
         }
@@ -853,7 +674,7 @@ public class MonsterDetailPanelUI : MonoBehaviour
     // ─────────────────────────────────────────────────────────────
     // Job Site rendering (single source of truth via JobBalance)
     // ─────────────────────────────────────────────────────────────
-    void RenderJobSites(MonsterDataSO monster)
+    private void RenderJobSites(MonsterDataSO monster)
     {
         if (!jobSiteText) return;
 

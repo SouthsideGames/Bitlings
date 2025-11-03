@@ -18,7 +18,7 @@ MonoBehaviour:
   subtitle: Resource
   body: 'Comes from: Mine
 
-    Used for: Temp ATK increase, Craft advanced items
+    Used for: Temp ATK increase during encounters
 
     Related
     site effect: +5 ATK (uses: 1)'

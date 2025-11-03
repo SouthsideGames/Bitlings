@@ -18,7 +18,7 @@ MonoBehaviour:
   subtitle: Resource
   body: 'Comes from: Workshop
 
-    Used for: Apply temp run modifiers, Enhance abilities
+    Used for: Apply type resistance during encounters
 
     Related
     site effect: +25% sigil power (uses: 3)'
