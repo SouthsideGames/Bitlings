@@ -443,7 +443,7 @@ RectTransform:
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
   m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 175, y: 175}
+  m_SizeDelta: {x: 300, y: 300}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &7373613168248681974
 CanvasRenderer:
@@ -754,4 +754,3 @@ MonoBehaviour:
   healCostType: 3
   partialHealCost: 1
   fullHealCost: 3
-  holdThreshold: 0.4

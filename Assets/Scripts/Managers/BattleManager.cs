@@ -750,15 +750,43 @@ public class BattleManager : MonoBehaviour
         }
 
         // Write HP back to save
-        var teamList = SaveManager.Data.team;
+       var teamList  = SaveManager.Data.team ?? new List<OwnedMonsterData>();
+        var ownedList = SaveManager.Data.owned ?? new List<OwnedMonsterData>();
+
+        // 1) Persist post-battle HP into TEAM entries
         for (int i = 0; i < teamCount && i < teamList.Count; i++)
         {
-            var owned = teamList[i];
-            owned.currentHP = Mathf.CeilToInt(Mathf.Max(0f, teamHP[i]));
-            teamList[i] = owned;
+            var t = teamList[i];
+            if (t == null || string.IsNullOrEmpty(t.monsterId)) continue;
+
+            int hp = Mathf.CeilToInt(Mathf.Max(0f, teamHP[i]));
+            t.currentHP = hp;
+            teamList[i] = t;
         }
 
+        // 2) Mirror those TEAM HP values back into OWNED collection
         long nowUnix = SaveManager.NowUnix();
+
+        for (int i = 0; i < teamList.Count; i++)
+        {
+            var t = teamList[i];
+            if (t == null || string.IsNullOrEmpty(t.monsterId)) continue;
+
+            // find matching owned entry by monsterId
+            for (int j = 0; j < ownedList.Count; j++)
+            {
+                var o = ownedList[j];
+                if (!string.IsNullOrEmpty(o.monsterId) && o.monsterId == t.monsterId)
+                {
+                    o.currentHP  = Mathf.Max(0, t.currentHP); // <-- the fix: OWNED gets true post-battle HP
+                    o.lastHPUnix = nowUnix;                    // for regen timing
+                    ownedList[j] = o;
+                    break;
+                }
+            }
+        }
+
+        // 3) Timestamp team copies and remove KO’d from active team (still owned at 0 HP)
         for (int i = 0; i < teamList.Count; i++)
         {
             var e = teamList[i];
@@ -768,7 +796,7 @@ public class BattleManager : MonoBehaviour
 
             if (e.currentHP <= 0)
             {
-                // Remove from team (still owned)
+                // Remove from team (kept in owned with 0 HP)
                 teamList[i] = new OwnedMonsterData();
             }
             else
@@ -777,7 +805,8 @@ public class BattleManager : MonoBehaviour
             }
         }
 
-        SaveManager.Data.team = teamList;
+        SaveManager.Data.owned = ownedList;
+        SaveManager.Data.team  = teamList;
         SaveManager.Save();
         GameEvents.OnTeamChanged?.Invoke();
 
