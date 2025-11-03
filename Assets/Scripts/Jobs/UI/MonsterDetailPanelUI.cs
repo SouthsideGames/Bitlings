@@ -310,6 +310,9 @@ public class MonsterDetailPanelUI : MonoBehaviour
 
         if (closeButton) closeButton.gameObject.SetActive(isAssign);
 
+        // Disable slot buttons if KO (prevents clicks even if list allowed opening)
+        SetSlotButtonsInteractable(isOwnedPick && !IsKO());
+
         TryStep("Header & Static Fields", () =>
         {
             if (!safeSkipMonsterIcon && icon) icon.sprite = monster ? monster.icon : null;
@@ -351,13 +354,30 @@ public class MonsterDetailPanelUI : MonoBehaviour
         {
             int dispLvl = GetDisplayLevel();
 
-            int hpL   = current ? Mathf.RoundToInt(BattleCalc.CalcHP(current, dispLvl)) : 0;
-            int atkL  = current ? Mathf.RoundToInt(BattleCalc.CalcBaseAttack(current, dispLvl, 0, 0)) : 0;
-            int defL  = current ? Mathf.RoundToInt(current.baseDefense) : 0;
-            float spd = current ? current.baseSpeed : 0f;
+            // max stats
+            int maxHP   = current ? Mathf.RoundToInt(BattleCalc.CalcHP(current, dispLvl)) : 0;
+            int atkL    = current ? Mathf.RoundToInt(BattleCalc.CalcBaseAttack(current, dispLvl, 0, 0)) : 0;
+            int defL    = current ? Mathf.RoundToInt(current.baseDefense) : 0;
+            float spd   = current ? current.baseSpeed : 0f;
+
+            // current HP (assign mode shows real current)
+            int curHP = maxHP;
+            if (_mode == MonsterDetailMode.AssignToTeam && _currentOwned != null && !string.IsNullOrEmpty(_currentOwned.monsterId))
+                curHP = Mathf.Clamp(_currentOwned.currentHP < 0 ? maxHP : _currentOwned.currentHP, 0, maxHP);
 
             if (lvlText) lvlText.text = $"LVL: {dispLvl}";
-            if (hpText)  hpText.text  = $"HP: {hpL}";
+            if (hpText)
+            {
+                if (_mode == MonsterDetailMode.AssignToTeam)
+                {
+                    // Show KO label if 0
+                    hpText.text = curHP == 0 ? $"HP: 0 / {maxHP}  (KO)" : $"HP: {curHP} / {maxHP}";
+                }
+                else
+                {
+                    hpText.text = $"HP: {maxHP}";
+                }
+            }
             if (atkText) atkText.text = $"ATK: {atkL}";
             if (defText) defText.text = current ? $"DEF: {defL}" : "DEF: —";
             if (spdText) spdText.text = $"SPD: {spd:0.##}";
@@ -460,6 +480,14 @@ public class MonsterDetailPanelUI : MonoBehaviour
             return;
         }
 
+        // Hard stop: cannot assign KO'd monster
+        if (_currentOwned.currentHP == 0)
+        {
+            Debug.LogWarning("[MonsterDetailPanel] Cannot assign a KO'd monster. Heal or wait for regen first.");
+            Hide();
+            return;
+        }
+
         var team = SaveManager.Data.team ?? new List<OwnedMonsterData>();
         while (team.Count < 3) team.Add(new OwnedMonsterData());
 
@@ -467,7 +495,7 @@ public class MonsterDetailPanelUI : MonoBehaviour
         {
             monsterId = _currentOwned.monsterId,
             level     = _currentOwned.level,
-            currentHP = -1,
+            currentHP = -1, // uninitialized -> will be set on battle start or regen system
             currentXP = _currentOwned.currentXP
         };
 
@@ -687,6 +715,9 @@ public class MonsterDetailPanelUI : MonoBehaviour
                 if (teamHolder)           teamHolder.SetActive(isTeamView);
                 if (closeButton)          closeButton.gameObject.SetActive(isAssign);
 
+                // Disable slot buttons if KO when picking from owned
+                SetSlotButtonsInteractable(isOwnedPick && !IsKO());
+
                 // Bind/mask Title button based on mode/ownership
                 UpdateTitleButtonBinding();
 
@@ -708,23 +739,39 @@ public class MonsterDetailPanelUI : MonoBehaviour
                 int dispLvl = GetDisplayLevel();
                 if (lvlText) lvlText.text = $"LVL: {dispLvl}";
 
+                // Max stats
+                int maxHP = 0, atkL = 0, defL = 0; float spd = 0f;
                 if (!safeSkipStats && current)
                 {
-                    int hpL = 0, atkL = 0, defL = Mathf.RoundToInt(current.baseDefense); float spd = current.baseSpeed;
-                    try { hpL = Mathf.RoundToInt(BattleCalc.CalcHP(current, dispLvl)); } catch (Exception e) { Debug.LogError($"HP calc {current?.id}: {e}"); }
-                    try { atkL = Mathf.RoundToInt(BattleCalc.CalcBaseAttack(current, dispLvl, 0, 0)); } catch (Exception e) { Debug.LogError($"ATK calc {current?.id}: {e}"); }
-                    if (hpText)  hpText.text  = $"HP: {hpL}";
-                    if (atkText) atkText.text = $"ATK: {atkL}";
-                    if (defText) defText.text = $"DEF: {defL}";
-                    if (spdText) spdText.text = $"SPD: {spd:0.##}";
+                    try { maxHP = Mathf.RoundToInt(BattleCalc.CalcHP(current, dispLvl)); } catch (Exception e) { Debug.LogError($"HP calc {current?.id}: {e}"); }
+                    try { atkL  = Mathf.RoundToInt(BattleCalc.CalcBaseAttack(current, dispLvl, 0, 0)); } catch (Exception e) { Debug.LogError($"ATK calc {current?.id}: {e}"); }
+                    defL = Mathf.RoundToInt(current.baseDefense);
+                    spd  = current.baseSpeed;
                 }
                 else
                 {
-                    if (hpText)  hpText.text  = "HP: —";
-                    if (atkText) atkText.text = "ATK: —";
-                    if (defText) defText.text = current ? $"DEF: {Mathf.RoundToInt(current.baseDefense)}" : "DEF: —";
-                    if (spdText) spdText.text = current ? $"SPD: {current.baseSpeed:0.##}" : "SPD: —";
+                    defL = current ? Mathf.RoundToInt(current.baseDefense) : 0;
+                    spd  = current ? current.baseSpeed : 0f;
                 }
+
+                // Current HP for assign mode
+                int curHP = maxHP;
+                if (_mode == MonsterDetailMode.AssignToTeam && _currentOwned != null && !string.IsNullOrEmpty(_currentOwned.monsterId))
+                    curHP = Mathf.Clamp(_currentOwned.currentHP < 0 ? maxHP : _currentOwned.currentHP, 0, maxHP);
+
+                if (hpText)
+                {
+                    if (_mode == MonsterDetailMode.AssignToTeam && maxHP > 0)
+                        hpText.text = curHP == 0 ? $"HP: 0 / {maxHP}  (KO)" : $"HP: {curHP} / {maxHP}";
+                    else if (maxHP > 0)
+                        hpText.text = $"HP: {maxHP}";
+                    else
+                        hpText.text = "HP: —";
+                }
+
+                if (atkText) atkText.text = atkL > 0 ? $"ATK: {atkL}" : "ATK: —";
+                if (defText) defText.text = current ? $"DEF: {defL}" : "DEF: —";
+                if (spdText) spdText.text = current ? $"SPD: {spd:0.##}" : "SPD: —";
 
                 if (evoText) evoText.text = (!safeSkipEvolution) ? BuildEvolutionLine(current) : "EVO: —";
             });
@@ -756,10 +803,10 @@ public class MonsterDetailPanelUI : MonoBehaviour
 
                 List<MonsterType> strong = null, weak = null;
                 try { strong = BattleTypeChart.GetStrongAgainst(current.type); } catch (Exception ex) { Debug.LogError($"Strong({current.type}) fail: {ex}"); }
-                try { weak = BattleTypeChart.GetWeakAgainst(current.type); } catch (Exception ex) { Debug.LogError($"Weak({current.type}) fail: {ex}"); }
+                try { weak   = BattleTypeChart.GetWeakAgainst(current.type);   } catch (Exception ex) { Debug.LogError($"Weak({current.type}) fail: {ex}"); }
 
                 if (strong != null) foreach (var t in strong) CreateTypeIcon(t, strongIconHolder, true);
-                if (weak   != null) foreach (var t in weak)   CreateTypeIcon(t, weakIconHolder, true);
+                if (weak   != null) foreach (var t in weak)   CreateTypeIcon(t,   weakIconHolder, true);
             });
             _stage = RenderStage.Done;
         }
@@ -817,5 +864,23 @@ public class MonsterDetailPanelUI : MonoBehaviour
         jobSiteText.text = (jobs.Count > 0)
             ? $"Job Site: {string.Join(", ", jobs.Select(JobStrings.SiteName))}"
             : "Job Site: —";
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // Local helpers
+    // ─────────────────────────────────────────────────────────────
+    private bool IsKO()
+    {
+        return _mode == MonsterDetailMode.AssignToTeam
+               && _currentOwned != null
+               && !string.IsNullOrEmpty(_currentOwned.monsterId)
+               && _currentOwned.currentHP == 0;
+    }
+
+    private void SetSlotButtonsInteractable(bool on)
+    {
+        if (slot1Button) slot1Button.interactable = on;
+        if (slot2Button) slot2Button.interactable = on;
+        if (slot3Button) slot3Button.interactable = on;
     }
 }

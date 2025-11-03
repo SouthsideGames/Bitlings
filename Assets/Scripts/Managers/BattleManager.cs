@@ -758,6 +758,29 @@ public class BattleManager : MonoBehaviour
             teamList[i] = owned;
         }
 
+        long nowUnix = SaveManager.NowUnix();
+        for (int i = 0; i < teamList.Count; i++)
+        {
+            var e = teamList[i];
+            if (e == null || string.IsNullOrEmpty(e.monsterId)) continue;
+
+            e.lastHPUnix = nowUnix;
+
+            if (e.currentHP <= 0)
+            {
+                // Remove from team (still owned)
+                teamList[i] = new OwnedMonsterData();
+            }
+            else
+            {
+                teamList[i] = e;
+            }
+        }
+
+        SaveManager.Data.team = teamList;
+        SaveManager.Save();
+        GameEvents.OnTeamChanged?.Invoke();
+
         // Clear temps
         BattleTempBuffs.I?.ClearPlayerAtkBonus();
         BattleTempBuffs.I?.ClearPlayerSpeedBonus();

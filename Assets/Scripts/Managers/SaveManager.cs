@@ -135,6 +135,7 @@ public static class SaveManager
 
         TrainingManager.I?.ProcessOfflineTrainingAll();
         JobManager.I?.ProcessOfflineAllSites();
+        HealthRegenSystem.I?.TryApplyOfflineRegen();
     }
 
     // ─────────────────────────────────────────────────────────────────────────────

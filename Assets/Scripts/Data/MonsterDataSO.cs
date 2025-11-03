@@ -27,6 +27,10 @@ public class MonsterDataSO : ScriptableObject
     public int baseDefense = 8;
     public int baseSpeed = 10;
 
+    [Header("Regeneration")]
+    [Tooltip("Passive HP regenerated per real-time hour when not in battle. 0 = no passive regen.")]
+    [Min(0f)] public float hpRegenPerHour = 6f;
+
     [Header("Fatigue")]
     [Tooltip("Percent (0..1) of site fatigue added per hour when this monster works. 0.03 = 3%/hr.")]
     [Range(0f, 0.20f)]

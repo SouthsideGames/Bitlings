@@ -9,6 +9,7 @@ public class OwnedMonsterData
     public int level = 1;
     public int currentXP = 0;
     public int currentHP = -1;
+    public long lastHPUnix = 0;
     public int flatAtkBonus = 0;
     public bool isTraining = false;
     public long trainingLastUnix = 0;
