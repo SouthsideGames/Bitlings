@@ -726,7 +726,7 @@ public class BattleManager : MonoBehaviour
         if (finalCoins < 0) finalCoins = 0;
 
         // ── XP: compute base vs shiny/training vs title
-        int xpBaseTimesTraining = 0;
+       int xpBaseTimesTraining = 0;
         int xpTitleBonus = 0;
         int xpTotal = 0;
 
@@ -748,11 +748,16 @@ public class BattleManager : MonoBehaviour
             xpBaseTimesTraining = baseAfterShiny;
             xpTitleBonus = Mathf.Max(0, xpTotal - baseAfterShiny);
 
+            // ✅ ADD THIS BLOCK (Growth Cores from earned XP)
+            var econ = TokenEconomy.Load();
+            int growthCores = econ ? econ.TokensFromXP(xpTotal) : Mathf.Max(0, xpTotal / 10);
+            if (growthCores > 0)
+                ResourceManager.I?.Add(ResourceType.GrowthCores, growthCores);
+
             // Now actually grant & save through the normal path (persists XP/level)
             float passMulToRewards = titleXPMul; // Rewards already applies shiny/training inside
             BattleRewards.GrantVictoryXPAndEvo(activeIndex, wildLevel, MonsterLibraryLocator.Lib, Mathf.Max(0f, passMulToRewards));
         }
-
         // Write HP back to save
         var teamList  = SaveManager.Data.team ?? new List<OwnedMonsterData>();
         var ownedList = SaveManager.Data.owned ?? new List<OwnedMonsterData>();

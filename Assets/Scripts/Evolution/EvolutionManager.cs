@@ -18,6 +18,7 @@ public static class EvolutionManager
         var team = SaveManager.Data.team;
         OwnedMonsterData teamRef = null;
 
+        // ---- TEAM PASS ----
         if (team != null)
         {
             for (int i = 0; i < team.Count; i++)
@@ -26,8 +27,10 @@ public static class EvolutionManager
                 if (m != null && m.monsterId == monsterId && m.level >= def.evolutionLevel)
                 {
                     m.monsterId = newId;
-                    int maxTeamHP = Mathf.RoundToInt(BattleCalc.CalcHP(defNew, Mathf.Max(1, m.level)));
-                    m.currentHP = Mathf.Max(1, maxTeamHP);
+
+                    // ADDITIVE CARRY-OVER (NewBase + trainingBonus)
+                    EvolutionHelper.RebuildStatsAdditive(m, defNew, 1f);
+
                     team[i] = m;
                     teamRef = m;
                     changed = true;
@@ -36,17 +39,21 @@ public static class EvolutionManager
             }
         }
 
+        // ---- OWNED PASS ----
         var owned = SaveManager.Data.owned;
         if (owned != null)
         {
             int ownedIdx = -1;
 
+            // Prefer matching by ownedUID if we evolved a team ref above
             if (teamRef != null && !string.IsNullOrEmpty(teamRef.ownedUID))
                 ownedIdx = owned.FindIndex(o => o != null && o.ownedUID == teamRef.ownedUID);
 
+            // Fallback match by id+level if needed
             if (ownedIdx < 0 && teamRef != null)
                 ownedIdx = owned.FindIndex(o => o != null && o.monsterId == monsterId && o.level == teamRef.level);
 
+            // Final fallback: first by id
             if (ownedIdx < 0)
                 ownedIdx = owned.FindIndex(o => o != null && o.monsterId == monsterId);
 
@@ -54,8 +61,10 @@ public static class EvolutionManager
             {
                 var o = owned[ownedIdx];
                 o.monsterId = newId;
-                int maxOwnedHP = Mathf.RoundToInt(BattleCalc.CalcHP(defNew, Mathf.Max(1, o.level)));
-                o.currentHP = Mathf.Max(1, maxOwnedHP);
+
+                // ADDITIVE CARRY-OVER (NewBase + trainingBonus)
+                EvolutionHelper.RebuildStatsAdditive(o, defNew, 1f);
+
                 owned[ownedIdx] = o;
                 changed = true;
             }
@@ -63,6 +72,7 @@ public static class EvolutionManager
 
         if (!changed) return false;
 
+        // Update training ref if pointing at old id
         if (SaveManager.Data.trainingMonsterId == monsterId)
             SaveManager.Data.trainingMonsterId = newId;
 

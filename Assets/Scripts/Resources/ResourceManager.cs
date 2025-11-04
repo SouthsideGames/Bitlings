@@ -5,7 +5,7 @@ using UnityEngine;
 public enum ResourceType {
     TrainingXP, Coins, Energy, Medkits, Materials,
     Sigils, Lures, CaptureBands, Luck,
-    AttackBoosters, HPBoosters, SpeedBoosters, ShinyOrbs, BlessingTokens, RestCharge, Gems
+    AttackBoosters, HPBoosters, SpeedBoosters, ShinyOrbs, BlessingTokens, RestCharge, Gems, GrowthCores
 }
 
 
@@ -183,4 +183,6 @@ public class ResourceManager : MonoBehaviour
         }
         return AddCoins(scaled);
     }
+
+
 }

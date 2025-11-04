@@ -18,7 +18,10 @@ public class OwnedMonsterData
     public string ownedUID;
     public bool isShiny = false;
     public int shinyTier = 0;
-    
+    public TrainingBonus trainingBonus = new TrainingBonus();
+    public bool autoApply = false;
+    public int autoApplyTargetLevel = 0;
+    public string lastBucketId = null;
 }
 
 
@@ -183,4 +186,40 @@ public class PlayerManager
         }
         jobStorageUpgrades.Add(new JobStorageUpgrade { job = j, extra = amount });
     }
+
+    public List<OwnedMonsterData> GetAllOwnedMonsters(bool includeTeam = true)
+    {
+        var result = new List<OwnedMonsterData>();
+
+        if (owned != null)
+            result.AddRange(owned);
+
+        if (includeTeam && team != null)
+        {
+            // Avoid duplicates using ownedUID (EnsureTransientSets assigns UIDs)
+            var seen = new HashSet<string>();
+            for (int i = 0; i < result.Count; i++)
+            {
+                var o = result[i];
+                if (o != null && !string.IsNullOrEmpty(o.ownedUID))
+                    seen.Add(o.ownedUID);
+            }
+
+            for (int i = 0; i < team.Count; i++)
+            {
+                var t = team[i];
+                if (t == null) continue;
+
+                var id = string.IsNullOrEmpty(t.ownedUID) ? null : t.ownedUID;
+                if (id == null || !seen.Contains(id))
+                {
+                    result.Add(t);
+                    if (id != null) seen.Add(id);
+                }
+            }
+        }
+
+        return result;
+    }
+
 }

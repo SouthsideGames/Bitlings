@@ -7,7 +7,7 @@ public enum PanelId
     None = 0,
     Intro,
     Encounter,
-    Training,
+    Growth,
     Home,
     Resources,
     Upgrades,
