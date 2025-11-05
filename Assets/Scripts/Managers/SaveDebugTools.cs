@@ -49,15 +49,15 @@ public static class SaveDebugTools
             coins       = TryGetCoins(),
             team        = new List<AuditTeamSlot>(),
             owned       = new List<AuditOwned>(),
-            titles      = TryGetTitlesMap(),
-            jobs        = TryGetJobAssignments()
+            titles      = TryGetTitlesMap(),     // NOTE: JsonUtility won't serialize Dictionary (non-blocking)
+            jobs        = TryGetJobAssignments() // NOTE: same as above
         };
 
         // --- Read team/owned via reflection (no dynamic) ---
-        var team = GetFieldOrPropValue<List<OwnedMonsterData>>(dataObj, "team");
+        var team  = GetFieldOrPropValue<List<OwnedMonsterData>>(dataObj, "team");
         var owned = GetFieldOrPropValue<List<OwnedMonsterData>>(dataObj, "owned");
 
-        if (team == null) team = new List<OwnedMonsterData>();
+        if (team == null)  team  = new List<OwnedMonsterData>();
         if (owned == null) owned = new List<OwnedMonsterData>();
 
         // Team
@@ -81,7 +81,7 @@ public static class SaveDebugTools
             });
         }
 
-        // Owned
+        // Owned (with base/final stat snapshot)
         foreach (var o in owned)
         {
             if (o == null || string.IsNullOrEmpty(o.monsterId)) continue;
@@ -96,13 +96,46 @@ public static class SaveDebugTools
                 lastHPUnix   = o.lastHPUnix,
                 lastBucketId = o.lastBucketId,
 
-                // If your OwnedMonsterData has these, reflection below will fill them (safe if missing)
+                // Saved persistent training/evolution bonuses (if present on your model)
                 bonusHP      = GetIntField(o, "bonusHP"),
                 bonusATK     = GetIntField(o, "bonusATK"),
                 bonusDEF     = GetIntField(o, "bonusDEF"),
                 bonusSPD     = GetIntField(o, "bonusSPD"),
                 isShiny      = GetBoolField(o, "isShiny"),
             };
+
+            // Compute base/final stats at export time:
+            //   base = definition @ current level
+            //   final = base + saved training bonuses (+ flat equip for ATK)
+            try
+            {
+                var def = MonsterLibraryLocator.GetById(o.monsterId);
+                int lvl = Mathf.Max(1, o.level);
+
+                if (def)
+                {
+                    entry.baseHP  = Mathf.RoundToInt(BattleCalc.CalcHP(def, lvl));
+                    entry.baseATK = Mathf.RoundToInt(BattleCalc.CalcBaseAttack(def, lvl, 0, 0));
+                    entry.baseDEF = BattleCalc.CalcDefense(def, lvl);
+                    entry.baseSPD = BattleCalc.CalcSpeed(def, lvl);
+
+                    int flatAtkBonus = GetIntField(o, "flatAtkBonus"); // optional equip flat
+
+                    entry.finalHP  = Mathf.Max(1, entry.baseHP  + entry.bonusHP);
+                    entry.finalATK = Mathf.Max(1, entry.baseATK + entry.bonusATK + Mathf.Max(0, flatAtkBonus));
+                    entry.finalDEF = Mathf.Max(0, entry.baseDEF + entry.bonusDEF);
+                    entry.finalSPD = Mathf.Max(1, entry.baseSPD + entry.bonusSPD);
+                }
+                else
+                {
+                    Debug.LogWarning($"[SaveDebugTools] No MonsterDataSO found for '{o.monsterId}'. Base/final stats left at 0.");
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.LogWarning($"[SaveDebugTools] Stat compute failed for '{o.monsterId}': {ex.Message}");
+            }
+
             snap.owned.Add(entry);
         }
 
@@ -118,7 +151,7 @@ public static class SaveDebugTools
         return snap;
     }
 
-    // ---------- helpers ----------
+    // ---------- helpers (reflection-safe) ----------
     private static T GetFieldOrPropValue<T>(object obj, string name) where T : class
     {
         if (obj == null) return null;
@@ -238,7 +271,7 @@ public static class SaveDebugTools
             var tm = TitleManager.I;
             if (tm == null) return map;
 
-            // Try common shapes: Dictionary<string,string> ActiveTitleByOwned / activeByOwned / etc.
+            // Try common shapes: Dictionary<string,string> ActiveTitleByOwned / activeByOwned / BoundTitlesByOwned
             var t = tm.GetType();
 
             foreach (var name in new[] { "ActiveTitleByOwned", "activeByOwned", "BoundTitlesByOwned" })
@@ -307,7 +340,7 @@ public static class SaveDebugTools
             var jm = JobManager.I;
             if (jm == null) return map;
 
-            // Try common shapes: Dictionary<string, JobType> CurrentAssignments / currentAssignments
+            // Try common shapes: Dictionary<string, JobType> CurrentAssignments / currentAssignments / Assignments
             foreach (var name in new[] { "CurrentAssignments", "currentAssignments", "Assignments" })
             {
                 var dictObj = GetFieldOrPropAsIDictionary(jm, name);
@@ -357,13 +390,13 @@ public static class SaveDebugTools
         public string version;
         public long   savedAtUnix;
         public int    winStreak;
-        public Dictionary<string,int> resources;
+        public Dictionary<string,int>    resources; // NOTE: JsonUtility won't serialize Dictionary
         public int coins;
         public List<AuditTeamSlot> team;
-        public List<AuditOwned> owned;
+        public List<AuditOwned>    owned;
         public List<AuditSpeciesIndex> speciesIndex;
-        public Dictionary<string,string> titles; // optional
-        public Dictionary<string,string> jobs;   // optional
+        public Dictionary<string,string> titles; // NOTE: JsonUtility won't serialize Dictionary
+        public Dictionary<string,string> jobs;   // NOTE: JsonUtility won't serialize Dictionary
     }
 
     [Serializable] private class AuditTeamSlot
@@ -387,12 +420,24 @@ public static class SaveDebugTools
         public long   lastHPUnix;
         public string lastBucketId;
 
+        // Persistent bonuses saved on OwnedMonsterData (if present)
         public int    bonusHP;
         public int    bonusATK;
         public int    bonusDEF;
         public int    bonusSPD;
-
         public bool   isShiny;
+
+        // Base stats computed from defs (at current level)
+        public int    baseHP;
+        public int    baseATK;
+        public int    baseDEF;
+        public int    baseSPD;
+
+        // Final = base + persistent bonuses (+ equip ATK flat)
+        public int    finalHP;
+        public int    finalATK;
+        public int    finalDEF;
+        public int    finalSPD;
     }
 
     [Serializable] private class AuditSpeciesIndex

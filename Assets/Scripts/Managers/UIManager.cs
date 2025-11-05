@@ -44,7 +44,7 @@ public class UIManager : MonoBehaviour
 {
     public static UIManager I { get; private set; }
 
-    [Header("Registry (fill in Inspector)")]
+    [Header("Panels")]
     [SerializeField] private List<PanelEntry> panels = new List<PanelEntry>();
 
     // events
@@ -64,7 +64,6 @@ public class UIManager : MonoBehaviour
         {
             if (p == null || p.root == null) continue;
             if (!_map.ContainsKey(p.id)) _map.Add(p.id, p);
-            // ensure consistent initial state from scene
             SetActive(p.id, p.root.activeSelf, fireEvent: false);
         }
     }

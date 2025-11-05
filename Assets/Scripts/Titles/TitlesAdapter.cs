@@ -262,13 +262,29 @@ public static class TitlesAdapter
         return 1f;
     }
 
-    public static float GetJobFatigueMult(string ownedId, MonsterDataSO def, int level, JobType site)
+   public static float GetJobFatigueMult(string ownedId, MonsterDataSO def, int level, JobType site)
     {
-        if (TryInvoke("GetJobFatigueMultiplier", new object[] { ownedId, def, level, site }, out var res) && res is float f)
-            return Mathf.Max(0f, f);
+        // Default: no change
+        float mult = 1f;
 
-        return 1f;
+        // Get this monster’s titles (implement this to your data source)
+        var titles = GetTitles(ownedId); // ← your existing accessor
+        if (titles == null) return mult;
+
+        for (int i = 0; i < titles.Count; i++)
+        {
+            var t = titles[i];
+            if (t is JobFatigueBoosterTitleSO ft && ft.AppliesTo(site))
+            {
+                // Multiply, don’t add (stacking by multiplication is typical for rates)
+                mult *= Mathf.Max(0f, ft.fatigueMultiplier);
+            }
+        }
+
+        // Safety: never negative, never NaN
+        return float.IsFinite(mult) ? Mathf.Max(0f, mult) : 1f;
     }
+
 
     public static float GetJobAuraPercent(string ownedId, MonsterDataSO def, int level, JobType site)
     {
@@ -289,21 +305,90 @@ public static class TitlesAdapter
     /// <summary> Build team-wide auras (sum % per site). </summary>
     public static Dictionary<JobType, float> BuildJobAuras(System.Collections.IEnumerable teamEnumerable)
     {
+        // Initialize result with all job types present (0% default)
         var result = new Dictionary<JobType, float>(16);
         foreach (JobType jt in Enum.GetValues(typeof(JobType)))
             if (!result.ContainsKey(jt)) result[jt] = 0f;
 
+        // Prefer authoritative source of "who is working where" → JobManager assignments.
+        var jm = JobManager.I;
+        if (jm != null && jm.States != null && jm.States.Count > 0)
+        {
+            // Quick helper: get a monster's level from team (if present) else 1
+            int GetLevelFromTeam(string ownedId)
+            {
+                if (string.IsNullOrEmpty(ownedId) || teamEnumerable == null) return 1;
+
+                foreach (var entry in teamEnumerable)
+                {
+                    var et = entry.GetType();
+                    string mid = null;
+                    int lvl = 1;
+                    try
+                    {
+                        mid = (string)(et.GetField("monsterId")?.GetValue(entry) ??
+                                    et.GetProperty("monsterId")?.GetValue(entry, null));
+                        var raw = et.GetField("level")?.GetValue(entry) ??
+                                et.GetProperty("level")?.GetValue(entry, null) ?? 1;
+                        lvl = Convert.ToInt32(raw);
+                    }
+                    catch { /* keep defaults */ }
+
+                    if (!string.IsNullOrEmpty(mid) && mid == ownedId) return Mathf.Max(1, lvl);
+                }
+                return 1;
+            }
+
+            foreach (var st in jm.States)
+            {
+                if (st?.config == null || st.workers == null) continue;
+
+                var job = st.config.jobType;
+                for (int i = 0; i < st.workers.Count; i++)
+                {
+                    var w = st.workers[i];
+                    if (w == null) continue;
+
+                    // Prefer owned-instance id; fallback to base def id
+                    string id = !string.IsNullOrEmpty(w.monsterId) ? w.monsterId : (w.def ? w.def.id : null);
+                    if (string.IsNullOrEmpty(id)) continue;
+
+                    var def = w.def ?? MonsterLibraryLocator.GetById(id);
+                    if (!def) continue;
+
+                    int level = GetLevelFromTeam(id);
+
+                    float aura = 0f;
+                    try { aura = Mathf.Max(0f, GetJobAuraPercent(id, def, level, job)); } catch { aura = 0f; }
+                    if (aura > 0f) result[job] += aura;
+                }
+            }
+
+            return result; // done — assignment-aware path
+        }
+
+        // Fallback: if JobManager not ready, keep previous behavior (scan team for all sites).
         if (teamEnumerable == null) return result;
 
         foreach (var entry in teamEnumerable)
         {
-            string id = ReadString(entry, "monsterId");
+            string id = null; int level = 1;
+            try
+            {
+                var et = entry.GetType();
+                id    = (string)(et.GetField("monsterId")?.GetValue(entry) ??
+                                et.GetProperty("monsterId")?.GetValue(entry, null));
+                var raw = et.GetField("level")?.GetValue(entry) ??
+                        et.GetProperty("level")?.GetValue(entry, null) ?? 1;
+                level = Convert.ToInt32(raw);
+            }
+            catch { id = null; level = 1; }
             if (string.IsNullOrEmpty(id)) continue;
 
-            int level = ReadInt(entry, "level", 1);
             var def = MonsterLibraryLocator.GetById(id);
             if (!def) continue;
 
+            // Note: this path adds aura to every site (legacy behavior) until JobManager is available.
             foreach (JobType jt in Enum.GetValues(typeof(JobType)))
             {
                 float aura = 0f;
@@ -313,58 +398,50 @@ public static class TitlesAdapter
         }
 
         return result;
-
-        static string ReadString(object obj, string name)
-        {
-            if (obj == null) return null;
-            var t = obj.GetType();
-            var f = t.GetField(name);
-            if (f != null && f.FieldType == typeof(string)) return (string)f.GetValue(obj);
-            var p = t.GetProperty(name);
-            if (p != null && p.PropertyType == typeof(string)) return (string)p.GetValue(obj, null);
-            return null;
-        }
-        static int ReadInt(object obj, string name, int fallback)
-        {
-            if (obj == null) return fallback;
-            var t = obj.GetType();
-            var f = t.GetField(name);
-            if (f != null) { try { return Convert.ToInt32(f.GetValue(obj)); } catch { } }
-            var p = t.GetProperty(name);
-            if (p != null) { try { return Convert.ToInt32(p.GetValue(obj, null)); } catch { } }
-            return fallback;
-        }
     }
 
     /// <summary> Sum of flat capacity bonuses across the active team for a specific job site. </summary>
-    public static int GetJobCapacityBonus(JobType site)
+   public static int GetJobCapacityBonus(JobType site)
     {
-        var team = SaveManager.Data?.team;
-        if (team == null) return 0;
+        int bonus = 0;
 
-        int total = 0;
-        foreach (var entry in team)
+        var jm = JobManager.I;
+        if (jm == null || jm.States == null) return 0;
+
+        // Find the site and sum bonuses from workers actually assigned there
+        for (int si = 0; si < jm.States.Count; si++)
         {
-            if (entry == null) continue;
+            var st = jm.States[si];
+            if (st?.config == null || st.config.jobType != site) continue;
 
-            string id = null; int level = 1;
-            try
+            var workers = st.workers;
+            if (workers == null) break;
+
+            for (int wi = 0; wi < workers.Count; wi++)
             {
-                var et = entry.GetType();
-                id    = (string)(et.GetField("monsterId")?.GetValue(entry) ?? et.GetProperty("monsterId")?.GetValue(entry, null));
-                level = Convert.ToInt32(et.GetField("level")?.GetValue(entry) ?? et.GetProperty("level")?.GetValue(entry, null) ?? 1);
+                var w = workers[wi];
+                if (w == null) continue;
+
+                string id = !string.IsNullOrEmpty(w.monsterId) ? w.monsterId : (w.def ? w.def.id : null);
+                if (string.IsNullOrEmpty(id)) continue;
+
+                var titles = GetTitles(id); // ← your existing accessor
+                if (titles == null) continue;
+
+                for (int ti = 0; ti < titles.Count; ti++)
+                {
+                    if (titles[ti] is JobCapacityBoosterTitleSO cap && cap.AppliesTo(site))
+                    {
+                        // Flat stacking is fine; clamp to >= 0 just in case
+                        bonus += Mathf.Max(0, cap.capacityBonusFlat);
+                    }
+                }
             }
-            catch { id = null; level = 1; }
 
-            if (string.IsNullOrEmpty(id)) continue;
-
-            var def = MonsterLibraryLocator.GetById(id);
-            if (!def) continue;
-
-            try { total += Mathf.Max(0, GetJobCapacityFlat(id, def, level, site)); } catch { }
+            break; // site found/processed
         }
 
-        return Mathf.Max(0, total);
+        return Mathf.Max(0, bonus);
     }
 
     // ─────────────────────────────────────────────────────────────────────────────
@@ -470,4 +547,24 @@ public static class TitlesAdapter
             return Mathf.Max(0f, f);
         return 1f;
     }
+
+    
+    private static List<TitleSO> GetTitles(string monsterId)
+    {
+        if (string.IsNullOrEmpty(monsterId)) 
+            return new List<TitleSO>();
+
+        // Try to call runtime method (reflection bridge)
+        if (TryInvoke("GetTitlesForMonster", new object[] { monsterId }, out var res))
+        {
+            if (res is List<TitleSO> list) 
+                return list;
+            if (res is IEnumerable<TitleSO> enumerable) 
+                return new List<TitleSO>(enumerable);
+        }
+
+        // Nothing returned — safe default
+        return new List<TitleSO>();
+    }
+
 }
