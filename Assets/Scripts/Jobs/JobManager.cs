@@ -517,6 +517,9 @@ public sealed class JobManager : MonoBehaviour
                 if (EncounterManager.I) EncounterManager.I.AddEnergy(whole);
                 else ResourceBank.Add(ResourceType.Energy, whole);
                 break;
+            case ResourceType.GrowthCores:
+                ResourceManager.I.Add(ResourceType.GrowthCores, whole);
+                break;
 
             default:
                 ResourceBank.Add(res, whole);

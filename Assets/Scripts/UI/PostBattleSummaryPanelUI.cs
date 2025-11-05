@@ -12,7 +12,7 @@ public class PostBattleSummaryPanelUI : MonoBehaviour
     [SerializeField] private RectTransform root;
     [SerializeField] private TextMeshProUGUI titleLabel;
     [SerializeField] private TextMeshProUGUI coinsLabel;
-    [SerializeField] private TextMeshProUGUI xpLabel;
+    [SerializeField] private TextMeshProUGUI growthCoresLabel; // formerly xpLabel
     [SerializeField] private TextMeshProUGUI levelupsLabel;
     [SerializeField] private TextMeshProUGUI captureLabel;
 
@@ -22,9 +22,8 @@ public class PostBattleSummaryPanelUI : MonoBehaviour
 
     public Action OnClosed;
 
-    // Rich XP breakdown list (optional): one line per monster
     [Header("Optional Detail Block")]
-    [SerializeField] private TextMeshProUGUI xpDetailsLabel;
+    [SerializeField] private TextMeshProUGUI growthCoresDetailsLabel; // formerly xpDetailsLabel
 
     const string GREEN = "#3CDE74";
 
@@ -35,12 +34,14 @@ public class PostBattleSummaryPanelUI : MonoBehaviour
         if (!root) root = transform as RectTransform;
 
         cg.alpha = 0f;
+        cg.blocksRaycasts = false;
+        cg.interactable = false;
         if (root) root.localScale = Vector3.one * 0.96f;
     }
 
     public void Set(
-        BattleResult r,
-        int xpGained = 0,
+        BattleResult result,
+        int growthCoresGained = 0,
         int monstersLeveledUp = 0,
         bool captured = false,
         string capturedMonsterId = null,
@@ -48,28 +49,24 @@ public class PostBattleSummaryPanelUI : MonoBehaviour
         List<string> levelUpSummaries = null,
         int coinsBase = 0,
         int coinsTitleBonus = 0,
-        int xpBase = 0,
-        int xpTitleBonus = 0,
-        List<string> xpDetailLines = null
+        int growthCoresBase = 0,
+        int growthCoresTitleBonus = 0,
+        List<string> growthCoresDetailLines = null
     )
     {
-        if (titleLabel) titleLabel.text = r.victory ? "Victory!" : "Defeat";
+        if (titleLabel) titleLabel.text = result.victory ? "Victory!" : "Defeat";
 
-        // ─────────────── Coins line ───────────────
+        // ─────────────── Coins ───────────────
         int coinsTotal = Mathf.Max(0, coinsBase + coinsTitleBonus);
         if (coinsLabel)
-        {
             coinsLabel.text = BuildRewardLine("Coins", coinsBase, coinsTitleBonus, coinsTotal);
-        }
 
-        // ─────────────── XP line ───────────────
-        int xpTotal = Mathf.Max(0, xpBase + xpTitleBonus);
-        if (xpLabel)
-        {
-            xpLabel.text = BuildRewardLine("XP", xpBase, xpTitleBonus, xpTotal);
-        }
+        // ─────────────── Growth Cores ───────────────
+        int totalCores = Mathf.Max(0, growthCoresBase + growthCoresTitleBonus);
+        if (growthCoresLabel)
+            growthCoresLabel.text = BuildRewardLine("Growth Cores", growthCoresBase, growthCoresTitleBonus, totalCores);
 
-        // Level-up banner
+        // Level-ups
         if (levelupsLabel)
         {
             if (monstersLeveledUp > 0)
@@ -91,51 +88,57 @@ public class PostBattleSummaryPanelUI : MonoBehaviour
             else levelupsLabel.text = "No level ups";
         }
 
-        // Capture text
+        // Capture
         if (captureLabel)
         {
             if (captured)
             {
                 string name = !string.IsNullOrEmpty(capturedMonsterId)
-                              ? capturedMonsterId
-                              : (r.wildDef ? r.wildDef.id : "Unknown");
-                int lvl = capturedLevel > 0 ? capturedLevel : Mathf.Max(1, r.wildLevel);
+                    ? capturedMonsterId
+                    : (result.wildDef ? result.wildDef.id : "Unknown");
+                int lvl = capturedLevel > 0 ? capturedLevel : Mathf.Max(1, result.wildLevel);
                 captureLabel.text = $"Captured: {name} (Lv {lvl})";
             }
             else captureLabel.text = "No capture";
         }
 
-        // Optional detailed XP list: one line per monster
-        if (xpDetailsLabel)
+        // Growth Core breakdown lines
+        if (growthCoresDetailsLabel)
         {
-            if (xpDetailLines != null && xpDetailLines.Count > 0)
+            if (growthCoresDetailLines != null && growthCoresDetailLines.Count > 0)
             {
-                // Example line format you can feed in:
-                // "Cindrax Lv5 (12/180) → +36 <color=#3CDE74>(+6)</color> → Lv6 (4/225)"
-                xpDetailsLabel.gameObject.SetActive(true);
-                xpDetailsLabel.text = string.Join("\n", xpDetailLines);
+                growthCoresDetailsLabel.gameObject.SetActive(true);
+                growthCoresDetailsLabel.text = string.Join("\n", growthCoresDetailLines);
             }
             else
             {
-                xpDetailsLabel.gameObject.SetActive(false);
+                growthCoresDetailsLabel.gameObject.SetActive(false);
             }
         }
     }
 
     public void Show()
     {
+        cg.blocksRaycasts = true;
+        cg.interactable = true;
         LeanTween.alphaCanvas(cg, 1f, fadeIn).setEaseOutSine();
         if (root) LeanTween.scale(root, Vector3.one, popIn).setEaseOutBack();
     }
 
-    // ─────────────────────────────────────────────────────────────────────────────
+    public void Close()
+    {
+        cg.blocksRaycasts = false;
+        cg.interactable = false;
+        LeanTween.alphaCanvas(cg, 0f, 0.12f).setEaseInSine()
+            .setOnComplete(() => OnClosed?.Invoke());
+    }
 
     private string BuildRewardLine(string label, int baseValue, int titleBonus, int total)
     {
-        // If no title bonus affected the reward, show: "Coins: 10"
         if (titleBonus <= 0 || baseValue <= 0)
         {
-            return $"{label}: {Mathf.Max(0, baseValue)}";
+            int display = Mathf.Max(baseValue, total);
+            return $"{label}: {Mathf.Max(0, display)}";
         }
 
         float multiplier = total > 0 && baseValue > 0 ? (float)total / baseValue : 1f;
@@ -149,7 +152,6 @@ public class PostBattleSummaryPanelUI : MonoBehaviour
         float rounded = Mathf.Round(m);
         if (Mathf.Abs(rounded - m) < 0.001f)
             return $"x{rounded:0}";
-
         return $"x{m:0.##}";
     }
 }

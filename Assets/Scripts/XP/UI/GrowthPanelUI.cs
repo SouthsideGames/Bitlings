@@ -1,146 +1,192 @@
 using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.UI;
 using TMPro;
 
 public class GrowthPanelUI : MonoBehaviour
 {
     [Header("Refs")]
-    [SerializeField] private PlayerManager playerManager;         // assign in Inspector
-    [SerializeField] private StatBucketPanelUI statPanel;         // assign the StatBucketPanelUI in Inspector
-    [SerializeField] private TextMeshProUGUI growthCoresText;     // header text: "Growth Cores: N"
+    [SerializeField] private PlayerManager playerManager;     // optional
+    [SerializeField] private StatBucketPanelUI statPanel;     // required
+    [SerializeField] private TextMeshProUGUI growthCoresText; // header label
 
-    [Header("List Parents")]
-    [SerializeField] private Transform autoApplyStrip;            // optional: a parent for a top strip (up to 3)
-    [SerializeField] private Transform listParent;                // parent for all monster entries
+    [Header("List Roots")]
+    [SerializeField] private Transform listParent;            // required (ScrollRect content)
+    [SerializeField] private Transform autoApplyStrip;        // optional
 
     [Header("Prefabs")]
-    [Tooltip("A simple prefab with a Button on the root and optional child Texts named 'NameText' and 'LevelText', 'AutoToggle' Toggle, and 'Icon' Image.")]
-    [SerializeField] private GameObject listItemPrefab;           // no custom script required
+    [SerializeField] private GrowthListItemUI listItemPrefab; // required (must live on root)
 
     [Header("Limits")]
-    [SerializeField] private int autoApplyCap = 3;
+    [SerializeField, Min(1)] private int autoApplyCap = 3;
 
-    void OnEnable() => RefreshAll();
+    [Header("Optional Display")]
+    [SerializeField] private MonsterLibrarySO monsterLibrary; // optional; auto-wires from Locator
+
+    void OnEnable()
+    {
+        SaveManager.Data?.EnsureTransientSets();
+        // Try to auto-wire MonsterLibrary if not set
+        if (!monsterLibrary && MonsterLibraryLocator.Lib)
+        {
+            monsterLibrary = MonsterLibraryLocator.Lib;
+        }
+        RefreshAll();
+    }
 
     public void RefreshAll()
     {
+        if (!listParent)
+        {
+            Debug.LogError("[GrowthPanelUI] listParent is not assigned. Assign the ScrollRect Content transform.");
+            return;
+        }
+        if (!listItemPrefab)
+        {
+            Debug.LogError("[GrowthPanelUI] listItemPrefab is not assigned. Assign a prefab with GrowthListItemUI on the root.");
+            return;
+        }
+        if (!statPanel)
+        {
+            Debug.LogError("[GrowthPanelUI] statPanel is not assigned. Drag your StatBucketPanelUI.");
+            return;
+        }
+
         RefreshCores();
         BuildList();
         BuildAutoApplyStrip();
     }
 
-    void RefreshCores()
+    private void RefreshCores()
     {
         if (!growthCoresText) return;
         int cores = ResourceManager.I ? ResourceManager.I.Get(ResourceType.GrowthCores) : 0;
         growthCoresText.text = $"Growth Cores: {cores}";
     }
 
-    void BuildList()
+    private void BuildList()
     {
-        // clear
-        if (listParent)
+        // clear children
+        for (int i = listParent.childCount - 1; i >= 0; i--)
+            Destroy(listParent.GetChild(i).gameObject);
+
+        var monsters = GetAllMonsters();
+
+        if (monsters == null)
         {
-            for (int i = listParent.childCount - 1; i >= 0; i--)
-                Destroy(listParent.GetChild(i).gameObject);
+            Debug.LogWarning("[GrowthPanelUI] GetAllMonsters() returned null. Is SaveManager.Data loaded?");
+            return;
+        }
+        if (monsters.Count == 0)
+        {
+            Debug.LogWarning("[GrowthPanelUI] No monsters found (owned/team empty).");
+            return;
         }
 
-        List<OwnedMonsterData> monsters = playerManager != null
-            ? playerManager.GetAllOwnedMonsters(true)
-            : null;
+        int spawned = 0;
 
-        if (monsters == null || listParent == null || listItemPrefab == null) return;
-
-        foreach (var m in monsters)
+        for (int i = 0; i < monsters.Count; i++)
         {
-            if (m == null) continue;
-            var go = Instantiate(listItemPrefab, listParent);
+            var m = monsters[i];
+            if (m == null || string.IsNullOrEmpty(m.monsterId)) continue;
 
-            // Try to find common UI bits by name (optional; skip if not present)
-            var btn   = go.GetComponent<Button>();
-            var nameT = FindTMP(go.transform, "NameText");
-            var lvlT  = FindTMP(go.transform, "LevelText");
-            var icon  = FindImg(go.transform,  "Icon");
-            var tog   = FindToggle(go.transform, "AutoToggle");
+            // Optional name/icon/type from library
+            string displayName = m.monsterId;
+            Sprite icon = null;
+            MonsterType type = MonsterType.None;
 
-            if (nameT) nameT.text = m.monsterId;
-            if (lvlT)  lvlT.text  = $"Lv {m.level}";
-            // icon: if you have an icon system, set sprite here; else ignore.
-
-            if (tog)
+            if (monsterLibrary)
             {
-                tog.isOn = m.autoApply;
-                tog.onValueChanged.RemoveAllListeners();
-                tog.onValueChanged.AddListener(v =>
+                var def = monsterLibrary.GetById(m.monsterId);
+                if (def)
                 {
-                    // enforce cap at 3: if turning on would exceed, reject
-                    if (v && CountAutoApplyEnabled() >= autoApplyCap)
-                    {
-                        tog.isOn = false;
-                        return;
-                    }
-                    m.autoApply = v;
-                    if (v && m.autoApplyTargetLevel < m.level + 1)
-                        m.autoApplyTargetLevel = m.level + 1;
-                });
+                    if (!string.IsNullOrEmpty(def.displayName)) displayName = def.displayName;
+                    icon = def.icon;
+                    type = def.type;
+                }
+                else
+                {
+                    // Still spawn; just log once per missing ID
+                    Debug.LogWarning($"[GrowthPanelUI] MonsterLibrary has no def for '{m.monsterId}'. Row will use ID.");
+                }
             }
 
-            if (btn)
+            var view = Instantiate(listItemPrefab, listParent);
+            if (!view)
             {
-                btn.onClick.RemoveAllListeners();
-                btn.onClick.AddListener(() =>
-                {
-                    if (statPanel)
-                    {
-                        statPanel.OpenFor(m);
-                        statPanel.gameObject.SetActive(true);
-                    }
-                });
+                Debug.LogError("[GrowthPanelUI] Failed to instantiate listItemPrefab.");
+                continue;
             }
+
+            view.Bind(
+                model: m,
+                displayName: displayName,
+                icon: icon,
+                type: type,
+                onOpen: HandleOpenItem,
+                canEnableAnotherAuto: CanEnableAnotherAuto,
+                onAutoChanged: HandleAutoChanged
+            );
+
+            spawned++;
+        }
+
+        if (spawned == 0)
+        {
+            Debug.LogWarning("[GrowthPanelUI] Monsters existed but no rows spawned (all invalid?). Check console warnings above.");
+        }
+        else
+        {
+            Debug.Log($"[GrowthPanelUI] Spawned {spawned} monster rows.");
         }
     }
 
-    void BuildAutoApplyStrip()
+    private void BuildAutoApplyStrip()
     {
-        // OPTIONAL: If you want a top strip of pinned monsters, populate it here.
-        // For now, we simply rely on the toggle beside each list item.
         if (!autoApplyStrip) return;
-
-        // Example (clear any children)
         for (int i = autoApplyStrip.childCount - 1; i >= 0; i--)
             Destroy(autoApplyStrip.GetChild(i).gameObject);
-
-        // You can instantiate a small pill UI here for each enabled auto-apply monster if desired.
+        // Optional: add chips for enabled auto-apply targets here.
     }
 
-    int CountAutoApplyEnabled()
+    // --- Callbacks ---
+    private void HandleOpenItem(OwnedMonsterData m)
     {
-        int count = 0;
-        var monsters = playerManager != null ? playerManager.GetAllOwnedMonsters(true) : null;
+        if (!statPanel) return;
+        statPanel.OpenFor(m);
+        statPanel.gameObject.SetActive(true);
+    }
+
+    private bool CanEnableAnotherAuto() => CountAutoApplyEnabled() < autoApplyCap;
+
+    private void HandleAutoChanged()
+    {
+        BuildAutoApplyStrip();
+    }
+
+    // --- Data ---
+    private List<OwnedMonsterData> GetAllMonsters()
+    {
+        // Prefer PlayerManager if it actually returns data; otherwise fall back to SaveManager.
+        if (playerManager != null)
+        {
+            var fromPM = playerManager.GetAllOwnedMonsters(true);
+            if (fromPM != null && fromPM.Count > 0) return fromPM;
+            Debug.Log("[GrowthPanelUI] PlayerManager empty; falling back to SaveManager.");
+        }
+
+        RosterUtils.EnsureTeam3();
+        var merged = RosterUtils.GetAllOwnedMonstersMerged(includeTeam: true);
+        Debug.Log($"[GrowthPanelUI] Roster merged count = {merged.Count}");
+        return merged;
+    }
+
+    private int CountAutoApplyEnabled()
+    {
+        var monsters = GetAllMonsters();
         if (monsters == null) return 0;
+        int c = 0;
         for (int i = 0; i < monsters.Count; i++)
-            if (monsters[i] != null && monsters[i].autoApply) count++;
-        return count;
-    }
-
-    // --- small helpers to find optional children by name ---
-
-    TextMeshProUGUI FindTMP(Transform root, string childName)
-    {
-        var t = root.Find(childName);
-        return t ? t.GetComponent<TextMeshProUGUI>() : null;
-    }
-
-    Image FindImg(Transform root, string childName)
-    {
-        var t = root.Find(childName);
-        return t ? t.GetComponent<Image>() : null;
-    }
-
-    Toggle FindToggle(Transform root, string childName)
-    {
-        var t = root.Find(childName);
-        return t ? t.GetComponent<Toggle>() : null;
+            if (monsters[i] != null && monsters[i].autoApply) c++;
+        return c;
     }
 }

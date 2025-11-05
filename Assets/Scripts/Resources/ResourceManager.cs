@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 
 public enum ResourceType {
-    TrainingXP, Coins, Energy, Medkits, Materials,
+    Coins, Energy, Medkits, Materials,
     Sigils, Lures, CaptureBands, Luck,
     AttackBoosters, HPBoosters, SpeedBoosters, ShinyOrbs, BlessingTokens, RestCharge, Gems, GrowthCores
 }

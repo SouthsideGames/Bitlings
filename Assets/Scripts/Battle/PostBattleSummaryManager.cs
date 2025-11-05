@@ -21,20 +21,20 @@ public class PostBattleSummaryManager : MonoBehaviour
 
     struct Queued
     {
-        public BattleResult r;
-        public int xp;
+        public BattleResult result;
+        public int growthCoresGained;
         public int leveled;
         public bool captured;
         public string capturedId;
         public int capturedLvl;
         public List<string> levelUpLines;
 
-        // New breakdown fields
         public int coinsBase;
         public int coinsTitleBonus;
-        public int xpBase;
-        public int xpTitleBonus;
-        public List<string> xpDetailLines;
+
+        public int growthCoresBase;
+        public int growthCoresTitleBonus;
+        public List<string> growthCoresDetailLines;
     }
 
     public void NotifyBattleStart() => _battleInProgress = true;
@@ -42,7 +42,7 @@ public class PostBattleSummaryManager : MonoBehaviour
     public void NotifyBattleEnd(
         BattleResult result,
         bool isAuto,
-        int xpGained = 0,
+        int growthCoresGained = 0,
         int monstersLeveledUp = 0,
         bool captured = false,
         string capturedMonsterId = null,
@@ -50,9 +50,9 @@ public class PostBattleSummaryManager : MonoBehaviour
         List<string> levelUpSummaries = null,
         int coinsBase = 0,
         int coinsTitleBonus = 0,
-        int xpBase = 0,
-        int xpTitleBonus = 0,
-        List<string> xpDetailLines = null
+        int growthCoresBase = 0,
+        int growthCoresTitleBonus = 0,
+        List<string> growthCoresDetailLines = null
     )
     {
         _battleInProgress = false;
@@ -60,8 +60,8 @@ public class PostBattleSummaryManager : MonoBehaviour
 
         _pending.Enqueue(new Queued
         {
-            r = result,
-            xp = xpGained,
+            result = result,
+            growthCoresGained = growthCoresGained,
             leveled = monstersLeveledUp,
             captured = captured,
             capturedId = capturedMonsterId,
@@ -69,9 +69,9 @@ public class PostBattleSummaryManager : MonoBehaviour
             levelUpLines = levelUpSummaries,
             coinsBase = coinsBase,
             coinsTitleBonus = coinsTitleBonus,
-            xpBase = xpBase,
-            xpTitleBonus = xpTitleBonus,
-            xpDetailLines = xpDetailLines
+            growthCoresBase = growthCoresBase,
+            growthCoresTitleBonus = growthCoresTitleBonus,
+            growthCoresDetailLines = growthCoresDetailLines
         });
 
         TryShowNext();
@@ -90,12 +90,7 @@ public class PostBattleSummaryManager : MonoBehaviour
     }
 
     public void TryFlush() => TryShowNext();
-
-    // In PostBattleSummaryManager
-    public void FlushNowIfPossible()
-    {
-        TryShowNext();
-    }
+    public void FlushNowIfPossible() => TryShowNext();
 
     void TryShowNext()
     {
@@ -119,8 +114,8 @@ public class PostBattleSummaryManager : MonoBehaviour
         };
 
         postBattleSummaryPanelUI.Set(
-            q.r,
-            q.xp,
+            q.result,
+            q.growthCoresGained,
             q.leveled,
             q.captured,
             q.capturedId,
@@ -128,9 +123,9 @@ public class PostBattleSummaryManager : MonoBehaviour
             q.levelUpLines,
             q.coinsBase,
             q.coinsTitleBonus,
-            q.xpBase,
-            q.xpTitleBonus,
-            q.xpDetailLines
+            q.growthCoresBase,
+            q.growthCoresTitleBonus,
+            q.growthCoresDetailLines
         );
 
         postBattleSummaryPanelUI.Show();

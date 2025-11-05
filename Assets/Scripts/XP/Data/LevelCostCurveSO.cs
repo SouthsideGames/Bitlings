@@ -1,6 +1,6 @@
 using UnityEngine;
 
-[CreateAssetMenu(menuName = "Data/Economy/Level Cost Curve", fileName = "LevelCostCurve")]
+[CreateAssetMenu(menuName = "Data/XP System/Level Cost Curve", fileName = "LevelCostCurve")]
 public class LevelCostCurveSO : ScriptableObject
 {
     [Header("If array is too short, last value repeats.")]

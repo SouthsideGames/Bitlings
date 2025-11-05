@@ -99,6 +99,7 @@ public static class SaveManager
 
             string json = JsonUtility.ToJson(Data, prettyPrint: true);
             AtomicWrite(SavePath, json);
+            SaveDebugTools.ExportAuditJson(false);
             try { File.Copy(SavePath, BackupPath, overwrite: true); } catch { }
         }
         catch (Exception e)
@@ -133,7 +134,6 @@ public static class SaveManager
         PruneExpiredLures(true);
         PruneExpiredLuckBoosts(true);
 
-        TrainingManager.I?.ProcessOfflineTrainingAll();
         JobManager.I?.ProcessOfflineAllSites();
         HealthRegenSystem.I?.TryApplyOfflineRegen();
     }

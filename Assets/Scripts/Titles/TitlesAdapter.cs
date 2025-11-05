@@ -237,12 +237,12 @@ public static class TitlesAdapter
         return 1f;
     }
 
-    public static float GetXPMultOnVictory(string monsterId, MonsterDataSO wild, int wildLevel)
+    public static float GetGrowthCoreMultOnVictory(string monsterId, MonsterDataSO wild, int wildLevel)
     {
-        if (TryInvoke("GetXPMultOnVictory", new object[] { monsterId, wild, wildLevel }, out var res) && res is float f)
+        if (TryInvoke("GetGrowthCoreMultOnVictory", new object[] { monsterId, wild, wildLevel }, out var res) && res is float f)
             return Mathf.Max(0f, f);
 
-        WarnDefault("GetXPMultOnVictory", "Provide XP victory multiplier or return 1.");
+        WarnDefault("GetGrowthCoreMultOnVictory", "Provide Growth Core victory multiplier or return 1.");
         return 1f;
     }
 

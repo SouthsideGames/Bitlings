@@ -714,88 +714,81 @@ public class BattleManager : MonoBehaviour
         if (victory && teamIds != null && activeIndex >= 0 && activeIndex < teamIds.Length)
         {
             float cm = TitlesAdapter.GetCoinMultOnVictory(teamIds[activeIndex], wildDef, wildLevel);
-            Debug.Log($"[TitleVictory] Coin mult={cm:0.##}");
-
             if (cm > 0f)
             {
                 finalCoins = Mathf.Max(0, Mathf.RoundToInt(baseCoins * cm));
                 coinTitleBonus = Mathf.Max(0, finalCoins - baseCoins);
             }
         }
-        
+
         if (finalCoins < 0) finalCoins = 0;
 
-        // ── XP: compute base vs shiny/training vs title
-       int xpBaseTimesTraining = 0;
-        int xpTitleBonus = 0;
-        int xpTotal = 0;
+        // ── GROWTH CORES: replaces XP entirely
+        int baseCores = Mathf.Max(1, 2 + wildLevel); // simple base curve (replaceable later)
+        int growthCoreTitleBonus = 0;
+        int growthCoreTotal = 0;
 
         if (victory)
         {
-            // Base raw XP per your rules (5 + 2*wildLevel), then shiny/training mult, then title mult
-            int baseRaw = Mathf.Max(0, 5 + 2 * wildLevel);
+            // Apply shiny multiplier (old training system kept)
             var data = SaveManager.Data;
-            var m = (data != null && data.team != null && activeIndex >= 0 && activeIndex < data.team.Count) ? data.team[activeIndex] : default;
+            var m = (data != null && data.team != null && activeIndex >= 0 && activeIndex < data.team.Count)
+                ? data.team[activeIndex]
+                : default;
 
-            float shinyMul = ShinySystems.TrainingXpMult(m);
-            int baseAfterShiny = Mathf.RoundToInt(baseRaw * shinyMul);
+            float shinyMul = ShinySystems.TrainingXpMult(m); // reuse function for consistency
+            int baseAfterShiny = Mathf.RoundToInt(baseCores * shinyMul);
 
-            float titleXPMul = 1f;
+            // Apply title multiplier for Growth Cores
+            float titleCoreMul = 1f;
             if (teamIds != null && activeIndex >= 0 && activeIndex < teamIds.Length)
-                titleXPMul = Mathf.Max(0f, TitlesAdapter.GetXPMultOnVictory(teamIds[activeIndex], wildDef, wildLevel));
+                titleCoreMul = Mathf.Max(0f, TitlesAdapter.GetGrowthCoreMultOnVictory(teamIds[activeIndex], wildDef, wildLevel));
 
-            xpTotal = Mathf.RoundToInt(baseAfterShiny * titleXPMul);
-            xpBaseTimesTraining = baseAfterShiny;
-            xpTitleBonus = Mathf.Max(0, xpTotal - baseAfterShiny);
+            growthCoreTotal = Mathf.RoundToInt(baseAfterShiny * titleCoreMul);
+            growthCoreTitleBonus = Mathf.Max(0, growthCoreTotal - baseAfterShiny);
 
-            // ✅ ADD THIS BLOCK (Growth Cores from earned XP)
-            var econ = TokenEconomy.Load();
-            int growthCores = econ ? econ.TokensFromXP(xpTotal) : Mathf.Max(0, xpTotal / 10);
-            if (growthCores > 0)
-                ResourceManager.I?.Add(ResourceType.GrowthCores, growthCores);
+            // Award to player
+            if (growthCoreTotal > 0)
+                ResourceManager.I?.Add(ResourceType.GrowthCores, growthCoreTotal);
 
-            // Now actually grant & save through the normal path (persists XP/level)
-            float passMulToRewards = titleXPMul; // Rewards already applies shiny/training inside
-            BattleRewards.GrantVictoryXPAndEvo(activeIndex, wildLevel, MonsterLibraryLocator.Lib, Mathf.Max(0f, passMulToRewards));
+            BattleLogger.Log($"Gained {growthCoreTotal} Growth Cores.", LogScope.Battle);
         }
-        // Write HP back to save
-        var teamList  = SaveManager.Data.team ?? new List<OwnedMonsterData>();
+
+        // ── Persist HP results
+        var teamList = SaveManager.Data.team ?? new List<OwnedMonsterData>();
         var ownedList = SaveManager.Data.owned ?? new List<OwnedMonsterData>();
+        long nowUnix = SaveManager.NowUnix();
 
         // 1) Persist post-battle HP into TEAM entries
         for (int i = 0; i < teamCount && i < teamList.Count; i++)
         {
             var t = teamList[i];
             if (t == null || string.IsNullOrEmpty(t.monsterId)) continue;
-
             int hp = Mathf.CeilToInt(Mathf.Max(0f, teamHP[i]));
             t.currentHP = hp;
             teamList[i] = t;
         }
 
-        // 2) Mirror those TEAM HP values back into OWNED collection
-        long nowUnix = SaveManager.NowUnix();
-
+        // 2) Mirror to OWNED collection
         for (int i = 0; i < teamList.Count; i++)
         {
             var t = teamList[i];
             if (t == null || string.IsNullOrEmpty(t.monsterId)) continue;
 
-            // find matching owned entry by monsterId
             for (int j = 0; j < ownedList.Count; j++)
             {
                 var o = ownedList[j];
                 if (!string.IsNullOrEmpty(o.monsterId) && o.monsterId == t.monsterId)
                 {
-                    o.currentHP  = Mathf.Max(0, t.currentHP); // OWNED gets true post-battle HP
-                    o.lastHPUnix = nowUnix;                    // for regen timing
+                    o.currentHP = Mathf.Max(0, t.currentHP);
+                    o.lastHPUnix = nowUnix;
                     ownedList[j] = o;
                     break;
                 }
             }
         }
 
-        // 3) Timestamp team copies and remove KO’d from active team (still owned at 0 HP)
+        // 3) Timestamp & remove KO’d team members
         for (int i = 0; i < teamList.Count; i++)
         {
             var e = teamList[i];
@@ -804,22 +797,17 @@ public class BattleManager : MonoBehaviour
             e.lastHPUnix = nowUnix;
 
             if (e.currentHP <= 0)
-            {
-                // Remove from team (kept in owned with 0 HP)
-                teamList[i] = new OwnedMonsterData();
-            }
+                teamList[i] = new OwnedMonsterData(); // keep owned copy with 0 HP
             else
-            {
                 teamList[i] = e;
-            }
         }
 
         SaveManager.Data.owned = ownedList;
-        SaveManager.Data.team  = teamList;
+        SaveManager.Data.team = teamList;
         SaveManager.Save();
         GameEvents.OnTeamChanged?.Invoke();
 
-        // Clear temps
+        // Clear temporary buffs
         BattleTempBuffs.I?.ClearPlayerAtkBonus();
         BattleTempBuffs.I?.ClearPlayerSpeedBonus();
         BattleTempBuffs.I?.ClearPlayerHPBonus();
@@ -838,31 +826,18 @@ public class BattleManager : MonoBehaviour
         };
 
         SetCombatPanels(false);
+
         if (teamIds != null && activeIndex >= 0 && activeIndex < teamIds.Length)
             TitlesAdapter.OnBattleEnd(teamIds[activeIndex], victory, wildDef, wildLevel);
 
         onEnd?.Invoke(result);
 
-        // Build optional XP detail line for the active monster
-        var xpLines = new List<string>();
-        try
-        {
-            var data = SaveManager.Data;
-            if (data != null && data.team != null && activeIndex >= 0 && activeIndex < data.team.Count)
-            {
-                var def = teamDefs[activeIndex];
-                var owned = data.team[activeIndex];
-                string nm = def ? def.displayName : (owned.monsterId ?? "Ally");
-                xpLines.Add($"{nm} Lv{owned.level} → +{Mathf.Max(0, xpBaseTimesTraining + xpTitleBonus)} (<color=#3CDE74>+{xpTitleBonus}</color>) XP");
-            }
-        }
-        catch { /* non-fatal UI sugar */ }
-
+        // ── Summary panel update
         bool isAuto = EncounterManager.I && EncounterManager.I.IsAutoMode;
         PostBattleSummaryManager.I?.NotifyBattleEnd(
             result,
             isAuto,
-            xpTotal,
+            growthCoreTotal,                  // replaces XP
             monstersLeveledUp: 0,
             captured: false,
             capturedMonsterId: null,
@@ -870,9 +845,9 @@ public class BattleManager : MonoBehaviour
             levelUpSummaries: null,
             coinsBase: baseCoins,
             coinsTitleBonus: coinTitleBonus,
-            xpBase: xpBaseTimesTraining,
-            xpTitleBonus: xpTitleBonus,
-            xpDetailLines: xpLines
+            growthCoresBase: baseCores,                // reuse labels until summary UI updated
+            growthCoresTitleBonus: growthCoreTitleBonus,
+            growthCoresDetailLines: new List<string> { $"Gained {growthCoreTotal} Growth Cores." }
         );
 
         GameEvents.BattleFinished?.Invoke(result);

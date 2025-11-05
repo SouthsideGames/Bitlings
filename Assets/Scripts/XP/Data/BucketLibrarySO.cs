@@ -1,7 +1,7 @@
 using System.Linq;
 using UnityEngine;
 
-[CreateAssetMenu(menuName = "Data/Monsters/Bucket Library", fileName = "BucketLibrary")]
+[CreateAssetMenu(menuName = "Data/XP System/Bucket Library", fileName = "BucketLibrary")]
 public class BucketLibrarySO : ScriptableObject
 {
     public LevelUpBucketSO[] buckets;

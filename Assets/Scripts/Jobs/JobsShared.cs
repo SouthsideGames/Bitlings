@@ -49,7 +49,7 @@ public static class JobStrings {
     };
 
     public static string ResourceName(ResourceType t) => t switch {
-        ResourceType.TrainingXP      => "Training XP",
+        ResourceType.GrowthCores      => "Growth Cores",
         ResourceType.Coins           => "Coins",
         ResourceType.Energy          => "Energy",
         ResourceType.Medkits         => "Medkits",
@@ -71,7 +71,7 @@ public static class JobStrings {
 public static class JobOutput
 {
     public static ResourceType Output(JobType site) => site switch {
-        JobType.Gym         => ResourceType.TrainingXP,
+        JobType.Gym         => ResourceType.GrowthCores,
         JobType.Quarry      => ResourceType.Coins,
         JobType.Mine        => ResourceType.AttackBoosters,
         JobType.PowerPlant  => ResourceType.Energy,
@@ -109,7 +109,7 @@ public static class JobBalance
     private const float OFF = 0.9f;
 
     private static readonly Dictionary<JobType, float> _basePerHour = new() {
-        { JobType.Gym,          60f },
+        { JobType.Gym,          6f },
         { JobType.Quarry,       80f },
         { JobType.Mine,          1f },
         { JobType.PowerPlant,   20f },

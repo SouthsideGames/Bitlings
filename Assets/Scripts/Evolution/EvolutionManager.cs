@@ -79,6 +79,8 @@ public static class EvolutionManager
         RefreshOwnedIds(monsterId, newId);
 
         SaveManager.Save();
+        SaveDebugTools.ExportAuditJson(false);
+        
         GameEvents.OnTeamChanged?.Invoke();
         GameEvents.MonsterEvolved?.Invoke(newId);
         TitlesAdapter.OnMonsterEvolved(newId);

@@ -1,7 +1,7 @@
 using UnityEngine;
 
-[CreateAssetMenu(menuName = "Data/Resource/Token Economy", fileName = "TokenEconomy")]
-public class TokenEconomy : ScriptableObject
+[CreateAssetMenu(menuName = "Data/XP System/Token Economy", fileName = "TokenEconomy")]
+public class TokenEconomySO : ScriptableObject
 {
     [Header("XP → Growth Core conversion")]
     [Tooltip("How many XP become 1 Growth Core. Example: 10 XP = 1 GC")]
@@ -25,5 +25,5 @@ public class TokenEconomy : ScriptableObject
     public int CoresForDef(int def) => Mathf.CeilToInt(def / (float)defPerCore);
     public int CoresForSpd(int spd) => Mathf.CeilToInt(spd / (float)spdPerCore);
 
-    public static TokenEconomy Load() => Resources.Load<TokenEconomy>("TokenEconomy");
+    public static TokenEconomySO Load() => Resources.Load<TokenEconomySO>("TokenEconomy");
 }

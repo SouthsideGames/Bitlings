@@ -519,7 +519,7 @@ public sealed class TitleManager : MonoBehaviour
         return Mathf.Max(0f, mul);
     }
 
-    public float GetXPMultOnVictory(string monsterId, MonsterDataSO wild, int wildLevel)
+   public float GetGrowthCoreMultOnVictory(string monsterId, MonsterDataSO wild, int wildLevel)
     {
         float mul = 1f;
 
@@ -532,13 +532,14 @@ public sealed class TitleManager : MonoBehaviour
             var t = titles[i];
             if (!t) continue;
 
-            if (t is XPBonusOnVictoryTitleSO xp)
+            if (t is GrowthCoreBonusOnVictoryTitleSO gc)
             {
-                mul *= Mathf.Max(0f, xp.xpMultiplier);
+                mul *= Mathf.Max(0f, gc.growthCoreMultiplier);
                 continue;
             }
 
-            if (TryReadFloat(t, out var v, "xpMultiplier", "experienceMultiplier", "rewardXPMult"))
+            // Flexible reflection fallback if field name changes
+            if (TryReadFloat(t, out var v, "growthCoreMultiplier", "coreMultiplier", "rewardGrowthMult"))
                 mul *= Mathf.Max(0f, v);
         }
 

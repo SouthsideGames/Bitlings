@@ -8,7 +8,7 @@ public class AutoApplyService : MonoBehaviour
     [Header("Refs")]
     [SerializeField] private PlayerManager playerManager;      // drag in
     [SerializeField] private BucketLibrarySO bucketLibrary;    // drag in
-    [SerializeField] private TokenEconomy tokenEconomy;        // drag in (or leave null to auto-load)
+    [SerializeField] private TokenEconomySO tokenEconomy;        // drag in (or leave null to auto-load)
     [SerializeField] private LevelCostCurveSO levelCostCurve;  // drag in
 
     [Header("Options")]
@@ -21,7 +21,7 @@ public class AutoApplyService : MonoBehaviour
     {
         if (I != null && I != this) { Destroy(gameObject); return; }
         I = this;
-        if (!tokenEconomy) tokenEconomy = TokenEconomy.Load();
+        if (!tokenEconomy) tokenEconomy = TokenEconomySO.Load();
     }
 
     void Update()
