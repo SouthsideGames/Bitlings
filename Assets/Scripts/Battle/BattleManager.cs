@@ -91,7 +91,7 @@ public class BattleManager : MonoBehaviour
     // Pending one-turn damage buffs for benched allies (applied on swap-in)
     private float[] teamPendingBuffPct;
     private int[]   teamPendingBuffTurns;
-
+    private int _turnIndex = 0;
     private bool inBattle;
     private Action<BattleResult> onEnd;
     private float startTime;
@@ -280,6 +280,9 @@ public class BattleManager : MonoBehaviour
 
             yield return Wait(beginRoundDelay);
 
+            _turnIndex++;
+            TitlesAdapter.OnTurnAdvanced(_turnIndex);
+
             // ── Speed / Initiative in order: Base → Job → Titles → Boosters
             int pSpeedBase = BattleCalc.CalcSpeed(teamDefs[activeIndex], teamLevels[activeIndex]);
 
@@ -320,14 +323,16 @@ public class BattleManager : MonoBehaviour
             {
                 if (jobCtx != null && jobCtx[activeIndex] != null)
                 {
-                    if (jobCtx[activeIndex].speedBuffTurns > 0)      jobCtx[activeIndex].speedBuffTurns--;
-                    if (jobCtx[activeIndex].critBuffTurns > 0)       jobCtx[activeIndex].critBuffTurns--;
+                    if (jobCtx[activeIndex].speedBuffTurns > 0) jobCtx[activeIndex].speedBuffTurns--;
+                    if (jobCtx[activeIndex].critBuffTurns > 0) jobCtx[activeIndex].critBuffTurns--;
                     if (jobCtx[activeIndex].critResistBuffTurns > 0) jobCtx[activeIndex].critResistBuffTurns--;
-                    if (jobCtx[activeIndex].dmgReduceBuffTurns > 0)  jobCtx[activeIndex].dmgReduceBuffTurns--;
+                    if (jobCtx[activeIndex].dmgReduceBuffTurns > 0) jobCtx[activeIndex].dmgReduceBuffTurns--;
                 }
 
                 yield return Wait(endRoundDelay);
             }
+            
+            round++;
         }
 
         turnCR = null;
@@ -386,6 +391,8 @@ public class BattleManager : MonoBehaviour
             /*critMult*/ critMultiplier,
             /*flatDefBonus*/ 0
         );
+
+        TitlesAdapter.OnAttackLanded(teamIds[activeIndex], dr.crit);
 
         // ─────────────────────────────────────────────────────────────
         // 2) JOB PASSIVES (damage multipliers etc.)
@@ -612,6 +619,8 @@ public class BattleManager : MonoBehaviour
         // ── Apply to HP
         teamHP[activeIndex] = Mathf.Max(0f, teamHP[activeIndex] - dmg_final);
         ClampAndPushActiveHP();
+
+        TitlesAdapter.OnHitTaken(teamIds[activeIndex], dmg_final, dr.crit && !df.cannotBeCrit);
 
         string foeName = wildDef ? wildDef.displayName : "Foe";
         BattleLogger.Log($"{foeName} hits {GetName(activeIndex)} for {dmg_final}!", LogScope.Battle);
@@ -1323,6 +1332,7 @@ public class BattleManager : MonoBehaviour
 
     private IEnumerator Co_StartBattleNow()
     {
+        _turnIndex = 0;
         inBattle = true;
         startTime = Time.unscaledTime;
 

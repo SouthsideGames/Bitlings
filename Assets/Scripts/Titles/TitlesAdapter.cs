@@ -178,9 +178,24 @@ public static class TitlesAdapter
     // Lifecycle / Events
     // ─────────────────────────────────────────────────────────────────────────────
 
+    public static void OnTurnAdvanced(int turnIndex)
+    {
+        if (!TryInvoke("OnTurnAdvanced", new object[] { turnIndex }, out _)) {}
+    }
+
+    public static void OnAttackLanded(string attackerId, bool wasCrit)
+    {
+        if (!TryInvoke("OnAttackLanded", new object[] { attackerId, wasCrit }, out _)) {}
+    }
+
+    public static void OnHitTaken(string defenderId, int damage, bool wasCrit)
+    {
+        if (!TryInvoke("OnHitTaken", new object[] { defenderId, damage, wasCrit }, out _)) {}
+    }
+
     public static void OnBattleStart(string activeMonsterId, MonsterDataSO wild, int wildLevel)
     {
-        if (!TryInvoke("OnBattleStart", new object[] { activeMonsterId, wild, wildLevel }, out _)){}
+        if (!TryInvoke("OnBattleStart", new object[] { activeMonsterId, wild, wildLevel }, out _)) { }
     }
 
     public static void OnBattleEnd(string activeMonsterId, bool victory, MonsterDataSO wild, int wildLevel)
