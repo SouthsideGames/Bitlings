@@ -10,10 +10,10 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: f84cb6da77f7db64b94e2034c36a5a24, type: 3}
-  m_Name: T_001
+  m_Name: T_009
   m_EditorClassIdentifier: 
-  titleId: T_001
-  displayName: Forge Foreman
-  description: 'While assigned to Forge: +10% site output.'
-  targetJobSite: 5
+  titleId: T_009
+  displayName: Power Regulator
+  description: 'While assigned to PowerPlant: +10% site output.'
+  targetJobSite: 3
   siteAuraPercent: 10

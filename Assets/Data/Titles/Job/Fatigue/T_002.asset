@@ -12,7 +12,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 61450cc82dca6cf49b69d38a3002c4d9, type: 3}
   m_Name: T_002
   m_EditorClassIdentifier: 
-  titleId: 
-  displayName: 
-  description: 
-  fatigueMultiplier: 1
+  titleId: T_002
+  displayName: Smelter Technician
+  description: 'While assigned to Forge: Fatigue x0.85.'
+  targetJobSite: 5
+  fatigueMultiplier: 0.85
