@@ -580,8 +580,9 @@ public class BattleManager : MonoBehaviour
         int dmg_afterScalar = Mathf.Max(1, Mathf.RoundToInt(dr.damage * incomingScalar));
 
         // ── Stage 1.5: incoming effectiveness titles (defensive) BEFORE %/flat filters
-        float incomingEffMul = TitlesAdapter.GetIncomingEffectivenessMult(
-            teamIds[activeIndex], teamDefs[activeIndex], teamLevels[activeIndex]
+       float incomingEffMul = TitlesAdapter.GetIncomingEffectivenessMult(
+            teamIds[activeIndex], teamDefs[activeIndex], teamLevels[activeIndex],
+            wildDef ? wildDef.type : MonsterType.None
         );
         if (!Mathf.Approximately(incomingEffMul, 1f))
         {

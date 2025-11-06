@@ -480,13 +480,43 @@ public static class TitlesAdapter
         return 0f;
     }
 
+    public static float GetIncomingEffectivenessMult(string ownedId, MonsterDataSO def, int level, MonsterType incomingType)
+    {
+        float mul = 1f;
+
+        // 1) Keep existing generic defensive effectiveness titles (e.g., nullifiers/resistors)
+        mul *= Mathf.Max(0f, TitleManager.I.GetIncomingEffectivenessMultiplier(ownedId, def, level));
+
+        // 2) Apply any per-type resist titles that match the incoming attack type
+        var list = TitleManager.I.GetEquippedList(ownedId, def, level);
+        if (list != null)
+        {
+            for (int i = 0; i < list.Count; i++)
+            {
+                if (list[i] is TypeResistTitleSO tr && tr.resistTypes != null && tr.resistTypes.Length > 0)
+                {
+                    for (int k = 0; k < tr.resistTypes.Length; k++)
+                    {
+                        if (incomingType != MonsterType.None && tr.resistTypes[k] == incomingType)
+                        {
+                            mul *= Mathf.Max(0f, tr.incomingMultiplier);
+                            break; // avoid double-counting same asset
+                        }
+                    }
+                }
+            }
+        }
+
+        return Mathf.Max(0f, mul);
+    }
+
+    // Backward-compatible alias used by any old call sites that didn’t pass a type.
     public static float GetIncomingEffectivenessMult(string ownedId, MonsterDataSO def, int level)
     {
-        if (TryInvoke("GetIncomingEffectivenessMultiplier", new object[] { ownedId, def, level }, out var res) && res is float f)
-            return Mathf.Max(0f, f);
-
-        return 1f;
+        // Fallback: just apply existing generic defensive mods (no per-type logic)
+        return Mathf.Max(0f, TitleManager.I.GetIncomingEffectivenessMultiplier(ownedId, def, level));
     }
+
 
     /// <summary> Defender-side damage filter: cannotBeCrit / % reduce / flat reduce. </summary>
     public static TitleDamageFilter GetDamageFilter(string ownedId, MonsterDataSO def, int level)

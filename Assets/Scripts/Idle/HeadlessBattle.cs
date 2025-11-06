@@ -2,6 +2,10 @@ using UnityEngine;
 
 public static class HeadlessBattle
 {
+    /// <summary>
+    /// Compact headless input for win/coin simulation.
+    /// Compose upstream (Jobs/Idle/Title systems) and pass the final multipliers here.
+    /// </summary>
     public struct Input
     {
         public int   avgTeamLevel;
@@ -10,46 +14,71 @@ public static class HeadlessBattle
         public float rewardMultiplier;
         public int   rngSeed;
 
-        // These already include Jobs/Idle + Titles (caller composes)
+        /// <summary>Offensive pressure scalar (>=0). Compose jobs, titles, etc.</summary>
         public float offenseMul;
+
+        /// <summary>Defensive durability scalar (>=0). Compose jobs, titles, etc.</summary>
         public float defenseMul;
 
-        public float earlyEdge;  // Jobs/Idle only
-        public float coinMul;    // Jobs/Idle only (Title coin mult applied at grant time)
+        /// <summary>
+        /// NEW: Defensive per-type resist scalar (>=0). 
+        /// Example: 0.75 for “-25% Fire damage taken” when fighting Fire.
+        /// If unset/zero, treated as 1f (neutral).
+        /// </summary>
+        public float incomingTypeResistMul;
+
+        /// <summary>Early momentum edge from idle/job systems only (additive bias to p).</summary>
+        public float earlyEdge;
+
+        /// <summary>Jobs/Idle coin multiplier only (title coin multipliers are applied at grant time).</summary>
+        public float coinMul;
     }
 
     public struct Output
     {
         public bool victory;
-        public int coins;
+        public int  coins;
     }
 
     public static Output Resolve(in Input i)
     {
-        int diff = i.avgTeamLevel - i.wildLevel;
-        float p = 0.5f + Mathf.Clamp(diff * 0.08f, -0.35f, 0.40f);
+        // Base win probability from level diff
+        int   diff = i.avgTeamLevel - i.wildLevel;
+        float p    = 0.5f + Mathf.Clamp(diff * 0.08f, -0.35f, 0.40f);
 
-        // Fold multipliers into win probability (bounded later)
-        p += (i.offenseMul - 1f) * 0.30f;
-        p += (i.defenseMul - 1f) * 0.30f;
+        // Normalize multipliers to safe domain (0 or negative -> 1)
+        float offMul = SafeMul(i.offenseMul);
+        float defMul = SafeMul(i.defenseMul) * SafeMul(i.incomingTypeResistMul); // ← include type resist here
+
+        // Fold composed multipliers into probability
+        // Tuning weights are intentionally conservative; adjust to taste.
+        p += (offMul - 1f) * 0.30f;
+        p += (defMul - 1f) * 0.30f;
+
+        // Early momentum/edge (jobs/idle)
         p += i.earlyEdge;
 
+        // Boundaries
         p = Mathf.Clamp01(p);
         p = Mathf.Clamp(p, 0.05f, 0.95f);
 
-        var rng = new System.Random(i.rngSeed);
+        var  rng = new System.Random(i.rngSeed);
         bool win = rng.NextDouble() < p;
 
+        // Rewards
         int coins = 0;
         if (win)
         {
-            float baseCoins = (i.baseCoinPerWin + Mathf.Max(0, i.wildLevel) * 1.5f) * i.rewardMultiplier;
-            baseCoins *= Mathf.Max(0.5f, i.coinMul); // jobs/idle only
+            float baseCoins = (i.baseCoinPerWin + Mathf.Max(0, i.wildLevel) * 1.5f) * Mathf.Max(0f, i.rewardMultiplier);
+            baseCoins *= Mathf.Max(0.5f, i.coinMul); // jobs/idle only; title coin mult applied later at grant
             coins = Mathf.RoundToInt(baseCoins);
         }
 
         return new Output { victory = win, coins = coins };
     }
+
+    /// <summary>Coerces invalid/zero multipliers to neutral (1f).</summary>
+    private static float SafeMul(float m) => (m > 0f) ? m : 1f;
 
     // (Kept for parity if you ever want to mirror DamageFilter logic in headless detail sims later)
     private struct DamageFilterView { public bool cannotBeCrit; public float percentReduce; public int flatReduce; }
@@ -66,9 +95,9 @@ public static class HeadlessBattle
         bool ok = true;
         bool noCrit = false; float pct = 0f; int flat = 0;
 
-        if (fNoCrit != null && fNoCrit.FieldType == typeof(bool)) noCrit = (bool)fNoCrit.GetValue(boxed); else ok = false;
-        if (fPct    != null && fPct.FieldType    == typeof(float)) pct    = (float)fPct.GetValue(boxed);   else ok = false;
-        if (fFlat   != null && fFlat.FieldType   == typeof(int))   flat   = (int)fFlat.GetValue(boxed);    else ok = false;
+        if (fNoCrit != null && fNoCrit.FieldType == typeof(bool))  noCrit = (bool)fNoCrit.GetValue(boxed); else ok = false;
+        if (fPct    != null && fPct.FieldType    == typeof(float)) pct    = (float)fPct.GetValue(boxed);    else ok = false;
+        if (fFlat   != null && fFlat.FieldType   == typeof(int))   flat   = (int)fFlat.GetValue(boxed);     else ok = false;
 
         if (!ok) return false;
         view = new DamageFilterView { cannotBeCrit = noCrit, percentReduce = pct, flatReduce = flat };

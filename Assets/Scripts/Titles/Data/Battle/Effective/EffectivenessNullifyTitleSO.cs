@@ -1,10 +1,11 @@
 using UnityEngine;
 
 [CreateAssetMenu(menuName = "Data/Titles/Effectiveness Nullify", fileName = "EffectivenessNullifyTitle")]
+[Tooltip("Used to define Titles that reduce or nullify incoming type effectiveness damage multipliers.")]
 public sealed class EffectivenessNullifyTitleSO : TitleSO
 {
-    [Header("Multiply incoming effectiveness (e.g., 0.5 = halve type weakness)")]
-    [Tooltip("Values <1 reduce type advantage; 0 ignores type effectiveness completely.")]
+    [Header("Incoming Effectiveness Control")]
+    [Tooltip("Multiplier applied to incoming type effectiveness. Values <1 reduce weakness; 0 ignores type advantage entirely.")]
     [Range(0f, 2f)]
     public float incomingEffectivenessMultiplier = 1f;
 }
