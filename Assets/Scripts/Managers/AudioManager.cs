@@ -14,9 +14,8 @@ public enum SfxType
     UIClose,
 
     // Economy
-    CurrencyGain,
+    ResourceGain,
     Purchase,
-    PurchaseFail,
 
     // Battle
     HitLight,
@@ -25,14 +24,12 @@ public enum SfxType
     Victory,
     Defeat,
     CaptureSuccess,
-    CaptureFail,
 
     // Jobs
     JobAssign,
 
     // Progress
     LevelUp,
-    Unlock,
     // Titles
     TitleEquip,
     TitleUnequip,

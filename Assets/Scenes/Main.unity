@@ -9056,137 +9056,42 @@ MonoBehaviour:
     duckMusic: 0
     duckDb: -6
     duckDuration: 0.25
-  - type: 5
-    clips: []
-    volume: 1
-    pitchMin: 0.5
-    pitchMax: 0.76
-    cooldown: 0
-    duckMusic: 0
-    duckDb: -6
-    duckDuration: 0.25
-  - type: 6
-    clips: []
-    volume: 1
-    pitchMin: 1
-    pitchMax: 1
-    cooldown: 0
-    duckMusic: 0
-    duckDb: -6
-    duckDuration: 0.25
-  - type: 4
-    clips: []
-    volume: 1
-    pitchMin: 1
-    pitchMax: 1
-    cooldown: 0
-    duckMusic: 0
-    duckDb: -6
-    duckDuration: 0.25
-  - type: 7
-    clips: []
-    volume: 1
-    pitchMin: 1
-    pitchMax: 1
-    cooldown: 0
-    duckMusic: 0
-    duckDb: -6
-    duckDuration: 0.25
-  - type: 8
-    clips: []
-    volume: 1
-    pitchMin: 1
-    pitchMax: 1
-    cooldown: 0
-    duckMusic: 0
-    duckDb: -6
-    duckDuration: 0.25
-  - type: 9
-    clips: []
-    volume: 1
-    pitchMin: 1
-    pitchMax: 1
-    cooldown: 0
-    duckMusic: 0
-    duckDb: -6
-    duckDuration: 0.25
-  - type: 10
-    clips: []
-    volume: 1
-    pitchMin: 1
-    pitchMax: 1
-    cooldown: 0
-    duckMusic: 0
-    duckDb: -6
-    duckDuration: 0.25
   - type: 11
-    clips: []
+    clips:
+    - {fileID: 8300000, guid: dac9db45ffae2478696abe4e4d870360, type: 3}
     volume: 1
-    pitchMin: 1
-    pitchMax: 1
-    cooldown: 0
-    duckMusic: 0
-    duckDb: -6
-    duckDuration: 0.25
-  - type: 12
-    clips: []
-    volume: 1
-    pitchMin: 1
-    pitchMax: 1
-    cooldown: 0
-    duckMusic: 0
-    duckDb: -6
-    duckDuration: 0.25
-  - type: 13
-    clips: []
-    volume: 1
-    pitchMin: 1
-    pitchMax: 1
+    pitchMin: 0.85
+    pitchMax: 1.05
     cooldown: 0
     duckMusic: 0
     duckDb: -6
     duckDuration: 0.25
   - type: 14
-    clips: []
+    clips:
+    - {fileID: 8300000, guid: c90884fe051d74c4aa6ecde07b896b98, type: 3}
     volume: 1
-    pitchMin: 1
-    pitchMax: 1
+    pitchMin: 0.85
+    pitchMax: 1.05
     cooldown: 0
     duckMusic: 0
     duckDb: -6
     duckDuration: 0.25
   - type: 15
-    clips: []
+    clips:
+    - {fileID: 8300000, guid: c90884fe051d74c4aa6ecde07b896b98, type: 3}
     volume: 1
-    pitchMin: 1
-    pitchMax: 1
+    pitchMin: 0.85
+    pitchMax: 1.05
     cooldown: 0
     duckMusic: 0
     duckDb: -6
     duckDuration: 0.25
-  - type: 16
-    clips: []
+  - type: 13
+    clips:
+    - {fileID: 8300000, guid: c90884fe051d74c4aa6ecde07b896b98, type: 3}
     volume: 1
-    pitchMin: 1
-    pitchMax: 1
-    cooldown: 0
-    duckMusic: 0
-    duckDb: -6
-    duckDuration: 0.25
-  - type: 18
-    clips: []
-    volume: 1
-    pitchMin: 1
-    pitchMax: 1
-    cooldown: 0
-    duckMusic: 0
-    duckDb: -6
-    duckDuration: 0.25
-  - type: 17
-    clips: []
-    volume: 1
-    pitchMin: 1
-    pitchMax: 1
+    pitchMin: 0.85
+    pitchMax: 1.05
     cooldown: 0
     duckMusic: 0
     duckDb: -6
