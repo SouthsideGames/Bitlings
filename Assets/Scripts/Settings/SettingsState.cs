@@ -4,8 +4,8 @@ using System;
 public class SettingsState
 {
     // ───────── Audio ─────────
-    public float masterVolume = 0.8f;
-    public float musicVolume  = 0.8f;
+    public float masterVolume = 0.25f;
+    public float musicVolume  = 0.25f;
     public float sfxVolume    = 0.8f;
 
     public bool muteAll   = false;

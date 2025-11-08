@@ -10,8 +10,6 @@ public enum SfxType
 
     // Core/UI
     Click,
-    Select,
-    Back,
     UIOpen,
     UIClose,
 
@@ -19,7 +17,6 @@ public enum SfxType
     CurrencyGain,
     Purchase,
     PurchaseFail,
-    Upgrade,
 
     // Battle
     HitLight,
@@ -32,14 +29,10 @@ public enum SfxType
 
     // Jobs
     JobAssign,
-    JobComplete,
-    JobError,
 
     // Progress
     LevelUp,
     Unlock,
-    Achievement,
-
     // Titles
     TitleEquip,
     TitleUnequip,
@@ -68,7 +61,6 @@ public class AudioManager : MonoBehaviour
 {
     public static AudioManager I { get; private set; }
 
-    // ───────────────────────────────────────────────────────────── Mixer / Buses
     [Header("Mixer")]
     public AudioMixer mixer;
     public AudioMixerGroup masterGroup;
@@ -77,10 +69,9 @@ public class AudioManager : MonoBehaviour
 
     [Tooltip("Exposed mixer parameter names (case-sensitive).")]
     public string masterVolParam = "MasterVol";
-    public string musicVolParam  = "MusicVol";
-    public string sfxVolParam    = "SfxVol";
+    public string musicVolParam = "MusicVol";
+    public string sfxVolParam = "SfxVol";
 
-    // ─────────────────────────────────────────────────────────────────── Music
     [Header("Music")]
     [SerializeField] private AudioSource musicA;
     [SerializeField] private AudioSource musicB;
@@ -91,7 +82,6 @@ public class AudioManager : MonoBehaviour
     private AudioSource _activeMusic;
     private Coroutine _xfadeCo;
 
-    // ──────────────────────────────────────────────────────────────────── SFX
     [Header("SFX")]
     [Range(1, 16)] public int sfxPoolSize = 4;
     [SerializeField] private List<AudioSource> sfxPool = new();
@@ -105,20 +95,16 @@ public class AudioManager : MonoBehaviour
     private readonly Dictionary<SfxType, SfxEntry> _sfxMap = new();
     private readonly Dictionary<SfxType, float> _nextPlayableAt = new();
 
-    // ─────────────────────────────────────────────────────────── Auto Routing
     [Header("Auto Music Routing")]
     public bool autoSwapForEncounter = true;
 
-    // ───────────────────────────────────────────────────────────── Settings
-    // Store as 0..1 linear values and per-bus mutes
     private float _master01 = 0.8f;
-    private float _music01  = 0.8f;
-    private float _sfx01    = 0.9f;
-    private bool  _muteAll   = false;
-    private bool  _muteMusic = false;
-    private bool  _muteSfx   = false;
+    private float _music01 = 0.8f;
+    private float _sfx01 = 0.9f;
+    private bool _muteAll = false;
+    private bool _muteMusic = false;
+    private bool _muteSfx = false;
 
-    // ────────────────────────────────────────────────────────────── Lifecycle
     private void Awake()
     {
         if (I != null && I != this)
@@ -251,10 +237,15 @@ public class AudioManager : MonoBehaviour
         if (entry.duckMusic) StartCoroutine(C0_TempDuckMusic(entry.duckDb, entry.duckDuration));
     }
 
-    // ── Settings API expected by SettingsPanel ──────────────────────────────────
     public float GetMasterVolume() => _master01;
-    public float GetMusicVolume()  => _music01;
-    public float GetSfxVolume()    => _sfx01;
+    public float GetMusicVolume() => _music01;
+    public float GetSfxVolume() => _sfx01;
+    public void SetMaster01(float v) => SetMasterVolume(v);
+    public void SetMusic01(float v) => SetMusicVolume(v);
+    public void SetSfx01(float v) => SetSfxVolume(v);
+    public void ApplyVolumes() => ApplyMixerVolumes();
+    public void OnButtonClick() => PlaySfx(SfxType.Click);
+
 
     public void SetMasterVolume(float v)
     {
@@ -293,14 +284,6 @@ public class AudioManager : MonoBehaviour
         MirrorToSave_StateOnly();
         ApplyMixerVolumes();
     }
-
-    // Backwards-compat helper if anything calls these old names
-    public void SetMaster01(float v) => SetMasterVolume(v);
-    public void SetMusic01 (float v) => SetMusicVolume(v);
-    public void SetSfx01   (float v) => SetSfxVolume(v);
-
-    // Compatibility hook for SettingsManager.SendMessage("ApplyVolumes")
-    public void ApplyVolumes() => ApplyMixerVolumes();
 
     // ───────────────────────────────────────────────────────────── Internals
     private bool PassCooldown(SfxType type, SfxEntry entry)
@@ -353,24 +336,24 @@ public class AudioManager : MonoBehaviour
             var s = SaveManager.Data?.settings;
             if (s != null)
             {
-                _master01  = Mathf.Clamp01(s.masterVolume);
-                _music01   = Mathf.Clamp01(s.musicVolume);
-                _sfx01     = Mathf.Clamp01(s.sfxVolume);
-                _muteAll   = s.muteAll;
+                _master01 = Mathf.Clamp01(s.masterVolume);
+                _music01 = Mathf.Clamp01(s.musicVolume);
+                _sfx01 = Mathf.Clamp01(s.sfxVolume);
+                _muteAll = s.muteAll;
                 _muteMusic = s.muteMusic;
-                _muteSfx   = s.muteSfx;
+                _muteSfx = s.muteSfx;
                 return;
             }
         }
         catch { /* ignore and use defaults */ }
 
         // sensible defaults
-        _master01  = 0.8f;
-        _music01   = 0.8f;
-        _sfx01     = 0.9f;
-        _muteAll   = false;
+        _master01 = 0.8f;
+        _music01 = 0.8f;
+        _sfx01 = 0.9f;
+        _muteAll = false;
         _muteMusic = false;
-        _muteSfx   = false;
+        _muteSfx = false;
     }
 
     private void MirrorToSave_StateOnly()
@@ -381,11 +364,11 @@ public class AudioManager : MonoBehaviour
             if (s == null) return;
 
             s.masterVolume = _master01;
-            s.musicVolume  = _music01;
-            s.sfxVolume    = _sfx01;
-            s.muteAll      = _muteAll;
-            s.muteMusic    = _muteMusic;
-            s.muteSfx      = _muteSfx;
+            s.musicVolume = _music01;
+            s.sfxVolume = _sfx01;
+            s.muteAll = _muteAll;
+            s.muteMusic = _muteMusic;
+            s.muteSfx = _muteSfx;
 
             SaveManager.Save();
         }
@@ -420,19 +403,19 @@ public class AudioManager : MonoBehaviour
         dur = Mathf.Max(0.01f, dur);
         float t = 0f;
 
-        if (to   != null) to.outputAudioMixerGroup = musicGroup;
+        if (to != null) to.outputAudioMixerGroup = musicGroup;
         if (from != null) from.outputAudioMixerGroup = musicGroup;
 
         while (t < dur)
         {
             t += Time.unscaledDeltaTime;
             float a = Mathf.Clamp01(t / dur);
-            if (to   != null) to.volume   = a;
+            if (to != null) to.volume = a;
             if (from != null) from.volume = 1f - a;
             yield return null;
         }
 
-        if (to   != null) to.volume = 1f;
+        if (to != null) to.volume = 1f;
         if (from != null)
         {
             from.Stop();
@@ -514,4 +497,5 @@ public class AudioManager : MonoBehaviour
         else if (startingMusic != null)
             PlayMusic(startingMusic, loop: true, crossfade: defaultCrossfade);
     }
+
 }

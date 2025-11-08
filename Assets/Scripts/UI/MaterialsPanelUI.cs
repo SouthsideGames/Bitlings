@@ -35,9 +35,14 @@ public class MaterialsPanelUI : MonoBehaviour
         if (closeBtn)   closeBtn.onClick.AddListener(Hide);
     }
 
-    void Start()
+    void OnEnable()
     {
-        if (openOnStart) Show();
+        Show();
+    }
+
+    void OnDisable()
+    {
+        Hide();
     }
 
     public void Show()
