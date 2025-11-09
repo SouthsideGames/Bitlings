@@ -8,7 +8,7 @@ public enum ResourceType
 {
     Coins, Energy, Medkits, Materials,
     Sigils, Lures, CaptureBands, Luck,
-    AttackBoosters, HPBoosters, SpeedBoosters, ShinyOrbs, BlessingTokens, RestCharge, Gems, GrowthCores
+    AttackBoosters, HPBoosters, SpeedBoosters, ShinyOrbs, BlessingTokens, RestCharge, Gems, GrowthCores, PackShards
 }
 
 public class ResourceManager : MonoBehaviour
