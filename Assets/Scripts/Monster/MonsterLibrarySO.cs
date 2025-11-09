@@ -8,13 +8,16 @@ public class MonsterLibrarySO : ScriptableObject
     [SerializeField] public MonsterDataSO[] monsters;
 
     [Header("Availability")]
-    [SerializeField] private MonsterPackLibrarySO packLibrary;   //
+    [SerializeField] private MonsterPackLibrarySO packLibrary;
     [SerializeField] private bool respectPackGating = true;
 
-    public IEnumerable<MonsterDataSO> All => monsters?.Where(m => m != null && !string.IsNullOrEmpty(m.id)) ?? Enumerable.Empty<MonsterDataSO>();
+    public IEnumerable<MonsterDataSO> All =>
+        monsters?.Where(m => m != null && !string.IsNullOrEmpty(m.id)) ?? Enumerable.Empty<MonsterDataSO>();
+
     public IEnumerable<MonsterDataSO> AllAvailable => All.Where(IsAvailable);
 
-    public MonsterDataSO GetById(string id) => string.IsNullOrEmpty(id) ? null : All.FirstOrDefault(m => m.id == id);
+    public MonsterDataSO GetById(string id)
+        => string.IsNullOrEmpty(id) ? null : All.FirstOrDefault(m => m.id == id);
 
     public MonsterDataSO GetRandom()
     {
@@ -42,39 +45,58 @@ public class MonsterLibrarySO : ScriptableObject
         return src.Count(m => m.type == type);
     }
 
+    // ─────────────────────────────────────────────────────────────────────────────
+    //  Availability / Pack Gating
+    // ─────────────────────────────────────────────────────────────────────────────
+
     public bool IsAvailable(MonsterDataSO def)
     {
         if (def == null) return false;
         if (!respectPackGating || packLibrary == null) return true;
 
-        bool gated = false;
-        bool unlocked = false;
+        var packs = packLibrary.Packs;
+        if (packs == null || packs.Count == 0) return true;
 
-        var packs = packLibrary.packs;
-        if (packs != null)
+        // Use SaveManager-backed unlocks (null-safe)
+        var unlockedSet = (SaveManager.Data?.unlockedPacks != null)
+            ? new HashSet<string>(SaveManager.Data.unlockedPacks)
+            : s_emptySet;
+
+        bool gated = false;
+
+        for (int i = 0; i < packs.Count; i++)
         {
-            for (int i = 0; i < packs.Count; i++)
+            var p = packs[i];
+            if (p == null || p.monsters == null) continue;
+
+            // If this pack contains the monster, it’s gated by this pack
+            for (int j = 0; j < p.monsters.Count; j++)
             {
-                var p = packs[i];
-                if (p == null || p.monsters == null) continue;
-                for (int j = 0; j < p.monsters.Count; j++)
+                if (p.monsters[j] == def)
                 {
-                    if (p.monsters[j] == def)
-                    {
-                        gated = true;
-                        if (AchievementsSaveStore.Data.unlockedPacks.Contains(p.id)) unlocked = true;
-                    }
+                    // As soon as we find the containing pack, if it's unlocked → available
+                    if (unlockedSet.Contains(p.id)) return true;
+                    gated = true;
+                    // Keep searching in case the same monster appears in another unlocked pack
+                    break;
                 }
             }
         }
 
-        return !gated || unlocked;
+        // Not found in any pack (not gated) → available; otherwise gated & locked → unavailable
+        return !gated;
     }
 
-    public MonsterDataSO GetRandomWeightedWithTypeBonus(Dictionary<MonsterType, float> typeMultipliers, bool onlyAvailable = true)
+    // ─────────────────────────────────────────────────────────────────────────────
+    //  Weighted Random (Type Bonus)
+    // ─────────────────────────────────────────────────────────────────────────────
+
+    public MonsterDataSO GetRandomWeightedWithTypeBonus(
+        Dictionary<MonsterType, float> typeMultipliers, bool onlyAvailable = true)
     {
         var src = onlyAvailable ? AllAvailable : All;
         var pool = src.Where(m => m.spawnWeight > 0).ToArray();
+
         if (pool.Length == 0)
         {
             var backup = src.ToArray();
@@ -84,6 +106,7 @@ public class MonsterLibrarySO : ScriptableObject
 
         float total = 0f;
         float[] weights = new float[pool.Length];
+
         for (int i = 0; i < pool.Length; i++)
         {
             float baseW = Mathf.Max(0, pool[i].spawnWeight);
@@ -104,6 +127,13 @@ public class MonsterLibrarySO : ScriptableObject
             running += weights[i];
             if (roll <= running) return pool[i];
         }
+
         return pool[pool.Length - 1];
     }
+
+    // ─────────────────────────────────────────────────────────────────────────────
+    //  Internal
+    // ─────────────────────────────────────────────────────────────────────────────
+
+    private static readonly HashSet<string> s_emptySet = new HashSet<string>();
 }

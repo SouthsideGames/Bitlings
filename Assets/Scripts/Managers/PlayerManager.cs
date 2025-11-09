@@ -88,6 +88,7 @@ public class PlayerManager
 
     public int coins = 0;
     public List<int> resourceCounts = new List<int>();
+    public List<string> unlockedPacks = new List<string>();
 
     public int tapLevel = 0;
     public int idleLevel = 0;

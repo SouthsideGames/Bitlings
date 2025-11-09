@@ -190,6 +190,8 @@ public static class SaveManager
         Data.jobAssignments ??= new List<JobAssignment>();
         Data.jobProgress ??= new List<JobProgress>();
         Data.jobStorageUpgrades ??= new List<JobStorageUpgrade>();
+        Data.unlockedPacks ??= new List<string>();
+
 
         // Identity
         if (string.IsNullOrEmpty(Data.playerId)) Data.playerId = Guid.NewGuid().ToString("N");

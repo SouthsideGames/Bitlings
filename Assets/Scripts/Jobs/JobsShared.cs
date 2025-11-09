@@ -8,7 +8,7 @@ public enum JobType {
     Forge = 5, Workshop = 6, Harbor = 7, CryoLab = 8,
     Observatory = 9, Containment = 10, WyrmDen = 11, ShadowMarket = 12, Sanctum = 13, Clinic = 14,
     None = 15,
-    BugExpedition = 16 
+    Expedition = 16 
 }
 
 public enum SiteEffectKind {
@@ -47,6 +47,8 @@ public static class JobStrings {
         JobType.ShadowMarket => "Shadow Market",
         JobType.Sanctum      => "Sanctum",
         JobType.Clinic       => "Clinic",
+        JobType.Expedition   => "Expedition",
+
         _ => site.ToString()
     };
 
@@ -66,6 +68,7 @@ public static class JobStrings {
         ResourceType.ShinyOrbs       => "Shiny Orbs",
         ResourceType.BlessingTokens  => "Blessing Tokens",
         ResourceType.RestCharge      => "Rest Charge",
+        ResourceType.PackShards      => "Pack Shards",
         _ => t.ToString()
     };
 }
@@ -88,6 +91,8 @@ public static class JobOutput
         JobType.ShadowMarket=> ResourceType.ShinyOrbs,
         JobType.Sanctum     => ResourceType.BlessingTokens,
         JobType.Clinic      => ResourceType.RestCharge,
+        JobType.Expedition  => ResourceType.PackShards,
+
         _ => ResourceType.Coins
     };
 
@@ -125,25 +130,27 @@ public static class JobBalance
         { JobType.WyrmDen,      0.5f },
         { JobType.ShadowMarket,  1f },
         { JobType.Sanctum,      0.25f },
-        { JobType.Clinic,       0.25f }
+        { JobType.Clinic,       0.25f },
+        { JobType.Expedition,    1.0f },
     };
 
     private static readonly Dictionary<JobType, HashSet<MonsterType>> _bestTypes = new() {
         { JobType.Gym,          new() { MonsterType.Clash } },
-        { JobType.Quarry,       new() { MonsterType.Ground, MonsterType.Rock } },
+        { JobType.Quarry,       new() { MonsterType.Ground } },
         { JobType.Mine,         new() { MonsterType.Rock } },
         { JobType.PowerPlant,   new() { MonsterType.Electric } },
-        { JobType.Grove,        new() { MonsterType.Grass, MonsterType.Bug } },
-        { JobType.Forge,        new() { MonsterType.Fire, MonsterType.Alloy } },
+        { JobType.Grove,        new() { MonsterType.Grass} },
+        { JobType.Forge,        new() { MonsterType.Fire } },
         { JobType.Workshop,     new() { MonsterType.Alloy } },
-        { JobType.Harbor,       new() { MonsterType.Water, MonsterType.Sky } },
+        { JobType.Harbor,       new() { MonsterType.Water } },
         { JobType.CryoLab,      new() { MonsterType.Ice } },
         { JobType.Observatory,  new() { MonsterType.Oracle } },
         { JobType.Containment,  new() { MonsterType.Corrupt } },
         { JobType.WyrmDen,      new() { MonsterType.Wyrm } },
-        { JobType.ShadowMarket, new() { MonsterType.Umbral, MonsterType.Specter } },
+        { JobType.ShadowMarket, new() { MonsterType.Umbral } },
         { JobType.Sanctum,      new() { MonsterType.Specter } },
         { JobType.Clinic,       new() { MonsterType.Sky } },
+        { JobType.Expedition,   new() { MonsterType.Bug  }  },
     };
 
     private static readonly Dictionary<JobType, HashSet<MonsterType>> _offTypes = new() {
