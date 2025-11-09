@@ -4,9 +4,11 @@ using UnityEngine;
 using System.Linq;
 
 public enum JobType {
-    Gym, Quarry, Mine, PowerPlant, Grove,
-    Forge, Workshop, Harbor, CryoLab,
-    Observatory, Containment, WyrmDen, ShadowMarket, Sanctum, Clinic, None
+    Gym = 0, Quarry = 1, Mine = 2, PowerPlant = 3, Grove = 4,
+    Forge = 5, Workshop = 6, Harbor = 7, CryoLab = 8,
+    Observatory = 9, Containment = 10, WyrmDen = 11, ShadowMarket = 12, Sanctum = 13, Clinic = 14,
+    None = 15,
+    BugExpedition = 16 
 }
 
 public enum SiteEffectKind {
