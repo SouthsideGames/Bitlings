@@ -14924,6 +14924,7 @@ MonoBehaviour:
   critChanceWild: 0.08
   critMultiplier: 1.8
   showEffectivenessText: 1
+  pauseForFirstDecision: 1
   battleSpeed: 1
   debugIncomingMitigation: 0
   debugEffectivenessOutgoing: 0
@@ -32791,6 +32792,7 @@ GameObject:
   - component: {fileID: 742296753}
   - component: {fileID: 742296752}
   - component: {fileID: 742296755}
+  - component: {fileID: 742296756}
   m_Layer: 5
   m_Name: EncounterBtn
   m_TagString: Untagged
@@ -32938,6 +32940,21 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   target: 2
   action: 0
+--- !u!114 &742296756
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 742296750}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9934906d9d52360448bcf7ceb473dc19, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  minRequiredTeamMembers: 1
+  requiredEnergy: 5
+  pollInterval: 0.2
 --- !u!114 &752172015 stripped
 MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 5156059903695854479, guid: 0023aef483730e8409b88ae8d18f66ed, type: 3}
@@ -37029,7 +37046,6 @@ GameObject:
   - component: {fileID: 848159430}
   - component: {fileID: 848159429}
   - component: {fileID: 848159432}
-  - component: {fileID: 848159433}
   m_Layer: 5
   m_Name: EncounterBtn
   m_TagString: Untagged
@@ -37164,20 +37180,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   holdSeconds: 0.6
---- !u!114 &848159433
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 848159427}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 9934906d9d52360448bcf7ceb473dc19, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  minRequiredTeamMembers: 1
-  pollInterval: 0.2
 --- !u!1 &849080163
 GameObject:
   m_ObjectHideFlags: 0

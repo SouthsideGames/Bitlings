@@ -5,12 +5,11 @@ using UnityEngine.UI;
 [RequireComponent(typeof(Button))]
 public sealed class EncounterButtonGuard : MonoBehaviour
 {
-    [Header("Rules")]
+    [Header("Requirements")]
+    [Tooltip("Minimum number of monsters required on the team to start an encounter.")]
     [SerializeField, Min(1)] private int minRequiredTeamMembers = 1;
-    [SerializeField, Range(0.05f, 1f)] private float pollInterval = 0.2f;
 
     private Button _button;
-    private float _timer;
 
     private void Awake()
     {
@@ -20,42 +19,96 @@ public sealed class EncounterButtonGuard : MonoBehaviour
 
     private void OnEnable()
     {
-        _timer = pollInterval; // force refresh next frame
+        // Energy signals
+        EncounterManager.OnEnergyGained += HandleEnergyGained;
+        GameEvents.EnergyChanged += HandleEnergyChanged;
+
+        // Team changes (e.g., captures, heals, benching, defeats)
+        GameEvents.OnTeamChanged += HandleTeamChanged;
+
+        // Initial pass
+        Apply();
     }
 
-    private void Update()
+    private void OnDisable()
     {
-        _timer += Time.unscaledDeltaTime;
-        if (_timer >= pollInterval)
-        {
-            _timer = 0f;
-            Apply();
-        }
+        EncounterManager.OnEnergyGained -= HandleEnergyGained;
+        GameEvents.EnergyChanged -= HandleEnergyChanged;
+        GameEvents.OnTeamChanged -= HandleTeamChanged;
+    }
+
+    private void HandleEnergyGained(int gained, int newTotal)
+    {
+        // Only gained events fire here—still just re-apply gate
+        Apply();
+    }
+
+    private void HandleEnergyChanged()
+    {
+        Apply();
+    }
+
+    private void HandleTeamChanged()
+    {
+        Apply();
     }
 
     private void Apply()
     {
-        bool hasValidTeam = false;
-        var data = SaveManager.Data;
+        if (_button == null) return;
 
-        if (data != null && data.team != null)
+        bool hasValidTeam = HasMinimumTeam(minRequiredTeamMembers);
+        bool hasEnoughEnergy = HasRequiredEnergy();
+
+        _button.interactable = hasValidTeam && hasEnoughEnergy;
+
+#if UNITY_EDITOR
+        if (!_button.interactable)
         {
-            int validCount = 0;
-            for (int i = 0; i < data.team.Count; i++)
+            if (!hasValidTeam)
+                Debug.Log("[EncounterButtonGuard] Disabled — insufficient team size.");
+            else if (!hasEnoughEnergy)
+                Debug.Log("[EncounterButtonGuard] Disabled — not enough energy.");
+        }
+#endif
+    }
+
+    private static bool HasMinimumTeam(int minMembers)
+    {
+        var data = SaveManager.Data;
+        if (data == null || data.team == null) return false;
+
+        int count = 0;
+        for (int i = 0; i < data.team.Count; i++)
+        {
+            var entry = data.team[i];
+            if (entry != null && !string.IsNullOrEmpty(entry.monsterId))
             {
-                var entry = data.team[i];
-                if (entry != null && !string.IsNullOrEmpty(entry.monsterId))
-                {
-                    validCount++;
-                    if (validCount >= minRequiredTeamMembers)
-                    {
-                        hasValidTeam = true;
-                        break;
-                    }
-                }
+                count++;
+                if (count >= minMembers) return true;
             }
         }
+        return false;
+    }
 
-        _button.interactable = hasValidTeam;
+    private static bool HasRequiredEnergy()
+    {
+        // Prefer EncounterManager because cost can be tuned there
+        int needed = 1;
+        int current = 0;
+
+        if (EncounterManager.I != null)
+        {
+            needed = Mathf.Max(1, EncounterManager.I.GetEncounterCost());
+            current = Mathf.Max(0, EncounterManager.I.GetEnergyPoints());
+        }
+        else
+        {
+            // Fallback if EM not alive yet: try resource bank
+            needed = 1; // conservative default
+            current = Mathf.Max(0, ResourceBank.Get(ResourceType.Energy));
+        }
+
+        return current >= needed;
     }
 }

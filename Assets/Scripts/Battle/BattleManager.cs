@@ -94,6 +94,7 @@ public class BattleManager : MonoBehaviour
     [Range(0f, 1f)][SerializeField] private float critChanceWild = 0.08f;
     [SerializeField] private float critMultiplier = 1.8f;
     [SerializeField] private bool showEffectivenessText = true;
+    [SerializeField] private bool pauseForFirstDecision = true;
 
     [Header("Speed Control")]
     [SerializeField, Min(0.25f)] private float battleSpeed = 1f; // 1x, 2x, 3x
@@ -413,21 +414,21 @@ public class BattleManager : MonoBehaviour
     // ─────────────────────────────────────────────────────────────────────────────
     private IEnumerator WaitForPlayerChoiceAndResolve()
     {
+        // Do not clear pendingAction here; allow pre-queued first choice.
         IsPlayerTurn = true;
-        pendingAction = PlayerAction.None;
 
-        // Wait until one of the SetPlayerAction* is clicked
+        // If nothing is chosen yet, wait for a button press.
         while (inBattle && pendingAction == PlayerAction.None)
             yield return null;
 
-        var choice = pendingAction;
+        var choice = pendingAction;       // consume it
         pendingAction = PlayerAction.None;
         IsPlayerTurn = false;
 
         switch (choice)
         {
             case PlayerAction.Attack:
-                yield return PlayerTurn(); // your existing attack flow
+                yield return PlayerTurn();
                 break;
 
             case PlayerAction.Defend:
@@ -456,10 +457,11 @@ public class BattleManager : MonoBehaviour
                 break;
 
             default:
-                // Safety: if somehow none, just do nothing and let round continue
+                // no-op if somehow None
                 break;
         }
     }
+
 
     private IEnumerator PlayerTurn()
     {
@@ -1463,10 +1465,24 @@ public class BattleManager : MonoBehaviour
         if (activeIndex >= 0 && teamIds != null && activeIndex < teamIds.Length)
             TitlesAdapter.OnBattleStart(teamIds[activeIndex], wildDef, wildLevel);
 
+        // >>> NEW: require the player to pick an action before ANYTHING happens.
+        if (manualTurns && pauseForFirstDecision)
+        {
+            IsPlayerTurn = true;
+            pendingAction = PlayerAction.None;
+
+            // Wait until they press Attack/Defend/Focus/Run; we DO NOT resolve yet.
+            while (inBattle && pendingAction == PlayerAction.None)
+                yield return null;
+
+            IsPlayerTurn = false;
+        }
+
         if (turnCR != null) StopCoroutine(turnCR);
         turnCR = StartCoroutine(TurnLoop());
         yield break;
     }
+
 
     private TitleStatMods GetTitleModsForIndex(int idx)
     {

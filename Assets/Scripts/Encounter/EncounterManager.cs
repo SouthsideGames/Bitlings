@@ -12,6 +12,7 @@ public class EncounterManager : MonoBehaviour
     [Obsolete("UI no longer renders inline status. Use BattleLogger instead.")]
     public event Action<string> OnStatus;
     public event Action OnStateChanged;
+    public static event Action<int, int> OnEnergyGained; 
 
     [Header("Refs")]
     [SerializeField] private BattleManager battleManager;
@@ -219,14 +220,22 @@ public class EncounterManager : MonoBehaviour
     // Utility for scripts that just want to add energy (e.g., rewards)
     public void AddEnergy(int amount, bool allowOvercap = true)
     {
-        int max = GetEncounterMax();
+       int max = GetEncounterMax();
+        int before = _energyPoints;
+
         _energyPoints += amount;
         if (!allowOvercap) _energyPoints = Mathf.Min(_energyPoints, max);
         ClampEnergy();
+
+        int gained = Mathf.Max(0, _energyPoints - before);
+
         SaveEnergy();
         MirrorEnergyIntoSaveData();
         GameEvents.EnergyChanged?.Invoke();
         OnStateChanged?.Invoke();
+
+        if (gained > 0)
+            OnEnergyGained?.Invoke(gained, _energyPoints);
     }
 
     // Spends energy and resets the regen timer (your “timer restarts” spec)
@@ -294,7 +303,7 @@ public class EncounterManager : MonoBehaviour
         int gained = (int)Math.Floor(total / energySecondsPerPoint);
         _energyRemainderSecs = (float)(total - (gained * energySecondsPerPoint));
 
-        if (gained > 0)
+       if (gained > 0)
         {
             _energyPoints = Mathf.Min(max, _energyPoints + gained);
             if (_energyPoints >= max) _energyRemainderSecs = 0f;
@@ -302,6 +311,8 @@ public class EncounterManager : MonoBehaviour
             MirrorEnergyIntoSaveData();
             SaveEnergy();
             GameEvents.EnergyChanged?.Invoke();
+
+            OnEnergyGained?.Invoke(gained, _energyPoints);
         }
 
         // move “last” to now so future elapsed is clean
@@ -319,9 +330,10 @@ public class EncounterManager : MonoBehaviour
         _tickAccum = 0f;
 
         _energyRemainderSecs += 1f;
-        if (_energyRemainderSecs >= energySecondsPerPoint)
+       if (_energyRemainderSecs >= energySecondsPerPoint)
         {
             _energyRemainderSecs -= energySecondsPerPoint;
+            int before = _energyPoints;
             _energyPoints = Mathf.Min(max, _energyPoints + 1);
             if (_energyPoints >= max) _energyRemainderSecs = 0f;
 
@@ -329,6 +341,10 @@ public class EncounterManager : MonoBehaviour
             SaveEnergy();
             GameEvents.EnergyChanged?.Invoke();
             OnStateChanged?.Invoke();
+
+            int gained = Mathf.Max(0, _energyPoints - before);
+            if (gained > 0)
+                OnEnergyGained?.Invoke(gained, _energyPoints);
         }
     }
 
