@@ -69,6 +69,9 @@ public class MonsterDataSO : ScriptableObject
     public TitleTrackSO titleTrack;
     public TitleSO[] defaultAlwaysOnTitles;
 
+    [Header("Personality")]
+    public MonsterPersonalitySO Personality;
+
     [Header("Description")]
     [TextArea(3, 10)] public string description;
 

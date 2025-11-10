@@ -14836,6 +14836,7 @@ GameObject:
   - component: {fileID: 350265109}
   - component: {fileID: 350265105}
   - component: {fileID: 350265110}
+  - component: {fileID: 350265111}
   m_Layer: 0
   m_Name: BattleSystem
   m_TagString: Untagged
@@ -14884,46 +14885,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 5ee64b4d326b84b8196062669d0bb3fa, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  wildPanel: {fileID: 2106433468}
-  wildHPBar: {fileID: 1838927775}
-  wildIcon: {fileID: 977078553}
-  wildNameText: {fileID: 689594971}
-  wildLevelText: {fileID: 130439262}
-  wildIdText: {fileID: 2077712500}
-  wildTypeText: {fileID: 534789989}
-  wildRarityText: {fileID: 1579296188}
-  wildHPText: {fileID: 1979796869}
-  wildATKText: {fileID: 1967429852}
-  wildDEFText: {fileID: 12030047}
-  wildSPDText: {fileID: 1007944373}
-  playerPanel: {fileID: 38083262}
-  playerHPBar: {fileID: 1115045369}
-  playerIcon: {fileID: 1888576084}
-  playerNameText: {fileID: 920404976}
-  playerLevelText: {fileID: 492674187}
-  playerIdText: {fileID: 1031775655}
-  playerTypeText: {fileID: 254841521}
-  playerRarityText: {fileID: 1645513833}
-  playerHPText: {fileID: 1465336771}
-  playerATKText: {fileID: 661648414}
-  playerDEFText: {fileID: 1683455664}
-  playerSPDText: {fileID: 1162799787}
-  benchBtn1: {fileID: 1948088819}
-  benchBtn2: {fileID: 2104611570}
-  benchImg1: {fileID: 1348430610}
-  benchImg2: {fileID: 986170096}
-  benchHPText1: {fileID: 1478715891}
-  benchHPText2: {fileID: 607737988}
-  beginRoundDelay: 0.15
-  hitPause: 0.25
-  endRoundDelay: 0.6
-  critChancePlayer: 0.1
-  critChanceWild: 0.08
-  critMultiplier: 1.8
-  showEffectivenessText: 1
-  battleSpeed: 1
-  debugIncomingMitigation: 0
-  debugEffectivenessOutgoing: 1
+  turn: {fileID: 350265111}
 --- !u!114 &350265109
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -14952,6 +14914,55 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   defaultRegenPerHour: 6
   tickSeconds: 30
+--- !u!114 &350265111
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 350265103}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 28ecc557192b84fe488de125e4339ed9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  wildPanel: {fileID: 0}
+  wildHPBar: {fileID: 0}
+  wildIcon: {fileID: 0}
+  wildNameText: {fileID: 0}
+  wildLevelText: {fileID: 0}
+  wildIdText: {fileID: 0}
+  wildTypeText: {fileID: 0}
+  wildRarityText: {fileID: 0}
+  wildHPText: {fileID: 0}
+  wildATKText: {fileID: 0}
+  wildDEFText: {fileID: 0}
+  wildSPDText: {fileID: 0}
+  playerPanel: {fileID: 0}
+  playerHPBar: {fileID: 0}
+  playerIcon: {fileID: 0}
+  playerNameText: {fileID: 0}
+  playerLevelText: {fileID: 0}
+  playerIdText: {fileID: 0}
+  playerTypeText: {fileID: 0}
+  playerRarityText: {fileID: 0}
+  playerHPText: {fileID: 0}
+  playerATKText: {fileID: 0}
+  playerDEFText: {fileID: 0}
+  playerSPDText: {fileID: 0}
+  benchBtn1: {fileID: 0}
+  benchBtn2: {fileID: 0}
+  benchImg1: {fileID: 0}
+  benchImg2: {fileID: 0}
+  benchHPText1: {fileID: 0}
+  benchHPText2: {fileID: 0}
+  beginRoundDelay: 0.12
+  stepPause: 0.18
+  endRoundDelay: 0.35
+  critChancePlayer: 0.1
+  critChanceWild: 0.08
+  critMultiplier: 1.8
+  showEffectivenessText: 1
 --- !u!1 &351614685
 GameObject:
   m_ObjectHideFlags: 0
@@ -50146,6 +50157,20 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 56c59b7d506b048d28ae47d4709b1b1c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  atkBonus: 0
+  atkStart: 0
+  atkEnd: 0
+  hpBonus: 0
+  hpStart: 0
+  hpEnd: 0
+  speedFlatBonus: 0
+  speedStart: 0
+  speedEnd: 0
+  defBonus: 0
+  defStart: 0
+  defEnd: 0
+  trStart: 0
+  trEnd: 0
 --- !u!114 &1102682444
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -50797,17 +50822,6 @@ RectTransform:
   m_CorrespondingSourceObject: {fileID: 5698874864061593983, guid: 2f76a415071af8049a8156116ae846cb, type: 3}
   m_PrefabInstance: {fileID: 1115045367}
   m_PrefabAsset: {fileID: 0}
---- !u!114 &1115045369 stripped
-MonoBehaviour:
-  m_CorrespondingSourceObject: {fileID: 302897282638546707, guid: 2f76a415071af8049a8156116ae846cb, type: 3}
-  m_PrefabInstance: {fileID: 1115045367}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 67db9e8f0e2ae9c40bc1e2b64352a6b4, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
 --- !u!1 &1115065262
 GameObject:
   m_ObjectHideFlags: 0
@@ -80691,17 +80705,6 @@ RectTransform:
   m_CorrespondingSourceObject: {fileID: 4471743323330786851, guid: 80be722fcec05844aa4a2d67248d26fb, type: 3}
   m_PrefabInstance: {fileID: 1838927773}
   m_PrefabAsset: {fileID: 0}
---- !u!114 &1838927775 stripped
-MonoBehaviour:
-  m_CorrespondingSourceObject: {fileID: 3587545884255248103, guid: 80be722fcec05844aa4a2d67248d26fb, type: 3}
-  m_PrefabInstance: {fileID: 1838927773}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 67db9e8f0e2ae9c40bc1e2b64352a6b4, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
 --- !u!1 &1842730437
 GameObject:
   m_ObjectHideFlags: 0
