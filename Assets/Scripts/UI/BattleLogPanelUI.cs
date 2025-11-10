@@ -3,6 +3,7 @@ using UnityEngine.UI;
 using TMPro;
 using System.Text;
 using System.Collections.Generic;
+using System.Collections;
 
 public class BattleLogPanelUI : MonoBehaviour
 {
@@ -74,9 +75,26 @@ public class BattleLogPanelUI : MonoBehaviour
     void AddRow(LogEntry e)
     {
         if (!rowPrefab || !content) return;
+
         var row = Instantiate(rowPrefab, content);
         row.Set(e);
         _rows.Add(row);
+
+        // Force immediate layout so Content height updates now
+        LayoutRebuilder.ForceRebuildLayoutImmediate(content);
+
+        // If you auto-scroll, do it next frame so the new content size is final
+        if (AutoScroll && isActiveAndEnabled)
+            StartCoroutine(CoScrollBottomNextFrame());
+    }
+
+    IEnumerator CoScrollBottomNextFrame()
+    {
+        // wait one frame to let the layout system finish
+        yield return null;
+        Canvas.ForceUpdateCanvases();
+        scrollRect.verticalNormalizedPosition = 0f; // bottom
+        Canvas.ForceUpdateCanvases();
     }
 
     void ClearRows()
@@ -86,11 +104,13 @@ public class BattleLogPanelUI : MonoBehaviour
         _rows.Clear();
     }
 
-    void ScrollToBottom()
+   void ScrollToBottom()
     {
         if (!scrollRect) return;
         Canvas.ForceUpdateCanvases();
-        scrollRect.verticalNormalizedPosition = 0f; // bottom
+        scrollRect.verticalNormalizedPosition = 0f;
+        LayoutRebuilder.ForceRebuildLayoutImmediate(content);
         Canvas.ForceUpdateCanvases();
     }
+
 }

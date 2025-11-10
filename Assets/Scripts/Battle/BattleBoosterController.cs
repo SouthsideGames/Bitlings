@@ -58,6 +58,22 @@ public sealed class BattleBoosterController : MonoBehaviour
             _ => false
         };
 
+    /// <summary>
+    /// Returns (remainingTurns, maxTurns) for the given booster.
+    /// Health is instant (no duration), so returns (0,0).
+    /// </summary>
+    public (int remaining, int max) Active(BoosterType t)
+    {
+        switch (t)
+        {
+            case BoosterType.Attack:     return (attackDur, attackBoostTurns);
+            case BoosterType.Speed:      return (speedDur,  speedBoostTurns);
+            case BoosterType.TypeResist: return (resistDur, resistBoostTurns);
+            case BoosterType.Health:     return (0, 0); // instant heal, no active duration
+            default:                     return (0, 0);
+        }
+    }
+
     public int   GetAttackBonus() => attackDur > 0 ? attackFlatBonus : 0;
     public int   GetSpeedBonus()  => speedDur  > 0 ? speedFlatBonus  : 0;
     public float GetResistMul()   => resistDur > 0 ? resistMultiplier : 1f;
@@ -89,9 +105,12 @@ public sealed class BattleBoosterController : MonoBehaviour
                 break;
 
             case BoosterType.Health:
-                int healed = hooks.HealPlayer(healthHealAmount);
-                cdHp = boosterCooldownTurns;
-                msg = $"Health Boost: Healed {healed} HP.";
+                {
+                    int healed = 0;
+                    if (hooks.HealPlayer != null) healed = hooks.HealPlayer(healthHealAmount);
+                    cdHp = boosterCooldownTurns;
+                    msg = $"Health Boost: Healed {healed} HP.";
+                }
                 break;
 
             case BoosterType.Speed:

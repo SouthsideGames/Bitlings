@@ -1,3 +1,4 @@
+// Assets/Scripts/Monster/MonsterPackManager.cs
 using UnityEngine;
 using System;
 
@@ -5,8 +6,12 @@ public class MonsterPackManager : MonoBehaviour
 {
     public static MonsterPackManager I { get; private set; }
 
-    private MonsterPackLibrarySO _packLibrary;  // Loaded from Resources
-    private MonsterLibrarySO _monsterLibrary;   // Resolved via MonsterLibraryLocator
+    [Header("References (Optional)")]
+    [Tooltip("If set, this overrides all other ways of finding the pack library.")]
+    [SerializeField] private MonsterPackLibrarySO packLibraryOverride;
+
+    private MonsterPackLibrarySO _packLibrary;  // Loaded: Override → Locator → Resources
+    private MonsterLibrarySO     _monsterLibrary;   // Resolved via MonsterLibraryLocator
 
     [Header("Tuning")]
     [Tooltip("Global discount applied to all pack costs (0..1). 0.15 = 15% off.")]
@@ -23,21 +28,29 @@ public class MonsterPackManager : MonoBehaviour
         if (I != null && I != this) { Destroy(gameObject); return; }
         I = this;
 
-        // Load main pack library if not set
-        _packLibrary = Resources.Load<MonsterPackLibrarySO>("MonsterPackLibrary");
+        // 1) Inspector override → 2) Locator (Resources cached) → 3) Direct Resources (paranoid fallback)
+        _packLibrary = packLibraryOverride
+                       ? packLibraryOverride
+                       : (MonsterPackLibraryLocator.Lib != null
+                          ? MonsterPackLibraryLocator.Lib
+                          : Resources.Load<MonsterPackLibrarySO>("MonsterPackLibrary"));
+
         if (!_packLibrary)
         {
-            Debug.LogError("[MonsterPackManager] MonsterPackLibrary.asset not found in Resources/");
+            Debug.LogError("[MonsterPackManager] Could not resolve MonsterPackLibrarySO. " +
+                           "Set it in the Inspector OR create Assets/Resources/MonsterPackLibrary.asset");
             return;
         }
 
+        // Warmup any internal indexes
         _packLibrary.Warmup();
 
-        // Load monster library via locator
+        // Load monster library via locator (this is already your desired path)
         _monsterLibrary = MonsterLibraryLocator.Lib;
         if (!_monsterLibrary)
         {
-            Debug.LogWarning("[MonsterPackManager] MonsterLibraryLocator.Lib not found in Resources/MonsterLibrary");
+            Debug.LogWarning("[MonsterPackManager] MonsterLibraryLocator.Lib could not load. " +
+                             "Ensure Assets/Resources/MonsterLibrary.asset exists.");
         }
 
         // Ensure save list exists

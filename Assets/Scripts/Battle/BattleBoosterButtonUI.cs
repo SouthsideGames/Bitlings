@@ -1,6 +1,7 @@
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
+using System.Reflection;
 
 [RequireComponent(typeof(Button))]
 public class BattleBoosterButtonUI : MonoBehaviour
@@ -23,6 +24,7 @@ public class BattleBoosterButtonUI : MonoBehaviour
     void Awake()
     {
         if (!button) button = GetComponent<Button>();
+        button.onClick.RemoveAllListeners();
         button.onClick.AddListener(OnClick);
         ApplyTitle();
     }
@@ -86,10 +88,48 @@ public class BattleBoosterButtonUI : MonoBehaviour
 
     private void OnClick()
     {
-        var tbm = FindObjectOfType<TurnBattleManager>();
-        if (!tbm) return;
+        var ctrl = BattleBoosterController.I;
+        if (!ctrl) return;
 
-        tbm.UseBoosterFromUI(boosterType); // consumes turn on success
+        // Try common method names on the controller to keep this UI decoupled
+        bool used = false;
+        var t = ctrl.GetType();
+
+        // Prefer a UseFromUI method that might want a BattleManager reference
+        var bm = FindFirstObjectByType<BattleManager>();
+
+        used = TryInvokeBool(t, ctrl, "UseFromUI", new object[] { boosterType, bm }) ||
+               TryInvokeBool(t, ctrl, "UseFromUI", new object[] { boosterType }) ||
+               TryInvokeBool(t, ctrl, "Use",       new object[] { boosterType }) ||
+               TryInvokeBool(t, ctrl, "TryUse",    new object[] { boosterType }) ||
+               TryInvokeVoidThenTrue(t, ctrl, "Activate", new object[] { boosterType });
+
+        if (used)
+        {
+            // Optional little feedback nudge if a BattleManager and icon exist
+            if (bm && bm.isActiveAndEnabled)
+            {
+                // no hard dependency; UI feedback handled inside bm if desired
+            }
+        }
+
         RefreshImmediate();
+    }
+
+    private bool TryInvokeBool(System.Type t, object instance, string method, object[] args)
+    {
+        var m = t.GetMethod(method, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+        if (m == null) return false;
+        var ret = m.Invoke(instance, args);
+        if (ret is bool b) return b;
+        return true; // if it returned void/non-bool, assume success
+    }
+
+    private bool TryInvokeVoidThenTrue(System.Type t, object instance, string method, object[] args)
+    {
+        var m = t.GetMethod(method, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+        if (m == null) return false;
+        m.Invoke(instance, args);
+        return true;
     }
 }

@@ -17,6 +17,8 @@ public class EncounterButtonHold : MonoBehaviour, IPointerDownHandler, IPointerU
         pressedAt = Time.unscaledTime;
     }
 
+    
+
     public void OnPointerUp(PointerEventData eventData)
     {
         if (!pressed) return;

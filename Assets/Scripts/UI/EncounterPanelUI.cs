@@ -11,6 +11,8 @@ public class EncounterPanelUI : MonoBehaviour
     [SerializeField] private TextMeshProUGUI energyLabel;
     [SerializeField] private TextMeshProUGUI energyEtaLabel;
     [SerializeField, Min(1f)] private float energySecondsPerPoint = 1200f;
+
+    // (Optional legacy) If this exists in the scene, we hide it at runtime.
     [SerializeField] private TextMeshProUGUI winStreakText;
 
     // ─────────────────────────────────────────────────────────────
@@ -24,20 +26,11 @@ public class EncounterPanelUI : MonoBehaviour
 
     [Header("Blinder Localization & Random")]
     [SerializeField] private bool useRandomBlinder = true;
-
-    [Tooltip("Language code (e.g., 'en', 'es'). Leave empty to auto-detect via Application.systemLanguage.")]
     [SerializeField] private string preferredLanguageCode = "";
-
-    [Tooltip("Optional: force a specific pack (overrides library resolution).")]
     [SerializeField] private BlinderMessagePackSO overridePack;
-
-    [Tooltip("Global library of blinder message packs.")]
     [SerializeField] private BlinderMessageLibrarySO blinderLibrary;
-
-    [Tooltip("Absolute fallback line if everything else is missing.")]
     [SerializeField] private string hardFallbackLine = "I WONDER WHAT WE WILL ENCOUNTER";
 
-    // tracking last pick to avoid immediate repeats
     string _lastBlinderLine = null;
 
     // ─────────────────────────────────────────────────────────────
@@ -49,7 +42,6 @@ public class EncounterPanelUI : MonoBehaviour
     [SerializeField, Range(1, 12)] private int maxTeamShown = 6;
     [SerializeField, Range(0f, 0.25f)] private float teamStaggerFade = 0.05f;
 
-    // Internal
     private TextMeshProUGUI encounterLabel;
     float _etaTickAccum = 0f;
     bool _isFading;
@@ -67,16 +59,15 @@ public class EncounterPanelUI : MonoBehaviour
             blinderGroup.interactable = true;
         }
 
+        // If the old on-screen win streak label is still assigned, hide it.
+        if (winStreakText) winStreakText.gameObject.SetActive(false);
+
         // Initial line (random or fallback)
         PickAndApplyBlinderLine(forcePick: true);
     }
 
     void OnEnable()
     {
-        RefreshWinStreak();
-        if (EncounterManager.I != null)
-            EncounterManager.I.OnStateChanged += RefreshWinStreak;
-
         if (encounterBtn)
         {
             encounterBtn.onClick.RemoveAllListeners();
@@ -88,6 +79,12 @@ public class EncounterPanelUI : MonoBehaviour
             EncounterManager.I.OnStateChanged += OnEncounterStateChanged;
             GameEvents.EnergyChanged += RefreshEnergy;
         }
+
+        // Log the current win streak immediately on enable
+        LogCurrentWinStreak("Status");
+
+        // Subscribe to streak changes → log to BattleLogger
+        GameEvents.WinStreakChanged += OnWinStreakChanged;
 
         if (!IsInBattle())
         {
@@ -104,8 +101,7 @@ public class EncounterPanelUI : MonoBehaviour
         RefreshAll();
 
         GameEvents.BattleFinished += OnBattleFinished;
-        GameEvents.WinStreakChanged += Handle;
-        UpdateNow();
+        UpdateEnergyEtaUI(); // seed ETA
     }
 
     void OnDisable()
@@ -114,11 +110,10 @@ public class EncounterPanelUI : MonoBehaviour
         {
             EncounterManager.I.OnStateChanged -= OnEncounterStateChanged;
             GameEvents.EnergyChanged -= RefreshEnergy;
-            EncounterManager.I.OnStateChanged -= RefreshWinStreak;
         }
 
         GameEvents.BattleFinished -= OnBattleFinished;
-        GameEvents.WinStreakChanged -= Handle;
+        GameEvents.WinStreakChanged -= OnWinStreakChanged;
 
         if (encounterBtn) encounterBtn.onClick.RemoveAllListeners();
         if (_fadeCo != null) StopCoroutine(_fadeCo);
@@ -141,14 +136,35 @@ public class EncounterPanelUI : MonoBehaviour
         RefreshEnergy();
     }
 
-    private void Handle(int value) => UpdateNow();
-
-    private void UpdateNow()
+    // Win streak → Battle Log
+    void OnWinStreakChanged(int value)
     {
-        if (!winStreakText) return;
-        // Display handled in RefreshWinStreak
+        BattleLogger.Log($"Win Streak: {value}", LogScope.Encounter);
     }
 
+    void LogCurrentWinStreak(string prefix = null)
+    {
+        int streak = (EncounterManager.I != null) ? EncounterManager.I.CurrentWinStreak : 0;
+        string label = string.IsNullOrEmpty(prefix) ? "Win Streak" : $"{prefix} • Win Streak";
+        BattleLogger.Log($"{label}: {streak}", LogScope.Encounter);
+    }
+
+    void OnBattleFinished(BattleResult _)
+    {
+        // After every battle, log the new streak value.
+        LogCurrentWinStreak("Updated");
+
+        if (!IsInBattle())
+        {
+            ShowBlinder(true, instant: true);
+            BuildTeamPreview();
+            PickAndApplyBlinderLine();
+        }
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // Button/Energy/ETA
+    // ─────────────────────────────────────────────────────────────
     void RefreshButtonAndLabel()
     {
         bool nextFree = NextEncounterIsFree();
@@ -209,12 +225,11 @@ public class EncounterPanelUI : MonoBehaviour
         energyEtaLabel.text = (hours > 0)
             ? $"Full in ~ {hours}h {minutes:D2}m"
             : $"Full in ~ {minutes}m";
-}
+    }
 
     // ─────────────────────────────────────────────────────────────
     // Blinder Flow
     // ─────────────────────────────────────────────────────────────
-
     void OnEncounterStateChanged()
     {
         if (IsInBattle())
@@ -275,9 +290,6 @@ public class EncounterPanelUI : MonoBehaviour
             blinderGroup.blocksRaycasts = false;
             blinderGroup.interactable = false;
         }
-
-        // Optional: fade out team preview here if using per-item fades
-        // yield return StartCoroutine(Co_FadeOutTeamPreview());
 
         _isFading = false;
         RefreshButtonAndLabel();
@@ -349,7 +361,6 @@ public class EncounterPanelUI : MonoBehaviour
     // ─────────────────────────────────────────────────────────────
     // Team Preview
     // ─────────────────────────────────────────────────────────────
-
     void BuildTeamPreview()
     {
         if (!teamPreviewRoot || !teamItemPrefab) return;
@@ -380,16 +391,13 @@ public class EncounterPanelUI : MonoBehaviour
     void ClearTeamPreview()
     {
         for (int i = 0; i < _previewItems.Count; i++)
-        {
             if (_previewItems[i])
                 Destroy(_previewItems[i].gameObject);
-        }
         _previewItems.Clear();
     }
 
     IEnumerator Co_FadeInTeamPreview()
     {
-        // ensure start at 0
         SetTeamAlpha(0f);
         for (int i = 0; i < _previewItems.Count; i++)
         {
@@ -426,7 +434,6 @@ public class EncounterPanelUI : MonoBehaviour
     // ─────────────────────────────────────────────────────────────
     // EncounterManager passthrough helpers (null-safe)
     // ─────────────────────────────────────────────────────────────
-
     bool IsInBattle()          => EncounterManager.I != null && EncounterManager.I.IsInBattle;
     bool IsAutoMode()          => EncounterManager.I != null && EncounterManager.I.IsAutoMode;
     bool NextEncounterIsFree() => EncounterManager.I != null && EncounterManager.I.NextEncounterIsFree;
@@ -435,54 +442,29 @@ public class EncounterPanelUI : MonoBehaviour
     int  GetEncounterMax()     => EncounterManager.I != null ? EncounterManager.I.GetEncounterMax() : 0;
     int  GetEncounterCost()    => EncounterManager.I != null ? EncounterManager.I.GetEncounterCost() : 0;
 
-    void RequestEncounterTap()
-    {
-        EncounterManager.I?.RequestEncounterTap();
-    }
+    void RequestEncounterTap() => EncounterManager.I?.RequestEncounterTap();
 
     public void OnClickToggleAuto() => EncounterManager.I?.ToggleAutoMode();
-
-    void OnBattleFinished(BattleResult _)
-    {
-        RefreshWinStreak();
-        if (!IsInBattle())
-        {
-            ShowBlinder(true, instant: true);
-            BuildTeamPreview();
-            PickAndApplyBlinderLine();
-        }
-    }
-
-    void RefreshWinStreak()
-    {
-        if (!winStreakText) return;
-        int streak = (EncounterManager.I != null) ? EncounterManager.I.CurrentWinStreak : 0;
-        winStreakText.text = $"Streak: {streak}";
-    }
 
     // ─────────────────────────────────────────────────────────────
     // Localization + Weighted Picker
     // ─────────────────────────────────────────────────────────────
-
     void PickAndApplyBlinderLine(bool forcePick = false)
     {
         if (!blinderText) return;
 
-        // If not random, just use fallback
         if (!useRandomBlinder && !forcePick)
         {
             blinderText.text = hardFallbackLine;
             return;
         }
 
-        // Resolve active pack
         BlinderMessagePackSO pack = overridePack;
         if (!pack && blinderLibrary)
         {
             string lang = preferredLanguageCode;
             if (string.IsNullOrWhiteSpace(lang))
             {
-                // derive from system language (simple map)
                 lang = Application.systemLanguage.ToString().ToLowerInvariant();
                 if (lang.StartsWith("english")) lang = "en";
                 else if (lang.StartsWith("spanish")) lang = "es";
@@ -503,7 +485,6 @@ public class EncounterPanelUI : MonoBehaviour
             return;
         }
 
-        // Calculate total weight / validity
         float totalWeight = 0f;
         int validCount = 0;
         for (int i = 0; i < pack.entries.Count; i++)
@@ -521,7 +502,6 @@ public class EncounterPanelUI : MonoBehaviour
             return;
         }
 
-        // Weighted pick; avoid repeating last line if we can (one reroll)
         string chosen = WeightedPick(pack, totalWeight);
         if (validCount > 1 && !string.IsNullOrEmpty(_lastBlinderLine) && chosen == _lastBlinderLine)
         {
@@ -546,8 +526,6 @@ public class EncounterPanelUI : MonoBehaviour
             acc += e.weight;
             if (r <= acc) return e.line;
         }
-
-        // Fallback (floating point edge cases)
         return pack.GetAnyNonEmptyFallback(hardFallbackLine);
     }
 }
