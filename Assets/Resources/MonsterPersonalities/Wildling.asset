@@ -1,0 +1,27 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ddacac2f09b7d458ca06a53ea0d33cce, type: 3}
+  m_Name: Wildling
+  m_EditorClassIdentifier: 
+  group: 7
+  attackWeight: 9
+  defendWeight: 0
+  focusWeight: 1
+  runWeight: 0
+  lowHpThreshold: 0.3
+  lowHpDefendBonus: 2
+  lowHpRunBonus: 1
+  superEffectiveAttackBonus: 3
+  badMatchDefendBonus: 1
+  badMatchRunBonus: 1
+  eachTurnAttackBonus: 1
+  description: Primal aggression; ignores danger, rarely defends.

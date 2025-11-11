@@ -1,12 +1,8 @@
 using UnityEngine;
 using UnityEngine.UI;
-using UnityEngine.Assertions;
 
 public class SettingsPanel : MonoBehaviour
 {
-    [Header("Debug")]
-    [SerializeField] private bool debugLogs = true;
-
     [Header("Volume Sliders (0..1)")]
     [SerializeField] private Slider masterSlider;
     [SerializeField] private Slider musicSlider;
@@ -27,7 +23,6 @@ public class SettingsPanel : MonoBehaviour
     [SerializeField] private Button resetButton;
 
     bool _wired;
-    bool _started;   // to avoid double-subscribe before Start
 
     void Awake()
     {
@@ -36,34 +31,16 @@ public class SettingsPanel : MonoBehaviour
         if (sfxSlider)    { sfxSlider.minValue    = 0f; sfxSlider.maxValue    = 1f; }
 
         if (resetButton) resetButton.onClick.RemoveAllListeners();
-
-        if (debugLogs) Debug.Log($"[SettingsPanel] Awake on {name}.", this);
     }
 
     void Start()
     {
-        _started = true;
-        if (debugLogs) Debug.Log($"[SettingsPanel] Start on {name}. EventSystem present: {FindObjectOfType<UnityEngine.EventSystems.EventSystem>()!=null}", this);
-
-        // If this panel starts enabled, we might miss an early settings init order.
-        // Force one more refresh in Start to be safe.
         SafeSubscribe();
         Refresh();
-
-        // Safety check for common visibility issues
-        var cg = GetComponentInParent<CanvasGroup>();
-        if (cg && cg.alpha < 0.99f && debugLogs)
-            Debug.LogWarning($"[SettingsPanel] CanvasGroup alpha = {cg.alpha}. If you 'see nothing', this may be why.", this);
-
-        var canvas = GetComponentInParent<Canvas>();
-        if (!canvas && debugLogs)
-            Debug.LogWarning("[SettingsPanel] No Canvas found in parents. UI won't render.", this);
     }
 
     void OnEnable()
     {
-        if (debugLogs) Debug.Log($"[SettingsPanel] OnEnable on {name}.", this);
-
         SafeSubscribe();
         Refresh();
 
@@ -74,7 +51,6 @@ public class SettingsPanel : MonoBehaviour
             {
                 var mgr = SettingsManager.I;
                 if (mgr != null) mgr.OnReset();
-                if (debugLogs) Debug.Log("[SettingsPanel] Reset pressed: SettingsManager.OnReset()", this);
             });
         }
 
@@ -83,8 +59,6 @@ public class SettingsPanel : MonoBehaviour
 
     void OnDisable()
     {
-        if (debugLogs) Debug.Log($"[SettingsPanel] OnDisable on {name}.", this);
-
         SafeUnsubscribe();
 
         if (resetButton) resetButton.onClick.RemoveAllListeners();
@@ -103,10 +77,6 @@ public class SettingsPanel : MonoBehaviour
             sm.OnSettingsChanged -= Refresh; // de-dupe
             sm.OnSettingsChanged += Refresh;
         }
-        else if (debugLogs)
-        {
-            Debug.LogWarning("[SettingsPanel] SettingsManager.I is null at subscribe time.", this);
-        }
     }
 
     void SafeUnsubscribe()
@@ -117,18 +87,12 @@ public class SettingsPanel : MonoBehaviour
 
     void Refresh()
     {
-        if (debugLogs) Debug.Log("[SettingsPanel] Refresh()", this);
-
         // Audio
         if (AudioManager.I)
         {
             if (masterSlider) masterSlider.SetValueWithoutNotify(AudioManager.I.GetMasterVolume());
             if (musicSlider)  musicSlider .SetValueWithoutNotify(AudioManager.I.GetMusicVolume());
             if (sfxSlider)    sfxSlider   .SetValueWithoutNotify(AudioManager.I.GetSfxVolume());
-        }
-        else if (debugLogs)
-        {
-            Debug.LogWarning("[SettingsPanel] AudioManager.I is null during Refresh().", this);
         }
 
         // Settings state
@@ -144,10 +108,6 @@ public class SettingsPanel : MonoBehaviour
 
             if (autoScrollLogToggle)
                 autoScrollLogToggle.SetIsOnWithoutNotify(s.autoScrollBattleLog);
-        }
-        else if (debugLogs)
-        {
-            Debug.LogWarning("[SettingsPanel] Settings object is null (SettingsManager.S or SaveManager.Data.settings).", this);
         }
     }
 
@@ -243,17 +203,5 @@ public class SettingsPanel : MonoBehaviour
     {
         var mgr = SettingsManager.I;
         if (mgr != null) mgr.SetAutoScrollBattleLog(on);
-    }
-
-    // ------------ Editor helpers ------------
-
-    [ContextMenu("Log Reference Status")]
-    void LogRefs()
-    {
-        Debug.Log(
-            $"[SettingsPanel] Refs — master:{(masterSlider? "Y":"-")} music:{(musicSlider? "Y":"-")} sfx:{(sfxSlider? "Y":"-")} " +
-            $"muteAll:{(muteAllToggle? "Y":"-")} muteMusic:{(muteMusicToggle? "Y":"-")} muteSfx:{(muteSfxToggle? "Y":"-")} " +
-            $"autoDupes:{(autoConvertDupesToggle? "Y":"-")} autoScroll:{(autoScrollLogToggle? "Y":"-")} reset:{(resetButton? "Y":"-")}",
-            this);
     }
 }

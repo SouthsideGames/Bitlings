@@ -25,12 +25,18 @@ public class BattleManager : MonoBehaviour
     private enum PlayerAction { None, Attack, Defend, Focus, Run }
 
     [Header("Manual Turn Settings")]
-    [Tooltip("If true, the battle waits for a button click each player turn.")]
     [SerializeField] private bool manualTurns = true;
-    [SerializeField, Range(0f,1f)] private float defendReducePct = 0.50f; // 50% less dmg taken next enemy hit (this round)
-    [SerializeField, Range(0f,1f)] private float focusBuffPct = 0.50f;    // +50% damage multiplier
-    [SerializeField, Min(1)]       private int   focusBuffTurns = 1;      // lasts this many player attacks
-    [SerializeField, Range(0f,1f)] private float runEscapeChance = 0.35f;
+    [SerializeField, Range(0f,1f)] private float defendReducePct = 0.50f;
+    [SerializeField, Range(0f,1f)] private float focusBuffPct   = 0.50f;
+    [SerializeField, Min(1)]       private int   focusBuffTurns  = 1;
+
+    [SerializeField, Range(0f,1f)] private float runBaseChance   = 0.25f; // base floor
+    [SerializeField, Range(0f,1f)] private float runMinChance    = 0.05f; // never lower than this
+    [SerializeField, Range(0f,1f)] private float runMaxChance    = 0.95f; // never higher than this
+    [SerializeField, Range(0f,1f)] private float runSpeedWeight  = 0.50f; // how much (playerSPD/(playerSPD+wildSPD) - 0.5) matters
+    [SerializeField, Range(0f,1f)] private float runAttemptBonus = 0.10f; // +10% per failed attempt
+    [SerializeField, Range(0f,1f)] private float runHpWeight     = 0.25f; // easier to run when wild is hurt
+
 
     public bool IsPlayerTurn { get; private set; } // for UI
     private PlayerAction pendingAction = PlayerAction.None;
@@ -137,6 +143,8 @@ public class BattleManager : MonoBehaviour
     private int   wildWeakenTurns = 0; // retained for future systems; unused now
     private float wildWeakenPct = 0f;
 
+    private int runAttempts = 0;
+
     private static readonly Color StatNeutral = Color.white;
     private static readonly Color StatBuff    = new Color(0.35f, 1f, 0.35f);
     private static readonly Color StatNerf    = new Color(1f, 0.35f, 0.35f);
@@ -199,6 +207,7 @@ public class BattleManager : MonoBehaviour
         playerNoCritTurns = 0;
         wildWeakenTurns = 0;
         wildWeakenPct = 0f;
+        runAttempts = 0;
 
         inBattle = false;
         onEnd = onEnded;
@@ -445,16 +454,23 @@ public class BattleManager : MonoBehaviour
                 break;
 
             case PlayerAction.Run:
-                if (UnityEngine.Random.value < runEscapeChance)
+            {
+                float chance = ComputeRunChance();
+                bool escaped = UnityEngine.Random.value < chance;
+
+                if (escaped)
                 {
-                    BattleLogger.Log("Got away safely!", LogScope.Battle);
-                    EndBattle(false);
+                    BattleLogger.Log($"Got away safely! (Run chance {Mathf.RoundToInt(chance * 100f)}%)", LogScope.Battle);
+                    EndBattle(false); // ends as a non-victory (like Pokémon)
                 }
                 else
                 {
-                    BattleLogger.Log("Couldn't escape!", LogScope.Battle);
+                    runAttempts++;
+                    BattleLogger.Log($"Couldn't escape! (Run chance was {Mathf.RoundToInt(chance * 100f)}%)", LogScope.Battle);
+                    // Failing to run consumes your turn; flow continues so the foe can act this round.
                 }
                 break;
+            }
 
             default:
                 // no-op if somehow None
@@ -1722,4 +1738,49 @@ public class BattleManager : MonoBehaviour
     {
         MitLog($"[Mitigation] {GetName(activeIndex)} | Crit Rolled: {(critRolled ? "Yes" : "No")} | Negated by Title: {(critNegated ? "Yes" : "No")}");
     }
+
+    private int GetPlayerEffectiveSpeedForRun()
+    {
+        if (activeIndex < 0 || teamDefs == null || activeIndex >= teamDefs.Length || teamDefs[activeIndex] == null)
+            return 1;
+
+        // Keep it simple: use base CalcSpeed + job first-turn buff if present this round
+        int spd = BattleCalc.CalcSpeed(teamDefs[activeIndex], teamLevels[activeIndex]);
+
+        var j = (jobCtx != null) ? jobCtx[activeIndex] : null;
+        if (j != null && j.speedBuffTurns > 0 && j.speedBonusPctFirstTurns != 0f)
+            spd = Mathf.Max(1, Mathf.RoundToInt(spd * (1f + j.speedBonusPctFirstTurns)));
+
+        // You can layer titles here if you’d like parity with turn order, but base + job is enough for feel.
+        return Mathf.Max(1, spd);
+    }
+
+    private int GetWildEffectiveSpeedForRun()
+    {
+        if (!wildDef) return 1;
+        return Mathf.Max(1, BattleCalc.CalcSpeed(wildDef, wildLevel));
+    }
+
+    private float ComputeRunChance()
+    {
+        // Speed term: 0..1 centered around 0.5
+        int pSpd = GetPlayerEffectiveSpeedForRun();
+        int wSpd = GetWildEffectiveSpeedForRun();
+        float speedTerm = (pSpd + wSpd) > 0 ? (float)pSpd / (pSpd + wSpd) : 0.5f;
+
+        // HP term: 0..1; higher when wild is lower HP
+        float hp01 = 1f - (wildHP / Mathf.Max(1f, wildMaxHP)); // 0 when full, 1 when at 0
+
+        // Attempts: +runAttemptBonus per fail
+        float attemptsBonus = runAttemptBonus * Mathf.Max(0, runAttempts);
+
+        float chance =
+            runBaseChance +
+            runSpeedWeight * (speedTerm - 0.5f) + // ± around base
+            runHpWeight    * hp01 +
+            attemptsBonus;
+
+        return Mathf.Clamp(chance, runMinChance, runMaxChance);
+    }
+
 }

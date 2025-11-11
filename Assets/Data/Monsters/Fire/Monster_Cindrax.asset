@@ -20,13 +20,16 @@ MonoBehaviour:
   backIcon: {fileID: 21300000, guid: 04821365fb0f84d479662d5d54b3f8dd, type: 3}
   shinyIcon: {fileID: 21300000, guid: f572bf755d8964f448047b5c96414851, type: 3}
   shinyBackIcon: {fileID: 21300000, guid: 50acd1d026295a84b923ed2b00d79115, type: 3}
+  rarity: 2
   canBeStarter: 0
   starterWeight: 1
   baseHP: 60
   baseAttack: 84
   baseDefense: 36
   baseSpeed: 60
+  hpRegenPerHour: 6
   fatigueRatePerHour: 0.03
+  fatigueCooldownHours: 8
   baseTrainingXPPerHour: 56
   evolutionStage: 1
   evolutionLevel: 0
@@ -37,8 +40,8 @@ MonoBehaviour:
   bossWeight: 1
   spawnWeight: 2.5
   jobSkill: 1.8
-  rarity: 2
-  titleTrack: {fileID: 0}
+  titleTrack: {fileID: 11400000, guid: a0cebc3ec30f34489b73b651a2003023, type: 2}
   defaultAlwaysOnTitles: []
+  Personality: {fileID: 0}
   description: Cindrax gather near volcanic vents, where their flickering flames
     are said to spark new life in the Bitling world.

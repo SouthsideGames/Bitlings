@@ -17,7 +17,7 @@ public class MonsterDataSO : ScriptableObject
     public Sprite backIcon;
     public Sprite shinyIcon;
     public Sprite shinyBackIcon;
-
+    public Rarity rarity = Rarity.Common;
     public bool canBeStarter = false;
     [Min(0)] public int starterWeight = 1;
 
@@ -62,8 +62,6 @@ public class MonsterDataSO : ScriptableObject
 
     [Header("Collection & Jobs")]
     [Range(0.5f, 3f)] public float jobSkill = 1f;
-    public Rarity rarity = Rarity.Common;
-
 
     [Header("Titles")]
     public TitleTrackSO titleTrack;
