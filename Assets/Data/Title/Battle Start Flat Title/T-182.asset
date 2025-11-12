@@ -10,11 +10,11 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 7c6531a1653eb6d4ea5d44f8f8c54ecf, type: 3}
-  m_Name: T-001
+  m_Name: T-182
   m_EditorClassIdentifier: 
-  titleId: T-001
-  displayName: Apprentice
-  description: Adds +10 ATK at battle start. Lasts 2 turn(s).
-  stat: 0
+  titleId: T-182
+  displayName: Corporate Lineman
+  description: Adds +10 HP at battle start. Lasts 1 turn(s).
+  stat: 3
   flatAmount: 10
-  durationTurns: 2
+  durationTurns: 1
