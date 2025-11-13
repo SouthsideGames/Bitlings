@@ -10,9 +10,9 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 00ee23453e315ea4fb16c7c455a0cdcf, type: 3}
-  m_Name: T-002
+  m_Name: T-029
   m_EditorClassIdentifier: 
-  titleId: T-002
-  displayName: Firefighter
-  description: Grants 10% HP shield at battle start.
-  shieldPct: 14
+  titleId: T-029
+  displayName: Botanist
+  description: Grants 29% HP shield at battle start.
+  shieldPct: 29

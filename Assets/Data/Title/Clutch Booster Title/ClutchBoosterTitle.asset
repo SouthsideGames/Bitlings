@@ -9,10 +9,14 @@ MonoBehaviour:
   m_GameObject: {fileID: 0}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 00ee23453e315ea4fb16c7c455a0cdcf, type: 3}
-  m_Name: T-002
+  m_Script: {fileID: 11500000, guid: 9fd8379c58b45aa458fd033a92a4a8c3, type: 3}
+  m_Name: ClutchBoosterTitle
   m_EditorClassIdentifier: 
-  titleId: T-002
-  displayName: Firefighter
-  description: Grants 10% HP shield at battle start.
-  shieldPct: 14
+  titleId: 
+  displayName: 
+  description: 
+  hpBelowThreshold01: 0.25
+  atkPct: 0
+  defPct: 0
+  spdPct: 0
+  dmgMult: 1
