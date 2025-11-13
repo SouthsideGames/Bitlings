@@ -1,6 +1,6 @@
 using UnityEngine;
 
-[CreateAssetMenu(menuName = "Data/Titles/Effectiveness Nullify", fileName = "EffectivenessNullifyTitle")]
+[CreateAssetMenu(menuName = "Data/Titles/Battle/Effectiveness Nullify", fileName = "EffectivenessNullifyTitle")]
 [Tooltip("Used to define Titles that reduce or nullify incoming type effectiveness damage multipliers.")]
 public sealed class EffectivenessNullifyTitleSO : TitleSO
 {

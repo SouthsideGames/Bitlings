@@ -1,6 +1,6 @@
 using UnityEngine;
 
-[CreateAssetMenu(menuName = "Data/Titles/Stat Booster", fileName = "StatBoosterTitle")]
+[CreateAssetMenu(menuName = "Data/Titles/Stat/Stat Booster", fileName = "StatBoosterTitle")]
 [Tooltip("Used to define Titles that apply a single, always-active stat boost to the wearer.")]
 public sealed class StatBoosterTitleSO : TitleSO
 {

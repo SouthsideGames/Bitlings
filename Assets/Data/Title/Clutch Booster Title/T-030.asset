@@ -10,13 +10,13 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 9fd8379c58b45aa458fd033a92a4a8c3, type: 3}
-  m_Name: ClutchBoosterTitle
+  m_Name: T-030
   m_EditorClassIdentifier: 
-  titleId: 
-  displayName: 
-  description: 
+  titleId: T-030
+  displayName: Officer
+  description: Boosts ATK by 10% when HP falls below 25%.
   hpBelowThreshold01: 0.25
-  atkPct: 0
+  atkPct: 1.1
   defPct: 0
   spdPct: 0
   dmgMult: 1

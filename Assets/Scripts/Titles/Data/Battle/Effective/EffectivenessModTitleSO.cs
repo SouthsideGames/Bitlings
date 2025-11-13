@@ -2,7 +2,7 @@ using UnityEngine;
 
 public enum EffectivenessMode { Multiply, Add }
 
-[CreateAssetMenu(menuName = "Data/Titles/Effectiveness Mod", fileName = "EffectivenessModTitle")]
+[CreateAssetMenu(menuName = "Data/Titles/Battle/Effectiveness Mod", fileName = "EffectivenessModTitle")]
 [Tooltip("Used to define Titles that modify the effectiveness of type matchups during damage calculation.")]
 public sealed class EffectivenessModTitleSO : TitleSO
 {

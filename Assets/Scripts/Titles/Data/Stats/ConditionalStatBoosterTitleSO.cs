@@ -1,6 +1,6 @@
 using UnityEngine;
 
-[CreateAssetMenu(menuName = "Data/Titles/Conditional Stat Booster", fileName = "ConditionalStatBoosterTitle")]
+[CreateAssetMenu(menuName = "Data/Titles/Stat/Conditional Stat Booster", fileName = "ConditionalStatBoosterTitle")]
 [Tooltip("Used to define Titles that boost specific stats when certain conditions are met, such as low HP or win streaks.")]
 public sealed class ConditionalStatBoosterTitleSO : TitleSO
 {

@@ -2,7 +2,7 @@ using UnityEngine;
 
 public enum BattleStatKind { ATK, DEF, SPD, HP }
 
-[CreateAssetMenu(menuName = "Data/Titles/Turn Booster", fileName = "TurnBoosterTitle")]
+[CreateAssetMenu(menuName = "Data/Titles/Battle/Turn Booster", fileName = "TurnBoosterTitle")]
 [Tooltip("Used to define Titles that increase a chosen stat by a percentage each turn, stacking over time.")]
 public sealed class TurnBoosterTitleSO : TitleSO
 {

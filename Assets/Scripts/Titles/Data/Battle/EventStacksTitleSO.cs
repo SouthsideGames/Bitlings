@@ -2,7 +2,7 @@ using UnityEngine;
 
 public enum EventTriggerKind { OnHitTaken, OnAttack, OnCrit }
 
-[CreateAssetMenu(menuName = "Data/Titles/Event Stacks", fileName = "EventStacksTitle")]
+[CreateAssetMenu(menuName = "Data/Titles/Battle/Event Stacks", fileName = "EventStacksTitle")]
 [Tooltip("Used to define Titles that build temporary stat stacks when specific battle events occur (hit, attack, crit).")]
 public sealed class EventStacksTitleSO : TitleSO
 {

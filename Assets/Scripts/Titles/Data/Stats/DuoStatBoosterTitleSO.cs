@@ -1,6 +1,6 @@
 using UnityEngine;
 
-[CreateAssetMenu(fileName = "DualStatBoosterTitle", menuName = "Data/Titles/Dual Stat Booster", order = 210)]
+[CreateAssetMenu(fileName = "DualStatBoosterTitle", menuName = "Data/Titles/Stat/Dual Stat Booster", order = 210)]
 [Tooltip("Used to define Titles that apply two stat modifiers at all times (unconditional dual stat bonuses).")]
 public sealed class DuoStatBoosterTitleSO : TitleSO
 {

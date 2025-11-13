@@ -1,6 +1,6 @@
 using UnityEngine;
 
-[CreateAssetMenu(menuName = "Data/Titles/Conditional Dual Stat Booster", fileName = "DualConditionalBoosterTitle")]
+[CreateAssetMenu(menuName = "Data/Titles/Stat/Conditional Dual Stat Booster", fileName = "DualConditionalBoosterTitle")]
 [Tooltip("Used to define Titles that boost two stats simultaneously under certain conditions (e.g., low HP, ally count, win streak).")]
 public sealed class DuoConditionalStatBoosterTitleSO : TitleSO
 {

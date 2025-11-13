@@ -1,6 +1,6 @@
 using UnityEngine;
 
-[CreateAssetMenu(menuName = "Data/Titles/Damage Filter", fileName = "DamageFilterTitle")]
+[CreateAssetMenu(menuName = "Data/Titles/Battle/Damage Filter", fileName = "DamageFilterTitle")]
 [Tooltip("Used to define Titles that reduce or modify incoming damage to the monster wearing it.")]
 public sealed class DamageFilterTitleSO : TitleSO
 {

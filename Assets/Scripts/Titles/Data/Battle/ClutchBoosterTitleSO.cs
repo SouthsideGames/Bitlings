@@ -1,6 +1,6 @@
 using UnityEngine;
 
-[CreateAssetMenu(menuName = "Data/Titles/Clutch Booster", fileName = "ClutchBoosterTitle")]
+[CreateAssetMenu(menuName = "Data/Titles/Battle/Clutch Booster", fileName = "ClutchBoosterTitle")]
 [Tooltip("Used to define Titles that boost stats when the monster's HP falls below a certain threshold.")]
 public sealed class ClutchBoosterTitleSO : TitleSO
 {
@@ -19,6 +19,4 @@ public sealed class ClutchBoosterTitleSO : TitleSO
     [Tooltip("Percent SPD increase when below threshold.")]
     public float spdPct = 0f;
 
-    [Tooltip("Optional multiplier applied to outgoing damage while below threshold.")]
-    public float dmgMult = 1f;
 }

@@ -80,7 +80,7 @@ public static class BattleTypeChart
         [MonsterType.Sky] = new()
         {
             [MonsterType.Bug] = 2f,
-            [MonsterType.Ground] = 2f,
+            [MonsterType.Grass] = 2f,
             [MonsterType.Electric] = 0.5f,
             [MonsterType.Rock] = 0.5f,
             [MonsterType.Ice] = 0.5f,
@@ -91,6 +91,7 @@ public static class BattleTypeChart
         {
             [MonsterType.Umbral] = 2f,
             [MonsterType.Grass] = 2f,
+            [MonsterType.Oracle] = 2f,
             [MonsterType.Sky] = 0.5f,
             [MonsterType.Fire] = 0.5f,
             [MonsterType.Rock] = 0.5f,

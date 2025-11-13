@@ -1,6 +1,6 @@
 using UnityEngine;
 
-[CreateAssetMenu(fileName = "GrowthCoreBonusOnVictory", menuName = "Data/Titles/Growth Core Bonus On Victory", order = 101)]
+[CreateAssetMenu(fileName = "GrowthCoreBonusOnVictory", menuName = "Data/Titles/Reward/Growth Core Bonus On Victory", order = 101)]
 [Tooltip("Used to define Titles that boost growth core rewards gained after winning a battle.")]
 public class GrowthCoreBonusOnVictoryTitleSO : TitleSO
 {

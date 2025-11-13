@@ -1,6 +1,6 @@
 using UnityEngine;
 
-[CreateAssetMenu(fileName = "ConditionalJobRateBooster", menuName = "Data/Titles/Conditional Job Rate Booster", order = 103)]
+[CreateAssetMenu(fileName = "ConditionalJobRateBooster", menuName = "Data/Titles/Jobs/Conditional Job Rate Booster", order = 103)]
 [Tooltip("Used to define Titles that boost a monster's job production rate while actively assigned to a job site. Optionally restrict to a specific job type.")]
 public class ConditionalJobRateBoosterTitleSO : TitleSO
 {

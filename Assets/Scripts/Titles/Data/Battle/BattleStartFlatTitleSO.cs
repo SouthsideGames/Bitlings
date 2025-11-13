@@ -1,6 +1,6 @@
 using UnityEngine;
 
-[CreateAssetMenu(menuName = "Data/Titles/Battle Start Flat", fileName = "BattleStartFlatTitle")]
+[CreateAssetMenu(menuName = "Data/Titles/Battle/Battle Start Flat", fileName = "BattleStartFlatTitle")]
 [Tooltip("Used to define Titles that grant a temporary flat stat bonus at the start of battle.")]
 public sealed class BattleStartFlatTitleSO : TitleSO
 {

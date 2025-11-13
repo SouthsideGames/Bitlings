@@ -1,6 +1,6 @@
 using UnityEngine;
 
-[CreateAssetMenu(menuName = "Data/Titles/Combat/Type Resist (Incoming)", fileName = "TypeResistTitle")]
+[CreateAssetMenu(menuName = "Data/Titles/Battle/Type Resist", fileName = "TypeResistTitle")]
 [Tooltip("Used to define Titles that reduce damage taken from specific monster types.")]
 public sealed class TypeResistTitleSO : TitleSO
 {

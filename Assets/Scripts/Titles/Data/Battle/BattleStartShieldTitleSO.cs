@@ -1,6 +1,6 @@
 using UnityEngine;
 
-[CreateAssetMenu(menuName = "Data/Titles/Battle Start Shield", fileName = "BattleStartShieldTitle")]
+[CreateAssetMenu(menuName = "Data/Titles/Battle/Battle Start Shield", fileName = "BattleStartShieldTitle")]
 [Tooltip("Used to define Titles that grant a starting shield based on the monster's Max HP when battle begins.")]
 public sealed class BattleStartShieldTitleSO : TitleSO
 {
