@@ -32,7 +32,6 @@ public class JobSlotUI : MonoBehaviour
         button.onClick.RemoveAllListeners();
         button.onClick.AddListener(() =>
         {
-            // Open the job assignment panel
             if (jobAssignPanelUI)
                 jobAssignPanelUI.Open(job, slotIndex);
 

@@ -13,13 +13,12 @@ public class JobPanelUI : MonoBehaviour
         public TextMeshProUGUI title;
         public TextMeshProUGUI stored;
 
-        // We’ll render: "<rate>/hr  (+X%)"
         public TextMeshProUGUI rate;
 
         public Button collectBtn;
 
         [Header("Full State (optional)")]
-        public GameObject fullBadge; // set in prefab if you want a "FULL" indicator
+        public GameObject fullBadge;
 
         [Header("Slots (size = maxWorkers)")]
         public JobSlotUI[] slots;
@@ -48,7 +47,7 @@ public class JobPanelUI : MonoBehaviour
         Refresh();
         GameEvents.OnJobsChanged += Refresh;
         GameEvents.OnResourcesChanged += Refresh;
-        GameEvents.JobGlobalModsChanged += Refresh; // titles/aura/cap changes
+        GameEvents.JobGlobalModsChanged += Refresh; 
     }
 
     void OnDisable()

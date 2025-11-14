@@ -245,10 +245,6 @@ public static class JobBalance
         return mult;
     }
 
-    /// <summary>
-    /// Which job sites unlock when the player first sees/captures a monster of this type.
-    /// Used by JobManager.TryUnlockSitesForType(type).
-    /// </summary>
     public static IEnumerable<JobType> JobsUnlockedByType(MonsterType type)
     {
         if (_bestTypes == null || _bestTypes.Count == 0)
