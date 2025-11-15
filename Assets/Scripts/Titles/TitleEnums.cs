@@ -19,11 +19,12 @@ public enum OpKind
 public enum ConditionKind
 {
     None = 0,
-    HealthBelowPercent = 1,  // threshold01 used
-    HealthAbovePercent = 2,  // threshold01 used
-    AllyCountBelow     = 3,  // countN used
-    WinStreakAbove     = 4   // countN used
+    HealthBelowPercent = 1,
+    HealthAbovePercent = 2,
+    AllyCountBelow = 3,
+    WinStreakAbove = 4
 }
+
 public enum JobBoosterKind
 {
     FatigueMultiplier = 0,
