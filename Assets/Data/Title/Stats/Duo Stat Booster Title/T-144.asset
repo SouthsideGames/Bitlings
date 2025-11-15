@@ -1,0 +1,24 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e37e7682e49c84857899bd5fd02da43e, type: 3}
+  m_Name: T-144
+  m_EditorClassIdentifier: 
+  titleId: T-144
+  displayName: Training Therapist
+  description: Increases HP (25) but reduces SPD (10).
+  statA: 0
+  opA: 0
+  valueA: 25
+  statB: 3
+  opB: 1
+  valueB: 10
+  enabled: 1
