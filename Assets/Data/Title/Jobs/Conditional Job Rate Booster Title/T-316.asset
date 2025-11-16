@@ -14,6 +14,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   titleId: T-316
   displayName: Machinist
-  description: Increases job production rate by 20% while assigned to Wyrm.
+  description: Increases job production rate by 20% while assigned to Wyrm Den.
   rateMultiplier: 1.2
   restrictTo: 11

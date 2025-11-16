@@ -9,11 +9,12 @@ MonoBehaviour:
   m_GameObject: {fileID: 0}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 2777d60f4d7639b4194b9c5da24f670f, type: 3}
-  m_Name: T-067
+  m_Script: {fileID: 11500000, guid: 04f078adfdffba749b6bd9d362f129e9, type: 3}
+  m_Name: T-239
   m_EditorClassIdentifier: 
-  titleId: T-067
-  displayName: Engineer
-  description: Increases job production rate by 20% while assigned to Gym.
-  rateMultiplier: 1.2
-  restrictTo: 0
+  titleId: T-239
+  displayName: Principal Carpenter
+  description: Reduces incoming damage by 5.
+  flatReduce: 5
+  percentMultiplier: 1
+  cannotBeCrit: 0

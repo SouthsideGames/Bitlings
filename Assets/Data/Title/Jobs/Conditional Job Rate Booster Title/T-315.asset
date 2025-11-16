@@ -14,6 +14,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   titleId: T-315
   displayName: Lead Firefighter
-  description: Increases job production rate by 15% while assigned to Forge.
+  description: Increases job production rate by 15% while assigned to Sanctum.
   rateMultiplier: 1.15
-  restrictTo: 5
+  restrictTo: 13
