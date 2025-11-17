@@ -6,7 +6,6 @@ using System;
 public class UpgradeRowUI : MonoBehaviour
 {
     [Header("Visuals")]
-    [SerializeField] private Image iconImage;
     [SerializeField] private TextMeshProUGUI nameLabel;
     [SerializeField] private TextMeshProUGUI levelLabel;
     [SerializeField] private TextMeshProUGUI costLabel;
@@ -24,11 +23,10 @@ public class UpgradeRowUI : MonoBehaviour
     private Func<int> _getCost;
     private Action _onBuy;
 
-    public void BindStatic(string displayName, Sprite icon, string infoId,
+    public void BindStatic(string displayName, string infoId,
                            Func<int> getLevel, Func<int> getCost, Action onBuy)
     {
         _fallbackTitle = displayName;
-        _icon = icon;
         _infoId = infoId;
 
         _getLevel = getLevel;
@@ -36,7 +34,6 @@ public class UpgradeRowUI : MonoBehaviour
         _onBuy    = onBuy;
 
         if (nameLabel) nameLabel.text = displayName;
-        if (iconImage) iconImage.sprite = icon;
 
         if (buyButton)
         {

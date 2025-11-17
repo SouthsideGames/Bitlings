@@ -1,5 +1,6 @@
 using UnityEngine;
 using System.Collections.Generic;
+using System;
 
 public class UpgradesPanelUI : MonoBehaviour
 {
@@ -35,12 +36,11 @@ public class UpgradesPanelUI : MonoBehaviour
             var row = go.GetComponent<UpgradeRowUI>();
             if (!row) row = go.AddComponent<UpgradeRowUI>();
 
-            // supply delegates per upgrade type
-            System.Func<int> getLevel = () => GetLevel(e.type);
-            System.Func<int> getCost  = () => GetCost(e.type);
-            System.Action    onBuy    = () => TryBuy(e.type);
+            Func<int> getLevel = () => GetLevel(e.type);
+            Func<int> getCost  = () => GetCost(e.type);
+            Action    onBuy    = () => TryBuy(e.type);
 
-            row.BindStatic(e.displayName, e.icon, e.infoId, getLevel, getCost, onBuy);
+            row.BindStatic(e.displayName, e.infoId, getLevel, getCost, onBuy);
             _rows.Add(row);
         }
     }
@@ -106,7 +106,6 @@ public class UpgradesPanelUI : MonoBehaviour
         IncLevel(t);
         SaveManager.Save();
 
-        // refresh UI + notify others (same pattern as your old Upgrades UI)
         GameEvents.OnResourcesChanged?.Invoke();
         Refresh();
     }

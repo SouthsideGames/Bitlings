@@ -180,17 +180,17 @@ public static class TitlesAdapter
 
     public static void OnTurnAdvanced(int turnIndex)
     {
-        if (!TryInvoke("OnTurnAdvanced", new object[] { turnIndex }, out _)) {}
+        if (!TryInvoke("OnTurnAdvanced", new object[] { turnIndex }, out _)) { }
     }
 
     public static void OnAttackLanded(string attackerId, bool wasCrit)
     {
-        if (!TryInvoke("OnAttackLanded", new object[] { attackerId, wasCrit }, out _)) {}
+        if (!TryInvoke("OnAttackLanded", new object[] { attackerId, wasCrit }, out _)) { }
     }
 
     public static void OnHitTaken(string defenderId, int damage, bool wasCrit)
     {
-        if (!TryInvoke("OnHitTaken", new object[] { defenderId, damage, wasCrit }, out _)) {}
+        if (!TryInvoke("OnHitTaken", new object[] { defenderId, damage, wasCrit }, out _)) { }
     }
 
     public static void OnBattleStart(string activeMonsterId, MonsterDataSO wild, int wildLevel)
@@ -200,22 +200,22 @@ public static class TitlesAdapter
 
     public static void OnBattleEnd(string activeMonsterId, bool victory, MonsterDataSO wild, int wildLevel)
     {
-        if (!TryInvoke("OnBattleEnd", new object[] { activeMonsterId, victory, wild, wildLevel }, out _)){}
+        if (!TryInvoke("OnBattleEnd", new object[] { activeMonsterId, victory, wild, wildLevel }, out _)) { }
     }
 
     public static void OnMonsterLeveled(string monsterId, int newLevel)
     {
-        if (!TryInvoke("OnMonsterLeveled", new object[] { monsterId, newLevel }, out _)){}
+        if (!TryInvoke("OnMonsterLeveled", new object[] { monsterId, newLevel }, out _)) { }
     }
 
     public static void OnMonsterCaptured(string monsterId, MonsterType type, int level, bool isShiny)
     {
-        if (!TryInvoke("OnMonsterCaptured", new object[] { monsterId, type, level, isShiny }, out _)){}
+        if (!TryInvoke("OnMonsterCaptured", new object[] { monsterId, type, level, isShiny }, out _)) { }
     }
 
     public static void OnMonsterEvolved(string newMonsterId)
     {
-        if (!TryInvoke("OnMonsterEvolved", new object[] { newMonsterId }, out _)){}
+        if (!TryInvoke("OnMonsterEvolved", new object[] { newMonsterId }, out _)) { }
     }
 
     // ─────────────────────────────────────────────────────────────────────────────
@@ -277,13 +277,20 @@ public static class TitlesAdapter
         return 1f;
     }
 
-   public static float GetJobFatigueMult(string ownedId, MonsterDataSO def, int level, JobType site)
+    /// <summary>
+    /// Job fatigue multiplier while assigned to a specific site.
+    /// Prefers runtime’s GetJobFatigueMultiplier(ownedId, def, level, site); falls back to local per-title scan.
+    /// </summary>
+    public static float GetJobFatigueMult(string ownedId, MonsterDataSO def, int level, JobType site)
     {
-        // Default: no change
+        // Preferred: ask the runtime directly if it implements a site-aware API.
+        if (TryInvoke("GetJobFatigueMultiplier", new object[] { ownedId, def, level, site }, out var res) && res is float f)
+            return Mathf.Max(0f, f);
+
+        // Fallback: local logic using JobFatigueBoosterTitleSO + AppliesTo(site)
         float mult = 1f;
 
-        // Get this monster’s titles (implement this to your data source)
-        var titles = GetTitles(ownedId); // ← your existing accessor
+        var titles = GetTitles(ownedId);
         if (titles == null) return mult;
 
         for (int i = 0; i < titles.Count; i++)
@@ -291,15 +298,12 @@ public static class TitlesAdapter
             var t = titles[i];
             if (t is JobFatigueBoosterTitleSO ft && ft.AppliesTo(site))
             {
-                // Multiply, don’t add (stacking by multiplication is typical for rates)
                 mult *= Mathf.Max(0f, ft.fatigueMultiplier);
             }
         }
 
-        // Safety: never negative, never NaN
         return float.IsFinite(mult) ? Mathf.Max(0f, mult) : 1f;
     }
-
 
     public static float GetJobAuraPercent(string ownedId, MonsterDataSO def, int level, JobType site)
     {
@@ -342,9 +346,9 @@ public static class TitlesAdapter
                     try
                     {
                         mid = (string)(et.GetField("monsterId")?.GetValue(entry) ??
-                                    et.GetProperty("monsterId")?.GetValue(entry, null));
+                                       et.GetProperty("monsterId")?.GetValue(entry, null));
                         var raw = et.GetField("level")?.GetValue(entry) ??
-                                et.GetProperty("level")?.GetValue(entry, null) ?? 1;
+                                  et.GetProperty("level")?.GetValue(entry, null) ?? 1;
                         lvl = Convert.ToInt32(raw);
                     }
                     catch { /* keep defaults */ }
@@ -392,9 +396,9 @@ public static class TitlesAdapter
             {
                 var et = entry.GetType();
                 id    = (string)(et.GetField("monsterId")?.GetValue(entry) ??
-                                et.GetProperty("monsterId")?.GetValue(entry, null));
+                                 et.GetProperty("monsterId")?.GetValue(entry, null));
                 var raw = et.GetField("level")?.GetValue(entry) ??
-                        et.GetProperty("level")?.GetValue(entry, null) ?? 1;
+                          et.GetProperty("level")?.GetValue(entry, null) ?? 1;
                 level = Convert.ToInt32(raw);
             }
             catch { id = null; level = 1; }
@@ -416,7 +420,7 @@ public static class TitlesAdapter
     }
 
     /// <summary> Sum of flat capacity bonuses across the active team for a specific job site. </summary>
-   public static int GetJobCapacityBonus(JobType site)
+    public static int GetJobCapacityBonus(JobType site)
     {
         int bonus = 0;
 
@@ -440,14 +444,13 @@ public static class TitlesAdapter
                 string id = !string.IsNullOrEmpty(w.monsterId) ? w.monsterId : (w.def ? w.def.id : null);
                 if (string.IsNullOrEmpty(id)) continue;
 
-                var titles = GetTitles(id); // ← your existing accessor
+                var titles = GetTitles(id); // ← reflection-runtime accessor
                 if (titles == null) continue;
 
                 for (int ti = 0; ti < titles.Count; ti++)
                 {
                     if (titles[ti] is JobCapacityBoosterTitleSO cap && cap.AppliesTo(site))
                     {
-                        // Flat stacking is fine; clamp to >= 0 just in case
                         bonus += Mathf.Max(0, cap.capacityBonusFlat);
                     }
                 }
@@ -480,27 +483,45 @@ public static class TitlesAdapter
         return 0f;
     }
 
+    /// <summary>
+    /// Incoming effectiveness multiplier, typed (defender perspective).
+    /// Prefers runtime’s GetIncomingEffectivenessMult(ownedId, def, level, incomingType).
+    /// Falls back to legacy behavior using TitleManager if needed.
+    /// </summary>
     public static float GetIncomingEffectivenessMult(string ownedId, MonsterDataSO def, int level, MonsterType incomingType)
     {
+        // Preferred: ask the runtime directly if the new API exists.
+        if (TryInvoke("GetIncomingEffectivenessMult", new object[] { ownedId, def, level, incomingType }, out var res) && res is float f)
+            return Mathf.Max(0f, f);
+
+        // Fallback: legacy manual path (generic defensive multiplier + TypeResistTitleSO)
         float mul = 1f;
 
-        // 1) Keep existing generic defensive effectiveness titles (e.g., nullifiers/resistors)
-        mul *= Mathf.Max(0f, TitleManager.I.GetIncomingEffectivenessMultiplier(ownedId, def, level));
+        // 1) Generic defensive effectiveness titles (nullifiers/resistors)
+        if (TitleManager.I != null)
+            mul *= Mathf.Max(0f, TitleManager.I.GetIncomingEffectivenessMultiplier(ownedId, def, level));
 
-        // 2) Apply any per-type resist titles that match the incoming attack type
-        var list = TitleManager.I.GetEquippedList(ownedId, def, level);
-        if (list != null)
+        // If no type passed, we’re done.
+        if (incomingType == MonsterType.None)
+            return Mathf.Max(0f, mul);
+
+        // 2) Per-type resist titles that match the incoming type
+        if (TitleManager.I != null)
         {
-            for (int i = 0; i < list.Count; i++)
+            var list = TitleManager.I.GetEquippedList(ownedId, def, level);
+            if (list != null)
             {
-                if (list[i] is TypeResistTitleSO tr && tr.resistTypes != null && tr.resistTypes.Length > 0)
+                for (int i = 0; i < list.Count; i++)
                 {
-                    for (int k = 0; k < tr.resistTypes.Length; k++)
+                    if (list[i] is TypeResistTitleSO tr && tr.resistTypes != null && tr.resistTypes.Length > 0)
                     {
-                        if (incomingType != MonsterType.None && tr.resistTypes[k] == incomingType)
+                        for (int k = 0; k < tr.resistTypes.Length; k++)
                         {
-                            mul *= Mathf.Max(0f, tr.incomingMultiplier);
-                            break; // avoid double-counting same asset
+                            if (tr.resistTypes[k] == incomingType)
+                            {
+                                mul *= Mathf.Max(0f, tr.incomingMultiplier);
+                                break; // avoid double-counting same asset
+                            }
                         }
                     }
                 }
@@ -510,13 +531,23 @@ public static class TitlesAdapter
         return Mathf.Max(0f, mul);
     }
 
-    // Backward-compatible alias used by any old call sites that didn’t pass a type.
+    /// <summary>
+    /// Backward-compatible alias for any old callsites that didn’t pass a type.
+    /// Prefers runtime’s GetIncomingEffectivenessMultiplier(ownedId, def, level) if available.
+    /// </summary>
     public static float GetIncomingEffectivenessMult(string ownedId, MonsterDataSO def, int level)
     {
-        // Fallback: just apply existing generic defensive mods (no per-type logic)
-        return Mathf.Max(0f, TitleManager.I.GetIncomingEffectivenessMultiplier(ownedId, def, level));
-    }
+        // Preferred: ask via reflection
+        if (TryInvoke("GetIncomingEffectivenessMultiplier", new object[] { ownedId, def, level }, out var res) && res is float f)
+            return Mathf.Max(0f, f);
 
+        // Fallback: if TitleManager singleton exists, use its generic defensive multiplier.
+        if (TitleManager.I != null)
+            return Mathf.Max(0f, TitleManager.I.GetIncomingEffectivenessMultiplier(ownedId, def, level));
+
+        // No implementation — neutral
+        return 1f;
+    }
 
     /// <summary> Defender-side damage filter: cannotBeCrit / % reduce / flat reduce. </summary>
     public static TitleDamageFilter GetDamageFilter(string ownedId, MonsterDataSO def, int level)
@@ -593,23 +624,24 @@ public static class TitlesAdapter
         return 1f;
     }
 
-    
+    // ─────────────────────────────────────────────────────────────────────────────
+    // Helper: pull titles for a monster via runtime bridge
+    // ─────────────────────────────────────────────────────────────────────────────
     private static List<TitleSO> GetTitles(string monsterId)
     {
-        if (string.IsNullOrEmpty(monsterId)) 
+        if (string.IsNullOrEmpty(monsterId))
             return new List<TitleSO>();
 
         // Try to call runtime method (reflection bridge)
         if (TryInvoke("GetTitlesForMonster", new object[] { monsterId }, out var res))
         {
-            if (res is List<TitleSO> list) 
+            if (res is List<TitleSO> list)
                 return list;
-            if (res is IEnumerable<TitleSO> enumerable) 
+            if (res is IEnumerable<TitleSO> enumerable)
                 return new List<TitleSO>(enumerable);
         }
 
         // Nothing returned — safe default
         return new List<TitleSO>();
     }
-
 }

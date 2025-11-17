@@ -12,9 +12,10 @@ public class PostBattleSummaryPanelUI : MonoBehaviour
     [SerializeField] private RectTransform root;
     [SerializeField] private TextMeshProUGUI titleLabel;
     [SerializeField] private TextMeshProUGUI coinsLabel;
-    [SerializeField] private TextMeshProUGUI growthCoresLabel; // formerly xpLabel
+    [SerializeField] private TextMeshProUGUI growthCoresLabel;
     [SerializeField] private TextMeshProUGUI levelupsLabel;
     [SerializeField] private TextMeshProUGUI captureLabel;
+    [SerializeField] private BattleManager battleManager;
 
     [Header("Anim")]
     [SerializeField] private float fadeIn = 0.18f;
@@ -23,7 +24,7 @@ public class PostBattleSummaryPanelUI : MonoBehaviour
     public Action OnClosed;
 
     [Header("Optional Detail Block")]
-    [SerializeField] private TextMeshProUGUI growthCoresDetailsLabel; // formerly xpDetailsLabel
+    [SerializeField] private TextMeshProUGUI growthCoresDetailsLabel;
 
     const string GREEN = "#3CDE74";
 
@@ -41,7 +42,7 @@ public class PostBattleSummaryPanelUI : MonoBehaviour
 
     public void Set(
         BattleResult result,
-        int growthCoresGained = 0,
+        int growthCoresGained = 0,          
         int monstersLeveledUp = 0,
         bool captured = false,
         string capturedMonsterId = null,
@@ -49,24 +50,40 @@ public class PostBattleSummaryPanelUI : MonoBehaviour
         List<string> levelUpSummaries = null,
         int coinsBase = 0,
         int coinsTitleBonus = 0,
-        int growthCoresBase = 0,
-        int growthCoresTitleBonus = 0,
+        int growthCoresBase = 0,            
+        int growthCoresTitleBonus = 0,      
         List<string> growthCoresDetailLines = null
     )
     {
-        if (titleLabel) titleLabel.text = result.victory ? "Victory!" : "Defeat";
+        // ───────────── Title ─────────────
+        if (titleLabel)
+            titleLabel.text = result.victory ? "Victory!" : "Defeat";
 
-        // ─────────────── Coins ───────────────
+        // ───────────── Coins ─────────────
         int coinsTotal = Mathf.Max(0, coinsBase + coinsTitleBonus);
         if (coinsLabel)
             coinsLabel.text = BuildRewardLine("Coins", coinsBase, coinsTitleBonus, coinsTotal);
 
-        // ─────────────── Growth Cores ───────────────
-        int totalCores = Mathf.Max(0, growthCoresBase + growthCoresTitleBonus);
+        // ───────────── Growth Cores ─────────────
+        int coresTotal = Mathf.Max(0, growthCoresBase + growthCoresTitleBonus);
         if (growthCoresLabel)
-            growthCoresLabel.text = BuildRewardLine("Growth Cores", growthCoresBase, growthCoresTitleBonus, totalCores);
+        {
+            if (growthCoresBase <= 0 && growthCoresTitleBonus <= 0 && growthCoresGained > 0)
+            {
+                growthCoresLabel.text = $"Growth Cores: {growthCoresGained}";
+            }
+            else
+            {
+                growthCoresLabel.text = BuildRewardLine(
+                    "Growth Cores",
+                    growthCoresBase,
+                    growthCoresTitleBonus,
+                    coresTotal
+                );
+            }
+        }
 
-        // Level-ups
+        // ───────────── Level Ups ─────────────
         if (levelupsLabel)
         {
             if (monstersLeveledUp > 0)
@@ -83,12 +100,18 @@ public class PostBattleSummaryPanelUI : MonoBehaviour
                     sb.Append(')');
                     levelupsLabel.text = sb.ToString();
                 }
-                else levelupsLabel.text = $"{monstersLeveledUp} leveled up";
+                else
+                {
+                    levelupsLabel.text = $"{monstersLeveledUp} leveled up";
+                }
             }
-            else levelupsLabel.text = "No level ups";
+            else
+            {
+                levelupsLabel.text = "No level ups";
+            }
         }
 
-        // Capture
+        // ───────────── Capture ─────────────
         if (captureLabel)
         {
             if (captured)
@@ -96,13 +119,20 @@ public class PostBattleSummaryPanelUI : MonoBehaviour
                 string name = !string.IsNullOrEmpty(capturedMonsterId)
                     ? capturedMonsterId
                     : (result.wildDef ? result.wildDef.id : "Unknown");
-                int lvl = capturedLevel > 0 ? capturedLevel : Mathf.Max(1, result.wildLevel);
+
+                int lvl = capturedLevel > 0
+                    ? capturedLevel
+                    : Mathf.Max(1, result.wildLevel);
+
                 captureLabel.text = $"Captured: {name} (Lv {lvl})";
             }
-            else captureLabel.text = "No capture";
+            else
+            {
+                captureLabel.text = "No capture";
+            }
         }
 
-        // Growth Core breakdown lines
+        // ───────────── Growth Core Breakdown (per-monster lines) ─────────────
         if (growthCoresDetailsLabel)
         {
             if (growthCoresDetailLines != null && growthCoresDetailLines.Count > 0)
@@ -127,11 +157,26 @@ public class PostBattleSummaryPanelUI : MonoBehaviour
 
     public void Close()
     {
+        bool isAuto = IsAutoBattleMode();
+
+        if (isAuto)
+        {
+            BattleLogger.SetEnabled(false);
+            BattleLogger.ClearAll(false);
+        }
+        else
+        {
+            BattleLogger.SetEnabled(true);
+            BattleLogger.ClearAll(false);
+        }
+
         cg.blocksRaycasts = false;
         cg.interactable = false;
         LeanTween.alphaCanvas(cg, 0f, 0.12f).setEaseInSine()
             .setOnComplete(() => OnClosed?.Invoke());
     }
+
+    private bool IsAutoBattleMode() => EncounterManager.I && EncounterManager.I.IsAutoMode;
 
     private string BuildRewardLine(string label, int baseValue, int titleBonus, int total)
     {

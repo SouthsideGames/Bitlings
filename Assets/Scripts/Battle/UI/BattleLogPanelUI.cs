@@ -1,17 +1,15 @@
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
-using System.Text;
 using System.Collections.Generic;
 using System.Collections;
-
 
 public class BattleLogPanelUI : MonoBehaviour
 {
     [Header("UI")]
     [SerializeField] private ScrollRect scrollRect;
-    [SerializeField] private RectTransform content;  
-    [SerializeField] private LogRowUI rowPrefab;      
+    [SerializeField] private RectTransform content;
+    [SerializeField] private LogRowUI rowPrefab;
 
     [Header("Behavior")]
     [Tooltip("If true, clears the panel whenever a new battle begins.")]
@@ -26,12 +24,12 @@ public class BattleLogPanelUI : MonoBehaviour
 
     void OnEnable()
     {
-
         RebuildFromHistory();
 
         BattleLogger.OnLogAppended    += HandleAdded;
         BattleLogger.OnBattleBegan    += HandleBattleBegin;
         BattleLogger.OnEncounterBegan += HandleEncounterBegin;
+        BattleLogger.OnLogCleared     += HandleLogCleared;
     }
 
     void OnDisable()
@@ -39,6 +37,7 @@ public class BattleLogPanelUI : MonoBehaviour
         BattleLogger.OnLogAppended    -= HandleAdded;
         BattleLogger.OnBattleBegan    -= HandleBattleBegin;
         BattleLogger.OnEncounterBegan -= HandleEncounterBegin;
+        BattleLogger.OnLogCleared     -= HandleLogCleared;
     }
 
     void HandleBattleBegin(string label)
@@ -59,18 +58,25 @@ public class BattleLogPanelUI : MonoBehaviour
         if (AutoScroll) ScrollToBottom();
     }
 
+    void HandleLogCleared()
+    {
+        ClearRows();
+    }
+
     void RebuildFromHistory()
     {
         ClearRows();
+
         var list = BattleLogger.Entries;
         for (int i = 0; i < list.Count; i++)
             AddRow(list[i]);
+
         ScrollToBottom();
     }
 
     void AddSystem(string text)
     {
-        HandleAdded(new LogEntry { text = text, scope = LogScope.System, unix = SaveManager.NowUnix() });
+        BattleLogger.Log(text, LogScope.System);
     }
 
     void AddRow(LogEntry e)
@@ -84,28 +90,30 @@ public class BattleLogPanelUI : MonoBehaviour
         // Force immediate layout so Content height updates now
         LayoutRebuilder.ForceRebuildLayoutImmediate(content);
 
-        // If you auto-scroll, do it next frame so the new content size is final
         if (AutoScroll && isActiveAndEnabled)
             StartCoroutine(CoScrollBottomNextFrame());
     }
 
     IEnumerator CoScrollBottomNextFrame()
     {
-        // wait one frame to let the layout system finish
         yield return null;
         Canvas.ForceUpdateCanvases();
-        scrollRect.verticalNormalizedPosition = 0f; // bottom
+        if (scrollRect != null)
+            scrollRect.verticalNormalizedPosition = 0f;
         Canvas.ForceUpdateCanvases();
     }
 
     void ClearRows()
     {
         for (int i = 0; i < _rows.Count; i++)
-            if (_rows[i]) Destroy(_rows[i].gameObject);
+        {
+            if (_rows[i])
+                Destroy(_rows[i].gameObject);
+        }
         _rows.Clear();
     }
 
-   void ScrollToBottom()
+    void ScrollToBottom()
     {
         if (!scrollRect) return;
         Canvas.ForceUpdateCanvases();
@@ -114,4 +122,26 @@ public class BattleLogPanelUI : MonoBehaviour
         Canvas.ForceUpdateCanvases();
     }
 
+    // ─────────────────────────────────────────────────────────
+    // Hook for Post-Game Summary "Continue" button
+    // ─────────────────────────────────────────────────────────
+    /// <summary>
+    /// Call this from your post-battle summary when the player hits Continue.
+    /// Pass isAutoBattle = true when you're about to chain into auto battles.
+    /// </summary>
+    public void PrepForNextBattle(bool isAutoBattle)
+    {
+        if (isAutoBattle)
+        {
+            // Auto-battle: clear & disable logging to avoid spam / overhead.
+            BattleLogger.ClearAll(false);
+            BattleLogger.SetEnabled(false);
+        }
+        else
+        {
+            // Manual: clear & leave logging enabled for the next fight.
+            BattleLogger.SetEnabled(true);
+            BattleLogger.ClearAll(false);
+        }
+    }
 }

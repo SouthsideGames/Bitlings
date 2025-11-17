@@ -48,8 +48,7 @@ public class SettingsManager : MonoBehaviour
     {
         if (SaveManager.Data == null) return;
 
-        // Fresh defaults from SettingsState ctor
-        SaveManager.Data.settings = new SettingsState(); // e.g., autoConvertDuplicates = true, autoScrollBattleLog = true
+        SaveManager.Data.settings = new SettingsState();
         SaveManager.Save();
         OnSettingsChanged?.Invoke();
 

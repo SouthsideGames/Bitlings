@@ -331,6 +331,40 @@ public sealed class TitleManager : MonoBehaviour
         return add;
     }
 
+    public float GetIncomingEffectivenessMult(string monsterId, MonsterDataSO def, int level, MonsterType incomingType)
+    {
+        // 1) Start with generic defensive multiplier (nullifiers, etc.)
+        float mul = GetIncomingEffectivenessMultiplier(monsterId, def, level);
+
+        // If we don't know the incoming type, we’re done.
+        if (incomingType == MonsterType.None)
+            return Mathf.Max(0f, mul);
+
+        // 2) Apply any per-type resist titles that match the incoming attack type.
+        var titles = GetEquippedList(monsterId, def, level);
+        if (titles != null)
+        {
+            for (int i = 0; i < titles.Count; i++)
+            {
+                if (titles[i] is TypeResistTitleSO tr && tr.resistTypes != null && tr.resistTypes.Length > 0)
+                {
+                    for (int k = 0; k < tr.resistTypes.Length; k++)
+                    {
+                        if (tr.resistTypes[k] == incomingType)
+                        {
+                            // e.g. incomingMultiplier = 0.75f for 25% less damage.
+                            mul *= Mathf.Max(0f, tr.incomingMultiplier);
+                            break; // don’t double-count same asset
+                        }
+                    }
+                }
+            }
+        }
+
+        return Mathf.Max(0f, mul);
+    }
+
+
     // Adapter expects fields: cannotBeCrit, percentReduce, flatReduce
     public struct TitleDamageFilter
     {

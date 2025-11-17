@@ -457,17 +457,16 @@ public class BattleManager : MonoBehaviour
             {
                 float chance = ComputeRunChance();
                 bool escaped = UnityEngine.Random.value < chance;
-
                 if (escaped)
                 {
                     BattleLogger.Log($"Got away safely! (Run chance {Mathf.RoundToInt(chance * 100f)}%)", LogScope.Battle);
-                    EndBattle(false); // ends as a non-victory (like Pokémon)
+                    EndBattle(false);
+                    yield break; // stop resolving this turn
                 }
                 else
                 {
                     runAttempts++;
                     BattleLogger.Log($"Couldn't escape! (Run chance was {Mathf.RoundToInt(chance * 100f)}%)", LogScope.Battle);
-                    // Failing to run consumes your turn; flow continues so the foe can act this round.
                 }
                 break;
             }
@@ -970,7 +969,7 @@ public class BattleManager : MonoBehaviour
         onEnd?.Invoke(result);
 
         bool isAuto = EncounterManager.I && EncounterManager.I.IsAutoMode;
-        PostBattleSummaryManager.I?.NotifyBattleEnd(
+       PostBattleSummaryManager.I?.NotifyBattleEnd(
             result,
             isAuto,
             growthCoreTotal,
@@ -979,10 +978,10 @@ public class BattleManager : MonoBehaviour
             capturedMonsterId: null,
             capturedLevel: 0,
             levelUpSummaries: null,
-            coinsBase: finalCoins, // base not needed here for UI but passing something
-            coinsTitleBonus: 0,
-            growthCoresBase: 0,
-            growthCoresTitleBonus: 0,
+            coinsBase: baseCoins,
+            coinsTitleBonus: coinTitleBonus,
+            growthCoresBase: growthCoreTotal - growthCoreTitleBonus, // or baseAfterShiny
+            growthCoresTitleBonus: growthCoreTitleBonus,
             growthCoresDetailLines: new List<string> { $"Gained {growthCoreTotal} Growth Cores." }
         );
 
@@ -1074,18 +1073,51 @@ public class BattleManager : MonoBehaviour
         if (manualTurns && !IsPlayerTurn) return;
 
         List<int> others = new();
-        for (int i = 0; i < teamCount; i++) if (i != activeIndex) others.Add(i);
+        for (int i = 0; i < teamCount; i++)
+            if (i != activeIndex) others.Add(i);
+
         if (benchSlot < 0 || benchSlot >= others.Count) return;
 
         int targetIndex = others[benchSlot];
         if (teamHP[targetIndex] <= 0f) return;
 
-        (teamDefs[activeIndex], teamDefs[targetIndex])       = (teamDefs[targetIndex], teamDefs[activeIndex]);
-        (teamLevels[activeIndex], teamLevels[targetIndex])   = (teamLevels[targetIndex], teamLevels[activeIndex]);
-        (teamMaxHP[activeIndex], teamMaxHP[targetIndex])     = (teamMaxHP[targetIndex], teamMaxHP[activeIndex]);
-        (teamHP[activeIndex], teamHP[targetIndex])           = (teamHP[targetIndex], teamHP[activeIndex]);
-        (teamIds[activeIndex], teamIds[targetIndex])         = (teamIds[targetIndex], teamIds[activeIndex]);
+        // ─────────────────────────────────────────────────────────────
+        // Core team data swap
+        // ─────────────────────────────────────────────────────────────
+        (teamDefs[activeIndex],   teamDefs[targetIndex])   = (teamDefs[targetIndex],   teamDefs[activeIndex]);
+        (teamLevels[activeIndex], teamLevels[targetIndex]) = (teamLevels[targetIndex], teamLevels[activeIndex]);
+        (teamMaxHP[activeIndex],  teamMaxHP[targetIndex])  = (teamMaxHP[targetIndex],  teamMaxHP[activeIndex]);
+        (teamHP[activeIndex],     teamHP[targetIndex])     = (teamHP[targetIndex],     teamHP[activeIndex]);
+        (teamIds[activeIndex],    teamIds[targetIndex])    = (teamIds[targetIndex],    teamIds[activeIndex]);
 
+        // ─────────────────────────────────────────────────────────────
+        // CRITICAL: keep runtime battle state aligned with slots
+        // ─────────────────────────────────────────────────────────────
+        if (jobCtx != null && jobCtx.Length > activeIndex && jobCtx.Length > targetIndex)
+        {
+            (jobCtx[activeIndex], jobCtx[targetIndex]) =
+                (jobCtx[targetIndex], jobCtx[activeIndex]);
+        }
+
+        if (shieldHP != null && shieldHP.Length > activeIndex && shieldHP.Length > targetIndex)
+        {
+            (shieldHP[activeIndex], shieldHP[targetIndex]) =
+                (shieldHP[targetIndex], shieldHP[activeIndex]);
+        }
+
+        if (teamPendingBuffPct != null && teamPendingBuffPct.Length > activeIndex && teamPendingBuffPct.Length > targetIndex)
+        {
+            (teamPendingBuffPct[activeIndex], teamPendingBuffPct[targetIndex]) =
+                (teamPendingBuffPct[targetIndex], teamPendingBuffPct[activeIndex]);
+        }
+
+        if (teamPendingBuffTurns != null && teamPendingBuffTurns.Length > activeIndex && teamPendingBuffTurns.Length > targetIndex)
+        {
+            (teamPendingBuffTurns[activeIndex], teamPendingBuffTurns[targetIndex]) =
+                (teamPendingBuffTurns[targetIndex], teamPendingBuffTurns[activeIndex]);
+        }
+
+        // Also keep SaveManager.Data.team order in sync with the swap
         var t = SaveManager.Data.team[activeIndex];
         SaveManager.Data.team[activeIndex] = SaveManager.Data.team[targetIndex];
         SaveManager.Data.team[targetIndex] = t;
@@ -1095,14 +1127,20 @@ public class BattleManager : MonoBehaviour
         ClampAndPushActiveHP();
         RefreshBenchUI();
 
+        // Apply any pending buff now that this monster is active
         if (teamPendingBuffPct != null && teamPendingBuffTurns != null)
         {
             if (teamPendingBuffPct[activeIndex] > 0f)
             {
                 tempDmgBuffPct   += teamPendingBuffPct[activeIndex];
                 tempDmgBuffTurns  = Mathf.Max(tempDmgBuffTurns, teamPendingBuffTurns[activeIndex]);
-                BattleLogger.Log($"{GetName(activeIndex)} carries over +{Mathf.RoundToInt(teamPendingBuffPct[activeIndex] * 100f)}% damage from bench.", LogScope.Battle);
-                teamPendingBuffPct[activeIndex] = 0f;
+
+                BattleLogger.Log(
+                    $"{GetName(activeIndex)} carries over +{Mathf.RoundToInt(teamPendingBuffPct[activeIndex] * 100f)}% damage from bench.",
+                    LogScope.Battle
+                );
+
+                teamPendingBuffPct[activeIndex]   = 0f;
                 teamPendingBuffTurns[activeIndex] = 0;
             }
         }
@@ -1111,41 +1149,81 @@ public class BattleManager : MonoBehaviour
         Punch(playerIcon);
     }
 
+
     private bool AutoSwapToAlive()
     {
         for (int i = 0; i < teamCount; i++)
         {
             if (i == activeIndex) continue;
-            if (teamHP[i] > 0f)
+            if (teamHP[i] <= 0f) continue;
+
+            int targetIndex = i;
+
+            // ─────────────────────────────────────────────────────────
+            // Core team data swap
+            // ─────────────────────────────────────────────────────────
+            (teamDefs[activeIndex],   teamDefs[targetIndex])   = (teamDefs[targetIndex],   teamDefs[activeIndex]);
+            (teamLevels[activeIndex], teamLevels[targetIndex]) = (teamLevels[targetIndex], teamLevels[activeIndex]);
+            (teamMaxHP[activeIndex],  teamMaxHP[targetIndex])  = (teamMaxHP[targetIndex],  teamMaxHP[activeIndex]);
+            (teamHP[activeIndex],     teamHP[targetIndex])     = (teamHP[targetIndex],     teamHP[activeIndex]);
+            (teamIds[activeIndex],    teamIds[targetIndex])    = (teamIds[targetIndex],    teamIds[activeIndex]);
+
+            // ─────────────────────────────────────────────────────────
+            // CRITICAL: keep runtime battle state aligned with slots
+            // ─────────────────────────────────────────────────────────
+            if (jobCtx != null && jobCtx.Length > activeIndex && jobCtx.Length > targetIndex)
             {
-                (teamDefs[activeIndex], teamDefs[i])       = (teamDefs[i], teamDefs[activeIndex]);
-                (teamLevels[activeIndex], teamLevels[i])   = (teamLevels[i], teamLevels[activeIndex]);
-                (teamMaxHP[activeIndex], teamMaxHP[i])     = (teamMaxHP[i], teamMaxHP[activeIndex]);
-                (teamHP[activeIndex], teamHP[i])           = (teamHP[i], teamHP[activeIndex]);
-                (teamIds[activeIndex], teamIds[i])         = (teamIds[i], teamIds[activeIndex]);
-
-                var t = SaveManager.Data.team[activeIndex];
-                SaveManager.Data.team[activeIndex] = SaveManager.Data.team[i];
-                SaveManager.Data.team[i] = t;
-                SaveManager.Save();
-
-                ApplyActiveToUI();
-                ClampAndPushActiveHP();
-                RefreshBenchUI();
-
-                if (teamPendingBuffPct != null && teamPendingBuffPct[activeIndex] > 0f)
-                {
-                    tempDmgBuffPct   += teamPendingBuffPct[activeIndex];
-                    tempDmgBuffTurns  = Mathf.Max(tempDmgBuffTurns, teamPendingBuffTurns[activeIndex]);
-                    BattleLogger.Log($"{GetName(activeIndex)} carries over +{Mathf.RoundToInt(teamPendingBuffPct[activeIndex] * 100f)}% damage from bench.", LogScope.Battle);
-                    teamPendingBuffPct[activeIndex] = 0f;
-                    teamPendingBuffTurns[activeIndex] = 0;
-                }
-
-                BattleLogger.Log($"Auto-swapped to {GetName(activeIndex)}!", LogScope.Battle);
-                return true;
+                (jobCtx[activeIndex], jobCtx[targetIndex]) =
+                    (jobCtx[targetIndex], jobCtx[activeIndex]);
             }
+
+            if (shieldHP != null && shieldHP.Length > activeIndex && shieldHP.Length > targetIndex)
+            {
+                (shieldHP[activeIndex], shieldHP[targetIndex]) =
+                    (shieldHP[targetIndex], shieldHP[activeIndex]);
+            }
+
+            if (teamPendingBuffPct != null && teamPendingBuffPct.Length > activeIndex && teamPendingBuffPct.Length > targetIndex)
+            {
+                (teamPendingBuffPct[activeIndex], teamPendingBuffPct[targetIndex]) =
+                    (teamPendingBuffPct[targetIndex], teamPendingBuffPct[activeIndex]);
+            }
+
+            if (teamPendingBuffTurns != null && teamPendingBuffTurns.Length > activeIndex && teamPendingBuffTurns.Length > targetIndex)
+            {
+                (teamPendingBuffTurns[activeIndex], teamPendingBuffTurns[targetIndex]) =
+                    (teamPendingBuffTurns[targetIndex], teamPendingBuffTurns[activeIndex]);
+            }
+
+            // Keep SaveManager.Data.team in sync
+            var t = SaveManager.Data.team[activeIndex];
+            SaveManager.Data.team[activeIndex] = SaveManager.Data.team[targetIndex];
+            SaveManager.Data.team[targetIndex] = t;
+            SaveManager.Save();
+
+            ApplyActiveToUI();
+            ClampAndPushActiveHP();
+            RefreshBenchUI();
+
+            // Apply any pending buff now that this monster is active
+            if (teamPendingBuffPct != null && teamPendingBuffPct[activeIndex] > 0f)
+            {
+                tempDmgBuffPct   += teamPendingBuffPct[activeIndex];
+                tempDmgBuffTurns  = Mathf.Max(tempDmgBuffTurns, teamPendingBuffTurns[activeIndex]);
+
+                BattleLogger.Log(
+                    $"{GetName(activeIndex)} carries over +{Mathf.RoundToInt(teamPendingBuffPct[activeIndex] * 100f)}% damage from bench.",
+                    LogScope.Battle
+                );
+
+                teamPendingBuffPct[activeIndex]   = 0f;
+                teamPendingBuffTurns[activeIndex] = 0;
+            }
+
+            BattleLogger.Log($"Auto-swapped to {GetName(activeIndex)}!", LogScope.Battle);
+            return true;
         }
+
         return false;
     }
 

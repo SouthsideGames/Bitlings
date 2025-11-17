@@ -4,9 +4,7 @@ using System.Text;
 using UnityEngine;
 
 // ─────────────────────────────────────────────────────────────
-// Shared types (kept here so all scripts can "see" them)
-// If you already created BattleLogTypes.cs, delete that or
-// remove these duplicates.
+// Shared types
 // ─────────────────────────────────────────────────────────────
 public enum LogScope { System, Encounter, Battle }
 
@@ -16,21 +14,20 @@ public struct LogEntry
     public long unix;
     public LogScope scope;
     public string text;
-    public string battleLabel; 
+    public string battleLabel;
 }
 
 // ─────────────────────────────────────────────────────────────
-// Color & formatting helpers (as requested)
+// Color & formatting helpers
 // ─────────────────────────────────────────────────────────────
 public static class BattleLogColors
 {
-    // Tweak freely; these are readable on light/dark UIs
-    public const string Base    = "#FFFFFF"; // white
-    public const string Buff    = "#36D674"; // green-ish
-    public const string Debuff  = "#FF7A53"; // orange/red
-    public const string Crit    = "#FFD94A"; // gold
-    public const string Info    = "#7FD7FF"; // cyan (type effectiveness, notes)
-    public const string Name    = "#D7B6FF"; // attacker/skill names if you want flair
+    public const string Base   = "#FFFFFF"; // white
+    public const string Buff   = "#36D674"; // green-ish
+    public const string Debuff = "#FF7A53"; // orange/red
+    public const string Crit   = "#FFD94A"; // gold
+    public const string Info   = "#7FD7FF"; // cyan
+    public const string Name   = "#D7B6FF"; // attacker/skill names
 }
 
 public enum ModKind { Buff, Debuff, Info }
@@ -38,10 +35,10 @@ public enum ModKind { Buff, Debuff, Info }
 [Serializable]
 public struct DamageMod
 {
-    public ModKind kind;     // Buff/Debuff/Info
-    public float amount;     // positive number for display (+X / -Y). For Info you can leave 0.
-    public string label;     // e.g., "attack up", "armor", "type"
-    
+    public ModKind kind;   // Buff/Debuff/Info
+    public float amount;   // positive number for display
+    public string label;   // e.g., "attack up", "armor", "type"
+
     public DamageMod(ModKind kind, float amount, string label = null)
     {
         this.kind   = kind;
@@ -52,7 +49,6 @@ public struct DamageMod
 
 public static class DamageLogFormatter
 {
-    // Builds:  27 dmg ( <base>18</base> (<buff>+6</buff> <debuff>-2</debuff>) [flags] )
     public static string FormatDamageLine(
         string attackerName,
         string targetName,
@@ -61,25 +57,21 @@ public static class DamageLogFormatter
         int baseDamage,
         IReadOnlyList<DamageMod> mods,
         bool crit = false,
-        float effectiveness = 1f // 2f = super, 0.5f=weak, 1f = normal
+        float effectiveness = 1f
     )
     {
         var sb = new StringBuilder(128);
 
         // Header story bit
-        if (!string.IsNullOrEmpty(attackerName) && !string.IsNullOrEmpty(targetName))
-            sb.Append($"{attackerName} ");
-        else if (!string.IsNullOrEmpty(attackerName))
-            sb.Append($"{attackerName} ");
-
+        if (!string.IsNullOrEmpty(attackerName))
+            sb.Append(attackerName).Append(" ");
         if (!string.IsNullOrEmpty(moveName))
-            sb.Append($"uses {moveName} ");
-
+            sb.Append("uses ").Append(moveName).Append(" ");
         if (!string.IsNullOrEmpty(targetName))
-            sb.Append($"on {targetName} ");
+            sb.Append("on ").Append(targetName).Append(" ");
 
         sb.Append("→ ");
-        sb.Append($"{totalDamage} dmg ");
+        sb.Append(totalDamage).Append(" dmg ");
 
         // Breakdown
         sb.Append("(");
@@ -87,38 +79,39 @@ public static class DamageLogFormatter
           .Append(baseDamage)
           .Append("</color>");
 
-        // Parenthesized buff/debuff details
+        // Buff / Debuff breakdown
         bool hasBD = HasBuffOrDebuff(mods);
         if (hasBD)
         {
             sb.Append(" (");
-            for (int i = 0; i < mods.Count; i++)
+            bool first = true;
+            for (int i = 0; i < (mods?.Count ?? 0); i++)
             {
                 var m = mods[i];
-                if (m.kind == ModKind.Info) continue; // keep Info outside the parens
+                if (m.kind == ModKind.Info) continue;
 
-                if (i > 0 && (mods[i - 1].kind != ModKind.Info))
-                    sb.Append(" ");
+                if (!first) sb.Append(" ");
+                first = false;
 
                 if (m.kind == ModKind.Buff)
                 {
                     sb.Append("<color=").Append(BattleLogColors.Buff).Append(">");
                     sb.Append("+").Append(Mathf.RoundToInt(m.amount));
-                    if (!string.IsNullOrEmpty(m.label)) sb.Append($" {m.label}");
+                    if (!string.IsNullOrEmpty(m.label)) sb.Append(" ").Append(m.label);
                     sb.Append("</color>");
                 }
                 else if (m.kind == ModKind.Debuff)
                 {
                     sb.Append("<color=").Append(BattleLogColors.Debuff).Append(">");
                     sb.Append("-").Append(Mathf.RoundToInt(m.amount));
-                    if (!string.IsNullOrEmpty(m.label)) sb.Append($" {m.label}");
+                    if (!string.IsNullOrEmpty(m.label)) sb.Append(" ").Append(m.label);
                     sb.Append("</color>");
                 }
             }
             sb.Append(")");
         }
 
-        // Flags like CRIT or effectiveness live after parens
+        // Crit / effectiveness flags
         if (crit)
         {
             sb.Append(" <color=").Append(BattleLogColors.Crit).Append(">CRIT!</color>");
@@ -132,7 +125,7 @@ public static class DamageLogFormatter
                 sb.Append(" <color=").Append(BattleLogColors.Info).Append(">Not very effective</color>");
         }
 
-        // Also print any Info-type mods as trailing tags (e.g., “pierce”, “ignores armor”)
+        // Info-type mods (pierce, ignores armor, etc.)
         if (mods != null)
         {
             for (int i = 0; i < mods.Count; i++)
@@ -140,9 +133,11 @@ public static class DamageLogFormatter
                 var m = mods[i];
                 if (m.kind != ModKind.Info) continue;
                 if (!string.IsNullOrEmpty(m.label))
+                {
                     sb.Append(" <color=").Append(BattleLogColors.Info).Append(">")
                       .Append(m.label)
                       .Append("</color>");
+                }
             }
         }
 
@@ -172,6 +167,7 @@ public static class BattleLogger
     public static event Action<bool>     OnBattleEnded;
     public static event Action<string>   OnEncounterBegan;
     public static event Action<bool>     OnEncounterEnded;
+    public static event Action          OnLogCleared;
 
     static readonly List<LogEntry> _entries = new List<LogEntry>(512);
     static string _currentBattleLabel;
@@ -179,7 +175,18 @@ public static class BattleLogger
 
     public static IReadOnlyList<LogEntry> Entries => _entries;
 
-    static long NowUnix() => SaveManager.NowUnix(); // assumes your SaveManager exposes this
+    // Global toggle (use for Manual vs Auto battle)
+    public static bool Enabled { get; private set; } = true;
+
+    static long NowUnix() => SaveManager.NowUnix();
+
+    // ─────────────────────────────────────────────────────────
+    // Enable / Disable
+    // ─────────────────────────────────────────────────────────
+    public static void SetEnabled(bool on)
+    {
+        Enabled = on;
+    }
 
     // ─────────────────────────────────────────────────────────
     // Battle / Encounter lifecycle
@@ -213,6 +220,7 @@ public static class BattleLogger
     // ─────────────────────────────────────────────────────────
     public static void Log(string message, LogScope scope = LogScope.Battle)
     {
+        if (!Enabled) return;
         if (string.IsNullOrEmpty(message)) return;
 
         var e = new LogEntry
@@ -228,7 +236,7 @@ public static class BattleLogger
     }
 
     // ─────────────────────────────────────────────────────────
-    // Narrative damage line with colored base/buffs/debuffs
+    // Damage + combat helpers
     // ─────────────────────────────────────────────────────────
     public static void LogDamage(
         string attackerName,
@@ -241,13 +249,14 @@ public static class BattleLogger
         float effectiveness = 1f,
         LogScope scope = LogScope.Battle)
     {
+        if (!Enabled) return;
+
         string line = DamageLogFormatter.FormatDamageLine(
             attackerName, targetName, moveName, totalDamage, baseDamage, mods, crit, effectiveness
         );
         Log(line, scope);
     }
 
-    // Optional: simple wrappers for common beats
     public static void LogMiss(string attackerName, string targetName, string moveName, LogScope scope = LogScope.Battle)
     {
         Log($"{attackerName} uses {moveName} on {targetName} → <color={BattleLogColors.Info}>Missed</color>", scope);
@@ -264,11 +273,53 @@ public static class BattleLogger
     }
 
     // ─────────────────────────────────────────────────────────
+    // Turn / Title helpers for “what happened this turn?”
+    // ─────────────────────────────────────────────────────────
+    public static void LogTurnStart(int turnIndex)
+    {
+        Log($"— Turn {turnIndex} begins —", LogScope.Battle);
+    }
+
+    public static void LogTitleActivation(string ownerName, string titleName, string summary)
+    {
+        // Example: "Umbra-01's Foreman activates: +20% Attack this turn."
+        Log(
+            $"<color={BattleLogColors.Name}>{ownerName}'s</color> {titleName} " +
+            $"<color={BattleLogColors.Buff}>activates</color>: {summary}",
+            LogScope.Battle
+        );
+    }
+
+    public static void LogChoice(string actorName, string choiceSummary, bool isPlayer)
+    {
+        // e.g. "Player: Umbra-01 chooses ATTACK (Shadow Claw)."
+        string side = isPlayer ? "Player" : "Enemy";
+        Log($"{side}: {actorName} chooses {choiceSummary}.", LogScope.Battle);
+    }
+
+    // ─────────────────────────────────────────────────────────
     // Maintenance
     // ─────────────────────────────────────────────────────────
-    public static void ClearAll()
+    /// <summary>
+    /// Clears all stored entries and notifies listeners that the log was cleared.
+    /// Use emitSystemLine = true if you want a "(log cleared)" message added after clearing.
+    /// </summary>
+    public static void ClearAll(bool emitSystemLine = false)
     {
         _entries.Clear();
-        OnLogAppended?.Invoke(new LogEntry { unix = NowUnix(), scope = LogScope.System, text = "(log cleared)" });
+        OnLogCleared?.Invoke();
+
+        if (emitSystemLine && Enabled)
+        {
+            var e = new LogEntry
+            {
+                unix  = NowUnix(),
+                scope = LogScope.System,
+                text  = "(log cleared)",
+                battleLabel = null
+            };
+            _entries.Add(e);
+            OnLogAppended?.Invoke(e);
+        }
     }
 }

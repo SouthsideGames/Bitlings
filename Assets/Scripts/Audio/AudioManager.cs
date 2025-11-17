@@ -111,9 +111,7 @@ public class AudioManager : MonoBehaviour
             return;
         }
         I = this;
-        DontDestroyOnLoad(gameObject);
 
-        // Map catalog
         _sfxMap.Clear();
         foreach (var e in sfxCatalog)
             if (!_sfxMap.ContainsKey(e.type)) _sfxMap.Add(e.type, e);
