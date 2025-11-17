@@ -20,13 +20,16 @@ MonoBehaviour:
   backIcon: {fileID: 21300000, guid: 002db4af838c546fe8c8a500985e6c03, type: 3}
   shinyIcon: {fileID: 21300000, guid: 4cd5e6839cef97d4ca7041f6fafa0173, type: 3}
   shinyBackIcon: {fileID: 21300000, guid: 2dea2de7fab54b04e9fc1b4b627f589d, type: 3}
+  rarity: 2
   canBeStarter: 0
   starterWeight: 1
   baseHP: 48
   baseAttack: 72
   baseDefense: 36
   baseSpeed: 84
+  hpRegenPerHour: 6
   fatigueRatePerHour: 0.03
+  fatigueCooldownHours: 8
   baseTrainingXPPerHour: 62
   evolutionStage: 1
   evolutionLevel: 0
@@ -37,8 +40,8 @@ MonoBehaviour:
   bossWeight: 1
   spawnWeight: 2.5
   jobSkill: 1.9
-  rarity: 2
-  titleTrack: {fileID: 0}
+  titleTrack: {fileID: 11400000, guid: 0d39fbabcf6c44cabb6dcb9706a4be58, type: 2}
   defaultAlwaysOnTitles: []
+  Personality: {fileID: 11400000, guid: 3733616cf9f0f4dddb5bee9d6ba2952f, type: 2}
   description: ts body hums with constant energy. Boltling darts forward in sharp
     bursts, striking before its opponent can react.

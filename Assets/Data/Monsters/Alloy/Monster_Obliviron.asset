@@ -20,13 +20,16 @@ MonoBehaviour:
   backIcon: {fileID: 21300000, guid: 2ea653cae2d80104593300ee8de92377, type: 3}
   shinyIcon: {fileID: 21300000, guid: ae3a772aa98854b57880de5fd5d0eb11, type: 3}
   shinyBackIcon: {fileID: 21300000, guid: f20939e0f3bd94652a3224713a1cdf09, type: 3}
+  rarity: 5
   canBeStarter: 0
   starterWeight: 1
   baseHP: 105
   baseAttack: 60
   baseDefense: 105
   baseSpeed: 30
+  hpRegenPerHour: 6
   fatigueRatePerHour: 0.03
+  fatigueCooldownHours: 8
   baseTrainingXPPerHour: 66
   evolutionStage: 1
   evolutionLevel: 0
@@ -37,8 +40,8 @@ MonoBehaviour:
   bossWeight: 1
   spawnWeight: 0.5
   jobSkill: 2.8
-  rarity: 5
-  titleTrack: {fileID: 0}
+  titleTrack: {fileID: 11400000, guid: 220b2169a710041d988d3a36f79350ea, type: 2}
   defaultAlwaysOnTitles: []
+  Personality: {fileID: 11400000, guid: 2e75af56469454f81aab48433f975b34, type: 2}
   description: Forged from forgotten alloys, Obliviron is said to be indestructible.
     Legends claim its armored body has withstood centuries without a single crack.

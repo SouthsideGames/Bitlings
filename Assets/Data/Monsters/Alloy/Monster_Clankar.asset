@@ -20,13 +20,16 @@ MonoBehaviour:
   backIcon: {fileID: 21300000, guid: 861bef715462d8e4db8f3ff6085f3f54, type: 3}
   shinyIcon: {fileID: 21300000, guid: 1be94db7166604d1999e0bfaac325d75, type: 3}
   shinyBackIcon: {fileID: 21300000, guid: c43ef40f5472f49eb8e504363b22ed14, type: 3}
+  rarity: 0
   canBeStarter: 1
   starterWeight: 10
   baseHP: 70
   baseAttack: 40
   baseDefense: 70
   baseSpeed: 20
+  hpRegenPerHour: 6
   fatigueRatePerHour: 0.03
+  fatigueCooldownHours: 8
   baseTrainingXPPerHour: 32
   evolutionStage: 1
   evolutionLevel: 0
@@ -37,8 +40,8 @@ MonoBehaviour:
   bossWeight: 1
   spawnWeight: 6
   jobSkill: 1
-  rarity: 0
-  titleTrack: {fileID: 0}
+  titleTrack: {fileID: 11400000, guid: 66c91d5f9a59742f5b5b335bd10da4c6, type: 2}
   defaultAlwaysOnTitles: []
+  Personality: {fileID: 11400000, guid: 71fa3f6cb68214bca94496affd470944, type: 2}
   description: Its body rattles with every step. Clankar scuttles tirelessly, its
     metallic claws clicking in a steady rhythm.

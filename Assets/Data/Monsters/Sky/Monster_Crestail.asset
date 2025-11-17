@@ -20,13 +20,16 @@ MonoBehaviour:
   backIcon: {fileID: 21300000, guid: c1b8687aee6a3764f9c7557db8393080, type: 3}
   shinyIcon: {fileID: 21300000, guid: fede27bc3ac3a4522931ce994a706be4, type: 3}
   shinyBackIcon: {fileID: 21300000, guid: 210f3063ca590441c9496ad7d29840d6, type: 3}
+  rarity: 0
   canBeStarter: 1
   starterWeight: 10
   baseHP: 40
   baseAttack: 50
   baseDefense: 30
   baseSpeed: 80
+  hpRegenPerHour: 6
   fatigueRatePerHour: 0.03
+  fatigueCooldownHours: 8
   baseTrainingXPPerHour: 46
   evolutionStage: 1
   evolutionLevel: 0
@@ -37,8 +40,8 @@ MonoBehaviour:
   bossWeight: 1
   spawnWeight: 7
   jobSkill: 1
-  rarity: 0
-  titleTrack: {fileID: 0}
+  titleTrack: {fileID: 11400000, guid: 9a2ccec700c534ce591020fdf504c3f3, type: 2}
   defaultAlwaysOnTitles: []
+  Personality: {fileID: 11400000, guid: e8e5c9163905a4840aca1effe845621c, type: 2}
   description: Its fiery crest flares as it takes flight. Crestall darts through
     the skies in bursts of speed, often racing the wind itself.

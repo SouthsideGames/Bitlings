@@ -20,13 +20,16 @@ MonoBehaviour:
   backIcon: {fileID: 21300000, guid: 9a7e14f5b3cdedd499d92093eb111504, type: 3}
   shinyIcon: {fileID: 21300000, guid: 525b1043849ac4834aeb2ae4d61d6975, type: 3}
   shinyBackIcon: {fileID: 21300000, guid: 0286f9539fab34a3e930f2e741812e13, type: 3}
+  rarity: 0
   canBeStarter: 0
   starterWeight: 1
   baseHP: 77
   baseAttack: 44
   baseDefense: 66
   baseSpeed: 33
+  hpRegenPerHour: 6
   fatigueRatePerHour: 0.03
+  fatigueCooldownHours: 8
   baseTrainingXPPerHour: 37
   evolutionStage: 3
   evolutionLevel: 0
@@ -37,8 +40,8 @@ MonoBehaviour:
   bossWeight: 1
   spawnWeight: 0
   jobSkill: 1.2
-  rarity: 0
-  titleTrack: {fileID: 0}
+  titleTrack: {fileID: 11400000, guid: 43eae15e0e5894a8ab68b7ab00b997de, type: 2}
   defaultAlwaysOnTitles: []
+  Personality: {fileID: 11400000, guid: a31b270cc22594368bd4541ee042d278, type: 2}
   description: It can swallow prey nearly its own size. Mawric lurks where rivers
     run deep, feared for pulling Bitlings into the dark below.

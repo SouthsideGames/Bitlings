@@ -20,13 +20,16 @@ MonoBehaviour:
   backIcon: {fileID: 21300000, guid: 9c86d9fcf84de4306aa4d551d115577c, type: 3}
   shinyIcon: {fileID: 21300000, guid: af7eb2af245a7ca489dc0aff074ed6bb, type: 3}
   shinyBackIcon: {fileID: 21300000, guid: f714c9d8f13fa9d418678e8e69d3aac3, type: 3}
+  rarity: 0
   canBeStarter: 0
   starterWeight: 1
   baseHP: 42
   baseAttack: 63
   baseDefense: 32
   baseSpeed: 73
+  hpRegenPerHour: 6
   fatigueRatePerHour: 0.03
+  fatigueCooldownHours: 8
   baseTrainingXPPerHour: 47
   evolutionStage: 2
   evolutionLevel: 0
@@ -37,8 +40,8 @@ MonoBehaviour:
   bossWeight: 1
   spawnWeight: 0
   jobSkill: 1.1
-  rarity: 0
-  titleTrack: {fileID: 0}
+  titleTrack: {fileID: 11400000, guid: fd759ceaa7ff54ae5bd100d71e7e69d6, type: 2}
   defaultAlwaysOnTitles: []
+  Personality: {fileID: 11400000, guid: 3733616cf9f0f4dddb5bee9d6ba2952f, type: 2}
   description: Its entire body crackles with energy. Strikion is feared for sudden
     lunges that strike faster than the eye can follow.

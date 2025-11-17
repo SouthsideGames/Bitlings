@@ -20,13 +20,16 @@ MonoBehaviour:
   backIcon: {fileID: 21300000, guid: 1e578135737bea64dba588dbb12daa1e, type: 3}
   shinyIcon: {fileID: 21300000, guid: 8778f8d24397f4506ae9df8f38b1821e, type: 3}
   shinyBackIcon: {fileID: 21300000, guid: 5093b5f9b77d24fd595ac8c9f1752c91, type: 3}
+  rarity: 0
   canBeStarter: 1
   starterWeight: 10
   baseHP: 60
   baseAttack: 50
   baseDefense: 40
   baseSpeed: 50
+  hpRegenPerHour: 6
   fatigueRatePerHour: 0.03
+  fatigueCooldownHours: 8
   baseTrainingXPPerHour: 40
   evolutionStage: 1
   evolutionLevel: 18
@@ -37,8 +40,8 @@ MonoBehaviour:
   bossWeight: 1
   spawnWeight: 6
   jobSkill: 1
-  rarity: 0
-  titleTrack: {fileID: 0}
+  titleTrack: {fileID: 11400000, guid: 4ac50c79e6d364b3e8d67ba7b007e95c, type: 2}
   defaultAlwaysOnTitles: []
+  Personality: {fileID: 11400000, guid: 758625599ac8542bfa091e1bf5323fa2, type: 2}
   description: Sporelix shuffles clumsily, scattering spores as it moves. Villagers
     avoid it, fearing the strange growths it leaves behind.

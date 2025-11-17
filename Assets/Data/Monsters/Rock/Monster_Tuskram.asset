@@ -20,13 +20,16 @@ MonoBehaviour:
   backIcon: {fileID: 21300000, guid: 4ef0ec67af12df341bbba8f0434a37e2, type: 3}
   shinyIcon: {fileID: 21300000, guid: a6f473f7e44533b428f530307f891db9, type: 3}
   shinyBackIcon: {fileID: 21300000, guid: 308177abdabae3749a32447c82368c95, type: 3}
+  rarity: 1
   canBeStarter: 1
   starterWeight: 7
   baseHP: 88
   baseAttack: 44
   baseDefense: 66
   baseSpeed: 22
+  hpRegenPerHour: 6
   fatigueRatePerHour: 0.03
+  fatigueCooldownHours: 8
   baseTrainingXPPerHour: 38
   evolutionStage: 1
   evolutionLevel: 24
@@ -37,8 +40,8 @@ MonoBehaviour:
   bossWeight: 1
   spawnWeight: 5
   jobSkill: 1.1
-  rarity: 1
-  titleTrack: {fileID: 0}
+  titleTrack: {fileID: 11400000, guid: 4895c73be63a3473b9047daee4b3c0f9, type: 2}
   defaultAlwaysOnTitles: []
+  Personality: {fileID: 11400000, guid: d2d9ec6158abb40d2a7618ee71a9de06, type: 2}
   description: Tuskram charges headfirst into obstacles to clear paths. Its rocky
     hide protects it from injury as it batters through stone.

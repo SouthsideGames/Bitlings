@@ -20,13 +20,16 @@ MonoBehaviour:
   backIcon: {fileID: 21300000, guid: 296252648303af442a3d71026e859834, type: 3}
   shinyIcon: {fileID: -801612624374383581, guid: 2277c2dbce3c04bfda0b083544faa5e6, type: 3}
   shinyBackIcon: {fileID: -6488103128992921508, guid: 867204279608d47a38a861673866ee32, type: 3}
+  rarity: 3
   canBeStarter: 0
   starterWeight: 1
   baseHP: 52
   baseAttack: 91
   baseDefense: 52
   baseSpeed: 65
+  hpRegenPerHour: 6
   fatigueRatePerHour: 0.03
+  fatigueCooldownHours: 8
   baseTrainingXPPerHour: 40
   evolutionStage: 1
   evolutionLevel: 0
@@ -37,8 +40,8 @@ MonoBehaviour:
   bossWeight: 1
   spawnWeight: 1.5
   jobSkill: 2.4
-  rarity: 3
-  titleTrack: {fileID: 0}
+  titleTrack: {fileID: 11400000, guid: b36afc3751235433bbb3736d9b622303, type: 2}
   defaultAlwaysOnTitles: []
+  Personality: {fileID: 11400000, guid: 8c0967dab72904a53ac10e854118eebb, type: 2}
   description: "Its rocky body cracks with flowing magma. Volcranox\u2019s fiery
     core fuels its rage, said to burn hotter than a collapsing star."

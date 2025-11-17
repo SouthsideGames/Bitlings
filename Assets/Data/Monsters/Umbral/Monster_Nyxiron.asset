@@ -20,13 +20,16 @@ MonoBehaviour:
   backIcon: {fileID: 21300000, guid: 8180f9b5f7875e14bb9e77baa1f263e2, type: 3}
   shinyIcon: {fileID: 21300000, guid: f6787f5f0d9b53741a3d386a7dd12d0e, type: 3}
   shinyBackIcon: {fileID: 21300000, guid: 5f5f6f1fa6d46bf4d82887c8d038b0e6, type: 3}
+  rarity: 4
   canBeStarter: 0
   starterWeight: 1
   baseHP: 96
   baseAttack: 112
   baseDefense: 48
   baseSpeed: 64
+  hpRegenPerHour: 6
   fatigueRatePerHour: 0.03
+  fatigueCooldownHours: 8
   baseTrainingXPPerHour: 60
   evolutionStage: 1
   evolutionLevel: 0
@@ -37,9 +40,9 @@ MonoBehaviour:
   bossWeight: 1
   spawnWeight: 0
   jobSkill: 2.8
-  rarity: 4
-  titleTrack: {fileID: 0}
+  titleTrack: {fileID: 11400000, guid: 4261d23bb3b1e4d2cad15fd1bcd9ffaf, type: 2}
   defaultAlwaysOnTitles: []
+  Personality: {fileID: 11400000, guid: ca09b5cdb2cde4bb7878385f2d34bf55, type: 2}
   description: "Said to be born from shadows cast on ancient battlefields. Nyxiron\u2019s
     strikes are as fast as lightning, its claws carving despair into all who face
     it."

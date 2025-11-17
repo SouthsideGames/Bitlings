@@ -20,13 +20,16 @@ MonoBehaviour:
   backIcon: {fileID: 21300000, guid: 8ba7e538ba57ab141a31f768ff3b782f, type: 3}
   shinyIcon: {fileID: 21300000, guid: 50484b5fbf007a44d934c26f22006b28, type: 3}
   shinyBackIcon: {fileID: 21300000, guid: a56b3f8b19e5ee2489650fdf1be2bed9, type: 3}
+  rarity: 3
   canBeStarter: 0
   starterWeight: 1
   baseHP: 78
   baseAttack: 52
   baseDefense: 91
   baseSpeed: 39
+  hpRegenPerHour: 6
   fatigueRatePerHour: 0.03
+  fatigueCooldownHours: 8
   baseTrainingXPPerHour: 56
   evolutionStage: 1
   evolutionLevel: 0
@@ -37,8 +40,8 @@ MonoBehaviour:
   bossWeight: 1
   spawnWeight: 1.5
   jobSkill: 2
-  rarity: 3
-  titleTrack: {fileID: 0}
+  titleTrack: {fileID: 11400000, guid: db326120f6d6a412ba4e0f7df6990345, type: 2}
   defaultAlwaysOnTitles: []
+  Personality: {fileID: 11400000, guid: ad0406630c0e1459897f0f87f1f80154, type: 2}
   description: Its body is covered in hardened leaves sharp as blades. Viridra silently
     waits among trees, striking swiftly at intruders.

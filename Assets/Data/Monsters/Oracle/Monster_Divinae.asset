@@ -20,13 +20,16 @@ MonoBehaviour:
   backIcon: {fileID: 21300000, guid: 53868b95421b39a4ab2f813296fe32ba, type: 3}
   shinyIcon: {fileID: 21300000, guid: 77bb5b11768997b4d8e1c8f873d6eb23, type: 3}
   shinyBackIcon: {fileID: 21300000, guid: 03d13cc262296fd4780bbe317080f5c4, type: 3}
+  rarity: 0
   canBeStarter: 1
   starterWeight: 10
   baseHP: 40
   baseAttack: 40
   baseDefense: 40
   baseSpeed: 80
+  hpRegenPerHour: 6
   fatigueRatePerHour: 0.03
+  fatigueCooldownHours: 8
   baseTrainingXPPerHour: 46
   evolutionStage: 1
   evolutionLevel: 0
@@ -37,8 +40,8 @@ MonoBehaviour:
   bossWeight: 1
   spawnWeight: 7
   jobSkill: 1
-  rarity: 0
-  titleTrack: {fileID: 0}
+  titleTrack: {fileID: 11400000, guid: a8636927bd9a04d598f71a9362494c2d, type: 2}
   defaultAlwaysOnTitles: []
+  Personality: {fileID: 11400000, guid: 8fb41ae5d07a9422888bd80d80e2fbde, type: 2}
   description: A gentle being that follows the glimmer of its floating gem. Divinae
     is said to glimpse fragments of the future when the stone pulses with light.

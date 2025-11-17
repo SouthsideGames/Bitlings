@@ -20,13 +20,16 @@ MonoBehaviour:
   backIcon: {fileID: 21300000, guid: 3cc43c2eec654004e85282c14ad897df, type: 3}
   shinyIcon: {fileID: 21300000, guid: ce91efcdd1f784e1f9d74e0e1f92af44, type: 3}
   shinyBackIcon: {fileID: 21300000, guid: b524113c1b361438b9261521350969b3, type: 3}
+  rarity: 1
   canBeStarter: 0
   starterWeight: 1
   baseHP: 66
   baseAttack: 55
   baseDefense: 44
   baseSpeed: 55
+  hpRegenPerHour: 6
   fatigueRatePerHour: 0.03
+  fatigueCooldownHours: 8
   baseTrainingXPPerHour: 46
   evolutionStage: 2
   evolutionLevel: 0
@@ -37,8 +40,8 @@ MonoBehaviour:
   bossWeight: 1
   spawnWeight: 0
   jobSkill: 1.2
-  rarity: 1
-  titleTrack: {fileID: 0}
+  titleTrack: {fileID: 11400000, guid: 19f416f9304a14196aa11eab4623edee, type: 2}
   defaultAlwaysOnTitles: []
+  Personality: {fileID: 11400000, guid: 8ef7aefb1f925433aa90fd9095d65f82, type: 2}
   description: Its spores grow more venomous as it matures. Toxmyre is feared for
     corrupting entire fields, leaving behind blighted, lifeless soil.

@@ -20,13 +20,16 @@ MonoBehaviour:
   backIcon: {fileID: 21300000, guid: 778a35bf094223e4c97ab39ea84d7d57, type: 3}
   shinyIcon: {fileID: 21300000, guid: 22dc69796363b464c83310fe44fa2deb, type: 3}
   shinyBackIcon: {fileID: 21300000, guid: 7af124539947eb94bb0c2d516b73e935, type: 3}
+  rarity: 3
   canBeStarter: 0
   starterWeight: 1
   baseHP: 78
   baseAttack: 78
   baseDefense: 52
   baseSpeed: 52
+  hpRegenPerHour: 6
   fatigueRatePerHour: 0.03
+  fatigueCooldownHours: 8
   baseTrainingXPPerHour: 60
   evolutionStage: 1
   evolutionLevel: 0
@@ -37,8 +40,8 @@ MonoBehaviour:
   bossWeight: 1
   spawnWeight: 1.5
   jobSkill: 2.2
-  rarity: 3
-  titleTrack: {fileID: 0}
+  titleTrack: {fileID: 11400000, guid: 6b4667918ff0b427eabf9a166d47b82b, type: 2}
   defaultAlwaysOnTitles: []
+  Personality: {fileID: 11400000, guid: e6aae7880a6944b05bc4da7d55e8fffd, type: 2}
   description: "Its body is carved from stone-like scales. Granityr\u2019s roar echoes
     through caverns, shaking loose boulders that tumble in its wake."

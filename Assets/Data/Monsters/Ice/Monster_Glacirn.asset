@@ -20,13 +20,16 @@ MonoBehaviour:
   backIcon: {fileID: 21300000, guid: 947b6658c8c13419caaad89d3e754b36, type: 3}
   shinyIcon: {fileID: 21300000, guid: 8a7e12eb86593984996f719c257400fb, type: 3}
   shinyBackIcon: {fileID: 21300000, guid: 8333e4e4101c5b34789441d836767462, type: 3}
+  rarity: 2
   canBeStarter: 0
   starterWeight: 1
   baseHP: 48
   baseAttack: 84
   baseDefense: 36
   baseSpeed: 72
+  hpRegenPerHour: 6
   fatigueRatePerHour: 0.03
+  fatigueCooldownHours: 8
   baseTrainingXPPerHour: 59
   evolutionStage: 1
   evolutionLevel: 0
@@ -37,8 +40,8 @@ MonoBehaviour:
   bossWeight: 1
   spawnWeight: 2.5
   jobSkill: 1.8
-  rarity: 2
-  titleTrack: {fileID: 0}
+  titleTrack: {fileID: 11400000, guid: b9a7beb438ebe4eb4aca881fd87948de, type: 2}
   defaultAlwaysOnTitles: []
+  Personality: {fileID: 11400000, guid: 790c31bd71bf045feb7c203b52a49754, type: 2}
   description: Its jagged body bristles with icy spines. Glacirn rolls across frozen
     plains, scattering shards that can pierce even steel.

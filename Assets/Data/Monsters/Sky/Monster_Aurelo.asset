@@ -20,13 +20,16 @@ MonoBehaviour:
   backIcon: {fileID: 21300000, guid: 4d50d00f0abc9f449ae6f588d56beeeb, type: 3}
   shinyIcon: {fileID: 21300000, guid: fa1e19c2614814de8aaf1780248c942d, type: 3}
   shinyBackIcon: {fileID: 21300000, guid: 10fac0dd15aa94594bcb2bb2c943cbc9, type: 3}
+  rarity: 1
   canBeStarter: 1
   starterWeight: 7
   baseHP: 44
   baseAttack: 55
   baseDefense: 33
   baseSpeed: 88
+  hpRegenPerHour: 6
   fatigueRatePerHour: 0.03
+  fatigueCooldownHours: 8
   baseTrainingXPPerHour: 54
   evolutionStage: 1
   evolutionLevel: 22
@@ -37,8 +40,8 @@ MonoBehaviour:
   bossWeight: 1
   spawnWeight: 5
   jobSkill: 1.2
-  rarity: 1
-  titleTrack: {fileID: 11400000, guid: 4d17f3173a6e3724cbafc9ee10fedd28, type: 2}
+  titleTrack: {fileID: 11400000, guid: 85441e8d4bfc6448ea192b15db83786c, type: 2}
   defaultAlwaysOnTitles: []
+  Personality: {fileID: 11400000, guid: dc588633b46794883be5263b17376bf3, type: 2}
   description: Aurelo flits restlessly through the skies. It calls to others with
     high chirps that echo across valleys.

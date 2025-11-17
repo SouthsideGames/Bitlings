@@ -20,13 +20,16 @@ MonoBehaviour:
   backIcon: {fileID: 21300000, guid: 7c8cb506a237c3247aa0bfaa4713041e, type: 3}
   shinyIcon: {fileID: 21300000, guid: fd9202dfe669e7a45a1332d62facf053, type: 3}
   shinyBackIcon: {fileID: 21300000, guid: 8b4188389e9a4f748ac82a90dfa0ac15, type: 3}
+  rarity: 3
   canBeStarter: 0
   starterWeight: 1
   baseHP: 52
   baseAttack: 65
   baseDefense: 39
   baseSpeed: 104
+  hpRegenPerHour: 6
   fatigueRatePerHour: 0.03
+  fatigueCooldownHours: 8
   baseTrainingXPPerHour: 71
   evolutionStage: 1
   evolutionLevel: 0
@@ -37,8 +40,8 @@ MonoBehaviour:
   bossWeight: 1
   spawnWeight: 1.5
   jobSkill: 2.2
-  rarity: 3
-  titleTrack: {fileID: 0}
+  titleTrack: {fileID: 11400000, guid: 30403915ba2b6447a922cb90c5da6267, type: 2}
   defaultAlwaysOnTitles: []
+  Personality: {fileID: 11400000, guid: 48288e9e78c65453781f793c8df03e90, type: 2}
   description: Its form flickers like a tattered veil. Wraithor slips through walls
     and shadows, striking unseen before vanishing without a trace.

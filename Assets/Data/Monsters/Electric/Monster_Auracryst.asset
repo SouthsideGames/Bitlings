@@ -20,13 +20,16 @@ MonoBehaviour:
   backIcon: {fileID: 21300000, guid: 37bfa13a11a486e45af846aef283686f, type: 3}
   shinyIcon: {fileID: 21300000, guid: fb9db913bd80cb349883916b3900c82b, type: 3}
   shinyBackIcon: {fileID: 21300000, guid: 0c807c4cb955952498b57e3ca1f0aaac, type: 3}
+  rarity: 4
   canBeStarter: 0
   starterWeight: 1
   baseHP: 64
   baseAttack: 96
   baseDefense: 64
   baseSpeed: 96
+  hpRegenPerHour: 6
   fatigueRatePerHour: 0.03
+  fatigueCooldownHours: 8
   baseTrainingXPPerHour: 63
   evolutionStage: 1
   evolutionLevel: 0
@@ -37,8 +40,8 @@ MonoBehaviour:
   bossWeight: 1
   spawnWeight: 0
   jobSkill: 2.8
-  rarity: 4
-  titleTrack: {fileID: 0}
+  titleTrack: {fileID: 11400000, guid: e8fd5c995c7da4148823936389eadafe, type: 2}
   defaultAlwaysOnTitles: []
+  Personality: {fileID: 11400000, guid: 9dfee50a1efc74bffa28531d67019a53, type: 2}
   description: Its wings shimmer with crystalline lightning. Auracryst soars among
     stormclouds, drawing entire skies into its control.

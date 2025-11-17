@@ -20,13 +20,16 @@ MonoBehaviour:
   backIcon: {fileID: 21300000, guid: 414e4c75dd2fb9b49bc56fa45502efbd, type: 3}
   shinyIcon: {fileID: 21300000, guid: 62510e81a9bf34582976043f5834dce7, type: 3}
   shinyBackIcon: {fileID: 21300000, guid: a1d130fc4a812439393d0ef3689de477, type: 3}
+  rarity: 0
   canBeStarter: 1
   starterWeight: 10
   baseHP: 50
   baseAttack: 60
   baseDefense: 40
   baseSpeed: 50
+  hpRegenPerHour: 6
   fatigueRatePerHour: 0.03
+  fatigueCooldownHours: 8
   baseTrainingXPPerHour: 40
   evolutionStage: 1
   evolutionLevel: 0
@@ -37,8 +40,8 @@ MonoBehaviour:
   bossWeight: 1
   spawnWeight: 6
   jobSkill: 1
-  rarity: 0
-  titleTrack: {fileID: 0}
+  titleTrack: {fileID: 11400000, guid: 643cc57b14fba4a5f96548048016ac90, type: 2}
   defaultAlwaysOnTitles: []
+  Personality: {fileID: 11400000, guid: 3733616cf9f0f4dddb5bee9d6ba2952f, type: 2}
   description: The mask it wears is fused to its body. Maskra lurks at the edge of
     torchlight, its eyes glinting before it slips back into darkness.

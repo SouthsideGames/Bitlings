@@ -20,13 +20,16 @@ MonoBehaviour:
   backIcon: {fileID: 21300000, guid: 4482e5594eeb6ba4eb3ebbe0120b23ef, type: 3}
   shinyIcon: {fileID: 21300000, guid: 637987cae44904b48b845b425b143db9, type: 3}
   shinyBackIcon: {fileID: 21300000, guid: ec651d3f4f626c343bb0bd9566f451d8, type: 3}
+  rarity: 2
   canBeStarter: 0
   starterWeight: 1
   baseHP: 96
   baseAttack: 48
   baseDefense: 72
   baseSpeed: 24
+  hpRegenPerHour: 6
   fatigueRatePerHour: 0.03
+  fatigueCooldownHours: 8
   baseTrainingXPPerHour: 44
   evolutionStage: 2
   evolutionLevel: 0
@@ -37,8 +40,8 @@ MonoBehaviour:
   bossWeight: 1
   spawnWeight: 1.5
   jobSkill: 2.2
-  rarity: 2
-  titleTrack: {fileID: 0}
+  titleTrack: {fileID: 11400000, guid: aa24814e139a44ed19cff775490ba5bf, type: 2}
   defaultAlwaysOnTitles: []
+  Personality: {fileID: 11400000, guid: d2d9ec6158abb40d2a7618ee71a9de06, type: 2}
   description: Its tusks can shatter boulders with a single strike. Gravhorn is feared
     in the Bitling world for the tremors it causes when it charges.

@@ -20,13 +20,16 @@ MonoBehaviour:
   backIcon: {fileID: 21300000, guid: 7ed2d2ff399201649813b9642fc82b3e, type: 3}
   shinyIcon: {fileID: 21300000, guid: 78181fd7ba990da4ca2736f26ae658b8, type: 3}
   shinyBackIcon: {fileID: 21300000, guid: b2efe158de74055478fbc5e02f86352b, type: 3}
+  rarity: 0
   canBeStarter: 0
   starterWeight: 1
   baseHP: 70
   baseAttack: 44
   baseDefense: 76
   baseSpeed: 30
+  hpRegenPerHour: 6
   fatigueRatePerHour: 0.03
+  fatigueCooldownHours: 8
   baseTrainingXPPerHour: 36
   evolutionStage: 3
   evolutionLevel: 0
@@ -37,8 +40,8 @@ MonoBehaviour:
   bossWeight: 1
   spawnWeight: 0
   jobSkill: 1.2
-  rarity: 0
-  titleTrack: {fileID: 0}
+  titleTrack: {fileID: 11400000, guid: e618188c86c1347fc90ed4aca3873d9d, type: 2}
   defaultAlwaysOnTitles: []
+  Personality: {fileID: 11400000, guid: f6f72aa846632454b97832d01d1b5c0c, type: 2}
   description: Sylvire spreads roots as it rests, enriching the soil. In the Bitling
     world, areas they inhabit quickly become lush and overgrown.

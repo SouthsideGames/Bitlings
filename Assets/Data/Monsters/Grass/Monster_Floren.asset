@@ -20,13 +20,16 @@ MonoBehaviour:
   backIcon: {fileID: 21300000, guid: 7f0c774cf53832d4e9a167fd7e1d5197, type: 3}
   shinyIcon: {fileID: 21300000, guid: 79d574739b0733e459d4d66fe48ac970, type: 3}
   shinyBackIcon: {fileID: 21300000, guid: 8818fce5e7c91994f830de9183a786ae, type: 3}
+  rarity: 0
   canBeStarter: 0
   starterWeight: 1
   baseHP: 65
   baseAttack: 42
   baseDefense: 73
   baseSpeed: 30
+  hpRegenPerHour: 6
   fatigueRatePerHour: 0.03
+  fatigueCooldownHours: 8
   baseTrainingXPPerHour: 36
   evolutionStage: 2
   evolutionLevel: 25
@@ -37,8 +40,8 @@ MonoBehaviour:
   bossWeight: 1
   spawnWeight: 3.5
   jobSkill: 1.1
-  rarity: 0
-  titleTrack: {fileID: 0}
+  titleTrack: {fileID: 11400000, guid: e63249542137b49a4ada2ddcdc6764eb, type: 2}
   defaultAlwaysOnTitles: []
+  Personality: {fileID: 11400000, guid: f6f72aa846632454b97832d01d1b5c0c, type: 2}
   description: As it grows, more leaves sprout from its body. Floren releases soothing
     aromas that calm nearby Bitlings.

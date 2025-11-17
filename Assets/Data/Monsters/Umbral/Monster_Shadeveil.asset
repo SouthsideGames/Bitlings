@@ -20,13 +20,16 @@ MonoBehaviour:
   backIcon: {fileID: 3615147600836554367, guid: 73c21d72c8747b14fba4e57a8ca6c8ee, type: 3}
   shinyIcon: {fileID: -801612624374383581, guid: 1af389bc46fa0442d90b3e0b7dea48c0, type: 3}
   shinyBackIcon: {fileID: -6488103128992921508, guid: f36ee916349f94f0ba25a917e6fd0f5a, type: 3}
+  rarity: 3
   canBeStarter: 0
   starterWeight: 1
   baseHP: 65
   baseAttack: 78
   baseDefense: 52
   baseSpeed: 65
+  hpRegenPerHour: 6
   fatigueRatePerHour: 0.03
+  fatigueCooldownHours: 8
   baseTrainingXPPerHour: 63
   evolutionStage: 1
   evolutionLevel: 40
@@ -37,8 +40,8 @@ MonoBehaviour:
   bossWeight: 1
   spawnWeight: 1.5
   jobSkill: 2
-  rarity: 3
-  titleTrack: {fileID: 0}
+  titleTrack: {fileID: 11400000, guid: b6dc1fd759a14407cbe096f1abdad92a, type: 2}
   defaultAlwaysOnTitles: []
+  Personality: {fileID: 11400000, guid: 29327199089b34217bcb6d621828d70f, type: 2}
   description: Its body is shrouded in ever-shifting wisps. Shadeveil drifts silently
     through ruins, its laughter echoing long after it fades.

@@ -20,6 +20,7 @@ MonoBehaviour:
   backIcon: {fileID: 21300000, guid: 80205622ed7e2404db881414579a263d, type: 3}
   shinyIcon: {fileID: 21300000, guid: 6384cc5a1af6d544f9cb29bcf77acf2d, type: 3}
   shinyBackIcon: {fileID: 21300000, guid: c8f5f4348c4f48a40b3191ddb09564ef, type: 3}
+  rarity: 0
   canBeStarter: 1
   starterWeight: 10
   baseHP: 60
@@ -39,8 +40,8 @@ MonoBehaviour:
   bossWeight: 1
   spawnWeight: 6
   jobSkill: 1
-  rarity: 0
-  titleTrack: {fileID: 11400000, guid: 21a7e543b3bffa342a0c194cf43981e3, type: 2}
+  titleTrack: {fileID: 11400000, guid: 4c195c55473324d6ea6feb17047d4460, type: 2}
   defaultAlwaysOnTitles: []
+  Personality: {fileID: 11400000, guid: a31b270cc22594368bd4541ee042d278, type: 2}
   description: Dravix clings to cliffs with its claws. Its wings are not strong enough
     for long flights, so it glides between rocky ledges in search of prey.

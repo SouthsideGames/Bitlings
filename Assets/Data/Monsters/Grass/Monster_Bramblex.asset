@@ -20,13 +20,16 @@ MonoBehaviour:
   backIcon: {fileID: 21300000, guid: a2fe7d4d68def674cb5b671af6de3f5b, type: 3}
   shinyIcon: {fileID: 21300000, guid: 0c517c3760a9b8b47928b185c9b1b681, type: 3}
   shinyBackIcon: {fileID: 21300000, guid: 4c990a735b732a44d9883603b11e3c01, type: 3}
+  rarity: 2
   canBeStarter: 0
   starterWeight: 1
   baseHP: 72
   baseAttack: 48
   baseDefense: 84
   baseSpeed: 36
+  hpRegenPerHour: 6
   fatigueRatePerHour: 0.03
+  fatigueCooldownHours: 8
   baseTrainingXPPerHour: 49
   evolutionStage: 1
   evolutionLevel: 0
@@ -37,8 +40,8 @@ MonoBehaviour:
   bossWeight: 1
   spawnWeight: 2.5
   jobSkill: 1.7
-  rarity: 2
-  titleTrack: {fileID: 0}
+  titleTrack: {fileID: 11400000, guid: 48e066f4886b844d8bb3c1c1a331df6f, type: 2}
   defaultAlwaysOnTitles: []
+  Personality: {fileID: 11400000, guid: f6f72aa846632454b97832d01d1b5c0c, type: 2}
   description: Covered in thorny leaves, Bramblex defends its territory fiercely.
     In the Bitling world, its presence keeps larger predators at bay.

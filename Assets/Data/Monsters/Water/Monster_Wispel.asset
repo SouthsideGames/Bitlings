@@ -20,13 +20,16 @@ MonoBehaviour:
   backIcon: {fileID: 21300000, guid: 086909d0a156fae44bb14fe83c5ecdca, type: 3}
   shinyIcon: {fileID: 21300000, guid: ce695ca06beec48d09ed4dedce3beb9e, type: 3}
   shinyBackIcon: {fileID: 21300000, guid: 3a8861b0a320f43d4b075989cff2ba9a, type: 3}
+  rarity: 0
   canBeStarter: 0
   starterWeight: 1
   baseHP: 74
   baseAttack: 42
   baseDefense: 63
   baseSpeed: 31
+  hpRegenPerHour: 6
   fatigueRatePerHour: 0.03
+  fatigueCooldownHours: 8
   baseTrainingXPPerHour: 36
   evolutionStage: 2
   evolutionLevel: 25
@@ -37,8 +40,8 @@ MonoBehaviour:
   bossWeight: 1
   spawnWeight: 3.5
   jobSkill: 1.1
-  rarity: 0
-  titleTrack: {fileID: 0}
+  titleTrack: {fileID: 11400000, guid: 4d1ba4f728cde43d19992149600440d0, type: 2}
   defaultAlwaysOnTitles: []
+  Personality: {fileID: 11400000, guid: a31b270cc22594368bd4541ee042d278, type: 2}
   description: It drifts with the flow of rivers, conserving energy until startled,
     when it bursts into sudden movement.

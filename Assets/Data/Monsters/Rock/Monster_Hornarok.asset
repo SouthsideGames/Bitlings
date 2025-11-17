@@ -20,13 +20,16 @@ MonoBehaviour:
   backIcon: {fileID: 21300000, guid: af72d7b9e5de6da44a81afa5778543f1, type: 3}
   shinyIcon: {fileID: 21300000, guid: 92717e8f253735e4f9b1c6b351f46d4c, type: 3}
   shinyBackIcon: {fileID: 21300000, guid: 379d8b0a7c34f4d42ae5950bd7aaee66, type: 3}
+  rarity: 3
   canBeStarter: 0
   starterWeight: 1
   baseHP: 104
   baseAttack: 52
   baseDefense: 78
   baseSpeed: 26
+  hpRegenPerHour: 6
   fatigueRatePerHour: 0.03
+  fatigueCooldownHours: 8
   baseTrainingXPPerHour: 52
   evolutionStage: 1
   evolutionLevel: 0
@@ -37,8 +40,8 @@ MonoBehaviour:
   bossWeight: 1
   spawnWeight: 1.5
   jobSkill: 2.2
-  rarity: 3
-  titleTrack: {fileID: 0}
+  titleTrack: {fileID: 11400000, guid: 6f492a68ae372432e966736406c18f94, type: 2}
   defaultAlwaysOnTitles: []
+  Personality: {fileID: 11400000, guid: 51b0055ca9f5a4ccbb97fd51ef39fae1, type: 2}
   description: "Hornarok\u2019s rocky armor shrugs off most blows. Its burning tail
     glows hotter when enraged, warning foes to keep their distance."

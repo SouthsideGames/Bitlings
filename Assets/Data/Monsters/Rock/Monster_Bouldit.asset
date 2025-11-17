@@ -20,13 +20,16 @@ MonoBehaviour:
   backIcon: {fileID: 21300000, guid: b0aec7b454ab9264397316ef8480aebf, type: 3}
   shinyIcon: {fileID: 21300000, guid: 0e3a3cf65cd610c4997601021b494721, type: 3}
   shinyBackIcon: {fileID: 21300000, guid: e83d701310f95a441a6b3a0ffb72c3fb, type: 3}
+  rarity: 0
   canBeStarter: 1
   starterWeight: 10
   baseHP: 80
   baseAttack: 40
   baseDefense: 60
   baseSpeed: 20
+  hpRegenPerHour: 6
   fatigueRatePerHour: 0.03
+  fatigueCooldownHours: 8
   baseTrainingXPPerHour: 32
   evolutionStage: 1
   evolutionLevel: 0
@@ -37,8 +40,8 @@ MonoBehaviour:
   bossWeight: 1
   spawnWeight: 7
   jobSkill: 1
-  rarity: 0
-  titleTrack: {fileID: 0}
+  titleTrack: {fileID: 11400000, guid: 500452e2f5ee644518a0ed3bb099a9d7, type: 2}
   defaultAlwaysOnTitles: []
+  Personality: {fileID: 11400000, guid: ed3f5d9f88fbc40289370f9c1a7a1656, type: 2}
   description: Bouldit plods slowly across rocky fields. When it rests, its body
     is indistinguishable from an ordinary boulder.

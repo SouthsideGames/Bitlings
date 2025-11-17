@@ -20,12 +20,14 @@ MonoBehaviour:
   backIcon: {fileID: 21300000, guid: 51f92782a610dce418e49405bcb5f5b4, type: 3}
   shinyIcon: {fileID: 21300000, guid: 257f0dc8b42d86c4cab683288ee2264d, type: 3}
   shinyBackIcon: {fileID: 21300000, guid: 7f8831e86ff2a084dbc527ea9cca8ec6, type: 3}
+  rarity: 0
   canBeStarter: 1
   starterWeight: 10
   baseHP: 60
   baseAttack: 40
   baseDefense: 70
   baseSpeed: 30
+  hpRegenPerHour: 6
   fatigueRatePerHour: 0.03
   fatigueCooldownHours: 8
   baseTrainingXPPerHour: 35
@@ -38,8 +40,8 @@ MonoBehaviour:
   bossWeight: 1
   spawnWeight: 7
   jobSkill: 1
-  rarity: 0
-  titleTrack: {fileID: 11400000, guid: 4d17f3173a6e3724cbafc9ee10fedd28, type: 2}
+  titleTrack: {fileID: 11400000, guid: ef117207033454887a7ed73339a94864, type: 2}
   defaultAlwaysOnTitles: []
+  Personality: {fileID: 11400000, guid: db9c4a912e52a4c5298eec48842ba111, type: 2}
   description: Its leafy body helps it blend into undergrowth. Budfern sways with
     the breeze, hiding from predators in the Bitling world.
