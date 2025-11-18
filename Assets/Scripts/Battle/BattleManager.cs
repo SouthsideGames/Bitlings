@@ -224,7 +224,6 @@ public class BattleManager : MonoBehaviour
         if (wildHPBar) { wildHPBar.maxValue = wildMaxHP; wildHPBar.value = wildHP; }
 
         UpdateWildInfoUI();
-
         teamCount = Mathf.Min(3, roster.Count);
         if (teamCount <= 0) { inBattle = false; return; }
 
@@ -240,16 +239,25 @@ public class BattleManager : MonoBehaviour
             var def = MonsterLibraryLocator.GetById(owned.monsterId);
             if (!def) continue;
 
-            teamIds[i]   = owned.monsterId;
-            teamDefs[i]  = def;
-            teamLevels[i]= owned.level;
+            teamIds[i]    = owned.monsterId;
+            teamDefs[i]   = def;
+            teamLevels[i] = owned.level;
 
-            teamMaxHP[i] = BattleCalc.CalcHP(def, owned.level);
+            // --- base max HP from curve ---
+            float baseMax = BattleCalc.CalcHP(def, owned.level);
+
+            // --- permanent training HP bonus (saved) ---
+            int bonusHP = Mathf.Max(0, owned.trainingBonus.hp);
+
+            float finalMax = Mathf.Max(1f, baseMax + bonusHP);
+            teamMaxHP[i] = finalMax;
+
             int savedHP = owned.currentHP;
             teamHP[i] = (savedHP >= 0)
-                ? Mathf.Clamp(savedHP, 0, (int)teamMaxHP[i])
-                : teamMaxHP[i];
+                ? Mathf.Clamp(savedHP, 0, Mathf.RoundToInt(finalMax))
+                : finalMax;
         }
+
 
         jobCtx  = new JobBattlePassives.Ctx[teamCount];
         shieldHP= new float[teamCount];
@@ -340,7 +348,12 @@ public class BattleManager : MonoBehaviour
             TitlesAdapter.OnTurnAdvanced(_turnIndex);
 
             // ── Speed / Initiative in order: Base → Job → Titles → Boosters
-            int pSpeedBase = BattleCalc.CalcSpeed(teamDefs[activeIndex], teamLevels[activeIndex]);
+          int pSpeedBase = BattleCalc.CalcSpeed(teamDefs[activeIndex], teamLevels[activeIndex]);
+
+            // Training speed bonus
+            var roster = SaveManager.Data?.team;
+            if (roster != null && activeIndex < roster.Count && roster[activeIndex] != null)
+                pSpeedBase += Mathf.Max(0, roster[activeIndex].trainingBonus.spd);
 
             // Job first
             var jSpeed = jobCtx != null ? jobCtx[activeIndex] : null;
@@ -482,16 +495,26 @@ public class BattleManager : MonoBehaviour
     {
         if (teamHP[activeIndex] <= 0.01f && !AutoSwapToAlive()) yield break;
 
-        // 1) Base ATK (no temp/booster flats here)
-        int equipFlat = 0;
         var roster = SaveManager.Data?.team;
-        if (roster != null && activeIndex < roster.Count && roster[activeIndex] != null)
-            equipFlat = Mathf.Max(0, roster[activeIndex].flatAtkBonus);
 
+        // 1) Permanent flat ATK: equipment + training
+        int equipFlat = 0;
+        int trainingAtk = 0;
+
+        if (roster != null && activeIndex < roster.Count && roster[activeIndex] != null)
+        {
+            var om = roster[activeIndex];
+            equipFlat   = Mathf.Max(0, om.flatAtkBonus);
+            trainingAtk = Mathf.Max(0, om.trainingBonus.atk);
+        }
+
+        int permanentFlat = Mathf.Max(0, equipFlat + trainingAtk);
+
+        // Base ATK (no temp/booster flats here)
         float atkBaseF = BattleCalc.CalcBaseAttack(
             teamDefs[activeIndex],
             teamLevels[activeIndex],
-            equipFlat,
+            permanentFlat,
             0
         );
         int atkBase = Mathf.Max(1, Mathf.RoundToInt(atkBaseF));
@@ -501,7 +524,7 @@ public class BattleManager : MonoBehaviour
         float atkWithBoosterF = BattleCalc.CalcBaseAttack(
             teamDefs[activeIndex],
             teamLevels[activeIndex],
-            equipFlat,
+            permanentFlat,
             tempFlatFromBoosters
         );
         float atkBoosterMult = Mathf.Max(0.01f, atkWithBoosterF / Mathf.Max(1f, atkBase));
@@ -520,7 +543,7 @@ public class BattleManager : MonoBehaviour
         }
         playerCrit = Mathf.Clamp01(playerCrit);
 
-        // Resolve with BASE ONLY
+        // Resolve with BASE ONLY (Atk already includes training)
         var dr = BattleCalc.ResolveHit(
             teamIds[activeIndex], teamDefs[activeIndex], teamLevels[activeIndex],
             null, wildDef, wildLevel,
@@ -630,7 +653,8 @@ public class BattleManager : MonoBehaviour
         yield break;
     }
 
-    private IEnumerator EnemyTurn()
+
+   private IEnumerator EnemyTurn()
     {
         if (debugIncomingMitigation) Debug.Log("[Mitigation] EnemyTurn started — debugIncomingMitigation = TRUE");
 
@@ -641,8 +665,17 @@ public class BattleManager : MonoBehaviour
         // Booster DEF flat APPLIES LAST (not in ResolveHit)
         int defFlatBooster = BattleTempBuffs.I ? BattleTempBuffs.I.GetPlayerDefenseBonus() : 0;
 
-        var ctx = (jobCtx != null) ? jobCtx[activeIndex] : null;
+        var ctx  = (jobCtx != null) ? jobCtx[activeIndex] : null;
         float preHP = teamHP[activeIndex];
+
+        // Training DEF (flat DR per point from trainingBonus.def)
+        int trainingFlatDef = 0;
+        var roster = SaveManager.Data?.team;
+        if (roster != null && activeIndex < roster.Count && roster[activeIndex] != null)
+        {
+            // TrainingBonus is a value type; no null-check needed
+            trainingFlatDef = Mathf.Max(0, roster[activeIndex].trainingBonus.def);
+        }
 
         // Defender Titles damage filter (cannot be crit, % reduce, flat)
         var df = TitlesAdapter.GetDamageFilter(teamIds[activeIndex], teamDefs[activeIndex], teamLevels[activeIndex]);
@@ -654,6 +687,7 @@ public class BattleManager : MonoBehaviour
             playerCritResist += ctx.critResistFlat;
             if (ctx.critResistBuffTurns > 0) playerCritResist += ctx.critResistBonusFirstTurns;
         }
+
         float wildCritChance = df.cannotBeCrit ? 0f : Mathf.Clamp01(critChanceWild - playerCritResist);
 
         // Resolve (defender ID present) with NO flatDefBonus here
@@ -682,16 +716,24 @@ public class BattleManager : MonoBehaviour
         // Incoming scalar: conditionals + jobs
         float incomingScalar = 1f;
 
-        // Conditional DEF%
+        // Conditional DEF% (from Titles)
         var cmods = GetConditionalModsForActive();
-        if (cmods.defPct > 0f) incomingScalar *= (1f - Mathf.Clamp01(cmods.defPct));
+        if (cmods.defPct > 0f)
+            incomingScalar *= (1f - Mathf.Clamp01(cmods.defPct));
 
         // Job-based reductions
         if (ctx != null && !ctx.usedFirstIncoming && ctx.firstIncomingReduce > 0f)
-        { ctx.usedFirstIncoming = true; incomingScalar *= (1f - ctx.firstIncomingReduce); }
+        {
+            ctx.usedFirstIncoming = true;
+            incomingScalar *= (1f - ctx.firstIncomingReduce);
+        }
 
-        if (ctx != null && ctx.baseDamageReducePct > 0f) incomingScalar *= (1f - ctx.baseDamageReducePct);
-        if (ctx != null && ctx.defenseBonusPct    > 0f) incomingScalar *= (1f - ctx.defenseBonusPct);
+        if (ctx != null && ctx.baseDamageReducePct > 0f)
+            incomingScalar *= (1f - ctx.baseDamageReducePct);
+
+        if (ctx != null && ctx.defenseBonusPct > 0f)
+            incomingScalar *= (1f - ctx.defenseBonusPct);
+
         if (ctx != null && ctx.dmgReduceBuffTurns > 0 && ctx.dmgReduceFirstTurns > 0f)
             incomingScalar *= (1f - ctx.dmgReduceFirstTurns);
 
@@ -732,8 +774,9 @@ public class BattleManager : MonoBehaviour
             ? Mathf.Max(1, Mathf.RoundToInt(dmg_afterScalar * (1f - percentReduce)))
             : dmg_afterScalar;
 
-        // Stage 3: Booster DEF flat + title flat
-        int dmg_afterFlat = Mathf.Max(1, dmg_afterPercent - (flatReduce + Mathf.Max(0, defFlatBooster)));
+        // Stage 3: Booster DEF flat + title flat + training DEF
+        int totalFlatDR   = flatReduce + Mathf.Max(0, defFlatBooster) + Mathf.Max(0, trainingFlatDef);
+        int dmg_afterFlat = Mathf.Max(1, dmg_afterPercent - totalFlatDR);
 
         // Stage 4: Shield
         float shieldBefore  = (shieldHP != null && shieldHP.Length > activeIndex) ? shieldHP[activeIndex] : 0f;
@@ -771,10 +814,11 @@ public class BattleManager : MonoBehaviour
         {
             MitLogOncePerTurnHeader(critRolled, critNegatedByTitle);
 
-            int shieldAbsInt       = Mathf.RoundToInt(shieldAbsorbF);
-            int jobsPctOff         = Mathf.RoundToInt((1f - incomingScalar) * 100f);
-            int titlePctOff        = Mathf.RoundToInt(percentReduce * 100f);
-            int shieldBeforeInt    = Mathf.RoundToInt(shieldBefore);
+            int shieldAbsInt     = Mathf.RoundToInt(shieldAbsorbF);
+            int jobsPctOff       = Mathf.RoundToInt((1f - incomingScalar) * 100f);
+            int titlePctOff      = Mathf.RoundToInt(percentReduce * 100f);
+            int shieldBeforeInt  = Mathf.RoundToInt(shieldBefore);
+            int totalFlatDRDebug = totalFlatDR;
 
             var text =
                 $"  • Base: {baseRawDamage}\n" +
@@ -782,7 +826,7 @@ public class BattleManager : MonoBehaviour
                 (Mathf.Approximately(incomingEffMul, 1f) ? "" :
                 $"  • After Title Incoming-Effectiveness x{incomingEffMul:0.00}\n") +
                 $"  • After Title % ({titlePctOff}% off): {dmg_afterPercent}\n" +
-                $"  • After Title Flat+Booster (-{flatReduce + Mathf.Max(0, defFlatBooster)}): {dmg_afterFlat}\n" +
+                $"  • After Flat DR (title + booster + training DEF = -{totalFlatDRDebug}): {dmg_afterFlat}\n" +
                 $"  • Shield Absorb (-{shieldAbsInt}, was {shieldBeforeInt})\n" +
                 $"  ⇒ Final Applied: {dmg_final}";
 
@@ -1353,11 +1397,32 @@ public class BattleManager : MonoBehaviour
 
         int lvl = (teamLevels != null && activeIndex < teamLevels.Length) ? teamLevels[activeIndex] : 1;
 
-        // PURE BASE
+        // PURE BASE from curve
         int baseHP  = Mathf.RoundToInt(BattleCalc.CalcHP(def, lvl));
         int baseATK = Mathf.RoundToInt(BattleCalc.CalcBaseAttack(def, lvl, 0, 0));
         int baseDEF = BattleCalc.CalcDefense(def, lvl);
-        int baseSPD = BattleCalc.CalcSpeed(def, lvl);
+        int baseSPD = BattleCalc.CalcSpeed(def,   lvl);
+
+        // PERMANENT TRAINING BONUSES
+        int bonusHP  = 0;
+        int bonusATK = 0;
+        int bonusDEF = 0;
+        int bonusSPD = 0;
+
+        var roster = SaveManager.Data?.team;
+       if (roster != null && activeIndex < roster.Count && roster[activeIndex] != null)
+        {
+            var tb = roster[activeIndex].trainingBonus;
+            bonusHP  = Mathf.Max(0, tb.hp);
+            bonusATK = Mathf.Max(0, tb.atk);
+            bonusDEF = Mathf.Max(0, tb.def);
+            bonusSPD = Mathf.Max(0, tb.spd);
+        }
+
+        baseHP  += bonusHP;
+        baseATK += bonusATK;
+        baseDEF += bonusDEF;
+        baseSPD += bonusSPD;
 
         // TEMP / EQUIP FLATS
         int tempHPFlat  = BattleTempBuffs.I ? BattleTempBuffs.I.GetPlayerHPBonus()        : 0;
@@ -1366,7 +1431,6 @@ public class BattleManager : MonoBehaviour
         int tempSPDFlat = BattleTempBuffs.I ? BattleTempBuffs.I.GetPlayerSpeedFlatBonus() : 0;
 
         int equippedFlatATK = 0;
-        var roster = SaveManager.Data?.team;
         if (roster != null && activeIndex < roster.Count && roster[activeIndex] != null)
             equippedFlatATK = Mathf.Max(0, roster[activeIndex].flatAtkBonus);
 
@@ -1374,9 +1438,9 @@ public class BattleManager : MonoBehaviour
         var ctx = TitleContext.Empty;
         ctx.ownedId = (teamIds != null && activeIndex < teamIds.Length) ? teamIds[activeIndex] : "";
 
-        float maxHPForCtx = Mathf.Max(1f, baseHP + tempHPFlat);
-        float currentHP   = (teamHP != null && activeIndex < teamHP.Length) ? teamHP[activeIndex] : maxHPForCtx;
-        ctx.selfHp01 = Mathf.Clamp01(currentHP / maxHPForCtx);
+        int hpBaseForCtx = Mathf.Max(1, baseHP + tempHPFlat);
+        float currentHP   = (teamHP != null && activeIndex < teamHP.Length) ? teamHP[activeIndex] : hpBaseForCtx;
+        ctx.selfHp01 = Mathf.Clamp01(currentHP / Mathf.Max(1f, hpBaseForCtx));
 
         ctx.alliesAlive = GetAlliesAliveNotIncludingActive();
         ctx.winStreak   = GetWinStreakSafe();
@@ -1391,7 +1455,7 @@ public class BattleManager : MonoBehaviour
         if (playerLevelText)  playerLevelText.text  = $"LVL: {lvl}";
 
         // HP — Base Max vs Final Max (titles/conditionals applied)
-        int hpBaseForDisplay  = Mathf.Max(1, baseHP + tempHPFlat);
+        int hpBaseForDisplay  = hpBaseForCtx;
         float hpFinalF = TitlesAdapter.GetStatValue(ctx.ownedId, def, lvl, "HP", ctx, hpBaseForDisplay);
         int hpFinal = Mathf.Max(1, Mathf.RoundToInt(hpFinalF));
         if (playerHPText)
@@ -1434,7 +1498,6 @@ public class BattleManager : MonoBehaviour
         bool resistOn = BattleTempBuffs.I && BattleTempBuffs.I.IsTypeResistActive();
         if (resistOn && playerRarityText) playerRarityText.text += " [Resist]";
     }
-
     private void ApplyActiveToUI()
     {
         var def = teamDefs[activeIndex];
@@ -1822,14 +1885,18 @@ public class BattleManager : MonoBehaviour
         if (activeIndex < 0 || teamDefs == null || activeIndex >= teamDefs.Length || teamDefs[activeIndex] == null)
             return 1;
 
-        // Keep it simple: use base CalcSpeed + job first-turn buff if present this round
         int spd = BattleCalc.CalcSpeed(teamDefs[activeIndex], teamLevels[activeIndex]);
 
+        // Training SPD
+        var roster = SaveManager.Data?.team;
+        if (roster != null && activeIndex < roster.Count && roster[activeIndex] != null)
+            spd += Mathf.Max(0, roster[activeIndex].trainingBonus.spd);
+
+        // Job first-turn buff if present
         var j = (jobCtx != null) ? jobCtx[activeIndex] : null;
         if (j != null && j.speedBuffTurns > 0 && j.speedBonusPctFirstTurns != 0f)
             spd = Mathf.Max(1, Mathf.RoundToInt(spd * (1f + j.speedBonusPctFirstTurns)));
 
-        // You can layer titles here if you’d like parity with turn order, but base + job is enough for feel.
         return Mathf.Max(1, spd);
     }
 

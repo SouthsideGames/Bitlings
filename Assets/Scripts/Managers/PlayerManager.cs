@@ -22,6 +22,9 @@ public class OwnedMonsterData
     public bool autoApply = false;
     public int autoApplyTargetLevel = 0;
     public string lastBucketId = null;
+
+    public int unspentStatPoints = 0;
+    
 }
 
 
@@ -190,37 +193,48 @@ public class PlayerManager
 
     public List<OwnedMonsterData> GetAllOwnedMonsters(bool includeTeam = true)
     {
+        team  ??= new List<OwnedMonsterData>();
+        owned ??= new List<OwnedMonsterData>();
+
         var result = new List<OwnedMonsterData>();
+        var seen   = new HashSet<string>();
 
-        if (owned != null)
-            result.AddRange(owned);
-
-        if (includeTeam && team != null)
+        // Owned first
+        for (int i = 0; i < owned.Count; i++)
         {
-            // Avoid duplicates using ownedUID (EnsureTransientSets assigns UIDs)
-            var seen = new HashSet<string>();
-            for (int i = 0; i < result.Count; i++)
+            var m = owned[i];
+            if (m == null || string.IsNullOrEmpty(m.monsterId))
+                continue;
+
+            if (!string.IsNullOrEmpty(m.ownedUID))
             {
-                var o = result[i];
-                if (o != null && !string.IsNullOrEmpty(o.ownedUID))
-                    seen.Add(o.ownedUID);
+                if (!seen.Add(m.ownedUID))
+                    continue;
             }
 
+            result.Add(m);
+        }
+
+        if (includeTeam)
+        {
             for (int i = 0; i < team.Count; i++)
             {
                 var t = team[i];
-                if (t == null) continue;
+                if (t == null || string.IsNullOrEmpty(t.monsterId))
+                    continue;
 
-                var id = string.IsNullOrEmpty(t.ownedUID) ? null : t.ownedUID;
-                if (id == null || !seen.Contains(id))
+                if (!string.IsNullOrEmpty(t.ownedUID))
                 {
-                    result.Add(t);
-                    if (id != null) seen.Add(id);
+                    if (!seen.Add(t.ownedUID))
+                        continue;
                 }
+
+                result.Add(t);
             }
         }
 
         return result;
     }
+
 
 }

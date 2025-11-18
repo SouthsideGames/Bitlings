@@ -1,192 +1,234 @@
-using System.Collections.Generic;
 using UnityEngine;
 using TMPro;
+using System.Collections.Generic;
 
-public class GrowthPanelUI : MonoBehaviour
+/// <summary>
+/// Panel that shows all monsters eligible for Growth Core leveling,
+/// and opens the StatBucketPanelUI when you tap a row.
+/// </summary>
+public sealed class GrowthPanelUI : MonoBehaviour
 {
     [Header("Refs")]
-    [SerializeField] private PlayerManager playerManager;     // optional
-    [SerializeField] private StatBucketPanelUI statPanel;     // required
-    [SerializeField] private TextMeshProUGUI growthCoresText; // header label
+    [Tooltip("Player data source. If left null, SaveManager.Data will be used.")]
+    [SerializeField] private PlayerManager playerManager;
 
-    [Header("List Roots")]
-    [SerializeField] private Transform listParent;            // required (ScrollRect content)
-    [SerializeField] private Transform autoApplyStrip;        // optional
+    [Tooltip("Panel that actually spends Growth Cores and levels a monster.")]
+    [SerializeField] private StatBucketPanelUI statPanel;
+
+    [Tooltip("Label that shows how many Growth Cores you have.")]
+    [SerializeField] private TextMeshProUGUI growthCoresText;
+
+    [Tooltip("Parent transform where GrowthListItemUI rows are instantiated.")]
+    [SerializeField] private Transform listParent;
+
+    [Tooltip("Strip / banner that appears when Auto Apply is enabled on at least one monster.")]
+    [SerializeField] private GameObject autoApplyStrip;
 
     [Header("Prefabs")]
-    [SerializeField] private GrowthListItemUI listItemPrefab; // required (must live on root)
+    [SerializeField] private GrowthListItemUI itemPrefab;
 
     [Header("Limits")]
-    [SerializeField, Min(1)] private int autoApplyCap = 3;
+    [Tooltip("Maximum monsters that can have Auto Apply enabled at once. 0 or less = no cap.")]
+    [SerializeField] private int autoApplyCap = 3;
 
     [Header("Optional Display")]
-    [SerializeField] private MonsterLibrarySO monsterLibrary; // optional; auto-wires from Locator
+    [Tooltip("Optional explicit reference to the monster library. If null, will use MonsterLibraryLocator.Lib.")]
+    [SerializeField] private MonsterLibrarySO monsterLibrary;
 
-    void OnEnable()
+    // Runtime
+    private readonly List<GrowthListItemUI> _rows = new();
+    private int _autoApplyEnabledCount;
+
+    // Convenience property for current player data
+    private PlayerManager Data => SaveManager.Data ?? playerManager;
+
+    // ─────────────────────────────────────────────────────────────────────────────
+    // Unity
+    // ─────────────────────────────────────────────────────────────────────────────
+
+    private void OnEnable()
     {
-        SaveManager.Data?.EnsureTransientSets();
-        // Try to auto-wire MonsterLibrary if not set
-        if (!monsterLibrary && MonsterLibraryLocator.Lib)
+        // Make sure save data is loaded
+        if (SaveManager.Data == null)
         {
-            monsterLibrary = MonsterLibraryLocator.Lib;
+            SaveManager.LoadOrCreate();
         }
+
+        if (!monsterLibrary && MonsterLibraryLocator.Lib)
+            monsterLibrary = MonsterLibraryLocator.Lib;
+
         RefreshAll();
     }
 
+    // ─────────────────────────────────────────────────────────────────────────────
+    // Public API
+    // ─────────────────────────────────────────────────────────────────────────────
+
     public void RefreshAll()
     {
-        if (!listParent)
+        if (Data == null)
         {
-            Debug.LogError("[GrowthPanelUI] listParent is not assigned. Assign the ScrollRect Content transform.");
-            return;
-        }
-        if (!listItemPrefab)
-        {
-            Debug.LogError("[GrowthPanelUI] listItemPrefab is not assigned. Assign a prefab with GrowthListItemUI on the root.");
-            return;
-        }
-        if (!statPanel)
-        {
-            Debug.LogError("[GrowthPanelUI] statPanel is not assigned. Drag your StatBucketPanelUI.");
+            Debug.LogWarning("[GrowthPanelUI] No player data (SaveManager.Data is null).");
             return;
         }
 
-        RefreshCores();
+        RefreshCoreCount();
         BuildList();
-        BuildAutoApplyStrip();
+        RefreshAutoApplyStrip();
     }
 
-    private void RefreshCores()
+    // Can be called from other systems when Growth Cores change.
+    public void RefreshCoreCount()
     {
         if (!growthCoresText) return;
+
         int cores = ResourceManager.I ? ResourceManager.I.Get(ResourceType.GrowthCores) : 0;
-        growthCoresText.text = $"Growth Cores: {cores}";
+        growthCoresText.text = cores.ToString();
     }
+
+    // ─────────────────────────────────────────────────────────────────────────────
+    // List building
+    // ─────────────────────────────────────────────────────────────────────────────
 
     private void BuildList()
     {
-        // clear children
-        for (int i = listParent.childCount - 1; i >= 0; i--)
-            Destroy(listParent.GetChild(i).gameObject);
+        if (!listParent || !itemPrefab)
+        {
+            Debug.LogError("[GrowthPanelUI] listParent or itemPrefab not assigned.");
+            return;
+        }
+
+        // Clear old rows
+        foreach (Transform child in listParent)
+        {
+            Destroy(child.gameObject);
+        }
+        _rows.Clear();
 
         var monsters = GetAllMonsters();
-
-        if (monsters == null)
+        if (monsters == null || monsters.Count == 0)
         {
-            Debug.LogWarning("[GrowthPanelUI] GetAllMonsters() returned null. Is SaveManager.Data loaded?");
-            return;
-        }
-        if (monsters.Count == 0)
-        {
-            Debug.LogWarning("[GrowthPanelUI] No monsters found (owned/team empty).");
+            Debug.LogWarning("[GrowthPanelUI] No monsters found to populate growth list.");
+            _autoApplyEnabledCount = 0;
             return;
         }
 
-        int spawned = 0;
+        // Recount Auto Apply flags
+        _autoApplyEnabledCount = CountAutoApplyEnabled(monsters);
 
+        foreach (var om in monsters)
+        {
+            if (om == null || string.IsNullOrEmpty(om.monsterId))
+                continue;
+
+            var def = GetDefinition(om.monsterId);
+
+            string displayName = def ? def.displayName : om.monsterId;
+            Sprite icon = def ? def.icon : null;
+            MonsterType type = def ? def.type : MonsterType.None;
+
+            var row = Instantiate(itemPrefab, listParent);
+            _rows.Add(row);
+
+            row.Bind(
+                om,
+                displayName,
+                icon,
+                type,
+                OnRowOpen,
+                CanEnableAnotherAuto,
+                OnAutoChanged
+            );
+        }
+    }
+
+    private MonsterDataSO GetDefinition(string monsterId)
+    {
+        if (string.IsNullOrEmpty(monsterId)) return null;
+
+        if (monsterLibrary)
+            return monsterLibrary.GetById(monsterId);
+
+        return MonsterLibraryLocator.GetById(monsterId);
+    }
+
+    /// <summary>
+    /// Pulls every OwnedMonsterData from the save (team + bench).
+    /// Uses PlayerManager.GetAllOwnedMonsters(includeTeam: true) so
+    /// we share the same logic as AutoApplyService.
+    /// </summary>
+    private List<OwnedMonsterData> GetAllMonsters()
+    {
+        if (Data == null)
+            return null;
+
+        // NOTE: this calls the method defined in PlayerManager:
+        // public List<OwnedMonsterData> GetAllOwnedMonsters(bool includeTeam = true)
+        var monsters = Data.GetAllOwnedMonsters(includeTeam: true);
+        return monsters;
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────────
+    // Auto Apply cap helpers
+    // ─────────────────────────────────────────────────────────────────────────────
+
+    private bool CanEnableAnotherAuto()
+    {
+        if (autoApplyCap <= 0) return true;
+        return _autoApplyEnabledCount < autoApplyCap;
+    }
+
+    private void OnAutoChanged()
+    {
+        // Recount from current save state
+        var monsters = GetAllMonsters();
+        _autoApplyEnabledCount = CountAutoApplyEnabled(monsters);
+        RefreshAutoApplyStrip();
+    }
+
+    private void RefreshAutoApplyStrip()
+    {
+        if (!autoApplyStrip) return;
+
+        bool anyAuto = _autoApplyEnabledCount > 0;
+        autoApplyStrip.SetActive(anyAuto);
+    }
+
+    private int CountAutoApplyEnabled(List<OwnedMonsterData> monsters)
+    {
+        if (monsters == null) return 0;
+
+        int count = 0;
         for (int i = 0; i < monsters.Count; i++)
         {
             var m = monsters[i];
-            if (m == null || string.IsNullOrEmpty(m.monsterId)) continue;
-
-            // Optional name/icon/type from library
-            string displayName = m.monsterId;
-            Sprite icon = null;
-            MonsterType type = MonsterType.None;
-
-            if (monsterLibrary)
-            {
-                var def = monsterLibrary.GetById(m.monsterId);
-                if (def)
-                {
-                    if (!string.IsNullOrEmpty(def.displayName)) displayName = def.displayName;
-                    icon = def.icon;
-                    type = def.type;
-                }
-                else
-                {
-                    // Still spawn; just log once per missing ID
-                    Debug.LogWarning($"[GrowthPanelUI] MonsterLibrary has no def for '{m.monsterId}'. Row will use ID.");
-                }
-            }
-
-            var view = Instantiate(listItemPrefab, listParent);
-            if (!view)
-            {
-                Debug.LogError("[GrowthPanelUI] Failed to instantiate listItemPrefab.");
-                continue;
-            }
-
-            view.Bind(
-                model: m,
-                displayName: displayName,
-                icon: icon,
-                type: type,
-                onOpen: HandleOpenItem,
-                canEnableAnotherAuto: CanEnableAnotherAuto,
-                onAutoChanged: HandleAutoChanged
-            );
-
-            spawned++;
+            if (m != null && m.autoApply)
+                count++;
         }
+        return count;
+    }
 
-        if (spawned == 0)
+    // ─────────────────────────────────────────────────────────────────────────────
+    // Row callbacks
+    // ─────────────────────────────────────────────────────────────────────────────
+
+    private void OnRowOpen(OwnedMonsterData model)
+    {
+        if (model == null)
+            return;
+
+        if (!statPanel)
         {
-            Debug.LogWarning("[GrowthPanelUI] Monsters existed but no rows spawned (all invalid?). Check console warnings above.");
-        }
-        else
-        {
-            Debug.Log($"[GrowthPanelUI] Spawned {spawned} monster rows.");
-        }
-    }
-
-    private void BuildAutoApplyStrip()
-    {
-        if (!autoApplyStrip) return;
-        for (int i = autoApplyStrip.childCount - 1; i >= 0; i--)
-            Destroy(autoApplyStrip.GetChild(i).gameObject);
-        // Optional: add chips for enabled auto-apply targets here.
-    }
-
-    // --- Callbacks ---
-    private void HandleOpenItem(OwnedMonsterData m)
-    {
-        if (!statPanel) return;
-        statPanel.OpenFor(m);
-        statPanel.gameObject.SetActive(true);
-    }
-
-    private bool CanEnableAnotherAuto() => CountAutoApplyEnabled() < autoApplyCap;
-
-    private void HandleAutoChanged()
-    {
-        BuildAutoApplyStrip();
-    }
-
-    // --- Data ---
-    private List<OwnedMonsterData> GetAllMonsters()
-    {
-        // Prefer PlayerManager if it actually returns data; otherwise fall back to SaveManager.
-        if (playerManager != null)
-        {
-            var fromPM = playerManager.GetAllOwnedMonsters(true);
-            if (fromPM != null && fromPM.Count > 0) return fromPM;
-            Debug.Log("[GrowthPanelUI] PlayerManager empty; falling back to SaveManager.");
+            Debug.LogWarning("[GrowthPanelUI] statPanel is not assigned.");
+            return;
         }
 
-        RosterUtils.EnsureTeam3();
-        var merged = RosterUtils.GetAllOwnedMonstersMerged(includeTeam: true);
-        Debug.Log($"[GrowthPanelUI] Roster merged count = {merged.Count}");
-        return merged;
-    }
+        var def = GetDefinition(model.monsterId);
+        statPanel.OpenFor(model);
 
-    private int CountAutoApplyEnabled()
-    {
-        var monsters = GetAllMonsters();
-        if (monsters == null) return 0;
-        int c = 0;
-        for (int i = 0; i < monsters.Count; i++)
-            if (monsters[i] != null && monsters[i].autoApply) c++;
-        return c;
+        // When the player spends cores and levels up in StatBucketPanelUI,
+        // it modifies the same OwnedMonsterData instance that this row is bound to.
+        // The next time this panel is shown or refreshed, the level list will
+        // read the updated level directly from save.
     }
 }

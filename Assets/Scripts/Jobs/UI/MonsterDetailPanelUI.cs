@@ -180,19 +180,13 @@ public class MonsterDetailPanelUI : MonoBehaviour
         _teamSlotIndex = -1;
         _onRemoved = null;
 
-        _currentOwned = new OwnedMonsterData
-        {
-            monsterId = owned.monsterId,
-            level     = owned.level,
-            currentHP = owned.currentHP,
-            currentXP = owned.currentXP
-        };
+        _currentOwned = owned;
 
-        current   = MonsterLibraryLocator.GetById(owned.monsterId);
+        current   = MonsterLibraryLocator.GetById(_currentOwned.monsterId);
         onConfirm = null;
         onCancel  = null;
 
-        UpdateTitleButtonBinding(); // bind the Title button
+        UpdateTitleButtonBinding();
         SafeOpen(current);
     }
 
@@ -204,21 +198,17 @@ public class MonsterDetailPanelUI : MonoBehaviour
         _teamSlotIndex = Mathf.Clamp(slotIndex, 0, 2);
         _onRemoved = onRemoved;
 
-        _currentOwned = new OwnedMonsterData
-        {
-            monsterId = member.monsterId,
-            level     = member.level,
-            currentHP = member.currentHP,
-            currentXP = member.currentXP
-        };
+        // ✅ use the real object, no copy
+        _currentOwned = member;
 
-        current   = MonsterLibraryLocator.GetById(member.monsterId);
+        current   = MonsterLibraryLocator.GetById(_currentOwned.monsterId);
         onConfirm = null;
         onCancel  = null;
 
-        UpdateTitleButtonBinding(); // bind the Title button
+        UpdateTitleButtonBinding();
         SafeOpen(current);
     }
+
 
     public void Hide()
     {

@@ -44,56 +44,11 @@ public static class BattleRewards
 
     public static void GrantVictoryXPAndEvo(int activeIndex, int wildLevel, MonsterLibrarySO library, float xpMultiplier)
     {
-        var data = SaveManager.Data;
-        if (data == null || data.team == null) return;
-        if (activeIndex < 0 || activeIndex >= data.team.Count) return;
+        int baseCores = Mathf.Max(0, 5 + 2 * wildLevel);
+        int finalCores = Mathf.RoundToInt(baseCores * Mathf.Max(0f, xpMultiplier));
 
-        int baseXp = Mathf.Max(0, 5 + 2 * wildLevel);
-        var m = data.team[activeIndex];
+        if (finalCores <= 0) return;
 
-        int finalXp = Mathf.RoundToInt(
-            baseXp *
-            ShinySystems.TrainingXpMult(m) *
-            Mathf.Max(0f, xpMultiplier)
-        );
-
-        if (m.level >= LevelRules.MaxLevel)
-        {
-            m.currentXP = 0;
-            data.team[activeIndex] = m;
-            SaveManager.Save();
-            return;
-        }
-
-        m.currentXP += finalXp;
-
-        while (m.level < LevelRules.MaxLevel)
-        {
-            int need = LevelRules.XPToNext(m.level);
-            if (m.currentXP < need) break;
-
-            m.currentXP -= need;
-            m.level++;
-
-            GameEvents.MonsterLeveled?.Invoke(m.monsterId, m.level);
-
-            var defNow = (library != null) ? library.GetById(m.monsterId) : null;
-            if (defNow != null && defNow.evolutionLevel > 0 && defNow.evolutionForm != null &&
-                m.level >= defNow.evolutionLevel)
-            {
-                GameEvents.EvolutionOffered?.Invoke(m.monsterId);
-            }
-        }
-
-        if (m.level >= LevelRules.MaxLevel) m.currentXP = 0;
-
-        data.team[activeIndex] = m;
-
-        if (!string.IsNullOrEmpty(data.trainingMonsterId) && data.trainingMonsterId == m.monsterId)
-            data.trainingMonsterLevel = m.level;
-
-        SaveManager.Save();
+        ResourceManager.I?.Add(ResourceType.GrowthCores, finalCores);
     }
-
-
 }

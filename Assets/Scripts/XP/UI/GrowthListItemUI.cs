@@ -9,7 +9,7 @@ public class GrowthListItemUI : MonoBehaviour
     [SerializeField] private Button openButton;
     [SerializeField] private TextMeshProUGUI nameText;
     [SerializeField] private TextMeshProUGUI levelText;
-    [SerializeField] private TextMeshProUGUI typeText;          // 🆕 Type label
+    [SerializeField] private TextMeshProUGUI typeText;          // Type label
     [SerializeField] private Image iconImage;                   // optional
     [SerializeField] private Toggle autoToggle;                 // optional
 
@@ -19,6 +19,9 @@ public class GrowthListItemUI : MonoBehaviour
     private Action _onAutoChanged;              // callback to notify parent
     private bool _suppressToggle;
 
+    // -------------------------------------------------------------------------
+    // BIND
+    // -------------------------------------------------------------------------
     public void Bind(
         OwnedMonsterData model,
         string displayName,
@@ -62,6 +65,66 @@ public class GrowthListItemUI : MonoBehaviour
         RefreshOpenInteractable();
     }
 
+    // -------------------------------------------------------------------------
+    // LIFECYCLE – subscribe to team changes so level label updates when saved
+    // -------------------------------------------------------------------------
+    private void OnEnable()
+    {
+        GameEvents.OnTeamChanged += HandleTeamChanged;
+    }
+
+    private void OnDisable()
+    {
+        GameEvents.OnTeamChanged -= HandleTeamChanged;
+    }
+
+    private void HandleTeamChanged()
+    {
+        if (_model == null) return;
+
+        var data = SaveManager.Data;
+        if (data == null || data.team == null) return;
+
+        OwnedMonsterData latest = null;
+
+        // Prefer matching by ownedUID if present (most robust if team order changes)
+        if (!string.IsNullOrEmpty(_model.ownedUID))
+        {
+            for (int i = 0; i < data.team.Count; i++)
+            {
+                var m = data.team[i];
+                if (m != null && m.ownedUID == _model.ownedUID)
+                {
+                    latest = m;
+                    break;
+                }
+            }
+        }
+
+        // Fallback: match by monsterId if we didn’t find by ownedUID
+        if (latest == null && !string.IsNullOrEmpty(_model.monsterId))
+        {
+            for (int i = 0; i < data.team.Count; i++)
+            {
+                var m = data.team[i];
+                if (m != null && m.monsterId == _model.monsterId)
+                {
+                    latest = m;
+                    break;
+                }
+            }
+        }
+
+        if (latest != null)
+        {
+            _model = latest;
+            RefreshLevel(_model.level);
+        }
+    }
+
+    // -------------------------------------------------------------------------
+    // CORE UI HELPERS
+    // -------------------------------------------------------------------------
     // Call this if cores change globally and you want to refresh rows.
     public void RefreshOpenInteractable()
     {
@@ -73,6 +136,7 @@ public class GrowthListItemUI : MonoBehaviour
     private void OnAutoToggleChanged(bool isOn)
     {
         if (_suppressToggle) return;
+        if (_model == null) return;
 
         if (isOn)
         {
@@ -98,7 +162,6 @@ public class GrowthListItemUI : MonoBehaviour
         _onAutoChanged?.Invoke();
     }
 
-    // Optional helper if you need to refresh only the level label externally
     public void RefreshLevel(int newLevel)
     {
         if (levelText) levelText.text = $"Lv {Mathf.Max(1, newLevel)}";

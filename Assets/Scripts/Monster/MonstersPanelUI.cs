@@ -235,25 +235,33 @@ public class MonstersPanelUI : MonoBehaviour
 
     void AddOrReplaceInTeam(OwnedMonsterData pick)
     {
-        var team = SaveManager.Data.team;
-        if (team == null) return;
+        if (pick == null || string.IsNullOrEmpty(pick.monsterId)) return;
 
-        while (team.Count < 3) team.Add(new OwnedMonsterData());
+        var data = SaveManager.Data;
+        if (data == null) return;
+
+        var team = data.team;
+        if (team == null)
+        {
+            team = new List<OwnedMonsterData>();
+            data.team = team;
+        }
+
+        // Ensure list has 3 slots (can be null placeholders)
+        while (team.Count < 3) team.Add(null);
 
         int empty = team.FindIndex(t => t == null || string.IsNullOrEmpty(t.monsterId));
-        int slot = (empty >= 0) ? empty : Mathf.Clamp(selectedTeamIndex, 0, 2);
+        int slot  = (empty >= 0) ? empty : Mathf.Clamp(selectedTeamIndex, 0, 2);
 
-        team[slot] = new OwnedMonsterData
-        {
-            monsterId = pick.monsterId,
-            level = pick.level,
-            currentHP = pick.currentHP,
-            currentXP = pick.currentXP
-        };
+        // ✅ point the team slot directly to the same OwnedMonsterData instance
+        team[slot] = pick;
 
         SaveManager.Save();
         RefreshAll();
     }
+
+
+
 
     void SelectTeamSlot(int idx)
     {

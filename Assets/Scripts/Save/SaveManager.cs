@@ -237,36 +237,56 @@ public static class SaveManager
         NormalizeOwnedEntries(Data.owned);
         NormalizeOwnedEntries(Data.team);
 
-        // Ensure any team member exists in owned list (at least one copy)
+        // Ensure any team member exists in owned list AND that the team slot
+        // references the owned instance (no separate copies).
         for (int i = 0; i < Data.team.Count; i++)
         {
             var t = Data.team[i];
-            if (t == null || string.IsNullOrEmpty(t.monsterId)) continue;
+            if (t == null || string.IsNullOrEmpty(t.monsterId))
+                continue;
 
-            // Track species in ownedIds
-            Data.ownedIds.Add(t.monsterId);
-
-            bool found = false;
-            for (int k = 0; k < Data.owned.Count; k++)
+            // Try to find a matching owned entry by ownedUID first
+            OwnedMonsterData canonical = null;
+            if (!string.IsNullOrEmpty(t.ownedUID))
             {
-                var o = Data.owned[k];
-                if (o != null && o.monsterId == t.monsterId) { found = true; break; }
+                canonical = Data.owned.Find(o => o != null && o.ownedUID == t.ownedUID);
             }
 
-            if (!found)
+            // Fallback: match by monsterId if UID is missing or not found
+            if (canonical == null)
             {
-                // Insert a minimal owned copy for consistency
-                Data.owned.Add(new OwnedMonsterData
+                canonical = Data.owned.Find(o => o != null && o.monsterId == t.monsterId);
+            }
+
+            // If still not found, create a new owned record from the team data
+            if (canonical == null)
+            {
+                canonical = new OwnedMonsterData
                 {
                     monsterId = t.monsterId,
-                    level = Mathf.Max(1, t.level),
-                    currentHP = -1,
+                    level     = Mathf.Max(1, t.level),
+                    currentHP = t.currentHP <= -1 ? t.currentHP : -1,
                     currentXP = Mathf.Max(0, t.currentXP),
-                    ownedUID = string.IsNullOrEmpty(t.ownedUID) ? Guid.NewGuid().ToString("N") : t.ownedUID
-                });
+                    ownedUID  = string.IsNullOrEmpty(t.ownedUID) ? Guid.NewGuid().ToString("N") : t.ownedUID
+                };
+                Data.owned.Add(canonical);
             }
-        }
 
+            // Ensure the canonical entry has a UID
+            if (string.IsNullOrEmpty(canonical.ownedUID))
+            {
+                canonical.ownedUID = string.IsNullOrEmpty(t.ownedUID)
+                    ? Guid.NewGuid().ToString("N")
+                    : t.ownedUID;
+            }
+
+            // ✅ Make this team slot reference the canonical owned object
+            Data.team[i] = canonical;
+
+            // Track species in ownedIds
+            if (!string.IsNullOrEmpty(canonical.monsterId))
+                Data.ownedIds.Add(canonical.monsterId);
+        }
         // Training pointer default
         if (string.IsNullOrEmpty(Data.trainingMonsterId) && Data.team.Count > 0)
         {
@@ -440,46 +460,53 @@ public static class SaveManager
         if (Data == null || string.IsNullOrEmpty(monsterId)) return;
         EnsureDefaults();
 
-        // Ensure an owned copy exists
-        var existing = Data.owned.Find(o => o != null && o.monsterId == monsterId);
-        if (existing == null)
+        // 1) Ensure a canonical owned entry
+        OwnedMonsterData canonical = Data.owned.Find(o => o != null && o.monsterId == monsterId);
+        if (canonical == null)
         {
-            var om = new OwnedMonsterData
+            canonical = new OwnedMonsterData
             {
                 monsterId = monsterId,
-                level = Mathf.Max(1, level),
+                level     = Mathf.Max(1, level),
                 currentHP = -1,
                 currentXP = 0,
-                ownedUID = Guid.NewGuid().ToString("N")
+                ownedUID  = Guid.NewGuid().ToString("N")
             };
-            Data.owned.Add(om);
+            Data.owned.Add(canonical);
         }
         else
         {
             // Normalize the existing one
-            if (existing.level <= 0) existing.level = Mathf.Max(1, level);
-            if (existing.currentHP == 0) existing.currentHP = -1;
-            if (string.IsNullOrEmpty(existing.ownedUID)) existing.ownedUID = Guid.NewGuid().ToString("N");
+            if (canonical.level <= 0) canonical.level = Mathf.Max(1, level);
+            if (canonical.currentHP == 0) canonical.currentHP = -1;
+            if (string.IsNullOrEmpty(canonical.ownedUID))
+                canonical.ownedUID = Guid.NewGuid().ToString("N");
         }
 
         // Track species
         Data.ownedIds ??= new HashSet<string>();
         Data.ownedIds.Add(monsterId);
 
-        // Ensure on team at least once
-        bool onTeam = Data.team.Exists(t => t != null && t.monsterId == monsterId);
+        // 2) Ensure team uses the canonical instance (no separate copy)
+        bool onTeam = false;
+        for (int i = 0; i < Data.team.Count; i++)
+        {
+            var t = Data.team[i];
+            if (t != null && t.monsterId == monsterId)
+            {
+                Data.team[i] = canonical; // re-point any existing entry
+                onTeam = true;
+            }
+        }
+
         if (!onTeam)
         {
-            Data.team.Add(new OwnedMonsterData
-            {
-                monsterId = monsterId,
-                level = Mathf.Max(1, level),
-                currentHP = -1,
-                currentXP = 0,
-                ownedUID = Guid.NewGuid().ToString("N")
-            });
-            if (string.IsNullOrEmpty(Data.trainingMonsterId)) Data.trainingMonsterId = monsterId;
+            Data.team.Add(canonical);
         }
+
+        // 3) Training pointer
+        if (string.IsNullOrEmpty(Data.trainingMonsterId))
+            Data.trainingMonsterId = monsterId;
 
         Data.hasChosenStarter = true;
 
@@ -497,6 +524,7 @@ public static class SaveManager
 
         Save();
     }
+
 
     // ─────────────────────────────────────────────────────────────────────────────
     // Job runtime sidecar I/O (slot fatigue + cooldown)

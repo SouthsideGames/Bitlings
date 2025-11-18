@@ -62,15 +62,6 @@ public sealed class EncounterButtonGuard : MonoBehaviour
 
         _button.interactable = hasValidTeam && hasEnoughEnergy;
 
-#if UNITY_EDITOR
-        if (!_button.interactable)
-        {
-            if (!hasValidTeam)
-                Debug.Log("[EncounterButtonGuard] Disabled — insufficient team size.");
-            else if (!hasEnoughEnergy)
-                Debug.Log("[EncounterButtonGuard] Disabled — not enough energy.");
-        }
-#endif
     }
 
     private static bool HasMinimumTeam(int minMembers)
@@ -93,7 +84,6 @@ public sealed class EncounterButtonGuard : MonoBehaviour
 
     private static bool HasRequiredEnergy()
     {
-        // Prefer EncounterManager because cost can be tuned there
         int needed = 1;
         int current = 0;
 
@@ -104,7 +94,6 @@ public sealed class EncounterButtonGuard : MonoBehaviour
         }
         else
         {
-            // Fallback if EM not alive yet: try resource bank
             needed = 1; // conservative default
             current = Mathf.Max(0, ResourceBank.Get(ResourceType.Energy));
         }
