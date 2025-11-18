@@ -30,6 +30,7 @@ public enum PanelId
     Log,
     PostBattleSummary,
     Achievement,
+    CheatCodes,
     DebugTools,
 }
 
