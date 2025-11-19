@@ -460,11 +460,11 @@ public static class SaveManager
         if (Data == null || string.IsNullOrEmpty(monsterId)) return;
         EnsureDefaults();
 
-        // 1) Ensure a canonical owned entry
-        OwnedMonsterData canonical = Data.owned.Find(o => o != null && o.monsterId == monsterId);
-        if (canonical == null)
+        // 1) Ensure an OWNED instance exists
+        var ownedMonster = Data.owned.Find(o => o != null && o.monsterId == monsterId);
+        if (ownedMonster == null)
         {
-            canonical = new OwnedMonsterData
+            ownedMonster = new OwnedMonsterData
             {
                 monsterId = monsterId,
                 level     = Mathf.Max(1, level),
@@ -472,41 +472,28 @@ public static class SaveManager
                 currentXP = 0,
                 ownedUID  = Guid.NewGuid().ToString("N")
             };
-            Data.owned.Add(canonical);
+            Data.owned.Add(ownedMonster);
         }
         else
         {
-            // Normalize the existing one
-            if (canonical.level <= 0) canonical.level = Mathf.Max(1, level);
-            if (canonical.currentHP == 0) canonical.currentHP = -1;
-            if (string.IsNullOrEmpty(canonical.ownedUID))
-                canonical.ownedUID = Guid.NewGuid().ToString("N");
+            if (ownedMonster.level <= 0) ownedMonster.level = Mathf.Max(1, level);
+            if (ownedMonster.currentHP == 0) ownedMonster.currentHP = -1;
+            if (string.IsNullOrEmpty(ownedMonster.ownedUID))
+                ownedMonster.ownedUID = Guid.NewGuid().ToString("N");
         }
 
-        // Track species
-        Data.ownedIds ??= new HashSet<string>();
-        Data.ownedIds.Add(monsterId);
-
-        // 2) Ensure team uses the canonical instance (no separate copy)
-        bool onTeam = false;
-        for (int i = 0; i < Data.team.Count; i++)
-        {
-            var t = Data.team[i];
-            if (t != null && t.monsterId == monsterId)
-            {
-                Data.team[i] = canonical; // re-point any existing entry
-                onTeam = true;
-            }
-        }
-
+        // 2) Ensure that EXACT instance is on the team
+        bool onTeam = Data.team.Exists(t => t != null && t.ownedUID == ownedMonster.ownedUID);
         if (!onTeam)
         {
-            Data.team.Add(canonical);
+            Data.team.Add(ownedMonster); // 🔥 same reference, no copy
+            if (string.IsNullOrEmpty(Data.trainingMonsterId))
+                Data.trainingMonsterId = monsterId;
         }
 
-        // 3) Training pointer
-        if (string.IsNullOrEmpty(Data.trainingMonsterId))
-            Data.trainingMonsterId = monsterId;
+        // 3) Track species, seen types, etc. (unchanged)
+        Data.ownedIds ??= new HashSet<string>();
+        Data.ownedIds.Add(monsterId);
 
         Data.hasChosenStarter = true;
 

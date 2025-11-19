@@ -1,63 +1,100 @@
-// EvolutionService.cs
 using System;
 using System.Collections.Generic;
 using UnityEngine;
 
 public static class EvolutionService
 {
-    /// Evolves the specified owned entry from its current monsterId to targetMonsterId.
-    /// - Rewrites the entry in SaveManager.Data.owned
-    /// - Updates any team slot pointing to that same owned record
-    /// - Enforces "no duplicates" for species (unless allowDuplicateSpecies = true)
-    /// Returns true if changed, false if blocked or invalid.
-    public static bool EvolveOwnedByMonsterId(string fromMonsterId, string targetMonsterId, bool allowDuplicateSpecies = false)
+    /// <summary>
+    /// Evolves the specified owned instance to targetMonsterId.
+    /// - Finds (or inserts) the canonical entry in Data.owned by ownedUID.
+    /// - Optionally enforces "no duplicate species" by removing other instances of the target species.
+    /// - Updates any team slot that references the same ownedUID.
+    /// </summary>
+    public static bool EvolveOwnedInstance(OwnedMonsterData source, string targetMonsterId, bool allowDuplicateSpecies = false)
     {
         var data = SaveManager.Data;
-        if (data == null || string.IsNullOrEmpty(fromMonsterId) || string.IsNullOrEmpty(targetMonsterId))
+        if (data == null || source == null || string.IsNullOrEmpty(source.monsterId) || string.IsNullOrEmpty(targetMonsterId))
             return false;
 
-        var owned = data.owned ?? new List<OwnedMonsterData>();
-        int idx = owned.FindIndex(o => o != null && o.monsterId == fromMonsterId);
-        if (idx < 0) return false;
+        data.owned ??= new List<OwnedMonsterData>();
+        data.team  ??= new List<OwnedMonsterData>();
 
-        // Enforce uniqueness: if we already own target species, handle it
-        if (!allowDuplicateSpecies && owned.Exists(o => o != null && o.monsterId == targetMonsterId))
+        // 1) Resolve canonical owned entry (by ownedUID first, then by ref/monsterId)
+        OwnedMonsterData ownedEntry = null;
+
+        if (!string.IsNullOrEmpty(source.ownedUID))
         {
-            // We remove OTHER instances of target species to keep single copy after evolution.
-            for (int i = owned.Count - 1; i >= 0; i--)
+            ownedEntry = data.owned.Find(o => o != null && o.ownedUID == source.ownedUID);
+        }
+
+        if (ownedEntry == null)
+        {
+            // Fallback: same reference already in owned?
+            int directIdx = data.owned.IndexOf(source);
+            if (directIdx >= 0)
             {
-                if (i == idx) continue;
-                var o = owned[i];
-                if (o != null && o.monsterId == targetMonsterId)
+                ownedEntry = data.owned[directIdx];
+            }
+        }
+
+        if (ownedEntry == null)
+        {
+            // Fallback: first by species (less ideal, but better than nothing)
+            ownedEntry = data.owned.Find(o => o != null && o.monsterId == source.monsterId);
+        }
+
+        // If we STILL don't have it in owned, treat this source as a new owned entry.
+        if (ownedEntry == null)
+        {
+            if (string.IsNullOrEmpty(source.ownedUID))
+                source.ownedUID = Guid.NewGuid().ToString("N");
+
+            ownedEntry = source;
+            data.owned.Add(ownedEntry);
+        }
+
+        string oldId = ownedEntry.monsterId;
+
+        // 2) Enforce species uniqueness if requested
+        if (!allowDuplicateSpecies)
+        {
+            for (int i = data.owned.Count - 1; i >= 0; i--)
+            {
+                var o = data.owned[i];
+                if (o == null) continue;
+
+                // Skip the evolving instance itself
+                if (ReferenceEquals(o, ownedEntry)) continue;
+                if (!string.IsNullOrEmpty(o.ownedUID) && !string.IsNullOrEmpty(ownedEntry.ownedUID) &&
+                    o.ownedUID == ownedEntry.ownedUID)
+                    continue;
+
+                // Remove OTHER instances of the target species
+                if (o.monsterId == targetMonsterId)
                 {
-                    // If the duplicate is on team, clear its team slots
-                    ClearTeamSlotsFor(o);
-                    owned.RemoveAt(i);
+                    ClearTeamSlotsForInstance(o);
+                    data.owned.RemoveAt(i);
                 }
             }
         }
 
-        // Update owned entry in place
-        var entry = owned[idx];
-        string oldId = entry.monsterId;
-        entry.monsterId = targetMonsterId;
-        owned[idx] = entry;
+        // 3) Actually evolve the canonical owned entry
+        ownedEntry.monsterId = targetMonsterId;
 
-        // Update team slots that point to the same *owned record* (by identity)
-        SyncTeamSlotIfSameIdentity(oldId, targetMonsterId, entry);
+        // 4) Sync any team slots that reference this exact instance
+        SyncTeamSlotsForInstance(ownedEntry);
 
-        data.owned = owned;
-        SaveManager.Data = data;
         SaveManager.Save();
-
-        // Optional: write audit
         SaveDebugTools.ExportAuditJson(true);
 
-        Debug.Log($"[EvolutionService] Evolved {oldId} → {targetMonsterId}");
+        Debug.Log($"[EvolutionService] Evolved {oldId} → {targetMonsterId} (UID: {ownedEntry.ownedUID})");
         return true;
     }
 
-    /// Utility: evolve based on library definition (if current species has an evolution at/under this level).
+    /// <summary>
+    /// Convenience: evolve based on library definition for a specific instance
+    /// if it meets the evolution level requirement.
+    /// </summary>
     public static bool TryAutoEvolve(OwnedMonsterData owned, MonsterLibrarySO lib)
     {
         if (owned == null || string.IsNullOrEmpty(owned.monsterId) || lib == null) return false;
@@ -67,61 +104,71 @@ public static class EvolutionService
 
         if (def.evolutionForm && def.evolutionLevel > 0 && owned.level >= def.evolutionLevel)
         {
-            return EvolveOwnedByMonsterId(owned.monsterId, def.evolutionForm.id, false);
+            return EvolveOwnedInstance(owned, def.evolutionForm.id, allowDuplicateSpecies: false);
         }
         return false;
     }
 
     // ---------- helpers ----------
-    private static void ClearTeamSlotsFor(OwnedMonsterData target)
+
+    /// <summary>
+    /// Clears team slots for a specific owned instance (by reference or ownedUID).
+    /// </summary>
+    private static void ClearTeamSlotsForInstance(OwnedMonsterData target)
     {
-        var team = SaveManager.Data.team ?? new List<OwnedMonsterData>();
+        var data = SaveManager.Data;
+        if (data == null) return;
+
+        var team = data.team ?? new List<OwnedMonsterData>();
         for (int i = 0; i < team.Count; i++)
         {
             var t = team[i];
             if (t == null || string.IsNullOrEmpty(t.monsterId)) continue;
 
-            // If team holds same monsterId and likely the same owned identity, clear it.
-            if (t.monsterId == target.monsterId && LikelySameOwned(t, target))
+            if (IsSameInstance(t, target))
+            {
+                // Replace with an empty placeholder
                 team[i] = new OwnedMonsterData();
+            }
         }
-        SaveManager.Data.team = team;
+        data.team = team;
     }
 
-    private static void SyncTeamSlotIfSameIdentity(string oldId, string newId, OwnedMonsterData evolvedOwned)
+    /// <summary>
+    /// Updates any team slot that references this owned instance to the new monsterId.
+    /// </summary>
+    private static void SyncTeamSlotsForInstance(OwnedMonsterData evolvedOwned)
     {
-        var team = SaveManager.Data.team ?? new List<OwnedMonsterData>();
+        var data = SaveManager.Data;
+        if (data == null) return;
+
+        var team = data.team ?? new List<OwnedMonsterData>();
         for (int i = 0; i < team.Count; i++)
         {
             var t = team[i];
             if (t == null || string.IsNullOrEmpty(t.monsterId)) continue;
 
-            // Same "owned" identity? Update the species in team
-            if (t.monsterId == oldId && LikelySameOwned(t, evolvedOwned))
+            if (IsSameInstance(t, evolvedOwned))
             {
-                t.monsterId = newId;
+                t.monsterId = evolvedOwned.monsterId;
                 team[i] = t;
             }
         }
-        SaveManager.Data.team = team;
+        data.team = team;
     }
 
-    // Heuristic equality if ownedUID exists; otherwise fall back to level+timestamps
-    private static bool LikelySameOwned(OwnedMonsterData a, OwnedMonsterData b)
+    /// <summary>
+    /// Checks if two OwnedMonsterData entries represent the same logical instance
+    /// using ownedUID when available, otherwise falling back to reference equality.
+    /// </summary>
+    private static bool IsSameInstance(OwnedMonsterData a, OwnedMonsterData b)
     {
-        try
-        {
-            var f = typeof(OwnedMonsterData).GetField("ownedUID");
-            if (f != null)
-            {
-                string ua = f.GetValue(a) as string;
-                string ub = f.GetValue(b) as string;
-                if (!string.IsNullOrEmpty(ua) && !string.IsNullOrEmpty(ub))
-                    return ua == ub;
-            }
-        }
-        catch { }
+        if (a == null || b == null) return false;
 
-        return a.level == b.level && a.lastHPUnix == b.lastHPUnix && a.currentXP == b.currentXP;
+        if (!string.IsNullOrEmpty(a.ownedUID) && !string.IsNullOrEmpty(b.ownedUID))
+            return a.ownedUID == b.ownedUID;
+
+        // Fallback: direct reference
+        return ReferenceEquals(a, b);
     }
 }

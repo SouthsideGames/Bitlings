@@ -438,7 +438,9 @@ public class MonsterDetailPanelUI : MonoBehaviour
 
     private void AssignToSlot(int slotIndex)
     {
-        if (_mode != MonsterDetailMode.AssignToTeam || _currentOwned == null || string.IsNullOrEmpty(_currentOwned.monsterId))
+        if (_mode != MonsterDetailMode.AssignToTeam 
+            || _currentOwned == null 
+            || string.IsNullOrEmpty(_currentOwned.monsterId))
         {
             Hide();
             return;
@@ -452,23 +454,30 @@ public class MonsterDetailPanelUI : MonoBehaviour
             return;
         }
 
-        var team = SaveManager.Data.team ?? new List<OwnedMonsterData>();
+        var data = SaveManager.Data;
+        if (data == null)
+        {
+            Debug.LogError("[MonsterDetailPanel] SaveManager.Data is null in AssignToSlot.");
+            Hide();
+            return;
+        }
+
+        var team = data.team ?? new List<OwnedMonsterData>();
         while (team.Count < 3) team.Add(new OwnedMonsterData());
 
-        team[slotIndex] = new OwnedMonsterData
-        {
-            monsterId = _currentOwned.monsterId,
-            level     = _currentOwned.level,
-            currentHP = -1, // uninitialized -> will be set on battle start or regen system
-            currentXP = _currentOwned.currentXP
-        };
+        // Use the canonical owned entry if possible (duplicate-safe)
+        var canonical = XPManager.Resolve(_currentOwned) ?? _currentOwned;
 
-        SaveManager.Data.team = team;
+        // Point the team slot at this monster (keep all fields: titles, training, etc.)
+        team[slotIndex] = canonical;
+
+        data.team = team;
         SaveManager.Save();
         GameEvents.OnTeamChanged?.Invoke();
 
         Hide();
     }
+
 
     private void RemoveFromTeam()
     {

@@ -73,7 +73,7 @@ public static class XPManager
     /// - Save + fire OnTeamChanged
     /// Returns true if level-up succeeded.
     /// </summary>
-    public static bool TryManualLevelUp(
+        public static bool TryManualLevelUp(
         OwnedMonsterData raw,
         int pointsPerLevel,
         LevelCostCurveSO levelCostCurve,
@@ -117,6 +117,44 @@ public static class XPManager
                 target.currentHP = newMaxHP;
         }
 
+        // 🔥 Ensure this canonical monster exists in Data.owned and uses THIS reference
+        var data = SaveManager.Data;
+        if (data != null)
+        {
+            data.owned ??= new System.Collections.Generic.List<OwnedMonsterData>();
+
+            OwnedMonsterData ownedMatch = null;
+
+            // Try match by ownedUID
+            if (!string.IsNullOrEmpty(target.ownedUID))
+            {
+                ownedMatch = data.owned.Find(o => o != null && o.ownedUID == target.ownedUID);
+            }
+
+            // Fallback: match by monsterId
+            if (ownedMatch == null && !string.IsNullOrEmpty(target.monsterId))
+            {
+                ownedMatch = data.owned.Find(o => o != null && o.monsterId == target.monsterId);
+            }
+
+            // If we don't have it in owned yet, add THIS target as the owned instance
+            if (ownedMatch == null)
+            {
+                data.owned.Add(target);
+            }
+            else if (!ReferenceEquals(ownedMatch, target))
+            {
+                // If there is an existing owned entry, update it to match the canonical target
+                ownedMatch.level             = target.level;
+                ownedMatch.unspentStatPoints = target.unspentStatPoints;
+                ownedMatch.currentHP         = target.currentHP;
+                ownedMatch.currentXP         = target.currentXP;
+                ownedMatch.monsterId         = target.monsterId;
+                ownedMatch.ownedUID          = target.ownedUID;
+                ownedMatch.trainingBonus     = target.trainingBonus;
+            }
+        }
+
         // Mirror back to the UI instance if it's a different object
         if (!ReferenceEquals(raw, target))
         {
@@ -126,6 +164,7 @@ public static class XPManager
             raw.currentXP         = target.currentXP;
             raw.monsterId         = target.monsterId;
             raw.ownedUID          = target.ownedUID;
+            raw.trainingBonus     = target.trainingBonus;
         }
 
         SaveManager.Save();
@@ -133,6 +172,7 @@ public static class XPManager
 
         return true;
     }
+
 
     /// <summary>
     /// Apply stat training (hp/atk/def/spd) via TrainingBonus, then save.

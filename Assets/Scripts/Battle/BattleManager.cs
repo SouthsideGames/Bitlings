@@ -938,54 +938,52 @@ public class BattleManager : MonoBehaviour
         }
 
         // Persist HP results
-        var teamList = SaveManager.Data.team ?? new List<OwnedMonsterData>();
-        var ownedList = SaveManager.Data.owned ?? new List<OwnedMonsterData>();
+        var data     = SaveManager.Data;
+        var teamList = data.team ?? new List<OwnedMonsterData>();
         long nowUnix = SaveManager.NowUnix();
 
+        // 1) Push runtime HP into team entries and their canonical save entries
         for (int i = 0; i < teamCount && i < teamList.Count; i++)
         {
             var t = teamList[i];
             if (t == null || string.IsNullOrEmpty(t.monsterId)) continue;
+
             int hp = Mathf.CeilToInt(Mathf.Max(0f, teamHP[i]));
-            t.currentHP = hp;
+            t.currentHP  = hp;
+            t.lastHPUnix = nowUnix;
+
+            // write back into team list
             teamList[i] = t;
-        }
 
-        for (int i = 0; i < teamList.Count; i++)
-        {
-            var t = teamList[i];
-            if (t == null || string.IsNullOrEmpty(t.monsterId)) continue;
-
-            for (int j = 0; j < ownedList.Count; j++)
+            // write into canonical (owned list) if this is a copy
+            var canonical = XPManager.Resolve(t);
+            if (canonical != null && !ReferenceEquals(canonical, t))
             {
-                var o = ownedList[j];
-                if (!string.IsNullOrEmpty(o.monsterId) && o.monsterId == t.monsterId)
-                {
-                    o.currentHP = Mathf.Max(0, t.currentHP);
-                    o.lastHPUnix = nowUnix;
-                    ownedList[j] = o;
-                    break;
-                }
+                canonical.currentHP  = t.currentHP;
+                canonical.lastHPUnix = nowUnix;
             }
         }
 
+        // 2) Clear fainted team slots, but keep box entries (just with HP = 0)
         for (int i = 0; i < teamList.Count; i++)
         {
             var e = teamList[i];
             if (e == null || string.IsNullOrEmpty(e.monsterId)) continue;
 
-            e.lastHPUnix = nowUnix;
+            // lastHPUnix should already be set above for active ones, but ensure
+            if (e.lastHPUnix == 0)
+                e.lastHPUnix = nowUnix;
 
             if (e.currentHP <= 0)
-                teamList[i] = new OwnedMonsterData();
+                teamList[i] = new OwnedMonsterData(); // empty slot
             else
                 teamList[i] = e;
         }
 
-        SaveManager.Data.owned = ownedList;
-        SaveManager.Data.team = teamList;
+        data.team = teamList;
         SaveManager.Save();
         GameEvents.OnTeamChanged?.Invoke();
+
 
         // Clear temporary buffs
         BattleTempBuffs.I?.ClearPlayerAtkBonus();
