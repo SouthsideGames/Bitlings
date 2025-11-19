@@ -13,45 +13,44 @@ public static class XPManager
     /// in SaveManager.Data. Prefer Data.owned, then Data.team.
     /// Returns null if none found.
     /// </summary>
-    private static OwnedMonsterData FindCanonicalInSave(OwnedMonsterData source)
+ private static OwnedMonsterData FindCanonicalInSave(OwnedMonsterData source)
+{
+    var data = SaveManager.Data;
+    if (data == null || source == null) return null;
+
+    // 1) Prefer OWED LIST by ownedUID
+    if (!string.IsNullOrEmpty(source.ownedUID) && data.owned != null)
     {
-        var data = SaveManager.Data;
-        if (data == null || source == null) return null;
-
-        // Prefer ownedUID if present
-        if (!string.IsNullOrEmpty(source.ownedUID))
-        {
-            if (data.owned != null)
-            {
-                var match = data.owned.Find(o => o != null && o.ownedUID == source.ownedUID);
-                if (match != null) return match;
-            }
-
-            if (data.team != null)
-            {
-                var match = data.team.Find(o => o != null && o.ownedUID == source.ownedUID);
-                if (match != null) return match;
-            }
-        }
-
-        // Fallback: monsterId
-        if (!string.IsNullOrEmpty(source.monsterId))
-        {
-            if (data.owned != null)
-            {
-                var match = data.owned.Find(o => o != null && o.monsterId == source.monsterId);
-                if (match != null) return match;
-            }
-
-            if (data.team != null)
-            {
-                var match = data.team.Find(o => o != null && o.monsterId == source.monsterId);
-                if (match != null) return match;
-            }
-        }
-
-        return null;
+        var match = data.owned.Find(o => o != null && o.ownedUID == source.ownedUID);
+        if (match != null) return match;
     }
+
+    // 2) Then OWNED LIST by monsterId
+    if (!string.IsNullOrEmpty(source.monsterId) && data.owned != null)
+    {
+        var match = data.owned.Find(o => o != null && o.monsterId == source.monsterId);
+        if (match != null) return match;
+    }
+
+    // 3) Only fall back to TEAM if we truly can't find it in owned
+
+    // Team by ownedUID
+    if (!string.IsNullOrEmpty(source.ownedUID) && data.team != null)
+    {
+        var match = data.team.Find(o => o != null && o.ownedUID == source.ownedUID);
+        if (match != null) return match;
+    }
+
+    // Team by monsterId
+    if (!string.IsNullOrEmpty(source.monsterId) && data.team != null)
+    {
+        var match = data.team.Find(o => o != null && o.monsterId == source.monsterId);
+        if (match != null) return match;
+    }
+
+    return null;
+}
+
 
     /// <summary>
     /// Public resolver: returns the canonical OwnedMonsterData from SaveManager.Data
