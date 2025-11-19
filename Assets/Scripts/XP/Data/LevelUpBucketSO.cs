@@ -5,7 +5,6 @@ public class LevelUpBucketSO : ScriptableObject
 {
      [Header("Identity")]
     public string bucketId;         
-    public Sprite icon;
     [TextArea] public string description;
 
     [Header("Pick Rules")]

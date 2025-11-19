@@ -2,7 +2,6 @@ using UnityEngine;
 
 public static class EvolutionHelper
 {
-    
     public static void RebuildStatsAdditive(OwnedMonsterData m, MonsterDataSO newForm, float carryScale = 1f)
     {
         if (m == null || newForm == null) return;
@@ -14,5 +13,12 @@ public static class EvolutionHelper
 
         // Bake attack increase
         m.flatAtkBonus += Mathf.RoundToInt(tb.atk * (carryScale - 1f));
+    }
+
+    public static bool CanEvolve(OwnedMonsterData m, MonsterDataSO def)
+    {
+        if (m == null || def == null) return false;
+        if (!def.evolutionForm || def.evolutionLevel <= 0) return false;
+        return m.level >= def.evolutionLevel;
     }
 }

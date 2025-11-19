@@ -13,11 +13,11 @@ MonoBehaviour:
   m_Name: Speedster
   m_EditorClassIdentifier: 
   bucketId: Speed
-  icon: {fileID: 0}
-  description: Very high SPD; some ATK; low HP/DEF.
-  picksPerLevel: 1
+  description: Specializes in turn order and evasion. Heavy focus on SPD, enabling
+    quick actions and tactical advantages.
+  picksPerLevel: 3
   allowDuplicatePicks: 1
   hpWeight: 1
   atkWeight: 1
   defWeight: 1
-  spdWeight: 1
+  spdWeight: 7

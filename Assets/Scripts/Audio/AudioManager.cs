@@ -2,7 +2,6 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.Audio;
 
 public enum SfxType
 {
@@ -30,6 +29,7 @@ public enum SfxType
 
     // Progress
     LevelUp,
+
     // Titles
     TitleEquip,
     TitleUnequip,
@@ -45,152 +45,152 @@ public class SfxEntry
     [Range(0.5f, 1.5f)] public float pitchMin = 0.98f;
     [Range(0.5f, 1.5f)] public float pitchMax = 1.02f;
 
-    [Tooltip("Per-type cooldown to limit spam (seconds). 0 = use manager default.")]
     [Min(0f)] public float cooldown = 0f;
-
-    [Header("Optional: music ducking (requires AudioMixer; ignored otherwise)")]
-    public bool duckMusic = false;
-    [Range(-24f, 0f)] public float duckDb = -6f;
-    [Min(0f)] public float duckDuration = 0.25f;
 }
 
 public class AudioManager : MonoBehaviour
 {
     public static AudioManager I { get; private set; }
 
-    // ──────────────────────────────
-    // Mixer (OPTIONAL – safe to leave empty)
-    // ──────────────────────────────
-    [Header("Mixer (optional – can be left empty if not using AudioMixer)")]
-    public AudioMixer mixer;
-    public AudioMixerGroup masterGroup;
-    public AudioMixerGroup musicGroup;
-    public AudioMixerGroup sfxGroup;
-
-    [Tooltip("Exposed mixer parameter names (only used if mixer is assigned).")]
-    public string masterVolParam = "MasterVol";
-    public string musicVolParam = "MusicVol";
-    public string sfxVolParam   = "SfxVol";
-
-    // ──────────────────────────────
+    // ─────────────────────────────────────────────────────────────
     // Music
-    // ──────────────────────────────
+    // ─────────────────────────────────────────────────────────────
     [Header("Music")]
     [SerializeField] private AudioSource musicA;
     [SerializeField] private AudioSource musicB;
+
     [SerializeField] private AudioClip startingMusic;
     [SerializeField] private AudioClip battleMusic;
+    [SerializeField] private AudioClip victoryMusic;  // NEW
+    [SerializeField] private AudioClip defeatMusic;   // NEW
     [SerializeField, Min(0f)] private float defaultCrossfade = 0.75f;
 
     private AudioSource _activeMusic;
     private Coroutine _xfadeCo;
 
-    // ──────────────────────────────
+    // ─────────────────────────────────────────────────────────────
     // SFX
-    // ──────────────────────────────
+    // ─────────────────────────────────────────────────────────────
     [Header("SFX")]
     [Range(1, 16)] public int sfxPoolSize = 4;
+
     [SerializeField] private List<AudioSource> sfxPool = new();
-    private int _sfxPoolIndex = 0;
+    private int _sfxIndex = 0;
 
-    [Tooltip("Default cooldown to prevent rapid spam (seconds).")]
-    [Range(0f, 0.5f)] public float defaultSfxCooldown = 0.08f;
+    [Tooltip("Default cooldown per effect type (seconds).")]
+    [Range(0f, 0.5f)] public float defaultCooldown = 0.08f;
 
-    public List<SfxEntry> sfxCatalog = new();
+    public List<SfxEntry> catalog = new();
+    private readonly Dictionary<SfxType, SfxEntry> _map = new();
+    private readonly Dictionary<SfxType, float> _nextPlayable = new();
 
-    private readonly Dictionary<SfxType, SfxEntry> _sfxMap = new();
-    private readonly Dictionary<SfxType, float> _nextPlayableAt = new();
+    // ─────────────────────────────────────────────────────────────
+    // Settings (volumes & mutes)
+    // ─────────────────────────────────────────────────────────────
+    private float _master01 = 0.8f;
+    private float _music01 = 0.8f;
+    private float _sfx01 = 0.9f;
 
-    // ──────────────────────────────
-    // Auto music routing
-    // ──────────────────────────────
-    [Header("Auto Music Routing")]
+    private bool _muteAll = false;
+    private bool _muteMusic = false;
+    private bool _muteSfx = false;
+
+    // ─────────────────────────────────────────────────────────────
+    // Battle result tracking (for victory/defeat music)
+    // ─────────────────────────────────────────────────────────────
+    private bool _hasLastBattleResult = false;
+    private bool _lastBattleVictory = false;
+
+    // Toggle for automatic swapping based on UI/battle state
     public bool autoSwapForEncounter = true;
 
-    // ──────────────────────────────
-    // Global volumes & mutes (0..1)
-    // ──────────────────────────────
-    private float _master01 = 0.8f;
-    private float _music01  = 0.8f;
-    private float _sfx01    = 0.9f;
-    private bool  _muteAll  = false;
-    private bool  _muteMusic = false;
-    private bool  _muteSfx   = false;
-
-    // ──────────────────────────────
-    // Unity lifecycle
-    // ──────────────────────────────
+    // ─────────────────────────────────────────────────────────────
+    // Unity Lifecycle
+    // ─────────────────────────────────────────────────────────────
     private void Awake()
     {
         if (I != null && I != this)
         {
-            gameObject.SetActive(false);
-            Destroy(this);
+            Destroy(gameObject);
             return;
         }
         I = this;
 
-        _sfxMap.Clear();
-        foreach (var e in sfxCatalog)
-            if (!_sfxMap.ContainsKey(e.type)) _sfxMap.Add(e.type, e);
-
-        // Route music to Music group (if using mixer; safe if musicGroup is null)
-        if (musicA != null) musicA.outputAudioMixerGroup = musicGroup;
-        if (musicB != null) musicB.outputAudioMixerGroup = musicGroup;
-        _activeMusic = musicA;
+        // Build map
+        _map.Clear();
+        foreach (var e in catalog)
+            if (!_map.ContainsKey(e.type))
+                _map.Add(e.type, e);
 
         EnsureSfxPool();
 
-        LoadOrDefaultSettings();
-        ApplyMixerVolumes(); // now applies direct AudioSource volumes when no mixer
+        LoadSettings();
+        ApplyVolumes();
 
-        if (autoSwapForEncounter)
-        {
-            // UI panels (instance event with (PanelId id, bool opened))
-            if (UIManager.I != null)
-                UIManager.I.OnPanelChanged += OnPanelChanged;
-
-            // Encounter state (parameterless Action)
-            if (EncounterManager.I != null)
-                EncounterManager.I.OnStateChanged += OnEncounterStateChanged;
-        }
+        // Setup music
+        _activeMusic = musicA;
 
         if (startingMusic != null)
-            PlayMusic(startingMusic, loop: true, crossfade: defaultCrossfade);
+            PlayMusic(startingMusic, true, defaultCrossfade);
     }
 
-    private void OnDestroy()
+    private void OnEnable()
     {
-        if (I == this) I = null;
+        TryHookUiEvents();
 
-        if (autoSwapForEncounter)
+        // Listen for battle end to know victory vs defeat
+        GameEvents.BattleFinished += OnBattleFinished;
+    }
+
+    private void OnDisable()
+    {
+        if (UIManager.I != null)
+            UIManager.I.OnPanelChanged -= OnPanelChanged;
+
+        GameEvents.BattleFinished -= OnBattleFinished;
+    }
+
+    private void Start()
+    {
+        // In case UIManager came up after AudioManager
+        TryHookUiEvents();
+    }
+
+    private void TryHookUiEvents()
+    {
+        if (UIManager.I != null)
         {
-            if (UIManager.I != null)
-                UIManager.I.OnPanelChanged -= OnPanelChanged;
-
-            if (EncounterManager.I != null)
-                EncounterManager.I.OnStateChanged -= OnEncounterStateChanged;
+            UIManager.I.OnPanelChanged -= OnPanelChanged;
+            UIManager.I.OnPanelChanged += OnPanelChanged;
         }
     }
 
-    // ─────────────────────────────────────────────────────────────── Public API
-    // Music
+    private void OnBattleFinished(BattleResult result)
+    {
+        _hasLastBattleResult = true;
+        _lastBattleVictory = result.victory;
+        // We don't force music swap here; it happens when the summary opens.
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // Public API for Music
+    // ─────────────────────────────────────────────────────────────
     public void PlayMusic(AudioClip clip, bool loop = true, float crossfade = -1f)
     {
         if (!clip) return;
-        if (crossfade < 0f) crossfade = defaultCrossfade;
+
+        if (crossfade < 0f)
+            crossfade = defaultCrossfade;
 
         var next = (_activeMusic == musicA) ? musicB : musicA;
-        if (next == null) return;
-
         next.clip = clip;
         next.loop = loop;
         next.volume = 0f;
-        next.outputAudioMixerGroup = musicGroup;
         next.Play();
 
         if (_xfadeCo != null) StopCoroutine(_xfadeCo);
-        _xfadeCo = StartCoroutine(C0_Crossfade(_activeMusic, next, crossfade));
+        _xfadeCo = StartCoroutine(CO_Crossfade(_activeMusic, next, crossfade));
+
         _activeMusic = next;
     }
 
@@ -198,308 +198,228 @@ public class AudioManager : MonoBehaviour
     {
         if (_activeMusic == null || !_activeMusic.isPlaying) return;
         if (_xfadeCo != null) StopCoroutine(_xfadeCo);
-        _xfadeCo = StartCoroutine(C0_FadeOutStop(_activeMusic, fadeOut));
+        _xfadeCo = StartCoroutine(CO_FadeOut(_activeMusic, fadeOut));
     }
 
-    // SFX (typed)
+    // ─────────────────────────────────────────────────────────────
+    // Public API — SFX
+    // ─────────────────────────────────────────────────────────────
     public void PlaySfx(SfxType type)
     {
         if (type == SfxType.None) return;
-        if (!_sfxMap.TryGetValue(type, out var entry)) return;
+
+        if (!_map.TryGetValue(type, out var entry)) return;
         if (!PassCooldown(type, entry)) return;
         if (entry.clips == null || entry.clips.Count == 0) return;
 
         var clip = entry.clips[UnityEngine.Random.Range(0, entry.clips.Count)];
-        var src  = NextSfxSource();
+        var src = NextSfxSource();
 
-        src.outputAudioMixerGroup = sfxGroup; // safe if null
-        src.pitch        = UnityEngine.Random.Range(entry.pitchMin, entry.pitchMax);
-        src.spatialBlend = 0f;
-        src.panStereo    = 0f;
+        src.pitch = UnityEngine.Random.Range(entry.pitchMin, entry.pitchMax);
 
-        // Apply global SFX volume + mutes directly
-        float sfxScale = (_muteAll || _muteSfx) ? 0f : (_master01 * _sfx01);
-        src.PlayOneShot(clip, entry.volume * sfxScale);
-
-        // Ducking uses mixer if present; ignored otherwise
-        if (entry.duckMusic) StartCoroutine(C0_TempDuckMusic(entry.duckDb, entry.duckDuration));
+        float volume = entry.volume * GetSfxScale();
+        src.PlayOneShot(clip, volume);
     }
 
-    // SFX (positional or 2D panned)
-    public void PlaySfxAt(SfxType type, Vector3 position, float spatialBlend = 1f, float panStereo = 0f)
+    public void PreviewSfx(SfxType type = SfxType.Click)
     {
-        if (type == SfxType.None) return;
-        if (!_sfxMap.TryGetValue(type, out var entry)) return;
-        if (!PassCooldown(type, entry)) return;
-        if (entry.clips == null || entry.clips.Count == 0) return;
+        if (type == SfxType.None)
+            type = SfxType.Click;
 
-        var clip = entry.clips[UnityEngine.Random.Range(0, entry.clips.Count)];
-
-        var go  = new GameObject($"SFX_{type}");
-        var src = go.AddComponent<AudioSource>();
-        src.outputAudioMixerGroup = sfxGroup; // safe if null
-        src.clip         = clip;
-
-        float sfxScale   = (_muteAll || _muteSfx) ? 0f : (_master01 * _sfx01);
-        src.volume       = entry.volume * sfxScale;
-
-        src.pitch        = UnityEngine.Random.Range(entry.pitchMin, entry.pitchMax);
-        src.spatialBlend = Mathf.Clamp01(spatialBlend);
-        src.panStereo    = Mathf.Clamp(panStereo, -1f, 1f);
-        src.rolloffMode  = AudioRolloffMode.Linear;
-        src.minDistance  = 2f;
-        src.maxDistance  = 25f;
-
-        if (spatialBlend >= 1f) go.transform.position = position;
-
-        src.Play();
-        Destroy(go, clip.length + 0.1f);
-
-        if (entry.duckMusic) StartCoroutine(C0_TempDuckMusic(entry.duckDb, entry.duckDuration));
+        PlaySfx(type);
     }
 
-    // Vol getters (used by SettingsPanel)
+    // ─────────────────────────────────────────────────────────────
+    // Volumes & Mutes (called by SettingsPanel)
+    // ─────────────────────────────────────────────────────────────
     public float GetMasterVolume() => _master01;
-    public float GetMusicVolume()  => _music01;
-    public float GetSfxVolume()    => _sfx01;
+    public float GetMusicVolume() => _music01;
+    public float GetSfxVolume() => _sfx01;
 
-    public void SetMaster01(float v) => SetMasterVolume(v);
-    public void SetMusic01(float v)  => SetMusicVolume(v);
-    public void SetSfx01(float v)    => SetSfxVolume(v);
-
-    // Called by SettingsManager.ApplyDefaults via SendMessage("ApplyVolumes")
-    public void ApplyVolumes() => ApplyMixerVolumes();
-
-    public void OnButtonClick() => PlaySfx(SfxType.Click);
-
-    // Slider hooks
     public void SetMasterVolume(float v)
     {
         _master01 = Mathf.Clamp01(v);
-        MirrorToSave_StateOnly();
-        ApplyMixerVolumes();
+        SaveSettings();
+        ApplyVolumes();
     }
 
     public void SetMusicVolume(float v)
     {
         _music01 = Mathf.Clamp01(v);
-        MirrorToSave_StateOnly();
-        ApplyMixerVolumes();
+        SaveSettings();
+        ApplyVolumes();
     }
 
     public void SetSfxVolume(float v)
     {
         _sfx01 = Mathf.Clamp01(v);
-        MirrorToSave_StateOnly();
-        ApplyMixerVolumes();
+        SaveSettings();
+        ApplyVolumes();
     }
 
-    // Toggle hooks
     public void OnMuteAllToggle(bool on)
     {
         _muteAll = on;
-        MirrorToSave_StateOnly();
-        ApplyMixerVolumes();
+        SaveSettings();
+        ApplyVolumes();
     }
 
     public void OnMuteMusicToggle(bool on)
     {
         _muteMusic = on;
-        MirrorToSave_StateOnly();
-        ApplyMixerVolumes();
+        SaveSettings();
+        ApplyVolumes();
     }
 
     public void OnMuteSfxToggle(bool on)
     {
         _muteSfx = on;
-        MirrorToSave_StateOnly();
-        ApplyMixerVolumes();
+        SaveSettings();
+        ApplyVolumes();
     }
 
-    // ───────────────────────────────────────────────────────────── Internals
-
-    private bool PassCooldown(SfxType type, SfxEntry entry)
+    // ─────────────────────────────────────────────────────────────
+    // Volume Logic
+    // ─────────────────────────────────────────────────────────────
+    private float GetMusicScale()
     {
-        float now = Time.unscaledTime;
-        _nextPlayableAt.TryGetValue(type, out float nextAt);
-        float cd = (entry.cooldown > 0f) ? entry.cooldown : defaultSfxCooldown;
-        if (now < nextAt) return false;
-        _nextPlayableAt[type] = now + cd;
-        return true;
+        if (_muteAll || _muteMusic) return 0f;
+        return _master01 * _music01;
     }
 
+    private float GetSfxScale()
+    {
+        if (_muteAll || _muteSfx) return 0f;
+        return _master01 * _sfx01;
+    }
+
+    private void ApplyVolumes()
+    {
+        float musicScale = GetMusicScale();
+
+        if (_activeMusic == musicA)
+        {
+            if (musicA != null) musicA.volume = musicScale;
+            if (musicB != null) musicB.volume = 0f;
+        }
+        else
+        {
+            if (musicB != null) musicB.volume = musicScale;
+            if (musicA != null) musicA.volume = 0f;
+        }
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // Internals — SFX Pool
+    // ─────────────────────────────────────────────────────────────
     private void EnsureSfxPool()
     {
-        sfxPool.RemoveAll(a => a == null);
+        sfxPool.RemoveAll(x => x == null);
 
         while (sfxPool.Count < sfxPoolSize)
         {
-            var go = new GameObject($"SFX_Pool_{sfxPool.Count}");
-            go.transform.SetParent(transform, false);
+            var go = new GameObject($"SFX_{sfxPool.Count}");
+            go.transform.SetParent(transform);
             var src = go.AddComponent<AudioSource>();
             src.playOnAwake = false;
-            src.loop        = false;
-            src.outputAudioMixerGroup = sfxGroup;
-            src.spatialBlend = 0f;
+            src.loop = false;
             sfxPool.Add(src);
-        }
-
-        while (sfxPool.Count > sfxPoolSize)
-        {
-            var last = sfxPool[sfxPool.Count - 1];
-            if (last != null) Destroy(last.gameObject);
-            sfxPool.RemoveAt(sfxPool.Count - 1);
         }
     }
 
     private AudioSource NextSfxSource()
     {
-        if (sfxPool.Count == 0) EnsureSfxPool();
-        var src = sfxPool[_sfxPoolIndex];
-        _sfxPoolIndex = (_sfxPoolIndex + 1) % sfxPool.Count;
+        var src = sfxPool[_sfxIndex];
+        _sfxIndex = (_sfxIndex + 1) % sfxPool.Count;
         return src;
     }
 
-    private void LoadOrDefaultSettings()
+    private bool PassCooldown(SfxType type, SfxEntry entry)
     {
-        try
-        {
-            // Prefer SaveManager.Data.settings
-            var s = SaveManager.Data?.settings;
-            if (s != null)
-            {
-                _master01 = Mathf.Clamp01(s.masterVolume);
-                _music01  = Mathf.Clamp01(s.musicVolume);
-                _sfx01    = Mathf.Clamp01(s.sfxVolume);
-                _muteAll  = s.muteAll;
-                _muteMusic = s.muteMusic;
-                _muteSfx   = s.muteSfx;
-                return;
-            }
-        }
-        catch { /* ignore and use defaults */ }
+        float now = Time.unscaledTime;
 
-        // sensible defaults
-        _master01 = 0.8f;
-        _music01  = 0.8f;
-        _sfx01    = 0.9f;
-        _muteAll  = false;
-        _muteMusic = false;
-        _muteSfx   = false;
+        _nextPlayable.TryGetValue(type, out float nextAt);
+        float cd = (entry.cooldown > 0f) ? entry.cooldown : defaultCooldown;
+
+        if (now < nextAt) return false;
+
+        _nextPlayable[type] = now + cd;
+        return true;
     }
 
-    private void MirrorToSave_StateOnly()
+    // ─────────────────────────────────────────────────────────────
+    // Internals — Settings Load/Save
+    // ─────────────────────────────────────────────────────────────
+    private void LoadSettings()
     {
-        try
-        {
-            var s = SaveManager.Data?.settings;
-            if (s == null) return;
+        var s = SaveManager.Data?.settings;
+        if (s == null) return;
 
-            s.masterVolume = _master01;
-            s.musicVolume  = _music01;
-            s.sfxVolume    = _sfx01;
-            s.muteAll      = _muteAll;
-            s.muteMusic    = _muteMusic;
-            s.muteSfx      = _muteSfx;
+        _master01 = s.masterVolume;
+        _music01 = s.musicVolume;
+        _sfx01 = s.sfxVolume;
 
-            SaveManager.Save();
-        }
-        catch { /* non-fatal */ }
+        _muteAll = s.muteAll;
+        _muteMusic = s.muteMusic;
+        _muteSfx = s.muteSfx;
     }
 
-    /// <summary>
-    /// Applies current master/music/SFX values + mutes directly to AudioSources.
-    /// Mixer parameters are only used if a mixer is assigned (optional).
-    /// </summary>
-    private void ApplyMixerVolumes()
+    private void SaveSettings()
     {
-        // Compute linear scales
-        float masterScale = _muteAll ? 0f : _master01;
-        float musicScale  = (_muteAll || _muteMusic) ? 0f : (_master01 * _music01);
-        float sfxScale    = (_muteAll || _muteSfx)   ? 0f : (_master01 * _sfx01);
+        var s = SaveManager.Data?.settings;
+        if (s == null) return;
 
-        // Apply to music sources (direct volume)
-        if (_xfadeCo == null)
-        {
-            // Not currently crossfading – just set active track
-            if (_activeMusic == musicA)
-            {
-                if (musicA != null) musicA.volume = musicScale;
-                if (musicB != null) musicB.volume = 0f;
-            }
-            else
-            {
-                if (musicB != null) musicB.volume = musicScale;
-                if (musicA != null) musicA.volume = 0f;
-            }
-        }
-        // If crossfading, C0_Crossfade will handle volumes per frame using the latest scales.
+        s.masterVolume = _master01;
+        s.musicVolume = _music01;
+        s.sfxVolume = _sfx01;
 
-        // SFX pool: we don't set volume here; we apply `sfxScale` when playing each sound.
-        // (See PlaySfx / PlaySfxAt.)
+        s.muteAll = _muteAll;
+        s.muteMusic = _muteMusic;
+        s.muteSfx = _muteSfx;
 
-        // If a Mixer is assigned and you *want* to still drive it, we keep this optional:
-        if (mixer != null)
-        {
-            float masterDb = Lin01ToDb(masterScale);
-            float musicDb  = Lin01ToDb(musicScale);
-            float sfxDb    = Lin01ToDb(sfxScale);
-
-            mixer.SetFloat(masterVolParam, masterDb);
-            mixer.SetFloat(musicVolParam,  musicDb);
-            mixer.SetFloat(sfxVolParam,    sfxDb);
-        }
+        SaveManager.Save();
     }
 
-    private static float Lin01ToDb(float v01)
-    {
-        if (v01 <= 0.0001f) return -80f; // silence
-        return Mathf.Log10(v01) * 20f;
-    }
-
-    private IEnumerator C0_Crossfade(AudioSource from, AudioSource to, float dur)
+    // ─────────────────────────────────────────────────────────────
+    // Crossfade Coroutines
+    // ─────────────────────────────────────────────────────────────
+    private IEnumerator CO_Crossfade(AudioSource from, AudioSource to, float dur)
     {
         dur = Mathf.Max(0.01f, dur);
         float t = 0f;
-
-        if (to   != null) to.outputAudioMixerGroup   = musicGroup;
-        if (from != null) from.outputAudioMixerGroup = musicGroup;
 
         while (t < dur)
         {
             t += Time.unscaledDeltaTime;
             float a = Mathf.Clamp01(t / dur);
 
-            // Re-calc current global music scale each frame so sliders/mutes
-            // affect the fade immediately.
-            float musicScale = (_muteAll || _muteMusic) ? 0f : (_master01 * _music01);
+            float musicScale = GetMusicScale();
 
-            if (to   != null) to.volume   = a * musicScale;
+            if (to != null) to.volume = a * musicScale;
             if (from != null) from.volume = (1f - a) * musicScale;
 
             yield return null;
         }
 
-        float finalScale = (_muteAll || _muteMusic) ? 0f : (_master01 * _music01);
-
+        float finalScale = GetMusicScale();
         if (to != null) to.volume = finalScale;
 
         if (from != null)
         {
             from.Stop();
-            from.clip   = null;
+            from.clip = null;
             from.volume = 0f;
         }
 
         _xfadeCo = null;
     }
 
-    private IEnumerator C0_FadeOutStop(AudioSource src, float dur)
+    private IEnumerator CO_FadeOut(AudioSource src, float dur)
     {
         if (src == null) yield break;
+
         float start = src.volume;
         float t = 0f;
-        dur = Mathf.Max(0.01f, dur);
 
         while (t < dur)
         {
@@ -510,62 +430,78 @@ public class AudioManager : MonoBehaviour
         }
 
         src.Stop();
-        src.clip   = null;
+        src.clip = null;
         src.volume = 0f;
     }
 
-    private IEnumerator C0_TempDuckMusic(float duckDb, float duration)
-    {
-        // If no mixer, just skip ducking
-        if (mixer == null || string.IsNullOrEmpty(musicVolParam)) yield break;
-
-        float original;
-        if (!mixer.GetFloat(musicVolParam, out original)) original = 0f;
-
-        float target = Mathf.Clamp(original + duckDb, -80f, 0f);
-
-        float t = 0f;
-        const float ease = 0.06f;
-        while (t < 1f)
-        {
-            t += Time.unscaledDeltaTime / ease;
-            mixer.SetFloat(musicVolParam, Mathf.Lerp(original, target, Mathf.SmoothStep(0, 1, t)));
-            yield return null;
-        }
-
-        yield return new WaitForSecondsRealtime(duration);
-
-        t = 0f;
-        while (t < 1f)
-        {
-            t += Time.unscaledDeltaTime / ease;
-            mixer.SetFloat(musicVolParam, Mathf.Lerp(target, original, Mathf.SmoothStep(0, 1, t)));
-            yield return null;
-        }
-        mixer.SetFloat(musicVolParam, original);
-    }
-
-    // ─────────────────────────────────────────────────────────── Auto Routing
+    // ─────────────────────────────────────────────────────────────
+    // UI / Battle-driven music switching
+    // ─────────────────────────────────────────────────────────────
     private void OnPanelChanged(PanelId id, bool opened)
     {
         if (!autoSwapForEncounter) return;
-        if (id == PanelId.Encounter) DecideMusicByState();
+
+        // Whenever these panels change, re-evaluate the music state.
+        if (id == PanelId.Encounter ||
+            id == PanelId.PostBattleSummary ||
+            id == PanelId.Home)
+        {
+            UpdateMusicForCurrentState();
+        }
     }
 
+    // If you ever hook EncounterManager state events, call this.
     private void OnEncounterStateChanged()
     {
         if (!autoSwapForEncounter) return;
-        DecideMusicByState();
+        UpdateMusicForCurrentState();
     }
 
-    private void DecideMusicByState()
+    private void UpdateMusicForCurrentState()
     {
-        bool inBattle      = EncounterManager.I != null && EncounterManager.I.IsInBattle;
-        bool encounterOpen = UIManager.I != null && UIManager.I.IsOpen(PanelId.Encounter);
+        var ui = UIManager.I;
 
+        bool inBattle      = EncounterManager.I != null && EncounterManager.I.IsInBattle;
+        bool encounterOpen = ui != null && ui.IsOpen(PanelId.Encounter);
+        bool summaryOpen   = ui != null && ui.IsOpen(PanelId.PostBattleSummary);
+
+        // 1) Post-battle summary → victory or defeat music
+        if (summaryOpen)
+        {
+            AudioClip clip = null;
+
+            if (_hasLastBattleResult)
+                clip = _lastBattleVictory ? victoryMusic : defeatMusic;
+
+            if (clip != null)
+            {
+                PlayMusic(clip, true, defaultCrossfade);
+            }
+            else if (startingMusic != null)
+            {
+                PlayMusic(startingMusic, true, defaultCrossfade);
+            }
+
+            return;
+        }
+
+        // 2) Battle music only when: encounter open, in battle, and no summary
         if (inBattle && encounterOpen && battleMusic != null)
-            PlayMusic(battleMusic, loop: true, crossfade: defaultCrossfade);
-        else if (startingMusic != null)
-            PlayMusic(startingMusic, loop: true, crossfade: defaultCrossfade);
+        {
+            PlayMusic(battleMusic, true, defaultCrossfade);
+            return;
+        }
+
+        // 3) Everything else → starting/home music
+        if (startingMusic != null)
+            PlayMusic(startingMusic, true, defaultCrossfade);
     }
+
+    public void RefreshMusicState()
+    {
+        UpdateMusicForCurrentState();
+    }
+
+    public void PlayClick() => PlaySfx(SfxType.Click);
+
 }

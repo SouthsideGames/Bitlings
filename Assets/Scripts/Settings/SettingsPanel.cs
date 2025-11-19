@@ -20,7 +20,11 @@ public class SettingsPanel : MonoBehaviour
     [Tooltip("If ON: the Battle Log scrolls to latest entry automatically.")]
     [SerializeField] private Toggle autoScrollLogToggle;
 
+    [Header("Buttons")]
     [SerializeField] private Button resetButton;
+
+    [Tooltip("Optional: plays a SFX so the player can hear the current volume.")]
+    [SerializeField] private Button testSfxButton;
 
     bool _wired;
 
@@ -31,6 +35,7 @@ public class SettingsPanel : MonoBehaviour
         if (sfxSlider)    { sfxSlider.minValue    = 0f; sfxSlider.maxValue    = 1f; }
 
         if (resetButton) resetButton.onClick.RemoveAllListeners();
+        if (testSfxButton) testSfxButton.onClick.RemoveAllListeners();
     }
 
     void Start()
@@ -54,6 +59,16 @@ public class SettingsPanel : MonoBehaviour
             });
         }
 
+        if (testSfxButton)
+        {
+            testSfxButton.onClick.RemoveAllListeners();
+            testSfxButton.onClick.AddListener(() =>
+            {
+                if (AudioManager.I != null)
+                    AudioManager.I.PreviewSfx(); // uses Click by default
+            });
+        }
+
         WireEvents();
     }
 
@@ -62,7 +77,10 @@ public class SettingsPanel : MonoBehaviour
         SafeUnsubscribe();
 
         if (resetButton) resetButton.onClick.RemoveAllListeners();
-        if (autoScrollLogToggle) autoScrollLogToggle.onValueChanged.RemoveListener(OnAutoScrollChanged);
+        if (testSfxButton) testSfxButton.onClick.RemoveAllListeners();
+
+        if (autoScrollLogToggle)
+            autoScrollLogToggle.onValueChanged.RemoveListener(OnAutoScrollChanged);
 
         UnwireEvents();
     }
@@ -185,13 +203,35 @@ public class SettingsPanel : MonoBehaviour
 
     // -------------- Handlers --------------
 
-    void OnMasterChanged(float v) { if (AudioManager.I) AudioManager.I.SetMasterVolume(v); }
-    void OnMusicChanged(float v)  { if (AudioManager.I) AudioManager.I.SetMusicVolume(v); }
-    void OnSfxChanged(float v)    { if (AudioManager.I) AudioManager.I.SetSfxVolume(v); }
+    void OnMasterChanged(float v)
+    {
+        if (AudioManager.I) AudioManager.I.SetMasterVolume(v);
+    }
 
-    void OnMuteAll(bool on)       { if (AudioManager.I) AudioManager.I.OnMuteAllToggle(on); }
-    void OnMuteMusic(bool on)     { if (AudioManager.I) AudioManager.I.OnMuteMusicToggle(on); }
-    void OnMuteSfx(bool on)       { if (AudioManager.I) AudioManager.I.OnMuteSfxToggle(on); }
+    void OnMusicChanged(float v)
+    {
+        if (AudioManager.I) AudioManager.I.SetMusicVolume(v);
+    }
+
+    void OnSfxChanged(float v)
+    {
+        if (AudioManager.I) AudioManager.I.SetSfxVolume(v);
+    }
+
+    void OnMuteAll(bool on)
+    {
+        if (AudioManager.I) AudioManager.I.OnMuteAllToggle(on);
+    }
+
+    void OnMuteMusic(bool on)
+    {
+        if (AudioManager.I) AudioManager.I.OnMuteMusicToggle(on);
+    }
+
+    void OnMuteSfx(bool on)
+    {
+        if (AudioManager.I) AudioManager.I.OnMuteSfxToggle(on);
+    }
 
     void OnAutoConvertDupesToggled(bool on)
     {

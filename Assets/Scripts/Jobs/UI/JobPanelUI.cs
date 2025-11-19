@@ -24,6 +24,9 @@ public class JobPanelUI : MonoBehaviour
         public JobSlotUI[] slots;
     }
 
+    [Header("Panel")]
+    [SerializeField] private PanelId panelId = PanelId.Home; 
+
     [SerializeField] private JobTile[] tiles;
 
     [Header("Visuals")]

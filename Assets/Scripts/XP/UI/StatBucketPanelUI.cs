@@ -7,8 +7,8 @@ public class StatBucketPanelUI : MonoBehaviour
 {
     [Header("UI - Header")]
     [SerializeField] private TextMeshProUGUI nameText;
-    [SerializeField] private TextMeshProUGUI pointsText;   // "Points used / unspent"
-    [SerializeField] private TextMeshProUGUI costText;     // "Next Lv: X / Y GC"
+    [SerializeField] private TextMeshProUGUI pointsText;   
+    [SerializeField] private TextMeshProUGUI costText;   
 
     [Header("UI - Buckets")]
     [SerializeField] private Button offenseBtn;
@@ -35,12 +35,12 @@ public class StatBucketPanelUI : MonoBehaviour
     [SerializeField] private Button spdPlus;
 
     [Header("UI - Footer")]
-    [SerializeField] private Button levelUpBtn;  // NEW: spend cores → level up
-    [SerializeField] private Button confirmBtn;  // apply stat allocation only
-    [SerializeField] private Button cancelBtn;
+    [SerializeField] private Button levelUpBtn;  
+    [SerializeField] private Button confirmBtn; 
+    [SerializeField] private Button closeBtn;
 
     [Header("Config")]
-    [SerializeField, Min(1)] private int pointsPerLevel = 3;  // stat points gained per level
+    [SerializeField, Min(1)] private int pointsPerLevel = 3; 
 
     private TokenEconomySO   tokenEconomy;
     private BucketLibrarySO  bucketLibrary;
@@ -49,14 +49,12 @@ public class StatBucketPanelUI : MonoBehaviour
     private OwnedMonsterData _m;
     private LevelUpBucketSO _bucket;
 
-    // current base stats at this level (computed from data)
     private int _baseHP, _baseATK, _baseDEF, _baseSPD;
 
-    // manual allocations in UI (session-only, in "point units")
     private int _allocHp, _allocAtk, _allocDef, _allocSpd;
 
-    private int _points;           // total points allocated this session (must be <= unspentStatPoints)
-    private int _nextCostToLevel;  // cores needed for next level
+    private int _points;          
+    private int _nextCostToLevel;  
 
     const string GREEN = "#3CDE74";
 
@@ -120,8 +118,10 @@ public class StatBucketPanelUI : MonoBehaviour
 
         if (levelUpBtn) levelUpBtn.onClick.AddListener(OnClickLevelUp);
         if (confirmBtn) confirmBtn.onClick.AddListener(ConfirmSpend);
-        if (cancelBtn)  cancelBtn.onClick.AddListener(() => gameObject.SetActive(false));
+        if (closeBtn)   closeBtn.onClick.AddListener(ClosePanel); 
     }
+
+    private void ClosePanel() => gameObject.SetActive(false);
 
     private void ClearAlloc()
     {
@@ -137,7 +137,7 @@ public class StatBucketPanelUI : MonoBehaviour
         return Mathf.Max(1, levelCostCurve.CoresToNextLevel(Mathf.Max(1, _m.level)));
     }
 
-   public void OpenFor(OwnedMonsterData m)
+    public void OpenFor(OwnedMonsterData m)
     {
         if (m == null || string.IsNullOrEmpty(m.monsterId))
         {
@@ -145,20 +145,17 @@ public class StatBucketPanelUI : MonoBehaviour
             return;
         }
 
-        // Always resolve to canonical save object
         _m = XPManager.Resolve(m);
 
         ComputeCurrentStats();
         ClearAlloc();
 
-        // Bucket selection
         if (bucketLibrary)
         {
             _bucket = bucketLibrary.GetById(_m.lastBucketId, bucketLibrary.DefaultBucket());
             if (!_bucket) _bucket = bucketLibrary.DefaultBucket();
         }
 
-        // Optional: name header
         var def = MonsterLibraryLocator.GetById(_m.monsterId);
         if (nameText)
             nameText.text = def ? def.displayName : _m.monsterId;
@@ -166,8 +163,6 @@ public class StatBucketPanelUI : MonoBehaviour
         gameObject.SetActive(true);
         RefreshUI();
     }
-
-
 
     private void ComputeCurrentStats()
     {
@@ -189,15 +184,11 @@ public class StatBucketPanelUI : MonoBehaviour
             _baseSPD = BattleCalc.CalcSpeed(def,   lvl);
         }
 
-        // ✅ add permanent growth
         _baseHP  += _m.trainingBonus.hp;
         _baseATK += _m.trainingBonus.atk;
         _baseDEF += _m.trainingBonus.def;
         _baseSPD += _m.trainingBonus.spd;
     }
-
-
-
 
     private void RefreshUI()
     {
@@ -210,7 +201,6 @@ public class StatBucketPanelUI : MonoBehaviour
         if (pointsText)
             pointsText.text = $"Points used: {_points}  •  Unspent: {remaining}";
 
-        // Growth cores for NEXT LEVEL
         int haveCores = ResourceManager.I ? ResourceManager.I.Get(ResourceType.GrowthCores) : 0;
         _nextCostToLevel = CalcNextCostForCurrentLevel();
 
@@ -222,7 +212,6 @@ public class StatBucketPanelUI : MonoBehaviour
                 costText.text = $"Next Lv: {haveCores}/{_nextCostToLevel} GC";
         }
 
-        // Show current stat plus green delta (converted via tokenEconomy)
         int hpDelta  = _allocHp  * (tokenEconomy ? tokenEconomy.hpPerCore  : 1);
         int atkDelta = _allocAtk * (tokenEconomy ? tokenEconomy.atkPerCore : 1);
         int defDelta = _allocDef * (tokenEconomy ? tokenEconomy.defPerCore : 1);
@@ -245,11 +234,9 @@ public class StatBucketPanelUI : MonoBehaviour
         if (defMinus) defMinus.interactable = _allocDef > 0;
         if (spdMinus) spdMinus.interactable = _allocSpd > 0;
 
-        // Confirm requires at least 1 allocated point
         if (confirmBtn)
             confirmBtn.interactable = _points > 0;
 
-        // Level-up button needs enough cores and not at cap
         if (levelUpBtn)
         {
             bool canLevel = _m != null
@@ -280,9 +267,8 @@ public class StatBucketPanelUI : MonoBehaviour
         int unspent = Mathf.Max(0, _m.unspentStatPoints);
         int remaining = Mathf.Max(0, unspent - _points);
 
-        // Increasing allocation
         if (delta > 0 && remaining <= 0)
-            return; // no stat points left
+            return;
 
         int next = field + delta;
         if (next < 0) return;
@@ -301,8 +287,6 @@ public class StatBucketPanelUI : MonoBehaviour
 
         if (_m != null)
             _m.lastBucketId = _bucket ? _bucket.bucketId : null;
-
-        // (Optional) highlight selected tab here.
     }
 
     // ─────────────────────────────────────────────────────────────
@@ -314,27 +298,59 @@ public class StatBucketPanelUI : MonoBehaviour
         if (_m == null || levelCostCurve == null) return;
         if (_m.level >= LevelRules.MaxLevel) return;
 
-        // 🔎 Make sure we're operating on the canonical instance
         _m = XPManager.Resolve(_m);
         if (_m == null) return;
 
-        // Run the centralized level-up (spends cores, adds points, clamps HP, saves)
         bool success = XPManager.TryManualLevelUp(
             _m,
             pointsPerLevel,
             levelCostCurve,
-            monsterLibrary: null // uses MonsterLibraryLocator internally
+            monsterLibrary: null
         );
 
         if (!success)
             return;
 
-        // Recompute and refresh UI
+        string key = !string.IsNullOrEmpty(_m.ownedUID)
+            ? _m.ownedUID
+            : _m.monsterId;
+
+        GameEvents.MonsterLeveled?.Invoke(key, _m.level);
+
         ComputeCurrentStats();
         _nextCostToLevel = CalcNextCostForCurrentLevel();
         RefreshUI();
+    }
 
-        // Extra sanity debug: look up the saved instance by ownedUID
+    // ─────────────────────────────────────────────────────────────
+    // Confirm stat allocation: spend stat points, no cores
+    // ─────────────────────────────────────────────────────────────
+
+    private void ConfirmSpend()
+    {
+        if (_m == null || _points <= 0)
+        {
+            gameObject.SetActive(false);
+            return;
+        }
+
+        _m = XPManager.Resolve(_m);
+        if (_m == null)
+        {
+            gameObject.SetActive(false);
+            return;
+        }
+
+        TrainingBonus delta = new TrainingBonus
+        {
+            hp  = _allocHp  * (tokenEconomy ? tokenEconomy.hpPerCore  : 1),
+            atk = _allocAtk * (tokenEconomy ? tokenEconomy.atkPerCore : 1),
+            def = _allocDef * (tokenEconomy ? tokenEconomy.defPerCore : 1),
+            spd = _allocSpd * (tokenEconomy ? tokenEconomy.spdPerCore : 1)
+        };
+
+        XPManager.ApplyTrainingAndSave(_m, delta);
+
         var data = SaveManager.Data;
         if (data != null && data.owned != null)
         {
@@ -351,52 +367,16 @@ public class StatBucketPanelUI : MonoBehaviour
 
             if (match != null)
             {
-                Debug.Log(
-                    $"[LEVEL UP] canonical level={_m.level}, " +
-                    $"savedMatchLevel={match.level}, " +
-                    $"sameRef={ReferenceEquals(_m, match)}"
-                );
-            }
-            else
-            {
-                Debug.Log("[LEVEL UP] WARNING: could not find matching owned monster in SaveManager.Data.owned");
+                match.unspentStatPoints -= _points;
+                if (match.unspentStatPoints < 0) match.unspentStatPoints = 0;
+
+                _m.unspentStatPoints = match.unspentStatPoints;
+
+                SaveManager.Save();
             }
         }
-    }
-
-
-
-    // ─────────────────────────────────────────────────────────────
-    // Confirm stat allocation: spend stat points, no cores
-    // ─────────────────────────────────────────────────────────────
-
-    private void ConfirmSpend()
-    {
-        if (_m == null || _points <= 0)
-        {
-            gameObject.SetActive(false);
-            return;
-        }
-
-        // Build TrainingBonus delta from allocated points
-        TrainingBonus delta = new TrainingBonus
-        {
-            hp  = _allocHp  * (tokenEconomy ? tokenEconomy.hpPerCore  : 1),
-            atk = _allocAtk * (tokenEconomy ? tokenEconomy.atkPerCore : 1),
-            def = _allocDef * (tokenEconomy ? tokenEconomy.defPerCore : 1),
-            spd = _allocSpd * (tokenEconomy ? tokenEconomy.spdPerCore : 1)
-        };
-
-        // Apply training via central manager
-        XPManager.ApplyTrainingAndSave(_m, delta);
-
-        _m.unspentStatPoints -= _points;
-        if (_m.unspentStatPoints < 0) _m.unspentStatPoints = 0;
 
         ComputeCurrentStats();
-
         gameObject.SetActive(false);
     }
-
-
 }

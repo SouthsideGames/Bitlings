@@ -19,6 +19,10 @@ public class TeamMonsterCardUI : MonoBehaviour
     [SerializeField] private int partialHealCost = 1;
     [SerializeField] private int fullHealCost = 3;
 
+    [Header("Evolution Alert")]
+    [Tooltip("Shown when this monster is eligible to evolve.")]
+    [SerializeField] private GameObject evolveAlert;   // assign a small icon GameObject in the prefab
+
     private OwnedMonsterData _data;
     private MonsterDataSO _def;
     private Action<OwnedMonsterData> _onClick;      // open detail
@@ -84,7 +88,10 @@ public class TeamMonsterCardUI : MonoBehaviour
 
     private void HandleResourcesChanged()
     {
+        // Team changed or resources changed: HP, heal button, and evo alert might need updating.
+        UpdateHpText();
         UpdateHealInteractable();
+        RefreshEvolutionAlert();
     }
 
     public void RefreshVisuals()
@@ -105,6 +112,7 @@ public class TeamMonsterCardUI : MonoBehaviour
 
         UpdateHpText();
         UpdateHealInteractable();
+        RefreshEvolutionAlert();
     }
 
     private void UpdateHpText()
@@ -137,6 +145,19 @@ public class TeamMonsterCardUI : MonoBehaviour
         healBtn.interactable = interactable;
     }
 
+    private void RefreshEvolutionAlert()
+    {
+        if (!evolveAlert) return;
+
+        bool show = false;
+        if (_data != null && _def != null)
+        {
+            show = EvolutionHelper.CanEvolve(_data, _def);
+        }
+
+        evolveAlert.SetActive(show);
+    }
+
     private void TryHeal(bool partial)
     {
         if (_def == null || _data == null) return;
@@ -160,13 +181,6 @@ public class TeamMonsterCardUI : MonoBehaviour
         _onAnyChanged?.Invoke();
     }
 
-    private int GetResource(ResourceType type)
-    {
-        return ResourceManager.I ? ResourceManager.I.Get(type) : 0;
-    }
-
-    private bool SpendResource(ResourceType type, int amount)
-    {
-        return ResourceManager.I && ResourceManager.I.TrySpend(type, amount);
-    }
+    private int GetResource(ResourceType type) =>ResourceManager.I ? ResourceManager.I.Get(type) : 0;
+    private bool SpendResource(ResourceType type, int amount) => ResourceManager.I && ResourceManager.I.TrySpend(type, amount);
 }

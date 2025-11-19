@@ -13,11 +13,11 @@ MonoBehaviour:
   m_Name: Defensive
   m_EditorClassIdentifier: 
   bucketId: Defense
-  icon: {fileID: 0}
-  description: Big chance to gain HP/DEF; low ATK/SPD.
-  picksPerLevel: 1
-  allowDuplicatePicks: 1
-  hpWeight: 1
+  description: Built for durability. Greatly increases DEF with strong HP support,
+    creating slow but tanky monsters
+  picksPerLevel: 2
+  allowDuplicatePicks: 0
+  hpWeight: 3
   atkWeight: 1
-  defWeight: 1
+  defWeight: 5
   spdWeight: 1

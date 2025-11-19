@@ -4,13 +4,7 @@ using UnityEngine;
 
 public static class EvolutionService
 {
-    /// <summary>
-    /// Evolves the specified owned instance to targetMonsterId.
-    /// - Finds (or inserts) the canonical entry in Data.owned by ownedUID.
-    /// - Optionally enforces "no duplicate species" by removing other instances of the target species.
-    /// - Updates any team slot that references the same ownedUID.
-    /// </summary>
-    public static bool EvolveOwnedInstance(OwnedMonsterData source, string targetMonsterId, bool allowDuplicateSpecies = false)
+     public static bool EvolveOwnedInstance(OwnedMonsterData source, string targetMonsterId, bool allowDuplicateSpecies = true)
     {
         var data = SaveManager.Data;
         if (data == null || source == null || string.IsNullOrEmpty(source.monsterId) || string.IsNullOrEmpty(targetMonsterId))
@@ -91,11 +85,8 @@ public static class EvolutionService
         return true;
     }
 
-    /// <summary>
-    /// Convenience: evolve based on library definition for a specific instance
-    /// if it meets the evolution level requirement.
-    /// </summary>
-    public static bool TryAutoEvolve(OwnedMonsterData owned, MonsterLibrarySO lib)
+
+   public static bool TryAutoEvolve(OwnedMonsterData owned, MonsterLibrarySO lib)
     {
         if (owned == null || string.IsNullOrEmpty(owned.monsterId) || lib == null) return false;
 
@@ -104,16 +95,14 @@ public static class EvolutionService
 
         if (def.evolutionForm && def.evolutionLevel > 0 && owned.level >= def.evolutionLevel)
         {
-            return EvolveOwnedInstance(owned, def.evolutionForm.id, allowDuplicateSpecies: false);
+            // ✅ Allow duplicates now.
+            return EvolveOwnedInstance(owned, def.evolutionForm.id, allowDuplicateSpecies: true);
         }
         return false;
     }
 
     // ---------- helpers ----------
 
-    /// <summary>
-    /// Clears team slots for a specific owned instance (by reference or ownedUID).
-    /// </summary>
     private static void ClearTeamSlotsForInstance(OwnedMonsterData target)
     {
         var data = SaveManager.Data;

@@ -13,11 +13,11 @@ MonoBehaviour:
   m_Name: Offensive
   m_EditorClassIdentifier: 
   bucketId: Offense
-  icon: {fileID: 0}
-  description: Large chance to gain ATK; modest SPD; rare HP/DEF.
-  picksPerLevel: 1
+  description: Prioritizes raw damage output. Strong focus on ATK gains with minimal
+    emphasis on HP, DEF, or SPD.
+  picksPerLevel: 3
   allowDuplicatePicks: 1
   hpWeight: 1
-  atkWeight: 1
+  atkWeight: 5
   defWeight: 1
   spdWeight: 1

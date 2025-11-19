@@ -13,11 +13,11 @@ MonoBehaviour:
   m_Name: Utility
   m_EditorClassIdentifier: 
   bucketId: Utility
-  icon: {fileID: 0}
-  description: Even spread with a slight SPD bias
-  picksPerLevel: 1
-  allowDuplicatePicks: 1
-  hpWeight: 1
+  description: "Focuses on survivability and consistency. Prefers HP and SPD increases
+    with modest DEF and minimal ATK growth \u2014 ideal for support-oriented monsters"
+  picksPerLevel: 2
+  allowDuplicatePicks: 0
+  hpWeight: 4
   atkWeight: 1
-  defWeight: 1
-  spdWeight: 1
+  defWeight: 3
+  spdWeight: 4

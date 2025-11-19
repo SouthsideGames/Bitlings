@@ -6,7 +6,7 @@ using System.Collections.Generic;
 public class JobAssignPanelUI : MonoBehaviour
 {
     [Header("Panel")]
-    [SerializeField] private PanelId panelId = PanelId.JobAssign; // centralize open/close via UIManager
+    [SerializeField] private PanelId panelId = PanelId.JobAssign; 
 
     [Header("Wiring")]
     [SerializeField] private Image currentImage;

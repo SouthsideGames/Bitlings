@@ -10,18 +10,17 @@ public class OwnedMonsterListItemUI : MonoBehaviour
     [SerializeField] private TextMeshProUGUI nameText;
     [SerializeField] private TextMeshProUGUI idText;
     [SerializeField] private Button rootButton;
-
-    [Tooltip("Countdown text that shows when a KO'd monster will be usable again.")]
     [SerializeField] private TextMeshProUGUI cooldownText;
+
+    [Header("Evolution Alert")]
+    [SerializeField] private GameObject evolveAlert;
 
     [Header("Detail Panel (Assign Mode)")]
     [SerializeField] private MonsterDetailPanelUI detailPanel;
 
-    // data
     private OwnedMonsterData _data;
     private MonsterDataSO _def;
 
-    // refresh cadence for countdown (seconds)
     private float _nextUiRefreshAt;
 
     void Awake()
@@ -36,18 +35,27 @@ public class OwnedMonsterListItemUI : MonoBehaviour
             rootButton.onClick.RemoveAllListeners();
             rootButton.onClick.AddListener(OnClickOpenDetails);
         }
+
+        if (evolveAlert)
+            evolveAlert.SetActive(false);
+
+        GameEvents.MonsterLeveled -= HandleMonsterLeveled;
+        GameEvents.MonsterLeveled += HandleMonsterLeveled;
+    }
+
+    private void OnDestroy()
+    {
+        GameEvents.MonsterLeveled -= HandleMonsterLeveled;
     }
 
     void OnDisable()
     {
-        // stop any residual countdown flicker when pooled/disabled
         _nextUiRefreshAt = 0f;
         if (cooldownText) cooldownText.gameObject.SetActive(false);
     }
 
     void Update()
     {
-        // While KO'd, update the countdown ~1Hz
         if (!HasValidMonster(_data)) return;
         if (IsUsable(_data)) return;
 
@@ -58,9 +66,6 @@ public class OwnedMonsterListItemUI : MonoBehaviour
         }
     }
 
-    // ─────────────────────────────────────────────────────────────
-    // Public API
-    // ─────────────────────────────────────────────────────────────
     public void Setup(OwnedMonsterData data)
     {
         var def = HasValidMonster(data) ? MonsterLibraryLocator.GetById(data.monsterId) : null;
@@ -72,7 +77,6 @@ public class OwnedMonsterListItemUI : MonoBehaviour
         _data = data;
         _def  = def;
 
-        // Icon
         if (icon)
         {
             if (def && def.icon)
@@ -87,7 +91,6 @@ public class OwnedMonsterListItemUI : MonoBehaviour
             }
         }
 
-        // Text
         if (nameText)
             nameText.text = def
                 ? (string.IsNullOrEmpty(def.displayName) ? def.name : def.displayName)
@@ -96,24 +99,20 @@ public class OwnedMonsterListItemUI : MonoBehaviour
         if (idText)
             idText.text = HasValidMonster(data) ? data.monsterId : "—";
 
-        // Apply unified state (interactable + visuals + countdown)
         ApplyState();
 
-        // Force an immediate countdown render when KO
         _nextUiRefreshAt = 0f;
         if (!IsUsable(_data)) UpdateKOCountdown();
+
+        RefreshEvolutionAlert();
     }
 
-    /// <summary>Manually toggle base interactivity (still respects KO lock).</summary>
     public void SetInteractable(bool on)
     {
         if (rootButton) rootButton.interactable = on && IsUsable(_data);
-        ApplyKOVisualsOnly(); // keep visuals consistent
+        ApplyKOVisualsOnly();
     }
 
-    // ─────────────────────────────────────────────────────────────
-    // Click
-    // ─────────────────────────────────────────────────────────────
     private void OnClickOpenDetails()
     {
         if (detailPanel == null)
@@ -123,26 +122,19 @@ public class OwnedMonsterListItemUI : MonoBehaviour
         }
 
         if (!HasValidMonster(_data)) return;
-        if (!IsUsable(_data))
-        {
-            // Optional: Toast "Monster is KO’d — heal or wait for regen."
-            return;
-        }
+        if (!IsUsable(_data)) return;
 
         detailPanel.ShowAssign(_data);
     }
 
-    // ─────────────────────────────────────────────────────────────
-    // State/Visuals
-    // ─────────────────────────────────────────────────────────────
     private void ApplyState()
     {
-        // Button interactable gates everything through IsUsable
         if (rootButton) rootButton.interactable = HasValidMonster(_data) && IsUsable(_data);
 
-        // Visuals / countdown
         ApplyKOVisualsOnly();
         if (!IsUsable(_data)) UpdateKOCountdown();
+
+        RefreshEvolutionAlert();
     }
 
     private void ApplyKOVisualsOnly()
@@ -164,9 +156,24 @@ public class OwnedMonsterListItemUI : MonoBehaviour
         cooldownText.text = ok ? FormatETA(eta) : "Healing…";
     }
 
-    // ─────────────────────────────────────────────────────────────
-    // Helpers
-    // ─────────────────────────────────────────────────────────────
+    private void RefreshEvolutionAlert()
+    {
+        if (!evolveAlert) return;
+
+        var def = _def;
+        if (def == null && HasValidMonster(_data))
+        {
+            def = MonsterLibraryLocator.GetById(_data.monsterId);
+            _def = def;
+        }
+
+        bool show = false;
+        if (_data != null && def != null)
+            show = EvolutionHelper.CanEvolve(_data, def);
+
+        evolveAlert.SetActive(show);
+    }
+
     private static bool HasValidMonster(OwnedMonsterData d)
     {
         return d != null && !string.IsNullOrEmpty(d.monsterId);
@@ -174,16 +181,9 @@ public class OwnedMonsterListItemUI : MonoBehaviour
 
     private static bool IsUsable(OwnedMonsterData d)
     {
-        // HP == 0 → KO (not usable)
-        // HP  > 0 → usable
-        // HP == -1 → uninitialized (treat as full/usable per team rules)
         return HasValidMonster(d) && d.currentHP != 0;
     }
 
-    /// <summary>
-    /// Calculates the ETA until +1 HP via passive regen.
-    /// Mirrors HealthRegenSystem integer tick behavior.
-    /// </summary>
     private static (bool ok, TimeSpan eta) TryGetETAForNextHP(OwnedMonsterData d, MonsterDataSO def)
     {
         if (!HasValidMonster(d)) return (false, TimeSpan.Zero);
@@ -192,7 +192,7 @@ public class OwnedMonsterListItemUI : MonoBehaviour
         if (def && def.hpRegenPerHour > 0f)
             perHour = def.hpRegenPerHour;
         else
-            perHour = HealthRegenSystem.GetDefaultRegenPerHour(); // accessor provided in HealthRegenSystem
+            perHour = HealthRegenSystem.GetDefaultRegenPerHour();
 
         if (perHour <= 0.0001f) return (false, TimeSpan.Zero);
 
@@ -211,5 +211,22 @@ public class OwnedMonsterListItemUI : MonoBehaviour
         if (span.TotalHours >= 1.0)
             return $"{(int)span.TotalHours}:{span.Minutes:00}:{span.Seconds:00}";
         return $"{span.Minutes:D2}:{span.Seconds:D2}";
+    }
+
+    private void HandleMonsterLeveled(string ownedIdOrDefId, int newLevel)
+    {
+        if (_data == null)
+            return;
+
+        string myKey = !string.IsNullOrEmpty(_data.ownedUID)
+            ? _data.ownedUID
+            : _data.monsterId;
+
+        if (myKey != ownedIdOrDefId)
+            return;
+
+        _data.level = newLevel;
+
+        ApplyState();
     }
 }

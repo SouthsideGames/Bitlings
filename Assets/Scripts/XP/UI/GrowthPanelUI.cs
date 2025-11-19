@@ -226,9 +226,5 @@ public sealed class GrowthPanelUI : MonoBehaviour
         var def = GetDefinition(model.monsterId);
         statPanel.OpenFor(model);
 
-        // When the player spends cores and levels up in StatBucketPanelUI,
-        // it modifies the same OwnedMonsterData instance that this row is bound to.
-        // The next time this panel is shown or refreshed, the level list will
-        // read the updated level directly from save.
     }
 }

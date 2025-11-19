@@ -13,11 +13,11 @@ MonoBehaviour:
   m_Name: Balance
   m_EditorClassIdentifier: 
   bucketId: Balance
-  icon: {fileID: 0}
-  description: Uniform odds.
-  picksPerLevel: 1
+  description: "A perfectly even spread of stat growth. No strengths, no weaknesses
+    \u2014 each level grants uniform chances for HP, ATK, DEF, and SPD increases."
+  picksPerLevel: 2
   allowDuplicatePicks: 1
-  hpWeight: 1
-  atkWeight: 1
-  defWeight: 1
-  spdWeight: 1
+  hpWeight: 3
+  atkWeight: 3
+  defWeight: 3
+  spdWeight: 3

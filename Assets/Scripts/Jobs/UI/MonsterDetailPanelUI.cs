@@ -44,7 +44,7 @@ public class MonsterDetailPanelUI : MonoBehaviour
     [SerializeField] private CanvasGroup canvasGroup;
 
     [Header("Titles (Tag Button hosts TitleButtonUI)")]
-    [SerializeField] private TitleButtonUI titleButton; // Drag the Tag button's TitleButtonUI here
+    [SerializeField] private TitleButtonUI titleButton;
 
     [Header("Type Matchups (Icons Only)")]
     [SerializeField] private Transform strongIconHolder;
@@ -52,7 +52,6 @@ public class MonsterDetailPanelUI : MonoBehaviour
     [SerializeField] private GameObject typeIconPrefab;
     [SerializeField] private TypeIconLibrary typeIconLibrary;
 
-    // ===== Mode Holders =====
     [Header("Mode Holders")]
     [SerializeField] private GameObject starterButtonsHolder;
     [SerializeField] private GameObject slotButtonsHolder;
@@ -64,11 +63,14 @@ public class MonsterDetailPanelUI : MonoBehaviour
     [SerializeField] private Button slot2Button;
     [SerializeField] private Button slot3Button;
 
-    // ===== Team Holder Buttons =====
     [Header("Team Holder Buttons")]
     [SerializeField] private Button removeButton;
 
-    // ===== Build Safe Mode (Isolation) =====
+    [Header("Evolution")]
+    [Tooltip("Shown in AssignToTeam mode when this owned monster can evolve.")]
+    [SerializeField] private Button evolveButton;
+    [SerializeField] private EvolutionPanelUI evolutionPanel;
+
     [Header("Build Safe Mode (Isolation)")]
     [SerializeField] private bool safeSkipStats = true;
     [SerializeField] private bool safeSkipEvolution = false;
@@ -87,7 +89,6 @@ public class MonsterDetailPanelUI : MonoBehaviour
     private Action<MonsterDataSO> onConfirm;
     private Action onCancel;
 
-    // Team context
     private int _teamSlotIndex = -1;
     private Action _onRemoved;
 
@@ -133,11 +134,21 @@ public class MonsterDetailPanelUI : MonoBehaviour
         if (slot3Button)   { slot3Button.onClick.RemoveAllListeners();   slot3Button.onClick.AddListener(() => AssignToSlot(2)); }
         if (removeButton)  { removeButton.onClick.RemoveAllListeners();  removeButton.onClick.AddListener(RemoveFromTeam); }
 
+        if (evolveButton)
+        {
+            evolveButton.onClick.RemoveAllListeners();
+            evolveButton.onClick.AddListener(OnClickEvolve);
+        }
+
         ResolveTitleButton();
 
-        // Keep the title button text hot while panel lives
         TitleAssignPanelUI.OnTitlesChanged -= HandleTitlesChanged;
         TitleAssignPanelUI.OnTitlesChanged += HandleTitlesChanged;
+
+        GameEvents.MonsterLeveled  -= HandleMonsterLeveled;
+        GameEvents.MonsterLeveled  += HandleMonsterLeveled;
+        GameEvents.MonsterEvolved  -= HandleMonsterEvolved;
+        GameEvents.MonsterEvolved  += HandleMonsterEvolved;
     }
 
     private void OnDisable() => ResetVisualsImmediate();
@@ -145,11 +156,10 @@ public class MonsterDetailPanelUI : MonoBehaviour
     private void OnDestroy()
     {
         TitleAssignPanelUI.OnTitlesChanged -= HandleTitlesChanged;
+        GameEvents.MonsterLeveled          -= HandleMonsterLeveled;
+        GameEvents.MonsterEvolved          -= HandleMonsterEvolved;
     }
 
-    // ─────────────────────────────────────────────────────────────
-    // PUBLIC API
-    // ─────────────────────────────────────────────────────────────
     public void Show(MonsterDataSO monster, Action<MonsterDataSO> onConfirmCallback, Action onCancelCallback = null)
     {
         _mode = MonsterDetailMode.StarterSelect;
@@ -161,9 +171,9 @@ public class MonsterDetailPanelUI : MonoBehaviour
         onConfirm = onConfirmCallback;
         onCancel  = onCancelCallback;
 
-        // Hide title button in starter flow
         if (titleButton) titleButton.gameObject.SetActive(false);
 
+        RefreshEvolveButton();
         SafeOpen(monster);
     }
 
@@ -187,6 +197,7 @@ public class MonsterDetailPanelUI : MonoBehaviour
         onCancel  = null;
 
         UpdateTitleButtonBinding();
+        RefreshEvolveButton();
         SafeOpen(current);
     }
 
@@ -198,7 +209,6 @@ public class MonsterDetailPanelUI : MonoBehaviour
         _teamSlotIndex = Mathf.Clamp(slotIndex, 0, 2);
         _onRemoved = onRemoved;
 
-        // ✅ use the real object, no copy
         _currentOwned = member;
 
         current   = MonsterLibraryLocator.GetById(_currentOwned.monsterId);
@@ -206,9 +216,9 @@ public class MonsterDetailPanelUI : MonoBehaviour
         onCancel  = null;
 
         UpdateTitleButtonBinding();
+        RefreshEvolveButton();
         SafeOpen(current);
     }
-
 
     public void Hide()
     {
@@ -232,17 +242,13 @@ public class MonsterDetailPanelUI : MonoBehaviour
         if (closeButton) closeButton.gameObject.SetActive(false);
     }
 
-    // ─────────────────────────────────────────────────────────────
-    // Open flow (staged)
-    // ─────────────────────────────────────────────────────────────
     private void SafeOpen(MonsterDataSO monster)
     {
         if (monster == null) return;
 
-        // ensure object is active before coroutines
         if (!gameObject.activeInHierarchy)
         {
-            if (canvasGroup) canvasGroup.alpha = 0f; // prevent flash
+            if (canvasGroup) canvasGroup.alpha = 0f;
             OpenSelf();
         }
 
@@ -252,16 +258,12 @@ public class MonsterDetailPanelUI : MonoBehaviour
             _stageCR = null;
         }
 
-        _stage = RenderStage.Header; // start staged flow
+        _stage = RenderStage.Header;
         _stageCR = StartCoroutine(CoRenderStaged(monster));
     }
 
-    // ─────────────────────────────────────────────────────────────
-    // Internal staged render
-    // ─────────────────────────────────────────────────────────────
     private IEnumerator CoRenderStaged(MonsterDataSO monster)
     {
-        // FRAME 1: header only (zero risk)
         if (_stage == RenderStage.Header)
         {
             TryStep("Header & Static Fields", () =>
@@ -295,7 +297,6 @@ public class MonsterDetailPanelUI : MonoBehaviour
                     }
                 }
 
-                // holder visibility
                 bool isAssign    = (_mode == MonsterDetailMode.AssignToTeam);
                 bool isTeamView  = isAssign && _teamSlotIndex >= 0;
                 bool isOwnedPick = isAssign && _teamSlotIndex < 0;
@@ -304,13 +305,10 @@ public class MonsterDetailPanelUI : MonoBehaviour
                 if (teamHolder)           teamHolder.SetActive(isTeamView);
                 if (closeButton)          closeButton.gameObject.SetActive(isAssign);
 
-                // Disable slot buttons if KO when picking from owned
                 SetSlotButtonsInteractable(isOwnedPick && !IsKO());
 
-                // Bind/mask Title button based on mode/ownership
                 UpdateTitleButtonBinding();
 
-                // Job Sites (canonical source)
                 RenderJobSites(monster);
 
                 OpenSelf();
@@ -321,7 +319,6 @@ public class MonsterDetailPanelUI : MonoBehaviour
             yield return null;
         }
 
-        // FRAME 2: stats/evo (guarded)
         if (_stage == RenderStage.StatsEvo)
         {
             TryStep("Stats & Evo", () =>
@@ -329,7 +326,6 @@ public class MonsterDetailPanelUI : MonoBehaviour
                 int dispLvl = GetDisplayLevel();
                 if (lvlText) lvlText.text = $"LVL: {dispLvl}";
 
-                // Max stats
                 int maxHP = 0, atkL = 0, defL = 0; float spd = 0f;
                 if (!safeSkipStats && current)
                 {
@@ -344,7 +340,6 @@ public class MonsterDetailPanelUI : MonoBehaviour
                     spd  = current ? current.baseSpeed : 0f;
                 }
 
-                // Current HP for assign mode
                 int curHP = maxHP;
                 if (_mode == MonsterDetailMode.AssignToTeam && _currentOwned != null && !string.IsNullOrEmpty(_currentOwned.monsterId))
                     curHP = Mathf.Clamp(_currentOwned.currentHP < 0 ? maxHP : _currentOwned.currentHP, 0, maxHP);
@@ -364,13 +359,14 @@ public class MonsterDetailPanelUI : MonoBehaviour
                 if (spdText) spdText.text = current ? $"SPD: {spd:0.##}" : "SPD: —";
 
                 if (evoText) evoText.text = (!safeSkipEvolution) ? BuildEvolutionLine(current) : "EVO: —";
+
+                RefreshEvolveButton();
             });
 
             _stage = RenderStage.Description;
             yield return null;
         }
 
-        // FRAME 3: description (TMP worst-case)
         if (_stage == RenderStage.Description)
         {
             TryStep("Description", () =>
@@ -383,7 +379,6 @@ public class MonsterDetailPanelUI : MonoBehaviour
             yield return null;
         }
 
-        // FRAME 4: type icons (sprite lookups)
         if (_stage == RenderStage.TypeIcons)
         {
             TryStep("Type Matchup Icons", () =>
@@ -407,9 +402,6 @@ public class MonsterDetailPanelUI : MonoBehaviour
         _stageCR = null;
     }
 
-    // ─────────────────────────────────────────────────────────────
-    // Button handlers
-    // ─────────────────────────────────────────────────────────────
     private void Confirm()
     {
         TryStep("Confirm", () =>
@@ -446,7 +438,6 @@ public class MonsterDetailPanelUI : MonoBehaviour
             return;
         }
 
-        // Hard stop: cannot assign KO'd monster
         if (_currentOwned.currentHP == 0)
         {
             Debug.LogWarning("[MonsterDetailPanel] Cannot assign a KO'd monster. Heal or wait for regen first.");
@@ -465,10 +456,8 @@ public class MonsterDetailPanelUI : MonoBehaviour
         var team = data.team ?? new List<OwnedMonsterData>();
         while (team.Count < 3) team.Add(new OwnedMonsterData());
 
-        // Use the canonical owned entry if possible (duplicate-safe)
         var canonical = XPManager.Resolve(_currentOwned) ?? _currentOwned;
 
-        // Point the team slot at this monster (keep all fields: titles, training, etc.)
         team[slotIndex] = canonical;
 
         data.team = team;
@@ -477,7 +466,6 @@ public class MonsterDetailPanelUI : MonoBehaviour
 
         Hide();
     }
-
 
     private void RemoveFromTeam()
     {
@@ -496,9 +484,6 @@ public class MonsterDetailPanelUI : MonoBehaviour
         Hide();
     }
 
-    // ─────────────────────────────────────────────────────────────
-    // Helpers
-    // ─────────────────────────────────────────────────────────────
     private void OpenSelf()
     {
         if (_visible) return;
@@ -558,8 +543,9 @@ public class MonsterDetailPanelUI : MonoBehaviour
 
         if (!UIManager.I) gameObject.SetActive(false);
 
-        // Hide the Title button on reset
         if (titleButton) titleButton.gameObject.SetActive(false);
+
+        if (evolveButton) evolveButton.gameObject.SetActive(false);
 
         _visible = UIManager.I && selfPanelId != PanelId.None ? _visible : false;
     }
@@ -633,9 +619,21 @@ public class MonsterDetailPanelUI : MonoBehaviour
         return 1;
     }
 
-    // ─────────────────────────────────────────────────────────────
-    // Titles wiring
-    // ─────────────────────────────────────────────────────────────
+    private void RefreshEvolveButton()
+    {
+        if (!evolveButton)
+            return;
+
+        bool canShow = (_mode == MonsterDetailMode.AssignToTeam)
+                       && _currentOwned != null
+                       && !string.IsNullOrEmpty(_currentOwned.monsterId)
+                       && current != null
+                       && EvolutionHelper.CanEvolve(_currentOwned, current);
+
+        evolveButton.gameObject.SetActive(canShow);
+        evolveButton.interactable = canShow;
+    }
+
     private void ResolveTitleButton()
     {
         if (titleButton) return;
@@ -656,12 +654,11 @@ public class MonsterDetailPanelUI : MonoBehaviour
 
         int lvl = GetDisplayLevel();
         titleButton.Bind(_currentOwned.monsterId, current, lvl);
-        titleButton.RefreshLabel(); // ensure label shows titleId or UNEMPLOYED immediately
+        titleButton.RefreshLabel();
     }
 
     private void HandleTitlesChanged(string ownedId)
     {
-        // Only refresh if this panel is showing the same owned monster
         if (_currentOwned != null
             && !string.IsNullOrEmpty(_currentOwned.monsterId)
             && _currentOwned.monsterId == ownedId)
@@ -670,9 +667,6 @@ public class MonsterDetailPanelUI : MonoBehaviour
         }
     }
 
-    // ─────────────────────────────────────────────────────────────
-    // Job Site rendering (single source of truth via JobBalance)
-    // ─────────────────────────────────────────────────────────────
     private void RenderJobSites(MonsterDataSO monster)
     {
         if (!jobSiteText) return;
@@ -686,9 +680,6 @@ public class MonsterDetailPanelUI : MonoBehaviour
             : "Job Site: —";
     }
 
-    // ─────────────────────────────────────────────────────────────
-    // Local helpers
-    // ─────────────────────────────────────────────────────────────
     private bool IsKO()
     {
         return _mode == MonsterDetailMode.AssignToTeam
@@ -702,5 +693,62 @@ public class MonsterDetailPanelUI : MonoBehaviour
         if (slot1Button) slot1Button.interactable = on;
         if (slot2Button) slot2Button.interactable = on;
         if (slot3Button) slot3Button.interactable = on;
+    }
+
+    private void OnClickEvolve()
+    {
+        if (_mode != MonsterDetailMode.AssignToTeam)
+            return;
+
+        if (_currentOwned == null || string.IsNullOrEmpty(_currentOwned.monsterId))
+            return;
+
+        if (!evolutionPanel)
+        {
+            Debug.LogWarning("[MonsterDetailPanelUI] EvolutionPanelUI reference is missing.");
+            return;
+        }
+
+        evolutionPanel.Open(_currentOwned);
+    }
+
+    private void HandleMonsterLeveled(string ownedIdOrDefId, int newLevel)
+    {
+        if (_currentOwned == null || string.IsNullOrEmpty(_currentOwned.monsterId))
+            return;
+
+        string myKey = !string.IsNullOrEmpty(_currentOwned.ownedUID)
+            ? _currentOwned.ownedUID
+            : _currentOwned.monsterId;
+
+        if (myKey != ownedIdOrDefId)
+            return;
+
+        _currentOwned.level = newLevel;
+
+        if (lvlText)
+            lvlText.text = $"LVL: {GetDisplayLevel()}";
+
+        RefreshEvolveButton();
+    }
+
+    private void HandleMonsterEvolved(string newDefId)
+    {
+        if (!_visible) return;
+        if (_mode != MonsterDetailMode.AssignToTeam) return;
+        if (_currentOwned == null) return;
+
+        var resolved = XPManager.Resolve(_currentOwned) ?? _currentOwned;
+        _currentOwned = resolved;
+
+        if (string.IsNullOrEmpty(_currentOwned.monsterId))
+            return;
+
+        current = MonsterLibraryLocator.GetById(_currentOwned.monsterId);
+        if (!current) return;
+
+        UpdateTitleButtonBinding();
+        RefreshEvolveButton();
+        SafeOpen(current);
     }
 }
