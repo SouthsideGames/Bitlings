@@ -11,7 +11,7 @@ public enum PanelId
     Home,
     Resources,
     Upgrades,
-    Monsters,
+    MonsterBox,
     JobAssign,
     Harbor,
     CryoLab,
