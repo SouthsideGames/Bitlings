@@ -914,9 +914,11 @@ public class BattleManager : MonoBehaviour
         int growthCoreTitleBonus = 0;
         int growthCoreTotal = 0;
 
+        // single SaveManager.Data alias for this method
+        var data = SaveManager.Data;
+
         if (victory)
         {
-            var data = SaveManager.Data;
             var m = (data != null && data.team != null && activeIndex >= 0 && activeIndex < data.team.Count)
                 ? data.team[activeIndex]
                 : default;
@@ -938,52 +940,61 @@ public class BattleManager : MonoBehaviour
         }
 
         // Persist HP results
-        var data     = SaveManager.Data;
-        var teamList = data.team ?? new List<OwnedMonsterData>();
+        var teamList  = data != null && data.team  != null ? data.team  : new List<OwnedMonsterData>();
+        var ownedList = data != null && data.owned != null ? data.owned : new List<OwnedMonsterData>();
         long nowUnix = SaveManager.NowUnix();
 
-        // 1) Push runtime HP into team entries and their canonical save entries
+        // 1) write HP back into team list
         for (int i = 0; i < teamCount && i < teamList.Count; i++)
         {
             var t = teamList[i];
             if (t == null || string.IsNullOrEmpty(t.monsterId)) continue;
-
             int hp = Mathf.CeilToInt(Mathf.Max(0f, teamHP[i]));
-            t.currentHP  = hp;
-            t.lastHPUnix = nowUnix;
-
-            // write back into team list
+            t.currentHP = hp;
             teamList[i] = t;
+        }
 
-            // write into canonical (owned list) if this is a copy
-            var canonical = XPManager.Resolve(t);
-            if (canonical != null && !ReferenceEquals(canonical, t))
+        // 2) mirror those HP values into owned list
+        for (int i = 0; i < teamList.Count; i++)
+        {
+            var t = teamList[i];
+            if (t == null || string.IsNullOrEmpty(t.monsterId)) continue;
+
+            for (int j = 0; j < ownedList.Count; j++)
             {
-                canonical.currentHP  = t.currentHP;
-                canonical.lastHPUnix = nowUnix;
+                var o = ownedList[j];
+                if (!string.IsNullOrEmpty(o.monsterId) && o.monsterId == t.monsterId)
+                {
+                    o.currentHP = Mathf.Max(0, t.currentHP);
+                    o.lastHPUnix = nowUnix;
+                    ownedList[j] = o;
+                    break;
+                }
             }
         }
 
-        // 2) Clear fainted team slots, but keep box entries (just with HP = 0)
+        // 3) clear KO’d team slots
         for (int i = 0; i < teamList.Count; i++)
         {
             var e = teamList[i];
             if (e == null || string.IsNullOrEmpty(e.monsterId)) continue;
 
-            // lastHPUnix should already be set above for active ones, but ensure
-            if (e.lastHPUnix == 0)
-                e.lastHPUnix = nowUnix;
+            e.lastHPUnix = nowUnix;
 
             if (e.currentHP <= 0)
-                teamList[i] = new OwnedMonsterData(); // empty slot
+                teamList[i] = new OwnedMonsterData();
             else
                 teamList[i] = e;
         }
 
-        data.team = teamList;
-        SaveManager.Save();
-        GameEvents.OnTeamChanged?.Invoke();
+        if (data != null)
+        {
+            data.owned = ownedList;
+            data.team  = teamList;
+            SaveManager.Save();
+        }
 
+        GameEvents.OnTeamChanged?.Invoke();
 
         // Clear temporary buffs
         BattleTempBuffs.I?.ClearPlayerAtkBonus();
@@ -1011,7 +1022,7 @@ public class BattleManager : MonoBehaviour
         onEnd?.Invoke(result);
 
         bool isAuto = EncounterManager.I && EncounterManager.I.IsAutoMode;
-       PostBattleSummaryManager.I?.NotifyBattleEnd(
+        PostBattleSummaryManager.I?.NotifyBattleEnd(
             result,
             isAuto,
             growthCoreTotal,
@@ -1022,13 +1033,14 @@ public class BattleManager : MonoBehaviour
             levelUpSummaries: null,
             coinsBase: baseCoins,
             coinsTitleBonus: coinTitleBonus,
-            growthCoresBase: growthCoreTotal - growthCoreTitleBonus, // or baseAfterShiny
+            growthCoresBase: growthCoreTotal - growthCoreTitleBonus, // baseAfterShiny equivalent
             growthCoresTitleBonus: growthCoreTitleBonus,
             growthCoresDetailLines: new List<string> { $"Gained {growthCoreTotal} Growth Cores." }
         );
 
         GameEvents.BattleFinished?.Invoke(result);
     }
+
 
     private void ClampAndPushActiveHP()
     {
