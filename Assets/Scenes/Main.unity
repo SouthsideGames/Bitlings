@@ -10402,10 +10402,108 @@ MonoBehaviour:
   catalog:
   - type: 1
     clips:
-    - {fileID: 0}
+    - {fileID: 8300000, guid: f6ef4a451528d47e98b6133f95a4c7ea, type: 3}
     volume: 0.5
     pitchMin: 1
     pitchMax: 1
+    cooldown: 0
+  - type: 2
+    clips:
+    - {fileID: 8300000, guid: be5eb5023129e440984740c8b298e1f9, type: 3}
+    volume: 0.5
+    pitchMin: 0.85
+    pitchMax: 1.05
+    cooldown: 0
+  - type: 3
+    clips:
+    - {fileID: 8300000, guid: a76c01cfd32c14a8494b581bdac2a902, type: 3}
+    volume: 0.5
+    pitchMin: 0.85
+    pitchMax: 1.05
+    cooldown: 0
+  - type: 15
+    clips:
+    - {fileID: 8300000, guid: 42cf980de39ae42cba4f503916ec84d4, type: 3}
+    volume: 0.5
+    pitchMin: 0.85
+    pitchMax: 1.05
+    cooldown: 0
+  - type: 16
+    clips:
+    - {fileID: 8300000, guid: 1891c5dbf7da24e7e9c8ece542fbcaec, type: 3}
+    volume: 0.5
+    pitchMin: 0.85
+    pitchMax: 1.05
+    cooldown: 0
+  - type: 5
+    clips:
+    - {fileID: 8300000, guid: a0c29cb2b613f40db8af8043cb661d63, type: 3}
+    volume: 0.5
+    pitchMin: 0.85
+    pitchMax: 1.05
+    cooldown: 0
+  - type: 17
+    clips:
+    - {fileID: 8300000, guid: 57f98be679fe74c4ba2ff9bad92aa313, type: 3}
+    volume: 0.5
+    pitchMin: 0.85
+    pitchMax: 1.05
+    cooldown: 0
+  - type: 11
+    clips:
+    - {fileID: 8300000, guid: fb46675d8245b4017b1d735572618eae, type: 3}
+    volume: 0.5
+    pitchMin: 0.85
+    pitchMax: 1.05
+    cooldown: 0
+  - type: 4
+    clips:
+    - {fileID: 8300000, guid: 7c8b03cc70804462dbfcd936f872b638, type: 3}
+    volume: 0.5
+    pitchMin: 0.85
+    pitchMax: 1.05
+    cooldown: 0
+  - type: 6
+    clips:
+    - {fileID: 8300000, guid: 555eea225fcf140c1b539be97cbd87a1, type: 3}
+    volume: 0.5
+    pitchMin: 0.85
+    pitchMax: 1.05
+    cooldown: 0
+  - type: 19
+    clips:
+    - {fileID: 8300000, guid: 9057c9d9d412d4f76ad9788f878d7b77, type: 3}
+    volume: 0.5
+    pitchMin: 0.85
+    pitchMax: 1.05
+    cooldown: 0
+  - type: 7
+    clips:
+    - {fileID: 8300000, guid: b35eaabaac81640d9a57e72704c33752, type: 3}
+    volume: 0.5
+    pitchMin: 0.85
+    pitchMax: 1.05
+    cooldown: 0
+  - type: 8
+    clips:
+    - {fileID: 8300000, guid: a9c1e9a984ecf44fabcb1b9c4fcb24cc, type: 3}
+    volume: 0.5
+    pitchMin: 0.85
+    pitchMax: 1.05
+    cooldown: 0
+  - type: 18
+    clips:
+    - {fileID: 8300000, guid: f63c1fee67006448eb5f82fd877f8713, type: 3}
+    volume: 0.5
+    pitchMin: 0.85
+    pitchMax: 1.05
+    cooldown: 0
+  - type: 13
+    clips:
+    - {fileID: 8300000, guid: 7ea525830d3634ed4a5d5dc8781a53c0, type: 3}
+    volume: 0.5
+    pitchMin: 0.85
+    pitchMax: 1.05
     cooldown: 0
   autoSwapForEncounter: 1
 --- !u!1 &221474463
@@ -45447,7 +45545,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 1, y: 0}
-  m_AnchoredPosition: {x: -0.000061035156, y: 61.999996}
+  m_AnchoredPosition: {x: 0, y: 62}
   m_SizeDelta: {x: 0, y: 248.7942}
   m_Pivot: {x: 0.5, y: 0}
 --- !u!114 &917394704

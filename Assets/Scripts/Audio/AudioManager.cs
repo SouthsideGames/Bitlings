@@ -13,19 +13,16 @@ public enum SfxType
     UIClose,
 
     // Economy
-    ResourceGain,
+    Collect,
     Purchase,
 
     // Battle
-    HitLight,
-    HitHeavy,
+    Attack,
+    Defend,
     CritHit,
     Victory,
     Defeat,
     CaptureSuccess,
-
-    // Jobs
-    JobAssign,
 
     // Progress
     LevelUp,
@@ -33,6 +30,14 @@ public enum SfxType
     // Titles
     TitleEquip,
     TitleUnequip,
+
+    //Encounters
+    ShinyEncounter,
+    BossEncounter,
+    UnqiueEncounter,
+
+    Run,
+    Focus
 }
 
 [Serializable]
