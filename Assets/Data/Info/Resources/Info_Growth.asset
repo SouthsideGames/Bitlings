@@ -18,5 +18,4 @@ MonoBehaviour:
   subtitle: Resource
   body: 'Comes from: Gym
 
-    Used for: Train monsters'
-  icon: {fileID: 21300000, guid: c6b94df2f7daa39418f418ba89171162, type: 3}
+    Used for: Training monsters'

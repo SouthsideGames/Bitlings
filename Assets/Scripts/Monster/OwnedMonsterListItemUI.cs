@@ -124,6 +124,8 @@ public class OwnedMonsterListItemUI : MonoBehaviour
         if (!HasValidMonster(_data)) return;
         if (!IsUsable(_data)) return;
 
+        AudioManager.I.PlayClick();
+
         detailPanel.ShowAssign(_data);
     }
 

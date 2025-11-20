@@ -10,4 +10,6 @@ public class JobMonsterEntryUI : MonoBehaviour
     public TextMeshProUGUI nameText;
     public TextMeshProUGUI scoreText;
     public Image typeIcon;
+
+    
 }

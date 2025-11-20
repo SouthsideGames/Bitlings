@@ -12,8 +12,6 @@ public class EncounterPanelUI : MonoBehaviour
     [SerializeField] private TextMeshProUGUI energyEtaLabel;
     [SerializeField, Min(1f)] private float energySecondsPerPoint = 1200f;
 
-    // (Optional legacy) If this exists in the scene, we hide it at runtime.
-    [SerializeField] private TextMeshProUGUI winStreakText;
 
     // ─────────────────────────────────────────────────────────────
     // Blinder (localized + weighted random)
@@ -58,9 +56,6 @@ public class EncounterPanelUI : MonoBehaviour
             blinderGroup.blocksRaycasts = true;
             blinderGroup.interactable = true;
         }
-
-        // If the old on-screen win streak label is still assigned, hide it.
-        if (winStreakText) winStreakText.gameObject.SetActive(false);
 
         // Initial line (random or fallback)
         PickAndApplyBlinderLine(forcePick: true);

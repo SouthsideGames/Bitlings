@@ -12,17 +12,20 @@ public sealed class TitleOptionItem : MonoBehaviour
 
     [Header("Action Button")]
     [SerializeField] private Button assignBtn;
-    [SerializeField] private Sprite assignedActionSprite;   // shown when THIS option is equipped (button = Remove)
-    [SerializeField] private Sprite unassignedActionSprite; // shown when NOT equipped (button = Assign)
+    [SerializeField] private Sprite assignedActionSprite;
+    [SerializeField] private Sprite unassignedActionSprite;
 
-    // Context (set by Setup)
+    [Header("Interaction")]
+    [SerializeField] private Button infoButton;
+    [SerializeField] private string infoId;
+
     private string _ownedId;
     private MonsterDataSO _def;
     private int _level;
     private int _tierIndex;
     private int _levelRequired;
-    private TitleSO _option;             // this row's option
-    private TitleSO _equippedInTier;     // current equipped for this tier
+    private TitleSO _option;             
+    private TitleSO _equippedInTier;    
     private Action _onChanged;
 
     // cached UI bits
@@ -36,9 +39,13 @@ public sealed class TitleOptionItem : MonoBehaviour
             _assignBtnLabel = assignBtn.GetComponentInChildren<TextMeshProUGUI>(true);
             _assignBtnImage = assignBtn.GetComponent<Image>();
         }
+
+        if (infoButton)
+        {
+            infoButton.onClick.RemoveAllListeners();
+            infoButton.onClick.AddListener(OpenInfo);
+        }
     }
-
-
 
     public void SetIcon(Sprite s)
     {
@@ -63,8 +70,11 @@ public sealed class TitleOptionItem : MonoBehaviour
         _tierIndex      = tierIndex;
         _levelRequired  = Mathf.Max(1, levelRequired);
         _option         = option;
-        _equippedInTier = equippedInTier; // <<— important: seed current state
+        _equippedInTier = equippedInTier;
         _onChanged      = onChanged;
+
+        if (_option != null && string.IsNullOrWhiteSpace(infoId))
+            infoId = _option.titleId;
 
         if (nameText)   nameText.text   = option ? option.displayName : "(null)";
         if (unlockText) unlockText.text = (_level >= _levelRequired) ? "Unlocked" : $"Lvl ≥ {_levelRequired}";
@@ -79,7 +89,7 @@ public sealed class TitleOptionItem : MonoBehaviour
         RefreshButtonVisuals();
     }
 
-    private void RefreshButtonVisuals()
+    void RefreshButtonVisuals()
     {
         bool isThisEquipped = (_equippedInTier != null && _equippedInTier == _option);
 
@@ -88,31 +98,45 @@ public sealed class TitleOptionItem : MonoBehaviour
             _assignBtnImage.sprite = isThisEquipped ? assignedActionSprite : unassignedActionSprite;
     }
 
-    private void OnActionClicked()
+    void OnActionClicked()
     {
         if (_option == null || _def == null) return;
 
         bool isThisEquipped = (_equippedInTier != null && _equippedInTier == _option);
 
-        // Drive the runtime
         if (isThisEquipped)
         {
             TitleManager.I?.Unequip(_ownedId, _def, _tierIndex);
-            _equippedInTier = null; // <<— flip local state immediately
+            _equippedInTier = null;
         }
         else
         {
             TitleManager.I?.Equip(_ownedId, _def, _tierIndex, _option);
-            _equippedInTier = _option; // <<— flip local state immediately
+            _equippedInTier = _option;
         }
 
-        // Update this row’s visuals right away so the user sees the change
         RefreshButtonVisuals();
 
-        // Notify the rest of the UI to refresh if needed (lists, headers, etc.)
+        AudioManager.I.PlayClick();
+
         TitleAssignPanelUI.OnTitlesChanged?.Invoke(_ownedId);
         _onChanged?.Invoke();
     }
 
-    
+    void OpenInfo()
+    {
+        if (_option == null)
+            return;
+
+
+        var id = string.IsNullOrWhiteSpace(infoId) ? _option.titleId : infoId;
+
+        string fallbackTitle    = _option.displayName;
+        const string fallbackSubtitle = "Title";
+        string fallbackBody     = _option.description;
+
+        InfoRouter.Open(id, fallbackTitle, fallbackSubtitle, fallbackBody);
+
+        AudioManager.I.PlayClick();
+    }
 }

@@ -7,7 +7,6 @@ public class InfoPanelUI : MonoBehaviour
     public static InfoPanelUI I { get; private set; }
 
     [Header("Wire to the object registered as PanelId.Info in UIManager")]
-    [SerializeField] private Image iconImage;
     [SerializeField] private TextMeshProUGUI titleLabel;
     [SerializeField] private TextMeshProUGUI subtitleLabel;
     [SerializeField] private TextMeshProUGUI bodyLabel;
@@ -19,9 +18,8 @@ public class InfoPanelUI : MonoBehaviour
         if (closeButton) closeButton.onClick.AddListener(Close);
     }
 
-    public void Set(Sprite icon, string title, string subtitle, string body)
+    public void Set(string title, string subtitle, string body)
     {
-        if (iconImage)     iconImage.sprite = icon;
         if (titleLabel)    titleLabel.text  = title ?? "";
         if (subtitleLabel) subtitleLabel.text = subtitle ?? "";
         if (bodyLabel)     bodyLabel.text   = body ?? "";

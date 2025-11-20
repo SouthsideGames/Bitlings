@@ -212,6 +212,8 @@ public class JobAssignPanelUI : MonoBehaviour
                     currentImage.sprite = _pendingDef.icon ? _pendingDef.icon : emptySlotSprite;
                     currentImage.color  = _pendingDef.icon ? Color.white : new Color(1, 1, 1, 0.6f);
                 }
+
+                AudioManager.I.PlayClick();
             });
         }
     }

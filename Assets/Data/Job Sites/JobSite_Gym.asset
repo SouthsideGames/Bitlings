@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: JobSite_Gym
   m_EditorClassIdentifier: 
   jobType: 0
-  produces: 0
+  produces: 16
   baseRatePerHour: 100
   storageCap: 500
   maxWorkers: 3

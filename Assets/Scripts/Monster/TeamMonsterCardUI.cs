@@ -61,11 +61,13 @@ public class TeamMonsterCardUI : MonoBehaviour
     private void OnClickRoot()
     {
         _onClick?.Invoke(_data);
+        AudioManager.I.PlayClick();
     }
 
     private void OnClickHealPartial()
     {
         TryHeal(partial: true);
+         AudioManager.I.PlayClick();
     }
 
     // OPTIONAL: if you ever add a “Full Heal” button

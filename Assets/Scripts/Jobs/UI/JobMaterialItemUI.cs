@@ -74,6 +74,8 @@ public class JobMaterialItemUI : MonoBehaviour
                 _onDeltaChanged?.Invoke(-1);
                 RefreshVisuals();
                 requestRefresh?.Invoke();
+
+                AudioManager.I.PlayClick();
             });
         }
 
@@ -90,6 +92,8 @@ public class JobMaterialItemUI : MonoBehaviour
                 _onDeltaChanged?.Invoke(+1);
                 RefreshVisuals();
                 requestRefresh?.Invoke();
+
+                AudioManager.I.PlayClick();
             });
         }
     }
@@ -122,4 +126,5 @@ public class JobMaterialItemUI : MonoBehaviour
         _baseCurXP = 0;
         RefreshVisuals();
     }
+
 }

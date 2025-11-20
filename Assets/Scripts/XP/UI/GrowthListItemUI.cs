@@ -166,4 +166,6 @@ public class GrowthListItemUI : MonoBehaviour
     {
         if (levelText) levelText.text = $"Lv {Mathf.Max(1, newLevel)}";
     }
+
+    public void ButtonClick() => AudioManager.I.PlayClick();
 }

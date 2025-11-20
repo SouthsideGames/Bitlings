@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: JobSite_Expedition
   m_EditorClassIdentifier: 
   jobType: 16
-  produces: 16
+  produces: 17
   baseRatePerHour: 1
   storageCap: 25
   maxWorkers: 3
