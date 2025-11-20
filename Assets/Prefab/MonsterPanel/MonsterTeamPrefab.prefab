@@ -725,8 +725,8 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 50
-  m_fontSizeBase: 50
+  m_fontSize: 48
+  m_fontSizeBase: 48
   m_fontWeight: 400
   m_enableAutoSizing: 0
   m_fontSizeMin: 18
@@ -830,4 +830,7 @@ MonoBehaviour:
   healCostType: 3
   partialHealCost: 1
   fullHealCost: 3
+  medkitResourceType: 3
+  partialHealMedkitCost: 1
+  fullHealMedkitCost: 1
   evolveAlert: {fileID: 6655590525920695086}

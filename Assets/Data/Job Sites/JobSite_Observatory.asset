@@ -17,6 +17,6 @@ MonoBehaviour:
   baseRatePerHour: 20
   storageCap: 100
   maxWorkers: 3
-  eligibleTypes: 09000000
+  eligibleTypes: 0a000000
   icon: {fileID: -7252507484307156637, guid: 76bdb0aafa7317e4c869935294b16abd, type: 3}
   displayName: Observatory

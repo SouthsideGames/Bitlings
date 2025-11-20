@@ -17,6 +17,6 @@ MonoBehaviour:
   baseRatePerHour: 100
   storageCap: 500
   maxWorkers: 3
-  eligibleTypes: 05000000
+  eligibleTypes: 06000000
   icon: {fileID: 21300000, guid: e5fb26b3af00b2549949286c76126ab7, type: 3}
   displayName: Gym

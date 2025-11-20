@@ -17,6 +17,6 @@ MonoBehaviour:
   baseRatePerHour: 5
   storageCap: 25
   maxWorkers: 3
-  eligibleTypes: 0c000000
+  eligibleTypes: 0d000000
   icon: {fileID: 21300000, guid: 55add3bf9ff7b044489609863ad4fd16, type: 3}
   displayName: Sanctum

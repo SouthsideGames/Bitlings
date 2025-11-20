@@ -38,9 +38,10 @@ public class BattleManager : MonoBehaviour
     [SerializeField, Range(0f,1f)] private float runHpWeight     = 0.25f; // easier to run when wild is hurt
 
 
-    public bool IsPlayerTurn { get; private set; } // for UI
+    public bool IsPlayerTurn { get; private set; }
+    private bool isResolvingPlayerTurn = false;
     private PlayerAction pendingAction = PlayerAction.None;
-    private bool defendActiveThisRound = false;    // consumed on next enemy hit
+    private bool defendActiveThisRound = false; 
 
     // ─────────────────────────────────────────────────────────────────────────────
     // Wild UI
@@ -159,6 +160,7 @@ public class BattleManager : MonoBehaviour
 
         SetCombatPanels(false);
     }
+    
 
     void OnEnable()
     {
@@ -187,8 +189,10 @@ public class BattleManager : MonoBehaviour
     private void TryQueueAction(PlayerAction a)
     {
         if (!inBattle || !manualTurns) return;
-        if (!IsPlayerTurn) return;                   // only during player's phase
-        if (pendingAction != PlayerAction.None) return; // already chosen
+        if (!IsPlayerTurn) return;           
+        if (isResolvingPlayerTurn) return;     
+        if (pendingAction != PlayerAction.None) return; 
+
         pendingAction = a;
     }
 
@@ -347,45 +351,85 @@ public class BattleManager : MonoBehaviour
             _turnIndex++;
             TitlesAdapter.OnTurnAdvanced(_turnIndex);
 
-            // ── Speed / Initiative in order: Base → Job → Titles → Boosters
-          int pSpeedBase = BattleCalc.CalcSpeed(teamDefs[activeIndex], teamLevels[activeIndex]);
+            // ────────────────────────────────────────────────────────────────
+            // SPEED CALCULATION (Player)
+            // ────────────────────────────────────────────────────────────────
+            int pSpeedBase = BattleCalc.CalcSpeed(teamDefs[activeIndex], teamLevels[activeIndex]);
 
             // Training speed bonus
             var roster = SaveManager.Data?.team;
             if (roster != null && activeIndex < roster.Count && roster[activeIndex] != null)
                 pSpeedBase += Mathf.Max(0, roster[activeIndex].trainingBonus.spd);
 
-            // Job first
+            // Job buff (first X turns)
             var jSpeed = jobCtx != null ? jobCtx[activeIndex] : null;
             if (jSpeed != null && jSpeed.speedBuffTurns > 0 && jSpeed.speedBonusPctFirstTurns != 0f)
                 pSpeedBase = Mathf.Max(1, Mathf.RoundToInt(pSpeedBase * (1f + jSpeed.speedBonusPctFirstTurns)));
 
-            // Titles second
+            // Titles
             var titleCtx = BuildTitleContextForActive();
             float pSpeedAfterTitlesF = TitlesAdapter.GetStatValue(
                 teamIds[activeIndex], teamDefs[activeIndex], teamLevels[activeIndex], "SPD", titleCtx, pSpeedBase
             );
             int pSpeedAfterTitles = Mathf.Max(1, Mathf.RoundToInt(pSpeedAfterTitlesF));
 
-            // Boosters last (flat)
+            // Boosters (flat)
             int tempSPDFlat = BattleTempBuffs.I ? BattleTempBuffs.I.GetPlayerSpeedFlatBonus() : 0;
             int pSpeed = Mathf.Max(1, pSpeedAfterTitles + Mathf.Max(0, tempSPDFlat));
 
+            // Enemy Speed
             int wSpeed = BattleCalc.CalcSpeed(wildDef, wildLevel);
 
-            bool playerFirst = pSpeed >= wSpeed;
-            if (playerFirst) BattleLogger.Log($"{GetName(activeIndex)} acts first!", LogScope.Battle);
-            else             BattleLogger.Log($"{(wildDef ? wildDef.displayName : "Foe")} acts first!", LogScope.Battle);
+            // ────────────────────────────────────────────────────────────────
+            // ** UPDATED INITIATIVE LOGIC **
+            // Pokémon-style turn order with true speed tie 50/50
+            // ────────────────────────────────────────────────────────────────
 
+            bool playerFirst;
+
+            if (pSpeed > wSpeed)
+            {
+                playerFirst = true;
+            }
+            else if (pSpeed < wSpeed)
+            {
+                playerFirst = false;
+            }
+            else
+            {
+                // True speed tie → random
+                playerFirst = UnityEngine.Random.value < 0.5f;
+
+                string tieName = playerFirst
+                    ? GetName(activeIndex)
+                    : (wildDef ? wildDef.displayName : "Foe");
+
+                BattleLogger.Log($"Speed tie! {tieName} moves first!", LogScope.Battle);
+            }
+
+            // Only log normal message when it wasn't a tie
+            if (pSpeed != wSpeed)
+            {
+                if (playerFirst)
+                    BattleLogger.Log($"{GetName(activeIndex)} acts first!", LogScope.Battle);
+                else
+                    BattleLogger.Log($"{(wildDef ? wildDef.displayName : "Foe")} acts first!", LogScope.Battle);
+            }
+
+            // ────────────────────────────────────────────────────────────────
+            // ROUND ORDER (NEVER MORE THAN 1 ACTION EACH)
+            // ────────────────────────────────────────────────────────────────
             if (playerFirst)
             {
+                // Player → Enemy
                 if (!IsWildKO() && !IsTeamKO())
                 {
-                    if (manualTurns) { yield return WaitForPlayerChoiceAndResolve(); }
-                    else             { yield return PlayerTurn(); }
+                    if (manualTurns) yield return WaitForPlayerChoiceAndResolve();
+                    else             yield return PlayerTurn();
                     if (CheckEnd()) break;
                     yield return Wait(hitPause);
                 }
+
                 if (!IsWildKO() && !IsTeamKO())
                 {
                     yield return EnemyTurn();
@@ -395,21 +439,26 @@ public class BattleManager : MonoBehaviour
             }
             else
             {
+                // Enemy → Player
                 if (!IsWildKO() && !IsTeamKO())
                 {
                     yield return EnemyTurn();
                     if (CheckEnd()) break;
                     yield return Wait(hitPause);
                 }
+
                 if (!IsWildKO() && !IsTeamKO())
                 {
-                    if (manualTurns) { yield return WaitForPlayerChoiceAndResolve(); }
-                    else             { yield return PlayerTurn(); }
+                    if (manualTurns) yield return WaitForPlayerChoiceAndResolve();
+                    else             yield return PlayerTurn();
                     if (CheckEnd()) break;
                     yield return Wait(hitPause);
                 }
             }
 
+            // ────────────────────────────────────────────────────────────────
+            // End Round Cleanup
+            // ────────────────────────────────────────────────────────────────
             if (!IsWildKO() && !IsTeamKO())
             {
                 if (jobCtx != null && jobCtx[activeIndex] != null)
@@ -423,7 +472,6 @@ public class BattleManager : MonoBehaviour
                 yield return Wait(endRoundDelay);
             }
 
-            // reset per-round flags
             defendActiveThisRound = false;
             round++;
         }
@@ -493,7 +541,19 @@ public class BattleManager : MonoBehaviour
 
     private IEnumerator PlayerTurn()
     {
-        if (teamHP[activeIndex] <= 0.01f && !AutoSwapToAlive()) yield break;
+        // Prevent multiple calls caused by button mashing or UI spam
+        if (isResolvingPlayerTurn)
+            yield break;
+
+        // Lock re-entry until this turn is fully resolved
+        isResolvingPlayerTurn = true;
+
+        // Safety: ensure there is someone alive to act
+        if (teamHP[activeIndex] <= 0.01f && !AutoSwapToAlive())
+        {
+            isResolvingPlayerTurn = false;
+            yield break;
+        }
 
         var roster = SaveManager.Data?.team;
 
@@ -576,6 +636,7 @@ public class BattleManager : MonoBehaviour
         {
             int before = dr.damage;
             dr.damage = Mathf.Max(1, Mathf.RoundToInt(dr.damage * effMul));
+
             if (debugEffectivenessOutgoing)
             {
                 string msg = $"[EffectivenessModTitle] MULT x{effMul:0.00}: {before} → {dr.damage}";
@@ -634,7 +695,7 @@ public class BattleManager : MonoBehaviour
         }
         if (dr.crit) BattleLogger.Log("Critical hit!", LogScope.Battle);
 
-        // End-of-player-turn job regen (if any)
+        // End-of-player-turn job regen
         var j2 = (jobCtx != null) ? jobCtx[activeIndex] : null;
         if (j2 != null && j2.endTurnHealPct > 0f)
         {
@@ -650,6 +711,9 @@ public class BattleManager : MonoBehaviour
 
         Punch(playerIcon);
         FirePlayerEndTurnTicks(dealtDamageThisTurn: dr.damage > 0, critThisTurn: dr.crit);
+
+        // Turn is officially finished, allow next action
+        isResolvingPlayerTurn = false;
         yield break;
     }
 

@@ -1,23 +1,22 @@
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
-using System.Collections.Generic; // ✅ add this
+using System.Collections.Generic;
 
 public class PackShopPanelUI : MonoBehaviour
 {
     [Header("Refs")]
     [SerializeField] private Transform contentRoot;
-    [SerializeField] private PackShopItemUI itemPrefab;
+    [SerializeField] private PackShopItemUI packShopPrefab;
     [SerializeField] private TextMeshProUGUI currencyHeader;
-    [SerializeField] private Button closeButton;
+    [SerializeField] private PackDetailPanelUI packDetailPanel;  
 
-    [Header("Data")]
-    [SerializeField] private MonsterPackLibrarySO library;
+    private MonsterPackLibrarySO library;
 
     void Awake()
     {
-        if (!library) library = Resources.Load<MonsterPackLibrarySO>("MonsterPackLibrary");
-        if (closeButton) closeButton.onClick.AddListener(() => gameObject.SetActive(false));
+        if (!library)
+            library = Resources.Load<MonsterPackLibrarySO>("MonsterPackLibrary");
     }
 
     void OnEnable()
@@ -37,16 +36,20 @@ public class PackShopPanelUI : MonoBehaviour
     private void OnPackUnlocked(string _)
     {
         RefreshCurrencyHeader();
+        BuildList();
     }
 
     private void RefreshCurrencyHeader()
     {
         int have = ResourceBank.Get(ResourceType.PackShards);
-        if (currencyHeader) currencyHeader.text = $"Pack Shards: {have}";
+        if (currencyHeader)
+            currencyHeader.text = $"Pack Shards: {have}";
     }
 
     private void BuildList()
     {
+        if (!contentRoot) return;
+
         for (int i = contentRoot.childCount - 1; i >= 0; i--)
             Destroy(contentRoot.GetChild(i).gameObject);
 
@@ -54,13 +57,20 @@ public class PackShopPanelUI : MonoBehaviour
 
         var packs = new List<MonsterPackSO>(library.Packs);
 
-        packs.Sort((a,b) => (MonsterPackManager.I.IsUnlocked(a.id) ? 1 : 0).CompareTo(MonsterPackManager.I.IsUnlocked(b.id) ? 1 : 0));
-
-        foreach (var pack in library.Packs)
+        // Optional: sort so locked packs appear first
+        packs.Sort((a, b) =>
         {
-            if (!pack) continue;
-            var row = Instantiate(itemPrefab, contentRoot);
-            row.Bind(pack);
+            bool aUnlocked = MonsterPackManager.I != null && MonsterPackManager.I.IsUnlocked(a.id);
+            bool bUnlocked = MonsterPackManager.I != null && MonsterPackManager.I.IsUnlocked(b.id);
+            return aUnlocked.CompareTo(bUnlocked);
+        });
+
+        foreach (var pack in packs)
+        {
+            if (!pack || !packShopPrefab) continue;
+
+            var row = Instantiate(packShopPrefab, contentRoot);
+            row.Bind(pack, packDetailPanel);
         }
     }
 }

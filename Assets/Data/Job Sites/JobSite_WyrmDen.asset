@@ -17,6 +17,6 @@ MonoBehaviour:
   baseRatePerHour: 20
   storageCap: 100
   maxWorkers: 3
-  eligibleTypes: 0d000000
+  eligibleTypes: 0e000000
   icon: {fileID: 21300000, guid: 9547edd03db9c8545982eef5d6710e5c, type: 3}
   displayName: Wyrm Den

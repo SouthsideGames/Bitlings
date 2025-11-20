@@ -13,11 +13,16 @@ public class TeamMonsterCardUI : MonoBehaviour
     [SerializeField] private Button rootButton;
     [SerializeField] private Button healBtn;
 
-    [Header("Heal Settings")]
+    [Header("Heal Settings (Coins Fallback)")]
     [SerializeField, Range(0f, 1f)] private float partialHealPct = 0.25f;
     [SerializeField] private ResourceType healCostType = ResourceType.Coins;
     [SerializeField] private int partialHealCost = 1;
     [SerializeField] private int fullHealCost = 3;
+
+    [Header("Heal Settings (Medkits First)")]
+    [SerializeField] private ResourceType medkitResourceType = ResourceType.Medkits;
+    [SerializeField] private int partialHealMedkitCost = 1;
+    [SerializeField] private int fullHealMedkitCost = 1;
 
     [Header("Evolution Alert")]
     [Tooltip("Shown when this monster is eligible to evolve.")]
@@ -67,13 +72,14 @@ public class TeamMonsterCardUI : MonoBehaviour
     private void OnClickHealPartial()
     {
         TryHeal(partial: true);
-         AudioManager.I.PlayClick();
+        AudioManager.I.PlayClick();
     }
 
-    // OPTIONAL: if you ever add a “Full Heal” button
+    // If you ever hook up a separate full-heal button, call this.
     private void OnClickHealFull()
     {
         TryHeal(partial: false);
+        AudioManager.I.PlayClick();
     }
 
     private void OnEnable()
@@ -123,14 +129,16 @@ public class TeamMonsterCardUI : MonoBehaviour
 
         int maxHP = HealingService.CalcMaxHP(_def, _data.level);
         int curHP = _data.currentHP >= 0 ? Mathf.Min(_data.currentHP, maxHP) : maxHP;
-        hpText.text = (maxHP > 0) ? $"HP: {Mathf.Max(0, curHP)}/{maxHP}" : "";
+
+        hpText.text = (maxHP > 0) ? $"HP: {Mathf.Max(0, curHP)}/{maxHP}" : string.Empty;
     }
 
     private void UpdateHealInteractable()
     {
         if (!healBtn) return;
 
-        bool interactable = false;
+        GameObject healGO = healBtn.gameObject;
+        bool shouldBeActive = false;
 
         if (_def != null && _data != null)
         {
@@ -138,13 +146,19 @@ public class TeamMonsterCardUI : MonoBehaviour
             int curHP = _data.currentHP >= 0 ? Mathf.Min(_data.currentHP, maxHP) : maxHP;
             bool needsHeal = curHP < maxHP;
 
-            int have = GetResource(healCostType);
-            bool canHeal = have >= partialHealCost;
+            int medkits = GetResource(medkitResourceType);
+            int coins = GetResource(healCostType);
 
-            interactable = needsHeal && canHeal;
+            // For this card we assume the button uses partial heal costs
+            bool canHealWithMedkits = medkits >= partialHealMedkitCost;
+            bool canHealWithCoins = coins >= partialHealCost;
+            bool canHeal = canHealWithMedkits || canHealWithCoins;
+
+            shouldBeActive = needsHeal && canHeal;
         }
 
-        healBtn.interactable = interactable;
+        healGO.SetActive(shouldBeActive);
+        healBtn.interactable = shouldBeActive;
     }
 
     private void RefreshEvolutionAlert()
@@ -166,10 +180,33 @@ public class TeamMonsterCardUI : MonoBehaviour
 
         int maxHP = HealingService.CalcMaxHP(_def, _data.level);
         int curHP = _data.currentHP >= 0 ? Mathf.Min(_data.currentHP, maxHP) : maxHP;
-        if (curHP >= maxHP) { UpdateHealInteractable(); return; }
+        if (curHP >= maxHP)
+        {
+            UpdateHealInteractable();
+            return;
+        }
 
-        int cost = partial ? partialHealCost : fullHealCost;
-        if (!SpendResource(healCostType, cost)) { UpdateHealInteractable(); return; }
+        // ----- RESOURCE CHOICE: use medkits first, then coins -----
+        int medkitCost = partial ? partialHealMedkitCost : fullHealMedkitCost;
+        int coinCost = partial ? partialHealCost : fullHealCost;
+
+        bool paid = false;
+
+        int medkits = GetResource(medkitResourceType);
+        if (medkits >= medkitCost && medkitCost > 0)
+        {
+            paid = SpendResource(medkitResourceType, medkitCost);
+        }
+        else if (coinCost > 0)
+        {
+            paid = SpendResource(healCostType, coinCost);
+        }
+
+        if (!paid)
+        {
+            UpdateHealInteractable();
+            return;
+        }
 
         int restore = partial
             ? Mathf.CeilToInt(maxHP * Mathf.Clamp01(partialHealPct))
@@ -183,6 +220,9 @@ public class TeamMonsterCardUI : MonoBehaviour
         _onAnyChanged?.Invoke();
     }
 
-    private int GetResource(ResourceType type) =>ResourceManager.I ? ResourceManager.I.Get(type) : 0;
-    private bool SpendResource(ResourceType type, int amount) => ResourceManager.I && ResourceManager.I.TrySpend(type, amount);
+    private int GetResource(ResourceType type) =>
+        ResourceManager.I ? ResourceManager.I.Get(type) : 0;
+
+    private bool SpendResource(ResourceType type, int amount) =>
+        ResourceManager.I && ResourceManager.I.TrySpend(type, amount);
 }

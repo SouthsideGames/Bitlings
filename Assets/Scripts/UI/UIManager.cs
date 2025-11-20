@@ -31,7 +31,9 @@ public enum PanelId
     PostBattleSummary = 24,
     Achievement = 25,
     CheatCodes = 26,
-    DebugTools = 27,
+    Expedition = 27,
+    PackDetails = 28,   
+    
 }
 
 [Serializable]

@@ -317,23 +317,23 @@ public sealed class JobManager : MonoBehaviour
 
             s.slotFatigue01[i] = Mathf.Min(1f, s.slotFatigue01[i] + perHour * dtHours);
 
-            // Hit 100%? auto-remove + start cooldown
             if (s.slotFatigue01[i] >= 1f - 0.0001f)
             {
                 string key = GetBestId(w);
-                float hrsCD = Mathf.Max(0f, w.def.fatigueCooldownHours); // requires field on MonsterDataSO
+                float hrsCD = Mathf.Max(0f, w.def.fatigueCooldownHours);
 
                 long until = SaveManager.NowUnix() + Mathf.RoundToInt(hrsCD * 3600f);
                 s.slotCooldownUntilUnix[i] = until;
 
-                // Global cooldown map: follows the monster across sites
                 if (!string.IsNullOrEmpty(key)) _cooldownUntil[key] = until;
 
                 // Remove worker from the slot
                 s.workers[i] = null;
                 RemoveAssignedUnix(key);
 
-                // Keep bar at 100% for this frame (UI), next tick it will decay since empty
+                // NEW: auto-collect this site's stored resources
+                Collect(s.config.jobType);
+
                 s.slotFatigue01[i] = 1f;
 
                 SaveAssignmentsToSave();

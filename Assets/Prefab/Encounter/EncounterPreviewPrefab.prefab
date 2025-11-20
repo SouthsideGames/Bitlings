@@ -359,7 +359,7 @@ GameObject:
   - component: {fileID: 4806695187116038979}
   - component: {fileID: 4259621443617196683}
   m_Layer: 5
-  m_Name: TeamMonsterPreviewPrefab
+  m_Name: EncounterPreviewPrefab
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
