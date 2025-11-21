@@ -24,8 +24,8 @@ public sealed class TitleOptionItem : MonoBehaviour
     private int _level;
     private int _tierIndex;
     private int _levelRequired;
-    private TitleSO _option;             
-    private TitleSO _equippedInTier;    
+    private TitleSO _option;
+    private TitleSO _equippedInTier;
     private Action _onChanged;
 
     // cached UI bits
@@ -73,8 +73,8 @@ public sealed class TitleOptionItem : MonoBehaviour
         _equippedInTier = equippedInTier;
         _onChanged      = onChanged;
 
-        if (_option != null && string.IsNullOrWhiteSpace(infoId))
-            infoId = _option.titleId;
+        // We no longer auto-generate infoId from the TitleSO.
+        // If you want a custom Info entry, set infoId in the inspector.
 
         if (nameText)   nameText.text   = option ? option.displayName : "(null)";
         if (unlockText) unlockText.text = (_level >= _levelRequired) ? "Unlocked" : $"Lvl ≥ {_levelRequired}";
@@ -91,7 +91,7 @@ public sealed class TitleOptionItem : MonoBehaviour
 
     void RefreshButtonVisuals()
     {
-        bool isThisEquipped = (_equippedInTier != null && _equippedInTier == _option);
+        bool isThisEquipped = _equippedInTier != null && _equippedInTier == _option;
 
         if (_assignBtnLabel) _assignBtnLabel.text = isThisEquipped ? "Remove" : "Assign";
         if (_assignBtnImage)
@@ -102,7 +102,7 @@ public sealed class TitleOptionItem : MonoBehaviour
     {
         if (_option == null || _def == null) return;
 
-        bool isThisEquipped = (_equippedInTier != null && _equippedInTier == _option);
+        bool isThisEquipped = _equippedInTier != null && _equippedInTier == _option;
 
         if (isThisEquipped)
         {
@@ -128,12 +128,12 @@ public sealed class TitleOptionItem : MonoBehaviour
         if (_option == null)
             return;
 
+        // Allow override via inspector; otherwise use generic Title info entry.
+        var id = string.IsNullOrWhiteSpace(infoId) ? "title.generic" : infoId;
 
-        var id = string.IsNullOrWhiteSpace(infoId) ? _option.titleId : infoId;
-
-        string fallbackTitle    = _option.displayName;
+        string fallbackTitle      = _option.displayName;
         const string fallbackSubtitle = "Title";
-        string fallbackBody     = _option.description;
+        string fallbackBody       = _option.description;
 
         InfoRouter.Open(id, fallbackTitle, fallbackSubtitle, fallbackBody);
 

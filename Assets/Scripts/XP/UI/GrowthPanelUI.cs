@@ -48,16 +48,26 @@ public sealed class GrowthPanelUI : MonoBehaviour
 
     private void OnEnable()
     {
-        // Make sure save data is loaded
         if (SaveManager.Data == null)
-        {
             SaveManager.LoadOrCreate();
-        }
 
         if (!monsterLibrary && MonsterLibraryLocator.Lib)
             monsterLibrary = MonsterLibraryLocator.Lib;
 
+        GameEvents.OnResourcesChanged += HandleResourcesChanged; // 🔹 add this
         RefreshAll();
+    }
+
+    private void OnDisable()
+    {
+        GameEvents.OnResourcesChanged -= HandleResourcesChanged; // 🔹 add this
+    }
+
+    private void HandleResourcesChanged()
+    {
+        RefreshCoreCount();          // update the number at the top
+        foreach (var row in _rows)   // update button interactable state
+            row.RefreshOpenInteractable();
     }
 
     // ─────────────────────────────────────────────────────────────────────────────

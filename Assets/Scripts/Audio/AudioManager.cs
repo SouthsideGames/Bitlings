@@ -9,7 +9,6 @@ public enum SfxType
 
     // Core/UI
     Click = 1,
-    UIOpen = 2,
 
     // Economy
     Collect = 3,
