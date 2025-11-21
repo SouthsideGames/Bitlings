@@ -181,7 +181,10 @@ public class BattleManager : MonoBehaviour
     // ─────────────────────────────────────────────────────────────────────────────
     // Public API for action bar (hook buttons to these)
     // ─────────────────────────────────────────────────────────────────────────────
-    public void SetPlayerActionAttack() { TryQueueAction(PlayerAction.Attack); }
+    public void SetPlayerActionAttack()
+    {
+        TryQueueAction(PlayerAction.Attack);
+    }
     public void SetPlayerActionDefend() { TryQueueAction(PlayerAction.Defend); }
     public void SetPlayerActionFocus()  { TryQueueAction(PlayerAction.Focus);  }
     public void SetPlayerActionRun()    { TryQueueAction(PlayerAction.Run);    }

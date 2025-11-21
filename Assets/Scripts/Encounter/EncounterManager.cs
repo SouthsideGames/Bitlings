@@ -477,6 +477,8 @@ public class EncounterManager : MonoBehaviour
         if (_currentEncounterIsBoss)
             wildLevel = Mathf.Max(1, wildLevel + bossLevelBonus);
 
+        PlayEncounterSfx(wild);
+
         if (TapBoost.I) TapBoost.I.ResetEncounter();
 
         var p = SaveManager.Data.team[0];
@@ -512,6 +514,15 @@ public class EncounterManager : MonoBehaviour
 
     void OnBattleEnded(BattleResult result)
     {
+
+        if (AudioManager.I)
+        {
+            if (result.victory)
+                AudioManager.I.PlaySfx(SfxType.Victory);
+            else
+                AudioManager.I.PlaySfx(SfxType.Defeat);
+        }
+        
         // Apply any local/global (non-title) encounter multipliers here
         int finalCoins = ApplyCoinsGainedMultiplier(result.coinsGained);
         finalCoins = Mathf.Max(0, finalCoins);
@@ -1118,6 +1129,9 @@ public class EncounterManager : MonoBehaviour
 
         if (success)
         {
+            if (AudioManager.I)
+                AudioManager.I.PlaySfx(SfxType.CaptureSuccess);
+
             var om = new OwnedMonsterData
             {
                 monsterId = def.id,
@@ -1144,6 +1158,107 @@ public class EncounterManager : MonoBehaviour
             EmitStatus($"Capture failed. {def.displayName} escaped.", LogScope.Encounter);
         }
     }
+
+        // ───────────────────────── Encounter SFX helpers ─────────────────────────
+    private void PlayEncounterSfx(MonsterDataSO wild)
+    {
+        if (AudioManager.I == null || wild == null)
+            return;
+
+        // Boss has highest priority
+        if (_currentEncounterIsBoss)
+        {
+            AudioManager.I.PlaySfx(SfxType.BossEncounter);
+            return;
+        }
+
+        // Shiny encounter
+        if (IsShinyMonster(wild))
+        {
+            AudioManager.I.PlaySfx(SfxType.ShinyEncounter);
+            return;
+        }
+
+        // Unique / special encounter
+        if (IsUniqueMonster(wild))
+        {
+            AudioManager.I.PlaySfx(SfxType.UnqiueEncounter); // note: enum spelling
+            return;
+        }
+    }
+
+    private bool IsShinyMonster(MonsterDataSO m)
+    {
+        if (!m) return false;
+
+        try
+        {
+            var t = m.GetType();
+
+            // Try field "isShiny"
+            var f = t.GetField("isShiny", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+            if (f != null)
+            {
+                var val = f.GetValue(m);
+                if (val is bool b) return b;
+            }
+
+            // Try property "isShiny"
+            var p = t.GetProperty("isShiny", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+            if (p != null && p.CanRead)
+            {
+                var val = p.GetValue(m, null);
+                if (val is bool b) return b;
+            }
+        }
+        catch { /* ignore and treat as non-shiny */ }
+
+        return false;
+    }
+
+    private bool IsUniqueMonster(MonsterDataSO m)
+    {
+        if (!m) return false;
+
+        try
+        {
+            var t = m.GetType();
+
+            // Try "isUniqueEncounter"
+            var f1 = t.GetField("isUniqueEncounter", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+            if (f1 != null)
+            {
+                var v = f1.GetValue(m);
+                if (v is bool b1) return b1;
+            }
+
+            var p1 = t.GetProperty("isUniqueEncounter", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+            if (p1 != null && p1.CanRead)
+            {
+                var v = p1.GetValue(m, null);
+                if (v is bool b1p) return b1p;
+            }
+
+            // Fallback: "isUnique"
+            var f2 = t.GetField("isUnique", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+            if (f2 != null)
+            {
+                var v = f2.GetValue(m);
+                if (v is bool b2) return b2;
+            }
+
+            var p2 = t.GetProperty("isUnique", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+            if (p2 != null && p2.CanRead)
+            {
+                var v = p2.GetValue(m, null);
+                if (v is bool b2p) return b2p;
+            }
+        }
+        catch { /* ignore and treat as non-unique */ }
+
+        return false;
+    }
+
 
     // ── Blinders helpers (soft-optional) ────────────────────────────────────────
     void Blinders_Show()

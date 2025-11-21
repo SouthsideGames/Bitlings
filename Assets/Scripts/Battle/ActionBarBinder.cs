@@ -41,33 +41,44 @@ public sealed class ActionBarBinder : MonoBehaviour
 
     void Awake()
     {
-        // Best-effort fallback if not wired in Inspector
-        if (!battle)
-        {
-            battle = GetComponentInParent<BattleManager>();
-            if (!battle) battle = FindFirstObjectByType<BattleManager>();
-        }
-
-        // Bind the clicks (clear old listeners just in case)
         if (attackBtn)
         {
             attackBtn.onClick.RemoveAllListeners();
-            attackBtn.onClick.AddListener(() => { if (battle) battle.SetPlayerActionAttack(); });
+            attackBtn.onClick.AddListener(() =>
+            {
+                if (battle) battle.SetPlayerActionAttack();
+                if (AudioManager.I != null) AudioManager.I.PlaySfx(SfxType.Attack);
+            });
         }
+
         if (defendBtn)
         {
             defendBtn.onClick.RemoveAllListeners();
-            defendBtn.onClick.AddListener(() => { if (battle) battle.SetPlayerActionDefend(); });
+            defendBtn.onClick.AddListener(() =>
+            {
+                if (battle) battle.SetPlayerActionDefend();
+                if (AudioManager.I != null) AudioManager.I.PlaySfx(SfxType.Defend);
+            });
         }
+
         if (focusBtn)
         {
             focusBtn.onClick.RemoveAllListeners();
-            focusBtn.onClick.AddListener(() => { if (battle) battle.SetPlayerActionFocus();  });
+            focusBtn.onClick.AddListener(() =>
+            {
+                if (battle) battle.SetPlayerActionFocus();
+                if (AudioManager.I != null) AudioManager.I.PlaySfx(SfxType.Focus);
+            });
         }
+
         if (runBtn)
         {
             runBtn.onClick.RemoveAllListeners();
-            runBtn.onClick.AddListener(() => { if (battle) battle.SetPlayerActionRun();    });
+            runBtn.onClick.AddListener(() =>
+            {
+                if (battle) battle.SetPlayerActionRun();
+                if (AudioManager.I != null) AudioManager.I.PlaySfx(SfxType.Run);
+            });
         }
     }
 
@@ -88,10 +99,12 @@ public sealed class ActionBarBinder : MonoBehaviour
                 bool isAuto = false;
                 try
                 {
-                    // This is safe even if EncounterManager.I is null
                     isAuto = (EncounterManager.I != null) && EncounterManager.I.IsAutoMode;
                 }
-                catch { /* ignore if the API differs; we just won't gate by auto-mode */ }
+                catch
+                {
+                    // ignore if the API differs
+                }
 
                 if (isAuto) enable = false;
             }

@@ -21,19 +21,22 @@ public enum SfxType
     CritHit = 7,
     Victory = 8,
     Defeat = 9,
+    Run = 17,
+    Focus = 18,
     CaptureSuccess = 10,
+    
     // Progress
     LevelUp = 11,
 
     // Titles
     TitleEquip = 12,
     TitleUnequip = 13,
+
     //Encounters
     ShinyEncounter = 14,
     BossEncounter = 15,
     UnqiueEncounter = 16,
-    Run = 17,
-    Focus = 18
+
 }
 
 [Serializable]
