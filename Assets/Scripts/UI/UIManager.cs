@@ -134,7 +134,12 @@ public class UIManager : MonoBehaviour
             if (_open.Add(id))
             {
                 e.root.SetActive(true);
-                if (fireEvent) OnPanelChanged?.Invoke(id, true);
+                if (fireEvent)
+                {
+                    OnPanelChanged?.Invoke(id, true);
+                    AudioManager.I.PlaySfx(SfxType.UIOpen);
+                } 
+                    
             }
         }
         else

@@ -144,6 +144,8 @@ public class MonsterPackManager : MonoBehaviour
 
         // Optional popup
         GameEvents.ShowRewardPopup?.Invoke(pack.displayName, "Pack Unlocked", 0, 0);
+
+        AudioManager.I.PlaySfx(SfxType.Purchase);
         return true;
     }
 

@@ -320,6 +320,7 @@ public class StatBucketPanelUI : MonoBehaviour
         ComputeCurrentStats();
         _nextCostToLevel = CalcNextCostForCurrentLevel();
         RefreshUI();
+        AudioManager.I.PlaySfx(SfxType.LevelUp);
     }
 
     // ─────────────────────────────────────────────────────────────

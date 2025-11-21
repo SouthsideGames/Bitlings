@@ -8,36 +8,32 @@ public enum SfxType
     None = 0,
 
     // Core/UI
-    Click,
-    UIOpen,
-    UIClose,
+    Click = 1,
+    UIOpen = 2,
 
     // Economy
-    Collect,
-    Purchase,
+    Collect = 3,
+    Purchase = 4,
 
     // Battle
-    Attack,
-    Defend,
-    CritHit,
-    Victory,
-    Defeat,
-    CaptureSuccess,
-
+    Attack = 5,
+    Defend = 6,
+    CritHit = 7,
+    Victory = 8,
+    Defeat = 9,
+    CaptureSuccess = 10,
     // Progress
-    LevelUp,
+    LevelUp = 11,
 
     // Titles
-    TitleEquip,
-    TitleUnequip,
-
+    TitleEquip = 12,
+    TitleUnequip = 13,
     //Encounters
-    ShinyEncounter,
-    BossEncounter,
-    UnqiueEncounter,
-
-    Run,
-    Focus
+    ShinyEncounter = 14,
+    BossEncounter = 15,
+    UnqiueEncounter = 16,
+    Run = 17,
+    Focus = 18
 }
 
 [Serializable]

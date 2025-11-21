@@ -10397,7 +10397,8 @@ MonoBehaviour:
   defeatMusic: {fileID: 8300000, guid: 442b2eceaeb4d0145ae1168d7abdf7e1, type: 3}
   defaultCrossfade: 0.75
   sfxPoolSize: 4
-  sfxPool: []
+  sfxPool:
+  - {fileID: 282642171}
   defaultCooldown: 0.08
   catalog:
   - type: 1
@@ -10414,23 +10415,9 @@ MonoBehaviour:
     pitchMin: 0.85
     pitchMax: 1.05
     cooldown: 0
-  - type: 3
+  - type: 4
     clips:
-    - {fileID: 8300000, guid: a76c01cfd32c14a8494b581bdac2a902, type: 3}
-    volume: 0.5
-    pitchMin: 0.85
-    pitchMax: 1.05
-    cooldown: 0
-  - type: 15
-    clips:
-    - {fileID: 8300000, guid: 42cf980de39ae42cba4f503916ec84d4, type: 3}
-    volume: 0.5
-    pitchMin: 0.85
-    pitchMax: 1.05
-    cooldown: 0
-  - type: 16
-    clips:
-    - {fileID: 8300000, guid: 1891c5dbf7da24e7e9c8ece542fbcaec, type: 3}
+    - {fileID: 8300000, guid: 7c8b03cc70804462dbfcd936f872b638, type: 3}
     volume: 0.5
     pitchMin: 0.85
     pitchMax: 1.05
@@ -10442,37 +10429,9 @@ MonoBehaviour:
     pitchMin: 0.85
     pitchMax: 1.05
     cooldown: 0
-  - type: 17
-    clips:
-    - {fileID: 8300000, guid: 57f98be679fe74c4ba2ff9bad92aa313, type: 3}
-    volume: 0.5
-    pitchMin: 0.85
-    pitchMax: 1.05
-    cooldown: 0
-  - type: 11
-    clips:
-    - {fileID: 8300000, guid: fb46675d8245b4017b1d735572618eae, type: 3}
-    volume: 0.5
-    pitchMin: 0.85
-    pitchMax: 1.05
-    cooldown: 0
-  - type: 4
-    clips:
-    - {fileID: 8300000, guid: 7c8b03cc70804462dbfcd936f872b638, type: 3}
-    volume: 0.5
-    pitchMin: 0.85
-    pitchMax: 1.05
-    cooldown: 0
   - type: 6
     clips:
     - {fileID: 8300000, guid: 555eea225fcf140c1b539be97cbd87a1, type: 3}
-    volume: 0.5
-    pitchMin: 0.85
-    pitchMax: 1.05
-    cooldown: 0
-  - type: 19
-    clips:
-    - {fileID: 8300000, guid: 9057c9d9d412d4f76ad9788f878d7b77, type: 3}
     volume: 0.5
     pitchMin: 0.85
     pitchMax: 1.05
@@ -10491,6 +10450,41 @@ MonoBehaviour:
     pitchMin: 0.85
     pitchMax: 1.05
     cooldown: 0
+  - type: 19
+    clips:
+    - {fileID: 8300000, guid: 9057c9d9d412d4f76ad9788f878d7b77, type: 3}
+    volume: 0.5
+    pitchMin: 0.85
+    pitchMax: 1.05
+    cooldown: 0
+  - type: 15
+    clips:
+    - {fileID: 8300000, guid: 42cf980de39ae42cba4f503916ec84d4, type: 3}
+    volume: 0.5
+    pitchMin: 0.85
+    pitchMax: 1.05
+    cooldown: 0
+  - type: 16
+    clips:
+    - {fileID: 8300000, guid: 1891c5dbf7da24e7e9c8ece542fbcaec, type: 3}
+    volume: 0.5
+    pitchMin: 0.85
+    pitchMax: 1.05
+    cooldown: 0
+  - type: 17
+    clips:
+    - {fileID: 8300000, guid: 57f98be679fe74c4ba2ff9bad92aa313, type: 3}
+    volume: 0.5
+    pitchMin: 0.85
+    pitchMax: 1.05
+    cooldown: 0
+  - type: 11
+    clips:
+    - {fileID: 8300000, guid: fb46675d8245b4017b1d735572618eae, type: 3}
+    volume: 0.5
+    pitchMin: 0.85
+    pitchMax: 1.05
+    cooldown: 0
   - type: 18
     clips:
     - {fileID: 8300000, guid: f63c1fee67006448eb5f82fd877f8713, type: 3}
@@ -10501,6 +10495,27 @@ MonoBehaviour:
   - type: 13
     clips:
     - {fileID: 8300000, guid: 7ea525830d3634ed4a5d5dc8781a53c0, type: 3}
+    volume: 0.5
+    pitchMin: 0.85
+    pitchMax: 1.05
+    cooldown: 0
+  - type: 9
+    clips:
+    - {fileID: 8300000, guid: 7f330ede16bc14e46bf95775d7b45203, type: 3}
+    volume: 0.5
+    pitchMin: 0.85
+    pitchMax: 1.05
+    cooldown: 0
+  - type: 10
+    clips:
+    - {fileID: 8300000, guid: 12b0d3d836fb145eca5a6d07bf644349, type: 3}
+    volume: 0.5
+    pitchMin: 0.85
+    pitchMax: 1.05
+    cooldown: 0
+  - type: 12
+    clips:
+    - {fileID: 8300000, guid: 9e71d92629345427c858220f0a2a8dc6, type: 3}
     volume: 0.5
     pitchMin: 0.85
     pitchMax: 1.05
