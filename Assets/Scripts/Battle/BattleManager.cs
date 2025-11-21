@@ -30,15 +30,18 @@ public class BattleManager : MonoBehaviour
     [Header("Manual Turn Settings")]
     [SerializeField] private bool manualTurns = true;
     [SerializeField, Range(0f, 1f)] private float defendReducePct = 0.50f;
+    [SerializeField, Range(0f, 1f)] private float guardConvertPct = 1.0f;
+    [SerializeField, Range(0f, 2f)] private float chargeBonusPct = 0.5f;
+
     [SerializeField, Range(0f, 1f)] private float focusBuffPct = 0.50f;
     [SerializeField, Min(1)] private int focusBuffTurns = 1;
 
-    [SerializeField, Range(0f, 1f)] private float runBaseChance = 0.25f; // base floor
-    [SerializeField, Range(0f, 1f)] private float runMinChance = 0.05f; // never lower than this
-    [SerializeField, Range(0f, 1f)] private float runMaxChance = 0.95f; // never higher than this
-    [SerializeField, Range(0f, 1f)] private float runSpeedWeight = 0.50f; // how much (playerSPD/(playerSPD+wildSPD) - 0.5) matters
-    [SerializeField, Range(0f, 1f)] private float runAttemptBonus = 0.10f; // +10% per failed attempt
-    [SerializeField, Range(0f, 1f)] private float runHpWeight = 0.25f; // easier to run when wild is hurt
+    [SerializeField, Range(0f, 1f)] private float runBaseChance = 0.25f; 
+    [SerializeField, Range(0f, 1f)] private float runMinChance = 0.05f;
+    [SerializeField, Range(0f, 1f)] private float runMaxChance = 0.95f; 
+    [SerializeField, Range(0f, 1f)] private float runSpeedWeight = 0.50f; 
+    [SerializeField, Range(0f, 1f)] private float runAttemptBonus = 0.10f; 
+    [SerializeField, Range(0f, 1f)] private float runHpWeight = 0.25f; 
 
     private bool _isPlayerTurn;
     public bool IsPlayerTurn => _isPlayerTurn;
@@ -112,6 +115,12 @@ public class BattleManager : MonoBehaviour
     [SerializeField, Min(0.25f)] private float battleSpeed = 1f; // 1x, 2x, 3x
     public float BattleSpeed => battleSpeed;
 
+    [Header("Status UI (Player)")]
+    [SerializeField] private Image guardIcon;
+    [SerializeField] private Image chargeIcon; 
+    [SerializeField] private TextMeshProUGUI playerShieldText;
+
+
     [Header("Debug")]
     [SerializeField] private bool debugIncomingMitigation = false;
     [SerializeField] private bool debugEffectivenessOutgoing = false;
@@ -128,7 +137,10 @@ public class BattleManager : MonoBehaviour
     private string[] teamIds;
 
     private JobBattlePassives.Ctx[] jobCtx;
+
     private float[] shieldHP;
+    private float[] pendingGuardShield; 
+    private bool[] chargedNextAttack;
 
     // Pending one-turn damage buffs for benched allies (applied on swap-in)
     private float[] teamPendingBuffPct;
@@ -171,7 +183,12 @@ public class BattleManager : MonoBehaviour
             battleSpeed = Mathf.Clamp(SaveManager.Data.settings.battleSpeed, 0.25f, 5f);
 
         SetCombatPanels(false);
+
+        if (guardIcon) guardIcon.enabled = false;
+        if (chargeIcon) chargeIcon.enabled = false;
+        if (playerShieldText) playerShieldText.gameObject.SetActive(false);
     }
+
 
     void OnEnable()
     {
@@ -290,6 +307,9 @@ public class BattleManager : MonoBehaviour
         slotDamageBuffPct = new float[teamCount];
         slotDamageBuffTurns = new int[teamCount];
 
+        pendingGuardShield = new float[teamCount];
+        chargedNextAttack = new bool[teamCount];
+
         for (int i = 0; i < teamCount; i++)
         {
             var owned = SaveManager.Data.team[i];
@@ -370,6 +390,8 @@ public class BattleManager : MonoBehaviour
                 }
                 swappedFromKO = true;
             }
+
+            ApplyPendingGuardShieldForActive();
 
             BattleLogger.Log($"— Round {round} —", LogScope.Battle);
             yield return Wait(beginRoundDelay);
@@ -478,6 +500,7 @@ public class BattleManager : MonoBehaviour
             }
 
             defendActiveThisRound = false;
+            if (guardIcon) guardIcon.enabled = false;
             round++;
         }
 
@@ -505,21 +528,29 @@ public class BattleManager : MonoBehaviour
                 break;
 
             case PlayerAction.Defend:
-                defendActiveThisRound = true;
-                BattleLogger.Log($"{GetName(activeIndex)} braces for impact (−{Mathf.RoundToInt(defendReducePct * 100f)}% incoming this round).", LogScope.Battle);
+            defendActiveThisRound = true;
+                if (guardIcon) guardIcon.enabled = true;
+                BattleLogger.Log(
+                    $"{GetName(activeIndex)} guards, reducing this hit and storing power as a shield for next round.",
+                    LogScope.Battle
+                );
                 Punch(playerIcon);
                 break;
 
             case PlayerAction.Focus:
-                if (slotDamageBuffPct != null && slotDamageBuffTurns != null &&
-                    activeIndex >= 0 && activeIndex < slotDamageBuffPct.Length)
+                 if (chargedNextAttack != null &&
+                    activeIndex >= 0 &&
+                    activeIndex < chargedNextAttack.Length)
                 {
-                    slotDamageBuffPct[activeIndex] =
-                        Mathf.Max(slotDamageBuffPct[activeIndex], focusBuffPct);
-                    slotDamageBuffTurns[activeIndex] =
-                        Mathf.Max(slotDamageBuffTurns[activeIndex], focusBuffTurns);
+                    chargedNextAttack[activeIndex] = true;
                 }
-                BattleLogger.Log($"{GetName(activeIndex)} focuses (+{Mathf.RoundToInt(focusBuffPct * 100f)}% ATK for {focusBuffTurns} turn(s)).", LogScope.Battle);
+
+                if (chargeIcon) chargeIcon.enabled = true;
+
+                BattleLogger.Log(
+                    $"{GetName(activeIndex)} is charging up for a powerful next attack (+{Mathf.RoundToInt(chargeBonusPct * 100f)}%).",
+                    LogScope.Battle
+                );
                 Punch(playerIcon);
                 break;
 
@@ -680,6 +711,23 @@ public class BattleManager : MonoBehaviour
         if (!Mathf.Approximately(atkBoosterMult, 1f))
             dr.damage = Mathf.Max(1, Mathf.RoundToInt(dr.damage * atkBoosterMult));
 
+        if (chargedNextAttack != null &&
+            activeIndex >= 0 &&
+            activeIndex < chargedNextAttack.Length &&
+            chargedNextAttack[activeIndex] &&
+            chargeBonusPct > 0f)
+        {
+            dr.damage = Mathf.Max(1, Mathf.RoundToInt(dr.damage * (1f + chargeBonusPct)));
+            chargedNextAttack[activeIndex] = false;
+
+            if (chargeIcon) chargeIcon.enabled = false;
+
+            BattleLogger.Log(
+                $"{GetName(activeIndex)} unleashes a charged attack (+{Mathf.RoundToInt(chargeBonusPct * 100f)}% damage)!",
+                LogScope.Battle
+            );
+        }
+
         wildHP = Mathf.Max(0f, wildHP - dr.damage);
         PushHPBars();
 
@@ -785,6 +833,20 @@ public class BattleManager : MonoBehaviour
         if (ctx != null && ctx.dmgReduceBuffTurns > 0 && ctx.dmgReduceFirstTurns > 0f)
             incomingScalar *= (1f - ctx.dmgReduceFirstTurns);
 
+        float scalarBeforeGuard = incomingScalar;
+        float preventedByGuardRaw = 0f;
+
+        if (defendActiveThisRound && defendReducePct > 0f)
+        {
+            float guardPct = Mathf.Clamp01(defendReducePct);
+            incomingScalar *= (1f - guardPct);
+
+            // amount of raw damage “removed” by guard, before titles/shields
+            float dmgBeforeGuard = dr.damage * scalarBeforeGuard;
+            float dmgAfterGuard = dr.damage * incomingScalar;
+            preventedByGuardRaw = Mathf.Max(0f, dmgBeforeGuard - dmgAfterGuard);
+        }
+
         if (defendActiveThisRound && defendReducePct > 0f)
             incomingScalar *= (1f - Mathf.Clamp01(defendReducePct));
 
@@ -835,6 +897,21 @@ public class BattleManager : MonoBehaviour
 
         teamHP[activeIndex] = Mathf.Max(0f, teamHP[activeIndex] - dmg_final);
         ClampAndPushActiveHP();
+
+        if (preventedByGuardRaw > 0f &&
+            pendingGuardShield != null &&
+            activeIndex >= 0 &&
+            activeIndex < pendingGuardShield.Length &&
+            guardConvertPct > 0f)
+        {
+            float shieldGain = preventedByGuardRaw * guardConvertPct;
+            pendingGuardShield[activeIndex] += shieldGain;
+
+            BattleLogger.Log(
+                $"{GetName(activeIndex)} stores {Mathf.RoundToInt(shieldGain)} damage as a guard shield for the next round.",
+                LogScope.Battle
+            );
+        }
 
         TitlesAdapter.OnHitTaken(teamIds[activeIndex], dmg_final, dr.crit && !df.cannotBeCrit);
 
@@ -1103,6 +1180,8 @@ public class BattleManager : MonoBehaviour
         }
 
         UpdatePlayerInfoUI();
+
+        UpdateShieldUI();
     }
 
     private void PushHPBars()
@@ -1474,6 +1553,7 @@ public class BattleManager : MonoBehaviour
         if (playerNameText) playerNameText.text = def ? def.displayName : "";
         if (playerLevelText) playerLevelText.text = $"Lv {lvl}";
         UpdatePlayerInfoUI();
+        UpdateChargeIconForActive();
     }
 
     private WaitForSecondsRealtime Wait(float t)
@@ -1886,4 +1966,60 @@ public class BattleManager : MonoBehaviour
 
         return Mathf.Clamp(chance, runMinChance, runMaxChance);
     }
+
+    private void ApplyPendingGuardShieldForActive()
+    {
+        if (pendingGuardShield == null || shieldHP == null) return;
+        if (activeIndex < 0 || activeIndex >= pendingGuardShield.Length) return;
+
+        float gain = pendingGuardShield[activeIndex];
+        if (gain <= 0.01f) return;
+
+        shieldHP[activeIndex] += gain;
+        pendingGuardShield[activeIndex] = 0f;
+
+        BattleLogger.Log(
+            $"{GetName(activeIndex)} gains a guard shield of {Mathf.RoundToInt(gain)}!",
+            LogScope.Battle
+        );
+
+        ClampAndPushActiveHP();
+    }
+
+    private void UpdateChargeIconForActive()
+    {
+        if (!chargeIcon) return;
+
+        bool charged =
+            chargedNextAttack != null &&
+            activeIndex >= 0 &&
+            activeIndex < chargedNextAttack.Length &&
+            chargedNextAttack[activeIndex];
+
+        chargeIcon.enabled = charged;
+    }
+
+    private void UpdateShieldUI()
+    {
+        if (!playerShieldText) return;
+
+        float shield = (shieldHP != null &&
+                        activeIndex >= 0 &&
+                        activeIndex < shieldHP.Length)
+            ? shieldHP[activeIndex]
+            : 0f;
+
+        if (shield > 0f)
+        {
+            playerShieldText.gameObject.SetActive(true);
+            playerShieldText.text = $"Shield: {Mathf.CeilToInt(shield)}";
+        }
+        else
+        {
+            playerShieldText.gameObject.SetActive(false);
+        }
+    }
+
+
+
 }
