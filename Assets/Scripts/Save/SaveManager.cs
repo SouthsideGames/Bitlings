@@ -35,9 +35,9 @@ public static class SaveManager
 {
     public static PlayerManager Data;
 
-    public static string SavePath      => Path.Combine(Application.persistentDataPath, "idle_mon_save.json");
-    public static string BackupPath    => Path.Combine(Application.persistentDataPath, "idle_mon_save.bak");
-    public static string JobRuntimePath=> Path.Combine(Application.persistentDataPath, "idle_job_runtime.json");
+    public static string SavePath       => Path.Combine(Application.persistentDataPath, "idle_mon_save.json");
+    public static string BackupPath     => Path.Combine(Application.persistentDataPath, "idle_mon_save.bak");
+    public static string JobRuntimePath => Path.Combine(Application.persistentDataPath, "idle_job_runtime.json");
 
     // ─────────────────────────────────────────────────────────────────────────────
     // Lifecycle
@@ -152,6 +152,9 @@ public static class SaveManager
             lastEncounterResetYMD = TodayYMD(),
             lastSavedUnix = NowUnix(),
 
+            // Win streak
+            winStreak = 0,
+
             // Collections (ensure non-null)
             ownedIds = new HashSet<string>(),
             ownedIdsList = new List<string>(),
@@ -192,7 +195,6 @@ public static class SaveManager
         Data.jobStorageUpgrades ??= new List<JobStorageUpgrade>();
         Data.unlockedPacks ??= new List<string>();
 
-
         // Identity
         if (string.IsNullOrEmpty(Data.playerId)) Data.playerId = Guid.NewGuid().ToString("N");
 
@@ -201,6 +203,9 @@ public static class SaveManager
         if (Data.encounterCost <= 0) Data.encounterCost = 5;
         if (Data.encounterPoints < 0) Data.encounterPoints = 0;
         if (Data.lastEncounterResetYMD == 0) Data.lastEncounterResetYMD = TodayYMD();
+
+        // ✅ Win streak defaults / clamp
+        if (Data.winStreak < 0) Data.winStreak = 0;
 
         // Resource counts sized to enum
         int need = Enum.GetValues(typeof(ResourceType)).Length;
@@ -231,7 +236,6 @@ public static class SaveManager
 
         // Settings
         Data.settings ??= new SettingsState();
-        // (Your SettingsState should contain fields like autoBenchEnabled, autoClinicReliefEnabled, etc.)
 
         // Normalize team & owned and ensure cross-consistency
         NormalizeOwnedEntries(Data.owned);
@@ -287,6 +291,7 @@ public static class SaveManager
             if (!string.IsNullOrEmpty(canonical.monsterId))
                 Data.ownedIds.Add(canonical.monsterId);
         }
+
         // Training pointer default
         if (string.IsNullOrEmpty(Data.trainingMonsterId) && Data.team.Count > 0)
         {
@@ -315,8 +320,8 @@ public static class SaveManager
             if (om.level <= 0) om.level = 1;
             if (om.currentXP < 0) om.currentXP = 0;
 
-            // ✅ Keep 0 HP as "downed" so the player must heal or bench them.
-            //    Only coerce values less than -1 up to the -1 sentinel.
+            // Keep 0 HP as "downed" so the player must heal or bench them.
+            // Only coerce values less than -1 up to the -1 sentinel.
             if (om.currentHP < -1) om.currentHP = -1;
 
             // Ensure a stable UID for references
@@ -328,6 +333,7 @@ public static class SaveManager
                 Data.ownedIds.Add(om.monsterId);
         }
     }
+
     static void EnsureTrainingDefaults()
     {
         if (Data?.owned == null) return;
@@ -486,12 +492,12 @@ public static class SaveManager
         bool onTeam = Data.team.Exists(t => t != null && t.ownedUID == ownedMonster.ownedUID);
         if (!onTeam)
         {
-            Data.team.Add(ownedMonster); // 🔥 same reference, no copy
+            Data.team.Add(ownedMonster); // same reference, no copy
             if (string.IsNullOrEmpty(Data.trainingMonsterId))
                 Data.trainingMonsterId = monsterId;
         }
 
-        // 3) Track species, seen types, etc. (unchanged)
+        // 3) Track species, seen types, etc.
         Data.ownedIds ??= new HashSet<string>();
         Data.ownedIds.Add(monsterId);
 
@@ -511,7 +517,6 @@ public static class SaveManager
 
         Save();
     }
-
 
     // ─────────────────────────────────────────────────────────────────────────────
     // Job runtime sidecar I/O (slot fatigue + cooldown)

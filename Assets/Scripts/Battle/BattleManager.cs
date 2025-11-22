@@ -34,7 +34,6 @@ public class BattleManager : MonoBehaviour
     [SerializeField, Range(0f, 2f)] private float chargeBonusPct = 0.5f;
 
     [SerializeField, Range(0f, 1f)] private float focusBuffPct = 0.50f;
-    [SerializeField, Min(1)] private int focusBuffTurns = 1;
 
     [SerializeField, Range(0f, 1f)] private float runBaseChance = 0.25f; 
     [SerializeField, Range(0f, 1f)] private float runMinChance = 0.05f;

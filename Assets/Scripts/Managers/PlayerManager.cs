@@ -100,7 +100,7 @@ public class PlayerManager
     public int autoTapLevel;
     public int coinGainLevel;
     public int offlineLevel;
-
+    public int winStreak;
     public int encounterPoints = 0;
     public int encounterMax = 50;
     public int encounterCost = 5;

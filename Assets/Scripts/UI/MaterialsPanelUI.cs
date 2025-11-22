@@ -11,7 +11,6 @@ public class MaterialsPanelUI : MonoBehaviour
     [SerializeField] private TextMeshProUGUI totalMaterialsText;
     [SerializeField] private Button confirmBtn;
     [SerializeField] private Button cancelBtn;
-    [SerializeField] private Button closeBtn;
 
     [Header("Visual")]
     [SerializeField] private Color totalNormal = Color.white;
@@ -33,7 +32,6 @@ public class MaterialsPanelUI : MonoBehaviour
 
         if (confirmBtn) { confirmBtn.onClick.RemoveAllListeners(); confirmBtn.onClick.AddListener(Confirm); }
         if (cancelBtn)  { cancelBtn.onClick.RemoveAllListeners();  cancelBtn.onClick.AddListener(Cancel); }
-        if (closeBtn)   { closeBtn.onClick.RemoveAllListeners();   closeBtn.onClick.AddListener(Close); }
     }
 
     void Start()
@@ -47,10 +45,7 @@ public class MaterialsPanelUI : MonoBehaviour
         RefreshTotals();
     }
 
-    void OnDisable()
-    {
-        Clear();
-    }
+    void OnDisable() => Clear();
 
     // ---------- Public API ----------
     public void Open()

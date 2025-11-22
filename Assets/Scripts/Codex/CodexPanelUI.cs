@@ -9,10 +9,12 @@ public enum OwnedSortMode
     ByIdAsc,
     ByNameAZ,
     ByNameZA,
-    ByType
+    ByType,
+    ByLevelLowToHigh,
+    ByLevelHighToLow
 }
 
-public class MonstersPanelUI : MonoBehaviour
+public class CodexPanelUI : MonoBehaviour
 {
     [Header("Team")]
     [SerializeField] private RectTransform teamContent;
@@ -40,7 +42,7 @@ public class MonstersPanelUI : MonoBehaviour
             BuildSortDropdownOptions();
 
             int saved = LoadSortIndexFromJson();
-            saved = Mathf.Clamp(saved, 0, (int)OwnedSortMode.ByType);
+            saved = Mathf.Clamp(saved, 0, (int)OwnedSortMode.ByLevelHighToLow);
 
             sortDropdown.onValueChanged.RemoveAllListeners();
             sortDropdown.SetValueWithoutNotify(saved);
@@ -86,7 +88,7 @@ public class MonstersPanelUI : MonoBehaviour
         if (!sortDropdown) return;
 
         var options = new List<TMP_Dropdown.OptionData>();
-        for (int i = 0; i <= (int)OwnedSortMode.ByType; i++)
+        for (int i = 0; i <= (int)OwnedSortMode.ByLevelHighToLow; i++)
             options.Add(new TMP_Dropdown.OptionData(GetSortLabel((OwnedSortMode)i)));
 
         sortDropdown.options = options;
@@ -97,18 +99,20 @@ public class MonstersPanelUI : MonoBehaviour
     {
         switch (mode)
         {
-            case OwnedSortMode.ByIdAsc:  return "ID ↑";
-            case OwnedSortMode.ByNameAZ: return "Name A → Z";
-            case OwnedSortMode.ByNameZA: return "Name Z → A";
-            case OwnedSortMode.ByType:   return "Type";
-            default:                     return mode.ToString();
+            case OwnedSortMode.ByIdAsc:          return "ID ↑";
+            case OwnedSortMode.ByNameAZ:         return "Name A → Z";
+            case OwnedSortMode.ByNameZA:         return "Name Z → A";
+            case OwnedSortMode.ByType:           return "Type";
+            case OwnedSortMode.ByLevelLowToHigh: return "Level ↑";
+            case OwnedSortMode.ByLevelHighToLow: return "Level ↓";
+            default:                             return mode.ToString();
         }
     }
 
     // Called when the dropdown value changes
     void OnSortChanged(int value)
     {
-        var mode = (OwnedSortMode)Mathf.Clamp(value, 0, (int)OwnedSortMode.ByType);
+        var mode = (OwnedSortMode)Mathf.Clamp(value, 0, (int)OwnedSortMode.ByLevelHighToLow);
         if (mode == _lastSortMode) return;
 
         _lastSortMode = mode;
@@ -143,7 +147,11 @@ public class MonstersPanelUI : MonoBehaviour
     void RebuildOwnedOnly()
     {
         var data = SaveManager.Data;
-        if (data == null) { Clear(ownedContent); return; }
+        if (data == null)
+        {
+            Clear(ownedContent);
+            return;
+        }
 
         var team  = data.team  ?? new List<OwnedMonsterData>();
         var owned = data.owned ?? new List<OwnedMonsterData>();
@@ -176,7 +184,7 @@ public class MonstersPanelUI : MonoBehaviour
             if (card)
             {
                 int slotIndex = i;
-               card.Setup(
+                card.Setup(
                     data: member,
                     def: def,
                     onClick: _ =>
@@ -187,7 +195,6 @@ public class MonstersPanelUI : MonoBehaviour
                     },
                     onAnyChanged: RefreshAll
                 );
-
             }
         }
 
@@ -260,9 +267,6 @@ public class MonstersPanelUI : MonoBehaviour
         RefreshAll();
     }
 
-
-
-
     void SelectTeamSlot(int idx)
     {
         selectedTeamIndex = Mathf.Clamp(idx, 0, 2);
@@ -277,7 +281,7 @@ public class MonstersPanelUI : MonoBehaviour
     OwnedSortMode GetSortMode()
     {
         if (!sortDropdown) return OwnedSortMode.ByIdAsc;
-        return (OwnedSortMode)Mathf.Clamp(sortDropdown.value, 0, (int)OwnedSortMode.ByType);
+        return (OwnedSortMode)Mathf.Clamp(sortDropdown.value, 0, (int)OwnedSortMode.ByLevelHighToLow);
     }
 
     List<OwnedMonsterData> SortOwned(List<OwnedMonsterData> list, OwnedSortMode mode)
@@ -286,10 +290,23 @@ public class MonstersPanelUI : MonoBehaviour
         {
             case OwnedSortMode.ByNameAZ:
                 return list.OrderBy(o => GetNameKey(o)).ThenBy(o => o.monsterId).ToList();
+
             case OwnedSortMode.ByNameZA:
                 return list.OrderByDescending(o => GetNameKey(o)).ThenBy(o => o.monsterId).ToList();
+
             case OwnedSortMode.ByType:
                 return list.OrderBy(o => GetTypeKey(o)).ThenBy(o => GetNameKey(o)).ToList();
+
+            case OwnedSortMode.ByLevelLowToHigh:
+                return list.OrderBy(o => o.level)
+                           .ThenBy(o => GetNameKey(o))
+                           .ToList();
+
+            case OwnedSortMode.ByLevelHighToLow:
+                return list.OrderByDescending(o => o.level)
+                           .ThenBy(o => GetNameKey(o))
+                           .ToList();
+
             case OwnedSortMode.ByIdAsc:
             default:
                 return list.OrderBy(o => o.monsterId).ToList();

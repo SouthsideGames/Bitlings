@@ -6,7 +6,7 @@ using System.Collections.Generic;
 /// Panel that shows all monsters eligible for Growth Core leveling,
 /// and opens the StatBucketPanelUI when you tap a row.
 /// </summary>
-public sealed class GrowthPanelUI : MonoBehaviour
+public sealed class GymPanelUI : MonoBehaviour
 {
     [Header("Refs")]
     [Tooltip("Player data source. If left null, SaveManager.Data will be used.")]
