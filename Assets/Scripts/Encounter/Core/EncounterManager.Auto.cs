@@ -45,7 +45,5 @@ public partial class EncounterManager
 
         EmitStatus("AUTO stopped: no energy.", LogScope.System);
         OnStateChanged?.Invoke();
-
-        Blinders_Show();
     }
 }

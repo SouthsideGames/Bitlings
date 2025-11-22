@@ -1,11 +1,19 @@
+// Assets/Scripts/Misc/UpgradeCatalogEntry.cs
 using UnityEngine;
 
 [System.Serializable]
 public class UpgradeCatalogEntry
 {
-    public UpgradeType type;
+    [Header("Identity")]
+    public FeatureId featureId;
     public string displayName;
+    public Sprite icon;
 
-    [Tooltip("String id for Info panel, e.g., upg.tap, upg.idle")]
+    [Header("Info Panel")]
+    [Tooltip("String id for Info panel, e.g., feat.idle.basic")]
     public string infoId;
+
+    [Header("Cost")]
+    [Min(0)]
+    public int coinCost = 50;
 }

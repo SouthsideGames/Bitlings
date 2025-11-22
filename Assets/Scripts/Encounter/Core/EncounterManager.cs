@@ -16,9 +16,6 @@ public partial class EncounterManager : MonoBehaviour
     [Header("Refs")]
     [SerializeField] private BattleManager battleManager;
 
-    [SerializeField] private MonoBehaviour blindersBehaviour;
-    MethodInfo _blindersShow, _blindersHide;
-
     [Header("Boss Settings")]
     [Tooltip("0 = use PlayerData.bossEveryN")]
     [SerializeField, Min(0)] private int bossEveryNOverride = 0;
@@ -51,14 +48,6 @@ public partial class EncounterManager : MonoBehaviour
         if (I != null && I != this) { Destroy(gameObject); return; }
         I = this;
 
-        // cache blinders reflection (soft-optional dependency)
-        if (blindersBehaviour)
-        {
-            var t = blindersBehaviour.GetType();
-            _blindersShow = t.GetMethod("Show", BindingFlags.Public | BindingFlags.Instance);
-            _blindersHide = t.GetMethod("Hide", BindingFlags.Public | BindingFlags.Instance);
-        }
-
         // Win streak & energy
         _currentWinStreak = LoadWinStreakOr(0);
         _currentWinStreak = Mathf.Max(0, _currentWinStreak);
@@ -87,9 +76,6 @@ public partial class EncounterManager : MonoBehaviour
 
         NormalizeTeamHPIfUninitialized();
         GameEvents.WinStreakChanged?.Invoke(_currentWinStreak);
-
-        // Ensure blinders start UP on the Encounter panel
-        Blinders_Show();
 
         // initial UI update with correct energy mirrored
         MirrorEnergyIntoSaveData();
@@ -276,9 +262,7 @@ public partial class EncounterManager : MonoBehaviour
         if (_currentEncounterIsBoss && _currentBossUsed != null)
             GameEvents.BossSpawned?.Invoke(_currentBossUsed.id, _currentBossUsed);
 
-        // Battle starts → lower the blinders
-        Blinders_Hide();
-
+        
         inBattle = true;
         OnStateChanged?.Invoke();
 
@@ -287,7 +271,6 @@ public partial class EncounterManager : MonoBehaviour
             EmitStatus("No BattleManager assigned.", LogScope.System);
             inBattle = false;
             OnStateChanged?.Invoke();
-            Blinders_Show();
             return;
         }
 
@@ -516,17 +499,6 @@ public partial class EncounterManager : MonoBehaviour
             AudioManager.I.PlaySfx(SfxType.UnqiueEncounter); // enum spelling kept
             return;
         }
-    }
-
-    // ── Blinders helpers (soft-optional) ────────────────────────────────────────
-    void Blinders_Show()
-    {
-        try { _blindersShow?.Invoke(blindersBehaviour, null); } catch { }
-    }
-
-    void Blinders_Hide()
-    {
-        try { _blindersHide?.Invoke(blindersBehaviour, null); } catch { }
     }
 
     // ========================================================================

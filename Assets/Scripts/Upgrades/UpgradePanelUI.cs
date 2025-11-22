@@ -1,6 +1,6 @@
+// Assets/Scripts/UI/UpgradesPanelUI.cs
 using UnityEngine;
 using System.Collections.Generic;
-using System;
 
 public class UpgradesPanelUI : MonoBehaviour
 {
@@ -15,98 +15,39 @@ public class UpgradesPanelUI : MonoBehaviour
 
     void OnEnable()
     {
-        GameEvents.OnResourcesChanged += Refresh;
-        BuildListIfNeeded();
-        Refresh();
+        BuildRows();
     }
 
     void OnDisable()
     {
-        GameEvents.OnResourcesChanged -= Refresh;
+        _rows.Clear();
     }
 
-    void BuildListIfNeeded()
+    void BuildRows()
     {
-        if (listRoot.childCount > 0) return;
+        if (listRoot == null || rowPrefab == null)
+            return;
+
+        // Clear old
+        for (int i = listRoot.childCount - 1; i >= 0; i--)
+        {
+            Destroy(listRoot.GetChild(i).gameObject);
+        }
         _rows.Clear();
 
-        foreach (var e in catalog)
+        // Build new
+        foreach (var entry in catalog)
         {
+            if (entry == null || entry.featureId == FeatureId.None)
+                continue;
+
             var go = Instantiate(rowPrefab, listRoot);
             var row = go.GetComponent<UpgradeRowUI>();
-            if (!row) row = go.AddComponent<UpgradeRowUI>();
-
-            Func<int> getLevel = () => GetLevel(e.type);
-            Func<int> getCost  = () => GetCost(e.type);
-            Action    onBuy    = () => TryBuy(e.type);
-
-            row.BindStatic(e.displayName, e.infoId, getLevel, getCost, onBuy);
-            _rows.Add(row);
+            if (row != null)
+            {
+                row.Init(entry);
+                _rows.Add(row);
+            }
         }
-    }
-
-    void Refresh()
-    {
-        foreach (var row in _rows) row.Refresh();
-    }
-
-    // ---------- buying / mapping ----------
-
-    int GetLevel(UpgradeType t)
-    {
-        if (SaveManager.Data == null) return 0;
-        return t switch
-        {
-            UpgradeType.Tap      => SaveManager.Data.tapLevel,
-            UpgradeType.Idle     => SaveManager.Data.idleLevel,
-            UpgradeType.Crit     => SaveManager.Data.critLevel,
-            UpgradeType.AutoTap  => SaveManager.Data.autoTapLevel,
-            UpgradeType.CoinGain => SaveManager.Data.coinGainLevel,
-            UpgradeType.Offline  => SaveManager.Data.offlineLevel,
-            _ => 0
-        };
-    }
-
-    void IncLevel(UpgradeType t)
-    {
-        if (SaveManager.Data == null) return;
-        switch (t)
-        {
-            case UpgradeType.Tap:      SaveManager.Data.tapLevel++; break;
-            case UpgradeType.Idle:     SaveManager.Data.idleLevel++; break;
-            case UpgradeType.Crit:     SaveManager.Data.critLevel++; break;
-            case UpgradeType.AutoTap:  SaveManager.Data.autoTapLevel++; break;
-            case UpgradeType.CoinGain: SaveManager.Data.coinGainLevel++; break;
-            case UpgradeType.Offline:  SaveManager.Data.offlineLevel++; break;
-        }
-    }
-
-    int GetCost(UpgradeType t)
-    {
-        return t switch
-        {
-            UpgradeType.Tap      => Upgrades.TapCost(),
-            UpgradeType.Idle     => Upgrades.IdleCost(),
-            UpgradeType.Crit     => Upgrades.CritCost(),
-            UpgradeType.AutoTap  => Upgrades.AutoTapCost(),
-            UpgradeType.CoinGain => Upgrades.CoinGainCost(),
-            UpgradeType.Offline  => Upgrades.OfflineCost(),
-            _ => 0
-        };
-    }
-
-    void TryBuy(UpgradeType t)
-    {
-        if (SaveManager.Data == null) return;
-
-        int cost = GetCost(t);
-        if (cost <= 0) return;
-        if (!ResourceBank.TrySpend(ResourceType.Coins, cost)) return;
-
-        IncLevel(t);
-        SaveManager.Save();
-
-        GameEvents.OnResourcesChanged?.Invoke();
-        Refresh();
     }
 }

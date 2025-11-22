@@ -3,7 +3,7 @@ using UnityEngine.UI;
 using TMPro;
 using System.Collections.Generic;
 
-public class MaterialsPanelUI : MonoBehaviour
+public class ForgePanelUI : MonoBehaviour
 {
     [Header("UI")]
     [SerializeField] private RectTransform listRoot;
