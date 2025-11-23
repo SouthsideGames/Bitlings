@@ -33,6 +33,7 @@ public enum PanelId
     CheatCodes = 26,
     Expedition = 27,
     PackDetails = 28,   
+     Recycle = 29
     
 }
 

@@ -89,4 +89,27 @@ public class SettingsManager : MonoBehaviour
         S.autoScrollBattleLog = enabled;
         Persist();
     }
+
+    // ─────────────────────────────────────────────────────────
+    // Seeds / RNG (Daily / Custom Seeds)
+    // ─────────────────────────────────────────────────────────
+
+    public string GetCustomSeed() => S.customSeed ?? string.Empty;
+
+    public void SetCustomSeed(string seed)
+    {
+        seed ??= string.Empty;
+        if (S.customSeed == seed) return;
+        S.customSeed = seed;
+        Persist();
+    }
+
+    public bool GetUseCustomSeed() => S.useCustomSeed;
+
+    public void SetUseCustomSeed(bool enabled)
+    {
+        if (S.useCustomSeed == enabled) return;
+        S.useCustomSeed = enabled;
+        Persist();
+    }
 }

@@ -49,7 +49,6 @@ public class CheatCodeManager : MonoBehaviour
             return;
         }
         I = this;
-        DontDestroyOnLoad(gameObject);
 
         // Normalize codes at startup (trim + upper)
         for (int i = 0; i < cheats.Count; i++)

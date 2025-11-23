@@ -8,7 +8,7 @@ public class UpgradesPanelUI : MonoBehaviour
     [SerializeField] private Transform listRoot;
     [SerializeField] private GameObject rowPrefab;
 
-    [Header("Catalog (order shown)")]
+    [Header("Catalog")]
     [SerializeField] private List<UpgradeCatalogEntry> catalog = new();
 
     private readonly List<UpgradeRowUI> _rows = new();

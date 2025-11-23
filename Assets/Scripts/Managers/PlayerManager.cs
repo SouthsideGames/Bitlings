@@ -89,6 +89,9 @@ public class PlayerManager
     public List<string> ownedIdsList = new List<string>();
     [NonSerialized] public HashSet<string> ownedIds = new HashSet<string>();
 
+    public List<string> favoriteMonsterIdsList = new List<string>();
+    [NonSerialized] public HashSet<string> favoriteMonsterIds = new HashSet<string>();
+
     public int coins = 0;
     public List<int> resourceCounts = new List<int>();
     public List<string> unlockedPacks = new List<string>();
@@ -134,6 +137,9 @@ public class PlayerManager
     {
         if (ownedIds == null)
             ownedIds = new HashSet<string>(ownedIdsList ?? new List<string>());
+
+        if (favoriteMonsterIds == null)
+            favoriteMonsterIds = new HashSet<string>(favoriteMonsterIdsList ?? new List<string>());
 
         activeLures         ??= new List<LureBiasData>();
         activeCaptureBands  ??= new List<CaptureBandData>();

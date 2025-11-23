@@ -24,7 +24,6 @@ public class FeatureUnlockManager : MonoBehaviour
         }
 
         I = this;
-        DontDestroyOnLoad(gameObject);
 
         LoadFromPrefsOrDefaults();
     }
@@ -52,13 +51,16 @@ public class FeatureUnlockManager : MonoBehaviour
 
         _unlocked.Add(feature);
 
+        // Apply special side-effects (config toggles, expansions, etc.)
+        ApplySideEffectsForFeature(feature);
+
         OnFeatureUnlocked?.Invoke(feature);
         SaveToPrefs();
 
         return true;
     }
 
-    // Optional hooks for future SaveManager integration:
+    // Optional hooks for future SaveManager JSON integration:
     public List<string> GetUnlockedIdsForSave()
     {
         var list = new List<string>(_unlocked.Count);
@@ -80,12 +82,15 @@ public class FeatureUnlockManager : MonoBehaviour
             }
         }
 
+        // Always apply starting defaults too
         foreach (var f in startingUnlocked)
             _unlocked.Add(f);
+
+        ApplySideEffectsForAllUnlocked();
     }
 
     // ─────────────────────────────────────────────────────────────
-    // Internal: simple PlayerPrefs persistence for now
+    // Internal: PlayerPrefs persistence
     // ─────────────────────────────────────────────────────────────
 
     private const string PlayerPrefsKey = "FeatureUnlocks_JSON";
@@ -117,9 +122,13 @@ public class FeatureUnlockManager : MonoBehaviour
         {
             var wrapper = JsonUtility.FromJson<FeatureUnlockSaveWrapper>(json);
             if (wrapper != null && wrapper.ids != null)
+            {
                 RestoreFromSavedIds(wrapper.ids);
+            }
             else
+            {
                 ApplyStartingDefaults();
+            }
         }
         catch
         {
@@ -143,5 +152,57 @@ public class FeatureUnlockManager : MonoBehaviour
         _unlocked.Clear();
         foreach (var f in startingUnlocked)
             _unlocked.Add(f);
+
+        ApplySideEffectsForAllUnlocked();
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // Feature-specific side effects
+    // ─────────────────────────────────────────────────────────────
+
+    private void ApplySideEffectsForAllUnlocked()
+    {
+        foreach (var f in _unlocked)
+            ApplySideEffectsForFeature(f);
+    }
+
+    private void ApplySideEffectsForFeature(FeatureId feature)
+    {
+        switch (feature)
+        {
+            case FeatureId.IdleBattle_OfflineCapture:
+                EnableOfflineCaptures();
+                break;
+
+            case FeatureId.IdleBattle_RewardBoost:
+                // No runtime side-effects required; IdleBattleManager reads the unlock.
+                break;
+
+            // Seeds / RNG: no direct SO toggles needed. SeedService reads these flags.
+            case FeatureId.Seeds_DailyBasic:
+            case FeatureId.Seeds_CustomInput:
+            case FeatureId.Seeds_RerollDailyOnce:
+                // No-op here; used by SeedService + SettingsPanel.
+                break;
+
+            // Add more cases here when adding new feature unlocks:
+            // case FeatureId.Something:
+            //     DoSpecialThing();
+            //     break;
+        }
+    }
+
+    private void EnableOfflineCaptures()
+    {
+        var cfg = Resources.Load<IdleBattleConfigSO>("IdleBattleConfig");
+        if (cfg != null)
+        {
+            cfg.allowCapturesOffline = true;
+            Debug.Log("[FeatureUnlockManager] Enabled Offline Captures (IdleBattle_OfflineCapture)");
+        }
+        else
+        {
+            Debug.LogWarning("[FeatureUnlockManager] IdleBattleConfigSO not found when enabling offline capture.");
+        }
     }
 }

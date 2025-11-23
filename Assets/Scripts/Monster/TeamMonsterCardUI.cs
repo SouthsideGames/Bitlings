@@ -24,15 +24,19 @@ public class TeamMonsterCardUI : MonoBehaviour
     [SerializeField] private int partialHealMedkitCost = 1;
     [SerializeField] private int fullHealMedkitCost = 1;
 
-    [Header("Evolution Alert")]
-    [Tooltip("Shown when this monster is eligible to evolve.")]
-    [SerializeField] private GameObject evolveAlert;   // assign a small icon GameObject in the prefab
+    [Header("Alerts")]
+    [SerializeField] private GameObject evolveAlert;
+    [SerializeField] private GameObject favoriteAlert;
+
 
     private OwnedMonsterData _data;
     private MonsterDataSO _def;
-    private Action<OwnedMonsterData> _onClick;      // open detail
+    private Action<OwnedMonsterData> _onClick;
     private Action _onAnyChanged;
 
+    // ----------------------------------------------------------
+    // Setup
+    // ----------------------------------------------------------
     public void Setup(
         OwnedMonsterData data,
         MonsterDataSO def,
@@ -46,6 +50,7 @@ public class TeamMonsterCardUI : MonoBehaviour
 
         WireButtons();
         RefreshVisuals();
+        RefreshFavoriteIcon();
     }
 
     private void WireButtons()
@@ -59,49 +64,56 @@ public class TeamMonsterCardUI : MonoBehaviour
         if (healBtn)
         {
             healBtn.onClick.RemoveAllListeners();
-            healBtn.onClick.AddListener(OnClickHealPartial); // simple one-click heal
+            healBtn.onClick.AddListener(OnClickHealPartial);
         }
     }
 
     private void OnClickRoot()
     {
         _onClick?.Invoke(_data);
-        AudioManager.I.PlayClick();
+        AudioManager.I?.PlayClick();
     }
 
     private void OnClickHealPartial()
     {
         TryHeal(partial: true);
-        AudioManager.I.PlayClick();
+        AudioManager.I?.PlayClick();
     }
 
-    // If you ever hook up a separate full-heal button, call this.
     private void OnClickHealFull()
     {
         TryHeal(partial: false);
-        AudioManager.I.PlayClick();
+        AudioManager.I?.PlayClick();
     }
 
+    // ----------------------------------------------------------
+    // Events
+    // ----------------------------------------------------------
     private void OnEnable()
     {
         GameEvents.OnResourcesChanged += HandleResourcesChanged;
         GameEvents.OnTeamChanged += HandleResourcesChanged;
+        GameEvents.FavoritesChanged += RefreshFavoriteIcon;
     }
 
     private void OnDisable()
     {
         GameEvents.OnResourcesChanged -= HandleResourcesChanged;
         GameEvents.OnTeamChanged -= HandleResourcesChanged;
+        GameEvents.FavoritesChanged -= RefreshFavoriteIcon;
     }
 
     private void HandleResourcesChanged()
     {
-        // Team changed or resources changed: HP, heal button, and evo alert might need updating.
         UpdateHpText();
         UpdateHealInteractable();
         RefreshEvolutionAlert();
+        RefreshFavoriteIcon();
     }
 
+    // ----------------------------------------------------------
+    // Visuals
+    // ----------------------------------------------------------
     public void RefreshVisuals()
     {
         if (img)
@@ -121,6 +133,7 @@ public class TeamMonsterCardUI : MonoBehaviour
         UpdateHpText();
         UpdateHealInteractable();
         RefreshEvolutionAlert();
+        RefreshFavoriteIcon();
     }
 
     private void UpdateHpText()
@@ -130,15 +143,56 @@ public class TeamMonsterCardUI : MonoBehaviour
         int maxHP = HealingService.CalcMaxHP(_def, _data.level);
         int curHP = _data.currentHP >= 0 ? Mathf.Min(_data.currentHP, maxHP) : maxHP;
 
-        hpText.text = (maxHP > 0) ? $"HP: {Mathf.Max(0, curHP)}/{maxHP}" : string.Empty;
+        hpText.text = $"HP: {Mathf.Max(0, curHP)}/{maxHP}";
     }
 
+    private void RefreshEvolutionAlert()
+    {
+        if (!evolveAlert) return;
+
+        bool show = false;
+
+        if (_data != null && _def != null)
+            show = EvolutionHelper.CanEvolve(_data, _def);
+
+        evolveAlert.SetActive(show);
+    }
+
+    // ----------------------------------------------------------
+    // FAVORITES ICON
+    // ----------------------------------------------------------
+    private void RefreshFavoriteIcon()
+    {
+        if (!favoriteAlert)
+            return;
+
+        // Must unlock feature
+        bool hasFeature = FeatureUnlockManager.I &&
+                          FeatureUnlockManager.I.IsUnlocked(FeatureId.Codex_Favorites);
+
+        // Must have valid monster
+        bool valid = _data != null && !string.IsNullOrEmpty(_data.monsterId);
+
+        if (!hasFeature || !valid)
+        {
+            favoriteAlert.SetActive(false);
+            return;
+        }
+
+        // Check if this monster (by definition ID) is favorited
+        bool isFav = FavoriteService.IsFavorite(_data.monsterId);
+
+        favoriteAlert.SetActive(isFav);
+    }
+
+    // ----------------------------------------------------------
+    // Healing
+    // ----------------------------------------------------------
     private void UpdateHealInteractable()
     {
         if (!healBtn) return;
 
-        GameObject healGO = healBtn.gameObject;
-        bool shouldBeActive = false;
+        bool enable = false;
 
         if (_def != null && _data != null)
         {
@@ -149,29 +203,14 @@ public class TeamMonsterCardUI : MonoBehaviour
             int medkits = GetResource(medkitResourceType);
             int coins = GetResource(healCostType);
 
-            // For this card we assume the button uses partial heal costs
             bool canHealWithMedkits = medkits >= partialHealMedkitCost;
             bool canHealWithCoins = coins >= partialHealCost;
-            bool canHeal = canHealWithMedkits || canHealWithCoins;
 
-            shouldBeActive = needsHeal && canHeal;
+            enable = needsHeal && (canHealWithMedkits || canHealWithCoins);
         }
 
-        healGO.SetActive(shouldBeActive);
-        healBtn.interactable = shouldBeActive;
-    }
-
-    private void RefreshEvolutionAlert()
-    {
-        if (!evolveAlert) return;
-
-        bool show = false;
-        if (_data != null && _def != null)
-        {
-            show = EvolutionHelper.CanEvolve(_data, _def);
-        }
-
-        evolveAlert.SetActive(show);
+        healBtn.gameObject.SetActive(enable);
+        healBtn.interactable = enable;
     }
 
     private void TryHeal(bool partial)
@@ -180,27 +219,22 @@ public class TeamMonsterCardUI : MonoBehaviour
 
         int maxHP = HealingService.CalcMaxHP(_def, _data.level);
         int curHP = _data.currentHP >= 0 ? Mathf.Min(_data.currentHP, maxHP) : maxHP;
+
         if (curHP >= maxHP)
         {
             UpdateHealInteractable();
             return;
         }
 
-        // ----- RESOURCE CHOICE: use medkits first, then coins -----
         int medkitCost = partial ? partialHealMedkitCost : fullHealMedkitCost;
         int coinCost = partial ? partialHealCost : fullHealCost;
 
         bool paid = false;
 
-        int medkits = GetResource(medkitResourceType);
-        if (medkits >= medkitCost && medkitCost > 0)
-        {
+        if (GetResource(medkitResourceType) >= medkitCost && medkitCost > 0)
             paid = SpendResource(medkitResourceType, medkitCost);
-        }
         else if (coinCost > 0)
-        {
             paid = SpendResource(healCostType, coinCost);
-        }
 
         if (!paid)
         {
@@ -215,6 +249,7 @@ public class TeamMonsterCardUI : MonoBehaviour
         _data.currentHP = Mathf.Clamp(curHP + restore, 0, maxHP);
 
         SaveManager.Save();
+
         UpdateHpText();
         UpdateHealInteractable();
         _onAnyChanged?.Invoke();

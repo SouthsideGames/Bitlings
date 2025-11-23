@@ -29,4 +29,5 @@ public static class GameEvents
     public static Action<int> IdleBatchCompleted;
 
     public static Action<int> WinStreakChanged;
+    public static Action FavoritesChanged;
 }

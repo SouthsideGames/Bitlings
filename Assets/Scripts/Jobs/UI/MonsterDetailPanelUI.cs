@@ -71,6 +71,11 @@ public class MonsterDetailPanelUI : MonoBehaviour
     [SerializeField] private Button evolveButton;
     [SerializeField] private EvolutionPanelUI evolutionPanel;
 
+    [Header("Favorites")]
+    [Tooltip("Shown when Codex_Favorites is unlocked. Toggles this monster as a favorite.")]
+    [SerializeField] private Button favoriteButton;
+    [SerializeField] private GameObject favoriteOnIcon;
+
     [Header("Build Safe Mode (Isolation)")]
     [SerializeField] private bool safeSkipStats = true;
     [SerializeField] private bool safeSkipEvolution = false;
@@ -140,6 +145,12 @@ public class MonsterDetailPanelUI : MonoBehaviour
             evolveButton.onClick.AddListener(OnClickEvolve);
         }
 
+        if (favoriteButton)
+        {
+            favoriteButton.onClick.RemoveAllListeners();
+            favoriteButton.onClick.AddListener(OnClickFavorite);
+        }
+
         ResolveTitleButton();
 
         TitleAssignPanelUI.OnTitlesChanged -= HandleTitlesChanged;
@@ -160,6 +171,10 @@ public class MonsterDetailPanelUI : MonoBehaviour
         GameEvents.MonsterEvolved          -= HandleMonsterEvolved;
     }
 
+    // ─────────────────────────────────────────────────────────────
+    // Public Show APIs
+    // ─────────────────────────────────────────────────────────────
+
     public void Show(MonsterDataSO monster, Action<MonsterDataSO> onConfirmCallback, Action onCancelCallback = null)
     {
         _mode = MonsterDetailMode.StarterSelect;
@@ -174,6 +189,7 @@ public class MonsterDetailPanelUI : MonoBehaviour
         if (titleButton) titleButton.gameObject.SetActive(false);
 
         RefreshEvolveButton();
+        SetupFavoriteButton();
         SafeOpen(monster);
     }
 
@@ -198,6 +214,7 @@ public class MonsterDetailPanelUI : MonoBehaviour
 
         UpdateTitleButtonBinding();
         RefreshEvolveButton();
+        SetupFavoriteButton();
         SafeOpen(current);
     }
 
@@ -217,6 +234,7 @@ public class MonsterDetailPanelUI : MonoBehaviour
 
         UpdateTitleButtonBinding();
         RefreshEvolveButton();
+        SetupFavoriteButton();
         SafeOpen(current);
     }
 
@@ -241,6 +259,54 @@ public class MonsterDetailPanelUI : MonoBehaviour
 
         if (closeButton) closeButton.gameObject.SetActive(false);
     }
+
+    // ─────────────────────────────────────────────────────────────
+    // Favorite handling
+    // ─────────────────────────────────────────────────────────────
+
+    private void SetupFavoriteButton()
+    {
+        if (!favoriteButton)
+            return;
+
+        bool featureOn = FeatureUnlockManager.I &&
+                         FeatureUnlockManager.I.IsUnlocked(FeatureId.Codex_Favorites) &&
+                         current != null;
+
+        favoriteButton.gameObject.SetActive(featureOn);
+        favoriteButton.onClick.RemoveAllListeners();
+
+        if (featureOn)
+        {
+            favoriteButton.onClick.AddListener(OnClickFavorite);
+            RefreshFavoriteVisual();
+        }
+        else if (favoriteOnIcon)
+        {
+            favoriteOnIcon.SetActive(false);
+        }
+    }
+
+    private void OnClickFavorite()
+    {
+        if (current == null) return;
+
+        // Assuming FavoriteService uses the MonsterDataSO ID as key.
+        FavoriteService.ToggleFavorite(current.id);
+        RefreshFavoriteVisual();
+    }
+
+    private void RefreshFavoriteVisual()
+    {
+        if (!favoriteOnIcon || current == null) return;
+
+        bool isFav = FavoriteService.IsFavorite(current.id);
+        favoriteOnIcon.SetActive(isFav);
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // Staged render
+    // ─────────────────────────────────────────────────────────────
 
     private void SafeOpen(MonsterDataSO monster)
     {
@@ -308,11 +374,13 @@ public class MonsterDetailPanelUI : MonoBehaviour
                 SetSlotButtonsInteractable(isOwnedPick && !IsKO());
 
                 UpdateTitleButtonBinding();
-
                 RenderJobSites(monster);
 
                 OpenSelf();
                 if (canvasGroup) LeanTween.alphaCanvas(canvasGroup, 1f, 0.15f);
+
+                // Make sure favorite visuals are in sync if we changed monster
+                SetupFavoriteButton();
             });
 
             _stage = RenderStage.StatsEvo;
@@ -402,6 +470,10 @@ public class MonsterDetailPanelUI : MonoBehaviour
         _stageCR = null;
     }
 
+    // ─────────────────────────────────────────────────────────────
+    // Confirm / Cancel / Assign / Remove
+    // ─────────────────────────────────────────────────────────────
+
     private void Confirm()
     {
         TryStep("Confirm", () =>
@@ -484,6 +556,10 @@ public class MonsterDetailPanelUI : MonoBehaviour
         Hide();
     }
 
+    // ─────────────────────────────────────────────────────────────
+    // Internal helpers
+    // ─────────────────────────────────────────────────────────────
+
     private void OpenSelf()
     {
         if (_visible) return;
@@ -546,6 +622,9 @@ public class MonsterDetailPanelUI : MonoBehaviour
         if (titleButton) titleButton.gameObject.SetActive(false);
 
         if (evolveButton) evolveButton.gameObject.SetActive(false);
+
+        if (favoriteButton) favoriteButton.gameObject.SetActive(false);
+        if (favoriteOnIcon) favoriteOnIcon.SetActive(false);
 
         _visible = UIManager.I && selfPanelId != PanelId.None ? _visible : false;
     }
@@ -749,6 +828,7 @@ public class MonsterDetailPanelUI : MonoBehaviour
 
         UpdateTitleButtonBinding();
         RefreshEvolveButton();
+        SetupFavoriteButton();
         SafeOpen(current);
     }
 }

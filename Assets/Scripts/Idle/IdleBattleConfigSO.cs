@@ -19,4 +19,7 @@ public class IdleBattleConfigSO : ScriptableObject
 
     [Header("Log")]
     [Min(10)] public int encounterLogMaxEntries = 60;
+
+    [Header("Feature Unlocks")]
+    [Range(1f, 5f)] public float rewardBoostMultiplier = 1.5f;
 }

@@ -7,10 +7,11 @@ public class StatBucketPanelUI : MonoBehaviour
 {
     [Header("UI - Header")]
     [SerializeField] private TextMeshProUGUI nameText;
-    [SerializeField] private TextMeshProUGUI pointsText;   
-    [SerializeField] private TextMeshProUGUI costText;   
+    [SerializeField] private TextMeshProUGUI pointsText;
+    [SerializeField] private TextMeshProUGUI costText;
 
     [Header("UI - Buckets")]
+    [SerializeField] private GameObject presetsRoot;
     [SerializeField] private Button offenseBtn;
     [SerializeField] private Button defenseBtn;
     [SerializeField] private Button utilityBtn;
@@ -35,12 +36,12 @@ public class StatBucketPanelUI : MonoBehaviour
     [SerializeField] private Button spdPlus;
 
     [Header("UI - Footer")]
-    [SerializeField] private Button levelUpBtn;  
-    [SerializeField] private Button confirmBtn; 
+    [SerializeField] private Button levelUpBtn;
+    [SerializeField] private Button confirmBtn;
     [SerializeField] private Button closeBtn;
 
     [Header("Config")]
-    [SerializeField, Min(1)] private int pointsPerLevel = 3; 
+    [SerializeField, Min(1)] private int pointsPerLevel = 3;
 
     private TokenEconomySO   tokenEconomy;
     private BucketLibrarySO  bucketLibrary;
@@ -53,8 +54,8 @@ public class StatBucketPanelUI : MonoBehaviour
 
     private int _allocHp, _allocAtk, _allocDef, _allocSpd;
 
-    private int _points;          
-    private int _nextCostToLevel;  
+    private int _points;
+    private int _nextCostToLevel;
 
     const string GREEN = "#3CDE74";
 
@@ -66,6 +67,21 @@ public class StatBucketPanelUI : MonoBehaviour
         Wire();
         ClearAlloc();
         gameObject.SetActive(false);
+    }
+
+    private void OnEnable()
+    {
+        if (FeatureUnlockManager.I != null)
+            FeatureUnlockManager.I.OnFeatureUnlocked += HandleFeatureUnlocked;
+
+        RefreshPresetVisibility();
+        RefreshUI();
+    }
+
+    private void OnDisable()
+    {
+        if (FeatureUnlockManager.I != null)
+            FeatureUnlockManager.I.OnFeatureUnlocked -= HandleFeatureUnlocked;
     }
 
 #if UNITY_EDITOR
@@ -110,15 +126,16 @@ public class StatBucketPanelUI : MonoBehaviour
         if (spdMinus) spdMinus.onClick.AddListener(() => AddAlloc(ref _allocSpd, -1));
         if (spdPlus)  spdPlus.onClick.AddListener(() => AddAlloc(ref _allocSpd, +1));
 
-        if (offenseBtn) offenseBtn.onClick.AddListener(() => SetBucket("Offense"));
-        if (defenseBtn) defenseBtn.onClick.AddListener(() => SetBucket("Defense"));
-        if (utilityBtn) utilityBtn.onClick.AddListener(() => SetBucket("Utility"));
-        if (balanceBtn) balanceBtn.onClick.AddListener(() => SetBucket("Balance"));
-        if (speedBtn)   speedBtn.onClick.AddListener(() => SetBucket("Speed"));
+        // Preset buttons: set bucket + apply preset allocation
+        if (offenseBtn) offenseBtn.onClick.AddListener(() => OnPresetClicked("Offense"));
+        if (defenseBtn) defenseBtn.onClick.AddListener(() => OnPresetClicked("Defense"));
+        if (utilityBtn) utilityBtn.onClick.AddListener(() => OnPresetClicked("Utility"));
+        if (balanceBtn) balanceBtn.onClick.AddListener(() => OnPresetClicked("Balance"));
+        if (speedBtn)   speedBtn.onClick.AddListener(() => OnPresetClicked("Speed"));
 
         if (levelUpBtn) levelUpBtn.onClick.AddListener(OnClickLevelUp);
         if (confirmBtn) confirmBtn.onClick.AddListener(ConfirmSpend);
-        if (closeBtn)   closeBtn.onClick.AddListener(ClosePanel); 
+        if (closeBtn)   closeBtn.onClick.AddListener(ClosePanel);
     }
 
     private void ClosePanel() => gameObject.SetActive(false);
@@ -161,6 +178,7 @@ public class StatBucketPanelUI : MonoBehaviour
             nameText.text = def ? def.displayName : _m.monsterId;
 
         gameObject.SetActive(true);
+        RefreshPresetVisibility();
         RefreshUI();
     }
 
@@ -278,6 +296,13 @@ public class StatBucketPanelUI : MonoBehaviour
         RefreshUI();
     }
 
+    // Preset click: remember bucket + auto-allocate points
+    private void OnPresetClicked(string bucketId)
+    {
+        SetBucket(bucketId);
+        ApplyPreset(bucketId);
+    }
+
     private void SetBucket(string bucketId)
     {
         if (!bucketLibrary) return;
@@ -287,6 +312,54 @@ public class StatBucketPanelUI : MonoBehaviour
 
         if (_m != null)
             _m.lastBucketId = _bucket ? _bucket.bucketId : null;
+    }
+
+    // Apply up to 5 points according to the selected preset
+    private void ApplyPreset(string bucketId)
+    {
+        if (_m == null) return;
+
+        int unspent = Mathf.Max(0, _m.unspentStatPoints);
+        int remaining = Mathf.Max(0, unspent - _points);
+        if (remaining <= 0) return;
+
+        int toSpend = Mathf.Min(5, remaining);
+
+        switch (bucketId)
+        {
+            case "Offense":
+                for (int i = 0; i < toSpend; i++)
+                    AddAlloc(ref _allocAtk, +1);
+                break;
+
+            case "Defense":
+                for (int i = 0; i < toSpend; i++)
+                    AddAlloc(ref _allocDef, +1);
+                break;
+
+            case "Speed":
+                for (int i = 0; i < toSpend; i++)
+                    AddAlloc(ref _allocSpd, +1);
+                break;
+
+            case "Balance":
+                for (int i = 0; i < toSpend; i++)
+                {
+                    int step = i % 3;
+                    if (step == 0)      AddAlloc(ref _allocHp,  +1);
+                    else if (step == 1) AddAlloc(ref _allocAtk, +1);
+                    else                AddAlloc(ref _allocDef, +1);
+                }
+                break;
+
+            case "Utility":
+                for (int i = 0; i < toSpend; i++)
+                {
+                    if (i % 2 == 0) AddAlloc(ref _allocHp, +1);
+                    else            AddAlloc(ref _allocSpd, +1);
+                }
+                break;
+        }
     }
 
     // ─────────────────────────────────────────────────────────────
@@ -379,5 +452,25 @@ public class StatBucketPanelUI : MonoBehaviour
 
         ComputeCurrentStats();
         gameObject.SetActive(false);
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // Feature gating – presets
+    // ─────────────────────────────────────────────────────────────
+
+    private void HandleFeatureUnlocked(FeatureId feature)
+    {
+        if (feature == FeatureId.AutoGrowth_UsePresets)
+            RefreshPresetVisibility();
+    }
+
+    private void RefreshPresetVisibility()
+    {
+        if (!presetsRoot) return;
+
+        bool unlocked = FeatureUnlockManager.I != null &&
+                        FeatureUnlockManager.I.IsUnlocked(FeatureId.AutoGrowth_UsePresets);
+
+        presetsRoot.SetActive(unlocked);
     }
 }

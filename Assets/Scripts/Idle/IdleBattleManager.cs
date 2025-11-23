@@ -22,17 +22,50 @@ public class IdleBattleManager : MonoBehaviour
 
     void Start()
     {
-        ResolveOfflineIfAny();
-        TryOpenSummaryIfNeeded();
+        if (IsIdleBattleUnlocked())
+        {
+            ResolveOfflineIfAny();
+            TryOpenSummaryIfNeeded();
+        }
+        else
+        {
+            // Ensure legacy auto-battle sessions are disabled if the feature is locked.
+            var s = IdleBattleStore.Load();
+            if (s.autoBattling)
+            {
+                s.autoBattling = false;
+                IdleBattleStore.Save(s);
+            }
+        }
     }
 
     void Update()
     {
-        TickForegroundAuto();
+        if (IsIdleBattleUnlocked())
+        {
+            TickForegroundAuto();
+        }
+    }
+
+    // Feature unlock helper
+    private bool IsIdleBattleUnlocked()
+    {
+        // If the FeatureUnlockManager isn't in the scene yet, treat it as unlocked
+        // so the game still works in dev / old saves.
+        if (FeatureUnlockManager.I == null)
+            return true;
+
+        return FeatureUnlockManager.I.IsUnlocked(FeatureId.IdleBattle_Basic);
     }
 
     public void EnableAuto(string biomeId = null)
     {
+        if (!IsIdleBattleUnlocked())
+        {
+            Debug.Log("IdleBattleManager: Idle battles are locked by feature unlocks; ignoring EnableAuto().");
+            return;
+        }
+
         var s = IdleBattleStore.Load();
         if (!s.autoBattling)
         {
@@ -104,6 +137,8 @@ public class IdleBattleManager : MonoBehaviour
 
     private void RunBatchEncounters(int count)
     {
+        if (!IsIdleBattleUnlocked() || count <= 0) return;
+
         ResourceBank.BeginBatch();
 
         var s     = IdleBattleStore.Load();
@@ -126,6 +161,17 @@ public class IdleBattleManager : MonoBehaviour
 
         // Titles-independent global neutral mul (keep for future if needed)
         float coinMulNeutral = 1f;
+
+        // Feature unlock: Idle Reward Boost (extra coins from idle battles)
+        if (FeatureUnlockManager.I != null &&
+            FeatureUnlockManager.I.IsUnlocked(FeatureId.IdleBattle_RewardBoost))
+        {
+            float boost = 1.5f; // fallback if config missing
+            if (config != null)
+                boost = Mathf.Max(1f, config.rewardBoostMultiplier);
+
+            coinMulNeutral *= boost;
+        }
 
         int baseCost      = Mathf.Max(1, SaveManager.Data.encounterCost);
         int effectiveCost = Mathf.Max(1, Mathf.RoundToInt(baseCost * Mathf.Clamp(teamP.energyCostMul, 0.5f, 1f)));
@@ -150,9 +196,9 @@ public class IdleBattleManager : MonoBehaviour
             // ─────────────────────────────────────────────────────────
             // Titles: fold the lead monster’s Title effects into headless odds
             // ─────────────────────────────────────────────────────────
-            string leadId = (teamIds.Count > 0) ? teamIds[0] : null;
-            MonsterDataSO leadDef = null;
-            int leadLevel = 1;
+            string        leadId    = (teamIds.Count > 0) ? teamIds[0] : null;
+            MonsterDataSO leadDef   = null;
+            int           leadLevel = 1;
 
             if (!string.IsNullOrEmpty(leadId))
             {
@@ -376,7 +422,6 @@ public class IdleBattleManager : MonoBehaviour
     // Developer helpers
     public void Dev_RunEncounters(int count)
     {
-        if (count <= 0) return;
         RunBatchEncounters(count);
         ForceOpenSummary();
     }
@@ -392,8 +437,12 @@ public class IdleBattleManager : MonoBehaviour
     public void Dev_OpenSummary() => ForceOpenSummary();
     public void Dev_ClearIdleLog() => IdleBattleStore.ClearLog();
 
-    // Put near other small helpers
-    private struct DamageFilterView { public bool cannotBeCrit; public float percentReduce; public int flatReduce; }
+    private struct DamageFilterView
+    {
+        public bool cannotBeCrit;
+        public float percentReduce;
+        public int flatReduce;
+    }
 
     private static bool TryUnboxDamageFilter(object boxed, out DamageFilterView view)
     {
@@ -416,5 +465,4 @@ public class IdleBattleManager : MonoBehaviour
         view = new DamageFilterView { cannotBeCrit = noCrit, percentReduce = pct, flatReduce = flat };
         return true;
     }
-
 }

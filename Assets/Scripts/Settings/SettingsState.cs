@@ -21,7 +21,12 @@ public class SettingsState
     // ───────── Miscellaneous ─────────
     public bool  logProductionBreakdown = false;
     public int   monstersSortMode = 0;
-    public bool autoConvertDuplicates = true;
-    public bool autoScrollBattleLog = true;
+    public bool  autoConvertDuplicates = true;
+    public bool  autoScrollBattleLog = true;
     public float battleSpeed = 1f;
+
+    // ───────── Seeds / RNG ─────────
+    // If true, systems that support seeding should prefer customSeed (when feature is unlocked).
+    public bool   useCustomSeed = false;
+    public string customSeed    = "";
 }

@@ -10,14 +10,24 @@ public class EncounterButtonHold : MonoBehaviour, IPointerDownHandler, IPointerU
     private float pressedAt;
     private bool firedHold;
 
+    // ─────────────────────────────────────────────────────────────
+    // Helpers
+    // ─────────────────────────────────────────────────────────────
+    private bool IsIdleBattleUnlocked()
+    {
+        if (FeatureUnlockManager.I == null)
+            return true; // fail-safe in editor or if unlock system not loaded
+
+        return FeatureUnlockManager.I.IsUnlocked(FeatureId.IdleBattle_Basic);
+    }
+
+    // ─────────────────────────────────────────────────────────────
     public void OnPointerDown(PointerEventData eventData)
     {
         pressed = true;
         firedHold = false;
         pressedAt = Time.unscaledTime;
     }
-
-    
 
     public void OnPointerUp(PointerEventData eventData)
     {
@@ -35,7 +45,7 @@ public class EncounterButtonHold : MonoBehaviour, IPointerDownHandler, IPointerU
             return;
         }
 
-        // Count valid monsters only (non-null entries with a monsterId)
+        // Only allow valid monsters
         bool hasValidMonster = false;
         for (int i = 0; i < data.team.Count; i++)
         {
@@ -83,7 +93,16 @@ public class EncounterButtonHold : MonoBehaviour, IPointerDownHandler, IPointerU
             firedHold = true;
             pressed = false;
 
-            // Hold = Toggle Auto Mode
+            // ───────────────────────────────────────────────────────
+            // HOLD = Toggle Auto Mode **only if unlocked**
+            // ───────────────────────────────────────────────────────
+            if (!IsIdleBattleUnlocked())
+            {
+                Debug.Log("[EncounterButtonHold] Auto mode is locked — unlock Idle Battles to enable this.");
+                // (optional) play denied SFX here
+                return;
+            }
+
             EncounterManager.I?.ToggleAutoMode();
         }
     }

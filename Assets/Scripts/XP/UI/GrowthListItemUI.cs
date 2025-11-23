@@ -56,13 +56,14 @@ public class GrowthListItemUI : MonoBehaviour
             autoToggle.onValueChanged.AddListener(OnAutoToggleChanged);
         }
 
+        RefreshAutoToggleFeatureGate();
+        RefreshOpenInteractable();
+
         if (openButton)
         {
             openButton.onClick.RemoveAllListeners();
             openButton.onClick.AddListener(() => _onOpen?.Invoke(_model));
         }
-
-        RefreshOpenInteractable();
     }
 
     // -------------------------------------------------------------------------
@@ -71,11 +72,25 @@ public class GrowthListItemUI : MonoBehaviour
     private void OnEnable()
     {
         GameEvents.OnTeamChanged += HandleTeamChanged;
+
+        if (FeatureUnlockManager.I != null)
+            FeatureUnlockManager.I.OnFeatureUnlocked += HandleFeatureUnlocked;
+
+        RefreshAutoToggleFeatureGate();
     }
 
     private void OnDisable()
     {
         GameEvents.OnTeamChanged -= HandleTeamChanged;
+
+        if (FeatureUnlockManager.I != null)
+            FeatureUnlockManager.I.OnFeatureUnlocked -= HandleFeatureUnlocked;
+    }
+
+    private void HandleFeatureUnlocked(FeatureId feature)
+    {
+        if (feature == FeatureId.AutoGrowth_Basic)
+            RefreshAutoToggleFeatureGate();
     }
 
     private void HandleTeamChanged()
@@ -125,6 +140,24 @@ public class GrowthListItemUI : MonoBehaviour
     // -------------------------------------------------------------------------
     // CORE UI HELPERS
     // -------------------------------------------------------------------------
+
+    private bool IsAutoGrowthUnlocked()
+    {
+        return FeatureUnlockManager.I != null &&
+               FeatureUnlockManager.I.IsUnlocked(FeatureId.AutoGrowth_Basic);
+    }
+
+    private void RefreshAutoToggleFeatureGate()
+    {
+        if (!autoToggle) return;
+
+        bool unlocked = IsAutoGrowthUnlocked();
+        autoToggle.gameObject.SetActive(unlocked);
+
+        // If the feature is somehow locked but the data has autoApply = true,
+        // we leave the data as-is but hide the toggle.
+    }
+
     // Call this if cores change globally and you want to refresh rows.
     public void RefreshOpenInteractable()
     {
@@ -137,6 +170,15 @@ public class GrowthListItemUI : MonoBehaviour
     {
         if (_suppressToggle) return;
         if (_model == null) return;
+
+        if (!IsAutoGrowthUnlocked())
+        {
+            // Safety guard – should not happen because toggle is hidden when locked.
+            _suppressToggle = true;
+            autoToggle.SetIsOnWithoutNotify(false);
+            _suppressToggle = false;
+            return;
+        }
 
         if (isOn)
         {

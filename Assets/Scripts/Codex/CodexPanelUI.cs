@@ -25,6 +25,10 @@ public class CodexPanelUI : MonoBehaviour
     [SerializeField] private GameObject ownedListItemPrefab;
     [SerializeField] private TMP_Dropdown sortDropdown;
 
+    [Header("Filters")]
+    [SerializeField] private Button capturedOnlyButton;
+    [SerializeField] private Button favoritesOnlyButton;
+
     [Header("Detail")]
     [SerializeField] private MonsterDetailPanelUI detailPanel;
 
@@ -32,11 +36,19 @@ public class CodexPanelUI : MonoBehaviour
     private OwnedSortMode _lastSortMode = OwnedSortMode.ByIdAsc;
     private readonly List<RectTransform> _teamCardRoots = new List<RectTransform>();
 
+    private bool _capturedOnlyFilter = false;
+    private bool _favoritesOnlyFilter = false;
+
     void OnEnable()
     {
-        GameEvents.OnTeamChanged += RefreshAll;
+        GameEvents.OnTeamChanged      += RefreshAll;
         GameEvents.OnResourcesChanged += RefreshAll;
+        GameEvents.MonsterCaptured    += HandleMonsterCaptured;
+        GameEvents.FavoritesChanged   += HandleFavoritesChanged;
 
+        // ---------------------
+        // SORT DROPDOWN
+        // ---------------------
         if (sortDropdown)
         {
             BuildSortDropdownOptions();
@@ -51,16 +63,75 @@ public class CodexPanelUI : MonoBehaviour
             sortDropdown.RefreshShownValue();
         }
 
+        // ---------------------
+        // CAPTURED-ONLY BUTTON (newly gated)
+        // ---------------------
+        bool captureFilterUnlocked =
+            FeatureUnlockManager.I != null &&
+            FeatureUnlockManager.I.IsUnlocked(FeatureId.Codex_CaptureOnlyFilter);
+
+        if (capturedOnlyButton)
+        {
+            capturedOnlyButton.onClick.RemoveAllListeners();
+            capturedOnlyButton.gameObject.SetActive(captureFilterUnlocked);
+
+            if (captureFilterUnlocked)
+                capturedOnlyButton.onClick.AddListener(OnToggleCapturedOnly);
+        }
+
+        // ---------------------
+        // FAVORITES-ONLY BUTTON
+        // ---------------------
+        bool favoritesUnlocked =
+            FeatureUnlockManager.I != null &&
+            FeatureUnlockManager.I.IsUnlocked(FeatureId.Codex_Favorites);
+
+        if (favoritesOnlyButton)
+        {
+            favoritesOnlyButton.onClick.RemoveAllListeners();
+            favoritesOnlyButton.gameObject.SetActive(favoritesUnlocked);
+
+            if (favoritesUnlocked)
+                favoritesOnlyButton.onClick.AddListener(OnToggleFavoritesOnly);
+        }
+
+        // Reset filters if locked
+        _capturedOnlyFilter  = false;
+
+        if (!favoritesUnlocked)
+            _favoritesOnlyFilter = false;
+
         RefreshAll();
     }
 
+
     void OnDisable()
     {
-        GameEvents.OnTeamChanged -= RefreshAll;
+        GameEvents.OnTeamChanged      -= RefreshAll;
         GameEvents.OnResourcesChanged -= RefreshAll;
+        GameEvents.MonsterCaptured    -= HandleMonsterCaptured;
+        GameEvents.FavoritesChanged   -= HandleFavoritesChanged;
 
         if (sortDropdown)
             sortDropdown.onValueChanged.RemoveListener(OnSortChanged);
+
+        if (capturedOnlyButton)
+            capturedOnlyButton.onClick.RemoveListener(OnToggleCapturedOnly);
+
+        if (favoritesOnlyButton)
+            favoritesOnlyButton.onClick.RemoveListener(OnToggleFavoritesOnly);
+    }
+
+    private void HandleMonsterCaptured(string monsterId, MonsterType type)
+    {
+        // Capture status changed → rebuild Codex entries
+        RebuildOwnedOnly();
+    }
+
+    private void HandleFavoritesChanged()
+    {
+        // Favorites changed → just rebuild the owned grid
+        RebuildOwnedOnly();
     }
 
     // ---------- JSON persistence helpers ----------
@@ -82,7 +153,6 @@ public class CodexPanelUI : MonoBehaviour
     }
     // ----------------------------------------------
 
-    // Build dropdown options to match enum order
     void BuildSortDropdownOptions()
     {
         if (!sortDropdown) return;
@@ -109,7 +179,6 @@ public class CodexPanelUI : MonoBehaviour
         }
     }
 
-    // Called when the dropdown value changes
     void OnSortChanged(int value)
     {
         var mode = (OwnedSortMode)Mathf.Clamp(value, 0, (int)OwnedSortMode.ByLevelHighToLow);
@@ -135,9 +204,8 @@ public class CodexPanelUI : MonoBehaviour
 
         BuildTeam(team);
 
-        // preserve Owned scroll across full refreshes
         var scroll = ownedContent ? ownedContent.GetComponentInParent<ScrollRect>() : null;
-        float pos = scroll ? scroll.verticalNormalizedPosition : 1f;
+        float pos  = scroll ? scroll.verticalNormalizedPosition : 1f;
 
         BuildOwned(owned, team, GetSortMode());
 
@@ -157,12 +225,16 @@ public class CodexPanelUI : MonoBehaviour
         var owned = data.owned ?? new List<OwnedMonsterData>();
 
         var scroll = ownedContent ? ownedContent.GetComponentInParent<ScrollRect>() : null;
-        float pos = scroll ? scroll.verticalNormalizedPosition : 1f;
+        float pos  = scroll ? scroll.verticalNormalizedPosition : 1f;
 
         BuildOwned(owned, team, GetSortMode());
 
         if (scroll) scroll.verticalNormalizedPosition = pos;
     }
+
+    // ─────────────────────────────────────────────
+    // Team row (unchanged from your working version)
+    // ─────────────────────────────────────────────
 
     void BuildTeam(List<OwnedMonsterData> team)
     {
@@ -201,72 +273,6 @@ public class CodexPanelUI : MonoBehaviour
         SelectTeamSlot(Mathf.Clamp(selectedTeamIndex, 0, 2));
     }
 
-    void BuildOwned(List<OwnedMonsterData> owned, List<OwnedMonsterData> team, OwnedSortMode sortMode)
-    {
-        Clear(ownedContent);
-        if (owned == null) return;
-
-        var teamKeys = new HashSet<string>((team ?? new List<OwnedMonsterData>()).Select(SafeKey));
-        var list = owned.Where(o => o != null && !string.IsNullOrEmpty(o.monsterId) && !teamKeys.Contains(SafeKey(o)))
-                        .ToList();
-
-        var sorted = SortOwned(list, sortMode);
-
-        foreach (var o in sorted)
-        {
-            var def = MonsterLibraryLocator.GetById(o.monsterId);
-            var go = Instantiate(ownedListItemPrefab, ownedContent);
-            var item = go.GetComponent<OwnedMonsterListItemUI>();
-            if (item)
-            {
-                item.Setup(o, def);
-            }
-        }
-    }
-
-    void OpenDetailFromOwned(OwnedMonsterData owned)
-    {
-        if (!detailPanel || owned == null || string.IsNullOrEmpty(owned.monsterId)) return;
-
-        var def = MonsterLibraryLocator.GetById(owned.monsterId);
-
-        detailPanel.Show(
-            def,
-            _ =>
-            {
-                AddOrReplaceInTeam(owned);
-                detailPanel.Hide();
-            }
-        );
-    }
-
-    void AddOrReplaceInTeam(OwnedMonsterData pick)
-    {
-        if (pick == null || string.IsNullOrEmpty(pick.monsterId)) return;
-
-        var data = SaveManager.Data;
-        if (data == null) return;
-
-        var team = data.team;
-        if (team == null)
-        {
-            team = new List<OwnedMonsterData>();
-            data.team = team;
-        }
-
-        // Ensure list has 3 slots (can be null placeholders)
-        while (team.Count < 3) team.Add(null);
-
-        int empty = team.FindIndex(t => t == null || string.IsNullOrEmpty(t.monsterId));
-        int slot  = (empty >= 0) ? empty : Mathf.Clamp(selectedTeamIndex, 0, 2);
-
-        // ✅ point the team slot directly to the same OwnedMonsterData instance
-        team[slot] = pick;
-
-        SaveManager.Save();
-        RefreshAll();
-    }
-
     void SelectTeamSlot(int idx)
     {
         selectedTeamIndex = Mathf.Clamp(idx, 0, 2);
@@ -278,71 +284,192 @@ public class CodexPanelUI : MonoBehaviour
             LeanTween.scale(_teamCardRoots[selectedTeamIndex], Vector3.one * 1.05f, 0.08f).setLoopPingPong(1);
     }
 
-    OwnedSortMode GetSortMode()
-    {
-        if (!sortDropdown) return OwnedSortMode.ByIdAsc;
-        return (OwnedSortMode)Mathf.Clamp(sortDropdown.value, 0, (int)OwnedSortMode.ByLevelHighToLow);
-    }
-
-    List<OwnedMonsterData> SortOwned(List<OwnedMonsterData> list, OwnedSortMode mode)
-    {
-        switch (mode)
-        {
-            case OwnedSortMode.ByNameAZ:
-                return list.OrderBy(o => GetNameKey(o)).ThenBy(o => o.monsterId).ToList();
-
-            case OwnedSortMode.ByNameZA:
-                return list.OrderByDescending(o => GetNameKey(o)).ThenBy(o => o.monsterId).ToList();
-
-            case OwnedSortMode.ByType:
-                return list.OrderBy(o => GetTypeKey(o)).ThenBy(o => GetNameKey(o)).ToList();
-
-            case OwnedSortMode.ByLevelLowToHigh:
-                return list.OrderBy(o => o.level)
-                           .ThenBy(o => GetNameKey(o))
-                           .ToList();
-
-            case OwnedSortMode.ByLevelHighToLow:
-                return list.OrderByDescending(o => o.level)
-                           .ThenBy(o => GetNameKey(o))
-                           .ToList();
-
-            case OwnedSortMode.ByIdAsc:
-            default:
-                return list.OrderBy(o => o.monsterId).ToList();
-        }
-    }
-
-    string GetNameKey(OwnedMonsterData o)
-    {
-        var def = MonsterLibraryLocator.GetById(o.monsterId);
-        return def ? (string.IsNullOrEmpty(def.displayName) ? def.name : def.displayName) : "~";
-    }
-
-    string GetTypeKey(OwnedMonsterData o)
-    {
-        var def = MonsterLibraryLocator.GetById(o.monsterId);
-        return def ? def.type.ToString() : "~";
-    }
-
-    static void Clear(RectTransform parent)
-    {
-        if (!parent) return;
-        for (int i = parent.childCount - 1; i >= 0; i--)
-            Object.Destroy(parent.GetChild(i).gameObject);
-    }
-
-    static string SafeKey(OwnedMonsterData d)
-    {
-        if (d == null) return "";
-        return (d.monsterId ?? "") + "#" + d.level;
-    }
-
     private void OpenTeamDetail(int slotIndex, OwnedMonsterData member)
     {
         if (!detailPanel || member == null || string.IsNullOrEmpty(member.monsterId))
             return;
 
         detailPanel.ShowTeamMember(slotIndex, member, onRemoved: RefreshAll);
+    }
+
+    // ─────────────────────────────────────────────
+    // Codex grid: all monsters (captured + unknown)
+    // ─────────────────────────────────────────────
+
+    void BuildOwned(List<OwnedMonsterData> owned, List<OwnedMonsterData> team, OwnedSortMode sortMode)
+    {
+        Clear(ownedContent);
+        if (!ownedContent || ownedListItemPrefab == null)
+            return;
+
+        var data = SaveManager.Data;
+        if (data == null)
+            return;
+
+        // 1) Collect all Owned monsters (owned + team, deduped by ownedUID)
+        var allOwned = data.GetAllOwnedMonsters(includeTeam: true) ?? new List<OwnedMonsterData>();
+        var ownedById = new Dictionary<string, OwnedMonsterData>();
+
+        for (int i = 0; i < allOwned.Count; i++)
+        {
+            var om = allOwned[i];
+            if (om == null || string.IsNullOrEmpty(om.monsterId))
+                continue;
+
+            // If multiple copies exist, prefer the highest level as the Codex representative
+            if (!ownedById.TryGetValue(om.monsterId, out var existing) || (existing != null && om.level > existing.level))
+            {
+                ownedById[om.monsterId] = om;
+            }
+        }
+
+        // 2) Pull all monster defs from the main library
+        var lib = MonsterLibraryLocator.Lib;
+        if (!lib || lib.monsters == null || lib.monsters.Count() == 0)
+            return;
+
+        var defs = lib.monsters
+            .Where(d => d != null)
+            .ToList();
+
+        if (defs.Count == 0)
+            return;
+
+        // 3) Sort definitions based on current sort mode + owned level data
+        var sortedDefs = SortDefs(defs, sortMode, ownedById);
+
+        // 4) Instantiate a row for EVERY monster in the game
+        foreach (var def in sortedDefs)
+        {
+            if (!def) continue;
+
+            bool captured  = ownedById.TryGetValue(def.id, out var ownedData);
+            bool isFavorite = FavoriteService.IsFavorite(def.id);
+
+            // Filters
+            if (_capturedOnlyFilter && !captured)
+                continue;
+
+            if (_favoritesOnlyFilter)
+            {
+                bool favoritesFeatureUnlocked = FeatureUnlockManager.I &&
+                                                FeatureUnlockManager.I.IsUnlocked(FeatureId.Codex_Favorites);
+                if (!favoritesFeatureUnlocked) continue;
+                if (!isFavorite) continue;
+            }
+
+            var go = Instantiate(ownedListItemPrefab, ownedContent);
+            var item = go.GetComponent<OwnedMonsterListItemUI>();
+            if (item)
+            {
+                // This will:
+                // - Show full info for captured
+                // - Show "???" + black icon for uncaptured
+                // - Disable detail click if not captured
+                item.SetupForCodex(
+                    def,
+                    ownedData,
+                    captured,
+                    isFavorite,
+                    allowDetail: captured,
+                    detailPanelOverride: detailPanel
+                );
+            }
+        }
+    }
+
+    // ─────────────────────────────────────────────
+    // Sorting helpers (now operating on defs, not Owned list)
+    // ─────────────────────────────────────────────
+
+    OwnedSortMode GetSortMode()
+    {
+        if (!sortDropdown) return _lastSortMode;
+        return (OwnedSortMode)Mathf.Clamp(sortDropdown.value, 0, (int)OwnedSortMode.ByLevelHighToLow);
+    }
+
+    static List<MonsterDataSO> SortDefs(
+        List<MonsterDataSO> defs,
+        OwnedSortMode mode,
+        Dictionary<string, OwnedMonsterData> ownedById)
+    {
+        IEnumerable<MonsterDataSO> query = defs;
+
+        switch (mode)
+        {
+            case OwnedSortMode.ByNameAZ:
+                query = defs.OrderBy(d => SafeName(d)).ThenBy(d => d ? d.id : string.Empty);
+                break;
+
+            case OwnedSortMode.ByNameZA:
+                query = defs.OrderByDescending(d => SafeName(d)).ThenBy(d => d ? d.id : string.Empty);
+                break;
+
+            case OwnedSortMode.ByType:
+                query = defs
+                    .OrderBy(d => d ? (int)d.type : int.MaxValue)
+                    .ThenBy(d => SafeName(d));
+                break;
+
+            case OwnedSortMode.ByLevelLowToHigh:
+                query = defs
+                    .OrderBy(d => GetOwnedLevel(d, ownedById))
+                    .ThenBy(d => SafeName(d));
+                break;
+
+            case OwnedSortMode.ByLevelHighToLow:
+                query = defs
+                    .OrderByDescending(d => GetOwnedLevel(d, ownedById))
+                    .ThenBy(d => SafeName(d));
+                break;
+
+            case OwnedSortMode.ByIdAsc:
+            default:
+                query = defs.OrderBy(d => d ? d.id : string.Empty);
+                break;
+        }
+
+        return query.ToList();
+    }
+
+    static string SafeName(MonsterDataSO d)
+    {
+        if (!d) return string.Empty;
+        if (!string.IsNullOrEmpty(d.displayName)) return d.displayName;
+        return d.name ?? string.Empty;
+    }
+
+    static int GetOwnedLevel(MonsterDataSO def, Dictionary<string, OwnedMonsterData> ownedById)
+    {
+        if (!def || ownedById == null) return 0;
+        if (!ownedById.TryGetValue(def.id, out var om) || om == null) return 0;
+        return Mathf.Max(1, om.level);
+    }
+
+    // ─────────────────────────────────────────────
+    // Filter button callbacks
+    // ─────────────────────────────────────────────
+
+    private void OnToggleCapturedOnly()
+    {
+        _capturedOnlyFilter = !_capturedOnlyFilter;
+        RebuildOwnedOnly();
+    }
+
+    private void OnToggleFavoritesOnly()
+    {
+        _favoritesOnlyFilter = !_favoritesOnlyFilter;
+        RebuildOwnedOnly();
+    }
+
+    // ─────────────────────────────────────────────
+    // Helpers
+    // ─────────────────────────────────────────────
+
+    static void Clear(RectTransform parent)
+    {
+        if (!parent) return;
+        for (int i = parent.childCount - 1; i >= 0; i--)
+            Object.Destroy(parent.GetChild(i).gameObject);
     }
 }

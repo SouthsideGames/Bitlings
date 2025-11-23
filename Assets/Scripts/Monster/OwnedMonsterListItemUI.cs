@@ -12,16 +12,21 @@ public class OwnedMonsterListItemUI : MonoBehaviour
     [SerializeField] private Button rootButton;
     [SerializeField] private TextMeshProUGUI cooldownText;
 
-    [Header("Evolution Alert")]
+    [Header("Alerts")]
     [SerializeField] private GameObject evolveAlert;
+    [SerializeField] private GameObject favoriteAlert;
 
     [Header("Detail Panel (Assign Mode)")]
     [SerializeField] private MonsterDetailPanelUI detailPanel;
 
+    // data
     private OwnedMonsterData _data;
     private MonsterDataSO _def;
 
+    // runtime
     private float _nextUiRefreshAt;
+    private bool _allowDetail = true;
+    private MonsterDetailPanelUI _detailPanelOverride;
 
     void Awake()
     {
@@ -66,6 +71,10 @@ public class OwnedMonsterListItemUI : MonoBehaviour
         }
     }
 
+    // ---------------------------------------------------------------------
+    // Standard setup (owned lists, team assigners, etc.)
+    // ---------------------------------------------------------------------
+
     public void Setup(OwnedMonsterData data)
     {
         var def = HasValidMonster(data) ? MonsterLibraryLocator.GetById(data.monsterId) : null;
@@ -74,15 +83,20 @@ public class OwnedMonsterListItemUI : MonoBehaviour
 
     public void Setup(OwnedMonsterData data, MonsterDataSO def)
     {
+        _allowDetail = true;
+        _detailPanelOverride = null;
+
         _data = data;
         _def  = def;
 
+        // Icon
         if (icon)
         {
             if (def && def.icon)
             {
                 icon.enabled = true;
                 icon.sprite  = def.icon;
+                icon.color   = Color.white;
             }
             else
             {
@@ -91,13 +105,21 @@ public class OwnedMonsterListItemUI : MonoBehaviour
             }
         }
 
+        // Name / ID
         if (nameText)
-            nameText.text = def
-                ? (string.IsNullOrEmpty(def.displayName) ? def.name : def.displayName)
-                : "Unknown";
+        {
+            if (def)
+                nameText.text = string.IsNullOrEmpty(def.displayName) ? def.name : def.displayName;
+            else
+                nameText.text = "Unknown";
+        }
 
         if (idText)
             idText.text = HasValidMonster(data) ? data.monsterId : "—";
+
+        // Favorites are only shown for Codex entries; hide here.
+        if (favoriteAlert)
+            favoriteAlert.SetActive(false);
 
         ApplyState();
 
@@ -107,15 +129,104 @@ public class OwnedMonsterListItemUI : MonoBehaviour
         RefreshEvolutionAlert();
     }
 
+    // ---------------------------------------------------------------------
+    // Codex-specific setup
+    // ---------------------------------------------------------------------
+
+    /// <summary>
+    /// Setup this row for Codex usage, where every monster in the (captured) pool
+    /// is listed. Uncaptured entries would be shown as ??? and are not clickable.
+    /// </summary>
+    public void SetupForCodex(
+        MonsterDataSO def,
+        OwnedMonsterData ownedData,
+        bool captured,
+        bool isFavorite,
+        bool allowDetail,
+        MonsterDetailPanelUI detailPanelOverride)
+    {
+        _detailPanelOverride = detailPanelOverride;
+        _allowDetail = allowDetail && captured;    // cannot open detail for uncaptured
+
+        _def = def;
+        _data = captured ? ownedData : null;       // unknown entries would have no OwnedMonsterData
+
+        // Icon
+        if (icon)
+        {
+            if (def && def.icon)
+            {
+                icon.enabled = true;
+                icon.sprite  = def.icon;
+                icon.color   = captured ? Color.white : Color.black;
+            }
+            else
+            {
+                icon.enabled = false;
+                icon.sprite  = null;
+            }
+        }
+
+        // Text: captured vs unknown
+        if (nameText)
+        {
+            if (captured && def)
+                nameText.text = string.IsNullOrEmpty(def.displayName) ? def.name : def.displayName;
+            else
+                nameText.text = "???";
+        }
+
+        if (idText)
+        {
+            if (captured && def)
+                idText.text = def.id;
+            else
+                idText.text = "???";
+        }
+
+        // Favorites icon (only for captured + feature unlocked)
+        if (favoriteAlert)
+        {
+            bool hasFeature = FeatureUnlockManager.I &&
+                              FeatureUnlockManager.I.IsUnlocked(FeatureId.Codex_Favorites);
+            favoriteAlert.SetActive(hasFeature && captured && isFavorite);
+        }
+
+        // KO / cooldown text only makes sense for captured monsters.
+        if (cooldownText)
+            cooldownText.gameObject.SetActive(false);
+
+        // Evolve alert makes no sense for unknown entries.
+        if (evolveAlert)
+            evolveAlert.SetActive(false);
+
+        ApplyState();
+
+        _nextUiRefreshAt = 0f;
+        if (!IsUsable(_data)) UpdateKOCountdown();
+
+        RefreshEvolutionAlert();
+    }
+
+    // ---------------------------------------------------------------------
+    // Interactions
+    // ---------------------------------------------------------------------
+
     public void SetInteractable(bool on)
     {
-        if (rootButton) rootButton.interactable = on && IsUsable(_data);
+        if (rootButton)
+            rootButton.interactable = on && HasValidMonster(_data) && IsUsable(_data) && _allowDetail;
+
         ApplyKOVisualsOnly();
     }
 
     private void OnClickOpenDetails()
     {
-        if (detailPanel == null)
+        if (!_allowDetail)
+            return;
+
+        var panel = _detailPanelOverride ? _detailPanelOverride : detailPanel;
+        if (panel == null)
         {
             Debug.LogWarning("[OwnedMonsterListItemUI] MonsterDetailPanelUI not found in scene.");
             return;
@@ -126,16 +237,15 @@ public class OwnedMonsterListItemUI : MonoBehaviour
 
         AudioManager.I.PlayClick();
 
-        detailPanel.ShowAssign(_data);
+        panel.ShowAssign(_data);
     }
 
     private void ApplyState()
     {
-        if (rootButton) rootButton.interactable = HasValidMonster(_data) && IsUsable(_data);
+        if (rootButton)
+            rootButton.interactable = HasValidMonster(_data) && IsUsable(_data) && _allowDetail;
 
         ApplyKOVisualsOnly();
-        if (!IsUsable(_data)) UpdateKOCountdown();
-
         RefreshEvolutionAlert();
     }
 
@@ -176,6 +286,10 @@ public class OwnedMonsterListItemUI : MonoBehaviour
         evolveAlert.SetActive(show);
     }
 
+    // ---------------------------------------------------------------------
+    // Static helpers
+    // ---------------------------------------------------------------------
+
     private static bool HasValidMonster(OwnedMonsterData d)
     {
         return d != null && !string.IsNullOrEmpty(d.monsterId);
@@ -214,6 +328,10 @@ public class OwnedMonsterListItemUI : MonoBehaviour
             return $"{(int)span.TotalHours}:{span.Minutes:00}:{span.Seconds:00}";
         return $"{span.Minutes:D2}:{span.Seconds:D2}";
     }
+
+    // ---------------------------------------------------------------------
+    // Event handlers
+    // ---------------------------------------------------------------------
 
     private void HandleMonsterLeveled(string ownedIdOrDefId, int newLevel)
     {
