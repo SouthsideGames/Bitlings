@@ -26,6 +26,13 @@ public partial class EncounterManager : MonoBehaviour
     [SerializeField] private float postResultDelay = 0.8f;
     [SerializeField] private float autoPollSeconds = 0.25f;
 
+    [Header("Battle Spawn Points")]
+    [SerializeField] private Transform playerSpawnPoint;
+    [SerializeField] private Transform enemySpawnPoint;
+
+    public Transform PlayerSpawnPoint => playerSpawnPoint;
+    public Transform EnemySpawnPoint  => enemySpawnPoint;
+
     // Runtime state
     private bool _currentEncounterIsBoss = false;
     private MonsterDataSO _currentBossUsed = null;

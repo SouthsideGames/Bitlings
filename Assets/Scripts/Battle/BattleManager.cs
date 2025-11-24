@@ -26,6 +26,7 @@ public class BattleManager : MonoBehaviour
     // Manual-turn settings
     // ─────────────────────────────────────────────────────────────────────────────
     private enum PlayerAction { None, Attack, Defend, Focus, Run }
+    private enum EnemyAction { Attack, Focus, Run }
 
     [Header("Manual Turn Settings")]
     [SerializeField] private bool manualTurns = true;
@@ -35,12 +36,20 @@ public class BattleManager : MonoBehaviour
 
     [SerializeField, Range(0f, 1f)] private float focusBuffPct = 0.50f;
 
-    [SerializeField, Range(0f, 1f)] private float runBaseChance = 0.25f; 
+    [SerializeField, Range(0f, 1f)] private float runBaseChance = 0.25f;
     [SerializeField, Range(0f, 1f)] private float runMinChance = 0.05f;
-    [SerializeField, Range(0f, 1f)] private float runMaxChance = 0.95f; 
-    [SerializeField, Range(0f, 1f)] private float runSpeedWeight = 0.50f; 
-    [SerializeField, Range(0f, 1f)] private float runAttemptBonus = 0.10f; 
-    [SerializeField, Range(0f, 1f)] private float runHpWeight = 0.25f; 
+    [SerializeField, Range(0f, 1f)] private float runMaxChance = 0.95f;
+    [SerializeField, Range(0f, 1f)] private float runSpeedWeight = 0.50f;
+    [SerializeField, Range(0f, 1f)] private float runAttemptBonus = 0.10f;
+    [SerializeField, Range(0f, 1f)] private float runHpWeight = 0.25f;
+
+    [Header("Defend Reliability")]
+    [SerializeField, Range(0f, 1f)] private float defendFirstUseSuccess = 1.0f;
+    [SerializeField, Range(0f, 1f)] private float defendRepeatMultiplier = 0.5f;
+    [SerializeField, Range(0f, 1f)] private float defendMinSuccess = 0.1f;
+
+    [Header("Attack VFX")]
+    [SerializeField] private bool spawnAttackPrefabs = true;
 
     private bool _isPlayerTurn;
     public bool IsPlayerTurn => _isPlayerTurn;
@@ -111,14 +120,13 @@ public class BattleManager : MonoBehaviour
     [SerializeField] private bool pauseForFirstDecision = true;
 
     [Header("Speed Control")]
-    [SerializeField, Min(0.25f)] private float battleSpeed = 1f; // 1x, 2x, 3x
+    [SerializeField, Min(0.25f)] private float battleSpeed = 1f;
     public float BattleSpeed => battleSpeed;
 
     [Header("Status UI (Player)")]
     [SerializeField] private Image guardIcon;
-    [SerializeField] private Image chargeIcon; 
+    [SerializeField] private Image chargeIcon;
     [SerializeField] private TextMeshProUGUI playerShieldText;
-
 
     [Header("Debug")]
     [SerializeField] private bool debugIncomingMitigation = false;
@@ -138,14 +146,12 @@ public class BattleManager : MonoBehaviour
     private JobBattlePassives.Ctx[] jobCtx;
 
     private float[] shieldHP;
-    private float[] pendingGuardShield; 
+    private float[] pendingGuardShield;
     private bool[] chargedNextAttack;
 
-    // Pending one-turn damage buffs for benched allies (applied on swap-in)
     private float[] teamPendingBuffPct;
     private int[] teamPendingBuffTurns;
 
-    // Per-slot damage buffs (Focus + bench-carry buffs)
     private float[] slotDamageBuffPct;
     private int[] slotDamageBuffTurns;
 
@@ -160,12 +166,16 @@ public class BattleManager : MonoBehaviour
 
     private int playerNoDmgTurns = 0;
     private int playerNoCritTurns = 0;
-    private int wildWeakenTurns = 0; // retained for future systems; unused now
+    private int wildWeakenTurns = 0;
     private float wildWeakenPct = 0f;
 
-    private int runAttempts = 0;
+    private int defendConsecutiveUses = 0;
+    private float currentDefendSuccess = 1f;
 
-    // BattleResult tracking
+    private int runAttempts = 0;
+    private bool wildChargedNextAttack = false;
+
+
     private int _totalCritsThisBattle = 0;
     private int _totalDamageTakenThisBattle = 0;
 
@@ -188,7 +198,6 @@ public class BattleManager : MonoBehaviour
         if (playerShieldText) playerShieldText.gameObject.SetActive(false);
     }
 
-
     void OnEnable()
     {
         GameEvents.BattleFinished += HandleBattleFinishedUIRefresh;
@@ -205,9 +214,6 @@ public class BattleManager : MonoBehaviour
         if (benchBtn2) benchBtn2.onClick.RemoveAllListeners();
     }
 
-    // ─────────────────────────────────────────────────────────────────────────────
-    // Player turn flag helper
-    // ─────────────────────────────────────────────────────────────────────────────
     private void SetIsPlayerTurn(bool value)
     {
         if (_isPlayerTurn == value) return;
@@ -216,7 +222,7 @@ public class BattleManager : MonoBehaviour
     }
 
     // ─────────────────────────────────────────────────────────────────────────────
-    // Public API for action bar (hook buttons to these)
+    // Public API for action bar
     // ─────────────────────────────────────────────────────────────────────────────
     public void SetPlayerActionAttack() { TryQueueAction(PlayerAction.Attack); }
     public void SetPlayerActionDefend() { TryQueueAction(PlayerAction.Defend); }
@@ -252,6 +258,9 @@ public class BattleManager : MonoBehaviour
 
         _totalCritsThisBattle = 0;
         _totalDamageTakenThisBattle = 0;
+
+        defendConsecutiveUses = 0;
+        currentDefendSuccess = defendFirstUseSuccess;
 
         inBattle = false;
         onEnd = onEnded;
@@ -400,27 +409,14 @@ public class BattleManager : MonoBehaviour
 
             if (swappedFromKO)
             {
-                if (!IsWildKO() && !IsTeamKO())
-                {
-                    if (manualTurns) yield return WaitForPlayerChoiceAndResolve();
-                    else yield return PlayerTurn();
-                    if (CheckEnd()) break;
-                    yield return Wait(hitPause);
-                }
+                ClampAndPushActiveHP();
+                ApplyActiveToUI();
+                RefreshBenchUI();
+            }
 
-                if (!IsWildKO() && !IsTeamKO())
-                {
-                    if (jobCtx != null && jobCtx[activeIndex] != null)
-                    {
-                        if (jobCtx[activeIndex].speedBuffTurns > 0) jobCtx[activeIndex].speedBuffTurns--;
-                        if (jobCtx[activeIndex].critBuffTurns > 0) jobCtx[activeIndex].critBuffTurns--;
-                        if (jobCtx[activeIndex].critResistBuffTurns > 0) jobCtx[activeIndex].critResistBuffTurns--;
-                        if (jobCtx[activeIndex].dmgReduceBuffTurns > 0) jobCtx[activeIndex].dmgReduceBuffTurns--;
-                    }
-                    yield return Wait(endRoundDelay);
-                }
-
-                defendActiveThisRound = false;
+            if (IsWildKO() || IsTeamKO())
+            {
+                if (CheckEnd()) break;
                 round++;
                 continue;
             }
@@ -431,13 +427,30 @@ public class BattleManager : MonoBehaviour
             if (roster != null && activeIndex < roster.Count && roster[activeIndex] != null)
                 pSpeedBase += Mathf.Max(0, roster[activeIndex].trainingBonus.spd);
 
-            var jSpeed = jobCtx != null ? jobCtx[activeIndex] : null;
-            if (jSpeed != null && jSpeed.speedBuffTurns > 0 && jSpeed.speedBonusPctFirstTurns != 0f)
-                pSpeedBase = Mathf.Max(1, Mathf.RoundToInt(pSpeedBase * (1f + jSpeed.speedBonusPctFirstTurns)));
+            var jSpeed = (jobCtx != null &&
+                          activeIndex >= 0 &&
+                          activeIndex < jobCtx.Length)
+                ? jobCtx[activeIndex]
+                : null;
+
+            if (jSpeed != null &&
+                jSpeed.speedBuffTurns > 0 &&
+                jSpeed.speedBonusPctFirstTurns != 0f)
+            {
+                pSpeedBase = Mathf.Max(
+                    1,
+                    Mathf.RoundToInt(pSpeedBase * (1f + jSpeed.speedBonusPctFirstTurns))
+                );
+            }
 
             var titleCtx = BuildTitleContextForActive();
             float pSpeedAfterTitlesF = TitlesAdapter.GetStatValue(
-                teamIds[activeIndex], teamDefs[activeIndex], teamLevels[activeIndex], "SPD", titleCtx, pSpeedBase
+                teamIds[activeIndex],
+                teamDefs[activeIndex],
+                teamLevels[activeIndex],
+                "SPD",
+                titleCtx,
+                pSpeedBase
             );
             int pSpeedAfterTitles = Mathf.Max(1, Mathf.RoundToInt(pSpeedAfterTitlesF));
 
@@ -449,6 +462,9 @@ public class BattleManager : MonoBehaviour
             if (pSpeed > wSpeed) playerFirst = true;
             else if (pSpeed < wSpeed) playerFirst = false;
             else playerFirst = UnityEngine.Random.value < 0.5f;
+
+            defendActiveThisRound = false;
+            if (guardIcon) guardIcon.enabled = false;
 
             if (playerFirst)
             {
@@ -471,23 +487,141 @@ public class BattleManager : MonoBehaviour
             {
                 if (!IsWildKO() && !IsTeamKO())
                 {
+                    PlayerAction queuedChoice = PlayerAction.Attack;
+
+                    if (manualTurns)
+                    {
+                        SetIsPlayerTurn(true);
+                        pendingAction = PlayerAction.None;
+
+                        while (inBattle && pendingAction == PlayerAction.None)
+                            yield return null;
+
+                        queuedChoice = pendingAction;
+                        pendingAction = PlayerAction.None;
+                        SetIsPlayerTurn(false);
+
+                        if (queuedChoice == PlayerAction.Defend)
+                        {
+                            string name = GetName(activeIndex);
+                            bool success = RollDefendSuccess();
+
+                            if (success)
+                            {
+                                defendActiveThisRound = true;
+                                if (guardIcon) guardIcon.enabled = true;
+
+                                BattleLogger.Log($"{name} is defending.", LogScope.Battle);
+                                BattleLogger.Log(
+                                    $"{name} will reduce the next hit and convert it into a shield for the following round.",
+                                    LogScope.Battle
+                                );
+                            }
+                            else
+                            {
+                                defendActiveThisRound = false;
+                                if (guardIcon) guardIcon.enabled = false;
+
+                                BattleLogger.Log($"{name} tried to defend, but it failed!", LogScope.Battle);
+                            }
+
+                            Punch(playerIcon);
+                        }
+                        else
+                        {
+                            ResetDefendStreak();
+                            defendActiveThisRound = false;
+                            if (guardIcon) guardIcon.enabled = false;
+                        }
+                    }
+
                     yield return EnemyTurn();
                     if (CheckEnd()) break;
                     yield return Wait(hitPause);
-                }
 
-                if (!IsWildKO() && !IsTeamKO())
-                {
-                    if (manualTurns) yield return WaitForPlayerChoiceAndResolve();
-                    else yield return PlayerTurn();
-                    if (CheckEnd()) break;
-                    yield return Wait(hitPause);
+                    if (!IsWildKO() && !IsTeamKO())
+                    {
+                        if (manualTurns)
+                        {
+                            switch (queuedChoice)
+                            {
+                                case PlayerAction.Attack:
+                                    yield return PlayerTurn();
+                                    break;
+
+                                case PlayerAction.Focus:
+                                    {
+                                        ResetDefendStreak();
+
+                                        if (chargedNextAttack != null &&
+                                            activeIndex >= 0 &&
+                                            activeIndex < chargedNextAttack.Length)
+                                        {
+                                            chargedNextAttack[activeIndex] = true;
+                                        }
+
+                                        if (chargeIcon) chargeIcon.enabled = true;
+
+                                        BattleLogger.Log($"{GetName(activeIndex)} is charging.", LogScope.Battle);
+                                        BattleLogger.Log(
+                                            $"Their next attack will deal +{Mathf.RoundToInt(chargeBonusPct * 100f)}% damage.",
+                                            LogScope.Battle
+                                        );
+                                        Punch(playerIcon);
+                                        break;
+                                    }
+
+                                case PlayerAction.Run:
+                                    {
+                                        ResetDefendStreak();
+
+                                        float chance = ComputeRunChance();
+                                        bool escaped = UnityEngine.Random.value < chance;
+
+                                        string name = GetName(activeIndex);
+
+                                        if (escaped)
+                                        {
+                                            BattleLogger.Log(
+                                                $"{name} has fled! (Run chance {Mathf.RoundToInt(chance * 100f)}%)",
+                                                LogScope.Battle
+                                            );
+                                            EndBattle(false, true);
+                                            yield break;
+                                        }
+                                        else
+                                        {
+                                            runAttempts++;
+                                            BattleLogger.Log(
+                                                $"Couldn't escape! (Run chance was {Mathf.RoundToInt(chance * 100f)}%)",
+                                                LogScope.Battle
+                                            );
+                                        }
+                                        break;
+                                    }
+
+                                case PlayerAction.Defend:
+                                default:
+                                    break;
+                            }
+                        }
+                        else
+                        {
+                            yield return PlayerTurn();
+                        }
+
+                        if (CheckEnd()) break;
+                        yield return Wait(hitPause);
+                    }
                 }
             }
 
             if (!IsWildKO() && !IsTeamKO())
             {
-                if (jobCtx != null && jobCtx[activeIndex] != null)
+                if (jobCtx != null &&
+                    activeIndex >= 0 &&
+                    activeIndex < jobCtx.Length &&
+                    jobCtx[activeIndex] != null)
                 {
                     if (jobCtx[activeIndex].speedBuffTurns > 0) jobCtx[activeIndex].speedBuffTurns--;
                     if (jobCtx[activeIndex].critBuffTurns > 0) jobCtx[activeIndex].critBuffTurns--;
@@ -500,15 +634,13 @@ public class BattleManager : MonoBehaviour
 
             defendActiveThisRound = false;
             if (guardIcon) guardIcon.enabled = false;
+
             round++;
         }
 
         turnCR = null;
     }
 
-    // ─────────────────────────────────────────────────────────────────────────────
-    // Manual Turn: wait for UI choice, then apply effect
-    // ─────────────────────────────────────────────────────────────────────────────
     private IEnumerator WaitForPlayerChoiceAndResolve()
     {
         SetIsPlayerTurn(true);
@@ -523,50 +655,86 @@ public class BattleManager : MonoBehaviour
         switch (choice)
         {
             case PlayerAction.Attack:
+                ResetDefendStreak();
                 yield return PlayerTurn();
                 break;
 
             case PlayerAction.Defend:
-            defendActiveThisRound = true;
-                if (guardIcon) guardIcon.enabled = true;
-                BattleLogger.Log(
-                    $"{GetName(activeIndex)} guards, reducing this hit and storing power as a shield for next round.",
-                    LogScope.Battle
-                );
-                Punch(playerIcon);
-                break;
-
-            case PlayerAction.Focus:
-                 if (chargedNextAttack != null &&
-                    activeIndex >= 0 &&
-                    activeIndex < chargedNextAttack.Length)
                 {
-                    chargedNextAttack[activeIndex] = true;
+                    string name = GetName(activeIndex);
+                    bool success = RollDefendSuccess();
+
+                    if (success)
+                    {
+                        defendActiveThisRound = true;
+                        if (guardIcon) guardIcon.enabled = true;
+
+                        BattleLogger.Log($"{name} is defending.", LogScope.Battle);
+                        BattleLogger.Log(
+                            $"{name} will reduce the next hit and convert it into a shield for the following round.",
+                            LogScope.Battle
+                        );
+                    }
+                    else
+                    {
+                        defendActiveThisRound = false;
+                        if (guardIcon) guardIcon.enabled = false;
+
+                        BattleLogger.Log($"{name} tried to defend, but it failed!", LogScope.Battle);
+                    }
+
+                    Punch(playerIcon);
+                    break;
                 }
 
-                if (chargeIcon) chargeIcon.enabled = true;
+            case PlayerAction.Focus:
+                {
+                    ResetDefendStreak();
 
-                BattleLogger.Log(
-                    $"{GetName(activeIndex)} is charging up for a powerful next attack (+{Mathf.RoundToInt(chargeBonusPct * 100f)}%).",
-                    LogScope.Battle
-                );
-                Punch(playerIcon);
-                break;
+                    if (chargedNextAttack != null &&
+                        activeIndex >= 0 &&
+                        activeIndex < chargedNextAttack.Length)
+                    {
+                        chargedNextAttack[activeIndex] = true;
+                    }
+
+                    if (chargeIcon) chargeIcon.enabled = true;
+
+                    BattleLogger.Log($"{GetName(activeIndex)} is charging.", LogScope.Battle);
+                    BattleLogger.Log(
+                        $"Their next attack will deal +{Mathf.RoundToInt(chargeBonusPct * 100f)}% damage.",
+                        LogScope.Battle
+                    );
+
+                    Punch(playerIcon);
+                    break;
+                }
 
             case PlayerAction.Run:
                 {
+                    ResetDefendStreak();
+
                     float chance = ComputeRunChance();
                     bool escaped = UnityEngine.Random.value < chance;
+
+                    string name = GetName(activeIndex);
+
                     if (escaped)
                     {
-                        BattleLogger.Log($"Got away safely! (Run chance {Mathf.RoundToInt(chance * 100f)}%)", LogScope.Battle);
-                        EndBattle(false, true); // natural escape, not a defeat
+                        BattleLogger.Log(
+                            $"{name} has fled! (Run chance {Mathf.RoundToInt(chance * 100f)}%)",
+                            LogScope.Battle
+                        );
+                        EndBattle(false, true);
                         yield break;
                     }
                     else
                     {
                         runAttempts++;
-                        BattleLogger.Log($"Couldn't escape! (Run chance was {Mathf.RoundToInt(chance * 100f)}%)", LogScope.Battle);
+                        BattleLogger.Log(
+                            $"Couldn't escape! (Run chance was {Mathf.RoundToInt(chance * 100f)}%)",
+                            LogScope.Battle
+                        );
                     }
                     break;
                 }
@@ -588,6 +756,8 @@ public class BattleManager : MonoBehaviour
             isResolvingPlayerTurn = false;
             yield break;
         }
+
+        LogAttackUsedAndSpawnVfx(true);
 
         var roster = SaveManager.Data?.team;
 
@@ -765,9 +935,72 @@ public class BattleManager : MonoBehaviour
 
     private IEnumerator EnemyTurn()
     {
-        if (debugIncomingMitigation) Debug.Log("[Mitigation] EnemyTurn started — debugIncomingMitigation = TRUE");
+        // If our active slot is KO'd, try to autoswap first.
+        if (teamHP[activeIndex] <= 0.01f && !AutoSwapToAlive())
+            yield break;
 
-        if (teamHP[activeIndex] <= 0.01f && !AutoSwapToAlive()) yield break;
+        // Decide what the wild will do this turn.
+        var choice = ChooseEnemyAction();
+
+        // ─────────────────────────────────────────────────────────────
+        // FOCUS (Charge): skip attacking; next attack is boosted
+        // ─────────────────────────────────────────────────────────────
+        if (choice == EnemyAction.Focus)
+        {
+            wildChargedNextAttack = true;
+
+            string name = wildDef ? wildDef.displayName : "Foe";
+            BattleLogger.Log($"{name} is charging up.", LogScope.Battle);
+            BattleLogger.Log(
+                $"Their next attack will deal +{Mathf.RoundToInt(chargeBonusPct * 100f)}% damage.",
+                LogScope.Battle
+            );
+
+            Punch(wildIcon);
+            yield break;
+        }
+
+        // ─────────────────────────────────────────────────────────────
+        // RUN: wild tries to flee the battle
+        // ─────────────────────────────────────────────────────────────
+        if (choice == EnemyAction.Run)
+        {
+            string name = wildDef ? wildDef.displayName : "Foe";
+            float chance = ComputeEnemyRunChance();
+            bool fled = UnityEngine.Random.value < chance;
+
+            if (fled)
+            {
+                BattleLogger.Log(
+                    $"{name} fled! (Run chance {Mathf.RoundToInt(chance * 100f)}%)",
+                    LogScope.Battle
+                );
+
+                // Treat as no victory / no defeat, just end encounter.
+                EndBattle(false, escaped: true);
+                yield break;
+            }
+            else
+            {
+                BattleLogger.Log(
+                    $"{name} tried to flee, but couldn't! (Run chance {Mathf.RoundToInt(chance * 100f)}%)",
+                    LogScope.Battle
+                );
+                yield break;
+            }
+        }
+
+        // ─────────────────────────────────────────────────────────────
+        // ATTACK: fall through into the existing attack logic
+        // ─────────────────────────────────────────────────────────────
+        if (debugIncomingMitigation)
+            Debug.Log("[Mitigation] EnemyTurn started — debugIncomingMitigation = TRUE");
+
+        if (teamHP[activeIndex] <= 0.01f && !AutoSwapToAlive())
+            yield break;
+
+        // Log attack name / VFX from MonsterDataSO.basicAttackName / prefab
+        LogAttackUsedAndSpawnVfx(false);
 
         int enemyAtk = Mathf.Max(1, Mathf.RoundToInt(wildAttackPerTurn));
         int defFlatBooster = BattleTempBuffs.I ? BattleTempBuffs.I.GetPlayerDefenseBonus() : 0;
@@ -786,7 +1019,8 @@ public class BattleManager : MonoBehaviour
         if (ctx != null)
         {
             playerCritResist += ctx.critResistFlat;
-            if (ctx.critResistBuffTurns > 0) playerCritResist += ctx.critResistBonusFirstTurns;
+            if (ctx.critResistBuffTurns > 0)
+                playerCritResist += ctx.critResistBonusFirstTurns;
         }
 
         float wildCritChance = df.cannotBeCrit ? 0f : Mathf.Clamp01(critChanceWild - playerCritResist);
@@ -808,6 +1042,21 @@ public class BattleManager : MonoBehaviour
                 null, wildDef, wildLevel,
                 teamIds[activeIndex], teamDefs[activeIndex], teamLevels[activeIndex],
                 enemyAtk, 0f, critMultiplier, 0
+            );
+        }
+
+        // ─────────────────────────────────────────────────────────────
+        // Apply CHARGED bonus if the wild used Focus last turn
+        // ─────────────────────────────────────────────────────────────
+        if (wildChargedNextAttack && chargeBonusPct > 0f)
+        {
+            dr.damage = Mathf.Max(1, Mathf.RoundToInt(dr.damage * (1f + chargeBonusPct)));
+            wildChargedNextAttack = false;
+
+            string attackerName = wildDef ? wildDef.displayName : "Foe";
+            BattleLogger.Log(
+                $"{attackerName} unleashes a charged attack (+{Mathf.RoundToInt(chargeBonusPct * 100f)}% dmg)!",
+                LogScope.Battle
             );
         }
 
@@ -835,26 +1084,15 @@ public class BattleManager : MonoBehaviour
         float scalarBeforeGuard = incomingScalar;
         float preventedByGuardRaw = 0f;
 
+        // Player Defend → Guard
         if (defendActiveThisRound && defendReducePct > 0f)
         {
             float guardPct = Mathf.Clamp01(defendReducePct);
             incomingScalar *= (1f - guardPct);
 
-            // amount of raw damage “removed” by guard, before titles/shields
             float dmgBeforeGuard = dr.damage * scalarBeforeGuard;
             float dmgAfterGuard = dr.damage * incomingScalar;
             preventedByGuardRaw = Mathf.Max(0f, dmgBeforeGuard - dmgAfterGuard);
-        }
-
-        if (defendActiveThisRound && defendReducePct > 0f)
-            incomingScalar *= (1f - Mathf.Clamp01(defendReducePct));
-
-        if (wildWeakenTurns > 0 && wildWeakenPct > 0f)
-        {
-            incomingScalar *= (1f - wildWeakenPct);
-            BattleLogger.Log($"{(wildDef ? wildDef.displayName : "Foe")} is weakened (-{Mathf.RoundToInt(wildWeakenPct * 100f)}% dmg).", LogScope.Battle);
-            wildWeakenTurns--;
-            if (wildWeakenTurns <= 0) wildWeakenPct = 0f;
         }
 
         int dmg_afterScalar = Mathf.Max(1, Mathf.RoundToInt(dr.damage * incomingScalar));
@@ -897,6 +1135,7 @@ public class BattleManager : MonoBehaviour
         teamHP[activeIndex] = Mathf.Max(0f, teamHP[activeIndex] - dmg_final);
         ClampAndPushActiveHP();
 
+        // Convert prevented damage → shield for next round
         if (preventedByGuardRaw > 0f &&
             pendingGuardShield != null &&
             activeIndex >= 0 &&
@@ -927,7 +1166,8 @@ public class BattleManager : MonoBehaviour
         if (dr.crit && !df.cannotBeCrit) _totalCritsThisBattle++;
         _totalDamageTakenThisBattle += dmg_final;
 
-        if (!playerTookFirstIncomingThisBattle) playerTookFirstIncomingThisBattle = true;
+        if (!playerTookFirstIncomingThisBattle)
+            playerTookFirstIncomingThisBattle = true;
 
         if (debugIncomingMitigation)
         {
@@ -940,7 +1180,7 @@ public class BattleManager : MonoBehaviour
 
             var text =
                 $"  • Base: {baseRawDamage}\n" +
-                $"  • After Job/Conditional scalar ({jobsPctOff}% off): {Mathf.Max(1, Mathf.RoundToInt(baseRawDamage * incomingScalar))}\n" +
+                $"  • After Job/Conditional scalar ({jobsPctOff}% off)\n" +
                 (Mathf.Approximately(incomingEffMul, 1f) ? "" :
                 $"  • After Title Incoming-Effectiveness x{incomingEffMul:0.00}\n") +
                 $"  • After Title % ({titlePctOff}% off): {dmg_afterPercent}\n" +
@@ -998,7 +1238,7 @@ public class BattleManager : MonoBehaviour
 
     private void EndBattle(bool victory, bool escaped = false)
     {
-        if (!inBattle && !escaped) return; // allow escape to still finalize if called mid-setup
+        if (!inBattle && !escaped) return;
 
         inBattle = false;
         SetIsPlayerTurn(false);
@@ -1009,7 +1249,6 @@ public class BattleManager : MonoBehaviour
 
         float survived = Mathf.Max(0f, Time.unscaledTime - startTime);
 
-        // COINS (none for escape)
         int baseCoins = 0;
         int finalCoins = 0;
         int coinTitleBonus = 0;
@@ -1032,7 +1271,6 @@ public class BattleManager : MonoBehaviour
             if (finalCoins < 0) finalCoins = 0;
         }
 
-        // GROWTH CORES (victory only)
         int baseCores = Mathf.Max(1, 2 + wildLevel);
         int growthCoreTitleBonus = 0;
         int growthCoreTotal = 0;
@@ -1065,7 +1303,6 @@ public class BattleManager : MonoBehaviour
         var ownedList = data != null && data.owned != null ? data.owned : new List<OwnedMonsterData>();
         long nowUnix = SaveManager.NowUnix();
 
-        // 1) write HP back into team list
         for (int i = 0; i < teamCount && i < teamList.Count; i++)
         {
             var t = teamList[i];
@@ -1075,7 +1312,6 @@ public class BattleManager : MonoBehaviour
             teamList[i] = t;
         }
 
-        // 2) mirror those HP values into owned list
         for (int i = 0; i < teamList.Count; i++)
         {
             var t = teamList[i];
@@ -1094,7 +1330,6 @@ public class BattleManager : MonoBehaviour
             }
         }
 
-        // 3) update lastHPUnix for team entries, but do NOT clear KO'd slots
         for (int i = 0; i < teamList.Count; i++)
         {
             var e = teamList[i];
@@ -1655,7 +1890,20 @@ public class BattleManager : MonoBehaviour
 
         var vsName = wildDef ? $"{wildDef.displayName} (Lv {wildLevel})" : "Unknown";
         BattleLogger.BeginBattle(vsName);
-        BattleLogger.Log(wildDef ? $"A wild {wildDef.displayName} (Lv {wildLevel}) appeared!" : "A wild foe appeared!", LogScope.Battle);
+        if (wildDef)
+            BattleLogger.Log($"A wild {wildDef.displayName} (Lv {wildLevel}) appeared!", LogScope.Battle);
+        else
+            BattleLogger.Log("A wild foe appeared!", LogScope.Battle);
+
+        // Personality flair
+        string personalityLabel = GetWildPersonalityLabel();
+        if (!string.IsNullOrEmpty(personalityLabel) && wildDef && wildDef.Personality != null)
+        {
+            if (!string.IsNullOrEmpty(wildDef.Personality.description))
+                BattleLogger.Log($"Personality: {personalityLabel} – {wildDef.Personality.description}", LogScope.Battle);
+            else
+                BattleLogger.Log($"Personality: {personalityLabel}.", LogScope.Battle);
+        }
 
         for (int i = 0; i < teamCount; i++)
         {
@@ -2019,6 +2267,187 @@ public class BattleManager : MonoBehaviour
         }
     }
 
+    // Helper: get personality label for wild
+    private string GetWildPersonalityLabel()
+    {
+        if (!wildDef || wildDef.Personality == null) return null;
+        return wildDef.Personality.group.ToString();
+    }
+
+    private void LogAttackUsedAndSpawnVfx(bool isPlayerSide)
+    {
+        MonsterDataSO def = isPlayerSide
+            ? (teamDefs != null && activeIndex >= 0 && activeIndex < teamDefs.Length ? teamDefs[activeIndex] : null)
+            : wildDef;
+
+        if (!def) return;
+
+        string attackerName = isPlayerSide
+            ? GetName(activeIndex)
+            : (wildDef ? wildDef.displayName : "Foe");
+
+        string moveName = !string.IsNullOrEmpty(def.basicAttackName)
+            ? def.basicAttackName
+            : "Attack";
+
+        string personalityTag = (!isPlayerSide) ? GetWildPersonalityLabel() : null;
+        string suffix = string.IsNullOrEmpty(personalityTag) ? "" : $" ({personalityTag})";
+
+        // Pokémon-style line with personality flair for wild
+        BattleLogger.Log($"{attackerName}{suffix} used {moveName}!", LogScope.Battle);
+
+        if (!spawnAttackPrefabs) return;
+        if (!def.basicAttackPrefab) return;
+
+        Transform spawnRoot = null;
+        if (EncounterManager.I != null)
+        {
+            spawnRoot = isPlayerSide
+                ? EncounterManager.I.PlayerSpawnPoint
+                : EncounterManager.I.EnemySpawnPoint;
+        }
+
+        Vector3 pos = spawnRoot ? spawnRoot.position : Vector3.zero;
+        Quaternion rot = spawnRoot ? spawnRoot.rotation : Quaternion.identity;
+
+        var inst = GameObject.Instantiate(def.basicAttackPrefab, pos, rot);
+        if (spawnRoot)
+            inst.transform.SetParent(spawnRoot, worldPositionStays: true);
+
+        float life = Mathf.Max(0f, def.basicAttackPrefabLifetime);
+        if (life > 0f)
+            GameObject.Destroy(inst, life);
+    }
+
+    private bool RollDefendSuccess()
+    {
+        float chance = Mathf.Clamp01(currentDefendSuccess);
+        bool ok = UnityEngine.Random.value <= chance;
+
+        if (ok)
+        {
+            defendConsecutiveUses++;
+
+            float next = defendFirstUseSuccess * Mathf.Pow(defendRepeatMultiplier, defendConsecutiveUses);
+            currentDefendSuccess = Mathf.Max(defendMinSuccess, next);
+        }
+        else
+        {
+            defendConsecutiveUses = 0;
+            currentDefendSuccess = defendFirstUseSuccess;
+        }
+
+        return ok;
+    }
+
+    private void ResetDefendStreak()
+    {
+        defendConsecutiveUses = 0;
+        currentDefendSuccess = defendFirstUseSuccess;
+    }
+
+    private EnemyAction ChooseEnemyAction()
+    {
+        // Dead wild can't act.
+        if (wildHP <= 0.01f || wildMaxHP <= 0.01f || !wildDef)
+            return EnemyAction.Attack;
+
+        float hp01 = Mathf.Clamp01(wildHP / wildMaxHP);
+        bool lowHP = hp01 < 0.35f;
+        bool veryLowHP = hp01 < 0.20f;
+
+        // Base weights (before personality tweaks)
+        float wAttack = 1.0f;
+        float wFocus = 0.15f;
+        float wRun = 0.05f;
+
+        // Personality-based adjustments
+        string groupName = null;
+        if (wildDef.Personality != null)
+        {
+            try { groupName = wildDef.Personality.group.ToString(); }
+            catch { groupName = null; }
+        }
+
+        switch (groupName)
+        {
+            case "Offensive":
+                wAttack = 1.5f;
+                wFocus = 0.35f;
+                wRun = veryLowHP ? 0.15f : 0.02f;
+                break;
+
+            case "Defensive":
+                wAttack = 0.7f;
+                wFocus = 0.10f;
+                wRun = lowHP ? 0.35f : 0.10f;
+                break;
+
+            case "Tactical":
+                wAttack = 0.9f;
+                wFocus = 0.4f;
+                wRun = lowHP ? 0.25f : 0.05f;
+                break;
+
+            case "Cowardly":
+                wAttack = 0.6f;
+                wFocus = 0.05f;
+                wRun = lowHP ? 0.70f : 0.30f;
+                break;
+
+            case "Berserker":
+                wAttack = 1.7f;
+                wFocus = 0.4f;
+                wRun = 0.0f;   // Never runs
+                break;
+
+            default:
+                // Any other / unknown group just uses base pattern
+                break;
+        }
+
+        // Additional HP-based bias: the lower the HP, the more likely to run
+        if (veryLowHP) wRun *= 1.8f;
+        else if (lowHP) wRun *= 1.3f;
+
+        float total = wAttack + wFocus + wRun;
+        if (total <= 0.0001f)
+            return EnemyAction.Attack;
+
+        float roll = UnityEngine.Random.value * total;
+
+        if (roll < wAttack) return EnemyAction.Attack;
+        roll -= wAttack;
+
+        if (roll < wFocus) return EnemyAction.Focus;
+        roll -= wFocus;
+
+        return EnemyAction.Run;
+    }
+    
+    private float ComputeEnemyRunChance()
+    {
+        if (!wildDef || wildMaxHP <= 0.01f)
+            return 0f;
+
+        float hpLost01 = 1f - Mathf.Clamp01(wildHP / wildMaxHP); // 0 = full HP, 1 = nearly KO
+        float baseChance = 0.05f;          // 5% even at full HP
+        float hpBonus    = hpLost01 * 0.70f; // up to +70% at 1 HP
+
+        // Personality tweak: Cowardly has higher success when they *do* try to run
+        string groupName = null;
+        if (wildDef.Personality != null)
+        {
+            try { groupName = wildDef.Personality.group.ToString(); }
+            catch { groupName = null; }
+        }
+
+        if (groupName == "Evasive")
+            hpBonus *= 1.3f;
+
+        float chance = baseChance + hpBonus;
+        return Mathf.Clamp01(chance);
+    }
 
 
 }

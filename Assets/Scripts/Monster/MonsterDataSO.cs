@@ -70,6 +70,17 @@ public class MonsterDataSO : ScriptableObject
     [Header("Personality")]
     public MonsterPersonalitySO Personality;
 
+    [Header("Battle VFX & Moves")]
+    [Tooltip("Name shown in battle log. E.g., 'Tackle', 'Leaf Slash', 'Spark Shot'.")]
+    public string basicAttackName = "Attack";
+
+    [Tooltip("Optional prefab spawned when this Bitling attacks (projectile, slash, etc.).")]
+    public GameObject basicAttackPrefab;
+
+    [Tooltip("Lifetime in seconds for spawned attack prefab. 0 = do not auto-destroy.")]
+    [Min(0f)] public float basicAttackPrefabLifetime = 1.25f;
+
+
     [Header("Description")]
     [TextArea(3, 10)] public string description;
 
