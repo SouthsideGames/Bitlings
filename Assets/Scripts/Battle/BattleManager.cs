@@ -50,6 +50,14 @@ public class BattleManager : MonoBehaviour
     [Header("Attack VFX")]
     [SerializeField] private bool spawnAttackPrefabs = true;
 
+    [Header("Action Effect VFX")]
+    [SerializeField] private bool spawnActionEffectPrefabs = true;
+    [SerializeField] private GameObject actionAttackPrefab;
+    [SerializeField] private GameObject actionDefendPrefab;
+    [SerializeField] private GameObject actionFocusPrefab;
+    [SerializeField] private GameObject actionRunPrefab;
+    [SerializeField, Min(0f)] private float actionEffectLifetime = 1.0f;
+
     private bool _isPlayerTurn;
     public bool IsPlayerTurn => _isPlayerTurn;
     public event Action<bool> OnPlayerTurnChanged;
@@ -240,6 +248,9 @@ public class BattleManager : MonoBehaviour
         if (pendingAction != PlayerAction.None) return;
 
         pendingAction = a;
+
+        // Spawn action VFX so player can see what was chosen
+        SpawnActionEffect(a, true);
     }
 
     // Legacy alias
@@ -482,6 +493,8 @@ public class BattleManager : MonoBehaviour
 
             // Decide wild action once per round
             EnemyAction wildChoice = ChooseEnemyAction();
+            // Spawn enemy action VFX as soon as the wild action is decided
+            SpawnActionEffect(EnemyActionToPlayerAction(wildChoice), false);
 
             if (playerFirst)
             {
@@ -2253,6 +2266,54 @@ public class BattleManager : MonoBehaviour
         else
         {
             playerShieldText.gameObject.SetActive(false);
+        }
+    }
+
+    private void SpawnActionEffect(PlayerAction action, bool isPlayerSide)
+    {
+        if (!spawnActionEffectPrefabs) return;
+        if (action == PlayerAction.None) return;
+
+        GameObject prefab = null;
+        switch (action)
+        {
+            case PlayerAction.Attack: prefab = actionAttackPrefab; break;
+            case PlayerAction.Defend: prefab = actionDefendPrefab; break;
+            case PlayerAction.Focus:  prefab = actionFocusPrefab;  break;
+            case PlayerAction.Run:    prefab = actionRunPrefab;    break;
+        }
+
+        if (!prefab) return;
+
+        Transform spawnRoot = null;
+        if (EncounterManager.I != null)
+        {
+            spawnRoot = isPlayerSide
+                ? EncounterManager.I.PlayerSpawnPoint
+                : EncounterManager.I.EnemySpawnPoint;
+        }
+
+        Vector3 pos = spawnRoot ? spawnRoot.position : Vector3.zero;
+        Quaternion rot = spawnRoot ? spawnRoot.rotation : Quaternion.identity;
+
+        var inst = GameObject.Instantiate(prefab, pos, rot);
+        if (spawnRoot)
+            inst.transform.SetParent(spawnRoot, worldPositionStays: true);
+
+        float life = Mathf.Max(0f, actionEffectLifetime);
+        if (life > 0f)
+            GameObject.Destroy(inst, life);
+    }
+
+    private PlayerAction EnemyActionToPlayerAction(EnemyAction ea)
+    {
+        switch (ea)
+        {
+            case EnemyAction.Attack: return PlayerAction.Attack;
+            case EnemyAction.Defend: return PlayerAction.Defend;
+            case EnemyAction.Focus:  return PlayerAction.Focus;
+            case EnemyAction.Run:    return PlayerAction.Run;
+            default:                 return PlayerAction.Attack;
         }
     }
 
