@@ -21,6 +21,14 @@ public class WorkerRef
     public MonsterDataSO def;    // Fallback to base definition
 }
 
+[Serializable]
+public class BlessingBuff
+{
+    public JobType job;
+    public int flatBonus;
+    public long untilUnix;
+}
+
 /// <summary>Runtime state for a single job site.</summary>
 [Serializable]
 public class JobSiteState
@@ -87,7 +95,7 @@ public sealed class JobManager : MonoBehaviour
 
     // Per-monster cooldown (key = ownedId or def.id). Persisted via SaveManager sidecar.
     private readonly Dictionary<string, long> _cooldownUntil = new();
-
+    private List<BlessingBuff> _blessingBuffs = new List<BlessingBuff>();
     private readonly Dictionary<string, MonsterDataSO> _idToDef = new();
     private readonly Dictionary<string, long> _assignedUnix = new();
     private Dictionary<JobType, float> _auraByJob = new Dictionary<JobType, float>(16);
@@ -915,6 +923,7 @@ public sealed class JobManager : MonoBehaviour
         if (site == null) return 0;
 
         int baseCap = site.storageCap;
+
         int extraFromSave = 0;
         if (SaveManager.Data != null)
         {
@@ -926,12 +935,19 @@ public sealed class JobManager : MonoBehaviour
         try { flatFromTitles = Mathf.Max(0, TitlesAdapter.GetJobCapacityBonus(site.jobType)); }
         catch { flatFromTitles = 0; }
 
+        // NEW: temporary Sanctum blessing (runtime-only)
+        int tempFromBlessings = 0;
+        try { tempFromBlessings = Mathf.Max(0, GetActiveBlessingBonus(site.jobType)); }
+        catch { tempFromBlessings = 0; }
+
         var st = FindState(site.jobType);
         float levelMul = (st != null) ? JobLeveling.StorageMultForLevel(st.level) : 1f;
 
-        int preMultFlat = Mathf.Max(0, baseCap + extraFromSave + flatFromTitles);
+        int preMultFlat = Mathf.Max(0, baseCap + extraFromSave + flatFromTitles + tempFromBlessings);
         return Mathf.Max(0, Mathf.RoundToInt(preMultFlat * levelMul));
     }
+
+
 
     public (JobType job, float hours) GetCurrentJobAndHours(string monsterId)
     {
@@ -1235,4 +1251,96 @@ public sealed class JobManager : MonoBehaviour
         }
         return null;
     }
+
+    public void ApplyTemporaryStorageBlessing(JobType job, int flatBonus, float durationSeconds)
+    {
+        if (flatBonus == 0 || durationSeconds <= 0f) return;
+
+        if (_blessingBuffs == null) _blessingBuffs = new List<BlessingBuff>();
+
+        long now   = SaveManager.NowUnix();
+        long until = now + Mathf.RoundToInt(durationSeconds);
+
+        // If there's already an active blessing for this site, stack and extend it
+        BlessingBuff existing = null;
+        for (int i = 0; i < _blessingBuffs.Count; i++)
+        {
+            var b = _blessingBuffs[i];
+            if (b != null && b.job == job && b.untilUnix > now)
+            {
+                existing = b;
+                break;
+            }
+        }
+
+        if (existing != null)
+        {
+            existing.flatBonus += flatBonus;
+            if (until > existing.untilUnix) existing.untilUnix = until;
+        }
+        else
+        {
+            _blessingBuffs.Add(new BlessingBuff
+            {
+                job = job,
+                flatBonus = flatBonus,
+                untilUnix = until
+            });
+        }
+    }
+
+    private int GetActiveBlessingBonus(JobType job)
+    {
+        if (_blessingBuffs == null || _blessingBuffs.Count == 0) return 0;
+
+        long now = SaveManager.NowUnix();
+        int total = 0;
+
+        // Clean up expired buffs as we go
+        for (int i = _blessingBuffs.Count - 1; i >= 0; i--)
+        {
+            var b = _blessingBuffs[i];
+            if (b == null || b.untilUnix <= now)
+            {
+                _blessingBuffs.RemoveAt(i);
+                continue;
+            }
+
+            if (b.job == job)
+                total += Mathf.Max(0, b.flatBonus);
+        }
+
+        return total;
+    }
+
+
+    public int GetTemporaryStorageBonus(JobType job)
+    {
+        return GetActiveBlessingBonus(job);
+    }
+
+    public float GetBlessingSecondsRemaining(JobType job)
+    {
+        if (_blessingBuffs == null || _blessingBuffs.Count == 0) return 0f;
+
+        long now = SaveManager.NowUnix();
+        long latestUntil = 0;
+
+        for (int i = _blessingBuffs.Count - 1; i >= 0; i--)
+        {
+            var b = _blessingBuffs[i];
+            if (b == null || b.untilUnix <= now)
+            {
+                _blessingBuffs.RemoveAt(i);
+                continue;
+            }
+
+            if (b.job == job && b.untilUnix > latestUntil)
+                latestUntil = b.untilUnix;
+        }
+
+        if (latestUntil <= now) return 0f;
+        return Mathf.Max(0f, latestUntil - now);
+    }
+
 }

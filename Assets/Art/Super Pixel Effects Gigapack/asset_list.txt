@@ -1,0 +1,113 @@
+//////////////////////////////////////////////
+// Super Pixel Effects Gigapack: Asset List //
+//////////////////////////////////////////////
+
+Total Unique Animation Types: 52 (paid version)
+Total Assets (including size and color variants): 720 (paid version)
+
+[Free] Epic Explosion 001 Large (Explosions/epic_explosion_001): 128x128
+[Free] Epic Explosion 001 Small (Explosions/epic_explosion_001): 64x64
+[Free] Epic Explosion 002 Large (Explosions/epic_explosion_002): 192x192
+[Free] Epic Explosion 002 Small (Explosions/epic_explosion_002): 96x96
+[Free] Stylized Explosion 001 Large (Explosions/stylized_explosion_001): 96x96
+[Free] Stylized Explosion 001 Small (Explosions/stylized_explosion_001): 48x48
+[Free] Stylized Explosion 002 Large (Explosions/stylized_explosion_002): 96x96
+[Free] Stylized Explosion 002 Small (Explosions/stylized_explosion_002): 48x48
+[Free] Stylized Explosion 003 Large (Explosions/stylized_explosion_003): 128x96
+[Free] Stylized Explosion 003 Small (Explosions/stylized_explosion_003): 64x48
+[Free] Symmetrical Explosion 001 Large (Explosions/symmetrical_explosion_001): 64x64
+[Free] Symmetrical Explosion 001 Small (Explosions/symmetrical_explosion_001): 32x32
+[Free] Symmetrical Explosion 002 Large (Explosions/symmetrical_explosion_002): 64x64
+[Free] Symmetrical Explosion 002 Small (Explosions/symmetrical_explosion_002): 32x32
+[Free] Fantasy Spell - Absorb 001 Large (Fantasy Spells/spell_absorb_001): 128x128
+[Free] Fantasy Spell - Absorb 001 Small (Fantasy Spells/spell_absorb_001): 64x64
+[Free] Fantasy Spell - Attack Up 001 Large (Fantasy Spells/spell_attack_up_001): 128x128
+[Free] Fantasy Spell - Attack Up 001 Small (Fantasy Spells/spell_attack_up_001): 64x64
+[Free] Fantasy Spell - Death 001 Large (Fantasy Spells/spell_death_001): 64x64
+[Free] Fantasy Spell - Death 001 Small (Fantasy Spells/spell_death_001): 32x32
+[Free] Fantasy Spell - Defense Up 001 Large (Fantasy Spells/spell_defense_up_001): 128x128
+[Free] Fantasy Spell - Defense Up 001 Small (Fantasy Spells/spell_defense_up_001): 64x64
+[Free] Fantasy Spell - Haste 001 Large (Fantasy Spells/spell_haste_001): 128x128
+[Free] Fantasy Spell - Haste 001 Small (Fantasy Spells/spell_haste_001): 64x64
+[Free] Fantasy Spell - Poison 001 Large (Fantasy Spells/spell_poison_001): 128x128
+[Free] Fantasy Spell - Poison 001 Small (Fantasy Spells/spell_poison_001): 64x64
+[Free] Directional Impact 001 Large (Impacts/directional_impact_001): 64x64
+[Free] Directional Impact 001 Small (Impacts/directional_impact_001): 32x32
+[Free] Directional Impact 002 Large (Impacts/directional_impact_002): 140x50
+[Free] Directional Impact 002 Small (Impacts/directional_impact_002): 70x25
+[Free] Directional Impact 003 Large (Impacts/directional_impact_003): 80x80
+[Free] Directional Impact 003 Small (Impacts/directional_impact_003): 40x40
+[Free] Directional Impact 004 Large (Impacts/directional_impact_004): 80x80
+[Free] Directional Impact 004 Small (Impacts/directional_impact_004): 40x40
+[Free] Symmetrical Impact 001 Large (Impacts/symmetrical_impact_001): 96x96
+[Free] Symmetrical Impact 001 Small (Impacts/symmetrical_impact_001): 48x48
+[Free] Symmetrical Impact 002 Large (Impacts/symmetrical_impact_002): 96x96
+[Free] Symmetrical Impact 002 Small (Impacts/symmetrical_impact_002): 48x48
+[Free] Symmetrical Impact 003 Large (Impacts/symmetrical_impact_003): 96x96
+[Free] Symmetrical Impact 003 Small (Impacts/symmetrical_impact_003): 48x48
+[Free] Symmetrical Impact 004 Large (Impacts/symmetrical_impact_004): 96x96
+[Free] Symmetrical Impact 004 Small (Impacts/symmetrical_impact_004): 48x48
+[Paid] Toon Impact 001 Large (Impacts/toon_impact_001): 128x128
+[Paid] Toon Impact 001 Small (Impacts/toon_impact_001): 64x64
+[Free] Lightning Burst 001 Large (Lightning/lightning_burst_001): 64x64
+[Free] Lightning Burst 001 Small (Lightning/lightning_burst_001): 32x32
+[Free] Lightning Burst 002 Large (Lightning/lightning_burst_002): 64x64
+[Free] Lightning Burst 002 Small (Lightning/lightning_burst_002): 32x32
+[Free] Lightning Burst 003 Large (Lightning/lightning_burst_003): 96x96
+[Free] Lightning Burst 003 Small (Lightning/lightning_burst_003): 48x48
+[Free] Lightning Strike 001 Large (Lightning/lightning_strike_001): 128x128
+[Free] Lightning Strike 001 Small (Lightning/lightning_strike_001): 64x64
+[Paid] Lightning Strike 002A Large (Lightning/lightning_strike_002A): 144x128
+[Paid] Lightning Strike 002A Small (Lightning/lightning_strike_002A): 72x64
+[Paid] Lightning Strike 002B Large (Lightning/lightning_strike_002B): 144x128
+[Paid] Lightning Strike 002B Small (Lightning/lightning_strike_002B): 72x64
+[Paid] Lightning Strike 003A Large (Lightning/lightning_strike_003A): 96x128
+[Paid] Lightning Strike 003A Small (Lightning/lightning_strike_003A): 48x64
+[Paid] Lightning Strike 003B Large (Lightning/lightning_strike_003B): 96x128
+[Paid] Lightning Strike 003B Small (Lightning/lightning_strike_003B): 48x64
+[Free] Directional Bubble Burst 001 Large (Magic Bursts/directional_bubble_burst_001): 128x128
+[Free] Directional Bubble Burst 001 Small (Magic Bursts/directional_bubble_burst_001): 64x64
+[Paid] Directional Heart Burst 001 Large (Magic Bursts/directional_heart_burst_001): 128x128
+[Paid] Directional Heart Burst 001 Small (Magic Bursts/directional_heart_burst_001): 64x64
+[Paid] Directional Heart Burst 002 Large (Magic Bursts/directional_heart_burst_002): 128x128
+[Paid] Directional Heart Burst 002 Small (Magic Bursts/directional_heart_burst_002): 64x64
+[Paid] Directional Particle Burst 001 Large (Magic Bursts/directional_particle_burst_001): 128x128
+[Paid] Directional Particle Burst 001 Small (Magic Bursts/directional_particle_burst_001): 64x64
+[Paid] Directional Sparkle Burst 001 Large (Magic Bursts/directional_sparkle_burst_001): 128x128
+[Paid] Directional Sparkle Burst 001 Small (Magic Bursts/directional_sparkle_burst_001): 64x64
+[Paid] Directional Sparkle Burst 002 Large (Magic Bursts/directional_sparkle_burst_002): 128x128
+[Paid] Directional Sparkle Burst 002 Small (Magic Bursts/directional_sparkle_burst_002): 64x64
+[Paid] Directional Star Burst 001 Large (Magic Bursts/directional_star_burst_001): 128x128
+[Paid] Directional Star Burst 001 Small (Magic Bursts/directional_star_burst_001): 64x64
+[Free] Round Heart Burst 001 Large (Magic Bursts/round_heart_burst_001): 128x128
+[Free] Round Heart Burst 001 Small (Magic Bursts/round_heart_burst_001): 64x64
+[Free] Round Sparkle Burst 001 Large (Magic Bursts/round_sparkle_burst_001): 64x64
+[Free] Round Sparkle Burst 001 Small (Magic Bursts/round_sparkle_burst_001): 32x32
+[Free] Round Sparkle Burst 002 Large (Magic Bursts/round_sparkle_burst_002): 64x64
+[Free] Round Sparkle Burst 002 Small (Magic Bursts/round_sparkle_burst_002): 32x32
+[Free] Round Sparkle Burst 003 Large (Magic Bursts/round_sparkle_burst_003): 64x64
+[Free] Round Sparkle Burst 003 Small (Magic Bursts/round_sparkle_burst_003): 32x32
+[Free] Sci-fi Charge Up 001 Large (Sci-fi/scifi_charge_up_001): 96x96
+[Free] Sci-fi Charge Up 001 Small (Sci-fi/scifi_charge_up_001): 48x48
+[Free] Sci-fi Warp 001 Large (Sci-fi/scifi_warp_001): 128x128
+[Free] Sci-fi Warp 001 Small (Sci-fi/scifi_warp_001): 64x64
+[Free] Sci-fi Warp 002 Large (Sci-fi/scifi_warp_002): 96x96
+[Free] Sci-fi Warp 002 Small (Sci-fi/scifi_warp_002): 48x48
+[Free] Directional Smoke Burst 001 Large (Smoke Bursts/directional_smoke_burst_001): 64x64
+[Free] Directional Smoke Burst 001 Small (Smoke Bursts/directional_smoke_burst_001): 32x32
+[Paid] Directional Smoke Burst 002 Large (Smoke Bursts/directional_smoke_burst_002): 96x96
+[Paid] Directional Smoke Burst 002 Small (Smoke Bursts/directional_smoke_burst_002): 48x48
+[Free] Stylized Skull Smoke Burst 001 Large (Smoke Bursts/stylized_skull_smoke_burst_001): 64x64
+[Free] Stylized Skull Smoke Burst 001 Small (Smoke Bursts/stylized_skull_smoke_burst_001): 32x32
+[Free] Symmetrical Smoke Burst 001 Large (Smoke Bursts/symmetrical_smoke_burst_001): 64x64
+[Free] Symmetrical Smoke Burst 001 Small (Smoke Bursts/symmetrical_smoke_burst_001): 32x32
+[Paid] Symmetrical Smoke Burst 002 Large (Smoke Bursts/symmetrical_smoke_burst_002): 128x128
+[Paid] Symmetrical Smoke Burst 002 Small (Smoke Bursts/symmetrical_smoke_burst_002): 64x64
+[Free] Burst Splatter 001 Large (Splatters/burst_splatter_001): 64x64
+[Free] Burst Splatter 001 Small (Splatters/burst_splatter_001): 32x32
+[Free] Directional Splatter 001 Large (Splatters/directional_splatter_001): 64x64
+[Free] Directional Splatter 001 Small (Splatters/directional_splatter_001): 32x32
+[Paid] Directional Splatter 002 Large (Splatters/directional_splatter_002): 96x96
+[Paid] Directional Splatter 002 Small (Splatters/directional_splatter_002): 48x48
+
+Get this asset pack and more at: https://untiedgames.com/assets

@@ -7,7 +7,6 @@ public class UpgradeCatalogEntry
     [Header("Identity")]
     public FeatureId featureId;
     public string displayName;
-    public Sprite icon;
 
     [Header("Info Panel")]
     [Tooltip("String id for Info panel, e.g., feat.idle.basic")]

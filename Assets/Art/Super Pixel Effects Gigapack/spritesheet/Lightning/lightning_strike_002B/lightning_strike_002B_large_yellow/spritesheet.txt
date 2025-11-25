@@ -1,0 +1,7 @@
+PNG/Lightning/lightning_strike_002B/lightning_strike_002B_large_yellow/frame0000.png = 0 0 144 128
+PNG/Lightning/lightning_strike_002B/lightning_strike_002B_large_yellow/frame0001.png = 144 0 144 128
+PNG/Lightning/lightning_strike_002B/lightning_strike_002B_large_yellow/frame0002.png = 288 0 144 128
+PNG/Lightning/lightning_strike_002B/lightning_strike_002B_large_yellow/frame0003.png = 432 0 144 128
+PNG/Lightning/lightning_strike_002B/lightning_strike_002B_large_yellow/frame0004.png = 576 0 144 128
+PNG/Lightning/lightning_strike_002B/lightning_strike_002B_large_yellow/frame0005.png = 720 0 144 128
+PNG/Lightning/lightning_strike_002B/lightning_strike_002B_large_yellow/frame0006.png = 864 0 144 128

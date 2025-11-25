@@ -7,7 +7,6 @@ using System;
 public class UpgradeRowUI : MonoBehaviour
 {
     [Header("Visuals")]
-    [SerializeField] private Image iconImage;
     [SerializeField] private TextMeshProUGUI nameLabel;
     [SerializeField] private TextMeshProUGUI stateLabel;  // "Locked" / "Unlocked"
     [SerializeField] private TextMeshProUGUI costLabel;
@@ -76,9 +75,7 @@ public class UpgradeRowUI : MonoBehaviour
         _fallbackTitle = string.IsNullOrWhiteSpace(entry.displayName)
             ? _featureId.ToString()
             : entry.displayName;
-        _icon = entry.icon;
 
-        if (iconImage != null) iconImage.sprite = _icon;
         if (nameLabel != null) nameLabel.text = _fallbackTitle;
 
         Refresh();

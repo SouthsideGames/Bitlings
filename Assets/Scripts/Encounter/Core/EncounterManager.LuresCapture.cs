@@ -90,16 +90,26 @@ public partial class EncounterManager
 
             float mult = 1f;
 
+            // Lure type bias
             if (typeMult != null && typeMult.TryGetValue(m.type, out float tMult))
                 mult *= Mathf.Max(0f, tMult);
 
+            // WyrmDen rarity weighting
             mult *= JobBalance.GetWyrmDenRarityWeightMult(m.rarity);
 
+            // Luck: favors scarce monsters
             if (luckBonus01 > 0f && maxBase > minBase)
             {
                 float scarcity01 = Mathf.Clamp01((maxBase - baseW) / (maxBase - minBase));
                 float luckMult = 1f + luckBonus01 * scarcity01;
                 mult *= luckMult;
+            }
+
+            // 🔹 Shiny Orb: boost any shiny variants
+            float shinyMult = GetActiveShinyBoostMult();
+            if (shinyMult > 1f && IsShinyMonster(m))
+            {
+                mult *= shinyMult;
             }
 
             float finalW = baseW * mult;

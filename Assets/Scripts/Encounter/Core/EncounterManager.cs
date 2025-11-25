@@ -286,29 +286,44 @@ public partial class EncounterManager : MonoBehaviour
 
     void OnBattleEnded(BattleResult result)
     {
-        // Victory / defeat SFX
+        bool escaped = result.escaped;
+        bool victory = result.victory;
+        bool defeat  = !victory && !escaped;
+
+        // Victory / defeat SFX (do NOT play defeat when the wild fled)
         if (AudioManager.I)
         {
-            if (result.victory)
+            if (victory)
                 AudioManager.I.PlaySfx(SfxType.Victory);
-            else
+            else if (defeat)
                 AudioManager.I.PlaySfx(SfxType.Defeat);
+            // optional: else if (escaped) AudioManager.I.PlaySfx(SfxType.Run); // if you add a flee SFX
         }
 
-        // Coin multiplier (placeholder hook)
-        int finalCoins = ApplyCoinsGainedMultiplier(result.coinsGained);
-        finalCoins = Mathf.Max(0, finalCoins);
+        // Coin multiplier (no coins if the enemy fled)
+        int finalCoins = 0;
+        if (!escaped)
+        {
+            finalCoins = ApplyCoinsGainedMultiplier(result.coinsGained);
+            finalCoins = Mathf.Max(0, finalCoins);
 
-        if (finalCoins > 0)
-            ResourceManager.I.Add(ResourceType.Coins, finalCoins);
+            if (finalCoins > 0)
+                ResourceManager.I.Add(ResourceType.Coins, finalCoins);
+        }
 
-        EmitStatus(result.victory ? $"Victory! +{finalCoins} coins" : "Defeat.");
+        // Status text
+        if (victory)
+            EmitStatus($"Victory! +{finalCoins} coins");
+        else if (defeat)
+            EmitStatus("Defeat.");
+        else if (escaped)
+            EmitStatus("The wild Bitling fled.");
 
-        // Boss defeat signal
-        if (result.victory && _currentEncounterIsBoss && _currentBossUsed != null)
+        // Boss defeat signal (only on real victory)
+        if (victory && _currentEncounterIsBoss && _currentBossUsed != null)
             GameEvents.BossDefeated?.Invoke(_currentBossUsed.id);
 
-        // Boss cadence bookkeeping
+        // Boss cadence bookkeeping – up to you if escape counts; leaving as-is:
         if (SaveManager.Data != null)
         {
             AfterBattleCadenceUpdate(
@@ -320,7 +335,7 @@ public partial class EncounterManager : MonoBehaviour
         }
 
         // Capture logic (victory only)
-        if (result.victory)
+        if (victory)
         {
             if (_currentEncounterIsBoss || (result.wildDef != null && result.wildDef.uncatchable))
             {
@@ -332,12 +347,14 @@ public partial class EncounterManager : MonoBehaviour
             }
         }
 
-        // Win streak update
-        if (result.victory) SetWinStreak(_currentWinStreak + 1);
-        else                SetWinStreak(0);
+        // Win streak update – DO NOT reset on escape
+        if (victory)
+            SetWinStreak(_currentWinStreak + 1);
+        else if (defeat)
+            SetWinStreak(0);
+        // escaped: leave streak unchanged
 
         ReconcileHPWithCurrentWinStreak();
-
         OnStateChanged?.Invoke();
 
         // Persist non-resource state changes
@@ -348,12 +365,13 @@ public partial class EncounterManager : MonoBehaviour
         finished.coinsGained = finalCoins;
         GameEvents.BattleFinished?.Invoke(finished);
 
-        BattleLogger.EndEncounter(result.victory);
+        BattleLogger.EndEncounter(victory);
 
-        // Continue post-result flow
+        // Continue post-result flow – pass escaped flag too
         if (postResultCo != null) { StopCoroutine(postResultCo); postResultCo = null; }
-        postResultCo = StartCoroutine(PostResultFlow(result.victory));
+        postResultCo = StartCoroutine(PostResultFlow(victory, escaped));
     }
+
 
     private int ApplyCoinsGainedMultiplier(int baseCoins)
     {
@@ -362,14 +380,54 @@ public partial class EncounterManager : MonoBehaviour
         return Mathf.Max(0, Mathf.FloorToInt(baseCoins * MULT));
     }
 
-    IEnumerator PostResultFlow(bool victory)
+    IEnumerator PostResultFlow(bool victory, bool escaped)
     {
         yield return new WaitForSeconds(postResultDelay);
         inBattle = false;
 
+        // ─────────────────────────────────────────────────────
+        // ENEMY FLED → neutral outcome, not a defeat
+        // ─────────────────────────────────────────────────────
+        if (escaped)
+        {
+            nextEncounterFree = false;
+            autoRunPaidEnergy = false;
+            OnStateChanged?.Invoke();
+
+            if (autoMode)
+            {
+                // In AUTO, just move on like a normal finished battle,
+                // but still respect energy.
+                if (!HasEnergy())
+                {
+                    StopAuto_NoEnergy();
+                    yield break;
+                }
+                if (!SpendEnergy())
+                {
+                    StopAuto_NoEnergy();
+                    yield break;
+                }
+
+                EmitStatus("The wild Bitling fled. Starting next encounter (AUTO)…", LogScope.System);
+                StartEncounter(false);
+            }
+            else
+            {
+                // Manual: show summary and let player tap again
+                EmitStatus("The wild Bitling fled. Tap ENCOUNTER for the next fight.", LogScope.System);
+                PostBattleSummaryManager.I?.SetAutoBattling(false);
+                PostBattleSummaryManager.I?.FlushNowIfPossible();
+            }
+
+            yield break;
+        }
+
+        // ─────────────────────────────────────────────────────
+        // Defeat
+        // ─────────────────────────────────────────────────────
         if (!victory)
         {
-            // Defeat
             nextEncounterFree = false;
             autoRunPaidEnergy = false;
             OnStateChanged?.Invoke();
@@ -381,17 +439,17 @@ public partial class EncounterManager : MonoBehaviour
                 yield break;
             }
 
-            // Manual: show summary immediately
             EmitStatus("Battle finished. Showing summary…", LogScope.System);
             PostBattleSummaryManager.I?.SetAutoBattling(false);
             PostBattleSummaryManager.I?.FlushNowIfPossible();
             yield break;
         }
 
+        // ─────────────────────────────────────────────────────
         // Victory
+        // ─────────────────────────────────────────────────────
         if (autoMode)
         {
-            // AUTO: chain battles; no summary pop yet
             if (!autoRunPaidEnergy)
             {
                 if (!HasEnergy()) { StopAuto_NoEnergy(); yield break; }
@@ -402,7 +460,6 @@ public partial class EncounterManager : MonoBehaviour
             yield break;
         }
 
-        // Manual victory: next is free + show summary
         nextEncounterFree = true;
         OnStateChanged?.Invoke();
         EmitStatus("Battle finished. Showing summary…", LogScope.System);
@@ -410,6 +467,7 @@ public partial class EncounterManager : MonoBehaviour
         PostBattleSummaryManager.I?.SetAutoBattling(false);
         PostBattleSummaryManager.I?.FlushNowIfPossible();
     }
+
 
     // ================= Idle helpers / State getters ============================
 

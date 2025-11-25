@@ -26,7 +26,7 @@ public class BattleManager : MonoBehaviour
     // Manual-turn settings
     // ─────────────────────────────────────────────────────────────────────────────
     private enum PlayerAction { None, Attack, Defend, Focus, Run }
-    private enum EnemyAction { Attack, Focus, Run }
+    private enum EnemyAction  { Attack, Defend, Focus, Run }
 
     [Header("Manual Turn Settings")]
     [SerializeField] private bool manualTurns = true;
@@ -34,8 +34,7 @@ public class BattleManager : MonoBehaviour
     [SerializeField, Range(0f, 1f)] private float guardConvertPct = 1.0f;
     [SerializeField, Range(0f, 2f)] private float chargeBonusPct = 0.5f;
 
-    [SerializeField, Range(0f, 1f)] private float focusBuffPct = 0.50f;
-
+    [Header("Run Settings")]
     [SerializeField, Range(0f, 1f)] private float runBaseChance = 0.25f;
     [SerializeField, Range(0f, 1f)] private float runMinChance = 0.05f;
     [SerializeField, Range(0f, 1f)] private float runMaxChance = 0.95f;
@@ -166,15 +165,19 @@ public class BattleManager : MonoBehaviour
 
     private int playerNoDmgTurns = 0;
     private int playerNoCritTurns = 0;
-    private int wildWeakenTurns = 0;
-    private float wildWeakenPct = 0f;
 
     private int defendConsecutiveUses = 0;
     private float currentDefendSuccess = 1f;
+    private int wildDefendConsecutiveUses = 0;
+    private float wildDefendCurrentSuccess = 1f;
+
+    private bool wildDefendActiveThisRound = false;
+    private float wildShieldHP = 0f;
+    private float wildPendingGuardShield = 0f;
+    private System.Random _enemyRng = new System.Random();
 
     private int runAttempts = 0;
     private bool wildChargedNextAttack = false;
-
 
     private int _totalCritsThisBattle = 0;
     private int _totalDamageTakenThisBattle = 0;
@@ -227,7 +230,7 @@ public class BattleManager : MonoBehaviour
     public void SetPlayerActionAttack() { TryQueueAction(PlayerAction.Attack); }
     public void SetPlayerActionDefend() { TryQueueAction(PlayerAction.Defend); }
     public void SetPlayerActionFocus() { TryQueueAction(PlayerAction.Focus); }
-    public void SetPlayerActionRun() { TryQueueAction(PlayerAction.Run); }
+    public void SetPlayerActionRun()    { TryQueueAction(PlayerAction.Run); }
 
     private void TryQueueAction(PlayerAction a)
     {
@@ -252,8 +255,6 @@ public class BattleManager : MonoBehaviour
 
         playerNoDmgTurns = 0;
         playerNoCritTurns = 0;
-        wildWeakenTurns = 0;
-        wildWeakenPct = 0f;
         runAttempts = 0;
 
         _totalCritsThisBattle = 0;
@@ -261,6 +262,13 @@ public class BattleManager : MonoBehaviour
 
         defendConsecutiveUses = 0;
         currentDefendSuccess = defendFirstUseSuccess;
+
+        wildDefendConsecutiveUses = 0;
+        wildDefendCurrentSuccess  = defendFirstUseSuccess;
+        wildDefendActiveThisRound = false;
+        wildShieldHP              = 0f;
+        wildPendingGuardShield    = 0f;
+        wildChargedNextAttack     = false;
 
         inBattle = false;
         onEnd = onEnded;
@@ -277,6 +285,7 @@ public class BattleManager : MonoBehaviour
         if (wildHPBar) { wildHPBar.maxValue = wildMaxHP; wildHPBar.value = wildHP; }
 
         UpdateWildInfoUI();
+
         teamCount = Mathf.Min(3, roster.Count);
         if (teamCount <= 0) { inBattle = false; return; }
 
@@ -342,6 +351,7 @@ public class BattleManager : MonoBehaviour
         playerLandedFirstHitThisBattle = false;
 
         defendActiveThisRound = false;
+        wildDefendActiveThisRound = false;
         pendingAction = PlayerAction.None;
         SetIsPlayerTurn(false);
 
@@ -400,6 +410,9 @@ public class BattleManager : MonoBehaviour
             }
 
             ApplyPendingGuardShieldForActive();
+            ApplyPendingGuardShieldForWild();
+
+            wildDefendActiveThisRound = false;
 
             BattleLogger.Log($"— Round {round} —", LogScope.Battle);
             yield return Wait(beginRoundDelay);
@@ -421,6 +434,7 @@ public class BattleManager : MonoBehaviour
                 continue;
             }
 
+            // SPEED CALC
             int pSpeedBase = BattleCalc.CalcSpeed(teamDefs[activeIndex], teamLevels[activeIndex]);
 
             var roster = SaveManager.Data?.team;
@@ -428,8 +442,8 @@ public class BattleManager : MonoBehaviour
                 pSpeedBase += Mathf.Max(0, roster[activeIndex].trainingBonus.spd);
 
             var jSpeed = (jobCtx != null &&
-                          activeIndex >= 0 &&
-                          activeIndex < jobCtx.Length)
+                        activeIndex >= 0 &&
+                        activeIndex < jobCtx.Length)
                 ? jobCtx[activeIndex]
                 : null;
 
@@ -466,8 +480,18 @@ public class BattleManager : MonoBehaviour
             defendActiveThisRound = false;
             if (guardIcon) guardIcon.enabled = false;
 
+            // Decide wild action once per round
+            EnemyAction wildChoice = ChooseEnemyAction();
+
             if (playerFirst)
             {
+                // TRUE PROTECT PRIORITY FOR WILD DEFEND
+                if (wildChoice == EnemyAction.Defend)
+                {
+                    ApplyWildDefendStance();
+                    // Wild will not attack this round; we won't call EnemyTurn for Defend later.
+                }
+
                 if (!IsWildKO() && !IsTeamKO())
                 {
                     if (manualTurns) yield return WaitForPlayerChoiceAndResolve();
@@ -478,13 +502,19 @@ public class BattleManager : MonoBehaviour
 
                 if (!IsWildKO() && !IsTeamKO())
                 {
-                    yield return EnemyTurn();
-                    if (CheckEnd()) break;
-                    yield return Wait(hitPause);
+                    // Only call EnemyTurn if wild did NOT purely Defend this round
+                    if (wildChoice != EnemyAction.Defend)
+                    {
+                        yield return EnemyTurn(wildChoice);
+                        if (CheckEnd()) break;
+                        yield return Wait(hitPause);
+                    }
                 }
             }
             else
             {
+                // ENEMY FIRST
+                // Player still chooses their action BEFORE wild attacks
                 if (!IsWildKO() && !IsTeamKO())
                 {
                     PlayerAction queuedChoice = PlayerAction.Attack;
@@ -535,7 +565,8 @@ public class BattleManager : MonoBehaviour
                         }
                     }
 
-                    yield return EnemyTurn();
+                    // Wild acts
+                    yield return EnemyTurn(wildChoice);
                     if (CheckEnd()) break;
                     yield return Wait(hitPause);
 
@@ -634,7 +665,7 @@ public class BattleManager : MonoBehaviour
 
             defendActiveThisRound = false;
             if (guardIcon) guardIcon.enabled = false;
-
+            wildDefendActiveThisRound = false;
             round++;
         }
 
@@ -897,7 +928,47 @@ public class BattleManager : MonoBehaviour
             );
         }
 
-        wildHP = Mathf.Max(0f, wildHP - dr.damage);
+        // Wild Guard (Defend) applies here for incoming player hits
+        float preventedByWildGuard = 0f;
+        int dmgToApply = dr.damage;
+
+        if (wildDefendActiveThisRound && defendReducePct > 0f)
+        {
+            float guardPct = Mathf.Clamp01(defendReducePct);
+            int before = dmgToApply;
+            int after  = Mathf.Max(1, Mathf.RoundToInt(dmgToApply * (1f - guardPct)));
+            preventedByWildGuard = Mathf.Max(0, before - after);
+            dmgToApply = after;
+        }
+
+        // Wild shield absorbs damage first
+        if (wildShieldHP > 0f)
+        {
+            float absorb = Mathf.Min(wildShieldHP, dmgToApply);
+            wildShieldHP = Mathf.Max(0f, wildShieldHP - absorb);
+            dmgToApply   = Mathf.Max(1, dmgToApply - Mathf.RoundToInt(absorb));
+
+            if (absorb > 0f)
+            {
+                string foeName2 = wildDef ? wildDef.displayName : "Foe";
+                BattleLogger.Log($"{foeName2}'s shield absorbed {Mathf.RoundToInt(absorb)}!", LogScope.Battle);
+            }
+        }
+
+        // Store prevented damage as guard shield for next round
+        if (preventedByWildGuard > 0f && guardConvertPct > 0f)
+        {
+            float gain = preventedByWildGuard * guardConvertPct;
+            wildPendingGuardShield += gain;
+
+            string foeName3 = wildDef ? wildDef.displayName : "Foe";
+            BattleLogger.Log(
+                $"{foeName3} stores {Mathf.RoundToInt(gain)} damage as a guard shield for the next round.",
+                LogScope.Battle
+            );
+        }
+
+        wildHP = Mathf.Max(0f, wildHP - dmgToApply);
         PushHPBars();
 
         if (!playerLandedFirstHitThisBattle && dr.damage > 0)
@@ -933,18 +1004,26 @@ public class BattleManager : MonoBehaviour
         yield break;
     }
 
-    private IEnumerator EnemyTurn()
+    private IEnumerator EnemyTurn(EnemyAction choice)
     {
         // If our active slot is KO'd, try to autoswap first.
         if (teamHP[activeIndex] <= 0.01f && !AutoSwapToAlive())
             yield break;
 
-        // Decide what the wild will do this turn.
-        var choice = ChooseEnemyAction();
+        // If the wild does anything other than Defend, reset its defend streak.
+        if (choice != EnemyAction.Defend)
+            ResetEnemyDefendStreak();
 
-        // ─────────────────────────────────────────────────────────────
-        // FOCUS (Charge): skip attacking; next attack is boosted
-        // ─────────────────────────────────────────────────────────────
+        // DEFEND (Guard)
+        if (choice == EnemyAction.Defend)
+        {
+            // NOTE: when player is faster we already applied this via ApplyWildDefendStance()
+            // and we *don't* call EnemyTurn for Defend at all.
+            ApplyWildDefendStance();
+            yield break;
+        }
+
+        // FOCUS (Charge)
         if (choice == EnemyAction.Focus)
         {
             wildChargedNextAttack = true;
@@ -960,9 +1039,7 @@ public class BattleManager : MonoBehaviour
             yield break;
         }
 
-        // ─────────────────────────────────────────────────────────────
         // RUN: wild tries to flee the battle
-        // ─────────────────────────────────────────────────────────────
         if (choice == EnemyAction.Run)
         {
             string name = wildDef ? wildDef.displayName : "Foe";
@@ -990,9 +1067,7 @@ public class BattleManager : MonoBehaviour
             }
         }
 
-        // ─────────────────────────────────────────────────────────────
-        // ATTACK: fall through into the existing attack logic
-        // ─────────────────────────────────────────────────────────────
+        // ATTACK
         if (debugIncomingMitigation)
             Debug.Log("[Mitigation] EnemyTurn started — debugIncomingMitigation = TRUE");
 
@@ -1045,9 +1120,7 @@ public class BattleManager : MonoBehaviour
             );
         }
 
-        // ─────────────────────────────────────────────────────────────
-        // Apply CHARGED bonus if the wild used Focus last turn
-        // ─────────────────────────────────────────────────────────────
+        // CHARGED bonus if the wild used Focus last turn
         if (wildChargedNextAttack && chargeBonusPct > 0f)
         {
             dr.damage = Mathf.Max(1, Mathf.RoundToInt(dr.damage * (1f + chargeBonusPct)));
@@ -1414,7 +1487,6 @@ public class BattleManager : MonoBehaviour
         }
 
         UpdatePlayerInfoUI();
-
         UpdateShieldUI();
     }
 
@@ -2041,89 +2113,6 @@ public class BattleManager : MonoBehaviour
         return ctx;
     }
 
-    private struct DamageFilterView
-    {
-        public bool cannotBeCrit;
-        public float percentReduce;
-        public int flatReduce;
-    }
-
-    private bool TryUnboxDamageFilter(object boxed, out DamageFilterView view)
-    {
-        view = default;
-        if (boxed == null) return false;
-        var t = boxed.GetType();
-
-        bool ok = true;
-        try
-        {
-            bool GetBool(string name, bool def)
-            {
-                var f = t.GetField(name) ?? (object)t.GetProperty(name);
-                if (f is System.Reflection.FieldInfo fi) return (bool)fi.GetValue(boxed);
-                if (f is System.Reflection.PropertyInfo pi) return (bool)pi.GetValue(boxed);
-                return def;
-            }
-            float GetFloat(string name, float def)
-            {
-                var f = t.GetField(name) ?? (object)t.GetProperty(name);
-                if (f is System.Reflection.FieldInfo fi) return Convert.ToSingle(fi.GetValue(boxed));
-                if (f is System.Reflection.PropertyInfo pi) return Convert.ToSingle(pi.GetValue(boxed));
-                return def;
-            }
-            int GetInt(string name, int def)
-            {
-                var f = t.GetField(name) ?? (object)t.GetProperty(name);
-                if (f is System.Reflection.FieldInfo fi) return Convert.ToInt32(fi.GetValue(boxed));
-                if (f is System.Reflection.PropertyInfo pi) return Convert.ToInt32(pi.GetValue(boxed));
-                return def;
-            }
-
-            view.cannotBeCrit = GetBool("cannotBeCrit", false);
-            view.percentReduce = Mathf.Clamp01(GetFloat("percentReduce", 0f));
-            view.flatReduce = Mathf.Max(0, GetInt("flatReduce", 0));
-            return true;
-        }
-        catch { ok = false; }
-
-        return ok;
-    }
-
-    private static void UnboxDamageFilter(object box, out bool cannotBeCrit, out float percentReduce, out int flatReduce)
-    {
-        cannotBeCrit = false;
-        percentReduce = 0f;
-        flatReduce = 0;
-
-        if (box == null) return;
-
-        var t = box.GetType();
-        var f1 = t.GetField("cannotBeCrit"); var p1 = t.GetProperty("cannotBeCrit");
-        var f2 = t.GetField("percentReduce"); var p2 = t.GetProperty("percentReduce");
-        var f3 = t.GetField("flatReduce"); var p3 = t.GetProperty("flatReduce");
-
-        try
-        {
-            if (f1 != null) cannotBeCrit = (bool)(f1.GetValue(box) ?? false);
-            else if (p1 != null) cannotBeCrit = (bool)(p1.GetValue(box, null) ?? false);
-        }
-        catch { }
-
-        try
-        {
-            if (f2 != null) percentReduce = Mathf.Max(0f, (float)(f2.GetValue(box) ?? 0f));
-            else if (p2 != null) percentReduce = Mathf.Max(0f, (float)(p2.GetValue(box, null) ?? 0f));
-        }
-        catch { }
-
-        try
-        {
-            if (f3 != null) flatReduce = Mathf.Max(0, (int)(f3.GetValue(box) ?? 0));
-            else if (p3 != null) flatReduce = Mathf.Max(0, (int)(p3.GetValue(box, null) ?? 0));
-        }
-        catch { }
-    }
-
     private void SetColoredStat(TextMeshProUGUI label, string name, int baseVal, int finalVal)
     {
         if (!label) return;
@@ -2348,93 +2337,58 @@ public class BattleManager : MonoBehaviour
 
     private EnemyAction ChooseEnemyAction()
     {
-        // Dead wild can't act.
-        if (wildHP <= 0.01f || wildMaxHP <= 0.01f || !wildDef)
+        if (!wildDef || wildMaxHP <= 0.01f)
             return EnemyAction.Attack;
 
-        float hp01 = Mathf.Clamp01(wildHP / wildMaxHP);
-        bool lowHP = hp01 < 0.35f;
-        bool veryLowHP = hp01 < 0.20f;
+        float hpRatio = Mathf.Clamp01(wildHP / Mathf.Max(1f, wildMaxHP));
 
-        // Base weights (before personality tweaks)
-        float wAttack = 1.0f;
-        float wFocus = 0.15f;
-        float wRun = 0.05f;
+        BattleAction action = BattleAction.Attack;
 
-        // Personality-based adjustments
-        string groupName = null;
         if (wildDef.Personality != null)
         {
-            try { groupName = wildDef.Personality.group.ToString(); }
-            catch { groupName = null; }
+            var ctx = new PersonalityContext
+            {
+                selfHpRatio          = hpRatio,
+                hasSuperEffectiveMove = false,
+                isBadlyMatched        = false,
+                turnNumber            = Mathf.Max(1, _turnIndex + 1)
+            };
+
+            action = wildDef.Personality.ChooseAction(in ctx, _enemyRng);
         }
 
-        switch (groupName)
+        // Fallback: if no Personality, use a simple HP-based bias.
+        EnemyAction Fallback()
         {
-            case "Offensive":
-                wAttack = 1.5f;
-                wFocus = 0.35f;
-                wRun = veryLowHP ? 0.15f : 0.02f;
-                break;
-
-            case "Defensive":
-                wAttack = 0.7f;
-                wFocus = 0.10f;
-                wRun = lowHP ? 0.35f : 0.10f;
-                break;
-
-            case "Tactical":
-                wAttack = 0.9f;
-                wFocus = 0.4f;
-                wRun = lowHP ? 0.25f : 0.05f;
-                break;
-
-            case "Cowardly":
-                wAttack = 0.6f;
-                wFocus = 0.05f;
-                wRun = lowHP ? 0.70f : 0.30f;
-                break;
-
-            case "Berserker":
-                wAttack = 1.7f;
-                wFocus = 0.4f;
-                wRun = 0.0f;   // Never runs
-                break;
-
-            default:
-                // Any other / unknown group just uses base pattern
-                break;
+            if (hpRatio < 0.25f && UnityEngine.Random.value < 0.40f)
+                return EnemyAction.Run;
+            if (hpRatio < 0.50f && UnityEngine.Random.value < 0.30f)
+                return EnemyAction.Defend;
+            if (UnityEngine.Random.value < 0.15f)
+                return EnemyAction.Focus;
+            return EnemyAction.Attack;
         }
 
-        // Additional HP-based bias: the lower the HP, the more likely to run
-        if (veryLowHP) wRun *= 1.8f;
-        else if (lowHP) wRun *= 1.3f;
-
-        float total = wAttack + wFocus + wRun;
-        if (total <= 0.0001f)
-            return EnemyAction.Attack;
-
-        float roll = UnityEngine.Random.value * total;
-
-        if (roll < wAttack) return EnemyAction.Attack;
-        roll -= wAttack;
-
-        if (roll < wFocus) return EnemyAction.Focus;
-        roll -= wFocus;
-
-        return EnemyAction.Run;
+        switch (action)
+        {
+            case BattleAction.Attack: return EnemyAction.Attack;
+            case BattleAction.Defend: return EnemyAction.Defend;
+            case BattleAction.Focus:  return EnemyAction.Focus;
+            case BattleAction.Run:    return EnemyAction.Run;
+            default:                  return Fallback();
+        }
     }
-    
+
     private float ComputeEnemyRunChance()
     {
         if (!wildDef || wildMaxHP <= 0.01f)
             return 0f;
 
         float hpLost01 = 1f - Mathf.Clamp01(wildHP / wildMaxHP); // 0 = full HP, 1 = nearly KO
-        float baseChance = 0.05f;          // 5% even at full HP
+        float baseChance = 0.05f;            // 5% even at full HP
         float hpBonus    = hpLost01 * 0.70f; // up to +70% at 1 HP
 
-        // Personality tweak: Cowardly has higher success when they *do* try to run
+        // Personality tweak: Evasive has higher success when they *do* try to run
         string groupName = null;
         if (wildDef.Personality != null)
         {
@@ -2449,5 +2403,68 @@ public class BattleManager : MonoBehaviour
         return Mathf.Clamp01(chance);
     }
 
+    private void ApplyPendingGuardShieldForWild()
+    {
+        if (wildPendingGuardShield <= 0.01f) return;
 
+        string name = wildDef ? wildDef.displayName : "Foe";
+        float gain = wildPendingGuardShield;
+        wildShieldHP += gain;
+        wildPendingGuardShield = 0f;
+
+        BattleLogger.Log(
+            $"{name} gains a guard shield of {Mathf.RoundToInt(gain)}!",
+            LogScope.Battle
+        );
+    }
+
+    private bool RollEnemyDefendSuccess()
+    {
+        float chance = Mathf.Clamp01(wildDefendCurrentSuccess);
+        bool ok = UnityEngine.Random.value <= chance;
+
+        if (ok)
+        {
+            wildDefendConsecutiveUses++;
+            float next = defendFirstUseSuccess * Mathf.Pow(defendRepeatMultiplier, wildDefendConsecutiveUses);
+            wildDefendCurrentSuccess = Mathf.Max(defendMinSuccess, next);
+        }
+        else
+        {
+            wildDefendConsecutiveUses = 0;
+            wildDefendCurrentSuccess  = defendFirstUseSuccess;
+        }
+
+        return ok;
+    }
+
+    private void ResetEnemyDefendStreak()
+    {
+        wildDefendConsecutiveUses = 0;
+        wildDefendCurrentSuccess  = defendFirstUseSuccess;
+    }
+
+    private void ApplyWildDefendStance()
+    {
+        string name = wildDef ? wildDef.displayName : "Foe";
+        bool success = RollEnemyDefendSuccess();
+
+        if (success)
+        {
+            wildDefendActiveThisRound = true;
+
+            BattleLogger.Log($"{name} is defending.", LogScope.Battle);
+            BattleLogger.Log(
+                $"{name} will reduce the next hit and convert it into a shield for the following round.",
+                LogScope.Battle
+            );
+        }
+        else
+        {
+            wildDefendActiveThisRound = false;
+            BattleLogger.Log($"{name} tried to defend, but it failed!", LogScope.Battle);
+        }
+
+        Punch(wildIcon);
+    }
 }
