@@ -18,5 +18,4 @@ MonoBehaviour:
   subtitle: Resource
   body: 'Comes from: Quarry
 
-    Used for: Shop purchases, Character unlocks'
-  icon: {fileID: 21300000, guid: 4ec6dac5926278d40a9074c180fb5a4c, type: 3}
+    Needed for permanent upgrades'

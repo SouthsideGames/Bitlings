@@ -18,8 +18,7 @@ MonoBehaviour:
   subtitle: Resource
   body: 'Comes from: Cryo Lab
 
-    Used for: Improve capture odds
+    Improve capture odds in encounters during timer
+    duration
 
-    Related
-    site effect: +10% capture chance (uses: 3)'
-  icon: {fileID: 21300000, guid: 917c0ce4b2658ac44a0238c9bf29048a, type: 3}
+'

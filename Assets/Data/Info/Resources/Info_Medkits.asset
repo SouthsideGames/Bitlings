@@ -18,5 +18,4 @@ MonoBehaviour:
   subtitle: Resource
   body: 'Comes from: Grove
 
-    Used for: Heal team between battles'
-  icon: {fileID: 21300000, guid: 301f7bde0ab933145a0c7eb2c3e59fbc, type: 3}
+    Needed to heal Bitlings'

@@ -16801,8 +16801,8 @@ MonoBehaviour:
   benchHPText1: {fileID: 1478715891}
   benchHPText2: {fileID: 607737988}
   beginRoundDelay: 0.15
-  hitPause: 0.25
-  endRoundDelay: 0.6
+  hitPause: 0.5
+  endRoundDelay: 1
   critChancePlayer: 0.1
   critChanceWild: 0.08
   critMultiplier: 1.8
@@ -49603,15 +49603,15 @@ RectTransform:
   m_GameObject: {fileID: 977078552}
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1.25, y: 1.25, z: 1}
+  m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 2106433469}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 232.14, y: 0.0014095}
-  m_SizeDelta: {x: 410.97, y: 472.25}
+  m_AnchoredPosition: {x: 232.14, y: -60.159}
+  m_SizeDelta: {x: 410.97, y: 470.01}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!1 &977965027
 GameObject:
@@ -92352,10 +92352,6 @@ MonoBehaviour:
     displayName: Rest Charges
     icon: {fileID: 21300000, guid: c68dbe972bd16bd418911ee30ceb09b7, type: 3}
     infoId: res.Rest
-  - type: 15
-    displayName: Gems
-    icon: {fileID: 21300000, guid: fdadc8078ecb3ea49a6138a64b7dca5a, type: 3}
-    infoId: res.Gem
   - type: 16
     displayName: Growth Cores
     icon: {fileID: 21300000, guid: 9577df180274c0846bb38a79770cea22, type: 3}

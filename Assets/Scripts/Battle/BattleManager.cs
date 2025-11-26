@@ -249,8 +249,6 @@ public class BattleManager : MonoBehaviour
 
         pendingAction = a;
 
-        // Spawn action VFX so player can see what was chosen (player side)
-        SpawnActionEffect(a, true);
     }
 
     // Legacy alias
@@ -1025,7 +1023,6 @@ public class BattleManager : MonoBehaviour
         // For non-Defend actions, show the action effect now and give it a tiny moment
         if (choice != EnemyAction.Defend)
         {
-            SpawnActionEffect(EnemyActionToPlayerAction(choice), false);
             yield return Wait(0.15f);
         }
 
@@ -2275,53 +2272,6 @@ public class BattleManager : MonoBehaviour
         }
     }
 
-    private void SpawnActionEffect(PlayerAction action, bool isPlayerSide)
-    {
-        if (!spawnActionEffectPrefabs) return;
-        if (action == PlayerAction.None) return;
-
-        GameObject prefab = null;
-        switch (action)
-        {
-            case PlayerAction.Attack: prefab = actionAttackPrefab; break;
-            case PlayerAction.Defend: prefab = actionDefendPrefab; break;
-            case PlayerAction.Focus:  prefab = actionFocusPrefab;  break;
-            case PlayerAction.Run:    prefab = actionRunPrefab;    break;
-        }
-
-        if (!prefab) return;
-
-        Transform spawnRoot = null;
-        if (EncounterManager.I != null)
-        {
-            spawnRoot = isPlayerSide
-                ? EncounterManager.I.PlayerSpawnPoint
-                : EncounterManager.I.EnemySpawnPoint;
-        }
-
-        Vector3 pos = spawnRoot ? spawnRoot.position : Vector3.zero;
-        Quaternion rot = spawnRoot ? spawnRoot.rotation : Quaternion.identity;
-
-        var inst = GameObject.Instantiate(prefab, pos, rot);
-        if (spawnRoot)
-            inst.transform.SetParent(spawnRoot, worldPositionStays: true);
-
-        float life = Mathf.Max(0f, actionEffectLifetime);
-        if (life > 0f)
-            GameObject.Destroy(inst, life);
-    }
-
-    private PlayerAction EnemyActionToPlayerAction(EnemyAction ea)
-    {
-        switch (ea)
-        {
-            case EnemyAction.Attack: return PlayerAction.Attack;
-            case EnemyAction.Defend: return PlayerAction.Defend;
-            case EnemyAction.Focus:  return PlayerAction.Focus;
-            case EnemyAction.Run:    return PlayerAction.Run;
-            default:                 return PlayerAction.Attack;
-        }
-    }
 
     // Helper: get personality label for wild
     private string GetWildPersonalityLabel()
@@ -2520,9 +2470,6 @@ public class BattleManager : MonoBehaviour
         if (success)
         {
             wildDefendActiveThisRound = true;
-
-            // Show enemy Defend action effect
-            SpawnActionEffect(PlayerAction.Defend, false);
 
             BattleLogger.Log($"{name} is defending.", LogScope.Battle);
             BattleLogger.Log(

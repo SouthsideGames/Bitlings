@@ -18,8 +18,4 @@ MonoBehaviour:
   subtitle: Resource
   body: 'Comes from: Wyrm Den
 
-    Used for: Increase rare/shiny odds, Better drops
-
-    Related
-    site effect: +5% rare spawns (uses: 3)'
-  icon: {fileID: 21300000, guid: d8a75965deab3674cb46b78a4d4685ad, type: 3}
+    Increase rare Bitling encounters'

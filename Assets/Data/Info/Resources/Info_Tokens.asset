@@ -18,5 +18,4 @@ MonoBehaviour:
   subtitle: Resource
   body: 'Comes from: Sanctum
 
-    Used for: Sanctum blessings, Run-wide perks'
-  icon: {fileID: 21300000, guid: 8f9bda9db9d352c47a2b6eed9d87a95b, type: 3}
+    Used to temporarily increase job site capacity'

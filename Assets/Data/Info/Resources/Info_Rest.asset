@@ -18,5 +18,4 @@ MonoBehaviour:
   subtitle: Resource
   body: 'Comes from: Clinic
 
-    Used for: Restore energy or skip timers'
-  icon: {fileID: 21300000, guid: 1ec6e89e6128e824b92e1164a5fa56ca, type: 3}
+    Use to reduce Bitling job fatigue'

@@ -18,5 +18,4 @@ MonoBehaviour:
   subtitle: Resource
   body: 'Comes from: Forge
 
-    Used for: Upgrade job sites'
-  icon: {fileID: 21300000, guid: 1fbb4a7c76b74b8469cbf767dd6a4bf4, type: 3}
+    Needed to upgrade job sites'

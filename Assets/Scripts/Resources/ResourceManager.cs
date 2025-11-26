@@ -8,7 +8,7 @@ public enum ResourceType
 {
     None = 0, Coins = 1, Energy = 2, Medkits = 3, Materials = 4,
     Sigils = 5, Lures = 6, CaptureBands = 7, Luck = 8,
-    AttackBoosters = 9, HPBoosters = 10, SpeedBoosters = 11, ShinyOrbs = 12, BlessingTokens = 13, RestCharge = 14, Gems = 15, GrowthCores = 16, PackShards = 17
+    AttackBoosters = 9, HPBoosters = 10, SpeedBoosters = 11, ShinyOrbs = 12, BlessingTokens = 13, RestCharge = 14, GrowthCores = 16, PackShards = 17
 }
 
 public class ResourceManager : MonoBehaviour

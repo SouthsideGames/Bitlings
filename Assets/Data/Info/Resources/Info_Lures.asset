@@ -18,8 +18,5 @@ MonoBehaviour:
   subtitle: Resource
   body: 'Comes from: Harbor
 
-    Used for: Bias encounter types, Increase spawn
-    rate
-
-    Related site effect: +30% encounter weight (uses: 3)'
-  icon: {fileID: 21300000, guid: a3efbc29351aee74e89f960ba6ad2e33, type: 3}
+    Increases the encounter odds of a certain Bitlings
+    types'
