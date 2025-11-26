@@ -43,5 +43,8 @@ MonoBehaviour:
   titleTrack: {fileID: 11400000, guid: 4408630b0d8e04857b73aeea71b2741f, type: 2}
   defaultAlwaysOnTitles: []
   Personality: {fileID: 11400000, guid: 71fa3f6cb68214bca94496affd470944, type: 2}
+  basicAttackName: Attack
+  basicAttackPrefab: {fileID: 8624645253036040332, guid: f03e702d7c9714bc2af48b5b17c93c88, type: 3}
+  basicAttackPrefabLifetime: 1
   description: Cloddle disguises itself among boulders. When disturbed, it curls
     into a ball and rolls away with surprising force.

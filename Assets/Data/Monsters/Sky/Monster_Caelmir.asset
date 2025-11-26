@@ -43,5 +43,8 @@ MonoBehaviour:
   titleTrack: {fileID: 11400000, guid: c831e8e07804b4e55b5f035fe7d77e88, type: 2}
   defaultAlwaysOnTitles: []
   Personality: {fileID: 11400000, guid: ab061081920b544089b918a9f1f3759b, type: 2}
+  basicAttackName: Attack
+  basicAttackPrefab: {fileID: 5988486418563103347, guid: 310c8d56e543d4cd4ae9c55fa6047252, type: 3}
+  basicAttackPrefabLifetime: 1
   description: "Said to descend when storms split the heavens. Zephyros\u2019s wings
     generate winds so fierce they can level forests in moments."

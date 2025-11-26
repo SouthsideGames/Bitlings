@@ -43,5 +43,8 @@ MonoBehaviour:
   titleTrack: {fileID: 11400000, guid: 6f492a68ae372432e966736406c18f94, type: 2}
   defaultAlwaysOnTitles: []
   Personality: {fileID: 11400000, guid: 51b0055ca9f5a4ccbb97fd51ef39fae1, type: 2}
+  basicAttackName: Attack
+  basicAttackPrefab: {fileID: 0}
+  basicAttackPrefabLifetime: 1
   description: "Hornarok\u2019s rocky armor shrugs off most blows. Its burning tail
     glows hotter when enraged, warning foes to keep their distance."

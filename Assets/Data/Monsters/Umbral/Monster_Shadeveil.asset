@@ -43,5 +43,8 @@ MonoBehaviour:
   titleTrack: {fileID: 11400000, guid: b6dc1fd759a14407cbe096f1abdad92a, type: 2}
   defaultAlwaysOnTitles: []
   Personality: {fileID: 11400000, guid: 29327199089b34217bcb6d621828d70f, type: 2}
+  basicAttackName: Attack
+  basicAttackPrefab: {fileID: 1424259663161806981, guid: bd2d781a7e4f84cb58aedda30af5d65d, type: 3}
+  basicAttackPrefabLifetime: 1
   description: Its body is shrouded in ever-shifting wisps. Shadeveil drifts silently
     through ruins, its laughter echoing long after it fades.

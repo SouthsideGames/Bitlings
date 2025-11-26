@@ -43,5 +43,8 @@ MonoBehaviour:
   titleTrack: {fileID: 11400000, guid: db326120f6d6a412ba4e0f7df6990345, type: 2}
   defaultAlwaysOnTitles: []
   Personality: {fileID: 11400000, guid: ad0406630c0e1459897f0f87f1f80154, type: 2}
+  basicAttackName: Attack
+  basicAttackPrefab: {fileID: 0}
+  basicAttackPrefabLifetime: 1
   description: Its body is covered in hardened leaves sharp as blades. Viridra silently
     waits among trees, striking swiftly at intruders.

@@ -43,5 +43,8 @@ MonoBehaviour:
   titleTrack: {fileID: 11400000, guid: 4d1ba4f728cde43d19992149600440d0, type: 2}
   defaultAlwaysOnTitles: []
   Personality: {fileID: 11400000, guid: a31b270cc22594368bd4541ee042d278, type: 2}
+  basicAttackName: Attack
+  basicAttackPrefab: {fileID: 7604281169824035565, guid: 4065dc449fe6fd94eb31f0e575b94514, type: 3}
+  basicAttackPrefabLifetime: 1
   description: It drifts with the flow of rivers, conserving energy until startled,
     when it bursts into sudden movement.

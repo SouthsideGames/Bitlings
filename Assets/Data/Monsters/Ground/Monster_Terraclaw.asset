@@ -43,5 +43,8 @@ MonoBehaviour:
   titleTrack: {fileID: 11400000, guid: f8ca68ce5b1a3416eb3c79f7b571cc6b, type: 2}
   defaultAlwaysOnTitles: []
   Personality: {fileID: 11400000, guid: d2d9ec6158abb40d2a7618ee71a9de06, type: 2}
+  basicAttackName: Attack
+  basicAttackPrefab: {fileID: 8624645253036040332, guid: f03e702d7c9714bc2af48b5b17c93c88, type: 3}
+  basicAttackPrefabLifetime: 1
   description: Terraclaw is said to carve entire caverns with its massive claws.
     The ground quakes when it tunnels beneath the surface.

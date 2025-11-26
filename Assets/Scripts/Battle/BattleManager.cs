@@ -237,8 +237,8 @@ public class BattleManager : MonoBehaviour
     // ─────────────────────────────────────────────────────────────────────────────
     public void SetPlayerActionAttack() { TryQueueAction(PlayerAction.Attack); }
     public void SetPlayerActionDefend() { TryQueueAction(PlayerAction.Defend); }
-    public void SetPlayerActionFocus() { TryQueueAction(PlayerAction.Focus); }
-    public void SetPlayerActionRun()    { TryQueueAction(PlayerAction.Run); }
+    public void SetPlayerActionFocus()  { TryQueueAction(PlayerAction.Focus);  }
+    public void SetPlayerActionRun()    { TryQueueAction(PlayerAction.Run);    }
 
     private void TryQueueAction(PlayerAction a)
     {
@@ -249,7 +249,7 @@ public class BattleManager : MonoBehaviour
 
         pendingAction = a;
 
-        // Spawn action VFX so player can see what was chosen
+        // Spawn action VFX so player can see what was chosen (player side)
         SpawnActionEffect(a, true);
     }
 
@@ -493,8 +493,6 @@ public class BattleManager : MonoBehaviour
 
             // Decide wild action once per round
             EnemyAction wildChoice = ChooseEnemyAction();
-            // Spawn enemy action VFX as soon as the wild action is decided
-            SpawnActionEffect(EnemyActionToPlayerAction(wildChoice), false);
 
             if (playerFirst)
             {
@@ -594,55 +592,55 @@ public class BattleManager : MonoBehaviour
                                     break;
 
                                 case PlayerAction.Focus:
+                                {
+                                    ResetDefendStreak();
+
+                                    if (chargedNextAttack != null &&
+                                        activeIndex >= 0 &&
+                                        activeIndex < chargedNextAttack.Length)
                                     {
-                                        ResetDefendStreak();
-
-                                        if (chargedNextAttack != null &&
-                                            activeIndex >= 0 &&
-                                            activeIndex < chargedNextAttack.Length)
-                                        {
-                                            chargedNextAttack[activeIndex] = true;
-                                        }
-
-                                        if (chargeIcon) chargeIcon.enabled = true;
-
-                                        BattleLogger.Log($"{GetName(activeIndex)} is charging.", LogScope.Battle);
-                                        BattleLogger.Log(
-                                            $"Their next attack will deal +{Mathf.RoundToInt(chargeBonusPct * 100f)}% damage.",
-                                            LogScope.Battle
-                                        );
-                                        Punch(playerIcon);
-                                        break;
+                                        chargedNextAttack[activeIndex] = true;
                                     }
+
+                                    if (chargeIcon) chargeIcon.enabled = true;
+
+                                    BattleLogger.Log($"{GetName(activeIndex)} is charging.", LogScope.Battle);
+                                    BattleLogger.Log(
+                                        $"Their next attack will deal +{Mathf.RoundToInt(chargeBonusPct * 100f)}% damage.",
+                                        LogScope.Battle
+                                    );
+                                    Punch(playerIcon);
+                                    break;
+                                }
 
                                 case PlayerAction.Run:
+                                {
+                                    ResetDefendStreak();
+
+                                    float chance = ComputeRunChance();
+                                    bool escaped = UnityEngine.Random.value < chance;
+
+                                    string name = GetName(activeIndex);
+
+                                    if (escaped)
                                     {
-                                        ResetDefendStreak();
-
-                                        float chance = ComputeRunChance();
-                                        bool escaped = UnityEngine.Random.value < chance;
-
-                                        string name = GetName(activeIndex);
-
-                                        if (escaped)
-                                        {
-                                            BattleLogger.Log(
-                                                $"{name} has fled! (Run chance {Mathf.RoundToInt(chance * 100f)}%)",
-                                                LogScope.Battle
-                                            );
-                                            EndBattle(false, true);
-                                            yield break;
-                                        }
-                                        else
-                                        {
-                                            runAttempts++;
-                                            BattleLogger.Log(
-                                                $"Couldn't escape! (Run chance was {Mathf.RoundToInt(chance * 100f)}%)",
-                                                LogScope.Battle
-                                            );
-                                        }
-                                        break;
+                                        BattleLogger.Log(
+                                            $"{name} has fled! (Run chance {Mathf.RoundToInt(chance * 100f)}%)",
+                                            LogScope.Battle
+                                        );
+                                        EndBattle(false, true);
+                                        yield break;
                                     }
+                                    else
+                                    {
+                                        runAttempts++;
+                                        BattleLogger.Log(
+                                            $"Couldn't escape! (Run chance was {Mathf.RoundToInt(chance * 100f)}%)",
+                                            LogScope.Battle
+                                        );
+                                    }
+                                    break;
+                                }
 
                                 case PlayerAction.Defend:
                                 default:
@@ -704,84 +702,84 @@ public class BattleManager : MonoBehaviour
                 break;
 
             case PlayerAction.Defend:
+            {
+                string name = GetName(activeIndex);
+                bool success = RollDefendSuccess();
+
+                if (success)
                 {
-                    string name = GetName(activeIndex);
-                    bool success = RollDefendSuccess();
+                    defendActiveThisRound = true;
+                    if (guardIcon) guardIcon.enabled = true;
 
-                    if (success)
-                    {
-                        defendActiveThisRound = true;
-                        if (guardIcon) guardIcon.enabled = true;
-
-                        BattleLogger.Log($"{name} is defending.", LogScope.Battle);
-                        BattleLogger.Log(
-                            $"{name} will reduce the next hit and convert it into a shield for the following round.",
-                            LogScope.Battle
-                        );
-                    }
-                    else
-                    {
-                        defendActiveThisRound = false;
-                        if (guardIcon) guardIcon.enabled = false;
-
-                        BattleLogger.Log($"{name} tried to defend, but it failed!", LogScope.Battle);
-                    }
-
-                    Punch(playerIcon);
-                    break;
-                }
-
-            case PlayerAction.Focus:
-                {
-                    ResetDefendStreak();
-
-                    if (chargedNextAttack != null &&
-                        activeIndex >= 0 &&
-                        activeIndex < chargedNextAttack.Length)
-                    {
-                        chargedNextAttack[activeIndex] = true;
-                    }
-
-                    if (chargeIcon) chargeIcon.enabled = true;
-
-                    BattleLogger.Log($"{GetName(activeIndex)} is charging.", LogScope.Battle);
+                    BattleLogger.Log($"{name} is defending.", LogScope.Battle);
                     BattleLogger.Log(
-                        $"Their next attack will deal +{Mathf.RoundToInt(chargeBonusPct * 100f)}% damage.",
+                        $"{name} will reduce the next hit and convert it into a shield for the following round.",
                         LogScope.Battle
                     );
-
-                    Punch(playerIcon);
-                    break;
                 }
+                else
+                {
+                    defendActiveThisRound = false;
+                    if (guardIcon) guardIcon.enabled = false;
+
+                    BattleLogger.Log($"{name} tried to defend, but it failed!", LogScope.Battle);
+                }
+
+                Punch(playerIcon);
+                break;
+            }
+
+            case PlayerAction.Focus:
+            {
+                ResetDefendStreak();
+
+                if (chargedNextAttack != null &&
+                    activeIndex >= 0 &&
+                    activeIndex < chargedNextAttack.Length)
+                {
+                    chargedNextAttack[activeIndex] = true;
+                }
+
+                if (chargeIcon) chargeIcon.enabled = true;
+
+                BattleLogger.Log($"{GetName(activeIndex)} is charging.", LogScope.Battle);
+                BattleLogger.Log(
+                    $"Their next attack will deal +{Mathf.RoundToInt(chargeBonusPct * 100f)}% damage.",
+                    LogScope.Battle
+                );
+
+                Punch(playerIcon);
+                break;
+            }
 
             case PlayerAction.Run:
+            {
+                ResetDefendStreak();
+
+                float chance = ComputeRunChance();
+                bool escaped = UnityEngine.Random.value < chance;
+
+                string name = GetName(activeIndex);
+
+                if (escaped)
                 {
-                    ResetDefendStreak();
-
-                    float chance = ComputeRunChance();
-                    bool escaped = UnityEngine.Random.value < chance;
-
-                    string name = GetName(activeIndex);
-
-                    if (escaped)
-                    {
-                        BattleLogger.Log(
-                            $"{name} has fled! (Run chance {Mathf.RoundToInt(chance * 100f)}%)",
-                            LogScope.Battle
-                        );
-                        EndBattle(false, true);
-                        yield break;
-                    }
-                    else
-                    {
-                        runAttempts++;
-                        BattleLogger.Log(
-                            $"Couldn't escape! (Run chance was {Mathf.RoundToInt(chance * 100f)}%)",
-                            LogScope.Battle
-                        );
-                    }
-                    break;
+                    BattleLogger.Log(
+                        $"{name} has fled! (Run chance {Mathf.RoundToInt(chance * 100f)}%)",
+                        LogScope.Battle
+                    );
+                    EndBattle(false, true);
+                    yield break;
                 }
+                else
+                {
+                    runAttempts++;
+                    BattleLogger.Log(
+                        $"Couldn't escape! (Run chance was {Mathf.RoundToInt(chance * 100f)}%)",
+                        LogScope.Battle
+                    );
+                }
+                break;
+            }
 
             default:
                 break;
@@ -801,6 +799,7 @@ public class BattleManager : MonoBehaviour
             yield break;
         }
 
+        // Log + spawn attack prefab (on the *target* side – see method)
         LogAttackUsedAndSpawnVfx(true);
 
         var roster = SaveManager.Data?.team;
@@ -862,7 +861,7 @@ public class BattleManager : MonoBehaviour
         if (jctx != null && jctx.attackBonusPct > 0f)
             dr.damage = Mathf.Max(1, Mathf.RoundToInt(dr.damage * (1f + jctx.attackBonusPct)));
 
-        if (jctx != null && !jctx.usedFirstOutgoing && jctx.firstOutgoingBonus > 0f)
+        if (jctx != null && jctx.usedFirstOutgoing == false && jctx.firstOutgoingBonus > 0f)
         {
             jctx.usedFirstOutgoing = true;
             dr.damage = Mathf.Max(1, Mathf.RoundToInt(dr.damage * (1f + jctx.firstOutgoingBonus)));
@@ -1023,6 +1022,13 @@ public class BattleManager : MonoBehaviour
         if (teamHP[activeIndex] <= 0.01f && !AutoSwapToAlive())
             yield break;
 
+        // For non-Defend actions, show the action effect now and give it a tiny moment
+        if (choice != EnemyAction.Defend)
+        {
+            SpawnActionEffect(EnemyActionToPlayerAction(choice), false);
+            yield return Wait(0.15f);
+        }
+
         // If the wild does anything other than Defend, reset its defend streak.
         if (choice != EnemyAction.Defend)
             ResetEnemyDefendStreak();
@@ -1031,7 +1037,7 @@ public class BattleManager : MonoBehaviour
         if (choice == EnemyAction.Defend)
         {
             // NOTE: when player is faster we already applied this via ApplyWildDefendStance()
-            // and we *don't* call EnemyTurn for Defend at all.
+            // and we *don't* call EnemyTurn for Defend at all in that branch.
             ApplyWildDefendStance();
             yield break;
         }
@@ -1177,8 +1183,8 @@ public class BattleManager : MonoBehaviour
             incomingScalar *= (1f - guardPct);
 
             float dmgBeforeGuard = dr.damage * scalarBeforeGuard;
-            float dmgAfterGuard = dr.damage * incomingScalar;
-            preventedByGuardRaw = Mathf.Max(0f, dmgBeforeGuard - dmgAfterGuard);
+            float dmgAfterGuard  = dr.damage * incomingScalar;
+            preventedByGuardRaw  = Mathf.Max(0f, dmgBeforeGuard - dmgAfterGuard);
         }
 
         int dmg_afterScalar = Mathf.Max(1, Mathf.RoundToInt(dr.damage * incomingScalar));
@@ -2352,9 +2358,10 @@ public class BattleManager : MonoBehaviour
         Transform spawnRoot = null;
         if (EncounterManager.I != null)
         {
+            // IMPORTANT: attack prefabs hit the *target* side
             spawnRoot = isPlayerSide
-                ? EncounterManager.I.PlayerSpawnPoint
-                : EncounterManager.I.EnemySpawnPoint;
+                ? EncounterManager.I.EnemySpawnPoint   // Player attacks → prefab on wild
+                : EncounterManager.I.PlayerSpawnPoint; // Wild attacks → prefab on player
         }
 
         Vector3 pos = spawnRoot ? spawnRoot.position : Vector3.zero;
@@ -2513,6 +2520,9 @@ public class BattleManager : MonoBehaviour
         if (success)
         {
             wildDefendActiveThisRound = true;
+
+            // Show enemy Defend action effect
+            SpawnActionEffect(PlayerAction.Defend, false);
 
             BattleLogger.Log($"{name} is defending.", LogScope.Battle);
             BattleLogger.Log(

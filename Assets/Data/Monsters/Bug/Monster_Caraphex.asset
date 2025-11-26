@@ -43,5 +43,8 @@ MonoBehaviour:
   titleTrack: {fileID: 11400000, guid: e4dce6e0b5c324b6b99f6fdf000a9fb8, type: 2}
   defaultAlwaysOnTitles: []
   Personality: {fileID: 11400000, guid: 14f787df7868d4a09ae546b16b48b751, type: 2}
+  basicAttackName: Attack
+  basicAttackPrefab: {fileID: 0}
+  basicAttackPrefabLifetime: 1
   description: Its shell hardens into a gleaming carapace. Caraphex is known to gather
     in swarms, overwhelming much larger foes with sheer numbers.

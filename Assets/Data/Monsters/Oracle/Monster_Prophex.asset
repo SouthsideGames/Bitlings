@@ -43,5 +43,8 @@ MonoBehaviour:
   titleTrack: {fileID: 11400000, guid: 49f56f588f2fd410bb7c964a447c5bf0, type: 2}
   defaultAlwaysOnTitles: []
   Personality: {fileID: 11400000, guid: c888a14ff8e93443e99af03360015689, type: 2}
+  basicAttackName: Attack
+  basicAttackPrefab: {fileID: 0}
+  basicAttackPrefabLifetime: 1
   description: "Its visions pierce into the darkest corners of fate. Prophex\u2019s
     warnings are often riddles, whispered moments before disaster strikes."

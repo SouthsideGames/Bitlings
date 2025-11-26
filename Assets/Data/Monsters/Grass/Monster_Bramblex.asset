@@ -43,5 +43,8 @@ MonoBehaviour:
   titleTrack: {fileID: 11400000, guid: 48e066f4886b844d8bb3c1c1a331df6f, type: 2}
   defaultAlwaysOnTitles: []
   Personality: {fileID: 11400000, guid: f6f72aa846632454b97832d01d1b5c0c, type: 2}
+  basicAttackName: Attack
+  basicAttackPrefab: {fileID: 0}
+  basicAttackPrefabLifetime: 1
   description: Covered in thorny leaves, Bramblex defends its territory fiercely.
     In the Bitling world, its presence keeps larger predators at bay.

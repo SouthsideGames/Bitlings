@@ -43,5 +43,8 @@ MonoBehaviour:
   titleTrack: {fileID: 11400000, guid: 9753b77a619f1424f82e60837505d6ce, type: 2}
   defaultAlwaysOnTitles: []
   Personality: {fileID: 11400000, guid: dc588633b46794883be5263b17376bf3, type: 2}
+  basicAttackName: Attack
+  basicAttackPrefab: {fileID: 5988486418563103347, guid: 310c8d56e543d4cd4ae9c55fa6047252, type: 3}
+  basicAttackPrefabLifetime: 1
   description: With wings swift as the wind, Zephyros can vanish from sight in a
     flash. Skyfolk believe its appearance is a sign of fair weather.

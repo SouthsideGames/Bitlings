@@ -43,5 +43,8 @@ MonoBehaviour:
   titleTrack: {fileID: 11400000, guid: df92f4406611d463bb8fe051578c659e, type: 2}
   defaultAlwaysOnTitles: []
   Personality: {fileID: 11400000, guid: ed3f5d9f88fbc40289370f9c1a7a1656, type: 2}
+  basicAttackName: Attack
+  basicAttackPrefab: {fileID: 8624645253036040332, guid: f03e702d7c9714bc2af48b5b17c93c88, type: 3}
+  basicAttackPrefabLifetime: 1
   description: Grubble spends most of its time half-buried in dirt. It shakes the
     ground as it digs, loosening soil for other Bitlings to burrow through.

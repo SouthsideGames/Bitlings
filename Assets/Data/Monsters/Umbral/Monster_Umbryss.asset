@@ -43,5 +43,8 @@ MonoBehaviour:
   titleTrack: {fileID: 11400000, guid: c87e81d68cfa441caa1b0bc3af9f6de7, type: 2}
   defaultAlwaysOnTitles: []
   Personality: {fileID: 11400000, guid: 38ced003b48194272ab4cfa8cd9c5d01, type: 2}
+  basicAttackName: Attack
+  basicAttackPrefab: {fileID: 1424259663161806981, guid: bd2d781a7e4f84cb58aedda30af5d65d, type: 3}
+  basicAttackPrefabLifetime: 1
   description: Born from the deepest shadows, Umbryss is said to blot out the light
     around it. Legends claim entire nights have fallen early at its passing.

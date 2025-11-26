@@ -43,5 +43,8 @@ MonoBehaviour:
   titleTrack: {fileID: 11400000, guid: 9a2ccec700c534ce591020fdf504c3f3, type: 2}
   defaultAlwaysOnTitles: []
   Personality: {fileID: 11400000, guid: e8e5c9163905a4840aca1effe845621c, type: 2}
+  basicAttackName: Attack
+  basicAttackPrefab: {fileID: 5988486418563103347, guid: 310c8d56e543d4cd4ae9c55fa6047252, type: 3}
+  basicAttackPrefabLifetime: 1
   description: Its fiery crest flares as it takes flight. Crestall darts through
     the skies in bursts of speed, often racing the wind itself.

@@ -43,5 +43,8 @@ MonoBehaviour:
   titleTrack: {fileID: 11400000, guid: 220b2169a710041d988d3a36f79350ea, type: 2}
   defaultAlwaysOnTitles: []
   Personality: {fileID: 11400000, guid: 2e75af56469454f81aab48433f975b34, type: 2}
+  basicAttackName: Attack
+  basicAttackPrefab: {fileID: 0}
+  basicAttackPrefabLifetime: 1
   description: Forged from forgotten alloys, Obliviron is said to be indestructible.
     Legends claim its armored body has withstood centuries without a single crack.

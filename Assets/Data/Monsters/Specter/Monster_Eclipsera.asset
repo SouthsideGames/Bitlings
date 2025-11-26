@@ -43,5 +43,8 @@ MonoBehaviour:
   titleTrack: {fileID: 11400000, guid: 151c9dfed2c484c81af1890a63aac1b4, type: 2}
   defaultAlwaysOnTitles: []
   Personality: {fileID: 11400000, guid: 48288e9e78c65453781f793c8df03e90, type: 2}
+  basicAttackName: Attack
+  basicAttackPrefab: {fileID: 0}
+  basicAttackPrefabLifetime: 1
   description: Said to appear only under eclipses, Eclipsera drifts through the skies
     like a silent omen. Legends whisper that its gaze can pierce both time and soul.

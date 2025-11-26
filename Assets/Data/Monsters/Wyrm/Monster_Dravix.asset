@@ -43,5 +43,8 @@ MonoBehaviour:
   titleTrack: {fileID: 11400000, guid: 4c195c55473324d6ea6feb17047d4460, type: 2}
   defaultAlwaysOnTitles: []
   Personality: {fileID: 11400000, guid: a31b270cc22594368bd4541ee042d278, type: 2}
+  basicAttackName: Attack
+  basicAttackPrefab: {fileID: 7446462880551948952, guid: 18696ea6ccccd974d902d9304c2b6b7e, type: 3}
+  basicAttackPrefabLifetime: 1
   description: Dravix clings to cliffs with its claws. Its wings are not strong enough
     for long flights, so it glides between rocky ledges in search of prey.

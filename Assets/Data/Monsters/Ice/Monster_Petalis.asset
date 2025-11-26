@@ -43,5 +43,8 @@ MonoBehaviour:
   titleTrack: {fileID: 11400000, guid: 8c12844650d0a40e99c1794ffdb092bb, type: 2}
   defaultAlwaysOnTitles: []
   Personality: {fileID: 11400000, guid: 29327199089b34217bcb6d621828d70f, type: 2}
+  basicAttackName: Attack
+  basicAttackPrefab: {fileID: 2650955928365913985, guid: f4836eb6d259942b9abe6e0a520af59f, type: 3}
+  basicAttackPrefabLifetime: 1
   description: Formed of clustered ice petals, Petalis drifts quietly in the cold.
     It shivers gently, scattering frost in its wake.

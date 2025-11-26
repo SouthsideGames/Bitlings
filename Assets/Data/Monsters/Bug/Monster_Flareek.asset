@@ -43,5 +43,8 @@ MonoBehaviour:
   titleTrack: {fileID: 11400000, guid: 5afa7c6bcf750435997e62dac7579554, type: 2}
   defaultAlwaysOnTitles: []
   Personality: {fileID: 11400000, guid: 758625599ac8542bfa091e1bf5323fa2, type: 2}
+  basicAttackName: Attack
+  basicAttackPrefab: {fileID: 0}
+  basicAttackPrefabLifetime: 1
   description: Its fiery wings scatter glowing dust as it flies. Flareek is often
     spotted at dusk, drifting like a tiny lantern in the Bitling world.

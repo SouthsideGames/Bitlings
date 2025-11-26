@@ -43,5 +43,8 @@ MonoBehaviour:
   titleTrack: {fileID: 11400000, guid: b36afc3751235433bbb3736d9b622303, type: 2}
   defaultAlwaysOnTitles: []
   Personality: {fileID: 11400000, guid: 8c0967dab72904a53ac10e854118eebb, type: 2}
+  basicAttackName: Attack
+  basicAttackPrefab: {fileID: 126357351932672970, guid: a7524146891194bc4b7eb73ba1e38b46, type: 3}
+  basicAttackPrefabLifetime: 1
   description: "Its rocky body cracks with flowing magma. Volcranox\u2019s fiery
     core fuels its rage, said to burn hotter than a collapsing star."

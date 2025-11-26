@@ -43,5 +43,8 @@ MonoBehaviour:
   titleTrack: {fileID: 11400000, guid: ef117207033454887a7ed73339a94864, type: 2}
   defaultAlwaysOnTitles: []
   Personality: {fileID: 11400000, guid: db9c4a912e52a4c5298eec48842ba111, type: 2}
+  basicAttackName: Attack
+  basicAttackPrefab: {fileID: 0}
+  basicAttackPrefabLifetime: 1
   description: Its leafy body helps it blend into undergrowth. Budfern sways with
     the breeze, hiding from predators in the Bitling world.

@@ -43,5 +43,8 @@ MonoBehaviour:
   titleTrack: {fileID: 11400000, guid: e8fd5c995c7da4148823936389eadafe, type: 2}
   defaultAlwaysOnTitles: []
   Personality: {fileID: 11400000, guid: 9dfee50a1efc74bffa28531d67019a53, type: 2}
+  basicAttackName: Attack
+  basicAttackPrefab: {fileID: 4179996368917665753, guid: 77ce3f8bf17474b06ac473e26248a299, type: 3}
+  basicAttackPrefabLifetime: 1
   description: Its wings shimmer with crystalline lightning. Auracryst soars among
     stormclouds, drawing entire skies into its control.

@@ -43,5 +43,8 @@ MonoBehaviour:
   titleTrack: {fileID: 11400000, guid: 4895c73be63a3473b9047daee4b3c0f9, type: 2}
   defaultAlwaysOnTitles: []
   Personality: {fileID: 11400000, guid: d2d9ec6158abb40d2a7618ee71a9de06, type: 2}
+  basicAttackName: Attack
+  basicAttackPrefab: {fileID: 0}
+  basicAttackPrefabLifetime: 1
   description: Tuskram charges headfirst into obstacles to clear paths. Its rocky
     hide protects it from injury as it batters through stone.

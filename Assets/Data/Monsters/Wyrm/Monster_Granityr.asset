@@ -43,5 +43,8 @@ MonoBehaviour:
   titleTrack: {fileID: 11400000, guid: 6b4667918ff0b427eabf9a166d47b82b, type: 2}
   defaultAlwaysOnTitles: []
   Personality: {fileID: 11400000, guid: e6aae7880a6944b05bc4da7d55e8fffd, type: 2}
+  basicAttackName: Attack
+  basicAttackPrefab: {fileID: 7446462880551948952, guid: 18696ea6ccccd974d902d9304c2b6b7e, type: 3}
+  basicAttackPrefabLifetime: 1
   description: "Its body is carved from stone-like scales. Granityr\u2019s roar echoes
     through caverns, shaking loose boulders that tumble in its wake."

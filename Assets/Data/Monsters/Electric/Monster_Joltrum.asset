@@ -43,5 +43,8 @@ MonoBehaviour:
   titleTrack: {fileID: 11400000, guid: 0d39fbabcf6c44cabb6dcb9706a4be58, type: 2}
   defaultAlwaysOnTitles: []
   Personality: {fileID: 11400000, guid: 3733616cf9f0f4dddb5bee9d6ba2952f, type: 2}
+  basicAttackName: Attack
+  basicAttackPrefab: {fileID: 4179996368917665753, guid: 77ce3f8bf17474b06ac473e26248a299, type: 3}
+  basicAttackPrefabLifetime: 1
   description: ts body hums with constant energy. Boltling darts forward in sharp
     bursts, striking before its opponent can react.

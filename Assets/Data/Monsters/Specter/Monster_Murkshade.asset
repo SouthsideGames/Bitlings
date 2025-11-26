@@ -43,5 +43,8 @@ MonoBehaviour:
   titleTrack: {fileID: 11400000, guid: 4e51ccf95ec91484ca6283dfec70e2af, type: 2}
   defaultAlwaysOnTitles: []
   Personality: {fileID: 11400000, guid: ab061081920b544089b918a9f1f3759b, type: 2}
+  basicAttackName: Attack
+  basicAttackPrefab: {fileID: 0}
+  basicAttackPrefabLifetime: 1
   description: A drifting cloud of cursed smoke. Murkshade fades in and out of sight,
     its glowing eyes the last thing seen before it vanishes.
