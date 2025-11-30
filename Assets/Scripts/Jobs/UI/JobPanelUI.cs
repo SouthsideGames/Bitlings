@@ -40,6 +40,10 @@ public class JobPanelUI : MonoBehaviour
     [SerializeField] private Color capUpColor   = new Color(0.22f, 0.85f, 0.35f); // green
     [SerializeField] private Color capDownColor = new Color(0.90f, 0.30f, 0.30f); // red
 
+    [Header("Collect FX")]
+    [SerializeField] private float collectPunchScale = 1.1f;
+    [SerializeField] private float collectPunchTime  = 0.15f;
+
     void OnEnable()
     {
         JobManager.I?.ProcessOfflineAllSites();
@@ -72,10 +76,8 @@ public class JobPanelUI : MonoBehaviour
             // ─────────────────────────────────────────────────────────────
             // Capacity text with colored delta (titles vs. no titles)
             // ─────────────────────────────────────────────────────────────
-            // Effective cap from manager (includes titles + level mult)
             int capWithTitles = JobManager.I.GetEffectiveStorageCap(s.config);
 
-            // Build cap WITHOUT titles (still includes level multiplier & save bonus)
             int baseCap = s.config.storageCap;
 
             int extraFromSave = 0;
@@ -85,15 +87,12 @@ public class JobPanelUI : MonoBehaviour
                 catch { extraFromSave = 0; }
             }
 
-            // No-titles, pre-mult
             int preMultNoTitles = Mathf.Max(0, baseCap + extraFromSave);
 
-            // Same level multiplier manager uses
             float lvlMul = JobLeveling.StorageMultForLevel(s.level);
 
             int capNoTitles = Mathf.Max(0, Mathf.RoundToInt(preMultNoTitles * lvlMul));
 
-            // Delta is how much titles added after level mult
             int deltaCap = capWithTitles - capNoTitles;
 
             int storedWhole = Mathf.FloorToInt(s.storedAmount);
@@ -144,6 +143,7 @@ public class JobPanelUI : MonoBehaviour
                 {
                     int got = JobManager.I.Collect(t.job);
                     AudioManager.I.PlaySfx(SfxType.Collect);
+                    PlayCollectFX(t);
                     Refresh();
                 });
             }
@@ -196,24 +196,18 @@ public class JobPanelUI : MonoBehaviour
                        * JobBalance.EvolutionMult(w.def.evolutionStage)
                        * JobBalance.AffinityMult(s.config.jobType, w.def.type);
 
-            // EXCLUDE per-worker title rate mult here
             sum += mult;
         }
 
         float normalized = 1f + (sum / 3f);
         float perHour = s.config.baseRatePerHour * normalized;
 
-        // Boss/global debuff still applies
         perHour *= BossDebuffSystem.GetMultiplier(s.config.jobType, SaveManager.NowUnix());
 
-        // EXCLUDE site-wide title aura here
-
-        // Shiny stacking (attribute, not a title)
         float shinyAura = ShinySystems.SiteShinyAuraMult(s.workers);
         int shinyCount  = CountShinies(s.workers);
         float shinySet  = 1f + (shinyCount >= 3 ? 0.12f : (shinyCount == 2 ? 0.07f : (shinyCount == 1 ? 0.03f : 0f)));
 
-        // Average working slot fatigue (same logic as manager)
         float avgFatigue = AverageWorkingSlotFatigue(s);
 
         return perHour * shinyAura * shinySet * (1f - Mathf.Clamp01(avgFatigue));
@@ -234,7 +228,6 @@ public class JobPanelUI : MonoBehaviour
                        * JobBalance.EvolutionMult(w.def.evolutionStage)
                        * JobBalance.AffinityMult(s.config.jobType, w.def.type);
 
-            // INCLUDE per-worker title rate mult
             try
             {
                 string wid = GetBestId(w);
@@ -248,10 +241,8 @@ public class JobPanelUI : MonoBehaviour
         float normalized = 1f + (sum / 3f);
         float perHour = s.config.baseRatePerHour * normalized;
 
-        // Boss/global debuff
         perHour *= BossDebuffSystem.GetMultiplier(s.config.jobType, SaveManager.NowUnix());
 
-        // INCLUDE site-wide aura titles
         try
         {
             var auras = TitlesAdapter.BuildJobAuras(SaveManager.Data?.team);
@@ -260,15 +251,13 @@ public class JobPanelUI : MonoBehaviour
         }
         catch { }
 
-        // Shiny stacking (attribute)
-        float shinyAura = ShinySystems.SiteShinyAuraMult(s.workers);
-        int shinyCount  = CountShinies(s.workers);
-        float shinySet  = 1f + (shinyCount >= 3 ? 0.12f : (shinyCount == 2 ? 0.07f : (shinyCount == 1 ? 0.03f : 0f)));
+        float shinyAura2 = ShinySystems.SiteShinyAuraMult(s.workers);
+        int shinyCount2  = CountShinies(s.workers);
+        float shinySet2  = 1f + (shinyCount2 >= 3 ? 0.12f : (shinyCount2 == 2 ? 0.07f : (shinyCount2 == 1 ? 0.03f : 0f)));
 
-        // Same fatigue model as manager
-        float avgFatigue = AverageWorkingSlotFatigue(s);
+        float avgFatigue2 = AverageWorkingSlotFatigue(s);
 
-        return perHour * shinyAura * shinySet * (1f - Mathf.Clamp01(avgFatigue));
+        return perHour * shinyAura2 * shinySet2 * (1f - Mathf.Clamp01(avgFatigue2));
     }
 
     private static float AverageWorkingSlotFatigue(JobSiteState s)
@@ -326,7 +315,6 @@ public class JobPanelUI : MonoBehaviour
     {
         if (w == null) return false;
 
-        // Prefer owned-instance record
         var ownedId = w.monsterId;
         if (!string.IsNullOrEmpty(ownedId))
         {
@@ -341,7 +329,6 @@ public class JobPanelUI : MonoBehaviour
             }
         }
 
-        // Fallback to def via reflection if present
         var def = w.def;
         if (!def) return false;
         try
@@ -355,5 +342,28 @@ public class JobPanelUI : MonoBehaviour
         catch { }
 
         return false;
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // FX
+    // ─────────────────────────────────────────────────────────────
+    private void PlayCollectFX(JobTile t)
+    {
+        if (t == null || t.collectBtn == null) return;
+
+        RectTransform target = t.collectBtn.transform as RectTransform;
+        if (!target) return;
+
+        target.localScale = Vector3.one;
+
+        LeanTween.scale(target.gameObject,
+                        Vector3.one * collectPunchScale,
+                        collectPunchTime)
+                .setEaseOutBack()
+                .setOnComplete(() =>
+                {
+                    if (target)
+                        target.localScale = Vector3.one;
+                });
     }
 }

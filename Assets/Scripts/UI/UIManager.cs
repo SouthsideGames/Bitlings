@@ -71,6 +71,7 @@ public class UIManager : MonoBehaviour
 
     void Start()
     {
+        Debug.Log($"[UIManager] Has Intro? {_map.ContainsKey(PanelId.Intro)}");
         CloseAll();
         Show(PanelId.Intro);
     }
@@ -90,9 +91,13 @@ public class UIManager : MonoBehaviour
     public void CloseAll()
     {
         var list = new List<PanelId>(_open);
-        foreach (var id in list) SetActive(id, false);
+        foreach (var id in list)
+        {
+            SetImmediate(id, false, fireEvent: false);
+        }
+        _open.Clear();
     }
-
+    
     public void CloseAllExcept(PanelId keep)
     {
         var list = new List<PanelId>(_open);
@@ -119,7 +124,13 @@ public class UIManager : MonoBehaviour
 
     private void SetActive(PanelId id, bool on, bool fireEvent = true)
     {
-        if (!_map.TryGetValue(id, out var p) || p.root == null) return;
+        Debug.Log($"[UIManager] SetActive {id} -> {on}");
+
+        if (!_map.TryGetValue(id, out var p) || p.root == null)
+        {
+            Debug.LogWarning($"[UIManager] No panel root for {id}");
+            return;
+        }
 
         if (on)
         {
