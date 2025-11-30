@@ -57,6 +57,27 @@ public class BattleManager : MonoBehaviour
     [SerializeField] private GameObject actionFocusPrefab;
     [SerializeField] private GameObject actionRunPrefab;
     [SerializeField, Min(0f)] private float actionEffectLifetime = 1.0f;
+    
+
+    // ─────────────────────────────────────────────────────────────
+    // POLISH
+    // ─────────────────────────────────────────────────────────────
+    [Header("Damage Number FX")]
+    [SerializeField] private DamageNumberUI damageNumberPrefab;
+    [SerializeField] private RectTransform  playerDamageAnchor;
+    [SerializeField] private RectTransform  wildDamageAnchor;
+
+    [Header("Damage Number Colors")]
+    [SerializeField] private Color dmgNormalColor  = Color.white;
+    [SerializeField] private Color dmgCritColor    = new Color(1f, 0.9f, 0.35f);  // gold-ish
+    [SerializeField] private Color dmgWeakColor    = new Color(0.55f, 0.8f, 1f);   // cyan-ish
+    [SerializeField] private Color dmgResistColor  = new Color(0.75f, 0.75f, 0.75f);
+
+    [Header("Screen Shake")]
+    [SerializeField] private Transform screenShakeRoot;        // Optional. If null, uses Camera.main
+    [SerializeField] private float heavyHitShakeMagnitude = 12f;
+    [SerializeField] private float heavyHitShakeDuration  = 0.15f;
+    [SerializeField] private float heavyHitThresholdPct   = 0.30f; // 30% HP
 
     private bool _isPlayerTurn;
     public bool IsPlayerTurn => _isPlayerTurn;
@@ -555,6 +576,8 @@ public class BattleManager : MonoBehaviour
                                     $"{name} will reduce the next hit and convert it into a shield for the following round.",
                                     LogScope.Battle
                                 );
+
+                                PlayDefendShieldFX(isPlayer: true);
                             }
                             else
                             {
@@ -699,7 +722,7 @@ public class BattleManager : MonoBehaviour
                 yield return PlayerTurn();
                 break;
 
-            case PlayerAction.Defend:
+           case PlayerAction.Defend:
             {
                 string name = GetName(activeIndex);
                 bool success = RollDefendSuccess();
@@ -714,6 +737,8 @@ public class BattleManager : MonoBehaviour
                         $"{name} will reduce the next hit and convert it into a shield for the following round.",
                         LogScope.Battle
                     );
+
+                    PlayDefendShieldFX(isPlayer: true);
                 }
                 else
                 {
@@ -949,6 +974,11 @@ public class BattleManager : MonoBehaviour
             int after  = Mathf.Max(1, Mathf.RoundToInt(dmgToApply * (1f - guardPct)));
             preventedByWildGuard = Mathf.Max(0, before - after);
             dmgToApply = after;
+
+            if (preventedByWildGuard > 0f)
+            {
+                PlayDefendShieldFX(isPlayer: false);
+            }
         }
 
         // Wild shield absorbs damage first
@@ -981,6 +1011,19 @@ public class BattleManager : MonoBehaviour
         wildHP = Mathf.Max(0f, wildHP - dmgToApply);
         PushHPBars();
 
+        SpawnDamageNumber(
+            dmgToApply,
+            dr.crit,
+            dr.effectiveness,
+            hitPlayer: false
+        );
+
+        float wRatio = wildMaxHP > 0.01f ? (float)dmgToApply / wildMaxHP : 0f;
+        if (wRatio >= heavyHitThresholdPct || (dr.crit && wRatio >= heavyHitThresholdPct * 0.5f))
+        {
+            ScreenShake(heavyHitShakeMagnitude, heavyHitShakeDuration);
+        }
+        
         if (!playerLandedFirstHitThisBattle && dr.damage > 0)
             playerLandedFirstHitThisBattle = true;
 
@@ -1224,6 +1267,20 @@ public class BattleManager : MonoBehaviour
         teamHP[activeIndex] = Mathf.Max(0f, teamHP[activeIndex] - dmg_final);
         ClampAndPushActiveHP();
 
+        SpawnDamageNumber(
+            dmg_final,
+            dr.crit && !df.cannotBeCrit,
+            dr.effectiveness,
+            hitPlayer: true
+        );
+
+        float maxHP = GetFinalMaxHPForIndex(activeIndex);
+        float ratio = maxHP > 0.01f ? (float)dmg_final / maxHP : 0f;
+        if (ratio >= heavyHitThresholdPct || (dr.crit && ratio >= heavyHitThresholdPct * 0.5f))
+        {
+            ScreenShake(heavyHitShakeMagnitude, heavyHitShakeDuration);
+        }
+
         // Convert prevented damage → shield for next round
         if (preventedByGuardRaw > 0f &&
             pendingGuardShield != null &&
@@ -1251,6 +1308,12 @@ public class BattleManager : MonoBehaviour
             else if (dr.effectiveness < 0.85f) BattleLogger.Log("It's not very effective...", LogScope.Battle);
         }
         if (dr.crit && !df.cannotBeCrit) BattleLogger.Log("Critical hit!", LogScope.Battle);
+
+        if (dr.crit && !df.cannotBeCrit)
+        {
+            _totalCritsThisBattle++;
+            if (AudioManager.I) AudioManager.I.PlaySfx(SfxType.CritHit);
+        }
 
         if (dr.crit && !df.cannotBeCrit) _totalCritsThisBattle++;
         _totalDamageTakenThisBattle += dmg_final;
@@ -1290,6 +1353,7 @@ public class BattleManager : MonoBehaviour
                 float healAmt = curMax * ctx.rescueHealPct;
                 TryAddHPToActive(healAmt);
                 BattleLogger.Log($"{GetName(activeIndex)} triage heals {Mathf.RoundToInt(healAmt)} HP!", LogScope.Battle);
+                AudioManager.I.PlaySfx(SfxType.Heal);
             }
         }
 
@@ -1301,6 +1365,7 @@ public class BattleManager : MonoBehaviour
                 ctx.surgeApplied = true;
                 ctx.attackBonusPct += ctx.surgeAtkBonusPct;
                 BattleLogger.Log($"{GetName(activeIndex)} becomes enraged (+{Mathf.RoundToInt(ctx.surgeAtkBonusPct * 100f)}% ATK)!", LogScope.Battle);
+                AudioManager.I.PlaySfx(SfxType.Clutch);
             }
         }
 
@@ -1313,12 +1378,14 @@ public class BattleManager : MonoBehaviour
         if (IsWildKO())
         {
             BattleLogger.Log("Wild monster fainted!", LogScope.Battle);
+            AudioManager.I.PlaySfx(SfxType.KO);
             EndBattle(true);
             return true;
         }
         if (IsTeamKO())
         {
             BattleLogger.Log("Your team is unable to battle!", LogScope.Battle);
+            AudioManager.I.PlaySfx(SfxType.KO);
             EndBattle(false);
             return true;
         }
@@ -2485,4 +2552,90 @@ public class BattleManager : MonoBehaviour
 
         Punch(wildIcon);
     }
+
+    private void SpawnDamageNumber(
+        int amount,
+        bool isCrit,
+        float effectiveness,
+        bool hitPlayer
+    )
+    {
+        if (!damageNumberPrefab) return;
+
+        RectTransform anchor = hitPlayer ? playerDamageAnchor : wildDamageAnchor;
+        if (!anchor) return;
+
+        var inst = Instantiate(damageNumberPrefab, anchor);
+        var color = dmgNormalColor;
+
+        if (isCrit)
+        {
+            color = dmgCritColor;
+        }
+        else
+        {
+            if (effectiveness > 1.25f)       color = dmgWeakColor;   // super-effective
+            else if (effectiveness < 0.85f)  color = dmgResistColor; // not very effective
+        }
+
+        inst.Init(amount, color);
+    }
+
+    private void PlayDefendShieldFX(bool isPlayer)
+    {
+        // Re-use your existing icon punch, plus a shimmer on guard icon
+        if (isPlayer)
+        {
+            if (guardIcon)
+            {
+                // Quick punch scale
+                Punch(guardIcon);
+
+                // Shimmer alpha
+                var g = guardIcon;
+                float startA = g.color.a;
+                LeanTween.value(g.gameObject, 0.35f, startA, 0.35f)
+                    .setOnUpdate(a =>
+                    {
+                        var c = g.color;
+                        c.a = a;
+                        g.color = c;
+                    });
+            }
+        }
+        else
+        {
+            if (wildIcon) Punch(wildIcon);
+        }
+    }
+
+    private void ScreenShake(float magnitude, float duration)
+    {
+        Transform target = screenShakeRoot;
+        if (!target)
+        {
+            var cam = Camera.main;
+            if (cam) target = cam.transform;
+        }
+        if (!target) return;
+
+        Vector3 original = target.localPosition;
+        float   endTime  = Time.unscaledTime + duration;
+
+        // Simple manual shake using LeanTween value
+        LeanTween.value(gameObject, 0f, magnitude, duration)
+            .setOnUpdate(val =>
+            {
+                if (!target) return;
+                float offset = Mathf.Sin(Time.unscaledTime * 80f) * val;
+                target.localPosition = original + new Vector3(offset, 0f, 0f);
+            })
+            .setOnComplete(() =>
+            {
+                if (target) target.localPosition = original;
+            });
+    }
+
+
+
 }

@@ -27,7 +27,8 @@ public static class BattleLogColors
     public const string Debuff = "#FF7A53"; // orange/red
     public const string Crit   = "#FFD94A"; // gold
     public const string Info   = "#7FD7FF"; // cyan
-    public const string Name   = "#D7B6FF"; // attacker/skill names
+    public const string Name   = "#D7B6FF";
+    public const string Title = "#FFB347";
 }
 
 public enum ModKind { Buff, Debuff, Info }
@@ -284,6 +285,7 @@ public static class BattleLogger
     {
         // Example: "Umbra-01's Foreman activates: +20% Attack this turn."
         Log(
+            $"<color={BattleLogColors.Title}>[TITLE]</color> " +
             $"<color={BattleLogColors.Name}>{ownerName}'s</color> {titleName} " +
             $"<color={BattleLogColors.Buff}>activates</color>: {summary}",
             LogScope.Battle

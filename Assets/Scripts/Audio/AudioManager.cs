@@ -23,13 +23,12 @@ public enum SfxType
     Run = 17,
     Focus = 18,
     CaptureSuccess = 10,
+    KO = 12,
+    Clutch = 13,
+    Heal = 19,
     
     // Progress
     LevelUp = 11,
-
-    // Titles
-    TitleEquip = 12,
-    TitleUnequip = 13,
 
     //Encounters
     ShinyEncounter = 14,
