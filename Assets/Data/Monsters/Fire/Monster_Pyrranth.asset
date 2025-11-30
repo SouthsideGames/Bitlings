@@ -43,7 +43,7 @@ MonoBehaviour:
   titleTrack: {fileID: 11400000, guid: cc291a23cdc25489d90b0b3962e969c1, type: 2}
   defaultAlwaysOnTitles: []
   Personality: {fileID: 11400000, guid: 38ced003b48194272ab4cfa8cd9c5d01, type: 2}
-  basicAttackName: Attack
+  basicAttackName: Flame Burst
   basicAttackPrefab: {fileID: 126357351932672970, guid: a7524146891194bc4b7eb73ba1e38b46, type: 3}
   basicAttackPrefabLifetime: 1
   description: "Its body radiates the heat of molten rock. Pyrranth\u2019s horn glows

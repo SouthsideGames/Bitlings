@@ -43,7 +43,7 @@ MonoBehaviour:
   titleTrack: {fileID: 11400000, guid: e618188c86c1347fc90ed4aca3873d9d, type: 2}
   defaultAlwaysOnTitles: []
   Personality: {fileID: 11400000, guid: f6f72aa846632454b97832d01d1b5c0c, type: 2}
-  basicAttackName: Attack
+  basicAttackName: Leaf Jab
   basicAttackPrefab: {fileID: 0}
   basicAttackPrefabLifetime: 1
   description: Sylvire spreads roots as it rests, enriching the soil. In the Bitling

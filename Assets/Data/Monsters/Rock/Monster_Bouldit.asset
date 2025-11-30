@@ -43,7 +43,7 @@ MonoBehaviour:
   titleTrack: {fileID: 11400000, guid: 500452e2f5ee644518a0ed3bb099a9d7, type: 2}
   defaultAlwaysOnTitles: []
   Personality: {fileID: 11400000, guid: ed3f5d9f88fbc40289370f9c1a7a1656, type: 2}
-  basicAttackName: Attack
+  basicAttackName: Stone Bash
   basicAttackPrefab: {fileID: 0}
   basicAttackPrefabLifetime: 1
   description: Bouldit plods slowly across rocky fields. When it rests, its body

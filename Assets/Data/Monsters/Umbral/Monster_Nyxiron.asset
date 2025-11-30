@@ -43,7 +43,7 @@ MonoBehaviour:
   titleTrack: {fileID: 11400000, guid: 4261d23bb3b1e4d2cad15fd1bcd9ffaf, type: 2}
   defaultAlwaysOnTitles: []
   Personality: {fileID: 11400000, guid: ca09b5cdb2cde4bb7878385f2d34bf55, type: 2}
-  basicAttackName: Attack
+  basicAttackName: Shadow Jab
   basicAttackPrefab: {fileID: 1424259663161806981, guid: bd2d781a7e4f84cb58aedda30af5d65d, type: 3}
   basicAttackPrefabLifetime: 1
   description: "Said to be born from shadows cast on ancient battlefields. Nyxiron\u2019s

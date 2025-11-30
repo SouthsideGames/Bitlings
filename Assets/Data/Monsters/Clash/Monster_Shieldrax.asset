@@ -43,7 +43,7 @@ MonoBehaviour:
   titleTrack: {fileID: 11400000, guid: facad7f1d6ab14a568bb7b14dd172969, type: 2}
   defaultAlwaysOnTitles: []
   Personality: {fileID: 11400000, guid: 3733616cf9f0f4dddb5bee9d6ba2952f, type: 2}
-  basicAttackName: Attack
+  basicAttackName: Impact Blow
   basicAttackPrefab: {fileID: 5406408022945852380, guid: a106796f95643465ab9883d4b5161f50, type: 3}
   basicAttackPrefabLifetime: 1
   description: Its claws harden into shield-like plates. Shieldrax challenges opponents

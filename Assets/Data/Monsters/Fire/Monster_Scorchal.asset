@@ -43,7 +43,7 @@ MonoBehaviour:
   titleTrack: {fileID: 11400000, guid: 96feca965c49345a2a8e6a499487b997, type: 2}
   defaultAlwaysOnTitles: []
   Personality: {fileID: 11400000, guid: 29327199089b34217bcb6d621828d70f, type: 2}
-  basicAttackName: Attack
+  basicAttackName: Flame Burst
   basicAttackPrefab: {fileID: 126357351932672970, guid: a7524146891194bc4b7eb73ba1e38b46, type: 3}
   basicAttackPrefabLifetime: 1
   description: The flames on its back grow wilder as it matures. Scorchal is known

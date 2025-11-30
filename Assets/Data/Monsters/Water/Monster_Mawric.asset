@@ -43,7 +43,7 @@ MonoBehaviour:
   titleTrack: {fileID: 11400000, guid: 43eae15e0e5894a8ab68b7ab00b997de, type: 2}
   defaultAlwaysOnTitles: []
   Personality: {fileID: 11400000, guid: a31b270cc22594368bd4541ee042d278, type: 2}
-  basicAttackName: Attack
+  basicAttackName: Aqua Shot
   basicAttackPrefab: {fileID: 7604281169824035565, guid: 4065dc449fe6fd94eb31f0e575b94514, type: 3}
   basicAttackPrefabLifetime: 1
   description: It can swallow prey nearly its own size. Mawric lurks where rivers

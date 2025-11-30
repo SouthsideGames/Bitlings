@@ -43,7 +43,7 @@ MonoBehaviour:
   titleTrack: {fileID: 11400000, guid: 95bb973a227674b1184c491284efe31a, type: 2}
   defaultAlwaysOnTitles: []
   Personality: {fileID: 11400000, guid: a31b270cc22594368bd4541ee042d278, type: 2}
-  basicAttackName: Attack
+  basicAttackName: Impact Blow
   basicAttackPrefab: {fileID: 5406408022945852380, guid: a106796f95643465ab9883d4b5161f50, type: 3}
   basicAttackPrefabLifetime: 1
   description: Scravix fights with its claws even against much larger foes. It practices

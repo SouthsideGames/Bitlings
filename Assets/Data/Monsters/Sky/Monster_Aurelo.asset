@@ -43,7 +43,7 @@ MonoBehaviour:
   titleTrack: {fileID: 11400000, guid: 85441e8d4bfc6448ea192b15db83786c, type: 2}
   defaultAlwaysOnTitles: []
   Personality: {fileID: 11400000, guid: dc588633b46794883be5263b17376bf3, type: 2}
-  basicAttackName: Attack
+  basicAttackName: Gale Swipe
   basicAttackPrefab: {fileID: 5988486418563103347, guid: 310c8d56e543d4cd4ae9c55fa6047252, type: 3}
   basicAttackPrefabLifetime: 1
   description: Aurelo flits restlessly through the skies. It calls to others with

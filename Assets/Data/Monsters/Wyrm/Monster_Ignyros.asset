@@ -43,7 +43,7 @@ MonoBehaviour:
   titleTrack: {fileID: 11400000, guid: e004035262d134338932f384378921de, type: 2}
   defaultAlwaysOnTitles: []
   Personality: {fileID: 11400000, guid: 38ced003b48194272ab4cfa8cd9c5d01, type: 2}
-  basicAttackName: Attack
+  basicAttackName: Drake Strike
   basicAttackPrefab: {fileID: 7446462880551948952, guid: 18696ea6ccccd974d902d9304c2b6b7e, type: 3}
   basicAttackPrefabLifetime: 1
   description: "Forged in the heart of the earth, its scales shine like metal. Ignyros\u2019s

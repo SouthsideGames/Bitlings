@@ -43,7 +43,7 @@ MonoBehaviour:
   titleTrack: {fileID: 11400000, guid: 31ce47105b49640978331c4f9dfa6faf, type: 2}
   defaultAlwaysOnTitles: []
   Personality: {fileID: 11400000, guid: 3733616cf9f0f4dddb5bee9d6ba2952f, type: 2}
-  basicAttackName: Attack
+  basicAttackName: Flame Burst
   basicAttackPrefab: {fileID: 126357351932672970, guid: a7524146891194bc4b7eb73ba1e38b46, type: 3}
   basicAttackPrefabLifetime: 1
   description: Small flames dance across its body. Flarix is playful but careless,

@@ -43,7 +43,7 @@ MonoBehaviour:
   titleTrack: {fileID: 11400000, guid: e63249542137b49a4ada2ddcdc6764eb, type: 2}
   defaultAlwaysOnTitles: []
   Personality: {fileID: 11400000, guid: f6f72aa846632454b97832d01d1b5c0c, type: 2}
-  basicAttackName: Attack
+  basicAttackName: Leaf Jab
   basicAttackPrefab: {fileID: 0}
   basicAttackPrefabLifetime: 1
   description: As it grows, more leaves sprout from its body. Floren releases soothing

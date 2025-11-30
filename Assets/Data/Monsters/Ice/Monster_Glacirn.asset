@@ -43,7 +43,7 @@ MonoBehaviour:
   titleTrack: {fileID: 11400000, guid: b9a7beb438ebe4eb4aca881fd87948de, type: 2}
   defaultAlwaysOnTitles: []
   Personality: {fileID: 11400000, guid: 790c31bd71bf045feb7c203b52a49754, type: 2}
-  basicAttackName: Attack
+  basicAttackName: Frost Snap
   basicAttackPrefab: {fileID: 2650955928365913985, guid: f4836eb6d259942b9abe6e0a520af59f, type: 3}
   basicAttackPrefabLifetime: 1
   description: Its jagged body bristles with icy spines. Glacirn rolls across frozen

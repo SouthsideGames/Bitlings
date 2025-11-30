@@ -43,7 +43,7 @@ MonoBehaviour:
   titleTrack: {fileID: 11400000, guid: 13ffbc0ec7e6d4bad9c2d9d95e28ca93, type: 2}
   defaultAlwaysOnTitles: []
   Personality: {fileID: 11400000, guid: 29327199089b34217bcb6d621828d70f, type: 2}
-  basicAttackName: Attack
+  basicAttackName: Frost Snap
   basicAttackPrefab: {fileID: 2650955928365913985, guid: f4836eb6d259942b9abe6e0a520af59f, type: 3}
   basicAttackPrefabLifetime: 1
   description: Its icy petals spin gracefully in the wind. Cryora is revered in the

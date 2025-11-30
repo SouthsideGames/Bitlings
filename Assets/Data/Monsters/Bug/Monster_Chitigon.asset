@@ -43,7 +43,7 @@ MonoBehaviour:
   titleTrack: {fileID: 11400000, guid: 018081930ace14afa86e5c34281e4b73, type: 2}
   defaultAlwaysOnTitles: []
   Personality: {fileID: 11400000, guid: f6f72aa846632454b97832d01d1b5c0c, type: 2}
-  basicAttackName: Attack
+  basicAttackName: Chitin Bite
   basicAttackPrefab: {fileID: 0}
   basicAttackPrefabLifetime: 1
   description: Forged of steel-like chitin, Chitigon commands lesser swarms with

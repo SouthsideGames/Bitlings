@@ -43,7 +43,7 @@ MonoBehaviour:
   titleTrack: {fileID: 11400000, guid: 19f416f9304a14196aa11eab4623edee, type: 2}
   defaultAlwaysOnTitles: []
   Personality: {fileID: 11400000, guid: 8ef7aefb1f925433aa90fd9095d65f82, type: 2}
-  basicAttackName: Attack
+  basicAttackName: Hex Lash
   basicAttackPrefab: {fileID: 8046187082596486557, guid: 86fc56d41698d45bfbf27d043ca2944d, type: 3}
   basicAttackPrefabLifetime: 1
   description: Its spores grow more venomous as it matures. Toxmyre is feared for

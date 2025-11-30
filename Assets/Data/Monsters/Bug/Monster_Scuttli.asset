@@ -43,7 +43,7 @@ MonoBehaviour:
   titleTrack: {fileID: 11400000, guid: 0132afe7236144fd1b0b6e012cd5d3ea, type: 2}
   defaultAlwaysOnTitles: []
   Personality: {fileID: 11400000, guid: 14f787df7868d4a09ae546b16b48b751, type: 2}
-  basicAttackName: Attack
+  basicAttackName: Chitin Bite
   basicAttackPrefab: {fileID: 0}
   basicAttackPrefabLifetime: 1
   description: Scuttli darts across the forest floor in quick bursts. It hides beneath

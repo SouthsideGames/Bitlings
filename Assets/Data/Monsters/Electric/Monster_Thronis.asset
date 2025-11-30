@@ -43,7 +43,7 @@ MonoBehaviour:
   titleTrack: {fileID: 11400000, guid: 3cb921ba2fbd343b6a3306ce08631ede, type: 2}
   defaultAlwaysOnTitles: []
   Personality: {fileID: 11400000, guid: 29327199089b34217bcb6d621828d70f, type: 2}
-  basicAttackName: Attack
+  basicAttackName: Spark Bolt
   basicAttackPrefab: {fileID: 4179996368917665753, guid: 77ce3f8bf17474b06ac473e26248a299, type: 3}
   basicAttackPrefabLifetime: 1
   description: With a body plated like armor and a crown of living lightning, Thronis

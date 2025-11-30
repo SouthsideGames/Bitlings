@@ -43,7 +43,7 @@ MonoBehaviour:
   titleTrack: {fileID: 11400000, guid: 5184277cf171048f990ffc7bd8d80206, type: 2}
   defaultAlwaysOnTitles: []
   Personality: {fileID: 11400000, guid: 71fa3f6cb68214bca94496affd470944, type: 2}
-  basicAttackName: Attack
+  basicAttackName: Aqua Shot
   basicAttackPrefab: {fileID: 7604281169824035565, guid: 4065dc449fe6fd94eb31f0e575b94514, type: 3}
   basicAttackPrefabLifetime: 1
   description: Its thick scales make it nearly unbreakable. Maulgar wrestles foes

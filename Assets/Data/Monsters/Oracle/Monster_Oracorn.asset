@@ -43,7 +43,7 @@ MonoBehaviour:
   titleTrack: {fileID: 11400000, guid: d95613f0067bb4b95a9ae43ab7b806ed, type: 2}
   defaultAlwaysOnTitles: []
   Personality: {fileID: 11400000, guid: 161b42f296f3a430cbc353e1e7a3a111, type: 2}
-  basicAttackName: Attack
+  basicAttackName: Foresight Beam
   basicAttackPrefab: {fileID: 0}
   basicAttackPrefabLifetime: 1
   description: "Said to appear only to those chosen by fate, Oracorn\u2019s horn

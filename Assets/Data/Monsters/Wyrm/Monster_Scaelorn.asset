@@ -43,7 +43,7 @@ MonoBehaviour:
   titleTrack: {fileID: 11400000, guid: 7b8b59b8583a14872916db1ea9a4f457, type: 2}
   defaultAlwaysOnTitles: []
   Personality: {fileID: 11400000, guid: e6aae7880a6944b05bc4da7d55e8fffd, type: 2}
-  basicAttackName: Attack
+  basicAttackName: Drake Strike
   basicAttackPrefab: {fileID: 7446462880551948952, guid: 18696ea6ccccd974d902d9304c2b6b7e, type: 3}
   basicAttackPrefabLifetime: 1
   description: Its scales harden into jagged armor as it matures. Scaelorn is feared

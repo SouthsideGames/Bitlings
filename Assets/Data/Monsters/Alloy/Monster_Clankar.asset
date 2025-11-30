@@ -43,7 +43,7 @@ MonoBehaviour:
   titleTrack: {fileID: 11400000, guid: 66c91d5f9a59742f5b5b335bd10da4c6, type: 2}
   defaultAlwaysOnTitles: []
   Personality: {fileID: 11400000, guid: 71fa3f6cb68214bca94496affd470944, type: 2}
-  basicAttackName: Attack
+  basicAttackName: Metal Bash
   basicAttackPrefab: {fileID: 0}
   basicAttackPrefabLifetime: 1
   description: Its body rattles with every step. Clankar scuttles tirelessly, its

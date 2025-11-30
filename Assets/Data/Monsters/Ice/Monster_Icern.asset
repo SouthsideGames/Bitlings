@@ -43,7 +43,7 @@ MonoBehaviour:
   titleTrack: {fileID: 11400000, guid: 2d2f1dee1dd014435a512368311ce70e, type: 2}
   defaultAlwaysOnTitles: []
   Personality: {fileID: 11400000, guid: 8a3e57b479f5246d38cd9b71c25a27a1, type: 2}
-  basicAttackName: Attack
+  basicAttackName: Frost Snap
   basicAttackPrefab: {fileID: 2650955928365913985, guid: f4836eb6d259942b9abe6e0a520af59f, type: 3}
   basicAttackPrefabLifetime: 1
   description: Its jagged body rattles like breaking ice when it moves. Icern slithers

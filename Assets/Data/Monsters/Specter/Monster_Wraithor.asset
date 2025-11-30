@@ -43,7 +43,7 @@ MonoBehaviour:
   titleTrack: {fileID: 11400000, guid: 30403915ba2b6447a922cb90c5da6267, type: 2}
   defaultAlwaysOnTitles: []
   Personality: {fileID: 11400000, guid: 48288e9e78c65453781f793c8df03e90, type: 2}
-  basicAttackName: Attack
+  basicAttackName: Wraith Touch
   basicAttackPrefab: {fileID: 0}
   basicAttackPrefabLifetime: 1
   description: Its form flickers like a tattered veil. Wraithor slips through walls

@@ -43,7 +43,7 @@ MonoBehaviour:
   titleTrack: {fileID: 11400000, guid: 603c6d6acff36435194ac6ed0d4fe3b4, type: 2}
   defaultAlwaysOnTitles: []
   Personality: {fileID: 11400000, guid: 75a511658b2e544f4869d466b3f7ba5a, type: 2}
-  basicAttackName: Attack
+  basicAttackName: Hex Lash
   basicAttackPrefab: {fileID: 8046187082596486557, guid: 86fc56d41698d45bfbf27d043ca2944d, type: 3}
   basicAttackPrefabLifetime: 1
   description: "A twisted jester of the shadows. Carnivolt\u2019s laughter echoes

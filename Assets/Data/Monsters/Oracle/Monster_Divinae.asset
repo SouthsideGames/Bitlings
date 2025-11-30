@@ -43,7 +43,7 @@ MonoBehaviour:
   titleTrack: {fileID: 11400000, guid: a8636927bd9a04d598f71a9362494c2d, type: 2}
   defaultAlwaysOnTitles: []
   Personality: {fileID: 11400000, guid: 8fb41ae5d07a9422888bd80d80e2fbde, type: 2}
-  basicAttackName: Attack
+  basicAttackName: Foresight Beam
   basicAttackPrefab: {fileID: 0}
   basicAttackPrefabLifetime: 1
   description: A gentle being that follows the glimmer of its floating gem. Divinae

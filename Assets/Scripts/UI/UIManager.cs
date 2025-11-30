@@ -32,9 +32,8 @@ public enum PanelId
     Achievement = 25,
     CheatCodes = 26,
     Expedition = 27,
-    PackDetails = 28,   
-     Recycle = 29
-    
+    PackDetails = 28,
+    Recycle = 29
 }
 
 [Serializable]
@@ -49,12 +48,10 @@ public class UIManager : MonoBehaviour
     public static UIManager I { get; private set; }
 
     [Header("Panels")]
-    [SerializeField] private List<PanelEntry> panels = new List<PanelEntry>();
+    [SerializeField] private List<PanelEntry> panels = new();
 
-    // events
-    public event Action<PanelId, bool> OnPanelChanged; 
+    public event Action<PanelId, bool> OnPanelChanged;
 
-    // internals
     private readonly Dictionary<PanelId, PanelEntry> _map = new();
     private readonly HashSet<PanelId> _open = new();
 
@@ -68,55 +65,38 @@ public class UIManager : MonoBehaviour
         {
             if (p == null || p.root == null) continue;
             if (!_map.ContainsKey(p.id)) _map.Add(p.id, p);
-            SetActive(p.id, p.root.activeSelf, fireEvent: false);
+            SetImmediate(p.id, p.root.activeSelf, fireEvent: false);
         }
     }
 
     void Start()
     {
         CloseAll();
-
         Show(PanelId.Intro);
     }
 
-    // ------- Public API -------
-
-    public void Show(PanelId id)
-    {
-        SetActive(id, true);
-    }
+    // PUBLIC API
+    public void Show(PanelId id) => SetActive(id, true);
+    public void Toggle(PanelId id) => SetActive(id, !_open.Contains(id));
+    public bool IsOpen(PanelId id) => _open.Contains(id);
 
     public bool Hide(PanelId id)
     {
-        if (!_map.TryGetValue(id, out var panel) || panel.root == null)
-        {
-            Debug.LogWarning($"[UIManager] Hide failed: {id} not registered");
-            return false;
-        }
-        panel.root.SetActive(false);
-        _open.Remove(id);
-        OnPanelChanged?.Invoke(id, false);
+        if (!_map.TryGetValue(id, out var p) || p.root == null) return false;
+        SetActive(id, false);
         return true;
     }
 
-    public void Toggle(PanelId id)
-    {
-        bool isOpen = IsOpen(id);
-        SetActive(id, !isOpen);
-    }
-
-    public bool IsOpen(PanelId id) => _open.Contains(id);
-
     public void CloseAll()
     {
-        var toClose = new List<PanelId>(_open);
-        foreach (var id in toClose) SetActive(id, false);
+        var list = new List<PanelId>(_open);
+        foreach (var id in list) SetActive(id, false);
     }
 
     public void CloseAllExcept(PanelId keep)
     {
-        var toClose = new List<PanelId>(_open);
-        foreach (var id in toClose) if (id != keep) SetActive(id, false);
+        var list = new List<PanelId>(_open);
+        foreach (var id in list) if (id != keep) SetActive(id, false);
     }
 
     public GameObject GetRoot(PanelId id)
@@ -124,33 +104,74 @@ public class UIManager : MonoBehaviour
         return _map.TryGetValue(id, out var e) ? e.root : null;
     }
 
-    // ------- Internals -------
+    // INTERNALS --------------------------------------------------------------
+
+    private void SetImmediate(PanelId id, bool on, bool fireEvent)
+    {
+        if (!_map.TryGetValue(id, out var p) || p.root == null) return;
+        p.root.SetActive(on);
+
+        if (on) _open.Add(id);
+        else _open.Remove(id);
+
+        if (fireEvent) OnPanelChanged?.Invoke(id, on);
+    }
 
     private void SetActive(PanelId id, bool on, bool fireEvent = true)
     {
-        if (!_map.TryGetValue(id, out var e) || e.root == null) return;
+        if (!_map.TryGetValue(id, out var p) || p.root == null) return;
 
         if (on)
         {
             if (_open.Add(id))
             {
-                e.root.SetActive(true);
-                if (fireEvent)
-                {
-                    OnPanelChanged?.Invoke(id, true);
-                } 
-                    
+                AnimateOpen(p.root);
+                if (fireEvent) OnPanelChanged?.Invoke(id, true);
             }
         }
         else
         {
             if (_open.Remove(id))
             {
-                e.root.SetActive(false);
-                if (fireEvent) OnPanelChanged?.Invoke(id, false);
+                AnimateClose(p.root, () =>
+                {
+                    p.root.SetActive(false);
+                    if (fireEvent) OnPanelChanged?.Invoke(id, false);
+                });
             }
         }
     }
 
-    
+    // ANIMATIONS -------------------------------------------------------------
+
+    private void AnimateOpen(GameObject root)
+    {
+        root.SetActive(true);
+
+        CanvasGroup cg = root.GetComponent<CanvasGroup>();
+        if (cg == null) cg = root.AddComponent<CanvasGroup>();
+
+        RectTransform rt = root.GetComponent<RectTransform>();
+
+        // Start hidden
+        cg.alpha = 0f;
+        rt.anchoredPosition = new Vector2(rt.anchoredPosition.x, -30f);
+
+        // Fade in + slide up
+        LeanTween.alphaCanvas(cg, 1f, 0.25f).setEaseOutCubic();
+        LeanTween.moveY(rt, 0f, 0.25f).setEaseOutCubic();
+    }
+
+    private void AnimateClose(GameObject root, Action onComplete)
+    {
+        CanvasGroup cg = root.GetComponent<CanvasGroup>();
+        if (cg == null) cg = root.AddComponent<CanvasGroup>();
+
+        RectTransform rt = root.GetComponent<RectTransform>();
+
+        // Fade out + slide down
+        LeanTween.alphaCanvas(cg, 0f, 0.20f).setEaseInCubic();
+        LeanTween.moveY(rt, -30f, 0.20f).setEaseInCubic()
+            .setOnComplete(() => onComplete?.Invoke());
+    }
 }
