@@ -6,12 +6,23 @@ using System.Collections.Generic;
 
 public class EncounterPanelUI : MonoBehaviour
 {
+    public static EncounterPanelUI I { get; private set; }
+
     [Header("Refs")]
     [SerializeField] private Button encounterBtn;
     [SerializeField] private TextMeshProUGUI energyLabel;
     [SerializeField] private TextMeshProUGUI energyEtaLabel;
     [SerializeField, Min(1f)] private float energySecondsPerPoint = 1200f;
 
+    // ─────────────────────────────────────────────────────────────
+    // Auto Mode UI
+    // ─────────────────────────────────────────────────────────────
+    [Header("Auto Mode UI")]
+    [SerializeField] private CanvasGroup autoBannerGroup;      // "AUTO ON" mini banner
+    [SerializeField] private Image       encounterBtnFrame;    // optional frame/bg image to tint
+    [SerializeField] private Color       autoOnButtonColor = new Color(0.8f, 1.0f, 0.8f, 1f);
+
+    private Color _defaultBtnFrameColor;
 
     // ─────────────────────────────────────────────────────────────
     // Blinder (localized + weighted random)
@@ -40,6 +51,19 @@ public class EncounterPanelUI : MonoBehaviour
     [SerializeField, Range(1, 12)] private int maxTeamShown = 6;
     [SerializeField, Range(0f, 0.25f)] private float teamStaggerFade = 0.05f;
 
+    [Header("Button / Energy FX")]
+    [SerializeField, Min(1.01f)] private float energyGainPunchScale = 1.08f;
+    [SerializeField, Min(0.01f)] private float energyGainPunchTime  = 0.12f;
+
+    [SerializeField, Min(1.01f)] private float noEnergyPunchScale   = 1.08f;
+    [SerializeField, Min(0.01f)] private float noEnergyPunchTime    = 0.12f;
+
+    [Header("Energy Toast")]
+    [SerializeField] private RectTransform energyToastAnchor;
+    [SerializeField] private GameObject    energyToastPrefab;
+    [SerializeField] private float         energyToastRiseY    = 30f;
+    [SerializeField] private float         energyToastDuration = 0.8f;
+
     private TextMeshProUGUI encounterLabel;
     float _etaTickAccum = 0f;
     bool _isFading;
@@ -48,7 +72,12 @@ public class EncounterPanelUI : MonoBehaviour
 
     void Awake()
     {
+        I = this;
+
         encounterLabel = encounterBtn ? encounterBtn.GetComponentInChildren<TextMeshProUGUI>() : null;
+
+        if (encounterBtnFrame)
+            _defaultBtnFrameColor = encounterBtnFrame.color;
 
         if (blinderGroup)
         {
@@ -59,6 +88,9 @@ public class EncounterPanelUI : MonoBehaviour
 
         // Initial line (random or fallback)
         PickAndApplyBlinderLine(forcePick: true);
+
+        // Ensure AUTO banner starts hidden
+        ShowAutoOnBanner(false);
     }
 
     void OnEnable()
@@ -75,10 +107,9 @@ public class EncounterPanelUI : MonoBehaviour
             GameEvents.EnergyChanged += RefreshEnergy;
         }
 
-        // Log the current win streak immediately on enable
-        LogCurrentWinStreak("Status");
+        EncounterManager.OnEnergyGained += OnEnergyGained;
 
-        // Subscribe to streak changes → log to BattleLogger
+        LogCurrentWinStreak("Status");
         GameEvents.WinStreakChanged += OnWinStreakChanged;
 
         if (!IsInBattle())
@@ -107,6 +138,7 @@ public class EncounterPanelUI : MonoBehaviour
             GameEvents.EnergyChanged -= RefreshEnergy;
         }
 
+        EncounterManager.OnEnergyGained -= OnEnergyGained;
         GameEvents.BattleFinished -= OnBattleFinished;
         GameEvents.WinStreakChanged -= OnWinStreakChanged;
 
@@ -181,6 +213,10 @@ public class EncounterPanelUI : MonoBehaviour
             else if (nextFree) encounterLabel.text = "NEXT";
             else encounterLabel.text = "ENCOUNTER";
         }
+
+        // AUTO banner & button tint
+        ShowAutoOnBanner(auto);
+        UpdateEncounterButtonTint(auto);
     }
 
     void RefreshEnergy()
@@ -223,6 +259,25 @@ public class EncounterPanelUI : MonoBehaviour
     }
 
     // ─────────────────────────────────────────────────────────────
+    // Auto UI helpers
+    // ─────────────────────────────────────────────────────────────
+    public void ShowAutoOnBanner(bool show)
+    {
+        if (!autoBannerGroup) return;
+
+        autoBannerGroup.alpha = show ? 1f : 0f;
+        autoBannerGroup.blocksRaycasts = false;
+        autoBannerGroup.interactable = false;
+    }
+
+    void UpdateEncounterButtonTint(bool auto)
+    {
+        if (!encounterBtnFrame) return;
+
+        encounterBtnFrame.color = auto ? autoOnButtonColor : _defaultBtnFrameColor;
+    }
+
+    // ─────────────────────────────────────────────────────────────
     // Blinder Flow
     // ─────────────────────────────────────────────────────────────
     void OnEncounterStateChanged()
@@ -244,6 +299,18 @@ public class EncounterPanelUI : MonoBehaviour
     void OnClickEncounter()
     {
         if (_isFading) return;
+
+        bool auto      = IsAutoMode();
+        bool inBattle  = IsInBattle();
+        bool nextFree  = NextEncounterIsFree();
+        bool hasEnergy = HasEnergy();
+
+        if (!inBattle && !auto && !nextFree && !hasEnergy)
+        {
+            PlayNoEnergyFX();
+            AudioManager.I?.PlaySfx(SfxType.Denied);
+            return;
+        }
 
         if (blinderGroup && blinderGroup.alpha > 0.01f)
         {
@@ -461,14 +528,14 @@ public class EncounterPanelUI : MonoBehaviour
             if (string.IsNullOrWhiteSpace(lang))
             {
                 lang = Application.systemLanguage.ToString().ToLowerInvariant();
-                if (lang.StartsWith("english")) lang = "en";
+                if (lang.StartsWith("english"))      lang = "en";
                 else if (lang.StartsWith("spanish")) lang = "es";
-                else if (lang.StartsWith("french")) lang = "fr";
+                else if (lang.StartsWith("french"))  lang = "fr";
                 else if (lang.StartsWith("portuguese")) lang = "pt";
-                else if (lang.StartsWith("german")) lang = "de";
+                else if (lang.StartsWith("german"))  lang = "de";
                 else if (lang.StartsWith("italian")) lang = "it";
                 else if (lang.StartsWith("japanese")) lang = "ja";
-                else if (lang.StartsWith("korean")) lang = "ko";
+                else if (lang.StartsWith("korean"))  lang = "ko";
                 else if (lang.StartsWith("chinese")) lang = "zh";
             }
             pack = blinderLibrary.ResolvePack(lang?.ToLowerInvariant());
@@ -522,5 +589,93 @@ public class EncounterPanelUI : MonoBehaviour
             if (r <= acc) return e.line;
         }
         return pack.GetAnyNonEmptyFallback(hardFallbackLine);
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // Energy events & FX
+    // ─────────────────────────────────────────────────────────────
+    void OnEnergyGained(int gained, int newTotal)
+    {
+        if (gained <= 0) return;
+
+        PlayEnergyGainedFX();
+        SpawnEnergyToast(gained);
+    }
+
+    void PlayEnergyGainedFX()
+    {
+        if (!encounterBtn) return;
+
+        var rt = encounterBtn.transform as RectTransform;
+        if (!rt) return;
+
+        rt.localScale = Vector3.one;
+
+        LeanTween.scale(rt.gameObject,
+                        Vector3.one * energyGainPunchScale,
+                        energyGainPunchTime)
+                .setEaseOutBack()
+                .setOnComplete(() =>
+                {
+                    if (rt) rt.localScale = Vector3.one;
+                });
+    }
+
+    void PlayNoEnergyFX()
+    {
+        if (!energyLabel) return;
+
+        var rt = energyLabel.rectTransform;
+        if (!rt) return;
+
+        rt.localScale = Vector3.one;
+
+        LeanTween.scale(rt.gameObject,
+                        Vector3.one * noEnergyPunchScale,
+                        noEnergyPunchTime)
+                .setEaseShake()
+                .setOnComplete(() =>
+                {
+                    if (rt) rt.localScale = Vector3.one;
+                });
+    }
+
+    void SpawnEnergyToast(int gained)
+    {
+        if (!energyToastPrefab || !energyToastAnchor) return;
+
+        var go = Instantiate(energyToastPrefab, energyToastAnchor);
+        var rt = go.transform as RectTransform;
+        var cg = go.GetComponent<CanvasGroup>();
+
+        if (!cg)
+        {
+            cg = go.AddComponent<CanvasGroup>();
+        }
+
+        rt.anchoredPosition = Vector2.zero;
+        cg.alpha = 1f;
+
+        var label = go.GetComponentInChildren<TextMeshProUGUI>();
+        if (label)
+        {
+            label.text = $"+{gained} Energy";
+        }
+
+        Vector2 startPos = rt.anchoredPosition;
+        Vector2 endPos   = startPos + new Vector2(0f, energyToastRiseY);
+
+        LeanTween.value(go, 0f, 1f, energyToastDuration)
+                .setOnUpdate((float t) =>
+                {
+                    if (!rt || !cg) return;
+                    rt.anchoredPosition = Vector2.Lerp(startPos, endPos, t);
+                    cg.alpha = 1f - t;
+                })
+                .setOnComplete(() =>
+                {
+                    if (go)
+                        Destroy(go);
+                });
     }
 }

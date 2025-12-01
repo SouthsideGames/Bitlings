@@ -1526,6 +1526,11 @@ public class BattleManager : MonoBehaviour
             damageTaken = _totalDamageTakenThisBattle
         };
 
+        if (!victory && !escaped && EncounterManager.I != null && EncounterManager.I.IsAutoMode)
+        {
+            EncounterManager.I.NotifyAuto_TeamKO();
+        }
+
         SetCombatPanels(false);
 
         if (teamIds != null && activeIndex >= 0 && activeIndex < teamIds.Length)

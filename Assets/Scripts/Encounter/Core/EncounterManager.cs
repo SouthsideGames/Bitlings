@@ -152,7 +152,12 @@ public partial class EncounterManager : MonoBehaviour
             nextEncounterFree = false;
             autoRunPaidEnergy = false;
 
-            if (autoLoopCo != null) { StopCoroutine(autoLoopCo); autoLoopCo = null; }
+            if (autoLoopCo != null)
+            {
+                StopCoroutine(autoLoopCo);
+                autoLoopCo = null;
+            }
+
             autoLoopCo = StartCoroutine(AutoLoop());
 
             PostBattleSummaryManager.I?.SetAutoBattling(true);
@@ -161,20 +166,31 @@ public partial class EncounterManager : MonoBehaviour
                 EmitStatus("AUTO mode ON. Battling until defeat…", LogScope.System);
             else
                 EmitStatus("AUTO mode ON. Will continue after this battle…", LogScope.System);
+
+            if (EncounterPanelUI.I)
+                EncounterPanelUI.I.ShowAutoOnBanner(true);
         }
         else
         {
             autoRunPaidEnergy = false;
 
-            if (autoLoopCo != null) { StopCoroutine(autoLoopCo); autoLoopCo = null; }
+            if (autoLoopCo != null)
+            {
+                StopCoroutine(autoLoopCo);
+                autoLoopCo = null;
+            }
 
             PostBattleSummaryManager.I?.SetAutoBattling(false);
 
             EmitStatus("AUTO mode OFF. Tap ENCOUNTER for the next fight.", LogScope.System);
+
+            if (EncounterPanelUI.I)
+                EncounterPanelUI.I.ShowAutoOnBanner(false);
         }
 
         OnStateChanged?.Invoke();
     }
+
 
     // ============================= ENCOUNTER FLOW ===============================
 
@@ -238,6 +254,10 @@ public partial class EncounterManager : MonoBehaviour
             return;
         }
 
+        // 🔹 NEW: if AUTO is running and this is a special (epic/mythic/legendary/unique),
+        // pause auto so the player can decide manually.
+        NotifyAuto_SpecialSpawn(wild);
+
         // Calculate average team level
         int avgTeamLvl = 1;
         if (data.team != null && data.team.Count > 0)
@@ -269,7 +289,6 @@ public partial class EncounterManager : MonoBehaviour
         if (_currentEncounterIsBoss && _currentBossUsed != null)
             GameEvents.BossSpawned?.Invoke(_currentBossUsed.id, _currentBossUsed);
 
-        
         inBattle = true;
         OnStateChanged?.Invoke();
 
@@ -283,6 +302,7 @@ public partial class EncounterManager : MonoBehaviour
 
         battleManager.Begin(wild, wildLevel, OnBattleEnded);
     }
+
 
     void OnBattleEnded(BattleResult result)
     {

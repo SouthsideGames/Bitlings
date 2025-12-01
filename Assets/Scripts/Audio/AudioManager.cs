@@ -13,6 +13,7 @@ public enum SfxType
     // Economy
     Collect = 3,
     Purchase = 4,
+    Denied = 2,
 
     // Battle
     Attack = 5,
