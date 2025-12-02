@@ -1,16 +1,11 @@
 using UnityEngine;
 using UnityEngine.EventSystems;
-using UnityEngine.UI;
 
 public class EncounterButtonHold : MonoBehaviour,
     IPointerDownHandler, IPointerUpHandler, IPointerExitHandler
 {
     [Tooltip("Hold duration to trigger AUTO toggle.")]
     public float holdSeconds = 0.6f;
-
-    [Header("Hold Ring (optional)")]
-    [Tooltip("Radial image that fills while holding for AUTO.")]
-    [SerializeField] private Image holdFillImage;
 
     private bool  pressed;
     private float pressedAt;
@@ -26,6 +21,15 @@ public class EncounterButtonHold : MonoBehaviour,
         return FeatureUnlockManager.I.IsUnlocked(FeatureId.IdleBattle_Basic);
     }
 
+    private void TriggerHaptic()
+    {
+        // Simple built-in mobile vibration.
+        // Does nothing in Editor / PC.
+    #if UNITY_ANDROID || UNITY_IOS
+        Handheld.Vibrate();
+    #endif
+    }
+
     // ─────────────────────────────────────────────────────────────
     // Pointer events
     // ─────────────────────────────────────────────────────────────
@@ -34,25 +38,11 @@ public class EncounterButtonHold : MonoBehaviour,
         pressed   = true;
         firedHold = false;
         pressedAt = Time.unscaledTime;
-
-        if (holdFillImage)
-        {
-            holdFillImage.gameObject.SetActive(true);
-            holdFillImage.fillAmount = 0f;
-        }
     }
 
     public void OnPointerUp(PointerEventData eventData)
     {
-        bool wasPressed = pressed;
-        pressed = false;
-
-        // PointerUp might fire after we already reset state; just clear ring and bail.
-        if (!wasPressed)
-        {
-            ResetFillOnly();
-            return;
-        }
+        if (!pressed) return;
 
         // If we already fired the hold action, skip tap-start
         if (!firedHold)
@@ -96,7 +86,6 @@ public class EncounterButtonHold : MonoBehaviour,
             EncounterManager.I.RequestEncounterTap();
         }
 
-        // Reset state after tap or hold release
         ResetPressState();
     }
 
@@ -120,13 +109,6 @@ public class EncounterButtonHold : MonoBehaviour,
 
         float heldFor = Time.unscaledTime - pressedAt;
 
-        // Update radial fill
-        if (holdFillImage && holdSeconds > 0.01f)
-        {
-            float t = Mathf.Clamp01(heldFor / holdSeconds);
-            holdFillImage.fillAmount = t;
-        }
-
         if (heldFor >= holdSeconds)
         {
             firedHold = true;
@@ -136,12 +118,13 @@ public class EncounterButtonHold : MonoBehaviour,
             if (!IsIdleBattleUnlocked())
             {
                 Debug.Log("[EncounterButtonHold] Auto mode is locked — unlock Idle Battles to enable this.");
-                ResetFillOnly();
                 return;
             }
 
+            // Haptic bump on successful auto toggle
+            TriggerHaptic();
+
             EncounterManager.I?.ToggleAutoMode();
-            ResetFillOnly(); // keep firedHold true so this release doesn't fire tap
         }
     }
 
@@ -153,15 +136,5 @@ public class EncounterButtonHold : MonoBehaviour,
         pressed   = false;
         firedHold = false;
         pressedAt = 0f;
-        ResetFillOnly();
-    }
-
-    private void ResetFillOnly()
-    {
-        if (holdFillImage)
-        {
-            holdFillImage.fillAmount = 0f;
-            holdFillImage.gameObject.SetActive(false);
-        }
     }
 }

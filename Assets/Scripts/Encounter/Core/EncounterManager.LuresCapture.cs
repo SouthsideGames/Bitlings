@@ -311,7 +311,7 @@ public partial class EncounterManager
             data.owned ??= new List<OwnedMonsterData>();
             data.owned.Add(om);
 
-            data.ownedIds  ??= new HashSet<string>();   data.ownedIds.Add(def.id);
+            data.ownedIds  ??= new HashSet<string>();      data.ownedIds.Add(def.id);
             data.seenTypes ??= new HashSet<MonsterType>(); data.seenTypes.Add(def.type);
 
             SaveManager.Save();
@@ -322,6 +322,10 @@ public partial class EncounterManager
                 LogScope.Encounter
             );
             EmitStatus($"Captured {def.displayName}! (Lv {level})", LogScope.Encounter);
+
+            // NEW: capture success UI feedback (wild panel glow / banner)
+            if (EncounterPanelUI.I)
+                EncounterPanelUI.I.OnCaptureSuccess(def, IsShinyMonster(def));
         }
         else
         {
@@ -330,8 +334,13 @@ public partial class EncounterManager
                 LogScope.Encounter
             );
             EmitStatus($"Capture failed. {def.displayName} escaped.", LogScope.Encounter);
+
+            // NEW: capture fail UI feedback (shake / ESCAPED)
+            if (EncounterPanelUI.I)
+                EncounterPanelUI.I.OnCaptureFailed(def);
         }
     }
+
 
     // ── Shiny / Unique helpers ─────────────────────────────────────────────────
 

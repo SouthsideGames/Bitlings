@@ -167,8 +167,6 @@ public partial class EncounterManager : MonoBehaviour
             else
                 EmitStatus("AUTO mode ON. Will continue after this battle…", LogScope.System);
 
-            if (EncounterPanelUI.I)
-                EncounterPanelUI.I.ShowAutoOnBanner(true);
         }
         else
         {
@@ -183,9 +181,6 @@ public partial class EncounterManager : MonoBehaviour
             PostBattleSummaryManager.I?.SetAutoBattling(false);
 
             EmitStatus("AUTO mode OFF. Tap ENCOUNTER for the next fight.", LogScope.System);
-
-            if (EncounterPanelUI.I)
-                EncounterPanelUI.I.ShowAutoOnBanner(false);
         }
 
         OnStateChanged?.Invoke();
@@ -254,11 +249,11 @@ public partial class EncounterManager : MonoBehaviour
             return;
         }
 
-        // 🔹 NEW: if AUTO is running and this is a special (epic/mythic/legendary/unique),
-        // pause auto so the player can decide manually.
+        if (EncounterPanelUI.I)
+            EncounterPanelUI.I.OnWildSpawned(wild);
+
         NotifyAuto_SpecialSpawn(wild);
 
-        // Calculate average team level
         int avgTeamLvl = 1;
         if (data.team != null && data.team.Count > 0)
         {

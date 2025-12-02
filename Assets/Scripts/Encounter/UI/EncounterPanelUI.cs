@@ -15,16 +15,6 @@ public class EncounterPanelUI : MonoBehaviour
     [SerializeField, Min(1f)] private float energySecondsPerPoint = 1200f;
 
     // ─────────────────────────────────────────────────────────────
-    // Auto Mode UI
-    // ─────────────────────────────────────────────────────────────
-    [Header("Auto Mode UI")]
-    [SerializeField] private CanvasGroup autoBannerGroup;      // "AUTO ON" mini banner
-    [SerializeField] private Image       encounterBtnFrame;    // optional frame/bg image to tint
-    [SerializeField] private Color       autoOnButtonColor = new Color(0.8f, 1.0f, 0.8f, 1f);
-
-    private Color _defaultBtnFrameColor;
-
-    // ─────────────────────────────────────────────────────────────
     // Blinder (localized + weighted random)
     // ─────────────────────────────────────────────────────────────
     [Header("Blinder")]
@@ -32,6 +22,25 @@ public class EncounterPanelUI : MonoBehaviour
     [SerializeField] private TextMeshProUGUI blinderText;
     [SerializeField, Range(0.05f, 1.5f)] private float preFadeDelay = 0.25f;
     [SerializeField, Range(0.1f, 2.0f)] private float fadeDuration = 0.6f;
+
+    [Header("Blinder Typewriter")]
+    [SerializeField, Range(0.005f, 0.08f)] private float typewriterCharDelay = 0.03f;
+
+    [Header("Blinder Background Tints")]
+    [SerializeField] private Image blinderBackground;
+    [SerializeField] private Color defaultBlinderTint = new Color(0f, 0f, 0f, 0.7f);
+    [SerializeField] private Color bossImminentTint = new Color(0.8f, 0.25f, 0.25f, 0.8f);
+    [SerializeField] private Color genericLureTint = new Color(0.25f, 0.5f, 0.9f, 0.7f);
+
+    [System.Serializable]
+    public class LureTint
+    {
+        public MonsterType type;
+        public Color tint = Color.white;
+    }
+
+    [Tooltip("Optional per-type lure tints. If a type isn’t listed, genericLureTint is used.")]
+    [SerializeField] private List<LureTint> lureTints = new();
 
     [Header("Blinder Localization & Random")]
     [SerializeField] private bool useRandomBlinder = true;
@@ -53,31 +62,49 @@ public class EncounterPanelUI : MonoBehaviour
 
     [Header("Button / Energy FX")]
     [SerializeField, Min(1.01f)] private float energyGainPunchScale = 1.08f;
-    [SerializeField, Min(0.01f)] private float energyGainPunchTime  = 0.12f;
+    [SerializeField, Min(0.01f)] private float energyGainPunchTime = 0.12f;
 
-    [SerializeField, Min(1.01f)] private float noEnergyPunchScale   = 1.08f;
-    [SerializeField, Min(0.01f)] private float noEnergyPunchTime    = 0.12f;
+    [SerializeField, Min(1.01f)] private float noEnergyPunchScale = 1.08f;
+    [SerializeField, Min(0.01f)] private float noEnergyPunchTime = 0.12f;
 
     [Header("Energy Toast")]
     [SerializeField] private RectTransform energyToastAnchor;
-    [SerializeField] private GameObject    energyToastPrefab;
-    [SerializeField] private float         energyToastRiseY    = 30f;
-    [SerializeField] private float         energyToastDuration = 0.8f;
+    [SerializeField] private GameObject energyToastPrefab;
+    [SerializeField] private float energyToastRiseY = 30f;
+    [SerializeField] private float energyToastDuration = 0.8f;
+
+    // ─────────────────────────────────────────────────────────────
+    // Capture Feedback (Success / Fail)
+    // ─────────────────────────────────────────────────────────────
+    [Header("Capture Feedback")]
+    [SerializeField] private CanvasGroup captureBannerGroup;
+    [SerializeField] private TextMeshProUGUI captureBannerText;
+    [SerializeField] private RectTransform wildPanelRoot;
+
+    [SerializeField] private Color successColor = new Color(0.3f, 1f, 0.3f);
+    [SerializeField] private Color failColor = new Color(1f, 0.4f, 0.4f);
+    [SerializeField] private Color shinyColor = new Color(1f, 0.85f, 0.2f);
+
+    [SerializeField, Min(0.1f)] private float captureFxDuration = 0.9f;
+
+    [Tooltip("Small 'already caught' icon shown when this species is in your collection.")]
+    [SerializeField] private GameObject ownedCapturedIcon;
 
     private TextMeshProUGUI encounterLabel;
     float _etaTickAccum = 0f;
     bool _isFading;
     Coroutine _fadeCo;
+    Coroutine _typewriterCo;
     readonly List<TeamPreviewItemUI> _previewItems = new();
 
+    // ─────────────────────────────────────────────────────────────
+    // Unity lifecycle
+    // ─────────────────────────────────────────────────────────────
     void Awake()
     {
         I = this;
 
         encounterLabel = encounterBtn ? encounterBtn.GetComponentInChildren<TextMeshProUGUI>() : null;
-
-        if (encounterBtnFrame)
-            _defaultBtnFrameColor = encounterBtnFrame.color;
 
         if (blinderGroup)
         {
@@ -86,11 +113,12 @@ public class EncounterPanelUI : MonoBehaviour
             blinderGroup.interactable = true;
         }
 
-        // Initial line (random or fallback)
-        PickAndApplyBlinderLine(forcePick: true);
+        if (ownedCapturedIcon)
+            ownedCapturedIcon.SetActive(false);
 
-        // Ensure AUTO banner starts hidden
-        ShowAutoOnBanner(false);
+        // Initial line (random or fallback) + initial background tint
+        RefreshBlinderTint();
+        PickAndApplyBlinderLine(forcePick: true);
     }
 
     void OnEnable()
@@ -116,7 +144,7 @@ public class EncounterPanelUI : MonoBehaviour
         {
             ShowBlinder(true, instant: true);
             BuildTeamPreview();
-            PickAndApplyBlinderLine(); // fresh line when shown
+            PickAndApplyBlinderLine();
         }
         else
         {
@@ -144,6 +172,7 @@ public class EncounterPanelUI : MonoBehaviour
 
         if (encounterBtn) encounterBtn.onClick.RemoveAllListeners();
         if (_fadeCo != null) StopCoroutine(_fadeCo);
+        if (_typewriterCo != null) StopCoroutine(_typewriterCo);
         _isFading = false;
     }
 
@@ -157,13 +186,18 @@ public class EncounterPanelUI : MonoBehaviour
         }
     }
 
+    // ─────────────────────────────────────────────────────────────
+    // Public refresh
+    // ─────────────────────────────────────────────────────────────
     public void RefreshAll()
     {
         RefreshButtonAndLabel();
         RefreshEnergy();
     }
 
-    // Win streak → Battle Log
+    // ─────────────────────────────────────────────────────────────
+    // Win Streak logging
+    // ─────────────────────────────────────────────────────────────
     void OnWinStreakChanged(int value)
     {
         BattleLogger.Log($"Win Streak: {value}", LogScope.Encounter);
@@ -178,7 +212,6 @@ public class EncounterPanelUI : MonoBehaviour
 
     void OnBattleFinished(BattleResult _)
     {
-        // After every battle, log the new streak value.
         LogCurrentWinStreak("Updated");
 
         if (!IsInBattle())
@@ -186,37 +219,33 @@ public class EncounterPanelUI : MonoBehaviour
             ShowBlinder(true, instant: true);
             BuildTeamPreview();
             PickAndApplyBlinderLine();
+            ClearWildStateUI();
         }
     }
 
     // ─────────────────────────────────────────────────────────────
-    // Button/Energy/ETA
+    // Button / Energy / ETA
     // ─────────────────────────────────────────────────────────────
     void RefreshButtonAndLabel()
     {
         bool nextFree = NextEncounterIsFree();
-        bool auto     = IsAutoMode();
-        bool inBattle = IsInBattle();
+        bool auto = IsAutoMode();
 
-        bool canManualStart = (nextFree || HasEnergy());
-        bool interactable =
-            !inBattle &&
-            !auto &&
-            canManualStart &&
-            !_isFading;
+        if (!encounterBtn)
+            return;
 
-        if (encounterBtn) encounterBtn.interactable = interactable;
+        if (!encounterLabel)
+            encounterLabel = encounterBtn.GetComponentInChildren<TextMeshProUGUI>();
 
         if (encounterLabel)
         {
-            if (auto) encounterLabel.text = "AUTO: ON";
-            else if (nextFree) encounterLabel.text = "NEXT";
-            else encounterLabel.text = "ENCOUNTER";
+            if (auto)
+                encounterLabel.text = "AUTO: ON";
+            else if (nextFree)
+                encounterLabel.text = "NEXT";
+            else
+                encounterLabel.text = "ENCOUNTER";
         }
-
-        // AUTO banner & button tint
-        ShowAutoOnBanner(auto);
-        UpdateEncounterButtonTint(auto);
     }
 
     void RefreshEnergy()
@@ -237,8 +266,8 @@ public class EncounterPanelUI : MonoBehaviour
     {
         if (!energyEtaLabel) return;
 
-        int cur  = GetEnergyPoints();
-        int max  = GetEncounterMax();
+        int cur = GetEnergyPoints();
+        int max = GetEncounterMax();
 
         if (cur >= max)
         {
@@ -258,28 +287,6 @@ public class EncounterPanelUI : MonoBehaviour
             : $"Full in ~ {minutes}m";
     }
 
-    // ─────────────────────────────────────────────────────────────
-    // Auto UI helpers
-    // ─────────────────────────────────────────────────────────────
-    public void ShowAutoOnBanner(bool show)
-    {
-        if (!autoBannerGroup) return;
-
-        autoBannerGroup.alpha = show ? 1f : 0f;
-        autoBannerGroup.blocksRaycasts = false;
-        autoBannerGroup.interactable = false;
-    }
-
-    void UpdateEncounterButtonTint(bool auto)
-    {
-        if (!encounterBtnFrame) return;
-
-        encounterBtnFrame.color = auto ? autoOnButtonColor : _defaultBtnFrameColor;
-    }
-
-    // ─────────────────────────────────────────────────────────────
-    // Blinder Flow
-    // ─────────────────────────────────────────────────────────────
     void OnEncounterStateChanged()
     {
         if (IsInBattle())
@@ -292,7 +299,8 @@ public class EncounterPanelUI : MonoBehaviour
             RefreshAll();
             ShowBlinder(true, instant: true);
             BuildTeamPreview();
-            PickAndApplyBlinderLine(); // fresh line when returning from battle
+            PickAndApplyBlinderLine();
+            ClearWildStateUI();
         }
     }
 
@@ -300,11 +308,12 @@ public class EncounterPanelUI : MonoBehaviour
     {
         if (_isFading) return;
 
-        bool auto      = IsAutoMode();
-        bool inBattle  = IsInBattle();
-        bool nextFree  = NextEncounterIsFree();
+        bool auto = IsAutoMode();
+        bool inBattle = IsInBattle();
+        bool nextFree = NextEncounterIsFree();
         bool hasEnergy = HasEnergy();
 
+        // No energy -> shake + denied SFX, but do NOT disable button
         if (!inBattle && !auto && !nextFree && !hasEnergy)
         {
             PlayNoEnergyFX();
@@ -335,6 +344,13 @@ public class EncounterPanelUI : MonoBehaviour
             blinderGroup.interactable = true;
         }
 
+        // Stop any ongoing typewriter when fading out
+        if (_typewriterCo != null)
+        {
+            StopCoroutine(_typewriterCo);
+            _typewriterCo = null;
+        }
+
         yield return new WaitForSecondsRealtime(Mathf.Max(0.05f, preFadeDelay));
 
         if (blinderGroup)
@@ -358,6 +374,9 @@ public class EncounterPanelUI : MonoBehaviour
         RequestEncounterTap();
     }
 
+    // ─────────────────────────────────────────────────────────────
+    // Blinder Fade helpers
+    // ─────────────────────────────────────────────────────────────
     void ShowBlinder(bool show, bool instant)
     {
         if (!blinderGroup) return;
@@ -370,6 +389,7 @@ public class EncounterPanelUI : MonoBehaviour
 
             if (show)
             {
+                RefreshBlinderTint();
                 PickAndApplyBlinderLine();
                 BuildTeamPreview();
             }
@@ -395,6 +415,13 @@ public class EncounterPanelUI : MonoBehaviour
         blinderGroup.blocksRaycasts = true;
         blinderGroup.interactable = true;
 
+        // Stop any ongoing typewriter while we tween alpha
+        if (_typewriterCo != null)
+        {
+            StopCoroutine(_typewriterCo);
+            _typewriterCo = null;
+        }
+
         while (t < dur)
         {
             t += Time.unscaledDeltaTime;
@@ -408,6 +435,7 @@ public class EncounterPanelUI : MonoBehaviour
 
         if (target > 0.01f)
         {
+            RefreshBlinderTint();
             PickAndApplyBlinderLine();
             BuildTeamPreview();
         }
@@ -418,6 +446,100 @@ public class EncounterPanelUI : MonoBehaviour
 
         _isFading = false;
         RefreshButtonAndLabel();
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // Blinder visuals (tints + typewriter)
+    // ─────────────────────────────────────────────────────────────
+    void RefreshBlinderTint()
+    {
+        if (!blinderBackground) return;
+
+        Color tint = defaultBlinderTint;
+
+        // Boss cadence check: if boss is about to trigger, override tint.
+        if (IsBossImminent())
+        {
+            tint = bossImminentTint;
+        }
+        else
+        {
+            // Lure-based tint
+            var lure = (EncounterManager.I != null) ? EncounterManager.I.CurrentLure : null;
+            if (lure != null)
+            {
+                tint = ResolveLureTint(lure.type);
+            }
+        }
+
+        blinderBackground.color = tint;
+    }
+
+    Color ResolveLureTint(MonsterType type)
+    {
+        if (lureTints != null)
+        {
+            for (int i = 0; i < lureTints.Count; i++)
+            {
+                var lt = lureTints[i];
+                if (lt != null && lt.type == type)
+                    return lt.tint;
+            }
+        }
+        return genericLureTint;
+    }
+
+    bool IsBossImminent()
+    {
+        var data = SaveManager.Data;
+        if (data == null) return false;
+
+        int cadence = (data.bossEveryN > 0) ? data.bossEveryN : 10;
+        if (cadence < 1) cadence = 10;
+
+        int since = Mathf.Max(0, data.encountersSinceBoss);
+        return since >= (cadence - 1);
+    }
+
+    void ApplyBlinderText(string message, bool instant = false)
+    {
+        if (!blinderText) return;
+
+        if (_typewriterCo != null)
+        {
+            StopCoroutine(_typewriterCo);
+            _typewriterCo = null;
+        }
+
+        bool skipTypewriter =
+            instant ||
+            typewriterCharDelay <= 0f ||
+            !gameObject.activeInHierarchy;
+
+        if (skipTypewriter)
+        {
+            blinderText.text = message;
+            return;
+        }
+
+        _typewriterCo = StartCoroutine(Co_TypeWriter(message));
+    }
+
+    IEnumerator Co_TypeWriter(string fullText)
+    {
+        if (!blinderText)
+            yield break;
+
+        blinderText.text = string.Empty;
+
+        // Simple substring-based typewriter; fine for these short lines.
+        for (int i = 0; i <= fullText.Length; i++)
+        {
+            blinderText.text = fullText.Substring(0, i);
+            yield return new WaitForSecondsRealtime(typewriterCharDelay);
+        }
+
+        _typewriterCo = null;
     }
 
     // ─────────────────────────────────────────────────────────────
@@ -496,28 +618,29 @@ public class EncounterPanelUI : MonoBehaviour
     // ─────────────────────────────────────────────────────────────
     // EncounterManager passthrough helpers (null-safe)
     // ─────────────────────────────────────────────────────────────
-    bool IsInBattle()          => EncounterManager.I != null && EncounterManager.I.IsInBattle;
-    bool IsAutoMode()          => EncounterManager.I != null && EncounterManager.I.IsAutoMode;
+    bool IsInBattle() => EncounterManager.I != null && EncounterManager.I.IsInBattle;
+    bool IsAutoMode() => EncounterManager.I != null && EncounterManager.I.IsAutoMode;
     bool NextEncounterIsFree() => EncounterManager.I != null && EncounterManager.I.NextEncounterIsFree;
-    bool HasEnergy()           => EncounterManager.I != null && EncounterManager.I.HasEnergy();
-    int  GetEnergyPoints()     => EncounterManager.I != null ? EncounterManager.I.GetEnergyPoints() : 0;
-    int  GetEncounterMax()     => EncounterManager.I != null ? EncounterManager.I.GetEncounterMax() : 0;
-    int  GetEncounterCost()    => EncounterManager.I != null ? EncounterManager.I.GetEncounterCost() : 0;
+    bool HasEnergy() => EncounterManager.I != null && EncounterManager.I.HasEnergy();
+    int GetEnergyPoints() => EncounterManager.I != null ? EncounterManager.I.GetEnergyPoints() : 0;
+    int GetEncounterMax() => EncounterManager.I != null ? EncounterManager.I.GetEncounterMax() : 0;
+    int GetEncounterCost() => EncounterManager.I != null ? EncounterManager.I.GetEncounterCost() : 0;
 
     void RequestEncounterTap() => EncounterManager.I?.RequestEncounterTap();
 
     public void OnClickToggleAuto() => EncounterManager.I?.ToggleAutoMode();
 
     // ─────────────────────────────────────────────────────────────
-    // Localization + Weighted Picker
+    // Localization + Weighted Picker (now feeds typewriter)
     // ─────────────────────────────────────────────────────────────
     void PickAndApplyBlinderLine(bool forcePick = false)
     {
         if (!blinderText) return;
 
+        // Non-random mode: just show fallback line
         if (!useRandomBlinder && !forcePick)
         {
-            blinderText.text = hardFallbackLine;
+            ApplyBlinderText(hardFallbackLine, instant: true);
             return;
         }
 
@@ -528,14 +651,14 @@ public class EncounterPanelUI : MonoBehaviour
             if (string.IsNullOrWhiteSpace(lang))
             {
                 lang = Application.systemLanguage.ToString().ToLowerInvariant();
-                if (lang.StartsWith("english"))      lang = "en";
+                if (lang.StartsWith("english")) lang = "en";
                 else if (lang.StartsWith("spanish")) lang = "es";
-                else if (lang.StartsWith("french"))  lang = "fr";
+                else if (lang.StartsWith("french")) lang = "fr";
                 else if (lang.StartsWith("portuguese")) lang = "pt";
-                else if (lang.StartsWith("german"))  lang = "de";
+                else if (lang.StartsWith("german")) lang = "de";
                 else if (lang.StartsWith("italian")) lang = "it";
                 else if (lang.StartsWith("japanese")) lang = "ja";
-                else if (lang.StartsWith("korean"))  lang = "ko";
+                else if (lang.StartsWith("korean")) lang = "ko";
                 else if (lang.StartsWith("chinese")) lang = "zh";
             }
             pack = blinderLibrary.ResolvePack(lang?.ToLowerInvariant());
@@ -543,7 +666,7 @@ public class EncounterPanelUI : MonoBehaviour
 
         if (!pack || pack.entries == null || pack.entries.Count == 0)
         {
-            blinderText.text = hardFallbackLine;
+            ApplyBlinderText(hardFallbackLine, instant: true);
             return;
         }
 
@@ -560,7 +683,8 @@ public class EncounterPanelUI : MonoBehaviour
 
         if (validCount == 0 || totalWeight <= 0f)
         {
-            blinderText.text = pack.GetAnyNonEmptyFallback(hardFallbackLine);
+            string fallback = pack.GetAnyNonEmptyFallback(hardFallbackLine);
+            ApplyBlinderText(fallback, instant: true);
             return;
         }
 
@@ -572,7 +696,11 @@ public class EncounterPanelUI : MonoBehaviour
         }
 
         _lastBlinderLine = chosen;
-        blinderText.text = string.IsNullOrEmpty(chosen) ? pack.GetAnyNonEmptyFallback(hardFallbackLine) : chosen;
+        string finalLine = string.IsNullOrEmpty(chosen)
+            ? pack.GetAnyNonEmptyFallback(hardFallbackLine)
+            : chosen;
+
+        ApplyBlinderText(finalLine);
     }
 
     string WeightedPick(BlinderMessagePackSO pack, float totalWeight)
@@ -649,9 +777,7 @@ public class EncounterPanelUI : MonoBehaviour
         var cg = go.GetComponent<CanvasGroup>();
 
         if (!cg)
-        {
             cg = go.AddComponent<CanvasGroup>();
-        }
 
         rt.anchoredPosition = Vector2.zero;
         cg.alpha = 1f;
@@ -663,7 +789,7 @@ public class EncounterPanelUI : MonoBehaviour
         }
 
         Vector2 startPos = rt.anchoredPosition;
-        Vector2 endPos   = startPos + new Vector2(0f, energyToastRiseY);
+        Vector2 endPos = startPos + new Vector2(0f, energyToastRiseY);
 
         LeanTween.value(go, 0f, 1f, energyToastDuration)
                 .setOnUpdate((float t) =>
@@ -677,5 +803,145 @@ public class EncounterPanelUI : MonoBehaviour
                     if (go)
                         Destroy(go);
                 });
+    }
+
+    // ========================================================================
+    // CAPTURE FX (Success / Fail)
+    // ========================================================================
+    public void OnCaptureSuccess(MonsterDataSO def, bool isShiny)
+    {
+        if (!captureBannerGroup || !captureBannerText)
+            return;
+
+        // Activate + reset banner
+        captureBannerGroup.gameObject.SetActive(true);
+        captureBannerGroup.alpha = 0f;
+
+        captureBannerText.text = "CAPTURED!";
+        captureBannerText.color = isShiny ? shinyColor : successColor;
+
+        // Wild panel punch / subtle glow
+        if (wildPanelRoot)
+        {
+            LeanTween.cancel(wildPanelRoot.gameObject);
+            wildPanelRoot.localScale = Vector3.one * 0.9f;
+
+            // Scale punch
+            LeanTween.scale(wildPanelRoot.gameObject, Vector3.one * 1.2f, 0.25f)
+                .setEaseOutBack()
+                .setOnComplete(() =>
+                {
+                    if (!wildPanelRoot) return;
+                    LeanTween.scale(wildPanelRoot.gameObject, Vector3.one, 0.25f)
+                        .setEaseOutCubic();
+                });
+
+            // Optional extra flair for shiny
+            if (isShiny)
+            {
+                // quick little tilt wobble
+                LeanTween.rotateZ(wildPanelRoot.gameObject, 15f, 0.12f)
+                    .setLoopPingPong(2);
+            }
+        }
+
+        // Banner fade in → hold → fade out
+        LeanTween.value(gameObject, 0f, 1f, 0.25f)
+            .setOnUpdate(a =>
+            {
+                if (captureBannerGroup)
+                    captureBannerGroup.alpha = a;
+            })
+            .setOnComplete(() =>
+            {
+                LeanTween.value(gameObject, 1f, 0f, captureFxDuration)
+                    .setDelay(0.4f)
+                    .setOnUpdate(a =>
+                    {
+                        if (captureBannerGroup)
+                            captureBannerGroup.alpha = a;
+                    })
+                    .setOnComplete(() =>
+                    {
+                        if (captureBannerGroup)
+                            captureBannerGroup.gameObject.SetActive(false);
+                    });
+            });
+    }
+
+    public void OnCaptureFailed(MonsterDataSO def)
+    {
+        if (!captureBannerGroup || !captureBannerText)
+            return;
+
+        // Activate + reset banner
+        captureBannerGroup.gameObject.SetActive(true);
+        captureBannerGroup.alpha = 0f;
+
+        captureBannerText.text = "ESCAPED!";
+        captureBannerText.color = failColor;
+
+        // Wild panel shake
+        if (wildPanelRoot)
+        {
+            LeanTween.cancel(wildPanelRoot.gameObject);
+            Vector3 original = wildPanelRoot.localPosition;
+
+            LeanTween.moveLocalX(wildPanelRoot.gameObject, original.x + 15f, 0.06f)
+                .setLoopPingPong(3)
+                .setOnComplete(() =>
+                {
+                    if (wildPanelRoot)
+                        wildPanelRoot.localPosition = original;
+                });
+        }
+
+        // Banner fade in → hold → fade out
+        LeanTween.value(gameObject, 0f, 1f, 0.2f)
+            .setOnUpdate(a =>
+            {
+                if (captureBannerGroup)
+                    captureBannerGroup.alpha = a;
+            })
+            .setOnComplete(() =>
+            {
+                LeanTween.value(gameObject, 1f, 0f, captureFxDuration)
+                    .setDelay(0.3f)
+                    .setOnUpdate(a =>
+                    {
+                        if (captureBannerGroup)
+                            captureBannerGroup.alpha = a;
+                    })
+                    .setOnComplete(() =>
+                    {
+                        if (captureBannerGroup)
+                            captureBannerGroup.gameObject.SetActive(false);
+                    });
+            });
+    }
+
+    void ClearWildStateUI()
+    {
+        if (ownedCapturedIcon)
+            ownedCapturedIcon.SetActive(false);
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // Wild spawn → "already owned" icon
+    // ─────────────────────────────────────────────────────────────
+    public void OnWildSpawned(MonsterDataSO def)
+    {
+        if (!ownedCapturedIcon)
+            return;
+
+        // No data loaded yet → be safe and hide
+        if (SaveManager.Data == null || SaveManager.Data.ownedIds == null || def == null)
+        {
+            ownedCapturedIcon.SetActive(false);
+            return;
+        }
+
+        bool alreadyOwned = SaveManager.Data.ownedIds.Contains(def.id);
+        ownedCapturedIcon.SetActive(alreadyOwned);
     }
 }
