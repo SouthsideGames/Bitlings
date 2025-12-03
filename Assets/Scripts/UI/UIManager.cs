@@ -25,7 +25,7 @@ public enum PanelId
     TitleDetail = 18,
     StarterPicker = 19,
     Forge = 20,
-    HowToPlay = 21,
+    Manual = 21,
     Info = 22,
     Log = 23,
     PostBattleSummary = 24,

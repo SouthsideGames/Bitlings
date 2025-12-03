@@ -12,7 +12,8 @@ public enum OwnedSortMode
     ByType,
     ByLevelLowToHigh,
     ByLevelHighToLow,
-    OwnedMonsters
+    OwnedMonsters,
+    ShinyMonsters
 }
 
 public class CodexPanelUI : MonoBehaviour
@@ -55,7 +56,7 @@ public class CodexPanelUI : MonoBehaviour
             BuildSortDropdownOptions();
 
             int saved = LoadSortIndexFromJson();
-            saved = Mathf.Clamp(saved, 0, (int)OwnedSortMode.ByLevelHighToLow);
+            saved = Mathf.Clamp(saved, 0, (int)OwnedSortMode.ShinyMonsters);
 
             sortDropdown.onValueChanged.RemoveAllListeners();
             sortDropdown.SetValueWithoutNotify(saved);
@@ -159,8 +160,9 @@ public class CodexPanelUI : MonoBehaviour
         if (!sortDropdown) return;
 
         var options = new List<TMP_Dropdown.OptionData>();
-        for (int i = 0; i <= (int)OwnedSortMode.OwnedMonsters; i++)
+        for (int i = 0; i <= (int)OwnedSortMode.ShinyMonsters; i++)
             options.Add(new TMP_Dropdown.OptionData(GetSortLabel((OwnedSortMode)i)));
+
 
 
         sortDropdown.options = options;
@@ -178,14 +180,16 @@ public class CodexPanelUI : MonoBehaviour
             case OwnedSortMode.ByLevelLowToHigh: return "Level ↑";
             case OwnedSortMode.ByLevelHighToLow: return "Level ↓";
             case OwnedSortMode.OwnedMonsters:    return "Owned Only";
+            case OwnedSortMode.ShinyMonsters:    return "Shiny Only";
             default:                             return mode.ToString();
         }
     }
 
 
+
     void OnSortChanged(int value)
     {
-        var mode = (OwnedSortMode)Mathf.Clamp(value, 0, (int)OwnedSortMode.OwnedMonsters);
+        var mode = (OwnedSortMode)Mathf.Clamp(value, 0, (int)OwnedSortMode.ShinyMonsters);
         if (mode == _lastSortMode) return;
 
         _lastSortMode = mode;
@@ -314,6 +318,8 @@ public class CodexPanelUI : MonoBehaviour
         var allOwned = data.GetAllOwnedMonsters(includeTeam: true) ?? new List<OwnedMonsterData>();
         var ownedById = new Dictionary<string, OwnedMonsterData>();
 
+        bool shinyOnlyMode = sortMode == OwnedSortMode.ShinyMonsters;
+
         for (int i = 0; i < allOwned.Count; i++)
         {
             var om = allOwned[i];
@@ -389,7 +395,8 @@ public class CodexPanelUI : MonoBehaviour
     OwnedSortMode GetSortMode()
     {
         if (!sortDropdown) return _lastSortMode;
-        return (OwnedSortMode)Mathf.Clamp(sortDropdown.value, 0, (int)OwnedSortMode.OwnedMonsters);
+        return (OwnedSortMode)Mathf.Clamp(sortDropdown.value, 0, (int)OwnedSortMode.ShinyMonsters);
+
     }
 
     static List<MonsterDataSO> SortDefs(
@@ -428,10 +435,15 @@ public class CodexPanelUI : MonoBehaviour
                 break;
 
             case OwnedSortMode.OwnedMonsters:
-                // 🔥 Only monsters that are actually owned
                 query = defs
                     .Where(d => d && ownedById != null && ownedById.ContainsKey(d.id))
-                    .OrderBy(d => d.id); // or SafeName(d) if you prefer
+                    .OrderBy(d => d.id);
+                break;
+            case OwnedSortMode.ShinyMonsters:   // 👈 NEW
+                query = defs
+                    .Where(d => d && ownedById != null && ownedById.ContainsKey(d.id))
+                    .OrderByDescending(d => GetOwnedLevel(d, ownedById))
+                    .ThenBy(d => SafeName(d));
                 break;
 
             case OwnedSortMode.ByIdAsc:
