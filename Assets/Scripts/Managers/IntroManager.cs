@@ -128,7 +128,7 @@ public class IntroManager : MonoBehaviour
         if (UIManager.I)
         {
             var introRoot = UIManager.I.GetRoot(titlePanelId);
-            bool starterIsUnderIntro = (starterRoot && introRoot) && starterRoot.transform.IsChildOf(introRoot.transform);
+            bool starterIsUnderIntro = starterRoot && introRoot && starterRoot.transform.IsChildOf(introRoot.transform);
 
             if (!starterIsUnderIntro)
             {

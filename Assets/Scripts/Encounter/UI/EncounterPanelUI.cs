@@ -113,6 +113,8 @@ public class EncounterPanelUI : MonoBehaviour
             blinderGroup.interactable = true;
         }
 
+        captureBannerGroup.alpha = 0f;
+
         if (ownedCapturedIcon)
             ownedCapturedIcon.SetActive(false);
 

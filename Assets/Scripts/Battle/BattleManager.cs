@@ -18,6 +18,10 @@ public struct BattleResult
     public int critCount;
     public int turnsSurvived;
     public int damageTaken;
+
+    // NEW
+    public int damageDealt;
+    public bool gotFirstHit;
 }
 
 public class BattleManager : MonoBehaviour
@@ -26,7 +30,7 @@ public class BattleManager : MonoBehaviour
     // Manual-turn settings
     // ─────────────────────────────────────────────────────────────────────────────
     private enum PlayerAction { None, Attack, Defend, Focus, Run }
-    private enum EnemyAction  { Attack, Defend, Focus, Run }
+    private enum EnemyAction { Attack, Defend, Focus, Run }
 
     [Header("Manual Turn Settings")]
     [SerializeField] private bool manualTurns = true;
@@ -50,34 +54,26 @@ public class BattleManager : MonoBehaviour
     [Header("Attack VFX")]
     [SerializeField] private bool spawnAttackPrefabs = true;
 
-    [Header("Action Effect VFX")]
-    [SerializeField] private bool spawnActionEffectPrefabs = true;
-    [SerializeField] private GameObject actionAttackPrefab;
-    [SerializeField] private GameObject actionDefendPrefab;
-    [SerializeField] private GameObject actionFocusPrefab;
-    [SerializeField] private GameObject actionRunPrefab;
-    [SerializeField, Min(0f)] private float actionEffectLifetime = 1.0f;
-    
 
     // ─────────────────────────────────────────────────────────────
     // POLISH
     // ─────────────────────────────────────────────────────────────
     [Header("Damage Number FX")]
     [SerializeField] private DamageNumberUI damageNumberPrefab;
-    [SerializeField] private RectTransform  playerDamageAnchor;
-    [SerializeField] private RectTransform  wildDamageAnchor;
+    [SerializeField] private RectTransform playerDamageAnchor;
+    [SerializeField] private RectTransform wildDamageAnchor;
 
     [Header("Damage Number Colors")]
-    [SerializeField] private Color dmgNormalColor  = Color.white;
-    [SerializeField] private Color dmgCritColor    = new Color(1f, 0.9f, 0.35f);  // gold-ish
-    [SerializeField] private Color dmgWeakColor    = new Color(0.55f, 0.8f, 1f);   // cyan-ish
-    [SerializeField] private Color dmgResistColor  = new Color(0.75f, 0.75f, 0.75f);
+    [SerializeField] private Color dmgNormalColor = Color.white;
+    [SerializeField] private Color dmgCritColor = new Color(1f, 0.9f, 0.35f);  // gold-ish
+    [SerializeField] private Color dmgWeakColor = new Color(0.55f, 0.8f, 1f);   // cyan-ish
+    [SerializeField] private Color dmgResistColor = new Color(0.75f, 0.75f, 0.75f);
 
     [Header("Screen Shake")]
     [SerializeField] private Transform screenShakeRoot;        // Optional. If null, uses Camera.main
     [SerializeField] private float heavyHitShakeMagnitude = 12f;
-    [SerializeField] private float heavyHitShakeDuration  = 0.15f;
-    [SerializeField] private float heavyHitThresholdPct   = 0.30f; // 30% HP
+    [SerializeField] private float heavyHitShakeDuration = 0.15f;
+    [SerializeField] private float heavyHitThresholdPct = 0.30f; // 30% HP
 
     private bool _isPlayerTurn;
     public bool IsPlayerTurn => _isPlayerTurn;
@@ -121,6 +117,15 @@ public class BattleManager : MonoBehaviour
     [SerializeField] private TextMeshProUGUI playerDEFText;
     [SerializeField] private TextMeshProUGUI playerSPDText;
 
+    [Header("HP Shake Targets")]
+    [SerializeField] private RectTransform playerHPShakeRoot;
+    [SerializeField] private RectTransform wildHPShakeRoot;
+
+    [Header("HP Shake Settings")]
+    [SerializeField] private float hpShakeDuration = 0.25f;
+    [SerializeField] private float hpShakeStrength = 8f;
+
+
     // ─────────────────────────────────────────────────────────────────────────────
     // Bench UI
     // ─────────────────────────────────────────────────────────────────────────────
@@ -145,7 +150,6 @@ public class BattleManager : MonoBehaviour
     [Range(0f, 1f)][SerializeField] private float critChanceWild = 0.08f;
     [SerializeField] private float critMultiplier = 1.8f;
     [SerializeField] private bool showEffectivenessText = true;
-    [SerializeField] private bool pauseForFirstDecision = true;
 
     [Header("Speed Control")]
     [SerializeField, Min(0.25f)] private float battleSpeed = 1f;
@@ -183,6 +187,15 @@ public class BattleManager : MonoBehaviour
     private float[] slotDamageBuffPct;
     private int[] slotDamageBuffTurns;
 
+    [Header("HP Bar Animation")]
+    [SerializeField] private bool smoothHPBars = true;
+
+    [SerializeField, Min(0.01f)]
+    private float hpBarSecondsForFull = 0.6f;
+
+    private Coroutine _playerHPAnimCR;
+    private Coroutine _wildHPAnimCR;
+
     private int _turnIndex = 0;
     private bool inBattle;
     private Action<BattleResult> onEnd;
@@ -210,7 +223,7 @@ public class BattleManager : MonoBehaviour
 
     private int _totalCritsThisBattle = 0;
     private int _totalDamageTakenThisBattle = 0;
-
+    private int _totalDamageDealtThisBattle = 0;
     private static readonly Color StatNeutral = Color.white;
     private static readonly Color StatBuff = new Color(0.35f, 1f, 0.35f);
     private static readonly Color StatNerf = new Color(1f, 0.35f, 0.35f);
@@ -258,8 +271,8 @@ public class BattleManager : MonoBehaviour
     // ─────────────────────────────────────────────────────────────────────────────
     public void SetPlayerActionAttack() { TryQueueAction(PlayerAction.Attack); }
     public void SetPlayerActionDefend() { TryQueueAction(PlayerAction.Defend); }
-    public void SetPlayerActionFocus()  { TryQueueAction(PlayerAction.Focus);  }
-    public void SetPlayerActionRun()    { TryQueueAction(PlayerAction.Run);    }
+    public void SetPlayerActionFocus() { TryQueueAction(PlayerAction.Focus); }
+    public void SetPlayerActionRun() { TryQueueAction(PlayerAction.Run); }
 
     private void TryQueueAction(PlayerAction a)
     {
@@ -289,16 +302,17 @@ public class BattleManager : MonoBehaviour
 
         _totalCritsThisBattle = 0;
         _totalDamageTakenThisBattle = 0;
+        _totalDamageDealtThisBattle = 0;
 
         defendConsecutiveUses = 0;
         currentDefendSuccess = defendFirstUseSuccess;
 
         wildDefendConsecutiveUses = 0;
-        wildDefendCurrentSuccess  = defendFirstUseSuccess;
+        wildDefendCurrentSuccess = defendFirstUseSuccess;
         wildDefendActiveThisRound = false;
-        wildShieldHP              = 0f;
-        wildPendingGuardShield    = 0f;
-        wildChargedNextAttack     = false;
+        wildShieldHP = 0f;
+        wildPendingGuardShield = 0f;
+        wildChargedNextAttack = false;
 
         inBattle = false;
         onEnd = onEnded;
@@ -613,55 +627,55 @@ public class BattleManager : MonoBehaviour
                                     break;
 
                                 case PlayerAction.Focus:
-                                {
-                                    ResetDefendStreak();
-
-                                    if (chargedNextAttack != null &&
-                                        activeIndex >= 0 &&
-                                        activeIndex < chargedNextAttack.Length)
                                     {
-                                        chargedNextAttack[activeIndex] = true;
+                                        ResetDefendStreak();
+
+                                        if (chargedNextAttack != null &&
+                                            activeIndex >= 0 &&
+                                            activeIndex < chargedNextAttack.Length)
+                                        {
+                                            chargedNextAttack[activeIndex] = true;
+                                        }
+
+                                        if (chargeIcon) chargeIcon.enabled = true;
+
+                                        BattleLogger.Log($"{GetName(activeIndex)} is charging.", LogScope.Battle);
+                                        BattleLogger.Log(
+                                            $"Their next attack will deal +{Mathf.RoundToInt(chargeBonusPct * 100f)}% damage.",
+                                            LogScope.Battle
+                                        );
+                                        Punch(playerIcon);
+                                        break;
                                     }
-
-                                    if (chargeIcon) chargeIcon.enabled = true;
-
-                                    BattleLogger.Log($"{GetName(activeIndex)} is charging.", LogScope.Battle);
-                                    BattleLogger.Log(
-                                        $"Their next attack will deal +{Mathf.RoundToInt(chargeBonusPct * 100f)}% damage.",
-                                        LogScope.Battle
-                                    );
-                                    Punch(playerIcon);
-                                    break;
-                                }
 
                                 case PlayerAction.Run:
-                                {
-                                    ResetDefendStreak();
-
-                                    float chance = ComputeRunChance();
-                                    bool escaped = UnityEngine.Random.value < chance;
-
-                                    string name = GetName(activeIndex);
-
-                                    if (escaped)
                                     {
-                                        BattleLogger.Log(
-                                            $"{name} has fled! (Run chance {Mathf.RoundToInt(chance * 100f)}%)",
-                                            LogScope.Battle
-                                        );
-                                        EndBattle(false, true);
-                                        yield break;
+                                        ResetDefendStreak();
+
+                                        float chance = ComputeRunChance();
+                                        bool escaped = UnityEngine.Random.value < chance;
+
+                                        string name = GetName(activeIndex);
+
+                                        if (escaped)
+                                        {
+                                            BattleLogger.Log(
+                                                $"{name} has fled! (Run chance {Mathf.RoundToInt(chance * 100f)}%)",
+                                                LogScope.Battle
+                                            );
+                                            EndBattle(false, true);
+                                            yield break;
+                                        }
+                                        else
+                                        {
+                                            runAttempts++;
+                                            BattleLogger.Log(
+                                                $"Couldn't escape! (Run chance was {Mathf.RoundToInt(chance * 100f)}%)",
+                                                LogScope.Battle
+                                            );
+                                        }
+                                        break;
                                     }
-                                    else
-                                    {
-                                        runAttempts++;
-                                        BattleLogger.Log(
-                                            $"Couldn't escape! (Run chance was {Mathf.RoundToInt(chance * 100f)}%)",
-                                            LogScope.Battle
-                                        );
-                                    }
-                                    break;
-                                }
 
                                 case PlayerAction.Defend:
                                 default:
@@ -722,87 +736,87 @@ public class BattleManager : MonoBehaviour
                 yield return PlayerTurn();
                 break;
 
-           case PlayerAction.Defend:
-            {
-                string name = GetName(activeIndex);
-                bool success = RollDefendSuccess();
-
-                if (success)
+            case PlayerAction.Defend:
                 {
-                    defendActiveThisRound = true;
-                    if (guardIcon) guardIcon.enabled = true;
+                    string name = GetName(activeIndex);
+                    bool success = RollDefendSuccess();
 
-                    BattleLogger.Log($"{name} is defending.", LogScope.Battle);
-                    BattleLogger.Log(
-                        $"{name} will reduce the next hit and convert it into a shield for the following round.",
-                        LogScope.Battle
-                    );
+                    if (success)
+                    {
+                        defendActiveThisRound = true;
+                        if (guardIcon) guardIcon.enabled = true;
 
-                    PlayDefendShieldFX(isPlayer: true);
+                        BattleLogger.Log($"{name} is defending.", LogScope.Battle);
+                        BattleLogger.Log(
+                            $"{name} will reduce the next hit and convert it into a shield for the following round.",
+                            LogScope.Battle
+                        );
+
+                        PlayDefendShieldFX(isPlayer: true);
+                    }
+                    else
+                    {
+                        defendActiveThisRound = false;
+                        if (guardIcon) guardIcon.enabled = false;
+
+                        BattleLogger.Log($"{name} tried to defend, but it failed!", LogScope.Battle);
+                    }
+
+                    Punch(playerIcon);
+                    break;
                 }
-                else
-                {
-                    defendActiveThisRound = false;
-                    if (guardIcon) guardIcon.enabled = false;
-
-                    BattleLogger.Log($"{name} tried to defend, but it failed!", LogScope.Battle);
-                }
-
-                Punch(playerIcon);
-                break;
-            }
 
             case PlayerAction.Focus:
-            {
-                ResetDefendStreak();
-
-                if (chargedNextAttack != null &&
-                    activeIndex >= 0 &&
-                    activeIndex < chargedNextAttack.Length)
                 {
-                    chargedNextAttack[activeIndex] = true;
+                    ResetDefendStreak();
+
+                    if (chargedNextAttack != null &&
+                        activeIndex >= 0 &&
+                        activeIndex < chargedNextAttack.Length)
+                    {
+                        chargedNextAttack[activeIndex] = true;
+                    }
+
+                    if (chargeIcon) chargeIcon.enabled = true;
+
+                    BattleLogger.Log($"{GetName(activeIndex)} is charging.", LogScope.Battle);
+                    BattleLogger.Log(
+                        $"Their next attack will deal +{Mathf.RoundToInt(chargeBonusPct * 100f)}% damage.",
+                        LogScope.Battle
+                    );
+
+                    Punch(playerIcon);
+                    break;
                 }
-
-                if (chargeIcon) chargeIcon.enabled = true;
-
-                BattleLogger.Log($"{GetName(activeIndex)} is charging.", LogScope.Battle);
-                BattleLogger.Log(
-                    $"Their next attack will deal +{Mathf.RoundToInt(chargeBonusPct * 100f)}% damage.",
-                    LogScope.Battle
-                );
-
-                Punch(playerIcon);
-                break;
-            }
 
             case PlayerAction.Run:
-            {
-                ResetDefendStreak();
-
-                float chance = ComputeRunChance();
-                bool escaped = UnityEngine.Random.value < chance;
-
-                string name = GetName(activeIndex);
-
-                if (escaped)
                 {
-                    BattleLogger.Log(
-                        $"{name} has fled! (Run chance {Mathf.RoundToInt(chance * 100f)}%)",
-                        LogScope.Battle
-                    );
-                    EndBattle(false, true);
-                    yield break;
+                    ResetDefendStreak();
+
+                    float chance = ComputeRunChance();
+                    bool escaped = UnityEngine.Random.value < chance;
+
+                    string name = GetName(activeIndex);
+
+                    if (escaped)
+                    {
+                        BattleLogger.Log(
+                            $"{name} has fled! (Run chance {Mathf.RoundToInt(chance * 100f)}%)",
+                            LogScope.Battle
+                        );
+                        EndBattle(false, true);
+                        yield break;
+                    }
+                    else
+                    {
+                        runAttempts++;
+                        BattleLogger.Log(
+                            $"Couldn't escape! (Run chance was {Mathf.RoundToInt(chance * 100f)}%)",
+                            LogScope.Battle
+                        );
+                    }
+                    break;
                 }
-                else
-                {
-                    runAttempts++;
-                    BattleLogger.Log(
-                        $"Couldn't escape! (Run chance was {Mathf.RoundToInt(chance * 100f)}%)",
-                        LogScope.Battle
-                    );
-                }
-                break;
-            }
 
             default:
                 break;
@@ -971,7 +985,7 @@ public class BattleManager : MonoBehaviour
         {
             float guardPct = Mathf.Clamp01(defendReducePct);
             int before = dmgToApply;
-            int after  = Mathf.Max(1, Mathf.RoundToInt(dmgToApply * (1f - guardPct)));
+            int after = Mathf.Max(1, Mathf.RoundToInt(dmgToApply * (1f - guardPct)));
             preventedByWildGuard = Mathf.Max(0, before - after);
             dmgToApply = after;
 
@@ -986,7 +1000,7 @@ public class BattleManager : MonoBehaviour
         {
             float absorb = Mathf.Min(wildShieldHP, dmgToApply);
             wildShieldHP = Mathf.Max(0f, wildShieldHP - absorb);
-            dmgToApply   = Mathf.Max(1, dmgToApply - Mathf.RoundToInt(absorb));
+            dmgToApply = Mathf.Max(1, dmgToApply - Mathf.RoundToInt(absorb));
 
             if (absorb > 0f)
             {
@@ -1009,6 +1023,7 @@ public class BattleManager : MonoBehaviour
         }
 
         wildHP = Mathf.Max(0f, wildHP - dmgToApply);
+        _totalDamageDealtThisBattle += Mathf.Max(0, dmgToApply);
         PushHPBars();
 
         SpawnDamageNumber(
@@ -1023,7 +1038,7 @@ public class BattleManager : MonoBehaviour
         {
             ScreenShake(heavyHitShakeMagnitude, heavyHitShakeDuration);
         }
-        
+
         if (!playerLandedFirstHitThisBattle && dr.damage > 0)
             playerLandedFirstHitThisBattle = true;
 
@@ -1223,8 +1238,8 @@ public class BattleManager : MonoBehaviour
             incomingScalar *= (1f - guardPct);
 
             float dmgBeforeGuard = dr.damage * scalarBeforeGuard;
-            float dmgAfterGuard  = dr.damage * incomingScalar;
-            preventedByGuardRaw  = Mathf.Max(0f, dmgBeforeGuard - dmgAfterGuard);
+            float dmgAfterGuard = dr.damage * incomingScalar;
+            preventedByGuardRaw = Mathf.Max(0f, dmgBeforeGuard - dmgAfterGuard);
         }
 
         int dmg_afterScalar = Mathf.Max(1, Mathf.RoundToInt(dr.damage * incomingScalar));
@@ -1523,7 +1538,10 @@ public class BattleManager : MonoBehaviour
             secondsSurvived = survived,
             critCount = _totalCritsThisBattle,
             turnsSurvived = _turnIndex,
-            damageTaken = _totalDamageTakenThisBattle
+            damageTaken = _totalDamageTakenThisBattle,
+
+            damageDealt = _totalDamageDealtThisBattle,
+            gotFirstHit = playerLandedFirstHitThisBattle
         };
 
         if (!victory && !escaped && EncounterManager.I != null && EncounterManager.I.IsAutoMode)
@@ -1558,42 +1576,132 @@ public class BattleManager : MonoBehaviour
         GameEvents.BattleFinished?.Invoke(result);
     }
 
+    private void SetHPBarAnimated(
+        Slider bar,
+        ref Coroutine animCR,
+        float targetValue,
+        float maxValue
+    )
+    {
+        if (!bar) return;
+
+        // Clamp and set max
+        maxValue = Mathf.Max(1f, maxValue);
+        bar.maxValue = maxValue;
+        targetValue = Mathf.Clamp(targetValue, 0f, maxValue);
+
+        // If animation is disabled or object is not active, just snap
+        if (!smoothHPBars || !gameObject.activeInHierarchy)
+        {
+            if (animCR != null)
+            {
+                StopCoroutine(animCR);
+                animCR = null;
+            }
+            bar.value = targetValue;
+            return;
+        }
+
+        float current = bar.value;
+
+        if (current > targetValue)
+        {
+            if (bar == playerHPBar)
+                PlayHPShake(playerHPShakeRoot);
+            else if (bar == wildHPBar)
+                PlayHPShake(wildHPShakeRoot);
+        }
+
+        // If already at target, just snap & clear any old coroutine
+        if (Mathf.Approximately(current, targetValue))
+        {
+            if (animCR != null)
+            {
+                StopCoroutine(animCR);
+                animCR = null;
+            }
+            bar.value = targetValue;
+            return;
+        }
+
+        // Restart animation from current -> target
+        if (animCR != null) StopCoroutine(animCR);
+        animCR = StartCoroutine(Co_AnimateHPBar(bar, current, targetValue));
+    }
+
+    private IEnumerator Co_AnimateHPBar(Slider bar, float start, float end)
+    {
+        if (!bar)
+            yield break;
+
+        float max = Mathf.Max(1f, bar.maxValue);
+        float distance = Mathf.Abs(end - start);
+
+        // Duration scales with how big the HP change is, just like Pokémon
+        float duration = hpBarSecondsForFull * (distance / max);
+        duration = Mathf.Max(0.05f, duration); // tiny hits still visible
+
+        float t = 0f;
+        while (t < 1f)
+        {
+            t += Time.unscaledDeltaTime / duration;
+            float v = Mathf.Lerp(start, end, t);
+            bar.value = v;
+            yield return null;
+        }
+
+        bar.value = end;
+    }
+
+
     private void ClampAndPushActiveHP()
     {
         float curMax = GetFinalMaxHPForIndex(activeIndex);
         teamHP[activeIndex] = Mathf.Min(teamHP[activeIndex], curMax);
 
-        if (playerHPBar)
-        {
-            playerHPBar.maxValue = curMax;
-            playerHPBar.value = Mathf.Clamp(teamHP[activeIndex], 0f, curMax);
-        }
-        if (wildHPBar)
-        {
-            wildHPBar.maxValue = Mathf.Max(1f, wildMaxHP);
-            wildHPBar.value = Mathf.Clamp(wildHP, 0f, wildHPBar.maxValue);
-        }
+        // Animated player bar
+        SetHPBarAnimated(
+            playerHPBar,
+            ref _playerHPAnimCR,
+            teamHP[activeIndex],
+            curMax
+        );
+
+        // Animated wild bar
+        SetHPBarAnimated(
+            wildHPBar,
+            ref _wildHPAnimCR,
+            wildHP,
+            wildMaxHP
+        );
 
         UpdatePlayerInfoUI();
         UpdateShieldUI();
     }
 
+
     private void PushHPBars()
     {
-        if (wildHPBar)
-        {
-            wildHPBar.maxValue = Mathf.Max(1f, wildMaxHP);
-            wildHPBar.value = Mathf.Clamp(wildHP, 0f, wildHPBar.maxValue);
-        }
-        if (playerHPBar)
-        {
-            float curMax = GetFinalMaxHPForIndex(activeIndex);
-            playerHPBar.maxValue = curMax;
-            playerHPBar.value = Mathf.Clamp(teamHP[activeIndex], 0f, curMax);
-        }
+        // Wild
+        SetHPBarAnimated(
+            wildHPBar,
+            ref _wildHPAnimCR,
+            wildHP,
+            wildMaxHP
+        );
+
+        // Player
+        float curMax = GetFinalMaxHPForIndex(activeIndex);
+        SetHPBarAnimated(
+            playerHPBar,
+            ref _playerHPAnimCR,
+            teamHP[activeIndex],
+            curMax
+        );
 
         UpdatePlayerInfoUI();
     }
+
 
     private void RefreshBenchUI()
     {
@@ -2077,17 +2185,6 @@ public class BattleManager : MonoBehaviour
         if (activeIndex >= 0 && teamIds != null && activeIndex < teamIds.Length)
             TitlesAdapter.OnBattleStart(teamIds[activeIndex], wildDef, wildLevel);
 
-        if (manualTurns && pauseForFirstDecision)
-        {
-            SetIsPlayerTurn(true);
-            pendingAction = PlayerAction.None;
-
-            while (inBattle && pendingAction == PlayerAction.None)
-                yield return null;
-
-            SetIsPlayerTurn(false);
-        }
-
         if (turnCR != null) StopCoroutine(turnCR);
         turnCR = StartCoroutine(TurnLoop());
         yield break;
@@ -2438,10 +2535,10 @@ public class BattleManager : MonoBehaviour
         {
             var ctx = new PersonalityContext
             {
-                selfHpRatio          = hpRatio,
+                selfHpRatio = hpRatio,
                 hasSuperEffectiveMove = false,
-                isBadlyMatched        = false,
-                turnNumber            = Mathf.Max(1, _turnIndex + 1)
+                isBadlyMatched = false,
+                turnNumber = Mathf.Max(1, _turnIndex + 1)
             };
 
             action = wildDef.Personality.ChooseAction(in ctx, _enemyRng);
@@ -2463,9 +2560,9 @@ public class BattleManager : MonoBehaviour
         {
             case BattleAction.Attack: return EnemyAction.Attack;
             case BattleAction.Defend: return EnemyAction.Defend;
-            case BattleAction.Focus:  return EnemyAction.Focus;
-            case BattleAction.Run:    return EnemyAction.Run;
-            default:                  return Fallback();
+            case BattleAction.Focus: return EnemyAction.Focus;
+            case BattleAction.Run: return EnemyAction.Run;
+            default: return Fallback();
         }
     }
 
@@ -2476,7 +2573,7 @@ public class BattleManager : MonoBehaviour
 
         float hpLost01 = 1f - Mathf.Clamp01(wildHP / wildMaxHP); // 0 = full HP, 1 = nearly KO
         float baseChance = 0.05f;            // 5% even at full HP
-        float hpBonus    = hpLost01 * 0.70f; // up to +70% at 1 HP
+        float hpBonus = hpLost01 * 0.70f; // up to +70% at 1 HP
 
         // Personality tweak: Evasive has higher success when they *do* try to run
         string groupName = null;
@@ -2522,7 +2619,7 @@ public class BattleManager : MonoBehaviour
         else
         {
             wildDefendConsecutiveUses = 0;
-            wildDefendCurrentSuccess  = defendFirstUseSuccess;
+            wildDefendCurrentSuccess = defendFirstUseSuccess;
         }
 
         return ok;
@@ -2531,7 +2628,7 @@ public class BattleManager : MonoBehaviour
     private void ResetEnemyDefendStreak()
     {
         wildDefendConsecutiveUses = 0;
-        wildDefendCurrentSuccess  = defendFirstUseSuccess;
+        wildDefendCurrentSuccess = defendFirstUseSuccess;
     }
 
     private void ApplyWildDefendStance()
@@ -2579,8 +2676,8 @@ public class BattleManager : MonoBehaviour
         }
         else
         {
-            if (effectiveness > 1.25f)       color = dmgWeakColor;   // super-effective
-            else if (effectiveness < 0.85f)  color = dmgResistColor; // not very effective
+            if (effectiveness > 1.25f) color = dmgWeakColor;   // super-effective
+            else if (effectiveness < 0.85f) color = dmgResistColor; // not very effective
         }
 
         inst.Init(amount, color);
@@ -2625,7 +2722,7 @@ public class BattleManager : MonoBehaviour
         if (!target) return;
 
         Vector3 original = target.localPosition;
-        float   endTime  = Time.unscaledTime + duration;
+        float endTime = Time.unscaledTime + duration;
 
         // Simple manual shake using LeanTween value
         LeanTween.value(gameObject, 0f, magnitude, duration)
@@ -2640,6 +2737,27 @@ public class BattleManager : MonoBehaviour
                 if (target) target.localPosition = original;
             });
     }
+    
+    private void PlayHPShake(RectTransform target)
+    {
+        if (!target) return;
+
+        // Cancel existing shake if still running
+        LeanTween.cancel(target.gameObject);
+
+        // Reset to original
+        Vector3 originalPos = target.anchoredPosition;
+
+        // Apply shake
+        LeanTween.moveX(target, originalPos.x + UnityEngine.Random.Range(-hpShakeStrength, hpShakeStrength), hpShakeDuration)
+            .setEasePunch()
+            .setOnComplete(() =>
+            {
+                // Restore original position after shaking
+                target.anchoredPosition = originalPos;
+            });
+    }
+
 
 
 

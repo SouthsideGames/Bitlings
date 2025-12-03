@@ -11,7 +11,8 @@ public enum OwnedSortMode
     ByNameZA,
     ByType,
     ByLevelLowToHigh,
-    ByLevelHighToLow
+    ByLevelHighToLow,
+    OwnedMonsters
 }
 
 public class CodexPanelUI : MonoBehaviour
@@ -158,8 +159,9 @@ public class CodexPanelUI : MonoBehaviour
         if (!sortDropdown) return;
 
         var options = new List<TMP_Dropdown.OptionData>();
-        for (int i = 0; i <= (int)OwnedSortMode.ByLevelHighToLow; i++)
+        for (int i = 0; i <= (int)OwnedSortMode.OwnedMonsters; i++)
             options.Add(new TMP_Dropdown.OptionData(GetSortLabel((OwnedSortMode)i)));
+
 
         sortDropdown.options = options;
         sortDropdown.RefreshShownValue();
@@ -175,13 +177,15 @@ public class CodexPanelUI : MonoBehaviour
             case OwnedSortMode.ByType:           return "Type";
             case OwnedSortMode.ByLevelLowToHigh: return "Level ↑";
             case OwnedSortMode.ByLevelHighToLow: return "Level ↓";
+            case OwnedSortMode.OwnedMonsters:    return "Owned Only";
             default:                             return mode.ToString();
         }
     }
 
+
     void OnSortChanged(int value)
     {
-        var mode = (OwnedSortMode)Mathf.Clamp(value, 0, (int)OwnedSortMode.ByLevelHighToLow);
+        var mode = (OwnedSortMode)Mathf.Clamp(value, 0, (int)OwnedSortMode.OwnedMonsters);
         if (mode == _lastSortMode) return;
 
         _lastSortMode = mode;
@@ -385,7 +389,7 @@ public class CodexPanelUI : MonoBehaviour
     OwnedSortMode GetSortMode()
     {
         if (!sortDropdown) return _lastSortMode;
-        return (OwnedSortMode)Mathf.Clamp(sortDropdown.value, 0, (int)OwnedSortMode.ByLevelHighToLow);
+        return (OwnedSortMode)Mathf.Clamp(sortDropdown.value, 0, (int)OwnedSortMode.OwnedMonsters);
     }
 
     static List<MonsterDataSO> SortDefs(
@@ -423,6 +427,13 @@ public class CodexPanelUI : MonoBehaviour
                     .ThenBy(d => SafeName(d));
                 break;
 
+            case OwnedSortMode.OwnedMonsters:
+                // 🔥 Only monsters that are actually owned
+                query = defs
+                    .Where(d => d && ownedById != null && ownedById.ContainsKey(d.id))
+                    .OrderBy(d => d.id); // or SafeName(d) if you prefer
+                break;
+
             case OwnedSortMode.ByIdAsc:
             default:
                 query = defs.OrderBy(d => d ? d.id : string.Empty);
@@ -431,6 +442,7 @@ public class CodexPanelUI : MonoBehaviour
 
         return query.ToList();
     }
+
 
     static string SafeName(MonsterDataSO d)
     {
