@@ -549,4 +549,17 @@ public static class SaveManager
             return null;
         }
     }
+
+    public static bool HasSeenStory()
+    {
+        return Data != null && Data.hasSeenStory;
+    }
+
+    public static void MarkStorySeen()
+    {
+        if (Data == null) return;
+        Data.hasSeenStory = true;
+        Save();
+    }
+
 }

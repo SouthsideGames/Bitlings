@@ -114,7 +114,7 @@ public class PlayerManager
     public string trainingMonsterId = null;
     public int trainingMonsterLevel = 0;
     public int pendingIdleXP = 0;
-
+    public bool hasSeenStory = false;
     public long lastClosedUnix = 0;
     public long lastSavedUnix = 0;
 
