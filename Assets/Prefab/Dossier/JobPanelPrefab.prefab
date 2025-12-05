@@ -463,6 +463,22 @@ MonoBehaviour:
   outputText: {fileID: 4049850247790747768}
   assignedText: {fileID: 6494448389387240054}
   topPerformerText: {fileID: 1646145841228829980}
+  defaultIcon: {fileID: -7494832002983411052, guid: dde5b7b55f5d244b3ba05ea8970e7adf, type: 3}
+  gymIcon: {fileID: 966787029945040730, guid: 1fe2e3d44d72842338e55bb78c224a1e, type: 3}
+  quarryIcon: {fileID: 7706349867302316357, guid: 22a6869bdfe52403099e6f2e63c1e218, type: 3}
+  mineIcon: {fileID: -6108794176398932734, guid: 4564484d004aa461cbfd0489539649b4, type: 3}
+  powerPlantIcon: {fileID: 8607699008840149923, guid: 489c34973596a4709b5f608ee5e8ec6d, type: 3}
+  groveIcon: {fileID: -3250816630770824585, guid: 8891afcd56735428d8b17fcbe28dfd11, type: 3}
+  forgeIcon: {fileID: -7613363800498527238, guid: 004385bc47f614e34b1a10963db7a11a, type: 3}
+  workshopIcon: {fileID: -4575638020387879218, guid: 132a6f9aaed454ccb99fd00ee2e45570, type: 3}
+  harborIcon: {fileID: -4112560220257063119, guid: fbdf0e898f0a44ff0a1c01e17c97d22e, type: 3}
+  cryoLabIcon: {fileID: -501088339156860634, guid: fb8e855ccd1444ccdb161b7f909cc199, type: 3}
+  observatoryIcon: {fileID: -4323764531387730939, guid: c64951a7a11024c61ab626300edb8105, type: 3}
+  containmentIcon: {fileID: -7395050089118920598, guid: 9a6695919508b4566a05fc7a7a8d6a07, type: 3}
+  wyrmDenIcon: {fileID: -4330508236222623831, guid: a5945cdf547864b8787a2d4106457745, type: 3}
+  shadowMarketIcon: {fileID: -6832312888051438786, guid: 0a1846de911694bdc8539f2231b2f260, type: 3}
+  sanctumIcon: {fileID: 4634099014351716080, guid: 93f9016b438ef49a8873a0b09186dc02, type: 3}
+  clinicIcon: {fileID: -4189190229917846540, guid: cc440f6418a3b4a20b7347accc69daff, type: 3}
 --- !u!1 &6934748818564071116
 GameObject:
   m_ObjectHideFlags: 0
