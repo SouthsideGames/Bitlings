@@ -351,8 +351,9 @@ GameObject:
   - component: {fileID: 7094284198594658502}
   - component: {fileID: 7874386416888510373}
   - component: {fileID: 3453668058936373510}
+  - component: {fileID: 1156360764422854409}
   m_Layer: 5
-  m_Name: JobPanel_Prefab
+  m_Name: JobPanelPrefab
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -377,7 +378,7 @@ RectTransform:
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
   m_AnchoredPosition: {x: -3.8612, y: 361.03128}
-  m_SizeDelta: {x: 903.1492, y: 497.7133}
+  m_SizeDelta: {x: 800, y: 497.7133}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &7094284198594658502
 CanvasRenderer:
@@ -443,6 +444,25 @@ MonoBehaviour:
   m_ChildScaleWidth: 0
   m_ChildScaleHeight: 0
   m_ReverseArrangement: 0
+--- !u!114 &1156360764422854409
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6639674895258822298}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8b30c60351a394b40acc653c8c87bf87, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  jobIconImage: {fileID: 8104304676054784805}
+  jobNameText: {fileID: 5440712921114924670}
+  hoursText: {fileID: 3726747127591818322}
+  materialsText: {fileID: 3293682769354774785}
+  outputText: {fileID: 4049850247790747768}
+  assignedText: {fileID: 6494448389387240054}
+  topPerformerText: {fileID: 1646145841228829980}
 --- !u!1 &6934748818564071116
 GameObject:
   m_ObjectHideFlags: 0

@@ -2307,7 +2307,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_Content: {fileID: 1961965203}
-  m_Horizontal: 1
+  m_Horizontal: 0
   m_Vertical: 1
   m_MovementType: 1
   m_Elasticity: 0.1
@@ -10148,7 +10148,8 @@ MonoBehaviour:
   careScoreFillImage: {fileID: 1874313221}
   careScoreValueText: {fileID: 1025942211}
   careScoreNoteText: {fileID: 1360570979}
-  jobsReportText: {fileID: 0}
+  jobPanelParent: {fileID: 1961965203}
+  jobPanelPrefab: {fileID: 1156360764422854409, guid: 2679ea14732c04e4aa3c4977aeeee691, type: 3}
 --- !u!1 &204380324
 GameObject:
   m_ObjectHideFlags: 0
@@ -105412,7 +105413,7 @@ GameObject:
   - component: {fileID: 1961965203}
   - component: {fileID: 1961965204}
   m_Layer: 5
-  m_Name: Content
+  m_Name: Job Panel Parent
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -105435,7 +105436,7 @@ RectTransform:
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 1, y: 1}
   m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 0, y: 300}
+  m_SizeDelta: {x: 0, y: 9000}
   m_Pivot: {x: 0, y: 1}
 --- !u!114 &1961965204
 MonoBehaviour:

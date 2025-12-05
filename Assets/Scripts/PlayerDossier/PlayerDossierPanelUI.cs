@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Text;
 using UnityEngine;
 using UnityEngine.UI;
@@ -36,7 +37,10 @@ public class PlayerDossierPanelUI : MonoBehaviour
     // PAGE 2 – JOB NETWORK UI REFERENCES
     // ─────────────────────────────────────────────────────────────
     [Header("Page 2 - Jobs")]
-    [SerializeField] private TextMeshProUGUI jobsReportText;
+    [SerializeField] private Transform jobPanelParent;           // Grid/vertical layout on Page 2
+    [SerializeField] private PlayerDossierJobPanelUI jobPanelPrefab;
+
+    private readonly List<PlayerDossierJobPanelUI> _jobPanels = new List<PlayerDossierJobPanelUI>();
 
     private int _currentPageIndex = 0;
 
@@ -133,6 +137,9 @@ public class PlayerDossierPanelUI : MonoBehaviour
             prevButton.interactable = _currentPageIndex > 0;
 
         if (nextButton != null)
+            prevButton.interactable = _currentPageIndex > 0;
+
+        if (nextButton != null)
             nextButton.interactable = _currentPageIndex < totalPages - 1;
     }
 
@@ -162,7 +169,6 @@ public class PlayerDossierPanelUI : MonoBehaviour
             if (rankText != null)        rankText.text = "Rank: Trainee";
             if (operationIdText != null) operationIdText.text = "Operation ID: BRN-0000-XXXX";
 
-            // Labeled fallback values
             if (totalBitlingsText != null)
                 totalBitlingsText.text = "Total Bitlings Managed:   0";
 
@@ -191,7 +197,6 @@ public class PlayerDossierPanelUI : MonoBehaviour
             return;
         }
 
-        // Identity
         if (handlerNameText != null)
             handlerNameText.text = stats.handlerName;
 
@@ -201,7 +206,6 @@ public class PlayerDossierPanelUI : MonoBehaviour
         if (operationIdText != null)
             operationIdText.text = stats.operationId;
 
-        // Stats (with labels, as requested)
         if (totalBitlingsText != null)
             totalBitlingsText.text = $"Total Bitlings Managed:   {stats.totalOwnedBitlings}";
 
@@ -214,7 +218,6 @@ public class PlayerDossierPanelUI : MonoBehaviour
         if (shinyCountText != null)
             shinyCountText.text = $"Shiny Bitlings:            {stats.shinyOwned}";
 
-        // Care score bar
         float normalized = Mathf.Clamp01(stats.careScorePercent / 100f);
 
         if (careScoreFillImage != null)
@@ -238,34 +241,43 @@ public class PlayerDossierPanelUI : MonoBehaviour
     }
 
     // ─────────────────────────────────────────────────────────────
-    // PAGE 2 – APPLY JOB NETWORK SNAPSHOT
+    // PAGE 2 – JOB PANELS
     // ─────────────────────────────────────────────────────────────
 
     private void PopulatePage2(PlayerDossierSnapshot stats)
     {
-        if (jobsReportText == null)
+        if (jobPanelParent == null || jobPanelPrefab == null)
             return;
 
         if (stats == null || stats.jobSites == null || stats.jobSites.Length == 0)
         {
-            jobsReportText.text = "No job site data available yet.\nAssign Bitlings to jobs to generate a report.";
+            // Hide any existing panels
+            for (int i = 0; i < _jobPanels.Count; i++)
+                _jobPanels[i].gameObject.SetActive(false);
+
             return;
         }
 
-        var sb = new StringBuilder();
+        int needed = stats.jobSites.Length;
 
-        sb.AppendLine($"Job Sites Online: {stats.unlockedJobSites} / {stats.totalJobSites}");
-        sb.AppendLine($"Bitlings Currently Working: {stats.totalWorkersAssigned}");
-        sb.AppendLine();
-
-        foreach (var row in stats.jobSites)
+        // Ensure we have enough instances
+        while (_jobPanels.Count < needed)
         {
-            if (row == null) continue;
-
-            string status = row.unlocked ? "ONLINE" : "LOCKED";
-            sb.AppendLine($"{row.displayName}: {status} — Workers: {row.assignedWorkers}");
+            var panel = Instantiate(jobPanelPrefab, jobPanelParent);
+            _jobPanels.Add(panel);
         }
 
-        jobsReportText.text = sb.ToString();
+        // Bind or hide
+        for (int i = 0; i < _jobPanels.Count; i++)
+        {
+            if (i < needed)
+            {
+                _jobPanels[i].Bind(stats.jobSites[i]);
+            }
+            else
+            {
+                _jobPanels[i].gameObject.SetActive(false);
+            }
+        }
     }
 }
