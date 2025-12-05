@@ -12,9 +12,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 8909f92dca58941be8a4545ccb059a11, type: 3}
   m_Name: Info_PackShard
   m_EditorClassIdentifier: 
-  id: res.packShards
+  id: res.packShard
   category: 1
-  title: Pack Shards
+  title: Pack Shard
   subtitle: Resource
   body: 'Comes from: Expedition
 

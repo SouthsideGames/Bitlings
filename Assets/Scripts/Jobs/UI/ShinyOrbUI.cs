@@ -42,14 +42,14 @@ public class ShadowMarketUI : MonoBehaviour
 
     void RefreshCounts()
     {
-        int have = ResourceBank.Get(ResourceType.ShinyOrbs);
+        int have = ResourceBank.Get(ResourceType.ShinyOrb);
         if (orbsLabel) orbsLabel.text = $"Shiny Orbs: {have}";
         if (useOrbBtn) useOrbBtn.interactable = have > 0;
     }
 
     void OnClickUseOrb()
     {
-        if (!ResourceBank.TrySpend(ResourceType.ShinyOrbs, 1))
+        if (!ResourceBank.TrySpend(ResourceType.ShinyOrb, 1))
         {
             RefreshCounts();
             return;

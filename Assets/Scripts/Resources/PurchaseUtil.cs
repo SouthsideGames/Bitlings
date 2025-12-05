@@ -8,13 +8,13 @@ public static class PurchaseUtil
     {
         if (materialRequired <= 0) return true;
 
-        int haveMats    = ResourceBank.Get(ResourceType.Materials);
+        int haveMats    = ResourceBank.Get(ResourceType.Material);
         int matsToSpend = Mathf.Clamp(haveMats, 0, materialRequired);
         int remaining   = materialRequired - matsToSpend;
 
         if (matsToSpend > 0)
         {
-            if (!ResourceBank.TrySpend(ResourceType.Materials, matsToSpend))
+            if (!ResourceBank.TrySpend(ResourceType.Material, matsToSpend))
                 return false;
         }
 
@@ -23,9 +23,9 @@ public static class PurchaseUtil
             const int CoinsPerMaterial = 5;
             int coinsNeeded = remaining * CoinsPerMaterial;
 
-            if (!ResourceBank.TrySpend(ResourceType.Coins, coinsNeeded))
+            if (!ResourceBank.TrySpend(ResourceType.Coin, coinsNeeded))
             {
-                if (matsToSpend > 0) ResourceBank.Add(ResourceType.Materials, matsToSpend);
+                if (matsToSpend > 0) ResourceBank.Add(ResourceType.Material, matsToSpend);
                 return false;
             }
         }
@@ -38,7 +38,7 @@ public static class PurchaseUtil
     public static int CoinsRemainderIfPayingWithMats(int materialRequired)
     {
         const int CoinsPerMaterial = 5;
-        int haveMats  = ResourceBank.Get(ResourceType.Materials);
+        int haveMats  = ResourceBank.Get(ResourceType.Material);
         int remaining = Mathf.Max(0, materialRequired - Mathf.Clamp(haveMats, 0, materialRequired));
         return remaining * CoinsPerMaterial;
     }
@@ -46,7 +46,7 @@ public static class PurchaseUtil
     public static bool TrySpendCoinsOnly(int coinCost)
     {
         if (coinCost <= 0) return true;
-        if (!ResourceBank.TrySpend(ResourceType.Coins, coinCost)) return false;
+        if (!ResourceBank.TrySpend(ResourceType.Coin, coinCost)) return false;
         GameEvents.OnResourcesChanged?.Invoke();
         return true;
     }

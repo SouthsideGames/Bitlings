@@ -78,7 +78,7 @@ public class ForgePanelUI : MonoBehaviour
         Clear();
         if (_jobs == null || listRoot == null || jobItemPrefab == null) return;
 
-        _baseMaterials = ResourceBank.Get(ResourceType.Materials);
+        _baseMaterials = ResourceBank.Get(ResourceType.Material);
         _tempMaterials = _baseMaterials;
 
         var states = _jobs.States;
@@ -182,8 +182,8 @@ public class ForgePanelUI : MonoBehaviour
             }
         }
 
-        if (totalSpend > 0)  ResourceBank.TrySpend(ResourceType.Materials, totalSpend);
-        if (totalRefund > 0) ResourceBank.Add(ResourceType.Materials, totalRefund);
+        if (totalSpend > 0)  ResourceBank.TrySpend(ResourceType.Material, totalSpend);
+        if (totalRefund > 0) ResourceBank.Add(ResourceType.Material, totalRefund);
 
         ResourceBank.EndBatch();
 

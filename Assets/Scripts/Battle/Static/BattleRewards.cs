@@ -49,6 +49,6 @@ public static class BattleRewards
 
         if (finalCores <= 0) return;
 
-        ResourceManager.I?.Add(ResourceType.GrowthCores, finalCores);
+        ResourceManager.I?.Add(ResourceType.GrowthCore, finalCores);
     }
 }

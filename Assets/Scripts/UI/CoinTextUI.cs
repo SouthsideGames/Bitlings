@@ -24,7 +24,7 @@ public class CoinTextUI : MonoBehaviour
     private void Refresh()
     {
         if (!_label) return;
-        int coins = ResourceBank.Get(ResourceType.Coins);
+        int coins = ResourceBank.Get(ResourceType.Coin);
         _label.text = coins.ToString(); // just the number
     }
 }

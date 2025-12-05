@@ -92,12 +92,12 @@ public static class XPManager
 
         // Cost for NEXT level based on current level in save
         int need = levelCostCurve.CoresToNextLevel(target.level);
-        int have = rm.Get(ResourceType.GrowthCores);
+        int have = rm.Get(ResourceType.GrowthCore);
         if (have < need || need <= 0)
             return false;
 
         // Spend cores
-        rm.Add(ResourceType.GrowthCores, -need);
+        rm.Add(ResourceType.GrowthCore, -need);
 
         // Level up + stat points (on canonical)
         target.level = Mathf.Max(1, target.level + 1);

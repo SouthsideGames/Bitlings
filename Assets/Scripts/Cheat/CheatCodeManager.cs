@@ -27,7 +27,7 @@ public class CheatDefinition
 
     [Header("AddResource settings (used if effect = AddResource)")]
     [Tooltip("Resource to add when using AddResource.")]
-    public ResourceType resourceType = ResourceType.Coins;
+    public ResourceType resourceType = ResourceType.Coin;
 
     [Tooltip("Amount to add when using AddResource.")]
     public int amount = 0;

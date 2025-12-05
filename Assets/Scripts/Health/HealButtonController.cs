@@ -41,7 +41,7 @@ public class HealButtonController : MonoBehaviour
         int kitsNeeded = HealingService.MedkitsToHealFull(missing, hpPerMedkit);
         int coinsNeeded = HealingService.CoinsToHealFull(config, owned.level, missing);
 
-        int haveKits = ResourceBank.Get(ResourceType.Medkits);
+        int haveKits = ResourceBank.Get(ResourceType.Medkit);
         bool useKitsOnly = haveKits >= kitsNeeded && kitsNeeded > 0;
         bool needFallback = (kitsNeeded > 0 && haveKits < kitsNeeded);
 
@@ -63,14 +63,14 @@ public class HealButtonController : MonoBehaviour
         else if (needFallback)
         {
             int kitsShort = kitsNeeded - haveKits; // you already computed kitsNeeded & haveKits
-            int coins     = ResourceManager.I.Get(ResourceType.Coins);
+            int coins     = ResourceManager.I.Get(ResourceType.Coin);
 
             costLabel.text = $"{haveKits} Medkits + {coinsNeeded} Coins";
             healButton.interactable = (coins >= coinsNeeded) || (haveKits > 0);
         }
         else
         {
-            int coins = ResourceManager.I.Get(ResourceType.Coins);
+            int coins = ResourceManager.I.Get(ResourceType.Coin);
 
             costLabel.text = $"{coinsNeeded} Coins";
             healButton.interactable = (coins >= coinsNeeded);
@@ -93,21 +93,21 @@ public class HealButtonController : MonoBehaviour
         if (!config.allowHealingIfKO && curHP <= 0) { Refresh(); return; }
 
         int kitsNeeded = HealingService.MedkitsToHealFull(missing, hpPerMedkit);
-        int haveKits = ResourceBank.Get(ResourceType.Medkits);
+        int haveKits = ResourceBank.Get(ResourceType.Medkit);
 
         if (haveKits >= kitsNeeded && kitsNeeded > 0)
         {
-            if (!ResourceBank.TrySpend(ResourceType.Medkits, kitsNeeded)) { Refresh(); return; }
+            if (!ResourceBank.TrySpend(ResourceType.Medkit, kitsNeeded)) { Refresh(); return; }
         }
         else
         {
             if (haveKits > 0)
             {
                 // spend what you have, then cover rest with coins
-                if (!ResourceBank.TrySpend(ResourceType.Medkits, haveKits)) { Refresh(); return; }
+                if (!ResourceBank.TrySpend(ResourceType.Medkit, haveKits)) { Refresh(); return; }
             }
             int coinsNeeded = HealingService.CoinsToHealFull(config, owned.level, missing);
-            if (!ResourceManager.I.TrySpend(ResourceType.Coins, coinsNeeded)) { Refresh(); return; }
+            if (!ResourceManager.I.TrySpend(ResourceType.Coin, coinsNeeded)) { Refresh(); return; }
         }
 
         owned.currentHP = maxHP;

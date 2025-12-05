@@ -6,9 +6,9 @@ using UnityEngine;
 
 public enum ResourceType
 {
-    None = 0, Coins = 1, Energy = 2, Medkits = 3, Materials = 4,
-    Sigils = 5, Lures = 6, CaptureBands = 7, Luck = 8,
-    AttackBoosters = 9, HPBoosters = 10, SpeedBoosters = 11, ShinyOrbs = 12, BlessingTokens = 13, RestCharge = 14, GrowthCores = 16, PackShards = 17
+    None = 0, Coin = 1, Energy = 2, Medkit = 3, Material = 4,
+    TypeResBooster = 5, Lure = 6, CaptureBand = 7, Luck = 8,
+    AttackBooster = 9, HPBooster = 10, SpeedBooster = 11, ShinyOrb = 12, BlessingScale = 13, RestCharge = 14, GrowthCore = 16, PackShard = 17
 }
 
 public class ResourceManager : MonoBehaviour
@@ -134,7 +134,7 @@ public class ResourceManager : MonoBehaviour
     {
         int amt = Mathf.Max(0, baseCoins);
         if (amt == 0) return 0;
-        Add(ResourceType.Coins, amt);
+        Add(ResourceType.Coin, amt);
         return amt;
     }
 
@@ -176,19 +176,19 @@ public class ResourceManager : MonoBehaviour
         // Authoritative source for migration is the legacy field.
         var data = SaveManager.Data;
         int legacyCoins = (data != null) ? Mathf.Max(0, data.coins) : 0;
-        int bankCoins   = ResourceBank.Get(ResourceType.Coins);
+        int bankCoins   = ResourceBank.Get(ResourceType.Coin);
 
         if (legacyCoins != bankCoins)
         {
             int delta = legacyCoins - bankCoins;
             if (delta != 0)
-                ResourceBank.Add(ResourceType.Coins, delta);
+                ResourceBank.Add(ResourceType.Coin, delta);
         }
 
         // Snap legacy to bank once, then save the main JSON.
         if (data != null)
         {
-            int finalCoins = ResourceBank.Get(ResourceType.Coins);
+            int finalCoins = ResourceBank.Get(ResourceType.Coin);
             if (data.coins != finalCoins)
                 data.coins = finalCoins;
 

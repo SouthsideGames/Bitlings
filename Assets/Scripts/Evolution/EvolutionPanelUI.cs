@@ -10,7 +10,6 @@ public class EvolutionPanelUI : MonoBehaviour
     [SerializeField] private TextMeshProUGUI currentLevel;
     [SerializeField] private Image evolutionIcon;
     [SerializeField] private TextMeshProUGUI evolutionName;
-    [SerializeField] private TextMeshProUGUI titleText;
 
     [Header("Stat Preview")]
     [Tooltip("Line showing HP before/after and delta, e.g. 'HP: 120 → 150 (+30)'")]
@@ -74,14 +73,6 @@ public class EvolutionPanelUI : MonoBehaviour
         if (currentName)   currentName.text   = _currentDef.displayName;
         if (currentLevel)  currentLevel.text  = $"Lv {_source.level}";
         if (evolutionName) evolutionName.text = _nextDef.displayName;
-
-        if (titleText)
-        {
-            if (_currentDef.evolutionLevel > 0)
-                titleText.text = $"Evolve {_currentDef.displayName} into {_nextDef.displayName}?";
-            else
-                titleText.text = "Evolve this monster?";
-        }
 
         if (currentIcon)   currentIcon.sprite   = _currentDef.icon;
         if (evolutionIcon) evolutionIcon.sprite = _nextDef.icon;

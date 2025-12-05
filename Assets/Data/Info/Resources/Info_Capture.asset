@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   id: res.Capture
   category: 1
-  title: Capture Bands
+  title: Capture Band
   subtitle: Resource
   body: 'Comes from: Cryo Lab
 

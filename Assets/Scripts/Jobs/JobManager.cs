@@ -517,16 +517,16 @@ public sealed class JobManager : MonoBehaviour
         var res = JobOutput.Output(job);
         switch (res)
         {
-            case ResourceType.Coins:
-                ResourceManager.I.Add(ResourceType.Coins, whole);
+            case ResourceType.Coin:
+                ResourceManager.I.Add(ResourceType.Coin, whole);
                 break;
 
             case ResourceType.Energy:
                 if (EncounterManager.I) EncounterManager.I.AddEnergy(whole);
                 else ResourceBank.Add(ResourceType.Energy, whole);
                 break;
-            case ResourceType.GrowthCores:
-                ResourceManager.I.Add(ResourceType.GrowthCores, whole);
+            case ResourceType.GrowthCore:
+                ResourceManager.I.Add(ResourceType.GrowthCore, whole);
                 break;
 
             default:

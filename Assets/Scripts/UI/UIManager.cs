@@ -35,6 +35,7 @@ public enum PanelId
     PackDetails = 28,
     Recycle = 29,
     Story = 30,
+    PlayerDossier = 31,
 }
 
 [Serializable]

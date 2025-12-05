@@ -50,7 +50,7 @@ public class HPBooster : MonoBehaviour
 
     private void RefreshCounts()
     {
-        int have = ResourceBank.Get(ResourceType.HPBoosters);
+        int have = ResourceBank.Get(ResourceType.HPBooster);
         if (boosterCountLabel) boosterCountLabel.text = $"x{have}";
     }
 
@@ -67,7 +67,7 @@ public class HPBooster : MonoBehaviour
             if (boosterRadial) boosterRadial.fillAmount = 0f;
         }
 
-        bool haveItem = !consumeItem || ResourceBank.Get(ResourceType.HPBoosters) > 0;
+        bool haveItem = !consumeItem || ResourceBank.Get(ResourceType.HPBooster) > 0;
         if (boosterBtn) boosterBtn.interactable = can && haveItem;
     }
 
@@ -93,7 +93,7 @@ public class HPBooster : MonoBehaviour
         bool spent = true;
         if (consumeItem)
         {
-            spent = ResourceBank.TrySpend(ResourceType.HPBoosters, 1);
+            spent = ResourceBank.TrySpend(ResourceType.HPBooster, 1);
             if (!spent)
             {
                 RefreshCounts();
@@ -116,7 +116,7 @@ public class HPBooster : MonoBehaviour
         // Refund if it failed after spending
         if (!used && consumeItem && spent)
         {
-            ResourceBank.Add(ResourceType.HPBoosters, 1);
+            ResourceBank.Add(ResourceType.HPBooster, 1);
             BattleLogger.Log("HP Boost failed to activate; item refunded.", LogScope.Battle);
         }
         else if (used)

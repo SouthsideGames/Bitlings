@@ -10,12 +10,12 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 8909f92dca58941be8a4545ccb059a11, type: 3}
-  m_Name: Info_Coins
+  m_Name: Info_BlessingScale
   m_EditorClassIdentifier: 
-  id: res.Coins
+  id: res.BlessingScale
   category: 1
-  title: Coins
+  title: Blessing Scale
   subtitle: Resource
-  body: 'Comes from: Quarry
+  body: 'Comes from: Sanctum
 
-    Needed for permanent upgrades'
+    Used to temporarily increase job site capacity'

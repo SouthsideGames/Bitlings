@@ -92,7 +92,7 @@ public sealed class GymPanelUI : MonoBehaviour
     {
         if (!growthCoresText) return;
 
-        int cores = ResourceManager.I ? ResourceManager.I.Get(ResourceType.GrowthCores) : 0;
+        int cores = ResourceManager.I ? ResourceManager.I.Get(ResourceType.GrowthCore) : 0;
         growthCoresText.text = cores.ToString();
     }
 

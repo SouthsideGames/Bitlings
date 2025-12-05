@@ -10,13 +10,12 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 8909f92dca58941be8a4545ccb059a11, type: 3}
-  m_Name: Info_Lures
+  m_Name: Info_TypeRes
   m_EditorClassIdentifier: 
-  id: res.Lures
+  id: res.TypeRes
   category: 1
-  title: Lures
+  title: Type-Resistant Booster
   subtitle: Resource
-  body: 'Comes from: Harbor
+  body: 'Comes from: Workshop
 
-    Increases the encounter odds of a certain Bitlings
-    types'
+    Temporary apply type resistance during encounters'

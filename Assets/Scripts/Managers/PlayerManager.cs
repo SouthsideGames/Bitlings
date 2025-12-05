@@ -22,7 +22,6 @@ public class OwnedMonsterData
     public bool autoApply = false;
     public int autoApplyTargetLevel = 0;
     public string lastBucketId = null;
-
     public int unspentStatPoints = 0;
     
 }
@@ -76,6 +75,8 @@ public class ShinyBoostData
 public class PlayerManager
 {
     public string playerId = null;
+    public string playerName = null;
+
 
     public List<OwnedMonsterData> team = new List<OwnedMonsterData>();
     public List<OwnedMonsterData> owned = new List<OwnedMonsterData>();

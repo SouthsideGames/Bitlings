@@ -258,7 +258,7 @@ public static class SaveDebugTools
     {
         try
         {
-            return ResourceManager.I ? ResourceManager.I.Get(ResourceType.Coins) : 0;
+            return ResourceManager.I ? ResourceManager.I.Get(ResourceType.Coin) : 0;
         }
         catch { return 0; }
     }

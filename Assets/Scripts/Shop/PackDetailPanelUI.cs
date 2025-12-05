@@ -95,7 +95,7 @@ public class PackDetailPanelUI : MonoBehaviour
     {
         switch (t)
         {
-            case ResourceType.PackShards: return "Shards";
+            case ResourceType.PackShard: return "Shards";
             default:                      return t.ToString();
         }
     }

@@ -39,9 +39,45 @@ public static class SaveManager
     public static string BackupPath     => Path.Combine(Application.persistentDataPath, "idle_mon_save.bak");
     public static string JobRuntimePath => Path.Combine(Application.persistentDataPath, "idle_job_runtime.json");
 
-    // ─────────────────────────────────────────────────────────────────────────────
+    // ─────────────────────────────────────────────────────────────
+    // Auto-generated handler names
+    // ─────────────────────────────────────────────────────────────
+
+    private static readonly string[] namePrefixes = new string[]
+    {
+        "Handler", "Operator", "Agent", "Keeper", "Caretaker",
+        "Riftwatcher", "Observer", "Archivist", "Custodian",
+        "Tech", "Warden", "Cipher", "Bitmaster"
+    };
+
+    private static readonly string[] nameStems = new string[]
+    {
+        "Flux", "Byte", "Voxel", "Data", "Prism", "Spark", "Root", "Fracture",
+        "Shard", "Node", "Pulse", "Shift", "Core", "Patch", "Signal",
+        "Ripple", "Trace", "Flow"
+    };
+
+    private static string GeneratePlayerName()
+    {
+        // 1% chance to get a rare “Ω” title
+        if (UnityEngine.Random.value <= 0.01f)
+        {
+            int rareNum = UnityEngine.Random.Range(1, 99);
+            return $"Prime Overseer-Ω{rareNum:00}";
+        }
+
+        string prefix = namePrefixes[UnityEngine.Random.Range(0, namePrefixes.Length)];
+        string stem   = nameStems[UnityEngine.Random.Range(0, nameStems.Length)];
+
+        // 3 random hex characters
+        string hex = UnityEngine.Random.Range(0, 4095).ToString("X3");
+
+        return $"{prefix} {stem}-{hex}";
+    }
+
+    // ─────────────────────────────────────────────────────────────
     // Lifecycle
-    // ─────────────────────────────────────────────────────────────────────────────
+    // ─────────────────────────────────────────────────────────────
 
     public static void LoadOrCreate()
     {
@@ -138,9 +174,9 @@ public static class SaveManager
         HealthRegenSystem.I?.TryApplyOfflineRegen();
     }
 
-    // ─────────────────────────────────────────────────────────────────────────────
+    // ─────────────────────────────────────────────────────────────
     // Defaults / Normalization
-    // ─────────────────────────────────────────────────────────────────────────────
+    // ─────────────────────────────────────────────────────────────
 
     static PlayerManager NewFreshPlayer()
     {
@@ -179,6 +215,9 @@ public static class SaveManager
             settings = new SettingsState()
         };
 
+        // Auto-generate a handler name for a totally fresh save
+        p.playerName = GeneratePlayerName();
+
         return p;
     }
 
@@ -197,6 +236,7 @@ public static class SaveManager
 
         // Identity
         if (string.IsNullOrEmpty(Data.playerId)) Data.playerId = Guid.NewGuid().ToString("N");
+        if (string.IsNullOrEmpty(Data.playerName)) Data.playerName = GeneratePlayerName();
 
         // Encounter economy
         if (Data.encounterMax <= 0) Data.encounterMax = 50;
@@ -352,9 +392,9 @@ public static class SaveManager
         }
     }
 
-    // ─────────────────────────────────────────────────────────────────────────────
+    // ─────────────────────────────────────────────────────────────
     // Buff/Lure Expiration
-    // ─────────────────────────────────────────────────────────────────────────────
+    // ─────────────────────────────────────────────────────────────
 
     static bool PruneExpiredLures(bool saveIfChanged)
     {
@@ -399,9 +439,9 @@ public static class SaveManager
         return changed;
     }
 
-    // ─────────────────────────────────────────────────────────────────────────────
+    // ─────────────────────────────────────────────────────────────
     // Utilities
-    // ─────────────────────────────────────────────────────────────────────────────
+    // ─────────────────────────────────────────────────────────────
 
     public static int TodayYMD()
     {
@@ -518,9 +558,9 @@ public static class SaveManager
         Save();
     }
 
-    // ─────────────────────────────────────────────────────────────────────────────
+    // ─────────────────────────────────────────────────────────────
     // Job runtime sidecar I/O (slot fatigue + cooldown)
-    // ─────────────────────────────────────────────────────────────────────────────
+    // ─────────────────────────────────────────────────────────────
 
     public static void SaveJobRuntime(JobRuntimeSave blob)
     {
@@ -561,5 +601,4 @@ public static class SaveManager
         Data.hasSeenStory = true;
         Save();
     }
-
 }

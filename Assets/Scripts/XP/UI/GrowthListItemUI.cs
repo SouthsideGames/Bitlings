@@ -162,7 +162,7 @@ public class GrowthListItemUI : MonoBehaviour
     public void RefreshOpenInteractable()
     {
         if (!openButton) return;
-        int cores = ResourceManager.I ? ResourceManager.I.Get(ResourceType.GrowthCores) : 0;
+        int cores = ResourceManager.I ? ResourceManager.I.Get(ResourceType.GrowthCore) : 0;
         openButton.interactable = cores > 0;
     }
 

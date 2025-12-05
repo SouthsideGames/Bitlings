@@ -323,7 +323,7 @@ public partial class EncounterManager : MonoBehaviour
             finalCoins = Mathf.Max(0, finalCoins);
 
             if (finalCoins > 0)
-                ResourceManager.I.Add(ResourceType.Coins, finalCoins);
+                ResourceManager.I.Add(ResourceType.Coin, finalCoins);
         }
 
         // Status text

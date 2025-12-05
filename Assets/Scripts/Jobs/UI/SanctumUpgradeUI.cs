@@ -72,7 +72,7 @@ public class SanctumUpgradeUI : MonoBehaviour
 
     void RefreshTokens()
     {
-        int count = ResourceBank.Get(ResourceType.BlessingTokens);
+        int count = ResourceBank.Get(ResourceType.BlessingScale);
         if (tokenLabel) tokenLabel.text = $"Blessing Tokens: {count}";
         if (upgradeBtn) upgradeBtn.interactable = count > 0;
     }
@@ -135,7 +135,7 @@ public class SanctumUpgradeUI : MonoBehaviour
         if (_sites == null || _sites.Length == 0) return;
 
         // Spend token first
-        if (!ResourceBank.TrySpend(ResourceType.BlessingTokens, 1))
+        if (!ResourceBank.TrySpend(ResourceType.BlessingScale, 1))
         {
             RefreshTokens();
             return;
@@ -145,7 +145,7 @@ public class SanctumUpgradeUI : MonoBehaviour
         if (!jm)
         {
             // Refund if something went wrong
-            ResourceBank.Add(ResourceType.BlessingTokens, 1);
+            ResourceBank.Add(ResourceType.BlessingScale, 1);
             RefreshTokens();
             return;
         }
@@ -160,7 +160,7 @@ public class SanctumUpgradeUI : MonoBehaviour
             if (usedTokens >= maxTokensPerSite)
             {
                 // Refund and bail
-                ResourceBank.Add(ResourceType.BlessingTokens, 1);
+                ResourceBank.Add(ResourceType.BlessingScale, 1);
                 RefreshTokens();
                 return;
             }

@@ -10,12 +10,13 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 8909f92dca58941be8a4545ccb059a11, type: 3}
-  m_Name: Info_Materials
+  m_Name: Info_Lure
   m_EditorClassIdentifier: 
-  id: res.Materials
+  id: res.Lure
   category: 1
-  title: Materials
+  title: Lure
   subtitle: Resource
-  body: 'Comes from: Forge
+  body: 'Comes from: Harbor
 
-    Needed to upgrade job sites'
+    Increases the encounter odds of a certain Bitlings
+    types'

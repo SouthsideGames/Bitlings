@@ -111,16 +111,16 @@ public class AutoApplyService : MonoBehaviour
     {
         var rm = ResourceManager.I;
         if (rm == null) return 0;
-        return rm.Get(ResourceType.GrowthCores);
+        return rm.Get(ResourceType.GrowthCore);
     }
 
     bool TrySpendGrowthCores(int amount)
     {
         var rm = ResourceManager.I;
         if (rm == null || amount <= 0) return false;
-        int have = rm.Get(ResourceType.GrowthCores);
+        int have = rm.Get(ResourceType.GrowthCore);
         if (have < amount) return false;
-        rm.Add(ResourceType.GrowthCores, -amount);
+        rm.Add(ResourceType.GrowthCore, -amount);
         return true;
     }
 

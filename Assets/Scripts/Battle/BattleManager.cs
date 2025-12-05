@@ -1465,7 +1465,7 @@ public class BattleManager : MonoBehaviour
             growthCoreTitleBonus = Mathf.Max(0, growthCoreTotal - baseAfterShiny);
 
             if (growthCoreTotal > 0)
-                ResourceManager.I?.Add(ResourceType.GrowthCores, growthCoreTotal);
+                ResourceManager.I?.Add(ResourceType.GrowthCore, growthCoreTotal);
 
             BattleLogger.Log($"Gained {growthCoreTotal} Growth Cores.", LogScope.Battle);
         }

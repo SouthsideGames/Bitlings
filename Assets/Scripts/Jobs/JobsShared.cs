@@ -16,11 +16,11 @@ public enum SiteEffectKind {
     EncounterTypeWeight,
     CaptureBonus,
     RarityBonus,
-    ShinyOrbs,
+    ShinyOrb,
     StatBoostAttack,
     StatBoostHP,
     StatBoostSpeed,
-    Sigils
+    TypeResBoosters
 }
 
 public struct SiteEffect {
@@ -53,22 +53,22 @@ public static class JobStrings {
     };
 
     public static string ResourceName(ResourceType t) => t switch {
-        ResourceType.GrowthCores      => "Growth Cores",
-        ResourceType.Coins           => "Coins",
+        ResourceType.GrowthCore      => "Growth Core",
+        ResourceType.Coin           => "Coin",
         ResourceType.Energy          => "Energy",
-        ResourceType.Medkits         => "Medkits",
-        ResourceType.Materials       => "Materials",
-        ResourceType.Sigils          => "Sigils",
-        ResourceType.Lures           => "Lures",
-        ResourceType.CaptureBands    => "Capture Bands",
+        ResourceType.Medkit         => "Medkit",
+        ResourceType.Material       => "Material",
+        ResourceType.TypeResBooster => "Type-Resistant Booster",
+        ResourceType.Lure           => "Lure",
+        ResourceType.CaptureBand    => "Capture Band",
         ResourceType.Luck            => "Luck",
-        ResourceType.AttackBoosters  => "Attack Boosters",
-        ResourceType.HPBoosters      => "HP Boosters",
-        ResourceType.SpeedBoosters   => "Speed Boosters",
-        ResourceType.ShinyOrbs       => "Shiny Orbs",
-        ResourceType.BlessingTokens  => "Blessing Tokens",
+        ResourceType.AttackBooster  => "Attack Booster",
+        ResourceType.HPBooster      => "HP Booster",
+        ResourceType.SpeedBooster   => "Speed Booster",
+        ResourceType.ShinyOrb       => "Shiny Orb",
+        ResourceType.BlessingScale  => "Blessing Token",
         ResourceType.RestCharge      => "Rest Charge",
-        ResourceType.PackShards      => "Pack Shards",
+        ResourceType.PackShard      => "Pack Shard",
         _ => t.ToString()
     };
 }
@@ -76,35 +76,35 @@ public static class JobStrings {
 public static class JobOutput
 {
     public static ResourceType Output(JobType site) => site switch {
-        JobType.Gym         => ResourceType.GrowthCores,
-        JobType.Quarry      => ResourceType.Coins,
-        JobType.Mine        => ResourceType.AttackBoosters,
+        JobType.Gym         => ResourceType.GrowthCore,
+        JobType.Quarry      => ResourceType.Coin,
+        JobType.Mine        => ResourceType.AttackBooster,
         JobType.PowerPlant  => ResourceType.Energy,
-        JobType.Grove       => ResourceType.Medkits,
-        JobType.Forge       => ResourceType.Materials,
-        JobType.Workshop    => ResourceType.Sigils,
-        JobType.Harbor      => ResourceType.Lures,
-        JobType.CryoLab     => ResourceType.CaptureBands,
-        JobType.Observatory => ResourceType.HPBoosters,
-        JobType.Containment => ResourceType.SpeedBoosters,
+        JobType.Grove       => ResourceType.Medkit,
+        JobType.Forge       => ResourceType.Material,
+        JobType.Workshop    => ResourceType.TypeResBooster,
+        JobType.Harbor      => ResourceType.Lure,
+        JobType.CryoLab     => ResourceType.CaptureBand,
+        JobType.Observatory => ResourceType.HPBooster,
+        JobType.Containment => ResourceType.SpeedBooster,
         JobType.WyrmDen     => ResourceType.Luck,
-        JobType.ShadowMarket=> ResourceType.ShinyOrbs,
-        JobType.Sanctum     => ResourceType.BlessingTokens,
+        JobType.ShadowMarket=> ResourceType.ShinyOrb,
+        JobType.Sanctum     => ResourceType.BlessingScale,
         JobType.Clinic      => ResourceType.RestCharge,
-        JobType.Expedition  => ResourceType.PackShards,
+        JobType.Expedition  => ResourceType.PackShard,
 
-        _ => ResourceType.Coins
+        _ => ResourceType.Coin
     };
 
     public static SiteEffect? Effect(JobType site) => site switch {
         JobType.Harbor       => new SiteEffect { kind = SiteEffectKind.EncounterTypeWeight, value = 0.30f, uses = 3, target = null },
-        JobType.CryoLab      => new SiteEffect { kind = SiteEffectKind.CaptureBonus,       value = 0.10f, uses = 3, target = null },
-        JobType.WyrmDen      => new SiteEffect { kind = SiteEffectKind.RarityBonus,        value = 0.05f, uses = 3, target = null },
-        JobType.Containment  => new SiteEffect { kind = SiteEffectKind.StatBoostSpeed,     value = 0.15f, uses = 1,  target = null },
-        JobType.ShadowMarket => new SiteEffect { kind = SiteEffectKind.ShinyOrbs,          value = 0.10f, uses = 1,  target = null },
-        JobType.Mine         => new SiteEffect { kind = SiteEffectKind.StatBoostAttack,    value = 5f,    uses = 1,  target = null },
-        JobType.Observatory  => new SiteEffect { kind = SiteEffectKind.StatBoostHP,        value = 10f,   uses = 1,  target = null },
-        JobType.Workshop     => new SiteEffect { kind = SiteEffectKind.Sigils,             value = 0.25f, uses = 3,  target = null },
+        JobType.CryoLab      => new SiteEffect { kind = SiteEffectKind.CaptureBonus,        value = 0.10f, uses = 3, target = null },
+        JobType.WyrmDen      => new SiteEffect { kind = SiteEffectKind.RarityBonus,         value = 0.05f, uses = 3, target = null },
+        JobType.Containment  => new SiteEffect { kind = SiteEffectKind.StatBoostSpeed,      value = 0.15f, uses = 1,  target = null },
+        JobType.ShadowMarket => new SiteEffect { kind = SiteEffectKind.ShinyOrb,           value = 0.10f, uses = 1,  target = null },
+        JobType.Mine         => new SiteEffect { kind = SiteEffectKind.StatBoostAttack,     value = 5f,    uses = 1,  target = null },
+        JobType.Observatory  => new SiteEffect { kind = SiteEffectKind.StatBoostHP,         value = 10f,   uses = 1,  target = null },
+        JobType.Workshop     => new SiteEffect { kind = SiteEffectKind.TypeResBoosters,     value = 0.25f, uses = 3,  target = null },
         _ => null
     };
 }

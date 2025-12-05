@@ -12,9 +12,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 8909f92dca58941be8a4545ccb059a11, type: 3}
   m_Name: Info_Growth
   m_EditorClassIdentifier: 
-  id: res.growthcores
+  id: res.growthcore
   category: 1
-  title: Growth Cores
+  title: Growth Core
   subtitle: Resource
   body: 'Comes from: Gym
 

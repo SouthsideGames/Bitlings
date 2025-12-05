@@ -219,7 +219,7 @@ public class StatBucketPanelUI : MonoBehaviour
         if (pointsText)
             pointsText.text = $"Points used: {_points}  •  Unspent: {remaining}";
 
-        int haveCores = ResourceManager.I ? ResourceManager.I.Get(ResourceType.GrowthCores) : 0;
+        int haveCores = ResourceManager.I ? ResourceManager.I.Get(ResourceType.GrowthCore) : 0;
         _nextCostToLevel = CalcNextCostForCurrentLevel();
 
         if (costText)

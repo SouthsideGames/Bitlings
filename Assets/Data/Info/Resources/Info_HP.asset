@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   id: res.HP
   category: 1
-  title: HP Boosters
+  title: HP Booster
   subtitle: Resource
   body: 'Comes from: Observatory
 

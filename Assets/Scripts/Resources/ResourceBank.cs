@@ -14,10 +14,10 @@ public static class ResourceBank
 
     private static readonly ResourceType[] BoosterTypes = new[]
     {
-        ResourceType.Sigils,
-        ResourceType.AttackBoosters,
-        ResourceType.HPBoosters,
-        ResourceType.SpeedBoosters
+        ResourceType.TypeResBooster,
+        ResourceType.AttackBooster,
+        ResourceType.HPBooster,
+        ResourceType.SpeedBooster
     };
 
     // ─────────────────────────────────────────────────────────────
@@ -170,7 +170,7 @@ public static class ResourceBank
 
         // Overflow becomes coins
         if (overflow > 0 && BoosterOverflowCoinValue > 0)
-            Add(ResourceType.Coins, overflow * BoosterOverflowCoinValue);
+            Add(ResourceType.Coin, overflow * BoosterOverflowCoinValue);
 
         EmitChanged();
     }

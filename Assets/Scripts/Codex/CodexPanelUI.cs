@@ -12,7 +12,6 @@ public enum OwnedSortMode
     ByType,
     ByLevelLowToHigh,
     ByLevelHighToLow,
-    OwnedMonsters,
     ShinyMonsters
 }
 
@@ -106,7 +105,6 @@ public class CodexPanelUI : MonoBehaviour
         RefreshAll();
     }
 
-
     void OnDisable()
     {
         GameEvents.OnTeamChanged      -= RefreshAll;
@@ -124,17 +122,9 @@ public class CodexPanelUI : MonoBehaviour
             favoritesOnlyButton.onClick.RemoveListener(OnToggleFavoritesOnly);
     }
 
-    private void HandleMonsterCaptured(string monsterId, MonsterType type)
-    {
-        // Capture status changed → rebuild Codex entries
-        RebuildOwnedOnly();
-    }
+    private void HandleMonsterCaptured(string monsterId, MonsterType type) => RebuildOwnedOnly();
 
-    private void HandleFavoritesChanged()
-    {
-        // Favorites changed → just rebuild the owned grid
-        RebuildOwnedOnly();
-    }
+    private void HandleFavoritesChanged() => RebuildOwnedOnly();
 
     // ---------- JSON persistence helpers ----------
     int LoadSortIndexFromJson()
@@ -163,8 +153,6 @@ public class CodexPanelUI : MonoBehaviour
         for (int i = 0; i <= (int)OwnedSortMode.ShinyMonsters; i++)
             options.Add(new TMP_Dropdown.OptionData(GetSortLabel((OwnedSortMode)i)));
 
-
-
         sortDropdown.options = options;
         sortDropdown.RefreshShownValue();
     }
@@ -179,13 +167,10 @@ public class CodexPanelUI : MonoBehaviour
             case OwnedSortMode.ByType:           return "Type";
             case OwnedSortMode.ByLevelLowToHigh: return "Level ↑";
             case OwnedSortMode.ByLevelHighToLow: return "Level ↓";
-            case OwnedSortMode.OwnedMonsters:    return "Owned Only";
             case OwnedSortMode.ShinyMonsters:    return "Shiny Only";
             default:                             return mode.ToString();
         }
     }
-
-
 
     void OnSortChanged(int value)
     {
@@ -241,7 +226,7 @@ public class CodexPanelUI : MonoBehaviour
     }
 
     // ─────────────────────────────────────────────
-    // Team row (unchanged from your working version)
+    // Team row
     // ─────────────────────────────────────────────
 
     void BuildTeam(List<OwnedMonsterData> team)
@@ -314,11 +299,11 @@ public class CodexPanelUI : MonoBehaviour
         if (data == null)
             return;
 
-        // 1) Collect all Owned monsters (owned + team, deduped by ownedUID)
-        var allOwned = data.GetAllOwnedMonsters(includeTeam: true) ?? new List<OwnedMonsterData>();
-        var ownedById = new Dictionary<string, OwnedMonsterData>();
-
-        bool shinyOnlyMode = sortMode == OwnedSortMode.ShinyMonsters;
+        // 1) Collect all Owned monsters (owned + team, deduped by ownedUID),
+        //    and track best normal + best shiny per monsterId
+        var allOwned   = data.GetAllOwnedMonsters(includeTeam: true) ?? new List<OwnedMonsterData>();
+        var ownedById  = new Dictionary<string, OwnedMonsterData>();
+        var shinyById  = new Dictionary<string, OwnedMonsterData>();
 
         for (int i = 0; i < allOwned.Count; i++)
         {
@@ -326,10 +311,19 @@ public class CodexPanelUI : MonoBehaviour
             if (om == null || string.IsNullOrEmpty(om.monsterId))
                 continue;
 
-            // If multiple copies exist, prefer the highest level as the Codex representative
+            // Best overall copy (for non-shiny sorts)
             if (!ownedById.TryGetValue(om.monsterId, out var existing) || (existing != null && om.level > existing.level))
             {
                 ownedById[om.monsterId] = om;
+            }
+
+            // Best shiny copy (for shiny sort)
+            if (om.isShiny)
+            {
+                if (!shinyById.TryGetValue(om.monsterId, out var shinyExisting) || (shinyExisting != null && om.level > shinyExisting.level))
+                {
+                    shinyById[om.monsterId] = om;
+                }
             }
         }
 
@@ -345,15 +339,29 @@ public class CodexPanelUI : MonoBehaviour
         if (defs.Count == 0)
             return;
 
-        // 3) Sort definitions based on current sort mode + owned level data
-        var sortedDefs = SortDefs(defs, sortMode, ownedById);
+        // 3) Sort definitions based on current sort mode
+        var sortedDefs = SortDefs(defs, sortMode, ownedById, shinyById);
 
-        // 4) Instantiate a row for EVERY monster in the game
+        bool shinyMode = (sortMode == OwnedSortMode.ShinyMonsters);
+
+        // 4) Instantiate rows (respect filters, using correct owned data per mode)
         foreach (var def in sortedDefs)
         {
             if (!def) continue;
 
-            bool captured  = ownedById.TryGetValue(def.id, out var ownedData);
+            OwnedMonsterData ownedData;
+            bool captured;
+
+            if (shinyMode)
+            {
+
+                captured = shinyById.TryGetValue(def.id, out ownedData);
+            }
+            else
+            {
+                captured = ownedById.TryGetValue(def.id, out ownedData);
+            }
+
             bool isFavorite = FavoriteService.IsFavorite(def.id);
 
             // Filters
@@ -372,10 +380,8 @@ public class CodexPanelUI : MonoBehaviour
             var item = go.GetComponent<OwnedMonsterListItemUI>();
             if (item)
             {
-                // This will:
-                // - Show full info for captured
-                // - Show "???" + black icon for uncaptured
-                // - Disable detail click if not captured
+                // For shiny mode: ownedData will be the best shiny copy,
+                // so item can show shiny badge / tint using ownedData.isShiny.
                 item.SetupForCodex(
                     def,
                     ownedData,
@@ -389,31 +395,35 @@ public class CodexPanelUI : MonoBehaviour
     }
 
     // ─────────────────────────────────────────────
-    // Sorting helpers (now operating on defs, not Owned list)
+    // Sorting helpers
     // ─────────────────────────────────────────────
 
     OwnedSortMode GetSortMode()
     {
         if (!sortDropdown) return _lastSortMode;
         return (OwnedSortMode)Mathf.Clamp(sortDropdown.value, 0, (int)OwnedSortMode.ShinyMonsters);
-
     }
 
     static List<MonsterDataSO> SortDefs(
         List<MonsterDataSO> defs,
         OwnedSortMode mode,
-        Dictionary<string, OwnedMonsterData> ownedById)
+        Dictionary<string, OwnedMonsterData> ownedById,
+        Dictionary<string, OwnedMonsterData> shinyById)
     {
         IEnumerable<MonsterDataSO> query = defs;
 
         switch (mode)
         {
             case OwnedSortMode.ByNameAZ:
-                query = defs.OrderBy(d => SafeName(d)).ThenBy(d => d ? d.id : string.Empty);
+                query = defs
+                    .OrderBy(d => SafeName(d))
+                    .ThenBy(d => d ? d.id : string.Empty);
                 break;
 
             case OwnedSortMode.ByNameZA:
-                query = defs.OrderByDescending(d => SafeName(d)).ThenBy(d => d ? d.id : string.Empty);
+                query = defs
+                    .OrderByDescending(d => SafeName(d))
+                    .ThenBy(d => d ? d.id : string.Empty);
                 break;
 
             case OwnedSortMode.ByType:
@@ -434,15 +444,11 @@ public class CodexPanelUI : MonoBehaviour
                     .ThenBy(d => SafeName(d));
                 break;
 
-            case OwnedSortMode.OwnedMonsters:
+            case OwnedSortMode.ShinyMonsters:
+                // Shiny-only: only monsters where we have at least one shiny copy.
                 query = defs
-                    .Where(d => d && ownedById != null && ownedById.ContainsKey(d.id))
-                    .OrderBy(d => d.id);
-                break;
-            case OwnedSortMode.ShinyMonsters:   // 👈 NEW
-                query = defs
-                    .Where(d => d && ownedById != null && ownedById.ContainsKey(d.id))
-                    .OrderByDescending(d => GetOwnedLevel(d, ownedById))
+                    .Where(d => d && shinyById != null && shinyById.ContainsKey(d.id))
+                    .OrderByDescending(d => GetOwnedLevel(d, shinyById))
                     .ThenBy(d => SafeName(d));
                 break;
 
@@ -455,7 +461,6 @@ public class CodexPanelUI : MonoBehaviour
         return query.ToList();
     }
 
-
     static string SafeName(MonsterDataSO d)
     {
         if (!d) return string.Empty;
@@ -463,10 +468,10 @@ public class CodexPanelUI : MonoBehaviour
         return d.name ?? string.Empty;
     }
 
-    static int GetOwnedLevel(MonsterDataSO def, Dictionary<string, OwnedMonsterData> ownedById)
+    static int GetOwnedLevel(MonsterDataSO def, Dictionary<string, OwnedMonsterData> ownedDict)
     {
-        if (!def || ownedById == null) return 0;
-        if (!ownedById.TryGetValue(def.id, out var om) || om == null) return 0;
+        if (!def || ownedDict == null) return 0;
+        if (!ownedDict.TryGetValue(def.id, out var om) || om == null) return 0;
         return Mathf.Max(1, om.level);
     }
 

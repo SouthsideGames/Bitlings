@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   id: res.Shiny
   category: 1
-  title: Shiny Orbs
+  title: Shiny Orb
   subtitle: Resource
   body: 'Comes from: Shadow Market
 

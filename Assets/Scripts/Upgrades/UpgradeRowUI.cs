@@ -98,7 +98,7 @@ public class UpgradeRowUI : MonoBehaviour
 
         if (buyButton != null)
         {
-            int coins = ResourceBank.Get(ResourceType.Coins);
+            int coins = ResourceBank.Get(ResourceType.Coin);
             buyButton.interactable = !unlocked && _coinCost > 0 && coins >= _coinCost;
         }
     }
@@ -115,7 +115,7 @@ public class UpgradeRowUI : MonoBehaviour
         if (FeatureUnlockManager.I.IsUnlocked(_featureId))
             return;
 
-        if (_coinCost > 0 && !ResourceBank.TrySpend(ResourceType.Coins, _coinCost))
+        if (_coinCost > 0 && !ResourceBank.TrySpend(ResourceType.Coin, _coinCost))
             return;
 
         // Unlock + persist

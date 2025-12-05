@@ -15,12 +15,12 @@ public class TeamMonsterCardUI : MonoBehaviour
 
     [Header("Heal Settings (Coins Fallback)")]
     [SerializeField, Range(0f, 1f)] private float partialHealPct = 0.25f;
-    [SerializeField] private ResourceType healCostType = ResourceType.Coins;
+    [SerializeField] private ResourceType healCostType = ResourceType.Coin;
     [SerializeField] private int partialHealCost = 1;
     [SerializeField] private int fullHealCost = 3;
 
     [Header("Heal Settings (Medkits First)")]
-    [SerializeField] private ResourceType medkitResourceType = ResourceType.Medkits;
+    [SerializeField] private ResourceType medkitResourceType = ResourceType.Medkit;
     [SerializeField] private int partialHealMedkitCost = 1;
     [SerializeField] private int fullHealMedkitCost = 1;
 

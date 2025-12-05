@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   id: res.Spd
   category: 1
-  title: Speed Boosters
+  title: Speed Booster
   subtitle: Resource
   body: 'Comes from: Containment
 

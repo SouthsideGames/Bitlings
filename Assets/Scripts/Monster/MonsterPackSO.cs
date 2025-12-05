@@ -16,7 +16,7 @@ public class MonsterPackSO : ScriptableObject
     public int baseCost = 5;
 
     [Tooltip("Which currency this pack uses. If None/0, manager's defaultCurrency is used.")]
-    public ResourceType costType = ResourceType.PackShards;
+    public ResourceType costType = ResourceType.PackShard;
 
     [Tooltip("Per-pack sale: 0..1 → 0.20 = 20% off")]
     [Range(0f, 1f)] public float saleOff01 = 0f;

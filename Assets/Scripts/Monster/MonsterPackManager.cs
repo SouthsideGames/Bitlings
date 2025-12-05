@@ -62,7 +62,7 @@ public class MonsterPackManager : MonoBehaviour
         foreach (var p in _packLibrary.PacksReadOnly)
         {
             if (!p) continue;
-            if (p.costType != ResourceType.PackShards)
+            if (p.costType != ResourceType.PackShard)
                 Debug.LogWarning($"[MonsterPackManager] '{p.name}' has costType={p.costType} but shop is shards-only.");
         }
 #endif
@@ -92,7 +92,7 @@ public class MonsterPackManager : MonoBehaviour
     public bool TryGetEffectiveCost(MonsterPackSO pack, out int finalCost, out ResourceType currency)
     {
         finalCost = 0;
-        currency  = ResourceType.PackShards; // shards-only
+        currency  = ResourceType.PackShard; // shards-only
         if (!pack) return false;
 
         int baseCost = Mathf.Max(0, pack.baseCost);
@@ -118,7 +118,7 @@ public class MonsterPackManager : MonoBehaviour
             return false;
         }
 
-        int have = ResourceBank.Get(ResourceType.PackShards);
+        int have = ResourceBank.Get(ResourceType.PackShard);
         if (have < cost) { reason = "Not enough Shards"; return false; }
 
         return true;
@@ -137,7 +137,7 @@ public class MonsterPackManager : MonoBehaviour
             return false;
 
         // Spend shards
-        if (!ResourceManager.I.TrySpend(ResourceType.PackShards, cost))
+        if (!ResourceManager.I.TrySpend(ResourceType.PackShard, cost))
             return false;
 
         Unlock(packId);

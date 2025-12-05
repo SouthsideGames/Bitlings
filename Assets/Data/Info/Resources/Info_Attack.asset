@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   id: res.Atk
   category: 1
-  title: Attack Boosters
+  title: Attack Booster
   subtitle: Resource
   body: 'Comes from: Mine
 
