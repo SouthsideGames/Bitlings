@@ -249,6 +249,8 @@ public partial class EncounterManager : MonoBehaviour
             return;
         }
 
+        FieldOpsTracker.RecordEncounter(wild);
+
         if (EncounterPanelUI.I)
             EncounterPanelUI.I.OnWildSpawned(wild);
 
@@ -336,7 +338,10 @@ public partial class EncounterManager : MonoBehaviour
 
         // Boss defeat signal (only on real victory)
         if (victory && _currentEncounterIsBoss && _currentBossUsed != null)
+        {
             GameEvents.BossDefeated?.Invoke(_currentBossUsed.id);
+            FieldOpsTracker.RecordRiftStabilization(_currentBossUsed);
+        }            
 
         // Boss cadence bookkeeping – up to you if escape counts; leaving as-is:
         if (SaveManager.Data != null)

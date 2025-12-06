@@ -293,7 +293,10 @@ public partial class EncounterManager
         float finalChance = Mathf.Clamp01(baseChance + bandBonus + luckBonus + lureBonus + streakBonus);
 
         float roll = Random.value;
-        bool success = (roll <= finalChance);
+        bool success = roll <= finalChance;
+
+        bool isShiny = IsShinyMonster(def);
+        FieldOpsTracker.RecordCaptureAttempt(def, success, isShiny);
 
         if (success)
         {
@@ -316,6 +319,8 @@ public partial class EncounterManager
 
             SaveManager.Save();
             GameEvents.OnResourcesChanged?.Invoke();
+
+            GameEvents.MonsterCaptured?.Invoke(def.id, def.type);
 
             BattleLogger.Log(
                 $"🎉 Capture success! {def.displayName} (Lv {level}) joined your roster. [p={Mathf.RoundToInt(finalChance * 100f)}%]",

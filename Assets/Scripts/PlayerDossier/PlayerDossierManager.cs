@@ -29,6 +29,39 @@ public class PlayerDossierSnapshot
     // ─────────────────────────────────────────────────────────────
     [Header("Job Network")]
     public JobSiteRowSnapshot[] jobSites;
+
+    // ─────────────────────────────────────────────────────────────
+    // PAGE 3 – FIELD OPERATIONS
+    // ─────────────────────────────────────────────────────────────
+    [Header("Field Operations")]
+    public int encountersInitiated;
+    public int captureSuccessRate;      // 0–100
+    public int riftStabilizations;
+    public int rareBitlingsFound;
+    public int shinyDiscoveries;
+    public int longestCaptureStreak;
+    public string[] fieldOpsHighlights;
+
+    [Header("Page 4 – Resources")]
+    public int coinCount;
+    public int energyCount;
+    public int medkitCount;
+    public int materialCount;
+    public int typeResBoosterCount;
+    public int lureCount;
+    public int captureBandCount;
+    public int luckCount;
+    public int atkBoosterCount;
+    public int hpBoosterCount;
+    public int speedBoosterCount;
+    public int shinyOrbCount;
+    public int blessingScaleCount;
+    public int restChargeCount;
+    public int growthCoreCount;
+    public int packShardCount;
+
+    public int conversionEfficiencyPercent;
+
 }
 
 [Serializable]
@@ -137,6 +170,15 @@ public class PlayerDossierManager : MonoBehaviour
             snapshot.careScoreNote      = "BRN notes: No data available.";
 
             snapshot.jobSites           = Array.Empty<JobSiteRowSnapshot>();
+
+            snapshot.encountersInitiated   = 0;
+            snapshot.captureSuccessRate    = 0;
+            snapshot.riftStabilizations    = 0;
+            snapshot.rareBitlingsFound     = 0;
+            snapshot.shinyDiscoveries      = 0;
+            snapshot.longestCaptureStreak  = 0;
+            snapshot.fieldOpsHighlights    = Array.Empty<string>();
+
             return snapshot;
         }
 
@@ -199,6 +241,12 @@ public class PlayerDossierManager : MonoBehaviour
 
         // Page 2 – Job stats
         BuildJobStats(data, snapshot);
+
+        // Page 3 – Field Ops stats
+        BuildFieldOps(data, snapshot);
+
+        // Page 4 – Resources
+        BuildResourceSummary(data, snapshot);
 
         return snapshot;
     }
@@ -413,6 +461,40 @@ public class PlayerDossierManager : MonoBehaviour
         return best;
     }
 
+    // ─────────────────────────────────────────────────────────────
+    // Field Ops (Page 3)
+    // ─────────────────────────────────────────────────────────────
+
+    private void BuildFieldOps(PlayerManager data, PlayerDossierSnapshot snapshot)
+    {
+        var f = data.fieldOps ?? new FieldOpsStats();
+
+        snapshot.encountersInitiated  = Mathf.Max(0, f.encountersInitiated);
+        snapshot.riftStabilizations   = Mathf.Max(0, f.riftStabilizations);
+        snapshot.rareBitlingsFound    = Mathf.Max(0, f.rareBitlingsFound);
+        snapshot.shinyDiscoveries     = Mathf.Max(0, f.shinyDiscoveries);
+        snapshot.longestCaptureStreak = Mathf.Max(0, f.longestCaptureStreak);
+
+        int attempts  = Mathf.Max(0, f.captureAttempts);
+        int successes = Mathf.Max(0, f.capturesSuccessful);
+        int ratePct   = 0;
+        if (attempts > 0)
+        {
+            float ratio = successes / (float)attempts;
+            ratePct = Mathf.Clamp(Mathf.RoundToInt(ratio * 100f), 0, 100);
+        }
+        snapshot.captureSuccessRate = ratePct;
+
+        if (f.recentHighlights != null && f.recentHighlights.Count > 0)
+            snapshot.fieldOpsHighlights = f.recentHighlights.ToArray();
+        else
+            snapshot.fieldOpsHighlights = Array.Empty<string>();
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // Helpers
+    // ─────────────────────────────────────────────────────────────
+
     private string FormatOperationId(string playerId)
     {
         if (string.IsNullOrEmpty(playerId))
@@ -426,4 +508,141 @@ public class PlayerDossierManager : MonoBehaviour
         string tail = trimmed.Substring(trimmed.Length - 4, 4);
         return $"{head}-{tail}";
     }
+
+    private void BuildResourceSummary(PlayerManager data, PlayerDossierSnapshot s)
+    {
+        var bank = ResourceManager.I;
+        if (bank == null)
+        {
+            Debug.LogWarning("ResourceManager not found for dossier Page 4.");
+            return;
+        }
+
+        // ─────────────────────────────────────────────────────────────
+        // Raw resource counts (live from ResourceManager)
+        // ─────────────────────────────────────────────────────────────
+        s.coinCount           = bank.Get(ResourceType.Coin);
+        s.energyCount         = bank.Get(ResourceType.Energy);
+        s.medkitCount         = bank.Get(ResourceType.Medkit);
+        s.materialCount       = bank.Get(ResourceType.Material);
+        s.typeResBoosterCount = bank.Get(ResourceType.TypeResBooster);
+        s.lureCount           = bank.Get(ResourceType.Lure);
+        s.captureBandCount    = bank.Get(ResourceType.CaptureBand);
+        s.luckCount           = bank.Get(ResourceType.Luck);
+        s.atkBoosterCount     = bank.Get(ResourceType.AttackBooster);
+        s.hpBoosterCount      = bank.Get(ResourceType.HPBooster);
+        s.speedBoosterCount   = bank.Get(ResourceType.SpeedBooster);
+        s.shinyOrbCount       = bank.Get(ResourceType.ShinyOrb);
+        s.blessingScaleCount  = bank.Get(ResourceType.BlessingScale);
+        s.restChargeCount     = bank.Get(ResourceType.RestCharge);
+        s.growthCoreCount     = bank.Get(ResourceType.GrowthCore);
+        s.packShardCount      = bank.Get(ResourceType.PackShard);
+
+        // ─────────────────────────────────────────────────────────────
+        // BRN Composite Handler Efficiency Score (0–100)
+        // ─────────────────────────────────────────────────────────────
+        s.conversionEfficiencyPercent = ComputeHandlerEfficiency(data, s);
+    }
+
+    /// <summary>
+    /// Computes the BRN "Handler Efficiency" score as a composite of:
+    /// - Job stability (avg job level)
+    /// - Bitling care (careScorePercent)
+    /// - Field operations (captures, streaks, rares)
+    /// - Resource stewardship (progression items & coins)
+    /// Returns 0–100.
+    /// </summary>
+    private int ComputeHandlerEfficiency(PlayerManager data, PlayerDossierSnapshot snap)
+    {
+        if (data == null) return 0;
+
+        // ─────────────────────────────────────────────────────────────
+        // 1) Job stability / management (0–1)
+        // ─────────────────────────────────────────────────────────────
+        float jobLevelScore = 0f;
+        if (data.jobProgress != null && data.jobProgress.Count > 0)
+        {
+            int levelSum = 0;
+            int count    = 0;
+
+            for (int i = 0; i < data.jobProgress.Count; i++)
+            {
+                var jp = data.jobProgress[i];
+                if (jp == null) continue;
+
+                levelSum += Mathf.Max(1, jp.level);
+                count++;
+            }
+
+            if (count > 0)
+            {
+                float avgLevel = levelSum / (float)count;
+                jobLevelScore  = Mathf.Clamp01(avgLevel / JobLeveling.MaxLevel);
+            }
+        }
+
+        // ─────────────────────────────────────────────────────────────
+        // 2) Bitling care (0–1) – from Page 1 careScorePercent
+        // ─────────────────────────────────────────────────────────────
+        float careScoreNorm = Mathf.Clamp01(snap.careScorePercent / 100f);
+
+        // ─────────────────────────────────────────────────────────────
+        // 3) Field operations skill (0–1)
+        //    Uses: success rate, streak, rare finds
+        // ─────────────────────────────────────────────────────────────
+        var f = data.fieldOps ?? new FieldOpsStats();
+
+        float successNorm = 0f;
+        if (f.captureAttempts > 0)
+            successNorm = Mathf.Clamp01(f.capturesSuccessful / Mathf.Max(1f, f.captureAttempts));
+
+        float streakNorm = Mathf.Clamp01(f.longestCaptureStreak / 20f);   // 20+ streak = capped
+        float rareNorm   = Mathf.Clamp01(f.rareBitlingsFound / 30f);      // 30+ rares = capped
+
+        float captureScore =
+            (successNorm * 0.5f) +
+            (streakNorm  * 0.3f) +
+            (rareNorm    * 0.2f);
+
+        // ─────────────────────────────────────────────────────────────
+        // 4) Resource stewardship (0–1)
+        //    Progression items + coins
+        // ─────────────────────────────────────────────────────────────
+        int progTotal =
+            snap.growthCoreCount      +
+            snap.blessingScaleCount   +
+            snap.packShardCount       +
+            snap.shinyOrbCount        +
+            snap.atkBoosterCount      +
+            snap.hpBoosterCount       +
+            snap.speedBoosterCount    +
+            snap.captureBandCount     +
+            snap.lureCount            +
+            snap.luckCount;
+
+        // 100+ total progression items is treated as "max utilization"
+        float progNorm = Mathf.Clamp01(progTotal / 100f);
+
+        // 50,000+ coins is treated as "max economic readiness"
+        float coinNorm = Mathf.Clamp01(snap.coinCount / 50000f);
+
+        float resourceUsageScore =
+            (progNorm * 0.6f) +
+            (coinNorm * 0.4f);
+
+        // ─────────────────────────────────────────────────────────────
+        // 5) Combine into final BRN rating (0–1)
+        // ─────────────────────────────────────────────────────────────
+        float efficiency =
+            (jobLevelScore       * 0.35f) +   // job management
+            (careScoreNorm       * 0.25f) +   // bitling care
+            (captureScore        * 0.25f) +   // field ops
+            (resourceUsageScore  * 0.15f);    // resources
+
+        efficiency = Mathf.Clamp01(efficiency);
+
+        return Mathf.RoundToInt(efficiency * 100f);
+    }
+
+
 }

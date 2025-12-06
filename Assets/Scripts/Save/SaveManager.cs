@@ -212,6 +212,8 @@ public static class SaveManager
             jobAssignments = new List<JobAssignment>(),
             jobProgress = new List<JobProgress>(),
 
+            fieldOps = new FieldOpsStats(),
+
             settings = new SettingsState()
         };
 
@@ -233,6 +235,9 @@ public static class SaveManager
         Data.jobProgress ??= new List<JobProgress>();
         Data.jobStorageUpgrades ??= new List<JobStorageUpgrade>();
         Data.unlockedPacks ??= new List<string>();
+
+        if (Data.fieldOps == null)
+            Data.fieldOps = new FieldOpsStats();
 
         // Identity
         if (string.IsNullOrEmpty(Data.playerId)) Data.playerId = Guid.NewGuid().ToString("N");

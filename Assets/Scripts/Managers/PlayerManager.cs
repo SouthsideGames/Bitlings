@@ -72,6 +72,22 @@ public class ShinyBoostData
 }
 
 [Serializable]
+public class FieldOpsStats
+{
+    public int encountersInitiated;      // how many wild battles were started
+    public int captureAttempts;          // how many capture rolls happened
+    public int capturesSuccessful;       // how many succeeded
+    public int rareBitlingsFound;        // successful captures of Rare/Epic/Legendary/Mythic
+    public int shinyDiscoveries;         // shiny captures
+    public int riftStabilizations;       // boss defeats (or other rift events)
+    public int longestCaptureStreak;     // best streak of consecutive successes
+    public int currentCaptureStreak;     // current streak (resets on fail)
+
+    public System.Collections.Generic.List<string> recentHighlights =
+        new System.Collections.Generic.List<string>();
+}
+
+[Serializable]
 public class PlayerManager
 {
     public string playerId = null;
@@ -86,6 +102,7 @@ public class PlayerManager
     public List<LuckBoostData> activeLuckBoosts = new List<LuckBoostData>();
     public List<JobStorageUpgrade> jobStorageUpgrades = new List<JobStorageUpgrade>();
     public List<ShinyBoostData> activeShinyBoosts = new List<ShinyBoostData>();
+    public FieldOpsStats fieldOps = new FieldOpsStats();
 
     public List<string> ownedIdsList = new List<string>();
     [NonSerialized] public HashSet<string> ownedIds = new HashSet<string>();

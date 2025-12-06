@@ -42,6 +42,42 @@ public class PlayerDossierPanelUI : MonoBehaviour
 
     private readonly List<PlayerDossierJobPanelUI> _jobPanels = new List<PlayerDossierJobPanelUI>();
 
+    // ─────────────────────────────────────────────────────────────
+    // PAGE 3 – FIELD OPERATIONS UI REFERENCES
+    // ─────────────────────────────────────────────────────────────
+    [Header("Page 3 - Field Ops")]
+    [SerializeField] private TextMeshProUGUI encountersInitiatedText;
+    [SerializeField] private TextMeshProUGUI captureSuccessRateText;
+    [SerializeField] private TextMeshProUGUI riftStabilizationsText;
+    [SerializeField] private TextMeshProUGUI rareBitlingsFoundText;
+    [SerializeField] private TextMeshProUGUI shinyDiscoveriesText;
+    [SerializeField] private TextMeshProUGUI longestCaptureStreakText;
+    [SerializeField] private TextMeshProUGUI fieldOpsHighlightsText;
+
+
+    [Header("Page 4 – Resources")]
+    [SerializeField] private TextMeshProUGUI coinsText;
+    [SerializeField] private TextMeshProUGUI energyText;
+    [SerializeField] private TextMeshProUGUI medkitText;
+    [SerializeField] private TextMeshProUGUI materialText;
+    [SerializeField] private TextMeshProUGUI typeResBoosterText;
+    [SerializeField] private TextMeshProUGUI lureText;
+    [SerializeField] private TextMeshProUGUI captureBandText;
+    [SerializeField] private TextMeshProUGUI luckText;
+    [SerializeField] private TextMeshProUGUI atkBoosterText;
+    [SerializeField] private TextMeshProUGUI hpBoosterText;
+    [SerializeField] private TextMeshProUGUI speedBoosterText;
+    [SerializeField] private TextMeshProUGUI shinyOrbText;
+    [SerializeField] private TextMeshProUGUI blessingScaleText;
+    [SerializeField] private TextMeshProUGUI restChargeText;
+    [SerializeField] private TextMeshProUGUI growthCoreText;
+    [SerializeField] private TextMeshProUGUI packShardText;
+
+    [SerializeField] private Image efficiencyFill;
+    [SerializeField] private TextMeshProUGUI efficiencyPercentText;
+    [SerializeField] private TextMeshProUGUI brnRatingText;
+
+
     private int _currentPageIndex = 0;
 
     private void Awake()
@@ -65,12 +101,16 @@ public class PlayerDossierPanelUI : MonoBehaviour
             var snapshot = manager.CurrentSnapshot;
             PopulatePage1(snapshot);
             PopulatePage2(snapshot);
+            PopulatePage3(snapshot);
+            PopulatePage4(snapshot);
         }
         else
         {
             Debug.LogWarning("[PlayerDossierPanelUI] No PlayerDossierManager found in scene.");
             PopulatePage1(null);
             PopulatePage2(null);
+            PopulatePage3(null);
+            PopulatePage4(null);
         }
     }
 
@@ -134,9 +174,6 @@ public class PlayerDossierPanelUI : MonoBehaviour
             dotsText.text = BuildDotsString(totalPages, _currentPageIndex);
 
         if (prevButton != null)
-            prevButton.interactable = _currentPageIndex > 0;
-
-        if (nextButton != null)
             prevButton.interactable = _currentPageIndex > 0;
 
         if (nextButton != null)
@@ -280,4 +317,148 @@ public class PlayerDossierPanelUI : MonoBehaviour
             }
         }
     }
+
+    // ─────────────────────────────────────────────────────────────
+    // PAGE 3 – FIELD OPERATIONS
+    // ─────────────────────────────────────────────────────────────
+
+    private void PopulatePage3(PlayerDossierSnapshot stats)
+    {
+        if (stats == null)
+        {
+            if (encountersInitiatedText != null)
+                encountersInitiatedText.text = "Encounters Initiated:   0";
+
+            if (captureSuccessRateText != null)
+                captureSuccessRateText.text = "Capture Success Rate:   0%";
+
+            if (riftStabilizationsText != null)
+                riftStabilizationsText.text = "Rift Stabilizations:    0";
+
+            if (rareBitlingsFoundText != null)
+                rareBitlingsFoundText.text = "Rare Bitlings Found:    0";
+
+            if (shinyDiscoveriesText != null)
+                shinyDiscoveriesText.text = "Shiny Discoveries:      0";
+
+            if (longestCaptureStreakText != null)
+                longestCaptureStreakText.text = "Longest Capture Streak: 0";
+
+            if (fieldOpsHighlightsText != null)
+                fieldOpsHighlightsText.text = "Recent Highlights:\n—";
+
+            return;
+        }
+
+        if (encountersInitiatedText != null)
+            encountersInitiatedText.text =
+                $"Encounters Initiated:   {stats.encountersInitiated}";
+
+        if (captureSuccessRateText != null)
+            captureSuccessRateText.text =
+                $"Capture Success Rate:   {stats.captureSuccessRate}%";
+
+        if (riftStabilizationsText != null)
+            riftStabilizationsText.text =
+                $"Rift Stabilizations:    {stats.riftStabilizations}";
+
+        if (rareBitlingsFoundText != null)
+            rareBitlingsFoundText.text =
+                $"Rare Bitlings Found:    {stats.rareBitlingsFound}";
+
+        if (shinyDiscoveriesText != null)
+            shinyDiscoveriesText.text =
+                $"Shiny Discoveries:      {stats.shinyDiscoveries}";
+
+        if (longestCaptureStreakText != null)
+            longestCaptureStreakText.text =
+                $"Longest Capture Streak: {stats.longestCaptureStreak}";
+
+        if (fieldOpsHighlightsText != null)
+        {
+            if (stats.fieldOpsHighlights == null || stats.fieldOpsHighlights.Length == 0)
+            {
+                fieldOpsHighlightsText.text = "—";
+            }
+            else
+            {
+                fieldOpsHighlightsText.text = string.Join("\n", stats.fieldOpsHighlights);
+            }
+        }
+    }
+
+    private void PopulatePage4(PlayerDossierSnapshot s)
+    {
+        if (s == null)
+        {
+            if (coinsText)          coinsText.text          = "0";
+            if (energyText)         energyText.text         = "0";
+            if (medkitText)         medkitText.text         = "0";
+            if (materialText)       materialText.text       = "0";
+            if (typeResBoosterText) typeResBoosterText.text = "0";
+            if (lureText)           lureText.text           = "0";
+            if (captureBandText)    captureBandText.text    = "0";
+            if (luckText)           luckText.text           = "0";
+            if (atkBoosterText)     atkBoosterText.text     = "0";
+            if (hpBoosterText)      hpBoosterText.text      = "0";
+            if (speedBoosterText)   speedBoosterText.text   = "0";
+            if (shinyOrbText)       shinyOrbText.text       = "0";
+            if (blessingScaleText)  blessingScaleText.text  = "0";
+            if (restChargeText)     restChargeText.text     = "0";
+            if (growthCoreText)     growthCoreText.text     = "0";
+            if (packShardText)      packShardText.text      = "0";
+
+            if (efficiencyPercentText) efficiencyPercentText.text = "0%";
+            if (efficiencyFill)
+            {
+                var rt = efficiencyFill.rectTransform;
+                rt.anchorMax = new Vector2(0f, rt.anchorMax.y);
+            }
+            if (brnRatingText) brnRatingText.text = "BRN Rating: Stable Operator";
+            return;
+        }
+
+        if (coinsText)          coinsText.text          = s.coinCount.ToString("N0");
+        if (energyText)         energyText.text         = s.energyCount.ToString();
+        if (medkitText)         medkitText.text         = s.medkitCount.ToString();
+        if (materialText)       materialText.text       = s.materialCount.ToString("N0");
+        if (typeResBoosterText) typeResBoosterText.text = s.typeResBoosterCount.ToString();
+        if (lureText)           lureText.text           = s.lureCount.ToString();
+        if (captureBandText)    captureBandText.text    = s.captureBandCount.ToString();
+        if (luckText)           luckText.text           = s.luckCount.ToString();
+        if (atkBoosterText)     atkBoosterText.text     = s.atkBoosterCount.ToString();
+        if (hpBoosterText)      hpBoosterText.text      = s.hpBoosterCount.ToString();
+        if (speedBoosterText)   speedBoosterText.text   = s.speedBoosterCount.ToString();
+        if (shinyOrbText)       shinyOrbText.text       = s.shinyOrbCount.ToString();
+        if (blessingScaleText)  blessingScaleText.text  = s.blessingScaleCount.ToString();
+        if (restChargeText)     restChargeText.text     = s.restChargeCount.ToString();
+        if (growthCoreText)     growthCoreText.text     = s.growthCoreCount.ToString();
+        if (packShardText)      packShardText.text      = s.packShardCount.ToString();
+
+        // Efficiency bar + % + rating stay the same as before...
+        float normalized = Mathf.Clamp01(s.conversionEfficiencyPercent / 100f);
+
+        if (efficiencyPercentText)
+            efficiencyPercentText.text = $"{s.conversionEfficiencyPercent}%";
+
+        if (efficiencyFill)
+        {
+            var rt = efficiencyFill.rectTransform;
+            rt.anchorMax = new Vector2(normalized, rt.anchorMax.y);
+        }
+
+        if (brnRatingText)
+        {
+            int eff = s.conversionEfficiencyPercent;
+            string rating =
+                eff >= 70 ? "BRN Rating: Critical Asset" :
+                eff >= 40 ? "BRN Rating: High-Performance Handler" :
+                            "BRN Rating: Stable Operator";
+
+            brnRatingText.text = rating;
+        }
+    }
+
+
+
 }
