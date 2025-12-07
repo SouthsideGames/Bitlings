@@ -62,6 +62,11 @@ public class PlayerDossierSnapshot
 
     public int conversionEfficiencyPercent;
 
+    [Header("Page 5 – BRN Résumé")]
+    public string[] resumeLines;      // bullet lines for the page
+    public string brnResumeNote;      // short supervisor-style note
+
+
 }
 
 [Serializable]
@@ -247,6 +252,9 @@ public class PlayerDossierManager : MonoBehaviour
 
         // Page 4 – Resources
         BuildResourceSummary(data, snapshot);
+
+        // Page 5 – BRN Résumé
+        BuildResumePage(data, snapshot);
 
         return snapshot;
     }
@@ -643,6 +651,188 @@ public class PlayerDossierManager : MonoBehaviour
 
         return Mathf.RoundToInt(efficiency * 100f);
     }
+
+    private void BuildResumePage(PlayerManager data, PlayerDossierSnapshot snap)
+    {
+        var lines = new List<string>();
+
+        // ─────────────────────────────────────────────────────────────
+        // 1) First Bitling acquired
+        // ─────────────────────────────────────────────────────────────
+        var firstOwned = GetFirstOwnedBitling(data);
+        if (firstOwned != null)
+        {
+            string name = GetMonsterDisplayName(firstOwned.monsterId);
+            if (!string.IsNullOrEmpty(name))
+                lines.Add($"First Bitling acquired: {name}.");
+        }
+
+        // ─────────────────────────────────────────────────────────────
+        // 2) Highest-level Bitling
+        // ─────────────────────────────────────────────────────────────
+        var highest = GetHighestLevelBitling(data);
+        if (highest != null)
+        {
+            string name = GetMonsterDisplayName(highest.monsterId);
+            if (!string.IsNullOrEmpty(name))
+                lines.Add($"{name} reached level {Mathf.Max(1, highest.level)}, becoming a core team member.");
+        }
+
+        // ─────────────────────────────────────────────────────────────
+        // 3) Shiny highlight
+        // ─────────────────────────────────────────────────────────────
+        var shiny = GetNotableShiny(data);
+        if (shiny != null)
+        {
+            string name = GetMonsterDisplayName(shiny.monsterId);
+            if (!string.IsNullOrEmpty(name))
+                lines.Add($"Shiny Bitling detected in field operations: {name}.");
+        }
+
+        // ─────────────────────────────────────────────────────────────
+        // 4) Job network highlight (most productive site)
+        // ─────────────────────────────────────────────────────────────
+        if (snap.jobSites != null && snap.jobSites.Length > 0)
+        {
+            JobSiteRowSnapshot bestSite = null;
+            for (int i = 0; i < snap.jobSites.Length; i++)
+            {
+                var js = snap.jobSites[i];
+                if (js == null) continue;
+                if (bestSite == null || js.materialsProcessed > bestSite.materialsProcessed)
+                    bestSite = js;
+            }
+
+            if (bestSite != null && bestSite.materialsProcessed > 0)
+            {
+                string siteName = bestSite.displayName;
+                string units    = bestSite.materialsProcessed.ToString("N0");
+                lines.Add($"Most productive job site: {siteName} ({units} units processed to date).");
+            }
+        }
+
+        // ─────────────────────────────────────────────────────────────
+        // 5) Field operations highlights (streaks, rares, rifts)
+        // ─────────────────────────────────────────────────────────────
+        var f = data.fieldOps ?? new FieldOpsStats();
+
+        if (f.longestCaptureStreak > 0)
+            lines.Add($"Capture streak record: {f.longestCaptureStreak} successful captures in a row.");
+
+        if (f.rareBitlingsFound > 0)
+            lines.Add($"Rare Bitlings handled in the field: {f.rareBitlingsFound}.");
+
+        if (f.riftStabilizations > 0)
+        {
+            string rs = f.riftStabilizations == 1 ? "Rift stabilization" : "Rift stabilizations";
+            lines.Add($"{rs} completed: {f.riftStabilizations}.");
+        }
+
+        // ─────────────────────────────────────────────────────────────
+        // 6) Species & care overview
+        // ─────────────────────────────────────────────────────────────
+        if (snap.discoveredSpecies > 0)
+        {
+            lines.Add($"Discovered {snap.discoveredSpecies} Bitling species so far.");
+        }
+
+        // Keep list from getting too long
+        const int MAX_LINES = 7;
+        if (lines.Count > MAX_LINES)
+            lines.RemoveRange(MAX_LINES, lines.Count - MAX_LINES);
+
+        snap.resumeLines = lines.ToArray();
+
+        // ─────────────────────────────────────────────────────────────
+        // BRN résumé note – based on efficiency & care
+        // ─────────────────────────────────────────────────────────────
+        int eff  = Mathf.Clamp(snap.conversionEfficiencyPercent, 0, 100);
+        float careNorm = Mathf.Clamp01(snap.careScorePercent / 100f);
+
+        if (eff >= 75 && careNorm >= 0.7f)
+        {
+            snap.brnResumeNote =
+                "Handler performance is strong across care, job management, and field operations. Recommended for rank review at the next BRN audit.";
+        }
+        else if (eff >= 40)
+        {
+            snap.brnResumeNote =
+                "Handler performance remains stable during the Rift crisis. Continued monitoring and gradual increase in responsibilities is advised.";
+        }
+        else
+        {
+            snap.brnResumeNote =
+                "Handler record indicates developing competencies. Additional supervision, training, and controlled field exposure are recommended.";
+        }
+    }
+
+    private OwnedMonsterData GetFirstOwnedBitling(PlayerManager data)
+    {
+        if (data?.owned == null || data.owned.Count == 0)
+            return null;
+
+        // Best-effort: first non-null entry
+        for (int i = 0; i < data.owned.Count; i++)
+        {
+            var om = data.owned[i];
+            if (om != null && !string.IsNullOrEmpty(om.monsterId))
+                return om;
+        }
+
+        return null;
+    }
+
+    private OwnedMonsterData GetHighestLevelBitling(PlayerManager data)
+    {
+        if (data?.owned == null || data.owned.Count == 0)
+            return null;
+
+        OwnedMonsterData best = null;
+        for (int i = 0; i < data.owned.Count; i++)
+        {
+            var om = data.owned[i];
+            if (om == null || string.IsNullOrEmpty(om.monsterId)) continue;
+
+            if (best == null || om.level > best.level)
+                best = om;
+        }
+        return best;
+    }
+
+    private OwnedMonsterData GetNotableShiny(PlayerManager data)
+    {
+        if (data?.owned == null || data.owned.Count == 0)
+            return null;
+
+        // Prefer highest-level shiny
+        OwnedMonsterData best = null;
+        for (int i = 0; i < data.owned.Count; i++)
+        {
+            var om = data.owned[i];
+            if (om == null || !om.isShiny || string.IsNullOrEmpty(om.monsterId)) continue;
+
+            if (best == null || om.level > best.level)
+                best = om;
+        }
+        return best;
+    }
+
+    private string GetMonsterDisplayName(string monsterId)
+    {
+        if (string.IsNullOrEmpty(monsterId))
+            return null;
+
+        try
+        {
+            var def = MonsterLibraryLocator.GetById(monsterId);
+            if (def != null && !string.IsNullOrEmpty(def.displayName))
+                return def.displayName;
+        }
+        catch { }
+
+        return monsterId;
+    }
+
 
 
 }

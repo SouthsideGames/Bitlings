@@ -624,9 +624,9 @@ public class EncounterPanelUI : MonoBehaviour
     bool IsAutoMode() => EncounterManager.I != null && EncounterManager.I.IsAutoMode;
     bool NextEncounterIsFree() => EncounterManager.I != null && EncounterManager.I.NextEncounterIsFree;
     bool HasEnergy() => EncounterManager.I != null && EncounterManager.I.HasEnergy();
-    int GetEnergyPoints() => EncounterManager.I != null ? EncounterManager.I.GetEnergyPoints() : 0;
-    int GetEncounterMax() => EncounterManager.I != null ? EncounterManager.I.GetEncounterMax() : 0;
-    int GetEncounterCost() => EncounterManager.I != null ? EncounterManager.I.GetEncounterCost() : 0;
+    public int GetEnergyPoints() => EncounterManager.I != null ? EncounterManager.I.GetEnergyPoints() : 0;
+    public int GetEncounterMax() => EncounterManager.I != null ? EncounterManager.I.GetEncounterMax() : 0;
+    public int GetEncounterCost() => EncounterManager.I != null ? EncounterManager.I.GetEncounterCost() : 0;
 
     void RequestEncounterTap() => EncounterManager.I?.RequestEncounterTap();
 

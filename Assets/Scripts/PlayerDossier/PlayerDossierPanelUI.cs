@@ -54,7 +54,9 @@ public class PlayerDossierPanelUI : MonoBehaviour
     [SerializeField] private TextMeshProUGUI longestCaptureStreakText;
     [SerializeField] private TextMeshProUGUI fieldOpsHighlightsText;
 
-
+    // ─────────────────────────────────────────────────────────────
+    // PAGE 4 – RESOURCES UI REFERENCES
+    // ─────────────────────────────────────────────────────────────
     [Header("Page 4 – Resources")]
     [SerializeField] private TextMeshProUGUI coinsText;
     [SerializeField] private TextMeshProUGUI energyText;
@@ -77,6 +79,12 @@ public class PlayerDossierPanelUI : MonoBehaviour
     [SerializeField] private TextMeshProUGUI efficiencyPercentText;
     [SerializeField] private TextMeshProUGUI brnRatingText;
 
+    // ─────────────────────────────────────────────────────────────
+    // PAGE 5 – BRN RÉSUMÉ
+    // ─────────────────────────────────────────────────────────────
+    [Header("Page 5 - BRN Résumé")]
+    [SerializeField] private TextMeshProUGUI resumeLinesText;
+    [SerializeField] private TextMeshProUGUI resumeNoteText;
 
     private int _currentPageIndex = 0;
 
@@ -103,6 +111,7 @@ public class PlayerDossierPanelUI : MonoBehaviour
             PopulatePage2(snapshot);
             PopulatePage3(snapshot);
             PopulatePage4(snapshot);
+            PopulatePage5(snapshot);
         }
         else
         {
@@ -111,6 +120,7 @@ public class PlayerDossierPanelUI : MonoBehaviour
             PopulatePage2(null);
             PopulatePage3(null);
             PopulatePage4(null);
+            PopulatePage5(null);
         }
     }
 
@@ -387,26 +397,30 @@ public class PlayerDossierPanelUI : MonoBehaviour
         }
     }
 
+    // ─────────────────────────────────────────────────────────────
+    // PAGE 4 – RESOURCES (UPDATED WITH LABEL + VALUE)
+    // ─────────────────────────────────────────────────────────────
+
     private void PopulatePage4(PlayerDossierSnapshot s)
     {
         if (s == null)
         {
-            if (coinsText)          coinsText.text          = "0";
-            if (energyText)         energyText.text         = "0";
-            if (medkitText)         medkitText.text         = "0";
-            if (materialText)       materialText.text       = "0";
-            if (typeResBoosterText) typeResBoosterText.text = "0";
-            if (lureText)           lureText.text           = "0";
-            if (captureBandText)    captureBandText.text    = "0";
-            if (luckText)           luckText.text           = "0";
-            if (atkBoosterText)     atkBoosterText.text     = "0";
-            if (hpBoosterText)      hpBoosterText.text      = "0";
-            if (speedBoosterText)   speedBoosterText.text   = "0";
-            if (shinyOrbText)       shinyOrbText.text       = "0";
-            if (blessingScaleText)  blessingScaleText.text  = "0";
-            if (restChargeText)     restChargeText.text     = "0";
-            if (growthCoreText)     growthCoreText.text     = "0";
-            if (packShardText)      packShardText.text      = "0";
+            if (coinsText)          coinsText.text          = "Coins: 0";
+            if (energyText)         energyText.text         = "Harbor Cargo: 0";
+            if (medkitText)         medkitText.text         = "Medkits: 0";
+            if (materialText)       materialText.text       = "Ingot Materials: 0";
+            if (typeResBoosterText) typeResBoosterText.text = "Type Shields: 0";
+            if (lureText)           lureText.text           = "Shiny Lures: 0";
+            if (captureBandText)    captureBandText.text    = "Capture Bands: 0";
+            if (luckText)           luckText.text           = "Luck Orbs: 0";
+            if (atkBoosterText)     atkBoosterText.text     = "Attack Boosters: 0";
+            if (hpBoosterText)      hpBoosterText.text      = "HP Boosters: 0";
+            if (speedBoosterText)   speedBoosterText.text   = "Speed Boosters: 0";
+            if (shinyOrbText)       shinyOrbText.text       = "Shiny Orbs: 0";
+            if (blessingScaleText)  blessingScaleText.text  = "Blessing Tokens: 0";
+            if (restChargeText)     restChargeText.text     = "Rest Charges: 0";
+            if (growthCoreText)     growthCoreText.text     = "Growth Cores: 0";
+            if (packShardText)      packShardText.text      = "Shards: 0";
 
             if (efficiencyPercentText) efficiencyPercentText.text = "0%";
             if (efficiencyFill)
@@ -418,24 +432,57 @@ public class PlayerDossierPanelUI : MonoBehaviour
             return;
         }
 
-        if (coinsText)          coinsText.text          = s.coinCount.ToString("N0");
-        if (energyText)         energyText.text         = s.energyCount.ToString();
-        if (medkitText)         medkitText.text         = s.medkitCount.ToString();
-        if (materialText)       materialText.text       = s.materialCount.ToString("N0");
-        if (typeResBoosterText) typeResBoosterText.text = s.typeResBoosterCount.ToString();
-        if (lureText)           lureText.text           = s.lureCount.ToString();
-        if (captureBandText)    captureBandText.text    = s.captureBandCount.ToString();
-        if (luckText)           luckText.text           = s.luckCount.ToString();
-        if (atkBoosterText)     atkBoosterText.text     = s.atkBoosterCount.ToString();
-        if (hpBoosterText)      hpBoosterText.text      = s.hpBoosterCount.ToString();
-        if (speedBoosterText)   speedBoosterText.text   = s.speedBoosterCount.ToString();
-        if (shinyOrbText)       shinyOrbText.text       = s.shinyOrbCount.ToString();
-        if (blessingScaleText)  blessingScaleText.text  = s.blessingScaleCount.ToString();
-        if (restChargeText)     restChargeText.text     = s.restChargeCount.ToString();
-        if (growthCoreText)     growthCoreText.text     = s.growthCoreCount.ToString();
-        if (packShardText)      packShardText.text      = s.packShardCount.ToString();
+        // Core “headline” resources using your lore names
+        if (materialText)
+            materialText.text = $"Ingot Materials: {s.materialCount.ToString("N0")}";
 
-        // Efficiency bar + % + rating stay the same as before...
+        if (energyText)
+            energyText.text = $"Harbor Cargo: {s.energyCount.ToString("N0")}";
+
+        if (captureBandText)
+            captureBandText.text = $"Capture Bands: {s.captureBandCount}";
+
+        if (blessingScaleText)
+            blessingScaleText.text = $"Blessing Tokens: {s.blessingScaleCount}";
+
+        if (luckText)
+            luckText.text = $"Luck Orbs: {s.luckCount}";
+
+        if (lureText)
+            lureText.text = $"Shiny Lures: {s.lureCount}";
+
+        if (growthCoreText)
+            growthCoreText.text = $"Growth Cores: {s.growthCoreCount}";
+
+        if (packShardText)
+            packShardText.text = $"Shards: {s.packShardCount}";
+
+        if (coinsText)
+            coinsText.text = $"Coins: {s.coinCount.ToString("N0")}";
+
+        // Supporting resources keep clear, BRN-flavored names as well
+        if (medkitText)
+            medkitText.text = $"Medkits: {s.medkitCount}";
+
+        if (typeResBoosterText)
+            typeResBoosterText.text = $"Type Shields: {s.typeResBoosterCount}";
+
+        if (atkBoosterText)
+            atkBoosterText.text = $"Attack Boosters: {s.atkBoosterCount}";
+
+        if (hpBoosterText)
+            hpBoosterText.text = $"HP Boosters: {s.hpBoosterCount}";
+
+        if (speedBoosterText)
+            speedBoosterText.text = $"Speed Boosters: {s.speedBoosterCount}";
+
+        if (shinyOrbText)
+            shinyOrbText.text = $"Shiny Orbs: {s.shinyOrbCount}";
+
+        if (restChargeText)
+            restChargeText.text = $"Rest Charges: {s.restChargeCount}";
+
+        // Efficiency bar + % + rating stays the same logic
         float normalized = Mathf.Clamp01(s.conversionEfficiencyPercent / 100f);
 
         if (efficiencyPercentText)
@@ -459,6 +506,53 @@ public class PlayerDossierPanelUI : MonoBehaviour
         }
     }
 
+    // ─────────────────────────────────────────────────────────────
+    // PAGE 5 – BRN Résumé
+    // ─────────────────────────────────────────────────────────────
 
+    private void PopulatePage5(PlayerDossierSnapshot stats)
+    {
+        if (resumeLinesText == null && resumeNoteText == null)
+            return;
 
+        if (stats == null)
+        {
+            if (resumeLinesText != null)
+                resumeLinesText.text = "• No BRN history available yet.\n• Continue operations to generate a field record.";
+
+            if (resumeNoteText != null)
+                resumeNoteText.text = "Handler record incomplete. BRN will update this résumé as more data is collected.";
+
+            return;
+        }
+
+        // Bullet lines
+        if (resumeLinesText != null)
+        {
+            if (stats.resumeLines == null || stats.resumeLines.Length == 0)
+            {
+                resumeLinesText.text = "• No significant events recorded yet.\n• Continue operating job sites and handling field encounters.";
+            }
+            else
+            {
+                var sb = new System.Text.StringBuilder();
+                for (int i = 0; i < stats.resumeLines.Length; i++)
+                {
+                    if (i > 0) sb.AppendLine();
+                    sb.Append("• ");
+                    sb.Append(stats.resumeLines[i]);
+                }
+                resumeLinesText.text = sb.ToString();
+            }
+        }
+
+        // BRN note
+        if (resumeNoteText != null)
+        {
+            if (string.IsNullOrEmpty(stats.brnResumeNote))
+                resumeNoteText.text = "Handler performance remains under review.";
+            else
+                resumeNoteText.text = stats.brnResumeNote;
+        }
+    }
 }
