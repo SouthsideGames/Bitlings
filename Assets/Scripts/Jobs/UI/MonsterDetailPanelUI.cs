@@ -703,11 +703,22 @@ public class MonsterDetailPanelUI : MonoBehaviour
         if (!evolveButton)
             return;
 
-        bool canShow = (_mode == MonsterDetailMode.AssignToTeam)
-                       && _currentOwned != null
-                       && !string.IsNullOrEmpty(_currentOwned.monsterId)
-                       && current != null
-                       && EvolutionHelper.CanEvolve(_currentOwned, current);
+        bool canShow = false;
+
+        if (_mode == MonsterDetailMode.AssignToTeam &&
+            _currentOwned != null &&
+            !string.IsNullOrEmpty(_currentOwned.monsterId) &&
+            current != null &&
+            current.evolutionForm != null &&
+            current.evolutionLevel > 0)
+        {
+            int curLevel = GetDisplayLevel();
+
+            if (curLevel >= current.evolutionLevel)
+            {
+                canShow = EvolutionHelper.CanEvolve(_currentOwned, current);
+            }
+        }
 
         evolveButton.gameObject.SetActive(canShow);
         evolveButton.interactable = canShow;
