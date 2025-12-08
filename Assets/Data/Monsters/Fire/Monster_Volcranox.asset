@@ -15,7 +15,7 @@ MonoBehaviour:
   id: M-005
   displayName: Volcranox
   type: 1
-  typeIcon: {fileID: 21300000, guid: f62ba72457a83394cb27be8b0d0011db, type: 3}
+  typeIcon: {fileID: 21300000, guid: d552cfb27992e494694a52b7e3578364, type: 3}
   icon: {fileID: 21300000, guid: 4db341f17ae9cdf4ea420bf3e462aa98, type: 3}
   backIcon: {fileID: 21300000, guid: 296252648303af442a3d71026e859834, type: 3}
   shinyIcon: {fileID: -801612624374383581, guid: 2277c2dbce3c04bfda0b083544faa5e6, type: 3}

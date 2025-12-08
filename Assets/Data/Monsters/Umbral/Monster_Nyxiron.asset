@@ -15,7 +15,7 @@ MonoBehaviour:
   id: M-061
   displayName: Nyxiron
   type: 15
-  typeIcon: {fileID: 21300000, guid: 5e2d5499617378b40971a6d461eb2727, type: 3}
+  typeIcon: {fileID: 21300000, guid: a5efb49857c07455fa8503bc949b1aba, type: 3}
   icon: {fileID: 21300000, guid: a618fa3d97dc1d748b13100ec48b1195, type: 3}
   backIcon: {fileID: 21300000, guid: 8180f9b5f7875e14bb9e77baa1f263e2, type: 3}
   shinyIcon: {fileID: 21300000, guid: f6787f5f0d9b53741a3d386a7dd12d0e, type: 3}

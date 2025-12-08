@@ -15,7 +15,7 @@ MonoBehaviour:
   id: M-020
   displayName: Icern
   type: 5
-  typeIcon: {fileID: 21300000, guid: 1a0523f8755ad1f4485d1c7613888105, type: 3}
+  typeIcon: {fileID: 21300000, guid: 7503da639a0af47adbd6514de1c118ba, type: 3}
   icon: {fileID: 21300000, guid: fa1739b51a6044a7f9f373dbf5437106, type: 3}
   backIcon: {fileID: 21300000, guid: 127e97d7a508941ae9c0bb1876e53532, type: 3}
   shinyIcon: {fileID: 21300000, guid: 1e4364731f225714d8197275a671c051, type: 3}

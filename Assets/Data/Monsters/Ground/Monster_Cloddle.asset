@@ -15,7 +15,7 @@ MonoBehaviour:
   id: M-025
   displayName: Cloddle
   type: 8
-  typeIcon: {fileID: 21300000, guid: b1c9dc482ebfb5046ba40b33bd731783, type: 3}
+  typeIcon: {fileID: 21300000, guid: f0d6243fead4a41fcae07804c4d66233, type: 3}
   icon: {fileID: 21300000, guid: 85b9d35547b0c4440b68df893c2f321a, type: 3}
   backIcon: {fileID: 21300000, guid: 35f17c1f3f8184746aa1a9cb488d1d6b, type: 3}
   shinyIcon: {fileID: 21300000, guid: cc79b5b89d63e4f75accbde3967adb23, type: 3}

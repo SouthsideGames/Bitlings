@@ -15,7 +15,7 @@ MonoBehaviour:
   id: M-019
   displayName: Thronis
   type: 4
-  typeIcon: {fileID: 21300000, guid: 3222076e383d35c4caf42204f19699c2, type: 3}
+  typeIcon: {fileID: 21300000, guid: e57a940f3027d4a9f83f25cefbc6d738, type: 3}
   icon: {fileID: 21300000, guid: 54a6fb5123cda4bf8a658b1da8a2f36d, type: 3}
   backIcon: {fileID: 21300000, guid: c3653af337d204bbfb831153f7e8531f, type: 3}
   shinyIcon: {fileID: 21300000, guid: 1c8963dd6d43e9245848d5fd6440b6c9, type: 3}

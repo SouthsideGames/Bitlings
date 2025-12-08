@@ -15,7 +15,7 @@ MonoBehaviour:
   id: M-055
   displayName: Shieldrax
   type: 6
-  typeIcon: {fileID: 21300000, guid: f05da849a1c8472468f431123a2a2c55, type: 3}
+  typeIcon: {fileID: 21300000, guid: 08b8f2b54695d465cb15062c5b76b5a4, type: 3}
   icon: {fileID: 21300000, guid: 46493ad440305f44d986a91861ebdaf1, type: 3}
   backIcon: {fileID: 21300000, guid: 3b301f9884a2011438e174b152088386, type: 3}
   shinyIcon: {fileID: 21300000, guid: 43a79926b05fca847ab514ad5164395f, type: 3}

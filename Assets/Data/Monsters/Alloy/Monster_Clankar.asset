@@ -15,7 +15,7 @@ MonoBehaviour:
   id: M-038
   displayName: Clankar
   type: 16
-  typeIcon: {fileID: 21300000, guid: bd1a1c79118e35a4da2783a3618d122e, type: 3}
+  typeIcon: {fileID: 21300000, guid: c802d8c6dfd7c40329bae6fe5d96fc85, type: 3}
   icon: {fileID: 21300000, guid: e5817a119c9eca441a6ea3890c0e7ada, type: 3}
   backIcon: {fileID: 21300000, guid: 861bef715462d8e4db8f3ff6085f3f54, type: 3}
   shinyIcon: {fileID: 21300000, guid: 1be94db7166604d1999e0bfaac325d75, type: 3}

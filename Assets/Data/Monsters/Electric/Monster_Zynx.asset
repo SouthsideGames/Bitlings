@@ -15,7 +15,7 @@ MonoBehaviour:
   id: M-016
   displayName: Zynx
   type: 4
-  typeIcon: {fileID: 21300000, guid: 3222076e383d35c4caf42204f19699c2, type: 3}
+  typeIcon: {fileID: 21300000, guid: e57a940f3027d4a9f83f25cefbc6d738, type: 3}
   icon: {fileID: 21300000, guid: b6ac4cd47c9dd433db3868d7fccaf473, type: 3}
   backIcon: {fileID: 21300000, guid: 7e90f42e827784d21b29244635c656db, type: 3}
   shinyIcon: {fileID: 21300000, guid: 286a484658da5bf42a65458b11bf5f4d, type: 3}

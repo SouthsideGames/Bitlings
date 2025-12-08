@@ -15,7 +15,7 @@ MonoBehaviour:
   id: M-056
   displayName: Warwing
   type: 6
-  typeIcon: {fileID: 21300000, guid: f05da849a1c8472468f431123a2a2c55, type: 3}
+  typeIcon: {fileID: 21300000, guid: 08b8f2b54695d465cb15062c5b76b5a4, type: 3}
   icon: {fileID: 21300000, guid: 707be0fca7451c94ab57ef41d93a5063, type: 3}
   backIcon: {fileID: 21300000, guid: baf4276ae080df84bbf48fdea4b956c7, type: 3}
   shinyIcon: {fileID: 21300000, guid: b19ac954b0eadee49a2d62d04bdf6eda, type: 3}

@@ -15,7 +15,7 @@ MonoBehaviour:
   id: M-012
   displayName: Wispel
   type: 2
-  typeIcon: {fileID: 21300000, guid: 85eb7ffaf6611914b8661dbe382134a0, type: 3}
+  typeIcon: {fileID: 21300000, guid: dd2adea89cda84ec4a589a6d1d5da1ae, type: 3}
   icon: {fileID: 21300000, guid: 2e1f93dec3f297647b880d3da65be203, type: 3}
   backIcon: {fileID: 21300000, guid: 086909d0a156fae44bb14fe83c5ecdca, type: 3}
   shinyIcon: {fileID: 21300000, guid: ce695ca06beec48d09ed4dedce3beb9e, type: 3}

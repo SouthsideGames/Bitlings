@@ -15,7 +15,7 @@ MonoBehaviour:
   id: M-014
   displayName: Phobrak
   type: 2
-  typeIcon: {fileID: 21300000, guid: 85eb7ffaf6611914b8661dbe382134a0, type: 3}
+  typeIcon: {fileID: 21300000, guid: dd2adea89cda84ec4a589a6d1d5da1ae, type: 3}
   icon: {fileID: 21300000, guid: ab99683266fdd784db041d5ee8efbaa4, type: 3}
   backIcon: {fileID: 21300000, guid: fa68ddcb87a369c489261be31ec3d0ce, type: 3}
   shinyIcon: {fileID: 21300000, guid: 505f3e3c57b274e8c82c2d01d64ec804, type: 3}

@@ -15,7 +15,7 @@ MonoBehaviour:
   id: M-058
   displayName: Sporelix
   type: 7
-  typeIcon: {fileID: 21300000, guid: 16b4e9b3df396ae4099b8006cc5c6206, type: 3}
+  typeIcon: {fileID: 21300000, guid: 10d50b4d1dee041cc8dcf349a9ce86a1, type: 3}
   icon: {fileID: 21300000, guid: 81a757657c21f19439ffc846371b559c, type: 3}
   backIcon: {fileID: 21300000, guid: 1e578135737bea64dba588dbb12daa1e, type: 3}
   shinyIcon: {fileID: 21300000, guid: 8778f8d24397f4506ae9df8f38b1821e, type: 3}

@@ -15,7 +15,7 @@ MonoBehaviour:
   id: M-008
   displayName: Sylvire
   type: 3
-  typeIcon: {fileID: 21300000, guid: 2ec966d8a0664734c8cb549a6f2c9b49, type: 3}
+  typeIcon: {fileID: 21300000, guid: 46bf3bbfcff674f17bd0ea06a23e1467, type: 3}
   icon: {fileID: 21300000, guid: 4d21de2a0c99cdf4da8da86f48d945b8, type: 3}
   backIcon: {fileID: 21300000, guid: 7ed2d2ff399201649813b9642fc82b3e, type: 3}
   shinyIcon: {fileID: 21300000, guid: 78181fd7ba990da4ca2736f26ae658b8, type: 3}

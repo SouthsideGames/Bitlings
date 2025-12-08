@@ -15,7 +15,7 @@ MonoBehaviour:
   id: M-042
   displayName: Wraithor
   type: 13
-  typeIcon: {fileID: 21300000, guid: a4dc8fe6005f03240b2a907edb679f02, type: 3}
+  typeIcon: {fileID: 21300000, guid: 00ff3f4c0d50247a8915bc882652db22, type: 3}
   icon: {fileID: 21300000, guid: ac50bb944382a7a4da96c2f6e3e0faee, type: 3}
   backIcon: {fileID: 21300000, guid: 7c8cb506a237c3247aa0bfaa4713041e, type: 3}
   shinyIcon: {fileID: 21300000, guid: fd9202dfe669e7a45a1332d62facf053, type: 3}

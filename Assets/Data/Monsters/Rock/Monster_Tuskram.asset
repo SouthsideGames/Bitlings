@@ -15,7 +15,7 @@ MonoBehaviour:
   id: M-029
   displayName: Tuskram
   type: 12
-  typeIcon: {fileID: 21300000, guid: b7f6f5a14fb5e6243b5df871e57d7d1b, type: 3}
+  typeIcon: {fileID: 21300000, guid: 5c631c9f2f98b441caa0de9f7de0cfcd, type: 3}
   icon: {fileID: 21300000, guid: 965c787a3d76739419a742d722592206, type: 3}
   backIcon: {fileID: 21300000, guid: 4ef0ec67af12df341bbba8f0434a37e2, type: 3}
   shinyIcon: {fileID: 21300000, guid: a6f473f7e44533b428f530307f891db9, type: 3}

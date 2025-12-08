@@ -15,7 +15,7 @@ MonoBehaviour:
   id: M-047
   displayName: Dravix
   type: 14
-  typeIcon: {fileID: 21300000, guid: 12d385ecbdfdfef4a8dc4ea4e25a001d, type: 3}
+  typeIcon: {fileID: 21300000, guid: 3934876669845455994cef6f6ee793af, type: 3}
   icon: {fileID: 21300000, guid: 27aa3d407df8a2743ad4477ea3980840, type: 3}
   backIcon: {fileID: 21300000, guid: 80205622ed7e2404db881414579a263d, type: 3}
   shinyIcon: {fileID: 21300000, guid: 6384cc5a1af6d544f9cb29bcf77acf2d, type: 3}

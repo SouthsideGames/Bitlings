@@ -15,7 +15,7 @@ MonoBehaviour:
   id: M-002
   displayName: Flarix
   type: 1
-  typeIcon: {fileID: 21300000, guid: f62ba72457a83394cb27be8b0d0011db, type: 3}
+  typeIcon: {fileID: 21300000, guid: d552cfb27992e494694a52b7e3578364, type: 3}
   icon: {fileID: 21300000, guid: 3af57f1403d43794d965c0d65cb6a370, type: 3}
   backIcon: {fileID: 21300000, guid: 0d587440e2ffecd4bb0ed760a974d872, type: 3}
   shinyIcon: {fileID: 21300000, guid: f572bf755d8964f448047b5c96414851, type: 3}

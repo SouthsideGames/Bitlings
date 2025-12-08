@@ -15,7 +15,7 @@ MonoBehaviour:
   id: M-021
   displayName: Petalis
   type: 5
-  typeIcon: {fileID: 21300000, guid: 1a0523f8755ad1f4485d1c7613888105, type: 3}
+  typeIcon: {fileID: 21300000, guid: 7503da639a0af47adbd6514de1c118ba, type: 3}
   icon: {fileID: 21300000, guid: 5feb912444feb4cdd98a545d32d2dfe8, type: 3}
   backIcon: {fileID: 21300000, guid: 8867c22238ea8483ca0db8a725dd1274, type: 3}
   shinyIcon: {fileID: 21300000, guid: 808b1547322d3c74dbcd28c871359e9a, type: 3}

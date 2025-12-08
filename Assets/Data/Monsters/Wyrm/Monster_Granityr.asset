@@ -15,7 +15,7 @@ MonoBehaviour:
   id: M-049
   displayName: Granityr
   type: 14
-  typeIcon: {fileID: 21300000, guid: 12d385ecbdfdfef4a8dc4ea4e25a001d, type: 3}
+  typeIcon: {fileID: 21300000, guid: 3934876669845455994cef6f6ee793af, type: 3}
   icon: {fileID: 21300000, guid: 1b72590d0ad43cd4eae10b70b37c0ee3, type: 3}
   backIcon: {fileID: 21300000, guid: 778a35bf094223e4c97ab39ea84d7d57, type: 3}
   shinyIcon: {fileID: 21300000, guid: 22dc69796363b464c83310fe44fa2deb, type: 3}

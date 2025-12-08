@@ -15,7 +15,7 @@ MonoBehaviour:
   id: M-018
   displayName: Joltrum
   type: 4
-  typeIcon: {fileID: 21300000, guid: 3222076e383d35c4caf42204f19699c2, type: 3}
+  typeIcon: {fileID: 21300000, guid: e57a940f3027d4a9f83f25cefbc6d738, type: 3}
   icon: {fileID: 21300000, guid: 0ba0eda73815348c0afacd4329989ce1, type: 3}
   backIcon: {fileID: 21300000, guid: 002db4af838c546fe8c8a500985e6c03, type: 3}
   shinyIcon: {fileID: 21300000, guid: 4cd5e6839cef97d4ca7041f6fafa0173, type: 3}

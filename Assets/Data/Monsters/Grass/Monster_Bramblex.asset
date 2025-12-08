@@ -15,7 +15,7 @@ MonoBehaviour:
   id: M-010
   displayName: Bramblex
   type: 3
-  typeIcon: {fileID: 21300000, guid: 2ec966d8a0664734c8cb549a6f2c9b49, type: 3}
+  typeIcon: {fileID: 21300000, guid: 46bf3bbfcff674f17bd0ea06a23e1467, type: 3}
   icon: {fileID: 21300000, guid: 9704f5990e550a64c8ba443c917158b7, type: 3}
   backIcon: {fileID: 21300000, guid: a2fe7d4d68def674cb5b671af6de3f5b, type: 3}
   shinyIcon: {fileID: 21300000, guid: 0c517c3760a9b8b47928b185c9b1b681, type: 3}

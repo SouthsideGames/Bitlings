@@ -15,7 +15,7 @@ MonoBehaviour:
   id: M-040
   displayName: Obliviron
   type: 16
-  typeIcon: {fileID: 21300000, guid: bd1a1c79118e35a4da2783a3618d122e, type: 3}
+  typeIcon: {fileID: 21300000, guid: c802d8c6dfd7c40329bae6fe5d96fc85, type: 3}
   icon: {fileID: 21300000, guid: 0f2298c514247d44b9a96b96af6d5d82, type: 3}
   backIcon: {fileID: 21300000, guid: 2ea653cae2d80104593300ee8de92377, type: 3}
   shinyIcon: {fileID: 21300000, guid: ae3a772aa98854b57880de5fd5d0eb11, type: 3}

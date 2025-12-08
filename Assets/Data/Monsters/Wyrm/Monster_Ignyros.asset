@@ -15,7 +15,7 @@ MonoBehaviour:
   id: M-050
   displayName: Ignyros
   type: 14
-  typeIcon: {fileID: 21300000, guid: 12d385ecbdfdfef4a8dc4ea4e25a001d, type: 3}
+  typeIcon: {fileID: 21300000, guid: 3934876669845455994cef6f6ee793af, type: 3}
   icon: {fileID: 21300000, guid: 70b88ca745341204fb4697ad392b176e, type: 3}
   backIcon: {fileID: 21300000, guid: 159f877747b45744787050a60c5563f4, type: 3}
   shinyIcon: {fileID: 21300000, guid: 335dff3eab02f684387d5c9c93cf019b, type: 3}
