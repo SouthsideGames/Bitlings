@@ -18,6 +18,7 @@ public class EncounterPanelUI : MonoBehaviour
     // Blinder (localized + weighted random)
     // ─────────────────────────────────────────────────────────────
     [Header("Blinder")]
+    [SerializeField] private CanvasGroup storyGroup; // (if you removed this, delete this line)
     [SerializeField] private CanvasGroup blinderGroup;
     [SerializeField] private TextMeshProUGUI blinderText;
     [SerializeField, Range(0.05f, 1.5f)] private float preFadeDelay = 0.25f;
@@ -90,6 +91,19 @@ public class EncounterPanelUI : MonoBehaviour
     [Tooltip("Small 'already caught' icon shown when this species is in your collection.")]
     [SerializeField] private GameObject ownedCapturedIcon;
 
+    // ─────────────────────────────────────────────────────────────
+    // Wild State HUD (guard / shield / charge)
+    // ─────────────────────────────────────────────────────────────
+    [Header("Wild State")]
+    [SerializeField] private TextMeshProUGUI wildStateLabel;
+    [SerializeField] private GameObject wildGuardIcon;
+    [SerializeField] private GameObject wildShieldIcon;
+    [SerializeField] private GameObject wildChargeIcon;
+
+    bool _wildIsGuarding;
+    int _wildShieldAmount;
+    int _wildChargeTurns;
+
     private TextMeshProUGUI encounterLabel;
     float _etaTickAccum = 0f;
     bool _isFading;
@@ -113,7 +127,8 @@ public class EncounterPanelUI : MonoBehaviour
             blinderGroup.interactable = true;
         }
 
-        captureBannerGroup.alpha = 0f;
+        if (captureBannerGroup)
+            captureBannerGroup.alpha = 0f;
 
         if (ownedCapturedIcon)
             ownedCapturedIcon.SetActive(false);
@@ -922,10 +937,90 @@ public class EncounterPanelUI : MonoBehaviour
             });
     }
 
+    // ─────────────────────────────────────────────────────────────
+    // Wild state reset + public state API
+    // ─────────────────────────────────────────────────────────────
     void ClearWildStateUI()
     {
         if (ownedCapturedIcon)
             ownedCapturedIcon.SetActive(false);
+
+        _wildIsGuarding = false;
+        _wildShieldAmount = 0;
+        _wildChargeTurns = 0;
+
+        if (wildGuardIcon) wildGuardIcon.SetActive(false);
+        if (wildShieldIcon) wildShieldIcon.SetActive(false);
+        if (wildChargeIcon) wildChargeIcon.SetActive(false);
+
+        if (wildStateLabel)
+            wildStateLabel.text = string.Empty;
+    }
+
+    /// <summary>
+    /// Called by enemy / battle logic when the wild monster uses or stops Guard.
+    /// </summary>
+    public void SetWildGuarding(bool isGuarding)
+    {
+        _wildIsGuarding = isGuarding;
+
+        if (wildGuardIcon)
+            wildGuardIcon.SetActive(isGuarding);
+
+        RefreshWildStateLabel();
+    }
+
+    /// <summary>
+    /// Set the wild monster's current shield amount (0 = none).
+    /// </summary>
+    public void SetWildShield(int shieldAmount)
+    {
+        _wildShieldAmount = Mathf.Max(0, shieldAmount);
+
+        if (wildShieldIcon)
+            wildShieldIcon.SetActive(_wildShieldAmount > 0);
+
+        RefreshWildStateLabel();
+    }
+
+    /// <summary>
+    /// Set how many turns the wild monster has left on its charge.
+    /// Use 0 to mean "not charging".
+    /// </summary>
+    public void SetWildChargeTurns(int turnsRemaining)
+    {
+        _wildChargeTurns = Mathf.Max(0, turnsRemaining);
+
+        if (wildChargeIcon)
+            wildChargeIcon.SetActive(_wildChargeTurns > 0);
+
+        RefreshWildStateLabel();
+    }
+
+    /// <summary>
+    /// Rebuilds the small summary text under the wild monster.
+    /// Example output: "Guard • Shield 25 • Charging (1)"
+    /// </summary>
+    void RefreshWildStateLabel()
+    {
+        if (!wildStateLabel)
+            return;
+
+        var parts = new List<string>();
+
+        if (_wildIsGuarding)
+            parts.Add("Guard");
+
+        if (_wildShieldAmount > 0)
+            parts.Add($"Shield {_wildShieldAmount}");
+
+        if (_wildChargeTurns > 0)
+            parts.Add($"Charging ({_wildChargeTurns})");
+
+        if (parts.Count == 0)
+            wildStateLabel.text = string.Empty;
+        else
+            wildStateLabel.text = string.Join(" • ", parts);
     }
 
     // ─────────────────────────────────────────────────────────────
@@ -933,6 +1028,9 @@ public class EncounterPanelUI : MonoBehaviour
     // ─────────────────────────────────────────────────────────────
     public void OnWildSpawned(MonsterDataSO def)
     {
+        // Reset previous wild state whenever a new encounter begins
+        ClearWildStateUI();
+
         if (!ownedCapturedIcon)
             return;
 
