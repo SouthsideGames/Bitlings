@@ -20,6 +20,8 @@ public class MonsterDataSO : ScriptableObject
     public Rarity rarity = Rarity.Common;
     public bool canBeStarter = false;
     [Min(0)] public int starterWeight = 1;
+    
+    public int maxLevel = 50;
 
     [Header("Stats")]
     public int baseHP = 60;
