@@ -186,8 +186,6 @@ public class MonsterDetailPanelUI : MonoBehaviour
         onConfirm = onConfirmCallback;
         onCancel  = onCancelCallback;
 
-        if (titleButton) titleButton.gameObject.SetActive(false);
-
         RefreshEvolveButton();
         SetupFavoriteButton();
         SafeOpen(monster);

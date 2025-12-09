@@ -23,6 +23,7 @@ MonoBehaviour:
   rarity: 1
   canBeStarter: 0
   starterWeight: 1
+  maxLevel: 50
   baseHP: 46
   baseAttack: 58
   baseDefense: 34
