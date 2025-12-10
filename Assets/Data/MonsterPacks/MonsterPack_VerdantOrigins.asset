@@ -10,13 +10,15 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: f048558a82b7c2147ab6a4d2677278ea, type: 3}
-  m_Name: MonsterPack_
+  m_Name: MonsterPack_VerdantOrigins
   m_EditorClassIdentifier: 
-  id: 
-  displayName: 
-  description: 
-  icon: {fileID: 0}
-  baseCost: 5
+  id: MP-001
+  displayName: Verdant Origins
+  description: A collection of early-game nature dwellers that thrive in forests,
+    burrows, and soft earth. Ideal for new keepers seeking reliable Grass, Bug, and
+    Ground companions.
+  icon: {fileID: -1117101209642016615, guid: e01effe31a0f2124b91c2adb7a3085c7, type: 3}
+  baseCost: 8
   costType: 17
   saleOff01: 0
   unlockByDefault: 0

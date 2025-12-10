@@ -39,8 +39,6 @@ public class MonsterDataSO : ScriptableObject
     public float fatigueRatePerHour = 0.03f;
     [Range(0f, 48f)] public float fatigueCooldownHours = 8f;
 
-    [Header("Training")]
-    public int baseTrainingXPPerHour = 30;
 
     [Header("Evolution")]
     public int evolutionStage = 1;
