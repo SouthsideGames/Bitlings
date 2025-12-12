@@ -68,7 +68,7 @@ public static class JobStrings {
         ResourceType.ShinyOrb       => "Shiny Orb",
         ResourceType.BlessingScale  => "Blessing Token",
         ResourceType.RestCharge      => "Rest Charge",
-        ResourceType.PackShard      => "Pack Shard",
+        ResourceType.PackVoucher      => "Pack Shard",
         _ => t.ToString()
     };
 }
@@ -91,7 +91,7 @@ public static class JobOutput
         JobType.ShadowMarket=> ResourceType.ShinyOrb,
         JobType.Sanctum     => ResourceType.BlessingScale,
         JobType.Clinic      => ResourceType.RestCharge,
-        JobType.Expedition  => ResourceType.PackShard,
+        JobType.Expedition  => ResourceType.PackVoucher,
 
         _ => ResourceType.Credits
     };

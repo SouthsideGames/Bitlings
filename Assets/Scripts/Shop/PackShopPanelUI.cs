@@ -41,7 +41,7 @@ public class PackShopPanelUI : MonoBehaviour
 
     private void RefreshCurrencyHeader()
     {
-        int have = ResourceBank.Get(ResourceType.PackShard);
+        int have = ResourceBank.Get(ResourceType.PackVoucher);
         if (currencyHeader)
             currencyHeader.text = $"Pack Shards: {have}";
     }

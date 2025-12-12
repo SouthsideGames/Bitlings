@@ -8578,9 +8578,9 @@ RectTransform:
   - {fileID: 1746140856}
   m_Father: {fileID: 917394703}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 1}
-  m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 489.49573, y: -140}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 0, y: 0}
+  m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 320, y: 150}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &183951169
@@ -23524,7 +23524,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: 'Shards: '
+  m_text: 'Voucher:'
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: ca247a3092b7b404dbaa6f4ab43e450c, type: 2}
   m_sharedMaterial: {fileID: -403277894513911722, guid: ca247a3092b7b404dbaa6f4ab43e450c, type: 2}
@@ -27735,7 +27735,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: -4179452062282147901, guid: 74e5a5f1c81d742699cbe6fb6f938dcf, type: 3}
+  m_Sprite: {fileID: -109353936457988245, guid: df23d2ef5229744a0a8cc432cfb15ddd, type: 3}
   m_Type: 0
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -64350,7 +64350,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!114 &1167268450
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -89566,7 +89566,7 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: 3960355587664765872, guid: ad3c94b4faa4cb64c812b24986528157, type: 3}
       propertyPath: m_text
-      value: Use shards to grow your collection.
+      value: Use vouchers to grow your collection.
       objectReference: {fileID: 0}
     - target: {fileID: 3960355587664765872, guid: ad3c94b4faa4cb64c812b24986528157, type: 3}
       propertyPath: m_fontAsset
@@ -89574,7 +89574,7 @@ PrefabInstance:
       objectReference: {fileID: 11400000, guid: e1980d03e94584c2b8bf7986c994fd3a, type: 2}
     - target: {fileID: 3960355587664765872, guid: ad3c94b4faa4cb64c812b24986528157, type: 3}
       propertyPath: m_hasFontAssetChanged
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 5999859918814579861, guid: ad3c94b4faa4cb64c812b24986528157, type: 3}
       propertyPath: m_Name
@@ -101359,9 +101359,9 @@ MonoBehaviour:
     icon: {fileID: 2291750746404757969, guid: ce3a6dc26e8c44aada3227991627a8e0, type: 3}
     infoId: res.growthcore
   - type: 17
-    displayName: Pack Shard
-    icon: {fileID: -4179452062282147901, guid: 74e5a5f1c81d742699cbe6fb6f938dcf, type: 3}
-    infoId: res.packShard
+    displayName: Pack Voucher
+    icon: {fileID: -109353936457988245, guid: df23d2ef5229744a0a8cc432cfb15ddd, type: 3}
+    infoId: res.packVoucher
   recycleButton: {fileID: 1300845163}
   recyclePanelId: 29
 --- !u!1 &1829481768

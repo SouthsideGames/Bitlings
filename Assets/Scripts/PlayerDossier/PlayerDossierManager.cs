@@ -544,7 +544,7 @@ public class PlayerDossierManager : MonoBehaviour
         s.blessingScaleCount  = bank.Get(ResourceType.BlessingScale);
         s.restChargeCount     = bank.Get(ResourceType.RestCharge);
         s.growthCoreCount     = bank.Get(ResourceType.GrowthCore);
-        s.packShardCount      = bank.Get(ResourceType.PackShard);
+        s.packShardCount      = bank.Get(ResourceType.PackVoucher);
 
         // ─────────────────────────────────────────────────────────────
         // BRN Composite Handler Efficiency Score (0–100)
