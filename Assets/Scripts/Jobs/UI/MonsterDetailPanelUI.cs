@@ -701,26 +701,40 @@ public class MonsterDetailPanelUI : MonoBehaviour
         if (!evolveButton)
             return;
 
-        bool canShow = false;
-
-        if (_mode == MonsterDetailMode.AssignToTeam &&
-            _currentOwned != null &&
-            !string.IsNullOrEmpty(_currentOwned.monsterId) &&
-            current != null &&
-            current.evolutionForm != null &&
-            current.evolutionLevel > 0)
+        // Must have a valid definition first
+        if (current == null)
         {
-            int curLevel = GetDisplayLevel();
-
-            if (curLevel >= current.evolutionLevel)
-            {
-                canShow = EvolutionHelper.CanEvolve(_currentOwned, current);
-            }
+            evolveButton.gameObject.SetActive(false);
+            return;
         }
 
-        evolveButton.gameObject.SetActive(canShow);
-        evolveButton.interactable = canShow;
+        // Basic evolution flags from MonsterDataSO
+        bool hasEvolution = current.evolutionForm != null && current.evolutionLevel > 0;
+
+        // "Monster level" – 1 for starters, owned level for AssignToTeam
+        int curLevel = GetDisplayLevel();
+        bool meetsLevel = hasEvolution && curLevel >= current.evolutionLevel;
+
+        // Always show the button if this species could evolve at this level
+        // (StarterSelect OR AssignToTeam).
+        evolveButton.gameObject.SetActive(meetsLevel);
+
+        // Now decide if it should actually be clickable.
+        // Only truly evolvable when we are viewing an owned monster in AssignToTeam.
+        bool canActuallyEvolve = false;
+
+        if (meetsLevel &&
+            _mode == MonsterDetailMode.AssignToTeam &&
+            _currentOwned != null &&
+            !string.IsNullOrEmpty(_currentOwned.monsterId))
+        {
+            // Keep your existing helper checks (costs, resources, etc.)
+            canActuallyEvolve = EvolutionHelper.CanEvolve(_currentOwned, current);
+        }
+
+        evolveButton.interactable = canActuallyEvolve;
     }
+
 
     private void ResolveTitleButton()
     {
@@ -732,18 +746,28 @@ public class MonsterDetailPanelUI : MonoBehaviour
     {
         if (!titleButton) return;
 
-        bool canBind = (_mode == MonsterDetailMode.AssignToTeam)
-                       && _currentOwned != null
-                       && !string.IsNullOrEmpty(_currentOwned.monsterId)
-                       && current != null;
+        // Prefer owned ID when we have one; fall back to definition ID (for starters)
+        string key = null;
+
+        if (_currentOwned != null && !string.IsNullOrEmpty(_currentOwned.monsterId))
+        {
+            key = _currentOwned.monsterId;
+        }
+        else if (current != null && !string.IsNullOrEmpty(current.id))
+        {
+            key = current.id;
+        }
+
+        bool canBind = current != null && !string.IsNullOrEmpty(key);
 
         titleButton.gameObject.SetActive(canBind);
         if (!canBind) return;
 
-        int lvl = GetDisplayLevel();
-        titleButton.Bind(_currentOwned.monsterId, current, lvl);
+        int lvl = GetDisplayLevel(); // For starters this is 1
+        titleButton.Bind(key, current, lvl);
         titleButton.RefreshLabel();
     }
+
 
     private void HandleTitlesChanged(string ownedId)
     {

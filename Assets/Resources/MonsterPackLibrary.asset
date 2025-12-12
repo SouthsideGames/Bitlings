@@ -13,4 +13,6 @@ MonoBehaviour:
   m_Name: MonsterPackLibrary
   m_EditorClassIdentifier: 
   packs:
-  - {fileID: 0}
+  - {fileID: 11400000, guid: c250f32f716cb3345abfb9ce8ff091a8, type: 2}
+  - {fileID: 11400000, guid: a8381c0fb16f393499b491e6d1cbb1b5, type: 2}
+  - {fileID: 11400000, guid: 134cf2f36fb7a8a4d9b60699c3aae710, type: 2}

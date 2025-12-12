@@ -1,0 +1,51 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 32ffc26ed7d444b02a9332ce4279b117, type: 3}
+  m_Name: Monster_Shelpilk
+  m_EditorClassIdentifier: 
+  id: M-075
+  displayName: Shelpilk
+  type: 2
+  typeIcon: {fileID: 21300000, guid: dd2adea89cda84ec4a589a6d1d5da1ae, type: 3}
+  icon: {fileID: 21300000, guid: 793902b837c4b41aaba7c93bf88da5fe, type: 3}
+  backIcon: {fileID: 21300000, guid: aac2a0cb167f24f19b581715fb7e172c, type: 3}
+  shinyIcon: {fileID: 21300000, guid: 273ab278a74f241e9b8eff7ab4962599, type: 3}
+  shinyBackIcon: {fileID: 21300000, guid: ac3e6f8ea8ad844b2a030cbd35abb30b, type: 3}
+  rarity: 0
+  canBeStarter: 0
+  starterWeight: 0
+  maxLevel: 50
+  baseHP: 60
+  baseAttack: 50
+  baseDefense: 60
+  baseSpeed: 30
+  hpRegenPerHour: 8
+  fatigueRatePerHour: 0.03
+  fatigueCooldownHours: 8
+  evolutionStage: 1
+  evolutionLevel: 16
+  evolutionForm: {fileID: 11400000, guid: 8244b69983695f541854b374678cf1ee, type: 2}
+  uncatchable: 0
+  isBoss: 0
+  bossJobDebuffs: []
+  bossWeight: 1
+  spawnWeight: 7
+  jobSkill: 1
+  titleTrack: {fileID: 11400000, guid: ee1166b317bb5e849bf8e8baf9442cb4, type: 2}
+  defaultAlwaysOnTitles: []
+  Personality: {fileID: 11400000, guid: db9c4a912e52a4c5298eec48842ba111, type: 2}
+  basicAttackName: Aqua Shot
+  basicAttackPrefab: {fileID: 7604281169824035565, guid: 4065dc449fe6fd94eb31f0e575b94514, type: 3}
+  basicAttackPrefabLifetime: 1.25
+  description: Shelpilk hides beneath its layered shell, only peeking out when the
+    tide is calm. It digs shallow pits in sandbanks, filtering tiny organisms that
+    drift past.
