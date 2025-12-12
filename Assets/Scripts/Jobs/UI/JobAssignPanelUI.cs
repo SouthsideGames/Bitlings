@@ -16,6 +16,10 @@ public class JobAssignPanelUI : MonoBehaviour
     [SerializeField] private Button confirmBtn;
     [SerializeField] private Button removeBtn;
 
+    [Header("Empty State")]
+    [SerializeField] private GameObject noWorkersRoot;
+    [SerializeField] private GameObject scrollViewRoot;
+
     [Header("Preview")]
     [SerializeField] private TextMeshProUGUI outputPreviewText;
 
@@ -23,47 +27,39 @@ public class JobAssignPanelUI : MonoBehaviour
     private int _slotIndex;
     private WorkerRef _currentWorker;
     private MonsterDataSO _pendingDef;
-    private string _pendingId; // ownedUID of the candidate
+    private string _pendingId;
 
-    private JobSiteState _cachedState; // for preview math
+    private JobSiteState _cachedState;
 
-    // ─────────────────────────────────────────────────────────────
-    // Open
-    // ─────────────────────────────────────────────────────────────
     public void Open(JobType job, int slotIndex)
     {
-        _job      = job;
+        _job = job;
         _slotIndex = slotIndex;
 
         var s = JobManager.I?.States.Find(x => x.config != null && x.config.jobType == _job);
-        _cachedState  = s;
+        _cachedState = s;
         _currentWorker = null;
 
         if (s != null && slotIndex >= 0 && slotIndex < s.workers.Count)
             _currentWorker = s.workers[slotIndex];
 
-        // reset pending selection
         _pendingDef = null;
-        _pendingId  = null;
+        _pendingId = null;
 
-        // current slot image
         if (currentImage)
         {
             if (_currentWorker != null && _currentWorker.def && _currentWorker.def.icon)
             {
                 currentImage.sprite = _currentWorker.def.icon;
-                currentImage.color  = Color.white;
+                currentImage.color = Color.white;
             }
             else
             {
                 currentImage.sprite = emptySlotSprite;
-                currentImage.color  = new Color(1f, 1f, 1f, 0.6f);
             }
         }
 
         BuildList();
-
-        // show current output/hr with no candidate applied
         UpdateOutputPreview(currentOnly: true);
 
         if (confirmBtn)
@@ -78,15 +74,12 @@ public class JobAssignPanelUI : MonoBehaviour
             removeBtn.gameObject.SetActive(true);
             removeBtn.onClick.RemoveAllListeners();
             removeBtn.onClick.AddListener(OnRemove);
-            removeBtn.interactable = (_currentWorker != null);
+            removeBtn.interactable = _currentWorker != null;
         }
 
         OpenSelf();
     }
 
-    // ─────────────────────────────────────────────────────────────
-    // Build list of eligible monsters (one normal + one shiny per species)
-    // ─────────────────────────────────────────────────────────────
     void BuildList()
     {
         if (!listContent) return;
@@ -94,29 +87,27 @@ public class JobAssignPanelUI : MonoBehaviour
         for (int i = listContent.childCount - 1; i >= 0; i--)
             Destroy(listContent.GetChild(i).gameObject);
 
+        SetNoWorkersState(false);
+
         var data = SaveManager.Data;
         if (data == null || data.owned == null)
         {
-            Debug.LogWarning("[JobAssignPanelUI] No save data or owned list.");
+            SetNoWorkersState(true);
             return;
         }
+
         if (monsterButtonPrefab == null)
         {
-            Debug.LogError("[JobAssignPanelUI] monsterButtonPrefab is not assigned.");
+            SetNoWorkersState(true);
             return;
         }
 
-        // 1) De-dupe owned list to: at most 1 normal + 1 shiny per species
-        int rawOwnedCount = data.owned.Count;
-
-        // key = speciesId + "|S" or "|N"
         var bestByKey = new Dictionary<string, OwnedMonsterData>(64);
         for (int i = 0; i < data.owned.Count; i++)
         {
             var o = data.owned[i];
             if (o == null || string.IsNullOrEmpty(o.monsterId)) continue;
 
-            // ensure unique ownedUID
             if (string.IsNullOrEmpty(o.ownedUID))
                 o.ownedUID = System.Guid.NewGuid().ToString("N");
 
@@ -136,9 +127,7 @@ public class JobAssignPanelUI : MonoBehaviour
             }
         }
 
-        // 2) Build eligible entries
         var entries = new List<(MonsterDataSO def, string ownedUid, float score)>();
-        int eligibleCount = 0;
         foreach (var kv in bestByKey)
         {
             var owned = kv.Value;
@@ -148,34 +137,19 @@ public class JobAssignPanelUI : MonoBehaviour
             bool allowed = JobManager.I == null ? true : JobManager.I.IsTypeEligibleFor(_job, def.type);
             if (!allowed) continue;
 
-            eligibleCount++;
             float score = EffectivenessScore(_job, def);
             entries.Add((def, owned.ownedUID, score));
         }
 
-        // highest score first
         entries.Sort((a, b) => b.score.CompareTo(a.score));
 
-        Debug.Log($"[JobAssignPanelUI] Job={_job} RawOwned={rawOwnedCount} DistinctOwned={bestByKey.Count} Eligible={eligibleCount}");
-
-        // 3) Build UI
         if (entries.Count == 0)
         {
-            var placeholder = new GameObject("NoEligibleHint", typeof(RectTransform));
-            placeholder.transform.SetParent(listContent, false);
-            var text = placeholder.AddComponent<TextMeshProUGUI>();
-            text.text = "No eligible workers";
-            text.alignment = TextAlignmentOptions.Center;
-            text.enableAutoSizing = true;
-            text.fontSizeMin = 18;
-            text.fontSizeMax = 28;
-            var rt = (RectTransform)placeholder.transform;
-            rt.anchorMin = new Vector2(0, 1);
-            rt.anchorMax = new Vector2(1, 1);
-            rt.pivot    = new Vector2(0.5f, 1f);
-            rt.sizeDelta = new Vector2(0, 80);
+            SetNoWorkersState(true);
             return;
         }
+
+        SetNoWorkersState(false);
 
         foreach (var e in entries)
         {
@@ -184,8 +158,7 @@ public class JobAssignPanelUI : MonoBehaviour
 
             if (!ui)
             {
-                // very simple fallback
-                var btn   = go.GetComponent<Button>();
+                var btn = go.GetComponent<Button>();
                 var label = go.GetComponentInChildren<TextMeshProUGUI>();
                 if (label) label.text = e.def.displayName;
                 if (btn)
@@ -194,15 +167,16 @@ public class JobAssignPanelUI : MonoBehaviour
                     btn.onClick.AddListener(() =>
                     {
                         _pendingDef = e.def;
-                        _pendingId  = e.ownedUid;
+                        _pendingId = e.ownedUid;
 
                         if (currentImage)
                         {
                             currentImage.sprite = _pendingDef.icon ? _pendingDef.icon : emptySlotSprite;
-                            currentImage.color  = _pendingDef.icon ? Color.white : new Color(1, 1, 1, 0.6f);
+                            currentImage.color = _pendingDef.icon ? Color.white : new Color(1, 1, 1, 0.6f);
                         }
 
                         UpdateOutputPreview(currentOnly: false);
+                        AudioManager.I?.PlayClick();
                     });
                 }
                 continue;
@@ -210,29 +184,35 @@ public class JobAssignPanelUI : MonoBehaviour
 
             if (ui.icon)
             {
-                ui.icon.sprite  = e.def.icon;
+                ui.icon.sprite = e.def.icon;
                 ui.icon.enabled = e.def.icon;
             }
-            if (ui.nameText)  ui.nameText.text  = e.def.displayName;
+            if (ui.nameText) ui.nameText.text = e.def.displayName;
             if (ui.scoreText) ui.scoreText.text = $"x{e.score:0.##}";
-            if (ui.typeIcon)  ui.typeIcon.sprite = e.def.typeIcon;
+            if (ui.typeIcon) ui.typeIcon.sprite = e.def.typeIcon;
 
             ui.button.onClick.RemoveAllListeners();
             ui.button.onClick.AddListener(() =>
             {
                 _pendingDef = e.def;
-                _pendingId  = e.ownedUid;
+                _pendingId = e.ownedUid;
 
                 if (currentImage)
                 {
                     currentImage.sprite = _pendingDef.icon ? _pendingDef.icon : emptySlotSprite;
-                    currentImage.color  = _pendingDef.icon ? Color.white : new Color(1, 1, 1, 0.6f);
+                    currentImage.color = _pendingDef.icon ? Color.white : new Color(1, 1, 1, 0.6f);
                 }
 
                 UpdateOutputPreview(currentOnly: false);
-                AudioManager.I.PlayClick();
+                AudioManager.I?.PlayClick();
             });
         }
+    }
+
+    private void SetNoWorkersState(bool noWorkers)
+    {
+        if (noWorkersRoot) noWorkersRoot.SetActive(noWorkers);
+        if (scrollViewRoot) scrollViewRoot.SetActive(!noWorkers);
     }
 
     float EffectivenessScore(JobType job, MonsterDataSO def)
@@ -243,18 +223,13 @@ public class JobAssignPanelUI : MonoBehaviour
              * JobBalance.AffinityMult(job, def.type);
     }
 
-    // ─────────────────────────────────────────────────────────────
-    // Confirm / Remove / Close
-    // ─────────────────────────────────────────────────────────────
     void OnConfirm()
     {
         if (JobManager.I == null) { Close(); return; }
         if (_pendingDef == null) { Close(); return; }
 
-        // defensive re-check
         if (!JobManager.I.IsTypeEligibleFor(_job, _pendingDef.type))
         {
-            Debug.LogWarning($"[JobAssignPanelUI] {_pendingDef.displayName} not eligible for {_job}.");
             Close();
             return;
         }
@@ -282,12 +257,10 @@ public class JobAssignPanelUI : MonoBehaviour
     {
         CloseSelf();
 
-        // Ask Jobs panel to refresh
         var jobsUI = FindFirstObjectByType<JobPanelUI>();
         if (jobsUI) jobsUI.SendMessage("Refresh", SendMessageOptions.DontRequireReceiver);
     }
 
-    // --- UIManager glue ---
     void OpenSelf()
     {
         if (UIManager.I) UIManager.I.Show(panelId);
@@ -300,13 +273,9 @@ public class JobAssignPanelUI : MonoBehaviour
         else gameObject.SetActive(false);
     }
 
-    // ─────────────────────────────────────────────────────────────
-    // Estimated Output/hr preview
-    // ─────────────────────────────────────────────────────────────
     void UpdateOutputPreview(bool currentOnly)
     {
-        if (!outputPreviewText)
-            return;
+        if (!outputPreviewText) return;
 
         if (JobManager.I == null || _cachedState == null || _cachedState.config == null)
         {
@@ -318,44 +287,36 @@ public class JobAssignPanelUI : MonoBehaviour
         float previewRate = currentRate;
 
         if (!currentOnly && _pendingDef != null)
-        {
             previewRate = ComputeRatePerHour_WithCandidate(_cachedState, _pendingDef, _pendingId, _slotIndex);
-        }
 
-        int cur   = Mathf.FloorToInt(currentRate);
-        int next  = Mathf.FloorToInt(previewRate);
+        int cur = Mathf.FloorToInt(currentRate);
+        int next = Mathf.FloorToInt(previewRate);
         int delta = next - cur;
 
-        if (delta == 0)
-        {
-            outputPreviewText.text = $"Estimated Output: {next}/hr";
-        }
+        if (delta == 0) outputPreviewText.text = $"Estimated Output: {next}/hr";
         else
         {
             string sign = delta > 0 ? "+" : "-";
-            outputPreviewText.text =
-                $"Estimated Output: {next}/hr ({sign}{Mathf.Abs(delta)}/hr)";
+            outputPreviewText.text = $"Estimated Output: {next}/hr ({sign}{Mathf.Abs(delta)}/hr)";
         }
     }
 
     float ComputeRatePerHour_WithCandidate(JobSiteState src, MonsterDataSO cand, string ownedUid, int slotIndex)
     {
-        if (src == null || src.config == null || cand == null)
-            return 0f;
+        if (src == null || src.config == null || cand == null) return 0f;
 
-        // shallow clone of the state for simulation
         var sim = new JobSiteState
         {
-            config        = src.config,
-            workers       = new List<WorkerRef>(src.workers ?? new List<WorkerRef>()),
+            config = src.config,
+            workers = new List<WorkerRef>(src.workers ?? new List<WorkerRef>()),
             slotFatigue01 = src.slotFatigue01,
             slotCooldownUntilUnix = src.slotCooldownUntilUnix,
-            storedAmount  = src.storedAmount,
+            storedAmount = src.storedAmount,
             cachedRatePerHour = src.cachedRatePerHour,
-            level         = src.level,
-            currentXP     = src.currentXP,
+            level = src.level,
+            currentXP = src.currentXP,
             maxXPForLevel = src.maxXPForLevel,
-            fatigue01     = src.fatigue01,
+            fatigue01 = src.fatigue01,
             allowClinicRelief = src.allowClinicRelief
         };
 
@@ -371,9 +332,6 @@ public class JobAssignPanelUI : MonoBehaviour
         return ComputeRatePerHour_WithTitles(sim);
     }
 
-    // ─────────────────────────────────────────────────────────────
-    // Rate computation – mirrors JobPanelUI
-    // ─────────────────────────────────────────────────────────────
     float ComputeRatePerHour_NoTitles(JobSiteState s)
     {
         if (!HasAnyWorker(s.workers)) return 0f;
@@ -389,26 +347,20 @@ public class JobAssignPanelUI : MonoBehaviour
                        * JobBalance.EvolutionMult(w.def.evolutionStage)
                        * JobBalance.AffinityMult(s.config.jobType, w.def.type);
 
-            // EXCLUDE per-worker title rate mult here
             sum += mult;
         }
 
         float normalized = 1f + (sum / 3f);
-        float perHour    = s.config.baseRatePerHour * normalized;
+        float perHour = s.config.baseRatePerHour * normalized;
 
-        // Boss/global debuff still applies
         perHour *= BossDebuffSystem.GetMultiplier(s.config.jobType, SaveManager.NowUnix());
 
-        // EXCLUDE site-wide title aura here
-
-        // Shiny stacking (attribute, not title)
         float shinyAura = ShinySystems.SiteShinyAuraMult(s.workers);
-        int shinyCount  = CountShinies(s.workers);
-        float shinySet  = 1f + (shinyCount >= 3 ? 0.12f :
+        int shinyCount = CountShinies(s.workers);
+        float shinySet = 1f + (shinyCount >= 3 ? 0.12f :
                                (shinyCount == 2 ? 0.07f :
                                (shinyCount == 1 ? 0.03f : 0f)));
 
-        // Average working slot fatigue
         float avgFatigue = AverageWorkingSlotFatigue(s);
 
         return perHour * shinyAura * shinySet * (1f - Mathf.Clamp01(avgFatigue));
@@ -418,10 +370,8 @@ public class JobAssignPanelUI : MonoBehaviour
     {
         if (!HasAnyWorker(s.workers)) return 0f;
 
-        // Start from the "no titles" version so numbers match JobPanelUI
         float perHour = ComputeRatePerHour_NoTitles(s);
 
-        // Per-worker titles
         try
         {
             for (int i = 0; i < s.workers.Count; i++)
@@ -435,7 +385,6 @@ public class JobAssignPanelUI : MonoBehaviour
         }
         catch { }
 
-        // Site-wide aura titles
         try
         {
             var auras = TitlesAdapter.BuildJobAuras(SaveManager.Data?.team);
@@ -451,9 +400,6 @@ public class JobAssignPanelUI : MonoBehaviour
         return perHour;
     }
 
-    // ─────────────────────────────────────────────────────────────
-    // Helpers (mirrors JobPanelUI)
-    // ─────────────────────────────────────────────────────────────
     bool HasAnyWorker(List<WorkerRef> workers)
     {
         if (workers == null) return false;

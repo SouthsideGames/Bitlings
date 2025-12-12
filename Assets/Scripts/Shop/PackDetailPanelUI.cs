@@ -23,12 +23,13 @@ public class PackDetailPanelUI : MonoBehaviour
     {
         if (purchaseButton)
             purchaseButton.onHoldComplete.AddListener(PurchaseCurrentPack);
-
     }
 
     public void Open(MonsterPackSO pack)
     {
         _currentPack = pack;
+        if (!gameObject.activeSelf)
+            gameObject.SetActive(true);
 
         RefreshUI();
     }
@@ -42,21 +43,18 @@ public class PackDetailPanelUI : MonoBehaviour
             return;
 
         bool success = MonsterPackManager.I.Purchase(_currentPack.id);
-        if (success)
-        {
+        if (success && purchaseButton)
             purchaseButton.gameObject.SetActive(false);
-        }
     }
 
     private void RefreshUI()
     {
+        if (_currentPack == null) return;
 
-        // Basic info
         if (packIcon) packIcon.sprite = _currentPack.icon;
         if (packNameText) packNameText.text = _currentPack.displayName;
         if (descriptionText) descriptionText.text = _currentPack.description;
 
-        // Cost
         if (MonsterPackManager.I != null &&
             MonsterPackManager.I.TryGetEffectiveCost(_currentPack, out int cost, out ResourceType currency))
         {
@@ -74,7 +72,7 @@ public class PackDetailPanelUI : MonoBehaviour
 
     private void BuildMonsterIcons()
     {
-        if (!monsterIconRoot || !monsterIconPrefab)
+        if (!monsterIconRoot || !monsterIconPrefab || _currentPack == null)
             return;
 
         for (int i = monsterIconRoot.childCount - 1; i >= 0; i--)
@@ -96,7 +94,7 @@ public class PackDetailPanelUI : MonoBehaviour
         switch (t)
         {
             case ResourceType.PackShard: return "Shards";
-            default:                      return t.ToString();
+            default: return t.ToString();
         }
     }
 }

@@ -17,17 +17,14 @@ public class JobSiteView : MonoBehaviour
     [Header("Slot 1")]
     [SerializeField] private CanvasGroup slot1Group;
     [SerializeField] private TextMeshProUGUI slot1CDText;
-    [SerializeField] private TextMeshProUGUI slot1RateText;
 
     [Header("Slot 2")]
     [SerializeField] private CanvasGroup slot2Group;
     [SerializeField] private TextMeshProUGUI slot2CDText;
-    [SerializeField] private TextMeshProUGUI slot2RateText;
 
     [Header("Slot 3")]
     [SerializeField] private CanvasGroup slot3Group;
     [SerializeField] private TextMeshProUGUI slot3CDText;
-    [SerializeField] private TextMeshProUGUI slot3RateText;
 
     void Awake()
     {
@@ -60,7 +57,10 @@ public class JobSiteView : MonoBehaviour
 
     public void Refresh()
     {
-        bool unlocked = SaveManager.Data != null && SaveManager.Data.unlockedJobSites != null && SaveManager.Data.unlockedJobSites.Contains(site);
+        bool unlocked = SaveManager.Data != null &&
+                        SaveManager.Data.unlockedJobSites != null &&
+                        SaveManager.Data.unlockedJobSites.Contains(site);
+
         if (rootToToggle) rootToToggle.SetActive(unlocked);
         if (!unlocked) return;
 
@@ -80,63 +80,67 @@ public class JobSiteView : MonoBehaviour
         SetSlotVisible(slot2Group, cap >= 2);
         SetSlotVisible(slot3Group, cap >= 3);
 
-        RenderAndAlpha(st, 0, slot1Group, slot1CDText, slot1RateText);
-        RenderAndAlpha(st, 1, slot2Group, slot2CDText, slot2RateText);
-        RenderAndAlpha(st, 2, slot3Group, slot3CDText, slot3RateText);
+        RenderAndAlpha(st, 0, slot1Group, slot1CDText);
+        RenderAndAlpha(st, 1, slot2Group, slot2CDText);
+        RenderAndAlpha(st, 2, slot3Group, slot3CDText);
     }
 
     private JobSiteState GetRuntimeState(JobType job)
     {
         if (JobManager.I == null) return null;
-        for (int i = 0; i < JobManager.I.States.Count; i++)
+        foreach (var st in JobManager.I.States)
         {
-            var st = JobManager.I.States[i];
-            if (st != null && st.config != null && st.config.jobType == job) return st;
+            if (st != null && st.config != null && st.config.jobType == job)
+                return st;
         }
         return null;
     }
 
-    private void RenderAndAlpha(JobSiteState st, int slotIndex, CanvasGroup group, TextMeshProUGUI cdText, TextMeshProUGUI rateText)
+    private void RenderAndAlpha(JobSiteState st, int slotIndex, CanvasGroup group, TextMeshProUGUI cdText)
     {
         int cap = Mathf.Clamp(st.config.maxWorkers, 1, 3);
         if (slotIndex < 0 || slotIndex >= cap)
         {
             SetSlotVisible(group, false);
             if (cdText) cdText.text = "";
-            if (rateText) rateText.text = "";
             return;
         }
 
-        WorkerRef w = (st.workers != null && slotIndex < st.workers.Count) ? st.workers[slotIndex] : null;
+        WorkerRef w = (st.workers != null && slotIndex < st.workers.Count)
+            ? st.workers[slotIndex]
+            : null;
+
         bool hasWorker = (w != null && w.def != null);
 
         if (!hasWorker)
         {
             SetGroupAlpha(group, 0f, false, false);
             if (cdText) cdText.text = "-";
-            if (rateText) rateText.text = "-";
             return;
         }
 
         SetGroupAlpha(group, 1f, true, true);
-        RenderSlot(st, slotIndex, cdText, rateText);
+        RenderSlot(st, slotIndex, cdText);
     }
 
-    private void RenderSlot(JobSiteState st, int slotIndex, TextMeshProUGUI cdText, TextMeshProUGUI rateText)
+    private void RenderSlot(JobSiteState st, int slotIndex, TextMeshProUGUI cdText)
     {
         int cap = Mathf.Clamp(st.config.maxWorkers, 1, 3);
         if (slotIndex < 0 || slotIndex >= cap)
         {
             if (cdText) cdText.text = "";
-            if (rateText) rateText.text = "";
             return;
         }
 
-        float f = (st.slotFatigue01 != null && slotIndex < st.slotFatigue01.Length) ? Mathf.Clamp01(st.slotFatigue01[slotIndex]) : 0f;
-        WorkerRef w = (st.workers != null && slotIndex < st.workers.Count) ? st.workers[slotIndex] : null;
-        long now = SaveManager.NowUnix();
-        long untilUnix = (st.slotCooldownUntilUnix != null && slotIndex < st.slotCooldownUntilUnix.Length) ? st.slotCooldownUntilUnix[slotIndex] : 0L;
+        float f = (st.slotFatigue01 != null && slotIndex < st.slotFatigue01.Length)
+            ? Mathf.Clamp01(st.slotFatigue01[slotIndex])
+            : 0f;
 
+        WorkerRef w = (st.workers != null && slotIndex < st.workers.Count)
+            ? st.workers[slotIndex]
+            : null;
+
+        // No rate text used anymore
         float ratePerHour = 0f;
         if (w != null && w.def != null)
         {
@@ -144,23 +148,33 @@ public class JobSiteView : MonoBehaviour
             string wid = GetBestId(w);
             int lvl = GetOwnedLevelOr1(wid, w.def);
             float mul = 1f;
-            try { mul = Mathf.Max(0f, TitlesAdapter.GetJobFatigueMult(wid, w.def, lvl, st.config.jobType)); } catch { mul = 1f; }
-            try { if (TitleManager.I != null) mul = Mathf.Min(mul, Mathf.Max(0f, TitleManager.I.GetJobFatigueMultiplier(wid, w.def, lvl, st.config.jobType))); } catch { }
+
+            try { mul = Mathf.Max(0f, TitlesAdapter.GetJobFatigueMult(wid, w.def, lvl, st.config.jobType)); }
+            catch { }
+
+            try
+            {
+                if (TitleManager.I != null)
+                    mul = Mathf.Min(mul, Mathf.Max(0f, TitleManager.I.GetJobFatigueMultiplier(wid, w.def, lvl, st.config.jobType)));
+            }
+            catch { }
+
             ratePerHour *= mul;
         }
-
-        if (rateText) rateText.text = (ratePerHour > 0f) ? $"{ratePerHour * 100f:0.#}% / hr" : "-";
 
         if (cdText)
         {
             if (ratePerHour > 0f)
             {
                 float remain01 = Mathf.Clamp01(1f - f);
-                float hrs = (ratePerHour > 0f) ? (remain01 / ratePerHour) : 0f;
+                float hrs = remain01 / ratePerHour;
                 long secs = Math.Max(0L, (long)Math.Round(hrs * 3600f));
                 cdText.text = $"Resting in {FormatHm(secs)}";
             }
-            else cdText.text = "-";
+            else
+            {
+                cdText.text = "-";
+            }
         }
     }
 
@@ -169,6 +183,7 @@ public class JobSiteView : MonoBehaviour
         if (!cg) return;
         cg.gameObject.SetActive(vis);
         if (!vis) return;
+
         cg.alpha = 1f;
         cg.interactable = true;
         cg.blocksRaycasts = true;
@@ -191,25 +206,26 @@ public class JobSiteView : MonoBehaviour
 
     private static int GetOwnedLevelOr1(string ownedOrDefId, MonsterDataSO fallbackDef)
     {
-        if (string.IsNullOrEmpty(ownedOrDefId)) return 1;
         var owned = SaveManager.Data?.owned;
         if (owned != null)
         {
-            for (int i = 0; i < owned.Count; i++)
+            foreach (var om in owned)
             {
-                var om = owned[i];
-                if (om != null && om.monsterId == ownedOrDefId) return Mathf.Max(1, om.level);
+                if (om != null && om.monsterId == ownedOrDefId)
+                    return Mathf.Max(1, om.level);
             }
         }
+
         var team = SaveManager.Data?.team;
         if (team != null)
         {
-            for (int i = 0; i < team.Count; i++)
+            foreach (var tm in team)
             {
-                var e = team[i];
-                if (e != null && e.monsterId == ownedOrDefId) return Mathf.Max(1, e.level);
+                if (tm != null && tm.monsterId == ownedOrDefId)
+                    return Mathf.Max(1, tm.level);
             }
         }
+
         return 1;
     }
 
@@ -218,6 +234,7 @@ public class JobSiteView : MonoBehaviour
         if (seconds <= 0) return "0m";
         long h = seconds / 3600;
         long m = (seconds % 3600) / 60;
+
         if (h > 0) return $"{h}h {m}m";
         return $"{Mathf.Max(1, (int)m)}m";
     }

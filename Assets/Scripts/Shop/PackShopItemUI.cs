@@ -2,21 +2,27 @@ using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 
+[RequireComponent(typeof(Button))]
 public class PackShopItemUI : MonoBehaviour
 {
     [Header("UI")]
     [SerializeField] private Image icon;
     [SerializeField] private TextMeshProUGUI nameText;
-    [SerializeField] private Button rootButton;
     [SerializeField] private GameObject unlockedBadge;
 
     private MonsterPackSO _pack;
     private PackDetailPanelUI _detailPanel;
+    private Button _button;
 
     void Awake()
     {
-        if (rootButton)
-            rootButton.onClick.AddListener(OnClicked);
+        _button = GetComponent<Button>();
+        _button.onClick.AddListener(OnClicked);
+    }
+
+    void OnDestroy()
+    {
+        _button.onClick.RemoveListener(OnClicked);
     }
 
     public void Bind(MonsterPackSO pack, PackDetailPanelUI detailPanel)
@@ -45,7 +51,9 @@ public class PackShopItemUI : MonoBehaviour
     private void OnClicked()
     {
         if (_pack == null || _detailPanel == null) return;
+
         _detailPanel.Open(_pack);
+        UIManager.I?.Show(PanelId.PackDetails);
 
         AudioManager.I?.PlayClick();
     }
