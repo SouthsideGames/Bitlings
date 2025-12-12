@@ -62,18 +62,18 @@ public class PlayerDossierPanelUI : MonoBehaviour
     [SerializeField] private TextMeshProUGUI energyText;
     [SerializeField] private TextMeshProUGUI medkitText;
     [SerializeField] private TextMeshProUGUI materialText;
-    [SerializeField] private TextMeshProUGUI typeResBoosterText;
-    [SerializeField] private TextMeshProUGUI lureText;
-    [SerializeField] private TextMeshProUGUI captureBandText;
-    [SerializeField] private TextMeshProUGUI luckText;
-    [SerializeField] private TextMeshProUGUI atkBoosterText;
-    [SerializeField] private TextMeshProUGUI hpBoosterText;
-    [SerializeField] private TextMeshProUGUI speedBoosterText;
+    [SerializeField] private TextMeshProUGUI pPEPermitText;
+    [SerializeField] private TextMeshProUGUI flyerText;
+    [SerializeField] private TextMeshProUGUI workOrderText;
+    [SerializeField] private TextMeshProUGUI favorText;
+    [SerializeField] private TextMeshProUGUI trainingVoucherText;
+    [SerializeField] private TextMeshProUGUI wellnessVoucherText;
+    [SerializeField] private TextMeshProUGUI efficiencyVoucherText;
     [SerializeField] private TextMeshProUGUI shinyOrbText;
     [SerializeField] private TextMeshProUGUI blessingScaleText;
-    [SerializeField] private TextMeshProUGUI restChargeText;
+    [SerializeField] private TextMeshProUGUI coffeeText;
     [SerializeField] private TextMeshProUGUI growthCoreText;
-    [SerializeField] private TextMeshProUGUI packShardText;
+    [SerializeField] private TextMeshProUGUI packVoucherText;
 
     [SerializeField] private Image efficiencyFill;
     [SerializeField] private TextMeshProUGUI efficiencyPercentText;
@@ -405,22 +405,22 @@ public class PlayerDossierPanelUI : MonoBehaviour
     {
         if (s == null)
         {
-            if (creditsText)          creditsText.text          = "credits: 0";
-            if (energyText)         energyText.text         = "Harbor Cargo: 0";
-            if (medkitText)         medkitText.text         = "Medkits: 0";
-            if (materialText)       materialText.text       = "Ingot Materials: 0";
-            if (typeResBoosterText) typeResBoosterText.text = "Type Shields: 0";
-            if (lureText)           lureText.text           = "Shiny Lures: 0";
-            if (captureBandText)    captureBandText.text    = "Capture Bands: 0";
-            if (luckText)           luckText.text           = "Luck Orbs: 0";
-            if (atkBoosterText)     atkBoosterText.text     = "Attack Boosters: 0";
-            if (hpBoosterText)      hpBoosterText.text      = "HP Boosters: 0";
-            if (speedBoosterText)   speedBoosterText.text   = "Speed Boosters: 0";
-            if (shinyOrbText)       shinyOrbText.text       = "Shiny Orbs: 0";
-            if (blessingScaleText)  blessingScaleText.text  = "Blessing Tokens: 0";
-            if (restChargeText)     restChargeText.text     = "Rest Charges: 0";
-            if (growthCoreText)     growthCoreText.text     = "Growth Cores: 0";
-            if (packShardText)      packShardText.text      = "Shards: 0";
+            if (creditsText)                creditsText.text                                    = "Credits: 0";
+            if (energyText)                 energyText.text                                     = "Energies: 0";
+            if (medkitText)                 medkitText.text                                     = "Medkits: 0";
+            if (materialText)               materialText.text                                   = "Materials: 0";
+            if (pPEPermitText)              pPEPermitText.text                                  = "PPEPermits: 0";
+            if (flyerText)                  flyerText.text                                      = "Flyers: 0";
+            if (workOrderText)              workOrderText.text                                  = "Work Orders: 0";
+            if (favorText)                  favorText.text                                      = "Favors: 0";
+            if (trainingVoucherText)        trainingVoucherText.text                            = "Training Voucher: 0";
+            if (wellnessVoucherText)        wellnessVoucherText.text                            = "Wellness Voucher: 0";
+            if (efficiencyVoucherText)      efficiencyVoucherText.text                          = "Efficiency Voucher: 0";
+            if (shinyOrbText)               shinyOrbText.text                                   = "Shiny Orbs: 0";
+            if (blessingScaleText)          blessingScaleText.text                              = "Blessing Scales: 0";
+            if (coffeeText)                 coffeeText.text                                     = "Coffees: 0";
+            if (growthCoreText)             growthCoreText.text                                 = "Growth Cores: 0";
+            if (packVoucherText)            packVoucherText.text                                = "Pack Voucher: 0";
 
             if (efficiencyPercentText) efficiencyPercentText.text = "0%";
             if (efficiencyFill)
@@ -439,23 +439,23 @@ public class PlayerDossierPanelUI : MonoBehaviour
         if (energyText)
             energyText.text = $"Harbor Cargo: {s.energyCount.ToString("N0")}";
 
-        if (captureBandText)
-            captureBandText.text = $"Capture Bands: {s.captureBandCount}";
+        if (workOrderText)
+            workOrderText.text = $"Capture Bands: {s.captureBandCount}";
 
         if (blessingScaleText)
             blessingScaleText.text = $"Blessing Tokens: {s.blessingScaleCount}";
 
-        if (luckText)
-            luckText.text = $"Luck Orbs: {s.luckCount}";
+        if (favorText)
+            favorText.text = $"Luck Orbs: {s.luckCount}";
 
-        if (lureText)
-            lureText.text = $"Shiny Lures: {s.lureCount}";
+        if (flyerText)
+            flyerText.text = $"Shiny Lures: {s.lureCount}";
 
         if (growthCoreText)
             growthCoreText.text = $"Growth Cores: {s.growthCoreCount}";
 
-        if (packShardText)
-            packShardText.text = $"Shards: {s.packShardCount}";
+        if (packVoucherText)
+            packVoucherText.text = $"Shards: {s.packVoucherCount}";
 
         if (creditsText)
             creditsText.text = $"credits: {s.creditCount.ToString("N0")}";
@@ -464,23 +464,23 @@ public class PlayerDossierPanelUI : MonoBehaviour
         if (medkitText)
             medkitText.text = $"Medkits: {s.medkitCount}";
 
-        if (typeResBoosterText)
-            typeResBoosterText.text = $"Type Shields: {s.typeResBoosterCount}";
+        if (pPEPermitText)
+            pPEPermitText.text = $"Type Shields: {s.typeResBoosterCount}";
 
-        if (atkBoosterText)
-            atkBoosterText.text = $"Attack Boosters: {s.atkBoosterCount}";
+        if (trainingVoucherText)
+            trainingVoucherText.text = $"Attack Boosters: {s.atkBoosterCount}";
 
-        if (hpBoosterText)
-            hpBoosterText.text = $"HP Boosters: {s.hpBoosterCount}";
+        if (wellnessVoucherText)
+            wellnessVoucherText.text = $"HP Boosters: {s.hpBoosterCount}";
 
-        if (speedBoosterText)
-            speedBoosterText.text = $"Speed Boosters: {s.speedBoosterCount}";
+        if (efficiencyVoucherText)
+            efficiencyVoucherText.text = $"Speed Boosters: {s.speedBoosterCount}";
 
         if (shinyOrbText)
             shinyOrbText.text = $"Shiny Orbs: {s.shinyOrbCount}";
 
-        if (restChargeText)
-            restChargeText.text = $"Rest Charges: {s.restChargeCount}";
+        if (coffeeText)
+            coffeeText.text = $"Rest Charges: {s.restChargeCount}";
 
         // Efficiency bar + % + rating stays the same logic
         float normalized = Mathf.Clamp01(s.conversionEfficiencyPercent / 100f);

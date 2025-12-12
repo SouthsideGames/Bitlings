@@ -58,7 +58,7 @@ public class PlayerDossierSnapshot
     public int blessingScaleCount;
     public int restChargeCount;
     public int growthCoreCount;
-    public int packShardCount;
+    public int packVoucherCount;
 
     public int conversionEfficiencyPercent;
 
@@ -533,18 +533,18 @@ public class PlayerDossierManager : MonoBehaviour
         s.energyCount         = bank.Get(ResourceType.Energy);
         s.medkitCount         = bank.Get(ResourceType.Medkit);
         s.materialCount       = bank.Get(ResourceType.Material);
-        s.typeResBoosterCount = bank.Get(ResourceType.TypeResBooster);
-        s.lureCount           = bank.Get(ResourceType.Lure);
-        s.captureBandCount    = bank.Get(ResourceType.CaptureBand);
-        s.luckCount           = bank.Get(ResourceType.Luck);
-        s.atkBoosterCount     = bank.Get(ResourceType.AttackBooster);
-        s.hpBoosterCount      = bank.Get(ResourceType.HPBooster);
-        s.speedBoosterCount   = bank.Get(ResourceType.SpeedBooster);
+        s.typeResBoosterCount = bank.Get(ResourceType.PPEPermit);
+        s.lureCount           = bank.Get(ResourceType.Flyer);
+        s.captureBandCount    = bank.Get(ResourceType.WorkOrder);
+        s.luckCount           = bank.Get(ResourceType.Favor);
+        s.atkBoosterCount     = bank.Get(ResourceType.TrainingVoucher_ATK);
+        s.hpBoosterCount      = bank.Get(ResourceType.WellnessVoucher);
+        s.speedBoosterCount   = bank.Get(ResourceType.EfficiencyVoucher);
         s.shinyOrbCount       = bank.Get(ResourceType.ShinyOrb);
         s.blessingScaleCount  = bank.Get(ResourceType.BlessingScale);
-        s.restChargeCount     = bank.Get(ResourceType.RestCharge);
+        s.restChargeCount     = bank.Get(ResourceType.Coffee);
         s.growthCoreCount     = bank.Get(ResourceType.GrowthCore);
-        s.packShardCount      = bank.Get(ResourceType.PackVoucher);
+        s.packVoucherCount      = bank.Get(ResourceType.PackVoucher);
 
         // ─────────────────────────────────────────────────────────────
         // BRN Composite Handler Efficiency Score (0–100)
@@ -619,7 +619,7 @@ public class PlayerDossierManager : MonoBehaviour
         int progTotal =
             snap.growthCoreCount      +
             snap.blessingScaleCount   +
-            snap.packShardCount       +
+            snap.packVoucherCount       +
             snap.shinyOrbCount        +
             snap.atkBoosterCount      +
             snap.hpBoosterCount       +

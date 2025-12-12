@@ -50,7 +50,7 @@ public class AttackBooster : MonoBehaviour
 
     private void RefreshCounts()
     {
-        int count = ResourceBank.Get(ResourceType.AttackBooster);
+        int count = ResourceBank.Get(ResourceType.TrainingVoucher_ATK);
         if (boosterCountLabel) boosterCountLabel.text = $"{count}";
     }
 
@@ -69,7 +69,7 @@ public class AttackBooster : MonoBehaviour
                 boosterRadial.fillAmount = (rem > 0 && max > 0) ? (float)rem / max : 0f;
         }
 
-        bool haveItem = !consumeItem || ResourceBank.Get(ResourceType.AttackBooster) > 0;
+        bool haveItem = !consumeItem || ResourceBank.Get(ResourceType.TrainingVoucher_ATK) > 0;
         if (boosterBtn) boosterBtn.interactable = can && haveItem;
     }
 
@@ -94,7 +94,7 @@ public class AttackBooster : MonoBehaviour
         bool spent = true;
         if (consumeItem)
         {
-            spent = ResourceBank.TrySpend(ResourceType.AttackBooster, 1);
+            spent = ResourceBank.TrySpend(ResourceType.TrainingVoucher_ATK, 1);
             if (!spent)
             {
                 RefreshCounts();
@@ -117,7 +117,7 @@ public class AttackBooster : MonoBehaviour
         // Refund if failed after spending
         if (!used && consumeItem && spent)
         {
-            ResourceBank.Add(ResourceType.AttackBooster, 1);
+            ResourceBank.Add(ResourceType.TrainingVoucher_ATK, 1);
             BattleLogger.Log("Attack Booster failed to activate; item refunded.", LogScope.Battle);
         }
         else if (used)

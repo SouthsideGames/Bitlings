@@ -45,7 +45,7 @@ public class SpeedBooster : MonoBehaviour
 
     private void RefreshCounts()
     {
-        int count = ResourceBank.Get(ResourceType.SpeedBooster);
+        int count = ResourceBank.Get(ResourceType.EfficiencyVoucher);
         if (boosterCountLabel) boosterCountLabel.text = $"{count}";
     }
 
@@ -63,7 +63,7 @@ public class SpeedBooster : MonoBehaviour
             if (boosterRadial)
                 boosterRadial.fillAmount = (rem > 0 && max > 0) ? (float)rem / max : 0f;
 
-            bool haveItem = !consumeItem || ResourceBank.Get(ResourceType.SpeedBooster) > 0;
+            bool haveItem = !consumeItem || ResourceBank.Get(ResourceType.EfficiencyVoucher) > 0;
             if (boosterBtn) boosterBtn.interactable = can && haveItem;
         }
         else
@@ -94,7 +94,7 @@ public class SpeedBooster : MonoBehaviour
         bool spent = true;
         if (consumeItem)
         {
-            spent = ResourceBank.TrySpend(ResourceType.SpeedBooster, 1);
+            spent = ResourceBank.TrySpend(ResourceType.EfficiencyVoucher, 1);
             if (!spent)
             {
                 RefreshCounts();
@@ -117,7 +117,7 @@ public class SpeedBooster : MonoBehaviour
         // Refund if failed after spending
         if (!used && consumeItem && spent)
         {
-            ResourceBank.Add(ResourceType.SpeedBooster, 1);
+            ResourceBank.Add(ResourceType.EfficiencyVoucher, 1);
             BattleLogger.Log("Speed Booster failed to activate; item refunded.", LogScope.Battle);
         }
         else if (used)

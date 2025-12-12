@@ -7,8 +7,8 @@ using UnityEngine;
 public enum ResourceType
 {
     None = 0, Credits = 1, Energy = 2, Medkit = 3, Material = 4,
-    TypeResBooster = 5, Lure = 6, CaptureBand = 7, Luck = 8,
-    AttackBooster = 9, HPBooster = 10, SpeedBooster = 11, ShinyOrb = 12, BlessingScale = 13, RestCharge = 14, GrowthCore = 16, PackVoucher = 17
+    PPEPermit = 5, Flyer = 6, WorkOrder = 7, Favor = 8,
+    TrainingVoucher_ATK = 9, WellnessVoucher = 10, EfficiencyVoucher = 11, ShinyOrb = 12, BlessingScale = 13, Coffee = 14, GrowthCore = 16, PackVoucher = 17
 }
 
 public class ResourceManager : MonoBehaviour

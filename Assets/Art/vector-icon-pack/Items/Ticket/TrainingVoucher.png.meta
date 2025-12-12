@@ -1,10 +1,10 @@
 fileFormatVersion: 2
-guid: de6b103a24e9f44d989f1d26b41f3658
+guid: 1fde2d8115b3341ba938eeff46d8193b
 TextureImporter:
   internalIDToNameTable:
   - first:
-      213: -8421726322193360495
-    second: Ticket Pink Outline 256_0
+      213: -781000674992755973
+    second: Ticket Yellow Outline 256_0
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -109,16 +109,29 @@ TextureImporter:
     ignorePlatformSupport: 0
     androidETC2FallbackOverride: 0
     forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: Android
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
   spriteSheet:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: Ticket Pink Outline 256_0
+      name: Ticket Yellow Outline 256_0
       rect:
         serializedVersion: 2
         x: 0
         y: 20
-        width: 255
+        width: 256
         height: 216
       alignment: 0
       pivot: {x: 0, y: 0}
@@ -128,8 +141,8 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: 1999b1ab784002b80800000000000000
-      internalID: -8421726322193360495
+      spriteID: bfa67b526045925f0800000000000000
+      internalID: -781000674992755973
       vertices: []
       indices: 
       edges: []
@@ -148,7 +161,7 @@ TextureImporter:
     spriteCustomMetadata:
       entries: []
     nameFileIdTable:
-      Ticket Pink Outline 256_0: -8421726322193360495
+      Ticket Yellow Outline 256_0: -781000674992755973
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

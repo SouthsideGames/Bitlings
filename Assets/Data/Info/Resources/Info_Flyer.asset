@@ -10,12 +10,13 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 8909f92dca58941be8a4545ccb059a11, type: 3}
-  m_Name: Info_TypeRes
+  m_Name: Info_Flyer
   m_EditorClassIdentifier: 
-  id: res.TypeRes
+  id: res.Flyer
   category: 1
-  title: Type-Resistant Booster
+  title: Flyer
   subtitle: Resource
-  body: 'Comes from: Workshop
+  body: 'Comes from: Harbor
 
-    Temporary apply type resistance during encounters'
+    Increases the encounter odds of a certain Bitlings
+    types'

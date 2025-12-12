@@ -50,7 +50,7 @@ public class LuckBoosterUI : MonoBehaviour
     void Refresh()
     {
         if (!luckLabel || !useLuckBtn) return;
-        int have = ResourceBank.Get(ResourceType.Luck);
+        int have = ResourceBank.Get(ResourceType.Favor);
 
         bool active = GetSecondsRemaining() > 0;
         useLuckBtn.interactable = (!active) && (!consumeLuckItem || have > 0);
@@ -60,7 +60,7 @@ public class LuckBoosterUI : MonoBehaviour
 
     void OnClickUseLuck()
     {
-        if (consumeLuckItem && !ResourceBank.TrySpend(ResourceType.Luck, 1))
+        if (consumeLuckItem && !ResourceBank.TrySpend(ResourceType.Favor, 1))
         {
             Refresh();
             return;

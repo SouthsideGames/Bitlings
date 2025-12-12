@@ -50,7 +50,7 @@ public class TypeResistBooster : MonoBehaviour
 
     private void RefreshCounts()
     {
-        int count = ResourceBank.Get(ResourceType.TypeResBooster);
+        int count = ResourceBank.Get(ResourceType.PPEPermit);
         if (boosterCountLabel) boosterCountLabel.text = $"{count}";
     }
 
@@ -69,7 +69,7 @@ public class TypeResistBooster : MonoBehaviour
                 boosterRadial.fillAmount = (rem > 0 && max > 0) ? (float)rem / max : 0f;
         }
 
-        bool haveItem = !consumeItem || ResourceBank.Get(ResourceType.TypeResBooster) > 0;
+        bool haveItem = !consumeItem || ResourceBank.Get(ResourceType.PPEPermit) > 0;
         if (boosterBtn) boosterBtn.interactable = can && haveItem;
     }
 
@@ -94,7 +94,7 @@ public class TypeResistBooster : MonoBehaviour
         bool spent = true;
         if (consumeItem)
         {
-            spent = ResourceBank.TrySpend(ResourceType.TypeResBooster, 1);
+            spent = ResourceBank.TrySpend(ResourceType.PPEPermit, 1);
             if (!spent)
             {
                 RefreshCounts();
@@ -117,7 +117,7 @@ public class TypeResistBooster : MonoBehaviour
         // Refund if failed after spending
         if (!used && consumeItem && spent)
         {
-            ResourceBank.Add(ResourceType.TypeResBooster, 1);
+            ResourceBank.Add(ResourceType.PPEPermit, 1);
             BattleLogger.Log("Type Resist failed to activate; Sigil refunded.", LogScope.Battle);
         }
         else if (used)

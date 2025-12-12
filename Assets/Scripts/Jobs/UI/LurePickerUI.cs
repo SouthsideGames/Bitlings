@@ -79,7 +79,7 @@ public class LurePickerUI : MonoBehaviour
             return;
         }
 
-        int have = ResourceBank.Get(ResourceType.Lure);
+        int have = ResourceBank.Get(ResourceType.Flyer);
         luresLabel.text = $"Lures: {have}";
         useLureBtn.interactable = !consumeLureItem || have > 0;
     }
@@ -88,7 +88,7 @@ public class LurePickerUI : MonoBehaviour
     {
         var type = (MonsterType)typeDropdown.value;
 
-        if (consumeLureItem && !ResourceBank.TrySpend(ResourceType.Lure, 1))
+        if (consumeLureItem && !ResourceBank.TrySpend(ResourceType.Flyer, 1))
         {
             Refresh();
             return;

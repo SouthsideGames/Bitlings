@@ -14,10 +14,10 @@ public static class ResourceBank
 
     private static readonly ResourceType[] BoosterTypes = new[]
     {
-        ResourceType.TypeResBooster,
-        ResourceType.AttackBooster,
-        ResourceType.HPBooster,
-        ResourceType.SpeedBooster
+        ResourceType.PPEPermit,
+        ResourceType.TrainingVoucher_ATK,
+        ResourceType.WellnessVoucher,
+        ResourceType.EfficiencyVoucher
     };
 
     // ─────────────────────────────────────────────────────────────

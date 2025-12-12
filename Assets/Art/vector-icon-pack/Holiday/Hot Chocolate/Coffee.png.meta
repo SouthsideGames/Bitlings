@@ -1,10 +1,10 @@
 fileFormatVersion: 2
-guid: 1fde2d8115b3341ba938eeff46d8193b
+guid: 51b5bb6d13bc74b3f855180650026748
 TextureImporter:
   internalIDToNameTable:
   - first:
-      213: -781000674992755973
-    second: Ticket Yellow Outline 256_0
+      213: 2285944867557445247
+    second: Hot Chocolate Outline 256_0
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -109,17 +109,30 @@ TextureImporter:
     ignorePlatformSupport: 0
     androidETC2FallbackOverride: 0
     forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: Android
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
   spriteSheet:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: Ticket Yellow Outline 256_0
+      name: Hot Chocolate Outline 256_0
       rect:
         serializedVersion: 2
-        x: 0
-        y: 20
-        width: 256
-        height: 216
+        x: 1
+        y: 10
+        width: 254
+        height: 236
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -128,8 +141,8 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: bfa67b526045925f0800000000000000
-      internalID: -781000674992755973
+      spriteID: f7e83eedebe49bf10800000000000000
+      internalID: 2285944867557445247
       vertices: []
       indices: 
       edges: []
@@ -148,7 +161,7 @@ TextureImporter:
     spriteCustomMetadata:
       entries: []
     nameFileIdTable:
-      Ticket Yellow Outline 256_0: -781000674992755973
+      Hot Chocolate Outline 256_0: 2285944867557445247
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

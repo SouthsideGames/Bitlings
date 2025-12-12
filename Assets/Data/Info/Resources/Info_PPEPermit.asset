@@ -10,15 +10,12 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 8909f92dca58941be8a4545ccb059a11, type: 3}
-  m_Name: Info_Capture
+  m_Name: Info_PPEPermit
   m_EditorClassIdentifier: 
-  id: res.Capture
+  id: res.PPEPermit
   category: 1
-  title: Capture Band
+  title: PPE Permit
   subtitle: Resource
-  body: 'Comes from: Cryo Lab
+  body: 'Comes from: Workshop
 
-    Improve capture odds in encounters during timer
-    duration
-
-'
+    Temporary apply type resistance during encounters'

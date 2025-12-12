@@ -838,7 +838,7 @@ public sealed class JobManager : MonoBehaviour
     {
         if (dtHours <= 0f) return;
 
-        int available = ResourceBank.Get(ResourceType.RestCharge);
+        int available = ResourceBank.Get(ResourceType.Coffee);
         if (available <= 0) return;
 
         // targets are non-clinic sites that allow relief and have any slot fatigue > 0
@@ -890,8 +890,8 @@ public sealed class JobManager : MonoBehaviour
             if (allCapped) break;
         }
 
-        int spent = ResourceBank.Get(ResourceType.RestCharge) - available;
-        if (spent > 0) ResourceBank.Add(ResourceType.RestCharge, -spent);
+        int spent = ResourceBank.Get(ResourceType.Coffee) - available;
+        if (spent > 0) ResourceBank.Add(ResourceType.Coffee, -spent);
     }
 
     // ---------------------------- UI / Views ----------------------------

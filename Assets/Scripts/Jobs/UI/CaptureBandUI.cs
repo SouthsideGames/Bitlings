@@ -42,14 +42,14 @@ public class CaptureBandUI : MonoBehaviour
     void Refresh()
     {
         if (!bandsLabel || !useBandBtn) return;
-        int have = ResourceBank.Get(ResourceType.CaptureBand);
+        int have = ResourceBank.Get(ResourceType.WorkOrder);
         bandsLabel.text = $"CaptureBands: {have}";
         useBandBtn.interactable = !consumeBandItem || have > 0;
     }
 
     void OnClickUseBand()
     {
-        if (consumeBandItem && !ResourceBank.TrySpend(ResourceType.CaptureBand, 1))
+        if (consumeBandItem && !ResourceBank.TrySpend(ResourceType.WorkOrder, 1))
         {
             Refresh();
             return;

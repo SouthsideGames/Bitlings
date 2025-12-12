@@ -6914,9 +6914,9 @@ RectTransform:
   m_Children: []
   m_Father: {fileID: 985984711}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 1}
-  m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 514.745, y: -942.90826}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 0, y: 0}
+  m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 950, y: 50}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &145472925
@@ -10145,7 +10145,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!224 &202605869
 RectTransform:
   m_ObjectHideFlags: 0
@@ -10248,22 +10248,22 @@ MonoBehaviour:
   shinyDiscoveriesText: {fileID: 1842625013}
   longestCaptureStreakText: {fileID: 1590252559}
   fieldOpsHighlightsText: {fileID: 1669775497}
-  creditsText: {fileID: 0}
+  creditsText: {fileID: 1568245596}
   energyText: {fileID: 1610762148}
   medkitText: {fileID: 2011897876}
   materialText: {fileID: 1579726181}
-  typeResBoosterText: {fileID: 898697957}
-  lureText: {fileID: 826591069}
-  captureBandText: {fileID: 1254909125}
-  luckText: {fileID: 784900956}
-  atkBoosterText: {fileID: 243358237}
-  hpBoosterText: {fileID: 599464219}
-  speedBoosterText: {fileID: 1501012707}
+  pPEPermitText: {fileID: 898697957}
+  flyerText: {fileID: 826591069}
+  workOrderText: {fileID: 1254909125}
+  favorText: {fileID: 784900956}
+  trainingVoucherText: {fileID: 243358237}
+  wellnessVoucherText: {fileID: 599464219}
+  efficiencyVoucherText: {fileID: 1501012707}
   shinyOrbText: {fileID: 207982997}
   blessingScaleText: {fileID: 978516136}
-  restChargeText: {fileID: 1585747523}
+  coffeeText: {fileID: 1585747523}
   growthCoreText: {fileID: 145472926}
-  packShardText: {fileID: 1568505749}
+  packVoucherText: {fileID: 1568505749}
   efficiencyFill: {fileID: 1165232800}
   efficiencyPercentText: {fileID: 1775224283}
   brnRatingText: {fileID: 1622501637}
@@ -10423,9 +10423,9 @@ RectTransform:
   m_Children: []
   m_Father: {fileID: 985984711}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 1}
-  m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 514.745, y: -751.57074}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 0, y: 0}
+  m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 950, y: 50}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &207982996
@@ -11800,9 +11800,9 @@ RectTransform:
   - {fileID: 1205135109}
   m_Father: {fileID: 1339184250}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 1}
-  m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 489.49573, y: -87.5}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 0, y: 0}
+  m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 557.6511, y: 100}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &238525781
@@ -11918,7 +11918,7 @@ GameObject:
   - component: {fileID: 243358236}
   - component: {fileID: 243358237}
   m_Layer: 5
-  m_Name: Atk Boost
+  m_Name: TrainingVoucher_ATK
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -11938,9 +11938,9 @@ RectTransform:
   m_Children: []
   m_Father: {fileID: 985984711}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 1}
-  m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 514.745, y: -560.2332}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 0, y: 0}
+  m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 950, y: 50}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &243358236
@@ -31672,7 +31672,7 @@ GameObject:
   - component: {fileID: 599464218}
   - component: {fileID: 599464219}
   m_Layer: 5
-  m_Name: HP Boost
+  m_Name: WellnessVoucher_HP
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -31692,9 +31692,9 @@ RectTransform:
   m_Children: []
   m_Father: {fileID: 985984711}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 1}
-  m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 514.745, y: -624.0124}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 0, y: 0}
+  m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 950, y: 50}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &599464218
@@ -36173,7 +36173,7 @@ MonoBehaviour:
   m_margin: {x: 0, y: 0, z: 0, w: 0}
   m_isUsingLegacyAnimationComponent: 0
   m_isVolumetricText: 0
-  m_hasFontAssetChanged: 1
+  m_hasFontAssetChanged: 0
   m_baseMaterial: {fileID: 0}
   m_maskOffset: {x: 0, y: 0, z: 0, w: 0}
 --- !u!222 &681043937
@@ -41231,7 +41231,7 @@ GameObject:
   - component: {fileID: 784900955}
   - component: {fileID: 784900956}
   m_Layer: 5
-  m_Name: Luck
+  m_Name: Favor
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -41251,9 +41251,9 @@ RectTransform:
   m_Children: []
   m_Father: {fileID: 985984711}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 1}
-  m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 514.745, y: -496.45404}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 0, y: 0}
+  m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 950, y: 50}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &784900955
@@ -41983,9 +41983,9 @@ RectTransform:
   m_Children: []
   m_Father: {fileID: 1339184250}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 1}
-  m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 110.670166, y: -87.5}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 0, y: 0}
+  m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 100, y: 100}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &794716755
@@ -43353,7 +43353,7 @@ GameObject:
   - component: {fileID: 826591068}
   - component: {fileID: 826591069}
   m_Layer: 5
-  m_Name: Lure
+  m_Name: Flyer
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -43373,9 +43373,9 @@ RectTransform:
   m_Children: []
   m_Father: {fileID: 985984711}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 1}
-  m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 514.745, y: -368.89575}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 0, y: 0}
+  m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 950, y: 50}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &826591068
@@ -45374,7 +45374,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!224 &854478635
 RectTransform:
   m_ObjectHideFlags: 0
@@ -48212,7 +48212,7 @@ GameObject:
   - component: {fileID: 898697956}
   - component: {fileID: 898697957}
   m_Layer: 5
-  m_Name: TypeRes
+  m_Name: PPEPermit
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -48232,9 +48232,9 @@ RectTransform:
   m_Children: []
   m_Father: {fileID: 985984711}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 1}
-  m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 514.745, y: -305.1166}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 0, y: 0}
+  m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 950, y: 50}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &898697956
@@ -53412,9 +53412,9 @@ RectTransform:
   m_Children: []
   m_Father: {fileID: 985984711}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 1}
-  m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 514.745, y: -815.3499}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 0, y: 0}
+  m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 950, y: 50}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &978516135
@@ -66783,9 +66783,9 @@ RectTransform:
   m_Children: []
   m_Father: {fileID: 238525780}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 1}
-  m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 434.52557, y: -50}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 0, y: 0}
+  m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 217.43, y: 75}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1205135110
@@ -66876,7 +66876,7 @@ MonoBehaviour:
   m_margin: {x: 0, y: 0, z: 0, w: 0}
   m_isUsingLegacyAnimationComponent: 0
   m_isVolumetricText: 0
-  m_hasFontAssetChanged: 1
+  m_hasFontAssetChanged: 0
   m_baseMaterial: {fileID: 0}
   m_maskOffset: {x: 0, y: 0, z: 0, w: 0}
 --- !u!222 &1205135111
@@ -69412,7 +69412,7 @@ GameObject:
   - component: {fileID: 1254909124}
   - component: {fileID: 1254909125}
   m_Layer: 5
-  m_Name: Capture
+  m_Name: WorkOrder
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -69432,9 +69432,9 @@ RectTransform:
   m_Children: []
   m_Father: {fileID: 985984711}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 1}
-  m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 514.745, y: -432.6749}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 0, y: 0}
+  m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 950, y: 50}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &1254909124
@@ -69744,7 +69744,7 @@ MonoBehaviour:
   m_margin: {x: 0, y: 0, z: 0, w: 0}
   m_isUsingLegacyAnimationComponent: 0
   m_isVolumetricText: 0
-  m_hasFontAssetChanged: 1
+  m_hasFontAssetChanged: 0
   m_baseMaterial: {fileID: 0}
   m_maskOffset: {x: 0, y: 0, z: 0, w: 0}
 --- !u!1 &1259369278
@@ -75192,7 +75192,7 @@ MonoBehaviour:
   m_margin: {x: 0, y: 0, z: 0, w: 0}
   m_isUsingLegacyAnimationComponent: 0
   m_isVolumetricText: 0
-  m_hasFontAssetChanged: 1
+  m_hasFontAssetChanged: 0
   m_baseMaterial: {fileID: 0}
   m_maskOffset: {x: 0, y: 0, z: 0, w: 0}
 --- !u!222 &1346597274
@@ -83005,7 +83005,7 @@ GameObject:
   - component: {fileID: 1501012706}
   - component: {fileID: 1501012707}
   m_Layer: 5
-  m_Name: Spd Boost
+  m_Name: EfficiencyVoucher_SPD
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -83025,9 +83025,9 @@ RectTransform:
   m_Children: []
   m_Father: {fileID: 985984711}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 1}
-  m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 514.745, y: -687.79156}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 0, y: 0}
+  m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 950, y: 50}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &1501012706
@@ -86480,7 +86480,7 @@ GameObject:
   - component: {fileID: 1568245595}
   - component: {fileID: 1568245596}
   m_Layer: 5
-  m_Name: CoinCount
+  m_Name: Credits
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -86500,9 +86500,9 @@ RectTransform:
   m_Children: []
   m_Father: {fileID: 985984711}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 1}
-  m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 514.745, y: -50}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 0, y: 0}
+  m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 950, y: 50}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &1568245595
@@ -86616,7 +86616,7 @@ GameObject:
   - component: {fileID: 1568505748}
   - component: {fileID: 1568505749}
   m_Layer: 5
-  m_Name: Pack Shard
+  m_Name: Pack Voucher
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -86636,9 +86636,9 @@ RectTransform:
   m_Children: []
   m_Father: {fileID: 985984711}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 1}
-  m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 514.745, y: -1006.68744}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 0, y: 0}
+  m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 950, y: 50}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &1568505748
@@ -87526,9 +87526,9 @@ RectTransform:
   m_Children: []
   m_Father: {fileID: 985984711}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 1}
-  m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 514.745, y: -241.33746}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 0, y: 0}
+  m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 950, y: 50}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &1579726180
@@ -88253,7 +88253,7 @@ GameObject:
   - component: {fileID: 1585747522}
   - component: {fileID: 1585747523}
   m_Layer: 5
-  m_Name: Rest Charge
+  m_Name: Coffee
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -88273,9 +88273,9 @@ RectTransform:
   m_Children: []
   m_Father: {fileID: 985984711}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 1}
-  m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 514.745, y: -879.1291}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 0, y: 0}
+  m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 950, y: 50}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &1585747522
@@ -88847,9 +88847,9 @@ RectTransform:
   m_Children: []
   m_Father: {fileID: 238525780}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 1}
-  m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 120.11058, y: -50}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 0, y: 0}
+  m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 211.4, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1594772414
@@ -88940,7 +88940,7 @@ MonoBehaviour:
   m_margin: {x: 0.020065237, y: 49.371346, z: -94.03805, w: 52.11421}
   m_isUsingLegacyAnimationComponent: 0
   m_isVolumetricText: 0
-  m_hasFontAssetChanged: 1
+  m_hasFontAssetChanged: 0
   m_baseMaterial: {fileID: 0}
   m_maskOffset: {x: 0, y: 0, z: 0, w: 0}
 --- !u!222 &1594772415
@@ -90215,9 +90215,9 @@ RectTransform:
   m_Children: []
   m_Father: {fileID: 985984711}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 1}
-  m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 514.745, y: -113.77915}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 0, y: 0}
+  m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 950, y: 50}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &1610762147
@@ -98741,7 +98741,7 @@ MonoBehaviour:
   m_margin: {x: 0, y: 0, z: 0, w: 0}
   m_isUsingLegacyAnimationComponent: 0
   m_isVolumetricText: 0
-  m_hasFontAssetChanged: 1
+  m_hasFontAssetChanged: 0
   m_baseMaterial: {fileID: 0}
   m_maskOffset: {x: 0, y: 0, z: 0, w: 0}
 --- !u!222 &1775224284
@@ -101315,33 +101315,33 @@ MonoBehaviour:
     icon: {fileID: -82702583781362031, guid: d2da644c3f7344a6aa777c14615a5e47, type: 3}
     infoId: res.Material
   - type: 6
-    displayName: Lure
-    icon: {fileID: -8829681699636693407, guid: 1da21c81aad7943499857a9b00582762, type: 3}
-    infoId: res.Lure
+    displayName: Flyer
+    icon: {fileID: 3321169378428917069, guid: d2a224ffc5dd14cd9bea2e051ae55a5d, type: 3}
+    infoId: res.Flyer
   - type: 7
-    displayName: Capture Band
-    icon: {fileID: 21300000, guid: 917c0ce4b2658ac44a0238c9bf29048a, type: 3}
-    infoId: res.Capture
+    displayName: Work Order
+    icon: {fileID: -184922529597343108, guid: 242083f04895f496db58523ff283ee47, type: 3}
+    infoId: res.WorkOrder
   - type: 8
-    displayName: Luck
+    displayName: Favor
     icon: {fileID: 5787554331827840099, guid: 70dc8220ffe4d425cbbe0cbe67177f0d, type: 3}
-    infoId: res.Luck
+    infoId: res.Favor
   - type: 5
-    displayName: Type Res Boost
+    displayName: PPE Permit
     icon: {fileID: 2579639455195160362, guid: 8161cc557b3534e1c92074f069e630c9, type: 3}
-    infoId: res.TypeRes
+    infoId: res.PPEPermit
   - type: 9
-    displayName: ATK Boost
-    icon: {fileID: -7667829682062625619, guid: 8aee5f27d43734b0c81819ed01616fb5, type: 3}
-    infoId: res.Atk
+    displayName: Training Voucher
+    icon: {fileID: -781000674992755973, guid: 1fde2d8115b3341ba938eeff46d8193b, type: 3}
+    infoId: res.Training
   - type: 10
-    displayName: HP Boost
-    icon: {fileID: -5476033080650236209, guid: 4576e372101904833a3fd4c347849d84, type: 3}
-    infoId: res.HP
+    displayName: Wellness Voucher
+    icon: {fileID: -8421726322193360495, guid: de6b103a24e9f44d989f1d26b41f3658, type: 3}
+    infoId: res.Wellness
   - type: 11
-    displayName: SPD Boost
-    icon: {fileID: -720548752678865658, guid: 394ddf11e79b44994805a3be9f48962b, type: 3}
-    infoId: res.Spd
+    displayName: Efficiency Voucher
+    icon: {fileID: 8927612914066773425, guid: ded28a9359c44417f81415a26f3e2fd2, type: 3}
+    infoId: res.Efficiency
   - type: 12
     displayName: Shiny Orb
     icon: {fileID: 3084012362977371794, guid: e2d3b8730a443435bb167b9bcdacd4eb, type: 3}
@@ -101351,9 +101351,9 @@ MonoBehaviour:
     icon: {fileID: -4330508236222623831, guid: a5945cdf547864b8787a2d4106457745, type: 3}
     infoId: res.BlessingScale
   - type: 14
-    displayName: Rest Charge
-    icon: {fileID: 3239092004989240471, guid: 17aba26ca510041839044db43288e114, type: 3}
-    infoId: res.Rest
+    displayName: Coffee
+    icon: {fileID: 2285944867557445247, guid: 51b5bb6d13bc74b3f855180650026748, type: 3}
+    infoId: res.Coffee
   - type: 16
     displayName: Growth Core
     icon: {fileID: 2291750746404757969, guid: ce3a6dc26e8c44aada3227991627a8e0, type: 3}
@@ -110175,9 +110175,9 @@ RectTransform:
   m_Children: []
   m_Father: {fileID: 985984711}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 1}
-  m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 514.745, y: -177.5583}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 0, y: 0}
+  m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 950, y: 50}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &2011897875
@@ -117879,9 +117879,9 @@ RectTransform:
   m_Children: []
   m_Father: {fileID: 1339184250}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 1}
-  m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 868.3213, y: -87.5}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 0, y: 0}
+  m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 100, y: 100}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &2126249580
@@ -123393,7 +123393,7 @@ MonoBehaviour:
   m_margin: {x: 0, y: 0, z: 0, w: 0}
   m_isUsingLegacyAnimationComponent: 0
   m_isVolumetricText: 0
-  m_hasFontAssetChanged: 1
+  m_hasFontAssetChanged: 0
   m_baseMaterial: {fileID: 0}
   m_maskOffset: {x: 0, y: 0, z: 0, w: 0}
 --- !u!114 &5254612866903406357

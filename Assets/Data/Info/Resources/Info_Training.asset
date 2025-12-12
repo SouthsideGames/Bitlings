@@ -10,13 +10,14 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 8909f92dca58941be8a4545ccb059a11, type: 3}
-  m_Name: Info_Lure
+  m_Name: Info_Training
   m_EditorClassIdentifier: 
-  id: res.Lure
+  id: res.Training
   category: 1
-  title: Lure
+  title: Training Voucher
   subtitle: Resource
-  body: 'Comes from: Harbor
+  body: 'Comes from: Mine
 
-    Increases the encounter odds of a certain Bitlings
-    types'
+    Temporary ATK increase during encounters
+
+'
