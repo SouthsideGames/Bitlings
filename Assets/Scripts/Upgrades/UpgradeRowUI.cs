@@ -17,7 +17,7 @@ public class UpgradeRowUI : MonoBehaviour
 
     // internal data
     FeatureId _featureId = FeatureId.None;
-    int _coinCost;
+    int _creditCost;
     string _infoId;
     string _fallbackTitle;
     Sprite _icon;
@@ -70,7 +70,7 @@ public class UpgradeRowUI : MonoBehaviour
             throw new ArgumentNullException(nameof(entry));
 
         _featureId = entry.featureId;
-        _coinCost = entry.coinCost;
+        _creditCost = entry.creditCost;
         _infoId = entry.infoId;
         _fallbackTitle = string.IsNullOrWhiteSpace(entry.displayName)
             ? _featureId.ToString()
@@ -94,12 +94,12 @@ public class UpgradeRowUI : MonoBehaviour
             stateLabel.text = unlocked ? "Unlocked" : "Locked";
 
         if (costLabel != null)
-            costLabel.text = unlocked ? "-" : $"{_coinCost} Coins";
+            costLabel.text = unlocked ? "-" : $"{_creditCost} credits";
 
         if (buyButton != null)
         {
-            int coins = ResourceBank.Get(ResourceType.Coin);
-            buyButton.interactable = !unlocked && _coinCost > 0 && coins >= _coinCost;
+            int credits = ResourceBank.Get(ResourceType.Credits);
+            buyButton.interactable = !unlocked && _creditCost > 0 && credits >= _creditCost;
         }
     }
 
@@ -115,7 +115,7 @@ public class UpgradeRowUI : MonoBehaviour
         if (FeatureUnlockManager.I.IsUnlocked(_featureId))
             return;
 
-        if (_coinCost > 0 && !ResourceBank.TrySpend(ResourceType.Coin, _coinCost))
+        if (_creditCost > 0 && !ResourceBank.TrySpend(ResourceType.Credits, _creditCost))
             return;
 
         // Unlock + persist
@@ -132,7 +132,7 @@ public class UpgradeRowUI : MonoBehaviour
 
         const string fallbackSubtitle = "Feature Unlock";
         const string fallbackBody =
-            "Unlocks a new feature or system for your account.\nCosts Coins.";
+            "Unlocks a new feature or system for your account.\nCosts credits.";
 
         InfoRouter.Open(id, _fallbackTitle, fallbackSubtitle, fallbackBody, _icon);
     }

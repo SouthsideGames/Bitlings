@@ -22,7 +22,7 @@ _Comprehensive testing guide for your pre-release mobile build (Google Play / Ap
 
 | ✅  | Test                                       | Tip                                                 |
 | --- | ------------------------------------------ | --------------------------------------------------- |
-| [ ] | Restart resumes same progress              | Levels, XP, coins, and timers persist.              |
+| [ ] | Restart resumes same progress              | Levels, XP, credits, and timers persist.              |
 | [ ] | Timed buffs persist after app close        | Force-close mid-boost, reopen, check timers resume. |
 | [ ] | Job sites retain workers and stored output | Especially after 1h+ idle or device time change.    |
 | [ ] | JSON save + backup both created            | Check `idle_mon_save.json` and backup path.         |
@@ -55,7 +55,7 @@ _Comprehensive testing guide for your pre-release mobile build (Google Play / Ap
 | [ ] | Crits trigger SFX and higher damage        | Confirm crit chance values work.       |
 | [ ] | Player/enemy turns alternate properly      | No double or skipped turns.            |
 | [ ] | Bench swap works mid-battle                | Swapped monster resumes next turn.     |
-| [ ] | Victory rewards XP + Coins                 | Matches battle duration/time survived. |
+| [ ] | Victory rewards XP + credits                 | Matches battle duration/time survived. |
 | [ ] | Defeat safely returns to panel             | No soft locks.                         |
 
 💡 **Tip:** Use different types to verify passive weaknesses/resists.
@@ -109,7 +109,7 @@ _Comprehensive testing guide for your pre-release mobile build (Google Play / Ap
 
 | ✅  | Test                                | Tip                           |
 | --- | ----------------------------------- | ----------------------------- |
-| [ ] | Coin gains appear immediately       | After battle/job collection.  |
+| [ ] | credit gains appear immediately       | After battle/job collection.  |
 | [ ] | Resource spends update UI instantly | Buy Lure/Band, verify counts. |
 | [ ] | Negative balances impossible        | Try spending with 0.          |
 | [ ] | Balances match after save/load      | No rounding drift.            |

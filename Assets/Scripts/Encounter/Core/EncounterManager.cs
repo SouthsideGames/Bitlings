@@ -317,20 +317,20 @@ public partial class EncounterManager : MonoBehaviour
             // optional: else if (escaped) AudioManager.I.PlaySfx(SfxType.Run); // if you add a flee SFX
         }
 
-        // Coin multiplier (no coins if the enemy fled)
-        int finalCoins = 0;
+        // credit multiplier (no credits if the enemy fled)
+        int finalcredits = 0;
         if (!escaped)
         {
-            finalCoins = ApplyCoinsGainedMultiplier(result.coinsGained);
-            finalCoins = Mathf.Max(0, finalCoins);
+            finalcredits = ApplycreditsGainedMultiplier(result.creditsGained);
+            finalcredits = Mathf.Max(0, finalcredits);
 
-            if (finalCoins > 0)
-                ResourceManager.I.Add(ResourceType.Coin, finalCoins);
+            if (finalcredits > 0)
+                ResourceManager.I.Add(ResourceType.Credits, finalcredits);
         }
 
         // Status text
         if (victory)
-            EmitStatus($"Victory! +{finalCoins} coins");
+            EmitStatus($"Victory! +{finalcredits} credits");
         else if (defeat)
             EmitStatus("Defeat.");
         else if (escaped)
@@ -380,9 +380,9 @@ public partial class EncounterManager : MonoBehaviour
         // Persist non-resource state changes
         SaveManager.Save();
 
-        // Broadcast finished event with real coins credited
+        // Broadcast finished event with real credits credited
         var finished = result;
-        finished.coinsGained = finalCoins;
+        finished.creditsGained = finalcredits;
         GameEvents.BattleFinished?.Invoke(finished);
 
         BattleLogger.EndEncounter(victory);
@@ -393,11 +393,11 @@ public partial class EncounterManager : MonoBehaviour
     }
 
 
-    private int ApplyCoinsGainedMultiplier(int baseCoins)
+    private int ApplycreditsGainedMultiplier(int basecredits)
     {
-        if (baseCoins <= 0) return 0;
+        if (basecredits <= 0) return 0;
         const float MULT = 1f; // hook for future titles/meta
-        return Mathf.Max(0, Mathf.FloorToInt(baseCoins * MULT));
+        return Mathf.Max(0, Mathf.FloorToInt(basecredits * MULT));
     }
 
     IEnumerator PostResultFlow(bool victory, bool escaped)

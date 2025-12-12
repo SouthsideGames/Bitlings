@@ -9,7 +9,7 @@ public class ResourceCatalogEntry
     public string displayName;
     public Sprite icon;
 
-    [Tooltip("String id used by InfoLibrary/InfoRouter, e.g., res.coins, res.energy")]
+    [Tooltip("String id used by InfoLibrary/InfoRouter, e.g., res.credits, res.energy")]
     public string infoId;
 }
 

@@ -4,10 +4,10 @@ using UnityEngine;
 public class HealingConfigSO : ScriptableObject
 {
     [Header("Pricing")]
-    [Tooltip("Coins per HP at level 1")]
-    public float baseCoinsPerHP = 0.5f;
-    [Tooltip("Additional coins per HP per level (linear growth)")]
-    public float coinsPerHPPerLevel = 0.15f;
+    [Tooltip("credits per HP at level 1")]
+    public float basecreditsPerHP = 0.5f;
+    [Tooltip("Additional credits per HP per level (linear growth)")]
+    public float creditsPerHPPerLevel = 0.15f;
     [Tooltip("Minimum total cost for any heal action")]
     public int minimumCost = 1;
 

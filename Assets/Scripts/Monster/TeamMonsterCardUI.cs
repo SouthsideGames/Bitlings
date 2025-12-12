@@ -13,9 +13,9 @@ public class TeamMonsterCardUI : MonoBehaviour
     [SerializeField] private Button rootButton;
     [SerializeField] private Button healBtn;
 
-    [Header("Heal Settings (Coins Fallback)")]
+    [Header("Heal Settings (credits Fallback)")]
     [SerializeField, Range(0f, 1f)] private float partialHealPct = 0.25f;
-    [SerializeField] private ResourceType healCostType = ResourceType.Coin;
+    [SerializeField] private ResourceType healCostType = ResourceType.Credits;
     [SerializeField] private int partialHealCost = 1;
     [SerializeField] private int fullHealCost = 3;
 
@@ -201,12 +201,12 @@ public class TeamMonsterCardUI : MonoBehaviour
             bool needsHeal = curHP < maxHP;
 
             int medkits = GetResource(medkitResourceType);
-            int coins = GetResource(healCostType);
+            int credits = GetResource(healCostType);
 
             bool canHealWithMedkits = medkits >= partialHealMedkitCost;
-            bool canHealWithCoins = coins >= partialHealCost;
+            bool canHealWithcredits = credits >= partialHealCost;
 
-            enable = needsHeal && (canHealWithMedkits || canHealWithCoins);
+            enable = needsHeal && (canHealWithMedkits || canHealWithcredits);
         }
 
         healBtn.gameObject.SetActive(enable);
@@ -227,14 +227,14 @@ public class TeamMonsterCardUI : MonoBehaviour
         }
 
         int medkitCost = partial ? partialHealMedkitCost : fullHealMedkitCost;
-        int coinCost = partial ? partialHealCost : fullHealCost;
+        int creditCost = partial ? partialHealCost : fullHealCost;
 
         bool paid = false;
 
         if (GetResource(medkitResourceType) >= medkitCost && medkitCost > 0)
             paid = SpendResource(medkitResourceType, medkitCost);
-        else if (coinCost > 0)
-            paid = SpendResource(healCostType, coinCost);
+        else if (creditCost > 0)
+            paid = SpendResource(healCostType, creditCost);
 
         if (!paid)
         {

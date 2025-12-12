@@ -14,7 +14,7 @@ public class PostBattleSummaryPanelUI : MonoBehaviour
     [SerializeField] private TextMeshProUGUI titleLabel;
 
     [Header("Rewards")]
-    [SerializeField] private TextMeshProUGUI coinsLabel;
+    [SerializeField] private TextMeshProUGUI creditsLabel;
     [SerializeField] private TextMeshProUGUI growthCoresLabel;
     [SerializeField] private TextMeshProUGUI captureLabel;
 
@@ -96,8 +96,8 @@ public class PostBattleSummaryPanelUI : MonoBehaviour
         string capturedMonsterId = null,
         int capturedLevel = 0,
         List<string> levelUpSummaries = null,   // kept for compatibility (unused)
-        int coinsBase = 0,
-        int coinsTitleBonus = 0,
+        int creditsBase = 0,
+        int creditsTitleBonus = 0,
         int growthCoresBase = 0,
         int growthCoresTitleBonus = 0,
         List<string> growthCoresDetailLines = null // kept for compatibility (unused)
@@ -107,10 +107,10 @@ public class PostBattleSummaryPanelUI : MonoBehaviour
         if (titleLabel)
             titleLabel.text = result.victory ? "Victory!" : "Defeat";
 
-        // ───────────── Coins ─────────────
-        int coinsTotal = Mathf.Max(0, coinsBase + coinsTitleBonus);
-        if (coinsLabel)
-            coinsLabel.text = BuildRewardLine("Coins", coinsBase, coinsTitleBonus, coinsTotal);
+        // ───────────── credits ─────────────
+        int creditsTotal = Mathf.Max(0, creditsBase + creditsTitleBonus);
+        if (creditsLabel)
+            creditsLabel.text = BuildRewardLine("credits", creditsBase, creditsTitleBonus, creditsTotal);
 
         // ───────────── Growth Cores ─────────────
         int coresTotal = Mathf.Max(0, growthCoresBase + growthCoresTitleBonus);

@@ -10,7 +10,7 @@ public static class ResourceBank
     // Booster/Sigil cap settings
     // ─────────────────────────────────────────────────────────────
     public const int BoosterCapTotal = 50;          // Combined cap
-    public const int BoosterOverflowCoinValue = 1;  // Overflow → coins
+    public const int BoosterOverflowcreditValue = 1;  // Overflow → credits
 
     private static readonly ResourceType[] BoosterTypes = new[]
     {
@@ -168,9 +168,9 @@ public static class ResourceBank
         if (toAdd > 0)
             L[i] = Mathf.Clamp(L[i] + toAdd, 0, int.MaxValue);
 
-        // Overflow becomes coins
-        if (overflow > 0 && BoosterOverflowCoinValue > 0)
-            Add(ResourceType.Coin, overflow * BoosterOverflowCoinValue);
+        // Overflow becomes credits
+        if (overflow > 0 && BoosterOverflowcreditValue > 0)
+            Add(ResourceType.Credits, overflow * BoosterOverflowcreditValue);
 
         EmitChanged();
     }

@@ -3,14 +3,14 @@ using UnityEngine;
 public static class HeadlessBattle
 {
     /// <summary>
-    /// Compact headless input for win/coin simulation.
+    /// Compact headless input for win/credit simulation.
     /// Compose upstream (Jobs/Idle/Title systems) and pass the final multipliers here.
     /// </summary>
     public struct Input
     {
         public int   avgTeamLevel;
         public int   wildLevel;
-        public int   baseCoinPerWin;
+        public int   basecreditPerWin;
         public float rewardMultiplier;
         public int   rngSeed;
 
@@ -30,14 +30,14 @@ public static class HeadlessBattle
         /// <summary>Early momentum edge from idle/job systems only (additive bias to p).</summary>
         public float earlyEdge;
 
-        /// <summary>Jobs/Idle coin multiplier only (title coin multipliers are applied at grant time).</summary>
-        public float coinMul;
+        /// <summary>Jobs/Idle credit multiplier only (title credit multipliers are applied at grant time).</summary>
+        public float creditMul;
     }
 
     public struct Output
     {
         public bool victory;
-        public int  coins;
+        public int  credits;
     }
 
     public static Output Resolve(in Input i)
@@ -66,15 +66,15 @@ public static class HeadlessBattle
         bool win = rng.NextDouble() < p;
 
         // Rewards
-        int coins = 0;
+        int credits = 0;
         if (win)
         {
-            float baseCoins = (i.baseCoinPerWin + Mathf.Max(0, i.wildLevel) * 1.5f) * Mathf.Max(0f, i.rewardMultiplier);
-            baseCoins *= Mathf.Max(0.5f, i.coinMul); // jobs/idle only; title coin mult applied later at grant
-            coins = Mathf.RoundToInt(baseCoins);
+            float basecredits = (i.basecreditPerWin + Mathf.Max(0, i.wildLevel) * 1.5f) * Mathf.Max(0f, i.rewardMultiplier);
+            basecredits *= Mathf.Max(0.5f, i.creditMul); // jobs/idle only; title credit mult applied later at grant
+            credits = Mathf.RoundToInt(basecredits);
         }
 
-        return new Output { victory = win, coins = coins };
+        return new Output { victory = win, credits = credits };
     }
 
     /// <summary>Coerces invalid/zero multipliers to neutral (1f).</summary>

@@ -3,7 +3,7 @@ using UnityEngine;
 public static class InfoServices
 {
     /// <summary>
-    /// Open the Info panel by a string id (e.g., "res.coins", "job.forge", "tag.hunter").
+    /// Open the Info panel by a string id (e.g., "res.credits", "job.forge", "tag.hunter").
     /// Fallbacks are optional and only used if the SO is missing or has empty fields.
     /// </summary>
     public static void OpenById(
@@ -17,7 +17,7 @@ public static class InfoServices
     }
 
     /// <summary>
-    /// Convenience for resources: builds id "res.{enum}" (e.g., res.Coins, res.Energy).
+    /// Convenience for resources: builds id "res.{enum}" (e.g., res.credits, res.Energy).
     /// </summary>
     public static void OpenResource(
         ResourceType type,
@@ -71,7 +71,7 @@ public static class InfoServices
 
     /// <summary>
     /// Adapter for older call sites that use (category, key).
-    /// This converts to the string id convention (e.g., "res.coins") and opens the panel.
+    /// This converts to the string id convention (e.g., "res.credits") and opens the panel.
     /// </summary>
     public static void Open(
         InfoCategory category,

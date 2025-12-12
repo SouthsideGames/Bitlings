@@ -46,7 +46,7 @@ public static class SaveDebugTools
             savedAtUnix = SaveManager.NowUnix(),
             winStreak   = TryGetWinStreak(),
             resources   = TryGetResources(),
-            coins       = TryGetCoins(),
+            credits       = TryGetcredits(),
             team        = new List<AuditTeamSlot>(),
             owned       = new List<AuditOwned>(),
             titles      = TryGetTitlesMap(),     // NOTE: JsonUtility won't serialize Dictionary (non-blocking)
@@ -254,11 +254,11 @@ public static class SaveDebugTools
         return map;
     }
 
-    private static int TryGetCoins()
+    private static int TryGetcredits()
     {
         try
         {
-            return ResourceManager.I ? ResourceManager.I.Get(ResourceType.Coin) : 0;
+            return ResourceManager.I ? ResourceManager.I.Get(ResourceType.Credits) : 0;
         }
         catch { return 0; }
     }
@@ -391,7 +391,7 @@ public static class SaveDebugTools
         public long   savedAtUnix;
         public int    winStreak;
         public Dictionary<string,int>    resources; // NOTE: JsonUtility won't serialize Dictionary
-        public int coins;
+        public int credits;
         public List<AuditTeamSlot> team;
         public List<AuditOwned>    owned;
         public List<AuditSpeciesIndex> speciesIndex;

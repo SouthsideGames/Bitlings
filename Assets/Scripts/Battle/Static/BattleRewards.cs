@@ -4,7 +4,7 @@ using System.Collections.Generic;
 
 public static class BattleRewards
 {
-    public static int CoinsFor(bool victory, int wildLevel, float secondsSurvived)
+    public static int creditsFor(bool victory, int wildLevel, float secondsSurvived)
     {
         if (victory)
         {
@@ -18,7 +18,7 @@ public static class BattleRewards
         }
     }
 
-    public static int CalcCoinsForWin(int wildLevel, Rarity rarity)
+    public static int CalccreditsForWin(int wildLevel, Rarity rarity)
     {
         float rarityMul = 1f;
         switch (rarity)
@@ -33,8 +33,8 @@ public static class BattleRewards
         }
 
         int baseWin = Mathf.RoundToInt(6 + wildLevel * 2.5f);
-        int coins = Mathf.RoundToInt(baseWin * rarityMul);
-        return Mathf.Max(1, coins);
+        int credits = Mathf.RoundToInt(baseWin * rarityMul);
+        return Mathf.Max(1, credits);
     }
 
     public static void GrantVictoryXPAndEvo(int activeIndex, int wildLevel, MonsterLibrarySO library)

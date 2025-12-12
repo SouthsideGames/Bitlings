@@ -58,7 +58,7 @@ public class PlayerDossierPanelUI : MonoBehaviour
     // PAGE 4 – RESOURCES UI REFERENCES
     // ─────────────────────────────────────────────────────────────
     [Header("Page 4 – Resources")]
-    [SerializeField] private TextMeshProUGUI coinsText;
+    [SerializeField] private TextMeshProUGUI creditsText;
     [SerializeField] private TextMeshProUGUI energyText;
     [SerializeField] private TextMeshProUGUI medkitText;
     [SerializeField] private TextMeshProUGUI materialText;
@@ -405,7 +405,7 @@ public class PlayerDossierPanelUI : MonoBehaviour
     {
         if (s == null)
         {
-            if (coinsText)          coinsText.text          = "Coins: 0";
+            if (creditsText)          creditsText.text          = "credits: 0";
             if (energyText)         energyText.text         = "Harbor Cargo: 0";
             if (medkitText)         medkitText.text         = "Medkits: 0";
             if (materialText)       materialText.text       = "Ingot Materials: 0";
@@ -457,8 +457,8 @@ public class PlayerDossierPanelUI : MonoBehaviour
         if (packShardText)
             packShardText.text = $"Shards: {s.packShardCount}";
 
-        if (coinsText)
-            coinsText.text = $"Coins: {s.coinCount.ToString("N0")}";
+        if (creditsText)
+            creditsText.text = $"credits: {s.creditCount.ToString("N0")}";
 
         // Supporting resources keep clear, BRN-flavored names as well
         if (medkitText)

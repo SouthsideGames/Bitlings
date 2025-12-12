@@ -14,5 +14,5 @@ public class UpgradeCatalogEntry
 
     [Header("Cost")]
     [Min(0)]
-    public int coinCost = 50;
+    public int creditCost = 50;
 }

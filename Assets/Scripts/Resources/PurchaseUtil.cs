@@ -3,8 +3,8 @@ using System;
 
 public static class PurchaseUtil
 {
-    [Obsolete("Use TrySpendCoinsOnly for upgrades; materials are now for job-site leveling UI only.")]
-    public static bool TrySpendMaterialsThenCoins(int materialRequired)
+    [Obsolete("Use TrySpendcreditsOnly for upgrades; materials are now for job-site leveling UI only.")]
+    public static bool TrySpendMaterialsThencredits(int materialRequired)
     {
         if (materialRequired <= 0) return true;
 
@@ -20,10 +20,10 @@ public static class PurchaseUtil
 
         if (remaining > 0)
         {
-            const int CoinsPerMaterial = 5;
-            int coinsNeeded = remaining * CoinsPerMaterial;
+            const int creditsPerMaterial = 5;
+            int creditsNeeded = remaining * creditsPerMaterial;
 
-            if (!ResourceBank.TrySpend(ResourceType.Coin, coinsNeeded))
+            if (!ResourceBank.TrySpend(ResourceType.Credits, creditsNeeded))
             {
                 if (matsToSpend > 0) ResourceBank.Add(ResourceType.Material, matsToSpend);
                 return false;
@@ -35,18 +35,18 @@ public static class PurchaseUtil
     }
 
     [Obsolete("Unused for upgrades; kept for legacy UI previews.")]
-    public static int CoinsRemainderIfPayingWithMats(int materialRequired)
+    public static int creditsRemainderIfPayingWithMats(int materialRequired)
     {
-        const int CoinsPerMaterial = 5;
+        const int creditsPerMaterial = 5;
         int haveMats  = ResourceBank.Get(ResourceType.Material);
         int remaining = Mathf.Max(0, materialRequired - Mathf.Clamp(haveMats, 0, materialRequired));
-        return remaining * CoinsPerMaterial;
+        return remaining * creditsPerMaterial;
     }
 
-    public static bool TrySpendCoinsOnly(int coinCost)
+    public static bool TrySpendcreditsOnly(int creditCost)
     {
-        if (coinCost <= 0) return true;
-        if (!ResourceBank.TrySpend(ResourceType.Coin, coinCost)) return false;
+        if (creditCost <= 0) return true;
+        if (!ResourceBank.TrySpend(ResourceType.Credits, creditCost)) return false;
         GameEvents.OnResourcesChanged?.Invoke();
         return true;
     }

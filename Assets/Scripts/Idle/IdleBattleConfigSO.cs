@@ -12,7 +12,7 @@ public class IdleBattleConfigSO : ScriptableObject
 
     [Header("Rewards")]
     [Range(0.1f, 5f)] public float rewardMultiplier = 1f;
-    public int baseCoinPerWin = 5;
+    public int basecreditPerWin = 5;
 
     [Header("Capture")]
     public bool allowCapturesOffline = false; 

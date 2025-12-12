@@ -43,7 +43,7 @@ public class PlayerDossierSnapshot
     public string[] fieldOpsHighlights;
 
     [Header("Page 4 – Resources")]
-    public int coinCount;
+    public int creditCount;
     public int energyCount;
     public int medkitCount;
     public int materialCount;
@@ -529,7 +529,7 @@ public class PlayerDossierManager : MonoBehaviour
         // ─────────────────────────────────────────────────────────────
         // Raw resource counts (live from ResourceManager)
         // ─────────────────────────────────────────────────────────────
-        s.coinCount           = bank.Get(ResourceType.Coin);
+        s.creditCount           = bank.Get(ResourceType.Credits);
         s.energyCount         = bank.Get(ResourceType.Energy);
         s.medkitCount         = bank.Get(ResourceType.Medkit);
         s.materialCount       = bank.Get(ResourceType.Material);
@@ -557,7 +557,7 @@ public class PlayerDossierManager : MonoBehaviour
     /// - Job stability (avg job level)
     /// - Bitling care (careScorePercent)
     /// - Field operations (captures, streaks, rares)
-    /// - Resource stewardship (progression items & coins)
+    /// - Resource stewardship (progression items & credits)
     /// Returns 0–100.
     /// </summary>
     private int ComputeHandlerEfficiency(PlayerManager data, PlayerDossierSnapshot snap)
@@ -614,7 +614,7 @@ public class PlayerDossierManager : MonoBehaviour
 
         // ─────────────────────────────────────────────────────────────
         // 4) Resource stewardship (0–1)
-        //    Progression items + coins
+        //    Progression items + credits
         // ─────────────────────────────────────────────────────────────
         int progTotal =
             snap.growthCoreCount      +
@@ -631,12 +631,12 @@ public class PlayerDossierManager : MonoBehaviour
         // 100+ total progression items is treated as "max utilization"
         float progNorm = Mathf.Clamp01(progTotal / 100f);
 
-        // 50,000+ coins is treated as "max economic readiness"
-        float coinNorm = Mathf.Clamp01(snap.coinCount / 50000f);
+        // 50,000+ credits is treated as "max economic readiness"
+        float creditNorm = Mathf.Clamp01(snap.creditCount / 50000f);
 
         float resourceUsageScore =
             (progNorm * 0.6f) +
-            (coinNorm * 0.4f);
+            (creditNorm * 0.4f);
 
         // ─────────────────────────────────────────────────────────────
         // 5) Combine into final BRN rating (0–1)

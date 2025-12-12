@@ -39,7 +39,7 @@ public class HealButtonController : MonoBehaviour
         int missing = HealingService.MissingHP(curHP, maxHP);
 
         int kitsNeeded = HealingService.MedkitsToHealFull(missing, hpPerMedkit);
-        int coinsNeeded = HealingService.CoinsToHealFull(config, owned.level, missing);
+        int creditsNeeded = HealingService.creditsToHealFull(config, owned.level, missing);
 
         int haveKits = ResourceBank.Get(ResourceType.Medkit);
         bool useKitsOnly = haveKits >= kitsNeeded && kitsNeeded > 0;
@@ -63,17 +63,17 @@ public class HealButtonController : MonoBehaviour
         else if (needFallback)
         {
             int kitsShort = kitsNeeded - haveKits; // you already computed kitsNeeded & haveKits
-            int coins     = ResourceManager.I.Get(ResourceType.Coin);
+            int credits     = ResourceManager.I.Get(ResourceType.Credits);
 
-            costLabel.text = $"{haveKits} Medkits + {coinsNeeded} Coins";
-            healButton.interactable = (coins >= coinsNeeded) || (haveKits > 0);
+            costLabel.text = $"{haveKits} Medkits + {creditsNeeded} credits";
+            healButton.interactable = (credits >= creditsNeeded) || (haveKits > 0);
         }
         else
         {
-            int coins = ResourceManager.I.Get(ResourceType.Coin);
+            int credits = ResourceManager.I.Get(ResourceType.Credits);
 
-            costLabel.text = $"{coinsNeeded} Coins";
-            healButton.interactable = (coins >= coinsNeeded);
+            costLabel.text = $"{creditsNeeded} credits";
+            healButton.interactable = (credits >= creditsNeeded);
         }
     }
 
@@ -103,11 +103,11 @@ public class HealButtonController : MonoBehaviour
         {
             if (haveKits > 0)
             {
-                // spend what you have, then cover rest with coins
+                // spend what you have, then cover rest with credits
                 if (!ResourceBank.TrySpend(ResourceType.Medkit, haveKits)) { Refresh(); return; }
             }
-            int coinsNeeded = HealingService.CoinsToHealFull(config, owned.level, missing);
-            if (!ResourceManager.I.TrySpend(ResourceType.Coin, coinsNeeded)) { Refresh(); return; }
+            int creditsNeeded = HealingService.creditsToHealFull(config, owned.level, missing);
+            if (!ResourceManager.I.TrySpend(ResourceType.Credits, creditsNeeded)) { Refresh(); return; }
         }
 
         owned.currentHP = maxHP;

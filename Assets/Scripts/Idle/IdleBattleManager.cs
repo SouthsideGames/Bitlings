@@ -160,9 +160,9 @@ public class IdleBattleManager : MonoBehaviour
         }
 
         // Titles-independent global neutral mul (keep for future if needed)
-        float coinMulNeutral = 1f;
+        float creditMulNeutral = 1f;
 
-        // Feature unlock: Idle Reward Boost (extra coins from idle battles)
+        // Feature unlock: Idle Reward Boost (extra credits from idle battles)
         if (FeatureUnlockManager.I != null &&
             FeatureUnlockManager.I.IsUnlocked(FeatureId.IdleBattle_RewardBoost))
         {
@@ -170,7 +170,7 @@ public class IdleBattleManager : MonoBehaviour
             if (config != null)
                 boost = Mathf.Max(1f, config.rewardBoostMultiplier);
 
-            coinMulNeutral *= boost;
+            creditMulNeutral *= boost;
         }
 
         int baseCost      = Mathf.Max(1, SaveManager.Data.encounterCost);
@@ -242,7 +242,7 @@ public class IdleBattleManager : MonoBehaviour
             {
                 avgTeamLevel     = avgLv,
                 wildLevel        = wildLevel,
-                baseCoinPerWin   = config.baseCoinPerWin,
+                basecreditPerWin   = config.basecreditPerWin,
                 rewardMultiplier = config.rewardMultiplier,
                 rngSeed          = rng.Next(),
 
@@ -250,20 +250,20 @@ public class IdleBattleManager : MonoBehaviour
                 offenseMul       = teamP.offenseMul * Mathf.Max(0.1f, titleOffMul),
                 defenseMul       = teamP.defenseMul * Mathf.Max(0.1f, titleDefMul),
 
-                // jobs/idle only (Title coin mult is applied later in ResourceManager)
+                // jobs/idle only (Title credit mult is applied later in ResourceManager)
                 earlyEdge        = teamP.earlyEdge,
-                coinMul          = teamP.coinMul
+                creditMul          = teamP.creditMul
             });
 
-            // Base coins from headless result + neutral mul
-            int coinsBase = Mathf.Max(0, Mathf.FloorToInt(hb.coins * Mathf.Max(0f, coinMulNeutral)));
+            // Base credits from headless result + neutral mul
+            int creditsBase = Mathf.Max(0, Mathf.FloorToInt(hb.credits * Mathf.Max(0f, creditMulNeutral)));
 
-            // Titles-aware coin grant via ResourceManager (uses lead monster if present)
+            // Titles-aware credit grant via ResourceManager (uses lead monster if present)
             int awarded = 0;
-            if (hb.victory && coinsBase > 0)
+            if (hb.victory && creditsBase > 0)
             {
                 string leadIdForGrant = (teamIds.Count > 0) ? teamIds[0] : null;
-                awarded = ResourceManager.I.AddCoinsWithTitles(coinsBase, leadIdForGrant, wild, wildLevel);
+                awarded = ResourceManager.I.AddCreditsWithTitles(creditsBase, leadIdForGrant, wild, wildLevel);
             }
 
             // Log with the actual awarded amount (post-titles), keep shiny flag
@@ -273,7 +273,7 @@ public class IdleBattleManager : MonoBehaviour
             GameEvents.BattleFinished?.Invoke(new BattleResult
             {
                 victory      = hb.victory,
-                coinsGained  = awarded, // already titles-scaled + actually banked
+                creditsGained  = awarded, // already titles-scaled + actually banked
                 wildDef      = wild,
                 wildLevel    = wildLevel
             });
@@ -337,17 +337,17 @@ public class IdleBattleManager : MonoBehaviour
         return Mathf.Max(1, Mathf.RoundToInt(sum / Mathf.Max(1f, count)));
     }
 
-    private static void AddToLogMerged(List<IdleEncounterLogEntry> log, string monsterId, int coins, bool shiny)
+    private static void AddToLogMerged(List<IdleEncounterLogEntry> log, string monsterId, int credits, bool shiny)
     {
         if (log == null) return;
         var e = log.Find(x => x.monsterId == monsterId);
         if (e == null)
         {
-            e = new IdleEncounterLogEntry { monsterId = monsterId, count = 0, coins = 0, shinySeen = false };
+            e = new IdleEncounterLogEntry { monsterId = monsterId, count = 0, credits = 0, shinySeen = false };
             log.Add(e);
         }
         e.count += 1;
-        e.coins += Mathf.Max(0, coins);
+        e.credits += Mathf.Max(0, credits);
         e.shinySeen |= shiny;
     }
 
@@ -362,7 +362,7 @@ public class IdleBattleManager : MonoBehaviour
         if (!rewardPanel) return;
         var s = IdleBattleStore.Load();
         var sum = BuildSummary(s);
-        if (sum.totalEncounters <= 0 && sum.totalCoins <= 0) return;
+        if (sum.totalEncounters <= 0 && sum.totalcredits <= 0) return;
         rewardPanel.Open(sum, onCollected: () => IdleBattleStore.ClearLog());
     }
 
@@ -381,12 +381,12 @@ public class IdleBattleManager : MonoBehaviour
             foreach (var e in s.log)
             {
                 res.totalEncounters += e.count;
-                res.totalCoins += e.coins;
+                res.totalcredits += e.credits;
                 res.mergedLog.Add(new IdleEncounterLogEntry
                 {
                     monsterId = e.monsterId,
                     count = e.count,
-                    coins = e.coins,
+                    credits = e.credits,
                     shinySeen = e.shinySeen
                 });
             }

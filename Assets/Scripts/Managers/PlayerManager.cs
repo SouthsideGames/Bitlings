@@ -110,7 +110,7 @@ public class PlayerManager
     public List<string> favoriteMonsterIdsList = new List<string>();
     [NonSerialized] public HashSet<string> favoriteMonsterIds = new HashSet<string>();
 
-    public int coins = 0;
+    public int credits = 0;
     public List<int> resourceCounts = new List<int>();
     public List<string> unlockedPacks = new List<string>();
 
@@ -119,7 +119,7 @@ public class PlayerManager
     public int battleXPLevel = 0;
     public int critLevel;
     public int autoTapLevel;
-    public int coinGainLevel;
+    public int creditGainLevel;
     public int offlineLevel;
     public int winStreak;
     public int encounterPoints = 0;

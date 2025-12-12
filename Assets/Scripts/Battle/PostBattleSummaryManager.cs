@@ -46,8 +46,8 @@ public class PostBattleSummaryManager : MonoBehaviour
         public int capturedLvl;
         public List<string> levelUpLines;
 
-        public int coinsBase;
-        public int coinsTitleBonus;
+        public int creditsBase;
+        public int creditsTitleBonus;
 
         public int growthCoresBase;
         public int growthCoresTitleBonus;
@@ -65,8 +65,8 @@ public class PostBattleSummaryManager : MonoBehaviour
         string capturedMonsterId = null,
         int capturedLevel = 0,
         List<string> levelUpSummaries = null,
-        int coinsBase = 0,
-        int coinsTitleBonus = 0,
+        int creditsBase = 0,
+        int creditsTitleBonus = 0,
         int growthCoresBase = 0,
         int growthCoresTitleBonus = 0,
         List<string> growthCoresDetailLines = null
@@ -84,8 +84,8 @@ public class PostBattleSummaryManager : MonoBehaviour
             capturedId = capturedMonsterId,
             capturedLvl = capturedLevel,
             levelUpLines = levelUpSummaries,
-            coinsBase = coinsBase,
-            coinsTitleBonus = coinsTitleBonus,
+            creditsBase = creditsBase,
+            creditsTitleBonus = creditsTitleBonus,
             growthCoresBase = growthCoresBase,
             growthCoresTitleBonus = growthCoresTitleBonus,
             growthCoresDetailLines = growthCoresDetailLines
@@ -198,8 +198,8 @@ public class PostBattleSummaryManager : MonoBehaviour
             q.capturedId,
             q.capturedLvl,
             q.levelUpLines,
-            q.coinsBase,
-            q.coinsTitleBonus,
+            q.creditsBase,
+            q.creditsTitleBonus,
             q.growthCoresBase,
             q.growthCoresTitleBonus,
             q.growthCoresDetailLines

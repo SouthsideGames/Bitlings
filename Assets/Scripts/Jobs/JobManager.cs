@@ -517,8 +517,8 @@ public sealed class JobManager : MonoBehaviour
         var res = JobOutput.Output(job);
         switch (res)
         {
-            case ResourceType.Coin:
-                ResourceManager.I.Add(ResourceType.Coin, whole);
+            case ResourceType.Credits:
+                ResourceManager.I.Add(ResourceType.Credits, whole);
                 break;
 
             case ResourceType.Energy:

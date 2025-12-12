@@ -6,7 +6,7 @@ public class IdleEncounterLogEntry
 {
     public string monsterId;
     public int count;
-    public int coins;
+    public int credits;
     public bool shinySeen;
 }
 
@@ -27,7 +27,7 @@ public class IdleBattleSummary
 {
     public int totalEncounters;
     public int totalEnergySpent;
-    public int totalCoins;
+    public int totalcredits;
     public float durationSeconds;
     public List<IdleEncounterLogEntry> mergedLog = new();
 }

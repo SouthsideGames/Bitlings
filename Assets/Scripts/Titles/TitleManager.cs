@@ -650,7 +650,7 @@ public sealed class TitleManager : MonoBehaviour
         }
     }
 
-    public float GetCoinMultOnVictory(string monsterId, MonsterDataSO wild, int wildLevel)
+    public float GetcreditMultOnVictory(string monsterId, MonsterDataSO wild, int wildLevel)
     {
         float mul = 1f;
 
@@ -663,13 +663,13 @@ public sealed class TitleManager : MonoBehaviour
             var t = titles[i];
             if (!t) continue;
 
-            if (t is CoinBonusOnVictoryTitleSO coin)
+            if (t is creditBonusOnVictoryTitleSO credit)
             {
-                mul *= Mathf.Max(0f, coin.coinMultiplier);
+                mul *= Mathf.Max(0f, credit.creditMultiplier);
                 continue;
             }
 
-            if (TryReadFloat(t, out var v, "coinMultiplier", "coinsMultiplier", "rewardCoinMult"))
+            if (TryReadFloat(t, out var v, "creditMultiplier", "creditsMultiplier", "rewardcreditMult"))
                 mul *= Mathf.Max(0f, v);
         }
 

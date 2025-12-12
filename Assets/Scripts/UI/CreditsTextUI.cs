@@ -1,7 +1,7 @@
 using UnityEngine;
 using TMPro;
 
-public class CoinTextUI : MonoBehaviour
+public class CreditsTextUI : MonoBehaviour
 {
     private TextMeshProUGUI _label;
 
@@ -24,7 +24,7 @@ public class CoinTextUI : MonoBehaviour
     private void Refresh()
     {
         if (!_label) return;
-        int coins = ResourceBank.Get(ResourceType.Coin);
-        _label.text = coins.ToString(); // just the number
+        int credits = ResourceBank.Get(ResourceType.Credits);
+        _label.text = credits.ToString(); // just the number
     }
 }

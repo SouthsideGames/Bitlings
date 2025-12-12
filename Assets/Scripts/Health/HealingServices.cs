@@ -9,10 +9,10 @@ public static class HealingService
     public static int MedkitsToHealFull(int missingHP, int hpPerKit) 
         => missingHP <= 0 ? 0 : Mathf.CeilToInt((float)missingHP / Mathf.Max(1, hpPerKit));
 
-    public static int CoinsToHealFull(HealingConfigSO cfg, int level, int missingHP)
+    public static int creditsToHealFull(HealingConfigSO cfg, int level, int missingHP)
     {
         if (missingHP <= 0) return 0;
-        float perHP = Mathf.Max(0f, cfg.baseCoinsPerHP + cfg.coinsPerHPPerLevel * Mathf.Max(1, level));
+        float perHP = Mathf.Max(0f, cfg.basecreditsPerHP + cfg.creditsPerHPPerLevel * Mathf.Max(1, level));
         int cost = Mathf.CeilToInt(perHP * missingHP);
         return Mathf.Max(cfg.minimumCost, cost);
     }

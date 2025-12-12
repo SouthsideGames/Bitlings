@@ -6,7 +6,7 @@ using UnityEngine;
 
 public enum ResourceType
 {
-    None = 0, Coin = 1, Energy = 2, Medkit = 3, Material = 4,
+    None = 0, Credits = 1, Energy = 2, Medkit = 3, Material = 4,
     TypeResBooster = 5, Lure = 6, CaptureBand = 7, Luck = 8,
     AttackBooster = 9, HPBooster = 10, SpeedBooster = 11, ShinyOrb = 12, BlessingScale = 13, RestCharge = 14, GrowthCore = 16, PackShard = 17
 }
@@ -16,8 +16,8 @@ public class ResourceManager : MonoBehaviour
     public static ResourceManager I { get; private set; }
 
     [Header("Migration")]
-    [Tooltip("If true, performs a one-time migration from SaveManager.Data.coins to ResourceBank[Coins] using a JSON sidecar flag.")]
-    [SerializeField] private bool runOneShotLegacyCoinMigration = true;
+    [Tooltip("If true, performs a one-time migration from SaveManager.Data.credits to ResourceBank[Credits] using a JSON sidecar flag.")]
+    [SerializeField] private bool runOneShotLegacyCreditMigration = true;
 
     // ─────────────────────────────────────────────────────────────────────────────
     // JSON migration sidecar
@@ -25,7 +25,7 @@ public class ResourceManager : MonoBehaviour
     [Serializable]
     private class MigrationFlags
     {
-        public bool coinMigratedV2;
+        public bool creditMigratedV2;
         public long savedAtUnix;
     }
 
@@ -40,8 +40,8 @@ public class ResourceManager : MonoBehaviour
         SaveManager.LoadOrCreate();
         ResourceBank.EnsureSize();
 
-        if (runOneShotLegacyCoinMigration)
-            TryMigrateLegacyCoinsOnce_WithJson();
+        if (runOneShotLegacyCreditMigration)
+            TryMigrateLegacyCreditsOnce_WithJson();
     }
 
     // ─────────────────────────────────────────────────────────────────────────────
@@ -127,76 +127,76 @@ public class ResourceManager : MonoBehaviour
     }
 
     // ─────────────────────────────────────────────────────────────────────────────
-    // Coins helpers (titles-aware)
+    // Credits helpers (titles-aware)
     // ─────────────────────────────────────────────────────────────────────────────
 
-    public int AddCoins(int baseCoins)
+    public int AddCredits(int baseCredits)
     {
-        int amt = Mathf.Max(0, baseCoins);
+        int amt = Mathf.Max(0, baseCredits);
         if (amt == 0) return 0;
-        Add(ResourceType.Coin, amt);
+        Add(ResourceType.Credits, amt);
         return amt;
     }
 
-    // Titles-aware coin award (manual/idle battles with context)
-    public int AddCoinsWithTitles(int baseCoins, string leadMonsterId, MonsterDataSO wild, int wildLevel)
+    // Titles-aware credit award (manual/idle battles with context)
+    public int AddCreditsWithTitles(int baseCredits, string leadMonsterId, MonsterDataSO wild, int wildLevel)
     {
-        int scaled = Mathf.Max(0, baseCoins);
+        int scaled = Mathf.Max(0, baseCredits);
         if (!string.IsNullOrEmpty(leadMonsterId))
         {
-            float cm = TitlesAdapter.GetCoinMultOnVictory(leadMonsterId, wild, wildLevel);
+            float cm = TitlesAdapter.GetcreditMultOnVictory(leadMonsterId, wild, wildLevel);
             if (cm > 0f) scaled = Mathf.RoundToInt(scaled * cm);
         }
-        return AddCoins(scaled);
+        return AddCredits(scaled);
     }
 
-    // Titles-aware coin award (contextless, e.g., after capture)
-    public int AddCoinsWithTitles(int baseCoins, string leadMonsterId)
+    // Titles-aware credit award (contextless, e.g., after capture)
+    public int AddCreditsWithTitles(int baseCredits, string leadMonsterId)
     {
-        int scaled = Mathf.Max(0, baseCoins);
+        int scaled = Mathf.Max(0, baseCredits);
         if (!string.IsNullOrEmpty(leadMonsterId))
         {
-            float cm = TitlesAdapter.GetCoinMultOnVictory(leadMonsterId, null, 0);
+            float cm = TitlesAdapter.GetcreditMultOnVictory(leadMonsterId, null, 0);
             if (cm > 0f) scaled = Mathf.RoundToInt(scaled * cm);
         }
-        return AddCoins(scaled);
+        return AddCredits(scaled);
     }
 
     // ─────────────────────────────────────────────────────────────────────────────
     // One-shot legacy migration (JSON sidecar)
     // ─────────────────────────────────────────────────────────────────────────────
 
-    private void TryMigrateLegacyCoinsOnce_WithJson()
+    private void TryMigrateLegacyCreditsOnce_WithJson()
     {
         var flags = LoadMigrationFlags();
 
-        if (flags.coinMigratedV2)
+        if (flags.creditMigratedV2)
             return;
 
         // Authoritative source for migration is the legacy field.
         var data = SaveManager.Data;
-        int legacyCoins = (data != null) ? Mathf.Max(0, data.coins) : 0;
-        int bankCoins   = ResourceBank.Get(ResourceType.Coin);
+        int legacyCredits = (data != null) ? Mathf.Max(0, data.credits) : 0;
+        int bankCredits   = ResourceBank.Get(ResourceType.Credits);
 
-        if (legacyCoins != bankCoins)
+        if (legacyCredits != bankCredits)
         {
-            int delta = legacyCoins - bankCoins;
+            int delta = legacyCredits - bankCredits;
             if (delta != 0)
-                ResourceBank.Add(ResourceType.Coin, delta);
+                ResourceBank.Add(ResourceType.Credits, delta);
         }
 
         // Snap legacy to bank once, then save the main JSON.
         if (data != null)
         {
-            int finalCoins = ResourceBank.Get(ResourceType.Coin);
-            if (data.coins != finalCoins)
-                data.coins = finalCoins;
+            int finalCredits = ResourceBank.Get(ResourceType.Credits);
+            if (data.credits != finalCredits)
+                data.credits = finalCredits;
 
             SaveManager.Save();
         }
 
         // Mark migrated in the sidecar JSON.
-        flags.coinMigratedV2 = true;
+        flags.creditMigratedV2 = true;
         flags.savedAtUnix = NowUnix();
         SaveMigrationFlags(flags);
     }

@@ -54,7 +54,7 @@ public static class JobStrings {
 
     public static string ResourceName(ResourceType t) => t switch {
         ResourceType.GrowthCore      => "Growth Core",
-        ResourceType.Coin           => "Coin",
+        ResourceType.Credits           => "credit",
         ResourceType.Energy          => "Energy",
         ResourceType.Medkit         => "Medkit",
         ResourceType.Material       => "Material",
@@ -77,7 +77,7 @@ public static class JobOutput
 {
     public static ResourceType Output(JobType site) => site switch {
         JobType.Gym         => ResourceType.GrowthCore,
-        JobType.Quarry      => ResourceType.Coin,
+        JobType.Quarry      => ResourceType.Credits,
         JobType.Mine        => ResourceType.AttackBooster,
         JobType.PowerPlant  => ResourceType.Energy,
         JobType.Grove       => ResourceType.Medkit,
@@ -93,7 +93,7 @@ public static class JobOutput
         JobType.Clinic      => ResourceType.RestCharge,
         JobType.Expedition  => ResourceType.PackShard,
 
-        _ => ResourceType.Coin
+        _ => ResourceType.Credits
     };
 
     public static SiteEffect? Effect(JobType site) => site switch {

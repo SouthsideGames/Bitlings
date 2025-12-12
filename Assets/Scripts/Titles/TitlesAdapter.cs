@@ -243,12 +243,12 @@ public static class TitlesAdapter
     // Multipliers (victory/capture/jobs)
     // ─────────────────────────────────────────────────────────────────────────────
 
-    public static float GetCoinMultOnVictory(string monsterId, MonsterDataSO wild, int wildLevel)
+    public static float GetcreditMultOnVictory(string monsterId, MonsterDataSO wild, int wildLevel)
     {
-        if (TryInvoke("GetCoinMultOnVictory", new object[] { monsterId, wild, wildLevel }, out var res) && res is float f)
+        if (TryInvoke("GetcreditMultOnVictory", new object[] { monsterId, wild, wildLevel }, out var res) && res is float f)
             return Mathf.Max(0f, f);
 
-        WarnDefault("GetCoinMultOnVictory", "Provide coin victory multiplier or return 1.");
+        WarnDefault("GetcreditMultOnVictory", "Provide credit victory multiplier or return 1.");
         return 1f;
     }
 
@@ -610,9 +610,9 @@ public static class TitlesAdapter
     // Global victory multipliers (optional)
     // ─────────────────────────────────────────────────────────────────────────────
 
-    public static float GetVictoryCoinMult()
+    public static float GetVictorycreditMult()
     {
-        if (TryInvoke("GetVictoryCoinMultiplier", Array.Empty<object>(), out var res) && res is float f)
+        if (TryInvoke("GetVictorycreditMultiplier", Array.Empty<object>(), out var res) && res is float f)
             return Mathf.Max(0f, f);
         return 1f;
     }

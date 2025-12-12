@@ -10,7 +10,7 @@ public struct BattleResult
     public bool victory;
     public bool escaped;
 
-    public int coinsGained;
+    public int creditsGained;
     public MonsterDataSO wildDef;
     public int wildLevel;
     public float secondsSurvived;
@@ -1420,26 +1420,26 @@ public class BattleManager : MonoBehaviour
 
         float survived = Mathf.Max(0f, Time.unscaledTime - startTime);
 
-        int baseCoins = 0;
-        int finalCoins = 0;
-        int coinTitleBonus = 0;
+        int basecredits = 0;
+        int finalcredits = 0;
+        int creditTitleBonus = 0;
 
         if (!escaped)
         {
-            baseCoins = BattleRewards.CoinsFor(victory, wildLevel, survived);
-            finalCoins = baseCoins;
+            basecredits = BattleRewards.creditsFor(victory, wildLevel, survived);
+            finalcredits = basecredits;
 
             if (victory && teamIds != null && activeIndex >= 0 && activeIndex < teamIds.Length)
             {
-                float cm = TitlesAdapter.GetCoinMultOnVictory(teamIds[activeIndex], wildDef, wildLevel);
+                float cm = TitlesAdapter.GetcreditMultOnVictory(teamIds[activeIndex], wildDef, wildLevel);
                 if (cm > 0f)
                 {
-                    finalCoins = Mathf.Max(0, Mathf.RoundToInt(baseCoins * cm));
-                    coinTitleBonus = Mathf.Max(0, finalCoins - baseCoins);
+                    finalcredits = Mathf.Max(0, Mathf.RoundToInt(basecredits * cm));
+                    creditTitleBonus = Mathf.Max(0, finalcredits - basecredits);
                 }
             }
 
-            if (finalCoins < 0) finalCoins = 0;
+            if (finalcredits < 0) finalcredits = 0;
         }
 
         int baseCores = Mathf.Max(1, 2 + wildLevel);
@@ -1525,14 +1525,14 @@ public class BattleManager : MonoBehaviour
         BattleTempBuffs.I?.ClearPlayerDefenseBonus();
 
         string outcomeLabel = escaped ? "Escaped" : (victory ? "Victory" : "Defeat");
-        BattleLogger.Log($"Battle ends: {outcomeLabel} (+{finalCoins} coins).", LogScope.Battle);
+        BattleLogger.Log($"Battle ends: {outcomeLabel} (+{finalcredits} credits).", LogScope.Battle);
         BattleLogger.EndBattle(victory);
 
         var result = new BattleResult
         {
             victory = victory,
             escaped = escaped,
-            coinsGained = finalCoins,
+            creditsGained = finalcredits,
             wildDef = wildDef,
             wildLevel = wildLevel,
             secondsSurvived = survived,
@@ -1566,8 +1566,8 @@ public class BattleManager : MonoBehaviour
             capturedMonsterId: null,
             capturedLevel: 0,
             levelUpSummaries: null,
-            coinsBase: baseCoins,
-            coinsTitleBonus: coinTitleBonus,
+            creditsBase: basecredits,
+            creditsTitleBonus: creditTitleBonus,
             growthCoresBase: growthCoreTotal - growthCoreTitleBonus,
             growthCoresTitleBonus: growthCoreTitleBonus,
             growthCoresDetailLines: new List<string> { $"Gained {growthCoreTotal} Growth Cores." }
