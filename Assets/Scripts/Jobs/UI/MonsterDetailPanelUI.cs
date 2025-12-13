@@ -36,6 +36,10 @@ public class MonsterDetailPanelUI : MonoBehaviour
     [SerializeField] private TextMeshProUGUI descText;
     [SerializeField] private TextMeshProUGUI jobSiteText;
 
+    [Header("Personality")]
+    [SerializeField] private TextMeshProUGUI personalityNameText;
+    [SerializeField] private Button personalityInfoButton;
+
     [Header("Starter Buttons (Confirm/Cancel)")]
     [SerializeField] private Button confirmButton;
     [SerializeField] private Button cancelButton;
@@ -151,15 +155,21 @@ public class MonsterDetailPanelUI : MonoBehaviour
             favoriteButton.onClick.AddListener(OnClickFavorite);
         }
 
+        if (personalityInfoButton)
+        {
+            personalityInfoButton.onClick.RemoveAllListeners();
+            personalityInfoButton.onClick.AddListener(OpenPersonalityInfo);
+        }
+
         ResolveTitleButton();
 
         TitleAssignPanelUI.OnTitlesChanged -= HandleTitlesChanged;
         TitleAssignPanelUI.OnTitlesChanged += HandleTitlesChanged;
 
-        GameEvents.MonsterLeveled  -= HandleMonsterLeveled;
-        GameEvents.MonsterLeveled  += HandleMonsterLeveled;
-        GameEvents.MonsterEvolved  -= HandleMonsterEvolved;
-        GameEvents.MonsterEvolved  += HandleMonsterEvolved;
+        GameEvents.MonsterLeveled -= HandleMonsterLeveled;
+        GameEvents.MonsterLeveled += HandleMonsterLeveled;
+        GameEvents.MonsterEvolved -= HandleMonsterEvolved;
+        GameEvents.MonsterEvolved += HandleMonsterEvolved;
     }
 
     private void OnDisable() => ResetVisualsImmediate();
@@ -182,7 +192,7 @@ public class MonsterDetailPanelUI : MonoBehaviour
         _teamSlotIndex = -1;
         _onRemoved = null;
 
-        current   = monster;
+        current = monster;
         onConfirm = onConfirmCallback;
         onCancel  = onCancelCallback;
 
@@ -289,7 +299,6 @@ public class MonsterDetailPanelUI : MonoBehaviour
     {
         if (current == null) return;
 
-        // Assuming FavoriteService uses the MonsterDataSO ID as key.
         FavoriteService.ToggleFavorite(current.id);
         RefreshFavoriteVisual();
     }
@@ -361,24 +370,21 @@ public class MonsterDetailPanelUI : MonoBehaviour
                     }
                 }
 
-                bool isAssign    = (_mode == MonsterDetailMode.AssignToTeam);
-                bool isTeamView  = isAssign && _teamSlotIndex >= 0;
-                bool isOwnedPick = isAssign && _teamSlotIndex < 0;
+                bool isAssign = _mode == MonsterDetailMode.AssignToTeam;
                 if (starterButtonsHolder) starterButtonsHolder.SetActive(!isAssign);
-                if (slotButtonsHolder)    slotButtonsHolder.SetActive(isOwnedPick);
-                if (teamHolder)           teamHolder.SetActive(isTeamView);
-                if (closeButton)          closeButton.gameObject.SetActive(isAssign);
+                if (slotButtonsHolder)    slotButtonsHolder.SetActive(isAssign && _teamSlotIndex < 0);
+                if (teamHolder)           teamHolder.SetActive(isAssign && _teamSlotIndex >= 0);
 
-                SetSlotButtonsInteractable(isOwnedPick && !IsKO());
+                if (closeButton) closeButton.gameObject.SetActive(isAssign);
 
-                UpdateTitleButtonBinding();
+                if (lvlText) lvlText.text = $"LVL: {GetDisplayLevel()}";
+
                 RenderJobSites(monster);
+                UpdateTitleButtonBinding();
 
-                OpenSelf();
-                if (canvasGroup) LeanTween.alphaCanvas(canvasGroup, 1f, 0.15f);
+                RefreshPersonalityUI(monster);
 
-                // Make sure favorite visuals are in sync if we changed monster
-                SetupFavoriteButton();
+                if (canvasGroup) LeanTween.alphaCanvas(canvasGroup, 1f, 0.12f);
             });
 
             _stage = RenderStage.StatsEvo;
@@ -390,9 +396,12 @@ public class MonsterDetailPanelUI : MonoBehaviour
             TryStep("Stats & Evo", () =>
             {
                 int dispLvl = GetDisplayLevel();
-                if (lvlText) lvlText.text = $"LVL: {dispLvl}";
 
-                int maxHP = 0, atkL = 0, defL = 0; float spd = 0f;
+                int maxHP = 0;
+                int atkL = 0;
+                int defL = 0;
+                float spd = 0f;
+
                 if (!safeSkipStats && current)
                 {
                     try { maxHP = Mathf.RoundToInt(BattleCalc.CalcHP(current, dispLvl)); } catch (Exception e) { Debug.LogError($"HP calc {current?.id}: {e}"); }
@@ -402,8 +411,10 @@ public class MonsterDetailPanelUI : MonoBehaviour
                 }
                 else
                 {
-                    defL = current ? Mathf.RoundToInt(current.baseDefense) : 0;
-                    spd  = current ? current.baseSpeed : 0f;
+                    maxHP = current ? Mathf.RoundToInt(current.baseHP) : 0;
+                    atkL  = current ? Mathf.RoundToInt(current.baseAttack) : 0;
+                    defL  = current ? Mathf.RoundToInt(current.baseDefense) : 0;
+                    spd   = current ? current.baseSpeed : 0f;
                 }
 
                 int curHP = maxHP;
@@ -441,6 +452,7 @@ public class MonsterDetailPanelUI : MonoBehaviour
                     descText.text = current ? current.description : "";
                 else if (descText) descText.text = "";
             });
+
             _stage = RenderStage.TypeIcons;
             yield return null;
         }
@@ -466,6 +478,52 @@ public class MonsterDetailPanelUI : MonoBehaviour
 
         LogStep("END Show (staged)");
         _stageCR = null;
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // Personality (InfoRouter pattern, same idea as ResourceRowUI)
+    // ─────────────────────────────────────────────────────────────
+
+    private void RefreshPersonalityUI(MonsterDataSO monster)
+    {
+        var p = monster ? monster.Personality : null;
+
+        if (personalityNameText)
+            personalityNameText.text = p ? p.name : "—";
+
+        if (personalityInfoButton)
+        {
+            // Only clickable if a personality exists
+            personalityInfoButton.interactable = p != null;
+            personalityInfoButton.gameObject.SetActive(true);
+        }
+    }
+
+    private void OpenPersonalityInfo()
+    {
+        if (current == null) return;
+
+        var p = current.Personality;
+        if (p == null)
+        {
+            AudioManager.I?.PlayClick();
+            return;
+        }
+
+        // InfoRouter id convention (mirrors ResourceRowUI style).
+        // Uses ScriptableObject asset name so it stays stable unless you rename the asset.
+        string id = $"per.{p.name}".ToLowerInvariant();
+
+        string title = p.name;
+        string subtitle = "Personality";
+
+        string body = !string.IsNullOrWhiteSpace(p.description)
+            ? p.description
+            : "No description available.";
+
+        InfoRouter.Open(id, title, subtitle, body);
+
+        AudioManager.I?.PlayClick();
     }
 
     // ─────────────────────────────────────────────────────────────
@@ -500,8 +558,8 @@ public class MonsterDetailPanelUI : MonoBehaviour
 
     private void AssignToSlot(int slotIndex)
     {
-        if (_mode != MonsterDetailMode.AssignToTeam 
-            || _currentOwned == null 
+        if (_mode != MonsterDetailMode.AssignToTeam
+            || _currentOwned == null
             || string.IsNullOrEmpty(_currentOwned.monsterId))
         {
             Hide();
@@ -592,9 +650,9 @@ public class MonsterDetailPanelUI : MonoBehaviour
     private void ResetVisualsImmediate()
     {
         if (canvasGroup) canvasGroup.alpha = 0f;
-        current   = null;
+        current = null;
         onConfirm = null;
-        onCancel  = null;
+        onCancel = null;
         _currentOwned = null;
         _mode = MonsterDetailMode.StarterSelect;
 
@@ -604,12 +662,15 @@ public class MonsterDetailPanelUI : MonoBehaviour
         if (icon) icon.sprite = null;
         if (jobSiteText) jobSiteText.text = string.Empty;
 
+        if (personalityNameText) personalityNameText.text = string.Empty;
+        if (personalityInfoButton) personalityInfoButton.interactable = false;
+
         ClearIcons(strongIconHolder);
         ClearIcons(weakIconHolder);
 
         if (starterButtonsHolder) starterButtonsHolder.SetActive(false);
-        if (slotButtonsHolder)    slotButtonsHolder.SetActive(false);
-        if (teamHolder)           teamHolder.SetActive(false);
+        if (slotButtonsHolder) slotButtonsHolder.SetActive(false);
+        if (teamHolder) teamHolder.SetActive(false);
 
         if (lvlText) lvlText.text = string.Empty;
 
@@ -701,26 +762,19 @@ public class MonsterDetailPanelUI : MonoBehaviour
         if (!evolveButton)
             return;
 
-        // Must have a valid definition first
         if (current == null)
         {
             evolveButton.gameObject.SetActive(false);
             return;
         }
 
-        // Basic evolution flags from MonsterDataSO
         bool hasEvolution = current.evolutionForm != null && current.evolutionLevel > 0;
 
-        // "Monster level" – 1 for starters, owned level for AssignToTeam
         int curLevel = GetDisplayLevel();
         bool meetsLevel = hasEvolution && curLevel >= current.evolutionLevel;
 
-        // Always show the button if this species could evolve at this level
-        // (StarterSelect OR AssignToTeam).
         evolveButton.gameObject.SetActive(meetsLevel);
 
-        // Now decide if it should actually be clickable.
-        // Only truly evolvable when we are viewing an owned monster in AssignToTeam.
         bool canActuallyEvolve = false;
 
         if (meetsLevel &&
@@ -728,13 +782,11 @@ public class MonsterDetailPanelUI : MonoBehaviour
             _currentOwned != null &&
             !string.IsNullOrEmpty(_currentOwned.monsterId))
         {
-            // Keep your existing helper checks (costs, resources, etc.)
             canActuallyEvolve = EvolutionHelper.CanEvolve(_currentOwned, current);
         }
 
         evolveButton.interactable = canActuallyEvolve;
     }
-
 
     private void ResolveTitleButton()
     {
@@ -746,7 +798,6 @@ public class MonsterDetailPanelUI : MonoBehaviour
     {
         if (!titleButton) return;
 
-        // Prefer owned ID when we have one; fall back to definition ID (for starters)
         string key = null;
 
         if (_currentOwned != null && !string.IsNullOrEmpty(_currentOwned.monsterId))
@@ -763,11 +814,10 @@ public class MonsterDetailPanelUI : MonoBehaviour
         titleButton.gameObject.SetActive(canBind);
         if (!canBind) return;
 
-        int lvl = GetDisplayLevel(); // For starters this is 1
+        int lvl = GetDisplayLevel();
         titleButton.Bind(key, current, lvl);
         titleButton.RefreshLabel();
     }
-
 
     private void HandleTitlesChanged(string ownedId)
     {
@@ -788,16 +838,8 @@ public class MonsterDetailPanelUI : MonoBehaviour
             : new List<JobType>();
 
         jobSiteText.text = (jobs.Count > 0)
-            ? $"Job Site: {string.Join(", ", jobs.Select(JobStrings.SiteName))}"
-            : "Job Site: —";
-    }
-
-    private bool IsKO()
-    {
-        return _mode == MonsterDetailMode.AssignToTeam
-               && _currentOwned != null
-               && !string.IsNullOrEmpty(_currentOwned.monsterId)
-               && _currentOwned.currentHP == 0;
+            ? string.Join(", ", jobs.Select(JobStrings.SiteName))
+            : "—";
     }
 
     private void SetSlotButtonsInteractable(bool on)

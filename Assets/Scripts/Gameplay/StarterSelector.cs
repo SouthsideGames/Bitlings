@@ -226,11 +226,18 @@ public class StarterSelector : MonoBehaviour
         try
         {
             Debug.Log($"[StarterSelector] GrantStarter -> {pick.id}");
+
+            // IMPORTANT:
+            // GrantStarter is the single source of truth for:
+            // - adding the starter to owned/team
+            // - adding seen type
+            // - firing GameEvents.StarterChosen (JobManager listens here to unlock sites)
+            // - saving
             SaveManager.GrantStarter(pick.id, 1);
 
             if (SaveManager.Data != null)
             {
-                // Mark chosen BEFORE events so listeners can read the flag/state.
+                // Redundant but harmless; keeps local state consistent immediately.
                 SaveManager.Data.hasChosenStarter = true;
 
                 // Ensure new team member(s) have valid HP
@@ -253,16 +260,10 @@ public class StarterSelector : MonoBehaviour
                     }
                 }
 
-                // Persist before events/UI
+                // Persist local adjustments
                 SaveManager.Save();
 
-                // Notify systems (JobManager listens here to unlock by type)
-                try { GameEvents.StarterChosen?.Invoke(pick.type); } catch (Exception e) { Debug.LogWarning($"[StarterSelector] StarterChosen listeners threw: {e}"); }
-
-                // Optional: recompute unlocks from seen/owned types if JobManager exposes it
-                try { JobManager.I?.RecalculateUnlocksFromSeenTypes(); } catch { /* it's fine if this doesn't exist */ }
-
-                // 🔁 Force the jobs UI to refresh immediately so unlocked sites appear now
+                // Force jobs UI refresh immediately so unlocked sites appear now
                 if (JobManager.I != null)
                 {
                     try

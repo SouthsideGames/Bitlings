@@ -85,6 +85,17 @@ public sealed class JobManager : MonoBehaviour
     [SerializeField] private float shiny2Bonus = 0.07f;
     [SerializeField] private float shiny3Bonus = 0.12f;
 
+    [Header("Starter Fallback Unlocks")]
+    [SerializeField] private bool enableStarterDefaultSitesFallback = true;
+
+    [Tooltip("Unlocked if the starter type maps to zero sites (edge case).")]
+    [SerializeField] private List<JobType> starterDefaultSites = new List<JobType>
+    {
+        JobType.Gym,
+        JobType.Quarry,
+        JobType.PowerPlant
+    };
+
 #if UNITY_EDITOR
     [Header("Debug (Editor Only)")]
     [SerializeField] private bool logProductionBreakdown = false;
@@ -740,7 +751,22 @@ public sealed class JobManager : MonoBehaviour
 
     private void OnStarterChosen(MonsterType type)
     {
-        TryUnlockSitesForType(type);
+        // 1) Normal unlock path
+        bool unlockedAny = TryUnlockSitesForType_ReturnsChanged(type);
+
+        // 2) Fallback for edge cases (starter type mapped to zero unlockable sites)
+        if (enableStarterDefaultSitesFallback && !unlockedAny)
+        {
+            bool fallbackChanged = EnsureStarterDefaultSitesUnlocked();
+            if (fallbackChanged)
+            {
+                // Ensure the rest of the system stays consistent
+                RefreshAllJobSiteViewsInScene();
+                GameEvents.OnJobsChanged?.Invoke();
+            }
+        }
+
+        // 3) Recompute from seen types (keeps save consistent long-term)
         RecalculateUnlocksFromSeenTypes();
     }
 
@@ -1342,5 +1368,62 @@ public sealed class JobManager : MonoBehaviour
         if (latestUntil <= now) return 0f;
         return Mathf.Max(0f, latestUntil - now);
     }
+
+    private bool TryUnlockSitesForType_ReturnsChanged(MonsterType type)
+    {
+        if (!lockSitesUntilEligible || SaveManager.Data == null)
+            return false;
+
+        SaveManager.Data.unlockedJobSites ??= new HashSet<JobType>();
+
+        bool changed = false;
+        bool foundAnyMapping = false;
+
+        foreach (var job in JobBalance.JobsUnlockedByType(type))
+        {
+            foundAnyMapping = true;
+            if (SaveManager.Data.unlockedJobSites.Add(job))
+                changed = true;
+        }
+
+        // If the mapping exists but it was already unlocked, "changed" will be false,
+        // which is fine — we only want the fallback when there are zero mapped jobs.
+        if (!foundAnyMapping)
+            return false;
+
+        if (changed)
+        {
+            SaveManager.Save();
+            RefreshAllJobSiteViewsInScene();
+            GameEvents.OnJobsChanged?.Invoke();
+        }
+
+        return true; // mapped to at least one job (whether newly changed or already unlocked)
+    }
+
+    private bool EnsureStarterDefaultSitesUnlocked()
+    {
+        if (SaveManager.Data == null) return false;
+        if (starterDefaultSites == null || starterDefaultSites.Count == 0) return false;
+
+        SaveManager.Data.unlockedJobSites ??= new HashSet<JobType>();
+
+        bool changed = false;
+
+        for (int i = 0; i < starterDefaultSites.Count; i++)
+        {
+            var job = starterDefaultSites[i];
+            if (job == JobType.None) continue;
+
+            if (SaveManager.Data.unlockedJobSites.Add(job))
+                changed = true;
+        }
+
+        if (changed)
+            SaveManager.Save();
+
+        return changed;
+    }
+
 
 }

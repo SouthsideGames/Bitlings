@@ -234,41 +234,88 @@ public class CodexPanelUI : MonoBehaviour
         Clear(teamContent);
         _teamCardRoots.Clear();
 
-        for (int i = 0; i < 3; i++)
+        if (team == null) team = new List<OwnedMonsterData>();
+
+        // Only show filled slots (monsterId present)
+        var filled = team
+            .Where(m => m != null && !string.IsNullOrEmpty(m.monsterId))
+            .ToList();
+
+        for (int i = 0; i < filled.Count; i++)
         {
-            var member = (i < team.Count) ? team[i] : null;
-            var def = (member != null && !string.IsNullOrEmpty(member.monsterId))
-                ? MonsterLibraryLocator.GetById(member.monsterId)
-                : null;
+            var member = filled[i];
+
+            var def = MonsterLibraryLocator.GetById(member.monsterId);
 
             var go = Instantiate(teamCardPrefab, teamContent);
             var card = go.GetComponent<TeamMonsterCardUI>();
             var rt = go.transform as RectTransform;
             if (rt) _teamCardRoots.Add(rt);
 
+            // If we only generate filled slots, HP bar can always be on.
+            // (You can keep SetTeamHpBarActive if you still want it for safety.)
+            SetTeamHpBarActive(go, active: true);
+
             if (card)
             {
-                int slotIndex = i;
+                int uiIndex = i; // index in the *visible list*
                 card.Setup(
                     data: member,
                     def: def,
                     onClick: _ =>
                     {
-                        SelectTeamSlot(slotIndex);
-                        if (member != null && !string.IsNullOrEmpty(member.monsterId))
-                            OpenTeamDetail(slotIndex, member);
+                        SelectTeamSlot(uiIndex);
+                        OpenTeamDetail(uiIndex, member);
                     },
                     onAnyChanged: RefreshAll
                 );
             }
         }
 
-        SelectTeamSlot(Mathf.Clamp(selectedTeamIndex, 0, 2));
+        // If there are no cards, ensure selection doesn't break.
+        if (_teamCardRoots.Count == 0)
+        {
+            selectedTeamIndex = 0;
+            return;
+        }
+
+        SelectTeamSlot(Mathf.Clamp(selectedTeamIndex, 0, _teamCardRoots.Count - 1));
+    }
+
+    // Finds the HP Slider under this team card and toggles it.
+    private void SetTeamHpBarActive(GameObject teamCardGO, bool active)
+    {
+        if (!teamCardGO) return;
+
+        var sliders = teamCardGO.GetComponentsInChildren<Slider>(true);
+        if (sliders == null || sliders.Length == 0) return;
+
+        Slider hpSlider = null;
+
+        for (int i = 0; i < sliders.Length; i++)
+        {
+            var s = sliders[i];
+            if (!s) continue;
+
+            var n = s.gameObject.name;
+            if (!string.IsNullOrEmpty(n) && n.ToLowerInvariant().Contains("hp"))
+            {
+                hpSlider = s;
+                break;
+            }
+        }
+
+        if (!hpSlider) hpSlider = sliders[0];
+
+        if (hpSlider)
+            hpSlider.gameObject.SetActive(active);
     }
 
     void SelectTeamSlot(int idx)
     {
-        selectedTeamIndex = Mathf.Clamp(idx, 0, 2);
+        if (_teamCardRoots.Count == 0) return;
+
+        selectedTeamIndex = Mathf.Clamp(idx, 0, _teamCardRoots.Count - 1);
 
         for (int i = 0; i < _teamCardRoots.Count; i++)
             if (_teamCardRoots[i] != null) _teamCardRoots[i].localScale = Vector3.one;
@@ -282,6 +329,9 @@ public class CodexPanelUI : MonoBehaviour
         if (!detailPanel || member == null || string.IsNullOrEmpty(member.monsterId))
             return;
 
+        // NOTE:
+        // Since we no longer show fixed "slot 0/1/2" positions, slotIndex here is the visible index.
+        // If your detail panel removal depends on the real team slot, you should pass the real index instead.
         detailPanel.ShowTeamMember(slotIndex, member, onRemoved: RefreshAll);
     }
 
@@ -299,8 +349,6 @@ public class CodexPanelUI : MonoBehaviour
         if (data == null)
             return;
 
-        // 1) Collect all Owned monsters (owned + team, deduped by ownedUID),
-        //    and track best normal + best shiny per monsterId
         var allOwned   = data.GetAllOwnedMonsters(includeTeam: true) ?? new List<OwnedMonsterData>();
         var ownedById  = new Dictionary<string, OwnedMonsterData>();
         var shinyById  = new Dictionary<string, OwnedMonsterData>();
@@ -311,13 +359,11 @@ public class CodexPanelUI : MonoBehaviour
             if (om == null || string.IsNullOrEmpty(om.monsterId))
                 continue;
 
-            // Best overall copy (for non-shiny sorts)
             if (!ownedById.TryGetValue(om.monsterId, out var existing) || (existing != null && om.level > existing.level))
             {
                 ownedById[om.monsterId] = om;
             }
 
-            // Best shiny copy (for shiny sort)
             if (om.isShiny)
             {
                 if (!shinyById.TryGetValue(om.monsterId, out var shinyExisting) || (shinyExisting != null && om.level > shinyExisting.level))
@@ -327,7 +373,6 @@ public class CodexPanelUI : MonoBehaviour
             }
         }
 
-        // 2) Pull all monster defs from the main library
         var lib = MonsterLibraryLocator.Lib;
         if (!lib || lib.monsters == null || lib.monsters.Count() == 0)
             return;
@@ -339,12 +384,10 @@ public class CodexPanelUI : MonoBehaviour
         if (defs.Count == 0)
             return;
 
-        // 3) Sort definitions based on current sort mode
         var sortedDefs = SortDefs(defs, sortMode, ownedById, shinyById);
 
         bool shinyMode = (sortMode == OwnedSortMode.ShinyMonsters);
 
-        // 4) Instantiate rows (respect filters, using correct owned data per mode)
         foreach (var def in sortedDefs)
         {
             if (!def) continue;
@@ -354,7 +397,6 @@ public class CodexPanelUI : MonoBehaviour
 
             if (shinyMode)
             {
-
                 captured = shinyById.TryGetValue(def.id, out ownedData);
             }
             else
@@ -364,7 +406,6 @@ public class CodexPanelUI : MonoBehaviour
 
             bool isFavorite = FavoriteService.IsFavorite(def.id);
 
-            // Filters
             if (_capturedOnlyFilter && !captured)
                 continue;
 
@@ -380,8 +421,6 @@ public class CodexPanelUI : MonoBehaviour
             var item = go.GetComponent<OwnedMonsterListItemUI>();
             if (item)
             {
-                // For shiny mode: ownedData will be the best shiny copy,
-                // so item can show shiny badge / tint using ownedData.isShiny.
                 item.SetupForCodex(
                     def,
                     ownedData,
@@ -445,7 +484,6 @@ public class CodexPanelUI : MonoBehaviour
                 break;
 
             case OwnedSortMode.ShinyMonsters:
-                // Shiny-only: only monsters where we have at least one shiny copy.
                 query = defs
                     .Where(d => d && shinyById != null && shinyById.ContainsKey(d.id))
                     .OrderByDescending(d => GetOwnedLevel(d, shinyById))
