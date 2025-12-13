@@ -9,6 +9,10 @@ public class PlayerDossierPanelUI : MonoBehaviour
     [Header("Navigation")]
     [SerializeField] private Button prevButton;
     [SerializeField] private Button nextButton;
+
+    // NEW
+    [SerializeField] private Button closeButton;
+
     [SerializeField] private TextMeshProUGUI pageLabelText;   // "PAGE 1 / 5"
     [SerializeField] private TextMeshProUGUI dotsText;        // "• ○ ○ ○ ○"
 
@@ -95,6 +99,10 @@ public class PlayerDossierPanelUI : MonoBehaviour
 
         if (nextButton != null)
             nextButton.onClick.AddListener(OnNextClicked);
+
+        // NEW
+        if (closeButton != null)
+            closeButton.onClick.AddListener(OnCloseClicked);
     }
 
     private void OnEnable()
@@ -131,6 +139,10 @@ public class PlayerDossierPanelUI : MonoBehaviour
 
         if (nextButton != null)
             nextButton.onClick.RemoveListener(OnNextClicked);
+
+        // NEW
+        if (closeButton != null)
+            closeButton.onClick.RemoveListener(OnCloseClicked);
     }
 
     // ─────────────────────────────────────────────────────────────
@@ -161,6 +173,12 @@ public class PlayerDossierPanelUI : MonoBehaviour
         RefreshNavigationUI();
     }
 
+    // NEW: your close behavior (disable panel by default)
+    private void OnCloseClicked()
+    {
+        gameObject.SetActive(false);
+    }
+
     private void RefreshPageVisibility()
     {
         if (pages == null) return;
@@ -183,12 +201,20 @@ public class PlayerDossierPanelUI : MonoBehaviour
         if (dotsText != null)
             dotsText.text = BuildDotsString(totalPages, _currentPageIndex);
 
+        bool isFirstPage = (_currentPageIndex <= 0);
+
+        // Page 1: show Close, hide Prev
+        // Other pages: hide Close, show Prev
         if (prevButton != null)
-            prevButton.interactable = _currentPageIndex > 0;
+            prevButton.gameObject.SetActive(!isFirstPage);
+
+        if (closeButton != null)
+            closeButton.gameObject.SetActive(isFirstPage);
 
         if (nextButton != null)
             nextButton.interactable = _currentPageIndex < totalPages - 1;
     }
+
 
     private string BuildDotsString(int totalPages, int currentIndex)
     {
@@ -207,7 +233,6 @@ public class PlayerDossierPanelUI : MonoBehaviour
     // ─────────────────────────────────────────────────────────────
     // PAGE 1 – APPLY SNAPSHOT TO UI
     // ─────────────────────────────────────────────────────────────
-
     private void PopulatePage1(PlayerDossierSnapshot stats)
     {
         if (stats == null)
@@ -287,10 +312,6 @@ public class PlayerDossierPanelUI : MonoBehaviour
             careScoreNoteText.text = stats.careScoreNote;
     }
 
-    // ─────────────────────────────────────────────────────────────
-    // PAGE 2 – JOB PANELS
-    // ─────────────────────────────────────────────────────────────
-
     private void PopulatePage2(PlayerDossierSnapshot stats)
     {
         if (jobPanelParent == null || jobPanelPrefab == null)
@@ -298,7 +319,6 @@ public class PlayerDossierPanelUI : MonoBehaviour
 
         if (stats == null || stats.jobSites == null || stats.jobSites.Length == 0)
         {
-            // Hide any existing panels
             for (int i = 0; i < _jobPanels.Count; i++)
                 _jobPanels[i].gameObject.SetActive(false);
 
@@ -307,14 +327,12 @@ public class PlayerDossierPanelUI : MonoBehaviour
 
         int needed = stats.jobSites.Length;
 
-        // Ensure we have enough instances
         while (_jobPanels.Count < needed)
         {
             var panel = Instantiate(jobPanelPrefab, jobPanelParent);
             _jobPanels.Add(panel);
         }
 
-        // Bind or hide
         for (int i = 0; i < _jobPanels.Count; i++)
         {
             if (i < needed)
@@ -327,10 +345,6 @@ public class PlayerDossierPanelUI : MonoBehaviour
             }
         }
     }
-
-    // ─────────────────────────────────────────────────────────────
-    // PAGE 3 – FIELD OPERATIONS
-    // ─────────────────────────────────────────────────────────────
 
     private void PopulatePage3(PlayerDossierSnapshot stats)
     {
@@ -397,10 +411,6 @@ public class PlayerDossierPanelUI : MonoBehaviour
         }
     }
 
-    // ─────────────────────────────────────────────────────────────
-    // PAGE 4 – RESOURCES (UPDATED WITH LABEL + VALUE)
-    // ─────────────────────────────────────────────────────────────
-
     private void PopulatePage4(PlayerDossierSnapshot s)
     {
         if (s == null)
@@ -432,7 +442,6 @@ public class PlayerDossierPanelUI : MonoBehaviour
             return;
         }
 
-        // Core “headline” resources using your lore names
         if (materialText)
             materialText.text = $"Ingot Materials: {s.materialCount.ToString("N0")}";
 
@@ -460,7 +469,6 @@ public class PlayerDossierPanelUI : MonoBehaviour
         if (creditsText)
             creditsText.text = $"credits: {s.creditCount.ToString("N0")}";
 
-        // Supporting resources keep clear, BRN-flavored names as well
         if (medkitText)
             medkitText.text = $"Medkits: {s.medkitCount}";
 
@@ -482,7 +490,6 @@ public class PlayerDossierPanelUI : MonoBehaviour
         if (coffeeText)
             coffeeText.text = $"Rest Charges: {s.restChargeCount}";
 
-        // Efficiency bar + % + rating stays the same logic
         float normalized = Mathf.Clamp01(s.conversionEfficiencyPercent / 100f);
 
         if (efficiencyPercentText)
@@ -506,10 +513,6 @@ public class PlayerDossierPanelUI : MonoBehaviour
         }
     }
 
-    // ─────────────────────────────────────────────────────────────
-    // PAGE 5 – BRN Résumé
-    // ─────────────────────────────────────────────────────────────
-
     private void PopulatePage5(PlayerDossierSnapshot stats)
     {
         if (resumeLinesText == null && resumeNoteText == null)
@@ -526,7 +529,6 @@ public class PlayerDossierPanelUI : MonoBehaviour
             return;
         }
 
-        // Bullet lines
         if (resumeLinesText != null)
         {
             if (stats.resumeLines == null || stats.resumeLines.Length == 0)
@@ -546,7 +548,6 @@ public class PlayerDossierPanelUI : MonoBehaviour
             }
         }
 
-        // BRN note
         if (resumeNoteText != null)
         {
             if (string.IsNullOrEmpty(stats.brnResumeNote))

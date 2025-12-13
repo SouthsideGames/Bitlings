@@ -33,6 +33,9 @@ public class PostBattleSummaryPanelUI : MonoBehaviour
     [SerializeField] private TextMeshProUGUI firstHitLabel;
     [SerializeField] private TextMeshProUGUI timeLabel;
 
+    [Header("Controls")]
+    [SerializeField] private Button continueButton;
+
     [Header("Anim")]
     [SerializeField] private float fadeIn = 0.18f;
     [SerializeField] private float popIn = 0.22f;
@@ -86,6 +89,25 @@ public class PostBattleSummaryPanelUI : MonoBehaviour
 
         if (root)
             root.localScale = Vector3.one * 0.96f;
+
+        if (continueButton)
+            continueButton.onClick.AddListener(OnContinueClicked);
+    }
+
+    private void OnDestroy()
+    {
+        if (continueButton)
+            continueButton.onClick.RemoveListener(OnContinueClicked);
+    }
+
+    private void OnContinueClicked()
+    {
+        // 1) Fade out this panel (and trigger your manager's OnClosed chain)
+        Close();
+
+        // 2) Ensure the panel root is actually hidden/disabled via UIManager
+        //    (This uses your UIManager close animation and disables the root on completion.)
+        UIManager.I?.Hide(PanelId.PostBattleSummary);
     }
 
     public void Set(
