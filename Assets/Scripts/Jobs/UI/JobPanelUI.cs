@@ -119,15 +119,19 @@ public class JobPanelUI : MonoBehaviour
                 float baseHr    = ComputeRatePerHour_NoTitles(s);
                 float boostedHr = ComputeRatePerHour_WithTitles(s);
 
-                int shown = Mathf.FloorToInt(boostedHr);
+                // NEW: show decimals for low rates (Clinic/Sanctum/etc.)
+                string shownText = boostedHr < 10f
+                    ? boostedHr.ToString("0.##")
+                    : Mathf.FloorToInt(boostedHr).ToString();
+
                 float deltaPct = 0f;
                 if (baseHr > 0.0001f)
                     deltaPct = (boostedHr / baseHr - 1f) * 100f;
 
                 if (Mathf.Abs(deltaPct) >= 0.5f)
-                    t.rate.text = $"{shown}/hr  {(deltaPct >= 0 ? "+" : string.Empty)}{deltaPct:0}%";
+                    t.rate.text = $"{shownText}/hr  {(deltaPct >= 0 ? "+" : string.Empty)}{deltaPct:0}%";
                 else
-                    t.rate.text = $"{shown}/hr";
+                    t.rate.text = $"{shownText}/hr";
 
                 if (deltaPct > 0.5f)       t.rate.color = rateUp;
                 else if (deltaPct < -0.5f) t.rate.color = rateDown;
@@ -176,6 +180,7 @@ public class JobPanelUI : MonoBehaviour
             }
         }
     }
+
 
     // ─────────────────────────────────────────────────────────────────────────────
     // Rate computation (base vs boosted)
