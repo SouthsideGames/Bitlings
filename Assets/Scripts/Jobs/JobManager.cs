@@ -940,8 +940,37 @@ public sealed class JobManager : MonoBehaviour
     private MonsterDataSO ResolveMonsterDef(string idOrOwnedId)
     {
         if (string.IsNullOrEmpty(idOrOwnedId)) return null;
+
+        // 1) Direct species ID lookup (M-###)
         if (_idToDef.TryGetValue(idOrOwnedId, out var def) && def) return def;
-        return MonsterLibraryLocator.GetById(idOrOwnedId);
+
+        var direct = MonsterLibraryLocator.GetById(idOrOwnedId);
+        if (direct) return direct;
+
+        // 2) If this looks like an owned-instance ID (ownedUID),
+        // map it back to the species monsterId and resolve that.
+        var owned = SaveManager.Data?.owned;
+        if (owned != null)
+        {
+            for (int i = 0; i < owned.Count; i++)
+            {
+                var om = owned[i];
+                if (om == null) continue;
+
+                // If your OwnedMonsterData has ownedUID, use it
+                if (!string.IsNullOrEmpty(om.ownedUID) && om.ownedUID == idOrOwnedId)
+                {
+                    if (!string.IsNullOrEmpty(om.monsterId))
+                    {
+                        if (_idToDef.TryGetValue(om.monsterId, out var def2) && def2) return def2;
+                        return MonsterLibraryLocator.GetById(om.monsterId);
+                    }
+                    return null;
+                }
+            }
+        }
+
+        return null;
     }
 
     public int GetEffectiveStorageCap(JobSiteSO site)
@@ -1060,7 +1089,7 @@ public sealed class JobManager : MonoBehaviour
         if (!string.IsNullOrEmpty(key)) _assignedUnix.Remove(key);
     }
 
-    private bool TryGetTeamEntry(string ownedId, out int index)
+    private bool TryGetTeamEntry(string ownedIdOrUid, out int index)
     {
         index = -1;
         var team = SaveManager.Data?.team;
@@ -1069,20 +1098,34 @@ public sealed class JobManager : MonoBehaviour
         for (int i = 0; i < team.Count; i++)
         {
             var e = team[i];
-            if (!string.IsNullOrEmpty(e?.monsterId) && e.monsterId == ownedId)
+            if (e == null) continue;
+
+            // Match by ownedUID first (instance-accurate)
+            if (!string.IsNullOrEmpty(e.ownedUID) && e.ownedUID == ownedIdOrUid)
+            {
+                index = i;
+                return true;
+            }
+
+            // Fallback: species id match
+            if (!string.IsNullOrEmpty(e.monsterId) && e.monsterId == ownedIdOrUid)
             {
                 index = i;
                 return true;
             }
         }
+
         return false;
     }
+
 
     // ---------------------------- Auto-bench (injury) ----------------------------
     private void AutoBenchSweep(float threshold01)
     {
         var team = SaveManager.Data?.team;
         if (team == null || team.Count == 0) return;
+
+        threshold01 = Mathf.Clamp01(threshold01);
 
         for (int si = 0; si < States.Count; si++)
         {
@@ -1094,25 +1137,39 @@ public sealed class JobManager : MonoBehaviour
                 var w = s.workers[wi];
                 if (w == null) continue;
 
+                // We only auto-bench team members we can resolve by ownedId
                 string ownedId = w.monsterId;
                 if (string.IsNullOrEmpty(ownedId)) continue;
+
                 if (!TryGetTeamEntry(ownedId, out int teamIndex)) continue;
 
                 var entry = team[teamIndex];
+                if (entry == null) continue;
+
                 int level = Mathf.Max(1, entry.level);
-                int curHP = Mathf.Max(0, entry.currentHP);
+
+                // Compute max HP from def+level (must exist to evaluate benching)
                 float maxHP = Mathf.Max(1f, BattleCalc.CalcHP(w.def, level));
-                float hp01 = curHP / maxHP;
+
+                // IMPORTANT: currentHP == -1 is your sentinel meaning "full / not tracked yet".
+                // Treat it as full HP so we don't bench on load.
+                float curHP = entry.currentHP;
+                if (curHP < 0) curHP = maxHP;   // -1 => full
+
+                float hp01 = Mathf.Clamp01(curHP / maxHP);
 
                 if (hp01 < threshold01)
                 {
+                    // Remove from job due to low HP
                     RemoveWorker(s.config.jobType, ownedId);
-                    if (autoBenchAutoFill) TryFillSlotFromTeam(s, wi, threshold01);
+
+                    // Optional: auto-fill the vacated slot with a healthy eligible monster
+                    if (autoBenchAutoFill)
+                        TryFillSlotFromTeam(s, wi, threshold01);
                 }
             }
         }
     }
-
     private bool TryFillSlotFromTeam(JobSiteState site, int slotIndex, float threshold01)
     {
         var team = SaveManager.Data?.team;
