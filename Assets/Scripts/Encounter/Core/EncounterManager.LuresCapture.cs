@@ -51,24 +51,51 @@ public partial class EncounterManager
         if (lib == null || lib.monsters == null || lib.monsters.Length == 0)
             return null;
 
-        List<MonsterDataSO> pool = new List<MonsterDataSO>(lib.monsters.Length);
+        // Pool = (base library spawnables) + (discovered spawnables not already in base pool)
+        // Always random by spawn weight (with lure/luck/shiny modifiers applied below).
+        var pool = new List<MonsterDataSO>(lib.monsters.Length + 16);
+        var added = new HashSet<string>();
+
+        // 1) Base: anything in the library with spawnWeight > 0 is always eligible
         for (int i = 0; i < lib.monsters.Length; i++)
         {
             var m = lib.monsters[i];
             if (m == null || string.IsNullOrEmpty(m.id)) continue;
             if (m.spawnWeight <= 0f) continue;
 
-            if (!IsMonsterDiscovered(m)) continue;
-
-            pool.Add(m);
+            if (added.Add(m.id))
+                pool.Add(m);
         }
 
+        // 2) Add discovered monsters (packs) to expand the pool (if they’re not already in it)
+        var data = SaveManager.Data;
+        if (data != null)
+        {
+            data.discoveredMonsterIds ??= new HashSet<string>();
+
+            foreach (var id in data.discoveredMonsterIds)
+            {
+                if (string.IsNullOrEmpty(id)) continue;
+                if (added.Contains(id)) continue;
+
+                var def = MonsterLibraryLocator.GetById(id);
+                if (def == null || string.IsNullOrEmpty(def.id)) continue;
+                if (def.spawnWeight <= 0f) continue;
+
+                if (added.Add(def.id))
+                    pool.Add(def);
+            }
+        }
+
+        // If nothing is spawnable by weight, fall back to any valid monster to avoid nulls.
+        // (This should only happen if all spawnWeight values are 0 or assets are misconfigured.)
         if (pool.Count == 0)
         {
             for (int i = 0; i < lib.monsters.Length; i++)
             {
                 var m = lib.monsters[i];
-                if (m != null && !string.IsNullOrEmpty(m.id)) pool.Add(m);
+                if (m == null || string.IsNullOrEmpty(m.id)) continue;
+                pool.Add(m);
             }
             if (pool.Count == 0) return null;
             return pool[Random.Range(0, pool.Count)];
@@ -77,6 +104,7 @@ public partial class EncounterManager
         var typeMult = BuildLureTypeMultipliers();
         float luckBonus01 = GetActiveLuckBonus01();
 
+        // min/max base weight for "scarcity" calc (luck favors scarce = lower base weight)
         float minBase = float.MaxValue;
         float maxBase = 0f;
         for (int i = 0; i < pool.Count; i++)
@@ -108,12 +136,10 @@ public partial class EncounterManager
                 mult *= luckMult;
             }
 
-            // 🔹 Shiny Orb: boost any shiny variants
+            // Shiny Orb: boost any shiny variants
             float shinyMult = GetActiveShinyBoostMult();
             if (shinyMult > 1f && IsShinyMonster(m))
-            {
                 mult *= shinyMult;
-            }
 
             float finalW = baseW * mult;
             if (float.IsNaN(finalW) || float.IsInfinity(finalW)) return 0f;

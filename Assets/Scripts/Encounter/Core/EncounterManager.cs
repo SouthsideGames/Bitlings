@@ -51,7 +51,7 @@ public partial class EncounterManager : MonoBehaviour
     private int _currentWinStreak = 0;
     public int CurrentWinStreak => _currentWinStreak;
 
-    // Tracks whether we are waiting on manual hire decision (prevents double flush)
+    // Tracks whether we are waiting on manual hire decision
     private bool _manualHirePending = false;
 
     // ─────────────────────────────────────────────────────────────────────────────
@@ -367,13 +367,34 @@ public partial class EncounterManager : MonoBehaviour
 
         var finished = result;
         finished.creditsGained = finalcredits;
-        GameEvents.BattleFinished?.Invoke(finished);
 
+        GameEvents.BattleFinished?.Invoke(finished);
         BattleLogger.EndEncounter(victory);
 
-        // IMPORTANT:
-        // We queue the summary data NOW so nothing is lost (even for manual victories).
-        // Manual victory will "hold" showing it until hire decision resolves.
+        // ─────────────────────────────────────────────────────────────────────
+        // FIX: HOLD the summary BEFORE queuing it on manual-victory hire flow.
+        // This prevents NotifyBattleEnd → TryShowNext from opening the summary
+        // immediately, which was causing the “summary opens again on hire click”.
+        // ─────────────────────────────────────────────────────────────────────
+        bool holdForHireDecision =
+            victory &&
+            !escaped &&
+            !autoMode &&
+            !_currentEncounterIsBoss &&
+            finished.wildDef != null &&
+            !finished.wildDef.uncatchable &&
+            EncounterPanelUI.I != null;
+
+        _manualHirePending = holdForHireDecision;
+
+        // If we must show Hire first, force the summary manager into HOLD mode now.
+        // (NotifyBattleEnd will enqueue, but TryShowNext will no-op while held.)
+        if (holdForHireDecision)
+            PostBattleSummaryManager.I?.SetAutoBattling(true);
+        else
+            PostBattleSummaryManager.I?.SetAutoBattling(autoMode);
+
+        // Queue the summary data NOW so nothing is lost (even for manual victories).
         PostBattleSummaryManager.I?.NotifyBattleEnd(
             finished,
             isAuto: autoMode,
@@ -476,9 +497,8 @@ public partial class EncounterManager : MonoBehaviour
         {
             EmitStatus("Victory. Hire decision…", LogScope.System);
 
-            _manualHirePending = true;
-
-            // HOLD the summary while the hire overlay is up
+            // _manualHirePending should already be true from OnBattleEnded (holdForHireDecision).
+            // Keep holding summary while the hire overlay is up.
             PostBattleSummaryManager.I?.SetAutoBattling(true);
 
             EncounterPanelUI.I.ShowHireDecision(_lastBattleResult.wildDef, _lastBattleResult.wildLevel);

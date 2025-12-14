@@ -43,6 +43,7 @@ public class PostBattleSummaryPanelUI : MonoBehaviour
     const string GREEN = "#3CDE74";
 
     private bool _hasClosed;
+    private BattleResult? _lastResult;
 
     private static readonly Dictionary<Rarity, Color> RARITY_COLORS = new()
     {
@@ -78,7 +79,6 @@ public class PostBattleSummaryPanelUI : MonoBehaviour
     {
         if (!root) root = transform as RectTransform;
 
-        // Ensure we start “closed”
         _hasClosed = false;
         gameObject.SetActive(false);
 
@@ -94,6 +94,13 @@ public class PostBattleSummaryPanelUI : MonoBehaviour
 
     private void OnContinueClicked()
     {
+        // CLEANUP REQUEST:
+        // If defeated, go to Home after continuing.
+        if (_lastResult.HasValue && !_lastResult.Value.victory && !_lastResult.Value.escaped)
+        {
+            UIManager.I?.Show(PanelId.Home);
+        }
+
         Close();
     }
 
@@ -101,18 +108,13 @@ public class PostBattleSummaryPanelUI : MonoBehaviour
     {
         _hasClosed = false;
 
-        // UIManager.Show already activates the root; this is just a safety net
         if (!gameObject.activeSelf)
             gameObject.SetActive(true);
 
-        // Optional small “pop” without CanvasGroup fading
         if (root)
         {
             LeanTween.cancel(root);
             root.localScale = Vector3.one;
-            // If you want a pop, uncomment:
-            // root.localScale = Vector3.one * 0.98f;
-            // LeanTween.scale(root, Vector3.one, 0.12f).setEaseOutBack();
         }
     }
 
@@ -134,10 +136,7 @@ public class PostBattleSummaryPanelUI : MonoBehaviour
             BattleLogger.ClearAll(false);
         }
 
-        // IMPORTANT: signal the manager immediately so it can continue the flow
         OnClosed?.Invoke();
-
-        // Then hide via UIManager so the root is properly disabled
         UIManager.I?.Hide(PanelId.PostBattleSummary);
     }
 
@@ -168,18 +167,20 @@ public class PostBattleSummaryPanelUI : MonoBehaviour
     public void Set(
         BattleResult result,
         int growthCoresGained = 0,
-        int monstersLeveledUp = 0,              // kept for compatibility (unused)
+        int monstersLeveledUp = 0,
         bool captured = false,
         string capturedMonsterId = null,
         int capturedLevel = 0,
-        List<string> levelUpSummaries = null,   // kept for compatibility (unused)
+        List<string> levelUpSummaries = null,
         int creditsBase = 0,
         int creditsTitleBonus = 0,
         int growthCoresBase = 0,
         int growthCoresTitleBonus = 0,
-        List<string> growthCoresDetailLines = null // kept for compatibility (unused)
+        List<string> growthCoresDetailLines = null
     )
     {
+        _lastResult = result;
+
         if (titleLabel)
             titleLabel.text = result.victory ? "Victory!" : "Defeat";
 

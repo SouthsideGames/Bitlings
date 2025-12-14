@@ -74,7 +74,11 @@ public class PostBattleSummaryManager : MonoBehaviour
     )
     {
         _battleInProgress = false;
-        _autoBattling = isAuto;
+
+        // IMPORTANT:
+        // If we’re already “holding” summaries (using SetAutoBattling(true) as a suspend),
+        // do NOT let this call clear that hold.
+        _autoBattling = _autoBattling || isAuto;
 
         _pending.Enqueue(new Queued
         {
@@ -83,22 +87,21 @@ public class PostBattleSummaryManager : MonoBehaviour
             leveled = monstersLeveledUp,
             captured = captured,
             capturedId = capturedMonsterId,
-            capturedLvl = capturedLevel,
+            capturedLvl = captured ? Mathf.Max(1, capturedLevel) : 0,
             levelUpLines = levelUpSummaries,
+
             creditsBase = creditsBase,
             creditsTitleBonus = creditsTitleBonus,
+
             growthCoresBase = growthCoresBase,
             growthCoresTitleBonus = growthCoresTitleBonus,
             growthCoresDetailLines = growthCoresDetailLines
         });
 
+        // Only attempt to show if we are not being held
         TryShowNext();
     }
 
-    /// <summary>
-    /// Allows EncounterManager to patch capture status on the most-recent queued summary
-    /// before it is shown. Safe no-op if nothing queued or panel already open.
-    /// </summary>
     public bool TryUpdateLatestQueuedCapture(bool captured, string capturedMonsterId, int capturedLevel)
     {
         if (_panelOpen) return false;
@@ -139,11 +142,7 @@ public class PostBattleSummaryManager : MonoBehaviour
 
     void TryShowNext()
     {
-        // Don’t show while:
-        // • Panel already open
-        // • Battle still running
-        // • Auto mode is on
-        // • In the middle of fading
+
         if (_panelOpen || _battleInProgress || _autoBattling || _isFading) return;
         if (_pending.Count == 0) return;
 

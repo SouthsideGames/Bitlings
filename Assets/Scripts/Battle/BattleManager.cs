@@ -1505,7 +1505,6 @@ public class BattleManager : MonoBehaviour
         {
             var e = teamList[i];
             if (e == null || string.IsNullOrEmpty(e.monsterId)) continue;
-
             e.lastHPUnix = nowUnix;
             teamList[i] = e;
         }
@@ -1525,7 +1524,7 @@ public class BattleManager : MonoBehaviour
         BattleTempBuffs.I?.ClearPlayerDefenseBonus();
 
         string outcomeLabel = escaped ? "Escaped" : (victory ? "Victory" : "Defeat");
-        BattleLogger.Log($"Battle ends: {outcomeLabel}.", LogScope.Battle);
+        BattleLogger.Log($"Battle ends: {outcomeLabel} (+{finalcredits} credits).", LogScope.Battle);
         BattleLogger.EndBattle(victory);
 
         var result = new BattleResult
@@ -1539,24 +1538,28 @@ public class BattleManager : MonoBehaviour
             critCount = _totalCritsThisBattle,
             turnsSurvived = _turnIndex,
             damageTaken = _totalDamageTakenThisBattle,
+
             damageDealt = _totalDamageDealtThisBattle,
             gotFirstHit = playerLandedFirstHitThisBattle
         };
 
         if (!victory && !escaped && EncounterManager.I != null && EncounterManager.I.IsAutoMode)
+        {
             EncounterManager.I.NotifyAuto_TeamKO();
+        }
 
         SetCombatPanels(false);
 
         if (teamIds != null && activeIndex >= 0 && activeIndex < teamIds.Length)
             TitlesAdapter.OnBattleEnd(teamIds[activeIndex], victory, wildDef, wildLevel);
 
-        // Let EncounterManager own post-battle UI flow (summary + hire cadence).
+        // Let EncounterManager control summary timing.
+        // It already queues PostBattleSummaryManager.NotifyBattleEnd(...) and decides when to Flush.
         onEnd?.Invoke(result);
 
-        // Keep this event. EncounterManager can listen and/or use onEnd callback.
         GameEvents.BattleFinished?.Invoke(result);
     }
+
 
 
     private void SetHPBarAnimated(

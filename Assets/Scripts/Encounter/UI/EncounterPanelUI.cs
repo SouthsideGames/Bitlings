@@ -92,31 +92,34 @@ public class EncounterPanelUI : MonoBehaviour
     [SerializeField] private GameObject ownedCapturedIcon;
 
     // ─────────────────────────────────────────────────────────────
-    // Hire Decision (Capture Prompt overlay, like blinderGroup)
+    // Hire Decision (now uses GameObject active/inactive; includes Continue pacing)
     // ─────────────────────────────────────────────────────────────
     [Header("Hire Decision")]
-    [SerializeField] private CanvasGroup hireDecisionGroup;
+    [SerializeField] private GameObject hireDecisionRoot;          // Whole overlay root
     [SerializeField] private Image hireMonsterIcon;
     [SerializeField] private TextMeshProUGUI hirePromptText;
+
+    [Header("Hire Decision Buttons")]
+    [SerializeField] private GameObject hireButtonsRoot;           // Parent of Yes/No
     [SerializeField] private Button hireYesButton;
     [SerializeField] private Button hireNoButton;
+    [SerializeField] private Button hireContinueButton;            // NEW: Continue
 
     [Header("Hire Decision Result Prefabs")]
     [SerializeField] private Transform hireResultSpawnPoint;
     [SerializeField] private GameObject hireAgreePrefab;
     [SerializeField] private GameObject hireDenyPrefab;
 
-    [Header("Hire Decision FX")]
-    [SerializeField, Range(0.05f, 0.5f)] private float hireDecisionFadeIn = 0.15f;
-    [SerializeField, Range(0.05f, 0.5f)] private float hireDecisionFadeOut = 0.15f;
-
     private MonsterDataSO _pendingHireDef;
     private int _pendingHireLevel;
-    Coroutine _hireDecisionCo;
 
-    // Exposed for EncounterManager to wait correctly
-    public bool IsHireDecisionOpen =>
-        hireDecisionGroup && hireDecisionGroup.alpha > 0.01f && hireDecisionGroup.blocksRaycasts;
+    // store what the player decided so Continue can finalize
+    private bool _hireChoseYes;
+    private bool _hireCaptureSucceeded;
+    private bool _hireDecisionLocked;
+
+    // Exposed for EncounterManager to ignore encounter clicks while open
+    public bool IsHireDecisionOpen => hireDecisionRoot && hireDecisionRoot.activeSelf;
 
     // ─────────────────────────────────────────────────────────────
     // Wild State HUD (guard / shield / charge)
@@ -160,14 +163,15 @@ public class EncounterPanelUI : MonoBehaviour
         if (ownedCapturedIcon)
             ownedCapturedIcon.SetActive(false);
 
-        // Hire decision starts hidden (like an overlay)
-        if (hireDecisionGroup)
-        {
-            hireDecisionGroup.alpha = 0f;
-            hireDecisionGroup.blocksRaycasts = false;
-            hireDecisionGroup.interactable = false;
-            hireDecisionGroup.gameObject.SetActive(true);
-        }
+        // Hire decision starts hidden
+        if (hireDecisionRoot)
+            hireDecisionRoot.SetActive(false);
+
+        if (hireContinueButton)
+            hireContinueButton.gameObject.SetActive(false);
+
+        if (hireButtonsRoot)
+            hireButtonsRoot.SetActive(true);
 
         RefreshBlinderTint();
         PickAndApplyBlinderLine(forcePick: true);
@@ -215,6 +219,11 @@ public class EncounterPanelUI : MonoBehaviour
             hireNoButton.onClick.RemoveAllListeners();
             hireNoButton.onClick.AddListener(OnClickHireNo);
         }
+        if (hireContinueButton)
+        {
+            hireContinueButton.onClick.RemoveAllListeners();
+            hireContinueButton.onClick.AddListener(OnClickHireContinue);
+        }
 
         RefreshAll();
 
@@ -241,8 +250,7 @@ public class EncounterPanelUI : MonoBehaviour
 
         if (hireYesButton) hireYesButton.onClick.RemoveAllListeners();
         if (hireNoButton) hireNoButton.onClick.RemoveAllListeners();
-        if (_hireDecisionCo != null) StopCoroutine(_hireDecisionCo);
-        _hireDecisionCo = null;
+        if (hireContinueButton) hireContinueButton.onClick.RemoveAllListeners();
     }
 
     void Update()
@@ -281,6 +289,9 @@ public class EncounterPanelUI : MonoBehaviour
 
     void OnBattleFinished(BattleResult _)
     {
+        // CLEANUP REQUEST: ensure blinder alpha is forced back to 1 at battle end
+        ForceBlinderAlphaToOne();
+
         LogCurrentWinStreak("Updated");
 
         if (!IsInBattle())
@@ -290,6 +301,19 @@ public class EncounterPanelUI : MonoBehaviour
             PickAndApplyBlinderLine();
             ClearWildStateUI();
         }
+    }
+
+    void ForceBlinderAlphaToOne()
+    {
+        if (!blinderGroup) return;
+
+        // stop any running fade so it can't leave alpha at 0
+        if (_fadeCo != null) { StopCoroutine(_fadeCo); _fadeCo = null; }
+        _isFading = false;
+
+        blinderGroup.alpha = 1f;
+        blinderGroup.blocksRaycasts = true;
+        blinderGroup.interactable = true;
     }
 
     // ─────────────────────────────────────────────────────────────
@@ -519,116 +543,95 @@ public class EncounterPanelUI : MonoBehaviour
     }
 
     // ─────────────────────────────────────────────────────────────
-    // Hire Decision API (called by EncounterManager on manual victory)
+    // Hire Decision API (manual victory)
     // ─────────────────────────────────────────────────────────────
     public void ShowHireDecision(MonsterDataSO def, int level)
     {
-        if (!hireDecisionGroup || def == null)
+        if (!hireDecisionRoot || def == null)
         {
             // Safety: if missing, do not block summary
-            PostBattleSummaryManager.I?.SetAutoBattling(false);
-            PostBattleSummaryManager.I?.FlushNowIfPossible();
+            EncounterManager.I?.OnHireDecisionResolved(false, false);
             return;
         }
 
         _pendingHireDef = def;
         _pendingHireLevel = Mathf.Max(1, level);
 
+        _hireChoseYes = false;
+        _hireCaptureSucceeded = false;
+        _hireDecisionLocked = false;
+
         if (hireMonsterIcon) hireMonsterIcon.sprite = def.icon;
         if (hirePromptText) hirePromptText.text = $"Do you want to hire {def.displayName}?";
 
-        // Ensure previous result isn't still sitting there
         ClearHireResultVisuals();
+
+        // UI state: decision buttons ON, continue OFF
+        if (hireButtonsRoot) hireButtonsRoot.SetActive(true);
+        if (hireContinueButton) hireContinueButton.gameObject.SetActive(false);
 
         // Hide blinder while decision is up
         ShowBlinder(false, instant: true);
 
-        if (_hireDecisionCo != null) StopCoroutine(_hireDecisionCo);
-        _hireDecisionCo = StartCoroutine(Co_ShowHireDecision());
-    }
-
-    IEnumerator Co_ShowHireDecision()
-    {
-        hireDecisionGroup.gameObject.SetActive(true);
-        hireDecisionGroup.blocksRaycasts = true;
-        hireDecisionGroup.interactable = true;
-
-        float dur = Mathf.Max(0.05f, hireDecisionFadeIn);
-        float t = 0f;
-        float start = hireDecisionGroup.alpha;
-
-        while (t < dur)
-        {
-            t += Time.unscaledDeltaTime;
-            hireDecisionGroup.alpha = Mathf.Lerp(start, 1f, t / dur);
-            yield return null;
-        }
-
-        hireDecisionGroup.alpha = 1f;
-        _hireDecisionCo = null;
-    }
-
-    IEnumerator Co_HideHireDecision()
-    {
-        hireDecisionGroup.blocksRaycasts = false;
-        hireDecisionGroup.interactable = false;
-
-        float dur = Mathf.Max(0.05f, hireDecisionFadeOut);
-        float t = 0f;
-        float start = hireDecisionGroup.alpha;
-
-        while (t < dur)
-        {
-            t += Time.unscaledDeltaTime;
-            hireDecisionGroup.alpha = Mathf.Lerp(start, 0f, t / dur);
-            yield return null;
-        }
-
-        hireDecisionGroup.alpha = 0f;
-
-        // keep active for simplicity; blocksRaycasts stays off
-        _hireDecisionCo = null;
+        hireDecisionRoot.SetActive(true);
     }
 
     void OnClickHireYes()
     {
         if (_isFading) return;
+        if (_hireDecisionLocked) return;
+
+        _hireDecisionLocked = true;
+        _hireChoseYes = true;
 
         bool success = false;
-
         if (EncounterManager.I != null && _pendingHireDef != null)
             success = EncounterManager.I.TryCaptureFromDecision(_pendingHireDef, _pendingHireLevel);
 
-        // YES -> agree on success, deny on fail
+        _hireCaptureSucceeded = success;
+
         SpawnHireResult(success);
 
-        if (_hireDecisionCo != null) StopCoroutine(_hireDecisionCo);
-        _hireDecisionCo = StartCoroutine(Co_FinishHireDecisionFlow());
+        // After decision, show Continue (pacing)
+        if (hireButtonsRoot) hireButtonsRoot.SetActive(false);
+        if (hireContinueButton) hireContinueButton.gameObject.SetActive(true);
     }
 
     void OnClickHireNo()
     {
         if (_isFading) return;
+        if (_hireDecisionLocked) return;
 
-        // NO -> always deny prefab
+        _hireDecisionLocked = true;
+        _hireChoseYes = false;
+        _hireCaptureSucceeded = false;
+
         SpawnHireResult(false);
 
-        if (_hireDecisionCo != null) StopCoroutine(_hireDecisionCo);
-        _hireDecisionCo = StartCoroutine(Co_FinishHireDecisionFlow());
+        // After decision, show Continue (pacing)
+        if (hireButtonsRoot) hireButtonsRoot.SetActive(false);
+        if (hireContinueButton) hireContinueButton.gameObject.SetActive(true);
     }
 
-    IEnumerator Co_FinishHireDecisionFlow()
+    void OnClickHireContinue()
     {
-        if (hireDecisionGroup)
-            yield return Co_HideHireDecision();
+        if (!_hireDecisionLocked)
+            return; // can't continue until player chose Yes/No
 
-        // After the decision is resolved, proceed to PostBattleSummary
-        PostBattleSummaryManager.I?.SetAutoBattling(false);
-        PostBattleSummaryManager.I?.FlushNowIfPossible();
+        // Close overlay
+        if (hireDecisionRoot) hireDecisionRoot.SetActive(false);
 
+        // Inform EncounterManager (it will patch summary + flush)
+        if (EncounterManager.I != null)
+            EncounterManager.I.OnHireDecisionResolved(_hireChoseYes, _hireCaptureSucceeded);
+
+        // cleanup
         _pendingHireDef = null;
         _pendingHireLevel = 0;
-        _hireDecisionCo = null;
+        _hireDecisionLocked = false;
+
+        if (hireContinueButton) hireContinueButton.gameObject.SetActive(false);
+        if (hireButtonsRoot) hireButtonsRoot.SetActive(true);
     }
 
     void SpawnHireResult(bool success)
@@ -638,9 +641,7 @@ public class EncounterPanelUI : MonoBehaviour
         GameObject prefab = success ? hireAgreePrefab : hireDenyPrefab;
         if (!prefab) return;
 
-        // Prevent stacking multiple agree/deny objects
         ClearHireResultVisuals();
-
         Instantiate(prefab, hireResultSpawnPoint.position, hireResultSpawnPoint.rotation, hireResultSpawnPoint);
     }
 
@@ -834,7 +835,7 @@ public class EncounterPanelUI : MonoBehaviour
     public void OnClickToggleAuto() => EncounterManager.I?.ToggleAutoMode();
 
     // ─────────────────────────────────────────────────────────────
-    // Localization + Weighted Picker (now feeds typewriter)
+    // Localization + Weighted Picker
     // ─────────────────────────────────────────────────────────────
     void PickAndApplyBlinderLine(bool forcePick = false)
     {
