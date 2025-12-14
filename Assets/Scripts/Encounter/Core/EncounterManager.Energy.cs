@@ -6,75 +6,93 @@ public partial class EncounterManager
     [Header("Energy (Regen)")]
     [Tooltip("If SaveManager.Data has encounterMax/Cost, those win; otherwise these are used.")]
     [SerializeField, Min(1)] private int fallbackEncounterMax = 10;
+
     [SerializeField, Min(1)] private int fallbackEncounterCost = 1;
+
     [Tooltip("Seconds required to regenerate 1 energy point.")]
     [SerializeField, Min(1f)] private float energySecondsPerPoint = 3600f;
 
-    const string PP_ENERGY_POINTS = "ENERGY_points";
-    const string PP_ENERGY_LAST   = "ENERGY_lastUnix";
-    const string PP_ENERGY_REM    = "ENERGY_remainder";
-
-    int   _energyPoints;
-    long  _energyLastUnix;
-    float _energyRemainderSecs;
     float _tickAccum;
 
-    public int  GetEnergyPoints()  => _energyPoints;
+    // ─────────────────────────────────────────────────────────────
+    // Public API
+    // ─────────────────────────────────────────────────────────────
 
-    public int  GetEncounterMax()  =>
+    public int GetEnergyPoints() => GetBankEnergy();
+
+    public int GetEncounterMax() =>
         (SaveManager.Data != null && SaveManager.Data.encounterMax > 0)
             ? SaveManager.Data.encounterMax
             : fallbackEncounterMax;
 
-    public int  GetEncounterCost() =>
+    public int GetEncounterCost() =>
         (SaveManager.Data != null && SaveManager.Data.encounterCost > 0)
             ? SaveManager.Data.encounterCost
             : fallbackEncounterCost;
 
-    public bool HasEnergy()        => _energyPoints >= GetEncounterCost();
+    public bool HasEnergy() => GetEnergyPoints() >= GetEncounterCost();
 
     public int GetSecondsUntilFull()
     {
         int max = GetEncounterMax();
-        if (_energyPoints >= max) return 0;
-        int missing = max - _energyPoints;
-        double total = (missing * energySecondsPerPoint) - _energyRemainderSecs;
+        int cur = GetEnergyPoints();
+        if (cur >= max) return 0;
+
+        float rem = GetEnergyRemainderSecs();
+        int missing = max - cur;
+        double total = (missing * energySecondsPerPoint) - rem;
         return Mathf.Max(0, (int)Math.Ceiling(total));
     }
 
     public void AddEnergy(int amount, bool allowOvercap = true)
     {
-        int max = GetEncounterMax();
-        int before = _energyPoints;
+        if (amount == 0) return;
 
-        _energyPoints += amount;
-        if (!allowOvercap) _energyPoints = Mathf.Min(_energyPoints, max);
-        ClampEnergy();
+        int max    = GetEncounterMax();
+        int before = GetBankEnergy();
 
-        int gained = Mathf.Max(0, _energyPoints - before);
+        int next = before + amount;
+        if (!allowOvercap)
+            next = Mathf.Min(next, max);
 
-        SaveEnergy();
-        MirrorEnergyIntoSaveData();
+        next = Mathf.Max(0, next);
+
+        SetBankEnergy(next);
+        ClampEnergyBank();
+
+        int after  = GetBankEnergy();
+        int gained = Mathf.Max(0, after - before);
+
+        // Reset regen baseline on gain so time math remains sane
+        SetEnergyLastUnix(NowUnix());
+
+        // Keep remainder within valid range
+        SetEnergyRemainderSecs(ClampRemainder(GetEnergyRemainderSecs()));
+
+        SaveEnergyStateToJson();
         GameEvents.EnergyChanged?.Invoke();
         OnStateChanged?.Invoke();
 
         if (gained > 0)
-            OnEnergyGained?.Invoke(gained, _energyPoints);
+            OnEnergyGained?.Invoke(gained, after);
     }
 
     public bool SpendEnergy()
     {
         int cost = GetEncounterCost();
-        if (_energyPoints < cost) return false;
+        if (cost <= 0) return true;
 
-        _energyPoints -= cost;
-        ClampEnergy();
+        // Single source of truth: bank
+        if (!ResourceBank.TrySpend(ResourceType.Energy, cost))
+            return false;
 
-        _energyLastUnix = NowUnix();
-        _energyRemainderSecs = 0f;
+        ClampEnergyBank();
 
-        SaveEnergy();
-        MirrorEnergyIntoSaveData();
+        // Reset timing baseline on spend
+        SetEnergyLastUnix(NowUnix());
+        SetEnergyRemainderSecs(0f);
+
+        SaveEnergyStateToJson();
         GameEvents.EnergyChanged?.Invoke();
         OnStateChanged?.Invoke();
         return true;
@@ -82,99 +100,178 @@ public partial class EncounterManager
 
     public bool SpendEnergyIfPossible() => SpendEnergy();
 
+    // ─────────────────────────────────────────────────────────────
+    // Lifecycle hooks expected by EncounterManager
+    // (Call from EncounterManager.Awake/Start/Update)
+    // ─────────────────────────────────────────────────────────────
+
     void LoadEnergy()
     {
+        SaveManager.LoadOrCreate();
+        ResourceBank.EnsureSize();
+
         int max = GetEncounterMax();
 
-        int def = Mathf.Clamp(max, 1, 9999);
-        _energyPoints        = PlayerPrefs.GetInt(PP_ENERGY_POINTS, def);
-        string lastStr       = PlayerPrefs.GetString(PP_ENERGY_LAST, NowUnix().ToString());
-        _energyLastUnix      = long.Parse(lastStr);
-        _energyRemainderSecs = PlayerPrefs.GetFloat(PP_ENERGY_REM, 0f);
+        // If this is a new account and energy hasn't been initialized, default to FULL.
+        // NOTE: If you want new accounts to start at 10 instead of full,
+        // initialize ResourceBank.Energy in your new-account initializer instead.
+        int cur = GetBankEnergy();
+        if (cur <= 0 && max > 0)
+            SetBankEnergy(max);
 
-        ClampEnergy();
-        _energyRemainderSecs = Mathf.Clamp(
-            _energyRemainderSecs,
-            0f,
-            Mathf.Max(0f, energySecondsPerPoint - 0.001f)
-        );
-    }
+        // Ensure JSON timer fields exist and are sane
+        long last = GetEnergyLastUnix();
+        if (last <= 0)
+            SetEnergyLastUnix(NowUnix());
 
-    void SaveEnergy()
-    {
-        PlayerPrefs.SetInt(PP_ENERGY_POINTS, _energyPoints);
-        PlayerPrefs.SetString(PP_ENERGY_LAST, _energyLastUnix.ToString());
-        PlayerPrefs.SetFloat(PP_ENERGY_REM, _energyRemainderSecs);
-        PlayerPrefs.Save();
-    }
+        float rem = GetEnergyRemainderSecs();
+        SetEnergyRemainderSecs(ClampRemainder(rem));
 
-    void ClampEnergy()
-    {
-        int max = GetEncounterMax();
-        _energyPoints = Mathf.Clamp(_energyPoints, 0, Mathf.Max(1, max));
+        ClampEnergyBank();
+        SaveEnergyStateToJson();
     }
 
     void ApplyOfflineRegen()
     {
         int max = GetEncounterMax();
-        if (_energyPoints >= max) { _energyRemainderSecs = 0f; return; }
+        int cur = GetBankEnergy();
 
-        long elapsed = NowUnix() - _energyLastUnix;
+        if (cur >= max)
+        {
+            SetEnergyRemainderSecs(0f);
+            SaveEnergyStateToJson();
+            return;
+        }
+
+        long now  = NowUnix();
+        long last = GetEnergyLastUnix();
+        if (last <= 0) last = now;
+
+        long elapsed = now - last;
         if (elapsed <= 0) return;
 
-        double total = _energyRemainderSecs + elapsed;
+        double total = GetEnergyRemainderSecs() + elapsed;
         int gained = (int)Math.Floor(total / energySecondsPerPoint);
-        _energyRemainderSecs = (float)(total - (gained * energySecondsPerPoint));
+        float newRem = (float)(total - (gained * energySecondsPerPoint));
 
         if (gained > 0)
         {
-            _energyPoints = Mathf.Min(max, _energyPoints + gained);
-            if (_energyPoints >= max) _energyRemainderSecs = 0f;
+            int next = Mathf.Min(max, cur + gained);
+            SetBankEnergy(next);
 
-            MirrorEnergyIntoSaveData();
-            SaveEnergy();
+            // If we hit full, remainder should be 0
+            if (next >= max) newRem = 0f;
+
             GameEvents.EnergyChanged?.Invoke();
-
-            OnEnergyGained?.Invoke(gained, _energyPoints);
+            OnEnergyGained?.Invoke(gained, next);
         }
 
-        _energyLastUnix = NowUnix();
-        SaveEnergy();
+        SetEnergyLastUnix(now);
+        SetEnergyRemainderSecs(ClampRemainder(newRem));
+        SaveEnergyStateToJson();
     }
 
     void TickEnergyRuntime()
     {
         int max = GetEncounterMax();
-        if (_energyPoints >= max) return;
+        int cur = GetBankEnergy();
+        if (cur >= max) return;
 
         _tickAccum += Time.unscaledDeltaTime;
         if (_tickAccum < 1f) return;
         _tickAccum = 0f;
 
-        _energyRemainderSecs += 1f;
-        if (_energyRemainderSecs >= energySecondsPerPoint)
-        {
-            _energyRemainderSecs -= energySecondsPerPoint;
-            int before = _energyPoints;
-            _energyPoints = Mathf.Min(max, _energyPoints + 1);
-            if (_energyPoints >= max) _energyRemainderSecs = 0f;
+        float rem = GetEnergyRemainderSecs() + 1f;
 
-            MirrorEnergyIntoSaveData();
-            SaveEnergy();
+        if (rem >= energySecondsPerPoint)
+        {
+            rem -= energySecondsPerPoint;
+
+            int before = cur;
+            int next = Mathf.Min(max, before + 1);
+            SetBankEnergy(next);
+
+            if (next >= max) rem = 0f;
+
             GameEvents.EnergyChanged?.Invoke();
             OnStateChanged?.Invoke();
 
-            int gained = Mathf.Max(0, _energyPoints - before);
+            int gained = Mathf.Max(0, next - before);
             if (gained > 0)
-                OnEnergyGained?.Invoke(gained, _energyPoints);
+                OnEnergyGained?.Invoke(gained, next);
         }
+
+        SetEnergyRemainderSecs(ClampRemainder(rem));
+        SetEnergyLastUnix(NowUnix());
+        SaveEnergyStateToJson();
     }
 
-    void MirrorEnergyIntoSaveData()
-    {
-        if (SaveManager.Data == null) return;
+    // ─────────────────────────────────────────────────────────────
+    // Internal helpers (Bank-only + JSON-only)
+    // ─────────────────────────────────────────────────────────────
 
-        SaveManager.Data.encounterPoints = _energyPoints;
+    int GetBankEnergy()
+    {
+        ResourceBank.EnsureSize();
+        return ResourceBank.Get(ResourceType.Energy);
+    }
+
+    void SetBankEnergy(int value)
+    {
+        ResourceBank.EnsureSize();
+        ResourceBank.Set(ResourceType.Energy, Mathf.Max(0, value));
+    }
+
+    void ClampEnergyBank()
+    {
+        int max = GetEncounterMax();
+        int cur = GetBankEnergy();
+        int clamped = Mathf.Clamp(cur, 0, Mathf.Max(1, max));
+        if (clamped != cur)
+            SetBankEnergy(clamped);
+    }
+
+    float ClampRemainder(float rem)
+    {
+        float cap = Mathf.Max(0f, energySecondsPerPoint - 0.001f);
+        return Mathf.Clamp(rem, 0f, cap);
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // JSON state accessors (SaveManager.Data)
+    // You MUST add these fields to SaveData:
+    //   public long energyLastUnix;
+    //   public float energyRemainderSecs;
+    // ─────────────────────────────────────────────────────────────
+
+    long GetEnergyLastUnix()
+    {
+        SaveManager.LoadOrCreate();
+        return (SaveManager.Data != null) ? SaveManager.Data.energyLastUnix : 0;
+    }
+
+    void SetEnergyLastUnix(long unix)
+    {
+        SaveManager.LoadOrCreate();
+        if (SaveManager.Data == null) return;
+        SaveManager.Data.energyLastUnix = unix;
+    }
+
+    float GetEnergyRemainderSecs()
+    {
+        SaveManager.LoadOrCreate();
+        return (SaveManager.Data != null) ? SaveManager.Data.energyRemainderSecs : 0f;
+    }
+
+    void SetEnergyRemainderSecs(float secs)
+    {
+        SaveManager.LoadOrCreate();
+        if (SaveManager.Data == null) return;
+        SaveManager.Data.energyRemainderSecs = secs;
+    }
+
+    void SaveEnergyStateToJson()
+    {
         SaveManager.Save();
     }
 

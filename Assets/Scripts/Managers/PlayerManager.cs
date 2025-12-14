@@ -138,6 +138,8 @@ public class PlayerManager
     public bool hasSeenStory = false;
     public long lastClosedUnix = 0;
     public long lastSavedUnix = 0;
+    public long energyLastUnix;
+    public float energyRemainderSecs;
 
     public int encountersSinceBoss = 0;  
     public int bossEveryN = 10;        

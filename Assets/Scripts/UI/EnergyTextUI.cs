@@ -2,8 +2,10 @@ using UnityEngine;
 using TMPro;
 
 public class EnergyTextUI : MonoBehaviour
-{  
+{
     [SerializeField] private TextMeshProUGUI energyLabel;
+
+    private static readonly Color NotEnoughColor = new Color(1f, 0.5f, 0.5f);
 
     private void Awake()
     {
@@ -14,7 +16,7 @@ public class EnergyTextUI : MonoBehaviour
     private void OnEnable()
     {
         GameEvents.EnergyChanged += Refresh;
-        GameEvents.OnResourcesChanged += Refresh; // safety only
+        GameEvents.OnResourcesChanged += Refresh; // required for reset/new-account init
         Refresh();
     }
 
@@ -28,29 +30,34 @@ public class EnergyTextUI : MonoBehaviour
     {
         if (!energyLabel) return;
 
-        // If EncounterManager isn't ready, show nothing
-        if (EncounterManager.I == null)
+        // Prefer EncounterPanelUI/EncounterManager when available (they know max/cost)
+        if (EncounterPanelUI.I != null)
         {
-            energyLabel.text = "0 / 0";
-            energyLabel.color = Color.white;
+            int cur = EncounterPanelUI.I.GetEnergyPoints();
+            int max = EncounterPanelUI.I.GetEncounterMax();
+            int cost = EncounterPanelUI.I.GetEncounterCost();
+
+            bool has = cur >= cost;
+            energyLabel.text = $"{cur} / {max}";
+            energyLabel.color = has ? Color.white : NotEnoughColor;
             return;
         }
 
-        int cur = EncounterPanelUI.I != null ? 
-            EncounterPanelUI.I.GetEnergyPoints() : 
-            EncounterManager.I.GetEnergyPoints();
+        if (EncounterManager.I != null)
+        {
+            int cur = EncounterManager.I.GetEnergyPoints();
+            int max = EncounterManager.I.GetEncounterMax();
+            int cost = EncounterManager.I.GetEncounterCost();
 
-        int max = EncounterPanelUI.I != null ?
-            EncounterPanelUI.I.GetEncounterMax() :
-            EncounterManager.I.GetEncounterMax();
+            bool has = cur >= cost;
+            energyLabel.text = $"{cur} / {max}";
+            energyLabel.color = has ? Color.white : NotEnoughColor;
+            return;
+        }
 
-        int cost = EncounterPanelUI.I != null ?
-            EncounterPanelUI.I.GetEncounterCost() :
-            EncounterManager.I.GetEncounterCost();
-
-        bool has = cur >= cost;
-
-        energyLabel.text = $"{cur} / {max}";
-        energyLabel.color = has ? Color.white : new Color(1f, 0.5f, 0.5f);
+        // Fallback: show stored energy even if EncounterManager isn't initialized yet
+        int stored = ResourceBank.Get(ResourceType.Energy);
+        energyLabel.text = $"{stored}";
+        energyLabel.color = Color.white;
     }
 }

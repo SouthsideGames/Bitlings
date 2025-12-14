@@ -66,7 +66,6 @@ public partial class EncounterManager : MonoBehaviour
 
         LoadEnergy();
         ApplyOfflineRegen();
-        MirrorEnergyIntoSaveData();
 
         SaveManager.LoadOrCreate();
         SaveManager.Data.EnsureTransientSets();
@@ -86,8 +85,7 @@ public partial class EncounterManager : MonoBehaviour
 
         NormalizeTeamHPIfUninitialized();
         GameEvents.WinStreakChanged?.Invoke(_currentWinStreak);
-
-        MirrorEnergyIntoSaveData();
+        
         GameEvents.EnergyChanged?.Invoke();
         OnStateChanged?.Invoke();
     }

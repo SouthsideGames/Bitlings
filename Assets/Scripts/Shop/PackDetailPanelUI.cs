@@ -65,11 +65,9 @@ public class PackDetailPanelUI : MonoBehaviour
         {
             Debug.Log($"Pack purchased: {_currentPack.displayName}");
 
-            // Optional: you can keep the button visible but disabled if you prefer.
             if (purchaseButton != null)
                 purchaseButton.gameObject.SetActive(false);
 
-            // Refresh text so currency/cost updates immediately in this panel.
             RefreshUI();
         }
         else

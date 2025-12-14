@@ -59,10 +59,20 @@ public class SettingsManager : MonoBehaviour
     public void OnReset()
     {
         SaveManager.ClearAll();
+
+        // Recreate save immediately
+        SaveManager.LoadOrCreate();
+
+        // Initialize clean resources
+        if (ResourceManager.I != null)
+            ResourceManager.I.InitializeNewAccountResources();
+
         ApplyDefaults();
+
         Time.timeScale = 1f;
         SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
     }
+
 
     // ─────────────────────────────────────────────────────────
     // Duplicate policy accessors

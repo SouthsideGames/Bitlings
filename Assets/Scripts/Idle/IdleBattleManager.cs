@@ -72,7 +72,10 @@ public class IdleBattleManager : MonoBehaviour
             s.autoBattling = true;
             s.sessionStartUnix = NowUnix();
             s.lastTickUnix = s.sessionStartUnix;
-            s.energyAtStart = SaveManager.Data.encounterPoints;
+
+            // Single source of truth: bank energy
+            s.energyAtStart = ResourceBank.Get(ResourceType.Energy);
+
             s.biomeId = biomeId;
             IdleBattleStore.Save(s);
         }
@@ -90,6 +93,9 @@ public class IdleBattleManager : MonoBehaviour
 
     private void ResolveOfflineIfAny()
     {
+        if (SaveManager.Data == null) return;
+        if (config == null) return;
+
         long lastSaved = SaveManager.Data.lastSavedUnix;
         long now = NowUnix();
         float elapsed = Mathf.Max(0, now - lastSaved);
@@ -99,8 +105,10 @@ public class IdleBattleManager : MonoBehaviour
         int timeEnc = Mathf.FloorToInt(clamped / config.secondsPerEncounter);
         if (timeEnc <= 0) return;
 
-        int cost = Mathf.Max(1, SaveManager.Data.encounterCost);
-        int byEnergy = SaveManager.Data.encounterPoints / cost;
+        int baseCost = GetEncounterCostSafe();
+        int curEnergy = GetEnergySafe();
+        int byEnergy = (baseCost <= 0) ? timeEnc : (curEnergy / baseCost);
+
         int toRun = Mathf.Min(timeEnc, byEnergy);
         if (toRun <= 0) return;
 
@@ -110,6 +118,8 @@ public class IdleBattleManager : MonoBehaviour
 
     private void TickForegroundAuto()
     {
+        if (config == null) return;
+
         var s = IdleBattleStore.Load();
         if (!s.autoBattling) return;
 
@@ -118,8 +128,10 @@ public class IdleBattleManager : MonoBehaviour
         int canRun = Mathf.FloorToInt(dt / config.secondsPerEncounter);
         if (canRun <= 0) return;
 
-        int cost = Mathf.Max(1, SaveManager.Data.encounterCost);
-        int byEnergy = SaveManager.Data.encounterPoints / cost;
+        int baseCost = GetEncounterCostSafe();
+        int curEnergy = GetEnergySafe();
+        int byEnergy = (baseCost <= 0) ? canRun : (curEnergy / baseCost);
+
         int toRun = Mathf.Min(canRun, byEnergy);
         if (toRun <= 0) return;
 
@@ -128,7 +140,8 @@ public class IdleBattleManager : MonoBehaviour
         s.lastTickUnix = now;
         IdleBattleStore.Save(s);
 
-        if (SaveManager.Data.encounterPoints < cost)
+        // Stop when we can’t afford another encounter
+        if (GetEnergySafe() < baseCost)
         {
             DisableAuto();
             ForceOpenSummary();
@@ -138,11 +151,12 @@ public class IdleBattleManager : MonoBehaviour
     private void RunBatchEncounters(int count)
     {
         if (!IsIdleBattleUnlocked() || count <= 0) return;
+        if (config == null) return;
 
         ResourceBank.BeginBatch();
 
-        var s     = IdleBattleStore.Load();
-        var rng   = new System.Random(SeedForSession(s));
+        var s = IdleBattleStore.Load();
+        var rng = new System.Random(SeedForSession(s));
         var teamP = JobIdlePassives.ComputeForActiveTeam();
 
         // Collect up to 3 team monster IDs (lead first)
@@ -167,20 +181,18 @@ public class IdleBattleManager : MonoBehaviour
             FeatureUnlockManager.I.IsUnlocked(FeatureId.IdleBattle_RewardBoost))
         {
             float boost = 1.5f; // fallback if config missing
-            if (config != null)
-                boost = Mathf.Max(1f, config.rewardBoostMultiplier);
+            boost = Mathf.Max(1f, config.rewardBoostMultiplier);
 
             creditMulNeutral *= boost;
         }
 
-        int baseCost      = Mathf.Max(1, SaveManager.Data.encounterCost);
+        int baseCost = GetEncounterCostSafe();
         int effectiveCost = Mathf.Max(1, Mathf.RoundToInt(baseCost * Mathf.Clamp(teamP.energyCostMul, 0.5f, 1f)));
 
         for (int i = 0; i < count; i++)
         {
-            if (!SpendEnergyIfPossible(effectiveCost)) break;
+            if (!SpendEnergy(effectiveCost)) break;
 
-            // Live-refresh the encounter/energy UI for each spend
             s.totalEnergySpent += effectiveCost;
             encounterManager?.RequestStateRefresh();
 
@@ -189,44 +201,41 @@ public class IdleBattleManager : MonoBehaviour
                 : null;
             if (wild == null) continue;
 
-            int  wildLevel = RollWildLevel();
-            bool shiny     = RollShiny(wild, rng);
-            int  avgLv     = GetAverageTeamLevel();
+            int wildLevel = RollWildLevel();
+            bool shiny = RollShiny(wild, rng);
+            int avgLv = GetAverageTeamLevel();
 
             // ─────────────────────────────────────────────────────────
             // Titles: fold the lead monster’s Title effects into headless odds
             // ─────────────────────────────────────────────────────────
-            string        leadId    = (teamIds.Count > 0) ? teamIds[0] : null;
-            MonsterDataSO leadDef   = null;
-            int           leadLevel = 1;
+            string leadId = (teamIds.Count > 0) ? teamIds[0] : null;
+            MonsterDataSO leadDef = null;
+            int leadLevel = 1;
 
             if (!string.IsNullOrEmpty(leadId))
             {
-                // Try to resolve def/level from team
                 leadDef = MonsterLibraryLocator.GetById(leadId);
                 var roster = SaveManager.Data?.team;
                 if (roster != null && roster.Count > 0 && roster[0] != null && roster[0].monsterId == leadId)
                     leadLevel = Mathf.Max(1, roster[0].level);
             }
 
-            // Title stat mods (ATK/DEF%) → map to offense/defense multipliers
             float titleOffMul = 1f;
             float titleDefMul = 1f;
+
             if (!string.IsNullOrEmpty(leadId))
             {
                 var mods = TitlesAdapter.GetBattleStatMods(leadId);
                 if (mods.atkPct > 0f) titleOffMul *= (1f + mods.atkPct);
                 if (mods.defPct > 0f) titleDefMul *= (1f + mods.defPct);
 
-                // EffectivenessMod → boost offense odds
                 try
                 {
                     float effMul = TitlesAdapter.GetEffectivenessMult(leadId, leadDef, leadLevel);
                     if (effMul > 0f) titleOffMul *= effMul;
                 }
-                catch { /* safe no-op */ }
+                catch { }
 
-                // DamageFilter → percent reduce → strengthen defense odds
                 try
                 {
                     var dfBox = TitlesAdapter.GetDamageFilter(leadId, leadDef, leadLevel);
@@ -234,31 +243,26 @@ public class IdleBattleManager : MonoBehaviour
                     if (TryUnboxDamageFilter(dfBox, out df) && df.percentReduce > 0f)
                         titleDefMul *= (1f + Mathf.Clamp01(df.percentReduce));
                 }
-                catch { /* safe no-op */ }
+                catch { }
             }
 
-            // Compose inputs: Jobs/Idle multipliers from teamP, plus Title multipliers we just computed.
             var hb = HeadlessBattle.Resolve(new HeadlessBattle.Input
             {
-                avgTeamLevel     = avgLv,
-                wildLevel        = wildLevel,
-                basecreditPerWin   = config.basecreditPerWin,
+                avgTeamLevel = avgLv,
+                wildLevel = wildLevel,
+                basecreditPerWin = config.basecreditPerWin,
                 rewardMultiplier = config.rewardMultiplier,
-                rngSeed          = rng.Next(),
+                rngSeed = rng.Next(),
 
-                // Fold in titles
-                offenseMul       = teamP.offenseMul * Mathf.Max(0.1f, titleOffMul),
-                defenseMul       = teamP.defenseMul * Mathf.Max(0.1f, titleDefMul),
+                offenseMul = teamP.offenseMul * Mathf.Max(0.1f, titleOffMul),
+                defenseMul = teamP.defenseMul * Mathf.Max(0.1f, titleDefMul),
 
-                // jobs/idle only (Title credit mult is applied later in ResourceManager)
-                earlyEdge        = teamP.earlyEdge,
-                creditMul          = teamP.creditMul
+                earlyEdge = teamP.earlyEdge,
+                creditMul = teamP.creditMul
             });
 
-            // Base credits from headless result + neutral mul
             int creditsBase = Mathf.Max(0, Mathf.FloorToInt(hb.credits * Mathf.Max(0f, creditMulNeutral)));
 
-            // Titles-aware credit grant via ResourceManager (uses lead monster if present)
             int awarded = 0;
             if (hb.victory && creditsBase > 0)
             {
@@ -266,41 +270,77 @@ public class IdleBattleManager : MonoBehaviour
                 awarded = ResourceManager.I.AddCreditsWithTitles(creditsBase, leadIdForGrant, wild, wildLevel);
             }
 
-            // Log with the actual awarded amount (post-titles), keep shiny flag
             AddToLogMerged(s.log, wild.id, awarded, shiny);
 
-            // Broadcast a compact battle result for observers (UI/analytics/achievements)
             GameEvents.BattleFinished?.Invoke(new BattleResult
             {
-                victory      = hb.victory,
-                creditsGained  = awarded, // already titles-scaled + actually banked
-                wildDef      = wild,
-                wildLevel    = wildLevel
+                victory = hb.victory,
+                creditsGained = awarded,
+                wildDef = wild,
+                wildLevel = wildLevel
             });
         }
 
         TrimLog(s.log, config.encounterLogMaxEntries);
         IdleBattleStore.Save(s);
 
-        // Final UI refresh at the end of the batch (covers partial loops / last update)
         encounterManager?.RequestStateRefresh();
 
         ResourceBank.EndBatch();
     }
 
-    private static bool SpendEnergyIfPossible(int cost)
+    // ─────────────────────────────────────────────────────────────
+    // Bank-only energy spend (prefer EncounterManager for timer correctness)
+    // ─────────────────────────────────────────────────────────────
+    private static bool SpendEnergy(int cost)
     {
         cost = Mathf.Max(1, cost);
-        if (SaveManager.Data.encounterPoints < cost) return false;
-        SaveManager.Data.encounterPoints -= cost;
-        if (SaveManager.Data.encounterPoints < 0) SaveManager.Data.encounterPoints = 0;
-        SaveManager.Save();
+
+        // Prefer EncounterManager so it updates JSON regen timing baseline
+        if (EncounterManager.I != null)
+        {
+            // If effective cost differs from the configured encounterCost,
+            // we spend directly from the bank but ALSO update the regen baseline data
+            // by calling Add/Spend style baseline updates in EncounterManager where possible.
+            //
+            // EncounterManager.SpendEnergy() uses encounterCost, so we cannot call it with a custom cost.
+            // Instead we:
+            //  1) bank spend
+            //  2) request EncounterManager to refresh state (it will tick baseline on next update)
+            if (ResourceBank.Get(ResourceType.Energy) < cost) return false;
+            if (!ResourceBank.TrySpend(ResourceType.Energy, cost)) return false;
+
+            GameEvents.EnergyChanged?.Invoke();
+            EncounterManager.I.RequestStateRefresh();
+            return true;
+        }
+
+        // Fallback (still bank-only)
+        if (ResourceBank.Get(ResourceType.Energy) < cost) return false;
+        if (!ResourceBank.TrySpend(ResourceType.Energy, cost)) return false;
+
+        GameEvents.EnergyChanged?.Invoke();
         return true;
+    }
+
+    private int GetEnergySafe()
+    {
+        // authoritative: EncounterManager reads bank; this keeps future-proofing
+        if (encounterManager != null) return encounterManager.GetEnergyPoints();
+        if (EncounterManager.I != null) return EncounterManager.I.GetEnergyPoints();
+        return ResourceBank.Get(ResourceType.Energy);
+    }
+
+    private int GetEncounterCostSafe()
+    {
+        if (encounterManager != null) return Mathf.Max(1, encounterManager.GetEncounterCost());
+        if (EncounterManager.I != null) return Mathf.Max(1, EncounterManager.I.GetEncounterCost());
+        return Mathf.Max(1, SaveManager.Data != null ? SaveManager.Data.encounterCost : 1);
     }
 
     private static int RollWildLevel()
     {
-        var team = SaveManager.Data.team;
+        var team = SaveManager.Data?.team;
         int avg = 1;
         if (team != null && team.Count > 0)
         {
@@ -315,6 +355,7 @@ public class IdleBattleManager : MonoBehaviour
     {
         int baseOdds = 512;
         float mult = 1f;
+
         var list = SaveManager.Data?.activeShinyBoosts;
         if (list != null && list.Count > 0)
         {
@@ -323,6 +364,7 @@ public class IdleBattleManager : MonoBehaviour
             if (cur != null && cur.expireUnix > now)
                 mult = Mathf.Max(1f, cur.bonus);
         }
+
         int threshold = Mathf.Max(1, Mathf.FloorToInt(baseOdds / Mathf.Max(1f, mult)));
         return rng.Next(threshold) == 0;
     }
@@ -340,12 +382,20 @@ public class IdleBattleManager : MonoBehaviour
     private static void AddToLogMerged(List<IdleEncounterLogEntry> log, string monsterId, int credits, bool shiny)
     {
         if (log == null) return;
+
         var e = log.Find(x => x.monsterId == monsterId);
         if (e == null)
         {
-            e = new IdleEncounterLogEntry { monsterId = monsterId, count = 0, credits = 0, shinySeen = false };
+            e = new IdleEncounterLogEntry
+            {
+                monsterId = monsterId,
+                count = 0,
+                credits = 0,
+                shinySeen = false
+            };
             log.Add(e);
         }
+
         e.count += 1;
         e.credits += Mathf.Max(0, credits);
         e.shinySeen |= shiny;
@@ -360,9 +410,11 @@ public class IdleBattleManager : MonoBehaviour
     private void ForceOpenSummary()
     {
         if (!rewardPanel) return;
+
         var s = IdleBattleStore.Load();
         var sum = BuildSummary(s);
         if (sum.totalEncounters <= 0 && sum.totalcredits <= 0) return;
+
         rewardPanel.Open(sum, onCollected: () => IdleBattleStore.ClearLog());
     }
 
@@ -376,6 +428,7 @@ public class IdleBattleManager : MonoBehaviour
     private IdleBattleSummary BuildSummary(IdleBattleSession s)
     {
         var res = new IdleBattleSummary();
+
         if (s?.log != null)
         {
             foreach (var e in s.log)
@@ -400,8 +453,11 @@ public class IdleBattleManager : MonoBehaviour
     private float EstimateDurationSecondsFromLog(IdleBattleSession s)
     {
         if (s?.log == null) return 0f;
+
         int encounters = 0;
-        for (int i = 0; i < s.log.Count; i++) encounters += s.log[i].count;
+        for (int i = 0; i < s.log.Count; i++)
+            encounters += s.log[i].count;
+
         return encounters * config.secondsPerEncounter;
     }
 
@@ -448,21 +504,30 @@ public class IdleBattleManager : MonoBehaviour
     {
         view = default;
         if (boxed == null) return false;
+
         var t = boxed.GetType();
 
         var fNoCrit = t.GetField("cannotBeCrit");
-        var fPct    = t.GetField("percentReduce");
-        var fFlat   = t.GetField("flatReduce");
+        var fPct = t.GetField("percentReduce");
+        var fFlat = t.GetField("flatReduce");
 
         bool ok = true;
-        bool noCrit = false; float pct = 0f; int flat = 0;
+        bool noCrit = false;
+        float pct = 0f;
+        int flat = 0;
 
         if (fNoCrit != null && fNoCrit.FieldType == typeof(bool)) noCrit = (bool)fNoCrit.GetValue(boxed); else ok = false;
-        if (fPct    != null && fPct.FieldType    == typeof(float)) pct    = (float)fPct.GetValue(boxed);   else ok = false;
-        if (fFlat   != null && fFlat.FieldType   == typeof(int))   flat   = (int)fFlat.GetValue(boxed);    else ok = false;
+        if (fPct != null && fPct.FieldType == typeof(float)) pct = (float)fPct.GetValue(boxed); else ok = false;
+        if (fFlat != null && fFlat.FieldType == typeof(int)) flat = (int)fFlat.GetValue(boxed); else ok = false;
 
         if (!ok) return false;
-        view = new DamageFilterView { cannotBeCrit = noCrit, percentReduce = pct, flatReduce = flat };
+
+        view = new DamageFilterView
+        {
+            cannotBeCrit = noCrit,
+            percentReduce = pct,
+            flatReduce = flat
+        };
         return true;
     }
 }

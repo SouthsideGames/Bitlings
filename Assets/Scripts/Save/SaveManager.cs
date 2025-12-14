@@ -39,9 +39,9 @@ public static class SaveManager
     public static string BackupPath => Path.Combine(Application.persistentDataPath, "idle_mon_save.bak");
     public static string JobRuntimePath => Path.Combine(Application.persistentDataPath, "idle_job_runtime.json");
 
-    // ─────────────────────────────────────────────────────────────
+    // ─────────────────────────────────────────────
     // Auto-generated handler names
-    // ─────────────────────────────────────────────────────────────
+    // ─────────────────────────────────────────────
 
     private static readonly string[] namePrefixes = new string[]
     {
@@ -75,9 +75,9 @@ public static class SaveManager
         return $"{prefix} {stem}-{hex}";
     }
 
-    // ─────────────────────────────────────────────────────────────
+    // ─────────────────────────────────────────────
     // Lifecycle
-    // ─────────────────────────────────────────────────────────────
+    // ─────────────────────────────────────────────
 
     public static void LoadOrCreate()
     {
@@ -165,16 +165,48 @@ public static class SaveManager
         }
     }
 
+    // ─────────────────────────────────────────────
+    // Hard reset (new account)
+    // ─────────────────────────────────────────────
     public static void ClearAll()
     {
+        // Delete persisted save files
         try { if (File.Exists(SavePath)) File.Delete(SavePath); } catch { }
         try { if (File.Exists(BackupPath)) File.Delete(BackupPath); } catch { }
         try { if (File.Exists(JobRuntimePath)) File.Delete(JobRuntimePath); } catch { }
 
+        // Brand-new save object
         Data = NewFreshPlayer();
+
+        // Initialize ResourceBank cleanly (single source of truth for ALL resources)
+        ResourceBank.EnsureSize();
+
+        foreach (ResourceType t in Enum.GetValues(typeof(ResourceType)))
+            ResourceBank.Set(t, 0);
+
+        // Starting resources (adjust as desired)
+        ResourceBank.Set(ResourceType.Energy, 50);
+        ResourceBank.Set(ResourceType.Credits, 0);
+        ResourceBank.Set(ResourceType.Medkit, 0);
+        ResourceBank.Set(ResourceType.PackVoucher, 0);
+
+        // Reset encounter config + JSON regen timers
+        Data.encounterMax = 50;
+        Data.encounterCost = 5;
+        Data.lastEncounterResetYMD = 0;
+
+        Data.energyLastUnix = NowUnix();
+        Data.energyRemainderSecs = 0f;
+
+        // Persist immediately
         Save();
 
+        // Notify dependent systems
         GameEvents.OnJobsChanged?.Invoke();
+        GameEvents.OnResourcesChanged?.Invoke();
+        GameEvents.EnergyChanged?.Invoke();
+
+        // Rebuild job state cleanly
         if (JobManager.I)
         {
             JobManager.I.LoadAssignmentsFromSave();
@@ -182,7 +214,7 @@ public static class SaveManager
             JobManager.I.RefreshAllJobSiteViewsInScene();
         }
 
-        Debug.Log("SaveManager: Cleared JSON save and reset state.");
+        Debug.Log($"[CLEAR ALL] New account created. Energy={ResourceBank.Get(ResourceType.Energy)}/{Data.encounterMax}");
     }
 
     public static void OnResume()
@@ -195,9 +227,9 @@ public static class SaveManager
         HealthRegenSystem.I?.TryApplyOfflineRegen();
     }
 
-    // ─────────────────────────────────────────────────────────────
+    // ─────────────────────────────────────────────
     // Defaults / Normalization
-    // ─────────────────────────────────────────────────────────────
+    // ─────────────────────────────────────────────
 
     static PlayerManager NewFreshPlayer()
     {
@@ -205,9 +237,12 @@ public static class SaveManager
         {
             encounterMax = 50,
             encounterCost = 5,
-            encounterPoints = 50,
             lastEncounterResetYMD = TodayYMD(),
             lastSavedUnix = NowUnix(),
+
+            // JSON-only energy regen timing (required by EncounterManager.Energy bank-only)
+            energyLastUnix = NowUnix(),
+            energyRemainderSecs = 0f,
 
             // Win streak
             winStreak = 0,
@@ -245,6 +280,9 @@ public static class SaveManager
         // Auto-generate a handler name for a totally fresh save
         p.playerName = GeneratePlayerName();
 
+        // IMPORTANT: Resource counts are managed by ResourceBank.EnsureSize().
+        // Here we can leave resourceCounts null; EnsureDefaults/ResourceBank will size it.
+
         return p;
     }
 
@@ -274,19 +312,20 @@ public static class SaveManager
         if (string.IsNullOrEmpty(Data.playerId)) Data.playerId = Guid.NewGuid().ToString("N");
         if (string.IsNullOrEmpty(Data.playerName)) Data.playerName = GeneratePlayerName();
 
-        // Encounter economy
+        // Encounter config
         if (Data.encounterMax <= 0) Data.encounterMax = 50;
         if (Data.encounterCost <= 0) Data.encounterCost = 5;
-        if (Data.encounterPoints < 0) Data.encounterPoints = 0;
         if (Data.lastEncounterResetYMD == 0) Data.lastEncounterResetYMD = TodayYMD();
+
+        // JSON-only energy regen timing
+        if (Data.energyLastUnix <= 0) Data.energyLastUnix = NowUnix();
+        if (Data.energyRemainderSecs < 0f) Data.energyRemainderSecs = 0f;
 
         // Win streak defaults / clamp
         if (Data.winStreak < 0) Data.winStreak = 0;
 
-        // Resource counts sized to enum
-        int need = Enum.GetValues(typeof(ResourceType)).Length;
-        Data.resourceCounts ??= new List<int>(new int[Mathf.Max(1, need)]);
-        while (Data.resourceCounts.Count < need) Data.resourceCounts.Add(0);
+        // Resource counts: size using the same rule as ResourceBank.EnsureSize()
+        EnsureResourceCountsSized();
 
         // Mirrors for hashsets/lists
         Data.ownedIds ??= new HashSet<string>();
@@ -382,6 +421,20 @@ public static class SaveManager
         if (Data.lastSavedUnix <= 0) Data.lastSavedUnix = NowUnix();
     }
 
+    static void EnsureResourceCountsSized()
+    {
+        if (Data == null) return;
+
+        Data.resourceCounts ??= new List<int>();
+
+        int need = 0;
+        foreach (ResourceType t in Enum.GetValues(typeof(ResourceType)))
+            need = Mathf.Max(need, (int)t + 1);
+
+        while (Data.resourceCounts.Count < need)
+            Data.resourceCounts.Add(0);
+    }
+
     static void NormalizeOwnedEntries(List<OwnedMonsterData> list)
     {
         if (list == null) return;
@@ -426,9 +479,9 @@ public static class SaveManager
         }
     }
 
-    // ─────────────────────────────────────────────────────────────
+    // ─────────────────────────────────────────────
     // Discovery API
-    // ─────────────────────────────────────────────────────────────
+    // ─────────────────────────────────────────────
 
     public static bool IsDiscovered(string monsterId)
     {
@@ -453,9 +506,9 @@ public static class SaveManager
         return true;
     }
 
-    // ─────────────────────────────────────────────────────────────
+    // ─────────────────────────────────────────────
     // Buff/Lure Expiration
-    // ─────────────────────────────────────────────────────────────
+    // ─────────────────────────────────────────────
 
     static bool PruneExpiredLures(bool saveIfChanged)
     {
@@ -500,9 +553,9 @@ public static class SaveManager
         return changed;
     }
 
-    // ─────────────────────────────────────────────────────────────
+    // ─────────────────────────────────────────────
     // Utilities
-    // ─────────────────────────────────────────────────────────────
+    // ─────────────────────────────────────────────
 
     public static int TodayYMD()
     {
@@ -619,9 +672,9 @@ public static class SaveManager
         Save();
     }
 
-    // ─────────────────────────────────────────────────────────────
+    // ─────────────────────────────────────────────
     // Job runtime sidecar I/O (slot fatigue + cooldown)
-    // ─────────────────────────────────────────────────────────────
+    // ─────────────────────────────────────────────
 
     public static void SaveJobRuntime(JobRuntimeSave blob)
     {

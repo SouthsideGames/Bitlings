@@ -142,28 +142,36 @@ public class MonsterPackManager : MonoBehaviour
 
         Unlock(packId);
 
-        // Optional popup
         GameEvents.ShowRewardPopup?.Invoke(pack.displayName, "Pack Unlocked", 0, 0);
 
         AudioManager.I.PlaySfx(SfxType.Purchase);
         return true;
     }
 
-    public void Unlock(string packId)
+   public void Unlock(string packId)
     {
         var data = SaveManager.Data;
         if (data == null) return;
 
         data.unlockedPacks ??= new System.Collections.Generic.List<string>();
+
+        bool added = false;
         if (!data.unlockedPacks.Contains(packId))
         {
             data.unlockedPacks.Add(packId);
-            SaveManager.Save(); // persist
+            added = true;
         }
+
+        // Persist (only if changed)
+        if (added)
+            SaveManager.Save();
+
+        MonsterCatalog.Invalidate();
+
+        GameEvents.OnResourcesChanged?.Invoke();
 
         try { OnPackUnlocked?.Invoke(packId); } catch { /* ignore */ }
 
-        // Optionally: register contained monsters in MonsterLibrary
         RegisterUnlockedMonsters(packId);
     }
 

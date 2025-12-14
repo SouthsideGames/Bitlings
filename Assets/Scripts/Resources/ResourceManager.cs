@@ -255,4 +255,25 @@ public class ResourceManager : MonoBehaviour
     }
 
     private static long NowUnix() => DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+
+    public void InitializeNewAccountResources()
+    {
+        ResourceBank.EnsureSize();
+
+        // Hard reset all resources
+        foreach (ResourceType t in Enum.GetValues(typeof(ResourceType)))
+        {
+            ResourceBank.Set(t, 0);
+        }
+
+        // Starting values
+        ResourceBank.Set(ResourceType.Energy, 10); // <-- your starting energy
+        ResourceBank.Set(ResourceType.Credits, 0);
+        ResourceBank.Set(ResourceType.Medkit, 0);
+        ResourceBank.Set(ResourceType.PackVoucher, 0);
+
+        SaveManager.Save();
+        GameEvents.OnResourcesChanged?.Invoke();
+    }
+
 }

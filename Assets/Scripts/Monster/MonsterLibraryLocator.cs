@@ -3,10 +3,10 @@ using System.Collections.Generic;
 
 public static class MonsterLibraryLocator
 {
-    private const string ResourcePath = "MonsterLibrary"; // → Assets/Resources/MonsterLibrary.asset
+    private const string ResourcePath = "MonsterLibrary";
     private static MonsterLibrarySO _lib;
     private static Dictionary<string, MonsterDataSO> _byId;
-
+    public static IReadOnlyList<MonsterDataSO> AllMonsters => MonsterCatalog.All;
 
     public static MonsterLibrarySO Lib
     {
@@ -35,28 +35,17 @@ public static class MonsterLibraryLocator
     // Lookup Methods
     // ─────────────────────────────────────────────────────────────────────────────
 
-    /// <summary>Gets a MonsterDataSO by ID, using cached dictionary if available.</summary>
-    public static MonsterDataSO GetById(string id)
+   public static MonsterDataSO GetById(string id)
     {
-        if (string.IsNullOrEmpty(id)) return null;
-        if (_byId == null) RebuildIndex();
-
-        // Primary lookup
-        if (_byId != null && _byId.TryGetValue(id, out var def))
-            return def;
-
-        // Secondary fallback (direct query from Lib)
-        return _lib != null ? _lib.GetById(id) : null;
+        return MonsterCatalog.GetById(id);
     }
 
-    /// <summary>Returns true if the given monster ID exists in the library.</summary>
     public static bool TryGet(string id, out MonsterDataSO def)
     {
         def = GetById(id);
         return def != null;
     }
 
-    /// <summary>Clears and rebuilds the ID→MonsterData dictionary.</summary>
     public static void RebuildIndex()
     {
         _byId = null;
@@ -79,6 +68,7 @@ public static class MonsterLibraryLocator
         }
     }
 
-    /// <summary>For editor or runtime diagnostics. Returns all loaded monsters.</summary>
     public static IReadOnlyDictionary<string, MonsterDataSO> GetAll() => _byId;
+
+    
 }
