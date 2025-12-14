@@ -3,6 +3,7 @@ using UnityEngine.UI;
 using TMPro;
 using System.Collections;
 using System.Collections.Generic;
+using Random = UnityEngine.Random;
 
 public class EncounterPanelUI : MonoBehaviour
 {
@@ -18,7 +19,6 @@ public class EncounterPanelUI : MonoBehaviour
     // Blinder (localized + weighted random)
     // ─────────────────────────────────────────────────────────────
     [Header("Blinder")]
-    [SerializeField] private CanvasGroup storyGroup; // (if you removed this, delete this line)
     [SerializeField] private CanvasGroup blinderGroup;
     [SerializeField] private TextMeshProUGUI blinderText;
     [SerializeField, Range(0.05f, 1.5f)] private float preFadeDelay = 0.25f;
@@ -92,6 +92,33 @@ public class EncounterPanelUI : MonoBehaviour
     [SerializeField] private GameObject ownedCapturedIcon;
 
     // ─────────────────────────────────────────────────────────────
+    // Hire Decision (Capture Prompt overlay, like blinderGroup)
+    // ─────────────────────────────────────────────────────────────
+    [Header("Hire Decision")]
+    [SerializeField] private CanvasGroup hireDecisionGroup;
+    [SerializeField] private Image hireMonsterIcon;
+    [SerializeField] private TextMeshProUGUI hirePromptText;
+    [SerializeField] private Button hireYesButton;
+    [SerializeField] private Button hireNoButton;
+
+    [Header("Hire Decision Result Prefabs")]
+    [SerializeField] private Transform hireResultSpawnPoint;
+    [SerializeField] private GameObject hireAgreePrefab;
+    [SerializeField] private GameObject hireDenyPrefab;
+
+    [Header("Hire Decision FX")]
+    [SerializeField, Range(0.05f, 0.5f)] private float hireDecisionFadeIn = 0.15f;
+    [SerializeField, Range(0.05f, 0.5f)] private float hireDecisionFadeOut = 0.15f;
+
+    private MonsterDataSO _pendingHireDef;
+    private int _pendingHireLevel;
+    Coroutine _hireDecisionCo;
+
+    // Exposed for EncounterManager to wait correctly
+    public bool IsHireDecisionOpen =>
+        hireDecisionGroup && hireDecisionGroup.alpha > 0.01f && hireDecisionGroup.blocksRaycasts;
+
+    // ─────────────────────────────────────────────────────────────
     // Wild State HUD (guard / shield / charge)
     // ─────────────────────────────────────────────────────────────
     [Header("Wild State")]
@@ -133,7 +160,15 @@ public class EncounterPanelUI : MonoBehaviour
         if (ownedCapturedIcon)
             ownedCapturedIcon.SetActive(false);
 
-        // Initial line (random or fallback) + initial background tint
+        // Hire decision starts hidden (like an overlay)
+        if (hireDecisionGroup)
+        {
+            hireDecisionGroup.alpha = 0f;
+            hireDecisionGroup.blocksRaycasts = false;
+            hireDecisionGroup.interactable = false;
+            hireDecisionGroup.gameObject.SetActive(true);
+        }
+
         RefreshBlinderTint();
         PickAndApplyBlinderLine(forcePick: true);
     }
@@ -169,6 +204,18 @@ public class EncounterPanelUI : MonoBehaviour
             ClearTeamPreview();
         }
 
+        // Hire decision button wiring
+        if (hireYesButton)
+        {
+            hireYesButton.onClick.RemoveAllListeners();
+            hireYesButton.onClick.AddListener(OnClickHireYes);
+        }
+        if (hireNoButton)
+        {
+            hireNoButton.onClick.RemoveAllListeners();
+            hireNoButton.onClick.AddListener(OnClickHireNo);
+        }
+
         RefreshAll();
 
         GameEvents.BattleFinished += OnBattleFinished;
@@ -191,6 +238,11 @@ public class EncounterPanelUI : MonoBehaviour
         if (_fadeCo != null) StopCoroutine(_fadeCo);
         if (_typewriterCo != null) StopCoroutine(_typewriterCo);
         _isFading = false;
+
+        if (hireYesButton) hireYesButton.onClick.RemoveAllListeners();
+        if (hireNoButton) hireNoButton.onClick.RemoveAllListeners();
+        if (_hireDecisionCo != null) StopCoroutine(_hireDecisionCo);
+        _hireDecisionCo = null;
     }
 
     void Update()
@@ -325,12 +377,15 @@ public class EncounterPanelUI : MonoBehaviour
     {
         if (_isFading) return;
 
+        // If hire decision is visible, ignore encounter clicks
+        if (IsHireDecisionOpen)
+            return;
+
         bool auto = IsAutoMode();
         bool inBattle = IsInBattle();
         bool nextFree = NextEncounterIsFree();
         bool hasEnergy = HasEnergy();
 
-        // No energy -> shake + denied SFX, but do NOT disable button
         if (!inBattle && !auto && !nextFree && !hasEnergy)
         {
             PlayNoEnergyFX();
@@ -361,7 +416,6 @@ public class EncounterPanelUI : MonoBehaviour
             blinderGroup.interactable = true;
         }
 
-        // Stop any ongoing typewriter when fading out
         if (_typewriterCo != null)
         {
             StopCoroutine(_typewriterCo);
@@ -432,7 +486,6 @@ public class EncounterPanelUI : MonoBehaviour
         blinderGroup.blocksRaycasts = true;
         blinderGroup.interactable = true;
 
-        // Stop any ongoing typewriter while we tween alpha
         if (_typewriterCo != null)
         {
             StopCoroutine(_typewriterCo);
@@ -466,6 +519,143 @@ public class EncounterPanelUI : MonoBehaviour
     }
 
     // ─────────────────────────────────────────────────────────────
+    // Hire Decision API (called by EncounterManager on manual victory)
+    // ─────────────────────────────────────────────────────────────
+    public void ShowHireDecision(MonsterDataSO def, int level)
+    {
+        if (!hireDecisionGroup || def == null)
+        {
+            // Safety: if missing, do not block summary
+            PostBattleSummaryManager.I?.SetAutoBattling(false);
+            PostBattleSummaryManager.I?.FlushNowIfPossible();
+            return;
+        }
+
+        _pendingHireDef = def;
+        _pendingHireLevel = Mathf.Max(1, level);
+
+        if (hireMonsterIcon) hireMonsterIcon.sprite = def.icon;
+        if (hirePromptText) hirePromptText.text = $"Do you want to hire {def.displayName}?";
+
+        // Ensure previous result isn't still sitting there
+        ClearHireResultVisuals();
+
+        // Hide blinder while decision is up
+        ShowBlinder(false, instant: true);
+
+        if (_hireDecisionCo != null) StopCoroutine(_hireDecisionCo);
+        _hireDecisionCo = StartCoroutine(Co_ShowHireDecision());
+    }
+
+    IEnumerator Co_ShowHireDecision()
+    {
+        hireDecisionGroup.gameObject.SetActive(true);
+        hireDecisionGroup.blocksRaycasts = true;
+        hireDecisionGroup.interactable = true;
+
+        float dur = Mathf.Max(0.05f, hireDecisionFadeIn);
+        float t = 0f;
+        float start = hireDecisionGroup.alpha;
+
+        while (t < dur)
+        {
+            t += Time.unscaledDeltaTime;
+            hireDecisionGroup.alpha = Mathf.Lerp(start, 1f, t / dur);
+            yield return null;
+        }
+
+        hireDecisionGroup.alpha = 1f;
+        _hireDecisionCo = null;
+    }
+
+    IEnumerator Co_HideHireDecision()
+    {
+        hireDecisionGroup.blocksRaycasts = false;
+        hireDecisionGroup.interactable = false;
+
+        float dur = Mathf.Max(0.05f, hireDecisionFadeOut);
+        float t = 0f;
+        float start = hireDecisionGroup.alpha;
+
+        while (t < dur)
+        {
+            t += Time.unscaledDeltaTime;
+            hireDecisionGroup.alpha = Mathf.Lerp(start, 0f, t / dur);
+            yield return null;
+        }
+
+        hireDecisionGroup.alpha = 0f;
+
+        // keep active for simplicity; blocksRaycasts stays off
+        _hireDecisionCo = null;
+    }
+
+    void OnClickHireYes()
+    {
+        if (_isFading) return;
+
+        bool success = false;
+
+        if (EncounterManager.I != null && _pendingHireDef != null)
+            success = EncounterManager.I.TryCaptureFromDecision(_pendingHireDef, _pendingHireLevel);
+
+        // YES -> agree on success, deny on fail
+        SpawnHireResult(success);
+
+        if (_hireDecisionCo != null) StopCoroutine(_hireDecisionCo);
+        _hireDecisionCo = StartCoroutine(Co_FinishHireDecisionFlow());
+    }
+
+    void OnClickHireNo()
+    {
+        if (_isFading) return;
+
+        // NO -> always deny prefab
+        SpawnHireResult(false);
+
+        if (_hireDecisionCo != null) StopCoroutine(_hireDecisionCo);
+        _hireDecisionCo = StartCoroutine(Co_FinishHireDecisionFlow());
+    }
+
+    IEnumerator Co_FinishHireDecisionFlow()
+    {
+        if (hireDecisionGroup)
+            yield return Co_HideHireDecision();
+
+        // After the decision is resolved, proceed to PostBattleSummary
+        PostBattleSummaryManager.I?.SetAutoBattling(false);
+        PostBattleSummaryManager.I?.FlushNowIfPossible();
+
+        _pendingHireDef = null;
+        _pendingHireLevel = 0;
+        _hireDecisionCo = null;
+    }
+
+    void SpawnHireResult(bool success)
+    {
+        if (!hireResultSpawnPoint) return;
+
+        GameObject prefab = success ? hireAgreePrefab : hireDenyPrefab;
+        if (!prefab) return;
+
+        // Prevent stacking multiple agree/deny objects
+        ClearHireResultVisuals();
+
+        Instantiate(prefab, hireResultSpawnPoint.position, hireResultSpawnPoint.rotation, hireResultSpawnPoint);
+    }
+
+    void ClearHireResultVisuals()
+    {
+        if (!hireResultSpawnPoint) return;
+
+        for (int i = hireResultSpawnPoint.childCount - 1; i >= 0; i--)
+        {
+            var child = hireResultSpawnPoint.GetChild(i);
+            if (child) Destroy(child.gameObject);
+        }
+    }
+
+    // ─────────────────────────────────────────────────────────────
     // Blinder visuals (tints + typewriter)
     // ─────────────────────────────────────────────────────────────
     void RefreshBlinderTint()
@@ -474,14 +664,12 @@ public class EncounterPanelUI : MonoBehaviour
 
         Color tint = defaultBlinderTint;
 
-        // Boss cadence check: if boss is about to trigger, override tint.
         if (IsBossImminent())
         {
             tint = bossImminentTint;
         }
         else
         {
-            // Lure-based tint
             var lure = (EncounterManager.I != null) ? EncounterManager.I.CurrentLure : null;
             if (lure != null)
             {
@@ -549,7 +737,6 @@ public class EncounterPanelUI : MonoBehaviour
 
         blinderText.text = string.Empty;
 
-        // Simple substring-based typewriter; fine for these short lines.
         for (int i = 0; i <= fullText.Length; i++)
         {
             blinderText.text = fullText.Substring(0, i);
@@ -644,7 +831,6 @@ public class EncounterPanelUI : MonoBehaviour
     public int GetEncounterCost() => EncounterManager.I != null ? EncounterManager.I.GetEncounterCost() : 0;
 
     void RequestEncounterTap() => EncounterManager.I?.RequestEncounterTap();
-
     public void OnClickToggleAuto() => EncounterManager.I?.ToggleAutoMode();
 
     // ─────────────────────────────────────────────────────────────
@@ -654,7 +840,6 @@ public class EncounterPanelUI : MonoBehaviour
     {
         if (!blinderText) return;
 
-        // Non-random mode: just show fallback line
         if (!useRandomBlinder && !forcePick)
         {
             ApplyBlinderText(hardFallbackLine, instant: true);
@@ -830,20 +1015,17 @@ public class EncounterPanelUI : MonoBehaviour
         if (!captureBannerGroup || !captureBannerText)
             return;
 
-        // Activate + reset banner
         captureBannerGroup.gameObject.SetActive(true);
         captureBannerGroup.alpha = 0f;
 
         captureBannerText.text = "CAPTURED!";
         captureBannerText.color = isShiny ? shinyColor : successColor;
 
-        // Wild panel punch / subtle glow
         if (wildPanelRoot)
         {
             LeanTween.cancel(wildPanelRoot.gameObject);
             wildPanelRoot.localScale = Vector3.one * 0.9f;
 
-            // Scale punch
             LeanTween.scale(wildPanelRoot.gameObject, Vector3.one * 1.2f, 0.25f)
                 .setEaseOutBack()
                 .setOnComplete(() =>
@@ -853,16 +1035,13 @@ public class EncounterPanelUI : MonoBehaviour
                         .setEaseOutCubic();
                 });
 
-            // Optional extra flair for shiny
             if (isShiny)
             {
-                // quick little tilt wobble
                 LeanTween.rotateZ(wildPanelRoot.gameObject, 15f, 0.12f)
                     .setLoopPingPong(2);
             }
         }
 
-        // Banner fade in → hold → fade out
         LeanTween.value(gameObject, 0f, 1f, 0.25f)
             .setOnUpdate(a =>
             {
@@ -891,14 +1070,12 @@ public class EncounterPanelUI : MonoBehaviour
         if (!captureBannerGroup || !captureBannerText)
             return;
 
-        // Activate + reset banner
         captureBannerGroup.gameObject.SetActive(true);
         captureBannerGroup.alpha = 0f;
 
         captureBannerText.text = "ESCAPED!";
         captureBannerText.color = failColor;
 
-        // Wild panel shake
         if (wildPanelRoot)
         {
             LeanTween.cancel(wildPanelRoot.gameObject);
@@ -913,7 +1090,6 @@ public class EncounterPanelUI : MonoBehaviour
                 });
         }
 
-        // Banner fade in → hold → fade out
         LeanTween.value(gameObject, 0f, 1f, 0.2f)
             .setOnUpdate(a =>
             {
@@ -957,9 +1133,6 @@ public class EncounterPanelUI : MonoBehaviour
             wildStateLabel.text = string.Empty;
     }
 
-    /// <summary>
-    /// Called by enemy / battle logic when the wild monster uses or stops Guard.
-    /// </summary>
     public void SetWildGuarding(bool isGuarding)
     {
         _wildIsGuarding = isGuarding;
@@ -970,9 +1143,6 @@ public class EncounterPanelUI : MonoBehaviour
         RefreshWildStateLabel();
     }
 
-    /// <summary>
-    /// Set the wild monster's current shield amount (0 = none).
-    /// </summary>
     public void SetWildShield(int shieldAmount)
     {
         _wildShieldAmount = Mathf.Max(0, shieldAmount);
@@ -983,10 +1153,6 @@ public class EncounterPanelUI : MonoBehaviour
         RefreshWildStateLabel();
     }
 
-    /// <summary>
-    /// Set how many turns the wild monster has left on its charge.
-    /// Use 0 to mean "not charging".
-    /// </summary>
     public void SetWildChargeTurns(int turnsRemaining)
     {
         _wildChargeTurns = Mathf.Max(0, turnsRemaining);
@@ -997,10 +1163,6 @@ public class EncounterPanelUI : MonoBehaviour
         RefreshWildStateLabel();
     }
 
-    /// <summary>
-    /// Rebuilds the small summary text under the wild monster.
-    /// Example output: "Guard • Shield 25 • Charging (1)"
-    /// </summary>
     void RefreshWildStateLabel()
     {
         if (!wildStateLabel)
@@ -1017,24 +1179,16 @@ public class EncounterPanelUI : MonoBehaviour
         if (_wildChargeTurns > 0)
             parts.Add($"Charging ({_wildChargeTurns})");
 
-        if (parts.Count == 0)
-            wildStateLabel.text = string.Empty;
-        else
-            wildStateLabel.text = string.Join(" • ", parts);
+        wildStateLabel.text = (parts.Count == 0) ? string.Empty : string.Join(" • ", parts);
     }
 
-    // ─────────────────────────────────────────────────────────────
-    // Wild spawn → "already owned" icon
-    // ─────────────────────────────────────────────────────────────
     public void OnWildSpawned(MonsterDataSO def)
     {
-        // Reset previous wild state whenever a new encounter begins
         ClearWildStateUI();
 
         if (!ownedCapturedIcon)
             return;
 
-        // No data loaded yet → be safe and hide
         if (SaveManager.Data == null || SaveManager.Data.ownedIds == null || def == null)
         {
             ownedCapturedIcon.SetActive(false);

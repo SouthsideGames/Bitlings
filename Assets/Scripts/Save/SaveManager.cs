@@ -11,7 +11,7 @@ public class JobRuntimeSite
 {
     public JobType job;
     public float[] slotFatigue01;
-    public long[]  slotCooldownUntilUnix;
+    public long[] slotCooldownUntilUnix;
 }
 
 [Serializable]
@@ -35,8 +35,8 @@ public static class SaveManager
 {
     public static PlayerManager Data;
 
-    public static string SavePath       => Path.Combine(Application.persistentDataPath, "idle_mon_save.json");
-    public static string BackupPath     => Path.Combine(Application.persistentDataPath, "idle_mon_save.bak");
+    public static string SavePath => Path.Combine(Application.persistentDataPath, "idle_mon_save.json");
+    public static string BackupPath => Path.Combine(Application.persistentDataPath, "idle_mon_save.bak");
     public static string JobRuntimePath => Path.Combine(Application.persistentDataPath, "idle_job_runtime.json");
 
     // ─────────────────────────────────────────────────────────────
@@ -67,7 +67,7 @@ public static class SaveManager
         }
 
         string prefix = namePrefixes[UnityEngine.Random.Range(0, namePrefixes.Length)];
-        string stem   = nameStems[UnityEngine.Random.Range(0, nameStems.Length)];
+        string stem = nameStems[UnityEngine.Random.Range(0, nameStems.Length)];
 
         // 3 random hex characters
         string hex = UnityEngine.Random.Range(0, 4095).ToString("X3");
@@ -93,6 +93,10 @@ public static class SaveManager
         }
 
         EnsureDefaults();
+
+        // ✅ Important: rebuild transient sets (HashSets) from list mirrors after defaults
+        Data?.EnsureTransientSets();
+
         EnsureTrainingDefaults();
 
         PruneExpiredCaptureBands(true);
@@ -102,9 +106,16 @@ public static class SaveManager
 
     public static void Save()
     {
+        if (Data == null)
+        {
+            Debug.LogWarning("SaveManager.Save called with Data == null. Creating fresh player.");
+            Data = NewFreshPlayer();
+        }
+
         try
         {
             // Keep mirrors in sync for JSON
+
             if (Data.ownedIds != null)
             {
                 Data.ownedIdsList ??= new List<string>();
@@ -128,6 +139,7 @@ public static class SaveManager
                 foreach (var j in Data.unlockedJobSites) Data.unlockedJobSitesList.Add(j);
             }
 
+            // ✅ Discovery mirror: Set -> List for JSON
             if (Data.discoveredMonsterIds != null)
             {
                 Data.discoveredMonsterIdsList ??= new List<string>();
@@ -210,7 +222,7 @@ public static class SaveManager
             unlockedJobSites = new HashSet<JobType>(),
             unlockedJobSitesList = new List<JobType>(),
 
-            // ✅ NEW: pack discovery
+            // ✅ pack discovery
             discoveredMonsterIds = new HashSet<string>(),
             discoveredMonsterIdsList = new List<string>(),
 
@@ -238,6 +250,12 @@ public static class SaveManager
 
     static void EnsureDefaults()
     {
+        if (Data == null)
+        {
+            Data = NewFreshPlayer();
+            return;
+        }
+
         // Base collections
         Data.owned ??= new List<OwnedMonsterData>();
         Data.team ??= new List<OwnedMonsterData>();
@@ -262,7 +280,7 @@ public static class SaveManager
         if (Data.encounterPoints < 0) Data.encounterPoints = 0;
         if (Data.lastEncounterResetYMD == 0) Data.lastEncounterResetYMD = TodayYMD();
 
-        // ✅ Win streak defaults / clamp
+        // Win streak defaults / clamp
         if (Data.winStreak < 0) Data.winStreak = 0;
 
         // Resource counts sized to enum
@@ -278,7 +296,7 @@ public static class SaveManager
         Data.unlockedJobSites ??= new HashSet<JobType>();
         Data.unlockedJobSitesList ??= new List<JobType>();
 
-        // ✅ NEW: discovery mirrors
+        // ✅ discovery mirrors
         Data.discoveredMonsterIds ??= new HashSet<string>();
         Data.discoveredMonsterIdsList ??= new List<string>();
 
@@ -296,7 +314,7 @@ public static class SaveManager
         for (int i = 0; i < Data.unlockedJobSitesList.Count; i++)
             Data.unlockedJobSites.Add(Data.unlockedJobSitesList[i]);
 
-        // ✅ NEW: rebuild discoveredMonsterIds from JSON list
+        // ✅ rebuild discoveredMonsterIds from JSON list
         Data.discoveredMonsterIds.Clear();
         for (int i = 0; i < Data.discoveredMonsterIdsList.Count; i++)
         {
@@ -312,42 +330,34 @@ public static class SaveManager
         NormalizeOwnedEntries(Data.owned);
         NormalizeOwnedEntries(Data.team);
 
-        // Ensure any team member exists in owned list AND that the team slot
-        // references the owned instance (no separate copies).
+        // Ensure any team member exists in owned list AND that the team slot references the owned instance
         for (int i = 0; i < Data.team.Count; i++)
         {
             var t = Data.team[i];
             if (t == null || string.IsNullOrEmpty(t.monsterId))
                 continue;
 
-            // Try to find a matching owned entry by ownedUID first
             OwnedMonsterData canonical = null;
+
             if (!string.IsNullOrEmpty(t.ownedUID))
-            {
                 canonical = Data.owned.Find(o => o != null && o.ownedUID == t.ownedUID);
-            }
 
-            // Fallback: match by monsterId if UID is missing or not found
             if (canonical == null)
-            {
                 canonical = Data.owned.Find(o => o != null && o.monsterId == t.monsterId);
-            }
 
-            // If still not found, create a new owned record from the team data
             if (canonical == null)
             {
                 canonical = new OwnedMonsterData
                 {
                     monsterId = t.monsterId,
-                    level     = Mathf.Max(1, t.level),
+                    level = Mathf.Max(1, t.level),
                     currentHP = t.currentHP <= -1 ? t.currentHP : -1,
                     currentXP = Mathf.Max(0, t.currentXP),
-                    ownedUID  = string.IsNullOrEmpty(t.ownedUID) ? Guid.NewGuid().ToString("N") : t.ownedUID
+                    ownedUID = string.IsNullOrEmpty(t.ownedUID) ? Guid.NewGuid().ToString("N") : t.ownedUID
                 };
                 Data.owned.Add(canonical);
             }
 
-            // Ensure the canonical entry has a UID
             if (string.IsNullOrEmpty(canonical.ownedUID))
             {
                 canonical.ownedUID = string.IsNullOrEmpty(t.ownedUID)
@@ -355,10 +365,8 @@ public static class SaveManager
                     : t.ownedUID;
             }
 
-            // ✅ Make this team slot reference the canonical owned object
             Data.team[i] = canonical;
 
-            // Track species in ownedIds
             if (!string.IsNullOrEmpty(canonical.monsterId))
                 Data.ownedIds.Add(canonical.monsterId);
         }
@@ -387,19 +395,14 @@ public static class SaveManager
                 om = list[i];
             }
 
-            // Enforce minimums and consistent sentinels
             if (om.level <= 0) om.level = 1;
             if (om.currentXP < 0) om.currentXP = 0;
 
-            // Keep 0 HP as "downed" so the player must heal or bench them.
-            // Only coerce values less than -1 up to the -1 sentinel.
             if (om.currentHP < -1) om.currentHP = -1;
 
-            // Ensure a stable UID for references
             if (string.IsNullOrEmpty(om.ownedUID))
                 om.ownedUID = Guid.NewGuid().ToString("N");
 
-            // Track species in ownedIds if this belongs to the owned list
             if (ReferenceEquals(list, Data.owned) && !string.IsNullOrEmpty(om.monsterId))
                 Data.ownedIds.Add(om.monsterId);
         }
@@ -424,7 +427,7 @@ public static class SaveManager
     }
 
     // ─────────────────────────────────────────────────────────────
-    // Discovery API (optional helpers, but useful for pack unlocks)
+    // Discovery API
     // ─────────────────────────────────────────────────────────────
 
     public static bool IsDiscovered(string monsterId)
@@ -442,7 +445,6 @@ public static class SaveManager
         bool added = Data.discoveredMonsterIds.Add(monsterId);
         if (!added) return false;
 
-        // Keep list mirror in sync immediately (so next Save has it)
         Data.discoveredMonsterIdsList ??= new List<string>();
         if (!Data.discoveredMonsterIdsList.Contains(monsterId))
             Data.discoveredMonsterIdsList.Add(monsterId);
@@ -565,17 +567,16 @@ public static class SaveManager
         if (Data == null || string.IsNullOrEmpty(monsterId)) return;
         EnsureDefaults();
 
-        // 1) Ensure an OWNED instance exists
         var ownedMonster = Data.owned.Find(o => o != null && o.monsterId == monsterId);
         if (ownedMonster == null)
         {
             ownedMonster = new OwnedMonsterData
             {
                 monsterId = monsterId,
-                level     = Mathf.Max(1, level),
+                level = Mathf.Max(1, level),
                 currentHP = -1,
                 currentXP = 0,
-                ownedUID  = Guid.NewGuid().ToString("N")
+                ownedUID = Guid.NewGuid().ToString("N")
             };
             Data.owned.Add(ownedMonster);
         }
@@ -587,25 +588,19 @@ public static class SaveManager
                 ownedMonster.ownedUID = Guid.NewGuid().ToString("N");
         }
 
-        // 2) Ensure that EXACT instance is on the team
         bool onTeam = Data.team.Exists(t => t != null && t.ownedUID == ownedMonster.ownedUID);
         if (!onTeam)
         {
-            Data.team.Add(ownedMonster); // same reference, no copy
+            Data.team.Add(ownedMonster);
             if (string.IsNullOrEmpty(Data.trainingMonsterId))
                 Data.trainingMonsterId = monsterId;
         }
 
-        // 3) Track species, seen types, etc.
         Data.ownedIds ??= new HashSet<string>();
         Data.ownedIds.Add(monsterId);
 
-        // ✅ also mark discovered so it can appear in codex/spawn gating
-        Data.discoveredMonsterIds ??= new HashSet<string>();
-        Data.discoveredMonsterIds.Add(monsterId);
-        Data.discoveredMonsterIdsList ??= new List<string>();
-        if (!Data.discoveredMonsterIdsList.Contains(monsterId))
-            Data.discoveredMonsterIdsList.Add(monsterId);
+        // ✅ Use centralized discovery helper
+        Discover(monsterId, save: false);
 
         Data.hasChosenStarter = true;
 

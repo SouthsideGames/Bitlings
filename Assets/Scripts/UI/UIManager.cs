@@ -43,6 +43,12 @@ public class PanelEntry
 {
     public PanelId id;
     public GameObject root;
+
+    [Tooltip("If false, UIManager will NOT add/use a CanvasGroup or fade this panel.")]
+    public bool useFade = true;
+
+    [Tooltip("Optional slide animation even when fade is disabled.")]
+    public bool useSlide = true;
 }
 
 public class UIManager : MonoBehaviour
@@ -78,7 +84,6 @@ public class UIManager : MonoBehaviour
         Show(PanelId.Intro);
     }
 
-    // PUBLIC API
     public void Show(PanelId id) => SetActive(id, true);
     public void Toggle(PanelId id) => SetActive(id, !_open.Contains(id));
     public bool IsOpen(PanelId id) => _open.Contains(id);
@@ -93,25 +98,17 @@ public class UIManager : MonoBehaviour
     public void CloseAll()
     {
         var list = new List<PanelId>(_open);
-        foreach (var id in list)
-        {
-            SetImmediate(id, false, fireEvent: false);
-        }
+        foreach (var id in list) SetImmediate(id, false, fireEvent: false);
         _open.Clear();
     }
-    
+
     public void CloseAllExcept(PanelId keep)
     {
         var list = new List<PanelId>(_open);
         foreach (var id in list) if (id != keep) SetActive(id, false);
     }
 
-    public GameObject GetRoot(PanelId id)
-    {
-        return _map.TryGetValue(id, out var e) ? e.root : null;
-    }
-
-    // INTERNALS --------------------------------------------------------------
+    public GameObject GetRoot(PanelId id) => _map.TryGetValue(id, out var e) ? e.root : null;
 
     private void SetImmediate(PanelId id, bool on, bool fireEvent)
     {
@@ -138,7 +135,7 @@ public class UIManager : MonoBehaviour
         {
             if (_open.Add(id))
             {
-                AnimateOpen(p.root);
+                AnimateOpen(p);
                 if (fireEvent) OnPanelChanged?.Invoke(id, true);
             }
         }
@@ -146,7 +143,7 @@ public class UIManager : MonoBehaviour
         {
             if (_open.Remove(id))
             {
-                AnimateClose(p.root, () =>
+                AnimateClose(p, () =>
                 {
                     p.root.SetActive(false);
                     if (fireEvent) OnPanelChanged?.Invoke(id, false);
@@ -155,36 +152,56 @@ public class UIManager : MonoBehaviour
         }
     }
 
-    // ANIMATIONS -------------------------------------------------------------
-
-    private void AnimateOpen(GameObject root)
+    private void AnimateOpen(PanelEntry p)
     {
+        var root = p.root;
         root.SetActive(true);
 
-        CanvasGroup cg = root.GetComponent<CanvasGroup>();
-        if (cg == null) cg = root.AddComponent<CanvasGroup>();
-
         RectTransform rt = root.GetComponent<RectTransform>();
 
-        // Start hidden
-        cg.alpha = 0f;
-        rt.anchoredPosition = new Vector2(rt.anchoredPosition.x, -30f);
+        // Optional slide-in
+        if (p.useSlide && rt)
+        {
+            var pos = rt.anchoredPosition;
+            rt.anchoredPosition = new Vector2(pos.x, -30f);
+            LeanTween.moveY(rt, 0f, 0.18f).setEaseOutCubic();
+        }
 
-        // Fade in + slide up
-        LeanTween.alphaCanvas(cg, 1f, 0.25f).setEaseOutCubic();
-        LeanTween.moveY(rt, 0f, 0.25f).setEaseOutCubic();
+        // Fade only if enabled
+        if (p.useFade)
+        {
+            CanvasGroup cg = root.GetComponent<CanvasGroup>();
+            if (cg == null) cg = root.AddComponent<CanvasGroup>();
+            cg.alpha = 0f;
+            LeanTween.alphaCanvas(cg, 1f, 0.18f).setEaseOutCubic();
+        }
     }
 
-    private void AnimateClose(GameObject root, Action onComplete)
+    private void AnimateClose(PanelEntry p, Action onComplete)
     {
-        CanvasGroup cg = root.GetComponent<CanvasGroup>();
-        if (cg == null) cg = root.AddComponent<CanvasGroup>();
-
+        var root = p.root;
         RectTransform rt = root.GetComponent<RectTransform>();
 
-        // Fade out + slide down
-        LeanTween.alphaCanvas(cg, 0f, 0.20f).setEaseInCubic();
-        LeanTween.moveY(rt, -30f, 0.20f).setEaseInCubic()
-            .setOnComplete(() => onComplete?.Invoke());
+        float dur = 0.16f;
+        bool anyTween = false;
+
+        if (p.useSlide && rt)
+        {
+            anyTween = true;
+            LeanTween.moveY(rt, -30f, dur).setEaseInCubic();
+        }
+
+        if (p.useFade)
+        {
+            anyTween = true;
+            CanvasGroup cg = root.GetComponent<CanvasGroup>();
+            if (cg == null) cg = root.AddComponent<CanvasGroup>();
+            LeanTween.alphaCanvas(cg, 0f, dur).setEaseInCubic();
+        }
+
+        if (anyTween)
+            LeanTween.delayedCall(root, dur, () => onComplete?.Invoke());
+        else
+            onComplete?.Invoke();
     }
 }

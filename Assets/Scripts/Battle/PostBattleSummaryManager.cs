@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -94,6 +95,33 @@ public class PostBattleSummaryManager : MonoBehaviour
         TryShowNext();
     }
 
+    /// <summary>
+    /// Allows EncounterManager to patch capture status on the most-recent queued summary
+    /// before it is shown. Safe no-op if nothing queued or panel already open.
+    /// </summary>
+    public bool TryUpdateLatestQueuedCapture(bool captured, string capturedMonsterId, int capturedLevel)
+    {
+        if (_panelOpen) return false;
+        if (_pending.Count == 0) return false;
+
+        // Queue doesn't allow indexing; rebuild to patch the last item.
+        int count = _pending.Count;
+        var list = new List<Queued>(count);
+        while (_pending.Count > 0)
+            list.Add(_pending.Dequeue());
+
+        var last = list[list.Count - 1];
+        last.captured = captured;
+        last.capturedId = capturedMonsterId;
+        last.capturedLvl = captured ? Mathf.Max(1, capturedLevel) : 0;
+        list[list.Count - 1] = last;
+
+        for (int i = 0; i < list.Count; i++)
+            _pending.Enqueue(list[i]);
+
+        return true;
+    }
+
     public void SetAutoBattling(bool on)
     {
         _autoBattling = on;
@@ -127,8 +155,8 @@ public class PostBattleSummaryManager : MonoBehaviour
 
         var q = _pending.Dequeue();
 
-        // If we have a fade overlay, use the Pokémon-style:
-        // Wild faints → short delay → fade to black → summary
+        // If we have a fade overlay, use:
+        // short delay → fade to black → summary
         if (fadeOverlay && fadeToBlackDuration > 0f)
         {
             StartCoroutine(Co_FadeAndShow(q));
@@ -139,15 +167,13 @@ public class PostBattleSummaryManager : MonoBehaviour
         }
     }
 
-    System.Collections.IEnumerator Co_FadeAndShow(Queued q)
+    IEnumerator Co_FadeAndShow(Queued q)
     {
         _isFading = true;
 
-        // Small pause after KO so the player can see the faint
         if (delayBeforeFade > 0f)
             yield return new WaitForSecondsRealtime(delayBeforeFade);
 
-        // Activate overlay & fade to black
         fadeOverlay.gameObject.SetActive(true);
         fadeOverlay.blocksRaycasts = true;
         fadeOverlay.interactable = false;
@@ -178,7 +204,6 @@ public class PostBattleSummaryManager : MonoBehaviour
         {
             _panelOpen = false;
 
-            // Fade back from black to battle UI / world
             if (fadeOverlay)
             {
                 StartCoroutine(Co_FadeOutOverlayThenShowNext());
@@ -208,7 +233,7 @@ public class PostBattleSummaryManager : MonoBehaviour
         postBattleSummaryPanelUI.Show();
     }
 
-    System.Collections.IEnumerator Co_FadeOutOverlayThenShowNext()
+    IEnumerator Co_FadeOutOverlayThenShowNext()
     {
         if (!fadeOverlay)
         {
@@ -233,7 +258,6 @@ public class PostBattleSummaryManager : MonoBehaviour
 
         _isFading = false;
 
-        // Small delay to prevent immediate re-open spam
         LeanTween.delayedCall(gameObject, 0.05f, TryShowNext);
     }
 }

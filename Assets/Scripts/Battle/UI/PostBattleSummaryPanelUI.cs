@@ -7,7 +7,6 @@ using System.Collections.Generic;
 public class PostBattleSummaryPanelUI : MonoBehaviour
 {
     [Header("Refs")]
-    [SerializeField] private CanvasGroup cg;
     [SerializeField] private RectTransform root;
 
     [Header("Title & Layout")]
@@ -36,16 +35,14 @@ public class PostBattleSummaryPanelUI : MonoBehaviour
     [Header("Controls")]
     [SerializeField] private Button continueButton;
 
-    [Header("Anim")]
-    [SerializeField] private float fadeIn = 0.18f;
-    [SerializeField] private float popIn = 0.22f;
-
     public Action OnClosed;
 
     [Header("Optional")]
     [SerializeField] private BattleManager battleManager;
 
     const string GREEN = "#3CDE74";
+
+    private bool _hasClosed;
 
     private static readonly Dictionary<Rarity, Color> RARITY_COLORS = new()
     {
@@ -79,16 +76,11 @@ public class PostBattleSummaryPanelUI : MonoBehaviour
 
     void Awake()
     {
-        if (!cg) cg = GetComponent<CanvasGroup>();
-        if (!cg) cg = gameObject.AddComponent<CanvasGroup>();
         if (!root) root = transform as RectTransform;
 
-        cg.alpha = 0f;
-        cg.blocksRaycasts = false;
-        cg.interactable = false;
-
-        if (root)
-            root.localScale = Vector3.one * 0.96f;
+        // Ensure we start “closed”
+        _hasClosed = false;
+        gameObject.SetActive(false);
 
         if (continueButton)
             continueButton.onClick.AddListener(OnContinueClicked);
@@ -102,176 +94,33 @@ public class PostBattleSummaryPanelUI : MonoBehaviour
 
     private void OnContinueClicked()
     {
-        // 1) Fade out this panel (and trigger your manager's OnClosed chain)
         Close();
-
-        // 2) Ensure the panel root is actually hidden/disabled via UIManager
-        //    (This uses your UIManager close animation and disables the root on completion.)
-        UIManager.I?.Hide(PanelId.PostBattleSummary);
-    }
-
-    public void Set(
-        BattleResult result,
-        int growthCoresGained = 0,
-        int monstersLeveledUp = 0,              // kept for compatibility (unused)
-        bool captured = false,
-        string capturedMonsterId = null,
-        int capturedLevel = 0,
-        List<string> levelUpSummaries = null,   // kept for compatibility (unused)
-        int creditsBase = 0,
-        int creditsTitleBonus = 0,
-        int growthCoresBase = 0,
-        int growthCoresTitleBonus = 0,
-        List<string> growthCoresDetailLines = null // kept for compatibility (unused)
-    )
-    {
-        // ───────────── Title ─────────────
-        if (titleLabel)
-            titleLabel.text = result.victory ? "Victory!" : "Defeat";
-
-        // ───────────── credits ─────────────
-        int creditsTotal = Mathf.Max(0, creditsBase + creditsTitleBonus);
-        if (creditsLabel)
-            creditsLabel.text = BuildRewardLine("credits", creditsBase, creditsTitleBonus, creditsTotal);
-
-        // ───────────── Growth Cores ─────────────
-        int coresTotal = Mathf.Max(0, growthCoresBase + growthCoresTitleBonus);
-        if (growthCoresLabel)
-        {
-            if (growthCoresBase <= 0 && growthCoresTitleBonus <= 0 && growthCoresGained > 0)
-            {
-                // Legacy fallback: only total given
-                growthCoresLabel.text = $"Growth Cores: {growthCoresGained}";
-            }
-            else
-            {
-                growthCoresLabel.text = BuildRewardLine(
-                    "Growth Cores",
-                    growthCoresBase,
-                    growthCoresTitleBonus,
-                    coresTotal
-                );
-            }
-        }
-
-        // ───────────── Capture ─────────────
-        if (captureLabel)
-        {
-            if (captured)
-            {
-                string name = !string.IsNullOrEmpty(capturedMonsterId)
-                    ? capturedMonsterId
-                    : (result.wildDef ? result.wildDef.id : "Unknown");
-
-                int lvl = capturedLevel > 0 ? capturedLevel : Mathf.Max(1, result.wildLevel);
-                captureLabel.text = $"Captured: {name} (Lv {lvl})";
-            }
-            else
-            {
-                captureLabel.text = "No capture";
-            }
-        }
-
-        // ───────────── Center – Portrait & Basic Info ─────────────
-        MonsterDataSO wildDef = result.wildDef;
-
-        if (enemyPortraitImage)
-        {
-            if (wildDef && wildDef.icon)
-            {
-                enemyPortraitImage.enabled = true;
-                enemyPortraitImage.sprite = wildDef.icon;
-            }
-            else
-            {
-                enemyPortraitImage.enabled = false;
-            }
-        }
-
-        if (enemyNameLabel)
-        {
-            if (wildDef)
-                enemyNameLabel.text = wildDef.displayName;
-            else
-                enemyNameLabel.text = "Unknown Foe";
-        }
-
-        if (wildLevelLabel)
-        {
-            int lvl = Mathf.Max(1, result.wildLevel);
-            wildLevelLabel.text = $"Lv {lvl}";
-        }
-
-        // Rarity text + color
-        if (rarityLabel)
-        {
-            if (wildDef)
-            {
-                Rarity rarity = wildDef.rarity;
-                rarityLabel.text = rarity.ToString();
-
-                if (RARITY_COLORS.TryGetValue(rarity, out var col))
-                    rarityLabel.color = col;
-                else
-                    rarityLabel.color = Color.white;
-            }
-            else
-            {
-                rarityLabel.text = string.Empty;
-            }
-        }
-
-        // Type text + color
-        if (typeLabel)
-        {
-            if (wildDef)
-            {
-                MonsterType type = wildDef.type; // adjust field name if needed
-                typeLabel.text = type.ToString();
-
-                if (TYPE_COLORS.TryGetValue(type, out var col))
-                    typeLabel.color = col;
-                else
-                    typeLabel.color = Color.white;
-            }
-            else
-            {
-                typeLabel.text = string.Empty;
-            }
-        }
-
-        // ───────────── Right – Breakdown (individual TMP fields) ─────────────
-        if (turnsTakenLabel)
-            turnsTakenLabel.text = $"Turns Taken: {Mathf.Max(1, result.turnsSurvived)}";
-
-        if (damageDealtLabel)
-            damageDealtLabel.text = $"Damage Dealt: {Mathf.Max(0, result.damageDealt)}";
-
-        if (damageTakenLabel)
-            damageTakenLabel.text = $"Damage Taken: {Mathf.Max(0, result.damageTaken)}";
-
-        if (critsLabel)
-            critsLabel.text = $"Crits: {Mathf.Max(0, result.critCount)}";
-
-        if (firstHitLabel)
-            firstHitLabel.text = $"First Hit: {(result.gotFirstHit ? "Yes" : "No")}";
-
-        if (timeLabel)
-            timeLabel.text = $"Time: {FormatTime(result.secondsSurvived)}";
     }
 
     public void Show()
     {
-        cg.blocksRaycasts = true;
-        cg.interactable = true;
+        _hasClosed = false;
 
-        LeanTween.alphaCanvas(cg, 1f, fadeIn).setEaseOutSine();
+        // UIManager.Show already activates the root; this is just a safety net
+        if (!gameObject.activeSelf)
+            gameObject.SetActive(true);
+
+        // Optional small “pop” without CanvasGroup fading
         if (root)
-            LeanTween.scale(root, Vector3.one, popIn).setEaseOutBack();
+        {
+            LeanTween.cancel(root);
+            root.localScale = Vector3.one;
+            // If you want a pop, uncomment:
+            // root.localScale = Vector3.one * 0.98f;
+            // LeanTween.scale(root, Vector3.one, 0.12f).setEaseOutBack();
+        }
     }
 
     public void Close()
     {
+        if (_hasClosed) return;
+        _hasClosed = true;
+
         bool isAuto = IsAutoBattleMode();
 
         if (isAuto)
@@ -285,11 +134,11 @@ public class PostBattleSummaryPanelUI : MonoBehaviour
             BattleLogger.ClearAll(false);
         }
 
-        cg.blocksRaycasts = false;
-        cg.interactable = false;
+        // IMPORTANT: signal the manager immediately so it can continue the flow
+        OnClosed?.Invoke();
 
-        LeanTween.alphaCanvas(cg, 0f, 0.12f).setEaseInSine()
-            .setOnComplete(() => OnClosed?.Invoke());
+        // Then hide via UIManager so the root is properly disabled
+        UIManager.I?.Hide(PanelId.PostBattleSummary);
     }
 
     private bool IsAutoBattleMode() => EncounterManager.I && EncounterManager.I.IsAutoMode;
@@ -313,7 +162,105 @@ public class PostBattleSummaryPanelUI : MonoBehaviour
         int s = Mathf.Max(0, Mathf.RoundToInt(seconds));
         int m = s / 60;
         int r = s % 60;
-
         return m > 0 ? $"{m}:{r:00}" : $"{r}s";
+    }
+
+    public void Set(
+        BattleResult result,
+        int growthCoresGained = 0,
+        int monstersLeveledUp = 0,              // kept for compatibility (unused)
+        bool captured = false,
+        string capturedMonsterId = null,
+        int capturedLevel = 0,
+        List<string> levelUpSummaries = null,   // kept for compatibility (unused)
+        int creditsBase = 0,
+        int creditsTitleBonus = 0,
+        int growthCoresBase = 0,
+        int growthCoresTitleBonus = 0,
+        List<string> growthCoresDetailLines = null // kept for compatibility (unused)
+    )
+    {
+        if (titleLabel)
+            titleLabel.text = result.victory ? "Victory!" : "Defeat";
+
+        int creditsTotal = Mathf.Max(0, creditsBase + creditsTitleBonus);
+        if (creditsLabel)
+            creditsLabel.text = BuildRewardLine("credits", creditsBase, creditsTitleBonus, creditsTotal);
+
+        int coresTotal = Mathf.Max(0, growthCoresBase + growthCoresTitleBonus);
+        if (growthCoresLabel)
+        {
+            if (growthCoresBase <= 0 && growthCoresTitleBonus <= 0 && growthCoresGained > 0)
+                growthCoresLabel.text = $"Growth Cores: {growthCoresGained}";
+            else
+                growthCoresLabel.text = BuildRewardLine("Growth Cores", growthCoresBase, growthCoresTitleBonus, coresTotal);
+        }
+
+        if (captureLabel)
+        {
+            if (captured)
+            {
+                string name = !string.IsNullOrEmpty(capturedMonsterId)
+                    ? capturedMonsterId
+                    : (result.wildDef ? result.wildDef.id : "Unknown");
+
+                int lvl = capturedLevel > 0 ? capturedLevel : Mathf.Max(1, result.wildLevel);
+                captureLabel.text = $"Captured: {name} (Lv {lvl})";
+            }
+            else captureLabel.text = "No capture";
+        }
+
+        MonsterDataSO wildDef = result.wildDef;
+
+        if (enemyPortraitImage)
+        {
+            if (wildDef && wildDef.icon)
+            {
+                enemyPortraitImage.enabled = true;
+                enemyPortraitImage.sprite = wildDef.icon;
+            }
+            else enemyPortraitImage.enabled = false;
+        }
+
+        if (enemyNameLabel)
+            enemyNameLabel.text = wildDef ? wildDef.displayName : "Unknown Foe";
+
+        if (wildLevelLabel)
+            wildLevelLabel.text = $"Lv {Mathf.Max(1, result.wildLevel)}";
+
+        if (rarityLabel)
+        {
+            if (wildDef)
+            {
+                Rarity rarity = wildDef.rarity;
+                rarityLabel.text = rarity.ToString();
+                rarityLabel.color = RARITY_COLORS.TryGetValue(rarity, out var col) ? col : Color.white;
+            }
+            else
+            {
+                rarityLabel.text = string.Empty;
+            }
+        }
+
+        if (typeLabel)
+        {
+            if (wildDef)
+            {
+                MonsterType type = wildDef.type;
+                typeLabel.text = type.ToString();
+                typeLabel.color = TYPE_COLORS.TryGetValue(type, out var col) ? col : Color.white;
+            }
+            else
+            {
+                typeLabel.text = string.Empty;
+            }
+        }
+
+        if (turnsTakenLabel) turnsTakenLabel.text = $"Turns Taken: {Mathf.Max(1, result.turnsSurvived)}";
+        if (damageDealtLabel) damageDealtLabel.text = $"Damage Dealt: {Mathf.Max(0, result.damageDealt)}";
+        if (damageTakenLabel) damageTakenLabel.text = $"Damage Taken: {Mathf.Max(0, result.damageTaken)}";
+        if (critsLabel) critsLabel.text = $"Crits: {Mathf.Max(0, result.critCount)}";
+        if (firstHitLabel) firstHitLabel.text = $"First Hit: {(result.gotFirstHit ? "Yes" : "No")}";
+        if (timeLabel) timeLabel.text = $"Time: {FormatTime(result.secondsSurvived)}";
     }
 }

@@ -1556,23 +1556,33 @@ public class BattleManager : MonoBehaviour
 
         onEnd?.Invoke(result);
 
-        bool isAuto = EncounterManager.I && EncounterManager.I.IsAutoMode;
-        PostBattleSummaryManager.I?.NotifyBattleEnd(
-            result,
-            isAuto,
-            growthCoreTotal,
-            monstersLeveledUp: 0,
-            captured: false,
-            capturedMonsterId: null,
-            capturedLevel: 0,
-            levelUpSummaries: null,
-            creditsBase: basecredits,
-            creditsTitleBonus: creditTitleBonus,
-            growthCoresBase: growthCoreTotal - growthCoreTitleBonus,
-            growthCoresTitleBonus: growthCoreTitleBonus,
-            growthCoresDetailLines: new List<string> { $"Gained {growthCoreTotal} Growth Cores." }
-        );
+      bool isAuto = EncounterManager.I && EncounterManager.I.IsAutoMode;
 
+        bool shouldOpenSummaryNow =
+            isAuto ||            // auto mode can show summary immediately
+            !victory ||          // defeats show immediately
+            escaped;             // escapes show immediately
+
+        if (shouldOpenSummaryNow)
+        {
+            PostBattleSummaryManager.I?.NotifyBattleEnd(
+                result,
+                isAuto,
+                growthCoreTotal,
+                monstersLeveledUp: 0,
+                captured: false,
+                capturedMonsterId: null,
+                capturedLevel: 0,
+                levelUpSummaries: null,
+                creditsBase: basecredits,
+                creditsTitleBonus: creditTitleBonus,
+                growthCoresBase: growthCoreTotal - growthCoreTitleBonus,
+                growthCoresTitleBonus: growthCoreTitleBonus,
+                growthCoresDetailLines: new List<string> { $"Gained {growthCoreTotal} Growth Cores." }
+            );
+        }
+
+        // Keep this event. EncounterManager can listen and/or use onEnd callback.
         GameEvents.BattleFinished?.Invoke(result);
     }
 

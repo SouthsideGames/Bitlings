@@ -1,7 +1,7 @@
 using UnityEngine;
 using System;
 using System.Collections;
-using System.Reflection;
+using System.Collections.Generic;
 using Random = UnityEngine.Random;
 
 public partial class EncounterManager : MonoBehaviour
@@ -37,6 +37,9 @@ public partial class EncounterManager : MonoBehaviour
     private bool _currentEncounterIsBoss = false;
     private MonsterDataSO _currentBossUsed = null;
 
+    // Cache the most recent battle result (manual hire decision needs this)
+    private BattleResult _lastBattleResult;
+
     private bool inBattle;
     private bool autoMode;
     private bool nextEncounterFree;
@@ -48,6 +51,9 @@ public partial class EncounterManager : MonoBehaviour
     private int _currentWinStreak = 0;
     public int CurrentWinStreak => _currentWinStreak;
 
+    // Tracks whether we are waiting on manual hire decision (prevents double flush)
+    private bool _manualHirePending = false;
+
     // ─────────────────────────────────────────────────────────────────────────────
 
     void Awake()
@@ -55,7 +61,6 @@ public partial class EncounterManager : MonoBehaviour
         if (I != null && I != this) { Destroy(gameObject); return; }
         I = this;
 
-        // Win streak & energy
         _currentWinStreak = LoadWinStreakOr(0);
         _currentWinStreak = Mathf.Max(0, _currentWinStreak);
 
@@ -63,7 +68,6 @@ public partial class EncounterManager : MonoBehaviour
         ApplyOfflineRegen();
         MirrorEnergyIntoSaveData();
 
-        // Make sure save is ready and shiny synergy is up to date
         SaveManager.LoadOrCreate();
         SaveManager.Data.EnsureTransientSets();
         GlobalEffects.RecalcShinySynergy();
@@ -75,7 +79,6 @@ public partial class EncounterManager : MonoBehaviour
 
         ResourceBank.EnsureSize();
 
-        // Manual by default → summaries can pop immediately
         PostBattleSummaryManager.I?.SetAutoBattling(false);
 
         EmitStatus("Tap ENCOUNTER to begin. Hold to toggle AUTO.", LogScope.System);
@@ -84,7 +87,6 @@ public partial class EncounterManager : MonoBehaviour
         NormalizeTeamHPIfUninitialized();
         GameEvents.WinStreakChanged?.Invoke(_currentWinStreak);
 
-        // initial UI update with correct energy mirrored
         MirrorEnergyIntoSaveData();
         GameEvents.EnergyChanged?.Invoke();
         OnStateChanged?.Invoke();
@@ -107,7 +109,6 @@ public partial class EncounterManager : MonoBehaviour
 
     void Start()
     {
-        // Already ensured in Awake, but Start is a safe place for UI messaging
         EmitStatus("Tap ENCOUNTER to begin. Hold to toggle AUTO.", LogScope.System);
         OnStateChanged?.Invoke();
     }
@@ -159,14 +160,12 @@ public partial class EncounterManager : MonoBehaviour
             }
 
             autoLoopCo = StartCoroutine(AutoLoop());
-
             PostBattleSummaryManager.I?.SetAutoBattling(true);
 
             if (!inBattle)
                 EmitStatus("AUTO mode ON. Battling until defeat…", LogScope.System);
             else
                 EmitStatus("AUTO mode ON. Will continue after this battle…", LogScope.System);
-
         }
         else
         {
@@ -179,13 +178,11 @@ public partial class EncounterManager : MonoBehaviour
             }
 
             PostBattleSummaryManager.I?.SetAutoBattling(false);
-
             EmitStatus("AUTO mode OFF. Tap ENCOUNTER for the next fight.", LogScope.System);
         }
 
         OnStateChanged?.Invoke();
     }
-
 
     // ============================= ENCOUNTER FLOW ===============================
 
@@ -297,27 +294,26 @@ public partial class EncounterManager : MonoBehaviour
             return;
         }
 
+        PostBattleSummaryManager.I?.NotifyBattleStart();
+
+        _manualHirePending = false;
         battleManager.Begin(wild, wildLevel, OnBattleEnded);
     }
 
-
     void OnBattleEnded(BattleResult result)
     {
+        _lastBattleResult = result;
+
         bool escaped = result.escaped;
         bool victory = result.victory;
         bool defeat = !victory && !escaped;
 
-        // Victory / defeat SFX (do NOT play defeat when the wild fled)
         if (AudioManager.I)
         {
-            if (victory)
-                AudioManager.I.PlaySfx(SfxType.Victory);
-            else if (defeat)
-                AudioManager.I.PlaySfx(SfxType.Defeat);
-            // optional: else if (escaped) AudioManager.I.PlaySfx(SfxType.Run); // if you add a flee SFX
+            if (victory) AudioManager.I.PlaySfx(SfxType.Victory);
+            else if (defeat) AudioManager.I.PlaySfx(SfxType.Defeat);
         }
 
-        // credit multiplier (no credits if the enemy fled)
         int finalcredits = 0;
         if (!escaped)
         {
@@ -328,22 +324,16 @@ public partial class EncounterManager : MonoBehaviour
                 ResourceManager.I.Add(ResourceType.Credits, finalcredits);
         }
 
-        // Status text
-        if (victory)
-            EmitStatus($"Victory! +{finalcredits} credits");
-        else if (defeat)
-            EmitStatus("Defeat.");
-        else if (escaped)
-            EmitStatus("The wild Bitling fled.");
+        if (victory) EmitStatus($"Victory! +{finalcredits} credits");
+        else if (defeat) EmitStatus("Defeat.");
+        else if (escaped) EmitStatus("The wild Bitling fled.");
 
-        // Boss defeat signal (only on real victory)
         if (victory && _currentEncounterIsBoss && _currentBossUsed != null)
         {
             GameEvents.BossDefeated?.Invoke(_currentBossUsed.id);
             FieldOpsTracker.RecordRiftStabilization(_currentBossUsed);
         }
 
-        // Boss cadence bookkeeping – up to you if escape counts; leaving as-is:
         if (SaveManager.Data != null)
         {
             AfterBattleCadenceUpdate(
@@ -354,8 +344,8 @@ public partial class EncounterManager : MonoBehaviour
             );
         }
 
-        // Capture logic (victory only)
-        if (victory)
+        // AUTO capture only; manual capture is driven by hire overlay
+        if (victory && autoMode)
         {
             if (_currentEncounterIsBoss || (result.wildDef != null && result.wildDef.uncatchable))
             {
@@ -367,36 +357,47 @@ public partial class EncounterManager : MonoBehaviour
             }
         }
 
-        // Win streak update – DO NOT reset on escape
-        if (victory)
-            SetWinStreak(_currentWinStreak + 1);
-        else if (defeat)
-            SetWinStreak(0);
-        // escaped: leave streak unchanged
+        if (victory) SetWinStreak(_currentWinStreak + 1);
+        else if (defeat) SetWinStreak(0);
 
         ReconcileHPWithCurrentWinStreak();
         OnStateChanged?.Invoke();
 
-        // Persist non-resource state changes
         SaveManager.Save();
 
-        // Broadcast finished event with real credits credited
         var finished = result;
         finished.creditsGained = finalcredits;
         GameEvents.BattleFinished?.Invoke(finished);
 
         BattleLogger.EndEncounter(victory);
 
-        // Continue post-result flow – pass escaped flag too
+        // IMPORTANT:
+        // We queue the summary data NOW so nothing is lost (even for manual victories).
+        // Manual victory will "hold" showing it until hire decision resolves.
+        PostBattleSummaryManager.I?.NotifyBattleEnd(
+            finished,
+            isAuto: autoMode,
+            growthCoresGained: 0,
+            monstersLeveledUp: 0,
+            captured: false,
+            capturedMonsterId: null,
+            capturedLevel: 0,
+            levelUpSummaries: null,
+            creditsBase: finalcredits,
+            creditsTitleBonus: 0,
+            growthCoresBase: 0,
+            growthCoresTitleBonus: 0,
+            growthCoresDetailLines: null
+        );
+
         if (postResultCo != null) { StopCoroutine(postResultCo); postResultCo = null; }
         postResultCo = StartCoroutine(PostResultFlow(victory, escaped));
     }
 
-
     private int ApplycreditsGainedMultiplier(int basecredits)
     {
         if (basecredits <= 0) return 0;
-        const float MULT = 1f; // hook for future titles/meta
+        const float MULT = 1f;
         return Mathf.Max(0, Mathf.FloorToInt(basecredits * MULT));
     }
 
@@ -405,9 +406,7 @@ public partial class EncounterManager : MonoBehaviour
         yield return new WaitForSeconds(postResultDelay);
         inBattle = false;
 
-        // ─────────────────────────────────────────────────────
-        // ENEMY FLED → neutral outcome, not a defeat
-        // ─────────────────────────────────────────────────────
+        // Enemy fled
         if (escaped)
         {
             nextEncounterFree = false;
@@ -416,36 +415,22 @@ public partial class EncounterManager : MonoBehaviour
 
             if (autoMode)
             {
-                // In AUTO, just move on like a normal finished battle,
-                // but still respect energy.
-                if (!HasEnergy())
-                {
-                    StopAuto_NoEnergy();
-                    yield break;
-                }
-                if (!SpendEnergy())
-                {
-                    StopAuto_NoEnergy();
-                    yield break;
-                }
+                if (!HasEnergy()) { StopAuto_NoEnergy(); yield break; }
+                if (!SpendEnergy()) { StopAuto_NoEnergy(); yield break; }
 
                 EmitStatus("The wild Bitling fled. Starting next encounter (AUTO)…", LogScope.System);
                 StartEncounter(false);
             }
             else
             {
-                // Manual: show summary and let player tap again
-                EmitStatus("The wild Bitling fled. Tap ENCOUNTER for the next fight.", LogScope.System);
+                EmitStatus("The wild Bitling fled. Showing summary…", LogScope.System);
                 PostBattleSummaryManager.I?.SetAutoBattling(false);
                 PostBattleSummaryManager.I?.FlushNowIfPossible();
             }
-
             yield break;
         }
 
-        // ─────────────────────────────────────────────────────
         // Defeat
-        // ─────────────────────────────────────────────────────
         if (!victory)
         {
             nextEncounterFree = false;
@@ -455,7 +440,6 @@ public partial class EncounterManager : MonoBehaviour
             if (autoMode)
             {
                 EmitStatus("Defeat. Retrying (AUTO)…", LogScope.System);
-                // summary stays queued
                 yield break;
             }
 
@@ -465,9 +449,7 @@ public partial class EncounterManager : MonoBehaviour
             yield break;
         }
 
-        // ─────────────────────────────────────────────────────
         // Victory
-        // ─────────────────────────────────────────────────────
         if (autoMode)
         {
             if (!autoRunPaidEnergy)
@@ -480,14 +462,67 @@ public partial class EncounterManager : MonoBehaviour
             yield break;
         }
 
+        // Manual victory: HIRE WINDOW FIRST, SUMMARY AFTER
         nextEncounterFree = true;
         OnStateChanged?.Invoke();
-        EmitStatus("Battle finished. Showing summary…", LogScope.System);
 
+        bool canAskHire =
+            !_currentEncounterIsBoss &&
+            _lastBattleResult.wildDef != null &&
+            !_lastBattleResult.wildDef.uncatchable &&
+            EncounterPanelUI.I != null;
+
+        if (canAskHire)
+        {
+            EmitStatus("Victory. Hire decision…", LogScope.System);
+
+            _manualHirePending = true;
+
+            // HOLD the summary while the hire overlay is up
+            PostBattleSummaryManager.I?.SetAutoBattling(true);
+
+            EncounterPanelUI.I.ShowHireDecision(_lastBattleResult.wildDef, _lastBattleResult.wildLevel);
+            yield break;
+        }
+
+        EmitStatus("Battle finished. Showing summary…", LogScope.System);
         PostBattleSummaryManager.I?.SetAutoBattling(false);
         PostBattleSummaryManager.I?.FlushNowIfPossible();
     }
 
+    // ========================================================================
+    // Called by EncounterPanelUI when YES/NO is clicked and capture attempt resolved.
+    // ========================================================================
+    public void OnHireDecisionResolved(bool hiredYes, bool captureSucceeded)
+    {
+        if (!_manualHirePending)
+        {
+            // Safety: prevent double-resolve or late callbacks
+            PostBattleSummaryManager.I?.SetAutoBattling(false);
+            PostBattleSummaryManager.I?.FlushNowIfPossible();
+            return;
+        }
+
+        _manualHirePending = false;
+
+        // Patch the most recently queued summary entry with capture info (if any).
+        if (hiredYes && captureSucceeded && _lastBattleResult.wildDef != null)
+        {
+            PostBattleSummaryManager.I?.TryUpdateLatestQueuedCapture(
+                true,
+                _lastBattleResult.wildDef.id,
+                _lastBattleResult.wildLevel
+            );
+        }
+        else
+        {
+            PostBattleSummaryManager.I?.TryUpdateLatestQueuedCapture(false, null, 0);
+        }
+
+        // Release + show
+        PostBattleSummaryManager.I?.SetAutoBattling(false);
+        PostBattleSummaryManager.I?.FlushNowIfPossible();
+    }
 
     // ================= Idle helpers / State getters ============================
 
@@ -522,7 +557,7 @@ public partial class EncounterManager : MonoBehaviour
             var om = team[i];
             if (om == null || string.IsNullOrEmpty(om.monsterId)) continue;
 
-            if (om.currentHP >= 0) continue; // only when -1 (uninitialized)
+            if (om.currentHP >= 0) continue; // only when -1
 
             var def = lib.GetById(om.monsterId);
             if (!def) continue;
@@ -553,56 +588,44 @@ public partial class EncounterManager : MonoBehaviour
         return false;
     }
 
-    string GetLastStatus() => null; // kept for AppendLine compatibility
+    string GetLastStatus() => null;
 
     string AppendLine(string a, string b)
         => string.IsNullOrEmpty(a) ? b : (a + "\n" + b);
 
-    // ───────────────────────── Encounter SFX helpers ─────────────────────────
     private void PlayEncounterSfx(MonsterDataSO wild)
     {
         if (AudioManager.I == null || wild == null)
             return;
 
-        // Boss has highest priority
         if (_currentEncounterIsBoss)
         {
             AudioManager.I.PlaySfx(SfxType.BossEncounter);
             return;
         }
 
-        // Shiny encounter
         if (IsShinyMonster(wild))
         {
             AudioManager.I.PlaySfx(SfxType.ShinyEncounter);
             return;
         }
 
-        // Unique / special encounter (Legendary/Mythic)
         if (IsUniqueMonster(wild))
         {
-            AudioManager.I.PlaySfx(SfxType.UnqiueEncounter); // enum spelling kept
+            AudioManager.I.PlaySfx(SfxType.UnqiueEncounter);
             return;
         }
     }
 
     // ========================================================================
-    // WIN STREAK SYSTEM (self-contained in this file)
+    // WIN STREAK SYSTEM
     // ========================================================================
 
-    /// <summary>
-    /// If you later want win streak to buff heal HP or similar, put that logic here.
-    /// For now it's a no-op so the call compiles safely.
-    /// </summary>
     private void ReconcileHPWithCurrentWinStreak()
     {
-        // currently no special HP behavior tied to win streak
-        // you can hook in bonuses/regen here if desired
+        // hook for future
     }
 
-    /// <summary>
-    /// Reads saved win streak or returns the fallback.
-    /// </summary>
     private int LoadWinStreakOr(int fallback)
     {
         try
@@ -618,9 +641,6 @@ public partial class EncounterManager : MonoBehaviour
         }
     }
 
-    /// <summary>
-    /// Sets the win streak, fires events, updates SaveManager, and handles clamps.
-    /// </summary>
     public void SetWinStreak(int value)
     {
         int clamped = Mathf.Max(0, value);
@@ -630,25 +650,15 @@ public partial class EncounterManager : MonoBehaviour
 
         _currentWinStreak = clamped;
 
-        // Persist to save
         try
         {
             var data = SaveManager.Data;
             if (data != null)
-            {
                 data.winStreak = clamped;
-            }
-        }
-        catch
-        {
-        }
-
-        // Broadcast streak update (UI, titles, battle manager, etc.)
-        try
-        {
-            GameEvents.WinStreakChanged?.Invoke(clamped);
         }
         catch { }
+
+        try { GameEvents.WinStreakChanged?.Invoke(clamped); } catch { }
 
         BattleLogger.Log($"Win streak: {_currentWinStreak}", LogScope.System);
     }
@@ -665,5 +675,8 @@ public partial class EncounterManager : MonoBehaviour
         return data.discoveredMonsterIds.Contains(m.id);
     }
 
-
+    public bool TryCaptureFromDecision(MonsterDataSO def, int level)
+    {
+        return TryCatchWithResult(def, level, out _);
+    }
 }

@@ -52,7 +52,7 @@ public partial class EncounterManager
             return null;
 
         List<MonsterDataSO> pool = new List<MonsterDataSO>(lib.monsters.Length);
-       for (int i = 0; i < lib.monsters.Length; i++)
+        for (int i = 0; i < lib.monsters.Length; i++)
         {
             var m = lib.monsters[i];
             if (m == null || string.IsNullOrEmpty(m.id)) continue;
@@ -252,15 +252,27 @@ public partial class EncounterManager
     // ====== Capture logic ======
     void TryCatch(MonsterDataSO def, int level)
     {
-        if (!def) return;
+        // Legacy wrapper (AUTO mode / old flow). Keeps compatibility.
+        TryCatchWithResult(def, level, out _);
+    }
+
+    /// <summary>
+    /// Attempts to capture and returns success/failure.
+    /// Also outputs the finalChance used for logging/UI if desired.
+    /// </summary>
+    bool TryCatchWithResult(MonsterDataSO def, int level, out float finalChance)
+    {
+        finalChance = 0f;
+
+        if (!def) return false;
         var data = SaveManager.Data;
-        var lib  = MonsterLibraryLocator.Lib;
-        if (data == null || !lib) return;
+        var lib = MonsterLibraryLocator.Lib;
+        if (data == null || !lib) return false;
 
         if (def.uncatchable)
         {
             EmitStatus("(Capture skipped — uncatchable.)", LogScope.Encounter);
-            return;
+            return false;
         }
 
         // Base chance from spawn weight → [15%, 65%]
@@ -284,16 +296,16 @@ public partial class EncounterManager
         );
         float baseChance = Mathf.Lerp(0.15f, 0.65f, t);
 
-        float bandBonus  = GetActiveCaptureBonus01() * 0.25f;
+        float bandBonus = GetActiveCaptureBonus01() * 0.25f;
         float scarcity01 = 1f - t;
-        float luckBonus  = GetActiveLuckBonus01() * 0.20f * Mathf.Clamp01(scarcity01 * 1.25f);
-        float lureBonus  = 0f;
+        float luckBonus = GetActiveLuckBonus01() * 0.20f * Mathf.Clamp01(scarcity01 * 1.25f);
+        float lureBonus = 0f;
         var lure = CurrentLure;
         if (lure != null && lure.type == def.type)
             lureBonus = Mathf.Clamp01(lure.bonus) * 0.10f;
         float streakBonus = Mathf.Clamp01(CurrentWinStreak / 20f) * 0.05f;
 
-        float finalChance = Mathf.Clamp01(baseChance + bandBonus + luckBonus + lureBonus + streakBonus);
+        finalChance = Mathf.Clamp01(baseChance + bandBonus + luckBonus + lureBonus + streakBonus);
 
         float roll = Random.value;
         bool success = roll <= finalChance;
@@ -309,15 +321,15 @@ public partial class EncounterManager
             var om = new OwnedMonsterData
             {
                 monsterId = def.id,
-                level     = Mathf.Max(1, level),
+                level = Mathf.Max(1, level),
                 currentHP = -1,
                 currentXP = 0,
-                ownedUID  = Guid.NewGuid().ToString("N")
+                ownedUID = Guid.NewGuid().ToString("N")
             };
             data.owned ??= new List<OwnedMonsterData>();
             data.owned.Add(om);
 
-            data.ownedIds  ??= new HashSet<string>();      data.ownedIds.Add(def.id);
+            data.ownedIds ??= new HashSet<string>(); data.ownedIds.Add(def.id);
             data.seenTypes ??= new HashSet<MonsterType>(); data.seenTypes.Add(def.type);
 
             SaveManager.Save();
@@ -331,7 +343,7 @@ public partial class EncounterManager
             );
             EmitStatus($"Captured {def.displayName}! (Lv {level})", LogScope.Encounter);
 
-            // NEW: capture success UI feedback (wild panel glow / banner)
+            // capture success UI feedback (wild panel glow / banner)
             if (EncounterPanelUI.I)
                 EncounterPanelUI.I.OnCaptureSuccess(def, IsShinyMonster(def));
         }
@@ -343,10 +355,12 @@ public partial class EncounterManager
             );
             EmitStatus($"Capture failed. {def.displayName} escaped.", LogScope.Encounter);
 
-            // NEW: capture fail UI feedback (shake / ESCAPED)
+            // capture fail UI feedback (shake / ESCAPED)
             if (EncounterPanelUI.I)
                 EncounterPanelUI.I.OnCaptureFailed(def);
         }
+
+        return success;
     }
 
 
@@ -400,76 +414,72 @@ public partial class EncounterManager
         {
             var t = m.GetType();
 
-            // First, try a "rarity" field/property and treat Legendary/Mythic as unique
+            // 1) Check rarity enum/string
             object rarityObj = null;
 
-            var rf = t.GetField("rarity",
+            var fR = t.GetField("rarity",
                 System.Reflection.BindingFlags.Public |
                 System.Reflection.BindingFlags.NonPublic |
                 System.Reflection.BindingFlags.Instance);
-            if (rf != null)
-                rarityObj = rf.GetValue(m);
+            if (fR != null) rarityObj = fR.GetValue(m);
 
-            if (rarityObj == null)
-            {
-                var rp = t.GetProperty("rarity",
-                    System.Reflection.BindingFlags.Public |
-                    System.Reflection.BindingFlags.NonPublic |
-                    System.Reflection.BindingFlags.Instance);
-                if (rp != null && rp.CanRead)
-                    rarityObj = rp.GetValue(m, null);
-            }
+            var pR = t.GetProperty("rarity",
+                System.Reflection.BindingFlags.Public |
+                System.Reflection.BindingFlags.NonPublic |
+                System.Reflection.BindingFlags.Instance);
+            if (rarityObj == null && pR != null && pR.CanRead)
+                rarityObj = pR.GetValue(m, null);
 
             if (rarityObj != null)
             {
-                string rarityName = rarityObj.ToString();
-                if (string.Equals(rarityName, "Legendary", StringComparison.OrdinalIgnoreCase) ||
-                    string.Equals(rarityName, "Mythic",    StringComparison.OrdinalIgnoreCase) ||
-                    string.Equals(rarityName, "Mythical",  StringComparison.OrdinalIgnoreCase))
+                string name = rarityObj.ToString();
+                if (!string.IsNullOrEmpty(name))
                 {
-                    return true;
+                    name = name.ToLowerInvariant();
+                    if (name.Contains("legend") || name.Contains("myth"))
+                        return true;
                 }
             }
 
-            // Legacy: explicit flags
-            var f1 = t.GetField("isUniqueEncounter",
+            // 2) Legacy booleans
+            var fU = t.GetField("isUniqueEncounter",
                 System.Reflection.BindingFlags.Public |
                 System.Reflection.BindingFlags.NonPublic |
                 System.Reflection.BindingFlags.Instance);
-            if (f1 != null)
+            if (fU != null)
             {
-                var v = f1.GetValue(m);
-                if (v is bool b1 && b1) return true;
+                var val = fU.GetValue(m);
+                if (val is bool b && b) return true;
             }
 
-            var p1 = t.GetProperty("isUniqueEncounter",
+            var fU2 = t.GetField("isUnique",
                 System.Reflection.BindingFlags.Public |
                 System.Reflection.BindingFlags.NonPublic |
                 System.Reflection.BindingFlags.Instance);
-            if (p1 != null && p1.CanRead)
+            if (fU2 != null)
             {
-                var v = p1.GetValue(m, null);
-                if (v is bool b1p && b1p) return true;
+                var val = fU2.GetValue(m);
+                if (val is bool b && b) return true;
             }
 
-            var f2 = t.GetField("isUnique",
+            var pU = t.GetProperty("isUniqueEncounter",
                 System.Reflection.BindingFlags.Public |
                 System.Reflection.BindingFlags.NonPublic |
                 System.Reflection.BindingFlags.Instance);
-            if (f2 != null)
+            if (pU != null && pU.CanRead)
             {
-                var v = f2.GetValue(m);
-                if (v is bool b2 && b2) return true;
+                var val = pU.GetValue(m, null);
+                if (val is bool b && b) return true;
             }
 
-            var p2 = t.GetProperty("isUnique",
+            var pU2 = t.GetProperty("isUnique",
                 System.Reflection.BindingFlags.Public |
                 System.Reflection.BindingFlags.NonPublic |
                 System.Reflection.BindingFlags.Instance);
-            if (p2 != null && p2.CanRead)
+            if (pU2 != null && pU2.CanRead)
             {
-                var v = p2.GetValue(m, null);
-                if (v is bool b2p && b2p) return true;
+                var val = pU2.GetValue(m, null);
+                if (val is bool b && b) return true;
             }
         }
         catch { }
