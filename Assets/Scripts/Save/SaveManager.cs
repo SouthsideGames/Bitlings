@@ -4,7 +4,6 @@ using System.IO;
 using System.Text;
 using System.Collections.Generic;
 
-#region Job runtime sidecar (used by JobManager)
 
 [Serializable]
 public class JobRuntimeSite
@@ -29,7 +28,6 @@ public class JobRuntimeSave
     public long savedAtUnix;
 }
 
-#endregion
 
 public static class SaveManager
 {
@@ -93,8 +91,6 @@ public static class SaveManager
         }
 
         EnsureDefaults();
-
-        // ✅ Important: rebuild transient sets (HashSets) from list mirrors after defaults
         Data?.EnsureTransientSets();
 
         EnsureTrainingDefaults();
@@ -156,7 +152,8 @@ public static class SaveManager
 
             string json = JsonUtility.ToJson(Data, prettyPrint: true);
             AtomicWrite(SavePath, json);
-            SaveDebugTools.ExportAuditJson(false);
+
+
             try { File.Copy(SavePath, BackupPath, overwrite: true); } catch { }
         }
         catch (Exception e)
@@ -175,10 +172,8 @@ public static class SaveManager
         try { if (File.Exists(BackupPath)) File.Delete(BackupPath); } catch { }
         try { if (File.Exists(JobRuntimePath)) File.Delete(JobRuntimePath); } catch { }
 
-        // Brand-new save object
         Data = NewFreshPlayer();
 
-        // Initialize ResourceBank cleanly (single source of truth for ALL resources)
         ResourceBank.EnsureSize();
 
         foreach (ResourceType t in Enum.GetValues(typeof(ResourceType)))
@@ -194,7 +189,6 @@ public static class SaveManager
         Data.encounterMax = 50;
         Data.encounterCost = 5;
         Data.lastEncounterResetYMD = 0;
-
         Data.energyLastUnix = NowUnix();
         Data.energyRemainderSecs = 0f;
 

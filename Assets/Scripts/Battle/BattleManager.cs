@@ -1330,7 +1330,6 @@ public class BattleManager : MonoBehaviour
             if (AudioManager.I) AudioManager.I.PlaySfx(SfxType.CritHit);
         }
 
-        if (dr.crit && !df.cannotBeCrit) _totalCritsThisBattle++;
         _totalDamageTakenThisBattle += dmg_final;
 
         if (!playerTookFirstIncomingThisBattle)

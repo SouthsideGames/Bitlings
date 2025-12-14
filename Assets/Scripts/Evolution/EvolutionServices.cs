@@ -79,7 +79,6 @@ public static class EvolutionService
         SyncTeamSlotsForInstance(ownedEntry);
 
         SaveManager.Save();
-        SaveDebugTools.ExportAuditJson(true);
 
         Debug.Log($"[EvolutionService] Evolved {oldId} → {targetMonsterId} (UID: {ownedEntry.ownedUID})");
         return true;

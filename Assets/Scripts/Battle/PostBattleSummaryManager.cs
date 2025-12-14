@@ -9,32 +9,15 @@ public class PostBattleSummaryManager : MonoBehaviour
 
     [SerializeField] private PostBattleSummaryPanelUI postBattleSummaryPanelUI;
 
-    [Header("Fade Overlay (Battle → Summary)")]
-    [SerializeField] private CanvasGroup fadeOverlay;              // full-screen black image
-    [SerializeField, Min(0f)] private float fadeToBlackDuration = 0.30f;
-    [SerializeField, Min(0f)] private float delayBeforeFade = 0.10f;
-    [SerializeField, Min(0f)] private float delayBeforeSummaryAfterFade = 0.05f;
-    [SerializeField, Range(0f, 1f)] private float fadeOverlayTargetAlpha = 0.8f;
-    [SerializeField, Min(0f)] private float fadeOutDuration = 0.25f;
-
     readonly Queue<Queued> _pending = new Queue<Queued>();
     bool _panelOpen;
     bool _autoBattling;
     bool _battleInProgress;
-    bool _isFading;
 
     void Awake()
     {
         if (I != null && I != this) { Destroy(gameObject); return; }
         I = this;
-
-        if (fadeOverlay)
-        {
-            fadeOverlay.alpha = 0f;
-            fadeOverlay.blocksRaycasts = false;
-            fadeOverlay.interactable = false;
-            fadeOverlay.gameObject.SetActive(false);
-        }
     }
 
     struct Queued
@@ -98,7 +81,6 @@ public class PostBattleSummaryManager : MonoBehaviour
             growthCoresDetailLines = growthCoresDetailLines
         });
 
-        // Only attempt to show if we are not being held
         TryShowNext();
     }
 
@@ -107,7 +89,6 @@ public class PostBattleSummaryManager : MonoBehaviour
         if (_panelOpen) return false;
         if (_pending.Count == 0) return false;
 
-        // Queue doesn't allow indexing; rebuild to patch the last item.
         int count = _pending.Count;
         var list = new List<Queued>(count);
         while (_pending.Count > 0)
@@ -142,8 +123,7 @@ public class PostBattleSummaryManager : MonoBehaviour
 
     void TryShowNext()
     {
-
-        if (_panelOpen || _battleInProgress || _autoBattling || _isFading) return;
+        if (_panelOpen || _battleInProgress || _autoBattling) return;
         if (_pending.Count == 0) return;
 
         if (!postBattleSummaryPanelUI)
@@ -153,44 +133,6 @@ public class PostBattleSummaryManager : MonoBehaviour
         }
 
         var q = _pending.Dequeue();
-
-        // If we have a fade overlay, use:
-        // short delay → fade to black → summary
-        if (fadeOverlay && fadeToBlackDuration > 0f)
-        {
-            StartCoroutine(Co_FadeAndShow(q));
-        }
-        else
-        {
-            ShowSummaryImmediately(q);
-        }
-    }
-
-    IEnumerator Co_FadeAndShow(Queued q)
-    {
-        _isFading = true;
-
-        if (delayBeforeFade > 0f)
-            yield return new WaitForSecondsRealtime(delayBeforeFade);
-
-        fadeOverlay.gameObject.SetActive(true);
-        fadeOverlay.blocksRaycasts = true;
-        fadeOverlay.interactable = false;
-        fadeOverlay.alpha = 0f;
-
-        float t = 0f;
-        while (t < 1f)
-        {
-            t += Time.unscaledDeltaTime / Mathf.Max(0.0001f, fadeToBlackDuration);
-            float a = Mathf.Lerp(0f, fadeOverlayTargetAlpha, Mathf.Clamp01(t));
-            fadeOverlay.alpha = a;
-            yield return null;
-        }
-        fadeOverlay.alpha = fadeOverlayTargetAlpha;
-
-        if (delayBeforeSummaryAfterFade > 0f)
-            yield return new WaitForSecondsRealtime(delayBeforeSummaryAfterFade);
-
         ShowSummaryImmediately(q);
     }
 
@@ -203,15 +145,8 @@ public class PostBattleSummaryManager : MonoBehaviour
         {
             _panelOpen = false;
 
-            if (fadeOverlay)
-            {
-                StartCoroutine(Co_FadeOutOverlayThenShowNext());
-            }
-            else
-            {
-                _isFading = false;
-                LeanTween.delayedCall(gameObject, 0.05f, TryShowNext);
-            }
+            // Small defer so UIManager Hide/Show doesn’t collide in the same frame.
+            StartCoroutine(Co_DelayedTryShowNext());
         };
 
         postBattleSummaryPanelUI.Set(
@@ -232,31 +167,9 @@ public class PostBattleSummaryManager : MonoBehaviour
         postBattleSummaryPanelUI.Show();
     }
 
-    IEnumerator Co_FadeOutOverlayThenShowNext()
+    IEnumerator Co_DelayedTryShowNext()
     {
-        if (!fadeOverlay)
-        {
-            _isFading = false;
-            LeanTween.delayedCall(gameObject, 0.05f, TryShowNext);
-            yield break;
-        }
-
-        float startA = fadeOverlay.alpha;
-        float t = 0f;
-        while (t < 1f)
-        {
-            t += Time.unscaledDeltaTime / Mathf.Max(0.0001f, fadeOutDuration);
-            float a = Mathf.Lerp(startA, 0f, Mathf.Clamp01(t));
-            fadeOverlay.alpha = a;
-            yield return null;
-        }
-
-        fadeOverlay.alpha = 0f;
-        fadeOverlay.gameObject.SetActive(false);
-        fadeOverlay.blocksRaycasts = false;
-
-        _isFading = false;
-
-        LeanTween.delayedCall(gameObject, 0.05f, TryShowNext);
+        yield return null; // next frame
+        TryShowNext();
     }
 }

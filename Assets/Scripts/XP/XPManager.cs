@@ -200,7 +200,6 @@ public static class XPManager
         }
 
         SaveManager.Save();
-        SaveDebugTools.ExportAuditJson(true);
         GameEvents.OnTeamChanged?.Invoke();
     }
 }

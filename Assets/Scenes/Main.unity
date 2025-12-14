@@ -5039,6 +5039,8 @@ MonoBehaviour:
     hasSeenStory: 0
     lastClosedUnix: 0
     lastSavedUnix: 0
+    energyLastUnix: 0
+    energyRemainderSecs: 0
     encountersSinceBoss: 0
     bossEveryN: 10
     lastBossId: 
@@ -22699,6 +22701,8 @@ MonoBehaviour:
     hasSeenStory: 0
     lastClosedUnix: 0
     lastSavedUnix: 0
+    energyLastUnix: 0
+    energyRemainderSecs: 0
     encountersSinceBoss: 0
     bossEveryN: 10
     lastBossId: 
@@ -24371,6 +24375,7 @@ MonoBehaviour:
   ownedContent: {fileID: 202524159}
   ownedListItemPrefab: {fileID: 6526791262681945177, guid: 569c515790348a043b4390f0f0dce167, type: 3}
   sortDropdown: {fileID: 2045855022}
+  viewDropdown: {fileID: 0}
   capturedOnlyButton: {fileID: 885606292}
   favoritesOnlyButton: {fileID: 1996912084}
   detailPanel: {fileID: 575335894}
@@ -58569,9 +58574,9 @@ Transform:
   m_Children:
   - {fileID: 220062699}
   - {fileID: 350265104}
+  - {fileID: 1298594863}
   - {fileID: 509373851}
   - {fileID: 995690358}
-  - {fileID: 1298594863}
   - {fileID: 696163718}
   - {fileID: 1102682440}
   - {fileID: 1565288693}
@@ -72954,7 +72959,7 @@ GameObject:
   - component: {fileID: 1298594867}
   - component: {fileID: 1298594866}
   m_Layer: 0
-  m_Name: SaveSystems
+  m_Name: BootSystem
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -96157,12 +96162,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   postBattleSummaryPanelUI: {fileID: 1847555329}
-  fadeOverlay: {fileID: 0}
-  fadeToBlackDuration: 0.3
-  delayBeforeFade: 0.1
-  delayBeforeSummaryAfterFade: 0.05
-  fadeOverlayTargetAlpha: 0.8
-  fadeOutDuration: 0.25
 --- !u!1 &1697083000
 GameObject:
   m_ObjectHideFlags: 0

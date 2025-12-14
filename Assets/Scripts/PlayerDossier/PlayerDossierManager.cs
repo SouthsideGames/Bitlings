@@ -110,7 +110,6 @@ public class PlayerDossierManager : MonoBehaviour
         }
 
         I = this;
-        DontDestroyOnLoad(gameObject);
     }
 
     private void OnEnable()
