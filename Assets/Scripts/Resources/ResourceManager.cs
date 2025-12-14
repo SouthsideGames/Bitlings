@@ -42,6 +42,8 @@ public class ResourceManager : MonoBehaviour
 
         if (runOneShotLegacyCreditMigration)
             TryMigrateLegacyCreditsOnce_WithJson();
+
+        Debug.Log($"[DEBUG] PackVoucher = {ResourceBank.Get(ResourceType.PackVoucher)}");
     }
 
     // ─────────────────────────────────────────────────────────────────────────────

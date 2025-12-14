@@ -1,6 +1,7 @@
 using UnityEngine;
 using UnityEngine.UI; // ScrollRect
 using TMPro;
+using System;
 using System.Linq;
 using System.Collections.Generic;
 
@@ -65,7 +66,7 @@ public class CodexPanelUI : MonoBehaviour
         }
 
         // ---------------------
-        // CAPTURED-ONLY BUTTON (newly gated)
+        // CAPTURED-ONLY BUTTON (gated)
         // ---------------------
         bool captureFilterUnlocked =
             FeatureUnlockManager.I != null &&
@@ -81,7 +82,7 @@ public class CodexPanelUI : MonoBehaviour
         }
 
         // ---------------------
-        // FAVORITES-ONLY BUTTON
+        // FAVORITES-ONLY BUTTON (gated)
         // ---------------------
         bool favoritesUnlocked =
             FeatureUnlockManager.I != null &&
@@ -97,8 +98,7 @@ public class CodexPanelUI : MonoBehaviour
         }
 
         // Reset filters if locked
-        _capturedOnlyFilter  = false;
-
+        _capturedOnlyFilter = false;
         if (!favoritesUnlocked)
             _favoritesOnlyFilter = false;
 
@@ -123,7 +123,6 @@ public class CodexPanelUI : MonoBehaviour
     }
 
     private void HandleMonsterCaptured(string monsterId, MonsterType type) => RebuildOwnedOnly();
-
     private void HandleFavoritesChanged() => RebuildOwnedOnly();
 
     // ---------- JSON persistence helpers ----------
@@ -244,7 +243,6 @@ public class CodexPanelUI : MonoBehaviour
         for (int i = 0; i < filled.Count; i++)
         {
             var member = filled[i];
-
             var def = MonsterLibraryLocator.GetById(member.monsterId);
 
             var go = Instantiate(teamCardPrefab, teamContent);
@@ -253,12 +251,11 @@ public class CodexPanelUI : MonoBehaviour
             if (rt) _teamCardRoots.Add(rt);
 
             // If we only generate filled slots, HP bar can always be on.
-            // (You can keep SetTeamHpBarActive if you still want it for safety.)
             SetTeamHpBarActive(go, active: true);
 
             if (card)
             {
-                int uiIndex = i; // index in the *visible list*
+                int uiIndex = i; // index in the visible list
                 card.Setup(
                     data: member,
                     def: def,
@@ -329,14 +326,11 @@ public class CodexPanelUI : MonoBehaviour
         if (!detailPanel || member == null || string.IsNullOrEmpty(member.monsterId))
             return;
 
-        // NOTE:
-        // Since we no longer show fixed "slot 0/1/2" positions, slotIndex here is the visible index.
-        // If your detail panel removal depends on the real team slot, you should pass the real index instead.
         detailPanel.ShowTeamMember(slotIndex, member, onRemoved: RefreshAll);
     }
 
     // ─────────────────────────────────────────────
-    // Codex grid: all monsters (captured + unknown)
+    // Codex grid: all monsters (captured + unknown + discovered via packs)
     // ─────────────────────────────────────────────
 
     void BuildOwned(List<OwnedMonsterData> owned, List<OwnedMonsterData> team, OwnedSortMode sortMode)
@@ -349,6 +343,7 @@ public class CodexPanelUI : MonoBehaviour
         if (data == null)
             return;
 
+        // Build "best owned per monsterId" dictionaries (normal + shiny)
         var allOwned   = data.GetAllOwnedMonsters(includeTeam: true) ?? new List<OwnedMonsterData>();
         var ownedById  = new Dictionary<string, OwnedMonsterData>();
         var shinyById  = new Dictionary<string, OwnedMonsterData>();
@@ -360,18 +355,17 @@ public class CodexPanelUI : MonoBehaviour
                 continue;
 
             if (!ownedById.TryGetValue(om.monsterId, out var existing) || (existing != null && om.level > existing.level))
-            {
                 ownedById[om.monsterId] = om;
-            }
 
             if (om.isShiny)
             {
                 if (!shinyById.TryGetValue(om.monsterId, out var shinyExisting) || (shinyExisting != null && om.level > shinyExisting.level))
-                {
                     shinyById[om.monsterId] = om;
-                }
             }
         }
+
+        // NEW: discovered set based on unlocked packs
+        var discoveredByPack = BuildDiscoveredMonsterIdSetFromUnlockedPacks(data);
 
         var lib = MonsterLibraryLocator.Lib;
         if (!lib || lib.monsters == null || lib.monsters.Count() == 0)
@@ -392,21 +386,24 @@ public class CodexPanelUI : MonoBehaviour
         {
             if (!def) continue;
 
-            OwnedMonsterData ownedData;
-            bool captured;
+            OwnedMonsterData ownedData = null;
 
+            // capturedReal = truly owned (or shiny owned when in shiny mode)
+            bool capturedReal;
             if (shinyMode)
-            {
-                captured = shinyById.TryGetValue(def.id, out ownedData);
-            }
+                capturedReal = shinyById.TryGetValue(def.id, out ownedData);
             else
-            {
-                captured = ownedById.TryGetValue(def.id, out ownedData);
-            }
+                capturedReal = ownedById.TryGetValue(def.id, out ownedData);
+
+            // discovered = reveal in codex even if not owned yet
+            bool discovered =
+                capturedReal ||
+                (discoveredByPack != null && discoveredByPack.Contains(def.id));
 
             bool isFavorite = FavoriteService.IsFavorite(def.id);
 
-            if (_capturedOnlyFilter && !captured)
+            // IMPORTANT: captured-only filter uses capturedReal (not discovered)
+            if (_capturedOnlyFilter && !capturedReal)
                 continue;
 
             if (_favoritesOnlyFilter)
@@ -421,16 +418,53 @@ public class CodexPanelUI : MonoBehaviour
             var item = go.GetComponent<OwnedMonsterListItemUI>();
             if (item)
             {
+                // We pass "captured: discovered" so your existing list-item code reveals
+                // icon/name/details for pack-discovered monsters without changing that class.
                 item.SetupForCodex(
                     def,
                     ownedData,
-                    captured,
-                    isFavorite,
-                    allowDetail: captured,
+                    captured: discovered,
+                    isFavorite: isFavorite,
+                    allowDetail: discovered,
                     detailPanelOverride: detailPanel
                 );
             }
         }
+    }
+
+    /// <summary>
+    /// Builds a set of monster IDs that should be revealed because they belong to any unlocked pack.
+    /// </summary>
+    private HashSet<string> BuildDiscoveredMonsterIdSetFromUnlockedPacks(PlayerManager data)
+    {
+        if (data == null) return null;
+        if (data.unlockedPacks == null || data.unlockedPacks.Count == 0) return null;
+
+        var packLib = MonsterPackLibraryLocator.Lib;
+        if (!packLib) return null;
+
+        // Ensure cache built
+        packLib.Warmup();
+
+        var set = new HashSet<string>(StringComparer.Ordinal);
+
+        for (int i = 0; i < data.unlockedPacks.Count; i++)
+        {
+            var packId = data.unlockedPacks[i];
+            if (string.IsNullOrEmpty(packId)) continue;
+
+            var pack = packLib.Get(packId);
+            if (!pack || pack.monsters == null) continue;
+
+            for (int m = 0; m < pack.monsters.Count; m++)
+            {
+                var def = pack.monsters[m];
+                if (!def || string.IsNullOrEmpty(def.id)) continue;
+                set.Add(def.id);
+            }
+        }
+
+        return set;
     }
 
     // ─────────────────────────────────────────────
@@ -537,6 +571,7 @@ public class CodexPanelUI : MonoBehaviour
     {
         if (!parent) return;
         for (int i = parent.childCount - 1; i >= 0; i--)
-            Object.Destroy(parent.GetChild(i).gameObject);
+            UnityEngine.Object.Destroy(parent.GetChild(i).gameObject);
     }
+
 }

@@ -52,11 +52,14 @@ public partial class EncounterManager
             return null;
 
         List<MonsterDataSO> pool = new List<MonsterDataSO>(lib.monsters.Length);
-        for (int i = 0; i < lib.monsters.Length; i++)
+       for (int i = 0; i < lib.monsters.Length; i++)
         {
             var m = lib.monsters[i];
             if (m == null || string.IsNullOrEmpty(m.id)) continue;
             if (m.spawnWeight <= 0f) continue;
+
+            if (!IsMonsterDiscovered(m)) continue;
+
             pool.Add(m);
         }
 

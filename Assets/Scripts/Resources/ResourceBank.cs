@@ -57,16 +57,21 @@ public static class ResourceBank
     // ─────────────────────────────────────────────────────────────
     // Core methods
     // ─────────────────────────────────────────────────────────────
-    public static void EnsureSize()
+   public static void EnsureSize()
     {
         SaveManager.LoadOrCreate();
         if (SaveManager.Data.resourceCounts == null)
             SaveManager.Data.resourceCounts = new List<int>();
 
-        int need = Enum.GetValues(typeof(ResourceType)).Length;
+        // IMPORTANT: size by max enum value + 1 (NOT Enum.GetValues().Length)
+        int need = 0;
+        foreach (ResourceType t in Enum.GetValues(typeof(ResourceType)))
+            need = Mathf.Max(need, (int)t + 1);
+
         while (SaveManager.Data.resourceCounts.Count < need)
             SaveManager.Data.resourceCounts.Add(0);
     }
+
 
     static int Index(ResourceType t) => (int)t;
 

@@ -197,21 +197,36 @@ public class MonsterPackManager : MonoBehaviour
     /// </summary>
     private void RegisterUnlockedMonsters(string packId)
     {
-        if (_monsterLibrary == null) return;
         if (_packLibrary == null) return;
 
         var pack = _packLibrary.Get(packId);
         if (pack == null || pack.monsters == null || pack.monsters.Count == 0) return;
 
-        var seen = SaveManager.Data?.seenTypes;
-        if (seen == null) return;
+        var data = SaveManager.Data;
+        if (data == null) return;
+
+        data.discoveredMonsterIds ??= new System.Collections.Generic.HashSet<string>();
+        data.seenTypes ??= new System.Collections.Generic.HashSet<MonsterType>();
+
+        bool changed = false;
 
         foreach (var monster in pack.monsters)
         {
             if (monster == null) continue;
-            seen.Add(monster.type);
+
+            // Discover by ID (THIS is what your Codex keys on)
+            if (!string.IsNullOrEmpty(monster.id) && data.discoveredMonsterIds.Add(monster.id))
+                changed = true;
+
+            // Optional: keep type tracking too
+            if (data.seenTypes.Add(monster.type))
+                changed = true;
         }
+
+        if (changed)
+            SaveManager.Save();
     }
+
 
     // Optional tuning API
     public void SetGlobalDiscount01(float v) => globalDiscount01 = Mathf.Clamp01(v);

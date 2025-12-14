@@ -15,19 +15,23 @@ public class PackDetailPanelUI : MonoBehaviour
     [SerializeField] private Image monsterIconPrefab;
 
     [Header("Buttons")]
-    [SerializeField] private HoldToPurchaseButton purchaseButton;
+    [SerializeField] private Button purchaseButton;
 
     private MonsterPackSO _currentPack;
 
-    void Awake()
+    private void Awake()
     {
-        if (purchaseButton)
-            purchaseButton.onHoldComplete.AddListener(PurchaseCurrentPack);
+        if (purchaseButton != null)
+        {
+            purchaseButton.onClick.RemoveAllListeners();
+            purchaseButton.onClick.AddListener(PurchaseCurrentPack);
+        }
     }
 
     public void Open(MonsterPackSO pack)
     {
         _currentPack = pack;
+
         if (!gameObject.activeSelf)
             gameObject.SetActive(true);
 
@@ -36,20 +40,43 @@ public class PackDetailPanelUI : MonoBehaviour
 
     public void PurchaseCurrentPack()
     {
-        if (_currentPack == null || MonsterPackManager.I == null)
+        if (_currentPack == null)
+        {
+            Debug.LogError("Pack purchase failed: No current pack assigned.");
             return;
+        }
+
+        if (MonsterPackManager.I == null)
+        {
+            Debug.LogError("Pack purchase failed: MonsterPackManager not available.");
+            return;
+        }
 
         if (!MonsterPackManager.I.CanPurchase(_currentPack.id, out _))
+        {
+            Debug.Log("Pack purchase blocked: Cannot afford or not allowed.");
             return;
+        }
 
         bool success = MonsterPackManager.I.Purchase(_currentPack.id);
-        if (success && purchaseButton)
-            purchaseButton.gameObject.SetActive(false);
+
+        if (success)
+        {
+            Debug.Log($"Pack purchased: {_currentPack.displayName}");
+
+            if (purchaseButton != null)
+                purchaseButton.gameObject.SetActive(false);
+        }
+        else
+        {
+            Debug.LogError("Pack purchase failed inside MonsterPackManager.");
+        }
     }
 
     private void RefreshUI()
     {
-        if (_currentPack == null) return;
+        if (_currentPack == null)
+            return;
 
         if (packIcon) packIcon.sprite = _currentPack.icon;
         if (packNameText) packNameText.text = _currentPack.displayName;
@@ -61,10 +88,9 @@ public class PackDetailPanelUI : MonoBehaviour
             if (costText)
                 costText.text = $"{cost} {CurrencyLabel(currency)}";
         }
-        else
+        else if (costText)
         {
-            if (costText)
-                costText.text = string.Empty;
+            costText.text = string.Empty;
         }
 
         BuildMonsterIcons();
@@ -78,7 +104,8 @@ public class PackDetailPanelUI : MonoBehaviour
         for (int i = monsterIconRoot.childCount - 1; i >= 0; i--)
             Destroy(monsterIconRoot.GetChild(i).gameObject);
 
-        if (_currentPack.monsters == null) return;
+        if (_currentPack.monsters == null)
+            return;
 
         foreach (var monster in _currentPack.monsters)
         {
@@ -89,12 +116,14 @@ public class PackDetailPanelUI : MonoBehaviour
         }
     }
 
-    private string CurrencyLabel(ResourceType t)
+    private string CurrencyLabel(ResourceType type)
     {
-        switch (t)
+        switch (type)
         {
-            case ResourceType.PackVoucher: return "Shards";
-            default: return t.ToString();
+            case ResourceType.PackVoucher:
+                return "Shards";
+            default:
+                return type.ToString();
         }
     }
 }

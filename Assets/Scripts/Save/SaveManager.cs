@@ -128,6 +128,15 @@ public static class SaveManager
                 foreach (var j in Data.unlockedJobSites) Data.unlockedJobSitesList.Add(j);
             }
 
+            if (Data.discoveredMonsterIds != null)
+            {
+                Data.discoveredMonsterIdsList ??= new List<string>();
+                Data.discoveredMonsterIdsList.Clear();
+                foreach (var id in Data.discoveredMonsterIds)
+                    if (!string.IsNullOrEmpty(id)) Data.discoveredMonsterIdsList.Add(id);
+                Data.discoveredMonsterIdsList.Sort(StringComparer.Ordinal);
+            }
+
             // Update last saved time safely (never go backwards far)
             long now = NowUnix();
             if (Data.lastSavedUnix > 0 && now + 300 < Data.lastSavedUnix) now = Data.lastSavedUnix;
@@ -201,6 +210,10 @@ public static class SaveManager
             unlockedJobSites = new HashSet<JobType>(),
             unlockedJobSitesList = new List<JobType>(),
 
+            // ✅ NEW: pack discovery
+            discoveredMonsterIds = new HashSet<string>(),
+            discoveredMonsterIdsList = new List<string>(),
+
             team = new List<OwnedMonsterData>(),
             owned = new List<OwnedMonsterData>(),
 
@@ -265,6 +278,10 @@ public static class SaveManager
         Data.unlockedJobSites ??= new HashSet<JobType>();
         Data.unlockedJobSitesList ??= new List<JobType>();
 
+        // ✅ NEW: discovery mirrors
+        Data.discoveredMonsterIds ??= new HashSet<string>();
+        Data.discoveredMonsterIdsList ??= new List<string>();
+
         // Rebuild sets from their list mirrors (authoritative for JSON)
         Data.ownedIds.Clear();
         foreach (var id in Data.ownedIdsList)
@@ -278,6 +295,15 @@ public static class SaveManager
         Data.unlockedJobSites.Clear();
         for (int i = 0; i < Data.unlockedJobSitesList.Count; i++)
             Data.unlockedJobSites.Add(Data.unlockedJobSitesList[i]);
+
+        // ✅ NEW: rebuild discoveredMonsterIds from JSON list
+        Data.discoveredMonsterIds.Clear();
+        for (int i = 0; i < Data.discoveredMonsterIdsList.Count; i++)
+        {
+            var id = Data.discoveredMonsterIdsList[i];
+            if (!string.IsNullOrEmpty(id))
+                Data.discoveredMonsterIds.Add(id);
+        }
 
         // Settings
         Data.settings ??= new SettingsState();
@@ -395,6 +421,34 @@ public static class SaveManager
             if (om.lastLevelClaimDay == 0) om.lastLevelClaimDay = -1;
             if (om.pendingLevels < 0) om.pendingLevels = 0;
         }
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // Discovery API (optional helpers, but useful for pack unlocks)
+    // ─────────────────────────────────────────────────────────────
+
+    public static bool IsDiscovered(string monsterId)
+    {
+        if (Data == null || string.IsNullOrEmpty(monsterId)) return false;
+        Data.discoveredMonsterIds ??= new HashSet<string>();
+        return Data.discoveredMonsterIds.Contains(monsterId);
+    }
+
+    public static bool Discover(string monsterId, bool save = true)
+    {
+        if (Data == null || string.IsNullOrEmpty(monsterId)) return false;
+
+        Data.discoveredMonsterIds ??= new HashSet<string>();
+        bool added = Data.discoveredMonsterIds.Add(monsterId);
+        if (!added) return false;
+
+        // Keep list mirror in sync immediately (so next Save has it)
+        Data.discoveredMonsterIdsList ??= new List<string>();
+        if (!Data.discoveredMonsterIdsList.Contains(monsterId))
+            Data.discoveredMonsterIdsList.Add(monsterId);
+
+        if (save) Save();
+        return true;
     }
 
     // ─────────────────────────────────────────────────────────────
@@ -545,6 +599,13 @@ public static class SaveManager
         // 3) Track species, seen types, etc.
         Data.ownedIds ??= new HashSet<string>();
         Data.ownedIds.Add(monsterId);
+
+        // ✅ also mark discovered so it can appear in codex/spawn gating
+        Data.discoveredMonsterIds ??= new HashSet<string>();
+        Data.discoveredMonsterIds.Add(monsterId);
+        Data.discoveredMonsterIdsList ??= new List<string>();
+        if (!Data.discoveredMonsterIdsList.Contains(monsterId))
+            Data.discoveredMonsterIdsList.Add(monsterId);
 
         Data.hasChosenStarter = true;
 

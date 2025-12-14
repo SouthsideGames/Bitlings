@@ -31,7 +31,7 @@ public partial class EncounterManager : MonoBehaviour
     [SerializeField] private Transform enemySpawnPoint;
 
     public Transform PlayerSpawnPoint => playerSpawnPoint;
-    public Transform EnemySpawnPoint  => enemySpawnPoint;
+    public Transform EnemySpawnPoint => enemySpawnPoint;
 
     // Runtime state
     private bool _currentEncounterIsBoss = false;
@@ -145,7 +145,7 @@ public partial class EncounterManager : MonoBehaviour
         autoMode = !autoMode;
 
         if (autoMode) IdleBattleManager.I?.EnableAuto();
-        else          IdleBattleManager.I?.DisableAuto();
+        else IdleBattleManager.I?.DisableAuto();
 
         if (autoMode)
         {
@@ -305,7 +305,7 @@ public partial class EncounterManager : MonoBehaviour
     {
         bool escaped = result.escaped;
         bool victory = result.victory;
-        bool defeat  = !victory && !escaped;
+        bool defeat = !victory && !escaped;
 
         // Victory / defeat SFX (do NOT play defeat when the wild fled)
         if (AudioManager.I)
@@ -341,7 +341,7 @@ public partial class EncounterManager : MonoBehaviour
         {
             GameEvents.BossDefeated?.Invoke(_currentBossUsed.id);
             FieldOpsTracker.RecordRiftStabilization(_currentBossUsed);
-        }            
+        }
 
         // Boss cadence bookkeeping – up to you if escape counts; leaving as-is:
         if (SaveManager.Data != null)
@@ -499,8 +499,8 @@ public partial class EncounterManager : MonoBehaviour
         return true;
     }
 
-    public bool IsInBattle      => inBattle;
-    public bool IsAutoMode      => autoMode;
+    public bool IsInBattle => inBattle;
+    public bool IsAutoMode => autoMode;
     public bool NextEncounterIsFree => nextEncounterFree;
 
     void EmitStatus(string msg, LogScope scope = LogScope.Encounter)
@@ -512,7 +512,7 @@ public partial class EncounterManager : MonoBehaviour
 
     void NormalizeTeamHPIfUninitialized()
     {
-        var lib  = MonsterLibraryLocator.Lib;
+        var lib = MonsterLibraryLocator.Lib;
         var team = SaveManager.Data?.team;
         if (!lib || team == null) return;
 
@@ -654,4 +654,16 @@ public partial class EncounterManager : MonoBehaviour
     }
 
     public int GetWinStreak() => _currentWinStreak;
+
+    private bool IsMonsterDiscovered(MonsterDataSO m)
+    {
+        if (m == null || string.IsNullOrEmpty(m.id)) return false;
+        var data = SaveManager.Data;
+        if (data == null) return false;
+
+        data.discoveredMonsterIds ??= new HashSet<string>();
+        return data.discoveredMonsterIds.Contains(m.id);
+    }
+
+
 }
