@@ -16,6 +16,13 @@ public enum OwnedSortMode
     ShinyMonsters
 }
 
+public enum CodexViewMode
+{
+    All = 0,
+    Discovered = 1,
+    Captured = 2
+}
+
 public class CodexPanelUI : MonoBehaviour
 {
     [Header("Team")]
@@ -25,7 +32,12 @@ public class CodexPanelUI : MonoBehaviour
     [Header("Owned (Box)")]
     [SerializeField] private RectTransform ownedContent;
     [SerializeField] private GameObject ownedListItemPrefab;
+
+    [Header("Dropdowns")]
     [SerializeField] private TMP_Dropdown sortDropdown;
+
+    // NEW: Optional "All / Discovered / Captured" dropdown
+    [SerializeField] private TMP_Dropdown viewDropdown;
 
     [Header("Filters")]
     [SerializeField] private Button capturedOnlyButton;
@@ -41,12 +53,14 @@ public class CodexPanelUI : MonoBehaviour
     private bool _capturedOnlyFilter = false;
     private bool _favoritesOnlyFilter = false;
 
+    private CodexViewMode _viewMode = CodexViewMode.All;
+
     void OnEnable()
     {
-        GameEvents.OnTeamChanged      += RefreshAll;
+        GameEvents.OnTeamChanged += RefreshAll;
         GameEvents.OnResourcesChanged += RefreshAll;
-        GameEvents.MonsterCaptured    += HandleMonsterCaptured;
-        GameEvents.FavoritesChanged   += HandleFavoritesChanged;
+        GameEvents.MonsterCaptured += HandleMonsterCaptured;
+        GameEvents.FavoritesChanged += HandleFavoritesChanged;
 
         // ---------------------
         // SORT DROPDOWN
@@ -63,6 +77,19 @@ public class CodexPanelUI : MonoBehaviour
             _lastSortMode = (OwnedSortMode)saved;
             sortDropdown.onValueChanged.AddListener(OnSortChanged);
             sortDropdown.RefreshShownValue();
+        }
+
+        // ---------------------
+        // VIEW DROPDOWN (NEW)
+        // ---------------------
+        if (viewDropdown)
+        {
+            BuildViewDropdownOptions();
+
+            viewDropdown.onValueChanged.RemoveAllListeners();
+            viewDropdown.SetValueWithoutNotify((int)_viewMode);
+            viewDropdown.onValueChanged.AddListener(OnViewChanged);
+            viewDropdown.RefreshShownValue();
         }
 
         // ---------------------
@@ -107,13 +134,16 @@ public class CodexPanelUI : MonoBehaviour
 
     void OnDisable()
     {
-        GameEvents.OnTeamChanged      -= RefreshAll;
+        GameEvents.OnTeamChanged -= RefreshAll;
         GameEvents.OnResourcesChanged -= RefreshAll;
-        GameEvents.MonsterCaptured    -= HandleMonsterCaptured;
-        GameEvents.FavoritesChanged   -= HandleFavoritesChanged;
+        GameEvents.MonsterCaptured -= HandleMonsterCaptured;
+        GameEvents.FavoritesChanged -= HandleFavoritesChanged;
 
         if (sortDropdown)
             sortDropdown.onValueChanged.RemoveListener(OnSortChanged);
+
+        if (viewDropdown)
+            viewDropdown.onValueChanged.RemoveListener(OnViewChanged);
 
         if (capturedOnlyButton)
             capturedOnlyButton.onClick.RemoveListener(OnToggleCapturedOnly);
@@ -156,18 +186,32 @@ public class CodexPanelUI : MonoBehaviour
         sortDropdown.RefreshShownValue();
     }
 
+    void BuildViewDropdownOptions()
+    {
+        if (!viewDropdown) return;
+
+        viewDropdown.options = new List<TMP_Dropdown.OptionData>
+        {
+            new TMP_Dropdown.OptionData("All"),
+            new TMP_Dropdown.OptionData("Discovered"),
+            new TMP_Dropdown.OptionData("Captured")
+        };
+
+        viewDropdown.RefreshShownValue();
+    }
+
     string GetSortLabel(OwnedSortMode mode)
     {
         switch (mode)
         {
-            case OwnedSortMode.ByIdAsc:          return "ID ↑";
-            case OwnedSortMode.ByNameAZ:         return "Name A → Z";
-            case OwnedSortMode.ByNameZA:         return "Name Z → A";
-            case OwnedSortMode.ByType:           return "Type";
+            case OwnedSortMode.ByIdAsc: return "ID ↑";
+            case OwnedSortMode.ByNameAZ: return "Name A → Z";
+            case OwnedSortMode.ByNameZA: return "Name Z → A";
+            case OwnedSortMode.ByType: return "Type";
             case OwnedSortMode.ByLevelLowToHigh: return "Level ↑";
             case OwnedSortMode.ByLevelHighToLow: return "Level ↓";
-            case OwnedSortMode.ShinyMonsters:    return "Shiny Only";
-            default:                             return mode.ToString();
+            case OwnedSortMode.ShinyMonsters: return "Shiny Only";
+            default: return mode.ToString();
         }
     }
 
@@ -181,6 +225,12 @@ public class CodexPanelUI : MonoBehaviour
         RebuildOwnedOnly();
     }
 
+    void OnViewChanged(int value)
+    {
+        _viewMode = (CodexViewMode)Mathf.Clamp(value, 0, (int)CodexViewMode.Captured);
+        RebuildOwnedOnly();
+    }
+
     public void RefreshAll()
     {
         var data = SaveManager.Data;
@@ -191,13 +241,13 @@ public class CodexPanelUI : MonoBehaviour
             return;
         }
 
-        var team  = data.team  ?? new List<OwnedMonsterData>();
+        var team = data.team ?? new List<OwnedMonsterData>();
         var owned = data.owned ?? new List<OwnedMonsterData>();
 
         BuildTeam(team);
 
         var scroll = ownedContent ? ownedContent.GetComponentInParent<ScrollRect>() : null;
-        float pos  = scroll ? scroll.verticalNormalizedPosition : 1f;
+        float pos = scroll ? scroll.verticalNormalizedPosition : 1f;
 
         BuildOwned(owned, team, GetSortMode());
 
@@ -213,11 +263,11 @@ public class CodexPanelUI : MonoBehaviour
             return;
         }
 
-        var team  = data.team  ?? new List<OwnedMonsterData>();
+        var team = data.team ?? new List<OwnedMonsterData>();
         var owned = data.owned ?? new List<OwnedMonsterData>();
 
         var scroll = ownedContent ? ownedContent.GetComponentInParent<ScrollRect>() : null;
-        float pos  = scroll ? scroll.verticalNormalizedPosition : 1f;
+        float pos = scroll ? scroll.verticalNormalizedPosition : 1f;
 
         BuildOwned(owned, team, GetSortMode());
 
@@ -330,7 +380,7 @@ public class CodexPanelUI : MonoBehaviour
     }
 
     // ─────────────────────────────────────────────
-    // Codex grid: all monsters (captured + unknown + discovered via packs)
+    // Codex grid: ALL defs = MonsterLibrary + unlocked pack monsters
     // ─────────────────────────────────────────────
 
     void BuildOwned(List<OwnedMonsterData> owned, List<OwnedMonsterData> team, OwnedSortMode sortMode)
@@ -344,9 +394,9 @@ public class CodexPanelUI : MonoBehaviour
             return;
 
         // Build "best owned per monsterId" dictionaries (normal + shiny)
-        var allOwned   = data.GetAllOwnedMonsters(includeTeam: true) ?? new List<OwnedMonsterData>();
-        var ownedById  = new Dictionary<string, OwnedMonsterData>();
-        var shinyById  = new Dictionary<string, OwnedMonsterData>();
+        var allOwned = data.GetAllOwnedMonsters(includeTeam: true) ?? new List<OwnedMonsterData>();
+        var ownedById = new Dictionary<string, OwnedMonsterData>();
+        var shinyById = new Dictionary<string, OwnedMonsterData>();
 
         for (int i = 0; i < allOwned.Count; i++)
         {
@@ -364,22 +414,15 @@ public class CodexPanelUI : MonoBehaviour
             }
         }
 
-        // NEW: discovered set based on unlocked packs
+        // Pack-discovered set based on unlocked packs
         var discoveredByPack = BuildDiscoveredMonsterIdSetFromUnlockedPacks(data);
 
-        var lib = MonsterLibraryLocator.Lib;
-        if (!lib || lib.monsters == null || lib.monsters.Count() == 0)
-            return;
-
-        var defs = lib.monsters
-            .Where(d => d != null)
-            .ToList();
-
-        if (defs.Count == 0)
+        // NEW: Build defs from BOTH the main library and the unlocked packs
+        var defs = BuildAllCodexDefsFromLibraryAndUnlockedPacks(data);
+        if (defs == null || defs.Count == 0)
             return;
 
         var sortedDefs = SortDefs(defs, sortMode, ownedById, shinyById);
-
         bool shinyMode = (sortMode == OwnedSortMode.ShinyMonsters);
 
         foreach (var def in sortedDefs)
@@ -398,7 +441,15 @@ public class CodexPanelUI : MonoBehaviour
             // discovered = reveal in codex even if not owned yet
             bool discovered =
                 capturedReal ||
-                (discoveredByPack != null && discoveredByPack.Contains(def.id));
+                (discoveredByPack != null && discoveredByPack.Contains(def.id)) ||
+                SaveManager.IsDiscovered(def.id); // optional safety: supports manual discovery too
+
+            // View dropdown filter (NEW)
+            if (_viewMode == CodexViewMode.Captured && !capturedReal)
+                continue;
+
+            if (_viewMode == CodexViewMode.Discovered && !discovered)
+                continue;
 
             bool isFavorite = FavoriteService.IsFavorite(def.id);
 
@@ -418,8 +469,7 @@ public class CodexPanelUI : MonoBehaviour
             var item = go.GetComponent<OwnedMonsterListItemUI>();
             if (item)
             {
-                // We pass "captured: discovered" so your existing list-item code reveals
-                // icon/name/details for pack-discovered monsters without changing that class.
+                // Pass "captured: discovered" so silhouettes become visible for pack monsters
                 item.SetupForCodex(
                     def,
                     ownedData,
@@ -433,6 +483,54 @@ public class CodexPanelUI : MonoBehaviour
     }
 
     /// <summary>
+    /// Union of MonsterLibrary monsters + any monsters referenced by unlocked packs.
+    /// This ensures pack-only monsters appear in the Codex (as silhouettes if discovered).
+    /// </summary>
+    private List<MonsterDataSO> BuildAllCodexDefsFromLibraryAndUnlockedPacks(PlayerManager data)
+    {
+        var result = new List<MonsterDataSO>();
+        var seen = new HashSet<string>(StringComparer.Ordinal);
+
+        // 1) Main library
+        var lib = MonsterLibraryLocator.Lib;
+        if (lib && lib.monsters != null)
+        {
+            foreach (var d in lib.monsters)
+            {
+                if (!d || string.IsNullOrEmpty(d.id)) continue;
+                if (seen.Add(d.id)) result.Add(d);
+            }
+        }
+
+        // 2) Unlocked packs
+        if (data == null || data.unlockedPacks == null || data.unlockedPacks.Count == 0)
+            return result;
+
+        var packLib = MonsterPackLibraryLocator.Lib;
+        if (!packLib) return result;
+
+        packLib.Warmup();
+
+        for (int i = 0; i < data.unlockedPacks.Count; i++)
+        {
+            var packId = data.unlockedPacks[i];
+            if (string.IsNullOrEmpty(packId)) continue;
+
+            var pack = packLib.Get(packId);
+            if (!pack || pack.monsters == null) continue;
+
+            for (int m = 0; m < pack.monsters.Count; m++)
+            {
+                var def = pack.monsters[m];
+                if (!def || string.IsNullOrEmpty(def.id)) continue;
+                if (seen.Add(def.id)) result.Add(def);
+            }
+        }
+
+        return result;
+    }
+
+    /// <summary>
     /// Builds a set of monster IDs that should be revealed because they belong to any unlocked pack.
     /// </summary>
     private HashSet<string> BuildDiscoveredMonsterIdSetFromUnlockedPacks(PlayerManager data)
@@ -443,7 +541,6 @@ public class CodexPanelUI : MonoBehaviour
         var packLib = MonsterPackLibraryLocator.Lib;
         if (!packLib) return null;
 
-        // Ensure cache built
         packLib.Warmup();
 
         var set = new HashSet<string>(StringComparer.Ordinal);
@@ -573,5 +670,4 @@ public class CodexPanelUI : MonoBehaviour
         for (int i = parent.childCount - 1; i >= 0; i--)
             UnityEngine.Object.Destroy(parent.GetChild(i).gameObject);
     }
-
 }

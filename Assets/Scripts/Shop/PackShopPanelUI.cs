@@ -43,7 +43,7 @@ public class PackShopPanelUI : MonoBehaviour
     {
         int have = ResourceBank.Get(ResourceType.PackVoucher);
         if (currencyHeader)
-            currencyHeader.text = $"Pack Shards: {have}";
+            currencyHeader.text = $"Pack Vouchers: {have}";
     }
 
     private void BuildList()

@@ -592,10 +592,14 @@ public class EncounterPanelUI : MonoBehaviour
 
         SpawnHireResult(success);
 
+        // NEW: Update prompt text to clearly show outcome
+        SetHirePromptForResult(choseYes: true, captureSucceeded: success);
+
         // After decision, show Continue (pacing)
         if (hireButtonsRoot) hireButtonsRoot.SetActive(false);
         if (hireContinueButton) hireContinueButton.gameObject.SetActive(true);
     }
+
 
     void OnClickHireNo()
     {
@@ -608,10 +612,14 @@ public class EncounterPanelUI : MonoBehaviour
 
         SpawnHireResult(false);
 
+        // NEW: Update prompt text to clearly show outcome
+        SetHirePromptForResult(choseYes: false, captureSucceeded: false);
+
         // After decision, show Continue (pacing)
         if (hireButtonsRoot) hireButtonsRoot.SetActive(false);
         if (hireContinueButton) hireContinueButton.gameObject.SetActive(true);
     }
+
 
     void OnClickHireContinue()
     {
@@ -633,6 +641,26 @@ public class EncounterPanelUI : MonoBehaviour
         if (hireContinueButton) hireContinueButton.gameObject.SetActive(false);
         if (hireButtonsRoot) hireButtonsRoot.SetActive(true);
     }
+
+    void SetHirePromptForResult(bool choseYes, bool captureSucceeded)
+    {
+        if (!hirePromptText) return;
+
+        string name = (_pendingHireDef != null) ? _pendingHireDef.displayName : "this monster";
+
+        if (!choseYes)
+        {
+            hirePromptText.text = $"You declined {name}.";
+            return;
+        }
+
+        // choseYes == true
+        if (captureSucceeded)
+            hirePromptText.text = $"Hired {name}! Added to your roster.";
+        else
+            hirePromptText.text = $"Hiring failed — {name} refused the offer.";
+    }
+
 
     void SpawnHireResult(bool success)
     {

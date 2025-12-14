@@ -55,6 +55,7 @@ public class PackDetailPanelUI : MonoBehaviour
         if (!MonsterPackManager.I.CanPurchase(_currentPack.id, out _))
         {
             Debug.Log("Pack purchase blocked: Cannot afford or not allowed.");
+            RefreshUI(); // keep UI honest
             return;
         }
 
@@ -64,12 +65,17 @@ public class PackDetailPanelUI : MonoBehaviour
         {
             Debug.Log($"Pack purchased: {_currentPack.displayName}");
 
+            // Optional: you can keep the button visible but disabled if you prefer.
             if (purchaseButton != null)
                 purchaseButton.gameObject.SetActive(false);
+
+            // Refresh text so currency/cost updates immediately in this panel.
+            RefreshUI();
         }
         else
         {
             Debug.LogError("Pack purchase failed inside MonsterPackManager.");
+            RefreshUI();
         }
     }
 
@@ -82,15 +88,33 @@ public class PackDetailPanelUI : MonoBehaviour
         if (packNameText) packNameText.text = _currentPack.displayName;
         if (descriptionText) descriptionText.text = _currentPack.description;
 
+        int cost = 0;
+        ResourceType currency = ResourceType.None;
+
         if (MonsterPackManager.I != null &&
-            MonsterPackManager.I.TryGetEffectiveCost(_currentPack, out int cost, out ResourceType currency))
+            MonsterPackManager.I.TryGetEffectiveCost(_currentPack, out cost, out currency))
         {
+            int have = 0;
+
+            // Prefer ResourceManager if it exists, otherwise fallback to ResourceBank.
+            if (ResourceManager.I != null)
+                have = ResourceManager.I.Get(currency);
+            else
+                have = ResourceBank.Get(currency);
+
             if (costText)
-                costText.text = $"{cost} {CurrencyLabel(currency)}";
+                costText.text = $"{have} / {cost} {CurrencyLabel(currency)}";
         }
-        else if (costText)
+        else
         {
-            costText.text = string.Empty;
+            if (costText) costText.text = string.Empty;
+        }
+
+        // Button availability
+        if (purchaseButton != null)
+        {
+            bool canPurchase = (MonsterPackManager.I != null) && MonsterPackManager.I.CanPurchase(_currentPack.id, out _);
+            purchaseButton.interactable = canPurchase;
         }
 
         BuildMonsterIcons();
@@ -121,7 +145,7 @@ public class PackDetailPanelUI : MonoBehaviour
         switch (type)
         {
             case ResourceType.PackVoucher:
-                return "Shards";
+                return "Pack Vouchers"; // was incorrectly "Shards"
             default:
                 return type.ToString();
         }
