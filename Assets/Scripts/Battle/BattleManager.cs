@@ -1043,7 +1043,7 @@ public class BattleManager : MonoBehaviour
             playerLandedFirstHitThisBattle = true;
 
         string foeName = wildDef ? wildDef.displayName : "Foe";
-        BattleLogger.Log($"{GetName(activeIndex)} hits {foeName} for {dr.damage}!", LogScope.Battle);
+        BattleLogger.Log($"{GetName(activeIndex)} hits {foeName} for {dmgToApply}!", LogScope.Battle);
 
         if (showEffectivenessText)
         {
@@ -1525,7 +1525,7 @@ public class BattleManager : MonoBehaviour
         BattleTempBuffs.I?.ClearPlayerDefenseBonus();
 
         string outcomeLabel = escaped ? "Escaped" : (victory ? "Victory" : "Defeat");
-        BattleLogger.Log($"Battle ends: {outcomeLabel} (+{finalcredits} credits).", LogScope.Battle);
+        BattleLogger.Log($"Battle ends: {outcomeLabel}.", LogScope.Battle);
         BattleLogger.EndBattle(victory);
 
         var result = new BattleResult
@@ -1539,52 +1539,25 @@ public class BattleManager : MonoBehaviour
             critCount = _totalCritsThisBattle,
             turnsSurvived = _turnIndex,
             damageTaken = _totalDamageTakenThisBattle,
-
             damageDealt = _totalDamageDealtThisBattle,
             gotFirstHit = playerLandedFirstHitThisBattle
         };
 
         if (!victory && !escaped && EncounterManager.I != null && EncounterManager.I.IsAutoMode)
-        {
             EncounterManager.I.NotifyAuto_TeamKO();
-        }
 
         SetCombatPanels(false);
 
         if (teamIds != null && activeIndex >= 0 && activeIndex < teamIds.Length)
             TitlesAdapter.OnBattleEnd(teamIds[activeIndex], victory, wildDef, wildLevel);
 
+        // Let EncounterManager own post-battle UI flow (summary + hire cadence).
         onEnd?.Invoke(result);
-
-      bool isAuto = EncounterManager.I && EncounterManager.I.IsAutoMode;
-
-        bool shouldOpenSummaryNow =
-            isAuto ||            // auto mode can show summary immediately
-            !victory ||          // defeats show immediately
-            escaped;             // escapes show immediately
-
-        if (shouldOpenSummaryNow)
-        {
-            PostBattleSummaryManager.I?.NotifyBattleEnd(
-                result,
-                isAuto,
-                growthCoreTotal,
-                monstersLeveledUp: 0,
-                captured: false,
-                capturedMonsterId: null,
-                capturedLevel: 0,
-                levelUpSummaries: null,
-                creditsBase: basecredits,
-                creditsTitleBonus: creditTitleBonus,
-                growthCoresBase: growthCoreTotal - growthCoreTitleBonus,
-                growthCoresTitleBonus: growthCoreTitleBonus,
-                growthCoresDetailLines: new List<string> { $"Gained {growthCoreTotal} Growth Cores." }
-            );
-        }
 
         // Keep this event. EncounterManager can listen and/or use onEnd callback.
         GameEvents.BattleFinished?.Invoke(result);
     }
+
 
     private void SetHPBarAnimated(
         Slider bar,
