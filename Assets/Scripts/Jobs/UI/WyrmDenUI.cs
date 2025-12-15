@@ -6,12 +6,12 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 
-public class LuckBoosterUI : MonoBehaviour
+public class WyrmDenUI : MonoBehaviour
 {
     [Header("UI")]
-    [SerializeField] private Button useLuckBtn;
-    [SerializeField] private TextMeshProUGUI luckLabel;
-    [SerializeField] private TextMeshProUGUI luckTimerText;
+    [SerializeField] private Button useButton;
+    [SerializeField] private TextMeshProUGUI favorLabel;
+    [SerializeField] private TextMeshProUGUI favorTimerText;
 
     [Header("Effect")]
     [Tooltip("0..1 where 0.25 = +25% increased encounter odds while active.")]
@@ -20,7 +20,7 @@ public class LuckBoosterUI : MonoBehaviour
     [Tooltip("How long the boost lasts (CaptureBand-style hours).")]
     [SerializeField, Min(1)] private int durationHours = 2;
 
-    [SerializeField] private bool consumeLuckItem = true;
+    [SerializeField] private bool consumeFavorItem = true;
 
     Coroutine _ticker;
 
@@ -40,27 +40,27 @@ public class LuckBoosterUI : MonoBehaviour
 
     void Wire()
     {
-        if (!useLuckBtn) return;
-        useLuckBtn.onClick.RemoveAllListeners();
-        useLuckBtn.onClick.AddListener(OnClickUseLuck);
+        if (!useButton) return;
+        useButton.onClick.RemoveAllListeners();
+        useButton.onClick.AddListener(OnClickUse);
     }
 
     void OnResourcesChanged() => Refresh();
 
     void Refresh()
     {
-        if (!luckLabel || !useLuckBtn) return;
+        if (!favorLabel || !useButton) return;
         int have = ResourceBank.Get(ResourceType.Favor);
 
         bool active = GetSecondsRemaining() > 0;
-        useLuckBtn.interactable = (!active) && (!consumeLuckItem || have > 0);
+        useButton.interactable = (!active) && (!consumeFavorItem || have > 0);
 
-        luckLabel.text = $"Luck: {have}";
+        favorLabel.text = $"Favor: {have}";
     }
 
-    void OnClickUseLuck()
+    void OnClickUse()
     {
-        if (consumeLuckItem && !ResourceBank.TrySpend(ResourceType.Favor, 1))
+        if (consumeFavorItem && !ResourceBank.TrySpend(ResourceType.Favor, 1))
         {
             Refresh();
             return;
@@ -69,12 +69,12 @@ public class LuckBoosterUI : MonoBehaviour
         long now = SaveManager.NowUnix();
         long expiry = now + Mathf.Max(1, durationHours) * 3600L;
 
-        if (SaveManager.Data.activeLuckBoosts == null)
-            SaveManager.Data.activeLuckBoosts = new List<LuckBoostData>();
+        if (SaveManager.Data.activeFavorBoosts == null)
+            SaveManager.Data.activeFavorBoosts = new List<LuckBoostData>();
 
         // Same behavior as CaptureBand: keep a single active entry
-        SaveManager.Data.activeLuckBoosts.Clear();
-        SaveManager.Data.activeLuckBoosts.Add(new LuckBoostData
+        SaveManager.Data.activeFavorBoosts.Clear();
+        SaveManager.Data.activeFavorBoosts.Add(new LuckBoostData
         {
             bonus = Mathf.Clamp01(bonus),
             expireUnix = expiry
@@ -100,10 +100,10 @@ public class LuckBoosterUI : MonoBehaviour
         var wait = new WaitForSecondsRealtime(1f);
         while (true)
         {
-            if (luckTimerText)
+            if (favorTimerText)
             {
                 long rem = GetSecondsRemaining();
-                luckTimerText.text = rem > 0 ? FormatHMS(rem) : "No active Luck";
+                favorTimerText.text = rem > 0 ? FormatHMS(rem) : "No active Favor";
             }
             yield return wait;
         }
@@ -111,7 +111,7 @@ public class LuckBoosterUI : MonoBehaviour
 
     long GetSecondsRemaining()
     {
-        var list = SaveManager.Data?.activeLuckBoosts;
+        var list = SaveManager.Data?.activeFavorBoosts;
         if (list == null || list.Count == 0) return -1;
         var cur = list[0];
         if (cur == null) return -1;

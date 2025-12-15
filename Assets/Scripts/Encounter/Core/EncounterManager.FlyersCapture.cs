@@ -7,9 +7,9 @@ public partial class EncounterManager
 {
     // ================= LURES / LUCK / SHINY / CAPTURE BAND =====================
 
-    public IReadOnlyList<LureBiasData> ActiveLures => SaveManager.Data?.activeLures;
+    public IReadOnlyList<FlyerBiasData> ActiveLures => SaveManager.Data?.activeFlyers;
 
-    public void AddLure(MonsterType type, float bonus = 0.30f, int durationHours = 2)
+    public void AddFlyer(MonsterType type, float bonus = 0.30f, int durationHours = 2)
     {
         if (SaveManager.Data == null) return;
 
@@ -19,11 +19,11 @@ public partial class EncounterManager
         long now = SaveManager.NowUnix();
         long expiry = now + durationHours * 3600L;
 
-        if (SaveManager.Data.activeLures == null)
-            SaveManager.Data.activeLures = new List<LureBiasData>();
+        if (SaveManager.Data.activeFlyers == null)
+            SaveManager.Data.activeFlyers = new List<FlyerBiasData>();
 
-        SaveManager.Data.activeLures.Clear();
-        SaveManager.Data.activeLures.Add(new LureBiasData
+        SaveManager.Data.activeFlyers.Clear();
+        SaveManager.Data.activeFlyers.Add(new FlyerBiasData
         {
             type = type,
             bonus = bonus,
@@ -34,10 +34,10 @@ public partial class EncounterManager
         GameEvents.OnResourcesChanged?.Invoke();
     }
 
-    private Dictionary<MonsterType, float> BuildLureTypeMultipliers()
+    private Dictionary<MonsterType, float> BuildFlyerTypeMultipliers()
     {
         var map = new Dictionary<MonsterType, float>();
-        var cur = CurrentLure;
+        var cur = CurrentFlyer;
         if (cur == null) return map;
 
         float mult = Mathf.Clamp(1f + Mathf.Max(0f, cur.bonus), 1f, 3f);
@@ -45,14 +45,12 @@ public partial class EncounterManager
         return map;
     }
 
-    public MonsterDataSO PickWildConsideringLures()
+    public MonsterDataSO PickWildConsideringFlyers()
     {
         var lib = MonsterLibraryLocator.Lib;
         if (lib == null || lib.monsters == null || lib.monsters.Length == 0)
             return null;
 
-        // Pool = (base library spawnables) + (discovered spawnables not already in base pool)
-        // Always random by spawn weight (with lure/luck/shiny modifiers applied below).
         var pool = new List<MonsterDataSO>(lib.monsters.Length + 16);
         var added = new HashSet<string>();
 
@@ -87,8 +85,6 @@ public partial class EncounterManager
             }
         }
 
-        // If nothing is spawnable by weight, fall back to any valid monster to avoid nulls.
-        // (This should only happen if all spawnWeight values are 0 or assets are misconfigured.)
         if (pool.Count == 0)
         {
             for (int i = 0; i < lib.monsters.Length; i++)
@@ -101,8 +97,8 @@ public partial class EncounterManager
             return pool[Random.Range(0, pool.Count)];
         }
 
-        var typeMult = BuildLureTypeMultipliers();
-        float luckBonus01 = GetActiveLuckBonus01();
+        var typeMult = BuildFlyerTypeMultipliers();
+        float flyerBonus01 = GetActiveFlyerBonus01();
 
         // min/max base weight for "scarcity" calc (luck favors scarce = lower base weight)
         float minBase = float.MaxValue;
@@ -129,10 +125,10 @@ public partial class EncounterManager
             mult *= JobBalance.GetWyrmDenRarityWeightMult(m.rarity);
 
             // Luck: favors scarce monsters
-            if (luckBonus01 > 0f && maxBase > minBase)
+            if (flyerBonus01 > 0f && maxBase > minBase)
             {
                 float scarcity01 = Mathf.Clamp01((maxBase - baseW) / (maxBase - minBase));
-                float luckMult = 1f + luckBonus01 * scarcity01;
+                float luckMult = 1f + flyerBonus01 * scarcity01;
                 mult *= luckMult;
             }
 
@@ -149,11 +145,11 @@ public partial class EncounterManager
         return PickByWeight(pool, GetFinalWeight);
     }
 
-    public LureBiasData CurrentLure
+    public FlyerBiasData CurrentFlyer
     {
         get
         {
-            var list = SaveManager.Data?.activeLures;
+            var list = SaveManager.Data?.activeFlyers;
             if (list == null || list.Count == 0) return null;
             var cur = list[0];
             if (cur != null && cur.expireUnix <= SaveManager.NowUnix())
@@ -171,7 +167,7 @@ public partial class EncounterManager
     {
         get
         {
-            var list = SaveManager.Data?.activeLuckBoosts;
+            var list = SaveManager.Data?.activeFavorBoosts;
             if (list == null || list.Count == 0) return null;
             var cur = list[0];
             if (cur != null && cur.expireUnix <= SaveManager.NowUnix())
@@ -203,11 +199,11 @@ public partial class EncounterManager
         }
     }
 
-    private CaptureBandData CurrentCaptureBand
+    private WorkOrderData CurrentCaptureBand
     {
         get
         {
-            var list = SaveManager.Data?.activeCaptureBands;
+            var list = SaveManager.Data?.activeWorkOrders;
             if (list == null || list.Count == 0) return null;
             var cur = list[0];
             if (cur != null && cur.expireUnix <= SaveManager.NowUnix())
@@ -221,7 +217,7 @@ public partial class EncounterManager
         }
     }
 
-    private float GetActiveLuckBonus01()
+    private float GetActiveFlyerBonus01()
     {
         var cur = CurrentLuck;
         if (cur == null) return 0f;
@@ -242,9 +238,9 @@ public partial class EncounterManager
         return Mathf.Clamp01(cur.bonus);
     }
 
-    public long GetLureSecondsRemaining()
+    public long GetFlyerSecondsRemaining()
     {
-        var cur = CurrentLure;
+        var cur = CurrentFlyer;
         if (cur == null) return -1;
         long now = SaveManager.NowUnix();
         long rem = cur.expireUnix - now;
@@ -276,11 +272,7 @@ public partial class EncounterManager
     }
 
     // ====== Capture logic ======
-    void TryCatch(MonsterDataSO def, int level)
-    {
-        // Legacy wrapper (AUTO mode / old flow). Keeps compatibility.
-        TryCatchWithResult(def, level, out _);
-    }
+    void TryCatch(MonsterDataSO def, int level) => TryCatchWithResult(def, level, out _);
 
     /// <summary>
     /// Attempts to capture and returns success/failure.
@@ -324,9 +316,9 @@ public partial class EncounterManager
 
         float bandBonus = GetActiveCaptureBonus01() * 0.25f;
         float scarcity01 = 1f - t;
-        float luckBonus = GetActiveLuckBonus01() * 0.20f * Mathf.Clamp01(scarcity01 * 1.25f);
+        float luckBonus = GetActiveFlyerBonus01() * 0.20f * Mathf.Clamp01(scarcity01 * 1.25f);
         float lureBonus = 0f;
-        var lure = CurrentLure;
+        var lure = CurrentFlyer;
         if (lure != null && lure.type == def.type)
             lureBonus = Mathf.Clamp01(lure.bonus) * 0.10f;
         float streakBonus = Mathf.Clamp01(CurrentWinStreak / 20f) * 0.05f;
@@ -369,9 +361,6 @@ public partial class EncounterManager
             );
             EmitStatus($"Captured {def.displayName}! (Lv {level})", LogScope.Encounter);
 
-            // capture success UI feedback (wild panel glow / banner)
-            if (EncounterPanelUI.I)
-                EncounterPanelUI.I.OnCaptureSuccess(def, IsShinyMonster(def));
         }
         else
         {
@@ -381,9 +370,6 @@ public partial class EncounterManager
             );
             EmitStatus($"Capture failed. {def.displayName} escaped.", LogScope.Encounter);
 
-            // capture fail UI feedback (shake / ESCAPED)
-            if (EncounterPanelUI.I)
-                EncounterPanelUI.I.OnCaptureFailed(def);
         }
 
         return success;

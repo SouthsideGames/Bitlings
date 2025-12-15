@@ -3,7 +3,7 @@ using UnityEngine.UI;
 using TMPro;
 using System.Collections.Generic;
 
-public class PackShopPanelUI : MonoBehaviour
+public class ExpeditionUI : MonoBehaviour
 {
     [Header("Refs")]
     [SerializeField] private Transform contentRoot;
