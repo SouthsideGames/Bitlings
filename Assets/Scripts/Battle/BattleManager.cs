@@ -235,9 +235,7 @@ public class BattleManager : MonoBehaviour
 
         if (SaveManager.Data != null && SaveManager.Data.settings != null)
             battleSpeed = Mathf.Clamp(SaveManager.Data.settings.battleSpeed, 0.25f, 5f);
-
-        SetCombatPanels(false);
-
+            
         if (guardIcon) guardIcon.enabled = false;
         if (chargeIcon) chargeIcon.enabled = false;
         if (playerShieldText) playerShieldText.gameObject.SetActive(false);
@@ -1408,10 +1406,12 @@ public class BattleManager : MonoBehaviour
 
     private void EndBattle(bool victory, bool escaped = false)
     {
-        if (!inBattle && !escaped) return;
+        if (!inBattle) return;
 
         inBattle = false;
         SetIsPlayerTurn(false);
+        benchBtn1.interactable = false;
+        benchBtn2.interactable = false;
         pendingAction = PlayerAction.None;
         defendActiveThisRound = false;
 
@@ -1547,7 +1547,8 @@ public class BattleManager : MonoBehaviour
             EncounterManager.I.NotifyAuto_TeamKO();
         }
 
-        SetCombatPanels(false);
+        SetPostBattleWinnerVisible(victory, escaped);
+
 
         if (teamIds != null && activeIndex >= 0 && activeIndex < teamIds.Length)
             TitlesAdapter.OnBattleEnd(teamIds[activeIndex], victory, wildDef, wildLevel);
@@ -2722,7 +2723,7 @@ public class BattleManager : MonoBehaviour
                 if (target) target.localPosition = original;
             });
     }
-    
+
     private void PlayHPShake(RectTransform target)
     {
         if (!target) return;
@@ -2742,6 +2743,31 @@ public class BattleManager : MonoBehaviour
                 target.anchoredPosition = originalPos;
             });
     }
+    
+    private void SetPostBattleWinnerVisible(bool victory, bool escaped)
+    {
+        // Escaped = no winner. Keep player visible, hide the wild.
+        if (escaped)
+        {
+            if (playerPanel) playerPanel.SetActive(true);
+            if (wildPanel) wildPanel.SetActive(false);
+            return;
+        }
+
+        // Victory => show player, hide wild
+        if (victory)
+        {
+            if (playerPanel) playerPanel.SetActive(true);
+            if (wildPanel) wildPanel.SetActive(false);
+        }
+        // Defeat => show wild, hide player
+        else
+        {
+            if (playerPanel) playerPanel.SetActive(false);
+            if (wildPanel) wildPanel.SetActive(true);
+        }
+    }
+
 
 
 
