@@ -289,8 +289,6 @@ public class EncounterPanelUI : MonoBehaviour
 
     void OnBattleFinished(BattleResult _)
     {
-        // CLEANUP REQUEST: ensure blinder alpha is forced back to 1 at battle end
-        ForceBlinderAlphaToOne();
 
         LogCurrentWinStreak("Updated");
 
@@ -303,7 +301,7 @@ public class EncounterPanelUI : MonoBehaviour
         }
     }
 
-    void ForceBlinderAlphaToOne()
+    public void ForceBlinderAlphaToOne()
     {
         if (!blinderGroup) return;
 
