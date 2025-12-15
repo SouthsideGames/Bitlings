@@ -236,7 +236,7 @@ public partial class EncounterManager : MonoBehaviour
         }
 
         if (wild == null)
-            wild = PickWildConsideringLures();
+            wild = PickWildConsideringFlyers();
 
         if (wild == null)
         {

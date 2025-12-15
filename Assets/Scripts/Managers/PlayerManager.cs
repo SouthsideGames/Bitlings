@@ -36,7 +36,7 @@ public class JobAssignment
 }
 
 [Serializable]
-public class LureBiasData
+public class FlyerBiasData
 {
     public MonsterType type;
     public float bonus;
@@ -96,7 +96,7 @@ public class PlayerManager
 
     public List<OwnedMonsterData> team = new List<OwnedMonsterData>();
     public List<OwnedMonsterData> owned = new List<OwnedMonsterData>();
-    public List<LureBiasData> activeLures = new List<LureBiasData>();
+    public List<FlyerBiasData> activeFlyers = new List<FlyerBiasData>();
     public List<CaptureBandData> activeCaptureBands = new List<CaptureBandData>();
     public List<JobGlobalMod> activeJobMods = new List<JobGlobalMod>();
     public List<LuckBoostData> activeLuckBoosts = new List<LuckBoostData>();
@@ -167,7 +167,7 @@ public class PlayerManager
         if (discoveredMonsterIds == null)
             discoveredMonsterIds = new HashSet<string>(discoveredMonsterIdsList ?? new List<string>());
 
-        activeLures         ??= new List<LureBiasData>();
+        activeFlyers         ??= new List<FlyerBiasData>();
         activeCaptureBands  ??= new List<CaptureBandData>();
         activeLuckBoosts    ??= new List<LuckBoostData>();
         activeShinyBoosts   ??= new List<ShinyBoostData>();

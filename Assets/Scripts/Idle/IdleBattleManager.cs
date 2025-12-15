@@ -197,7 +197,7 @@ public class IdleBattleManager : MonoBehaviour
             encounterManager?.RequestStateRefresh();
 
             var wild = encounterManager != null
-                ? encounterManager.PickWildConsideringLures()
+                ? encounterManager.PickWildConsideringFlyers()
                 : null;
             if (wild == null) continue;
 

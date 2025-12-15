@@ -258,7 +258,7 @@ public static class SaveManager
             team = new List<OwnedMonsterData>(),
             owned = new List<OwnedMonsterData>(),
 
-            activeLures = new List<LureBiasData>(),
+            activeFlyers = new List<FlyerBiasData>(),
             activeCaptureBands = new List<CaptureBandData>(),
             activeLuckBoosts = new List<LuckBoostData>(),
 
@@ -291,7 +291,7 @@ public static class SaveManager
         // Base collections
         Data.owned ??= new List<OwnedMonsterData>();
         Data.team ??= new List<OwnedMonsterData>();
-        Data.activeLures ??= new List<LureBiasData>();
+        Data.activeFlyers ??= new List<FlyerBiasData>();
         Data.activeCaptureBands ??= new List<CaptureBandData>();
         Data.activeLuckBoosts ??= new List<LuckBoostData>();
         Data.jobAssignments ??= new List<JobAssignment>();
@@ -506,16 +506,16 @@ public static class SaveManager
 
     static bool PruneExpiredLures(bool saveIfChanged)
     {
-        if (Data?.activeLures == null || Data.activeLures.Count == 0) return false;
+        if (Data?.activeFlyers == null || Data.activeFlyers.Count == 0) return false;
 
         long now = NowUnix();
-        int before = Data.activeLures.Count;
-        Data.activeLures.RemoveAll(l =>
+        int before = Data.activeFlyers.Count;
+        Data.activeFlyers.RemoveAll(l =>
         {
             long exp = (l != null) ? l.expireUnix : 0L;
             return exp > 0 && exp <= now;
         });
-        bool changed = Data.activeLures.Count != before;
+        bool changed = Data.activeFlyers.Count != before;
 
         if (saveIfChanged && changed) Save();
         return changed;

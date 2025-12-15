@@ -74,25 +74,11 @@ public class EncounterPanelUI : MonoBehaviour
     [SerializeField] private float energyToastRiseY = 30f;
     [SerializeField] private float energyToastDuration = 0.8f;
 
-    // ─────────────────────────────────────────────────────────────
-    // Capture Feedback (Success / Fail)
-    // ─────────────────────────────────────────────────────────────
-    [Header("Capture Feedback")]
-    [SerializeField] private CanvasGroup captureBannerGroup;
-    [SerializeField] private TextMeshProUGUI captureBannerText;
-    [SerializeField] private RectTransform wildPanelRoot;
-
-    [SerializeField] private Color successColor = new Color(0.3f, 1f, 0.3f);
-    [SerializeField] private Color failColor = new Color(1f, 0.4f, 0.4f);
-    [SerializeField] private Color shinyColor = new Color(1f, 0.85f, 0.2f);
-
-    [SerializeField, Min(0.1f)] private float captureFxDuration = 0.9f;
-
     [Tooltip("Small 'already caught' icon shown when this species is in your collection.")]
     [SerializeField] private GameObject ownedCapturedIcon;
 
     // ─────────────────────────────────────────────────────────────
-    // Hire Decision (now uses GameObject active/inactive; includes Continue pacing)
+    // Hire Decision (GameObject active/inactive; includes Continue pacing)
     // ─────────────────────────────────────────────────────────────
     [Header("Hire Decision")]
     [SerializeField] private GameObject hireDecisionRoot;          // Whole overlay root
@@ -103,7 +89,7 @@ public class EncounterPanelUI : MonoBehaviour
     [SerializeField] private GameObject hireButtonsRoot;           // Parent of Yes/No
     [SerializeField] private Button hireYesButton;
     [SerializeField] private Button hireNoButton;
-    [SerializeField] private Button hireContinueButton;            // NEW: Continue
+    [SerializeField] private Button hireContinueButton;            // Continue
 
     [Header("Hire Decision Result Prefabs")]
     [SerializeField] private Transform hireResultSpawnPoint;
@@ -113,12 +99,10 @@ public class EncounterPanelUI : MonoBehaviour
     private MonsterDataSO _pendingHireDef;
     private int _pendingHireLevel;
 
-    // store what the player decided so Continue can finalize
     private bool _hireChoseYes;
     private bool _hireCaptureSucceeded;
     private bool _hireDecisionLocked;
 
-    // Exposed for EncounterManager to ignore encounter clicks while open
     public bool IsHireDecisionOpen => hireDecisionRoot && hireDecisionRoot.activeSelf;
 
     // ─────────────────────────────────────────────────────────────
@@ -157,13 +141,9 @@ public class EncounterPanelUI : MonoBehaviour
             blinderGroup.interactable = true;
         }
 
-        if (captureBannerGroup)
-            captureBannerGroup.alpha = 0f;
-
         if (ownedCapturedIcon)
             ownedCapturedIcon.SetActive(false);
 
-        // Hire decision starts hidden
         if (hireDecisionRoot)
             hireDecisionRoot.SetActive(false);
 
@@ -208,7 +188,6 @@ public class EncounterPanelUI : MonoBehaviour
             ClearTeamPreview();
         }
 
-        // Hire decision button wiring
         if (hireYesButton)
         {
             hireYesButton.onClick.RemoveAllListeners();
@@ -228,7 +207,7 @@ public class EncounterPanelUI : MonoBehaviour
         RefreshAll();
 
         GameEvents.BattleFinished += OnBattleFinished;
-        UpdateEnergyEtaUI(); // seed ETA
+        UpdateEnergyEtaUI();
     }
 
     void OnDisable()
@@ -289,7 +268,6 @@ public class EncounterPanelUI : MonoBehaviour
 
     void OnBattleFinished(BattleResult _)
     {
-        // CLEANUP REQUEST: ensure blinder alpha is forced back to 1 at battle end
         ForceBlinderAlphaToOne();
 
         LogCurrentWinStreak("Updated");
@@ -307,7 +285,6 @@ public class EncounterPanelUI : MonoBehaviour
     {
         if (!blinderGroup) return;
 
-        // stop any running fade so it can't leave alpha at 0
         if (_fadeCo != null) { StopCoroutine(_fadeCo); _fadeCo = null; }
         _isFading = false;
 
@@ -370,7 +347,7 @@ public class EncounterPanelUI : MonoBehaviour
 
         int seconds = EncounterManager.I != null
             ? EncounterManager.I.GetSecondsUntilFull()
-            : (int)((max - cur) * Mathf.Max(1f, energySecondsPerPoint)); // fallback
+            : (int)((max - cur) * Mathf.Max(1f, energySecondsPerPoint));
 
         int hours = seconds / 3600;
         int minutes = (seconds % 3600) / 60;
@@ -400,10 +377,7 @@ public class EncounterPanelUI : MonoBehaviour
     void OnClickEncounter()
     {
         if (_isFading) return;
-
-        // If hire decision is visible, ignore encounter clicks
-        if (IsHireDecisionOpen)
-            return;
+        if (IsHireDecisionOpen) return;
 
         bool auto = IsAutoMode();
         bool inBattle = IsInBattle();
@@ -470,7 +444,7 @@ public class EncounterPanelUI : MonoBehaviour
     }
 
     // ─────────────────────────────────────────────────────────────
-    // Blinder Fade helpers
+    // Blinder helpers
     // ─────────────────────────────────────────────────────────────
     void ShowBlinder(bool show, bool instant)
     {
@@ -543,13 +517,12 @@ public class EncounterPanelUI : MonoBehaviour
     }
 
     // ─────────────────────────────────────────────────────────────
-    // Hire Decision API (manual victory)
+    // Hire Decision
     // ─────────────────────────────────────────────────────────────
     public void ShowHireDecision(MonsterDataSO def, int level)
     {
         if (!hireDecisionRoot || def == null)
         {
-            // Safety: if missing, do not block summary
             EncounterManager.I?.OnHireDecisionResolved(false, false);
             return;
         }
@@ -566,11 +539,9 @@ public class EncounterPanelUI : MonoBehaviour
 
         ClearHireResultVisuals();
 
-        // UI state: decision buttons ON, continue OFF
         if (hireButtonsRoot) hireButtonsRoot.SetActive(true);
         if (hireContinueButton) hireContinueButton.gameObject.SetActive(false);
 
-        // Hide blinder while decision is up
         ShowBlinder(false, instant: true);
 
         hireDecisionRoot.SetActive(true);
@@ -591,15 +562,11 @@ public class EncounterPanelUI : MonoBehaviour
         _hireCaptureSucceeded = success;
 
         SpawnHireResult(success);
-
-        // NEW: Update prompt text to clearly show outcome
         SetHirePromptForResult(choseYes: true, captureSucceeded: success);
 
-        // After decision, show Continue (pacing)
         if (hireButtonsRoot) hireButtonsRoot.SetActive(false);
         if (hireContinueButton) hireContinueButton.gameObject.SetActive(true);
     }
-
 
     void OnClickHireNo()
     {
@@ -611,29 +578,21 @@ public class EncounterPanelUI : MonoBehaviour
         _hireCaptureSucceeded = false;
 
         SpawnHireResult(false);
-
-        // NEW: Update prompt text to clearly show outcome
         SetHirePromptForResult(choseYes: false, captureSucceeded: false);
 
-        // After decision, show Continue (pacing)
         if (hireButtonsRoot) hireButtonsRoot.SetActive(false);
         if (hireContinueButton) hireContinueButton.gameObject.SetActive(true);
     }
 
-
     void OnClickHireContinue()
     {
         if (!_hireDecisionLocked)
-            return; // can't continue until player chose Yes/No
+            return;
 
-        // Close overlay
         if (hireDecisionRoot) hireDecisionRoot.SetActive(false);
 
-        // Inform EncounterManager (it will patch summary + flush)
-        if (EncounterManager.I != null)
-            EncounterManager.I.OnHireDecisionResolved(_hireChoseYes, _hireCaptureSucceeded);
+        EncounterManager.I?.OnHireDecisionResolved(_hireChoseYes, _hireCaptureSucceeded);
 
-        // cleanup
         _pendingHireDef = null;
         _pendingHireLevel = 0;
         _hireDecisionLocked = false;
@@ -654,13 +613,10 @@ public class EncounterPanelUI : MonoBehaviour
             return;
         }
 
-        // choseYes == true
-        if (captureSucceeded)
-            hirePromptText.text = $"Hired {name}! Added to your roster.";
-        else
-            hirePromptText.text = $"Hiring failed — {name} refused the offer.";
+        hirePromptText.text = captureSucceeded
+            ? $"Hired {name}! Added to your roster."
+            : $"Hiring failed — {name} refused the offer.";
     }
-
 
     void SpawnHireResult(bool success)
     {
@@ -699,11 +655,9 @@ public class EncounterPanelUI : MonoBehaviour
         }
         else
         {
-            var lure = (EncounterManager.I != null) ? EncounterManager.I.CurrentLure : null;
+            var lure = (EncounterManager.I != null) ? EncounterManager.I.CurrentFlyer : null;
             if (lure != null)
-            {
                 tint = ResolveLureTint(lure.type);
-            }
         }
 
         blinderBackground.color = tint;
@@ -1034,112 +988,6 @@ public class EncounterPanelUI : MonoBehaviour
                     if (go)
                         Destroy(go);
                 });
-    }
-
-    // ========================================================================
-    // CAPTURE FX (Success / Fail)
-    // ========================================================================
-    public void OnCaptureSuccess(MonsterDataSO def, bool isShiny)
-    {
-        if (!captureBannerGroup || !captureBannerText)
-            return;
-
-        captureBannerGroup.gameObject.SetActive(true);
-        captureBannerGroup.alpha = 0f;
-
-        captureBannerText.text = "CAPTURED!";
-        captureBannerText.color = isShiny ? shinyColor : successColor;
-
-        if (wildPanelRoot)
-        {
-            LeanTween.cancel(wildPanelRoot.gameObject);
-            wildPanelRoot.localScale = Vector3.one * 0.9f;
-
-            LeanTween.scale(wildPanelRoot.gameObject, Vector3.one * 1.2f, 0.25f)
-                .setEaseOutBack()
-                .setOnComplete(() =>
-                {
-                    if (!wildPanelRoot) return;
-                    LeanTween.scale(wildPanelRoot.gameObject, Vector3.one, 0.25f)
-                        .setEaseOutCubic();
-                });
-
-            if (isShiny)
-            {
-                LeanTween.rotateZ(wildPanelRoot.gameObject, 15f, 0.12f)
-                    .setLoopPingPong(2);
-            }
-        }
-
-        LeanTween.value(gameObject, 0f, 1f, 0.25f)
-            .setOnUpdate(a =>
-            {
-                if (captureBannerGroup)
-                    captureBannerGroup.alpha = a;
-            })
-            .setOnComplete(() =>
-            {
-                LeanTween.value(gameObject, 1f, 0f, captureFxDuration)
-                    .setDelay(0.4f)
-                    .setOnUpdate(a =>
-                    {
-                        if (captureBannerGroup)
-                            captureBannerGroup.alpha = a;
-                    })
-                    .setOnComplete(() =>
-                    {
-                        if (captureBannerGroup)
-                            captureBannerGroup.gameObject.SetActive(false);
-                    });
-            });
-    }
-
-    public void OnCaptureFailed(MonsterDataSO def)
-    {
-        if (!captureBannerGroup || !captureBannerText)
-            return;
-
-        captureBannerGroup.gameObject.SetActive(true);
-        captureBannerGroup.alpha = 0f;
-
-        captureBannerText.text = "ESCAPED!";
-        captureBannerText.color = failColor;
-
-        if (wildPanelRoot)
-        {
-            LeanTween.cancel(wildPanelRoot.gameObject);
-            Vector3 original = wildPanelRoot.localPosition;
-
-            LeanTween.moveLocalX(wildPanelRoot.gameObject, original.x + 15f, 0.06f)
-                .setLoopPingPong(3)
-                .setOnComplete(() =>
-                {
-                    if (wildPanelRoot)
-                        wildPanelRoot.localPosition = original;
-                });
-        }
-
-        LeanTween.value(gameObject, 0f, 1f, 0.2f)
-            .setOnUpdate(a =>
-            {
-                if (captureBannerGroup)
-                    captureBannerGroup.alpha = a;
-            })
-            .setOnComplete(() =>
-            {
-                LeanTween.value(gameObject, 1f, 0f, captureFxDuration)
-                    .setDelay(0.3f)
-                    .setOnUpdate(a =>
-                    {
-                        if (captureBannerGroup)
-                            captureBannerGroup.alpha = a;
-                    })
-                    .setOnComplete(() =>
-                    {
-                        if (captureBannerGroup)
-                            captureBannerGroup.gameObject.SetActive(false);
-                    });
-            });
     }
 
     // ─────────────────────────────────────────────────────────────
