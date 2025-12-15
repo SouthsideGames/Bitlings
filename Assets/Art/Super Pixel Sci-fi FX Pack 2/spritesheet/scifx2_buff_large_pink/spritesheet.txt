@@ -1,0 +1,15 @@
+scifx2_buff_large_pink/frame0000.png = 0 0 96 128
+scifx2_buff_large_pink/frame0001.png = 96 0 96 128
+scifx2_buff_large_pink/frame0002.png = 192 0 96 128
+scifx2_buff_large_pink/frame0003.png = 288 0 96 128
+scifx2_buff_large_pink/frame0004.png = 384 0 96 128
+scifx2_buff_large_pink/frame0005.png = 480 0 96 128
+scifx2_buff_large_pink/frame0006.png = 576 0 96 128
+scifx2_buff_large_pink/frame0007.png = 672 0 96 128
+scifx2_buff_large_pink/frame0008.png = 768 0 96 128
+scifx2_buff_large_pink/frame0009.png = 864 0 96 128
+scifx2_buff_large_pink/frame0010.png = 960 0 96 128
+scifx2_buff_large_pink/frame0011.png = 1056 0 96 128
+scifx2_buff_large_pink/frame0012.png = 1152 0 96 128
+scifx2_buff_large_pink/frame0013.png = 1248 0 96 128
+scifx2_buff_large_pink/frame0014.png = 1344 0 96 128
