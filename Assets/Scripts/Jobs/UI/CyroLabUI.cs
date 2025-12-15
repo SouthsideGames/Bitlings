@@ -5,14 +5,14 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 
-public class CaptureBandUI : MonoBehaviour
+public class CyroLabUI : MonoBehaviour
 {
-    [SerializeField] private Button useBandBtn;
-    [SerializeField] private TextMeshProUGUI bandsLabel;
-    [SerializeField] private TextMeshProUGUI bandTimerText;
+    [SerializeField] private Button useButton;
+    [SerializeField] private TextMeshProUGUI ordersLabel;
+    [SerializeField] private TextMeshProUGUI orderTimerText;
     [SerializeField, Range(0f,1f)] private float bonus = 0.25f;
     [SerializeField, Min(1)] private int durationHours = 2;
-    [SerializeField] private bool consumeBandItem = true;
+    [SerializeField] private bool consumeWorkOrderItem = true;
 
     Coroutine _ticker;
 
@@ -26,9 +26,9 @@ public class CaptureBandUI : MonoBehaviour
 
     void Wire()
     {
-        if (useBandBtn == null) return;
-        useBandBtn.onClick.RemoveAllListeners();
-        useBandBtn.onClick.AddListener(OnClickUseBand);
+        if (useButton == null) return;
+        useButton.onClick.RemoveAllListeners();
+        useButton.onClick.AddListener(OnClickUse);
     }
 
     void OnDisable()
@@ -41,15 +41,15 @@ public class CaptureBandUI : MonoBehaviour
 
     void Refresh()
     {
-        if (!bandsLabel || !useBandBtn) return;
+        if (!ordersLabel || !useButton) return;
         int have = ResourceBank.Get(ResourceType.WorkOrder);
-        bandsLabel.text = $"CaptureBands: {have}";
-        useBandBtn.interactable = !consumeBandItem || have > 0;
+        ordersLabel.text = $"Work Orders: {have}";
+        useButton.interactable = !consumeWorkOrderItem || have > 0;
     }
 
-    void OnClickUseBand()
+    void OnClickUse()
     {
-        if (consumeBandItem && !ResourceBank.TrySpend(ResourceType.WorkOrder, 1))
+        if (consumeWorkOrderItem && !ResourceBank.TrySpend(ResourceType.WorkOrder, 1))
         {
             Refresh();
             return;
@@ -58,10 +58,10 @@ public class CaptureBandUI : MonoBehaviour
         long now = SaveManager.NowUnix();
         long expiry = now + Mathf.Max(1, durationHours) * 3600L;
 
-        if (SaveManager.Data.activeCaptureBands == null)
-            SaveManager.Data.activeCaptureBands = new List<CaptureBandData>();
-        SaveManager.Data.activeCaptureBands.Clear();
-        SaveManager.Data.activeCaptureBands.Add(new CaptureBandData { bonus = Mathf.Clamp01(bonus), expireUnix = expiry });
+        if (SaveManager.Data.activeWorkOrders == null)
+            SaveManager.Data.activeWorkOrders = new List<WorkOrderData>();
+        SaveManager.Data.activeWorkOrders.Clear();
+        SaveManager.Data.activeWorkOrders.Add(new WorkOrderData { bonus = Mathf.Clamp01(bonus), expireUnix = expiry });
 
         SaveManager.Save();
         GameEvents.OnResourcesChanged?.Invoke();
@@ -74,10 +74,10 @@ public class CaptureBandUI : MonoBehaviour
     {
         while (true)
         {
-            if (bandTimerText)
+            if (orderTimerText)
             {
                 long rem = GetSecondsRemaining();
-                bandTimerText.text = rem > 0 ? FormatHMS(rem) : "No active CaptureBand";
+                orderTimerText.text = rem > 0 ? FormatHMS(rem) : "NO ACTIVE WORK ORDERS";
             }
             yield return new WaitForSecondsRealtime(1f);
         }
@@ -85,12 +85,12 @@ public class CaptureBandUI : MonoBehaviour
 
     long GetSecondsRemaining()
     {
-        var list = SaveManager.Data?.activeCaptureBands;
+        var list = SaveManager.Data?.activeWorkOrders;
         if (list == null || list.Count == 0) return -1;
         var cur = list[0];
         if (cur == null) return -1;
         long rem = cur.expireUnix - SaveManager.NowUnix();
-        return System.Math.Max(0L, rem);
+        return Math.Max(0L, rem);
     }
 
     string FormatHMS(long seconds)

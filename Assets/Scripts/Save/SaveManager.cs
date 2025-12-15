@@ -259,8 +259,8 @@ public static class SaveManager
             owned = new List<OwnedMonsterData>(),
 
             activeFlyers = new List<FlyerBiasData>(),
-            activeCaptureBands = new List<CaptureBandData>(),
-            activeLuckBoosts = new List<LuckBoostData>(),
+            activeWorkOrders = new List<WorkOrderData>(),
+            activeFavorBoosts = new List<LuckBoostData>(),
 
             jobStorageUpgrades = new List<JobStorageUpgrade>(),
             jobAssignments = new List<JobAssignment>(),
@@ -292,8 +292,8 @@ public static class SaveManager
         Data.owned ??= new List<OwnedMonsterData>();
         Data.team ??= new List<OwnedMonsterData>();
         Data.activeFlyers ??= new List<FlyerBiasData>();
-        Data.activeCaptureBands ??= new List<CaptureBandData>();
-        Data.activeLuckBoosts ??= new List<LuckBoostData>();
+        Data.activeWorkOrders ??= new List<WorkOrderData>();
+        Data.activeFavorBoosts ??= new List<LuckBoostData>();
         Data.jobAssignments ??= new List<JobAssignment>();
         Data.jobProgress ??= new List<JobProgress>();
         Data.jobStorageUpgrades ??= new List<JobStorageUpgrade>();
@@ -523,12 +523,12 @@ public static class SaveManager
 
     static bool PruneExpiredCaptureBands(bool saveIfChanged)
     {
-        if (Data?.activeCaptureBands == null || Data.activeCaptureBands.Count == 0) return false;
+        if (Data?.activeWorkOrders == null || Data.activeWorkOrders.Count == 0) return false;
 
         long now = NowUnix();
-        int before = Data.activeCaptureBands.Count;
-        Data.activeCaptureBands.RemoveAll(b => b != null && b.expireUnix <= now);
-        bool changed = Data.activeCaptureBands.Count != before;
+        int before = Data.activeWorkOrders.Count;
+        Data.activeWorkOrders.RemoveAll(b => b != null && b.expireUnix <= now);
+        bool changed = Data.activeWorkOrders.Count != before;
 
         if (saveIfChanged && changed) Save();
         return changed;
@@ -536,12 +536,12 @@ public static class SaveManager
 
     static bool PruneExpiredLuckBoosts(bool saveIfChanged)
     {
-        if (Data?.activeLuckBoosts == null || Data.activeLuckBoosts.Count == 0) return false;
+        if (Data?.activeFavorBoosts == null || Data.activeFavorBoosts.Count == 0) return false;
 
         long now = NowUnix();
-        int before = Data.activeLuckBoosts.Count;
-        Data.activeLuckBoosts.RemoveAll(b => b != null && b.expireUnix <= now);
-        bool changed = Data.activeLuckBoosts.Count != before;
+        int before = Data.activeFavorBoosts.Count;
+        Data.activeFavorBoosts.RemoveAll(b => b != null && b.expireUnix <= now);
+        bool changed = Data.activeFavorBoosts.Count != before;
 
         if (saveIfChanged && changed) Save();
         return changed;

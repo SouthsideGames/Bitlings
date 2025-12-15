@@ -3995,7 +3995,7 @@ GameObject:
   m_Component:
   - component: {fileID: 72228849}
   - component: {fileID: 72228848}
-  - component: {fileID: 72228847}
+  - component: {fileID: 72228850}
   m_Layer: 5
   m_Name: Panel_WyrmDen
   m_TagString: Untagged
@@ -4003,24 +4003,6 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 0
---- !u!114 &72228847
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 72228846}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: f250536366acb484fac9a4f477e6f151, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  useLuckBtn: {fileID: 902163044}
-  luckLabel: {fileID: 1098916444}
-  luckTimerText: {fileID: 889786303}
-  bonus: 0.25
-  durationHours: 2
-  consumeLuckItem: 1
 --- !u!222 &72228848
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -4052,6 +4034,24 @@ RectTransform:
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
+--- !u!114 &72228850
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 72228846}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 232ed347c4de1134d8b91dbe2fd5c495, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  useButton: {fileID: 902163044}
+  favorLabel: {fileID: 1098916444}
+  favorTimerText: {fileID: 889786303}
+  bonus: 0.25
+  durationHours: 2
+  consumeFavorItem: 1
 --- !u!1 &73356049
 GameObject:
   m_ObjectHideFlags: 0
@@ -4998,9 +4998,9 @@ MonoBehaviour:
     team: []
     owned: []
     activeFlyers: []
-    activeCaptureBands: []
+    activeWorkOrders: []
     activeJobMods: []
-    activeLuckBoosts: []
+    activeFavorBoosts: []
     jobStorageUpgrades: []
     activeShinyBoosts: []
     fieldOps:
@@ -6401,8 +6401,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 3.0943, y: 168.87}
-  m_SizeDelta: {x: 811.6871, y: 848.74}
+  m_AnchoredPosition: {x: 3.0943, y: 377.19}
+  m_SizeDelta: {x: 811.6871, y: 554.04}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &134546148
 MonoBehaviour:
@@ -7094,7 +7094,7 @@ RectTransform:
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 0, y: 0}
   m_AnchoredPosition: {x: 74.881836, y: 82.80469}
-  m_SizeDelta: {x: 131.3474, y: 47.7323}
+  m_SizeDelta: {x: 23.2533, y: 47.7323}
   m_Pivot: {x: 0, y: 0}
 --- !u!114 &147408922
 MonoBehaviour:
@@ -14695,7 +14695,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: 'Shiny Lures: 12'
+  m_text: 'Shiny Orb: 12'
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: ca247a3092b7b404dbaa6f4ab43e450c, type: 2}
   m_sharedMaterial: {fileID: -403277894513911722, guid: ca247a3092b7b404dbaa6f4ab43e450c, type: 2}
@@ -22660,9 +22660,9 @@ MonoBehaviour:
     team: []
     owned: []
     activeFlyers: []
-    activeCaptureBands: []
+    activeWorkOrders: []
     activeJobMods: []
-    activeLuckBoosts: []
+    activeFavorBoosts: []
     jobStorageUpgrades: []
     activeShinyBoosts: []
     fieldOps:
@@ -34317,7 +34317,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!114 &652745099
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -37082,7 +37082,7 @@ GameObject:
   - component: {fileID: 698114179}
   - component: {fileID: 698114180}
   m_Layer: 5
-  m_Name: BandLabel
+  m_Name: WorkOrderLabel
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -37104,8 +37104,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 700, y: 100}
+  m_AnchoredPosition: {x: 0, y: 60}
+  m_SizeDelta: {x: 700, y: 215}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &698114179
 CanvasRenderer:
@@ -37135,7 +37135,9 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: 'Band: 12'
+  m_text: 'Order: 12
+
+'
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: ca247a3092b7b404dbaa6f4ab43e450c, type: 2}
   m_sharedMaterial: {fileID: -403277894513911722, guid: ca247a3092b7b404dbaa6f4ab43e450c, type: 2}
@@ -37162,10 +37164,10 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 110
+  m_fontSize: 72
   m_fontSizeBase: 110
   m_fontWeight: 400
-  m_enableAutoSizing: 0
+  m_enableAutoSizing: 1
   m_fontSizeMin: 18
   m_fontSizeMax: 72
   m_fontStyle: 0
@@ -42848,7 +42850,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!224 &797809218
 RectTransform:
   m_ObjectHideFlags: 0
@@ -45697,12 +45699,12 @@ RectTransform:
   - {fileID: 1071763915}
   - {fileID: 72228849}
   - {fileID: 89578091}
+  - {fileID: 1167268452}
   - {fileID: 1741372079}
   - {fileID: 1845558543}
   - {fileID: 2046987864}
   - {fileID: 1829444260}
   - {fileID: 1942174914}
-  - {fileID: 1167268452}
   - {fileID: 622564764}
   - {fileID: 1104776531}
   - {fileID: 200122322}
@@ -48018,7 +48020,7 @@ GameObject:
   - component: {fileID: 889786304}
   - component: {fileID: 889786303}
   m_Layer: 5
-  m_Name: LuckTimer
+  m_Name: FavorTimer
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -49172,7 +49174,7 @@ GameObject:
   - component: {fileID: 900510820}
   - component: {fileID: 900510819}
   m_Layer: 5
-  m_Name: BandTimer
+  m_Name: WorkOrderTimer
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -49293,8 +49295,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 5.2315, y: -434.90018}
-  m_SizeDelta: {x: 800.5829, y: 358.8096}
+  m_AnchoredPosition: {x: 5.2315, y: -307.15}
+  m_SizeDelta: {x: 800.5829, y: 614.31}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!1 &902163040
 GameObject:
@@ -60570,12 +60572,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 46e42e594ae64468bbc1d17fb7e20859, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  useBandBtn: {fileID: 415407556}
-  bandsLabel: {fileID: 698114180}
-  bandTimerText: {fileID: 900510819}
+  useButton: {fileID: 415407556}
+  ordersLabel: {fileID: 698114180}
+  orderTimerText: {fileID: 900510819}
   bonus: 0.25
   durationHours: 2
-  consumeBandItem: 1
+  consumeWorkOrderItem: 1
 --- !u!222 &1071763914
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -61707,7 +61709,7 @@ GameObject:
   - component: {fileID: 1098916443}
   - component: {fileID: 1098916444}
   m_Layer: 5
-  m_Name: LuckLabel
+  m_Name: FavorLabel
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -68612,8 +68614,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 5.2315, y: -434.90018}
-  m_SizeDelta: {x: 800.5829, y: 358.8096}
+  m_AnchoredPosition: {x: 5.2315, y: -307.15}
+  m_SizeDelta: {x: 800.5829, y: 614.31}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!1 &1215896654
 GameObject:
@@ -69159,9 +69161,9 @@ RectTransform:
   - {fileID: 1613914532}
   m_Father: {fileID: 800279132}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 0, y: 0}
-  m_AnchoredPosition: {x: 0, y: 0}
+  m_AnchorMin: {x: 0, y: 1}
+  m_AnchorMax: {x: 0, y: 1}
+  m_AnchoredPosition: {x: 734.2436, y: -215}
   m_SizeDelta: {x: 320, y: 150}
   m_Pivot: {x: 0.5, y: 0}
 --- !u!114 &1226516189
@@ -72561,7 +72563,7 @@ PrefabInstance:
       objectReference: {fileID: 11400000, guid: e1980d03e94584c2b8bf7986c994fd3a, type: 2}
     - target: {fileID: 3960355587664765872, guid: ad3c94b4faa4cb64c812b24986528157, type: 3}
       propertyPath: m_hasFontAssetChanged
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 5999859918814579861, guid: ad3c94b4faa4cb64c812b24986528157, type: 3}
       propertyPath: m_Name
@@ -72661,7 +72663,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6663969907382850219, guid: ad3c94b4faa4cb64c812b24986528157, type: 3}
       propertyPath: m_hasFontAssetChanged
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
@@ -78656,9 +78658,9 @@ RectTransform:
   - {fileID: 1100954479}
   m_Father: {fileID: 800279132}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 0, y: 0}
-  m_AnchoredPosition: {x: 0, y: 0}
+  m_AnchorMin: {x: 0, y: 1}
+  m_AnchorMax: {x: 0, y: 1}
+  m_AnchoredPosition: {x: 244.74786, y: -140}
   m_SizeDelta: {x: 320, y: 150}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1386927798
@@ -94720,7 +94722,7 @@ PrefabInstance:
       objectReference: {fileID: 11400000, guid: e1980d03e94584c2b8bf7986c994fd3a, type: 2}
     - target: {fileID: 3960355587664765872, guid: ad3c94b4faa4cb64c812b24986528157, type: 3}
       propertyPath: m_hasFontAssetChanged
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 5999859918814579861, guid: ad3c94b4faa4cb64c812b24986528157, type: 3}
       propertyPath: m_Name
@@ -94820,7 +94822,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6663969907382850219, guid: ad3c94b4faa4cb64c812b24986528157, type: 3}
       propertyPath: m_hasFontAssetChanged
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
@@ -109846,8 +109848,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: 0, y: 0.00002670288}
-  m_SizeDelta: {x: 0, y: -0.000022888}
+  m_AnchoredPosition: {x: 68.24579, y: 0.00002670288}
+  m_SizeDelta: {x: 136.4916, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1971641233
 MonoBehaviour:
@@ -109869,7 +109871,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: Beta
+  m_text: Beta 0.2
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: ca247a3092b7b404dbaa6f4ab43e450c, type: 2}
   m_sharedMaterial: {fileID: -403277894513911722, guid: ca247a3092b7b404dbaa6f4ab43e450c, type: 2}
@@ -113244,8 +113246,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 3.0943, y: 168.87}
-  m_SizeDelta: {x: 811.6871, y: 848.74}
+  m_AnchoredPosition: {x: 3.0943, y: 377.19}
+  m_SizeDelta: {x: 811.6871, y: 554.04}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &2034486902
 MonoBehaviour:
@@ -120732,7 +120734,7 @@ PrefabInstance:
       objectReference: {fileID: 11400000, guid: e1980d03e94584c2b8bf7986c994fd3a, type: 2}
     - target: {fileID: 3960355587664765872, guid: ad3c94b4faa4cb64c812b24986528157, type: 3}
       propertyPath: m_hasFontAssetChanged
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 5999859918814579861, guid: ad3c94b4faa4cb64c812b24986528157, type: 3}
       propertyPath: m_Name
@@ -120832,7 +120834,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6663969907382850219, guid: ad3c94b4faa4cb64c812b24986528157, type: 3}
       propertyPath: m_hasFontAssetChanged
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []

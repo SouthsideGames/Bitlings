@@ -44,7 +44,7 @@ public class FlyerBiasData
 }
 
 [Serializable]
-public class CaptureBandData
+public class WorkOrderData
 {
     public float bonus;
     public long expireUnix;
@@ -97,9 +97,9 @@ public class PlayerManager
     public List<OwnedMonsterData> team = new List<OwnedMonsterData>();
     public List<OwnedMonsterData> owned = new List<OwnedMonsterData>();
     public List<FlyerBiasData> activeFlyers = new List<FlyerBiasData>();
-    public List<CaptureBandData> activeCaptureBands = new List<CaptureBandData>();
+    public List<WorkOrderData> activeWorkOrders = new List<WorkOrderData>();
     public List<JobGlobalMod> activeJobMods = new List<JobGlobalMod>();
-    public List<LuckBoostData> activeLuckBoosts = new List<LuckBoostData>();
+    public List<LuckBoostData> activeFavorBoosts = new List<LuckBoostData>();
     public List<JobStorageUpgrade> jobStorageUpgrades = new List<JobStorageUpgrade>();
     public List<ShinyBoostData> activeShinyBoosts = new List<ShinyBoostData>();
     public FieldOpsStats fieldOps = new FieldOpsStats();
@@ -168,8 +168,8 @@ public class PlayerManager
             discoveredMonsterIds = new HashSet<string>(discoveredMonsterIdsList ?? new List<string>());
 
         activeFlyers         ??= new List<FlyerBiasData>();
-        activeCaptureBands  ??= new List<CaptureBandData>();
-        activeLuckBoosts    ??= new List<LuckBoostData>();
+        activeWorkOrders  ??= new List<WorkOrderData>();
+        activeFavorBoosts    ??= new List<LuckBoostData>();
         activeShinyBoosts   ??= new List<ShinyBoostData>();
         jobStorageUpgrades  ??= new List<JobStorageUpgrade>();
         team                ??= new List<OwnedMonsterData>();

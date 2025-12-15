@@ -167,7 +167,7 @@ public partial class EncounterManager
     {
         get
         {
-            var list = SaveManager.Data?.activeLuckBoosts;
+            var list = SaveManager.Data?.activeFavorBoosts;
             if (list == null || list.Count == 0) return null;
             var cur = list[0];
             if (cur != null && cur.expireUnix <= SaveManager.NowUnix())
@@ -199,11 +199,11 @@ public partial class EncounterManager
         }
     }
 
-    private CaptureBandData CurrentCaptureBand
+    private WorkOrderData CurrentCaptureBand
     {
         get
         {
-            var list = SaveManager.Data?.activeCaptureBands;
+            var list = SaveManager.Data?.activeWorkOrders;
             if (list == null || list.Count == 0) return null;
             var cur = list[0];
             if (cur != null && cur.expireUnix <= SaveManager.NowUnix())
