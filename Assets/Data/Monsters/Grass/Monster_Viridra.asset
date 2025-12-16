@@ -23,6 +23,7 @@ MonoBehaviour:
   rarity: 3
   canBeStarter: 0
   starterWeight: 1
+  maxLevel: 50
   baseHP: 78
   baseAttack: 52
   baseDefense: 91
@@ -30,7 +31,6 @@ MonoBehaviour:
   hpRegenPerHour: 6
   fatigueRatePerHour: 0.03
   fatigueCooldownHours: 8
-  baseTrainingXPPerHour: 56
   evolutionStage: 1
   evolutionLevel: 0
   evolutionForm: {fileID: 0}
@@ -44,7 +44,7 @@ MonoBehaviour:
   defaultAlwaysOnTitles: []
   Personality: {fileID: 11400000, guid: ad0406630c0e1459897f0f87f1f80154, type: 2}
   basicAttackName: Leaf Jab
-  basicAttackPrefab: {fileID: 0}
+  basicAttackPrefab: {fileID: 7147688047696861109, guid: 5287b95db783b4379b733d77af2cc458, type: 3}
   basicAttackPrefabLifetime: 1
   description: Its body is covered in hardened leaves sharp as blades. Viridra silently
     waits among trees, striking swiftly at intruders.

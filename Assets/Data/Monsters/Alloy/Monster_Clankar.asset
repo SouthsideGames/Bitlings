@@ -23,6 +23,7 @@ MonoBehaviour:
   rarity: 0
   canBeStarter: 1
   starterWeight: 10
+  maxLevel: 50
   baseHP: 70
   baseAttack: 40
   baseDefense: 70
@@ -30,7 +31,6 @@ MonoBehaviour:
   hpRegenPerHour: 6
   fatigueRatePerHour: 0.03
   fatigueCooldownHours: 8
-  baseTrainingXPPerHour: 32
   evolutionStage: 1
   evolutionLevel: 0
   evolutionForm: {fileID: 0}
@@ -44,7 +44,7 @@ MonoBehaviour:
   defaultAlwaysOnTitles: []
   Personality: {fileID: 11400000, guid: 71fa3f6cb68214bca94496affd470944, type: 2}
   basicAttackName: Metal Bash
-  basicAttackPrefab: {fileID: 0}
+  basicAttackPrefab: {fileID: 5172629195496952374, guid: ad774bbb8084f42c29f12cd62581f796, type: 3}
   basicAttackPrefabLifetime: 1
   description: Its body rattles with every step. Clankar scuttles tirelessly, its
     metallic claws clicking in a steady rhythm.

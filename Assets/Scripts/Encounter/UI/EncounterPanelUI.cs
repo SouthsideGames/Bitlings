@@ -105,18 +105,6 @@ public class EncounterPanelUI : MonoBehaviour
 
     public bool IsHireDecisionOpen => hireDecisionRoot && hireDecisionRoot.activeSelf;
 
-    // ─────────────────────────────────────────────────────────────
-    // Wild State HUD (guard / shield / charge)
-    // ─────────────────────────────────────────────────────────────
-    [Header("Wild State")]
-    [SerializeField] private TextMeshProUGUI wildStateLabel;
-    [SerializeField] private GameObject wildGuardIcon;
-    [SerializeField] private GameObject wildShieldIcon;
-    [SerializeField] private GameObject wildChargeIcon;
-
-    bool _wildIsGuarding;
-    int _wildShieldAmount;
-    int _wildChargeTurns;
 
     private TextMeshProUGUI encounterLabel;
     float _etaTickAccum = 0f;
@@ -277,7 +265,6 @@ public class EncounterPanelUI : MonoBehaviour
             ShowBlinder(true, instant: true);
             BuildTeamPreview();
             PickAndApplyBlinderLine();
-            ClearWildStateUI();
         }
     }
 
@@ -370,7 +357,6 @@ public class EncounterPanelUI : MonoBehaviour
             ShowBlinder(true, instant: true);
             BuildTeamPreview();
             PickAndApplyBlinderLine();
-            ClearWildStateUI();
         }
     }
 
@@ -989,79 +975,8 @@ public class EncounterPanelUI : MonoBehaviour
                         Destroy(go);
                 });
     }
-
-    // ─────────────────────────────────────────────────────────────
-    // Wild state reset + public state API
-    // ─────────────────────────────────────────────────────────────
-    void ClearWildStateUI()
-    {
-        if (ownedCapturedIcon)
-            ownedCapturedIcon.SetActive(false);
-
-        _wildIsGuarding = false;
-        _wildShieldAmount = 0;
-        _wildChargeTurns = 0;
-
-        if (wildGuardIcon) wildGuardIcon.SetActive(false);
-        if (wildShieldIcon) wildShieldIcon.SetActive(false);
-        if (wildChargeIcon) wildChargeIcon.SetActive(false);
-
-        if (wildStateLabel)
-            wildStateLabel.text = string.Empty;
-    }
-
-    public void SetWildGuarding(bool isGuarding)
-    {
-        _wildIsGuarding = isGuarding;
-
-        if (wildGuardIcon)
-            wildGuardIcon.SetActive(isGuarding);
-
-        RefreshWildStateLabel();
-    }
-
-    public void SetWildShield(int shieldAmount)
-    {
-        _wildShieldAmount = Mathf.Max(0, shieldAmount);
-
-        if (wildShieldIcon)
-            wildShieldIcon.SetActive(_wildShieldAmount > 0);
-
-        RefreshWildStateLabel();
-    }
-
-    public void SetWildChargeTurns(int turnsRemaining)
-    {
-        _wildChargeTurns = Mathf.Max(0, turnsRemaining);
-
-        if (wildChargeIcon)
-            wildChargeIcon.SetActive(_wildChargeTurns > 0);
-
-        RefreshWildStateLabel();
-    }
-
-    void RefreshWildStateLabel()
-    {
-        if (!wildStateLabel)
-            return;
-
-        var parts = new List<string>();
-
-        if (_wildIsGuarding)
-            parts.Add("Guard");
-
-        if (_wildShieldAmount > 0)
-            parts.Add($"Shield {_wildShieldAmount}");
-
-        if (_wildChargeTurns > 0)
-            parts.Add($"Charging ({_wildChargeTurns})");
-
-        wildStateLabel.text = (parts.Count == 0) ? string.Empty : string.Join(" • ", parts);
-    }
-
     public void OnWildSpawned(MonsterDataSO def)
     {
-        ClearWildStateUI();
 
         if (!ownedCapturedIcon)
             return;

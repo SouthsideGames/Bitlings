@@ -23,6 +23,7 @@ MonoBehaviour:
   rarity: 0
   canBeStarter: 0
   starterWeight: 1
+  maxLevel: 50
   baseHP: 65
   baseAttack: 42
   baseDefense: 73
@@ -30,7 +31,6 @@ MonoBehaviour:
   hpRegenPerHour: 6
   fatigueRatePerHour: 0.03
   fatigueCooldownHours: 8
-  baseTrainingXPPerHour: 36
   evolutionStage: 2
   evolutionLevel: 25
   evolutionForm: {fileID: 11400000, guid: 198217f86f9ba9d4db84b07a1e4b8ddb, type: 2}
@@ -44,7 +44,7 @@ MonoBehaviour:
   defaultAlwaysOnTitles: []
   Personality: {fileID: 11400000, guid: f6f72aa846632454b97832d01d1b5c0c, type: 2}
   basicAttackName: Leaf Jab
-  basicAttackPrefab: {fileID: 0}
+  basicAttackPrefab: {fileID: 7147688047696861109, guid: 5287b95db783b4379b733d77af2cc458, type: 3}
   basicAttackPrefabLifetime: 1
   description: As it grows, more leaves sprout from its body. Floren releases soothing
     aromas that calm nearby Bitlings.

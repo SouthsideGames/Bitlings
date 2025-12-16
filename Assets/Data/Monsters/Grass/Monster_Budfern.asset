@@ -23,6 +23,7 @@ MonoBehaviour:
   rarity: 0
   canBeStarter: 1
   starterWeight: 10
+  maxLevel: 50
   baseHP: 60
   baseAttack: 40
   baseDefense: 70
@@ -30,7 +31,6 @@ MonoBehaviour:
   hpRegenPerHour: 6
   fatigueRatePerHour: 0.03
   fatigueCooldownHours: 8
-  baseTrainingXPPerHour: 35
   evolutionStage: 1
   evolutionLevel: 14
   evolutionForm: {fileID: 11400000, guid: e24cdf0f361254948903fab289fa4020, type: 2}
@@ -44,7 +44,7 @@ MonoBehaviour:
   defaultAlwaysOnTitles: []
   Personality: {fileID: 11400000, guid: db9c4a912e52a4c5298eec48842ba111, type: 2}
   basicAttackName: Leaf Jab
-  basicAttackPrefab: {fileID: 0}
+  basicAttackPrefab: {fileID: 7147688047696861109, guid: 5287b95db783b4379b733d77af2cc458, type: 3}
   basicAttackPrefabLifetime: 1
   description: Its leafy body helps it blend into undergrowth. Budfern sways with
     the breeze, hiding from predators in the Bitling world.

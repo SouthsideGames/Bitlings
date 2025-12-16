@@ -23,6 +23,7 @@ MonoBehaviour:
   rarity: 5
   canBeStarter: 0
   starterWeight: 1
+  maxLevel: 50
   baseHP: 105
   baseAttack: 60
   baseDefense: 105
@@ -30,7 +31,6 @@ MonoBehaviour:
   hpRegenPerHour: 6
   fatigueRatePerHour: 0.03
   fatigueCooldownHours: 8
-  baseTrainingXPPerHour: 66
   evolutionStage: 1
   evolutionLevel: 0
   evolutionForm: {fileID: 0}
@@ -44,7 +44,7 @@ MonoBehaviour:
   defaultAlwaysOnTitles: []
   Personality: {fileID: 11400000, guid: 2e75af56469454f81aab48433f975b34, type: 2}
   basicAttackName: Metal Bash
-  basicAttackPrefab: {fileID: 0}
+  basicAttackPrefab: {fileID: 5172629195496952374, guid: ad774bbb8084f42c29f12cd62581f796, type: 3}
   basicAttackPrefabLifetime: 1
   description: Forged from forgotten alloys, Obliviron is said to be indestructible.
     Legends claim its armored body has withstood centuries without a single crack.

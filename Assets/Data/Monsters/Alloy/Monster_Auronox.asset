@@ -23,6 +23,7 @@ MonoBehaviour:
   rarity: 3
   canBeStarter: 0
   starterWeight: 1
+  maxLevel: 50
   baseHP: 91
   baseAttack: 52
   baseDefense: 91
@@ -30,7 +31,6 @@ MonoBehaviour:
   hpRegenPerHour: 6
   fatigueRatePerHour: 0.03
   fatigueCooldownHours: 8
-  baseTrainingXPPerHour: 53
   evolutionStage: 1
   evolutionLevel: 0
   evolutionForm: {fileID: 0}
@@ -44,7 +44,7 @@ MonoBehaviour:
   defaultAlwaysOnTitles: []
   Personality: {fileID: 11400000, guid: d2d9ec6158abb40d2a7618ee71a9de06, type: 2}
   basicAttackName: Metal Bash
-  basicAttackPrefab: {fileID: 0}
+  basicAttackPrefab: {fileID: 5172629195496952374, guid: ad774bbb8084f42c29f12cd62581f796, type: 3}
   basicAttackPrefabLifetime: 1
   description: "Its golden frame hums with ancient energy. Auronox\u2019s central
     eye never blinks, watching tirelessly as its gears rotate in silent rhythm."
