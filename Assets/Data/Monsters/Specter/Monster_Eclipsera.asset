@@ -23,6 +23,7 @@ MonoBehaviour:
   rarity: 4
   canBeStarter: 0
   starterWeight: 1
+  maxLevel: 50
   baseHP: 56
   baseAttack: 70
   baseDefense: 42
@@ -30,7 +31,6 @@ MonoBehaviour:
   hpRegenPerHour: 6
   fatigueRatePerHour: 0.03
   fatigueCooldownHours: 8
-  baseTrainingXPPerHour: 80
   evolutionStage: 1
   evolutionLevel: 0
   evolutionForm: {fileID: 0}
@@ -44,7 +44,7 @@ MonoBehaviour:
   defaultAlwaysOnTitles: []
   Personality: {fileID: 11400000, guid: 48288e9e78c65453781f793c8df03e90, type: 2}
   basicAttackName: Wraith Touch
-  basicAttackPrefab: {fileID: 0}
+  basicAttackPrefab: {fileID: 9101927626726485638, guid: 257dd9ab5e3cf0544a679d2e444f8d35, type: 3}
   basicAttackPrefabLifetime: 1
   description: Said to appear only under eclipses, Eclipsera drifts through the skies
     like a silent omen. Legends whisper that its gaze can pierce both time and soul.

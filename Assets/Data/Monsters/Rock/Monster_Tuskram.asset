@@ -23,6 +23,7 @@ MonoBehaviour:
   rarity: 1
   canBeStarter: 1
   starterWeight: 7
+  maxLevel: 50
   baseHP: 88
   baseAttack: 44
   baseDefense: 66
@@ -30,7 +31,6 @@ MonoBehaviour:
   hpRegenPerHour: 6
   fatigueRatePerHour: 0.03
   fatigueCooldownHours: 8
-  baseTrainingXPPerHour: 38
   evolutionStage: 1
   evolutionLevel: 24
   evolutionForm: {fileID: 11400000, guid: 3af5b09f26ccd7c4b894df9413c3708d, type: 2}
@@ -44,7 +44,7 @@ MonoBehaviour:
   defaultAlwaysOnTitles: []
   Personality: {fileID: 11400000, guid: d2d9ec6158abb40d2a7618ee71a9de06, type: 2}
   basicAttackName: Stone Bash
-  basicAttackPrefab: {fileID: 0}
+  basicAttackPrefab: {fileID: 2351537007807138146, guid: 02418565875047149b7ee7a075c39850, type: 3}
   basicAttackPrefabLifetime: 1
   description: Tuskram charges headfirst into obstacles to clear paths. Its rocky
     hide protects it from injury as it batters through stone.

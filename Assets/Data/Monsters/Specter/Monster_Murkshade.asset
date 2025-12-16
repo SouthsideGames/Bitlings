@@ -23,6 +23,7 @@ MonoBehaviour:
   rarity: 0
   canBeStarter: 1
   starterWeight: 10
+  maxLevel: 50
   baseHP: 40
   baseAttack: 50
   baseDefense: 30
@@ -30,7 +31,6 @@ MonoBehaviour:
   hpRegenPerHour: 6
   fatigueRatePerHour: 0.03
   fatigueCooldownHours: 8
-  baseTrainingXPPerHour: 46
   evolutionStage: 1
   evolutionLevel: 0
   evolutionForm: {fileID: 0}
@@ -44,7 +44,7 @@ MonoBehaviour:
   defaultAlwaysOnTitles: []
   Personality: {fileID: 11400000, guid: ab061081920b544089b918a9f1f3759b, type: 2}
   basicAttackName: Wraith Touch
-  basicAttackPrefab: {fileID: 0}
+  basicAttackPrefab: {fileID: 9101927626726485638, guid: 257dd9ab5e3cf0544a679d2e444f8d35, type: 3}
   basicAttackPrefabLifetime: 1
   description: A drifting cloud of cursed smoke. Murkshade fades in and out of sight,
     its glowing eyes the last thing seen before it vanishes.

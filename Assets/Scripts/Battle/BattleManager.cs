@@ -160,6 +160,11 @@ public class BattleManager : MonoBehaviour
     [SerializeField] private Image chargeIcon;
     [SerializeField] private TextMeshProUGUI playerShieldText;
 
+    [Header("Status UI (Wild)")]
+    [SerializeField] private Image wildGuardIcon;
+    [SerializeField] private Image wildChargeIcon;
+    [SerializeField] private TextMeshProUGUI wildShieldText;
+
     [Header("Debug")]
     [SerializeField] private bool debugIncomingMitigation = false;
     [SerializeField] private bool debugEffectivenessOutgoing = false;
@@ -235,10 +240,14 @@ public class BattleManager : MonoBehaviour
 
         if (SaveManager.Data != null && SaveManager.Data.settings != null)
             battleSpeed = Mathf.Clamp(SaveManager.Data.settings.battleSpeed, 0.25f, 5f);
-            
+
         if (guardIcon) guardIcon.enabled = false;
         if (chargeIcon) chargeIcon.enabled = false;
         if (playerShieldText) playerShieldText.gameObject.SetActive(false);
+
+        if (wildGuardIcon) wildGuardIcon.enabled = false;
+        if (wildChargeIcon) wildChargeIcon.enabled = false;
+        if (wildShieldText) wildShieldText.gameObject.SetActive(false);
     }
 
     void OnEnable()
@@ -292,7 +301,7 @@ public class BattleManager : MonoBehaviour
     public void Begin(MonsterDataSO wild, int level, Action<BattleResult> onEnded)
     {
         var roster = SaveManager.Data.team;
-        if (roster == null || roster.Count == 0) return;
+        if (roster == null || roster.Count == 0) { ForceEndBattleEarly(false); return; }
 
         playerNoDmgTurns = 0;
         playerNoCritTurns = 0;
@@ -326,6 +335,7 @@ public class BattleManager : MonoBehaviour
         if (wildLevelText) wildLevelText.text = $"Lv {wildLevel}";
         if (wildHPBar) { wildHPBar.maxValue = wildMaxHP; wildHPBar.value = wildHP; }
 
+        UpdateWildStatusUI();
         UpdateWildInfoUI();
 
         teamCount = Mathf.Min(3, roster.Count);
@@ -455,6 +465,7 @@ public class BattleManager : MonoBehaviour
             ApplyPendingGuardShieldForWild();
 
             wildDefendActiveThisRound = false;
+            UpdateWildStatusUI();
 
             BattleLogger.Log($"— Round {round} —", LogScope.Battle);
             yield return Wait(beginRoundDelay);
@@ -710,6 +721,7 @@ public class BattleManager : MonoBehaviour
             defendActiveThisRound = false;
             if (guardIcon) guardIcon.enabled = false;
             wildDefendActiveThisRound = false;
+            UpdateWildStatusUI();
             round++;
         }
 
@@ -998,7 +1010,7 @@ public class BattleManager : MonoBehaviour
         {
             float absorb = Mathf.Min(wildShieldHP, dmgToApply);
             wildShieldHP = Mathf.Max(0f, wildShieldHP - absorb);
-            dmgToApply = Mathf.Max(1, dmgToApply - Mathf.RoundToInt(absorb));
+            dmgToApply = Mathf.Max(0, dmgToApply - Mathf.RoundToInt(absorb));
 
             if (absorb > 0f)
             {
@@ -1108,6 +1120,7 @@ public class BattleManager : MonoBehaviour
             );
 
             Punch(wildIcon);
+            UpdateWildStatusUI();
             yield break;
         }
 
@@ -1197,7 +1210,7 @@ public class BattleManager : MonoBehaviour
         {
             dr.damage = Mathf.Max(1, Mathf.RoundToInt(dr.damage * (1f + chargeBonusPct)));
             wildChargedNextAttack = false;
-
+            UpdateWildStatusUI();
             string attackerName = wildDef ? wildDef.displayName : "Foe";
             BattleLogger.Log(
                 $"{attackerName} unleashes a charged attack (+{Mathf.RoundToInt(chargeBonusPct * 100f)}% dmg)!",
@@ -1209,22 +1222,22 @@ public class BattleManager : MonoBehaviour
 
         var cmods = GetConditionalModsForActive();
         if (cmods.defPct > 0f)
-            incomingScalar *= (1f - Mathf.Clamp01(cmods.defPct));
+            incomingScalar *= 1f - Mathf.Clamp01(cmods.defPct);
 
         if (ctx != null && !ctx.usedFirstIncoming && ctx.firstIncomingReduce > 0f)
         {
             ctx.usedFirstIncoming = true;
-            incomingScalar *= (1f - ctx.firstIncomingReduce);
+            incomingScalar *= 1f - ctx.firstIncomingReduce;
         }
 
         if (ctx != null && ctx.baseDamageReducePct > 0f)
-            incomingScalar *= (1f - ctx.baseDamageReducePct);
+            incomingScalar *= 1f - ctx.baseDamageReducePct;
 
         if (ctx != null && ctx.defenseBonusPct > 0f)
-            incomingScalar *= (1f - ctx.defenseBonusPct);
+            incomingScalar *= 1f - ctx.defenseBonusPct;
 
         if (ctx != null && ctx.dmgReduceBuffTurns > 0 && ctx.dmgReduceFirstTurns > 0f)
-            incomingScalar *= (1f - ctx.dmgReduceFirstTurns);
+            incomingScalar *= 1f - ctx.dmgReduceFirstTurns;
 
         float scalarBeforeGuard = incomingScalar;
         float preventedByGuardRaw = 0f;
@@ -1663,6 +1676,9 @@ public class BattleManager : MonoBehaviour
 
         UpdatePlayerInfoUI();
         UpdateShieldUI();
+        UpdateWildStatusUI();
+
+
     }
 
 
@@ -2584,6 +2600,7 @@ public class BattleManager : MonoBehaviour
         float gain = wildPendingGuardShield;
         wildShieldHP += gain;
         wildPendingGuardShield = 0f;
+        UpdateWildStatusUI();
 
         BattleLogger.Log(
             $"{name} gains a guard shield of {Mathf.RoundToInt(gain)}!",
@@ -2625,7 +2642,7 @@ public class BattleManager : MonoBehaviour
         if (success)
         {
             wildDefendActiveThisRound = true;
-
+            UpdateWildStatusUI();
             BattleLogger.Log($"{name} is defending.", LogScope.Battle);
             BattleLogger.Log(
                 $"{name} will reduce the next hit and convert it into a shield for the following round.",
@@ -2635,6 +2652,7 @@ public class BattleManager : MonoBehaviour
         else
         {
             wildDefendActiveThisRound = false;
+            UpdateWildStatusUI();
             BattleLogger.Log($"{name} tried to defend, but it failed!", LogScope.Battle);
         }
 
@@ -2743,7 +2761,7 @@ public class BattleManager : MonoBehaviour
                 target.anchoredPosition = originalPos;
             });
     }
-    
+
     private void SetPostBattleWinnerVisible(bool victory, bool escaped)
     {
         // Escaped = no winner. Keep player visible, hide the wild.
@@ -2769,6 +2787,53 @@ public class BattleManager : MonoBehaviour
     }
 
 
+    private void UpdateWildStatusUI()
+    {
+        if (wildGuardIcon) wildGuardIcon.enabled = wildDefendActiveThisRound;
+
+        if (wildChargeIcon) wildChargeIcon.enabled = wildChargedNextAttack;
+
+        if (!wildShieldText) return;
+
+        if (wildShieldHP > 0.01f)
+        {
+            wildShieldText.gameObject.SetActive(true);
+            wildShieldText.text = $"Shield: {Mathf.CeilToInt(wildShieldHP)}";
+        }
+        else
+        {
+            wildShieldText.gameObject.SetActive(false);
+        }
+    }
+
+    private void ForceEndBattleEarly(bool victory, bool escaped = false)
+    {
+        // treat as ended even if we never reached inBattle=true
+        SetIsPlayerTurn(false);
+        pendingAction = PlayerAction.None;
+
+        // disable bench buttons safely
+        if (benchBtn1) benchBtn1.interactable = false;
+        if (benchBtn2) benchBtn2.interactable = false;
+
+        var result = new BattleResult
+        {
+            victory = victory,
+            escaped = escaped,
+            creditsGained = 0,
+            wildDef = wildDef,
+            wildLevel = wildLevel,
+            secondsSurvived = 0f,
+            critCount = 0,
+            turnsSurvived = 0,
+            damageTaken = 0,
+            damageDealt = 0,
+            gotFirstHit = false
+        };
+
+        onEnd?.Invoke(result);
+        GameEvents.BattleFinished?.Invoke(result);
+    }
 
 
 

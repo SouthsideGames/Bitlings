@@ -23,6 +23,7 @@ MonoBehaviour:
   rarity: 1
   canBeStarter: 1
   starterWeight: 7
+  maxLevel: 50
   baseHP: 55
   baseAttack: 55
   baseDefense: 44
@@ -30,7 +31,6 @@ MonoBehaviour:
   hpRegenPerHour: 6
   fatigueRatePerHour: 0.03
   fatigueCooldownHours: 8
-  baseTrainingXPPerHour: 48
   evolutionStage: 1
   evolutionLevel: 20
   evolutionForm: {fileID: 11400000, guid: 711713b649ca64ec9a23e2d6de67dee8, type: 2}
@@ -44,7 +44,7 @@ MonoBehaviour:
   defaultAlwaysOnTitles: []
   Personality: {fileID: 11400000, guid: 14f787df7868d4a09ae546b16b48b751, type: 2}
   basicAttackName: Chitin Bite
-  basicAttackPrefab: {fileID: 0}
+  basicAttackPrefab: {fileID: 6777048211968024641, guid: 36482d8bd89710b4983cb69ab5a8cceb, type: 3}
   basicAttackPrefabLifetime: 1
   description: Scuttli darts across the forest floor in quick bursts. It hides beneath
     leaves when threatened, peeking out with curious eyes.

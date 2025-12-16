@@ -23,6 +23,7 @@ MonoBehaviour:
   rarity: 3
   canBeStarter: 0
   starterWeight: 1
+  maxLevel: 50
   baseHP: 52
   baseAttack: 52
   baseDefense: 52
@@ -30,7 +31,6 @@ MonoBehaviour:
   hpRegenPerHour: 6
   fatigueRatePerHour: 0.03
   fatigueCooldownHours: 8
-  baseTrainingXPPerHour: 71
   evolutionStage: 1
   evolutionLevel: 0
   evolutionForm: {fileID: 0}
@@ -44,7 +44,7 @@ MonoBehaviour:
   defaultAlwaysOnTitles: []
   Personality: {fileID: 11400000, guid: c888a14ff8e93443e99af03360015689, type: 2}
   basicAttackName: Foresight Beam
-  basicAttackPrefab: {fileID: 0}
+  basicAttackPrefab: {fileID: 7907104310462883121, guid: 37212b887c61ad84eacd87133a8a9e9d, type: 3}
   basicAttackPrefabLifetime: 1
   description: "Its visions pierce into the darkest corners of fate. Prophex\u2019s
     warnings are often riddles, whispered moments before disaster strikes."

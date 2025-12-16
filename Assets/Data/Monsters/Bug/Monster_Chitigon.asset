@@ -23,6 +23,7 @@ MonoBehaviour:
   rarity: 4
   canBeStarter: 0
   starterWeight: 1
+  maxLevel: 50
   baseHP: 80
   baseAttack: 112
   baseDefense: 64
@@ -30,7 +31,6 @@ MonoBehaviour:
   hpRegenPerHour: 6
   fatigueRatePerHour: 0.03
   fatigueCooldownHours: 8
-  baseTrainingXPPerHour: 58
   evolutionStage: 1
   evolutionLevel: 0
   evolutionForm: {fileID: 0}
@@ -44,7 +44,7 @@ MonoBehaviour:
   defaultAlwaysOnTitles: []
   Personality: {fileID: 11400000, guid: f6f72aa846632454b97832d01d1b5c0c, type: 2}
   basicAttackName: Chitin Bite
-  basicAttackPrefab: {fileID: 0}
+  basicAttackPrefab: {fileID: 6777048211968024641, guid: 36482d8bd89710b4983cb69ab5a8cceb, type: 3}
   basicAttackPrefabLifetime: 1
   description: Forged of steel-like chitin, Chitigon commands lesser swarms with
     piercing screeches. Its strikes are said to split stone.

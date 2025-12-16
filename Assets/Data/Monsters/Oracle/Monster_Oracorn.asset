@@ -23,6 +23,7 @@ MonoBehaviour:
   rarity: 5
   canBeStarter: 0
   starterWeight: 1
+  maxLevel: 50
   baseHP: 60
   baseAttack: 60
   baseDefense: 60
@@ -30,7 +31,6 @@ MonoBehaviour:
   hpRegenPerHour: 6
   fatigueRatePerHour: 0.03
   fatigueCooldownHours: 8
-  baseTrainingXPPerHour: 86
   evolutionStage: 1
   evolutionLevel: 0
   evolutionForm: {fileID: 0}
@@ -44,7 +44,7 @@ MonoBehaviour:
   defaultAlwaysOnTitles: []
   Personality: {fileID: 11400000, guid: 161b42f296f3a430cbc353e1e7a3a111, type: 2}
   basicAttackName: Foresight Beam
-  basicAttackPrefab: {fileID: 0}
+  basicAttackPrefab: {fileID: 7907104310462883121, guid: 37212b887c61ad84eacd87133a8a9e9d, type: 3}
   basicAttackPrefabLifetime: 1
   description: "Said to appear only to those chosen by fate, Oracorn\u2019s horn
     glows with visions of destiny. Its presence is believed to guide entire civilizations."

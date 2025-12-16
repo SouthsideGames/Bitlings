@@ -23,6 +23,7 @@ MonoBehaviour:
   rarity: 2
   canBeStarter: 0
   starterWeight: 1
+  maxLevel: 50
   baseHP: 96
   baseAttack: 48
   baseDefense: 72
@@ -30,7 +31,6 @@ MonoBehaviour:
   hpRegenPerHour: 6
   fatigueRatePerHour: 0.03
   fatigueCooldownHours: 8
-  baseTrainingXPPerHour: 44
   evolutionStage: 2
   evolutionLevel: 0
   evolutionForm: {fileID: 0}
@@ -44,7 +44,7 @@ MonoBehaviour:
   defaultAlwaysOnTitles: []
   Personality: {fileID: 11400000, guid: d2d9ec6158abb40d2a7618ee71a9de06, type: 2}
   basicAttackName: Stone Bash
-  basicAttackPrefab: {fileID: 0}
+  basicAttackPrefab: {fileID: 2351537007807138146, guid: 02418565875047149b7ee7a075c39850, type: 3}
   basicAttackPrefabLifetime: 1
   description: Its tusks can shatter boulders with a single strike. Gravhorn is feared
     in the Bitling world for the tremors it causes when it charges.

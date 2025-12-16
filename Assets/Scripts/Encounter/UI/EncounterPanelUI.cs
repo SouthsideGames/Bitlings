@@ -281,7 +281,7 @@ public class EncounterPanelUI : MonoBehaviour
         }
     }
 
-    void ForceBlinderAlphaToOne()
+    public void ForceBlinderAlphaToOne()
     {
         if (!blinderGroup) return;
 

@@ -23,6 +23,7 @@ MonoBehaviour:
   rarity: 0
   canBeStarter: 1
   starterWeight: 10
+  maxLevel: 50
   baseHP: 50
   baseAttack: 50
   baseDefense: 40
@@ -30,7 +31,6 @@ MonoBehaviour:
   hpRegenPerHour: 6
   fatigueRatePerHour: 0.03
   fatigueCooldownHours: 8
-  baseTrainingXPPerHour: 42
   evolutionStage: 1
   evolutionLevel: 0
   evolutionForm: {fileID: 0}
@@ -44,7 +44,7 @@ MonoBehaviour:
   defaultAlwaysOnTitles: []
   Personality: {fileID: 11400000, guid: 758625599ac8542bfa091e1bf5323fa2, type: 2}
   basicAttackName: Chitin Bite
-  basicAttackPrefab: {fileID: 0}
+  basicAttackPrefab: {fileID: 6777048211968024641, guid: 36482d8bd89710b4983cb69ab5a8cceb, type: 3}
   basicAttackPrefabLifetime: 1
   description: Its fiery wings scatter glowing dust as it flies. Flareek is often
     spotted at dusk, drifting like a tiny lantern in the Bitling world.
