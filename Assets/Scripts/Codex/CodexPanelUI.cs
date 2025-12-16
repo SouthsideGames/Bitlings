@@ -36,9 +36,6 @@ public class CodexPanelUI : MonoBehaviour
     [Header("Dropdowns")]
     [SerializeField] private TMP_Dropdown sortDropdown;
 
-    // NEW: Optional "All / Discovered / Captured" dropdown
-    [SerializeField] private TMP_Dropdown viewDropdown;
-
     [Header("Filters")]
     [SerializeField] private Button capturedOnlyButton;
     [SerializeField] private Button favoritesOnlyButton;
@@ -79,18 +76,6 @@ public class CodexPanelUI : MonoBehaviour
             sortDropdown.RefreshShownValue();
         }
 
-        // ---------------------
-        // VIEW DROPDOWN (NEW)
-        // ---------------------
-        if (viewDropdown)
-        {
-            BuildViewDropdownOptions();
-
-            viewDropdown.onValueChanged.RemoveAllListeners();
-            viewDropdown.SetValueWithoutNotify((int)_viewMode);
-            viewDropdown.onValueChanged.AddListener(OnViewChanged);
-            viewDropdown.RefreshShownValue();
-        }
 
         // ---------------------
         // CAPTURED-ONLY BUTTON (gated)
@@ -142,8 +127,6 @@ public class CodexPanelUI : MonoBehaviour
         if (sortDropdown)
             sortDropdown.onValueChanged.RemoveListener(OnSortChanged);
 
-        if (viewDropdown)
-            viewDropdown.onValueChanged.RemoveListener(OnViewChanged);
 
         if (capturedOnlyButton)
             capturedOnlyButton.onClick.RemoveListener(OnToggleCapturedOnly);
@@ -186,19 +169,6 @@ public class CodexPanelUI : MonoBehaviour
         sortDropdown.RefreshShownValue();
     }
 
-    void BuildViewDropdownOptions()
-    {
-        if (!viewDropdown) return;
-
-        viewDropdown.options = new List<TMP_Dropdown.OptionData>
-        {
-            new TMP_Dropdown.OptionData("All"),
-            new TMP_Dropdown.OptionData("Discovered"),
-            new TMP_Dropdown.OptionData("Captured")
-        };
-
-        viewDropdown.RefreshShownValue();
-    }
 
     string GetSortLabel(OwnedSortMode mode)
     {

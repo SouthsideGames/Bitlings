@@ -1,14 +1,10 @@
 fileFormatVersion: 2
-<<<<<<< Updated upstream
-guid: e9a0dbbc8be7a46788ebc45500de0856
-=======
-guid: 83decf44dc6648640a35320285811168
->>>>>>> Stashed changes
+guid: 79837dc9450ed8746a1ee38051a053f4
 TextureImporter:
   internalIDToNameTable:
   - first:
-      213: 954245733787019876
-    second: SolarReign_0
+      213: -5636573795231498921
+    second: OceanicDepths_0
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -101,8 +97,6 @@ TextureImporter:
     androidETC2FallbackOverride: 0
     forceMaximumCompressionQuality_BC6H_BC7: 0
   - serializedVersion: 4
-<<<<<<< Updated upstream
-=======
     buildTarget: Android
     maxTextureSize: 2048
     resizeAlgorithm: 0
@@ -116,7 +110,6 @@ TextureImporter:
     androidETC2FallbackOverride: 0
     forceMaximumCompressionQuality_BC6H_BC7: 0
   - serializedVersion: 4
->>>>>>> Stashed changes
     buildTarget: iOS
     maxTextureSize: 2048
     resizeAlgorithm: 0
@@ -133,7 +126,7 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: SolarReign_0
+      name: OceanicDepths_0
       rect:
         serializedVersion: 2
         x: 0
@@ -148,8 +141,8 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: 46aaec660792e3d00800000000000000
-      internalID: 954245733787019876
+      spriteID: 75d73f04ffdd6c1b0800000000000000
+      internalID: -5636573795231498921
       vertices: []
       indices: 
       edges: []
@@ -168,7 +161,7 @@ TextureImporter:
     spriteCustomMetadata:
       entries: []
     nameFileIdTable:
-      SolarReign_0: 954245733787019876
+      OceanicDepths_0: -5636573795231498921
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

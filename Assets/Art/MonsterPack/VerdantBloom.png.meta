@@ -1,14 +1,10 @@
 fileFormatVersion: 2
-<<<<<<< Updated upstream
-guid: e9a0dbbc8be7a46788ebc45500de0856
-=======
-guid: 83decf44dc6648640a35320285811168
->>>>>>> Stashed changes
+guid: 22fc84a2f4f29934fab8fae92fd5a38d
 TextureImporter:
   internalIDToNameTable:
   - first:
-      213: 954245733787019876
-    second: SolarReign_0
+      213: -5027526749869579681
+    second: VerdantBloom_0
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -101,8 +97,6 @@ TextureImporter:
     androidETC2FallbackOverride: 0
     forceMaximumCompressionQuality_BC6H_BC7: 0
   - serializedVersion: 4
-<<<<<<< Updated upstream
-=======
     buildTarget: Android
     maxTextureSize: 2048
     resizeAlgorithm: 0
@@ -116,7 +110,6 @@ TextureImporter:
     androidETC2FallbackOverride: 0
     forceMaximumCompressionQuality_BC6H_BC7: 0
   - serializedVersion: 4
->>>>>>> Stashed changes
     buildTarget: iOS
     maxTextureSize: 2048
     resizeAlgorithm: 0
@@ -133,7 +126,7 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: SolarReign_0
+      name: VerdantBloom_0
       rect:
         serializedVersion: 2
         x: 0
@@ -148,8 +141,8 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: 46aaec660792e3d00800000000000000
-      internalID: 954245733787019876
+      spriteID: f52ef37de03aa3ab0800000000000000
+      internalID: -5027526749869579681
       vertices: []
       indices: 
       edges: []
@@ -168,7 +161,7 @@ TextureImporter:
     spriteCustomMetadata:
       entries: []
     nameFileIdTable:
-      SolarReign_0: 954245733787019876
+      VerdantBloom_0: -5027526749869579681
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

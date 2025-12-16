@@ -18,29 +18,28 @@ public class HarborUI : MonoBehaviour
     [Header("Active Flyer Icon")]
     [SerializeField] private Image activeFlyerIcon;
 
-    [Serializable]
-    public struct TypeIcon
-    {
-        public MonsterType type;
-        public Sprite sprite;
-    }
-
-    [SerializeField] private List<TypeIcon> typeIcons = new List<TypeIcon>();
-    Dictionary<MonsterType, Sprite> _iconMap;
-
     [Header("Flyer Settings")]
     [SerializeField, Range(0f, 1f)] private float bonus = 0.30f;
     [SerializeField, Min(1)] private int durationHours = 2;
     [SerializeField] private bool consumeFlyerItem = true;
 
-    Coroutine _ticker;
+    [Header("Resources")]
+    [Tooltip("Resources.Load() path (without extension). Example: Resources/TypeIconLibrary.asset => \"TypeIconLibrary\"")]
+    [SerializeField] private string typeIconLibraryResourcePath = "TypeIconLibrary";
+
+    private TypeIconLibrary _typeIconLib;
+    private Coroutine _ticker;
 
     void OnEnable()
     {
         if (SaveManager.Data == null) SaveManager.LoadOrCreate();
 
+        _typeIconLib = Resources.Load<TypeIconLibrary>(typeIconLibraryResourcePath);
+        if (_typeIconLib == null)
+            Debug.LogError($"HarborUI: TypeIconLibrary not found at Resources path '{typeIconLibraryResourcePath}'. " +
+                           $"Place the asset under a Resources folder and ensure the path matches.");
+
         BuildTypeOptions();
-        BuildIconMap();
         Wire();
 
         Refresh();
@@ -82,21 +81,9 @@ public class HarborUI : MonoBehaviour
     void BuildTypeOptions()
     {
         if (!typeDropdown) return;
+
         typeDropdown.ClearOptions();
         typeDropdown.AddOptions(new List<string>(Enum.GetNames(typeof(MonsterType))));
-    }
-
-    void BuildIconMap()
-    {
-        _iconMap = new Dictionary<MonsterType, Sprite>();
-        if (typeIcons == null) return;
-
-        for (int i = 0; i < typeIcons.Count; i++)
-        {
-            var entry = typeIcons[i];
-            if (entry.sprite == null) continue;
-            _iconMap[entry.type] = entry.sprite;
-        }
     }
 
     void Refresh()
@@ -117,7 +104,7 @@ public class HarborUI : MonoBehaviour
 
     void OnClickUseFlyer()
     {
-        var type = (MonsterType)typeDropdown.value;
+        var type = (MonsterType)(typeDropdown ? typeDropdown.value : 0);
 
         if (consumeFlyerItem && !ResourceBank.TrySpend(ResourceType.Flyer, 1))
         {
@@ -156,10 +143,17 @@ public class HarborUI : MonoBehaviour
             return;
         }
 
-        if (_iconMap == null) BuildIconMap();
+        // If library missing, hide icon
+        if (_typeIconLib == null)
+        {
+            if (activeFlyerIcon.gameObject.activeSelf)
+                activeFlyerIcon.gameObject.SetActive(false);
+            return;
+        }
 
-        // If we have a configured sprite for this flyer type, show it; otherwise hide the icon.
-        if (_iconMap != null && _iconMap.TryGetValue(cur.type, out var spr) && spr != null)
+        // Use library lookup; if missing, hide icon (no fallback sprite)
+        var spr = _typeIconLib.GetIcon(cur.type);
+        if (spr != null)
         {
             activeFlyerIcon.sprite = spr;
             if (!activeFlyerIcon.gameObject.activeSelf)
@@ -216,7 +210,7 @@ public class HarborUI : MonoBehaviour
         var (curPct, afterPct) = EstimateCurrentAndAfter(selected, bonus);
 
         var curFlyer = EncounterManager.I?.CurrentFlyer;
-        string clock = "";
+        string clock;
         if (curFlyer != null)
         {
             long secs = EncounterManager.I.GetFlyerSecondsRemaining();
