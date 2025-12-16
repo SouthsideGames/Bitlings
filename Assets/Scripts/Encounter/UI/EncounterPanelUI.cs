@@ -256,7 +256,6 @@ public class EncounterPanelUI : MonoBehaviour
 
     void OnBattleFinished(BattleResult _)
     {
-        ForceBlinderAlphaToOne();
 
         LogCurrentWinStreak("Updated");
 
@@ -872,6 +871,8 @@ public class EncounterPanelUI : MonoBehaviour
             : chosen;
 
         ApplyBlinderText(finalLine);
+
+        ForceBlinderAlphaToOne();
     }
 
     string WeightedPick(BlinderMessagePackSO pack, float totalWeight)
