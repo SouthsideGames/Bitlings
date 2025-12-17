@@ -265,7 +265,7 @@ public class ResourceManager : MonoBehaviour
             ResourceBank.Set(t, 0);
         }
 
-        ResourceBank.Set(ResourceType.Energy, 10);
+        ResourceBank.Set(ResourceType.Energy, 50);
         ResourceBank.Set(ResourceType.Credits, 0);
         ResourceBank.Set(ResourceType.Medkit, 0);
         ResourceBank.Set(ResourceType.PackVoucher, 0);

@@ -2,6 +2,7 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 using System;
+using System.Collections;
 
 public class JobSiteView : MonoBehaviour
 {
@@ -26,6 +27,10 @@ public class JobSiteView : MonoBehaviour
     [SerializeField] private CanvasGroup slot3Group;
     [SerializeField] private TextMeshProUGUI slot3CDText;
 
+    public JobType Site => site;
+
+    private Coroutine _refreshCR;
+
     void Awake()
     {
         if (!rootToToggle) rootToToggle = gameObject;
@@ -35,31 +40,70 @@ public class JobSiteView : MonoBehaviour
     {
         if (allowReliefToggle)
         {
+            allowReliefToggle.onValueChanged.RemoveAllListeners();
             allowReliefToggle.onValueChanged.AddListener(v =>
             {
                 var st = GetRuntimeState(site);
                 if (st != null) st.allowClinicRelief = v;
             });
         }
+
         Refresh();
     }
 
     void OnEnable()
     {
         GameEvents.OnJobsChanged += Refresh;
-        Refresh();
+
+        // Boot-order safety: SaveManager/JobManager might not be ready on the same frame.
+        if (_refreshCR != null) StopCoroutine(_refreshCR);
+        _refreshCR = StartCoroutine(RefreshNextFrame());
     }
 
     void OnDisable()
     {
         GameEvents.OnJobsChanged -= Refresh;
+
+        if (_refreshCR != null)
+        {
+            StopCoroutine(_refreshCR);
+            _refreshCR = null;
+        }
+    }
+
+    IEnumerator RefreshNextFrame()
+    {
+        yield return null;
+        _refreshCR = null;
+        Refresh();
     }
 
     public void Refresh()
     {
-        bool unlocked = SaveManager.Data != null &&
-                        SaveManager.Data.unlockedJobSites != null &&
-                        SaveManager.Data.unlockedJobSites.Contains(site);
+        // Ensure save data exists and transient sets are rebuilt (important for runtime unlocks)
+        if (SaveManager.Data == null)
+            SaveManager.LoadOrCreate();
+
+        SaveManager.Data?.EnsureTransientSets();
+
+        // Safety repair: if list has items but set is empty/null, rebuild set from list
+        if (SaveManager.Data != null)
+        {
+            SaveManager.Data.unlockedJobSitesList ??= new System.Collections.Generic.List<JobType>();
+            SaveManager.Data.unlockedJobSites     ??= new System.Collections.Generic.HashSet<JobType>();
+
+            if (SaveManager.Data.unlockedJobSites.Count == 0 && SaveManager.Data.unlockedJobSitesList.Count > 0)
+            {
+                SaveManager.Data.unlockedJobSites.Clear();
+                for (int i = 0; i < SaveManager.Data.unlockedJobSitesList.Count; i++)
+                    SaveManager.Data.unlockedJobSites.Add(SaveManager.Data.unlockedJobSitesList[i]);
+            }
+        }
+
+        bool unlocked =
+            SaveManager.Data != null &&
+            SaveManager.Data.unlockedJobSites != null &&
+            SaveManager.Data.unlockedJobSites.Contains(site);
 
         if (rootToToggle) rootToToggle.SetActive(unlocked);
         if (!unlocked) return;
@@ -73,7 +117,8 @@ public class JobSiteView : MonoBehaviour
             return;
         }
 
-        if (allowReliefToggle) allowReliefToggle.SetIsOnWithoutNotify(st.allowClinicRelief);
+        if (allowReliefToggle)
+            allowReliefToggle.SetIsOnWithoutNotify(st.allowClinicRelief);
 
         int cap = Mathf.Clamp(st.config.maxWorkers, 1, 3);
         SetSlotVisible(slot1Group, cap >= 1);
@@ -85,9 +130,11 @@ public class JobSiteView : MonoBehaviour
         RenderAndAlpha(st, 2, slot3Group, slot3CDText);
     }
 
+
     private JobSiteState GetRuntimeState(JobType job)
     {
         if (JobManager.I == null) return null;
+
         foreach (var st in JobManager.I.States)
         {
             if (st != null && st.config != null && st.config.jobType == job)
@@ -110,7 +157,8 @@ public class JobSiteView : MonoBehaviour
             ? st.workers[slotIndex]
             : null;
 
-        bool hasWorker = (w != null && w.def != null);
+        // Treat monsterId as “present” even if def resolves late.
+        bool hasWorker = (w != null && (w.def != null || !string.IsNullOrEmpty(w.monsterId)));
 
         if (!hasWorker)
         {
@@ -140,13 +188,20 @@ public class JobSiteView : MonoBehaviour
             ? st.workers[slotIndex]
             : null;
 
-        // No rate text used anymore
-        float ratePerHour = 0f;
-        if (w != null && w.def != null)
+        // If def is missing, we can’t compute accurate fatigue rates — show safe placeholder text.
+        if (w == null || w.def == null)
         {
-            ratePerHour = Mathf.Max(0f, w.def.fatigueRatePerHour);
+            if (cdText) cdText.text = (f > 0f) ? "Resting..." : "-";
+            return;
+        }
+
+        float ratePerHour = Mathf.Max(0f, w.def.fatigueRatePerHour);
+
+        if (ratePerHour > 0f)
+        {
             string wid = GetBestId(w);
             int lvl = GetOwnedLevelOr1(wid, w.def);
+
             float mul = 1f;
 
             try { mul = Mathf.Max(0f, TitlesAdapter.GetJobFatigueMult(wid, w.def, lvl, st.config.jobType)); }
@@ -162,19 +217,18 @@ public class JobSiteView : MonoBehaviour
             ratePerHour *= mul;
         }
 
-        if (cdText)
+        if (!cdText) return;
+
+        if (ratePerHour > 0f)
         {
-            if (ratePerHour > 0f)
-            {
-                float remain01 = Mathf.Clamp01(1f - f);
-                float hrs = remain01 / ratePerHour;
-                long secs = Math.Max(0L, (long)Math.Round(hrs * 3600f));
-                cdText.text = $"Resting in {FormatHm(secs)}";
-            }
-            else
-            {
-                cdText.text = "-";
-            }
+            float remain01 = Mathf.Clamp01(1f - f);
+            float hrs = remain01 / ratePerHour;
+            long secs = Math.Max(0L, (long)Math.Round(hrs * 3600f));
+            cdText.text = $"Resting in {FormatHm(secs)}";
+        }
+        else
+        {
+            cdText.text = "-";
         }
     }
 

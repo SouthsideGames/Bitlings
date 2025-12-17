@@ -127,7 +127,6 @@ public class StarterSelector : MonoBehaviour
 
                 if (bypassDetailPanelForDebug)
                 {
-                    // BYPASS: choose immediately, no detail panel
                     btn.onClick.AddListener(() =>
                     {
                         if (_locked) return;
@@ -140,7 +139,6 @@ public class StarterSelector : MonoBehaviour
                 }
                 else
                 {
-                    // NORMAL: open detail panel first
                     btn.onClick.AddListener(() =>
                     {
                         if (_locked) return;
@@ -213,6 +211,13 @@ public class StarterSelector : MonoBehaviour
 
     void OnConfirmDetail(MonsterDataSO chosen) => Choose(chosen);
 
+    // =========================================================================
+    // IMPORTANT UPDATE:
+    // - After selecting a starter, we ensure SaveManager transient sets are rebuilt
+    // - We apply starter unlocks
+    // - We force Save() AND broadcast OnJobsChanged (and OnTeamChanged) AFTER save
+    // - We also force an immediate UI refresh on the next frame
+    // =========================================================================
     void Choose(MonsterDataSO pick)
     {
         if (pick == null || string.IsNullOrEmpty(pick.id))
@@ -227,17 +232,19 @@ public class StarterSelector : MonoBehaviour
         {
             Debug.Log($"[StarterSelector] GrantStarter -> {pick.id}");
 
-            // IMPORTANT:
-            // GrantStarter is the single source of truth for:
-            // - adding the starter to owned/team
-            // - adding seen type
-            // - firing GameEvents.StarterChosen (JobManager listens here to unlock sites)
-            // - saving
+            // This already saves, and may raise StarterChosen (via SaveManager.GrantStarter).
             SaveManager.GrantStarter(pick.id, 1);
+
+            // Ensure runtime sets are present NOW (fixes “works after relaunch” symptoms)
+            if (SaveManager.Data != null)
+                SaveManager.Data.EnsureTransientSets();
+
+            // Apply unlocks (may Save internally). We still broadcast after our final Save().
+            if (JobManager.I != null)
+                JobManager.I.ApplyStarterUnlocksNow(pick.type);
 
             if (SaveManager.Data != null)
             {
-                // Redundant but harmless; keeps local state consistent immediately.
                 SaveManager.Data.hasChosenStarter = true;
 
                 // Ensure new team member(s) have valid HP
@@ -249,6 +256,7 @@ public class StarterSelector : MonoBehaviour
                     {
                         var om = team[i];
                         if (om == null || string.IsNullOrEmpty(om.monsterId)) continue;
+
                         if (om.currentHP <= 0)
                         {
                             var def = lib.GetById(om.monsterId);
@@ -260,26 +268,22 @@ public class StarterSelector : MonoBehaviour
                     }
                 }
 
-                // Persist local adjustments
+                // FINAL authoritative save for everything we changed above.
                 SaveManager.Save();
 
-                // Force jobs UI refresh immediately so unlocked sites appear now
-                if (JobManager.I != null)
-                {
-                    try
-                    {
-                        JobManager.I.RefreshAllJobSiteViewsInScene();
-                        Debug.Log("[StarterSelector] Forced job site UI refresh after starter selection.");
-                    }
-                    catch (Exception e)
-                    {
-                        Debug.LogWarning($"[StarterSelector] RefreshAllJobSiteViewsInScene threw: {e}");
-                    }
-                }
+                // Rebuild transient sets again after Save (defensive; avoids stale in-memory state)
+                SaveManager.Data.EnsureTransientSets();
+            }
 
-                // Broadcast UI change events so any listeners update too
-                try { GameEvents.OnJobsChanged?.Invoke(); } catch { }
-                try { GameEvents.OnTeamChanged?.Invoke(); } catch { }
+            // Broadcast AFTER Save so listeners read consistent state.
+            try { GameEvents.OnJobsChanged?.Invoke(); } catch { }
+            try { GameEvents.OnTeamChanged?.Invoke(); } catch { }
+
+            // Force views to refresh both immediately and next frame (covers enable-order issues)
+            if (JobManager.I != null)
+            {
+                try { JobManager.I.RefreshAllJobSiteViewsInScene(); } catch { }
+                StartCoroutine(RefreshJobsNextFrame());
             }
 
             StartCoroutine(RouteNextFrame());
@@ -290,6 +294,21 @@ public class StarterSelector : MonoBehaviour
             _locked = false;
             SetButtonsInteractable(true);
         }
+    }
+
+    private IEnumerator RefreshJobsNextFrame()
+    {
+        yield return null;
+
+        // Ensure sets are present before refresh reads them
+        SaveManager.Data?.EnsureTransientSets();
+
+        if (JobManager.I != null)
+        {
+            try { JobManager.I.RefreshAllJobSiteViewsInScene(); } catch { }
+        }
+
+        try { GameEvents.OnJobsChanged?.Invoke(); } catch { }
     }
 
     IEnumerator RouteNextFrame()

@@ -63,10 +63,8 @@ public partial class EncounterManager
         int after  = GetBankEnergy();
         int gained = Mathf.Max(0, after - before);
 
-        // Reset regen baseline on gain so time math remains sane
         SetEnergyLastUnix(NowUnix());
 
-        // Keep remainder within valid range
         SetEnergyRemainderSecs(ClampRemainder(GetEnergyRemainderSecs()));
 
         SaveEnergyStateToJson();
@@ -82,13 +80,11 @@ public partial class EncounterManager
         int cost = GetEncounterCost();
         if (cost <= 0) return true;
 
-        // Single source of truth: bank
         if (!ResourceBank.TrySpend(ResourceType.Energy, cost))
             return false;
 
         ClampEnergyBank();
 
-        // Reset timing baseline on spend
         SetEnergyLastUnix(NowUnix());
         SetEnergyRemainderSecs(0f);
 
@@ -112,9 +108,6 @@ public partial class EncounterManager
 
         int max = GetEncounterMax();
 
-        // If this is a new account and energy hasn't been initialized, default to FULL.
-        // NOTE: If you want new accounts to start at 10 instead of full,
-        // initialize ResourceBank.Energy in your new-account initializer instead.
         int cur = GetBankEnergy();
         if (cur <= 0 && max > 0)
             SetBankEnergy(max);
@@ -206,9 +199,6 @@ public partial class EncounterManager
         SaveEnergyStateToJson();
     }
 
-    // ─────────────────────────────────────────────────────────────
-    // Internal helpers (Bank-only + JSON-only)
-    // ─────────────────────────────────────────────────────────────
 
     int GetBankEnergy()
     {
@@ -237,12 +227,6 @@ public partial class EncounterManager
         return Mathf.Clamp(rem, 0f, cap);
     }
 
-    // ─────────────────────────────────────────────────────────────
-    // JSON state accessors (SaveManager.Data)
-    // You MUST add these fields to SaveData:
-    //   public long energyLastUnix;
-    //   public float energyRemainderSecs;
-    // ─────────────────────────────────────────────────────────────
 
     long GetEnergyLastUnix()
     {

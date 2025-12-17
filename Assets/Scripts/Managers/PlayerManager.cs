@@ -158,34 +158,74 @@ public class PlayerManager
 
     public void EnsureTransientSets()
     {
-        if (ownedIds == null)
-            ownedIds = new HashSet<string>(ownedIdsList ?? new List<string>());
+        // Ensure list mirrors exist (these are what JsonUtility actually persists)
+        ownedIdsList ??= new List<string>();
+        favoriteMonsterIdsList ??= new List<string>();
+        discoveredMonsterIdsList ??= new List<string>();
+        seenTypesList ??= new List<MonsterType>();
+        unlockedJobSitesList ??= new List<JobType>();
 
-        if (favoriteMonsterIds == null)
-            favoriteMonsterIds = new HashSet<string>(favoriteMonsterIdsList ?? new List<string>());
+        // Ensure transient sets exist (runtime only)
+        ownedIds ??= new HashSet<string>();
+        favoriteMonsterIds ??= new HashSet<string>();
+        discoveredMonsterIds ??= new HashSet<string>();
+        seenTypes ??= new HashSet<MonsterType>();
+        unlockedJobSites ??= new HashSet<JobType>();
 
-        if (discoveredMonsterIds == null)
-            discoveredMonsterIds = new HashSet<string>(discoveredMonsterIdsList ?? new List<string>());
+        // ALWAYS resync sets from lists (authoritative after load)
+        ownedIds.Clear();
+        for (int i = 0; i < ownedIdsList.Count; i++)
+        {
+            var id = ownedIdsList[i];
+            if (!string.IsNullOrEmpty(id)) ownedIds.Add(id);
+        }
 
-        activeFlyers         ??= new List<FlyerBiasData>();
-        activeWorkOrders  ??= new List<WorkOrderData>();
-        activeFavorBoosts    ??= new List<LuckBoostData>();
-        activeShinyBoosts   ??= new List<ShinyBoostData>();
-        jobStorageUpgrades  ??= new List<JobStorageUpgrade>();
-        team                ??= new List<OwnedMonsterData>();
-        owned               ??= new List<OwnedMonsterData>();
+        favoriteMonsterIds.Clear();
+        for (int i = 0; i < favoriteMonsterIdsList.Count; i++)
+        {
+            var id = favoriteMonsterIdsList[i];
+            if (!string.IsNullOrEmpty(id)) favoriteMonsterIds.Add(id);
+        }
 
-        if (seenTypes == null)
-            seenTypes = new HashSet<MonsterType>(seenTypesList ?? new List<MonsterType>());
-        if (unlockedJobSites == null)
-            unlockedJobSites = new HashSet<JobType>(unlockedJobSitesList ?? new List<JobType>());
+        discoveredMonsterIds.Clear();
+        for (int i = 0; i < discoveredMonsterIdsList.Count; i++)
+        {
+            var id = discoveredMonsterIdsList[i];
+            if (!string.IsNullOrEmpty(id)) discoveredMonsterIds.Add(id);
+        }
 
+        seenTypes.Clear();
+        for (int i = 0; i < seenTypesList.Count; i++)
+            seenTypes.Add(seenTypesList[i]);
+
+        unlockedJobSites.Clear();
+        for (int i = 0; i < unlockedJobSitesList.Count; i++)
+            unlockedJobSites.Add(unlockedJobSitesList[i]);
+
+        // Ensure other collections exist
+        activeFlyers ??= new List<FlyerBiasData>();
+        activeWorkOrders ??= new List<WorkOrderData>();
+        activeFavorBoosts ??= new List<LuckBoostData>();
+        activeShinyBoosts ??= new List<ShinyBoostData>();
+        jobStorageUpgrades ??= new List<JobStorageUpgrade>();
+        team ??= new List<OwnedMonsterData>();
+        owned ??= new List<OwnedMonsterData>();
+        jobAssignments ??= new List<JobAssignment>();
+        jobProgress ??= new List<JobProgress>();
+        activeJobMods ??= new List<JobGlobalMod>();
+
+        fieldOps ??= new FieldOpsStats();
+
+        settings ??= new SettingsState();
+
+        // Ensure ownedUIDs exist
         if (owned != null)
         {
             for (int i = 0; i < owned.Count; i++)
                 if (owned[i] != null && string.IsNullOrEmpty(owned[i].ownedUID))
                     owned[i].ownedUID = Guid.NewGuid().ToString("N");
         }
+
         if (team != null)
         {
             for (int i = 0; i < team.Count; i++)
@@ -193,12 +233,14 @@ public class PlayerManager
                     team[i].ownedUID = Guid.NewGuid().ToString("N");
         }
 
+        // Expired shiny boosts cleanup (keeps existing behavior)
         if (activeShinyBoosts.Count > 0 && activeShinyBoosts[0] != null &&
             activeShinyBoosts[0].expireUnix <= SaveManager.NowUnix())
         {
             activeShinyBoosts.Clear();
         }
     }
+
 
     public int GetJobStorageExtra(JobType j)
     {

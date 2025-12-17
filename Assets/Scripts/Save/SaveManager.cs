@@ -4,6 +4,7 @@ using System.IO;
 using System.Text;
 using System.Collections.Generic;
 
+#region Job runtime sidecar (slot fatigue + cooldown)
 
 [Serializable]
 public class JobRuntimeSite
@@ -28,10 +29,14 @@ public class JobRuntimeSave
     public long savedAtUnix;
 }
 
+#endregion
 
 public static class SaveManager
 {
     public static PlayerManager Data;
+
+    private static bool _loaded;
+    private static bool _isSaving;
 
     public static string SavePath => Path.Combine(Application.persistentDataPath, "idle_mon_save.json");
     public static string BackupPath => Path.Combine(Application.persistentDataPath, "idle_mon_save.bak");
@@ -57,7 +62,6 @@ public static class SaveManager
 
     private static string GeneratePlayerName()
     {
-        // 1% chance to get a rare “Ω” title
         if (UnityEngine.Random.value <= 0.01f)
         {
             int rareNum = UnityEngine.Random.Range(1, 99);
@@ -65,11 +69,8 @@ public static class SaveManager
         }
 
         string prefix = namePrefixes[UnityEngine.Random.Range(0, namePrefixes.Length)];
-        string stem = nameStems[UnityEngine.Random.Range(0, nameStems.Length)];
-
-        // 3 random hex characters
-        string hex = UnityEngine.Random.Range(0, 4095).ToString("X3");
-
+        string stem   = nameStems[UnityEngine.Random.Range(0, nameStems.Length)];
+        string hex    = UnityEngine.Random.Range(0, 4095).ToString("X3");
         return $"{prefix} {stem}-{hex}";
     }
 
@@ -79,6 +80,9 @@ public static class SaveManager
 
     public static void LoadOrCreate()
     {
+        if (_loaded) return;
+        _loaded = true;
+
         EnsureFolder();
 
         if (!TryLoad(SavePath, out Data))
@@ -86,7 +90,7 @@ public static class SaveManager
             if (!TryLoad(BackupPath, out Data))
             {
                 Data = NewFreshPlayer();
-                Save();
+                // Do not call Save() until defaults are ensured, to avoid writing half-initialized JSON.
             }
         }
 
@@ -98,54 +102,34 @@ public static class SaveManager
         PruneExpiredCaptureBands(true);
         PruneExpiredLures(true);
         PruneExpiredLuckBoosts(true);
+
+        // IMPORTANT: Ensure HashSet mirrors are ALWAYS rebuilt from list mirrors on load.
+        // This is the #1 culprit when you see "list=1 set=1" but the UI behaves like it is locked.
+        RebuildTransientSetsFromLists();
+
+        // First-time write (new save) after everything is consistent.
+        if (!File.Exists(SavePath))
+            Save();
+
     }
 
     public static void Save()
     {
+        if (_isSaving) return;
+        _isSaving = true;
+
         if (Data == null)
-        {
-            Debug.LogWarning("SaveManager.Save called with Data == null. Creating fresh player.");
             Data = NewFreshPlayer();
-        }
 
         try
         {
-            // Keep mirrors in sync for JSON
+            // Normalize first so we never serialize inconsistent mirrors.
+            EnsureDefaults();
 
-            if (Data.ownedIds != null)
-            {
-                Data.ownedIdsList ??= new List<string>();
-                Data.ownedIdsList.Clear();
-                foreach (var id in Data.ownedIds)
-                    if (!string.IsNullOrEmpty(id)) Data.ownedIdsList.Add(id);
-                Data.ownedIdsList.Sort(StringComparer.Ordinal);
-            }
+            // Mirrors: HashSet -> List
+            SyncListsFromSets();
 
-            if (Data.seenTypes != null)
-            {
-                Data.seenTypesList ??= new List<MonsterType>();
-                Data.seenTypesList.Clear();
-                foreach (var t in Data.seenTypes) Data.seenTypesList.Add(t);
-            }
-
-            if (Data.unlockedJobSites != null)
-            {
-                Data.unlockedJobSitesList ??= new List<JobType>();
-                Data.unlockedJobSitesList.Clear();
-                foreach (var j in Data.unlockedJobSites) Data.unlockedJobSitesList.Add(j);
-            }
-
-            // ✅ Discovery mirror: Set -> List for JSON
-            if (Data.discoveredMonsterIds != null)
-            {
-                Data.discoveredMonsterIdsList ??= new List<string>();
-                Data.discoveredMonsterIdsList.Clear();
-                foreach (var id in Data.discoveredMonsterIds)
-                    if (!string.IsNullOrEmpty(id)) Data.discoveredMonsterIdsList.Add(id);
-                Data.discoveredMonsterIdsList.Sort(StringComparer.Ordinal);
-            }
-
-            // Update last saved time safely (never go backwards far)
+            // lastSavedUnix monotonic-ish
             long now = NowUnix();
             if (Data.lastSavedUnix > 0 && now + 300 < Data.lastSavedUnix) now = Data.lastSavedUnix;
             Data.lastSavedUnix = Math.Max(Data.lastSavedUnix, now);
@@ -153,54 +137,54 @@ public static class SaveManager
             string json = JsonUtility.ToJson(Data, prettyPrint: true);
             AtomicWrite(SavePath, json);
 
-
             try { File.Copy(SavePath, BackupPath, overwrite: true); } catch { }
         }
         catch (Exception e)
         {
-            Debug.LogError($"SaveManager.Save failed: {e.Message}");
+            Debug.LogError($"SaveManager.Save failed: {e}");
+        }
+        finally
+        {
+            _isSaving = false;
         }
     }
 
     // ─────────────────────────────────────────────
     // Hard reset (new account)
     // ─────────────────────────────────────────────
+
     public static void ClearAll()
     {
-        // Delete persisted save files
         try { if (File.Exists(SavePath)) File.Delete(SavePath); } catch { }
         try { if (File.Exists(BackupPath)) File.Delete(BackupPath); } catch { }
         try { if (File.Exists(JobRuntimePath)) File.Delete(JobRuntimePath); } catch { }
 
         Data = NewFreshPlayer();
 
+        // Ensure resources exist
         ResourceBank.EnsureSize();
-
         foreach (ResourceType t in Enum.GetValues(typeof(ResourceType)))
             ResourceBank.Set(t, 0);
 
-        // Starting resources (adjust as desired)
         ResourceBank.Set(ResourceType.Energy, 50);
         ResourceBank.Set(ResourceType.Credits, 0);
         ResourceBank.Set(ResourceType.Medkit, 0);
         ResourceBank.Set(ResourceType.PackVoucher, 0);
 
-        // Reset encounter config + JSON regen timers
         Data.encounterMax = 50;
         Data.encounterCost = 5;
         Data.lastEncounterResetYMD = 0;
         Data.energyLastUnix = NowUnix();
         Data.energyRemainderSecs = 0f;
 
-        // Persist immediately
+        EnsureDefaults();
+        SyncListsFromSets();
         Save();
 
-        // Notify dependent systems
         GameEvents.OnJobsChanged?.Invoke();
         GameEvents.OnResourcesChanged?.Invoke();
         GameEvents.EnergyChanged?.Invoke();
 
-        // Rebuild job state cleanly
         if (JobManager.I)
         {
             JobManager.I.LoadAssignmentsFromSave();
@@ -229,19 +213,19 @@ public static class SaveManager
     {
         var p = new PlayerManager
         {
+            playerId = Guid.NewGuid().ToString("N"),
+            playerName = GeneratePlayerName(),
+
             encounterMax = 50,
             encounterCost = 5,
             lastEncounterResetYMD = TodayYMD(),
             lastSavedUnix = NowUnix(),
 
-            // JSON-only energy regen timing (required by EncounterManager.Energy bank-only)
             energyLastUnix = NowUnix(),
             energyRemainderSecs = 0f,
 
-            // Win streak
             winStreak = 0,
 
-            // Collections (ensure non-null)
             ownedIds = new HashSet<string>(),
             ownedIdsList = new List<string>(),
 
@@ -251,7 +235,6 @@ public static class SaveManager
             unlockedJobSites = new HashSet<JobType>(),
             unlockedJobSitesList = new List<JobType>(),
 
-            // ✅ pack discovery
             discoveredMonsterIds = new HashSet<string>(),
             discoveredMonsterIdsList = new List<string>(),
 
@@ -271,12 +254,6 @@ public static class SaveManager
             settings = new SettingsState()
         };
 
-        // Auto-generate a handler name for a totally fresh save
-        p.playerName = GeneratePlayerName();
-
-        // IMPORTANT: Resource counts are managed by ResourceBank.EnsureSize().
-        // Here we can leave resourceCounts null; EnsureDefaults/ResourceBank will size it.
-
         return p;
     }
 
@@ -288,7 +265,7 @@ public static class SaveManager
             return;
         }
 
-        // Base collections
+        // Lists
         Data.owned ??= new List<OwnedMonsterData>();
         Data.team ??= new List<OwnedMonsterData>();
         Data.activeFlyers ??= new List<FlyerBiasData>();
@@ -298,9 +275,15 @@ public static class SaveManager
         Data.jobProgress ??= new List<JobProgress>();
         Data.jobStorageUpgrades ??= new List<JobStorageUpgrade>();
         Data.unlockedPacks ??= new List<string>();
+        Data.resourceCounts ??= new List<int>();
 
-        if (Data.fieldOps == null)
-            Data.fieldOps = new FieldOpsStats();
+        Data.activeJobMods ??= new List<JobGlobalMod>();
+        Data.activeShinyBoosts ??= new List<ShinyBoostData>();
+        Data.favoriteMonsterIdsList ??= new List<string>();
+        Data.discoveredMonsterIdsList ??= new List<string>();
+
+        if (Data.fieldOps == null) Data.fieldOps = new FieldOpsStats();
+        Data.settings ??= new SettingsState();
 
         // Identity
         if (string.IsNullOrEmpty(Data.playerId)) Data.playerId = Guid.NewGuid().ToString("N");
@@ -311,64 +294,39 @@ public static class SaveManager
         if (Data.encounterCost <= 0) Data.encounterCost = 5;
         if (Data.lastEncounterResetYMD == 0) Data.lastEncounterResetYMD = TodayYMD();
 
-        // JSON-only energy regen timing
+        // Energy timing
         if (Data.energyLastUnix <= 0) Data.energyLastUnix = NowUnix();
         if (Data.energyRemainderSecs < 0f) Data.energyRemainderSecs = 0f;
 
-        // Win streak defaults / clamp
         if (Data.winStreak < 0) Data.winStreak = 0;
 
-        // Resource counts: size using the same rule as ResourceBank.EnsureSize()
         EnsureResourceCountsSized();
 
-        // Mirrors for hashsets/lists
+        // Sets exist
         Data.ownedIds ??= new HashSet<string>();
-        Data.ownedIdsList ??= new List<string>();
+        Data.favoriteMonsterIds ??= new HashSet<string>();
+        Data.discoveredMonsterIds ??= new HashSet<string>();
         Data.seenTypes ??= new HashSet<MonsterType>();
-        Data.seenTypesList ??= new List<MonsterType>();
         Data.unlockedJobSites ??= new HashSet<JobType>();
+
+        Data.ownedIdsList ??= new List<string>();
+        Data.favoriteMonsterIdsList ??= new List<string>();
+        Data.discoveredMonsterIdsList ??= new List<string>();
+        Data.seenTypesList ??= new List<MonsterType>();
         Data.unlockedJobSitesList ??= new List<JobType>();
 
-        // ✅ discovery mirrors
-        Data.discoveredMonsterIds ??= new HashSet<string>();
-        Data.discoveredMonsterIdsList ??= new List<string>();
+        // Authoritative for persistence: LISTS.
+        RebuildTransientSetsFromLists();
 
-        // Rebuild sets from their list mirrors (authoritative for JSON)
-        Data.ownedIds.Clear();
-        foreach (var id in Data.ownedIdsList)
-            if (!string.IsNullOrEmpty(id))
-                Data.ownedIds.Add(id);
-
-        Data.seenTypes.Clear();
-        for (int i = 0; i < Data.seenTypesList.Count; i++)
-            Data.seenTypes.Add(Data.seenTypesList[i]);
-
-        Data.unlockedJobSites.Clear();
-        for (int i = 0; i < Data.unlockedJobSitesList.Count; i++)
-            Data.unlockedJobSites.Add(Data.unlockedJobSitesList[i]);
-
-        // ✅ rebuild discoveredMonsterIds from JSON list
-        Data.discoveredMonsterIds.Clear();
-        for (int i = 0; i < Data.discoveredMonsterIdsList.Count; i++)
-        {
-            var id = Data.discoveredMonsterIdsList[i];
-            if (!string.IsNullOrEmpty(id))
-                Data.discoveredMonsterIds.Add(id);
-        }
-
-        // Settings
-        Data.settings ??= new SettingsState();
-
-        // Normalize team & owned and ensure cross-consistency
+        // Normalize owned/team entries (uids, clamps)
         NormalizeOwnedEntries(Data.owned);
         NormalizeOwnedEntries(Data.team);
 
-        // Ensure any team member exists in owned list AND that the team slot references the owned instance
+        // Ensure team entries reference the owned instance (canonicalize)
         for (int i = 0; i < Data.team.Count; i++)
         {
             var t = Data.team[i];
-            if (t == null || string.IsNullOrEmpty(t.monsterId))
-                continue;
+            if (t == null || string.IsNullOrEmpty(t.monsterId)) continue;
 
             OwnedMonsterData canonical = null;
 
@@ -392,11 +350,7 @@ public static class SaveManager
             }
 
             if (string.IsNullOrEmpty(canonical.ownedUID))
-            {
-                canonical.ownedUID = string.IsNullOrEmpty(t.ownedUID)
-                    ? Guid.NewGuid().ToString("N")
-                    : t.ownedUID;
-            }
+                canonical.ownedUID = Guid.NewGuid().ToString("N");
 
             Data.team[i] = canonical;
 
@@ -407,7 +361,7 @@ public static class SaveManager
         // Training pointer default
         if (string.IsNullOrEmpty(Data.trainingMonsterId) && Data.team.Count > 0)
         {
-            Data.trainingMonsterId = Data.team[0].monsterId;
+            Data.trainingMonsterId = Data.team[0]?.monsterId;
             var om = Data.owned.Find(o => o != null && o.monsterId == Data.trainingMonsterId);
             if (om != null) om.isTraining = true;
         }
@@ -418,7 +372,6 @@ public static class SaveManager
     static void EnsureResourceCountsSized()
     {
         if (Data == null) return;
-
         Data.resourceCounts ??= new List<int>();
 
         int need = 0;
@@ -444,7 +397,6 @@ public static class SaveManager
 
             if (om.level <= 0) om.level = 1;
             if (om.currentXP < 0) om.currentXP = 0;
-
             if (om.currentHP < -1) om.currentHP = -1;
 
             if (string.IsNullOrEmpty(om.ownedUID))
@@ -471,6 +423,112 @@ public static class SaveManager
             if (om.lastLevelClaimDay == 0) om.lastLevelClaimDay = -1;
             if (om.pendingLevels < 0) om.pendingLevels = 0;
         }
+    }
+
+    // ─────────────────────────────────────────────
+    // CRITICAL: mirror sync helpers
+    // ─────────────────────────────────────────────
+
+    private static void RebuildTransientSetsFromLists()
+    {
+        if (Data == null) return;
+
+        Data.ownedIds ??= new HashSet<string>();
+        Data.favoriteMonsterIds ??= new HashSet<string>();
+        Data.discoveredMonsterIds ??= new HashSet<string>();
+        Data.seenTypes ??= new HashSet<MonsterType>();
+        Data.unlockedJobSites ??= new HashSet<JobType>();
+
+        Data.ownedIds.Clear();
+        if (Data.ownedIdsList != null)
+        {
+            for (int i = 0; i < Data.ownedIdsList.Count; i++)
+            {
+                var id = Data.ownedIdsList[i];
+                if (!string.IsNullOrEmpty(id)) Data.ownedIds.Add(id);
+            }
+        }
+
+        Data.favoriteMonsterIds.Clear();
+        if (Data.favoriteMonsterIdsList != null)
+        {
+            for (int i = 0; i < Data.favoriteMonsterIdsList.Count; i++)
+            {
+                var id = Data.favoriteMonsterIdsList[i];
+                if (!string.IsNullOrEmpty(id)) Data.favoriteMonsterIds.Add(id);
+            }
+        }
+
+        Data.discoveredMonsterIds.Clear();
+        if (Data.discoveredMonsterIdsList != null)
+        {
+            for (int i = 0; i < Data.discoveredMonsterIdsList.Count; i++)
+            {
+                var id = Data.discoveredMonsterIdsList[i];
+                if (!string.IsNullOrEmpty(id)) Data.discoveredMonsterIds.Add(id);
+            }
+        }
+
+        Data.seenTypes.Clear();
+        if (Data.seenTypesList != null)
+        {
+            for (int i = 0; i < Data.seenTypesList.Count; i++)
+                Data.seenTypes.Add(Data.seenTypesList[i]);
+        }
+
+        Data.unlockedJobSites.Clear();
+        if (Data.unlockedJobSitesList != null)
+        {
+            for (int i = 0; i < Data.unlockedJobSitesList.Count; i++)
+                Data.unlockedJobSites.Add(Data.unlockedJobSitesList[i]);
+        }
+    }
+
+    private static void SyncListsFromSets()
+    {
+        if (Data == null) return;
+
+        // owned ids
+        Data.ownedIdsList ??= new List<string>();
+        Data.ownedIdsList.Clear();
+        if (Data.ownedIds != null)
+        {
+            foreach (var id in Data.ownedIds)
+                if (!string.IsNullOrEmpty(id)) Data.ownedIdsList.Add(id);
+            Data.ownedIdsList.Sort(StringComparer.Ordinal);
+        }
+
+        // favorites
+        Data.favoriteMonsterIdsList ??= new List<string>();
+        Data.favoriteMonsterIdsList.Clear();
+        if (Data.favoriteMonsterIds != null)
+        {
+            foreach (var id in Data.favoriteMonsterIds)
+                if (!string.IsNullOrEmpty(id)) Data.favoriteMonsterIdsList.Add(id);
+            Data.favoriteMonsterIdsList.Sort(StringComparer.Ordinal);
+        }
+
+        // discovered
+        Data.discoveredMonsterIdsList ??= new List<string>();
+        Data.discoveredMonsterIdsList.Clear();
+        if (Data.discoveredMonsterIds != null)
+        {
+            foreach (var id in Data.discoveredMonsterIds)
+                if (!string.IsNullOrEmpty(id)) Data.discoveredMonsterIdsList.Add(id);
+            Data.discoveredMonsterIdsList.Sort(StringComparer.Ordinal);
+        }
+
+        // seen types
+        Data.seenTypesList ??= new List<MonsterType>();
+        Data.seenTypesList.Clear();
+        if (Data.seenTypes != null)
+            foreach (var t in Data.seenTypes) Data.seenTypesList.Add(t);
+
+        // unlocked sites
+        Data.unlockedJobSitesList ??= new List<JobType>();
+        Data.unlockedJobSitesList.Clear();
+        if (Data.unlockedJobSites != null)
+            foreach (var j in Data.unlockedJobSites) Data.unlockedJobSitesList.Add(j);
     }
 
     // ─────────────────────────────────────────────
@@ -510,13 +568,14 @@ public static class SaveManager
 
         long now = NowUnix();
         int before = Data.activeFlyers.Count;
+
         Data.activeFlyers.RemoveAll(l =>
         {
             long exp = (l != null) ? l.expireUnix : 0L;
             return exp > 0 && exp <= now;
         });
-        bool changed = Data.activeFlyers.Count != before;
 
+        bool changed = Data.activeFlyers.Count != before;
         if (saveIfChanged && changed) Save();
         return changed;
     }
@@ -527,9 +586,10 @@ public static class SaveManager
 
         long now = NowUnix();
         int before = Data.activeWorkOrders.Count;
-        Data.activeWorkOrders.RemoveAll(b => b != null && b.expireUnix <= now);
-        bool changed = Data.activeWorkOrders.Count != before;
 
+        Data.activeWorkOrders.RemoveAll(b => b != null && b.expireUnix <= now);
+
+        bool changed = Data.activeWorkOrders.Count != before;
         if (saveIfChanged && changed) Save();
         return changed;
     }
@@ -540,9 +600,10 @@ public static class SaveManager
 
         long now = NowUnix();
         int before = Data.activeFavorBoosts.Count;
-        Data.activeFavorBoosts.RemoveAll(b => b != null && b.expireUnix <= now);
-        bool changed = Data.activeFavorBoosts.Count != before;
 
+        Data.activeFavorBoosts.RemoveAll(b => b != null && b.expireUnix <= now);
+
+        bool changed = Data.activeFavorBoosts.Count != before;
         if (saveIfChanged && changed) Save();
         return changed;
     }
@@ -558,7 +619,6 @@ public static class SaveManager
     }
 
     public static long NowUnix() => DateTimeOffset.UtcNow.ToUnixTimeSeconds();
-
     public static int TodayDayIndexUTC() => (int)(NowUnix() / 86400L);
 
     static void EnsureFolder()
@@ -607,11 +667,17 @@ public static class SaveManager
         }
     }
 
+    // ─────────────────────────────────────────────
+    // Starter granting
+    // ─────────────────────────────────────────────
+
     public static bool HasStarter() => Data != null && Data.hasChosenStarter;
 
     public static void GrantStarter(string monsterId, int level = 1)
     {
-        if (Data == null || string.IsNullOrEmpty(monsterId)) return;
+        if (string.IsNullOrEmpty(monsterId)) return;
+
+        if (!_loaded) LoadOrCreate();
         EnsureDefaults();
 
         var ownedMonster = Data.owned.Find(o => o != null && o.monsterId == monsterId);
@@ -643,10 +709,7 @@ public static class SaveManager
                 Data.trainingMonsterId = monsterId;
         }
 
-        Data.ownedIds ??= new HashSet<string>();
         Data.ownedIds.Add(monsterId);
-
-        // ✅ Use centralized discovery helper
         Discover(monsterId, save: false);
 
         Data.hasChosenStarter = true;
@@ -656,8 +719,8 @@ public static class SaveManager
             var def = MonsterLibraryLocator.GetById(monsterId);
             if (def != null)
             {
-                Data.seenTypes ??= new HashSet<MonsterType>();
                 Data.seenTypes.Add(def.type);
+                // Do NOT double-fire unlocks here; StarterSelector already calls ApplyStarterUnlocksNow.
                 GameEvents.StarterChosen?.Invoke(def.type);
             }
         }
@@ -667,7 +730,7 @@ public static class SaveManager
     }
 
     // ─────────────────────────────────────────────
-    // Job runtime sidecar I/O (slot fatigue + cooldown)
+    // Job runtime sidecar I/O
     // ─────────────────────────────────────────────
 
     public static void SaveJobRuntime(JobRuntimeSave blob)
@@ -698,15 +761,44 @@ public static class SaveManager
         }
     }
 
-    public static bool HasSeenStory()
-    {
-        return Data != null && Data.hasSeenStory;
-    }
+    // ─────────────────────────────────────────────
+    // Story gate
+    // ─────────────────────────────────────────────
+
+    public static bool HasSeenStory() => Data != null && Data.hasSeenStory;
 
     public static void MarkStorySeen()
     {
+        if (!_loaded) LoadOrCreate();
         if (Data == null) return;
         Data.hasSeenStory = true;
         Save();
     }
+
+    public static bool UnlockJobSite(JobType site, bool save = true, bool fireEvent = true)
+    {
+        if (!_loaded) LoadOrCreate();
+        if (Data == null) return false;
+
+        Data.unlockedJobSites ??= new HashSet<JobType>();
+        Data.unlockedJobSitesList ??= new List<JobType>();
+
+        bool addedSet = Data.unlockedJobSites.Add(site);
+        bool addedList = false;
+
+        if (!Data.unlockedJobSitesList.Contains(site))
+        {
+            Data.unlockedJobSitesList.Add(site);
+            addedList = true;
+        }
+
+        if (save && (addedSet || addedList))
+            Save();
+
+        if (fireEvent && (addedSet || addedList))
+            GameEvents.OnJobsChanged?.Invoke();
+
+        return addedSet || addedList;
+    }
+
 }

@@ -495,8 +495,6 @@ public partial class EncounterManager : MonoBehaviour
         {
             EmitStatus("Victory. Hire decision…", LogScope.System);
 
-            // _manualHirePending should already be true from OnBattleEnded (holdForHireDecision).
-            // Keep holding summary while the hire overlay is up.
             PostBattleSummaryManager.I?.SetAutoBattling(true);
 
             EncounterPanelUI.I.ShowHireDecision(_lastBattleResult.wildDef, _lastBattleResult.wildLevel);
@@ -575,7 +573,7 @@ public partial class EncounterManager : MonoBehaviour
             var om = team[i];
             if (om == null || string.IsNullOrEmpty(om.monsterId)) continue;
 
-            if (om.currentHP >= 0) continue; // only when -1
+            if (om.currentHP >= 0) continue; 
 
             var def = lib.GetById(om.monsterId);
             if (!def) continue;

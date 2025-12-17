@@ -136,7 +136,6 @@ public sealed class JobManager : MonoBehaviour
         // Load slot fatigue + cooldowns from sidecar file
         LoadRuntimeFromSave();
 
-        SubscribeUnlockEvents();
         if (lockSitesUntilEligible) RecalculateUnlocksFromSeenTypes();
         if (simulateOfflineOnLoad) ResolveOfflineIfAny();
 
@@ -155,16 +154,13 @@ public sealed class JobManager : MonoBehaviour
         GameEvents.StarterChosen -= OnStarterChosen;
         GameEvents.MonsterCaptured -= OnMonsterCaptured;
         GameEvents.JobGlobalModsChanged -= OnJobModsChanged;
-    }
 
-    private void OnDestroy()
-    {
-        UnsubscribeUnlockEvents();
         if (SettingsManager.I) SettingsManager.I.OnSettingsChanged -= PullSettings;
 
         // Persist runtime on destroy to be safe
         SaveRuntimeToSave();
     }
+
 
     private void Update()
     {
@@ -736,19 +732,6 @@ public sealed class JobManager : MonoBehaviour
         return false;
     }
 
-    // ---------------------------- Unlocks ----------------------------
-    private void SubscribeUnlockEvents()
-    {
-        GameEvents.MonsterCaptured += OnMonsterCaptured;
-        GameEvents.StarterChosen += OnStarterChosen;
-    }
-
-    private void UnsubscribeUnlockEvents()
-    {
-        GameEvents.MonsterCaptured -= OnMonsterCaptured;
-        GameEvents.StarterChosen -= OnStarterChosen;
-    }
-
     private void OnStarterChosen(MonsterType type)
     {
         // 1) Normal unlock path
@@ -828,7 +811,19 @@ public sealed class JobManager : MonoBehaviour
     public bool IsSiteUnlocked(JobType job)
     {
         if (!lockSitesUntilEligible) return true;
-        return SaveManager.Data?.unlockedJobSites != null && SaveManager.Data.unlockedJobSites.Contains(job);
+
+        var d = SaveManager.Data;
+        if (d == null) return false;
+
+        // LIST is authoritative (JsonUtility-safe)
+        if (d.unlockedJobSitesList != null && d.unlockedJobSitesList.Contains(job))
+            return true;
+
+        // Set is a cache/fallback only
+        if (d.unlockedJobSites != null && d.unlockedJobSites.Contains(job))
+            return true;
+
+        return false;
     }
 
     // ---------------------------- Offline sim & clinic relief ----------------------------
@@ -1481,6 +1476,52 @@ public sealed class JobManager : MonoBehaviour
 
         return changed;
     }
+
+    public void ApplyStarterUnlocksNow(MonsterType type)
+    {
+        var d = SaveManager.Data;
+        if (d == null) return;
+
+        d.seenTypes ??= new HashSet<MonsterType>();
+        d.seenTypesList ??= new List<MonsterType>();
+
+        d.unlockedJobSites ??= new HashSet<JobType>();
+        d.unlockedJobSitesList ??= new List<JobType>();
+
+        // Record seen type (write to list too)
+        if (d.seenTypes.Add(type) && !d.seenTypesList.Contains(type))
+            d.seenTypesList.Add(type);
+
+        bool mappedAny = false;
+
+        void Unlock(JobType job)
+        {
+            if (job == JobType.None) return;
+
+            d.unlockedJobSites.Add(job); // cache
+            if (!d.unlockedJobSitesList.Contains(job))
+                d.unlockedJobSitesList.Add(job); // authoritative
+        }
+
+        foreach (var job in JobBalance.JobsUnlockedByType(type))
+        {
+            mappedAny = true;
+            Unlock(job);
+        }
+
+        if (enableStarterDefaultSitesFallback && !mappedAny)
+        {
+            for (int i = 0; i < starterDefaultSites.Count; i++)
+                Unlock(starterDefaultSites[i]);
+        }
+
+        SaveManager.Save();
+        RefreshAllJobSiteViewsInScene();
+        GameEvents.OnJobsChanged?.Invoke();
+    }
+
+
+
 
 
 }
