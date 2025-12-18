@@ -267,9 +267,6 @@ public class JobAssignPanelUI : MonoBehaviour
     {
         if (UIManager.I) UIManager.I.Show(panelId);
         else gameObject.SetActive(true);
-
-        GameEvents.Tutorial_JobAssignOpened?.Invoke();
-
     }
 
     void CloseSelf()

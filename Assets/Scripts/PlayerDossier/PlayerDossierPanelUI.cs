@@ -107,7 +107,6 @@ public class PlayerDossierPanelUI : MonoBehaviour
 
     private void OnEnable()
     {
-        GameEvents.Tutorial_PlayerDossierOpened?.Invoke();
         _currentPageIndex = 0;
         RefreshPageVisibility();
         RefreshNavigationUI();
@@ -177,7 +176,6 @@ public class PlayerDossierPanelUI : MonoBehaviour
     // NEW: your close behavior (disable panel by default)
     private void OnCloseClicked()
     {
-        GameEvents.Tutorial_PlayerDossierClosed?.Invoke();
         gameObject.SetActive(false);
     }
 

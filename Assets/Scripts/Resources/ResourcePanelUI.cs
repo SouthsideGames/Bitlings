@@ -32,7 +32,6 @@ public class ResourcePanelUI : MonoBehaviour
     void OnEnable()
     {
         GameEvents.OnResourcesChanged += Refresh;
-        GameEvents.Tutorial_ResourcePanelOpened?.Invoke();
 
 
         // Feature unlock listener
@@ -47,7 +46,6 @@ public class ResourcePanelUI : MonoBehaviour
     void OnDisable()
     {
         GameEvents.OnResourcesChanged -= Refresh;
-        GameEvents.Tutorial_ResourcePanelClosed?.Invoke();
 
         if (FeatureUnlockManager.I != null)
             FeatureUnlockManager.I.OnFeatureUnlocked -= HandleFeatureUnlocked;

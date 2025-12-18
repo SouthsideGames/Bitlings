@@ -8,13 +8,6 @@ public sealed class EncounterButtonGuard : MonoBehaviour
     [Header("Requirements")]
     [SerializeField, Min(1)] private int minRequiredTeamMembers = 1;
 
-    [Header("Tutorial Override")]
-    [Tooltip("If true, this guard will not fight the tutorial gating while the tutorial is active.")]
-    [SerializeField] private bool ignoreGuardWhileTutorialActive = true;
-
-    [Tooltip("When the tutorial is active, force the Encounter button to this interactable state.")]
-    [SerializeField] private bool tutorialForcedInteractable = false;
-
     [Header("Feedback")]
     [SerializeField] private RectTransform shakeTarget;
     [SerializeField, Range(0.05f, 0.5f)] private float shakeDuration = 0.2f;
@@ -57,24 +50,12 @@ public sealed class EncounterButtonGuard : MonoBehaviour
     {
         if (_button == null) return;
 
-        // Tutorial should fully control gating during onboarding.
-        if (ignoreGuardWhileTutorialActive && TutorialManager.IsActive)
-        {
-            _button.interactable = tutorialForcedInteractable;
-            return;
-        }
-
         bool hasTeam = HasMinimumTeam(minRequiredTeamMembers);
         _button.interactable = hasTeam;
     }
 
     private void OnButtonClicked()
     {
-        // If tutorial is active and we are forcing this disabled, do nothing (avoid shake/feedback).
-        if (ignoreGuardWhileTutorialActive && TutorialManager.IsActive && !tutorialForcedInteractable)
-            return;
-
-        // Existing behavior: if clicked without enough energy, shake feedback.
         if (!HasRequiredEnergy())
         {
             StartShake();
