@@ -50,6 +50,12 @@ public sealed class TutorialOverlayPanel : MonoBehaviour
     private void OnEnable()
     {
         if (!autoOpenOnEnable) return;
+        StartCoroutine(OpenNextFrame());
+    }
+
+    private System.Collections.IEnumerator OpenNextFrame()
+    {
+        yield return null; // wait one frame so UI + routing settles
         TryOpen();
     }
 

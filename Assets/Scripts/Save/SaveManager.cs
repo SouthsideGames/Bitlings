@@ -40,6 +40,7 @@ public static class SaveManager
 
     public static string SavePath => Path.Combine(Application.persistentDataPath, "idle_mon_save.json");
     public static string BackupPath => Path.Combine(Application.persistentDataPath, "idle_mon_save.bak");
+    public static string TutorialFlagsPath => Path.Combine(Application.persistentDataPath, "tutorial_flags.json");
     public static string JobRuntimePath => Path.Combine(Application.persistentDataPath, "idle_job_runtime.json");
 
     // ─────────────────────────────────────────────
@@ -158,6 +159,7 @@ public static class SaveManager
         try { if (File.Exists(SavePath)) File.Delete(SavePath); } catch { }
         try { if (File.Exists(BackupPath)) File.Delete(BackupPath); } catch { }
         try { if (File.Exists(JobRuntimePath)) File.Delete(JobRuntimePath); } catch { }
+        try { if (File.Exists(TutorialFlagsPath)) File.Delete(TutorialFlagsPath); } catch { }
 
         Data = NewFreshPlayer();
 
