@@ -8,10 +8,6 @@ public class IntroManager : MonoBehaviour
     [SerializeField] private PanelId starterPanelId = PanelId.StarterPicker;
     [SerializeField] private PanelId homePanelId    = PanelId.Home;
 
-    [Header("Tutorial Panel")]
-    [Tooltip("If set, we will open this panel after routing to Home (only if tutorial is not completed).")]
-    [SerializeField] private PanelId tutorialPanelId = PanelId.Tutorial;
-
     [Header("Story Panel")]
     [SerializeField] private PanelId storyPanelId = PanelId.Story;
 
@@ -109,24 +105,12 @@ public class IntroManager : MonoBehaviour
 
         if (hasStarter)
         {
-            RouteToHomeAndMaybeTutorial();
+            UIManager.I?.Show(homePanelId);
             UIManager.I?.Hide(titlePanelId);
             return;
         }
 
         ShowStarterFlow();
-    }
-
-    // ─────────────────────────────────────────────────────────────
-    // Home routing + tutorial (NEW)
-    // ─────────────────────────────────────────────────────────────
-    private void RouteToHomeAndMaybeTutorial()
-    {
-        UIManager.I?.Show(homePanelId);
-
-        // NEW: open tutorial panel after we reach Home (only if tutorial not completed)
-        if (tutorialPanelId != PanelId.None && TutorialManager.ShouldShowTutorial())
-            UIManager.I?.Show(tutorialPanelId);
     }
 
     // ─────────────────────────────────────────────────────────────
