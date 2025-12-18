@@ -236,6 +236,8 @@ public class JobAssignPanelUI : MonoBehaviour
 
         JobManager.I.RemoveFromAnyJob(_pendingId);
         JobManager.I.TryAssignWorkerAt(_job, _slotIndex, _pendingDef, _pendingId);
+        GameEvents.OnJobsChanged?.Invoke();
+        GameEvents.Tutorial_FirstJobAssigned?.Invoke();
         Close();
     }
 
@@ -265,6 +267,9 @@ public class JobAssignPanelUI : MonoBehaviour
     {
         if (UIManager.I) UIManager.I.Show(panelId);
         else gameObject.SetActive(true);
+
+        GameEvents.Tutorial_JobAssignOpened?.Invoke();
+
     }
 
     void CloseSelf()

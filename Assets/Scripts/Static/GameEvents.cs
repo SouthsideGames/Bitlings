@@ -30,4 +30,16 @@ public static class GameEvents
 
     public static Action<int> WinStreakChanged;
     public static Action FavoritesChanged;
+
+    // Tutorial signals (lightweight, no coupling)
+    public static Action Tutorial_PlayerDossierOpened;
+    public static Action Tutorial_PlayerDossierClosed;
+
+    public static Action Tutorial_ResourcePanelOpened;
+    public static Action Tutorial_ResourcePanelClosed;
+
+    public static Action Tutorial_JobAssignOpened;
+
+    // Fires only when a worker assignment is confirmed and applied
+    public static Action Tutorial_FirstJobAssigned;
 }

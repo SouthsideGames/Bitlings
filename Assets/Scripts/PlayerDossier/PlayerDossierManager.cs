@@ -114,6 +114,7 @@ public class PlayerDossierManager : MonoBehaviour
 
     private void OnEnable()
     {
+        
         if (autoRefreshOnEnable)
         {
             RefreshSnapshot();
