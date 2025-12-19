@@ -12,7 +12,7 @@ public class StarterSelector : MonoBehaviour
     [Header("Routing")]
     [SerializeField] private PanelId selfPanelId = PanelId.StarterPicker;
     [SerializeField] private PanelId introPanelId = PanelId.Intro;
-    [SerializeField] private PanelId homePanelId  = PanelId.Home;
+    [SerializeField] private PanelId homePanelId = PanelId.Home;
 
     [Tooltip("If true, this class routes to Home after choosing. If false, leave routing to caller.")]
     [SerializeField] private bool routeToHomeOnChoose = true;
@@ -23,8 +23,13 @@ public class StarterSelector : MonoBehaviour
     [SerializeField, Min(1)] private int maxNumberOfStarters = 4;
 
     [Header("Starter Filters")]
-    [SerializeField] private int minHpAtLv1  = 22;
+    [SerializeField] private int minHpAtLv1 = 22;
     [SerializeField] private int minAtkAtLv1 = 6;
+
+    [Header("Tutorial (optional)")]
+    [SerializeField] private bool triggerHomeTutorialAfterChoosingStarter = true;
+    [SerializeField] private string homeTutorialKey = "tut_home_v1"; // must match TutorialOverlayPanel.tutorialKey
+
 
     [Header("Debug")]
     [Tooltip("Bypass the MonsterDetail panel entirely. Click chooses immediately.")]
@@ -248,7 +253,7 @@ public class StarterSelector : MonoBehaviour
                 SaveManager.Data.hasChosenStarter = true;
 
                 // Ensure new team member(s) have valid HP
-                var lib  = MonsterLibraryLocator.Lib;
+                var lib = MonsterLibraryLocator.Lib;
                 var team = SaveManager.Data.team;
                 if (lib && team != null && team.Count > 0)
                 {
@@ -317,11 +322,13 @@ public class StarterSelector : MonoBehaviour
 
         if (UIManager.I != null)
         {
-            if (selfPanelId  != PanelId.None) UIManager.I.Hide(selfPanelId);
+            if (selfPanelId != PanelId.None) UIManager.I.Hide(selfPanelId);
             if (introPanelId != PanelId.None) UIManager.I.Hide(introPanelId);
             if (routeToHomeOnChoose && homePanelId != PanelId.None)
                 UIManager.I.Show(homePanelId);
         }
+
+        TryOpenHomeTutorial();
 
         _locked = false;
         SetButtonsInteractable(true);
@@ -357,7 +364,7 @@ public class StarterSelector : MonoBehaviour
             .Where(m => m.canBeStarter)
             .Where(m =>
             {
-                int hp1  = Mathf.RoundToInt(BattleCalc.CalcHP(m, 1));
+                int hp1 = Mathf.RoundToInt(BattleCalc.CalcHP(m, 1));
                 int atk1 = Mathf.RoundToInt(BattleCalc.CalcBaseAttack(m, 1, 0, 0));
                 return hp1 >= minHpAtLv1 && atk1 >= minAtkAtLv1;
             })
@@ -435,4 +442,31 @@ public class StarterSelector : MonoBehaviour
             return h;
         }
     }
+    
+    private void TryOpenHomeTutorial()
+    {
+        if (!triggerHomeTutorialAfterChoosingStarter) return;
+        if (UIManager.I == null) return;
+
+        var homeRoot = UIManager.I.GetRoot(homePanelId);
+        if (!homeRoot) return;
+
+        var overlays = homeRoot.GetComponentsInChildren<TutorialOverlayPanel>(true);
+        if (overlays == null || overlays.Length == 0) return;
+
+        for (int i = 0; i < overlays.Length; i++)
+        {
+            var o = overlays[i];
+            if (!o) continue;
+
+            if (o.MatchesKey(homeTutorialKey))
+            {
+                o.TryOpen();
+                return;
+            }
+        }
+
+        overlays[0].TryOpen();
+    }
+
 }

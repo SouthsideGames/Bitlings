@@ -28,6 +28,9 @@ public sealed class TutorialOverlayPanel : MonoBehaviour
     [SerializeField] private bool allowEarlyClose = false;
     [SerializeField] private bool completeOnlyOnLastSlide = true;
 
+    [Header("Skip")]
+    [SerializeField] private Button skipButton;
+
     [Serializable]
     public struct TutorialPage
     {
@@ -45,6 +48,9 @@ public sealed class TutorialOverlayPanel : MonoBehaviour
 
         if (nextButton) nextButton.onClick.AddListener(OnNextClicked);
         if (closeButton) closeButton.onClick.AddListener(OnCloseClicked);
+
+        if (skipButton)
+            skipButton.onClick.AddListener(OnSkipClicked);
     }
 
     private void OnEnable()
@@ -132,12 +138,26 @@ public sealed class TutorialOverlayPanel : MonoBehaviour
 
         if (closeButton)
             closeButton.gameObject.SetActive(allowEarlyClose);
+
+        if (skipButton)
+            skipButton.gameObject.SetActive(!isLast);
     }
+
 
     private void ShowOverlay(bool show)
     {
-        if (overlayRoot) overlayRoot.SetActive(show);
+        if (!overlayRoot) return;
+
+        if (show)
+        {
+            overlayRoot.SetActive(true);
+        }
+        else
+        {
+            overlayRoot.SetActive(false);
+        }
     }
+
 
     // ─────────────────────────────────────────────────────────────────────────────
     // JSON persistence (no PlayerPrefs)
@@ -218,4 +238,26 @@ public sealed class TutorialOverlayPanel : MonoBehaviour
             catch { }
         }
     }
+
+    private void OnSkipClicked()
+    {
+        if (string.IsNullOrWhiteSpace(tutorialKey)) return;
+
+        // Always mark as complete when skipping
+        TutorialJsonStore.SetComplete(tutorialKey, true);
+
+        // Consume any pending open request so it doesn't re-open
+        _pendingOpen.Remove(tutorialKey);
+
+        _openedThisSession = true;
+
+        ShowOverlay(false);
+    }
+
+
+    public bool MatchesKey(string key)
+    {
+        return string.Equals(tutorialKey, key, StringComparison.Ordinal);
+    }
+
 }
