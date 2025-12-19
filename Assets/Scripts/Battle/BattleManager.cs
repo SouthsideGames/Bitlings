@@ -168,7 +168,7 @@ public class BattleManager : MonoBehaviour
 
     [Header("Battle Text Box")]
     [SerializeField] private BattleTextBoxUI battleTextBox;
-    [SerializeField] private BattleBottomPanelToggle _bottomToggle;
+    [SerializeField] private BattleSwitchToggle _bottomToggle;
 
 
     [Header("Debug")]

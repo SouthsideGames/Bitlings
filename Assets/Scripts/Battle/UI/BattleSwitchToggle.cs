@@ -1,21 +1,24 @@
 using UnityEngine;
 using UnityEngine.UI;
 
-public class BattleBottomPanelToggle : MonoBehaviour
+public class BattleSwitchToggle : MonoBehaviour
 {
     [Header("Panels (CanvasGroup preferred)")]
     [SerializeField] private CanvasGroup battleTextGroup;
     [SerializeField] private CanvasGroup boosterBarGroup;
 
-    [Header("Optional: button visuals")]
+    [Header("Toggle Button")]
     [SerializeField] private Button toggleButton;
+
+    [Header("Toggle Icons (show the OTHER mode)")]
+    [SerializeField] private GameObject battleTextIcon; // icon representing battle text
+    [SerializeField] private GameObject boosterBarIcon; // icon representing boost bar
 
     [Header("Rules")]
     [SerializeField] private bool startShowingText = true;
 
-    // Hook to BattleManager so we can block toggling during narration/turn locks
     [Header("Battle State Source")]
-    [SerializeField] private BattleManager battle; // drag your BattleManager here
+    [SerializeField] private BattleManager battle;
 
     private bool _showingText;
 
@@ -36,17 +39,8 @@ public class BattleBottomPanelToggle : MonoBehaviour
 
     public void Toggle()
     {
-        // If battle not assigned, just toggle (safe fallback)
-        if (battle != null)
-        {
-            // Block toggling while narration is locking input
-            // You already have _narrationLock in BattleManager; expose it as a public property.
-            if (battle.NarrationLocked)
-                return;
-
-            // Optional: if you only want boosters on player turn
-            // if (!battle.IsPlayerTurn) return;
-        }
+        if (battle != null && battle.NarrationLocked)
+            return;
 
         _showingText = !_showingText;
         ApplyState(immediate: false);
@@ -56,14 +50,31 @@ public class BattleBottomPanelToggle : MonoBehaviour
     {
         if (_showingText)
         {
+            // Show battle text panel
             SetGroupVisible(battleTextGroup, true);
             SetGroupVisible(boosterBarGroup, false);
+
+            // Toggle icon shows BOOSTS (what you'll switch to)
+            SetIconState(showBattleTextIcon: false);
         }
         else
         {
+            // Show boost bar panel
             SetGroupVisible(battleTextGroup, false);
             SetGroupVisible(boosterBarGroup, true);
+
+            // Toggle icon shows BATTLE TEXT (what you'll switch to)
+            SetIconState(showBattleTextIcon: true);
         }
+    }
+
+    private void SetIconState(bool showBattleTextIcon)
+    {
+        if (battleTextIcon != null)
+            battleTextIcon.SetActive(showBattleTextIcon);
+
+        if (boosterBarIcon != null)
+            boosterBarIcon.SetActive(!showBattleTextIcon);
     }
 
     private static void SetGroupVisible(CanvasGroup cg, bool visible)
@@ -74,7 +85,7 @@ public class BattleBottomPanelToggle : MonoBehaviour
         cg.blocksRaycasts = visible;
     }
 
-    // Optional: call from BattleManager when a new line starts/ends to force text visible
+    // Called by BattleManager to force narration visibility
     public void ForceShowText()
     {
         _showingText = true;
