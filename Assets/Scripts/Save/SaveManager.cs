@@ -38,10 +38,10 @@ public static class SaveManager
     private static bool _loaded;
     private static bool _isSaving;
 
-    public static string SavePath => Path.Combine(Application.persistentDataPath, "idle_mon_save.json");
-    public static string BackupPath => Path.Combine(Application.persistentDataPath, "idle_mon_save.bak");
-    public static string TutorialFlagsPath => Path.Combine(Application.persistentDataPath, "tutorial_flags.json");
-    public static string JobRuntimePath => Path.Combine(Application.persistentDataPath, "idle_job_runtime.json");
+    public static string SavePath         => Path.Combine(Application.persistentDataPath, "idle_mon_save.json");
+    public static string BackupPath       => Path.Combine(Application.persistentDataPath, "idle_mon_save.bak");
+    public static string TutorialFlagsPath=> Path.Combine(Application.persistentDataPath, "tutorial_flags.json");
+    public static string JobRuntimePath   => Path.Combine(Application.persistentDataPath, "idle_job_runtime.json");
 
     // ─────────────────────────────────────────────
     // Auto-generated handler names
@@ -105,13 +105,14 @@ public static class SaveManager
         PruneExpiredLuckBoosts(true);
 
         // IMPORTANT: Ensure HashSet mirrors are ALWAYS rebuilt from list mirrors on load.
-        // This is the #1 culprit when you see "list=1 set=1" but the UI behaves like it is locked.
         RebuildTransientSetsFromLists();
+
+        // Tutorial flags are SaveManager-owned; load once so UI calls are stable.
+        EnsureTutorialFlagsLoaded();
 
         // First-time write (new save) after everything is consistent.
         if (!File.Exists(SavePath))
             Save();
-
     }
 
     public static void Save()
@@ -159,7 +160,9 @@ public static class SaveManager
         try { if (File.Exists(SavePath)) File.Delete(SavePath); } catch { }
         try { if (File.Exists(BackupPath)) File.Delete(BackupPath); } catch { }
         try { if (File.Exists(JobRuntimePath)) File.Delete(JobRuntimePath); } catch { }
-        try { if (File.Exists(TutorialFlagsPath)) File.Delete(TutorialFlagsPath); } catch { }
+
+        // SaveManager owns tutorial flags; clear through API so in-memory cache resets too.
+        ClearTutorialFlags();
 
         Data = NewFreshPlayer();
 
@@ -425,6 +428,90 @@ public static class SaveManager
             if (om.lastLevelClaimDay == 0) om.lastLevelClaimDay = -1;
             if (om.pendingLevels < 0) om.pendingLevels = 0;
         }
+    }
+
+    // ─────────────────────────────────────────────
+    // Tutorial flags (SaveManager-owned persistence)
+    // ─────────────────────────────────────────────
+
+    [Serializable]
+    private sealed class TutorialFlagsData
+    {
+        public List<string> completed = new List<string>();
+    }
+
+    private static TutorialFlagsData _tutorialData;
+    private static HashSet<string> _tutorialSet;
+    private static bool _tutorialLoaded;
+
+    private static void EnsureTutorialFlagsLoaded()
+    {
+        if (_tutorialLoaded) return;
+        _tutorialLoaded = true;
+
+        _tutorialData = new TutorialFlagsData();
+        _tutorialSet  = new HashSet<string>(StringComparer.Ordinal);
+
+        try
+        {
+            if (File.Exists(TutorialFlagsPath))
+            {
+                var json = File.ReadAllText(TutorialFlagsPath, Encoding.UTF8);
+                if (!string.IsNullOrWhiteSpace(json))
+                    _tutorialData = JsonUtility.FromJson<TutorialFlagsData>(json) ?? new TutorialFlagsData();
+            }
+        }
+        catch
+        {
+            _tutorialData = new TutorialFlagsData();
+        }
+
+        if (_tutorialData.completed != null)
+        {
+            for (int i = 0; i < _tutorialData.completed.Count; i++)
+            {
+                var k = _tutorialData.completed[i];
+                if (!string.IsNullOrWhiteSpace(k)) _tutorialSet.Add(k);
+            }
+        }
+    }
+
+    private static void SaveTutorialFlagsFile()
+    {
+        try
+        {
+            _tutorialData.completed = new List<string>(_tutorialSet);
+            var json = JsonUtility.ToJson(_tutorialData, true);
+            AtomicWrite(TutorialFlagsPath, json);
+        }
+        catch { }
+    }
+
+    public static bool IsTutorialComplete(string key)
+    {
+        if (string.IsNullOrWhiteSpace(key)) return false;
+        EnsureTutorialFlagsLoaded();
+        return _tutorialSet.Contains(key);
+    }
+
+    public static void SetTutorialComplete(string key, bool done)
+    {
+        if (string.IsNullOrWhiteSpace(key)) return;
+        EnsureTutorialFlagsLoaded();
+
+        bool changed = done ? _tutorialSet.Add(key) : _tutorialSet.Remove(key);
+        if (!changed) return;
+
+        SaveTutorialFlagsFile();
+    }
+
+    public static void ClearTutorialFlags()
+    {
+        _tutorialLoaded = true;
+        _tutorialData = new TutorialFlagsData();
+        _tutorialSet  = new HashSet<string>(StringComparer.Ordinal);
+
+        try { if (File.Exists(TutorialFlagsPath)) File.Delete(TutorialFlagsPath); } catch { }
     }
 
     // ─────────────────────────────────────────────
@@ -802,5 +889,4 @@ public static class SaveManager
 
         return addedSet || addedList;
     }
-
 }
