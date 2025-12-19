@@ -28,7 +28,7 @@ public static class BattleLogColors
     public const string Crit   = "#FFD94A"; // gold
     public const string Info   = "#7FD7FF"; // cyan
     public const string Name   = "#D7B6FF";
-    public const string Title = "#FFB347";
+    public const string Title  = "#FFB347";
 }
 
 public enum ModKind { Buff, Debuff, Info }
@@ -164,11 +164,15 @@ public static class DamageLogFormatter
 public static class BattleLogger
 {
     public static event Action<LogEntry> OnLogAppended;
-    public static event Action<string>   OnBattleBegan;
-    public static event Action<bool>     OnBattleEnded;
-    public static event Action<string>   OnEncounterBegan;
-    public static event Action<bool>     OnEncounterEnded;
-    public static event Action          OnLogCleared;
+
+    // NEW: for BattleHistoryModalUI (append-only text stream)
+    public static event Action<string> OnLineLogged;
+
+    public static event Action<string> OnBattleBegan;
+    public static event Action<bool>   OnBattleEnded;
+    public static event Action<string> OnEncounterBegan;
+    public static event Action<bool>   OnEncounterEnded;
+    public static event Action         OnLogCleared;
 
     static readonly List<LogEntry> _entries = new List<LogEntry>(512);
     static string _currentBattleLabel;
@@ -176,17 +180,43 @@ public static class BattleLogger
 
     public static IReadOnlyList<LogEntry> Entries => _entries;
 
+    // NEW: snapshot helper for modal rebuild
+    public static IReadOnlyList<LogEntry> GetEntriesSnapshot() => _entries;
+
+    // NEW: optional helper if you only want strings
+    public static IReadOnlyList<string> GetLinesSnapshot(int max = 0)
+    {
+        if (max <= 0 || max >= _entries.Count)
+        {
+            var all = new List<string>(_entries.Count);
+            for (int i = 0; i < _entries.Count; i++) all.Add(_entries[i].text);
+            return all;
+        }
+
+        int start = Mathf.Max(0, _entries.Count - max);
+        int count = _entries.Count - start;
+        var list = new List<string>(count);
+        for (int i = start; i < _entries.Count; i++) list.Add(_entries[i].text);
+        return list;
+    }
+
     // Global toggle (use for Manual vs Auto battle)
     public static bool Enabled { get; private set; } = true;
+
+    // Optional: cap stored lines to avoid unbounded growth across many encounters
+    public static int MaxEntries { get; private set; } = 800;
 
     static long NowUnix() => SaveManager.NowUnix();
 
     // ─────────────────────────────────────────────────────────
     // Enable / Disable
     // ─────────────────────────────────────────────────────────
-    public static void SetEnabled(bool on)
+    public static void SetEnabled(bool on) => Enabled = on;
+
+    public static void SetMaxEntries(int max)
     {
-        Enabled = on;
+        MaxEntries = Mathf.Clamp(max, 50, 10000);
+        TrimToMax();
     }
 
     // ─────────────────────────────────────────────────────────
@@ -233,7 +263,12 @@ public static class BattleLogger
         };
 
         _entries.Add(e);
+        TrimToMax();
+
         OnLogAppended?.Invoke(e);
+
+        // NEW: battle history modal can subscribe to this
+        OnLineLogged?.Invoke(message);
     }
 
     // ─────────────────────────────────────────────────────────
@@ -315,13 +350,25 @@ public static class BattleLogger
         {
             var e = new LogEntry
             {
-                unix  = NowUnix(),
-                scope = LogScope.System,
-                text  = "(log cleared)",
+                unix       = NowUnix(),
+                scope      = LogScope.System,
+                text       = "(log cleared)",
                 battleLabel = null
             };
+
             _entries.Add(e);
             OnLogAppended?.Invoke(e);
+            OnLineLogged?.Invoke(e.text);
         }
+    }
+
+    static void TrimToMax()
+    {
+        if (MaxEntries <= 0) return;
+        int overflow = _entries.Count - MaxEntries;
+        if (overflow <= 0) return;
+
+        // Remove oldest
+        _entries.RemoveRange(0, overflow);
     }
 }

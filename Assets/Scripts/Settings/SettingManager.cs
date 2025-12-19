@@ -122,4 +122,40 @@ public class SettingsManager : MonoBehaviour
         S.useCustomSeed = enabled;
         Persist();
     }
+
+    // ─────────────────────────────────────────────────────────
+    // Battle UX / Accessibility
+    // ─────────────────────────────────────────────────────────
+    public bool GetShowInlineBattleIcons() => S.showInlineBattleIcons;
+    public void SetShowInlineBattleIcons(bool enabled)
+    {
+        if (S.showInlineBattleIcons == enabled) return;
+        S.showInlineBattleIcons = enabled;
+        Persist();
+    }
+
+    public bool GetCondensedBattleText() => S.condensedBattleText;
+    public void SetCondensedBattleText(bool enabled)
+    {
+        if (S.condensedBattleText == enabled) return;
+        S.condensedBattleText = enabled;
+        Persist();
+    }
+
+    public bool GetCompressAutoBattleText() => S.compressAutoBattleText;
+    public void SetCompressAutoBattleText(bool enabled)
+    {
+        if (S.compressAutoBattleText == enabled) return;
+        S.compressAutoBattleText = enabled;
+        Persist();
+    }
+
+    public bool GetBattleHistoryEnabled() => S.battleHistoryEnabled;
+    public void SetBattleHistoryEnabled(bool enabled)
+    {
+        if (S.battleHistoryEnabled == enabled) return;
+        S.battleHistoryEnabled = enabled;
+        Persist();
+    }
+
 }
