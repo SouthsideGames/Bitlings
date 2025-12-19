@@ -7,9 +7,13 @@ using System.Collections.Generic;
 
 public class CyroLabUI : MonoBehaviour
 {
+    [Header("UI")]
     [SerializeField] private Button useButton;
+    [SerializeField] private TextMeshProUGUI useButtonLabel;
     [SerializeField] private TextMeshProUGUI ordersLabel;
     [SerializeField] private TextMeshProUGUI orderTimerText;
+
+    [Header("Effect")]
     [SerializeField, Range(0f,1f)] private float bonus = 0.25f;
     [SerializeField, Min(1)] private int durationHours = 2;
     [SerializeField] private bool consumeWorkOrderItem = true;
@@ -42,10 +46,14 @@ public class CyroLabUI : MonoBehaviour
     void Refresh()
     {
         if (!ordersLabel || !useButton) return;
+
         int have = ResourceBank.Get(ResourceType.WorkOrder);
         ordersLabel.text = $"Work Orders: {have}";
         useButton.interactable = !consumeWorkOrderItem || have > 0;
+
+        RefreshButtonLabel();
     }
+
 
     void OnClickUse()
     {
@@ -65,6 +73,7 @@ public class CyroLabUI : MonoBehaviour
 
         SaveManager.Save();
         GameEvents.OnResourcesChanged?.Invoke();
+        RefreshButtonLabel();
     }
 
     void StartTicker() { if (_ticker != null) StopCoroutine(_ticker); _ticker = StartCoroutine(Tick()); }
@@ -77,8 +86,11 @@ public class CyroLabUI : MonoBehaviour
             if (orderTimerText)
             {
                 long rem = GetSecondsRemaining();
-                orderTimerText.text = rem > 0 ? FormatHMS(rem) : "NO ACTIVE WORK ORDERS";
+                orderTimerText.text = rem > 0 ? FormatHMS(rem) : "Use Work Order";
             }
+
+            RefreshButtonLabel();
+
             yield return new WaitForSecondsRealtime(1f);
         }
     }
@@ -99,4 +111,13 @@ public class CyroLabUI : MonoBehaviour
         var t = TimeSpan.FromSeconds(seconds);
         return (t.TotalHours >= 1.0) ? $"{(int)t.TotalHours}h {t.Minutes}m {t.Seconds}s" : $"{t.Minutes}m {t.Seconds}s";
     }
+
+    void RefreshButtonLabel()
+    {
+        if (!useButtonLabel) return;
+
+        bool active = GetSecondsRemaining() > 0;
+        useButtonLabel.text = active ? "Replace Work Order" : "Use Work Order";
+    }
+
 }

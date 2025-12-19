@@ -8,13 +8,14 @@ using System.Collections.Generic;
 public class SanctumUI : MonoBehaviour
 {
     [Header("UI")]
-    [SerializeField] private TMP_Dropdown    siteDropdown;
-    [SerializeField] private Button          useButton;
+    [SerializeField] private Button useButton;
     [SerializeField] private TextMeshProUGUI ShardLabel;
     [SerializeField] private TextMeshProUGUI capPreviewLabel;
     [SerializeField] private TextMeshProUGUI timerLabel;
+    [SerializeField] private TMP_Text useButtonLabel;
 
-    [Header("Site Icon")]
+    [Header("Effect")]
+    [SerializeField] private TMP_Dropdown siteDropdown;
     [SerializeField] private Image siteIcon;
 
     [Serializable]
@@ -37,46 +38,95 @@ public class SanctumUI : MonoBehaviour
     void OnEnable()
     {
         BuildIconMap();
-        RefreshShards();
         BuildDropdown();
         Hook();
+
+        RefreshShards();
         RefreshPreview();
         RefreshTimer();
         RefreshSiteIcon();
+        RefreshButtonLabel();
+
+        GameEvents.OnResourcesChanged += OnResourcesChanged;
+        GameEvents.OnJobsChanged += OnJobsChanged;
     }
 
     void OnDisable()
     {
+        GameEvents.OnResourcesChanged -= OnResourcesChanged;
+        GameEvents.OnJobsChanged -= OnJobsChanged;
+
         if (useButton) useButton.onClick.RemoveAllListeners();
         if (siteDropdown) siteDropdown.onValueChanged.RemoveAllListeners();
     }
 
-    void Update() => RefreshTimer();
+    void Update()
+    {
+        RefreshTimer();
+        RefreshButtonLabel();
+    }
+
+    void OnResourcesChanged()
+    {
+        RefreshShards();
+        RefreshButtonLabel();
+    }
+
+    void OnJobsChanged()
+    {
+        RefreshPreview();
+        RefreshTimer();
+        RefreshButtonLabel();
+        RefreshSiteIcon();
+    }
 
     void Hook()
     {
-        if (useButton) useButton.onClick.AddListener(DoUpgrade);
+        if (useButton)
+        {
+            useButton.onClick.RemoveAllListeners();
+            useButton.onClick.AddListener(DoUpgrade);
+
+            if (useButtonLabel == null)
+                useButtonLabel = useButton.GetComponentInChildren<TMP_Text>(true);
+        }
 
         if (siteDropdown)
         {
+            siteDropdown.onValueChanged.RemoveAllListeners();
             siteDropdown.onValueChanged.AddListener(_ =>
             {
                 RefreshPreview();
                 RefreshTimer();
+                RefreshButtonLabel();
                 RefreshSiteIcon();
             });
         }
     }
 
+    void RefreshButtonLabel()
+    {
+        if (!useButtonLabel) return;
+        bool active = GetBlessingSecondsRemainingForSelected() > 0.5f;
+        useButtonLabel.text = active ? "Replace Blessing" : "Use Blessing Scale";
+    }
+
+    float GetBlessingSecondsRemainingForSelected()
+    {
+        if (_sites == null || _sites.Length == 0) return 0f;
+        var jm = JobManager.I;
+        if (!jm) return 0f;
+
+        var site = _sites[Mathf.Clamp(siteDropdown.value, 0, _sites.Length - 1)];
+        return jm.GetBlessingSecondsRemaining(site.jobType);
+    }
+
     void BuildIconMap()
     {
         _iconMap = new Dictionary<JobType, Sprite>();
-
         foreach (var entry in jobTypeIcons)
-        {
             if (entry.sprite != null)
                 _iconMap[entry.jobType] = entry.sprite;
-        }
     }
 
     void BuildDropdown()
@@ -106,8 +156,7 @@ public class SanctumUI : MonoBehaviour
 
     void RefreshSiteIcon()
     {
-        if (siteIcon == null)
-            return;
+        if (siteIcon == null) return;
 
         if (_sites == null || _sites.Length == 0)
         {
@@ -118,9 +167,7 @@ public class SanctumUI : MonoBehaviour
         int idx = Mathf.Clamp(siteDropdown.value, 0, _sites.Length - 1);
         var site = _sites[idx];
 
-        if (_iconMap != null &&
-            _iconMap.TryGetValue(site.jobType, out var sprite) &&
-            sprite != null)
+        if (_iconMap != null && _iconMap.TryGetValue(site.jobType, out var sprite) && sprite != null)
         {
             siteIcon.sprite = sprite;
             siteIcon.gameObject.SetActive(true);
@@ -130,10 +177,6 @@ public class SanctumUI : MonoBehaviour
             siteIcon.gameObject.SetActive(false);
         }
     }
-
-    // ─────────────────────────────────────────────
-    // Existing logic unchanged below
-    // ─────────────────────────────────────────────
 
     void RefreshShards()
     {
@@ -145,17 +188,12 @@ public class SanctumUI : MonoBehaviour
     void RefreshPreview()
     {
         if (capPreviewLabel == null) return;
-        if (_sites == null || _sites.Length == 0)
-        {
-            capPreviewLabel.text = "";
-            return;
-        }
+        if (_sites == null || _sites.Length == 0) { capPreviewLabel.text = ""; return; }
 
         var jm = JobManager.I;
         if (!jm) { capPreviewLabel.text = ""; return; }
 
         var site = _sites[Mathf.Clamp(siteDropdown.value, 0, _sites.Length - 1)];
-
         int current = jm.GetEffectiveStorageCap(site);
         int after = current + flatPerToken;
 
@@ -167,11 +205,7 @@ public class SanctumUI : MonoBehaviour
         if (timerLabel == null || _sites == null || _sites.Length == 0) return;
 
         var jm = JobManager.I;
-        if (!jm)
-        {
-            timerLabel.text = "";
-            return;
-        }
+        if (!jm) { timerLabel.text = ""; return; }
 
         var site = _sites[Mathf.Clamp(siteDropdown.value, 0, _sites.Length - 1)];
 
@@ -195,6 +229,7 @@ public class SanctumUI : MonoBehaviour
         if (!ResourceBank.TrySpend(ResourceType.BlessingScale, 1))
         {
             RefreshShards();
+            RefreshButtonLabel();
             return;
         }
 
@@ -203,6 +238,7 @@ public class SanctumUI : MonoBehaviour
         {
             ResourceBank.Add(ResourceType.BlessingScale, 1);
             RefreshShards();
+            RefreshButtonLabel();
             return;
         }
 
@@ -216,6 +252,7 @@ public class SanctumUI : MonoBehaviour
             {
                 ResourceBank.Add(ResourceType.BlessingScale, 1);
                 RefreshShards();
+                RefreshButtonLabel();
                 return;
             }
         }
@@ -226,6 +263,7 @@ public class SanctumUI : MonoBehaviour
         RefreshShards();
         RefreshPreview();
         RefreshTimer();
+        RefreshButtonLabel();
         RefreshSiteIcon();
 
         GameEvents.OnJobsChanged?.Invoke();

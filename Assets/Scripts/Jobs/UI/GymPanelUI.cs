@@ -2,10 +2,7 @@ using UnityEngine;
 using TMPro;
 using System.Collections.Generic;
 
-/// <summary>
-/// Panel that shows all monsters eligible for Growth Core leveling,
-/// and opens the StatBucketPanelUI when you tap a row.
-/// </summary>
+
 public sealed class GymPanelUI : MonoBehaviour
 {
     [Header("Refs")]

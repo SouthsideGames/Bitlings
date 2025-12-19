@@ -8,22 +8,19 @@ using System.Linq;
 
 public class HarborUI : MonoBehaviour
 {
-    [Header("Refs")]
+    [Header("UI")]
     [SerializeField] private TMP_Dropdown typeDropdown;
     [SerializeField] private Button useFlyerButton;
     [SerializeField] private TextMeshProUGUI flyersLabel;
     [SerializeField] private TextMeshProUGUI flyerTimerText;
     [SerializeField] private TextMeshProUGUI chanceLabel;
-
-    [Header("Active Flyer Icon")]
+    [SerializeField] private TMP_Text useFlyerButtonLabel;
     [SerializeField] private Image activeFlyerIcon;
 
-    [Header("Flyer Settings")]
+    [Header("Effect")]
     [SerializeField, Range(0f, 1f)] private float bonus = 0.30f;
     [SerializeField, Min(1)] private int durationHours = 2;
     [SerializeField] private bool consumeFlyerItem = true;
-
-    [Header("Resources")]
     [Tooltip("Resources.Load() path (without extension). Example: Resources/TypeIconLibrary.asset => \"TypeIconLibrary\"")]
     [SerializeField] private string typeIconLibraryResourcePath = "TypeIconLibrary";
 
@@ -36,8 +33,7 @@ public class HarborUI : MonoBehaviour
 
         _typeIconLib = Resources.Load<TypeIconLibrary>(typeIconLibraryResourcePath);
         if (_typeIconLib == null)
-            Debug.LogError($"HarborUI: TypeIconLibrary not found at Resources path '{typeIconLibraryResourcePath}'. " +
-                           $"Place the asset under a Resources folder and ensure the path matches.");
+            Debug.LogError($"HarborUI: TypeIconLibrary not found at Resources path '{typeIconLibraryResourcePath}'.");
 
         BuildTypeOptions();
         Wire();
@@ -45,6 +41,7 @@ public class HarborUI : MonoBehaviour
         Refresh();
         UpdateTexts();
         RefreshActiveFlyerIcon();
+        RefreshButtonLabel();
 
         StartTicker();
         GameEvents.OnResourcesChanged += OnResourcesChanged;
@@ -61,6 +58,7 @@ public class HarborUI : MonoBehaviour
         Refresh();
         UpdateTexts();
         RefreshActiveFlyerIcon();
+        RefreshButtonLabel();
     }
 
     void Wire()
@@ -76,6 +74,9 @@ public class HarborUI : MonoBehaviour
             typeDropdown.onValueChanged.RemoveAllListeners();
             typeDropdown.onValueChanged.AddListener(_ => UpdateTexts());
         }
+
+        if (useFlyerButtonLabel == null && useFlyerButton != null)
+            useFlyerButtonLabel = useFlyerButton.GetComponentInChildren<TMP_Text>(true);
     }
 
     void BuildTypeOptions()
@@ -98,8 +99,25 @@ public class HarborUI : MonoBehaviour
         }
 
         int have = ResourceBank.Get(ResourceType.Flyer);
+
+        bool active = GetFlyerSecondsRemaining() > 0;
+        useFlyerButton.interactable = (!consumeFlyerItem || have > 0); // allow replace even while active, per your current behavior
+
         flyersLabel.text = $"Flyers: {have}";
-        useFlyerButton.interactable = !consumeFlyerItem || have > 0;
+    }
+
+    void RefreshButtonLabel()
+    {
+        if (!useFlyerButtonLabel) return;
+
+        bool active = GetFlyerSecondsRemaining() > 0;
+        useFlyerButtonLabel.text = active ? "Replace Flyer" : "Use Flyer";
+    }
+
+    long GetFlyerSecondsRemaining()
+    {
+        if (!EncounterManager.I) return 0;
+        return EncounterManager.I.GetFlyerSecondsRemaining();
     }
 
     void OnClickUseFlyer()
@@ -109,6 +127,7 @@ public class HarborUI : MonoBehaviour
         if (consumeFlyerItem && !ResourceBank.TrySpend(ResourceType.Flyer, 1))
         {
             Refresh();
+            RefreshButtonLabel();
             return;
         }
 
@@ -120,6 +139,7 @@ public class HarborUI : MonoBehaviour
         Refresh();
         UpdateTexts();
         RefreshActiveFlyerIcon();
+        RefreshButtonLabel();
     }
 
     void RefreshActiveFlyerIcon()
@@ -128,14 +148,12 @@ public class HarborUI : MonoBehaviour
 
         var cur = EncounterManager.I?.CurrentFlyer;
 
-        // Treat expired as "none"
         if (cur != null)
         {
             long secs = EncounterManager.I.GetFlyerSecondsRemaining();
             if (secs <= 0) cur = null;
         }
 
-        // No active flyer => hide icon entirely
         if (cur == null)
         {
             if (activeFlyerIcon.gameObject.activeSelf)
@@ -143,7 +161,6 @@ public class HarborUI : MonoBehaviour
             return;
         }
 
-        // If library missing, hide icon
         if (_typeIconLib == null)
         {
             if (activeFlyerIcon.gameObject.activeSelf)
@@ -151,7 +168,6 @@ public class HarborUI : MonoBehaviour
             return;
         }
 
-        // Use library lookup; if missing, hide icon (no fallback sprite)
         var spr = _typeIconLib.GetIcon(cur.type);
         if (spr != null)
         {
@@ -179,6 +195,7 @@ public class HarborUI : MonoBehaviour
 
     IEnumerator TickRoutine()
     {
+        var wait = new WaitForSecondsRealtime(1f);
         while (true)
         {
             if (flyerTimerText)
@@ -187,10 +204,10 @@ public class HarborUI : MonoBehaviour
                 flyerTimerText.text = rem > 0 ? FormatHMS(rem) : "No active flyers";
             }
 
-            // If flyer expires while this panel is open, reflect it immediately.
             RefreshActiveFlyerIcon();
+            RefreshButtonLabel();
 
-            yield return new WaitForSecondsRealtime(1f);
+            yield return wait;
         }
     }
 
@@ -206,7 +223,6 @@ public class HarborUI : MonoBehaviour
         }
 
         var selected = (MonsterType)(typeDropdown ? typeDropdown.value : 0);
-
         var (curPct, afterPct) = EstimateCurrentAndAfter(selected, bonus);
 
         var curFlyer = EncounterManager.I?.CurrentFlyer;
@@ -232,7 +248,6 @@ public class HarborUI : MonoBehaviour
     (float currentPct, float afterPct) EstimateCurrentAndAfter(MonsterType chosen, float bonusToApply)
     {
         var currentMult = BuildTypeMultipliersFromActiveFlyer();
-
         float current = ComputeTypeChance(chosen, currentMult);
 
         var previewMult = new Dictionary<MonsterType, float>(currentMult);
@@ -243,7 +258,6 @@ public class HarborUI : MonoBehaviour
             previewMult[chosen] = add;
 
         float after = ComputeTypeChance(chosen, previewMult);
-
         return (current * 100f, after * 100f);
     }
 
