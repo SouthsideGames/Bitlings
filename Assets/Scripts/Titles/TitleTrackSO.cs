@@ -10,7 +10,7 @@ public class TitleTier
     public List<TitleSO> unlockChoices = new List<TitleSO>();
 }
 
-[CreateAssetMenu(menuName = "Data/Titles/Title Track", fileName = "TitleTrack")]
+[CreateAssetMenu(menuName = "Data/Titles/Title Track", fileName = "TitleTrack_")]
 public sealed class TitleTrackSO : ScriptableObject
 {
     public List<TitleTier> tiers = new List<TitleTier>();

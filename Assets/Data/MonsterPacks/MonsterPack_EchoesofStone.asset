@@ -21,4 +21,8 @@ MonoBehaviour:
   costType: 17
   saleOff01: 0
   unlockByDefault: 0
-  monsters: []
+  monsters:
+  - {fileID: 11400000, guid: 46c35bc8bb4f85b44b368837a0f66432, type: 2}
+  - {fileID: 11400000, guid: a9e1306cb4783e2429ad9031c0fb4849, type: 2}
+  - {fileID: 11400000, guid: 83665844898ad794bafb8ad084654bee, type: 2}
+  - {fileID: 11400000, guid: 93cc37e9ec53e9b4dbaadbfecedec837, type: 2}
