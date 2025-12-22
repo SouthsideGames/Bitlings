@@ -1,6 +1,7 @@
 // Assets/Scripts/Monster/MonsterPackManager.cs
 using UnityEngine;
 using System;
+using System.Collections.Generic;
 
 public class MonsterPackManager : MonoBehaviour
 {
@@ -10,12 +11,22 @@ public class MonsterPackManager : MonoBehaviour
     [Tooltip("If set, this overrides all other ways of finding the pack library.")]
     [SerializeField] private MonsterPackLibrarySO packLibraryOverride;
 
-    private MonsterPackLibrarySO _packLibrary;  // Loaded: Override → Locator → Resources
-    private MonsterLibrarySO     _monsterLibrary;   // Resolved via MonsterLibraryLocator
+    private MonsterPackLibrarySO _packLibrary;      // Loaded: Override → Locator → Resources
+    private MonsterLibrarySO _monsterLibrary;       // Resolved via MonsterLibraryLocator
 
     [Header("Tuning")]
     [Tooltip("Global discount applied to all pack costs (0..1). 0.15 = 15% off.")]
     [Range(0f, 1f)] [SerializeField] private float globalDiscount01 = 0f;
+
+    [Header("Pack Seasons (Optional)")]
+    [Tooltip("If set, seasons are enabled and only active-season packs are shown/purchasable.")]
+    [SerializeField] private MonsterPackSeasonRotationSO seasonRotationOverride;
+
+    private MonsterPackSeasonRotationSO _seasonRotation;
+
+    // Cache active season pack ids so UI & purchase checks are fast
+    private int _cachedSeasonIndex = int.MinValue;
+    private readonly HashSet<string> _activeSeasonPackIds = new HashSet<string>(StringComparer.Ordinal);
 
     /// <summary> Fired after a pack is unlocked. Parameter = packId. </summary>
     public static event Action<string> OnPackUnlocked;
@@ -53,9 +64,16 @@ public class MonsterPackManager : MonoBehaviour
                              "Ensure Assets/Resources/MonsterLibrary.asset exists.");
         }
 
+        // Seasons: Inspector override → Locator → none (seasons disabled)
+        _seasonRotation = seasonRotationOverride
+            ? seasonRotationOverride
+            : MonsterPackSeasonLocator.Seasons;
+
+        RefreshActiveSeasonCache(force: true);
+
         // Ensure save list exists
         if (SaveManager.Data != null)
-            SaveManager.Data.unlockedPacks ??= new System.Collections.Generic.List<string>();
+            SaveManager.Data.unlockedPacks ??= new List<string>();
 
 #if UNITY_EDITOR
         // Warn if any pack has a non-shard costType
@@ -68,6 +86,86 @@ public class MonsterPackManager : MonoBehaviour
 #endif
 
         AutoUnlockDefaults();
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────────
+    // Seasons
+    // ─────────────────────────────────────────────────────────────────────────────
+
+    public bool SeasonsEnabled =>
+        _seasonRotation != null &&
+        _seasonRotation.seasons != null &&
+        _seasonRotation.seasons.Count > 0;
+
+    private void RefreshActiveSeasonCache(bool force = false)
+    {
+        _activeSeasonPackIds.Clear();
+
+        if (!SeasonsEnabled)
+        {
+            _cachedSeasonIndex = int.MinValue;
+            return;
+        }
+
+        long now = SaveManager.NowUnix();
+        int idx = _seasonRotation.GetSeasonIndex(now);
+
+        if (!force && idx == _cachedSeasonIndex) return;
+        _cachedSeasonIndex = idx;
+
+        var ids = _seasonRotation.GetActivePackIds(now);
+        if (ids == null) return;
+
+        for (int i = 0; i < ids.Count; i++)
+        {
+            var id = ids[i];
+            if (!string.IsNullOrEmpty(id))
+                _activeSeasonPackIds.Add(id);
+        }
+    }
+
+    public bool IsPackOfferedThisSeason(string packId)
+    {
+        // If no seasons configured, behave like today (all packs allowed)
+        if (!SeasonsEnabled) return true;
+        if (string.IsNullOrEmpty(packId)) return false;
+
+        RefreshActiveSeasonCache();
+        return _activeSeasonPackIds.Contains(packId);
+    }
+
+    /// <summary>
+    /// Use this for your Shop UI to populate the grid when seasons are enabled.
+    /// If seasons are disabled, returns all packs (current behavior).
+    /// </summary>
+    public List<MonsterPackSO> GetActiveSeasonPacks()
+    {
+        var result = new List<MonsterPackSO>();
+        if (_packLibrary == null) return result;
+
+        if (!SeasonsEnabled)
+        {
+            foreach (var p in _packLibrary.PacksReadOnly)
+                if (p != null) result.Add(p);
+            return result;
+        }
+
+        RefreshActiveSeasonCache();
+
+        // Preserve the season order defined in the rotation asset
+        var ids = _seasonRotation.GetActivePackIds(SaveManager.NowUnix());
+        if (ids == null) return result;
+
+        for (int i = 0; i < ids.Count; i++)
+        {
+            var id = ids[i];
+            if (string.IsNullOrEmpty(id)) continue;
+
+            var p = _packLibrary.Get(id);
+            if (p != null) result.Add(p);
+        }
+
+        return result;
     }
 
     // ─────────────────────────────────────────────────────────────────────────────
@@ -92,7 +190,7 @@ public class MonsterPackManager : MonoBehaviour
     public bool TryGetEffectiveCost(MonsterPackSO pack, out int finalCost, out ResourceType currency)
     {
         finalCost = 0;
-        currency  = ResourceType.PackVoucher; // shards-only
+        currency = ResourceType.PackVoucher; // shards-only
         if (!pack) return false;
 
         int baseCost = Mathf.Max(0, pack.baseCost);
@@ -110,6 +208,14 @@ public class MonsterPackManager : MonoBehaviour
 
         var pack = _packLibrary.Get(packId);
         if (!pack) { reason = "Pack not found"; return false; }
+
+        // Season gate
+        if (!IsPackOfferedThisSeason(packId))
+        {
+            reason = "Not available this season";
+            return false;
+        }
+
         if (IsUnlocked(packId)) { reason = "Already unlocked"; return false; }
 
         if (!TryGetEffectiveCost(pack, out int cost, out _))
@@ -148,12 +254,12 @@ public class MonsterPackManager : MonoBehaviour
         return true;
     }
 
-   public void Unlock(string packId)
+    public void Unlock(string packId)
     {
         var data = SaveManager.Data;
         if (data == null) return;
 
-        data.unlockedPacks ??= new System.Collections.Generic.List<string>();
+        data.unlockedPacks ??= new List<string>();
 
         bool added = false;
         if (!data.unlockedPacks.Contains(packId))
@@ -167,7 +273,6 @@ public class MonsterPackManager : MonoBehaviour
             SaveManager.Save();
 
         MonsterCatalog.Invalidate();
-
         GameEvents.OnResourcesChanged?.Invoke();
 
         try { OnPackUnlocked?.Invoke(packId); } catch { /* ignore */ }
@@ -184,7 +289,7 @@ public class MonsterPackManager : MonoBehaviour
         if (_packLibrary == null || _packLibrary.PacksReadOnly == null) return;
         if (SaveManager.Data == null) return;
 
-        var list = SaveManager.Data.unlockedPacks ??= new System.Collections.Generic.List<string>();
+        var list = SaveManager.Data.unlockedPacks ??= new List<string>();
 
         bool changed = false;
         foreach (var p in _packLibrary.PacksReadOnly)
@@ -213,8 +318,8 @@ public class MonsterPackManager : MonoBehaviour
         var data = SaveManager.Data;
         if (data == null) return;
 
-        data.discoveredMonsterIds ??= new System.Collections.Generic.HashSet<string>();
-        data.seenTypes ??= new System.Collections.Generic.HashSet<MonsterType>();
+        data.discoveredMonsterIds ??= new HashSet<string>();
+        data.seenTypes ??= new HashSet<MonsterType>();
 
         bool changed = false;
 
@@ -235,7 +340,46 @@ public class MonsterPackManager : MonoBehaviour
             SaveManager.Save();
     }
 
-
-    // Optional tuning API
+        // Optional tuning API
     public void SetGlobalDiscount01(float v) => globalDiscount01 = Mathf.Clamp01(v);
+
+        public int GetCurrentSeasonNumber1Based()
+    {
+        if (!SeasonsEnabled) return 0;
+        RefreshActiveSeasonCache();
+        return _cachedSeasonIndex + 1;
+    }
+
+    public long GetCurrentSeasonEndUnix()
+    {
+        if (!SeasonsEnabled || _seasonRotation == null) return 0;
+        long now = SaveManager.NowUnix();
+        return _seasonRotation.GetSeasonEndUnix(now);
+    }
+
+    /// <summary>
+    /// Returns next season packs in the order defined in the rotation asset.
+    /// If seasons are not enabled, returns empty list.
+    /// </summary>
+    public List<MonsterPackSO> GetNextSeasonPacks()
+    {
+        var result = new List<MonsterPackSO>();
+        if (!SeasonsEnabled || _seasonRotation == null || _packLibrary == null) return result;
+
+        long now = SaveManager.NowUnix();
+        var ids = _seasonRotation.GetNextPackIds(now);
+        if (ids == null) return result;
+
+        for (int i = 0; i < ids.Count; i++)
+        {
+            var id = ids[i];
+            if (string.IsNullOrEmpty(id)) continue;
+
+            var p = _packLibrary.Get(id);
+            if (p != null) result.Add(p);
+        }
+
+        return result;
+    }
+
 }
