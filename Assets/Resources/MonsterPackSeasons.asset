@@ -15,4 +15,9 @@ MonoBehaviour:
   rotationStartUnix: 0
   seasonLengthDays: 30
   loop: 1
-  seasons: []
+  seasons:
+  - seasonName: Roots of the Wild
+    packIds:
+    - MP-001
+    - MP-003
+    - MP-010

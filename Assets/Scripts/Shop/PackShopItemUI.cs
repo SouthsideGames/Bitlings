@@ -8,7 +8,14 @@ public class PackShopItemUI : MonoBehaviour
     [Header("UI")]
     [SerializeField] private Image icon;
     [SerializeField] private TextMeshProUGUI nameText;
+
+    [Header("NEW - Row Details")]
+    [SerializeField] private TextMeshProUGUI rarityText;
+    [SerializeField] private TextMeshProUGUI costText;
+
+    [Header("Badges")]
     [SerializeField] private GameObject unlockedBadge;
+    [SerializeField] private GameObject returningBadge;
 
     private MonsterPackSO _pack;
     private PackDetailPanelUI _detailPanel;
@@ -20,9 +27,21 @@ public class PackShopItemUI : MonoBehaviour
         _button.onClick.AddListener(OnClicked);
     }
 
+    void OnEnable()
+    {
+        MonsterPackManager.OnPackUnlocked += OnPackUnlocked;
+        RefreshState();
+    }
+
+    void OnDisable()
+    {
+        MonsterPackManager.OnPackUnlocked -= OnPackUnlocked;
+    }
+
     void OnDestroy()
     {
-        _button.onClick.RemoveListener(OnClicked);
+        if (_button != null)
+            _button.onClick.RemoveListener(OnClicked);
     }
 
     public void Bind(MonsterPackSO pack, PackDetailPanelUI detailPanel)
@@ -34,8 +53,16 @@ public class PackShopItemUI : MonoBehaviour
         {
             if (icon) icon.sprite = _pack.icon;
             if (nameText) nameText.text = _pack.displayName;
+
+            if (rarityText)
+                rarityText.text = string.IsNullOrEmpty(_pack.rarityLabel) ? "" : _pack.rarityLabel;
         }
 
+        RefreshState();
+    }
+
+    private void OnPackUnlocked(string _)
+    {
         RefreshState();
     }
 
@@ -43,9 +70,34 @@ public class PackShopItemUI : MonoBehaviour
     {
         if (_pack == null || MonsterPackManager.I == null) return;
 
-        bool unlocked = MonsterPackManager.I.IsUnlocked(_pack.id);
+        var mgr = MonsterPackManager.I;
+
+        bool unlocked = mgr.IsUnlocked(_pack.id);
+
         if (unlockedBadge)
             unlockedBadge.SetActive(unlocked);
+
+        // Returning badge: show only if it’s a returning pack AND not already unlocked
+        bool returning = !unlocked && mgr.IsReturningPackThisSeason(_pack.id);
+        if (returningBadge)
+            returningBadge.SetActive(returning);
+
+        // Cost (effective)
+        if (costText != null)
+        {
+            if (unlocked)
+            {
+                costText.text = "Unlocked";
+            }
+            else if (mgr.TryGetEffectiveCost(_pack, out int cost, out _))
+            {
+                costText.text = $"{cost}";
+            }
+            else
+            {
+                costText.text = "";
+            }
+        }
     }
 
     private void OnClicked()

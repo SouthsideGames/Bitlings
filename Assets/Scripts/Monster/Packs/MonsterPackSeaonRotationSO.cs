@@ -8,8 +8,8 @@ public class MonsterPackSeasonRotationSO : ScriptableObject
     [Serializable]
     public class SeasonEntry
     {
-        [Tooltip("Optional label for UI/debug (e.g., 'Season 1').")]
-        public string seasonId = "Season";
+        [Tooltip("Season name shown in UI (e.g., 'Verdant Uprising').")]
+        public string seasonName = "Season";
 
         [Tooltip("Pack IDs available during this season (e.g., 3 packs).")]
         public List<string> packIds = new List<string>();

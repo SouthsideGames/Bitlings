@@ -17,6 +17,7 @@ MonoBehaviour:
   description: Rock and Alloy hybrids shaped by ages of pressure and refinement.
     Durable, relentless, and forged for long battles.
   icon: {fileID: 21300000, guid: ad273b5ba0914db4c91d22043640a51e, type: 3}
+  rarity: Uncommon
   baseCost: 18
   costType: 17
   saleOff01: 0

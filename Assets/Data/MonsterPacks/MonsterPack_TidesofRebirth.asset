@@ -17,6 +17,7 @@ MonoBehaviour:
   description: Creatures touched by the deep ocean and ancient prophecy. Water and
     Oracle monsters that embody tides, renewal, and foresight.
   icon: {fileID: 21300000, guid: 454580818ac0d164abf8e44922bc120d, type: 3}
+  rarity: Common
   baseCost: 6
   costType: 17
   saleOff01: 0

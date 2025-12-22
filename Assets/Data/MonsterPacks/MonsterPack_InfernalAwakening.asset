@@ -17,6 +17,7 @@ MonoBehaviour:
   description: A surge of Fire and Corrupt beasts born from molten chaos and shadowed
     flame. These monsters erupt with volatility and dark power.
   icon: {fileID: 21300000, guid: 6ac791544b8894b49b65dd67082ea272, type: 3}
+  rarity: Common
   baseCost: 9
   costType: 17
   saleOff01: 0

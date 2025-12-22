@@ -18,6 +18,7 @@ MonoBehaviour:
     burrows, and soft earth. Ideal for new keepers seeking reliable Grass, Bug, and
     Ground companions.
   icon: {fileID: 21300000, guid: e01effe31a0f2124b91c2adb7a3085c7, type: 3}
+  rarity: Common
   baseCost: 8
   costType: 17
   saleOff01: 0

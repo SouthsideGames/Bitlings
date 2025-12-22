@@ -11,6 +11,10 @@ public class MonsterPackSO : ScriptableObject
     [TextArea] public string description;
     public Sprite icon;
 
+    [Header("Display")]
+    [Tooltip("UI-only rarity label (e.g., Common, Uncommon, Rare, Epic, Legendary, Boss, Mythic).")]
+    public string rarityLabel = "Common";
+
     [Header("Cost")]
     [FormerlySerializedAs("tokenCost")]
     public int baseCost = 5;
