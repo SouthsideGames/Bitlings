@@ -1,0 +1,98 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: cae2acd564e036e41ac49c3f60a01960, type: 3}
+  m_Name: MonsterPackSeasons
+  m_EditorClassIdentifier: 
+  rotationStartUnix: 0
+  seasonLengthDays: 30
+  loop: 1
+  seasons:
+  - seasonName: Roots of the Wild
+    packIds:
+    - MP-001
+    - MP-003
+    - MP-010
+  - seasonName: Flame & Shadow
+    packIds:
+    - MP-002
+    - MP-006
+    - MP-005
+  - seasonName: Forged Futures
+    packIds:
+    - MP-007
+    - MP-008
+    - MP-012
+  - seasonName: Cracks in the World
+    packIds:
+    - MP-011
+    - MP-013
+    - MP-004
+  - seasonName: Toxic Bloom
+    packIds:
+    - MP-014
+    - MP-015
+    - MP-001
+  - seasonName: Decay Protocol
+    packIds:
+    - MP-017
+    - MP-019
+    - MP-009
+  - seasonName: Skyfall Surge
+    packIds:
+    - MP-018
+    - MP-021
+    - MP-025
+  - seasonName: Echoes of Ice
+    packIds:
+    - MP-024
+    - MP-023
+    - MP-010
+  - seasonName: Steel Reign
+    packIds:
+    - MP-029
+    - MP-016
+    - MP-031
+  - seasonName: Dreambound
+    packIds:
+    - MP-030
+    - MP-034
+    - MP-003
+  - seasonName: Wrath & Wyms
+    packIds:
+    - MP-032
+    - MP-039
+    - MP-008
+  - seasonName: Blight & Bloom
+    packIds:
+    - MP-027
+    - MP-040
+    - MP-015
+  - seasonName: Fracture Point
+    packIds:
+    - MP-036
+    - MP-028
+    - MP-009
+  - seasonName: Velocity
+    packIds:
+    - MP-026
+    - MP-037
+    - MP-033
+  - seasonName: Whispers of the Dead
+    packIds:
+    - MP-044
+    - MP-022
+    - MP-006
+  - seasonName: End of the Cycle
+    packIds:
+    - MP-051
+    - MP-043
+    - MP-030

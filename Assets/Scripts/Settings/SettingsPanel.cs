@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.UI;
+using TMPro;
 
 public class SettingsPanel : MonoBehaviour
 {
@@ -20,7 +21,25 @@ public class SettingsPanel : MonoBehaviour
     [Tooltip("If ON: the Battle Log scrolls to latest entry automatically.")]
     [SerializeField] private Toggle autoScrollLogToggle;
 
+    [Header("Seeds / RNG")]
+    [Tooltip("If ON, systems can prefer the custom seed (when unlocked).")]
+    [SerializeField] private Toggle useCustomSeedToggle;
+
+    [Tooltip("Custom random seed string (unlocked via Seeds_CustomInput).")]
+    [SerializeField] private TMP_InputField seedInputField;
+
+    [Header("Daily Seed UI")]
+    [Tooltip("Displays the current daily seed (if unlocked).")]
+    [SerializeField] private TextMeshProUGUI dailySeedLabel;
+
+    [Tooltip("Button to reroll today's daily seed (if reroll feature unlocked).")]
+    [SerializeField] private Button rerollDailySeedButton;
+
+    [Header("Buttons")]
     [SerializeField] private Button resetButton;
+
+    [Tooltip("Optional: plays a SFX so the player can hear the current volume.")]
+    [SerializeField] private Button testSfxButton;
 
     bool _wired;
 
@@ -30,17 +49,22 @@ public class SettingsPanel : MonoBehaviour
         if (musicSlider)  { musicSlider.minValue  = 0f; musicSlider.maxValue  = 1f; }
         if (sfxSlider)    { sfxSlider.minValue    = 0f; sfxSlider.maxValue    = 1f; }
 
-        if (resetButton)
-        {
-            resetButton.onClick.RemoveAllListeners();
-        }
+        if (resetButton) resetButton.onClick.RemoveAllListeners();
+        if (testSfxButton) testSfxButton.onClick.RemoveAllListeners();
+
+        if (rerollDailySeedButton) rerollDailySeedButton.onClick.RemoveAllListeners();
+    }
+
+    void Start()
+    {
+        SafeSubscribe();
+        Refresh();
     }
 
     void OnEnable()
     {
-        if (SettingsManager.I) SettingsManager.I.OnSettingsChanged += Refresh;
-
-        Refresh();  // pulls values and sets toggles/sliders
+        SafeSubscribe();
+        Refresh();
 
         if (resetButton)
         {
@@ -52,23 +76,72 @@ public class SettingsPanel : MonoBehaviour
             });
         }
 
+        if (testSfxButton)
+        {
+            testSfxButton.onClick.RemoveAllListeners();
+            testSfxButton.onClick.AddListener(() =>
+            {
+                if (AudioManager.I != null)
+                    AudioManager.I.PreviewSfx(); // uses Click by default
+            });
+        }
+
+        if (rerollDailySeedButton)
+        {
+            rerollDailySeedButton.onClick.RemoveAllListeners();
+            rerollDailySeedButton.onClick.AddListener(OnClickRerollDailySeed);
+        }
+
         WireEvents();
+
+        // Listen for feature unlocks so we can reveal seed UI when unlocked
+        if (FeatureUnlockManager.I != null)
+        {
+            FeatureUnlockManager.I.OnFeatureUnlocked -= HandleFeatureUnlocked;
+            FeatureUnlockManager.I.OnFeatureUnlocked += HandleFeatureUnlocked;
+        }
     }
 
     void OnDisable()
     {
-        if (SettingsManager.I) SettingsManager.I.OnSettingsChanged -= Refresh;
+        SafeUnsubscribe();
 
-        // optional tidy-up
         if (resetButton) resetButton.onClick.RemoveAllListeners();
-        if (autoScrollLogToggle) autoScrollLogToggle.onValueChanged.RemoveListener(OnAutoScrollChanged);
+        if (testSfxButton) testSfxButton.onClick.RemoveAllListeners();
+
+        if (autoScrollLogToggle)
+            autoScrollLogToggle.onValueChanged.RemoveListener(OnAutoScrollChanged);
+
+        if (rerollDailySeedButton)
+            rerollDailySeedButton.onClick.RemoveAllListeners();
 
         UnwireEvents();
+
+        if (FeatureUnlockManager.I != null)
+            FeatureUnlockManager.I.OnFeatureUnlocked -= HandleFeatureUnlocked;
     }
 
-    // Centralized repaint from current state
+    // ---------------- Core ----------------
+
+    void SafeSubscribe()
+    {
+        var sm = SettingsManager.I;
+        if (sm != null)
+        {
+            sm.OnSettingsChanged -= Refresh; // de-dupe
+            sm.OnSettingsChanged += Refresh;
+        }
+    }
+
+    void SafeUnsubscribe()
+    {
+        var sm = SettingsManager.I;
+        if (sm != null) sm.OnSettingsChanged -= Refresh;
+    }
+
     void Refresh()
     {
+        // Audio
         if (AudioManager.I)
         {
             if (masterSlider) masterSlider.SetValueWithoutNotify(AudioManager.I.GetMasterVolume());
@@ -76,6 +149,7 @@ public class SettingsPanel : MonoBehaviour
             if (sfxSlider)    sfxSlider   .SetValueWithoutNotify(AudioManager.I.GetSfxVolume());
         }
 
+        // Settings state
         var s = SettingsManager.I ? SettingsManager.I.S : SaveManager.Data?.settings;
         if (s != null)
         {
@@ -89,6 +163,9 @@ public class SettingsPanel : MonoBehaviour
             if (autoScrollLogToggle)
                 autoScrollLogToggle.SetIsOnWithoutNotify(s.autoScrollBattleLog);
         }
+
+        RefreshSeedUi(s);
+        RefreshDailySeedUi();
     }
 
     void WireEvents()
@@ -139,6 +216,18 @@ public class SettingsPanel : MonoBehaviour
             autoScrollLogToggle.onValueChanged.AddListener(OnAutoScrollChanged);
         }
 
+        if (useCustomSeedToggle)
+        {
+            useCustomSeedToggle.onValueChanged.RemoveListener(OnUseCustomSeedChanged);
+            useCustomSeedToggle.onValueChanged.AddListener(OnUseCustomSeedChanged);
+        }
+
+        if (seedInputField)
+        {
+            seedInputField.onValueChanged.RemoveListener(OnSeedInputChanged);
+            seedInputField.onValueChanged.AddListener(OnSeedInputChanged);
+        }
+
         _wired = true;
     }
 
@@ -160,10 +249,16 @@ public class SettingsPanel : MonoBehaviour
         if (autoScrollLogToggle)
             autoScrollLogToggle.onValueChanged.RemoveListener(OnAutoScrollChanged);
 
+        if (useCustomSeedToggle)
+            useCustomSeedToggle.onValueChanged.RemoveListener(OnUseCustomSeedChanged);
+
+        if (seedInputField)
+            seedInputField.onValueChanged.RemoveListener(OnSeedInputChanged);
+
         _wired = false;
     }
 
-    // --- Handlers ---
+    // -------------- Handlers --------------
 
     void OnMasterChanged(float v)
     {
@@ -198,23 +293,98 @@ public class SettingsPanel : MonoBehaviour
     void OnAutoConvertDupesToggled(bool on)
     {
         var mgr = SettingsManager.I;
-        if (mgr != null)
-        {
-            mgr.SetAutoConvertDuplicates(on);
-        }
+        if (mgr != null) mgr.SetAutoConvertDuplicates(on);
     }
 
     void OnAutoScrollChanged(bool on)
     {
         var mgr = SettingsManager.I;
-        if (mgr != null)
-        {
-            // Preferred: add this method in SettingsManager
-            mgr.SetAutoScrollBattleLog(on);
+        if (mgr != null) mgr.SetAutoScrollBattleLog(on);
+    }
 
-            // If you don't want to add a setter, use:
-            // mgr.S.autoScrollBattleLog = on;
-            // mgr.Save();
+    void OnUseCustomSeedChanged(bool on)
+    {
+        var mgr = SettingsManager.I;
+        if (mgr != null) mgr.SetUseCustomSeed(on);
+    }
+
+    void OnSeedInputChanged(string text)
+    {
+        var mgr = SettingsManager.I;
+        if (mgr != null) mgr.SetCustomSeed(text);
+    }
+
+    void OnClickRerollDailySeed()
+    {
+        if (SeedService.TryRerollDailySeed(out var newSeed))
+        {
+            // Update label immediately
+            RefreshDailySeedUi();
+            Debug.Log($"[SettingsPanel] Rerolled daily seed: {newSeed}");
+        }
+        else
+        {
+            Debug.Log("[SettingsPanel] Could not reroll daily seed (locked or already used today).");
+        }
+    }
+
+    // -------------- Seeds UI / Feature gating --------------
+
+    void HandleFeatureUnlocked(FeatureId feature)
+    {
+        if (feature == FeatureId.Seeds_CustomInput ||
+            feature == FeatureId.Seeds_DailyBasic ||
+            feature == FeatureId.Seeds_RerollDailyOnce)
+        {
+            Refresh();
+        }
+    }
+
+    void RefreshSeedUi(SettingsState s)
+    {
+        bool hasFeatureMgr = FeatureUnlockManager.I != null;
+        bool customUnlocked = hasFeatureMgr &&
+                              FeatureUnlockManager.I.IsUnlocked(FeatureId.Seeds_CustomInput);
+
+        if (useCustomSeedToggle)
+        {
+            useCustomSeedToggle.gameObject.SetActive(customUnlocked);
+            if (s != null)
+                useCustomSeedToggle.SetIsOnWithoutNotify(s.useCustomSeed);
+        }
+
+        if (seedInputField)
+        {
+            seedInputField.gameObject.SetActive(customUnlocked);
+            if (s != null)
+                seedInputField.SetTextWithoutNotify(s.customSeed ?? string.Empty);
+        }
+    }
+
+    void RefreshDailySeedUi()
+    {
+        bool hasFeatureMgr = FeatureUnlockManager.I != null;
+        bool dailyUnlocked = hasFeatureMgr &&
+                             FeatureUnlockManager.I.IsUnlocked(FeatureId.Seeds_DailyBasic);
+        bool rerollUnlocked = hasFeatureMgr &&
+                              FeatureUnlockManager.I.IsUnlocked(FeatureId.Seeds_RerollDailyOnce);
+
+        if (dailySeedLabel)
+        {
+            dailySeedLabel.gameObject.SetActive(dailyUnlocked);
+
+            if (dailyUnlocked)
+            {
+                string seed = SeedService.GetCurrentDailySeedString();
+                dailySeedLabel.text = string.IsNullOrEmpty(seed)
+                    ? "Daily Seed: --"
+                    : $"Daily Seed: {seed}";
+            }
+        }
+
+        if (rerollDailySeedButton)
+        {
+            rerollDailySeedButton.gameObject.SetActive(dailyUnlocked && rerollUnlocked);
         }
     }
 }

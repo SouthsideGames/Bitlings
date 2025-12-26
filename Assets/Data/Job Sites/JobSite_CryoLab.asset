@@ -17,6 +17,6 @@ MonoBehaviour:
   baseRatePerHour: 50
   storageCap: 300
   maxWorkers: 3
-  eligibleTypes: 04000000
+  eligibleTypes: 05000000
   icon: {fileID: 21300000, guid: 27cd7154c3249954ba26302bc13ef129, type: 3}
   displayName: Cryo Lab

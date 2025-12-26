@@ -15,18 +15,22 @@ MonoBehaviour:
   id: M-065
   displayName: Chitigon
   type: 11
+  typeIcon: {fileID: 21300000, guid: 8e7ac2a8f10ec4ba5860e036443e3fc8, type: 3}
   icon: {fileID: 21300000, guid: 8a9cf704562e3cb4eb19af085bb43108, type: 3}
   backIcon: {fileID: 21300000, guid: 3887ea960de68ca4cb534612791be3d2, type: 3}
   shinyIcon: {fileID: 21300000, guid: a1e60953a367eaa41b61026019e46374, type: 3}
   shinyBackIcon: {fileID: 21300000, guid: 8fb2a3e6da6b08f48b0f5790e56873f6, type: 3}
+  rarity: 4
   canBeStarter: 0
   starterWeight: 1
+  maxLevel: 50
   baseHP: 80
   baseAttack: 112
   baseDefense: 64
   baseSpeed: 64
+  hpRegenPerHour: 6
   fatigueRatePerHour: 0.03
-  baseTrainingXPPerHour: 58
+  fatigueCooldownHours: 8
   evolutionStage: 1
   evolutionLevel: 0
   evolutionForm: {fileID: 0}
@@ -36,7 +40,11 @@ MonoBehaviour:
   bossWeight: 1
   spawnWeight: 0
   jobSkill: 2.6
-  rarity: 4
-  tagTrack: {fileID: 11400000, guid: ec1c8997973307649a66c091a216d515, type: 2}
+  titleTrack: {fileID: 11400000, guid: 018081930ace14afa86e5c34281e4b73, type: 2}
+  defaultAlwaysOnTitles: []
+  Personality: {fileID: 11400000, guid: f6f72aa846632454b97832d01d1b5c0c, type: 2}
+  basicAttackName: Chitin Bite
+  basicAttackPrefab: {fileID: 6777048211968024641, guid: 36482d8bd89710b4983cb69ab5a8cceb, type: 3}
+  basicAttackPrefabLifetime: 1
   description: Forged of steel-like chitin, Chitigon commands lesser swarms with
     piercing screeches. Its strikes are said to split stone.

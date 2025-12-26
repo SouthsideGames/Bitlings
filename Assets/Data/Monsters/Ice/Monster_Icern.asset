@@ -15,17 +15,21 @@ MonoBehaviour:
   id: M-020
   displayName: Icern
   type: 5
+  typeIcon: {fileID: 21300000, guid: 7503da639a0af47adbd6514de1c118ba, type: 3}
   icon: {fileID: 21300000, guid: fa1739b51a6044a7f9f373dbf5437106, type: 3}
   backIcon: {fileID: 21300000, guid: 127e97d7a508941ae9c0bb1876e53532, type: 3}
   shinyIcon: {fileID: 21300000, guid: 1e4364731f225714d8197275a671c051, type: 3}
   shinyBackIcon: {fileID: 21300000, guid: d31575114ed59b146999276e948c1e60, type: 3}
+  rarity: 0
   canBeStarter: 1
   starterWeight: 10
   baseHP: 40
   baseAttack: 70
   baseDefense: 30
   baseSpeed: 60
+  hpRegenPerHour: 6
   fatigueRatePerHour: 0.03
+  fatigueCooldownHours: 8
   baseTrainingXPPerHour: 44
   evolutionStage: 1
   evolutionLevel: 0
@@ -36,7 +40,11 @@ MonoBehaviour:
   bossWeight: 1
   spawnWeight: 6
   jobSkill: 1
-  rarity: 0
-  tagTrack: {fileID: 11400000, guid: 899b92e2e47df6d4a91b59dcbca28762, type: 2}
+  titleTrack: {fileID: 11400000, guid: 2d2f1dee1dd014435a512368311ce70e, type: 2}
+  defaultAlwaysOnTitles: []
+  Personality: {fileID: 11400000, guid: 8a3e57b479f5246d38cd9b71c25a27a1, type: 2}
+  basicAttackName: Frost Snap
+  basicAttackPrefab: {fileID: 2650955928365913985, guid: f4836eb6d259942b9abe6e0a520af59f, type: 3}
+  basicAttackPrefabLifetime: 1
   description: Its jagged body rattles like breaking ice when it moves. Icern slithers
     through frozen caverns, vanishing into tunnels of frost.

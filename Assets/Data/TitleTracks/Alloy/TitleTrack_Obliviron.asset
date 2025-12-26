@@ -1,0 +1,30 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: af7b65046e5bb554c808c8500b10fe7d, type: 3}
+  m_Name: TitleTrack_Obliviron
+  m_EditorClassIdentifier: 
+  tiers:
+  - levelRequired: 1
+    unlockChoices:
+    - {fileID: 11400000, guid: 3d11a8acca093cd4da57a443c2a3eaf7, type: 2}
+  - levelRequired: 3
+    unlockChoices:
+    - {fileID: 11400000, guid: 2fbf8fa7343dcb944b10f92f1b9d63de, type: 2}
+  - levelRequired: 6
+    unlockChoices:
+    - {fileID: 11400000, guid: 719d7eeec886e1e49a04c5df33033aed, type: 2}
+  - levelRequired: 10
+    unlockChoices:
+    - {fileID: 11400000, guid: 392f629cb012d41579243d1fd657f01a, type: 2}
+  - levelRequired: 15
+    unlockChoices:
+    - {fileID: 11400000, guid: a5eca0f69d13b4e51ae8d4612d869eaa, type: 2}

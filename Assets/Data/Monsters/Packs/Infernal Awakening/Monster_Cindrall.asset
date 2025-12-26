@@ -1,0 +1,51 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 32ffc26ed7d444b02a9332ce4279b117, type: 3}
+  m_Name: Monster_Cindrall
+  m_EditorClassIdentifier: 
+  id: M-070
+  displayName: Cindrall
+  type: 1
+  typeIcon: {fileID: 21300000, guid: d552cfb27992e494694a52b7e3578364, type: 3}
+  icon: {fileID: 21300000, guid: 5655046cc294b409a8197e192f89664b, type: 3}
+  backIcon: {fileID: 21300000, guid: 10f8ab64b2d2e424cb11652f9ac6ae21, type: 3}
+  shinyIcon: {fileID: 21300000, guid: 6da97e7b5ef69487da01ecdced9c3959, type: 3}
+  shinyBackIcon: {fileID: 21300000, guid: adb651bf5f4314d53ad5b1c9ca16ec76, type: 3}
+  rarity: 0
+  canBeStarter: 0
+  starterWeight: 0
+  maxLevel: 50
+  baseHP: 40
+  baseAttack: 70
+  baseDefense: 40
+  baseSpeed: 50
+  hpRegenPerHour: 5
+  fatigueRatePerHour: 0.06
+  fatigueCooldownHours: 8
+  evolutionStage: 1
+  evolutionLevel: 16
+  evolutionForm: {fileID: 11400000, guid: b68d102fd3010314a9f615e937ee8c2f, type: 2}
+  uncatchable: 0
+  isBoss: 0
+  bossJobDebuffs: []
+  bossWeight: 1
+  spawnWeight: 7
+  jobSkill: 1
+  titleTrack: {fileID: 11400000, guid: 753af5ca0ec5081498bc691c8a038e18, type: 2}
+  defaultAlwaysOnTitles: []
+  Personality: {fileID: 11400000, guid: 3733616cf9f0f4dddb5bee9d6ba2952f, type: 2}
+  basicAttackName: Flame Burst
+  basicAttackPrefab: {fileID: 126357351932672970, guid: a7524146891194bc4b7eb73ba1e38b46, type: 3}
+  basicAttackPrefabLifetime: 1
+  description: Cindrall clings to burnt trees and rocky outcroppings, its body smoldering
+    with half-formed sparks. When startled, its flames flare bright enough to scorch
+    the ground beneath its feet.

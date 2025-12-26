@@ -15,18 +15,22 @@ MonoBehaviour:
   id: M-053
   displayName: Oracorn
   type: 10
+  typeIcon: {fileID: 21300000, guid: fb4479ed54fe64621a9e7a735eeffad8, type: 3}
   icon: {fileID: 21300000, guid: 88b58625dec45f94480927640c08807e, type: 3}
   backIcon: {fileID: 21300000, guid: 937fa09630d884a41b745bc079f1806b, type: 3}
   shinyIcon: {fileID: 21300000, guid: 17c5106b78310894e8559eb18c3163d2, type: 3}
   shinyBackIcon: {fileID: 21300000, guid: 69bf2b49ba60c9a448e6f844a4938ccd, type: 3}
+  rarity: 5
   canBeStarter: 0
   starterWeight: 1
+  maxLevel: 50
   baseHP: 60
   baseAttack: 60
   baseDefense: 60
   baseSpeed: 120
+  hpRegenPerHour: 6
   fatigueRatePerHour: 0.03
-  baseTrainingXPPerHour: 86
+  fatigueCooldownHours: 8
   evolutionStage: 1
   evolutionLevel: 0
   evolutionForm: {fileID: 0}
@@ -36,7 +40,11 @@ MonoBehaviour:
   bossWeight: 1
   spawnWeight: 0.5
   jobSkill: 2.8
-  rarity: 5
-  tagTrack: {fileID: 11400000, guid: 1f47a409efd38654ea33b6aaaf8de1b0, type: 2}
+  titleTrack: {fileID: 11400000, guid: d95613f0067bb4b95a9ae43ab7b806ed, type: 2}
+  defaultAlwaysOnTitles: []
+  Personality: {fileID: 11400000, guid: 161b42f296f3a430cbc353e1e7a3a111, type: 2}
+  basicAttackName: Foresight Beam
+  basicAttackPrefab: {fileID: 7907104310462883121, guid: 37212b887c61ad84eacd87133a8a9e9d, type: 3}
+  basicAttackPrefabLifetime: 1
   description: "Said to appear only to those chosen by fate, Oracorn\u2019s horn
     glows with visions of destiny. Its presence is believed to guide entire civilizations."

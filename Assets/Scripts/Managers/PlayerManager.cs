@@ -9,6 +9,7 @@ public class OwnedMonsterData
     public int level = 1;
     public int currentXP = 0;
     public int currentHP = -1;
+    public long lastHPUnix = 0;
     public int flatAtkBonus = 0;
     public bool isTraining = false;
     public long trainingLastUnix = 0;
@@ -17,7 +18,11 @@ public class OwnedMonsterData
     public string ownedUID;
     public bool isShiny = false;
     public int shinyTier = 0;
-    public List<TagSO> activeTags = new List<TagSO>();
+    public TrainingBonus trainingBonus = new TrainingBonus();
+    public bool autoApply = false;
+    public int autoApplyTargetLevel = 0;
+    public string lastBucketId = null;
+    public int unspentStatPoints = 0;
     
 }
 
@@ -31,7 +36,7 @@ public class JobAssignment
 }
 
 [Serializable]
-public class LureBiasData
+public class FlyerBiasData
 {
     public MonsterType type;
     public float bonus;
@@ -39,7 +44,7 @@ public class LureBiasData
 }
 
 [Serializable]
-public class CaptureBandData
+public class WorkOrderData
 {
     public float bonus;
     public long expireUnix;
@@ -67,34 +72,59 @@ public class ShinyBoostData
 }
 
 [Serializable]
+public class FieldOpsStats
+{
+    public int encountersInitiated;      // how many wild battles were started
+    public int captureAttempts;          // how many capture rolls happened
+    public int capturesSuccessful;       // how many succeeded
+    public int rareBitlingsFound;        // successful captures of Rare/Epic/Legendary/Mythic
+    public int shinyDiscoveries;         // shiny captures
+    public int riftStabilizations;       // boss defeats (or other rift events)
+    public int longestCaptureStreak;     // best streak of consecutive successes
+    public int currentCaptureStreak;     // current streak (resets on fail)
+
+    public System.Collections.Generic.List<string> recentHighlights =
+        new System.Collections.Generic.List<string>();
+}
+
+[Serializable]
 public class PlayerManager
 {
     public string playerId = null;
+    public string playerName = null;
+
 
     public List<OwnedMonsterData> team = new List<OwnedMonsterData>();
     public List<OwnedMonsterData> owned = new List<OwnedMonsterData>();
-    public List<LureBiasData> activeLures = new List<LureBiasData>();
-    public List<CaptureBandData> activeCaptureBands = new List<CaptureBandData>();
+    public List<FlyerBiasData> activeFlyers = new List<FlyerBiasData>();
+    public List<WorkOrderData> activeWorkOrders = new List<WorkOrderData>();
     public List<JobGlobalMod> activeJobMods = new List<JobGlobalMod>();
-    public List<LuckBoostData> activeLuckBoosts = new List<LuckBoostData>();
+    public List<LuckBoostData> activeFavorBoosts = new List<LuckBoostData>();
     public List<JobStorageUpgrade> jobStorageUpgrades = new List<JobStorageUpgrade>();
     public List<ShinyBoostData> activeShinyBoosts = new List<ShinyBoostData>();
-    public List<MonsterTagRecord> tagProgress = new List<MonsterTagRecord>();
+    public FieldOpsStats fieldOps = new FieldOpsStats();
 
     public List<string> ownedIdsList = new List<string>();
     [NonSerialized] public HashSet<string> ownedIds = new HashSet<string>();
 
-    public int coins = 0;
+    public List<string> favoriteMonsterIdsList = new List<string>();
+    [NonSerialized] public HashSet<string> favoriteMonsterIds = new HashSet<string>();
+
+    public List<string> discoveredMonsterIdsList = new List<string>();
+    [NonSerialized] public HashSet<string> discoveredMonsterIds = new HashSet<string>();
+
+    public int credits = 0;
     public List<int> resourceCounts = new List<int>();
+    public List<string> unlockedPacks = new List<string>();
 
     public int tapLevel = 0;
     public int idleLevel = 0;
     public int battleXPLevel = 0;
     public int critLevel;
     public int autoTapLevel;
-    public int coinGainLevel;
+    public int creditGainLevel;
     public int offlineLevel;
-
+    public int winStreak;
     public int encounterPoints = 0;
     public int encounterMax = 50;
     public int encounterCost = 5;
@@ -105,9 +135,11 @@ public class PlayerManager
     public string trainingMonsterId = null;
     public int trainingMonsterLevel = 0;
     public int pendingIdleXP = 0;
-
+    public bool hasSeenStory = false;
     public long lastClosedUnix = 0;
     public long lastSavedUnix = 0;
+    public long energyLastUnix;
+    public float energyRemainderSecs;
 
     public int encountersSinceBoss = 0;  
     public int bossEveryN = 10;        
@@ -126,28 +158,74 @@ public class PlayerManager
 
     public void EnsureTransientSets()
     {
-        if (ownedIds == null)
-            ownedIds = new HashSet<string>(ownedIdsList ?? new List<string>());
+        // Ensure list mirrors exist (these are what JsonUtility actually persists)
+        ownedIdsList ??= new List<string>();
+        favoriteMonsterIdsList ??= new List<string>();
+        discoveredMonsterIdsList ??= new List<string>();
+        seenTypesList ??= new List<MonsterType>();
+        unlockedJobSitesList ??= new List<JobType>();
 
-        activeLures         ??= new List<LureBiasData>();
-        activeCaptureBands  ??= new List<CaptureBandData>();
-        activeLuckBoosts    ??= new List<LuckBoostData>();
-        activeShinyBoosts   ??= new List<ShinyBoostData>();
-        jobStorageUpgrades  ??= new List<JobStorageUpgrade>();
-        team                ??= new List<OwnedMonsterData>();
-        owned               ??= new List<OwnedMonsterData>();
+        // Ensure transient sets exist (runtime only)
+        ownedIds ??= new HashSet<string>();
+        favoriteMonsterIds ??= new HashSet<string>();
+        discoveredMonsterIds ??= new HashSet<string>();
+        seenTypes ??= new HashSet<MonsterType>();
+        unlockedJobSites ??= new HashSet<JobType>();
 
-        if (seenTypes == null)
-            seenTypes = new HashSet<MonsterType>(seenTypesList ?? new List<MonsterType>());
-        if (unlockedJobSites == null)
-            unlockedJobSites = new HashSet<JobType>(unlockedJobSitesList ?? new List<JobType>());
+        // ALWAYS resync sets from lists (authoritative after load)
+        ownedIds.Clear();
+        for (int i = 0; i < ownedIdsList.Count; i++)
+        {
+            var id = ownedIdsList[i];
+            if (!string.IsNullOrEmpty(id)) ownedIds.Add(id);
+        }
 
+        favoriteMonsterIds.Clear();
+        for (int i = 0; i < favoriteMonsterIdsList.Count; i++)
+        {
+            var id = favoriteMonsterIdsList[i];
+            if (!string.IsNullOrEmpty(id)) favoriteMonsterIds.Add(id);
+        }
+
+        discoveredMonsterIds.Clear();
+        for (int i = 0; i < discoveredMonsterIdsList.Count; i++)
+        {
+            var id = discoveredMonsterIdsList[i];
+            if (!string.IsNullOrEmpty(id)) discoveredMonsterIds.Add(id);
+        }
+
+        seenTypes.Clear();
+        for (int i = 0; i < seenTypesList.Count; i++)
+            seenTypes.Add(seenTypesList[i]);
+
+        unlockedJobSites.Clear();
+        for (int i = 0; i < unlockedJobSitesList.Count; i++)
+            unlockedJobSites.Add(unlockedJobSitesList[i]);
+
+        // Ensure other collections exist
+        activeFlyers ??= new List<FlyerBiasData>();
+        activeWorkOrders ??= new List<WorkOrderData>();
+        activeFavorBoosts ??= new List<LuckBoostData>();
+        activeShinyBoosts ??= new List<ShinyBoostData>();
+        jobStorageUpgrades ??= new List<JobStorageUpgrade>();
+        team ??= new List<OwnedMonsterData>();
+        owned ??= new List<OwnedMonsterData>();
+        jobAssignments ??= new List<JobAssignment>();
+        jobProgress ??= new List<JobProgress>();
+        activeJobMods ??= new List<JobGlobalMod>();
+
+        fieldOps ??= new FieldOpsStats();
+
+        settings ??= new SettingsState();
+
+        // Ensure ownedUIDs exist
         if (owned != null)
         {
             for (int i = 0; i < owned.Count; i++)
                 if (owned[i] != null && string.IsNullOrEmpty(owned[i].ownedUID))
                     owned[i].ownedUID = Guid.NewGuid().ToString("N");
         }
+
         if (team != null)
         {
             for (int i = 0; i < team.Count; i++)
@@ -155,12 +233,14 @@ public class PlayerManager
                     team[i].ownedUID = Guid.NewGuid().ToString("N");
         }
 
+        // Expired shiny boosts cleanup (keeps existing behavior)
         if (activeShinyBoosts.Count > 0 && activeShinyBoosts[0] != null &&
             activeShinyBoosts[0].expireUnix <= SaveManager.NowUnix())
         {
             activeShinyBoosts.Clear();
         }
     }
+
 
     public int GetJobStorageExtra(JobType j)
     {
@@ -184,4 +264,51 @@ public class PlayerManager
         }
         jobStorageUpgrades.Add(new JobStorageUpgrade { job = j, extra = amount });
     }
+
+    public List<OwnedMonsterData> GetAllOwnedMonsters(bool includeTeam = true)
+    {
+        team  ??= new List<OwnedMonsterData>();
+        owned ??= new List<OwnedMonsterData>();
+
+        var result = new List<OwnedMonsterData>();
+        var seen   = new HashSet<string>();
+
+        // Owned first
+        for (int i = 0; i < owned.Count; i++)
+        {
+            var m = owned[i];
+            if (m == null || string.IsNullOrEmpty(m.monsterId))
+                continue;
+
+            if (!string.IsNullOrEmpty(m.ownedUID))
+            {
+                if (!seen.Add(m.ownedUID))
+                    continue;
+            }
+
+            result.Add(m);
+        }
+
+        if (includeTeam)
+        {
+            for (int i = 0; i < team.Count; i++)
+            {
+                var t = team[i];
+                if (t == null || string.IsNullOrEmpty(t.monsterId))
+                    continue;
+
+                if (!string.IsNullOrEmpty(t.ownedUID))
+                {
+                    if (!seen.Add(t.ownedUID))
+                        continue;
+                }
+
+                result.Add(t);
+            }
+        }
+
+        return result;
+    }
+
+
 }

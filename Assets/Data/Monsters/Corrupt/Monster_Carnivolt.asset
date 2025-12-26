@@ -15,17 +15,21 @@ MonoBehaviour:
   id: M-060
   displayName: Carnivolt
   type: 7
+  typeIcon: {fileID: 21300000, guid: 10d50b4d1dee041cc8dcf349a9ce86a1, type: 3}
   icon: {fileID: 21300000, guid: e03c8ad16c5f9ac4ca8abf96c092158f, type: 3}
   backIcon: {fileID: 21300000, guid: fae1344ba7806f440b13720981512a24, type: 3}
   shinyIcon: {fileID: 21300000, guid: ec77710b8aacb41f4b51b5b4551f35e2, type: 3}
   shinyBackIcon: {fileID: 21300000, guid: 5dd1a5f4b913a49cbb1251a821fb93d9, type: 3}
+  rarity: 5
   canBeStarter: 0
   starterWeight: 1
   baseHP: 90
   baseAttack: 75
   baseDefense: 60
   baseSpeed: 75
+  hpRegenPerHour: 6
   fatigueRatePerHour: 0.03
+  fatigueCooldownHours: 8
   baseTrainingXPPerHour: 76
   evolutionStage: 1
   evolutionLevel: 0
@@ -36,7 +40,11 @@ MonoBehaviour:
   bossWeight: 1
   spawnWeight: 0.5
   jobSkill: 2.8
-  rarity: 5
-  tagTrack: {fileID: 11400000, guid: 1e81e1bdafc074d40bbc0b320c4e3327, type: 2}
+  titleTrack: {fileID: 11400000, guid: 603c6d6acff36435194ac6ed0d4fe3b4, type: 2}
+  defaultAlwaysOnTitles: []
+  Personality: {fileID: 11400000, guid: 75a511658b2e544f4869d466b3f7ba5a, type: 2}
+  basicAttackName: Hex Lash
+  basicAttackPrefab: {fileID: 8046187082596486557, guid: 86fc56d41698d45bfbf27d043ca2944d, type: 3}
+  basicAttackPrefabLifetime: 1
   description: "A twisted jester of the shadows. Carnivolt\u2019s laughter echoes
     through the dark, driving those who hear it into madness."

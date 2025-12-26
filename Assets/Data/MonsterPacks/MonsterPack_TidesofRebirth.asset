@@ -1,0 +1,30 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f048558a82b7c2147ab6a4d2677278ea, type: 3}
+  m_Name: MonsterPack_TidesofRebirth
+  m_EditorClassIdentifier: 
+  id: MP-003
+  displayName: Tides of Rebirth
+  description: Creatures touched by the deep ocean and ancient prophecy. Water and
+    Oracle monsters that embody tides, renewal, and foresight.
+  icon: {fileID: 21300000, guid: 454580818ac0d164abf8e44922bc120d, type: 3}
+  rarity: Common
+  baseCost: 6
+  costType: 17
+  saleOff01: 0
+  unlockByDefault: 0
+  monsters:
+  - {fileID: 11400000, guid: d8a0783bc10efd143b08cfbd2b28101a, type: 2}
+  - {fileID: 11400000, guid: 8244b69983695f541854b374678cf1ee, type: 2}
+  - {fileID: 11400000, guid: 3be5568cb244c4241a566e12970da310, type: 2}
+  - {fileID: 11400000, guid: b31f774543ebb5d43abb3c699ec50481, type: 2}
+  - {fileID: 11400000, guid: aa7fdadb6e0cd534aa49ff513d3820ba, type: 2}

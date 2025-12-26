@@ -14,18 +14,22 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   id: M-050
   displayName: Ignyros
-  type: 13
+  type: 14
+  typeIcon: {fileID: 21300000, guid: 3934876669845455994cef6f6ee793af, type: 3}
   icon: {fileID: 21300000, guid: 70b88ca745341204fb4697ad392b176e, type: 3}
   backIcon: {fileID: 21300000, guid: 159f877747b45744787050a60c5563f4, type: 3}
   shinyIcon: {fileID: 21300000, guid: 335dff3eab02f684387d5c9c93cf019b, type: 3}
   shinyBackIcon: {fileID: 21300000, guid: 5462786f3b4b5bc43a9fe8ae2dd4c328, type: 3}
+  rarity: 4
   canBeStarter: 0
   starterWeight: 1
   baseHP: 84
   baseAttack: 84
   baseDefense: 56
   baseSpeed: 56
+  hpRegenPerHour: 6
   fatigueRatePerHour: 0.03
+  fatigueCooldownHours: 8
   baseTrainingXPPerHour: 67
   evolutionStage: 1
   evolutionLevel: 0
@@ -36,7 +40,11 @@ MonoBehaviour:
   bossWeight: 1
   spawnWeight: 1
   jobSkill: 2.5
-  rarity: 4
-  tagTrack: {fileID: 11400000, guid: 8940c1c8ab9c97548bd2f6d596c70da2, type: 2}
+  titleTrack: {fileID: 11400000, guid: e004035262d134338932f384378921de, type: 2}
+  defaultAlwaysOnTitles: []
+  Personality: {fileID: 11400000, guid: 38ced003b48194272ab4cfa8cd9c5d01, type: 2}
+  basicAttackName: Drake Strike
+  basicAttackPrefab: {fileID: 7446462880551948952, guid: 18696ea6ccccd974d902d9304c2b6b7e, type: 3}
+  basicAttackPrefabLifetime: 1
   description: "Forged in the heart of the earth, its scales shine like metal. Ignyros\u2019s
     tail flame never dies, said to be the spark of the world\u2019s first fire."

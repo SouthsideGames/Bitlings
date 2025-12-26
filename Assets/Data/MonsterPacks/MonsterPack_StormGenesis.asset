@@ -1,0 +1,29 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f048558a82b7c2147ab6a4d2677278ea, type: 3}
+  m_Name: MonsterPack_StormGenesis
+  m_EditorClassIdentifier: 
+  id: MP-004
+  displayName: Storm Genesis
+  description: Electric currents and skyborne winds merge in this volatile pack.
+    Expect fast, charged monsters that strike before foes can react.
+  icon: {fileID: 21300000, guid: 9c534ff028375e24798a7ad7e52927cf, type: 3}
+  rarity: Common
+  baseCost: 10
+  costType: 17
+  saleOff01: 0
+  unlockByDefault: 0
+  monsters:
+  - {fileID: 11400000, guid: 5b0ac32ffd3dd764ebcd47f1a5b0c830, type: 2}
+  - {fileID: 11400000, guid: 5137cf282fbe06a44b283c17275c625c, type: 2}
+  - {fileID: 11400000, guid: 0739778e5e623ad49adc2a10c2dd26ee, type: 2}
+  - {fileID: 11400000, guid: df38ab6dc72ab7b4b9b1f1f9e689b9c6, type: 2}

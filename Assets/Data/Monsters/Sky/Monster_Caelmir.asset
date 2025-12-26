@@ -15,17 +15,21 @@ MonoBehaviour:
   id: M-063
   displayName: Caelmir
   type: 9
+  typeIcon: {fileID: 21300000, guid: 1ddb138c655b3471cad890ace56df64b, type: 3}
   icon: {fileID: 21300000, guid: ebc79a6da17fd7d4bb7488d462ee05bd, type: 3}
   backIcon: {fileID: 21300000, guid: 385321d9c876f724297bee5598bd9c61, type: 3}
   shinyIcon: {fileID: 21300000, guid: ca4f10e4218b6bc428629d82ca5bb0c0, type: 3}
   shinyBackIcon: {fileID: 21300000, guid: cd50b8811569ee240ba3a53216908946, type: 3}
+  rarity: 4
   canBeStarter: 0
   starterWeight: 1
   baseHP: 80
   baseAttack: 96
   baseDefense: 64
   baseSpeed: 80
+  hpRegenPerHour: 6
   fatigueRatePerHour: 0.03
+  fatigueCooldownHours: 8
   baseTrainingXPPerHour: 61
   evolutionStage: 1
   evolutionLevel: 0
@@ -36,7 +40,11 @@ MonoBehaviour:
   bossWeight: 1
   spawnWeight: 0
   jobSkill: 2.9
-  rarity: 4
-  tagTrack: {fileID: 11400000, guid: 8c78b9afde078654eb6cfbad7e533951, type: 2}
+  titleTrack: {fileID: 11400000, guid: c831e8e07804b4e55b5f035fe7d77e88, type: 2}
+  defaultAlwaysOnTitles: []
+  Personality: {fileID: 11400000, guid: ab061081920b544089b918a9f1f3759b, type: 2}
+  basicAttackName: Gale Swipe
+  basicAttackPrefab: {fileID: 5988486418563103347, guid: 310c8d56e543d4cd4ae9c55fa6047252, type: 3}
+  basicAttackPrefabLifetime: 1
   description: "Said to descend when storms split the heavens. Zephyros\u2019s wings
     generate winds so fierce they can level forests in moments."

@@ -14,12 +14,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   id: res.Shiny
   category: 1
-  title: Shiny Orbs
+  title: Shiny Orb
   subtitle: Resource
   body: 'Comes from: Shadow Market
 
-    Used for: Boost shiny chance in next encounters
-
-    Related
-    site effect: +10% shiny odds (uses: 1)'
-  icon: {fileID: 21300000, guid: eead4c3f90d5cf5408e1cc3b19fb82f6, type: 3}
+    Increase shiny odds in encounters during
+    the duration of the timer'

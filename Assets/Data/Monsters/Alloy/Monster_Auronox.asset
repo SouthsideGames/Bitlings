@@ -15,18 +15,22 @@ MonoBehaviour:
   id: M-039
   displayName: Auronox
   type: 16
+  typeIcon: {fileID: 21300000, guid: c802d8c6dfd7c40329bae6fe5d96fc85, type: 3}
   icon: {fileID: 21300000, guid: 81e894dbacd34e34fb25150851e7ebb3, type: 3}
   backIcon: {fileID: 21300000, guid: 48bb8762eee4532418b9ff679a59fe78, type: 3}
   shinyIcon: {fileID: 21300000, guid: ecdf56717301e43139fddd45c73511f3, type: 3}
   shinyBackIcon: {fileID: 21300000, guid: 65ddd90cffad44436b5c9ab10471e8cf, type: 3}
+  rarity: 3
   canBeStarter: 0
   starterWeight: 1
+  maxLevel: 50
   baseHP: 91
   baseAttack: 52
   baseDefense: 91
   baseSpeed: 26
+  hpRegenPerHour: 6
   fatigueRatePerHour: 0.03
-  baseTrainingXPPerHour: 53
+  fatigueCooldownHours: 8
   evolutionStage: 1
   evolutionLevel: 0
   evolutionForm: {fileID: 0}
@@ -36,7 +40,11 @@ MonoBehaviour:
   bossWeight: 1
   spawnWeight: 1.5
   jobSkill: 2.2
-  rarity: 3
-  tagTrack: {fileID: 11400000, guid: 1d59dcda51011db40b178fe3874660f5, type: 2}
+  titleTrack: {fileID: 11400000, guid: 3f52141f4a3fb41e58d217b467d365b9, type: 2}
+  defaultAlwaysOnTitles: []
+  Personality: {fileID: 11400000, guid: d2d9ec6158abb40d2a7618ee71a9de06, type: 2}
+  basicAttackName: Metal Bash
+  basicAttackPrefab: {fileID: 5172629195496952374, guid: ad774bbb8084f42c29f12cd62581f796, type: 3}
+  basicAttackPrefabLifetime: 1
   description: "Its golden frame hums with ancient energy. Auronox\u2019s central
     eye never blinks, watching tirelessly as its gears rotate in silent rhythm."

@@ -8,7 +8,7 @@ public static class JobIdlePassives
         public float offenseMul;
         public float defenseMul;
         public float earlyEdge;
-        public float coinMul;
+        public float creditMul;
         public float energyCostMul;
     }
 
@@ -23,7 +23,7 @@ public static class JobIdlePassives
     {
         var team = SaveManager.Data?.team;
         int count = (team == null) ? 0 : Mathf.Min(3, team.Count);
-        if (count <= 0 || JobManager.I == null) return new TeamPassives { offenseMul = 1f, defenseMul = 1f, coinMul = 1f, energyCostMul = 1f };
+        if (count <= 0 || JobManager.I == null) return new TeamPassives { offenseMul = 1f, defenseMul = 1f, creditMul = 1f, energyCostMul = 1f };
 
         float offAccum = 0f;
         float defAccum = 0f;
@@ -82,7 +82,7 @@ public static class JobIdlePassives
             offenseMul = offenseMul,
             defenseMul = defenseMul,
             earlyEdge  = Mathf.Clamp(edgeAccum, 0f, 0.08f),
-            coinMul    = 1f,
+            creditMul    = 1f,
             energyCostMul = Mathf.Clamp(energyCostMul, 0.5f, 1f)
         };
     }

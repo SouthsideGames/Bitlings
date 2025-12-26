@@ -15,18 +15,22 @@ MonoBehaviour:
   id: M-010
   displayName: Bramblex
   type: 3
+  typeIcon: {fileID: 21300000, guid: 46bf3bbfcff674f17bd0ea06a23e1467, type: 3}
   icon: {fileID: 21300000, guid: 9704f5990e550a64c8ba443c917158b7, type: 3}
   backIcon: {fileID: 21300000, guid: a2fe7d4d68def674cb5b671af6de3f5b, type: 3}
   shinyIcon: {fileID: 21300000, guid: 0c517c3760a9b8b47928b185c9b1b681, type: 3}
   shinyBackIcon: {fileID: 21300000, guid: 4c990a735b732a44d9883603b11e3c01, type: 3}
+  rarity: 2
   canBeStarter: 0
   starterWeight: 1
+  maxLevel: 50
   baseHP: 72
   baseAttack: 48
   baseDefense: 84
   baseSpeed: 36
+  hpRegenPerHour: 6
   fatigueRatePerHour: 0.03
-  baseTrainingXPPerHour: 49
+  fatigueCooldownHours: 8
   evolutionStage: 1
   evolutionLevel: 0
   evolutionForm: {fileID: 0}
@@ -36,7 +40,11 @@ MonoBehaviour:
   bossWeight: 1
   spawnWeight: 2.5
   jobSkill: 1.7
-  rarity: 2
-  tagTrack: {fileID: 11400000, guid: 25e31dd427fe43144a2ce73ddd38c888, type: 2}
+  titleTrack: {fileID: 11400000, guid: 48e066f4886b844d8bb3c1c1a331df6f, type: 2}
+  defaultAlwaysOnTitles: []
+  Personality: {fileID: 11400000, guid: f6f72aa846632454b97832d01d1b5c0c, type: 2}
+  basicAttackName: Leaf Jab
+  basicAttackPrefab: {fileID: 7147688047696861109, guid: 5287b95db783b4379b733d77af2cc458, type: 3}
+  basicAttackPrefabLifetime: 1
   description: Covered in thorny leaves, Bramblex defends its territory fiercely.
     In the Bitling world, its presence keeps larger predators at bay.

@@ -1,0 +1,2 @@
+fanfx2_lightning_spell_start_large_red/frame0000.png = 0 0 64 128
+fanfx2_lightning_spell_start_large_red/frame0001.png = 64 0 64 128

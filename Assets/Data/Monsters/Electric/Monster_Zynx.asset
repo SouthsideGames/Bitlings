@@ -15,17 +15,21 @@ MonoBehaviour:
   id: M-016
   displayName: Zynx
   type: 4
+  typeIcon: {fileID: 21300000, guid: e57a940f3027d4a9f83f25cefbc6d738, type: 3}
   icon: {fileID: 21300000, guid: b6ac4cd47c9dd433db3868d7fccaf473, type: 3}
   backIcon: {fileID: 21300000, guid: 7e90f42e827784d21b29244635c656db, type: 3}
   shinyIcon: {fileID: 21300000, guid: 286a484658da5bf42a65458b11bf5f4d, type: 3}
   shinyBackIcon: {fileID: 21300000, guid: c3495849c93b2d649a85a689cb474adf, type: 3}
+  rarity: 0
   canBeStarter: 1
   starterWeight: 10
   baseHP: 40
   baseAttack: 60
   baseDefense: 30
   baseSpeed: 70
+  hpRegenPerHour: 6
   fatigueRatePerHour: 0.03
+  fatigueCooldownHours: 8
   baseTrainingXPPerHour: 45
   evolutionStage: 1
   evolutionLevel: 18
@@ -36,7 +40,11 @@ MonoBehaviour:
   bossWeight: 1
   spawnWeight: 6
   jobSkill: 1
-  rarity: 0
-  tagTrack: {fileID: 11400000, guid: aec0788e038b0434bb72339bd2a01cdd, type: 2}
+  titleTrack: {fileID: 11400000, guid: 6a3bd4e4bbc85409786b7ccb0e6d397d, type: 2}
+  defaultAlwaysOnTitles: []
+  Personality: {fileID: 11400000, guid: dc588633b46794883be5263b17376bf3, type: 2}
+  basicAttackName: Spark Bolt
+  basicAttackPrefab: {fileID: 4179996368917665753, guid: 77ce3f8bf17474b06ac473e26248a299, type: 3}
+  basicAttackPrefabLifetime: 1
   description: Zynx leaps unpredictably, its fur sparking with static. In the Bitling
     world, it is known to cling to power lines for warmth.

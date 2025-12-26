@@ -1,0 +1,50 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 32ffc26ed7d444b02a9332ce4279b117, type: 3}
+  m_Name: Monster_Shardel
+  m_EditorClassIdentifier: 
+  id: M-084
+  displayName: Shardel
+  type: 12
+  typeIcon: {fileID: 21300000, guid: 5c631c9f2f98b441caa0de9f7de0cfcd, type: 3}
+  icon: {fileID: 21300000, guid: 029af3570c5e8487db73e495587acff4, type: 3}
+  backIcon: {fileID: 21300000, guid: ef2e07cee201647e5844b1c324b1f83b, type: 3}
+  shinyIcon: {fileID: 21300000, guid: f60db4ae678a64e27a7198452a07dbb8, type: 3}
+  shinyBackIcon: {fileID: 21300000, guid: a5d37dd3140384dde95e4c13a6dffd7e, type: 3}
+  rarity: 0
+  canBeStarter: 0
+  starterWeight: 1
+  maxLevel: 50
+  baseHP: 70
+  baseAttack: 40
+  baseDefense: 60
+  baseSpeed: 30
+  hpRegenPerHour: 4
+  fatigueRatePerHour: 0.03
+  fatigueCooldownHours: 8
+  evolutionStage: 1
+  evolutionLevel: 20
+  evolutionForm: {fileID: 11400000, guid: 83665844898ad794bafb8ad084654bee, type: 2}
+  uncatchable: 0
+  isBoss: 0
+  bossJobDebuffs: []
+  bossWeight: 1
+  spawnWeight: 7
+  jobSkill: 1
+  titleTrack: {fileID: 11400000, guid: 2cd4db9c05011a348ba832e7813dd91b, type: 2}
+  defaultAlwaysOnTitles: []
+  Personality: {fileID: 11400000, guid: ed3f5d9f88fbc40289370f9c1a7a1656, type: 2}
+  basicAttackName: Stone Bash
+  basicAttackPrefab: {fileID: 2351537007807138146, guid: 02418565875047149b7ee7a075c39850, type: 3}
+  basicAttackPrefabLifetime: 1
+  description: Shardel forms near mineral faults where pressure forces crystals to
+    the surface. It chips itself apart and reforms, slowly learning to hold its shape.

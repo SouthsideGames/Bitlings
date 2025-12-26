@@ -15,18 +15,22 @@ MonoBehaviour:
   id: M-009
   displayName: Viridra
   type: 3
+  typeIcon: {fileID: 21300000, guid: 46bf3bbfcff674f17bd0ea06a23e1467, type: 3}
   icon: {fileID: 21300000, guid: 00284acd0a19b6e40be08365a00b64a1, type: 3}
   backIcon: {fileID: 21300000, guid: 8ba7e538ba57ab141a31f768ff3b782f, type: 3}
   shinyIcon: {fileID: 21300000, guid: 50484b5fbf007a44d934c26f22006b28, type: 3}
   shinyBackIcon: {fileID: 21300000, guid: a56b3f8b19e5ee2489650fdf1be2bed9, type: 3}
+  rarity: 3
   canBeStarter: 0
   starterWeight: 1
+  maxLevel: 50
   baseHP: 78
   baseAttack: 52
   baseDefense: 91
   baseSpeed: 39
+  hpRegenPerHour: 6
   fatigueRatePerHour: 0.03
-  baseTrainingXPPerHour: 56
+  fatigueCooldownHours: 8
   evolutionStage: 1
   evolutionLevel: 0
   evolutionForm: {fileID: 0}
@@ -36,7 +40,11 @@ MonoBehaviour:
   bossWeight: 1
   spawnWeight: 1.5
   jobSkill: 2
-  rarity: 3
-  tagTrack: {fileID: 11400000, guid: 6ff61b20bba936b409571089f80381af, type: 2}
+  titleTrack: {fileID: 11400000, guid: db326120f6d6a412ba4e0f7df6990345, type: 2}
+  defaultAlwaysOnTitles: []
+  Personality: {fileID: 11400000, guid: ad0406630c0e1459897f0f87f1f80154, type: 2}
+  basicAttackName: Leaf Jab
+  basicAttackPrefab: {fileID: 7147688047696861109, guid: 5287b95db783b4379b733d77af2cc458, type: 3}
+  basicAttackPrefabLifetime: 1
   description: Its body is covered in hardened leaves sharp as blades. Viridra silently
     waits among trees, striking swiftly at intruders.

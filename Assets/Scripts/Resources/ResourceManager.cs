@@ -1,42 +1,56 @@
 using System;
+using System.IO;
+using System.Text;
 using System.Collections.Generic;
 using UnityEngine;
 
-public enum ResourceType {
-    TrainingXP, Coins, Energy, Medkits, Materials,
-    Sigils, Lures, CaptureBands, Luck,
-    AttackBoosters, HPBoosters, SpeedBoosters, ShinyOrbs, BlessingTokens, RestCharge, Gems
+public enum ResourceType
+{
+    None = 0, Credits = 1, Energy = 2, Medkit = 3, Material = 4,
+    PPEPermit = 5, Flyer = 6, WorkOrder = 7, Favor = 8,
+    TrainingVoucher_ATK = 9, WellnessVoucher = 10, EfficiencyVoucher = 11, ShinyOrb = 12, BlessingScale = 13, Coffee = 14, GrowthCore = 16, PackVoucher = 17
 }
-
 
 public class ResourceManager : MonoBehaviour
 {
     public static ResourceManager I { get; private set; }
 
-    [Header("Startup")]
-    [Tooltip("If true, copy legacy Data.currency into enum-backed Coins once at boot.")]
-    [SerializeField] private bool mirrorLegacyCurrencyOnBoot = true;
+    [Header("Migration")]
+    [Tooltip("If true, performs a one-time migration from SaveManager.Data.credits to ResourceBank[Credits] using a JSON sidecar flag.")]
+    [SerializeField] private bool runOneShotLegacyCreditMigration = true;
+
+    // ─────────────────────────────────────────────────────────────────────────────
+    // JSON migration sidecar
+    // ─────────────────────────────────────────────────────────────────────────────
+    [Serializable]
+    private class MigrationFlags
+    {
+        public bool creditMigratedV2;
+        public long savedAtUnix;
+    }
+
+    private static string MigrationsPath =>
+        Path.Combine(Application.persistentDataPath, "idle_migrations.json");
 
     private void Awake()
     {
         if (I != null && I != this) { Destroy(gameObject); return; }
         I = this;
 
-        // Make sure Save is loaded and resource list is sized.
         SaveManager.LoadOrCreate();
         ResourceBank.EnsureSize();
 
-        if (mirrorLegacyCurrencyOnBoot) MirrorLegacyCurrencyIntoBank();
-        else MirrorBankCoinsIntoLegacy();
+        if (runOneShotLegacyCreditMigration)
+            TryMigrateLegacyCreditsOnce_WithJson();
+
     }
 
-    // --------------------------------------------------------------------
+    // ─────────────────────────────────────────────────────────────────────────────
     // Basic API
-    // --------------------------------------------------------------------
+    // ─────────────────────────────────────────────────────────────────────────────
 
     public int Get(ResourceType type) => ResourceBank.Get(type);
 
-    /// <summary> Sets a resource to an exact value by computing a delta and calling Add(). </summary>
     public void Set(ResourceType type, int value)
     {
         int cur = ResourceBank.Get(type);
@@ -48,31 +62,26 @@ public class ResourceManager : MonoBehaviour
     {
         if (amount == 0) return;
 
-        ResourceBank.Add(type, amount); // Expected to Save() + emit OnResourcesChanged
-
-        if (type == ResourceType.Coins)
-            MirrorBankCoinsIntoLegacy();
+        ResourceBank.Add(type, amount);
 
         GameEvents.OnResourcesChanged?.Invoke();
+        GameEvents.ResourceAdded?.Invoke(type, amount);
     }
 
-    /// <summary> Attempts to spend; returns false if insufficient. Mirrors coins on success. </summary>
     public bool TrySpend(ResourceType type, int amount)
     {
         if (amount <= 0) return true;
 
-        bool ok = ResourceBank.TrySpend(type, amount); // emits OnResourcesChanged on success
-        if (ok && type == ResourceType.Coins)
-            MirrorBankCoinsIntoLegacy();
-
-        GameEvents.OnResourcesChanged?.Invoke();
+        bool ok = ResourceBank.TrySpend(type, amount);
+        if (ok)
+            GameEvents.OnResourcesChanged?.Invoke();
 
         return ok;
     }
 
-    // --------------------------------------------------------------------
+    // ─────────────────────────────────────────────────────────────────────────────
     // Bundles / utilities
-    // --------------------------------------------------------------------
+    // ─────────────────────────────────────────────────────────────────────────────
 
     [Serializable]
     public struct ResourceAmount
@@ -81,21 +90,22 @@ public class ResourceManager : MonoBehaviour
         public int amount;
     }
 
-    /// <summary> Grants several resources at once. </summary>
     public void AddMany(IEnumerable<ResourceAmount> amounts)
     {
-        bool touchedCoins = false;
+        bool any = false;
         foreach (var ra in amounts)
         {
             if (ra.amount == 0) continue;
             ResourceBank.Add(ra.type, ra.amount);
-            if (ra.type == ResourceType.Coins) touchedCoins = true;
+            any = true;
         }
-        if (touchedCoins) MirrorBankCoinsIntoLegacy();
-        // If you prefer a single emit, add a batch API to ResourceBank and emit once.
+        if (any)
+        {
+            GameEvents.OnResourcesChanged?.Invoke();
+            // Note: fire ResourceAdded per-type if specific listeners depend on it.
+        }
     }
 
-    /// <summary> Spends several resources; all-or-nothing (no partial spend). </summary>
     public bool TrySpendMany(IEnumerable<ResourceAmount> costs)
     {
         // 1) Affordability check
@@ -106,48 +116,162 @@ public class ResourceManager : MonoBehaviour
         }
 
         // 2) Apply
-        bool touchedCoins = false;
+        bool any = false;
         foreach (var c in costs)
         {
             if (c.amount <= 0) continue;
-            ResourceBank.TrySpend(c.type, c.amount); // emits on success
-            if (c.type == ResourceType.Coins) touchedCoins = true;
+            ResourceBank.TrySpend(c.type, c.amount);
+            any = true;
         }
-        if (touchedCoins) MirrorBankCoinsIntoLegacy();
+        if (any) GameEvents.OnResourcesChanged?.Invoke();
         return true;
     }
 
-    // --------------------------------------------------------------------
-    // Legacy currency mirroring
-    // --------------------------------------------------------------------
+    // ─────────────────────────────────────────────────────────────────────────────
+    // Credits helpers (titles-aware)
+    // ─────────────────────────────────────────────────────────────────────────────
 
-    /// <summary> Copy legacy SaveManager.Data.currency into enum-backed bank (one-shot migration). </summary>
-    public void MirrorLegacyCurrencyIntoBank()
+    public int AddCredits(int baseCredits)
     {
-        if (SaveManager.Data == null) return;
-
-        int legacy = Mathf.Max(0, SaveManager.Data.coins);
-        int bankCoin = ResourceBank.Get(ResourceType.Coins);
-
-        if (legacy != bankCoin)
-        {
-            int delta = legacy - bankCoin;
-            if (delta != 0) ResourceBank.Add(ResourceType.Coins, delta);
-        }
-
-        MirrorBankCoinsIntoLegacy(); // keep both sides consistent
+        int amt = Mathf.Max(0, baseCredits);
+        if (amt == 0) return 0;
+        Add(ResourceType.Credits, amt);
+        return amt;
     }
 
-    /// <summary> Set legacy SaveManager.Data.currency to whatever the bank has for Coins. </summary>
-    public void MirrorBankCoinsIntoLegacy()
+    // Titles-aware credit award (manual/idle battles with context)
+    public int AddCreditsWithTitles(int baseCredits, string leadMonsterId, MonsterDataSO wild, int wildLevel)
     {
-        if (SaveManager.Data == null) return;
-
-        int coins = ResourceBank.Get(ResourceType.Coins);
-        if (SaveManager.Data.coins != coins)
+        int scaled = Mathf.Max(0, baseCredits);
+        if (!string.IsNullOrEmpty(leadMonsterId))
         {
-            SaveManager.Data.coins = coins;
-            SaveManager.Save(); // small write; maintains legacy consumers
+            float cm = TitlesAdapter.GetcreditMultOnVictory(leadMonsterId, wild, wildLevel);
+            if (cm > 0f) scaled = Mathf.RoundToInt(scaled * cm);
+        }
+        return AddCredits(scaled);
+    }
+
+    // Titles-aware credit award (contextless, e.g., after capture)
+    public int AddCreditsWithTitles(int baseCredits, string leadMonsterId)
+    {
+        int scaled = Mathf.Max(0, baseCredits);
+        if (!string.IsNullOrEmpty(leadMonsterId))
+        {
+            float cm = TitlesAdapter.GetcreditMultOnVictory(leadMonsterId, null, 0);
+            if (cm > 0f) scaled = Mathf.RoundToInt(scaled * cm);
+        }
+        return AddCredits(scaled);
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────────
+    // One-shot legacy migration (JSON sidecar)
+    // ─────────────────────────────────────────────────────────────────────────────
+
+    private void TryMigrateLegacyCreditsOnce_WithJson()
+    {
+        var flags = LoadMigrationFlags();
+
+        if (flags.creditMigratedV2)
+            return;
+
+        // Authoritative source for migration is the legacy field.
+        var data = SaveManager.Data;
+        int legacyCredits = (data != null) ? Mathf.Max(0, data.credits) : 0;
+        int bankCredits   = ResourceBank.Get(ResourceType.Credits);
+
+        if (legacyCredits != bankCredits)
+        {
+            int delta = legacyCredits - bankCredits;
+            if (delta != 0)
+                ResourceBank.Add(ResourceType.Credits, delta);
+        }
+
+        // Snap legacy to bank once, then save the main JSON.
+        if (data != null)
+        {
+            int finalCredits = ResourceBank.Get(ResourceType.Credits);
+            if (data.credits != finalCredits)
+                data.credits = finalCredits;
+
+            SaveManager.Save();
+        }
+
+        // Mark migrated in the sidecar JSON.
+        flags.creditMigratedV2 = true;
+        flags.savedAtUnix = NowUnix();
+        SaveMigrationFlags(flags);
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────────
+    // Migration JSON helpers
+    // ─────────────────────────────────────────────────────────────────────────────
+
+    private static MigrationFlags LoadMigrationFlags()
+    {
+        try
+        {
+            if (!File.Exists(MigrationsPath)) return new MigrationFlags();
+            var json = File.ReadAllText(MigrationsPath, Encoding.UTF8);
+            if (string.IsNullOrWhiteSpace(json)) return new MigrationFlags();
+
+            var flags = JsonUtility.FromJson<MigrationFlags>(json);
+            return flags ?? new MigrationFlags();
+        }
+        catch
+        {
+            return new MigrationFlags();
         }
     }
+
+    private static void SaveMigrationFlags(MigrationFlags flags)
+    {
+        try
+        {
+            string json = JsonUtility.ToJson(flags ?? new MigrationFlags(), prettyPrint: true);
+            AtomicWrite(MigrationsPath, json);
+        }
+        catch (Exception e)
+        {
+            Debug.LogWarning($"SaveMigrationFlags failed: {e.Message}");
+        }
+    }
+
+    private static void AtomicWrite(string path, string contents)
+    {
+        string tmp = path + ".tmp";
+        File.WriteAllText(tmp, contents, Encoding.UTF8);
+
+        try
+        {
+            if (File.Exists(path)) File.Delete(path);
+            File.Move(tmp, path);
+        }
+        catch
+        {
+            try { if (!File.Exists(path)) File.Copy(tmp, path); } catch { }
+            try { File.Delete(tmp); } catch { }
+        }
+    }
+
+    private static long NowUnix() => DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+
+    public void InitializeNewAccountResources()
+    {
+        ResourceBank.EnsureSize();
+
+        // Hard reset all resources
+        foreach (ResourceType t in Enum.GetValues(typeof(ResourceType)))
+        {
+            ResourceBank.Set(t, 0);
+        }
+
+        ResourceBank.Set(ResourceType.Energy, 50);
+        ResourceBank.Set(ResourceType.Credits, 0);
+        ResourceBank.Set(ResourceType.Medkit, 0);
+        ResourceBank.Set(ResourceType.PackVoucher, 0);
+
+        SaveManager.Save();
+        GameEvents.OnResourcesChanged?.Invoke();
+    }
+
 }

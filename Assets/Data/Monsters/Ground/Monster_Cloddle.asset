@@ -15,17 +15,21 @@ MonoBehaviour:
   id: M-025
   displayName: Cloddle
   type: 8
+  typeIcon: {fileID: 21300000, guid: f0d6243fead4a41fcae07804c4d66233, type: 3}
   icon: {fileID: 21300000, guid: 85b9d35547b0c4440b68df893c2f321a, type: 3}
   backIcon: {fileID: 21300000, guid: 35f17c1f3f8184746aa1a9cb488d1d6b, type: 3}
   shinyIcon: {fileID: 21300000, guid: cc79b5b89d63e4f75accbde3967adb23, type: 3}
   shinyBackIcon: {fileID: 21300000, guid: 80b116ad5d9d44feb81220144b68b7a4, type: 3}
+  rarity: 1
   canBeStarter: 1
   starterWeight: 7
   baseHP: 88
   baseAttack: 44
   baseDefense: 66
   baseSpeed: 22
+  hpRegenPerHour: 1
   fatigueRatePerHour: 0.03
+  fatigueCooldownHours: 8
   baseTrainingXPPerHour: 38
   evolutionStage: 1
   evolutionLevel: 16
@@ -36,7 +40,11 @@ MonoBehaviour:
   bossWeight: 1
   spawnWeight: 5
   jobSkill: 1.1
-  rarity: 1
-  tagTrack: {fileID: 11400000, guid: 747411f8177ca0f408962ce8862e54a7, type: 2}
+  titleTrack: {fileID: 11400000, guid: 4408630b0d8e04857b73aeea71b2741f, type: 2}
+  defaultAlwaysOnTitles: []
+  Personality: {fileID: 11400000, guid: 71fa3f6cb68214bca94496affd470944, type: 2}
+  basicAttackName: Terra Slam
+  basicAttackPrefab: {fileID: 8624645253036040332, guid: f03e702d7c9714bc2af48b5b17c93c88, type: 3}
+  basicAttackPrefabLifetime: 1
   description: Cloddle disguises itself among boulders. When disturbed, it curls
     into a ball and rolls away with surprising force.

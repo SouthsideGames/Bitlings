@@ -15,18 +15,22 @@ MonoBehaviour:
   id: M-028
   displayName: Bouldit
   type: 12
+  typeIcon: {fileID: 21300000, guid: 5c631c9f2f98b441caa0de9f7de0cfcd, type: 3}
   icon: {fileID: 21300000, guid: 340847cd1aaf6774094ffbae167d396d, type: 3}
   backIcon: {fileID: 21300000, guid: b0aec7b454ab9264397316ef8480aebf, type: 3}
   shinyIcon: {fileID: 21300000, guid: 0e3a3cf65cd610c4997601021b494721, type: 3}
   shinyBackIcon: {fileID: 21300000, guid: e83d701310f95a441a6b3a0ffb72c3fb, type: 3}
+  rarity: 0
   canBeStarter: 1
   starterWeight: 10
+  maxLevel: 50
   baseHP: 80
   baseAttack: 40
   baseDefense: 60
   baseSpeed: 20
+  hpRegenPerHour: 6
   fatigueRatePerHour: 0.03
-  baseTrainingXPPerHour: 32
+  fatigueCooldownHours: 8
   evolutionStage: 1
   evolutionLevel: 0
   evolutionForm: {fileID: 0}
@@ -36,7 +40,11 @@ MonoBehaviour:
   bossWeight: 1
   spawnWeight: 7
   jobSkill: 1
-  rarity: 0
-  tagTrack: {fileID: 11400000, guid: 77a8508eb8f7e9a4299d206a7b446e89, type: 2}
+  titleTrack: {fileID: 11400000, guid: 500452e2f5ee644518a0ed3bb099a9d7, type: 2}
+  defaultAlwaysOnTitles: []
+  Personality: {fileID: 11400000, guid: ed3f5d9f88fbc40289370f9c1a7a1656, type: 2}
+  basicAttackName: Stone Bash
+  basicAttackPrefab: {fileID: 2351537007807138146, guid: 02418565875047149b7ee7a075c39850, type: 3}
+  basicAttackPrefabLifetime: 1
   description: Bouldit plods slowly across rocky fields. When it rests, its body
     is indistinguishable from an ordinary boulder.

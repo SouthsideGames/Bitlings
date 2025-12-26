@@ -1,0 +1,109 @@
+using UnityEngine;
+
+public static class InfoServices
+{
+    /// <summary>
+    /// Open the Info panel by a string id (e.g., "res.credits", "job.forge", "tag.hunter").
+    /// Fallbacks are optional and only used if the SO is missing or has empty fields.
+    /// </summary>
+    public static void OpenById(
+        string infoId,
+        string fallbackTitle = null,
+        string fallbackSubtitle = null,
+        string fallbackBody = null,
+        Sprite fallbackIcon = null)
+    {
+        InfoRouter.Open(infoId, fallbackTitle, fallbackSubtitle, fallbackBody, fallbackIcon);
+    }
+
+    /// <summary>
+    /// Convenience for resources: builds id "res.{enum}" (e.g., res.credits, res.Energy).
+    /// </summary>
+    public static void OpenResource(
+        ResourceType type,
+        string fallbackTitle,
+        string fallbackSubtitle,
+        string fallbackBody,
+        Sprite fallbackIcon = null)
+    {
+        var id = $"res.{type}";
+        InfoRouter.Open(id, fallbackTitle, fallbackSubtitle, fallbackBody, fallbackIcon);
+    }
+
+    /// <summary>
+    /// Convenience for job sites: builds id "job.{key}" (you decide the key, e.g., "forge").
+    /// </summary>
+    public static void OpenJob(
+        string jobKey,
+        string fallbackTitle,
+        string fallbackSubtitle,
+        string fallbackBody,
+        Sprite fallbackIcon = null)
+    {
+        var id = $"job.{jobKey}";
+        InfoRouter.Open(id, fallbackTitle, fallbackSubtitle, fallbackBody, fallbackIcon);
+    }
+
+    /// <summary>
+    /// Generic helper for Titles: always uses the shared "title.generic" InfoContentSO,
+    /// but passes the specific Title's data as fallbacks.
+    /// 
+    /// Make sure you have an InfoContentSO with:
+    ///   id = "title.generic"
+    ///   category = Titles
+    ///   title = (empty, so TitleSO.displayName is used)
+    ///   subtitle = e.g. "Title"
+    ///   body = (empty, so TitleSO.description is used)
+    /// </summary>
+    public static void OpenTitleGeneric(TitleSO title)
+    {
+        if (title == null)
+            return;
+
+        string fallbackTitle      = title.displayName;
+        const string fallbackSubtitle = "Title";
+        string fallbackBody       = title.description;
+
+        // Info asset "title.generic" provides shared formatting / category;
+        // blank title/body let the fallbacks come through.
+        InfoRouter.Open("title.generic", fallbackTitle, fallbackSubtitle, fallbackBody);
+    }
+
+    /// <summary>
+    /// Adapter for older call sites that use (category, key).
+    /// This converts to the string id convention (e.g., "res.credits") and opens the panel.
+    /// </summary>
+    public static void Open(
+        InfoCategory category,
+        string key,
+        string fallbackTitle = null,
+        string fallbackSubtitle = null,
+        string fallbackBody = null,
+        Sprite fallbackIcon = null)
+    {
+        var id = BuildId(category, key);
+        InfoRouter.Open(id, fallbackTitle, fallbackSubtitle, fallbackBody, fallbackIcon);
+    }
+
+    // ---------- helpers ----------
+
+    private static string BuildId(InfoCategory category, string key)
+    {
+        if (string.IsNullOrWhiteSpace(key)) key = "unknown";
+
+        var prefix = category switch
+        {
+            InfoCategory.Resource => "res",
+            InfoCategory.JobSite  => "job",
+            InfoCategory.Tag      => "tag",
+            InfoCategory.Monster  => "mon",
+            InfoCategory.Upgrade  => "upg",
+            InfoCategory.Titles   => "title",
+            _                     => "misc"
+        };
+
+        // keep case as-is, or normalize if you prefer:
+        // key = key.Trim().ToLowerInvariant().Replace(" ", "");
+        return $"{prefix}.{key}";
+    }
+}

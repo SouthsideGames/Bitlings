@@ -17,6 +17,6 @@ MonoBehaviour:
   baseRatePerHour: 120
   storageCap: 1200
   maxWorkers: 3
-  eligibleTypes: 070000000b000000
+  eligibleTypes: 08000000
   icon: {fileID: 21300000, guid: fafca0a3d8c310a47977b7067d879730, type: 3}
   displayName: Quarry

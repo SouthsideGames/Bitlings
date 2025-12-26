@@ -11,18 +11,16 @@ public class ResourceRowUI : MonoBehaviour
 
     [Header("Interaction")]
     [SerializeField] private Button infoButton;
-    [SerializeField] private string infoId; // kept serialized so prefab can still set it if needed
+    [SerializeField] private string infoId;
 
     private ResourceType _type;
     private string _displayName;
-    private Sprite _icon;
 
     // --- NEW: primary bind that includes infoId ---
     public void BindStatic(string displayName, Sprite icon, ResourceType type, string infoId)
     {
         _type = type;
         _displayName = displayName;
-        _icon = icon;
         this.infoId = infoId; // store incoming id
 
         if (nameLabel) nameLabel.text = displayName;
@@ -32,10 +30,6 @@ public class ResourceRowUI : MonoBehaviour
         {
             infoButton.onClick.RemoveAllListeners();
             infoButton.onClick.AddListener(OpenInfo);
-        }
-        else
-        {
-            Debug.LogWarning($"[ResourceRowUI] InfoButton not wired on {name}");
         }
 
         RefreshAmount();
@@ -54,14 +48,15 @@ public class ResourceRowUI : MonoBehaviour
 
     void OpenInfo()
     {
-        // Prefer catalog/prefab-supplied id; fallback to res.{EnumName}
+
         var id = string.IsNullOrWhiteSpace(infoId) ? $"res.{_type}" : infoId;
 
-        // Minimal fallbacks (SO text will override these when present)
         const string fallbackSubtitle = "Resource";
         const string fallbackBody = "Comes from: —\nUsed for: —";
 
-        InfoRouter.Open(id, _displayName, fallbackSubtitle, fallbackBody, _icon);
+        InfoRouter.Open(id, _displayName, fallbackSubtitle, fallbackBody);
+
+        AudioManager.I.PlayClick();
     }
 
     string Format(int n)

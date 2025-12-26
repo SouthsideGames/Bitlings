@@ -15,17 +15,21 @@ MonoBehaviour:
   id: M-012
   displayName: Wispel
   type: 2
+  typeIcon: {fileID: 21300000, guid: dd2adea89cda84ec4a589a6d1d5da1ae, type: 3}
   icon: {fileID: 21300000, guid: 2e1f93dec3f297647b880d3da65be203, type: 3}
   backIcon: {fileID: 21300000, guid: 086909d0a156fae44bb14fe83c5ecdca, type: 3}
   shinyIcon: {fileID: 21300000, guid: ce695ca06beec48d09ed4dedce3beb9e, type: 3}
   shinyBackIcon: {fileID: 21300000, guid: 3a8861b0a320f43d4b075989cff2ba9a, type: 3}
+  rarity: 0
   canBeStarter: 0
   starterWeight: 1
   baseHP: 74
   baseAttack: 42
   baseDefense: 63
   baseSpeed: 31
+  hpRegenPerHour: 6
   fatigueRatePerHour: 0.03
+  fatigueCooldownHours: 8
   baseTrainingXPPerHour: 36
   evolutionStage: 2
   evolutionLevel: 25
@@ -36,7 +40,11 @@ MonoBehaviour:
   bossWeight: 1
   spawnWeight: 3.5
   jobSkill: 1.1
-  rarity: 0
-  tagTrack: {fileID: 11400000, guid: 078c47cb1c154a448a8e5b982fcec6a1, type: 2}
+  titleTrack: {fileID: 11400000, guid: 4d1ba4f728cde43d19992149600440d0, type: 2}
+  defaultAlwaysOnTitles: []
+  Personality: {fileID: 11400000, guid: a31b270cc22594368bd4541ee042d278, type: 2}
+  basicAttackName: Aqua Shot
+  basicAttackPrefab: {fileID: 7604281169824035565, guid: 4065dc449fe6fd94eb31f0e575b94514, type: 3}
+  basicAttackPrefabLifetime: 1
   description: It drifts with the flow of rivers, conserving energy until startled,
     when it bursts into sudden movement.

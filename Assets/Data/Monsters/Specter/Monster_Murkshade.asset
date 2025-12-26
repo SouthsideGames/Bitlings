@@ -15,18 +15,22 @@ MonoBehaviour:
   id: M-041
   displayName: Murkshade
   type: 13
+  typeIcon: {fileID: 21300000, guid: 00ff3f4c0d50247a8915bc882652db22, type: 3}
   icon: {fileID: 21300000, guid: df388733627ed1c4e8cd13cc018195ed, type: 3}
   backIcon: {fileID: 21300000, guid: 26a449f23959da240b55ce256a4b6bbe, type: 3}
   shinyIcon: {fileID: 21300000, guid: da476f8300a140e499a0ea3e2c146caf, type: 3}
   shinyBackIcon: {fileID: 21300000, guid: 74455f7c4dd87c54f8dea3257edee14c, type: 3}
+  rarity: 0
   canBeStarter: 1
   starterWeight: 10
+  maxLevel: 50
   baseHP: 40
   baseAttack: 50
   baseDefense: 30
   baseSpeed: 80
+  hpRegenPerHour: 6
   fatigueRatePerHour: 0.03
-  baseTrainingXPPerHour: 46
+  fatigueCooldownHours: 8
   evolutionStage: 1
   evolutionLevel: 0
   evolutionForm: {fileID: 0}
@@ -36,7 +40,11 @@ MonoBehaviour:
   bossWeight: 1
   spawnWeight: 7
   jobSkill: 1
-  rarity: 0
-  tagTrack: {fileID: 11400000, guid: 4654788ab19f32e4da5d5ed1832fdd41, type: 2}
+  titleTrack: {fileID: 11400000, guid: 4e51ccf95ec91484ca6283dfec70e2af, type: 2}
+  defaultAlwaysOnTitles: []
+  Personality: {fileID: 11400000, guid: ab061081920b544089b918a9f1f3759b, type: 2}
+  basicAttackName: Wraith Touch
+  basicAttackPrefab: {fileID: 9101927626726485638, guid: 257dd9ab5e3cf0544a679d2e444f8d35, type: 3}
+  basicAttackPrefabLifetime: 1
   description: A drifting cloud of cursed smoke. Murkshade fades in and out of sight,
     its glowing eyes the last thing seen before it vanishes.

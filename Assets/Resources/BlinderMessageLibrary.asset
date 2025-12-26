@@ -1,0 +1,17 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9d6d0954545562c449e4c992b9dd5203, type: 3}
+  m_Name: BlinderMessageLibrary
+  m_EditorClassIdentifier: 
+  defaultPack: {fileID: 11400000, guid: acdaed34360255544864872536cc7b71, type: 2}
+  packs:
+  - {fileID: 11400000, guid: d609f7fee1203ab4cbeb920d9669ff5e, type: 2}

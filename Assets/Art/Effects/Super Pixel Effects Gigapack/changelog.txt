@@ -1,0 +1,39 @@
+//////////////////////////////////////////////////
+// SUPER PIXEL EFFECTS GIGAPACK VERSION HISTORY //
+//////////////////////////////////////////////////
+
+This is the changelog for both the free and the paid version.
+The change listings will indicate which version is affected by a given change.
+
+This pack is updated about once per week! My schedule is here: https://untiedgames.com/schedule
+I usually add both new free and paid effects in each update.
+
+//////////////////////////////
+// Version 1.1.0 (11/22/25) //
+//////////////////////////////
+
+New Assets:
+- [Free] Added "Lightning Strike 001" (Lightning/lightning_strike_001)
+- [Paid] Added "Lightning Strike 002A" (Lightning/lightning_strike_002A)
+- [Paid] Added "Lightning Strike 002B" (Lightning/lightning_strike_002B)
+- [Paid] Added "Lightning Strike 003A" (Lightning/lightning_strike_003A)
+- [Paid] Added "Lightning Strike 003B" (Lightning/lightning_strike_003B)
+- [Free] Added "Round Heart Burst 001" (Magic Bursts/round_heart_burst_001)
+- [Free] Added "Directional Impact 003" (Impacts/directional_impact_003)
+- [Free] Added "Directional Impact 004" (Impacts/directional_impact_004)
+
+Fixes:
+- Renamed "Lightning Bursts" category to "Lightning", adjusted spritesheet metadata accordingly
+- Fixed Impacts/symmetrical_impact_001 subfolders having an incorrect naming pattern
+
+General Updates:
+- Added asset_list.txt. This file lists each asset's large and small version and its resolution.
+- Updated guide.txt (Lightning section)
+
+//////////////////////////////
+// Version 1.0.0 (11/16/25) //
+//////////////////////////////
+
+- Initial release. Woohoo!
+- Launched with 34 free effects.
+- Launched with 10 paid effects.

@@ -1,0 +1,23 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 02f3afeb2a2bffb46bbec27716e5a3fe, type: 3}
+  m_Name: T-052
+  m_EditorClassIdentifier: 
+  titleId: T-052
+  displayName: Architect
+  description: Gains +6% HP per stack when hit (max 6 stacks, 2 stacks decay each
+    turn).
+  stat: 3
+  trigger: 0
+  percentPerStack: 6
+  maxStacks: 6
+  decayPerTurn: 2

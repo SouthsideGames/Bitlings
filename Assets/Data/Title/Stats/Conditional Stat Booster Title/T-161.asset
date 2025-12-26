@@ -1,0 +1,23 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0b9dd8c35a5ed0447b9a56c55ae86b7e, type: 3}
+  m_Name: T-161
+  m_EditorClassIdentifier: 
+  titleId: T-161
+  displayName: Editor
+  description: While you have 1 or fewer allies alive, ATK +20.
+  condition: 3
+  threshold01: 0.5
+  countN: 1
+  stat: 1
+  operation: 0
+  value: 20

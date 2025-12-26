@@ -15,17 +15,21 @@ MonoBehaviour:
   id: M-064
   displayName: Pyrranth
   type: 1
+  typeIcon: {fileID: 21300000, guid: d552cfb27992e494694a52b7e3578364, type: 3}
   icon: {fileID: 21300000, guid: 1873dd3e07d3fd9429150720899a966d, type: 3}
   backIcon: {fileID: 21300000, guid: e09a2731b33d54047adce1c97d1660e3, type: 3}
   shinyIcon: {fileID: 21300000, guid: 36b26588093641f438d92b17eaf2be6e, type: 3}
   shinyBackIcon: {fileID: 21300000, guid: f0aaf55ac06701541b4481605cd77f63, type: 3}
+  rarity: 4
   canBeStarter: 0
   starterWeight: 1
   baseHP: 64
   baseAttack: 112
   baseDefense: 64
   baseSpeed: 80
+  hpRegenPerHour: 6
   fatigueRatePerHour: 0.03
+  fatigueCooldownHours: 8
   baseTrainingXPPerHour: 62
   evolutionStage: 1
   evolutionLevel: 0
@@ -36,7 +40,11 @@ MonoBehaviour:
   bossWeight: 1
   spawnWeight: 0
   jobSkill: 2.7
-  rarity: 4
-  tagTrack: {fileID: 11400000, guid: 635ec52b575d97f41bfeb3e0c0e47455, type: 2}
+  titleTrack: {fileID: 11400000, guid: cc291a23cdc25489d90b0b3962e969c1, type: 2}
+  defaultAlwaysOnTitles: []
+  Personality: {fileID: 11400000, guid: 38ced003b48194272ab4cfa8cd9c5d01, type: 2}
+  basicAttackName: Flame Burst
+  basicAttackPrefab: {fileID: 126357351932672970, guid: a7524146891194bc4b7eb73ba1e38b46, type: 3}
+  basicAttackPrefabLifetime: 1
   description: "Its body radiates the heat of molten rock. Pyrranth\u2019s horn glows
     white-hot in battle, able to pierce armor as if it were wax."

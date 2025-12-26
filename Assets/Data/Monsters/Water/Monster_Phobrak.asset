@@ -15,17 +15,21 @@ MonoBehaviour:
   id: M-014
   displayName: Phobrak
   type: 2
+  typeIcon: {fileID: 21300000, guid: dd2adea89cda84ec4a589a6d1d5da1ae, type: 3}
   icon: {fileID: 21300000, guid: ab99683266fdd784db041d5ee8efbaa4, type: 3}
   backIcon: {fileID: 21300000, guid: fa68ddcb87a369c489261be31ec3d0ce, type: 3}
   shinyIcon: {fileID: 21300000, guid: 505f3e3c57b274e8c82c2d01d64ec804, type: 3}
   shinyBackIcon: {fileID: 21300000, guid: 678b3d69655134a2799e77dce865f7ad, type: 3}
+  rarity: 2
   canBeStarter: 0
   starterWeight: 1
   baseHP: 84
   baseAttack: 48
   baseDefense: 72
   baseSpeed: 36
+  hpRegenPerHour: 6
   fatigueRatePerHour: 0.03
+  fatigueCooldownHours: 8
   baseTrainingXPPerHour: 49
   evolutionStage: 1
   evolutionLevel: 0
@@ -36,7 +40,11 @@ MonoBehaviour:
   bossWeight: 1
   spawnWeight: 2.5
   jobSkill: 1.9
-  rarity: 2
-  tagTrack: {fileID: 11400000, guid: df3637f42275a134ebd21d6e73ed2998, type: 2}
+  titleTrack: {fileID: 11400000, guid: 2a54a9fcf3f104e68970f3bcab5faa34, type: 2}
+  defaultAlwaysOnTitles: []
+  Personality: {fileID: 11400000, guid: a31b270cc22594368bd4541ee042d278, type: 2}
+  basicAttackName: Aqua Shot
+  basicAttackPrefab: {fileID: 7604281169824035565, guid: 4065dc449fe6fd94eb31f0e575b94514, type: 3}
+  basicAttackPrefabLifetime: 1
   description: Its many arms writhe constantly, giving off a faint glow. Phobrak
     drifts through dark waters, said to pull travelers into the deep.

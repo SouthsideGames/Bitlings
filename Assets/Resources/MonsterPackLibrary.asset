@@ -1,0 +1,20 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 42403e53d32716e49aac6f334883c645, type: 3}
+  m_Name: MonsterPackLibrary
+  m_EditorClassIdentifier: 
+  packs:
+  - {fileID: 11400000, guid: c250f32f716cb3345abfb9ce8ff091a8, type: 2}
+  - {fileID: 11400000, guid: a8381c0fb16f393499b491e6d1cbb1b5, type: 2}
+  - {fileID: 11400000, guid: 134cf2f36fb7a8a4d9b60699c3aae710, type: 2}
+  - {fileID: 11400000, guid: a5b45b05218c5954a84b0734a6f7cc5d, type: 2}
+  - {fileID: 11400000, guid: b59facf68b9a5f5428fda034f4def22c, type: 2}

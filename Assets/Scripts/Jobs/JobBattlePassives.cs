@@ -23,6 +23,11 @@ public static class JobBattlePassives
     const float CLINIC_TRIAGE_CAP  = 0.20f;
     const float CLINIC_THRESHOLD   = 0.40f;
 
+    // Expedition (Scout’s Edge)
+    const float EXPEDITION_SPEED_BASE = 0.08f, EXPEDITION_SPEED_PER_HOUR = 0.01f, EXPEDITION_SPEED_CAP = 0.15f;
+    const float EXPEDITION_CRIT_BASE  = 0.05f, EXPEDITION_CRIT_PER_HOUR  = 0.005f, EXPEDITION_CRIT_CAP  = 0.10f;
+
+
     public class Ctx
     {
         public JobType job;
@@ -115,6 +120,20 @@ public static class JobBattlePassives
 
             case JobType.Mine:
                 c.attackBonusPct = Mathf.Min(MINE_ATK_PER_HOUR * c.hours, MINE_ATK_CAP); break;
+                
+            case JobType.Expedition:
+                c.speedBuffTurns = 2;
+                c.speedBonusPctFirstTurns = Mathf.Clamp(
+                    EXPEDITION_SPEED_BASE + (EXPEDITION_SPEED_PER_HOUR * c.hours),
+                    0f, EXPEDITION_SPEED_CAP
+                );
+
+                c.critChanceFlat = Mathf.Clamp(
+                    EXPEDITION_CRIT_BASE + (EXPEDITION_CRIT_PER_HOUR * c.hours),
+                    0f, EXPEDITION_CRIT_CAP
+                );
+                break;
+
         }
         return c;
     }

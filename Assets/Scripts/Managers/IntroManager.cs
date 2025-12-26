@@ -1,13 +1,15 @@
 using UnityEngine;
 using UnityEngine.UI;
-using TMPro;
 
 public class IntroManager : MonoBehaviour
 {
     [Header("Panels")]
-    [SerializeField] private PanelId titlePanelId     = PanelId.Intro;          
-    [SerializeField] private PanelId starterPanelId   = PanelId.StarterPicker;
-    [SerializeField] private PanelId homePanelId      = PanelId.Home;           
+    [SerializeField] private PanelId titlePanelId   = PanelId.Intro;
+    [SerializeField] private PanelId starterPanelId = PanelId.StarterPicker;
+    [SerializeField] private PanelId homePanelId    = PanelId.Home;
+
+    [Header("Story Panel")]
+    [SerializeField] private PanelId storyPanelId = PanelId.Story;
 
     [Header("Title Refs")]
     [SerializeField] private RectTransform titleRoot;
@@ -23,30 +25,44 @@ public class IntroManager : MonoBehaviour
     [SerializeField] private float continueFadeOutTime = 0.2f;
 
     [SerializeField] private StarterSelector _starterSelector;
+
     private bool _consumed;
 
     void Awake()
     {
-        if (pressToContinueCanvas) { pressToContinueCanvas.alpha = 0f; pressToContinueCanvas.gameObject.SetActive(true); }
+        if (pressToContinueCanvas)
+        {
+            pressToContinueCanvas.alpha = 0f;
+            pressToContinueCanvas.gameObject.SetActive(true);
+        }
     }
 
     void OnEnable()
     {
-        if (pressToContinueButton) pressToContinueButton.onClick.AddListener(OnPressToContinue);
+        if (pressToContinueButton)
+            pressToContinueButton.onClick.AddListener(OnPressToContinue);
+
+        _consumed = false;
         StartFlash();
     }
 
     void OnDisable()
     {
-        if (pressToContinueButton) pressToContinueButton.onClick.RemoveListener(OnPressToContinue);
+        if (pressToContinueButton)
+            pressToContinueButton.onClick.RemoveListener(OnPressToContinue);
+
         LeanTween.cancel(gameObject);
         if (pressToContinueCanvas) LeanTween.cancel(pressToContinueCanvas.gameObject);
-        if (titleRoot) LeanTween.cancel(titleRoot);
+        if (titleRoot)            LeanTween.cancel(titleRoot);
     }
 
+    // ─────────────────────────────────────────────────────────────
+    // Flash / hint
+    // ─────────────────────────────────────────────────────────────
     void StartFlash()
     {
         if (!pressToContinueCanvas) return;
+
         pressToContinueCanvas.alpha = 0f;
         LeanTween.alphaCanvas(pressToContinueCanvas, 1f, flashDuration)
                  .setEaseInOutSine()
@@ -56,24 +72,38 @@ public class IntroManager : MonoBehaviour
     void StopFlash()
     {
         if (!pressToContinueCanvas) return;
+
         LeanTween.cancel(pressToContinueCanvas.gameObject);
         LeanTween.alphaCanvas(pressToContinueCanvas, 0f, continueFadeOutTime);
     }
 
+    // ─────────────────────────────────────────────────────────────
+    // Continue button
+    // ─────────────────────────────────────────────────────────────
     void OnPressToContinue()
     {
         if (_consumed) return;
+
+        bool hasSeenStory = SaveManager.Data != null && SaveManager.Data.hasSeenStory;
+        bool hasStarter   = SaveManager.Data != null && SaveManager.Data.hasChosenStarter;
+
+        if (!hasSeenStory)
+        {
+            UIManager.I?.Show(storyPanelId);
+            return;
+        }
+
         _consumed = true;
 
         StopFlash();
         if (pressToContinueCanvas)
         {
             pressToContinueCanvas.blocksRaycasts = false;
-            pressToContinueCanvas.interactable = false;
+            pressToContinueCanvas.interactable  = false;
             LeanTween.alphaCanvas(pressToContinueCanvas, 0f, continueFadeOutTime);
         }
 
-        if (SaveManager.Data != null && SaveManager.Data.hasChosenStarter)
+        if (hasStarter)
         {
             UIManager.I?.Show(homePanelId);
             UIManager.I?.Hide(titlePanelId);
@@ -83,6 +113,9 @@ public class IntroManager : MonoBehaviour
         ShowStarterFlow();
     }
 
+    // ─────────────────────────────────────────────────────────────
+    // Starter flow (same as before)
+    // ─────────────────────────────────────────────────────────────
     void ShowStarterFlow()
     {
         if (!titleRoot)
@@ -94,11 +127,15 @@ public class IntroManager : MonoBehaviour
         var startPos = titleRoot.anchoredPosition;
         var endPos   = new Vector2(startPos.x, titleSlideY);
 
-        if (pressToContinueButton) pressToContinueButton.gameObject.SetActive(false);
+        if (pressToContinueButton)
+            pressToContinueButton.gameObject.SetActive(false);
 
         LeanTween.value(gameObject, 0f, 1f, slideTime)
             .setEaseOutCubic()
-            .setOnUpdate((float t) => { titleRoot.anchoredPosition = Vector2.Lerp(startPos, endPos, t); })
+            .setOnUpdate((float t) =>
+            {
+                titleRoot.anchoredPosition = Vector2.Lerp(startPos, endPos, t);
+            })
             .setOnComplete(OpenStarterPanelAndShowSelector);
     }
 
@@ -128,7 +165,7 @@ public class IntroManager : MonoBehaviour
         if (UIManager.I)
         {
             var introRoot = UIManager.I.GetRoot(titlePanelId);
-            bool starterIsUnderIntro = (starterRoot && introRoot) && starterRoot.transform.IsChildOf(introRoot.transform);
+            bool starterIsUnderIntro = starterRoot && introRoot && starterRoot.transform.IsChildOf(introRoot.transform);
 
             if (!starterIsUnderIntro)
             {
@@ -136,14 +173,14 @@ public class IntroManager : MonoBehaviour
             }
             else
             {
-                if (pressToContinueButton) pressToContinueButton.gameObject.SetActive(false);
-                if (pressToContinueCanvas) pressToContinueCanvas.gameObject.SetActive(false);
+                if (pressToContinueButton)  pressToContinueButton.gameObject.SetActive(false);
+                if (pressToContinueCanvas)  pressToContinueCanvas.gameObject.SetActive(false);
             }
         }
 
         if (_starterSelector)
         {
-            _starterSelector.Show(); 
+            _starterSelector.Show();
         }
         else
         {

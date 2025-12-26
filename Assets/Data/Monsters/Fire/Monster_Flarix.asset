@@ -15,17 +15,21 @@ MonoBehaviour:
   id: M-002
   displayName: Flarix
   type: 1
+  typeIcon: {fileID: 21300000, guid: d552cfb27992e494694a52b7e3578364, type: 3}
   icon: {fileID: 21300000, guid: 3af57f1403d43794d965c0d65cb6a370, type: 3}
   backIcon: {fileID: 21300000, guid: 0d587440e2ffecd4bb0ed760a974d872, type: 3}
   shinyIcon: {fileID: 21300000, guid: f572bf755d8964f448047b5c96414851, type: 3}
   shinyBackIcon: {fileID: 21300000, guid: 50acd1d026295a84b923ed2b00d79115, type: 3}
+  rarity: 0
   canBeStarter: 1
   starterWeight: 10
   baseHP: 55
   baseAttack: 65
   baseDefense: 30
   baseSpeed: 50
+  hpRegenPerHour: 6
   fatigueRatePerHour: 0.03
+  fatigueCooldownHours: 8
   baseTrainingXPPerHour: 41
   evolutionStage: 1
   evolutionLevel: 14
@@ -36,7 +40,11 @@ MonoBehaviour:
   bossWeight: 1
   spawnWeight: 7
   jobSkill: 1.1
-  rarity: 0
-  tagTrack: {fileID: 11400000, guid: 1e5a1cd040af475498377d1d074fbb00, type: 2}
+  titleTrack: {fileID: 11400000, guid: 31ce47105b49640978331c4f9dfa6faf, type: 2}
+  defaultAlwaysOnTitles: []
+  Personality: {fileID: 11400000, guid: 3733616cf9f0f4dddb5bee9d6ba2952f, type: 2}
+  basicAttackName: Flame Burst
+  basicAttackPrefab: {fileID: 126357351932672970, guid: a7524146891194bc4b7eb73ba1e38b46, type: 3}
+  basicAttackPrefabLifetime: 1
   description: Small flames dance across its body. Flarix is playful but careless,
     often leaving tiny scorch marks wherever it goes.

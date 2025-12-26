@@ -15,17 +15,21 @@ MonoBehaviour:
   id: M-011
   displayName: Lustris
   type: 2
+  typeIcon: {fileID: 21300000, guid: dd2adea89cda84ec4a589a6d1d5da1ae, type: 3}
   icon: {fileID: 21300000, guid: c9c10012825cd9a4fbafeafd70608d19, type: 3}
   backIcon: {fileID: 21300000, guid: 9468bc8f1ffed7141845a8487f8c388e, type: 3}
   shinyIcon: {fileID: 21300000, guid: a893f43b90f32410087b9bddb723c040, type: 3}
   shinyBackIcon: {fileID: 21300000, guid: 86f3064bf7d374a0781dfea0116ce1f6, type: 3}
+  rarity: 0
   canBeStarter: 1
   starterWeight: 10
   baseHP: 70
   baseAttack: 40
   baseDefense: 60
   baseSpeed: 30
+  hpRegenPerHour: 6
   fatigueRatePerHour: 0.03
+  fatigueCooldownHours: 8
   baseTrainingXPPerHour: 34
   evolutionStage: 1
   evolutionLevel: 14
@@ -36,7 +40,11 @@ MonoBehaviour:
   bossWeight: 1
   spawnWeight: 7
   jobSkill: 1
-  rarity: 0
-  tagTrack: {fileID: 11400000, guid: 880c4bcae222a6d45b7cfcdb2d66a078, type: 2}
+  titleTrack: {fileID: 11400000, guid: 1dff4c7537fd047ffacfef69ad4e9c53, type: 2}
+  defaultAlwaysOnTitles: []
+  Personality: {fileID: 11400000, guid: db9c4a912e52a4c5298eec48842ba111, type: 2}
+  basicAttackName: Aqua Shot
+  basicAttackPrefab: {fileID: 7604281169824035565, guid: 4065dc449fe6fd94eb31f0e575b94514, type: 3}
+  basicAttackPrefabLifetime: 1
   description: Its eyes gleam faintly in shallow pools, luring other Bitlings closer
     before it darts away.

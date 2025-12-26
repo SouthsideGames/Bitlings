@@ -15,17 +15,21 @@ MonoBehaviour:
   id: M-021
   displayName: Petalis
   type: 5
+  typeIcon: {fileID: 21300000, guid: 7503da639a0af47adbd6514de1c118ba, type: 3}
   icon: {fileID: 21300000, guid: 5feb912444feb4cdd98a545d32d2dfe8, type: 3}
   backIcon: {fileID: 21300000, guid: 8867c22238ea8483ca0db8a725dd1274, type: 3}
   shinyIcon: {fileID: 21300000, guid: 808b1547322d3c74dbcd28c871359e9a, type: 3}
   shinyBackIcon: {fileID: 21300000, guid: 45ded08877762f142a1f1dc74a280216, type: 3}
+  rarity: 1
   canBeStarter: 1
   starterWeight: 7
   baseHP: 44
   baseAttack: 77
   baseDefense: 33
   baseSpeed: 66
+  hpRegenPerHour: 6
   fatigueRatePerHour: 0.03
+  fatigueCooldownHours: 8
   baseTrainingXPPerHour: 50
   evolutionStage: 1
   evolutionLevel: 22
@@ -36,7 +40,11 @@ MonoBehaviour:
   bossWeight: 1
   spawnWeight: 5
   jobSkill: 1.1
-  rarity: 1
-  tagTrack: {fileID: 11400000, guid: 8334f9b86e236424f8a70e39b20cfc6a, type: 2}
+  titleTrack: {fileID: 11400000, guid: 8c12844650d0a40e99c1794ffdb092bb, type: 2}
+  defaultAlwaysOnTitles: []
+  Personality: {fileID: 11400000, guid: 29327199089b34217bcb6d621828d70f, type: 2}
+  basicAttackName: Frost Snap
+  basicAttackPrefab: {fileID: 2650955928365913985, guid: f4836eb6d259942b9abe6e0a520af59f, type: 3}
+  basicAttackPrefabLifetime: 1
   description: Formed of clustered ice petals, Petalis drifts quietly in the cold.
     It shivers gently, scattering frost in its wake.

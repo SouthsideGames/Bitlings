@@ -18,5 +18,4 @@ MonoBehaviour:
   subtitle: Resource
   body: 'Comes from: Power Plant
 
-    Used for: Start Encounters'
-  icon: {fileID: 21300000, guid: 2ccdfb270fcfafd42abc29ed8eac1b6c, type: 3}
+    Needed to start encounters'

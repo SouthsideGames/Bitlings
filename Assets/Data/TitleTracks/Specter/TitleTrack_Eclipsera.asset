@@ -1,0 +1,30 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: af7b65046e5bb554c808c8500b10fe7d, type: 3}
+  m_Name: TitleTrack_Eclipsera
+  m_EditorClassIdentifier: 
+  tiers:
+  - levelRequired: 1
+    unlockChoices:
+    - {fileID: 11400000, guid: 9054898f6113d4732815c148a99d8ec1, type: 2}
+  - levelRequired: 4
+    unlockChoices:
+    - {fileID: 11400000, guid: 9e9b9b238a7883944b1ea5a1529b9f5f, type: 2}
+  - levelRequired: 8
+    unlockChoices:
+    - {fileID: 11400000, guid: 0c24bb049421e11448fd6d17f9b875ef, type: 2}
+  - levelRequired: 12
+    unlockChoices:
+    - {fileID: 11400000, guid: 808a9893dcec3453fb0c8882bb6f3f0c, type: 2}
+  - levelRequired: 15
+    unlockChoices:
+    - {fileID: 11400000, guid: 5bd02f24d4b260c488c9b44025df5919, type: 2}

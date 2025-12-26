@@ -1,0 +1,36 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ed8ea6f1294e98a4abf3e16d234951bf, type: 3}
+  m_Name: Default
+  m_EditorClassIdentifier: 
+  languageCode: en
+  entries:
+  - line: "The air feels different\u2026 something\u2019s nearby."
+    weight: 0
+  - line: I sense a spark of power ahead!
+    weight: 0
+  - line: "Let\u2019s see what fate throws at us this time."
+    weight: 0
+  - line: "Hope you stretched\u2014this might get messy."
+    weight: 0
+  - line: Another day, another wild creature to tame!
+    weight: 0
+  - line: "Even the wind\u2019s holding its breath\u2026"
+    weight: 0
+  - line: "Don\u2019t blink. The next one could be shiny!"
+    weight: 0
+  - line: "Stay sharp\u2014luck favors the alert."
+    weight: 0
+  - line: "I\u2019ve got a feeling about this one."
+    weight: 0
+  - line: "Every encounter\u2019s a step toward greatness."
+    weight: 0

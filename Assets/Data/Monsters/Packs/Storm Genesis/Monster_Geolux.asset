@@ -1,0 +1,51 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 32ffc26ed7d444b02a9332ce4279b117, type: 3}
+  m_Name: Monster_Geolux
+  m_EditorClassIdentifier: 
+  id: M-082
+  displayName: Geolux
+  type: 4
+  typeIcon: {fileID: 21300000, guid: e57a940f3027d4a9f83f25cefbc6d738, type: 3}
+  icon: {fileID: 21300000, guid: 1f5cb17a2e30443d9bf821b832cca29f, type: 3}
+  backIcon: {fileID: 21300000, guid: 2dd6fd5a042de422e95f701dcc810b61, type: 3}
+  shinyIcon: {fileID: 21300000, guid: 091caded916c74cf3bc3ec644592f90f, type: 3}
+  shinyBackIcon: {fileID: 21300000, guid: 1a84780262d69084b9c74d21bd5dacf5, type: 3}
+  rarity: 2
+  canBeStarter: 0
+  starterWeight: 1
+  maxLevel: 50
+  baseHP: 48
+  baseAttack: 72
+  baseDefense: 48
+  baseSpeed: 72
+  hpRegenPerHour: 6
+  fatigueRatePerHour: 0.05
+  fatigueCooldownHours: 6
+  evolutionStage: 1
+  evolutionLevel: 0
+  evolutionForm: {fileID: 0}
+  uncatchable: 0
+  isBoss: 0
+  bossJobDebuffs: []
+  bossWeight: 1
+  spawnWeight: 0
+  jobSkill: 1.45
+  titleTrack: {fileID: 11400000, guid: 36668e4a8ace3a54f950bbb49e9bf582, type: 2}
+  defaultAlwaysOnTitles: []
+  Personality: {fileID: 11400000, guid: 7d846af7498e249aeb01ccfca94e14f2, type: 2}
+  basicAttackName: Spark Bolt
+  basicAttackPrefab: {fileID: 4179996368917665753, guid: 77ce3f8bf17474b06ac473e26248a299, type: 3}
+  basicAttackPrefabLifetime: 1
+  description: Geolux radiates a steady glow from its crystalline core. Facilities
+    built near its habitat report unexplained surges in power and perfect energy
+    stability.

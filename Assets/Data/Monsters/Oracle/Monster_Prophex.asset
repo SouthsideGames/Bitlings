@@ -15,18 +15,22 @@ MonoBehaviour:
   id: M-052
   displayName: Prophex
   type: 10
+  typeIcon: {fileID: 21300000, guid: fb4479ed54fe64621a9e7a735eeffad8, type: 3}
   icon: {fileID: 21300000, guid: da6cc47de0ae19e4fa4eb152367924b5, type: 3}
   backIcon: {fileID: 21300000, guid: fe7ffe8066df7a346b0ca23653780a01, type: 3}
   shinyIcon: {fileID: 21300000, guid: b17a9d556cae6784fadb5d5b29ab591d, type: 3}
   shinyBackIcon: {fileID: 21300000, guid: a511f384f57394e4487bcc5fbff115a3, type: 3}
+  rarity: 3
   canBeStarter: 0
   starterWeight: 1
+  maxLevel: 50
   baseHP: 52
   baseAttack: 52
   baseDefense: 52
   baseSpeed: 104
+  hpRegenPerHour: 6
   fatigueRatePerHour: 0.03
-  baseTrainingXPPerHour: 71
+  fatigueCooldownHours: 8
   evolutionStage: 1
   evolutionLevel: 0
   evolutionForm: {fileID: 0}
@@ -36,7 +40,11 @@ MonoBehaviour:
   bossWeight: 1
   spawnWeight: 1.5
   jobSkill: 2.2
-  rarity: 3
-  tagTrack: {fileID: 11400000, guid: 5db11a46ef3bbef4689729ba5718dcd3, type: 2}
+  titleTrack: {fileID: 11400000, guid: 49f56f588f2fd410bb7c964a447c5bf0, type: 2}
+  defaultAlwaysOnTitles: []
+  Personality: {fileID: 11400000, guid: c888a14ff8e93443e99af03360015689, type: 2}
+  basicAttackName: Foresight Beam
+  basicAttackPrefab: {fileID: 7907104310462883121, guid: 37212b887c61ad84eacd87133a8a9e9d, type: 3}
+  basicAttackPrefabLifetime: 1
   description: "Its visions pierce into the darkest corners of fate. Prophex\u2019s
     warnings are often riddles, whispered moments before disaster strikes."

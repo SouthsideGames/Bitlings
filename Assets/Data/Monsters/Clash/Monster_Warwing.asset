@@ -15,17 +15,21 @@ MonoBehaviour:
   id: M-056
   displayName: Warwing
   type: 6
+  typeIcon: {fileID: 21300000, guid: 08b8f2b54695d465cb15062c5b76b5a4, type: 3}
   icon: {fileID: 21300000, guid: 707be0fca7451c94ab57ef41d93a5063, type: 3}
   backIcon: {fileID: 21300000, guid: baf4276ae080df84bbf48fdea4b956c7, type: 3}
   shinyIcon: {fileID: 21300000, guid: b19ac954b0eadee49a2d62d04bdf6eda, type: 3}
   shinyBackIcon: {fileID: 21300000, guid: 0efbb0ce15f09554e83d1bf275d3701e, type: 3}
+  rarity: 2
   canBeStarter: 0
   starterWeight: 1
   baseHP: 60
   baseAttack: 84
   baseDefense: 48
   baseSpeed: 48
+  hpRegenPerHour: 6
   fatigueRatePerHour: 0.03
+  fatigueCooldownHours: 8
   baseTrainingXPPerHour: 54
   evolutionStage: 1
   evolutionLevel: 0
@@ -36,7 +40,11 @@ MonoBehaviour:
   bossWeight: 1
   spawnWeight: 2.5
   jobSkill: 1.9
-  rarity: 2
-  tagTrack: {fileID: 11400000, guid: a768b254c076c3e458d2335f6da81e3e, type: 2}
+  titleTrack: {fileID: 11400000, guid: d4385911aef514acb98cd4e7a951eea3, type: 2}
+  defaultAlwaysOnTitles: []
+  Personality: {fileID: 11400000, guid: 3733616cf9f0f4dddb5bee9d6ba2952f, type: 2}
+  basicAttackName: Impact Blow
+  basicAttackPrefab: {fileID: 5406408022945852380, guid: a106796f95643465ab9883d4b5161f50, type: 3}
+  basicAttackPrefabLifetime: 1
   description: Each beat of its wings strikes like a battle drum. Warwing challenges
     all it sees, refusing to back down from any foe.

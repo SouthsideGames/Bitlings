@@ -15,17 +15,21 @@ MonoBehaviour:
   id: M-003
   displayName: Scorchal
   type: 1
+  typeIcon: {fileID: 21300000, guid: d552cfb27992e494694a52b7e3578364, type: 3}
   icon: {fileID: 21300000, guid: 0cefc01776e6aa241b31e0183462edd9, type: 3}
   backIcon: {fileID: 21300000, guid: d939207a7339a4f4d804a9a636c18cf3, type: 3}
   shinyIcon: {fileID: 21300000, guid: 1f6e5e99e4d52443d8d2ff4497e15c9d, type: 3}
   shinyBackIcon: {fileID: 21300000, guid: 5f7f040e55f6c4c79802f9f26bdafbbb, type: 3}
+  rarity: 0
   canBeStarter: 0
   starterWeight: 1
   baseHP: 60
   baseAttack: 70
   baseDefense: 35
   baseSpeed: 45
+  hpRegenPerHour: 6
   fatigueRatePerHour: 0.03
+  fatigueCooldownHours: 8
   baseTrainingXPPerHour: 41
   evolutionStage: 2
   evolutionLevel: 25
@@ -36,7 +40,11 @@ MonoBehaviour:
   bossWeight: 1
   spawnWeight: 3.5
   jobSkill: 1.2
-  rarity: 0
-  tagTrack: {fileID: 11400000, guid: 4f002f9e0e5b9814ea5af8c0a5ae7362, type: 2}
+  titleTrack: {fileID: 11400000, guid: 96feca965c49345a2a8e6a499487b997, type: 2}
+  defaultAlwaysOnTitles: []
+  Personality: {fileID: 11400000, guid: 29327199089b34217bcb6d621828d70f, type: 2}
+  basicAttackName: Flame Burst
+  basicAttackPrefab: {fileID: 126357351932672970, guid: a7524146891194bc4b7eb73ba1e38b46, type: 3}
+  basicAttackPrefabLifetime: 1
   description: The flames on its back grow wilder as it matures. Scorchal is known
     to challenge others with bursts of fire to prove its strength.

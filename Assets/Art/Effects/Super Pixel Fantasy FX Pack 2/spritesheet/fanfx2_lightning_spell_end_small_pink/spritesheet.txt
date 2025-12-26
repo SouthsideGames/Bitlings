@@ -1,0 +1,2 @@
+fanfx2_lightning_spell_end_small_pink/frame0000.png = 0 0 32 64
+fanfx2_lightning_spell_end_small_pink/frame0001.png = 32 0 32 64

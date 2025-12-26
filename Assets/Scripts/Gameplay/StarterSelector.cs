@@ -23,8 +23,16 @@ public class StarterSelector : MonoBehaviour
     [SerializeField, Min(1)] private int maxNumberOfStarters = 4;
 
     [Header("Starter Filters")]
-    [SerializeField] private int minHpAtLv1  = 22;
+    [SerializeField] private int minHpAtLv1 = 22;
     [SerializeField] private int minAtkAtLv1 = 6;
+
+    [Header("Swipe Browse (Detail Panel)")]
+    [Tooltip("If true, Starter detail supports swipe to browse between the currently shown starters.")]
+    [SerializeField] private bool enableSwipeBrowseInDetail = true;
+
+    [Header("Tutorial (optional)")]
+    [SerializeField] private bool triggerHomeTutorialAfterChoosingStarter = true;
+    [SerializeField] private string homeTutorialKey = "tut_home_v1"; // must match TutorialOverlayPanel.tutorialKey
 
     [Header("Debug")]
     [Tooltip("Bypass the MonsterDetail panel entirely. Click chooses immediately.")]
@@ -34,9 +42,13 @@ public class StarterSelector : MonoBehaviour
     private bool _locked;
     private Coroutine _openCR;
 
+    // cached browse list for detail panel (only valid starters, in UI order)
+    private readonly List<MonsterDataSO> _starterBrowseList = new List<MonsterDataSO>();
+
     void Awake()
     {
         if (starterButtons == null) return;
+
         for (int i = 0; i < starterButtons.Length; i++)
         {
             if (!starterButtons[i]) continue;
@@ -49,6 +61,7 @@ public class StarterSelector : MonoBehaviour
     void OnEnable()
     {
         _locked = false;
+
         if (SaveManager.Data == null || !SaveManager.Data.hasChosenStarter)
             Show();
     }
@@ -60,9 +73,12 @@ public class StarterSelector : MonoBehaviour
             StopCoroutine(_openCR);
             _openCR = null;
         }
+
         _locked = false;
         SetButtonsInteractable(true);
-        if (EventSystem.current) EventSystem.current.SetSelectedGameObject(null);
+
+        if (EventSystem.current)
+            EventSystem.current.SetSelectedGameObject(null);
     }
 
     public void Show()
@@ -86,6 +102,15 @@ public class StarterSelector : MonoBehaviour
 
         var pool = BuildStarterPool(lib);
         _starters = PickDailyDiverse(pool, count);
+
+        // Build the browse list once (valid only; matches button order)
+        _starterBrowseList.Clear();
+        for (int i = 0; i < count; i++)
+        {
+            var d = _starters[i];
+            if (d != null && !string.IsNullOrEmpty(d.id))
+                _starterBrowseList.Add(d);
+        }
 
         for (int i = 0; i < starterButtons.Length; i++)
         {
@@ -127,26 +152,30 @@ public class StarterSelector : MonoBehaviour
 
                 if (bypassDetailPanelForDebug)
                 {
-                    // BYPASS: choose immediately, no detail panel
                     btn.onClick.AddListener(() =>
                     {
                         if (_locked) return;
                         if (EventSystem.current) EventSystem.current.SetSelectedGameObject(null);
+
                         _locked = true;
                         SetButtonsInteractable(false);
+
                         Debug.Log($"[StarterSelector][BYPASS] Choosing starter: {capturedDef.id}");
                         Choose(capturedDef);
                     });
                 }
                 else
                 {
-                    // NORMAL: open detail panel first
+                    // compute browse index inside the browse list (not necessarily equal to i if nulls exist)
+                    int browseIndex = IndexInBrowseList(capturedDef);
+
                     btn.onClick.AddListener(() =>
                     {
                         if (_locked) return;
                         if (EventSystem.current) EventSystem.current.SetSelectedGameObject(null);
+
                         if (_openCR != null) StopCoroutine(_openCR);
-                        _openCR = StartCoroutine(OpenDetailNextFrame(capturedDef));
+                        _openCR = StartCoroutine(OpenDetailNextFrame(capturedDef, browseIndex));
                     });
                 }
 
@@ -159,10 +188,11 @@ public class StarterSelector : MonoBehaviour
             }
         }
 
-        if (EventSystem.current) EventSystem.current.SetSelectedGameObject(null);
+        if (EventSystem.current)
+            EventSystem.current.SetSelectedGameObject(null);
     }
 
-    IEnumerator OpenDetailNextFrame(MonsterDataSO defLocal)
+    IEnumerator OpenDetailNextFrame(MonsterDataSO defLocal, int browseIndex)
     {
         if (_locked || defLocal == null)
         {
@@ -186,6 +216,15 @@ public class StarterSelector : MonoBehaviour
 
         try
         {
+            // NEW: Provide browse context to the detail panel so it can swipe left/right
+            // NOTE: MonsterDetailPanelUI must implement these methods.
+            if (enableSwipeBrowseInDetail)
+            {
+                // Expected API in MonsterDetailPanelUI:
+                // - SetStarterBrowseContext(IReadOnlyList<MonsterDataSO> list, int startIndex)
+                detailPanel.SetStarterBrowseContext(_starterBrowseList, Mathf.Clamp(browseIndex, 0, _starterBrowseList.Count - 1));
+            }
+
             detailPanel.ShowStarter(
                 defLocal,
                 onConfirmCallback: OnConfirmDetail,
@@ -208,11 +247,16 @@ public class StarterSelector : MonoBehaviour
     {
         _locked = false;
         SetButtonsInteractable(true);
-        if (EventSystem.current) EventSystem.current.SetSelectedGameObject(null);
+
+        if (EventSystem.current)
+            EventSystem.current.SetSelectedGameObject(null);
     }
 
     void OnConfirmDetail(MonsterDataSO chosen) => Choose(chosen);
 
+    // =========================================================================
+    // Starter choose flow
+    // =========================================================================
     void Choose(MonsterDataSO pick)
     {
         if (pick == null || string.IsNullOrEmpty(pick.id))
@@ -226,13 +270,24 @@ public class StarterSelector : MonoBehaviour
         try
         {
             Debug.Log($"[StarterSelector] GrantStarter -> {pick.id}");
+
+            // This already saves, and may raise StarterChosen (via SaveManager.GrantStarter).
             SaveManager.GrantStarter(pick.id, 1);
+
+            // Ensure runtime sets are present NOW (fixes “works after relaunch” symptoms)
+            if (SaveManager.Data != null)
+                SaveManager.Data.EnsureTransientSets();
+
+            // Apply unlocks (may Save internally). We still broadcast after our final Save().
+            if (JobManager.I != null)
+                JobManager.I.ApplyStarterUnlocksNow(pick.type);
 
             if (SaveManager.Data != null)
             {
                 SaveManager.Data.hasChosenStarter = true;
 
-                var lib  = MonsterLibraryLocator.Lib;
+                // Ensure new team member(s) have valid HP
+                var lib = MonsterLibraryLocator.Lib;
                 var team = SaveManager.Data.team;
                 if (lib && team != null && team.Count > 0)
                 {
@@ -240,10 +295,12 @@ public class StarterSelector : MonoBehaviour
                     {
                         var om = team[i];
                         if (om == null || string.IsNullOrEmpty(om.monsterId)) continue;
+
                         if (om.currentHP <= 0)
                         {
                             var def = lib.GetById(om.monsterId);
                             if (!def) continue;
+
                             int maxHP = Mathf.RoundToInt(BattleCalc.CalcHP(def, Mathf.Max(1, om.level)));
                             om.currentHP = Mathf.Max(1, maxHP);
                             team[i] = om;
@@ -251,7 +308,22 @@ public class StarterSelector : MonoBehaviour
                     }
                 }
 
+                // FINAL authoritative save for everything we changed above.
                 SaveManager.Save();
+
+                // Rebuild transient sets again after Save (defensive; avoids stale in-memory state)
+                SaveManager.Data.EnsureTransientSets();
+            }
+
+            // Broadcast AFTER Save so listeners read consistent state.
+            try { GameEvents.OnJobsChanged?.Invoke(); } catch { }
+            try { GameEvents.OnTeamChanged?.Invoke(); } catch { }
+
+            // Force views to refresh both immediately and next frame (covers enable-order issues)
+            if (JobManager.I != null)
+            {
+                try { JobManager.I.RefreshAllJobSiteViewsInScene(); } catch { }
+                StartCoroutine(RefreshJobsNextFrame());
             }
 
             StartCoroutine(RouteNextFrame());
@@ -264,21 +336,40 @@ public class StarterSelector : MonoBehaviour
         }
     }
 
+    private IEnumerator RefreshJobsNextFrame()
+    {
+        yield return null;
+
+        // Ensure sets are present before refresh reads them
+        SaveManager.Data?.EnsureTransientSets();
+
+        if (JobManager.I != null)
+        {
+            try { JobManager.I.RefreshAllJobSiteViewsInScene(); } catch { }
+        }
+
+        try { GameEvents.OnJobsChanged?.Invoke(); } catch { }
+    }
+
     IEnumerator RouteNextFrame()
     {
         yield return null;
 
         if (UIManager.I != null)
         {
-            if (selfPanelId  != PanelId.None) UIManager.I.Hide(selfPanelId);
+            if (selfPanelId != PanelId.None) UIManager.I.Hide(selfPanelId);
             if (introPanelId != PanelId.None) UIManager.I.Hide(introPanelId);
             if (routeToHomeOnChoose && homePanelId != PanelId.None)
                 UIManager.I.Show(homePanelId);
         }
 
+        TryOpenHomeTutorial();
+
         _locked = false;
         SetButtonsInteractable(true);
-        if (EventSystem.current) EventSystem.current.SetSelectedGameObject(null);
+
+        if (EventSystem.current)
+            EventSystem.current.SetSelectedGameObject(null);
     }
 
     void SetButtonsInteractable(bool on)
@@ -293,6 +384,18 @@ public class StarterSelector : MonoBehaviour
         var t = btn.transform.Find("Icon");
         if (t) return t.GetComponent<Image>();
         return btn.GetComponentInChildren<Image>(true);
+    }
+
+    int IndexInBrowseList(MonsterDataSO def)
+    {
+        if (def == null || _starterBrowseList == null || _starterBrowseList.Count == 0)
+            return 0;
+
+        for (int i = 0; i < _starterBrowseList.Count; i++)
+            if (_starterBrowseList[i] == def || (_starterBrowseList[i] && _starterBrowseList[i].id == def.id))
+                return i;
+
+        return 0;
     }
 
     // =========================
@@ -310,7 +413,7 @@ public class StarterSelector : MonoBehaviour
             .Where(m => m.canBeStarter)
             .Where(m =>
             {
-                int hp1  = Mathf.RoundToInt(BattleCalc.CalcHP(m, 1));
+                int hp1 = Mathf.RoundToInt(BattleCalc.CalcHP(m, 1));
                 int atk1 = Mathf.RoundToInt(BattleCalc.CalcBaseAttack(m, 1, 0, 0));
                 return hp1 >= minHpAtLv1 && atk1 >= minAtkAtLv1;
             })
@@ -376,6 +479,7 @@ public class StarterSelector : MonoBehaviour
         var key = (SaveManager.Data != null && !string.IsNullOrEmpty(SaveManager.Data.playerId))
                   ? SaveManager.Data.playerId
                   : SystemInfo.deviceUniqueIdentifier;
+
         return string.IsNullOrEmpty(key) ? "fallback" : key;
     }
 
@@ -387,5 +491,31 @@ public class StarterSelector : MonoBehaviour
             for (int i = 0; i < s.Length; i++) h = h * 31 + s[i];
             return h;
         }
+    }
+
+    private void TryOpenHomeTutorial()
+    {
+        if (!triggerHomeTutorialAfterChoosingStarter) return;
+        if (UIManager.I == null) return;
+
+        var homeRoot = UIManager.I.GetRoot(homePanelId);
+        if (!homeRoot) return;
+
+        var overlays = homeRoot.GetComponentsInChildren<TutorialOverlayPanel>(true);
+        if (overlays == null || overlays.Length == 0) return;
+
+        for (int i = 0; i < overlays.Length; i++)
+        {
+            var o = overlays[i];
+            if (!o) continue;
+
+            if (o.MatchesKey(homeTutorialKey))
+            {
+                o.TryOpen();
+                return;
+            }
+        }
+
+        overlays[0].TryOpen();
     }
 }
