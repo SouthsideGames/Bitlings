@@ -12,7 +12,7 @@ public class StarterSelector : MonoBehaviour
     [Header("Routing")]
     [SerializeField] private PanelId selfPanelId = PanelId.StarterPicker;
     [SerializeField] private PanelId introPanelId = PanelId.Intro;
-    [SerializeField] private PanelId homePanelId = PanelId.Home;
+    [SerializeField] private PanelId homePanelId  = PanelId.Home;
 
     [Tooltip("If true, this class routes to Home after choosing. If false, leave routing to caller.")]
     [SerializeField] private bool routeToHomeOnChoose = true;
@@ -26,10 +26,13 @@ public class StarterSelector : MonoBehaviour
     [SerializeField] private int minHpAtLv1 = 22;
     [SerializeField] private int minAtkAtLv1 = 6;
 
+    [Header("Swipe Browse (Detail Panel)")]
+    [Tooltip("If true, Starter detail supports swipe to browse between the currently shown starters.")]
+    [SerializeField] private bool enableSwipeBrowseInDetail = true;
+
     [Header("Tutorial (optional)")]
     [SerializeField] private bool triggerHomeTutorialAfterChoosingStarter = true;
     [SerializeField] private string homeTutorialKey = "tut_home_v1"; // must match TutorialOverlayPanel.tutorialKey
-
 
     [Header("Debug")]
     [Tooltip("Bypass the MonsterDetail panel entirely. Click chooses immediately.")]
@@ -39,9 +42,13 @@ public class StarterSelector : MonoBehaviour
     private bool _locked;
     private Coroutine _openCR;
 
+    // cached browse list for detail panel (only valid starters, in UI order)
+    private readonly List<MonsterDataSO> _starterBrowseList = new List<MonsterDataSO>();
+
     void Awake()
     {
         if (starterButtons == null) return;
+
         for (int i = 0; i < starterButtons.Length; i++)
         {
             if (!starterButtons[i]) continue;
@@ -54,6 +61,7 @@ public class StarterSelector : MonoBehaviour
     void OnEnable()
     {
         _locked = false;
+
         if (SaveManager.Data == null || !SaveManager.Data.hasChosenStarter)
             Show();
     }
@@ -65,9 +73,12 @@ public class StarterSelector : MonoBehaviour
             StopCoroutine(_openCR);
             _openCR = null;
         }
+
         _locked = false;
         SetButtonsInteractable(true);
-        if (EventSystem.current) EventSystem.current.SetSelectedGameObject(null);
+
+        if (EventSystem.current)
+            EventSystem.current.SetSelectedGameObject(null);
     }
 
     public void Show()
@@ -91,6 +102,15 @@ public class StarterSelector : MonoBehaviour
 
         var pool = BuildStarterPool(lib);
         _starters = PickDailyDiverse(pool, count);
+
+        // Build the browse list once (valid only; matches button order)
+        _starterBrowseList.Clear();
+        for (int i = 0; i < count; i++)
+        {
+            var d = _starters[i];
+            if (d != null && !string.IsNullOrEmpty(d.id))
+                _starterBrowseList.Add(d);
+        }
 
         for (int i = 0; i < starterButtons.Length; i++)
         {
@@ -136,20 +156,26 @@ public class StarterSelector : MonoBehaviour
                     {
                         if (_locked) return;
                         if (EventSystem.current) EventSystem.current.SetSelectedGameObject(null);
+
                         _locked = true;
                         SetButtonsInteractable(false);
+
                         Debug.Log($"[StarterSelector][BYPASS] Choosing starter: {capturedDef.id}");
                         Choose(capturedDef);
                     });
                 }
                 else
                 {
+                    // compute browse index inside the browse list (not necessarily equal to i if nulls exist)
+                    int browseIndex = IndexInBrowseList(capturedDef);
+
                     btn.onClick.AddListener(() =>
                     {
                         if (_locked) return;
                         if (EventSystem.current) EventSystem.current.SetSelectedGameObject(null);
+
                         if (_openCR != null) StopCoroutine(_openCR);
-                        _openCR = StartCoroutine(OpenDetailNextFrame(capturedDef));
+                        _openCR = StartCoroutine(OpenDetailNextFrame(capturedDef, browseIndex));
                     });
                 }
 
@@ -162,10 +188,11 @@ public class StarterSelector : MonoBehaviour
             }
         }
 
-        if (EventSystem.current) EventSystem.current.SetSelectedGameObject(null);
+        if (EventSystem.current)
+            EventSystem.current.SetSelectedGameObject(null);
     }
 
-    IEnumerator OpenDetailNextFrame(MonsterDataSO defLocal)
+    IEnumerator OpenDetailNextFrame(MonsterDataSO defLocal, int browseIndex)
     {
         if (_locked || defLocal == null)
         {
@@ -189,6 +216,15 @@ public class StarterSelector : MonoBehaviour
 
         try
         {
+            // NEW: Provide browse context to the detail panel so it can swipe left/right
+            // NOTE: MonsterDetailPanelUI must implement these methods.
+            if (enableSwipeBrowseInDetail)
+            {
+                // Expected API in MonsterDetailPanelUI:
+                // - SetStarterBrowseContext(IReadOnlyList<MonsterDataSO> list, int startIndex)
+                detailPanel.SetStarterBrowseContext(_starterBrowseList, Mathf.Clamp(browseIndex, 0, _starterBrowseList.Count - 1));
+            }
+
             detailPanel.ShowStarter(
                 defLocal,
                 onConfirmCallback: OnConfirmDetail,
@@ -211,17 +247,15 @@ public class StarterSelector : MonoBehaviour
     {
         _locked = false;
         SetButtonsInteractable(true);
-        if (EventSystem.current) EventSystem.current.SetSelectedGameObject(null);
+
+        if (EventSystem.current)
+            EventSystem.current.SetSelectedGameObject(null);
     }
 
     void OnConfirmDetail(MonsterDataSO chosen) => Choose(chosen);
 
     // =========================================================================
-    // IMPORTANT UPDATE:
-    // - After selecting a starter, we ensure SaveManager transient sets are rebuilt
-    // - We apply starter unlocks
-    // - We force Save() AND broadcast OnJobsChanged (and OnTeamChanged) AFTER save
-    // - We also force an immediate UI refresh on the next frame
+    // Starter choose flow
     // =========================================================================
     void Choose(MonsterDataSO pick)
     {
@@ -266,6 +300,7 @@ public class StarterSelector : MonoBehaviour
                         {
                             var def = lib.GetById(om.monsterId);
                             if (!def) continue;
+
                             int maxHP = Mathf.RoundToInt(BattleCalc.CalcHP(def, Mathf.Max(1, om.level)));
                             om.currentHP = Mathf.Max(1, maxHP);
                             team[i] = om;
@@ -332,7 +367,9 @@ public class StarterSelector : MonoBehaviour
 
         _locked = false;
         SetButtonsInteractable(true);
-        if (EventSystem.current) EventSystem.current.SetSelectedGameObject(null);
+
+        if (EventSystem.current)
+            EventSystem.current.SetSelectedGameObject(null);
     }
 
     void SetButtonsInteractable(bool on)
@@ -347,6 +384,18 @@ public class StarterSelector : MonoBehaviour
         var t = btn.transform.Find("Icon");
         if (t) return t.GetComponent<Image>();
         return btn.GetComponentInChildren<Image>(true);
+    }
+
+    int IndexInBrowseList(MonsterDataSO def)
+    {
+        if (def == null || _starterBrowseList == null || _starterBrowseList.Count == 0)
+            return 0;
+
+        for (int i = 0; i < _starterBrowseList.Count; i++)
+            if (_starterBrowseList[i] == def || (_starterBrowseList[i] && _starterBrowseList[i].id == def.id))
+                return i;
+
+        return 0;
     }
 
     // =========================
@@ -430,6 +479,7 @@ public class StarterSelector : MonoBehaviour
         var key = (SaveManager.Data != null && !string.IsNullOrEmpty(SaveManager.Data.playerId))
                   ? SaveManager.Data.playerId
                   : SystemInfo.deviceUniqueIdentifier;
+
         return string.IsNullOrEmpty(key) ? "fallback" : key;
     }
 
@@ -442,7 +492,7 @@ public class StarterSelector : MonoBehaviour
             return h;
         }
     }
-    
+
     private void TryOpenHomeTutorial()
     {
         if (!triggerHomeTutorialAfterChoosingStarter) return;
@@ -468,5 +518,4 @@ public class StarterSelector : MonoBehaviour
 
         overlays[0].TryOpen();
     }
-
 }

@@ -5,11 +5,13 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using UnityEngine.InputSystem; // NEW (Input System package)
 
 public enum MonsterDetailMode
 {
     StarterSelect,
-    AssignToTeam
+    AssignToTeam,
+    CodexView
 }
 
 public class MonsterDetailPanelUI : MonoBehaviour
@@ -88,6 +90,19 @@ public class MonsterDetailPanelUI : MonoBehaviour
     [SerializeField] private bool safeSkipMonsterIcon = true;
     [SerializeField] private bool buildVerboseLogging;
 
+    [Header("Swipe Browse (Codex / Starter)")]
+    [Tooltip("Enable swipe-to-browse in Codex and Starter detail views.")]
+    [SerializeField] private bool enableSwipeBrowse = true;
+
+    [Tooltip("Swipe distance in pixels before a browse triggers.")]
+    [SerializeField] private float swipeMinPixels = 90f;
+
+    [Tooltip("Max vertical deviation allowed for a horizontal swipe (pixels).")]
+    [SerializeField] private float swipeMaxVerticalPixels = 120f;
+
+    [Tooltip("Cooldown between browse actions (seconds).")]
+    [SerializeField] private float swipeBrowseCooldown = 0.20f;
+
     private enum RenderStage { None, Header, StatsEvo, Description, TypeIcons, Done }
     private RenderStage _stage = RenderStage.None;
     private Coroutine _stageCR;
@@ -103,7 +118,18 @@ public class MonsterDetailPanelUI : MonoBehaviour
 
     private bool _visible;
 
-    private static readonly Dictionary<MonsterType, Color> TYPE_COLORS = new()
+    // ─────────────────────────────────────────────────────────────
+    // Browse session (Codex/Starter swipe)
+    // ─────────────────────────────────────────────────────────────
+    private IReadOnlyList<MonsterDataSO> _browseDefs;
+    private int _browseIndex = -1;
+    private bool _browseWrap = true;
+
+    private bool _swipeTracking;
+    private Vector2 _swipeStartPos;
+    private float _lastBrowseAt;
+
+    private static readonly Dictionary<MonsterType, Color> TYPE_COLORS = new Dictionary<MonsterType, Color>()
     {
         { MonsterType.Fire,     new Color32(230, 74,  25,255) },
         { MonsterType.Water,    new Color32( 30,136, 229,255) },
@@ -123,7 +149,7 @@ public class MonsterDetailPanelUI : MonoBehaviour
         { MonsterType.Alloy,    new Color32(158,158, 158,255) },
     };
 
-    private static readonly Dictionary<Rarity, Color> RARITY_COLORS = new()
+    private static readonly Dictionary<Rarity, Color> RARITY_COLORS = new Dictionary<Rarity, Color>()
     {
         { Rarity.Common,    new Color32(176,176,176,255) },
         { Rarity.Uncommon,  new Color32( 76,175, 80,255) },
@@ -136,12 +162,12 @@ public class MonsterDetailPanelUI : MonoBehaviour
     private void Awake()
     {
         if (confirmButton) { confirmButton.onClick.RemoveAllListeners(); confirmButton.onClick.AddListener(Confirm); }
-        if (cancelButton)  { cancelButton.onClick.RemoveAllListeners();  cancelButton.onClick.AddListener(Cancel);  }
-        if (closeButton)   { closeButton.onClick.RemoveAllListeners();   closeButton.onClick.AddListener(Hide);     }
-        if (slot1Button)   { slot1Button.onClick.RemoveAllListeners();   slot1Button.onClick.AddListener(() => AssignToSlot(0)); }
-        if (slot2Button)   { slot2Button.onClick.RemoveAllListeners();   slot2Button.onClick.AddListener(() => AssignToSlot(1)); }
-        if (slot3Button)   { slot3Button.onClick.RemoveAllListeners();   slot3Button.onClick.AddListener(() => AssignToSlot(2)); }
-        if (removeButton)  { removeButton.onClick.RemoveAllListeners();  removeButton.onClick.AddListener(RemoveFromTeam); }
+        if (cancelButton) { cancelButton.onClick.RemoveAllListeners(); cancelButton.onClick.AddListener(Cancel); }
+        if (closeButton) { closeButton.onClick.RemoveAllListeners(); closeButton.onClick.AddListener(Hide); }
+        if (slot1Button) { slot1Button.onClick.RemoveAllListeners(); slot1Button.onClick.AddListener(() => AssignToSlot(0)); }
+        if (slot2Button) { slot2Button.onClick.RemoveAllListeners(); slot2Button.onClick.AddListener(() => AssignToSlot(1)); }
+        if (slot3Button) { slot3Button.onClick.RemoveAllListeners(); slot3Button.onClick.AddListener(() => AssignToSlot(2)); }
+        if (removeButton) { removeButton.onClick.RemoveAllListeners(); removeButton.onClick.AddListener(RemoveFromTeam); }
 
         if (evolveButton)
         {
@@ -177,8 +203,91 @@ public class MonsterDetailPanelUI : MonoBehaviour
     private void OnDestroy()
     {
         TitleAssignPanelUI.OnTitlesChanged -= HandleTitlesChanged;
-        GameEvents.MonsterLeveled          -= HandleMonsterLeveled;
-        GameEvents.MonsterEvolved          -= HandleMonsterEvolved;
+        GameEvents.MonsterLeveled -= HandleMonsterLeveled;
+        GameEvents.MonsterEvolved -= HandleMonsterEvolved;
+    }
+
+    private void Update()
+    {
+        if (!_visible) return;
+        if (!enableSwipeBrowse) return;
+
+        // Only allow swipe browsing in Codex view, or Starter select detail view (if a browse session was provided)
+        bool canSwipe =
+            (_mode == MonsterDetailMode.CodexView) ||
+            (_mode == MonsterDetailMode.StarterSelect && _browseDefs != null && _browseDefs.Count > 1);
+
+        if (!canSwipe) return;
+
+        HandleSwipeInput();
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // Public Browse APIs
+    // ─────────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// General browse session used by Codex and Starter selector.
+    /// Provide the visible defs list and the currently opened def.
+    /// </summary>
+    public void SetBrowseSession(IReadOnlyList<MonsterDataSO> defs, MonsterDataSO currentDef, bool wrap = true)
+    {
+        _browseDefs = defs;
+        _browseWrap = wrap;
+        _browseIndex = ResolveBrowseIndex(defs, currentDef);
+        _swipeTracking = false;
+    }
+
+    /// <summary>
+    /// Compatibility API for older callers: pass selected index.
+    /// </summary>
+    public void SetStarterBrowseContext(IReadOnlyList<MonsterDataSO> starterDefs, int selectedIndex, bool wrap = true)
+    {
+        if (starterDefs == null || starterDefs.Count == 0)
+        {
+            ClearStarterBrowseContext();
+            return;
+        }
+
+        selectedIndex = Mathf.Clamp(selectedIndex, 0, starterDefs.Count - 1);
+        SetBrowseSession(starterDefs, starterDefs[selectedIndex], wrap);
+    }
+
+    /// <summary>
+    /// Convenience API: pass current def.
+    /// </summary>
+    public void SetStarterBrowseContext(IReadOnlyList<MonsterDataSO> starterDefs, MonsterDataSO currentDef, bool wrap = true)
+    {
+        SetBrowseSession(starterDefs, currentDef, wrap);
+    }
+
+    public void ClearStarterBrowseContext()
+    {
+        _browseDefs = null;
+        _browseIndex = -1;
+        _browseWrap = true;
+        _swipeTracking = false;
+    }
+
+    private int ResolveBrowseIndex(IReadOnlyList<MonsterDataSO> defs, MonsterDataSO currentDef)
+    {
+        if (defs == null || defs.Count == 0 || currentDef == null) return -1;
+
+        // Prefer id match (stable) over reference match.
+        string id = currentDef.id;
+        if (!string.IsNullOrEmpty(id))
+        {
+            for (int i = 0; i < defs.Count; i++)
+            {
+                var d = defs[i];
+                if (d && d.id == id) return i;
+            }
+        }
+
+        for (int i = 0; i < defs.Count; i++)
+            if (ReferenceEquals(defs[i], currentDef)) return i;
+
+        return -1;
     }
 
     // ─────────────────────────────────────────────────────────────
@@ -188,13 +297,13 @@ public class MonsterDetailPanelUI : MonoBehaviour
     public void Show(MonsterDataSO monster, Action<MonsterDataSO> onConfirmCallback, Action onCancelCallback = null)
     {
         _mode = MonsterDetailMode.StarterSelect;
-        _currentOwned = default;
+        _currentOwned = null;
         _teamSlotIndex = -1;
         _onRemoved = null;
 
         current = monster;
         onConfirm = onConfirmCallback;
-        onCancel  = onCancelCallback;
+        onCancel = onCancelCallback;
 
         RefreshEvolveButton();
         SetupFavoriteButton();
@@ -216,9 +325,9 @@ public class MonsterDetailPanelUI : MonoBehaviour
 
         _currentOwned = owned;
 
-        current   = MonsterLibraryLocator.GetById(_currentOwned.monsterId);
+        current = MonsterLibraryLocator.GetById(_currentOwned.monsterId);
         onConfirm = null;
-        onCancel  = null;
+        onCancel = null;
 
         UpdateTitleButtonBinding();
         RefreshEvolveButton();
@@ -236,14 +345,30 @@ public class MonsterDetailPanelUI : MonoBehaviour
 
         _currentOwned = member;
 
-        current   = MonsterLibraryLocator.GetById(_currentOwned.monsterId);
+        current = MonsterLibraryLocator.GetById(_currentOwned.monsterId);
         onConfirm = null;
-        onCancel  = null;
+        onCancel = null;
 
         UpdateTitleButtonBinding();
         RefreshEvolveButton();
         SetupFavoriteButton();
         SafeOpen(current);
+    }
+
+    public void ShowCodex(MonsterDataSO monster)
+    {
+        _mode = MonsterDetailMode.CodexView;
+        _currentOwned = null;
+        _teamSlotIndex = -1;
+        _onRemoved = null;
+
+        current = monster;
+        onConfirm = null;
+        onCancel = null;
+
+        RefreshEvolveButton();
+        SetupFavoriteButton();
+        SafeOpen(monster);
     }
 
     public void Hide()
@@ -342,15 +467,17 @@ public class MonsterDetailPanelUI : MonoBehaviour
             TryStep("Header & Static Fields", () =>
             {
                 if (!safeSkipMonsterIcon && icon) icon.sprite = monster ? monster.icon : null;
-                if (idText)   idText.text   = monster ? $"ID: {monster.id}" : "ID: -";
-                if (nameText) nameText.text = monster ? monster.displayName : "-";
+
+                if (idText) idText.text = monster ? $"ID: {monster.id}" : "ID: -";
+                if (nameText) nameText.text = monster ? (string.IsNullOrEmpty(monster.displayName) ? monster.name : monster.displayName) : "-";
 
                 if (typeText)
                 {
                     string typeName = monster ? monster.type.ToString() : "-";
-                    string typeHex  = "CCCCCC";
-                    if (monster && TYPE_COLORS.TryGetValue(monster.type, out var tc))
+                    string typeHex = "CCCCCC";
+                    if (monster != null && TYPE_COLORS.TryGetValue(monster.type, out var tc))
                         typeHex = ColorUtility.ToHtmlStringRGB(tc);
+
                     typeText.color = Color.white;
                     typeText.richText = true;
                     typeText.text = $"<color=#FFFFFF>TYPE:</color> <color=#{typeHex}>{typeName}</color>";
@@ -359,7 +486,7 @@ public class MonsterDetailPanelUI : MonoBehaviour
                 if (rarityText)
                 {
                     rarityText.text = monster ? $"{monster.rarity}" : "-";
-                    if (monster && RARITY_COLORS.TryGetValue(monster.rarity, out var rc))
+                    if (monster != null && RARITY_COLORS.TryGetValue(monster.rarity, out var rc))
                     {
                         rarityText.color = rc;
                         ApplyRarityBackground(rc);
@@ -371,17 +498,20 @@ public class MonsterDetailPanelUI : MonoBehaviour
                 }
 
                 bool isAssign = _mode == MonsterDetailMode.AssignToTeam;
-                if (starterButtonsHolder) starterButtonsHolder.SetActive(!isAssign);
+                bool isStarter = _mode == MonsterDetailMode.StarterSelect;
+                bool isCodex = _mode == MonsterDetailMode.CodexView;
+
+                if (starterButtonsHolder) starterButtonsHolder.SetActive(isStarter);
                 if (slotButtonsHolder)    slotButtonsHolder.SetActive(isAssign && _teamSlotIndex < 0);
                 if (teamHolder)           teamHolder.SetActive(isAssign && _teamSlotIndex >= 0);
 
-                if (closeButton) closeButton.gameObject.SetActive(isAssign);
+                // Codex should have a close button (same as Assign)
+                if (closeButton) closeButton.gameObject.SetActive(!isStarter);
 
                 if (lvlText) lvlText.text = $"LVL: {GetDisplayLevel()}";
 
                 RenderJobSites(monster);
                 UpdateTitleButtonBinding();
-
                 RefreshPersonalityUI(monster);
 
                 if (canvasGroup) LeanTween.alphaCanvas(canvasGroup, 1f, 0.12f);
@@ -402,19 +532,19 @@ public class MonsterDetailPanelUI : MonoBehaviour
                 int defL = 0;
                 float spd = 0f;
 
-                if (!safeSkipStats && current)
+                if (!safeSkipStats && current != null)
                 {
-                    try { maxHP = Mathf.RoundToInt(BattleCalc.CalcHP(current, dispLvl)); } catch (Exception e) { Debug.LogError($"HP calc {current?.id}: {e}"); }
-                    try { atkL  = Mathf.RoundToInt(BattleCalc.CalcBaseAttack(current, dispLvl, 0, 0)); } catch (Exception e) { Debug.LogError($"ATK calc {current?.id}: {e}"); }
-                    defL = Mathf.RoundToInt(current.baseDefense);
-                    spd  = current.baseSpeed;
+                    try { maxHP = Mathf.RoundToInt(BattleCalc.CalcHP(current, dispLvl)); } catch { maxHP = current != null ? Mathf.RoundToInt(current.baseHP) : 0; }
+                    try { atkL = Mathf.RoundToInt(BattleCalc.CalcBaseAttack(current, dispLvl, 0, 0)); } catch { atkL = current != null ? Mathf.RoundToInt(current.baseAttack) : 0; }
+                    defL = current != null ? Mathf.RoundToInt(current.baseDefense) : 0;
+                    spd = current != null ? current.baseSpeed : 0f;
                 }
                 else
                 {
-                    maxHP = current ? Mathf.RoundToInt(current.baseHP) : 0;
-                    atkL  = current ? Mathf.RoundToInt(current.baseAttack) : 0;
-                    defL  = current ? Mathf.RoundToInt(current.baseDefense) : 0;
-                    spd   = current ? current.baseSpeed : 0f;
+                    maxHP = current != null ? Mathf.RoundToInt(current.baseHP) : 0;
+                    atkL = current != null ? Mathf.RoundToInt(current.baseAttack) : 0;
+                    defL = current != null ? Mathf.RoundToInt(current.baseDefense) : 0;
+                    spd = current != null ? current.baseSpeed : 0f;
                 }
 
                 int curHP = maxHP;
@@ -466,11 +596,11 @@ public class MonsterDetailPanelUI : MonoBehaviour
                 if (safeSkipTypeIcons || current == null) return;
 
                 List<MonsterType> strong = null, weak = null;
-                try { strong = BattleTypeChart.GetStrongAgainst(current.type); } catch (Exception ex) { Debug.LogError($"Strong({current.type}) fail: {ex}"); }
-                try { weak   = BattleTypeChart.GetWeakAgainst(current.type);   } catch (Exception ex) { Debug.LogError($"Weak({current.type}) fail: {ex}"); }
+                try { strong = BattleTypeChart.GetStrongAgainst(current.type); } catch { strong = null; }
+                try { weak = BattleTypeChart.GetWeakAgainst(current.type); } catch { weak = null; }
 
                 if (strong != null) foreach (var t in strong) CreateTypeIcon(t, strongIconHolder, true);
-                if (weak   != null) foreach (var t in weak)   CreateTypeIcon(t,   weakIconHolder, true);
+                if (weak != null) foreach (var t in weak) CreateTypeIcon(t, weakIconHolder, true);
             });
 
             _stage = RenderStage.Done;
@@ -481,7 +611,124 @@ public class MonsterDetailPanelUI : MonoBehaviour
     }
 
     // ─────────────────────────────────────────────────────────────
-    // Personality (InfoRouter pattern, same idea as ResourceRowUI)
+    // Swipe input (Input System)
+    // ─────────────────────────────────────────────────────────────
+
+    private void HandleSwipeInput()
+    {
+        if (_browseDefs == null || _browseDefs.Count <= 1) return;
+
+        // Read from Touchscreen (mobile) or Mouse (editor/desktop).
+        bool pressed = false;
+        bool released = false;
+        Vector2 pos = Vector2.zero;
+
+        var ts = Touchscreen.current;
+        if (ts != null && ts.primaryTouch != null)
+        {
+            var touch = ts.primaryTouch;
+            pressed = touch.press.wasPressedThisFrame;
+            released = touch.press.wasReleasedThisFrame;
+            // When pressed/held, read position; on release, still read last position.
+            pos = touch.position.ReadValue();
+        }
+        else
+        {
+            var mouse = Mouse.current;
+            if (mouse == null) return;
+            pressed = mouse.leftButton.wasPressedThisFrame;
+            released = mouse.leftButton.wasReleasedThisFrame;
+            pos = mouse.position.ReadValue();
+        }
+
+        if (pressed)
+        {
+            _swipeTracking = true;
+            _swipeStartPos = pos;
+            return;
+        }
+
+        if (!_swipeTracking) return;
+
+        if (released)
+        {
+            _swipeTracking = false;
+
+            if (Time.unscaledTime - _lastBrowseAt < swipeBrowseCooldown)
+                return;
+
+            Vector2 delta = pos - _swipeStartPos;
+
+            // Horizontal swipe only (ignore big vertical drags)
+            if (Mathf.Abs(delta.y) > swipeMaxVerticalPixels)
+                return;
+
+            if (Mathf.Abs(delta.x) < swipeMinPixels)
+                return;
+
+            _lastBrowseAt = Time.unscaledTime;
+
+            // Swipe left (delta.x negative) => Next; swipe right => Prev
+            if (delta.x < 0f) BrowseNext();
+            else BrowsePrev();
+        }
+    }
+
+    private void BrowseNext()
+    {
+        if (_browseDefs == null || _browseDefs.Count == 0) return;
+
+        int idx = _browseIndex;
+        if (idx < 0) idx = ResolveBrowseIndex(_browseDefs, current);
+
+        int next = idx + 1;
+        if (next >= _browseDefs.Count)
+        {
+            if (!_browseWrap) return;
+            next = 0;
+        }
+
+        OpenBrowseIndex(next);
+    }
+
+    private void BrowsePrev()
+    {
+        if (_browseDefs == null || _browseDefs.Count == 0) return;
+
+        int idx = _browseIndex;
+        if (idx < 0) idx = ResolveBrowseIndex(_browseDefs, current);
+
+        int prev = idx - 1;
+        if (prev < 0)
+        {
+            if (!_browseWrap) return;
+            prev = _browseDefs.Count - 1;
+        }
+
+        OpenBrowseIndex(prev);
+    }
+
+    private void OpenBrowseIndex(int index)
+    {
+        if (_browseDefs == null || _browseDefs.Count == 0) return;
+
+        index = Mathf.Clamp(index, 0, _browseDefs.Count - 1);
+        var def = _browseDefs[index];
+        if (def == null) return;
+
+        _browseIndex = index;
+
+        // When browsing, always show as Codex (read-only) unless you explicitly want StarterSelect browsing.
+        // We keep the current mode as-is, but do NOT open assign/team screens from swipe.
+        current = def;
+
+        RefreshEvolveButton();
+        SetupFavoriteButton();
+        SafeOpen(def);
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // Personality (InfoRouter pattern)
     // ─────────────────────────────────────────────────────────────
 
     private void RefreshPersonalityUI(MonsterDataSO monster)
@@ -493,7 +740,6 @@ public class MonsterDetailPanelUI : MonoBehaviour
 
         if (personalityInfoButton)
         {
-            // Only clickable if a personality exists
             personalityInfoButton.interactable = p != null;
             personalityInfoButton.gameObject.SetActive(true);
         }
@@ -510,19 +756,12 @@ public class MonsterDetailPanelUI : MonoBehaviour
             return;
         }
 
-        // InfoRouter id convention (mirrors ResourceRowUI style).
-        // Uses ScriptableObject asset name so it stays stable unless you rename the asset.
         string id = $"per.{p.name}".ToLowerInvariant();
-
         string title = p.name;
         string subtitle = "Personality";
-
-        string body = !string.IsNullOrWhiteSpace(p.description)
-            ? p.description
-            : "No description available.";
+        string body = !string.IsNullOrWhiteSpace(p.description) ? p.description : "No description available.";
 
         InfoRouter.Open(id, title, subtitle, body);
-
         AudioManager.I?.PlayClick();
     }
 
@@ -585,7 +824,6 @@ public class MonsterDetailPanelUI : MonoBehaviour
         while (team.Count < 3) team.Add(new OwnedMonsterData());
 
         var canonical = XPManager.Resolve(_currentOwned) ?? _currentOwned;
-
         team[slotIndex] = canonical;
 
         data.team = team;
@@ -650,6 +888,7 @@ public class MonsterDetailPanelUI : MonoBehaviour
     private void ResetVisualsImmediate()
     {
         if (canvasGroup) canvasGroup.alpha = 0f;
+
         current = null;
         onConfirm = null;
         onCancel = null;
@@ -685,7 +924,8 @@ public class MonsterDetailPanelUI : MonoBehaviour
         if (favoriteButton) favoriteButton.gameObject.SetActive(false);
         if (favoriteOnIcon) favoriteOnIcon.SetActive(false);
 
-        _visible = UIManager.I && selfPanelId != PanelId.None ? _visible : false;
+        // browse session reset (do not force-clear; callers can keep it if they want)
+        _swipeTracking = false;
     }
 
     private void ClearIcons(Transform holder)
@@ -697,6 +937,8 @@ public class MonsterDetailPanelUI : MonoBehaviour
 
     private void CreateTypeIcon(MonsterType type, Transform parent, bool animate)
     {
+        if (!typeIconPrefab || !parent) return;
+
         var go = Instantiate(typeIconPrefab, parent);
         var img = go.GetComponent<Image>();
         if (img && typeIconLibrary) img.sprite = typeIconLibrary.GetIcon(type);
@@ -715,19 +957,19 @@ public class MonsterDetailPanelUI : MonoBehaviour
         if (!m.evolutionForm || m.evolutionLevel <= 0)
             return "EVO: —";
 
-        string nextName = m.evolutionForm ? m.evolutionForm.displayName : "???";
+        string nextName = m.evolutionForm ? (string.IsNullOrEmpty(m.evolutionForm.displayName) ? m.evolutionForm.name : m.evolutionForm.displayName) : "???";
         int lvl = Mathf.Max(1, m.evolutionLevel);
 
-        int curHpAtEvo  = Mathf.RoundToInt(BattleCalc.CalcHP(m, lvl));
-        int nxtHpAtEvo  = Mathf.RoundToInt(BattleCalc.CalcHP(m.evolutionForm, lvl));
+        int curHpAtEvo = Mathf.RoundToInt(BattleCalc.CalcHP(m, lvl));
+        int nxtHpAtEvo = Mathf.RoundToInt(BattleCalc.CalcHP(m.evolutionForm, lvl));
         int curAtkAtEvo = Mathf.RoundToInt(BattleCalc.CalcBaseAttack(m, lvl, 0, 0));
         int nxtAtkAtEvo = Mathf.RoundToInt(BattleCalc.CalcBaseAttack(m.evolutionForm, lvl, 0, 0));
 
-        int dHp  = nxtHpAtEvo  - curHpAtEvo;
+        int dHp = nxtHpAtEvo - curHpAtEvo;
         int dAtk = nxtAtkAtEvo - curAtkAtEvo;
 
         string deltas = $" (+{dHp} HP, +{dAtk} ATK)";
-        return $"EVO: Lv {lvl} → {nextName}{(dHp > 0 || dAtk > 0 ? deltas : "")}";
+        return $"EVO: Lv {lvl} → {nextName}{((dHp > 0 || dAtk > 0) ? deltas : "")}";
     }
 
     private void TryStep(string label, Action step)
@@ -762,7 +1004,8 @@ public class MonsterDetailPanelUI : MonoBehaviour
         if (!evolveButton)
             return;
 
-        if (current == null)
+        // Evolution button only makes sense in Assign mode.
+        if (_mode != MonsterDetailMode.AssignToTeam || current == null)
         {
             evolveButton.gameObject.SetActive(false);
             return;
@@ -777,13 +1020,8 @@ public class MonsterDetailPanelUI : MonoBehaviour
 
         bool canActuallyEvolve = false;
 
-        if (meetsLevel &&
-            _mode == MonsterDetailMode.AssignToTeam &&
-            _currentOwned != null &&
-            !string.IsNullOrEmpty(_currentOwned.monsterId))
-        {
+        if (meetsLevel && _currentOwned != null && !string.IsNullOrEmpty(_currentOwned.monsterId))
             canActuallyEvolve = EvolutionHelper.CanEvolve(_currentOwned, current);
-        }
 
         evolveButton.interactable = canActuallyEvolve;
     }
@@ -801,13 +1039,9 @@ public class MonsterDetailPanelUI : MonoBehaviour
         string key = null;
 
         if (_currentOwned != null && !string.IsNullOrEmpty(_currentOwned.monsterId))
-        {
             key = _currentOwned.monsterId;
-        }
         else if (current != null && !string.IsNullOrEmpty(current.id))
-        {
             key = current.id;
-        }
 
         bool canBind = current != null && !string.IsNullOrEmpty(key);
 
@@ -840,13 +1074,6 @@ public class MonsterDetailPanelUI : MonoBehaviour
         jobSiteText.text = (jobs.Count > 0)
             ? string.Join(", ", jobs.Select(JobStrings.SiteName))
             : "—";
-    }
-
-    private void SetSlotButtonsInteractable(bool on)
-    {
-        if (slot1Button) slot1Button.interactable = on;
-        if (slot2Button) slot2Button.interactable = on;
-        if (slot3Button) slot3Button.interactable = on;
     }
 
     private void OnClickEvolve()

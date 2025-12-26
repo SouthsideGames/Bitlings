@@ -52,6 +52,9 @@ public class CodexPanelUI : MonoBehaviour
 
     private CodexViewMode _viewMode = CodexViewMode.All;
 
+    // NEW: cache last visible codex defs (post-filter) for swipe browsing
+    private List<MonsterDataSO> _lastVisibleCodexDefs = new List<MonsterDataSO>();
+
     void OnEnable()
     {
         GameEvents.OnTeamChanged += RefreshAll;
@@ -75,7 +78,6 @@ public class CodexPanelUI : MonoBehaviour
             sortDropdown.onValueChanged.AddListener(OnSortChanged);
             sortDropdown.RefreshShownValue();
         }
-
 
         // ---------------------
         // CAPTURED-ONLY BUTTON (gated)
@@ -127,7 +129,6 @@ public class CodexPanelUI : MonoBehaviour
         if (sortDropdown)
             sortDropdown.onValueChanged.RemoveListener(OnSortChanged);
 
-
         if (capturedOnlyButton)
             capturedOnlyButton.onClick.RemoveListener(OnToggleCapturedOnly);
 
@@ -169,7 +170,6 @@ public class CodexPanelUI : MonoBehaviour
         sortDropdown.RefreshShownValue();
     }
 
-
     string GetSortLabel(OwnedSortMode mode)
     {
         switch (mode)
@@ -208,6 +208,7 @@ public class CodexPanelUI : MonoBehaviour
         {
             Clear(teamContent);
             Clear(ownedContent);
+            _lastVisibleCodexDefs = new List<MonsterDataSO>();
             return;
         }
 
@@ -230,6 +231,7 @@ public class CodexPanelUI : MonoBehaviour
         if (data == null)
         {
             Clear(ownedContent);
+            _lastVisibleCodexDefs = new List<MonsterDataSO>();
             return;
         }
 
@@ -356,6 +358,8 @@ public class CodexPanelUI : MonoBehaviour
     void BuildOwned(List<OwnedMonsterData> owned, List<OwnedMonsterData> team, OwnedSortMode sortMode)
     {
         Clear(ownedContent);
+        _lastVisibleCodexDefs = new List<MonsterDataSO>();
+
         if (!ownedContent || ownedListItemPrefab == null)
             return;
 
@@ -387,13 +391,16 @@ public class CodexPanelUI : MonoBehaviour
         // Pack-discovered set based on unlocked packs
         var discoveredByPack = BuildDiscoveredMonsterIdSetFromUnlockedPacks(data);
 
-        // NEW: Build defs from BOTH the main library and the unlocked packs
+        // Build defs from BOTH the main library and the unlocked packs
         var defs = BuildAllCodexDefsFromLibraryAndUnlockedPacks(data);
         if (defs == null || defs.Count == 0)
             return;
 
         var sortedDefs = SortDefs(defs, sortMode, ownedById, shinyById);
         bool shinyMode = (sortMode == OwnedSortMode.ShinyMonsters);
+
+        // NEW: collect spawned codex items so we can inject browse list after we know it
+        var spawnedItems = new List<OwnedMonsterListItemUI>();
 
         foreach (var def in sortedDefs)
         {
@@ -414,7 +421,7 @@ public class CodexPanelUI : MonoBehaviour
                 (discoveredByPack != null && discoveredByPack.Contains(def.id)) ||
                 SaveManager.IsDiscovered(def.id); // optional safety: supports manual discovery too
 
-            // View dropdown filter (NEW)
+            // View dropdown filter (if you wire a view dropdown later)
             if (_viewMode == CodexViewMode.Captured && !capturedReal)
                 continue;
 
@@ -423,7 +430,7 @@ public class CodexPanelUI : MonoBehaviour
 
             bool isFavorite = FavoriteService.IsFavorite(def.id);
 
-            // IMPORTANT: captured-only filter uses capturedReal (not discovered)
+            // captured-only filter uses capturedReal (not discovered)
             if (_capturedOnlyFilter && !capturedReal)
                 continue;
 
@@ -435,10 +442,15 @@ public class CodexPanelUI : MonoBehaviour
                 if (!isFavorite) continue;
             }
 
+            // This entry is visible in the current list (post-filter)
+            _lastVisibleCodexDefs.Add(def);
+
             var go = Instantiate(ownedListItemPrefab, ownedContent);
             var item = go.GetComponent<OwnedMonsterListItemUI>();
             if (item)
             {
+                spawnedItems.Add(item);
+
                 // Pass "captured: discovered" so silhouettes become visible for pack monsters
                 item.SetupForCodex(
                     def,
@@ -449,6 +461,13 @@ public class CodexPanelUI : MonoBehaviour
                     detailPanelOverride: detailPanel
                 );
             }
+        }
+
+        // NEW: push browse context into every spawned item so swipe works inside detail panel
+        for (int i = 0; i < spawnedItems.Count; i++)
+        {
+            if (spawnedItems[i] != null)
+                spawnedItems[i].SetCodexBrowseContext(_lastVisibleCodexDefs);
         }
     }
 

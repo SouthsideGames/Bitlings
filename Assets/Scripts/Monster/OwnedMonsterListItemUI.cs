@@ -2,7 +2,9 @@ using System;
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
+using System.Collections.Generic;
 
+[RequireComponent(typeof(Button))]
 public class OwnedMonsterListItemUI : MonoBehaviour
 {
     [Header("UI")]
@@ -16,7 +18,7 @@ public class OwnedMonsterListItemUI : MonoBehaviour
     [SerializeField] private GameObject evolveAlert;
     [SerializeField] private GameObject favoriteAlert;
 
-    [Header("Detail Panel (Assign Mode)")]
+    [Header("Detail Panel (Assign Mode / Codex)")]
     [SerializeField] private MonsterDetailPanelUI detailPanel;
 
     // data
@@ -28,12 +30,19 @@ public class OwnedMonsterListItemUI : MonoBehaviour
     private bool _allowDetail = true;
     private MonsterDetailPanelUI _detailPanelOverride;
 
+    // Codex browse context
+    private bool _isCodexRow;
+    private IReadOnlyList<MonsterDataSO> _codexBrowseDefs;
+
     void Awake()
     {
         if (detailPanel == null)
             detailPanel = FindAnyObjectByType<MonsterDetailPanelUI>(FindObjectsInactive.Include);
 
         if (cooldownText) cooldownText.gameObject.SetActive(false);
+
+        if (rootButton == null)
+            rootButton = GetComponent<Button>();
 
         if (rootButton)
         {
@@ -51,6 +60,9 @@ public class OwnedMonsterListItemUI : MonoBehaviour
     private void OnDestroy()
     {
         GameEvents.MonsterLeveled -= HandleMonsterLeveled;
+
+        if (rootButton)
+            rootButton.onClick.RemoveListener(OnClickOpenDetails);
     }
 
     void OnDisable()
@@ -83,11 +95,14 @@ public class OwnedMonsterListItemUI : MonoBehaviour
 
     public void Setup(OwnedMonsterData data, MonsterDataSO def)
     {
+        _isCodexRow = false;
+        _codexBrowseDefs = null;
+
         _allowDetail = true;
         _detailPanelOverride = null;
 
         _data = data;
-        _def  = def;
+        _def = def;
 
         // Icon
         if (icon)
@@ -95,13 +110,13 @@ public class OwnedMonsterListItemUI : MonoBehaviour
             if (def && def.icon)
             {
                 icon.enabled = true;
-                icon.sprite  = def.icon;
-                icon.color   = Color.white;
+                icon.sprite = def.icon;
+                icon.color = Color.white;
             }
             else
             {
                 icon.enabled = false;
-                icon.sprite  = null;
+                icon.sprite = null;
             }
         }
 
@@ -134,8 +149,8 @@ public class OwnedMonsterListItemUI : MonoBehaviour
     // ---------------------------------------------------------------------
 
     /// <summary>
-    /// Setup this row for Codex usage, where every monster in the (captured) pool
-    /// is listed. Uncaptured entries would be shown as ??? and are not clickable.
+    /// Codex row setup. "captured" here means "revealed/known" in the Codex context.
+    /// If not captured/revealed, row shows ??? and is not interactable.
     /// </summary>
     public void SetupForCodex(
         MonsterDataSO def,
@@ -145,11 +160,14 @@ public class OwnedMonsterListItemUI : MonoBehaviour
         bool allowDetail,
         MonsterDetailPanelUI detailPanelOverride)
     {
+        _isCodexRow = true;
+        _codexBrowseDefs = null; // set later by CodexPanelUI after it knows the final visible list
+
         _detailPanelOverride = detailPanelOverride;
-        _allowDetail = allowDetail && captured;    // cannot open detail for uncaptured
+        _allowDetail = allowDetail && captured; // cannot open detail for unrevealed
 
         _def = def;
-        _data = captured ? ownedData : null;       // unknown entries would have no OwnedMonsterData
+        _data = captured ? ownedData : null; // unrevealed entries have no OwnedMonsterData
 
         // Icon
         if (icon)
@@ -157,13 +175,15 @@ public class OwnedMonsterListItemUI : MonoBehaviour
             if (def && def.icon)
             {
                 icon.enabled = true;
-                icon.sprite  = def.icon;
-                icon.color   = captured ? Color.white : Color.black;
+                icon.sprite = def.icon;
+
+                // Silhouette effect for unrevealed
+                icon.color = captured ? Color.white : Color.black;
             }
             else
             {
                 icon.enabled = false;
-                icon.sprite  = null;
+                icon.sprite = null;
             }
         }
 
@@ -192,11 +212,11 @@ public class OwnedMonsterListItemUI : MonoBehaviour
             favoriteAlert.SetActive(hasFeature && captured && isFavorite);
         }
 
-        // KO / cooldown text only makes sense for captured monsters.
+        // KO / cooldown text only makes sense for owned monsters, not codex silhouettes.
         if (cooldownText)
             cooldownText.gameObject.SetActive(false);
 
-        // Evolve alert makes no sense for unknown entries.
+        // Evolve alert makes no sense for codex grid rows.
         if (evolveAlert)
             evolveAlert.SetActive(false);
 
@@ -208,6 +228,15 @@ public class OwnedMonsterListItemUI : MonoBehaviour
         RefreshEvolutionAlert();
     }
 
+    /// <summary>
+    /// Called by CodexPanelUI after it knows the final visible list of defs.
+    /// Enables swipe-browse context in MonsterDetailPanelUI.
+    /// </summary>
+    public void SetCodexBrowseContext(IReadOnlyList<MonsterDataSO> visibleDefs)
+    {
+        _codexBrowseDefs = visibleDefs;
+    }
+
     // ---------------------------------------------------------------------
     // Interactions
     // ---------------------------------------------------------------------
@@ -215,7 +244,12 @@ public class OwnedMonsterListItemUI : MonoBehaviour
     public void SetInteractable(bool on)
     {
         if (rootButton)
-            rootButton.interactable = on && HasValidMonster(_data) && IsUsable(_data) && _allowDetail;
+        {
+            if (_isCodexRow)
+                rootButton.interactable = on && _allowDetail && _def != null;
+            else
+                rootButton.interactable = on && HasValidMonster(_data) && IsUsable(_data) && _allowDetail;
+        }
 
         ApplyKOVisualsOnly();
     }
@@ -232,10 +266,41 @@ public class OwnedMonsterListItemUI : MonoBehaviour
             return;
         }
 
+        AudioManager.I?.PlayClick();
+
+        // Codex behavior: open by def (not OwnedMonsterData) and set browse list for swipe
+        if (_isCodexRow)
+        {
+            if (_def == null) return;
+
+            // Use the APIs that exist in MonsterDetailPanelUI
+            if (_codexBrowseDefs != null && _codexBrowseDefs.Count > 1)
+            {
+                int startIndex = 0;
+                for (int i = 0; i < _codexBrowseDefs.Count; i++)
+                {
+                    var d = _codexBrowseDefs[i];
+                    if (d && (_def == d || (!string.IsNullOrEmpty(d.id) && d.id == _def.id)))
+                    {
+                        startIndex = i;
+                        break;
+                    }
+                }
+
+                panel.SetStarterBrowseContext(_codexBrowseDefs, startIndex);
+            }
+            else
+            {
+                panel.ClearStarterBrowseContext();
+            }
+
+            panel.ShowCodex(_def);
+            return;
+        }
+
+        // Owned/team behavior
         if (!HasValidMonster(_data)) return;
         if (!IsUsable(_data)) return;
-
-        AudioManager.I.PlayClick();
 
         panel.ShowAssign(_data);
     }
@@ -243,7 +308,12 @@ public class OwnedMonsterListItemUI : MonoBehaviour
     private void ApplyState()
     {
         if (rootButton)
-            rootButton.interactable = HasValidMonster(_data) && IsUsable(_data) && _allowDetail;
+        {
+            if (_isCodexRow)
+                rootButton.interactable = (_def != null) && _allowDetail;
+            else
+                rootButton.interactable = HasValidMonster(_data) && IsUsable(_data) && _allowDetail;
+        }
 
         ApplyKOVisualsOnly();
         RefreshEvolutionAlert();
@@ -261,7 +331,7 @@ public class OwnedMonsterListItemUI : MonoBehaviour
     {
         if (!cooldownText) return;
         if (!HasValidMonster(_data)) { cooldownText.gameObject.SetActive(false); return; }
-        if (IsUsable(_data))        { cooldownText.gameObject.SetActive(false); return; }
+        if (IsUsable(_data)) { cooldownText.gameObject.SetActive(false); return; }
 
         var (ok, eta) = TryGetETAForNextHP(_data, _def);
         cooldownText.gameObject.SetActive(true);
@@ -314,7 +384,7 @@ public class OwnedMonsterListItemUI : MonoBehaviour
 
         int secondsPerHP = Mathf.CeilToInt(3600f / perHour);
 
-        long now  = SaveManager.NowUnix();
+        long now = SaveManager.NowUnix();
         long last = d.lastHPUnix > 0 ? d.lastHPUnix : now;
         long elapsed = Math.Max(0, now - last);
 

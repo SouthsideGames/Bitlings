@@ -26869,6 +26869,7 @@ MonoBehaviour:
   maxNumberOfStarters: 4
   minHpAtLv1: 22
   minAtkAtLv1: 6
+  enableSwipeBrowseInDetail: 1
   triggerHomeTutorialAfterChoosingStarter: 1
   homeTutorialKey: tut_home_v1
   bypassDetailPanelForDebug: 0
@@ -37219,6 +37220,10 @@ MonoBehaviour:
   safeSkipDescription: 0
   safeSkipMonsterIcon: 0
   buildVerboseLogging: 0
+  enableSwipeBrowse: 1
+  swipeMinPixels: 90
+  swipeMaxVerticalPixels: 120
+  swipeBrowseCooldown: 0.2
 --- !u!1 &575658651
 GameObject:
   m_ObjectHideFlags: 0
@@ -106527,8 +106532,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   packLibraryOverride: {fileID: 11400000, guid: 0ed52c495b48ed145a5de028de91e29f, type: 2}
-  globalDiscount01: 0
   seasonRotationOverride: {fileID: 11400000, guid: 49fe77760ed5f574b99f2cac6b2a059a, type: 2}
+  globalDiscount01: 0
 --- !u!1 &1566884176
 GameObject:
   m_ObjectHideFlags: 0
