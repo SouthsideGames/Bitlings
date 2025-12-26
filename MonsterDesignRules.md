@@ -54,9 +54,11 @@ public string description;
 
 // Boss-Only
 public int bossWeight;
-Boss monsters do not use spawnWeight and instead rely on bossWeight.
+// Boss monsters do not use spawnWeight and instead rely on bossWeight.
 
-2. ID & Naming Conventions
+```
+
+# 2. ID & Naming Conventions
 Standard Monsters
 IDs follow the format: M-001, M-002, …
 
