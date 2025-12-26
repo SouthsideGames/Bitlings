@@ -10,7 +10,7 @@ using Unity.Notifications.iOS;
 
 public class NotificationManager : MonoBehaviour
 {
-    [SerializeField] private AndroidNofitication androidNotification;
+    [SerializeField] private AndroidNotification androidNotification;
     [SerializeField] private IOSNotification iosNotification;
 
 
