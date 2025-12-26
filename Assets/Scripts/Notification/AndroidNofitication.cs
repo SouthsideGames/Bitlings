@@ -12,7 +12,7 @@ public class AndroidNofitication : MonoBehaviour
     {
         if (!Permission.HasUserAuthorizedPermission("android.permission.POST_NOTIFICATIONS"))
         {
-            Permission.RequestUserPermission("android.permission.POST_NOTIFICATION");
+            Permission.RequestUserPermission("android.permission.POST_NOTIFICATIONS");
         }
     }
 
