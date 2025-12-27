@@ -1,3 +1,4 @@
+#if UNITY_INCLUDE_TESTS
 using System.Collections;
 using NUnit.Framework;
 using UnityEngine;
@@ -50,3 +51,4 @@ public class PerformancePlayModeTests
         Object.Destroy(runnerObject);
     }
 }
+#endif
