@@ -17,18 +17,137 @@ public sealed class TitleManager : MonoBehaviour
     // id -> TitleSO
     private readonly Dictionary<string, TitleSO> _idToTitle = new Dictionary<string, TitleSO>();
 
+    private string _activeBattleMonsterId;
+
     // ─────────────────────────────────────────────────────────────────────
     // Per-battle state (TurnBooster / EventStacks / BattleStart)
     // ─────────────────────────────────────────────────────────────────────
     // NOTE: one-simple-bucket-per-monster; expand to keyed tuples if you add multiple variants per monster.
-    private readonly Dictionary<string, int>   _turnStacks          = new();   // grows on OnTurnAdvanced up to max (TurnBooster)
-    private readonly Dictionary<string, int>   _eventStacks         = new();   // grows on triggers (EventStacks)
-    private readonly Dictionary<string, int>   _eventMax            = new();   // cache max for UI/debug (optional)
-    private readonly Dictionary<string, int>   _eventDecayPerTurn   = new();   // how many stacks to decay each turn
-    private readonly Dictionary<string, int>   _flatStartUntilTurn  = new();   // inclusive last turn index where flat buff applies
-    private readonly Dictionary<string, int>   _flatStartAmountAtk  = new();   // flat ATK from BattleStartFlatTitleSO (expand if you add other stats)
-    private readonly Dictionary<string, float> _shieldRemaining     = new();   // BattleStartShieldTitleSO: remaining shield HP
+    private readonly Dictionary<string, int> _turnStacks = new();           // grows on OnTurnAdvanced up to max (TurnBooster)
+    private readonly Dictionary<string, int> _eventStacks = new();          // grows on triggers (EventStacks)
+    private readonly Dictionary<string, int> _eventMax = new();             // cache max for UI/debug (optional)
+    private readonly Dictionary<string, int> _eventDecayPerTurn = new();    // how many stacks to decay each turn
+    private readonly Dictionary<string, int> _flatStartUntilTurn = new();   // inclusive last turn index where flat buff applies
+    private readonly Dictionary<string, int> _flatStartAmountAtk = new();   // flat ATK from BattleStartFlatTitleSO (expand if you add other stats)
+    private readonly Dictionary<string, float> _shieldRemaining = new();    // BattleStartShieldTitleSO: remaining shield HP
     private int _turnIndex;
+
+    // ─────────────────────────────────────────────────────────────────────
+    // Active Title UI state (Status Bar)
+    // ─────────────────────────────────────────────────────────────────────
+    public struct ActiveTitleUIState
+    {
+        public string titleId;
+        public string displayName;
+        public Sprite icon;
+        public int stacks;     // 0 if not applicable
+        public bool isActive;  // true = highlight (active), false = dim (inactive)
+    }
+
+    /// <summary>
+    /// UI helper: returns equipped titles for a monster with "active" flags + stacks based on current battle state.
+    /// Safe to call outside battle (will just show equipped titles as active).
+    /// </summary>
+    public List<ActiveTitleUIState> GetActiveTitleUIStates(string ownedMonsterId)
+    {
+        var res = new List<ActiveTitleUIState>();
+        if (string.IsNullOrEmpty(ownedMonsterId)) return res;
+
+        var def = MonsterLibraryLocator.GetById(ownedMonsterId);
+        int lvl = GetLevelOr1(ownedMonsterId);
+        var equipped = GetEquippedList(ownedMonsterId, def, lvl);
+
+        if (equipped == null) return res;
+
+        for (int i = 0; i < equipped.Count; i++)
+        {
+            var t = equipped[i];
+            if (!t) continue;
+
+            var s = new ActiveTitleUIState
+            {
+                titleId = t.titleId,
+                displayName = string.IsNullOrEmpty(t.displayName) ? t.titleId : t.displayName,
+                icon = TryReadSprite(t, out var icon) ? icon : null,
+                stacks = 0,
+                isActive = true
+            };
+
+            // If we are not in a battle, treat equipped titles as active for UI consistency.
+            bool inBattle = _turnStacks.Count > 0 || _eventStacks.Count > 0 || _shieldRemaining.Count > 0 || _flatStartUntilTurn.Count > 0;
+
+            if (inBattle)
+            {
+                if (t is TurnBoosterTitleSO tb)
+                {
+                    _turnStacks.TryGetValue(ownedMonsterId, out int st);
+                    s.stacks = st;
+                    s.isActive = st > 0;
+                }
+                else if (t is EventStacksTitleSO)
+                {
+                    _eventStacks.TryGetValue(ownedMonsterId, out int st);
+                    s.stacks = st;
+                    s.isActive = st > 0;
+                }
+                else if (t is BattleStartShieldTitleSO)
+                {
+                    _shieldRemaining.TryGetValue(ownedMonsterId, out float shield);
+                    s.isActive = shield > 0.01f;
+                }
+                else if (t is BattleStartFlatTitleSO)
+                {
+                    if (_flatStartUntilTurn.TryGetValue(ownedMonsterId, out int until))
+                        s.isActive = _turnIndex <= until;
+                }
+                else
+                {
+                    // Unknown runtime title types: keep active=true (equipped)
+                    s.isActive = true;
+                }
+            }
+
+            res.Add(s);
+        }
+
+        return res;
+    }
+
+    private static bool TryReadSprite(object obj, out Sprite sprite)
+    {
+        sprite = null;
+        if (obj == null) return false;
+
+        try
+        {
+            var t = obj.GetType();
+
+            // Prefer "icon" field/property if you add it to TitleSO.
+            var f = t.GetField("icon");
+            if (f != null && f.FieldType == typeof(Sprite))
+            {
+                sprite = (Sprite)f.GetValue(obj);
+                return sprite != null;
+            }
+
+            var p = t.GetProperty("icon");
+            if (p != null && p.PropertyType == typeof(Sprite))
+            {
+                sprite = (Sprite)p.GetValue(obj, null);
+                return sprite != null;
+            }
+
+            var p2 = t.GetProperty("Icon");
+            if (p2 != null && p2.PropertyType == typeof(Sprite))
+            {
+                sprite = (Sprite)p2.GetValue(obj, null);
+                return sprite != null;
+            }
+        }
+        catch { }
+
+        return false;
+    }
 
     // ─────────────────────────────────────────────────────────────────────
     // Unity
@@ -244,7 +363,7 @@ public sealed class TitleManager : MonoBehaviour
             }
         }
 
-        // ── NEW: BattleStartFlatTitleSO (ATK-only in this simple pass; expand as needed)
+        // ── BattleStartFlatTitleSO (ATK-only in this simple pass; expand as needed)
         if (stat == StatKind.Attack && _flatStartAmountAtk.TryGetValue(monsterId, out int flat)
             && _flatStartUntilTurn.TryGetValue(monsterId, out int untilTurn)
             && _turnIndex <= untilTurn)
@@ -252,7 +371,7 @@ public sealed class TitleManager : MonoBehaviour
             current += flat;
         }
 
-        // ── NEW: TurnBoosterTitleSO (percent per turn up to max stacks)
+        // ── TurnBoosterTitleSO (percent per turn up to max stacks)
         var tb = GetFirstTitle<TurnBoosterTitleSO>(monsterId, def, level);
         if (tb != null && MatchesStat(stat, tb.stat) && _turnStacks.TryGetValue(monsterId, out int tStacks) && tStacks > 0)
         {
@@ -260,7 +379,7 @@ public sealed class TitleManager : MonoBehaviour
             current *= 1f + pct * Mathf.Min(tStacks, Mathf.Max(1, tb.maxStacks));
         }
 
-        // ── NEW: EventStacksTitleSO (percent per stack; grows on triggers; optional decay)
+        // ── EventStacksTitleSO (percent per stack; grows on triggers; optional decay)
         var es = GetFirstTitle<EventStacksTitleSO>(monsterId, def, level);
         if (es != null && MatchesStat(stat, es.stat) && _eventStacks.TryGetValue(monsterId, out int eStacks) && eStacks > 0)
         {
@@ -268,14 +387,14 @@ public sealed class TitleManager : MonoBehaviour
             current *= 1f + pct * Mathf.Min(eStacks, Mathf.Max(1, es.maxStacks));
         }
 
-        // ── NEW: ClutchBoosterTitleSO (threshold via ctx.hpPct)
+        // ── ClutchBoosterTitleSO (threshold via ctx.hpPct)
         var clutch = GetFirstTitle<ClutchBoosterTitleSO>(monsterId, def, level);
-        float hp01 = ReadHp01(ctx); // ← helper below
+        float hp01 = ReadHp01(ctx);
         if (clutch != null && hp01 <= Mathf.Clamp01(clutch.hpBelowThreshold01))
         {
-            if (stat == StatKind.Attack && clutch.atkPct > 0f)   current *= (1f + clutch.atkPct);
-            if (stat == StatKind.Defense && clutch.defPct > 0f)  current *= (1f + clutch.defPct);
-            if (stat == StatKind.Speed && clutch.spdPct > 0f)    current *= (1f + clutch.spdPct);
+            if (stat == StatKind.Attack && clutch.atkPct > 0f) current *= (1f + clutch.atkPct);
+            if (stat == StatKind.Defense && clutch.defPct > 0f) current *= (1f + clutch.defPct);
+            if (stat == StatKind.Speed && clutch.spdPct > 0f) current *= (1f + clutch.spdPct);
         }
 
         return current;
@@ -336,7 +455,6 @@ public sealed class TitleManager : MonoBehaviour
         // 1) Start with generic defensive multiplier (nullifiers, etc.)
         float mul = GetIncomingEffectivenessMultiplier(monsterId, def, level);
 
-        // If we don't know the incoming type, we’re done.
         if (incomingType == MonsterType.None)
             return Mathf.Max(0f, mul);
 
@@ -352,9 +470,8 @@ public sealed class TitleManager : MonoBehaviour
                     {
                         if (tr.resistTypes[k] == incomingType)
                         {
-                            // e.g. incomingMultiplier = 0.75f for 25% less damage.
                             mul *= Mathf.Max(0f, tr.incomingMultiplier);
-                            break; // don’t double-count same asset
+                            break;
                         }
                     }
                 }
@@ -363,7 +480,6 @@ public sealed class TitleManager : MonoBehaviour
 
         return Mathf.Max(0f, mul);
     }
-
 
     // Adapter expects fields: cannotBeCrit, percentReduce, flatReduce
     public struct TitleDamageFilter
@@ -383,7 +499,6 @@ public sealed class TitleManager : MonoBehaviour
             var t = titles[i] as DamageFilterTitleSO;
             if (!t) continue;
 
-            // Convert 1.0-baseline multiplier to a percent reduction amount.
             float reduceFromMult = Mathf.Clamp01(1f - Mathf.Max(0f, t.percentMultiplier));
             f.flatReduce += Mathf.Max(0, t.flatReduce);
             f.percentReduce = Mathf.Clamp01(f.percentReduce + reduceFromMult);
@@ -395,10 +510,8 @@ public sealed class TitleManager : MonoBehaviour
     public object GetDamageFilterBoxed(string monsterId, MonsterDataSO def, int level) => GetDamageFilter(monsterId, def, level);
 
     // --- Job boosters (while assigned) ---
-    // Updated to be site-aware when SO exposes target site or AppliesTo(site)
     public float GetJobFatigueMultiplier(string monsterId, MonsterDataSO def, int level)
     {
-        // Legacy callsite support (no site provided) — treat as neutral
         var titles = GetEquippedList(monsterId, def, level);
         float mul = 1f;
         for (int i = 0; i < titles.Count; i++)
@@ -419,19 +532,17 @@ public sealed class TitleManager : MonoBehaviour
             bool applies = false;
             try
             {
-                // Preferred: explicit helper on SO
                 var m = t.GetType().GetMethod("AppliesTo");
                 if (m != null) applies = (bool)m.Invoke(t, new object[] { site });
                 else
                 {
-                    // Fallback: match by field if present
                     var f = t.GetType().GetField("targetJobSite");
                     if (f != null)
                     {
                         var val = (JobType)f.GetValue(t);
                         applies = (val == JobType.None || val == site);
                     }
-                    else applies = true; // if no field, treat as global
+                    else applies = true;
                 }
             }
             catch { applies = true; }
@@ -468,7 +579,7 @@ public sealed class TitleManager : MonoBehaviour
             }
             catch { applies = true; }
 
-            if (applies) sum += Mathf.Max(0f, ja is JobAuraTitleSO ? ja.siteAuraPercent : 0f);
+            if (applies) sum += Mathf.Max(0f, ja.siteAuraPercent);
         }
         return sum;
     }
@@ -507,7 +618,6 @@ public sealed class TitleManager : MonoBehaviour
 
     public float GetJobRateMult(string monsterId, JobType site)
     {
-        // kept from your original (with site check for ConditionalJobRateBoosterTitleSO)
         var def = MonsterLibraryLocator.GetById(monsterId);
         int lvl = 1;
         var titles = GetEquippedList(monsterId, def, lvl);
@@ -531,7 +641,6 @@ public sealed class TitleManager : MonoBehaviour
         return Mathf.Max(0f, mul);
     }
 
-    // Router for adapter
     public float GetStatValueRouter(string monsterId, MonsterDataSO def, int level, string statKind, TitleContext ctx, float baseValue)
     {
         var norm = NormalizeStatKey(statKind);
@@ -541,7 +650,6 @@ public sealed class TitleManager : MonoBehaviour
         return GetStatValue(monsterId, def, level, kind, in ctx, baseValue);
     }
 
-    // Small reflection helper (flexible field/property names)
     private static bool TryReadFloat(object obj, out float value, params string[] names)
     {
         value = 0f;
@@ -572,10 +680,7 @@ public sealed class TitleManager : MonoBehaviour
         {
             var t = titles[i] as EffectivenessNullifyTitleSO;
             if (t)
-            {
-                // Stack multiplicatively (so multiple resistances combine)
                 mul *= Mathf.Max(0f, t.incomingEffectivenessMultiplier);
-            }
         }
         return mul;
     }
@@ -583,16 +688,15 @@ public sealed class TitleManager : MonoBehaviour
     // ─────────────────────────────────────────────────────────────────────
     // UI-friendly wrappers that ALWAYS raise the event on change
     // ─────────────────────────────────────────────────────────────────────
-
     public bool AssignTitleToMonster(string monsterId, MonsterDataSO def, int tierIndex, TitleSO choose)
     {
-        bool ok = Equip(monsterId, def, tierIndex, choose); // Equip already calls RaiseTitleChange if changed
+        bool ok = Equip(monsterId, def, tierIndex, choose);
         return ok;
     }
 
     public bool RemoveTitleFromMonster(string monsterId, MonsterDataSO def, int tierIndex)
     {
-        bool ok = Unequip(monsterId, def, tierIndex); // Unequip already calls RaiseTitleChange if changed
+        bool ok = Unequip(monsterId, def, tierIndex);
         return ok;
     }
 
@@ -645,8 +749,8 @@ public sealed class TitleManager : MonoBehaviour
             case "ATK": return "Attack";
             case "DEF": return "Defense";
             case "SPD": return "Speed";
-            case "HP":  return "HP";
-            default:    return key; // "Attack","Defense","Speed" already fine
+            case "HP": return "HP";
+            default: return key;
         }
     }
 
@@ -716,9 +820,10 @@ public sealed class TitleManager : MonoBehaviour
         _flatStartUntilTurn.Clear();
         _flatStartAmountAtk.Clear();
         _shieldRemaining.Clear();
+
+        _activeBattleMonsterId = activeMonsterId;
         _turnIndex = 0;
 
-        // Pre-bake start buffs for active monster (expand to allies if you want)
         if (!string.IsNullOrEmpty(activeMonsterId))
             ApplyBattleStartBonuses(activeMonsterId);
     }
@@ -733,6 +838,8 @@ public sealed class TitleManager : MonoBehaviour
         _flatStartUntilTurn.Clear();
         _flatStartAmountAtk.Clear();
         _shieldRemaining.Clear();
+
+        _activeBattleMonsterId = "";
         _turnIndex = 0;
     }
 
@@ -746,16 +853,38 @@ public sealed class TitleManager : MonoBehaviour
     {
         _turnIndex = Mathf.Max(0, turnIndex);
 
+        // decay event stacks
         var keys = _eventStacks.Keys.ToArray();
         for (int i = 0; i < keys.Length; i++)
         {
             var id = keys[i];
             if (!_eventStacks.TryGetValue(id, out var cur)) continue;
+
             int decay = _eventDecayPerTurn.TryGetValue(id, out var d) ? d : 0;
             if (decay > 0)
                 _eventStacks[id] = Mathf.Max(0, cur - decay);
         }
 
+        // TurnBooster: gain 1 stack each turn up to max, on the active monster
+        if (!string.IsNullOrEmpty(_activeBattleMonsterId))
+        {
+            var def = MonsterLibraryLocator.GetById(_activeBattleMonsterId);
+            int lvl = GetLevelOr1(_activeBattleMonsterId);
+            var tb = GetFirstTitle<TurnBoosterTitleSO>(_activeBattleMonsterId, def, lvl);
+
+            if (tb != null)
+            {
+                _turnStacks.TryGetValue(_activeBattleMonsterId, out int cur);
+                int next = Mathf.Min(cur + 1, Mathf.Max(1, tb.maxStacks));
+                _turnStacks[_activeBattleMonsterId] = next;
+
+                BattleLogger.LogTitleActivation(
+                    ownerName: def != null ? def.displayName : _activeBattleMonsterId,
+                    titleName: string.IsNullOrEmpty(tb.displayName) ? tb.titleId : tb.displayName,
+                    summary: $"+1 stack ({next}/{tb.maxStacks})"
+                );
+            }
+        }
     }
 
     // Called by TitlesAdapter.OnAttackLanded(attackerId, wasCrit)
@@ -779,18 +908,29 @@ public sealed class TitleManager : MonoBehaviour
     {
         if (string.IsNullOrEmpty(defenderId)) return;
 
-        // Shield consumption (if present) — call this from your damage pipeline if you prefer
-        if (_shieldRemaining.TryGetValue(defenderId, out float shield) && shield > 0f)
+        // Shield consumption (visual/log only here; actual damage reduction should occur in damage pipeline)
+        if (_shieldRemaining.TryGetValue(defenderId, out float shield) && shield > 0f && damage > 0)
         {
             float used = Mathf.Min(shield, damage);
-            shield -= used;
-            _shieldRemaining[defenderId] = Mathf.Max(0f, shield);
-            // If you want to actually reduce damage here, expose a helper that returns reduced value.
+            float next = Mathf.Max(0f, shield - used);
+            _shieldRemaining[defenderId] = next;
+
+            var def = MonsterLibraryLocator.GetById(defenderId);
+            int lvl = GetLevelOr1(defenderId);
+            var shieldTitle = GetFirstTitle<BattleStartShieldTitleSO>(defenderId, def, lvl);
+            if (shieldTitle != null)
+            {
+                BattleLogger.LogTitleActivation(
+                    ownerName: def != null ? def.displayName : defenderId,
+                    titleName: string.IsNullOrEmpty(shieldTitle.displayName) ? shieldTitle.titleId : shieldTitle.displayName,
+                    summary: $"absorbed {Mathf.RoundToInt(used)} (rem {Mathf.RoundToInt(next)})"
+                );
+            }
         }
 
-        var def = MonsterLibraryLocator.GetById(defenderId);
-        int lvl = GetLevelOr1(defenderId);
-        var es = GetFirstTitle<EventStacksTitleSO>(defenderId, def, lvl);
+        var def2 = MonsterLibraryLocator.GetById(defenderId);
+        int lvl2 = GetLevelOr1(defenderId);
+        var es = GetFirstTitle<EventStacksTitleSO>(defenderId, def2, lvl2);
         if (es == null) return;
 
         bool trigger = (es.trigger == EventTriggerKind.OnHitTaken) || (wasCrit && es.trigger == EventTriggerKind.OnCrit);
@@ -802,7 +942,6 @@ public sealed class TitleManager : MonoBehaviour
     // ─────────────────────────────────────────────────────────────────────
     // Helpers
     // ─────────────────────────────────────────────────────────────────────
-
     private void ApplyBattleStartBonuses(string id)
     {
         var def = MonsterLibraryLocator.GetById(id);
@@ -812,8 +951,20 @@ public sealed class TitleManager : MonoBehaviour
         var flat = GetFirstTitle<BattleStartFlatTitleSO>(id, def, lvl);
         if (flat != null)
         {
-            _flatStartAmountAtk[id] = Mathf.Max(0, flat.flatAmount);
-            _flatStartUntilTurn[id] = Mathf.Max(1, flat.durationTurns <= 0 ? 1 : flat.durationTurns);
+            int amt = Mathf.Max(0, flat.flatAmount);
+            int dur = Mathf.Max(1, flat.durationTurns <= 0 ? 1 : flat.durationTurns);
+
+            _flatStartAmountAtk[id] = amt;
+
+            // Duration is number of turns including the current turn index.
+            // Example: dur=1 => only turnIndex 0. dur=2 => turnIndex 0 and 1.
+            _flatStartUntilTurn[id] = _turnIndex + (dur - 1);
+
+            BattleLogger.LogTitleActivation(
+                ownerName: def != null ? def.displayName : id,
+                titleName: string.IsNullOrEmpty(flat.displayName) ? flat.titleId : flat.displayName,
+                summary: $"+{amt} ATK for {dur} turn(s)"
+            );
         }
 
         // Shield from MaxHP %
@@ -821,7 +972,14 @@ public sealed class TitleManager : MonoBehaviour
         if (shield != null)
         {
             float maxHP = Mathf.Max(1f, BattleCalc.CalcHP(def, Mathf.Max(1, lvl)));
-            _shieldRemaining[id] = Mathf.Max(0f, maxHP * (Mathf.Max(0f, shield.shieldPct) / 100f));
+            float shieldHP = Mathf.Max(0f, maxHP * (Mathf.Max(0f, shield.shieldPct) / 100f));
+            _shieldRemaining[id] = shieldHP;
+
+            BattleLogger.LogTitleActivation(
+                ownerName: def != null ? def.displayName : id,
+                titleName: string.IsNullOrEmpty(shield.displayName) ? shield.titleId : shield.displayName,
+                summary: $"+Shield {Mathf.RoundToInt(shieldHP)}"
+            );
         }
     }
 
@@ -829,9 +987,23 @@ public sealed class TitleManager : MonoBehaviour
     {
         _eventStacks.TryGetValue(id, out int cur);
         int next = Mathf.Min(cur + 1, maxStacks);
+
         _eventStacks[id] = next;
         _eventMax[id] = maxStacks;
         _eventDecayPerTurn[id] = Mathf.Max(0, decayPerTurn);
+
+        // Log stack gains as procs (trust layer)
+        var def = MonsterLibraryLocator.GetById(id);
+        int lvl = GetLevelOr1(id);
+        var es = GetFirstTitle<EventStacksTitleSO>(id, def, lvl);
+        if (es != null && next != cur)
+        {
+            BattleLogger.LogTitleActivation(
+                ownerName: def != null ? def.displayName : id,
+                titleName: string.IsNullOrEmpty(es.displayName) ? es.titleId : es.displayName,
+                summary: $"+1 stack ({next}/{maxStacks})"
+            );
+        }
     }
 
     private static bool MatchesStat(StatKind stat, BattleStatKind bsk)
@@ -893,20 +1065,37 @@ public sealed class TitleManager : MonoBehaviour
         {
             var t = ctx.GetType();
 
-            // Try common field names
             var f = t.GetField("hpPct") ?? t.GetField("hp01") ?? t.GetField("hp") ?? t.GetField("health01");
             if (f != null)
                 return Mathf.Clamp01(Convert.ToSingle(f.GetValue(ctx)));
 
-            // Try common property names
             var p = t.GetProperty("hpPct") ?? t.GetProperty("hp01") ?? t.GetProperty("HP01") ?? t.GetProperty("Health01");
             if (p != null)
                 return Mathf.Clamp01(Convert.ToSingle(p.GetValue(ctx, null)));
         }
-        catch { /* fall through */ }
+        catch { }
 
-        // Default to full health if unavailable to avoid accidental always-on clutch
         return 1f;
+    }
+
+    public Sprite TryGetIconByTitleName(string titleName)
+    {
+        if (string.IsNullOrEmpty(titleName)) return null;
+
+        // Match displayName first
+        foreach (var kv in _idToTitle)
+        {
+            var so = kv.Value;
+            if (!so) continue;
+            if (string.Equals(so.displayName, titleName, StringComparison.OrdinalIgnoreCase))
+                return so.icon;
+        }
+
+        // Fallback: match by id
+        if (_idToTitle.TryGetValue(titleName, out var byId) && byId)
+            return byId.icon;
+
+        return null;
     }
 
 }

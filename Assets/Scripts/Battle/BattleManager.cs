@@ -177,6 +177,8 @@ public class BattleManager : MonoBehaviour
 
     public bool NarrationLocked => _narrationLock;
     private bool _narrationLock;
+    public MonsterDataSO WildDef => wildDef;
+    public int WildLevel => wildLevel;
 
 
     private MonsterDataSO wildDef;
@@ -213,6 +215,7 @@ public class BattleManager : MonoBehaviour
 
     private int _turnIndex = 0;
     private bool inBattle;
+    public bool InBattle => inBattle;
     private Action<BattleResult> onEnd;
     private float startTime;
     private Coroutine turnCR;
@@ -291,12 +294,12 @@ public class BattleManager : MonoBehaviour
     public void SetPlayerActionFocus() { TryQueueAction(PlayerAction.Focus); }
     public void SetPlayerActionRun() { TryQueueAction(PlayerAction.Run); }
 
-   private void TryQueueAction(PlayerAction a)
+    private void TryQueueAction(PlayerAction a)
     {
         if (!inBattle || !manualTurns) return;
         if (!IsPlayerTurn) return;
         if (isResolvingPlayerTurn) return;
-        if (_narrationLock) return;        
+        if (_narrationLock) return;
         if (pendingAction != PlayerAction.None) return;
 
         pendingAction = a;
@@ -2853,6 +2856,16 @@ public class BattleManager : MonoBehaviour
             yield return battleTextBox.ShowLine(new BattleLine(line, tags), battleSpeed);
 
         _narrationLock = false;
+    }
+    
+    public string ActivePlayerMonsterId
+    {
+        get
+        {
+            if (teamIds == null || teamIds.Length == 0) return "";
+            if (activeIndex < 0 || activeIndex >= teamIds.Length) return "";
+            return teamIds[activeIndex];
+        }
     }
 
 

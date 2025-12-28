@@ -3,6 +3,21 @@ using System.Collections.Generic;
 using System.Text;
 using UnityEngine;
 
+[Serializable]
+public struct TitleProcEvent
+{
+    public string ownerName;
+    public string titleName;
+    public string summary;
+
+    public TitleProcEvent(string ownerName, string titleName, string summary)
+    {
+        this.ownerName = ownerName;
+        this.titleName = titleName;
+        this.summary = summary;
+    }
+}
+
 // ─────────────────────────────────────────────────────────────
 // Shared types
 // ─────────────────────────────────────────────────────────────
@@ -173,6 +188,7 @@ public static class BattleLogger
     public static event Action<string> OnEncounterBegan;
     public static event Action<bool>   OnEncounterEnded;
     public static event Action         OnLogCleared;
+    public static event Action<TitleProcEvent> OnTitleProc;
 
     static readonly List<LogEntry> _entries = new List<LogEntry>(512);
     static string _currentBattleLabel;
@@ -318,7 +334,9 @@ public static class BattleLogger
 
     public static void LogTitleActivation(string ownerName, string titleName, string summary)
     {
-        // Example: "Umbra-01's Foreman activates: +20% Attack this turn."
+        // Fire proc event FIRST so UI can react even if logging is disabled later.
+        OnTitleProc?.Invoke(new TitleProcEvent(ownerName, titleName, summary));
+
         Log(
             $"<color={BattleLogColors.Title}>[TITLE]</color> " +
             $"<color={BattleLogColors.Name}>{ownerName}'s</color> {titleName} " +
@@ -326,6 +344,7 @@ public static class BattleLogger
             LogScope.Battle
         );
     }
+
 
     public static void LogChoice(string actorName, string choiceSummary, bool isPlayer)
     {
