@@ -18,6 +18,9 @@ public sealed class ActionBarBinder : MonoBehaviour
     [Tooltip("If true, buttons also auto-disable when Encounter auto-mode is on (EncounterManager.I.IsAutoMode).")]
     [SerializeField] private bool alsoDisableDuringEncounterAutoMode = true;
 
+    private bool _hasLast;
+    private bool _lastEnable;
+
     void Reset()
     {
         // Try to find BattleManager up the hierarchy or in scene
@@ -34,12 +37,38 @@ public sealed class ActionBarBinder : MonoBehaviour
             var n = b.name.ToLowerInvariant();
             if (n.Contains("attack")) attackBtn = b;
             else if (n.Contains("defend")) defendBtn = b;
-            else if (n.Contains("focus"))  focusBtn  = b;
-            else if (n.Contains("run"))    runBtn    = b;
+            else if (n.Contains("focus")) focusBtn = b;
+            else if (n.Contains("run")) runBtn = b;
         }
     }
 
     void Awake()
+    {
+        WireButtons();
+    }
+
+    void OnEnable()
+    {
+        if (!battle)
+        {
+            battle = GetComponentInParent<BattleManager>();
+            if (!battle) battle = FindFirstObjectByType<BattleManager>();
+        }
+
+        // Option A: semantic global battle/encounter state events
+        GameEvents.OnBattleStateChanged += Refresh;
+        GameEvents.OnEncounterAutoModeChanged += Refresh;
+
+        Refresh();
+    }
+
+    void OnDisable()
+    {
+        GameEvents.OnBattleStateChanged -= Refresh;
+        GameEvents.OnEncounterAutoModeChanged -= Refresh;
+    }
+
+    private void WireButtons()
     {
         if (attackBtn)
         {
@@ -48,6 +77,9 @@ public sealed class ActionBarBinder : MonoBehaviour
             {
                 if (battle) battle.SetPlayerActionAttack();
                 if (AudioManager.I != null) AudioManager.I.PlaySfx(SfxType.Attack);
+
+                // Action selection may lock input immediately
+                Refresh();
             });
         }
 
@@ -58,6 +90,7 @@ public sealed class ActionBarBinder : MonoBehaviour
             {
                 if (battle) battle.SetPlayerActionDefend();
                 if (AudioManager.I != null) AudioManager.I.PlaySfx(SfxType.Defend);
+                Refresh();
             });
         }
 
@@ -68,6 +101,7 @@ public sealed class ActionBarBinder : MonoBehaviour
             {
                 if (battle) battle.SetPlayerActionFocus();
                 if (AudioManager.I != null) AudioManager.I.PlaySfx(SfxType.Focus);
+                Refresh();
             });
         }
 
@@ -78,38 +112,59 @@ public sealed class ActionBarBinder : MonoBehaviour
             {
                 if (battle) battle.SetPlayerActionRun();
                 if (AudioManager.I != null) AudioManager.I.PlaySfx(SfxType.Run);
+                Refresh();
             });
         }
     }
 
-    void Update()
+    private void Refresh()
     {
         if (!autoDisableWhenNotPlayerTurn)
-            return;
-
-        bool enable = false;
-
-        if (battle && battle.isActiveAndEnabled)
         {
-            enable = battle.IsPlayerTurn;
-
-            // Optionally also gate by Encounter auto-mode if present
-            if (alsoDisableDuringEncounterAutoMode)
-            {
-                bool isAuto = false;
-                try
-                {
-                    isAuto = (EncounterManager.I != null) && EncounterManager.I.IsAutoMode;
-                }
-                catch
-                {
-                    // ignore if the API differs
-                }
-
-                if (isAuto) enable = false;
-            }
+            ApplyInteractable(true);
+            return;
         }
 
+        bool enable = ComputeEnable();
+
+        // Apply only if changed
+        if (_hasLast && enable == _lastEnable)
+            return;
+
+        _hasLast = true;
+        _lastEnable = enable;
+
+        ApplyInteractable(enable);
+    }
+
+    private bool ComputeEnable()
+    {
+        if (battle == null || !battle.isActiveAndEnabled)
+            return false;
+
+        bool enable = battle.IsPlayerTurn;
+
+        // Optionally also gate by Encounter auto-mode if present
+        if (enable && alsoDisableDuringEncounterAutoMode)
+        {
+            bool isAuto = false;
+            try
+            {
+                isAuto = (EncounterManager.I != null) && EncounterManager.I.IsAutoMode;
+            }
+            catch
+            {
+                // ignore if the API differs
+            }
+
+            if (isAuto) enable = false;
+        }
+
+        return enable;
+    }
+
+    private void ApplyInteractable(bool enable)
+    {
         if (attackBtn && attackBtn.interactable != enable) attackBtn.interactable = enable;
         if (defendBtn && defendBtn.interactable != enable) defendBtn.interactable = enable;
         if (focusBtn  && focusBtn.interactable  != enable) focusBtn.interactable  = enable;

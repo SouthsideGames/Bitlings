@@ -284,6 +284,7 @@ public class BattleManager : MonoBehaviour
         if (_isPlayerTurn == value) return;
         _isPlayerTurn = value;
         OnPlayerTurnChanged?.Invoke(_isPlayerTurn);
+        GameEvents.OnBattleStateChanged?.Invoke();
     }
 
     // ─────────────────────────────────────────────────────────────────────────────
@@ -303,6 +304,8 @@ public class BattleManager : MonoBehaviour
         if (pendingAction != PlayerAction.None) return;
 
         pendingAction = a;
+
+        GameEvents.OnBattleStateChanged?.Invoke();
     }
 
 
@@ -596,6 +599,7 @@ public class BattleManager : MonoBehaviour
 
                         queuedChoice = pendingAction;
                         pendingAction = PlayerAction.None;
+                        GameEvents.OnBattleStateChanged?.Invoke();
                         SetIsPlayerTurn(false);
 
                         if (queuedChoice == PlayerAction.Defend)
@@ -751,6 +755,7 @@ public class BattleManager : MonoBehaviour
 
         var choice = pendingAction;
         pendingAction = PlayerAction.None;
+        GameEvents.OnBattleStateChanged?.Invoke();
         SetIsPlayerTurn(false);
 
         switch (choice)
@@ -1425,6 +1430,7 @@ public class BattleManager : MonoBehaviour
 
         inBattle = false;
         SetIsPlayerTurn(false);
+        GameEvents.OnBattleStateChanged?.Invoke();
         benchBtn1.interactable = false;
         benchBtn2.interactable = false;
         pendingAction = PlayerAction.None;
@@ -2846,11 +2852,13 @@ public class BattleManager : MonoBehaviour
         BattleLogger.Log(line, LogScope.Battle); // still always logs (history stays complete)
 
         _narrationLock = true;
+        GameEvents.OnBattleStateChanged?.Invoke();
 
         if (battleTextBox != null)
             yield return battleTextBox.ShowLine(new BattleLine(line, tags), battleSpeed);
 
         _narrationLock = false;
+        GameEvents.OnBattleStateChanged?.Invoke();
     }
     
     public string ActivePlayerMonsterId

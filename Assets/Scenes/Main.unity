@@ -23435,11 +23435,11 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   battle: {fileID: 350265108}
+  visualsRoot: {fileID: 1437681278}
   iconImage: {fileID: 948965671}
   titleLabel: {fileID: 2138333378}
   infoButton: {fileID: 948965670}
   hideIfNoTitle: 1
-  refreshInterval: 0.25
 --- !u!1 &350598962
 GameObject:
   m_ObjectHideFlags: 0
@@ -29151,8 +29151,8 @@ MonoBehaviour:
   bucketLibrary: {fileID: 11400000, guid: 076ae093432eb9c4fba12625e06165dd, type: 2}
   tokenEconomy: {fileID: 11400000, guid: 948b6e1fef14efa4d81e574133a733ca, type: 2}
   levelCostCurve: {fileID: 11400000, guid: 16201bf82caa3424ea80ca520e61f1c8, type: 2}
-  pollSeconds: 0.5
   autoApplyCap: 3
+  debounceSeconds: 0.1
 --- !u!1 &435565714
 GameObject:
   m_ObjectHideFlags: 0

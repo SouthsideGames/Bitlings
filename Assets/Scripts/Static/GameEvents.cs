@@ -33,6 +33,8 @@ public static class GameEvents
 
     public static Action Tutorial_FirstJobAssigned;
 
-    // NEW: boosters UI refresh signal (cooldowns/durations/availability changed)
     public static Action OnBoostersChanged;
+
+    public static Action OnBattleStateChanged;
+    public static Action OnEncounterAutoModeChanged;
 }

@@ -10,6 +10,7 @@ public sealed class BattleTitleStatusBarUI : MonoBehaviour
     [SerializeField] private BattleManager battle;
 
     [Header("UI")]
+    [SerializeField] private GameObject visualsRoot; // NEW: child container to hide/show
     [SerializeField] private Image iconImage;
     [SerializeField] private TextMeshProUGUI titleLabel;
     [SerializeField] private Button infoButton;
@@ -22,6 +23,12 @@ public sealed class BattleTitleStatusBarUI : MonoBehaviour
 
     private EventInfo _battleChangedEvent;
     private object _battleEventOwner;
+
+    void Awake()
+    {
+        // If not assigned, default to this object (but we still won’t disable this GO)
+        if (visualsRoot == null) visualsRoot = gameObject;
+    }
 
     void OnEnable()
     {
@@ -46,14 +53,11 @@ public sealed class BattleTitleStatusBarUI : MonoBehaviour
         if (infoButton) infoButton.onClick.RemoveAllListeners();
     }
 
-    private void HandleTeamChanged()
-    {
-        // Team changes often coincide with swap / owned changes; safe refresh.
-        ForceRefresh();
-    }
+    private void HandleTeamChanged() => ForceRefresh();
 
     public void ForceRefresh()
     {
+        // If battle isn’t ready yet, just hide visuals. Do NOT deactivate this GO.
         if (battle == null || !battle.InBattle || TitleManager.I == null)
         {
             ApplyEmpty();
@@ -61,6 +65,8 @@ public sealed class BattleTitleStatusBarUI : MonoBehaviour
         }
 
         var monsterId = battle.ActivePlayerMonsterId;
+
+        // Only skip refresh if the monster hasn’t changed and we already have a title.
         if (monsterId == _lastMonsterId && _currentTitle != null)
             return;
 
@@ -98,7 +104,7 @@ public sealed class BattleTitleStatusBarUI : MonoBehaviour
         if (iconImage) iconImage.sprite = title.icon;
         if (titleLabel) titleLabel.text = title.displayName;
 
-        gameObject.SetActive(true);
+        SetVisible(true);
     }
 
     private void ApplyEmpty()
@@ -108,10 +114,14 @@ public sealed class BattleTitleStatusBarUI : MonoBehaviour
         if (iconImage) iconImage.sprite = null;
         if (titleLabel) titleLabel.text = "";
 
-        if (hideIfNoTitle)
-            gameObject.SetActive(false);
-        else
-            gameObject.SetActive(true);
+        SetVisible(!hideIfNoTitle);
+    }
+
+    private void SetVisible(bool visible)
+    {
+        // Only toggle the visuals container (child), never the whole GameObject.
+        if (visualsRoot != null)
+            visualsRoot.SetActive(visible);
     }
 
     private void OpenInfo()
@@ -130,8 +140,6 @@ public sealed class BattleTitleStatusBarUI : MonoBehaviour
     }
 
     // ---- Optional BattleManager event hook (reflection) ----
-    // If BattleManager has an event like OnActiveMonsterChanged / OnTurnChanged / OnStateChanged,
-    // we hook it to ForceRefresh.
     private void HookBattleChangedEvent()
     {
         if (battle == null) return;
