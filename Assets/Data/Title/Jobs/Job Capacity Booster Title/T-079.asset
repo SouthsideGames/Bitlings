@@ -15,5 +15,6 @@ MonoBehaviour:
   titleId: T-079
   displayName: Librarian
   description: Adds +100 storage capacity at Grove job site.
+  icon: {fileID: 8223624561192069640, guid: b07d6628ccc55443ebba64dd523bec24, type: 3}
   targetJobSite: 4
   capacityBonusFlat: 100

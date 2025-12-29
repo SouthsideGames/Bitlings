@@ -15,5 +15,6 @@ MonoBehaviour:
   titleId: T-330
   displayName: Groundskeeper
   description: Boosts Grove output by 10% while the wearer is assigned to the Grove.
+  icon: {fileID: 8223624561192069640, guid: b07d6628ccc55443ebba64dd523bec24, type: 3}
   targetJobSite: 4
   siteAuraPercent: 10

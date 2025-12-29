@@ -15,6 +15,7 @@ MonoBehaviour:
   titleId: T-190
   displayName: Accountant
   description: Adds +25 HP at battle start. Lasts 4 turn(s).
+  icon: {fileID: 7282265641985593549, guid: babbb01aafdeb49eab915a3fa3806073, type: 3}
   stat: 3
   flatAmount: 25
   durationTurns: 4

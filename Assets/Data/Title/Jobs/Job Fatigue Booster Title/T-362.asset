@@ -15,5 +15,6 @@ MonoBehaviour:
   titleId: T-362
   displayName: Chief Steward
   description: Reduces job fatigue gain by 25% while working at Harbor.
+  icon: {fileID: 8223624561192069640, guid: b07d6628ccc55443ebba64dd523bec24, type: 3}
   targetJobSite: 7
   fatigueMultiplier: 0.75

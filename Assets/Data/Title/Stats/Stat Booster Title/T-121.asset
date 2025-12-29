@@ -15,6 +15,7 @@ MonoBehaviour:
   titleId: T-121
   displayName: Safety Engineer
   description: Boosts ATK by 25.
+  icon: {fileID: 7617494016918777864, guid: 901668dd83f054253a0d4b283e24a25c, type: 3}
   stat: 1
   operation: 0
   value: 25

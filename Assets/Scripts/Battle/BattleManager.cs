@@ -977,12 +977,7 @@ public class BattleManager : MonoBehaviour
                 Debug.Log(msg);
             }
         }
-
-        // Tap boost (if used)
-        float tap = TapBoost.I ? TapBoost.I.CurrentMultiplier : 1f;
-        if (!Mathf.Approximately(tap, 1f))
-            dr.damage = Mathf.Max(1, Mathf.RoundToInt(dr.damage * tap));
-
+        
         // Slot damage buff (temporary)
         if (slotDamageBuffPct != null && slotDamageBuffTurns != null &&
             activeIndex >= 0 && activeIndex < slotDamageBuffPct.Length &&

@@ -15,6 +15,7 @@ MonoBehaviour:
   titleId: T-170
   displayName: Smith
   description: 'Below 60% HP: ATK increased by 20% but SPD reduced by 10%.'
+  icon: {fileID: -1701936405944522535, guid: 4229c666f41ed45eaa348f0634c42fbe, type: 3}
   condition: 1
   threshold01: 0.6
   countN: 1

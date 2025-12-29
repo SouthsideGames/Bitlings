@@ -15,5 +15,6 @@ MonoBehaviour:
   titleId: T-333
   displayName: Dockmaster
   description: Boosts Harbor output by 15% while the wearer is assigned to the Harbor.
+  icon: {fileID: 8223624561192069640, guid: b07d6628ccc55443ebba64dd523bec24, type: 3}
   targetJobSite: 7
   siteAuraPercent: 15

@@ -15,6 +15,7 @@ MonoBehaviour:
   titleId: T-018
   displayName: Supervisor
   description: Increases ATK but reduces SPD.
+  icon: {fileID: 3524203170830039954, guid: 23a1fc70c608d4ef28fe21f3322255e2, type: 3}
   statA: 1
   opA: 0
   valueA: 15

@@ -15,6 +15,7 @@ MonoBehaviour:
   titleId: T-287
   displayName: Doctor
   description: Gains +5% HP each turn for 3 turns (max +15% HP).
+  icon: {fileID: -7211892166802722315, guid: 28fa34c3b419148d6b24298ab5402546, type: 3}
   stat: 3
   percentPerTurn: 5
   maxStacks: 3

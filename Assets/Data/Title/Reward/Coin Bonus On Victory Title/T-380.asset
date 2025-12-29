@@ -15,4 +15,5 @@ MonoBehaviour:
   titleId: T-380
   displayName: Assembler
   description: Increases coin gains by 40%.
-  coinMultiplier: 1.4
+  icon: {fileID: -3496002049442729487, guid: c44d43bdac301486ebb1095a25c33894, type: 3}
+  creditMultiplier: 1.1

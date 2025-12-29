@@ -15,6 +15,7 @@ MonoBehaviour:
   titleId: T-134
   displayName: Training Treasurer
   description: Boosts SPD by 20%.
+  icon: {fileID: 3902597290929183080, guid: 24da5d2a0d2fd410984dc7a22a8b7faa, type: 3}
   stat: 3
   operation: 2
   value: 1.2

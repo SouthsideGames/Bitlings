@@ -15,5 +15,6 @@ MonoBehaviour:
   titleId: T-364
   displayName: Regional Grinder
   description: Reduces job fatigue gain by 10% while working at Quarry.
+  icon: {fileID: 8223624561192069640, guid: b07d6628ccc55443ebba64dd523bec24, type: 3}
   targetJobSite: 1
   fatigueMultiplier: 0.9

@@ -15,5 +15,6 @@ MonoBehaviour:
   titleId: T-081
   displayName: Firefighter
   description: Slows fatigue gain by 10% while working at Forge.
+  icon: {fileID: 8223624561192069640, guid: b07d6628ccc55443ebba64dd523bec24, type: 3}
   targetJobSite: 5
   fatigueMultiplier: 0.9

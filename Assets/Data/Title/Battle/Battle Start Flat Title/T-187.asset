@@ -15,6 +15,7 @@ MonoBehaviour:
   titleId: T-187
   displayName: Principal Supervisor
   description: Adds +10 SPD at battle start. Lasts 1 turn(s).
+  icon: {fileID: 7617494016918777864, guid: 901668dd83f054253a0d4b283e24a25c, type: 3}
   stat: 2
   flatAmount: 10
   durationTurns: 1

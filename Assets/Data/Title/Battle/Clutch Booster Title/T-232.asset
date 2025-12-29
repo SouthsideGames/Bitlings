@@ -15,8 +15,8 @@ MonoBehaviour:
   titleId: T-232
   displayName: Speed Engineer
   description: Boosts SPD by 25% when HP falls below 25%.
+  icon: {fileID: 6491568308551129627, guid: 2383639ffee5242b6aa3db0e42301988, type: 3}
   hpBelowThreshold01: 0.25
   atkPct: 0
   defPct: 0
   spdPct: 1.25
-  dmgMult: 1

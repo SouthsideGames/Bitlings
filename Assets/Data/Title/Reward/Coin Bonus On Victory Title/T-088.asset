@@ -15,4 +15,5 @@ MonoBehaviour:
   titleId: T-088
   displayName: Nurse
   description: Increases coin gains by 25%.
-  coinMultiplier: 1.25
+  icon: {fileID: -3496002049442729487, guid: c44d43bdac301486ebb1095a25c33894, type: 3}
+  creditMultiplier: 1.1

@@ -1,36 +1,34 @@
-using System.Collections.Generic;
-using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
+using TMPro;
 
 public sealed class BattleTitleStatusBarUI : MonoBehaviour
 {
-    public enum Side { Player, Wild }
-
     [Header("Refs")]
     [SerializeField] private BattleManager battle;
-    [SerializeField] private Side side = Side.Player;
 
     [Header("UI")]
-    [SerializeField] private Transform iconRoot;
-    [SerializeField] private BattleTitleStatusIconUI iconPrefab;
+    [SerializeField] private Image iconImage;
+    [SerializeField] private TextMeshProUGUI titleLabel;
+    [SerializeField] private Button infoButton;
 
-    [Header("Behavior")]
-    [SerializeField] private bool hideIfNone = true;
-    [SerializeField] private float refreshInterval = 0.25f;
+    [Header("Rules")]
+    [SerializeField] private bool hideIfNoTitle = true;
+    [SerializeField, Min(0.05f)] private float refreshInterval = 0.25f;
 
-    private readonly List<BattleTitleStatusIconUI> _spawned = new();
     private float _t;
-    private string _lastKey = "";
+    private string _lastMonsterId;
+    private TitleSO _currentTitle;
 
     void OnEnable()
     {
-        ForceRefresh();
-    }
+        if (infoButton)
+        {
+            infoButton.onClick.RemoveAllListeners();
+            infoButton.onClick.AddListener(OpenInfo);
+        }
 
-    void OnDisable()
-    {
-        ClearIcons();
+        ForceRefresh();
     }
 
     void Update()
@@ -39,112 +37,89 @@ public sealed class BattleTitleStatusBarUI : MonoBehaviour
         if (_t < refreshInterval) return;
         _t = 0f;
 
-        if (battle == null || !battle.InBattle)
+        if (battle == null || !battle.InBattle || TitleManager.I == null)
         {
-            if (hideIfNone) gameObject.SetActive(false);
+            ApplyEmpty();
             return;
         }
 
-        string key = BuildStateKey();
-        if (key == _lastKey) return;
-
-        ForceRefresh();
-    }
-
-    private string BuildStateKey()
-    {
-        if (battle == null || !battle.InBattle) return "";
-
-        if (side == Side.Player)
-            return battle.ActivePlayerMonsterId ?? "";
-        else
-            return (battle.WildDef != null ? battle.WildDef.id : "WILD_NULL") + ":" + battle.WildLevel;
+        var monsterId = battle.ActivePlayerMonsterId;
+        if (monsterId != _lastMonsterId)
+            ForceRefresh();
     }
 
     public void ForceRefresh()
     {
         _t = 0f;
 
-        if (battle == null || !battle.InBattle)
+        if (battle == null || !battle.InBattle || TitleManager.I == null)
         {
-            ClearIcons();
-            if (hideIfNone) gameObject.SetActive(false);
-            _lastKey = "";
+            ApplyEmpty();
             return;
         }
 
-        _lastKey = BuildStateKey();
-
-        List<TitleSO> titles = GetTitlesForSide();
-        if (titles == null) titles = new List<TitleSO>();
-
-        // Filter nulls + respect UI flag
-        var filtered = new List<TitleSO>(titles.Count);
-        for (int i = 0; i < titles.Count; i++)
-        {
-            var t = titles[i];
-            if (!t) continue;
-            if (!t.showInBattleStatusBar) continue;
-            filtered.Add(t);
-        }
-
-        ClearIcons();
-
-        for (int i = 0; i < filtered.Count; i++)
-        {
-            var so = filtered[i];
-            var ui = Instantiate(iconPrefab, iconRoot);
-            ui.Bind(so, stackText: "");
-            _spawned.Add(ui);
-        }
-
-        bool any = filtered.Count > 0;
-        if (hideIfNone) gameObject.SetActive(any);
+        _lastMonsterId = battle.ActivePlayerMonsterId;
+        RefreshForMonster(_lastMonsterId);
     }
 
-    private List<TitleSO> GetTitlesForSide()
+    private void RefreshForMonster(string monsterId)
     {
-        if (TitleManager.I == null) return new List<TitleSO>();
+        _currentTitle = null;
 
-        if (side == Side.Player)
+        if (string.IsNullOrEmpty(monsterId))
         {
-            var id = battle.ActivePlayerMonsterId;
-            if (string.IsNullOrEmpty(id)) return new List<TitleSO>();
+            ApplyEmpty();
+            return;
+        }
 
-            return TitleManager.I.GetTitlesForMonster(id);
-        }
-        else
+        // One title max by design
+        var states = TitleManager.I.GetActiveTitleUIStates(monsterId);
+        if (states == null || states.Count == 0)
         {
-            // Wild monster: no saved equips; but you may have always-on titles.
-            // If you *do* want wild titles, implement a wild-title policy.
-            // For now: return empty.
-            return new List<TitleSO>();
+            ApplyEmpty();
+            return;
         }
+
+        var s = states[0];
+        var title = TitleManager.I.GetTitleById(s.titleId);
+        if (!title)
+        {
+            ApplyEmpty();
+            return;
+        }
+
+        _currentTitle = title;
+
+        if (iconImage)  iconImage.sprite = title.icon;
+        if (titleLabel) titleLabel.text = title.displayName;
+
+        gameObject.SetActive(true);
     }
 
-    private void ClearIcons()
+    private void ApplyEmpty()
     {
-        for (int i = 0; i < _spawned.Count; i++)
-        {
-            if (_spawned[i]) Destroy(_spawned[i].gameObject);
-        }
-        _spawned.Clear();
+        _currentTitle = null;
+
+        if (iconImage)  iconImage.sprite = null;
+        if (titleLabel) titleLabel.text = "";
+
+        if (hideIfNoTitle)
+            gameObject.SetActive(false);
     }
-}
 
-public sealed class BattleTitleStatusIconUI : MonoBehaviour
-{
-    [SerializeField] private Image icon;
-    [SerializeField] private TextMeshProUGUI stackText;
-
-    public void Bind(TitleSO so, string stackText = "")
+    private void OpenInfo()
     {
-        if (icon) icon.sprite = so ? so.icon : null;
+        if (_currentTitle == null) return;
 
-        if (this.stackText)
-        {
-            this.stackText.text = stackText ?? "";
-            this.stackText.gameObject.SetActive(!string.IsNullOrEmpty(stackText));
-        }
+        // Match ResourceRowUI behavior exactly
+        var id = $"title.{_currentTitle.titleId}";
+        InfoRouter.Open(
+            id,
+            _currentTitle.displayName,
+            "Active Title",
+            _currentTitle.description
+        );
+
+        AudioManager.I?.PlayClick();
     }
 }

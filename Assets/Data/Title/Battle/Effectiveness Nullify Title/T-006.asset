@@ -15,4 +15,5 @@ MonoBehaviour:
   titleId: T-006
   displayName: Teacher
   description: Reduces type weakness damage by 10%.
+  icon: {fileID: -4359337021282963907, guid: 5529b5b2fb89240a99a3b5c95101f7f0, type: 3}
   incomingEffectivenessMultiplier: 0.9

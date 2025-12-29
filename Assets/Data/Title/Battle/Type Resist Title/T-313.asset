@@ -15,5 +15,6 @@ MonoBehaviour:
   titleId: T-313
   displayName: Regional Paramedic
   description: Reduces damage taken from Water- and Ice-type attacks by 50%.
+  icon: {fileID: 2579639455195160362, guid: 8161cc557b3534e1c92074f069e630c9, type: 3}
   resistTypes: 0200000005000000
   incomingMultiplier: 0.5

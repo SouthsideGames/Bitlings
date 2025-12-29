@@ -15,5 +15,6 @@ MonoBehaviour:
   titleId: T-084
   displayName: Machinist
   description: Slows fatigue gain by 25% while working at Sanctum.
+  icon: {fileID: 8223624561192069640, guid: b07d6628ccc55443ebba64dd523bec24, type: 3}
   targetJobSite: 13
   fatigueMultiplier: 0.75

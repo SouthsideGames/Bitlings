@@ -15,5 +15,6 @@ MonoBehaviour:
   titleId: T-360
   displayName: Supervisor
   description: Reduces job fatigue gain by 15% while working at Power Plant.
+  icon: {fileID: 8223624561192069640, guid: b07d6628ccc55443ebba64dd523bec24, type: 3}
   targetJobSite: 3
   fatigueMultiplier: 0.85

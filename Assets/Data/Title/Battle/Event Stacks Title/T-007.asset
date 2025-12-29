@@ -16,6 +16,7 @@ MonoBehaviour:
   displayName: Foreman
   description: Gains +4% ATK per stack when attacking (max 5 stacks, 1 stack decays
     each turn).
+  icon: {fileID: -7211892166802722315, guid: 28fa34c3b419148d6b24298ab5402546, type: 3}
   stat: 0
   trigger: 1
   percentPerStack: 4

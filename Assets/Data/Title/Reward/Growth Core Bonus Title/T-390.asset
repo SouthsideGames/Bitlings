@@ -15,4 +15,5 @@ MonoBehaviour:
   titleId: T-390
   displayName: Rigger
   description: Increases growth cores by 50%.
+  icon: {fileID: 2291750746404757969, guid: ce3a6dc26e8c44aada3227991627a8e0, type: 3}
   growthCoreMultiplier: 1.5

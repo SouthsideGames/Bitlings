@@ -15,6 +15,7 @@ MonoBehaviour:
   titleId: T-178
   displayName: Plant Accountant
   description: "Above 75% HP: DEF +30%, SPD \u201315%."
+  icon: {fileID: -1701936405944522535, guid: 4229c666f41ed45eaa348f0634c42fbe, type: 3}
   condition: 2
   threshold01: 0.75
   countN: 1

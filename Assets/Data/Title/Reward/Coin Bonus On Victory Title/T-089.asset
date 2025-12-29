@@ -15,4 +15,5 @@ MonoBehaviour:
   titleId: T-089
   displayName: Consultant
   description: Increases coin gains by 30%.
-  coinMultiplier: 1.3
+  icon: {fileID: -3496002049442729487, guid: c44d43bdac301486ebb1095a25c33894, type: 3}
+  creditMultiplier: 1.1

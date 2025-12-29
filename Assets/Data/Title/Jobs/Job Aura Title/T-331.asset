@@ -15,5 +15,6 @@ MonoBehaviour:
   titleId: T-331
   displayName: Forge Master
   description: Boosts Forge output by 25% while the wearer is assigned to the Forge.
+  icon: {fileID: 8223624561192069640, guid: b07d6628ccc55443ebba64dd523bec24, type: 3}
   targetJobSite: 5
   siteAuraPercent: 25

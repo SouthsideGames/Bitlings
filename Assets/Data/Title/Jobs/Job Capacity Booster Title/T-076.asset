@@ -15,5 +15,6 @@ MonoBehaviour:
   titleId: T-076
   displayName: Analyst
   description: Adds +100 storage capacity at Cryo Lab job site.
+  icon: {fileID: 8223624561192069640, guid: b07d6628ccc55443ebba64dd523bec24, type: 3}
   targetJobSite: 8
   capacityBonusFlat: 100

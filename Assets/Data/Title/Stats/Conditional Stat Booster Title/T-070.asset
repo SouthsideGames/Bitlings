@@ -15,6 +15,7 @@ MonoBehaviour:
   titleId: T-070
   displayName: Corporate Janitor
   description: While above 70% HP, SPD +8.
+  icon: {fileID: -1701936405944522535, guid: 4229c666f41ed45eaa348f0634c42fbe, type: 3}
   condition: 2
   threshold01: 0.7
   countN: 1

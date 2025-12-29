@@ -15,5 +15,6 @@ MonoBehaviour:
   titleId: T-348
   displayName: Associate Weaver
   description: Adds +100 storage capacity at Mine job site.
+  icon: {fileID: 8223624561192069640, guid: b07d6628ccc55443ebba64dd523bec24, type: 3}
   targetJobSite: 2
   capacityBonusFlat: 100

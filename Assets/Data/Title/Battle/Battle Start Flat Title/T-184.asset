@@ -15,6 +15,7 @@ MonoBehaviour:
   titleId: T-184
   displayName: Technician
   description: Adds +20 ATK at battle start. Lasts 3 turn(s).
+  icon: {fileID: 7617494016918777864, guid: 901668dd83f054253a0d4b283e24a25c, type: 3}
   stat: 0
   flatAmount: 20
   durationTurns: 3

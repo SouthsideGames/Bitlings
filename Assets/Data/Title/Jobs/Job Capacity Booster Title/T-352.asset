@@ -15,5 +15,6 @@ MonoBehaviour:
   titleId: T-352
   displayName: Maintenance Therapist
   description: Adds +5 storage capacity at Sanctum job site.
+  icon: {fileID: 8223624561192069640, guid: b07d6628ccc55443ebba64dd523bec24, type: 3}
   targetJobSite: 13
   capacityBonusFlat: 5

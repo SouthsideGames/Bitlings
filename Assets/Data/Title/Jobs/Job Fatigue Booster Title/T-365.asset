@@ -15,5 +15,6 @@ MonoBehaviour:
   titleId: T-365
   displayName: Lead Botanist
   description: Reduces job fatigue gain by 15% while working at Expedition.
+  icon: {fileID: 8223624561192069640, guid: b07d6628ccc55443ebba64dd523bec24, type: 3}
   targetJobSite: 16
   fatigueMultiplier: 0.85

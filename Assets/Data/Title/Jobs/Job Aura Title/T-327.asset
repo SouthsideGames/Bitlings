@@ -15,5 +15,6 @@ MonoBehaviour:
   titleId: T-327
   displayName: Quarry Supervisor
   description: Boosts Quarry output by 15% while the wearer is assigned to the Quarry.
+  icon: {fileID: 8223624561192069640, guid: b07d6628ccc55443ebba64dd523bec24, type: 3}
   targetJobSite: 1
   siteAuraPercent: 15

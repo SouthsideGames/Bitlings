@@ -15,6 +15,7 @@ MonoBehaviour:
   titleId: T-119
   displayName: Plumber
   description: Boosts HP by 25%
+  icon: {fileID: 7282265641985593549, guid: babbb01aafdeb49eab915a3fa3806073, type: 3}
   stat: 0
   operation: 2
   value: 1.25

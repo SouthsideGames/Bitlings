@@ -16,5 +16,6 @@ MonoBehaviour:
   displayName: Cryo Technician
   description: Boosts Cryo Lab output by 15% while the wearer is assigned to the
     Cryo Lab.
+  icon: {fileID: 8223624561192069640, guid: b07d6628ccc55443ebba64dd523bec24, type: 3}
   targetJobSite: 8
   siteAuraPercent: 15

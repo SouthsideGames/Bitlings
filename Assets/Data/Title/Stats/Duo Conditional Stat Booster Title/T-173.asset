@@ -15,6 +15,7 @@ MonoBehaviour:
   titleId: T-173
   displayName: Lead Assembler
   description: 'Below 35% HP: ATK increased by 45%, DEF reduced by 20%.'
+  icon: {fileID: -1701936405944522535, guid: 4229c666f41ed45eaa348f0634c42fbe, type: 3}
   condition: 1
   threshold01: 0.35
   countN: 1

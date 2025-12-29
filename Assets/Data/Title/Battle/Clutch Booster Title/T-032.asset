@@ -15,8 +15,8 @@ MonoBehaviour:
   titleId: T-032
   displayName: Surgeon
   description: Boosts ATK by 20% when HP falls below 25%.
+  icon: {fileID: 6491568308551129627, guid: 2383639ffee5242b6aa3db0e42301988, type: 3}
   hpBelowThreshold01: 0.25
   atkPct: 1.2
   defPct: 0
   spdPct: 0
-  dmgMult: 1

@@ -16,5 +16,6 @@ MonoBehaviour:
   displayName: Market Broker
   description: Boosts Shadow Market output by 25% while the wearer is assigned to
     the Shadow Market.
+  icon: {fileID: 8223624561192069640, guid: b07d6628ccc55443ebba64dd523bec24, type: 3}
   targetJobSite: 12
   siteAuraPercent: 25

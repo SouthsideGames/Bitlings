@@ -16,5 +16,6 @@ MonoBehaviour:
   displayName: Stargazer
   description: Boosts Observatory output by 15% while the wearer is assigned to the
     Observatory.
+  icon: {fileID: 8223624561192069640, guid: b07d6628ccc55443ebba64dd523bec24, type: 3}
   targetJobSite: 9
   siteAuraPercent: 15

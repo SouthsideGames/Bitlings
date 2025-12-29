@@ -15,5 +15,6 @@ MonoBehaviour:
   titleId: T-361
   displayName: Sommelier
   description: Reduces job fatigue gain by 20% while working at Grove.
+  icon: {fileID: 8223624561192069640, guid: b07d6628ccc55443ebba64dd523bec24, type: 3}
   targetJobSite: 4
   fatigueMultiplier: 0.8

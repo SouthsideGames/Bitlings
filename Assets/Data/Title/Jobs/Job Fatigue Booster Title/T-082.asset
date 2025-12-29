@@ -15,5 +15,6 @@ MonoBehaviour:
   titleId: T-082
   displayName: Biochemist
   description: Slows fatigue gain by 15% while working at Cryo Lab.
+  icon: {fileID: 8223624561192069640, guid: b07d6628ccc55443ebba64dd523bec24, type: 3}
   targetJobSite: 8
   fatigueMultiplier: 0.85

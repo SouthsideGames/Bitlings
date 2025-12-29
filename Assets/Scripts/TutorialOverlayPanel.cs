@@ -61,7 +61,7 @@ public sealed class TutorialOverlayPanel : MonoBehaviour
         // If an instance is already in scene (even inactive), open it now.
         try
         {
-            var all = UnityEngine.Object.FindObjectsOfType<TutorialOverlayPanel>(true);
+            var all = FindObjectsByType<TutorialOverlayPanel>(FindObjectsInactive.Include, FindObjectsSortMode.None);
             for (int i = 0; i < all.Length; i++)
             {
                 var t = all[i];
@@ -172,14 +172,13 @@ public sealed class TutorialOverlayPanel : MonoBehaviour
     {
         if (string.IsNullOrWhiteSpace(tutorialKey)) return;
 
-        // Skip = complete immediately (SaveManager owns saving)
         SaveManager.SetTutorialComplete(tutorialKey, true);
-
-        // Ensure it won't reopen due to a pending request
         _pendingOpen.Remove(tutorialKey);
 
         _openedThisSession = true;
         ShowOverlay(false);
+
+        AudioManager.I.PlayClick();
     }
 
     private void RenderPage()

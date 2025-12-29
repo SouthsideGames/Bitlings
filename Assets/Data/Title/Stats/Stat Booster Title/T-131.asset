@@ -15,6 +15,7 @@ MonoBehaviour:
   titleId: T-131
   displayName: Broker
   description: Boosts SPD by 10.
+  icon: {fileID: 3902597290929183080, guid: 24da5d2a0d2fd410984dc7a22a8b7faa, type: 3}
   stat: 3
   operation: 0
   value: 10

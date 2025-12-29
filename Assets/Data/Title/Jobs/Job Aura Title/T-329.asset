@@ -16,5 +16,6 @@ MonoBehaviour:
   displayName: Power Engineer
   description: Boosts Power Plant output by 20% while the wearer is assigned to the
     Power Plant.
+  icon: {fileID: 8223624561192069640, guid: b07d6628ccc55443ebba64dd523bec24, type: 3}
   targetJobSite: 3
   siteAuraPercent: 20

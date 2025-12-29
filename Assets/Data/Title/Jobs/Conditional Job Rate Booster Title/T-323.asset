@@ -15,5 +15,6 @@ MonoBehaviour:
   titleId: T-323
   displayName: Logistics Receptionist
   description: Increases job production rate by 30% while assigned to Quarry.
+  icon: {fileID: -1701936405944522535, guid: 4229c666f41ed45eaa348f0634c42fbe, type: 3}
   rateMultiplier: 1.3
   restrictTo: 1

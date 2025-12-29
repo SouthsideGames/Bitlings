@@ -15,5 +15,6 @@ MonoBehaviour:
   titleId: T-367
   displayName: Research Welder
   description: Reduces job fatigue gain by 25% while working at Wyrm Den.
+  icon: {fileID: 8223624561192069640, guid: b07d6628ccc55443ebba64dd523bec24, type: 3}
   targetJobSite: 11
   fatigueMultiplier: 0.75

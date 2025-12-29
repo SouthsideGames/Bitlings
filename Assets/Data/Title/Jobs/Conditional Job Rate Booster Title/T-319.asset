@@ -15,5 +15,6 @@ MonoBehaviour:
   titleId: T-319
   displayName: Concierge
   description: Increases job production rate by 10% while assigned to Clinic.
+  icon: {fileID: -1701936405944522535, guid: 4229c666f41ed45eaa348f0634c42fbe, type: 3}
   rateMultiplier: 1.1
   restrictTo: 14

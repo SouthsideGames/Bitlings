@@ -15,5 +15,6 @@ MonoBehaviour:
   titleId: T-301
   displayName: Corporate Builder
   description: Reduces damage taken from Ground-type attacks by 10%.
+  icon: {fileID: 2579639455195160362, guid: 8161cc557b3534e1c92074f069e630c9, type: 3}
   resistTypes: 08000000
   incomingMultiplier: 0.75

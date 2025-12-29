@@ -266,8 +266,6 @@ public partial class EncounterManager : MonoBehaviour
 
         PlayEncounterSfx(wild);
 
-        if (TapBoost.I) TapBoost.I.ResetEncounter();
-
         var p = data.team[0];
         if (_currentEncounterIsBoss)
             EmitStatus($"⚠️ BOSS ENCOUNTER! {wild.displayName} (Lv {wildLevel}) appears.{(p.flatAtkBonus > 0 ? $" (+ATK {p.flatAtkBonus})" : "")}");

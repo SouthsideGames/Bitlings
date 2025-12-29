@@ -22,7 +22,6 @@ public sealed class TitleManager : MonoBehaviour
     // ─────────────────────────────────────────────────────────────────────
     // Per-battle state (TurnBooster / EventStacks / BattleStart)
     // ─────────────────────────────────────────────────────────────────────
-    // NOTE: one-simple-bucket-per-monster; expand to keyed tuples if you add multiple variants per monster.
     private readonly Dictionary<string, int> _turnStacks = new();           // grows on OnTurnAdvanced up to max (TurnBooster)
     private readonly Dictionary<string, int> _eventStacks = new();          // grows on triggers (EventStacks)
     private readonly Dictionary<string, int> _eventMax = new();             // cache max for UI/debug (optional)
@@ -33,7 +32,7 @@ public sealed class TitleManager : MonoBehaviour
     private int _turnIndex;
 
     // ─────────────────────────────────────────────────────────────────────
-    // Active Title UI state (Status Bar)
+    // Active Title UI state (Status Bar / Info Button)
     // ─────────────────────────────────────────────────────────────────────
     public struct ActiveTitleUIState
     {
@@ -45,8 +44,38 @@ public sealed class TitleManager : MonoBehaviour
     }
 
     /// <summary>
-    /// UI helper: returns equipped titles for a monster with "active" flags + stacks based on current battle state.
-    /// Safe to call outside battle (will just show equipped titles as active).
+    /// Returns the SINGLE equipped title id for a monster (excluding always-on defaults).
+    /// If none equipped, returns "".
+    /// </summary>
+    public string GetEquippedTitleId(string ownedMonsterId)
+    {
+        if (string.IsNullOrEmpty(ownedMonsterId)) return "";
+
+        var def = MonsterLibraryLocator.GetById(ownedMonsterId);
+        if (!def || !def.titleTrack) return "";
+
+        var tiers = def.titleTrack.tiers;
+        if (tiers == null || tiers.Count == 0) return "";
+
+        var save = TitleSaveStore.GetOrCreateEquip(ownedMonsterId);
+        if (save == null || save.tierSelections == null) return "";
+
+        // Enforced as "only one total" by Equip(), but we still scan defensively.
+        for (int i = 0; i < save.tierSelections.Count; i++)
+        {
+            var tid = save.tierSelections[i];
+            if (!string.IsNullOrEmpty(tid))
+                return tid;
+        }
+
+        return "";
+    }
+
+    /// <summary>
+    /// UI helper (legacy): returns equipped titles for a monster with "active" flags + stacks based on current battle state.
+    /// With the one-title rule, this will typically return either:
+    /// - default always-on titles (if you use them), plus
+    /// - a single picked title (at most one)
     /// </summary>
     public List<ActiveTitleUIState> GetActiveTitleUIStates(string ownedMonsterId)
     {
@@ -56,7 +85,6 @@ public sealed class TitleManager : MonoBehaviour
         var def = MonsterLibraryLocator.GetById(ownedMonsterId);
         int lvl = GetLevelOr1(ownedMonsterId);
         var equipped = GetEquippedList(ownedMonsterId, def, lvl);
-
         if (equipped == null) return res;
 
         for (int i = 0; i < equipped.Count; i++)
@@ -102,7 +130,6 @@ public sealed class TitleManager : MonoBehaviour
                 }
                 else
                 {
-                    // Unknown runtime title types: keep active=true (equipped)
                     s.isActive = true;
                 }
             }
@@ -122,7 +149,6 @@ public sealed class TitleManager : MonoBehaviour
         {
             var t = obj.GetType();
 
-            // Prefer "icon" field/property if you add it to TitleSO.
             var f = t.GetField("icon");
             if (f != null && f.FieldType == typeof(Sprite))
             {
@@ -154,6 +180,11 @@ public sealed class TitleManager : MonoBehaviour
     // ─────────────────────────────────────────────────────────────────────
     private void Awake()
     {
+        if (I != null && I != this)
+        {
+            Destroy(gameObject);
+            return;
+        }
         I = this;
         BuildIndex();
     }
@@ -217,6 +248,8 @@ public sealed class TitleManager : MonoBehaviour
         if (tiers == null || tierIndex < 0 || tierIndex >= tiers.Count) return "";
 
         var save = TitleSaveStore.GetOrCreateEquip(monsterId);
+        if (save == null || save.tierSelections == null) return "";
+
         if (tierIndex >= save.tierSelections.Count) return "";
         return save.tierSelections[tierIndex];
     }
@@ -226,7 +259,9 @@ public sealed class TitleManager : MonoBehaviour
     // (Fires JobGlobalModsChanged for UI/logic that depends on titles)
     // ─────────────────────────────────────────────────────────────────────
 
-    /// <summary>Equip a title in a specific tier. Enforces maxSelectable (currently 1 total).</summary>
+    /// <summary>
+    /// Equip a title in a specific tier. Enforces ONE active title total (clears all other tiers).
+    /// </summary>
     public bool Equip(string monsterId, MonsterDataSO def, int tierIndex, TitleSO choose)
     {
         if (string.IsNullOrEmpty(monsterId) || !def || !def.titleTrack) return false;
@@ -239,14 +274,13 @@ public sealed class TitleManager : MonoBehaviour
         if (tier.unlockChoices == null || !tier.unlockChoices.Contains(choose)) return false;
 
         var save = TitleSaveStore.GetOrCreateEquip(monsterId);
+        if (save == null) return false;
 
-        // Only ONE active title total — clear prior picks
+        // Ensure list exists + correct size
+        if (save.tierSelections == null) save.tierSelections = new List<string>();
         save.tierSelections.Clear();
-
-        // Resize to tiers
         for (int i = 0; i < tiers.Count; i++) save.tierSelections.Add("");
 
-        // If already the same selection, no-op (but still ensure list length)
         bool changed = save.tierSelections[tierIndex] != choose.titleId;
         save.tierSelections[tierIndex] = choose.titleId;
 
@@ -269,6 +303,9 @@ public sealed class TitleManager : MonoBehaviour
         if (tiers == null || tierIndex < 0 || tierIndex >= tiers.Count) return false;
 
         var save = TitleSaveStore.GetOrCreateEquip(monsterId);
+        if (save == null) return false;
+
+        if (save.tierSelections == null) save.tierSelections = new List<string>();
         while (save.tierSelections.Count < tiers.Count) save.tierSelections.Add("");
 
         bool changed = !string.IsNullOrEmpty(save.tierSelections[tierIndex]);
@@ -279,36 +316,41 @@ public sealed class TitleManager : MonoBehaviour
         return true;
     }
 
-    /// <summary>Returns always-on titles + equipped (per unlocked tier). Null for locked/no pick.</summary>
+    /// <summary>
+    /// Returns always-on titles + equipped (per unlocked tier). Null for locked/no pick.
+    /// Note: With the one-title rule, at most one tier will have a non-empty selection.
+    /// </summary>
     public List<TitleSO> GetEquippedList(string monsterId, MonsterDataSO def, int level)
     {
         var res = new List<TitleSO>();
+
+        // Always-on defaults
+        if (def && def.defaultAlwaysOnTitles != null)
+            res.AddRange(def.defaultAlwaysOnTitles);
+
         if (string.IsNullOrEmpty(monsterId) || !def || !def.titleTrack)
-        {
-            if (def && def.defaultAlwaysOnTitles != null) res.AddRange(def.defaultAlwaysOnTitles);
             return res;
-        }
 
         var tiers = def.titleTrack.tiers;
-        if (tiers == null)
-        {
-            if (def.defaultAlwaysOnTitles != null) res.AddRange(def.defaultAlwaysOnTitles);
-            return res;
-        }
+        if (tiers == null) return res;
 
         var save = TitleSaveStore.GetOrCreateEquip(monsterId);
+        if (save == null) return res;
 
-        if (def.defaultAlwaysOnTitles != null) res.AddRange(def.defaultAlwaysOnTitles);
+        if (save.tierSelections == null) save.tierSelections = new List<string>();
 
         for (int i = 0; i < tiers.Count; i++)
         {
             var tier = tiers[i];
+
+            // Locked tier -> keep placeholder null for legacy callers that expect aligned list
             if (level < Mathf.Max(1, tier.levelRequired)) { res.Add(null); continue; }
 
             string tid = (i < save.tierSelections.Count) ? save.tierSelections[i] : "";
-            if (!string.IsNullOrEmpty(tid) && _idToTitle.TryGetValue(tid, out var t)) res.Add(t);
+            if (!string.IsNullOrEmpty(tid) && _idToTitle.TryGetValue(tid, out var t) && t) res.Add(t);
             else res.Add(null);
         }
+
         return res;
     }
 
@@ -324,11 +366,17 @@ public sealed class TitleManager : MonoBehaviour
         return GetEquippedList(monsterId, def, lvl);
     }
 
+    public TitleSO GetTitleById(string titleId)
+    {
+        if (string.IsNullOrEmpty(titleId)) return null;
+        return _idToTitle.TryGetValue(titleId, out var so) ? so : null;
+    }
+
     // ─────────────────────────────────────────────────────────────────────
     // Evaluation helpers
     // ─────────────────────────────────────────────────────────────────────
 
-    // Single/Conditional/Dual stat application + NEW boosters
+    // Single/Conditional/Dual stat application + boosters
     public float GetStatValue(string monsterId, MonsterDataSO def, int level, StatKind stat, in TitleContext ctx, float baseValue)
     {
         var titles = GetEquippedList(monsterId, def, level);
@@ -686,18 +734,16 @@ public sealed class TitleManager : MonoBehaviour
     }
 
     // ─────────────────────────────────────────────────────────────────────
-    // UI-friendly wrappers that ALWAYS raise the event on change
+    // UI-friendly wrappers
     // ─────────────────────────────────────────────────────────────────────
     public bool AssignTitleToMonster(string monsterId, MonsterDataSO def, int tierIndex, TitleSO choose)
     {
-        bool ok = Equip(monsterId, def, tierIndex, choose);
-        return ok;
+        return Equip(monsterId, def, tierIndex, choose);
     }
 
     public bool RemoveTitleFromMonster(string monsterId, MonsterDataSO def, int tierIndex)
     {
-        bool ok = Unequip(monsterId, def, tierIndex);
-        return ok;
+        return Unequip(monsterId, def, tierIndex);
     }
 
     public bool ToggleTitleOnMonster(string monsterId, MonsterDataSO def, int tierIndex, TitleSO choose)
@@ -713,7 +759,7 @@ public sealed class TitleManager : MonoBehaviour
         if (string.IsNullOrEmpty(monsterId)) return;
 
         var save = TitleSaveStore.GetOrCreateEquip(monsterId);
-        if (save.tierSelections == null || save.tierSelections.Count == 0) return;
+        if (save == null || save.tierSelections == null || save.tierSelections.Count == 0) return;
 
         bool changed = false;
         for (int i = 0; i < save.tierSelections.Count; i++)
@@ -754,6 +800,7 @@ public sealed class TitleManager : MonoBehaviour
         }
     }
 
+    // Keep legacy spelling (if other code calls it)
     public float GetcreditMultOnVictory(string monsterId, MonsterDataSO wild, int wildLevel)
     {
         float mul = 1f;
@@ -779,6 +826,10 @@ public sealed class TitleManager : MonoBehaviour
 
         return Mathf.Max(0f, mul);
     }
+
+    // Optional nicer alias (won’t break existing callers)
+    public float GetCreditMultOnVictory(string monsterId, MonsterDataSO wild, int wildLevel)
+        => GetcreditMultOnVictory(monsterId, wild, wildLevel);
 
     public float GetGrowthCoreMultOnVictory(string monsterId, MonsterDataSO wild, int wildLevel)
     {
@@ -809,8 +860,6 @@ public sealed class TitleManager : MonoBehaviour
     // ─────────────────────────────────────────────────────────────────────
     // TitlesAdapter event relays (safe no-ops if unused)
     // ─────────────────────────────────────────────────────────────────────
-
-    // Called by TitlesAdapter.OnBattleStart(...)
     public void OnBattleStart(string activeMonsterId, MonsterDataSO wild, int wildLevel)
     {
         _turnStacks.Clear();
@@ -828,7 +877,6 @@ public sealed class TitleManager : MonoBehaviour
             ApplyBattleStartBonuses(activeMonsterId);
     }
 
-    // Called by TitlesAdapter.OnBattleEnd(...)
     public void OnBattleEnd(string activeMonsterId, bool victory, MonsterDataSO wild, int wildLevel)
     {
         _turnStacks.Clear();
@@ -843,12 +891,10 @@ public sealed class TitleManager : MonoBehaviour
         _turnIndex = 0;
     }
 
-    // Optional events you may fire from Encounter/Battle
     public void OnMonsterLeveled(string monsterId, int newLevel) { }
     public void OnMonsterCaptured(string monsterId, MonsterType type, int level, bool isShiny) { }
     public void OnMonsterEvolved(string newMonsterId) { }
 
-    // Called by TitlesAdapter.OnTurnAdvanced(...)
     public void OnTurnAdvanced(int turnIndex)
     {
         _turnIndex = Mathf.Max(0, turnIndex);
@@ -887,7 +933,6 @@ public sealed class TitleManager : MonoBehaviour
         }
     }
 
-    // Called by TitlesAdapter.OnAttackLanded(attackerId, wasCrit)
     public void OnAttackLanded(string attackerId, bool wasCrit)
     {
         if (string.IsNullOrEmpty(attackerId)) return;
@@ -903,7 +948,6 @@ public sealed class TitleManager : MonoBehaviour
         BumpEventStacks(attackerId, Mathf.Max(1, es.maxStacks), Mathf.Max(0, es.decayPerTurn));
     }
 
-    // Called by TitlesAdapter.OnHitTaken(defenderId, damage, wasCrit)
     public void OnHitTaken(string defenderId, int damage, bool wasCrit)
     {
         if (string.IsNullOrEmpty(defenderId)) return;
@@ -956,8 +1000,7 @@ public sealed class TitleManager : MonoBehaviour
 
             _flatStartAmountAtk[id] = amt;
 
-            // Duration is number of turns including the current turn index.
-            // Example: dur=1 => only turnIndex 0. dur=2 => turnIndex 0 and 1.
+            // dur=1 => only turnIndex 0. dur=2 => turnIndex 0 and 1.
             _flatStartUntilTurn[id] = _turnIndex + (dur - 1);
 
             BattleLogger.LogTitleActivation(
@@ -992,7 +1035,6 @@ public sealed class TitleManager : MonoBehaviour
         _eventMax[id] = maxStacks;
         _eventDecayPerTurn[id] = Mathf.Max(0, decayPerTurn);
 
-        // Log stack gains as procs (trust layer)
         var def = MonsterLibraryLocator.GetById(id);
         int lvl = GetLevelOr1(id);
         var es = GetFirstTitle<EventStacksTitleSO>(id, def, lvl);
@@ -1082,7 +1124,6 @@ public sealed class TitleManager : MonoBehaviour
     {
         if (string.IsNullOrEmpty(titleName)) return null;
 
-        // Match displayName first
         foreach (var kv in _idToTitle)
         {
             var so = kv.Value;
@@ -1091,11 +1132,9 @@ public sealed class TitleManager : MonoBehaviour
                 return so.icon;
         }
 
-        // Fallback: match by id
         if (_idToTitle.TryGetValue(titleName, out var byId) && byId)
             return byId.icon;
 
         return null;
     }
-
 }

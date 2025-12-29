@@ -15,8 +15,8 @@ MonoBehaviour:
   titleId: T-225
   displayName: Guard Captain
   description: Boosts DEF by 15% when HP falls below 25%.
+  icon: {fileID: 6491568308551129627, guid: 2383639ffee5242b6aa3db0e42301988, type: 3}
   hpBelowThreshold01: 0.25
   atkPct: 0
   defPct: 1.15
   spdPct: 0
-  dmgMult: 1

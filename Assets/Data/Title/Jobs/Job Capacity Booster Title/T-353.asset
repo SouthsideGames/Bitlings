@@ -15,5 +15,6 @@ MonoBehaviour:
   titleId: T-353
   displayName: Chief Officer
   description: Adds +10 storage capacity at Shadow Market job site.
+  icon: {fileID: 8223624561192069640, guid: b07d6628ccc55443ebba64dd523bec24, type: 3}
   targetJobSite: 12
   capacityBonusFlat: 10

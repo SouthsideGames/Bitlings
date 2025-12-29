@@ -15,5 +15,6 @@ MonoBehaviour:
   titleId: T-041
   displayName: Process Manager
   description: Increases effectiveness damage by 20%.
+  icon: {fileID: -7326837690389346907, guid: a09e21ff9e6304070913d0bc8bd6bdc3, type: 3}
   mode: 0
   amount: 1.2
