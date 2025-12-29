@@ -1,7 +1,6 @@
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
-using System.Reflection;
 
 [RequireComponent(typeof(Button))]
 public class BattleBoosterButtonUI : MonoBehaviour
@@ -10,14 +9,11 @@ public class BattleBoosterButtonUI : MonoBehaviour
     public BoosterType boosterType;
 
     [Header("UI")]
-    public Button button;                 // auto-filled if null
-    public TextMeshProUGUI titleText;     // optional label
-    public TextMeshProUGUI cdText;        // "CD: 2"
-    public TextMeshProUGUI hintText;      // reason when disabled (optional)
-    public CanvasGroup canvasGroup;       // optional fade
-
-    private float nextRefreshAt = 0f;
-    private const float REFRESH_EVERY = 0.15f;
+    public Button button;
+    public TextMeshProUGUI titleText;
+    public TextMeshProUGUI cdText;
+    public TextMeshProUGUI hintText;
+    public CanvasGroup canvasGroup;
 
     void Reset() { button = GetComponent<Button>(); }
 
@@ -29,15 +25,18 @@ public class BattleBoosterButtonUI : MonoBehaviour
         ApplyTitle();
     }
 
-    void OnEnable() { RefreshImmediate(); }
-
-    void Update()
+    void OnEnable()
     {
-        if (Time.unscaledTime >= nextRefreshAt)
-        {
-            nextRefreshAt = Time.unscaledTime + REFRESH_EVERY;
-            RefreshImmediate();
-        }
+        GameEvents.OnResourcesChanged += RefreshImmediate;
+        GameEvents.OnBoostersChanged += RefreshImmediate;
+
+        RefreshImmediate();
+    }
+
+    void OnDisable()
+    {
+        GameEvents.OnResourcesChanged -= RefreshImmediate;
+        GameEvents.OnBoostersChanged -= RefreshImmediate;
     }
 
     private void ApplyTitle()
@@ -56,11 +55,15 @@ public class BattleBoosterButtonUI : MonoBehaviour
     private void RefreshImmediate()
     {
         var ctrl = BattleBoosterController.I;
-        bool interact = false; string reason = null; string cd = "";
+
+        bool interact = false;
+        string reason = null;
+        string cd = "";
 
         if (ctrl)
         {
             interact = ctrl.CanUse(boosterType, out reason);
+
             var (atk, hp, spd, res) = ctrl.Cooldowns();
             int c = boosterType switch
             {
@@ -70,11 +73,12 @@ public class BattleBoosterButtonUI : MonoBehaviour
                 BoosterType.TypeResist => res,
                 _ => 0
             };
+
             cd = c > 0 ? $"CD: {c}" : "";
         }
 
         if (button) button.interactable = interact;
-        if (cdText)  cdText.text = cd;
+        if (cdText) cdText.text = cd;
 
         if (canvasGroup)
         {
@@ -83,7 +87,8 @@ public class BattleBoosterButtonUI : MonoBehaviour
             canvasGroup.interactable = true;
         }
 
-        if (hintText) hintText.text = (!interact && !string.IsNullOrEmpty(reason)) ? reason : "";
+        if (hintText)
+            hintText.text = (!interact && !string.IsNullOrEmpty(reason)) ? reason : "";
     }
 
     private void OnClick()
@@ -91,45 +96,14 @@ public class BattleBoosterButtonUI : MonoBehaviour
         var ctrl = BattleBoosterController.I;
         if (!ctrl) return;
 
-        // Try common method names on the controller to keep this UI decoupled
-        bool used = false;
-        var t = ctrl.GetType();
-
-        // Prefer a UseFromUI method that might want a BattleManager reference
-        var bm = FindFirstObjectByType<BattleManager>();
-
-        used = TryInvokeBool(t, ctrl, "UseFromUI", new object[] { boosterType, bm }) ||
-               TryInvokeBool(t, ctrl, "UseFromUI", new object[] { boosterType }) ||
-               TryInvokeBool(t, ctrl, "Use",       new object[] { boosterType }) ||
-               TryInvokeBool(t, ctrl, "TryUse",    new object[] { boosterType }) ||
-               TryInvokeVoidThenTrue(t, ctrl, "Activate", new object[] { boosterType });
+        bool used = ctrl.TryUseFromUI(boosterType, out var msg);
 
         if (used)
         {
-            // Optional little feedback nudge if a BattleManager and icon exist
-            if (bm && bm.isActiveAndEnabled)
-            {
-                // no hard dependency; UI feedback handled inside bm if desired
-            }
+            if (!string.IsNullOrEmpty(msg))
+                BattleLogger.Log(msg, LogScope.Battle);
         }
 
         RefreshImmediate();
-    }
-
-    private bool TryInvokeBool(System.Type t, object instance, string method, object[] args)
-    {
-        var m = t.GetMethod(method, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
-        if (m == null) return false;
-        var ret = m.Invoke(instance, args);
-        if (ret is bool b) return b;
-        return true; // if it returned void/non-bool, assume success
-    }
-
-    private bool TryInvokeVoidThenTrue(System.Type t, object instance, string method, object[] args)
-    {
-        var m = t.GetMethod(method, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
-        if (m == null) return false;
-        m.Invoke(instance, args);
-        return true;
     }
 }

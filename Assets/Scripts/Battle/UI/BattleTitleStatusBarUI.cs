@@ -1,6 +1,8 @@
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
+using System;
+using System.Reflection;
 
 public sealed class BattleTitleStatusBarUI : MonoBehaviour
 {
@@ -14,11 +16,12 @@ public sealed class BattleTitleStatusBarUI : MonoBehaviour
 
     [Header("Rules")]
     [SerializeField] private bool hideIfNoTitle = true;
-    [SerializeField, Min(0.05f)] private float refreshInterval = 0.25f;
 
-    private float _t;
     private string _lastMonsterId;
     private TitleSO _currentTitle;
+
+    private EventInfo _battleChangedEvent;
+    private object _battleEventOwner;
 
     void OnEnable()
     {
@@ -28,15 +31,29 @@ public sealed class BattleTitleStatusBarUI : MonoBehaviour
             infoButton.onClick.AddListener(OpenInfo);
         }
 
+        GameEvents.OnTeamChanged += HandleTeamChanged; // fallback signal
+
+        HookBattleChangedEvent();
+
         ForceRefresh();
     }
 
-    void Update()
+    void OnDisable()
     {
-        _t += Time.unscaledDeltaTime;
-        if (_t < refreshInterval) return;
-        _t = 0f;
+        GameEvents.OnTeamChanged -= HandleTeamChanged;
+        UnhookBattleChangedEvent();
 
+        if (infoButton) infoButton.onClick.RemoveAllListeners();
+    }
+
+    private void HandleTeamChanged()
+    {
+        // Team changes often coincide with swap / owned changes; safe refresh.
+        ForceRefresh();
+    }
+
+    public void ForceRefresh()
+    {
         if (battle == null || !battle.InBattle || TitleManager.I == null)
         {
             ApplyEmpty();
@@ -44,22 +61,11 @@ public sealed class BattleTitleStatusBarUI : MonoBehaviour
         }
 
         var monsterId = battle.ActivePlayerMonsterId;
-        if (monsterId != _lastMonsterId)
-            ForceRefresh();
-    }
-
-    public void ForceRefresh()
-    {
-        _t = 0f;
-
-        if (battle == null || !battle.InBattle || TitleManager.I == null)
-        {
-            ApplyEmpty();
+        if (monsterId == _lastMonsterId && _currentTitle != null)
             return;
-        }
 
-        _lastMonsterId = battle.ActivePlayerMonsterId;
-        RefreshForMonster(_lastMonsterId);
+        _lastMonsterId = monsterId;
+        RefreshForMonster(monsterId);
     }
 
     private void RefreshForMonster(string monsterId)
@@ -72,7 +78,6 @@ public sealed class BattleTitleStatusBarUI : MonoBehaviour
             return;
         }
 
-        // One title max by design
         var states = TitleManager.I.GetActiveTitleUIStates(monsterId);
         if (states == null || states.Count == 0)
         {
@@ -90,7 +95,7 @@ public sealed class BattleTitleStatusBarUI : MonoBehaviour
 
         _currentTitle = title;
 
-        if (iconImage)  iconImage.sprite = title.icon;
+        if (iconImage) iconImage.sprite = title.icon;
         if (titleLabel) titleLabel.text = title.displayName;
 
         gameObject.SetActive(true);
@@ -100,18 +105,19 @@ public sealed class BattleTitleStatusBarUI : MonoBehaviour
     {
         _currentTitle = null;
 
-        if (iconImage)  iconImage.sprite = null;
+        if (iconImage) iconImage.sprite = null;
         if (titleLabel) titleLabel.text = "";
 
         if (hideIfNoTitle)
             gameObject.SetActive(false);
+        else
+            gameObject.SetActive(true);
     }
 
     private void OpenInfo()
     {
         if (_currentTitle == null) return;
 
-        // Match ResourceRowUI behavior exactly
         var id = $"title.{_currentTitle.titleId}";
         InfoRouter.Open(
             id,
@@ -122,4 +128,45 @@ public sealed class BattleTitleStatusBarUI : MonoBehaviour
 
         AudioManager.I?.PlayClick();
     }
+
+    // ---- Optional BattleManager event hook (reflection) ----
+    // If BattleManager has an event like OnActiveMonsterChanged / OnTurnChanged / OnStateChanged,
+    // we hook it to ForceRefresh.
+    private void HookBattleChangedEvent()
+    {
+        if (battle == null) return;
+
+        var t = battle.GetType();
+        _battleChangedEvent =
+            t.GetEvent("OnActiveMonsterChanged") ??
+            t.GetEvent("OnStateChanged") ??
+            t.GetEvent("OnTurnChanged");
+
+        if (_battleChangedEvent == null) return;
+
+        try
+        {
+            var handler = Delegate.CreateDelegate(_battleChangedEvent.EventHandlerType, this, nameof(OnBattleChanged));
+            _battleChangedEvent.AddEventHandler(battle, handler);
+            _battleEventOwner = handler;
+        }
+        catch
+        {
+            _battleChangedEvent = null;
+            _battleEventOwner = null;
+        }
+    }
+
+    private void UnhookBattleChangedEvent()
+    {
+        if (battle == null || _battleChangedEvent == null || _battleEventOwner == null) return;
+
+        try { _battleChangedEvent.RemoveEventHandler(battle, (Delegate)_battleEventOwner); }
+        catch { }
+
+        _battleChangedEvent = null;
+        _battleEventOwner = null;
+    }
+
+    private void OnBattleChanged() => ForceRefresh();
 }

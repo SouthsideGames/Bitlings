@@ -1,7 +1,6 @@
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
-using System;
 
 public class StatBucketPanelUI : MonoBehaviour
 {
@@ -43,21 +42,24 @@ public class StatBucketPanelUI : MonoBehaviour
     [Header("Config")]
     [SerializeField, Min(1)] private int pointsPerLevel = 3;
 
-    private TokenEconomySO   tokenEconomy;
-    private BucketLibrarySO  bucketLibrary;
+    private TokenEconomySO tokenEconomy;
+    private BucketLibrarySO bucketLibrary;
     private LevelCostCurveSO levelCostCurve;
 
     private OwnedMonsterData _m;
     private LevelUpBucketSO _bucket;
 
+    private string _displayNameCached;
+
     private int _baseHP, _baseATK, _baseDEF, _baseSPD;
 
     private int _allocHp, _allocAtk, _allocDef, _allocSpd;
-
     private int _points;
     private int _nextCostToLevel;
 
-    const string GREEN = "#3CDE74";
+    private const string GREEN = "#3CDE74";
+
+    private enum StatKind { HP, ATK, DEF, SPD }
 
     // ─────────────────────────────────────────────────────────────
 
@@ -65,7 +67,7 @@ public class StatBucketPanelUI : MonoBehaviour
     {
         AutoLoadSOsIfMissing();
         Wire();
-        ClearAlloc();
+        ResetAllocState(refresh: false);
         gameObject.SetActive(false);
     }
 
@@ -103,11 +105,13 @@ public class StatBucketPanelUI : MonoBehaviour
                 if (all != null && all.Length > 0) tokenEconomy = all[0];
             }
         }
+
         if (!bucketLibrary)
         {
             var all = Resources.LoadAll<BucketLibrarySO>("");
             if (all != null && all.Length > 0) bucketLibrary = all[0];
         }
+
         if (!levelCostCurve)
         {
             var all = Resources.LoadAll<LevelCostCurveSO>("");
@@ -117,35 +121,41 @@ public class StatBucketPanelUI : MonoBehaviour
 
     private void Wire()
     {
-        if (hpMinus)  hpMinus.onClick.AddListener(() => AddAlloc(ref _allocHp,  -1));
-        if (hpPlus)   hpPlus.onClick.AddListener(() => AddAlloc(ref _allocHp,  +1));
-        if (atkMinus) atkMinus.onClick.AddListener(() => AddAlloc(ref _allocAtk, -1));
-        if (atkPlus)  atkPlus.onClick.AddListener(() => AddAlloc(ref _allocAtk, +1));
-        if (defMinus) defMinus.onClick.AddListener(() => AddAlloc(ref _allocDef, -1));
-        if (defPlus)  defPlus.onClick.AddListener(() => AddAlloc(ref _allocDef, +1));
-        if (spdMinus) spdMinus.onClick.AddListener(() => AddAlloc(ref _allocSpd, -1));
-        if (spdPlus)  spdPlus.onClick.AddListener(() => AddAlloc(ref _allocSpd, +1));
+        // Stats (+/-)
+        if (hpMinus) hpMinus.onClick.AddListener(() => ChangeAlloc(StatKind.HP, -1));
+        if (hpPlus) hpPlus.onClick.AddListener(() => ChangeAlloc(StatKind.HP, +1));
 
-        // Preset buttons: set bucket + apply preset allocation
+        if (atkMinus) atkMinus.onClick.AddListener(() => ChangeAlloc(StatKind.ATK, -1));
+        if (atkPlus) atkPlus.onClick.AddListener(() => ChangeAlloc(StatKind.ATK, +1));
+
+        if (defMinus) defMinus.onClick.AddListener(() => ChangeAlloc(StatKind.DEF, -1));
+        if (defPlus) defPlus.onClick.AddListener(() => ChangeAlloc(StatKind.DEF, +1));
+
+        if (spdMinus) spdMinus.onClick.AddListener(() => ChangeAlloc(StatKind.SPD, -1));
+        if (spdPlus) spdPlus.onClick.AddListener(() => ChangeAlloc(StatKind.SPD, +1));
+
+        // Presets
         if (offenseBtn) offenseBtn.onClick.AddListener(() => OnPresetClicked("Offense"));
         if (defenseBtn) defenseBtn.onClick.AddListener(() => OnPresetClicked("Defense"));
         if (utilityBtn) utilityBtn.onClick.AddListener(() => OnPresetClicked("Utility"));
         if (balanceBtn) balanceBtn.onClick.AddListener(() => OnPresetClicked("Balance"));
-        if (speedBtn)   speedBtn.onClick.AddListener(() => OnPresetClicked("Speed"));
+        if (speedBtn) speedBtn.onClick.AddListener(() => OnPresetClicked("Speed"));
 
+        // Footer
         if (levelUpBtn) levelUpBtn.onClick.AddListener(OnClickLevelUp);
         if (confirmBtn) confirmBtn.onClick.AddListener(ConfirmSpend);
-        if (closeBtn)   closeBtn.onClick.AddListener(ClosePanel);
+        if (closeBtn) closeBtn.onClick.AddListener(ClosePanel);
     }
 
     private void ClosePanel() => gameObject.SetActive(false);
 
-    private void ClearAlloc()
+    private void ResetAllocState(bool refresh)
     {
         _allocHp = _allocAtk = _allocDef = _allocSpd = 0;
         _points = 0;
         _nextCostToLevel = CalcNextCostForCurrentLevel();
-        RefreshUI();
+
+        if (refresh) RefreshUI();
     }
 
     private int CalcNextCostForCurrentLevel()
@@ -163,19 +173,24 @@ public class StatBucketPanelUI : MonoBehaviour
         }
 
         _m = XPManager.Resolve(m);
+        if (_m == null)
+        {
+            gameObject.SetActive(false);
+            return;
+        }
+
+        // Cache display name (avoid recomputing each refresh)
+        var def = MonsterLibraryLocator.GetById(_m.monsterId);
+        _displayNameCached = def ? def.displayName : _m.monsterId;
 
         ComputeCurrentStats();
-        ClearAlloc();
+        ResetAllocState(refresh: false);
 
         if (bucketLibrary)
         {
             _bucket = bucketLibrary.GetById(_m.lastBucketId, bucketLibrary.DefaultBucket());
             if (!_bucket) _bucket = bucketLibrary.DefaultBucket();
         }
-
-        var def = MonsterLibraryLocator.GetById(_m.monsterId);
-        if (nameText)
-            nameText.text = def ? def.displayName : _m.monsterId;
 
         gameObject.SetActive(true);
         RefreshPresetVisibility();
@@ -184,10 +199,7 @@ public class StatBucketPanelUI : MonoBehaviour
 
     private void ComputeCurrentStats()
     {
-        _baseHP  = 0;
-        _baseATK = 0;
-        _baseDEF = 0;
-        _baseSPD = 0;
+        _baseHP = _baseATK = _baseDEF = _baseSPD = 0;
 
         if (_m == null || string.IsNullOrEmpty(_m.monsterId)) return;
 
@@ -196,13 +208,13 @@ public class StatBucketPanelUI : MonoBehaviour
 
         if (def)
         {
-            _baseHP  = Mathf.RoundToInt(BattleCalc.CalcHP(def, lvl));
+            _baseHP = Mathf.RoundToInt(BattleCalc.CalcHP(def, lvl));
             _baseATK = Mathf.RoundToInt(BattleCalc.CalcBaseAttack(def, lvl, 0, 0));
             _baseDEF = BattleCalc.CalcDefense(def, lvl);
-            _baseSPD = BattleCalc.CalcSpeed(def,   lvl);
+            _baseSPD = BattleCalc.CalcSpeed(def, lvl);
         }
 
-        _baseHP  += _m.trainingBonus.hp;
+        _baseHP += _m.trainingBonus.hp;
         _baseATK += _m.trainingBonus.atk;
         _baseDEF += _m.trainingBonus.def;
         _baseSPD += _m.trainingBonus.spd;
@@ -210,8 +222,12 @@ public class StatBucketPanelUI : MonoBehaviour
 
     private void RefreshUI()
     {
-        if (_m != null && nameText)
-            nameText.text = $"{_m.monsterId}  •  Lv {_m.level}";
+        // Header
+        if (nameText)
+        {
+            if (_m == null) nameText.text = "—";
+            else nameText.text = $"{_displayNameCached}  •  Lv {_m.level}";
+        }
 
         int unspent = _m != null ? Mathf.Max(0, _m.unspentStatPoints) : 0;
         int remaining = Mathf.Max(0, unspent - _points);
@@ -224,30 +240,30 @@ public class StatBucketPanelUI : MonoBehaviour
 
         if (costText)
         {
-            if (_m == null)
-                costText.text = "Next Lv: -- / -- GC";
-            else
-                costText.text = $"Next Lv: {haveCores}/{_nextCostToLevel} GC";
+            if (_m == null) costText.text = "Next Lv: -- / -- GC";
+            else costText.text = $"Next Lv: {haveCores}/{_nextCostToLevel} GC";
         }
 
-        int hpDelta  = _allocHp  * (tokenEconomy ? tokenEconomy.hpPerCore  : 1);
+        // Deltas (these are “training bonus” deltas; naming in TokenEconomySO is per-core)
+        int hpDelta = _allocHp * (tokenEconomy ? tokenEconomy.hpPerCore : 1);
         int atkDelta = _allocAtk * (tokenEconomy ? tokenEconomy.atkPerCore : 1);
         int defDelta = _allocDef * (tokenEconomy ? tokenEconomy.defPerCore : 1);
         int spdDelta = _allocSpd * (tokenEconomy ? tokenEconomy.spdPerCore : 1);
 
-        SetStatLabel(hpVal,  _baseHP,  hpDelta);
+        SetStatLabel(hpVal, _baseHP, hpDelta);
         SetStatLabel(atkVal, _baseATK, atkDelta);
         SetStatLabel(defVal, _baseDEF, defDelta);
         SetStatLabel(spdVal, _baseSPD, spdDelta);
 
+        // Interactables
         bool hasPointsLeft = remaining > 0;
 
-        if (hpPlus)   hpPlus.interactable   = hasPointsLeft;
-        if (atkPlus)  atkPlus.interactable  = hasPointsLeft;
-        if (defPlus)  defPlus.interactable  = hasPointsLeft;
-        if (spdPlus)  spdPlus.interactable  = hasPointsLeft;
+        if (hpPlus) hpPlus.interactable = hasPointsLeft;
+        if (atkPlus) atkPlus.interactable = hasPointsLeft;
+        if (defPlus) defPlus.interactable = hasPointsLeft;
+        if (spdPlus) spdPlus.interactable = hasPointsLeft;
 
-        if (hpMinus)  hpMinus.interactable  = _allocHp  > 0;
+        if (hpMinus) hpMinus.interactable = _allocHp > 0;
         if (atkMinus) atkMinus.interactable = _allocAtk > 0;
         if (defMinus) defMinus.interactable = _allocDef > 0;
         if (spdMinus) spdMinus.interactable = _allocSpd > 0;
@@ -260,6 +276,7 @@ public class StatBucketPanelUI : MonoBehaviour
             bool canLevel = _m != null
                             && _m.level < LevelRules.MaxLevel
                             && haveCores >= _nextCostToLevel;
+
             levelUpBtn.interactable = canLevel;
 
             var label = levelUpBtn.GetComponentInChildren<TextMeshProUGUI>();
@@ -271,14 +288,13 @@ public class StatBucketPanelUI : MonoBehaviour
     private void SetStatLabel(TextMeshProUGUI label, int baseVal, int allocDelta)
     {
         if (!label) return;
+
         int total = baseVal + allocDelta;
-        if (allocDelta > 0)
-            label.text = $"{total} <color={GREEN}>(+{allocDelta})</color>";
-        else
-            label.text = $"{total}";
+        if (allocDelta > 0) label.text = $"{total} <color={GREEN}>(+{allocDelta})</color>";
+        else label.text = $"{total}";
     }
 
-    private void AddAlloc(ref int field, int delta)
+    private void ChangeAlloc(StatKind stat, int delta)
     {
         if (_m == null) return;
 
@@ -288,15 +304,32 @@ public class StatBucketPanelUI : MonoBehaviour
         if (delta > 0 && remaining <= 0)
             return;
 
+        ref int field = ref GetAllocRef(stat);
+
         int next = field + delta;
         if (next < 0) return;
 
         field = next;
         _points = _allocHp + _allocAtk + _allocDef + _allocSpd;
+
         RefreshUI();
     }
 
-    // Preset click: remember bucket + auto-allocate points
+    private ref int GetAllocRef(StatKind stat)
+    {
+        switch (stat)
+        {
+            case StatKind.HP: return ref _allocHp;
+            case StatKind.ATK: return ref _allocAtk;
+            case StatKind.DEF: return ref _allocDef;
+            default: return ref _allocSpd;
+        }
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // Presets
+    // ─────────────────────────────────────────────────────────────
+
     private void OnPresetClicked(string bucketId)
     {
         SetBucket(bucketId);
@@ -314,7 +347,7 @@ public class StatBucketPanelUI : MonoBehaviour
             _m.lastBucketId = _bucket ? _bucket.bucketId : null;
     }
 
-    // Apply up to 5 points according to the selected preset
+    // Apply up to 5 points according to the selected preset (polish: one UI refresh at end)
     private void ApplyPreset(string bucketId)
     {
         if (_m == null) return;
@@ -325,41 +358,52 @@ public class StatBucketPanelUI : MonoBehaviour
 
         int toSpend = Mathf.Min(5, remaining);
 
+        // local adds, then commit once (avoids repeated RefreshUI calls)
+        int addHp = 0, addAtk = 0, addDef = 0, addSpd = 0;
+
         switch (bucketId)
         {
             case "Offense":
-                for (int i = 0; i < toSpend; i++)
-                    AddAlloc(ref _allocAtk, +1);
+                addAtk = toSpend;
                 break;
 
             case "Defense":
-                for (int i = 0; i < toSpend; i++)
-                    AddAlloc(ref _allocDef, +1);
+                addDef = toSpend;
                 break;
 
             case "Speed":
-                for (int i = 0; i < toSpend; i++)
-                    AddAlloc(ref _allocSpd, +1);
+                addSpd = toSpend;
                 break;
 
             case "Balance":
                 for (int i = 0; i < toSpend; i++)
                 {
                     int step = i % 3;
-                    if (step == 0)      AddAlloc(ref _allocHp,  +1);
-                    else if (step == 1) AddAlloc(ref _allocAtk, +1);
-                    else                AddAlloc(ref _allocDef, +1);
+                    if (step == 0) addHp++;
+                    else if (step == 1) addAtk++;
+                    else addDef++;
                 }
                 break;
 
             case "Utility":
                 for (int i = 0; i < toSpend; i++)
                 {
-                    if (i % 2 == 0) AddAlloc(ref _allocHp, +1);
-                    else            AddAlloc(ref _allocSpd, +1);
+                    if (i % 2 == 0) addHp++;
+                    else addSpd++;
                 }
                 break;
+
+            default:
+                return;
         }
+
+        _allocHp += addHp;
+        _allocAtk += addAtk;
+        _allocDef += addDef;
+        _allocSpd += addSpd;
+        _points = _allocHp + _allocAtk + _allocDef + _allocSpd;
+
+        RefreshUI();
     }
 
     // ─────────────────────────────────────────────────────────────
@@ -384,16 +428,15 @@ public class StatBucketPanelUI : MonoBehaviour
         if (!success)
             return;
 
-        string key = !string.IsNullOrEmpty(_m.ownedUID)
-            ? _m.ownedUID
-            : _m.monsterId;
-
+        string key = !string.IsNullOrEmpty(_m.ownedUID) ? _m.ownedUID : _m.monsterId;
         GameEvents.MonsterLeveled?.Invoke(key, _m.level);
 
         ComputeCurrentStats();
         _nextCostToLevel = CalcNextCostForCurrentLevel();
         RefreshUI();
-        AudioManager.I.PlaySfx(SfxType.LevelUp);
+
+        if (AudioManager.I != null)
+            AudioManager.I.PlaySfx(SfxType.LevelUp);
     }
 
     // ─────────────────────────────────────────────────────────────
@@ -417,7 +460,7 @@ public class StatBucketPanelUI : MonoBehaviour
 
         TrainingBonus delta = new TrainingBonus
         {
-            hp  = _allocHp  * (tokenEconomy ? tokenEconomy.hpPerCore  : 1),
+            hp = _allocHp * (tokenEconomy ? tokenEconomy.hpPerCore : 1),
             atk = _allocAtk * (tokenEconomy ? tokenEconomy.atkPerCore : 1),
             def = _allocDef * (tokenEconomy ? tokenEconomy.defPerCore : 1),
             spd = _allocSpd * (tokenEconomy ? tokenEconomy.spdPerCore : 1)
@@ -425,33 +468,32 @@ public class StatBucketPanelUI : MonoBehaviour
 
         XPManager.ApplyTrainingAndSave(_m, delta);
 
-        var data = SaveManager.Data;
-        if (data != null && data.owned != null)
-        {
-            OwnedMonsterData match = null;
-
-            if (!string.IsNullOrEmpty(_m.ownedUID))
-            {
-                match = data.owned.Find(o => o != null && o.ownedUID == _m.ownedUID);
-            }
-            else
-            {
-                match = data.owned.Find(o => o != null && o.monsterId == _m.monsterId);
-            }
-
-            if (match != null)
-            {
-                match.unspentStatPoints -= _points;
-                if (match.unspentStatPoints < 0) match.unspentStatPoints = 0;
-
-                _m.unspentStatPoints = match.unspentStatPoints;
-
-                SaveManager.Save();
-            }
-        }
+        ConsumeUnspentPointsAndSave(_points);
 
         ComputeCurrentStats();
         gameObject.SetActive(false);
+    }
+
+    private void ConsumeUnspentPointsAndSave(int pointsUsed)
+    {
+        if (pointsUsed <= 0) return;
+
+        var data = SaveManager.Data;
+        if (data == null || data.owned == null || _m == null) return;
+
+        OwnedMonsterData match = null;
+
+        if (!string.IsNullOrEmpty(_m.ownedUID))
+            match = data.owned.Find(o => o != null && o.ownedUID == _m.ownedUID);
+        else
+            match = data.owned.Find(o => o != null && o.monsterId == _m.monsterId);
+
+        if (match == null) return;
+
+        match.unspentStatPoints = Mathf.Max(0, match.unspentStatPoints - pointsUsed);
+        _m.unspentStatPoints = match.unspentStatPoints;
+
+        SaveManager.Save();
     }
 
     // ─────────────────────────────────────────────────────────────

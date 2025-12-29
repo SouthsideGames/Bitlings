@@ -32,4 +32,7 @@ public static class GameEvents
     public static Action FavoritesChanged;
 
     public static Action Tutorial_FirstJobAssigned;
+
+    // NEW: boosters UI refresh signal (cooldowns/durations/availability changed)
+    public static Action OnBoostersChanged;
 }

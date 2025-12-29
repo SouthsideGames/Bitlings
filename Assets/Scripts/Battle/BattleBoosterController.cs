@@ -26,20 +26,46 @@ public sealed class BattleBoosterController : MonoBehaviour
     bool usedABoosterThisTurn;
     bool playersTurn;
 
+    // NEW: runtime hooks (provided by battle runtime)
+    BattleRuntimeHooks _hooks;
+
     void Awake()
     {
         if (I != null && I != this) { Destroy(gameObject); return; }
         I = this;
     }
 
+    // ----------------------------------------------------------
+    // Runtime hooks (set once per encounter / battle session)
+    // ----------------------------------------------------------
+    public void SetHooks(BattleRuntimeHooks hooks)
+    {
+        _hooks = hooks;
+    }
+
+    // UI-safe wrapper: UI doesn't need to know hooks
+    public bool TryUseFromUI(BoosterType t, out string msg)
+    {
+        return TryUse(t, _hooks, out msg);
+    }
+
+    // ----------------------------------------------------------
+    // Turn lifecycle
+    // ----------------------------------------------------------
     public void OnTurnStart(bool isPlayer)
     {
         playersTurn = isPlayer;
         usedABoosterThisTurn = false;
+
+        // Availability changed (whose turn + used reset)
+        GameEvents.OnBoostersChanged?.Invoke();
     }
 
     public void OnTurnEnd()
     {
+        int a0 = attackDur, s0 = speedDur, r0 = resistDur;
+        int c0 = cdAtk, ch0 = cdHp, cs0 = cdSpd, cr0 = cdRes;
+
         if (attackDur > 0) attackDur--;
         if (speedDur  > 0) speedDur--;
         if (resistDur > 0) resistDur--;
@@ -48,8 +74,17 @@ public sealed class BattleBoosterController : MonoBehaviour
         if (cdHp  > 0) cdHp--;
         if (cdSpd > 0) cdSpd--;
         if (cdRes > 0) cdRes--;
+
+        if (attackDur != a0 || speedDur != s0 || resistDur != r0 ||
+            cdAtk != c0 || cdHp != ch0 || cdSpd != cs0 || cdRes != cr0)
+        {
+            GameEvents.OnBoostersChanged?.Invoke();
+        }
     }
 
+    // ----------------------------------------------------------
+    // Queries
+    // ----------------------------------------------------------
     public bool IsBoosterActive(BoosterType t) =>
         t switch {
             BoosterType.Attack     => attackDur > 0,
@@ -69,7 +104,7 @@ public sealed class BattleBoosterController : MonoBehaviour
             case BoosterType.Attack:     return (attackDur, attackBoostTurns);
             case BoosterType.Speed:      return (speedDur,  speedBoostTurns);
             case BoosterType.TypeResist: return (resistDur, resistBoostTurns);
-            case BoosterType.Health:     return (0, 0); // instant heal, no active duration
+            case BoosterType.Health:     return (0, 0);
             default:                     return (0, 0);
         }
     }
@@ -82,6 +117,7 @@ public sealed class BattleBoosterController : MonoBehaviour
     {
         if (!playersTurn) { reason = "Not your turn."; return false; }
         if (usedABoosterThisTurn) { reason = "You already used a booster this turn."; return false; }
+
         switch (t)
         {
             case BoosterType.Attack:     if (cdAtk > 0) { reason = $"Attack Boost cooling down ({cdAtk})."; return false; } break;
@@ -89,9 +125,14 @@ public sealed class BattleBoosterController : MonoBehaviour
             case BoosterType.Speed:      if (cdSpd > 0) { reason = $"Speed Boost cooling down ({cdSpd}).";  return false; } break;
             case BoosterType.TypeResist: if (cdRes > 0) { reason = $"Resist Boost cooling down ({cdRes})."; return false; } break;
         }
-        reason = null; return true;
+
+        reason = null;
+        return true;
     }
 
+    // ----------------------------------------------------------
+    // Execution
+    // ----------------------------------------------------------
     public bool TryUse(BoosterType t, BattleRuntimeHooks hooks, out string msg)
     {
         if (!CanUse(t, out msg)) return false;
@@ -107,7 +148,9 @@ public sealed class BattleBoosterController : MonoBehaviour
             case BoosterType.Health:
                 {
                     int healed = 0;
-                    if (hooks.HealPlayer != null) healed = hooks.HealPlayer(healthHealAmount);
+                    if (hooks.HealPlayer != null)
+                        healed = hooks.HealPlayer(healthHealAmount);
+
                     cdHp = boosterCooldownTurns;
                     msg = $"Health Boost: Healed {healed} HP.";
                 }
@@ -124,16 +167,24 @@ public sealed class BattleBoosterController : MonoBehaviour
                 cdRes = boosterCooldownTurns;
                 msg = $"Type Resist: Incoming damage reduced for {resistDur} turn(s).";
                 break;
+
+            default:
+                msg = "Unknown booster.";
+                return false;
         }
 
         usedABoosterThisTurn = true;
+
+        // Booster state changed (durations/cooldowns/availability)
+        GameEvents.OnBoostersChanged?.Invoke();
+
         return true;
     }
 
-    public (int atk,int hp,int spd,int res) Cooldowns() => (cdAtk, cdHp, cdSpd, cdRes);
+    public (int atk, int hp, int spd, int res) Cooldowns() => (cdAtk, cdHp, cdSpd, cdRes);
 }
 
 public struct BattleRuntimeHooks
 {
-    public System.Func<int,int> HealPlayer; // returns actual healed amount
+    public System.Func<int, int> HealPlayer; // returns actual healed amount
 }
