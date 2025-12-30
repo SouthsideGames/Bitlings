@@ -10,10 +10,10 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 32ffc26ed7d444b02a9332ce4279b117, type: 3}
-  m_Name: Monster_Cindrax
+  m_Name: Monster_Ignirix
   m_EditorClassIdentifier: 
   id: M-001
-  displayName: Cindrax
+  displayName: Ignirix
   type: 1
   typeIcon: {fileID: 21300000, guid: d552cfb27992e494694a52b7e3578364, type: 3}
   icon: {fileID: 21300000, guid: 1226e2155d87cc54bad061c817a6faa8, type: 3}
@@ -23,14 +23,14 @@ MonoBehaviour:
   rarity: 2
   canBeStarter: 0
   starterWeight: 1
+  maxLevel: 50
   baseHP: 60
-  baseAttack: 84
-  baseDefense: 36
-  baseSpeed: 60
-  hpRegenPerHour: 6
-  fatigueRatePerHour: 0.03
-  fatigueCooldownHours: 8
-  baseTrainingXPPerHour: 56
+  baseAttack: 78
+  baseDefense: 22
+  baseSpeed: 40
+  hpRegenPerHour: 5.7
+  fatigueRatePerHour: 0.2
+  fatigueCooldownHours: 7.2
   evolutionStage: 1
   evolutionLevel: 0
   evolutionForm: {fileID: 0}
@@ -38,13 +38,12 @@ MonoBehaviour:
   isBoss: 0
   bossJobDebuffs: []
   bossWeight: 1
-  spawnWeight: 2.5
-  jobSkill: 1.8
+  spawnWeight: 2
+  jobSkill: 1.08
   titleTrack: {fileID: 11400000, guid: 79936ff21507048bcaab651979784d4a, type: 2}
   defaultAlwaysOnTitles: []
-  Personality: {fileID: 11400000, guid: 29327199089b34217bcb6d621828d70f, type: 2}
-  basicAttackName: Flame Burst
+  Personality: {fileID: 11400000, guid: 3733616cf9f0f4dddb5bee9d6ba2952f, type: 2}
+  basicAttackName: Flame Bite
   basicAttackPrefab: {fileID: 126357351932672970, guid: a7524146891194bc4b7eb73ba1e38b46, type: 3}
   basicAttackPrefabLifetime: 1
-  description: Cindrax gather near volcanic vents, where their flickering flames
-    are said to spark new life in the Bitling world.
+  description: A volatile fire beast that lunges headfirst into battle
