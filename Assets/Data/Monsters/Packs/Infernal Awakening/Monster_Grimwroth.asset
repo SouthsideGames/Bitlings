@@ -16,10 +16,10 @@ MonoBehaviour:
   displayName: Grimwroth
   type: 7
   typeIcon: {fileID: 21300000, guid: 10d50b4d1dee041cc8dcf349a9ce86a1, type: 3}
-  icon: {fileID: 21300000, guid: dbbca7959d1654d5eb8112c2f6bcd299, type: 3}
-  backIcon: {fileID: 21300000, guid: 4a01a69fa5a444d88b4ef4f1623758c2, type: 3}
-  shinyIcon: {fileID: 21300000, guid: 05dcda8d63f664f39a1cbd9b9749caa9, type: 3}
-  shinyBackIcon: {fileID: 21300000, guid: 494b3a2c742b64cf1880316bf6da25a4, type: 3}
+  icon: {fileID: 21300000, guid: b3cfa6ac9f8524764a8c420a732e0648, type: 3}
+  backIcon: {fileID: 21300000, guid: 34be8dd0890404685b66aff342baf2d0, type: 3}
+  shinyIcon: {fileID: 21300000, guid: 263069d8564544cf6b4df7e6c32aa018, type: 3}
+  shinyBackIcon: {fileID: 21300000, guid: 3acbf20c2ebcc4a2e8da423952c9f6d7, type: 3}
   rarity: 1
   canBeStarter: 0
   starterWeight: 0

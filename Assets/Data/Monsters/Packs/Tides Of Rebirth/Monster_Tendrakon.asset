@@ -16,10 +16,10 @@ MonoBehaviour:
   displayName: Tendrakon
   type: 2
   typeIcon: {fileID: 21300000, guid: dd2adea89cda84ec4a589a6d1d5da1ae, type: 3}
-  icon: {fileID: 21300000, guid: 483181ac5be12445d931e7df2964c544, type: 3}
-  backIcon: {fileID: 21300000, guid: a2353fa2c966940c7813d28552b20d1d, type: 3}
-  shinyIcon: {fileID: 21300000, guid: 805d23fd10c434edd96e281c5a6b5bb8, type: 3}
-  shinyBackIcon: {fileID: 21300000, guid: 19526e2d90846441284f824d7b8cd46b, type: 3}
+  icon: {fileID: 21300000, guid: 22b096e7e5536421d936e23b929fcc64, type: 3}
+  backIcon: {fileID: 21300000, guid: a1f37c5341b2640c6aae8118fecda67c, type: 3}
+  shinyIcon: {fileID: 21300000, guid: 73476e90374544374b16755300335bce, type: 3}
+  shinyBackIcon: {fileID: 21300000, guid: 992aaf639b4bf486c9a4d71ce20e354c, type: 3}
   rarity: 2
   canBeStarter: 0
   starterWeight: 0

@@ -16,10 +16,10 @@ MonoBehaviour:
   displayName: Auralyte
   type: 10
   typeIcon: {fileID: 21300000, guid: fb4479ed54fe64621a9e7a735eeffad8, type: 3}
-  icon: {fileID: 21300000, guid: 986414be0131746cd8f166f105bdbbc9, type: 3}
-  backIcon: {fileID: 21300000, guid: 25874784225c641558971c12ba22b697, type: 3}
-  shinyIcon: {fileID: 21300000, guid: 68f109678004244b99ff3a30d77b3d30, type: 3}
-  shinyBackIcon: {fileID: 21300000, guid: 1b4217d01f57e4974aeb1997d573d79f, type: 3}
+  icon: {fileID: 21300000, guid: 267cad0e898fb4949bce90b9bfad4849, type: 3}
+  backIcon: {fileID: 21300000, guid: 725e9b9b75402418799a7adebda7030b, type: 3}
+  shinyIcon: {fileID: 21300000, guid: ba0a087e3ebc046c8a4b017e8a495f5b, type: 3}
+  shinyBackIcon: {fileID: 21300000, guid: 324b15a1f8287433b9200a7c1cc7b688, type: 3}
   rarity: 1
   canBeStarter: 0
   starterWeight: 0

@@ -16,10 +16,10 @@ MonoBehaviour:
   displayName: Crestrawl
   type: 2
   typeIcon: {fileID: 21300000, guid: dd2adea89cda84ec4a589a6d1d5da1ae, type: 3}
-  icon: {fileID: 21300000, guid: 533c92583b6cc4c2987d0a78c0a1419f, type: 3}
-  backIcon: {fileID: 21300000, guid: 1c16159470bb84db68a4d40d16f53845, type: 3}
-  shinyIcon: {fileID: 21300000, guid: c4e690da320444a81a63d22c7212f857, type: 3}
-  shinyBackIcon: {fileID: 21300000, guid: 0d9cefecd73684c508478cd1f3e792d0, type: 3}
+  icon: {fileID: 21300000, guid: 0f257d02177a4441b8deda57fdb81e94, type: 3}
+  backIcon: {fileID: 21300000, guid: 4b96b5a752f724187b1558b3d590f0bd, type: 3}
+  shinyIcon: {fileID: 21300000, guid: c973f19ddd81e478099de8def64dd0ed, type: 3}
+  shinyBackIcon: {fileID: 21300000, guid: 6293a758527384daaafe45f74312d5fb, type: 3}
   rarity: 1
   canBeStarter: 0
   starterWeight: 0

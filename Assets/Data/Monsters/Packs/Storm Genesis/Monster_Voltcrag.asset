@@ -16,10 +16,10 @@ MonoBehaviour:
   displayName: Voltcrag
   type: 4
   typeIcon: {fileID: 21300000, guid: e57a940f3027d4a9f83f25cefbc6d738, type: 3}
-  icon: {fileID: 21300000, guid: d2ece2616af68475f9f6916e622347de, type: 3}
-  backIcon: {fileID: 21300000, guid: b8a0ecd59c4904e738f23b10c8159df9, type: 3}
-  shinyIcon: {fileID: 21300000, guid: b7318af8dda7240f1832c0ec8ae53b33, type: 3}
-  shinyBackIcon: {fileID: 21300000, guid: a5f8545e651a941dda45e3be4b4d5b60, type: 3}
+  icon: {fileID: 21300000, guid: 14c557821ef514cfc80b536375c1c76a, type: 3}
+  backIcon: {fileID: 21300000, guid: 5cf8dc4c0f4e743b2b12b8ae07486783, type: 3}
+  shinyIcon: {fileID: 21300000, guid: d893abfb1ae794eb482170776ce9c08a, type: 3}
+  shinyBackIcon: {fileID: 21300000, guid: 6e487da3cbf9e47b1bb4558cc7103929, type: 3}
   rarity: 1
   canBeStarter: 0
   starterWeight: 1

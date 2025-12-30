@@ -16,10 +16,10 @@ MonoBehaviour:
   displayName: Coilisk
   type: 16
   typeIcon: {fileID: 21300000, guid: c802d8c6dfd7c40329bae6fe5d96fc85, type: 3}
-  icon: {fileID: 21300000, guid: e4531ee410d5245449ec35ed964e5873, type: 3}
-  backIcon: {fileID: 21300000, guid: d6a157636bc854958a5a1ba84e5b4896, type: 3}
-  shinyIcon: {fileID: 21300000, guid: cb0cb98707e464565b948deeb86ba608, type: 3}
-  shinyBackIcon: {fileID: 21300000, guid: c113eef5507434f1297506a71925a4e8, type: 3}
+  icon: {fileID: 21300000, guid: aaa0025a068884802b6297ca8b1c3d52, type: 3}
+  backIcon: {fileID: 21300000, guid: 9a8eb0ac758bc41b1a2b8c9efc8290bf, type: 3}
+  shinyIcon: {fileID: 21300000, guid: bc5d5667e254140129ed8f8fed1de59d, type: 3}
+  shinyBackIcon: {fileID: 21300000, guid: 89ba412cdb0974d52a9222eca7285232, type: 3}
   rarity: 0
   canBeStarter: 0
   starterWeight: 1

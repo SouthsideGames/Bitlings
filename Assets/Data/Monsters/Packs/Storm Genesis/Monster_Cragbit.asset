@@ -16,10 +16,10 @@ MonoBehaviour:
   displayName: Cragbit
   type: 4
   typeIcon: {fileID: 21300000, guid: e57a940f3027d4a9f83f25cefbc6d738, type: 3}
-  icon: {fileID: 21300000, guid: 886adb3be89684945afafaca4200163c, type: 3}
-  backIcon: {fileID: 21300000, guid: 954ac606761874e5a8c1f70812cc129c, type: 3}
-  shinyIcon: {fileID: 21300000, guid: 1d51dd09fd3e944e39ff18956a58c779, type: 3}
-  shinyBackIcon: {fileID: 21300000, guid: 04b7344b11c0641adadebe2f367d4b27, type: 3}
+  icon: {fileID: 21300000, guid: 64b50985d806b4938b1efbb7a70c95bf, type: 3}
+  backIcon: {fileID: 21300000, guid: 53b06290efc4f496ca492271d35ab63c, type: 3}
+  shinyIcon: {fileID: 21300000, guid: e9fabed90470e4c4fbc9c28082a294d5, type: 3}
+  shinyBackIcon: {fileID: 21300000, guid: 20f86cfce393c4c1e8d86d35756ad744, type: 3}
   rarity: 0
   canBeStarter: 0
   starterWeight: 1

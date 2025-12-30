@@ -16,10 +16,10 @@ MonoBehaviour:
   displayName: Murdwisp
   type: 7
   typeIcon: {fileID: 21300000, guid: 10d50b4d1dee041cc8dcf349a9ce86a1, type: 3}
-  icon: {fileID: 21300000, guid: 14e23006c487a409a9a1c1b81c9e115e, type: 3}
-  backIcon: {fileID: 21300000, guid: 5a487c66de63b4e40911ea98802a211c, type: 3}
-  shinyIcon: {fileID: 21300000, guid: 439f13a2be33946c58ceafa9c5dc6136, type: 3}
-  shinyBackIcon: {fileID: 21300000, guid: 01b76b3bfe06e409a9137b7483d837a7, type: 3}
+  icon: {fileID: 21300000, guid: fd5c91169d2834ebf9e19a1e7bfa0f9a, type: 3}
+  backIcon: {fileID: 21300000, guid: e6c97936f16b34643a350b5300860aa3, type: 3}
+  shinyIcon: {fileID: 21300000, guid: 01d410cc9b8b24cccb6ba7eb73cb6190, type: 3}
+  shinyBackIcon: {fileID: 21300000, guid: 4af91bb1498054750b59e7ce8f4fe20a, type: 3}
   rarity: 0
   canBeStarter: 0
   starterWeight: 0

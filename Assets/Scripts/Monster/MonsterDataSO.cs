@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 
 public enum MonsterType { None = 0, Fire = 1, Water = 2, Grass = 3, Electric = 4, Ice = 5, Clash = 6, Corrupt = 7, Ground = 8, Sky = 9, Oracle = 10, Bug = 11, Rock = 12, Specter = 13, Wyrm = 14, Umbral = 15, Alloy = 16 }
-public enum Rarity { Common = 0, Uncommon = 1, Rare = 2, Epic = 3, Legendary = 4, Mythic = 5 }
+public enum Rarity { Common = 0, Uncommon = 1, Rare = 2, Epic = 3, Legendary = 4, Mythic = 5, Boss = 6 }
 
 [CreateAssetMenu(menuName = "Data/Monster/Monster", fileName = "Monster_")]
 public class MonsterDataSO : ScriptableObject
@@ -78,7 +78,7 @@ public class MonsterDataSO : ScriptableObject
     public GameObject basicAttackPrefab;
 
     [Tooltip("Lifetime in seconds for spawned attack prefab. 0 = do not auto-destroy.")]
-    [Min(0f)] public float basicAttackPrefabLifetime = 1.25f;
+    [Min(0f)] public float basicAttackPrefabLifetime = 1f;
 
 
     [Header("Description")]

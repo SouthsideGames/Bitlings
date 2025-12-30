@@ -16,10 +16,10 @@ MonoBehaviour:
   displayName: Sporelup
   type: 3
   typeIcon: {fileID: 21300000, guid: 46bf3bbfcff674f17bd0ea06a23e1467, type: 3}
-  icon: {fileID: 21300000, guid: 97bcdca56f6564bb1a11dce88e38e1b6, type: 3}
-  backIcon: {fileID: 21300000, guid: 170220af720954b12becff1568d89168, type: 3}
-  shinyIcon: {fileID: 21300000, guid: baa52f3125e304a2094801b9fd668f8c, type: 3}
-  shinyBackIcon: {fileID: 21300000, guid: a490a85a351fe46c28d5e4ed68a1c6a7, type: 3}
+  icon: {fileID: 21300000, guid: 6402491fe0b944832b7d06990d84b241, type: 3}
+  backIcon: {fileID: 21300000, guid: 21a1ca9d5b8b24ebba2b94daf97d2fae, type: 3}
+  shinyIcon: {fileID: 21300000, guid: 1d9faa24bca8040dcb2dccb205f766c6, type: 3}
+  shinyBackIcon: {fileID: 21300000, guid: 6a353d1b1eabd449494bad4e6cd88bfd, type: 3}
   rarity: 0
   canBeStarter: 0
   starterWeight: 0

@@ -16,10 +16,10 @@ MonoBehaviour:
   displayName: Ironmite
   type: 11
   typeIcon: {fileID: 21300000, guid: 8e7ac2a8f10ec4ba5860e036443e3fc8, type: 3}
-  icon: {fileID: 21300000, guid: 858595a0b58734d1daf349d38eed1d3c, type: 3}
-  backIcon: {fileID: 21300000, guid: c7b96f86c7d9c4393b4792dca340d143, type: 3}
-  shinyIcon: {fileID: 21300000, guid: 993d175dcfc864f63a1cb8d14f09b1d9, type: 3}
-  shinyBackIcon: {fileID: 21300000, guid: 3e3497bbaed3c43ad82887ccec8859d4, type: 3}
+  icon: {fileID: 21300000, guid: edaf1ab137d19474aa0788e0c040fc38, type: 3}
+  backIcon: {fileID: 21300000, guid: 570ed3a3dced5449cb9fea3a21f33632, type: 3}
+  shinyIcon: {fileID: 21300000, guid: 1f7b610e5e72b4399bdf16c4c119d0c6, type: 3}
+  shinyBackIcon: {fileID: 21300000, guid: 347ffb57ce1df4f129e54688c0edac05, type: 3}
   rarity: 0
   canBeStarter: 0
   starterWeight: 0

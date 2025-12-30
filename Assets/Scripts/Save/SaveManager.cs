@@ -38,23 +38,27 @@ public static class SaveManager
     private static bool _loaded;
     private static bool _isSaving;
 
-    public static string SavePath         => Path.Combine(Application.persistentDataPath, "idle_mon_save.json");
-    public static string BackupPath       => Path.Combine(Application.persistentDataPath, "idle_mon_save.bak");
-    public static string TutorialFlagsPath=> Path.Combine(Application.persistentDataPath, "tutorial_flags.json");
-    public static string JobRuntimePath   => Path.Combine(Application.persistentDataPath, "idle_job_runtime.json");
+    // ─────────────────────────────────────────────
+    // Paths
+    // ─────────────────────────────────────────────
+
+    public static string SavePath          => Path.Combine(Application.persistentDataPath, "idle_mon_save.json");
+    public static string BackupPath        => Path.Combine(Application.persistentDataPath, "idle_mon_save.bak");
+    public static string TutorialFlagsPath => Path.Combine(Application.persistentDataPath, "tutorial_flags.json");
+    public static string JobRuntimePath    => Path.Combine(Application.persistentDataPath, "idle_job_runtime.json");
 
     // ─────────────────────────────────────────────
     // Auto-generated handler names
     // ─────────────────────────────────────────────
 
-    private static readonly string[] namePrefixes = new string[]
+    private static readonly string[] namePrefixes = new[]
     {
         "Handler", "Operator", "Agent", "Keeper", "Caretaker",
         "Riftwatcher", "Observer", "Archivist", "Custodian",
         "Tech", "Warden", "Cipher", "Bitmaster"
     };
 
-    private static readonly string[] nameStems = new string[]
+    private static readonly string[] nameStems = new[]
     {
         "Flux", "Byte", "Voxel", "Data", "Prism", "Spark", "Root", "Fracture",
         "Shard", "Node", "Pulse", "Shift", "Core", "Patch", "Signal",
@@ -84,33 +88,21 @@ public static class SaveManager
         if (_loaded) return;
         _loaded = true;
 
-        EnsureFolder();
+        SaveFiles.EnsureFolder(SavePath);
 
+        // Load primary, then backup, else new.
         if (!TryLoad(SavePath, out Data))
         {
             if (!TryLoad(BackupPath, out Data))
             {
                 Data = NewFreshPlayer();
-                // Do not call Save() until defaults are ensured, to avoid writing half-initialized JSON.
+                // No Save() here; we normalize everything first.
             }
         }
 
-        EnsureDefaults();
-        Data?.EnsureTransientSets();
+        NormalizeAfterLoad();
 
-        EnsureTrainingDefaults();
-
-        PruneExpiredCaptureBands(true);
-        PruneExpiredLures(true);
-        PruneExpiredLuckBoosts(true);
-
-        // IMPORTANT: Ensure HashSet mirrors are ALWAYS rebuilt from list mirrors on load.
-        RebuildTransientSetsFromLists();
-
-        // Tutorial flags are SaveManager-owned; load once so UI calls are stable.
-        EnsureTutorialFlagsLoaded();
-
-        // First-time write (new save) after everything is consistent.
+        // First-time write after everything is consistent.
         if (!File.Exists(SavePath))
             Save();
     }
@@ -120,16 +112,13 @@ public static class SaveManager
         if (_isSaving) return;
         _isSaving = true;
 
-        if (Data == null)
-            Data = NewFreshPlayer();
-
         try
         {
-            // Normalize first so we never serialize inconsistent mirrors.
-            EnsureDefaults();
+            if (Data == null)
+                Data = NewFreshPlayer();
 
-            // Mirrors: HashSet -> List
-            SyncListsFromSets();
+            // Normalize first so we never serialize inconsistent mirrors.
+            NormalizeBeforeSave();
 
             // lastSavedUnix monotonic-ish
             long now = NowUnix();
@@ -137,9 +126,10 @@ public static class SaveManager
             Data.lastSavedUnix = Math.Max(Data.lastSavedUnix, now);
 
             string json = JsonUtility.ToJson(Data, prettyPrint: true);
-            AtomicWrite(SavePath, json);
+            SaveFiles.AtomicWriteUtf8(SavePath, json);
 
-            try { File.Copy(SavePath, BackupPath, overwrite: true); } catch { }
+            // Backup best-effort (do not throw)
+            SaveFiles.TryCopy(SavePath, BackupPath);
         }
         catch (Exception e)
         {
@@ -151,15 +141,26 @@ public static class SaveManager
         }
     }
 
+    public static void OnResume()
+    {
+        // These may call Save() when changes occur (guarded).
+        PruneExpiredCaptureBands(saveIfChanged: true);
+        PruneExpiredLures(saveIfChanged: true);
+        PruneExpiredLuckBoosts(saveIfChanged: true);
+
+        JobManager.I?.ProcessOfflineAllSites();
+        HealthRegenSystem.I?.TryApplyOfflineRegen();
+    }
+
     // ─────────────────────────────────────────────
     // Hard reset (new account)
     // ─────────────────────────────────────────────
 
     public static void ClearAll()
     {
-        try { if (File.Exists(SavePath)) File.Delete(SavePath); } catch { }
-        try { if (File.Exists(BackupPath)) File.Delete(BackupPath); } catch { }
-        try { if (File.Exists(JobRuntimePath)) File.Delete(JobRuntimePath); } catch { }
+        SaveFiles.TryDelete(SavePath);
+        SaveFiles.TryDelete(BackupPath);
+        SaveFiles.TryDelete(JobRuntimePath);
 
         // SaveManager owns tutorial flags; clear through API so in-memory cache resets too.
         ClearTutorialFlags();
@@ -182,8 +183,7 @@ public static class SaveManager
         Data.energyLastUnix = NowUnix();
         Data.energyRemainderSecs = 0f;
 
-        EnsureDefaults();
-        SyncListsFromSets();
+        NormalizeBeforeSave();
         Save();
 
         GameEvents.OnJobsChanged?.Invoke();
@@ -200,23 +200,38 @@ public static class SaveManager
         Debug.Log($"[CLEAR ALL] New account created. Energy={ResourceBank.Get(ResourceType.Energy)}/{Data.encounterMax}");
     }
 
-    public static void OnResume()
-    {
-        PruneExpiredCaptureBands(true);
-        PruneExpiredLures(true);
-        PruneExpiredLuckBoosts(true);
+    // ─────────────────────────────────────────────
+    // Normalization (single source of truth)
+    // ─────────────────────────────────────────────
 
-        JobManager.I?.ProcessOfflineAllSites();
-        HealthRegenSystem.I?.TryApplyOfflineRegen();
+    private static void NormalizeAfterLoad()
+    {
+        EnsureDefaults();                 // creates missing lists/sets, clamps
+        Data?.EnsureTransientSets();      // your existing transient init (if any)
+
+        EnsureTrainingDefaults();
+
+        PruneExpiredCaptureBands(saveIfChanged: true);
+        PruneExpiredLures(saveIfChanged: true);
+        PruneExpiredLuckBoosts(saveIfChanged: true);
+
+        // LISTS are authoritative for persistence. Always rebuild sets from lists after load.
+        RebuildTransientSetsFromLists();
+
+        // Tutorial flags are SaveManager-owned; load once so UI calls are stable.
+        EnsureTutorialFlagsLoaded();
     }
 
-    // ─────────────────────────────────────────────
-    // Defaults / Normalization
-    // ─────────────────────────────────────────────
-
-    static PlayerManager NewFreshPlayer()
+    private static void NormalizeBeforeSave()
     {
-        var p = new PlayerManager
+        EnsureDefaults();
+        // Sets -> Lists prior to serialization.
+        SyncListsFromSets();
+    }
+
+    private static PlayerManager NewFreshPlayer()
+    {
+        return new PlayerManager
         {
             playerId = Guid.NewGuid().ToString("N"),
             playerName = GeneratePlayerName(),
@@ -255,14 +270,11 @@ public static class SaveManager
             jobProgress = new List<JobProgress>(),
 
             fieldOps = new FieldOpsStats(),
-
             settings = new SettingsState()
         };
-
-        return p;
     }
 
-    static void EnsureDefaults()
+    private static void EnsureDefaults()
     {
         if (Data == null)
         {
@@ -287,7 +299,7 @@ public static class SaveManager
         Data.favoriteMonsterIdsList ??= new List<string>();
         Data.discoveredMonsterIdsList ??= new List<string>();
 
-        if (Data.fieldOps == null) Data.fieldOps = new FieldOpsStats();
+        Data.fieldOps ??= new FieldOpsStats();
         Data.settings ??= new SettingsState();
 
         // Identity
@@ -307,7 +319,7 @@ public static class SaveManager
 
         EnsureResourceCountsSized();
 
-        // Sets exist
+        // Sets
         Data.ownedIds ??= new HashSet<string>();
         Data.favoriteMonsterIds ??= new HashSet<string>();
         Data.discoveredMonsterIds ??= new HashSet<string>();
@@ -374,7 +386,7 @@ public static class SaveManager
         if (Data.lastSavedUnix <= 0) Data.lastSavedUnix = NowUnix();
     }
 
-    static void EnsureResourceCountsSized()
+    private static void EnsureResourceCountsSized()
     {
         if (Data == null) return;
         Data.resourceCounts ??= new List<int>();
@@ -387,7 +399,7 @@ public static class SaveManager
             Data.resourceCounts.Add(0);
     }
 
-    static void NormalizeOwnedEntries(List<OwnedMonsterData> list)
+    private static void NormalizeOwnedEntries(List<OwnedMonsterData> list)
     {
         if (list == null) return;
 
@@ -412,7 +424,7 @@ public static class SaveManager
         }
     }
 
-    static void EnsureTrainingDefaults()
+    private static void EnsureTrainingDefaults()
     {
         if (Data?.owned == null) return;
 
@@ -452,52 +464,49 @@ public static class SaveManager
         _tutorialData = new TutorialFlagsData();
         _tutorialSet  = new HashSet<string>(StringComparer.Ordinal);
 
+        if (!SaveFiles.TryReadAllTextUtf8(TutorialFlagsPath, out var json) || string.IsNullOrWhiteSpace(json))
+            return;
+
         try
         {
-            if (File.Exists(TutorialFlagsPath))
-            {
-                var json = File.ReadAllText(TutorialFlagsPath, Encoding.UTF8);
-                if (!string.IsNullOrWhiteSpace(json))
-                    _tutorialData = JsonUtility.FromJson<TutorialFlagsData>(json) ?? new TutorialFlagsData();
-            }
+            _tutorialData = JsonUtility.FromJson<TutorialFlagsData>(json) ?? new TutorialFlagsData();
         }
         catch
         {
             _tutorialData = new TutorialFlagsData();
         }
 
-        if (_tutorialData.completed != null)
+        if (_tutorialData.completed == null) return;
+
+        for (int i = 0; i < _tutorialData.completed.Count; i++)
         {
-            for (int i = 0; i < _tutorialData.completed.Count; i++)
-            {
-                var k = _tutorialData.completed[i];
-                if (!string.IsNullOrWhiteSpace(k)) _tutorialSet.Add(k);
-            }
+            var k = _tutorialData.completed[i];
+            if (!string.IsNullOrWhiteSpace(k)) _tutorialSet.Add(k);
         }
     }
 
     private static void SaveTutorialFlagsFile()
     {
-        try
-        {
-            _tutorialData.completed = new List<string>(_tutorialSet);
-            var json = JsonUtility.ToJson(_tutorialData, true);
-            AtomicWrite(TutorialFlagsPath, json);
-        }
-        catch { }
+        if (_tutorialSet == null) return;
+
+        _tutorialData.completed = new List<string>(_tutorialSet);
+        var json = JsonUtility.ToJson(_tutorialData, true);
+        SaveFiles.AtomicWriteUtf8(TutorialFlagsPath, json);
     }
 
     public static bool IsTutorialComplete(string key)
     {
         if (string.IsNullOrWhiteSpace(key)) return false;
         EnsureTutorialFlagsLoaded();
-        return _tutorialSet.Contains(key);
+        return _tutorialSet != null && _tutorialSet.Contains(key);
     }
 
     public static void SetTutorialComplete(string key, bool done)
     {
         if (string.IsNullOrWhiteSpace(key)) return;
+
         EnsureTutorialFlagsLoaded();
+        _tutorialSet ??= new HashSet<string>(StringComparer.Ordinal);
 
         bool changed = done ? _tutorialSet.Add(key) : _tutorialSet.Remove(key);
         if (!changed) return;
@@ -511,7 +520,7 @@ public static class SaveManager
         _tutorialData = new TutorialFlagsData();
         _tutorialSet  = new HashSet<string>(StringComparer.Ordinal);
 
-        try { if (File.Exists(TutorialFlagsPath)) File.Delete(TutorialFlagsPath); } catch { }
+        SaveFiles.TryDelete(TutorialFlagsPath);
     }
 
     // ─────────────────────────────────────────────
@@ -651,7 +660,7 @@ public static class SaveManager
     // Buff/Lure Expiration
     // ─────────────────────────────────────────────
 
-    static bool PruneExpiredLures(bool saveIfChanged)
+    private static bool PruneExpiredLures(bool saveIfChanged)
     {
         if (Data?.activeFlyers == null || Data.activeFlyers.Count == 0) return false;
 
@@ -669,7 +678,7 @@ public static class SaveManager
         return changed;
     }
 
-    static bool PruneExpiredCaptureBands(bool saveIfChanged)
+    private static bool PruneExpiredCaptureBands(bool saveIfChanged)
     {
         if (Data?.activeWorkOrders == null || Data.activeWorkOrders.Count == 0) return false;
 
@@ -683,7 +692,7 @@ public static class SaveManager
         return changed;
     }
 
-    static bool PruneExpiredLuckBoosts(bool saveIfChanged)
+    private static bool PruneExpiredLuckBoosts(bool saveIfChanged)
     {
         if (Data?.activeFavorBoosts == null || Data.activeFavorBoosts.Count == 0) return false;
 
@@ -710,25 +719,15 @@ public static class SaveManager
     public static long NowUnix() => DateTimeOffset.UtcNow.ToUnixTimeSeconds();
     public static int TodayDayIndexUTC() => (int)(NowUnix() / 86400L);
 
-    static void EnsureFolder()
-    {
-        try
-        {
-            var dir = Path.GetDirectoryName(SavePath);
-            if (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir))
-                Directory.CreateDirectory(dir);
-        }
-        catch { }
-    }
-
-    static bool TryLoad(string path, out PlayerManager data)
+    private static bool TryLoad(string path, out PlayerManager data)
     {
         data = null;
+
+        if (!SaveFiles.TryReadAllTextUtf8(path, out var json)) return false;
+        if (string.IsNullOrWhiteSpace(json)) return false;
+
         try
         {
-            if (!File.Exists(path)) return false;
-            string json = File.ReadAllText(path, Encoding.UTF8);
-            if (string.IsNullOrWhiteSpace(json)) return false;
             data = JsonUtility.FromJson<PlayerManager>(json);
             return data != null;
         }
@@ -736,23 +735,6 @@ public static class SaveManager
         {
             data = null;
             return false;
-        }
-    }
-
-    static void AtomicWrite(string path, string contents)
-    {
-        string tmp = path + ".tmp";
-        File.WriteAllText(tmp, contents, Encoding.UTF8);
-
-        try
-        {
-            if (File.Exists(path)) File.Delete(path);
-            File.Move(tmp, path);
-        }
-        catch
-        {
-            try { if (!File.Exists(path)) File.Copy(tmp, path); } catch { }
-            try { File.Delete(tmp); } catch { }
         }
     }
 
@@ -803,17 +785,14 @@ public static class SaveManager
 
         Data.hasChosenStarter = true;
 
-        try
+        // Keep event emission, but avoid a broad try/catch (null checks instead).
+        var def = MonsterLibraryLocator.GetById(monsterId);
+        if (def != null)
         {
-            var def = MonsterLibraryLocator.GetById(monsterId);
-            if (def != null)
-            {
-                Data.seenTypes.Add(def.type);
-                // Do NOT double-fire unlocks here; StarterSelector already calls ApplyStarterUnlocksNow.
-                GameEvents.StarterChosen?.Invoke(def.type);
-            }
+            Data.seenTypes.Add(def.type);
+            // Do NOT double-fire unlocks here; StarterSelector already calls ApplyStarterUnlocksNow.
+            GameEvents.StarterChosen?.Invoke(def.type);
         }
-        catch { }
 
         Save();
     }
@@ -824,24 +803,17 @@ public static class SaveManager
 
     public static void SaveJobRuntime(JobRuntimeSave blob)
     {
-        try
-        {
-            var json = JsonUtility.ToJson(blob ?? new JobRuntimeSave(), prettyPrint: true);
-            AtomicWrite(JobRuntimePath, json);
-        }
-        catch (Exception e)
-        {
-            Debug.LogWarning($"SaveJobRuntime failed: {e.Message}");
-        }
+        var json = JsonUtility.ToJson(blob ?? new JobRuntimeSave(), prettyPrint: true);
+        SaveFiles.AtomicWriteUtf8(JobRuntimePath, json);
     }
 
     public static JobRuntimeSave LoadJobRuntime()
     {
+        if (!SaveFiles.TryReadAllTextUtf8(JobRuntimePath, out var json) || string.IsNullOrWhiteSpace(json))
+            return null;
+
         try
         {
-            if (!File.Exists(JobRuntimePath)) return null;
-            var json = File.ReadAllText(JobRuntimePath, Encoding.UTF8);
-            if (string.IsNullOrWhiteSpace(json)) return null;
             return JsonUtility.FromJson<JobRuntimeSave>(json);
         }
         catch
@@ -888,5 +860,79 @@ public static class SaveManager
             GameEvents.OnJobsChanged?.Invoke();
 
         return addedSet || addedList;
+    }
+
+    // ─────────────────────────────────────────────
+    // File helper (isolates I/O + error handling)
+    // ─────────────────────────────────────────────
+
+    private static class SaveFiles
+    {
+        public static void EnsureFolder(string anyFilePath)
+        {
+            try
+            {
+                var dir = Path.GetDirectoryName(anyFilePath);
+                if (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir))
+                    Directory.CreateDirectory(dir);
+            }
+            catch { }
+        }
+
+        public static bool TryReadAllTextUtf8(string path, out string text)
+        {
+            text = null;
+            try
+            {
+                if (!File.Exists(path)) return false;
+                text = File.ReadAllText(path, Encoding.UTF8);
+                return true;
+            }
+            catch
+            {
+                text = null;
+                return false;
+            }
+        }
+
+        public static void AtomicWriteUtf8(string path, string contents)
+        {
+            EnsureFolder(path);
+
+            string tmp = path + ".tmp";
+            File.WriteAllText(tmp, contents ?? string.Empty, Encoding.UTF8);
+
+            try
+            {
+                if (File.Exists(path)) File.Delete(path);
+                File.Move(tmp, path);
+            }
+            catch
+            {
+                // Fallback: attempt copy, then cleanup
+                try { if (!File.Exists(path)) File.Copy(tmp, path); } catch { }
+                try { File.Delete(tmp); } catch { }
+            }
+        }
+
+        public static void TryCopy(string src, string dst)
+        {
+            try
+            {
+                if (File.Exists(src))
+                    File.Copy(src, dst, overwrite: true);
+            }
+            catch { }
+        }
+
+        public static void TryDelete(string path)
+        {
+            try
+            {
+                if (File.Exists(path))
+                    File.Delete(path);
+            }
+            catch { }
+        }
     }
 }
