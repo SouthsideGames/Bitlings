@@ -42,27 +42,55 @@ public sealed class MonsterCsvImporterWindow : EditorWindow
     [Tooltip("If enabled, assigns MonsterDataSO.typeIcon using sprites in Assets/Art/Types based on type mapping.")]
     [SerializeField] private bool autoAssignTypeIcon = true;
 
+    [Header("Sprites (Optional via Asset Path Columns)")]
+    [SerializeField] private bool importIconSpritesByPath = true;
+
     [Header("Title Track Sync")]
-    [Tooltip("If enabled, review & update the monster's TitleTrackSO to match CSV.")]
     [SerializeField] private bool reviewUpdateTitleTrack = true;
-
-    [Tooltip("If a monster has no titleTrack, create one and assign it.")]
     [SerializeField] private bool createTitleTrackIfMissing = true;
-
-    [Tooltip("If enabled, move title tracks into the correct type folder under TitleTracks root.")]
     [SerializeField] private bool moveTitleTracksToTypeFolder = true;
-
-    [Tooltip("If enabled, rename title track asset files to TitleTrack_<NoSpacesMonsterName>.asset")]
     [SerializeField] private bool renameTitleTracksToMonsterName = true;
-
-    [Tooltip("If enabled, update tiers on the TitleTrackSO to match CSV Title Track + Title Track Levels.")]
     [SerializeField] private bool syncTitleTrackTiersFromCsv = true;
 
-    [Header("Optional Resolution")]
-    [SerializeField] private bool resolveEvolutionForm = true;
+    [Header("Always-On Titles (MonsterDataSO.defaultAlwaysOnTitles)")]
+    [SerializeField] private bool syncAlwaysOnTitlesFromCsv = true;
+
+    [Header("Personality")]
+    [Tooltip("If enabled, resolves MonsterPersonalitySO by asset name in Assets/Resources/MonsterPersonalities")]
     [SerializeField] private bool resolvePersonality = true;
 
+    [Header("Evolution")]
+    [SerializeField] private bool resolveEvolutionForm = true;
+
+    [Header("Deterministic Basic Attack Prefab By Type")]
+    [Tooltip("If enabled, sets basicAttackPrefab to Assets/Prefab/Effects/TypeEffects/<Type>.prefab (if found).")]
+    [SerializeField] private bool setBasicAttackPrefabByType = true;
+
+    [Tooltip("Deterministic prefab folder path.")]
+    [SerializeField] private string typeEffectPrefabFolder = "Assets/Prefab/Effects/TypeEffects";
+
     [SerializeField] private bool logVerbose = false;
+
+    // Your type icon filename mapping (FileName -> Type)
+    private static readonly Dictionary<MonsterType, string> TYPE_ICON_FILE = new()
+    {
+        { MonsterType.Bug, "Bug" },
+        { MonsterType.Clash, "Clash" },
+        { MonsterType.Umbral, "Dark" },
+        { MonsterType.Wyrm, "Dragon" },
+        { MonsterType.Electric, "Electric" },
+        { MonsterType.Fire, "Fire" },
+        { MonsterType.Grass, "Grass" },
+        { MonsterType.Ground, "Ground" },
+        { MonsterType.Ice, "Ice" },
+        { MonsterType.Oracle, "Mystic" },
+        { MonsterType.Corrupt, "Poison" },
+        { MonsterType.Rock, "Rock" },
+        { MonsterType.Sky, "Sky" },
+        { MonsterType.Specter, "Spirit" },
+        { MonsterType.Alloy, "Steel" },
+        { MonsterType.Water, "Water" },
+    };
 
     // Column normalization map (case-insensitive)
     private static readonly Dictionary<string, string> COL = new(StringComparer.OrdinalIgnoreCase)
@@ -97,48 +125,43 @@ public sealed class MonsterCsvImporterWindow : EditorWindow
         {"Evolution Level","Evolution Level"},
         {"Evolution Form Id","Evolution Form Id"},
 
-        {"Attack Name","Attack Name"},
+        {"Attack Name","Basic Attack Name"},
+        {"Basic Attack Name","Basic Attack Name"},
+        {"Basic Attack Prefab Lifetime","Basic Attack Prefab Lifetime"},
+
         {"Description","Description"},
 
-        // Title Track sync
-        {"Title Track","Title Track"},                 // pipe list of Title IDs (TitleSO.titleId)
-        {"Title Track Titles","Title Track"},          // alias
-        {"Title Track Levels","Title Track Levels"},   // pipe list of ints
-        {"Title Levels","Title Track Levels"},         // alias
-    };
+        // Boss/starter
+        {"Can Be Starter","Can Be Starter"},
+        {"Starter Weight","Starter Weight"},
+        {"Boss Weight","Boss Weight"},
+        {"Uncatchable","Uncatchable"}, // optional; will be overridden by Boss rarity rule
 
-    // Your type icon filename mapping (FileName -> Type)
-    // We store as MonsterType -> FileName.
-    private static readonly Dictionary<MonsterType, string> TYPE_ICON_FILE = new()
-    {
-        { MonsterType.Bug, "Bug" },
-        { MonsterType.Clash, "Clash" },
-        { MonsterType.Umbral, "Dark" },
-        { MonsterType.Wyrm, "Dragon" },
-        { MonsterType.Electric, "Electric" },
-        { MonsterType.Fire, "Fire" },
-        { MonsterType.Grass, "Grass" },
-        { MonsterType.Ground, "Ground" },
-        { MonsterType.Ice, "Ice" },
-        { MonsterType.Oracle, "Mystic" },
-        { MonsterType.Corrupt, "Poison" },
-        { MonsterType.Rock, "Rock" },
-        { MonsterType.Sky, "Sky" },
-        { MonsterType.Specter, "Spirit" },
-        { MonsterType.Alloy, "Steel" },
-        { MonsterType.Water, "Water" },
+        // Titles
+        {"Always On Titles","Always On Titles"},
+
+        // Title Track
+        {"Title Track","Title Track"},
+        {"Title Track Titles","Title Track"},
+        {"Title Track Levels","Title Track Levels"},
+        {"Title Levels","Title Track Levels"},
+
+        // Optional sprite paths
+        {"Icon Path","Icon Path"},
+        {"Back Icon Path","Back Icon Path"},
+        {"Shiny Icon Path","Shiny Icon Path"},
+        {"Shiny Back Icon Path","Shiny Back Icon Path"},
     };
 
     [MenuItem("Bitlings/Import/Monsters From CSV")]
     public static void Open()
     {
         var win = GetWindow<MonsterCsvImporterWindow>("Monster CSV Importer");
-        win.minSize = new Vector2(700, 860);
+        win.minSize = new Vector2(720, 920);
     }
 
     private void OnEnable()
     {
-        // Auto-fill roots if they exist (non-destructive)
         if (titlesRootFolder == null)
             titlesRootFolder = AssetDatabase.LoadAssetAtPath<DefaultAsset>("Assets/Data/Title");
         if (titleTracksRootFolder == null)
@@ -186,6 +209,22 @@ public sealed class MonsterCsvImporterWindow : EditorWindow
         autoAssignTypeIcon = EditorGUILayout.Toggle("Auto-Assign typeIcon", autoAssignTypeIcon);
 
         EditorGUILayout.Space();
+        EditorGUILayout.LabelField("Optional Sprite Paths", EditorStyles.boldLabel);
+        importIconSpritesByPath = EditorGUILayout.Toggle("Import icon/back/shiny sprites by Asset Path columns", importIconSpritesByPath);
+
+        EditorGUILayout.Space();
+        EditorGUILayout.LabelField("Personality", EditorStyles.boldLabel);
+        resolvePersonality = EditorGUILayout.Toggle("Resolve Personality (Assets/Resources/MonsterPersonalities)", resolvePersonality);
+
+        EditorGUILayout.Space();
+        EditorGUILayout.LabelField("Deterministic Attack Prefab", EditorStyles.boldLabel);
+        setBasicAttackPrefabByType = EditorGUILayout.Toggle("Set basicAttackPrefab by Type", setBasicAttackPrefabByType);
+        using (new EditorGUI.DisabledScope(!setBasicAttackPrefabByType))
+        {
+            typeEffectPrefabFolder = EditorGUILayout.TextField("TypeEffects Prefab Folder", typeEffectPrefabFolder);
+        }
+
+        EditorGUILayout.Space();
         EditorGUILayout.LabelField("Title Track Sync", EditorStyles.boldLabel);
         reviewUpdateTitleTrack = EditorGUILayout.Toggle("Review/Update Title Track", reviewUpdateTitleTrack);
         using (new EditorGUI.DisabledScope(!reviewUpdateTitleTrack))
@@ -197,9 +236,14 @@ public sealed class MonsterCsvImporterWindow : EditorWindow
         }
 
         EditorGUILayout.Space();
-        EditorGUILayout.LabelField("Optional", EditorStyles.boldLabel);
+        EditorGUILayout.LabelField("Always-On Titles", EditorStyles.boldLabel);
+        syncAlwaysOnTitlesFromCsv = EditorGUILayout.Toggle("Sync defaultAlwaysOnTitles From CSV", syncAlwaysOnTitlesFromCsv);
+
+        EditorGUILayout.Space();
+        EditorGUILayout.LabelField("Evolution", EditorStyles.boldLabel);
         resolveEvolutionForm = EditorGUILayout.Toggle("Resolve Evolution Form (2nd pass)", resolveEvolutionForm);
-        resolvePersonality = EditorGUILayout.Toggle("Resolve Personality (by asset name)", resolvePersonality);
+
+        EditorGUILayout.Space();
         logVerbose = EditorGUILayout.Toggle("Verbose Logs", logVerbose);
 
         EditorGUILayout.Space(18);
@@ -212,12 +256,12 @@ public sealed class MonsterCsvImporterWindow : EditorWindow
 
         EditorGUILayout.Space();
         EditorGUILayout.HelpBox(
-            "Title Track Sync expects:\n" +
-            "  Title Track:        T-001|T-014|T-022\n" +
-            "  Title Track Levels: 3|7|12\n\n" +
-            "Titles loaded from: Assets/Data/Title\n" +
-            "Tracks stored under: Assets/Data/TitleTracks/<TypeName>/TitleTrack_<NoSpacesMonsterName>.asset\n" +
-            "Type Icons loaded from: Assets/Art/Types (your mapping).",
+            "Boss rule enforced:\n" +
+            "- If Rarity == Boss: isBoss=true AND uncatchable=true\n" +
+            "- Else: isBoss=false AND uncatchable=false\n\n" +
+            "Personality is resolved by asset name in Assets/Resources/MonsterPersonalities.\n" +
+            "Attack prefab is resolved deterministically: " + "Assets/Prefab/Effects/TypeEffects/<Type>.prefab\n" +
+            "(Type string is enum ToString())\n",
             MessageType.Info
         );
     }
@@ -226,14 +270,18 @@ public sealed class MonsterCsvImporterWindow : EditorWindow
     {
         if (outputMonsterRootFolder == null) return false;
         if (!AssetDatabase.IsValidFolder(AssetDatabase.GetAssetPath(outputMonsterRootFolder))) return false;
+        if (csvAsset == null && string.IsNullOrWhiteSpace(csvPathOverride)) return false;
+
+        if (reviewUpdateTitleTrack || syncAlwaysOnTitlesFromCsv)
+        {
+            if (titlesRootFolder == null) return false;
+            if (!AssetDatabase.IsValidFolder(AssetDatabase.GetAssetPath(titlesRootFolder))) return false;
+        }
 
         if (reviewUpdateTitleTrack)
         {
             if (titleTracksRootFolder == null) return false;
             if (!AssetDatabase.IsValidFolder(AssetDatabase.GetAssetPath(titleTracksRootFolder))) return false;
-
-            if (titlesRootFolder == null) return false;
-            if (!AssetDatabase.IsValidFolder(AssetDatabase.GetAssetPath(titlesRootFolder))) return false;
         }
 
         if (autoAssignTypeIcon)
@@ -242,7 +290,12 @@ public sealed class MonsterCsvImporterWindow : EditorWindow
             if (!AssetDatabase.IsValidFolder(AssetDatabase.GetAssetPath(typeIconsRootFolder))) return false;
         }
 
-        if (csvAsset == null && string.IsNullOrWhiteSpace(csvPathOverride)) return false;
+        if (setBasicAttackPrefabByType)
+        {
+            if (string.IsNullOrWhiteSpace(typeEffectPrefabFolder)) return false;
+            if (!AssetDatabase.IsValidFolder(typeEffectPrefabFolder)) return false;
+        }
+
         return true;
     }
 
@@ -269,17 +322,20 @@ public sealed class MonsterCsvImporterWindow : EditorWindow
         var headerMap = BuildHeaderMap(table.Headers);
         var existingById = IndexExistingMonsters(monsterRootPath);
 
-        Dictionary<string, MonsterPersonalitySO> personalityByName = null;
-        if (resolvePersonality)
-            personalityByName = IndexPersonalities();
-
+        // Index Title assets by titleId
         Dictionary<string, TitleSO> titleByTitleId = null;
-        if (reviewUpdateTitleTrack)
+        if (reviewUpdateTitleTrack || syncAlwaysOnTitlesFromCsv)
             titleByTitleId = IndexTitlesByTitleIdInFolder(titlesRootPath);
 
+        // Cache type icons
         Dictionary<MonsterType, Sprite> typeIconCache = null;
         if (autoAssignTypeIcon)
             typeIconCache = BuildTypeIconCache(typeIconsPath);
+
+        // Personality lookup: load all MonsterPersonalitySO from Resources/MonsterPersonalities
+        Dictionary<string, MonsterPersonalitySO> personalityByName = null;
+        if (resolvePersonality)
+            personalityByName = IndexPersonalitiesFromResources();
 
         var pendingEvolution = new Dictionary<MonsterDataSO, string>();
 
@@ -294,6 +350,9 @@ public sealed class MonsterCsvImporterWindow : EditorWindow
         int created = 0, updated = 0, skipped = 0, errors = 0;
         int movedMonsters = 0, renamedMonsters = 0;
         int movedTracks = 0, renamedTracks = 0, updatedTracks = 0, createdTracks = 0;
+        int updatedAlwaysOnTitles = 0;
+        int setAttackPrefabs = 0;
+        int setSpriteRefs = 0;
 
         try
         {
@@ -341,11 +400,30 @@ public sealed class MonsterCsvImporterWindow : EditorWindow
                     if (TryParseEnum(Get(row, headerMap, "Rarity"), out Rarity rr))
                         monster.rarity = rr;
 
+                    // MaxLevel forced
+                    monster.maxLevel = 50;
+
+                    // Boss rule enforced only by rarity
+                    bool boss = monster.rarity == Rarity.Boss;
+                    monster.isBoss = boss;
+                    monster.uncatchable = boss;
+
                     // Type icon assignment
                     if (autoAssignTypeIcon && typeIconCache != null)
                     {
                         if (typeIconCache.TryGetValue(monster.type, out var sprite) && sprite != null)
                             monster.typeIcon = sprite;
+                    }
+
+                    // Optional sprite paths
+                    if (importIconSpritesByPath)
+                    {
+                        bool any = false;
+                        any |= TryAssignSpriteByPath(Get(row, headerMap, "Icon Path"), ref monster.icon);
+                        any |= TryAssignSpriteByPath(Get(row, headerMap, "Back Icon Path"), ref monster.backIcon);
+                        any |= TryAssignSpriteByPath(Get(row, headerMap, "Shiny Icon Path"), ref monster.shinyIcon);
+                        any |= TryAssignSpriteByPath(Get(row, headerMap, "Shiny Back Icon Path"), ref monster.shinyBackIcon);
+                        if (any) setSpriteRefs++;
                     }
 
                     // Defer monster move/rename
@@ -376,6 +454,17 @@ public sealed class MonsterCsvImporterWindow : EditorWindow
                     // Job skill
                     if (TryFloat(Get(row, headerMap, "Job Skill"), out float js)) monster.jobSkill = Mathf.Clamp(js, 0.5f, 3f);
 
+                    // Starter flags
+                    if (TryBool(Get(row, headerMap, "Can Be Starter"), out bool starter))
+                        monster.canBeStarter = starter;
+
+                    if (TryInt(Get(row, headerMap, "Starter Weight"), out int stw))
+                        monster.starterWeight = Mathf.Max(0, stw);
+
+                    // Boss weight (even for non-boss, you can set; but it’s only used if boss)
+                    if (TryInt(Get(row, headerMap, "Boss Weight"), out int bw))
+                        monster.bossWeight = Mathf.Max(1, bw);
+
                     // Evolution stage/level (form resolved later)
                     if (TryInt(Get(row, headerMap, "Evolution Stage"), out int es)) monster.evolutionStage = Mathf.Max(1, es);
                     if (TryInt(Get(row, headerMap, "Evolution Level"), out int el)) monster.evolutionLevel = Mathf.Max(0, el);
@@ -386,24 +475,59 @@ public sealed class MonsterCsvImporterWindow : EditorWindow
                         pendingEvolution[monster] = evoId;
                     }
 
-                    // Personality
+                    // Personality (Resources/MonsterPersonalities by asset name)
                     if (resolvePersonality && personalityByName != null)
                     {
                         string p = Get(row, headerMap, "Personality").Trim();
                         if (!string.IsNullOrWhiteSpace(p) && personalityByName.TryGetValue(p, out var pso))
                             monster.Personality = pso;
                         else if (!string.IsNullOrWhiteSpace(p) && logVerbose)
-                            Debug.LogWarning($"[MonsterCsvImporter] Personality '{p}' not found (Monster {id})");
+                            Debug.LogWarning($"[MonsterCsvImporter] Personality '{p}' not found in Resources/MonsterPersonalities (Monster {id})");
                     }
 
-                    // Attack name / description
-                    string atkName = Get(row, headerMap, "Attack Name");
+                    // Basic attack name
+                    string atkName = Get(row, headerMap, "Basic Attack Name");
                     if (!string.IsNullOrWhiteSpace(atkName)) monster.basicAttackName = atkName.Trim();
 
+                    // Basic attack prefab lifetime
+                    if (TryFloat(Get(row, headerMap, "Basic Attack Prefab Lifetime"), out float life))
+                        monster.basicAttackPrefabLifetime = Mathf.Max(0f, life);
+
+                    // Deterministic basicAttackPrefab by type
+                    if (setBasicAttackPrefabByType)
+                    {
+                        var prefab = LoadTypeEffectPrefab(monster.type, typeEffectPrefabFolder);
+                        if (prefab != null)
+                        {
+                            monster.basicAttackPrefab = prefab;
+                            setAttackPrefabs++;
+                        }
+                        else if (logVerbose)
+                        {
+                            Debug.LogWarning($"[MonsterCsvImporter] Missing TypeEffect prefab for type '{monster.type}' at {typeEffectPrefabFolder}/{monster.type}.prefab");
+                        }
+                    }
+
+                    // Description
                     string desc = Get(row, headerMap, "Description");
                     if (!string.IsNullOrWhiteSpace(desc)) monster.description = desc.Trim();
 
-                    // Title Track sync (strongly typed now)
+                    // Always-On Titles
+                    if (syncAlwaysOnTitlesFromCsv && titleByTitleId != null)
+                    {
+                        string always = Get(row, headerMap, "Always On Titles").Trim();
+                        if (!string.IsNullOrWhiteSpace(always))
+                        {
+                            var titles = ResolveTitleIdList(always, titleByTitleId);
+                            if (!TitleArrayEquals(monster.defaultAlwaysOnTitles, titles))
+                            {
+                                monster.defaultAlwaysOnTitles = titles;
+                                updatedAlwaysOnTitles++;
+                            }
+                        }
+                    }
+
+                    // Title Track sync
                     if (reviewUpdateTitleTrack)
                     {
                         if (string.IsNullOrWhiteSpace(trackRootPath) || !AssetDatabase.IsValidFolder(trackRootPath))
@@ -523,20 +647,18 @@ public sealed class MonsterCsvImporterWindow : EditorWindow
             AssetDatabase.Refresh();
         }
 
-        // Apply track tier sync (strongly typed, safe)
+        // Apply track tier sync (typed)
         if (reviewUpdateTitleTrack && syncTitleTrackTiersFromCsv && deferredTrackTierSync.Count > 0)
         {
             foreach (var item in deferredTrackTierSync)
             {
                 if (item.track == null) continue;
-
                 if (ApplyTitleTrackIfDifferent(item.track, item.desiredTiers))
                 {
                     updatedTracks++;
                     EditorUtility.SetDirty(item.track);
                 }
             }
-
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
         }
@@ -584,8 +706,77 @@ public sealed class MonsterCsvImporterWindow : EditorWindow
             "[MonsterCsvImporter] Done. " +
             $"Created={created}, Updated={updated}, Skipped={skipped}, Errors={errors}. " +
             $"MonsterMoved={movedMonsters}, MonsterRenamed={renamedMonsters}. " +
-            $"TracksCreated={createdTracks}, TracksMoved={movedTracks}, TracksRenamed={renamedTracks}, TracksUpdated={updatedTracks}."
+            $"TracksCreated={createdTracks}, TracksMoved={movedTracks}, TracksRenamed={renamedTracks}, TracksUpdated={updatedTracks}. " +
+            $"AlwaysOnTitlesUpdated={updatedAlwaysOnTitles}, TypeAttackPrefabsSet={setAttackPrefabs}, SpriteRefsSet={setSpriteRefs}."
         );
+    }
+
+    // ---------------- Deterministic Type Effect Prefab ----------------
+
+    private static GameObject LoadTypeEffectPrefab(MonsterType type, string folder)
+    {
+        if (type == MonsterType.None) return null;
+        if (string.IsNullOrWhiteSpace(folder) || !AssetDatabase.IsValidFolder(folder)) return null;
+
+        string path = $"{folder}/{type}.prefab";
+        var go = AssetDatabase.LoadAssetAtPath<GameObject>(path);
+        if (go != null) return go;
+
+        // Optional fallback: try case-insensitive search by name within folder
+        string[] guids = AssetDatabase.FindAssets($"t:GameObject {type}", new[] { folder });
+        foreach (var g in guids)
+        {
+            string p = AssetDatabase.GUIDToAssetPath(g);
+            var candidate = AssetDatabase.LoadAssetAtPath<GameObject>(p);
+            if (candidate != null && string.Equals(candidate.name, type.ToString(), StringComparison.OrdinalIgnoreCase))
+                return candidate;
+        }
+
+        return null;
+    }
+
+    // ---------------- Sprites by Asset Path ----------------
+
+    private static bool TryAssignSpriteByPath(string path, ref Sprite targetField)
+    {
+        path = (path ?? "").Trim();
+        if (string.IsNullOrWhiteSpace(path)) return false;
+        var s = AssetDatabase.LoadAssetAtPath<Sprite>(path);
+        if (s == null) return false;
+        if (targetField == s) return false;
+        targetField = s;
+        return true;
+    }
+
+    // ---------------- Always-On Titles ----------------
+
+    private static TitleSO[] ResolveTitleIdList(string pipeList, Dictionary<string, TitleSO> titleById)
+    {
+        var parts = pipeList.Split(new[] { '|' }, StringSplitOptions.RemoveEmptyEntries);
+        var list = new List<TitleSO>();
+
+        foreach (var p in parts)
+        {
+            var key = (p ?? "").Trim();
+            if (string.IsNullOrWhiteSpace(key)) continue;
+            if (titleById.TryGetValue(key, out var so) && so != null)
+            {
+                if (!list.Contains(so))
+                    list.Add(so);
+            }
+        }
+
+        return list.ToArray();
+    }
+
+    private static bool TitleArrayEquals(TitleSO[] a, TitleSO[] b)
+    {
+        a ??= Array.Empty<TitleSO>();
+        b ??= Array.Empty<TitleSO>();
+        if (a.Length != b.Length) return false;
+        for (int i = 0; i < a.Length; i++)
+            if (a[i] != b[i]) return false;
+        return true;
     }
 
     // ---------------- Title Track (typed) ----------------
@@ -594,16 +785,11 @@ public sealed class MonsterCsvImporterWindow : EditorWindow
     {
         string desiredName = $"TitleTrack_{ToAssetName(monsterDisplayName)}";
         string assetPath = AssetDatabase.GenerateUniqueAssetPath($"{folderPath}/{desiredName}.asset");
-
         var so = ScriptableObject.CreateInstance<TitleTrackSO>();
         AssetDatabase.CreateAsset(so, assetPath);
         return so;
     }
 
-    // Build desired tiers from CSV Title Track + Title Track Levels.
-    // - Titles pipe list uses TitleSO.titleId
-    // - Levels pipe list aligns by index; default level = 3 if missing.
-    // - Titles sharing same level become choices in the same tier.
     private static List<(int level, List<TitleSO> titles)> BuildDesiredTitleTiersFromCsv(
         Dictionary<string, string> row,
         Dictionary<string, string> headerMap,
@@ -669,7 +855,6 @@ public sealed class MonsterCsvImporterWindow : EditorWindow
     {
         if (track == null || desired == null) return false;
 
-        // Compare strictly (tier order and title order)
         if (TitleTrackEquals(track, desired))
             return false;
 
@@ -713,9 +898,7 @@ public sealed class MonsterCsvImporterWindow : EditorWindow
             if (aChoices.Count != bChoices.Count) return false;
 
             for (int j = 0; j < aChoices.Count; j++)
-            {
                 if (aChoices[j] != bChoices[j]) return false;
-            }
         }
 
         return true;
@@ -726,7 +909,6 @@ public sealed class MonsterCsvImporterWindow : EditorWindow
     private static Dictionary<MonsterType, Sprite> BuildTypeIconCache(string typeIconsFolderPath)
     {
         var cache = new Dictionary<MonsterType, Sprite>();
-
         foreach (var kv in TYPE_ICON_FILE)
         {
             string fileName = kv.Value;
@@ -734,7 +916,6 @@ public sealed class MonsterCsvImporterWindow : EditorWindow
             if (sprite != null)
                 cache[kv.Key] = sprite;
         }
-
         return cache;
     }
 
@@ -759,6 +940,21 @@ public sealed class MonsterCsvImporterWindow : EditorWindow
         }
 
         return null;
+    }
+
+    // ---------------- Personality from Resources ----------------
+
+    private static Dictionary<string, MonsterPersonalitySO> IndexPersonalitiesFromResources()
+    {
+        // Loads from Assets/Resources/MonsterPersonalities
+        var dict = new Dictionary<string, MonsterPersonalitySO>(StringComparer.OrdinalIgnoreCase);
+        var all = Resources.LoadAll<MonsterPersonalitySO>("MonsterPersonalities");
+        foreach (var p in all)
+        {
+            if (p == null) continue;
+            dict[p.name.Trim()] = p;
+        }
+        return dict;
     }
 
     // ---------------- Generic rename/move helpers ----------------
@@ -826,6 +1022,7 @@ public sealed class MonsterCsvImporterWindow : EditorWindow
         foreach (char c in Path.GetInvalidFileNameChars())
             displayName = displayName.Replace(c.ToString(), "");
 
+        // Remove all whitespace
         displayName = string.Concat(displayName.Split((char[])null, StringSplitOptions.RemoveEmptyEntries));
 
         if (displayName.Length == 0) return "";
@@ -913,7 +1110,6 @@ public sealed class MonsterCsvImporterWindow : EditorWindow
 
         var so = ScriptableObject.CreateInstance<MonsterDataSO>();
         so.id = id;
-
         AssetDatabase.CreateAsset(so, assetPath);
         return so;
     }
@@ -931,23 +1127,6 @@ public sealed class MonsterCsvImporterWindow : EditorWindow
 
             if (!string.IsNullOrWhiteSpace(so.id))
                 dict[so.id.Trim()] = so;
-        }
-
-        return dict;
-    }
-
-    private static Dictionary<string, MonsterPersonalitySO> IndexPersonalities()
-    {
-        var dict = new Dictionary<string, MonsterPersonalitySO>(StringComparer.OrdinalIgnoreCase);
-
-        string[] guids = AssetDatabase.FindAssets("t:MonsterPersonalitySO");
-        foreach (var g in guids)
-        {
-            string p = AssetDatabase.GUIDToAssetPath(g);
-            var so = AssetDatabase.LoadAssetAtPath<MonsterPersonalitySO>(p);
-            if (so == null) continue;
-
-            dict[so.name.Trim()] = so;
         }
 
         return dict;
@@ -1100,6 +1279,34 @@ public sealed class MonsterCsvImporterWindow : EditorWindow
 
         s = s.Replace(",", ".");
         return float.TryParse(s, NumberStyles.Float, CultureInfo.InvariantCulture, out v);
+    }
+
+    private static bool TryBool(string s, out bool v)
+    {
+        s = (s ?? "").Trim();
+        if (string.IsNullOrWhiteSpace(s)) { v = false; return false; }
+
+        if (bool.TryParse(s, out v)) return true;
+
+        // allow 0/1, yes/no, y/n
+        if (string.Equals(s, "1", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(s, "yes", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(s, "y", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(s, "true", StringComparison.OrdinalIgnoreCase))
+        {
+            v = true; return true;
+        }
+
+        if (string.Equals(s, "0", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(s, "no", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(s, "n", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(s, "false", StringComparison.OrdinalIgnoreCase))
+        {
+            v = false; return true;
+        }
+
+        v = false;
+        return false;
     }
 
     private static bool TryParseEnum<T>(string s, out T value) where T : struct

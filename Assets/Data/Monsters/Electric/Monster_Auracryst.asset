@@ -23,6 +23,7 @@ MonoBehaviour:
   rarity: 4
   canBeStarter: 0
   starterWeight: 1
+  maxLevel: 50
   baseHP: 64
   baseAttack: 96
   baseDefense: 64
@@ -30,7 +31,6 @@ MonoBehaviour:
   hpRegenPerHour: 6
   fatigueRatePerHour: 0.03
   fatigueCooldownHours: 8
-  baseTrainingXPPerHour: 63
   evolutionStage: 1
   evolutionLevel: 0
   evolutionForm: {fileID: 0}
