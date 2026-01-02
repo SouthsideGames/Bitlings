@@ -1,0 +1,30 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: af7b65046e5bb554c808c8500b10fe7d, type: 3}
+  m_Name: TitleTrack_Graveil
+  m_EditorClassIdentifier: 
+  tiers:
+  - levelRequired: 1
+    unlockChoices:
+    - {fileID: 11400000, guid: a096efc383417ce4e8fff04b31e3d9e6, type: 2}
+  - levelRequired: 4
+    unlockChoices:
+    - {fileID: 11400000, guid: 641a7301387bc48dc99a2fe63e35af93, type: 2}
+  - levelRequired: 8
+    unlockChoices:
+    - {fileID: 11400000, guid: 8d7992d440e421641b8157745971a3a4, type: 2}
+  - levelRequired: 12
+    unlockChoices:
+    - {fileID: 11400000, guid: fa80df6c0c44bf947807051c53585897, type: 2}
+  - levelRequired: 15
+    unlockChoices:
+    - {fileID: 11400000, guid: 6b544265ac67740279a102bb686f56c3, type: 2}

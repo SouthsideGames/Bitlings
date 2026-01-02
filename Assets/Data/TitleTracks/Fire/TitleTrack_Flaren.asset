@@ -13,18 +13,18 @@ MonoBehaviour:
   m_Name: TitleTrack_Flaren
   m_EditorClassIdentifier: 
   tiers:
-  - levelRequired: 3
+  - levelRequired: 1
     unlockChoices:
     - {fileID: 11400000, guid: c992a934142d5de42acf1b136aff2569, type: 2}
-  - levelRequired: 3
+  - levelRequired: 4
     unlockChoices:
     - {fileID: 11400000, guid: 9038e944f4e35a84cbe0efdbf0042c39, type: 2}
-  - levelRequired: 3
+  - levelRequired: 8
     unlockChoices:
     - {fileID: 11400000, guid: 50e95df186132dd4d92e3c472f26e50e, type: 2}
-  - levelRequired: 3
+  - levelRequired: 12
     unlockChoices:
     - {fileID: 11400000, guid: fc6807acc3c259743a6511849d396c40, type: 2}
-  - levelRequired: 3
+  - levelRequired: 15
     unlockChoices:
     - {fileID: 11400000, guid: f81db28d7007ef941ac6cadc20602f1f, type: 2}

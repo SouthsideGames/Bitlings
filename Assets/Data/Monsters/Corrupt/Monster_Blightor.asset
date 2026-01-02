@@ -1,0 +1,50 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 32ffc26ed7d444b02a9332ce4279b117, type: 3}
+  m_Name: Monster_Blightor
+  m_EditorClassIdentifier: 
+  id: M-060
+  displayName: Blightor
+  type: 7
+  typeIcon: {fileID: 21300000, guid: 10d50b4d1dee041cc8dcf349a9ce86a1, type: 3}
+  icon: {fileID: 21300000, guid: e03c8ad16c5f9ac4ca8abf96c092158f, type: 3}
+  backIcon: {fileID: 21300000, guid: fae1344ba7806f440b13720981512a24, type: 3}
+  shinyIcon: {fileID: 21300000, guid: ec77710b8aacb41f4b51b5b4551f35e2, type: 3}
+  shinyBackIcon: {fileID: 21300000, guid: 5dd1a5f4b913a49cbb1251a821fb93d9, type: 3}
+  rarity: 5
+  canBeStarter: 0
+  starterWeight: 1
+  maxLevel: 50
+  baseHP: 118
+  baseAttack: 104
+  baseDefense: 48
+  baseSpeed: 30
+  hpRegenPerHour: 13.6
+  fatigueRatePerHour: 0.2
+  fatigueCooldownHours: 12.1
+  evolutionStage: 1
+  evolutionLevel: 0
+  evolutionForm: {fileID: 0}
+  uncatchable: 0
+  isBoss: 0
+  bossJobDebuffs: []
+  bossWeight: 1
+  spawnWeight: 0.05
+  jobSkill: 1.3
+  titleTrack: {fileID: 11400000, guid: 603c6d6acff36435194ac6ed0d4fe3b4, type: 2}
+  defaultAlwaysOnTitles: []
+  Personality: {fileID: 11400000, guid: 225b50a30ca2b4463828b97ab1e08247, type: 2}
+  basicAttackName: Ruin Burst
+  basicAttackPrefab: {fileID: 8046187082596486557, guid: 86fc56d41698d45bfbf27d043ca2944d, type: 3}
+  basicAttackPrefabLifetime: 1
+  description: A mythic avatar of corruption that radiates unstable power, overwhelming
+    foes with catastrophic strikes fueled by rampant decay.

@@ -1,0 +1,30 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: af7b65046e5bb554c808c8500b10fe7d, type: 3}
+  m_Name: TitleTrack_Blightor
+  m_EditorClassIdentifier: 
+  tiers:
+  - levelRequired: 2
+    unlockChoices:
+    - {fileID: 11400000, guid: e1b2ea88c1633614a8a17b2abf5f5e7d, type: 2}
+  - levelRequired: 5
+    unlockChoices:
+    - {fileID: 11400000, guid: 0c4ec08db0e878f48a327f570d1e549f, type: 2}
+  - levelRequired: 8
+    unlockChoices:
+    - {fileID: 11400000, guid: c2f2ffea479c42a4587f575f432bb379, type: 2}
+  - levelRequired: 12
+    unlockChoices:
+    - {fileID: 11400000, guid: a5c2ba1de8fa05a4daeb2136ab3cf9df, type: 2}
+  - levelRequired: 15
+    unlockChoices:
+    - {fileID: 11400000, guid: 76f433c56b2f94717983939f0d5b1ff9, type: 2}

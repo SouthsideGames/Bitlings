@@ -46,4 +46,5 @@ MonoBehaviour:
   basicAttackName: Inferno Rend
   basicAttackPrefab: {fileID: 126357351932672970, guid: a7524146891194bc4b7eb73ba1e38b46, type: 3}
   basicAttackPrefabLifetime: 1
-  description: A fully ignited fire beast that overwhelms foes with fast
+  description: A fully ignited fire beast that overwhelms foes with fast, searing
+    assaults.

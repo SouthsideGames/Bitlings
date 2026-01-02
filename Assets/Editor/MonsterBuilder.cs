@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
+using System.Linq;
 using System.Text;
 using UnityEditor;
 using UnityEngine;
@@ -45,6 +46,21 @@ public sealed class MonsterBuilder : EditorWindow
     [Tooltip("Suffix for shiny back sprite (Sprite name is <NormalizedName><Suffix>).")]
     [SerializeField] private string spriteSuffixBackShiny = "_backshiny";
 
+    [Header("Art Pipeline (Pre-Import)")]
+    [SerializeField] private bool runRenameBitlingsPreImport = true;
+
+    [Tooltip("Option A: migrate from legacy per-monster folders into flat Assets/Art/Monsters/<Type>/<Rarity>/")]
+    [SerializeField] private bool fixMonsterArtFolderNames = true;
+
+    [Tooltip("Renames/moves legacy files (front_nobg, etc.) into strict <Token>_(front/back/frontshiny/backshiny).")]
+    [SerializeField] private bool renameMonsterArtFilesToConvention = true;
+
+    [Tooltip("Validates required sprites exist in Assets/Art/Monsters/<Type>/<Rarity> before import.")]
+    [SerializeField] private bool validateMonsterArtBeforeImport = true;
+
+    [Tooltip("If enabled and validation finds missing art, import will abort.")]
+    [SerializeField] private bool abortImportIfArtMissing = false;
+
     [Header("Create / Update")]
     [SerializeField] private bool createIfMissing = true;
     [SerializeField] private bool updateExisting = true;
@@ -56,6 +72,9 @@ public sealed class MonsterBuilder : EditorWindow
     [Header("Monster Asset Naming")]
     [Tooltip("If enabled, monster asset files are renamed to Monster_<NoSpacesName>.asset")]
     [SerializeField] private bool renameMonsterAssetsToMonsterName = true;
+
+    [Tooltip("If enabled, also sets the ScriptableObject's internal name (so it matches the asset filename).")]
+    [SerializeField] private bool syncMonsterScriptableObjectNameToAsset = true;
 
     [Header("Type Icon")]
     [Tooltip("If enabled, assigns MonsterDataSO.typeIcon using sprites in Assets/Art/Types based on type mapping.")]
@@ -73,6 +92,9 @@ public sealed class MonsterBuilder : EditorWindow
 
     [Tooltip("If enabled, sync title tiers from CSV Title 1..N columns (one tier per title).")]
     [SerializeField] private bool syncTitleTrackTiersFromCsv = true;
+
+    [Tooltip("If enabled, also sets the TitleTrackSO internal name (so it matches the asset filename).")]
+    [SerializeField] private bool syncTitleTrackScriptableObjectNameToAsset = true;
 
     [Header("Always-On Titles (MonsterDataSO.defaultAlwaysOnTitles) (Skipped for Boss rarity)")]
     [SerializeField] private bool syncAlwaysOnTitlesFromCsv = true;
@@ -93,10 +115,8 @@ public sealed class MonsterBuilder : EditorWindow
 
     [SerializeField] private bool logVerbose = false;
 
-    // How many Title slots exist in CSV (Title 1..Title N)
     private const int TITLE_SLOTS = 5;
 
-    // Your type icon filename mapping (FileName -> Type)
     private static readonly Dictionary<MonsterType, string> TYPE_ICON_FILE = new()
     {
         { MonsterType.Bug, "Bug" },
@@ -179,7 +199,7 @@ public sealed class MonsterBuilder : EditorWindow
         {"Always On Titles","Always On Titles"},
     };
 
-    [MenuItem("Bitlings/Import/Monsters From CSV")]
+    [MenuItem("Bitlings/Builder/Monsters From CSV")]
     public static void Open()
     {
         var win = GetWindow<MonsterBuilder>("Monster CSV Importer");
@@ -231,6 +251,18 @@ public sealed class MonsterBuilder : EditorWindow
         }
 
         EditorGUILayout.Space();
+        EditorGUILayout.LabelField("Art Pipeline (Pre-Import)", EditorStyles.boldLabel);
+        runRenameBitlingsPreImport = EditorGUILayout.Toggle("Run RenameBitlings Pre-Import", runRenameBitlingsPreImport);
+        using (new EditorGUI.DisabledScope(!runRenameBitlingsPreImport || !autoAssignMonsterSpritesByConvention))
+        {
+            fixMonsterArtFolderNames = EditorGUILayout.Toggle("Fix/Migrate Legacy Folders to Flat (Option A)", fixMonsterArtFolderNames);
+            renameMonsterArtFilesToConvention = EditorGUILayout.Toggle("Rename/Move Legacy Files to Convention", renameMonsterArtFilesToConvention);
+            validateMonsterArtBeforeImport = EditorGUILayout.Toggle("Validate Required Sprites (4)", validateMonsterArtBeforeImport);
+            using (new EditorGUI.DisabledScope(!validateMonsterArtBeforeImport))
+                abortImportIfArtMissing = EditorGUILayout.Toggle("Abort Import If Art Missing", abortImportIfArtMissing);
+        }
+
+        EditorGUILayout.Space();
         EditorGUILayout.LabelField("Create / Update", EditorStyles.boldLabel);
         createIfMissing = EditorGUILayout.Toggle("Create If Missing", createIfMissing);
         updateExisting = EditorGUILayout.Toggle("Update Existing", updateExisting);
@@ -246,6 +278,8 @@ public sealed class MonsterBuilder : EditorWindow
         EditorGUILayout.Space();
         EditorGUILayout.LabelField("Monster Asset Naming", EditorStyles.boldLabel);
         renameMonsterAssetsToMonsterName = EditorGUILayout.Toggle("Rename Monster Assets", renameMonsterAssetsToMonsterName);
+        using (new EditorGUI.DisabledScope(!renameMonsterAssetsToMonsterName))
+            syncMonsterScriptableObjectNameToAsset = EditorGUILayout.Toggle("Sync Monster SO .name to Asset", syncMonsterScriptableObjectNameToAsset);
 
         EditorGUILayout.Space();
         EditorGUILayout.LabelField("Type Icon", EditorStyles.boldLabel);
@@ -275,6 +309,9 @@ public sealed class MonsterBuilder : EditorWindow
             createTitleTrackIfMissing = EditorGUILayout.Toggle("Create Track If Missing", createTitleTrackIfMissing);
             moveTitleTracksToTypeFolder = EditorGUILayout.Toggle("Move Tracks To Type Folder", moveTitleTracksToTypeFolder);
             renameTitleTracksToMonsterName = EditorGUILayout.Toggle("Rename Track Assets", renameTitleTracksToMonsterName);
+            using (new EditorGUI.DisabledScope(!renameTitleTracksToMonsterName))
+                syncTitleTrackScriptableObjectNameToAsset = EditorGUILayout.Toggle("Sync Track SO .name to Asset", syncTitleTrackScriptableObjectNameToAsset);
+
             syncTitleTrackTiersFromCsv = EditorGUILayout.Toggle("Sync Track Tiers From CSV (Title 1..5)", syncTitleTrackTiersFromCsv);
         }
 
@@ -299,14 +336,10 @@ public sealed class MonsterBuilder : EditorWindow
 
         EditorGUILayout.Space();
         EditorGUILayout.HelpBox(
-            "Rules enforced:\n" +
-            "- Max Level always set to 50\n" +
-            "- If Rarity == Boss: isBoss=true, uncatchable=true, titleTrack cleared, defaultAlwaysOnTitles cleared\n" +
-            "- Else: isBoss=false, uncatchable=false\n\n" +
-            "Titles:\n" +
-            "- Uses CSV columns Title 1..Title 5 + Title N Unlock Amount.\n" +
-            "- If Title N is blank or N/A, it is skipped and NO tier is created.\n" +
-            "- Each Title creates its OWN TitleTier element (one unlock per tier).\n",
+            "Notes:\n" +
+            "- Monster assets can be renamed to Monster_<Token>.asset.\n" +
+            "- If 'Sync Monster SO .name to Asset' is enabled, the ScriptableObject internal name is also updated.\n" +
+            "- This prevents cases where the asset filename changes but the object name stays old.\n",
             MessageType.Info
         );
 
@@ -374,6 +407,52 @@ public sealed class MonsterBuilder : EditorWindow
         }
 
         var headerMap = BuildHeaderMap(table.Headers);
+
+        // ---- Pre-import Art Pipeline (Option A) ----
+        if (runRenameBitlingsPreImport &&
+            autoAssignMonsterSpritesByConvention &&
+            !string.IsNullOrWhiteSpace(monsterSpritesRootPath) &&
+            AssetDatabase.IsValidFolder(monsterSpritesRootPath))
+        {
+            var monsterRows = new List<(MonsterType type, Rarity rarity, string displayName)>();
+            foreach (var row in table.Rows)
+            {
+                string name = Get(row, headerMap, "Name").Trim();
+                if (string.IsNullOrWhiteSpace(name)) continue;
+
+                MonsterType t = MonsterType.None;
+                TryParseEnum(Get(row, headerMap, "Type"), out t);
+
+                Rarity r = Rarity.Common;
+                TryParseEnum(Get(row, headerMap, "Rarity"), out r);
+
+                monsterRows.Add((t, r, name));
+            }
+
+            var report = RenameBitlingsUtility.RunPreImportPipeline(
+                targetRootArtMonsters: monsterSpritesRootPath,
+                monsters: monsterRows,
+                fixFolderNamesAndMigrateToFlat: fixMonsterArtFolderNames,
+                renameFilesToConvention: renameMonsterArtFilesToConvention,
+                validateRequiredSprites: validateMonsterArtBeforeImport,
+                dryRun: false,
+                logVerbose: logVerbose
+            );
+
+            if (report.HasIssues || report.Info.Count > 0 || report.Skipped.Count > 0)
+            {
+                var msg = "[MonsterCsvImporter] RenameBitlings Pre-Import Report:\n" + report.ToSummaryString();
+                if (report.HasIssues) Debug.LogWarning(msg);
+                else Debug.Log(msg);
+            }
+
+            if (abortImportIfArtMissing && report.Missing.Count > 0)
+            {
+                Debug.LogError("[MonsterCsvImporter] Import aborted due to missing monster art (Abort Import If Art Missing = ON).");
+                return;
+            }
+        }
+
         var existingById = IndexExistingMonsters(monsterRootPath);
 
         Dictionary<string, TitleSO> titleByTitleId = null;
@@ -472,7 +551,7 @@ public sealed class MonsterBuilder : EditorWindow
                             monster.typeIcon = sprite;
                     }
 
-                    // Monster sprites by convention (preferred)
+                    // Monster sprites by convention (Option A flat folder)
                     if (autoAssignMonsterSpritesByConvention && !string.IsNullOrWhiteSpace(monsterSpritesRootPath))
                     {
                         if (TryAssignMonsterSpritesByConvention(monster, monsterSpritesRootPath, out int assignedCount))
@@ -656,17 +735,34 @@ public sealed class MonsterBuilder : EditorWindow
             AssetDatabase.Refresh();
         }
 
-        // Apply deferred monster renames
+        // Apply deferred monster renames (and sync ScriptableObject .name)
         if (renameMonsterAssetsToMonsterName && deferredMonsterRenames.Count > 0)
         {
             foreach (var monster in deferredMonsterRenames)
             {
                 if (monster == null) continue;
-                if (TryRenameAsset(monster, $"Monster_{ToAssetName(monster.displayName)}", out string renameErr))
+
+                string desired = $"Monster_{ToAssetName(monster.displayName)}";
+
+                bool renamed = TryRenameAsset(monster, desired, out string renameErr);
+                if (renamed)
+                {
                     renamedMonsters++;
-                else if (!string.IsNullOrWhiteSpace(renameErr))
-                    Debug.LogWarning($"[MonsterCsvImporter] Monster rename failed for {monster.id}: {renameErr}");
+                    if (syncMonsterScriptableObjectNameToAsset)
+                        SyncObjectNameToAssetFile(monster);
+                }
+                else
+                {
+                    // Even if file name didn't change, we still want to restore old behavior:
+                    // ensure the ScriptableObject internal name matches the asset filename.
+                    if (syncMonsterScriptableObjectNameToAsset)
+                        SyncObjectNameToAssetFile(monster);
+
+                    if (!string.IsNullOrWhiteSpace(renameErr))
+                        Debug.LogWarning($"[MonsterCsvImporter] Monster rename failed for {monster.id}: {renameErr}");
+                }
             }
+
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
         }
@@ -686,16 +782,28 @@ public sealed class MonsterBuilder : EditorWindow
             AssetDatabase.Refresh();
         }
 
-        // Apply deferred track renames
+        // Apply deferred track renames (and sync ScriptableObject .name)
         if (reviewUpdateTitleTrack && renameTitleTracksToMonsterName && deferredTrackRenames.Count > 0)
         {
             foreach (var r in deferredTrackRenames)
             {
                 if (r.track == null) continue;
-                if (TryRenameAsset(r.track, r.desiredName, out string renameErr))
+
+                bool renamed = TryRenameAsset(r.track, r.desiredName, out string renameErr);
+                if (renamed)
+                {
                     renamedTracks++;
-                else if (!string.IsNullOrWhiteSpace(renameErr))
-                    Debug.LogWarning($"[MonsterCsvImporter] TitleTrack rename failed: {renameErr}");
+                    if (syncTitleTrackScriptableObjectNameToAsset)
+                        SyncObjectNameToAssetFile(r.track);
+                }
+                else
+                {
+                    if (syncTitleTrackScriptableObjectNameToAsset)
+                        SyncObjectNameToAssetFile(r.track);
+
+                    if (!string.IsNullOrWhiteSpace(renameErr))
+                        Debug.LogWarning($"[MonsterCsvImporter] TitleTrack rename failed: {renameErr}");
+                }
             }
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
@@ -766,6 +874,24 @@ public sealed class MonsterBuilder : EditorWindow
         );
     }
 
+    // ---------------- NEW: Sync ScriptableObject internal name to asset filename ----------------
+
+    private static void SyncObjectNameToAssetFile(UnityEngine.Object asset)
+    {
+        if (asset == null) return;
+
+        string p = AssetDatabase.GetAssetPath(asset);
+        if (string.IsNullOrWhiteSpace(p)) return;
+
+        string fileName = Path.GetFileNameWithoutExtension(p);
+        if (string.IsNullOrWhiteSpace(fileName)) return;
+
+        if (asset.name == fileName) return;
+
+        asset.name = fileName;
+        EditorUtility.SetDirty(asset);
+    }
+
     // ---------------- Title Track tier build (Title 1..N Slots) ----------------
 
     private static List<(int level, List<TitleSO> titles)> BuildDesiredTitleTiersFromCsv_Slots(
@@ -818,7 +944,7 @@ public sealed class MonsterBuilder : EditorWindow
                string.Equals(s, "-", StringComparison.OrdinalIgnoreCase);
     }
 
-    // ---------------- Monster Sprite Convention ----------------
+    // ---------------- Monster Sprite Convention (Option A flat folder) ----------------
 
     private bool TryAssignMonsterSpritesByConvention(MonsterDataSO monster, string rootPath, out int assignedCount)
     {

@@ -13,18 +13,18 @@ MonoBehaviour:
   m_Name: TitleTrack_Thornel
   m_EditorClassIdentifier: 
   tiers:
-  - levelRequired: 3
+  - levelRequired: 1
     unlockChoices:
     - {fileID: 11400000, guid: b4997c2fe7d4a1b43bc869bfcb9d1064, type: 2}
-  - levelRequired: 3
+  - levelRequired: 4
     unlockChoices:
     - {fileID: 11400000, guid: 65e1df2c5d2acf749a429d77e1ea2c85, type: 2}
-  - levelRequired: 3
+  - levelRequired: 8
     unlockChoices:
     - {fileID: 11400000, guid: b094b13cb2aa9734fad7a644858c32b8, type: 2}
-  - levelRequired: 3
+  - levelRequired: 12
     unlockChoices:
     - {fileID: 11400000, guid: 744ad397976e51c49a7cfccf88b2d095, type: 2}
-  - levelRequired: 3
+  - levelRequired: 15
     unlockChoices:
     - {fileID: 11400000, guid: 598f34ddd21e57a408674366cdfac40f, type: 2}

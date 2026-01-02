@@ -13,12 +13,12 @@ MonoBehaviour:
   m_Name: TitleTrack_Emrixen
   m_EditorClassIdentifier: 
   tiers:
-  - levelRequired: 3
+  - levelRequired: 2
     unlockChoices:
     - {fileID: 11400000, guid: c19086f28684923428939e0227415d4d, type: 2}
-  - levelRequired: 3
+  - levelRequired: 10
     unlockChoices:
     - {fileID: 11400000, guid: 06d71b7f47579574088aa3edba194444, type: 2}
-  - levelRequired: 3
+  - levelRequired: 14
     unlockChoices:
     - {fileID: 11400000, guid: 0ba7a28fe41c45a4e92fe65a296eaba9, type: 2}

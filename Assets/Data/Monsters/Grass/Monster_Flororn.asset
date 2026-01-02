@@ -47,4 +47,4 @@ MonoBehaviour:
   basicAttackPrefab: {fileID: 7147688047696861109, guid: 5287b95db783b4379b733d77af2cc458, type: 3}
   basicAttackPrefabLifetime: 1
   description: A mature forest guardian that shields allies and strikes back with
-    controlled
+    controlled, verdant force.

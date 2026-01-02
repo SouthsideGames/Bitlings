@@ -46,4 +46,5 @@ MonoBehaviour:
   basicAttackName: Vine Lash
   basicAttackPrefab: {fileID: 7147688047696861109, guid: 5287b95db783b4379b733d77af2cc458, type: 3}
   basicAttackPrefabLifetime: 1
-  description: Its body thickens with vines
+  description: Its body thickens with vines, offering stronger protection and steadier
+    healing presence.

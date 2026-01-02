@@ -1,0 +1,30 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: af7b65046e5bb554c808c8500b10fe7d, type: 3}
+  m_Name: TitleTrack_Crystir
+  m_EditorClassIdentifier: 
+  tiers:
+  - levelRequired: 1
+    unlockChoices:
+    - {fileID: 11400000, guid: 31516b1fcac14c44aaeacf680fc0d5b8, type: 2}
+  - levelRequired: 4
+    unlockChoices:
+    - {fileID: 11400000, guid: df9109033861016428656f21d2cad8ea, type: 2}
+  - levelRequired: 8
+    unlockChoices:
+    - {fileID: 11400000, guid: 167421bd6bbec4644b1bc54c58096d9e, type: 2}
+  - levelRequired: 12
+    unlockChoices:
+    - {fileID: 11400000, guid: c889f1ab1be3ced47b673705f852a249, type: 2}
+  - levelRequired: 15
+    unlockChoices:
+    - {fileID: 11400000, guid: df34af77b87a680469fb23d13f8f138a, type: 2}

@@ -46,4 +46,5 @@ MonoBehaviour:
   basicAttackName: Flare Claw
   basicAttackPrefab: {fileID: 126357351932672970, guid: a7524146891194bc4b7eb73ba1e38b46, type: 3}
   basicAttackPrefabLifetime: 1
-  description: Its flames grow steadier and stronger
+  description: Its flames grow steadier and stronger, trading some speed for sharper,
+    burning strikes.

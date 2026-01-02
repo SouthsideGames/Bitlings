@@ -1,0 +1,50 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 32ffc26ed7d444b02a9332ce4279b117, type: 3}
+  m_Name: Monster_Aurel
+  m_EditorClassIdentifier: 
+  id: M-035
+  displayName: Aurel
+  type: 9
+  typeIcon: {fileID: 21300000, guid: 1ddb138c655b3471cad890ace56df64b, type: 3}
+  icon: {fileID: 21300000, guid: 54efb5850660cfa4f96c0ade1974e277, type: 3}
+  backIcon: {fileID: 21300000, guid: c1b8687aee6a3764f9c7557db8393080, type: 3}
+  shinyIcon: {fileID: 21300000, guid: fede27bc3ac3a4522931ce994a706be4, type: 3}
+  shinyBackIcon: {fileID: 21300000, guid: 210f3063ca590441c9496ad7d29840d6, type: 3}
+  rarity: 0
+  canBeStarter: 1
+  starterWeight: 10
+  maxLevel: 50
+  baseHP: 44
+  baseAttack: 48
+  baseDefense: 22
+  baseSpeed: 36
+  hpRegenPerHour: 4.8
+  fatigueRatePerHour: 0.2
+  fatigueCooldownHours: 7.1
+  evolutionStage: 1
+  evolutionLevel: 0
+  evolutionForm: {fileID: 0}
+  uncatchable: 0
+  isBoss: 0
+  bossJobDebuffs: []
+  bossWeight: 1
+  spawnWeight: 8
+  jobSkill: 0.95
+  titleTrack: {fileID: 11400000, guid: 9a2ccec700c534ce591020fdf504c3f3, type: 2}
+  defaultAlwaysOnTitles: []
+  Personality: {fileID: 11400000, guid: e8e5c9163905a4840aca1effe845621c, type: 2}
+  basicAttackName: Gale Peck
+  basicAttackPrefab: {fileID: 5988486418563103347, guid: 310c8d56e543d4cd4ae9c55fa6047252, type: 3}
+  basicAttackPrefabLifetime: 1
+  description: A nimble sky flier that swoops in with sharp pecks before darting
+    away on swift wings.

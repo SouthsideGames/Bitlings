@@ -13,15 +13,15 @@ MonoBehaviour:
   m_Name: TitleTrack_Petorn
   m_EditorClassIdentifier: 
   tiers:
-  - levelRequired: 3
+  - levelRequired: 2
     unlockChoices:
     - {fileID: 11400000, guid: c4ad4c8d61acdc54dac3f9f88f1891bf, type: 2}
-  - levelRequired: 3
+  - levelRequired: 6
     unlockChoices:
     - {fileID: 11400000, guid: 444df508a85ddb8459b5a5165fa299d5, type: 2}
-  - levelRequired: 3
+  - levelRequired: 10
     unlockChoices:
     - {fileID: 11400000, guid: 31089b8c47e840043886934f1d5f4f46, type: 2}
-  - levelRequired: 3
+  - levelRequired: 14
     unlockChoices:
     - {fileID: 11400000, guid: e20a6a877af824429b1305be94d2a2f6, type: 2}

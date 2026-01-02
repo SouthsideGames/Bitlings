@@ -13,12 +13,12 @@ MonoBehaviour:
   m_Name: TitleTrack_Vinel
   m_EditorClassIdentifier: 
   tiers:
-  - levelRequired: 3
+  - levelRequired: 2
     unlockChoices:
     - {fileID: 11400000, guid: f0e53950f2ecd1346ada80856c0f01df, type: 2}
-  - levelRequired: 3
+  - levelRequired: 10
     unlockChoices:
     - {fileID: 11400000, guid: 25b585674c120a4478246cf717f24c8f, type: 2}
-  - levelRequired: 3
+  - levelRequired: 14
     unlockChoices:
     - {fileID: 11400000, guid: ff12e8c740a4a9347a02749d699d5ca9, type: 2}

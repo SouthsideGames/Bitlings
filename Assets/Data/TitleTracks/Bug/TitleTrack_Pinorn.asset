@@ -1,0 +1,27 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: af7b65046e5bb554c808c8500b10fe7d, type: 3}
+  m_Name: TitleTrack_Pinorn
+  m_EditorClassIdentifier: 
+  tiers:
+  - levelRequired: 2
+    unlockChoices:
+    - {fileID: 11400000, guid: c968ddb859c78e04884979d59765790c, type: 2}
+  - levelRequired: 6
+    unlockChoices:
+    - {fileID: 11400000, guid: eabd42c93ef14774c8b6b874762a87d8, type: 2}
+  - levelRequired: 10
+    unlockChoices:
+    - {fileID: 11400000, guid: 538374b3463384d4e9deeaec06551318, type: 2}
+  - levelRequired: 14
+    unlockChoices:
+    - {fileID: 11400000, guid: f9c7e8f0b72565b44a489419fd8ef366, type: 2}

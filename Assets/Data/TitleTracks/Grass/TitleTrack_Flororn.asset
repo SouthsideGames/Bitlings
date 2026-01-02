@@ -13,15 +13,15 @@ MonoBehaviour:
   m_Name: TitleTrack_Flororn
   m_EditorClassIdentifier: 
   tiers:
-  - levelRequired: 3
+  - levelRequired: 2
     unlockChoices:
     - {fileID: 11400000, guid: 7bca5a0fde2cd8047b5ae0787d2f1967, type: 2}
-  - levelRequired: 3
+  - levelRequired: 6
     unlockChoices:
     - {fileID: 11400000, guid: 73366473457d0834382b0bd06db81989, type: 2}
-  - levelRequired: 3
+  - levelRequired: 10
     unlockChoices:
     - {fileID: 11400000, guid: 2d94a35f25fda9c4a94aa72bbc77c2db, type: 2}
-  - levelRequired: 3
+  - levelRequired: 14
     unlockChoices:
     - {fileID: 11400000, guid: 638994d928ef74b0ca55ad0f631ad3eb, type: 2}

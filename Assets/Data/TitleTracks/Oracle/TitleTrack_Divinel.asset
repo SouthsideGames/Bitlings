@@ -1,0 +1,30 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: af7b65046e5bb554c808c8500b10fe7d, type: 3}
+  m_Name: TitleTrack_Divinel
+  m_EditorClassIdentifier: 
+  tiers:
+  - levelRequired: 2
+    unlockChoices:
+    - {fileID: 11400000, guid: 4320522abb893495b83c2c1b6ce8733a, type: 2}
+  - levelRequired: 5
+    unlockChoices:
+    - {fileID: 11400000, guid: 0d2df86b9a4b14a08b93d3d9c02e7cb5, type: 2}
+  - levelRequired: 8
+    unlockChoices:
+    - {fileID: 11400000, guid: b9f83ebc1bb9d46438c53f6b735e2958, type: 2}
+  - levelRequired: 12
+    unlockChoices:
+    - {fileID: 11400000, guid: 4444242f3b7ed42429cbf560b8357b27, type: 2}
+  - levelRequired: 15
+    unlockChoices:
+    - {fileID: 11400000, guid: 4cfe43fb08d53864c84698ddfc14bb9d, type: 2}

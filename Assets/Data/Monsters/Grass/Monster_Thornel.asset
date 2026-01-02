@@ -46,4 +46,5 @@ MonoBehaviour:
   basicAttackName: Thorn Break
   basicAttackPrefab: {fileID: 7147688047696861109, guid: 5287b95db783b4379b733d77af2cc458, type: 3}
   basicAttackPrefabLifetime: 1
-  description: A hardened forest sentinel that advances slowly
+  description: A hardened forest sentinel that advances slowly, striking with crushing
+    vines and enduring immense punishment.

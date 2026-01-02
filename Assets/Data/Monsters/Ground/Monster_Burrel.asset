@@ -1,0 +1,50 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 32ffc26ed7d444b02a9332ce4279b117, type: 3}
+  m_Name: Monster_Burrel
+  m_EditorClassIdentifier: 
+  id: M-024
+  displayName: Burrel
+  type: 8
+  typeIcon: {fileID: 21300000, guid: f0d6243fead4a41fcae07804c4d66233, type: 3}
+  icon: {fileID: 21300000, guid: 1688c27cfb18f914691095bf29de0147, type: 3}
+  backIcon: {fileID: 21300000, guid: e6007203fd0e68a43bfac13360c16266, type: 3}
+  shinyIcon: {fileID: 21300000, guid: 578fc5efbadfa47c593cb4f0152e8fce, type: 3}
+  shinyBackIcon: {fileID: 21300000, guid: 1edb95c11229e4e71b3aa21961aa3b9c, type: 3}
+  rarity: 0
+  canBeStarter: 1
+  starterWeight: 10
+  maxLevel: 50
+  baseHP: 60
+  baseAttack: 36
+  baseDefense: 38
+  baseSpeed: 16
+  hpRegenPerHour: 6.6
+  fatigueRatePerHour: 0.2
+  fatigueCooldownHours: 7.9
+  evolutionStage: 1
+  evolutionLevel: 0
+  evolutionForm: {fileID: 0}
+  uncatchable: 0
+  isBoss: 0
+  bossJobDebuffs: []
+  bossWeight: 1
+  spawnWeight: 8
+  jobSkill: 0.95
+  titleTrack: {fileID: 11400000, guid: df92f4406611d463bb8fe051578c659e, type: 2}
+  defaultAlwaysOnTitles: []
+  Personality: {fileID: 11400000, guid: db9c4a912e52a4c5298eec48842ba111, type: 2}
+  basicAttackName: Stone Nudge
+  basicAttackPrefab: {fileID: 8624645253036040332, guid: f03e702d7c9714bc2af48b5b17c93c88, type: 3}
+  basicAttackPrefabLifetime: 1
+  description: A squat ground dweller that braces itself in the soil, resisting blows
+    while slowly wearing enemies down with heavy, earthen strikes.

@@ -13,15 +13,15 @@ MonoBehaviour:
   m_Name: TitleTrack_Ignirix
   m_EditorClassIdentifier: 
   tiers:
-  - levelRequired: 3
+  - levelRequired: 2
     unlockChoices:
     - {fileID: 11400000, guid: c2f0fdd5e9fcb25498ae79caf77583c0, type: 2}
-  - levelRequired: 3
+  - levelRequired: 6
     unlockChoices:
     - {fileID: 11400000, guid: fe67a4187cf7add4289106de72912f92, type: 2}
-  - levelRequired: 3
+  - levelRequired: 10
     unlockChoices:
     - {fileID: 11400000, guid: 71652094aed89c948ae2a0cb846cf011, type: 2}
-  - levelRequired: 3
+  - levelRequired: 14
     unlockChoices:
     - {fileID: 11400000, guid: d9ec0d8891fb1da4fb1bed5ba426f375, type: 2}
