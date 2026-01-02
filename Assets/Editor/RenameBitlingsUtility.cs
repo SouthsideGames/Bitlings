@@ -9,24 +9,6 @@ using UnityEngine;
 
 public static class RenameBitlingsUtility
 {
-    // ---------------- Types ----------------
-
-    public readonly struct MonsterKey
-    {
-        public readonly MonsterType type;
-        public readonly Rarity rarity;
-        public readonly string displayName;
-
-        public MonsterKey(MonsterType type, Rarity rarity, string displayName)
-        {
-            this.type = type;
-            this.rarity = rarity;
-            this.displayName = displayName;
-        }
-
-        public override string ToString() => $"{type}|{rarity}|{displayName}";
-    }
-
     // ---------------- Naming Rules ----------------
 
     public static readonly string[] RequiredSuffixes =
@@ -57,7 +39,16 @@ public static class RenameBitlingsUtility
 
         public bool HasIssues => Missing.Count > 0 || Collisions.Count > 0;
 
-        public string ToSummaryString(int max = 60)
+        public void Absorb(Report other)
+        {
+            if (other == null) return;
+            Missing.AddRange(other.Missing);
+            Collisions.AddRange(other.Collisions);
+            Skipped.AddRange(other.Skipped);
+            Info.AddRange(other.Info);
+        }
+
+        public string ToSummaryString(int max = 80)
         {
             var sb = new StringBuilder();
 
@@ -81,7 +72,7 @@ public static class RenameBitlingsUtility
         }
     }
 
-    // ---------------- Public Pipeline ----------------
+    // ---------------- Public Pipeline (Main Art Root) ----------------
     // NOTE: This pipeline ONLY renames files IN PLACE (no moving).
     // The "fixFolderNamesAndMigrateToFlat" parameter is accepted for compatibility but intentionally ignored.
 
@@ -122,64 +113,135 @@ public static class RenameBitlingsUtility
                 continue;
             }
 
-            // ---- Rename legacy files IN PLACE ONLY ----
-            if (renameFilesToConvention)
-            {
-                foreach (var kv in LegacyBaseToSuffix)
-                {
-                    string legacyBase = kv.Key;
-                    string suffix = kv.Value;
-                    string desiredBase = token + suffix;
-
-                    // If strict target already exists, do not overwrite.
-                    if (FindTextureByExactBaseName(folder, desiredBase) != null ||
-                        LoadSpriteByExactName(folder, desiredBase) != null)
-                        continue;
-
-                    // Find the legacy file inside THIS SAME folder.
-                    string legacyPath = FindTextureByExactBaseName(folder, legacyBase);
-                    if (string.IsNullOrWhiteSpace(legacyPath))
-                        continue;
-
-                    if (dryRun)
-                    {
-                        rep.Info.Add($"[DryRun] Rename in place: {legacyBase} -> {desiredBase} ({folder})");
-                        continue;
-                    }
-
-                    string err = AssetDatabase.RenameAsset(legacyPath, desiredBase);
-                    if (!string.IsNullOrWhiteSpace(err))
-                        rep.Collisions.Add($"Rename failed: {legacyPath} -> {desiredBase}. Error: {err}");
-                    else if (logVerbose)
-                        Debug.Log($"[RenameBitlings] Renamed in place: {legacyBase} -> {desiredBase} ({folder})");
-                }
-
-                if (!dryRun)
-                {
-                    AssetDatabase.SaveAssets();
-                    AssetDatabase.Refresh();
-                }
-            }
-
-            // ---- Validation ----
-            if (validateRequiredSprites)
-            {
-                foreach (var suffix in RequiredSuffixes)
-                {
-                    string expected = token + suffix;
-                    if (LoadSpriteByExactName(folder, expected) == null)
-                        rep.Missing.Add($"Missing '{expected}' in {folder} (Monster='{m.displayName}')");
-                }
-            }
+            RenameAndValidateInFolder(rep, folder, token, m.displayName, renameFilesToConvention, validateRequiredSprites, dryRun, logVerbose);
         }
 
         return rep;
     }
 
-    // ---------------- Scanner (restored) ----------------
-    // If no CSV is provided, this tries to infer monsters by scanning:
+    // ---------------- Public Pipeline (Pack Root) ----------------
+    // Expected structure:
+    // Assets/Monsters/Packs/<Pack Name>/<Monster Name>/
+    public static Report RunPackPipeline(
+        string packsRoot,
+        IEnumerable<(string packName, string displayName)> monsters,
+        bool renameFilesToConvention,
+        bool validateRequiredSprites,
+        bool dryRun,
+        bool logVerbose
+    )
+    {
+        var rep = new Report();
+
+        if (!AssetDatabase.IsValidFolder(packsRoot))
+        {
+            rep.Missing.Add($"Invalid packs root: {packsRoot}");
+            return rep;
+        }
+
+        foreach (var m in monsters)
+        {
+            string packName = (m.packName ?? "").Trim();
+            string monsterName = (m.displayName ?? "").Trim();
+
+            if (string.IsNullOrWhiteSpace(packName) || packName.IndexOf("Main", StringComparison.OrdinalIgnoreCase) >= 0)
+            {
+                rep.Skipped.Add($"Pack entry treated as Main (skipped by pack pipeline): Pack='{packName}', Monster='{monsterName}'");
+                continue;
+            }
+
+            if (string.IsNullOrWhiteSpace(monsterName))
+            {
+                rep.Skipped.Add($"Invalid monster folder name (blank) in pack '{packName}'");
+                continue;
+            }
+
+            // Do NOT sanitize here for path resolution; use actual folder names on disk.
+            string folder = $"{packsRoot}/{packName}/{monsterName}";
+            if (!AssetDatabase.IsValidFolder(folder))
+            {
+                rep.Missing.Add($"Missing pack monster folder: {folder}");
+                continue;
+            }
+
+            string token = NormalizeMonsterToken(monsterName);
+            if (string.IsNullOrWhiteSpace(token))
+            {
+                rep.Skipped.Add($"Invalid token: '{monsterName}' (Pack='{packName}')");
+                continue;
+            }
+
+            RenameAndValidateInFolder(rep, folder, token, monsterName, renameFilesToConvention, validateRequiredSprites, dryRun, logVerbose);
+        }
+
+        return rep;
+    }
+
+    private static void RenameAndValidateInFolder(
+        Report rep,
+        string folder,
+        string token,
+        string displayNameForLogs,
+        bool renameFilesToConvention,
+        bool validateRequiredSprites,
+        bool dryRun,
+        bool logVerbose
+    )
+    {
+        // ---- Rename legacy files IN PLACE ONLY ----
+        if (renameFilesToConvention)
+        {
+            foreach (var kv in LegacyBaseToSuffix)
+            {
+                string legacyBase = kv.Key;
+                string suffix = kv.Value;
+                string desiredBase = token + suffix;
+
+                // If strict target already exists, do not overwrite.
+                if (FindTextureByExactBaseName(folder, desiredBase) != null ||
+                    LoadSpriteByExactName(folder, desiredBase) != null)
+                    continue;
+
+                // Find the legacy file inside THIS SAME folder.
+                string legacyPath = FindTextureByExactBaseName(folder, legacyBase);
+                if (string.IsNullOrWhiteSpace(legacyPath))
+                    continue;
+
+                if (dryRun)
+                {
+                    rep.Info.Add($"[DryRun] Rename in place: {legacyBase} -> {desiredBase} ({folder})");
+                    continue;
+                }
+
+                string err = AssetDatabase.RenameAsset(legacyPath, desiredBase);
+                if (!string.IsNullOrWhiteSpace(err))
+                    rep.Collisions.Add($"Rename failed: {legacyPath} -> {desiredBase}. Error: {err}");
+                else if (logVerbose)
+                    Debug.Log($"[RenameBitlings] Renamed in place: {legacyBase} -> {desiredBase} ({folder})");
+            }
+
+            if (!dryRun)
+            {
+                AssetDatabase.SaveAssets();
+                AssetDatabase.Refresh();
+            }
+        }
+
+        // ---- Validation ----
+        if (validateRequiredSprites)
+        {
+            foreach (var suffix in RequiredSuffixes)
+            {
+                string expected = token + suffix;
+                if (LoadSpriteByExactName(folder, expected) == null)
+                    rep.Missing.Add($"Missing '{expected}' in {folder} (Monster='{displayNameForLogs}')");
+            }
+        }
+    }
+
+    // ---------------- Scanner (Main) ----------------
     // Assets/Art/Monsters/<Type>/<Rarity>/
-    // It detects any Sprite ending with "_front" and uses the prefix as the token/displayName.
+    // Detect any Sprite ending with "_front" and uses the prefix as the token/displayName.
 
     public static List<(MonsterType type, Rarity rarity, string displayName)> ScanMonstersFromArtRoot(string artMonstersRoot)
     {
@@ -202,7 +264,6 @@ public static class RenameBitlingsUtility
                 if (!Enum.TryParse(rarityName, true, out Rarity rarity))
                     rarity = Rarity.Common;
 
-                // Primary: strict sprites
                 string[] spriteGuids = AssetDatabase.FindAssets("t:Sprite", new[] { rf });
                 foreach (var g in spriteGuids)
                 {
@@ -218,17 +279,46 @@ public static class RenameBitlingsUtility
 
                     list.Add((type, rarity, token));
                 }
-
-                // Fallback: legacy textures (in case sprites haven't been created yet)
-                // If front_nobg exists, treat folder as having a monster; but we need a token.
-                // In this situation we cannot infer the token reliably, so we do NOT add entries.
-                // (This keeps the tool safe and avoids creating nonsense tokens.)
             }
         }
 
-        // De-dupe
         return list
             .GroupBy(x => $"{x.type}|{x.rarity}|{x.displayName}", StringComparer.OrdinalIgnoreCase)
+            .Select(g => g.First())
+            .ToList();
+    }
+
+    // ---------------- Scanner (Packs) ----------------
+    // Assets/Monsters/Packs/<Pack Name>/<Monster Name>/
+    // Uses folder names for pack + monster; does not attempt to infer type/rarity.
+    public static List<(string packName, string displayName)> ScanMonstersFromPackRoot(string packsRoot)
+    {
+        var list = new List<(string packName, string displayName)>();
+
+        if (string.IsNullOrWhiteSpace(packsRoot) || !AssetDatabase.IsValidFolder(packsRoot))
+            return list;
+
+        var packFolders = AssetDatabase.GetSubFolders(packsRoot);
+        foreach (var pf in packFolders)
+        {
+            string packName = Path.GetFileName(pf);
+
+            // Explicitly skip "Main" pack folder if it exists for any reason.
+            if (packName.IndexOf("Main", StringComparison.OrdinalIgnoreCase) >= 0)
+                continue;
+
+            var monsterFolders = AssetDatabase.GetSubFolders(pf);
+            foreach (var mf in monsterFolders)
+            {
+                string monsterName = Path.GetFileName(mf);
+                if (string.IsNullOrWhiteSpace(monsterName)) continue;
+
+                list.Add((packName, monsterName));
+            }
+        }
+
+        return list
+            .GroupBy(x => $"{x.packName}|{x.displayName}", StringComparer.OrdinalIgnoreCase)
             .Select(g => g.First())
             .ToList();
     }
@@ -285,17 +375,26 @@ public static class RenameBitlingsUtility
         return char.ToUpperInvariant(token[0]) + token.Substring(1);
     }
 
-    // ---------------- CSV Support ----------------
-    // NOTE: This is a minimal reader intended only for Name/Type/Rarity.
-    // It does not support quoted commas fully; use your MonsterBuilder CSV parsing for complex cases.
+    private static bool IsMainPackValue(string packName)
+    {
+        if (string.IsNullOrWhiteSpace(packName)) return true;
+        return packName.IndexOf("Main", StringComparison.OrdinalIgnoreCase) >= 0;
+    }
 
-    public static bool TryReadCsvMonsters(
+    // ---------------- CSV Support (V2) ----------------
+    // Reads Name, Type, Rarity, Pack Name.
+    // Pack Name containing "Main" => main monster (uses type/rarity folders under Assets/Art/Monsters).
+    // Any other Pack Name => pack monster (uses Assets/Monsters/Packs/<Pack Name>/<Monster Name>/).
+
+    public static bool TryReadCsvMonstersV2(
         UnityEngine.Object csvAsset,
-        out List<(MonsterType type, Rarity rarity, string displayName)> monsters,
+        out List<(MonsterType type, Rarity rarity, string displayName)> mainMonsters,
+        out List<(string packName, string displayName)> packMonsters,
         out string error
     )
     {
-        monsters = new();
+        mainMonsters = new();
+        packMonsters = new();
         error = null;
 
         if (csvAsset == null)
@@ -346,17 +445,24 @@ public static class RenameBitlingsUtility
         }
 
         string[] headers = lines[0].TrimEnd('\r').Split(',');
+
         int nameCol = Array.FindIndex(headers, h =>
             h.Equals("Name", StringComparison.OrdinalIgnoreCase) ||
             h.Equals("Display Name", StringComparison.OrdinalIgnoreCase));
+
         int typeCol = Array.FindIndex(headers, h =>
             h.Equals("Type", StringComparison.OrdinalIgnoreCase));
+
         int rarityCol = Array.FindIndex(headers, h =>
             h.Equals("Rarity", StringComparison.OrdinalIgnoreCase));
 
-        if (nameCol < 0 || typeCol < 0 || rarityCol < 0)
+        int packCol = Array.FindIndex(headers, h =>
+            h.Equals("Pack Name", StringComparison.OrdinalIgnoreCase) ||
+            h.Equals("PackName", StringComparison.OrdinalIgnoreCase));
+
+        if (nameCol < 0 || rarityCol < 0 || typeCol < 0 || packCol < 0)
         {
-            error = "CSV must include Name (or Display Name), Type, and Rarity columns.";
+            error = "CSV must include Name (or Display Name), Type, Rarity, and Pack Name columns.";
             return false;
         }
 
@@ -365,21 +471,43 @@ public static class RenameBitlingsUtility
             string line = lines[i].TrimEnd('\r');
             if (string.IsNullOrWhiteSpace(line)) continue;
 
+            // Minimal CSV parsing: comma-split. (Matches your prior utility note.)
             var cells = line.Split(',');
-            if (cells.Length <= Math.Max(nameCol, Math.Max(typeCol, rarityCol)))
+            int need = Math.Max(Math.Max(nameCol, typeCol), Math.Max(rarityCol, packCol));
+            if (cells.Length <= need)
                 continue;
 
             string name = cells[nameCol].Trim();
             if (string.IsNullOrWhiteSpace(name)) continue;
 
-            MonsterType t = MonsterType.None;
-            Enum.TryParse(cells[typeCol].Trim(), true, out t);
+            string packName = cells[packCol].Trim();
 
-            Rarity r = Rarity.Common;
-            Enum.TryParse(cells[rarityCol].Trim(), true, out r);
+            if (IsMainPackValue(packName))
+            {
+                MonsterType t = MonsterType.None;
+                Enum.TryParse(cells[typeCol].Trim(), true, out t);
 
-            monsters.Add((t, r, name));
+                Rarity r = Rarity.Common;
+                Enum.TryParse(cells[rarityCol].Trim(), true, out r);
+
+                mainMonsters.Add((t, r, name));
+            }
+            else
+            {
+                packMonsters.Add((packName, name));
+            }
         }
+
+        // De-dupe
+        mainMonsters = mainMonsters
+            .GroupBy(x => $"{x.type}|{x.rarity}|{x.displayName}", StringComparer.OrdinalIgnoreCase)
+            .Select(g => g.First())
+            .ToList();
+
+        packMonsters = packMonsters
+            .GroupBy(x => $"{x.packName}|{x.displayName}", StringComparer.OrdinalIgnoreCase)
+            .Select(g => g.First())
+            .ToList();
 
         return true;
     }

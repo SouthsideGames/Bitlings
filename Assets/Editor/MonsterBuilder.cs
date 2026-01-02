@@ -69,6 +69,15 @@ public sealed class MonsterBuilder : EditorWindow
     [SerializeField] private bool routeMonstersByTypeFolder = true;
     [SerializeField] private bool moveExistingMonstersToTypeFolder = true;
 
+[Header("Pack Routing")]
+[SerializeField] private bool routeMonstersToPackFolders = false;
+
+[Tooltip("If true, reads Pack Name from CSV column 'Pack Name'. If false, uses Pack Name Override for all rows.")]
+[SerializeField] private bool packNameFromCsv = true;
+
+[Tooltip("Used when Pack Name From CSV is OFF (applies to all rows).")]
+[SerializeField] private string packNameOverride = "Season_01";
+
     [Header("Monster Asset Naming")]
     [Tooltip("If enabled, monster asset files are renamed to Monster_<NoSpacesName>.asset")]
     [SerializeField] private bool renameMonsterAssetsToMonsterName = true;
@@ -148,6 +157,9 @@ public sealed class MonsterBuilder : EditorWindow
 
         {"Type","Type"},
         {"Rarity","Rarity"},
+
+        {"Pack Name","Pack Name"},
+        {"PackName","Pack Name"},
 
         {"Spawn Weight","Spawn Weight"},
         {"spawnWeight","Spawn Weight"},
@@ -274,6 +286,16 @@ public sealed class MonsterBuilder : EditorWindow
         {
             moveExistingMonstersToTypeFolder = EditorGUILayout.Toggle("Move Existing Monsters To Type Folder", moveExistingMonstersToTypeFolder);
         }
+
+EditorGUILayout.Space();
+EditorGUILayout.LabelField("Pack Routing", EditorStyles.boldLabel);
+routeMonstersToPackFolders = EditorGUILayout.Toggle("Route Monsters To Pack Folders", routeMonstersToPackFolders);
+using (new EditorGUI.DisabledScope(!routeMonstersToPackFolders))
+{
+    packNameFromCsv = EditorGUILayout.Toggle("Pack Name From CSV Column", packNameFromCsv);
+    using (new EditorGUI.DisabledScope(packNameFromCsv))
+        packNameOverride = EditorGUILayout.TextField("Pack Name Override", packNameOverride);
+}
 
         EditorGUILayout.Space();
         EditorGUILayout.LabelField("Monster Asset Naming", EditorStyles.boldLabel);
@@ -477,6 +499,7 @@ public sealed class MonsterBuilder : EditorWindow
         var deferredTrackTierSync = new List<(TitleTrackSO track, List<(int level, List<TitleSO> titles)> desiredTiers)>();
 
         int created = 0, updated = 0, skipped = 0, errors = 0;
+        int mainRows = 0, packRows = 0;
         int movedMonsters = 0, renamedMonsters = 0;
         int movedTracks = 0, renamedTracks = 0, updatedTracks = 0, createdTracks = 0;
         int updatedAlwaysOnTitles = 0;
@@ -498,13 +521,35 @@ public sealed class MonsterBuilder : EditorWindow
                     MonsterType parsedType = MonsterType.None;
                     TryParseEnum(Get(row, headerMap, "Type"), out parsedType);
 
+                    // Pack routing: if Pack Name contains "Main" (or is blank), treat as non-pack.
+                    string packNameCell = Get(row, headerMap, "Pack Name").Trim();
+                    string packName = packNameFromCsv ? packNameCell : (packNameOverride ?? "").Trim();
+                    bool isMainMonster = IsMainPackName(packName);
+                    bool isPackMonster = routeMonstersToPackFolders && !isMainMonster;
+
+                    // Counts for summary (valid ID rows only)
+                    if (isPackMonster) packRows++; else mainRows++;
+
                     bool has = existingById.TryGetValue(id, out var monster);
                     if (!has && !createIfMissing) { skipped++; continue; }
                     if (has && !updateExisting) { skipped++; continue; }
 
                     if (!has)
                     {
-                        string folder = routeMonstersByTypeFolder ? EnsureTypeFolder(monsterRootPath, parsedType) : monsterRootPath;
+                        string folder;
+
+                        if (isPackMonster)
+                        {
+                            // Uses: Assets/Data/Monsters/Packs/<PackName>/<Rarity>
+                            Rarity rParsed = Rarity.Common;
+                            TryParseEnum(Get(row, headerMap, "Rarity"), out rParsed);
+                            folder = EnsurePackRarityFolder(monsterRootPath, packName, rParsed);
+                        }
+                        else
+                        {
+                            folder = routeMonstersByTypeFolder ? EnsureTypeFolder(monsterRootPath, parsedType) : monsterRootPath;
+                        }
+
                         monster = CreateMonsterAsset(folder, id);
                         existingById[id] = monster;
                         created++;
@@ -576,7 +621,7 @@ public sealed class MonsterBuilder : EditorWindow
                     }
 
                     // Defer monster move/rename
-                    if (routeMonstersByTypeFolder && moveExistingMonstersToTypeFolder)
+                    if (!isPackMonster && routeMonstersByTypeFolder && moveExistingMonstersToTypeFolder)
                     {
                         string desiredFolder = EnsureTypeFolder(monsterRootPath, monster.type);
                         deferredMonsterMoves.Add((monster, desiredFolder));
@@ -866,6 +911,7 @@ public sealed class MonsterBuilder : EditorWindow
 
         Debug.Log(
             "[MonsterCsvImporter] Done. " +
+            $"RowsMain={mainRows}, RowsPack={packRows}. " +
             $"Created={created}, Updated={updated}, Skipped={skipped}, Errors={errors}. " +
             $"MonsterMoved={movedMonsters}, MonsterRenamed={renamedMonsters}. " +
             $"TracksCreated={createdTracks}, TracksMoved={movedTracks}, TracksRenamed={renamedTracks}, TracksUpdated={updatedTracks}. " +
@@ -1328,7 +1374,44 @@ public sealed class MonsterBuilder : EditorWindow
 
     // ---------------- Folder Routing ----------------
 
-    private static string EnsureTypeFolder(string rootPath, MonsterType type)
+    private static bool IsMainPackName(string packName)
+    {
+        packName = (packName ?? "").Trim();
+        if (string.IsNullOrWhiteSpace(packName)) return true;
+        return packName.IndexOf("Main", StringComparison.OrdinalIgnoreCase) >= 0;
+    }
+
+    private static string EnsureFolder(string parent, string name)
+{
+    name = (name ?? "").Trim();
+    if (string.IsNullOrWhiteSpace(name)) name = "Unsorted";
+
+    foreach (char c in Path.GetInvalidFileNameChars())
+        name = name.Replace(c.ToString(), "");
+
+    if (string.IsNullOrWhiteSpace(name)) name = "Unsorted";
+
+    string desired = $"{parent}/{name}";
+    if (!AssetDatabase.IsValidFolder(desired))
+        AssetDatabase.CreateFolder(parent, name);
+
+    return desired;
+}
+
+private static string EnsurePackRarityFolder(string monsterRootPath, string packName, Rarity rarity)
+{
+    // Defensive guard: "Main" is not a real pack and should never create Packs/Main.
+    if (IsMainPackName(packName))
+        throw new ArgumentException("Pack Name is 'Main' (or blank). This row should be routed as a non-pack monster.", nameof(packName));
+
+    // Assets/Data/Monsters/Packs/<PackName>/<Rarity>
+    string packsRoot = EnsureFolder(monsterRootPath, "Packs");
+    string packRoot = EnsureFolder(packsRoot, packName);
+    string rarityFolder = EnsureFolder(packRoot, rarity.ToString());
+    return rarityFolder;
+}
+
+private static string EnsureTypeFolder(string rootPath, MonsterType type)
     {
         string typeName = (type == MonsterType.None) ? "Unsorted" : type.ToString();
         string desired = $"{rootPath}/{typeName}";
