@@ -32,8 +32,10 @@ public static class RenameBitlingsUtility
             { "back_shiny_nobg",  "_backshiny" },
 
             // Additional legacy variants (no underscore)
-            { "frontshiny",       "_frontshiny" },
-            { "backshiny",        "_backshiny" },
+            { "frontshiny",        "_frontshiny" },
+            { "backshiny",         "_backshiny" },
+            { "front_shiny",       "_frontshiny" },
+            { "back_shiny",        "_backshiny" },
         };
 
     // ---------------- Report ----------------
