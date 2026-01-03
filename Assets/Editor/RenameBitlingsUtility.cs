@@ -11,6 +11,8 @@ public static class RenameBitlingsUtility
 {
     // ---------------- Naming Rules ----------------
 
+    // REQUIRED in the sense that the validator expects all 4 to exist.
+    // If you later decide shiny should be optional, we can make that a toggle.
     public static readonly string[] RequiredSuffixes =
     {
         "_front",
@@ -19,6 +21,8 @@ public static class RenameBitlingsUtility
         "_backshiny"
     };
 
+    // Legacy file base name (no token) -> strict suffix (token + suffix).
+    // Example: "front_nobg.png" becomes "<Token>_front.png"
     private static readonly Dictionary<string, string> LegacyBaseToSuffix =
         new(StringComparer.OrdinalIgnoreCase)
         {
@@ -26,6 +30,10 @@ public static class RenameBitlingsUtility
             { "back_nobg",        "_back" },
             { "front_shiny_nobg", "_frontshiny" },
             { "back_shiny_nobg",  "_backshiny" },
+
+            // Additional legacy variants (no underscore)
+            { "frontshiny",       "_frontshiny" },
+            { "backshiny",        "_backshiny" },
         };
 
     // ---------------- Report ----------------
@@ -73,8 +81,8 @@ public static class RenameBitlingsUtility
     }
 
     // ---------------- Public Pipeline (Main Art Root) ----------------
-    // NOTE: This pipeline ONLY renames files IN PLACE (no moving).
-    // The "fixFolderNamesAndMigrateToFlat" parameter is accepted for compatibility but intentionally ignored.
+    // Assets/Art/Monsters/<Type>/<Rarity>/
+    // NOTE: This pipeline renames files IN PLACE only (no moving).
 
     public static Report RunPreImportPipeline(
         string targetRootArtMonsters,
@@ -144,7 +152,7 @@ public static class RenameBitlingsUtility
             string packName = (m.packName ?? "").Trim();
             string monsterName = (m.displayName ?? "").Trim();
 
-            if (string.IsNullOrWhiteSpace(packName) || packName.IndexOf("Main", StringComparison.OrdinalIgnoreCase) >= 0)
+            if (IsMainPackValue(packName))
             {
                 rep.Skipped.Add($"Pack entry treated as Main (skipped by pack pipeline): Pack='{packName}', Monster='{monsterName}'");
                 continue;
@@ -156,7 +164,7 @@ public static class RenameBitlingsUtility
                 continue;
             }
 
-            // Do NOT sanitize here for path resolution; use actual folder names on disk.
+            // Use actual folder names on disk.
             string folder = $"{packsRoot}/{packName}/{monsterName}";
             if (!AssetDatabase.IsValidFolder(folder))
             {
@@ -176,6 +184,8 @@ public static class RenameBitlingsUtility
 
         return rep;
     }
+
+    // ---------------- Core Work ----------------
 
     private static void RenameAndValidateInFolder(
         Report rep,
@@ -198,11 +208,10 @@ public static class RenameBitlingsUtility
                 string desiredBase = token + suffix;
 
                 // If strict target already exists, do not overwrite.
-                if (FindTextureByExactBaseName(folder, desiredBase) != null ||
-                    LoadSpriteByExactName(folder, desiredBase) != null)
+                if (HasAnyAssetWithExactBaseName(folder, desiredBase))
                     continue;
 
-                // Find the legacy file inside THIS SAME folder.
+                // Find the legacy file inside THIS SAME folder by exact base name.
                 string legacyPath = FindTextureByExactBaseName(folder, legacyBase);
                 if (string.IsNullOrWhiteSpace(legacyPath))
                     continue;
@@ -228,12 +237,14 @@ public static class RenameBitlingsUtility
         }
 
         // ---- Validation ----
+        // IMPORTANT: Validation should not false-warn if the file exists but is imported as Texture2D (not Sprite).
+        // So we accept either an exact-named Sprite OR an exact-named Texture2D file.
         if (validateRequiredSprites)
         {
             foreach (var suffix in RequiredSuffixes)
             {
                 string expected = token + suffix;
-                if (LoadSpriteByExactName(folder, expected) == null)
+                if (!HasAnyAssetWithExactBaseName(folder, expected))
                     rep.Missing.Add($"Missing '{expected}' in {folder} (Monster='{displayNameForLogs}')");
             }
         }
@@ -304,7 +315,7 @@ public static class RenameBitlingsUtility
             string packName = Path.GetFileName(pf);
 
             // Explicitly skip "Main" pack folder if it exists for any reason.
-            if (packName.IndexOf("Main", StringComparison.OrdinalIgnoreCase) >= 0)
+            if (IsMainPackValue(packName))
                 continue;
 
             var monsterFolders = AssetDatabase.GetSubFolders(pf);
@@ -325,20 +336,52 @@ public static class RenameBitlingsUtility
 
     // ---------------- Asset Helpers ----------------
 
+    private static bool HasAnyAssetWithExactBaseName(string folder, string baseName)
+    {
+        // Accept exact-named Sprite OR exact-named Texture2D (pre-sliced / not sprite-imported).
+        if (LoadSpriteByExactName(folder, baseName) != null)
+            return true;
+
+        if (FindTextureByExactBaseName(folder, baseName) != null)
+            return true;
+
+        return false;
+    }
+
     private static string FindTextureByExactBaseName(string folder, string baseName)
     {
         if (!AssetDatabase.IsValidFolder(folder)) return null;
 
+        // FindAssets tokenizes; we still confirm exact filename base match.
         string[] guids = AssetDatabase.FindAssets($"t:Texture2D {baseName}", new[] { folder });
         foreach (var g in guids)
         {
             string p = AssetDatabase.GUIDToAssetPath(g);
             if (string.IsNullOrWhiteSpace(p)) continue;
 
-            if (Path.GetFileNameWithoutExtension(p)
-                .Equals(baseName, StringComparison.OrdinalIgnoreCase))
+            if (Path.GetFileNameWithoutExtension(p).Equals(baseName, StringComparison.OrdinalIgnoreCase))
                 return p;
         }
+
+        // Also allow "Default" textures that may not import as Texture2D search hits reliably in some cases.
+        // Fall back to direct file scan as a last resort.
+        try
+        {
+            string absFolder = ToAbsolutePath(folder);
+            if (!string.IsNullOrWhiteSpace(absFolder) && Directory.Exists(absFolder))
+            {
+                // Typical image extensions
+                string[] exts = { ".png", ".jpg", ".jpeg", ".tga", ".psd", ".webp" };
+                foreach (var ext in exts)
+                {
+                    string candidate = Path.Combine(absFolder, baseName + ext);
+                    if (File.Exists(candidate))
+                        return folder + "/" + Path.GetFileName(candidate);
+                }
+            }
+        }
+        catch { /* no-op */ }
+
         return null;
     }
 
@@ -357,6 +400,17 @@ public static class RenameBitlingsUtility
         return null;
     }
 
+    private static string ToAbsolutePath(string assetPath)
+    {
+        // assetPath like "Assets/Art/Monsters/Fire/Epic"
+        if (string.IsNullOrWhiteSpace(assetPath)) return null;
+        if (!assetPath.StartsWith("Assets", StringComparison.OrdinalIgnoreCase)) return null;
+
+        // Application.dataPath => .../<Project>/Assets
+        string projectRoot = Directory.GetParent(Application.dataPath)!.FullName;
+        return Path.Combine(projectRoot, assetPath.Replace('/', Path.DirectorySeparatorChar));
+    }
+
     // ---------------- Naming ----------------
 
     public static string NormalizeMonsterToken(string displayName)
@@ -367,6 +421,7 @@ public static class RenameBitlingsUtility
         foreach (char c in Path.GetInvalidFileNameChars())
             displayName = displayName.Replace(c.ToString(), "");
 
+        // Remove whitespace and collapse to a single token.
         string token = string.Concat(
             displayName.Split((char[])null, StringSplitOptions.RemoveEmptyEntries));
 
@@ -471,7 +526,8 @@ public static class RenameBitlingsUtility
             string line = lines[i].TrimEnd('\r');
             if (string.IsNullOrWhiteSpace(line)) continue;
 
-            // Minimal CSV parsing: comma-split. (Matches your prior utility note.)
+            // Minimal CSV parsing: comma-split.
+            // If you expect commas inside quoted cells, we should swap in a proper CSV parser.
             var cells = line.Split(',');
             int need = Math.Max(Math.Max(nameCol, typeCol), Math.Max(rarityCol, packCol));
             if (cells.Length <= need)

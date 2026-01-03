@@ -21,6 +21,7 @@ public sealed class RenameBitlings : EditorWindow
     [Header("Actions")]
     [SerializeField] private bool fixFoldersAndMigrateLegacy = true; // currently ignored by utility (no moving)
     [SerializeField] private bool renameLegacyFilesToConvention = true;
+    [Tooltip("Validates only the truly required art: front + back. Shiny is treated as optional (no warnings).")]
     [SerializeField] private bool validateRequiredSprites = true;
 
     [Header("Safety")]
@@ -68,8 +69,8 @@ public sealed class RenameBitlings : EditorWindow
         EditorGUILayout.Space();
         EditorGUILayout.LabelField("Pipeline", EditorStyles.boldLabel);
         fixFoldersAndMigrateLegacy = EditorGUILayout.ToggleLeft("Fix Folder Names (legacy migrate - currently ignored; no moves)", fixFoldersAndMigrateLegacy);
-        renameLegacyFilesToConvention = EditorGUILayout.ToggleLeft("Rename legacy files to strict convention (<Token>_front/_back/_frontshiny/_backshiny)", renameLegacyFilesToConvention);
-        validateRequiredSprites = EditorGUILayout.ToggleLeft("Validate required sprites (4)", validateRequiredSprites);
+        renameLegacyFilesToConvention = EditorGUILayout.ToggleLeft("Rename legacy files to convention (<Token>_front/_back/_shiny_front/_shiny_back)", renameLegacyFilesToConvention);
+        validateRequiredSprites = EditorGUILayout.ToggleLeft("Validate required sprites (front/back only)", validateRequiredSprites);
 
         EditorGUILayout.Space();
         EditorGUILayout.LabelField("Safety", EditorStyles.boldLabel);
