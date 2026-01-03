@@ -247,6 +247,24 @@ public partial class EncounterManager
         return Math.Max(0L, rem);
     }
 
+    public long GetShinyBoostSecondsRemaining()
+    {
+        var cur = CurrentShinyBoost;
+        if (cur == null) return -1;
+
+        long rem = cur.expireUnix - SaveManager.NowUnix();
+        return Math.Max(0L, rem);
+    }
+
+    public long GetCaptureBonusSecondsRemaining()
+    {
+        var cur = CurrentCaptureBand;
+        if (cur == null) return -1;
+
+        long rem = cur.expireUnix - SaveManager.NowUnix();
+        return Math.Max(0L, rem);
+    }
+
     private static T PickByWeight<T>(IList<T> items, System.Func<T, float> getWeight)
     {
         float total = 0f;
