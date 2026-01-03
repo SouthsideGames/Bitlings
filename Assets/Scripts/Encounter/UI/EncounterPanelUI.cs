@@ -1,6 +1,7 @@
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using Random = UnityEngine.Random;
@@ -14,6 +15,8 @@ public class EncounterPanelUI : MonoBehaviour
     [SerializeField] private TextMeshProUGUI energyLabel;
     [SerializeField] private TextMeshProUGUI energyEtaLabel;
     [SerializeField, Min(1f)] private float energySecondsPerPoint = 1200f;
+    [SerializeField] private Image shinyBoostIcon;
+    [SerializeField] private Image captureBonusIcon;
 
     // ─────────────────────────────────────────────────────────────
     // Blinder (localized + weighted random)
@@ -227,6 +230,7 @@ public class EncounterPanelUI : MonoBehaviour
         {
             _etaTickAccum = 0f;
             UpdateEnergyEtaUI();
+            RefreshBoostIcons();
         }
     }
 
@@ -237,6 +241,7 @@ public class EncounterPanelUI : MonoBehaviour
     {
         RefreshButtonAndLabel();
         RefreshEnergy();
+        RefreshBoostIcons();
     }
 
     // ─────────────────────────────────────────────────────────────
@@ -316,6 +321,42 @@ public class EncounterPanelUI : MonoBehaviour
         energyLabel.color = has ? Color.white : new Color(1f, 0.5f, 0.5f);
 
         UpdateEnergyEtaUI();
+    }
+
+    void RefreshBoostIcons()
+    {
+        if (!shinyBoostIcon && !captureBonusIcon) return;
+
+        bool shinyActive = false;
+        bool captureActive = false;
+
+        if (EncounterManager.I != null)
+        {
+            shinyActive = EncounterManager.I.GetShinyBoostSecondsRemaining() > 0;
+            captureActive = EncounterManager.I.GetCaptureBonusSecondsRemaining() > 0;
+        }
+        else if (SaveManager.Data != null)
+        {
+            long now = SaveManager.NowUnix();
+            shinyActive = HasActiveTimer(SaveManager.Data.activeShinyBoosts, now, data => data.expireUnix);
+            captureActive = HasActiveTimer(SaveManager.Data.activeWorkOrders, now, data => data.expireUnix);
+        }
+
+        if (shinyBoostIcon)
+            shinyBoostIcon.gameObject.SetActive(shinyActive);
+
+        if (captureBonusIcon)
+            captureBonusIcon.gameObject.SetActive(captureActive);
+    }
+
+    private static bool HasActiveTimer<T>(List<T> list, long nowUnix, Func<T, long> getExpiry)
+    {
+        if (list == null || list.Count == 0) return false;
+
+        var cur = list[0];
+        if (cur == null) return false;
+
+        return getExpiry(cur) > nowUnix;
     }
 
     void UpdateEnergyEtaUI()
