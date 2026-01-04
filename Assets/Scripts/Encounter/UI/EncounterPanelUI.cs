@@ -1,6 +1,7 @@
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using Random = UnityEngine.Random;
@@ -14,6 +15,55 @@ public class EncounterPanelUI : MonoBehaviour
     [SerializeField] private TextMeshProUGUI energyLabel;
     [SerializeField] private TextMeshProUGUI energyEtaLabel;
     [SerializeField, Min(1f)] private float energySecondsPerPoint = 1200f;
+
+    // ─────────────────────────────────────────────────────────────
+    // Encounter Bar Buttons + Labels (Icon + TMP under it)
+    // ─────────────────────────────────────────────────────────────
+    [Header("Encounter Bar Buttons")]
+
+    [Header("Energy (icon is a button; NO timer text under icon)")]
+    [SerializeField] private Button energyInfoButton;
+    [SerializeField] private TooltipTrigger energyTooltip;
+
+    [Header("Flyer (icon is a button; NO timer text under icon)")]
+    [SerializeField] private GameObject flyerRoot;
+    [SerializeField] private Button flyerButton;
+    [SerializeField] private TooltipTrigger flyerTooltip;
+    [SerializeField] private Image flyerIcon;
+    [SerializeField] private TextMeshProUGUI flyerTypeLabel; // shows type name only
+
+    [Header("Shiny Boost (shows timer under icon)")]
+    [SerializeField] private GameObject shinyRoot;
+    [SerializeField] private Button shinyButton;
+    [SerializeField] private TooltipTrigger shinyTooltip;
+    [SerializeField] private Image shinyIcon;
+    [SerializeField] private TextMeshProUGUI shinyTimerLabel;
+
+    [Header("Capture Boost (shows timer under icon)")]
+    [SerializeField] private GameObject captureRoot;
+    [SerializeField] private Button captureButton;
+    [SerializeField] private TooltipTrigger captureTooltip;
+    [SerializeField] private Image captureIcon;
+    [SerializeField] private TextMeshProUGUI captureTimerLabel;
+
+    [Header("Favor / Luck Boost (shows timer under icon)")]
+    [SerializeField] private GameObject favorRoot;
+    [SerializeField] private Button favorButton;
+    [SerializeField] private TooltipTrigger favorTooltip;
+    [SerializeField] private Image favorIcon;
+    [SerializeField] private TextMeshProUGUI favorTimerLabel;
+
+    [Header("Timer Warning FX (for timed boosts only)")]
+    [SerializeField] private bool warningFxEnabled = true;
+    [SerializeField] private int warningSeconds = 60;
+    [SerializeField] private Color timerNormalColor = Color.white;
+    [SerializeField] private Color timerWarningColor = new Color(1f, 0.35f, 0.35f);
+    [SerializeField, Min(1.01f)] private float pulseScale = 1.08f;
+    [SerializeField, Min(0.05f)] private float pulseTime = 0.25f;
+
+    private int _shinyPulseTweenId = -1;
+    private int _capturePulseTweenId = -1;
+    private int _favorPulseTweenId = -1;
 
     // ─────────────────────────────────────────────────────────────
     // Blinder (localized + weighted random)
@@ -105,7 +155,6 @@ public class EncounterPanelUI : MonoBehaviour
 
     public bool IsHireDecisionOpen => hireDecisionRoot && hireDecisionRoot.activeSelf;
 
-
     private TextMeshProUGUI encounterLabel;
     float _etaTickAccum = 0f;
     bool _isFading;
@@ -141,6 +190,12 @@ public class EncounterPanelUI : MonoBehaviour
         if (hireButtonsRoot)
             hireButtonsRoot.SetActive(true);
 
+        // Ensure boost roots start hidden (only active while timer active)
+        SetBoostRootActive(flyerRoot, false);
+        SetBoostRootActive(shinyRoot, false);
+        SetBoostRootActive(captureRoot, false);
+        SetBoostRootActive(favorRoot, false);
+
         RefreshBlinderTint();
         PickAndApplyBlinderLine(forcePick: true);
     }
@@ -153,6 +208,14 @@ public class EncounterPanelUI : MonoBehaviour
             encounterBtn.onClick.AddListener(OnClickEncounter);
         }
 
+        // Tooltip triggers don't need button listeners; they run on pointer hold.
+        // But we still ensure TooltipTrigger components exist if buttons are wired.
+        EnsureTooltipTrigger(energyInfoButton, ref energyTooltip);
+        EnsureTooltipTrigger(flyerButton, ref flyerTooltip);
+        EnsureTooltipTrigger(shinyButton, ref shinyTooltip);
+        EnsureTooltipTrigger(captureButton, ref captureTooltip);
+        EnsureTooltipTrigger(favorButton, ref favorTooltip);
+
         if (EncounterManager.I != null)
         {
             EncounterManager.I.OnStateChanged += OnEncounterStateChanged;
@@ -160,9 +223,9 @@ public class EncounterPanelUI : MonoBehaviour
         }
 
         EncounterManager.OnEnergyGained += OnEnergyGained;
-
-        LogCurrentWinStreak("Status");
+        GameEvents.BattleFinished += OnBattleFinished;
         GameEvents.WinStreakChanged += OnWinStreakChanged;
+        GameEvents.OnResourcesChanged += OnResourcesChanged;
 
         if (!IsInBattle())
         {
@@ -193,9 +256,7 @@ public class EncounterPanelUI : MonoBehaviour
         }
 
         RefreshAll();
-
-        GameEvents.BattleFinished += OnBattleFinished;
-        UpdateEnergyEtaUI();
+        RefreshEncounterBoostIconsAndTooltips(force: true);
     }
 
     void OnDisable()
@@ -209,15 +270,16 @@ public class EncounterPanelUI : MonoBehaviour
         EncounterManager.OnEnergyGained -= OnEnergyGained;
         GameEvents.BattleFinished -= OnBattleFinished;
         GameEvents.WinStreakChanged -= OnWinStreakChanged;
+        GameEvents.OnResourcesChanged -= OnResourcesChanged;
 
         if (encounterBtn) encounterBtn.onClick.RemoveAllListeners();
         if (_fadeCo != null) StopCoroutine(_fadeCo);
         if (_typewriterCo != null) StopCoroutine(_typewriterCo);
         _isFading = false;
 
-        if (hireYesButton) hireYesButton.onClick.RemoveAllListeners();
-        if (hireNoButton) hireNoButton.onClick.RemoveAllListeners();
-        if (hireContinueButton) hireContinueButton.onClick.RemoveAllListeners();
+        StopPulse(ref _shinyPulseTweenId, shinyTimerLabel);
+        StopPulse(ref _capturePulseTweenId, captureTimerLabel);
+        StopPulse(ref _favorPulseTweenId, favorTimerLabel);
     }
 
     void Update()
@@ -227,7 +289,14 @@ public class EncounterPanelUI : MonoBehaviour
         {
             _etaTickAccum = 0f;
             UpdateEnergyEtaUI();
+            RefreshEncounterBoostIconsAndTooltips(force: false);
         }
+    }
+
+    void OnResourcesChanged()
+    {
+        RefreshEncounterBoostIconsAndTooltips(force: true);
+        RefreshEnergy();
     }
 
     // ─────────────────────────────────────────────────────────────
@@ -237,6 +306,303 @@ public class EncounterPanelUI : MonoBehaviour
     {
         RefreshButtonAndLabel();
         RefreshEnergy();
+        UpdateEnergyEtaUI();
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // Encounter Boost Icons + Tooltips
+    // ─────────────────────────────────────────────────────────────
+    void RefreshEncounterBoostIconsAndTooltips(bool force)
+    {
+        // ENERGY TOOLTIP (no timer label in bar)
+        UpdateEnergyTooltip();
+
+        // FLYER (NO timer label in bar, but tooltip includes timer)
+        long flyerRem = (EncounterManager.I != null) ? EncounterManager.I.GetFlyerSecondsRemaining() : -1;
+        bool flyerActive = flyerRem > 0;
+
+        SetBoostRootActive(flyerRoot, flyerActive);
+
+        if (flyerActive)
+        {
+            var cur = EncounterManager.I != null ? EncounterManager.I.CurrentFlyer : null;
+
+            if (flyerTypeLabel)
+                flyerTypeLabel.text = (cur != null) ? cur.type.ToString() : "Unknown";
+
+            UpdateFlyerTooltip(cur, flyerRem);
+        }
+        else
+        {
+            ClearTooltip(flyerTooltip);
+        }
+
+        // SHINY (timer label + tooltip)
+        long shinyRem = GetShinySecondsRemaining();
+        bool shinyActive = shinyRem > 0;
+
+        SetBoostRootActive(shinyRoot, shinyActive);
+
+        if (shinyActive)
+        {
+            if (shinyTimerLabel)
+                shinyTimerLabel.text = FormatHMS(shinyRem);
+
+            ApplyTimerWarningFX(shinyRem, shinyTimerLabel, ref _shinyPulseTweenId);
+
+            UpdateSimpleTimerTooltip(
+                shinyTooltip,
+                "Shiny Charm Active",
+                $"Time Remaining: {FormatHMS(shinyRem)}"
+            );
+        }
+        else
+        {
+            StopPulse(ref _shinyPulseTweenId, shinyTimerLabel);
+            ClearTooltip(shinyTooltip);
+        }
+
+        // CAPTURE (timer label + tooltip)
+        long captureRem = GetCaptureSecondsRemaining();
+        bool captureActive = captureRem > 0;
+
+        SetBoostRootActive(captureRoot, captureActive);
+
+        if (captureActive)
+        {
+            if (captureTimerLabel)
+                captureTimerLabel.text = FormatHMS(captureRem);
+
+            ApplyTimerWarningFX(captureRem, captureTimerLabel, ref _capturePulseTweenId);
+
+            UpdateSimpleTimerTooltip(
+                captureTooltip,
+                "Capture Boost Active",
+                $"Time Remaining: {FormatHMS(captureRem)}"
+            );
+        }
+        else
+        {
+            StopPulse(ref _capturePulseTweenId, captureTimerLabel);
+            ClearTooltip(captureTooltip);
+        }
+
+        // FAVOR (timer label + tooltip)
+        long favorRem = GetFavorSecondsRemaining();
+        bool favorActive = favorRem > 0;
+
+        SetBoostRootActive(favorRoot, favorActive);
+
+        if (favorActive)
+        {
+            if (favorTimerLabel)
+                favorTimerLabel.text = FormatHMS(favorRem);
+
+            ApplyTimerWarningFX(favorRem, favorTimerLabel, ref _favorPulseTweenId);
+
+            UpdateSimpleTimerTooltip(
+                favorTooltip,
+                "Favor Boost Active",
+                $"Time Remaining: {FormatHMS(favorRem)}"
+            );
+        }
+        else
+        {
+            StopPulse(ref _favorPulseTweenId, favorTimerLabel);
+            ClearTooltip(favorTooltip);
+        }
+    }
+
+    void UpdateEnergyTooltip()
+    {
+        if (!energyTooltip) return;
+
+        int cur = GetEnergyPoints();
+        int max = GetEncounterMax();
+
+        string eta = energyEtaLabel ? energyEtaLabel.text : "";
+        if (string.IsNullOrEmpty(eta))
+            eta = BuildEnergyEtaStringFallback(cur, max);
+
+        energyTooltip.message = "Energy";
+        energyTooltip.subtitle = $"{cur} / {max}\n{eta}";
+    }
+
+    void UpdateFlyerTooltip(object flyerObj, long remainingSeconds)
+    {
+        if (!flyerTooltip) return;
+
+        // flyerObj is whatever your CurrentFlyer type is; we only use ToString for type label already.
+        string typeName = "Unknown";
+        if (EncounterManager.I != null && EncounterManager.I.CurrentFlyer != null)
+            typeName = EncounterManager.I.CurrentFlyer.type.ToString();
+
+        flyerTooltip.message = "Flyer Active";
+        flyerTooltip.subtitle = $"{typeName}\nTime Remaining: {FormatHMS(remainingSeconds)}";
+    }
+
+    void UpdateSimpleTimerTooltip(TooltipTrigger trigger, string title, string subtitle)
+    {
+        if (!trigger) return;
+        trigger.message = title;
+        trigger.subtitle = subtitle;
+    }
+
+    void ClearTooltip(TooltipTrigger trigger)
+    {
+        if (!trigger) return;
+        trigger.message = "";
+        trigger.subtitle = "";
+    }
+
+    string BuildEnergyEtaStringFallback(int cur, int max)
+    {
+        if (cur >= max) return "Energy full";
+
+        int seconds = EncounterManager.I != null
+            ? EncounterManager.I.GetSecondsUntilFull()
+            : (int)((max - cur) * Mathf.Max(1f, energySecondsPerPoint));
+
+        int hours = seconds / 3600;
+        int minutes = (seconds % 3600) / 60;
+
+        return (hours > 0)
+            ? $"Full in ~ {hours}h {minutes:D2}m"
+            : $"Full in ~ {minutes}m";
+    }
+
+    void EnsureTooltipTrigger(Button btn, ref TooltipTrigger trigger)
+    {
+        if (!btn) return;
+
+        if (!trigger)
+            trigger = btn.GetComponent<TooltipTrigger>();
+
+        if (!trigger)
+            trigger = btn.gameObject.AddComponent<TooltipTrigger>();
+    }
+
+    void SetBoostRootActive(GameObject root, bool active)
+    {
+        if (!root) return;
+        if (root.activeSelf != active)
+            root.SetActive(active);
+    }
+
+    void ApplyTimerWarningFX(long remainingSeconds, TextMeshProUGUI label, ref int tweenId)
+    {
+        if (!label) return;
+
+        bool warn = warningFxEnabled && remainingSeconds > 0 && remainingSeconds <= Mathf.Max(1, warningSeconds);
+        label.color = warn ? timerWarningColor : timerNormalColor;
+
+        if (!warn)
+        {
+            StopPulse(ref tweenId, label);
+            return;
+        }
+
+        // Pulse near expiry (within warning window)
+        var rt = label.rectTransform;
+        if (!rt) return;
+
+        if (tweenId != -1 && LeanTween.isTweening(tweenId))
+            return;
+
+        rt.localScale = Vector3.one;
+
+        tweenId = LeanTween.scale(rt.gameObject, Vector3.one * pulseScale, pulseTime)
+            .setEaseInOutSine()
+            .setLoopPingPong()
+            .id;
+    }
+
+    void StopPulse(ref int tweenId, TextMeshProUGUI label)
+    {
+        if (tweenId != -1)
+        {
+            if (LeanTween.isTweening(tweenId))
+                LeanTween.cancel(tweenId);
+            tweenId = -1;
+        }
+
+        if (label && label.rectTransform)
+            label.rectTransform.localScale = Vector3.one;
+
+        if (label)
+            label.color = timerNormalColor;
+    }
+
+    long GetShinySecondsRemaining()
+    {
+        var list = SaveManager.Data?.activeShinyBoosts;
+        if (list == null || list.Count == 0) return -1;
+
+        var cur = list[0];
+        if (cur == null) return -1;
+
+        long rem = cur.expireUnix - SaveManager.NowUnix();
+        if (rem <= 0)
+        {
+            list.Clear();
+            SaveManager.Save();
+            GameEvents.OnResourcesChanged?.Invoke();
+            return -1;
+        }
+
+        return Math.Max(0L, rem);
+    }
+
+    long GetCaptureSecondsRemaining()
+    {
+        var list = SaveManager.Data?.activeWorkOrders;
+        if (list == null || list.Count == 0) return -1;
+
+        var cur = list[0];
+        if (cur == null) return -1;
+
+        long rem = cur.expireUnix - SaveManager.NowUnix();
+        if (rem <= 0)
+        {
+            list.Clear();
+            SaveManager.Save();
+            GameEvents.OnResourcesChanged?.Invoke();
+            return -1;
+        }
+
+        return Math.Max(0L, rem);
+    }
+
+    long GetFavorSecondsRemaining()
+    {
+        var list = SaveManager.Data?.activeFavorBoosts;
+        if (list == null || list.Count == 0) return -1;
+
+        var cur = list[0];
+        if (cur == null) return -1;
+
+        long rem = cur.expireUnix - SaveManager.NowUnix();
+        if (rem <= 0)
+        {
+            list.Clear();
+            SaveManager.Save();
+            GameEvents.OnResourcesChanged?.Invoke();
+            return -1;
+        }
+
+        return Math.Max(0L, rem);
+    }
+
+    static string FormatHMS(long seconds)
+    {
+        seconds = Math.Max(0L, seconds);
+        var t = TimeSpan.FromSeconds(seconds);
+
+        if (t.TotalHours >= 1.0)
+            return $"{(int)t.TotalHours}h {t.Minutes}m {t.Seconds}s";
+        if (t.TotalMinutes >= 1.0)
+            return $"{t.Minutes}m {t.Seconds}s";
+        return $"{t.Seconds}s";
     }
 
     // ─────────────────────────────────────────────────────────────
@@ -256,7 +622,6 @@ public class EncounterPanelUI : MonoBehaviour
 
     void OnBattleFinished(BattleResult _)
     {
-
         LogCurrentWinStreak("Updated");
 
         if (!IsInBattle())
@@ -265,6 +630,8 @@ public class EncounterPanelUI : MonoBehaviour
             BuildTeamPreview();
             PickAndApplyBlinderLine();
         }
+
+        RefreshEncounterBoostIconsAndTooltips(force: true);
     }
 
     public void ForceBlinderAlphaToOne()
@@ -316,6 +683,7 @@ public class EncounterPanelUI : MonoBehaviour
         energyLabel.color = has ? Color.white : new Color(1f, 0.5f, 0.5f);
 
         UpdateEnergyEtaUI();
+        UpdateEnergyTooltip();
     }
 
     void UpdateEnergyEtaUI()
@@ -357,6 +725,8 @@ public class EncounterPanelUI : MonoBehaviour
             BuildTeamPreview();
             PickAndApplyBlinderLine();
         }
+
+        RefreshEncounterBoostIconsAndTooltips(force: true);
     }
 
     void OnClickEncounter()
@@ -502,7 +872,7 @@ public class EncounterPanelUI : MonoBehaviour
     }
 
     // ─────────────────────────────────────────────────────────────
-    // Hire Decision
+    // Hire Decision (unchanged)
     // ─────────────────────────────────────────────────────────────
     public void ShowHireDecision(MonsterDataSO def, int level)
     {
@@ -528,7 +898,6 @@ public class EncounterPanelUI : MonoBehaviour
         if (hireContinueButton) hireContinueButton.gameObject.SetActive(false);
 
         ShowBlinder(false, instant: true);
-
         hireDecisionRoot.SetActive(true);
     }
 
@@ -626,7 +995,7 @@ public class EncounterPanelUI : MonoBehaviour
     }
 
     // ─────────────────────────────────────────────────────────────
-    // Blinder visuals (tints + typewriter)
+    // Blinder visuals + picker (unchanged below)
     // ─────────────────────────────────────────────────────────────
     void RefreshBlinderTint()
     {
@@ -714,8 +1083,102 @@ public class EncounterPanelUI : MonoBehaviour
         _typewriterCo = null;
     }
 
+    void PickAndApplyBlinderLine(bool forcePick = false)
+    {
+        if (!blinderText) return;
+
+        if (!useRandomBlinder && !forcePick)
+        {
+            ApplyBlinderText(hardFallbackLine, instant: true);
+            return;
+        }
+
+        BlinderMessagePackSO pack = overridePack;
+        if (!pack && blinderLibrary)
+        {
+            string lang = preferredLanguageCode;
+            if (string.IsNullOrWhiteSpace(lang))
+            {
+                lang = Application.systemLanguage.ToString().ToLowerInvariant();
+                if (lang.StartsWith("english")) lang = "en";
+                else if (lang.StartsWith("spanish")) lang = "es";
+                else if (lang.StartsWith("french")) lang = "fr";
+                else if (lang.StartsWith("portuguese")) lang = "pt";
+                else if (lang.StartsWith("german")) lang = "de";
+                else if (lang.StartsWith("italian")) lang = "it";
+                else if (lang.StartsWith("japanese")) lang = "ja";
+                else if (lang.StartsWith("korean")) lang = "ko";
+                else if (lang.StartsWith("chinese")) lang = "zh";
+            }
+            pack = blinderLibrary.ResolvePack(lang?.ToLowerInvariant());
+        }
+
+        if (!pack || pack.entries == null || pack.entries.Count == 0)
+        {
+            ApplyBlinderText(hardFallbackLine, instant: true);
+            return;
+        }
+
+        float totalWeight = 0f;
+        int validCount = 0;
+        for (int i = 0; i < pack.entries.Count; i++)
+        {
+            var e = pack.entries[i];
+            if (string.IsNullOrWhiteSpace(e.line)) continue;
+            if (e.weight <= 0f) continue;
+            totalWeight += e.weight;
+            validCount++;
+        }
+
+        if (validCount == 0 || totalWeight <= 0f)
+        {
+            ApplyBlinderText(hardFallbackLine, instant: true);
+            return;
+        }
+
+        float r = Random.value * totalWeight;
+        float acc = 0f;
+
+        string chosen = hardFallbackLine;
+        for (int i = 0; i < pack.entries.Count; i++)
+        {
+            var e = pack.entries[i];
+            if (string.IsNullOrWhiteSpace(e.line) || e.weight <= 0f) continue;
+
+            acc += e.weight;
+            if (r <= acc)
+            {
+                chosen = e.line;
+                break;
+            }
+        }
+
+        if (validCount > 1 && !string.IsNullOrEmpty(_lastBlinderLine) && chosen == _lastBlinderLine)
+        {
+            // small reroll
+            r = Random.value * totalWeight;
+            acc = 0f;
+            for (int i = 0; i < pack.entries.Count; i++)
+            {
+                var e = pack.entries[i];
+                if (string.IsNullOrWhiteSpace(e.line) || e.weight <= 0f) continue;
+
+                acc += e.weight;
+                if (r <= acc)
+                {
+                    chosen = e.line;
+                    break;
+                }
+            }
+        }
+
+        _lastBlinderLine = chosen;
+        ApplyBlinderText(chosen);
+        ForceBlinderAlphaToOne();
+    }
+
     // ─────────────────────────────────────────────────────────────
-    // Team Preview
+    // Team preview (unchanged)
     // ─────────────────────────────────────────────────────────────
     void BuildTeamPreview()
     {
@@ -788,7 +1251,7 @@ public class EncounterPanelUI : MonoBehaviour
     }
 
     // ─────────────────────────────────────────────────────────────
-    // EncounterManager passthrough helpers (null-safe)
+    // EncounterManager passthrough helpers
     // ─────────────────────────────────────────────────────────────
     bool IsInBattle() => EncounterManager.I != null && EncounterManager.I.IsInBattle;
     bool IsAutoMode() => EncounterManager.I != null && EncounterManager.I.IsAutoMode;
@@ -802,97 +1265,7 @@ public class EncounterPanelUI : MonoBehaviour
     public void OnClickToggleAuto() => EncounterManager.I?.ToggleAutoMode();
 
     // ─────────────────────────────────────────────────────────────
-    // Localization + Weighted Picker
-    // ─────────────────────────────────────────────────────────────
-    void PickAndApplyBlinderLine(bool forcePick = false)
-    {
-        if (!blinderText) return;
-
-        if (!useRandomBlinder && !forcePick)
-        {
-            ApplyBlinderText(hardFallbackLine, instant: true);
-            return;
-        }
-
-        BlinderMessagePackSO pack = overridePack;
-        if (!pack && blinderLibrary)
-        {
-            string lang = preferredLanguageCode;
-            if (string.IsNullOrWhiteSpace(lang))
-            {
-                lang = Application.systemLanguage.ToString().ToLowerInvariant();
-                if (lang.StartsWith("english")) lang = "en";
-                else if (lang.StartsWith("spanish")) lang = "es";
-                else if (lang.StartsWith("french")) lang = "fr";
-                else if (lang.StartsWith("portuguese")) lang = "pt";
-                else if (lang.StartsWith("german")) lang = "de";
-                else if (lang.StartsWith("italian")) lang = "it";
-                else if (lang.StartsWith("japanese")) lang = "ja";
-                else if (lang.StartsWith("korean")) lang = "ko";
-                else if (lang.StartsWith("chinese")) lang = "zh";
-            }
-            pack = blinderLibrary.ResolvePack(lang?.ToLowerInvariant());
-        }
-
-        if (!pack || pack.entries == null || pack.entries.Count == 0)
-        {
-            ApplyBlinderText(hardFallbackLine, instant: true);
-            return;
-        }
-
-        float totalWeight = 0f;
-        int validCount = 0;
-        for (int i = 0; i < pack.entries.Count; i++)
-        {
-            var e = pack.entries[i];
-            if (string.IsNullOrWhiteSpace(e.line)) continue;
-            if (e.weight <= 0f) continue;
-            totalWeight += e.weight;
-            validCount++;
-        }
-
-        if (validCount == 0 || totalWeight <= 0f)
-        {
-            string fallback = pack.GetAnyNonEmptyFallback(hardFallbackLine);
-            ApplyBlinderText(fallback, instant: true);
-            return;
-        }
-
-        string chosen = WeightedPick(pack, totalWeight);
-        if (validCount > 1 && !string.IsNullOrEmpty(_lastBlinderLine) && chosen == _lastBlinderLine)
-        {
-            string reroll = WeightedPick(pack, totalWeight);
-            if (!string.IsNullOrEmpty(reroll)) chosen = reroll;
-        }
-
-        _lastBlinderLine = chosen;
-        string finalLine = string.IsNullOrEmpty(chosen)
-            ? pack.GetAnyNonEmptyFallback(hardFallbackLine)
-            : chosen;
-
-        ApplyBlinderText(finalLine);
-
-        ForceBlinderAlphaToOne();
-    }
-
-    string WeightedPick(BlinderMessagePackSO pack, float totalWeight)
-    {
-        float r = Random.value * totalWeight;
-        float acc = 0f;
-
-        for (int i = 0; i < pack.entries.Count; i++)
-        {
-            var e = pack.entries[i];
-            if (string.IsNullOrWhiteSpace(e.line) || e.weight <= 0f) continue;
-
-            acc += e.weight;
-            if (r <= acc) return e.line;
-        }
-        return pack.GetAnyNonEmptyFallback(hardFallbackLine);
-    }
-
-    // ─────────────────────────────────────────────────────────────
-    // Energy events & FX
+    // Energy events & FX (unchanged)
     // ─────────────────────────────────────────────────────────────
     void OnEnergyGained(int gained, int newTotal)
     {
@@ -900,6 +1273,8 @@ public class EncounterPanelUI : MonoBehaviour
 
         PlayEnergyGainedFX();
         SpawnEnergyToast(gained);
+
+        UpdateEnergyTooltip();
     }
 
     void PlayEnergyGainedFX()
@@ -976,9 +1351,9 @@ public class EncounterPanelUI : MonoBehaviour
                         Destroy(go);
                 });
     }
+
     public void OnWildSpawned(MonsterDataSO def)
     {
-
         if (!ownedCapturedIcon)
             return;
 

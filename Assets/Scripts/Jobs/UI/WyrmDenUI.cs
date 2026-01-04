@@ -93,7 +93,7 @@ public class WyrmDenUI : MonoBehaviour
         SaveManager.Save();
         GameEvents.OnResourcesChanged?.Invoke();
 
-        RefreshButtonLabel();          // ← ADD
+        RefreshButtonLabel();        
     }
 
     void StartTicker()
