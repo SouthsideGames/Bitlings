@@ -331,6 +331,9 @@ public static class SaveManager
         Data.discoveredMonsterIdsList ??= new List<string>();
         Data.seenTypesList ??= new List<MonsterType>();
         Data.unlockedJobSitesList ??= new List<JobType>();
+        Data.achievements ??= new List<AchievementProgressData>();
+        Data.achievementMap ??= new Dictionary<string, AchievementProgressData>(StringComparer.Ordinal);
+        Data.achievementMap.Clear();
 
         // Authoritative for persistence: LISTS.
         RebuildTransientSetsFromLists();
@@ -338,6 +341,14 @@ public static class SaveManager
         // Normalize owned/team entries (uids, clamps)
         NormalizeOwnedEntries(Data.owned);
         NormalizeOwnedEntries(Data.team);
+
+        for (int i = 0; i < Data.achievements.Count; i++)
+        {
+            var a = Data.achievements[i];
+            if (a == null || string.IsNullOrEmpty(a.id)) continue;
+            if (!Data.achievementMap.ContainsKey(a.id))
+                Data.achievementMap.Add(a.id, a);
+        }
 
         // Ensure team entries reference the owned instance (canonicalize)
         for (int i = 0; i < Data.team.Count; i++)

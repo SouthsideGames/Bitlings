@@ -1,6 +1,16 @@
 using System;
 using System.Collections.Generic;
 
+[Serializable]
+public class AchievementProgressData
+{
+    public string id;
+    public int value;
+    public bool unlocked;
+    public long unlockedUnix;
+    public bool seen; 
+}
+
 
 [Serializable]
 public class OwnedMonsterData
@@ -112,6 +122,10 @@ public class PlayerManager
 
     public List<string> discoveredMonsterIdsList = new List<string>();
     [NonSerialized] public HashSet<string> discoveredMonsterIds = new HashSet<string>();
+
+    public List<AchievementProgressData> achievements = new List<AchievementProgressData>();
+    [NonSerialized] public Dictionary<string, AchievementProgressData> achievementMap
+        = new Dictionary<string, AchievementProgressData>(StringComparer.Ordinal);
 
     public int credits = 0;
     public List<int> resourceCounts = new List<int>();
