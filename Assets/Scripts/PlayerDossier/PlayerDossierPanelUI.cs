@@ -15,7 +15,8 @@ public class PlayerDossierPanelUI : MonoBehaviour
     [SerializeField] private TextMeshProUGUI dotsText;        // "• ○ ○ ○ ○ ○"
 
     [Header("Pages (in order)")]
-    [SerializeField] private GameObject[] pages; // Page_1_Overview, Page_2_JobSites, Page_3_FieldOps, Page_4_Achievements, Page_5_Resources, Page_6_Resume
+    [Tooltip("Order MUST be: Page_1_Overview, Page_2_JobSites, Page_3_FieldOps, Page_4_Resources, Page_5_Resume, Page_6_Achievements")]
+    [SerializeField] private GameObject[] pages;
 
     // ─────────────────────────────────────────────────────────────
     // PAGE 1 – OVERVIEW UI REFERENCES
@@ -56,20 +57,9 @@ public class PlayerDossierPanelUI : MonoBehaviour
     [SerializeField] private TextMeshProUGUI fieldOpsHighlightsText;
 
     // ─────────────────────────────────────────────────────────────
-    // PAGE 4 – ACHIEVEMENTS (NEW)
+    // PAGE 4 – RESOURCES
     // ─────────────────────────────────────────────────────────────
-    [Header("Page 4 - Achievements")]
-    [SerializeField] private Transform achievementRowParent;
-    [SerializeField] private PlayerDossierAchievementRowUI achievementRowPrefab;
-    [SerializeField] private Slider achievementCompletionSlider;
-    [SerializeField] private TextMeshProUGUI achievementCompletionText;
-
-    private readonly List<PlayerDossierAchievementRowUI> _achievementRows = new List<PlayerDossierAchievementRowUI>();
-
-    // ─────────────────────────────────────────────────────────────
-    // PAGE 5 – RESOURCES
-    // ─────────────────────────────────────────────────────────────
-    [Header("Page 5 – Resources")]
+    [Header("Page 4 – Resources")]
     [SerializeField] private TextMeshProUGUI creditsText;
     [SerializeField] private TextMeshProUGUI energyText;
     [SerializeField] private TextMeshProUGUI medkitText;
@@ -92,24 +82,30 @@ public class PlayerDossierPanelUI : MonoBehaviour
     [SerializeField] private TextMeshProUGUI brnRatingText;
 
     // ─────────────────────────────────────────────────────────────
-    // PAGE 6 – BRN RÉSUMÉ
+    // PAGE 5 – BRN RÉSUMÉ
     // ─────────────────────────────────────────────────────────────
-    [Header("Page 6 - BRN Résumé")]
+    [Header("Page 5 - BRN Résumé")]
     [SerializeField] private TextMeshProUGUI resumeLinesText;
     [SerializeField] private TextMeshProUGUI resumeNoteText;
+
+    // ─────────────────────────────────────────────────────────────
+    // PAGE 6 – ACHIEVEMENTS (FINAL PAGE)
+    // ─────────────────────────────────────────────────────────────
+    [Header("Page 6 - Achievements")]
+    [SerializeField] private Transform achievementRowParent;
+    [SerializeField] private PlayerDossierAchievementRowUI achievementRowPrefab;
+    [SerializeField] private Slider achievementCompletionSlider;
+    [SerializeField] private TextMeshProUGUI achievementCompletionText;
+
+    private readonly List<PlayerDossierAchievementRowUI> _achievementRows = new List<PlayerDossierAchievementRowUI>();
 
     private int _currentPageIndex = 0;
 
     private void Awake()
     {
-        if (prevButton != null)
-            prevButton.onClick.AddListener(OnPrevClicked);
-
-        if (nextButton != null)
-            nextButton.onClick.AddListener(OnNextClicked);
-
-        if (closeButton != null)
-            closeButton.onClick.AddListener(OnCloseClicked);
+        if (prevButton != null) prevButton.onClick.AddListener(OnPrevClicked);
+        if (nextButton != null) nextButton.onClick.AddListener(OnNextClicked);
+        if (closeButton != null) closeButton.onClick.AddListener(OnCloseClicked);
     }
 
     private void OnEnable()
@@ -129,9 +125,9 @@ public class PlayerDossierPanelUI : MonoBehaviour
             PopulatePage1(snapshot);
             PopulatePage2(snapshot);
             PopulatePage3(snapshot);
-            PopulatePage4Achievements(snapshot);
-            PopulatePage5Resources(snapshot);
-            PopulatePage6Resume(snapshot);
+            PopulatePage4Resources(snapshot);
+            PopulatePage5Resume(snapshot);
+            PopulatePage6Achievements(snapshot);
         }
         else
         {
@@ -139,22 +135,17 @@ public class PlayerDossierPanelUI : MonoBehaviour
             PopulatePage1(null);
             PopulatePage2(null);
             PopulatePage3(null);
-            PopulatePage4Achievements(null);
-            PopulatePage5Resources(null);
-            PopulatePage6Resume(null);
+            PopulatePage4Resources(null);
+            PopulatePage5Resume(null);
+            PopulatePage6Achievements(null);
         }
     }
 
     private void OnDestroy()
     {
-        if (prevButton != null)
-            prevButton.onClick.RemoveListener(OnPrevClicked);
-
-        if (nextButton != null)
-            nextButton.onClick.RemoveListener(OnNextClicked);
-
-        if (closeButton != null)
-            closeButton.onClick.RemoveListener(OnCloseClicked);
+        if (prevButton != null) prevButton.onClick.RemoveListener(OnPrevClicked);
+        if (nextButton != null) nextButton.onClick.RemoveListener(OnNextClicked);
+        if (closeButton != null) closeButton.onClick.RemoveListener(OnCloseClicked);
     }
 
     // ─────────────────────────────────────────────────────────────
@@ -195,7 +186,7 @@ public class PlayerDossierPanelUI : MonoBehaviour
 
     private void RefreshNavigationUI()
     {
-        int totalPages   = (pages != null) ? pages.Length : 0;
+        int totalPages = (pages != null) ? pages.Length : 0;
         int displayIndex = _currentPageIndex + 1;
 
         if (pageLabelText != null)
@@ -224,8 +215,7 @@ public class PlayerDossierPanelUI : MonoBehaviour
         for (int i = 0; i < totalPages; i++)
         {
             sb.Append(i == currentIndex ? '•' : '○');
-            if (i < totalPages - 1)
-                sb.Append(' ');
+            if (i < totalPages - 1) sb.Append(' ');
         }
         return sb.ToString();
     }
@@ -239,13 +229,13 @@ public class PlayerDossierPanelUI : MonoBehaviour
         if (stats == null)
         {
             if (handlerNameText != null) handlerNameText.text = "Handler: BRN Operator";
-            if (rankText != null)        rankText.text = "Rank: Trainee";
+            if (rankText != null) rankText.text = "Rank: Trainee";
             if (operationIdText != null) operationIdText.text = "Operation ID: BRN-0000-XXXX";
 
-            if (totalBitlingsText != null)      totalBitlingsText.text = "Total Bitlings Managed:   0";
-            if (discoveredSpeciesText != null)  discoveredSpeciesText.text = "Discovered Species:       0";
-            if (avgLevelText != null)           avgLevelText.text = "Average Bitling Level:     0";
-            if (shinyCountText != null)         shinyCountText.text = "Shiny Bitlings:            0";
+            if (totalBitlingsText != null) totalBitlingsText.text = "Total Bitlings Managed:   0";
+            if (discoveredSpeciesText != null) discoveredSpeciesText.text = "Discovered Species:       0";
+            if (avgLevelText != null) avgLevelText.text = "Average Bitling Level:     0";
+            if (shinyCountText != null) shinyCountText.text = "Shiny Bitlings:            0";
 
             if (careScoreFillImage != null)
             {
@@ -256,18 +246,18 @@ public class PlayerDossierPanelUI : MonoBehaviour
             }
 
             if (careScoreValueText != null) careScoreValueText.text = "0%";
-            if (careScoreNoteText != null)  careScoreNoteText.text = "BRN notes: No data available.";
+            if (careScoreNoteText != null) careScoreNoteText.text = "BRN notes: No data available.";
             return;
         }
 
         if (handlerNameText != null) handlerNameText.text = stats.handlerName;
-        if (rankText != null)        rankText.text = stats.rankName;
+        if (rankText != null) rankText.text = stats.rankName;
         if (operationIdText != null) operationIdText.text = stats.operationId;
 
-        if (totalBitlingsText != null)     totalBitlingsText.text = $"Total Bitlings Managed:   {stats.totalOwnedBitlings}";
+        if (totalBitlingsText != null) totalBitlingsText.text = $"Total Bitlings Managed:   {stats.totalOwnedBitlings}";
         if (discoveredSpeciesText != null) discoveredSpeciesText.text = $"Discovered Species:       {stats.discoveredSpecies}";
-        if (avgLevelText != null)          avgLevelText.text = $"Average Bitling Level:     {stats.averageLevel:0}";
-        if (shinyCountText != null)        shinyCountText.text = $"Shiny Bitlings:            {stats.shinyOwned}";
+        if (avgLevelText != null) avgLevelText.text = $"Average Bitling Level:     {stats.averageLevel:0}";
+        if (shinyCountText != null) shinyCountText.text = $"Shiny Bitlings:            {stats.shinyOwned}";
 
         float normalized = Mathf.Clamp01(stats.careScorePercent / 100f);
 
@@ -280,7 +270,7 @@ public class PlayerDossierPanelUI : MonoBehaviour
         }
 
         if (careScoreValueText != null) careScoreValueText.text = $"{stats.careScorePercent:0}%";
-        if (careScoreNoteText != null)  careScoreNoteText.text = stats.careScoreNote;
+        if (careScoreNoteText != null) careScoreNoteText.text = stats.careScoreNote;
     }
 
     // ─────────────────────────────────────────────────────────────
@@ -320,21 +310,21 @@ public class PlayerDossierPanelUI : MonoBehaviour
         if (stats == null)
         {
             if (encountersInitiatedText != null) encountersInitiatedText.text = "Encounters Initiated:   0";
-            if (captureSuccessRateText != null)  captureSuccessRateText.text = "Capture Success Rate:   0%";
-            if (riftStabilizationsText != null)  riftStabilizationsText.text = "Rift Stabilizations:    0";
-            if (rareBitlingsFoundText != null)   rareBitlingsFoundText.text = "Rare Bitlings Found:    0";
-            if (shinyDiscoveriesText != null)    shinyDiscoveriesText.text = "Shiny Discoveries:      0";
-            if (longestCaptureStreakText != null)longestCaptureStreakText.text = "Longest Capture Streak: 0";
-            if (fieldOpsHighlightsText != null)  fieldOpsHighlightsText.text = "Recent Highlights:\n—";
+            if (captureSuccessRateText != null) captureSuccessRateText.text = "Capture Success Rate:   0%";
+            if (riftStabilizationsText != null) riftStabilizationsText.text = "Rift Stabilizations:    0";
+            if (rareBitlingsFoundText != null) rareBitlingsFoundText.text = "Rare Bitlings Found:    0";
+            if (shinyDiscoveriesText != null) shinyDiscoveriesText.text = "Shiny Discoveries:      0";
+            if (longestCaptureStreakText != null) longestCaptureStreakText.text = "Longest Capture Streak: 0";
+            if (fieldOpsHighlightsText != null) fieldOpsHighlightsText.text = "Recent Highlights:\n—";
             return;
         }
 
         if (encountersInitiatedText != null) encountersInitiatedText.text = $"Encounters Initiated:   {stats.encountersInitiated}";
-        if (captureSuccessRateText != null)  captureSuccessRateText.text = $"Capture Success Rate:   {stats.captureSuccessRate}%";
-        if (riftStabilizationsText != null)  riftStabilizationsText.text = $"Rift Stabilizations:    {stats.riftStabilizations}";
-        if (rareBitlingsFoundText != null)   rareBitlingsFoundText.text = $"Rare Bitlings Found:    {stats.rareBitlingsFound}";
-        if (shinyDiscoveriesText != null)    shinyDiscoveriesText.text = $"Shiny Discoveries:      {stats.shinyDiscoveries}";
-        if (longestCaptureStreakText != null)longestCaptureStreakText.text = $"Longest Capture Streak: {stats.longestCaptureStreak}";
+        if (captureSuccessRateText != null) captureSuccessRateText.text = $"Capture Success Rate:   {stats.captureSuccessRate}%";
+        if (riftStabilizationsText != null) riftStabilizationsText.text = $"Rift Stabilizations:    {stats.riftStabilizations}";
+        if (rareBitlingsFoundText != null) rareBitlingsFoundText.text = $"Rare Bitlings Found:    {stats.rareBitlingsFound}";
+        if (shinyDiscoveriesText != null) shinyDiscoveriesText.text = $"Shiny Discoveries:      {stats.shinyDiscoveries}";
+        if (longestCaptureStreakText != null) longestCaptureStreakText.text = $"Longest Capture Streak: {stats.longestCaptureStreak}";
 
         if (fieldOpsHighlightsText != null)
             fieldOpsHighlightsText.text = (stats.fieldOpsHighlights == null || stats.fieldOpsHighlights.Length == 0)
@@ -343,87 +333,29 @@ public class PlayerDossierPanelUI : MonoBehaviour
     }
 
     // ─────────────────────────────────────────────────────────────
-    // Page 4 – Achievements (NEW)
+    // Page 4 – Resources
     // ─────────────────────────────────────────────────────────────
 
-    private void PopulatePage4Achievements(PlayerDossierSnapshot stats)
+    private void PopulatePage4Resources(PlayerDossierSnapshot s)
     {
-        if (achievementRowParent == null || achievementRowPrefab == null)
-            return;
+        if (s == null) return;
 
-        if (stats == null || stats.achievements == null)
-        {
-            for (int i = 0; i < _achievementRows.Count; i++)
-                _achievementRows[i].gameObject.SetActive(false);
-
-            if (achievementCompletionText) achievementCompletionText.text = "0/0 Unlocked";
-            if (achievementCompletionSlider)
-            {
-                achievementCompletionSlider.minValue = 0;
-                achievementCompletionSlider.maxValue = 1;
-                achievementCompletionSlider.value = 0;
-            }
-            return;
-        }
-
-        // Header / completion
-        int unlocked = Mathf.Max(0, stats.achievementsUnlocked);
-        int total    = Mathf.Max(1, stats.achievementsTotal);
-
-        if (achievementCompletionText)
-            achievementCompletionText.text = $"{unlocked}/{total} Unlocked";
-
-        if (achievementCompletionSlider)
-        {
-            achievementCompletionSlider.minValue = 0;
-            achievementCompletionSlider.maxValue = total;
-            achievementCompletionSlider.value = unlocked;
-
-            LeanTween.cancel(achievementCompletionSlider.gameObject);
-            float from = achievementCompletionSlider.value;
-            LeanTween.value(achievementCompletionSlider.gameObject, from, unlocked, 0.25f)
-                .setOnUpdate(v => achievementCompletionSlider.value = v);
-        }
-
-        int needed = stats.achievements.Length;
-
-        while (_achievementRows.Count < needed)
-            _achievementRows.Add(Instantiate(achievementRowPrefab, achievementRowParent));
-
-        for (int i = 0; i < _achievementRows.Count; i++)
-        {
-            if (i < needed)
-                _achievementRows[i].Bind(stats.achievements[i]);
-            else
-                _achievementRows[i].gameObject.SetActive(false);
-        }
-    }
-
-    // ─────────────────────────────────────────────────────────────
-    // Page 5 – Resources (was Page 4)
-    // ─────────────────────────────────────────────────────────────
-
-    private void PopulatePage5Resources(PlayerDossierSnapshot s)
-    {
-        if (s == null)
-            return;
-
-        if (materialText)          materialText.text = $"Ingot Materials: {s.materialCount:N0}";
-        if (energyText)            energyText.text = $"Harbor Cargo: {s.energyCount:N0}";
-        if (workOrderText)         workOrderText.text = $"Capture Bands: {s.captureBandCount}";
-        if (blessingScaleText)     blessingScaleText.text = $"Blessing Tokens: {s.blessingScaleCount}";
-        if (favorText)             favorText.text = $"Luck Orbs: {s.luckCount}";
-        if (flyerText)             flyerText.text = $"Shiny Lures: {s.lureCount}";
-        if (growthCoreText)        growthCoreText.text = $"Growth Cores: {s.growthCoreCount}";
-        if (packVoucherText)       packVoucherText.text = $"Shards: {s.packVoucherCount}";
-        if (creditsText)           creditsText.text = $"credits: {s.creditCount:N0}";
-        if (medkitText)            medkitText.text = $"Medkits: {s.medkitCount}";
-        if (pPEPermitText)         pPEPermitText.text = $"Type Shields: {s.typeResBoosterCount}";
-        if (trainingVoucherText)   trainingVoucherText.text = $"Attack Boosters: {s.atkBoosterCount}";
-        if (wellnessVoucherText)   wellnessVoucherText.text = $"HP Boosters: {s.hpBoosterCount}";
+        if (materialText) materialText.text = $"Ingot Materials: {s.materialCount:N0}";
+        if (energyText) energyText.text = $"Harbor Cargo: {s.energyCount:N0}";
+        if (workOrderText) workOrderText.text = $"Capture Bands: {s.captureBandCount}";
+        if (blessingScaleText) blessingScaleText.text = $"Blessing Tokens: {s.blessingScaleCount}";
+        if (favorText) favorText.text = $"Luck Orbs: {s.luckCount}";
+        if (flyerText) flyerText.text = $"Shiny Lures: {s.lureCount}";
+        if (growthCoreText) growthCoreText.text = $"Growth Cores: {s.growthCoreCount}";
+        if (packVoucherText) packVoucherText.text = $"Shards: {s.packVoucherCount}";
+        if (creditsText) creditsText.text = $"Credits: {s.creditCount:N0}";
+        if (medkitText) medkitText.text = $"Medkits: {s.medkitCount}";
+        if (pPEPermitText) pPEPermitText.text = $"Type Shields: {s.typeResBoosterCount}";
+        if (trainingVoucherText) trainingVoucherText.text = $"Attack Boosters: {s.atkBoosterCount}";
+        if (wellnessVoucherText) wellnessVoucherText.text = $"HP Boosters: {s.hpBoosterCount}";
         if (efficiencyVoucherText) efficiencyVoucherText.text = $"Speed Boosters: {s.speedBoosterCount}";
-        if (shinyOrbText)          shinyOrbText.text = $"Shiny Orbs: {s.shinyOrbCount}";
-        if (coffeeText)            coffeeText.text = $"Rest Charges: {s.restChargeCount}";
+        if (shinyOrbText) shinyOrbText.text = $"Shiny Orbs: {s.shinyOrbCount}";
+        if (coffeeText) coffeeText.text = $"Rest Charges: {s.restChargeCount}";
 
         float normalized = Mathf.Clamp01(s.conversionEfficiencyPercent / 100f);
 
@@ -436,31 +368,30 @@ public class PlayerDossierPanelUI : MonoBehaviour
         if (brnRatingText)
         {
             int eff = s.conversionEfficiencyPercent;
-            string rating =
+            brnRatingText.text =
                 eff >= 70 ? "BRN Rating: Critical Asset" :
                 eff >= 40 ? "BRN Rating: High-Performance Handler" :
                             "BRN Rating: Stable Operator";
-            brnRatingText.text = rating;
         }
     }
 
     // ─────────────────────────────────────────────────────────────
-    // Page 6 – Résumé (was Page 5)
+    // Page 5 – Résumé
     // ─────────────────────────────────────────────────────────────
 
-    private void PopulatePage6Resume(PlayerDossierSnapshot stats)
+    private void PopulatePage5Resume(PlayerDossierSnapshot stats)
     {
-        if (resumeLinesText == null && resumeNoteText == null)
-            return;
+        if (resumeLinesText == null && resumeNoteText == null) return;
 
-        if (stats == null)
-            return;
+        if (stats == null) return;
 
         if (resumeLinesText != null)
         {
             if (stats.resumeLines == null || stats.resumeLines.Length == 0)
             {
-                resumeLinesText.text = "• No significant events recorded yet.\n• Continue operating job sites and handling field encounters.";
+                resumeLinesText.text =
+                    "• No significant events recorded yet.\n" +
+                    "• Continue operating job sites and handling field encounters.";
             }
             else
             {
@@ -480,6 +411,73 @@ public class PlayerDossierPanelUI : MonoBehaviour
             resumeNoteText.text = string.IsNullOrEmpty(stats.brnResumeNote)
                 ? "Handler performance remains under review."
                 : stats.brnResumeNote;
+        }
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // Page 6 – Achievements (FINAL PAGE)
+    // ─────────────────────────────────────────────────────────────
+
+    private void PopulatePage6Achievements(PlayerDossierSnapshot stats)
+    {
+        if (achievementRowParent == null || achievementRowPrefab == null)
+        {
+            Debug.LogWarning("[PlayerDossierPanelUI] Achievements refs missing: achievementRowParent or achievementRowPrefab.");
+            return;
+        }
+
+        if (stats == null || stats.achievements == null)
+        {
+            for (int i = 0; i < _achievementRows.Count; i++)
+                _achievementRows[i].gameObject.SetActive(false);
+
+            if (achievementCompletionText) achievementCompletionText.text = "Commendations Issued: 0 / 0";
+            if (achievementCompletionSlider)
+            {
+                achievementCompletionSlider.minValue = 0;
+                achievementCompletionSlider.maxValue = 1;
+                achievementCompletionSlider.value = 0;
+            }
+            return;
+        }
+
+        int unlocked = Mathf.Max(0, stats.achievementsUnlocked);
+        int total = Mathf.Max(1, stats.achievementsTotal);
+
+        if (achievementCompletionText)
+            achievementCompletionText.text = $"Commendations Issued: {unlocked} / {total}";
+
+        if (achievementCompletionSlider)
+        {
+            LeanTween.cancel(achievementCompletionSlider.gameObject);
+
+            achievementCompletionSlider.minValue = 0;
+            achievementCompletionSlider.maxValue = total;
+
+            float from = achievementCompletionSlider.value;
+            float to = unlocked;
+
+            // If the slider hasn't been initialized yet, snap then animate
+            if (from <= 0f && unlocked > 0)
+                from = 0f;
+
+            achievementCompletionSlider.value = from;
+
+            LeanTween.value(achievementCompletionSlider.gameObject, from, to, 0.25f)
+                .setOnUpdate(v => { if (achievementCompletionSlider) achievementCompletionSlider.value = v; });
+        }
+
+        int needed = stats.achievements.Length;
+
+        while (_achievementRows.Count < needed)
+            _achievementRows.Add(Instantiate(achievementRowPrefab, achievementRowParent));
+
+        for (int i = 0; i < _achievementRows.Count; i++)
+        {
+            if (i < needed)
+                _achievementRows[i].Bind(stats.achievements[i]);
+            else
+                _achievementRows[i].gameObject.SetActive(false);
         }
     }
 }
