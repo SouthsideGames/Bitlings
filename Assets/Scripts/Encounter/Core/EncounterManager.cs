@@ -85,7 +85,7 @@ public partial class EncounterManager : MonoBehaviour
 
         NormalizeTeamHPIfUninitialized();
         GameEvents.WinStreakChanged?.Invoke(_currentWinStreak);
-        
+
         GameEvents.EnergyChanged?.Invoke();
         OnStateChanged?.Invoke();
     }
@@ -571,7 +571,7 @@ public partial class EncounterManager : MonoBehaviour
             var om = team[i];
             if (om == null || string.IsNullOrEmpty(om.monsterId)) continue;
 
-            if (om.currentHP >= 0) continue; 
+            if (om.currentHP >= 0) continue;
 
             var def = lib.GetById(om.monsterId);
             if (!def) continue;
@@ -693,4 +693,97 @@ public partial class EncounterManager : MonoBehaviour
     {
         return TryCatchWithResult(def, level, out _);
     }
+    
+    /// <summary>
+    /// Starts an encounter against a specific monster ID. Intended for cheats / QA.
+    /// Returns false with a reason if the encounter can't start.
+    /// </summary>
+    public bool RequestForcedEncounter(string monsterId, bool spendEnergy, out string reason)
+    {
+        reason = null;
+
+        if (inBattle) { reason = "Already in battle."; return false; }
+
+        var data = SaveManager.Data;
+        if (data == null || data.team == null || data.team.Count == 0)
+        {
+            reason = "No team yet. Catch something to begin!";
+            StopAuto_NoEnergy();
+            return false;
+        }
+
+        if (!HasHealthyMonsters())
+        {
+            reason = "All team members are down. Heal up first.";
+            StopAuto_NoEnergy();
+            return false;
+        }
+
+        if (string.IsNullOrWhiteSpace(monsterId))
+        {
+            reason = "Monster ID is empty.";
+            return false;
+        }
+
+        monsterId = monsterId.Trim();
+        MonsterDataSO wild = MonsterLibraryLocator.GetById(monsterId);
+        if (wild == null)
+        {
+            reason = $"Monster '{monsterId}' not found.";
+            return false;
+        }
+
+        if (spendEnergy)
+        {
+            if (!HasEnergy()) { reason = "Out of energy!"; return false; }
+            if (!SpendEnergy()) { reason = "Out of energy!"; return false; }
+        }
+
+        // Forced encounters are never bosses.
+        _currentEncounterIsBoss = false;
+        _currentBossUsed = null;
+
+        FieldOpsTracker.RecordEncounter(wild);
+
+        if (EncounterPanelUI.I)
+            EncounterPanelUI.I.OnWildSpawned(wild);
+
+        NotifyAuto_SpecialSpawn(wild);
+
+        int avgTeamLvl = 1;
+        if (data.team != null && data.team.Count > 0)
+        {
+            int sum = 0;
+            for (int i = 0; i < data.team.Count; i++)
+                sum += data.team[i].level;
+            avgTeamLvl = Mathf.Max(1, Mathf.RoundToInt((float)sum / data.team.Count));
+        }
+
+        int wildLevel = Mathf.Clamp(avgTeamLvl + UnityEngine.Random.Range(-1, 2), 1, 99);
+
+        PlayEncounterSfx(wild);
+
+        var p = data.team[0];
+        EmitStatus($"Encounter! A wild {wild.displayName} (Lv {wildLevel}) appears.{(p.flatAtkBonus > 0 ? $" (+ATK {p.flatAtkBonus})" : "")}");
+
+        BattleLogger.BeginEncounter($"{wild.displayName} Lv{wildLevel}");
+
+        inBattle = true;
+        OnStateChanged?.Invoke();
+
+        if (!battleManager)
+        {
+            reason = "No BattleManager assigned.";
+            inBattle = false;
+            OnStateChanged?.Invoke();
+            return false;
+        }
+
+        PostBattleSummaryManager.I?.NotifyBattleStart();
+
+        _manualHirePending = false;
+        battleManager.Begin(wild, wildLevel, OnBattleEnded);
+        return true;
+    }
+
 }

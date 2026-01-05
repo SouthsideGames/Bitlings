@@ -6668,6 +6668,7 @@ MonoBehaviour:
     lastEncounterResetYMD: 0
     dailyBonusDay: 1
     lastDailyClaimDayIndex: -1
+    forceShinyCapturesRemaining: 0
     trainingMonsterId: 
     trainingMonsterLevel: 0
     pendingIdleXP: 0
@@ -29571,6 +29572,7 @@ MonoBehaviour:
     lastEncounterResetYMD: 0
     dailyBonusDay: 1
     lastDailyClaimDayIndex: -1
+    forceShinyCapturesRemaining: 0
     trainingMonsterId: 
     trainingMonsterLevel: 0
     pendingIdleXP: 0
@@ -34468,56 +34470,161 @@ MonoBehaviour:
     effect: 3
     resourceType: 0
     amount: 0
+    hours: 1
+    monsterId: 
+    spendEnergy: 0
   - code: F1LL1TUP
     description: Refills encounter energy to max.
     effect: 2
     resourceType: 0
     amount: 0
+    hours: 1
+    monsterId: 
+    spendEnergy: 0
   - code: SHOWMETHEMONEY
     description: Adds 1000 coins.
     effect: 1
     resourceType: 1
     amount: 1000
+    hours: 1
+    monsterId: 
+    spendEnergy: 0
   - code: SH1NYRA1N
     description: Adds 50 shiny orbs.
     effect: 1
     resourceType: 12
     amount: 50
+    hours: 1
+    monsterId: 
+    spendEnergy: 0
   - code: M3D1T!
     description: "Adds 50 medkits.\t"
     effect: 1
     resourceType: 3
     amount: 50
+    hours: 1
+    monsterId: 
+    spendEnergy: 0
   - code: 1RON
     description: Adds 500 materials.
     effect: 1
     resourceType: 4
     amount: 500
+    hours: 1
+    monsterId: 
+    spendEnergy: 0
   - code: $1G1L$
     description: Adds 25 sigils.
     effect: 1
     resourceType: 5
     amount: 25
+    hours: 1
+    monsterId: 
+    spendEnergy: 0
   - code: LUR3$
     description: Adds 10 lures.
     effect: 1
     resourceType: 6
     amount: 10
+    hours: 1
+    monsterId: 
+    spendEnergy: 0
   - code: C@P
     description: Adds 10 capture bands.
     effect: 1
     resourceType: 7
     amount: 10
+    hours: 1
+    monsterId: 
+    spendEnergy: 0
   - code: $H@RD$
     description: Adds 100 pack vouchers
     effect: 1
     resourceType: 17
     amount: 100
+    hours: 1
+    monsterId: 
+    spendEnergy: 0
   - code: COR3$
     description: Adds 200 growth cores.
     effect: 1
     resourceType: 16
     amount: 200
+    hours: 1
+    monsterId: 
+    spendEnergy: 0
+  - code: $3T_CR3D1t$_99999
+    description: Adds 9999 credits.
+    effect: 1
+    resourceType: 1
+    amount: 9999
+    hours: 1
+    monsterId: 
+    spendEnergy: 0
+  - code: R3$3T_COOLDOWN$
+    description: Reset all cooldowns.
+    effect: 8
+    resourceType: 1
+    amount: 9999
+    hours: 1
+    monsterId: 
+    spendEnergy: 0
+  - code: CL3@R_FAT1GU3
+    description: Clear all job fatigue
+    effect: 9
+    resourceType: 1
+    amount: 9999
+    hours: 1
+    monsterId: 
+    spendEnergy: 0
+  - code: D1SCOV3R_@LL
+    description: Discover all monsters
+    effect: 10
+    resourceType: 1
+    amount: 9999
+    hours: 1
+    monsterId: 
+    spendEnergy: 0
+  - code: F1GHT_M001
+    description: Start encounter with a monster ID.
+    effect: 11
+    resourceType: 1
+    amount: 9999
+    hours: 1
+    monsterId: M-001
+    spendEnergy: 0
+  - code: $HINY_N3XT
+    description: Next encounter will be a shiny.
+    effect: 12
+    resourceType: 1
+    amount: 0
+    hours: 1
+    monsterId: 
+    spendEnergy: 0
+  - code: R3V1V3_T3@M
+    description: Revive all monsters.
+    effect: 13
+    resourceType: 1
+    amount: 0
+    hours: 1
+    monsterId: 
+    spendEnergy: 0
+  - code: H3@L_T3@M
+    description: 'Heal the whole team. '
+    effect: 14
+    resourceType: 1
+    amount: 0
+    hours: 1
+    monsterId: 
+    spendEnergy: 0
+  - code: UNLOCK_ALL_P@CK$
+    description: Unlock all monster packs.
+    effect: 15
+    resourceType: 1
+    amount: 0
+    hours: 1
+    monsterId: 
+    spendEnergy: 0
 --- !u!1 &510952519
 GameObject:
   m_ObjectHideFlags: 0

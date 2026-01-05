@@ -48,7 +48,7 @@ public partial class EncounterManager
     {
         if (amount == 0) return;
 
-        int max    = GetEncounterMax();
+        int max = GetEncounterMax();
         int before = GetBankEnergy();
 
         int next = before + amount;
@@ -60,7 +60,7 @@ public partial class EncounterManager
         SetBankEnergy(next);
         ClampEnergyBank();
 
-        int after  = GetBankEnergy();
+        int after = GetBankEnergy();
         int gained = Mathf.Max(0, after - before);
 
         SetEnergyLastUnix(NowUnix());
@@ -136,7 +136,7 @@ public partial class EncounterManager
             return;
         }
 
-        long now  = NowUnix();
+        long now = NowUnix();
         long last = GetEnergyLastUnix();
         if (last <= 0) last = now;
 
@@ -260,4 +260,15 @@ public partial class EncounterManager
     }
 
     static long NowUnix() => DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+    
+    /// <summary>
+    /// Forces an immediate offline energy regen pass (uses energyLastUnix / energyRemainderSecs).
+    /// Useful for cheats that simulate time passage.
+    /// </summary>
+    public void Cheat_ApplyOfflineEnergyRegen()
+    {
+        ApplyOfflineRegen();
+        OnStateChanged?.Invoke();
+    }
+
 }

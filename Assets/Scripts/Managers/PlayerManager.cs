@@ -145,7 +145,7 @@ public class PlayerManager
     public int lastEncounterResetYMD = 0;
     public int dailyBonusDay = 1;            // 1-based day in the current cycle
     public int lastDailyClaimDayIndex = -1;
-
+    public int forceShinyCapturesRemaining = 0;
     public string trainingMonsterId = null;
     public int trainingMonsterLevel = 0;
     public int pendingIdleXP = 0;

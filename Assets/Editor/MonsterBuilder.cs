@@ -69,14 +69,17 @@ public sealed class MonsterBuilder : EditorWindow
     [SerializeField] private bool routeMonstersByTypeFolder = true;
     [SerializeField] private bool moveExistingMonstersToTypeFolder = true;
 
-[Header("Pack Routing")]
-[SerializeField] private bool routeMonstersToPackFolders = false;
+    [Header("Pack Routing")]
+    [SerializeField] private bool routeMonstersToPackFolders = false;
 
-[Tooltip("If true, reads Pack Name from CSV column 'Pack Name'. If false, uses Pack Name Override for all rows.")]
-[SerializeField] private bool packNameFromCsv = true;
+    [Tooltip("If true, reads Pack Name from CSV column 'Pack Name'. If false, uses Pack Name Override for all rows.")]
+    [SerializeField] private bool packNameFromCsv = true;
 
-[Tooltip("Used when Pack Name From CSV is OFF (applies to all rows).")]
-[SerializeField] private string packNameOverride = "Season_01";
+    [Tooltip("Used when Pack Name From CSV is OFF (applies to all rows). Also used when Force Single Pack Folder is ON.")]
+    [SerializeField] private string packNameOverride = "Season_01";
+
+    [Tooltip("If ON, ALL pack-routed monsters go into ONE pack folder (Pack Name Override). CSV Pack Name is ignored for folder routing.")]
+    [SerializeField] private bool forceSinglePackFolder = true;
 
     [Header("Monster Asset Naming")]
     [Tooltip("If enabled, monster asset files are renamed to Monster_<NoSpacesName>.asset")]
@@ -287,15 +290,25 @@ public sealed class MonsterBuilder : EditorWindow
             moveExistingMonstersToTypeFolder = EditorGUILayout.Toggle("Move Existing Monsters To Type Folder", moveExistingMonstersToTypeFolder);
         }
 
-EditorGUILayout.Space();
-EditorGUILayout.LabelField("Pack Routing", EditorStyles.boldLabel);
-routeMonstersToPackFolders = EditorGUILayout.Toggle("Route Monsters To Pack Folders", routeMonstersToPackFolders);
-using (new EditorGUI.DisabledScope(!routeMonstersToPackFolders))
-{
-    packNameFromCsv = EditorGUILayout.Toggle("Pack Name From CSV Column", packNameFromCsv);
-    using (new EditorGUI.DisabledScope(packNameFromCsv))
-        packNameOverride = EditorGUILayout.TextField("Pack Name Override", packNameOverride);
-}
+        EditorGUILayout.Space();
+        EditorGUILayout.LabelField("Pack Routing", EditorStyles.boldLabel);
+        routeMonstersToPackFolders = EditorGUILayout.Toggle("Route Monsters To Pack Folders", routeMonstersToPackFolders);
+        using (new EditorGUI.DisabledScope(!routeMonstersToPackFolders))
+        {
+            forceSinglePackFolder = EditorGUILayout.Toggle("Force Single Pack Folder", forceSinglePackFolder);
+
+            using (new EditorGUI.DisabledScope(forceSinglePackFolder))
+            {
+                packNameFromCsv = EditorGUILayout.Toggle("Pack Name From CSV Column", packNameFromCsv);
+            }
+
+            packNameOverride = EditorGUILayout.TextField("Pack Name Override", packNameOverride);
+
+            if (forceSinglePackFolder && string.IsNullOrWhiteSpace(packNameOverride))
+            {
+                EditorGUILayout.HelpBox("Force Single Pack Folder is ON, but Pack Name Override is blank. Pack routing will fall back to Main (non-pack).", MessageType.Warning);
+            }
+        }
 
         EditorGUILayout.Space();
         EditorGUILayout.LabelField("Monster Asset Naming", EditorStyles.boldLabel);
@@ -361,7 +374,7 @@ using (new EditorGUI.DisabledScope(!routeMonstersToPackFolders))
             "Notes:\n" +
             "- Monster assets can be renamed to Monster_<Token>.asset.\n" +
             "- If 'Sync Monster SO .name to Asset' is enabled, the ScriptableObject internal name is also updated.\n" +
-            "- This prevents cases where the asset filename changes but the object name stays old.\n",
+            "- Pack Routing: With 'Force Single Pack Folder' ON, all pack monsters route to Packs/<PackNameOverride>/<Rarity>.\n",
             MessageType.Info
         );
 
@@ -521,11 +534,19 @@ using (new EditorGUI.DisabledScope(!routeMonstersToPackFolders))
                     MonsterType parsedType = MonsterType.None;
                     TryParseEnum(Get(row, headerMap, "Type"), out parsedType);
 
-                    // Pack routing: if Pack Name contains "Main" (or is blank), treat as non-pack.
-                    string packNameCell = Get(row, headerMap, "Pack Name").Trim();
-                    string packName = packNameFromCsv ? packNameCell : (packNameOverride ?? "").Trim();
-                    bool isMainMonster = IsMainPackName(packName);
-                    bool isPackMonster = routeMonstersToPackFolders && !isMainMonster;
+                    // ---- Pack routing decision (UPDATED) ----
+                    string packNameCellRaw = Get(row, headerMap, "Pack Name").Trim();
+
+                    // Determine the "intended" pack name based on settings.
+                    // If ForceSinglePackFolder is ON, we will use packNameOverride for folder routing.
+                    string packNameIntended;
+                    if (routeMonstersToPackFolders && forceSinglePackFolder)
+                        packNameIntended = (packNameOverride ?? "").Trim();
+                    else
+                        packNameIntended = packNameFromCsv ? packNameCellRaw : (packNameOverride ?? "").Trim();
+
+                    bool isMainMonster = IsMainPackName(packNameIntended);
+                    bool isPackMonster = routeMonstersToPackFolders && !isMainMonster && !string.IsNullOrWhiteSpace(packNameIntended);
 
                     // Counts for summary (valid ID rows only)
                     if (isPackMonster) packRows++; else mainRows++;
@@ -543,7 +564,7 @@ using (new EditorGUI.DisabledScope(!routeMonstersToPackFolders))
                             // Uses: Assets/Data/Monsters/Packs/<PackName>/<Rarity>
                             Rarity rParsed = Rarity.Common;
                             TryParseEnum(Get(row, headerMap, "Rarity"), out rParsed);
-                            folder = EnsurePackRarityFolder(monsterRootPath, packName, rParsed);
+                            folder = EnsurePackRarityFolder(monsterRootPath, packNameIntended, rParsed);
                         }
                         else
                         {
@@ -620,7 +641,7 @@ using (new EditorGUI.DisabledScope(!routeMonstersToPackFolders))
                         if (any) setSpriteRefs++;
                     }
 
-                    // Defer monster move/rename
+                    // Defer monster move/rename (never move pack monsters into type folders)
                     if (!isPackMonster && routeMonstersByTypeFolder && moveExistingMonstersToTypeFolder)
                     {
                         string desiredFolder = EnsureTypeFolder(monsterRootPath, monster.type);
@@ -798,8 +819,6 @@ using (new EditorGUI.DisabledScope(!routeMonstersToPackFolders))
                 }
                 else
                 {
-                    // Even if file name didn't change, we still want to restore old behavior:
-                    // ensure the ScriptableObject internal name matches the asset filename.
                     if (syncMonsterScriptableObjectNameToAsset)
                         SyncObjectNameToAssetFile(monster);
 
@@ -1377,41 +1396,64 @@ using (new EditorGUI.DisabledScope(!routeMonstersToPackFolders))
     private static bool IsMainPackName(string packName)
     {
         packName = (packName ?? "").Trim();
+
+        // Treat blank and NA-like as "Main"
         if (string.IsNullOrWhiteSpace(packName)) return true;
+        if (string.Equals(packName, "N/A", StringComparison.OrdinalIgnoreCase)) return true;
+        if (string.Equals(packName, "NA", StringComparison.OrdinalIgnoreCase)) return true;
+        if (string.Equals(packName, "-", StringComparison.OrdinalIgnoreCase)) return true;
+
         return packName.IndexOf("Main", StringComparison.OrdinalIgnoreCase) >= 0;
     }
 
+    private static string NormalizePackFolderName(string packName)
+    {
+        packName = (packName ?? "").Trim();
+        if (string.IsNullOrWhiteSpace(packName)) return "Unsorted";
+
+        // normalize whitespace -> underscores (prevents "Season 01" vs "Season_01")
+        packName = string.Join("_", packName.Split((char[])null, StringSplitOptions.RemoveEmptyEntries));
+
+        foreach (char c in Path.GetInvalidFileNameChars())
+            packName = packName.Replace(c.ToString(), "");
+
+        if (string.IsNullOrWhiteSpace(packName)) return "Unsorted";
+        return packName;
+    }
+
     private static string EnsureFolder(string parent, string name)
-{
-    name = (name ?? "").Trim();
-    if (string.IsNullOrWhiteSpace(name)) name = "Unsorted";
+    {
+        name = (name ?? "").Trim();
+        if (string.IsNullOrWhiteSpace(name)) name = "Unsorted";
 
-    foreach (char c in Path.GetInvalidFileNameChars())
-        name = name.Replace(c.ToString(), "");
+        foreach (char c in Path.GetInvalidFileNameChars())
+            name = name.Replace(c.ToString(), "");
 
-    if (string.IsNullOrWhiteSpace(name)) name = "Unsorted";
+        if (string.IsNullOrWhiteSpace(name)) name = "Unsorted";
 
-    string desired = $"{parent}/{name}";
-    if (!AssetDatabase.IsValidFolder(desired))
-        AssetDatabase.CreateFolder(parent, name);
+        string desired = $"{parent}/{name}";
+        if (!AssetDatabase.IsValidFolder(desired))
+            AssetDatabase.CreateFolder(parent, name);
 
-    return desired;
-}
+        return desired;
+    }
 
-private static string EnsurePackRarityFolder(string monsterRootPath, string packName, Rarity rarity)
-{
-    // Defensive guard: "Main" is not a real pack and should never create Packs/Main.
-    if (IsMainPackName(packName))
-        throw new ArgumentException("Pack Name is 'Main' (or blank). This row should be routed as a non-pack monster.", nameof(packName));
+    private static string EnsurePackRarityFolder(string monsterRootPath, string packName, Rarity rarity)
+    {
+        // Defensive guard: "Main"/blank/NA is not a real pack and should never create Packs/Main.
+        if (IsMainPackName(packName))
+            throw new ArgumentException("Pack Name is 'Main' (or blank/NA). This row should be routed as a non-pack monster.", nameof(packName));
 
-    // Assets/Data/Monsters/Packs/<PackName>/<Rarity>
-    string packsRoot = EnsureFolder(monsterRootPath, "Packs");
-    string packRoot = EnsureFolder(packsRoot, packName);
-    string rarityFolder = EnsureFolder(packRoot, rarity.ToString());
-    return rarityFolder;
-}
+        packName = NormalizePackFolderName(packName);
 
-private static string EnsureTypeFolder(string rootPath, MonsterType type)
+        // Assets/Data/Monsters/Packs/<PackName>/<Rarity>
+        string packsRoot = EnsureFolder(monsterRootPath, "Packs");
+        string packRoot = EnsureFolder(packsRoot, packName);
+        string rarityFolder = EnsureFolder(packRoot, rarity.ToString());
+        return rarityFolder;
+    }
+
+    private static string EnsureTypeFolder(string rootPath, MonsterType type)
     {
         string typeName = (type == MonsterType.None) ? "Unsorted" : type.ToString();
         string desired = $"{rootPath}/{typeName}";

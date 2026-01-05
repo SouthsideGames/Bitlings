@@ -329,6 +329,10 @@ public partial class EncounterManager
         bool success = roll <= finalChance;
 
         bool isShiny = IsShinyMonster(def);
+
+        if (SaveManager.Data != null && SaveManager.Data.forceShinyCapturesRemaining > 0)
+            isShiny = true;
+
         FieldOpsTracker.RecordCaptureAttempt(def, success, isShiny);
 
         if (success)
@@ -342,8 +346,18 @@ public partial class EncounterManager
                 level = Mathf.Max(1, level),
                 currentHP = -1,
                 currentXP = 0,
-                ownedUID = Guid.NewGuid().ToString("N")
+                ownedUID = Guid.NewGuid().ToString("N"),
+                
+                isShiny = isShiny,
+                shinyTier = isShiny ? 1 : 0
             };
+
+            if (isShiny && SaveManager.Data != null && SaveManager.Data.forceShinyCapturesRemaining > 0)
+            {
+                SaveManager.Data.forceShinyCapturesRemaining =
+                    Mathf.Max(0, SaveManager.Data.forceShinyCapturesRemaining - 1);
+            }
+
             data.owned ??= new List<OwnedMonsterData>();
             data.owned.Add(om);
 

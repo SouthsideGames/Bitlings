@@ -1,0 +1,21 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: af7b65046e5bb554c808c8500b10fe7d, type: 3}
+  m_Name: TitleTrack_Sprigel
+  m_EditorClassIdentifier: 
+  tiers:
+  - levelRequired: 3
+    unlockChoices:
+    - {fileID: 11400000, guid: 53932a21c1d134b4cb9d8dd4287f74ec, type: 2}
+  - levelRequired: 10
+    unlockChoices:
+    - {fileID: 11400000, guid: 3eeae979ed207374383a76bdee55d3a9, type: 2}

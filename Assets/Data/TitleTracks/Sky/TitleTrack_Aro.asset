@@ -1,0 +1,21 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: af7b65046e5bb554c808c8500b10fe7d, type: 3}
+  m_Name: TitleTrack_Aro
+  m_EditorClassIdentifier: 
+  tiers:
+  - levelRequired: 3
+    unlockChoices:
+    - {fileID: 11400000, guid: c169f8806953a684a85f917d9746c60f, type: 2}
+  - levelRequired: 10
+    unlockChoices:
+    - {fileID: 11400000, guid: a289ace2a61ca0e47b454f4b80ebec49, type: 2}

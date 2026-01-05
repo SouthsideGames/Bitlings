@@ -89,7 +89,8 @@ public sealed class JobManager : MonoBehaviour
     [SerializeField] private bool enableStarterDefaultSitesFallback = true;
 
     [Tooltip("Unlocked if the starter type maps to zero sites (edge case).")]
-    [SerializeField] private List<JobType> starterDefaultSites = new List<JobType>
+    [SerializeField]
+    private List<JobType> starterDefaultSites = new List<JobType>
     {
         JobType.Gym,
         JobType.Quarry,
@@ -401,8 +402,8 @@ public sealed class JobManager : MonoBehaviour
 
         // Shiny stacking
         float shinyAura = ShinySystems.SiteShinyAuraMult(s.workers);
-        int shinyCount  = CountShinies(s.workers);
-        float shinySet  = 1f + (shinyCount >= 3 ? shiny3Bonus : (shinyCount == 2 ? shiny2Bonus : (shinyCount == 1 ? shiny1Bonus : 0f)));
+        int shinyCount = CountShinies(s.workers);
+        float shinySet = 1f + (shinyCount >= 3 ? shiny3Bonus : (shinyCount == 2 ? shiny2Bonus : (shinyCount == 1 ? shiny1Bonus : 0f)));
 
         return perHour * shinyAura * shinySet;
     }
@@ -1316,7 +1317,7 @@ public sealed class JobManager : MonoBehaviour
         if (cfg != null && cfg.eligibleTypes != null && cfg.eligibleTypes.Length > 0)
             return Array.Exists(cfg.eligibleTypes, t => t == type);
 
-        return false; 
+        return false;
     }
 
     private JobSiteSO GetSiteConfig(JobType job)
@@ -1336,7 +1337,7 @@ public sealed class JobManager : MonoBehaviour
 
         if (_blessingBuffs == null) _blessingBuffs = new List<BlessingBuff>();
 
-        long now   = SaveManager.NowUnix();
+        long now = SaveManager.NowUnix();
         long until = now + Mathf.RoundToInt(durationSeconds);
 
         // If there's already an active blessing for this site, stack and extend it
@@ -1518,6 +1519,71 @@ public sealed class JobManager : MonoBehaviour
         SaveManager.Save();
         RefreshAllJobSiteViewsInScene();
         GameEvents.OnJobsChanged?.Invoke();
+    }
+
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Cheats / Debug Helpers
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Sets all slot fatigue to 0 across all job sites and persists the runtime sidecar.
+    /// Returns the number of slots that had fatigue > 0.
+    /// </summary>
+    public int Cheat_ClearAllFatigue()
+    {
+        int cleared = 0;
+
+        for (int si = 0; si < States.Count; si++)
+        {
+            var s = States[si];
+            if (s == null || s.slotFatigue01 == null) continue;
+            for (int i = 0; i < s.slotFatigue01.Length; i++)
+            {
+                if (s.slotFatigue01[i] > 0f) cleared++;
+                s.slotFatigue01[i] = 0f;
+            }
+        }
+
+        SaveRuntimeToSave();
+        RefreshAllJobSiteViewsInScene();
+        GameEvents.OnJobsChanged?.Invoke();
+        return cleared;
+    }
+
+    /// <summary>
+    /// Clears all job cooldowns:
+    /// - Slot cooldowns (slotCooldownUntilUnix)
+    /// - Monster cooldown map (_cooldownUntil)
+    /// Persists the runtime sidecar. Returns the number of cooldown entries cleared.
+    /// </summary>
+    public int Cheat_ResetCooldowns()
+    {
+        int cleared = 0;
+
+        // Slot cooldowns
+        for (int si = 0; si < States.Count; si++)
+        {
+            var s = States[si];
+            if (s == null || s.slotCooldownUntilUnix == null) continue;
+            for (int i = 0; i < s.slotCooldownUntilUnix.Length; i++)
+            {
+                if (s.slotCooldownUntilUnix[i] > 0) cleared++;
+                s.slotCooldownUntilUnix[i] = 0;
+            }
+        }
+
+        // Monster cooldown dictionary
+        if (_cooldownUntil != null)
+        {
+            cleared += _cooldownUntil.Count;
+            _cooldownUntil.Clear();
+        }
+
+        SaveRuntimeToSave();
+        RefreshAllJobSiteViewsInScene();
+        GameEvents.OnJobsChanged?.Invoke();
+        return cleared;
     }
 
 

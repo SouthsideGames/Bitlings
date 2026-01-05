@@ -11,17 +11,17 @@ public class MonsterPackManager : MonoBehaviour
     [Tooltip("If set, this overrides all other ways of finding the pack library.")]
     [SerializeField] private MonsterPackLibrarySO packLibraryOverride;
 
-    private MonsterPackLibrarySO _packLibrary;  
-    private MonsterLibrarySO _monsterLibrary;   
+    private MonsterPackLibrarySO _packLibrary;
+    private MonsterLibrarySO _monsterLibrary;
 
     [Header("Pack Seasons (Optional)")]
     [Tooltip("If set, seasons are enabled and only active-season packs are shown/purchasable.")]
     [SerializeField] private MonsterPackSeasonRotationSO seasonRotationOverride;
 
-    
+
     [Header("Tuning")]
     [Tooltip("Global discount applied to all pack costs (0..1). 0.15 = 15% off.")]
-    [Range(0f, 1f)] [SerializeField] private float globalDiscount01 = 0f;
+    [Range(0f, 1f)][SerializeField] private float globalDiscount01 = 0f;
 
     private MonsterPackSeasonRotationSO _seasonRotation;
 
@@ -409,4 +409,43 @@ public class MonsterPackManager : MonoBehaviour
 
     // Optional tuning API
     public void SetGlobalDiscount01(float v) => globalDiscount01 = Mathf.Clamp01(v);
+    
+    /// <summary>
+    /// Unlocks every pack in the pack library, then registers their monsters as discovered.
+    /// Saves once. Intended for cheats / QA.
+    /// Returns how many packs were newly unlocked.
+    /// </summary>
+    public int Cheat_UnlockAllPacks()
+    {
+        if (_packLibrary == null || SaveManager.Data == null) return 0;
+
+        var data = SaveManager.Data;
+        data.unlockedPacks ??= new System.Collections.Generic.List<string>();
+
+        int added = 0;
+
+        foreach (var p in _packLibrary.PacksReadOnly)
+        {
+            if (!p || string.IsNullOrEmpty(p.id)) continue;
+            if (data.unlockedPacks.Contains(p.id)) continue;
+
+            data.unlockedPacks.Add(p.id);
+            added++;
+
+            // Make contained monsters visible in Codex/draft pools
+            RegisterUnlockedMonsters(p.id);
+
+            try { OnPackUnlocked?.Invoke(p.id); } catch { /* ignore */ }
+        }
+
+        if (added > 0)
+        {
+            SaveManager.Save();
+            MonsterCatalog.Invalidate();
+            GameEvents.OnResourcesChanged?.Invoke();
+        }
+
+        return added;
+    }
+
 }

@@ -1,0 +1,50 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 32ffc26ed7d444b02a9332ce4279b117, type: 3}
+  m_Name: Monster_Wisporn
+  m_EditorClassIdentifier: 
+  id: M-092
+  displayName: Wisporn
+  type: 13
+  typeIcon: {fileID: 21300000, guid: 00ff3f4c0d50247a8915bc882652db22, type: 3}
+  icon: {fileID: 0}
+  backIcon: {fileID: 0}
+  shinyIcon: {fileID: 0}
+  shinyBackIcon: {fileID: 0}
+  rarity: 1
+  canBeStarter: 0
+  starterWeight: 1
+  maxLevel: 50
+  baseHP: 56
+  baseAttack: 48
+  baseDefense: 30
+  baseSpeed: 30
+  hpRegenPerHour: 7.2
+  fatigueRatePerHour: 0.2
+  fatigueCooldownHours: 8.8
+  evolutionStage: 3
+  evolutionLevel: 0
+  evolutionForm: {fileID: 0}
+  uncatchable: 0
+  isBoss: 0
+  bossJobDebuffs: []
+  bossWeight: 1
+  spawnWeight: 4.5
+  jobSkill: 1
+  titleTrack: {fileID: 11400000, guid: 12881520f9d744ee78e7f6034d6f1b70, type: 2}
+  defaultAlwaysOnTitles: []
+  Personality: {fileID: 0}
+  basicAttackName: Veil Tap
+  basicAttackPrefab: {fileID: 9101927626726485638, guid: 257dd9ab5e3cf0544a679d2e444f8d35, type: 3}
+  basicAttackPrefabLifetime: 1
+  description: A drifting specter that flickers unpredictably draining foes with
+    soft but persistent ghostly strikes.

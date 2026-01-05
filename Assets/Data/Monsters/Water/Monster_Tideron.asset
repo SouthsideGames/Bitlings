@@ -18,7 +18,7 @@ MonoBehaviour:
   typeIcon: {fileID: 21300000, guid: dd2adea89cda84ec4a589a6d1d5da1ae, type: 3}
   icon: {fileID: 21300000, guid: ab99683266fdd784db041d5ee8efbaa4, type: 3}
   backIcon: {fileID: 21300000, guid: fa68ddcb87a369c489261be31ec3d0ce, type: 3}
-  shinyIcon: {fileID: 21300000, guid: 525b1043849ac4834aeb2ae4d61d6975, type: 3}
+  shinyIcon: {fileID: 21300000, guid: 505f3e3c57b274e8c82c2d01d64ec804, type: 3}
   shinyBackIcon: {fileID: 21300000, guid: 678b3d69655134a2799e77dce865f7ad, type: 3}
   rarity: 2
   canBeStarter: 0
