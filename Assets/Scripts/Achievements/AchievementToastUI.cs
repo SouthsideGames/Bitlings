@@ -5,6 +5,8 @@ using TMPro;
 
 public sealed class AchievementToastUI : MonoBehaviour
 {
+    public static AchievementToastUI I { get; private set; }
+
     [Header("UI")]
     [SerializeField] private CanvasGroup canvasGroup;
     [SerializeField] private Image iconImage;
@@ -13,31 +15,44 @@ public sealed class AchievementToastUI : MonoBehaviour
     [Header("Timing")]
     [SerializeField] private float showSeconds = 2.25f;
 
+    [Header("Text")]
+    [SerializeField] private string prefixText = "Achievement Unlocked:";
+
     private readonly Queue<AchievementEntrySO> _queue = new Queue<AchievementEntrySO>();
     private bool _playing;
 
     private void Awake()
     {
+        if (I != null && I != this)
+        {
+            Destroy(gameObject);
+            return;
+        }
+
+        I = this;
+
+        // Optional: keep across scenes if you want global toast
+        DontDestroyOnLoad(gameObject);
+
         if (!canvasGroup) canvasGroup = GetComponent<CanvasGroup>();
         if (canvasGroup) canvasGroup.alpha = 0f;
+
+        // If you keep this object enabled in scene, this is fine.
+        // If you keep it disabled, manager direct-call handles it.
     }
 
-    private void OnEnable()
-    {
-        if (AchievementManager.I != null)
-            AchievementManager.I.OnUnlocked += HandleUnlocked;
-    }
-
-    private void OnDisable()
-    {
-        if (AchievementManager.I != null)
-            AchievementManager.I.OnUnlocked -= HandleUnlocked;
-    }
-
-    private void HandleUnlocked(AchievementEntrySO entry)
+    /// <summary>
+    /// Queue a toast for an unlocked achievement. Safe to call even if the toast is inactive.
+    /// </summary>
+    public void QueueUnlocked(AchievementEntrySO entry)
     {
         if (entry == null) return;
+
         _queue.Enqueue(entry);
+
+        // Ensure object is active so tween/coroutines can run
+        if (!gameObject.activeSelf)
+            gameObject.SetActive(true);
 
         if (!_playing)
             PlayNext();
@@ -48,6 +63,9 @@ public sealed class AchievementToastUI : MonoBehaviour
         if (_queue.Count == 0)
         {
             _playing = false;
+
+            // Optional: hide itself when done
+            if (canvasGroup) canvasGroup.alpha = 0f;
             return;
         }
 
@@ -56,25 +74,29 @@ public sealed class AchievementToastUI : MonoBehaviour
         var entry = _queue.Dequeue();
 
         if (iconImage) iconImage.sprite = entry.icon;
-        if (label) label.text = $"Achievement Unlocked: {entry.displayName}";
-
-        gameObject.SetActive(true);
+        if (label) label.text = $"{prefixText} {entry.displayName}";
 
         if (canvasGroup)
         {
             LeanTween.cancel(canvasGroup.gameObject);
             canvasGroup.alpha = 0f;
+
             LeanTween.alphaCanvas(canvasGroup, 1f, 0.18f).setEaseOutCubic();
 
             LeanTween.delayedCall(gameObject, showSeconds, () =>
             {
+                if (canvasGroup == null)
+                {
+                    PlayNext();
+                    return;
+                }
+
                 LeanTween.alphaCanvas(canvasGroup, 0f, 0.18f).setEaseInCubic()
                     .setOnComplete(() => PlayNext());
             });
         }
         else
         {
-            // No CanvasGroup fallback
             LeanTween.delayedCall(gameObject, showSeconds, () => PlayNext());
         }
     }

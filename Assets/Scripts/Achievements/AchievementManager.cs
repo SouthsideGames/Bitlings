@@ -63,7 +63,7 @@ public sealed class AchievementManager : MonoBehaviour
         if (library == null)
         {
             Debug.LogWarning("[AchievementManager] No AchievementLibrary found. Create one at Resources/Achievements/AchievementLibrary.");
-            _initialized = true; // prevent spamming
+            _initialized = true;
             return;
         }
 
@@ -76,13 +76,10 @@ public sealed class AchievementManager : MonoBehaviour
                 _idToEntry.Add(e.id, e);
         }
 
-        // Ensure save entries exist for all library entries
         EnsureAllSaved();
 
-        // Cache current max win streak seen
         _maxWinStreakSeen = Mathf.Max(_maxWinStreakSeen, SaveManager.Data != null ? SaveManager.Data.winStreak : 0);
 
-        // Evaluate snapshot-based achievements once at init
         EvaluateSnapshotAchievements(saveIfChanged: false);
 
         _initialized = true;
@@ -96,7 +93,6 @@ public sealed class AchievementManager : MonoBehaviour
         data.achievements ??= new List<AchievementProgressData>();
         data.achievementMap ??= new Dictionary<string, AchievementProgressData>(StringComparer.Ordinal);
 
-        // Rebuild map if needed
         data.achievementMap.Clear();
         for (int i = 0; i < data.achievements.Count; i++)
         {
@@ -113,6 +109,7 @@ public sealed class AchievementManager : MonoBehaviour
             string id = kv.Key;
             if (data.achievementMap.ContainsKey(id)) continue;
 
+            // NOTE: seen=true means "not new" — we flip to false on unlock.
             var ap = new AchievementProgressData { id = id, value = 0, unlocked = false, unlockedUnix = 0, seen = true };
             data.achievements.Add(ap);
             data.achievementMap.Add(id, ap);
@@ -196,11 +193,7 @@ public sealed class AchievementManager : MonoBehaviour
     private void OnMonsterCaptured(string monsterId, MonsterType type)
     {
         ProgressAll(AchievementTrigger.TotalCaptures, 1);
-
-        // Filtered type captures
         ProgressWhere(AchievementTrigger.CapturesByType, e => e.useTypeFilter && e.typeFilter.Equals(type), 1);
-
-        // Snapshot achievements might change due to ownedIds / seenTypes updates
         EvaluateSnapshotAchievements(saveIfChanged: saveOnEveryProgress);
     }
 
@@ -221,14 +214,12 @@ public sealed class AchievementManager : MonoBehaviour
         if (r.victory && !r.escaped)
             ProgressAll(AchievementTrigger.BattleWins, 1);
 
-        // Perfect battle requires BattleResult.damageTaken (you already added this in your struct)
         if (r.victory && !r.escaped && r.damageTaken == 0)
             ProgressAll(AchievementTrigger.PerfectBattles, 1);
     }
 
     private void OnResourceAdded(ResourceType t, int amount)
     {
-        // Most games use Credits as the achievement target. We support filter anyway.
         ProgressWhere(
             AchievementTrigger.CreditsEarned,
             e => !e.useResourceFilter || e.resourceFilter.Equals(t),
@@ -263,19 +254,18 @@ public sealed class AchievementManager : MonoBehaviour
 
     private void EvaluateSnapshotAchievements(bool saveIfChanged)
     {
-        // These are computed from SaveManager.Data state, not from incremental events.
         var data = SaveManager.Data;
         if (data == null) return;
 
-        int favCount = data.favoriteMonsterIds != null ? data.favoriteMonsterIds.Count : (data.favoriteMonsterIdsList?.Count ?? 0);
+        int favCount  = data.favoriteMonsterIds != null ? data.favoriteMonsterIds.Count : (data.favoriteMonsterIdsList?.Count ?? 0);
         int ownedCount = data.ownedIds != null ? data.ownedIds.Count : (data.ownedIdsList?.Count ?? 0);
-        int typeCount = data.seenTypes != null ? data.seenTypes.Count : (data.seenTypesList?.Count ?? 0);
+        int typeCount  = data.seenTypes != null ? data.seenTypes.Count : (data.seenTypesList?.Count ?? 0);
 
         bool changed = false;
 
-        changed |= SetMaxProgress(AchievementTrigger.FavoritesCount, favCount, allowSave:false);
-        changed |= SetMaxProgress(AchievementTrigger.OwnMonstersCount, ownedCount, allowSave:false);
-        changed |= SetMaxProgress(AchievementTrigger.DiscoverTypesCount, typeCount, allowSave:false);
+        changed |= SetMaxProgress(AchievementTrigger.FavoritesCount, favCount, allowSave: false);
+        changed |= SetMaxProgress(AchievementTrigger.OwnMonstersCount, ownedCount, allowSave: false);
+        changed |= SetMaxProgress(AchievementTrigger.DiscoverTypesCount, typeCount, allowSave: false);
 
         if (changed && saveIfChanged)
             SaveManager.Save();
@@ -385,7 +375,10 @@ public sealed class AchievementManager : MonoBehaviour
 
         OnUnlocked?.Invoke(e);
 
-        // Save immediately on unlock (recommended)
+        // Robust toast call: works even if toast object started disabled
+        if (AchievementToastUI.I != null)
+            AchievementToastUI.I.QueueUnlocked(e);
+
         SaveManager.Save();
     }
 
