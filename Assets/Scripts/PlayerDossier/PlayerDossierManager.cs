@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Microsoft.Unity.VisualStudio.Editor;
 using UnityEngine;
 
 /// <summary>
@@ -63,11 +64,30 @@ public class PlayerDossierSnapshot
     public int conversionEfficiencyPercent;
 
     [Header("Page 5 – BRN Résumé")]
-    public string[] resumeLines;      // bullet lines for the page
-    public string brnResumeNote;      // short supervisor-style note
+    public string[] resumeLines;     
+    public string brnResumeNote;
+
+    [Header("Page 6 - Achievements")]
+    public int achievementsUnlocked;
+    public int achievementsTotal;
+    public AchievementRowSnapshot[] achievements;    
 
 
 }
+
+[Serializable]
+public class AchievementRowSnapshot
+{
+    public string id;
+    public Sprite icon;
+    public string name;
+    public string description;
+    public bool unlocked;
+    public int value;
+    public int goal;
+    public bool isNew;
+}
+
 
 [Serializable]
 public class JobSiteRowSnapshot
