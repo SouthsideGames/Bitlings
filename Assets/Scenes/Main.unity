@@ -121198,6 +121198,10 @@ MonoBehaviour:
   - icon: {fileID: 21300000, guid: 5b05ebb3f339e4f03b3026941ea99ecc, type: 3}
     text: "Page 5 \u2013 BRN R\xE9sum\xE9 is a narrative summary of your record.\nIt
       updates automatically as you play."
+  - icon: {fileID: 21300000, guid: 5b05ebb3f339e4f03b3026941ea99ecc, type: 3}
+    text: "Page 6 \u2013 Achievements track your long-term progress across Bitlings.\nComplete
+      objectives to earn permanent badges and see how close you are to full completion.\nAchievements
+      are saved permanently and update automatically as you play."
   overlayRoot: {fileID: 1980897493}
   dimmerImage: {fileID: 1352943133}
   iconImage: {fileID: 363891473}
