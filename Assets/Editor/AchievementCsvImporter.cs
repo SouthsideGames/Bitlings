@@ -27,7 +27,7 @@ public static class AchievementCsvImporter
     private const string DefaultEntriesFolder = "Assets/Data/Achievements/Entries";
     private const string DefaultLibraryPath   = "Assets/Resources/Achievements/AchievementLibrary.asset";
 
-    [MenuItem("Tools/Achievements/Import CSV (Create/Update SOs)")]
+    [MenuItem("Bitlings/Achievements/Import CSV (Create/Update SOs)")]
     public static void ImportCsvMenu()
     {
         string csvPath = EditorUtility.OpenFilePanel("Select Achievements CSV", Application.dataPath, "csv");
