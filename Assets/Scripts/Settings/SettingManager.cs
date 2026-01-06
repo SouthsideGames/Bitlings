@@ -10,6 +10,8 @@ public class SettingsManager : MonoBehaviour
     public SettingsState S => Ensure();
     SettingsState _fallback;
 
+    bool _isResetting;
+
     void Awake()
     {
         if (I != null && I != this)
@@ -40,10 +42,6 @@ public class SettingsManager : MonoBehaviour
         OnSettingsChanged?.Invoke();
     }
 
-    // ─────────────────────────────────────────────────────────
-    // Defaults / Reset
-    // ─────────────────────────────────────────────────────────
-
     public void ApplyDefaults()
     {
         if (SaveManager.Data == null) return;
@@ -58,25 +56,31 @@ public class SettingsManager : MonoBehaviour
 
     public void OnReset()
     {
-        SaveManager.ClearAll();
+        if (_isResetting) return;
+        _isResetting = true;
 
-        // Recreate save immediately
-        SaveManager.LoadOrCreate();
+        try
+        {
+            Time.timeScale = 1f;
 
-        // Initialize clean resources
-        if (ResourceManager.I != null)
-            ResourceManager.I.InitializeNewAccountResources();
+            SaveManager.ClearAll();
+            PlayerPrefs.DeleteAll();
+            PlayerPrefs.Save();
 
-        ApplyDefaults();
+            SaveManager.LoadOrCreate();
 
-        Time.timeScale = 1f;
-        SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
+            if (ResourceManager.I != null)
+                ResourceManager.I.InitializeNewAccountResources();
+
+            ApplyDefaults();
+
+            SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
+        }
+        finally
+        {
+            _isResetting = false;
+        }
     }
-
-
-    // ─────────────────────────────────────────────────────────
-    // Duplicate policy accessors
-    // ─────────────────────────────────────────────────────────
 
     public bool GetAutoConvertDuplicates() => S.autoConvertDuplicates;
 
@@ -87,10 +91,6 @@ public class SettingsManager : MonoBehaviour
         Persist();
     }
 
-    // ─────────────────────────────────────────────────────────
-    // Battle Log: Auto-scroll setting
-    // ─────────────────────────────────────────────────────────
-
     public bool GetAutoScrollBattleLog() => S.autoScrollBattleLog;
 
     public void SetAutoScrollBattleLog(bool enabled)
@@ -99,10 +99,6 @@ public class SettingsManager : MonoBehaviour
         S.autoScrollBattleLog = enabled;
         Persist();
     }
-
-    // ─────────────────────────────────────────────────────────
-    // Seeds / RNG (Daily / Custom Seeds)
-    // ─────────────────────────────────────────────────────────
 
     public string GetCustomSeed() => S.customSeed ?? string.Empty;
 
@@ -123,10 +119,8 @@ public class SettingsManager : MonoBehaviour
         Persist();
     }
 
-    // ─────────────────────────────────────────────────────────
-    // Battle UX / Accessibility
-    // ─────────────────────────────────────────────────────────
     public bool GetShowInlineBattleIcons() => S.showInlineBattleIcons;
+
     public void SetShowInlineBattleIcons(bool enabled)
     {
         if (S.showInlineBattleIcons == enabled) return;
@@ -135,6 +129,7 @@ public class SettingsManager : MonoBehaviour
     }
 
     public bool GetCondensedBattleText() => S.condensedBattleText;
+
     public void SetCondensedBattleText(bool enabled)
     {
         if (S.condensedBattleText == enabled) return;
@@ -143,6 +138,7 @@ public class SettingsManager : MonoBehaviour
     }
 
     public bool GetCompressAutoBattleText() => S.compressAutoBattleText;
+
     public void SetCompressAutoBattleText(bool enabled)
     {
         if (S.compressAutoBattleText == enabled) return;
@@ -151,11 +147,11 @@ public class SettingsManager : MonoBehaviour
     }
 
     public bool GetBattleHistoryEnabled() => S.battleHistoryEnabled;
+
     public void SetBattleHistoryEnabled(bool enabled)
     {
         if (S.battleHistoryEnabled == enabled) return;
         S.battleHistoryEnabled = enabled;
         Persist();
     }
-
 }

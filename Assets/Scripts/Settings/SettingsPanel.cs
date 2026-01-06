@@ -41,6 +41,24 @@ public class SettingsPanel : MonoBehaviour
     [Tooltip("Optional: plays a SFX so the player can hear the current volume.")]
     [SerializeField] private Button testSfxButton;
 
+    [Header("Reset Confirmation Panel")]
+    [Tooltip("Root object for the reset confirmation panel.")]
+    [SerializeField] private GameObject resetConfirmRoot;
+
+    [Tooltip("Optional confirmation text on the panel.")]
+    [SerializeField] private TextMeshProUGUI resetConfirmLabel;
+
+    [Tooltip("Accept button that executes the reset.")]
+    [SerializeField] private Button resetConfirmAcceptButton;
+
+    [Tooltip("Cancel button that closes the confirmation panel.")]
+    [SerializeField] private Button resetConfirmCancelButton;
+
+    [Tooltip("If provided, this text will be placed into the confirmation label when opening the panel.")]
+    [TextArea(2, 6)]
+    [SerializeField] private string resetConfirmMessage =
+        "Please confirm that you would like to reset your information.\nYou will lose all progress including upgrades, resources, etc.";
+
     bool _wired;
 
     void Awake()
@@ -51,8 +69,14 @@ public class SettingsPanel : MonoBehaviour
 
         if (resetButton) resetButton.onClick.RemoveAllListeners();
         if (testSfxButton) testSfxButton.onClick.RemoveAllListeners();
-
         if (rerollDailySeedButton) rerollDailySeedButton.onClick.RemoveAllListeners();
+
+        // Confirm panel listeners
+        if (resetConfirmAcceptButton) resetConfirmAcceptButton.onClick.RemoveAllListeners();
+        if (resetConfirmCancelButton) resetConfirmCancelButton.onClick.RemoveAllListeners();
+
+        // Default: keep confirm panel closed
+        SetResetConfirmVisible(false);
     }
 
     void Start()
@@ -66,14 +90,11 @@ public class SettingsPanel : MonoBehaviour
         SafeSubscribe();
         Refresh();
 
+        // Reset button opens confirmation panel (does not reset immediately)
         if (resetButton)
         {
             resetButton.onClick.RemoveAllListeners();
-            resetButton.onClick.AddListener(() =>
-            {
-                var mgr = SettingsManager.I;
-                if (mgr != null) mgr.OnReset();
-            });
+            resetButton.onClick.AddListener(OpenResetConfirmation);
         }
 
         if (testSfxButton)
@@ -90,6 +111,19 @@ public class SettingsPanel : MonoBehaviour
         {
             rerollDailySeedButton.onClick.RemoveAllListeners();
             rerollDailySeedButton.onClick.AddListener(OnClickRerollDailySeed);
+        }
+
+        // Wire confirm panel buttons
+        if (resetConfirmAcceptButton)
+        {
+            resetConfirmAcceptButton.onClick.RemoveAllListeners();
+            resetConfirmAcceptButton.onClick.AddListener(OnResetConfirmAccept);
+        }
+
+        if (resetConfirmCancelButton)
+        {
+            resetConfirmCancelButton.onClick.RemoveAllListeners();
+            resetConfirmCancelButton.onClick.AddListener(OnResetConfirmCancel);
         }
 
         WireEvents();
@@ -115,10 +149,54 @@ public class SettingsPanel : MonoBehaviour
         if (rerollDailySeedButton)
             rerollDailySeedButton.onClick.RemoveAllListeners();
 
+        if (resetConfirmAcceptButton)
+            resetConfirmAcceptButton.onClick.RemoveAllListeners();
+
+        if (resetConfirmCancelButton)
+            resetConfirmCancelButton.onClick.RemoveAllListeners();
+
         UnwireEvents();
 
         if (FeatureUnlockManager.I != null)
             FeatureUnlockManager.I.OnFeatureUnlocked -= HandleFeatureUnlocked;
+    }
+
+    // ---------------- Reset Confirmation ----------------
+
+    void OpenResetConfirmation()
+    {
+        if (resetConfirmLabel && !string.IsNullOrEmpty(resetConfirmMessage))
+            resetConfirmLabel.text = resetConfirmMessage;
+
+        SetResetConfirmVisible(true);
+    }
+
+    void OnResetConfirmAccept()
+    {
+        SetResetConfirmVisible(false);
+
+        var mgr = SettingsManager.I;
+        if (mgr != null)
+        {
+            // This should be your "clear everything" entry point.
+            // Keep ALL destructive logic centralized in SettingsManager.
+            mgr.OnReset();
+        }
+        else
+        {
+            Debug.LogWarning("[SettingsPanel] SettingsManager.I was null; reset was not executed.");
+        }
+    }
+
+    void OnResetConfirmCancel()
+    {
+        SetResetConfirmVisible(false);
+    }
+
+    void SetResetConfirmVisible(bool visible)
+    {
+        if (resetConfirmRoot)
+            resetConfirmRoot.SetActive(visible);
     }
 
     // ---------------- Core ----------------
