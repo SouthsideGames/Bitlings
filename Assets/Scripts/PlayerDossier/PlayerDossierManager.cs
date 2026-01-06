@@ -23,6 +23,12 @@ public class PlayerDossierSnapshot
     [Range(0f, 100f)] public float careScorePercent;
     public string careScoreNote;
 
+    [Header("Care Score Breakdown")]
+    [Range(0f, 100f)] public float careDevelopmentPercent;
+    [Range(0f, 100f)] public float careBalancePercent;
+    [Range(0f, 100f)] public float careRecoveryPercent;
+    [Range(0f, 100f)] public float careAssignmentPercent;
+
     // ─────────────────────────────────────────────────────────────
     // PAGE 2 – JOB NETWORK
     // ─────────────────────────────────────────────────────────────
@@ -168,10 +174,6 @@ public class PlayerDossierManager : MonoBehaviour
         _cachedSnapshot = BuildSnapshotFromSave();
     }
 
-    // ─────────────────────────────────────────────────────────────
-    // Internal: Build snapshot from SaveManager.Data
-    // ─────────────────────────────────────────────────────────────
-
     private PlayerDossierSnapshot BuildSnapshotFromSave()
     {
         var snapshot = new PlayerDossierSnapshot();
@@ -179,31 +181,36 @@ public class PlayerDossierManager : MonoBehaviour
         var data = SaveManager.Data;
         if (data == null)
         {
-            snapshot.handlerName        = "Handler: BRN Operator";
-            snapshot.rankName           = "Rank: Trainee";
-            snapshot.operationId        = "Operation ID: BRN-0000-XXXX";
+            snapshot.handlerName = "Handler: BRN Operator";
+            snapshot.rankName = "Rank: Trainee";
+            snapshot.operationId = "Operation ID: BRN-0000-XXXX";
 
             snapshot.totalOwnedBitlings = 0;
-            snapshot.discoveredSpecies  = 0;
-            snapshot.averageLevel       = 0f;
-            snapshot.shinyOwned         = 0;
+            snapshot.discoveredSpecies = 0;
+            snapshot.averageLevel = 0f;
+            snapshot.shinyOwned = 0;
 
-            snapshot.careScorePercent   = 0f;
-            snapshot.careScoreNote      = "BRN notes: No data available.";
+            snapshot.careScorePercent = 0f;
+            snapshot.careScoreNote = "BRN notes: No data available.";
 
-            snapshot.jobSites           = Array.Empty<JobSiteRowSnapshot>();
+            snapshot.careDevelopmentPercent = 0f;
+            snapshot.careBalancePercent = 0f;
+            snapshot.careRecoveryPercent = 0f;
+            snapshot.careAssignmentPercent = 0f;
 
-            snapshot.encountersInitiated  = 0;
-            snapshot.captureSuccessRate   = 0;
-            snapshot.riftStabilizations   = 0;
-            snapshot.rareBitlingsFound    = 0;
-            snapshot.shinyDiscoveries     = 0;
+            snapshot.jobSites = Array.Empty<JobSiteRowSnapshot>();
+
+            snapshot.encountersInitiated = 0;
+            snapshot.captureSuccessRate = 0;
+            snapshot.riftStabilizations = 0;
+            snapshot.rareBitlingsFound = 0;
+            snapshot.shinyDiscoveries = 0;
             snapshot.longestCaptureStreak = 0;
-            snapshot.fieldOpsHighlights   = Array.Empty<string>();
+            snapshot.fieldOpsHighlights = Array.Empty<string>();
 
             snapshot.achievementsUnlocked = 0;
-            snapshot.achievementsTotal    = 0;
-            snapshot.achievements         = Array.Empty<AchievementRowSnapshot>();
+            snapshot.achievementsTotal = 0;
+            snapshot.achievements = Array.Empty<AchievementRowSnapshot>();
 
             return snapshot;
         }
@@ -213,12 +220,12 @@ public class PlayerDossierManager : MonoBehaviour
         // Identity
         string displayName = string.IsNullOrEmpty(data.playerName) ? "BRN Operator" : data.playerName;
         snapshot.handlerName = $"Handler: {displayName}";
-        snapshot.rankName    = "Rank: Trainee"; // TODO: derive later
+        snapshot.rankName = "Rank: Trainee"; // TODO: derive later
         snapshot.operationId = $"Operation ID: {FormatOperationId(data.playerId)}";
 
         // Owned monsters
         int totalOwned = 0;
-        int levelSum   = 0;
+        int levelSum = 0;
         int shinyCount = 0;
 
         if (data.owned != null)
@@ -237,8 +244,8 @@ public class PlayerDossierManager : MonoBehaviour
         }
 
         snapshot.totalOwnedBitlings = totalOwned;
-        snapshot.shinyOwned         = shinyCount;
-        snapshot.averageLevel       = totalOwned > 0 ? (float)levelSum / totalOwned : 0f;
+        snapshot.shinyOwned = shinyCount;
+        snapshot.averageLevel = totalOwned > 0 ? (float)levelSum / totalOwned : 0f;
 
         // Discovered species
         int discovered = 0;
@@ -249,27 +256,17 @@ public class PlayerDossierManager : MonoBehaviour
 
         snapshot.discoveredSpecies = discovered;
 
-        // Care score (simple composite)
-        float careScore = 0f;
-        if (totalOwned > 0)
-        {
-            float shinyFactor = Mathf.Clamp01(shinyCount / Mathf.Max(1f, totalOwned));
-            float levelFactor = Mathf.Clamp01(snapshot.averageLevel / 30f);
-
-            careScore = Mathf.Lerp(40f, 95f, (shinyFactor + levelFactor) * 0.5f);
-        }
-
-        snapshot.careScorePercent = careScore;
-        snapshot.careScoreNote    = "BRN notes: Bitling care is within stable parameters.";
-
-        // Page 2 – Jobs
+        // Page 2 – Jobs (also supports care "Assignment" score)
         BuildJobStats(data, snapshot);
 
         // Page 3 – Field Ops
         BuildFieldOps(data, snapshot);
 
-        // Page 4 – Resources
+        // Page 4 – Resources (also supports care "Recovery" score)
         BuildResourceSummary(data, snapshot);
+
+        // Care score + breakdown (computed AFTER jobs/resources are available)
+        ComputeCareScore(data, snapshot);
 
         // Page 5 – Resume
         BuildResumePage(data, snapshot);
@@ -278,6 +275,85 @@ public class PlayerDossierManager : MonoBehaviour
         BuildAchievementsPage(data, snapshot);
 
         return snapshot;
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // Care Score
+    // ─────────────────────────────────────────────────────────────
+
+    private void ComputeCareScore(PlayerManager data, PlayerDossierSnapshot snap)
+    {
+        if (data == null || snap == null)
+            return;
+
+        if (snap.totalOwnedBitlings <= 0)
+        {
+            snap.careDevelopmentPercent = 0f;
+            snap.careBalancePercent = 0f;
+            snap.careRecoveryPercent = 0f;
+            snap.careAssignmentPercent = 0f;
+
+            snap.careScorePercent = 0f;
+            snap.careScoreNote = "BRN notes: No data available.";
+            return;
+        }
+
+        // DEVELOPMENT (0–100): average level normalized to 30
+        float levelFactor = Mathf.Clamp01(snap.averageLevel / 30f);
+        float development = Mathf.Lerp(30f, 100f, levelFactor);
+
+        // BALANCE (0–100): % of roster within 50% of avg level
+        int balancedCount = 0;
+        float threshold = snap.averageLevel * 0.5f;
+
+        if (data.owned != null)
+        {
+            for (int i = 0; i < data.owned.Count; i++)
+            {
+                var om = data.owned[i];
+                if (om == null) continue;
+                if (Mathf.Max(1, om.level) >= threshold) balancedCount++;
+            }
+        }
+
+        float balanceRatio = balancedCount / Mathf.Max(1f, snap.totalOwnedBitlings);
+        float balance = Mathf.Lerp(25f, 100f, Mathf.Clamp01(balanceRatio));
+
+        // RECOVERY (0–100): based on available rest + medkits (simple, non-punitive proxy)
+        // Uses values already populated in BuildResourceSummary.
+        float restNorm = Mathf.Clamp01(snap.restChargeCount / 10f);
+        float medNorm = Mathf.Clamp01(snap.medkitCount / 10f);
+        float recovery = Mathf.Lerp(20f, 100f, (restNorm * 0.6f) + (medNorm * 0.4f));
+
+        // ASSIGNMENT (0–100): utilization = assigned workers / total owned
+        int assignedWorkers = 0;
+        if (data.jobAssignments != null)
+        {
+            for (int i = 0; i < data.jobAssignments.Count; i++)
+            {
+                var a = data.jobAssignments[i];
+                if (a?.workerIds == null) continue;
+                assignedWorkers += a.workerIds.Count;
+            }
+        }
+
+        float util = Mathf.Clamp01(assignedWorkers / Mathf.Max(1f, snap.totalOwnedBitlings));
+        float assignment = Mathf.Lerp(20f, 100f, util);
+
+        snap.careDevelopmentPercent = Mathf.Clamp(development, 0f, 100f);
+        snap.careBalancePercent = Mathf.Clamp(balance, 0f, 100f);
+        snap.careRecoveryPercent = Mathf.Clamp(recovery, 0f, 100f);
+        snap.careAssignmentPercent = Mathf.Clamp(assignment, 0f, 100f);
+
+        // Final headline care score (weighted average)
+        float combined =
+            (snap.careDevelopmentPercent * 0.40f) +
+            (snap.careBalancePercent * 0.20f) +
+            (snap.careRecoveryPercent * 0.20f) +
+            (snap.careAssignmentPercent * 0.20f);
+
+        snap.careScorePercent = Mathf.Clamp(combined, 0f, 100f);
+        snap.careScoreNote = "BRN notes: Bitling care is within stable parameters.";
     }
 
     // ─────────────────────────────────────────────────────────────
@@ -290,7 +366,7 @@ public class PlayerDossierManager : MonoBehaviour
         var rows = new List<JobSiteRowSnapshot>();
 
         data.jobAssignments ??= new List<JobAssignment>();
-        data.jobProgress    ??= new List<JobProgress>();
+        data.jobProgress ??= new List<JobProgress>();
 
         foreach (var job in jobs)
         {
@@ -299,7 +375,7 @@ public class PlayerDossierManager : MonoBehaviour
 
             var row = new JobSiteRowSnapshot
             {
-                job         = job,
+                job = job,
                 displayName = JobStrings.SiteName(job)
             };
 
@@ -333,7 +409,7 @@ public class PlayerDossierManager : MonoBehaviour
             }
             else
             {
-                row.topPerformerName  = string.Empty;
+                row.topPerformerName = string.Empty;
                 row.topPerformerLevel = 0;
             }
 
@@ -483,13 +559,13 @@ public class PlayerDossierManager : MonoBehaviour
     {
         var f = data.fieldOps ?? new FieldOpsStats();
 
-        snapshot.encountersInitiated  = Mathf.Max(0, f.encountersInitiated);
-        snapshot.riftStabilizations   = Mathf.Max(0, f.riftStabilizations);
-        snapshot.rareBitlingsFound    = Mathf.Max(0, f.rareBitlingsFound);
-        snapshot.shinyDiscoveries     = Mathf.Max(0, f.shinyDiscoveries);
+        snapshot.encountersInitiated = Mathf.Max(0, f.encountersInitiated);
+        snapshot.riftStabilizations = Mathf.Max(0, f.riftStabilizations);
+        snapshot.rareBitlingsFound = Mathf.Max(0, f.rareBitlingsFound);
+        snapshot.shinyDiscoveries = Mathf.Max(0, f.shinyDiscoveries);
         snapshot.longestCaptureStreak = Mathf.Max(0, f.longestCaptureStreak);
 
-        int attempts  = Mathf.Max(0, f.captureAttempts);
+        int attempts = Mathf.Max(0, f.captureAttempts);
         int successes = Mathf.Max(0, f.capturesSuccessful);
 
         int ratePct = 0;
@@ -519,22 +595,22 @@ public class PlayerDossierManager : MonoBehaviour
             return;
         }
 
-        s.creditCount          = bank.Get(ResourceType.Credits);
-        s.energyCount          = bank.Get(ResourceType.Energy);
-        s.medkitCount          = bank.Get(ResourceType.Medkit);
-        s.materialCount        = bank.Get(ResourceType.Material);
-        s.typeResBoosterCount  = bank.Get(ResourceType.PPEPermit);
-        s.lureCount            = bank.Get(ResourceType.Flyer);
-        s.captureBandCount     = bank.Get(ResourceType.WorkOrder);
-        s.luckCount            = bank.Get(ResourceType.Favor);
-        s.atkBoosterCount      = bank.Get(ResourceType.TrainingVoucher_ATK);
-        s.hpBoosterCount       = bank.Get(ResourceType.WellnessVoucher);
-        s.speedBoosterCount    = bank.Get(ResourceType.EfficiencyVoucher);
-        s.shinyOrbCount        = bank.Get(ResourceType.ShinyOrb);
-        s.blessingScaleCount   = bank.Get(ResourceType.BlessingScale);
-        s.restChargeCount      = bank.Get(ResourceType.Coffee);
-        s.growthCoreCount      = bank.Get(ResourceType.GrowthCore);
-        s.packVoucherCount     = bank.Get(ResourceType.PackVoucher);
+        s.creditCount = bank.Get(ResourceType.Credits);
+        s.energyCount = bank.Get(ResourceType.Energy);
+        s.medkitCount = bank.Get(ResourceType.Medkit);
+        s.materialCount = bank.Get(ResourceType.Material);
+        s.typeResBoosterCount = bank.Get(ResourceType.PPEPermit);
+        s.lureCount = bank.Get(ResourceType.Flyer);
+        s.captureBandCount = bank.Get(ResourceType.WorkOrder);
+        s.luckCount = bank.Get(ResourceType.Favor);
+        s.atkBoosterCount = bank.Get(ResourceType.TrainingVoucher_ATK);
+        s.hpBoosterCount = bank.Get(ResourceType.WellnessVoucher);
+        s.speedBoosterCount = bank.Get(ResourceType.EfficiencyVoucher);
+        s.shinyOrbCount = bank.Get(ResourceType.ShinyOrb);
+        s.blessingScaleCount = bank.Get(ResourceType.BlessingScale);
+        s.restChargeCount = bank.Get(ResourceType.Coffee);
+        s.growthCoreCount = bank.Get(ResourceType.GrowthCore);
+        s.packVoucherCount = bank.Get(ResourceType.PackVoucher);
 
         s.conversionEfficiencyPercent = ComputeHandlerEfficiency(data, s);
     }
@@ -543,12 +619,11 @@ public class PlayerDossierManager : MonoBehaviour
     {
         if (data == null) return 0;
 
-        // 1) Job management
         float jobLevelScore = 0f;
         if (data.jobProgress != null && data.jobProgress.Count > 0)
         {
             int levelSum = 0;
-            int count    = 0;
+            int count = 0;
 
             for (int i = 0; i < data.jobProgress.Count; i++)
             {
@@ -562,14 +637,12 @@ public class PlayerDossierManager : MonoBehaviour
             if (count > 0)
             {
                 float avgLevel = levelSum / (float)count;
-                jobLevelScore  = Mathf.Clamp01(avgLevel / JobLeveling.MaxLevel);
+                jobLevelScore = Mathf.Clamp01(avgLevel / JobLeveling.MaxLevel);
             }
         }
 
-        // 2) Care
         float careScoreNorm = Mathf.Clamp01(snap.careScorePercent / 100f);
 
-        // 3) Field ops
         var f = data.fieldOps ?? new FieldOpsStats();
 
         float successNorm = 0f;
@@ -577,11 +650,10 @@ public class PlayerDossierManager : MonoBehaviour
             successNorm = Mathf.Clamp01(f.capturesSuccessful / Mathf.Max(1f, f.captureAttempts));
 
         float streakNorm = Mathf.Clamp01(f.longestCaptureStreak / 20f);
-        float rareNorm   = Mathf.Clamp01(f.rareBitlingsFound / 30f);
+        float rareNorm = Mathf.Clamp01(f.rareBitlingsFound / 30f);
 
         float captureScore = (successNorm * 0.5f) + (streakNorm * 0.3f) + (rareNorm * 0.2f);
 
-        // 4) Resources
         int progTotal =
             snap.growthCoreCount +
             snap.blessingScaleCount +
@@ -594,16 +666,15 @@ public class PlayerDossierManager : MonoBehaviour
             snap.lureCount +
             snap.luckCount;
 
-        float progNorm   = Mathf.Clamp01(progTotal / 100f);
+        float progNorm = Mathf.Clamp01(progTotal / 100f);
         float creditNorm = Mathf.Clamp01(snap.creditCount / 50000f);
 
         float resourceUsageScore = (progNorm * 0.6f) + (creditNorm * 0.4f);
 
-        // Combine
         float efficiency =
-            (jobLevelScore      * 0.35f) +
-            (careScoreNorm      * 0.25f) +
-            (captureScore       * 0.25f) +
+            (jobLevelScore * 0.35f) +
+            (careScoreNorm * 0.25f) +
+            (captureScore * 0.25f) +
             (resourceUsageScore * 0.15f);
 
         return Mathf.RoundToInt(Mathf.Clamp01(efficiency) * 100f);
@@ -779,8 +850,8 @@ public class PlayerDossierManager : MonoBehaviour
         if (am == null)
         {
             snap.achievementsUnlocked = 0;
-            snap.achievementsTotal    = 0;
-            snap.achievements         = Array.Empty<AchievementRowSnapshot>();
+            snap.achievementsTotal = 0;
+            snap.achievements = Array.Empty<AchievementRowSnapshot>();
             return;
         }
 
@@ -788,8 +859,8 @@ public class PlayerDossierManager : MonoBehaviour
         if (entries == null || entries.Count == 0)
         {
             snap.achievementsUnlocked = 0;
-            snap.achievementsTotal    = 0;
-            snap.achievements         = Array.Empty<AchievementRowSnapshot>();
+            snap.achievementsTotal = 0;
+            snap.achievements = Array.Empty<AchievementRowSnapshot>();
             return;
         }
 
@@ -817,30 +888,24 @@ public class PlayerDossierManager : MonoBehaviour
 
             rows.Add(new AchievementRowSnapshot
             {
-                id          = e.id,
-                icon        = e.icon,
-                name        = showSecret ? "???" : e.displayName,
+                id = e.id,
+                icon = e.icon,
+                name = showSecret ? "???" : e.displayName,
                 description = showSecret ? "Unlock this achievement to reveal details." : e.description,
-                unlocked    = unlocked,
-                value       = value,
-                goal        = goal,
-                isNew       = unlocked && prog != null && !prog.seen
+                unlocked = unlocked,
+                value = value,
+                goal = goal,
+                isNew = unlocked && prog != null && !prog.seen
             });
         }
 
-        // Sorting rules:
-        // - Completed (unlocked) go to the bottom
-        // - Closest-to-completion go to the top
-        // - If equal progress, randomize ordering
         var rng = new System.Random(GetStableShuffleSeed(data));
 
         rows.Sort((a, b) =>
         {
-            // unlocked bottom
-            int unlockedCompare = a.unlocked.CompareTo(b.unlocked); // false(0) before true(1)
+            int unlockedCompare = a.unlocked.CompareTo(b.unlocked);
             if (unlockedCompare != 0) return unlockedCompare;
 
-            // both locked: highest progress first
             if (!a.unlocked && !b.unlocked)
             {
                 float pa = a.goal > 0 ? (a.value / (float)a.goal) : 0f;
@@ -849,11 +914,9 @@ public class PlayerDossierManager : MonoBehaviour
                 int progCompare = pb.CompareTo(pa);
                 if (progCompare != 0) return progCompare;
 
-                // tie: random
                 return rng.Next(-1, 2);
             }
 
-            // both unlocked: random
             return rng.Next(-1, 2);
         });
 
@@ -864,14 +927,12 @@ public class PlayerDossierManager : MonoBehaviour
 
     private int GetStableShuffleSeed(PlayerManager data)
     {
-        // Stable enough to vary by player but not flicker every frame
-        // (changes when playerId changes; if null, uses a fixed seed).
         unchecked
         {
             int seed = 1337;
             if (data != null && !string.IsNullOrEmpty(data.playerId))
                 seed = (seed * 31) ^ data.playerId.GetHashCode();
-            seed = (seed * 31) ^ DateTime.UtcNow.Date.GetHashCode(); // changes once per day
+            seed = (seed * 31) ^ DateTime.UtcNow.Date.GetHashCode();
             return seed;
         }
     }

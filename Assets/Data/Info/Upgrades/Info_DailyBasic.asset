@@ -10,13 +10,16 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 8909f92dca58941be8a4545ccb059a11, type: 3}
-  m_Name: Info_OffilineEarnings
+  m_Name: Info_DailyBasic
   m_EditorClassIdentifier: 
-  id: upg.offline
+  id: upg.seeds.daily
   category: 5
-  title: Offline Earnings
-  subtitle: Upgrade
-  body: "Improves rewards collected while the game is closed or idle.  \nEach level
-    extends offline duration and increases stored gains.  \nPerfect for idle playstyles. 
-    \nCosts Coins; price scales per level.\n"
-  icon: {fileID: 0}
+  title: Daily Seeds
+  subtitle: Shared Daily Runs
+  body: 'Unlocks Daily Seed runs.
+
+    
+
+    Each day features a shared seed that
+    offers a consistent experience for all players, enabling fair comparisons and
+    community challenges.'

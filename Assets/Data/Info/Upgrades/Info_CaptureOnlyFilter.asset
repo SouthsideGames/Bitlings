@@ -10,13 +10,12 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 8909f92dca58941be8a4545ccb059a11, type: 3}
-  m_Name: Info_Crit
+  m_Name: Info_CaptureOnlyFilter
   m_EditorClassIdentifier: 
-  id: upg.crit
+  id: upg.codex.captureonly
   category: 5
-  title: Crit Power
-  subtitle: Upgrade
-  body: "Improves your chance to land critical hits and amplifies their damage. 
-    \nHigher levels increase both critical chance and multiplier.  \nSynergizes well
-    with Tap Power.  \nCosts Coins; price scales per level.\n"
-  icon: {fileID: 0}
+  title: Capture-Only Filter
+  subtitle: Codex Filtering
+  body: "Adds a \u201CCapture Only\u201D filter to the Codex.\r\n\r\nThis filter
+    shows only monsters you have successfully captured, helping you track collection
+    progress more efficiently."

@@ -22,7 +22,6 @@ public enum CheatEffectKind
     UnlockAllPacks,
 }
 
-
 [Serializable]
 public class CheatDefinition
 {
@@ -63,6 +62,13 @@ public class CheatCodeManager : MonoBehaviour
     [Tooltip("Configure your secret codes and their effects here.")]
     [SerializeField] private List<CheatDefinition> cheats = new();
 
+    [Header("Security")]
+    [SerializeField] private int maxInvalidAttempts = 3;
+    [SerializeField] private int lockHours = 24;
+
+    const long SECONDS_PER_HOUR = 3600;
+    const long SECONDS_PER_DAY = 86400;
+
     void Awake()
     {
         if (I != null && I != this)
@@ -89,12 +95,129 @@ public class CheatCodeManager : MonoBehaviour
             : raw.Trim().ToUpperInvariant();
     }
 
+    // ─────────────────────────────────────────────────────────────
+    // Lock / Attempts (persistent)
+    // ─────────────────────────────────────────────────────────────
+
+    public bool IsLocked(out long remainingSeconds)
+    {
+        remainingSeconds = 0;
+
+        if (SaveManager.Data == null) return false;
+
+        long now = SaveManager.NowUnix();
+        long until = SaveManager.Data.cheatLockedUntilUnix;
+
+        if (until <= 0) return false;
+
+        if (now >= until)
+        {
+            // Expired -> clear state
+            SaveManager.Data.cheatLockedUntilUnix = 0;
+            SaveManager.Data.cheatInvalidAttempts = 0;
+            SaveManager.Save();
+            return false;
+        }
+
+        remainingSeconds = Math.Max(0, until - now);
+        return true;
+    }
+
+    public string GetLockedMessage()
+    {
+        if (!IsLocked(out long remain))
+            return string.Empty;
+
+        // Themed lock message requested by you
+        return "REISSUING NEW SECURITY BADGES...\n" +
+               $"Process will be completed in: {FormatRemaining(remain)}";
+    }
+
+    string FormatRemaining(long seconds)
+    {
+        if (seconds < 0) seconds = 0;
+        var ts = TimeSpan.FromSeconds(seconds);
+
+        // Always show HH:MM:SS, even if > 24h (shouldn't be, but safe)
+        long totalHours = (long)ts.TotalHours;
+        return $"{totalHours:00}:{ts.Minutes:00}:{ts.Seconds:00}";
+    }
+
+    void RegisterInvalidAttempt(out string message, out bool triggeredLock)
+    {
+        triggeredLock = false;
+        message = "INVALID PASSCODE.";
+
+        if (SaveManager.Data == null)
+        {
+            message = "Save data not loaded.";
+            return;
+        }
+
+        // If already locked, just report lock message
+        if (IsLocked(out _))
+        {
+            message = GetLockedMessage();
+            return;
+        }
+
+        SaveManager.Data.cheatInvalidAttempts = Mathf.Max(0, SaveManager.Data.cheatInvalidAttempts);
+        SaveManager.Data.cheatInvalidAttempts++;
+
+        int a = SaveManager.Data.cheatInvalidAttempts;
+
+        if (a <= 1)
+        {
+            message = "INVALID PASSCODE.\nCheck authorization with Management.";
+        }
+        else if (a == 2)
+        {
+            message = "ACCESS DENIED.\nSecurity team has been notified.";
+        }
+        else
+        {
+            // 3rd+ -> lock for 24 hours
+            long now = SaveManager.NowUnix();
+            long lockSeconds = (lockHours <= 0 ? SECONDS_PER_DAY : lockHours * SECONDS_PER_HOUR);
+            SaveManager.Data.cheatLockedUntilUnix = now + lockSeconds;
+            SaveManager.Data.cheatInvalidAttempts = maxInvalidAttempts; // clamp to max
+            triggeredLock = true;
+
+            message = "SYSTEM LOCKDOWN INITIATED.\nShutting down access.";
+        }
+
+        SaveManager.Save();
+    }
+
+    void ResetInvalidAttemptsIfAny()
+    {
+        if (SaveManager.Data == null) return;
+
+        if (SaveManager.Data.cheatInvalidAttempts != 0)
+        {
+            SaveManager.Data.cheatInvalidAttempts = 0;
+            SaveManager.Save();
+        }
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // Apply Cheat
+    // ─────────────────────────────────────────────────────────────
+
     /// <summary>
     /// Tries to apply a cheat. Returns true on success, plus a user-facing message.
+    /// On third invalid attempt, this will lock cheats for 24 hours (or lockHours).
     /// </summary>
     public bool TryApplyCheat(string rawCode, out string message)
     {
         message = string.Empty;
+
+        // If locked, do not allow any attempts
+        if (IsLocked(out _))
+        {
+            message = GetLockedMessage();
+            return false;
+        }
 
         string normalized = NormalizeCode(rawCode);
         if (string.IsNullOrEmpty(normalized))
@@ -106,16 +229,29 @@ public class CheatCodeManager : MonoBehaviour
         var cd = cheats.Find(c => c != null && c.code == normalized);
         if (cd == null)
         {
-            message = "Invalid code.";
+            RegisterInvalidAttempt(out message, out _);
             return false;
         }
 
         bool ok = ExecuteCheat(cd, out message);
-        if (!ok && string.IsNullOrEmpty(message))
+
+        if (ok)
+        {
+            // Successful use resets invalid attempt streak
+            ResetInvalidAttemptsIfAny();
+            return true;
+        }
+
+        if (string.IsNullOrEmpty(message))
             message = "Cheat failed.";
 
-        return ok;
+        // Note: A *valid code* that fails does NOT count as an invalid passcode.
+        return false;
     }
+
+    // ─────────────────────────────────────────────────────────────
+    // Execution (unchanged)
+    // ─────────────────────────────────────────────────────────────
 
     bool ExecuteCheat(CheatDefinition cd, out string message)
     {
@@ -168,7 +304,6 @@ public class CheatCodeManager : MonoBehaviour
             case CheatEffectKind.UnlockAllPacks:
                 return ExecuteUnlockAllPacks(out message);
 
-
             default:
                 message = "Cheat not configured.";
                 return false;
@@ -194,7 +329,6 @@ public class CheatCodeManager : MonoBehaviour
             return false;
         }
 
-        // Prefer ResourceManager so listeners (UI, popups, etc.) stay consistent.
         if (ResourceManager.I != null) ResourceManager.I.Add(cd.resourceType, cd.amount);
         else ResourceBank.Add(cd.resourceType, cd.amount);
 
@@ -245,7 +379,6 @@ public class CheatCodeManager : MonoBehaviour
             return false;
         }
 
-        // Pack currency is shards-only in this project. It's stored as ResourceType.PackVoucher.
         if (ResourceManager.I != null) ResourceManager.I.Add(ResourceType.PackVoucher, amount);
         else ResourceBank.Add(ResourceType.PackVoucher, amount);
 
@@ -253,9 +386,6 @@ public class CheatCodeManager : MonoBehaviour
         return true;
     }
 
-    // ─────────────────────────────────────────────────────────────
-    // Refill Energy
-    // ─────────────────────────────────────────────────────────────
     bool ExecuteRefillEnergy(out string message)
     {
         message = string.Empty;
@@ -288,9 +418,6 @@ public class CheatCodeManager : MonoBehaviour
         return true;
     }
 
-    // ─────────────────────────────────────────────────────────────
-    // Unlock All Job Sites
-    // ─────────────────────────────────────────────────────────────
     bool ExecuteUnlockAllJobSites(out string message)
     {
         message = string.Empty;
@@ -311,7 +438,6 @@ public class CheatCodeManager : MonoBehaviour
 
         int before = SaveManager.Data.unlockedJobSites.Count;
 
-        // Use JobManager's configured sites so we only unlock valid ones.
         var sites = JobManager.I.GetSitesArray();
         if (sites != null)
         {
@@ -328,7 +454,6 @@ public class CheatCodeManager : MonoBehaviour
         int after = SaveManager.Data.unlockedJobSites.Count;
         int added = after - before;
 
-        // Persist + refresh views + notify listeners
         SaveManager.Save();
         JobManager.I.RefreshAllJobSiteViewsInScene();
         GameEvents.OnJobsChanged?.Invoke();
@@ -340,9 +465,6 @@ public class CheatCodeManager : MonoBehaviour
         return true;
     }
 
-    // ─────────────────────────────────────────────────────────────
-    // Advance Time (hours)
-    // ─────────────────────────────────────────────────────────────
     bool ExecuteAdvanceTimeHours(int hours, out string message)
     {
         message = string.Empty;
@@ -361,11 +483,9 @@ public class CheatCodeManager : MonoBehaviour
 
         long delta = (long)hours * 3600L;
 
-        // Shift the save timestamps backward so existing offline systems see elapsed time.
         SaveManager.Data.lastSavedUnix = Math.Max(0, SaveManager.Data.lastSavedUnix - delta);
         SaveManager.Data.energyLastUnix = Math.Max(0, SaveManager.Data.energyLastUnix - delta);
 
-        // Also shift job runtime savedAtUnix (informational, but keeps it coherent).
         var rt = SaveManager.LoadJobRuntime();
         if (rt != null)
         {
@@ -373,7 +493,6 @@ public class CheatCodeManager : MonoBehaviour
             SaveManager.SaveJobRuntime(rt);
         }
 
-        // Run offline systems.
         if (JobManager.I != null) JobManager.I.ProcessOfflineAllSites();
         HealthRegenSystem.I?.TryApplyOfflineRegen();
         if (EncounterManager.I != null) EncounterManager.I.Cheat_ApplyOfflineEnergyRegen();
@@ -384,14 +503,10 @@ public class CheatCodeManager : MonoBehaviour
         return true;
     }
 
-    // ─────────────────────────────────────────────────────────────
-    // Reset Cooldowns (Jobs)
-    // ─────────────────────────────────────────────────────────────
     bool ExecuteResetCooldowns(out string message)
     {
         message = string.Empty;
 
-        // Prefer in-memory reset if JobManager exists (ensures internal cooldown map clears).
         if (JobManager.I != null)
         {
             int cleared = JobManager.I.Cheat_ResetCooldowns();
@@ -399,7 +514,6 @@ public class CheatCodeManager : MonoBehaviour
             return true;
         }
 
-        // Fallback: clear runtime sidecar only.
         var blob = SaveManager.LoadJobRuntime();
         if (blob == null)
         {
@@ -433,9 +547,6 @@ public class CheatCodeManager : MonoBehaviour
         return true;
     }
 
-    // ─────────────────────────────────────────────────────────────
-    // Clear all job fatigue
-    // ─────────────────────────────────────────────────────────────
     bool ExecuteClearAllJobFatigue(out string message)
     {
         message = string.Empty;
@@ -447,7 +558,6 @@ public class CheatCodeManager : MonoBehaviour
             return true;
         }
 
-        // Fallback: clear runtime sidecar only.
         var blob = SaveManager.LoadJobRuntime();
         if (blob == null)
         {
@@ -474,9 +584,6 @@ public class CheatCodeManager : MonoBehaviour
         return true;
     }
 
-    // ─────────────────────────────────────────────────────────────
-    // Discover all monsters
-    // ─────────────────────────────────────────────────────────────
     bool ExecuteDiscoverAllMonsters(out string message)
     {
         message = string.Empty;
@@ -508,9 +615,6 @@ public class CheatCodeManager : MonoBehaviour
         return true;
     }
 
-    // ─────────────────────────────────────────────────────────────
-    // Start encounter with monster ID
-    // ─────────────────────────────────────────────────────────────
     bool ExecuteStartEncounterWithMonsterId(string monsterId, bool spendEnergy, out string message)
     {
         message = string.Empty;
@@ -587,8 +691,6 @@ public class CheatCodeManager : MonoBehaviour
         {
             var t = data.team[i];
             if (t == null || string.IsNullOrEmpty(t.monsterId)) continue;
-
-            // Only revive those that are KO'd
             if (t.currentHP > 0) continue;
 
             var def = lib.GetById(t.monsterId);
@@ -596,7 +698,6 @@ public class CheatCodeManager : MonoBehaviour
 
             int maxHP = HealingService.CalcMaxHP(def, t.level);
 
-            // Revive to 1 HP (classic revive behavior)
             t.currentHP = 1;
             t.lastHPUnix = now;
 
@@ -691,5 +792,4 @@ public class CheatCodeManager : MonoBehaviour
         message = added > 0 ? $"Unlocked {added} pack(s)." : "All packs already unlocked.";
         return true;
     }
-
 }

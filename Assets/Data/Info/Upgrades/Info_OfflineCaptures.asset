@@ -10,13 +10,16 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 8909f92dca58941be8a4545ccb059a11, type: 3}
-  m_Name: Info_Tap
+  m_Name: Info_OfflineCaptures
   m_EditorClassIdentifier: 
-  id: upg.tap
+  id: upg.idle.offlinecapture
   category: 5
-  title: Tap Power
-  subtitle: Upgrade
-  body: "Increases the power of your manual taps during encounters.  \nEach level
-    boosts tap damage and overall click effectiveness.  \nCosts Coins; price scales
-    with level."
-  icon: {fileID: 0}
+  title: Offline Captures
+  subtitle: Passive Monster Acquisition
+  body: 'Unlocks the ability to capture monsters during Idle Battles.
+
+    
+
+    Monsters
+    encountered while idle now have a chance to be captured automatically, expanding
+    your roster without active play.'

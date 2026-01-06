@@ -35,6 +35,7 @@ public enum PanelId
     Recycle = 29,
     Story = 30,
     PlayerDossier = 31,
+    ImagePreview = 32,
 }
 
 [Serializable]

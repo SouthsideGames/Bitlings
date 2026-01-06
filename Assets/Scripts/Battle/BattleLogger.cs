@@ -14,7 +14,7 @@ public struct TitleProcEvent
     {
         this.ownerName = ownerName;
         this.titleName = titleName;
-        this.summary = summary;
+        this.summary   = summary;
     }
 }
 
@@ -78,7 +78,6 @@ public static class DamageLogFormatter
     {
         var sb = new StringBuilder(128);
 
-        // Header story bit
         if (!string.IsNullOrEmpty(attackerName))
             sb.Append(attackerName).Append(" ");
         if (!string.IsNullOrEmpty(moveName))
@@ -89,13 +88,11 @@ public static class DamageLogFormatter
         sb.Append("→ ");
         sb.Append(totalDamage).Append(" dmg ");
 
-        // Breakdown
         sb.Append("(");
         sb.Append(" <color=").Append(BattleLogColors.Base).Append(">")
           .Append(baseDamage)
           .Append("</color>");
 
-        // Buff / Debuff breakdown
         bool hasBD = HasBuffOrDebuff(mods);
         if (hasBD)
         {
@@ -127,7 +124,6 @@ public static class DamageLogFormatter
             sb.Append(")");
         }
 
-        // Crit / effectiveness flags
         if (crit)
         {
             sb.Append(" <color=").Append(BattleLogColors.Crit).Append(">CRIT!</color>");
@@ -141,7 +137,6 @@ public static class DamageLogFormatter
                 sb.Append(" <color=").Append(BattleLogColors.Info).Append(">Not very effective</color>");
         }
 
-        // Info-type mods (pierce, ignores armor, etc.)
         if (mods != null)
         {
             for (int i = 0; i < mods.Count; i++)
@@ -180,7 +175,7 @@ public static class BattleLogger
 {
     public static event Action<LogEntry> OnLogAppended;
 
-    // NEW: for BattleHistoryModalUI (append-only text stream)
+    // For BattleHistoryModalUI (append-only text stream)
     public static event Action<string> OnLineLogged;
 
     public static event Action<string> OnBattleBegan;
@@ -196,10 +191,10 @@ public static class BattleLogger
 
     public static IReadOnlyList<LogEntry> Entries => _entries;
 
-    // NEW: snapshot helper for modal rebuild
+    // Snapshot helper for modal rebuild
     public static IReadOnlyList<LogEntry> GetEntriesSnapshot() => _entries;
 
-    // NEW: optional helper if you only want strings
+    // Optional helper if you only want strings
     public static IReadOnlyList<string> GetLinesSnapshot(int max = 0)
     {
         if (max <= 0 || max >= _entries.Count)
@@ -221,6 +216,10 @@ public static class BattleLogger
 
     // Optional: cap stored lines to avoid unbounded growth across many encounters
     public static int MaxEntries { get; private set; } = 800;
+
+    // EXACT string you said you don't want shown unless Auto is unlocked
+    // If your UI uses a different phrase (capitalization/punctuation), change it here.
+    public const string HoldForAutoLine = "Hold for Auto";
 
     static long NowUnix() => SaveManager.NowUnix();
 
@@ -270,6 +269,10 @@ public static class BattleLogger
         if (!Enabled) return;
         if (string.IsNullOrEmpty(message)) return;
 
+        // NEW: do not show "Hold for Auto" unless Auto is unlocked
+        if (ShouldSuppressAutoHint(message))
+            return;
+
         var e = new LogEntry
         {
             unix        = NowUnix(),
@@ -283,8 +286,24 @@ public static class BattleLogger
 
         OnLogAppended?.Invoke(e);
 
-        // NEW: battle history modal can subscribe to this
+        // battle history modal can subscribe to this
         OnLineLogged?.Invoke(message);
+    }
+
+    static bool ShouldSuppressAutoHint(string message)
+    {
+        // Keep this strict so we do not hide other lines by accident.
+        if (!string.Equals(message, HoldForAutoLine, StringComparison.Ordinal))
+            return false;
+
+        // If we cannot read save data, default to "locked" (suppress).
+        var p = SaveManager.Data;
+        if (p == null) return true;
+
+        // Use your real Auto unlock check here when available.
+        // For now, we can safely infer "Auto unlocked" from autoTapLevel > 0,
+        // since autoTapLevel exists in your PlayerManager data.
+        return p.autoTapLevel <= 0;
     }
 
     // ─────────────────────────────────────────────────────────
@@ -325,7 +344,7 @@ public static class BattleLogger
     }
 
     // ─────────────────────────────────────────────────────────
-    // Turn / Title helpers for “what happened this turn?”
+    // Turn / Title helpers
     // ─────────────────────────────────────────────────────────
     public static void LogTurnStart(int turnIndex)
     {
@@ -345,10 +364,8 @@ public static class BattleLogger
         );
     }
 
-
     public static void LogChoice(string actorName, string choiceSummary, bool isPlayer)
     {
-        // e.g. "Player: Umbra-01 chooses ATTACK (Shadow Claw)."
         string side = isPlayer ? "Player" : "Enemy";
         Log($"{side}: {actorName} chooses {choiceSummary}.", LogScope.Battle);
     }
@@ -369,9 +386,9 @@ public static class BattleLogger
         {
             var e = new LogEntry
             {
-                unix       = NowUnix(),
-                scope      = LogScope.System,
-                text       = "(log cleared)",
+                unix        = NowUnix(),
+                scope       = LogScope.System,
+                text        = "(log cleared)",
                 battleLabel = null
             };
 
@@ -387,7 +404,6 @@ public static class BattleLogger
         int overflow = _entries.Count - MaxEntries;
         if (overflow <= 0) return;
 
-        // Remove oldest
         _entries.RemoveRange(0, overflow);
     }
 }

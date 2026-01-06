@@ -52,7 +52,7 @@ public class CodexPanelUI : MonoBehaviour
 
     private CodexViewMode _viewMode = CodexViewMode.All;
 
-    // NEW: cache last visible codex defs (post-filter) for swipe browsing
+    // cache last visible codex defs (post-filter) for swipe browsing
     private List<MonsterDataSO> _lastVisibleCodexDefs = new List<MonsterDataSO>();
 
     void OnEnable()
@@ -180,7 +180,7 @@ public class CodexPanelUI : MonoBehaviour
             case OwnedSortMode.ByType: return "Type";
             case OwnedSortMode.ByLevelLowToHigh: return "Level ↑";
             case OwnedSortMode.ByLevelHighToLow: return "Level ↓";
-            case OwnedSortMode.ShinyMonsters: return "Shiny Only";
+            case OwnedSortMode.ShinyMonsters: return "Shiny First";
             default: return mode.ToString();
         }
     }
@@ -206,8 +206,8 @@ public class CodexPanelUI : MonoBehaviour
         var data = SaveManager.Data;
         if (data == null)
         {
-            Clear(teamContent);
-            Clear(ownedContent);
+            ClearAllChildren(teamContent);
+            ClearOwnedListItemsOnly(ownedContent);
             _lastVisibleCodexDefs = new List<MonsterDataSO>();
             return;
         }
@@ -230,7 +230,7 @@ public class CodexPanelUI : MonoBehaviour
         var data = SaveManager.Data;
         if (data == null)
         {
-            Clear(ownedContent);
+            ClearOwnedListItemsOnly(ownedContent);
             _lastVisibleCodexDefs = new List<MonsterDataSO>();
             return;
         }
@@ -252,7 +252,7 @@ public class CodexPanelUI : MonoBehaviour
 
     void BuildTeam(List<OwnedMonsterData> team)
     {
-        Clear(teamContent);
+        ClearAllChildren(teamContent);
         _teamCardRoots.Clear();
 
         if (team == null) team = new List<OwnedMonsterData>();
@@ -357,7 +357,10 @@ public class CodexPanelUI : MonoBehaviour
 
     void BuildOwned(List<OwnedMonsterData> owned, List<OwnedMonsterData> team, OwnedSortMode sortMode)
     {
-        Clear(ownedContent);
+        // IMPORTANT: only clear instantiated list items, do NOT nuke the entire ownedContent
+        // (otherwise you can destroy your filter bar/buttons if they live under ownedContent).
+        ClearOwnedListItemsOnly(ownedContent);
+
         _lastVisibleCodexDefs = new List<MonsterDataSO>();
 
         if (!ownedContent || ownedListItemPrefab == null)
@@ -397,7 +400,6 @@ public class CodexPanelUI : MonoBehaviour
             return;
 
         var sortedDefs = SortDefs(defs, sortMode, ownedById, shinyById);
-        bool shinyMode = (sortMode == OwnedSortMode.ShinyMonsters);
 
         // NEW: collect spawned codex items so we can inject browse list after we know it
         var spawnedItems = new List<OwnedMonsterListItemUI>();
@@ -408,12 +410,9 @@ public class CodexPanelUI : MonoBehaviour
 
             OwnedMonsterData ownedData = null;
 
-            // capturedReal = truly owned (or shiny owned when in shiny mode)
-            bool capturedReal;
-            if (shinyMode)
-                capturedReal = shinyById.TryGetValue(def.id, out ownedData);
-            else
-                capturedReal = ownedById.TryGetValue(def.id, out ownedData);
+            // capturedReal = truly owned (in ShinyFirst mode this is still "owned or not"
+            // for filtering; we keep capturedReal based on normal ownership).
+            bool capturedReal = ownedById.TryGetValue(def.id, out ownedData);
 
             // discovered = reveal in codex even if not owned yet
             bool discovered =
@@ -463,7 +462,7 @@ public class CodexPanelUI : MonoBehaviour
             }
         }
 
-        // NEW: push browse context into every spawned item so swipe works inside detail panel
+        // push browse context into every spawned item so swipe works inside detail panel
         for (int i = 0; i < spawnedItems.Count; i++)
         {
             if (spawnedItems[i] != null)
@@ -604,10 +603,12 @@ public class CodexPanelUI : MonoBehaviour
                 break;
 
             case OwnedSortMode.ShinyMonsters:
+                // Shiny FIRST (do not filter out non-shiny)
                 query = defs
-                    .Where(d => d && shinyById != null && shinyById.ContainsKey(d.id))
-                    .OrderByDescending(d => GetOwnedLevel(d, shinyById))
-                    .ThenBy(d => SafeName(d));
+                    .OrderByDescending(d => d && shinyById != null && shinyById.ContainsKey(d.id))
+                    .ThenByDescending(d => GetOwnedLevel(d, ownedById))
+                    .ThenBy(d => SafeName(d))
+                    .ThenBy(d => d ? d.id : string.Empty);
                 break;
 
             case OwnedSortMode.ByIdAsc:
@@ -640,12 +641,20 @@ public class CodexPanelUI : MonoBehaviour
     private void OnToggleCapturedOnly()
     {
         _capturedOnlyFilter = !_capturedOnlyFilter;
+
+        // optional: keep filters from stacking into "empty list" confusion
+        if (_capturedOnlyFilter) _favoritesOnlyFilter = false;
+
         RebuildOwnedOnly();
     }
 
     private void OnToggleFavoritesOnly()
     {
         _favoritesOnlyFilter = !_favoritesOnlyFilter;
+
+        // optional: keep filters from stacking into "empty list" confusion
+        if (_favoritesOnlyFilter) _capturedOnlyFilter = false;
+
         RebuildOwnedOnly();
     }
 
@@ -653,10 +662,28 @@ public class CodexPanelUI : MonoBehaviour
     // Helpers
     // ─────────────────────────────────────────────
 
-    static void Clear(RectTransform parent)
+    private static void ClearAllChildren(RectTransform parent)
     {
         if (!parent) return;
         for (int i = parent.childCount - 1; i >= 0; i--)
             UnityEngine.Object.Destroy(parent.GetChild(i).gameObject);
+    }
+
+    /// <summary>
+    /// Clears ONLY the instantiated OwnedMonsterListItemUI rows under ownedContent.
+    /// This prevents destroying static UI like headers/filter bars/buttons if they live under ownedContent.
+    /// </summary>
+    private static void ClearOwnedListItemsOnly(RectTransform parent)
+    {
+        if (!parent) return;
+
+        for (int i = parent.childCount - 1; i >= 0; i--)
+        {
+            var child = parent.GetChild(i);
+            if (!child) continue;
+
+            if (child.GetComponent<OwnedMonsterListItemUI>() != null)
+                UnityEngine.Object.Destroy(child.gameObject);
+        }
     }
 }

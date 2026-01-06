@@ -10,13 +10,15 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 8909f92dca58941be8a4545ccb059a11, type: 3}
-  m_Name: Info_Idle
+  m_Name: Info_CodexFavorites
   m_EditorClassIdentifier: 
-  id: upg.Idle
+  id: upg.codex.favorites
   category: 5
-  title: Idle Gain
-  subtitle: Upgrade
-  body: "Boosts your passive progress when not actively tapping.  \nEach level increases
-    idle damage, XP gain, or resource generation.  \nPerfect for background progression. 
-    \nCosts Coins; price scales per level."
-  icon: {fileID: 0}
+  title: Codex Favorites
+  subtitle: Quick Access Sorting
+  body: 'Unlocks the ability to favorite monsters in the Codex.
+
+    
+
+    Favorited
+    monsters can be pinned and sorted for faster access and easier roster management.'

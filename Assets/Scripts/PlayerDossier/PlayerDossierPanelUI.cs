@@ -35,6 +35,7 @@ public class PlayerDossierPanelUI : MonoBehaviour
     [SerializeField] private Image careScoreFillImage;
     [SerializeField] private TextMeshProUGUI careScoreValueText;
     [SerializeField] private TextMeshProUGUI careScoreNoteText;
+    [SerializeField] private Button careScoreInfoButton;
 
     // ─────────────────────────────────────────────────────────────
     // PAGE 2 – JOB NETWORK
@@ -122,7 +123,28 @@ public class PlayerDossierPanelUI : MonoBehaviour
         if (manager != null)
         {
             var snapshot = manager.CurrentSnapshot;
+
+            
             PopulatePage1(snapshot);
+
+            if (careScoreInfoButton)
+            {
+                careScoreInfoButton.onClick.RemoveAllListeners();
+                careScoreInfoButton.onClick.AddListener(() =>
+                {
+                    if (TooltipUI.I == null) return;
+
+                    string msg =
+                        "CARE SCORE BREAKDOWN\n" +
+                        $"• Development: {snapshot.careDevelopmentPercent:0}%\n" +
+                        $"• Balance: {snapshot.careBalancePercent:0}%\n" +
+                        $"• Recovery: {snapshot.careRecoveryPercent:0}%\n" +
+                        $"• Assignment: {snapshot.careAssignmentPercent:0}%";
+
+                    TooltipUI.I.Show(msg);
+                });
+            }
+
             PopulatePage2(snapshot);
             PopulatePage3(snapshot);
             PopulatePage4Resources(snapshot);

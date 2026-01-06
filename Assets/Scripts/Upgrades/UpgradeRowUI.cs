@@ -16,19 +16,25 @@ public class UpgradeRowUI : MonoBehaviour
     [SerializeField] private Button infoButton;
 
     // internal data
-    FeatureId _featureId = FeatureId.None;
-    int _creditCost;
-    string _infoId;
-    string _fallbackTitle;
-    Sprite _icon;
+    private FeatureId _featureId = FeatureId.None;
+    private int _creditCost;
+    private string _infoId;
+    private string _fallbackTitle;
+    private Sprite _icon;
 
     void Awake()
     {
         if (buyButton != null)
+        {
+            buyButton.onClick.RemoveListener(OnBuyClicked);
             buyButton.onClick.AddListener(OnBuyClicked);
+        }
 
         if (infoButton != null)
+        {
+            infoButton.onClick.RemoveListener(OpenInfo);
             infoButton.onClick.AddListener(OpenInfo);
+        }
     }
 
     void OnEnable()
@@ -72,11 +78,13 @@ public class UpgradeRowUI : MonoBehaviour
         _featureId = entry.featureId;
         _creditCost = entry.creditCost;
         _infoId = entry.infoId;
+
         _fallbackTitle = string.IsNullOrWhiteSpace(entry.displayName)
             ? _featureId.ToString()
             : entry.displayName;
 
-        if (nameLabel != null) nameLabel.text = _fallbackTitle;
+        if (nameLabel != null)
+            nameLabel.text = _fallbackTitle;
 
         Refresh();
     }
@@ -87,8 +95,9 @@ public class UpgradeRowUI : MonoBehaviour
 
     public void Refresh()
     {
-        bool unlocked = FeatureUnlockManager.I != null &&
-                        FeatureUnlockManager.I.IsUnlocked(_featureId);
+        bool unlocked =
+            FeatureUnlockManager.I != null &&
+            FeatureUnlockManager.I.IsUnlocked(_featureId);
 
         if (stateLabel != null)
             stateLabel.text = unlocked ? "Unlocked" : "Locked";
@@ -96,10 +105,17 @@ public class UpgradeRowUI : MonoBehaviour
         if (costLabel != null)
             costLabel.text = unlocked ? "-" : $"{_creditCost} credits";
 
+        // If purchased/unlocked, hide the BUY button GameObject entirely.
         if (buyButton != null)
         {
-            int credits = ResourceBank.Get(ResourceType.Credits);
-            buyButton.interactable = !unlocked && _creditCost > 0 && credits >= _creditCost;
+            buyButton.gameObject.SetActive(!unlocked);
+
+            // If it is visible, optionally control interactable by affordability.
+            if (!unlocked)
+            {
+                int credits = ResourceBank.Get(ResourceType.Credits);
+                buyButton.interactable = _creditCost > 0 && credits >= _creditCost;
+            }
         }
     }
 
@@ -112,13 +128,15 @@ public class UpgradeRowUI : MonoBehaviour
         if (FeatureUnlockManager.I == null)
             return;
 
+        // already purchased
         if (FeatureUnlockManager.I.IsUnlocked(_featureId))
             return;
 
+        // pay
         if (_creditCost > 0 && !ResourceBank.TrySpend(ResourceType.Credits, _creditCost))
             return;
 
-        // Unlock + persist
+        // unlock + persist
         FeatureUnlockManager.I.Unlock(_featureId);
         SaveManager.Save();
 
