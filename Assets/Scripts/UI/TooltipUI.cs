@@ -16,6 +16,7 @@ public class TooltipUI : MonoBehaviour
     [SerializeField] private float fadeOutTime = 0.25f;
 
     private bool _visible;
+    private int _fadeTweenId = -1;
 
     void Awake()
     {
@@ -27,7 +28,9 @@ public class TooltipUI : MonoBehaviour
         I = this;
 
         if (!group) group = GetComponent<CanvasGroup>();
-        if (group) group.alpha = 0f;
+
+        // Keep the object ACTIVE always; hide via CanvasGroup.
+        ApplyHiddenStateImmediate();
 
         if (closeButton)
         {
@@ -42,43 +45,73 @@ public class TooltipUI : MonoBehaviour
     public void Show(string text)
     {
         if (!label || !group) return;
+        if (string.IsNullOrEmpty(text)) return;
 
         label.text = text;
         _visible = true;
 
-        // Reset instantly then fade in
-        group.alpha = 0f;
-        gameObject.SetActive(true);
+        CancelFadeTween();
 
-        LeanTween.alphaCanvas(group, 1f, fadeInTime)
-            .setEaseOutQuad();
+        // Enable interaction while visible
+        group.blocksRaycasts = true;
+        group.interactable = true;
+
+        // Fade in from current alpha (or force from 0 if you want)
+        group.alpha = 0f;
+
+        _fadeTweenId = LeanTween.alphaCanvas(group, 1f, fadeInTime)
+            .setEaseOutQuad()
+            .id;
     }
 
     // ─────────────────────────────────────────────────────────────
-    // Close Button → Hide
+    // Close Button → Hide (fade alpha only; DO NOT deactivate GO)
     // ─────────────────────────────────────────────────────────────
     public void Hide()
     {
-        if (!_visible || !group) return;
+        if (!group) return;
 
         _visible = false;
 
-        LeanTween.alphaCanvas(group, 0f, fadeOutTime)
+        CancelFadeTween();
+
+        _fadeTweenId = LeanTween.alphaCanvas(group, 0f, fadeOutTime)
             .setEaseInQuad()
             .setOnComplete(() =>
             {
-                gameObject.SetActive(false);
-            });
+                // Disable interaction while hidden so it doesn't block UI
+                group.blocksRaycasts = false;
+                group.interactable = false;
+            })
+            .id;
     }
 
     // Instantly hide with no animation (if needed)
     public void HideImmediate()
     {
         _visible = false;
-        if (group)
+        if (!group) return;
+
+        CancelFadeTween();
+        ApplyHiddenStateImmediate();
+    }
+
+    private void ApplyHiddenStateImmediate()
+    {
+        if (!group) return;
+        group.alpha = 0f;
+        group.blocksRaycasts = false;
+        group.interactable = false;
+    }
+
+    private void CancelFadeTween()
+    {
+        if (_fadeTweenId != -1)
         {
-            group.alpha = 0f;
+            if (LeanTween.isTweening(_fadeTweenId))
+                LeanTween.cancel(_fadeTweenId);
+
+            _fadeTweenId = -1;
         }
-        gameObject.SetActive(false);
     }
 }

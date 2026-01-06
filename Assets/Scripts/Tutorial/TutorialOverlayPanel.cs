@@ -41,24 +41,15 @@ public sealed class TutorialOverlayPanel : MonoBehaviour
     private int _index;
     private bool _openedThisSession;
 
-    // ─────────────────────────────────────────────────────────────
-    // Runtime-only request queue (NOT persisted; SaveManager owns saving)
-    // ─────────────────────────────────────────────────────────────
     private static readonly HashSet<string> _pendingOpen =
         new HashSet<string>(StringComparer.Ordinal);
 
-    /// <summary>
-    /// Request that a tutorial opens when/where it exists.
-    /// Safe to call even before panels/UI are enabled or instantiated.
-    /// (No saving happens here.)
-    /// </summary>
     public static void RequestOpen(string key)
     {
         if (string.IsNullOrWhiteSpace(key)) return;
 
         _pendingOpen.Add(key);
 
-        // If an instance is already in scene (even inactive), open it now.
         try
         {
             var all = FindObjectsByType<TutorialOverlayPanel>(FindObjectsInactive.Include, FindObjectsSortMode.None);
@@ -77,9 +68,6 @@ public sealed class TutorialOverlayPanel : MonoBehaviour
         catch { }
     }
 
-    /// <summary>
-    /// Clears runtime-only requests (useful after ClearAll / hard reset).
-    /// </summary>
     public static void ClearPendingRequests()
     {
         _pendingOpen.Clear();
@@ -108,7 +96,7 @@ public sealed class TutorialOverlayPanel : MonoBehaviour
 
     private IEnumerator OpenNextFrame()
     {
-        yield return null; // let UI routing/instantiation settle
+        yield return null; 
         TryOpen();
     }
 
@@ -135,7 +123,6 @@ public sealed class TutorialOverlayPanel : MonoBehaviour
         RenderPage();
         ApplyButtons();
 
-        // Consume any pending open request once we successfully open.
         _pendingOpen.Remove(tutorialKey);
     }
 
