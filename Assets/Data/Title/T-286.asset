@@ -16,6 +16,7 @@ MonoBehaviour:
   displayName: Workshop Commander
   description: Gains +7% ATK each turn for 3 turns (max +21% ATK).
   icon: {fileID: -7211892166802722315, guid: 28fa34c3b419148d6b24298ab5402546, type: 3}
+  canRollOnWild: 1
   stat: 0
   percentPerTurn: 7
   maxStacks: 3

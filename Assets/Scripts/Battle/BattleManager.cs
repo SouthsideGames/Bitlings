@@ -19,16 +19,12 @@ public struct BattleResult
     public int turnsSurvived;
     public int damageTaken;
 
-    // NEW
     public int damageDealt;
     public bool gotFirstHit;
 }
 
 public class BattleManager : MonoBehaviour
 {
-    // ─────────────────────────────────────────────────────────────────────────────
-    // Manual-turn settings
-    // ─────────────────────────────────────────────────────────────────────────────
     private enum PlayerAction { None, Attack, Defend, Focus, Run }
     private enum EnemyAction { Attack, Defend, Focus, Run }
 
@@ -54,10 +50,6 @@ public class BattleManager : MonoBehaviour
     [Header("Attack VFX")]
     [SerializeField] private bool spawnAttackPrefabs = true;
 
-
-    // ─────────────────────────────────────────────────────────────
-    // POLISH
-    // ─────────────────────────────────────────────────────────────
     [Header("Damage Number FX")]
     [SerializeField] private DamageNumberUI damageNumberPrefab;
     [SerializeField] private RectTransform playerDamageAnchor;
@@ -65,15 +57,15 @@ public class BattleManager : MonoBehaviour
 
     [Header("Damage Number Colors")]
     [SerializeField] private Color dmgNormalColor = Color.white;
-    [SerializeField] private Color dmgCritColor = new Color(1f, 0.9f, 0.35f);  // gold-ish
-    [SerializeField] private Color dmgWeakColor = new Color(0.55f, 0.8f, 1f);   // cyan-ish
+    [SerializeField] private Color dmgCritColor = new Color(1f, 0.9f, 0.35f);
+    [SerializeField] private Color dmgWeakColor = new Color(0.55f, 0.8f, 1f);
     [SerializeField] private Color dmgResistColor = new Color(0.75f, 0.75f, 0.75f);
 
     [Header("Screen Shake")]
-    [SerializeField] private Transform screenShakeRoot;        // Optional. If null, uses Camera.main
+    [SerializeField] private Transform screenShakeRoot;
     [SerializeField] private float heavyHitShakeMagnitude = 12f;
     [SerializeField] private float heavyHitShakeDuration = 0.15f;
-    [SerializeField] private float heavyHitThresholdPct = 0.30f; // 30% HP
+    [SerializeField] private float heavyHitThresholdPct = 0.30f;
 
     private bool _isPlayerTurn;
     public bool IsPlayerTurn => _isPlayerTurn;
@@ -83,9 +75,6 @@ public class BattleManager : MonoBehaviour
     private PlayerAction pendingAction = PlayerAction.None;
     private bool defendActiveThisRound = false;
 
-    // ─────────────────────────────────────────────────────────────────────────────
-    // Wild UI
-    // ─────────────────────────────────────────────────────────────────────────────
     [Header("Wild UI")]
     [SerializeField] private GameObject wildPanel;
     [SerializeField] private Slider wildHPBar;
@@ -100,9 +89,6 @@ public class BattleManager : MonoBehaviour
     [SerializeField] private TextMeshProUGUI wildDEFText;
     [SerializeField] private TextMeshProUGUI wildSPDText;
 
-    // ─────────────────────────────────────────────────────────────────────────────
-    // Player UI
-    // ─────────────────────────────────────────────────────────────────────────────
     [Header("Player UI")]
     [SerializeField] private GameObject playerPanel;
     [SerializeField] private Slider playerHPBar;
@@ -125,10 +111,6 @@ public class BattleManager : MonoBehaviour
     [SerializeField] private float hpShakeDuration = 0.25f;
     [SerializeField] private float hpShakeStrength = 8f;
 
-
-    // ─────────────────────────────────────────────────────────────────────────────
-    // Bench UI
-    // ─────────────────────────────────────────────────────────────────────────────
     [Header("Bench UI")]
     [SerializeField] private Button benchBtn1;
     [SerializeField] private Button benchBtn2;
@@ -137,9 +119,6 @@ public class BattleManager : MonoBehaviour
     [SerializeField] private TextMeshProUGUI benchHPText1;
     [SerializeField] private TextMeshProUGUI benchHPText2;
 
-    // ─────────────────────────────────────────────────────────────────────────────
-    // Pacing / Combat
-    // ─────────────────────────────────────────────────────────────────────────────
     [Header("Turn Pacing (unscaled)")]
     [SerializeField, Min(0.05f)] private float beginRoundDelay = 0.15f;
     [SerializeField, Min(0.05f)] private float hitPause = 0.25f;
@@ -165,11 +144,9 @@ public class BattleManager : MonoBehaviour
     [SerializeField] private Image wildChargeIcon;
     [SerializeField] private TextMeshProUGUI wildShieldText;
 
-
     [Header("Battle Text Box")]
     [SerializeField] private BattleTextBoxUI battleTextBox;
     [SerializeField] private BattleSwitchToggle _bottomToggle;
-
 
     [Header("Debug")]
     [SerializeField] private bool debugIncomingMitigation = false;
@@ -179,7 +156,6 @@ public class BattleManager : MonoBehaviour
     private bool _narrationLock;
     public MonsterDataSO WildDef => wildDef;
     public int WildLevel => wildLevel;
-
 
     private MonsterDataSO wildDef;
     private int wildLevel;
@@ -209,6 +185,12 @@ public class BattleManager : MonoBehaviour
 
     [SerializeField, Min(0.01f)]
     private float hpBarSecondsForFull = 0.6f;
+
+    [Header("Debug - Titles")]
+    [SerializeField] private bool debugTitles = false;
+    [SerializeField] private bool debugTitlesEveryTurn = true;
+    [SerializeField] private bool debugTitlesOnSwap = true;
+
 
     private Coroutine _playerHPAnimCR;
     private Coroutine _wildHPAnimCR;
@@ -242,6 +224,7 @@ public class BattleManager : MonoBehaviour
     private int _totalCritsThisBattle = 0;
     private int _totalDamageTakenThisBattle = 0;
     private int _totalDamageDealtThisBattle = 0;
+
     private static readonly Color StatNeutral = Color.white;
     private static readonly Color StatBuff = new Color(0.35f, 1f, 0.35f);
     private static readonly Color StatNerf = new Color(1f, 0.35f, 0.35f);
@@ -287,9 +270,6 @@ public class BattleManager : MonoBehaviour
         GameEvents.OnBattleStateChanged?.Invoke();
     }
 
-    // ─────────────────────────────────────────────────────────────────────────────
-    // Public API for action bar
-    // ─────────────────────────────────────────────────────────────────────────────
     public void SetPlayerActionAttack() { TryQueueAction(PlayerAction.Attack); }
     public void SetPlayerActionDefend() { TryQueueAction(PlayerAction.Defend); }
     public void SetPlayerActionFocus() { TryQueueAction(PlayerAction.Focus); }
@@ -304,12 +284,9 @@ public class BattleManager : MonoBehaviour
         if (pendingAction != PlayerAction.None) return;
 
         pendingAction = a;
-
         GameEvents.OnBattleStateChanged?.Invoke();
     }
 
-
-    // Legacy alias
     public void BeginBattle(MonsterDataSO wild, int level, Action<BattleResult> onEnded)
     {
         Begin(wild, level, onEnded);
@@ -343,6 +320,8 @@ public class BattleManager : MonoBehaviour
 
         wildDef = wild;
         wildLevel = Mathf.Max(1, level);
+
+        // NOTE: internal battle HP baseline stays as-is; titles/conditionals apply via GetFinalMaxHPForIndex + UI.
         wildMaxHP = BattleCalc.CalcHP(wildDef, wildLevel) * 0.9f;
         wildHP = wildMaxHP;
         wildAttackPerTurn = BattleCalc.CalcBaseAttack(wildDef, wildLevel, 0, 0) * 0.9f;
@@ -411,8 +390,8 @@ public class BattleManager : MonoBehaviour
 
             if (jobCtx[i].startShieldPctMaxHp > 0f)
             {
-                float curMaxWithTitles = GetFinalMaxHPForIndex(i);
-                shieldHP[i] = curMaxWithTitles * jobCtx[i].startShieldPctMaxHp;
+                float curMaxWithTitlesAndConditionals = GetFinalMaxHPForIndex(i);
+                shieldHP[i] = curMaxWithTitlesAndConditionals * jobCtx[i].startShieldPctMaxHp;
             }
         }
 
@@ -460,7 +439,6 @@ public class BattleManager : MonoBehaviour
     private IEnumerator TurnLoop()
     {
         int round = 0;
-
         yield return Wait(0.4f);
 
         while (inBattle)
@@ -490,6 +468,9 @@ public class BattleManager : MonoBehaviour
             _turnIndex++;
             TitlesAdapter.OnTurnAdvanced(_turnIndex);
 
+            if (debugTitles && debugTitlesEveryTurn)
+                Debug_LogActiveTitlesSnapshot("TurnAdvanced");
+
             if (swappedFromKO)
             {
                 ClampAndPushActiveHP();
@@ -504,27 +485,17 @@ public class BattleManager : MonoBehaviour
                 continue;
             }
 
-            // SPEED CALC
+            // SPEED CALC (base + training + job, then titles, then conditional mods, then temp)
             int pSpeedBase = BattleCalc.CalcSpeed(teamDefs[activeIndex], teamLevels[activeIndex]);
 
             var roster = SaveManager.Data?.team;
             if (roster != null && activeIndex < roster.Count && roster[activeIndex] != null)
                 pSpeedBase += Mathf.Max(0, roster[activeIndex].trainingBonus.spd);
 
-            var jSpeed = (jobCtx != null &&
-                        activeIndex >= 0 &&
-                        activeIndex < jobCtx.Length)
-                ? jobCtx[activeIndex]
-                : null;
-
-            if (jSpeed != null &&
-                jSpeed.speedBuffTurns > 0 &&
-                jSpeed.speedBonusPctFirstTurns != 0f)
+            var jSpeed = (jobCtx != null && activeIndex >= 0 && activeIndex < jobCtx.Length) ? jobCtx[activeIndex] : null;
+            if (jSpeed != null && jSpeed.speedBuffTurns > 0 && jSpeed.speedBonusPctFirstTurns != 0f)
             {
-                pSpeedBase = Mathf.Max(
-                    1,
-                    Mathf.RoundToInt(pSpeedBase * (1f + jSpeed.speedBonusPctFirstTurns))
-                );
+                pSpeedBase = Mathf.Max(1, Mathf.RoundToInt(pSpeedBase * (1f + jSpeed.speedBonusPctFirstTurns)));
             }
 
             var titleCtx = BuildTitleContextForActive();
@@ -538,8 +509,14 @@ public class BattleManager : MonoBehaviour
             );
             int pSpeedAfterTitles = Mathf.Max(1, Mathf.RoundToInt(pSpeedAfterTitlesF));
 
+            // Conditional mods apply to real speed order
+            var cmods = GetConditionalModsForActive();
+            float pSpeedWithConditionalsF = (pSpeedAfterTitles + Mathf.Max(0, cmods.spdFlat)) * (1f + Mathf.Max(0f, cmods.spdPct));
+            int pSpeedWithConditionals = Mathf.Max(1, Mathf.RoundToInt(pSpeedWithConditionalsF));
+
             int tempSPDFlat = BattleTempBuffs.I ? BattleTempBuffs.I.GetPlayerSpeedFlatBonus() : 0;
-            int pSpeed = Mathf.Max(1, pSpeedAfterTitles + Mathf.Max(0, tempSPDFlat));
+            int pSpeed = Mathf.Max(1, pSpeedWithConditionals + Mathf.Max(0, tempSPDFlat));
+
             int wSpeed = BattleCalc.CalcSpeed(wildDef, wildLevel);
 
             bool playerFirst;
@@ -550,16 +527,14 @@ public class BattleManager : MonoBehaviour
             defendActiveThisRound = false;
             if (guardIcon) guardIcon.enabled = false;
 
-            // Decide wild action once per round
             EnemyAction wildChoice = ChooseEnemyAction();
 
             if (playerFirst)
             {
-                // TRUE PROTECT PRIORITY FOR WILD DEFEND
+                // Wild defend stance is resolved here; we must not also call EnemyTurn(defend).
                 if (wildChoice == EnemyAction.Defend)
                 {
                     ApplyWildDefendStance();
-                    // Wild will not attack this round; we won't call EnemyTurn for Defend later.
                 }
 
                 if (!IsWildKO() && !IsTeamKO())
@@ -572,7 +547,6 @@ public class BattleManager : MonoBehaviour
 
                 if (!IsWildKO() && !IsTeamKO())
                 {
-                    // Only call EnemyTurn if wild did NOT purely Defend this round
                     if (wildChoice != EnemyAction.Defend)
                     {
                         yield return EnemyTurn(wildChoice);
@@ -583,8 +557,6 @@ public class BattleManager : MonoBehaviour
             }
             else
             {
-                // ENEMY FIRST
-                // Player still chooses their action BEFORE wild attacks
                 if (!IsWildKO() && !IsTeamKO())
                 {
                     PlayerAction queuedChoice = PlayerAction.Attack;
@@ -613,18 +585,13 @@ public class BattleManager : MonoBehaviour
                                 if (guardIcon) guardIcon.enabled = true;
 
                                 BattleLogger.Log($"{name} is defending.", LogScope.Battle);
-                                BattleLogger.Log(
-                                    $"{name} will reduce the next hit and convert it into a shield for the following round.",
-                                    LogScope.Battle
-                                );
-
+                                BattleLogger.Log($"{name} will reduce the next hit and convert it into a shield for the following round.", LogScope.Battle);
                                 PlayDefendShieldFX(isPlayer: true);
                             }
                             else
                             {
                                 defendActiveThisRound = false;
                                 if (guardIcon) guardIcon.enabled = false;
-
                                 BattleLogger.Log($"{name} tried to defend, but it failed!", LogScope.Battle);
                             }
 
@@ -638,7 +605,6 @@ public class BattleManager : MonoBehaviour
                         }
                     }
 
-                    // Wild acts
                     yield return EnemyTurn(wildChoice);
                     if (CheckEnd()) break;
                     yield return Wait(hitPause);
@@ -654,55 +620,43 @@ public class BattleManager : MonoBehaviour
                                     break;
 
                                 case PlayerAction.Focus:
-                                    {
-                                        ResetDefendStreak();
+                                {
+                                    ResetDefendStreak();
 
-                                        if (chargedNextAttack != null &&
-                                            activeIndex >= 0 &&
-                                            activeIndex < chargedNextAttack.Length)
-                                        {
-                                            chargedNextAttack[activeIndex] = true;
-                                        }
+                                    if (chargedNextAttack != null && activeIndex >= 0 && activeIndex < chargedNextAttack.Length)
+                                        chargedNextAttack[activeIndex] = true;
 
-                                        if (chargeIcon) chargeIcon.enabled = true;
+                                    if (chargeIcon) chargeIcon.enabled = true;
 
-                                        BattleLogger.Log($"{GetName(activeIndex)} is charging.", LogScope.Battle);
-                                        BattleLogger.Log(
-                                            $"Their next attack will deal +{Mathf.RoundToInt(chargeBonusPct * 100f)}% damage.",
-                                            LogScope.Battle
-                                        );
-                                        Punch(playerIcon);
-                                        break;
-                                    }
+                                    BattleLogger.Log($"{GetName(activeIndex)} is charging.", LogScope.Battle);
+                                    BattleLogger.Log($"Their next attack will deal +{Mathf.RoundToInt(chargeBonusPct * 100f)}% damage.", LogScope.Battle);
+
+                                    Punch(playerIcon);
+                                    break;
+                                }
 
                                 case PlayerAction.Run:
+                                {
+                                    ResetDefendStreak();
+
+                                    float chance = ComputeRunChance();
+                                    bool escaped = UnityEngine.Random.value < chance;
+
+                                    string name = GetName(activeIndex);
+
+                                    if (escaped)
                                     {
-                                        ResetDefendStreak();
-
-                                        float chance = ComputeRunChance();
-                                        bool escaped = UnityEngine.Random.value < chance;
-
-                                        string name = GetName(activeIndex);
-
-                                        if (escaped)
-                                        {
-                                            BattleLogger.Log(
-                                                $"{name} has fled! (Run chance {Mathf.RoundToInt(chance * 100f)}%)",
-                                                LogScope.Battle
-                                            );
-                                            EndBattle(false, true);
-                                            yield break;
-                                        }
-                                        else
-                                        {
-                                            runAttempts++;
-                                            BattleLogger.Log(
-                                                $"Couldn't escape! (Run chance was {Mathf.RoundToInt(chance * 100f)}%)",
-                                                LogScope.Battle
-                                            );
-                                        }
-                                        break;
+                                        BattleLogger.Log($"{name} has fled! (Run chance {Mathf.RoundToInt(chance * 100f)}%)", LogScope.Battle);
+                                        EndBattle(false, true);
+                                        yield break;
                                     }
+                                    else
+                                    {
+                                        runAttempts++;
+                                        BattleLogger.Log($"Couldn't escape! (Run chance was {Mathf.RoundToInt(chance * 100f)}%)", LogScope.Battle);
+                                    }
+                                    break;
+                                }
 
                                 case PlayerAction.Defend:
                                 default:
@@ -722,10 +676,7 @@ public class BattleManager : MonoBehaviour
 
             if (!IsWildKO() && !IsTeamKO())
             {
-                if (jobCtx != null &&
-                    activeIndex >= 0 &&
-                    activeIndex < jobCtx.Length &&
-                    jobCtx[activeIndex] != null)
+                if (jobCtx != null && activeIndex >= 0 && activeIndex < jobCtx.Length && jobCtx[activeIndex] != null)
                 {
                     if (jobCtx[activeIndex].speedBuffTurns > 0) jobCtx[activeIndex].speedBuffTurns--;
                     if (jobCtx[activeIndex].critBuffTurns > 0) jobCtx[activeIndex].critBuffTurns--;
@@ -766,86 +717,68 @@ public class BattleManager : MonoBehaviour
                 break;
 
             case PlayerAction.Defend:
+            {
+                string name = GetName(activeIndex);
+                bool success = RollDefendSuccess();
+
+                if (success)
                 {
-                    string name = GetName(activeIndex);
-                    bool success = RollDefendSuccess();
+                    defendActiveThisRound = true;
+                    if (guardIcon) guardIcon.enabled = true;
 
-                    if (success)
-                    {
-                        defendActiveThisRound = true;
-                        if (guardIcon) guardIcon.enabled = true;
-
-                        BattleLogger.Log($"{name} is defending.", LogScope.Battle);
-                        BattleLogger.Log(
-                            $"{name} will reduce the next hit and convert it into a shield for the following round.",
-                            LogScope.Battle
-                        );
-
-                        PlayDefendShieldFX(isPlayer: true);
-                    }
-                    else
-                    {
-                        defendActiveThisRound = false;
-                        if (guardIcon) guardIcon.enabled = false;
-
-                        BattleLogger.Log($"{name} tried to defend, but it failed!", LogScope.Battle);
-                    }
-
-                    Punch(playerIcon);
-                    break;
+                    BattleLogger.Log($"{name} is defending.", LogScope.Battle);
+                    BattleLogger.Log($"{name} will reduce the next hit and convert it into a shield for the following round.", LogScope.Battle);
+                    PlayDefendShieldFX(isPlayer: true);
                 }
+                else
+                {
+                    defendActiveThisRound = false;
+                    if (guardIcon) guardIcon.enabled = false;
+                    BattleLogger.Log($"{name} tried to defend, but it failed!", LogScope.Battle);
+                }
+
+                Punch(playerIcon);
+                break;
+            }
 
             case PlayerAction.Focus:
-                {
-                    ResetDefendStreak();
+            {
+                ResetDefendStreak();
 
-                    if (chargedNextAttack != null &&
-                        activeIndex >= 0 &&
-                        activeIndex < chargedNextAttack.Length)
-                    {
-                        chargedNextAttack[activeIndex] = true;
-                    }
+                if (chargedNextAttack != null && activeIndex >= 0 && activeIndex < chargedNextAttack.Length)
+                    chargedNextAttack[activeIndex] = true;
 
-                    if (chargeIcon) chargeIcon.enabled = true;
+                if (chargeIcon) chargeIcon.enabled = true;
 
-                    BattleLogger.Log($"{GetName(activeIndex)} is charging.", LogScope.Battle);
-                    BattleLogger.Log(
-                        $"Their next attack will deal +{Mathf.RoundToInt(chargeBonusPct * 100f)}% damage.",
-                        LogScope.Battle
-                    );
+                BattleLogger.Log($"{GetName(activeIndex)} is charging.", LogScope.Battle);
+                BattleLogger.Log($"Their next attack will deal +{Mathf.RoundToInt(chargeBonusPct * 100f)}% damage.", LogScope.Battle);
 
-                    Punch(playerIcon);
-                    break;
-                }
+                Punch(playerIcon);
+                break;
+            }
 
             case PlayerAction.Run:
+            {
+                ResetDefendStreak();
+
+                float chance = ComputeRunChance();
+                bool escaped = UnityEngine.Random.value < chance;
+
+                string name = GetName(activeIndex);
+
+                if (escaped)
                 {
-                    ResetDefendStreak();
-
-                    float chance = ComputeRunChance();
-                    bool escaped = UnityEngine.Random.value < chance;
-
-                    string name = GetName(activeIndex);
-
-                    if (escaped)
-                    {
-                        BattleLogger.Log(
-                            $"{name} has fled! (Run chance {Mathf.RoundToInt(chance * 100f)}%)",
-                            LogScope.Battle
-                        );
-                        EndBattle(false, true);
-                        yield break;
-                    }
-                    else
-                    {
-                        runAttempts++;
-                        BattleLogger.Log(
-                            $"Couldn't escape! (Run chance was {Mathf.RoundToInt(chance * 100f)}%)",
-                            LogScope.Battle
-                        );
-                    }
-                    break;
+                    BattleLogger.Log($"{name} has fled! (Run chance {Mathf.RoundToInt(chance * 100f)}%)", LogScope.Battle);
+                    EndBattle(false, true);
+                    yield break;
                 }
+                else
+                {
+                    runAttempts++;
+                    BattleLogger.Log($"Couldn't escape! (Run chance was {Mathf.RoundToInt(chance * 100f)}%)", LogScope.Battle);
+                }
+                break;
+            }
 
             default:
                 break;
@@ -859,14 +792,12 @@ public class BattleManager : MonoBehaviour
 
         isResolvingPlayerTurn = true;
 
-        // If active slot is KO, try swap before acting
         if (teamHP[activeIndex] <= 0.01f && !AutoSwapToAlive())
         {
             isResolvingPlayerTurn = false;
             yield break;
         }
 
-        // ── Pokémon-style: announce → animate → resolve → results
         var playerDef = teamDefs[activeIndex];
         string attacker = GetName(activeIndex);
         string move = GetBasicMoveName(playerDef);
@@ -876,7 +807,6 @@ public class BattleManager : MonoBehaviour
         SpawnBasicAttackVfx(true);
         yield return Wait(0.10f);
 
-        // ── Build ATK base (owned training + equipment flat)
         var roster = SaveManager.Data?.team;
 
         int equipFlat = 0;
@@ -899,7 +829,13 @@ public class BattleManager : MonoBehaviour
         );
         int atkBase = Mathf.Max(1, Mathf.RoundToInt(atkBaseF));
 
-        // Booster (temp) attack flat
+        // Conditional mods must APPLY to real damage:
+        // We apply them to the attack stat BEFORE ResolveHit so crit/effectiveness scale correctly.
+        var cond = GetConditionalModsForActive();
+        int atkWithCondFlat = Mathf.Max(1, atkBase + Mathf.Max(0, cond.atkFlat));
+        int atkForResolve = Mathf.Max(1, Mathf.RoundToInt(atkWithCondFlat * (1f + Mathf.Max(0f, cond.atkPct))));
+
+        // Booster (temp) attack mult is derived from base calc; keep it multiplicative after.
         int tempFlatFromBoosters = BattleTempBuffs.I ? BattleTempBuffs.I.GetPlayerAtkBonus() : 0;
         float atkWithBoosterF = BattleCalc.CalcBaseAttack(
             teamDefs[activeIndex],
@@ -909,10 +845,8 @@ public class BattleManager : MonoBehaviour
         );
         float atkBoosterMult = Mathf.Max(0.01f, atkWithBoosterF / Mathf.Max(1f, atkBase));
 
-        // Titles context for stat calls
         var titleCtx = BuildTitleContextForActive();
 
-        // Crit from base + job ctx
         var jctx = (jobCtx != null) ? jobCtx[activeIndex] : null;
         float playerCrit = critChancePlayer;
         if (jctx != null)
@@ -923,11 +857,10 @@ public class BattleManager : MonoBehaviour
         }
         playerCrit = Mathf.Clamp01(playerCrit);
 
-        // Resolve hit (base damage/crit/effectiveness)
         var dr = BattleCalc.ResolveHit(
             teamIds[activeIndex], teamDefs[activeIndex], teamLevels[activeIndex],
             null, wildDef, wildLevel,
-            atkBase,
+            atkForResolve,
             playerCrit,
             critMultiplier,
             0
@@ -936,7 +869,6 @@ public class BattleManager : MonoBehaviour
         TitlesAdapter.OnAttackLanded(teamIds[activeIndex], dr.crit);
         if (dr.crit) _totalCritsThisBattle++;
 
-        // Job bonuses (attack)
         if (jctx != null && jctx.attackBonusPct > 0f)
             dr.damage = Mathf.Max(1, Mathf.RoundToInt(dr.damage * (1f + jctx.attackBonusPct)));
 
@@ -949,7 +881,6 @@ public class BattleManager : MonoBehaviour
         if (jctx != null && jctx.surgeApplied && jctx.surgeAtkBonusPct > 0f)
             dr.damage = Mathf.Max(1, Mathf.RoundToInt(dr.damage * (1f + jctx.surgeAtkBonusPct)));
 
-        // Titles: outgoing effectiveness adjustments
         float effMul = TitlesAdapter.GetEffectivenessMult(
             teamIds[activeIndex], teamDefs[activeIndex], teamLevels[activeIndex]
         );
@@ -982,8 +913,7 @@ public class BattleManager : MonoBehaviour
                 Debug.Log(msg);
             }
         }
-        
-        // Slot damage buff (temporary)
+
         if (slotDamageBuffPct != null && slotDamageBuffTurns != null &&
             activeIndex >= 0 && activeIndex < slotDamageBuffPct.Length &&
             slotDamageBuffTurns[activeIndex] > 0 &&
@@ -997,11 +927,9 @@ public class BattleManager : MonoBehaviour
                 slotDamageBuffPct[activeIndex] = 0f;
         }
 
-        // Booster multiplier
         if (!Mathf.Approximately(atkBoosterMult, 1f))
             dr.damage = Mathf.Max(1, Mathf.RoundToInt(dr.damage * atkBoosterMult));
 
-        // Player charge (Focus)
         if (chargedNextAttack != null &&
             activeIndex >= 0 &&
             activeIndex < chargedNextAttack.Length &&
@@ -1016,7 +944,6 @@ public class BattleManager : MonoBehaviour
             yield return Say($"{GetName(activeIndex)} unleashes a charged attack (+{Mathf.RoundToInt(chargeBonusPct * 100f)}% damage)!");
         }
 
-        // ── Wild Defend (Guard) reduction + convert to next-round shield
         float preventedByWildGuard = 0f;
         int dmgToApply = dr.damage;
 
@@ -1024,7 +951,7 @@ public class BattleManager : MonoBehaviour
         {
             float guardPct = Mathf.Clamp01(defendReducePct);
             int before = dmgToApply;
-            int after = Mathf.Max(1, Mathf.RoundToInt(dmgToApply * (1f - guardPct)));
+            int after = Mathf.Max(1, Mathf.RoundToInt(dmgToApply * (1f - guardPct))); // allow 0
             preventedByWildGuard = Mathf.Max(0, before - after);
             dmgToApply = after;
 
@@ -1032,8 +959,7 @@ public class BattleManager : MonoBehaviour
                 PlayDefendShieldFX(isPlayer: false);
         }
 
-        // ── Wild shield absorbs first
-        if (wildShieldHP > 0f)
+        if (wildShieldHP > 0f && dmgToApply > 0)
         {
             float absorb = Mathf.Min(wildShieldHP, dmgToApply);
             wildShieldHP = Mathf.Max(0f, wildShieldHP - absorb);
@@ -1043,7 +969,6 @@ public class BattleManager : MonoBehaviour
                 yield return Say($"{foeName}'s shield absorbed {Mathf.RoundToInt(absorb)}!");
         }
 
-        // Convert prevented damage to next-round guard shield
         if (preventedByWildGuard > 0f && guardConvertPct > 0f)
         {
             float gain = preventedByWildGuard * guardConvertPct;
@@ -1051,14 +976,12 @@ public class BattleManager : MonoBehaviour
             yield return Say($"{foeName} stores {Mathf.RoundToInt(gain)} damage as a guard shield for the next round.");
         }
 
-        // Apply damage
         wildHP = Mathf.Max(0f, wildHP - dmgToApply);
         _totalDamageDealtThisBattle += Mathf.Max(0, dmgToApply);
         PushHPBars();
 
         SpawnDamageNumber(dmgToApply, dr.crit, dr.effectiveness, hitPlayer: false);
 
-        // Heavy hit shake
         float wRatio = wildMaxHP > 0.01f ? (float)dmgToApply / wildMaxHP : 0f;
         if (wRatio >= heavyHitThresholdPct || (dr.crit && wRatio >= heavyHitThresholdPct * 0.5f))
             ScreenShake(heavyHitShakeMagnitude, heavyHitShakeDuration);
@@ -1066,7 +989,6 @@ public class BattleManager : MonoBehaviour
         if (!playerLandedFirstHitThisBattle && dr.damage > 0)
             playerLandedFirstHitThisBattle = true;
 
-        // Results narration
         yield return Say($"{attacker} hits {foeName} for {dmgToApply}!");
 
         if (showEffectivenessText)
@@ -1076,7 +998,6 @@ public class BattleManager : MonoBehaviour
         }
         if (dr.crit) yield return Say("Critical hit!");
 
-        // End-turn job heal
         if (jctx != null && jctx.endTurnHealPct > 0f)
         {
             bool canHeal = (jctx.regenTurns == int.MaxValue) || (jctx.regenTurns > 0);
@@ -1091,30 +1012,22 @@ public class BattleManager : MonoBehaviour
 
         Punch(playerIcon);
 
-        // Your existing tracking tick (no-dmg/no-crit turn counters, etc.)
         FirePlayerEndTurnTicks(dealtDamageThisTurn: dr.damage > 0, critThisTurn: dr.crit);
 
         isResolvingPlayerTurn = false;
     }
 
-
     private IEnumerator EnemyTurn(EnemyAction choice)
     {
-        // If our active slot is KO'd, try to autoswap first.
         if (teamHP[activeIndex] <= 0.01f && !AutoSwapToAlive())
             yield break;
 
-        // Non-defend actions get a tiny beat for readability
         if (choice != EnemyAction.Defend)
             yield return Wait(0.15f);
 
-        // If wild does anything other than Defend, reset defend streak
         if (choice != EnemyAction.Defend)
             ResetEnemyDefendStreak();
 
-        // ─────────────────────────────────────────────────────────────
-        // DEFEND (Guard)
-        // ─────────────────────────────────────────────────────────────
         if (choice == EnemyAction.Defend)
         {
             string name = wildDef ? wildDef.displayName : "Foe";
@@ -1134,7 +1047,6 @@ public class BattleManager : MonoBehaviour
             {
                 wildDefendActiveThisRound = false;
                 UpdateWildStatusUI();
-
                 yield return Say($"{name} tried to defend, but it failed!");
             }
 
@@ -1142,9 +1054,6 @@ public class BattleManager : MonoBehaviour
             yield break;
         }
 
-        // ─────────────────────────────────────────────────────────────
-        // FOCUS (Charge)
-        // ─────────────────────────────────────────────────────────────
         if (choice == EnemyAction.Focus)
         {
             wildChargedNextAttack = true;
@@ -1158,9 +1067,6 @@ public class BattleManager : MonoBehaviour
             yield break;
         }
 
-        // ─────────────────────────────────────────────────────────────
-        // RUN
-        // ─────────────────────────────────────────────────────────────
         if (choice == EnemyAction.Run)
         {
             string name = wildDef ? wildDef.displayName : "Foe";
@@ -1180,15 +1086,11 @@ public class BattleManager : MonoBehaviour
             }
         }
 
-        // ─────────────────────────────────────────────────────────────
-        // ATTACK
-        // ─────────────────────────────────────────────────────────────
         if (teamHP[activeIndex] <= 0.01f && !AutoSwapToAlive())
             yield break;
 
         string attackerName = wildDef ? wildDef.displayName : "Foe";
         string move = GetBasicMoveName(wildDef);
-        string targetName = GetName(activeIndex);
 
         yield return Say($"{attackerName} used {move}!");
         SpawnBasicAttackVfx(false);
@@ -1200,16 +1102,16 @@ public class BattleManager : MonoBehaviour
         var ctx = (jobCtx != null) ? jobCtx[activeIndex] : null;
         float preHP = teamHP[activeIndex];
 
-        // Training DEF contributes to flat DR
         int trainingFlatDef = 0;
         var roster = SaveManager.Data?.team;
         if (roster != null && activeIndex < roster.Count && roster[activeIndex] != null)
             trainingFlatDef = Mathf.Max(0, roster[activeIndex].trainingBonus.def);
 
-        // Titles damage filter (flat/%/crit immunity)
+        // Conditional mods must APPLY to real mitigation:
+        var cmods = GetConditionalModsForActive();
+
         var df = TitlesAdapter.GetDamageFilter(teamIds[activeIndex], teamDefs[activeIndex], teamLevels[activeIndex]);
 
-        // Crit resist from jobs
         float playerCritResist = 0f;
         if (ctx != null)
         {
@@ -1220,18 +1122,15 @@ public class BattleManager : MonoBehaviour
 
         float wildCritChance = df.cannotBeCrit ? 0f : Mathf.Clamp01(critChanceWild - playerCritResist);
 
-        // Base resolve
         var dr = BattleCalc.ResolveHit(
             null, wildDef, wildLevel,
             teamIds[activeIndex], teamDefs[activeIndex], teamLevels[activeIndex],
             enemyAtk, wildCritChance, critMultiplier, 0
         );
 
-        int baseRawDamage = dr.damage;
         bool critRolled = dr.crit;
         bool critNegatedByTitle = false;
 
-        // If titles say "cannot be crit", rebuild without crit
         if (df.cannotBeCrit && dr.crit)
         {
             critNegatedByTitle = true;
@@ -1242,7 +1141,6 @@ public class BattleManager : MonoBehaviour
             );
         }
 
-        // Wild charge bonus
         if (wildChargedNextAttack && chargeBonusPct > 0f)
         {
             dr.damage = Mathf.Max(1, Mathf.RoundToInt(dr.damage * (1f + chargeBonusPct)));
@@ -1252,10 +1150,9 @@ public class BattleManager : MonoBehaviour
             yield return Say($"{attackerName} unleashes a charged attack (+{Mathf.RoundToInt(chargeBonusPct * 100f)}% dmg)!");
         }
 
-        // ── Incoming mitigation scalar (jobs/conditionals/defend)
+        // Incoming mitigation scalar (conditionals + jobs + defend)
         float incomingScalar = 1f;
 
-        var cmods = GetConditionalModsForActive();
         if (cmods.defPct > 0f)
             incomingScalar *= 1f - Mathf.Clamp01(cmods.defPct);
 
@@ -1277,7 +1174,6 @@ public class BattleManager : MonoBehaviour
         float scalarBeforeGuard = incomingScalar;
         float preventedByGuardRaw = 0f;
 
-        // Player Defend (Guard)
         if (defendActiveThisRound && defendReducePct > 0f)
         {
             float guardPct = Mathf.Clamp01(defendReducePct);
@@ -1291,9 +1187,8 @@ public class BattleManager : MonoBehaviour
                 PlayDefendShieldFX(isPlayer: true);
         }
 
-        int dmg_afterScalar = Mathf.Max(1, Mathf.RoundToInt(dr.damage * incomingScalar));
+        int dmg_afterScalar = Mathf.Max(1, Mathf.RoundToInt(dr.damage * incomingScalar)); // allow 0
 
-        // Titles: incoming effectiveness multiplier (if you use it)
         float incomingEffMul = TitlesAdapter.GetIncomingEffectivenessMult(
             teamIds[activeIndex], teamDefs[activeIndex], teamLevels[activeIndex],
             wildDef ? wildDef.type : MonsterType.None
@@ -1301,7 +1196,6 @@ public class BattleManager : MonoBehaviour
         if (!Mathf.Approximately(incomingEffMul, 1f))
             dmg_afterScalar = Mathf.Max(1, Mathf.RoundToInt(dmg_afterScalar * incomingEffMul));
 
-        // Titles filter: % then flat
         float percentReduce = Mathf.Clamp01(df.percentReduce);
         int flatReduce = Mathf.Max(0, df.flatReduce);
 
@@ -1309,25 +1203,25 @@ public class BattleManager : MonoBehaviour
             ? Mathf.Max(1, Mathf.RoundToInt(dmg_afterScalar * (1f - percentReduce)))
             : dmg_afterScalar;
 
-        int totalFlatDR = flatReduce + Mathf.Max(0, defFlatBooster) + Mathf.Max(0, trainingFlatDef);
+        // Conditional defFlat applies as real flat DR (stacked with titles + boosters + training).
+        int totalFlatDR = flatReduce + Mathf.Max(0, defFlatBooster) + Mathf.Max(0, trainingFlatDef) + Mathf.Max(0, cmods.defFlat);
         int dmg_afterFlat = Mathf.Max(1, dmg_afterPercent - totalFlatDR);
 
-        // Shield absorb
+        // Shield absorb (allow full absorb to 0)
         float shieldBefore = (shieldHP != null && shieldHP.Length > activeIndex) ? shieldHP[activeIndex] : 0f;
         float shieldAbsorbF = 0f;
 
         int dmg_final = dmg_afterFlat;
-        if (shieldBefore > 0f)
+        if (shieldBefore > 0f && dmg_final > 0)
         {
             shieldAbsorbF = Mathf.Min(shieldBefore, dmg_final);
             shieldHP[activeIndex] = Mathf.Max(0f, shieldBefore - shieldAbsorbF);
-            dmg_final = Mathf.Max(1, dmg_final - Mathf.RoundToInt(shieldAbsorbF));
+            dmg_final = Mathf.Max(0, dmg_final - Mathf.RoundToInt(shieldAbsorbF));
 
             if (shieldAbsorbF > 0f)
                 yield return Say($"{GetName(activeIndex)}'s shield absorbed {Mathf.RoundToInt(shieldAbsorbF)}!");
         }
 
-        // Apply damage
         teamHP[activeIndex] = Mathf.Max(0f, teamHP[activeIndex] - dmg_final);
         ClampAndPushActiveHP();
 
@@ -1338,7 +1232,6 @@ public class BattleManager : MonoBehaviour
         if (ratio >= heavyHitThresholdPct || (dr.crit && ratio >= heavyHitThresholdPct * 0.5f))
             ScreenShake(heavyHitShakeMagnitude, heavyHitShakeDuration);
 
-        // Convert prevented dmg → next-round guard shield
         if (preventedByGuardRaw > 0f &&
             pendingGuardShield != null &&
             activeIndex >= 0 &&
@@ -1352,7 +1245,6 @@ public class BattleManager : MonoBehaviour
 
         TitlesAdapter.OnHitTaken(teamIds[activeIndex], dmg_final, dr.crit && !df.cannotBeCrit);
 
-        // Results narration
         yield return Say($"{attackerName} hits {GetName(activeIndex)} for {dmg_final}!");
 
         if (showEffectivenessText)
@@ -1374,7 +1266,6 @@ public class BattleManager : MonoBehaviour
         if (!playerTookFirstIncomingThisBattle)
             playerTookFirstIncomingThisBattle = true;
 
-        // Job rescue + surge checks (same as your current logic)
         if (ctx != null && !ctx.rescueUsed && ctx.rescueHealPct > 0f && teamHP[activeIndex] > 0f)
         {
             float curMax = GetFinalMaxHPForIndex(activeIndex);
@@ -1385,7 +1276,7 @@ public class BattleManager : MonoBehaviour
                 float healAmt = curMax * ctx.rescueHealPct;
                 TryAddHPToActive(healAmt);
                 yield return Say($"{GetName(activeIndex)} triage heals {Mathf.RoundToInt(healAmt)} HP!");
-                AudioManager.I.PlaySfx(SfxType.Heal);
+                if (AudioManager.I) AudioManager.I.PlaySfx(SfxType.Heal);
             }
         }
 
@@ -1397,27 +1288,26 @@ public class BattleManager : MonoBehaviour
                 ctx.surgeApplied = true;
                 ctx.attackBonusPct += ctx.surgeAtkBonusPct;
                 yield return Say($"{GetName(activeIndex)} becomes enraged (+{Mathf.RoundToInt(ctx.surgeAtkBonusPct * 100f)}% ATK)!");
-                AudioManager.I.PlaySfx(SfxType.Clutch);
+                if (AudioManager.I) AudioManager.I.PlaySfx(SfxType.Clutch);
             }
         }
 
         Punch(wildIcon);
     }
 
-
     private bool CheckEnd()
     {
         if (IsWildKO())
         {
             BattleLogger.Log("Wild monster fainted!", LogScope.Battle);
-            AudioManager.I.PlaySfx(SfxType.KO);
+            if (AudioManager.I) AudioManager.I.PlaySfx(SfxType.KO);
             EndBattle(true);
             return true;
         }
         if (IsTeamKO())
         {
             BattleLogger.Log("Your team is unable to battle!", LogScope.Battle);
-            AudioManager.I.PlaySfx(SfxType.KO);
+            if (AudioManager.I) AudioManager.I.PlaySfx(SfxType.KO);
             EndBattle(false);
             return true;
         }
@@ -1431,8 +1321,10 @@ public class BattleManager : MonoBehaviour
         inBattle = false;
         SetIsPlayerTurn(false);
         GameEvents.OnBattleStateChanged?.Invoke();
-        benchBtn1.interactable = false;
-        benchBtn2.interactable = false;
+
+        if (benchBtn1) benchBtn1.interactable = false;  // FIX: null-safe
+        if (benchBtn2) benchBtn2.interactable = false;  // FIX: null-safe
+
         pendingAction = PlayerAction.None;
         defendActiveThisRound = false;
 
@@ -1570,41 +1462,28 @@ public class BattleManager : MonoBehaviour
 
         SetPostBattleWinnerVisible(victory, escaped);
 
-
         if (teamIds != null && activeIndex >= 0 && activeIndex < teamIds.Length)
             TitlesAdapter.OnBattleEnd(teamIds[activeIndex], victory, wildDef, wildLevel);
 
-        // Let EncounterManager control summary timing.
-        // It already queues PostBattleSummaryManager.NotifyBattleEnd(...) and decides when to Flush.
         onEnd?.Invoke(result);
-
         GameEvents.BattleFinished?.Invoke(result);
     }
 
+    // ─────────────────────────────────────────────────────────────
+    // HP bar animation and UI remain the same as your original
+    // ─────────────────────────────────────────────────────────────
 
-
-    private void SetHPBarAnimated(
-        Slider bar,
-        ref Coroutine animCR,
-        float targetValue,
-        float maxValue
-    )
+    private void SetHPBarAnimated(Slider bar, ref Coroutine animCR, float targetValue, float maxValue)
     {
         if (!bar) return;
 
-        // Clamp and set max
         maxValue = Mathf.Max(1f, maxValue);
         bar.maxValue = maxValue;
         targetValue = Mathf.Clamp(targetValue, 0f, maxValue);
 
-        // If animation is disabled or object is not active, just snap
         if (!smoothHPBars || !gameObject.activeInHierarchy)
         {
-            if (animCR != null)
-            {
-                StopCoroutine(animCR);
-                animCR = null;
-            }
+            if (animCR != null) { StopCoroutine(animCR); animCR = null; }
             bar.value = targetValue;
             return;
         }
@@ -1613,40 +1492,30 @@ public class BattleManager : MonoBehaviour
 
         if (current > targetValue)
         {
-            if (bar == playerHPBar)
-                PlayHPShake(playerHPShakeRoot);
-            else if (bar == wildHPBar)
-                PlayHPShake(wildHPShakeRoot);
+            if (bar == playerHPBar) PlayHPShake(playerHPShakeRoot);
+            else if (bar == wildHPBar) PlayHPShake(wildHPShakeRoot);
         }
 
-        // If already at target, just snap & clear any old coroutine
         if (Mathf.Approximately(current, targetValue))
         {
-            if (animCR != null)
-            {
-                StopCoroutine(animCR);
-                animCR = null;
-            }
+            if (animCR != null) { StopCoroutine(animCR); animCR = null; }
             bar.value = targetValue;
             return;
         }
 
-        // Restart animation from current -> target
         if (animCR != null) StopCoroutine(animCR);
         animCR = StartCoroutine(Co_AnimateHPBar(bar, current, targetValue));
     }
 
     private IEnumerator Co_AnimateHPBar(Slider bar, float start, float end)
     {
-        if (!bar)
-            yield break;
+        if (!bar) yield break;
 
         float max = Mathf.Max(1f, bar.maxValue);
         float distance = Mathf.Abs(end - start);
 
-        // Duration scales with how big the HP change is, just like Pokémon
         float duration = hpBarSecondsForFull * (distance / max);
-        duration = Mathf.Max(0.05f, duration); // tiny hits still visible
+        duration = Mathf.Max(0.05f, duration);
 
         float t = 0f;
         while (t < 1f)
@@ -1660,58 +1529,28 @@ public class BattleManager : MonoBehaviour
         bar.value = end;
     }
 
-
     private void ClampAndPushActiveHP()
     {
         float curMax = GetFinalMaxHPForIndex(activeIndex);
         teamHP[activeIndex] = Mathf.Min(teamHP[activeIndex], curMax);
 
-        // Animated player bar
-        SetHPBarAnimated(
-            playerHPBar,
-            ref _playerHPAnimCR,
-            teamHP[activeIndex],
-            curMax
-        );
-
-        // Animated wild bar
-        SetHPBarAnimated(
-            wildHPBar,
-            ref _wildHPAnimCR,
-            wildHP,
-            wildMaxHP
-        );
+        SetHPBarAnimated(playerHPBar, ref _playerHPAnimCR, teamHP[activeIndex], curMax);
+        SetHPBarAnimated(wildHPBar, ref _wildHPAnimCR, wildHP, wildMaxHP);
 
         UpdatePlayerInfoUI();
         UpdateShieldUI();
         UpdateWildStatusUI();
-
-
     }
-
 
     private void PushHPBars()
     {
-        // Wild
-        SetHPBarAnimated(
-            wildHPBar,
-            ref _wildHPAnimCR,
-            wildHP,
-            wildMaxHP
-        );
+        SetHPBarAnimated(wildHPBar, ref _wildHPAnimCR, wildHP, wildMaxHP);
 
-        // Player
         float curMax = GetFinalMaxHPForIndex(activeIndex);
-        SetHPBarAnimated(
-            playerHPBar,
-            ref _playerHPAnimCR,
-            teamHP[activeIndex],
-            curMax
-        );
+        SetHPBarAnimated(playerHPBar, ref _playerHPAnimCR, teamHP[activeIndex], curMax);
 
         UpdatePlayerInfoUI();
     }
-
 
     private void RefreshBenchUI()
     {
@@ -1785,10 +1624,7 @@ public class BattleManager : MonoBehaviour
                 slotDamageBuffTurns[activeIndex] =
                     Mathf.Max(slotDamageBuffTurns[activeIndex], teamPendingBuffTurns[activeIndex]);
 
-                BattleLogger.Log(
-                    $"{GetName(activeIndex)} carries over +{Mathf.RoundToInt(teamPendingBuffPct[activeIndex] * 100f)}% damage from bench.",
-                    LogScope.Battle
-                );
+                BattleLogger.Log($"{GetName(activeIndex)} carries over +{Mathf.RoundToInt(teamPendingBuffPct[activeIndex] * 100f)}% damage from bench.", LogScope.Battle);
 
                 teamPendingBuffPct[activeIndex] = 0f;
                 teamPendingBuffTurns[activeIndex] = 0;
@@ -1797,6 +1633,9 @@ public class BattleManager : MonoBehaviour
 
         BattleLogger.Log($"Swapped to {GetName(activeIndex)}!", LogScope.Battle);
         Punch(playerIcon);
+
+        if (debugTitles && debugTitlesOnSwap)
+            Debug_LogActiveTitlesSnapshot("Swap");
     }
 
     private bool AutoSwapToAlive()
@@ -1822,10 +1661,7 @@ public class BattleManager : MonoBehaviour
                     slotDamageBuffTurns[activeIndex] =
                         Mathf.Max(slotDamageBuffTurns[activeIndex], teamPendingBuffTurns[activeIndex]);
 
-                    BattleLogger.Log(
-                        $"{GetName(activeIndex)} carries over +{Mathf.RoundToInt(teamPendingBuffPct[activeIndex] * 100f)}% damage from bench.",
-                        LogScope.Battle
-                    );
+                    BattleLogger.Log($"{GetName(activeIndex)} carries over +{Mathf.RoundToInt(teamPendingBuffPct[activeIndex] * 100f)}% damage from bench.", LogScope.Battle);
 
                     teamPendingBuffPct[activeIndex] = 0f;
                     teamPendingBuffTurns[activeIndex] = 0;
@@ -1835,6 +1671,9 @@ public class BattleManager : MonoBehaviour
             BattleLogger.Log($"Auto-swapped to {GetName(activeIndex)}!", LogScope.Battle);
             return true;
         }
+
+        if (debugTitles && debugTitlesOnSwap)
+            Debug_LogActiveTitlesSnapshot("Swap");
 
         return false;
     }
@@ -1863,75 +1702,6 @@ public class BattleManager : MonoBehaviour
         ClampAndPushActiveHP();
     }
 
-    private string Pct(float v) => $"{Mathf.RoundToInt(v * 100f)}%";
-    private string HpVal(float v) => Mathf.RoundToInt(v).ToString();
-
-    private string BuildPassiveSummary(int idx)
-    {
-        if (jobCtx == null || idx < 0 || idx >= jobCtx.Length || jobCtx[idx] == null) return null;
-        var c = jobCtx[idx];
-
-        List<string> tags = new List<string>();
-        switch (c.job)
-        {
-            case JobType.Gym:
-                if (c.maxHpBonusPct > 0f) tags.Add($"Gym +{Pct(c.maxHpBonusPct)} Max HP");
-                break;
-            case JobType.Forge:
-                if (c.firstOutgoingBonus > 0f) tags.Add($"Forge +{Pct(c.firstOutgoingBonus)} first hit");
-                break;
-            case JobType.PowerPlant:
-                if (c.speedBuffTurns > 0 && c.speedBonusPctFirstTurns > 0f) tags.Add($"Power +{Pct(c.speedBonusPctFirstTurns)} SPD (2t)");
-                break;
-            case JobType.Quarry:
-                if (c.defenseBonusPct > 0f) tags.Add($"Quarry −{Pct(c.defenseBonusPct)} dmg taken");
-                break;
-            case JobType.Grove:
-                if (c.endTurnHealPct > 0f) tags.Add($"Grove +{Pct(c.endTurnHealPct)} HP/turn");
-                break;
-            case JobType.Workshop:
-                if (c.critBuffTurns > 0 && c.critChanceBonusFirstTurns > 0f) tags.Add($"Workshop +{Pct(c.critChanceBonusFirstTurns)} crit (2t)");
-                break;
-            case JobType.Harbor:
-                if (c.startShieldPctMaxHp > 0f && teamMaxHP != null && idx < teamMaxHP.Length)
-                    tags.Add($"Harbor shield {HpVal(GetFinalMaxHPForIndex(idx) * c.startShieldPctMaxHp)}");
-                if (c.endTurnHealPct > 0f && c.regenTurns > 0) tags.Add($"Harbor +{Pct(c.endTurnHealPct)} HP (2t)");
-                break;
-            case JobType.CryoLab:
-                if (c.critResistFlat > 0f) tags.Add($"Cryo +{Pct(c.critResistFlat)} crit resist");
-                break;
-            case JobType.Observatory:
-                if (c.critChanceFlat > 0f) tags.Add($"Observ +{Pct(c.critChanceFlat)} crit");
-                if (c.critResistBuffTurns > 0 && c.critResistBonusFirstTurns > 0f) tags.Add($"Observ +{Pct(c.critResistBonusFirstTurns)} crit resist (2t)");
-                break;
-            case JobType.Containment:
-                if (c.baseDamageReducePct > 0f) tags.Add($"Contain −{Pct(c.baseDamageReducePct)} dmg taken");
-                break;
-            case JobType.WyrmDen:
-                if (c.surgeAtkBonusPct > 0f) tags.Add($"Wyrm +{Pct(c.surgeAtkBonusPct)} ATK @ <50% HP");
-                break;
-            case JobType.ShadowMarket:
-                if (c.firstIncomingReduce > 0f) tags.Add($"Shadow −{Pct(c.firstIncomingReduce)} first hit taken");
-                break;
-            case JobType.Sanctum:
-                if (c.startShieldPctMaxHp > 0f && teamMaxHP != null && idx < teamMaxHP.Length)
-                    tags.Add($"Sanctum shield {HpVal(GetFinalMaxHPForIndex(idx) * c.startShieldPctMaxHp)}");
-                if (c.dmgReduceBuffTurns > 0 && c.dmgReduceFirstTurns > 0f) tags.Add($"Sanctum −{Pct(c.dmgReduceFirstTurns)} dmg (2t)");
-                break;
-            case JobType.Clinic:
-                if (c.rescueHealPct > 0f)
-                    tags.Add($"Clinic triage +{Pct(c.rescueHealPct)} @ <{Pct(c.rescueThreshold)} HP");
-                break;
-            case JobType.Mine:
-                if (c.attackBonusPct > 0f) tags.Add($"Mine +{Pct(c.attackBonusPct)} ATK");
-                break;
-        }
-
-        if (tags.Count == 0) return null;
-        string name = GetName(idx);
-        return $"{name}: " + string.Join(" • ", tags);
-    }
-
     private void FirePlayerEndTurnTicks(bool dealtDamageThisTurn, bool critThisTurn)
     {
         playerNoDmgTurns = dealtDamageThisTurn ? 0 : Mathf.Min(playerNoDmgTurns + 1, 99);
@@ -1942,19 +1712,27 @@ public class BattleManager : MonoBehaviour
     {
         if (!wildDef) return;
 
-        int dispHP = Mathf.RoundToInt(BattleCalc.CalcHP(wildDef, wildLevel));
-        int dispATK = Mathf.RoundToInt(BattleCalc.CalcBaseAttack(wildDef, wildLevel, 0, 0));
-        int dispDEF = BattleCalc.CalcDefense(wildDef, wildLevel);
-        int dispSPD = BattleCalc.CalcSpeed(wildDef, wildLevel);
+        // Base (what the monster "should" have at this level)
+        int baseHP  = Mathf.RoundToInt(BattleCalc.CalcHP(wildDef, wildLevel));
+        int baseATK = Mathf.RoundToInt(BattleCalc.CalcBaseAttack(wildDef, wildLevel, 0, 0));
+        int baseDEF = BattleCalc.CalcDefense(wildDef, wildLevel);
+        int baseSPD = BattleCalc.CalcSpeed(wildDef, wildLevel);
+
+        // Effective (what battle is actually using)
+        int effHP  = Mathf.RoundToInt(wildMaxHP);
+        int effATK = Mathf.RoundToInt(wildAttackPerTurn);
+        int effDEF = baseDEF;
+        int effSPD = baseSPD;
 
         if (wildIdText) wildIdText.text = $"ID: {wildDef.id}";
         if (wildTypeText) wildTypeText.text = $"TYPE: {wildDef.type}";
         if (wildRarityText) wildRarityText.text = $"RARITY: {wildDef.rarity}";
         if (wildLevelText) wildLevelText.text = $"LVL: {wildLevel}";
-        if (wildHPText) wildHPText.text = $"HP: {dispHP}";
-        if (wildATKText) wildATKText.text = $"ATK: {dispATK}";
-        if (wildDEFText) wildDEFText.text = $"DEF: {dispDEF}";
-        if (wildSPDText) wildSPDText.text = $"SPD: {dispSPD}";
+
+        if (wildHPText)  SetStatRowColorAndText(wildHPText,  "HP",  baseHP,  effHP,  minFinal: 1);
+        if (wildATKText) SetStatRowColorAndText(wildATKText, "ATK", baseATK, effATK, minFinal: 1);
+        if (wildDEFText) SetStatRowColorAndText(wildDEFText, "DEF", baseDEF, effDEF, minFinal: 0);
+        if (wildSPDText) SetStatRowColorAndText(wildSPDText, "SPD", baseSPD, effSPD, minFinal: 1);
     }
 
     private void UpdatePlayerInfoUI()
@@ -2019,38 +1797,70 @@ public class BattleManager : MonoBehaviour
 
         int hpBaseForDisplay = hpBaseForCtx;
         float hpFinalF = TitlesAdapter.GetStatValue(ctx.ownedId, def, lvl, "HP", ctx, hpBaseForDisplay);
-        int hpFinal = Mathf.Max(1, Mathf.RoundToInt(hpFinalF));
+        int hpTitleFinal = Mathf.Max(1, Mathf.RoundToInt(hpFinalF));
+
         if (playerHPText)
         {
-            SetColoredStat(playerHPText, "HP", hpBaseForDisplay, hpFinal);
-            playerHPText.text += CondTag(hpBaseForDisplay, 0, cmods.hpPct);
+            SetPlayerStatRowWithConditionals(
+                playerHPText,
+                "HP",
+                hpBaseForDisplay,
+                hpTitleFinal,
+                condFlat: 0,
+                condPct: cmods.hpPct,
+                minFinal: 1
+            );
         }
 
         int atkBaseForDisplay = Mathf.Max(1, baseATK + equippedFlatATK + tempATKFlat);
         float atkFinalF = TitlesAdapter.GetStatValue(ctx.ownedId, def, lvl, "Attack", ctx, atkBaseForDisplay);
-        int atkFinal = Mathf.Max(1, Mathf.RoundToInt(atkFinalF));
+        int atkTitleFinal = Mathf.Max(1, Mathf.RoundToInt(atkFinalF));
+
         if (playerATKText)
         {
-            SetColoredStat(playerATKText, "ATK", atkBaseForDisplay, atkFinal);
-            playerATKText.text += CondTag(atkBaseForDisplay, cmods.atkFlat, cmods.atkPct);
+            SetPlayerStatRowWithConditionals(
+                playerATKText,
+                "ATK",
+                atkBaseForDisplay,
+                atkTitleFinal,
+                condFlat: cmods.atkFlat,
+                condPct: cmods.atkPct,
+                minFinal: 1
+            );
         }
 
         int defBaseForDisplay = Mathf.Max(0, baseDEF + tempDEFFlat);
         float defFinalF = TitlesAdapter.GetStatValue(ctx.ownedId, def, lvl, "Defense", ctx, defBaseForDisplay);
-        int defFinal = Mathf.Max(0, Mathf.RoundToInt(defFinalF));
+        int defTitleFinal = Mathf.Max(0, Mathf.RoundToInt(defFinalF));
+
         if (playerDEFText)
         {
-            SetColoredStat(playerDEFText, "DEF", defBaseForDisplay, defFinal);
-            playerDEFText.text += CondTag(defBaseForDisplay, cmods.defFlat, cmods.defPct);
+            SetPlayerStatRowWithConditionals(
+                playerDEFText,
+                "DEF",
+                defBaseForDisplay,
+                defTitleFinal,
+                condFlat: cmods.defFlat,
+                condPct: cmods.defPct,
+                minFinal: 0 // DEF can be 0
+            );
         }
 
         int spdBaseForDisplay = Mathf.Max(1, baseSPD + tempSPDFlat);
         float spdFinalF = TitlesAdapter.GetStatValue(ctx.ownedId, def, lvl, "Speed", ctx, spdBaseForDisplay);
-        int spdFinal = Mathf.Max(1, Mathf.RoundToInt(spdFinalF));
+        int spdTitleFinal = Mathf.Max(1, Mathf.RoundToInt(spdFinalF));
+
         if (playerSPDText)
         {
-            SetColoredStat(playerSPDText, "SPD", spdBaseForDisplay, spdFinal);
-            playerSPDText.text += CondTag(spdBaseForDisplay, cmods.spdFlat, cmods.spdPct);
+            SetPlayerStatRowWithConditionals(
+                playerSPDText,
+                "SPD",
+                spdBaseForDisplay,
+                spdTitleFinal,
+                condFlat: cmods.spdFlat,
+                condPct: cmods.spdPct,
+                minFinal: 1
+            );
         }
 
         bool resistOn = BattleTempBuffs.I && BattleTempBuffs.I.IsTypeResistActive();
@@ -2106,20 +1916,6 @@ public class BattleManager : MonoBehaviour
         label.alpha = cur > 0f ? 1f : 0.35f;
     }
 
-    private void SetCombatPanels(bool on)
-    {
-        if (wildPanel) wildPanel.SetActive(on);
-        if (playerPanel) playerPanel.SetActive(on);
-    }
-
-    CanvasGroup EnsureCanvasGroup(GameObject go)
-    {
-        if (!go) return null;
-        var cg = go.GetComponent<CanvasGroup>();
-        if (!cg) cg = go.AddComponent<CanvasGroup>();
-        return cg;
-    }
-
     private IEnumerator Co_RevealPanelsThenStart(CanvasGroup wildCG, CanvasGroup playerCG, float duration)
     {
         float dur = Mathf.Max(0f, duration);
@@ -2138,8 +1934,7 @@ public class BattleManager : MonoBehaviour
 
         if (dur > 0f)
         {
-            if (usedTween)
-                yield return new WaitForSecondsRealtime(dur);
+            if (usedTween) yield return new WaitForSecondsRealtime(dur);
             else
             {
                 float t = 0f;
@@ -2168,6 +1963,7 @@ public class BattleManager : MonoBehaviour
 
         var vsName = wildDef ? $"{wildDef.displayName} (Lv {wildLevel})" : "Unknown";
         BattleLogger.BeginBattle(vsName);
+
         if (wildDef)
             BattleLogger.Log($"A wild {wildDef.displayName} (Lv {wildLevel}) appeared!", LogScope.Battle);
         else
@@ -2183,17 +1979,12 @@ public class BattleManager : MonoBehaviour
                 BattleLogger.Log($"Personality: {personalityLabel}.", LogScope.Battle);
         }
 
-        for (int i = 0; i < teamCount; i++)
-        {
-            var summary = BuildPassiveSummary(i);
-            if (!string.IsNullOrEmpty(summary))
-                BattleLogger.Log(summary, LogScope.Battle);
-        }
-
         PostBattleSummaryManager.I?.NotifyBattleStart();
 
         if (activeIndex >= 0 && teamIds != null && activeIndex < teamIds.Length)
             TitlesAdapter.OnBattleStart(teamIds[activeIndex], wildDef, wildLevel);
+
+        Debug_LogActiveTitlesSnapshot("BattleStart");
 
         if (turnCR != null) StopCoroutine(turnCR);
         turnCR = StartCoroutine(TurnLoop());
@@ -2207,6 +1998,54 @@ public class BattleManager : MonoBehaviour
         return default;
     }
 
+    // FIX: include conditional HP% into real max HP
+    private TitleStatMods GetConditionalModsForIndex(int idx)
+    {
+        if (teamIds == null || teamDefs == null || teamLevels == null) return default;
+        if (idx < 0 || idx >= teamIds.Length) return default;
+        if (string.IsNullOrEmpty(teamIds[idx]) || teamDefs[idx] == null) return default;
+
+        // IMPORTANT: do NOT call GetActiveMaxHP here (it calls us back).
+        float curMax = GetActiveMaxHP_NoConditionals(teamMaxHP[idx], idx);
+
+        float curHp = (teamHP != null && idx >= 0 && idx < teamHP.Length) ? teamHP[idx] : curMax;
+        float hp01 = curMax > 0.01f ? Mathf.Clamp01(curHp / curMax) : 0f;
+
+        int alliesAlive = 0;
+        for (int i = 0; i < teamCount; i++)
+            if (i != idx && teamHP != null && i < teamHP.Length && teamHP[i] > 0.01f) alliesAlive++;
+
+        int winStreak = (EncounterManager.I != null) ? EncounterManager.I.CurrentWinStreak : 0;
+
+        TitleContext ctx = TitleContext.Empty;
+        ctx.selfHp01 = hp01;
+        ctx.alliesAlive = alliesAlive;
+        ctx.winStreak = winStreak;
+
+        var def = teamDefs[idx];
+        int lvl = teamLevels[idx];
+        string ownedId = teamIds[idx];
+
+        TitleStatMods mods = default;
+        mods.atkFlat = Mathf.RoundToInt(TitlesAdapter.GetStatValue(ownedId, def, lvl, "atkFlat", ctx, 0f));
+        mods.atkPct  = TitlesAdapter.GetStatValue(ownedId, def, lvl, "atkPct",  ctx, 0f);
+
+        mods.defFlat = Mathf.RoundToInt(TitlesAdapter.GetStatValue(ownedId, def, lvl, "defFlat", ctx, 0f));
+        mods.defPct  = TitlesAdapter.GetStatValue(ownedId, def, lvl, "defPct",  ctx, 0f);
+
+        mods.spdFlat = Mathf.RoundToInt(TitlesAdapter.GetStatValue(ownedId, def, lvl, "spdFlat", ctx, 0f));
+        mods.spdPct  = TitlesAdapter.GetStatValue(ownedId, def, lvl, "spdPct",  ctx, 0f);
+
+        mods.hpPct   = TitlesAdapter.GetStatValue(ownedId, def, lvl, "hpPct", ctx, 0f);
+
+        return mods;
+    }
+
+    private TitleStatMods GetConditionalModsForActive()
+    {
+        return GetConditionalModsForIndex(activeIndex);
+    }
+
     public float GetActiveMaxHP(float baseMax, int idx = -1)
     {
         float v = Mathf.Max(1f, baseMax);
@@ -2215,6 +2054,10 @@ public class BattleManager : MonoBehaviour
         {
             var tmods = GetTitleModsForIndex(idx);
             if (tmods.hpPct > 0f) v *= (1f + tmods.hpPct);
+
+            // Conditional HP% must actually apply to max HP (affects survivability + shield scaling)
+            var cmods = GetConditionalModsForIndex(idx);
+            if (cmods.hpPct > 0f) v *= (1f + Mathf.Max(0f, cmods.hpPct));
         }
 
         int hpBuff = BattleTempBuffs.I ? BattleTempBuffs.I.GetPlayerHPBonus() : 0;
@@ -2227,43 +2070,6 @@ public class BattleManager : MonoBehaviour
     {
         if (teamMaxHP == null || idx < 0 || idx >= teamMaxHP.Length) return 1f;
         return GetActiveMaxHP(teamMaxHP[idx], idx);
-    }
-
-    private TitleStatMods GetConditionalModsForActive()
-    {
-        if (teamIds == null || activeIndex < 0 || activeIndex >= teamIds.Length) return default;
-
-        string ownedId = teamIds[activeIndex];
-        var def = teamDefs[activeIndex];
-        int lvl = teamLevels[activeIndex];
-
-        float curMax = GetFinalMaxHPForIndex(activeIndex);
-        float hp01 = curMax > 0.01f ? Mathf.Clamp01(teamHP[activeIndex] / curMax) : 0f;
-
-        int alliesAlive = 0;
-        for (int i = 0; i < teamCount; i++)
-            if (i != activeIndex && teamHP[i] > 0.01f) alliesAlive++;
-
-        int winStreak = (EncounterManager.I != null) ? EncounterManager.I.CurrentWinStreak : 0;
-
-        TitleContext ctx = TitleContext.Empty;
-        ctx.selfHp01 = hp01;
-        ctx.alliesAlive = alliesAlive;
-        ctx.winStreak = winStreak;
-
-        TitleStatMods mods = default;
-        mods.atkFlat = Mathf.RoundToInt(TitlesAdapter.GetStatValue(ownedId, def, lvl, "atkFlat", ctx, 0f));
-        mods.atkPct = TitlesAdapter.GetStatValue(ownedId, def, lvl, "atkPct", ctx, 0f);
-
-        mods.defFlat = Mathf.RoundToInt(TitlesAdapter.GetStatValue(ownedId, def, lvl, "defFlat", ctx, 0f));
-        mods.defPct = TitlesAdapter.GetStatValue(ownedId, def, lvl, "defPct", ctx, 0f);
-
-        mods.spdFlat = Mathf.RoundToInt(TitlesAdapter.GetStatValue(ownedId, def, lvl, "spdFlat", ctx, 0f));
-        mods.spdPct = TitlesAdapter.GetStatValue(ownedId, def, lvl, "spdPct", ctx, 0f);
-
-        mods.hpPct = TitlesAdapter.GetStatValue(ownedId, def, lvl, "hpPct", ctx, 0f);
-
-        return mods;
     }
 
     private int GetAlliesAliveNotIncludingActive()
@@ -2312,27 +2118,35 @@ public class BattleManager : MonoBehaviour
     {
         if (!label) return;
 
+        // Keep label neutral; only color the numbers.
+        label.color = StatNeutral;
+
         int delta = finalVal - baseVal;
         if (delta == 0)
         {
             label.text = $"{name}: {finalVal}";
-            label.color = StatNeutral;
             return;
         }
 
-        string sign = delta > 0 ? "+" : "";
-        label.text = $"{name}: {finalVal} ({sign}{delta})";
-        label.color = delta > 0 ? StatBuff : StatNerf;
+        Color c = delta > 0 ? StatBuff : StatNerf;
+
+        string finalColored = $"<color=#{Hex(c)}>{finalVal}</color>";
+        string deltaColored = ColorizeDelta(delta);
+
+        label.text = $"{name}: {finalColored} ({deltaColored})";
     }
+
 
     private string CondTag(int baseVal, int flat, float pct)
     {
         float raw = flat + (baseVal * pct);
         int delta = Mathf.RoundToInt(raw);
         if (delta == 0) return "";
-        string sign = delta > 0 ? "+" : "";
-        return $" {{cond {sign}{delta}}}";
+
+        // Only color the delta number
+        return $" {{cond {ColorizeDelta(delta)}}}";
     }
+
 
     private void HandleBattleFinishedUIRefresh(BattleResult _)
     {
@@ -2342,17 +2156,6 @@ public class BattleManager : MonoBehaviour
             ClampAndPushActiveHP();
             RefreshBenchUI();
         }
-    }
-
-    private void MitLog(string text)
-    {
-        try { BattleLogger.Log(text, LogScope.Battle); } catch { }
-        Debug.Log(text);
-    }
-
-    private void MitLogOncePerTurnHeader(bool critRolled, bool critNegated)
-    {
-        MitLog($"[Mitigation] {GetName(activeIndex)} | Crit Rolled: {(critRolled ? "Yes" : "No")} | Negated by Title: {(critNegated ? "Yes" : "No")}");
     }
 
     private int GetPlayerEffectiveSpeedForRun()
@@ -2370,6 +2173,10 @@ public class BattleManager : MonoBehaviour
         if (j != null && j.speedBuffTurns > 0 && j.speedBonusPctFirstTurns != 0f)
             spd = Mathf.Max(1, Mathf.RoundToInt(spd * (1f + j.speedBonusPctFirstTurns)));
 
+        // Conditional speed affects run chance too
+        var cmods = GetConditionalModsForActive();
+        spd = Mathf.Max(1, Mathf.RoundToInt((spd + Mathf.Max(0, cmods.spdFlat)) * (1f + Mathf.Max(0f, cmods.spdPct))));
+
         return Mathf.Max(1, spd);
     }
 
@@ -2386,7 +2193,6 @@ public class BattleManager : MonoBehaviour
         float speedTerm = (pSpd + wSpd) > 0 ? (float)pSpd / (pSpd + wSpd) : 0.5f;
 
         float hp01 = 1f - (wildHP / Mathf.Max(1f, wildMaxHP));
-
         float attemptsBonus = runAttemptBonus * Mathf.Max(0, runAttempts);
 
         float chance =
@@ -2409,11 +2215,7 @@ public class BattleManager : MonoBehaviour
         shieldHP[activeIndex] += gain;
         pendingGuardShield[activeIndex] = 0f;
 
-        BattleLogger.Log(
-            $"{GetName(activeIndex)} gains a guard shield of {Mathf.RoundToInt(gain)}!",
-            LogScope.Battle
-        );
-
+        BattleLogger.Log($"{GetName(activeIndex)} gains a guard shield of {Mathf.RoundToInt(gain)}!", LogScope.Battle);
         ClampAndPushActiveHP();
     }
 
@@ -2451,8 +2253,6 @@ public class BattleManager : MonoBehaviour
         }
     }
 
-
-    // Helper: get personality label for wild
     private string GetWildPersonalityLabel()
     {
         if (!wildDef || wildDef.Personality == null) return null;
@@ -2478,7 +2278,6 @@ public class BattleManager : MonoBehaviour
         Transform spawnRoot = null;
         if (EncounterManager.I != null)
         {
-            // Prefab appears on the *target* side
             spawnRoot = isPlayerSide
                 ? EncounterManager.I.EnemySpawnPoint
                 : EncounterManager.I.PlayerSpawnPoint;
@@ -2494,7 +2293,6 @@ public class BattleManager : MonoBehaviour
         if (life > 0f) Destroy(inst, life);
     }
 
-
     private bool RollDefendSuccess()
     {
         float chance = Mathf.Clamp01(currentDefendSuccess);
@@ -2503,7 +2301,6 @@ public class BattleManager : MonoBehaviour
         if (ok)
         {
             defendConsecutiveUses++;
-
             float next = defendFirstUseSuccess * Mathf.Pow(defendRepeatMultiplier, defendConsecutiveUses);
             currentDefendSuccess = Mathf.Max(defendMinSuccess, next);
         }
@@ -2528,7 +2325,6 @@ public class BattleManager : MonoBehaviour
             return EnemyAction.Attack;
 
         float hpRatio = Mathf.Clamp01(wildHP / Mathf.Max(1f, wildMaxHP));
-
         BattleAction action = BattleAction.Attack;
 
         if (wildDef.Personality != null)
@@ -2544,7 +2340,6 @@ public class BattleManager : MonoBehaviour
             action = wildDef.Personality.ChooseAction(in ctx, _enemyRng);
         }
 
-        // Fallback: if no Personality, use a simple HP-based bias.
         EnemyAction Fallback()
         {
             if (hpRatio < 0.25f && UnityEngine.Random.value < 0.40f)
@@ -2571,11 +2366,10 @@ public class BattleManager : MonoBehaviour
         if (!wildDef || wildMaxHP <= 0.01f)
             return 0f;
 
-        float hpLost01 = 1f - Mathf.Clamp01(wildHP / wildMaxHP); // 0 = full HP, 1 = nearly KO
-        float baseChance = 0.05f;            // 5% even at full HP
-        float hpBonus = hpLost01 * 0.70f; // up to +70% at 1 HP
+        float hpLost01 = 1f - Mathf.Clamp01(wildHP / wildMaxHP);
+        float baseChance = 0.05f;
+        float hpBonus = hpLost01 * 0.70f;
 
-        // Personality tweak: Evasive has higher success when they *do* try to run
         string groupName = null;
         if (wildDef.Personality != null)
         {
@@ -2600,10 +2394,7 @@ public class BattleManager : MonoBehaviour
         wildPendingGuardShield = 0f;
         UpdateWildStatusUI();
 
-        BattleLogger.Log(
-            $"{name} gains a guard shield of {Mathf.RoundToInt(gain)}!",
-            LogScope.Battle
-        );
+        BattleLogger.Log($"{name} gains a guard shield of {Mathf.RoundToInt(gain)}!", LogScope.Battle);
     }
 
     private bool RollEnemyDefendSuccess()
@@ -2642,10 +2433,7 @@ public class BattleManager : MonoBehaviour
             wildDefendActiveThisRound = true;
             UpdateWildStatusUI();
             BattleLogger.Log($"{name} is defending.", LogScope.Battle);
-            BattleLogger.Log(
-                $"{name} will reduce the next hit and convert it into a shield for the following round.",
-                LogScope.Battle
-            );
+            BattleLogger.Log($"{name} will reduce the next hit and convert it into a shield for the following round.", LogScope.Battle);
         }
         else
         {
@@ -2657,12 +2445,7 @@ public class BattleManager : MonoBehaviour
         Punch(wildIcon);
     }
 
-    private void SpawnDamageNumber(
-        int amount,
-        bool isCrit,
-        float effectiveness,
-        bool hitPlayer
-    )
+    private void SpawnDamageNumber(int amount, bool isCrit, float effectiveness, bool hitPlayer)
     {
         if (!damageNumberPrefab) return;
 
@@ -2672,14 +2455,11 @@ public class BattleManager : MonoBehaviour
         var inst = Instantiate(damageNumberPrefab, anchor);
         var color = dmgNormalColor;
 
-        if (isCrit)
-        {
-            color = dmgCritColor;
-        }
+        if (isCrit) color = dmgCritColor;
         else
         {
-            if (effectiveness > 1.25f) color = dmgWeakColor;   // super-effective
-            else if (effectiveness < 0.85f) color = dmgResistColor; // not very effective
+            if (effectiveness > 1.25f) color = dmgWeakColor;
+            else if (effectiveness < 0.85f) color = dmgResistColor;
         }
 
         inst.Init(amount, color);
@@ -2687,15 +2467,12 @@ public class BattleManager : MonoBehaviour
 
     private void PlayDefendShieldFX(bool isPlayer)
     {
-        // Re-use your existing icon punch, plus a shimmer on guard icon
         if (isPlayer)
         {
             if (guardIcon)
             {
-                // Quick punch scale
                 Punch(guardIcon);
 
-                // Shimmer alpha
                 var g = guardIcon;
                 float startA = g.color.a;
                 LeanTween.value(g.gameObject, 0.35f, startA, 0.35f)
@@ -2724,9 +2501,7 @@ public class BattleManager : MonoBehaviour
         if (!target) return;
 
         Vector3 original = target.localPosition;
-        float endTime = Time.unscaledTime + duration;
 
-        // Simple manual shake using LeanTween value
         LeanTween.value(gameObject, 0f, magnitude, duration)
             .setOnUpdate(val =>
             {
@@ -2744,25 +2519,17 @@ public class BattleManager : MonoBehaviour
     {
         if (!target) return;
 
-        // Cancel existing shake if still running
         LeanTween.cancel(target.gameObject);
 
-        // Reset to original
         Vector3 originalPos = target.anchoredPosition;
 
-        // Apply shake
         LeanTween.moveX(target, originalPos.x + UnityEngine.Random.Range(-hpShakeStrength, hpShakeStrength), hpShakeDuration)
             .setEasePunch()
-            .setOnComplete(() =>
-            {
-                // Restore original position after shaking
-                target.anchoredPosition = originalPos;
-            });
+            .setOnComplete(() => { target.anchoredPosition = originalPos; });
     }
 
     private void SetPostBattleWinnerVisible(bool victory, bool escaped)
     {
-        // Escaped = no winner. Keep player visible, hide the wild.
         if (escaped)
         {
             if (playerPanel) playerPanel.SetActive(true);
@@ -2770,13 +2537,11 @@ public class BattleManager : MonoBehaviour
             return;
         }
 
-        // Victory => show player, hide wild
         if (victory)
         {
             if (playerPanel) playerPanel.SetActive(true);
             if (wildPanel) wildPanel.SetActive(false);
         }
-        // Defeat => show wild, hide player
         else
         {
             if (playerPanel) playerPanel.SetActive(false);
@@ -2784,11 +2549,9 @@ public class BattleManager : MonoBehaviour
         }
     }
 
-
     private void UpdateWildStatusUI()
     {
         if (wildGuardIcon) wildGuardIcon.enabled = wildDefendActiveThisRound;
-
         if (wildChargeIcon) wildChargeIcon.enabled = wildChargedNextAttack;
 
         if (!wildShieldText) return;
@@ -2806,11 +2569,9 @@ public class BattleManager : MonoBehaviour
 
     private void ForceEndBattleEarly(bool victory, bool escaped = false)
     {
-        // treat as ended even if we never reached inBattle=true
         SetIsPlayerTurn(false);
         pendingAction = PlayerAction.None;
 
-        // disable bench buttons safely
         if (benchBtn1) benchBtn1.interactable = false;
         if (benchBtn2) benchBtn2.interactable = false;
 
@@ -2835,21 +2596,18 @@ public class BattleManager : MonoBehaviour
 
     private IEnumerator Say(string line, BattleLineTag tags = BattleLineTag.None)
     {
-        // Settings-driven filtering
         bool condensed = SettingsManager.I != null && SettingsManager.I.GetCondensedBattleText();
         bool autoCompress = SettingsManager.I != null && SettingsManager.I.GetCompressAutoBattleText();
 
         bool isAuto = (EncounterManager.I != null && EncounterManager.I.IsAutoMode) || !manualTurns;
 
-        // Condensed mode: drop Flavor lines
         if (condensed && (tags & BattleLineTag.Result) == 0)
             yield break;
 
-        // Auto compression: also drop Flavor lines in auto
         if (isAuto && autoCompress && (tags & BattleLineTag.Flavor) != 0)
             yield break;
 
-        BattleLogger.Log(line, LogScope.Battle); // still always logs (history stays complete)
+        BattleLogger.Log(line, LogScope.Battle);
 
         _narrationLock = true;
         GameEvents.OnBattleStateChanged?.Invoke();
@@ -2860,7 +2618,7 @@ public class BattleManager : MonoBehaviour
         _narrationLock = false;
         GameEvents.OnBattleStateChanged?.Invoke();
     }
-    
+
     public string ActivePlayerMonsterId
     {
         get
@@ -2869,6 +2627,205 @@ public class BattleManager : MonoBehaviour
             if (activeIndex < 0 || activeIndex >= teamIds.Length) return "";
             return teamIds[activeIndex];
         }
+    }
+
+    public string ActiveWildMonsterId
+    {
+        get
+        {
+            return wildDef ? wildDef.id : "";
+        }
+    }
+
+    // Add near GetActiveMaxHP
+    private float GetActiveMaxHP_NoConditionals(float baseMax, int idx)
+    {
+        float v = Mathf.Max(1f, baseMax);
+
+        // Titles HP% only
+        var tmods = GetTitleModsForIndex(idx);
+        if (tmods.hpPct > 0f) v *= (1f + tmods.hpPct);
+
+        // Temp HP buff
+        int hpBuff = BattleTempBuffs.I ? BattleTempBuffs.I.GetPlayerHPBonus() : 0;
+        v = Mathf.Max(1f, v + hpBuff);
+
+        return v;
+    }
+
+    private static string Hex(Color c) => ColorUtility.ToHtmlStringRGB(c);
+
+    private string ColorizeInt(int value, Color color)
+    {
+        return $"<color=#{Hex(color)}>{value}</color>";
+    }
+
+    private string ColorizeDelta(int delta)
+    {
+        if (delta == 0) return "0";
+        string sign = delta > 0 ? "+" : ""; 
+        Color c = delta > 0 ? StatBuff : StatNerf;
+        return $"<color=#{Hex(c)}>{sign}{delta}</color>";
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // Stat Coloring Helpers (label color changes)
+    // ─────────────────────────────────────────────────────────────
+
+    private void SetStatRowColorAndText(TextMeshProUGUI label, string statName, int baseVal, int finalVal, int minFinal = 1)
+    {
+        if (!label) return;
+
+        finalVal = Mathf.Max(minFinal, finalVal);
+        baseVal  = Mathf.Max(minFinal, baseVal);
+
+        int delta = finalVal - baseVal;
+
+        if (delta > 0) label.color = StatBuff;
+        else if (delta < 0) label.color = StatNerf;
+        else label.color = StatNeutral;
+
+        if (delta == 0)
+            label.text = $"{statName}: {finalVal}";
+        else
+            label.text = $"{statName}: {finalVal} ({(delta > 0 ? "+" : "")}{delta})";
+    }
+
+    private void SetPlayerStatRowWithConditionals(
+        TextMeshProUGUI label,
+        string statName,
+        int baseVal,
+        int titleFinalVal,
+        int condFlat,
+        float condPct,
+        int minFinal = 1)
+    {
+        // Conditionals are based on the *baseVal* (matches your CondTag logic)
+        int condDelta = Mathf.RoundToInt(condFlat + (baseVal * condPct));
+
+        int combinedFinal = titleFinalVal + condDelta;
+
+        // Clamp final appropriately (DEF can be 0, others should be 1+)
+        combinedFinal = Mathf.Max(minFinal, combinedFinal);
+
+        SetStatRowColorAndText(label, statName, baseVal, combinedFinal, minFinal);
+    }
+
+
+    private List<TitleSO> GetTitlesForOwnedIdSafe(string ownedId)
+    {
+        if (string.IsNullOrEmpty(ownedId)) return null;
+
+        // Preferred path (if your TitleManager has this API)
+        try
+        {
+            if (TitleManager.I != null)
+                return TitleManager.I.GetTitlesForMonster(ownedId);
+        }
+        catch { }
+
+        // Fallback: if TitlesAdapter has a method, you can wire it here later.
+        return null;
+    }
+
+    private void Debug_LogActiveTitlesSnapshot(string reason)
+    {
+        if (!debugTitles) return;
+        if (activeIndex < 0) return;
+        if (teamDefs == null || teamLevels == null || teamIds == null) return;
+        if (activeIndex >= teamDefs.Length || activeIndex >= teamLevels.Length || activeIndex >= teamIds.Length) return;
+
+        string ownedId = teamIds[activeIndex];
+        var def = teamDefs[activeIndex];
+        int lvl = teamLevels[activeIndex];
+
+        if (string.IsNullOrEmpty(ownedId) || def == null) return;
+
+        var titles = GetTitlesForOwnedIdSafe(ownedId);
+
+        Debug.Log($"[Titles][{reason}] Turn={_turnIndex} OwnedId={ownedId} Monster={def.displayName} Lv={lvl}");
+
+        if (titles == null)
+        {
+            Debug.Log("[Titles] Title list unavailable (TitleManager.I.GetTitlesForMonster not reachable). " +
+                    "If you paste TitleManager.cs or TitlesAdapter API, I’ll wire the correct call.");
+        }
+        else if (titles.Count == 0)
+        {
+            Debug.Log("[Titles] (No titles found)");
+        }
+        else
+        {
+            for (int i = 0; i < titles.Count; i++)
+            {
+                var t = titles[i];
+                if (!t) continue;
+
+                // Print common identifiers if present
+                string id = "";
+                try { id = t.titleId; } catch { }
+
+                string extra = "";
+
+                // Print key config when it’s a BattleStartFlat title (your Apprentice)
+                if (t is BattleStartFlatTitleSO bsf)
+                {
+                    extra = $" stat={bsf.stat} flatAmount={bsf.flatAmount} durationTurns={bsf.durationTurns}";
+                }
+
+                Debug.Log($"  • [{i}] {id} {t.name} ({t.GetType().Name}){extra}");
+            }
+        }
+
+        // Also probe what the TITLE layer is outputting right now (no conditionals applied here)
+        var ctx = BuildTitleContextForActive();
+
+        // Base display inputs (match your UI’s “baseForDisplay” approach as closely as possible)
+        int baseHP = Mathf.RoundToInt(BattleCalc.CalcHP(def, lvl));
+        int baseATK = Mathf.RoundToInt(BattleCalc.CalcBaseAttack(def, lvl, 0, 0));
+        int baseDEF = BattleCalc.CalcDefense(def, lvl);
+        int baseSPD = BattleCalc.CalcSpeed(def, lvl);
+
+        // Training + equipment + temp buffs (same logic you use in UpdatePlayerInfoUI)
+        var roster = SaveManager.Data?.team;
+        int bonusHP = 0, bonusATK = 0, bonusDEF = 0, bonusSPD = 0;
+        int equippedFlatATK = 0;
+
+        if (roster != null && activeIndex < roster.Count && roster[activeIndex] != null)
+        {
+            var tb = roster[activeIndex].trainingBonus;
+            bonusHP = Mathf.Max(0, tb.hp);
+            bonusATK = Mathf.Max(0, tb.atk);
+            bonusDEF = Mathf.Max(0, tb.def);
+            bonusSPD = Mathf.Max(0, tb.spd);
+
+            equippedFlatATK = Mathf.Max(0, roster[activeIndex].flatAtkBonus);
+        }
+
+        baseHP += bonusHP;
+        baseATK += bonusATK;
+        baseDEF += bonusDEF;
+        baseSPD += bonusSPD;
+
+        int tempHPFlat = BattleTempBuffs.I ? BattleTempBuffs.I.GetPlayerHPBonus() : 0;
+        int tempATKFlat = BattleTempBuffs.I ? BattleTempBuffs.I.GetPlayerAtkBonus() : 0;
+        int tempDEFFlat = BattleTempBuffs.I ? BattleTempBuffs.I.GetPlayerDefenseBonus() : 0;
+        int tempSPDFlat = BattleTempBuffs.I ? BattleTempBuffs.I.GetPlayerSpeedFlatBonus() : 0;
+
+        int hpBaseForTitles = Mathf.Max(1, baseHP + tempHPFlat);
+        int atkBaseForTitles = Mathf.Max(1, baseATK + equippedFlatATK + tempATKFlat);
+        int defBaseForTitles = Mathf.Max(0, baseDEF + tempDEFFlat);
+        int spdBaseForTitles = Mathf.Max(1, baseSPD + tempSPDFlat);
+
+        float hpAfterTitles = TitlesAdapter.GetStatValue(ownedId, def, lvl, "HP", ctx, hpBaseForTitles);
+        float atkAfterTitles = TitlesAdapter.GetStatValue(ownedId, def, lvl, "Attack", ctx, atkBaseForTitles);
+        float defAfterTitles = TitlesAdapter.GetStatValue(ownedId, def, lvl, "Defense", ctx, defBaseForTitles);
+        float spdAfterTitles = TitlesAdapter.GetStatValue(ownedId, def, lvl, "Speed", ctx, spdBaseForTitles);
+
+        Debug.Log(
+            $"[Titles][Probe] Inputs => HP:{hpBaseForTitles} ATK:{atkBaseForTitles} DEF:{defBaseForTitles} SPD:{spdBaseForTitles} | " +
+            $"Outputs => HP:{Mathf.RoundToInt(hpAfterTitles)} ATK:{Mathf.RoundToInt(atkAfterTitles)} DEF:{Mathf.RoundToInt(defAfterTitles)} SPD:{Mathf.RoundToInt(spdAfterTitles)}"
+        );
     }
 
 

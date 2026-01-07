@@ -17,6 +17,7 @@ MonoBehaviour:
   description: Gains +4% DEF per stack when hit (max 5 stacks, 1 stack decays each
     turn).
   icon: {fileID: -7211892166802722315, guid: 28fa34c3b419148d6b24298ab5402546, type: 3}
+  canRollOnWild: 1
   stat: 1
   trigger: 0
   percentPerStack: 4

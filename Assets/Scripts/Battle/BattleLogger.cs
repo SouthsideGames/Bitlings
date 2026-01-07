@@ -42,8 +42,9 @@ public static class BattleLogColors
     public const string Debuff = "#FF7A53"; // orange/red
     public const string Crit   = "#FFD94A"; // gold
     public const string Info   = "#7FD7FF"; // cyan
-    public const string Name   = "#D7B6FF";
-    public const string Title  = "#FFB347";
+    public const string Name   = "#D7B6FF"; // name tint
+    public const string Title  = "#FFB347"; // title tint
+    public const string Dim    = "#A9A9A9"; // grey
 }
 
 public enum ModKind { Buff, Debuff, Info }
@@ -76,7 +77,7 @@ public static class DamageLogFormatter
         float effectiveness = 1f
     )
     {
-        var sb = new StringBuilder(128);
+        var sb = new StringBuilder(160);
 
         if (!string.IsNullOrEmpty(attackerName))
             sb.Append(attackerName).Append(" ");
@@ -125,9 +126,7 @@ public static class DamageLogFormatter
         }
 
         if (crit)
-        {
             sb.Append(" <color=").Append(BattleLogColors.Crit).Append(">CRIT!</color>");
-        }
 
         if (!Mathf.Approximately(effectiveness, 1f))
         {
@@ -183,6 +182,8 @@ public static class BattleLogger
     public static event Action<string> OnEncounterBegan;
     public static event Action<bool>   OnEncounterEnded;
     public static event Action         OnLogCleared;
+
+    // Fired whenever a Title proc happens (UI toast / side panel / etc.)
     public static event Action<TitleProcEvent> OnTitleProc;
 
     static readonly List<LogEntry> _entries = new List<LogEntry>(512);
@@ -218,7 +219,6 @@ public static class BattleLogger
     public static int MaxEntries { get; private set; } = 800;
 
     // EXACT string you said you don't want shown unless Auto is unlocked
-    // If your UI uses a different phrase (capitalization/punctuation), change it here.
     public const string HoldForAutoLine = "Hold for Auto";
 
     static long NowUnix() => SaveManager.NowUnix();
@@ -269,7 +269,7 @@ public static class BattleLogger
         if (!Enabled) return;
         if (string.IsNullOrEmpty(message)) return;
 
-        // NEW: do not show "Hold for Auto" unless Auto is unlocked
+        // do not show "Hold for Auto" unless Auto is unlocked
         if (ShouldSuppressAutoHint(message))
             return;
 
@@ -285,24 +285,18 @@ public static class BattleLogger
         TrimToMax();
 
         OnLogAppended?.Invoke(e);
-
-        // battle history modal can subscribe to this
         OnLineLogged?.Invoke(message);
     }
 
     static bool ShouldSuppressAutoHint(string message)
     {
-        // Keep this strict so we do not hide other lines by accident.
         if (!string.Equals(message, HoldForAutoLine, StringComparison.Ordinal))
             return false;
 
-        // If we cannot read save data, default to "locked" (suppress).
         var p = SaveManager.Data;
         if (p == null) return true;
 
-        // Use your real Auto unlock check here when available.
-        // For now, we can safely infer "Auto unlocked" from autoTapLevel > 0,
-        // since autoTapLevel exists in your PlayerManager data.
+        // infer auto-unlocked from autoTapLevel > 0
         return p.autoTapLevel <= 0;
     }
 
@@ -344,24 +338,155 @@ public static class BattleLogger
     }
 
     // ─────────────────────────────────────────────────────────
-    // Turn / Title helpers
+    // Title helpers (NEW/IMPROVED)
+    // ─────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Short single-line header to show which Title is currently applied.
+    /// Call this at battle start (or right after you assign a title).
+    /// </summary>
+    public static void LogTitleHeader(string ownerName, string titleName, LogScope scope = LogScope.Battle)
+    {
+        if (string.IsNullOrEmpty(ownerName)) ownerName = "Unknown";
+        if (string.IsNullOrEmpty(titleName)) titleName = "None";
+
+        Log(
+            $"<color={BattleLogColors.Title}>[TITLE]</color> " +
+            $"<color={BattleLogColors.Name}>{ownerName}</color>: " +
+            $"<color={BattleLogColors.Title}>{titleName}</color>",
+            scope
+        );
+    }
+
+    /// <summary>
+    /// For roll outcomes (wild rolled / no roll / forced).
+    /// </summary>
+    public static void LogTitleRollResult(
+        string ownerName,
+        string rolledTitleName,
+        bool forced,
+        bool didRoll,
+        LogScope scope = LogScope.Encounter)
+    {
+        if (string.IsNullOrEmpty(ownerName)) ownerName = "Wild";
+
+        if (!didRoll)
+        {
+            Log(
+                $"<color={BattleLogColors.Title}>[TITLE]</color> " +
+                $"<color={BattleLogColors.Name}>{ownerName}</color>: " +
+                $"<color={BattleLogColors.Dim}>No title rolled</color>",
+                scope
+            );
+            return;
+        }
+
+        string forcedTag = forced
+            ? $" <color={BattleLogColors.Info}>(forced)</color>"
+            : "";
+
+        Log(
+            $"<color={BattleLogColors.Title}>[TITLE]</color> " +
+            $"<color={BattleLogColors.Name}>{ownerName}</color> rolled " +
+            $"<color={BattleLogColors.Title}>{(string.IsNullOrEmpty(rolledTitleName) ? "Unknown" : rolledTitleName)}</color>{forcedTag}",
+            scope
+        );
+    }
+
+    /// <summary>
+    /// Logs a title activation/proc line and emits the TitleProcEvent for UI toasts.
+    /// Use this when an effect actually triggers (not just passively exists).
+    /// </summary>
+    public static void LogTitleActivation(string ownerName, string titleName, string summary)
+    {
+        // Fire proc event FIRST so UI can react
+        OnTitleProc?.Invoke(new TitleProcEvent(ownerName, titleName, summary));
+
+        Log(
+            $"<color={BattleLogColors.Title}>[TITLE PROC]</color> " +
+            $"<color={BattleLogColors.Name}>{ownerName}</color> — " +
+            $"<color={BattleLogColors.Title}>{titleName}</color>: {summary}",
+            LogScope.Battle
+        );
+    }
+
+    /// <summary>
+    /// Optional: one-liner summary of title stat mods (useful for debugging).
+    /// Example: ATK +10% | DEF +2 | SPD -1
+    /// Pass only what you want to display.
+    /// </summary>
+    public static void LogTitleStatSummary(
+        string ownerName,
+        string titleName,
+        int atkFlat = 0, float atkPct = 0f,
+        int defFlat = 0, float defPct = 0f,
+        int spdFlat = 0, float spdPct = 0f,
+        float hpPct = 0f,
+        LogScope scope = LogScope.Battle)
+    {
+        var sb = new StringBuilder(128);
+
+        void AppendMod(string label, int flat, float pct)
+        {
+            bool hasFlat = flat != 0;
+            bool hasPct = !Mathf.Approximately(pct, 0f);
+            if (!hasFlat && !hasPct) return;
+
+            if (sb.Length > 0) sb.Append(" <color=").Append(BattleLogColors.Dim).Append(">|</color> ");
+
+            sb.Append(label).Append(" ");
+
+            if (hasFlat)
+            {
+                string col = flat > 0 ? BattleLogColors.Buff : BattleLogColors.Debuff;
+                sb.Append("<color=").Append(col).Append(">")
+                  .Append(flat > 0 ? "+" : "").Append(flat)
+                  .Append("</color>");
+                if (hasPct) sb.Append(" ");
+            }
+
+            if (hasPct)
+            {
+                int pctI = Mathf.RoundToInt(pct * 100f);
+                string col = pctI > 0 ? BattleLogColors.Buff : BattleLogColors.Debuff;
+                sb.Append("<color=").Append(col).Append(">")
+                  .Append(pctI > 0 ? "+" : "").Append(pctI).Append("%")
+                  .Append("</color>");
+            }
+        }
+
+        AppendMod("ATK", atkFlat, atkPct);
+        AppendMod("DEF", defFlat, defPct);
+        AppendMod("SPD", spdFlat, spdPct);
+
+        if (!Mathf.Approximately(hpPct, 0f))
+        {
+            if (sb.Length > 0) sb.Append(" <color=").Append(BattleLogColors.Dim).Append(">|</color> ");
+            int pctI = Mathf.RoundToInt(hpPct * 100f);
+            string col = pctI > 0 ? BattleLogColors.Buff : BattleLogColors.Debuff;
+            sb.Append("HP ")
+              .Append("<color=").Append(col).Append(">")
+              .Append(pctI > 0 ? "+" : "").Append(pctI).Append("%")
+              .Append("</color>");
+        }
+
+        if (sb.Length == 0) return;
+
+        Log(
+            $"<color={BattleLogColors.Title}>[TITLE]</color> " +
+            $"<color={BattleLogColors.Name}>{(string.IsNullOrEmpty(ownerName) ? "Unknown" : ownerName)}</color> — " +
+            $"<color={BattleLogColors.Title}>{(string.IsNullOrEmpty(titleName) ? "None" : titleName)}</color> " +
+            $"<color={BattleLogColors.Dim}>[{sb}]</color>",
+            scope
+        );
+    }
+
+    // ─────────────────────────────────────────────────────────
+    // Turn helpers
     // ─────────────────────────────────────────────────────────
     public static void LogTurnStart(int turnIndex)
     {
         Log($"— Turn {turnIndex} begins —", LogScope.Battle);
-    }
-
-    public static void LogTitleActivation(string ownerName, string titleName, string summary)
-    {
-        // Fire proc event FIRST so UI can react even if logging is disabled later.
-        OnTitleProc?.Invoke(new TitleProcEvent(ownerName, titleName, summary));
-
-        Log(
-            $"<color={BattleLogColors.Title}>[TITLE]</color> " +
-            $"<color={BattleLogColors.Name}>{ownerName}'s</color> {titleName} " +
-            $"<color={BattleLogColors.Buff}>activates</color>: {summary}",
-            LogScope.Battle
-        );
     }
 
     public static void LogChoice(string actorName, string choiceSummary, bool isPlayer)
@@ -373,10 +498,6 @@ public static class BattleLogger
     // ─────────────────────────────────────────────────────────
     // Maintenance
     // ─────────────────────────────────────────────────────────
-    /// <summary>
-    /// Clears all stored entries and notifies listeners that the log was cleared.
-    /// Use emitSystemLine = true if you want a "(log cleared)" message added after clearing.
-    /// </summary>
     public static void ClearAll(bool emitSystemLine = false)
     {
         _entries.Clear();

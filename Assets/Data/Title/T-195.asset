@@ -16,6 +16,7 @@ MonoBehaviour:
   displayName: Detective
   description: Adds +25 SPD at battle start. Lasts 4 turn(s).
   icon: {fileID: 7617494016918777864, guid: 901668dd83f054253a0d4b283e24a25c, type: 3}
+  canRollOnWild: 1
   stat: 2
   flatAmount: 25
   durationTurns: 4

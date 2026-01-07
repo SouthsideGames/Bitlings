@@ -16,5 +16,6 @@ MonoBehaviour:
   displayName: Control Judge
   description: Reduces damage taken from Specter-type attacks by 25%.
   icon: {fileID: 2579639455195160362, guid: 8161cc557b3534e1c92074f069e630c9, type: 3}
+  canRollOnWild: 1
   resistTypes: 0d000000
   incomingMultiplier: 0.75

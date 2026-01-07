@@ -16,6 +16,7 @@ MonoBehaviour:
   displayName: Steward
   description: Boosts SPD by 15.
   icon: {fileID: 3902597290929183080, guid: 24da5d2a0d2fd410984dc7a22a8b7faa, type: 3}
+  canRollOnWild: 1
   stat: 3
   operation: 0
   value: 15

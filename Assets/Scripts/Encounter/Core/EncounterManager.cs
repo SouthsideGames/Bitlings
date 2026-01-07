@@ -1,3 +1,5 @@
+// Assets/Scripts/Encounter/EncounterManager.cs  (partial)
+// FULL updated version of what you pasted, with wild title fixes + test toggles.
 using UnityEngine;
 using System;
 using System.Collections;
@@ -21,6 +23,17 @@ public partial class EncounterManager : MonoBehaviour
     [SerializeField, Min(0)] private int bossEveryNOverride = 0;
     [Tooltip("Flat level bonus applied to boss encounters")]
     [SerializeField, Min(0)] private int bossLevelBonus = 2;
+
+    [Header("Wild Titles (Encounter-only)")]
+    [SerializeField, Range(0f, 1f)] private float wildTitleRollChance = 0.35f;
+    [SerializeField] private string unemployedLabel = "Unemployed";
+
+    [Header("Wild Titles Debug (Testing)")]
+    [Tooltip("If enabled, any wild with at least 1 candidate will always roll a title (non-boss too).")]
+    [SerializeField] private bool debugForceWildTitleRoll = false;
+
+    [Tooltip("If enabled, logs candidate counts and outcomes each encounter.")]
+    [SerializeField] private bool debugWildTitleLogs = false;
 
     [Header("Options")]
     [SerializeField] private float postResultDelay = 0.8f;
@@ -53,6 +66,160 @@ public partial class EncounterManager : MonoBehaviour
 
     // Tracks whether we are waiting on manual hire decision
     private bool _manualHirePending = false;
+
+    // ─────────────────────────────────────────────────────────
+    // Wild Titles (encounter-scoped)
+    // ─────────────────────────────────────────────────────────
+    private int _wildEncounterSerial = 0;
+    private string _wildCombatId = null;
+    private TitleSO _wildRolledTitle = null;
+    private readonly List<TitleSO> _wildActiveTitles = new List<TitleSO>(8);
+    private string _wildTitleLabel = null;
+
+    public string WildCombatId => _wildCombatId;
+    public TitleSO WildRolledTitle => _wildRolledTitle;
+    public IReadOnlyList<TitleSO> WildActiveTitles => _wildActiveTitles;
+    public string WildTitleLabel => string.IsNullOrEmpty(_wildTitleLabel) ? unemployedLabel : _wildTitleLabel;
+
+    private void ClearWildTitleInjection()
+    {
+        if (!string.IsNullOrEmpty(_wildCombatId))
+            TitlesAdapter.ClearLocalTitles(_wildCombatId);
+
+        _wildCombatId = null;
+        _wildRolledTitle = null;
+        _wildActiveTitles.Clear();
+        _wildTitleLabel = null;
+    }
+
+    private void ResolveWildTitles(MonsterDataSO wildDef, int wildLevel)
+    {
+        ClearWildTitleInjection();
+
+        _wildEncounterSerial++;
+        string baseId = (wildDef != null && !string.IsNullOrEmpty(wildDef.id)) ? wildDef.id : "UNKNOWN";
+        _wildCombatId = $"WILD::{baseId}::{_wildEncounterSerial}";
+
+        // Always-on (species identity)
+        if (wildDef != null && wildDef.defaultAlwaysOnTitles != null)
+        {
+            for (int i = 0; i < wildDef.defaultAlwaysOnTitles.Length; i++)
+            {
+                var t = wildDef.defaultAlwaysOnTitles[i];
+                if (t != null && !_wildActiveTitles.Contains(t))
+                    _wildActiveTitles.Add(t);
+            }
+        }
+
+        // Candidate pool from TitleTrack tiers
+        var candidates = new List<TitleSO>(12);
+
+        if (wildDef != null && wildDef.titleTrack != null && wildDef.titleTrack.tiers != null)
+        {
+            var seen = new HashSet<TitleSO>();
+            for (int ti = 0; ti < wildDef.titleTrack.tiers.Count; ti++)
+            {
+                var tier = wildDef.titleTrack.tiers[ti];
+                if (tier == null) continue;
+
+                if (wildLevel < Mathf.Max(1, tier.levelRequired))
+                    continue;
+
+                var choices = tier.unlockChoices;
+                if (choices == null) continue;
+
+                for (int ci = 0; ci < choices.Count; ci++)
+                {
+                    var title = choices[ci];
+                    if (title == null) continue;
+                    if (!title.canRollOnWild) continue;
+                    if (seen.Add(title))
+                        candidates.Add(title);
+                }
+            }
+        }
+
+    #if UNITY_EDITOR || DEVELOPMENT_BUILD
+        // ── DEV OVERRIDE (priority 1): force a specific title by id
+        TitleSO forced = null;
+        string forcedId = Dev_ForceWildTitleId;
+
+        if (!string.IsNullOrWhiteSpace(forcedId))
+        {
+            forcedId = forcedId.Trim();
+
+            // Prefer TitleManager lookup if available
+            if (TitleManager.I != null)
+                forced = TitleManager.I.GetTitleById(forcedId);
+
+            // Fallback: find it inside candidates (works if it exists in the track pool)
+            if (forced == null)
+            {
+                for (int i = 0; i < candidates.Count; i++)
+                {
+                    var t = candidates[i];
+                    if (t == null) continue;
+
+                    // TitleSO might store id as titleId; use that
+                    if (string.Equals(t.titleId, forcedId, StringComparison.OrdinalIgnoreCase))
+                    {
+                        forced = t;
+                        break;
+                    }
+                }
+            }
+
+            if (forced != null)
+            {
+                _wildRolledTitle = forced;
+                if (!_wildActiveTitles.Contains(_wildRolledTitle))
+                    _wildActiveTitles.Add(_wildRolledTitle);
+
+                _wildTitleLabel = _wildRolledTitle.DisplayOrId;
+
+                // Inject battle-scoped titles so adapter fallbacks can scan them safely
+                TitlesAdapter.SetLocalTitles(_wildCombatId, _wildActiveTitles);
+                return; // skip normal roll
+            }
+            else
+            {
+                // If you want, you can label this clearly during testing
+                _wildTitleLabel = $"(Missing Title: {forcedId})";
+                TitlesAdapter.SetLocalTitles(_wildCombatId, _wildActiveTitles);
+                return;
+            }
+        }
+    #endif
+
+        // Bosses always roll 1 title if any candidates exist
+        bool shouldRoll =
+            _currentEncounterIsBoss
+                ? (candidates.Count > 0)
+                : (candidates.Count > 0 && Random.value <= Mathf.Clamp01(wildTitleRollChance));
+
+    #if UNITY_EDITOR || DEVELOPMENT_BUILD
+        // ── DEV OVERRIDE (priority 2): always roll if candidates exist
+        if (Dev_ForceWildTitleRoll && candidates.Count > 0)
+            shouldRoll = true;
+    #endif
+
+        if (shouldRoll)
+        {
+            _wildRolledTitle = candidates[Random.Range(0, candidates.Count)];
+            if (_wildRolledTitle != null && !_wildActiveTitles.Contains(_wildRolledTitle))
+                _wildActiveTitles.Add(_wildRolledTitle);
+        }
+        else
+        {
+            _wildRolledTitle = null;
+        }
+
+        _wildTitleLabel = (_wildRolledTitle != null) ? _wildRolledTitle.DisplayOrId : unemployedLabel;
+
+        // Inject battle-scoped titles so adapter fallbacks can scan them safely
+        TitlesAdapter.SetLocalTitles(_wildCombatId, _wildActiveTitles);
+    }
+
 
     // ─────────────────────────────────────────────────────────────────────────────
 
@@ -92,6 +259,8 @@ public partial class EncounterManager : MonoBehaviour
 
     void OnDisable()
     {
+        ClearWildTitleInjection();
+
         if (autoLoopCo != null) { StopCoroutine(autoLoopCo); autoLoopCo = null; }
         if (postResultCo != null) { StopCoroutine(postResultCo); postResultCo = null; }
         StopAllCoroutines();
@@ -99,6 +268,8 @@ public partial class EncounterManager : MonoBehaviour
 
     void OnDestroy()
     {
+        ClearWildTitleInjection();
+
         if (I == this) I = null;
         if (autoLoopCo != null) { StopCoroutine(autoLoopCo); autoLoopCo = null; }
         if (postResultCo != null) { StopCoroutine(postResultCo); postResultCo = null; }
@@ -186,6 +357,8 @@ public partial class EncounterManager : MonoBehaviour
 
     void StartEncounter(bool spendEnergy)
     {
+        ClearWildTitleInjection();
+
         var data = SaveManager.Data;
 
         if (data == null || data.team == null || data.team.Count == 0)
@@ -245,10 +418,6 @@ public partial class EncounterManager : MonoBehaviour
         }
 
         FieldOpsTracker.RecordEncounter(wild);
-
-        if (EncounterPanelUI.I)
-            EncounterPanelUI.I.OnWildSpawned(wild);
-
         NotifyAuto_SpecialSpawn(wild);
 
         int avgTeamLvl = 1;
@@ -264,17 +433,24 @@ public partial class EncounterManager : MonoBehaviour
         if (_currentEncounterIsBoss)
             wildLevel = Mathf.Max(1, wildLevel + bossLevelBonus);
 
+        ResolveWildTitles(wild, wildLevel);
+
+        if (EncounterPanelUI.I)
+            EncounterPanelUI.I.OnWildSpawned(wild);
+
         PlayEncounterSfx(wild);
 
         var p = data.team[0];
+        string titleSuffix = string.IsNullOrEmpty(WildTitleLabel) ? "" : $" — {WildTitleLabel}";
+
         if (_currentEncounterIsBoss)
-            EmitStatus($"⚠️ BOSS ENCOUNTER! {wild.displayName} (Lv {wildLevel}) appears.{(p.flatAtkBonus > 0 ? $" (+ATK {p.flatAtkBonus})" : "")}");
+            EmitStatus($"⚠️ BOSS ENCOUNTER! {wild.displayName} (Lv {wildLevel}){titleSuffix} appears.{(p.flatAtkBonus > 0 ? $" (+ATK {p.flatAtkBonus})" : "")}");
         else
-            EmitStatus($"Encounter! A wild {wild.displayName} (Lv {wildLevel}) appears.{(p.flatAtkBonus > 0 ? $" (+ATK {p.flatAtkBonus})" : "")}");
+            EmitStatus($"Encounter! A wild {wild.displayName} (Lv {wildLevel}){titleSuffix} appears.{(p.flatAtkBonus > 0 ? $" (+ATK {p.flatAtkBonus})" : "")}");
 
         BattleLogger.BeginEncounter(_currentEncounterIsBoss
-            ? $"BOSS: {wild.displayName} Lv{wildLevel}"
-            : $"{wild.displayName} Lv{wildLevel}");
+            ? $"BOSS: {wild.displayName} Lv{wildLevel}{titleSuffix}"
+            : $"{wild.displayName} Lv{wildLevel}{titleSuffix}");
 
         if (_currentEncounterIsBoss && _currentBossUsed != null)
             GameEvents.BossSpawned?.Invoke(_currentBossUsed.id, _currentBossUsed);
@@ -287,6 +463,7 @@ public partial class EncounterManager : MonoBehaviour
             EmitStatus("No BattleManager assigned.", LogScope.System);
             inBattle = false;
             OnStateChanged?.Invoke();
+            ClearWildTitleInjection();
             return;
         }
 
@@ -299,6 +476,9 @@ public partial class EncounterManager : MonoBehaviour
     void OnBattleEnded(BattleResult result)
     {
         _lastBattleResult = result;
+
+        // Battle is over; ensure wild titles cannot leak into any future context.
+        ClearWildTitleInjection();
 
         bool escaped = result.escaped;
         bool victory = result.victory;
@@ -367,11 +547,6 @@ public partial class EncounterManager : MonoBehaviour
         GameEvents.BattleFinished?.Invoke(finished);
         BattleLogger.EndEncounter(victory);
 
-        // ─────────────────────────────────────────────────────────────────────
-        // FIX: HOLD the summary BEFORE queuing it on manual-victory hire flow.
-        // This prevents NotifyBattleEnd → TryShowNext from opening the summary
-        // immediately, which was causing the “summary opens again on hire click”.
-        // ─────────────────────────────────────────────────────────────────────
         bool holdForHireDecision =
             victory &&
             !escaped &&
@@ -383,14 +558,11 @@ public partial class EncounterManager : MonoBehaviour
 
         _manualHirePending = holdForHireDecision;
 
-        // If we must show Hire first, force the summary manager into HOLD mode now.
-        // (NotifyBattleEnd will enqueue, but TryShowNext will no-op while held.)
         if (holdForHireDecision)
             PostBattleSummaryManager.I?.SetAutoBattling(true);
         else
             PostBattleSummaryManager.I?.SetAutoBattling(autoMode);
 
-        // Queue the summary data NOW so nothing is lost (even for manual victories).
         PostBattleSummaryManager.I?.NotifyBattleEnd(
             finished,
             isAuto: autoMode,
@@ -423,7 +595,6 @@ public partial class EncounterManager : MonoBehaviour
         yield return new WaitForSeconds(postResultDelay);
         inBattle = false;
 
-        // Enemy fled
         if (escaped)
         {
             nextEncounterFree = false;
@@ -447,7 +618,6 @@ public partial class EncounterManager : MonoBehaviour
             yield break;
         }
 
-        // Defeat
         if (!victory)
         {
             nextEncounterFree = false;
@@ -466,7 +636,6 @@ public partial class EncounterManager : MonoBehaviour
             yield break;
         }
 
-        // Victory
         if (autoMode)
         {
             if (!autoRunPaidEnergy)
@@ -479,7 +648,6 @@ public partial class EncounterManager : MonoBehaviour
             yield break;
         }
 
-        // Manual victory: HIRE WINDOW FIRST, SUMMARY AFTER
         nextEncounterFree = true;
         OnStateChanged?.Invoke();
 
@@ -504,14 +672,10 @@ public partial class EncounterManager : MonoBehaviour
         PostBattleSummaryManager.I?.FlushNowIfPossible();
     }
 
-    // ========================================================================
-    // Called by EncounterPanelUI when YES/NO is clicked and capture attempt resolved.
-    // ========================================================================
     public void OnHireDecisionResolved(bool hiredYes, bool captureSucceeded)
     {
         if (!_manualHirePending)
         {
-            // Safety: prevent double-resolve or late callbacks
             PostBattleSummaryManager.I?.SetAutoBattling(false);
             PostBattleSummaryManager.I?.FlushNowIfPossible();
             return;
@@ -519,7 +683,6 @@ public partial class EncounterManager : MonoBehaviour
 
         _manualHirePending = false;
 
-        // Patch the most recently queued summary entry with capture info (if any).
         if (hiredYes && captureSucceeded && _lastBattleResult.wildDef != null)
         {
             PostBattleSummaryManager.I?.TryUpdateLatestQueuedCapture(
@@ -533,7 +696,6 @@ public partial class EncounterManager : MonoBehaviour
             PostBattleSummaryManager.I?.TryUpdateLatestQueuedCapture(false, null, 0);
         }
 
-        // Release + show
         PostBattleSummaryManager.I?.SetAutoBattling(false);
         PostBattleSummaryManager.I?.FlushNowIfPossible();
     }
@@ -693,11 +855,7 @@ public partial class EncounterManager : MonoBehaviour
     {
         return TryCatchWithResult(def, level, out _);
     }
-    
-    /// <summary>
-    /// Starts an encounter against a specific monster ID. Intended for cheats / QA.
-    /// Returns false with a reason if the encounter can't start.
-    /// </summary>
+
     public bool RequestForcedEncounter(string monsterId, bool spendEnergy, out string reason)
     {
         reason = null;
@@ -739,15 +897,10 @@ public partial class EncounterManager : MonoBehaviour
             if (!SpendEnergy()) { reason = "Out of energy!"; return false; }
         }
 
-        // Forced encounters are never bosses.
         _currentEncounterIsBoss = false;
         _currentBossUsed = null;
 
         FieldOpsTracker.RecordEncounter(wild);
-
-        if (EncounterPanelUI.I)
-            EncounterPanelUI.I.OnWildSpawned(wild);
-
         NotifyAuto_SpecialSpawn(wild);
 
         int avgTeamLvl = 1;
@@ -761,12 +914,18 @@ public partial class EncounterManager : MonoBehaviour
 
         int wildLevel = Mathf.Clamp(avgTeamLvl + UnityEngine.Random.Range(-1, 2), 1, 99);
 
+        ResolveWildTitles(wild, wildLevel);
+
+        if (EncounterPanelUI.I)
+            EncounterPanelUI.I.OnWildSpawned(wild);
+
         PlayEncounterSfx(wild);
 
         var p = data.team[0];
-        EmitStatus($"Encounter! A wild {wild.displayName} (Lv {wildLevel}) appears.{(p.flatAtkBonus > 0 ? $" (+ATK {p.flatAtkBonus})" : "")}");
+        string titleSuffix = string.IsNullOrEmpty(WildTitleLabel) ? "" : $" — {WildTitleLabel}";
+        EmitStatus($"Encounter! A wild {wild.displayName} (Lv {wildLevel}){titleSuffix} appears.{(p.flatAtkBonus > 0 ? $" (+ATK {p.flatAtkBonus})" : "")}");
 
-        BattleLogger.BeginEncounter($"{wild.displayName} Lv{wildLevel}");
+        BattleLogger.BeginEncounter($"{wild.displayName} Lv{wildLevel}{titleSuffix}");
 
         inBattle = true;
         OnStateChanged?.Invoke();
@@ -776,6 +935,7 @@ public partial class EncounterManager : MonoBehaviour
             reason = "No BattleManager assigned.";
             inBattle = false;
             OnStateChanged?.Invoke();
+            ClearWildTitleInjection();
             return false;
         }
 
@@ -785,5 +945,25 @@ public partial class EncounterManager : MonoBehaviour
         battleManager.Begin(wild, wildLevel, OnBattleEnded);
         return true;
     }
+
+    // ─────────────────────────────────────────────────────────
+    // DEV / TEST OVERRIDES (PlayerPrefs driven)
+    // ─────────────────────────────────────────────────────────
+    #if UNITY_EDITOR || DEVELOPMENT_BUILD
+    private const string PP_ForceWildTitleRoll = "DEV_ForceWildTitleRoll"; // int 0/1
+    private const string PP_ForceWildTitleId   = "DEV_ForceWildTitleId";   // string e.g. "T-001"
+
+    public bool Dev_ForceWildTitleRoll
+    {
+        get => PlayerPrefs.GetInt(PP_ForceWildTitleRoll, 0) == 1;
+        set { PlayerPrefs.SetInt(PP_ForceWildTitleRoll, value ? 1 : 0); PlayerPrefs.Save(); }
+    }
+
+    public string Dev_ForceWildTitleId
+    {
+        get => PlayerPrefs.GetString(PP_ForceWildTitleId, "");
+        set { PlayerPrefs.SetString(PP_ForceWildTitleId, value ?? ""); PlayerPrefs.Save(); }
+    }
+    #endif
 
 }

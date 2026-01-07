@@ -16,6 +16,7 @@ MonoBehaviour:
   displayName: Staff Inspector
   description: 'If fewer than 2 allies remain: DEF +20%, ATK +15%.'
   icon: {fileID: -1701936405944522535, guid: 4229c666f41ed45eaa348f0634c42fbe, type: 3}
+  canRollOnWild: 1
   condition: 3
   threshold01: 0.5
   countN: 2

@@ -16,6 +16,7 @@ MonoBehaviour:
   displayName: Lead Locksmith
   description: Adds +30 DEF at battle start. Lasts 5 turn(s).
   icon: {fileID: 4557843346501441248, guid: fc0b14d3f7a8a4e529a6989ac3ac83f2, type: 3}
+  canRollOnWild: 1
   stat: 1
   flatAmount: 30
   durationTurns: 5

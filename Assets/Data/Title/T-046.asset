@@ -16,4 +16,5 @@ MonoBehaviour:
   displayName: Dispatcher
   description: Reduces type weakness damage by 20%.
   icon: {fileID: -4359337021282963907, guid: 5529b5b2fb89240a99a3b5c95101f7f0, type: 3}
+  canRollOnWild: 1
   incomingEffectivenessMultiplier: 0.8

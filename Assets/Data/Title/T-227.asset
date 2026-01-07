@@ -16,6 +16,7 @@ MonoBehaviour:
   displayName: Defense Architect
   description: Boosts DEF by 25% when HP falls below 25%.
   icon: {fileID: 6491568308551129627, guid: 2383639ffee5242b6aa3db0e42301988, type: 3}
+  canRollOnWild: 1
   hpBelowThreshold01: 0.25
   atkPct: 0
   defPct: 1.25

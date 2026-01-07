@@ -1,3 +1,4 @@
+// Assets/Scripts/Titles/TitlesAdapter.cs
 using System;
 using System.Reflection;
 using UnityEngine;
@@ -27,6 +28,9 @@ public struct TitleDamageFilter
 /// Thin reflection bridge between battle/gameplay code and your Title runtime.
 /// Looks for one of: TitleRuntime, TitleManager, TitlesManager.
 /// Never constructs MonoBehaviours — relies on exposed singletons or scene search.
+/// 
+/// Also supports local, battle-scoped title injection (e.g., wild titles rolled per encounter)
+/// without touching any save/equip pathways.
 /// </summary>
 public static class TitlesAdapter
 {
@@ -44,6 +48,57 @@ public static class TitlesAdapter
     // Simple per-name MethodInfo cache to avoid repeated reflection lookups.
     private static readonly Dictionary<string, MethodInfo> _miCache = new Dictionary<string, MethodInfo>(32);
     private static bool _warnedMissingType = false;
+
+    // ─────────────────────────────────────────────────────────────────────────────
+    // Local override layer (battle-scoped titles)
+    // ─────────────────────────────────────────────────────────────────────────────
+
+    // Key: combatant id (owned id or synthetic id like "WILD::<...>")
+    // Value: active titles list to use for adapter fallback scanning.
+    private static readonly Dictionary<string, List<TitleSO>> _localTitlesById =
+        new Dictionary<string, List<TitleSO>>(StringComparer.Ordinal);
+
+    /// <summary>
+    /// Inject battle-scoped titles for a given id (e.g., wild combat id).
+    /// These titles are used by adapter fallbacks that scan titles locally (job fatigue, type resist, etc.)
+    /// and allow wild titles to function without any save/equip calls.
+    /// </summary>
+    public static void SetLocalTitles(string id, IEnumerable<TitleSO> titles)
+    {
+        if (string.IsNullOrEmpty(id))
+            return;
+
+        if (!_localTitlesById.TryGetValue(id, out var list) || list == null)
+        {
+            list = new List<TitleSO>(8);
+            _localTitlesById[id] = list;
+        }
+        else
+        {
+            list.Clear();
+        }
+
+        if (titles == null) return;
+
+        foreach (var t in titles)
+        {
+            if (t == null) continue;
+            list.Add(t);
+        }
+    }
+
+    /// <summary> Remove any injected titles for a specific id. </summary>
+    public static void ClearLocalTitles(string id)
+    {
+        if (string.IsNullOrEmpty(id)) return;
+        _localTitlesById.Remove(id);
+    }
+
+    /// <summary> Clears all injected titles (safe to call at end of battle). </summary>
+    public static void ClearAllLocalTitles()
+    {
+        _localTitlesById.Clear();
+    }
 
     // ─────────────────────────────────────────────────────────────────────────────
     // Bootstrap
@@ -444,7 +499,7 @@ public static class TitlesAdapter
                 string id = !string.IsNullOrEmpty(w.monsterId) ? w.monsterId : (w.def ? w.def.id : null);
                 if (string.IsNullOrEmpty(id)) continue;
 
-                var titles = GetTitles(id); // ← reflection-runtime accessor
+                var titles = GetTitles(id); // ← reflection-runtime accessor OR local override
                 if (titles == null) continue;
 
                 for (int ti = 0; ti < titles.Count; ti++)
@@ -506,6 +561,9 @@ public static class TitlesAdapter
             return Mathf.Max(0f, mul);
 
         // 2) Per-type resist titles that match the incoming type
+        // NOTE: This path uses the equip list. If you want wild combatants to support this without
+        // touching equip/save logic, ensure your runtime implements GetIncomingEffectivenessMult
+        // OR ensure callers pass ids that are satisfied via local override + runtime route.
         if (TitleManager.I != null)
         {
             var list = TitleManager.I.GetEquippedList(ownedId, def, level);
@@ -625,14 +683,18 @@ public static class TitlesAdapter
     }
 
     // ─────────────────────────────────────────────────────────────────────────────
-    // Helper: pull titles for a monster via runtime bridge
+    // Helper: pull titles for a monster via runtime bridge OR local override
     // ─────────────────────────────────────────────────────────────────────────────
     private static List<TitleSO> GetTitles(string monsterId)
     {
         if (string.IsNullOrEmpty(monsterId))
             return new List<TitleSO>();
 
-        // Try to call runtime method (reflection bridge)
+        // 0) Local override (battle-scoped injection, e.g., wild titles)
+        if (_localTitlesById.TryGetValue(monsterId, out var local) && local != null)
+            return local;
+
+        // 1) Try to call runtime method (reflection bridge)
         if (TryInvoke("GetTitlesForMonster", new object[] { monsterId }, out var res))
         {
             if (res is List<TitleSO> list)

@@ -16,4 +16,5 @@ MonoBehaviour:
   displayName: Assistant Grinder
   description: Grants 20% HP shield at battle start.
   icon: {fileID: 7897754931147715801, guid: 0aa321dc32fcf4efa8ef724a48888827, type: 3}
+  canRollOnWild: 1
   shieldPct: 20

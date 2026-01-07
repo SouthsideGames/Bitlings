@@ -16,5 +16,6 @@ MonoBehaviour:
   displayName: Apex Operator
   description: Increases effectiveness damage by 50%.
   icon: {fileID: -7326837690389346907, guid: a09e21ff9e6304070913d0bc8bd6bdc3, type: 3}
+  canRollOnWild: 1
   mode: 0
   amount: 1.5

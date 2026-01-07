@@ -16,6 +16,7 @@ MonoBehaviour:
   displayName: Field Clerk
   description: Adds +10 ATK at battle start. Lasts 1 turn(s).
   icon: {fileID: 7617494016918777864, guid: 901668dd83f054253a0d4b283e24a25c, type: 3}
+  canRollOnWild: 1
   stat: 0
   flatAmount: 10
   durationTurns: 1

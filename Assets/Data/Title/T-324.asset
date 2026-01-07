@@ -16,5 +16,6 @@ MonoBehaviour:
   displayName: Workshop Mechanic
   description: Increases job production rate by 10% while assigned to Workshop.
   icon: {fileID: -1701936405944522535, guid: 4229c666f41ed45eaa348f0634c42fbe, type: 3}
+  canRollOnWild: 1
   rateMultiplier: 1.1
   restrictTo: 6

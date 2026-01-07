@@ -16,6 +16,7 @@ MonoBehaviour:
   displayName: Development Nurse
   description: Boosts HP (30%) but reduces SPD (15%).
   icon: {fileID: 3524203170830039954, guid: 23a1fc70c608d4ef28fe21f3322255e2, type: 3}
+  canRollOnWild: 1
   statA: 0
   opA: 2
   valueA: 1.3

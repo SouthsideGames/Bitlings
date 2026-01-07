@@ -16,6 +16,7 @@ MonoBehaviour:
   displayName: Chief Guard
   description: 'Above 80% HP: DEF increased by 40%, SPD reduced by 20%.'
   icon: {fileID: -1701936405944522535, guid: 4229c666f41ed45eaa348f0634c42fbe, type: 3}
+  canRollOnWild: 1
   condition: 2
   threshold01: 0.8
   countN: 1

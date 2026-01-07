@@ -16,6 +16,7 @@ MonoBehaviour:
   displayName: Contractor
   description: Reduces incoming damage by 20%.
   icon: {fileID: -1240720192239910882, guid: 8d9de46e05e144d2ab1156479b5325c8, type: 3}
+  canRollOnWild: 1
   flatReduce: 0
   percentMultiplier: 0.8
   cannotBeCrit: 0

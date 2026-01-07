@@ -16,6 +16,7 @@ MonoBehaviour:
   displayName: Builder
   description: Gains +6% DEF each turn for 3 turns (max +18% DEF).
   icon: {fileID: -7211892166802722315, guid: 28fa34c3b419148d6b24298ab5402546, type: 3}
+  canRollOnWild: 1
   stat: 1
   percentPerTurn: 6
   maxStacks: 3

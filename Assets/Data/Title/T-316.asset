@@ -16,5 +16,6 @@ MonoBehaviour:
   displayName: Machinist
   description: Increases job production rate by 20% while assigned to Wyrm Den.
   icon: {fileID: -1701936405944522535, guid: 4229c666f41ed45eaa348f0634c42fbe, type: 3}
+  canRollOnWild: 1
   rateMultiplier: 1.2
   restrictTo: 11
