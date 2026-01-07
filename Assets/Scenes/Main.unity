@@ -26082,6 +26082,18 @@ MonoBehaviour:
           m_StringArgument: 
           m_BoolArgument: 0
         m_CallState: 2
+      - m_Target: {fileID: 632815802}
+        m_TargetAssemblyTypeName: ImagePreviewPanelUI, Assembly-CSharp
+        m_MethodName: Close
+        m_Mode: 1
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
 --- !u!114 &377241191
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -27968,6 +27980,7 @@ GameObject:
   - component: {fileID: 404991140}
   - component: {fileID: 404991139}
   - component: {fileID: 404991138}
+  - component: {fileID: 404991141}
   m_Layer: 5
   m_Name: Monster Image
   m_TagString: Untagged
@@ -28032,6 +28045,20 @@ RectTransform:
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 250, y: 250}
   m_Pivot: {x: 0.5, y: 0.5}
+--- !u!114 &404991141
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 404991137}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0d8e9622e931a18479500f81f9c6ef6e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  sourceImage: {fileID: 404991138}
+  requireSprite: 1
 --- !u!1 &407109123
 GameObject:
   m_ObjectHideFlags: 0
@@ -44213,7 +44240,6 @@ GameObject:
   m_Component:
   - component: {fileID: 632815805}
   - component: {fileID: 632815804}
-  - component: {fileID: 632815803}
   - component: {fileID: 632815802}
   m_Layer: 5
   m_Name: Panel_ImagePreview
@@ -44236,20 +44262,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   previewImage: {fileID: 1147410225}
   closeButton: {fileID: 377241190}
-  backgroundCloseArea: {fileID: 0}
   previewPanelId: 32
---- !u!225 &632815803
-CanvasGroup:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 632815801}
-  m_Enabled: 1
-  m_Alpha: 1
-  m_Interactable: 1
-  m_BlocksRaycasts: 1
-  m_IgnoreParentGroups: 0
 --- !u!222 &632815804
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -71631,7 +71644,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   sourceImage: {fileID: 1002007386}
   requireSprite: 1
-  ignoreIfPreviewAlreadyOpen: 1
 --- !u!1 &1002396176
 GameObject:
   m_ObjectHideFlags: 0
@@ -79871,7 +79883,6 @@ GameObject:
   - component: {fileID: 1106295161}
   - component: {fileID: 1106295163}
   - component: {fileID: 1106295162}
-  - component: {fileID: 1106295164}
   m_Layer: 5
   m_Name: Monster Image BG
   m_TagString: Untagged
@@ -79938,21 +79949,6 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1106295160}
   m_CullTransparentMesh: 1
---- !u!114 &1106295164
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1106295160}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 0d8e9622e931a18479500f81f9c6ef6e, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  sourceImage: {fileID: 1106295162}
-  requireSprite: 1
-  ignoreIfPreviewAlreadyOpen: 1
 --- !u!1 &1106610907
 GameObject:
   m_ObjectHideFlags: 0
@@ -139828,7 +139824,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: Beta 1.1.1
+  m_text: Beta 1.1.2
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: ca247a3092b7b404dbaa6f4ab43e450c, type: 2}
   m_sharedMaterial: {fileID: -403277894513911722, guid: ca247a3092b7b404dbaa6f4ab43e450c, type: 2}

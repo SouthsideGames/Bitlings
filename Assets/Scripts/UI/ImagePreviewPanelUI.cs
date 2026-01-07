@@ -3,42 +3,24 @@ using UnityEngine.UI;
 
 public sealed class ImagePreviewPanelUI : MonoBehaviour
 {
-    public static ImagePreviewPanelUI I { get; private set; }
+    private static ImagePreviewPanelUI _i;
+    public static ImagePreviewPanelUI I => _i != null ? _i : FindEvenIfInactive();
 
     [Header("UI")]
-    [SerializeField] private Image previewImage;          // The big image on the panel
-    [SerializeField] private Button closeButton;          // Optional
-    [SerializeField] private Button backgroundCloseArea;  // Optional: full-screen button behind the preview image
+    [SerializeField] private Image previewImage;
+    [SerializeField] private Button closeButton;
 
     [Header("Panel")]
     [SerializeField] private PanelId previewPanelId = PanelId.ImagePreview;
 
     void Awake()
     {
-        if (I != null && I != this)
-        {
-            Destroy(gameObject);
-            return;
-        }
-        I = this;
+        _i = this;
 
-        if (closeButton)
-        {
-            closeButton.onClick.RemoveAllListeners();
-            closeButton.onClick.AddListener(Close);
-        }
-
-        if (backgroundCloseArea)
-        {
-            backgroundCloseArea.onClick.RemoveAllListeners();
-            backgroundCloseArea.onClick.AddListener(Close);
-        }
-
-        // Optional safety defaults
         if (previewImage)
         {
             previewImage.preserveAspect = true;
-            previewImage.raycastTarget = false; // prevents blocking the backgroundCloseArea if you use it
+            previewImage.raycastTarget = false;
         }
     }
 
@@ -52,7 +34,7 @@ public sealed class ImagePreviewPanelUI : MonoBehaviour
 
         if (!previewImage)
         {
-            Debug.LogWarning("[ImagePreviewPanelUI] previewImage is not assigned.");
+            Debug.LogWarning("[ImagePreviewPanelUI] previewImage not assigned.");
             return;
         }
 
@@ -71,5 +53,22 @@ public sealed class ImagePreviewPanelUI : MonoBehaviour
             UIManager.I.Hide(previewPanelId);
         else
             gameObject.SetActive(false);
+    }
+
+    private static ImagePreviewPanelUI FindEvenIfInactive()
+    {
+        // This finds components even if their GameObjects are inactive.
+        var all = Resources.FindObjectsOfTypeAll<ImagePreviewPanelUI>();
+        for (int i = 0; i < all.Length; i++)
+        {
+            // Ignore prefabs in project view; only accept scene objects.
+            if (all[i] != null && all[i].gameObject.scene.IsValid())
+            {
+                _i = all[i];
+                return _i;
+            }
+        }
+
+        return null;
     }
 }
