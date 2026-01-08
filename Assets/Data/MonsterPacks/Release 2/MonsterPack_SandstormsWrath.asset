@@ -1,0 +1,31 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f048558a82b7c2147ab6a4d2677278ea, type: 3}
+  m_Name: MonsterPack_SandstormsWrath
+  m_EditorClassIdentifier: 
+  id: MP-020
+  displayName: "Sandstorm\u2019s Wrath"
+  description: Forged by relentless desert winds, these Ground and Rock creatures
+    endure harsh extremes. Their strength lies in persistence, armor, and battlefield
+    control.
+  icon: {fileID: 21300000, guid: 7becb3c73d54c0143824c35d1760e1fc, type: 3}
+  rarityLabel: Uncommon
+  baseCost: 20
+  costType: 17
+  saleOff01: 0
+  unlockByDefault: 0
+  monsters:
+  - {fileID: 11400000, guid: 504bc60adcb4b4abd8bc985c589bbeb4, type: 2}
+  - {fileID: 11400000, guid: 370d3946ae41f45ed9ba0daf471ecf41, type: 2}
+  - {fileID: 11400000, guid: f19a29996c66f4f198ac9e96032e8b3a, type: 2}
+  - {fileID: 11400000, guid: 94d973cd8ec7a4c6ebbf191c863058e3, type: 2}
+  - {fileID: 11400000, guid: 2cd91f156bca243efb5ee2cef14e3442, type: 2}

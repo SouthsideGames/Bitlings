@@ -670,10 +670,23 @@ public sealed class MonsterBuilder : EditorWindow
                     if (TryFloat(Get(row, headerMap, "Job Skill"), out float js)) monster.jobSkill = Mathf.Clamp(js, 0.5f, 3f);
 
                     // Evolution stage/level (form resolved later)
-                    if (TryInt(Get(row, headerMap, "Evolution Stage"), out int es)) monster.evolutionStage = Mathf.Max(1, es);
+                    if (TryInt(Get(row, headerMap, "Evolution Stage"), out int es)) monster.evolutionStage = Mathf.Max(0, es);
                     if (TryInt(Get(row, headerMap, "Evolution Level"), out int el)) monster.evolutionLevel = Mathf.Max(0, el);
 
-                    if (resolveEvolutionForm)
+                    
+
+                    // If this monster has an evolution stage but no explicit evolution level, derive it from rarity.
+                    // (Keeps single-stage monsters at 0.)
+                    if (monster.evolutionStage <= 0)
+                    {
+                        monster.evolutionLevel = 0;
+                    }
+                    else if (monster.evolutionLevel <= 0)
+                    {
+                        monster.evolutionLevel = DefaultEvolutionLevel(monster.rarity);
+                    }
+
+if (resolveEvolutionForm)
                     {
                         string evoId = Get(row, headerMap, "Evolution Form Id").Trim();
                         pendingEvolution[monster] = evoId;
@@ -1642,6 +1655,20 @@ public sealed class MonsterBuilder : EditorWindow
 
         s = s.Replace(",", ".");
         return float.TryParse(s, NumberStyles.Float, CultureInfo.InvariantCulture, out v);
+    }
+
+    private static int DefaultEvolutionLevel(Rarity rarity)
+    {
+        // Defaults that scale with rarity. Tune here as needed.
+        return rarity switch
+        {
+            Rarity.Common    => 8,
+            Rarity.Uncommon  => 10,
+            Rarity.Rare      => 12,
+            Rarity.Epic      => 15,
+            Rarity.Legendary => 18,
+            _                => 12
+        };
     }
 
     private static bool TryParseEnum<T>(string s, out T value) where T : struct

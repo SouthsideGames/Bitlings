@@ -148,6 +148,10 @@ public class BattleManager : MonoBehaviour
     [SerializeField] private BattleTextBoxUI battleTextBox;
     [SerializeField] private BattleSwitchToggle _bottomToggle;
 
+    [Header("Encounter Tuning")]
+    [SerializeField, Range(0.5f, 2.0f)]
+    private float encounterThreatScalar = 1.0f;
+
     [Header("Debug")]
     [SerializeField] private bool debugIncomingMitigation = false;
     [SerializeField] private bool debugEffectivenessOutgoing = false;
@@ -322,9 +326,14 @@ public class BattleManager : MonoBehaviour
         wildLevel = Mathf.Max(1, level);
 
         // NOTE: internal battle HP baseline stays as-is; titles/conditionals apply via GetFinalMaxHPForIndex + UI.
-        wildMaxHP = BattleCalc.CalcHP(wildDef, wildLevel) * 0.9f;
+        float wHpBase  = BattleCalc.CalcHP(wildDef, wildLevel);
+        float wAtkBase = BattleCalc.CalcBaseAttack(wildDef, wildLevel, 0, 0);
+
+
+        wildMaxHP = Mathf.Max(1f, wHpBase * encounterThreatScalar);
         wildHP = wildMaxHP;
-        wildAttackPerTurn = BattleCalc.CalcBaseAttack(wildDef, wildLevel, 0, 0) * 0.9f;
+
+        wildAttackPerTurn = Mathf.Max(1f, wAtkBase * encounterThreatScalar);
 
         if (wildIcon) wildIcon.sprite = wildDef ? wildDef.icon : null;
         if (wildNameText) wildNameText.text = wildDef ? wildDef.displayName : "Wild";
@@ -809,17 +818,19 @@ public class BattleManager : MonoBehaviour
 
         var roster = SaveManager.Data?.team;
 
-        int equipFlat = 0;
+        int flatAtkBonus = 0;
         int trainingAtk = 0;
 
         if (roster != null && activeIndex < roster.Count && roster[activeIndex] != null)
         {
             var om = roster[activeIndex];
-            equipFlat = Mathf.Max(0, om.flatAtkBonus);
+            flatAtkBonus = Mathf.Max(0, om.flatAtkBonus);
             trainingAtk = Mathf.Max(0, om.trainingBonus.atk);
         }
 
-        int permanentFlat = Mathf.Max(0, equipFlat + trainingAtk);
+        int permanentFlat = flatAtkBonus;
+        if (!LooksLikeLegacyTrainingWasMirroredIntoFlat(flatAtkBonus, trainingAtk))
+            permanentFlat = Mathf.Max(0, flatAtkBonus + trainingAtk);
 
         float atkBaseF = BattleCalc.CalcBaseAttack(
             teamDefs[activeIndex],
@@ -830,7 +841,7 @@ public class BattleManager : MonoBehaviour
         int atkBase = Mathf.Max(1, Mathf.RoundToInt(atkBaseF));
 
         // Conditional mods must APPLY to real damage:
-        // We apply them to the attack stat BEFORE ResolveHit so crit/effectiveness scale correctly.
+        // Apply to the attack stat BEFORE ResolveHit so crit/effectiveness scale correctly.
         var cond = GetConditionalModsForActive();
         int atkWithCondFlat = Mathf.Max(1, atkBase + Mathf.Max(0, cond.atkFlat));
         int atkForResolve = Mathf.Max(1, Mathf.RoundToInt(atkWithCondFlat * (1f + Mathf.Max(0f, cond.atkPct))));
@@ -845,8 +856,7 @@ public class BattleManager : MonoBehaviour
         );
         float atkBoosterMult = Mathf.Max(0.01f, atkWithBoosterF / Mathf.Max(1f, atkBase));
 
-        var titleCtx = BuildTitleContextForActive();
-
+        // Crit setup (job + base)
         var jctx = (jobCtx != null) ? jobCtx[activeIndex] : null;
         float playerCrit = critChancePlayer;
         if (jctx != null)
@@ -869,6 +879,7 @@ public class BattleManager : MonoBehaviour
         TitlesAdapter.OnAttackLanded(teamIds[activeIndex], dr.crit);
         if (dr.crit) _totalCritsThisBattle++;
 
+        // Job attack multipliers
         if (jctx != null && jctx.attackBonusPct > 0f)
             dr.damage = Mathf.Max(1, Mathf.RoundToInt(dr.damage * (1f + jctx.attackBonusPct)));
 
@@ -881,39 +892,7 @@ public class BattleManager : MonoBehaviour
         if (jctx != null && jctx.surgeApplied && jctx.surgeAtkBonusPct > 0f)
             dr.damage = Mathf.Max(1, Mathf.RoundToInt(dr.damage * (1f + jctx.surgeAtkBonusPct)));
 
-        float effMul = TitlesAdapter.GetEffectivenessMult(
-            teamIds[activeIndex], teamDefs[activeIndex], teamLevels[activeIndex]
-        );
-        if (!Mathf.Approximately(effMul, 1f))
-        {
-            int before = dr.damage;
-            dr.damage = Mathf.Max(1, Mathf.RoundToInt(dr.damage * effMul));
-
-            if (debugEffectivenessOutgoing)
-            {
-                string msg = $"[EffectivenessModTitle] MULT x{effMul:0.00}: {before} → {dr.damage}";
-                try { BattleLogger.Log(msg, LogScope.Battle); } catch { }
-                Debug.Log(msg);
-            }
-        }
-
-        float effAdd = TitlesAdapter.GetEffectivenessAdd(
-            teamIds[activeIndex], teamDefs[activeIndex], teamLevels[activeIndex]
-        );
-        if (!Mathf.Approximately(effAdd, 0f) && dr.effectiveness > 0.0001f)
-        {
-            int before = dr.damage;
-            float scale = (dr.effectiveness + effAdd) / dr.effectiveness;
-            dr.damage = Mathf.Max(1, Mathf.RoundToInt(dr.damage * scale));
-
-            if (debugEffectivenessOutgoing)
-            {
-                string msg = $"[EffectivenessModTitle] ADD +{effAdd:0.00} (E={dr.effectiveness:0.00}) → x{scale:0.00}: {before} → {dr.damage}";
-                try { BattleLogger.Log(msg, LogScope.Battle); } catch { }
-                Debug.Log(msg);
-            }
-        }
-
+        // Slot damage buff (bench carry-over)
         if (slotDamageBuffPct != null && slotDamageBuffTurns != null &&
             activeIndex >= 0 && activeIndex < slotDamageBuffPct.Length &&
             slotDamageBuffTurns[activeIndex] > 0 &&
@@ -927,9 +906,11 @@ public class BattleManager : MonoBehaviour
                 slotDamageBuffPct[activeIndex] = 0f;
         }
 
+        // Booster mult after all additive/stat shaping (keeps your original philosophy)
         if (!Mathf.Approximately(atkBoosterMult, 1f))
             dr.damage = Mathf.Max(1, Mathf.RoundToInt(dr.damage * atkBoosterMult));
 
+        // Charge
         if (chargedNextAttack != null &&
             activeIndex >= 0 &&
             activeIndex < chargedNextAttack.Length &&
@@ -947,11 +928,12 @@ public class BattleManager : MonoBehaviour
         float preventedByWildGuard = 0f;
         int dmgToApply = dr.damage;
 
+        // Wild defend stance reduction (player outgoing)
         if (wildDefendActiveThisRound && defendReducePct > 0f)
         {
             float guardPct = Mathf.Clamp01(defendReducePct);
             int before = dmgToApply;
-            int after = Mathf.Max(1, Mathf.RoundToInt(dmgToApply * (1f - guardPct))); // allow 0
+            int after = Mathf.Max(1, Mathf.RoundToInt(dmgToApply * (1f - guardPct)));
             preventedByWildGuard = Mathf.Max(0, before - after);
             dmgToApply = after;
 
@@ -959,6 +941,7 @@ public class BattleManager : MonoBehaviour
                 PlayDefendShieldFX(isPlayer: false);
         }
 
+        // Wild shield absorb
         if (wildShieldHP > 0f && dmgToApply > 0)
         {
             float absorb = Mathf.Min(wildShieldHP, dmgToApply);
@@ -969,6 +952,7 @@ public class BattleManager : MonoBehaviour
                 yield return Say($"{foeName}'s shield absorbed {Mathf.RoundToInt(absorb)}!");
         }
 
+        // Guard convert into next-round wild shield
         if (preventedByWildGuard > 0f && guardConvertPct > 0f)
         {
             float gain = preventedByWildGuard * guardConvertPct;
@@ -976,6 +960,7 @@ public class BattleManager : MonoBehaviour
             yield return Say($"{foeName} stores {Mathf.RoundToInt(gain)} damage as a guard shield for the next round.");
         }
 
+        // Apply damage
         wildHP = Mathf.Max(0f, wildHP - dmgToApply);
         _totalDamageDealtThisBattle += Mathf.Max(0, dmgToApply);
         PushHPBars();
@@ -998,6 +983,7 @@ public class BattleManager : MonoBehaviour
         }
         if (dr.crit) yield return Say("Critical hit!");
 
+        // End-turn regen
         if (jctx != null && jctx.endTurnHealPct > 0f)
         {
             bool canHeal = (jctx.regenTurns == int.MaxValue) || (jctx.regenTurns > 0);
@@ -1122,24 +1108,12 @@ public class BattleManager : MonoBehaviour
 
         float wildCritChance = df.cannotBeCrit ? 0f : Mathf.Clamp01(critChanceWild - playerCritResist);
 
+
         var dr = BattleCalc.ResolveHit(
             null, wildDef, wildLevel,
             teamIds[activeIndex], teamDefs[activeIndex], teamLevels[activeIndex],
             enemyAtk, wildCritChance, critMultiplier, 0
         );
-
-        bool critRolled = dr.crit;
-        bool critNegatedByTitle = false;
-
-        if (df.cannotBeCrit && dr.crit)
-        {
-            critNegatedByTitle = true;
-            dr = BattleCalc.ResolveHit(
-                null, wildDef, wildLevel,
-                teamIds[activeIndex], teamDefs[activeIndex], teamLevels[activeIndex],
-                enemyAtk, 0f, critMultiplier, 0
-            );
-        }
 
         if (wildChargedNextAttack && chargeBonusPct > 0f)
         {
@@ -1150,7 +1124,6 @@ public class BattleManager : MonoBehaviour
             yield return Say($"{attackerName} unleashes a charged attack (+{Mathf.RoundToInt(chargeBonusPct * 100f)}% dmg)!");
         }
 
-        // Incoming mitigation scalar (conditionals + jobs + defend)
         float incomingScalar = 1f;
 
         if (cmods.defPct > 0f)
@@ -1187,25 +1160,11 @@ public class BattleManager : MonoBehaviour
                 PlayDefendShieldFX(isPlayer: true);
         }
 
-        int dmg_afterScalar = Mathf.Max(1, Mathf.RoundToInt(dr.damage * incomingScalar)); // allow 0
+        int dmg_afterScalar = Mathf.Max(1, Mathf.RoundToInt(dr.damage * incomingScalar));
 
-        float incomingEffMul = TitlesAdapter.GetIncomingEffectivenessMult(
-            teamIds[activeIndex], teamDefs[activeIndex], teamLevels[activeIndex],
-            wildDef ? wildDef.type : MonsterType.None
-        );
-        if (!Mathf.Approximately(incomingEffMul, 1f))
-            dmg_afterScalar = Mathf.Max(1, Mathf.RoundToInt(dmg_afterScalar * incomingEffMul));
-
-        float percentReduce = Mathf.Clamp01(df.percentReduce);
-        int flatReduce = Mathf.Max(0, df.flatReduce);
-
-        int dmg_afterPercent = (percentReduce > 0f)
-            ? Mathf.Max(1, Mathf.RoundToInt(dmg_afterScalar * (1f - percentReduce)))
-            : dmg_afterScalar;
-
-        // Conditional defFlat applies as real flat DR (stacked with titles + boosters + training).
-        int totalFlatDR = flatReduce + Mathf.Max(0, defFlatBooster) + Mathf.Max(0, trainingFlatDef) + Mathf.Max(0, cmods.defFlat);
-        int dmg_afterFlat = Mathf.Max(1, dmg_afterPercent - totalFlatDR);
+        // Apply non-title flat DR (boosters + training + conditional flat)
+        int totalFlatDR = Mathf.Max(0, defFlatBooster) + Mathf.Max(0, trainingFlatDef) + Mathf.Max(0, cmods.defFlat);
+        int dmg_afterFlat = Mathf.Max(1, dmg_afterScalar - totalFlatDR);
 
         // Shield absorb (allow full absorb to 0)
         float shieldBefore = (shieldHP != null && shieldHP.Length > activeIndex) ? shieldHP[activeIndex] : 0f;
@@ -1254,18 +1213,17 @@ public class BattleManager : MonoBehaviour
         }
 
         if (dr.crit && !df.cannotBeCrit)
+        {
             yield return Say("Critical hit!");
-        else if (critRolled && critNegatedByTitle)
-            yield return Say("The critical hit was negated!");
-
-        if (dr.crit && !df.cannotBeCrit)
             _totalCritsThisBattle++;
+        }
 
         _totalDamageTakenThisBattle += dmg_final;
 
         if (!playerTookFirstIncomingThisBattle)
             playerTookFirstIncomingThisBattle = true;
 
+        // Rescue / triage heal
         if (ctx != null && !ctx.rescueUsed && ctx.rescueHealPct > 0f && teamHP[activeIndex] > 0f)
         {
             float curMax = GetFinalMaxHPForIndex(activeIndex);
@@ -1280,6 +1238,7 @@ public class BattleManager : MonoBehaviour
             }
         }
 
+        // Surge / clutch-style ramp
         if (ctx != null && !ctx.surgeApplied)
         {
             float curMax = GetFinalMaxHPForIndex(activeIndex);
@@ -1718,9 +1677,9 @@ public class BattleManager : MonoBehaviour
         int baseDEF = BattleCalc.CalcDefense(wildDef, wildLevel);
         int baseSPD = BattleCalc.CalcSpeed(wildDef, wildLevel);
 
-        // Effective (what battle is actually using)
         int effHP  = Mathf.RoundToInt(wildMaxHP);
         int effATK = Mathf.RoundToInt(wildAttackPerTurn);
+
         int effDEF = baseDEF;
         int effSPD = baseSPD;
 
@@ -1776,7 +1735,15 @@ public class BattleManager : MonoBehaviour
 
         int equippedFlatATK = 0;
         if (roster != null && activeIndex < roster.Count && roster[activeIndex] != null)
-            equippedFlatATK = Mathf.Max(0, roster[activeIndex].flatAtkBonus);
+        {
+            int flatAtkBonus = Mathf.Max(0, roster[activeIndex].flatAtkBonus);
+            int trainingAtk = Mathf.Max(0, roster[activeIndex].trainingBonus.atk);
+
+            equippedFlatATK = flatAtkBonus;
+
+            if (LooksLikeLegacyTrainingWasMirroredIntoFlat(flatAtkBonus, trainingAtk))
+                equippedFlatATK = Mathf.Max(0, flatAtkBonus - trainingAtk);
+        }
 
         var ctx = TitleContext.Empty;
         ctx.ownedId = (teamIds != null && activeIndex < teamIds.Length) ? teamIds[activeIndex] : "";
@@ -2109,7 +2076,8 @@ public class BattleManager : MonoBehaviour
         {
             selfHp01 = hpPct,
             alliesAlive = alliesAlive,
-            winStreak = streak
+            winStreak = streak,
+            isBattle = true
         };
         return ctx;
     }
@@ -2827,6 +2795,24 @@ public class BattleManager : MonoBehaviour
             $"Outputs => HP:{Mathf.RoundToInt(hpAfterTitles)} ATK:{Mathf.RoundToInt(atkAfterTitles)} DEF:{Mathf.RoundToInt(defAfterTitles)} SPD:{Mathf.RoundToInt(spdAfterTitles)}"
         );
     }
+
+    // ─────────────────────────────────────────────────────────────
+    // ATK bonus normalization (legacy-safe)
+    // ─────────────────────────────────────────────────────────────
+
+    private static bool LooksLikeLegacyTrainingWasMirroredIntoFlat(int flatAtkBonus, int trainingAtk)
+    {
+        // Legacy bug behavior: every training ATK point was added to BOTH:
+        //   - flatAtkBonus
+        //   - trainingBonus.atk
+        //
+        // After the fix, flatAtkBonus should NOT include training ATK.
+        //
+        // We cannot perfectly distinguish "equipment flat ATK" from "legacy mirrored training" without a save version flag.
+        // This heuristic prioritizes preventing double-counting for existing saves.
+        return trainingAtk > 0 && flatAtkBonus >= trainingAtk;
+    }
+
 
 
 

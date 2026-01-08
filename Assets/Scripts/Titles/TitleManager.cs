@@ -1137,4 +1137,143 @@ public sealed class TitleManager : MonoBehaviour
 
         return null;
     }
+
+        public TitleStatMods GetBattleStatMods(string monsterId)
+    {
+        if (string.IsNullOrEmpty(monsterId))
+            return default;
+
+        // Resolve monster def
+        var def = MonsterLibraryLocator.GetById(monsterId);
+        if (!def)
+            return default;
+
+        // Resolve a best-guess level from save (team preferred)
+        int level = 1;
+        var data = SaveManager.Data;
+        if (data != null)
+        {
+            OwnedMonsterData found = null;
+
+            if (data.team != null)
+                found = data.team.Find(m => m != null && m.monsterId == monsterId);
+
+            if (found == null && data.owned != null)
+                found = data.owned.Find(m => m != null && m.monsterId == monsterId);
+
+            if (found != null)
+                level = Mathf.Max(1, found.level);
+        }
+
+        // Titles that apply here should be "always-on" boosters. Battle-start/turn-stack/etc.
+        // are handled by your existing TitleManager runtime state (not via this simple struct).
+        var titles = GetEquippedList(monsterId, def, level);
+
+        // Base stats (no title mods)
+        float baseHP = Mathf.Max(1f, BattleCalc.CalcHP(def, level));
+        float baseATK = Mathf.Max(1f, BattleCalc.CalcBaseAttack(def, level, 0, 0));
+        float baseDEF = Mathf.Max(1f, BattleCalc.CalcDefense(def, level));
+        float baseSPD = Mathf.Max(1f, BattleCalc.CalcSpeed(def, level));
+
+        // Accumulators in the same order BattleCalc applies them:
+        // flat first, then percent multiplier.
+        int atkFlat = 0;
+        int defFlat = 0;
+        int spdFlat = 0;
+
+        float hpMult = 1f;
+        float atkMult = 1f;
+        float defMult = 1f;
+        float spdMult = 1f;
+
+        // HP flat gets converted to a multiplier using baseHP (since TitleStatMods only supports hpPct)
+        float hpFlatAdd = 0f;
+
+        void ApplyOne(StatKind stat, OpKind op, float value)
+        {
+            // Normalize divide
+            float FactorFromOp()
+            {
+                if (op == OpKind.Multiply) return value;
+                if (op == OpKind.Divide)   return (Mathf.Approximately(value, 0f) ? 1f : 1f / value);
+                return 1f;
+            }
+
+            switch (stat)
+            {
+                case StatKind.HP:
+                {
+                    if (op == OpKind.Add) hpFlatAdd += value;
+                    else if (op == OpKind.Subtract) hpFlatAdd -= value;
+                    else hpMult *= Mathf.Max(0.01f, FactorFromOp());
+                    break;
+                }
+
+                case StatKind.Attack:
+                {
+                    if (op == OpKind.Add) atkFlat += Mathf.RoundToInt(value);
+                    else if (op == OpKind.Subtract) atkFlat -= Mathf.RoundToInt(value);
+                    else atkMult *= Mathf.Max(0.01f, FactorFromOp());
+                    break;
+                }
+
+                case StatKind.Defense:
+                {
+                    if (op == OpKind.Add) defFlat += Mathf.RoundToInt(value);
+                    else if (op == OpKind.Subtract) defFlat -= Mathf.RoundToInt(value);
+                    else defMult *= Mathf.Max(0.01f, FactorFromOp());
+                    break;
+                }
+
+                case StatKind.Speed:
+                {
+                    if (op == OpKind.Add) spdFlat += Mathf.RoundToInt(value);
+                    else if (op == OpKind.Subtract) spdFlat -= Mathf.RoundToInt(value);
+                    else spdMult *= Mathf.Max(0.01f, FactorFromOp());
+                    break;
+                }
+            }
+        }
+
+        for (int i = 0; i < titles.Count; i++)
+        {
+            var t = titles[i];
+            if (!t) continue;
+
+            if (t is StatBoosterTitleSO sb)
+            {
+                ApplyOne(sb.stat, sb.operation, sb.value);
+            }
+            else if (t is DuoStatBoosterTitleSO duo && duo.enabled)
+            {
+                ApplyOne(duo.statA, duo.opA, duo.valueA);
+                ApplyOne(duo.statB, duo.opB, duo.valueB);
+            }
+
+            // Intentionally ignored here:
+            // - ConditionalStatBoosterTitleSO / DuoConditionalStatBoosterTitleSO (requires ctx)
+            // - BattleStart/Turn/Event stack titles (stateful, applied elsewhere)
+            // - Damage filters / effectiveness mods (handled via existing adapter calls)
+        }
+
+        // Convert HP flat to multiplier (since BattleCalc applies hpPct multiplicatively)
+        if (!Mathf.Approximately(hpFlatAdd, 0f))
+        {
+            float hpFactorFromFlat = Mathf.Max(0.01f, (baseHP + hpFlatAdd) / baseHP);
+            hpMult *= hpFactorFromFlat;
+        }
+
+        TitleStatMods mods = default;
+
+        mods.atkFlat = atkFlat;
+        mods.defFlat = defFlat;
+        mods.spdFlat = spdFlat;
+
+        mods.hpPct  = hpMult  - 1f;
+        mods.atkPct = atkMult - 1f;
+        mods.defPct = defMult - 1f;
+        mods.spdPct = spdMult - 1f;
+
+        return mods;
+    }
 }

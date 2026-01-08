@@ -1,0 +1,50 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 32ffc26ed7d444b02a9332ce4279b117, type: 3}
+  m_Name: Monster_Kaskon
+  m_EditorClassIdentifier: 
+  id: M-184
+  displayName: Kaskon
+  type: 16
+  typeIcon: {fileID: 21300000, guid: c802d8c6dfd7c40329bae6fe5d96fc85, type: 3}
+  icon: {fileID: 0}
+  backIcon: {fileID: 0}
+  shinyIcon: {fileID: 0}
+  shinyBackIcon: {fileID: 0}
+  rarity: 2
+  canBeStarter: 0
+  starterWeight: 1
+  maxLevel: 50
+  baseHP: 80
+  baseAttack: 24
+  baseDefense: 82
+  baseSpeed: 14
+  hpRegenPerHour: 6.4
+  fatigueRatePerHour: 0.2
+  fatigueCooldownHours: 11.4
+  evolutionStage: 1
+  evolutionLevel: 28
+  evolutionForm: {fileID: 11400000, guid: 7f9c5060a53d64992ba5c8482a69b077, type: 2}
+  uncatchable: 0
+  isBoss: 0
+  bossJobDebuffs: []
+  bossWeight: 1
+  spawnWeight: 2
+  jobSkill: 1.08
+  titleTrack: {fileID: 11400000, guid: e9bbdcd2d9d9f46ecba858905f1f28eb, type: 2}
+  defaultAlwaysOnTitles: []
+  Personality: {fileID: 11400000, guid: 51b0055ca9f5a4ccbb97fd51ef39fae1, type: 2}
+  basicAttackName: Gear Jab
+  basicAttackPrefab: {fileID: 5172629195496952374, guid: ad774bbb8084f42c29f12cd62581f796, type: 3}
+  basicAttackPrefabLifetime: 1
+  description: A disciplined alloy striker that locks its joints and counters with
+    precise mechanical jabs.

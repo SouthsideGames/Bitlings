@@ -434,7 +434,8 @@ public class CheatCodeManager : MonoBehaviour
             return false;
         }
 
-        SaveManager.Data.unlockedJobSites ??= new HashSet<JobType>();
+        SaveManager.Data.unlockedJobSitesList ??= new List<JobType>();
+        SaveManager.Data.unlockedJobSites     ??= new HashSet<JobType>();
 
         int before = SaveManager.Data.unlockedJobSites.Count;
 
@@ -447,16 +448,27 @@ public class CheatCodeManager : MonoBehaviour
                 if (so == null) continue;
                 if (so.jobType == JobType.None) continue;
 
-                SaveManager.Data.unlockedJobSites.Add(so.jobType);
+                var jt = so.jobType;
+
+                SaveManager.Data.unlockedJobSites.Add(jt);
+
+                if (!SaveManager.Data.unlockedJobSitesList.Contains(jt))
+                    SaveManager.Data.unlockedJobSitesList.Add(jt);
             }
         }
+
+        SaveManager.Data.EnsureTransientSets();
 
         int after = SaveManager.Data.unlockedJobSites.Count;
         int added = after - before;
 
         SaveManager.Save();
+
         JobManager.I.RefreshAllJobSiteViewsInScene();
         GameEvents.OnJobsChanged?.Invoke();
+
+        foreach (var v in FindObjectsByType<JobSiteView>(FindObjectsSortMode.None))
+            v.Refresh();
 
         message = added > 0
             ? $"Unlocked {added} job site(s)."

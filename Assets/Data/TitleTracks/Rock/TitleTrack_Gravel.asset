@@ -13,12 +13,9 @@ MonoBehaviour:
   m_Name: TitleTrack_Gravel
   m_EditorClassIdentifier: 
   tiers:
-  - levelRequired: 2
-    unlockChoices:
-    - {fileID: 11400000, guid: ee7505b24fdfc4281baa7d56d4e7e3f6, type: 2}
   - levelRequired: 10
     unlockChoices:
-    - {fileID: 11400000, guid: 856ade98156889f4fbf9ab09303d21e3, type: 2}
+    - {fileID: 11400000, guid: df9109033861016428656f21d2cad8ea, type: 2}
   - levelRequired: 14
     unlockChoices:
-    - {fileID: 11400000, guid: df616eb1bc7dbf1439f4bd9c38267d97, type: 2}
+    - {fileID: 11400000, guid: 01abdc10d1a4b41e2b6ebdce1f312988, type: 2}

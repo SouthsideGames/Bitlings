@@ -1,0 +1,30 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f048558a82b7c2147ab6a4d2677278ea, type: 3}
+  m_Name: MonsterPack_PlagueNexus
+  m_EditorClassIdentifier: 
+  id: MP-017
+  displayName: Plague Nexus
+  description: Corrupt and Umbral horrors spread decay across prolonged battles.
+    Built for attrition, this pack rewards sustained pressure and battlefield denial
+    over quick victories.
+  icon: {fileID: 21300000, guid: 003984d255381404791fa19428bbfcaa, type: 3}
+  rarityLabel: Uncommon
+  baseCost: 20
+  costType: 17
+  saleOff01: 0
+  unlockByDefault: 0
+  monsters:
+  - {fileID: 11400000, guid: 6294e178ba4ed44c2ab984582122dbd4, type: 2}
+  - {fileID: 11400000, guid: 97142e6b5770a4a6a87eb23a82a31785, type: 2}
+  - {fileID: 11400000, guid: b1aa95c8c88af4890aa676f26697d4d2, type: 2}
+  - {fileID: 11400000, guid: bc685279eaa7f45d8ad1a518c313135d, type: 2}

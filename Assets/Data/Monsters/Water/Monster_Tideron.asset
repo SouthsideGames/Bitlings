@@ -31,8 +31,8 @@ MonoBehaviour:
   hpRegenPerHour: 7.9
   fatigueRatePerHour: 0.2
   fatigueCooldownHours: 8.2
-  evolutionStage: 3
-  evolutionLevel: 0
+  evolutionStage: 1
+  evolutionLevel: 12
   evolutionForm: {fileID: 0}
   uncatchable: 0
   isBoss: 0

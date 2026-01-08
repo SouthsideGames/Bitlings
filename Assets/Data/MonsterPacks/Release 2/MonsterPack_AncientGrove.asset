@@ -1,0 +1,29 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f048558a82b7c2147ab6a4d2677278ea, type: 3}
+  m_Name: MonsterPack_AncientGrove
+  m_EditorClassIdentifier: 
+  id: MP-015
+  displayName: Ancient Grove
+  description: Guardians bound to sacred forests stand watch over forgotten sanctuaries.
+    Grass and Oracle monsters here emphasize protection, balance, and spiritual resilience.
+  icon: {fileID: 21300000, guid: 75c3356f93bbb504d9c6cf3636288f4b, type: 3}
+  rarityLabel: Common
+  baseCost: 12
+  costType: 17
+  saleOff01: 0
+  unlockByDefault: 0
+  monsters:
+  - {fileID: 11400000, guid: 2e7b95e8f03f548519271afe9489704e, type: 2}
+  - {fileID: 11400000, guid: 6b7efc78eb5b147359c0abde8b3815cb, type: 2}
+  - {fileID: 11400000, guid: aacc45b5b41964a1e9a887a1faa72c18, type: 2}
+  - {fileID: 11400000, guid: a543c5eaab8f1470bbffbaf70caff9af, type: 2}

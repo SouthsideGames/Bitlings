@@ -1,0 +1,30 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f048558a82b7c2147ab6a4d2677278ea, type: 3}
+  m_Name: MonsterPack_LuminousTide
+  m_EditorClassIdentifier: 
+  id: MP-012
+  displayName: Luminous Tide
+  description: Bioluminescent creatures illuminate the darkest waters and skies.
+    Water and Sky monsters in this pack combine elegance with evasive, flowing combat
+    styles.
+  icon: {fileID: 21300000, guid: 2dd079251db29524caa4c81b47869295, type: 3}
+  rarityLabel: Common
+  baseCost: 11
+  costType: 17
+  saleOff01: 0
+  unlockByDefault: 0
+  monsters:
+  - {fileID: 11400000, guid: 270fa90c5df7542839763be3955bf005, type: 2}
+  - {fileID: 11400000, guid: 765316e888bba43d6b001288b98f4d35, type: 2}
+  - {fileID: 11400000, guid: 3fe32d2b032984e5cae8678de8e2c234, type: 2}
+  - {fileID: 11400000, guid: 6a273900809ff46b8bc013387dfdf871, type: 2}

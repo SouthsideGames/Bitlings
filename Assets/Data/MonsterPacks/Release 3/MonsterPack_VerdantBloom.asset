@@ -1,0 +1,30 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f048558a82b7c2147ab6a4d2677278ea, type: 3}
+  m_Name: MonsterPack_VerdantBloom
+  m_EditorClassIdentifier: 
+  id: MP-027
+  displayName: Verdant Bloom
+  description: Living symbols of renewal, these Grass and Bug monsters sustain allies
+    through regeneration. The pack rewards synergy, recovery, and long-form endurance
+    strategies.
+  icon: {fileID: 21300000, guid: 22fc84a2f4f29934fab8fae92fd5a38d, type: 3}
+  rarityLabel: Rare
+  baseCost: 26
+  costType: 17
+  saleOff01: 0
+  unlockByDefault: 0
+  monsters:
+  - {fileID: 11400000, guid: 3099b4e9fbd3f4651b36aafb50a7356f, type: 2}
+  - {fileID: 11400000, guid: c9631251d18d44a0bbf07e50512289c5, type: 2}
+  - {fileID: 11400000, guid: 27191f4d319514ee8931394c1bd5bff6, type: 2}
+  - {fileID: 11400000, guid: a3d8ef28d582b4a128cf95959d961403, type: 2}

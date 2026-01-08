@@ -73,11 +73,10 @@ public sealed class TitleOptionItem : MonoBehaviour
         _equippedInTier = equippedInTier;
         _onChanged      = onChanged;
 
-        // We no longer auto-generate infoId from the TitleSO.
-        // If you want a custom Info entry, set infoId in the inspector.
-
         if (nameText)   nameText.text   = option ? option.displayName : "(null)";
         if (unlockText) unlockText.text = (_level >= _levelRequired) ? "Unlocked" : $"Lvl ≥ {_levelRequired}";
+
+        SetIcon(option != null ? option.icon : null);
 
         if (assignBtn)
         {

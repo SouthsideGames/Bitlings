@@ -32,7 +32,7 @@ MonoBehaviour:
   fatigueRatePerHour: 0.2
   fatigueCooldownHours: 8.2
   evolutionStage: 1
-  evolutionLevel: 14
+  evolutionLevel: 18
   evolutionForm: {fileID: 11400000, guid: e5e30aa05d4e3449d8bd27e4f885678d, type: 2}
   uncatchable: 0
   isBoss: 0

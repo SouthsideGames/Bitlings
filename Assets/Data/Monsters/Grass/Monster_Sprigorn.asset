@@ -1,0 +1,49 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 32ffc26ed7d444b02a9332ce4279b117, type: 3}
+  m_Name: Monster_Sprigorn
+  m_EditorClassIdentifier: 
+  id: M-127
+  displayName: Sprigorn
+  type: 3
+  typeIcon: {fileID: 21300000, guid: 46bf3bbfcff674f17bd0ea06a23e1467, type: 3}
+  icon: {fileID: 0}
+  backIcon: {fileID: 0}
+  shinyIcon: {fileID: 0}
+  shinyBackIcon: {fileID: 0}
+  rarity: 1
+  canBeStarter: 0
+  starterWeight: 1
+  maxLevel: 50
+  baseHP: 64
+  baseAttack: 38
+  baseDefense: 46
+  baseSpeed: 26
+  hpRegenPerHour: 7.8
+  fatigueRatePerHour: 0.2
+  fatigueCooldownHours: 8.6
+  evolutionStage: 1
+  evolutionLevel: 22
+  evolutionForm: {fileID: 11400000, guid: aacc45b5b41964a1e9a887a1faa72c18, type: 2}
+  uncatchable: 0
+  isBoss: 0
+  bossJobDebuffs: []
+  bossWeight: 1
+  spawnWeight: 4.5
+  jobSkill: 1
+  titleTrack: {fileID: 11400000, guid: 6b4cef5b9dd0c43b3b47bf9729a1b591, type: 2}
+  defaultAlwaysOnTitles: []
+  Personality: {fileID: 11400000, guid: f6f72aa846632454b97832d01d1b5c0c, type: 2}
+  basicAttackName: Bloom Bash
+  basicAttackPrefab: {fileID: 7147688047696861109, guid: 5287b95db783b4379b733d77af2cc458, type: 3}
+  basicAttackPrefabLifetime: 1
+  description: Its body thickens with growth

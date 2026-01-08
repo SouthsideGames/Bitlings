@@ -181,52 +181,76 @@ public static class BattleCalc
         var atkType = atkDef ? atkDef.type : default;
         var defType = defDef ? defDef.type : default;
 
-        // Base effectiveness
-        float eff = BattleTypeChart.GetMultiplier(atkType, defType);
-        if (float.IsNaN(eff) || float.IsInfinity(eff)) eff = 1f;
+        // ─────────────────────────────────────────────────────────────
+        // Effectiveness (PEMDAS):
+        // (BaseEffectiveness + Additive) * OutgoingMult * IncomingMult
+        // ─────────────────────────────────────────────────────────────
+        float baseEff = BattleTypeChart.GetMultiplier(atkType, defType);
+        if (!float.IsFinite(baseEff)) baseEff = 1f;
 
-        // Attacker-side title effectiveness multiplier
+        float addEff = 0f;
+        if (!string.IsNullOrEmpty(attackerMonsterId))
+        {
+            try
+            {
+                addEff = TitlesAdapter.GetEffectivenessAdd(attackerMonsterId, atkDef, atkLevel);
+                if (!float.IsFinite(addEff)) addEff = 0f;
+            }
+            catch { addEff = 0f; }
+        }
+
+        float eff = baseEff + addEff;
+        eff = Mathf.Max(0f, eff);
+
+        // Attacker outgoing multiplier
         if (!string.IsNullOrEmpty(attackerMonsterId))
         {
             try
             {
                 float outMul = TitlesAdapter.GetEffectivenessMult(attackerMonsterId, atkDef, atkLevel);
-                if (!float.IsNaN(outMul) && !float.IsInfinity(outMul) && outMul > 0f) eff *= outMul;
+                if (float.IsFinite(outMul) && outMul > 0f) eff *= outMul;
             }
-            catch { /* keep resilient */ }
+            catch { /* resilient */ }
         }
 
-        // Defender-side incoming effectiveness multiplier (e.g., nullify or weaken type)
+        // Defender incoming multiplier (typed by incoming attack type)
         if (!string.IsNullOrEmpty(defenderMonsterId))
         {
             try
             {
-                float inMul = TitlesAdapter.GetIncomingEffectivenessMult(defenderMonsterId, defDef, defLevel);
-                if (!float.IsNaN(inMul) && !float.IsInfinity(inMul) && inMul >= 0f) eff *= inMul;
+                float inMul = TitlesAdapter.GetIncomingEffectivenessMult(defenderMonsterId, defDef, defLevel, atkType);
+                if (float.IsFinite(inMul) && inMul >= 0f) eff *= inMul;
             }
-            catch { /* default to 1f if not implemented */ }
+            catch { /* resilient */ }
         }
 
-        // Read defender damage filter (cannotBeCrit / %DR / flat DR)
+        if (!float.IsFinite(eff)) eff = 1f;
+        eff = Mathf.Max(0f, eff);
+
+        // ─────────────────────────────────────────────────────────────
+        // Defender damage filter (cannotBeCrit / %DR / flat DR)
+        // ─────────────────────────────────────────────────────────────
         bool blockCrit = false;
         float percentDR = 0f;
-        int   flatDR    = 0;
+        int flatDR = 0;
 
         if (!string.IsNullOrEmpty(defenderMonsterId))
         {
             try
             {
                 var df = TitlesAdapter.GetDamageFilter(defenderMonsterId, defDef, defLevel);
-                blockCrit   = df.cannotBeCrit;
-                percentDR   = Mathf.Clamp01(df.percentReduce);
-                flatDR      = Mathf.Max(0, df.flatReduce);
+                blockCrit = df.cannotBeCrit;
+                percentDR = Mathf.Clamp01(df.percentReduce);
+                flatDR = Mathf.Max(0, df.flatReduce);
             }
             catch { /* safe no-op */ }
         }
 
+        // Rock passive: immune to crits
         bool defenderIsRock = defDef && defDef.type == MonsterType.Rock;
         bool crit = !defenderIsRock && !blockCrit && (Random.value < critChance);
 
+        // Apply effectiveness with your existing safety floor
         float preMit = baseDamage * Mathf.Max(0.25f, eff) * (crit ? critMultiplier : 1f);
 
         // Title-aware defense if we have a defender ID
@@ -241,7 +265,7 @@ public static class BattleCalc
 
         // Apply defender title DR: percent first, then flat
         if (percentDR > 0f) afterDefense *= (1f - percentDR);
-        if (flatDR    > 0 ) afterDefense -= flatDR;
+        if (flatDR > 0) afterDefense -= flatDR;
 
         int dealt = Mathf.Max(1, Mathf.RoundToInt(afterDefense));
 
@@ -252,4 +276,6 @@ public static class BattleCalc
             effectiveness = eff
         };
     }
+
+
 }
