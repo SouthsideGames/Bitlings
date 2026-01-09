@@ -16,10 +16,10 @@ MonoBehaviour:
   displayName: Kaskar
   type: 16
   typeIcon: {fileID: 21300000, guid: c802d8c6dfd7c40329bae6fe5d96fc85, type: 3}
-  icon: {fileID: 0}
-  backIcon: {fileID: 0}
-  shinyIcon: {fileID: 0}
-  shinyBackIcon: {fileID: 0}
+  icon: {fileID: 21300000, guid: 11e74552df60d4ad1bf93bff6606d2ac, type: 3}
+  backIcon: {fileID: 21300000, guid: 70a30507ed8ad466db2d7341e23d8eb9, type: 3}
+  shinyIcon: {fileID: 21300000, guid: 33740bc7999854b6bb7e9a1e50fa0a22, type: 3}
+  shinyBackIcon: {fileID: 21300000, guid: d46a1fe1019d54bdba483df2f3f04468, type: 3}
   rarity: 3
   canBeStarter: 0
   starterWeight: 1

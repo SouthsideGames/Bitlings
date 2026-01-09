@@ -16,10 +16,10 @@ MonoBehaviour:
   displayName: Cogkar
   type: 16
   typeIcon: {fileID: 21300000, guid: c802d8c6dfd7c40329bae6fe5d96fc85, type: 3}
-  icon: {fileID: 0}
-  backIcon: {fileID: 0}
-  shinyIcon: {fileID: 0}
-  shinyBackIcon: {fileID: 0}
+  icon: {fileID: 21300000, guid: 1852e316ba3844180b96d2148c0fd115, type: 3}
+  backIcon: {fileID: 21300000, guid: 71e9b500fde814f3bb928262a8aee732, type: 3}
+  shinyIcon: {fileID: 21300000, guid: e3629fa86e02249b68c6ca505900fdd6, type: 3}
+  shinyBackIcon: {fileID: 21300000, guid: ff35fcc0671854834967b908262539ee, type: 3}
   rarity: 3
   canBeStarter: 0
   starterWeight: 1
