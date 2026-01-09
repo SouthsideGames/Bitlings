@@ -1,0 +1,50 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 32ffc26ed7d444b02a9332ce4279b117, type: 3}
+  m_Name: Monster_Emrix
+  m_EditorClassIdentifier: 
+  id: M-002
+  displayName: Emrix
+  type: 1
+  typeIcon: {fileID: 21300000, guid: d552cfb27992e494694a52b7e3578364, type: 3}
+  icon: {fileID: 21300000, guid: 3af57f1403d43794d965c0d65cb6a370, type: 3}
+  backIcon: {fileID: 21300000, guid: 0d587440e2ffecd4bb0ed760a974d872, type: 3}
+  shinyIcon: {fileID: 21300000, guid: eaa1a4168b0e74821ae08e43c885e8c3, type: 3}
+  shinyBackIcon: {fileID: 21300000, guid: 139c82b0f900a40fbbf700c3f1c3cc8b, type: 3}
+  rarity: 0
+  canBeStarter: 0
+  starterWeight: 1
+  maxLevel: 50
+  baseHP: 48
+  baseAttack: 56
+  baseDefense: 18
+  baseSpeed: 28
+  hpRegenPerHour: 4.6
+  fatigueRatePerHour: 0.2
+  fatigueCooldownHours: 7.2
+  evolutionStage: 1
+  evolutionLevel: 18
+  evolutionForm: {fileID: 11400000, guid: 7d1355c41cd2e634880b82f47f9c1e7f, type: 2}
+  uncatchable: 0
+  isBoss: 0
+  bossJobDebuffs: []
+  bossWeight: 1
+  spawnWeight: 8
+  jobSkill: 0.95
+  titleTrack: {fileID: 11400000, guid: b36db0b58a3714140b70ff5f141a14db, type: 2}
+  defaultAlwaysOnTitles: []
+  Personality: {fileID: 11400000, guid: 3733616cf9f0f4dddb5bee9d6ba2952f, type: 2}
+  basicAttackName: Ember Snap
+  basicAttackPrefab: {fileID: 126357351932672970, guid: a7524146891194bc4b7eb73ba1e38b46, type: 3}
+  basicAttackPrefabLifetime: 1
+  description: A small fire sprite that darts forward with quick, reckless bites
+    of flame.

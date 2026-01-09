@@ -1,0 +1,50 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 32ffc26ed7d444b02a9332ce4279b117, type: 3}
+  m_Name: Monster_Swarmor
+  m_EditorClassIdentifier: 
+  id: M-065
+  displayName: Swarmor
+  type: 11
+  typeIcon: {fileID: 21300000, guid: 8e7ac2a8f10ec4ba5860e036443e3fc8, type: 3}
+  icon: {fileID: 21300000, guid: 8a9cf704562e3cb4eb19af085bb43108, type: 3}
+  backIcon: {fileID: 21300000, guid: 3887ea960de68ca4cb534612791be3d2, type: 3}
+  shinyIcon: {fileID: 21300000, guid: a1e60953a367eaa41b61026019e46374, type: 3}
+  shinyBackIcon: {fileID: 21300000, guid: 8fb2a3e6da6b08f48b0f5790e56873f6, type: 3}
+  rarity: 6
+  canBeStarter: 0
+  starterWeight: 1
+  maxLevel: 50
+  baseHP: 145
+  baseAttack: 135
+  baseDefense: 70
+  baseSpeed: 50
+  hpRegenPerHour: 15.2
+  fatigueRatePerHour: 0.2
+  fatigueCooldownHours: 9.8
+  evolutionStage: 1
+  evolutionLevel: 12
+  evolutionForm: {fileID: 0}
+  uncatchable: 1
+  isBoss: 1
+  bossJobDebuffs: []
+  bossWeight: 1
+  spawnWeight: 0
+  jobSkill: 1
+  titleTrack: {fileID: 0}
+  defaultAlwaysOnTitles: []
+  Personality: {fileID: 11400000, guid: 225b50a30ca2b4463828b97ab1e08247, type: 2}
+  basicAttackName: Endless Brood
+  basicAttackPrefab: {fileID: 6777048211968024641, guid: 36482d8bd89710b4983cb69ab5a8cceb, type: 3}
+  basicAttackPrefabLifetime: 1
+  description: A nightmare hive mind that overwhelms foes through sheer numbers and
+    relentless coordinated assault.

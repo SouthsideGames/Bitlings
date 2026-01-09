@@ -1,0 +1,50 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 32ffc26ed7d444b02a9332ce4279b117, type: 3}
+  m_Name: Monster_Graveil
+  m_EditorClassIdentifier: 
+  id: M-042
+  displayName: Graveil
+  type: 13
+  typeIcon: {fileID: 21300000, guid: 00ff3f4c0d50247a8915bc882652db22, type: 3}
+  icon: {fileID: 21300000, guid: ac50bb944382a7a4da96c2f6e3e0faee, type: 3}
+  backIcon: {fileID: 21300000, guid: 7c8cb506a237c3247aa0bfaa4713041e, type: 3}
+  shinyIcon: {fileID: 21300000, guid: fd9202dfe669e7a45a1332d62facf053, type: 3}
+  shinyBackIcon: {fileID: 21300000, guid: 8b4188389e9a4f748ac82a90dfa0ac15, type: 3}
+  rarity: 3
+  canBeStarter: 0
+  starterWeight: 1
+  maxLevel: 50
+  baseHP: 82
+  baseAttack: 74
+  baseDefense: 44
+  baseSpeed: 35
+  hpRegenPerHour: 9.4
+  fatigueRatePerHour: 0.2
+  fatigueCooldownHours: 9.7
+  evolutionStage: 1
+  evolutionLevel: 15
+  evolutionForm: {fileID: 0}
+  uncatchable: 0
+  isBoss: 0
+  bossJobDebuffs: []
+  bossWeight: 1
+  spawnWeight: 0.7
+  jobSkill: 1.15
+  titleTrack: {fileID: 11400000, guid: fbed27ae8a0d54042af53bfad1fd46fd, type: 2}
+  defaultAlwaysOnTitles: []
+  Personality: {fileID: 11400000, guid: 48288e9e78c65453781f793c8df03e90, type: 2}
+  basicAttackName: Veil Rend
+  basicAttackPrefab: {fileID: 9101927626726485638, guid: 257dd9ab5e3cf0544a679d2e444f8d35, type: 3}
+  basicAttackPrefabLifetime: 1
+  description: An elite specter that slips between moments, striking from shadowed
+    angles before fading back into the veil.

@@ -1,0 +1,50 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 32ffc26ed7d444b02a9332ce4279b117, type: 3}
+  m_Name: Monster_Clashorn
+  m_EditorClassIdentifier: 
+  id: M-057
+  displayName: Clashorn
+  type: 6
+  typeIcon: {fileID: 21300000, guid: 08b8f2b54695d465cb15062c5b76b5a4, type: 3}
+  icon: {fileID: 21300000, guid: da57a89994a846c468d6702a6f086cb4, type: 3}
+  backIcon: {fileID: 21300000, guid: a2c222b4924a1734c861ac982286f54d, type: 3}
+  shinyIcon: {fileID: 21300000, guid: 5a4cc71965aaeee4eb9a28457aae3480, type: 3}
+  shinyBackIcon: {fileID: 21300000, guid: 7596d70cb28a22843860f4a9e4203054, type: 3}
+  rarity: 3
+  canBeStarter: 0
+  starterWeight: 1
+  maxLevel: 50
+  baseHP: 86
+  baseAttack: 98
+  baseDefense: 40
+  baseSpeed: 31
+  hpRegenPerHour: 6.9
+  fatigueRatePerHour: 0.2
+  fatigueCooldownHours: 7.8
+  evolutionStage: 1
+  evolutionLevel: 15
+  evolutionForm: {fileID: 0}
+  uncatchable: 0
+  isBoss: 0
+  bossJobDebuffs: []
+  bossWeight: 1
+  spawnWeight: 0.7
+  jobSkill: 1.15
+  titleTrack: {fileID: 11400000, guid: 0684f4bec441bcc4fa6de385be215cb4, type: 2}
+  defaultAlwaysOnTitles: []
+  Personality: {fileID: 11400000, guid: 1bd4805a0ba8f476b9f7b480b0cbb31d, type: 2}
+  basicAttackName: Rend Impact
+  basicAttackPrefab: {fileID: 5406408022945852380, guid: a106796f95643465ab9883d4b5161f50, type: 3}
+  basicAttackPrefabLifetime: 1
+  description: A brutal clash juggernaut that thrives in prolonged combat, tearing
+    into enemies with escalating, bone-crushing force.

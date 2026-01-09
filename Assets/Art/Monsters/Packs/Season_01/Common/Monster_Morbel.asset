@@ -1,0 +1,50 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 32ffc26ed7d444b02a9332ce4279b117, type: 3}
+  m_Name: Monster_Morbel
+  m_EditorClassIdentifier: 
+  id: M-058
+  displayName: Morbel
+  type: 7
+  typeIcon: {fileID: 21300000, guid: 10d50b4d1dee041cc8dcf349a9ce86a1, type: 3}
+  icon: {fileID: 21300000, guid: 81a757657c21f19439ffc846371b559c, type: 3}
+  backIcon: {fileID: 21300000, guid: 1e578135737bea64dba588dbb12daa1e, type: 3}
+  shinyIcon: {fileID: 21300000, guid: 8778f8d24397f4506ae9df8f38b1821e, type: 3}
+  shinyBackIcon: {fileID: 21300000, guid: 5093b5f9b77d24fd595ac8c9f1752c91, type: 3}
+  rarity: 0
+  canBeStarter: 0
+  starterWeight: 1
+  maxLevel: 50
+  baseHP: 54
+  baseAttack: 54
+  baseDefense: 22
+  baseSpeed: 20
+  hpRegenPerHour: 6.2
+  fatigueRatePerHour: 0.2
+  fatigueCooldownHours: 9.2
+  evolutionStage: 1
+  evolutionLevel: 18
+  evolutionForm: {fileID: 11400000, guid: add94f60bfae6604ea74400e0e2acaeb, type: 2}
+  uncatchable: 0
+  isBoss: 0
+  bossJobDebuffs: []
+  bossWeight: 1
+  spawnWeight: 8
+  jobSkill: 0.95
+  titleTrack: {fileID: 11400000, guid: 41b356bd285014940b7dc68746d50514, type: 2}
+  defaultAlwaysOnTitles: []
+  Personality: {fileID: 0}
+  basicAttackName: Rot Jab
+  basicAttackPrefab: {fileID: 8046187082596486557, guid: 86fc56d41698d45bfbf27d043ca2944d, type: 3}
+  basicAttackPrefabLifetime: 1
+  description: A warped sprout born of corruption, lurching forward with reckless
+    strikes and unstable energy.

@@ -1,0 +1,50 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 32ffc26ed7d444b02a9332ce4279b117, type: 3}
+  m_Name: Monster_Emrixen
+  m_EditorClassIdentifier: 
+  id: M-003
+  displayName: Emrixen
+  type: 1
+  typeIcon: {fileID: 21300000, guid: d552cfb27992e494694a52b7e3578364, type: 3}
+  icon: {fileID: 21300000, guid: 0cefc01776e6aa241b31e0183462edd9, type: 3}
+  backIcon: {fileID: 21300000, guid: d939207a7339a4f4d804a9a636c18cf3, type: 3}
+  shinyIcon: {fileID: 21300000, guid: 1f6e5e99e4d52443d8d2ff4497e15c9d, type: 3}
+  shinyBackIcon: {fileID: 21300000, guid: 5f7f040e55f6c4c79802f9f26bdafbbb, type: 3}
+  rarity: 1
+  canBeStarter: 0
+  starterWeight: 1
+  maxLevel: 50
+  baseHP: 54
+  baseAttack: 66
+  baseDefense: 22
+  baseSpeed: 28
+  hpRegenPerHour: 5.1
+  fatigueRatePerHour: 0.2
+  fatigueCooldownHours: 7.2
+  evolutionStage: 2
+  evolutionLevel: 22
+  evolutionForm: {fileID: 11400000, guid: 3a76a06a041df0946baec7fee72c42b9, type: 2}
+  uncatchable: 0
+  isBoss: 0
+  bossJobDebuffs: []
+  bossWeight: 1
+  spawnWeight: 4.5
+  jobSkill: 1
+  titleTrack: {fileID: 11400000, guid: 7ae5427d943e62a4c9bb3bf263673b9e, type: 2}
+  defaultAlwaysOnTitles: []
+  Personality: {fileID: 11400000, guid: 3733616cf9f0f4dddb5bee9d6ba2952f, type: 2}
+  basicAttackName: Flare Claw
+  basicAttackPrefab: {fileID: 126357351932672970, guid: a7524146891194bc4b7eb73ba1e38b46, type: 3}
+  basicAttackPrefabLifetime: 1
+  description: Its flames grow steadier and stronger, trading some speed for sharper,
+    burning strikes.
