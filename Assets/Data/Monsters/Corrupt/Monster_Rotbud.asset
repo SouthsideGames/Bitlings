@@ -16,10 +16,10 @@ MonoBehaviour:
   displayName: Rotbud
   type: 7
   typeIcon: {fileID: 21300000, guid: 10d50b4d1dee041cc8dcf349a9ce86a1, type: 3}
-  icon: {fileID: 0}
-  backIcon: {fileID: 0}
-  shinyIcon: {fileID: 0}
-  shinyBackIcon: {fileID: 0}
+  icon: {fileID: 21300000, guid: b3cfa6ac9f8524764a8c420a732e0648, type: 3}
+  backIcon: {fileID: 21300000, guid: 34be8dd0890404685b66aff342baf2d0, type: 3}
+  shinyIcon: {fileID: 21300000, guid: 263069d8564544cf6b4df7e6c32aa018, type: 3}
+  shinyBackIcon: {fileID: 21300000, guid: 3acbf20c2ebcc4a2e8da423952c9f6d7, type: 3}
   rarity: 0
   canBeStarter: 0
   starterWeight: 1

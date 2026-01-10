@@ -16,10 +16,10 @@ MonoBehaviour:
   displayName: Terron
   type: 8
   typeIcon: {fileID: 21300000, guid: f0d6243fead4a41fcae07804c4d66233, type: 3}
-  icon: {fileID: 0}
-  backIcon: {fileID: 0}
-  shinyIcon: {fileID: 0}
-  shinyBackIcon: {fileID: 0}
+  icon: {fileID: 21300000, guid: 1c8da778489dd4bea9b31886c898936a, type: 3}
+  backIcon: {fileID: 21300000, guid: e8c6cb1dec13e4c548994eb76b77f988, type: 3}
+  shinyIcon: {fileID: 21300000, guid: d5ee25b9fe2bc4826a950e53065151e0, type: 3}
+  shinyBackIcon: {fileID: 21300000, guid: 7c8f239a1f8624b5cb180f5f6ce345c7, type: 3}
   rarity: 1
   canBeStarter: 0
   starterWeight: 1

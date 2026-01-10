@@ -16,10 +16,10 @@ MonoBehaviour:
   displayName: Rocknub
   type: 12
   typeIcon: {fileID: 21300000, guid: 5c631c9f2f98b441caa0de9f7de0cfcd, type: 3}
-  icon: {fileID: 0}
-  backIcon: {fileID: 0}
-  shinyIcon: {fileID: 0}
-  shinyBackIcon: {fileID: 0}
+  icon: {fileID: 21300000, guid: fc4c96b8bf3574f5986ffecce731688d, type: 3}
+  backIcon: {fileID: 21300000, guid: c0688ac04f8ef409dace9d4b33ed355d, type: 3}
+  shinyIcon: {fileID: 21300000, guid: 49945397cac4143d898ac5dea65f8827, type: 3}
+  shinyBackIcon: {fileID: 21300000, guid: 71bbc9f88a3114a3dadbc911494a0ba9, type: 3}
   rarity: 0
   canBeStarter: 0
   starterWeight: 1

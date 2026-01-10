@@ -16,10 +16,10 @@ MonoBehaviour:
   displayName: Scut
   type: 11
   typeIcon: {fileID: 21300000, guid: 8e7ac2a8f10ec4ba5860e036443e3fc8, type: 3}
-  icon: {fileID: 0}
-  backIcon: {fileID: 0}
-  shinyIcon: {fileID: 0}
-  shinyBackIcon: {fileID: 0}
+  icon: {fileID: 21300000, guid: 06bed6ac2a9c14bf9a9194f5966660b3, type: 3}
+  backIcon: {fileID: 21300000, guid: 1e8db70c5598d458594b262e33befaea, type: 3}
+  shinyIcon: {fileID: 21300000, guid: fce1cc1632f914a10be1b23ae758ae01, type: 3}
+  shinyBackIcon: {fileID: 21300000, guid: 521b0d92f72014c208515ef8a572aac8, type: 3}
   rarity: 0
   canBeStarter: 0
   starterWeight: 1

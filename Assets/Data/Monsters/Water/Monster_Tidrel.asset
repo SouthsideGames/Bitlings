@@ -16,10 +16,10 @@ MonoBehaviour:
   displayName: Tidrel
   type: 2
   typeIcon: {fileID: 21300000, guid: dd2adea89cda84ec4a589a6d1d5da1ae, type: 3}
-  icon: {fileID: 0}
-  backIcon: {fileID: 0}
-  shinyIcon: {fileID: 0}
-  shinyBackIcon: {fileID: 0}
+  icon: {fileID: 21300000, guid: 3ea19ef820cc14f8fb0c786198f0f71c, type: 3}
+  backIcon: {fileID: 21300000, guid: fb2198c8c5f04468e8b6bcba761d6be4, type: 3}
+  shinyIcon: {fileID: 21300000, guid: 9284a5fe77a94499bab2cc35581a9472, type: 3}
+  shinyBackIcon: {fileID: 21300000, guid: 74086251b55034ab39bada68e07a4d82, type: 3}
   rarity: 2
   canBeStarter: 0
   starterWeight: 1

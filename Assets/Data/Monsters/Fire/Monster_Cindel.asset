@@ -16,10 +16,10 @@ MonoBehaviour:
   displayName: Cindel
   type: 1
   typeIcon: {fileID: 21300000, guid: d552cfb27992e494694a52b7e3578364, type: 3}
-  icon: {fileID: 0}
-  backIcon: {fileID: 0}
-  shinyIcon: {fileID: 0}
-  shinyBackIcon: {fileID: 0}
+  icon: {fileID: 21300000, guid: 41901ed4175e94cf49b027a837dd84b4, type: 3}
+  backIcon: {fileID: 21300000, guid: 673046ecda0254cb690320a01431d94b, type: 3}
+  shinyIcon: {fileID: 21300000, guid: 838b6ebe823ad4cdbab4576d703c70c3, type: 3}
+  shinyBackIcon: {fileID: 21300000, guid: 91ad7ef2332d843cfa6388a63886b208, type: 3}
   rarity: 0
   canBeStarter: 0
   starterWeight: 1

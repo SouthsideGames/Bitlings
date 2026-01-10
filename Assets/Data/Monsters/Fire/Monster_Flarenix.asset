@@ -16,10 +16,10 @@ MonoBehaviour:
   displayName: Flarenix
   type: 1
   typeIcon: {fileID: 21300000, guid: d552cfb27992e494694a52b7e3578364, type: 3}
-  icon: {fileID: 0}
-  backIcon: {fileID: 0}
-  shinyIcon: {fileID: 0}
-  shinyBackIcon: {fileID: 0}
+  icon: {fileID: 21300000, guid: 871ad3a0d09a34524a301857cefb2dc0, type: 3}
+  backIcon: {fileID: 21300000, guid: fa9817075de254532ad7b5d8f99f594e, type: 3}
+  shinyIcon: {fileID: 21300000, guid: ea903369299dd41adaa45a9194e564fe, type: 3}
+  shinyBackIcon: {fileID: 21300000, guid: 62e85b02d45f44e0db3b459d510ecc2a, type: 3}
   rarity: 3
   canBeStarter: 0
   starterWeight: 1

@@ -16,10 +16,10 @@ MonoBehaviour:
   displayName: Scuttorn
   type: 11
   typeIcon: {fileID: 21300000, guid: 8e7ac2a8f10ec4ba5860e036443e3fc8, type: 3}
-  icon: {fileID: 0}
-  backIcon: {fileID: 0}
-  shinyIcon: {fileID: 0}
-  shinyBackIcon: {fileID: 0}
+  icon: {fileID: 21300000, guid: a33d159c0fe6b4f82b71e83507107381, type: 3}
+  backIcon: {fileID: 21300000, guid: 8e3572099e1e44e1cbe890799d41be95, type: 3}
+  shinyIcon: {fileID: 21300000, guid: f14dec0dc87db43a6a37eef72f732ed0, type: 3}
+  shinyBackIcon: {fileID: 21300000, guid: 85677954108da42e9a829b13586c5501, type: 3}
   rarity: 1
   canBeStarter: 0
   starterWeight: 1

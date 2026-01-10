@@ -16,10 +16,10 @@ MonoBehaviour:
   displayName: Fira
   type: 1
   typeIcon: {fileID: 21300000, guid: d552cfb27992e494694a52b7e3578364, type: 3}
-  icon: {fileID: 0}
-  backIcon: {fileID: 0}
-  shinyIcon: {fileID: 0}
-  shinyBackIcon: {fileID: 0}
+  icon: {fileID: 21300000, guid: 3c9075c14f6124abfbbe256711caba28, type: 3}
+  backIcon: {fileID: 21300000, guid: d5127f783c7194d759df7ba688ed7940, type: 3}
+  shinyIcon: {fileID: 21300000, guid: 1cd1a73b694d64f19967c48dc1830315, type: 3}
+  shinyBackIcon: {fileID: 21300000, guid: 462755a08b75d428e9a1cc1be67d87ca, type: 3}
   rarity: 0
   canBeStarter: 0
   starterWeight: 1

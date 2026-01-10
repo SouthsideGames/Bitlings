@@ -16,10 +16,10 @@ MonoBehaviour:
   displayName: Aerel
   type: 9
   typeIcon: {fileID: 21300000, guid: 1ddb138c655b3471cad890ace56df64b, type: 3}
-  icon: {fileID: 0}
-  backIcon: {fileID: 0}
-  shinyIcon: {fileID: 0}
-  shinyBackIcon: {fileID: 0}
+  icon: {fileID: 21300000, guid: d589333525c604f668e0b33b022c0b78, type: 3}
+  backIcon: {fileID: 21300000, guid: f77bc742fb4f34e3b87d583d8afa24da, type: 3}
+  shinyIcon: {fileID: 21300000, guid: 9a3ed5401bab1422db6f90aba393b491, type: 3}
+  shinyBackIcon: {fileID: 21300000, guid: 4da9676887f0e47e1b4f8ccf3d866925, type: 3}
   rarity: 1
   canBeStarter: 0
   starterWeight: 1

@@ -16,10 +16,10 @@ MonoBehaviour:
   displayName: Wyrmorn
   type: 14
   typeIcon: {fileID: 21300000, guid: 3934876669845455994cef6f6ee793af, type: 3}
-  icon: {fileID: 0}
-  backIcon: {fileID: 0}
-  shinyIcon: {fileID: 0}
-  shinyBackIcon: {fileID: 0}
+  icon: {fileID: 21300000, guid: db29581c0355c409ab4201b632cc8b82, type: 3}
+  backIcon: {fileID: 21300000, guid: 4577ea7120ef7409dba8aa0ffee0ef19, type: 3}
+  shinyIcon: {fileID: 21300000, guid: 1a68e4b95f67a4163ae5132c65dadf47, type: 3}
+  shinyBackIcon: {fileID: 21300000, guid: 73fdc3fb4af674bdfa837b691712993a, type: 3}
   rarity: 2
   canBeStarter: 0
   starterWeight: 1

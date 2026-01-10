@@ -16,10 +16,10 @@ MonoBehaviour:
   displayName: Oracul
   type: 10
   typeIcon: {fileID: 21300000, guid: fb4479ed54fe64621a9e7a735eeffad8, type: 3}
-  icon: {fileID: 0}
-  backIcon: {fileID: 0}
-  shinyIcon: {fileID: 0}
-  shinyBackIcon: {fileID: 0}
+  icon: {fileID: 21300000, guid: e587140cc69114f8a8ba05c2fb62282b, type: 3}
+  backIcon: {fileID: 21300000, guid: a88fe3030136e4e0f8926092d30a3daf, type: 3}
+  shinyIcon: {fileID: 21300000, guid: 2bf92cd939bb64a4a99bd6832a02ddf1, type: 3}
+  shinyBackIcon: {fileID: 21300000, guid: 0b06ecbb2a3954773bc774a58df0dc01, type: 3}
   rarity: 1
   canBeStarter: 0
   starterWeight: 1

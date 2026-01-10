@@ -16,10 +16,10 @@ MonoBehaviour:
   displayName: Seeron
   type: 10
   typeIcon: {fileID: 21300000, guid: fb4479ed54fe64621a9e7a735eeffad8, type: 3}
-  icon: {fileID: 0}
-  backIcon: {fileID: 0}
-  shinyIcon: {fileID: 0}
-  shinyBackIcon: {fileID: 0}
+  icon: {fileID: 21300000, guid: 6033eebbff48146be8322737c9e4c537, type: 3}
+  backIcon: {fileID: 21300000, guid: ce4a56f2bf980458795991f15e8b0115, type: 3}
+  shinyIcon: {fileID: 21300000, guid: a41535740766246d29ef9f55750d2c30, type: 3}
+  shinyBackIcon: {fileID: 21300000, guid: 87657bec7c7b0484cae2965fceea9eba, type: 3}
   rarity: 0
   canBeStarter: 0
   starterWeight: 1

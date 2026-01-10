@@ -16,10 +16,10 @@ MonoBehaviour:
   displayName: Ornex
   type: 10
   typeIcon: {fileID: 21300000, guid: fb4479ed54fe64621a9e7a735eeffad8, type: 3}
-  icon: {fileID: 0}
-  backIcon: {fileID: 0}
-  shinyIcon: {fileID: 0}
-  shinyBackIcon: {fileID: 0}
+  icon: {fileID: 21300000, guid: 20ebf859f04f44cb1b23b26b6111c60f, type: 3}
+  backIcon: {fileID: 21300000, guid: 11a7289c21fe34f3b969c1fef26dda67, type: 3}
+  shinyIcon: {fileID: 21300000, guid: f6920283fb30a4578b6e974b4f0e4f5b, type: 3}
+  shinyBackIcon: {fileID: 21300000, guid: 5b47c801f97be43bcaa3b0a16ca33f95, type: 3}
   rarity: 2
   canBeStarter: 0
   starterWeight: 1

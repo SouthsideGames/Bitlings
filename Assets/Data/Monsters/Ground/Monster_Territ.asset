@@ -16,10 +16,10 @@ MonoBehaviour:
   displayName: Territ
   type: 8
   typeIcon: {fileID: 21300000, guid: f0d6243fead4a41fcae07804c4d66233, type: 3}
-  icon: {fileID: 0}
-  backIcon: {fileID: 0}
-  shinyIcon: {fileID: 0}
-  shinyBackIcon: {fileID: 0}
+  icon: {fileID: 21300000, guid: 1da7dd328426c40cf891637735fd5af2, type: 3}
+  backIcon: {fileID: 21300000, guid: 390971e2b7924444686f9f2a20e07ec0, type: 3}
+  shinyIcon: {fileID: 21300000, guid: eb69c02e43bed4c1492296a5ac45e826, type: 3}
+  shinyBackIcon: {fileID: 21300000, guid: f60a70d4c60954441957617476a2260a, type: 3}
   rarity: 0
   canBeStarter: 0
   starterWeight: 1

@@ -16,10 +16,10 @@ MonoBehaviour:
   displayName: Orin
   type: 10
   typeIcon: {fileID: 21300000, guid: fb4479ed54fe64621a9e7a735eeffad8, type: 3}
-  icon: {fileID: 0}
-  backIcon: {fileID: 0}
-  shinyIcon: {fileID: 0}
-  shinyBackIcon: {fileID: 0}
+  icon: {fileID: 21300000, guid: 3b0d1e7990a9f46199d6c65871f72a6b, type: 3}
+  backIcon: {fileID: 21300000, guid: 151d5279af19a45be954e6851c6155c8, type: 3}
+  shinyIcon: {fileID: 21300000, guid: 91782864d688a4dbb8ab2fbdfbea0a15, type: 3}
+  shinyBackIcon: {fileID: 21300000, guid: 38e9e4464a58d4e05999e42a22144359, type: 3}
   rarity: 0
   canBeStarter: 0
   starterWeight: 1

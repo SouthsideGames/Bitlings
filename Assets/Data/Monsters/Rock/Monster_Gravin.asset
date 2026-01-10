@@ -16,10 +16,10 @@ MonoBehaviour:
   displayName: Gravin
   type: 12
   typeIcon: {fileID: 21300000, guid: 5c631c9f2f98b441caa0de9f7de0cfcd, type: 3}
-  icon: {fileID: 0}
-  backIcon: {fileID: 0}
-  shinyIcon: {fileID: 0}
-  shinyBackIcon: {fileID: 0}
+  icon: {fileID: 21300000, guid: bc5820ef9d0944ec1834cf1651433c16, type: 3}
+  backIcon: {fileID: 21300000, guid: 094319493c56c441193db8a1a73bfc59, type: 3}
+  shinyIcon: {fileID: 21300000, guid: acf273f9ea16740989b12321cb4d8f39, type: 3}
+  shinyBackIcon: {fileID: 21300000, guid: 306851bbe97d847beba69f439d6ad4db, type: 3}
   rarity: 2
   canBeStarter: 0
   starterWeight: 1

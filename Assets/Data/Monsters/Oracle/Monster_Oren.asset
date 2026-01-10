@@ -16,10 +16,10 @@ MonoBehaviour:
   displayName: Oren
   type: 10
   typeIcon: {fileID: 21300000, guid: fb4479ed54fe64621a9e7a735eeffad8, type: 3}
-  icon: {fileID: 0}
-  backIcon: {fileID: 0}
-  shinyIcon: {fileID: 0}
-  shinyBackIcon: {fileID: 0}
+  icon: {fileID: 21300000, guid: da0a6b880b50544e3bee33e693599a0b, type: 3}
+  backIcon: {fileID: 21300000, guid: 1d718b0c694ca46cab9d846cdace5c87, type: 3}
+  shinyIcon: {fileID: 21300000, guid: af7b20a3481f04996a9e8488949a534f, type: 3}
+  shinyBackIcon: {fileID: 21300000, guid: b1bd34f218f9f4daba97003c278a8994, type: 3}
   rarity: 1
   canBeStarter: 0
   starterWeight: 1

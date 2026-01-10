@@ -16,10 +16,10 @@ MonoBehaviour:
   displayName: Frostrell
   type: 5
   typeIcon: {fileID: 21300000, guid: 7503da639a0af47adbd6514de1c118ba, type: 3}
-  icon: {fileID: 0}
-  backIcon: {fileID: 0}
-  shinyIcon: {fileID: 0}
-  shinyBackIcon: {fileID: 0}
+  icon: {fileID: 21300000, guid: 42d23387b27144120bebc324e889a3a9, type: 3}
+  backIcon: {fileID: 21300000, guid: a08d26161cf804da7b5fee87dc08e99d, type: 3}
+  shinyIcon: {fileID: 21300000, guid: 771bfb2b5b64a4c7f9cbe0a9e5b51eca, type: 3}
+  shinyBackIcon: {fileID: 21300000, guid: 077bf5409244e403b830c86ebbef23ce, type: 3}
   rarity: 1
   canBeStarter: 0
   starterWeight: 1

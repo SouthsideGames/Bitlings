@@ -16,10 +16,10 @@ MonoBehaviour:
   displayName: Emberon
   type: 1
   typeIcon: {fileID: 21300000, guid: d552cfb27992e494694a52b7e3578364, type: 3}
-  icon: {fileID: 0}
-  backIcon: {fileID: 0}
-  shinyIcon: {fileID: 0}
-  shinyBackIcon: {fileID: 0}
+  icon: {fileID: 21300000, guid: b7f29d718e1ca448f9a4ce44584ec0bd, type: 3}
+  backIcon: {fileID: 21300000, guid: 4b1571093f72c4daf9e572af63b57737, type: 3}
+  shinyIcon: {fileID: 21300000, guid: b630029fb8a064e7b9dc158d741c0b06, type: 3}
+  shinyBackIcon: {fileID: 21300000, guid: 6f005c38484d84c518f06a56c261501d, type: 3}
   rarity: 1
   canBeStarter: 0
   starterWeight: 1

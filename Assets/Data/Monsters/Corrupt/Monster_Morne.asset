@@ -16,10 +16,10 @@ MonoBehaviour:
   displayName: Morne
   type: 7
   typeIcon: {fileID: 21300000, guid: 10d50b4d1dee041cc8dcf349a9ce86a1, type: 3}
-  icon: {fileID: 0}
-  backIcon: {fileID: 0}
-  shinyIcon: {fileID: 0}
-  shinyBackIcon: {fileID: 0}
+  icon: {fileID: 21300000, guid: 5c95ed2cd7c4947d4800f7e475c7b543, type: 3}
+  backIcon: {fileID: 21300000, guid: c58644eb876344ca5a2fca9120ddd284, type: 3}
+  shinyIcon: {fileID: 21300000, guid: 46d31cf29b5fa4c03b74568e67030731, type: 3}
+  shinyBackIcon: {fileID: 21300000, guid: a51d6700bd65242f29730b282b4f0aac, type: 3}
   rarity: 1
   canBeStarter: 0
   starterWeight: 1

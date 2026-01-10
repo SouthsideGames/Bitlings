@@ -16,10 +16,10 @@ MonoBehaviour:
   displayName: Sporel
   type: 7
   typeIcon: {fileID: 21300000, guid: 10d50b4d1dee041cc8dcf349a9ce86a1, type: 3}
-  icon: {fileID: 0}
-  backIcon: {fileID: 0}
-  shinyIcon: {fileID: 0}
-  shinyBackIcon: {fileID: 0}
+  icon: {fileID: 21300000, guid: d8e28166e124548b5a62e77998ed5acd, type: 3}
+  backIcon: {fileID: 21300000, guid: 2d180bd764dc8443894d47a6955008c4, type: 3}
+  shinyIcon: {fileID: 21300000, guid: 56d87ec4ef2c647ef8e47f20508497a3, type: 3}
+  shinyBackIcon: {fileID: 21300000, guid: 00bc4c4f3fcbf436e9c9800513641b86, type: 3}
   rarity: 0
   canBeStarter: 0
   starterWeight: 1

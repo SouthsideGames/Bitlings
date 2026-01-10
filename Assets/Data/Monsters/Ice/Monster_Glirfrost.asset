@@ -16,10 +16,10 @@ MonoBehaviour:
   displayName: Glirfrost
   type: 5
   typeIcon: {fileID: 21300000, guid: 7503da639a0af47adbd6514de1c118ba, type: 3}
-  icon: {fileID: 0}
-  backIcon: {fileID: 0}
-  shinyIcon: {fileID: 0}
-  shinyBackIcon: {fileID: 0}
+  icon: {fileID: 21300000, guid: 0318b6547d120435592a6866bd7ef2b9, type: 3}
+  backIcon: {fileID: 21300000, guid: 9b81683272e704b06be7bbda3e6c60e0, type: 3}
+  shinyIcon: {fileID: 21300000, guid: 3af45480fe0de4bac9882438dff4cec6, type: 3}
+  shinyBackIcon: {fileID: 21300000, guid: cebed416f8d774d2f8cd39d96cabf7f2, type: 3}
   rarity: 3
   canBeStarter: 0
   starterWeight: 1

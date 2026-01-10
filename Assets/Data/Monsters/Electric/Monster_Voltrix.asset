@@ -16,10 +16,10 @@ MonoBehaviour:
   displayName: Voltrix
   type: 4
   typeIcon: {fileID: 21300000, guid: e57a940f3027d4a9f83f25cefbc6d738, type: 3}
-  icon: {fileID: 0}
-  backIcon: {fileID: 0}
-  shinyIcon: {fileID: 0}
-  shinyBackIcon: {fileID: 0}
+  icon: {fileID: 21300000, guid: f358f10e67bfe4f60814520c6a0f1aab, type: 3}
+  backIcon: {fileID: 21300000, guid: 51974a2fa445649d29494a006d0c3c13, type: 3}
+  shinyIcon: {fileID: 21300000, guid: 9f7a445c6a1fc4e378f101feff606a15, type: 3}
+  shinyBackIcon: {fileID: 21300000, guid: aa0a994c2bd6a4cc9acea9c22e989d23, type: 3}
   rarity: 2
   canBeStarter: 0
   starterWeight: 1

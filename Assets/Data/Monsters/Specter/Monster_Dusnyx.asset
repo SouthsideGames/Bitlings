@@ -16,10 +16,10 @@ MonoBehaviour:
   displayName: Dusnyx
   type: 13
   typeIcon: {fileID: 21300000, guid: 00ff3f4c0d50247a8915bc882652db22, type: 3}
-  icon: {fileID: 0}
-  backIcon: {fileID: 0}
-  shinyIcon: {fileID: 0}
-  shinyBackIcon: {fileID: 0}
+  icon: {fileID: 21300000, guid: 08b074e4938ac4a6c864798f5b87c5ef, type: 3}
+  backIcon: {fileID: 21300000, guid: 1d6b0d9733b0b4f5d84a97e6bd02f845, type: 3}
+  shinyIcon: {fileID: 21300000, guid: 5bb550bb292e345cbb6f6c671f47db6b, type: 3}
+  shinyBackIcon: {fileID: 21300000, guid: b044742c5bfa8450c9ea663222b8e8ab, type: 3}
   rarity: 1
   canBeStarter: 0
   starterWeight: 1

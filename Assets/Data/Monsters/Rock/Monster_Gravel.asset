@@ -16,10 +16,10 @@ MonoBehaviour:
   displayName: Gravel
   type: 12
   typeIcon: {fileID: 21300000, guid: 5c631c9f2f98b441caa0de9f7de0cfcd, type: 3}
-  icon: {fileID: 0}
-  backIcon: {fileID: 0}
-  shinyIcon: {fileID: 0}
-  shinyBackIcon: {fileID: 0}
+  icon: {fileID: 21300000, guid: bea8670384d1b4f369da6887013dc1f5, type: 3}
+  backIcon: {fileID: 21300000, guid: cd04d24b1bcb340aaaf25d991cb8fcd2, type: 3}
+  shinyIcon: {fileID: 21300000, guid: 4e7cfd0fa497b408bb76e1a3134fbeb0, type: 3}
+  shinyBackIcon: {fileID: 21300000, guid: 263803d0c993a4336a55fb45dd8715b4, type: 3}
   rarity: 1
   canBeStarter: 0
   starterWeight: 1

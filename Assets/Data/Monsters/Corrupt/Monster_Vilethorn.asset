@@ -16,10 +16,10 @@ MonoBehaviour:
   displayName: Vilethorn
   type: 7
   typeIcon: {fileID: 21300000, guid: 10d50b4d1dee041cc8dcf349a9ce86a1, type: 3}
-  icon: {fileID: 0}
-  backIcon: {fileID: 0}
-  shinyIcon: {fileID: 0}
-  shinyBackIcon: {fileID: 0}
+  icon: {fileID: 21300000, guid: e3e8c1a1c9c124a4cbb5bd7be86b757f, type: 3}
+  backIcon: {fileID: 21300000, guid: 5f8d5e52aa15c479ba182e2053d0fabc, type: 3}
+  shinyIcon: {fileID: 21300000, guid: ecd80df0fa4b0445a8fe88b82d9993b6, type: 3}
+  shinyBackIcon: {fileID: 21300000, guid: 936c25197903c4b6ab2be8e9586e5412, type: 3}
   rarity: 3
   canBeStarter: 0
   starterWeight: 1

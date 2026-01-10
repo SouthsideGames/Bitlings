@@ -16,10 +16,10 @@ MonoBehaviour:
   displayName: Skylit
   type: 9
   typeIcon: {fileID: 21300000, guid: 1ddb138c655b3471cad890ace56df64b, type: 3}
-  icon: {fileID: 0}
-  backIcon: {fileID: 0}
-  shinyIcon: {fileID: 0}
-  shinyBackIcon: {fileID: 0}
+  icon: {fileID: 21300000, guid: c6f20e533a6804c4bab5d3e1dcc3af20, type: 3}
+  backIcon: {fileID: 21300000, guid: 52b81eea1b03c44a3b47d63df73beb1c, type: 3}
+  shinyIcon: {fileID: 21300000, guid: f0ca5f8ae9d0044ba88358f374ee78dc, type: 3}
+  shinyBackIcon: {fileID: 21300000, guid: c0f428bb016e5441f87b48082b154550, type: 3}
   rarity: 0
   canBeStarter: 0
   starterWeight: 1

@@ -16,10 +16,10 @@ MonoBehaviour:
   displayName: Flare
   type: 1
   typeIcon: {fileID: 21300000, guid: d552cfb27992e494694a52b7e3578364, type: 3}
-  icon: {fileID: 0}
-  backIcon: {fileID: 0}
-  shinyIcon: {fileID: 0}
-  shinyBackIcon: {fileID: 0}
+  icon: {fileID: 21300000, guid: d84531071b55b4bd794e064eb6f5dd3a, type: 3}
+  backIcon: {fileID: 21300000, guid: b6a08b1dc617a44988f66e2c3f7c5044, type: 3}
+  shinyIcon: {fileID: 21300000, guid: 61327a0635d9d4c07a3a21cfd2f5b5e4, type: 3}
+  shinyBackIcon: {fileID: 21300000, guid: 7255a8424af5e469bb4147d197bf7338, type: 3}
   rarity: 2
   canBeStarter: 0
   starterWeight: 1

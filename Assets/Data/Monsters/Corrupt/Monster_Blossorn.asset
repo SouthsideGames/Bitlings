@@ -16,10 +16,10 @@ MonoBehaviour:
   displayName: Blossorn
   type: 7
   typeIcon: {fileID: 21300000, guid: 10d50b4d1dee041cc8dcf349a9ce86a1, type: 3}
-  icon: {fileID: 0}
-  backIcon: {fileID: 0}
-  shinyIcon: {fileID: 0}
-  shinyBackIcon: {fileID: 0}
+  icon: {fileID: 21300000, guid: fd5c91169d2834ebf9e19a1e7bfa0f9a, type: 3}
+  backIcon: {fileID: 21300000, guid: e6c97936f16b34643a350b5300860aa3, type: 3}
+  shinyIcon: {fileID: 21300000, guid: 01d410cc9b8b24cccb6ba7eb73cb6190, type: 3}
+  shinyBackIcon: {fileID: 21300000, guid: 4af91bb1498054750b59e7ce8f4fe20a, type: 3}
   rarity: 1
   canBeStarter: 0
   starterWeight: 1
