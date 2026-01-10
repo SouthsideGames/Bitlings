@@ -497,15 +497,20 @@ public class MonsterDetailPanelUI : MonoBehaviour
                     }
                 }
 
-                bool isAssign = _mode == MonsterDetailMode.AssignToTeam;
                 bool isStarter = _mode == MonsterDetailMode.StarterSelect;
                 bool isCodex = _mode == MonsterDetailMode.CodexView;
+                bool isAssign = _mode == MonsterDetailMode.AssignToTeam;
 
+                // Starter: Pick/Back
                 if (starterButtonsHolder) starterButtonsHolder.SetActive(isStarter);
-                if (slotButtonsHolder)    slotButtonsHolder.SetActive(isAssign && _teamSlotIndex < 0);
-                if (teamHolder)           teamHolder.SetActive(isAssign && _teamSlotIndex >= 0);
 
-                // Codex should have a close button (same as Assign)
+                // Codex: Slot buttons ONLY
+                if (slotButtonsHolder) slotButtonsHolder.SetActive(isCodex);
+
+                // Team detail view: Remove holder ONLY (Assign + viewing an occupied slot)
+                if (teamHolder) teamHolder.SetActive(isAssign && _teamSlotIndex >= 0);
+
+                // Close button in Codex + Assign modes (not Starter)
                 if (closeButton) closeButton.gameObject.SetActive(!isStarter);
 
                 if (lvlText) lvlText.text = $"LVL: {GetDisplayLevel()}";
@@ -718,8 +723,7 @@ public class MonsterDetailPanelUI : MonoBehaviour
 
         _browseIndex = index;
 
-        // When browsing, always show as Codex (read-only) unless you explicitly want StarterSelect browsing.
-        // We keep the current mode as-is, but do NOT open assign/team screens from swipe.
+        // Keep current mode as-is (Codex stays Codex; Starter stays Starter)
         current = def;
 
         RefreshEvolveButton();
@@ -797,6 +801,53 @@ public class MonsterDetailPanelUI : MonoBehaviour
 
     private void AssignToSlot(int slotIndex)
     {
+        slotIndex = Mathf.Clamp(slotIndex, 0, 2);
+
+        // ─────────────────────────────────────────
+        // CodexView: add current def into team slot
+        // ─────────────────────────────────────────
+        if (_mode == MonsterDetailMode.CodexView)
+        {
+            if (current == null || string.IsNullOrEmpty(current.id))
+            {
+                Hide();
+                return;
+            }
+
+            var data = SaveManager.Data;
+            if (data == null)
+            {
+                Debug.LogError("[MonsterDetailPanel] SaveManager.Data is null in AssignToSlot (CodexView).");
+                Hide();
+                return;
+            }
+
+            var team = data.team ?? new List<OwnedMonsterData>();
+            while (team.Count < 3) team.Add(new OwnedMonsterData());
+
+            // Create a new owned record for the selected slot.
+            // If your OwnedMonsterData needs more initialization, extend this struct/class accordingly.
+            var owned = new OwnedMonsterData
+            {
+                monsterId = current.id,
+                level = 1,
+                currentHP = -1, // UI treats -1 as "use max HP"
+                ownedUID = Guid.NewGuid().ToString("N")
+            };
+
+            team[slotIndex] = owned;
+
+            data.team = team;
+            SaveManager.Save();
+            GameEvents.OnTeamChanged?.Invoke();
+
+            Hide();
+            return;
+        }
+
+        // ─────────────────────────────────────────
+        // AssignToTeam: existing behavior (unchanged)
+        // ─────────────────────────────────────────
         if (_mode != MonsterDetailMode.AssignToTeam
             || _currentOwned == null
             || string.IsNullOrEmpty(_currentOwned.monsterId))
@@ -812,21 +863,21 @@ public class MonsterDetailPanelUI : MonoBehaviour
             return;
         }
 
-        var data = SaveManager.Data;
-        if (data == null)
+        var data2 = SaveManager.Data;
+        if (data2 == null)
         {
             Debug.LogError("[MonsterDetailPanel] SaveManager.Data is null in AssignToSlot.");
             Hide();
             return;
         }
 
-        var team = data.team ?? new List<OwnedMonsterData>();
-        while (team.Count < 3) team.Add(new OwnedMonsterData());
+        var team2 = data2.team ?? new List<OwnedMonsterData>();
+        while (team2.Count < 3) team2.Add(new OwnedMonsterData());
 
         var canonical = XPManager.Resolve(_currentOwned) ?? _currentOwned;
-        team[slotIndex] = canonical;
+        team2[slotIndex] = canonical;
 
-        data.team = team;
+        data2.team = team2;
         SaveManager.Save();
         GameEvents.OnTeamChanged?.Invoke();
 
