@@ -28,13 +28,6 @@ public partial class EncounterManager : MonoBehaviour
     [SerializeField, Range(0f, 1f)] private float wildTitleRollChance = 0.35f;
     [SerializeField] private string unemployedLabel = "Unemployed";
 
-    [Header("Wild Titles Debug (Testing)")]
-    [Tooltip("If enabled, any wild with at least 1 candidate will always roll a title (non-boss too).")]
-    [SerializeField] private bool debugForceWildTitleRoll = false;
-
-    [Tooltip("If enabled, logs candidate counts and outcomes each encounter.")]
-    [SerializeField] private bool debugWildTitleLogs = false;
-
     [Header("Options")]
     [SerializeField] private float postResultDelay = 0.8f;
     [SerializeField] private float autoPollSeconds = 0.25f;

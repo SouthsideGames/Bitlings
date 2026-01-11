@@ -15,7 +15,6 @@ public class TooltipUI : MonoBehaviour
     [SerializeField] private float fadeInTime = 0.12f;
     [SerializeField] private float fadeOutTime = 0.25f;
 
-    private bool _visible;
     private int _fadeTweenId = -1;
 
     void Awake()
@@ -48,8 +47,6 @@ public class TooltipUI : MonoBehaviour
         if (string.IsNullOrEmpty(text)) return;
 
         label.text = text;
-        _visible = true;
-
         CancelFadeTween();
 
         // Enable interaction while visible
@@ -71,8 +68,6 @@ public class TooltipUI : MonoBehaviour
     {
         if (!group) return;
 
-        _visible = false;
-
         CancelFadeTween();
 
         _fadeTweenId = LeanTween.alphaCanvas(group, 0f, fadeOutTime)
@@ -89,7 +84,6 @@ public class TooltipUI : MonoBehaviour
     // Instantly hide with no animation (if needed)
     public void HideImmediate()
     {
-        _visible = false;
         if (!group) return;
 
         CancelFadeTween();

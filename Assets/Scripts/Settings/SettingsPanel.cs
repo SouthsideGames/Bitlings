@@ -4,6 +4,52 @@ using TMPro;
 
 public class SettingsPanel : MonoBehaviour
 {
+    // ─────────────────────────────────────────────────────────
+    // NEW: Section / Tab UI
+    // ─────────────────────────────────────────────────────────
+    public enum SettingsSection
+    {
+        Audio,
+        Gameplay,
+        Notifications,
+        Seeds
+    }
+
+    [Header("Section Buttons")]
+    [SerializeField] private Button audioTabButton;
+    [SerializeField] private Button gameplayTabButton;
+    [SerializeField] private Button notificationsTabButton;
+    [SerializeField] private Button seedsTabButton;
+
+    [Header("Section Roots (Each root should contain its section UI)")]
+    [Tooltip("Root that holds master/music/sfx sliders + mute toggles + optional test SFX.")]
+    [SerializeField] private GameObject audioSectionRoot;
+
+    [Tooltip("Root that holds gameplay toggles (auto convert dupes, auto scroll log, etc.).")]
+    [SerializeField] private GameObject gameplaySectionRoot;
+
+    [Tooltip("Root that holds notifications toggles (master + fine-grained toggles).")]
+    [SerializeField] private GameObject notificationsSectionRoot;
+
+    [Tooltip("Root that holds seed toggles/fields and daily seed UI.")]
+    [SerializeField] private GameObject seedsSectionRoot;
+
+    [Header("Section Fade")]
+    [SerializeField, Range(0f, 1f)] private float hiddenAlpha = 0f;
+    [SerializeField, Min(0f)] private float fadeDuration = 0.15f;
+    [SerializeField] private bool disableHiddenSections = true;
+
+    [Header("Default Section On Open")]
+    [SerializeField] private SettingsSection defaultSection = SettingsSection.Audio;
+
+    private SettingsSection _activeSection;
+    private bool _sectionWired;
+    private CanvasGroup _audioCg, _gameplayCg, _notificationsCg, _seedsCg;
+
+    // ─────────────────────────────────────────────────────────
+    // Existing fields (UNCHANGED)
+    // ─────────────────────────────────────────────────────────
+
     [Header("Volume Sliders (0..1)")]
     [SerializeField] private Slider masterSlider;
     [SerializeField] private Slider musicSlider;
@@ -20,6 +66,13 @@ public class SettingsPanel : MonoBehaviour
 
     [Tooltip("If ON: the Battle Log scrolls to latest entry automatically.")]
     [SerializeField] private Toggle autoScrollLogToggle;
+
+    [Header("Notifications")]
+    [SerializeField] private Toggle notificationsEnabledToggle;
+    [SerializeField] private Toggle notifyJobStorageFullToggle;
+    [SerializeField] private Toggle notifyEnergyFullToggle;
+    [SerializeField] private Toggle notifyBoostExpiryToggle;
+    [SerializeField] private Toggle notifyFallback24hToggle;
 
     [Header("Seeds / RNG")]
     [Tooltip("If ON, systems can prefer the custom seed (when unlocked).")]
@@ -41,48 +94,39 @@ public class SettingsPanel : MonoBehaviour
     [Tooltip("Optional: plays a SFX so the player can hear the current volume.")]
     [SerializeField] private Button testSfxButton;
 
-    [Header("Reset Confirmation Panel")]
-    [Tooltip("Root object for the reset confirmation panel.")]
-    [SerializeField] private GameObject resetConfirmRoot;
-
-    [Tooltip("Optional confirmation text on the panel.")]
-    [SerializeField] private TextMeshProUGUI resetConfirmLabel;
-
-    [Tooltip("Accept button that executes the reset.")]
-    [SerializeField] private Button resetConfirmAcceptButton;
-
-    [Tooltip("Cancel button that closes the confirmation panel.")]
-    [SerializeField] private Button resetConfirmCancelButton;
-
-    [Tooltip("If provided, this text will be placed into the confirmation label when opening the panel.")]
-    [TextArea(2, 6)]
-    [SerializeField] private string resetConfirmMessage =
-        "Please confirm that you would like to reset your information.\nYou will lose all progress including upgrades, resources, etc.";
+    [Header("Debug")]
+    [SerializeField] private Button debugTestNotificationsButton;
+    [SerializeField] private Button debugClearNotificationsButton;
 
     bool _wired;
 
     void Awake()
     {
+        // Existing slider setup
         if (masterSlider) { masterSlider.minValue = 0f; masterSlider.maxValue = 1f; }
         if (musicSlider)  { musicSlider.minValue  = 0f; musicSlider.maxValue  = 1f; }
         if (sfxSlider)    { sfxSlider.minValue    = 0f; sfxSlider.maxValue    = 1f; }
 
+        // Existing button cleanup
         if (resetButton) resetButton.onClick.RemoveAllListeners();
         if (testSfxButton) testSfxButton.onClick.RemoveAllListeners();
         if (rerollDailySeedButton) rerollDailySeedButton.onClick.RemoveAllListeners();
 
-        // Confirm panel listeners
-        if (resetConfirmAcceptButton) resetConfirmAcceptButton.onClick.RemoveAllListeners();
-        if (resetConfirmCancelButton) resetConfirmCancelButton.onClick.RemoveAllListeners();
+        if (debugTestNotificationsButton) debugTestNotificationsButton.onClick.RemoveAllListeners();
+        if (debugClearNotificationsButton) debugClearNotificationsButton.onClick.RemoveAllListeners();
 
-        // Default: keep confirm panel closed
-        SetResetConfirmVisible(false);
+        // NEW: Setup section CanvasGroups
+        CacheSectionCanvasGroups();
     }
 
     void Start()
     {
         SafeSubscribe();
         Refresh();
+
+        // NEW: default section
+        ShowSection(defaultSection, instant: true);
+        WireSectionTabs();
     }
 
     void OnEnable()
@@ -90,11 +134,15 @@ public class SettingsPanel : MonoBehaviour
         SafeSubscribe();
         Refresh();
 
-        // Reset button opens confirmation panel (does not reset immediately)
+        // Existing listeners
         if (resetButton)
         {
             resetButton.onClick.RemoveAllListeners();
-            resetButton.onClick.AddListener(OpenResetConfirmation);
+            resetButton.onClick.AddListener(() =>
+            {
+                var mgr = SettingsManager.I;
+                if (mgr != null) mgr.OnReset();
+            });
         }
 
         if (testSfxButton)
@@ -103,7 +151,7 @@ public class SettingsPanel : MonoBehaviour
             testSfxButton.onClick.AddListener(() =>
             {
                 if (AudioManager.I != null)
-                    AudioManager.I.PreviewSfx(); // uses Click by default
+                    AudioManager.I.PreviewSfx();
             });
         }
 
@@ -113,27 +161,39 @@ public class SettingsPanel : MonoBehaviour
             rerollDailySeedButton.onClick.AddListener(OnClickRerollDailySeed);
         }
 
-        // Wire confirm panel buttons
-        if (resetConfirmAcceptButton)
+        if (debugTestNotificationsButton)
         {
-            resetConfirmAcceptButton.onClick.RemoveAllListeners();
-            resetConfirmAcceptButton.onClick.AddListener(OnResetConfirmAccept);
+            debugTestNotificationsButton.onClick.RemoveAllListeners();
+            debugTestNotificationsButton.onClick.AddListener(() =>
+            {
+                if (NotificationManager.I != null)
+                    NotificationManager.I.DebugScheduleTestNotifications();
+            });
         }
 
-        if (resetConfirmCancelButton)
+        if (debugClearNotificationsButton)
         {
-            resetConfirmCancelButton.onClick.RemoveAllListeners();
-            resetConfirmCancelButton.onClick.AddListener(OnResetConfirmCancel);
+            debugClearNotificationsButton.onClick.RemoveAllListeners();
+            debugClearNotificationsButton.onClick.AddListener(() =>
+            {
+                if (NotificationManager.I != null)
+                    NotificationManager.I.DebugClearScheduledNotifications();
+            });
         }
 
         WireEvents();
 
-        // Listen for feature unlocks so we can reveal seed UI when unlocked
         if (FeatureUnlockManager.I != null)
         {
             FeatureUnlockManager.I.OnFeatureUnlocked -= HandleFeatureUnlocked;
             FeatureUnlockManager.I.OnFeatureUnlocked += HandleFeatureUnlocked;
         }
+
+        // NEW: ensure tabs are wired & show the active/default section on reopen
+        CacheSectionCanvasGroups();
+        WireSectionTabs();
+        if (!IsSectionValid(_activeSection)) _activeSection = defaultSection;
+        ShowSection(_activeSection, instant: true);
     }
 
     void OnDisable()
@@ -142,61 +202,164 @@ public class SettingsPanel : MonoBehaviour
 
         if (resetButton) resetButton.onClick.RemoveAllListeners();
         if (testSfxButton) testSfxButton.onClick.RemoveAllListeners();
+        if (rerollDailySeedButton) rerollDailySeedButton.onClick.RemoveAllListeners();
 
-        if (autoScrollLogToggle)
-            autoScrollLogToggle.onValueChanged.RemoveListener(OnAutoScrollChanged);
-
-        if (rerollDailySeedButton)
-            rerollDailySeedButton.onClick.RemoveAllListeners();
-
-        if (resetConfirmAcceptButton)
-            resetConfirmAcceptButton.onClick.RemoveAllListeners();
-
-        if (resetConfirmCancelButton)
-            resetConfirmCancelButton.onClick.RemoveAllListeners();
+        if (debugTestNotificationsButton) debugTestNotificationsButton.onClick.RemoveAllListeners();
+        if (debugClearNotificationsButton) debugClearNotificationsButton.onClick.RemoveAllListeners();
 
         UnwireEvents();
 
         if (FeatureUnlockManager.I != null)
             FeatureUnlockManager.I.OnFeatureUnlocked -= HandleFeatureUnlocked;
+
+        // NEW: tab listeners cleanup
+        UnwireSectionTabs();
     }
 
-    // ---------------- Reset Confirmation ----------------
+    // ─────────────────────────────────────────────────────────
+    // NEW: Tabs / Sections
+    // ─────────────────────────────────────────────────────────
 
-    void OpenResetConfirmation()
+    void CacheSectionCanvasGroups()
     {
-        if (resetConfirmLabel && !string.IsNullOrEmpty(resetConfirmMessage))
-            resetConfirmLabel.text = resetConfirmMessage;
-
-        SetResetConfirmVisible(true);
+        _audioCg = EnsureCanvasGroup(audioSectionRoot);
+        _gameplayCg = EnsureCanvasGroup(gameplaySectionRoot);
+        _notificationsCg = EnsureCanvasGroup(notificationsSectionRoot);
+        _seedsCg = EnsureCanvasGroup(seedsSectionRoot);
     }
 
-    void OnResetConfirmAccept()
+    CanvasGroup EnsureCanvasGroup(GameObject root)
     {
-        SetResetConfirmVisible(false);
+        if (!root) return null;
+        var cg = root.GetComponent<CanvasGroup>();
+        if (!cg) cg = root.AddComponent<CanvasGroup>();
+        return cg;
+    }
 
-        var mgr = SettingsManager.I;
-        if (mgr != null)
+    void WireSectionTabs()
+    {
+        if (_sectionWired) return;
+
+        if (audioTabButton)
         {
-            // This should be your "clear everything" entry point.
-            // Keep ALL destructive logic centralized in SettingsManager.
-            mgr.OnReset();
+            audioTabButton.onClick.RemoveAllListeners();
+            audioTabButton.onClick.AddListener(() => ShowSection(SettingsSection.Audio));
+        }
+
+        if (gameplayTabButton)
+        {
+            gameplayTabButton.onClick.RemoveAllListeners();
+            gameplayTabButton.onClick.AddListener(() => ShowSection(SettingsSection.Gameplay));
+        }
+
+        if (notificationsTabButton)
+        {
+            notificationsTabButton.onClick.RemoveAllListeners();
+            notificationsTabButton.onClick.AddListener(() => ShowSection(SettingsSection.Notifications));
+        }
+
+        if (seedsTabButton)
+        {
+            seedsTabButton.onClick.RemoveAllListeners();
+            seedsTabButton.onClick.AddListener(() => ShowSection(SettingsSection.Seeds));
+        }
+
+        _sectionWired = true;
+    }
+
+    void UnwireSectionTabs()
+    {
+        if (!_sectionWired) return;
+
+        if (audioTabButton) audioTabButton.onClick.RemoveAllListeners();
+        if (gameplayTabButton) gameplayTabButton.onClick.RemoveAllListeners();
+        if (notificationsTabButton) notificationsTabButton.onClick.RemoveAllListeners();
+        if (seedsTabButton) seedsTabButton.onClick.RemoveAllListeners();
+
+        _sectionWired = false;
+    }
+
+    bool IsSectionValid(SettingsSection section)
+    {
+        return section switch
+        {
+            SettingsSection.Audio => audioSectionRoot != null,
+            SettingsSection.Gameplay => gameplaySectionRoot != null,
+            SettingsSection.Notifications => notificationsSectionRoot != null,
+            SettingsSection.Seeds => seedsSectionRoot != null,
+            _ => false
+        };
+    }
+
+    public void ShowSection(SettingsSection section, bool instant = false)
+    {
+        _activeSection = section;
+
+        // You can choose whether to fade or instantly swap.
+        bool doInstant = instant || fadeDuration <= 0f;
+
+        SetSectionVisible(_audioCg, section == SettingsSection.Audio, doInstant);
+        SetSectionVisible(_gameplayCg, section == SettingsSection.Gameplay, doInstant);
+        SetSectionVisible(_notificationsCg, section == SettingsSection.Notifications, doInstant);
+        SetSectionVisible(_seedsCg, section == SettingsSection.Seeds, doInstant);
+    }
+
+    void SetSectionVisible(CanvasGroup cg, bool visible, bool instant)
+    {
+        if (!cg) return;
+
+        var go = cg.gameObject;
+
+        // Ensure active before fading in
+        if (visible)
+        {
+            if (disableHiddenSections && !go.activeSelf) go.SetActive(true);
+            cg.blocksRaycasts = true;
+            cg.interactable = true;
+
+            float target = 1f;
+            if (instant)
+            {
+                CancelTween(cg);
+                cg.alpha = target;
+            }
+            else
+            {
+                CancelTween(cg);
+                cg.alpha = Mathf.Clamp01(cg.alpha);
+                LeanTween.alphaCanvas(cg, target, fadeDuration).setIgnoreTimeScale(true);
+            }
         }
         else
         {
-            Debug.LogWarning("[SettingsPanel] SettingsManager.I was null; reset was not executed.");
+            cg.blocksRaycasts = false;
+            cg.interactable = false;
+
+            float target = hiddenAlpha;
+            if (instant)
+            {
+                CancelTween(cg);
+                cg.alpha = target;
+                if (disableHiddenSections) go.SetActive(false);
+            }
+            else
+            {
+                CancelTween(cg);
+                LeanTween.alphaCanvas(cg, target, fadeDuration)
+                    .setIgnoreTimeScale(true)
+                    .setOnComplete(() =>
+                    {
+                        if (disableHiddenSections) go.SetActive(false);
+                    });
+            }
         }
     }
 
-    void OnResetConfirmCancel()
+    void CancelTween(CanvasGroup cg)
     {
-        SetResetConfirmVisible(false);
-    }
-
-    void SetResetConfirmVisible(bool visible)
-    {
-        if (resetConfirmRoot)
-            resetConfirmRoot.SetActive(visible);
+        if (!cg) return;
+        // LeanTween-safe cancel (won’t throw if nothing exists)
+        LeanTween.cancel(cg.gameObject);
     }
 
     // ---------------- Core ----------------
@@ -206,7 +369,7 @@ public class SettingsPanel : MonoBehaviour
         var sm = SettingsManager.I;
         if (sm != null)
         {
-            sm.OnSettingsChanged -= Refresh; // de-dupe
+            sm.OnSettingsChanged -= Refresh;
             sm.OnSettingsChanged += Refresh;
         }
     }
@@ -223,23 +386,45 @@ public class SettingsPanel : MonoBehaviour
         if (AudioManager.I)
         {
             if (masterSlider) masterSlider.SetValueWithoutNotify(AudioManager.I.GetMasterVolume());
-            if (musicSlider)  musicSlider .SetValueWithoutNotify(AudioManager.I.GetMusicVolume());
-            if (sfxSlider)    sfxSlider   .SetValueWithoutNotify(AudioManager.I.GetSfxVolume());
+            if (musicSlider)  musicSlider.SetValueWithoutNotify(AudioManager.I.GetMusicVolume());
+            if (sfxSlider)    sfxSlider.SetValueWithoutNotify(AudioManager.I.GetSfxVolume());
         }
 
-        // Settings state
         var s = SettingsManager.I ? SettingsManager.I.S : SaveManager.Data?.settings;
         if (s != null)
         {
-            if (muteAllToggle)   muteAllToggle  .SetIsOnWithoutNotify(s.muteAll);
+            if (muteAllToggle)   muteAllToggle.SetIsOnWithoutNotify(s.muteAll);
             if (muteMusicToggle) muteMusicToggle.SetIsOnWithoutNotify(s.muteMusic);
-            if (muteSfxToggle)   muteSfxToggle  .SetIsOnWithoutNotify(s.muteSfx);
+            if (muteSfxToggle)   muteSfxToggle.SetIsOnWithoutNotify(s.muteSfx);
 
             if (autoConvertDupesToggle)
                 autoConvertDupesToggle.SetIsOnWithoutNotify(s.autoConvertDuplicates);
 
             if (autoScrollLogToggle)
                 autoScrollLogToggle.SetIsOnWithoutNotify(s.autoScrollBattleLog);
+
+            // Notifications
+            if (notificationsEnabledToggle)
+                notificationsEnabledToggle.SetIsOnWithoutNotify(s.notificationsEnabled);
+
+            if (notifyJobStorageFullToggle)
+                notifyJobStorageFullToggle.SetIsOnWithoutNotify(s.notifyJobStorageFull);
+
+            if (notifyEnergyFullToggle)
+                notifyEnergyFullToggle.SetIsOnWithoutNotify(s.notifyEnergyFull);
+
+            if (notifyBoostExpiryToggle)
+                notifyBoostExpiryToggle.SetIsOnWithoutNotify(s.notifyBoostExpiry);
+
+            if (notifyFallback24hToggle)
+                notifyFallback24hToggle.SetIsOnWithoutNotify(s.notifyFallback24h);
+
+            // UX: disable children toggles if master is off
+            bool masterOn = s.notificationsEnabled;
+            if (notifyJobStorageFullToggle) notifyJobStorageFullToggle.interactable = masterOn;
+            if (notifyEnergyFullToggle)     notifyEnergyFullToggle.interactable     = masterOn;
+            if (notifyBoostExpiryToggle)    notifyBoostExpiryToggle.interactable    = masterOn;
+            if (notifyFallback24hToggle)    notifyFallback24hToggle.interactable    = masterOn;
         }
 
         RefreshSeedUi(s);
@@ -294,6 +479,38 @@ public class SettingsPanel : MonoBehaviour
             autoScrollLogToggle.onValueChanged.AddListener(OnAutoScrollChanged);
         }
 
+        // Notifications
+        if (notificationsEnabledToggle)
+        {
+            notificationsEnabledToggle.onValueChanged.RemoveListener(OnNotificationsEnabledChanged);
+            notificationsEnabledToggle.onValueChanged.AddListener(OnNotificationsEnabledChanged);
+        }
+
+        if (notifyJobStorageFullToggle)
+        {
+            notifyJobStorageFullToggle.onValueChanged.RemoveListener(OnNotifyJobStorageFullChanged);
+            notifyJobStorageFullToggle.onValueChanged.AddListener(OnNotifyJobStorageFullChanged);
+        }
+
+        if (notifyEnergyFullToggle)
+        {
+            notifyEnergyFullToggle.onValueChanged.RemoveListener(OnNotifyEnergyFullChanged);
+            notifyEnergyFullToggle.onValueChanged.AddListener(OnNotifyEnergyFullChanged);
+        }
+
+        if (notifyBoostExpiryToggle)
+        {
+            notifyBoostExpiryToggle.onValueChanged.RemoveListener(OnNotifyBoostExpiryChanged);
+            notifyBoostExpiryToggle.onValueChanged.AddListener(OnNotifyBoostExpiryChanged);
+        }
+
+        if (notifyFallback24hToggle)
+        {
+            notifyFallback24hToggle.onValueChanged.RemoveListener(OnNotifyFallback24hChanged);
+            notifyFallback24hToggle.onValueChanged.AddListener(OnNotifyFallback24hChanged);
+        }
+
+        // Seeds / RNG
         if (useCustomSeedToggle)
         {
             useCustomSeedToggle.onValueChanged.RemoveListener(OnUseCustomSeedChanged);
@@ -326,6 +543,17 @@ public class SettingsPanel : MonoBehaviour
 
         if (autoScrollLogToggle)
             autoScrollLogToggle.onValueChanged.RemoveListener(OnAutoScrollChanged);
+
+        if (notificationsEnabledToggle)
+            notificationsEnabledToggle.onValueChanged.RemoveListener(OnNotificationsEnabledChanged);
+        if (notifyJobStorageFullToggle)
+            notifyJobStorageFullToggle.onValueChanged.RemoveListener(OnNotifyJobStorageFullChanged);
+        if (notifyEnergyFullToggle)
+            notifyEnergyFullToggle.onValueChanged.RemoveListener(OnNotifyEnergyFullChanged);
+        if (notifyBoostExpiryToggle)
+            notifyBoostExpiryToggle.onValueChanged.RemoveListener(OnNotifyBoostExpiryChanged);
+        if (notifyFallback24hToggle)
+            notifyFallback24hToggle.onValueChanged.RemoveListener(OnNotifyFallback24hChanged);
 
         if (useCustomSeedToggle)
             useCustomSeedToggle.onValueChanged.RemoveListener(OnUseCustomSeedChanged);
@@ -380,6 +608,38 @@ public class SettingsPanel : MonoBehaviour
         if (mgr != null) mgr.SetAutoScrollBattleLog(on);
     }
 
+    // Notifications
+    void OnNotificationsEnabledChanged(bool on)
+    {
+        var mgr = SettingsManager.I;
+        if (mgr != null) mgr.SetNotificationsEnabled(on);
+    }
+
+    void OnNotifyJobStorageFullChanged(bool on)
+    {
+        var mgr = SettingsManager.I;
+        if (mgr != null) mgr.SetNotifyJobStorageFull(on);
+    }
+
+    void OnNotifyEnergyFullChanged(bool on)
+    {
+        var mgr = SettingsManager.I;
+        if (mgr != null) mgr.SetNotifyEnergyFull(on);
+    }
+
+    void OnNotifyBoostExpiryChanged(bool on)
+    {
+        var mgr = SettingsManager.I;
+        if (mgr != null) mgr.SetNotifyBoostExpiry(on);
+    }
+
+    void OnNotifyFallback24hChanged(bool on)
+    {
+        var mgr = SettingsManager.I;
+        if (mgr != null) mgr.SetNotifyFallback24h(on);
+    }
+
+    // Seeds
     void OnUseCustomSeedChanged(bool on)
     {
         var mgr = SettingsManager.I;
@@ -396,7 +656,6 @@ public class SettingsPanel : MonoBehaviour
     {
         if (SeedService.TryRerollDailySeed(out var newSeed))
         {
-            // Update label immediately
             RefreshDailySeedUi();
             Debug.Log($"[SettingsPanel] Rerolled daily seed: {newSeed}");
         }
@@ -406,8 +665,7 @@ public class SettingsPanel : MonoBehaviour
         }
     }
 
-    // -------------- Seeds UI / Feature gating --------------
-
+    // Feature gating hook
     void HandleFeatureUnlocked(FeatureId feature)
     {
         if (feature == FeatureId.Seeds_CustomInput ||

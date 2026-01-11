@@ -1,4 +1,4 @@
-using System;   
+using System;
 
 [Serializable]
 public class SettingsState
@@ -22,18 +22,29 @@ public class SettingsState
     public bool  logProductionBreakdown = false;
     public int   monstersSortMode = 0;
     public bool  autoConvertDuplicates = true;
+
+    // Existing battle/UI settings that your battle scripts reference
     public bool  autoScrollBattleLog = true;
     public float battleSpeed = 1f;
 
+    public bool condensedBattleText = false;        // GetCondensedBattleText()
+    public bool compressAutoBattleText = false;     // GetCompressAutoBattleText()
+    public bool battleHistoryEnabled = true;        // GetBattleHistoryEnabled()
+    public bool showInlineBattleIcons = true;       // GetShowInlineBattleIcons()
+
     // ───────── Seeds / RNG ─────────
-    // If true, systems that support seeding should prefer customSeed (when feature is unlocked).
     public bool   useCustomSeed = false;
     public string customSeed    = "";
 
-    // ───────── Battle UX / Accessibility ─────────
-    public bool showInlineBattleIcons = true;     // Crit/Shield/Effectiveness icons in narration
-    public bool condensedBattleText = false;      // Removes flavor lines (keeps results)
-    public bool compressAutoBattleText = true;    // Auto mode removes extra explanation lines
-    public bool battleHistoryEnabled = true;      // If false, hide the History button/modal
+    // ───────── Notifications ─────────
+    // Master switch: if OFF, NotificationManager schedules nothing.
+    public bool notificationsEnabled = true;
 
+    // Fine-grained toggles
+    public bool notifyJobStorageFull = true;
+    public bool notifyEnergyFull     = true;
+    public bool notifyBoostExpiry    = true;
+
+    // Optional generic fallback reminder
+    public bool notifyFallback24h    = true;
 }

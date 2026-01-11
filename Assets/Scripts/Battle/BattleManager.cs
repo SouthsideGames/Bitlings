@@ -152,10 +152,6 @@ public class BattleManager : MonoBehaviour
     [SerializeField, Range(0.5f, 2.0f)]
     private float encounterThreatScalar = 1.0f;
 
-    [Header("Debug")]
-    [SerializeField] private bool debugIncomingMitigation = false;
-    [SerializeField] private bool debugEffectivenessOutgoing = false;
-
     public bool NarrationLocked => _narrationLock;
     private bool _narrationLock;
     public MonsterDataSO WildDef => wildDef;

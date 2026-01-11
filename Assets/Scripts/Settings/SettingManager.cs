@@ -8,9 +8,7 @@ public class SettingsManager : MonoBehaviour
     public event Action OnSettingsChanged;
 
     public SettingsState S => Ensure();
-    SettingsState _fallback;
-
-    bool _isResetting;
+    private SettingsState _fallback;
 
     void Awake()
     {
@@ -19,11 +17,12 @@ public class SettingsManager : MonoBehaviour
             enabled = false;
             return;
         }
+
         I = this;
         Ensure();
     }
 
-    SettingsState Ensure()
+    private SettingsState Ensure()
     {
         if (SaveManager.Data == null)
             return _fallback ??= new SettingsState();
@@ -33,14 +32,21 @@ public class SettingsManager : MonoBehaviour
             SaveManager.Data.settings = new SettingsState();
             SaveManager.Save();
         }
+
         return SaveManager.Data.settings;
     }
 
-    void Persist()
+    private void Persist()
     {
-        if (SaveManager.Data != null) SaveManager.Save();
+        if (SaveManager.Data != null)
+            SaveManager.Save();
+
         OnSettingsChanged?.Invoke();
     }
+
+    // ─────────────────────────────────────────────────────────
+    // Defaults / Reset
+    // ─────────────────────────────────────────────────────────
 
     public void ApplyDefaults()
     {
@@ -56,31 +62,21 @@ public class SettingsManager : MonoBehaviour
 
     public void OnReset()
     {
-        if (_isResetting) return;
-        _isResetting = true;
+        SaveManager.ClearAll();
+        SaveManager.LoadOrCreate();
 
-        try
-        {
-            Time.timeScale = 1f;
+        if (ResourceManager.I != null)
+            ResourceManager.I.InitializeNewAccountResources();
 
-            SaveManager.ClearAll();
-            PlayerPrefs.DeleteAll();
-            PlayerPrefs.Save();
+        ApplyDefaults();
 
-            SaveManager.LoadOrCreate();
-
-            if (ResourceManager.I != null)
-                ResourceManager.I.InitializeNewAccountResources();
-
-            ApplyDefaults();
-
-            SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
-        }
-        finally
-        {
-            _isResetting = false;
-        }
+        Time.timeScale = 1f;
+        SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
     }
+
+    // ─────────────────────────────────────────────────────────
+    // Existing settings (examples you already had / we kept)
+    // ─────────────────────────────────────────────────────────
 
     public bool GetAutoConvertDuplicates() => S.autoConvertDuplicates;
 
@@ -119,14 +115,9 @@ public class SettingsManager : MonoBehaviour
         Persist();
     }
 
-    public bool GetShowInlineBattleIcons() => S.showInlineBattleIcons;
-
-    public void SetShowInlineBattleIcons(bool enabled)
-    {
-        if (S.showInlineBattleIcons == enabled) return;
-        S.showInlineBattleIcons = enabled;
-        Persist();
-    }
+    // ─────────────────────────────────────────────────────────
+    // BATTLE / UI SETTINGS (RESTORED to fix your compile errors)
+    // ─────────────────────────────────────────────────────────
 
     public bool GetCondensedBattleText() => S.condensedBattleText;
 
@@ -152,6 +143,64 @@ public class SettingsManager : MonoBehaviour
     {
         if (S.battleHistoryEnabled == enabled) return;
         S.battleHistoryEnabled = enabled;
+        Persist();
+    }
+
+    public bool GetShowInlineBattleIcons() => S.showInlineBattleIcons;
+
+    public void SetShowInlineBattleIcons(bool enabled)
+    {
+        if (S.showInlineBattleIcons == enabled) return;
+        S.showInlineBattleIcons = enabled;
+        Persist();
+    }
+
+    // ─────────────────────────────────────────────────────────
+    // Notifications (NEW)
+    // ─────────────────────────────────────────────────────────
+
+    public bool GetNotificationsEnabled() => S.notificationsEnabled;
+
+    public void SetNotificationsEnabled(bool enabled)
+    {
+        if (S.notificationsEnabled == enabled) return;
+        S.notificationsEnabled = enabled;
+        Persist();
+    }
+
+    public bool GetNotifyJobStorageFull() => S.notifyJobStorageFull;
+
+    public void SetNotifyJobStorageFull(bool enabled)
+    {
+        if (S.notifyJobStorageFull == enabled) return;
+        S.notifyJobStorageFull = enabled;
+        Persist();
+    }
+
+    public bool GetNotifyEnergyFull() => S.notifyEnergyFull;
+
+    public void SetNotifyEnergyFull(bool enabled)
+    {
+        if (S.notifyEnergyFull == enabled) return;
+        S.notifyEnergyFull = enabled;
+        Persist();
+    }
+
+    public bool GetNotifyBoostExpiry() => S.notifyBoostExpiry;
+
+    public void SetNotifyBoostExpiry(bool enabled)
+    {
+        if (S.notifyBoostExpiry == enabled) return;
+        S.notifyBoostExpiry = enabled;
+        Persist();
+    }
+
+    public bool GetNotifyFallback24h() => S.notifyFallback24h;
+
+    public void SetNotifyFallback24h(bool enabled)
+    {
+        if (S.notifyFallback24h == enabled) return;
+        S.notifyFallback24h = enabled;
         Persist();
     }
 }
