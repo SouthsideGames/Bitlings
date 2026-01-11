@@ -1,3 +1,4 @@
+using System.Collections;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -53,7 +54,7 @@ public class IntroManager : MonoBehaviour
 
         LeanTween.cancel(gameObject);
         if (pressToContinueCanvas) LeanTween.cancel(pressToContinueCanvas.gameObject);
-        if (titleRoot)            LeanTween.cancel(titleRoot);
+        if (titleRoot) LeanTween.cancel(titleRoot);
     }
 
     // ─────────────────────────────────────────────────────────────
@@ -65,8 +66,8 @@ public class IntroManager : MonoBehaviour
 
         pressToContinueCanvas.alpha = 0f;
         LeanTween.alphaCanvas(pressToContinueCanvas, 1f, flashDuration)
-                 .setEaseInOutSine()
-                 .setLoopPingPong();
+            .setEaseInOutSine()
+            .setLoopPingPong();
     }
 
     void StopFlash()
@@ -99,7 +100,7 @@ public class IntroManager : MonoBehaviour
         if (pressToContinueCanvas)
         {
             pressToContinueCanvas.blocksRaycasts = false;
-            pressToContinueCanvas.interactable  = false;
+            pressToContinueCanvas.interactable = false;
             LeanTween.alphaCanvas(pressToContinueCanvas, 0f, continueFadeOutTime);
         }
 
@@ -107,10 +108,22 @@ public class IntroManager : MonoBehaviour
         {
             UIManager.I?.Show(homePanelId);
             UIManager.I?.Hide(titlePanelId);
+
+            // NEW: open idle/auto-battle rewards AFTER Continue (and after Home is shown).
+            StartCoroutine(OpenIdleRewardsAfterContinue());
             return;
         }
 
         ShowStarterFlow();
+    }
+
+    private IEnumerator OpenIdleRewardsAfterContinue()
+    {
+        // Wait one frame to ensure panel routing completes and Home is visible.
+        yield return null;
+
+        // This will only open if there is a pending idle/auto battle summary/log.
+        IdleBattleManager.I?.TryOpenSummaryIfNeeded();
     }
 
     // ─────────────────────────────────────────────────────────────
@@ -125,7 +138,7 @@ public class IntroManager : MonoBehaviour
         }
 
         var startPos = titleRoot.anchoredPosition;
-        var endPos   = new Vector2(startPos.x, titleSlideY);
+        var endPos = new Vector2(startPos.x, titleSlideY);
 
         if (pressToContinueButton)
             pressToContinueButton.gameObject.SetActive(false);
@@ -173,8 +186,8 @@ public class IntroManager : MonoBehaviour
             }
             else
             {
-                if (pressToContinueButton)  pressToContinueButton.gameObject.SetActive(false);
-                if (pressToContinueCanvas)  pressToContinueCanvas.gameObject.SetActive(false);
+                if (pressToContinueButton) pressToContinueButton.gameObject.SetActive(false);
+                if (pressToContinueCanvas) pressToContinueCanvas.gameObject.SetActive(false);
             }
         }
 

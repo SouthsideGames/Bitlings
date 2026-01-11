@@ -5,8 +5,9 @@ using TMPro;
 public class SettingsPanel : MonoBehaviour
 {
     // ─────────────────────────────────────────────────────────
-    // NEW: Section / Tab UI
+    // Sections / Tabs
     // ─────────────────────────────────────────────────────────
+
     public enum SettingsSection
     {
         Audio,
@@ -47,7 +48,7 @@ public class SettingsPanel : MonoBehaviour
     private CanvasGroup _audioCg, _gameplayCg, _notificationsCg, _seedsCg;
 
     // ─────────────────────────────────────────────────────────
-    // Existing fields (UNCHANGED)
+    // Existing fields
     // ─────────────────────────────────────────────────────────
 
     [Header("Volume Sliders (0..1)")]
@@ -98,16 +99,18 @@ public class SettingsPanel : MonoBehaviour
     [SerializeField] private Button debugTestNotificationsButton;
     [SerializeField] private Button debugClearNotificationsButton;
 
-    bool _wired;
+    private bool _wired;
+
+    // ─────────────────────────────────────────────────────────
+    // Unity lifecycle
+    // ─────────────────────────────────────────────────────────
 
     void Awake()
     {
-        // Existing slider setup
         if (masterSlider) { masterSlider.minValue = 0f; masterSlider.maxValue = 1f; }
         if (musicSlider)  { musicSlider.minValue  = 0f; musicSlider.maxValue  = 1f; }
         if (sfxSlider)    { sfxSlider.minValue    = 0f; sfxSlider.maxValue    = 1f; }
 
-        // Existing button cleanup
         if (resetButton) resetButton.onClick.RemoveAllListeners();
         if (testSfxButton) testSfxButton.onClick.RemoveAllListeners();
         if (rerollDailySeedButton) rerollDailySeedButton.onClick.RemoveAllListeners();
@@ -115,7 +118,6 @@ public class SettingsPanel : MonoBehaviour
         if (debugTestNotificationsButton) debugTestNotificationsButton.onClick.RemoveAllListeners();
         if (debugClearNotificationsButton) debugClearNotificationsButton.onClick.RemoveAllListeners();
 
-        // NEW: Setup section CanvasGroups
         CacheSectionCanvasGroups();
     }
 
@@ -124,9 +126,12 @@ public class SettingsPanel : MonoBehaviour
         SafeSubscribe();
         Refresh();
 
-        // NEW: default section
-        ShowSection(defaultSection, instant: true);
         WireSectionTabs();
+
+        // Default section open (but never Seeds if locked)
+        _activeSection = defaultSection;
+        RefreshTabVisibility(); // may force away from Seeds if locked
+        ShowSection(_activeSection, instant: true);
     }
 
     void OnEnable()
@@ -134,7 +139,6 @@ public class SettingsPanel : MonoBehaviour
         SafeSubscribe();
         Refresh();
 
-        // Existing listeners
         if (resetButton)
         {
             resetButton.onClick.RemoveAllListeners();
@@ -189,10 +193,12 @@ public class SettingsPanel : MonoBehaviour
             FeatureUnlockManager.I.OnFeatureUnlocked += HandleFeatureUnlocked;
         }
 
-        // NEW: ensure tabs are wired & show the active/default section on reopen
         CacheSectionCanvasGroups();
         WireSectionTabs();
+
+        // Ensure the current section is valid, then apply tab visibility gating.
         if (!IsSectionValid(_activeSection)) _activeSection = defaultSection;
+        RefreshTabVisibility(); // may force away from Seeds if locked
         ShowSection(_activeSection, instant: true);
     }
 
@@ -212,12 +218,11 @@ public class SettingsPanel : MonoBehaviour
         if (FeatureUnlockManager.I != null)
             FeatureUnlockManager.I.OnFeatureUnlocked -= HandleFeatureUnlocked;
 
-        // NEW: tab listeners cleanup
         UnwireSectionTabs();
     }
 
     // ─────────────────────────────────────────────────────────
-    // NEW: Tabs / Sections
+    // Tabs / Sections
     // ─────────────────────────────────────────────────────────
 
     void CacheSectionCanvasGroups()
@@ -291,11 +296,38 @@ public class SettingsPanel : MonoBehaviour
         };
     }
 
+    // NEW: Seeds tab gating (show Seeds tab only when at least one Seeds feature is unlocked)
+    bool IsSeedsTabUnlocked()
+    {
+        var fm = FeatureUnlockManager.I;
+        if (fm == null) return false;
+
+        return fm.IsUnlocked(FeatureId.Seeds_DailyBasic)
+            || fm.IsUnlocked(FeatureId.Seeds_CustomInput)
+            || fm.IsUnlocked(FeatureId.Seeds_RerollDailyOnce);
+    } // FeatureUnlockManager API :contentReference[oaicite:0]{index=0}
+
+    // NEW: show/hide the Seeds tab button and enforce safe fallback if currently on Seeds.
+    void RefreshTabVisibility()
+    {
+        bool seedsUnlocked = IsSeedsTabUnlocked();
+
+        if (seedsTabButton)
+            seedsTabButton.gameObject.SetActive(seedsUnlocked);
+
+        // If Seeds section is active but Seeds is locked, fall back to Audio.
+        if (!seedsUnlocked && _activeSection == SettingsSection.Seeds)
+            _activeSection = SettingsSection.Audio;
+    }
+
     public void ShowSection(SettingsSection section, bool instant = false)
     {
+        // Enforce Seeds lock at the routing layer too (not just button visibility).
+        if (section == SettingsSection.Seeds && !IsSeedsTabUnlocked())
+            section = SettingsSection.Audio;
+
         _activeSection = section;
 
-        // You can choose whether to fade or instantly swap.
         bool doInstant = instant || fadeDuration <= 0f;
 
         SetSectionVisible(_audioCg, section == SettingsSection.Audio, doInstant);
@@ -310,7 +342,6 @@ public class SettingsPanel : MonoBehaviour
 
         var go = cg.gameObject;
 
-        // Ensure active before fading in
         if (visible)
         {
             if (disableHiddenSections && !go.activeSelf) go.SetActive(true);
@@ -358,11 +389,12 @@ public class SettingsPanel : MonoBehaviour
     void CancelTween(CanvasGroup cg)
     {
         if (!cg) return;
-        // LeanTween-safe cancel (won’t throw if nothing exists)
         LeanTween.cancel(cg.gameObject);
     }
 
-    // ---------------- Core ----------------
+    // ─────────────────────────────────────────────────────────
+    // Core subscribe/refresh
+    // ─────────────────────────────────────────────────────────
 
     void SafeSubscribe()
     {
@@ -429,7 +461,17 @@ public class SettingsPanel : MonoBehaviour
 
         RefreshSeedUi(s);
         RefreshDailySeedUi();
+
+        // NEW: tab gating (Seeds button visibility + safe fallback)
+        RefreshTabVisibility();
+
+        // If we forced away from Seeds due to lock, ensure visible state matches.
+        ShowSection(_activeSection, instant: true);
     }
+
+    // ─────────────────────────────────────────────────────────
+    // Wiring for value events
+    // ─────────────────────────────────────────────────────────
 
     void WireEvents()
     {
@@ -564,7 +606,9 @@ public class SettingsPanel : MonoBehaviour
         _wired = false;
     }
 
-    // -------------- Handlers --------------
+    // ─────────────────────────────────────────────────────────
+    // Handlers
+    // ─────────────────────────────────────────────────────────
 
     void OnMasterChanged(float v)
     {
@@ -675,6 +719,10 @@ public class SettingsPanel : MonoBehaviour
             Refresh();
         }
     }
+
+    // ─────────────────────────────────────────────────────────
+    // Seed UI refresh (your existing gating)
+    // ─────────────────────────────────────────────────────────
 
     void RefreshSeedUi(SettingsState s)
     {
