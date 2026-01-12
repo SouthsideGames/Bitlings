@@ -146,6 +146,7 @@ public class UpgradeRowUI : MonoBehaviour
 
     void OpenInfo()
     {
+        Debug.Log($"[UpgradeRowUI] OpenInfo clicked. InfoPanelUI.I is {(InfoPanelUI.I == null ? "NULL" : "OK")}");
         var id = string.IsNullOrWhiteSpace(_infoId) ? "upg.unknown" : _infoId;
 
         const string fallbackSubtitle = "Feature Unlock";
