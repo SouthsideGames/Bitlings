@@ -14,8 +14,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   jobType: 4
   produces: 3
-  baseRatePerHour: 60
-  storageCap: 600
+  baseRatePerHour: 1.5
+  storageCap: 70
   maxWorkers: 3
   eligibleTypes: 03000000
   icon: {fileID: 21300000, guid: dc62672e1f5057b478290fef29ccb7c5, type: 3}

@@ -59497,7 +59497,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 244.71667, y: -140}
+  m_AnchoredPosition: {x: 244.74786, y: -140}
   m_SizeDelta: {x: 320, y: 150}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &833641702
@@ -65744,7 +65744,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 734.15, y: -215}
+  m_AnchoredPosition: {x: 734.2436, y: -215}
   m_SizeDelta: {x: 320, y: 150}
   m_Pivot: {x: 0.5, y: 0}
 --- !u!114 &902163042
@@ -104999,8 +104999,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -226.90564, y: 33.576}
-  m_SizeDelta: {x: 478.4687, y: 67.151}
+  m_AnchoredPosition: {x: 0.37787, y: 33.576}
+  m_SizeDelta: {x: 933.04, y: 67.151}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &1420835569
 CanvasRenderer:
@@ -140332,47 +140332,115 @@ MonoBehaviour:
   - featureId: 1
     displayName: Idle Battles
     infoId: upg.idle.basic
-    creditCost: 50
+    creditCost: 750
   - featureId: 2
     displayName: Idle Reward Boost
     infoId: upg.idle.rewardboost
-    creditCost: 50
+    creditCost: 1000
   - featureId: 3
     displayName: Offline Captures
     infoId: upg.idle.offlinecapture
-    creditCost: 50
+    creditCost: 1250
   - featureId: 4
     displayName: Auto Growth
     infoId: upg.autogrowth.basic
-    creditCost: 50
+    creditCost: 750
   - featureId: 5
     displayName: Growth Presets
     infoId: upg.autogrowth.presets
-    creditCost: 50
+    creditCost: 1000
   - featureId: 6
     displayName: Recycling
     infoId: upg.recycle.basic
-    creditCost: 50
+    creditCost: 1250
   - featureId: 8
     displayName: Daily Seeds
     infoId: upg.seeds.daily
-    creditCost: 50
+    creditCost: 750
   - featureId: 9
     displayName: Custom Seeds
     infoId: upg.seeds.custom
-    creditCost: 50
+    creditCost: 1000
   - featureId: 10
     displayName: Daily Seed Reroll
     infoId: upg.seeds.reroll
-    creditCost: 50
+    creditCost: 1250
   - featureId: 12
     displayName: Codex Favorites
     infoId: upg.codex.favorites
-    creditCost: 50
+    creditCost: 1000
   - featureId: 13
     displayName: Capture-Only Filter
     infoId: upg.codex.captureonly
-    creditCost: 50
+    creditCost: 1000
+  - featureId: 100
+    displayName: Unlock Gym
+    infoId: upg.gym
+    creditCost: 1000
+  - featureId: 101
+    displayName: Unlock Quarry
+    infoId: upg.quarry
+    creditCost: 1000
+  - featureId: 102
+    displayName: Unlock Mine
+    infoId: upg.mine
+    creditCost: 1000
+  - featureId: 103
+    displayName: Unlock Power Plant
+    infoId: upg.powerplant
+    creditCost: 1250
+  - featureId: 105
+    displayName: Unlock Forge
+    infoId: upg.forge
+    creditCost: 1250
+  - featureId: 104
+    displayName: Unlock Grove
+    infoId: upg.grove
+    creditCost: 1750
+  - featureId: 104
+    displayName: Unlock Grove
+    infoId: upg.grove
+    creditCost: 1750
+  - featureId: 106
+    displayName: Unlock Workshop
+    infoId: upg.workshop
+    creditCost: 1750
+  - featureId: 107
+    displayName: Unlock Harbor
+    infoId: upg.harbor
+    creditCost: 1750
+  - featureId: 114
+    displayName: Unlock Clinic
+    infoId: upg.clinic
+    creditCost: 2250
+  - featureId: 108
+    displayName: Unlock Cryo Lab
+    infoId: upg.cryolab
+    creditCost: 2250
+  - featureId: 109
+    displayName: Unlock Observatory
+    infoId: upg.observatory
+    creditCost: 2750
+  - featureId: 110
+    displayName: Unlock Containment
+    infoId: upg.containment
+    creditCost: 3250
+  - featureId: 111
+    displayName: Unlock Wyrm Den
+    infoId: upg.wyrmden
+    creditCost: 3750
+  - featureId: 115
+    displayName: Unlock Expedition
+    infoId: upg.expedition
+    creditCost: 5250
+  - featureId: 112
+    displayName: Unlock Shadow Market
+    infoId: upg.shadowmarket
+    creditCost: 4250
+  - featureId: 113
+    displayName: Unlock Sanctum
+    infoId: upg.sanctum
+    creditCost: 4750
 --- !u!225 &1918802499
 CanvasGroup:
   m_ObjectHideFlags: 0
@@ -142564,8 +142632,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 2.458, y: 591.3886}
-  m_SizeDelta: {x: 949.3979, y: 50.5534}
+  m_AnchoredPosition: {x: 8.0242, y: 591.3886}
+  m_SizeDelta: {x: 938.2654, y: 50.5534}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1959825853
 MonoBehaviour:

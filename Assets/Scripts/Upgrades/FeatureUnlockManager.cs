@@ -185,10 +185,20 @@ public class FeatureUnlockManager : MonoBehaviour
                 // No-op here; used by SeedService + SettingsPanel.
                 break;
 
-            // Add more cases here when adding new feature unlocks:
-            // case FeatureId.Something:
-            //     DoSpecialThing();
-            //     break;
+            // ─────────────────────────────────────────────────────────────
+            // Jobs: when job feature is unlocked (purchased), unlock the site
+            // ─────────────────────────────────────────────────────────────
+            default:
+            {
+                // If this FeatureId represents a job unlock, unlock the job site.
+                if (FeatureIdJobs.TryGetJobFromFeature(feature, out var job) && job != JobType.None)
+                {
+                    // IMPORTANT: syncFeatureUnlock = false to avoid recursion.
+                    JobUnlockBridge.UnlockJob(job, syncFeatureUnlock: false);
+                }
+
+                break;
+            }
         }
     }
 

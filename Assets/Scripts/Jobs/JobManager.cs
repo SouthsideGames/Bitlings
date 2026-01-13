@@ -137,7 +137,9 @@ public sealed class JobManager : MonoBehaviour
         // Load slot fatigue + cooldowns from sidecar file
         LoadRuntimeFromSave();
 
+        // Ensure unlocks reflect both capture history and purchased features.
         if (lockSitesUntilEligible) RecalculateUnlocksFromSeenTypes();
+
         if (simulateOfflineOnLoad) ResolveOfflineIfAny();
 
         RefreshAllJobSiteViewsInScene();
@@ -162,7 +164,6 @@ public sealed class JobManager : MonoBehaviour
         SaveRuntimeToSave();
     }
 
-
     private void Update()
     {
         _accum += Time.unscaledDeltaTime;
@@ -171,6 +172,16 @@ public sealed class JobManager : MonoBehaviour
             Produce(_accum);
             _accum = 0f;
         }
+    }
+
+    // ---------------------------- Public: Purchasable unlock bridge ----------------------------
+
+    /// <summary>
+    /// Public API for upgrades / admin usage: force-unlock a job site.
+    /// </summary>
+    public void ForceUnlock(JobType job)
+    {
+        JobUnlockBridge.UnlockJob(job, syncFeatureUnlock: true);
     }
 
     // ---------------------------- Global change hooks ----------------------------
@@ -265,17 +276,6 @@ public sealed class JobManager : MonoBehaviour
 
             // Produce & store
             s.storedAmount = Mathf.Min(GetEffectiveStorageCap(s.config), s.storedAmount + finalRateHr * dtHours);
-
-#if UNITY_EDITOR
-            if (logProductionBreakdown)
-            {
-                float shinyAura = ShinySystems.SiteShinyAuraMult(s.workers);
-                int shinyCount = CountShinies(s.workers);
-                float shinySetMult = 1f + (shinyCount >= 3 ? shiny3Bonus : (shinyCount == 2 ? shiny2Bonus : (shinyCount == 1 ? shiny1Bonus : 0f)));
-                float baseAfterSpecies = (grossRateHr == 0f) ? 0f : (grossRateHr / Mathf.Max(1e-4f, shinyAura * shinySetMult));
-                DebugLogSiteBreakdown(s, baseAfterSpecies, shinyAura, shinySetMult, avgFatigue, finalRateHr);
-            }
-#endif
         }
 
         if (autoReliefEnabled) ApplyClinicRelief(dtHours);
@@ -347,7 +347,7 @@ public sealed class JobManager : MonoBehaviour
                 s.workers[i] = null;
                 RemoveAssignedUnix(key);
 
-                // NEW: auto-collect this site's stored resources
+                // auto-collect this site's stored resources
                 Collect(s.config.jobType);
 
                 s.slotFatigue01[i] = 1f;
@@ -744,7 +744,6 @@ public sealed class JobManager : MonoBehaviour
             bool fallbackChanged = EnsureStarterDefaultSitesUnlocked();
             if (fallbackChanged)
             {
-                // Ensure the rest of the system stays consistent
                 RefreshAllJobSiteViewsInScene();
                 GameEvents.OnJobsChanged?.Invoke();
             }
@@ -771,39 +770,36 @@ public sealed class JobManager : MonoBehaviour
     {
         if (SaveManager.Data == null) return;
 
+        // Keep legacy container alive
         SaveManager.Data.unlockedJobSites ??= new HashSet<JobType>();
-        int before = SaveManager.Data.unlockedJobSites.Count;
 
         if (SaveManager.Data.seenTypes != null)
         {
-            foreach (var t in SaveManager.Data.seenTypes) TryUnlockSitesForType(t);
+            foreach (var t in SaveManager.Data.seenTypes)
+                TryUnlockSitesForType(t);
         }
 
-        if (SaveManager.Data.unlockedJobSites.Count != before) SaveManager.Save();
+        SaveManager.Save();
     }
 
     private void TryUnlockSitesForType(MonsterType type)
     {
         if (!lockSitesUntilEligible || SaveManager.Data == null)
-        {
             return;
-        }
-
-        SaveManager.Data.unlockedJobSites ??= new HashSet<JobType>();
 
         bool changed = false;
 
         foreach (var job in JobBalance.JobsUnlockedByType(type))
         {
-            if (SaveManager.Data.unlockedJobSites.Add(job))
-            {
+            // Route through bridge so:
+            // - unlockedJobSitesList is updated
+            // - matching FeatureId is marked unlocked (upgrade rows reflect it)
+            if (JobUnlockBridge.UnlockJob(job, syncFeatureUnlock: true))
                 changed = true;
-            }
         }
 
         if (changed)
         {
-            SaveManager.Save();
             RefreshAllJobSiteViewsInScene();
             GameEvents.OnJobsChanged?.Invoke();
         }
@@ -811,20 +807,11 @@ public sealed class JobManager : MonoBehaviour
 
     public bool IsSiteUnlocked(JobType job)
     {
-        if (!lockSitesUntilEligible) return true;
-
-        var d = SaveManager.Data;
-        if (d == null) return false;
-
-        // LIST is authoritative (JsonUtility-safe)
-        if (d.unlockedJobSitesList != null && d.unlockedJobSitesList.Contains(job))
+        if (!lockSitesUntilEligible)
             return true;
 
-        // Set is a cache/fallback only
-        if (d.unlockedJobSites != null && d.unlockedJobSites.Contains(job))
-            return true;
-
-        return false;
+        // NEW: unified check (feature OR save data)
+        return JobUnlockBridge.IsJobUnlocked(job);
     }
 
     // ---------------------------- Offline sim & clinic relief ----------------------------
@@ -953,7 +940,6 @@ public sealed class JobManager : MonoBehaviour
                 var om = owned[i];
                 if (om == null) continue;
 
-                // If your OwnedMonsterData has ownedUID, use it
                 if (!string.IsNullOrEmpty(om.ownedUID) && om.ownedUID == idOrOwnedId)
                 {
                     if (!string.IsNullOrEmpty(om.monsterId))
@@ -986,7 +972,7 @@ public sealed class JobManager : MonoBehaviour
         try { flatFromTitles = Mathf.Max(0, TitlesAdapter.GetJobCapacityBonus(site.jobType)); }
         catch { flatFromTitles = 0; }
 
-        // NEW: temporary Sanctum blessing (runtime-only)
+        // temporary Sanctum blessing (runtime-only)
         int tempFromBlessings = 0;
         try { tempFromBlessings = Mathf.Max(0, GetActiveBlessingBonus(site.jobType)); }
         catch { tempFromBlessings = 0; }
@@ -997,8 +983,6 @@ public sealed class JobManager : MonoBehaviour
         int preMultFlat = Mathf.Max(0, baseCap + extraFromSave + flatFromTitles + tempFromBlessings);
         return Mathf.Max(0, Mathf.RoundToInt(preMultFlat * levelMul));
     }
-
-
 
     public (JobType job, float hours) GetCurrentJobAndHours(string monsterId)
     {
@@ -1037,30 +1021,6 @@ public sealed class JobManager : MonoBehaviour
         return false;
     }
 
-    private static List<string> CollectWorkerIds(List<WorkerRef> workers)
-    {
-        var ids = new List<string>();
-        if (workers == null) return ids;
-
-        for (int i = 0; i < workers.Count; i++)
-        {
-            var w = workers[i];
-            var id = GetBestId(w);
-            if (!string.IsNullOrEmpty(id)) ids.Add(id);
-        }
-        return ids;
-    }
-
-    private static void ForEachWorkerId(List<WorkerRef> workers, Action<string> action)
-    {
-        if (workers == null || action == null) return;
-        for (int i = 0; i < workers.Count; i++)
-        {
-            var id = GetBestId(workers[i]);
-            if (!string.IsNullOrEmpty(id)) action(id);
-        }
-    }
-
     private static string GetBestId(WorkerRef w)
     {
         if (w == null) return null;
@@ -1085,36 +1045,6 @@ public sealed class JobManager : MonoBehaviour
         if (!string.IsNullOrEmpty(key)) _assignedUnix.Remove(key);
     }
 
-    private bool TryGetTeamEntry(string ownedIdOrUid, out int index)
-    {
-        index = -1;
-        var team = SaveManager.Data?.team;
-        if (team == null) return false;
-
-        for (int i = 0; i < team.Count; i++)
-        {
-            var e = team[i];
-            if (e == null) continue;
-
-            // Match by ownedUID first (instance-accurate)
-            if (!string.IsNullOrEmpty(e.ownedUID) && e.ownedUID == ownedIdOrUid)
-            {
-                index = i;
-                return true;
-            }
-
-            // Fallback: species id match
-            if (!string.IsNullOrEmpty(e.monsterId) && e.monsterId == ownedIdOrUid)
-            {
-                index = i;
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-
     // ---------------------------- Auto-bench (injury) ----------------------------
     private void AutoBenchSweep(float threshold01)
     {
@@ -1133,7 +1063,6 @@ public sealed class JobManager : MonoBehaviour
                 var w = s.workers[wi];
                 if (w == null) continue;
 
-                // We only auto-bench team members we can resolve by ownedId
                 string ownedId = w.monsterId;
                 if (string.IsNullOrEmpty(ownedId)) continue;
 
@@ -1143,29 +1072,24 @@ public sealed class JobManager : MonoBehaviour
                 if (entry == null) continue;
 
                 int level = Mathf.Max(1, entry.level);
-
-                // Compute max HP from def+level (must exist to evaluate benching)
                 float maxHP = Mathf.Max(1f, BattleCalc.CalcHP(w.def, level));
 
-                // IMPORTANT: currentHP == -1 is your sentinel meaning "full / not tracked yet".
-                // Treat it as full HP so we don't bench on load.
                 float curHP = entry.currentHP;
-                if (curHP < 0) curHP = maxHP;   // -1 => full
+                if (curHP < 0) curHP = maxHP;
 
                 float hp01 = Mathf.Clamp01(curHP / maxHP);
 
                 if (hp01 < threshold01)
                 {
-                    // Remove from job due to low HP
                     RemoveWorker(s.config.jobType, ownedId);
 
-                    // Optional: auto-fill the vacated slot with a healthy eligible monster
                     if (autoBenchAutoFill)
                         TryFillSlotFromTeam(s, wi, threshold01);
                 }
             }
         }
     }
+
     private bool TryFillSlotFromTeam(JobSiteState site, int slotIndex, float threshold01)
     {
         var team = SaveManager.Data?.team;
@@ -1188,12 +1112,11 @@ public sealed class JobManager : MonoBehaviour
             string candId = entry.monsterId;
             if (string.IsNullOrEmpty(candId) || used.Contains(candId)) continue;
 
-            if (IsOnCooldown(candId)) continue; // don't auto-fill with resting monster
+            if (IsOnCooldown(candId)) continue;
 
             var def = MonsterLibraryLocator.GetById(entry.monsterId);
             if (!def) continue;
 
-            // NEW: ensure auto-fill respects eligibility
             if (!IsTypeEligibleFor(site.config.jobType, def.type)) continue;
 
             int level = Mathf.Max(1, entry.level);
@@ -1205,6 +1128,33 @@ public sealed class JobManager : MonoBehaviour
 
             return TryAssignWorkerAt(site.config.jobType, slotIndex, def, candId);
         }
+        return false;
+    }
+
+    private bool TryGetTeamEntry(string ownedIdOrUid, out int index)
+    {
+        index = -1;
+        var team = SaveManager.Data?.team;
+        if (team == null) return false;
+
+        for (int i = 0; i < team.Count; i++)
+        {
+            var e = team[i];
+            if (e == null) continue;
+
+            if (!string.IsNullOrEmpty(e.ownedUID) && e.ownedUID == ownedIdOrUid)
+            {
+                index = i;
+                return true;
+            }
+
+            if (!string.IsNullOrEmpty(e.monsterId) && e.monsterId == ownedIdOrUid)
+            {
+                index = i;
+                return true;
+            }
+        }
+
         return false;
     }
 
@@ -1224,19 +1174,7 @@ public sealed class JobManager : MonoBehaviour
 #endif
     }
 
-    // ---------------------------- Editor-only logging ----------------------------
-#if UNITY_EDITOR
-    private void DebugLogSiteBreakdown(JobSiteState s, float basePerHour, float shinyAura, float shinySetMult, float avgFatigue01, float finalRateHr)
-    {
-        if (!logProductionBreakdown) return;
-        Debug.Log(
-            $"[Job Debug] Site={s.config.jobType} | " +
-            $"Base={basePerHour:F1}/hr | Aura×{shinyAura:F2} | Set×{shinySetMult:F2} | " +
-            $"AvgFatigue={avgFatigue01:P0} | Final={finalRateHr:F1}/hr");
-    }
-#endif
-
-    // ---------------------------- Local helpers (missing in your file) ----------------------------
+    // ---------------------------- Local helpers ----------------------------
     private static int GetOwnedLevelOr1(string ownedOrDefId, MonsterDataSO fallbackDef)
     {
         if (string.IsNullOrEmpty(ownedOrDefId)) return 1;
@@ -1277,7 +1215,6 @@ public sealed class JobManager : MonoBehaviour
     {
         if (w == null) return false;
 
-        // Prefer owned-instance record
         var ownedId = w.monsterId;
         if (!string.IsNullOrEmpty(ownedId))
         {
@@ -1292,7 +1229,6 @@ public sealed class JobManager : MonoBehaviour
             }
         }
 
-        // Fallback to def via reflection if present
         var def = w.def;
         if (!def) return false;
         try
@@ -1320,54 +1256,6 @@ public sealed class JobManager : MonoBehaviour
         return false;
     }
 
-    private JobSiteSO GetSiteConfig(JobType job)
-    {
-        for (int i = 0; i < jobSites.Count; i++)
-        {
-            var c = jobSites[i];
-            if (!c) continue;
-            if (c.jobType == job) return c;
-        }
-        return null;
-    }
-
-    public void ApplyTemporaryStorageBlessing(JobType job, int flatBonus, float durationSeconds)
-    {
-        if (flatBonus == 0 || durationSeconds <= 0f) return;
-
-        if (_blessingBuffs == null) _blessingBuffs = new List<BlessingBuff>();
-
-        long now = SaveManager.NowUnix();
-        long until = now + Mathf.RoundToInt(durationSeconds);
-
-        // If there's already an active blessing for this site, stack and extend it
-        BlessingBuff existing = null;
-        for (int i = 0; i < _blessingBuffs.Count; i++)
-        {
-            var b = _blessingBuffs[i];
-            if (b != null && b.job == job && b.untilUnix > now)
-            {
-                existing = b;
-                break;
-            }
-        }
-
-        if (existing != null)
-        {
-            existing.flatBonus += flatBonus;
-            if (until > existing.untilUnix) existing.untilUnix = until;
-        }
-        else
-        {
-            _blessingBuffs.Add(new BlessingBuff
-            {
-                job = job,
-                flatBonus = flatBonus,
-                untilUnix = until
-            });
-        }
-    }
-
     private int GetActiveBlessingBonus(JobType job)
     {
         if (_blessingBuffs == null || _blessingBuffs.Count == 0) return 0;
@@ -1375,7 +1263,6 @@ public sealed class JobManager : MonoBehaviour
         long now = SaveManager.NowUnix();
         int total = 0;
 
-        // Clean up expired buffs as we go
         for (int i = _blessingBuffs.Count - 1; i >= 0; i--)
         {
             var b = _blessingBuffs[i];
@@ -1392,42 +1279,10 @@ public sealed class JobManager : MonoBehaviour
         return total;
     }
 
-
-    public int GetTemporaryStorageBonus(JobType job)
-    {
-        return GetActiveBlessingBonus(job);
-    }
-
-    public float GetBlessingSecondsRemaining(JobType job)
-    {
-        if (_blessingBuffs == null || _blessingBuffs.Count == 0) return 0f;
-
-        long now = SaveManager.NowUnix();
-        long latestUntil = 0;
-
-        for (int i = _blessingBuffs.Count - 1; i >= 0; i--)
-        {
-            var b = _blessingBuffs[i];
-            if (b == null || b.untilUnix <= now)
-            {
-                _blessingBuffs.RemoveAt(i);
-                continue;
-            }
-
-            if (b.job == job && b.untilUnix > latestUntil)
-                latestUntil = b.untilUnix;
-        }
-
-        if (latestUntil <= now) return 0f;
-        return Mathf.Max(0f, latestUntil - now);
-    }
-
     private bool TryUnlockSitesForType_ReturnsChanged(MonsterType type)
     {
         if (!lockSitesUntilEligible || SaveManager.Data == null)
             return false;
-
-        SaveManager.Data.unlockedJobSites ??= new HashSet<JobType>();
 
         bool changed = false;
         bool foundAnyMapping = false;
@@ -1435,31 +1290,27 @@ public sealed class JobManager : MonoBehaviour
         foreach (var job in JobBalance.JobsUnlockedByType(type))
         {
             foundAnyMapping = true;
-            if (SaveManager.Data.unlockedJobSites.Add(job))
+
+            if (JobUnlockBridge.UnlockJob(job, syncFeatureUnlock: true))
                 changed = true;
         }
 
-        // If the mapping exists but it was already unlocked, "changed" will be false,
-        // which is fine — we only want the fallback when there are zero mapped jobs.
         if (!foundAnyMapping)
             return false;
 
         if (changed)
         {
-            SaveManager.Save();
             RefreshAllJobSiteViewsInScene();
             GameEvents.OnJobsChanged?.Invoke();
         }
 
-        return true; // mapped to at least one job (whether newly changed or already unlocked)
+        return true;
     }
 
     private bool EnsureStarterDefaultSitesUnlocked()
     {
         if (SaveManager.Data == null) return false;
         if (starterDefaultSites == null || starterDefaultSites.Count == 0) return false;
-
-        SaveManager.Data.unlockedJobSites ??= new HashSet<JobType>();
 
         bool changed = false;
 
@@ -1468,12 +1319,9 @@ public sealed class JobManager : MonoBehaviour
             var job = starterDefaultSites[i];
             if (job == JobType.None) continue;
 
-            if (SaveManager.Data.unlockedJobSites.Add(job))
+            if (JobUnlockBridge.UnlockJob(job, syncFeatureUnlock: true))
                 changed = true;
         }
-
-        if (changed)
-            SaveManager.Save();
 
         return changed;
     }
@@ -1486,34 +1334,21 @@ public sealed class JobManager : MonoBehaviour
         d.seenTypes ??= new HashSet<MonsterType>();
         d.seenTypesList ??= new List<MonsterType>();
 
-        d.unlockedJobSites ??= new HashSet<JobType>();
-        d.unlockedJobSitesList ??= new List<JobType>();
-
-        // Record seen type (write to list too)
         if (d.seenTypes.Add(type) && !d.seenTypesList.Contains(type))
             d.seenTypesList.Add(type);
 
         bool mappedAny = false;
 
-        void Unlock(JobType job)
-        {
-            if (job == JobType.None) return;
-
-            d.unlockedJobSites.Add(job); // cache
-            if (!d.unlockedJobSitesList.Contains(job))
-                d.unlockedJobSitesList.Add(job); // authoritative
-        }
-
         foreach (var job in JobBalance.JobsUnlockedByType(type))
         {
             mappedAny = true;
-            Unlock(job);
+            JobUnlockBridge.UnlockJob(job, syncFeatureUnlock: true);
         }
 
         if (enableStarterDefaultSitesFallback && !mappedAny)
         {
             for (int i = 0; i < starterDefaultSites.Count; i++)
-                Unlock(starterDefaultSites[i]);
+                JobUnlockBridge.UnlockJob(starterDefaultSites[i], syncFeatureUnlock: true);
         }
 
         SaveManager.Save();
@@ -1521,15 +1356,9 @@ public sealed class JobManager : MonoBehaviour
         GameEvents.OnJobsChanged?.Invoke();
     }
 
-
     // ─────────────────────────────────────────────────────────────────────────
-    // Cheats / Debug Helpers
+    // Cheats / Debug Helpers (kept intact)
     // ─────────────────────────────────────────────────────────────────────────
-
-    /// <summary>
-    /// Sets all slot fatigue to 0 across all job sites and persists the runtime sidecar.
-    /// Returns the number of slots that had fatigue > 0.
-    /// </summary>
     public int Cheat_ClearAllFatigue()
     {
         int cleared = 0;
@@ -1551,17 +1380,10 @@ public sealed class JobManager : MonoBehaviour
         return cleared;
     }
 
-    /// <summary>
-    /// Clears all job cooldowns:
-    /// - Slot cooldowns (slotCooldownUntilUnix)
-    /// - Monster cooldown map (_cooldownUntil)
-    /// Persists the runtime sidecar. Returns the number of cooldown entries cleared.
-    /// </summary>
     public int Cheat_ResetCooldowns()
     {
         int cleared = 0;
 
-        // Slot cooldowns
         for (int si = 0; si < States.Count; si++)
         {
             var s = States[si];
@@ -1573,7 +1395,6 @@ public sealed class JobManager : MonoBehaviour
             }
         }
 
-        // Monster cooldown dictionary
         if (_cooldownUntil != null)
         {
             cleared += _cooldownUntil.Count;
@@ -1586,8 +1407,123 @@ public sealed class JobManager : MonoBehaviour
         return cleared;
     }
 
+    // ─────────────────────────────────────────────────────────────
+    // Sanctum: Temporary Storage Blessings (RESTORED API)
+    // These methods are referenced by SanctumUI.cs
+    // ─────────────────────────────────────────────────────────────
 
+    /// <summary>
+    /// Apply a temporary storage blessing to a target job. This increases effective storage cap
+    /// for the duration. Multiple blessings can stack.
+    /// </summary>
+    public void ApplyTemporaryStorageBlessing(JobType targetJob, int flatBonus, int durationSeconds)
+    {
+        ApplyTemporaryStorageBlessing(targetJob, flatBonus, (long)durationSeconds);
+    }
 
+    /// <summary>
+    /// Overload in case SanctumUI passes a float.
+    /// </summary>
+    public void ApplyTemporaryStorageBlessing(JobType targetJob, int flatBonus, float durationSeconds)
+    {
+        ApplyTemporaryStorageBlessing(targetJob, flatBonus, (long)Mathf.RoundToInt(durationSeconds));
+    }
 
+    /// <summary>
+    /// Core implementation using seconds duration.
+    /// </summary>
+    public void ApplyTemporaryStorageBlessing(JobType targetJob, int flatBonus, long durationSeconds)
+    {
+        if (targetJob == JobType.None) return;
+        if (flatBonus <= 0) return;
+
+        long now = SaveManager.NowUnix();
+        long until = now + Mathf.Max(1, (int)durationSeconds);
+
+        _blessingBuffs ??= new List<BlessingBuff>();
+        PruneExpiredBlessings(now);
+
+        _blessingBuffs.Add(new BlessingBuff
+        {
+            job = targetJob,
+            flatBonus = flatBonus,
+            untilUnix = until
+        });
+
+        // If you have any UI or cached cap/rate systems, refresh here.
+        RefreshAllJobSiteViewsInScene();
+        GameEvents.OnJobsChanged?.Invoke();
+    }
+
+    /// <summary>
+    /// Returns the total active temporary storage bonus (flat) for the job.
+    /// </summary>
+    public int GetTemporaryStorageBonus(JobType job)
+    {
+        if (job == JobType.None) return 0;
+
+        _blessingBuffs ??= new List<BlessingBuff>();
+        long now = SaveManager.NowUnix();
+        PruneExpiredBlessings(now);
+
+        int total = 0;
+        for (int i = 0; i < _blessingBuffs.Count; i++)
+        {
+            var b = _blessingBuffs[i];
+            if (b == null) continue;
+            if (b.job != job) continue;
+            if (b.untilUnix <= now) continue;
+
+            total += Mathf.Max(0, b.flatBonus);
+        }
+        return total;
+    }
+
+    /// <summary>
+    /// Returns remaining seconds for the blessing on this job.
+    /// If multiple blessings exist, returns the maximum remaining time.
+    /// </summary>
+    public int GetBlessingSecondsRemaining(JobType job)
+    {
+        if (job == JobType.None) return 0;
+
+        _blessingBuffs ??= new List<BlessingBuff>();
+        long now = SaveManager.NowUnix();
+        PruneExpiredBlessings(now);
+
+        long bestUntil = 0;
+        for (int i = 0; i < _blessingBuffs.Count; i++)
+        {
+            var b = _blessingBuffs[i];
+            if (b == null) continue;
+            if (b.job != job) continue;
+            if (b.untilUnix <= now) continue;
+
+            if (b.untilUnix > bestUntil)
+                bestUntil = b.untilUnix;
+        }
+
+        if (bestUntil <= now) return 0;
+        long remaining = bestUntil - now;
+
+        // Clamp to int range; your UI expects int seconds.
+        if (remaining > int.MaxValue) return int.MaxValue;
+        return (int)remaining;
+    }
+
+    /// <summary>
+    /// Removes expired blessings.
+    /// </summary>
+    private void PruneExpiredBlessings(long nowUnix)
+    {
+        if (_blessingBuffs == null || _blessingBuffs.Count == 0) return;
+
+        for (int i = _blessingBuffs.Count - 1; i >= 0; i--)
+        {
+            var b = _blessingBuffs[i];
+            if (b == null || b.untilUnix <= nowUnix)
+                _blessingBuffs.RemoveAt(i);
+        }
+    }
 
 }

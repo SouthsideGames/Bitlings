@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   jobType: 1
   produces: 1
-  baseRatePerHour: 120
+  baseRatePerHour: 25
   storageCap: 1200
   maxWorkers: 3
   eligibleTypes: 08000000
