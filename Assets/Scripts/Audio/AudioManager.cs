@@ -27,7 +27,7 @@ public enum SfxType
     KO = 12,
     Clutch = 13,
     Heal = 19,
-    
+
     // Progress
     LevelUp = 11,
 
@@ -35,7 +35,6 @@ public enum SfxType
     ShinyEncounter = 14,
     BossEncounter = 15,
     UnqiueEncounter = 16,
-
 }
 
 [Serializable]
@@ -62,14 +61,18 @@ public class AudioManager : MonoBehaviour
     [SerializeField] private AudioSource musicA;
     [SerializeField] private AudioSource musicB;
 
-    [SerializeField] private AudioClip startingMusic;
+    [Tooltip("Starting/home music pool. One clip is selected randomly at startup. No fallback is used.")]
+    [SerializeField] private List<AudioClip> startingMusicPool = new();
+
     [SerializeField] private AudioClip battleMusic;
-    [SerializeField] private AudioClip victoryMusic;  // NEW
-    [SerializeField] private AudioClip defeatMusic;   // NEW
+    [SerializeField] private AudioClip victoryMusic;
+    [SerializeField] private AudioClip defeatMusic;
     [SerializeField, Min(0f)] private float defaultCrossfade = 0.75f;
 
     private AudioSource _activeMusic;
     private Coroutine _xfadeCo;
+
+    private AudioClip _currentStartingMusic;
 
     // ─────────────────────────────────────────────────────────────
     // SFX
@@ -133,8 +136,12 @@ public class AudioManager : MonoBehaviour
         // Setup music
         _activeMusic = musicA;
 
-        if (startingMusic != null)
-            PlayMusic(startingMusic, true, defaultCrossfade);
+        // Choose and cache the session's starting/home music (NO fallback)
+        _currentStartingMusic = PickStartingMusic();
+
+        // If pool is misconfigured, we intentionally play nothing.
+        if (_currentStartingMusic != null)
+            PlayMusic(_currentStartingMusic, true, defaultCrossfade);
     }
 
     private void OnEnable()
@@ -173,6 +180,43 @@ public class AudioManager : MonoBehaviour
         _hasLastBattleResult = true;
         _lastBattleVictory = result.victory;
         // We don't force music swap here; it happens when the summary opens.
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // Starting Music Selection (NO fallback)
+    // ─────────────────────────────────────────────────────────────
+    private AudioClip PickStartingMusic()
+    {
+        if (startingMusicPool == null || startingMusicPool.Count == 0)
+            return null;
+
+        // Build list of valid (non-null) clips
+        List<AudioClip> valid = null;
+
+        for (int i = 0; i < startingMusicPool.Count; i++)
+        {
+            var c = startingMusicPool[i];
+            if (c == null) continue;
+
+            valid ??= new List<AudioClip>();
+            valid.Add(c);
+        }
+
+        if (valid == null || valid.Count == 0)
+            return null;
+
+        return valid[UnityEngine.Random.Range(0, valid.Count)];
+    }
+
+    /// <summary>
+    /// Optional: re-roll the starting/home music from the pool.
+    /// If playImmediately is true, it will crossfade to the new starting track right away.
+    /// </summary>
+    public void RerollStartingMusic(bool playImmediately = true)
+    {
+        _currentStartingMusic = PickStartingMusic();
+        if (playImmediately && _currentStartingMusic != null)
+            PlayMusic(_currentStartingMusic, true, defaultCrossfade);
     }
 
     // ─────────────────────────────────────────────────────────────
@@ -464,9 +508,9 @@ public class AudioManager : MonoBehaviour
     {
         var ui = UIManager.I;
 
-        bool inBattle      = EncounterManager.I != null && EncounterManager.I.IsInBattle;
+        bool inBattle = EncounterManager.I != null && EncounterManager.I.IsInBattle;
         bool encounterOpen = ui != null && ui.IsOpen(PanelId.Encounter);
-        bool summaryOpen   = ui != null && ui.IsOpen(PanelId.PostBattleSummary);
+        bool summaryOpen = ui != null && ui.IsOpen(PanelId.PostBattleSummary);
 
         // 1) Post-battle summary → victory or defeat music
         if (summaryOpen)
@@ -480,9 +524,10 @@ public class AudioManager : MonoBehaviour
             {
                 PlayMusic(clip, true, defaultCrossfade);
             }
-            else if (startingMusic != null)
+            else if (_currentStartingMusic != null)
             {
-                PlayMusic(startingMusic, true, defaultCrossfade);
+                // No fallback: only use the selected starting music if it exists.
+                PlayMusic(_currentStartingMusic, true, defaultCrossfade);
             }
 
             return;
@@ -495,9 +540,9 @@ public class AudioManager : MonoBehaviour
             return;
         }
 
-        // 3) Everything else → starting/home music
-        if (startingMusic != null)
-            PlayMusic(startingMusic, true, defaultCrossfade);
+        // 3) Everything else → starting/home music (NO fallback)
+        if (_currentStartingMusic != null)
+            PlayMusic(_currentStartingMusic, true, defaultCrossfade);
     }
 
     public void RefreshMusicState()
@@ -506,5 +551,4 @@ public class AudioManager : MonoBehaviour
     }
 
     public void PlayClick() => PlaySfx(SfxType.Click);
-
 }

@@ -7,8 +7,8 @@ using UnityEngine.UI;
 /// Centralized “juice” manager for battle.
 /// Owns LeanTween feedback: button presses, icon punches, hit reactions, damage numbers,
 /// defend/guard feedback, HP shakes, screen shakes, panel reveals.
-/// 
-/// This is presentation-only: BattleManager calls into this to update visuals.
+///
+/// Presentation-only: BattleManager calls into this to update visuals.
 /// </summary>
 [DisallowMultipleComponent]
 public sealed class BattleFeedbackManager : MonoBehaviour
@@ -31,6 +31,13 @@ public sealed class BattleFeedbackManager : MonoBehaviour
     [Header("Optional: Charge Icons (focus/charge status)")]
     [SerializeField] private Image playerChargeIcon;
     [SerializeField] private Image wildChargeIcon;
+
+    [Header("Status Icon Behavior")]
+    [Tooltip("If enabled, PlayDefendResult will briefly show the guard icon then auto-hide it.")]
+    [SerializeField] private bool autoHideGuardAfterDefendResult = true;
+
+    [Tooltip("How long the guard icon stays visible after a defend result before auto-hiding (unscaled).")]
+    [SerializeField, Min(0.01f)] private float guardAutoHideSeconds = 0.35f;
 
     [Header("Optional: Action Buttons (press feedback)")]
     [SerializeField] private Button attackBtn;
@@ -68,11 +75,6 @@ public sealed class BattleFeedbackManager : MonoBehaviour
     [Header("Attack Prefab VFX (optional)")]
     [SerializeField] private bool spawnAttackPrefabs = true;
 
-    [Header("Damage Number FX (optional)")]
-    [SerializeField] private DamageNumberUI damageNumberPrefab;
-    [SerializeField] private RectTransform playerDamageAnchor;
-    [SerializeField] private RectTransform wildDamageAnchor;
-
     [Header("Damage Number Colors (optional)")]
     [SerializeField] private Color dmgNormalColor = Color.white;
     [SerializeField] private Color dmgCritColor = new Color(1f, 0.9f, 0.35f);
@@ -85,15 +87,28 @@ public sealed class BattleFeedbackManager : MonoBehaviour
     [SerializeField, Range(0f, 50f)] private float heavyHitShakeMagnitude = 12f;
     [SerializeField, Min(0.01f)] private float heavyHitShakeDuration = 0.15f;
 
-     [Header("HP Text Feedback (Current/Max)")]
+    [Header("HP Text Feedback (Current/Max)")]
     [SerializeField] private TextMeshProUGUI playerHPValueText;
     [SerializeField] private TextMeshProUGUI wildHPValueText;
 
     [Tooltip("If enabled, briefly punches the HP text when the value changes.")]
     [SerializeField] private bool hpTextPunchOnChange = true;
-
     [SerializeField, Min(0.01f)] private float hpTextPunchScale = 1.12f;
     [SerializeField, Min(0.01f)] private float hpTextPunchTime = 0.10f;
+
+    [Header("HP Bar Animation (Optional)")]
+    [Tooltip("If set, FeedbackManager will animate these bars when SetHPBars is called.")]
+    [SerializeField] private Slider playerHPBar;
+    [SerializeField] private Slider wildHPBar;
+
+    [SerializeField] private bool smoothHPBars = true;
+    [SerializeField, Min(0.01f)] private float hpBarSecondsForFull = 0.6f;
+
+    private Coroutine _playerHPAnimCR;
+    private Coroutine _wildHPAnimCR;
+
+    private Coroutine _playerGuardAutoHideCR;
+    private Coroutine _wildGuardAutoHideCR;
 
     private int _lastPlayerCur = int.MinValue;
     private int _lastPlayerMax = int.MinValue;
@@ -107,11 +122,17 @@ public sealed class BattleFeedbackManager : MonoBehaviour
     {
         CacheBaseScales();
         WireOptionalButtonPresses();
+
+        // Start with status icons inactive.
+        ResetStatusIcons();
     }
 
     private void OnEnable()
     {
         CacheBaseScales();
+
+        // Ensure they are not left visible from a previous enable/disable.
+        ResetStatusIcons();
     }
 
     private void CacheBaseScales()
@@ -129,13 +150,27 @@ public sealed class BattleFeedbackManager : MonoBehaviour
     }
 
     // ─────────────────────────────────────────────────────────────
-    // Status icon toggles (these replace BattleManager chargeIcon.enabled)
+    // Status icon toggles (GameObject active/inactive)
     // ─────────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Call at battle start / swap / reset. Forces guard + charge icons to inactive.
+    /// </summary>
+    public void ResetStatusIcons()
+    {
+        StopGuardAutoHideCR(BattleFeedbackSide.Player);
+        StopGuardAutoHideCR(BattleFeedbackSide.Wild);
+
+        SetStatusIconVisible(playerGuardIcon, false);
+        SetStatusIconVisible(wildGuardIcon, false);
+        SetStatusIconVisible(playerChargeIcon, false);
+        SetStatusIconVisible(wildChargeIcon, false);
+    }
 
     public void SetCharge(BattleFeedbackSide side, bool on)
     {
         var icon = (side == BattleFeedbackSide.Player) ? playerChargeIcon : wildChargeIcon;
-        if (icon) icon.enabled = on;
+        SetStatusIconVisible(icon, on);
     }
 
     public void SetChargePlayer(bool on) => SetCharge(BattleFeedbackSide.Player, on);
@@ -144,11 +179,32 @@ public sealed class BattleFeedbackManager : MonoBehaviour
     public void SetGuard(BattleFeedbackSide side, bool on)
     {
         var icon = (side == BattleFeedbackSide.Player) ? playerGuardIcon : wildGuardIcon;
-        if (icon) icon.enabled = on;
+
+        if (!on)
+            StopGuardAutoHideCR(side);
+
+        SetStatusIconVisible(icon, on);
+    }
+
+    private void SetStatusIconVisible(Image icon, bool on)
+    {
+        if (!icon) return;
+
+        // Use SetActive to fully hide the icon (matches your requirement).
+        var go = icon.gameObject;
+        if (go && go.activeSelf != on) go.SetActive(on);
+
+        // If it's being shown, ensure the alpha isn't stuck from prior effects.
+        if (on)
+        {
+            var c = icon.color;
+            c.a = 1f;
+            icon.color = c;
+        }
     }
 
     // ─────────────────────────────────────────────────────────────
-    // Public API (existing + expanded)
+    // Public API
     // ─────────────────────────────────────────────────────────────
 
     public void PlayButtonPress(BattleFeedbackAction action)
@@ -236,12 +292,10 @@ public sealed class BattleFeedbackManager : MonoBehaviour
         Flash(icon, success ? flashDefend : flashFail, defendPulseTime);
         PunchScale(icon, success ? 1.06f : 1.03f, defendPulseTime * 0.8f);
 
-        if (side == BattleFeedbackSide.Player && playerGuardIcon) Punch(playerGuardIcon);
-        if (side == BattleFeedbackSide.Wild && wildGuardIcon) Punch(wildGuardIcon);
-
         if (!success)
             Shake(icon.rectTransform, hitShakePixels * 0.6f, hitShakeTime * 0.75f);
     }
+
 
     public void PlayKO(BattleFeedbackSide side)
     {
@@ -316,25 +370,6 @@ public sealed class BattleFeedbackManager : MonoBehaviour
         if (life > 0f) Destroy(inst, life);
     }
 
-    public void SpawnDamageNumber(int amount, bool isCrit, float effectiveness, bool hitPlayer)
-    {
-        if (!damageNumberPrefab) return;
-
-        RectTransform anchor = hitPlayer ? playerDamageAnchor : wildDamageAnchor;
-        if (!anchor) return;
-
-        var inst = Instantiate(damageNumberPrefab, anchor);
-
-        Color color = dmgNormalColor;
-        if (isCrit) color = dmgCritColor;
-        else
-        {
-            if (effectiveness > 1.25f) color = dmgWeakColor;
-            else if (effectiveness < 0.85f) color = dmgResistColor;
-        }
-
-        inst.Init(amount, color);
-    }
 
     public void ScreenShake(float magnitude, float duration)
     {
@@ -388,6 +423,7 @@ public sealed class BattleFeedbackManager : MonoBehaviour
         {
             if (playerGuardIcon)
             {
+                SetStatusIconVisible(playerGuardIcon, true);
                 Punch(playerGuardIcon);
 
                 var g = playerGuardIcon;
@@ -404,9 +440,189 @@ public sealed class BattleFeedbackManager : MonoBehaviour
         }
         else
         {
-            if (wildGuardIcon) Punch(wildGuardIcon);
+            if (wildGuardIcon)
+            {
+                SetStatusIconVisible(wildGuardIcon, true);
+                Punch(wildGuardIcon);
+            }
             else if (wildIcon) Punch(wildIcon);
         }
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // HP Text + HP Bars (centralized here)
+    // ─────────────────────────────────────────────────────────────
+
+    public bool HasHPTextWired => (playerHPValueText != null) || (wildHPValueText != null);
+    public bool HasHPBarsWired => (playerHPBar != null) || (wildHPBar != null);
+
+    /// <summary>
+    /// UI-only. Call whenever HP changes, when swapping, and at battle start.
+    /// </summary>
+    public void SetHPTexts(float playerCur, float playerMax, float wildCur, float wildMax)
+    {
+        int pCur = Mathf.CeilToInt(Mathf.Max(0f, playerCur));
+        int pMax = Mathf.CeilToInt(Mathf.Max(1f, playerMax));
+        int wCur = Mathf.CeilToInt(Mathf.Max(0f, wildCur));
+        int wMax = Mathf.CeilToInt(Mathf.Max(1f, wildMax));
+
+        bool pChanged = (pCur != _lastPlayerCur) || (pMax != _lastPlayerMax);
+        bool wChanged = (wCur != _lastWildCur) || (wMax != _lastWildMax);
+
+        _lastPlayerCur = pCur; _lastPlayerMax = pMax;
+        _lastWildCur = wCur; _lastWildMax = wMax;
+
+        if (playerHPValueText)
+        {
+            playerHPValueText.text = $"{pCur}/{pMax}";
+            if (hpTextPunchOnChange && pChanged) PunchTMP(playerHPValueText);
+        }
+
+        if (wildHPValueText)
+        {
+            wildHPValueText.text = $"{wCur}/{wMax}";
+            if (hpTextPunchOnChange && wChanged) PunchTMP(wildHPValueText);
+        }
+    }
+
+    /// <summary>
+    /// UI-only. If HP bars are wired, animates them smoothly (or snaps if disabled).
+    /// Also triggers a quick shake when the target value decreases.
+    /// </summary>
+    public void SetHPBars(float playerCur, float playerMax, float wildCur, float wildMax)
+    {
+        if (playerHPBar)
+        {
+            float pMax = Mathf.Max(1f, playerMax);
+            float pCur = Mathf.Clamp(playerCur, 0f, pMax);
+            SetHPBarAnimated(playerHPBar, ref _playerHPAnimCR, pCur, pMax, isPlayer: true);
+        }
+
+        if (wildHPBar)
+        {
+            float wMax = Mathf.Max(1f, wildMax);
+            float wCur = Mathf.Clamp(wildCur, 0f, wMax);
+            SetHPBarAnimated(wildHPBar, ref _wildHPAnimCR, wCur, wMax, isPlayer: false);
+        }
+    }
+
+    private void SetHPBarAnimated(Slider bar, ref Coroutine animCR, float targetValue, float maxValue, bool isPlayer)
+    {
+        if (!bar) return;
+
+        maxValue = Mathf.Max(1f, maxValue);
+        bar.maxValue = maxValue;
+
+        targetValue = Mathf.Clamp(targetValue, 0f, maxValue);
+
+        if (!smoothHPBars || !gameObject.activeInHierarchy)
+        {
+            if (animCR != null) { StopCoroutine(animCR); animCR = null; }
+            bar.value = targetValue;
+            return;
+        }
+
+        float current = bar.value;
+
+        // Shake-on-decrease behavior moved here.
+        if (current > targetValue)
+        {
+            if (isPlayer) PlayHPShakeForPlayer();
+            else PlayHPShakeForWild();
+        }
+
+        if (Mathf.Approximately(current, targetValue))
+        {
+            if (animCR != null) { StopCoroutine(animCR); animCR = null; }
+            bar.value = targetValue;
+            return;
+        }
+
+        if (animCR != null) StopCoroutine(animCR);
+        animCR = StartCoroutine(Co_AnimateHPBar(bar, current, targetValue));
+    }
+
+    private IEnumerator Co_AnimateHPBar(Slider bar, float start, float end)
+    {
+        if (!bar) yield break;
+
+        float max = Mathf.Max(1f, bar.maxValue);
+        float distance = Mathf.Abs(end - start);
+
+        float duration = hpBarSecondsForFull * (distance / max);
+        duration = Mathf.Max(0.05f, duration);
+
+        float t = 0f;
+        while (t < 1f)
+        {
+            t += Time.unscaledDeltaTime / duration;
+            bar.value = Mathf.Lerp(start, end, t);
+            yield return null;
+        }
+
+        bar.value = end;
+    }
+
+    private void PunchTMP(TextMeshProUGUI tmp)
+    {
+        if (!tmp) return;
+
+        var t = tmp.rectTransform;
+        if (!t) return;
+
+        LeanTween.cancel(t);
+        t.localScale = Vector3.one;
+
+        LeanTween.scale(t, Vector3.one * hpTextPunchScale, hpTextPunchTime)
+            .setEaseOutQuad()
+            .setIgnoreTimeScale(true)
+            .setOnComplete(() =>
+            {
+                if (!t) return;
+                LeanTween.scale(t, Vector3.one, hpTextPunchTime)
+                    .setEaseInQuad()
+                    .setIgnoreTimeScale(true);
+            });
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // Guard auto-hide helpers
+    // ─────────────────────────────────────────────────────────────
+
+    private void StartGuardAutoHide(BattleFeedbackSide side, float seconds)
+    {
+        StopGuardAutoHideCR(side);
+
+        if (!gameObject.activeInHierarchy) return;
+
+        if (side == BattleFeedbackSide.Player)
+            _playerGuardAutoHideCR = StartCoroutine(Co_AutoHideGuard(side, seconds));
+        else
+            _wildGuardAutoHideCR = StartCoroutine(Co_AutoHideGuard(side, seconds));
+    }
+
+    private void StopGuardAutoHideCR(BattleFeedbackSide side)
+    {
+        if (side == BattleFeedbackSide.Player)
+        {
+            if (_playerGuardAutoHideCR != null) { StopCoroutine(_playerGuardAutoHideCR); _playerGuardAutoHideCR = null; }
+        }
+        else
+        {
+            if (_wildGuardAutoHideCR != null) { StopCoroutine(_wildGuardAutoHideCR); _wildGuardAutoHideCR = null; }
+        }
+    }
+
+    private IEnumerator Co_AutoHideGuard(BattleFeedbackSide side, float seconds)
+    {
+        float wait = Mathf.Max(0.01f, seconds);
+        yield return new WaitForSecondsRealtime(wait);
+
+        var icon = (side == BattleFeedbackSide.Player) ? playerGuardIcon : wildGuardIcon;
+        SetStatusIconVisible(icon, false);
+
+        if (side == BattleFeedbackSide.Player) _playerGuardAutoHideCR = null;
+        else _wildGuardAutoHideCR = null;
     }
 
     // ─────────────────────────────────────────────────────────────
@@ -559,61 +775,6 @@ public sealed class BattleFeedbackManager : MonoBehaviour
             {
                 if (!rt) return;
                 rt.localPosition = basePos;
-            });
-    }
-
-    public bool HasHPTextWired => (playerHPValueText != null) || (wildHPValueText != null);
-
-    /// <summary>
-    /// UI-only. Call from BattleManager whenever HP changes, when swapping, and at battle start.
-    /// </summary>
-    public void SetHPTexts(float playerCur, float playerMax, float wildCur, float wildMax)
-    {
-        int pCur = Mathf.CeilToInt(Mathf.Max(0f, playerCur));
-        int pMax = Mathf.CeilToInt(Mathf.Max(1f, playerMax));
-        int wCur = Mathf.CeilToInt(Mathf.Max(0f, wildCur));
-        int wMax = Mathf.CeilToInt(Mathf.Max(1f, wildMax));
-
-        bool pChanged = (pCur != _lastPlayerCur) || (pMax != _lastPlayerMax);
-        bool wChanged = (wCur != _lastWildCur) || (wMax != _lastWildMax);
-
-        _lastPlayerCur = pCur; _lastPlayerMax = pMax;
-        _lastWildCur = wCur; _lastWildMax = wMax;
-
-        if (playerHPValueText)
-        {
-            playerHPValueText.text = $"{pCur}/{pMax}";
-            if (hpTextPunchOnChange && pChanged) PunchTMP(playerHPValueText);
-        }
-
-        if (wildHPValueText)
-        {
-            wildHPValueText.text = $"{wCur}/{wMax}";
-            if (hpTextPunchOnChange && wChanged) PunchTMP(wildHPValueText);
-        }
-    }
-
-    private void PunchTMP(TextMeshProUGUI tmp)
-    {
-        if (!tmp) return;
-
-        // LeanTween-safe punch. Does not require a CanvasGroup.
-        var t = tmp.rectTransform;
-        if (!t) return;
-
-        LeanTween.cancel(t);
-        t.localScale = Vector3.one;
-
-        // Quick up then back.
-        LeanTween.scale(t, Vector3.one * hpTextPunchScale, hpTextPunchTime)
-            .setEaseOutQuad()
-            .setIgnoreTimeScale(true)
-            .setOnComplete(() =>
-            {
-                if (!t) return;
-                LeanTween.scale(t, Vector3.one, hpTextPunchTime)
-                    .setEaseInQuad()
-                    .setIgnoreTimeScale(true);
             });
     }
 }

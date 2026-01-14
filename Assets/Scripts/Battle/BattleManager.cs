@@ -151,10 +151,6 @@ public class BattleManager : MonoBehaviour
     private float[] slotDamageBuffPct;
     private int[] slotDamageBuffTurns;
 
-    [Header("HP Bar Animation")]
-    [SerializeField] private bool smoothHPBars = true;
-    [SerializeField, Min(0.01f)] private float hpBarSecondsForFull = 0.6f;
-
     [Header("Debug - Titles")]
     [SerializeField] private bool debugTitles = false;
     [SerializeField] private bool debugTitlesEveryTurn = true;
@@ -399,6 +395,7 @@ public class BattleManager : MonoBehaviour
 
         if (turnCR != null) StopCoroutine(turnCR);
         turnCR = StartCoroutine(Co_RevealPanelsThenStart(wildCG, playerCG, 0.28f));
+        ResetStatusIcons();
     }
 
     private IEnumerator Co_RevealPanelsThenStart(CanvasGroup wildCG, CanvasGroup playerCG, float duration)
@@ -447,6 +444,10 @@ public class BattleManager : MonoBehaviour
         // Ensure HP text starts as Max/Max (e.g., 100/100) at battle start.
         UpdateHPTextUI();
 
+        // Add this:
+        ResetStatusIcons();
+        RefreshStatusIconsFromState();
+
         if (turnCR != null) StopCoroutine(turnCR);
         turnCR = StartCoroutine(TurnLoop());
         yield break;
@@ -472,10 +473,16 @@ public class BattleManager : MonoBehaviour
                 swappedFromKO = true;
             }
 
+            // Apply any stored guard shields (from last round)
             ApplyPendingGuardShieldForActive();
             ApplyPendingGuardShieldForWild();
 
+            // New round: clear defend stances (they are "this round only")
+            defendActiveThisRound = false;
             wildDefendActiveThisRound = false;
+
+            // Sync status icons after round reset + shield application
+            RefreshStatusIconsFromState();
 
             BattleLogger.Log($"— Round {round} —", LogScope.Battle);
             yield return Wait(beginRoundDelay);
@@ -491,6 +498,9 @@ public class BattleManager : MonoBehaviour
                 ClampAndPushActiveHP();
                 ApplyActiveToUI();
                 RefreshBenchUI();
+
+                // Swap can change which slot has charge queued
+                RefreshStatusIconsFromState();
             }
 
             if (IsWildKO() || IsTeamKO())
@@ -522,7 +532,9 @@ public class BattleManager : MonoBehaviour
             int pSpeedAfterTitles = Mathf.Max(1, Mathf.RoundToInt(pSpeedAfterTitlesF));
 
             var cmods = GetConditionalModsForActive();
-            float pSpeedWithConditionalsF = (pSpeedAfterTitles + Mathf.Max(0, cmods.spdFlat)) * (1f + Mathf.Max(0f, cmods.spdPct));
+            float pSpeedWithConditionalsF =
+                (pSpeedAfterTitles + Mathf.Max(0, cmods.spdFlat)) *
+                (1f + Mathf.Max(0f, cmods.spdPct));
             int pSpeedWithConditionals = Mathf.Max(1, Mathf.RoundToInt(pSpeedWithConditionalsF));
 
             int tempSPDFlat = BattleTempBuffs.I ? BattleTempBuffs.I.GetPlayerSpeedFlatBonus() : 0;
@@ -535,20 +547,24 @@ public class BattleManager : MonoBehaviour
             else if (pSpeed < wSpeed) playerFirst = false;
             else playerFirst = UnityEngine.Random.value < 0.5f;
 
-            defendActiveThisRound = false;
-
             EnemyAction wildChoice = ChooseEnemyAction();
 
             // When wild chooses Defend and player goes first, apply the defend stance immediately.
             if (playerFirst)
             {
                 if (wildChoice == EnemyAction.Defend)
-                    ApplyWildDefendStance();
+                {
+                    ApplyWildDefendStance(); // sets wildDefendActiveThisRound (success/fail)
+                    RefreshStatusIconsFromState();
+                }
 
                 if (!IsWildKO() && !IsTeamKO())
                 {
                     if (manualTurns) yield return WaitForPlayerChoiceAndResolve();
                     else yield return PlayerTurn();
+
+                    // Player may have set/consumed charge or set defend in the resolve
+                    RefreshStatusIconsFromState();
 
                     if (CheckEnd()) break;
                     yield return Wait(hitPause);
@@ -559,6 +575,10 @@ public class BattleManager : MonoBehaviour
                     if (wildChoice != EnemyAction.Defend)
                     {
                         yield return EnemyTurn(wildChoice);
+
+                        // Wild may have set/consumed charge or set defend in EnemyTurn
+                        RefreshStatusIconsFromState();
+
                         if (CheckEnd()) break;
                         yield return Wait(hitPause);
                     }
@@ -592,9 +612,13 @@ public class BattleManager : MonoBehaviour
 
                             if (feedback)
                             {
+                                // IMPORTANT: Do NOT call PlayDefendShieldFX here.
+                                // Shield FX is played when damage is actually prevented (inside EnemyTurn).
                                 feedback.PlayDefendResult(BattleFeedbackManager.BattleFeedbackSide.Player, success);
-                                if (success) feedback.PlayDefendShieldFX(isPlayer: true);
                             }
+
+                            // Defend icon should only show if success
+                            RefreshStatusIconsFromState();
 
                             if (success)
                             {
@@ -610,10 +634,15 @@ public class BattleManager : MonoBehaviour
                         {
                             ResetDefendStreak();
                             defendActiveThisRound = false;
+                            RefreshStatusIconsFromState();
                         }
                     }
 
                     yield return EnemyTurn(wildChoice);
+
+                    // Enemy turn can set defend/charge/consume charge
+                    RefreshStatusIconsFromState();
+
                     if (CheckEnd()) break;
                     yield return Wait(hitPause);
 
@@ -625,14 +654,19 @@ public class BattleManager : MonoBehaviour
                             {
                                 case PlayerAction.Attack:
                                     yield return PlayerTurn();
+                                    RefreshStatusIconsFromState();
                                     break;
 
                                 case PlayerAction.Focus:
                                 {
                                     ResetDefendStreak();
 
-                                    if (chargedNextAttack != null && activeIndex >= 0 && activeIndex < chargedNextAttack.Length)
+                                    if (chargedNextAttack != null &&
+                                        activeIndex >= 0 &&
+                                        activeIndex < chargedNextAttack.Length)
+                                    {
                                         chargedNextAttack[activeIndex] = true;
+                                    }
 
                                     BattleLogger.Log($"{GetName(activeIndex)} is charging.", LogScope.Battle);
                                     BattleLogger.Log($"Their next attack will deal +{Mathf.RoundToInt(chargeBonusPct * 100f)}% damage.", LogScope.Battle);
@@ -641,6 +675,8 @@ public class BattleManager : MonoBehaviour
                                         BattleFeedbackManager.BattleFeedbackSide.Player,
                                         BattleFeedbackManager.BattleFeedbackAction.Focus
                                     );
+
+                                    RefreshStatusIconsFromState();
                                     break;
                                 }
 
@@ -658,6 +694,9 @@ public class BattleManager : MonoBehaviour
                                         BattleFeedbackManager.BattleFeedbackAction.Run
                                     );
 
+                                    // Run does not affect guard/charge, but keep icons correct anyway
+                                    RefreshStatusIconsFromState();
+
                                     if (escaped)
                                     {
                                         BattleLogger.Log($"{name} has fled! (Run chance {Mathf.RoundToInt(chance * 100f)}%)", LogScope.Battle);
@@ -674,12 +713,14 @@ public class BattleManager : MonoBehaviour
 
                                 case PlayerAction.Defend:
                                 default:
+                                    // already handled above
                                     break;
                             }
                         }
                         else
                         {
                             yield return PlayerTurn();
+                            RefreshStatusIconsFromState();
                         }
 
                         if (CheckEnd()) break;
@@ -701,13 +742,17 @@ public class BattleManager : MonoBehaviour
                 yield return Wait(endRoundDelay);
             }
 
+            // Round ends: clear defend stances so guard icon does not persist
             defendActiveThisRound = false;
             wildDefendActiveThisRound = false;
+            RefreshStatusIconsFromState();
+
             round++;
         }
 
         turnCR = null;
     }
+
 
     private IEnumerator WaitForPlayerChoiceAndResolve()
     {
@@ -738,7 +783,6 @@ public class BattleManager : MonoBehaviour
                 if (feedback)
                 {
                     feedback.PlayDefendResult(BattleFeedbackManager.BattleFeedbackSide.Player, success);
-                    if (success) feedback.PlayDefendShieldFX(isPlayer: true);
                 }
 
                 if (success)
@@ -964,8 +1008,6 @@ public class BattleManager : MonoBehaviour
         _totalDamageDealtThisBattle += Mathf.Max(0, dmgToApply);
         PushHPBars();
 
-        if (feedback) feedback.SpawnDamageNumber(dmgToApply, dr.crit, dr.effectiveness, hitPlayer: false);
-
         float wRatio = wildMaxHP > 0.01f ? (float)dmgToApply / wildMaxHP : 0f;
         if (feedback) feedback.PlayHitReaction(BattleFeedbackManager.BattleFeedbackSide.Wild, dr.crit, wRatio);
 
@@ -1019,7 +1061,6 @@ public class BattleManager : MonoBehaviour
             if (feedback)
             {
                 feedback.PlayDefendResult(BattleFeedbackManager.BattleFeedbackSide.Wild, success);
-                if (success) feedback.PlayDefendShieldFX(isPlayer: false);
             }
 
             if (success)
@@ -1181,8 +1222,6 @@ public class BattleManager : MonoBehaviour
         teamHP[activeIndex] = Mathf.Max(0f, teamHP[activeIndex] - dmg_final);
         ClampAndPushActiveHP();
 
-        if (feedback) feedback.SpawnDamageNumber(dmg_final, dr.crit && !df.cannotBeCrit, dr.effectiveness, hitPlayer: true);
-
         float maxHP = GetFinalMaxHPForIndex(activeIndex);
         float ratio = maxHP > 0.01f ? (float)dmg_final / maxHP : 0f;
         if (feedback) feedback.PlayHitReaction(BattleFeedbackManager.BattleFeedbackSide.Player, dr.crit && !df.cannotBeCrit, ratio);
@@ -1280,6 +1319,9 @@ public class BattleManager : MonoBehaviour
 
         pendingAction = PlayerAction.None;
         defendActiveThisRound = false;
+        wildDefendActiveThisRound = false;
+        wildChargedNextAttack = false;
+        ResetStatusIcons();
 
         if (turnCR != null) { StopCoroutine(turnCR); turnCR = null; }
 
@@ -1421,69 +1463,34 @@ public class BattleManager : MonoBehaviour
         GameEvents.BattleFinished?.Invoke(result);
     }
 
-    private void SetHPBarAnimated(Slider bar, ref Coroutine animCR, float targetValue, float maxValue)
-    {
-        if (!bar) return;
-
-        maxValue = Mathf.Max(1f, maxValue);
-        bar.maxValue = maxValue;
-        targetValue = Mathf.Clamp(targetValue, 0f, maxValue);
-
-        if (!smoothHPBars || !gameObject.activeInHierarchy)
-        {
-            if (animCR != null) { StopCoroutine(animCR); animCR = null; }
-            bar.value = targetValue;
-            return;
-        }
-
-        float current = bar.value;
-
-        if (current > targetValue && feedback != null)
-        {
-            if (bar == playerHPBar) feedback.PlayHPShakeForPlayer();
-            else if (bar == wildHPBar) feedback.PlayHPShakeForWild();
-        }
-
-        if (Mathf.Approximately(current, targetValue))
-        {
-            if (animCR != null) { StopCoroutine(animCR); animCR = null; }
-            bar.value = targetValue;
-            return;
-        }
-
-        if (animCR != null) StopCoroutine(animCR);
-        animCR = StartCoroutine(Co_AnimateHPBar(bar, current, targetValue));
-    }
-
-    private IEnumerator Co_AnimateHPBar(Slider bar, float start, float end)
-    {
-        if (!bar) yield break;
-
-        float max = Mathf.Max(1f, bar.maxValue);
-        float distance = Mathf.Abs(end - start);
-
-        float duration = hpBarSecondsForFull * (distance / max);
-        duration = Mathf.Max(0.05f, duration);
-
-        float t = 0f;
-        while (t < 1f)
-        {
-            t += Time.unscaledDeltaTime / duration;
-            float v = Mathf.Lerp(start, end, t);
-            bar.value = v;
-            yield return null;
-        }
-
-        bar.value = end;
-    }
-
     private void ClampAndPushActiveHP()
     {
         float curMax = GetFinalMaxHPForIndex(activeIndex);
         teamHP[activeIndex] = Mathf.Min(teamHP[activeIndex], curMax);
 
-        SetHPBarAnimated(playerHPBar, ref _playerHPAnimCR, teamHP[activeIndex], curMax);
-        SetHPBarAnimated(wildHPBar, ref _wildHPAnimCR, wildHP, wildMaxHP);
+        if (feedback != null)
+        {
+            feedback.SetHPBars(
+                playerCur: teamHP[activeIndex],
+                playerMax: curMax,
+                wildCur: wildHP,
+                wildMax: wildMaxHP
+            );
+        }
+        else
+        {
+            // Fallback if feedback is missing (snap)
+            if (playerHPBar)
+            {
+                playerHPBar.maxValue = curMax;
+                playerHPBar.value = Mathf.Clamp(teamHP[activeIndex], 0f, curMax);
+            }
+            if (wildHPBar)
+            {
+                wildHPBar.maxValue = wildMaxHP;
+                wildHPBar.value = Mathf.Clamp(wildHP, 0f, wildMaxHP);
+            }
+        }
 
         UpdatePlayerInfoUI();
         UpdateHPTextUI();
@@ -1491,14 +1498,36 @@ public class BattleManager : MonoBehaviour
 
     private void PushHPBars()
     {
-        SetHPBarAnimated(wildHPBar, ref _wildHPAnimCR, wildHP, wildMaxHP);
-
         float curMax = GetFinalMaxHPForIndex(activeIndex);
-        SetHPBarAnimated(playerHPBar, ref _playerHPAnimCR, teamHP[activeIndex], curMax);
+
+        if (feedback != null)
+        {
+            feedback.SetHPBars(
+                playerCur: teamHP[activeIndex],
+                playerMax: curMax,
+                wildCur: wildHP,
+                wildMax: wildMaxHP
+            );
+        }
+        else
+        {
+            // Fallback if feedback is missing (snap)
+            if (wildHPBar)
+            {
+                wildHPBar.maxValue = wildMaxHP;
+                wildHPBar.value = Mathf.Clamp(wildHP, 0f, wildMaxHP);
+            }
+            if (playerHPBar)
+            {
+                playerHPBar.maxValue = curMax;
+                playerHPBar.value = Mathf.Clamp(teamHP[activeIndex], 0f, curMax);
+            }
+        }
 
         UpdatePlayerInfoUI();
         UpdateHPTextUI();
     }
+
 
     private void UpdateHPTextUI()
     {
@@ -2222,7 +2251,6 @@ public class BattleManager : MonoBehaviour
         if (feedback)
         {
             feedback.PlayDefendResult(BattleFeedbackManager.BattleFeedbackSide.Wild, success);
-            if (success) feedback.PlayDefendShieldFX(isPlayer: false);
         }
 
         if (success)
@@ -2261,6 +2289,7 @@ public class BattleManager : MonoBehaviour
     {
         SetIsPlayerTurn(false);
         pendingAction = PlayerAction.None;
+        ResetStatusIcons();
 
         if (benchBtn1) benchBtn1.interactable = false;
         if (benchBtn2) benchBtn2.interactable = false;
@@ -2431,4 +2460,39 @@ public class BattleManager : MonoBehaviour
     {
         return trainingAtk > 0 && flatAtkBonus >= trainingAtk;
     }
+
+    private void ResetStatusIcons()
+    {
+        if (!feedback) return;
+
+        feedback.SetGuard(BattleFeedbackManager.BattleFeedbackSide.Player, false);
+        feedback.SetGuard(BattleFeedbackManager.BattleFeedbackSide.Wild, false);
+
+        feedback.SetCharge(BattleFeedbackManager.BattleFeedbackSide.Player, false);
+        feedback.SetCharge(BattleFeedbackManager.BattleFeedbackSide.Wild, false);
+    }
+
+    /// <summary>
+    /// Call after swaps / at round boundaries to reflect the CURRENT logical status.
+    /// (Guard = defending this round, Charge = has charged next attack queued)
+    /// </summary>
+    private void RefreshStatusIconsFromState()
+    {
+        if (!feedback) return;
+
+        // Guard status (this round only)
+        feedback.SetGuard(BattleFeedbackManager.BattleFeedbackSide.Player, defendActiveThisRound);
+        feedback.SetGuard(BattleFeedbackManager.BattleFeedbackSide.Wild, wildDefendActiveThisRound);
+
+        // Charge status (persists until spent)
+        bool playerCharged =
+            (chargedNextAttack != null &&
+            activeIndex >= 0 &&
+            activeIndex < chargedNextAttack.Length &&
+            chargedNextAttack[activeIndex]);
+
+        feedback.SetCharge(BattleFeedbackManager.BattleFeedbackSide.Player, playerCharged);
+        feedback.SetCharge(BattleFeedbackManager.BattleFeedbackSide.Wild, wildChargedNextAttack);
+    }
+
 }

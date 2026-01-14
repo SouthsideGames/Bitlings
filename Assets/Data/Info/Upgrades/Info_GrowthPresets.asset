@@ -12,14 +12,14 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 8909f92dca58941be8a4545ccb059a11, type: 3}
   m_Name: Info_GrowthPresets
   m_EditorClassIdentifier: 
-  id: upg.autogrowth.presets
+  id: upg.growth.presets
   category: 5
   title: Growth Presets
   subtitle: Smart Auto Allocation
   body: 'Allows Auto Growth to use saved stat presets.
 
-    
 
-    Growth Cores
-    will be distributed according to your preferred stat buckets, maintaining optimized
-    builds automatically.'
+
+    Growth Cores will be
+    distributed according to your preferred stat buckets, maintaining optimized builds
+    automatically.'
