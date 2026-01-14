@@ -1,5 +1,3 @@
-// Assets/Scripts/Encounter/EncounterManager.cs  (partial)
-// FULL updated version of what you pasted, with wild title fixes + test toggles.
 using UnityEngine;
 using System;
 using System.Collections;
@@ -72,7 +70,23 @@ public partial class EncounterManager : MonoBehaviour
     public string WildCombatId => _wildCombatId;
     public TitleSO WildRolledTitle => _wildRolledTitle;
     public IReadOnlyList<TitleSO> WildActiveTitles => _wildActiveTitles;
+
+    // Existing behavior: returns unemployedLabel if empty/null
     public string WildTitleLabel => string.IsNullOrEmpty(_wildTitleLabel) ? unemployedLabel : _wildTitleLabel;
+
+    // NEW: UI helper. If the wild monster has no real title, returns false.
+    // This is what the UI should use to hide the TitleLabel GameObject.
+    public bool WildHasTitle
+    {
+        get
+        {
+            if (string.IsNullOrEmpty(_wildTitleLabel)) return false;
+            return !string.Equals(_wildTitleLabel, unemployedLabel, StringComparison.OrdinalIgnoreCase);
+        }
+    }
+
+    // NEW: UI-safe label. Empty string means "hide title UI".
+    public string WildTitleLabelUI => WildHasTitle ? _wildTitleLabel : "";
 
     private void ClearWildTitleInjection()
     {
@@ -132,7 +146,7 @@ public partial class EncounterManager : MonoBehaviour
             }
         }
 
-    #if UNITY_EDITOR || DEVELOPMENT_BUILD
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
         // ── DEV OVERRIDE (priority 1): force a specific title by id
         TitleSO forced = null;
         string forcedId = Dev_ForceWildTitleId;
@@ -182,7 +196,7 @@ public partial class EncounterManager : MonoBehaviour
                 return;
             }
         }
-    #endif
+#endif
 
         // Bosses always roll 1 title if any candidates exist
         bool shouldRoll =
@@ -190,11 +204,11 @@ public partial class EncounterManager : MonoBehaviour
                 ? (candidates.Count > 0)
                 : (candidates.Count > 0 && Random.value <= Mathf.Clamp01(wildTitleRollChance));
 
-    #if UNITY_EDITOR || DEVELOPMENT_BUILD
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
         // ── DEV OVERRIDE (priority 2): always roll if candidates exist
         if (Dev_ForceWildTitleRoll && candidates.Count > 0)
             shouldRoll = true;
-    #endif
+#endif
 
         if (shouldRoll)
         {
@@ -212,7 +226,6 @@ public partial class EncounterManager : MonoBehaviour
         // Inject battle-scoped titles so adapter fallbacks can scan them safely
         TitlesAdapter.SetLocalTitles(_wildCombatId, _wildActiveTitles);
     }
-
 
     // ─────────────────────────────────────────────────────────────────────────────
 
@@ -942,9 +955,9 @@ public partial class EncounterManager : MonoBehaviour
     // ─────────────────────────────────────────────────────────
     // DEV / TEST OVERRIDES (PlayerPrefs driven)
     // ─────────────────────────────────────────────────────────
-    #if UNITY_EDITOR || DEVELOPMENT_BUILD
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
     private const string PP_ForceWildTitleRoll = "DEV_ForceWildTitleRoll"; // int 0/1
-    private const string PP_ForceWildTitleId   = "DEV_ForceWildTitleId";   // string e.g. "T-001"
+    private const string PP_ForceWildTitleId = "DEV_ForceWildTitleId";     // string e.g. "T-001"
 
     public bool Dev_ForceWildTitleRoll
     {
@@ -957,6 +970,5 @@ public partial class EncounterManager : MonoBehaviour
         get => PlayerPrefs.GetString(PP_ForceWildTitleId, "");
         set { PlayerPrefs.SetString(PP_ForceWildTitleId, value ?? ""); PlayerPrefs.Save(); }
     }
-    #endif
-
+#endif
 }
