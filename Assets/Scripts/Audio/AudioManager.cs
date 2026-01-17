@@ -74,6 +74,9 @@ public class AudioManager : MonoBehaviour
 
     private AudioClip _currentStartingMusic;
 
+    // Track what is currently playing to avoid restarting the same clip every refresh.
+    private AudioClip _currentMusicClip = null;
+
     // ─────────────────────────────────────────────────────────────
     // SFX
     // ─────────────────────────────────────────────────────────────
@@ -124,9 +127,13 @@ public class AudioManager : MonoBehaviour
 
         // Build map
         _map.Clear();
-        foreach (var e in catalog)
+        for (int i = 0; i < catalog.Count; i++)
+        {
+            var e = catalog[i];
+            if (e == null) continue;
             if (!_map.ContainsKey(e.type))
                 _map.Add(e.type, e);
+        }
 
         EnsureSfxPool();
 
@@ -141,7 +148,7 @@ public class AudioManager : MonoBehaviour
 
         // If pool is misconfigured, we intentionally play nothing.
         if (_currentStartingMusic != null)
-            PlayMusic(_currentStartingMusic, true, defaultCrossfade);
+            PlayMusicIfDifferent(_currentStartingMusic, true, defaultCrossfade);
     }
 
     private void OnEnable()
@@ -216,7 +223,7 @@ public class AudioManager : MonoBehaviour
     {
         _currentStartingMusic = PickStartingMusic();
         if (playImmediately && _currentStartingMusic != null)
-            PlayMusic(_currentStartingMusic, true, defaultCrossfade);
+            PlayMusicIfDifferent(_currentStartingMusic, true, defaultCrossfade);
     }
 
     // ─────────────────────────────────────────────────────────────
@@ -224,12 +231,15 @@ public class AudioManager : MonoBehaviour
     // ─────────────────────────────────────────────────────────────
     public void PlayMusic(AudioClip clip, bool loop = true, float crossfade = -1f)
     {
+        // NOTE: This preserves your API surface. It will always swap even if same clip.
         if (!clip) return;
 
         if (crossfade < 0f)
             crossfade = defaultCrossfade;
 
         var next = (_activeMusic == musicA) ? musicB : musicA;
+        if (next == null) return;
+
         next.clip = clip;
         next.loop = loop;
         next.volume = 0f;
@@ -239,6 +249,25 @@ public class AudioManager : MonoBehaviour
         _xfadeCo = StartCoroutine(CO_Crossfade(_activeMusic, next, crossfade));
 
         _activeMusic = next;
+        _currentMusicClip = clip;
+    }
+
+    /// <summary>
+    /// Preferred internal path: only crossfades if the requested clip is different than the current clip.
+    /// Prevents "restarting the same song" when panels open/close.
+    /// </summary>
+    private void PlayMusicIfDifferent(AudioClip clip, bool loop = true, float crossfade = -1f)
+    {
+        if (!clip) return;
+
+        // If already playing this clip (on either source), just ensure volumes are correct.
+        if (_currentMusicClip == clip && _activeMusic != null && _activeMusic.isPlaying)
+        {
+            ApplyVolumes();
+            return;
+        }
+
+        PlayMusic(clip, loop, crossfade);
     }
 
     public void StopMusic(float fadeOut = 0.25f)
@@ -246,6 +275,8 @@ public class AudioManager : MonoBehaviour
         if (_activeMusic == null || !_activeMusic.isPlaying) return;
         if (_xfadeCo != null) StopCoroutine(_xfadeCo);
         _xfadeCo = StartCoroutine(CO_FadeOut(_activeMusic, fadeOut));
+
+        _currentMusicClip = null;
     }
 
     // ─────────────────────────────────────────────────────────────
@@ -259,12 +290,26 @@ public class AudioManager : MonoBehaviour
         if (!PassCooldown(type, entry)) return;
         if (entry.clips == null || entry.clips.Count == 0) return;
 
-        var clip = entry.clips[UnityEngine.Random.Range(0, entry.clips.Count)];
+        // Build list of valid clips so we never randomly pick a null clip.
+        List<AudioClip> valid = null;
+        for (int i = 0; i < entry.clips.Count; i++)
+        {
+            var c = entry.clips[i];
+            if (c == null) continue;
+            valid ??= new List<AudioClip>();
+            valid.Add(c);
+        }
+        if (valid == null || valid.Count == 0) return;
+
+        var clip = valid[UnityEngine.Random.Range(0, valid.Count)];
         var src = NextSfxSource();
+        if (src == null) return;
 
         src.pitch = UnityEngine.Random.Range(entry.pitchMin, entry.pitchMax);
 
         float volume = entry.volume * GetSfxScale();
+        if (volume <= 0f) return;
+
         src.PlayOneShot(clip, volume);
     }
 
@@ -275,6 +320,12 @@ public class AudioManager : MonoBehaviour
 
         PlaySfx(type);
     }
+
+    // Convenience helpers (preserve + expand)
+    public void PlayClick() => PlaySfx(SfxType.Click);
+    public void PlayDenied() => PlaySfx(SfxType.Denied);
+    public void PlayPurchase() => PlaySfx(SfxType.Purchase);
+    public void PlayCollect() => PlaySfx(SfxType.Collect);
 
     // ─────────────────────────────────────────────────────────────
     // Volumes & Mutes (called by SettingsPanel)
@@ -344,15 +395,20 @@ public class AudioManager : MonoBehaviour
     {
         float musicScale = GetMusicScale();
 
-        if (_activeMusic == musicA)
+        // Do not stomp crossfade behavior; only ensure base scaling is correct.
+        // If a crossfade is in progress, CO_Crossfade continuously sets volumes anyway.
+        if (_xfadeCo == null)
         {
-            if (musicA != null) musicA.volume = musicScale;
-            if (musicB != null) musicB.volume = 0f;
-        }
-        else
-        {
-            if (musicB != null) musicB.volume = musicScale;
-            if (musicA != null) musicA.volume = 0f;
+            if (_activeMusic == musicA)
+            {
+                if (musicA != null) musicA.volume = musicScale;
+                if (musicB != null) musicB.volume = 0f;
+            }
+            else
+            {
+                if (musicB != null) musicB.volume = musicScale;
+                if (musicA != null) musicA.volume = 0f;
+            }
         }
     }
 
@@ -376,6 +432,8 @@ public class AudioManager : MonoBehaviour
 
     private AudioSource NextSfxSource()
     {
+        if (sfxPool == null || sfxPool.Count == 0) return null;
+        _sfxIndex = (_sfxIndex + sfxPool.Count) % sfxPool.Count;
         var src = sfxPool[_sfxIndex];
         _sfxIndex = (_sfxIndex + 1) % sfxPool.Count;
         return src;
@@ -402,9 +460,9 @@ public class AudioManager : MonoBehaviour
         var s = SaveManager.Data?.settings;
         if (s == null) return;
 
-        _master01 = s.masterVolume;
-        _music01 = s.musicVolume;
-        _sfx01 = s.sfxVolume;
+        _master01 = Mathf.Clamp01(s.masterVolume);
+        _music01 = Mathf.Clamp01(s.musicVolume);
+        _sfx01 = Mathf.Clamp01(s.sfxVolume);
 
         _muteAll = s.muteAll;
         _muteMusic = s.muteMusic;
@@ -416,9 +474,9 @@ public class AudioManager : MonoBehaviour
         var s = SaveManager.Data?.settings;
         if (s == null) return;
 
-        s.masterVolume = _master01;
-        s.musicVolume = _music01;
-        s.sfxVolume = _sfx01;
+        s.masterVolume = Mathf.Clamp01(_master01);
+        s.musicVolume = Mathf.Clamp01(_music01);
+        s.sfxVolume = Mathf.Clamp01(_sfx01);
 
         s.muteAll = _muteAll;
         s.muteMusic = _muteMusic;
@@ -434,6 +492,9 @@ public class AudioManager : MonoBehaviour
     {
         dur = Mathf.Max(0.01f, dur);
         float t = 0f;
+
+        // Cache the intended clip; used to avoid re-triggering.
+        if (to != null) _currentMusicClip = to.clip;
 
         while (t < dur)
         {
@@ -479,6 +540,9 @@ public class AudioManager : MonoBehaviour
         src.Stop();
         src.clip = null;
         src.volume = 0f;
+
+        _xfadeCo = null;
+        _currentMusicClip = null;
     }
 
     // ─────────────────────────────────────────────────────────────
@@ -522,12 +586,12 @@ public class AudioManager : MonoBehaviour
 
             if (clip != null)
             {
-                PlayMusic(clip, true, defaultCrossfade);
+                PlayMusicIfDifferent(clip, true, defaultCrossfade);
             }
             else if (_currentStartingMusic != null)
             {
                 // No fallback: only use the selected starting music if it exists.
-                PlayMusic(_currentStartingMusic, true, defaultCrossfade);
+                PlayMusicIfDifferent(_currentStartingMusic, true, defaultCrossfade);
             }
 
             return;
@@ -536,19 +600,17 @@ public class AudioManager : MonoBehaviour
         // 2) Battle music only when: encounter open, in battle, and no summary
         if (inBattle && encounterOpen && battleMusic != null)
         {
-            PlayMusic(battleMusic, true, defaultCrossfade);
+            PlayMusicIfDifferent(battleMusic, true, defaultCrossfade);
             return;
         }
 
         // 3) Everything else → starting/home music (NO fallback)
         if (_currentStartingMusic != null)
-            PlayMusic(_currentStartingMusic, true, defaultCrossfade);
+            PlayMusicIfDifferent(_currentStartingMusic, true, defaultCrossfade);
     }
 
     public void RefreshMusicState()
     {
         UpdateMusicForCurrentState();
     }
-
-    public void PlayClick() => PlaySfx(SfxType.Click);
 }

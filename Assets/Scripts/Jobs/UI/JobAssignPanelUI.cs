@@ -1,7 +1,9 @@
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
+using System;
 using System.Collections.Generic;
+using System.Reflection;
 
 public class JobAssignPanelUI : MonoBehaviour
 {
@@ -29,6 +31,9 @@ public class JobAssignPanelUI : MonoBehaviour
     private MonsterDataSO _pendingDef;
     private string _pendingId;
 
+    // NEW: keep the pending owned data so we can validate fatigue at confirm time.
+    private OwnedMonsterData _pendingOwned;
+
     private JobSiteState _cachedState;
 
     public void Open(JobType job, int slotIndex)
@@ -45,6 +50,7 @@ public class JobAssignPanelUI : MonoBehaviour
 
         _pendingDef = null;
         _pendingId = null;
+        _pendingOwned = null;
 
         if (currentImage)
         {
@@ -102,6 +108,7 @@ public class JobAssignPanelUI : MonoBehaviour
             return;
         }
 
+        // Pick "best" owned monster per monsterId+shiny key.
         var bestByKey = new Dictionary<string, OwnedMonsterData>(64);
         for (int i = 0; i < data.owned.Count; i++)
         {
@@ -127,7 +134,8 @@ public class JobAssignPanelUI : MonoBehaviour
             }
         }
 
-        var entries = new List<(MonsterDataSO def, string ownedUid, float score)>();
+        // NEW: include owned reference + fatigue display.
+        var entries = new List<(MonsterDataSO def, OwnedMonsterData owned, string ownedUid, float score)>();
         foreach (var kv in bestByKey)
         {
             var owned = kv.Value;
@@ -138,7 +146,7 @@ public class JobAssignPanelUI : MonoBehaviour
             if (!allowed) continue;
 
             float score = EffectivenessScore(_job, def);
-            entries.Add((def, owned.ownedUID, score));
+            entries.Add((def, owned, owned.ownedUID, score));
         }
 
         entries.Sort((a, b) => b.score.CompareTo(a.score));
@@ -153,6 +161,8 @@ public class JobAssignPanelUI : MonoBehaviour
 
         foreach (var e in entries)
         {
+            bool isFatigued = TryGetFatigueState(e.owned, e.ownedUid, out string etaText);
+
             var go = Instantiate(monsterButtonPrefab, listContent);
             var ui = go.GetComponent<JobMonsterEntryUI>();
 
@@ -160,14 +170,29 @@ public class JobAssignPanelUI : MonoBehaviour
             {
                 var btn = go.GetComponent<Button>();
                 var label = go.GetComponentInChildren<TextMeshProUGUI>();
-                if (label) label.text = e.def.displayName;
+
+                if (label)
+                {
+                    label.text = isFatigued
+                        ? $"{e.def.displayName} (Fatigued{(string.IsNullOrEmpty(etaText) ? "" : $" • {etaText}")})"
+                        : e.def.displayName;
+                }
+
                 if (btn)
                 {
+                    btn.interactable = !isFatigued;
                     btn.onClick.RemoveAllListeners();
                     btn.onClick.AddListener(() =>
                     {
+                        if (isFatigued)
+                        {
+                            AudioManager.I?.PlayDenied();
+                            return;
+                        }
+
                         _pendingDef = e.def;
                         _pendingId = e.ownedUid;
+                        _pendingOwned = e.owned;
 
                         if (currentImage)
                         {
@@ -191,11 +216,21 @@ public class JobAssignPanelUI : MonoBehaviour
             if (ui.scoreText) ui.scoreText.text = $"x{e.score:0.##}";
             if (ui.typeIcon) ui.typeIcon.sprite = e.def.typeIcon;
 
+            // NEW: fatigue presentation + interaction
+            ui.SetFatigued(isFatigued, etaText);
+
             ui.button.onClick.RemoveAllListeners();
             ui.button.onClick.AddListener(() =>
             {
+                if (isFatigued)
+                {
+                    AudioManager.I?.PlayDenied();
+                    return;
+                }
+
                 _pendingDef = e.def;
                 _pendingId = e.ownedUid;
+                _pendingOwned = e.owned;
 
                 if (currentImage)
                 {
@@ -227,6 +262,13 @@ public class JobAssignPanelUI : MonoBehaviour
     {
         if (JobManager.I == null) { Close(); return; }
         if (_pendingDef == null) { Close(); return; }
+
+        // NEW: hard-block assignment if fatigued (even if UI somehow allowed it).
+        if (TryGetFatigueState(_pendingOwned, _pendingId, out _))
+        {
+            AudioManager.I?.PlayDenied();
+            return;
+        }
 
         if (!JobManager.I.IsTypeEligibleFor(_job, _pendingDef.type))
         {
@@ -483,5 +525,164 @@ public class JobAssignPanelUI : MonoBehaviour
         catch { }
 
         return false;
+    }
+
+    // ---------------------------
+    // NEW: Fatigue detection (defensive, reflection-based)
+    // ---------------------------
+    private bool TryGetFatigueState(OwnedMonsterData owned, string ownedUid, out string etaText)
+    {
+        etaText = null;
+        if (owned == null && string.IsNullOrEmpty(ownedUid)) return false;
+
+        long now = SaveManager.NowUnix();
+
+        // 1) Prefer a direct JobManager method if you have one (we search by name to avoid compile breaks).
+        // Expected patterns: IsMonsterFatigued(string uid), GetMonsterFatigueUntil(string uid), etc.
+        try
+        {
+            var jm = JobManager.I;
+            if (jm != null)
+            {
+                var t = jm.GetType();
+
+                // bool IsMonsterFatigued(string uid)
+                var mIs = t.GetMethod("IsMonsterFatigued", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+                if (mIs != null && mIs.ReturnType == typeof(bool))
+                {
+                    var ps = mIs.GetParameters();
+                    if (ps.Length == 1 && ps[0].ParameterType == typeof(string))
+                    {
+                        bool r = (bool)mIs.Invoke(jm, new object[] { ownedUid });
+                        if (r) return true;
+                    }
+                }
+
+                // long GetMonsterFatigueUntil(string uid)
+                var mUntil = t.GetMethod("GetMonsterFatigueUntil", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+                if (mUntil != null && (mUntil.ReturnType == typeof(long) || mUntil.ReturnType == typeof(int)))
+                {
+                    var ps = mUntil.GetParameters();
+                    if (ps.Length == 1 && ps[0].ParameterType == typeof(string))
+                    {
+                        long until = Convert.ToInt64(mUntil.Invoke(jm, new object[] { ownedUid }));
+                        if (until > now)
+                        {
+                            etaText = FormatEta(until - now);
+                            return true;
+                        }
+                    }
+                }
+            }
+        }
+        catch { }
+
+        // 2) Fall back to OwnedMonsterData fields/properties (common naming patterns).
+        // Examples: fatigueUntilUnix, fatiguedUntilUnix, jobFatigueUntilUnix, etc.
+        if (owned != null)
+        {
+            if (TryReadUntilUnix(owned, out long untilUnix))
+            {
+                if (untilUnix > now)
+                {
+                    etaText = FormatEta(untilUnix - now);
+                    return true;
+                }
+            }
+
+            // If there's a simple boolean flag.
+            if (TryReadBool(owned, new[] { "isFatigued", "fatigued", "IsFatigued" }, out bool isFatigued) && isFatigued)
+                return true;
+        }
+
+        return false;
+    }
+
+    private bool TryReadUntilUnix(object obj, out long untilUnix)
+    {
+        untilUnix = 0;
+        if (obj == null) return false;
+
+        string[] names =
+        {
+            "fatigueUntilUnix",
+            "fatiguedUntilUnix",
+            "jobFatigueUntilUnix",
+            "fatigueEndsUnix",
+            "fatigueEndUnix",
+            "cooldownUntilUnix",
+            "restUntilUnix"
+        };
+
+        var t = obj.GetType();
+
+        for (int i = 0; i < names.Length; i++)
+        {
+            // field
+            var f = t.GetField(names[i], BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+            if (f != null)
+            {
+                try
+                {
+                    untilUnix = Convert.ToInt64(f.GetValue(obj));
+                    return true;
+                }
+                catch { }
+            }
+
+            // property
+            var p = t.GetProperty(names[i], BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+            if (p != null && p.CanRead)
+            {
+                try
+                {
+                    untilUnix = Convert.ToInt64(p.GetValue(obj, null));
+                    return true;
+                }
+                catch { }
+            }
+        }
+
+        return false;
+    }
+
+    private bool TryReadBool(object obj, string[] names, out bool value)
+    {
+        value = false;
+        if (obj == null) return false;
+
+        var t = obj.GetType();
+
+        for (int i = 0; i < names.Length; i++)
+        {
+            var f = t.GetField(names[i], BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+            if (f != null && f.FieldType == typeof(bool))
+            {
+                try { value = (bool)f.GetValue(obj); return true; } catch { }
+            }
+
+            var p = t.GetProperty(names[i], BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+            if (p != null && p.CanRead && p.PropertyType == typeof(bool))
+            {
+                try { value = (bool)p.GetValue(obj, null); return true; } catch { }
+            }
+        }
+
+        return false;
+    }
+
+    private string FormatEta(long seconds)
+    {
+        if (seconds <= 0) return "0s";
+
+        long m = seconds / 60;
+        long s = seconds % 60;
+        if (m <= 0) return $"{s}s";
+
+        long h = m / 60;
+        m = m % 60;
+
+        if (h <= 0) return $"{m}m";
+        return $"{h}h {m}m";
     }
 }
