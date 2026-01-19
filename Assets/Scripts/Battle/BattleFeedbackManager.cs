@@ -32,13 +32,6 @@ public sealed class BattleFeedbackManager : MonoBehaviour
     [SerializeField] private Image playerChargeIcon;
     [SerializeField] private Image wildChargeIcon;
 
-    [Header("Status Icon Behavior")]
-    [Tooltip("If enabled, PlayDefendResult will briefly show the guard icon then auto-hide it.")]
-    [SerializeField] private bool autoHideGuardAfterDefendResult = true;
-
-    [Tooltip("How long the guard icon stays visible after a defend result before auto-hiding (unscaled).")]
-    [SerializeField, Min(0.01f)] private float guardAutoHideSeconds = 0.35f;
-
     [Header("Optional: Action Buttons (press feedback)")]
     [SerializeField] private Button attackBtn;
     [SerializeField] private Button defendBtn;

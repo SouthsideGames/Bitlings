@@ -82,6 +82,16 @@ public class MonsterDetailPanelUI : MonoBehaviour
     [SerializeField] private Button favoriteButton;
     [SerializeField] private GameObject favoriteOnIcon;
 
+    [Header("Stats View Toggle")]
+    [Tooltip("Optional: button that toggles Base Stats vs Adjusted Stats.")]
+    [SerializeField] private Button statsViewToggleButton;
+
+    [Tooltip("Optional: label that shows current view (BASE / ADJ).")]
+    [SerializeField] private TextMeshProUGUI statsViewToggleLabel;
+
+    [Tooltip("If true, panel starts in Base stats view.")]
+    [SerializeField] private bool startInBaseStatsView = false;
+
     [Header("Build Safe Mode (Isolation)")]
     [SerializeField] private bool safeSkipStats = true;
     [SerializeField] private bool safeSkipEvolution = false;
@@ -118,9 +128,7 @@ public class MonsterDetailPanelUI : MonoBehaviour
 
     private bool _visible;
 
-    // ─────────────────────────────────────────────────────────────
     // Browse session (Codex/Starter swipe)
-    // ─────────────────────────────────────────────────────────────
     private IReadOnlyList<MonsterDataSO> _browseDefs;
     private int _browseIndex = -1;
     private bool _browseWrap = true;
@@ -128,6 +136,9 @@ public class MonsterDetailPanelUI : MonoBehaviour
     private bool _swipeTracking;
     private Vector2 _swipeStartPos;
     private float _lastBrowseAt;
+
+    private bool _showBaseStats;
+    private const string TRAINING_GREEN = "#3CDE74";
 
     private static readonly Dictionary<MonsterType, Color> TYPE_COLORS = new Dictionary<MonsterType, Color>()
     {
@@ -161,6 +172,8 @@ public class MonsterDetailPanelUI : MonoBehaviour
 
     private void Awake()
     {
+        _showBaseStats = startInBaseStatsView;
+
         if (confirmButton) { confirmButton.onClick.RemoveAllListeners(); confirmButton.onClick.AddListener(Confirm); }
         if (cancelButton) { cancelButton.onClick.RemoveAllListeners(); cancelButton.onClick.AddListener(Cancel); }
         if (closeButton) { closeButton.onClick.RemoveAllListeners(); closeButton.onClick.AddListener(Hide); }
@@ -187,6 +200,14 @@ public class MonsterDetailPanelUI : MonoBehaviour
             personalityInfoButton.onClick.AddListener(OpenPersonalityInfo);
         }
 
+        if (statsViewToggleButton)
+        {
+            statsViewToggleButton.onClick.RemoveAllListeners();
+            statsViewToggleButton.onClick.AddListener(ToggleStatsView);
+        }
+
+        RefreshStatsViewToggleLabel();
+
         ResolveTitleButton();
 
         TitleAssignPanelUI.OnTitlesChanged -= HandleTitlesChanged;
@@ -212,7 +233,6 @@ public class MonsterDetailPanelUI : MonoBehaviour
         if (!_visible) return;
         if (!enableSwipeBrowse) return;
 
-        // Only allow swipe browsing in Codex view, or Starter select detail view (if a browse session was provided)
         bool canSwipe =
             (_mode == MonsterDetailMode.CodexView) ||
             (_mode == MonsterDetailMode.StarterSelect && _browseDefs != null && _browseDefs.Count > 1);
@@ -223,13 +243,157 @@ public class MonsterDetailPanelUI : MonoBehaviour
     }
 
     // ─────────────────────────────────────────────────────────────
+    // Stats toggle
+    // ─────────────────────────────────────────────────────────────
+
+    private void ToggleStatsView()
+    {
+        _showBaseStats = !_showBaseStats;
+        RefreshStatsViewToggleLabel();
+        RenderStatsSection(); // instant refresh
+        AudioManager.I?.PlayClick();
+    }
+
+    private void RefreshStatsViewToggleLabel()
+    {
+        if (!statsViewToggleLabel) return;
+        statsViewToggleLabel.text = _showBaseStats ? "BASE" : "ADJ";
+    }
+
+    /// <summary>
+    /// Re-renders only the stat labels (HP/ATK/DEF/SPD/EVO).
+    /// </summary>
+    private void RenderStatsSection()
+    {
+        if (!_visible) return;
+        if (current == null) return;
+
+        int dispLvl = GetDisplayLevel();
+        if (lvlText) lvlText.text = $"LVL: {dispLvl}";
+
+        // ─────────────────────────────────────────────────────────────
+        // BASE view: raw MonsterDataSO stats (no scaling, no training, no titles)
+        // ─────────────────────────────────────────────────────────────
+        if (_showBaseStats)
+        {
+            int hpB  = Mathf.RoundToInt(current.baseHP);
+            int atkB = Mathf.RoundToInt(current.baseAttack);
+            int defB = Mathf.RoundToInt(current.baseDefense);
+            float spdB = current.baseSpeed;
+
+            if (hpText)  hpText.text  = hpB  > 0 ? $"HP: {hpB}" : "HP: —";
+            if (atkText) atkText.text = atkB > 0 ? $"ATK: {atkB}" : "ATK: —";
+            if (defText) defText.text = $"DEF: {defB}";
+            if (spdText) spdText.text = $"SPD: {spdB:0.##}";
+
+            if (evoText) evoText.text = (!safeSkipEvolution) ? BuildEvolutionLine(current) : "EVO: —";
+            return;
+        }
+
+        // ─────────────────────────────────────────────────────────────
+        // ADJ view: level growth + (owned only) training + flatAtkBonus
+        // Titles/equipment are removable layers; they are not shown here as "progression totals".
+        // ─────────────────────────────────────────────────────────────
+
+        // Baseline (species + level growth) via BattleCalc
+        int hpBaseAdj  = 0;
+        int atkBaseAdj = 0;
+        int defBaseAdj = 0;
+        int spdBaseAdj = 0;
+
+        if (!safeSkipStats)
+        {
+            try { hpBaseAdj = Mathf.RoundToInt(BattleCalc.CalcHP(current, dispLvl)); }
+            catch { hpBaseAdj = Mathf.RoundToInt(current.baseHP); }
+
+            try { atkBaseAdj = Mathf.RoundToInt(BattleCalc.CalcBaseAttack(current, dispLvl, 0, 0)); }
+            catch { atkBaseAdj = Mathf.RoundToInt(current.baseAttack); }
+
+            try { defBaseAdj = BattleCalc.CalcDefense(current, dispLvl); }
+            catch { defBaseAdj = Mathf.RoundToInt(current.baseDefense); }
+
+            try { spdBaseAdj = BattleCalc.CalcSpeed(current, dispLvl); }
+            catch { spdBaseAdj = Mathf.Max(1, Mathf.RoundToInt(current.baseSpeed)); }
+        }
+        else
+        {
+            hpBaseAdj  = Mathf.RoundToInt(current.baseHP);
+            atkBaseAdj = Mathf.RoundToInt(current.baseAttack);
+            defBaseAdj = Mathf.RoundToInt(current.baseDefense);
+            spdBaseAdj = Mathf.RoundToInt(current.baseSpeed);
+        }
+
+        // Owned-only progression adds
+        int trainHp = 0, trainAtk = 0, trainDef = 0, trainSpd = 0;
+        int flatAtkBonus = 0;
+
+        bool hasOwnedInstance =
+            (_mode == MonsterDetailMode.AssignToTeam) &&
+            (_currentOwned != null) &&
+            !string.IsNullOrEmpty(_currentOwned.monsterId);
+
+        if (hasOwnedInstance)
+        {
+            trainHp  = Mathf.Max(0, _currentOwned.trainingBonus.hp);
+            trainAtk = Mathf.Max(0, _currentOwned.trainingBonus.atk);
+            trainDef = Mathf.Max(0, _currentOwned.trainingBonus.def);
+            trainSpd = Mathf.Max(0, _currentOwned.trainingBonus.spd);
+
+            flatAtkBonus = Mathf.Max(0, _currentOwned.flatAtkBonus);
+        }
+
+        // Apply training (EV-like) + permanent flatAtkBonus (with legacy guard)
+        int hpAdj  = Mathf.Max(1, hpBaseAdj + (hasOwnedInstance ? trainHp : 0));
+        int defAdj = Mathf.Max(0, defBaseAdj + (hasOwnedInstance ? trainDef : 0));
+        int spdAdj = Mathf.Max(1, spdBaseAdj + (hasOwnedInstance ? trainSpd : 0));
+
+        int atkTrainingPlusFlat = 0;
+        if (hasOwnedInstance)
+        {
+            // Normal: base + training + flat
+            atkTrainingPlusFlat = trainAtk + flatAtkBonus;
+
+            // Legacy: flat already contained training; avoid double add
+            if (LooksLikeLegacyTrainingWasMirroredIntoFlat(flatAtkBonus, trainAtk))
+                atkTrainingPlusFlat = Mathf.Max(0, flatAtkBonus);
+        }
+
+        int atkAdj = Mathf.Max(1, atkBaseAdj + atkTrainingPlusFlat);
+
+        // HP display for owned (currentHP/KO)
+        int curHP = hpAdj;
+        if (hasOwnedInstance)
+            curHP = Mathf.Clamp(_currentOwned.currentHP < 0 ? hpAdj : _currentOwned.currentHP, 0, hpAdj);
+
+        if (hpText)
+        {
+            if (hasOwnedInstance && hpAdj > 0)
+                hpText.text = curHP == 0 ? $"HP: 0 / {hpAdj}  (KO)" : $"HP: {curHP} / {hpAdj}";
+            else
+                hpText.text = hpAdj > 0 ? $"HP: {hpAdj}" : "HP: —";
+        }
+
+        // Training breakdown (owned only)
+        if (hasOwnedInstance)
+        {
+            if (atkText) atkText.text = FormatAdjInt("ATK", atkBaseAdj + (LooksLikeLegacyTrainingWasMirroredIntoFlat(flatAtkBonus, trainAtk) ? flatAtkBonus : flatAtkBonus), LooksLikeLegacyTrainingWasMirroredIntoFlat(flatAtkBonus, trainAtk) ? 0 : trainAtk);
+            if (defText) defText.text = FormatAdjInt("DEF", defBaseAdj, trainDef);
+            if (spdText) spdText.text = FormatAdjInt("SPD", spdBaseAdj, trainSpd);
+        }
+        else
+        {
+            if (atkText) atkText.text = $"ATK: {atkAdj}";
+            if (defText) defText.text = $"DEF: {defAdj}";
+            if (spdText) spdText.text = $"SPD: {spdAdj}";
+        }
+
+        if (evoText) evoText.text = (!safeSkipEvolution) ? BuildEvolutionLine(current) : "EVO: —";
+    }
+
+    // ─────────────────────────────────────────────────────────────
     // Public Browse APIs
     // ─────────────────────────────────────────────────────────────
 
-    /// <summary>
-    /// General browse session used by Codex and Starter selector.
-    /// Provide the visible defs list and the currently opened def.
-    /// </summary>
     public void SetBrowseSession(IReadOnlyList<MonsterDataSO> defs, MonsterDataSO currentDef, bool wrap = true)
     {
         _browseDefs = defs;
@@ -238,9 +402,6 @@ public class MonsterDetailPanelUI : MonoBehaviour
         _swipeTracking = false;
     }
 
-    /// <summary>
-    /// Compatibility API for older callers: pass selected index.
-    /// </summary>
     public void SetStarterBrowseContext(IReadOnlyList<MonsterDataSO> starterDefs, int selectedIndex, bool wrap = true)
     {
         if (starterDefs == null || starterDefs.Count == 0)
@@ -253,9 +414,6 @@ public class MonsterDetailPanelUI : MonoBehaviour
         SetBrowseSession(starterDefs, starterDefs[selectedIndex], wrap);
     }
 
-    /// <summary>
-    /// Convenience API: pass current def.
-    /// </summary>
     public void SetStarterBrowseContext(IReadOnlyList<MonsterDataSO> starterDefs, MonsterDataSO currentDef, bool wrap = true)
     {
         SetBrowseSession(starterDefs, currentDef, wrap);
@@ -273,7 +431,6 @@ public class MonsterDetailPanelUI : MonoBehaviour
     {
         if (defs == null || defs.Count == 0 || currentDef == null) return -1;
 
-        // Prefer id match (stable) over reference match.
         string id = currentDef.id;
         if (!string.IsNullOrEmpty(id))
         {
@@ -501,23 +658,20 @@ public class MonsterDetailPanelUI : MonoBehaviour
                 bool isCodex = _mode == MonsterDetailMode.CodexView;
                 bool isAssign = _mode == MonsterDetailMode.AssignToTeam;
 
-                // Starter: Pick/Back
                 if (starterButtonsHolder) starterButtonsHolder.SetActive(isStarter);
-
-                // Codex: Slot buttons ONLY
                 if (slotButtonsHolder) slotButtonsHolder.SetActive(isCodex);
-
-                // Team detail view: Remove holder ONLY (Assign + viewing an occupied slot)
                 if (teamHolder) teamHolder.SetActive(isAssign && _teamSlotIndex >= 0);
 
-                // Close button in Codex + Assign modes (not Starter)
                 if (closeButton) closeButton.gameObject.SetActive(!isStarter);
-
-                if (lvlText) lvlText.text = $"LVL: {GetDisplayLevel()}";
 
                 RenderJobSites(monster);
                 UpdateTitleButtonBinding();
                 RefreshPersonalityUI(monster);
+
+                RefreshStatsViewToggleLabel();
+
+                // Render stats once in header stage so UI is populated immediately.
+                RenderStatsSection();
 
                 if (canvasGroup) LeanTween.alphaCanvas(canvasGroup, 1f, 0.12f);
             });
@@ -528,52 +682,7 @@ public class MonsterDetailPanelUI : MonoBehaviour
 
         if (_stage == RenderStage.StatsEvo)
         {
-            TryStep("Stats & Evo", () =>
-            {
-                int dispLvl = GetDisplayLevel();
-
-                int maxHP = 0;
-                int atkL = 0;
-                int defL = 0;
-                float spd = 0f;
-
-                if (!safeSkipStats && current != null)
-                {
-                    try { maxHP = Mathf.RoundToInt(BattleCalc.CalcHP(current, dispLvl)); } catch { maxHP = current != null ? Mathf.RoundToInt(current.baseHP) : 0; }
-                    try { atkL = Mathf.RoundToInt(BattleCalc.CalcBaseAttack(current, dispLvl, 0, 0)); } catch { atkL = current != null ? Mathf.RoundToInt(current.baseAttack) : 0; }
-                    defL = current != null ? Mathf.RoundToInt(current.baseDefense) : 0;
-                    spd = current != null ? current.baseSpeed : 0f;
-                }
-                else
-                {
-                    maxHP = current != null ? Mathf.RoundToInt(current.baseHP) : 0;
-                    atkL = current != null ? Mathf.RoundToInt(current.baseAttack) : 0;
-                    defL = current != null ? Mathf.RoundToInt(current.baseDefense) : 0;
-                    spd = current != null ? current.baseSpeed : 0f;
-                }
-
-                int curHP = maxHP;
-                if (_mode == MonsterDetailMode.AssignToTeam && _currentOwned != null && !string.IsNullOrEmpty(_currentOwned.monsterId))
-                    curHP = Mathf.Clamp(_currentOwned.currentHP < 0 ? maxHP : _currentOwned.currentHP, 0, maxHP);
-
-                if (hpText)
-                {
-                    if (_mode == MonsterDetailMode.AssignToTeam && maxHP > 0)
-                        hpText.text = curHP == 0 ? $"HP: 0 / {maxHP}  (KO)" : $"HP: {curHP} / {maxHP}";
-                    else if (maxHP > 0)
-                        hpText.text = $"HP: {maxHP}";
-                    else
-                        hpText.text = "HP: —";
-                }
-
-                if (atkText) atkText.text = atkL > 0 ? $"ATK: {atkL}" : "ATK: —";
-                if (defText) defText.text = current ? $"DEF: {defL}" : "DEF: —";
-                if (spdText) spdText.text = current ? $"SPD: {spd:0.##}" : "SPD: —";
-
-                if (evoText) evoText.text = (!safeSkipEvolution) ? BuildEvolutionLine(current) : "EVO: —";
-
-                RefreshEvolveButton();
-            });
+            TryStep("Stats & Evo", RenderStatsSection);
 
             _stage = RenderStage.Description;
             yield return null;
@@ -623,7 +732,6 @@ public class MonsterDetailPanelUI : MonoBehaviour
     {
         if (_browseDefs == null || _browseDefs.Count <= 1) return;
 
-        // Read from Touchscreen (mobile) or Mouse (editor/desktop).
         bool pressed = false;
         bool released = false;
         Vector2 pos = Vector2.zero;
@@ -634,7 +742,6 @@ public class MonsterDetailPanelUI : MonoBehaviour
             var touch = ts.primaryTouch;
             pressed = touch.press.wasPressedThisFrame;
             released = touch.press.wasReleasedThisFrame;
-            // When pressed/held, read position; on release, still read last position.
             pos = touch.position.ReadValue();
         }
         else
@@ -664,7 +771,6 @@ public class MonsterDetailPanelUI : MonoBehaviour
 
             Vector2 delta = pos - _swipeStartPos;
 
-            // Horizontal swipe only (ignore big vertical drags)
             if (Mathf.Abs(delta.y) > swipeMaxVerticalPixels)
                 return;
 
@@ -673,7 +779,6 @@ public class MonsterDetailPanelUI : MonoBehaviour
 
             _lastBrowseAt = Time.unscaledTime;
 
-            // Swipe left (delta.x negative) => Next; swipe right => Prev
             if (delta.x < 0f) BrowseNext();
             else BrowsePrev();
         }
@@ -722,8 +827,6 @@ public class MonsterDetailPanelUI : MonoBehaviour
         if (def == null) return;
 
         _browseIndex = index;
-
-        // Keep current mode as-is (Codex stays Codex; Starter stays Starter)
         current = def;
 
         RefreshEvolveButton();
@@ -803,35 +906,21 @@ public class MonsterDetailPanelUI : MonoBehaviour
     {
         slotIndex = Mathf.Clamp(slotIndex, 0, 2);
 
-        // ─────────────────────────────────────────
-        // CodexView: add current def into team slot
-        // ─────────────────────────────────────────
         if (_mode == MonsterDetailMode.CodexView)
         {
-            if (current == null || string.IsNullOrEmpty(current.id))
-            {
-                Hide();
-                return;
-            }
+            if (current == null || string.IsNullOrEmpty(current.id)) { Hide(); return; }
 
             var data = SaveManager.Data;
-            if (data == null)
-            {
-                Debug.LogError("[MonsterDetailPanel] SaveManager.Data is null in AssignToSlot (CodexView).");
-                Hide();
-                return;
-            }
+            if (data == null) { Debug.LogError("[MonsterDetailPanel] SaveManager.Data is null in AssignToSlot (CodexView)."); Hide(); return; }
 
             var team = data.team ?? new List<OwnedMonsterData>();
             while (team.Count < 3) team.Add(new OwnedMonsterData());
 
-            // Create a new owned record for the selected slot.
-            // If your OwnedMonsterData needs more initialization, extend this struct/class accordingly.
             var owned = new OwnedMonsterData
             {
                 monsterId = current.id,
                 level = 1,
-                currentHP = -1, // UI treats -1 as "use max HP"
+                currentHP = -1,
                 ownedUID = Guid.NewGuid().ToString("N")
             };
 
@@ -845,9 +934,6 @@ public class MonsterDetailPanelUI : MonoBehaviour
             return;
         }
 
-        // ─────────────────────────────────────────
-        // AssignToTeam: existing behavior (unchanged)
-        // ─────────────────────────────────────────
         if (_mode != MonsterDetailMode.AssignToTeam
             || _currentOwned == null
             || string.IsNullOrEmpty(_currentOwned.monsterId))
@@ -975,7 +1061,6 @@ public class MonsterDetailPanelUI : MonoBehaviour
         if (favoriteButton) favoriteButton.gameObject.SetActive(false);
         if (favoriteOnIcon) favoriteOnIcon.SetActive(false);
 
-        // browse session reset (do not force-clear; callers can keep it if they want)
         _swipeTracking = false;
     }
 
@@ -1008,20 +1093,76 @@ public class MonsterDetailPanelUI : MonoBehaviour
         if (!m.evolutionForm || m.evolutionLevel <= 0)
             return "EVO: —";
 
-        string nextName = m.evolutionForm ? (string.IsNullOrEmpty(m.evolutionForm.displayName) ? m.evolutionForm.name : m.evolutionForm.displayName) : "???";
-        int lvl = Mathf.Max(1, m.evolutionLevel);
+        var nextDef = m.evolutionForm;
+        string nextName = nextDef
+            ? (string.IsNullOrEmpty(nextDef.displayName) ? nextDef.name : nextDef.displayName)
+            : "???";
 
-        int curHpAtEvo = Mathf.RoundToInt(BattleCalc.CalcHP(m, lvl));
-        int nxtHpAtEvo = Mathf.RoundToInt(BattleCalc.CalcHP(m.evolutionForm, lvl));
-        int curAtkAtEvo = Mathf.RoundToInt(BattleCalc.CalcBaseAttack(m, lvl, 0, 0));
-        int nxtAtkAtEvo = Mathf.RoundToInt(BattleCalc.CalcBaseAttack(m.evolutionForm, lvl, 0, 0));
+        int evoLvl = Mathf.Max(1, m.evolutionLevel);
 
-        int dHp = nxtHpAtEvo - curHpAtEvo;
-        int dAtk = nxtAtkAtEvo - curAtkAtEvo;
+        // Determine whether we have an owned instance (so we can carry training/flatAtkBonus forward)
+        bool hasOwnedInstance =
+            (_mode == MonsterDetailMode.AssignToTeam) &&
+            (_currentOwned != null) &&
+            !string.IsNullOrEmpty(_currentOwned.monsterId);
 
-        string deltas = $" (+{dHp} HP, +{dAtk} ATK)";
-        return $"EVO: Lv {lvl} → {nextName}{((dHp > 0 || dAtk > 0) ? deltas : "")}";
+        // Training/permanent bonuses that persist across evolution
+        int trainHP = 0, trainATK = 0, trainDEF = 0, trainSPD = 0;
+        int flatAtkBonus = 0;
+
+        if (hasOwnedInstance)
+        {
+            trainHP  = Mathf.Max(0, _currentOwned.trainingBonus.hp);
+            trainATK = Mathf.Max(0, _currentOwned.trainingBonus.atk);
+            trainDEF = Mathf.Max(0, _currentOwned.trainingBonus.def);
+            trainSPD = Mathf.Max(0, _currentOwned.trainingBonus.spd);
+            flatAtkBonus = Mathf.Max(0, _currentOwned.flatAtkBonus);
+
+            // Legacy guard: if old saves mirrored training into flatAtkBonus, avoid double counting.
+            if (LooksLikeLegacyTrainingWasMirroredIntoFlat(flatAtkBonus, trainATK))
+                trainATK = 0;
+        }
+
+        // Compute adjusted totals at the evolution level for current form and next form.
+        // IMPORTANT: We intentionally do NOT apply Titles/equipment here (moveable layers).
+        int curHP  = Mathf.RoundToInt(BattleCalc.CalcHP(m, evoLvl));
+        int nxtHP  = Mathf.RoundToInt(BattleCalc.CalcHP(nextDef, evoLvl));
+
+        int curATK = Mathf.RoundToInt(BattleCalc.CalcBaseAttack(m, evoLvl, 0, 0));
+        int nxtATK = Mathf.RoundToInt(BattleCalc.CalcBaseAttack(nextDef, evoLvl, 0, 0));
+
+        int curDEF = BattleCalc.CalcDefense(m, evoLvl);
+        int nxtDEF = BattleCalc.CalcDefense(nextDef, evoLvl);
+
+        int curSPD = BattleCalc.CalcSpeed(m, evoLvl);
+        int nxtSPD = BattleCalc.CalcSpeed(nextDef, evoLvl);
+
+        if (hasOwnedInstance)
+        {
+            curHP  += trainHP;  nxtHP  += trainHP;
+            curATK += (trainATK + flatAtkBonus);  nxtATK += (trainATK + flatAtkBonus);
+            curDEF += trainDEF; nxtDEF += trainDEF;
+            curSPD += trainSPD; nxtSPD += trainSPD;
+        }
+
+        int dHp  = nxtHP  - curHP;
+        int dAtk = nxtATK - curATK;
+        int dDef = nxtDEF - curDEF;
+        int dSpd = nxtSPD - curSPD;
+
+        // Build a compact delta string with only meaningful changes.
+        // Example: "(+15 HP, +6 ATK)"
+        List<string> parts = new List<string>(4);
+        if (dHp != 0)  parts.Add($"{(dHp > 0 ? "+" : "")}{dHp} HP");
+        if (dAtk != 0) parts.Add($"{(dAtk > 0 ? "+" : "")}{dAtk} ATK");
+        if (dDef != 0) parts.Add($"{(dDef > 0 ? "+" : "")}{dDef} DEF");
+        if (dSpd != 0) parts.Add($"{(dSpd > 0 ? "+" : "")}{dSpd} SPD");
+
+        string deltas = parts.Count > 0 ? $" ({string.Join(", ", parts)})" : "";
+
+        return $"EVO: Lv {evoLvl} → {nextName}{deltas}";
     }
+
 
     private void TryStep(string label, Action step)
     {
@@ -1055,7 +1196,6 @@ public class MonsterDetailPanelUI : MonoBehaviour
         if (!evolveButton)
             return;
 
-        // Evolution button only makes sense in Assign mode.
         if (_mode != MonsterDetailMode.AssignToTeam || current == null)
         {
             evolveButton.gameObject.SetActive(false);
@@ -1162,6 +1302,9 @@ public class MonsterDetailPanelUI : MonoBehaviour
             lvlText.text = $"LVL: {GetDisplayLevel()}";
 
         RefreshEvolveButton();
+
+        if (!_showBaseStats)
+            RenderStatsSection();
     }
 
     private void HandleMonsterEvolved(string newDefId)
@@ -1182,6 +1325,29 @@ public class MonsterDetailPanelUI : MonoBehaviour
         UpdateTitleButtonBinding();
         RefreshEvolveButton();
         SetupFavoriteButton();
+
         SafeOpen(current);
     }
+
+    private string FormatAdjInt(string label, int baseVal, int trainingVal)
+    {
+        int total = baseVal + trainingVal;
+        return $"{label}: {total} ({baseVal} + <color={TRAINING_GREEN}>{trainingVal}</color>)";
+    }
+
+    private string FormatAdjFloat(string label, float baseVal, int trainingVal)
+    {
+        float total = baseVal + trainingVal;
+        string baseStr = baseVal.ToString("0.##");
+        string totalStr = total.ToString("0.##");
+        return $"{label}: {totalStr} ({baseStr} + <color={TRAINING_GREEN}>{trainingVal}</color>)";
+    }
+
+    private bool LooksLikeLegacyTrainingWasMirroredIntoFlat(int flatAtkBonus, int trainingAtk)
+    {
+        if (flatAtkBonus <= 0 || trainingAtk <= 0) return false;
+
+        return flatAtkBonus >= trainingAtk && flatAtkBonus >= 10;
+    }
+
 }

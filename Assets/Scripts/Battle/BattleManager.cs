@@ -310,13 +310,12 @@ public class BattleManager : MonoBehaviour
             var def = MonsterLibraryLocator.GetById(owned.monsterId);
             if (!def) continue;
 
-            teamIds[i] = owned.monsterId;
-            teamDefs[i] = def;
-            teamLevels[i] = owned.level;
+            teamIds[i]   = owned.monsterId;
+            teamDefs[i]  = def;
+            teamLevels[i]= owned.level;
 
-            float baseMax = BattleCalc.CalcHP(def, owned.level);
-            int bonusHP = Mathf.Max(0, owned.trainingBonus.hp);
-            float finalMax = Mathf.Max(1f, baseMax + bonusHP);
+            GetProgressionTotalsForIndex(i, out int totalHP, out _, out _, out _, out _);
+            float finalMax = Mathf.Max(1f, totalHP);
             teamMaxHP[i] = finalMax;
 
             int savedHP = owned.currentHP;
@@ -510,11 +509,7 @@ public class BattleManager : MonoBehaviour
                 continue;
             }
 
-            int pSpeedBase = BattleCalc.CalcSpeed(teamDefs[activeIndex], teamLevels[activeIndex]);
-
-            var roster = SaveManager.Data?.team;
-            if (roster != null && activeIndex < roster.Count && roster[activeIndex] != null)
-                pSpeedBase += Mathf.Max(0, roster[activeIndex].trainingBonus.spd);
+            int pSpeedBase = GetProgressionTotalSPDForIndex(activeIndex);
 
             var jSpeed = (jobCtx != null && activeIndex >= 0 && activeIndex < jobCtx.Length) ? jobCtx[activeIndex] : null;
             if (jSpeed != null && jSpeed.speedBuffTurns > 0 && jSpeed.speedBonusPctFirstTurns != 0f)
@@ -658,58 +653,58 @@ public class BattleManager : MonoBehaviour
                                     break;
 
                                 case PlayerAction.Focus:
-                                {
-                                    ResetDefendStreak();
-
-                                    if (chargedNextAttack != null &&
-                                        activeIndex >= 0 &&
-                                        activeIndex < chargedNextAttack.Length)
                                     {
-                                        chargedNextAttack[activeIndex] = true;
+                                        ResetDefendStreak();
+
+                                        if (chargedNextAttack != null &&
+                                            activeIndex >= 0 &&
+                                            activeIndex < chargedNextAttack.Length)
+                                        {
+                                            chargedNextAttack[activeIndex] = true;
+                                        }
+
+                                        BattleLogger.Log($"{GetName(activeIndex)} is charging.", LogScope.Battle);
+                                        BattleLogger.Log($"Their next attack will deal +{Mathf.RoundToInt(chargeBonusPct * 100f)}% damage.", LogScope.Battle);
+
+                                        if (feedback) feedback.PlayActionQueued(
+                                            BattleFeedbackManager.BattleFeedbackSide.Player,
+                                            BattleFeedbackManager.BattleFeedbackAction.Focus
+                                        );
+
+                                        RefreshStatusIconsFromState();
+                                        break;
                                     }
-
-                                    BattleLogger.Log($"{GetName(activeIndex)} is charging.", LogScope.Battle);
-                                    BattleLogger.Log($"Their next attack will deal +{Mathf.RoundToInt(chargeBonusPct * 100f)}% damage.", LogScope.Battle);
-
-                                    if (feedback) feedback.PlayActionQueued(
-                                        BattleFeedbackManager.BattleFeedbackSide.Player,
-                                        BattleFeedbackManager.BattleFeedbackAction.Focus
-                                    );
-
-                                    RefreshStatusIconsFromState();
-                                    break;
-                                }
 
                                 case PlayerAction.Run:
-                                {
-                                    ResetDefendStreak();
-
-                                    float chance = ComputeRunChance();
-                                    bool escaped = UnityEngine.Random.value < chance;
-
-                                    string name = GetName(activeIndex);
-
-                                    if (feedback) feedback.PlayActionQueued(
-                                        BattleFeedbackManager.BattleFeedbackSide.Player,
-                                        BattleFeedbackManager.BattleFeedbackAction.Run
-                                    );
-
-                                    // Run does not affect guard/charge, but keep icons correct anyway
-                                    RefreshStatusIconsFromState();
-
-                                    if (escaped)
                                     {
-                                        BattleLogger.Log($"{name} has fled! (Run chance {Mathf.RoundToInt(chance * 100f)}%)", LogScope.Battle);
-                                        EndBattle(false, true);
-                                        yield break;
+                                        ResetDefendStreak();
+
+                                        float chance = ComputeRunChance();
+                                        bool escaped = UnityEngine.Random.value < chance;
+
+                                        string name = GetName(activeIndex);
+
+                                        if (feedback) feedback.PlayActionQueued(
+                                            BattleFeedbackManager.BattleFeedbackSide.Player,
+                                            BattleFeedbackManager.BattleFeedbackAction.Run
+                                        );
+
+                                        // Run does not affect guard/charge, but keep icons correct anyway
+                                        RefreshStatusIconsFromState();
+
+                                        if (escaped)
+                                        {
+                                            BattleLogger.Log($"{name} has fled! (Run chance {Mathf.RoundToInt(chance * 100f)}%)", LogScope.Battle);
+                                            EndBattle(false, true);
+                                            yield break;
+                                        }
+                                        else
+                                        {
+                                            runAttempts++;
+                                            BattleLogger.Log($"Couldn't escape! (Run chance was {Mathf.RoundToInt(chance * 100f)}%)", LogScope.Battle);
+                                        }
+                                        break;
                                     }
-                                    else
-                                    {
-                                        runAttempts++;
-                                        BattleLogger.Log($"Couldn't escape! (Run chance was {Mathf.RoundToInt(chance * 100f)}%)", LogScope.Battle);
-                                    }
-                                    break;
-                                }
 
                                 case PlayerAction.Defend:
                                 default:
@@ -774,73 +769,73 @@ public class BattleManager : MonoBehaviour
                 break;
 
             case PlayerAction.Defend:
-            {
-                string name = GetName(activeIndex);
-                bool success = RollDefendSuccess();
-
-                defendActiveThisRound = success;
-
-                if (feedback)
                 {
-                    feedback.PlayDefendResult(BattleFeedbackManager.BattleFeedbackSide.Player, success);
-                }
+                    string name = GetName(activeIndex);
+                    bool success = RollDefendSuccess();
 
-                if (success)
-                {
-                    BattleLogger.Log($"{name} is defending.", LogScope.Battle);
-                    BattleLogger.Log($"{name} will reduce the next hit and convert it into a shield for the following round.", LogScope.Battle);
+                    defendActiveThisRound = success;
+
+                    if (feedback)
+                    {
+                        feedback.PlayDefendResult(BattleFeedbackManager.BattleFeedbackSide.Player, success);
+                    }
+
+                    if (success)
+                    {
+                        BattleLogger.Log($"{name} is defending.", LogScope.Battle);
+                        BattleLogger.Log($"{name} will reduce the next hit and convert it into a shield for the following round.", LogScope.Battle);
+                    }
+                    else
+                    {
+                        BattleLogger.Log($"{name} tried to defend, but it failed!", LogScope.Battle);
+                    }
+                    break;
                 }
-                else
-                {
-                    BattleLogger.Log($"{name} tried to defend, but it failed!", LogScope.Battle);
-                }
-                break;
-            }
 
             case PlayerAction.Focus:
-            {
-                ResetDefendStreak();
+                {
+                    ResetDefendStreak();
 
-                if (chargedNextAttack != null && activeIndex >= 0 && activeIndex < chargedNextAttack.Length)
-                    chargedNextAttack[activeIndex] = true;
+                    if (chargedNextAttack != null && activeIndex >= 0 && activeIndex < chargedNextAttack.Length)
+                        chargedNextAttack[activeIndex] = true;
 
-                BattleLogger.Log($"{GetName(activeIndex)} is charging.", LogScope.Battle);
-                BattleLogger.Log($"Their next attack will deal +{Mathf.RoundToInt(chargeBonusPct * 100f)}% damage.", LogScope.Battle);
+                    BattleLogger.Log($"{GetName(activeIndex)} is charging.", LogScope.Battle);
+                    BattleLogger.Log($"Their next attack will deal +{Mathf.RoundToInt(chargeBonusPct * 100f)}% damage.", LogScope.Battle);
 
-                if (feedback) feedback.PlayActionQueued(
-                    BattleFeedbackManager.BattleFeedbackSide.Player,
-                    BattleFeedbackManager.BattleFeedbackAction.Focus
-                );
-                break;
-            }
+                    if (feedback) feedback.PlayActionQueued(
+                        BattleFeedbackManager.BattleFeedbackSide.Player,
+                        BattleFeedbackManager.BattleFeedbackAction.Focus
+                    );
+                    break;
+                }
 
             case PlayerAction.Run:
-            {
-                ResetDefendStreak();
-
-                float chance = ComputeRunChance();
-                bool escaped = UnityEngine.Random.value < chance;
-
-                string name = GetName(activeIndex);
-
-                if (feedback) feedback.PlayActionQueued(
-                    BattleFeedbackManager.BattleFeedbackSide.Player,
-                    BattleFeedbackManager.BattleFeedbackAction.Run
-                );
-
-                if (escaped)
                 {
-                    BattleLogger.Log($"{name} has fled! (Run chance {Mathf.RoundToInt(chance * 100f)}%)", LogScope.Battle);
-                    EndBattle(false, true);
-                    yield break;
+                    ResetDefendStreak();
+
+                    float chance = ComputeRunChance();
+                    bool escaped = UnityEngine.Random.value < chance;
+
+                    string name = GetName(activeIndex);
+
+                    if (feedback) feedback.PlayActionQueued(
+                        BattleFeedbackManager.BattleFeedbackSide.Player,
+                        BattleFeedbackManager.BattleFeedbackAction.Run
+                    );
+
+                    if (escaped)
+                    {
+                        BattleLogger.Log($"{name} has fled! (Run chance {Mathf.RoundToInt(chance * 100f)}%)", LogScope.Battle);
+                        EndBattle(false, true);
+                        yield break;
+                    }
+                    else
+                    {
+                        runAttempts++;
+                        BattleLogger.Log($"Couldn't escape! (Run chance was {Mathf.RoundToInt(chance * 100f)}%)", LogScope.Battle);
+                    }
+                    break;
                 }
-                else
-                {
-                    runAttempts++;
-                    BattleLogger.Log($"Couldn't escape! (Run chance was {Mathf.RoundToInt(chance * 100f)}%)", LogScope.Battle);
-                }
-                break;
-            }
 
             default:
                 break;
@@ -873,42 +868,19 @@ public class BattleManager : MonoBehaviour
 
         yield return Wait(0.10f);
 
-        var roster = SaveManager.Data?.team;
+        // Baseline TOTAL ATK (SpeciesBase + LevelGrowth + Training + flatAtkBonus w/ legacy guard)
+        GetProgressionTotalsForIndex(activeIndex, out _, out int atkBaseTotal, out _, out _, out _);
 
-        int flatAtkBonus = 0;
-        int trainingAtk = 0;
-
-        if (roster != null && activeIndex < roster.Count && roster[activeIndex] != null)
-        {
-            var om = roster[activeIndex];
-            flatAtkBonus = Mathf.Max(0, om.flatAtkBonus);
-            trainingAtk = Mathf.Max(0, om.trainingBonus.atk);
-        }
-
-        int permanentFlat = flatAtkBonus;
-        if (!LooksLikeLegacyTrainingWasMirroredIntoFlat(flatAtkBonus, trainingAtk))
-            permanentFlat = Mathf.Max(0, flatAtkBonus + trainingAtk);
-
-        float atkBaseF = BattleCalc.CalcBaseAttack(
-            teamDefs[activeIndex],
-            teamLevels[activeIndex],
-            permanentFlat,
-            0
-        );
-        int atkBase = Mathf.Max(1, Mathf.RoundToInt(atkBaseF));
-
+        // Conditionals apply on top of baseline totals
         var cond = GetConditionalModsForActive();
-        int atkWithCondFlat = Mathf.Max(1, atkBase + Mathf.Max(0, cond.atkFlat));
+        int atkWithCondFlat = Mathf.Max(1, atkBaseTotal + Mathf.Max(0, cond.atkFlat));
         int atkForResolve = Mathf.Max(1, Mathf.RoundToInt(atkWithCondFlat * (1f + Mathf.Max(0f, cond.atkPct))));
 
+        // Temp boosters are additive flat on top (do NOT recalc BattleCalc to create a multiplier)
         int tempFlatFromBoosters = BattleTempBuffs.I ? BattleTempBuffs.I.GetPlayerAtkBonus() : 0;
-        float atkWithBoosterF = BattleCalc.CalcBaseAttack(
-            teamDefs[activeIndex],
-            teamLevels[activeIndex],
-            permanentFlat,
-            tempFlatFromBoosters
-        );
-        float atkBoosterMult = Mathf.Max(0.01f, atkWithBoosterF / Mathf.Max(1f, atkBase));
+        if (tempFlatFromBoosters > 0)
+            atkForResolve = Mathf.Max(1, atkForResolve + Mathf.Max(0, tempFlatFromBoosters));
+
 
         var jctx = (jobCtx != null) ? jobCtx[activeIndex] : null;
         float playerCrit = critChancePlayer;
@@ -956,9 +928,6 @@ public class BattleManager : MonoBehaviour
             if (slotDamageBuffTurns[activeIndex] <= 0)
                 slotDamageBuffPct[activeIndex] = 0f;
         }
-
-        if (!Mathf.Approximately(atkBoosterMult, 1f))
-            dr.damage = Mathf.Max(1, Mathf.RoundToInt(dr.damage * atkBoosterMult));
 
         if (chargedNextAttack != null &&
             activeIndex >= 0 &&
@@ -1131,10 +1100,6 @@ public class BattleManager : MonoBehaviour
         var ctx = (jobCtx != null) ? jobCtx[activeIndex] : null;
         float preHP = teamHP[activeIndex];
 
-        int trainingFlatDef = 0;
-        var roster = SaveManager.Data?.team;
-        if (roster != null && activeIndex < roster.Count && roster[activeIndex] != null)
-            trainingFlatDef = Mathf.Max(0, roster[activeIndex].trainingBonus.def);
 
         var cmods = GetConditionalModsForActive();
 
@@ -1150,11 +1115,21 @@ public class BattleManager : MonoBehaviour
 
         float wildCritChance = df.cannotBeCrit ? 0f : Mathf.Clamp01(critChanceWild - playerCritResist);
 
+        // Baseline TOTAL DEF (SpeciesBase + LevelGrowth + Training)
+        GetProgressionTotalsForIndex(activeIndex, out _, out _, out int defBaseTotal, out _, out _);
+
+        // Flat defense sources stack onto DEF as a STAT (boosters + conditional flat)
+        int defenderEffectiveDefenseStat =
+            Mathf.Max(0, defBaseTotal + Mathf.Max(0, defFlatBooster) + Mathf.Max(0, cmods.defFlat));
+
         var dr = BattleCalc.ResolveHit(
             null, wildDef, wildLevel,
             teamIds[activeIndex], teamDefs[activeIndex], teamLevels[activeIndex],
-            enemyAtk, wildCritChance, critMultiplier, 0
+            enemyAtk, wildCritChance, critMultiplier,
+            defenderFlatDefenseBonus: 0,
+            defenderEffectiveDefenseStat: defenderEffectiveDefenseStat
         );
+
 
         if (wildChargedNextAttack && chargeBonusPct > 0f)
         {
@@ -1202,13 +1177,10 @@ public class BattleManager : MonoBehaviour
 
         int dmg_afterScalar = Mathf.Max(1, Mathf.RoundToInt(dr.damage * incomingScalar));
 
-        int totalFlatDR = Mathf.Max(0, defFlatBooster) + Mathf.Max(0, trainingFlatDef) + Mathf.Max(0, cmods.defFlat);
-        int dmg_afterFlat = Mathf.Max(1, dmg_afterScalar - totalFlatDR);
-
         float shieldBefore = (shieldHP != null && shieldHP.Length > activeIndex) ? shieldHP[activeIndex] : 0f;
         float shieldAbsorbF = 0f;
 
-        int dmg_final = dmg_afterFlat;
+        int dmg_final = dmg_afterScalar;
         if (shieldBefore > 0f && dmg_final > 0)
         {
             shieldAbsorbF = Mathf.Min(shieldBefore, dmg_final);
@@ -1531,24 +1503,68 @@ public class BattleManager : MonoBehaviour
 
     private void UpdateHPTextUI()
     {
+        // Player HP
         float playerMax = GetFinalMaxHPForIndex(activeIndex);
-        float playerCur = (teamHP != null && activeIndex >= 0 && activeIndex < teamHP.Length)
-            ? teamHP[activeIndex]
-            : playerMax;
+        playerMax = Mathf.Max(1f, playerMax);
 
+        float playerCur =
+            (teamHP != null && activeIndex >= 0 && activeIndex < teamHP.Length)
+                ? teamHP[activeIndex]
+                : playerMax;
+
+        playerCur = Mathf.Clamp(playerCur, 0f, playerMax);
+
+        // Wild HP
+        float wildMax = Mathf.Max(1f, wildMaxHP);
+        float wildCur = Mathf.Clamp(wildHP, 0f, wildMax);
+
+        // Preferred path: centralized feedback owns the HP text widgets
         if (feedback != null && feedback.HasHPTextWired)
         {
             feedback.SetHPTexts(
                 playerCur: playerCur,
                 playerMax: playerMax,
-                wildCur: wildHP,
-                wildMax: wildMaxHP
+                wildCur: wildCur,
+                wildMax: wildMax
             );
             return;
         }
 
+        // Fallback path: write directly to the HP stat rows if they exist.
+        // This keeps UI correct even if feedback is missing/unwired.
+        int pCurI = Mathf.CeilToInt(playerCur);
+        int pMaxI = Mathf.CeilToInt(playerMax);
+        int wCurI = Mathf.CeilToInt(wildCur);
+        int wMaxI = Mathf.CeilToInt(wildMax);
 
+        // Player "HP:" row (stat text)
+        if (playerHPText)
+        {
+            playerHPText.text = $"HP: {pCurI}/{pMaxI}";
+            playerHPText.color = StatNeutral;
+        }
+
+        // Wild "HP:" row (stat text)
+        if (wildHPText)
+        {
+            wildHPText.text = $"HP: {wCurI}/{wMaxI}";
+            wildHPText.color = StatNeutral;
+        }
+
+        // Also keep the sliders accurate if feedback isn't driving them.
+        if (playerHPBar)
+        {
+            playerHPBar.maxValue = playerMax;
+            playerHPBar.value = playerCur;
+        }
+
+        if (wildHPBar)
+        {
+            wildHPBar.maxValue = wildMax;
+            wildHPBar.value = wildCur;
+        }
     }
+
 
     private void RefreshBenchUI()
     {
@@ -1739,66 +1755,57 @@ public class BattleManager : MonoBehaviour
 
         int lvl = (teamLevels != null && activeIndex < teamLevels.Length) ? teamLevels[activeIndex] : 1;
 
-        int baseHP = Mathf.RoundToInt(BattleCalc.CalcHP(def, lvl));
-        int baseATK = Mathf.RoundToInt(BattleCalc.CalcBaseAttack(def, lvl, 0, 0));
-        int baseDEF = BattleCalc.CalcDefense(def, lvl);
-        int baseSPD = BattleCalc.CalcSpeed(def, lvl);
+        // ─────────────────────────────────────────────────────────────────────────
+        // Baseline TOTALS (SpeciesBase + LevelGrowth + TrainingBonus + flatAtkBonus*)
+        // *flatAtkBonus is treated as permanent progression ATK bonus and included in total ATK.
+        // Legacy guard: if old saves mirrored training into flatAtkBonus, we avoid double counting.
+        // ─────────────────────────────────────────────────────────────────────────
+        GetProgressionTotalsForIndex(
+            activeIndex,
+            out int baseTotalHP,
+            out int baseTotalATK,
+            out int baseTotalDEF,
+            out int baseTotalSPD,
+            out _ // flatAtkBonusOnly not needed for display here because baseTotalATK already includes it
+        );
 
-        int bonusHP = 0;
-        int bonusATK = 0;
-        int bonusDEF = 0;
-        int bonusSPD = 0;
-
-        var roster = SaveManager.Data?.team;
-        if (roster != null && activeIndex < roster.Count && roster[activeIndex] != null)
-        {
-            var tb = roster[activeIndex].trainingBonus;
-            bonusHP = Mathf.Max(0, tb.hp);
-            bonusATK = Mathf.Max(0, tb.atk);
-            bonusDEF = Mathf.Max(0, tb.def);
-            bonusSPD = Mathf.Max(0, tb.spd);
-        }
-
-        baseHP += bonusHP;
-        baseATK += bonusATK;
-        baseDEF += bonusDEF;
-        baseSPD += bonusSPD;
-
-        int tempHPFlat = BattleTempBuffs.I ? BattleTempBuffs.I.GetPlayerHPBonus() : 0;
+        // Temp flats (battle-only)
+        int tempHPFlat  = BattleTempBuffs.I ? BattleTempBuffs.I.GetPlayerHPBonus() : 0;
         int tempATKFlat = BattleTempBuffs.I ? BattleTempBuffs.I.GetPlayerAtkBonus() : 0;
         int tempDEFFlat = BattleTempBuffs.I ? BattleTempBuffs.I.GetPlayerDefenseBonus() : 0;
         int tempSPDFlat = BattleTempBuffs.I ? BattleTempBuffs.I.GetPlayerSpeedFlatBonus() : 0;
 
-        int equippedFlatATK = 0;
-        if (roster != null && activeIndex < roster.Count && roster[activeIndex] != null)
-        {
-            int flatAtkBonus = Mathf.Max(0, roster[activeIndex].flatAtkBonus);
-            int trainingAtk = Mathf.Max(0, roster[activeIndex].trainingBonus.atk);
-
-            equippedFlatATK = flatAtkBonus;
-
-            if (LooksLikeLegacyTrainingWasMirroredIntoFlat(flatAtkBonus, trainingAtk))
-                equippedFlatATK = Mathf.Max(0, flatAtkBonus - trainingAtk);
-        }
-
+        // Titles context
         var ctx = TitleContext.Empty;
         ctx.ownedId = (teamIds != null && activeIndex < teamIds.Length) ? teamIds[activeIndex] : "";
 
-        int hpBaseForCtx = Mathf.Max(1, baseHP + tempHPFlat);
-        float currentHP = (teamHP != null && activeIndex < teamHP.Length) ? teamHP[activeIndex] : hpBaseForCtx;
-        ctx.selfHp01 = Mathf.Clamp01(currentHP / Mathf.Max(1f, hpBaseForCtx));
+        // NOTE: HP% must be computed using "max HP before conditionals" to avoid recursion.
+        // We use hpBaseForCtx (baseline totals + temp HP) as the denominator for selfHp01.
+        float maxNoConds = GetActiveMaxHP_NoConditionals(teamMaxHP[activeIndex], activeIndex); // includes title hpPct + temp HP, excludes conditional hpPct
+        maxNoConds = Mathf.Max(1f, maxNoConds);
+
+        float currentHP = (teamHP != null && activeIndex < teamHP.Length) ? teamHP[activeIndex] : maxNoConds;
+        ctx.selfHp01 = Mathf.Clamp01(currentHP / maxNoConds);
+
 
         ctx.alliesAlive = GetAlliesAliveNotIncludingActive();
         ctx.winStreak = GetWinStreakSafe();
 
+        // Conditional mods depend on ctx (hp%, allies alive, win streak)
         var cmods = GetConditionalModsForActive();
 
+        // Header rows
         if (playerIdText) playerIdText.text = $"ID: {def.id}";
         if (playerTypeText) playerTypeText.text = $"TYPE: {def.type}";
         if (playerRarityText) playerRarityText.text = $"RARITY: {def.rarity}";
         if (playerLevelText) playerLevelText.text = $"LVL: {lvl}";
 
-        int hpBaseForDisplay = hpBaseForCtx;
+        // ─────────────────────────────────────────────────────────────────────────
+        // HP
+        // Base for display = baseline totals + temp HP
+        // Titles first, then conditionals (for coloring and delta)
+        // ─────────────────────────────────────────────────────────────────────────
+        int hpBaseForDisplay = Mathf.RoundToInt(maxNoConds);
         float hpFinalF = TitlesAdapter.GetStatValue(ctx.ownedId, def, lvl, "HP", ctx, hpBaseForDisplay);
         int hpTitleFinal = Mathf.Max(1, Mathf.RoundToInt(hpFinalF));
 
@@ -1812,7 +1819,12 @@ public class BattleManager : MonoBehaviour
             );
         }
 
-        int atkBaseForDisplay = Mathf.Max(1, baseATK + equippedFlatATK + tempATKFlat);
+        // ─────────────────────────────────────────────────────────────────────────
+        // ATK
+        // Base for display = baseline totals (already includes training + flatAtkBonus w/ legacy guard) + temp ATK
+        // Titles first, then conditionals
+        // ─────────────────────────────────────────────────────────────────────────
+        int atkBaseForDisplay = Mathf.Max(1, baseTotalATK + tempATKFlat);
         float atkFinalF = TitlesAdapter.GetStatValue(ctx.ownedId, def, lvl, "Attack", ctx, atkBaseForDisplay);
         int atkTitleFinal = Mathf.Max(1, Mathf.RoundToInt(atkFinalF));
 
@@ -1826,7 +1838,12 @@ public class BattleManager : MonoBehaviour
             );
         }
 
-        int defBaseForDisplay = Mathf.Max(0, baseDEF + tempDEFFlat);
+        // ─────────────────────────────────────────────────────────────────────────
+        // DEF
+        // Base for display = baseline totals + temp DEF
+        // Titles first, then conditionals
+        // ─────────────────────────────────────────────────────────────────────────
+        int defBaseForDisplay = Mathf.Max(0, baseTotalDEF + tempDEFFlat);
         float defFinalF = TitlesAdapter.GetStatValue(ctx.ownedId, def, lvl, "Defense", ctx, defBaseForDisplay);
         int defTitleFinal = Mathf.Max(0, Mathf.RoundToInt(defFinalF));
 
@@ -1840,7 +1857,12 @@ public class BattleManager : MonoBehaviour
             );
         }
 
-        int spdBaseForDisplay = Mathf.Max(1, baseSPD + tempSPDFlat);
+        // ─────────────────────────────────────────────────────────────────────────
+        // SPD
+        // Base for display = baseline totals + temp SPD
+        // Titles first, then conditionals
+        // ─────────────────────────────────────────────────────────────────────────
+        int spdBaseForDisplay = Mathf.Max(1, baseTotalSPD + tempSPDFlat);
         float spdFinalF = TitlesAdapter.GetStatValue(ctx.ownedId, def, lvl, "Speed", ctx, spdBaseForDisplay);
         int spdTitleFinal = Mathf.Max(1, Mathf.RoundToInt(spdFinalF));
 
@@ -1854,9 +1876,11 @@ public class BattleManager : MonoBehaviour
             );
         }
 
+        // Extra label
         bool resistOn = BattleTempBuffs.I && BattleTempBuffs.I.IsTypeResistActive();
         if (resistOn && playerRarityText) playerRarityText.text += " [Resist]";
     }
+
 
     private void ApplyActiveToUI()
     {
@@ -2045,11 +2069,7 @@ public class BattleManager : MonoBehaviour
         if (activeIndex < 0 || teamDefs == null || activeIndex >= teamDefs.Length || teamDefs[activeIndex] == null)
             return 1;
 
-        int spd = BattleCalc.CalcSpeed(teamDefs[activeIndex], teamLevels[activeIndex]);
-
-        var roster = SaveManager.Data?.team;
-        if (roster != null && activeIndex < roster.Count && roster[activeIndex] != null)
-            spd += Mathf.Max(0, roster[activeIndex].trainingBonus.spd);
+        int spd = GetProgressionTotalSPDForIndex(activeIndex);
 
         var j = (jobCtx != null) ? jobCtx[activeIndex] : null;
         if (j != null && j.speedBuffTurns > 0 && j.speedBonusPctFirstTurns != 0f)
@@ -2494,5 +2514,83 @@ public class BattleManager : MonoBehaviour
         feedback.SetCharge(BattleFeedbackManager.BattleFeedbackSide.Player, playerCharged);
         feedback.SetCharge(BattleFeedbackManager.BattleFeedbackSide.Wild, wildChargedNextAttack);
     }
+    
+    // ─────────────────────────────────────────────────────────────────────────────
+    // Progression Totals Helpers
+    // Baseline Totals = (SpeciesBase + LevelGrowth + TrainingBonus) + PermanentFlat (flatAtkBonus only)
+    // Titles/equipment/temp/conditionals stack elsewhere.
+    // ─────────────────────────────────────────────────────────────────────────────
+
+    private bool TryGetOwnedAtIndex(int idx, out OwnedMonsterData om)
+    {
+        om = null;
+        var roster = SaveManager.Data?.team;
+        if (roster == null) return false;
+        if (idx < 0 || idx >= roster.Count) return false;
+        om = roster[idx];
+        return om != null;
+    }
+
+    private void GetProgressionTotalsForIndex(
+        int idx,
+        out int totalHP,
+        out int totalATK,
+        out int totalDEF,
+        out int totalSPD,
+        out int flatAtkBonusOnly)
+    {
+        totalHP = totalATK = totalDEF = totalSPD = 0;
+        flatAtkBonusOnly = 0;
+
+        if (teamDefs == null || teamLevels == null) return;
+        if (idx < 0 || idx >= teamDefs.Length) return;
+        var def = teamDefs[idx];
+        if (!def) return;
+
+        int lvl = Mathf.Max(1, teamLevels[idx]);
+
+        // SpeciesBase + LevelGrowth
+        int hpBase  = Mathf.RoundToInt(BattleCalc.CalcHP(def, lvl));
+        int atkBase = Mathf.RoundToInt(BattleCalc.CalcBaseAttack(def, lvl, 0, 0));
+        int defBase = BattleCalc.CalcDefense(def, lvl);
+        int spdBase = BattleCalc.CalcSpeed(def, lvl);
+
+        // Training (EV-like)
+        int tHp = 0, tAtk = 0, tDef = 0, tSpd = 0;
+
+        // Permanent flat (separate system)
+        int flatAtk = 0;
+
+        if (TryGetOwnedAtIndex(idx, out var om))
+        {
+            tHp  = Mathf.Max(0, om.trainingBonus.hp);
+            tAtk = Mathf.Max(0, om.trainingBonus.atk);
+            tDef = Mathf.Max(0, om.trainingBonus.def);
+            tSpd = Mathf.Max(0, om.trainingBonus.spd);
+
+            flatAtk = Mathf.Max(0, om.flatAtkBonus);
+        }
+
+        // Baseline totals
+        totalHP  = Mathf.Max(1, hpBase + tHp);
+        totalDEF = Mathf.Max(0, defBase + tDef);
+        totalSPD = Mathf.Max(1, spdBase + tSpd);
+
+        // ATK baseline includes training + flatAtkBonus, with legacy guard:
+        int atkTrainingPlusFlat = tAtk + flatAtk;
+        if (LooksLikeLegacyTrainingWasMirroredIntoFlat(flatAtk, tAtk))
+            atkTrainingPlusFlat = Mathf.Max(0, flatAtk); // old saves: flat already includes training
+
+        totalATK = Mathf.Max(1, atkBase + atkTrainingPlusFlat);
+
+        flatAtkBonusOnly = flatAtk;
+    }
+
+    private int GetProgressionTotalSPDForIndex(int idx)
+    {
+        GetProgressionTotalsForIndex(idx, out _, out _, out _, out int spd, out _);
+        return Mathf.Max(1, spd);
+    }
+
 
 }

@@ -95,9 +95,6 @@ public class SettingsPanel : MonoBehaviour
     [Tooltip("Optional: plays a SFX so the player can hear the current volume.")]
     [SerializeField] private Button testSfxButton;
 
-    [Header("Debug")]
-    [SerializeField] private Button debugTestNotificationsButton;
-    [SerializeField] private Button debugClearNotificationsButton;
 
     private bool _wired;
 
@@ -115,9 +112,6 @@ public class SettingsPanel : MonoBehaviour
         if (testSfxButton) testSfxButton.onClick.RemoveAllListeners();
         if (rerollDailySeedButton) rerollDailySeedButton.onClick.RemoveAllListeners();
 
-        if (debugTestNotificationsButton) debugTestNotificationsButton.onClick.RemoveAllListeners();
-        if (debugClearNotificationsButton) debugClearNotificationsButton.onClick.RemoveAllListeners();
-
         CacheSectionCanvasGroups();
     }
 
@@ -128,7 +122,6 @@ public class SettingsPanel : MonoBehaviour
 
         WireSectionTabs();
 
-        // Default section open (but never Seeds if locked)
         _activeSection = defaultSection;
         RefreshTabVisibility(); // may force away from Seeds if locked
         ShowSection(_activeSection, instant: true);
@@ -165,26 +158,6 @@ public class SettingsPanel : MonoBehaviour
             rerollDailySeedButton.onClick.AddListener(OnClickRerollDailySeed);
         }
 
-        if (debugTestNotificationsButton)
-        {
-            debugTestNotificationsButton.onClick.RemoveAllListeners();
-            debugTestNotificationsButton.onClick.AddListener(() =>
-            {
-                if (NotificationManager.I != null)
-                    NotificationManager.I.DebugScheduleTestNotifications();
-            });
-        }
-
-        if (debugClearNotificationsButton)
-        {
-            debugClearNotificationsButton.onClick.RemoveAllListeners();
-            debugClearNotificationsButton.onClick.AddListener(() =>
-            {
-                if (NotificationManager.I != null)
-                    NotificationManager.I.DebugClearScheduledNotifications();
-            });
-        }
-
         WireEvents();
 
         if (FeatureUnlockManager.I != null)
@@ -209,9 +182,6 @@ public class SettingsPanel : MonoBehaviour
         if (resetButton) resetButton.onClick.RemoveAllListeners();
         if (testSfxButton) testSfxButton.onClick.RemoveAllListeners();
         if (rerollDailySeedButton) rerollDailySeedButton.onClick.RemoveAllListeners();
-
-        if (debugTestNotificationsButton) debugTestNotificationsButton.onClick.RemoveAllListeners();
-        if (debugClearNotificationsButton) debugClearNotificationsButton.onClick.RemoveAllListeners();
 
         UnwireEvents();
 
@@ -296,7 +266,6 @@ public class SettingsPanel : MonoBehaviour
         };
     }
 
-    // NEW: Seeds tab gating (show Seeds tab only when at least one Seeds feature is unlocked)
     bool IsSeedsTabUnlocked()
     {
         var fm = FeatureUnlockManager.I;
@@ -305,9 +274,8 @@ public class SettingsPanel : MonoBehaviour
         return fm.IsUnlocked(FeatureId.Seeds_DailyBasic)
             || fm.IsUnlocked(FeatureId.Seeds_CustomInput)
             || fm.IsUnlocked(FeatureId.Seeds_RerollDailyOnce);
-    } // FeatureUnlockManager API :contentReference[oaicite:0]{index=0}
+    } 
 
-    // NEW: show/hide the Seeds tab button and enforce safe fallback if currently on Seeds.
     void RefreshTabVisibility()
     {
         bool seedsUnlocked = IsSeedsTabUnlocked();
@@ -315,14 +283,12 @@ public class SettingsPanel : MonoBehaviour
         if (seedsTabButton)
             seedsTabButton.gameObject.SetActive(seedsUnlocked);
 
-        // If Seeds section is active but Seeds is locked, fall back to Audio.
         if (!seedsUnlocked && _activeSection == SettingsSection.Seeds)
             _activeSection = SettingsSection.Audio;
     }
 
     public void ShowSection(SettingsSection section, bool instant = false)
     {
-        // Enforce Seeds lock at the routing layer too (not just button visibility).
         if (section == SettingsSection.Seeds && !IsSeedsTabUnlocked())
             section = SettingsSection.Audio;
 
@@ -435,7 +401,6 @@ public class SettingsPanel : MonoBehaviour
             if (autoScrollLogToggle)
                 autoScrollLogToggle.SetIsOnWithoutNotify(s.autoScrollBattleLog);
 
-            // Notifications
             if (notificationsEnabledToggle)
                 notificationsEnabledToggle.SetIsOnWithoutNotify(s.notificationsEnabled);
 
@@ -451,7 +416,6 @@ public class SettingsPanel : MonoBehaviour
             if (notifyFallback24hToggle)
                 notifyFallback24hToggle.SetIsOnWithoutNotify(s.notifyFallback24h);
 
-            // UX: disable children toggles if master is off
             bool masterOn = s.notificationsEnabled;
             if (notifyJobStorageFullToggle) notifyJobStorageFullToggle.interactable = masterOn;
             if (notifyEnergyFullToggle)     notifyEnergyFullToggle.interactable     = masterOn;
@@ -461,11 +425,7 @@ public class SettingsPanel : MonoBehaviour
 
         RefreshSeedUi(s);
         RefreshDailySeedUi();
-
-        // NEW: tab gating (Seeds button visibility + safe fallback)
         RefreshTabVisibility();
-
-        // If we forced away from Seeds due to lock, ensure visible state matches.
         ShowSection(_activeSection, instant: true);
     }
 

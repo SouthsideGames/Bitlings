@@ -13,12 +13,16 @@ public class JobProgress
     public int maxXPForLevel;
 }
 
-/// <summary>Reference to a worker assigned to a site.</summary>
 [Serializable]
 public class WorkerRef
 {
-    public string monsterId;     // Prefer owned-instance ID when available
-    public MonsterDataSO def;    // Fallback to base definition
+    // NOTE:
+    // - ownedUID is the stable identity for an owned instance (survives evolution).
+    // - monsterId is the current species id (can change on evolution).
+    public string monsterId;
+    public string ownedUID;
+
+    public MonsterDataSO def;
 }
 
 [Serializable]
@@ -38,7 +42,7 @@ public class JobSiteState
 
     // Per-slot fatigue and cooldown (0..1 fatigue, unix seconds for cooldown)
     public float[] slotFatigue01 = new float[3];
-    public long[]  slotCooldownUntilUnix = new long[3];
+    public long[] slotCooldownUntilUnix = new long[3];
 
     // Legacy (kept to avoid null refs in any old UI; not used for production calc)
     [Range(0f, 1f)] public float fatigue01;
@@ -105,8 +109,9 @@ public sealed class JobManager : MonoBehaviour
     // ---------------------------- State ----------------------------
     public readonly List<JobSiteState> States = new();
 
-    // Per-monster cooldown (key = ownedId or def.id). Persisted via SaveManager sidecar.
+    // Per-monster cooldown (key = ownedUID when possible; else monsterId). Persisted via SaveManager sidecar.
     private readonly Dictionary<string, long> _cooldownUntil = new();
+
     private List<BlessingBuff> _blessingBuffs = new List<BlessingBuff>();
     private readonly Dictionary<string, MonsterDataSO> _idToDef = new();
     private readonly Dictionary<string, long> _assignedUnix = new();
@@ -137,6 +142,11 @@ public sealed class JobManager : MonoBehaviour
         // Load slot fatigue + cooldowns from sidecar file
         LoadRuntimeFromSave();
 
+        // IMPORTANT: After load, re-resolve all worker defs from their keys so:
+        // - ownedUID workers show the CURRENT species after evolution
+        // - stale / invalid keys are removed
+        SanitizeAndRefreshWorkersFromSaveKeys(saveIfChanged: true);
+
         // Ensure unlocks reflect both capture history and purchased features.
         if (lockSitesUntilEligible) RecalculateUnlocksFromSeenTypes();
 
@@ -150,6 +160,10 @@ public sealed class JobManager : MonoBehaviour
         GameEvents.StarterChosen += OnStarterChosen;
         GameEvents.MonsterCaptured += OnMonsterCaptured;
         GameEvents.JobGlobalModsChanged += OnJobModsChanged;
+
+        // When evolution occurs, ownedUID stays stable but monsterId changes.
+        // We refresh worker refs so job UI and production uses the new def.
+        GameEvents.MonsterEvolved += HandleMonsterEvolved;
     }
 
     private void OnDisable()
@@ -157,6 +171,7 @@ public sealed class JobManager : MonoBehaviour
         GameEvents.StarterChosen -= OnStarterChosen;
         GameEvents.MonsterCaptured -= OnMonsterCaptured;
         GameEvents.JobGlobalModsChanged -= OnJobModsChanged;
+        GameEvents.MonsterEvolved -= HandleMonsterEvolved;
 
         if (SettingsManager.I) SettingsManager.I.OnSettingsChanged -= PullSettings;
 
@@ -191,6 +206,15 @@ public sealed class JobManager : MonoBehaviour
         GameEvents.OnJobsChanged?.Invoke();
     }
 
+    private void HandleMonsterEvolved(string newDefId)
+    {
+        // Keep it cheap: only re-resolve defs from keys (ownedUID -> current monsterId -> def).
+        // Also cleans invalid keys.
+        SanitizeAndRefreshWorkersFromSaveKeys(saveIfChanged: true);
+        RefreshAllJobSiteViewsInScene();
+        GameEvents.OnJobsChanged?.Invoke();
+    }
+
     // ---------------------------- Initialization ----------------------------
     private void BuildDefIndex()
     {
@@ -216,9 +240,8 @@ public sealed class JobManager : MonoBehaviour
             var st = new JobSiteState { config = so, storedAmount = 0f };
 
             int cap = Mathf.Clamp(so.maxWorkers, 1, 3);
-            // workers
             for (int i = 0; i < cap; i++) st.workers.Add(null);
-            // ensure arrays
+
             st.slotFatigue01 = new float[cap];
             st.slotCooldownUntilUnix = new long[cap];
 
@@ -264,23 +287,23 @@ public sealed class JobManager : MonoBehaviour
             var s = States[si];
             if (s?.config == null) continue;
 
+            // Opportunistic refresh: if a worker ref is keyed by ownedUID but def is stale/null, fix it.
+            // This helps if any edge case evolved without event propagation.
+            RefreshSiteWorkerDefsIfNeeded(s);
+
             float grossRateHr = ComputeRatePerHour(s);
 
-            // Per-slot fatigue & auto-remove logic
             ApplyPerSlotFatigue(dtHours, s);
 
-            // If you also want fatigue to reduce production while working, use avg of active slots
             float avgFatigue = AverageWorkingSlotFatigue(s);
             float finalRateHr = grossRateHr * (1f - Mathf.Clamp01(avgFatigue));
             s.cachedRatePerHour = finalRateHr;
 
-            // Produce & store
             s.storedAmount = Mathf.Min(GetEffectiveStorageCap(s.config), s.storedAmount + finalRateHr * dtHours);
         }
 
         if (autoReliefEnabled) ApplyClinicRelief(dtHours);
 
-        // Persist runtime periodically (lightweight)
         SaveRuntimeToSave();
     }
 
@@ -308,25 +331,20 @@ public sealed class JobManager : MonoBehaviour
         {
             var w = s.workers[i];
 
-            // Empty slot: decay visible fatigue (rest look-n-feel)
             if (w?.def == null)
             {
                 if (s.slotFatigue01[i] > 0f)
-                {
                     s.slotFatigue01[i] = Mathf.Max(0f, s.slotFatigue01[i] - siteRestDecayPerHour * dtHours);
-                }
                 continue;
             }
 
-            // Increase fatigue for THIS worker
             float perHour = Mathf.Max(0f, w.def.fatigueRatePerHour);
 
-            // Titles fatigue multiplier (safe-guarded)
             try
             {
-                string speciesId = w.def ? w.def.id : null;
-                int lvl = GetOwnedLevelOr1(speciesId, w.def);
-                float mul = Mathf.Max(0f, TitlesAdapter.GetJobFatigueMult(speciesId, w.def, lvl, s.config.jobType));
+                string key = GetWorkerKey(w);
+                int lvl = GetOwnedLevelOr1(key, w.def);
+                float mul = Mathf.Max(0f, TitlesAdapter.GetJobFatigueMult(key, w.def, lvl, s.config.jobType));
                 perHour *= mul;
             }
             catch { }
@@ -335,7 +353,7 @@ public sealed class JobManager : MonoBehaviour
 
             if (s.slotFatigue01[i] >= 1f - 0.0001f)
             {
-                string key = GetBestId(w);
+                string key = GetWorkerKey(w);
                 float hrsCD = Mathf.Max(0f, w.def.fatigueCooldownHours);
 
                 long until = SaveManager.NowUnix() + Mathf.RoundToInt(hrsCD * 3600f);
@@ -343,11 +361,9 @@ public sealed class JobManager : MonoBehaviour
 
                 if (!string.IsNullOrEmpty(key)) _cooldownUntil[key] = until;
 
-                // Remove worker from the slot
                 s.workers[i] = null;
                 RemoveAssignedUnix(key);
 
-                // auto-collect this site's stored resources
                 Collect(s.config.jobType);
 
                 s.slotFatigue01[i] = 1f;
@@ -360,7 +376,6 @@ public sealed class JobManager : MonoBehaviour
 
     private float ComputeRatePerHour(JobSiteState s)
     {
-        // Require at least one worker
         if (!HasAnyWorker(s.workers))
             return 0f;
 
@@ -376,31 +391,25 @@ public sealed class JobManager : MonoBehaviour
                 * JobBalance.EvolutionMult(w.def.evolutionStage)
                 * JobBalance.AffinityMult(s.config.jobType, w.def.type);
 
-            string wid = GetBestId(w);
-            int lvl = GetOwnedLevelOr1(wid, w.def);
+            string key = GetWorkerKey(w);
+            int lvl = GetOwnedLevelOr1(key, w.def);
 
-            // Neutral resource hook (tags removed)
-            mult *= GetPerResourceWorkerMul(wid, s.config, here: true);
+            mult *= GetPerResourceWorkerMul(key, s.config, here: true);
 
-            // Titles: per-worker production multiplier
-            try { mult *= Mathf.Max(0f, TitlesAdapter.GetJobRateMult(wid, s.config.jobType)); } catch { }
+            try { mult *= Mathf.Max(0f, TitlesAdapter.GetJobRateMult(key, s.config.jobType)); } catch { }
 
             sum += mult;
         }
 
-        // “1 + sum/3” scaling for staffed sites
         float normalized = 1f + (sum / 3f);
         float perHour = s.config.baseRatePerHour * normalized;
 
-        // Boss/global
         perHour *= BossDebuffSystem.GetMultiplier(s.config.jobType, SaveManager.NowUnix());
 
-        // Titles site-wide aura: multiply by (1 + auraPct)
         float auraPct = 0f;
         if (_auraByJob != null) _auraByJob.TryGetValue(s.config.jobType, out auraPct);
         if (auraPct > 0f) perHour *= (1f + auraPct);
 
-        // Shiny stacking
         float shinyAura = ShinySystems.SiteShinyAuraMult(s.workers);
         int shinyCount = CountShinies(s.workers);
         float shinySet = 1f + (shinyCount >= 3 ? shiny3Bonus : (shinyCount == 2 ? shiny2Bonus : (shinyCount == 1 ? shiny1Bonus : 0f)));
@@ -414,26 +423,26 @@ public sealed class JobManager : MonoBehaviour
         var s = FindState(job);
         if (s == null || monster == null) return false;
 
-        // ELIGIBILITY GATE (strict)
         if (!IsTypeEligibleFor(job, monster.type))
-        {
             return false;
-        }
 
-        // cooldown gate
+        // ownedId is expected to be ownedUID when available. If not provided, falls back to monster.id (species).
         string key = ownedId ?? monster.id;
         if (IsOnCooldown(key))
-        {
             return false;
-        }
 
         int cap = Mathf.Clamp(s.config.maxWorkers, 1, 3);
         if (slotIndex < 0 || slotIndex >= cap) return false;
 
         EnsureWorkerListSize(s, cap);
-        s.workers[slotIndex] = new WorkerRef { def = monster, monsterId = key };
 
-        TouchAssignedUnix(key);
+        // Populate both ownedUID and monsterId for robustness:
+        // - If key is an ownedUID, store it in ownedUID and also store current monster.id as monsterId.
+        // - If key is species id, store it in monsterId only.
+        var wr = BuildWorkerRefFromKey(key, fallbackDef: monster);
+        s.workers[slotIndex] = wr;
+
+        TouchAssignedUnix(GetWorkerKey(wr));
         SaveAssignmentsToSave();
         SaveRuntimeToSave();
         GameEvents.OnJobsChanged?.Invoke();
@@ -445,18 +454,12 @@ public sealed class JobManager : MonoBehaviour
         var s = FindState(job);
         if (s == null || monster == null) return false;
 
-        // ELIGIBILITY GATE (strict)
         if (!IsTypeEligibleFor(job, monster.type))
-        {
             return false;
-        }
 
-        // cooldown gate
         string key = ownedId ?? monster.id;
         if (IsOnCooldown(key))
-        {
             return false;
-        }
 
         int cap = Mathf.Clamp(s.config.maxWorkers, 1, 3);
         EnsureWorkerListSize(s, cap);
@@ -464,9 +467,10 @@ public sealed class JobManager : MonoBehaviour
         int empty = s.workers.FindIndex(w => w == null);
         if (empty == -1) return false;
 
-        s.workers[empty] = new WorkerRef { def = monster, monsterId = key };
+        var wr = BuildWorkerRefFromKey(key, fallbackDef: monster);
+        s.workers[empty] = wr;
 
-        TouchAssignedUnix(key);
+        TouchAssignedUnix(GetWorkerKey(wr));
         SaveAssignmentsToSave();
         SaveRuntimeToSave();
         GameEvents.OnJobsChanged?.Invoke();
@@ -481,10 +485,12 @@ public sealed class JobManager : MonoBehaviour
         for (int i = 0; i < s.workers.Count; i++)
         {
             var w = s.workers[i];
-            if (!IsWorkerMatch(w, ownedIdOrDefId)) continue;
+            if (!IsWorkerMatchKey(w, ownedIdOrDefId)) continue;
 
+            string key = GetWorkerKey(w);
             s.workers[i] = null;
-            RemoveAssignedUnix(GetBestId(w));
+            RemoveAssignedUnix(key);
+
             SaveAssignmentsToSave();
             SaveRuntimeToSave();
             GameEvents.OnJobsChanged?.Invoke();
@@ -500,10 +506,11 @@ public sealed class JobManager : MonoBehaviour
             for (int i = 0; i < s.workers.Count; i++)
             {
                 var w = s.workers[i];
-                if (!IsWorkerMatch(w, ownedIdOrDefId)) continue;
+                if (!IsWorkerMatchKey(w, ownedIdOrDefId)) continue;
 
+                string key = GetWorkerKey(w);
                 s.workers[i] = null;
-                RemoveAssignedUnix(GetBestId(w));
+                RemoveAssignedUnix(key);
             }
         }
 
@@ -533,6 +540,7 @@ public sealed class JobManager : MonoBehaviour
                 if (EncounterManager.I) EncounterManager.I.AddEnergy(whole);
                 else ResourceBank.Add(ResourceType.Energy, whole);
                 break;
+
             case ResourceType.GrowthCore:
                 ResourceManager.I.Add(ResourceType.GrowthCore, whole);
                 break;
@@ -557,7 +565,7 @@ public sealed class JobManager : MonoBehaviour
         for (int i = 0; i < s.workers.Count; i++)
         {
             var w = s.workers[i];
-            if (w != null && (!string.IsNullOrEmpty(w.monsterId) || w.def != null)) count++;
+            if (w != null && (!string.IsNullOrEmpty(GetWorkerKey(w)) || w.def != null)) count++;
         }
         return count;
     }
@@ -576,7 +584,7 @@ public sealed class JobManager : MonoBehaviour
         foreach (var s in States)
         {
             var ja = new JobAssignment { job = s.config.jobType, workerIds = new List<string>() };
-            foreach (var w in s.workers) ja.workerIds.Add(GetBestId(w) ?? "");
+            foreach (var w in s.workers) ja.workerIds.Add(GetWorkerKey(w) ?? "");
             SaveManager.Data.jobAssignments.Add(ja);
         }
 
@@ -606,13 +614,19 @@ public sealed class JobManager : MonoBehaviour
 
             for (int i = 0; i < Mathf.Min(cap, ja.workerIds.Count); i++)
             {
-                var wid = ja.workerIds[i];
-                if (string.IsNullOrEmpty(wid)) { s.workers[i] = null; continue; }
+                var key = ja.workerIds[i];
+                if (string.IsNullOrEmpty(key)) { s.workers[i] = null; continue; }
 
-                var def = ResolveMonsterDef(wid);
-                s.workers[i] = def != null ? new WorkerRef { monsterId = wid, def = def } : null;
+                // key can be ownedUID (preferred) or species monsterId (legacy).
+                var wr = BuildWorkerRefFromKey(key, fallbackDef: null);
+                if (wr == null || wr.def == null)
+                {
+                    s.workers[i] = null;
+                    continue;
+                }
 
-                if (def != null) TouchAssignedUnix(wid);
+                s.workers[i] = wr;
+                TouchAssignedUnix(GetWorkerKey(wr));
             }
         }
 
@@ -690,7 +704,6 @@ public sealed class JobManager : MonoBehaviour
             var blob = SaveManager.LoadJobRuntime(); // returns SaveManager.JobRuntimeSave
             if (blob == null) return;
 
-            // cooldown map
             _cooldownUntil.Clear();
             if (blob.cooldowns != null)
             {
@@ -702,7 +715,6 @@ public sealed class JobManager : MonoBehaviour
                 }
             }
 
-            // per-site restore
             if (blob.sites != null)
             {
                 for (int i = 0; i < blob.sites.Count; i++)
@@ -725,20 +737,18 @@ public sealed class JobManager : MonoBehaviour
         catch { }
     }
 
-    private bool IsOnCooldown(string ownedOrDefId)
+    private bool IsOnCooldown(string key)
     {
-        if (string.IsNullOrEmpty(ownedOrDefId)) return false;
-        if (_cooldownUntil.TryGetValue(ownedOrDefId, out long until))
+        if (string.IsNullOrEmpty(key)) return false;
+        if (_cooldownUntil.TryGetValue(key, out long until))
             return until > SaveManager.NowUnix();
         return false;
     }
 
     private void OnStarterChosen(MonsterType type)
     {
-        // 1) Normal unlock path
         bool unlockedAny = TryUnlockSitesForType_ReturnsChanged(type);
 
-        // 2) Fallback for edge cases (starter type mapped to zero unlockable sites)
         if (enableStarterDefaultSitesFallback && !unlockedAny)
         {
             bool fallbackChanged = EnsureStarterDefaultSitesUnlocked();
@@ -749,7 +759,6 @@ public sealed class JobManager : MonoBehaviour
             }
         }
 
-        // 3) Recompute from seen types (keeps save consistent long-term)
         RecalculateUnlocksFromSeenTypes();
     }
 
@@ -770,7 +779,6 @@ public sealed class JobManager : MonoBehaviour
     {
         if (SaveManager.Data == null) return;
 
-        // Keep legacy container alive
         SaveManager.Data.unlockedJobSites ??= new HashSet<JobType>();
 
         if (SaveManager.Data.seenTypes != null)
@@ -791,9 +799,6 @@ public sealed class JobManager : MonoBehaviour
 
         foreach (var job in JobBalance.JobsUnlockedByType(type))
         {
-            // Route through bridge so:
-            // - unlockedJobSitesList is updated
-            // - matching FeatureId is marked unlocked (upgrade rows reflect it)
             if (JobUnlockBridge.UnlockJob(job, syncFeatureUnlock: true))
                 changed = true;
         }
@@ -810,7 +815,6 @@ public sealed class JobManager : MonoBehaviour
         if (!lockSitesUntilEligible)
             return true;
 
-        // NEW: unified check (feature OR save data)
         return JobUnlockBridge.IsJobUnlocked(job);
     }
 
@@ -850,7 +854,6 @@ public sealed class JobManager : MonoBehaviour
         int available = ResourceBank.Get(ResourceType.Coffee);
         if (available <= 0) return;
 
-        // targets are non-clinic sites that allow relief and have any slot fatigue > 0
         var targets = new List<JobSiteState>();
         foreach (var s in States)
         {
@@ -870,7 +873,6 @@ public sealed class JobManager : MonoBehaviour
         int idx = 0;
         int guard = 0;
 
-        // Round-robin across sites and slots
         while (available > 0 && guard++ < 100000)
         {
             var s = targets[idx];
@@ -930,8 +932,7 @@ public sealed class JobManager : MonoBehaviour
         var direct = MonsterLibraryLocator.GetById(idOrOwnedId);
         if (direct) return direct;
 
-        // 2) If this looks like an owned-instance ID (ownedUID),
-        // map it back to the species monsterId and resolve that.
+        // 2) ownedUID -> current species id
         var owned = SaveManager.Data?.owned;
         if (owned != null)
         {
@@ -946,6 +947,26 @@ public sealed class JobManager : MonoBehaviour
                     {
                         if (_idToDef.TryGetValue(om.monsterId, out var def2) && def2) return def2;
                         return MonsterLibraryLocator.GetById(om.monsterId);
+                    }
+                    return null;
+                }
+            }
+        }
+
+        // team as fallback (some projects only store team entries)
+        var team = SaveManager.Data?.team;
+        if (team != null)
+        {
+            for (int i = 0; i < team.Count; i++)
+            {
+                var tm = team[i];
+                if (tm == null) continue;
+                if (!string.IsNullOrEmpty(tm.ownedUID) && tm.ownedUID == idOrOwnedId)
+                {
+                    if (!string.IsNullOrEmpty(tm.monsterId))
+                    {
+                        if (_idToDef.TryGetValue(tm.monsterId, out var def2) && def2) return def2;
+                        return MonsterLibraryLocator.GetById(tm.monsterId);
                     }
                     return null;
                 }
@@ -972,7 +993,6 @@ public sealed class JobManager : MonoBehaviour
         try { flatFromTitles = Mathf.Max(0, TitlesAdapter.GetJobCapacityBonus(site.jobType)); }
         catch { flatFromTitles = 0; }
 
-        // temporary Sanctum blessing (runtime-only)
         int tempFromBlessings = 0;
         try { tempFromBlessings = Mathf.Max(0, GetActiveBlessingBonus(site.jobType)); }
         catch { tempFromBlessings = 0; }
@@ -984,9 +1004,9 @@ public sealed class JobManager : MonoBehaviour
         return Mathf.Max(0, Mathf.RoundToInt(preMultFlat * levelMul));
     }
 
-    public (JobType job, float hours) GetCurrentJobAndHours(string monsterId)
+    public (JobType job, float hours) GetCurrentJobAndHours(string key)
     {
-        if (string.IsNullOrEmpty(monsterId)) return (JobType.None, 0f);
+        if (string.IsNullOrEmpty(key)) return (JobType.None, 0f);
 
         for (int si = 0; si < States.Count; si++)
         {
@@ -996,10 +1016,10 @@ public sealed class JobManager : MonoBehaviour
             for (int wi = 0; wi < st.workers.Count; wi++)
             {
                 var w = st.workers[wi];
-                if (!IsWorkerMatch(w, monsterId)) continue;
+                if (!IsWorkerMatchKey(w, key)) continue;
 
-                var key = GetBestId(w);
-                if (!_assignedUnix.TryGetValue(key, out long start)) start = SaveManager.NowUnix();
+                var k = GetWorkerKey(w);
+                if (!_assignedUnix.TryGetValue(k, out long start)) start = SaveManager.NowUnix();
                 float hrs = Mathf.Max(0f, (SaveManager.NowUnix() - start) / 3600f);
 
                 return (st.config ? st.config.jobType : JobType.None, hrs);
@@ -1008,41 +1028,38 @@ public sealed class JobManager : MonoBehaviour
         return (JobType.None, 0f);
     }
 
-    private static float GetPerResourceWorkerMul(string workerId, JobSiteSO site, bool here)
+    private static float GetPerResourceWorkerMul(string workerKey, JobSiteSO site, bool here)
     {
-        // No tag multipliers; neutral hook.
         return 1f;
     }
 
     private static bool HasAnyWorker(List<WorkerRef> workers)
     {
         if (workers == null) return false;
-        for (int i = 0; i < workers.Count; i++) if (workers[i]?.def != null || !string.IsNullOrEmpty(workers[i]?.monsterId)) return true;
+        for (int i = 0; i < workers.Count; i++)
+        {
+            var w = workers[i];
+            if (w == null) continue;
+            if (w.def != null) return true;
+            if (!string.IsNullOrEmpty(GetWorkerKey(w))) return true;
+        }
         return false;
     }
 
-    private static string GetBestId(WorkerRef w)
+    // ---------------------------- Settings hookup ----------------------------
+    private void PullSettings()
     {
-        if (w == null) return null;
-        if (!string.IsNullOrEmpty(w.monsterId)) return w.monsterId;
-        return w.def ? w.def.id : null;
-    }
+        var s = SettingsManager.I?.S;
+        if (s == null) return;
 
-    private static bool IsWorkerMatch(WorkerRef w, string ownedIdOrDefId)
-    {
-        if (w == null || string.IsNullOrEmpty(ownedIdOrDefId)) return false;
-        if (!string.IsNullOrEmpty(w.monsterId) && w.monsterId == ownedIdOrDefId) return true;
-        return w.def != null && w.def.id == ownedIdOrDefId;
-    }
+        autoBenchEnabled = s.autoBenchEnabled;
+        autoBenchHPThreshold01 = Mathf.Clamp01(s.autoBenchThreshold01);
+        autoBenchAutoFill = s.autoBenchAutoFill;
+        autoReliefEnabled = s.autoClinicReliefEnabled;
 
-    private void TouchAssignedUnix(string key)
-    {
-        if (!string.IsNullOrEmpty(key)) _assignedUnix[key] = SaveManager.NowUnix();
-    }
-
-    private void RemoveAssignedUnix(string key)
-    {
-        if (!string.IsNullOrEmpty(key)) _assignedUnix.Remove(key);
+#if UNITY_EDITOR
+        logProductionBreakdown = s.logProductionBreakdown;
+#endif
     }
 
     // ---------------------------- Auto-bench (injury) ----------------------------
@@ -1063,10 +1080,10 @@ public sealed class JobManager : MonoBehaviour
                 var w = s.workers[wi];
                 if (w == null) continue;
 
-                string ownedId = w.monsterId;
-                if (string.IsNullOrEmpty(ownedId)) continue;
+                string key = GetWorkerKey(w);
+                if (string.IsNullOrEmpty(key)) continue;
 
-                if (!TryGetTeamEntry(ownedId, out int teamIndex)) continue;
+                if (!TryGetTeamEntryByKey(key, out int teamIndex)) continue;
 
                 var entry = team[teamIndex];
                 if (entry == null) continue;
@@ -1081,7 +1098,7 @@ public sealed class JobManager : MonoBehaviour
 
                 if (hp01 < threshold01)
                 {
-                    RemoveWorker(s.config.jobType, ownedId);
+                    RemoveWorker(s.config.jobType, key);
 
                     if (autoBenchAutoFill)
                         TryFillSlotFromTeam(s, wi, threshold01);
@@ -1102,17 +1119,20 @@ public sealed class JobManager : MonoBehaviour
             for (int wi = 0; wi < st.workers.Count; wi++)
             {
                 var w = st.workers[wi];
-                if (!string.IsNullOrEmpty(w?.monsterId)) used.Add(w.monsterId);
+                var k = GetWorkerKey(w);
+                if (!string.IsNullOrEmpty(k)) used.Add(k);
             }
         }
 
         for (int i = 0; i < team.Count; i++)
         {
             var entry = team[i];
-            string candId = entry.monsterId;
-            if (string.IsNullOrEmpty(candId) || used.Contains(candId)) continue;
+            if (entry == null) continue;
 
-            if (IsOnCooldown(candId)) continue;
+            string candKey = !string.IsNullOrEmpty(entry.ownedUID) ? entry.ownedUID : entry.monsterId;
+            if (string.IsNullOrEmpty(candKey) || used.Contains(candKey)) continue;
+
+            if (IsOnCooldown(candKey)) continue;
 
             var def = MonsterLibraryLocator.GetById(entry.monsterId);
             if (!def) continue;
@@ -1126,12 +1146,12 @@ public sealed class JobManager : MonoBehaviour
 
             if (hp01 < threshold01) continue;
 
-            return TryAssignWorkerAt(site.config.jobType, slotIndex, def, candId);
+            return TryAssignWorkerAt(site.config.jobType, slotIndex, def, candKey);
         }
         return false;
     }
 
-    private bool TryGetTeamEntry(string ownedIdOrUid, out int index)
+    private bool TryGetTeamEntryByKey(string key, out int index)
     {
         index = -1;
         var team = SaveManager.Data?.team;
@@ -1142,13 +1162,13 @@ public sealed class JobManager : MonoBehaviour
             var e = team[i];
             if (e == null) continue;
 
-            if (!string.IsNullOrEmpty(e.ownedUID) && e.ownedUID == ownedIdOrUid)
+            if (!string.IsNullOrEmpty(e.ownedUID) && e.ownedUID == key)
             {
                 index = i;
                 return true;
             }
 
-            if (!string.IsNullOrEmpty(e.monsterId) && e.monsterId == ownedIdOrUid)
+            if (!string.IsNullOrEmpty(e.monsterId) && e.monsterId == key)
             {
                 index = i;
                 return true;
@@ -1158,48 +1178,45 @@ public sealed class JobManager : MonoBehaviour
         return false;
     }
 
-    // ---------------------------- Settings hookup ----------------------------
-    private void PullSettings()
-    {
-        var s = SettingsManager.I?.S;
-        if (s == null) return;
-
-        autoBenchEnabled = s.autoBenchEnabled;
-        autoBenchHPThreshold01 = Mathf.Clamp01(s.autoBenchThreshold01);
-        autoBenchAutoFill = s.autoBenchAutoFill;
-        autoReliefEnabled = s.autoClinicReliefEnabled;
-
-#if UNITY_EDITOR
-        logProductionBreakdown = s.logProductionBreakdown;
-#endif
-    }
-
     // ---------------------------- Local helpers ----------------------------
-    private static int GetOwnedLevelOr1(string ownedOrDefId, MonsterDataSO fallbackDef)
+    private static int GetOwnedLevelOr1(string key, MonsterDataSO fallbackDef)
     {
-        if (string.IsNullOrEmpty(ownedOrDefId)) return 1;
+        if (string.IsNullOrEmpty(key)) return 1;
 
-        var owned = SaveManager.Data?.owned;
+        var data = SaveManager.Data;
+
+        var owned = data?.owned;
         if (owned != null)
         {
             for (int i = 0; i < owned.Count; i++)
             {
                 var om = owned[i];
-                if (om != null && om.monsterId == ownedOrDefId)
+                if (om == null) continue;
+
+                if (!string.IsNullOrEmpty(om.ownedUID) && om.ownedUID == key)
+                    return Mathf.Max(1, om.level);
+
+                if (!string.IsNullOrEmpty(om.monsterId) && om.monsterId == key)
                     return Mathf.Max(1, om.level);
             }
         }
 
-        var team = SaveManager.Data?.team;
+        var team = data?.team;
         if (team != null)
         {
             for (int i = 0; i < team.Count; i++)
             {
                 var e = team[i];
-                if (e != null && (e.monsterId == ownedOrDefId))
+                if (e == null) continue;
+
+                if (!string.IsNullOrEmpty(e.ownedUID) && e.ownedUID == key)
+                    return Mathf.Max(1, e.level);
+
+                if (!string.IsNullOrEmpty(e.monsterId) && e.monsterId == key)
                     return Mathf.Max(1, e.level);
             }
         }
+
         return 1;
     }
 
@@ -1215,20 +1232,38 @@ public sealed class JobManager : MonoBehaviour
     {
         if (w == null) return false;
 
-        var ownedId = w.monsterId;
-        if (!string.IsNullOrEmpty(ownedId))
+        var data = SaveManager.Data;
+
+        string uid = w.ownedUID;
+        string mid = w.monsterId;
+
+        var ownedList = data?.owned;
+        if (ownedList != null)
         {
-            var ownedList = SaveManager.Data?.owned;
-            if (ownedList != null)
+            for (int i = 0; i < ownedList.Count; i++)
             {
-                for (int i = 0; i < ownedList.Count; i++)
-                {
-                    var om = ownedList[i];
-                    if (om != null && om.monsterId == ownedId) return om.isShiny;
-                }
+                var om = ownedList[i];
+                if (om == null) continue;
+
+                if (!string.IsNullOrEmpty(uid) && om.ownedUID == uid) return om.isShiny;
+                if (!string.IsNullOrEmpty(mid) && om.monsterId == mid) return om.isShiny;
             }
         }
 
+        var team = data?.team;
+        if (team != null)
+        {
+            for (int i = 0; i < team.Count; i++)
+            {
+                var tm = team[i];
+                if (tm == null) continue;
+
+                if (!string.IsNullOrEmpty(uid) && tm.ownedUID == uid) return tm.isShiny;
+                if (!string.IsNullOrEmpty(mid) && tm.monsterId == mid) return tm.isShiny;
+            }
+        }
+
+        // fallback to def reflection if your def supports it
         var def = w.def;
         if (!def) return false;
         try
@@ -1411,27 +1446,16 @@ public sealed class JobManager : MonoBehaviour
     // Sanctum: Temporary Storage Blessings (RESTORED API)
     // These methods are referenced by SanctumUI.cs
     // ─────────────────────────────────────────────────────────────
-
-    /// <summary>
-    /// Apply a temporary storage blessing to a target job. This increases effective storage cap
-    /// for the duration. Multiple blessings can stack.
-    /// </summary>
     public void ApplyTemporaryStorageBlessing(JobType targetJob, int flatBonus, int durationSeconds)
     {
         ApplyTemporaryStorageBlessing(targetJob, flatBonus, (long)durationSeconds);
     }
 
-    /// <summary>
-    /// Overload in case SanctumUI passes a float.
-    /// </summary>
     public void ApplyTemporaryStorageBlessing(JobType targetJob, int flatBonus, float durationSeconds)
     {
         ApplyTemporaryStorageBlessing(targetJob, flatBonus, (long)Mathf.RoundToInt(durationSeconds));
     }
 
-    /// <summary>
-    /// Core implementation using seconds duration.
-    /// </summary>
     public void ApplyTemporaryStorageBlessing(JobType targetJob, int flatBonus, long durationSeconds)
     {
         if (targetJob == JobType.None) return;
@@ -1450,14 +1474,10 @@ public sealed class JobManager : MonoBehaviour
             untilUnix = until
         });
 
-        // If you have any UI or cached cap/rate systems, refresh here.
         RefreshAllJobSiteViewsInScene();
         GameEvents.OnJobsChanged?.Invoke();
     }
 
-    /// <summary>
-    /// Returns the total active temporary storage bonus (flat) for the job.
-    /// </summary>
     public int GetTemporaryStorageBonus(JobType job)
     {
         if (job == JobType.None) return 0;
@@ -1479,10 +1499,6 @@ public sealed class JobManager : MonoBehaviour
         return total;
     }
 
-    /// <summary>
-    /// Returns remaining seconds for the blessing on this job.
-    /// If multiple blessings exist, returns the maximum remaining time.
-    /// </summary>
     public int GetBlessingSecondsRemaining(JobType job)
     {
         if (job == JobType.None) return 0;
@@ -1506,14 +1522,10 @@ public sealed class JobManager : MonoBehaviour
         if (bestUntil <= now) return 0;
         long remaining = bestUntil - now;
 
-        // Clamp to int range; your UI expects int seconds.
         if (remaining > int.MaxValue) return int.MaxValue;
         return (int)remaining;
     }
 
-    /// <summary>
-    /// Removes expired blessings.
-    /// </summary>
     private void PruneExpiredBlessings(long nowUnix)
     {
         if (_blessingBuffs == null || _blessingBuffs.Count == 0) return;
@@ -1526,4 +1538,266 @@ public sealed class JobManager : MonoBehaviour
         }
     }
 
+    // ---------------------------- Worker Keying (ownedUID-first) ----------------------------
+    private static string GetWorkerKey(WorkerRef w)
+    {
+        if (w == null) return null;
+
+        if (!string.IsNullOrEmpty(w.ownedUID))
+            return w.ownedUID;
+
+        if (!string.IsNullOrEmpty(w.monsterId))
+            return w.monsterId;
+
+        return w.def ? w.def.id : null;
+    }
+
+    private static bool IsWorkerMatchKey(WorkerRef w, string key)
+    {
+        if (w == null || string.IsNullOrEmpty(key)) return false;
+        if (!string.IsNullOrEmpty(w.ownedUID) && w.ownedUID == key) return true;
+        if (!string.IsNullOrEmpty(w.monsterId) && w.monsterId == key) return true;
+        return w.def != null && w.def.id == key;
+    }
+
+    private void TouchAssignedUnix(string key)
+    {
+        if (!string.IsNullOrEmpty(key)) _assignedUnix[key] = SaveManager.NowUnix();
+    }
+
+    private void RemoveAssignedUnix(string key)
+    {
+        if (!string.IsNullOrEmpty(key)) _assignedUnix.Remove(key);
+    }
+
+    private OwnedMonsterData FindOwnedByUID(string ownedUID)
+    {
+        if (string.IsNullOrEmpty(ownedUID)) return null;
+
+        var data = SaveManager.Data;
+        if (data == null) return null;
+
+        if (data.owned != null)
+            for (int i = 0; i < data.owned.Count; i++)
+                if (data.owned[i] != null && data.owned[i].ownedUID == ownedUID)
+                    return data.owned[i];
+
+        if (data.team != null)
+            for (int i = 0; i < data.team.Count; i++)
+                if (data.team[i] != null && data.team[i].ownedUID == ownedUID)
+                    return data.team[i];
+
+        return null;
+    }
+
+    private WorkerRef BuildWorkerRefFromKey(string key, MonsterDataSO fallbackDef)
+    {
+        if (string.IsNullOrEmpty(key)) return null;
+
+        // If key maps to an owned instance, prefer ownedUID binding (stable across evolution)
+        var owned = FindOwnedByUID(key);
+        if (owned != null)
+        {
+            var def = !string.IsNullOrEmpty(owned.monsterId) ? MonsterLibraryLocator.GetById(owned.monsterId) : null;
+            if (!def) def = fallbackDef;
+
+            if (!def) return null;
+
+            return new WorkerRef
+            {
+                ownedUID = owned.ownedUID,
+                monsterId = owned.monsterId, // current species (may have changed due to evolution)
+                def = def
+            };
+        }
+
+        // Else treat key as species monsterId (legacy)
+        var def2 = ResolveMonsterDef(key);
+        if (!def2) def2 = fallbackDef;
+        if (!def2) return null;
+
+        return new WorkerRef
+        {
+            ownedUID = null,
+            monsterId = key,
+            def = def2
+        };
+    }
+
+    private void RefreshSiteWorkerDefsIfNeeded(JobSiteState s)
+    {
+        if (s == null || s.workers == null) return;
+
+        bool changed = false;
+
+        for (int i = 0; i < s.workers.Count; i++)
+        {
+            var w = s.workers[i];
+            if (w == null) continue;
+
+            var key = GetWorkerKey(w);
+            if (string.IsNullOrEmpty(key))
+            {
+                s.workers[i] = null;
+                changed = true;
+                continue;
+            }
+
+            // If this is ownedUID-bound, ensure monsterId and def reflect current owned state
+            if (!string.IsNullOrEmpty(w.ownedUID))
+            {
+                var owned = FindOwnedByUID(w.ownedUID);
+                if (owned == null || string.IsNullOrEmpty(owned.monsterId))
+                {
+                    s.workers[i] = null;
+                    changed = true;
+                    continue;
+                }
+
+                if (w.monsterId != owned.monsterId)
+                {
+                    w.monsterId = owned.monsterId;
+                    changed = true;
+                }
+
+                var newDef = MonsterLibraryLocator.GetById(owned.monsterId);
+                if (newDef && w.def != newDef)
+                {
+                    w.def = newDef;
+                    changed = true;
+                }
+            }
+            else
+            {
+                // species-bound: ensure def is resolved
+                if (w.def == null)
+                {
+                    var newDef = ResolveMonsterDef(w.monsterId);
+                    if (newDef != null)
+                    {
+                        w.def = newDef;
+                        changed = true;
+                    }
+                    else
+                    {
+                        s.workers[i] = null;
+                        changed = true;
+                    }
+                }
+            }
+        }
+
+        if (changed)
+        {
+            // Avoid excessive saves; caller decides. Here we do not auto-save.
+        }
+    }
+
+    /// <summary>
+    /// Ensures:
+    /// - Worker keys are valid (ownedUID exists or species exists)
+    /// - ownedUID workers use CURRENT evolved species/def
+    /// - stale / invalid saved keys are removed
+    /// </summary>
+    private void SanitizeAndRefreshWorkersFromSaveKeys(bool saveIfChanged)
+    {
+        bool changed = false;
+
+        // Build valid ownedUID set (owned + team)
+        var validUIDs = new HashSet<string>();
+        var data = SaveManager.Data;
+        if (data != null)
+        {
+            if (data.owned != null)
+                for (int i = 0; i < data.owned.Count; i++)
+                    if (data.owned[i] != null && !string.IsNullOrEmpty(data.owned[i].ownedUID))
+                        validUIDs.Add(data.owned[i].ownedUID);
+
+            if (data.team != null)
+                for (int i = 0; i < data.team.Count; i++)
+                    if (data.team[i] != null && !string.IsNullOrEmpty(data.team[i].ownedUID))
+                        validUIDs.Add(data.team[i].ownedUID);
+        }
+
+        foreach (var s in States)
+        {
+            if (s?.config == null) continue;
+
+            int cap = Mathf.Clamp(s.config.maxWorkers, 1, 3);
+            EnsureWorkerListSize(s, cap);
+
+            for (int i = 0; i < s.workers.Count; i++)
+            {
+                var w = s.workers[i];
+                if (w == null) continue;
+
+                // If ownedUID was stored, validate it exists
+                if (!string.IsNullOrEmpty(w.ownedUID))
+                {
+                    if (!validUIDs.Contains(w.ownedUID))
+                    {
+                        s.workers[i] = null;
+                        changed = true;
+                        continue;
+                    }
+
+                    // Refresh to current evolved def/monsterId
+                    var owned = FindOwnedByUID(w.ownedUID);
+                    if (owned == null || string.IsNullOrEmpty(owned.monsterId))
+                    {
+                        s.workers[i] = null;
+                        changed = true;
+                        continue;
+                    }
+
+                    var def = MonsterLibraryLocator.GetById(owned.monsterId);
+                    if (!def)
+                    {
+                        s.workers[i] = null;
+                        changed = true;
+                        continue;
+                    }
+
+                    if (w.monsterId != owned.monsterId) { w.monsterId = owned.monsterId; changed = true; }
+                    if (w.def != def) { w.def = def; changed = true; }
+
+                    continue;
+                }
+
+                // Legacy: if monsterId is actually an ownedUID, upgrade it
+                if (!string.IsNullOrEmpty(w.monsterId) && validUIDs.Contains(w.monsterId))
+                {
+                    var upgraded = BuildWorkerRefFromKey(w.monsterId, fallbackDef: w.def);
+                    s.workers[i] = upgraded;
+                    changed = true;
+                    continue;
+                }
+
+                // Species-bound: validate def exists
+                if (string.IsNullOrEmpty(w.monsterId))
+                {
+                    s.workers[i] = null;
+                    changed = true;
+                    continue;
+                }
+
+                var def2 = ResolveMonsterDef(w.monsterId);
+                if (!def2)
+                {
+                    s.workers[i] = null;
+                    changed = true;
+                    continue;
+                }
+
+                if (w.def != def2)
+                {
+                    w.def = def2;
+                    changed = true;
+                }
+            }
+        }
+
+        if (changed && saveIfChanged)
+            SaveAssignmentsToSave();
+    }
 }

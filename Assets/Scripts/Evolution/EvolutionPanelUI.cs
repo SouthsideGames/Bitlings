@@ -2,6 +2,18 @@ using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 
+/// <summary>
+/// Shows an evolution preview for an owned monster (current -> next form) and the stat deltas at the
+/// owned monster's CURRENT level, including training bonuses.
+/// 
+/// IMPORTANT:
+/// - HP: uses EvolutionHelper.CalcMaxHP (your existing behavior).
+/// - ATK: uses BattleCalc attack curve + training bonus.
+/// - DEF: now uses BattleCalc defense curve + training bonus (FIXED).
+/// - SPD: now uses BattleCalc speed curve + training bonus (FIXED).
+/// 
+/// This keeps your public API and overall behavior intact while making DEF/SPD consistent with HP/ATK.
+/// </summary>
 public class EvolutionPanelUI : MonoBehaviour
 {
     [Header("Wires")]
@@ -12,13 +24,9 @@ public class EvolutionPanelUI : MonoBehaviour
     [SerializeField] private TextMeshProUGUI evolutionName;
 
     [Header("Stat Preview")]
-    [Tooltip("Line showing HP before/after and delta, e.g. 'HP: 120 → 150 (+30)'")]
     [SerializeField] private TextMeshProUGUI hpLine;
-    [Tooltip("Line showing ATK before/after and delta.")]
     [SerializeField] private TextMeshProUGUI atkLine;
-    [Tooltip("Line showing DEF before/after and delta.")]
     [SerializeField] private TextMeshProUGUI defLine;
-    [Tooltip("Line showing SPD before/after and delta.")]
     [SerializeField] private TextMeshProUGUI spdLine;
 
     [Header("Buttons")]
@@ -29,13 +37,11 @@ public class EvolutionPanelUI : MonoBehaviour
     private MonsterDataSO _currentDef;
     private MonsterDataSO _nextDef;
 
-    // Colors for delta rich-text
-    private const string POS_COLOR_HEX = "3CDE74";  // same green you use elsewhere
+    private const string POS_COLOR_HEX = "3CDE74";
     private const string NEG_COLOR_HEX = "FF5555";
 
     private void Awake()
     {
-
         if (confirmButton)
         {
             confirmButton.onClick.RemoveAllListeners();
@@ -68,54 +74,73 @@ public class EvolutionPanelUI : MonoBehaviour
             return;
         }
 
+        if (currentName) currentName.text = string.IsNullOrEmpty(_currentDef.displayName) ? _currentDef.name : _currentDef.displayName;
+        if (currentLevel) currentLevel.text = $"Lv {Mathf.Max(1, _source.level)}";
+        if (evolutionName) evolutionName.text = string.IsNullOrEmpty(_nextDef.displayName) ? _nextDef.name : _nextDef.displayName;
 
-        // Basic labels
-        if (currentName)   currentName.text   = _currentDef.displayName;
-        if (currentLevel)  currentLevel.text  = $"Lv {_source.level}";
-        if (evolutionName) evolutionName.text = _nextDef.displayName;
-
-        if (currentIcon)   currentIcon.sprite   = _currentDef.icon;
+        if (currentIcon) currentIcon.sprite = _currentDef.icon;
         if (evolutionIcon) evolutionIcon.sprite = _nextDef.icon;
 
-        // Stat preview + flash anim
         RefreshStatPreview();
         PlayStatFlashAnimation();
+        gameObject.SetActive(true);
     }
 
     private void RefreshStatPreview()
     {
-        if (_currentDef == null || _nextDef == null)
+        if (_currentDef == null || _nextDef == null || _source == null)
         {
             ClearStatPreview();
             return;
         }
 
-        int level = Mathf.Max(1, _source != null && _source.level > 0 ? _source.level : 1);
+        int level = Mathf.Max(1, _source.level);
 
-        int curHp = 0, nxtHp = 0;
+        // HP stays routed through EvolutionHelper (keeps your existing behavior, including any special rules).
+        int curHp = EvolutionHelper.CalcMaxHP(_source, _currentDef);
+        int nxtHp = EvolutionHelper.CalcMaxHP(_source, _nextDef);
+
         int curAtk = 0, nxtAtk = 0;
         int curDef = 0, nxtDef = 0;
-        float curSpd = 0f, nxtSpd = 0f;
+        int curSpd = 0, nxtSpd = 0;
 
-        // HP / ATK via BattleCalc, same style as MonsterDetailPanelUI
-        try { curHp  = Mathf.RoundToInt(BattleCalc.CalcHP(_currentDef, level)); } catch { }
-        try { nxtHp  = Mathf.RoundToInt(BattleCalc.CalcHP(_nextDef,   level)); } catch { }
-        try { curAtk = Mathf.RoundToInt(BattleCalc.CalcBaseAttack(_currentDef, level, 0, 0)); } catch { }
-        try { nxtAtk = Mathf.RoundToInt(BattleCalc.CalcBaseAttack(_nextDef,   level, 0, 0)); } catch { }
+        // ATK via BattleCalc + training flat
+        try { curAtk = Mathf.RoundToInt(BattleCalc.CalcBaseAttack(_currentDef, level, 0, 0)); }
+        catch { curAtk = Mathf.RoundToInt(_currentDef.baseAttack); }
 
-        // DEF / SPD from base stats (keeps it simple and matches your detail panel)
-        curDef = Mathf.RoundToInt(_currentDef.baseDefense);
-        nxtDef = Mathf.RoundToInt(_nextDef.baseDefense);
-        curSpd = _currentDef.baseSpeed;
-        nxtSpd = _nextDef.baseSpeed;
+        try { nxtAtk = Mathf.RoundToInt(BattleCalc.CalcBaseAttack(_nextDef, level, 0, 0)); }
+        catch { nxtAtk = Mathf.RoundToInt(_nextDef.baseAttack); }
 
-        if (hpLine)  hpLine.text  = BuildStatLineInt("HP",  curHp,  nxtHp);
+        curAtk += Mathf.Max(0, _source.trainingBonus.atk);
+        nxtAtk += Mathf.Max(0, _source.trainingBonus.atk);
+
+        // DEF via BattleCalc + training flat (FIXED: previously baseDefense only)
+        try { curDef = BattleCalc.CalcDefense(_currentDef, level); }
+        catch { curDef = Mathf.RoundToInt(_currentDef.baseDefense); }
+
+        try { nxtDef = BattleCalc.CalcDefense(_nextDef, level); }
+        catch { nxtDef = Mathf.RoundToInt(_nextDef.baseDefense); }
+
+        curDef += Mathf.Max(0, _source.trainingBonus.def);
+        nxtDef += Mathf.Max(0, _source.trainingBonus.def);
+
+        // SPD via BattleCalc + training flat (FIXED: previously baseSpeed only)
+        // Note: BattleCalc.CalcSpeed returns int by design (turn priority stat).
+        try { curSpd = BattleCalc.CalcSpeed(_currentDef, level); }
+        catch { curSpd = Mathf.Max(1, Mathf.RoundToInt(_currentDef.baseSpeed)); }
+
+        try { nxtSpd = BattleCalc.CalcSpeed(_nextDef, level); }
+        catch { nxtSpd = Mathf.Max(1, Mathf.RoundToInt(_nextDef.baseSpeed)); }
+
+        curSpd += Mathf.Max(0, _source.trainingBonus.spd);
+        nxtSpd += Mathf.Max(0, _source.trainingBonus.spd);
+
+        if (hpLine) hpLine.text = BuildStatLineInt("HP", curHp, nxtHp);
         if (atkLine) atkLine.text = BuildStatLineInt("ATK", curAtk, nxtAtk);
         if (defLine) defLine.text = BuildStatLineInt("DEF", curDef, nxtDef);
-        if (spdLine) spdLine.text = BuildStatLineFloat("SPD", curSpd, nxtSpd);
+        if (spdLine) spdLine.text = BuildStatLineInt("SPD", curSpd, nxtSpd);
     }
 
-    // Rich-text colored deltas for integer stats
     private string BuildStatLineInt(string label, int before, int after)
     {
         int delta = after - before;
@@ -129,12 +154,12 @@ public class EvolutionPanelUI : MonoBehaviour
         return $"{label}: {before} → {after}{deltaText}";
     }
 
-    // Rich-text colored deltas for float stats (SPD)
+    // Kept for back-compat in case you used it elsewhere / might swap SPD back to float later.
     private string BuildStatLineFloat(string label, float before, float after)
     {
         float delta = after - before;
         string beforeStr = before.ToString("0.##");
-        string afterStr  = after.ToString("0.##");
+        string afterStr = after.ToString("0.##");
 
         if (Mathf.Approximately(delta, 0f))
             return $"{label}: {beforeStr} → {afterStr}";
@@ -149,15 +174,12 @@ public class EvolutionPanelUI : MonoBehaviour
 
     private void ClearStatPreview()
     {
-        if (hpLine)  hpLine.text  = "";
+        if (hpLine) hpLine.text = "";
         if (atkLine) atkLine.text = "";
         if (defLine) defLine.text = "";
         if (spdLine) spdLine.text = "";
     }
 
-    /// <summary>
-    /// Small LeanTween "flash" on each stat line to emphasize the new values.
-    /// </summary>
     private void PlayStatFlashAnimation()
     {
         AnimateTextPunch(hpLine);
@@ -174,7 +196,6 @@ public class EvolutionPanelUI : MonoBehaviour
         LeanTween.cancel(t.gameObject);
         t.localScale = Vector3.one;
 
-        // Quick punch up then ease back to 1
         LeanTween.scale(t.gameObject, Vector3.one * 1.08f, 0.12f)
             .setEaseOutBack()
             .setOnComplete(() =>

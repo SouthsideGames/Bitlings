@@ -2,17 +2,52 @@ using UnityEngine;
 
 public static class EvolutionHelper
 {
+
+    public static string GetOwnedKey(OwnedMonsterData m)
+    {
+        if (m == null) return null;
+        if (!string.IsNullOrEmpty(m.ownedUID)) return m.ownedUID;
+        if (!string.IsNullOrEmpty(m.monsterId)) return m.monsterId;
+        return null;
+    }
+
+    public static int CalcMaxHP(OwnedMonsterData m, MonsterDataSO def)
+    {
+        if (m == null || def == null) return 0;
+
+        int lvl = Mathf.Max(1, m.level);
+        int hp = 0;
+
+        // Prefer the ownedId overload (lets titles apply, if you use that overload)
+        string ownedKey = GetOwnedKey(m);
+        try
+        {
+            if (!string.IsNullOrEmpty(ownedKey))
+                hp = Mathf.RoundToInt(BattleCalc.CalcHP(def, lvl, ownedKey));
+            else
+                hp = Mathf.RoundToInt(BattleCalc.CalcHP(def, lvl));
+        }
+        catch
+        {
+            // fall back to base if calc blows up
+            hp = Mathf.RoundToInt(def.baseHP);
+        }
+
+        hp += Mathf.Max(0, m.trainingBonus.hp);
+        return Mathf.Max(1, hp);
+    }
+
+    public static void FullHealToMax(OwnedMonsterData m, MonsterDataSO def)
+    {
+        if (m == null || def == null) return;
+        m.currentHP = CalcMaxHP(m, def);
+    }
+
     public static void RebuildStatsAdditive(OwnedMonsterData m, MonsterDataSO newForm, float carryScale = 1f)
     {
         if (m == null || newForm == null) return;
-        var tb = m.trainingBonus;
 
-        int maxHP = Mathf.RoundToInt(BattleCalc.CalcHP(newForm, Mathf.Max(1, m.level)));
-        maxHP += Mathf.RoundToInt(tb.hp * carryScale);
-        m.currentHP = Mathf.Max(1, maxHP);
-
-        // Bake attack increase
-        m.flatAtkBonus += Mathf.RoundToInt(tb.atk * (carryScale - 1f));
+        FullHealToMax(m, newForm);
     }
 
     public static bool CanEvolve(OwnedMonsterData m, MonsterDataSO def)

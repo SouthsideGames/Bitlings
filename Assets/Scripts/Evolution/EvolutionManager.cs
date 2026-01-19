@@ -28,8 +28,8 @@ public static class EvolutionManager
                 {
                     m.monsterId = newId;
 
-                    // ADDITIVE CARRY-OVER (NewBase + trainingBonus)
-                    EvolutionHelper.RebuildStatsAdditive(m, defNew, 1f);
+                    // Full heal using NEW BASE + SAME LEVEL scaling + training bonus
+                    EvolutionHelper.FullHealToMax(m, defNew);
 
                     team[i] = m;
                     teamRef = m;
@@ -62,8 +62,8 @@ public static class EvolutionManager
                 var o = owned[ownedIdx];
                 o.monsterId = newId;
 
-                // ADDITIVE CARRY-OVER (NewBase + trainingBonus)
-                EvolutionHelper.RebuildStatsAdditive(o, defNew, 1f);
+                // Full heal using NEW BASE + SAME LEVEL scaling + training bonus
+                EvolutionHelper.FullHealToMax(o, defNew);
 
                 owned[ownedIdx] = o;
                 changed = true;
@@ -78,8 +78,11 @@ public static class EvolutionManager
 
         RefreshOwnedIds(monsterId, newId);
 
+        // Ensure jobAssignments worker IDs don't hold stale references
+        CleanupJobAssignmentsAfterEvolution();
+
         SaveManager.Save();
-        
+
         GameEvents.OnTeamChanged?.Invoke();
         GameEvents.MonsterEvolved?.Invoke(newId);
         TitlesAdapter.OnMonsterEvolved(newId);
@@ -99,5 +102,32 @@ public static class EvolutionManager
 
         if (!anyOldInOwned && !anyOldInTeam)
             data.ownedIds.Remove(oldId);
+    }
+
+    private static void CleanupJobAssignmentsAfterEvolution()
+    {
+        var data = SaveManager.Data;
+        if (data == null) return;
+        if (data.jobAssignments == null || data.jobAssignments.Count == 0) return;
+
+        var validUIDs = new HashSet<string>();
+        var all = data.GetAllOwnedMonsters(includeTeam: true);
+        if (all != null)
+        {
+            for (int i = 0; i < all.Count; i++)
+            {
+                var om = all[i];
+                if (om != null && !string.IsNullOrEmpty(om.ownedUID))
+                    validUIDs.Add(om.ownedUID);
+            }
+        }
+
+        for (int j = 0; j < data.jobAssignments.Count; j++)
+        {
+            var job = data.jobAssignments[j];
+            if (job == null || job.workerIds == null) continue;
+
+            job.workerIds.RemoveAll(id => string.IsNullOrEmpty(id) || !validUIDs.Contains(id));
+        }
     }
 }
