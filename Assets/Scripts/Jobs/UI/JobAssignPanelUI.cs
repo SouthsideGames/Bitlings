@@ -686,3 +686,4 @@ public class JobAssignPanelUI : MonoBehaviour
         return $"{h}h {m}m";
     }
 }
+ 
