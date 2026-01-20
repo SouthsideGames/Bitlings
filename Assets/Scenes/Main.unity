@@ -14744,7 +14744,13 @@ MonoBehaviour:
   musicB: {fileID: 1337313910}
   startingMusicPool:
   - {fileID: 8300000, guid: 44e330692b23838449c29cdceb7a23d3, type: 3}
-  battleMusic: {fileID: 8300000, guid: 26077a7f632023b478f5f39732ca9bdd, type: 3}
+  battleMusic: {fileID: 0}
+  battleMusicPool:
+  - {fileID: 8300000, guid: 26077a7f632023b478f5f39732ca9bdd, type: 3}
+  - {fileID: 8300000, guid: 59b06a31e42615b43aa7eeb9a2dc92ea, type: 3}
+  bossMusic: {fileID: 0}
+  bossMusicPool:
+  - {fileID: 8300000, guid: f38f284ab4d2f2e4baf90ae258692cf1, type: 3}
   victoryMusic: {fileID: 8300000, guid: 5219455a2c19e5b4fb78cbec15a0ba83, type: 3}
   defeatMusic: {fileID: 8300000, guid: 442b2eceaeb4d0145ae1168d7abdf7e1, type: 3}
   defaultCrossfade: 0.75
