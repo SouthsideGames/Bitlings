@@ -1,4 +1,3 @@
-// Assets/Scripts/UI/UpgradeRowUI.cs
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
@@ -8,7 +7,7 @@ public class UpgradeRowUI : MonoBehaviour
 {
     [Header("Visuals")]
     [SerializeField] private TextMeshProUGUI nameLabel;
-    [SerializeField] private TextMeshProUGUI stateLabel;  // "Locked" / "Unlocked"
+    [SerializeField] private TextMeshProUGUI stateLabel;
     [SerializeField] private TextMeshProUGUI costLabel;
 
     [Header("Buttons")]
@@ -16,25 +15,21 @@ public class UpgradeRowUI : MonoBehaviour
     [SerializeField] private Button infoButton;
 
     // internal data
-    private FeatureId _featureId = FeatureId.None;
-    private int _creditCost;
-    private string _infoId;
-    private string _fallbackTitle;
-    private Sprite _icon;
+    FeatureId _featureId = FeatureId.None;
+    int _creditCost;
+    string _infoId;
+    string _fallbackTitle;
+    Sprite _icon;
+
+    bool _hasValidEntry = false;
 
     void Awake()
     {
         if (buyButton != null)
-        {
-            buyButton.onClick.RemoveListener(OnBuyClicked);
             buyButton.onClick.AddListener(OnBuyClicked);
-        }
 
         if (infoButton != null)
-        {
-            infoButton.onClick.RemoveListener(OpenInfo);
             infoButton.onClick.AddListener(OpenInfo);
-        }
     }
 
     void OnEnable()
@@ -72,19 +67,43 @@ public class UpgradeRowUI : MonoBehaviour
 
     public void Init(UpgradeCatalogEntry entry)
     {
+        // Launch-safe: do NOT throw here. A single bad/missing entry should not crash the UI.
         if (entry == null)
-            throw new ArgumentNullException(nameof(entry));
+        {
+            _hasValidEntry = false;
+
+            Debug.LogError(
+                $"[UpgradeRowUI] Init called with null UpgradeCatalogEntry on '{gameObject.name}'. " +
+                "This row will be disabled to prevent UI crashes. Check your Upgrade Catalog / references.",
+                this
+            );
+
+            _featureId = FeatureId.None;
+            _creditCost = 0;
+            _infoId = "upg.unknown";
+            _fallbackTitle = "Unavailable";
+
+            if (nameLabel != null) nameLabel.text = _fallbackTitle;
+            if (stateLabel != null) stateLabel.text = "Unavailable";
+            if (costLabel != null) costLabel.text = "-";
+
+            if (buyButton != null) buyButton.interactable = false;
+
+            if (infoButton != null) infoButton.interactable = true;
+
+            return;
+        }
+
+        _hasValidEntry = true;
 
         _featureId = entry.featureId;
         _creditCost = entry.creditCost;
         _infoId = entry.infoId;
-
         _fallbackTitle = string.IsNullOrWhiteSpace(entry.displayName)
             ? _featureId.ToString()
             : entry.displayName;
 
-        if (nameLabel != null)
-            nameLabel.text = _fallbackTitle;
+        if (nameLabel != null) nameLabel.text = _fallbackTitle;
 
         Refresh();
     }
@@ -95,9 +114,14 @@ public class UpgradeRowUI : MonoBehaviour
 
     public void Refresh()
     {
-        bool unlocked =
-            FeatureUnlockManager.I != null &&
-            FeatureUnlockManager.I.IsUnlocked(_featureId);
+        if (!_hasValidEntry)
+        {
+            if (buyButton != null) buyButton.interactable = false;
+            return;
+        }
+
+        bool unlocked = FeatureUnlockManager.I != null &&
+                        FeatureUnlockManager.I.IsUnlocked(_featureId);
 
         if (stateLabel != null)
             stateLabel.text = unlocked ? "Unlocked" : "Locked";
@@ -105,17 +129,10 @@ public class UpgradeRowUI : MonoBehaviour
         if (costLabel != null)
             costLabel.text = unlocked ? "-" : $"{_creditCost} credits";
 
-        // If purchased/unlocked, hide the BUY button GameObject entirely.
         if (buyButton != null)
         {
-            buyButton.gameObject.SetActive(!unlocked);
-
-            // If it is visible, optionally control interactable by affordability.
-            if (!unlocked)
-            {
-                int credits = ResourceBank.Get(ResourceType.Credits);
-                buyButton.interactable = _creditCost > 0 && credits >= _creditCost;
-            }
+            int credits = ResourceBank.Get(ResourceType.Credits);
+            buyButton.interactable = !unlocked && _creditCost > 0 && credits >= _creditCost;
         }
     }
 
@@ -125,18 +142,19 @@ public class UpgradeRowUI : MonoBehaviour
 
     void OnBuyClicked()
     {
+        if (!_hasValidEntry)
+            return;
+
         if (FeatureUnlockManager.I == null)
             return;
 
-        // already purchased
         if (FeatureUnlockManager.I.IsUnlocked(_featureId))
             return;
 
-        // pay
         if (_creditCost > 0 && !ResourceBank.TrySpend(ResourceType.Credits, _creditCost))
             return;
 
-        // unlock + persist
+        // Unlock + persist
         FeatureUnlockManager.I.Unlock(_featureId);
         SaveManager.Save();
 
@@ -146,7 +164,6 @@ public class UpgradeRowUI : MonoBehaviour
 
     void OpenInfo()
     {
-        Debug.Log($"[UpgradeRowUI] OpenInfo clicked. InfoPanelUI.I is {(InfoPanelUI.I == null ? "NULL" : "OK")}");
         var id = string.IsNullOrWhiteSpace(_infoId) ? "upg.unknown" : _infoId;
 
         const string fallbackSubtitle = "Feature Unlock";
