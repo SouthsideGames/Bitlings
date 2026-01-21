@@ -53,22 +53,22 @@ public static class JobStrings {
     };
 
     public static string ResourceName(ResourceType t) => t switch {
-        ResourceType.GrowthCore      => "Growth Core",
-        ResourceType.Credits           => "credit",
-        ResourceType.Energy          => "Energy",
-        ResourceType.Medkit         => "Medkit",
-        ResourceType.Material       => "Material",
-        ResourceType.PPEPermit => "Type-Resistant Booster",
-        ResourceType.Flyer           => "Lure",
-        ResourceType.WorkOrder    => "Capture Band",
-        ResourceType.Favor            => "Luck",
-        ResourceType.TrainingVoucher_ATK  => "Attack Booster",
-        ResourceType.WellnessVoucher      => "HP Booster",
-        ResourceType.EfficiencyVoucher   => "Speed Booster",
-        ResourceType.ShinyOrb       => "Shiny Orb",
-        ResourceType.BlessingScale  => "Blessing Token",
-        ResourceType.Coffee      => "Rest Charge",
-        ResourceType.PackVoucher      => "Pack Shard",
+        ResourceType.GrowthCore             => "Growth Core",
+        ResourceType.Credits                => "Credit",
+        ResourceType.Energy                 => "Energy",
+        ResourceType.Medkit                 => "Medkit",
+        ResourceType.Material               => "Material",
+        ResourceType.PPEPermit              => "PPE Permit",
+        ResourceType.Flyer                  => "Flyer",
+        ResourceType.WorkOrder              => "Work Order",
+        ResourceType.Favor                  => "Luck",
+        ResourceType.TrainingVoucher        => "Training Voucher",
+        ResourceType.WellnessVoucher        => "Wellness Voucher",
+        ResourceType.EfficiencyVoucher      => "Efficiency Voucher",
+        ResourceType.ShinyOrb               => "Shiny Orb",
+        ResourceType.BlessingScale          => "Blessing Scale",
+        ResourceType.Coffee                 => "Rest Charge",
+        ResourceType.PackVoucher            => "Pack Voucher",
         _ => t.ToString()
     };
 }
@@ -78,7 +78,7 @@ public static class JobOutput
     public static ResourceType Output(JobType site) => site switch {
         JobType.Gym         => ResourceType.GrowthCore,
         JobType.Quarry      => ResourceType.Credits,
-        JobType.Mine        => ResourceType.TrainingVoucher_ATK,
+        JobType.Mine        => ResourceType.TrainingVoucher,
         JobType.PowerPlant  => ResourceType.Energy,
         JobType.Grove       => ResourceType.Medkit,
         JobType.Forge       => ResourceType.Material,

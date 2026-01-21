@@ -22,10 +22,9 @@ public class ResourcePanelUI : MonoBehaviour
     [Header("Catalog (order shown)")]
     [SerializeField] private List<ResourceCatalogEntry> catalog = new();
 
-    // NEW — Recycle button + target panel launcher
     [Header("Recycle Feature")]
     [SerializeField] private Button recycleButton;
-    [SerializeField] private PanelId recyclePanelId = PanelId.Recycle; // Make sure this exists in your enum
+    [SerializeField] private PanelId recyclePanelId = PanelId.Recycle; 
 
     private readonly List<ResourceRowUI> _rows = new();
 
@@ -33,8 +32,6 @@ public class ResourcePanelUI : MonoBehaviour
     {
         GameEvents.OnResourcesChanged += Refresh;
 
-
-        // Feature unlock listener
         if (FeatureUnlockManager.I != null)
             FeatureUnlockManager.I.OnFeatureUnlocked += HandleFeatureUnlocked;
 
@@ -77,9 +74,6 @@ public class ResourcePanelUI : MonoBehaviour
     // RECYCLE FEATURE SUPPORT
     // ----------------------------------------------------------------------
 
-    /// <summary>
-    /// Show or hide the Recycle button based on feature unlock.
-    /// </summary>
     private void UpdateRecycleButtonVisibility()
     {
         if (!recycleButton) return;
@@ -107,9 +101,6 @@ public class ResourcePanelUI : MonoBehaviour
             UpdateRecycleButtonVisibility();
     }
 
-    /// <summary>
-    /// Launch the recycle panel when the button is pressed.
-    /// </summary>
     private void OnClickRecycle()
     {
         if (UIManager.I != null)

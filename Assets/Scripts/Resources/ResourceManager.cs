@@ -8,7 +8,7 @@ public enum ResourceType
 {
     None = 0, Credits = 1, Energy = 2, Medkit = 3, Material = 4,
     PPEPermit = 5, Flyer = 6, WorkOrder = 7, Favor = 8,
-    TrainingVoucher_ATK = 9, WellnessVoucher = 10, EfficiencyVoucher = 11, ShinyOrb = 12, BlessingScale = 13, Coffee = 14, GrowthCore = 16, PackVoucher = 17
+    TrainingVoucher = 9, WellnessVoucher = 10, EfficiencyVoucher = 11, ShinyOrb = 12, BlessingScale = 13, Coffee = 14, GrowthCore = 16, PackVoucher = 17
 }
 
 public class ResourceManager : MonoBehaviour
@@ -269,6 +269,19 @@ public class ResourceManager : MonoBehaviour
         ResourceBank.Set(ResourceType.Credits, 0);
         ResourceBank.Set(ResourceType.Medkit, 0);
         ResourceBank.Set(ResourceType.PackVoucher, 0);
+        ResourceBank.Set(ResourceType.TrainingVoucher, 0);
+        ResourceBank.Set(ResourceType.WellnessVoucher, 0);
+        ResourceBank.Set(ResourceType.EfficiencyVoucher, 0);
+        ResourceBank.Set(ResourceType.PPEPermit, 0);
+        ResourceBank.Set(ResourceType.Flyer, 0);
+        ResourceBank.Set(ResourceType.WorkOrder, 0);
+        ResourceBank.Set(ResourceType.Favor, 0);
+        ResourceBank.Set(ResourceType.Material, 0);
+        ResourceBank.Set(ResourceType.ShinyOrb, 0);
+        ResourceBank.Set(ResourceType.BlessingScale, 0);
+        ResourceBank.Set(ResourceType.Coffee, 0);
+        ResourceBank.Set(ResourceType.GrowthCore, 0);
+
 
         SaveManager.Save();
         GameEvents.OnResourcesChanged?.Invoke();

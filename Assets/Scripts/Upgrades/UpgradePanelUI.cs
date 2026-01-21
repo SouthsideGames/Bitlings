@@ -235,7 +235,6 @@ public class UpgradesPanelUI : MonoBehaviour
             case FeatureId.Codex_CaptureOnlyFilter:
                 return UpgradeSection.Codex;
 
-            // Not on your 5 tabs; keep it visible somewhere.
             case FeatureId.Recycle_Basic:
             default:
                 return UpgradeSection.AutoGrowth;
@@ -299,10 +298,8 @@ public class UpgradesPanelUI : MonoBehaviour
 
     private IEnumerator CoRefreshSizer()
     {
-        // First pass: immediately after instantiation
         scrollSizer.Refresh(force: true);
 
-        // Second pass: next frame after layout settles (often needed for ContentSizeFitter/LayoutGroup)
         yield return null;
 
         if (!_isShuttingDown && scrollSizer)

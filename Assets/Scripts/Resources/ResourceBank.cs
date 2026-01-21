@@ -7,15 +7,16 @@ public static class ResourceBank
     static List<int> L => SaveManager.Data.resourceCounts;
 
     // ─────────────────────────────────────────────────────────────
-    // Booster/Sigil cap settings
+    // Booster cap settings (PER-RESOURCE, not shared)
     // ─────────────────────────────────────────────────────────────
-    public const int BoosterCapTotal = 50;          // Combined cap
-    public const int BoosterOverflowcreditValue = 1;  // Overflow → credits
+    // Each booster resource (PPEPermit, TrainingVoucher, WellnessVoucher, EfficiencyVoucher)
+    // caps independently at this value.
+    public const int BoosterCapPerType = 50;
 
     private static readonly ResourceType[] BoosterTypes = new[]
     {
         ResourceType.PPEPermit,
-        ResourceType.TrainingVoucher_ATK,
+        ResourceType.TrainingVoucher,
         ResourceType.WellnessVoucher,
         ResourceType.EfficiencyVoucher
     };
@@ -57,7 +58,7 @@ public static class ResourceBank
     // ─────────────────────────────────────────────────────────────
     // Core methods
     // ─────────────────────────────────────────────────────────────
-   public static void EnsureSize()
+    public static void EnsureSize()
     {
         SaveManager.LoadOrCreate();
         if (SaveManager.Data.resourceCounts == null)
@@ -71,7 +72,6 @@ public static class ResourceBank
         while (SaveManager.Data.resourceCounts.Count < need)
             SaveManager.Data.resourceCounts.Add(0);
     }
-
 
     static int Index(ResourceType t) => (int)t;
 
@@ -88,14 +88,20 @@ public static class ResourceBank
         EnsureSize();
         int i = Index(t);
         if (i < 0 || i >= L.Count) return;
+
         int v = Mathf.Max(0, value);
+
+        // Enforce per-type cap for boosters on Set as well (prevents UI confusion / bad saves)
+        if (IsCappedType(t))
+            v = Mathf.Min(v, BoosterCapPerType);
+
         if (L[i] == v) return;
         L[i] = v;
         EmitChanged();
     }
 
     // ─────────────────────────────────────────────────────────────
-    // Add logic (with booster/sigil cap enforcement)
+    // Add logic (with booster cap enforcement)
     // ─────────────────────────────────────────────────────────────
     public static void Add(ResourceType t, int delta)
     {
@@ -104,7 +110,7 @@ public static class ResourceBank
         int i = Index(t);
         if (i < 0 || i >= L.Count) return;
 
-        // Handle boosters/sigils with cap
+        // Handle boosters with per-type cap
         if (IsCappedType(t))
         {
             AddCappedResource(t, delta);
@@ -137,7 +143,7 @@ public static class ResourceBank
     }
 
     // ─────────────────────────────────────────────────────────────
-    // Booster/Sigil helpers
+    // Booster helpers
     // ─────────────────────────────────────────────────────────────
     static bool IsCappedType(ResourceType t)
     {
@@ -147,36 +153,44 @@ public static class ResourceBank
         return false;
     }
 
-    static int GetCappedTotal()
+    static void AddCappedResource(ResourceType t, int delta)
+    {
+        EnsureSize();
+        int i = Index(t);
+        if (i < 0 || i >= L.Count) return;
+
+        int cur = Mathf.Max(0, L[i]);
+
+        // Per-resource clamp
+        long next = (long)cur + delta;
+        if (next < 0) next = 0;
+        if (next > BoosterCapPerType) next = BoosterCapPerType;
+
+        int newVal = (int)next;
+        if (newVal == cur) return;
+
+        L[i] = newVal;
+        EmitChanged();
+    }
+
+    /// <summary>
+    /// Returns remaining capacity for the given booster type.
+    /// For non-capped resources, returns int.MaxValue.
+    /// </summary>
+    public static int GetBoosterRoom(ResourceType t)
+    {
+        if (!IsCappedType(t)) return int.MaxValue;
+        return Mathf.Max(0, BoosterCapPerType - Get(t));
+    }
+
+    /// <summary>
+    /// Optional: total count across all booster types (no longer used for caps).
+    /// </summary>
+    public static int GetTotalBoosters()
     {
         int total = 0;
         for (int i = 0; i < BoosterTypes.Length; i++)
             total += Get(BoosterTypes[i]);
         return total;
-    }
-
-    static void AddCappedResource(ResourceType t, int delta)
-    {
-        if (delta <= 0) return;
-
-        int currentTotal = GetCappedTotal();
-        int room = BoosterCapTotal - currentTotal;
-        if (room < 0) room = 0;
-
-        int toAdd = Mathf.Min(delta, room);
-        int overflow = Mathf.Max(0, delta - toAdd);
-
-        int i = Index(t);
-        if (i < 0 || i >= L.Count) return;
-
-        // Add what fits
-        if (toAdd > 0)
-            L[i] = Mathf.Clamp(L[i] + toAdd, 0, int.MaxValue);
-
-        // Overflow becomes credits
-        if (overflow > 0 && BoosterOverflowcreditValue > 0)
-            Add(ResourceType.Credits, overflow * BoosterOverflowcreditValue);
-
-        EmitChanged();
     }
 }

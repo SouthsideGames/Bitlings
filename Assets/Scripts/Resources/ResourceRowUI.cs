@@ -16,7 +16,6 @@ public class ResourceRowUI : MonoBehaviour
     private ResourceType _type;
     private string _displayName;
 
-    // --- NEW: primary bind that includes infoId ---
     public void BindStatic(string displayName, Sprite icon, ResourceType type, string infoId)
     {
         _type = type;
@@ -35,7 +34,6 @@ public class ResourceRowUI : MonoBehaviour
         RefreshAmount();
     }
 
-    // --- Backward compatibility overload (old call sites still work) ---
     public void BindStatic(string displayName, Sprite icon, ResourceType type)
         => BindStatic(displayName, icon, type, null);
 

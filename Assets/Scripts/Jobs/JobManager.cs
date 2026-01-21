@@ -134,6 +134,10 @@ public sealed class JobManager : MonoBehaviour
         PullSettings();
         if (SettingsManager.I) SettingsManager.I.OnSettingsChanged += PullSettings;
 
+        if (lockSitesUntilEligible && !SaveManager.IsHardResetting)
+            RecalculateUnlocksFromSeenTypes();
+
+
         BuildDefIndex();
         InitStates();
         LoadProgressFromSave();
@@ -164,6 +168,9 @@ public sealed class JobManager : MonoBehaviour
         // When evolution occurs, ownedUID stays stable but monsterId changes.
         // We refresh worker refs so job UI and production uses the new def.
         GameEvents.MonsterEvolved += HandleMonsterEvolved;
+
+        // Also refresh if save reload/hard wipe occurs in-session (safe no-op if you don’t fire this event).
+        GameEvents.OnSaveReloaded += HandleSaveReloaded;
     }
 
     private void OnDisable()
@@ -172,6 +179,7 @@ public sealed class JobManager : MonoBehaviour
         GameEvents.MonsterCaptured -= OnMonsterCaptured;
         GameEvents.JobGlobalModsChanged -= OnJobModsChanged;
         GameEvents.MonsterEvolved -= HandleMonsterEvolved;
+        GameEvents.OnSaveReloaded -= HandleSaveReloaded;
 
         if (SettingsManager.I) SettingsManager.I.OnSettingsChanged -= PullSettings;
 
@@ -181,6 +189,7 @@ public sealed class JobManager : MonoBehaviour
 
     private void Update()
     {
+        if (SaveManager.IsHardWiping) return;
         _accum += Time.unscaledDeltaTime;
         if (_accum >= tickSeconds)
         {
@@ -211,6 +220,23 @@ public sealed class JobManager : MonoBehaviour
         // Keep it cheap: only re-resolve defs from keys (ownedUID -> current monsterId -> def).
         // Also cleans invalid keys.
         SanitizeAndRefreshWorkersFromSaveKeys(saveIfChanged: true);
+        RefreshAllJobSiteViewsInScene();
+        GameEvents.OnJobsChanged?.Invoke();
+    }
+
+    private void HandleSaveReloaded()
+    {
+        // If SaveManager.HardWipeAll(reloadFresh:true) happens, JobManager should reload cleanly.
+        PullSettings();
+        BuildDefIndex();
+
+        LoadProgressFromSave();
+        LoadAssignmentsFromSave();
+        LoadRuntimeFromSave();
+
+        SanitizeAndRefreshWorkersFromSaveKeys(saveIfChanged: false);
+        if (lockSitesUntilEligible) RecalculateUnlocksFromSeenTypes();
+
         RefreshAllJobSiteViewsInScene();
         GameEvents.OnJobsChanged?.Invoke();
     }
@@ -588,7 +614,9 @@ public sealed class JobManager : MonoBehaviour
             SaveManager.Data.jobAssignments.Add(ja);
         }
 
-        SaveManager.Save();
+        // IMPORTANT: during hard reset/reload cycles, SaveManager may be mid-flight.
+        if (!SaveManager.IsHardResetting)
+            SaveManager.Save();
     }
 
     public void LoadAssignmentsFromSave()
@@ -603,6 +631,8 @@ public sealed class JobManager : MonoBehaviour
             for (int i = 0; i < cap; i++) s.workers.Add(null);
             EnsureWorkerListSize(s, cap);
         }
+
+        _assignedUnix.Clear();
 
         foreach (var ja in SaveManager.Data.jobAssignments)
         {
@@ -652,7 +682,8 @@ public sealed class JobManager : MonoBehaviour
             });
         }
 
-        SaveManager.Save();
+        if (!SaveManager.IsHardResetting)
+            SaveManager.Save();
     }
 
     public void LoadProgressFromSave()
@@ -675,6 +706,9 @@ public sealed class JobManager : MonoBehaviour
     {
         try
         {
+            // Avoid writing during hard wipe cycles; SaveManager will rewrite baseline.
+            if (SaveManager.IsHardResetting) return;
+
             var blob = new JobRuntimeSave { savedAtUnix = SaveManager.NowUnix() };
 
             foreach (var s in States)
@@ -740,8 +774,27 @@ public sealed class JobManager : MonoBehaviour
     private bool IsOnCooldown(string key)
     {
         if (string.IsNullOrEmpty(key)) return false;
+
+        // If key is a species id but we also track ownedUID cooldowns, check both where possible.
         if (_cooldownUntil.TryGetValue(key, out long until))
             return until > SaveManager.NowUnix();
+
+        // If key looks like a species id, attempt to see if there is an owned entry with that id currently on cooldown.
+        // (This preserves legacy behavior where callers pass monsterId.)
+        var data = SaveManager.Data;
+        var owned = data?.owned;
+        if (owned != null)
+        {
+            for (int i = 0; i < owned.Count; i++)
+            {
+                var om = owned[i];
+                if (om == null) continue;
+                if (om.monsterId != key) continue;
+                if (!string.IsNullOrEmpty(om.ownedUID) && _cooldownUntil.TryGetValue(om.ownedUID, out long until2))
+                    return until2 > SaveManager.NowUnix();
+            }
+        }
+
         return false;
     }
 
@@ -771,8 +824,21 @@ public sealed class JobManager : MonoBehaviour
     private void RegisterSeenType(MonsterType type)
     {
         if (SaveManager.Data == null) return;
+
         SaveManager.Data.seenTypes ??= new HashSet<MonsterType>();
-        if (SaveManager.Data.seenTypes.Add(type)) SaveManager.Save();
+        SaveManager.Data.seenTypesList ??= new List<MonsterType>();
+
+        bool added = SaveManager.Data.seenTypes.Add(type);
+        bool addedList = false;
+
+        if (!SaveManager.Data.seenTypesList.Contains(type))
+        {
+            SaveManager.Data.seenTypesList.Add(type);
+            addedList = true;
+        }
+
+        if ((added || addedList) && !SaveManager.IsHardResetting)
+            SaveManager.Save();
     }
 
     public void RecalculateUnlocksFromSeenTypes()
@@ -780,6 +846,7 @@ public sealed class JobManager : MonoBehaviour
         if (SaveManager.Data == null) return;
 
         SaveManager.Data.unlockedJobSites ??= new HashSet<JobType>();
+        SaveManager.Data.unlockedJobSitesList ??= new List<JobType>();
 
         if (SaveManager.Data.seenTypes != null)
         {
@@ -787,7 +854,8 @@ public sealed class JobManager : MonoBehaviour
                 TryUnlockSitesForType(t);
         }
 
-        SaveManager.Save();
+        if (!SaveManager.IsHardResetting)
+            SaveManager.Save();
     }
 
     private void TryUnlockSitesForType(MonsterType type)
@@ -851,6 +919,7 @@ public sealed class JobManager : MonoBehaviour
     {
         if (dtHours <= 0f) return;
 
+        // Optional: only spend Coffee if user enabled it in settings AND a site permits relief.
         int available = ResourceBank.Get(ResourceType.Coffee);
         if (available <= 0) return;
 
@@ -892,13 +961,16 @@ public sealed class JobManager : MonoBehaviour
 
             idx = (idx + 1) % targets.Count;
 
-            bool allCapped = true;
+            bool allZero = true;
             for (int i = 0; i < targets.Count; i++)
             {
-                float rem = Mathf.Max(0f, targets[i].slotFatigue01.Sum());
-                if (rem > 0f) { allCapped = false; break; }
+                if (targets[i].slotFatigue01 != null && targets[i].slotFatigue01.Any(v => v > 0f))
+                {
+                    allZero = false;
+                    break;
+                }
             }
-            if (allCapped) break;
+            if (allZero) break;
         }
 
         int spent = ResourceBank.Get(ResourceType.Coffee) - available;
@@ -1386,7 +1458,9 @@ public sealed class JobManager : MonoBehaviour
                 JobUnlockBridge.UnlockJob(starterDefaultSites[i], syncFeatureUnlock: true);
         }
 
-        SaveManager.Save();
+        if (!SaveManager.IsHardResetting)
+            SaveManager.Save();
+
         RefreshAllJobSiteViewsInScene();
         GameEvents.OnJobsChanged?.Invoke();
     }
@@ -1628,8 +1702,6 @@ public sealed class JobManager : MonoBehaviour
     {
         if (s == null || s.workers == null) return;
 
-        bool changed = false;
-
         for (int i = 0; i < s.workers.Count; i++)
         {
             var w = s.workers[i];
@@ -1639,7 +1711,6 @@ public sealed class JobManager : MonoBehaviour
             if (string.IsNullOrEmpty(key))
             {
                 s.workers[i] = null;
-                changed = true;
                 continue;
             }
 
@@ -1650,22 +1721,14 @@ public sealed class JobManager : MonoBehaviour
                 if (owned == null || string.IsNullOrEmpty(owned.monsterId))
                 {
                     s.workers[i] = null;
-                    changed = true;
                     continue;
                 }
 
-                if (w.monsterId != owned.monsterId)
-                {
-                    w.monsterId = owned.monsterId;
-                    changed = true;
-                }
+                w.monsterId = owned.monsterId;
 
                 var newDef = MonsterLibraryLocator.GetById(owned.monsterId);
-                if (newDef && w.def != newDef)
-                {
-                    w.def = newDef;
-                    changed = true;
-                }
+                if (newDef) w.def = newDef;
+                else { s.workers[i] = null; }
             }
             else
             {
@@ -1673,23 +1736,10 @@ public sealed class JobManager : MonoBehaviour
                 if (w.def == null)
                 {
                     var newDef = ResolveMonsterDef(w.monsterId);
-                    if (newDef != null)
-                    {
-                        w.def = newDef;
-                        changed = true;
-                    }
-                    else
-                    {
-                        s.workers[i] = null;
-                        changed = true;
-                    }
+                    if (newDef != null) w.def = newDef;
+                    else s.workers[i] = null;
                 }
             }
-        }
-
-        if (changed)
-        {
-            // Avoid excessive saves; caller decides. Here we do not auto-save.
         }
     }
 

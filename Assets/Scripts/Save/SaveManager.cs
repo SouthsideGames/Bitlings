@@ -39,6 +39,18 @@ public static class SaveManager
     private static bool _isSaving;
 
     // ─────────────────────────────────────────────
+    // Hard reset guard (prevents sidecar/runtime re-saves during scene reload)
+    // ─────────────────────────────────────────────
+    public static bool IsHardResetting { get; private set; }
+
+    // Alias for older/newer scripts that expect a different naming.
+    // SettingsManager / others may reference IsHardWiping.
+    public static bool IsHardWiping => IsHardResetting;
+
+    public static void BeginHardReset() => IsHardResetting = true;
+    public static void EndHardReset()   => IsHardResetting = false;
+
+    // ─────────────────────────────────────────────
     // Paths
     // ─────────────────────────────────────────────
 
@@ -90,26 +102,27 @@ public static class SaveManager
 
         SaveFiles.EnsureFolder(SavePath);
 
-        // Load primary, then backup, else new.
         if (!TryLoad(SavePath, out Data))
         {
             if (!TryLoad(BackupPath, out Data))
             {
                 Data = NewFreshPlayer();
-                // No Save() here; we normalize everything first.
             }
         }
 
         NormalizeAfterLoad();
 
-        // First-time write after everything is consistent.
-        if (!File.Exists(SavePath))
+        if (!File.Exists(SavePath) && !IsHardWiping)
             Save();
+
+        EndHardReset();
     }
 
     public static void Save()
     {
+        if (IsHardWiping) return;
         if (_isSaving) return;
+
         _isSaving = true;
 
         try
@@ -117,10 +130,8 @@ public static class SaveManager
             if (Data == null)
                 Data = NewFreshPlayer();
 
-            // Normalize first so we never serialize inconsistent mirrors.
             NormalizeBeforeSave();
 
-            // lastSavedUnix monotonic-ish
             long now = NowUnix();
             if (Data.lastSavedUnix > 0 && now + 300 < Data.lastSavedUnix) now = Data.lastSavedUnix;
             Data.lastSavedUnix = Math.Max(Data.lastSavedUnix, now);
@@ -128,7 +139,6 @@ public static class SaveManager
             string json = JsonUtility.ToJson(Data, prettyPrint: true);
             SaveFiles.AtomicWriteUtf8(SavePath, json);
 
-            // Backup best-effort (do not throw)
             SaveFiles.TryCopy(SavePath, BackupPath);
         }
         catch (Exception e)
@@ -143,7 +153,8 @@ public static class SaveManager
 
     public static void OnResume()
     {
-        // These may call Save() when changes occur (guarded).
+        if (IsHardWiping) return;
+
         PruneExpiredCaptureBands(saveIfChanged: true);
         PruneExpiredLures(saveIfChanged: true);
         PruneExpiredLuckBoosts(saveIfChanged: true);
@@ -154,41 +165,53 @@ public static class SaveManager
 
     // ─────────────────────────────────────────────
     // Hard reset (new account)
+    // NOTE: ClearAll is not the "button reset" path anymore; HardWipeAll is.
+    // Kept for dev/testing, but guarded to avoid firing events mid-reset.
     // ─────────────────────────────────────────────
 
     public static void ClearAll()
     {
-        SaveFiles.TryDelete(SavePath);
-        SaveFiles.TryDelete(BackupPath);
-        SaveFiles.TryDelete(JobRuntimePath);
+        BeginHardReset();
 
-        // SaveManager owns tutorial flags; clear through API so in-memory cache resets too.
-        ClearTutorialFlags();
+        try
+        {
+            SaveFiles.TryDelete(SavePath);
+            SaveFiles.TryDelete(BackupPath);
+            SaveFiles.TryDelete(JobRuntimePath);
 
-        Data = NewFreshPlayer();
+            ClearTutorialFlags();
 
-        // Ensure resources exist
-        ResourceBank.EnsureSize();
-        foreach (ResourceType t in Enum.GetValues(typeof(ResourceType)))
-            ResourceBank.Set(t, 0);
+            Data = NewFreshPlayer();
+            EnsureDefaults(); 
 
-        ResourceBank.Set(ResourceType.Energy, 50);
-        ResourceBank.Set(ResourceType.Credits, 0);
-        ResourceBank.Set(ResourceType.Medkit, 0);
-        ResourceBank.Set(ResourceType.PackVoucher, 0);
+            ResourceBank.EnsureSize();
+            foreach (ResourceType t in Enum.GetValues(typeof(ResourceType)))
+                ResourceBank.Set(t, 0);
 
-        Data.encounterMax = 50;
-        Data.encounterCost = 5;
-        Data.lastEncounterResetYMD = 0;
-        Data.energyLastUnix = NowUnix();
-        Data.energyRemainderSecs = 0f;
+            ResourceBank.Set(ResourceType.Energy, 50);
+            ResourceBank.Set(ResourceType.Credits, 0);
+            ResourceBank.Set(ResourceType.Medkit, 0);
+            ResourceBank.Set(ResourceType.PackVoucher, 0);
 
-        NormalizeBeforeSave();
-        Save();
+            Data.encounterMax = 50;
+            Data.encounterCost = 5;
+            Data.lastEncounterResetYMD = 0;
+            Data.energyLastUnix = NowUnix();
+            Data.energyRemainderSecs = 0f;
 
-        GameEvents.OnJobsChanged?.Invoke();
-        GameEvents.OnResourcesChanged?.Invoke();
-        GameEvents.EnergyChanged?.Invoke();
+            NormalizeBeforeSave();
+        }
+        finally
+        {
+            EndHardReset();
+        }
+
+        if (!IsHardWiping)
+        {
+            GameEvents.OnJobsChanged?.Invoke();
+            GameEvents.OnResourcesChanged?.Invoke();
+            GameEvents.EnergyChanged?.Invoke();
+        }
 
         if (JobManager.I)
         {
@@ -201,13 +224,123 @@ public static class SaveManager
     }
 
     // ─────────────────────────────────────────────
+    // HARD WIPE (true cold reset)
+    // - Deletes JSON files AND clears in-memory caches/guards
+    // - Designed to prevent “old session” objects from re-saving sidecar/runtime during reload
+    // ─────────────────────────────────────────────
+    public static void HardWipeAll(bool reloadFresh = true)
+    {
+        BeginHardReset();
+        GameEvents.HardResetting?.Invoke(true);
+
+        try
+        {
+            // 1) Stop the "already loaded" guard so LoadOrCreate can run again this session.
+            _loaded = false;
+
+            // 2) Wipe tutorial cache fully (not just the file).
+            _tutorialLoaded = false;
+            _tutorialData = null;
+            _tutorialSet = null;
+
+            // 3) Delete all known save files (and any temp leftovers).
+            SaveFiles.TryDelete(SavePath);
+            SaveFiles.TryDelete(BackupPath);
+            SaveFiles.TryDelete(JobRuntimePath);
+            SaveFiles.TryDelete(TutorialFlagsPath);
+
+            SaveFiles.TryDelete(SavePath + ".tmp");
+            SaveFiles.TryDelete(BackupPath + ".tmp");
+            SaveFiles.TryDelete(JobRuntimePath + ".tmp");
+            SaveFiles.TryDelete(TutorialFlagsPath + ".tmp");
+
+            // 4) Rebuild a truly fresh PlayerManager in memory.
+            Data = NewFreshPlayer();
+            JobUnlockBridge.ResetAllJobUnlocks(alsoResetPurchasedFlags: true);
+
+            // IMPORTANT ORDER:
+            // Ensure defaults/resources exist BEFORE ResourceBank touches anything.
+            EnsureDefaults();
+            EnsureResourceCountsSized();
+
+            NormalizeBeforeSave();
+
+            // 5) Reset ResourceBank mirror to zeros so nothing "sticks" in memory.
+            ResourceBank.EnsureSize();
+            foreach (ResourceType t in Enum.GetValues(typeof(ResourceType)))
+                ResourceBank.Set(t, 0);
+
+            ResourceBank.Set(ResourceType.Energy, 50);
+            ResourceBank.Set(ResourceType.Credits, 0);
+            ResourceBank.Set(ResourceType.Medkit, 0);
+            ResourceBank.Set(ResourceType.PackVoucher, 0);
+
+            Data.encounterMax = 50;
+            Data.encounterCost = 5;
+            Data.lastEncounterResetYMD = 0;
+            Data.energyLastUnix = NowUnix();
+            Data.energyRemainderSecs = 0f;
+
+            // 6) Persist baseline directly (bypass Save() because Save() is guarded during wipe).
+            // This ensures disk truth is correct before the scene reload.
+            ForceWriteBaselineNow();
+
+            // 7) If reloadFresh was requested, DO NOT set Data = null.
+            // Leaving Data non-null prevents EncounterManager/UI from null-refing mid-frame.
+            // If caller reloads scene (your SettingsManager does), we don't need to LoadOrCreate here.
+            if (reloadFresh)
+            {
+                // Optional: you can keep this off to avoid extra IO.
+                // If you want a disk re-read without scene reload, you can do:
+                // EndHardReset(); _loaded = false; LoadOrCreate();
+            }
+        }
+        catch (Exception e)
+        {
+            Debug.LogError($"SaveManager.HardWipeAll failed: {e}");
+        }
+        finally
+        {
+            EndHardReset();
+            GameEvents.HardResetting?.Invoke(false);
+        }
+
+        // Do NOT fire resource/job/energy events here.
+        // They can cause UI refresh while the scene is still active and mid-reset.
+        // Scene reload (SettingsManager.OnReset) will naturally refresh all bindings.
+    }
+
+    private static void ForceWriteBaselineNow()
+    {
+        try
+        {
+            if (Data == null)
+                Data = NewFreshPlayer();
+
+            NormalizeBeforeSave();
+
+            long now = NowUnix();
+            if (Data.lastSavedUnix > 0 && now + 300 < Data.lastSavedUnix) now = Data.lastSavedUnix;
+            Data.lastSavedUnix = Math.Max(Data.lastSavedUnix, now);
+
+            string json = JsonUtility.ToJson(Data, prettyPrint: true);
+            SaveFiles.AtomicWriteUtf8(SavePath, json);
+            SaveFiles.TryCopy(SavePath, BackupPath);
+        }
+        catch (Exception e)
+        {
+            Debug.LogError($"SaveManager.ForceWriteBaselineNow failed: {e}");
+        }
+    }
+
+    // ─────────────────────────────────────────────
     // Normalization (single source of truth)
     // ─────────────────────────────────────────────
 
     private static void NormalizeAfterLoad()
     {
-        EnsureDefaults();                 // creates missing lists/sets, clamps
-        Data?.EnsureTransientSets();      // your existing transient init (if any)
+        EnsureDefaults();         
+        Data?.EnsureTransientSets();     
 
         EnsureTrainingDefaults();
 
@@ -215,17 +348,14 @@ public static class SaveManager
         PruneExpiredLures(saveIfChanged: true);
         PruneExpiredLuckBoosts(saveIfChanged: true);
 
-        // LISTS are authoritative for persistence. Always rebuild sets from lists after load.
         RebuildTransientSetsFromLists();
 
-        // Tutorial flags are SaveManager-owned; load once so UI calls are stable.
         EnsureTutorialFlagsLoaded();
     }
 
     private static void NormalizeBeforeSave()
     {
         EnsureDefaults();
-        // Sets -> Lists prior to serialization.
         SyncListsFromSets();
     }
 
@@ -498,6 +628,7 @@ public static class SaveManager
 
     private static void SaveTutorialFlagsFile()
     {
+        if (IsHardWiping) return;
         if (_tutorialSet == null) return;
 
         _tutorialData.completed = new List<string>(_tutorialSet);
@@ -514,6 +645,7 @@ public static class SaveManager
 
     public static void SetTutorialComplete(string key, bool done)
     {
+        if (IsHardWiping) return;
         if (string.IsNullOrWhiteSpace(key)) return;
 
         EnsureTutorialFlagsLoaded();
@@ -532,6 +664,7 @@ public static class SaveManager
         _tutorialSet  = new HashSet<string>(StringComparer.Ordinal);
 
         SaveFiles.TryDelete(TutorialFlagsPath);
+        SaveFiles.TryDelete(TutorialFlagsPath + ".tmp");
     }
 
     // ─────────────────────────────────────────────
@@ -673,6 +806,7 @@ public static class SaveManager
 
     private static bool PruneExpiredLures(bool saveIfChanged)
     {
+        if (IsHardWiping) return false;
         if (Data?.activeFlyers == null || Data.activeFlyers.Count == 0) return false;
 
         long now = NowUnix();
@@ -691,6 +825,7 @@ public static class SaveManager
 
     private static bool PruneExpiredCaptureBands(bool saveIfChanged)
     {
+        if (IsHardWiping) return false;
         if (Data?.activeWorkOrders == null || Data.activeWorkOrders.Count == 0) return false;
 
         long now = NowUnix();
@@ -705,6 +840,7 @@ public static class SaveManager
 
     private static bool PruneExpiredLuckBoosts(bool saveIfChanged)
     {
+        if (IsHardWiping) return false;
         if (Data?.activeFavorBoosts == null || Data.activeFavorBoosts.Count == 0) return false;
 
         long now = NowUnix();
@@ -757,6 +893,7 @@ public static class SaveManager
 
     public static void GrantStarter(string monsterId, int level = 1)
     {
+        if (IsHardWiping) return;
         if (string.IsNullOrEmpty(monsterId)) return;
 
         if (!_loaded) LoadOrCreate();
@@ -796,12 +933,10 @@ public static class SaveManager
 
         Data.hasChosenStarter = true;
 
-        // Keep event emission, but avoid a broad try/catch (null checks instead).
         var def = MonsterLibraryLocator.GetById(monsterId);
         if (def != null)
         {
             Data.seenTypes.Add(def.type);
-            // Do NOT double-fire unlocks here; StarterSelector already calls ApplyStarterUnlocksNow.
             GameEvents.StarterChosen?.Invoke(def.type);
         }
 
@@ -814,6 +949,7 @@ public static class SaveManager
 
     public static void SaveJobRuntime(JobRuntimeSave blob)
     {
+        if (IsHardWiping) return;
         var json = JsonUtility.ToJson(blob ?? new JobRuntimeSave(), prettyPrint: true);
         SaveFiles.AtomicWriteUtf8(JobRuntimePath, json);
     }
@@ -841,6 +977,7 @@ public static class SaveManager
 
     public static void MarkStorySeen()
     {
+        if (IsHardWiping) return;
         if (!_loaded) LoadOrCreate();
         if (Data == null) return;
         Data.hasSeenStory = true;
@@ -849,6 +986,7 @@ public static class SaveManager
 
     public static bool UnlockJobSite(JobType site, bool save = true, bool fireEvent = true)
     {
+        if (IsHardWiping) return false;
         if (!_loaded) LoadOrCreate();
         if (Data == null) return false;
 
@@ -920,7 +1058,6 @@ public static class SaveManager
             }
             catch
             {
-                // Fallback: attempt copy, then cleanup
                 try { if (!File.Exists(path)) File.Copy(tmp, path); } catch { }
                 try { File.Delete(tmp); } catch { }
             }

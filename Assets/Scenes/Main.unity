@@ -37827,6 +37827,22 @@ MonoBehaviour:
     hours: 1
     monsterId: 
     spendEnergy: 0
+  - code: OPR@H
+    description: Adds 500 of all resources.
+    effect: 16
+    resourceType: 1
+    amount: 0
+    hours: 1
+    monsterId: 
+    spendEnergy: 0
+  - code: TRAIN50
+    description: Add 50 Training Vouchers
+    effect: 1
+    resourceType: 9
+    amount: 50
+    hours: 1
+    monsterId: 
+    spendEnergy: 0
   maxInvalidAttempts: 3
   lockHours: 24
 --- !u!1 &510952519
@@ -137308,8 +137324,8 @@ GameObject:
   m_Component:
   - component: {fileID: 1829444260}
   - component: {fileID: 1829444261}
-  - component: {fileID: 1829444262}
   - component: {fileID: 1829444263}
+  - component: {fileID: 1829444262}
   m_Layer: 5
   m_Name: Panel_Resources
   m_TagString: Untagged
@@ -145488,56 +145504,53 @@ MonoBehaviour:
   recipeLibrary: {fileID: 11400000, guid: f153dd1e0f9cb1b49b0833f99a4b8310, type: 2}
   iconCatalog:
   - type: 1
-    icon: {fileID: 21300000, guid: 4ec6dac5926278d40a9074c180fb5a4c, type: 3}
-    displayName: Coins
+    icon: {fileID: -3496002049442729487, guid: c44d43bdac301486ebb1095a25c33894, type: 3}
+    displayName: Credit
   - type: 2
-    icon: {fileID: 21300000, guid: 2ccdfb270fcfafd42abc29ed8eac1b6c, type: 3}
+    icon: {fileID: 8607699008840149923, guid: 489c34973596a4709b5f608ee5e8ec6d, type: 3}
     displayName: Energy
   - type: 3
-    icon: {fileID: 21300000, guid: 301f7bde0ab933145a0c7eb2c3e59fbc, type: 3}
-    displayName: Medkits
+    icon: {fileID: -4189190229917846540, guid: cc440f6418a3b4a20b7347accc69daff, type: 3}
+    displayName: Medkit
   - type: 4
-    icon: {fileID: 21300000, guid: 1fbb4a7c76b74b8469cbf767dd6a4bf4, type: 3}
-    displayName: Materials
-  - type: 5
-    icon: {fileID: 21300000, guid: d890453caa4b6034db2d35df42c94fb5, type: 3}
-    displayName: Sigils
+    icon: {fileID: -82702583781362031, guid: d2da644c3f7344a6aa777c14615a5e47, type: 3}
+    displayName: Material
   - type: 6
-    icon: {fileID: 21300000, guid: a3efbc29351aee74e89f960ba6ad2e33, type: 3}
-    displayName: Lures
+    icon: {fileID: 3321169378428917069, guid: d2a224ffc5dd14cd9bea2e051ae55a5d, type: 3}
+    displayName: Flyer
   - type: 7
-    icon: {fileID: 21300000, guid: 917c0ce4b2658ac44a0238c9bf29048a, type: 3}
-    displayName: Capture Bands
+    icon: {fileID: -184922529597343108, guid: 242083f04895f496db58523ff283ee47, type: 3}
+    displayName: Work Order
   - type: 8
-    icon: {fileID: 21300000, guid: d8a75965deab3674cb46b78a4d4685ad, type: 3}
+    icon: {fileID: 5787554331827840099, guid: 70dc8220ffe4d425cbbe0cbe67177f0d, type: 3}
     displayName: Luck
+  - type: 5
+    icon: {fileID: 2579639455195160362, guid: 8161cc557b3534e1c92074f069e630c9, type: 3}
+    displayName: PPE Permit
   - type: 9
-    icon: {fileID: 21300000, guid: 276f58a9acae2424ba2a707919fea8b5, type: 3}
-    displayName: Attack Boosters
+    icon: {fileID: -781000674992755973, guid: 1fde2d8115b3341ba938eeff46d8193b, type: 3}
+    displayName: Training Voucher
   - type: 10
-    icon: {fileID: 21300000, guid: 68cb970f21d581a4c9199025cdde3b18, type: 3}
-    displayName: HP Boosters
+    icon: {fileID: -8421726322193360495, guid: de6b103a24e9f44d989f1d26b41f3658, type: 3}
+    displayName: Wellness Voucher
   - type: 11
-    icon: {fileID: 21300000, guid: 9448b3c43d40c0a40853fb71b81a39b2, type: 3}
-    displayName: Speed Boosters
+    icon: {fileID: 8927612914066773425, guid: ded28a9359c44417f81415a26f3e2fd2, type: 3}
+    displayName: Efficiency Voucher
   - type: 12
-    icon: {fileID: 21300000, guid: 85ead575c5a3ece4fa1147a7a2b405ff, type: 3}
-    displayName: Shiny Orbs
+    icon: {fileID: 3084012362977371794, guid: e2d3b8730a443435bb167b9bcdacd4eb, type: 3}
+    displayName: Shiny Orb
   - type: 13
-    icon: {fileID: 21300000, guid: dde4205c2b962c043948051bff6229fa, type: 3}
-    displayName: Blessing Tokens
+    icon: {fileID: -4330508236222623831, guid: a5945cdf547864b8787a2d4106457745, type: 3}
+    displayName: Blessing Scale
   - type: 14
-    icon: {fileID: 21300000, guid: c68dbe972bd16bd418911ee30ceb09b7, type: 3}
+    icon: {fileID: 2285944867557445247, guid: 51b5bb6d13bc74b3f855180650026748, type: 3}
     displayName: Rest Charge
-  - type: 15
-    icon: {fileID: 21300000, guid: fdadc8078ecb3ea49a6138a64b7dca5a, type: 3}
-    displayName: Gems
   - type: 16
-    icon: {fileID: 21300000, guid: 9577df180274c0846bb38a79770cea22, type: 3}
-    displayName: Growth Cores
+    icon: {fileID: 2291750746404757969, guid: ce3a6dc26e8c44aada3227991627a8e0, type: 3}
+    displayName: Growth Core
   - type: 17
-    icon: {fileID: 21300000, guid: f00ebf5f3deae0f468a140750040a64c, type: 3}
-    displayName: Pack Shards
+    icon: {fileID: -109353936457988245, guid: df23d2ef5229744a0a8cc432cfb15ddd, type: 3}
+    displayName: Pack Voucher
   convertButton: {fileID: 1590915336}
   successBanner: {fileID: 1755182690}
   successBannerDuration: 1.2

@@ -1,20 +1,45 @@
 using System;
 using UnityEngine;
 
+/// <summary>
+/// Central event hub for cross-system notifications.
+/// Keep this file "dumb": declarations only (no logic) to avoid init-order issues.
+/// </summary>
 public static class GameEvents
 {
+    // ─────────────────────────────────────────────────────────
+    // Global / Common
+    // ─────────────────────────────────────────────────────────
     public static Action OnTeamChanged;
     public static Action OnResourcesChanged;
     public static Action OnJobsChanged;
 
     public static Action JobGlobalModsChanged;
 
+    public static Action OnSaveReloaded;
+
+    public static Action OnSettingsApplied;
+
+    /// <summary>
+    /// Fired when an account hard reset begins/ends.
+    /// true = begin, false = end.
+    /// </summary>
+    public static Action<bool> HardResetting;
+
+    // ─────────────────────────────────────────────────────────
+    // Monsters / Progression
+    // ─────────────────────────────────────────────────────────
     public static Action<string, int> MonsterLeveled;
     public static Action<string> EvolutionOffered;
     public static Action<string> MonsterEvolved;
     public static Action<string, MonsterType> MonsterCaptured;
     public static Action<MonsterType> StarterChosen;
 
+    public static Action OnOwnedMonstersChanged;
+
+    // ─────────────────────────────────────────────────────────
+    // Boss / Encounters / Battle
+    // ─────────────────────────────────────────────────────────
     public static Action<string, MonsterDataSO> BossSpawned;
     public static Action<string> BossDefeated;
 
@@ -22,10 +47,19 @@ public static class GameEvents
 
     public static Action<BattleResult> BattleFinished;
 
+    public static Action OnBattleStateChanged;
+    public static Action OnEncounterAutoModeChanged;
+
+    // ─────────────────────────────────────────────────────────
+    // Resources / Energy
+    // ─────────────────────────────────────────────────────────
     public static Action<ResourceType, int> ResourceAdded;
     public static Action<ResourceType, int> ResourceRemoved;
     public static Action EnergyChanged;
 
+    // ─────────────────────────────────────────────────────────
+    // Idle / Meta
+    // ─────────────────────────────────────────────────────────
     public static Action<int> IdleBatchCompleted;
 
     public static Action<int> WinStreakChanged;
@@ -34,7 +68,4 @@ public static class GameEvents
     public static Action Tutorial_FirstJobAssigned;
 
     public static Action OnBoostersChanged;
-
-    public static Action OnBattleStateChanged;
-    public static Action OnEncounterAutoModeChanged;
 }

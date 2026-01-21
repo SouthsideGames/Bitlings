@@ -1,12 +1,7 @@
-// Assets/Scripts/Jobs/JobUnlockBridge.cs
 using UnityEngine;
 
 public static class JobUnlockBridge
 {
-    /// <summary>
-    /// Unlock a job site in SaveManager data (authoritative list + cache set),
-    /// and optionally sync the corresponding FeatureId as unlocked (for Upgrade UI state).
-    /// </summary>
     public static bool UnlockJob(JobType job, bool syncFeatureUnlock = true)
     {
         if (job == JobType.None)
@@ -21,23 +16,19 @@ public static class JobUnlockBridge
 
         bool changed = false;
 
-        // Cache set
         if (d.unlockedJobSites.Add(job))
             changed = true;
 
-        // Authoritative list
         if (!d.unlockedJobSitesList.Contains(job))
         {
             d.unlockedJobSitesList.Add(job);
             changed = true;
         }
 
-        // Sync the feature flag so upgrades reflect the unlock
         if (syncFeatureUnlock && FeatureUnlockManager.I != null)
         {
             if (FeatureIdJobs.TryGetJobFeature(job, out var feat) && feat != FeatureId.None)
             {
-                // This is a free sync; no cost is charged here.
                 FeatureUnlockManager.I.Unlock(feat);
             }
         }
@@ -46,11 +37,8 @@ public static class JobUnlockBridge
         {
             SaveManager.Save();
 
-            // If JobManager exists, refresh views + events.
             if (JobManager.I != null)
-            {
                 JobManager.I.RefreshAllJobSiteViewsInScene();
-            }
 
             GameEvents.OnJobsChanged?.Invoke();
         }
@@ -58,11 +46,6 @@ public static class JobUnlockBridge
         return changed;
     }
 
-    /// <summary>
-    /// Returns true if the job is unlocked via either:
-    /// - SaveManager job unlock list/set
-    /// - OR the job FeatureId is unlocked (upgrade purchase)
-    /// </summary>
     public static bool IsJobUnlocked(JobType job)
     {
         if (job == JobType.None)
@@ -87,5 +70,25 @@ public static class JobUnlockBridge
             return true;
 
         return false;
+    }
+
+    public static void ResetAllJobUnlocks(bool alsoResetPurchasedFlags)
+    {
+        // 1) Clear SaveManager job unlock sets/lists
+        if (SaveManager.Data != null)
+        {
+            SaveManager.Data.unlockedJobSites?.Clear();
+            SaveManager.Data.unlockedJobSitesList?.Clear();
+        }
+
+        // 2) Clear purchased/feature side if requested (OPTION A)
+        if (alsoResetPurchasedFlags && FeatureUnlockManager.I != null)
+        {
+            // If this reset is meant to wipe the account, prefer the full reset:
+            FeatureUnlockManager.I.HardResetAllUnlocksToDefaults(fireEvents: false);
+
+            // If later you decide you ONLY want job purchases wiped, swap to:
+            // FeatureUnlockManager.I.ClearJobUnlockFeaturesToDefaults(fireEvents: false);
+        }
     }
 }

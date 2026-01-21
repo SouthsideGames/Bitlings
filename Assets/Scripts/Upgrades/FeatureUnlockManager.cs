@@ -15,6 +15,15 @@ public class FeatureUnlockManager : MonoBehaviour
     /// <summary>Fired whenever a feature is newly unlocked.</summary>
     public event Action<FeatureId> OnFeatureUnlocked;
 
+    // Internal persistence key
+    private const string PlayerPrefsKey = "FeatureUnlocks_JSON";
+
+    [Serializable]
+    private class FeatureUnlockSaveWrapper
+    {
+        public List<string> ids;
+    }
+
     void Awake()
     {
         if (I != null && I != this)
@@ -60,6 +69,64 @@ public class FeatureUnlockManager : MonoBehaviour
         return true;
     }
 
+    /// <summary>
+    /// DEV/RESET SUPPORT (OPTION A)
+    /// Full wipe of purchased feature unlocks (PlayerPrefs),
+    /// restoring ONLY starting defaults.
+    ///
+    /// Use this for account reset / hard wipe flows.
+    /// </summary>
+    public void HardResetAllUnlocksToDefaults(bool fireEvents = false)
+    {
+        // Clear runtime state
+        _unlocked.Clear();
+
+        // Delete persisted purchased state
+        if (PlayerPrefs.HasKey(PlayerPrefsKey))
+            PlayerPrefs.DeleteKey(PlayerPrefsKey);
+
+        PlayerPrefs.Save();
+
+        // Re-apply defaults
+        ApplyStartingDefaults();
+
+        // Optional: broadcast unlock events for defaults (usually unnecessary during hard reset)
+        if (fireEvents)
+        {
+            foreach (var f in _unlocked)
+                OnFeatureUnlocked?.Invoke(f);
+        }
+    }
+
+    /// <summary>
+    /// Clears ONLY job-related purchased feature unlocks, keeping other upgrades intact.
+    /// Useful if you ever support a "reset jobs only" action.
+    /// </summary>
+    public void ClearJobUnlockFeaturesToDefaults(bool fireEvents = false)
+    {
+        // Remove job feature ids
+        foreach (JobType j in Enum.GetValues(typeof(JobType)))
+        {
+            if (j == JobType.None) continue;
+
+            if (FeatureIdJobs.TryGetJobFeature(j, out var feat) && feat != FeatureId.None)
+                _unlocked.Remove(feat);
+        }
+
+        // Ensure defaults still present
+        foreach (var f in startingUnlocked)
+            _unlocked.Add(f);
+
+        ApplySideEffectsForAllUnlocked();
+        SaveToPrefs();
+
+        if (fireEvents)
+        {
+            foreach (var f in _unlocked)
+                OnFeatureUnlocked?.Invoke(f);
+        }
+    }
+
     // Optional hooks for future SaveManager JSON integration:
     public List<string> GetUnlockedIdsForSave()
     {
@@ -92,14 +159,6 @@ public class FeatureUnlockManager : MonoBehaviour
     // ─────────────────────────────────────────────────────────────
     // Internal: PlayerPrefs persistence
     // ─────────────────────────────────────────────────────────────
-
-    private const string PlayerPrefsKey = "FeatureUnlocks_JSON";
-
-    [Serializable]
-    private class FeatureUnlockSaveWrapper
-    {
-        public List<string> ids;
-    }
 
     private void LoadFromPrefsOrDefaults()
     {

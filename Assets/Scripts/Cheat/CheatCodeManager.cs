@@ -20,6 +20,7 @@ public enum CheatEffectKind
     ReviveTeam,
     HealTeamFull,
     UnlockAllPacks,
+    Add500ToAllResources,
 }
 
 [Serializable]
@@ -250,7 +251,7 @@ public class CheatCodeManager : MonoBehaviour
     }
 
     // ─────────────────────────────────────────────────────────────
-    // Execution (unchanged)
+    // Execution
     // ─────────────────────────────────────────────────────────────
 
     bool ExecuteCheat(CheatDefinition cd, out string message)
@@ -304,6 +305,9 @@ public class CheatCodeManager : MonoBehaviour
             case CheatEffectKind.UnlockAllPacks:
                 return ExecuteUnlockAllPacks(out message);
 
+            case CheatEffectKind.Add500ToAllResources:
+                return ExecuteAdd500ToAllResources(out message);
+
             default:
                 message = "Cheat not configured.";
                 return false;
@@ -311,7 +315,18 @@ public class CheatCodeManager : MonoBehaviour
     }
 
     // ─────────────────────────────────────────────────────────────
-    // Add Resource
+    // Booster helper (per-type capped)
+    // ─────────────────────────────────────────────────────────────
+    static bool IsBooster(ResourceType t)
+    {
+        return t == ResourceType.PPEPermit
+            || t == ResourceType.TrainingVoucher
+            || t == ResourceType.WellnessVoucher
+            || t == ResourceType.EfficiencyVoucher;
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // Add Resource (UPDATED for per-type cap)
     // ─────────────────────────────────────────────────────────────
     bool ExecuteAddResource(CheatDefinition cd, out string message)
     {
@@ -329,15 +344,32 @@ public class CheatCodeManager : MonoBehaviour
             return false;
         }
 
-        if (ResourceManager.I != null) ResourceManager.I.Add(cd.resourceType, cd.amount);
-        else ResourceBank.Add(cd.resourceType, cd.amount);
+        int amt = cd.amount;
 
-        message = $"Gave {cd.amount} {cd.resourceType}.";
+        if (IsBooster(cd.resourceType))
+        {
+            int room = ResourceBank.GetBoosterRoom(cd.resourceType);
+            if (room <= 0)
+            {
+                message = $"{cd.resourceType} already at cap ({ResourceBank.BoosterCapPerType}).";
+                return false;
+            }
+            amt = Mathf.Min(amt, room);
+        }
+
+        if (ResourceManager.I != null) ResourceManager.I.Add(cd.resourceType, amt);
+        else ResourceBank.Add(cd.resourceType, amt);
+
+        if (IsBooster(cd.resourceType) && amt < cd.amount)
+            message = $"Gave {amt}/{cd.amount} {cd.resourceType} (capped at {ResourceBank.BoosterCapPerType}).";
+        else
+            message = $"Gave {amt} {cd.resourceType}.";
+
         return true;
     }
 
     // ─────────────────────────────────────────────────────────────
-    // Set Resource
+    // Set Resource (unchanged; ResourceBank.Set enforces booster cap)
     // ─────────────────────────────────────────────────────────────
     bool ExecuteSetResource(CheatDefinition cd, out string message)
     {
@@ -363,6 +395,9 @@ public class CheatCodeManager : MonoBehaviour
         return true;
     }
 
+    // ─────────────────────────────────────────────────────────────
+    // Pack currency (UPDATED: boosters cap individually)
+    // ─────────────────────────────────────────────────────────────
     bool ExecuteAddPackCurrency(string label, int amount, out string message)
     {
         message = string.Empty;
@@ -379,12 +414,74 @@ public class CheatCodeManager : MonoBehaviour
             return false;
         }
 
+        // PackVoucher itself is not capped here.
         if (ResourceManager.I != null) ResourceManager.I.Add(ResourceType.PackVoucher, amount);
         else ResourceBank.Add(ResourceType.PackVoucher, amount);
+
+        // Also grant the three voucher boosters (each caps at BoosterCapPerType).
+        if (ResourceManager.I != null)
+        {
+            ResourceManager.I.Add(ResourceType.TrainingVoucher, amount);
+            ResourceManager.I.Add(ResourceType.WellnessVoucher, amount);
+            ResourceManager.I.Add(ResourceType.EfficiencyVoucher, amount);
+        }
+        else
+        {
+            ResourceBank.Add(ResourceType.TrainingVoucher, amount);
+            ResourceBank.Add(ResourceType.WellnessVoucher, amount);
+            ResourceBank.Add(ResourceType.EfficiencyVoucher, amount);
+        }
 
         message = $"Gave {amount} Pack {label}.";
         return true;
     }
+
+    // ─────────────────────────────────────────────────────────────
+    // Add 500 to all resources (UPDATED: boosters cap individually)
+    // ─────────────────────────────────────────────────────────────
+    bool ExecuteAdd500ToAllResources(out string message)
+    {
+        message = string.Empty;
+
+        if (SaveManager.Data == null)
+        {
+            message = "Save data not loaded.";
+            return false;
+        }
+
+        const int AMOUNT = 500;
+        int touched = 0;
+
+        ResourceBank.BeginBatch();
+        try
+        {
+            foreach (ResourceType t in Enum.GetValues(typeof(ResourceType)))
+            {
+                if (t == ResourceType.None) continue;
+
+                // Use the same path you used before (ResourceManager if present),
+                // but per-type booster capping is enforced by ResourceBank regardless.
+                if (ResourceManager.I != null) ResourceManager.I.Add(t, AMOUNT);
+                else ResourceBank.Add(t, AMOUNT);
+
+                GameEvents.ResourceAdded?.Invoke(t, AMOUNT);
+                touched++;
+            }
+        }
+        finally
+        {
+            ResourceBank.EndBatch();
+        }
+
+        GameEvents.OnResourcesChanged?.Invoke();
+
+        message = $"Applied cheat: +{AMOUNT} to each resource (boosters capped at {ResourceBank.BoosterCapPerType}). Updated {touched} entries.";
+        return true;
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // Everything below here is your original code (unchanged)
+    // ─────────────────────────────────────────────────────────────
 
     bool ExecuteRefillEnergy(out string message)
     {
@@ -435,7 +532,7 @@ public class CheatCodeManager : MonoBehaviour
         }
 
         SaveManager.Data.unlockedJobSitesList ??= new List<JobType>();
-        SaveManager.Data.unlockedJobSites     ??= new HashSet<JobType>();
+        SaveManager.Data.unlockedJobSites ??= new HashSet<JobType>();
 
         int before = SaveManager.Data.unlockedJobSites.Count;
 
@@ -803,5 +900,17 @@ public class CheatCodeManager : MonoBehaviour
         int added = MonsterPackManager.I.Cheat_UnlockAllPacks();
         message = added > 0 ? $"Unlocked {added} pack(s)." : "All packs already unlocked.";
         return true;
+    }
+
+    public void Cheat_AddPackVouchers(int amount)
+    {
+        amount = Mathf.Max(0, amount);
+
+        ResourceBank.EnsureSize(); // important if enum changed recently
+        ResourceBank.Add(ResourceType.PackVoucher, amount);
+
+        Debug.Log($"[CHEAT] PackVoucher now = {ResourceBank.Get(ResourceType.PackVoucher)} (+{amount})");
+
+        GameEvents.OnResourcesChanged?.Invoke();
     }
 }

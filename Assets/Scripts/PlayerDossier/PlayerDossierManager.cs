@@ -603,7 +603,7 @@ public class PlayerDossierManager : MonoBehaviour
         s.lureCount = bank.Get(ResourceType.Flyer);
         s.captureBandCount = bank.Get(ResourceType.WorkOrder);
         s.luckCount = bank.Get(ResourceType.Favor);
-        s.atkBoosterCount = bank.Get(ResourceType.TrainingVoucher_ATK);
+        s.atkBoosterCount = bank.Get(ResourceType.TrainingVoucher);
         s.hpBoosterCount = bank.Get(ResourceType.WellnessVoucher);
         s.speedBoosterCount = bank.Get(ResourceType.EfficiencyVoucher);
         s.shinyOrbCount = bank.Get(ResourceType.ShinyOrb);
