@@ -13,6 +13,9 @@ MonoBehaviour:
   m_Name: TitleTrack_Scut
   m_EditorClassIdentifier: 
   tiers:
+  - levelRequired: 3
+    unlockChoices:
+    - {fileID: 11400000, guid: 7462624696e3645769eddf26c0642989, type: 2}
   - levelRequired: 10
     unlockChoices:
     - {fileID: 11400000, guid: d0081e889942bbc45a91e410ae83b0ec, type: 2}

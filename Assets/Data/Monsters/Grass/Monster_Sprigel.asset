@@ -40,7 +40,7 @@ MonoBehaviour:
   bossWeight: 1
   spawnWeight: 8
   jobSkill: 0.95
-  titleTrack: {fileID: 11400000, guid: 3196bcd4b18e54f2fb8f08fe7430031f, type: 2}
+  titleTrack: {fileID: 11400000, guid: 7ce6a11d8e7b14c698f9a03a26076828, type: 2}
   defaultAlwaysOnTitles: []
   Personality: {fileID: 11400000, guid: f6f72aa846632454b97832d01d1b5c0c, type: 2}
   basicAttackName: Vine Tap

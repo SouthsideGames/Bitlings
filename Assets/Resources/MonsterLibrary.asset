@@ -25,7 +25,7 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 00814992be2fc354382a09a53c10ce01, type: 2}
   - {fileID: 11400000, guid: 0d82b14e9707c463baabcbd95ce146c3, type: 2}
   - {fileID: 11400000, guid: e5e30aa05d4e3449d8bd27e4f885678d, type: 2}
-  - {fileID: 11400000, guid: d1749a4de6d864a7186cf7da52dfe4e2, type: 2}
+  - {fileID: 11400000, guid: b9ea8cecb1c19473092c14d7705139f5, type: 2}
   - {fileID: 11400000, guid: 33d45cb2bcbc20545b87d93df28feb99, type: 2}
   - {fileID: 11400000, guid: d457f220e6d40644b83fd2bc905574e3, type: 2}
   - {fileID: 11400000, guid: ca59eb2e96627ec438e95f301118b919, type: 2}
@@ -78,3 +78,5 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 396454238eee6e2499b4197aaa721dbd, type: 2}
   - {fileID: 11400000, guid: c0f01c2379173bb44b714eb4c5c10dcb, type: 2}
   - {fileID: 11400000, guid: 1c7dcd048d106cc47aa9d2338ec6bcf9, type: 2}
+  packLibrary: {fileID: 0}
+  respectPackGating: 1
