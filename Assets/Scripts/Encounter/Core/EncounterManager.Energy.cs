@@ -261,10 +261,6 @@ public partial class EncounterManager
 
     static long NowUnix() => DateTimeOffset.UtcNow.ToUnixTimeSeconds();
     
-    /// <summary>
-    /// Forces an immediate offline energy regen pass (uses energyLastUnix / energyRemainderSecs).
-    /// Useful for cheats that simulate time passage.
-    /// </summary>
     public void Cheat_ApplyOfflineEnergyRegen()
     {
         ApplyOfflineRegen();

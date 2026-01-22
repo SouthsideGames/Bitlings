@@ -18,5 +18,5 @@ MonoBehaviour:
   storageCap: 15
   maxWorkers: 3
   eligibleTypes: 0c000000
-  icon: {fileID: 21300000, guid: d8e1285f97591d347a37ea7a289b9b2f, type: 3}
+  icon: {fileID: 21300000, guid: 1b996fb3cc3db494d98dcb88c55fabde, type: 3}
   displayName: Mine

@@ -18,5 +18,5 @@ MonoBehaviour:
   storageCap: 6
   maxWorkers: 3
   eligibleTypes: 09000000
-  icon: {fileID: 21300000, guid: e423988fdb39c21479c4681d81e88c18, type: 3}
+  icon: {fileID: 21300000, guid: 612b68d592226414f9cd4ff860aeed34, type: 3}
   displayName: Clinic

@@ -1,10 +1,10 @@
 fileFormatVersion: 2
-guid: e5fb26b3af00b2549949286c76126ab7
+guid: 7f317b7b8dc50b341a110515859f3747
 TextureImporter:
   internalIDToNameTable:
   - first:
-      213: 3373824036656535213
-    second: b4230b12-eafb-41c1-8b73-6b0240700df4_0
+      213: 8000750683452312051
+    second: Expedition V_0
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -51,7 +51,7 @@ TextureImporter:
   spriteMeshType: 1
   alignment: 0
   spritePivot: {x: 0.5, y: 0.5}
-  spritePixelsToUnits: 16
+  spritePixelsToUnits: 100
   spriteBorder: {x: 0, y: 0, z: 0, w: 0}
   spriteGenerateFallbackPhysicsShape: 1
   alphaUsage: 1
@@ -126,12 +126,12 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: b4230b12-eafb-41c1-8b73-6b0240700df4_0
+      name: Expedition V_0
       rect:
         serializedVersion: 2
-        x: 0
+        x: 11
         y: 0
-        width: 1024
+        width: 1402
         height: 1024
       alignment: 0
       pivot: {x: 0, y: 0}
@@ -141,8 +141,8 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: da65697061b32de20800000000000000
-      internalID: 3373824036656535213
+      spriteID: 3f983a75b50680f60800000000000000
+      internalID: 8000750683452312051
       vertices: []
       indices: 
       edges: []
@@ -161,7 +161,7 @@ TextureImporter:
     spriteCustomMetadata:
       entries: []
     nameFileIdTable:
-      b4230b12-eafb-41c1-8b73-6b0240700df4_0: 3373824036656535213
+      Expedition V_0: 8000750683452312051
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

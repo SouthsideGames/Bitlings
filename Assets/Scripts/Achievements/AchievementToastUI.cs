@@ -23,22 +23,14 @@ public sealed class AchievementToastUI : MonoBehaviour
 
     private void Awake()
     {
-        if (I != null && I != this)
-        {
-            Destroy(gameObject);
-            return;
-        }
-
+        if (I != null && I != this) { Destroy(gameObject); return; }
         I = this;
 
-        // Optional: keep across scenes if you want global toast
+
         DontDestroyOnLoad(gameObject);
 
         if (!canvasGroup) canvasGroup = GetComponent<CanvasGroup>();
         if (canvasGroup) canvasGroup.alpha = 0f;
-
-        // If you keep this object enabled in scene, this is fine.
-        // If you keep it disabled, manager direct-call handles it.
     }
 
     /// <summary>
@@ -50,7 +42,6 @@ public sealed class AchievementToastUI : MonoBehaviour
 
         _queue.Enqueue(entry);
 
-        // Ensure object is active so tween/coroutines can run
         if (!gameObject.activeSelf)
             gameObject.SetActive(true);
 
@@ -64,7 +55,6 @@ public sealed class AchievementToastUI : MonoBehaviour
         {
             _playing = false;
 
-            // Optional: hide itself when done
             if (canvasGroup) canvasGroup.alpha = 0f;
             return;
         }

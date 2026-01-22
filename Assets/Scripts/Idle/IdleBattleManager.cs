@@ -13,28 +13,36 @@ public class IdleBattleManager : MonoBehaviour
 
     private IdleBattleConfigSO config;
 
-    // NEW: runtime guard so we don't open multiple times per session unintentionally
     private bool _summaryOpenedThisSession = false;
 
     void Awake()
     {
+        if (I != null && I != this)
+        {
+            Destroy(gameObject);
+            return;
+        }
         I = this;
+
         if (config == null)
             config = Resources.Load<IdleBattleConfigSO>("IdleBattleConfig");
+
+        if (config == null)
+        {
+            Debug.LogError("[IdleBattleManager] Missing Resources/IdleBattleConfig. Idle battles will be disabled.", this);
+            enabled = false;
+        }
     }
 
     void Start()
     {
         if (IsIdleBattleUnlocked())
         {
-            // Resolve offline so the log/rewards exist,
-            // but DO NOT open the summary here anymore.
+
             ResolveOfflineIfAny();
-            // TryOpenSummaryIfNeeded();  // intentionally deferred until Continue
         }
         else
         {
-            // Ensure legacy auto-battle sessions are disabled if the feature is locked.
             var s = IdleBattleStore.Load();
             if (s.autoBattling)
             {
@@ -55,8 +63,6 @@ public class IdleBattleManager : MonoBehaviour
     // Feature unlock helper
     private bool IsIdleBattleUnlocked()
     {
-        // If the FeatureUnlockManager isn't in the scene yet, treat it as unlocked
-        // so the game still works in dev / old saves.
         if (FeatureUnlockManager.I == null)
             return true;
 
@@ -78,13 +84,10 @@ public class IdleBattleManager : MonoBehaviour
             s.sessionStartUnix = NowUnix();
             s.lastTickUnix = s.sessionStartUnix;
 
-            // Single source of truth: bank energy
             s.energyAtStart = ResourceBank.Get(ResourceType.Energy);
 
             s.biomeId = biomeId;
 
-            // NEW: when enabling auto, allow summary to open later again if needed
-            // (we still won’t auto-open; this just clears the runtime guard)
             _summaryOpenedThisSession = false;
 
             IdleBattleStore.Save(s);
@@ -124,7 +127,6 @@ public class IdleBattleManager : MonoBehaviour
 
         RunBatchEncounters(toRun);
 
-        // CHANGED: do not auto-open; mark pending instead
         MarkSummaryPendingIfLogExists();
     }
 
@@ -152,12 +154,10 @@ public class IdleBattleManager : MonoBehaviour
         s.lastTickUnix = now;
         IdleBattleStore.Save(s);
 
-        // Stop when we can’t afford another encounter
         if (GetEnergySafe() < baseCost)
         {
             DisableAuto();
 
-            // CHANGED: do not auto-open; mark pending instead
             MarkSummaryPendingIfLogExists();
         }
     }
@@ -173,7 +173,6 @@ public class IdleBattleManager : MonoBehaviour
         var rng = new System.Random(SeedForSession(s));
         var teamP = JobIdlePassives.ComputeForActiveTeam();
 
-        // Collect up to 3 team monster IDs (lead first)
         var team = SaveManager.Data?.team;
         var teamIds = new List<string>();
         if (team != null)
@@ -187,14 +186,12 @@ public class IdleBattleManager : MonoBehaviour
             }
         }
 
-        // Titles-independent global neutral mul (keep for future if needed)
         float creditMulNeutral = 1f;
 
-        // Feature unlock: Idle Reward Boost (extra credits from idle battles)
         if (FeatureUnlockManager.I != null &&
             FeatureUnlockManager.I.IsUnlocked(FeatureId.IdleBattle_RewardBoost))
         {
-            float boost = 1.5f; // fallback if config missing
+            float boost = 1.5f; 
             boost = Mathf.Max(1f, config.rewardBoostMultiplier);
 
             creditMulNeutral *= boost;
@@ -219,9 +216,6 @@ public class IdleBattleManager : MonoBehaviour
             bool shiny = RollShiny(wild, rng);
             int avgLv = GetAverageTeamLevel();
 
-            // ─────────────────────────────────────────────────────────
-            // Titles: fold the lead monster’s Title effects into headless odds
-            // ─────────────────────────────────────────────────────────
             string leadId = (teamIds.Count > 0) ? teamIds[0] : null;
             MonsterDataSO leadDef = null;
             int leadLevel = 1;
@@ -255,7 +249,7 @@ public class IdleBattleManager : MonoBehaviour
                     var dfBox = TitlesAdapter.GetDamageFilter(leadId, leadDef, leadLevel);
                     DamageFilterView df;
                     if (TryUnboxDamageFilter(dfBox, out df) && df.percentReduce > 0f)
-                        titleDefMul *= (1f + Mathf.Clamp01(df.percentReduce));
+                        titleDefMul *= 1f + Mathf.Clamp01(df.percentReduce);
                 }
                 catch { }
             }
@@ -298,7 +292,6 @@ public class IdleBattleManager : MonoBehaviour
         TrimLog(s.log, config.encounterLogMaxEntries);
         IdleBattleStore.Save(s);
 
-        // NEW: after we generate log entries, mark as pending so Continue can open it
         MarkSummaryPendingIfLogExists();
 
         encounterManager?.RequestStateRefresh();
@@ -306,17 +299,6 @@ public class IdleBattleManager : MonoBehaviour
         ResourceBank.EndBatch();
     }
 
-    // ─────────────────────────────────────────────────────────────
-    // Pending summary helpers
-    // ─────────────────────────────────────────────────────────────
-
-    // We store the "pending summary" flag in the same IdleBattleSession
-    // by leveraging an optional field. If your IdleBattleSession already
-    // has a suitable bool, use that instead.
-    //
-    // Because you did not include IdleBattleSession here, this implementation
-    // uses reflection-safe pattern: try to set a field if it exists; otherwise
-    // fall back to only using log presence.
     private void MarkSummaryPendingIfLogExists()
     {
         var s = IdleBattleStore.Load();
@@ -325,7 +307,6 @@ public class IdleBattleManager : MonoBehaviour
         bool hasLog = (s.log != null && s.log.Count > 0);
         if (!hasLog) return;
 
-        // Try set: s.hasPendingSummary = true (if field exists)
         TrySetBoolFieldIfPresent(s, "hasPendingSummary", true);
         IdleBattleStore.Save(s);
     }
@@ -334,13 +315,11 @@ public class IdleBattleManager : MonoBehaviour
     {
         if (s == null) return false;
 
-        // If session has a bool field "hasPendingSummary", use it.
         bool pending;
         if (TryGetBoolFieldIfPresent(s, "hasPendingSummary", out pending))
             return pending;
 
-        // Fallback: treat any non-empty log as pending.
-        return (s.log != null && s.log.Count > 0);
+        return s.log != null && s.log.Count > 0;
     }
 
     private void ClearPendingSummaryFlag(IdleBattleSession s)
@@ -380,7 +359,6 @@ public class IdleBattleManager : MonoBehaviour
     {
         cost = Mathf.Max(1, cost);
 
-        // Prefer EncounterManager so it updates JSON regen timing baseline
         if (EncounterManager.I != null)
         {
             if (ResourceBank.Get(ResourceType.Energy) < cost) return false;
@@ -391,7 +369,6 @@ public class IdleBattleManager : MonoBehaviour
             return true;
         }
 
-        // Fallback (still bank-only)
         if (ResourceBank.Get(ResourceType.Energy) < cost) return false;
         if (!ResourceBank.TrySpend(ResourceType.Energy, cost)) return false;
 
@@ -401,7 +378,6 @@ public class IdleBattleManager : MonoBehaviour
 
     private int GetEnergySafe()
     {
-        // authoritative: EncounterManager reads bank; this keeps future-proofing
         if (encounterManager != null) return encounterManager.GetEnergyPoints();
         if (EncounterManager.I != null) return EncounterManager.I.GetEnergyPoints();
         return ResourceBank.Get(ResourceType.Energy);
@@ -496,17 +472,14 @@ public class IdleBattleManager : MonoBehaviour
 
         rewardPanel.Open(sum, onCollected: () =>
         {
-            // Clear log like before
             IdleBattleStore.ClearLog();
 
-            // Also clear pending flag if it exists
             var ss = IdleBattleStore.Load();
             ClearPendingSummaryFlag(ss);
             IdleBattleStore.Save(ss);
         });
     }
 
-    // CHANGED: Public so IntroManager can call it, and logic now keys off "pending"
     public void TryOpenSummaryIfNeeded()
     {
         if (_summaryOpenedThisSession) return;
@@ -516,8 +489,6 @@ public class IdleBattleManager : MonoBehaviour
 
         ForceOpenSummary();
 
-        // If the pending flag exists, clear it immediately so we don't reopen
-        // in edge cases where the user closes the panel without collecting.
         var ss = IdleBattleStore.Load();
         ClearPendingSummaryFlag(ss);
         IdleBattleStore.Save(ss);
@@ -573,12 +544,10 @@ public class IdleBattleManager : MonoBehaviour
 
     private long NowUnix() => SaveManager.NowUnix();
 
-    // Developer helpers
     public void Dev_RunEncounters(int count)
     {
         RunBatchEncounters(count);
 
-        // CHANGED: dev helper should still open immediately for testing
         ForceOpenSummary();
     }
 

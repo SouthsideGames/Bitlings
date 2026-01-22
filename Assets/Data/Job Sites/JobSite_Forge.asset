@@ -18,5 +18,5 @@ MonoBehaviour:
   storageCap: 900
   maxWorkers: 3
   eligibleTypes: 01000000
-  icon: {fileID: 21300000, guid: 7a9466b0bbc3ee2458922f35582fff77, type: 3}
+  icon: {fileID: 21300000, guid: 2e11d61ac1bc14127996bbe122e09798, type: 3}
   displayName: Forge

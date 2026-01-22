@@ -23,16 +23,6 @@ public sealed class AchievementManager : MonoBehaviour
     private bool _initialized;
     private int _maxWinStreakSeen;
 
-    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
-    private static void AutoCreate()
-    {
-        if (I != null) return;
-
-        var go = new GameObject("AchievementManager");
-        DontDestroyOnLoad(go);
-        go.AddComponent<AchievementManager>();
-    }
-
     private void Awake()
     {
         if (I != null && I != this) { Destroy(gameObject); return; }
@@ -376,13 +366,10 @@ public sealed class AchievementManager : MonoBehaviour
 
         // Robust toast call: works even if toast object started disabled
         if (AchievementToastUI.I != null)
-            AchievementToastUI.I.QueueUnlocked(e);
+            AchievementToastUI.I?.QueueUnlocked(e);
 
         SaveManager.Save();
     }
 
-    private void FireProgress(AchievementEntrySO e, AchievementProgressData p)
-    {
-        OnProgressed?.Invoke(e, p.value, e.goal);
-    }
+    private void FireProgress(AchievementEntrySO e, AchievementProgressData p) => OnProgressed?.Invoke(e, p.value, e.goal);
 }

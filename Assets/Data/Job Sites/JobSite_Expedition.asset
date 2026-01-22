@@ -18,5 +18,5 @@ MonoBehaviour:
   storageCap: 8
   maxWorkers: 3
   eligibleTypes: 0b000000
-  icon: {fileID: 21300000, guid: 019385dd2914c452d831fc57d3b0101e, type: 3}
+  icon: {fileID: 21300000, guid: 7f317b7b8dc50b341a110515859f3747, type: 3}
   displayName: Expedition

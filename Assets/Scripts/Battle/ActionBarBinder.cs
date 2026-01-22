@@ -27,7 +27,6 @@ public sealed class ActionBarBinder : MonoBehaviour
 
     void Reset()
     {
-        // Auto-grab buttons by name
         var btns = GetComponentsInChildren<Button>(true);
         foreach (var b in btns)
         {
@@ -41,7 +40,6 @@ public sealed class ActionBarBinder : MonoBehaviour
 
     void Awake()
     {
-        // Ensure listeners exist even if OnEnable doesn't rewire.
         WireButtons();
     }
 
@@ -49,7 +47,6 @@ public sealed class ActionBarBinder : MonoBehaviour
     {
         EnsureRefs();
 
-        // Option A: semantic global battle/encounter state events
         GameEvents.OnBattleStateChanged += Refresh;
         GameEvents.OnEncounterAutoModeChanged += Refresh;
 
@@ -75,7 +72,6 @@ public sealed class ActionBarBinder : MonoBehaviour
 
         if (!feedback)
         {
-            // Prefer the feedback manager near the battle UI, but fall back to a scene search.
             feedback = GetComponentInParent<BattleFeedbackManager>();
             if (!feedback) feedback = FindFirstObjectByType<BattleFeedbackManager>();
         }
@@ -83,9 +79,6 @@ public sealed class ActionBarBinder : MonoBehaviour
 
     private void WireButtons()
     {
-        // We intentionally remove listeners and re-add, because:
-        // - this binder may be enabled/disabled multiple times
-        // - scene reloads can cause duplicate bindings if we don't clear
 
         if (attackBtn)
         {
@@ -100,7 +93,7 @@ public sealed class ActionBarBinder : MonoBehaviour
                 }
 
                 if (battle) battle.SetPlayerActionAttack();
-                if (AudioManager.I != null) AudioManager.I.PlaySfx(SfxType.Attack);
+                AudioManager.I?.PlaySfx(SfxType.Attack);
 
                 // Action selection may lock input immediately
                 Refresh();
@@ -119,7 +112,7 @@ public sealed class ActionBarBinder : MonoBehaviour
                 }
 
                 if (battle) battle.SetPlayerActionDefend();
-                if (AudioManager.I != null) AudioManager.I.PlaySfx(SfxType.Defend);
+                AudioManager.I?.PlaySfx(SfxType.Defend);
                 Refresh();
             });
         }
@@ -136,7 +129,7 @@ public sealed class ActionBarBinder : MonoBehaviour
                 }
 
                 if (battle) battle.SetPlayerActionFocus();
-                if (AudioManager.I != null) AudioManager.I.PlaySfx(SfxType.Focus);
+                AudioManager.I?.PlaySfx(SfxType.Focus);
                 Refresh();
             });
         }
@@ -153,7 +146,7 @@ public sealed class ActionBarBinder : MonoBehaviour
                 }
 
                 if (battle) battle.SetPlayerActionRun();
-                if (AudioManager.I != null) AudioManager.I.PlaySfx(SfxType.Run);
+                AudioManager.I?.PlaySfx(SfxType.Run);
                 Refresh();
             });
         }

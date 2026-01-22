@@ -18,5 +18,5 @@ MonoBehaviour:
   storageCap: 30
   maxWorkers: 3
   eligibleTypes: 02000000
-  icon: {fileID: 21300000, guid: 1f479cd953739c34781f1981870c344a, type: 3}
+  icon: {fileID: 21300000, guid: 09b596ef54e6648b5a83907abb5c3e89, type: 3}
   displayName: Harbor

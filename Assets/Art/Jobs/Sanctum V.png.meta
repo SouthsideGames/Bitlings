@@ -1,10 +1,19 @@
 fileFormatVersion: 2
-guid: 9547edd03db9c8545982eef5d6710e5c
+guid: c612726649425764dbead46095c7ead4
 TextureImporter:
   internalIDToNameTable:
   - first:
-      213: 4118754869804392263
-    second: Wyrm Den_0
+      213: 1933396130083595709
+    second: Sanctum V_0
+  - first:
+      213: -7220110083414954000
+    second: Sanctum V_1
+  - first:
+      213: 4817223637420622323
+    second: Sanctum V_2
+  - first:
+      213: -1924016320524538099
+    second: Sanctum V_3
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -51,7 +60,7 @@ TextureImporter:
   spriteMeshType: 1
   alignment: 0
   spritePivot: {x: 0.5, y: 0.5}
-  spritePixelsToUnits: 16
+  spritePixelsToUnits: 100
   spriteBorder: {x: 0, y: 0, z: 0, w: 0}
   spriteGenerateFallbackPhysicsShape: 1
   alphaUsage: 1
@@ -126,12 +135,12 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: Wyrm Den_0
+      name: Sanctum V_0
       rect:
         serializedVersion: 2
-        x: 0
+        x: 11
         y: 0
-        width: 1024
+        width: 1420
         height: 1024
       alignment: 0
       pivot: {x: 0, y: 0}
@@ -141,8 +150,74 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: 74fd9936bb1c82930800000000000000
-      internalID: 4118754869804392263
+      spriteID: db56fb7698dc4da10800000000000000
+      internalID: 1933396130083595709
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Sanctum V_1
+      rect:
+        serializedVersion: 2
+        x: 712
+        y: 808
+        width: 19
+        height: 20
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 0ffe5d602240dcb90800000000000000
+      internalID: -7220110083414954000
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Sanctum V_2
+      rect:
+        serializedVersion: 2
+        x: 764
+        y: 817
+        width: 17
+        height: 18
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 3f1421020673ad240800000000000000
+      internalID: 4817223637420622323
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Sanctum V_3
+      rect:
+        serializedVersion: 2
+        x: 799
+        y: 803
+        width: 11
+        height: 11
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: d0fa411b9558c45e0800000000000000
+      internalID: -1924016320524538099
       vertices: []
       indices: 
       edges: []
@@ -161,7 +236,10 @@ TextureImporter:
     spriteCustomMetadata:
       entries: []
     nameFileIdTable:
-      Wyrm Den_0: 4118754869804392263
+      Sanctum V_0: 1933396130083595709
+      Sanctum V_1: -7220110083414954000
+      Sanctum V_2: 4817223637420622323
+      Sanctum V_3: -1924016320524538099
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

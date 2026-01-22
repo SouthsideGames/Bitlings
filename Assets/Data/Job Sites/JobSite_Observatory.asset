@@ -18,5 +18,5 @@ MonoBehaviour:
   storageCap: 15
   maxWorkers: 3
   eligibleTypes: 0a000000
-  icon: {fileID: -7252507484307156637, guid: 76bdb0aafa7317e4c869935294b16abd, type: 3}
+  icon: {fileID: 21300000, guid: bdfef69d8311f1b4a8351837b6f80a78, type: 3}
   displayName: Observatory

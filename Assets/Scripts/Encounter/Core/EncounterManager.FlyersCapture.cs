@@ -337,8 +337,7 @@ public partial class EncounterManager
 
         if (success)
         {
-            if (AudioManager.I)
-                AudioManager.I.PlaySfx(SfxType.CaptureSuccess);
+            AudioManager.I?.PlaySfx(SfxType.CaptureSuccess);
 
             var om = new OwnedMonsterData
             {
@@ -400,7 +399,6 @@ public partial class EncounterManager
         {
             var t = m.GetType();
 
-            // Try field "isShiny"
             var f = t.GetField("isShiny",
                 System.Reflection.BindingFlags.Public |
                 System.Reflection.BindingFlags.NonPublic |
@@ -411,7 +409,6 @@ public partial class EncounterManager
                 if (val is bool b) return b;
             }
 
-            // Try property "isShiny"
             var p = t.GetProperty("isShiny",
                 System.Reflection.BindingFlags.Public |
                 System.Reflection.BindingFlags.NonPublic |
@@ -467,7 +464,6 @@ public partial class EncounterManager
                 }
             }
 
-            // 2) Legacy booleans
             var fU = t.GetField("isUniqueEncounter",
                 System.Reflection.BindingFlags.Public |
                 System.Reflection.BindingFlags.NonPublic |

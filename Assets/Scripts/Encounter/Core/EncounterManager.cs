@@ -441,8 +441,7 @@ public partial class EncounterManager : MonoBehaviour
 
         ResolveWildTitles(wild, wildLevel);
 
-        if (EncounterPanelUI.I)
-            EncounterPanelUI.I.OnWildSpawned(wild);
+        EncounterPanelUI.I?.OnWildSpawned(wild);
 
         PlayEncounterSfx(wild);
 
@@ -492,8 +491,8 @@ public partial class EncounterManager : MonoBehaviour
 
         if (AudioManager.I)
         {
-            if (victory) AudioManager.I.PlaySfx(SfxType.Victory);
-            else if (defeat) AudioManager.I.PlaySfx(SfxType.Defeat);
+            if (victory) AudioManager.I?.PlaySfx(SfxType.Victory);
+            else if (defeat) AudioManager.I?.PlaySfx(SfxType.Defeat);
         }
 
         int finalcredits = 0;
@@ -503,7 +502,19 @@ public partial class EncounterManager : MonoBehaviour
             finalcredits = Mathf.Max(0, finalcredits);
 
             if (finalcredits > 0)
-                ResourceManager.I.Add(ResourceType.Credits, finalcredits);
+            {
+
+                if (ResourceManager.I != null)
+                {
+                    ResourceManager.I?.Add(ResourceType.Credits, finalcredits);
+                }
+                else
+                {
+                    ResourceBank.Add(ResourceType.Credits, finalcredits);
+                    GameEvents.OnResourcesChanged?.Invoke();
+                    GameEvents.ResourceAdded?.Invoke(ResourceType.Credits, finalcredits);
+                }
+            }
         }
 
         if (victory) EmitStatus($"Victory! +{finalcredits} credits");
@@ -526,7 +537,6 @@ public partial class EncounterManager : MonoBehaviour
             );
         }
 
-        // AUTO capture only; manual capture is driven by hire overlay
         if (victory && autoMode)
         {
             if (_currentEncounterIsBoss || (result.wildDef != null && result.wildDef.uncatchable))
@@ -669,7 +679,7 @@ public partial class EncounterManager : MonoBehaviour
 
             PostBattleSummaryManager.I?.SetAutoBattling(true);
 
-            EncounterPanelUI.I.ShowHireDecision(_lastBattleResult.wildDef, _lastBattleResult.wildLevel);
+            EncounterPanelUI.I?.ShowHireDecision(_lastBattleResult.wildDef, _lastBattleResult.wildLevel);
             yield break;
         }
 
@@ -788,13 +798,13 @@ public partial class EncounterManager : MonoBehaviour
 
         if (IsShinyMonster(wild))
         {
-            AudioManager.I.PlaySfx(SfxType.ShinyEncounter);
+            AudioManager.I?.PlaySfx(SfxType.ShinyEncounter);
             return;
         }
 
         if (IsUniqueMonster(wild))
         {
-            AudioManager.I.PlaySfx(SfxType.UnqiueEncounter);
+            AudioManager.I?.PlaySfx(SfxType.UnqiueEncounter);
             return;
         }
     }
@@ -918,12 +928,11 @@ public partial class EncounterManager : MonoBehaviour
             avgTeamLvl = Mathf.Max(1, Mathf.RoundToInt((float)sum / data.team.Count));
         }
 
-        int wildLevel = Mathf.Clamp(avgTeamLvl + UnityEngine.Random.Range(-1, 2), 1, 99);
+        int wildLevel = Mathf.Clamp(avgTeamLvl + Random.Range(-1, 2), 1, 99);
 
         ResolveWildTitles(wild, wildLevel);
 
-        if (EncounterPanelUI.I)
-            EncounterPanelUI.I.OnWildSpawned(wild);
+        EncounterPanelUI.I?.OnWildSpawned(wild);
 
         PlayEncounterSfx(wild);
 

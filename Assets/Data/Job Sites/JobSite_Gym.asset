@@ -18,5 +18,5 @@ MonoBehaviour:
   storageCap: 90
   maxWorkers: 3
   eligibleTypes: 06000000
-  icon: {fileID: 21300000, guid: e5fb26b3af00b2549949286c76126ab7, type: 3}
+  icon: {fileID: 21300000, guid: 7a1f366d7e37345d497f3ea3f32e724f, type: 3}
   displayName: Gym

@@ -15,25 +15,53 @@ public class HealButtonController : MonoBehaviour
     private HealingConfigSO config;
     private MonsterLibrarySO library;
 
+    private bool _ready;
+
     void Awake()
     {
         if (library == null)
             library = Resources.Load<MonsterLibrarySO>("MonsterLibrary");
         if (config == null)
             config = Resources.Load<HealingConfigSO>("HealingConfig");
+
+        _ready = library != null && config != null;
+
+        if (!_ready)
+        {
+            Debug.LogError(
+                "[HealButtonController] Missing required Resources assets. " +
+                $"MonsterLibrary loaded={library != null}, HealingConfig loaded={config != null}. " +
+                "Heal UI will be disabled.",
+                this
+            );
+
+            if (hpLabel != null)   hpLabel.text = "Heal Unavailable";
+            if (costLabel != null) costLabel.text = "Missing Config";
+            if (healButton != null) healButton.interactable = false;
+        }
     }
 
     void OnEnable() { Refresh(); }
 
     public void Refresh()
     {
+        if (!_ready)
+            return;
+
         var team = SaveManager.Data?.team;
         if (team == null || teamIndex < 0 || teamIndex >= team.Count) return;
 
         var owned = team[teamIndex];
         if (string.IsNullOrEmpty(owned.monsterId)) return;
 
-        var def = library.GetById(owned.monsterId);
+        var def = (library != null) ? library.GetById(owned.monsterId) : null;
+        if (def == null)
+        {
+            if (hpLabel != null) hpLabel.text = "HP: ?";
+            if (costLabel != null) costLabel.text = "Missing Monster";
+            if (healButton != null) healButton.interactable = false;
+            return;
+        }
         int maxHP = HealingService.CalcMaxHP(def, owned.level);
         int curHP = owned.currentHP >= 0 ? Mathf.Min(owned.currentHP, maxHP) : maxHP;
         int missing = HealingService.MissingHP(curHP, maxHP);
@@ -43,7 +71,7 @@ public class HealButtonController : MonoBehaviour
 
         int haveKits = ResourceBank.Get(ResourceType.Medkit);
         bool useKitsOnly = haveKits >= kitsNeeded && kitsNeeded > 0;
-        bool needFallback = (kitsNeeded > 0 && haveKits < kitsNeeded);
+        bool needFallback = kitsNeeded > 0 && haveKits < kitsNeeded;
 
         if (missing <= 0)
         {
@@ -62,30 +90,38 @@ public class HealButtonController : MonoBehaviour
         }
         else if (needFallback)
         {
-            int kitsShort = kitsNeeded - haveKits; // you already computed kitsNeeded & haveKits
-            int credits     = ResourceManager.I.Get(ResourceType.Credits);
+            int kitsShort = kitsNeeded - haveKits; 
+            int credits = ResourceManager.I != null
+                ? ResourceManager.I.Get(ResourceType.Credits)
+                : ResourceBank.Get(ResourceType.Credits);
 
             costLabel.text = $"{haveKits} Medkits + {creditsNeeded} credits";
             healButton.interactable = (credits >= creditsNeeded) || (haveKits > 0);
         }
         else
         {
-            int credits = ResourceManager.I.Get(ResourceType.Credits);
+            int credits = ResourceManager.I != null
+                ? ResourceManager.I.Get(ResourceType.Credits)
+                : ResourceBank.Get(ResourceType.Credits);
 
             costLabel.text = $"{creditsNeeded} credits";
-            healButton.interactable = (credits >= creditsNeeded);
+            healButton.interactable = credits >= creditsNeeded;
         }
     }
 
     public void OnClickHeal()
     {
+        if (!_ready)
+            return;
+
         var team = SaveManager.Data?.team;
         if (team == null || teamIndex < 0 || teamIndex >= team.Count) return;
 
         var owned = team[teamIndex];
         if (string.IsNullOrEmpty(owned.monsterId)) return;
 
-        var def = library.GetById(owned.monsterId);
+        var def = (library != null) ? library.GetById(owned.monsterId) : null;
+        if (def == null) { Refresh(); return; }
         int maxHP = HealingService.CalcMaxHP(def, owned.level);
         int curHP = owned.currentHP >= 0 ? Mathf.Min(owned.currentHP, maxHP) : maxHP;
         int missing = HealingService.MissingHP(curHP, maxHP);
@@ -103,11 +139,13 @@ public class HealButtonController : MonoBehaviour
         {
             if (haveKits > 0)
             {
-                // spend what you have, then cover rest with credits
                 if (!ResourceBank.TrySpend(ResourceType.Medkit, haveKits)) { Refresh(); return; }
             }
             int creditsNeeded = HealingService.creditsToHealFull(config, owned.level, missing);
-            if (!ResourceManager.I.TrySpend(ResourceType.Credits, creditsNeeded)) { Refresh(); return; }
+            bool spent = ResourceManager.I != null
+                ? ResourceManager.I.TrySpend(ResourceType.Credits, creditsNeeded)
+                : ResourceBank.TrySpend(ResourceType.Credits, creditsNeeded);
+            if (!spent) { Refresh(); return; }
         }
 
         owned.currentHP = maxHP;

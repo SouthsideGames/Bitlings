@@ -109,7 +109,6 @@ public class IntroManager : MonoBehaviour
             UIManager.I?.Show(homePanelId);
             UIManager.I?.Hide(titlePanelId);
 
-            // NEW: open idle/auto-battle rewards AFTER Continue (and after Home is shown).
             StartCoroutine(OpenIdleRewardsAfterContinue());
             return;
         }
@@ -119,10 +118,8 @@ public class IntroManager : MonoBehaviour
 
     private IEnumerator OpenIdleRewardsAfterContinue()
     {
-        // Wait one frame to ensure panel routing completes and Home is visible.
         yield return null;
 
-        // This will only open if there is a pending idle/auto battle summary/log.
         IdleBattleManager.I?.TryOpenSummaryIfNeeded();
     }
 

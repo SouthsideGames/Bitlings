@@ -1240,7 +1240,7 @@ public class BattleManager : MonoBehaviour
                 float healAmt = curMax * ctx.rescueHealPct;
                 TryAddHPToActive(healAmt);
                 yield return Say($"{GetName(activeIndex)} triage heals {Mathf.RoundToInt(healAmt)} HP!");
-                if (AudioManager.I) AudioManager.I.PlaySfx(SfxType.Heal);
+                AudioManager.I?.PlaySfx(SfxType.Heal);
             }
         }
 
@@ -1252,7 +1252,7 @@ public class BattleManager : MonoBehaviour
                 ctx.surgeApplied = true;
                 ctx.attackBonusPct += ctx.surgeAtkBonusPct;
                 yield return Say($"{GetName(activeIndex)} becomes enraged (+{Mathf.RoundToInt(ctx.surgeAtkBonusPct * 100f)}% ATK)!");
-                if (AudioManager.I) AudioManager.I.PlaySfx(SfxType.Clutch);
+                AudioManager.I?.PlaySfx(SfxType.Clutch);
             }
         }
     }
@@ -1262,7 +1262,7 @@ public class BattleManager : MonoBehaviour
         if (IsWildKO())
         {
             BattleLogger.Log("Wild monster fainted!", LogScope.Battle);
-            if (AudioManager.I) AudioManager.I.PlaySfx(SfxType.KO);
+            AudioManager.I?.PlaySfx(SfxType.KO);
             if (feedback) feedback.PlayKO(BattleFeedbackManager.BattleFeedbackSide.Wild);
             EndBattle(true);
             return true;
@@ -1270,7 +1270,7 @@ public class BattleManager : MonoBehaviour
         if (IsTeamKO())
         {
             BattleLogger.Log("Your team is unable to battle!", LogScope.Battle);
-            if (AudioManager.I) AudioManager.I.PlaySfx(SfxType.KO);
+            AudioManager.I?.PlaySfx(SfxType.KO);
             if (feedback) feedback.PlayKO(BattleFeedbackManager.BattleFeedbackSide.Player);
             EndBattle(false);
             return true;
@@ -1423,7 +1423,7 @@ public class BattleManager : MonoBehaviour
 
         if (!victory && !escaped && EncounterManager.I != null && EncounterManager.I.IsAutoMode)
         {
-            EncounterManager.I.NotifyAuto_TeamKO();
+            EncounterManager.I?.NotifyAuto_TeamKO();
         }
 
         SetPostBattleWinnerVisible(victory, escaped);
@@ -1451,7 +1451,6 @@ public class BattleManager : MonoBehaviour
         }
         else
         {
-            // Fallback if feedback is missing (snap)
             if (playerHPBar)
             {
                 playerHPBar.maxValue = curMax;
@@ -1483,7 +1482,6 @@ public class BattleManager : MonoBehaviour
         }
         else
         {
-            // Fallback if feedback is missing (snap)
             if (wildHPBar)
             {
                 wildHPBar.maxValue = wildMaxHP;
@@ -1503,7 +1501,6 @@ public class BattleManager : MonoBehaviour
 
     private void UpdateHPTextUI()
     {
-        // Player HP
         float playerMax = GetFinalMaxHPForIndex(activeIndex);
         playerMax = Mathf.Max(1f, playerMax);
 
@@ -1514,11 +1511,9 @@ public class BattleManager : MonoBehaviour
 
         playerCur = Mathf.Clamp(playerCur, 0f, playerMax);
 
-        // Wild HP
         float wildMax = Mathf.Max(1f, wildMaxHP);
         float wildCur = Mathf.Clamp(wildHP, 0f, wildMax);
 
-        // Preferred path: centralized feedback owns the HP text widgets
         if (feedback != null && feedback.HasHPTextWired)
         {
             feedback.SetHPTexts(
@@ -1530,28 +1525,23 @@ public class BattleManager : MonoBehaviour
             return;
         }
 
-        // Fallback path: write directly to the HP stat rows if they exist.
-        // This keeps UI correct even if feedback is missing/unwired.
         int pCurI = Mathf.CeilToInt(playerCur);
         int pMaxI = Mathf.CeilToInt(playerMax);
         int wCurI = Mathf.CeilToInt(wildCur);
         int wMaxI = Mathf.CeilToInt(wildMax);
 
-        // Player "HP:" row (stat text)
         if (playerHPText)
         {
             playerHPText.text = $"HP: {pCurI}/{pMaxI}";
             playerHPText.color = StatNeutral;
         }
 
-        // Wild "HP:" row (stat text)
         if (wildHPText)
         {
             wildHPText.text = $"HP: {wCurI}/{wMaxI}";
             wildHPText.color = StatNeutral;
         }
 
-        // Also keep the sliders accurate if feedback isn't driving them.
         if (playerHPBar)
         {
             playerHPBar.maxValue = playerMax;
@@ -1766,22 +1756,18 @@ public class BattleManager : MonoBehaviour
             out int baseTotalATK,
             out int baseTotalDEF,
             out int baseTotalSPD,
-            out _ // flatAtkBonusOnly not needed for display here because baseTotalATK already includes it
+            out _ 
         );
 
-        // Temp flats (battle-only)
         int tempHPFlat  = BattleTempBuffs.I ? BattleTempBuffs.I.GetPlayerHPBonus() : 0;
         int tempATKFlat = BattleTempBuffs.I ? BattleTempBuffs.I.GetPlayerAtkBonus() : 0;
         int tempDEFFlat = BattleTempBuffs.I ? BattleTempBuffs.I.GetPlayerDefenseBonus() : 0;
         int tempSPDFlat = BattleTempBuffs.I ? BattleTempBuffs.I.GetPlayerSpeedFlatBonus() : 0;
 
-        // Titles context
         var ctx = TitleContext.Empty;
         ctx.ownedId = (teamIds != null && activeIndex < teamIds.Length) ? teamIds[activeIndex] : "";
 
-        // NOTE: HP% must be computed using "max HP before conditionals" to avoid recursion.
-        // We use hpBaseForCtx (baseline totals + temp HP) as the denominator for selfHp01.
-        float maxNoConds = GetActiveMaxHP_NoConditionals(teamMaxHP[activeIndex], activeIndex); // includes title hpPct + temp HP, excludes conditional hpPct
+        float maxNoConds = GetActiveMaxHP_NoConditionals(teamMaxHP[activeIndex], activeIndex);
         maxNoConds = Mathf.Max(1f, maxNoConds);
 
         float currentHP = (teamHP != null && activeIndex < teamHP.Length) ? teamHP[activeIndex] : maxNoConds;
@@ -1791,7 +1777,6 @@ public class BattleManager : MonoBehaviour
         ctx.alliesAlive = GetAlliesAliveNotIncludingActive();
         ctx.winStreak = GetWinStreakSafe();
 
-        // Conditional mods depend on ctx (hp%, allies alive, win streak)
         var cmods = GetConditionalModsForActive();
 
         // Header rows
@@ -1876,7 +1861,6 @@ public class BattleManager : MonoBehaviour
             );
         }
 
-        // Extra label
         bool resistOn = BattleTempBuffs.I && BattleTempBuffs.I.IsTypeResistActive();
         if (resistOn && playerRarityText) playerRarityText.text += " [Resist]";
     }
@@ -1938,8 +1922,6 @@ public class BattleManager : MonoBehaviour
         return default;
     }
 
-    // Tricky: conditional mods need current HP%, but HP% depends on maxHP, and maxHP depends on titles.
-    // We explicitly compute "maxHP without conditionals" to avoid recursion.
     private TitleStatMods GetConditionalModsForIndex(int idx)
     {
         if (teamIds == null || teamDefs == null || teamLevels == null) return default;
@@ -1981,10 +1963,7 @@ public class BattleManager : MonoBehaviour
         return mods;
     }
 
-    private TitleStatMods GetConditionalModsForActive()
-    {
-        return GetConditionalModsForIndex(activeIndex);
-    }
+    private TitleStatMods GetConditionalModsForActive() =>GetConditionalModsForIndex(activeIndex);
 
     public float GetActiveMaxHP(float baseMax, int idx = -1)
     {
@@ -1993,10 +1972,10 @@ public class BattleManager : MonoBehaviour
         if (idx >= 0)
         {
             var tmods = GetTitleModsForIndex(idx);
-            if (tmods.hpPct > 0f) v *= (1f + tmods.hpPct);
+            if (tmods.hpPct > 0f) v *= 1f + tmods.hpPct;
 
             var cmods = GetConditionalModsForIndex(idx);
-            if (cmods.hpPct > 0f) v *= (1f + Mathf.Max(0f, cmods.hpPct));
+            if (cmods.hpPct > 0f) v *= 1f + Mathf.Max(0f, cmods.hpPct);
         }
 
         int hpBuff = BattleTempBuffs.I ? BattleTempBuffs.I.GetPlayerHPBonus() : 0;
@@ -2424,8 +2403,7 @@ public class BattleManager : MonoBehaviour
 
         try
         {
-            if (TitleManager.I != null)
-                return TitleManager.I.GetTitlesForMonster(ownedId);
+            return TitleManager.I?.GetTitlesForMonster(ownedId);
         }
         catch { }
 
@@ -2506,10 +2484,10 @@ public class BattleManager : MonoBehaviour
 
         // Charge status (persists until spent)
         bool playerCharged =
-            (chargedNextAttack != null &&
+            chargedNextAttack != null &&
             activeIndex >= 0 &&
             activeIndex < chargedNextAttack.Length &&
-            chargedNextAttack[activeIndex]);
+            chargedNextAttack[activeIndex];
 
         feedback.SetCharge(BattleFeedbackManager.BattleFeedbackSide.Player, playerCharged);
         feedback.SetCharge(BattleFeedbackManager.BattleFeedbackSide.Wild, wildChargedNextAttack);
@@ -2579,7 +2557,7 @@ public class BattleManager : MonoBehaviour
         // ATK baseline includes training + flatAtkBonus, with legacy guard:
         int atkTrainingPlusFlat = tAtk + flatAtk;
         if (LooksLikeLegacyTrainingWasMirroredIntoFlat(flatAtk, tAtk))
-            atkTrainingPlusFlat = Mathf.Max(0, flatAtk); // old saves: flat already includes training
+            atkTrainingPlusFlat = Mathf.Max(0, flatAtk); 
 
         totalATK = Mathf.Max(1, atkBase + atkTrainingPlusFlat);
 
