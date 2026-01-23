@@ -146,6 +146,11 @@ public class EncounterPanelUI : MonoBehaviour
     [SerializeField] private GameObject hireAgreePrefab;
     [SerializeField] private GameObject hireDenyPrefab;
 
+    [Header("Navigation Lock")]
+    [SerializeField] private GameObject closeButtonRoot;  // assign the Close button GameObject (or its parent)
+    [SerializeField] private bool hideCloseDuringBattle = true;
+
+
     private MonsterDataSO _pendingHireDef;
     private int _pendingHireLevel;
 
@@ -226,6 +231,7 @@ public class EncounterPanelUI : MonoBehaviour
         GameEvents.BattleFinished += OnBattleFinished;
         GameEvents.WinStreakChanged += OnWinStreakChanged;
         GameEvents.OnResourcesChanged += OnResourcesChanged;
+        GameEvents.OnBattleStateChanged += HandleBattleStateChanged;
 
         if (!IsInBattle())
         {
@@ -237,6 +243,7 @@ public class EncounterPanelUI : MonoBehaviour
         {
             ShowBlinder(false, instant: true);
             ClearTeamPreview();
+            ApplyCloseLock();
         }
 
         if (hireYesButton)
@@ -271,6 +278,8 @@ public class EncounterPanelUI : MonoBehaviour
         GameEvents.BattleFinished -= OnBattleFinished;
         GameEvents.WinStreakChanged -= OnWinStreakChanged;
         GameEvents.OnResourcesChanged -= OnResourcesChanged;
+        GameEvents.OnBattleStateChanged -= HandleBattleStateChanged;
+
 
         if (encounterBtn) encounterBtn.onClick.RemoveAllListeners();
         if (_fadeCo != null) StopCoroutine(_fadeCo);
@@ -727,6 +736,8 @@ public class EncounterPanelUI : MonoBehaviour
         }
 
         RefreshEncounterBoostIconsAndTooltips(force: true);
+
+        ApplyCloseLock();
     }
 
     void OnClickEncounter()
@@ -1366,4 +1377,20 @@ public class EncounterPanelUI : MonoBehaviour
         bool alreadyOwned = SaveManager.Data.ownedIds.Contains(def.id);
         ownedCapturedIcon.SetActive(alreadyOwned);
     }
+
+    private void HandleBattleStateChanged()
+    {
+        ApplyCloseLock();
+    }
+
+    private void ApplyCloseLock()
+    {
+        if (!closeButtonRoot) return;
+        if (!hideCloseDuringBattle) { closeButtonRoot.SetActive(true); return; }
+
+        bool inBattle = IsInBattle();
+
+        closeButtonRoot.SetActive(!inBattle);
+    }
+
 }

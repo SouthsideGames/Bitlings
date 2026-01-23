@@ -95,6 +95,19 @@ public class SettingsPanel : MonoBehaviour
     [Tooltip("Optional: plays a SFX so the player can hear the current volume.")]
     [SerializeField] private Button testSfxButton;
 
+    // ─────────────────────────────────────────────────────────
+    // Reset Confirmation Panel (NEW)
+    // ─────────────────────────────────────────────────────────
+
+    [Header("Reset Confirmation (NEW)")]
+    [Tooltip("Root GameObject for the confirmation panel.")]
+    [SerializeField] private GameObject resetConfirmRoot;
+
+    [Tooltip("Button that closes the confirmation panel without resetting.")]
+    [SerializeField] private Button resetConfirmCloseButton;
+
+    [Tooltip("Button that confirms and proceeds with the reset.")]
+    [SerializeField] private Button resetConfirmAgreeButton;
 
     private bool _wired;
 
@@ -112,7 +125,14 @@ public class SettingsPanel : MonoBehaviour
         if (testSfxButton) testSfxButton.onClick.RemoveAllListeners();
         if (rerollDailySeedButton) rerollDailySeedButton.onClick.RemoveAllListeners();
 
+        // NEW: confirmation buttons
+        if (resetConfirmCloseButton) resetConfirmCloseButton.onClick.RemoveAllListeners();
+        if (resetConfirmAgreeButton) resetConfirmAgreeButton.onClick.RemoveAllListeners();
+
         CacheSectionCanvasGroups();
+
+        // NEW: start hidden
+        SetResetConfirmVisible(false);
     }
 
     void Start()
@@ -125,6 +145,9 @@ public class SettingsPanel : MonoBehaviour
         _activeSection = defaultSection;
         RefreshTabVisibility(); // may force away from Seeds if locked
         ShowSection(_activeSection, instant: true);
+
+        // NEW: start hidden (again, for safety across scene reloads)
+        SetResetConfirmVisible(false);
     }
 
     void OnEnable()
@@ -132,14 +155,11 @@ public class SettingsPanel : MonoBehaviour
         SafeSubscribe();
         Refresh();
 
+        // Reset button now opens confirmation panel instead of immediately resetting.
         if (resetButton)
         {
             resetButton.onClick.RemoveAllListeners();
-            resetButton.onClick.AddListener(() =>
-            {
-                var mgr = SettingsManager.I;
-                if (mgr != null) mgr.OnReset();
-            });
+            resetButton.onClick.AddListener(OpenResetConfirm);
         }
 
         if (testSfxButton)
@@ -158,6 +178,9 @@ public class SettingsPanel : MonoBehaviour
             rerollDailySeedButton.onClick.AddListener(OnClickRerollDailySeed);
         }
 
+        // NEW: confirmation panel wiring
+        WireResetConfirmation();
+
         WireEvents();
 
         if (FeatureUnlockManager.I != null)
@@ -173,6 +196,9 @@ public class SettingsPanel : MonoBehaviour
         if (!IsSectionValid(_activeSection)) _activeSection = defaultSection;
         RefreshTabVisibility(); // may force away from Seeds if locked
         ShowSection(_activeSection, instant: true);
+
+        // NEW: ensure hidden when opening settings
+        SetResetConfirmVisible(false);
     }
 
     void OnDisable()
@@ -183,12 +209,63 @@ public class SettingsPanel : MonoBehaviour
         if (testSfxButton) testSfxButton.onClick.RemoveAllListeners();
         if (rerollDailySeedButton) rerollDailySeedButton.onClick.RemoveAllListeners();
 
+        // NEW: unwire confirm panel buttons
+        if (resetConfirmCloseButton) resetConfirmCloseButton.onClick.RemoveAllListeners();
+        if (resetConfirmAgreeButton) resetConfirmAgreeButton.onClick.RemoveAllListeners();
+
         UnwireEvents();
 
         if (FeatureUnlockManager.I != null)
             FeatureUnlockManager.I.OnFeatureUnlocked -= HandleFeatureUnlocked;
 
         UnwireSectionTabs();
+
+        // NEW: ensure it doesn't remain stuck open if panel is disabled
+        SetResetConfirmVisible(false);
+    }
+
+    // ─────────────────────────────────────────────────────────
+    // Reset confirmation (NEW)
+    // ─────────────────────────────────────────────────────────
+
+    void WireResetConfirmation()
+    {
+        if (resetConfirmCloseButton)
+        {
+            resetConfirmCloseButton.onClick.RemoveAllListeners();
+            resetConfirmCloseButton.onClick.AddListener(CloseResetConfirm);
+        }
+
+        if (resetConfirmAgreeButton)
+        {
+            resetConfirmAgreeButton.onClick.RemoveAllListeners();
+            resetConfirmAgreeButton.onClick.AddListener(ConfirmResetAndProceed);
+        }
+    }
+
+    void OpenResetConfirm()
+    {
+        SetResetConfirmVisible(true);
+    }
+
+    void CloseResetConfirm()
+    {
+        SetResetConfirmVisible(false);
+    }
+
+    void ConfirmResetAndProceed()
+    {
+        // Close first so the UI is correct even if reset triggers panel routing / reloads.
+        SetResetConfirmVisible(false);
+
+        var mgr = SettingsManager.I;
+        if (mgr != null) mgr.OnReset();
+    }
+
+    void SetResetConfirmVisible(bool on)
+    {
+        if (!resetConfirmRoot) return;
+        resetConfirmRoot.SetActive(on);
     }
 
     // ─────────────────────────────────────────────────────────
@@ -274,7 +351,7 @@ public class SettingsPanel : MonoBehaviour
         return fm.IsUnlocked(FeatureId.Seeds_DailyBasic)
             || fm.IsUnlocked(FeatureId.Seeds_CustomInput)
             || fm.IsUnlocked(FeatureId.Seeds_RerollDailyOnce);
-    } 
+    }
 
     void RefreshTabVisibility()
     {

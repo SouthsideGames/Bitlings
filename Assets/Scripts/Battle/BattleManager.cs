@@ -443,6 +443,9 @@ public class BattleManager : MonoBehaviour
     {
         _turnIndex = 0;
         inBattle = true;
+
+        GameEvents.OnBattleStateChanged?.Invoke();
+
         startTime = Time.unscaledTime;
 
         var vsName = wildDef ? $"{wildDef.displayName} (Lv {wildLevel})" : "Unknown";

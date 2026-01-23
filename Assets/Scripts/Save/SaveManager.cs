@@ -35,8 +35,33 @@ public static class SaveManager
 {
     public static PlayerManager Data;
 
+    // ─────────────────────────────────────────────
+    // Combined Save Root (Option B)
+    // - PlayerManager (main state)
+    // - Tutorial flags
+    // - Job runtime sidecar
+    // - Titles (previously TitleSaveStore)
+    //
+    // NOTE: We keep existing SaveManager APIs (Data, tutorial helpers, job runtime helpers)
+    // so the rest of the project does not need refactors.
+    // ─────────────────────────────────────────────
+
+    [Serializable]
+    private sealed class PlayerSaveRoot
+    {
+        public int version = 1;
+        public PlayerManager player;
+        public List<string> tutorialCompleted = new List<string>();
+        public JobRuntimeSave jobRuntime;
+        public TitleSaveData titles;
+    }
+
     private static bool _loaded;
     private static bool _isSaving;
+
+    // Cached sidecar blobs now stored inside PlayerSave.json
+    private static JobRuntimeSave _jobRuntimeCache;
+    private static TitleSaveData _titlesCache;
 
     // ─────────────────────────────────────────────
     // Hard reset guard (prevents sidecar/runtime re-saves during scene reload)
@@ -54,10 +79,15 @@ public static class SaveManager
     // Paths
     // ─────────────────────────────────────────────
 
-    public static string SavePath          => Path.Combine(Application.persistentDataPath, "idle_mon_save.json");
-    public static string BackupPath        => Path.Combine(Application.persistentDataPath, "idle_mon_save.bak");
-    public static string TutorialFlagsPath => Path.Combine(Application.persistentDataPath, "tutorial_flags.json");
-    public static string JobRuntimePath    => Path.Combine(Application.persistentDataPath, "idle_job_runtime.json");
+    // NEW (authoritative)
+    public static string SavePath   => Path.Combine(Application.persistentDataPath, "PlayerSave.json");
+    public static string BackupPath => Path.Combine(Application.persistentDataPath, "PlayerSave.bak");
+
+    // Legacy (migration only)
+    private static string LegacySavePath          => Path.Combine(Application.persistentDataPath, "idle_mon_save.json");
+    private static string LegacyBackupPath        => Path.Combine(Application.persistentDataPath, "idle_mon_save.bak");
+    private static string LegacyTutorialFlagsPath => Path.Combine(Application.persistentDataPath, "tutorial_flags.json");
+    private static string LegacyJobRuntimePath    => Path.Combine(Application.persistentDataPath, "idle_job_runtime.json");
 
     // ─────────────────────────────────────────────
     // Auto-generated handler names
@@ -102,13 +132,24 @@ public static class SaveManager
 
         SaveFiles.EnsureFolder(SavePath);
 
-        if (!TryLoad(SavePath, out Data))
+        // 1) Load combined save first.
+        PlayerSaveRoot root = null;
+        if (!TryLoad(SavePath, out root))
         {
-            if (!TryLoad(BackupPath, out Data))
+            // 2) Fallback to combined backup.
+            if (!TryLoad(BackupPath, out root))
             {
-                Data = NewFreshPlayer();
+                // 3) Migrate from legacy multi-file layout.
+                root = MigrateFromLegacyOrCreateFresh();
             }
         }
+
+        Data = root?.player ?? NewFreshPlayer();
+
+        // Hydrate caches from root.
+        LoadTutorialFromRoot(root);
+        _jobRuntimeCache = root?.jobRuntime;
+        _titlesCache = root?.titles;
 
         NormalizeAfterLoad();
 
@@ -136,9 +177,10 @@ public static class SaveManager
             if (Data.lastSavedUnix > 0 && now + 300 < Data.lastSavedUnix) now = Data.lastSavedUnix;
             Data.lastSavedUnix = Math.Max(Data.lastSavedUnix, now);
 
-            string json = JsonUtility.ToJson(Data, prettyPrint: true);
+            // Build single-file root.
+            var root = BuildRootForSave();
+            string json = JsonUtility.ToJson(root, prettyPrint: true);
             SaveFiles.AtomicWriteUtf8(SavePath, json);
-
             SaveFiles.TryCopy(SavePath, BackupPath);
         }
         catch (Exception e)
@@ -177,9 +219,17 @@ public static class SaveManager
         {
             SaveFiles.TryDelete(SavePath);
             SaveFiles.TryDelete(BackupPath);
-            SaveFiles.TryDelete(JobRuntimePath);
+            // Legacy files (kept for safety during transition)
+            SaveFiles.TryDelete(LegacySavePath);
+            SaveFiles.TryDelete(LegacyBackupPath);
+            SaveFiles.TryDelete(LegacyJobRuntimePath);
+            SaveFiles.TryDelete(LegacyTutorialFlagsPath);
+            SaveFiles.TryDelete(TitleSaveStore.SavePath);
 
             ClearTutorialFlags();
+
+            _jobRuntimeCache = null;
+            _titlesCache = null;
 
             Data = NewFreshPlayer();
             EnsureDefaults(); 
@@ -246,13 +296,23 @@ public static class SaveManager
             // 3) Delete all known save files (and any temp leftovers).
             SaveFiles.TryDelete(SavePath);
             SaveFiles.TryDelete(BackupPath);
-            SaveFiles.TryDelete(JobRuntimePath);
-            SaveFiles.TryDelete(TutorialFlagsPath);
+            // Legacy files (multi-json layout)
+            SaveFiles.TryDelete(LegacySavePath);
+            SaveFiles.TryDelete(LegacyBackupPath);
+            SaveFiles.TryDelete(LegacyJobRuntimePath);
+            SaveFiles.TryDelete(LegacyTutorialFlagsPath);
+            SaveFiles.TryDelete(TitleSaveStore.SavePath);
 
             SaveFiles.TryDelete(SavePath + ".tmp");
             SaveFiles.TryDelete(BackupPath + ".tmp");
-            SaveFiles.TryDelete(JobRuntimePath + ".tmp");
-            SaveFiles.TryDelete(TutorialFlagsPath + ".tmp");
+            SaveFiles.TryDelete(LegacySavePath + ".tmp");
+            SaveFiles.TryDelete(LegacyBackupPath + ".tmp");
+            SaveFiles.TryDelete(LegacyJobRuntimePath + ".tmp");
+            SaveFiles.TryDelete(LegacyTutorialFlagsPath + ".tmp");
+            SaveFiles.TryDelete(TitleSaveStore.SavePath + ".tmp");
+
+            _jobRuntimeCache = null;
+            _titlesCache = null;
 
             // 4) Rebuild a truly fresh PlayerManager in memory.
             Data = NewFreshPlayer();
@@ -323,7 +383,8 @@ public static class SaveManager
             if (Data.lastSavedUnix > 0 && now + 300 < Data.lastSavedUnix) now = Data.lastSavedUnix;
             Data.lastSavedUnix = Math.Max(Data.lastSavedUnix, now);
 
-            string json = JsonUtility.ToJson(Data, prettyPrint: true);
+            var root = BuildRootForSave();
+            string json = JsonUtility.ToJson(root, prettyPrint: true);
             SaveFiles.AtomicWriteUtf8(SavePath, json);
             SaveFiles.TryCopy(SavePath, BackupPath);
         }
@@ -357,6 +418,98 @@ public static class SaveManager
     {
         EnsureDefaults();
         SyncListsFromSets();
+    }
+
+    // ─────────────────────────────────────────────
+    // Combined save helpers
+    // ─────────────────────────────────────────────
+
+    private static PlayerSaveRoot BuildRootForSave()
+    {
+        var root = new PlayerSaveRoot();
+        root.player = Data;
+
+        // Tutorial flags
+        EnsureTutorialFlagsLoaded();
+        if (_tutorialSet != null)
+            root.tutorialCompleted = new List<string>(_tutorialSet);
+
+        // Job runtime + titles blobs
+        root.jobRuntime = _jobRuntimeCache;
+        root.titles = _titlesCache;
+        return root;
+    }
+
+    private static void LoadTutorialFromRoot(PlayerSaveRoot root)
+    {
+        _tutorialLoaded = true;
+        _tutorialData = new TutorialFlagsData();
+        _tutorialSet = new HashSet<string>(StringComparer.Ordinal);
+
+        if (root?.tutorialCompleted == null) return;
+        for (int i = 0; i < root.tutorialCompleted.Count; i++)
+        {
+            var k = root.tutorialCompleted[i];
+            if (!string.IsNullOrWhiteSpace(k)) _tutorialSet.Add(k);
+        }
+    }
+
+    private static PlayerSaveRoot MigrateFromLegacyOrCreateFresh()
+    {
+        var root = new PlayerSaveRoot();
+
+        // 1) PlayerManager
+        PlayerManager legacyPlayer = null;
+        if (!TryLoad(LegacySavePath, out legacyPlayer))
+            TryLoad(LegacyBackupPath, out legacyPlayer);
+        root.player = legacyPlayer ?? NewFreshPlayer();
+
+        // 2) Tutorial flags
+        root.tutorialCompleted = ReadLegacyTutorialFlags();
+
+        // 3) Job runtime
+        root.jobRuntime = ReadLegacyJobRuntime();
+
+        // 4) Titles
+        root.titles = TitleSaveStore.TryLoadLegacyDirect();
+
+        return root;
+    }
+
+    private static List<string> ReadLegacyTutorialFlags()
+    {
+        try
+        {
+            if (!SaveFiles.TryReadAllTextUtf8(LegacyTutorialFlagsPath, out var json) || string.IsNullOrWhiteSpace(json))
+                return new List<string>();
+
+            var tmp = JsonUtility.FromJson<LegacyTutorialFlagsData>(json);
+            return tmp?.completed ?? new List<string>();
+        }
+        catch
+        {
+            return new List<string>();
+        }
+    }
+
+    [Serializable]
+    private sealed class LegacyTutorialFlagsData
+    {
+        public List<string> completed = new List<string>();
+    }
+
+    private static JobRuntimeSave ReadLegacyJobRuntime()
+    {
+        try
+        {
+            if (!SaveFiles.TryReadAllTextUtf8(LegacyJobRuntimePath, out var json) || string.IsNullOrWhiteSpace(json))
+                return null;
+            return JsonUtility.FromJson<JobRuntimeSave>(json);
+        }
+        catch
+        {
+            return null;
+        }
     }
 
     private static PlayerManager NewFreshPlayer()
@@ -605,25 +758,8 @@ public static class SaveManager
         _tutorialData = new TutorialFlagsData();
         _tutorialSet  = new HashSet<string>(StringComparer.Ordinal);
 
-        if (!SaveFiles.TryReadAllTextUtf8(TutorialFlagsPath, out var json) || string.IsNullOrWhiteSpace(json))
-            return;
-
-        try
-        {
-            _tutorialData = JsonUtility.FromJson<TutorialFlagsData>(json) ?? new TutorialFlagsData();
-        }
-        catch
-        {
-            _tutorialData = new TutorialFlagsData();
-        }
-
-        if (_tutorialData.completed == null) return;
-
-        for (int i = 0; i < _tutorialData.completed.Count; i++)
-        {
-            var k = _tutorialData.completed[i];
-            if (!string.IsNullOrWhiteSpace(k)) _tutorialSet.Add(k);
-        }
+        // Combined-save model: tutorial flags are hydrated from PlayerSaveRoot during LoadOrCreate().
+        // If EnsureTutorialFlagsLoaded is called before LoadOrCreate(), we simply start empty.
     }
 
     private static void SaveTutorialFlagsFile()
@@ -631,9 +767,8 @@ public static class SaveManager
         if (IsHardWiping) return;
         if (_tutorialSet == null) return;
 
-        _tutorialData.completed = new List<string>(_tutorialSet);
-        var json = JsonUtility.ToJson(_tutorialData, true);
-        SaveFiles.AtomicWriteUtf8(TutorialFlagsPath, json);
+        // Combined-save model: tutorial flags are persisted as part of PlayerSave.json.
+        Save();
     }
 
     public static bool IsTutorialComplete(string key)
@@ -663,8 +798,9 @@ public static class SaveManager
         _tutorialData = new TutorialFlagsData();
         _tutorialSet  = new HashSet<string>(StringComparer.Ordinal);
 
-        SaveFiles.TryDelete(TutorialFlagsPath);
-        SaveFiles.TryDelete(TutorialFlagsPath + ".tmp");
+        // Also remove legacy file if present.
+        SaveFiles.TryDelete(LegacyTutorialFlagsPath);
+        SaveFiles.TryDelete(LegacyTutorialFlagsPath + ".tmp");
     }
 
     // ─────────────────────────────────────────────
@@ -885,6 +1021,24 @@ public static class SaveManager
         }
     }
 
+    private static bool TryLoad(string path, out PlayerSaveRoot root)
+    {
+        root = null;
+        if (!SaveFiles.TryReadAllTextUtf8(path, out var json)) return false;
+        if (string.IsNullOrWhiteSpace(json)) return false;
+
+        try
+        {
+            root = JsonUtility.FromJson<PlayerSaveRoot>(json);
+            return root != null;
+        }
+        catch
+        {
+            root = null;
+            return false;
+        }
+    }
+
     // ─────────────────────────────────────────────
     // Starter granting
     // ─────────────────────────────────────────────
@@ -950,23 +1104,26 @@ public static class SaveManager
     public static void SaveJobRuntime(JobRuntimeSave blob)
     {
         if (IsHardWiping) return;
-        var json = JsonUtility.ToJson(blob ?? new JobRuntimeSave(), prettyPrint: true);
-        SaveFiles.AtomicWriteUtf8(JobRuntimePath, json);
+        _jobRuntimeCache = blob;
+        Save();
     }
 
     public static JobRuntimeSave LoadJobRuntime()
     {
-        if (!SaveFiles.TryReadAllTextUtf8(JobRuntimePath, out var json) || string.IsNullOrWhiteSpace(json))
-            return null;
+        return _jobRuntimeCache;
+    }
 
-        try
-        {
-            return JsonUtility.FromJson<JobRuntimeSave>(json);
-        }
-        catch
-        {
-            return null;
-        }
+    // ─────────────────────────────────────────────
+    // Titles blob (used by TitleSaveStore facade)
+    // ─────────────────────────────────────────────
+
+    public static TitleSaveData GetTitlesBlob() => _titlesCache;
+
+    public static void SetTitlesBlob(TitleSaveData data)
+    {
+        if (IsHardWiping) return;
+        _titlesCache = data;
+        Save();
     }
 
     // ─────────────────────────────────────────────
