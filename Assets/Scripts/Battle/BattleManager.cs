@@ -193,6 +193,26 @@ public class BattleManager : MonoBehaviour
     private static readonly Color StatBuff = new Color(0.35f, 1f, 0.35f);
     private static readonly Color StatNerf = new Color(1f, 0.35f, 0.35f);
 
+    // ─────────────────────────────────────────────────────────────────────────
+    // Battle-start stat baselines (for green/red deltas during battle)
+    // Baseline includes battle-start title effects (TitlesAdapter.OnBattleStart) as requested.
+    // Deltas shown in UI compare CURRENT effective values against these captured values.
+    // ─────────────────────────────────────────────────────────────────────────
+    private bool _battleStartBaselinesCaptured = false;
+
+    // Per-team-slot baselines (captured once at battle start).
+    private int[] _baseHP;
+    private int[] _baseATK;
+    private int[] _baseDEF;
+    private int[] _baseSPD;
+
+    // Wild baselines (captured once at battle start).
+    private int _wildBaseHP;
+    private int _wildBaseATK;
+    private int _wildBaseDEF;
+    private int _wildBaseSPD;
+
+
     void Start()
     {
         if (benchBtn1) benchBtn1.onClick.AddListener(() => ClickBench(0));
@@ -207,11 +227,13 @@ public class BattleManager : MonoBehaviour
     void OnEnable()
     {
         GameEvents.BattleFinished += HandleBattleFinishedUIRefresh;
+        GameEvents.BattleStatsChanged += HandleBattleStatsChanged;
     }
 
     void OnDisable()
     {
         GameEvents.BattleFinished -= HandleBattleFinishedUIRefresh;
+        GameEvents.BattleStatsChanged -= HandleBattleStatsChanged;
     }
 
     void OnDestroy()
@@ -303,6 +325,13 @@ public class BattleManager : MonoBehaviour
         teamMaxHP = new float[teamCount];
         teamHP = new float[teamCount];
         teamIds = new string[teamCount];
+
+        // Battle-start baselines (allocated now, captured in Co_StartBattleNow after TitlesAdapter.OnBattleStart)
+        _baseHP  = new int[teamCount];
+        _baseATK = new int[teamCount];
+        _baseDEF = new int[teamCount];
+        _baseSPD = new int[teamCount];
+        _battleStartBaselinesCaptured = false;
 
         for (int i = 0; i < teamCount; i++)
         {
@@ -438,6 +467,9 @@ public class BattleManager : MonoBehaviour
         if (activeIndex >= 0 && teamIds != null && activeIndex < teamIds.Length)
             TitlesAdapter.OnBattleStart(teamIds[activeIndex], wildDef, wildLevel);
 
+        // Capture battle-start baselines AFTER battle-start title effects.
+        CaptureBattleStartBaselines();
+
         Debug_LogActiveTitlesSnapshot("BattleStart");
 
         // Ensure HP text starts as Max/Max (e.g., 100/100) at battle start.
@@ -488,6 +520,7 @@ public class BattleManager : MonoBehaviour
 
             _turnIndex++;
             TitlesAdapter.OnTurnAdvanced(_turnIndex);
+            GameEvents.RaiseBattleStatsChanged();
 
             if (debugTitles && debugTitlesEveryTurn)
                 Debug_LogActiveTitlesSnapshot("TurnAdvanced");
@@ -1637,6 +1670,9 @@ public class BattleManager : MonoBehaviour
 
         BattleLogger.Log($"Swapped to {GetName(activeIndex)}!", LogScope.Battle);
 
+        // Swap changes which slot baseline we're comparing against; force an immediate stat refresh.
+        GameEvents.RaiseBattleStatsChanged();
+
         if (feedback) feedback.PlayActionQueued(
             BattleFeedbackManager.BattleFeedbackSide.Player,
             BattleFeedbackManager.BattleFeedbackAction.Focus
@@ -1677,6 +1713,9 @@ public class BattleManager : MonoBehaviour
             }
 
             BattleLogger.Log($"Auto-swapped to {GetName(activeIndex)}!", LogScope.Battle);
+
+            // Swap changes which slot baseline we're comparing against; force an immediate stat refresh.
+            GameEvents.RaiseBattleStatsChanged();
             return true;
         }
 
@@ -1730,10 +1769,10 @@ public class BattleManager : MonoBehaviour
         if (wildRarityText) wildRarityText.text = $"RARITY: {wildDef.rarity}";
         if (wildLevelText) wildLevelText.text = $"LVL: {wildLevel}";
 
-        if (wildHPText) SetStatRowColorAndText(wildHPText, "HP", baseHP, effHP, minFinal: 1);
-        if (wildATKText) SetStatRowColorAndText(wildATKText, "ATK", baseATK, effATK, minFinal: 1);
-        if (wildDEFText) SetStatRowColorAndText(wildDEFText, "DEF", baseDEF, effDEF, minFinal: 0);
-        if (wildSPDText) SetStatRowColorAndText(wildSPDText, "SPD", baseSPD, effSPD, minFinal: 1);
+        if (wildHPText) SetStatRowColorAndTextVsBaseline(wildHPText, "HP", _battleStartBaselinesCaptured ? _wildBaseHP : baseHP, effHP, minFinal: 1);
+        if (wildATKText) SetStatRowColorAndTextVsBaseline(wildATKText, "ATK", _battleStartBaselinesCaptured ? _wildBaseATK : baseATK, effATK, minFinal: 1);
+        if (wildDEFText) SetStatRowColorAndTextVsBaseline(wildDEFText, "DEF", _battleStartBaselinesCaptured ? _wildBaseDEF : baseDEF, effDEF, minFinal: 0);
+        if (wildSPDText) SetStatRowColorAndTextVsBaseline(wildSPDText, "SPD", _battleStartBaselinesCaptured ? _wildBaseSPD : baseSPD, effSPD, minFinal: 1);
     }
 
     private void UpdatePlayerInfoUI()
@@ -1798,7 +1837,9 @@ public class BattleManager : MonoBehaviour
         {
             SetPlayerStatRowWithConditionals(
                 playerHPText, "HP",
-                hpBaseForDisplay, hpTitleFinal,
+                hpBaseForDisplay,
+                (_battleStartBaselinesCaptured && _baseHP != null && activeIndex >= 0 && activeIndex < _baseHP.Length) ? _baseHP[activeIndex] : hpBaseForDisplay,
+                hpTitleFinal,
                 condFlat: 0, condPct: cmods.hpPct,
                 minFinal: 1
             );
@@ -1817,7 +1858,9 @@ public class BattleManager : MonoBehaviour
         {
             SetPlayerStatRowWithConditionals(
                 playerATKText, "ATK",
-                atkBaseForDisplay, atkTitleFinal,
+                atkBaseForDisplay,
+                (_battleStartBaselinesCaptured && _baseATK != null && activeIndex >= 0 && activeIndex < _baseATK.Length) ? _baseATK[activeIndex] : atkBaseForDisplay,
+                atkTitleFinal,
                 condFlat: cmods.atkFlat, condPct: cmods.atkPct,
                 minFinal: 1
             );
@@ -1836,7 +1879,9 @@ public class BattleManager : MonoBehaviour
         {
             SetPlayerStatRowWithConditionals(
                 playerDEFText, "DEF",
-                defBaseForDisplay, defTitleFinal,
+                defBaseForDisplay,
+                (_battleStartBaselinesCaptured && _baseDEF != null && activeIndex >= 0 && activeIndex < _baseDEF.Length) ? _baseDEF[activeIndex] : defBaseForDisplay,
+                defTitleFinal,
                 condFlat: cmods.defFlat, condPct: cmods.defPct,
                 minFinal: 0
             );
@@ -1855,7 +1900,9 @@ public class BattleManager : MonoBehaviour
         {
             SetPlayerStatRowWithConditionals(
                 playerSPDText, "SPD",
-                spdBaseForDisplay, spdTitleFinal,
+                spdBaseForDisplay,
+                (_battleStartBaselinesCaptured && _baseSPD != null && activeIndex >= 0 && activeIndex < _baseSPD.Length) ? _baseSPD[activeIndex] : spdBaseForDisplay,
+                spdTitleFinal,
                 condFlat: cmods.spdFlat, condPct: cmods.spdPct,
                 minFinal: 1
             );
@@ -2031,6 +2078,155 @@ public class BattleManager : MonoBehaviour
             isBattle = true
         };
         return ctx;
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Battle-start baselines capture
+    // ─────────────────────────────────────────────────────────────────────────
+
+    private int GetAlliesAliveNotIncludingIndex(int idx)
+    {
+        int alive = 0;
+        for (int i = 0; i < teamCount; i++)
+            if (i != idx && teamHP != null && i >= 0 && i < teamHP.Length && teamHP[i] > 0.01f) alive++;
+        return alive;
+    }
+
+    private TitleContext BuildTitleContextForIndex(int idx)
+    {
+        float curMax = GetFinalMaxHPForIndex(idx);
+        float hpPct = (teamHP != null && idx >= 0 && idx < teamHP.Length && curMax > 0.01f)
+            ? Mathf.Clamp01(teamHP[idx] / curMax)
+            : 0f;
+
+        int alliesAlive = GetAlliesAliveNotIncludingIndex(idx);
+        int streak = GetWinStreakSafe();
+
+        return new TitleContext(
+            ownedId: (teamIds != null && idx >= 0 && idx < teamIds.Length) ? teamIds[idx] : "",
+            hpPct: hpPct,
+            alliesAlive: alliesAlive,
+            winStreak: streak,
+            isBattle: true
+        );
+    }
+
+    /// <summary>
+    /// Captures battle-start effective stat baselines for all team slots and the wild.
+    /// This MUST be called after TitlesAdapter.OnBattleStart so battle-start title effects are included.
+    /// </summary>
+    private void CaptureBattleStartBaselines()
+    {
+        if (teamCount <= 0 || teamDefs == null || teamLevels == null || teamIds == null) return;
+
+        if (_baseHP == null || _baseHP.Length != teamCount)
+        {
+            _baseHP  = new int[teamCount];
+            _baseATK = new int[teamCount];
+            _baseDEF = new int[teamCount];
+            _baseSPD = new int[teamCount];
+        }
+
+        for (int i = 0; i < teamCount; i++)
+        {
+            ComputePlayerEffectiveStatsForIndex(i, out int hp, out int atk, out int def, out int spd);
+            _baseHP[i]  = hp;
+            _baseATK[i] = atk;
+            _baseDEF[i] = def;
+            _baseSPD[i] = spd;
+        }
+
+        ComputeWildEffectiveStats(out _wildBaseHP, out _wildBaseATK, out _wildBaseDEF, out _wildBaseSPD);
+
+        _battleStartBaselinesCaptured = true;
+    }
+
+    private void ComputeWildEffectiveStats(out int hp, out int atk, out int def, out int spd)
+    {
+        hp = 1; atk = 1; def = 0; spd = 1;
+        if (!wildDef) return;
+
+        int baseDEF = BattleCalc.CalcDefense(wildDef, wildLevel);
+        int baseSPD = BattleCalc.CalcSpeed(wildDef, wildLevel);
+
+        hp = Mathf.Max(1, Mathf.RoundToInt(wildMaxHP));
+        atk = Mathf.Max(1, Mathf.RoundToInt(wildAttackPerTurn));
+        def = Mathf.Max(0, baseDEF);
+        spd = Mathf.Max(1, baseSPD);
+    }
+
+    /// <summary>
+    /// Computes the CURRENT effective stats for the given team index, using the same battle-time
+    /// title + conditional + temp-buff logic as the player stat UI.
+    /// </summary>
+    private void ComputePlayerEffectiveStatsForIndex(int idx, out int hp, out int atk, out int def, out int spd)
+    {
+        hp = 1; atk = 1; def = 0; spd = 1;
+
+        if (idx < 0 || teamDefs == null || idx >= teamDefs.Length) return;
+        var defSO = teamDefs[idx];
+        if (!defSO) return;
+
+        int lvl = (teamLevels != null && idx < teamLevels.Length) ? teamLevels[idx] : 1;
+
+        GetProgressionTotalsForIndex(
+            idx,
+            out _,
+            out int baseTotalATK,
+            out int baseTotalDEF,
+            out int baseTotalSPD,
+            out _
+        );
+
+        int tempATKFlat = BattleTempBuffs.I ? BattleTempBuffs.I.GetPlayerAtkBonus() : 0;
+        int tempDEFFlat = BattleTempBuffs.I ? BattleTempBuffs.I.GetPlayerDefenseBonus() : 0;
+        int tempSPDFlat = BattleTempBuffs.I ? BattleTempBuffs.I.GetPlayerSpeedFlatBonus() : 0;
+
+        float maxNoConds = GetActiveMaxHP_NoConditionals(teamMaxHP[idx], idx);
+        maxNoConds = Mathf.Max(1f, maxNoConds);
+
+        // Title context (includes current HP percent + allies alive + win streak)
+        var ctx = BuildTitleContextForIndex(idx);
+
+        var cmods = GetConditionalModsForIndex(idx);
+
+        // HP (base for display is maxNoConds; titles applied, then conditionals)
+        int hpBaseForDisplay = Mathf.RoundToInt(maxNoConds);
+        float hpFinalF = TitlesAdapter.GetStatValue(ctx.ownedId, defSO, lvl, "HP", ctx, hpBaseForDisplay);
+        int hpTitleFinal = Mathf.Max(1, Mathf.RoundToInt(hpFinalF));
+        int hpCondDelta = Mathf.RoundToInt(0 + (hpBaseForDisplay * cmods.hpPct)); // hpFlat not used currently
+        hp = Mathf.Max(1, hpTitleFinal + hpCondDelta);
+
+        // ATK
+        int atkBaseForDisplay = Mathf.Max(1, baseTotalATK + tempATKFlat);
+        float atkFinalF = TitlesAdapter.GetStatValue(ctx.ownedId, defSO, lvl, "Attack", ctx, atkBaseForDisplay);
+        int atkTitleFinal = Mathf.Max(1, Mathf.RoundToInt(atkFinalF));
+        int atkCondDelta = Mathf.RoundToInt(cmods.atkFlat + (atkBaseForDisplay * cmods.atkPct));
+        atk = Mathf.Max(1, atkTitleFinal + atkCondDelta);
+
+        // DEF
+        int defBaseForDisplay = Mathf.Max(0, baseTotalDEF + tempDEFFlat);
+        float defFinalF = TitlesAdapter.GetStatValue(ctx.ownedId, defSO, lvl, "Defense", ctx, defBaseForDisplay);
+        int defTitleFinal = Mathf.Max(0, Mathf.RoundToInt(defFinalF));
+        int defCondDelta = Mathf.RoundToInt(cmods.defFlat + (defBaseForDisplay * cmods.defPct));
+        def = Mathf.Max(0, defTitleFinal + defCondDelta);
+
+        // SPD
+        int spdBaseForDisplay = Mathf.Max(1, baseTotalSPD + tempSPDFlat);
+        float spdFinalF = TitlesAdapter.GetStatValue(ctx.ownedId, defSO, lvl, "Speed", ctx, spdBaseForDisplay);
+        int spdTitleFinal = Mathf.Max(1, Mathf.RoundToInt(spdFinalF));
+        int spdCondDelta = Mathf.RoundToInt(cmods.spdFlat + (spdBaseForDisplay * cmods.spdPct));
+        spd = Mathf.Max(1, spdTitleFinal + spdCondDelta);
+    }
+
+
+    private void HandleBattleStatsChanged()
+    {
+        if (!inBattle) return;
+
+        UpdatePlayerInfoUI();
+        UpdateWildInfoUI();
+        UpdateHPTextUI();
     }
 
     private void HandleBattleFinishedUIRefresh(BattleResult _)
@@ -2381,10 +2577,34 @@ public class BattleManager : MonoBehaviour
             label.text = $"{statName}: {finalVal} ({(delta > 0 ? "+" : "")}{delta})";
     }
 
-    private void SetPlayerStatRowWithConditionals(
+    
+    /// <summary>
+    /// Colors and formats a stat row by comparing CURRENT final value against a captured BATTLE-START baseline.
+    /// </summary>
+    private void SetStatRowColorAndTextVsBaseline(TextMeshProUGUI label, string statName, int baselineVal, int finalVal, int minFinal = 1)
+    {
+        if (!label) return;
+
+        finalVal = Mathf.Max(minFinal, finalVal);
+        baselineVal = Mathf.Max(minFinal, baselineVal);
+
+        int delta = finalVal - baselineVal;
+
+        if (delta > 0) label.color = StatBuff;
+        else if (delta < 0) label.color = StatNerf;
+        else label.color = StatNeutral;
+
+        if (delta == 0)
+            label.text = $"{statName}: {finalVal}";
+        else
+            label.text = $"{statName}: {finalVal} ({(delta > 0 ? "+" : "")}{delta})";
+    }
+
+private void SetPlayerStatRowWithConditionals(
         TextMeshProUGUI label,
         string statName,
         int baseVal,
+        int baselineVal,
         int titleFinalVal,
         int condFlat,
         float condPct,
@@ -2394,7 +2614,8 @@ public class BattleManager : MonoBehaviour
         int combinedFinal = titleFinalVal + condDelta;
         combinedFinal = Mathf.Max(minFinal, combinedFinal);
 
-        SetStatRowColorAndText(label, statName, baseVal, combinedFinal, minFinal);
+        // Display delta vs captured battle-start baseline (not vs baseVal).
+        SetStatRowColorAndTextVsBaseline(label, statName, baselineVal, combinedFinal, minFinal);
     }
 
     private List<TitleSO> GetTitlesForOwnedIdSafe(string ownedId)

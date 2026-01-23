@@ -3,13 +3,7 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
-/// <summary>
-/// Centralized “juice” manager for battle.
-/// Owns LeanTween feedback: button presses, icon punches, hit reactions, damage numbers,
-/// defend/guard feedback, HP shakes, screen shakes, panel reveals.
-///
-/// Presentation-only: BattleManager calls into this to update visuals.
-/// </summary>
+
 [DisallowMultipleComponent]
 public sealed class BattleFeedbackManager : MonoBehaviour
 {
@@ -116,7 +110,6 @@ public sealed class BattleFeedbackManager : MonoBehaviour
         CacheBaseScales();
         WireOptionalButtonPresses();
 
-        // Start with status icons inactive.
         ResetStatusIcons();
     }
 
@@ -124,7 +117,6 @@ public sealed class BattleFeedbackManager : MonoBehaviour
     {
         CacheBaseScales();
 
-        // Ensure they are not left visible from a previous enable/disable.
         ResetStatusIcons();
     }
 

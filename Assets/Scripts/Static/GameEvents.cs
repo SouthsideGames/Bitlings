@@ -20,10 +20,6 @@ public static class GameEvents
 
     public static Action OnSettingsApplied;
 
-    /// <summary>
-    /// Fired when an account hard reset begins/ends.
-    /// true = begin, false = end.
-    /// </summary>
     public static Action<bool> HardResetting;
 
     // ─────────────────────────────────────────────────────────
@@ -68,4 +64,14 @@ public static class GameEvents
     public static Action Tutorial_FirstJobAssigned;
 
     public static Action OnBoostersChanged;
+
+    // ─────────────────────────────────────────────────────────────────────────────
+    // Battle stat refresh
+    // ─────────────────────────────────────────────────────────────────────────────
+    public static Action BattleStatsChanged;
+
+    public static void RaiseBattleStatsChanged()
+    {
+        BattleStatsChanged?.Invoke();
+    }
 }
