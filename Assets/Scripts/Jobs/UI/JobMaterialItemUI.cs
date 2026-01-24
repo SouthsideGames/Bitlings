@@ -106,7 +106,7 @@ public class JobMaterialItemUI : MonoBehaviour
         int cur = PendingCurXP;
         if (xpText)
         {
-            xpText.text = $"{cur}/{_maxXP}";
+            xpText.text = $"{cur}/{_maxXP} XP";
             if (_pending > 0)      xpText.color = addColor;
             else if (_pending < 0) xpText.color = removeColor;
             else                   xpText.color = normalColor;

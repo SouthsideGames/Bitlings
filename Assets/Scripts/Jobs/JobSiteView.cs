@@ -3,6 +3,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using System;
 using System.Collections;
+using System.Collections.Generic;
 
 public class JobSiteView : MonoBehaviour
 {
@@ -11,6 +12,9 @@ public class JobSiteView : MonoBehaviour
 
     [Header("Visibility")]
     [SerializeField] private GameObject rootToToggle;
+
+    [Header("Level UI")]
+    [SerializeField] private TextMeshProUGUI levelText;
 
     [Header("Controls")]
     [SerializeField] private Toggle allowReliefToggle;
@@ -89,8 +93,8 @@ public class JobSiteView : MonoBehaviour
         // Safety repair: if list has items but set is empty/null, rebuild set from list
         if (SaveManager.Data != null)
         {
-            SaveManager.Data.unlockedJobSitesList ??= new System.Collections.Generic.List<JobType>();
-            SaveManager.Data.unlockedJobSites     ??= new System.Collections.Generic.HashSet<JobType>();
+            SaveManager.Data.unlockedJobSitesList ??= new List<JobType>();
+            SaveManager.Data.unlockedJobSites     ??= new HashSet<JobType>();
 
             if (SaveManager.Data.unlockedJobSites.Count == 0 && SaveManager.Data.unlockedJobSitesList.Count > 0)
             {
@@ -106,15 +110,39 @@ public class JobSiteView : MonoBehaviour
             SaveManager.Data.unlockedJobSites.Contains(site);
 
         if (rootToToggle) rootToToggle.SetActive(unlocked);
-        if (!unlocked) return;
+
+        // If the panel is locked, also clear the level text so stale UI doesn't remain.
+        if (!unlocked)
+        {
+            if (levelText) levelText.text = "";
+            return;
+        }
 
         var st = GetRuntimeState(site);
+        Debug.Log($"[JobSiteView] name={name} site={site} st={(st!=null ? "OK":"NULL")} lvl={(st!=null ? st.level : -1)} levelText={(levelText ? levelText.name : "NULL")}");
+
         if (st == null || st.config == null)
         {
+            if (levelText) levelText.text = "";
             SetSlotVisible(slot1Group, false);
             SetSlotVisible(slot2Group, false);
             SetSlotVisible(slot3Group, false);
             return;
+        }
+
+        // ─────────────────────────────────────────────────────────────
+        // Level display (kept updated from runtime state)
+        // ─────────────────────────────────────────────────────────────
+        if (levelText)
+        {
+            int maxLvl = 0;
+            try { maxLvl = JobLeveling.MaxLevel; }
+            catch { maxLvl = 0; }
+
+            if (maxLvl > 0 && st.level >= maxLvl)
+                levelText.text = "Level MAX";
+            else
+                levelText.text = $"Level {Mathf.Max(1, st.level)}";
         }
 
         if (allowReliefToggle)
@@ -129,7 +157,6 @@ public class JobSiteView : MonoBehaviour
         RenderAndAlpha(st, 1, slot2Group, slot2CDText);
         RenderAndAlpha(st, 2, slot3Group, slot3CDText);
     }
-
 
     private JobSiteState GetRuntimeState(JobType job)
     {

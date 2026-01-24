@@ -9,7 +9,8 @@ public class ShadowMarketUI : MonoBehaviour
     [SerializeField] private Button useOrbBtn;
     [SerializeField] private TMP_Text useOrbBtnLabel;
     [SerializeField] private TextMeshProUGUI orbsLabel;
-    [SerializeField] private TextMeshProUGUI timerText;
+    [SerializeField] private TextMeshProUGUI orbsTimerText;
+    [SerializeField] private GameObject orbsActiveImage;
 
     [Header("Effect")]
     [SerializeField, Range(1f, 5f)] private float bonusMultiplier = 1.5f;
@@ -22,6 +23,7 @@ public class ShadowMarketUI : MonoBehaviour
         Wire();
         RefreshCounts();
         RefreshButtonLabel();
+        RefreshShinyVisual();
         StartTicker();
         GameEvents.OnResourcesChanged += OnResChanged;
     }
@@ -48,6 +50,7 @@ public class ShadowMarketUI : MonoBehaviour
     {
         RefreshCounts();
         RefreshButtonLabel();
+        RefreshShinyVisual();
     }
 
     void RefreshCounts()
@@ -57,7 +60,8 @@ public class ShadowMarketUI : MonoBehaviour
         if (orbsLabel) orbsLabel.text = $"Shiny Orbs: {have}";
 
         bool active = GetSecondsRemaining() > 0;
-        if (useOrbBtn) useOrbBtn.interactable = have > 0; // allow replace even while active, per current behavior
+        if (useOrbBtn)
+            useOrbBtn.interactable = (!active) && have > 0;
     }
 
     void RefreshButtonLabel()
@@ -65,7 +69,15 @@ public class ShadowMarketUI : MonoBehaviour
         if (!useOrbBtnLabel) return;
 
         bool active = GetSecondsRemaining() > 0;
-        useOrbBtnLabel.text = active ? "Replace Shiny Orb" : "Use Shiny Orb";
+        useOrbBtnLabel.text = active ? "Replace" : "Use";
+    }
+
+    void RefreshShinyVisual()
+    {
+        if (!orbsActiveImage) return;
+
+        bool active = GetSecondsRemaining() > 0;
+        orbsActiveImage.SetActive(active);
     }
 
     void OnClickUseOrb()
@@ -74,6 +86,7 @@ public class ShadowMarketUI : MonoBehaviour
         {
             RefreshCounts();
             RefreshButtonLabel();
+            RefreshShinyVisual();
             return;
         }
 
@@ -88,17 +101,34 @@ public class ShadowMarketUI : MonoBehaviour
         }
 
         list.Clear();
-        list.Add(new ShinyBoostData { bonus = Mathf.Max(1f, bonusMultiplier), expireUnix = expiry });
+        list.Add(new ShinyBoostData
+        {
+            bonus = Mathf.Max(1f, bonusMultiplier),
+            expireUnix = expiry
+        });
 
         SaveManager.Save();
         GameEvents.OnResourcesChanged?.Invoke();
 
         RefreshCounts();
         RefreshButtonLabel();
+        RefreshShinyVisual();
     }
 
-    void StartTicker() { if (_ticker != null) StopCoroutine(_ticker); _ticker = StartCoroutine(Tick()); }
-    void StopTicker() { if (_ticker != null) { StopCoroutine(_ticker); _ticker = null; } }
+    void StartTicker()
+    {
+        if (_ticker != null) StopCoroutine(_ticker);
+        _ticker = StartCoroutine(Tick());
+    }
+
+    void StopTicker()
+    {
+        if (_ticker != null)
+        {
+            StopCoroutine(_ticker);
+            _ticker = null;
+        }
+    }
 
     IEnumerator Tick()
     {
@@ -107,10 +137,11 @@ public class ShadowMarketUI : MonoBehaviour
         {
             long rem = GetSecondsRemaining();
 
-            if (timerText)
-                timerText.text = rem > 0 ? FormatHMS(rem) : "No shiny boost";
+            if (orbsTimerText)
+                orbsTimerText.text = rem > 0 ? FormatHMS(rem) : "No shiny boost";
 
             RefreshButtonLabel();
+            RefreshShinyVisual();
 
             yield return wait;
         }

@@ -11,6 +11,7 @@ public class WyrmDenUI : MonoBehaviour
     [SerializeField] private Button useButton;
     [SerializeField] private TextMeshProUGUI useButtonLabel;   
     [SerializeField] private TextMeshProUGUI favorLabel;
+    [SerializeField] private GameObject favorActiveImage;
     [SerializeField] private TextMeshProUGUI favorTimerText;
 
     [Header("Effect")]
@@ -25,7 +26,8 @@ public class WyrmDenUI : MonoBehaviour
     {
         Wire();
         Refresh();
-        RefreshButtonLabel();         
+        RefreshButtonLabel();   
+        RefreshFavorVisual();      
         StartTicker();
         GameEvents.OnResourcesChanged += OnResourcesChanged;
     }
@@ -47,6 +49,7 @@ public class WyrmDenUI : MonoBehaviour
     {
         Refresh();
         RefreshButtonLabel();         
+        RefreshFavorVisual();
     }
 
     void Refresh()
@@ -65,7 +68,7 @@ public class WyrmDenUI : MonoBehaviour
         if (!useButtonLabel) return;
 
         bool active = GetSecondsRemaining() > 0;
-        useButtonLabel.text = active ? "Replace Favor" : "Use Favor";
+        useButtonLabel.text = active ? "Replace" : "Use";
     }
 
     void OnClickUse()
@@ -94,6 +97,7 @@ public class WyrmDenUI : MonoBehaviour
         GameEvents.OnResourcesChanged?.Invoke();
 
         RefreshButtonLabel();        
+        RefreshFavorVisual();
     }
 
     void StartTicker()
@@ -121,6 +125,8 @@ public class WyrmDenUI : MonoBehaviour
             }
 
             RefreshButtonLabel();    
+            RefreshFavorVisual();
+
             yield return wait;
         }
     }
@@ -145,4 +151,13 @@ public class WyrmDenUI : MonoBehaviour
             ? $"{(int)t.TotalHours}h {t.Minutes}m {t.Seconds}s"
             : $"{t.Minutes}m {t.Seconds}s";
     }
+
+    void RefreshFavorVisual()
+    {
+        if (!favorActiveImage) return;
+
+        bool active = GetSecondsRemaining() > 0;
+        favorActiveImage.SetActive(active);
+    }
+
 }

@@ -12,6 +12,7 @@ public class CyroLabUI : MonoBehaviour
     [SerializeField] private TextMeshProUGUI useButtonLabel;
     [SerializeField] private TextMeshProUGUI ordersLabel;
     [SerializeField] private TextMeshProUGUI orderTimerText;
+    [SerializeField] private GameObject orderActiveImage;
 
     [Header("Effect")]
     [SerializeField, Range(0f,1f)] private float bonus = 0.25f;
@@ -20,12 +21,20 @@ public class CyroLabUI : MonoBehaviour
 
     Coroutine _ticker;
 
-   void OnEnable()
+    void OnEnable()
     {
         Wire();
         Refresh();
+        RefreshButtonLabel();
+        RefreshWorkOrderVisual();
         StartTicker();
         GameEvents.OnResourcesChanged += OnResourcesChanged;
+    }
+
+    void OnDisable()
+    {
+        StopTicker();
+        GameEvents.OnResourcesChanged -= OnResourcesChanged;
     }
 
     void Wire()
@@ -35,13 +44,12 @@ public class CyroLabUI : MonoBehaviour
         useButton.onClick.AddListener(OnClickUse);
     }
 
-    void OnDisable()
+    void OnResourcesChanged()
     {
-        StopTicker();
-        GameEvents.OnResourcesChanged -= OnResourcesChanged;
+        Refresh();
+        RefreshButtonLabel();
+        RefreshWorkOrderVisual();
     }
-
-    void OnResourcesChanged() { Refresh(); }
 
     void Refresh()
     {
@@ -49,17 +57,18 @@ public class CyroLabUI : MonoBehaviour
 
         int have = ResourceBank.Get(ResourceType.WorkOrder);
         ordersLabel.text = $"Work Orders: {have}";
-        useButton.interactable = !consumeWorkOrderItem || have > 0;
 
-        RefreshButtonLabel();
+        bool active = GetSecondsRemaining() > 0;
+        useButton.interactable = (!active) && (!consumeWorkOrderItem || have > 0);
     }
-
 
     void OnClickUse()
     {
         if (consumeWorkOrderItem && !ResourceBank.TrySpend(ResourceType.WorkOrder, 1))
         {
             Refresh();
+            RefreshButtonLabel();
+            RefreshWorkOrderVisual();
             return;
         }
 
@@ -68,19 +77,40 @@ public class CyroLabUI : MonoBehaviour
 
         if (SaveManager.Data.activeWorkOrders == null)
             SaveManager.Data.activeWorkOrders = new List<WorkOrderData>();
+
         SaveManager.Data.activeWorkOrders.Clear();
-        SaveManager.Data.activeWorkOrders.Add(new WorkOrderData { bonus = Mathf.Clamp01(bonus), expireUnix = expiry });
+        SaveManager.Data.activeWorkOrders.Add(new WorkOrderData
+        {
+            bonus = Mathf.Clamp01(bonus),
+            expireUnix = expiry
+        });
 
         SaveManager.Save();
         GameEvents.OnResourcesChanged?.Invoke();
+
         RefreshButtonLabel();
+        RefreshWorkOrderVisual();
     }
 
-    void StartTicker() { if (_ticker != null) StopCoroutine(_ticker); _ticker = StartCoroutine(Tick()); }
-    void StopTicker() { if (_ticker != null) { StopCoroutine(_ticker); _ticker = null; } }
+    void StartTicker()
+    {
+        if (_ticker != null) StopCoroutine(_ticker);
+        _ticker = StartCoroutine(Tick());
+    }
+
+    void StopTicker()
+    {
+        if (_ticker != null)
+        {
+            StopCoroutine(_ticker);
+            _ticker = null;
+        }
+    }
 
     IEnumerator Tick()
     {
+        var wait = new WaitForSecondsRealtime(1f);
+
         while (true)
         {
             if (orderTimerText)
@@ -90,17 +120,28 @@ public class CyroLabUI : MonoBehaviour
             }
 
             RefreshButtonLabel();
+            RefreshWorkOrderVisual();
 
-            yield return new WaitForSecondsRealtime(1f);
+            yield return wait;
         }
+    }
+
+    void RefreshWorkOrderVisual()
+    {
+        if (!orderActiveImage) return;
+
+        bool active = GetSecondsRemaining() > 0;
+        orderActiveImage.SetActive(active);
     }
 
     long GetSecondsRemaining()
     {
         var list = SaveManager.Data?.activeWorkOrders;
         if (list == null || list.Count == 0) return -1;
+
         var cur = list[0];
         if (cur == null) return -1;
+
         long rem = cur.expireUnix - SaveManager.NowUnix();
         return Math.Max(0L, rem);
     }
@@ -109,7 +150,9 @@ public class CyroLabUI : MonoBehaviour
     {
         if (seconds < 0) return "--";
         var t = TimeSpan.FromSeconds(seconds);
-        return (t.TotalHours >= 1.0) ? $"{(int)t.TotalHours}h {t.Minutes}m {t.Seconds}s" : $"{t.Minutes}m {t.Seconds}s";
+        return (t.TotalHours >= 1.0)
+            ? $"{(int)t.TotalHours}h {t.Minutes}m {t.Seconds}s"
+            : $"{t.Minutes}m {t.Seconds}s";
     }
 
     void RefreshButtonLabel()
@@ -117,7 +160,6 @@ public class CyroLabUI : MonoBehaviour
         if (!useButtonLabel) return;
 
         bool active = GetSecondsRemaining() > 0;
-        useButtonLabel.text = active ? "Replace Work Order" : "Use Work Order";
+        useButtonLabel.text = active ? "Replace" : "Use";
     }
-
 }

@@ -108,7 +108,7 @@ public class SanctumUI : MonoBehaviour
     {
         if (!useButtonLabel) return;
         bool active = GetBlessingSecondsRemainingForSelected() > 0.5f;
-        useButtonLabel.text = active ? "Replace Blessing" : "Use Blessing Scale";
+        useButtonLabel.text = active ? "Replace" : "Use";
     }
 
     float GetBlessingSecondsRemainingForSelected()
