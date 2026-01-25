@@ -214,7 +214,6 @@ public static class TeamProbe
 
     private static object GetSingletonInstance(Type t)
     {
-        // Try common singleton patterns: public static I/Instance, or FindObjectOfType
         var instProp = t.GetProperty("I", BindingFlags.Public | BindingFlags.Static)
                     ?? t.GetProperty("Instance", BindingFlags.Public | BindingFlags.Static);
         if (instProp != null)

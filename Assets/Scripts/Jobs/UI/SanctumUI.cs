@@ -46,6 +46,7 @@ public class SanctumUI : MonoBehaviour
         RefreshTimer();
         RefreshSiteIcon();
         RefreshButtonLabel();
+        RefreshUseButtonVisibility();
 
         GameEvents.OnResourcesChanged += OnResourcesChanged;
         GameEvents.OnJobsChanged += OnJobsChanged;
@@ -64,12 +65,14 @@ public class SanctumUI : MonoBehaviour
     {
         RefreshTimer();
         RefreshButtonLabel();
+        RefreshUseButtonVisibility();
     }
 
     void OnResourcesChanged()
     {
         RefreshShards();
         RefreshButtonLabel();
+        RefreshUseButtonVisibility();
     }
 
     void OnJobsChanged()
@@ -78,6 +81,7 @@ public class SanctumUI : MonoBehaviour
         RefreshTimer();
         RefreshButtonLabel();
         RefreshSiteIcon();
+        RefreshUseButtonVisibility();
     }
 
     void Hook()
@@ -100,6 +104,7 @@ public class SanctumUI : MonoBehaviour
                 RefreshTimer();
                 RefreshButtonLabel();
                 RefreshSiteIcon();
+                RefreshUseButtonVisibility();
             });
         }
     }
@@ -109,6 +114,26 @@ public class SanctumUI : MonoBehaviour
         if (!useButtonLabel) return;
         bool active = GetBlessingSecondsRemainingForSelected() > 0.5f;
         useButtonLabel.text = active ? "Replace" : "Use";
+    }
+
+    /// <summary>
+    /// If we do not have any Blessing Scales, hide the entire Use button GameObject.
+    /// </summary>
+    void RefreshUseButtonVisibility()
+    {
+        if (!useButton) return;
+
+        if (SaveManager.Data == null)
+        {
+            useButton.gameObject.SetActive(false);
+            return;
+        }
+
+        int count = ResourceBank.Get(ResourceType.BlessingScale);
+        bool shouldShow = count > 0;
+
+        if (useButton.gameObject.activeSelf != shouldShow)
+            useButton.gameObject.SetActive(shouldShow);
     }
 
     float GetBlessingSecondsRemainingForSelected()
@@ -182,7 +207,10 @@ public class SanctumUI : MonoBehaviour
     {
         int count = ResourceBank.Get(ResourceType.BlessingScale);
         if (ShardLabel) ShardLabel.text = $"Blessing Scales: {count}";
+
         if (useButton) useButton.interactable = count > 0;
+
+        RefreshUseButtonVisibility();
     }
 
     void RefreshPreview()
@@ -230,6 +258,7 @@ public class SanctumUI : MonoBehaviour
         {
             RefreshShards();
             RefreshButtonLabel();
+            RefreshUseButtonVisibility();
             return;
         }
 
@@ -239,6 +268,7 @@ public class SanctumUI : MonoBehaviour
             ResourceBank.Add(ResourceType.BlessingScale, 1);
             RefreshShards();
             RefreshButtonLabel();
+            RefreshUseButtonVisibility();
             return;
         }
 
@@ -253,6 +283,7 @@ public class SanctumUI : MonoBehaviour
                 ResourceBank.Add(ResourceType.BlessingScale, 1);
                 RefreshShards();
                 RefreshButtonLabel();
+                RefreshUseButtonVisibility();
                 return;
             }
         }
@@ -265,6 +296,7 @@ public class SanctumUI : MonoBehaviour
         RefreshTimer();
         RefreshButtonLabel();
         RefreshSiteIcon();
+        RefreshUseButtonVisibility();
 
         GameEvents.OnJobsChanged?.Invoke();
     }

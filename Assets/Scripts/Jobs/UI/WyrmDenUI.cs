@@ -9,14 +9,14 @@ public class WyrmDenUI : MonoBehaviour
 {
     [Header("UI")]
     [SerializeField] private Button useButton;
-    [SerializeField] private TextMeshProUGUI useButtonLabel;   
+    [SerializeField] private TextMeshProUGUI useButtonLabel;
     [SerializeField] private TextMeshProUGUI favorLabel;
     [SerializeField] private GameObject favorActiveImage;
     [SerializeField] private TextMeshProUGUI favorTimerText;
 
     [Header("Effect")]
     [Tooltip("0..1 where 0.25 = +25% increased encounter odds while active.")]
-    [SerializeField, Range(0f,1f)] private float bonus = 0.25f;
+    [SerializeField, Range(0f, 1f)] private float bonus = 0.25f;
     [SerializeField, Min(1)] private int durationHours = 2;
     [SerializeField] private bool consumeFavorItem = true;
 
@@ -26,8 +26,10 @@ public class WyrmDenUI : MonoBehaviour
     {
         Wire();
         Refresh();
-        RefreshButtonLabel();   
-        RefreshFavorVisual();      
+        RefreshButtonLabel();
+        RefreshFavorVisual();
+        RefreshUseButtonVisibility();
+
         StartTicker();
         GameEvents.OnResourcesChanged += OnResourcesChanged;
     }
@@ -48,8 +50,9 @@ public class WyrmDenUI : MonoBehaviour
     void OnResourcesChanged()
     {
         Refresh();
-        RefreshButtonLabel();         
+        RefreshButtonLabel();
         RefreshFavorVisual();
+        RefreshUseButtonVisibility();
     }
 
     void Refresh()
@@ -61,9 +64,32 @@ public class WyrmDenUI : MonoBehaviour
 
         useButton.interactable = (!active) && (!consumeFavorItem || have > 0);
         favorLabel.text = $"Favor: {have}";
+
+        RefreshUseButtonVisibility();
     }
 
-    void RefreshButtonLabel()        
+    /// <summary>
+    /// If we do not have any Favor (and we consume Favor), hide the entire Use button GameObject.
+    /// If consumeFavorItem is false, we always show the button.
+    /// </summary>
+    void RefreshUseButtonVisibility()
+    {
+        if (!useButton) return;
+
+        if (SaveManager.Data == null)
+        {
+            useButton.gameObject.SetActive(!consumeFavorItem);
+            return;
+        }
+
+        int have = ResourceBank.Get(ResourceType.Favor);
+        bool shouldShow = !consumeFavorItem || have > 0;
+
+        if (useButton.gameObject.activeSelf != shouldShow)
+            useButton.gameObject.SetActive(shouldShow);
+    }
+
+    void RefreshButtonLabel()
     {
         if (!useButtonLabel) return;
 
@@ -77,6 +103,7 @@ public class WyrmDenUI : MonoBehaviour
         {
             Refresh();
             RefreshButtonLabel();
+            RefreshUseButtonVisibility();
             return;
         }
 
@@ -96,8 +123,9 @@ public class WyrmDenUI : MonoBehaviour
         SaveManager.Save();
         GameEvents.OnResourcesChanged?.Invoke();
 
-        RefreshButtonLabel();        
+        RefreshButtonLabel();
         RefreshFavorVisual();
+        RefreshUseButtonVisibility();
     }
 
     void StartTicker()
@@ -124,8 +152,9 @@ public class WyrmDenUI : MonoBehaviour
                     : "No active Favor boost";
             }
 
-            RefreshButtonLabel();    
+            RefreshButtonLabel();
             RefreshFavorVisual();
+            RefreshUseButtonVisibility();
 
             yield return wait;
         }
@@ -159,5 +188,4 @@ public class WyrmDenUI : MonoBehaviour
         bool active = GetSecondsRemaining() > 0;
         favorActiveImage.SetActive(active);
     }
-
 }

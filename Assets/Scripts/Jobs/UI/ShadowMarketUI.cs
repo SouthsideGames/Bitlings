@@ -24,6 +24,8 @@ public class ShadowMarketUI : MonoBehaviour
         RefreshCounts();
         RefreshButtonLabel();
         RefreshShinyVisual();
+        RefreshUseButtonVisibility();
+
         StartTicker();
         GameEvents.OnResourcesChanged += OnResChanged;
     }
@@ -51,6 +53,7 @@ public class ShadowMarketUI : MonoBehaviour
         RefreshCounts();
         RefreshButtonLabel();
         RefreshShinyVisual();
+        RefreshUseButtonVisibility();
     }
 
     void RefreshCounts()
@@ -62,6 +65,29 @@ public class ShadowMarketUI : MonoBehaviour
         bool active = GetSecondsRemaining() > 0;
         if (useOrbBtn)
             useOrbBtn.interactable = (!active) && have > 0;
+
+        RefreshUseButtonVisibility();
+    }
+
+    /// <summary>
+    /// If we do not have any Shiny Orbs, hide the entire Use button GameObject.
+    /// </summary>
+    void RefreshUseButtonVisibility()
+    {
+        if (!useOrbBtn) return;
+
+        // Safe default: if save isn't ready, hide.
+        if (SaveManager.Data == null)
+        {
+            useOrbBtn.gameObject.SetActive(false);
+            return;
+        }
+
+        int have = ResourceBank.Get(ResourceType.ShinyOrb);
+        bool shouldShow = have > 0;
+
+        if (useOrbBtn.gameObject.activeSelf != shouldShow)
+            useOrbBtn.gameObject.SetActive(shouldShow);
     }
 
     void RefreshButtonLabel()
@@ -87,6 +113,7 @@ public class ShadowMarketUI : MonoBehaviour
             RefreshCounts();
             RefreshButtonLabel();
             RefreshShinyVisual();
+            RefreshUseButtonVisibility();
             return;
         }
 
@@ -113,6 +140,7 @@ public class ShadowMarketUI : MonoBehaviour
         RefreshCounts();
         RefreshButtonLabel();
         RefreshShinyVisual();
+        RefreshUseButtonVisibility();
     }
 
     void StartTicker()
@@ -142,6 +170,7 @@ public class ShadowMarketUI : MonoBehaviour
 
             RefreshButtonLabel();
             RefreshShinyVisual();
+            RefreshUseButtonVisibility();
 
             yield return wait;
         }

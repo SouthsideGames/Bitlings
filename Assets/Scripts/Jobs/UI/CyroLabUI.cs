@@ -15,7 +15,7 @@ public class CyroLabUI : MonoBehaviour
     [SerializeField] private GameObject orderActiveImage;
 
     [Header("Effect")]
-    [SerializeField, Range(0f,1f)] private float bonus = 0.25f;
+    [SerializeField, Range(0f, 1f)] private float bonus = 0.25f;
     [SerializeField, Min(1)] private int durationHours = 2;
     [SerializeField] private bool consumeWorkOrderItem = true;
 
@@ -27,6 +27,8 @@ public class CyroLabUI : MonoBehaviour
         Refresh();
         RefreshButtonLabel();
         RefreshWorkOrderVisual();
+        RefreshUseButtonVisibility();
+
         StartTicker();
         GameEvents.OnResourcesChanged += OnResourcesChanged;
     }
@@ -49,6 +51,7 @@ public class CyroLabUI : MonoBehaviour
         Refresh();
         RefreshButtonLabel();
         RefreshWorkOrderVisual();
+        RefreshUseButtonVisibility();
     }
 
     void Refresh()
@@ -60,6 +63,30 @@ public class CyroLabUI : MonoBehaviour
 
         bool active = GetSecondsRemaining() > 0;
         useButton.interactable = (!active) && (!consumeWorkOrderItem || have > 0);
+
+        RefreshUseButtonVisibility();
+    }
+
+    /// <summary>
+    /// If we do not have any work orders (and we consume them), hide the entire Use button GameObject.
+    /// If consumeWorkOrderItem is false, we always show the button.
+    /// </summary>
+    void RefreshUseButtonVisibility()
+    {
+        if (!useButton) return;
+
+        // Safe default: if save isn't ready, hide when consumption is enabled.
+        if (SaveManager.Data == null)
+        {
+            useButton.gameObject.SetActive(!consumeWorkOrderItem);
+            return;
+        }
+
+        int have = ResourceBank.Get(ResourceType.WorkOrder);
+        bool shouldShow = !consumeWorkOrderItem || have > 0;
+
+        if (useButton.gameObject.activeSelf != shouldShow)
+            useButton.gameObject.SetActive(shouldShow);
     }
 
     void OnClickUse()
@@ -69,6 +96,7 @@ public class CyroLabUI : MonoBehaviour
             Refresh();
             RefreshButtonLabel();
             RefreshWorkOrderVisual();
+            RefreshUseButtonVisibility();
             return;
         }
 
@@ -90,6 +118,7 @@ public class CyroLabUI : MonoBehaviour
 
         RefreshButtonLabel();
         RefreshWorkOrderVisual();
+        RefreshUseButtonVisibility();
     }
 
     void StartTicker()
@@ -121,6 +150,7 @@ public class CyroLabUI : MonoBehaviour
 
             RefreshButtonLabel();
             RefreshWorkOrderVisual();
+            RefreshUseButtonVisibility();
 
             yield return wait;
         }

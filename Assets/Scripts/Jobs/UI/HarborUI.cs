@@ -42,6 +42,7 @@ public class HarborUI : MonoBehaviour
         UpdateTexts();
         RefreshActiveFlyerIcon();
         RefreshButtonLabel();
+        RefreshUseButtonVisibility();
 
         StartTicker();
         GameEvents.OnResourcesChanged += OnResourcesChanged;
@@ -59,6 +60,7 @@ public class HarborUI : MonoBehaviour
         UpdateTexts();
         RefreshActiveFlyerIcon();
         RefreshButtonLabel();
+        RefreshUseButtonVisibility();
     }
 
     void Wire()
@@ -95,6 +97,7 @@ public class HarborUI : MonoBehaviour
         {
             flyersLabel.text = "Flyers: -";
             useFlyerButton.interactable = false;
+            RefreshUseButtonVisibility(); // keep consistent even if save missing
             return;
         }
 
@@ -104,6 +107,30 @@ public class HarborUI : MonoBehaviour
         useFlyerButton.interactable = (!consumeFlyerItem || have > 0); // allow replace even while active, per your current behavior
 
         flyersLabel.text = $"Flyers: {have}";
+
+        RefreshUseButtonVisibility();
+    }
+
+    /// <summary>
+    /// If we do not have any flyers (and we consume flyers), hide the entire Use Flyer button GameObject.
+    /// If consumeFlyerItem is false, we always show the button.
+    /// </summary>
+    void RefreshUseButtonVisibility()
+    {
+        if (!useFlyerButton) return;
+
+        if (SaveManager.Data == null)
+        {
+            // If save isn't ready, keep it hidden when consumption is enabled (safe default).
+            useFlyerButton.gameObject.SetActive(!consumeFlyerItem);
+            return;
+        }
+
+        int have = ResourceBank.Get(ResourceType.Flyer);
+
+        bool shouldShow = !consumeFlyerItem || have > 0;
+        if (useFlyerButton.gameObject.activeSelf != shouldShow)
+            useFlyerButton.gameObject.SetActive(shouldShow);
     }
 
     void RefreshButtonLabel()
@@ -111,7 +138,7 @@ public class HarborUI : MonoBehaviour
         if (!useFlyerButtonLabel) return;
 
         bool active = GetFlyerSecondsRemaining() > 0;
-        useFlyerButtonLabel.text = active ? "Replace Flyer" : "Use Flyer";
+        useFlyerButtonLabel.text = active ? "Replace" : "Use";
     }
 
     long GetFlyerSecondsRemaining()
@@ -128,6 +155,7 @@ public class HarborUI : MonoBehaviour
         {
             Refresh();
             RefreshButtonLabel();
+            RefreshUseButtonVisibility();
             return;
         }
 
@@ -140,6 +168,7 @@ public class HarborUI : MonoBehaviour
         UpdateTexts();
         RefreshActiveFlyerIcon();
         RefreshButtonLabel();
+        RefreshUseButtonVisibility();
     }
 
     void RefreshActiveFlyerIcon()
@@ -206,6 +235,7 @@ public class HarborUI : MonoBehaviour
 
             RefreshActiveFlyerIcon();
             RefreshButtonLabel();
+            RefreshUseButtonVisibility();
 
             yield return wait;
         }

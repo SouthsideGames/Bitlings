@@ -88,14 +88,6 @@ public class BattleManager : MonoBehaviour
     [SerializeField] private TextMeshProUGUI playerDEFText;
     [SerializeField] private TextMeshProUGUI playerSPDText;
 
-    // Optional: wire these to dedicated HP value labels (e.g., "23/50") so we never
-    // overwrite the stat rows (playerHPText / wildHPText) mid-battle.
-    [Header("HP Value Labels (Optional)")]
-    [SerializeField] private TextMeshProUGUI playerHPValueText;
-    [SerializeField] private TextMeshProUGUI wildHPValueText;
-
-    // If your playerHPText/wildHPText fields are used as the stat-row labels ("HP: 50"),
-    // keep this ON so UpdateHPTextUI will not overwrite them.
     [SerializeField] private bool hpTextFieldsAreStatRows = true;
 
     [Header("Bench UI")]
@@ -1577,18 +1569,9 @@ public class BattleManager : MonoBehaviour
             int wCurI = Mathf.CeilToInt(wildCur);
             int wMaxI = Mathf.CeilToInt(wildMax);
 
-            // If you wire these optional fields, they will show "23/50" etc. without
-            // ever overwriting your stat rows (HP/ATK/DEF/SPD).
-            if (playerHPValueText)
+            if (feedback != null && feedback.HasHPTextWired)
             {
-                playerHPValueText.gameObject.SetActive(true);
-                playerHPValueText.text = $"{pCurI}/{pMaxI}";
-            }
-
-            if (wildHPValueText)
-            {
-                wildHPValueText.gameObject.SetActive(true);
-                wildHPValueText.text = $"{wCurI}/{wMaxI}";
+                feedback.SetHPTexts(playerCur, playerMax, wildCur, wildMax);
             }
 
             // Legacy fallback:
