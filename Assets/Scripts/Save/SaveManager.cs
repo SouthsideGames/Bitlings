@@ -641,12 +641,32 @@ public static class SaveManager
 
             OwnedMonsterData canonical = null;
 
+            // 1) Strong match: ownedUID
             if (!string.IsNullOrEmpty(t.ownedUID))
                 canonical = Data.owned.Find(o => o != null && o.ownedUID == t.ownedUID);
 
+            // 2) Safe fallback: monsterId ONLY if unique in owned list (prevents duplicate cross-contamination)
             if (canonical == null)
-                canonical = Data.owned.Find(o => o != null && o.monsterId == t.monsterId);
+            {
+                int count = 0;
+                OwnedMonsterData single = null;
 
+                for (int k = 0; k < Data.owned.Count; k++)
+                {
+                    var o = Data.owned[k];
+                    if (o != null && o.monsterId == t.monsterId)
+                    {
+                        count++;
+                        if (count == 1) single = o;
+                        else break; // not unique
+                    }
+                }
+
+                if (count == 1)
+                    canonical = single;
+            }
+
+            // 3) If still null, create a new canonical owned entry from the team entry
             if (canonical == null)
             {
                 canonical = new OwnedMonsterData
@@ -655,19 +675,33 @@ public static class SaveManager
                     level = Mathf.Max(1, t.level),
                     currentHP = t.currentHP <= -1 ? t.currentHP : -1,
                     currentXP = Mathf.Max(0, t.currentXP),
-                    ownedUID = string.IsNullOrEmpty(t.ownedUID) ? Guid.NewGuid().ToString("N") : t.ownedUID
+                    ownedUID = string.IsNullOrEmpty(t.ownedUID) ? Guid.NewGuid().ToString("N") : t.ownedUID,
+
+                    // Preserve progression fields if present on OwnedMonsterData
+                    unspentStatPoints = Mathf.Max(0, t.unspentStatPoints),
+                    trainingBonus = t.trainingBonus,
+                    lastBucketId = t.lastBucketId,
+                    autoApply = t.autoApply,
+                    autoApplyTargetLevel = t.autoApplyTargetLevel,
+                    trainingLastUnix = t.trainingLastUnix,
+                    lastLevelClaimDay = t.lastLevelClaimDay,
+                    pendingLevels = Mathf.Max(0, t.pendingLevels),
                 };
+
                 Data.owned.Add(canonical);
             }
 
             if (string.IsNullOrEmpty(canonical.ownedUID))
                 canonical.ownedUID = Guid.NewGuid().ToString("N");
 
+            // Replace team entry with canonical owned instance
             Data.team[i] = canonical;
 
             if (!string.IsNullOrEmpty(canonical.monsterId))
                 Data.ownedIds.Add(canonical.monsterId);
         }
+
+
 
         // Training pointer default
         if (string.IsNullOrEmpty(Data.trainingMonsterId) && Data.team.Count > 0)

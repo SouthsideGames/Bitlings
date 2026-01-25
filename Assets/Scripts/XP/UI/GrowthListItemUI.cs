@@ -77,6 +77,7 @@ public class GrowthListItemUI : MonoBehaviour
             FeatureUnlockManager.I.OnFeatureUnlocked += HandleFeatureUnlocked;
 
         RefreshAutoToggleFeatureGate();
+        RefreshOpenInteractable();
     }
 
     private void OnDisable()
@@ -98,35 +99,57 @@ public class GrowthListItemUI : MonoBehaviour
         if (_model == null) return;
 
         var data = SaveManager.Data;
-        if (data == null || data.team == null) return;
+        if (data == null) return;
 
         OwnedMonsterData latest = null;
 
-        // Prefer matching by ownedUID if present (most robust if team order changes)
-        if (!string.IsNullOrEmpty(_model.ownedUID))
+        // Prefer canonical owned instance first (bench monsters must refresh too)
+        if (data.owned != null)
         {
-            for (int i = 0; i < data.team.Count; i++)
+            if (!string.IsNullOrEmpty(_model.ownedUID))
+                latest = data.owned.Find(o => o != null && o.ownedUID == _model.ownedUID);
+
+            if (latest == null && !string.IsNullOrEmpty(_model.monsterId))
             {
-                var m = data.team[i];
-                if (m != null && m.ownedUID == _model.ownedUID)
+                // Safe fallback: if multiple exist, we can't disambiguate; do nothing.
+                int count = 0;
+                OwnedMonsterData single = null;
+                for (int i = 0; i < data.owned.Count; i++)
                 {
-                    latest = m;
-                    break;
+                    var o = data.owned[i];
+                    if (o != null && o.monsterId == _model.monsterId)
+                    {
+                        count++;
+                        if (count == 1) single = o;
+                        else break;
+                    }
                 }
+                if (count == 1) latest = single;
             }
         }
 
-        // Fallback: match by monsterId if we didn’t find by ownedUID
-        if (latest == null && !string.IsNullOrEmpty(_model.monsterId))
+        // If not found in owned, try team list
+        if (latest == null && data.team != null)
         {
-            for (int i = 0; i < data.team.Count; i++)
+            if (!string.IsNullOrEmpty(_model.ownedUID))
+                latest = data.team.Find(t => t != null && t.ownedUID == _model.ownedUID);
+
+            if (latest == null && !string.IsNullOrEmpty(_model.monsterId))
             {
-                var m = data.team[i];
-                if (m != null && m.monsterId == _model.monsterId)
+                // Same safe fallback rule (unique only)
+                int count = 0;
+                OwnedMonsterData single = null;
+                for (int i = 0; i < data.team.Count; i++)
                 {
-                    latest = m;
-                    break;
+                    var t = data.team[i];
+                    if (t != null && t.monsterId == _model.monsterId)
+                    {
+                        count++;
+                        if (count == 1) single = t;
+                        else break;
+                    }
                 }
+                if (count == 1) latest = single;
             }
         }
 
@@ -134,6 +157,12 @@ public class GrowthListItemUI : MonoBehaviour
         {
             _model = latest;
             RefreshLevel(_model.level);
+            RefreshOpenInteractable();
+        }
+        else
+        {
+            // Still refresh interactable state (cores / points may have changed)
+            RefreshOpenInteractable();
         }
     }
 
@@ -153,17 +182,19 @@ public class GrowthListItemUI : MonoBehaviour
 
         bool unlocked = IsAutoGrowthUnlocked();
         autoToggle.gameObject.SetActive(unlocked);
-
-        // If the feature is somehow locked but the data has autoApply = true,
-        // we leave the data as-is but hide the toggle.
     }
 
     // Call this if cores change globally and you want to refresh rows.
     public void RefreshOpenInteractable()
     {
         if (!openButton) return;
+
         int cores = ResourceManager.I ? ResourceManager.I.Get(ResourceType.GrowthCore) : 0;
-        openButton.interactable = cores > 0;
+        int unspent = _model != null ? Mathf.Max(0, _model.unspentStatPoints) : 0;
+
+        // IMPORTANT: You must be able to open the stats panel even if you have 0 cores,
+        // as long as you have unspent stat points to spend.
+        openButton.interactable = (cores > 0) || (unspent > 0);
     }
 
     private void OnAutoToggleChanged(bool isOn)
@@ -173,7 +204,6 @@ public class GrowthListItemUI : MonoBehaviour
 
         if (!IsAutoGrowthUnlocked())
         {
-            // Safety guard – should not happen because toggle is hidden when locked.
             _suppressToggle = true;
             autoToggle.SetIsOnWithoutNotify(false);
             _suppressToggle = false;
@@ -182,7 +212,6 @@ public class GrowthListItemUI : MonoBehaviour
 
         if (isOn)
         {
-            // ask parent if we can enable (cap check)
             if (_canEnableAnotherAuto != null && !_canEnableAnotherAuto())
             {
                 _suppressToggle = true;

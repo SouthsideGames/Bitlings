@@ -13,14 +13,11 @@ public static class GameEvents
     public static Action OnTeamChanged;
     public static Action OnResourcesChanged;
     public static Action OnJobsChanged;
-
     public static Action JobGlobalModsChanged;
-
     public static Action OnSaveReloaded;
-
     public static Action OnSettingsApplied;
-
     public static Action<bool> HardResetting;
+    public static Action<string> ToastRequested;
 
     // ─────────────────────────────────────────────────────────
     // Monsters / Progression
@@ -30,7 +27,6 @@ public static class GameEvents
     public static Action<string> MonsterEvolved;
     public static Action<string, MonsterType> MonsterCaptured;
     public static Action<MonsterType> StarterChosen;
-
     public static Action OnOwnedMonstersChanged;
 
     // ─────────────────────────────────────────────────────────
@@ -38,11 +34,8 @@ public static class GameEvents
     // ─────────────────────────────────────────────────────────
     public static Action<string, MonsterDataSO> BossSpawned;
     public static Action<string> BossDefeated;
-
     public static Action<string, string, int, int> ShowRewardPopup;
-
     public static Action<BattleResult> BattleFinished;
-
     public static Action OnBattleStateChanged;
     public static Action OnEncounterAutoModeChanged;
 
@@ -57,12 +50,9 @@ public static class GameEvents
     // Idle / Meta
     // ─────────────────────────────────────────────────────────
     public static Action<int> IdleBatchCompleted;
-
     public static Action<int> WinStreakChanged;
     public static Action FavoritesChanged;
-
     public static Action Tutorial_FirstJobAssigned;
-
     public static Action OnBoostersChanged;
 
     // ─────────────────────────────────────────────────────────────────────────────
@@ -73,5 +63,11 @@ public static class GameEvents
     public static void RaiseBattleStatsChanged()
     {
         BattleStatsChanged?.Invoke();
+    }
+
+    public static void RaiseToast(string message)
+    {
+        if (string.IsNullOrWhiteSpace(message)) return;
+        ToastRequested?.Invoke(message);
     }
 }

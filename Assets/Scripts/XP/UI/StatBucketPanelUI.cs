@@ -43,29 +43,21 @@ public class StatBucketPanelUI : MonoBehaviour
     [Header("Config")]
     [SerializeField, Min(1)] private int pointsPerLevel = 3;
 
-    private TokenEconomySO   tokenEconomy;
-    private BucketLibrarySO  bucketLibrary;
+    private TokenEconomySO tokenEconomy;
+    private BucketLibrarySO bucketLibrary;
     private LevelCostCurveSO levelCostCurve;
     private bool _isConfirming;
     private OwnedMonsterData _m;
     private LevelUpBucketSO _bucket;
 
     // Display breakdown
-    // "Monster base" = monster's level-scaled base stats (no training)
-    // "Training"      = saved training bonuses + pending allocation (green)
     private int _monHP, _monATK, _monDEF, _monSPD;
     private int _trainHP, _trainATK, _trainDEF, _trainSPD;
-
     private int _baseHP, _baseATK, _baseDEF, _baseSPD;
-
     private int _allocHp, _allocAtk, _allocDef, _allocSpd;
-
     private int _points;
     private int _nextCostToLevel;
-
     const string GREEN = "#3CDE74";
-
-    // ─────────────────────────────────────────────────────────────
 
     private void Awake()
     {
@@ -123,8 +115,8 @@ public class StatBucketPanelUI : MonoBehaviour
 
     private void Wire()
     {
-        if (hpMinus)  hpMinus.onClick.AddListener(() => AddAlloc(ref _allocHp,  -1));
-        if (hpPlus)   hpPlus.onClick.AddListener(() => AddAlloc(ref _allocHp,  +1));
+        if (hpMinus)  hpMinus.onClick.AddListener(() => AddAlloc(ref _allocHp, -1));
+        if (hpPlus)   hpPlus.onClick.AddListener(() => AddAlloc(ref _allocHp, +1));
         if (atkMinus) atkMinus.onClick.AddListener(() => AddAlloc(ref _allocAtk, -1));
         if (atkPlus)  atkPlus.onClick.AddListener(() => AddAlloc(ref _allocAtk, +1));
         if (defMinus) defMinus.onClick.AddListener(() => AddAlloc(ref _allocDef, -1));
@@ -132,7 +124,6 @@ public class StatBucketPanelUI : MonoBehaviour
         if (spdMinus) spdMinus.onClick.AddListener(() => AddAlloc(ref _allocSpd, -1));
         if (spdPlus)  spdPlus.onClick.AddListener(() => AddAlloc(ref _allocSpd, +1));
 
-        // Preset buttons: set bucket + apply preset allocation
         if (offenseBtn) offenseBtn.onClick.AddListener(() => OnPresetClicked("Offense"));
         if (defenseBtn) defenseBtn.onClick.AddListener(() => OnPresetClicked("Defense"));
         if (utilityBtn) utilityBtn.onClick.AddListener(() => OnPresetClicked("Utility"));
@@ -190,25 +181,12 @@ public class StatBucketPanelUI : MonoBehaviour
 
     private void ComputeCurrentStats()
     {
-        _monHP  = 0;
-        _monATK = 0;
-        _monDEF = 0;
-        _monSPD = 0;
-
-        _trainHP  = 0;
-        _trainATK = 0;
-        _trainDEF = 0;
-        _trainSPD = 0;
-
-        _baseHP  = 0;
-        _baseATK = 0;
-        _baseDEF = 0;
-        _baseSPD = 0;
+        _monHP = _monATK = _monDEF = _monSPD = 0;
+        _trainHP = _trainATK = _trainDEF = _trainSPD = 0;
+        _baseHP = _baseATK = _baseDEF = _baseSPD = 0;
 
         if (_m == null || string.IsNullOrEmpty(_m.monsterId)) return;
 
-        // Canonical breakdown:
-        // base+level derived, training from save, total is sum.
         var stats = ProgressionStatCalc.Get(_m);
 
         _monHP  = stats.basePlusLevelHP;
@@ -221,13 +199,11 @@ public class StatBucketPanelUI : MonoBehaviour
         _trainDEF = stats.trainingDEF;
         _trainSPD = stats.trainingSPD;
 
-        // legacy aggregates (if any other UI expects these)
         _baseHP  = _monHP  + _trainHP;
         _baseATK = _monATK + _trainATK;
         _baseDEF = _monDEF + _trainDEF;
         _baseSPD = _monSPD + _trainSPD;
     }
-
 
     private void RefreshUI()
     {
@@ -256,8 +232,6 @@ public class StatBucketPanelUI : MonoBehaviour
         int defDelta = _allocDef * (tokenEconomy ? tokenEconomy.defPerCore : 1);
         int spdDelta = _allocSpd * (tokenEconomy ? tokenEconomy.spdPerCore : 1);
 
-        // Adjusted stats: Total (MonsterBase + Training[green])
-        // Training includes saved training bonuses + pending allocation.
         SetStatLabelBreakdown(hpVal,  _monHP,  _trainHP,  hpDelta);
         SetStatLabelBreakdown(atkVal, _monATK, _trainATK, atkDelta);
         SetStatLabelBreakdown(defVal, _monDEF, _trainDEF, defDelta);
@@ -291,10 +265,6 @@ public class StatBucketPanelUI : MonoBehaviour
         }
     }
 
-    // Display format requested:
-    //   100 (Base + Training[green])
-    // Base = monster base stats (level-scaled), excludes training.
-    // Training = saved training bonus + pending allocation.
     private void SetStatLabelBreakdown(TextMeshProUGUI label, int monsterBase, int trainingSaved, int allocDelta)
     {
         if (!label) return;
@@ -303,18 +273,7 @@ public class StatBucketPanelUI : MonoBehaviour
         int trainingVal = Mathf.Max(0, trainingSaved) + Mathf.Max(0, allocDelta);
         int total = baseVal + trainingVal;
 
-        // Keep it simple and consistent even when training is 0.
         label.text = $"{total} ({baseVal} + <color={GREEN}>{trainingVal}</color>)";
-    }
-
-    private void SetStatLabel(TextMeshProUGUI label, int baseVal, int allocDelta)
-    {
-        if (!label) return;
-        int total = baseVal + allocDelta;
-        if (allocDelta > 0)
-            label.text = $"{total} <color={GREEN}>(+{allocDelta})</color>";
-        else
-            label.text = $"{total}";
     }
 
     private void AddAlloc(ref int field, int delta)
@@ -335,7 +294,6 @@ public class StatBucketPanelUI : MonoBehaviour
         RefreshUI();
     }
 
-    // Preset click: remember bucket + auto-allocate points
     private void OnPresetClicked(string bucketId)
     {
         SetBucket(bucketId);
@@ -353,7 +311,6 @@ public class StatBucketPanelUI : MonoBehaviour
             _m.lastBucketId = _bucket ? _bucket.bucketId : null;
     }
 
-    // Apply up to 5 points according to the selected preset
     private void ApplyPreset(string bucketId)
     {
         if (_m == null) return;
@@ -367,43 +324,32 @@ public class StatBucketPanelUI : MonoBehaviour
         switch (bucketId)
         {
             case "Offense":
-                for (int i = 0; i < toSpend; i++)
-                    AddAlloc(ref _allocAtk, +1);
+                for (int i = 0; i < toSpend; i++) AddAlloc(ref _allocAtk, +1);
                 break;
-
             case "Defense":
-                for (int i = 0; i < toSpend; i++)
-                    AddAlloc(ref _allocDef, +1);
+                for (int i = 0; i < toSpend; i++) AddAlloc(ref _allocDef, +1);
                 break;
-
             case "Speed":
-                for (int i = 0; i < toSpend; i++)
-                    AddAlloc(ref _allocSpd, +1);
+                for (int i = 0; i < toSpend; i++) AddAlloc(ref _allocSpd, +1);
                 break;
-
             case "Balance":
                 for (int i = 0; i < toSpend; i++)
                 {
                     int step = i % 3;
-                    if (step == 0)      AddAlloc(ref _allocHp,  +1);
+                    if (step == 0) AddAlloc(ref _allocHp, +1);
                     else if (step == 1) AddAlloc(ref _allocAtk, +1);
-                    else                AddAlloc(ref _allocDef, +1);
+                    else AddAlloc(ref _allocDef, +1);
                 }
                 break;
-
             case "Utility":
                 for (int i = 0; i < toSpend; i++)
                 {
                     if (i % 2 == 0) AddAlloc(ref _allocHp, +1);
-                    else            AddAlloc(ref _allocSpd, +1);
+                    else AddAlloc(ref _allocSpd, +1);
                 }
                 break;
         }
     }
-
-    // ─────────────────────────────────────────────────────────────
-    // Level Up: spend Growth Cores → gain stat points
-    // ─────────────────────────────────────────────────────────────
 
     private void OnClickLevelUp()
     {
@@ -420,13 +366,9 @@ public class StatBucketPanelUI : MonoBehaviour
             monsterLibrary: null
         );
 
-        if (!success)
-            return;
+        if (!success) return;
 
-        string key = !string.IsNullOrEmpty(_m.ownedUID)
-            ? _m.ownedUID
-            : _m.monsterId;
-
+        string key = !string.IsNullOrEmpty(_m.ownedUID) ? _m.ownedUID : _m.monsterId;
         GameEvents.MonsterLeveled?.Invoke(key, _m.level);
 
         ComputeCurrentStats();
@@ -435,10 +377,6 @@ public class StatBucketPanelUI : MonoBehaviour
         AudioManager.I.PlaySfx(SfxType.LevelUp);
     }
 
-    // ─────────────────────────────────────────────────────────────
-    // Confirm stat allocation: spend stat points, no cores
-    // ─────────────────────────────────────────────────────────────
-
     private void ConfirmSpend()
     {
         if (_isConfirming) return;
@@ -446,10 +384,18 @@ public class StatBucketPanelUI : MonoBehaviour
 
         try
         {
-            // Guard
-            if (_m == null || _points <= 0)
+            // Keep the panel open in ALL cases.
+            if (_m == null)
             {
-                gameObject.SetActive(false);
+                if (confirmBtn) confirmBtn.interactable = true;
+                return;
+            }
+
+            if (_points <= 0)
+            {
+                // Nothing allocated — do not close, just inform.
+                GameEvents.RaiseToast("No points allocated");
+                if (confirmBtn) confirmBtn.interactable = true;
                 return;
             }
 
@@ -459,7 +405,9 @@ public class StatBucketPanelUI : MonoBehaviour
             _m = XPManager.Resolve(_m);
             if (_m == null)
             {
-                gameObject.SetActive(false);
+                // Keep open; fail safely.
+                GameEvents.RaiseToast("Could not apply changes");
+                if (confirmBtn) confirmBtn.interactable = true;
                 return;
             }
 
@@ -472,12 +420,13 @@ public class StatBucketPanelUI : MonoBehaviour
                 spd = _allocSpd * (tokenEconomy ? tokenEconomy.spdPerCore : 1)
             };
 
+            // Preserve existing behavior: apply + save (may fire team changed internally).
             XPManager.ApplyTrainingAndSave(_m, delta);
 
-            // Spend stat points on the canonical instance as well (do not rely on match != null)
+            // Spend stat points on the canonical instance
             _m.unspentStatPoints = Mathf.Max(0, _m.unspentStatPoints - _points);
 
-            // Also try to update the owned list entry if it exists (keeps your existing behavior)
+            // Ensure owned list entry matches canonical instance (extra safety)
             var data = SaveManager.Data;
             if (data != null && data.owned != null)
             {
@@ -490,25 +439,28 @@ public class StatBucketPanelUI : MonoBehaviour
 
                 if (match != null)
                     match.unspentStatPoints = _m.unspentStatPoints;
-
-                SaveManager.Save();
             }
 
-            // Refresh local computed stats + close
+            // Persist final state (including unspent points decrement)
+            SaveManager.Save();
+
+            // IMPORTANT: raise after BOTH training AND unspent points are correct
+            GameEvents.OnTeamChanged?.Invoke();
+
+            GameEvents.RaiseToast("STATS APPLIED");
+
+            // Refresh UI and leave panel open
             ComputeCurrentStats();
-            gameObject.SetActive(false);
+            ClearAlloc();   // also refreshes UI
+            RefreshUI();
         }
         finally
         {
-            // ALWAYS release the confirm lock and re-enable the button for the next open
             _isConfirming = false;
             if (confirmBtn) confirmBtn.interactable = true;
         }
     }
 
-    // ─────────────────────────────────────────────────────────────
-    // Feature gating – presets
-    // ─────────────────────────────────────────────────────────────
 
     private void HandleFeatureUnlocked(FeatureId feature)
     {
