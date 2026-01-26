@@ -164,6 +164,8 @@ public class HarborUI : MonoBehaviour
 
         EncounterManager.I?.AddFlyer(type, clampedBonus, hours);
 
+        GameEvents.RaiseToast("FLYER ACTIVATED");
+
         Refresh();
         UpdateTexts();
         RefreshActiveFlyerIcon();

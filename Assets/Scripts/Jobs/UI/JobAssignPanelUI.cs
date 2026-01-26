@@ -280,6 +280,8 @@ public class JobAssignPanelUI : MonoBehaviour
         JobManager.I.TryAssignWorkerAt(_job, _slotIndex, _pendingDef, _pendingId);
         GameEvents.OnJobsChanged?.Invoke();
         GameEvents.Tutorial_FirstJobAssigned?.Invoke();
+        GameEvents.RaiseToast("WORKER ASSIGNED");
+
         Close();
     }
 

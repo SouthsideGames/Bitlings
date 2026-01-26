@@ -115,6 +115,7 @@ public class CyroLabUI : MonoBehaviour
 
         SaveManager.Save();
         GameEvents.OnResourcesChanged?.Invoke();
+        GameEvents.RaiseToast("WORK ORDER ACTIVATED");
 
         RefreshButtonLabel();
         RefreshWorkOrderVisual();

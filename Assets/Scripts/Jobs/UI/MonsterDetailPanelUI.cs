@@ -276,12 +276,12 @@ public class MonsterDetailPanelUI : MonoBehaviour
         // ─────────────────────────────────────────────────────────────
         if (_showBaseStats)
         {
-            int hpB  = Mathf.RoundToInt(current.baseHP);
+            int hpB = Mathf.RoundToInt(current.baseHP);
             int atkB = Mathf.RoundToInt(current.baseAttack);
             int defB = Mathf.RoundToInt(current.baseDefense);
             float spdB = current.baseSpeed;
 
-            if (hpText)  hpText.text  = hpB  > 0 ? $"HP: {hpB}" : "HP: —";
+            if (hpText) hpText.text = hpB > 0 ? $"HP: {hpB}" : "HP: —";
             if (atkText) atkText.text = atkB > 0 ? $"ATK: {atkB}" : "ATK: —";
             if (defText) defText.text = $"DEF: {defB}";
             if (spdText) spdText.text = $"SPD: {spdB:0.##}";
@@ -296,7 +296,7 @@ public class MonsterDetailPanelUI : MonoBehaviour
         // ─────────────────────────────────────────────────────────────
 
         // Baseline (species + level growth) via BattleCalc
-        int hpBaseAdj  = 0;
+        int hpBaseAdj = 0;
         int atkBaseAdj = 0;
         int defBaseAdj = 0;
         int spdBaseAdj = 0;
@@ -317,7 +317,7 @@ public class MonsterDetailPanelUI : MonoBehaviour
         }
         else
         {
-            hpBaseAdj  = Mathf.RoundToInt(current.baseHP);
+            hpBaseAdj = Mathf.RoundToInt(current.baseHP);
             atkBaseAdj = Mathf.RoundToInt(current.baseAttack);
             defBaseAdj = Mathf.RoundToInt(current.baseDefense);
             spdBaseAdj = Mathf.RoundToInt(current.baseSpeed);
@@ -334,7 +334,7 @@ public class MonsterDetailPanelUI : MonoBehaviour
 
         if (hasOwnedInstance)
         {
-            trainHp  = Mathf.Max(0, _currentOwned.trainingBonus.hp);
+            trainHp = Mathf.Max(0, _currentOwned.trainingBonus.hp);
             trainAtk = Mathf.Max(0, _currentOwned.trainingBonus.atk);
             trainDef = Mathf.Max(0, _currentOwned.trainingBonus.def);
             trainSpd = Mathf.Max(0, _currentOwned.trainingBonus.spd);
@@ -343,7 +343,7 @@ public class MonsterDetailPanelUI : MonoBehaviour
         }
 
         // Apply training (EV-like) + permanent flatAtkBonus (with legacy guard)
-        int hpAdj  = Mathf.Max(1, hpBaseAdj + (hasOwnedInstance ? trainHp : 0));
+        int hpAdj = Mathf.Max(1, hpBaseAdj + (hasOwnedInstance ? trainHp : 0));
         int defAdj = Mathf.Max(0, defBaseAdj + (hasOwnedInstance ? trainDef : 0));
         int spdAdj = Mathf.Max(1, spdBaseAdj + (hasOwnedInstance ? trainSpd : 0));
 
@@ -906,6 +906,10 @@ public class MonsterDetailPanelUI : MonoBehaviour
     {
         slotIndex = Mathf.Clamp(slotIndex, 0, 2);
 
+        // We'll compute the toast label from the def we are assigning.
+        string bitlingName = GetBitlingName(current);
+        string slotLabel = GetSlotLabel(slotIndex);
+
         if (_mode == MonsterDetailMode.CodexView)
         {
             if (current == null || string.IsNullOrEmpty(current.id)) { Hide(); return; }
@@ -929,6 +933,9 @@ public class MonsterDetailPanelUI : MonoBehaviour
             data.team = team;
             SaveManager.Save();
             GameEvents.OnTeamChanged?.Invoke();
+
+            // ✅ Toast
+            GameEvents.RaiseToast($"{bitlingName} assigned to {slotLabel}");
 
             Hide();
             return;
@@ -967,25 +974,50 @@ public class MonsterDetailPanelUI : MonoBehaviour
         SaveManager.Save();
         GameEvents.OnTeamChanged?.Invoke();
 
+        GameEvents.RaiseToast($"{GetBitlingName(current)} assigned to {slotLabel}");
+
         Hide();
     }
+
 
     private void RemoveFromTeam()
     {
         if (_teamSlotIndex < 0) { Hide(); return; }
 
-        var team = SaveManager.Data.team ?? new List<OwnedMonsterData>();
+        var data = SaveManager.Data;
+        if (data == null) { Hide(); return; }
+
+        var team = data.team ?? new List<OwnedMonsterData>();
         while (team.Count < 3) team.Add(new OwnedMonsterData());
+
+        // Capture name BEFORE clearing slot
+        string removedName = "Bitling";
+        var existing = team[_teamSlotIndex];
+
+        if (existing != null && !string.IsNullOrEmpty(existing.monsterId))
+        {
+            var def = MonsterLibraryLocator.GetById(existing.monsterId);
+            removedName = GetBitlingName(def);
+        }
+        else if (current != null)
+        {
+            // Fallback if slot data is empty but UI is showing something
+            removedName = GetBitlingName(current);
+        }
 
         team[_teamSlotIndex] = new OwnedMonsterData();
 
-        SaveManager.Data.team = team;
+        data.team = team;
         SaveManager.Save();
         GameEvents.OnTeamChanged?.Invoke();
+
+        // ✅ Toast
+        GameEvents.RaiseToast($"{removedName} removed from active team");
 
         _onRemoved?.Invoke();
         Hide();
     }
+
 
     // ─────────────────────────────────────────────────────────────
     // Internal helpers
@@ -1112,7 +1144,7 @@ public class MonsterDetailPanelUI : MonoBehaviour
 
         if (hasOwnedInstance)
         {
-            trainHP  = Mathf.Max(0, _currentOwned.trainingBonus.hp);
+            trainHP = Mathf.Max(0, _currentOwned.trainingBonus.hp);
             trainATK = Mathf.Max(0, _currentOwned.trainingBonus.atk);
             trainDEF = Mathf.Max(0, _currentOwned.trainingBonus.def);
             trainSPD = Mathf.Max(0, _currentOwned.trainingBonus.spd);
@@ -1125,8 +1157,8 @@ public class MonsterDetailPanelUI : MonoBehaviour
 
         // Compute adjusted totals at the evolution level for current form and next form.
         // IMPORTANT: We intentionally do NOT apply Titles/equipment here (moveable layers).
-        int curHP  = Mathf.RoundToInt(BattleCalc.CalcHP(m, evoLvl));
-        int nxtHP  = Mathf.RoundToInt(BattleCalc.CalcHP(nextDef, evoLvl));
+        int curHP = Mathf.RoundToInt(BattleCalc.CalcHP(m, evoLvl));
+        int nxtHP = Mathf.RoundToInt(BattleCalc.CalcHP(nextDef, evoLvl));
 
         int curATK = Mathf.RoundToInt(BattleCalc.CalcBaseAttack(m, evoLvl, 0, 0));
         int nxtATK = Mathf.RoundToInt(BattleCalc.CalcBaseAttack(nextDef, evoLvl, 0, 0));
@@ -1139,13 +1171,13 @@ public class MonsterDetailPanelUI : MonoBehaviour
 
         if (hasOwnedInstance)
         {
-            curHP  += trainHP;  nxtHP  += trainHP;
-            curATK += (trainATK + flatAtkBonus);  nxtATK += (trainATK + flatAtkBonus);
+            curHP += trainHP; nxtHP += trainHP;
+            curATK += (trainATK + flatAtkBonus); nxtATK += (trainATK + flatAtkBonus);
             curDEF += trainDEF; nxtDEF += trainDEF;
             curSPD += trainSPD; nxtSPD += trainSPD;
         }
 
-        int dHp  = nxtHP  - curHP;
+        int dHp = nxtHP - curHP;
         int dAtk = nxtATK - curATK;
         int dDef = nxtDEF - curDEF;
         int dSpd = nxtSPD - curSPD;
@@ -1153,7 +1185,7 @@ public class MonsterDetailPanelUI : MonoBehaviour
         // Build a compact delta string with only meaningful changes.
         // Example: "(+15 HP, +6 ATK)"
         List<string> parts = new List<string>(4);
-        if (dHp != 0)  parts.Add($"{(dHp > 0 ? "+" : "")}{dHp} HP");
+        if (dHp != 0) parts.Add($"{(dHp > 0 ? "+" : "")}{dHp} HP");
         if (dAtk != 0) parts.Add($"{(dAtk > 0 ? "+" : "")}{dAtk} ATK");
         if (dDef != 0) parts.Add($"{(dDef > 0 ? "+" : "")}{dDef} DEF");
         if (dSpd != 0) parts.Add($"{(dSpd > 0 ? "+" : "")}{dSpd} SPD");
@@ -1349,5 +1381,18 @@ public class MonsterDetailPanelUI : MonoBehaviour
 
         return flatAtkBonus >= trainingAtk && flatAtkBonus >= 10;
     }
+    
+    private string GetBitlingName(MonsterDataSO def)
+    {
+        if (def == null) return "Bitling";
+        return !string.IsNullOrEmpty(def.displayName) ? def.displayName : def.name;
+    }
+
+    private string GetSlotLabel(int slotIndex)
+    {
+        // slotIndex is 0-based internally; player-facing is 1-based
+        return $"Slot {slotIndex + 1}";
+    }
+
 
 }

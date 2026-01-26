@@ -254,6 +254,15 @@ public class SanctumUI : MonoBehaviour
     {
         if (_sites == null || _sites.Length == 0) return;
 
+        // Save guard (match other UIs: no toast if save isn't ready)
+        if (SaveManager.Data == null)
+        {
+            RefreshShards();
+            RefreshButtonLabel();
+            RefreshUseButtonVisibility();
+            return;
+        }
+
         if (!ResourceBank.TrySpend(ResourceType.BlessingScale, 1))
         {
             RefreshShards();
@@ -265,6 +274,7 @@ public class SanctumUI : MonoBehaviour
         var jm = JobManager.I;
         if (!jm)
         {
+            // Refund
             ResourceBank.Add(ResourceType.BlessingScale, 1);
             RefreshShards();
             RefreshButtonLabel();
@@ -280,6 +290,7 @@ public class SanctumUI : MonoBehaviour
             int usedTokens = activeExtra / Mathf.Max(1, flatPerToken);
             if (usedTokens >= maxTokensPerSite)
             {
+                // Refund
                 ResourceBank.Add(ResourceType.BlessingScale, 1);
                 RefreshShards();
                 RefreshButtonLabel();
@@ -299,5 +310,8 @@ public class SanctumUI : MonoBehaviour
         RefreshUseButtonVisibility();
 
         GameEvents.OnJobsChanged?.Invoke();
+
+        GameEvents.RaiseToast("BLESSING ACTIVATED"); // or "BLESSING SCALE ACTIVATED"
     }
+
 }

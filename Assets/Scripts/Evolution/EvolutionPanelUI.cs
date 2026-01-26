@@ -2,18 +2,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 
-/// <summary>
-/// Shows an evolution preview for an owned monster (current -> next form) and the stat deltas at the
-/// owned monster's CURRENT level, including training bonuses.
-/// 
-/// IMPORTANT:
-/// - HP: uses EvolutionHelper.CalcMaxHP (your existing behavior).
-/// - ATK: uses BattleCalc attack curve + training bonus.
-/// - DEF: now uses BattleCalc defense curve + training bonus (FIXED).
-/// - SPD: now uses BattleCalc speed curve + training bonus (FIXED).
-/// 
-/// This keeps your public API and overall behavior intact while making DEF/SPD consistent with HP/ATK.
-/// </summary>
+
 public class EvolutionPanelUI : MonoBehaviour
 {
     [Header("Wires")]
@@ -216,6 +205,9 @@ public class EvolutionPanelUI : MonoBehaviour
         bool success = EvolutionService.EvolveOwnedInstance(_source, _nextDef.id, allowDuplicateSpecies: true);
         if (success)
         {
+            var evoName = !string.IsNullOrEmpty(_nextDef.displayName) ? _nextDef.displayName : _nextDef.name;
+            GameEvents.RaiseToast($"{evoName.ToUpperInvariant()} EVOLVED!");
+
             GameEvents.OnTeamChanged?.Invoke();
             GameEvents.MonsterEvolved?.Invoke(_nextDef.id);
             TitlesAdapter.OnMonsterEvolved(_nextDef.id);

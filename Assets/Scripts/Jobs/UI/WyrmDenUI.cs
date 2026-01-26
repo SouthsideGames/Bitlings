@@ -122,6 +122,7 @@ public class WyrmDenUI : MonoBehaviour
 
         SaveManager.Save();
         GameEvents.OnResourcesChanged?.Invoke();
+        GameEvents.RaiseToast("FAVOR ACTIVATED");
 
         RefreshButtonLabel();
         RefreshFavorVisual();

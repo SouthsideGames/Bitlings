@@ -120,6 +120,9 @@ public sealed class TitleOptionItem : MonoBehaviour
 
         TitleAssignPanelUI.OnTitlesChanged?.Invoke(_ownedId);
         _onChanged?.Invoke();
+
+        GameEvents.RaiseToast("TITLE ASSIGNED");
+
     }
 
     void OpenInfo()

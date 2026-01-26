@@ -159,6 +159,8 @@ public class UpgradeRowUI : MonoBehaviour
         SaveManager.Save();
 
         GameEvents.OnResourcesChanged?.Invoke();
+        GameEvents.RaiseToast("FEATURE UNLOCKED!");
+
         Refresh();
     }
 

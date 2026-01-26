@@ -108,6 +108,19 @@ public class ShadowMarketUI : MonoBehaviour
 
     void OnClickUseOrb()
     {
+        // Only toast if we successfully activate the shiny boost:
+        // - Save exists
+        // - Spend succeeds
+        // - We actually write a new boost + save
+        if (SaveManager.Data == null)
+        {
+            RefreshCounts();
+            RefreshButtonLabel();
+            RefreshShinyVisual();
+            RefreshUseButtonVisibility();
+            return;
+        }
+
         if (!ResourceBank.TrySpend(ResourceType.ShinyOrb, 1))
         {
             RefreshCounts();
@@ -136,6 +149,8 @@ public class ShadowMarketUI : MonoBehaviour
 
         SaveManager.Save();
         GameEvents.OnResourcesChanged?.Invoke();
+
+        GameEvents.RaiseToast("SHINY ORB ACTIVATED");
 
         RefreshCounts();
         RefreshButtonLabel();

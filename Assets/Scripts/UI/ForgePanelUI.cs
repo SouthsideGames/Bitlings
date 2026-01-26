@@ -191,6 +191,7 @@ public class ForgePanelUI : MonoBehaviour
 
         GameEvents.OnResourcesChanged?.Invoke();
         GameEvents.OnJobsChanged?.Invoke();
+        GameEvents.RaiseToast("JOB SITES UPDATED!");
 
         Build();
         RefreshTotals();
