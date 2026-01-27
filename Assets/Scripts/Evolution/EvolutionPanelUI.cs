@@ -63,12 +63,16 @@ public class EvolutionPanelUI : MonoBehaviour
             return;
         }
 
-        if (currentName) currentName.text = string.IsNullOrEmpty(_currentDef.displayName) ? _currentDef.name : _currentDef.displayName;
-        if (currentLevel) currentLevel.text = $"Lv {Mathf.Max(1, _source.level)}";
-        if (evolutionName) evolutionName.text = string.IsNullOrEmpty(_nextDef.displayName) ? _nextDef.name : _nextDef.displayName;
+        bool isShiny = _source != null && _source.isShiny;
 
-        if (currentIcon) currentIcon.sprite = _currentDef.icon;
-        if (evolutionIcon) evolutionIcon.sprite = _nextDef.icon;
+        if (currentName)
+            currentName.text = MonsterNameFormatter.Format(_currentDef, isShiny);
+        if (currentLevel) currentLevel.text = $"Lv {Mathf.Max(1, _source.level)}";
+        if (evolutionName)
+            evolutionName.text = MonsterNameFormatter.Format(_nextDef, isShiny);
+
+        if (currentIcon) currentIcon.sprite = MonsterNameFormatter.GetIcon(_currentDef, isShiny, backIcon: false);
+        if (evolutionIcon) evolutionIcon.sprite = MonsterNameFormatter.GetIcon(_nextDef, isShiny, backIcon: false);
 
         RefreshStatPreview();
         PlayStatFlashAnimation();
@@ -205,9 +209,6 @@ public class EvolutionPanelUI : MonoBehaviour
         bool success = EvolutionService.EvolveOwnedInstance(_source, _nextDef.id, allowDuplicateSpecies: true);
         if (success)
         {
-            var evoName = !string.IsNullOrEmpty(_nextDef.displayName) ? _nextDef.displayName : _nextDef.name;
-            GameEvents.RaiseToast($"{evoName.ToUpperInvariant()} EVOLVED!");
-
             GameEvents.OnTeamChanged?.Invoke();
             GameEvents.MonsterEvolved?.Invoke(_nextDef.id);
             TitlesAdapter.OnMonsterEvolved(_nextDef.id);

@@ -39,6 +39,15 @@ public sealed class BattleFeedbackManager : MonoBehaviour
     [SerializeField, Min(0.01f)] private float hitShakeTime = 0.12f;
     [SerializeField, Min(0.01f)] private float defendPulseTime = 0.16f;
 
+    [Header("Shiny Name Sparkle (Optional)")]
+    [Tooltip("If enabled, shiny monster names will punch-scale and 'sparkle' when they appear or are swapped in.")]
+    [SerializeField] private bool enableShinyNameSparkle = true;
+    [SerializeField, Min(0.01f)] private float shinyNamePunchTime = 0.12f;
+    [SerializeField, Range(1.01f, 1.40f)] private float shinyNamePunchScale = 1.18f;
+    [SerializeField, Min(0.01f)] private float shinyNameSparkleTime = 0.22f;
+    [SerializeField, Range(0f, 25f)] private float shinyNameWiggleDegrees = 8f;
+    [SerializeField, Range(0f, 15f)] private float shinyNameWiggleDuration = 0.25f;
+
     [Header("FX - Strength")]
     [SerializeField, Range(1.01f, 1.30f)] private float pressPunchScale = 1.08f;
     [SerializeField, Range(1.01f, 1.35f)] private float windupScale = 1.10f;
@@ -761,5 +770,91 @@ public sealed class BattleFeedbackManager : MonoBehaviour
                 if (!rt) return;
                 rt.localPosition = basePos;
             });
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // Shiny Name Sparkle (Optional)
+    // ─────────────────────────────────────────────────────────────
+
+    public void PlayShinyNameSparkle(TextMeshProUGUI label)
+    {
+        if (!enableShinyNameSparkle) return;
+        if (!label) return;
+
+        RectTransform rt = label.rectTransform;
+        var go = rt.gameObject;
+
+        // Cancel any prior tweens affecting this label so we don't stack effects on rapid swaps
+        LeanTween.cancel(go);
+
+        // Reset baseline (important if a prior tween was interrupted)
+        rt.localScale = Vector3.one;
+        rt.localRotation = Quaternion.identity;
+
+        // Ensure we can safely manipulate alpha without permanently changing your style
+        Color baseColor = label.color;
+
+        // 1) Punch scale: up then back down, driven by shinyNamePunchTime & shinyNamePunchScale
+        float punchIn = Mathf.Max(0.01f, shinyNamePunchTime);
+        float punchOut = Mathf.Max(0.01f, shinyNamePunchTime);
+
+        LeanTween.scale(rt, Vector3.one * Mathf.Max(1.01f, shinyNamePunchScale), punchIn)
+            .setEaseOutBack()
+            .setIgnoreTimeScale(true)
+            .setOnComplete(() =>
+            {
+                // Return to normal
+                LeanTween.scale(rt, Vector3.one, punchOut)
+                    .setEaseInBack()
+                    .setIgnoreTimeScale(true);
+            });
+
+        // 2) Sparkle pulse: alpha ping-pong, driven by shinyNameSparkleTime
+        // We do a quick fade down slightly then back up to baseline.
+        float sparkleT = Mathf.Max(0.01f, shinyNameSparkleTime);
+        float halfSparkle = sparkleT * 0.5f;
+
+        // Fade to 70% alpha then back to original alpha
+        float targetAlpha = Mathf.Clamp01(baseColor.a * 0.70f);
+
+        LeanTween.value(go, baseColor.a, targetAlpha, halfSparkle)
+            .setEaseOutSine()
+            .setIgnoreTimeScale(true)
+            .setOnUpdate((float a) =>
+            {
+                var c = label.color;
+                c.a = a;
+                label.color = c;
+            })
+            .setOnComplete(() =>
+            {
+                LeanTween.value(go, targetAlpha, baseColor.a, halfSparkle)
+                    .setEaseInSine()
+                    .setIgnoreTimeScale(true)
+                    .setOnUpdate((float a) =>
+                    {
+                        var c = label.color;
+                        c.a = a;
+                        label.color = c;
+                    });
+            });
+
+        // 3) Wiggle: rotateZ ping-pong, driven by shinyNameWiggleDegrees & shinyNameWiggleDuration
+        float wiggleDeg = Mathf.Max(0f, shinyNameWiggleDegrees);
+        float wiggleDur = Mathf.Max(0.01f, shinyNameWiggleDuration);
+
+        if (wiggleDeg > 0.01f)
+        {
+            // One ping-pong loop: 0 -> +deg -> 0 (LeanTween pingpong from target)
+            // We'll rotate to +deg and ping-pong once, then hard reset to 0.
+            LeanTween.rotateZ(go, wiggleDeg, wiggleDur)
+                .setEaseInOutSine()
+                .setIgnoreTimeScale(true)
+                .setLoopPingPong(1)
+                .setOnComplete(() =>
+                {
+                    rt.localRotation = Quaternion.identity;
+                });
+        }
     }
 }

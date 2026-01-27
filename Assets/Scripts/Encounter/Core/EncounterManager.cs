@@ -6,6 +6,34 @@ using Random = UnityEngine.Random;
 
 public partial class EncounterManager : MonoBehaviour
 {
+    // ─────────────────────────────────────────────────────────────
+    // Shiny Encounter State
+    // ─────────────────────────────────────────────────────────────
+
+    [Header("Shiny Encounters")]
+    [Tooltip("Baseline chance for a wild encounter to spawn shiny when no Shiny Orb boost is active.")]
+    [SerializeField, Range(0f, 1f)] private float baseWildShinyChance = 0.01f;
+
+    // Encounter-scoped flag: whether the CURRENT wild encounter should be treated as shiny.
+    // This is intentionally separate from capture logic; capture can still roll independently.
+    private bool _currentWildIsShiny = false;
+    public bool CurrentWildIsShiny => _currentWildIsShiny;
+
+    private bool RollWildShiny(MonsterDataSO wildDef)
+    {
+        if (!wildDef) return false;
+
+        // If no shiny art exists, don't mark it shiny (prevents "shiny" with normal visuals).
+        if (wildDef.shinyIcon == null) return false;
+
+        // Requested testing behavior: Shiny Orb active => 100% shiny spawns.
+        if (CurrentShinyBoost != null)
+            return true;
+
+        // Normal behavior: baseline roll.
+        float chance = Mathf.Clamp01(baseWildShinyChance);
+        return Random.value <= chance;
+    }
     public static EncounterManager I { get; private set; }
 
     [Obsolete("UI no longer renders inline status. Use BattleLogger instead.")]
@@ -66,6 +94,7 @@ public partial class EncounterManager : MonoBehaviour
     private TitleSO _wildRolledTitle = null;
     private readonly List<TitleSO> _wildActiveTitles = new List<TitleSO>(8);
     private string _wildTitleLabel = null;
+    private bool _lastWildWasShiny = false;
 
     public string WildCombatId => _wildCombatId;
     public TitleSO WildRolledTitle => _wildRolledTitle;
@@ -441,6 +470,10 @@ public partial class EncounterManager : MonoBehaviour
 
         ResolveWildTitles(wild, wildLevel);
 
+        // Determine whether this encounter should present the wild as shiny.
+        // This is encounter-spawn logic only (capture remains unchanged).
+        _currentWildIsShiny = RollWildShiny(wild);
+
         EncounterPanelUI.I?.OnWildSpawned(wild);
 
         PlayEncounterSfx(wild);
@@ -481,6 +514,10 @@ public partial class EncounterManager : MonoBehaviour
     void OnBattleEnded(BattleResult result)
     {
         _lastBattleResult = result;
+
+        // Reset encounter-spawn presentation state.
+        _lastWildWasShiny = _currentWildIsShiny;
+        _currentWildIsShiny = false;
 
         // Battle is over; ensure wild titles cannot leak into any future context.
         ClearWildTitleInjection();
@@ -587,6 +624,8 @@ public partial class EncounterManager : MonoBehaviour
             captured: false,
             capturedMonsterId: null,
             capturedLevel: 0,
+            capturedShiny: false,
+            wildWasShiny: _lastWildWasShiny,
             levelUpSummaries: null,
             creditsBase: finalcredits,
             creditsTitleBonus: 0,
@@ -679,7 +718,7 @@ public partial class EncounterManager : MonoBehaviour
 
             PostBattleSummaryManager.I?.SetAutoBattling(true);
 
-            EncounterPanelUI.I?.ShowHireDecision(_lastBattleResult.wildDef, _lastBattleResult.wildLevel);
+            EncounterPanelUI.I?.ShowHireDecision(_lastBattleResult.wildDef, _lastBattleResult.wildLevel, isShiny: _lastWildWasShiny);
             yield break;
         }
 
@@ -704,7 +743,8 @@ public partial class EncounterManager : MonoBehaviour
             PostBattleSummaryManager.I?.TryUpdateLatestQueuedCapture(
                 true,
                 _lastBattleResult.wildDef.id,
-                _lastBattleResult.wildLevel
+                _lastBattleResult.wildLevel,
+                capturedShiny: _lastWildWasShiny
             );
         }
         else
@@ -796,7 +836,9 @@ public partial class EncounterManager : MonoBehaviour
             return;
         }
 
-        if (IsShinyMonster(wild))
+        // Shiny encounter SFX: driven by encounter-spawn logic (Shiny Orb forces shiny encounters)
+        // with a legacy fallback to IsShinyMonster(def) for older data.
+        if (_currentWildIsShiny || IsShinyMonster(wild))
         {
             AudioManager.I?.PlaySfx(SfxType.ShinyEncounter);
             return;
@@ -931,6 +973,10 @@ public partial class EncounterManager : MonoBehaviour
         int wildLevel = Mathf.Clamp(avgTeamLvl + Random.Range(-1, 2), 1, 99);
 
         ResolveWildTitles(wild, wildLevel);
+
+        // Determine whether this encounter should present the wild as shiny.
+        // This is encounter-spawn logic only (capture remains unchanged).
+        _currentWildIsShiny = RollWildShiny(wild);
 
         EncounterPanelUI.I?.OnWildSpawned(wild);
 

@@ -51,7 +51,7 @@ public class JobPanelUI : MonoBehaviour
         Refresh();
         GameEvents.OnJobsChanged += Refresh;
         GameEvents.OnResourcesChanged += Refresh;
-        GameEvents.JobGlobalModsChanged += Refresh; 
+        GameEvents.JobGlobalModsChanged += Refresh;
     }
 
     void OnDisable()
@@ -168,7 +168,13 @@ public class JobPanelUI : MonoBehaviour
                 WorkerRef worker = (i < s.workers.Count) ? s.workers[i] : null;
                 if (worker != null && worker.def != null)
                 {
-                    var spr = worker.def.icon ? worker.def.icon : emptySlotSprite;
+                    // ✅ FIX: use shiny-aware icon
+                    bool shiny = ResolveWorkerShiny(worker);
+
+                    Sprite spr = MonsterNameFormatter.GetIcon(worker.def, shiny, backIcon: false);
+                    if (spr == null) spr = worker.def.icon;
+                    if (spr == null) spr = emptySlotSprite;
+
                     ui.SetWorker(spr, filledSlotColor);
                 }
                 else
@@ -180,7 +186,6 @@ public class JobPanelUI : MonoBehaviour
             }
         }
     }
-
 
     // ─────────────────────────────────────────────────────────────────────────────
     // Rate computation (base vs boosted)
@@ -347,6 +352,86 @@ public class JobPanelUI : MonoBehaviour
         catch { }
 
         return false;
+    }
+
+    // ✅ NEW: icon-facing shiny resolver (WorkerRef -> ownedUID -> monsterId fallback)
+    private static bool ResolveWorkerShiny(WorkerRef w)
+    {
+        if (w == null) return false;
+
+        // 1) Check using the IsWorkerShiny helper method.
+        if (IsWorkerShiny(w))
+            return true;
+
+        // 2) If we have a stable ownedUID, resolve the actual owned instance.
+        string uid = w.ownedUID;
+        if (!string.IsNullOrEmpty(uid))
+        {
+            var om = FindOwnedByUid(uid);
+            if (om != null)
+                return om.isShiny || om.shinyTier > 0;
+        }
+
+        // 3) Fallback by monsterId (less precise if multiple copies exist, but better than always normal).
+        string id = w.monsterId;
+        if (!string.IsNullOrEmpty(id))
+        {
+            var ownedList = SaveManager.Data?.owned;
+            if (ownedList != null)
+            {
+                for (int i = 0; i < ownedList.Count; i++)
+                {
+                    var om = ownedList[i];
+                    if (om == null) continue;
+                    if (!string.Equals(om.monsterId, id, StringComparison.Ordinal)) continue;
+                    if (om.isShiny || om.shinyTier > 0) return true;
+                }
+            }
+
+            var team = SaveManager.Data?.team;
+            if (team != null)
+            {
+                for (int i = 0; i < team.Count; i++)
+                {
+                    var om = team[i];
+                    if (om == null) continue;
+                    if (!string.Equals(om.monsterId, id, StringComparison.Ordinal)) continue;
+                    if (om.isShiny || om.shinyTier > 0) return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    private static OwnedMonsterData FindOwnedByUid(string uid)
+    {
+        var data = SaveManager.Data;
+        if (data == null || string.IsNullOrEmpty(uid)) return null;
+
+        var owned = data.owned;
+        if (owned != null)
+        {
+            for (int i = 0; i < owned.Count; i++)
+            {
+                var om = owned[i];
+                if (om != null && !string.IsNullOrEmpty(om.ownedUID) && om.ownedUID == uid)
+                    return om;
+            }
+        }
+
+        var team = data.team;
+        if (team != null)
+        {
+            for (int i = 0; i < team.Count; i++)
+            {
+                var om = team[i];
+                if (om != null && !string.IsNullOrEmpty(om.ownedUID) && om.ownedUID == uid)
+                    return om;
+            }
+        }
+
+        return null;
     }
 
     // ─────────────────────────────────────────────────────────────

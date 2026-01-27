@@ -28,11 +28,18 @@ public class TeamMonsterCardUI : MonoBehaviour
     [SerializeField] private GameObject evolveAlert;
     [SerializeField] private GameObject favoriteAlert;
 
-
     private OwnedMonsterData _data;
     private MonsterDataSO _def;
     private Action<OwnedMonsterData> _onClick;
     private Action _onAnyChanged;
+
+    // Legacy support: caller might only provide monsterId.
+    private string _monsterId;
+
+    // Preferred support: bind to an ownedUID when possible.
+    private string _ownedUid;
+
+    bool _bound;
 
     // ----------------------------------------------------------
     // Setup
@@ -48,9 +55,28 @@ public class TeamMonsterCardUI : MonoBehaviour
         _onClick = onClick;
         _onAnyChanged = onAnyChanged;
 
+        _monsterId = data != null ? data.monsterId : null;
+        _ownedUid = data != null ? data.ownedUID : null;
+
         WireButtons();
-        RefreshVisuals();
+        Refresh();
         RefreshFavoriteIcon();
+    }
+
+    // KEEP EXISTING API SURFACE (legacy)
+    public void Setup(string monsterId)
+    {
+        _monsterId = monsterId;
+        _ownedUid = null;
+        Refresh();
+    }
+
+    // NEW: preferred binder (doesn’t remove anything)
+    public void SetupByOwnedUid(string ownedUid)
+    {
+        _ownedUid = ownedUid;
+        _monsterId = null;
+        Refresh();
     }
 
     private void WireButtons()
@@ -91,16 +117,33 @@ public class TeamMonsterCardUI : MonoBehaviour
     // ----------------------------------------------------------
     private void OnEnable()
     {
+        if (!_bound)
+        {
+            GameEvents.OnTeamChanged += Refresh;
+            _bound = true;
+        }
+
         GameEvents.OnResourcesChanged += HandleResourcesChanged;
         GameEvents.OnTeamChanged += HandleResourcesChanged;
         GameEvents.FavoritesChanged += RefreshFavoriteIcon;
+
+        Refresh();
     }
 
     private void OnDisable()
     {
+        if (_bound)
+        {
+            GameEvents.OnTeamChanged -= Refresh;
+            _bound = false;
+        }
+
         GameEvents.OnResourcesChanged -= HandleResourcesChanged;
         GameEvents.OnTeamChanged -= HandleResourcesChanged;
         GameEvents.FavoritesChanged -= RefreshFavoriteIcon;
+
+        if (rootButton) rootButton.onClick.RemoveAllListeners();
+        if (healBtn) healBtn.onClick.RemoveAllListeners();
     }
 
     private void HandleResourcesChanged()
@@ -116,12 +159,17 @@ public class TeamMonsterCardUI : MonoBehaviour
     // ----------------------------------------------------------
     public void RefreshVisuals()
     {
+        bool isShiny = (_data != null) && (_data.isShiny || _data.shinyTier > 0);
+
         if (img)
         {
-            if (_def && _def.icon)
+            if (_def)
             {
-                img.enabled = true;
-                img.sprite = _def.icon;
+                var spr = MonsterNameFormatter.GetIcon(_def, isShiny, backIcon: false);
+                if (spr == null) spr = _def.icon;
+
+                img.sprite = spr;
+                img.enabled = (spr != null);
             }
             else
             {
@@ -133,12 +181,11 @@ public class TeamMonsterCardUI : MonoBehaviour
         UpdateHpText();
         UpdateHealInteractable();
         RefreshEvolutionAlert();
-        RefreshFavoriteIcon();
     }
 
     private void UpdateHpText()
     {
-        if (!hpText || _def == null || _data == null) return;
+        if (!hpText || _def == null || _data == null) { if (hpText) hpText.text = ""; return; }
 
         int maxHP = HealingService.CalcMaxHP(_def, _data.level);
         int curHP = _data.currentHP >= 0 ? Mathf.Min(_data.currentHP, maxHP) : maxHP;
@@ -151,7 +198,6 @@ public class TeamMonsterCardUI : MonoBehaviour
         if (!evolveAlert) return;
 
         bool show = false;
-
         if (_data != null && _def != null)
             show = EvolutionHelper.CanEvolve(_data, _def);
 
@@ -166,11 +212,9 @@ public class TeamMonsterCardUI : MonoBehaviour
         if (!favoriteAlert)
             return;
 
-        // Must unlock feature
         bool hasFeature = FeatureUnlockManager.I &&
                           FeatureUnlockManager.I.IsUnlocked(FeatureId.Codex_Favorites);
 
-        // Must have valid monster
         bool valid = _data != null && !string.IsNullOrEmpty(_data.monsterId);
 
         if (!hasFeature || !valid)
@@ -179,9 +223,7 @@ public class TeamMonsterCardUI : MonoBehaviour
             return;
         }
 
-        // Check if this monster (by definition ID) is favorited
         bool isFav = FavoriteService.IsFavorite(_data.monsterId);
-
         favoriteAlert.SetActive(isFav);
     }
 
@@ -198,15 +240,16 @@ public class TeamMonsterCardUI : MonoBehaviour
         {
             int maxHP = HealingService.CalcMaxHP(_def, _data.level);
             int curHP = _data.currentHP >= 0 ? Mathf.Min(_data.currentHP, maxHP) : maxHP;
+
             bool needsHeal = curHP < maxHP;
 
             int medkits = GetResource(medkitResourceType);
             int credits = GetResource(healCostType);
 
-            bool canHealWithMedkits = medkits >= partialHealMedkitCost;
-            bool canHealWithcredits = credits >= partialHealCost;
+            bool canHealWithMedkits = (partialHealMedkitCost > 0) && medkits >= partialHealMedkitCost;
+            bool canHealWithCredits = (partialHealCost > 0) && credits >= partialHealCost;
 
-            enable = needsHeal && (canHealWithMedkits || canHealWithcredits);
+            enable = needsHeal && (canHealWithMedkits || canHealWithCredits);
         }
 
         healBtn.gameObject.SetActive(enable);
@@ -231,9 +274,9 @@ public class TeamMonsterCardUI : MonoBehaviour
 
         bool paid = false;
 
-        if (GetResource(medkitResourceType) >= medkitCost && medkitCost > 0)
+        if (medkitCost > 0 && GetResource(medkitResourceType) >= medkitCost)
             paid = SpendResource(medkitResourceType, medkitCost);
-        else if (creditCost > 0)
+        else if (creditCost > 0 && GetResource(healCostType) >= creditCost)
             paid = SpendResource(healCostType, creditCost);
 
         if (!paid)
@@ -260,4 +303,53 @@ public class TeamMonsterCardUI : MonoBehaviour
 
     private bool SpendResource(ResourceType type, int amount) =>
         ResourceManager.I && ResourceManager.I.TrySpend(type, amount);
+
+    // ----------------------------------------------------------
+    // Resolve & Refresh
+    // ----------------------------------------------------------
+    void Refresh()
+    {
+        // 1) Prefer ownedUID binding if present
+        if (!string.IsNullOrEmpty(_ownedUid))
+        {
+            _data = FindInTeamByOwnedUid(_ownedUid);
+            _monsterId = _data != null ? _data.monsterId : _monsterId;
+        }
+
+        // 2) If only monsterId was provided (legacy), prefer the globally preferred variant
+        if (_data == null && !string.IsNullOrEmpty(_monsterId))
+        {
+            var pref = MonsterVariantPreference.GetPreferredOwned(_monsterId);
+            if (pref != null && !string.IsNullOrEmpty(pref.ownedUID))
+            {
+                _data = FindInTeamByOwnedUid(pref.ownedUID);
+                if (_data != null) _ownedUid = _data.ownedUID;
+            }
+        }
+
+        // 3) Fallback: first team entry matching monsterId
+        if (_data == null && !string.IsNullOrEmpty(_monsterId))
+            _data = FindInTeamByMonsterId(_monsterId);
+
+        // Resolve def from the resolved team entry if possible
+        string finalId = _data != null ? _data.monsterId : _monsterId;
+        _def = (!string.IsNullOrEmpty(finalId)) ? MonsterLibraryLocator.GetById(finalId) : null;
+
+        RefreshVisuals();
+        RefreshFavoriteIcon();
+    }
+
+    OwnedMonsterData FindInTeamByOwnedUid(string ownedUid)
+    {
+        var data = SaveManager.Data;
+        if (data == null || data.team == null || string.IsNullOrEmpty(ownedUid)) return null;
+        return data.team.Find(m => m != null && !string.IsNullOrEmpty(m.ownedUID) && m.ownedUID == ownedUid);
+    }
+
+    OwnedMonsterData FindInTeamByMonsterId(string monsterId)
+    {
+        var data = SaveManager.Data;
+        if (data == null || data.team == null || string.IsNullOrEmpty(monsterId)) return null;
+        return data.team.Find(m => m != null && m.monsterId == monsterId);
+    }
 }

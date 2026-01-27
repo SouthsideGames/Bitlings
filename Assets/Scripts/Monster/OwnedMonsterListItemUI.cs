@@ -104,14 +104,25 @@ public class OwnedMonsterListItemUI : MonoBehaviour
         _data = data;
         _def = def;
 
+        bool isShiny = data != null && (data.isShiny || data.shinyTier > 0);
+
         // Icon
         if (icon)
         {
-            if (def && def.icon)
+            if (def)
             {
-                icon.enabled = true;
-                icon.sprite = def.icon;
-                icon.color = Color.white;
+                var s = MonsterNameFormatter.GetIcon(def, isShiny, backIcon: false);
+                if (s)
+                {
+                    icon.enabled = true;
+                    icon.sprite = s;
+                    icon.color = Color.white;
+                }
+                else
+                {
+                    icon.enabled = false;
+                    icon.sprite = null;
+                }
             }
             else
             {
@@ -124,7 +135,7 @@ public class OwnedMonsterListItemUI : MonoBehaviour
         if (nameText)
         {
             if (def)
-                nameText.text = string.IsNullOrEmpty(def.displayName) ? def.name : def.displayName;
+                nameText.text = MonsterNameFormatter.Format(def, isShiny);
             else
                 nameText.text = "Unknown";
         }
@@ -169,16 +180,27 @@ public class OwnedMonsterListItemUI : MonoBehaviour
         _def = def;
         _data = captured ? ownedData : null; // unrevealed entries have no OwnedMonsterData
 
+        bool isShiny = captured && ownedData != null && (ownedData.isShiny || ownedData.shinyTier > 0);
+
         // Icon
         if (icon)
         {
-            if (def && def.icon)
+            if (def)
             {
-                icon.enabled = true;
-                icon.sprite = def.icon;
+                var s = MonsterNameFormatter.GetIcon(def, isShiny, backIcon: false);
+                if (s)
+                {
+                    icon.enabled = true;
+                    icon.sprite = s;
 
-                // Silhouette effect for unrevealed
-                icon.color = captured ? Color.white : Color.black;
+                    // Silhouette effect for unrevealed
+                    icon.color = captured ? Color.white : Color.black;
+                }
+                else
+                {
+                    icon.enabled = false;
+                    icon.sprite = null;
+                }
             }
             else
             {
@@ -191,7 +213,7 @@ public class OwnedMonsterListItemUI : MonoBehaviour
         if (nameText)
         {
             if (captured && def)
-                nameText.text = string.IsNullOrEmpty(def.displayName) ? def.name : def.displayName;
+                nameText.text = MonsterNameFormatter.Format(def, isShiny);
             else
                 nameText.text = "???";
         }

@@ -31,7 +31,7 @@ public class JobAssignPanelUI : MonoBehaviour
     private MonsterDataSO _pendingDef;
     private string _pendingId;
 
-    // NEW: keep the pending owned data so we can validate fatigue at confirm time.
+    // keep the pending owned data so we can validate fatigue + shiny at confirm time
     private OwnedMonsterData _pendingOwned;
 
     private JobSiteState _cachedState;
@@ -52,18 +52,7 @@ public class JobAssignPanelUI : MonoBehaviour
         _pendingId = null;
         _pendingOwned = null;
 
-        if (currentImage)
-        {
-            if (_currentWorker != null && _currentWorker.def && _currentWorker.def.icon)
-            {
-                currentImage.sprite = _currentWorker.def.icon;
-                currentImage.color = Color.white;
-            }
-            else
-            {
-                currentImage.sprite = emptySlotSprite;
-            }
-        }
+        RefreshCurrentWorkerIcon(); // ✅ shiny-aware
 
         BuildList();
         UpdateOutputPreview(currentOnly: true);
@@ -84,6 +73,28 @@ public class JobAssignPanelUI : MonoBehaviour
         }
 
         OpenSelf();
+    }
+
+    private void RefreshCurrentWorkerIcon()
+    {
+        if (!currentImage) return;
+
+        if (_currentWorker != null && _currentWorker.def != null)
+        {
+            bool isShiny = IsWorkerShiny(_currentWorker);
+            var spr = MonsterNameFormatter.GetIcon(_currentWorker.def, isShiny, backIcon: false);
+            if (spr == null) spr = _currentWorker.def.icon;
+
+            if (spr != null)
+            {
+                currentImage.sprite = spr;
+                currentImage.color = Color.white;
+                return;
+            }
+        }
+
+        currentImage.sprite = emptySlotSprite;
+        currentImage.color = new Color(1, 1, 1, 0.6f);
     }
 
     void BuildList()
@@ -108,7 +119,7 @@ public class JobAssignPanelUI : MonoBehaviour
             return;
         }
 
-        // Pick "best" owned monster per monsterId+shiny key.
+        // Pick "best" owned monster per monsterId + shiny key.
         var bestByKey = new Dictionary<string, OwnedMonsterData>(64);
         for (int i = 0; i < data.owned.Count; i++)
         {
@@ -116,9 +127,11 @@ public class JobAssignPanelUI : MonoBehaviour
             if (o == null || string.IsNullOrEmpty(o.monsterId)) continue;
 
             if (string.IsNullOrEmpty(o.ownedUID))
-                o.ownedUID = System.Guid.NewGuid().ToString("N");
+                o.ownedUID = Guid.NewGuid().ToString("N");
 
-            string key = o.monsterId + (o.isShiny ? "|S" : "|N");
+            bool isShiny = (o.isShiny || o.shinyTier > 0);
+            string key = o.monsterId + (isShiny ? "|S" : "|N");
+
             if (!bestByKey.TryGetValue(key, out var cur))
             {
                 bestByKey[key] = o;
@@ -134,7 +147,7 @@ public class JobAssignPanelUI : MonoBehaviour
             }
         }
 
-        // NEW: include owned reference + fatigue display.
+        // include owned reference + fatigue display
         var entries = new List<(MonsterDataSO def, OwnedMonsterData owned, string ownedUid, float score)>();
         foreach (var kv in bestByKey)
         {
@@ -162,10 +175,13 @@ public class JobAssignPanelUI : MonoBehaviour
         foreach (var e in entries)
         {
             bool isFatigued = TryGetFatigueState(e.owned, e.ownedUid, out string etaText);
+            bool isShiny = (e.owned != null) && (e.owned.isShiny || e.owned.shinyTier > 0);
 
             var go = Instantiate(monsterButtonPrefab, listContent);
             var ui = go.GetComponent<JobMonsterEntryUI>();
 
+            // If the prefab doesn't have JobMonsterEntryUI, fall back to generic Button + label,
+            // but STILL set a shiny-aware currentImage preview on click.
             if (!ui)
             {
                 var btn = go.GetComponent<Button>();
@@ -173,9 +189,10 @@ public class JobAssignPanelUI : MonoBehaviour
 
                 if (label)
                 {
+                    string name = MonsterNameFormatter.Format(e.def, isShiny);
                     label.text = isFatigued
-                        ? $"{e.def.displayName} (Fatigued{(string.IsNullOrEmpty(etaText) ? "" : $" • {etaText}")})"
-                        : e.def.displayName;
+                        ? $"{name} (Fatigued{(string.IsNullOrEmpty(etaText) ? "" : $" • {etaText}")})"
+                        : name;
                 }
 
                 if (btn)
@@ -194,11 +211,7 @@ public class JobAssignPanelUI : MonoBehaviour
                         _pendingId = e.ownedUid;
                         _pendingOwned = e.owned;
 
-                        if (currentImage)
-                        {
-                            currentImage.sprite = _pendingDef.icon ? _pendingDef.icon : emptySlotSprite;
-                            currentImage.color = _pendingDef.icon ? Color.white : new Color(1, 1, 1, 0.6f);
-                        }
+                        RefreshPendingPreviewIcon(); // ✅ shiny-aware
 
                         UpdateOutputPreview(currentOnly: false);
                         AudioManager.I?.PlayClick();
@@ -207,16 +220,21 @@ public class JobAssignPanelUI : MonoBehaviour
                 continue;
             }
 
+            // ✅ Shiny icon + shiny name
             if (ui.icon)
             {
-                ui.icon.sprite = e.def.icon;
-                ui.icon.enabled = e.def.icon;
+                var spr = MonsterNameFormatter.GetIcon(e.def, isShiny, backIcon: false);
+                if (spr == null) spr = e.def.icon;
+
+                ui.icon.sprite = spr;
+                ui.icon.enabled = (spr != null);
             }
-            if (ui.nameText) ui.nameText.text = e.def.displayName;
+
+            if (ui.nameText) ui.nameText.text = MonsterNameFormatter.Format(e.def, isShiny);
             if (ui.scoreText) ui.scoreText.text = $"x{e.score:0.##}";
             if (ui.typeIcon) ui.typeIcon.sprite = e.def.typeIcon;
 
-            // NEW: fatigue presentation + interaction
+            // fatigue presentation + interaction
             ui.SetFatigued(isFatigued, etaText);
 
             ui.button.onClick.RemoveAllListeners();
@@ -232,16 +250,34 @@ public class JobAssignPanelUI : MonoBehaviour
                 _pendingId = e.ownedUid;
                 _pendingOwned = e.owned;
 
-                if (currentImage)
-                {
-                    currentImage.sprite = _pendingDef.icon ? _pendingDef.icon : emptySlotSprite;
-                    currentImage.color = _pendingDef.icon ? Color.white : new Color(1, 1, 1, 0.6f);
-                }
+                RefreshPendingPreviewIcon(); // ✅ shiny-aware
 
                 UpdateOutputPreview(currentOnly: false);
                 AudioManager.I?.PlayClick();
             });
         }
+    }
+
+    private void RefreshPendingPreviewIcon()
+    {
+        if (!currentImage) return;
+
+        if (_pendingDef != null)
+        {
+            bool isShiny = (_pendingOwned != null) && (_pendingOwned.isShiny || _pendingOwned.shinyTier > 0);
+            var spr = MonsterNameFormatter.GetIcon(_pendingDef, isShiny, backIcon: false);
+            if (spr == null) spr = _pendingDef.icon;
+
+            if (spr != null)
+            {
+                currentImage.sprite = spr;
+                currentImage.color = Color.white;
+                return;
+            }
+        }
+
+        currentImage.sprite = emptySlotSprite;
+        currentImage.color = new Color(1, 1, 1, 0.6f);
     }
 
     private void SetNoWorkersState(bool noWorkers)
@@ -263,7 +299,7 @@ public class JobAssignPanelUI : MonoBehaviour
         if (JobManager.I == null) { Close(); return; }
         if (_pendingDef == null) { Close(); return; }
 
-        // NEW: hard-block assignment if fatigued (even if UI somehow allowed it).
+        // hard-block assignment if fatigued (even if UI somehow allowed it).
         if (TryGetFatigueState(_pendingOwned, _pendingId, out _))
         {
             AudioManager.I?.PlayDenied();
@@ -498,8 +534,9 @@ public class JobAssignPanelUI : MonoBehaviour
     {
         if (w == null) return false;
 
-        var ownedId = w.monsterId;
-        if (!string.IsNullOrEmpty(ownedId))
+        // Primary: WorkerRef.monsterId is your ownedUID key in this panel.
+        var ownedUid = w.monsterId;
+        if (!string.IsNullOrEmpty(ownedUid))
         {
             var ownedList = SaveManager.Data?.owned;
             if (ownedList != null)
@@ -507,8 +544,8 @@ public class JobAssignPanelUI : MonoBehaviour
                 for (int i = 0; i < ownedList.Count; i++)
                 {
                     var om = ownedList[i];
-                    if (om != null && om.ownedUID == ownedId)
-                        return om.isShiny;
+                    if (om != null && om.ownedUID == ownedUid)
+                        return (om.isShiny || om.shinyTier > 0);
                 }
             }
         }
@@ -516,13 +553,17 @@ public class JobAssignPanelUI : MonoBehaviour
         var def = w.def;
         if (!def) return false;
 
+        // Fallback: reflection on def flags (legacy)
         try
         {
-            var f = def.GetType().GetField("isShiny");
+            var f = def.GetType().GetField("isShiny", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
             if (f != null && f.FieldType == typeof(bool)) return (bool)f.GetValue(def);
 
-            var p = def.GetType().GetProperty("IsShiny");
+            var p = def.GetType().GetProperty("isShiny", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
             if (p != null && p.PropertyType == typeof(bool)) return (bool)p.GetValue(def, null);
+
+            var p2 = def.GetType().GetProperty("IsShiny", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+            if (p2 != null && p2.PropertyType == typeof(bool)) return (bool)p2.GetValue(def, null);
         }
         catch { }
 
@@ -530,7 +571,7 @@ public class JobAssignPanelUI : MonoBehaviour
     }
 
     // ---------------------------
-    // NEW: Fatigue detection (defensive, reflection-based)
+    // Fatigue detection (defensive, reflection-based)
     // ---------------------------
     private bool TryGetFatigueState(OwnedMonsterData owned, string ownedUid, out string etaText)
     {
@@ -539,8 +580,7 @@ public class JobAssignPanelUI : MonoBehaviour
 
         long now = SaveManager.NowUnix();
 
-        // 1) Prefer a direct JobManager method if you have one (we search by name to avoid compile breaks).
-        // Expected patterns: IsMonsterFatigued(string uid), GetMonsterFatigueUntil(string uid), etc.
+        // 1) Prefer a direct JobManager method if you have one (search by name to avoid compile breaks).
         try
         {
             var jm = JobManager.I;
@@ -580,7 +620,6 @@ public class JobAssignPanelUI : MonoBehaviour
         catch { }
 
         // 2) Fall back to OwnedMonsterData fields/properties (common naming patterns).
-        // Examples: fatigueUntilUnix, fatiguedUntilUnix, jobFatigueUntilUnix, etc.
         if (owned != null)
         {
             if (TryReadUntilUnix(owned, out long untilUnix))
@@ -592,7 +631,6 @@ public class JobAssignPanelUI : MonoBehaviour
                 }
             }
 
-            // If there's a simple boolean flag.
             if (TryReadBool(owned, new[] { "isFatigued", "fatigued", "IsFatigued" }, out bool isFatigued) && isFatigued)
                 return true;
         }
@@ -620,27 +658,17 @@ public class JobAssignPanelUI : MonoBehaviour
 
         for (int i = 0; i < names.Length; i++)
         {
-            // field
             var f = t.GetField(names[i], BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
             if (f != null)
             {
-                try
-                {
-                    untilUnix = Convert.ToInt64(f.GetValue(obj));
-                    return true;
-                }
+                try { untilUnix = Convert.ToInt64(f.GetValue(obj)); return true; }
                 catch { }
             }
 
-            // property
             var p = t.GetProperty(names[i], BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
             if (p != null && p.CanRead)
             {
-                try
-                {
-                    untilUnix = Convert.ToInt64(p.GetValue(obj, null));
-                    return true;
-                }
+                try { untilUnix = Convert.ToInt64(p.GetValue(obj, null)); return true; }
                 catch { }
             }
         }
@@ -688,4 +716,3 @@ public class JobAssignPanelUI : MonoBehaviour
         return $"{h}h {m}m";
     }
 }
- 

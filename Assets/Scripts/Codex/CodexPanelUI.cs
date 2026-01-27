@@ -370,24 +370,47 @@ public class CodexPanelUI : MonoBehaviour
         if (data == null)
             return;
 
-        // Build "best owned per monsterId" dictionaries (normal + shiny)
-        var allOwned = data.GetAllOwnedMonsters(includeTeam: true) ?? new List<OwnedMonsterData>();
-        var ownedById = new Dictionary<string, OwnedMonsterData>();
-        var shinyById = new Dictionary<string, OwnedMonsterData>();
+        // Build "best owned per monsterId" dictionaries (normal + shiny).
+        // We prefer owned-only, then supplement with team entries only if they look real (ownedUID present)
+        // to avoid placeholder team slots creating false "normal" ownership.
 
-        for (int i = 0; i < allOwned.Count; i++)
+        var ownedById = new Dictionary<string, OwnedMonsterData>(StringComparer.Ordinal);
+        var normalById = new Dictionary<string, OwnedMonsterData>(StringComparer.Ordinal);
+        var shinyById = new Dictionary<string, OwnedMonsterData>(StringComparer.Ordinal);
+
+        void Consider(OwnedMonsterData om)
         {
-            var om = allOwned[i];
-            if (om == null || string.IsNullOrEmpty(om.monsterId))
-                continue;
+            if (om == null || string.IsNullOrEmpty(om.monsterId)) return;
+            bool shiny = om.isShiny || om.shinyTier > 0;
 
-            if (!ownedById.TryGetValue(om.monsterId, out var existing) || (existing != null && om.level > existing.level))
+            // Best-any
+            if (!ownedById.TryGetValue(om.monsterId, out var existingAny) || (existingAny != null && om.level > existingAny.level))
                 ownedById[om.monsterId] = om;
 
-            if (om.isShiny)
+            // Best-normal / best-shiny
+            if (shiny)
             {
-                if (!shinyById.TryGetValue(om.monsterId, out var shinyExisting) || (shinyExisting != null && om.level > shinyExisting.level))
+                if (!shinyById.TryGetValue(om.monsterId, out var existingShiny) || (existingShiny != null && om.level > existingShiny.level))
                     shinyById[om.monsterId] = om;
+            }
+            else
+            {
+                if (!normalById.TryGetValue(om.monsterId, out var existingNormal) || (existingNormal != null && om.level > existingNormal.level))
+                    normalById[om.monsterId] = om;
+            }
+        }
+
+        var ownedOnly = data.GetAllOwnedMonsters(includeTeam: false) ?? new List<OwnedMonsterData>();
+        for (int i = 0; i < ownedOnly.Count; i++) Consider(ownedOnly[i]);
+
+        if (data.team != null)
+        {
+            for (int i = 0; i < data.team.Count; i++)
+            {
+                var t = data.team[i];
+                if (t == null) continue;
+                if (string.IsNullOrEmpty(t.ownedUID)) continue; // ignore placeholders
+                Consider(t);
             }
         }
 
@@ -409,10 +432,33 @@ public class CodexPanelUI : MonoBehaviour
             if (!def) continue;
 
             OwnedMonsterData ownedData = null;
+            OwnedMonsterData normalData = null;
+            OwnedMonsterData shinyData = null;
 
             // capturedReal = truly owned (in ShinyFirst mode this is still "owned or not"
             // for filtering; we keep capturedReal based on normal ownership).
             bool capturedReal = ownedById.TryGetValue(def.id, out ownedData);
+            normalById.TryGetValue(def.id, out normalData);
+            shinyById.TryGetValue(def.id, out shinyData);
+
+            // Choose which variant to display in the Codex grid.
+            // - If only shiny exists, show shiny.
+            // - If only normal exists, show normal.
+            // - If both exist, show the last-used variant (stored in settings).
+            OwnedMonsterData displayOwned = ownedData;
+            if (shinyData != null && normalData == null)
+            {
+                displayOwned = shinyData;
+            }
+            else if (shinyData != null && normalData != null)
+            {
+                bool preferShiny = (data.settings != null && data.settings.codexPreferShinyIds != null && data.settings.codexPreferShinyIds.Contains(def.id));
+                displayOwned = preferShiny ? shinyData : normalData;
+            }
+            else if (normalData != null)
+            {
+                displayOwned = normalData;
+            }
 
             // discovered = reveal in codex even if not owned yet
             bool discovered =
@@ -453,7 +499,7 @@ public class CodexPanelUI : MonoBehaviour
                 // Pass "captured: discovered" so silhouettes become visible for pack monsters
                 item.SetupForCodex(
                     def,
-                    ownedData,
+                    displayOwned,
                     captured: discovered,
                     isFavorite: isFavorite,
                     allowDetail: discovered,

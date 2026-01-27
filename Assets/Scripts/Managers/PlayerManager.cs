@@ -84,17 +84,24 @@ public class ShinyBoostData
 [Serializable]
 public class FieldOpsStats
 {
-    public int encountersInitiated;      // how many wild battles were started
-    public int captureAttempts;          // how many capture rolls happened
-    public int capturesSuccessful;       // how many succeeded
-    public int rareBitlingsFound;        // successful captures of Rare/Epic/Legendary/Mythic
-    public int shinyDiscoveries;         // shiny captures
-    public int riftStabilizations;       // boss defeats (or other rift events)
-    public int longestCaptureStreak;     // best streak of consecutive successes
-    public int currentCaptureStreak;     // current streak (resets on fail)
+    public int encountersInitiated;     
+    public int captureAttempts;       
+    public int capturesSuccessful;       
+    public int rareBitlingsFound;      
+    public int shinyDiscoveries;       
+    public int riftStabilizations;    
+    public int longestCaptureStreak;    
+    public int currentCaptureStreak;     
 
-    public System.Collections.Generic.List<string> recentHighlights =
-        new System.Collections.Generic.List<string>();
+    public List<string> recentHighlights =
+        new List<string>();
+}
+
+[Serializable]
+public class PreferredVariantKV
+{
+    public string monsterId;
+    public string preferredOwnedUid; 
 }
 
 [Serializable]
@@ -112,6 +119,7 @@ public class PlayerManager
     public List<LuckBoostData> activeFavorBoosts = new List<LuckBoostData>();
     public List<JobStorageUpgrade> jobStorageUpgrades = new List<JobStorageUpgrade>();
     public List<ShinyBoostData> activeShinyBoosts = new List<ShinyBoostData>();
+    public List<PreferredVariantKV> preferredVariants = new();
     public FieldOpsStats fieldOps = new FieldOpsStats();
 
     public List<string> ownedIdsList = new List<string>();
@@ -143,7 +151,7 @@ public class PlayerManager
     public int encounterMax = 50;
     public int encounterCost = 5;
     public int lastEncounterResetYMD = 0;
-    public int dailyBonusDay = 1;            // 1-based day in the current cycle
+    public int dailyBonusDay = 1;         
     public int lastDailyClaimDayIndex = -1;
     public int cheatInvalidAttempts;
     public long cheatLockedUntilUnix;

@@ -95,7 +95,7 @@ public class PostBattleSummaryPanelUI : MonoBehaviour
     private void OnContinueClicked()
     {
         EncounterPanelUI.I?.ForceBlinderAlphaToOne();
-        
+
         // CLEANUP REQUEST:
         // If defeated, go to Home after continuing.
         if (_lastResult.HasValue && !_lastResult.Value.victory && !_lastResult.Value.escaped)
@@ -166,6 +166,9 @@ public class PostBattleSummaryPanelUI : MonoBehaviour
         return m > 0 ? $"{m}:{r:00}" : $"{r}s";
     }
 
+    // ─────────────────────────────────────────────
+    // UPDATED: capturedShiny added as 7th argument
+    // ─────────────────────────────────────────────
     public void Set(
         BattleResult result,
         int growthCoresGained = 0,
@@ -173,15 +176,19 @@ public class PostBattleSummaryPanelUI : MonoBehaviour
         bool captured = false,
         string capturedMonsterId = null,
         int capturedLevel = 0,
+        bool capturedShiny = false,                  // NEW
         List<string> levelUpSummaries = null,
         int creditsBase = 0,
         int creditsTitleBonus = 0,
         int growthCoresBase = 0,
         int growthCoresTitleBonus = 0,
-        List<string> growthCoresDetailLines = null
+        List<string> growthCoresDetailLines = null,
+        bool wildWasShiny = false
     )
     {
         _lastResult = result;
+
+        bool effectiveShiny = capturedShiny || wildWasShiny;
 
         if (titleLabel)
             titleLabel.text = result.victory ? "Victory!" : "Defeat";
@@ -199,30 +206,39 @@ public class PostBattleSummaryPanelUI : MonoBehaviour
                 growthCoresLabel.text = BuildRewardLine("Growth Cores", growthCoresBase, growthCoresTitleBonus, coresTotal);
         }
 
+        // Capture line (UPDATED: wraps shiny name in *)
         if (captureLabel)
         {
             if (captured)
             {
-                string name = !string.IsNullOrEmpty(capturedMonsterId)
-                    ? capturedMonsterId
-                    : (result.wildDef ? result.wildDef.id : "Unknown");
+                // Use display name, but still fall back safely if needed.
+                string baseName = (result.wildDef != null) ? MonsterNameFormatter.GetDisplayName(result.wildDef) : (!string.IsNullOrEmpty(capturedMonsterId) ? capturedMonsterId : "Unknown");
+                string name = MonsterNameFormatter.Format(baseName, effectiveShiny);
 
                 int lvl = capturedLevel > 0 ? capturedLevel : Mathf.Max(1, result.wildLevel);
                 captureLabel.text = $"Captured: {name} (Lv {lvl})";
             }
-            else captureLabel.text = "No capture";
+            else
+            {
+                captureLabel.text = "No capture";
+            }
         }
 
         MonsterDataSO wildDef = result.wildDef;
 
         if (enemyPortraitImage)
         {
-            if (wildDef && wildDef.icon)
+            Sprite portrait = GetBestPortraitSprite(wildDef, effectiveShiny);
+            if (portrait != null)
             {
                 enemyPortraitImage.enabled = true;
-                enemyPortraitImage.sprite = wildDef.icon;
+                enemyPortraitImage.sprite = portrait;
             }
-            else enemyPortraitImage.enabled = false;
+            else
+            {
+                enemyPortraitImage.enabled = false;
+                enemyPortraitImage.sprite = null;
+            }
         }
 
         if (enemyNameLabel)
@@ -266,4 +282,15 @@ public class PostBattleSummaryPanelUI : MonoBehaviour
         if (firstHitLabel) firstHitLabel.text = $"First Hit: {(result.gotFirstHit ? "Yes" : "No")}";
         if (timeLabel) timeLabel.text = $"Time: {FormatTime(result.secondsSurvived)}";
     }
+
+    private Sprite GetBestPortraitSprite(MonsterDataSO def, bool shiny)
+    {
+        if (!def) return null;
+
+        if (shiny && def.shinyIcon != null)
+            return def.shinyIcon;
+
+        return def.icon;
+    }
+
 }

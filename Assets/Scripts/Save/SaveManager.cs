@@ -73,21 +73,21 @@ public static class SaveManager
     public static bool IsHardWiping => IsHardResetting;
 
     public static void BeginHardReset() => IsHardResetting = true;
-    public static void EndHardReset()   => IsHardResetting = false;
+    public static void EndHardReset() => IsHardResetting = false;
 
     // ─────────────────────────────────────────────
     // Paths
     // ─────────────────────────────────────────────
 
     // NEW (authoritative)
-    public static string SavePath   => Path.Combine(Application.persistentDataPath, "PlayerSave.json");
+    public static string SavePath => Path.Combine(Application.persistentDataPath, "PlayerSave.json");
     public static string BackupPath => Path.Combine(Application.persistentDataPath, "PlayerSave.bak");
 
     // Legacy (migration only)
-    private static string LegacySavePath          => Path.Combine(Application.persistentDataPath, "idle_mon_save.json");
-    private static string LegacyBackupPath        => Path.Combine(Application.persistentDataPath, "idle_mon_save.bak");
+    private static string LegacySavePath => Path.Combine(Application.persistentDataPath, "idle_mon_save.json");
+    private static string LegacyBackupPath => Path.Combine(Application.persistentDataPath, "idle_mon_save.bak");
     private static string LegacyTutorialFlagsPath => Path.Combine(Application.persistentDataPath, "tutorial_flags.json");
-    private static string LegacyJobRuntimePath    => Path.Combine(Application.persistentDataPath, "idle_job_runtime.json");
+    private static string LegacyJobRuntimePath => Path.Combine(Application.persistentDataPath, "idle_job_runtime.json");
 
     // ─────────────────────────────────────────────
     // Auto-generated handler names
@@ -116,8 +116,8 @@ public static class SaveManager
         }
 
         string prefix = namePrefixes[UnityEngine.Random.Range(0, namePrefixes.Length)];
-        string stem   = nameStems[UnityEngine.Random.Range(0, nameStems.Length)];
-        string hex    = UnityEngine.Random.Range(0, 4095).ToString("X3");
+        string stem = nameStems[UnityEngine.Random.Range(0, nameStems.Length)];
+        string hex = UnityEngine.Random.Range(0, 4095).ToString("X3");
         return $"{prefix} {stem}-{hex}";
     }
 
@@ -232,7 +232,7 @@ public static class SaveManager
             _titlesCache = null;
 
             Data = NewFreshPlayer();
-            EnsureDefaults(); 
+            EnsureDefaults();
 
             ResourceBank.EnsureSize();
             foreach (ResourceType t in Enum.GetValues(typeof(ResourceType)))
@@ -347,12 +347,9 @@ public static class SaveManager
 
             // 7) If reloadFresh was requested, DO NOT set Data = null.
             // Leaving Data non-null prevents EncounterManager/UI from null-refing mid-frame.
-            // If caller reloads scene (your SettingsManager does), we don't need to LoadOrCreate here.
             if (reloadFresh)
             {
-                // Optional: you can keep this off to avoid extra IO.
-                // If you want a disk re-read without scene reload, you can do:
-                // EndHardReset(); _loaded = false; LoadOrCreate();
+                // Optional: keep IO minimal and rely on scene reload.
             }
         }
         catch (Exception e)
@@ -364,10 +361,6 @@ public static class SaveManager
             EndHardReset();
             GameEvents.HardResetting?.Invoke(false);
         }
-
-        // Do NOT fire resource/job/energy events here.
-        // They can cause UI refresh while the scene is still active and mid-reset.
-        // Scene reload (SettingsManager.OnReset) will naturally refresh all bindings.
     }
 
     private static void ForceWriteBaselineNow()
@@ -400,8 +393,8 @@ public static class SaveManager
 
     private static void NormalizeAfterLoad()
     {
-        EnsureDefaults();         
-        Data?.EnsureTransientSets();     
+        EnsureDefaults();
+        Data?.EnsureTransientSets();
 
         EnsureTrainingDefaults();
 
@@ -576,7 +569,7 @@ public static class SaveManager
         Data.jobStorageUpgrades ??= new List<JobStorageUpgrade>();
         Data.unlockedPacks ??= new List<string>();
         Data.resourceCounts ??= new List<int>();
-
+        Data.preferredVariants ??= new List<PreferredVariantKV>();
         Data.activeJobMods ??= new List<JobGlobalMod>();
         Data.activeShinyBoosts ??= new List<ShinyBoostData>();
         Data.favoriteMonsterIdsList ??= new List<string>();
@@ -621,7 +614,7 @@ public static class SaveManager
         // Authoritative for persistence: LISTS.
         RebuildTransientSetsFromLists();
 
-        // Normalize owned/team entries (uids, clamps)
+        // Normalize owned/team entries (uids, clamps, shiny normalization)
         NormalizeOwnedEntries(Data.owned);
         NormalizeOwnedEntries(Data.team);
 
@@ -675,6 +668,8 @@ public static class SaveManager
                     level = Mathf.Max(1, t.level),
                     currentHP = t.currentHP <= -1 ? t.currentHP : -1,
                     currentXP = Mathf.Max(0, t.currentXP),
+
+                    // Preserve identity
                     ownedUID = string.IsNullOrEmpty(t.ownedUID) ? Guid.NewGuid().ToString("N") : t.ownedUID,
 
                     // Preserve progression fields if present on OwnedMonsterData
@@ -686,9 +681,44 @@ public static class SaveManager
                     trainingLastUnix = t.trainingLastUnix,
                     lastLevelClaimDay = t.lastLevelClaimDay,
                     pendingLevels = Mathf.Max(0, t.pendingLevels),
+
+                    // ✅ Preserve shiny identity from the team entry
+                    isShiny = t.isShiny,
+                    shinyTier = Mathf.Max(0, t.shinyTier),
                 };
 
+                // Shiny normalization (legacy safety)
+                if (canonical.shinyTier > 0 && !canonical.isShiny) canonical.isShiny = true;
+                if (canonical.isShiny && canonical.shinyTier <= 0) canonical.shinyTier = 1;
+
                 Data.owned.Add(canonical);
+            }
+            else
+            {
+                // ✅ If we found a canonical owned entry, merge team fields without stripping shiny identity.
+                canonical.level = Mathf.Max(1, t.level);
+                canonical.currentHP = t.currentHP; // team HP authoritative
+                canonical.currentXP = Mathf.Max(0, t.currentXP);
+
+                // Merge progression fields (team may be newest in some flows)
+                canonical.unspentStatPoints = Mathf.Max(canonical.unspentStatPoints, t.unspentStatPoints);
+                if (!string.IsNullOrEmpty(t.lastBucketId)) canonical.lastBucketId = t.lastBucketId;
+                canonical.trainingBonus = t.trainingBonus;
+                canonical.autoApply = t.autoApply;
+                canonical.autoApplyTargetLevel = t.autoApplyTargetLevel;
+                canonical.trainingLastUnix = t.trainingLastUnix != 0 ? t.trainingLastUnix : canonical.trainingLastUnix;
+                canonical.lastLevelClaimDay = t.lastLevelClaimDay != 0 ? t.lastLevelClaimDay : canonical.lastLevelClaimDay;
+                canonical.pendingLevels = Mathf.Max(canonical.pendingLevels, t.pendingLevels);
+
+                // ✅ Merge shiny identity (never erase if either side says shiny)
+                if (t.shinyTier > canonical.shinyTier) canonical.shinyTier = t.shinyTier;
+                if (t.isShiny) canonical.isShiny = true;
+                if (canonical.shinyTier > 0 && !canonical.isShiny) canonical.isShiny = true;
+                if (canonical.isShiny && canonical.shinyTier <= 0) canonical.shinyTier = 1;
+
+                // Ensure ownedUID exists
+                if (string.IsNullOrEmpty(canonical.ownedUID))
+                    canonical.ownedUID = string.IsNullOrEmpty(t.ownedUID) ? Guid.NewGuid().ToString("N") : t.ownedUID;
             }
 
             if (string.IsNullOrEmpty(canonical.ownedUID))
@@ -700,8 +730,6 @@ public static class SaveManager
             if (!string.IsNullOrEmpty(canonical.monsterId))
                 Data.ownedIds.Add(canonical.monsterId);
         }
-
-
 
         // Training pointer default
         if (string.IsNullOrEmpty(Data.trainingMonsterId) && Data.team.Count > 0)
@@ -747,6 +775,12 @@ public static class SaveManager
             if (string.IsNullOrEmpty(om.ownedUID))
                 om.ownedUID = Guid.NewGuid().ToString("N");
 
+            // ✅ Shiny normalization (supports legacy / partial saves)
+            // - shinyTier > 0 implies isShiny
+            // - isShiny implies at least shinyTier 1
+            if (om.shinyTier > 0 && !om.isShiny) om.isShiny = true;
+            if (om.isShiny && om.shinyTier <= 0) om.shinyTier = 1;
+
             if (ReferenceEquals(list, Data.owned) && !string.IsNullOrEmpty(om.monsterId))
                 Data.ownedIds.Add(om.monsterId);
         }
@@ -767,6 +801,10 @@ public static class SaveManager
 
             if (om.lastLevelClaimDay == 0) om.lastLevelClaimDay = -1;
             if (om.pendingLevels < 0) om.pendingLevels = 0;
+
+            // ✅ Shiny normalization here too (defensive)
+            if (om.shinyTier > 0 && !om.isShiny) om.isShiny = true;
+            if (om.isShiny && om.shinyTier <= 0) om.shinyTier = 1;
         }
     }
 
@@ -790,7 +828,7 @@ public static class SaveManager
         _tutorialLoaded = true;
 
         _tutorialData = new TutorialFlagsData();
-        _tutorialSet  = new HashSet<string>(StringComparer.Ordinal);
+        _tutorialSet = new HashSet<string>(StringComparer.Ordinal);
 
         // Combined-save model: tutorial flags are hydrated from PlayerSaveRoot during LoadOrCreate().
         // If EnsureTutorialFlagsLoaded is called before LoadOrCreate(), we simply start empty.
@@ -830,7 +868,7 @@ public static class SaveManager
     {
         _tutorialLoaded = true;
         _tutorialData = new TutorialFlagsData();
-        _tutorialSet  = new HashSet<string>(StringComparer.Ordinal);
+        _tutorialSet = new HashSet<string>(StringComparer.Ordinal);
 
         // Also remove legacy file if present.
         SaveFiles.TryDelete(LegacyTutorialFlagsPath);
@@ -1096,7 +1134,11 @@ public static class SaveManager
                 level = Mathf.Max(1, level),
                 currentHP = -1,
                 currentXP = 0,
-                ownedUID = Guid.NewGuid().ToString("N")
+                ownedUID = Guid.NewGuid().ToString("N"),
+
+                // ensure non-shiny starter by default
+                isShiny = false,
+                shinyTier = 0
             };
             Data.owned.Add(ownedMonster);
         }
@@ -1106,6 +1148,10 @@ public static class SaveManager
             if (ownedMonster.currentHP == 0) ownedMonster.currentHP = -1;
             if (string.IsNullOrEmpty(ownedMonster.ownedUID))
                 ownedMonster.ownedUID = Guid.NewGuid().ToString("N");
+
+            // normalize shiny fields in case older data is partially filled
+            if (ownedMonster.shinyTier > 0 && !ownedMonster.isShiny) ownedMonster.isShiny = true;
+            if (ownedMonster.isShiny && ownedMonster.shinyTier <= 0) ownedMonster.shinyTier = 1;
         }
 
         bool onTeam = Data.team.Exists(t => t != null && t.ownedUID == ownedMonster.ownedUID);

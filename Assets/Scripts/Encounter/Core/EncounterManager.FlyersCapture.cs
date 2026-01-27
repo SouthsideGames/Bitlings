@@ -224,6 +224,11 @@ public partial class EncounterManager
         return Mathf.Clamp01(cur.bonus);
     }
 
+    public bool HasActiveShinyBoost()
+    {
+        return CurrentShinyBoost != null;
+    }
+
     private float GetActiveShinyBoostMult()
     {
         var cur = CurrentShinyBoost;
@@ -328,10 +333,31 @@ public partial class EncounterManager
         float roll = Random.value;
         bool success = roll <= finalChance;
 
-        bool isShiny = IsShinyMonster(def);
+        // ---------------------------------------------------------------------
+        // SHINY DETERMINATION (FIXED):
+        // If the encounter was presented as shiny, the OwnedMonsterData must store isShiny=true,
+        // even if the species is not "shiny-flagged" by definition.
+        // ---------------------------------------------------------------------
 
+        // Encounter-scoped shiny presentation (either still active, or captured from battle end)
+        bool encounterWasShiny = _currentWildIsShiny || _lastWildWasShiny;
+
+        // Legacy/species shiny flag OR encounter presented shiny
+        bool isShiny = IsShinyMonster(def) || encounterWasShiny;
+
+        // If no shiny art exists, do not mark shiny (prevents "shiny" with normal visuals).
+        if (isShiny && def.shinyIcon == null)
+            isShiny = false;
+
+        // Shiny cheat
         if (SaveManager.Data != null && SaveManager.Data.forceShinyCapturesRemaining > 0)
+        {
             isShiny = true;
+
+            // still respect art availability
+            if (def.shinyIcon == null)
+                isShiny = false;
+        }
 
         FieldOpsTracker.RecordCaptureAttempt(def, success, isShiny);
 
@@ -346,16 +372,21 @@ public partial class EncounterManager
                 currentHP = -1,
                 currentXP = 0,
                 ownedUID = Guid.NewGuid().ToString("N"),
-                
+
                 isShiny = isShiny,
                 shinyTier = isShiny ? 1 : 0
             };
 
+            // Consume shiny cheat only on successful capture (your existing behavior)
             if (isShiny && SaveManager.Data != null && SaveManager.Data.forceShinyCapturesRemaining > 0)
             {
                 SaveManager.Data.forceShinyCapturesRemaining =
                     Mathf.Max(0, SaveManager.Data.forceShinyCapturesRemaining - 1);
             }
+
+            // IMPORTANT: consume the "last wild was shiny" sticky flag after it is used for capture,
+            // so it cannot leak into later capture attempts.
+            _lastWildWasShiny = false;
 
             data.owned ??= new List<OwnedMonsterData>();
             data.owned.Add(om);
@@ -373,7 +404,6 @@ public partial class EncounterManager
                 LogScope.Encounter
             );
             EmitStatus($"Captured {def.displayName}! (Lv {level})", LogScope.Encounter);
-
         }
         else
         {
@@ -382,12 +412,10 @@ public partial class EncounterManager
                 LogScope.Encounter
             );
             EmitStatus($"Capture failed. {def.displayName} escaped.", LogScope.Encounter);
-
         }
 
         return success;
     }
-
 
     // ── Shiny / Unique helpers ─────────────────────────────────────────────────
 

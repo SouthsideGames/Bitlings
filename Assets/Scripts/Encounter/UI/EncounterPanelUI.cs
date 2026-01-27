@@ -150,9 +150,10 @@ public class EncounterPanelUI : MonoBehaviour
     [SerializeField] private GameObject closeButtonRoot;  // assign the Close button GameObject (or its parent)
     [SerializeField] private bool hideCloseDuringBattle = true;
 
-
     private MonsterDataSO _pendingHireDef;
     private int _pendingHireLevel;
+
+    private bool _pendingHireIsShiny;     // NEW: sticky flag for the current hire prompt
 
     private bool _hireChoseYes;
     private bool _hireCaptureSucceeded;
@@ -207,6 +208,8 @@ public class EncounterPanelUI : MonoBehaviour
 
     void OnEnable()
     {
+        ForceBlinderAlphaToOne();
+
         if (encounterBtn)
         {
             encounterBtn.onClick.RemoveAllListeners();
@@ -279,7 +282,6 @@ public class EncounterPanelUI : MonoBehaviour
         GameEvents.WinStreakChanged -= OnWinStreakChanged;
         GameEvents.OnResourcesChanged -= OnResourcesChanged;
         GameEvents.OnBattleStateChanged -= HandleBattleStateChanged;
-
 
         if (encounterBtn) encounterBtn.onClick.RemoveAllListeners();
         if (_fadeCo != null) StopCoroutine(_fadeCo);
@@ -441,7 +443,6 @@ public class EncounterPanelUI : MonoBehaviour
     {
         if (!flyerTooltip) return;
 
-        // flyerObj is whatever your CurrentFlyer type is; we only use ToString for type label already.
         string typeName = "Unknown";
         if (EncounterManager.I != null && EncounterManager.I.CurrentFlyer != null)
             typeName = EncounterManager.I.CurrentFlyer.type.ToString();
@@ -511,7 +512,6 @@ public class EncounterPanelUI : MonoBehaviour
             return;
         }
 
-        // Pulse near expiry (within warning window)
         var rt = label.rectTransform;
         if (!rt) return;
 
@@ -736,7 +736,6 @@ public class EncounterPanelUI : MonoBehaviour
         }
 
         RefreshEncounterBoostIconsAndTooltips(force: true);
-
         ApplyCloseLock();
     }
 
@@ -883,9 +882,17 @@ public class EncounterPanelUI : MonoBehaviour
     }
 
     // ─────────────────────────────────────────────────────────────
-    // Hire Decision (unchanged)
+    // Hire Decision (UPDATED: respects passed isShiny; no overwrite)
     // ─────────────────────────────────────────────────────────────
+
+    // Backward-compatible overload (preserves prior call sites)
     public void ShowHireDecision(MonsterDataSO def, int level)
+    {
+        bool shiny = (EncounterManager.I != null && EncounterManager.I.CurrentWildIsShiny);
+        ShowHireDecision(def, level, shiny);
+    }
+
+    public void ShowHireDecision(MonsterDataSO def, int level, bool isShiny)
     {
         if (!hireDecisionRoot || def == null)
         {
@@ -896,12 +903,21 @@ public class EncounterPanelUI : MonoBehaviour
         _pendingHireDef = def;
         _pendingHireLevel = Mathf.Max(1, level);
 
+        // NEW: store the encounter’s shiny presentation for this hire decision
+        _pendingHireIsShiny = isShiny;
+
         _hireChoseYes = false;
         _hireCaptureSucceeded = false;
         _hireDecisionLocked = false;
 
-        if (hireMonsterIcon) hireMonsterIcon.sprite = def.icon;
-        if (hirePromptText) hirePromptText.text = $"Do you want to hire {def.displayName}?";
+        // IMPORTANT FIX:
+        // Do NOT overwrite isShiny by re-reading EncounterManager.I.CurrentWildIsShiny,
+        // because EncounterManager resets that flag on battle end.
+        if (hireMonsterIcon)
+            hireMonsterIcon.sprite = MonsterNameFormatter.GetIcon(def, _pendingHireIsShiny, backIcon: false);
+
+        if (hirePromptText)
+            hirePromptText.text = $"Do you want to hire {MonsterNameFormatter.Format(def, _pendingHireIsShiny)}?";
 
         ClearHireResultVisuals();
 
@@ -960,6 +976,7 @@ public class EncounterPanelUI : MonoBehaviour
 
         _pendingHireDef = null;
         _pendingHireLevel = 0;
+        _pendingHireIsShiny = false; // NEW: reset
         _hireDecisionLocked = false;
 
         if (hireContinueButton) hireContinueButton.gameObject.SetActive(false);
@@ -970,7 +987,10 @@ public class EncounterPanelUI : MonoBehaviour
     {
         if (!hirePromptText) return;
 
-        string name = (_pendingHireDef != null) ? _pendingHireDef.displayName : "this monster";
+        // Use the same shiny presentation that was shown to the player.
+        string name = (_pendingHireDef != null)
+            ? MonsterNameFormatter.Format(_pendingHireDef, _pendingHireIsShiny)
+            : "this monster";
 
         if (!choseYes)
         {
@@ -1166,7 +1186,6 @@ public class EncounterPanelUI : MonoBehaviour
 
         if (validCount > 1 && !string.IsNullOrEmpty(_lastBlinderLine) && chosen == _lastBlinderLine)
         {
-            // small reroll
             r = Random.value * totalWeight;
             acc = 0f;
             for (int i = 0; i < pack.entries.Count; i++)
@@ -1365,6 +1384,8 @@ public class EncounterPanelUI : MonoBehaviour
 
     public void OnWildSpawned(MonsterDataSO def)
     {
+        ForceBlinderAlphaToOne(); // ← HARD RESET
+
         if (!ownedCapturedIcon)
             return;
 
@@ -1389,8 +1410,6 @@ public class EncounterPanelUI : MonoBehaviour
         if (!hideCloseDuringBattle) { closeButtonRoot.SetActive(true); return; }
 
         bool inBattle = IsInBattle();
-
         closeButtonRoot.SetActive(!inBattle);
     }
-
 }
