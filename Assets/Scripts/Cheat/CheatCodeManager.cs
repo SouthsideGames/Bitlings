@@ -21,6 +21,7 @@ public enum CheatEffectKind
     HealTeamFull,
     UnlockAllPacks,
     Add500ToAllResources,
+    ToggleDiagnosticsPanel,
 }
 
 [Serializable]
@@ -307,6 +308,9 @@ public class CheatCodeManager : MonoBehaviour
 
             case CheatEffectKind.Add500ToAllResources:
                 return ExecuteAdd500ToAllResources(out message);
+
+            case CheatEffectKind.ToggleDiagnosticsPanel:
+                return ExecuteToggleDiagnosticsPanel(out message);
 
             default:
                 message = "Cheat not configured.";
@@ -913,4 +917,20 @@ public class CheatCodeManager : MonoBehaviour
 
         GameEvents.OnResourcesChanged?.Invoke();
     }
+
+    bool ExecuteToggleDiagnosticsPanel(out string message)
+    {
+        message = string.Empty;
+
+        if (DiagnosticsOverlayUI.I == null)
+        {
+            message = "DiagnosticsOverlayUI missing in scene.";
+            return false;
+        }
+
+        DiagnosticsOverlayUI.I?.Toggle();
+        message = "Diagnostics toggled.";
+        return true;
+    }
+
 }

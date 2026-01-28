@@ -422,6 +422,7 @@ public class EncounterPanelUI : MonoBehaviour
             StopPulse(ref _favorPulseTweenId, favorTimerLabel);
             ClearTooltip(favorTooltip);
         }
+
     }
 
     void UpdateEnergyTooltip()
@@ -888,7 +889,7 @@ public class EncounterPanelUI : MonoBehaviour
     // Backward-compatible overload (preserves prior call sites)
     public void ShowHireDecision(MonsterDataSO def, int level)
     {
-        bool shiny = (EncounterManager.I != null && EncounterManager.I.CurrentWildIsShiny);
+        bool shiny = EncounterManager.I != null && EncounterManager.I.CurrentWildIsShiny;
         ShowHireDecision(def, level, shiny);
     }
 

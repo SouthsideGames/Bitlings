@@ -119,7 +119,6 @@ public class JobSiteView : MonoBehaviour
         }
 
         var st = GetRuntimeState(site);
-        Debug.Log($"[JobSiteView] name={name} site={site} st={(st!=null ? "OK":"NULL")} lvl={(st!=null ? st.level : -1)} levelText={(levelText ? levelText.name : "NULL")}");
 
         if (st == null || st.config == null)
         {

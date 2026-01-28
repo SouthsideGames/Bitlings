@@ -405,7 +405,8 @@ public class IdleBattleManager : MonoBehaviour
 
     private static bool RollShiny(MonsterDataSO wild, System.Random rng)
     {
-        int baseOdds = 512;
+        const int baseOdds = 512;   
+        const float maxMult = 8f;  
         float mult = 1f;
 
         var list = SaveManager.Data?.activeShinyBoosts;
@@ -414,10 +415,10 @@ public class IdleBattleManager : MonoBehaviour
             var cur = list[0];
             long now = SaveManager.NowUnix();
             if (cur != null && cur.expireUnix > now)
-                mult = Mathf.Max(1f, cur.bonus);
+                mult = Mathf.Clamp(cur.bonus, 1f, maxMult);
         }
 
-        int threshold = Mathf.Max(1, Mathf.FloorToInt(baseOdds / Mathf.Max(1f, mult)));
+        int threshold = Mathf.Max(1, Mathf.FloorToInt(baseOdds / mult));
         return rng.Next(threshold) == 0;
     }
 

@@ -6,6 +6,7 @@ using Random = UnityEngine.Random;
 public partial class EncounterManager
 {
     // ================= LURES / LUCK / SHINY / CAPTURE BAND =====================
+    private const float MAX_SHINY_BOOST_MULT = 8f;
 
     public IReadOnlyList<FlyerBiasData> ActiveLures => SaveManager.Data?.activeFlyers;
 
@@ -233,7 +234,7 @@ public partial class EncounterManager
     {
         var cur = CurrentShinyBoost;
         if (cur == null) return 1f;
-        return Mathf.Max(1f, cur.bonus);
+        return Mathf.Clamp(cur.bonus, 1f, MAX_SHINY_BOOST_MULT);
     }
 
     private float GetActiveCaptureBonus01()
