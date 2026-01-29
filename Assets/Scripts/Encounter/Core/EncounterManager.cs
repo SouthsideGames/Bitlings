@@ -978,6 +978,7 @@ public partial class EncounterManager : MonoBehaviour
         // This is encounter-spawn logic only (capture remains unchanged).
         _currentWildIsShiny = RollWildShiny(wild);
 
+
         EncounterPanelUI.I?.OnWildSpawned(wild);
 
         PlayEncounterSfx(wild);

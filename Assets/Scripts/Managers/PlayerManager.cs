@@ -173,6 +173,7 @@ public class PlayerManager
     public List<JobProgress> jobProgress = new List<JobProgress>();
 
     public bool hasChosenStarter;
+    public bool diagnosticsUnlocked = false;
 
     public List<MonsterType> seenTypesList = new List<MonsterType>();
     [NonSerialized] public HashSet<MonsterType> seenTypes = new HashSet<MonsterType>();

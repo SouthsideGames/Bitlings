@@ -918,19 +918,41 @@ public class CheatCodeManager : MonoBehaviour
         GameEvents.OnResourcesChanged?.Invoke();
     }
 
-    bool ExecuteToggleDiagnosticsPanel(out string message)
+   bool ExecuteToggleDiagnosticsPanel(out string message)
     {
         message = string.Empty;
 
-        if (DiagnosticsOverlayUI.I == null)
+        if (SaveManager.Data == null)
         {
-            message = "DiagnosticsOverlayUI missing in scene.";
+            message = "Save data missing.";
             return false;
         }
 
-        DiagnosticsOverlayUI.I?.Toggle();
-        message = "Diagnostics toggled.";
+        // Unlock the diagnostics button permanently
+        SaveManager.Data.diagnosticsUnlocked = true;
+        SaveManager.Save();
+
+        Debug.Log("[DIAG] diagnosticsUnlocked set TRUE and saved.");
+
+        // Force UI refresh (including inactive child button)
+        var btnUI = DiagnosticsButtonUI.I != null ? DiagnosticsButtonUI.I : FindObjectOfType<DiagnosticsButtonUI>(true);
+        if (btnUI != null)
+        {
+            btnUI.ApplyFromSave("CheatUnlock");
+            Debug.Log("[DIAG] Forced DiagnosticsButtonUI.ApplyFromSave()");
+        }
+        else
+        {
+            Debug.LogWarning("[DIAG] DiagnosticsButtonUI not found in scene.");
+        }
+
+        // Optional: also open/close overlay if you want.
+        message = "Diagnostics unlocked.";
         return true;
     }
+
+
+
+
 
 }
