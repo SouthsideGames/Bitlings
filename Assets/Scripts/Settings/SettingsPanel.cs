@@ -1,6 +1,7 @@
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
+using UnityEngine.SceneManagement;
 
 public class SettingsPanel : MonoBehaviour
 {
@@ -90,6 +91,7 @@ public class SettingsPanel : MonoBehaviour
     [SerializeField] private Button rerollDailySeedButton;
 
     [Header("Buttons")]
+    [SerializeField] private Button mainMenuButton;
     [SerializeField] private Button resetButton;
 
     [Tooltip("Optional: plays a SFX so the player can hear the current volume.")]
@@ -143,10 +145,9 @@ public class SettingsPanel : MonoBehaviour
         WireSectionTabs();
 
         _activeSection = defaultSection;
-        RefreshTabVisibility(); // may force away from Seeds if locked
+        RefreshTabVisibility();
         ShowSection(_activeSection, instant: true);
 
-        // NEW: start hidden (again, for safety across scene reloads)
         SetResetConfirmVisible(false);
     }
 
@@ -155,11 +156,16 @@ public class SettingsPanel : MonoBehaviour
         SafeSubscribe();
         Refresh();
 
-        // Reset button now opens confirmation panel instead of immediately resetting.
         if (resetButton)
         {
             resetButton.onClick.RemoveAllListeners();
             resetButton.onClick.AddListener(OpenResetConfirm);
+        }
+
+        if( mainMenuButton)
+        {
+            mainMenuButton.onClick.RemoveAllListeners();
+            mainMenuButton.onClick.AddListener(ReturnToMainMenu);
         }
 
         if (testSfxButton)
@@ -178,7 +184,6 @@ public class SettingsPanel : MonoBehaviour
             rerollDailySeedButton.onClick.AddListener(OnClickRerollDailySeed);
         }
 
-        // NEW: confirmation panel wiring
         WireResetConfirmation();
 
         WireEvents();
@@ -192,12 +197,10 @@ public class SettingsPanel : MonoBehaviour
         CacheSectionCanvasGroups();
         WireSectionTabs();
 
-        // Ensure the current section is valid, then apply tab visibility gating.
         if (!IsSectionValid(_activeSection)) _activeSection = defaultSection;
-        RefreshTabVisibility(); // may force away from Seeds if locked
+        RefreshTabVisibility(); 
         ShowSection(_activeSection, instant: true);
 
-        // NEW: ensure hidden when opening settings
         SetResetConfirmVisible(false);
     }
 
@@ -208,8 +211,7 @@ public class SettingsPanel : MonoBehaviour
         if (resetButton) resetButton.onClick.RemoveAllListeners();
         if (testSfxButton) testSfxButton.onClick.RemoveAllListeners();
         if (rerollDailySeedButton) rerollDailySeedButton.onClick.RemoveAllListeners();
-
-        // NEW: unwire confirm panel buttons
+        if (mainMenuButton) mainMenuButton.onClick.RemoveAllListeners();
         if (resetConfirmCloseButton) resetConfirmCloseButton.onClick.RemoveAllListeners();
         if (resetConfirmAgreeButton) resetConfirmAgreeButton.onClick.RemoveAllListeners();
 
@@ -220,7 +222,6 @@ public class SettingsPanel : MonoBehaviour
 
         UnwireSectionTabs();
 
-        // NEW: ensure it doesn't remain stuck open if panel is disabled
         SetResetConfirmVisible(false);
     }
 
@@ -255,7 +256,6 @@ public class SettingsPanel : MonoBehaviour
 
     void ConfirmResetAndProceed()
     {
-        // Close first so the UI is correct even if reset triggers panel routing / reloads.
         SetResetConfirmVisible(false);
 
         var mgr = SettingsManager.I;
@@ -438,7 +438,6 @@ public class SettingsPanel : MonoBehaviour
     // ─────────────────────────────────────────────────────────
     // Core subscribe/refresh
     // ─────────────────────────────────────────────────────────
-
     void SafeSubscribe()
     {
         var sm = SettingsManager.I;
@@ -558,7 +557,6 @@ public class SettingsPanel : MonoBehaviour
             autoScrollLogToggle.onValueChanged.AddListener(OnAutoScrollChanged);
         }
 
-        // Notifications
         if (notificationsEnabledToggle)
         {
             notificationsEnabledToggle.onValueChanged.RemoveListener(OnNotificationsEnabledChanged);
@@ -589,7 +587,6 @@ public class SettingsPanel : MonoBehaviour
             notifyFallback24hToggle.onValueChanged.AddListener(OnNotifyFallback24hChanged);
         }
 
-        // Seeds / RNG
         if (useCustomSeedToggle)
         {
             useCustomSeedToggle.onValueChanged.RemoveListener(OnUseCustomSeedChanged);
@@ -646,7 +643,6 @@ public class SettingsPanel : MonoBehaviour
     // ─────────────────────────────────────────────────────────
     // Handlers
     // ─────────────────────────────────────────────────────────
-
     void OnMasterChanged(float v)
     {
         if (AudioManager.I) AudioManager.I.SetMasterVolume(v);
@@ -689,7 +685,6 @@ public class SettingsPanel : MonoBehaviour
         if (mgr != null) mgr.SetAutoScrollBattleLog(on);
     }
 
-    // Notifications
     void OnNotificationsEnabledChanged(bool on)
     {
         var mgr = SettingsManager.I;
@@ -720,7 +715,6 @@ public class SettingsPanel : MonoBehaviour
         if (mgr != null) mgr.SetNotifyFallback24h(on);
     }
 
-    // Seeds
     void OnUseCustomSeedChanged(bool on)
     {
         var mgr = SettingsManager.I;
@@ -746,7 +740,6 @@ public class SettingsPanel : MonoBehaviour
         }
     }
 
-    // Feature gating hook
     void HandleFeatureUnlocked(FeatureId feature)
     {
         if (feature == FeatureId.Seeds_CustomInput ||
@@ -760,7 +753,6 @@ public class SettingsPanel : MonoBehaviour
     // ─────────────────────────────────────────────────────────
     // Seed UI refresh (your existing gating)
     // ─────────────────────────────────────────────────────────
-
     void RefreshSeedUi(SettingsState s)
     {
         bool hasFeatureMgr = FeatureUnlockManager.I != null;
@@ -807,5 +799,10 @@ public class SettingsPanel : MonoBehaviour
         {
             rerollDailySeedButton.gameObject.SetActive(dailyUnlocked && rerollUnlocked);
         }
+    }
+
+    void ReturnToMainMenu()
+    {
+        SceneManager.LoadScene("Main");
     }
 }
