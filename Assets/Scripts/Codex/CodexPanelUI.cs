@@ -264,8 +264,12 @@ public class CodexPanelUI : MonoBehaviour
 
         for (int i = 0; i < filled.Count; i++)
         {
+            // IMPORTANT: capture locals per-iteration so UI callbacks can't
+            // accidentally reference the wrong monster if this method is
+            // rebuilt frequently.
             var member = filled[i];
-            var def = MonsterLibraryLocator.GetById(member.monsterId);
+            var memberLocal = member;
+            var def = MonsterLibraryLocator.GetById(memberLocal.monsterId);
 
             var go = Instantiate(teamCardPrefab, teamContent);
             var card = go.GetComponent<TeamMonsterCardUI>();
@@ -279,12 +283,12 @@ public class CodexPanelUI : MonoBehaviour
             {
                 int uiIndex = i; // index in the visible list
                 card.Setup(
-                    data: member,
+                    data: memberLocal,
                     def: def,
                     onClick: _ =>
                     {
                         SelectTeamSlot(uiIndex);
-                        OpenTeamDetail(uiIndex, member);
+                        OpenTeamDetail(uiIndex, memberLocal);
                     },
                     onAnyChanged: RefreshAll
                 );

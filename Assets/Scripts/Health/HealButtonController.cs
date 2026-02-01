@@ -153,6 +153,7 @@ public class HealButtonController : MonoBehaviour
         SaveManager.Save();
 
         GameEvents.OnTeamChanged?.Invoke();
+        GameEvents.OnTeamHealthChanged?.Invoke();
         GameEvents.OnResourcesChanged?.Invoke();
 
         Refresh();

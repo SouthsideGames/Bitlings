@@ -28,6 +28,7 @@ public sealed class EncounterButtonGuard : MonoBehaviour
         EncounterManager.OnEnergyGained += HandleEnergy;
         GameEvents.EnergyChanged += HandleEnergy;
         GameEvents.OnTeamChanged += HandleTeamChanged;
+        GameEvents.OnTeamHealthChanged += HandleTeamChanged;
 
         _button.onClick.AddListener(OnButtonClicked);
         Apply();
@@ -38,6 +39,7 @@ public sealed class EncounterButtonGuard : MonoBehaviour
         EncounterManager.OnEnergyGained -= HandleEnergy;
         GameEvents.EnergyChanged -= HandleEnergy;
         GameEvents.OnTeamChanged -= HandleTeamChanged;
+        GameEvents.OnTeamHealthChanged -= HandleTeamChanged;
 
         _button.onClick.RemoveListener(OnButtonClicked);
     }

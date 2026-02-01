@@ -618,6 +618,17 @@ public static class SaveManager
         NormalizeOwnedEntries(Data.owned);
         NormalizeOwnedEntries(Data.team);
 
+        // Defensive: ensure ownedUIDs are unique in the OWNED list.
+        // If duplicates exist (e.g., older bug or manual save edits), multiple
+        // team slots can accidentally bind to the same underlying object.
+        EnsureUniqueOwnedUIDs(Data.owned, null);
+
+        // Defensive: ensure TEAM entries don't contain ownedUID collisions that
+        // point at the wrong monster. If a team entry's ownedUID collides with
+        // a different monsterId, clear it so canonicalization falls back to the
+        // safer monsterId/unique matching below.
+        EnsureTeamOwnedUidMatchesMonsterId(Data.team, Data.owned);
+
         for (int i = 0; i < Data.achievements.Count; i++)
         {
             var a = Data.achievements[i];
@@ -666,7 +677,8 @@ public static class SaveManager
                 {
                     monsterId = t.monsterId,
                     level = Mathf.Max(1, t.level),
-                    currentHP = t.currentHP <= -1 ? t.currentHP : -1,
+                    // Preserve HP if it is known (>=0). -1 means "full/unknown" in this project.
+                    currentHP = (t.currentHP >= 0) ? t.currentHP : -1,
                     currentXP = Mathf.Max(0, t.currentXP),
 
                     // Preserve identity
@@ -742,6 +754,69 @@ public static class SaveManager
         if (Data.lastSavedUnix <= 0) Data.lastSavedUnix = NowUnix();
     }
 
+    // ─────────────────────────────────────────────
+    // Defensive UID de-dupe helpers
+    // ─────────────────────────────────────────────
+
+    /// <summary>
+    /// Ensures ownedUIDs are unique within the provided list.
+    /// If global is provided, uniqueness is enforced against that set too.
+    /// </summary>
+    private static void EnsureUniqueOwnedUIDs(List<OwnedMonsterData> list, HashSet<string> global)
+    {
+        if (list == null) return;
+
+        global ??= new HashSet<string>(StringComparer.Ordinal);
+
+        for (int i = 0; i < list.Count; i++)
+        {
+            var m = list[i];
+            if (m == null) continue;
+
+            if (string.IsNullOrEmpty(m.ownedUID))
+                m.ownedUID = Guid.NewGuid().ToString("N");
+
+            // If this UID is already used, regenerate.
+            if (global.Contains(m.ownedUID))
+                m.ownedUID = Guid.NewGuid().ToString("N");
+
+            global.Add(m.ownedUID);
+        }
+    }
+
+    /// <summary>
+    /// If a TEAM entry's ownedUID points at an OWNED entry with a different monsterId,
+    /// clear the team's ownedUID to prevent cross-binding.
+    /// </summary>
+    private static void EnsureTeamOwnedUidMatchesMonsterId(List<OwnedMonsterData> team, List<OwnedMonsterData> owned)
+    {
+        if (team == null || owned == null) return;
+
+        // Build UID → monsterId map from owned list.
+        var uidToId = new Dictionary<string, string>(StringComparer.Ordinal);
+        for (int i = 0; i < owned.Count; i++)
+        {
+            var o = owned[i];
+            if (o == null) continue;
+            if (string.IsNullOrEmpty(o.ownedUID) || string.IsNullOrEmpty(o.monsterId)) continue;
+            if (!uidToId.ContainsKey(o.ownedUID))
+                uidToId.Add(o.ownedUID, o.monsterId);
+        }
+
+        for (int i = 0; i < team.Count; i++)
+        {
+            var t = team[i];
+            if (t == null) continue;
+            if (string.IsNullOrEmpty(t.ownedUID) || string.IsNullOrEmpty(t.monsterId)) continue;
+
+            if (uidToId.TryGetValue(t.ownedUID, out var id) && !string.Equals(id, t.monsterId, StringComparison.Ordinal))
+            {
+                // Clear to force safer matching below (by UID if corrected later, else by unique monsterId).
+                t.ownedUID = null;
+            }
+        }
+    }
+
     private static void EnsureResourceCountsSized()
     {
         if (Data == null) return;
@@ -783,6 +858,62 @@ public static class SaveManager
 
             if (ReferenceEquals(list, Data.owned) && !string.IsNullOrEmpty(om.monsterId))
                 Data.ownedIds.Add(om.monsterId);
+        }
+    }
+
+    // ─────────────────────────────────────────────
+    // ownedUID collision guards
+    // ─────────────────────────────────────────────
+
+    /// <summary>
+    /// Ensures every entry in the list has a unique ownedUID.
+    /// If duplicates are found, the later duplicates are assigned a new GUID.
+    /// This prevents UI binding and team canonicalization from accidentally
+    /// pointing multiple monsters at the same underlying instance.
+    /// </summary>
+    private static void EnsureUniqueOwnedUIDs_Legacy(List<OwnedMonsterData> list, HashSet<string> seen)
+    {
+        if (list == null) return;
+        seen ??= new HashSet<string>(StringComparer.Ordinal);
+
+        for (int i = 0; i < list.Count; i++)
+        {
+            var om = list[i];
+            if (om == null) continue;
+
+            if (string.IsNullOrEmpty(om.ownedUID))
+                om.ownedUID = Guid.NewGuid().ToString("N");
+
+            // If ownedUID collides, re-key this entry.
+            if (seen.Contains(om.ownedUID))
+                om.ownedUID = Guid.NewGuid().ToString("N");
+
+            seen.Add(om.ownedUID);
+        }
+    }
+
+    /// <summary>
+    /// If a team entry's ownedUID points to an owned entry with a different monsterId,
+    /// clear the team ownedUID so later canonicalization prefers safer matching.
+    /// </summary>
+    private static void EnsureTeamOwnedUidMatchesMonsterId_Legacy(List<OwnedMonsterData> team, List<OwnedMonsterData> owned)
+    {
+        if (team == null || owned == null) return;
+
+        for (int i = 0; i < team.Count; i++)
+        {
+            var t = team[i];
+            if (t == null) continue;
+            if (string.IsNullOrEmpty(t.ownedUID) || string.IsNullOrEmpty(t.monsterId)) continue;
+
+            var match = owned.Find(o => o != null && o.ownedUID == t.ownedUID);
+            if (match == null) continue;
+
+            if (!string.Equals(match.monsterId, t.monsterId, StringComparison.Ordinal))
+            {
+                // Break the incorrect binding.
+                t.ownedUID = null;
+            }
         }
     }
 

@@ -293,6 +293,12 @@ public class TeamMonsterCardUI : MonoBehaviour
 
         SaveManager.Save();
 
+        // Notify cross-system listeners (Encounter button guard, team panels, etc.)
+        // that team HP has changed.
+        GameEvents.OnTeamHealthChanged?.Invoke();
+        // Also raise the broader team-change hook for any legacy listeners.
+        GameEvents.OnTeamChanged?.Invoke();
+
         UpdateHpText();
         UpdateHealInteractable();
         _onAnyChanged?.Invoke();

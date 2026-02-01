@@ -665,7 +665,7 @@ private IEnumerator MaybeSayKO_Wild(string victimName, float preHP, float postHP
                         yield return Wait(hitPause);
                     }
                 }
-}
+            }
             else
             {
                 if (!IsWildKO() && !IsTeamKO())
@@ -731,42 +731,48 @@ private IEnumerator MaybeSayKO_Wild(string victimName, float preHP, float postHP
                             RefreshStatusIconsFromState();
                         }
                     }
-                    // If the player queued a SWAP and the enemy is acting first this round,
-                    // the swap must resolve BEFORE the enemy attack so the incoming damage targets the new active monster.
-                    if (queuedChoice == PlayerAction.Swap)
+
+                    // ─────────────────────────────────────────────────────────
+                    // Swap priority (Pokemon-style):
+                    // If the player queued a Swap during the enemy-first branch,
+                    // resolve the swap BEFORE the wild executes its action so the
+                    // incoming hit targets the swapped-in monster.
+                    // (Swap consumes the player's action for the round.)
+                    // ─────────────────────────────────────────────────────────
+                    if (manualTurns && queuedChoice == PlayerAction.Swap)
                     {
+                        // If the current active was KO'ed somehow before swap resolution,
+                        // the queued action is lost (handled below after enemy turn).
                         if (teamHP[activeIndex] > 0.01f)
                         {
                             ResetDefendStreak();
                             ResolveQueuedSwap();
                             RefreshStatusIconsFromState();
                         }
-                        queuedChoice = PlayerAction.None; // swap consumes the player's action
+
+                        // Swap consumes the turn.
+                        queuedChoice = PlayerAction.None;
                     }
 
-                    // In the enemy-first branch, apply wild defend stance BEFORE the enemy would attack.
+                    // In the enemy-first branch, if the wild is defending this round,
+                    // apply the defend stance BEFORE its action would execute.
+                    // (We do NOT call EnemyTurn(Defend) to avoid double-rolling.)
                     if (wildChoice == EnemyAction.Defend)
                     {
                         ApplyWildDefendStance();
                         RefreshStatusIconsFromState();
                     }
-
-                    if (wildChoice != EnemyAction.Defend)
-                    {
-                        yield return EnemyTurn(wildChoice);
-
-                        // Enemy turn can set defend/charge/consume charge
-                        RefreshStatusIconsFromState();
-
-                        if (CheckEnd()) break;
-                        yield return Wait(hitPause);
-                    }
                     else
                     {
-                        // Defend consumes the enemy turn (no attack), but keep pacing consistent.
-                        if (CheckEnd()) break;
-                        yield return Wait(hitPause);
+                        yield return EnemyTurn(wildChoice);
                     }
+
+                    // Enemy turn can set defend/charge/consume charge
+                    RefreshStatusIconsFromState();
+
+                    if (CheckEnd()) break;
+                    yield return Wait(hitPause);
+
                     // If the wild KO'ed our active slot, we must auto-swap (if possible) and the queued action is lost.
                     if (!IsTeamKO() && teamHP[activeIndex] <= 0.01f)
                     {
@@ -1556,20 +1562,56 @@ private IEnumerator MaybeSayKO_Wild(string victimName, float preHP, float postHP
             teamList[i] = t;
         }
 
+        // Sync HP back to owned list.
+        // Prefer ownedUID matching so shiny/normal variants (same monsterId) don't cross-contaminate.
         for (int i = 0; i < teamList.Count; i++)
         {
             var t = teamList[i];
             if (t == null || string.IsNullOrEmpty(t.monsterId)) continue;
 
-            for (int j = 0; j < ownedList.Count; j++)
+            int idx = -1;
+
+            // 1) Strong match: ownedUID
+            if (!string.IsNullOrEmpty(t.ownedUID))
             {
-                var o = ownedList[j];
-                if (!string.IsNullOrEmpty(o.monsterId) && o.monsterId == t.monsterId)
+                for (int j = 0; j < ownedList.Count; j++)
+                {
+                    var o = ownedList[j];
+                    if (o != null && !string.IsNullOrEmpty(o.ownedUID) && o.ownedUID == t.ownedUID)
+                    {
+                        idx = j;
+                        break;
+                    }
+                }
+            }
+
+            // 2) Fallback: monsterId only if unique in owned list
+            if (idx < 0)
+            {
+                int count = 0;
+                int singleIdx = -1;
+                for (int j = 0; j < ownedList.Count; j++)
+                {
+                    var o = ownedList[j];
+                    if (o != null && !string.IsNullOrEmpty(o.monsterId) && o.monsterId == t.monsterId)
+                    {
+                        count++;
+                        singleIdx = j;
+                        if (count > 1) break;
+                    }
+                }
+
+                if (count == 1) idx = singleIdx;
+            }
+
+            if (idx >= 0 && idx < ownedList.Count)
+            {
+                var o = ownedList[idx];
+                if (o != null)
                 {
                     o.currentHP = Mathf.Max(0, t.currentHP);
                     o.lastHPUnix = nowUnix;
-                    ownedList[j] = o;
-                    break;
+                    ownedList[idx] = o;
                 }
             }
         }
