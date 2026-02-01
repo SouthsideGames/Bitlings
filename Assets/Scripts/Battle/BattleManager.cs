@@ -23,14 +23,10 @@ public struct BattleResult
     public bool gotFirstHit;
 }
 
-/// <summary>
-/// BattleManager owns the battle rules + state (turn loop, damage math, shields/guard/charge, rewards, saving).
-/// All “juice” (LeanTween, shakes, flashes, damage numbers, attack prefabs, panel fades, KO effects) is delegated
-/// to BattleFeedbackManager so this script stays focused on gameplay logic.
-/// </summary>
+
 public class BattleManager : MonoBehaviour
 {
-    private enum PlayerAction { None, Attack, Defend, Focus, Run }
+    private enum PlayerAction { None, Attack, Defend, Focus, Swap, Run }
     private enum EnemyAction { Attack, Defend, Focus, Run }
 
     [Header("Manual Turn Settings")]
@@ -38,6 +34,11 @@ public class BattleManager : MonoBehaviour
     [SerializeField, Range(0f, 1f)] private float defendReducePct = 0.50f;
     [SerializeField, Range(0f, 1f)] private float guardConvertPct = 1.0f;
     [SerializeField, Range(0f, 2f)] private float chargeBonusPct = 0.5f;
+
+    [Header("Manual Turn Failsafe (Optional)")]
+    [Tooltip("If enabled, auto-queues an Attack if the player doesn't pick an action within the timeout.")]
+    [SerializeField] private bool enableAutoQueueAttack = true;
+    [SerializeField, Min(1f)] private float autoQueueAttackAfterSeconds = 20f;
 
     [Header("Run Settings")]
     [SerializeField, Range(0f, 1f)] private float runBaseChance = 0.25f;
@@ -58,6 +59,7 @@ public class BattleManager : MonoBehaviour
 
     private bool isResolvingPlayerTurn = false;
     private PlayerAction pendingAction = PlayerAction.None;
+    private int pendingSwapBenchSlot = -1;
     private bool defendActiveThisRound = false;
 
     [Header("Wild UI")]
@@ -190,6 +192,9 @@ public class BattleManager : MonoBehaviour
     private static readonly Color StatBuff = new Color(0.35f, 1f, 0.35f);
     private static readonly Color StatNerf = new Color(1f, 0.35f, 0.35f);
 
+    private bool _playerQueuedSwap;
+    private int _playerSwapToIndex = -1;
+
     void Start()
     {
         if (benchBtn1) benchBtn1.onClick.AddListener(() => ClickBench(0));
@@ -245,6 +250,42 @@ public class BattleManager : MonoBehaviour
         GameEvents.OnBattleStateChanged?.Invoke();
     }
 
+
+private static void HardResetIconVisual(Image img)
+{
+    if (!img) return;
+
+    // Cancel any lingering feedback tweens from the previous encounter/battle.
+    LeanTween.cancel(img.gameObject);
+
+    var c = img.color;
+    c.a = 1f;
+    img.color = c;
+
+    img.canvasRenderer.SetAlpha(1f);
+
+    var cg = img.GetComponent<CanvasGroup>();
+    if (cg) cg.alpha = 1f;
+}
+
+private IEnumerator SayKO(string displayName)
+{
+    if (string.IsNullOrWhiteSpace(displayName)) yield break;
+    yield return Say($"{displayName} KO'ed!");
+}
+
+private IEnumerator MaybeSayKO_Player(string victimName, float preHP, float postHP)
+{
+    if (preHP > 0.01f && postHP <= 0.01f)
+        yield return SayKO(victimName);
+}
+
+private IEnumerator MaybeSayKO_Wild(string victimName, float preHP, float postHP)
+{
+    if (preHP > 0.01f && postHP <= 0.01f)
+        yield return SayKO(victimName);
+}
+
     public void BeginBattle(MonsterDataSO wild, int level, Action<BattleResult> onEnded)
     {
         Begin(wild, level, onEnded);
@@ -287,29 +328,22 @@ public class BattleManager : MonoBehaviour
 
         wildAttackPerTurn = Mathf.Max(1f, wAtkBase * encounterThreatScalar);
 
+        // IMPORTANT: clear any lingering icon tweens/alphas from the prior battle.
+        if (feedback != null) feedback.ResetIconVisuals();
+        HardResetIconVisual(playerIcon);
+        HardResetIconVisual(wildIcon);
+
         // ─────────────────────────────────────────────────────────────
         // Shiny encounter state (spawn-time), driven by EncounterManager
         // ─────────────────────────────────────────────────────────────
         bool shinyWild = (EncounterManager.I != null) && EncounterManager.I.CurrentWildIsShiny;
 
-        // Wild icon: use shiny icon if shiny encounter and one exists.
-       // Wild icon: use shiny icon if shiny encounter and one exists.
+                // Wild icon: use shiny icon if shiny encounter and one exists.
         if (wildIcon)
         {
             if (shinyWild && wildDef && wildDef.shinyIcon) wildIcon.sprite = wildDef.shinyIcon;
             else wildIcon.sprite = wildDef ? wildDef.icon : null;
-
-            // IMPORTANT: hard reset icon alpha/tint every battle start
-            var c = wildIcon.color;
-            c.a = 1f;
-            wildIcon.color = c;
-
-            // Also reset CanvasRenderer alpha (covers CrossFadeAlpha / CanvasRenderer.SetAlpha cases)
-            wildIcon.canvasRenderer.SetAlpha(1f);
-
-            // If a CanvasGroup exists on the icon itself, normalize it too
-            var iconCg = wildIcon.GetComponent<CanvasGroup>();
-            if (iconCg) iconCg.alpha = 1f;
+            HardResetIconVisual(wildIcon);
         }
 
 
@@ -346,10 +380,22 @@ public class BattleManager : MonoBehaviour
         for (int i = 0; i < teamCount; i++)
         {
             var owned = roster[i];
-            var def = MonsterLibraryLocator.GetById(owned.monsterId);
-            if (!def) continue;
+            teamIds[i] = owned != null ? owned.monsterId : null;
 
-            teamIds[i] = owned.monsterId;
+            var def = (owned != null && !string.IsNullOrEmpty(owned.monsterId))
+                ? MonsterLibraryLocator.GetById(owned.monsterId)
+                : null;
+
+            if (!def)
+            {
+                teamDefs[i] = null;
+                teamLevels[i] = 1;
+                teamMaxHP[i] = 1f;
+                teamHP[i] = 0f;
+                BattleLogger.Log($"[Battle] WARNING: team slot {i} has missing MonsterData for id '{teamIds[i]}'. Marking as KO/unusable.", LogScope.Battle);
+                continue;
+            }
+
             teamDefs[i] = def;
             teamLevels[i] = owned.level;
 
@@ -582,12 +628,11 @@ public class BattleManager : MonoBehaviour
 
             EnemyAction wildChoice = ChooseEnemyAction();
 
-            // When wild chooses Defend and player goes first, apply the defend stance immediately.
             if (playerFirst)
             {
                 if (wildChoice == EnemyAction.Defend)
                 {
-                    ApplyWildDefendStance(); // sets wildDefendActiveThisRound (success/fail)
+                    ApplyWildDefendStance();
                     RefreshStatusIconsFromState();
                 }
 
@@ -596,11 +641,16 @@ public class BattleManager : MonoBehaviour
                     if (manualTurns) yield return WaitForPlayerChoiceAndResolve();
                     else yield return PlayerTurn();
 
-                    // Player may have set/consumed charge or set defend in the resolve
                     RefreshStatusIconsFromState();
 
                     if (CheckEnd()) break;
                     yield return Wait(hitPause);
+
+                    if (!IsTeamKO() && teamHP[activeIndex] <= 0.01f)
+                    {
+                        AutoSwapToAlive();
+                        RefreshStatusIconsFromState();
+                    }
                 }
 
                 if (!IsWildKO() && !IsTeamKO())
@@ -609,14 +659,13 @@ public class BattleManager : MonoBehaviour
                     {
                         yield return EnemyTurn(wildChoice);
 
-                        // Wild may have set/consumed charge or set defend in EnemyTurn
                         RefreshStatusIconsFromState();
 
                         if (CheckEnd()) break;
                         yield return Wait(hitPause);
                     }
                 }
-            }
+}
             else
             {
                 if (!IsWildKO() && !IsTeamKO())
@@ -628,8 +677,22 @@ public class BattleManager : MonoBehaviour
                         SetIsPlayerTurn(true);
                         pendingAction = PlayerAction.None;
 
+                        float choiceStart = Time.unscaledTime;
+
                         while (inBattle && pendingAction == PlayerAction.None)
+                        {
+                            if (enableAutoQueueAttack && autoQueueAttackAfterSeconds > 0f && !_narrationLock)
+                            {
+                                if (Time.unscaledTime - choiceStart >= autoQueueAttackAfterSeconds)
+                                {
+                                    pendingAction = PlayerAction.Attack;
+                                    BattleLogger.Log($"[Battle] Failsafe: auto-queued Attack after {autoQueueAttackAfterSeconds:0}s idle.", LogScope.Battle);
+                                    break;
+                                }
+                            }
+
                             yield return null;
+                        }
 
                         queuedChoice = pendingAction;
                         pendingAction = PlayerAction.None;
@@ -668,14 +731,49 @@ public class BattleManager : MonoBehaviour
                             RefreshStatusIconsFromState();
                         }
                     }
+                    // If the player queued a SWAP and the enemy is acting first this round,
+                    // the swap must resolve BEFORE the enemy attack so the incoming damage targets the new active monster.
+                    if (queuedChoice == PlayerAction.Swap)
+                    {
+                        if (teamHP[activeIndex] > 0.01f)
+                        {
+                            ResetDefendStreak();
+                            ResolveQueuedSwap();
+                            RefreshStatusIconsFromState();
+                        }
+                        queuedChoice = PlayerAction.None; // swap consumes the player's action
+                    }
 
-                    yield return EnemyTurn(wildChoice);
+                    // In the enemy-first branch, apply wild defend stance BEFORE the enemy would attack.
+                    if (wildChoice == EnemyAction.Defend)
+                    {
+                        ApplyWildDefendStance();
+                        RefreshStatusIconsFromState();
+                    }
 
-                    // Enemy turn can set defend/charge/consume charge
-                    RefreshStatusIconsFromState();
+                    if (wildChoice != EnemyAction.Defend)
+                    {
+                        yield return EnemyTurn(wildChoice);
 
-                    if (CheckEnd()) break;
-                    yield return Wait(hitPause);
+                        // Enemy turn can set defend/charge/consume charge
+                        RefreshStatusIconsFromState();
+
+                        if (CheckEnd()) break;
+                        yield return Wait(hitPause);
+                    }
+                    else
+                    {
+                        // Defend consumes the enemy turn (no attack), but keep pacing consistent.
+                        if (CheckEnd()) break;
+                        yield return Wait(hitPause);
+                    }
+                    // If the wild KO'ed our active slot, we must auto-swap (if possible) and the queued action is lost.
+                    if (!IsTeamKO() && teamHP[activeIndex] <= 0.01f)
+                    {
+                        AutoSwapToAlive();
+                        queuedChoice = PlayerAction.None;
+                        RefreshStatusIconsFromState();
+                    }
 
                     if (!IsWildKO() && !IsTeamKO())
                     {
@@ -684,12 +782,21 @@ public class BattleManager : MonoBehaviour
                             switch (queuedChoice)
                             {
                                 case PlayerAction.Attack:
-                                    yield return PlayerTurn();
+                                    // If the active slot was KO'ed by the wild acting first, the player's queued action is lost.
+                                    if (teamHP[activeIndex] > 0.01f)
+                                        yield return PlayerTurn();
                                     RefreshStatusIconsFromState();
                                     break;
 
                                 case PlayerAction.Focus:
                                     {
+                                        // If the active slot was KO'ed by the wild acting first, the player's queued action is lost.
+                                        if (teamHP[activeIndex] <= 0.01f)
+                                        {
+                                            RefreshStatusIconsFromState();
+                                            break;
+                                        }
+
                                         ResetDefendStreak();
 
                                         if (chargedNextAttack != null &&
@@ -711,8 +818,30 @@ public class BattleManager : MonoBehaviour
                                         break;
                                     }
 
+                                case PlayerAction.Swap:
+                                    {
+                                        // If the active slot was KO'ed by the wild acting first, the player's queued action is lost.
+                                        if (teamHP[activeIndex] <= 0.01f)
+                                        {
+                                            RefreshStatusIconsFromState();
+                                            break;
+                                        }
+
+                                        ResetDefendStreak();
+                                        ResolveQueuedSwap();
+                                        RefreshStatusIconsFromState();
+                                        break;
+                                    }
+
                                 case PlayerAction.Run:
                                     {
+                                        // If the active slot was KO'ed by the wild acting first, the player's queued action is lost.
+                                        if (teamHP[activeIndex] <= 0.01f)
+                                        {
+                                            RefreshStatusIconsFromState();
+                                            break;
+                                        }
+
                                         ResetDefendStreak();
 
                                         float chance = ComputeRunChance();
@@ -744,6 +873,7 @@ public class BattleManager : MonoBehaviour
 
                                 case PlayerAction.Defend:
                                 default:
+                                    // Defend is resolved before the wild acts in the enemy-first branch.
                                     break;
                             }
                         }
@@ -787,8 +917,22 @@ public class BattleManager : MonoBehaviour
     {
         SetIsPlayerTurn(true);
 
+        float choiceStart = Time.unscaledTime;
+
         while (inBattle && pendingAction == PlayerAction.None)
+        {
+            if (enableAutoQueueAttack && autoQueueAttackAfterSeconds > 0f && !_narrationLock)
+            {
+                if (Time.unscaledTime - choiceStart >= autoQueueAttackAfterSeconds)
+                {
+                    pendingAction = PlayerAction.Attack;
+                    BattleLogger.Log($"[Battle] Failsafe: auto-queued Attack after {autoQueueAttackAfterSeconds:0}s idle.", LogScope.Battle);
+                    break;
+                }
+            }
+
             yield return null;
+        }
 
         var choice = pendingAction;
         pendingAction = PlayerAction.None;
@@ -840,6 +984,13 @@ public class BattleManager : MonoBehaviour
                         BattleFeedbackManager.BattleFeedbackSide.Player,
                         BattleFeedbackManager.BattleFeedbackAction.Focus
                     );
+                    break;
+                }
+
+            case PlayerAction.Swap:
+                {
+                    ResetDefendStreak();
+                    ResolveQueuedSwap();
                     break;
                 }
 
@@ -1007,6 +1158,7 @@ public class BattleManager : MonoBehaviour
             yield return Say($"{foeName} stores {Mathf.RoundToInt(gain)} damage as a guard shield for the next round.");
         }
 
+        float preWildHP = wildHP;
         wildHP = Mathf.Max(0f, wildHP - dmgToApply);
         _totalDamageDealtThisBattle += Mathf.Max(0, dmgToApply);
         PushHPBars();
@@ -1025,6 +1177,9 @@ public class BattleManager : MonoBehaviour
             else if (dr.effectiveness < 0.85f) yield return Say("It's not very effective...");
         }
         if (dr.crit) yield return Say("Critical hit!");
+
+        // Centralized KO messaging (fires only on HP crossing >0 → 0)
+        yield return MaybeSayKO_Wild(foeName, preWildHP, wildHP);
 
         if (jctx != null && jctx.endTurnHealPct > 0f)
         {
@@ -1089,7 +1244,7 @@ public class BattleManager : MonoBehaviour
 
             if (feedback) feedback.PlayActionQueued(
                 BattleFeedbackManager.BattleFeedbackSide.Wild,
-                BattleFeedbackManager.BattleFeedbackAction.Focus
+                BattleFeedbackManager.BattleFeedbackAction.Swap
             );
 
             yield break;
@@ -1225,6 +1380,8 @@ public class BattleManager : MonoBehaviour
                 yield return Say($"{GetName(activeIndex)}'s shield absorbed {Mathf.RoundToInt(shieldAbsorbF)}!");
         }
 
+        string victimName = GetName(activeIndex);
+        float prePlayerHP = teamHP[activeIndex];
         teamHP[activeIndex] = Mathf.Max(0f, teamHP[activeIndex] - dmg_final);
         ClampAndPushActiveHP();
 
@@ -1258,6 +1415,9 @@ public class BattleManager : MonoBehaviour
             yield return Say("Critical hit!");
             _totalCritsThisBattle++;
         }
+
+        // Centralized KO messaging (fires only on HP crossing >0 → 0)
+        yield return MaybeSayKO_Player(victimName, prePlayerHP, teamHP[activeIndex]);
 
         _totalDamageTakenThisBattle += dmg_final;
 
@@ -1633,54 +1793,73 @@ public class BattleManager : MonoBehaviour
     }
 
     private void ClickBench(int benchSlot)
+{
+    if (!inBattle) return;
+    if (!manualTurns) return; // swapping is a manual-turn action
+    if (!IsPlayerTurn) return;
+    if (isResolvingPlayerTurn) return;
+    if (_narrationLock) return;
+
+    // Lock swapping once an action is queued.
+    if (pendingAction != PlayerAction.None) return;
+
+    // Queue a Swap action (swapping costs the turn).
+    pendingSwapBenchSlot = benchSlot;
+    pendingAction = PlayerAction.Swap;
+    GameEvents.OnBattleStateChanged?.Invoke();
+}
+
+private void ResolveQueuedSwap()
+{
+    if (pendingSwapBenchSlot < 0) return;
+
+    List<int> others = new();
+    for (int i = 0; i < teamCount; i++)
+        if (i != activeIndex) others.Add(i);
+
+    int benchSlot = pendingSwapBenchSlot;
+    pendingSwapBenchSlot = -1;
+
+    if (benchSlot < 0 || benchSlot >= others.Count) return;
+
+    int targetIndex = others[benchSlot];
+    if (teamHP[targetIndex] <= 0f) return;
+
+    activeIndex = targetIndex;
+
+    ApplyActiveToUI();
+    ClampAndPushActiveHP();
+    RefreshBenchUI();
+
+    if (teamPendingBuffPct != null && teamPendingBuffTurns != null &&
+        slotDamageBuffPct != null && slotDamageBuffTurns != null &&
+        activeIndex >= 0 && activeIndex < teamPendingBuffPct.Length)
     {
-        if (!inBattle) return;
-        if (manualTurns && !IsPlayerTurn) return;
-
-        List<int> others = new();
-        for (int i = 0; i < teamCount; i++)
-            if (i != activeIndex) others.Add(i);
-
-        if (benchSlot < 0 || benchSlot >= others.Count) return;
-
-        int targetIndex = others[benchSlot];
-        if (teamHP[targetIndex] <= 0f) return;
-
-        activeIndex = targetIndex;
-
-        ApplyActiveToUI();
-        ClampAndPushActiveHP();
-        RefreshBenchUI();
-
-        if (teamPendingBuffPct != null && teamPendingBuffTurns != null &&
-            slotDamageBuffPct != null && slotDamageBuffTurns != null &&
-            activeIndex >= 0 && activeIndex < teamPendingBuffPct.Length)
+        if (teamPendingBuffPct[activeIndex] > 0f)
         {
-            if (teamPendingBuffPct[activeIndex] > 0f)
-            {
-                slotDamageBuffPct[activeIndex] += teamPendingBuffPct[activeIndex];
-                slotDamageBuffTurns[activeIndex] =
-                    Mathf.Max(slotDamageBuffTurns[activeIndex], teamPendingBuffTurns[activeIndex]);
+            slotDamageBuffPct[activeIndex] += teamPendingBuffPct[activeIndex];
+            slotDamageBuffTurns[activeIndex] =
+                Mathf.Max(slotDamageBuffTurns[activeIndex], teamPendingBuffTurns[activeIndex]);
 
-                BattleLogger.Log($"{GetName(activeIndex)} carries over +{Mathf.RoundToInt(teamPendingBuffPct[activeIndex] * 100f)}% damage from bench.", LogScope.Battle);
+            BattleLogger.Log($"{GetName(activeIndex)} carries over +{Mathf.RoundToInt(teamPendingBuffPct[activeIndex] * 100f)}% damage from bench.", LogScope.Battle);
 
-                teamPendingBuffPct[activeIndex] = 0f;
-                teamPendingBuffTurns[activeIndex] = 0;
-            }
+            teamPendingBuffPct[activeIndex] = 0f;
+            teamPendingBuffTurns[activeIndex] = 0;
         }
-
-        BattleLogger.Log($"Swapped to {GetName(activeIndex)}!", LogScope.Battle);
-
-        if (feedback) feedback.PlayActionQueued(
-            BattleFeedbackManager.BattleFeedbackSide.Player,
-            BattleFeedbackManager.BattleFeedbackAction.Focus
-        );
-
-        if (debugTitles && debugTitlesOnSwap)
-            Debug_LogActiveTitlesSnapshot("Swap");
     }
 
-    private bool AutoSwapToAlive()
+    BattleLogger.Log($"Swapped to {GetName(activeIndex)}! (turn consumed)", LogScope.Battle);
+
+    if (feedback) feedback.PlayActionQueued(
+        BattleFeedbackManager.BattleFeedbackSide.Player,
+        BattleFeedbackManager.BattleFeedbackAction.Swap
+    );
+
+    if (debugTitles && debugTitlesOnSwap)
+        Debug_LogActiveTitlesSnapshot("Swap");
+}
+
+private bool AutoSwapToAlive()
     {
         for (int i = 0; i < teamCount; i++)
         {

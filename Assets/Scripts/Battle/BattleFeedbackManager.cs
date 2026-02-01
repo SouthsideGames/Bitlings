@@ -8,7 +8,7 @@ using UnityEngine.UI;
 public sealed class BattleFeedbackManager : MonoBehaviour
 {
     public enum BattleFeedbackSide { Player, Wild }
-    public enum BattleFeedbackAction { Attack, Defend, Focus, Run }
+    public enum BattleFeedbackAction { Attack, Defend, Focus, Swap, Run }
 
     [Header("Icon Targets")]
     [SerializeField] private Graphic playerIcon;
@@ -242,6 +242,12 @@ public sealed class BattleFeedbackManager : MonoBehaviour
 
             case BattleFeedbackAction.Focus:
                 PunchScale(icon, 1.06f, defendPulseTime);
+                break;
+
+            case BattleFeedbackAction.Swap:
+                // Swap should read distinctly from Focus; a quick nudge + punch works well on mobile.
+                PunchScale(icon, 1.08f, pressPunchTime);
+                Nudge(icon.rectTransform, side == BattleFeedbackSide.Player ? +14f : -14f, windupTime);
                 break;
 
             case BattleFeedbackAction.Run:

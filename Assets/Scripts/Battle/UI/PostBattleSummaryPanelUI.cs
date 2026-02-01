@@ -101,6 +101,9 @@ public class PostBattleSummaryPanelUI : MonoBehaviour
         if (_lastResult.HasValue && !_lastResult.Value.victory && !_lastResult.Value.escaped)
         {
             UIManager.I?.Show(PanelId.Home);
+            // Also close the Encounter panel so the player isn't left in the encounter flow
+            // with a fully KO'd team.
+            UIManager.I?.Hide(PanelId.Encounter);
         }
 
         Close();

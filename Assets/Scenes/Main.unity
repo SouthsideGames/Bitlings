@@ -26525,6 +26525,8 @@ MonoBehaviour:
   defendReducePct: 0.5
   guardConvertPct: 1
   chargeBonusPct: 0.5
+  enableAutoQueueAttack: 1
+  autoQueueAttackAfterSeconds: 20
   runBaseChance: 0.25
   runMinChance: 0.05
   runMaxChance: 0.95
@@ -83818,9 +83820,9 @@ GameObject:
   m_Component:
   - component: {fileID: 1086514568}
   - component: {fileID: 1086514569}
+  - component: {fileID: 1086514572}
   - component: {fileID: 1086514570}
   - component: {fileID: 1086514571}
-  - component: {fileID: 1086514572}
   m_Layer: 5
   m_Name: Panel_Encounter
   m_TagString: Untagged
@@ -151316,7 +151318,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: Beta 1.2.4
+  m_text: Beta 1.2.5
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: ca247a3092b7b404dbaa6f4ab43e450c, type: 2}
   m_sharedMaterial: {fileID: -403277894513911722, guid: ca247a3092b7b404dbaa6f4ab43e450c, type: 2}

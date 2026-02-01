@@ -128,18 +128,18 @@ public class EncounterPanelUI : MonoBehaviour
     [SerializeField] private GameObject ownedCapturedIcon;
 
     // ─────────────────────────────────────────────────────────────
-    // Hire Decision (GameObject active/inactive; includes Continue pacing)
+    // Hire Decision
     // ─────────────────────────────────────────────────────────────
     [Header("Hire Decision")]
-    [SerializeField] private GameObject hireDecisionRoot;          // Whole overlay root
+    [SerializeField] private GameObject hireDecisionRoot;
     [SerializeField] private Image hireMonsterIcon;
     [SerializeField] private TextMeshProUGUI hirePromptText;
 
     [Header("Hire Decision Buttons")]
-    [SerializeField] private GameObject hireButtonsRoot;           // Parent of Yes/No
+    [SerializeField] private GameObject hireButtonsRoot;
     [SerializeField] private Button hireYesButton;
     [SerializeField] private Button hireNoButton;
-    [SerializeField] private Button hireContinueButton;            // Continue
+    [SerializeField] private Button hireContinueButton;
 
     [Header("Hire Decision Result Prefabs")]
     [SerializeField] private Transform hireResultSpawnPoint;
@@ -147,13 +147,12 @@ public class EncounterPanelUI : MonoBehaviour
     [SerializeField] private GameObject hireDenyPrefab;
 
     [Header("Navigation Lock")]
-    [SerializeField] private GameObject closeButtonRoot;  // assign the Close button GameObject (or its parent)
+    [SerializeField] private GameObject closeButtonRoot;
     [SerializeField] private bool hideCloseDuringBattle = true;
 
     private MonsterDataSO _pendingHireDef;
     private int _pendingHireLevel;
-
-    private bool _pendingHireIsShiny;     // NEW: sticky flag for the current hire prompt
+    private bool _pendingHireIsShiny;
 
     private bool _hireChoseYes;
     private bool _hireCaptureSucceeded;
@@ -167,6 +166,9 @@ public class EncounterPanelUI : MonoBehaviour
     Coroutine _fadeCo;
     Coroutine _typewriterCo;
     readonly List<TeamPreviewItemUI> _previewItems = new();
+
+    // NEW: prevents blinder reappearing mid-transition
+    bool _suppressAutoBlinderUntilBattle;
 
     // ─────────────────────────────────────────────────────────────
     // Unity lifecycle
@@ -196,7 +198,6 @@ public class EncounterPanelUI : MonoBehaviour
         if (hireButtonsRoot)
             hireButtonsRoot.SetActive(true);
 
-        // Ensure boost roots start hidden (only active while timer active)
         SetBoostRootActive(flyerRoot, false);
         SetBoostRootActive(shinyRoot, false);
         SetBoostRootActive(captureRoot, false);
@@ -216,8 +217,6 @@ public class EncounterPanelUI : MonoBehaviour
             encounterBtn.onClick.AddListener(OnClickEncounter);
         }
 
-        // Tooltip triggers don't need button listeners; they run on pointer hold.
-        // But we still ensure TooltipTrigger components exist if buttons are wired.
         EnsureTooltipTrigger(energyInfoButton, ref energyTooltip);
         EnsureTooltipTrigger(flyerButton, ref flyerTooltip);
         EnsureTooltipTrigger(shinyButton, ref shinyTooltip);
@@ -235,17 +234,19 @@ public class EncounterPanelUI : MonoBehaviour
         GameEvents.WinStreakChanged += OnWinStreakChanged;
         GameEvents.OnResourcesChanged += OnResourcesChanged;
         GameEvents.OnBattleStateChanged += HandleBattleStateChanged;
+        GameEvents.OnTeamChanged += OnTeamChanged;
 
         if (!IsInBattle())
         {
+            _suppressAutoBlinderUntilBattle = false;
             ShowBlinder(true, instant: true);
-            BuildTeamPreview();
+            EnsureTeamPreviewForCurrentState(forceRebuild: true);
             PickAndApplyBlinderLine();
         }
         else
         {
             ShowBlinder(false, instant: true);
-            ClearTeamPreview();
+            EnsureTeamPreviewForCurrentState(forceRebuild: false);
             ApplyCloseLock();
         }
 
@@ -282,6 +283,7 @@ public class EncounterPanelUI : MonoBehaviour
         GameEvents.WinStreakChanged -= OnWinStreakChanged;
         GameEvents.OnResourcesChanged -= OnResourcesChanged;
         GameEvents.OnBattleStateChanged -= HandleBattleStateChanged;
+        GameEvents.OnTeamChanged -= OnTeamChanged;
 
         if (encounterBtn) encounterBtn.onClick.RemoveAllListeners();
         if (_fadeCo != null) StopCoroutine(_fadeCo);
@@ -308,6 +310,19 @@ public class EncounterPanelUI : MonoBehaviour
     {
         RefreshEncounterBoostIconsAndTooltips(force: true);
         RefreshEnergy();
+
+        // Team can change due to hires/captures, etc.
+        EnsureTeamPreviewForCurrentState(forceRebuild: !IsInBattle());
+
+        // Button state depends on both energy and team health.
+        RefreshEncounterButtonInteractivity();
+    }
+
+    void OnTeamChanged()
+    {
+        // Team can change due to healing, level-ups, swaps, etc.
+        EnsureTeamPreviewForCurrentState(forceRebuild: !IsInBattle());
+        RefreshEncounterButtonInteractivity();
     }
 
     // ─────────────────────────────────────────────────────────────
@@ -318,6 +333,7 @@ public class EncounterPanelUI : MonoBehaviour
         RefreshButtonAndLabel();
         RefreshEnergy();
         UpdateEnergyEtaUI();
+        RefreshEncounterButtonInteractivity();
     }
 
     // ─────────────────────────────────────────────────────────────
@@ -325,10 +341,8 @@ public class EncounterPanelUI : MonoBehaviour
     // ─────────────────────────────────────────────────────────────
     void RefreshEncounterBoostIconsAndTooltips(bool force)
     {
-        // ENERGY TOOLTIP (no timer label in bar)
         UpdateEnergyTooltip();
 
-        // FLYER (NO timer label in bar, but tooltip includes timer)
         long flyerRem = (EncounterManager.I != null) ? EncounterManager.I.GetFlyerSecondsRemaining() : -1;
         bool flyerActive = flyerRem > 0;
 
@@ -348,7 +362,6 @@ public class EncounterPanelUI : MonoBehaviour
             ClearTooltip(flyerTooltip);
         }
 
-        // SHINY (timer label + tooltip)
         long shinyRem = GetShinySecondsRemaining();
         bool shinyActive = shinyRem > 0;
 
@@ -373,7 +386,6 @@ public class EncounterPanelUI : MonoBehaviour
             ClearTooltip(shinyTooltip);
         }
 
-        // CAPTURE (timer label + tooltip)
         long captureRem = GetCaptureSecondsRemaining();
         bool captureActive = captureRem > 0;
 
@@ -398,7 +410,6 @@ public class EncounterPanelUI : MonoBehaviour
             ClearTooltip(captureTooltip);
         }
 
-        // FAVOR (timer label + tooltip)
         long favorRem = GetFavorSecondsRemaining();
         bool favorActive = favorRem > 0;
 
@@ -422,7 +433,6 @@ public class EncounterPanelUI : MonoBehaviour
             StopPulse(ref _favorPulseTweenId, favorTimerLabel);
             ClearTooltip(favorTooltip);
         }
-
     }
 
     void UpdateEnergyTooltip()
@@ -636,8 +646,9 @@ public class EncounterPanelUI : MonoBehaviour
 
         if (!IsInBattle())
         {
+            _suppressAutoBlinderUntilBattle = false;
             ShowBlinder(true, instant: true);
-            BuildTeamPreview();
+            EnsureTeamPreviewForCurrentState(forceRebuild: true);
             PickAndApplyBlinderLine();
         }
 
@@ -679,6 +690,48 @@ public class EncounterPanelUI : MonoBehaviour
             else
                 encounterLabel.text = "ENCOUNTER";
         }
+    }
+
+    void RefreshEncounterButtonInteractivity()
+    {
+        if (!encounterBtn) return;
+
+        // Requirements:
+        //  - not currently in battle
+        //  - not mid-fade and not in the hire decision UI
+        //  - player has at least one monster on the team that is alive (HP != 0)
+        //  - enough energy to pay the cost, unless the next encounter is free
+        bool inBattle = IsInBattle();
+        bool busy = _isFading || IsHireDecisionOpen;
+        bool hasAliveTeam = HasAliveTeamMember();
+        bool hasEnergyOrFree = NextEncounterIsFree() || HasEnergy() || HasFallbackEnergy();
+
+        encounterBtn.interactable = !inBattle && !busy && hasAliveTeam && hasEnergyOrFree;
+    }
+
+    bool HasAliveTeamMember()
+    {
+        var team = SafeTeamList();
+        if (team == null || team.Count == 0) return false;
+
+        for (int i = 0; i < team.Count; i++)
+        {
+            var m = team[i];
+            if (m == null || string.IsNullOrEmpty(m.monsterId)) continue;
+            if (m.currentHP != 0) return true; // -1 (uninitialized) counts as alive
+        }
+
+        return false;
+    }
+
+    bool HasFallbackEnergy()
+    {
+        // Safety fallback when EncounterManager isn't available yet.
+        if (EncounterManager.I != null) return false;
+
+        int current = Mathf.Max(0, ResourceBank.Get(ResourceType.Energy));
+        int needed = Mathf.Max(1, GetEncounterCost());
+        return current >= needed;
     }
 
     void RefreshEnergy()
@@ -723,21 +776,29 @@ public class EncounterPanelUI : MonoBehaviour
 
     void OnEncounterStateChanged()
     {
-        if (IsInBattle())
+        bool inBattle = IsInBattle();
+
+        if (inBattle)
         {
+            _suppressAutoBlinderUntilBattle = false;
             ShowBlinder(false, instant: true);
-            ClearTeamPreview();
         }
         else
         {
             RefreshAll();
-            ShowBlinder(true, instant: true);
-            BuildTeamPreview();
-            PickAndApplyBlinderLine();
+
+            if (!_suppressAutoBlinderUntilBattle)
+            {
+                ShowBlinder(true, instant: true);
+                PickAndApplyBlinderLine();
+            }
+
+            EnsureTeamPreviewForCurrentState(forceRebuild: true);
         }
 
         RefreshEncounterBoostIconsAndTooltips(force: true);
         ApplyCloseLock();
+        RefreshEncounterButtonInteractivity();
     }
 
     void OnClickEncounter()
@@ -756,6 +817,9 @@ public class EncounterPanelUI : MonoBehaviour
             AudioManager.I?.PlaySfx(SfxType.Denied);
             return;
         }
+
+        // NEW: suppress auto blinder re-show until battle state flips
+        _suppressAutoBlinderUntilBattle = true;
 
         if (blinderGroup && blinderGroup.alpha > 0.01f)
         {
@@ -826,12 +890,10 @@ public class EncounterPanelUI : MonoBehaviour
             {
                 RefreshBlinderTint();
                 PickAndApplyBlinderLine();
-                BuildTeamPreview();
             }
-            else
-            {
-                ClearTeamPreview();
-            }
+
+            // IMPORTANT: team preview is NOT tied to blinder visibility anymore
+            EnsureTeamPreviewForCurrentState(forceRebuild: false);
         }
         else
         {
@@ -871,22 +933,17 @@ public class EncounterPanelUI : MonoBehaviour
         {
             RefreshBlinderTint();
             PickAndApplyBlinderLine();
-            BuildTeamPreview();
         }
-        else
-        {
-            ClearTeamPreview();
-        }
+
+        EnsureTeamPreviewForCurrentState(forceRebuild: false);
 
         _isFading = false;
         RefreshButtonAndLabel();
     }
 
     // ─────────────────────────────────────────────────────────────
-    // Hire Decision (UPDATED: respects passed isShiny; no overwrite)
+    // Hire Decision (kept as you had it)
     // ─────────────────────────────────────────────────────────────
-
-    // Backward-compatible overload (preserves prior call sites)
     public void ShowHireDecision(MonsterDataSO def, int level)
     {
         bool shiny = EncounterManager.I != null && EncounterManager.I.CurrentWildIsShiny;
@@ -903,17 +960,12 @@ public class EncounterPanelUI : MonoBehaviour
 
         _pendingHireDef = def;
         _pendingHireLevel = Mathf.Max(1, level);
-
-        // NEW: store the encounter’s shiny presentation for this hire decision
         _pendingHireIsShiny = isShiny;
 
         _hireChoseYes = false;
         _hireCaptureSucceeded = false;
         _hireDecisionLocked = false;
 
-        // IMPORTANT FIX:
-        // Do NOT overwrite isShiny by re-reading EncounterManager.I.CurrentWildIsShiny,
-        // because EncounterManager resets that flag on battle end.
         if (hireMonsterIcon)
             hireMonsterIcon.sprite = MonsterNameFormatter.GetIcon(def, _pendingHireIsShiny, backIcon: false);
 
@@ -977,18 +1029,25 @@ public class EncounterPanelUI : MonoBehaviour
 
         _pendingHireDef = null;
         _pendingHireLevel = 0;
-        _pendingHireIsShiny = false; // NEW: reset
+        _pendingHireIsShiny = false;
         _hireDecisionLocked = false;
 
         if (hireContinueButton) hireContinueButton.gameObject.SetActive(false);
         if (hireButtonsRoot) hireButtonsRoot.SetActive(true);
+
+        if (!IsInBattle())
+        {
+            _suppressAutoBlinderUntilBattle = false;
+            ShowBlinder(true, instant: true);
+            EnsureTeamPreviewForCurrentState(forceRebuild: true);
+            PickAndApplyBlinderLine();
+        }
     }
 
     void SetHirePromptForResult(bool choseYes, bool captureSucceeded)
     {
         if (!hirePromptText) return;
 
-        // Use the same shiny presentation that was shown to the player.
         string name = (_pendingHireDef != null)
             ? MonsterNameFormatter.Format(_pendingHireDef, _pendingHireIsShiny)
             : "this monster";
@@ -1027,7 +1086,7 @@ public class EncounterPanelUI : MonoBehaviour
     }
 
     // ─────────────────────────────────────────────────────────────
-    // Blinder visuals + picker (unchanged below)
+    // Blinder visuals + picker (unchanged)
     // ─────────────────────────────────────────────────────────────
     void RefreshBlinderTint()
     {
@@ -1209,16 +1268,44 @@ public class EncounterPanelUI : MonoBehaviour
     }
 
     // ─────────────────────────────────────────────────────────────
-    // Team preview (unchanged)
+    // Team preview (FIXED: governed by battle state, not blinder)
     // ─────────────────────────────────────────────────────────────
+    void EnsureTeamPreviewForCurrentState(bool forceRebuild)
+    {
+        if (!teamPreviewRoot || !teamItemPrefab)
+            return;
+
+        bool inBattle = IsInBattle();
+
+        if (inBattle)
+        {
+            ClearTeamPreview();
+            return;
+        }
+
+        if (!teamPreviewRoot.gameObject.activeSelf)
+            teamPreviewRoot.gameObject.SetActive(true);
+
+        if (forceRebuild)
+            BuildTeamPreview();
+        else if (_previewItems.Count == 0)
+            BuildTeamPreview();
+    }
+
     void BuildTeamPreview()
     {
         if (!teamPreviewRoot || !teamItemPrefab) return;
 
-        ClearTeamPreview();
+        if (!teamPreviewRoot.gameObject.activeSelf) teamPreviewRoot.gameObject.SetActive(true);
+
+        ClearTeamPreview(dontHideRoot: true);
 
         var team = SafeTeamList();
-        if (team == null || team.Count == 0) return;
+        if (team == null || team.Count == 0)
+        {
+            if (teamPreviewRoot) teamPreviewRoot.gameObject.SetActive(false);
+            return;
+        }
 
         int shown = 0;
         for (int i = 0; i < team.Count && shown < maxTeamShown; i++)
@@ -1238,12 +1325,15 @@ public class EncounterPanelUI : MonoBehaviour
             SetTeamAlpha(1f);
     }
 
-    void ClearTeamPreview()
+    void ClearTeamPreview(bool dontHideRoot = false)
     {
         for (int i = 0; i < _previewItems.Count; i++)
             if (_previewItems[i])
                 Destroy(_previewItems[i].gameObject);
         _previewItems.Clear();
+
+        if (!dontHideRoot && teamPreviewRoot && teamPreviewRoot.gameObject.activeSelf)
+            teamPreviewRoot.gameObject.SetActive(false);
     }
 
     IEnumerator Co_FadeInTeamPreview()
@@ -1385,7 +1475,7 @@ public class EncounterPanelUI : MonoBehaviour
 
     public void OnWildSpawned(MonsterDataSO def)
     {
-        ForceBlinderAlphaToOne(); // ← HARD RESET
+        ForceBlinderAlphaToOne();
 
         if (!ownedCapturedIcon)
             return;
@@ -1403,7 +1493,30 @@ public class EncounterPanelUI : MonoBehaviour
     private void HandleBattleStateChanged()
     {
         ApplyCloseLock();
+
+        bool inBattle = IsInBattle();
+
+        if (inBattle)
+        {
+            _suppressAutoBlinderUntilBattle = false;
+
+            ShowBlinder(false, instant: true);
+            EnsureTeamPreviewForCurrentState(forceRebuild: false);
+            return;
+        }
+
+        // Not in battle
+        if (!_suppressAutoBlinderUntilBattle)
+        {
+            ShowBlinder(true, instant: true);
+            PickAndApplyBlinderLine();
+
+            ForceBlinderAlphaToOne();
+        }
+
+        EnsureTeamPreviewForCurrentState(forceRebuild: true);
     }
+
 
     private void ApplyCloseLock()
     {

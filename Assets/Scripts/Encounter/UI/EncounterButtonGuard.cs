@@ -50,13 +50,22 @@ public sealed class EncounterButtonGuard : MonoBehaviour
     {
         if (_button == null) return;
 
-        bool hasTeam = HasMinimumTeam(minRequiredTeamMembers);
-        _button.interactable = hasTeam;
+        // Encounter is only actionable when:
+        //  - We are not currently inside a battle
+        //  - The player has at least N team members that are alive (HP != 0)
+        //  - The player has enough Energy to pay the encounter cost (unless the next encounter is free)
+        bool inBattle = EncounterManager.I != null && EncounterManager.I.IsInBattle;
+
+        bool hasTeamAlive = HasMinimumTeam(minRequiredTeamMembers);
+        bool hasEnergyOrFree = HasRequiredEnergyOrFree();
+
+        _button.interactable = !inBattle && hasTeamAlive && hasEnergyOrFree;
     }
 
     private void OnButtonClicked()
     {
-        if (!HasRequiredEnergy())
+        // If the button was force-enabled by some other script, still guard click feedback.
+        if (!HasRequiredEnergyOrFree())
         {
             StartShake();
             return;
@@ -116,8 +125,12 @@ public sealed class EncounterButtonGuard : MonoBehaviour
         return false;
     }
 
-    private static bool HasRequiredEnergy()
+    private static bool HasRequiredEnergyOrFree()
     {
+        // Free encounter bypasses the energy check.
+        if (EncounterManager.I != null && EncounterManager.I.NextEncounterIsFree)
+            return true;
+
         int needed = 1;
         int current = 0;
 
