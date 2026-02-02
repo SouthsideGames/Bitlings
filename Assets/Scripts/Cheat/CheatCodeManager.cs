@@ -535,6 +535,10 @@ public class CheatCodeManager : MonoBehaviour
             return false;
         }
 
+        // IMPORTANT:
+        // Jobs can be unlocked via the upgrades system (FeatureUnlockManager) OR directly via save flags.
+        // This cheat must keep BOTH systems in sync, otherwise the Upgrades UI will still show jobs as purchasable.
+
         SaveManager.Data.unlockedJobSitesList ??= new List<JobType>();
         SaveManager.Data.unlockedJobSites ??= new HashSet<JobType>();
 
@@ -549,12 +553,8 @@ public class CheatCodeManager : MonoBehaviour
                 if (so == null) continue;
                 if (so.jobType == JobType.None) continue;
 
-                var jt = so.jobType;
-
-                SaveManager.Data.unlockedJobSites.Add(jt);
-
-                if (!SaveManager.Data.unlockedJobSitesList.Contains(jt))
-                    SaveManager.Data.unlockedJobSitesList.Add(jt);
+                // Use the bridge so FeatureUnlockManager stays consistent.
+                JobUnlockBridge.UnlockJob(so.jobType, syncFeatureUnlock: true);
             }
         }
 
@@ -563,9 +563,12 @@ public class CheatCodeManager : MonoBehaviour
         int after = SaveManager.Data.unlockedJobSites.Count;
         int added = after - before;
 
+        // Bridge already saves/refreshes per-job, but we keep this final save to be safe.
         SaveManager.Save();
 
-        JobManager.I.RefreshAllJobSiteViewsInScene();
+        if (JobManager.I != null)
+            JobManager.I.RefreshAllJobSiteViewsInScene();
+
         GameEvents.OnJobsChanged?.Invoke();
 
         foreach (var v in FindObjectsByType<JobSiteView>(FindObjectsSortMode.None))
@@ -928,14 +931,12 @@ public class CheatCodeManager : MonoBehaviour
             return false;
         }
 
-        // Unlock the diagnostics button permanently
         SaveManager.Data.diagnosticsUnlocked = true;
         SaveManager.Save();
 
         Debug.Log("[DIAG] diagnosticsUnlocked set TRUE and saved.");
 
-        // Force UI refresh (including inactive child button)
-        var btnUI = DiagnosticsButtonUI.I != null ? DiagnosticsButtonUI.I : FindObjectOfType<DiagnosticsButtonUI>(true);
+        var btnUI = DiagnosticsButtonUI.I != null ? DiagnosticsButtonUI.I : FindFirstObjectByType<DiagnosticsButtonUI>(FindObjectsInactive.Include);
         if (btnUI != null)
         {
             btnUI.ApplyFromSave("CheatUnlock");
@@ -946,7 +947,6 @@ public class CheatCodeManager : MonoBehaviour
             Debug.LogWarning("[DIAG] DiagnosticsButtonUI not found in scene.");
         }
 
-        // Optional: also open/close overlay if you want.
         message = "Diagnostics unlocked.";
         return true;
     }

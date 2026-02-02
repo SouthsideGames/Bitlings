@@ -38,6 +38,7 @@ public class UpgradeRowUI : MonoBehaviour
             FeatureUnlockManager.I.OnFeatureUnlocked += HandleFeatureUnlocked;
 
         GameEvents.OnResourcesChanged += HandleResourcesChanged;
+        GameEvents.OnJobsChanged += HandleJobsChanged;
 
         Refresh();
     }
@@ -48,6 +49,14 @@ public class UpgradeRowUI : MonoBehaviour
             FeatureUnlockManager.I.OnFeatureUnlocked -= HandleFeatureUnlocked;
 
         GameEvents.OnResourcesChanged -= HandleResourcesChanged;
+        GameEvents.OnJobsChanged -= HandleJobsChanged;
+    }
+
+    void HandleJobsChanged()
+    {
+        // Job unlock cheats (or other save-based unlocks) may not fire FeatureUnlockManager events.
+        // Ensure the row updates its effective unlock state when job data changes.
+        Refresh();
     }
 
     void HandleFeatureUnlocked(FeatureId f)
@@ -120,8 +129,11 @@ public class UpgradeRowUI : MonoBehaviour
             return;
         }
 
-        bool unlocked = FeatureUnlockManager.I != null &&
-                        FeatureUnlockManager.I.IsUnlocked(_featureId);
+        // IMPORTANT:
+        // Jobs can be unlocked via multiple paths (upgrade purchase, cheat/debug, legacy save).
+        // The Upgrades UI must treat an already-unlocked job as "Unlocked" even if the
+        // FeatureUnlockManager flag was never set (common when using cheat unlocks).
+        bool unlocked = IsEffectivelyUnlocked();
 
         if (stateLabel != null)
             stateLabel.text = unlocked ? "Unlocked" : "Locked";
@@ -136,6 +148,25 @@ public class UpgradeRowUI : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Returns the authoritative "is unlocked" state for this upgrade entry.
+    /// For job unlocks, we also consult JobUnlockBridge (which checks save-based unlocks).
+    /// </summary>
+    private bool IsEffectivelyUnlocked()
+    {
+        // Primary: feature-based unlock (purchased upgrade)
+        if (FeatureUnlockManager.I != null && FeatureUnlockManager.I.IsUnlocked(_featureId))
+            return true;
+
+        // Secondary: if this FeatureId corresponds to a Job, treat save-based unlocks as unlocked too.
+        if (FeatureIdJobs.TryGetJobFromFeature(_featureId, out var job) && job != JobType.None)
+        {
+            return JobUnlockBridge.IsJobUnlocked(job);
+        }
+
+        return false;
+    }
+
     // ─────────────────────────────────────────────────────────────
     // Button actions
     // ─────────────────────────────────────────────────────────────
@@ -148,7 +179,8 @@ public class UpgradeRowUI : MonoBehaviour
         if (FeatureUnlockManager.I == null)
             return;
 
-        if (FeatureUnlockManager.I.IsUnlocked(_featureId))
+        // If unlocked by ANY path (including cheat), do nothing.
+        if (IsEffectivelyUnlocked())
             return;
 
         if (_creditCost > 0 && !ResourceBank.TrySpend(ResourceType.Credits, _creditCost))
