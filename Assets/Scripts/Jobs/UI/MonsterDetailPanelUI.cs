@@ -352,12 +352,9 @@ public class MonsterDetailPanelUI : MonoBehaviour
         int trainHp = 0, trainAtk = 0, trainDef = 0, trainSpd = 0;
         int flatAtkBonus = 0;
 
-        bool hasOwnedInstance =
-            (_mode == MonsterDetailMode.AssignToTeam) &&
-            (_currentOwned != null) &&
-            !string.IsNullOrEmpty(_currentOwned.monsterId);
+        bool hasOwnedInstance = (_currentOwned != null) && !string.IsNullOrEmpty(_currentOwned.monsterId);
 
-        if (hasOwnedInstance)
+if (hasOwnedInstance)
         {
             trainHp  = Mathf.Max(0, _currentOwned.trainingBonus.hp);
             trainAtk = Mathf.Max(0, _currentOwned.trainingBonus.atk);
@@ -569,6 +566,40 @@ public class MonsterDetailPanelUI : MonoBehaviour
         SetupShinyVariantUI();
         SafeOpen(monster);
     }
+
+
+    /// <summary>
+    /// Codex detail open that also carries the concrete owned instance (when revealed/captured).
+    /// This enables:
+    /// - Evolve button (if level requirement met)
+    /// - Adjusted stats using owned level + training + currentHP
+    /// </summary>
+    public void ShowCodexOwned(MonsterDataSO monster, OwnedMonsterData owned)
+    {
+        if (monster == null)
+            return;
+
+        // Prevent stale shiny/variant state carrying across openings.
+        ClearVariantState();
+
+        _mode = MonsterDetailMode.CodexView;
+        _teamSlotIndex = -1;
+        _onRemoved = null;
+
+        current = monster;
+        _currentOwned = owned;
+
+        onConfirm = null;
+        onCancel = null;
+
+        UpdateTitleButtonBinding();
+        RefreshEvolveButton();
+        SetupFavoriteButton();
+        ResolveVariantState(monster ? monster.id : null);
+        SetupShinyVariantUI();
+        SafeOpen(monster);
+    }
+
 
     public void Hide()
     {
@@ -1411,12 +1442,9 @@ public class MonsterDetailPanelUI : MonoBehaviour
         int evoLvl = Mathf.Max(1, m.evolutionLevel);
 
         // Determine whether we have an owned instance (so we can carry training/flatAtkBonus forward)
-        bool hasOwnedInstance =
-            (_mode == MonsterDetailMode.AssignToTeam) &&
-            (_currentOwned != null) &&
-            !string.IsNullOrEmpty(_currentOwned.monsterId);
+        bool hasOwnedInstance = (_currentOwned != null) && !string.IsNullOrEmpty(_currentOwned.monsterId);
 
-        // Training/permanent bonuses that persist across evolution
+// Training/permanent bonuses that persist across evolution
         int trainHP = 0, trainATK = 0, trainDEF = 0, trainSPD = 0;
         int flatAtkBonus = 0;
 
@@ -1496,8 +1524,11 @@ public class MonsterDetailPanelUI : MonoBehaviour
 
     private int GetDisplayLevel()
     {
-        if (_mode == MonsterDetailMode.AssignToTeam && _currentOwned != null && _currentOwned.level > 0)
+        // If we have a concrete owned instance (team OR owned-from-codex), use its level.
+        // Otherwise fall back to 1 for pure-def views (StarterSelect / unrevealed codex).
+        if (_currentOwned != null && _currentOwned.level > 0)
             return _currentOwned.level;
+
         return 1;
     }
 
@@ -1506,7 +1537,11 @@ public class MonsterDetailPanelUI : MonoBehaviour
         if (!evolveButton)
             return;
 
-        if (_mode != MonsterDetailMode.AssignToTeam || current == null)
+        // We want evolve available anywhere we're looking at a REAL owned instance
+        // (team slot OR owned-from-codex). Pure-def Codex/Starter views should hide it.
+        bool hasOwned = (_currentOwned != null) && !string.IsNullOrEmpty(_currentOwned.monsterId);
+
+        if (!hasOwned || current == null)
         {
             evolveButton.gameObject.SetActive(false);
             return;
@@ -1520,8 +1555,7 @@ public class MonsterDetailPanelUI : MonoBehaviour
         evolveButton.gameObject.SetActive(meetsLevel);
 
         bool canActuallyEvolve = false;
-
-        if (meetsLevel && _currentOwned != null && !string.IsNullOrEmpty(_currentOwned.monsterId))
+        if (meetsLevel)
             canActuallyEvolve = EvolutionHelper.CanEvolve(_currentOwned, current);
 
         evolveButton.interactable = canActuallyEvolve;

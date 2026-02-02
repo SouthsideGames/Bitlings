@@ -316,7 +316,10 @@ public class OwnedMonsterListItemUI : MonoBehaviour
                 panel.ClearStarterBrowseContext();
             }
 
-            panel.ShowCodex(_def);
+            if (HasValidMonster(_data))
+                panel.ShowCodexOwned(_def, _data);
+            else
+                panel.ShowCodex(_def);
             return;
         }
 
