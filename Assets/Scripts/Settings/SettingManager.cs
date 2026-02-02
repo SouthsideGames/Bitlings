@@ -159,8 +159,12 @@ public class SettingsManager : MonoBehaviour
     {
         seed ??= string.Empty;
         if (S.customSeed == seed) return;
+
         S.customSeed = seed;
         Persist();
+
+        SeedService.ClearSessionSeed();
+        SeedService.ApplyGlobalSeedForSession();
     }
 
     public bool GetUseCustomSeed() => S.useCustomSeed;
@@ -168,9 +172,14 @@ public class SettingsManager : MonoBehaviour
     public void SetUseCustomSeed(bool enabled)
     {
         if (S.useCustomSeed == enabled) return;
+
         S.useCustomSeed = enabled;
         Persist();
+
+        SeedService.ClearSessionSeed();
+        SeedService.ApplyGlobalSeedForSession();
     }
+
 
     // ─────────────────────────────────────────────────────────
     // JOB / IDLE (matches JobManager.PullSettings())

@@ -169,6 +169,8 @@ public class PlayerManager
     public int bossEveryN = 10;        
     public string lastBossId = null;
     public SettingsState settings;
+    // RNG seed state (daily seed persistence / reroll tracking)
+    public SeedState seedState = new SeedState();
     public List<JobAssignment> jobAssignments = new List<JobAssignment>();
     public List<JobProgress> jobProgress = new List<JobProgress>();
 

@@ -5,10 +5,6 @@ using UnityEngine.SceneManagement;
 
 public class SettingsPanel : MonoBehaviour
 {
-    // ─────────────────────────────────────────────────────────
-    // Sections / Tabs
-    // ─────────────────────────────────────────────────────────
-
     public enum SettingsSection
     {
         Audio,
@@ -24,16 +20,9 @@ public class SettingsPanel : MonoBehaviour
     [SerializeField] private Button seedsTabButton;
 
     [Header("Section Roots (Each root should contain its section UI)")]
-    [Tooltip("Root that holds master/music/sfx sliders + mute toggles + optional test SFX.")]
     [SerializeField] private GameObject audioSectionRoot;
-
-    [Tooltip("Root that holds gameplay toggles (auto convert dupes, auto scroll log, etc.).")]
     [SerializeField] private GameObject gameplaySectionRoot;
-
-    [Tooltip("Root that holds notifications toggles (master + fine-grained toggles).")]
     [SerializeField] private GameObject notificationsSectionRoot;
-
-    [Tooltip("Root that holds seed toggles/fields and daily seed UI.")]
     [SerializeField] private GameObject seedsSectionRoot;
 
     [Header("Section Fade")]
@@ -48,10 +37,6 @@ public class SettingsPanel : MonoBehaviour
     private bool _sectionWired;
     private CanvasGroup _audioCg, _gameplayCg, _notificationsCg, _seedsCg;
 
-    // ─────────────────────────────────────────────────────────
-    // Existing fields
-    // ─────────────────────────────────────────────────────────
-
     [Header("Volume Sliders (0..1)")]
     [SerializeField] private Slider masterSlider;
     [SerializeField] private Slider musicSlider;
@@ -63,10 +48,7 @@ public class SettingsPanel : MonoBehaviour
     [SerializeField] private Toggle muteSfxToggle;
 
     [Header("Gameplay")]
-    [Tooltip("If ON: duplicates auto-convert into Training XP; if OFF: keep duplicates.")]
     [SerializeField] private Toggle autoConvertDupesToggle;
-
-    [Tooltip("If ON: the Battle Log scrolls to latest entry automatically.")]
     [SerializeField] private Toggle autoScrollLogToggle;
 
     [Header("Notifications")]
@@ -77,63 +59,40 @@ public class SettingsPanel : MonoBehaviour
     [SerializeField] private Toggle notifyFallback24hToggle;
 
     [Header("Seeds / RNG")]
-    [Tooltip("If ON, systems can prefer the custom seed (when unlocked).")]
-    [SerializeField] private Toggle useCustomSeedToggle;
-
-    [Tooltip("Custom random seed string (unlocked via Seeds_CustomInput).")]
     [SerializeField] private TMP_InputField seedInputField;
+    [SerializeField] private Button applyCustomSeedButton;      
 
     [Header("Daily Seed UI")]
-    [Tooltip("Displays the current daily seed (if unlocked).")]
     [SerializeField] private TextMeshProUGUI dailySeedLabel;
-
-    [Tooltip("Button to reroll today's daily seed (if reroll feature unlocked).")]
     [SerializeField] private Button rerollDailySeedButton;
 
     [Header("Buttons")]
     [SerializeField] private Button mainMenuButton;
     [SerializeField] private Button resetButton;
-
-    [Tooltip("Optional: plays a SFX so the player can hear the current volume.")]
     [SerializeField] private Button testSfxButton;
 
-    // ─────────────────────────────────────────────────────────
-    // Reset Confirmation Panel (NEW)
-    // ─────────────────────────────────────────────────────────
-
     [Header("Reset Confirmation (NEW)")]
-    [Tooltip("Root GameObject for the confirmation panel.")]
     [SerializeField] private GameObject resetConfirmRoot;
-
-    [Tooltip("Button that closes the confirmation panel without resetting.")]
     [SerializeField] private Button resetConfirmCloseButton;
-
-    [Tooltip("Button that confirms and proceeds with the reset.")]
     [SerializeField] private Button resetConfirmAgreeButton;
 
     private bool _wired;
 
-    // ─────────────────────────────────────────────────────────
-    // Unity lifecycle
-    // ─────────────────────────────────────────────────────────
-
     void Awake()
     {
         if (masterSlider) { masterSlider.minValue = 0f; masterSlider.maxValue = 1f; }
-        if (musicSlider)  { musicSlider.minValue  = 0f; musicSlider.maxValue  = 1f; }
-        if (sfxSlider)    { sfxSlider.minValue    = 0f; sfxSlider.maxValue    = 1f; }
+        if (musicSlider) { musicSlider.minValue = 0f; musicSlider.maxValue = 1f; }
+        if (sfxSlider) { sfxSlider.minValue = 0f; sfxSlider.maxValue = 1f; }
 
         if (resetButton) resetButton.onClick.RemoveAllListeners();
         if (testSfxButton) testSfxButton.onClick.RemoveAllListeners();
         if (rerollDailySeedButton) rerollDailySeedButton.onClick.RemoveAllListeners();
+        if (applyCustomSeedButton) applyCustomSeedButton.onClick.RemoveAllListeners();
 
-        // NEW: confirmation buttons
         if (resetConfirmCloseButton) resetConfirmCloseButton.onClick.RemoveAllListeners();
         if (resetConfirmAgreeButton) resetConfirmAgreeButton.onClick.RemoveAllListeners();
 
         CacheSectionCanvasGroups();
-
-        // NEW: start hidden
         SetResetConfirmVisible(false);
     }
 
@@ -162,7 +121,7 @@ public class SettingsPanel : MonoBehaviour
             resetButton.onClick.AddListener(OpenResetConfirm);
         }
 
-        if( mainMenuButton)
+        if (mainMenuButton)
         {
             mainMenuButton.onClick.RemoveAllListeners();
             mainMenuButton.onClick.AddListener(ReturnToMainMenu);
@@ -184,8 +143,13 @@ public class SettingsPanel : MonoBehaviour
             rerollDailySeedButton.onClick.AddListener(OnClickRerollDailySeed);
         }
 
-        WireResetConfirmation();
+        if (applyCustomSeedButton)
+        {
+            applyCustomSeedButton.onClick.RemoveAllListeners();
+            applyCustomSeedButton.onClick.AddListener(OnClickApplyCustomSeed);
+        }
 
+        WireResetConfirmation();
         WireEvents();
 
         if (FeatureUnlockManager.I != null)
@@ -198,7 +162,7 @@ public class SettingsPanel : MonoBehaviour
         WireSectionTabs();
 
         if (!IsSectionValid(_activeSection)) _activeSection = defaultSection;
-        RefreshTabVisibility(); 
+        RefreshTabVisibility();
         ShowSection(_activeSection, instant: true);
 
         SetResetConfirmVisible(false);
@@ -211,6 +175,7 @@ public class SettingsPanel : MonoBehaviour
         if (resetButton) resetButton.onClick.RemoveAllListeners();
         if (testSfxButton) testSfxButton.onClick.RemoveAllListeners();
         if (rerollDailySeedButton) rerollDailySeedButton.onClick.RemoveAllListeners();
+        if (applyCustomSeedButton) applyCustomSeedButton.onClick.RemoveAllListeners();
         if (mainMenuButton) mainMenuButton.onClick.RemoveAllListeners();
         if (resetConfirmCloseButton) resetConfirmCloseButton.onClick.RemoveAllListeners();
         if (resetConfirmAgreeButton) resetConfirmAgreeButton.onClick.RemoveAllListeners();
@@ -224,10 +189,6 @@ public class SettingsPanel : MonoBehaviour
 
         SetResetConfirmVisible(false);
     }
-
-    // ─────────────────────────────────────────────────────────
-    // Reset confirmation (NEW)
-    // ─────────────────────────────────────────────────────────
 
     void WireResetConfirmation()
     {
@@ -244,20 +205,12 @@ public class SettingsPanel : MonoBehaviour
         }
     }
 
-    void OpenResetConfirm()
-    {
-        SetResetConfirmVisible(true);
-    }
-
-    void CloseResetConfirm()
-    {
-        SetResetConfirmVisible(false);
-    }
+    void OpenResetConfirm() => SetResetConfirmVisible(true);
+    void CloseResetConfirm() => SetResetConfirmVisible(false);
 
     void ConfirmResetAndProceed()
     {
         SetResetConfirmVisible(false);
-
         var mgr = SettingsManager.I;
         if (mgr != null) mgr.OnReset();
     }
@@ -267,10 +220,6 @@ public class SettingsPanel : MonoBehaviour
         if (!resetConfirmRoot) return;
         resetConfirmRoot.SetActive(on);
     }
-
-    // ─────────────────────────────────────────────────────────
-    // Tabs / Sections
-    // ─────────────────────────────────────────────────────────
 
     void CacheSectionCanvasGroups()
     {
@@ -435,9 +384,6 @@ public class SettingsPanel : MonoBehaviour
         LeanTween.cancel(cg.gameObject);
     }
 
-    // ─────────────────────────────────────────────────────────
-    // Core subscribe/refresh
-    // ─────────────────────────────────────────────────────────
     void SafeSubscribe()
     {
         var sm = SettingsManager.I;
@@ -456,20 +402,19 @@ public class SettingsPanel : MonoBehaviour
 
     void Refresh()
     {
-        // Audio
         if (AudioManager.I)
         {
             if (masterSlider) masterSlider.SetValueWithoutNotify(AudioManager.I.GetMasterVolume());
-            if (musicSlider)  musicSlider.SetValueWithoutNotify(AudioManager.I.GetMusicVolume());
-            if (sfxSlider)    sfxSlider.SetValueWithoutNotify(AudioManager.I.GetSfxVolume());
+            if (musicSlider) musicSlider.SetValueWithoutNotify(AudioManager.I.GetMusicVolume());
+            if (sfxSlider) sfxSlider.SetValueWithoutNotify(AudioManager.I.GetSfxVolume());
         }
 
         var s = SettingsManager.I ? SettingsManager.I.S : SaveManager.Data?.settings;
         if (s != null)
         {
-            if (muteAllToggle)   muteAllToggle.SetIsOnWithoutNotify(s.muteAll);
+            if (muteAllToggle) muteAllToggle.SetIsOnWithoutNotify(s.muteAll);
             if (muteMusicToggle) muteMusicToggle.SetIsOnWithoutNotify(s.muteMusic);
-            if (muteSfxToggle)   muteSfxToggle.SetIsOnWithoutNotify(s.muteSfx);
+            if (muteSfxToggle) muteSfxToggle.SetIsOnWithoutNotify(s.muteSfx);
 
             if (autoConvertDupesToggle)
                 autoConvertDupesToggle.SetIsOnWithoutNotify(s.autoConvertDuplicates);
@@ -494,9 +439,9 @@ public class SettingsPanel : MonoBehaviour
 
             bool masterOn = s.notificationsEnabled;
             if (notifyJobStorageFullToggle) notifyJobStorageFullToggle.interactable = masterOn;
-            if (notifyEnergyFullToggle)     notifyEnergyFullToggle.interactable     = masterOn;
-            if (notifyBoostExpiryToggle)    notifyBoostExpiryToggle.interactable    = masterOn;
-            if (notifyFallback24hToggle)    notifyFallback24hToggle.interactable    = masterOn;
+            if (notifyEnergyFullToggle) notifyEnergyFullToggle.interactable = masterOn;
+            if (notifyBoostExpiryToggle) notifyBoostExpiryToggle.interactable = masterOn;
+            if (notifyFallback24hToggle) notifyFallback24hToggle.interactable = masterOn;
         }
 
         RefreshSeedUi(s);
@@ -504,10 +449,6 @@ public class SettingsPanel : MonoBehaviour
         RefreshTabVisibility();
         ShowSection(_activeSection, instant: true);
     }
-
-    // ─────────────────────────────────────────────────────────
-    // Wiring for value events
-    // ─────────────────────────────────────────────────────────
 
     void WireEvents()
     {
@@ -587,12 +528,6 @@ public class SettingsPanel : MonoBehaviour
             notifyFallback24hToggle.onValueChanged.AddListener(OnNotifyFallback24hChanged);
         }
 
-        if (useCustomSeedToggle)
-        {
-            useCustomSeedToggle.onValueChanged.RemoveListener(OnUseCustomSeedChanged);
-            useCustomSeedToggle.onValueChanged.AddListener(OnUseCustomSeedChanged);
-        }
-
         if (seedInputField)
         {
             seedInputField.onValueChanged.RemoveListener(OnSeedInputChanged);
@@ -607,12 +542,12 @@ public class SettingsPanel : MonoBehaviour
         if (!_wired) return;
 
         if (masterSlider) masterSlider.onValueChanged.RemoveListener(OnMasterChanged);
-        if (musicSlider)  musicSlider.onValueChanged.RemoveListener(OnMusicChanged);
-        if (sfxSlider)    sfxSlider.onValueChanged.RemoveListener(OnSfxChanged);
+        if (musicSlider) musicSlider.onValueChanged.RemoveListener(OnMusicChanged);
+        if (sfxSlider) sfxSlider.onValueChanged.RemoveListener(OnSfxChanged);
 
-        if (muteAllToggle)   muteAllToggle.onValueChanged.RemoveListener(OnMuteAll);
+        if (muteAllToggle) muteAllToggle.onValueChanged.RemoveListener(OnMuteAll);
         if (muteMusicToggle) muteMusicToggle.onValueChanged.RemoveListener(OnMuteMusic);
-        if (muteSfxToggle)   muteSfxToggle.onValueChanged.RemoveListener(OnMuteSfx);
+        if (muteSfxToggle) muteSfxToggle.onValueChanged.RemoveListener(OnMuteSfx);
 
         if (autoConvertDupesToggle)
             autoConvertDupesToggle.onValueChanged.RemoveListener(OnAutoConvertDupesToggled);
@@ -631,47 +566,19 @@ public class SettingsPanel : MonoBehaviour
         if (notifyFallback24hToggle)
             notifyFallback24hToggle.onValueChanged.RemoveListener(OnNotifyFallback24hChanged);
 
-        if (useCustomSeedToggle)
-            useCustomSeedToggle.onValueChanged.RemoveListener(OnUseCustomSeedChanged);
-
         if (seedInputField)
             seedInputField.onValueChanged.RemoveListener(OnSeedInputChanged);
 
         _wired = false;
     }
 
-    // ─────────────────────────────────────────────────────────
-    // Handlers
-    // ─────────────────────────────────────────────────────────
-    void OnMasterChanged(float v)
-    {
-        if (AudioManager.I) AudioManager.I.SetMasterVolume(v);
-    }
+    void OnMasterChanged(float v) { if (AudioManager.I) AudioManager.I.SetMasterVolume(v); }
+    void OnMusicChanged(float v) { if (AudioManager.I) AudioManager.I.SetMusicVolume(v); }
+    void OnSfxChanged(float v) { if (AudioManager.I) AudioManager.I.SetSfxVolume(v); }
 
-    void OnMusicChanged(float v)
-    {
-        if (AudioManager.I) AudioManager.I.SetMusicVolume(v);
-    }
-
-    void OnSfxChanged(float v)
-    {
-        if (AudioManager.I) AudioManager.I.SetSfxVolume(v);
-    }
-
-    void OnMuteAll(bool on)
-    {
-        if (AudioManager.I) AudioManager.I.OnMuteAllToggle(on);
-    }
-
-    void OnMuteMusic(bool on)
-    {
-        if (AudioManager.I) AudioManager.I.OnMuteMusicToggle(on);
-    }
-
-    void OnMuteSfx(bool on)
-    {
-        if (AudioManager.I) AudioManager.I.OnMuteSfxToggle(on);
-    }
+    void OnMuteAll(bool on) { if (AudioManager.I) AudioManager.I.OnMuteAllToggle(on); }
+    void OnMuteMusic(bool on) { if (AudioManager.I) AudioManager.I.OnMuteMusicToggle(on); }
+    void OnMuteSfx(bool on) { if (AudioManager.I) AudioManager.I.OnMuteSfxToggle(on); }
 
     void OnAutoConvertDupesToggled(bool on)
     {
@@ -715,28 +622,66 @@ public class SettingsPanel : MonoBehaviour
         if (mgr != null) mgr.SetNotifyFallback24h(on);
     }
 
-    void OnUseCustomSeedChanged(bool on)
-    {
-        var mgr = SettingsManager.I;
-        if (mgr != null) mgr.SetUseCustomSeed(on);
-    }
-
     void OnSeedInputChanged(string text)
     {
         var mgr = SettingsManager.I;
         if (mgr != null) mgr.SetCustomSeed(text);
     }
 
+    void OnUseCustomSeedChanged_Legacy(bool on)
+    {
+        var mgr = SettingsManager.I;
+        if (mgr != null) mgr.SetUseCustomSeed(on);
+
+        SeedService.ClearSessionSeed();
+        SeedService.ApplyGlobalSeedForSession();
+        RefreshDailySeedUi();
+    }
+
+    void OnClickApplyCustomSeed()
+    {
+        var fm = FeatureUnlockManager.I;
+        if (fm == null || !fm.IsUnlocked(FeatureId.Seeds_CustomInput))
+        {
+            GameEvents.RaiseToast("Custom Seed is locked.");
+            return;
+        }
+
+        var mgr = SettingsManager.I;
+        if (mgr == null)
+            return;
+
+        string raw = (seedInputField != null) ? seedInputField.text : mgr.GetCustomSeed();
+        string token = SeedService.NormalizeSeedToken(raw);
+
+        if (string.IsNullOrWhiteSpace(token))
+        {
+            GameEvents.RaiseToast("Enter a seed first.");
+            return;
+        }
+
+        mgr.SetCustomSeed(token);
+        mgr.SetUseCustomSeed(true);
+
+        SeedService.ClearSessionSeed();
+        SeedService.ApplyGlobalSeedForSession();
+
+        ReturnToMainMenu();
+    }
+
     void OnClickRerollDailySeed()
     {
-        if (SeedService.TryRerollDailySeed(out var newSeed))
+        if (SeedService.TryRerollDailySeed(out var _))
         {
+            SeedService.ClearSessionSeed();
+            SeedService.ApplyGlobalSeedForSession();
             RefreshDailySeedUi();
-            Debug.Log($"[SettingsPanel] Rerolled daily seed: {newSeed}");
+
+            ReturnToMainMenu();
         }
         else
         {
-            Debug.Log("[SettingsPanel] Could not reroll daily seed (locked or already used today).");
+            GameEvents.RaiseToast("Reroll unavailable.");
         }
     }
 
@@ -750,37 +695,32 @@ public class SettingsPanel : MonoBehaviour
         }
     }
 
-    // ─────────────────────────────────────────────────────────
-    // Seed UI refresh (your existing gating)
-    // ─────────────────────────────────────────────────────────
     void RefreshSeedUi(SettingsState s)
     {
         bool hasFeatureMgr = FeatureUnlockManager.I != null;
         bool customUnlocked = hasFeatureMgr &&
                               FeatureUnlockManager.I.IsUnlocked(FeatureId.Seeds_CustomInput);
 
-        if (useCustomSeedToggle)
-        {
-            useCustomSeedToggle.gameObject.SetActive(customUnlocked);
-            if (s != null)
-                useCustomSeedToggle.SetIsOnWithoutNotify(s.useCustomSeed);
-        }
-
+        bool usingButton = (applyCustomSeedButton != null);
+        
         if (seedInputField)
         {
             seedInputField.gameObject.SetActive(customUnlocked);
             if (s != null)
                 seedInputField.SetTextWithoutNotify(s.customSeed ?? string.Empty);
         }
+
+        if (applyCustomSeedButton)
+            applyCustomSeedButton.gameObject.SetActive(customUnlocked);
     }
 
     void RefreshDailySeedUi()
     {
-        bool hasFeatureMgr = FeatureUnlockManager.I != null;
-        bool dailyUnlocked = hasFeatureMgr &&
-                             FeatureUnlockManager.I.IsUnlocked(FeatureId.Seeds_DailyBasic);
-        bool rerollUnlocked = hasFeatureMgr &&
-                              FeatureUnlockManager.I.IsUnlocked(FeatureId.Seeds_RerollDailyOnce);
+        var fm = FeatureUnlockManager.I;
+        bool hasFeatureMgr = fm != null;
+
+        bool dailyUnlocked = hasFeatureMgr && fm.IsUnlocked(FeatureId.Seeds_DailyBasic);
+        bool rerollUnlocked = hasFeatureMgr && fm.IsUnlocked(FeatureId.Seeds_RerollDailyOnce);
 
         if (dailySeedLabel)
         {
@@ -788,17 +728,19 @@ public class SettingsPanel : MonoBehaviour
 
             if (dailyUnlocked)
             {
-                string seed = SeedService.GetCurrentDailySeedString();
-                dailySeedLabel.text = string.IsNullOrEmpty(seed)
-                    ? "Daily Seed: --"
-                    : $"Daily Seed: {seed}";
+                SeedService.ApplyGlobalSeedForSession();
+
+                string token = SeedService.GetDisplaySeedToken();
+                string pfx = SeedService.GetDisplaySeedPrefix();
+
+                dailySeedLabel.text = string.IsNullOrWhiteSpace(token)
+                    ? "----"
+                    : $"{pfx} {token}";
             }
         }
 
         if (rerollDailySeedButton)
-        {
             rerollDailySeedButton.gameObject.SetActive(dailyUnlocked && rerollUnlocked);
-        }
     }
 
     void ReturnToMainMenu()

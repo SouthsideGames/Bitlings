@@ -5,21 +5,8 @@ public static class SeedService
 {
     public static int ActiveSeed { get; private set; }
 
-    // Optional: lets UI show what mode is active (CUSTOM/DAILY/SESSION/NONE)
     public enum SeedMode { None, Session, Daily, Custom }
     public static SeedMode ActiveMode { get; private set; } = SeedMode.None;
-
-    private const string DailySeedPrefsKey = "DailySeed_JSON";
-
-    private const string SessionSeedPrefsKey = "SessionSeed_Int";
-
-    [Serializable]
-    private class DailySeedSave
-    {
-        public int dayIndex;
-        public string seed;
-        public int lastRerollDayIndex;
-    }
 
     private static bool _seedApplied;
 
@@ -27,183 +14,193 @@ public static class SeedService
     {
         if (_seedApplied) return;
 
+        if (SaveManager.Data == null)
+            return;
+
         var fu = FeatureUnlockManager.I;
         var sm = SettingsManager.I;
-        if (fu == null || sm == null)
+
+        if (fu == null)
         {
-            Debug.Log("[SeedService] FeatureUnlockManager or SettingsManager not ready; skipping seed.");
+            ApplySessionSeed();
             return;
         }
 
-        var settings = sm.S;
-        if (settings == null)
+        bool customUnlocked = fu.IsUnlocked(FeatureId.Seeds_CustomInput);
+        bool dailyUnlocked = fu.IsUnlocked(FeatureId.Seeds_DailyBasic);
+
+        var settings = (sm != null) ? sm.S : null;
+        if (customUnlocked && settings == null)
             return;
 
-        // ─────────────────────────────────────────────────────
-        // 1) CUSTOM SEED (highest priority)
-        // ─────────────────────────────────────────────────────
-        if (fu.IsUnlocked(FeatureId.Seeds_CustomInput) &&
+        if (customUnlocked &&
+            settings != null &&
             settings.useCustomSeed &&
             !string.IsNullOrWhiteSpace(settings.customSeed))
         {
-            int seed = BuildHashedSeed(settings.customSeed, includePlayerId: true);
+            string token = NormalizeSeedToken(settings.customSeed);
+            int seed = BuildHashedSeed(token);
 
             ActiveSeed = seed;
             ActiveMode = SeedMode.Custom;
 
             UnityEngine.Random.InitState(seed);
             _seedApplied = true;
-
-            Debug.Log($"[SeedService] Applied CUSTOM seed (hash={seed}).");
             return;
         }
 
-        // ─────────────────────────────────────────────────────
-        // 2) DAILY SEED (fallback if custom not active)
-        // ─────────────────────────────────────────────────────
-        if (fu.IsUnlocked(FeatureId.Seeds_DailyBasic))
+        if (dailyUnlocked)
         {
-            var ds = LoadDailySeed() ?? new DailySeedSave
-            {
-                dayIndex = -1,
-                seed = string.Empty,
-                lastRerollDayIndex = -1
-            };
+            EnsureDailySeedForToday();
+            var ss = SaveManager.Data.seedState ?? (SaveManager.Data.seedState = new SeedState());
 
-            int today = SaveManager.TodayDayIndexUTC();
-            if (ds.dayIndex != today || string.IsNullOrEmpty(ds.seed))
-            {
-                ds.dayIndex = today;
-                ds.seed = GenerateNewSeedString();
-
-                if (ds.lastRerollDayIndex <= 0) ds.lastRerollDayIndex = -1;
-                SaveDailySeed(ds);
-            }
-
-            int seed = BuildHashedSeed(ds.seed, includePlayerId: true);
+            string token = NormalizeSeedToken(ss.dailySeed);
+            int seed = BuildHashedSeed(token);
 
             ActiveSeed = seed;
             ActiveMode = SeedMode.Daily;
 
             UnityEngine.Random.InitState(seed);
             _seedApplied = true;
-
-            Debug.Log($"[SeedService] Applied DAILY seed for day={today} (hash={seed}).");
             return;
         }
 
-        // ─────────────────────────────────────────────────────
-        // 3) NO SEED FEATURES → apply a random SESSION seed (displayable)
-        // ─────────────────────────────────────────────────────
-        // This keeps the "random each time you open the game" behavior,
-        // but makes it *observable* and repeatable for debugging.
-        int sessionSeed = LoadOrCreateSessionSeed();
+        ApplySessionSeed();
+    }
+
+    private static void ApplySessionSeed()
+    {
+        int sessionSeed = CreateNewSessionSeedInt();
 
         ActiveSeed = sessionSeed;
         ActiveMode = SeedMode.Session;
 
         UnityEngine.Random.InitState(sessionSeed);
         _seedApplied = true;
-
-        Debug.Log($"[SeedService] Applied SESSION seed (hash={sessionSeed}).");
     }
 
     public static string GetCurrentDailySeedString()
     {
-        var ds = LoadDailySeed();
-        if (ds == null) return string.Empty;
+        if (SaveManager.Data == null)
+            return string.Empty;
+
+        var ss = SaveManager.Data.seedState;
+        if (ss == null)
+            return string.Empty;
 
         int today = SaveManager.TodayDayIndexUTC();
-        if (ds.dayIndex != today) return string.Empty;
+        if (ss.dayIndex != today)
+            return string.Empty;
 
-        return ds.seed ?? string.Empty;
+        return ss.dailySeed ?? string.Empty;
+    }
+
+    public static string GetCurrentCustomSeedString()
+    {
+        var fu = FeatureUnlockManager.I;
+        var sm = SettingsManager.I;
+        if (fu == null || sm == null || sm.S == null)
+            return string.Empty;
+
+        if (!fu.IsUnlocked(FeatureId.Seeds_CustomInput))
+            return string.Empty;
+
+        if (!sm.S.useCustomSeed)
+            return string.Empty;
+
+        return sm.S.customSeed ?? string.Empty;
+    }
+
+    public static string GetDisplaySeedToken()
+    {
+        ApplyGlobalSeedForSession();
+
+        if (ActiveMode == SeedMode.Custom)
+            return NormalizeSeedToken(GetCurrentCustomSeedString());
+
+        if (ActiveMode == SeedMode.Daily)
+            return NormalizeSeedToken(GetCurrentDailySeedString());
+
+        return ActiveSeed != 0 ? ActiveSeed.ToString() : string.Empty;
+    }
+
+    public static string GetDisplaySeedPrefix()
+    {
+        ApplyGlobalSeedForSession();
+
+        if (ActiveMode == SeedMode.Custom) return "CUSTOM:";
+        if (ActiveMode == SeedMode.Daily) return "DAILY:";
+        return "SEED:";
     }
 
     public static bool TryRerollDailySeed(out string newSeed)
     {
         newSeed = null;
 
+        if (SaveManager.Data == null)
+            return false;
+
         var fu = FeatureUnlockManager.I;
         var sm = SettingsManager.I;
-        if (fu == null || sm == null) return false;
+        if (fu == null)
+            return false;
 
-        // Must have daily + reroll features
         if (!fu.IsUnlocked(FeatureId.Seeds_DailyBasic) ||
             !fu.IsUnlocked(FeatureId.Seeds_RerollDailyOnce))
         {
             return false;
         }
 
-        var settings = sm.S;
+        var settings = (sm != null) ? sm.S : null;
         bool customActive = fu.IsUnlocked(FeatureId.Seeds_CustomInput) &&
                             settings != null &&
                             settings.useCustomSeed &&
                             !string.IsNullOrWhiteSpace(settings.customSeed);
 
-        var ds = LoadDailySeed() ?? new DailySeedSave
-        {
-            dayIndex = -1,
-            seed = string.Empty,
-            lastRerollDayIndex = -1
-        };
-
+        var ss = SaveManager.Data.seedState ?? (SaveManager.Data.seedState = new SeedState());
         int today = SaveManager.TodayDayIndexUTC();
 
-        if (ds.lastRerollDayIndex == today)
-        {
-            Debug.Log("[SeedService] Daily seed reroll already used today.");
+        if (ss.lastRerollDayIndex == today)
             return false;
-        }
 
-        ds.dayIndex = today;
-        ds.seed = GenerateNewSeedString();
-        ds.lastRerollDayIndex = today;
-        SaveDailySeed(ds);
+        ss.dayIndex = today;
+        ss.dailySeed = GenerateNewSeedString();
+        ss.lastRerollDayIndex = today;
 
-        newSeed = ds.seed;
+        if (!SaveManager.IsHardWiping)
+            SaveManager.Save();
+
+        newSeed = ss.dailySeed;
 
         if (_seedApplied && !customActive)
         {
-            int seed = BuildHashedSeed(ds.seed, includePlayerId: true);
+            string token = NormalizeSeedToken(ss.dailySeed);
+            int seed = BuildHashedSeed(token);
 
             ActiveSeed = seed;
             ActiveMode = SeedMode.Daily;
 
             UnityEngine.Random.InitState(seed);
-            Debug.Log($"[SeedService] Re-applied RNG with NEW daily seed (hash={seed}).");
         }
 
         return true;
     }
 
-    // ─────────────────────────────────────────────────────────
-    // Internals: Daily seed persistence via PlayerPrefs
-    // ─────────────────────────────────────────────────────────
-
-    private static DailySeedSave LoadDailySeed()
+    private static void EnsureDailySeedForToday()
     {
-        if (!PlayerPrefs.HasKey(DailySeedPrefsKey))
-            return null;
+        var ss = SaveManager.Data.seedState ?? (SaveManager.Data.seedState = new SeedState());
+        int today = SaveManager.TodayDayIndexUTC();
 
-        string json = PlayerPrefs.GetString(DailySeedPrefsKey, string.Empty);
-        if (string.IsNullOrEmpty(json)) return null;
-
-        try
+        if (ss.dayIndex != today || string.IsNullOrEmpty(ss.dailySeed))
         {
-            return JsonUtility.FromJson<DailySeedSave>(json);
-        }
-        catch
-        {
-            return null;
-        }
-    }
+            ss.dayIndex = today;
+            ss.dailySeed = GenerateNewSeedString();
 
-    private static void SaveDailySeed(DailySeedSave ds)
-    {
-        if (ds == null) return;
-        string json = JsonUtility.ToJson(ds);
-        PlayerPrefs.SetString(DailySeedPrefsKey, json);
-        PlayerPrefs.Save();
+            if (ss.lastRerollDayIndex <= 0) ss.lastRerollDayIndex = -1;
+
+            if (!SaveManager.IsHardWiping)
+                SaveManager.Save();
+        }
     }
 
     private static string GenerateNewSeedString()
@@ -211,33 +208,28 @@ public static class SeedService
         return Guid.NewGuid().ToString("N").Substring(0, 8).ToUpperInvariant();
     }
 
-    private static int BuildHashedSeed(string seedString, bool includePlayerId)
+    public static string NormalizeSeedToken(string raw)
     {
-        if (seedString == null) seedString = string.Empty;
+        if (string.IsNullOrWhiteSpace(raw))
+            return string.Empty;
 
-        string combined = seedString;
+        string s = raw.Trim();
 
-        if (includePlayerId && SaveManager.Data != null)
-        {
-            string pid = SaveManager.Data.playerId ?? string.Empty;
-            combined = seedString + "|" + pid;
-        }
+        if (s.StartsWith("DAILY:", StringComparison.OrdinalIgnoreCase))
+            s = s.Substring(6).Trim();
 
-        return StableHash(combined);
+        if (s.StartsWith("CUSTOM:", StringComparison.OrdinalIgnoreCase))
+            s = s.Substring(7).Trim();
+
+        if (s.StartsWith("SEED:", StringComparison.OrdinalIgnoreCase))
+            s = s.Substring(5).Trim();
+
+        return s;
     }
 
-    private static int LoadOrCreateSessionSeed()
+    private static int BuildHashedSeed(string seedToken)
     {
-        if (PlayerPrefs.HasKey(SessionSeedPrefsKey))
-        {
-            int existing = PlayerPrefs.GetInt(SessionSeedPrefsKey, 0);
-            if (existing != 0) return existing;
-        }
-
-        int created = CreateNewSessionSeedInt();
-        PlayerPrefs.SetInt(SessionSeedPrefsKey, created);
-        PlayerPrefs.Save();
-        return created;
+        return StableHash(seedToken ?? string.Empty);
     }
 
     private static int CreateNewSessionSeedInt()
@@ -252,15 +244,6 @@ public static class SeedService
         return h;
     }
 
-    public static void ClearSessionSeed()
-    {
-        if (PlayerPrefs.HasKey(SessionSeedPrefsKey))
-        {
-            PlayerPrefs.DeleteKey(SessionSeedPrefsKey);
-            PlayerPrefs.Save();
-        }
-    }
-
     private static int StableHash(string s)
     {
         unchecked
@@ -272,5 +255,10 @@ public static class SeedService
         }
     }
 
-
+    public static void ClearSessionSeed()
+    {
+        ActiveSeed = 0;
+        ActiveMode = SeedMode.None;
+        _seedApplied = false;
+    }
 }

@@ -2,23 +2,73 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
 
-public class MainMenuSeedLabel : MonoBehaviour, IPointerClickHandler
+public class SeedLabel : MonoBehaviour, IPointerClickHandler
 {
     [Header("UI")]
     [SerializeField] private TextMeshProUGUI seedLabel;
 
     [Header("Format")]
     [SerializeField] private string prefix = "SEED:";
-    [SerializeField] private bool includeModeTag = false;    
-    [SerializeField] private bool copyFullText = true;        
+    [SerializeField] private bool includeModeTag = false;
+    [SerializeField] private bool copyFullText = true;
 
     [Header("Copy Feedback (optional)")]
     [SerializeField] private bool logOnCopy = true;
     [SerializeField] private string copiedMessage = "Seed copied.";
 
+    private FeatureUnlockManager _subscribedTo;
+
     void OnEnable()
     {
+        TrySubscribe();
         Refresh();
+    }
+
+    void OnDisable()
+    {
+        Unsubscribe();
+    }
+
+    void Update()
+    {
+        if (_subscribedTo == null && FeatureUnlockManager.I != null)
+        {
+            TrySubscribe();
+            Refresh();
+        }
+    }
+
+    private void TrySubscribe()
+    {
+        var fu = FeatureUnlockManager.I;
+        if (fu == null) return;
+
+        if (_subscribedTo == fu)
+            return;
+
+        Unsubscribe();
+
+        fu.OnFeatureUnlocked += HandleFeatureUnlocked;
+        _subscribedTo = fu;
+    }
+
+    private void Unsubscribe()
+    {
+        if (_subscribedTo != null)
+        {
+            _subscribedTo.OnFeatureUnlocked -= HandleFeatureUnlocked;
+            _subscribedTo = null;
+        }
+    }
+
+    private void HandleFeatureUnlocked(FeatureId feature)
+    {
+        if (feature == FeatureId.Seeds_DailyBasic ||
+            feature == FeatureId.Seeds_CustomInput ||
+            feature == FeatureId.Seeds_RerollDailyOnce)
+        {
+            Refresh();
+        }
     }
 
     public void Refresh()
@@ -26,39 +76,54 @@ public class MainMenuSeedLabel : MonoBehaviour, IPointerClickHandler
         if (seedLabel == null)
             return;
 
+        var fu = FeatureUnlockManager.I;
+        bool dailyUnlocked = (fu != null && fu.IsUnlocked(FeatureId.Seeds_DailyBasic));
+
+        seedLabel.gameObject.SetActive(dailyUnlocked);
+        if (!dailyUnlocked)
+            return;
+
         SeedService.ApplyGlobalSeedForSession();
 
-        int seed = SeedService.ActiveSeed;
+        string shownPrefix = SeedService.GetDisplaySeedPrefix();
+        string token = SeedService.GetDisplaySeedToken();
 
-        if (seed == 0)
+        if (string.IsNullOrWhiteSpace(token))
         {
-            seedLabel.text = $"{prefix} ----";
+            seedLabel.text = $"{shownPrefix} ----";
             return;
         }
 
         if (includeModeTag)
         {
             string tag = SeedService.ActiveMode.ToString().ToUpperInvariant();
-            seedLabel.text = $"{prefix} {seed} ({tag})";
+            seedLabel.text = $"{shownPrefix} {token} ({tag})";
         }
         else
         {
-            seedLabel.text = $"{prefix} {seed}";
+            seedLabel.text = $"{shownPrefix} {token}";
         }
     }
 
     public void OnPointerClick(PointerEventData eventData)
     {
-        int seed = SeedService.ActiveSeed;
-        if (seed == 0)
+        if (seedLabel == null || !seedLabel.gameObject.activeInHierarchy)
             return;
 
-        string toCopy = copyFullText ? $"{prefix} {seed}" : seed.ToString();
+        SeedService.ApplyGlobalSeedForSession();
+
+        string shownPrefix = SeedService.GetDisplaySeedPrefix();
+        string token = SeedService.GetDisplaySeedToken();
+
+        if (string.IsNullOrWhiteSpace(token))
+            return;
+
+        string toCopy = copyFullText ? $"{shownPrefix} {token}" : token;
 
         GUIUtility.systemCopyBuffer = toCopy;
 
         if (logOnCopy)
-            Debug.Log($"[MainMenuSeedLabel] {copiedMessage} ({toCopy})");
+            Debug.Log($"[SeedLabel] {copiedMessage} ({toCopy})");
 
         GameEvents.RaiseToast("Copied seed!");
     }
