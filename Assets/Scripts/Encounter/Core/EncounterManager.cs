@@ -74,6 +74,10 @@ public partial class EncounterManager : MonoBehaviour
 
     private bool inBattle;
     private bool autoMode;
+
+    // Snapshot of auto-mode at battle start. Used to resolve the CURRENT battle (turn pacing/text)
+    // even if auto-mode is toggled off mid-battle.
+    private bool _autoResolveSnapshot;
     private bool nextEncounterFree;
     private bool autoRunPaidEnergy;
 
@@ -493,6 +497,11 @@ public partial class EncounterManager : MonoBehaviour
         if (_currentEncounterIsBoss && _currentBossUsed != null)
             GameEvents.BossSpawned?.Invoke(_currentBossUsed.id, _currentBossUsed);
 
+        // Snapshot auto-mode at the moment the battle starts.
+        // If the player disables auto-mode mid-battle, we still want THIS battle
+        // to finish resolving as an auto-battle (no waiting for input / faster pacing).
+        _autoResolveSnapshot = autoMode;
+
         inBattle = true;
         OnStateChanged?.Invoke();
 
@@ -508,6 +517,9 @@ public partial class EncounterManager : MonoBehaviour
         PostBattleSummaryManager.I?.NotifyBattleStart();
 
         _manualHirePending = false;
+
+        // Configure the BattleManager with the snapshot so turn pacing is correct.
+        battleManager.ConfigureForAuto(_autoResolveSnapshot);
         battleManager.Begin(wild, wildLevel, OnBattleEnded);
     }
 
@@ -591,6 +603,27 @@ public partial class EncounterManager : MonoBehaviour
 
         ReconcileHPWithCurrentWinStreak();
         OnStateChanged?.Invoke();
+
+        // If this battle RESOLVED as auto-battle, optionally archive the battle log for later review.
+        // (This uses the snapshot so turning auto-mode off mid-battle still archives correctly.)
+        if (_autoResolveSnapshot
+            && SaveManager.Data != null
+            && FeatureUnlockManager.I != null
+            && FeatureUnlockManager.I.IsUnlocked(FeatureId.Battle_LogArchive))
+        {
+            string opponentId = null;
+            int opponentLevel = result.wildLevel;
+            if (result.wildDef != null) opponentId = result.wildDef.id;
+
+            AutoBattleLogArchive.AddEntry(
+                SaveManager.Data,
+                opponentId,
+                opponentLevel,
+                victory,
+                escaped,
+                BattleLogger.GetLinesSnapshot()
+            );
+        }
 
         SaveManager.Save();
 

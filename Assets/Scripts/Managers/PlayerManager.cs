@@ -135,6 +135,9 @@ public class PlayerManager
     [NonSerialized] public Dictionary<string, AchievementProgressData> achievementMap
         = new Dictionary<string, AchievementProgressData>(StringComparer.Ordinal);
 
+    // Auto-battle review (saved only when FeatureId.Battle_LogArchive is unlocked)
+    public List<AutoBattleLogEntry> autoBattleLogArchive = new List<AutoBattleLogEntry>();
+
     public int credits = 0;
     public List<int> resourceCounts = new List<int>();
     public List<string> unlockedPacks = new List<string>();
@@ -191,6 +194,9 @@ public class PlayerManager
         discoveredMonsterIdsList ??= new List<string>();
         seenTypesList ??= new List<MonsterType>();
         unlockedJobSitesList ??= new List<JobType>();
+
+        // Ensure persisted archives exist
+        autoBattleLogArchive ??= new List<AutoBattleLogEntry>();
 
         // Ensure transient sets exist (runtime only)
         ownedIds ??= new HashSet<string>();

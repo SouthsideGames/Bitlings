@@ -40,6 +40,57 @@ public class BattleManager : MonoBehaviour
     [SerializeField] private bool enableAutoQueueAttack = true;
     [SerializeField, Min(1f)] private float autoQueueAttackAfterSeconds = 20f;
 
+    // Runtime overrides (so auto-battle can resolve quickly without altering prefab defaults)
+    private bool _manualTurnsDefault;
+    private bool _enableAutoQueueDefault;
+    private float _autoQueueSecondsDefault;
+    private bool _autoResolveActive;
+    private bool _defaultsCaptured;
+
+    void Awake()
+    {
+        CaptureDefaults();
+    }
+
+    private void CaptureDefaults()
+    {
+        if (_defaultsCaptured) return;
+        _defaultsCaptured = true;
+
+        _manualTurnsDefault = manualTurns;
+        _enableAutoQueueDefault = enableAutoQueueAttack;
+        _autoQueueSecondsDefault = autoQueueAttackAfterSeconds;
+    }
+
+    /// <summary>
+    /// Called by EncounterManager at battle start.
+    /// When true, the battle resolves in automatic mode (no manual input waits),
+    /// and text/pace can be accelerated in UI scripts that query this flag.
+    /// </summary>
+    public bool AutoResolveActive => _autoResolveActive;
+
+    public void ConfigureForAuto(bool isAuto)
+    {
+        CaptureDefaults();
+        _autoResolveActive = isAuto;
+
+        if (isAuto)
+        {
+            // Force automatic turn resolution.
+            manualTurns = false;
+            enableAutoQueueAttack = false;
+            // Ensure timeout can't drag turns out if any manual-turn checks remain.
+            autoQueueAttackAfterSeconds = 0.25f;
+        }
+        else
+        {
+            // Restore prefab defaults.
+            manualTurns = _manualTurnsDefault;
+            enableAutoQueueAttack = _enableAutoQueueDefault;
+            autoQueueAttackAfterSeconds = _autoQueueSecondsDefault;
+        }
+    }
+
     [Header("Run Settings")]
     [SerializeField, Range(0f, 1f)] private float runBaseChance = 0.25f;
     [SerializeField, Range(0f, 1f)] private float runMinChance = 0.05f;

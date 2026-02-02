@@ -24,6 +24,10 @@ public enum FeatureId
     Codex_Favorites = 12,          // Favorite / pin sorting
     Codex_CaptureOnlyFilter = 13,  // "Capture only" filter
 
+    // ───── Battle QoL ─────
+    Battle_LogArchive = 14,        // Save auto-battle logs for later review
+    Battle_SpeedControl = 15,      // Show speed button during auto-battle
+
     // ─────────────────────────────────────────────────────────────
     // Jobs (Purchasable Unlocks)
     // Keep these in a reserved range for clarity.

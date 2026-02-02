@@ -58,8 +58,32 @@ public class BattleTextBoxUI : MonoBehaviour
         lineText.text = "";
         string full = line.text ?? "";
 
+        bool isAuto = (EncounterManager.I != null && EncounterManager.I.IsAutoMode);
+        bool compressAuto = isAuto && (SettingsManager.I == null || SettingsManager.I.GetCompressAutoBattleText());
+
         float cps = Mathf.Max(0.001f, typeSecondsPerChar);
         float scaled = cps / Mathf.Max(0.25f, battleSpeed);
+
+        // Auto-battle should never feel "stuck" on long lines.
+        // If the player enabled compressed auto-battle text, we render instantly and only hold briefly.
+        if (compressAuto)
+        {
+            lineText.text = full;
+            float autoHold = Mathf.Max(0.05f, 0.2f / Mathf.Max(0.25f, battleSpeed));
+            yield return new WaitForSecondsRealtime(autoHold);
+            yield break;
+        }
+
+        // Otherwise, still speed up the typewriter while in auto-mode.
+        if (isAuto) scaled *= 0.25f;
+
+        // Hard-cap total type time so very long lines don't drag.
+        if (full.Length * scaled > 0.75f)
+        {
+            lineText.text = full;
+            yield return new WaitForSecondsRealtime(0.25f / Mathf.Max(0.25f, battleSpeed));
+            yield break;
+        }
 
         for (int i = 0; i < full.Length; i++)
         {

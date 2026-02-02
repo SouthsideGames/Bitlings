@@ -8,6 +8,11 @@ public class BattleSpeedToggleUI : MonoBehaviour
     [SerializeField] private Button button;
     [SerializeField] private TextMeshProUGUI label;
 
+    [Header("Visibility")]
+    [Tooltip("If enabled, this button only appears when the battle speed feature is unlocked AND auto-battle is active.")]
+    [SerializeField] private bool gateByFeatureAndAutoMode = true;
+    [SerializeField] private FeatureId requiredFeature = FeatureId.Battle_SpeedControl;
+
     static readonly float[] OPTIONS = { 1f, 2f, 3f };
     int idx = 0;
 
@@ -26,6 +31,12 @@ public class BattleSpeedToggleUI : MonoBehaviour
         RefreshLabel();
     }
 
+    void OnEnable()
+    {
+        RefreshVisibility();
+        RefreshLabel();
+    }
+
     void OnDestroy()
     {
         if (button) button.onClick.RemoveListener(OnClick);
@@ -33,6 +44,7 @@ public class BattleSpeedToggleUI : MonoBehaviour
 
     void OnClick()
     {
+        if (!IsUsable()) return;
         idx = (idx + 1) % OPTIONS.Length;
         Apply(OPTIONS[idx], save:true);
         RefreshLabel();
@@ -53,6 +65,35 @@ public class BattleSpeedToggleUI : MonoBehaviour
         if (!label) return;
         float s = (battle != null) ? battle.BattleSpeed : OPTIONS[idx];
         label.text = $"x{s:0.#}";
+    }
+
+    void Update()
+    {
+        if (!gateByFeatureAndAutoMode) return;
+        RefreshVisibility();
+    }
+
+    private void RefreshVisibility()
+    {
+        if (!gateByFeatureAndAutoMode) return;
+
+        bool shouldShow = IsUsable();
+        if (gameObject.activeSelf != shouldShow)
+            gameObject.SetActive(shouldShow);
+    }
+
+    private bool IsUsable()
+    {
+        // Feature gate
+        if (FeatureUnlockManager.I == null) return false;
+        if (!FeatureUnlockManager.I.IsUnlocked(requiredFeature)) return false;
+
+        // Only during auto-battle
+        if (EncounterManager.I == null) return false;
+        if (!EncounterManager.I.IsAutoMode) return false;
+
+        // Must have a battle reference to apply speeds
+        return battle != null;
     }
 
     int ClosestIndex(float s)
