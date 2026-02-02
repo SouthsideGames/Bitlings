@@ -57,6 +57,8 @@ public class IntroManager : MonoBehaviour
         if (titleRoot) LeanTween.cancel(titleRoot);
     }
 
+    void OnApplicationQuit() => SeedService.ClearSessionSeed();
+
     // ─────────────────────────────────────────────────────────────
     // Flash / hint
     // ─────────────────────────────────────────────────────────────

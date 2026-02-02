@@ -96,7 +96,8 @@ public class UpgradeRowUI : MonoBehaviour
             if (stateLabel != null) stateLabel.text = "Unavailable";
             if (costLabel != null) costLabel.text = "-";
 
-            if (buyButton != null) buyButton.interactable = false;
+            // For invalid rows, hide buy button entirely.
+            if (buyButton != null) buyButton.gameObject.SetActive(false);
 
             if (infoButton != null) infoButton.interactable = true;
 
@@ -125,14 +126,12 @@ public class UpgradeRowUI : MonoBehaviour
     {
         if (!_hasValidEntry)
         {
-            if (buyButton != null) buyButton.interactable = false;
+            if (buyButton != null) buyButton.gameObject.SetActive(false);
             return;
         }
 
-        // IMPORTANT:
         // Jobs can be unlocked via multiple paths (upgrade purchase, cheat/debug, legacy save).
-        // The Upgrades UI must treat an already-unlocked job as "Unlocked" even if the
-        // FeatureUnlockManager flag was never set (common when using cheat unlocks).
+        // Treat already-unlocked jobs as "Unlocked" even if FeatureUnlockManager was never set.
         bool unlocked = IsEffectivelyUnlocked();
 
         if (stateLabel != null)
@@ -143,8 +142,21 @@ public class UpgradeRowUI : MonoBehaviour
 
         if (buyButton != null)
         {
+            // If owned, hide the entire buy button object for cleaner UI.
+            if (unlocked)
+            {
+                buyButton.gameObject.SetActive(false);
+                return;
+            }
+
+            // If not owned, show the buy button (even if unaffordable),
+            // but only allow clicking when the player can actually buy.
+            buyButton.gameObject.SetActive(true);
+
             int credits = ResourceBank.Get(ResourceType.Credits);
-            buyButton.interactable = !unlocked && _creditCost > 0 && credits >= _creditCost;
+            bool hasValidCost = _creditCost > 0;
+
+            buyButton.interactable = hasValidCost && credits >= _creditCost;
         }
     }
 
@@ -181,9 +193,16 @@ public class UpgradeRowUI : MonoBehaviour
 
         // If unlocked by ANY path (including cheat), do nothing.
         if (IsEffectivelyUnlocked())
+        {
+            Refresh(); // ensures button hides immediately if something changed
+            return;
+        }
+
+        // Cost guard
+        if (_creditCost <= 0)
             return;
 
-        if (_creditCost > 0 && !ResourceBank.TrySpend(ResourceType.Credits, _creditCost))
+        if (!ResourceBank.TrySpend(ResourceType.Credits, _creditCost))
             return;
 
         // Unlock + persist

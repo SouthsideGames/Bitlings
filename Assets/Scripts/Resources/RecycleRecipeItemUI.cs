@@ -7,11 +7,16 @@ public class RecycleRecipeItemUI : MonoBehaviour
 {
     [Header("UI")]
     [SerializeField] private Button rootButton;
+    [SerializeField] private Image backgroundImage;
     [SerializeField] private Image fromIconImage;
     [SerializeField] private TextMeshProUGUI fromAmountText;
     [SerializeField] private Image toIconImage;
     [SerializeField] private TextMeshProUGUI toAmountText;
     [SerializeField] private TextMeshProUGUI nameText;
+
+    [Header("Colors")]
+    [SerializeField] private Color selectedColor = new Color32(0x8C, 0x90, 0x93, 0xFF);
+    [SerializeField] private Color unselectedColor = new Color32(0x1C, 0x26, 0x2E, 0xFF);
 
     public RecycleRecipeSO Recipe { get; private set; }
 
@@ -53,6 +58,8 @@ public class RecycleRecipeItemUI : MonoBehaviour
             rootButton.onClick.AddListener(OnClick);
         }
 
+        // Default state
+        SetSelected(false);
     }
 
     private void OnClick()
@@ -61,4 +68,9 @@ public class RecycleRecipeItemUI : MonoBehaviour
         _onClicked?.Invoke(this);
     }
 
+    public void SetSelected(bool selected)
+    {
+        if (backgroundImage)
+            backgroundImage.color = selected ? selectedColor : unselectedColor;
+    }
 }

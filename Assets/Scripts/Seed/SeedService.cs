@@ -1,24 +1,24 @@
 using System;
 using UnityEngine;
 
-/// <summary>
-/// Central service for RNG seeding:
-/// - Custom seed (if feature + toggle + string set)
-/// - Otherwise, Daily seed (if feature unlocked)
-///
-/// Call SeedService.ApplyGlobalSeedForSession() once at startup (via SeedBootstrap).
-/// Everything that uses UnityEngine.Random will then follow that seed.
-/// </summary>
 public static class SeedService
 {
+    public static int ActiveSeed { get; private set; }
+
+    // Optional: lets UI show what mode is active (CUSTOM/DAILY/SESSION/NONE)
+    public enum SeedMode { None, Session, Daily, Custom }
+    public static SeedMode ActiveMode { get; private set; } = SeedMode.None;
+
     private const string DailySeedPrefsKey = "DailySeed_JSON";
+
+    private const string SessionSeedPrefsKey = "SessionSeed_Int";
 
     [Serializable]
     private class DailySeedSave
     {
-        public int dayIndex;   
-        public string seed;        
-        public int lastRerollDayIndex;   
+        public int dayIndex;
+        public string seed;
+        public int lastRerollDayIndex;
     }
 
     private static bool _seedApplied;
@@ -47,8 +47,13 @@ public static class SeedService
             !string.IsNullOrWhiteSpace(settings.customSeed))
         {
             int seed = BuildHashedSeed(settings.customSeed, includePlayerId: true);
+
+            ActiveSeed = seed;
+            ActiveMode = SeedMode.Custom;
+
             UnityEngine.Random.InitState(seed);
             _seedApplied = true;
+
             Debug.Log($"[SeedService] Applied CUSTOM seed (hash={seed}).");
             return;
         }
@@ -70,21 +75,38 @@ public static class SeedService
             {
                 ds.dayIndex = today;
                 ds.seed = GenerateNewSeedString();
+
                 if (ds.lastRerollDayIndex <= 0) ds.lastRerollDayIndex = -1;
                 SaveDailySeed(ds);
             }
 
             int seed = BuildHashedSeed(ds.seed, includePlayerId: true);
+
+            ActiveSeed = seed;
+            ActiveMode = SeedMode.Daily;
+
             UnityEngine.Random.InitState(seed);
             _seedApplied = true;
+
             Debug.Log($"[SeedService] Applied DAILY seed for day={today} (hash={seed}).");
             return;
         }
 
-        // 3) No seed applied → default RNG.
-        Debug.Log("[SeedService] No seed applied (no relevant features unlocked).");
-    }
+        // ─────────────────────────────────────────────────────
+        // 3) NO SEED FEATURES → apply a random SESSION seed (displayable)
+        // ─────────────────────────────────────────────────────
+        // This keeps the "random each time you open the game" behavior,
+        // but makes it *observable* and repeatable for debugging.
+        int sessionSeed = LoadOrCreateSessionSeed();
 
+        ActiveSeed = sessionSeed;
+        ActiveMode = SeedMode.Session;
+
+        UnityEngine.Random.InitState(sessionSeed);
+        _seedApplied = true;
+
+        Debug.Log($"[SeedService] Applied SESSION seed (hash={sessionSeed}).");
+    }
 
     public static string GetCurrentDailySeedString()
     {
@@ -96,7 +118,6 @@ public static class SeedService
 
         return ds.seed ?? string.Empty;
     }
-
 
     public static bool TryRerollDailySeed(out string newSeed)
     {
@@ -134,7 +155,6 @@ public static class SeedService
             return false;
         }
 
-        // Generate new seed for today
         ds.dayIndex = today;
         ds.seed = GenerateNewSeedString();
         ds.lastRerollDayIndex = today;
@@ -145,6 +165,10 @@ public static class SeedService
         if (_seedApplied && !customActive)
         {
             int seed = BuildHashedSeed(ds.seed, includePlayerId: true);
+
+            ActiveSeed = seed;
+            ActiveMode = SeedMode.Daily;
+
             UnityEngine.Random.InitState(seed);
             Debug.Log($"[SeedService] Re-applied RNG with NEW daily seed (hash={seed}).");
         }
@@ -202,9 +226,41 @@ public static class SeedService
         return StableHash(combined);
     }
 
-    /// <summary>
-    /// Simple deterministic string → int hash.
-    /// </summary>
+    private static int LoadOrCreateSessionSeed()
+    {
+        if (PlayerPrefs.HasKey(SessionSeedPrefsKey))
+        {
+            int existing = PlayerPrefs.GetInt(SessionSeedPrefsKey, 0);
+            if (existing != 0) return existing;
+        }
+
+        int created = CreateNewSessionSeedInt();
+        PlayerPrefs.SetInt(SessionSeedPrefsKey, created);
+        PlayerPrefs.Save();
+        return created;
+    }
+
+    private static int CreateNewSessionSeedInt()
+    {
+        string raw =
+            Guid.NewGuid().ToString("N") + "|" +
+            DateTime.UtcNow.Ticks.ToString() + "|" +
+            SystemInfo.deviceUniqueIdentifier;
+
+        int h = StableHash(raw);
+        if (h == 0) h = 1;
+        return h;
+    }
+
+    public static void ClearSessionSeed()
+    {
+        if (PlayerPrefs.HasKey(SessionSeedPrefsKey))
+        {
+            PlayerPrefs.DeleteKey(SessionSeedPrefsKey);
+            PlayerPrefs.Save();
+        }
+    }
+
     private static int StableHash(string s)
     {
         unchecked
@@ -215,4 +271,6 @@ public static class SeedService
             return hash;
         }
     }
+
+
 }
