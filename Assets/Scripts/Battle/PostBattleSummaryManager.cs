@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -62,10 +63,14 @@ public class PostBattleSummaryManager : MonoBehaviour
     {
         _battleInProgress = false;
 
-        // IMPORTANT:
-        // If we’re already “holding” summaries (using SetAutoBattling(true) as a suspend),
-        // do NOT let this call clear that hold.
-        _autoBattling = _autoBattling || isAuto;
+        // OPTION 1 (Idle rewards panel):
+        // When running auto battles, we do NOT show per-battle summaries.
+        // We aggregate results for an IdleBattleRewardPanel summary instead.
+        if (isAuto)
+        {
+            IdleBattleForegroundLogger.LogBattle(result);
+            return;
+        }
 
         _pending.Enqueue(new Queued
         {
@@ -192,8 +197,6 @@ public class PostBattleSummaryManager : MonoBehaviour
         postBattleSummaryPanelUI.OnClosed = () =>
         {
             _panelOpen = false;
-
-            // Small defer so UIManager Hide/Show doesn’t collide in the same frame.
             StartCoroutine(Co_DelayedTryShowNext());
         };
 

@@ -73,6 +73,10 @@ public partial class EncounterManager
         PostBattleSummaryManager.I?.NotifyEnergyDepleted();
         PostBattleSummaryManager.I?.SetAutoBattling(false);
 
+        // Option 1: show the merged IdleBattle rewards panel instead of per-fight victory summaries.
+        IdleBattleForegroundLogger.MarkPendingIfLogExists();
+        IdleBattleManager.I?.TryOpenSummaryIfNeeded();
+
         EmitStatus("AUTO stopped: no energy.", LogScope.System);
         OnStateChanged?.Invoke();
     }
@@ -97,6 +101,14 @@ public partial class EncounterManager
         }
 
         PostBattleSummaryManager.I?.SetAutoBattling(false);
+
+        // Option 1: show the merged IdleBattle rewards panel instead of per-fight victory summaries.
+        IdleBattleForegroundLogger.MarkPendingIfLogExists();
+        IdleBattleManager.I?.TryOpenSummaryIfNeeded();
+
+        // Option 1: show the merged IdleBattle rewards panel instead of per-fight victory summaries.
+        IdleBattleForegroundLogger.MarkPendingIfLogExists();
+        IdleBattleManager.I?.TryOpenSummaryIfNeeded();
 
         EmitStatus("AUTO stopped: no healthy team members.", LogScope.System);
         OnStateChanged?.Invoke();
@@ -174,6 +186,18 @@ public partial class EncounterManager
         }
 
         PostBattleSummaryManager.I?.SetAutoBattling(false);
+
+        // Option 1: show the merged IdleBattle rewards panel instead of per-fight victory summaries.
+        IdleBattleForegroundLogger.MarkPendingIfLogExists();
+        IdleBattleManager.I?.TryOpenSummaryIfNeeded();
+
+        // Option 1: show the merged IdleBattle rewards panel instead of per-fight victory summaries.
+        IdleBattleForegroundLogger.MarkPendingIfLogExists();
+        IdleBattleManager.I?.TryOpenSummaryIfNeeded();
+
+        // Option 1: show the merged IdleBattle rewards panel instead of per-fight victory summaries.
+        IdleBattleForegroundLogger.MarkPendingIfLogExists();
+        IdleBattleManager.I?.TryOpenSummaryIfNeeded();
 
         EmitStatus("AUTO stopped: team knocked out.", LogScope.System);
         OnStateChanged?.Invoke();

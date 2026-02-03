@@ -36,14 +36,13 @@ public class IdleBattleRewardPanelUI : MonoBehaviour
 
     }
 
-    public void Open(IdleBattleSummary summary, Action onCollected)
+    // titleOverride is optional (eg. "Auto Battles Complete" for foreground auto sessions).
+    public void Open(IdleBattleSummary summary, Action onCollected, string titleOverride = null)
     {
         _onCollected = onCollected;
 
-        // Ensure the UI container for this panel is visible.
-        UIManager.I?.Show(PanelId.IdleBattleRewards);
-
-        if (titleText) titleText.text = "While You Were Away…";
+        if (titleText)
+            titleText.text = string.IsNullOrEmpty(titleOverride) ? "While You Were Away…" : titleOverride;
         if (totalBattlesText) totalBattlesText.text = $"Bitlings Battled: {summary.totalEncounters}";
         if (durationText) durationText.text = $"Duration: {FormatDuration(summary.durationSeconds)}";
         if (energySpentText) energySpentText.text = $"Energy Spent: {summary.totalEnergySpent}";
@@ -80,9 +79,6 @@ public class IdleBattleRewardPanelUI : MonoBehaviour
         if (panel) { panel.alpha = 0; panel.interactable = false; panel.blocksRaycasts = false; }
         gameObject.SetActive(false);
         ClearList();
-
-        // Hide the container panel as well.
-        UIManager.I?.Hide(PanelId.IdleBattleRewards);
     }
 
     private void ClearList()
