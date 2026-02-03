@@ -388,6 +388,8 @@ public partial class EncounterManager : MonoBehaviour
             PostBattleSummaryManager.I?.SetAutoBattling(false);
             EmitStatus("AUTO mode OFF. Tap ENCOUNTER for the next fight.", LogScope.System);
         }
+        
+        GameEvents.RaiseAutoBattleModeChanged(autoMode);
 
         OnStateChanged?.Invoke();
     }
@@ -642,14 +644,18 @@ public partial class EncounterManager : MonoBehaviour
 
         _manualHirePending = holdForHireDecision;
 
+        // IMPORTANT:
+        // Use the snapshot of auto-mode captured when the battle started.
+        // If the player disables auto-mode mid-battle, THIS battle is still an
+        // auto battle for pacing and for summary suppression.
         if (holdForHireDecision)
             PostBattleSummaryManager.I?.SetAutoBattling(true);
         else
-            PostBattleSummaryManager.I?.SetAutoBattling(autoMode);
+            PostBattleSummaryManager.I?.SetAutoBattling(_autoResolveSnapshot);
 
         PostBattleSummaryManager.I?.NotifyBattleEnd(
             finished,
-            isAuto: autoMode,
+            isAuto: _autoResolveSnapshot,
             growthCoresGained: 0,
             monstersLeveledUp: 0,
             captured: false,

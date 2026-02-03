@@ -1,96 +1,89 @@
 using UnityEngine;
 using UnityEngine.UI;
-using TMPro;
 
 public class BattleSwitchToggle : MonoBehaviour
 {
-    public enum BattleMode
-    {
-        Text = 0,
-        Switch = 1
-    }
+    [Header("Panels (CanvasGroup preferred)")]
+    [SerializeField] private CanvasGroup battleTextGroup;
+    [SerializeField] private CanvasGroup boosterBarGroup;
 
-    [Header("UI")]
+    [Header("Toggle Button")]
     [SerializeField] private Button toggleButton;
-    [SerializeField] private TextMeshProUGUI modeLabel;
 
-    [Header("Optional")]
-    [Tooltip("If present, we can also update battle speed UI state when auto mode changes.")]
-    [SerializeField] private BattleSpeedToggleUI battleSpeedToggleUI;
+    [Header("Toggle Icons (show the OTHER mode)")]
+    [SerializeField] private GameObject battleTextIcon;
+    [SerializeField] private GameObject boosterBarIcon; 
 
-    [Header("State")]
-    [SerializeField] private BattleMode startMode = BattleMode.Text;
+    [Header("Rules")]
+    [SerializeField] private bool startShowingText = true;
 
-    private BattleMode _mode;
-    private bool _autoLocked;
+    [Header("Battle State Source")]
+    [SerializeField] private BattleManager battle;
 
-    public BattleMode Mode => _mode;
+    private bool _showingText;
 
     void Awake()
     {
-        _mode = startMode;
+        _showingText = startShowingText;
+        ApplyState(immediate: true);
 
         if (toggleButton != null)
-            toggleButton.onClick.AddListener(OnToggleClicked);
-
-        RefreshVisuals();
+            toggleButton.onClick.AddListener(Toggle);
     }
 
-    void OnEnable()
+    void OnDestroy()
     {
-        GameEvents.OnEncounterAutoModeChanged += HandleAutoModeChanged;
-        RefreshVisuals();
+        if (toggleButton != null)
+            toggleButton.onClick.RemoveListener(Toggle);
     }
 
-    void OnDisable()
+    public void Toggle()
     {
-        GameEvents.OnEncounterAutoModeChanged -= HandleAutoModeChanged;
+        if (battle != null && battle.NarrationLocked)
+            return;
+
+        _showingText = !_showingText;
+        ApplyState(immediate: false);
     }
 
-    private void HandleAutoModeChanged()
+    private void ApplyState(bool immediate)
     {
-        bool isAuto = (EncounterManager.I != null) && EncounterManager.I.IsAutoMode;
-        SetAutoBattleMode(isAuto);
-    }
-
-    private void OnToggleClicked()
-    {
-        if (_autoLocked) return;
-
-        _mode = (_mode == BattleMode.Text) ? BattleMode.Switch : BattleMode.Text;
-        RefreshVisuals();
-    }
-
-    private void RefreshVisuals()
-    {
-        if (modeLabel != null)
+        if (_showingText)
         {
-            modeLabel.text = (_mode == BattleMode.Text) ? "TEXT" : "SWITCH";
+            SetGroupVisible(battleTextGroup, true);
+            SetGroupVisible(boosterBarGroup, false);
+
+            SetIconState(showBattleTextIcon: false);
         }
+        else
+        {
+            SetGroupVisible(battleTextGroup, false);
+            SetGroupVisible(boosterBarGroup, true);
 
-        if (toggleButton != null)
-            toggleButton.interactable = !_autoLocked;
-
-        if (battleSpeedToggleUI != null)
-            battleSpeedToggleUI.SetAutoMode(_autoLocked);
+            SetIconState(showBattleTextIcon: true);
+        }
     }
 
-
-    public void SetAutoBattleMode(bool isAuto)
+    private void SetIconState(bool showBattleTextIcon)
     {
-        _autoLocked = isAuto;
+        if (battleTextIcon != null)
+            battleTextIcon.SetActive(showBattleTextIcon);
 
-        if (_autoLocked)
-            _mode = BattleMode.Text;
-
-        RefreshVisuals();
+        if (boosterBarIcon != null)
+            boosterBarIcon.SetActive(!showBattleTextIcon);
     }
 
-    // Convenience for other systems
-    public void SetMode(BattleMode mode)
+    private static void SetGroupVisible(CanvasGroup cg, bool visible)
     {
-        if (_autoLocked) return;
-        _mode = mode;
-        RefreshVisuals();
+        if (cg == null) return;
+        cg.alpha = visible ? 1f : 0f;
+        cg.interactable = visible;
+        cg.blocksRaycasts = visible;
+    }
+
+    public void ForceShowText()
+    {
+        _showingText = true;
+        ApplyState(immediate: true);
     }
 }

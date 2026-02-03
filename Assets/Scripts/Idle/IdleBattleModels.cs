@@ -19,7 +19,12 @@ public class IdleBattleSession
     public int totalEnergySpent;
     public long sessionStartUnix;
     public long lastTickUnix;
+
+    // Encountered (fought)
     public List<IdleEncounterLogEntry> log = new();
+
+    // Captured (successfully captured)
+    public List<IdleEncounterLogEntry> capturedLog = new();
 }
 
 [Serializable]
@@ -29,5 +34,10 @@ public class IdleBattleSummary
     public int totalEnergySpent;
     public int totalcredits;
     public float durationSeconds;
+
+    // Encountered (fought)
     public List<IdleEncounterLogEntry> mergedLog = new();
+
+    // Captured (successfully captured)
+    public List<IdleEncounterLogEntry> capturedLog = new();
 }

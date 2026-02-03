@@ -60,10 +60,9 @@ public class FeatureUnlockManager : MonoBehaviour
 
         _unlocked.Add(feature);
 
-        // Apply special side-effects (config toggles, expansions, etc.)
         ApplySideEffectsForFeature(feature);
-
         OnFeatureUnlocked?.Invoke(feature);
+        GameEvents.RaiseFeatureUnlocked(feature);
         SaveToPrefs();
 
         return true;
@@ -94,7 +93,10 @@ public class FeatureUnlockManager : MonoBehaviour
         if (fireEvents)
         {
             foreach (var f in _unlocked)
+            {
                 OnFeatureUnlocked?.Invoke(f);
+                 GameEvents.RaiseFeatureUnlocked(f);
+            }
         }
     }
 
@@ -123,7 +125,10 @@ public class FeatureUnlockManager : MonoBehaviour
         if (fireEvents)
         {
             foreach (var f in _unlocked)
+            {
                 OnFeatureUnlocked?.Invoke(f);
+                GameEvents.RaiseFeatureUnlocked(f);
+            }
         }
     }
 

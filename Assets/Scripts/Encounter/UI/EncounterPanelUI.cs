@@ -235,6 +235,7 @@ public class EncounterPanelUI : MonoBehaviour
         GameEvents.OnResourcesChanged += OnResourcesChanged;
         GameEvents.OnBattleStateChanged += HandleBattleStateChanged;
         GameEvents.OnTeamChanged += OnTeamChanged;
+        GameEvents.OnEncounterAutoModeChanged += ApplyCloseLock;
 
         if (!IsInBattle())
         {
@@ -284,6 +285,7 @@ public class EncounterPanelUI : MonoBehaviour
         GameEvents.OnResourcesChanged -= OnResourcesChanged;
         GameEvents.OnBattleStateChanged -= HandleBattleStateChanged;
         GameEvents.OnTeamChanged -= OnTeamChanged;
+        GameEvents.OnEncounterAutoModeChanged -= ApplyCloseLock;
 
         if (encounterBtn) encounterBtn.onClick.RemoveAllListeners();
         if (_fadeCo != null) StopCoroutine(_fadeCo);
@@ -1526,9 +1528,22 @@ public class EncounterPanelUI : MonoBehaviour
     private void ApplyCloseLock()
     {
         if (!closeButtonRoot) return;
-        if (!hideCloseDuringBattle) { closeButtonRoot.SetActive(true); return; }
+
+        bool isAuto = IsAutoMode();
+        if (isAuto)
+        {
+            closeButtonRoot.SetActive(true);
+            return;
+        }
+
+        if (!hideCloseDuringBattle)
+        {
+            closeButtonRoot.SetActive(true);
+            return;
+        }
 
         bool inBattle = IsInBattle();
         closeButtonRoot.SetActive(!inBattle);
     }
+
 }

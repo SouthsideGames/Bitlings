@@ -36,6 +36,7 @@ public static class GameEvents
     public static Action<BattleResult> BattleFinished;
     public static Action OnBattleStateChanged;
     public static Action OnEncounterAutoModeChanged;
+    public static Action<bool> AutoBattleModeChanged;
 
     // ─────────────────────────────────────────────────────────
     // Resources / Energy
@@ -53,6 +54,11 @@ public static class GameEvents
     public static Action Tutorial_FirstJobAssigned;
     public static Action OnBoostersChanged;
 
+        // ───────────────────────────────────────────────────────
+    // Features / Unlocks
+    // ─────────────────────────────────────────────────────────
+    public static Action<FeatureId> FeatureUnlocked;
+
     // ─────────────────────────────────────────────────────────────────────────────
     // Battle stat refresh
     // ─────────────────────────────────────────────────────────────────────────────
@@ -67,5 +73,18 @@ public static class GameEvents
     {
         if (string.IsNullOrWhiteSpace(message)) return;
         ToastRequested?.Invoke(message);
+    }
+
+    public static void RaiseFeatureUnlocked(FeatureId feature)
+    {
+        if (feature == FeatureId.None) return;
+        FeatureUnlocked?.Invoke(feature);
+    }
+
+    public static void RaiseAutoBattleModeChanged(bool isAuto)
+    {
+        AutoBattleModeChanged?.Invoke(isAuto);
+
+        OnEncounterAutoModeChanged?.Invoke();
     }
 }

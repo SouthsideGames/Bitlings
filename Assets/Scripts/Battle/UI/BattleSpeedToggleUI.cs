@@ -15,6 +15,10 @@ public class BattleSpeedToggleUI : MonoBehaviour
     [Tooltip("If enabled, speed cannot be changed during auto-battle.")]
     [SerializeField] private bool disableDuringAuto = false;
 
+    // NEW: Feature gating
+    [Header("Unlock Gating")]
+    [SerializeField] private FeatureId speedControlFeatureId = FeatureId.IdleBattle_SpeedControl;
+
     private bool _autoMode;
 
     void Awake()
@@ -26,23 +30,55 @@ public class BattleSpeedToggleUI : MonoBehaviour
             battleManager = FindFirstObjectByType<BattleManager>();
 
         RefreshLabel();
+        
     }
 
     void OnEnable()
     {
         GameEvents.OnEncounterAutoModeChanged += HandleAutoModeChanged;
-        HandleAutoModeChanged(); // sync initial
+
+
+        GameEvents.FeatureUnlocked += HandleFeatureUnlocked;
+
+        HandleAutoModeChanged(); 
+        RefreshVisibility();       
     }
 
     void OnDisable()
     {
         GameEvents.OnEncounterAutoModeChanged -= HandleAutoModeChanged;
+        GameEvents.FeatureUnlocked -= HandleFeatureUnlocked;
     }
 
     private void HandleAutoModeChanged()
     {
         bool isAuto = (EncounterManager.I != null) && EncounterManager.I.IsAutoMode;
         SetAutoMode(isAuto);
+
+        // NEW: auto mode impacts visibility too
+        RefreshVisibility();
+    }
+
+    // NEW
+    private void HandleFeatureUnlocked(FeatureId id)
+    {
+        if (id != speedControlFeatureId) return;
+        RefreshVisibility();
+    }
+
+    // NEW: Self-gating method
+    private void RefreshVisibility()
+    {
+        bool isAuto = (EncounterManager.I != null) && EncounterManager.I.IsAutoMode;
+
+        bool unlocked =
+            FeatureUnlockManager.I != null &&
+            FeatureUnlockManager.I.IsUnlocked(speedControlFeatureId);
+
+        bool shouldShow = unlocked && isAuto;
+
+        if (gameObject.activeSelf != shouldShow)
+            gameObject.SetActive(shouldShow);
     }
 
     public void SetAutoMode(bool isAuto)

@@ -394,9 +394,6 @@ private IEnumerator MaybeSayKO_Wild(string victimName, float preHP, float postHP
         // If you want BattleManager rules to also snap to auto:
         ConfigureForAuto(isAuto);
 
-        // Lock the bottom toggle during auto so it can't switch away from text
-        if (_bottomToggle != null)
-            _bottomToggle.SetAutoBattleMode(isAuto);
 
         // Wild icon: use shiny icon if shiny encounter and one exists.
         if (wildIcon)
@@ -1545,9 +1542,6 @@ private IEnumerator MaybeSayKO_Wild(string victimName, float preHP, float postHP
         inBattle = false;
         SetIsPlayerTurn(false);
         GameEvents.OnBattleStateChanged?.Invoke();
-
-        if (_bottomToggle != null)
-            _bottomToggle.SetAutoBattleMode(false);
 
         ConfigureForAuto(false);
 

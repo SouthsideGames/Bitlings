@@ -15,6 +15,69 @@ public class IdleBattleManager : MonoBehaviour
 
     private bool _summaryOpenedThisSession = false;
 
+    // Prevent double-logging when this manager runs headless batches
+    // (those batches also emit GameEvents.BattleFinished for telemetry).
+    private bool _headlessBatchRunning = false;
+
+    void OnEnable()
+    {
+        GameEvents.BattleFinished += HandleBattleFinished;
+    }
+
+    void OnDisable()
+    {
+        GameEvents.BattleFinished -= HandleBattleFinished;
+    }
+
+    // Foreground auto-battles (the player is watching) run through the normal BattleManager.
+    // We still want to aggregate a single summary panel at the end, so we listen for completed
+    // battles during auto mode and merge them into the idle log.
+    private void HandleBattleFinished(BattleResult r)
+    {
+        if (!IsIdleBattleUnlocked()) return;
+        if (_headlessBatchRunning) return; // headless already logs directly
+
+        var s = IdleBattleStore.Load();
+        if (s == null || !s.autoBattling) return;
+
+        // Only capture results while Encounter autoMode is active.
+        if (!IsEncounterAutoModeActive()) return;
+
+        if (r.wildDef == null || string.IsNullOrEmpty(r.wildDef.id)) return;
+
+        AddToLogMerged(s.log, r.wildDef.id, r.creditsGained, shiny: false);
+        TrimLog(s.log, config != null ? config.encounterLogMaxEntries : 50);
+
+        // Track energy spent as a best-effort (assumes most energy spend is from auto encounters).
+        try
+        {
+            int curEnergy = ResourceBank.Get(ResourceType.Energy);
+            int spent = Mathf.Max(0, s.energyAtStart - curEnergy);
+            if (spent > s.totalEnergySpent) s.totalEnergySpent = spent;
+        }
+        catch { }
+
+        TrySetBoolFieldIfPresent(s, "hasPendingSummary", true);
+        IdleBattleStore.Save(s);
+    }
+
+    private bool IsEncounterAutoModeActive()
+    {
+        try
+        {
+            var em = encounterManager != null ? encounterManager : EncounterManager.I;
+            if (em == null) return false;
+
+            // autoMode is private in EncounterManager; use reflection defensively.
+            var f = em.GetType().GetField("autoMode", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Public);
+            if (f != null && f.FieldType == typeof(bool))
+                return (bool)f.GetValue(em);
+        }
+        catch { }
+
+        return false;
+    }
+
     void Awake()
     {
         if (I != null && I != this)
@@ -167,9 +230,12 @@ public class IdleBattleManager : MonoBehaviour
         if (!IsIdleBattleUnlocked() || count <= 0) return;
         if (config == null) return;
 
+        _headlessBatchRunning = true;
         ResourceBank.BeginBatch();
 
-        var s = IdleBattleStore.Load();
+        try
+        {
+            var s = IdleBattleStore.Load();
         var rng = new System.Random(SeedForSession(s));
         var teamP = JobIdlePassives.ComputeForActiveTeam();
 
@@ -296,7 +362,12 @@ public class IdleBattleManager : MonoBehaviour
 
         encounterManager?.RequestStateRefresh();
 
-        ResourceBank.EndBatch();
+            ResourceBank.EndBatch();
+        }
+        finally
+        {
+            _headlessBatchRunning = false;
+        }
     }
 
     private void MarkSummaryPendingIfLogExists()
@@ -471,6 +542,10 @@ public class IdleBattleManager : MonoBehaviour
         // runtime guard
         _summaryOpenedThisSession = true;
 
+        // Ensure the container panel is visible (rewardPanel may be nested under a
+        // UIManager-controlled root).
+        UIManager.I?.Show(PanelId.IdleBattleRewards);
+
         rewardPanel.Open(sum, onCollected: () =>
         {
             IdleBattleStore.ClearLog();
@@ -478,6 +553,9 @@ public class IdleBattleManager : MonoBehaviour
             var ss = IdleBattleStore.Load();
             ClearPendingSummaryFlag(ss);
             IdleBattleStore.Save(ss);
+
+            // Close the rewards panel container when the player collects.
+            UIManager.I?.Hide(PanelId.IdleBattleRewards);
         });
     }
 
