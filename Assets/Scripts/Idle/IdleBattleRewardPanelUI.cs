@@ -40,6 +40,9 @@ public class IdleBattleRewardPanelUI : MonoBehaviour
     {
         _onCollected = onCollected;
 
+        // Ensure the UI container for this panel is visible.
+        UIManager.I?.Show(PanelId.IdleBattleRewards);
+
         if (titleText) titleText.text = "While You Were Away…";
         if (totalBattlesText) totalBattlesText.text = $"Bitlings Battled: {summary.totalEncounters}";
         if (durationText) durationText.text = $"Duration: {FormatDuration(summary.durationSeconds)}";
@@ -77,6 +80,9 @@ public class IdleBattleRewardPanelUI : MonoBehaviour
         if (panel) { panel.alpha = 0; panel.interactable = false; panel.blocksRaycasts = false; }
         gameObject.SetActive(false);
         ClearList();
+
+        // Hide the container panel as well.
+        UIManager.I?.Hide(PanelId.IdleBattleRewards);
     }
 
     private void ClearList()

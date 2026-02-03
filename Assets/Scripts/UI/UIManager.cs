@@ -1,6 +1,7 @@
 using UnityEngine;
 using System;
 using System.Collections.Generic;
+using System.Collections;
 
 public enum PanelId
 {
@@ -36,6 +37,7 @@ public enum PanelId
     Story = 30,
     PlayerDossier = 31,
     ImagePreview = 32,
+    IdleBattleRewards = 33,
 }
 
 [Serializable]
@@ -68,6 +70,10 @@ public class UIManager : MonoBehaviour
     private readonly Dictionary<PanelId, PanelEntry> _map = new();
     private readonly HashSet<PanelId> _open = new();
 
+    // Idle reward surfacing
+    private Coroutine _idleRewardCo;
+    private bool _idleRewardQueued;
+
     void Awake()
     {
         if (I != null && I != this) { Destroy(gameObject); return; }
@@ -99,6 +105,34 @@ public class UIManager : MonoBehaviour
     {
         CloseAll();
         Show(PanelId.Intro);
+    }
+
+    // If the app resumes and Home is already open, surface any pending idle rewards.
+    void OnApplicationFocus(bool hasFocus)
+    {
+        if (!hasFocus) return;
+
+        if (IsOpen(PanelId.Home))
+        {
+            RequestIdleBattleRewardsCheck();
+        }
+        else
+        {
+            // If we aren't on Home yet (ex: Intro), queue it until Home opens.
+            _idleRewardQueued = true;
+        }
+    }
+
+    void OnApplicationPause(bool paused)
+    {
+        if (!paused)
+        {
+            // Same behavior on unpause
+            if (IsOpen(PanelId.Home))
+                RequestIdleBattleRewardsCheck();
+            else
+                _idleRewardQueued = true;
+        }
     }
 
     public void Show(PanelId id) => SetActive(id, true);
@@ -134,7 +168,6 @@ public class UIManager : MonoBehaviour
     {
         if (!_map.TryGetValue(id, out var p) || p.root == null) return;
 
-        // Cancel any running tweens to avoid "stuck half-faded" panels
         CancelTweens(p.root);
 
         if (on)
@@ -149,7 +182,6 @@ public class UIManager : MonoBehaviour
                 cg.blocksRaycasts = true;
             }
 
-            // Ensure slide position is normalized (open position)
             var rt = p.root.GetComponent<RectTransform>();
             if (rt && p.useSlide)
             {
@@ -161,7 +193,6 @@ public class UIManager : MonoBehaviour
         }
         else
         {
-            // Before deactivating, ensure it won't intercept input if a CanvasGroup exists
             if (p.useFade)
             {
                 var cg = p.root.GetComponent<CanvasGroup>();
@@ -194,6 +225,19 @@ public class UIManager : MonoBehaviour
             {
                 AnimateOpen(p);
                 if (fireEvent) OnPanelChanged?.Invoke(id, true);
+
+                // When Home opens, try to surface idle/auto-battle rewards.
+                if (id == PanelId.Home)
+                {
+                    RequestIdleBattleRewardsCheck();
+
+                    // If something queued while we were on Intro, consume it now.
+                    if (_idleRewardQueued)
+                    {
+                        _idleRewardQueued = false;
+                        RequestIdleBattleRewardsCheck();
+                    }
+                }
             }
         }
         else
@@ -210,6 +254,25 @@ public class UIManager : MonoBehaviour
     }
 
     // ─────────────────────────────────────────────────────────────────────
+    // Idle Battle Reward surfacing
+    // ─────────────────────────────────────────────────────────────────────
+
+    private void RequestIdleBattleRewardsCheck()
+    {
+        if (_idleRewardCo != null) StopCoroutine(_idleRewardCo);
+        _idleRewardCo = StartCoroutine(Co_TryOpenIdleBattleRewardsNextFrame());
+    }
+
+    private IEnumerator Co_TryOpenIdleBattleRewardsNextFrame()
+    {
+        // Let the UI settle for a frame so panel transitions don't collide.
+        yield return null;
+
+        // Manager handles gating and will no-op if nothing is pending.
+        IdleBattleManager.I?.TryOpenSummaryIfNeeded();
+    }
+
+    // ─────────────────────────────────────────────────────────────────────
     // Animation
     // ─────────────────────────────────────────────────────────────────────
 
@@ -217,14 +280,11 @@ public class UIManager : MonoBehaviour
     {
         var root = p.root;
 
-        // Cancel any existing tweens (important when toggling quickly)
         CancelTweens(root);
-
         root.SetActive(true);
 
         RectTransform rt = root.GetComponent<RectTransform>();
 
-        // Optional slide-in
         if (p.useSlide && rt)
         {
             var pos = rt.anchoredPosition;
@@ -232,12 +292,10 @@ public class UIManager : MonoBehaviour
             LeanTween.moveY(rt, 0f, openFadeDuration).setEaseOutCubic();
         }
 
-        // Fade only if enabled
         if (p.useFade)
         {
             CanvasGroup cg = EnsureCanvasGroup(root);
 
-            // Enable interaction immediately on open
             cg.interactable = true;
             cg.blocksRaycasts = true;
 
@@ -250,7 +308,6 @@ public class UIManager : MonoBehaviour
     {
         var root = p.root;
 
-        // Cancel any existing tweens (important when toggling quickly)
         CancelTweens(root);
 
         RectTransform rt = root.GetComponent<RectTransform>();
@@ -264,7 +321,6 @@ public class UIManager : MonoBehaviour
 
             CanvasGroup cg = EnsureCanvasGroup(root);
 
-            // Disable interaction immediately on close (prevents ghost clicks during fade)
             cg.interactable = false;
             cg.blocksRaycasts = false;
 
@@ -298,10 +354,8 @@ public class UIManager : MonoBehaviour
     {
         if (!root) return;
 
-        // Cancel all tweens associated with this GameObject
         LeanTween.cancel(root);
 
-        // Also cancel tweens on RectTransform if present
         var rt = root.GetComponent<RectTransform>();
         if (rt) LeanTween.cancel(rt.gameObject);
     }

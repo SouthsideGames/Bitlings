@@ -1,117 +1,96 @@
-// Assets/Scripts/Battle/UI/BattleSwitchToggle.cs
 using UnityEngine;
 using UnityEngine.UI;
+using TMPro;
 
 public class BattleSwitchToggle : MonoBehaviour
 {
-    [Header("Toggle (Text <-> Speed)")]
-    [SerializeField] private Toggle switchToggle;
+    public enum BattleMode
+    {
+        Text = 0,
+        Switch = 1
+    }
 
-    [Header("Panels")]
-    [SerializeField] private GameObject textPanelRoot;
-    [SerializeField] private GameObject speedPanelRoot;
+    [Header("UI")]
+    [SerializeField] private Button toggleButton;
+    [SerializeField] private TextMeshProUGUI modeLabel;
 
-    [Header("Optional - Speed UI Controller")]
+    [Header("Optional")]
+    [Tooltip("If present, we can also update battle speed UI state when auto mode changes.")]
     [SerializeField] private BattleSpeedToggleUI battleSpeedToggleUI;
 
-    [Header("Auto Mode Behavior")]
-    [Tooltip("When auto battle is on, force showing the Text panel (recommended).")]
-    [SerializeField] private bool forceTextPanelDuringAuto = true;
+    [Header("State")]
+    [SerializeField] private BattleMode startMode = BattleMode.Text;
 
-    [Tooltip("When auto battle is on, disable the switch toggle so player can't swap panels.")]
-    [SerializeField] private bool disableSwitchDuringAuto = true;
+    private BattleMode _mode;
+    private bool _autoLocked;
 
-    [Tooltip("When auto battle is on, also disable the battle speed button.")]
-    [SerializeField] private bool disableSpeedButtonDuringAuto = false;
+    public BattleMode Mode => _mode;
 
-    private bool _isAutoLocked;
-    private bool _suppressCallback;
-
-    private void Awake()
+    void Awake()
     {
-        if (switchToggle != null)
-            switchToggle.onValueChanged.AddListener(HandleToggleChanged);
+        _mode = startMode;
+
+        if (toggleButton != null)
+            toggleButton.onClick.AddListener(OnToggleClicked);
+
+        RefreshVisuals();
     }
 
-    private void OnEnable()
+    void OnEnable()
     {
-        // In case something else changed state before we enabled.
-        ApplyPanelState(GetToggleValueSafe());
+        GameEvents.OnEncounterAutoModeChanged += HandleAutoModeChanged;
+        RefreshVisuals();
     }
 
-    private void OnDisable()
+    void OnDisable()
     {
-        // Keep listener (no RemoveAllListeners to preserve inspector wiring),
-        // but we do not need to unsubscribe because we added explicitly in Awake.
+        GameEvents.OnEncounterAutoModeChanged -= HandleAutoModeChanged;
     }
 
-    /// <summary>
-    /// Called by BattleManager to lock/unlock the UI while auto battle resolves.
-    /// </summary>
+    private void HandleAutoModeChanged()
+    {
+        bool isAuto = (EncounterManager.I != null) && EncounterManager.I.IsAutoMode;
+        SetAutoBattleMode(isAuto);
+    }
+
+    private void OnToggleClicked()
+    {
+        if (_autoLocked) return;
+
+        _mode = (_mode == BattleMode.Text) ? BattleMode.Switch : BattleMode.Text;
+        RefreshVisuals();
+    }
+
+    private void RefreshVisuals()
+    {
+        if (modeLabel != null)
+        {
+            modeLabel.text = (_mode == BattleMode.Text) ? "TEXT" : "SWITCH";
+        }
+
+        if (toggleButton != null)
+            toggleButton.interactable = !_autoLocked;
+
+        if (battleSpeedToggleUI != null)
+            battleSpeedToggleUI.SetAutoMode(_autoLocked);
+    }
+
+
     public void SetAutoBattleMode(bool isAuto)
     {
-        _isAutoLocked = isAuto;
+        _autoLocked = isAuto;
 
-        // If auto is on, we generally want the text panel visible.
-        if (isAuto && forceTextPanelDuringAuto)
-        {
-            SetToggleValueSafe(false); // false => Text panel (convention)
-        }
+        if (_autoLocked)
+            _mode = BattleMode.Text;
 
-        // Disable/enable the switch itself.
-        if (switchToggle != null && disableSwitchDuringAuto)
-            switchToggle.interactable = !isAuto;
-
-        // Optionally disable the speed button too.
-        if (battleSpeedToggleUI != null && disableSpeedButtonDuringAuto)
-            battleSpeedToggleUI.SetInteractable(!isAuto);
-
-        // Ensure panels are correct after any forced toggle change.
-        ApplyPanelState(GetToggleValueSafe());
+        RefreshVisuals();
     }
 
-    private void HandleToggleChanged(bool isOn)
+    // Convenience for other systems
+    public void SetMode(BattleMode mode)
     {
-        if (_suppressCallback) return;
-
-        // If auto is locked, reject user input and snap back.
-        if (_isAutoLocked && disableSwitchDuringAuto)
-        {
-            // Revert to the forced state (usually Text)
-            _suppressCallback = true;
-            switchToggle.isOn = false;
-            _suppressCallback = false;
-
-            ApplyPanelState(false);
-            return;
-        }
-
-        ApplyPanelState(isOn);
-    }
-
-    private void ApplyPanelState(bool showSpeedPanel)
-    {
-        if (textPanelRoot != null)
-            textPanelRoot.SetActive(!showSpeedPanel);
-
-        if (speedPanelRoot != null)
-            speedPanelRoot.SetActive(showSpeedPanel);
-
-        // If speed panel is hidden, you may still want speed button usable elsewhere.
-        // This script only controls visibility; interactability is controlled by SetAutoBattleMode if desired.
-    }
-
-    private bool GetToggleValueSafe()
-    {
-        return switchToggle != null && switchToggle.isOn;
-    }
-
-    private void SetToggleValueSafe(bool value)
-    {
-        if (switchToggle == null) return;
-
-        _suppressCallback = true;
-        switchToggle.isOn = value;
-        _suppressCallback = false;
+        if (_autoLocked) return;
+        _mode = mode;
+        RefreshVisuals();
     }
 }

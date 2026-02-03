@@ -1,4 +1,3 @@
-// Assets/Scripts/Battle/UI/BattleSpeedToggleUI.cs
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
@@ -9,98 +8,71 @@ public class BattleSpeedToggleUI : MonoBehaviour
     [SerializeField] private Button speedButton;
     [SerializeField] private TextMeshProUGUI speedLabel;
 
-    [Header("Optional")]
-    [SerializeField] private GameObject lockedBadge; 
+    [Header("Bindings")]
+    [SerializeField] private BattleManager battleManager;
 
-    [Header("Speed Steps (must match BattleManager clamp range)")]
-    [SerializeField] private float[] speeds = new float[] { 1f, 2f, 3f };
+    [Header("Behavior")]
+    [Tooltip("If enabled, speed cannot be changed during auto-battle.")]
+    [SerializeField] private bool disableDuringAuto = false;
 
-    private BattleManager _battle;
-    private bool _isInteractable = true;
+    private bool _autoMode;
 
-    private void Awake()
+    void Awake()
     {
         if (speedButton != null)
-            speedButton.onClick.AddListener(OnSpeedPressed);
+            speedButton.onClick.AddListener(OnSpeedClicked);
+
+        if (battleManager == null)
+            battleManager = FindFirstObjectByType<BattleManager>();
+
+        RefreshLabel();
     }
 
-    private void OnEnable()
+    void OnEnable()
     {
         GameEvents.OnEncounterAutoModeChanged += HandleAutoModeChanged;
-        GameEvents.OnSettingsApplied += HandleSettingsApplied;
-
-        ResolveBattleManager();
-        RefreshLabelFromBattle();
+        HandleAutoModeChanged(); // sync initial
     }
 
-    private void OnDisable()
+    void OnDisable()
     {
         GameEvents.OnEncounterAutoModeChanged -= HandleAutoModeChanged;
-        GameEvents.OnSettingsApplied -= HandleSettingsApplied;
-    }
-
-    private void ResolveBattleManager()
-    {
-        if (_battle != null) return;
-        _battle = FindFirstObjectByType<BattleManager>();
-    }
-
-    private void OnSpeedPressed()
-    {
-        if (!_isInteractable) return;
-
-        ResolveBattleManager();
-        if (_battle == null) return;
-
-        _battle.CycleBattleSpeed();
-
-        RefreshLabelFromBattle();
-    }
-
-    private void RefreshLabelFromBattle()
-    {
-        ResolveBattleManager();
-
-        float s = 1f;
-
-        if (_battle != null)
-            s = Mathf.Clamp(_battle.BattleSpeed, 0.25f, 5f);
-        else if (SaveManager.Data != null && SaveManager.Data.settings != null)
-            s = Mathf.Clamp(SaveManager.Data.settings.battleSpeed, 0.25f, 5f);
-
-        if (speedLabel != null)
-        {
-            speedLabel.text = $"Speed: {FormatSpeed(s)}";
-        }
-    }
-
-    private string FormatSpeed(float s)
-    {
-        if (Mathf.Abs(s - 1f) < 0.01f) return "1x";
-        if (Mathf.Abs(s - 2f) < 0.01f) return "2x";
-        if (Mathf.Abs(s - 3f) < 0.01f) return "3x";
-        return $"{s:0.##}x";
-    }
-
-    public void SetInteractable(bool canInteract)
-    {
-        _isInteractable = canInteract;
-
-        if (speedButton != null)
-            speedButton.interactable = canInteract;
-
-        if (lockedBadge != null)
-            lockedBadge.SetActive(!canInteract);
     }
 
     private void HandleAutoModeChanged()
     {
         bool isAuto = (EncounterManager.I != null) && EncounterManager.I.IsAutoMode;
-        RefreshLabelFromBattle();
+        SetAutoMode(isAuto);
     }
 
-    private void HandleSettingsApplied()
+    public void SetAutoMode(bool isAuto)
     {
-        RefreshLabelFromBattle();
+        _autoMode = isAuto;
+
+        if (speedButton != null)
+            speedButton.interactable = !(disableDuringAuto && _autoMode);
+
+        RefreshLabel();
+    }
+
+    private void OnSpeedClicked()
+    {
+        if (battleManager == null) return;
+        if (disableDuringAuto && _autoMode) return;
+
+        battleManager.CycleBattleSpeed();
+        RefreshLabel();
+    }
+
+    private void RefreshLabel()
+    {
+        if (speedLabel == null || battleManager == null) return;
+
+        float s = battleManager.BattleSpeed;
+
+        if (Mathf.Abs(s - 1f) < 0.01f) speedLabel.text = "1x";
+        else if (Mathf.Abs(s - 2f) < 0.01f) speedLabel.text = "2x";
+        else if (Mathf.Abs(s - 3f) < 0.01f) speedLabel.text = "3x";
+        else speedLabel.text = $"{s:0.##}x";
     }
 }
