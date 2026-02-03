@@ -32,7 +32,7 @@ public class AutoBattleLogEntry
         {
             if (!wasAutoResolved) return;
 
-            if (FeatureUnlockManager.I == null || !FeatureUnlockManager.I.IsUnlocked(FeatureId.Battle_LogArchive))
+            if (FeatureUnlockManager.I == null || !FeatureUnlockManager.I.IsUnlocked(FeatureId.IdleBattle_LogArchive))
                 return;
 
             var data = SaveManager.Data;

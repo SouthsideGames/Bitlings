@@ -389,7 +389,16 @@ private IEnumerator MaybeSayKO_Wild(string victimName, float preHP, float postHP
         // ─────────────────────────────────────────────────────────────
         bool shinyWild = (EncounterManager.I != null) && EncounterManager.I.CurrentWildIsShiny;
 
-                // Wild icon: use shiny icon if shiny encounter and one exists.
+        bool isAuto = (EncounterManager.I != null) && EncounterManager.I.IsAutoMode;
+
+        // If you want BattleManager rules to also snap to auto:
+        ConfigureForAuto(isAuto);
+
+        // Lock the bottom toggle during auto so it can't switch away from text
+        if (_bottomToggle != null)
+            _bottomToggle.SetAutoBattleMode(isAuto);
+
+        // Wild icon: use shiny icon if shiny encounter and one exists.
         if (wildIcon)
         {
             if (shinyWild && wildDef && wildDef.shinyIcon) wildIcon.sprite = wildDef.shinyIcon;
@@ -1536,6 +1545,11 @@ private IEnumerator MaybeSayKO_Wild(string victimName, float preHP, float postHP
         inBattle = false;
         SetIsPlayerTurn(false);
         GameEvents.OnBattleStateChanged?.Invoke();
+
+        if (_bottomToggle != null)
+            _bottomToggle.SetAutoBattleMode(false);
+
+        ConfigureForAuto(false);
 
         if (benchBtn1) benchBtn1.interactable = false;
         if (benchBtn2) benchBtn2.interactable = false;

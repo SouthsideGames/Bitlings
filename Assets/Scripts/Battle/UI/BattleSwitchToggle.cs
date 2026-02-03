@@ -1,94 +1,117 @@
+// Assets/Scripts/Battle/UI/BattleSwitchToggle.cs
 using UnityEngine;
 using UnityEngine.UI;
 
 public class BattleSwitchToggle : MonoBehaviour
 {
-    [Header("Panels (CanvasGroup preferred)")]
-    [SerializeField] private CanvasGroup battleTextGroup;
-    [SerializeField] private CanvasGroup boosterBarGroup;
+    [Header("Toggle (Text <-> Speed)")]
+    [SerializeField] private Toggle switchToggle;
 
-    [Header("Toggle Button")]
-    [SerializeField] private Button toggleButton;
+    [Header("Panels")]
+    [SerializeField] private GameObject textPanelRoot;
+    [SerializeField] private GameObject speedPanelRoot;
 
-    [Header("Toggle Icons (show the OTHER mode)")]
-    [SerializeField] private GameObject battleTextIcon; // icon representing battle text
-    [SerializeField] private GameObject boosterBarIcon; // icon representing boost bar
+    [Header("Optional - Speed UI Controller")]
+    [SerializeField] private BattleSpeedToggleUI battleSpeedToggleUI;
 
-    [Header("Rules")]
-    [SerializeField] private bool startShowingText = true;
+    [Header("Auto Mode Behavior")]
+    [Tooltip("When auto battle is on, force showing the Text panel (recommended).")]
+    [SerializeField] private bool forceTextPanelDuringAuto = true;
 
-    [Header("Battle State Source")]
-    [SerializeField] private BattleManager battle;
+    [Tooltip("When auto battle is on, disable the switch toggle so player can't swap panels.")]
+    [SerializeField] private bool disableSwitchDuringAuto = true;
 
-    private bool _showingText;
+    [Tooltip("When auto battle is on, also disable the battle speed button.")]
+    [SerializeField] private bool disableSpeedButtonDuringAuto = false;
 
-    void Awake()
+    private bool _isAutoLocked;
+    private bool _suppressCallback;
+
+    private void Awake()
     {
-        _showingText = startShowingText;
-        ApplyState(immediate: true);
-
-        if (toggleButton != null)
-            toggleButton.onClick.AddListener(Toggle);
+        if (switchToggle != null)
+            switchToggle.onValueChanged.AddListener(HandleToggleChanged);
     }
 
-    void OnDestroy()
+    private void OnEnable()
     {
-        if (toggleButton != null)
-            toggleButton.onClick.RemoveListener(Toggle);
+        // In case something else changed state before we enabled.
+        ApplyPanelState(GetToggleValueSafe());
     }
 
-    public void Toggle()
+    private void OnDisable()
     {
-        if (battle != null && battle.NarrationLocked)
+        // Keep listener (no RemoveAllListeners to preserve inspector wiring),
+        // but we do not need to unsubscribe because we added explicitly in Awake.
+    }
+
+    /// <summary>
+    /// Called by BattleManager to lock/unlock the UI while auto battle resolves.
+    /// </summary>
+    public void SetAutoBattleMode(bool isAuto)
+    {
+        _isAutoLocked = isAuto;
+
+        // If auto is on, we generally want the text panel visible.
+        if (isAuto && forceTextPanelDuringAuto)
+        {
+            SetToggleValueSafe(false); // false => Text panel (convention)
+        }
+
+        // Disable/enable the switch itself.
+        if (switchToggle != null && disableSwitchDuringAuto)
+            switchToggle.interactable = !isAuto;
+
+        // Optionally disable the speed button too.
+        if (battleSpeedToggleUI != null && disableSpeedButtonDuringAuto)
+            battleSpeedToggleUI.SetInteractable(!isAuto);
+
+        // Ensure panels are correct after any forced toggle change.
+        ApplyPanelState(GetToggleValueSafe());
+    }
+
+    private void HandleToggleChanged(bool isOn)
+    {
+        if (_suppressCallback) return;
+
+        // If auto is locked, reject user input and snap back.
+        if (_isAutoLocked && disableSwitchDuringAuto)
+        {
+            // Revert to the forced state (usually Text)
+            _suppressCallback = true;
+            switchToggle.isOn = false;
+            _suppressCallback = false;
+
+            ApplyPanelState(false);
             return;
-
-        _showingText = !_showingText;
-        ApplyState(immediate: false);
-    }
-
-    private void ApplyState(bool immediate)
-    {
-        if (_showingText)
-        {
-            // Show battle text panel
-            SetGroupVisible(battleTextGroup, true);
-            SetGroupVisible(boosterBarGroup, false);
-
-            // Toggle icon shows BOOSTS (what you'll switch to)
-            SetIconState(showBattleTextIcon: false);
         }
-        else
-        {
-            // Show boost bar panel
-            SetGroupVisible(battleTextGroup, false);
-            SetGroupVisible(boosterBarGroup, true);
 
-            // Toggle icon shows BATTLE TEXT (what you'll switch to)
-            SetIconState(showBattleTextIcon: true);
-        }
+        ApplyPanelState(isOn);
     }
 
-    private void SetIconState(bool showBattleTextIcon)
+    private void ApplyPanelState(bool showSpeedPanel)
     {
-        if (battleTextIcon != null)
-            battleTextIcon.SetActive(showBattleTextIcon);
+        if (textPanelRoot != null)
+            textPanelRoot.SetActive(!showSpeedPanel);
 
-        if (boosterBarIcon != null)
-            boosterBarIcon.SetActive(!showBattleTextIcon);
+        if (speedPanelRoot != null)
+            speedPanelRoot.SetActive(showSpeedPanel);
+
+        // If speed panel is hidden, you may still want speed button usable elsewhere.
+        // This script only controls visibility; interactability is controlled by SetAutoBattleMode if desired.
     }
 
-    private static void SetGroupVisible(CanvasGroup cg, bool visible)
+    private bool GetToggleValueSafe()
     {
-        if (cg == null) return;
-        cg.alpha = visible ? 1f : 0f;
-        cg.interactable = visible;
-        cg.blocksRaycasts = visible;
+        return switchToggle != null && switchToggle.isOn;
     }
 
-    // Called by BattleManager to force narration visibility
-    public void ForceShowText()
+    private void SetToggleValueSafe(bool value)
     {
-        _showingText = true;
-        ApplyState(immediate: true);
+        if (switchToggle == null) return;
+
+        _suppressCallback = true;
+        switchToggle.isOn = value;
+        _suppressCallback = false;
     }
 }

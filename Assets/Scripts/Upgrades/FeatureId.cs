@@ -7,6 +7,8 @@ public enum FeatureId
     IdleBattle_Basic = 1,          // Unlocks idle battles UI / access
     IdleBattle_RewardBoost = 2,    // Improves idle rewards
     IdleBattle_OfflineCapture = 3, // Unlock offline monster captures
+    IdleBattle_LogArchive = 14,        // Save auto-battle logs for later review
+    IdleBattle_SpeedControl = 15,  
 
     // ───── Auto-Growth System ─────
     AutoGrowth_Basic = 4,          // Auto-spend Growth Cores over threshold
@@ -24,9 +26,6 @@ public enum FeatureId
     Codex_Favorites = 12,          // Favorite / pin sorting
     Codex_CaptureOnlyFilter = 13,  // "Capture only" filter
 
-    // ───── Battle QoL ─────
-    Battle_LogArchive = 14,        // Save auto-battle logs for later review
-    Battle_SpeedControl = 15,      // Show speed button during auto-battle
 
     // ─────────────────────────────────────────────────────────────
     // Jobs (Purchasable Unlocks)

@@ -604,12 +604,10 @@ public partial class EncounterManager : MonoBehaviour
         ReconcileHPWithCurrentWinStreak();
         OnStateChanged?.Invoke();
 
-        // If this battle RESOLVED as auto-battle, optionally archive the battle log for later review.
-        // (This uses the snapshot so turning auto-mode off mid-battle still archives correctly.)
         if (_autoResolveSnapshot
             && SaveManager.Data != null
             && FeatureUnlockManager.I != null
-            && FeatureUnlockManager.I.IsUnlocked(FeatureId.Battle_LogArchive))
+            && FeatureUnlockManager.I.IsUnlocked(FeatureId.IdleBattle_LogArchive))
         {
             string opponentId = null;
             int opponentLevel = result.wildLevel;
