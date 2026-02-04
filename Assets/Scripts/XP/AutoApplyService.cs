@@ -1,227 +1,198 @@
-using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class AutoApplyService : MonoBehaviour
+public partial class AutoApplyService : MonoBehaviour
 {
-    public static AutoApplyService I { get; private set; }
+    [Header("Config")]
+    [SerializeField] private LevelCostCurveSO levelCostCurve;
 
-    [Header("Refs")]
-    [SerializeField] private PlayerManager playerManager;     
-    [SerializeField] private BucketLibrarySO bucketLibrary;    
-    [SerializeField] private TokenEconomySO tokenEconomy;      
-    [SerializeField] private LevelCostCurveSO levelCostCurve;  
+    [Tooltip("Optional. If left empty, will use MonsterLibraryLocator.GetById.")]
+    [SerializeField] private MonsterLibrarySO monsterLibrary;
 
-    [Header("Options")]
+    [Tooltip("How many unspent stat points are gained per level (matches StatBucketPanelUI default).")]
+    [SerializeField, Min(1)] private int pointsPerLevel = 3;
+
+    [Tooltip("Maximum monsters that can be auto-applied per press.")]
     [SerializeField] private int autoApplyCap = 3;
 
-    [Header("Debounce")]
-    [Tooltip("Small delay to coalesce multiple triggers (resource gain + team changed, etc.).")]
-    [SerializeField, Min(0f)] private float debounceSeconds = 0.10f;
-
-    bool _dirty;
-    bool _scheduled;
-    float _nextEarliestRun;
-
-    void Awake()
-    {
-        if (I != null && I != this)
-        {
-            Destroy(gameObject);
-            return;
-        }
-        I = this;
-
-        // Fallbacks (mirrors your existing script)
-        if (playerManager == null)
-            playerManager = SaveManager.Data;
-
-        if (tokenEconomy == null)
-            tokenEconomy = Resources.Load<TokenEconomySO>("TokenEconomy");
-
-        if (bucketLibrary == null)
-            bucketLibrary = Resources.Load<BucketLibrarySO>("BucketLibrary");
-    }
+    [Tooltip("Safety cap to prevent runaway loops if data is bad.")]
+    [SerializeField] private int safetyLevelOps = 2000;
 
     void OnEnable()
     {
-        GameEvents.OnTeamChanged += HandleTeamChanged;
-        GameEvents.MonsterLeveled += HandleMonsterLeveled;
-
-        GameEvents.ResourceAdded += HandleResourceAdded;
-        GameEvents.OnResourcesChanged += HandleResourcesChanged;
-
-        RequestAutoApply();
+        GameEvents.AutoApplyRequested += HandleAutoApplyRequested;
     }
 
     void OnDisable()
     {
-        GameEvents.OnTeamChanged -= HandleTeamChanged;
-        GameEvents.MonsterLeveled -= HandleMonsterLeveled;
-
-        GameEvents.ResourceAdded -= HandleResourceAdded;
-        GameEvents.OnResourcesChanged -= HandleResourcesChanged;
+        GameEvents.AutoApplyRequested -= HandleAutoApplyRequested;
     }
 
-    void HandleTeamChanged() => RequestAutoApply();
-
-    void HandleMonsterLeveled(string ownedKey, int newLevel)
+    private void HandleAutoApplyRequested()
     {
-        // A level-up often changes affordability/targets; re-check.
-        RequestAutoApply();
-    }
-
-    void HandleResourceAdded(ResourceType type, int amount)
-    {
-        // Only care about GrowthCore positive gains (auto-apply becomes possible).
-        if (type == ResourceType.GrowthCore && amount > 0)
-            RequestAutoApply();
-    }
-
-    void HandleResourcesChanged()
-    {
-        // Broad fallback. We debounce so this won't be noisy.
-        RequestAutoApply();
+        ApplyAllAutoSelectedEvenSplit();
     }
 
     /// <summary>
-    /// Public hook for UI/scripts to request a run after toggling autoApply or target level.
+    /// Uses ALL available Growth Cores and applies them across up to autoApplyCap monsters
+    /// that have autoApply enabled. Cores are split evenly between selected monsters:
+    /// budgetPerMonster = totalCores / selectedCount, with remainder distributed 1-by-1.
+    ///
+    /// If autoApplyTargetLevel <= 0, it is treated as "no cap" (level as far as budget allows).
+    ///
+    /// IMPORTANT: This path also awards unspentStatPoints per level (pointsPerLevel),
+    /// matching normal leveling behavior.
     /// </summary>
-    public void RequestAutoApply()
+    public void ApplyAllAutoSelectedEvenSplit()
     {
-        _dirty = true;
-
-        float now = Time.unscaledTime;
-        _nextEarliestRun = Mathf.Max(_nextEarliestRun, now + debounceSeconds);
-
-        if (!_scheduled)
+        var data = SaveManager.Data;
+        if (data == null)
         {
-            _scheduled = true;
-            StartCoroutine(RunWhenReady());
+            Debug.LogWarning("[AutoApplyService] SaveManager.Data is null.");
+            return;
         }
-    }
 
-    IEnumerator RunWhenReady()
-    {
-        // Always wait at least one frame so multiple events in a single frame coalesce.
-        yield return null;
-
-        while (true)
+        if (levelCostCurve == null)
         {
-            if (!_dirty)
-            {
-                _scheduled = false;
-                yield break;
-            }
-
-            float now = Time.unscaledTime;
-            if (now < _nextEarliestRun)
-            {
-                yield return null;
-                continue;
-            }
-
-            _dirty = false;
-            TickAutoApply();
-
-            // If TickAutoApply indirectly caused another RequestAutoApply, loop again.
-            yield return null;
+            Debug.LogWarning("[AutoApplyService] levelCostCurve is not assigned.");
+            return;
         }
-    }
 
-    void TickAutoApply()
-    {
-        var data = playerManager ?? SaveManager.Data;
-        if (data == null || levelCostCurve == null)
+        int totalCores = ResourceBank.Get(ResourceType.GrowthCore);
+        if (totalCores <= 0)
+        {
+            GameEvents.RaiseToast("No Growth Cores to apply.");
             return;
+        }
 
-        var monsters = GetAllOwnedMonsters();
-        if (monsters == null || monsters.Count == 0)
+        // 1) Gather selected autos (cap at autoApplyCap)
+        var all = data.GetAllOwnedMonsters(includeTeam: true);
+        if (all == null || all.Count == 0)
+        {
+            GameEvents.RaiseToast("No monsters found.");
             return;
+        }
 
-        int cores = GetGrowthCores();
-        if (cores <= 0)
+        List<OwnedMonsterData> selected = new List<OwnedMonsterData>(autoApplyCap);
+        for (int i = 0; i < all.Count; i++)
+        {
+            var m = all[i];
+            if (m == null) continue;
+            if (!m.autoApply) continue;
+
+            selected.Add(m);
+            if (selected.Count >= autoApplyCap) break;
+        }
+
+        if (selected.Count == 0)
+        {
+            GameEvents.RaiseToast("No Auto Apply monsters selected.");
             return;
+        }
 
-        int processed = 0;
-        bool changed = false;
+        // 2) Split budgets (even split)
+        int count = selected.Count;
+        int baseBudget = totalCores / count;
+        int remainder = totalCores % count;
 
+        if (baseBudget <= 0 && remainder <= 0)
+        {
+            GameEvents.RaiseToast("Not enough Growth Cores.");
+            return;
+        }
+
+        int[] budgets = new int[count];
+        for (int i = 0; i < count; i++)
+            budgets[i] = baseBudget + (i < remainder ? 1 : 0);
+
+        // 3) Spend + level within budget per monster (batched)
         ResourceBank.BeginBatch();
 
-        try
+        bool changed = false;
+        int ops = 0;
+
+        for (int i = 0; i < count; i++)
         {
-            foreach (var m in monsters)
+            var m = selected[i];
+            int budget = budgets[i];
+
+            // targetLevel: 0/negative means no cap
+            int targetLevel = (m.autoApplyTargetLevel <= 0) ? int.MaxValue : m.autoApplyTargetLevel;
+
+            while (budget > 0 && m.level < targetLevel)
             {
-                if (m == null || !m.autoApply) continue;
-                if (processed >= autoApplyCap) break;
+                if (ops++ > safetyLevelOps) break;
 
-                // guards
-                if (m.autoApplyTargetLevel <= 0) continue;
-                if (m.level >= m.autoApplyTargetLevel) continue;
+                int cost = levelCostCurve.CoresToNextLevel(m.level);
+                if (cost <= 0) break;
 
-                int need = Mathf.Max(1, levelCostCurve.CoresToNextLevel(Mathf.Max(1, m.level)));
+                if (budget < cost) break;
 
-                // Re-check current cores (can drop as we spend in this loop).
-                cores = GetGrowthCores();
-                if (cores < need) continue;
+                // Spend from the bank (batched, no spam)
+                if (!ResourceBank.TrySpend(ResourceType.GrowthCore, cost))
+                    break;
 
-                var bucket = bucketLibrary
-                    ? bucketLibrary.GetById(m.lastBucketId, bucketLibrary.DefaultBucket())
-                    : null;
+                budget -= cost;
 
-                if (bucket == null || tokenEconomy == null) continue;
-
-                // Spend cores
-                if (!TrySpendGrowthCores(need)) continue;
-
-                // Apply training delta + level up
-                var delta = LevelUpCalculator.DistributeByWeights(need, bucket, tokenEconomy);
-                MonsterStatApplier.Apply(m, delta);
+                // Level + award points (THIS is what you were missing)
                 m.level = Mathf.Max(1, m.level + 1);
+                m.unspentStatPoints += Mathf.Max(0, pointsPerLevel);
 
-                // Clamp HP to new max
-                var def = MonsterLibraryLocator.GetById(m.monsterId);
-                if (def != null)
-                {
-                    int newMaxHP = Mathf.RoundToInt(BattleCalc.CalcHP(def, m.level));
-                    m.currentHP = Mathf.Clamp(m.currentHP, 0, newMaxHP);
-                }
+                // Defensive: keep shiny fields consistent (mirrors XPManager behavior)
+                NormalizeShinyFields(m);
 
-                processed++;
+                // Clamp HP to new max (mirrors XPManager.TryManualLevelUp)
+                ClampHpToNewMax(m);
+
                 changed = true;
+
+                // Signature: (string, int)
+                GameEvents.MonsterLeveled?.Invoke(m.monsterId, m.level);
             }
         }
-        finally
-        {
-            ResourceBank.EndBatch();
-        }
+
+        ResourceBank.EndBatch();
 
         if (changed)
         {
             SaveManager.Save();
+            GameEvents.OnOwnedMonstersChanged?.Invoke();
             GameEvents.OnTeamChanged?.Invoke();
+        }
+        else
+        {
+            GameEvents.RaiseToast("No eligible Auto Apply upgrades (need more Growth Cores).");
         }
     }
 
-    int GetGrowthCores()
-    {
-        if (ResourceManager.I != null)
-            return ResourceManager.I.Get(ResourceType.GrowthCore);
+    // ─────────────────────────────────────────────────────────────
+    // Helpers (mirrors XPManager behavior)
+    // ─────────────────────────────────────────────────────────────
 
-        return ResourceBank.Get(ResourceType.GrowthCore);
+    private void NormalizeShinyFields(OwnedMonsterData om)
+    {
+        if (om == null) return;
+        if (om.shinyTier > 0 && !om.isShiny) om.isShiny = true;
+        if (om.isShiny && om.shinyTier <= 0) om.shinyTier = 1;
+        if (!om.isShiny && om.shinyTier < 0) om.shinyTier = 0;
     }
 
-    bool TrySpendGrowthCores(int amount)
+    private void ClampHpToNewMax(OwnedMonsterData om)
     {
-        if (amount <= 0) return true;
-        return ResourceBank.TrySpend(ResourceType.GrowthCore, amount);
-    }
+        if (om == null || string.IsNullOrEmpty(om.monsterId)) return;
 
-    List<OwnedMonsterData> GetAllOwnedMonsters()
-    {
-        var data = playerManager ?? SaveManager.Data;
-        if (data == null) return null;
+        MonsterDataSO def = null;
+        if (monsterLibrary != null)
+            def = monsterLibrary.GetById(om.monsterId);
+        else
+            def = MonsterLibraryLocator.GetById(om.monsterId);
 
-        return data.GetAllOwnedMonsters(includeTeam: true);
+        if (!def) return;
+
+        int basePlusLevel = Mathf.RoundToInt(BattleCalc.CalcHP(def, om.level));
+        int totalMaxHP = basePlusLevel + Mathf.Max(0, om.trainingBonus.hp);
+
+        if (om.currentHP > totalMaxHP)
+            om.currentHP = totalMaxHP;
     }
 }

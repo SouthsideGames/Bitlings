@@ -64,6 +64,9 @@ public static class GameEvents
     // ─────────────────────────────────────────────────────────────────────────────
     public static Action BattleStatsChanged;
 
+    public static event Action AutoApplyRequested;
+    
+
     public static void RaiseBattleStatsChanged()
     {
         BattleStatsChanged?.Invoke();
@@ -86,5 +89,10 @@ public static class GameEvents
         AutoBattleModeChanged?.Invoke(isAuto);
 
         OnEncounterAutoModeChanged?.Invoke();
+    }
+
+    public static void RaiseAutoApplyRequested()
+    {
+        AutoApplyRequested?.Invoke();
     }
 }

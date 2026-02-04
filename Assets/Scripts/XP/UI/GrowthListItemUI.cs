@@ -9,19 +9,17 @@ public class GrowthListItemUI : MonoBehaviour
     [SerializeField] private Button openButton;
     [SerializeField] private TextMeshProUGUI nameText;
     [SerializeField] private TextMeshProUGUI levelText;
-    [SerializeField] private TextMeshProUGUI typeText;          // Type label
-    [SerializeField] private Image iconImage;                   // optional
-    [SerializeField] private Toggle autoToggle;                 // optional
+    [SerializeField] private TextMeshProUGUI typeText;
+    [SerializeField] private Image iconImage;
+    [SerializeField] private Toggle autoToggle;
+    [SerializeField] private TextMeshProUGUI autoStateText;
 
     private OwnedMonsterData _model;
     private Action<OwnedMonsterData> _onOpen;
-    private Func<bool> _canEnableAnotherAuto;   // returns true if enabling is allowed
-    private Action _onAutoChanged;              // callback to notify parent
+    private Func<bool> _canEnableAnotherAuto;
+    private Action _onAutoChanged;
     private bool _suppressToggle;
 
-    // -------------------------------------------------------------------------
-    // BIND
-    // -------------------------------------------------------------------------
     public void Bind(
         OwnedMonsterData model,
         string displayName,
@@ -36,20 +34,20 @@ public class GrowthListItemUI : MonoBehaviour
         _canEnableAnotherAuto = canEnableAnotherAuto;
         _onAutoChanged = onAutoChanged;
 
-        if (nameText)  nameText.text  = displayName ?? model.monsterId;
+        if (nameText) nameText.text = displayName ?? model.monsterId;
         if (levelText) levelText.text = $"Lv {Mathf.Max(1, model.level)}";
-        if (typeText)  typeText.text  = type.ToString().ToUpperInvariant();
+        if (typeText) typeText.text = type.ToString().ToUpperInvariant();
 
         if (iconImage)
         {
             iconImage.enabled = icon != null;
-            iconImage.sprite  = icon;
+            iconImage.sprite = icon;
         }
 
         if (autoToggle)
         {
             _suppressToggle = true;
-            autoToggle.SetIsOnWithoutNotify(_model.autoApply);
+            autoToggle.SetIsOnWithoutNotify(_model != null && _model.autoApply);
             _suppressToggle = false;
 
             autoToggle.onValueChanged.RemoveAllListeners();
@@ -58,6 +56,7 @@ public class GrowthListItemUI : MonoBehaviour
 
         RefreshAutoToggleFeatureGate();
         RefreshOpenInteractable();
+        RefreshAutoStateText();
 
         if (openButton)
         {
@@ -66,9 +65,6 @@ public class GrowthListItemUI : MonoBehaviour
         }
     }
 
-    // -------------------------------------------------------------------------
-    // LIFECYCLE – subscribe to team changes so level label updates when saved
-    // -------------------------------------------------------------------------
     private void OnEnable()
     {
         GameEvents.OnTeamChanged += HandleTeamChanged;
@@ -78,6 +74,7 @@ public class GrowthListItemUI : MonoBehaviour
 
         RefreshAutoToggleFeatureGate();
         RefreshOpenInteractable();
+        RefreshAutoStateText();
     }
 
     private void OnDisable()
@@ -88,10 +85,20 @@ public class GrowthListItemUI : MonoBehaviour
             FeatureUnlockManager.I.OnFeatureUnlocked -= HandleFeatureUnlocked;
     }
 
+    private void RefreshAutoStateText()
+    {
+        if (!autoStateText) return;
+        bool on = _model != null && _model.autoApply;
+        autoStateText.text = on ? "ON" : "OFF";
+    }
+
     private void HandleFeatureUnlocked(FeatureId feature)
     {
         if (feature == FeatureId.AutoGrowth_Basic)
+        {
             RefreshAutoToggleFeatureGate();
+            RefreshAutoStateText();
+        }
     }
 
     private void HandleTeamChanged()
@@ -103,7 +110,6 @@ public class GrowthListItemUI : MonoBehaviour
 
         OwnedMonsterData latest = null;
 
-        // Prefer canonical owned instance first (bench monsters must refresh too)
         if (data.owned != null)
         {
             if (!string.IsNullOrEmpty(_model.ownedUID))
@@ -111,7 +117,6 @@ public class GrowthListItemUI : MonoBehaviour
 
             if (latest == null && !string.IsNullOrEmpty(_model.monsterId))
             {
-                // Safe fallback: if multiple exist, we can't disambiguate; do nothing.
                 int count = 0;
                 OwnedMonsterData single = null;
                 for (int i = 0; i < data.owned.Count; i++)
@@ -128,7 +133,6 @@ public class GrowthListItemUI : MonoBehaviour
             }
         }
 
-        // If not found in owned, try team list
         if (latest == null && data.team != null)
         {
             if (!string.IsNullOrEmpty(_model.ownedUID))
@@ -136,7 +140,6 @@ public class GrowthListItemUI : MonoBehaviour
 
             if (latest == null && !string.IsNullOrEmpty(_model.monsterId))
             {
-                // Same safe fallback rule (unique only)
                 int count = 0;
                 OwnedMonsterData single = null;
                 for (int i = 0; i < data.team.Count; i++)
@@ -157,18 +160,20 @@ public class GrowthListItemUI : MonoBehaviour
         {
             _model = latest;
             RefreshLevel(_model.level);
+
+            _suppressToggle = true;
+            if (autoToggle) autoToggle.SetIsOnWithoutNotify(_model.autoApply);
+            _suppressToggle = false;
+
+            RefreshAutoStateText();
             RefreshOpenInteractable();
         }
         else
         {
-            // Still refresh interactable state (cores / points may have changed)
             RefreshOpenInteractable();
+            RefreshAutoStateText();
         }
     }
-
-    // -------------------------------------------------------------------------
-    // CORE UI HELPERS
-    // -------------------------------------------------------------------------
 
     private bool IsAutoGrowthUnlocked()
     {
@@ -184,16 +189,16 @@ public class GrowthListItemUI : MonoBehaviour
         autoToggle.gameObject.SetActive(unlocked);
     }
 
-    // Call this if cores change globally and you want to refresh rows.
     public void RefreshOpenInteractable()
     {
         if (!openButton) return;
 
-        int cores = ResourceManager.I ? ResourceManager.I.Get(ResourceType.GrowthCore) : 0;
+        int cores =
+            ResourceManager.I ? ResourceManager.I.Get(ResourceType.GrowthCore)
+            : ResourceBank.Get(ResourceType.GrowthCore);
+
         int unspent = _model != null ? Mathf.Max(0, _model.unspentStatPoints) : 0;
 
-        // IMPORTANT: You must be able to open the stats panel even if you have 0 cores,
-        // as long as you have unspent stat points to spend.
         openButton.interactable = (cores > 0) || (unspent > 0);
     }
 
@@ -205,8 +210,13 @@ public class GrowthListItemUI : MonoBehaviour
         if (!IsAutoGrowthUnlocked())
         {
             _suppressToggle = true;
-            autoToggle.SetIsOnWithoutNotify(false);
+            if (autoToggle) autoToggle.SetIsOnWithoutNotify(false);
             _suppressToggle = false;
+
+            _model.autoApply = false;
+            SaveManager.Save();
+
+            RefreshAutoStateText();
             return;
         }
 
@@ -215,14 +225,17 @@ public class GrowthListItemUI : MonoBehaviour
             if (_canEnableAnotherAuto != null && !_canEnableAnotherAuto())
             {
                 _suppressToggle = true;
-                autoToggle.SetIsOnWithoutNotify(false);
+                if (autoToggle) autoToggle.SetIsOnWithoutNotify(false);
                 _suppressToggle = false;
+
+                RefreshAutoStateText();
                 return;
             }
 
             _model.autoApply = true;
-            if (_model.autoApplyTargetLevel < _model.level + 1)
-                _model.autoApplyTargetLevel = _model.level + 1;
+
+            // IMPORTANT: 0 means "no cap" so Apply will level as far as budget allows
+            _model.autoApplyTargetLevel = 0;
         }
         else
         {
@@ -230,6 +243,13 @@ public class GrowthListItemUI : MonoBehaviour
         }
 
         SaveManager.Save();
+
+        RefreshAutoStateText();
+        RefreshOpenInteractable();
+
+        GameEvents.OnTeamChanged?.Invoke();
+
+        // IMPORTANT: Do NOT auto-level on toggle. The Gym panel Apply button triggers leveling.
         _onAutoChanged?.Invoke();
     }
 

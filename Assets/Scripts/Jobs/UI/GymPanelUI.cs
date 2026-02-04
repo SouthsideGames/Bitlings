@@ -1,7 +1,7 @@
 using UnityEngine;
 using TMPro;
 using System.Collections.Generic;
-
+using UnityEngine.UI;
 
 public sealed class GymPanelUI : MonoBehaviour
 {
@@ -21,6 +21,12 @@ public sealed class GymPanelUI : MonoBehaviour
     [Tooltip("Strip / banner that appears when Auto Apply is enabled on at least one monster.")]
     [SerializeField] private GameObject autoApplyStrip;
 
+    [Tooltip("Optional label inside the Auto Apply strip. If assigned, it will be updated so the strip isn't blank.")]
+    [SerializeField] private TextMeshProUGUI autoApplyStripText;
+
+    [Tooltip("Optional label for listing which monsters are Auto Apply (names). Leave null if you don't want this.")]
+    [SerializeField] private TextMeshProUGUI autoApplyStripListText;
+
     [Header("Prefabs")]
     [SerializeField] private GrowthListItemUI itemPrefab;
 
@@ -32,16 +38,18 @@ public sealed class GymPanelUI : MonoBehaviour
     [Tooltip("Optional explicit reference to the monster library. If null, will use MonsterLibraryLocator.Lib.")]
     [SerializeField] private MonsterLibrarySO monsterLibrary;
 
+    [Header("Auto Growth")]
+    [SerializeField] private Button applyAutoGrowthButton;
+    [SerializeField] private FeatureId autoGrowthFeatureId = FeatureId.AutoGrowth_Basic;
+
+
+
     // Runtime
     private readonly List<GrowthListItemUI> _rows = new();
     private int _autoApplyEnabledCount;
 
     // Convenience property for current player data
     private PlayerManager Data => SaveManager.Data ?? playerManager;
-
-    // ─────────────────────────────────────────────────────────────────────────────
-    // Unity
-    // ─────────────────────────────────────────────────────────────────────────────
 
     private void OnEnable()
     {
@@ -51,40 +59,47 @@ public sealed class GymPanelUI : MonoBehaviour
         if (!monsterLibrary && MonsterLibraryLocator.Lib)
             monsterLibrary = MonsterLibraryLocator.Lib;
 
-        GameEvents.OnResourcesChanged += HandleResourcesChanged; // 🔹 add this
+        if (applyAutoGrowthButton != null)
+        {
+            applyAutoGrowthButton.onClick.RemoveListener(OnApplyAutoGrowthClicked);
+            applyAutoGrowthButton.onClick.AddListener(OnApplyAutoGrowthClicked);
+        }
+
+        if (FeatureUnlockManager.I != null)
+            FeatureUnlockManager.I.OnFeatureUnlocked += HandleFeatureUnlocked;
+
+        GameEvents.OnResourcesChanged += HandleResourcesChanged;
         RefreshAll();
     }
 
     private void OnDisable()
     {
-        GameEvents.OnResourcesChanged -= HandleResourcesChanged; // 🔹 add this
+        GameEvents.OnResourcesChanged -= HandleResourcesChanged;
+        if (FeatureUnlockManager.I != null)
+            FeatureUnlockManager.I.OnFeatureUnlocked -= HandleFeatureUnlocked;
     }
 
     private void HandleResourcesChanged()
     {
-        RefreshCoreCount();          // update the number at the top
-        foreach (var row in _rows)   // update button interactable state
+        RefreshCoreCount();
+        foreach (var row in _rows)
             row.RefreshOpenInteractable();
     }
-
-    // ─────────────────────────────────────────────────────────────────────────────
-    // Public API
-    // ─────────────────────────────────────────────────────────────────────────────
 
     public void RefreshAll()
     {
         if (Data == null)
         {
-            Debug.LogWarning("[GrowthPanelUI] No player data (SaveManager.Data is null).");
+            Debug.LogWarning("[GymPanelUI] No player data (SaveManager.Data is null).");
             return;
         }
 
         RefreshCoreCount();
         BuildList();
         RefreshAutoApplyStrip();
+        RefreshApplyButtonGate();
     }
 
-    // Can be called from other systems when Growth Cores change.
     public void RefreshCoreCount()
     {
         if (!growthCoresText) return;
@@ -93,34 +108,28 @@ public sealed class GymPanelUI : MonoBehaviour
         growthCoresText.text = cores.ToString();
     }
 
-    // ─────────────────────────────────────────────────────────────────────────────
-    // List building
-    // ─────────────────────────────────────────────────────────────────────────────
-
     private void BuildList()
     {
         if (!listParent || !itemPrefab)
         {
-            Debug.LogError("[GrowthPanelUI] listParent or itemPrefab not assigned.");
+            Debug.LogError("[GymPanelUI] listParent or itemPrefab not assigned.");
             return;
         }
 
-        // Clear old rows
         foreach (Transform child in listParent)
-        {
             Destroy(child.gameObject);
-        }
+
         _rows.Clear();
 
         var monsters = GetAllMonsters();
         if (monsters == null || monsters.Count == 0)
         {
-            Debug.LogWarning("[GrowthPanelUI] No monsters found to populate growth list.");
+            Debug.LogWarning("[GymPanelUI] No monsters found to populate growth list.");
             _autoApplyEnabledCount = 0;
+            RefreshAutoApplyStrip(); // keep strip correct
             return;
         }
 
-        // Recount Auto Apply flags
         _autoApplyEnabledCount = CountAutoApplyEnabled(monsters);
 
         foreach (var om in monsters)
@@ -159,25 +168,13 @@ public sealed class GymPanelUI : MonoBehaviour
         return MonsterLibraryLocator.GetById(monsterId);
     }
 
-    /// <summary>
-    /// Pulls every OwnedMonsterData from the save (team + bench).
-    /// Uses PlayerManager.GetAllOwnedMonsters(includeTeam: true) so
-    /// we share the same logic as AutoApplyService.
-    /// </summary>
     private List<OwnedMonsterData> GetAllMonsters()
     {
         if (Data == null)
             return null;
 
-        // NOTE: this calls the method defined in PlayerManager:
-        // public List<OwnedMonsterData> GetAllOwnedMonsters(bool includeTeam = true)
-        var monsters = Data.GetAllOwnedMonsters(includeTeam: true);
-        return monsters;
+        return Data.GetAllOwnedMonsters(includeTeam: true);
     }
-
-    // ─────────────────────────────────────────────────────────────────────────────
-    // Auto Apply cap helpers
-    // ─────────────────────────────────────────────────────────────────────────────
 
     private bool CanEnableAnotherAuto()
     {
@@ -187,7 +184,6 @@ public sealed class GymPanelUI : MonoBehaviour
 
     private void OnAutoChanged()
     {
-        // Recount from current save state
         var monsters = GetAllMonsters();
         _autoApplyEnabledCount = CountAutoApplyEnabled(monsters);
         RefreshAutoApplyStrip();
@@ -199,6 +195,42 @@ public sealed class GymPanelUI : MonoBehaviour
 
         bool anyAuto = _autoApplyEnabledCount > 0;
         autoApplyStrip.SetActive(anyAuto);
+
+        // If strip is visible, keep it informative (prevents “blank strip”)
+        if (anyAuto)
+        {
+            if (autoApplyStripText)
+            {
+                string cap = (autoApplyCap <= 0) ? "∞" : autoApplyCap.ToString();
+                autoApplyStripText.text = $"Auto Apply: {_autoApplyEnabledCount}/{cap}";
+            }
+
+            if (autoApplyStripListText)
+            {
+                autoApplyStripListText.text = BuildAutoApplyNameList();
+            }
+        }
+    }
+
+    private string BuildAutoApplyNameList()
+    {
+        var monsters = GetAllMonsters();
+        if (monsters == null) return "";
+
+        List<string> names = new List<string>();
+
+        for (int i = 0; i < monsters.Count; i++)
+        {
+            var m = monsters[i];
+            if (m == null || !m.autoApply) continue;
+
+            var def = GetDefinition(m.monsterId);
+            names.Add(def ? def.displayName : m.monsterId);
+        }
+
+        // Keep it short in a banner
+        if (names.Count == 0) return "";
+        return string.Join(", ", names);
     }
 
     private int CountAutoApplyEnabled(List<OwnedMonsterData> monsters)
@@ -215,10 +247,6 @@ public sealed class GymPanelUI : MonoBehaviour
         return count;
     }
 
-    // ─────────────────────────────────────────────────────────────────────────────
-    // Row callbacks
-    // ─────────────────────────────────────────────────────────────────────────────
-
     private void OnRowOpen(OwnedMonsterData model)
     {
         if (model == null)
@@ -226,12 +254,45 @@ public sealed class GymPanelUI : MonoBehaviour
 
         if (!statPanel)
         {
-            Debug.LogWarning("[GrowthPanelUI] statPanel is not assigned.");
+            Debug.LogWarning("[GymPanelUI] statPanel is not assigned.");
             return;
         }
 
-        var def = GetDefinition(model.monsterId);
         statPanel.OpenFor(model);
+    }
+
+    private void OnApplyAutoGrowthClicked()
+    {
+        if (!IsAutoGrowthUnlocked())
+        {
+            GameEvents.RaiseToast("Auto Growth is not unlocked yet.");
+            return;
+        }
+
+        GameEvents.RaiseAutoApplyRequested();
+    }
+
+    private bool IsAutoGrowthUnlocked()
+    {
+        return FeatureUnlockManager.I != null &&
+            FeatureUnlockManager.I.IsUnlocked(autoGrowthFeatureId);
+    }
+
+    private void RefreshApplyButtonGate()
+    {
+        if (!applyAutoGrowthButton) return;
+
+        bool unlocked = IsAutoGrowthUnlocked();
+        applyAutoGrowthButton.gameObject.SetActive(unlocked);
 
     }
+
+    private void HandleFeatureUnlocked(FeatureId feature)
+    {
+        if (feature == autoGrowthFeatureId)
+            RefreshApplyButtonGate();
+    }
+
+
+
 }
