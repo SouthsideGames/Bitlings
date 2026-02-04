@@ -15,32 +15,54 @@ public class IdleBattleManager : MonoBehaviour
 
     private bool _summaryOpenedThisSession = false;
 
-    // Prevent double-logging when this manager runs headless batches
-    // (those batches also emit GameEvents.BattleFinished for telemetry).
     private bool _headlessBatchRunning = false;
+
+    [Header("Offline Capture")]
+    [Tooltip("When unlocked, idle/auto battles can also attempt captures and list them in the rewards panel.")]
+    [SerializeField] private FeatureId offlineCaptureFeatureId = FeatureId.IdleBattle_OfflineCapture;
 
     void OnEnable()
     {
         GameEvents.BattleFinished += HandleBattleFinished;
+        GameEvents.MonsterCaptured += HandleMonsterCaptured;
     }
 
     void OnDisable()
     {
         GameEvents.BattleFinished -= HandleBattleFinished;
+        GameEvents.MonsterCaptured -= HandleMonsterCaptured;
     }
 
-    // Foreground auto-battles (the player is watching) run through the normal BattleManager.
-    // We still want to aggregate a single summary panel at the end, so we listen for completed
-    // battles during auto mode and merge them into the idle log.
+    private void HandleMonsterCaptured(string monsterId, MonsterType _)
+    {
+        if (!IsIdleBattleUnlocked()) return;
+        if (_headlessBatchRunning) return;
+        if (!IsOfflineCaptureUnlocked()) return;
+
+        // Only record captures during foreground auto (player chose AUTO).
+        if (!IsEncounterAutoModeActive()) return;
+        if (string.IsNullOrEmpty(monsterId)) return;
+
+        var s = IdleBattleStore.Load();
+        if (s == null) return;
+
+        s.capturedLog ??= new List<IdleEncounterLogEntry>();
+        AddToLogMerged(s.capturedLog, monsterId, credits: 0, shiny: false);
+        TrimLog(s.capturedLog, config != null ? config.encounterLogMaxEntries : 50);
+
+        TrySetBoolFieldIfPresent(s, "hasPendingSummary", true);
+        IdleBattleStore.Save(s);
+    }
+
+
     private void HandleBattleFinished(BattleResult r)
     {
         if (!IsIdleBattleUnlocked()) return;
-        if (_headlessBatchRunning) return; // headless already logs directly
+        if (_headlessBatchRunning) return; 
 
         var s = IdleBattleStore.Load();
-        if (s == null || !s.autoBattling) return;
+        if (s == null) return;
 
-        // Only capture results while Encounter autoMode is active.
         if (!IsEncounterAutoModeActive()) return;
 
         if (r.wildDef == null || string.IsNullOrEmpty(r.wildDef.id)) return;
@@ -48,7 +70,6 @@ public class IdleBattleManager : MonoBehaviour
         AddToLogMerged(s.log, r.wildDef.id, r.creditsGained, shiny: false);
         TrimLog(s.log, config != null ? config.encounterLogMaxEntries : 50);
 
-        // Track energy spent as a best-effort (assumes most energy spend is from auto encounters).
         try
         {
             int curEnergy = ResourceBank.Get(ResourceType.Energy);
@@ -66,12 +87,7 @@ public class IdleBattleManager : MonoBehaviour
         try
         {
             var em = encounterManager != null ? encounterManager : EncounterManager.I;
-            if (em == null) return false;
-
-            // autoMode is private in EncounterManager; use reflection defensively.
-            var f = em.GetType().GetField("autoMode", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Public);
-            if (f != null && f.FieldType == typeof(bool))
-                return (bool)f.GetValue(em);
+            return em != null && em.IsAutoMode;
         }
         catch { }
 
@@ -130,6 +146,15 @@ public class IdleBattleManager : MonoBehaviour
             return true;
 
         return FeatureUnlockManager.I.IsUnlocked(FeatureId.IdleBattle_Basic);
+    }
+
+    private bool IsOfflineCaptureUnlocked()
+    {
+        if (FeatureUnlockManager.I == null)
+            return true;
+        if (offlineCaptureFeatureId == FeatureId.None)
+            return true;
+        return FeatureUnlockManager.I.IsUnlocked(offlineCaptureFeatureId);
     }
 
     public void EnableAuto(string biomeId = null)
@@ -346,6 +371,23 @@ public class IdleBattleManager : MonoBehaviour
 
             AddToLogMerged(s.log, wild.id, awarded, shiny);
 
+            // Offline/idle capture attempts (headless batches only).
+            // This is gated behind a feature unlock and uses a lightweight roll.
+            if (hb.victory && IsOfflineCaptureUnlocked() && wild != null && !wild.uncatchable)
+            {
+                float chance = CalcIdleCaptureChance01(wild);
+                if (rng.NextDouble() <= chance)
+                {
+                    bool applied = ApplyIdleCaptureToSave(wild, wildLevel, isShiny: shiny);
+                    if (applied)
+                    {
+                        s.capturedLog ??= new List<IdleEncounterLogEntry>();
+                        AddToLogMerged(s.capturedLog, wild.id, credits: 0, shiny: shiny);
+                        TrimLog(s.capturedLog, config != null ? config.encounterLogMaxEntries : 50);
+                    }
+                }
+            }
+
             GameEvents.BattleFinished?.Invoke(new BattleResult
             {
                 victory = hb.victory,
@@ -375,7 +417,7 @@ public class IdleBattleManager : MonoBehaviour
         var s = IdleBattleStore.Load();
         if (s == null) return;
 
-        bool hasLog = (s.log != null && s.log.Count > 0);
+        bool hasLog = (s.log != null && s.log.Count > 0) || (s.capturedLog != null && s.capturedLog.Count > 0);
         if (!hasLog) return;
 
         TrySetBoolFieldIfPresent(s, "hasPendingSummary", true);
@@ -390,7 +432,7 @@ public class IdleBattleManager : MonoBehaviour
         if (TryGetBoolFieldIfPresent(s, "hasPendingSummary", out pending))
             return pending;
 
-        return s.log != null && s.log.Count > 0;
+        return (s.log != null && s.log.Count > 0) || (s.capturedLog != null && s.capturedLog.Count > 0);
     }
 
     private void ClearPendingSummaryFlag(IdleBattleSession s)
@@ -503,6 +545,104 @@ public class IdleBattleManager : MonoBehaviour
         return Mathf.Max(1, Mathf.RoundToInt(sum / Mathf.Max(1f, count)));
     }
 
+    // ------------------------------------------------------------------------------------
+    // Idle captures (headless batches)
+    // ------------------------------------------------------------------------------------
+
+    private static float CalcIdleCaptureChance01(MonsterDataSO def)
+    {
+        if (def == null) return 0f;
+
+        // Mirror the general intent of EncounterManager capture logic:
+        // common spawns are easier, rare spawns are harder, clamped to a sane range.
+        float weight = Mathf.Max(0.0001f, def.spawnWeight);
+
+        float minW = weight;
+        float maxW = weight;
+        try
+        {
+            var lib = MonsterLibraryLocator.Lib;
+            if (lib != null)
+            {
+                foreach (var m in lib.All)
+                {
+                    if (m == null) continue;
+                    if (m.spawnWeight <= 0f) continue;
+                    minW = Mathf.Min(minW, m.spawnWeight);
+                    maxW = Mathf.Max(maxW, m.spawnWeight);
+                }
+            }
+        }
+        catch { }
+
+        float t = 0f;
+        if (maxW > minW)
+            t = Mathf.InverseLerp(maxW, minW, weight); // higher weight => closer to 1 (easier)
+
+        // 15% .. 65%
+        return Mathf.Clamp01(Mathf.Lerp(0.15f, 0.65f, t));
+    }
+
+    private static bool ApplyIdleCaptureToSave(MonsterDataSO def, int level, bool isShiny)
+    {
+        if (def == null) return false;
+        if (SaveManager.Data == null) return false;
+
+        // Do not capture bosses/uncatchables (already guarded by caller) but keep it defensive.
+        if (def.uncatchable) return false;
+
+        var data = SaveManager.Data;
+        data.owned ??= new List<OwnedMonsterData>();
+
+        // Match variants: same monsterId + shiny flag.
+        OwnedMonsterData existing = null;
+        for (int i = 0; i < data.owned.Count; i++)
+        {
+            var om = data.owned[i];
+            if (om == null) continue;
+            if (!string.Equals(om.monsterId, def.id, StringComparison.OrdinalIgnoreCase)) continue;
+            if (om.isShiny != isShiny) continue;
+            existing = om;
+            break;
+        }
+
+        int maxLv = Mathf.Max(1, def.maxLevel);
+
+        if (existing == null)
+        {
+            var om = new OwnedMonsterData
+            {
+                monsterId = def.id,
+                level = Mathf.Clamp(level <= 0 ? 1 : level, 1, maxLv),
+                currentXP = 0,
+                currentHP = -1,
+                lastHPUnix = 0,
+                ownedUID = System.Guid.NewGuid().ToString("N"),
+                isShiny = isShiny,
+                shinyTier = isShiny ? 1 : 0
+            };
+
+            data.owned.Add(om);
+            try { GameEvents.OnOwnedMonstersChanged?.Invoke(); } catch { }
+            try { GameEvents.MonsterCaptured?.Invoke(def.id, def.type); } catch { }
+            SaveManager.Save();
+            return true;
+        }
+
+        // Duplicate: level up by +1 if not max.
+        int before = existing.level;
+        existing.level = Mathf.Clamp(existing.level + 1, 1, maxLv);
+
+        // List reference is the same object; still fire events.
+        try { GameEvents.OnOwnedMonstersChanged?.Invoke(); } catch { }
+        if (existing.level > before)
+            try { GameEvents.MonsterLeveled?.Invoke(existing.monsterId, existing.level); } catch { }
+
+        try { GameEvents.MonsterCaptured?.Invoke(def.id, def.type); } catch { }
+        SaveManager.Save();
+        return true;
+    }
+
     private static void AddToLogMerged(List<IdleEncounterLogEntry> log, string monsterId, int credits, bool shiny)
     {
         if (log == null) return;
@@ -542,8 +682,6 @@ public class IdleBattleManager : MonoBehaviour
         // runtime guard
         _summaryOpenedThisSession = true;
 
-        // Ensure the container panel is visible (rewardPanel may be nested under a
-        // UIManager-controlled root).
         UIManager.I?.Show(PanelId.IdleBattleRewards);
 
         rewardPanel.Open(sum, onCollected: () =>
@@ -554,7 +692,6 @@ public class IdleBattleManager : MonoBehaviour
             ClearPendingSummaryFlag(ss);
             IdleBattleStore.Save(ss);
 
-            // Close the rewards panel container when the player collects.
             UIManager.I?.Hide(PanelId.IdleBattleRewards);
         });
     }
@@ -584,6 +721,20 @@ public class IdleBattleManager : MonoBehaviour
                 res.totalEncounters += e.count;
                 res.totalcredits += e.credits;
                 res.mergedLog.Add(new IdleEncounterLogEntry
+                {
+                    monsterId = e.monsterId,
+                    count = e.count,
+                    credits = e.credits,
+                    shinySeen = e.shinySeen
+                });
+            }
+        }
+
+        if (s?.capturedLog != null)
+        {
+            foreach (var e in s.capturedLog)
+            {
+                res.capturedLog.Add(new IdleEncounterLogEntry
                 {
                     monsterId = e.monsterId,
                     count = e.count,

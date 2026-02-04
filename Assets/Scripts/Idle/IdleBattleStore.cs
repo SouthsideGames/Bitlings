@@ -41,6 +41,7 @@ public static class IdleBattleStore
     {
         var s = Load();
         s.log?.Clear();
+        s.capturedLog?.Clear();
         Save(s);
     }
 }

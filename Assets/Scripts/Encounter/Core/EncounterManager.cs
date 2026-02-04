@@ -14,8 +14,6 @@ public partial class EncounterManager : MonoBehaviour
     [Tooltip("Baseline chance for a wild encounter to spawn shiny when no Shiny Orb boost is active.")]
     [SerializeField, Range(0f, 1f)] private float baseWildShinyChance = 0.01f;
 
-    // Encounter-scoped flag: whether the CURRENT wild encounter should be treated as shiny.
-    // This is intentionally separate from capture logic; capture can still roll independently.
     private bool _currentWildIsShiny = false;
     public bool CurrentWildIsShiny => _currentWildIsShiny;
 
@@ -23,14 +21,11 @@ public partial class EncounterManager : MonoBehaviour
     {
         if (!wildDef) return false;
 
-        // If no shiny art exists, don't mark it shiny (prevents "shiny" with normal visuals).
         if (wildDef.shinyIcon == null) return false;
 
-        // Requested testing behavior: Shiny Orb active => 100% shiny spawns.
         if (CurrentShinyBoost != null)
             return true;
 
-        // Normal behavior: baseline roll.
         float chance = Mathf.Clamp01(baseWildShinyChance);
         return Random.value <= chance;
     }
@@ -180,7 +175,6 @@ public partial class EncounterManager : MonoBehaviour
         }
 
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
-        // ── DEV OVERRIDE (priority 1): force a specific title by id
         TitleSO forced = null;
         string forcedId = Dev_ForceWildTitleId;
 
@@ -188,11 +182,9 @@ public partial class EncounterManager : MonoBehaviour
         {
             forcedId = forcedId.Trim();
 
-            // Prefer TitleManager lookup if available
             if (TitleManager.I != null)
                 forced = TitleManager.I.GetTitleById(forcedId);
 
-            // Fallback: find it inside candidates (works if it exists in the track pool)
             if (forced == null)
             {
                 for (int i = 0; i < candidates.Count; i++)
@@ -200,7 +192,6 @@ public partial class EncounterManager : MonoBehaviour
                     var t = candidates[i];
                     if (t == null) continue;
 
-                    // TitleSO might store id as titleId; use that
                     if (string.Equals(t.titleId, forcedId, StringComparison.OrdinalIgnoreCase))
                     {
                         forced = t;
@@ -217,13 +208,11 @@ public partial class EncounterManager : MonoBehaviour
 
                 _wildTitleLabel = _wildRolledTitle.DisplayOrId;
 
-                // Inject battle-scoped titles so adapter fallbacks can scan them safely
                 TitlesAdapter.SetLocalTitles(_wildCombatId, _wildActiveTitles);
-                return; // skip normal roll
+                return; 
             }
             else
             {
-                // If you want, you can label this clearly during testing
                 _wildTitleLabel = $"(Missing Title: {forcedId})";
                 TitlesAdapter.SetLocalTitles(_wildCombatId, _wildActiveTitles);
                 return;
@@ -231,14 +220,12 @@ public partial class EncounterManager : MonoBehaviour
         }
 #endif
 
-        // Bosses always roll 1 title if any candidates exist
         bool shouldRoll =
             _currentEncounterIsBoss
                 ? (candidates.Count > 0)
                 : (candidates.Count > 0 && Random.value <= Mathf.Clamp01(wildTitleRollChance));
 
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
-        // ── DEV OVERRIDE (priority 2): always roll if candidates exist
         if (Dev_ForceWildTitleRoll && candidates.Count > 0)
             shouldRoll = true;
 #endif
@@ -256,7 +243,6 @@ public partial class EncounterManager : MonoBehaviour
 
         _wildTitleLabel = (_wildRolledTitle != null) ? _wildRolledTitle.DisplayOrId : unemployedLabel;
 
-        // Inject battle-scoped titles so adapter fallbacks can scan them safely
         TitlesAdapter.SetLocalTitles(_wildCombatId, _wildActiveTitles);
     }
 
@@ -358,6 +344,8 @@ public partial class EncounterManager : MonoBehaviour
 
         if (autoMode)
         {
+            PostBattleSummaryManager.I?.ClearQueuedSummaries();
+
             nextEncounterFree = false;
             autoRunPaidEnergy = false;
 
@@ -476,8 +464,6 @@ public partial class EncounterManager : MonoBehaviour
 
         ResolveWildTitles(wild, wildLevel);
 
-        // Determine whether this encounter should present the wild as shiny.
-        // This is encounter-spawn logic only (capture remains unchanged).
         _currentWildIsShiny = RollWildShiny(wild);
 
         EncounterPanelUI.I?.OnWildSpawned(wild);
@@ -499,9 +485,6 @@ public partial class EncounterManager : MonoBehaviour
         if (_currentEncounterIsBoss && _currentBossUsed != null)
             GameEvents.BossSpawned?.Invoke(_currentBossUsed.id, _currentBossUsed);
 
-        // Snapshot auto-mode at the moment the battle starts.
-        // If the player disables auto-mode mid-battle, we still want THIS battle
-        // to finish resolving as an auto-battle (no waiting for input / faster pacing).
         _autoResolveSnapshot = autoMode;
 
         inBattle = true;
@@ -520,7 +503,6 @@ public partial class EncounterManager : MonoBehaviour
 
         _manualHirePending = false;
 
-        // Configure the BattleManager with the snapshot so turn pacing is correct.
         battleManager.ConfigureForAuto(_autoResolveSnapshot);
         battleManager.Begin(wild, wildLevel, OnBattleEnded);
     }
@@ -533,7 +515,6 @@ public partial class EncounterManager : MonoBehaviour
         _lastWildWasShiny = _currentWildIsShiny;
         _currentWildIsShiny = false;
 
-        // Battle is over; ensure wild titles cannot leak into any future context.
         ClearWildTitleInjection();
 
         bool escaped = result.escaped;
@@ -644,10 +625,6 @@ public partial class EncounterManager : MonoBehaviour
 
         _manualHirePending = holdForHireDecision;
 
-        // IMPORTANT:
-        // Use the snapshot of auto-mode captured when the battle started.
-        // If the player disables auto-mode mid-battle, THIS battle is still an
-        // auto battle for pacing and for summary suppression.
         if (holdForHireDecision)
             PostBattleSummaryManager.I?.SetAutoBattling(true);
         else
@@ -873,8 +850,6 @@ public partial class EncounterManager : MonoBehaviour
             return;
         }
 
-        // Shiny encounter SFX: driven by encounter-spawn logic (Shiny Orb forces shiny encounters)
-        // with a legacy fallback to IsShinyMonster(def) for older data.
         if (_currentWildIsShiny || IsShinyMonster(wild))
         {
             AudioManager.I?.PlaySfx(SfxType.ShinyEncounter);
@@ -1011,8 +986,6 @@ public partial class EncounterManager : MonoBehaviour
 
         ResolveWildTitles(wild, wildLevel);
 
-        // Determine whether this encounter should present the wild as shiny.
-        // This is encounter-spawn logic only (capture remains unchanged).
         _currentWildIsShiny = RollWildShiny(wild);
 
 

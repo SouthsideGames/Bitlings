@@ -20,6 +20,26 @@ public class PostBattleSummaryManager : MonoBehaviour
         I = this;
     }
 
+
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+    public int Debug_PendingCount => _pending.Count;
+    public bool Debug_AutoHold => _autoBattling;
+    public bool Debug_BattleInProgress => _battleInProgress;
+    public bool Debug_PanelOpen => _panelOpen;
+#endif
+
+    public void ClearQueuedSummaries()
+    {
+        _pending.Clear();
+    }
+
+    private bool IsForegroundAutoActive()
+    {
+        var em = EncounterManager.I;
+        return em != null && em.IsAutoMode;
+    }
+
+
     struct Queued
     {
         public BattleResult result;
@@ -181,7 +201,11 @@ public class PostBattleSummaryManager : MonoBehaviour
         if (_panelOpen || _battleInProgress || _autoBattling) return;
         if (_pending.Count == 0) return;
 
-        if (!postBattleSummaryPanelUI)
+        
+        // Contract guard: never show summaries while foreground auto is active.
+        if (IsForegroundAutoActive()) return;
+
+if (!postBattleSummaryPanelUI)
         {
             Debug.LogWarning("[PostBattleSummaryManager] Missing PostBattleSummaryPanelUI reference.");
             return;
