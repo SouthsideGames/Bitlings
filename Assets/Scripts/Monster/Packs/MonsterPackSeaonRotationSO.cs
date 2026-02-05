@@ -16,7 +16,7 @@ public class MonsterPackSeasonRotationSO : ScriptableObject
     }
 
     [Header("Rotation")]
-    [Tooltip("UTC unix timestamp (seconds) when rotation begins. If 0, code will treat as 'now'.")]
+    [Tooltip("UTC unix timestamp (seconds) when rotation begins. If 0, code will use a universal default epoch (offline-friendly).")]
     public long rotationStartUnix = 0;
 
     [Tooltip("Default 30 (monthly-ish). Change to 7 for weekly seasons, etc.")]
@@ -30,16 +30,34 @@ public class MonsterPackSeasonRotationSO : ScriptableObject
 
     public long SeasonLengthSeconds => (long)seasonLengthDays * 86400L;
 
+    // Universal offline epoch (UTC) used when rotationStartUnix is not set.
+    // 2026-01-01 00:00:00 UTC
+    private const long DefaultRotationEpochUnix = 1767225600L;
+
+    private long GetRotationStartUnix(long nowUnix)
+    {
+        long start = rotationStartUnix;
+
+        // If not explicitly configured, fall back to a universal epoch (NOT per-install).
+        if (start <= 0)
+            start = DefaultRotationEpochUnix;
+
+        // If device time is earlier than the rotation start, clamp elapsed to 0.
+        // (Prevents negative season indices if a clock is wrong.)
+        if (nowUnix < start)
+            return nowUnix; // ensures elapsed becomes 0 in callers that use Math.Max(0, now - start)
+
+        return start;
+    }
+
     public int GetSeasonIndex(long nowUnix)
     {
         if (seasons == null || seasons.Count == 0) return -1;
 
-        long start = rotationStartUnix;
-        if (start <= 0) start = nowUnix; // first-run fallback
+        long start = GetRotationStartUnix(nowUnix);
 
         long len = Math.Max(1, SeasonLengthSeconds);
         long elapsed = Math.Max(0, nowUnix - start);
-
         long rawIndex = elapsed / len;
 
         if (!loop)
@@ -61,8 +79,7 @@ public class MonsterPackSeasonRotationSO : ScriptableObject
     {
         if (seasons == null || seasons.Count == 0) return nowUnix;
 
-        long start = rotationStartUnix;
-        if (start <= 0) start = nowUnix;
+        long start = GetRotationStartUnix(nowUnix);
 
         long len = Math.Max(1, SeasonLengthSeconds);
         long elapsed = Math.Max(0, nowUnix - start);

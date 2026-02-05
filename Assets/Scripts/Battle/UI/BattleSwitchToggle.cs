@@ -1,3 +1,4 @@
+
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -11,14 +12,18 @@ public class BattleSwitchToggle : MonoBehaviour
     [SerializeField] private Button toggleButton;
 
     [Header("Toggle Icons (show the OTHER mode)")]
-    [SerializeField] private GameObject battleTextIcon;
-    [SerializeField] private GameObject boosterBarIcon; 
+    [SerializeField] private GameObject battleTextIcon; // icon representing battle text
+    [SerializeField] private GameObject boosterBarIcon; // icon representing boost bar
 
     [Header("Rules")]
     [SerializeField] private bool startShowingText = true;
 
     [Header("Battle State Source")]
     [SerializeField] private BattleManager battle;
+
+    [Header("Auto Mode / Visibility")]
+    [Tooltip("If true, this entire toggle control hides during AUTO battles.")]
+    [SerializeField] private bool hideDuringAutoBattle = true;
 
     private bool _showingText;
 
@@ -50,16 +55,20 @@ public class BattleSwitchToggle : MonoBehaviour
     {
         if (_showingText)
         {
+            // Show battle text panel
             SetGroupVisible(battleTextGroup, true);
             SetGroupVisible(boosterBarGroup, false);
 
+            // Toggle icon shows BOOSTS (what you'll switch to)
             SetIconState(showBattleTextIcon: false);
         }
         else
         {
+            // Show boost bar panel
             SetGroupVisible(battleTextGroup, false);
             SetGroupVisible(boosterBarGroup, true);
 
+            // Toggle icon shows BATTLE TEXT (what you'll switch to)
             SetIconState(showBattleTextIcon: true);
         }
     }
@@ -81,9 +90,22 @@ public class BattleSwitchToggle : MonoBehaviour
         cg.blocksRaycasts = visible;
     }
 
+    // Called by BattleManager to force narration visibility
     public void ForceShowText()
     {
         _showingText = true;
         ApplyState(immediate: true);
     }
+
+    private void HandleAutoModeChanged()
+    {
+        if (!hideDuringAutoBattle) return;
+
+        bool isAuto = (EncounterManager.I != null) && EncounterManager.I.IsAutoMode;
+
+        // Hide this switch toggle during auto mode if desired
+        if (gameObject.activeSelf == isAuto)
+            gameObject.SetActive(!isAuto);
+    }
+
 }

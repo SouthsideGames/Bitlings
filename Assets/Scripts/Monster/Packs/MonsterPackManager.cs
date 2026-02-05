@@ -94,10 +94,9 @@ public class MonsterPackManager : MonoBehaviour
 
     private void RefreshActiveSeasonCache(bool force = false)
     {
-        _activeSeasonPackIds.Clear();
-
         if (!SeasonsEnabled)
         {
+            _activeSeasonPackIds.Clear();
             _cachedSeasonIndex = int.MinValue;
             return;
         }
@@ -105,8 +104,13 @@ public class MonsterPackManager : MonoBehaviour
         long now = SaveManager.NowUnix();
         int idx = _seasonRotation.GetSeasonIndex(now);
 
-        if (!force && idx == _cachedSeasonIndex) return;
+        // If same season and not forced, keep existing cache (DO NOT clear)
+        if (!force && idx == _cachedSeasonIndex)
+            return;
+
         _cachedSeasonIndex = idx;
+
+        _activeSeasonPackIds.Clear();
 
         var ids = _seasonRotation.GetActivePackIds(now);
         if (ids == null) return;
@@ -118,6 +122,7 @@ public class MonsterPackManager : MonoBehaviour
                 _activeSeasonPackIds.Add(id);
         }
     }
+
 
     public int GetCurrentSeasonNumber1Based()
     {

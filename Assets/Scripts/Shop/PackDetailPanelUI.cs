@@ -11,7 +11,7 @@ public class PackDetailPanelUI : MonoBehaviour
     [SerializeField] private TextMeshProUGUI costText;
 
     [Header("Status / Messaging")]
-    [SerializeField] private TextMeshProUGUI statusText;            // NEW: reason like "Not available this season"
+    [SerializeField] private TextMeshProUGUI statusText;        
     [SerializeField] private TextMeshProUGUI purchaseButtonLabel;   
 
     [Header("Monster Icons")]
@@ -96,7 +96,6 @@ public class PackDetailPanelUI : MonoBehaviour
         }
         else
         {
-            Debug.LogError("[PackDetailPanelUI] Pack purchase failed inside MonsterPackManager.");
             RefreshUI();
         }
 
@@ -122,7 +121,7 @@ public class PackDetailPanelUI : MonoBehaviour
             int have = (ResourceManager.I != null) ? ResourceManager.I.Get(currency) : ResourceBank.Get(currency);
 
             if (costText)
-                costText.text = $"{have} / {cost} {CurrencyLabel(currency)}";
+                costText.text = $"{cost} {CurrencyLabel(currency)}";
         }
         else
         {

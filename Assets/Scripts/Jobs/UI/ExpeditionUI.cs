@@ -1,5 +1,6 @@
 using UnityEngine;
 using TMPro;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 
@@ -177,6 +178,7 @@ public class ExpeditionUI : MonoBehaviour
             seasonCountdownText.text = "Season ends soon";
             seasonCountdownText.color = Color.red;
 
+            // If your manager rotates seasons on expiry, these refresh calls are fine.
             RefreshSeasonHeader();
             BuildCurrentSeasonList();
             return;
@@ -189,15 +191,26 @@ public class ExpeditionUI : MonoBehaviour
         else
             RestoreCountdownColor();
 
-        // "Season ends in 12d 4h" (minutes if under 1 day)
-        long days = remaining / 86400L;
-        long hours = (remaining % 86400L) / 3600L;
-        long mins = (remaining % 3600L) / 60L;
+        // Tiered precision label via TimeSpan
+        // Guard against negative/overflow (remaining is already > 0 here, but keep it safe)
+        double safeSeconds = Math.Max(0, (double)remaining);
+        TimeSpan t = TimeSpan.FromSeconds(safeSeconds);
 
-        if (days > 0)
-            seasonCountdownText.text = $"Season ends in {days}d {hours}h";
-        else
-            seasonCountdownText.text = $"Season ends in {hours}h {mins}m";
+        seasonCountdownText.text = $"Season ends in {FormatRemaining(t)}";
+    }
+
+    private string FormatRemaining(TimeSpan t)
+    {
+        if (t.TotalDays > 3)
+            return $"{(int)t.TotalDays}d {t.Hours}h";
+
+        if (t.TotalDays > 1)
+            return $"{(int)t.TotalDays}d {t.Hours}h {t.Minutes}m";
+
+        if (t.TotalHours >= 1)
+            return $"{t.Hours}h {t.Minutes}m {t.Seconds}s";
+
+        return $"{t.Minutes}m {t.Seconds}s";
     }
 
     private void RestoreCountdownColor()
