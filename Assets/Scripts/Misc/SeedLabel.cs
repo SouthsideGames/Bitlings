@@ -77,7 +77,7 @@ public class SeedLabel : MonoBehaviour, IPointerClickHandler
             return;
 
         var fu = FeatureUnlockManager.I;
-        bool dailyUnlocked = (fu != null && fu.IsUnlocked(FeatureId.Seeds_DailyBasic));
+        bool dailyUnlocked = fu != null && fu.IsUnlocked(FeatureId.Seeds_DailyBasic);
 
         seedLabel.gameObject.SetActive(dailyUnlocked);
         if (!dailyUnlocked)
@@ -85,7 +85,9 @@ public class SeedLabel : MonoBehaviour, IPointerClickHandler
 
         SeedService.ApplyGlobalSeedForSession();
 
-        string shownPrefix = SeedService.GetDisplaySeedPrefix();
+        string shownPrefix = string.IsNullOrWhiteSpace(prefix)
+            ? SeedService.GetDisplaySeedPrefix()
+            : prefix;
         string token = SeedService.GetDisplaySeedToken();
 
         if (string.IsNullOrWhiteSpace(token))

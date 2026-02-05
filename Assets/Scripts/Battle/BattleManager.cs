@@ -243,9 +243,6 @@ public class BattleManager : MonoBehaviour
     private static readonly Color StatBuff = new Color(0.35f, 1f, 0.35f);
     private static readonly Color StatNerf = new Color(1f, 0.35f, 0.35f);
 
-    private bool _playerQueuedSwap;
-    private int _playerSwapToIndex = -1;
-
     void Start()
     {
         if (benchBtn1) benchBtn1.onClick.AddListener(() => ClickBench(0));

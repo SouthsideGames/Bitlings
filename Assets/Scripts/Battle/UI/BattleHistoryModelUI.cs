@@ -3,7 +3,7 @@ using UnityEngine.UI;
 using TMPro;
 using System.Collections.Generic;
 
-public class BattleHistoryModalUI : MonoBehaviour
+public class BattleHistoryModelUI : MonoBehaviour
 {
     [Header("UI")]
     [SerializeField] private GameObject root;

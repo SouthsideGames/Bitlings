@@ -1,6 +1,6 @@
 using UnityEngine;
 
-public class PanelButton : MonoBehaviour
+public class PanelButtonUI : MonoBehaviour
 {
     public PanelId target;
 

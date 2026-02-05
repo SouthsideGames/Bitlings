@@ -21,7 +21,7 @@ public sealed class BattleDebugOverlay : MonoBehaviour
 
     void Awake()
     {
-        if (FindObjectsOfType<BattleDebugOverlay>(true).Length > 1)
+        if (FindObjectsByType<BattleDebugOverlay>(FindObjectsSortMode.None).Length > 1)
         {
             Destroy(gameObject);
             return;
