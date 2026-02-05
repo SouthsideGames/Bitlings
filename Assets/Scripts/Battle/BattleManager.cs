@@ -281,6 +281,11 @@ public class BattleManager : MonoBehaviour
         _isPlayerTurn = value;
         OnPlayerTurnChanged?.Invoke(_isPlayerTurn);
 
+
+        // Booster system: ensure turn gating is kept in sync (enables/disables booster buttons correctly).
+        if (BattleBoosterController.I != null)
+            BattleBoosterController.I.OnTurnStart(_isPlayerTurn);
+
         GameEvents.OnBattleStateChanged?.Invoke();
     }
 
@@ -514,6 +519,26 @@ private IEnumerator MaybeSayKO_Wild(string victimName, float preHP, float postHP
         ApplyActiveToUI();
         ClampAndPushActiveHP();
         RefreshBenchUI();
+
+        // Booster system: provide runtime hooks so UI boosters can perform actions (e.g., Health booster healing).
+        if (BattleBoosterController.I != null)
+        {
+            BattleBoosterController.I.SetHooks(new BattleRuntimeHooks
+            {
+                // Heal the currently active team slot. Return actual healed amount.
+                HealPlayer = (amount) =>
+                {
+                    if (teamHP == null || teamHP.Length == 0 || activeIndex < 0 || activeIndex >= teamHP.Length)
+                        return 0;
+
+                    float before = teamHP[activeIndex];
+                    TryAddHPToActive(amount);
+                    float after = teamHP[activeIndex];
+                    return Mathf.RoundToInt(Mathf.Max(0f, after - before));
+                }
+            });
+        }
+
 
         if (wildPanel) wildPanel.SetActive(true);
         if (playerPanel) playerPanel.SetActive(true);
@@ -964,6 +989,10 @@ private IEnumerator MaybeSayKO_Wild(string victimName, float preHP, float postHP
 
                 yield return Wait(endRoundDelay);
             }
+
+            // Booster system: tick durations/cooldowns once per completed round.
+            if (BattleBoosterController.I != null)
+                BattleBoosterController.I.OnTurnEnd();
 
             defendActiveThisRound = false;
             wildDefendActiveThisRound = false;

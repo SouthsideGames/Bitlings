@@ -68,8 +68,9 @@ public sealed class BattleBoosterController : MonoBehaviour
         playersTurn = isPlayer;
         usedABoosterThisTurn = false;
 
-        // Do NOT raise events here—turn start does not change durations/cooldowns/stats.
-        // (UI will refresh when stats actually change.)
+        // Turn start changes whether boosters are usable ("Not your turn" gate),
+        // so the booster UI must refresh here.
+        GameEvents.OnBoostersChanged?.Invoke();
     }
 
     public void OnTurnEnd()
