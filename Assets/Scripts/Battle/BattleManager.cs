@@ -110,7 +110,7 @@ public class BattleManager : MonoBehaviour
 
     private bool isResolvingPlayerTurn = false;
     private PlayerAction pendingAction = PlayerAction.None;
-    private int pendingSwapBenchSlot = -1;
+private int pendingSwapBenchSlot = -1;
     private bool defendActiveThisRound = false;
 
     [Header("Wild UI")]
@@ -262,6 +262,11 @@ public class BattleManager : MonoBehaviour
 
     void OnDisable()
     {
+        // Safety: if this object is disabled mid-battle (panel stack / scene change),
+        // stop the turn loop and clear locks to avoid soft-locks or stray coroutines.
+        if (inBattle || turnCR != null)
+            AbortBattleInternal();
+
         GameEvents.BattleFinished -= HandleBattleFinishedUIRefresh;
         GameEvents.BattleStatsChanged -= HandleBattleStatsChanged;
     }
@@ -272,7 +277,41 @@ public class BattleManager : MonoBehaviour
         if (benchBtn2) benchBtn2.onClick.RemoveAllListeners();
     }
 
-    private void SetIsPlayerTurn(bool value)
+    
+/// <summary>
+/// Hard-aborts the current battle without awarding rewards.
+/// Used as a safety net when the BattleManager is disabled mid-battle.
+/// </summary>
+private void AbortBattleInternal()
+{
+    inBattle = false;
+    SetIsPlayerTurn(false);
+
+    // Clear any locks / queued input so UI can't get stuck.
+    _narrationLock = false;
+    isResolvingPlayerTurn = false;
+    pendingAction = PlayerAction.None;
+    pendingSwapBenchSlot = -1;
+
+    defendActiveThisRound = false;
+    wildDefendActiveThisRound = false;
+    wildChargedNextAttack = false;
+    wildPendingGuardShield = 0f;
+
+    if (turnCR != null)
+    {
+        StopCoroutine(turnCR);
+        turnCR = null;
+    }
+
+    ConfigureForAuto(false);
+    ResetStatusIcons();
+
+    if (benchBtn1) benchBtn1.interactable = false;
+    if (benchBtn2) benchBtn2.interactable = false;
+}
+
+private void SetIsPlayerTurn(bool value)
     {
         if (_isPlayerTurn == value) return;
         _isPlayerTurn = value;
@@ -348,6 +387,22 @@ private IEnumerator MaybeSayKO_Wild(string victimName, float preHP, float postHP
     {
         var roster = SaveManager.Data.team;
         if (roster == null || roster.Count == 0) { ForceEndBattleEarly(false); return; }
+
+        // Safety: if Begin is invoked while a prior battle coroutine is still around,
+        // stop it and clear any lingering per-battle state.
+        if (turnCR != null)
+        {
+            StopCoroutine(turnCR);
+            turnCR = null;
+        }
+
+        inBattle = false;
+        _narrationLock = false;
+        isResolvingPlayerTurn = false;
+        pendingAction = PlayerAction.None;
+        pendingSwapBenchSlot = -1;
+        defendActiveThisRound = false;
+        wildDefendActiveThisRound = false;
 
         playerNoDmgTurns = 0;
         playerNoCritTurns = 0;
@@ -1575,6 +1630,9 @@ private IEnumerator MaybeSayKO_Wild(string victimName, float preHP, float postHP
         if (benchBtn2) benchBtn2.interactable = false;
 
         pendingAction = PlayerAction.None;
+        pendingSwapBenchSlot = -1;
+        _narrationLock = false;
+        isResolvingPlayerTurn = false;
         defendActiveThisRound = false;
         wildDefendActiveThisRound = false;
         wildChargedNextAttack = false;
@@ -2649,11 +2707,31 @@ private bool AutoSwapToAlive()
 
     private void ForceEndBattleEarly(bool victory, bool escaped = false)
     {
+        // Early-outs can happen before the normal EndBattle path.
+        // Keep this path safe: stop coroutines, restore defaults, and clear input/locks.
+        inBattle = false;
         SetIsPlayerTurn(false);
+
         pendingAction = PlayerAction.None;
+        pendingSwapBenchSlot = -1;
+        _narrationLock = false;
+        isResolvingPlayerTurn = false;
+
+        defendActiveThisRound = false;
+        wildDefendActiveThisRound = false;
+        wildChargedNextAttack = false;
+        wildPendingGuardShield = 0f;
+
+        if (turnCR != null)
+        {
+            StopCoroutine(turnCR);
+            turnCR = null;
+        }
+
+        ConfigureForAuto(false);
         ResetStatusIcons();
 
-        if (benchBtn1) benchBtn1.interactable = false;
+if (benchBtn1) benchBtn1.interactable = false;
         if (benchBtn2) benchBtn2.interactable = false;
 
         var result = new BattleResult
@@ -2693,8 +2771,46 @@ private bool AutoSwapToAlive()
         _narrationLock = true;
         GameEvents.OnBattleStateChanged?.Invoke();
 
+        // Safety: narration should never hard-deadlock the battle if the text UI is disabled
+        // or a tween/coroutine is interrupted. We enforce a realtime timeout.
         if (battleTextBox != null)
-            yield return battleTextBox.ShowLine(new BattleLine(line, tags), battleSpeed);
+        {
+            IEnumerator lineCR = null;
+            try
+            {
+                lineCR = battleTextBox.ShowLine(new BattleLine(line, tags), battleSpeed);
+            }
+            catch (Exception e)
+            {
+                Debug.LogWarning($"[BattleManager] battleTextBox.ShowLine threw: {e.Message}");
+            }
+
+            if (lineCR != null)
+            {
+                float t0 = Time.unscaledTime;
+                while (true)
+                {
+                    bool movedNext = false;
+                    try
+                    {
+                        movedNext = lineCR.MoveNext();
+                    }
+                    catch (Exception e)
+                    {
+                        Debug.LogWarning($"[BattleManager] ShowLine iterator threw: {e.Message}");
+                        break;
+                    }
+
+                    if (!movedNext) break;
+
+                    yield return lineCR.Current;
+
+                    // Break if UI gets disabled or something hangs too long.
+                    if (!isActiveAndEnabled) break;
+                    if (Time.unscaledTime - t0 > 8f) break;
+                }
+            }
+        }
 
         _narrationLock = false;
         GameEvents.OnBattleStateChanged?.Invoke();
