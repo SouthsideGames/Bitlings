@@ -105,6 +105,42 @@ public sealed class BattleFeedbackManager : MonoBehaviour
     [SerializeField, Range(0f, 50f)] private float heavyHitShakeMagnitude = 12f;
     [SerializeField, Min(0.01f)] private float heavyHitShakeDuration = 0.15f;
 
+
+    [Header("Micro-Juice (Optional)")]
+    [Tooltip("If enabled, applies a tiny timeScale pause on crits/heavy hits for punchy impact.")]
+    [SerializeField] private bool enableHitStop = true;
+
+    [SerializeField, Min(0f)] private float hitStopTimeScale = 0.05f;
+    [SerializeField, Min(0.01f)] private float hitStopCritSeconds = 0.05f;
+    [SerializeField, Min(0.01f)] private float hitStopHeavySeconds = 0.04f;
+
+    [Tooltip("KO slow motion timeScale for a short burst.")]
+    [SerializeField] private bool enableKOSlowMo = true;
+    [SerializeField, Range(0.05f, 1f)] private float koSlowMoTimeScale = 0.20f;
+    [SerializeField, Min(0.01f)] private float koSlowMoSeconds = 0.20f;
+
+    [Header("Vignette Flash (Optional)")]
+    [Tooltip("Optional full-screen Image used for a subtle KO flash (alpha anim).")]
+    [SerializeField] private Image vignetteFlash;
+    [SerializeField, Range(0f, 1f)] private float vignetteFlashAlpha = 0.25f;
+    [SerializeField, Min(0.01f)] private float vignetteFlashIn = 0.06f;
+    [SerializeField, Min(0.01f)] private float vignetteFlashOut = 0.14f;
+
+    [Header("Crit Tag (Optional)")]
+    [Tooltip("Optional TMP label near the icon that flashes 'CRIT!' when a crit lands.")]
+    [SerializeField] private TMP_Text playerCritTag;
+    [SerializeField] private TMP_Text wildCritTag;
+    [SerializeField, Min(0.01f)] private float critTagSeconds = 0.35f;
+    [SerializeField, Range(1.01f, 1.6f)] private float critTagPunch = 1.25f;
+
+    [Header("Shake Scaling")]
+    [Tooltip("Damage ratio (damage / maxHP) that maps to full shake. Keeps shake consistent across HP values.")]
+    [SerializeField, Range(0.05f, 1f)] private float ratioForMaxShake = 0.35f;
+    [SerializeField, Range(0f, 30f)] private float minScreenShake = 1.5f;
+    [SerializeField, Range(0f, 60f)] private float maxScreenShake = 10f;
+
+    private Coroutine _timeScaleCR;
+
     [Header("HP Text Feedback (Current/Max)")]
     [SerializeField] private TextMeshProUGUI playerHPValueText;
     [SerializeField] private TextMeshProUGUI wildHPValueText;
@@ -366,24 +402,67 @@ public void SetGuard(BattleFeedbackSide side, bool on)
         Nudge(icon.rectTransform, attackerSide == BattleFeedbackSide.Player ? +10f : -10f, windupTime);
     }
 
+    
     public void PlayHitReaction(BattleFeedbackSide targetSide, bool crit, float damageRatio01 = -1f)
+    {
+        PlayHitReaction(targetSide, crit, damageRatio01, wasGuarded: false);
+    }
+
+    /// <summary>
+    /// Extended variant that can reduce shake / change SFX when the hit was guarded/shielded.
+    /// </summary>
+    public void PlayHitReaction(BattleFeedbackSide targetSide, bool crit, float damageRatio01, bool wasGuarded)
     {
         var icon = GetIcon(targetSide);
         if (!icon) return;
 
+        float ratio01 = Mathf.Max(0f, damageRatio01);
+
+        // Shake scaling: consistent across HP values
+        float shakeT = (damageRatio01 < 0f) ? 0f : Mathf.Clamp01(ratio01 / Mathf.Max(0.01f, ratioForMaxShake));
+        float screenMag = Mathf.Lerp(minScreenShake, maxScreenShake, shakeT);
+
         float shakeMult = 1f;
         if (crit) shakeMult *= critExtraShakeMult;
-        if (damageRatio01 >= 0f && damageRatio01 >= heavyHitThreshold01) shakeMult *= heavyExtraShakeMult;
+        if (damageRatio01 >= 0f && ratio01 >= heavyHitThreshold01) shakeMult *= heavyExtraShakeMult;
 
-        Flash(icon, crit ? flashCrit : flashNormal, hitFlashTime);
+        // Guarded hits feel "clanky" and less violent
+        if (wasGuarded)
+        {
+            shakeMult *= 0.55f;
+            screenMag *= 0.55f;
+        }
+
+        Flash(icon, crit ? flashCrit : (wasGuarded ? flashDefend : flashNormal), hitFlashTime);
         Shake(icon.rectTransform, hitShakePixels * shakeMult, hitShakeTime);
 
         var hpRoot = (targetSide == BattleFeedbackSide.Player) ? playerHPShakeRoot : wildHPShakeRoot;
         if (hpRoot) PlayHPShake(hpRoot);
 
-        if (damageRatio01 >= 0f && damageRatio01 >= heavyHitThreshold01)
-            ScreenShake(heavyHitShakeMagnitude, heavyHitShakeDuration);
+        if (damageRatio01 >= 0f)
+            ScreenShake(screenMag, heavyHitShakeDuration);
+
+        // Micro-juice: hitstop on crit / heavy hits
+        if (enableHitStop)
+        {
+            bool heavy = (damageRatio01 >= 0f && ratio01 >= heavyHitThreshold01);
+            float seconds = crit ? hitStopCritSeconds : (heavy ? hitStopHeavySeconds : 0f);
+            if (seconds > 0f && !wasGuarded)
+                HitStop(seconds);
+        }
+
+        if (crit)
+        {
+            PlayCritTag(targetSide);
+            AudioManager.I?.PlaySfx(SfxType.CritHit);
+        }
+        else if (wasGuarded)
+        {
+            // Distinct "clank"
+            AudioManager.I?.PlaySfx(SfxType.Defend);
+        }
     }
+
 
     public void PlayDefendResult(BattleFeedbackSide side, bool success)
     {
@@ -400,6 +479,12 @@ public void SetGuard(BattleFeedbackSide side, bool on)
 
     public void PlayKO(BattleFeedbackSide side)
     {
+        if (enableKOSlowMo)
+            SlowMo(koSlowMoTimeScale, koSlowMoSeconds);
+
+        if (vignetteFlash)
+            FlashVignette();
+
         var icon = GetIcon(side);
         if (!icon) return;
 
@@ -415,6 +500,125 @@ public void SetGuard(BattleFeedbackSide side, bool on)
 
         FadeGraphic(icon, 0.35f, 0.18f);
     }
+
+
+    private void HitStop(float seconds)
+    {
+        SlowMo(hitStopTimeScale, seconds);
+    }
+
+    private void SlowMo(float timeScale, float seconds)
+    {
+        if (seconds <= 0f) return;
+
+        if (_timeScaleCR != null)
+            StopCoroutine(_timeScaleCR);
+
+        _timeScaleCR = StartCoroutine(Co_TimeScale(timeScale, seconds));
+    }
+
+    private IEnumerator Co_TimeScale(float timeScale, float seconds)
+    {
+        float prev = Time.timeScale;
+        float prevFixed = Time.fixedDeltaTime;
+
+        // Apply
+        Time.timeScale = Mathf.Clamp(timeScale, 0.001f, 1f);
+        Time.fixedDeltaTime = prevFixed * Time.timeScale;
+
+        float t = 0f;
+        while (t < seconds)
+        {
+            t += Time.unscaledDeltaTime;
+            yield return null;
+        }
+
+        // Restore
+        Time.timeScale = prev;
+        Time.fixedDeltaTime = prevFixed;
+
+        _timeScaleCR = null;
+    }
+
+    private void FlashVignette()
+    {
+        if (!vignetteFlash) return;
+
+        LeanTween.cancel(vignetteFlash.gameObject);
+
+        var c = vignetteFlash.color;
+        c.a = 0f;
+        vignetteFlash.color = c;
+
+        vignetteFlash.gameObject.SetActive(true);
+
+        LeanTween.value(vignetteFlash.gameObject, 0f, vignetteFlashAlpha, vignetteFlashIn)
+            .setIgnoreTimeScale(true)
+            .setOnUpdate((float a) =>
+            {
+                if (!vignetteFlash) return;
+                var cc = vignetteFlash.color;
+                cc.a = a;
+                vignetteFlash.color = cc;
+            })
+            .setOnComplete(() =>
+            {
+                LeanTween.value(vignetteFlash.gameObject, vignetteFlashAlpha, 0f, vignetteFlashOut)
+                    .setIgnoreTimeScale(true)
+                    .setOnUpdate((float a) =>
+                    {
+                        if (!vignetteFlash) return;
+                        var cc = vignetteFlash.color;
+                        cc.a = a;
+                        vignetteFlash.color = cc;
+                    })
+                    .setOnComplete(() =>
+                    {
+                        if (vignetteFlash)
+                            vignetteFlash.gameObject.SetActive(false);
+                    });
+            });
+    }
+
+    private void PlayCritTag(BattleFeedbackSide side)
+    {
+        TMP_Text tag = (side == BattleFeedbackSide.Player) ? playerCritTag : wildCritTag;
+        if (!tag) return;
+
+        tag.gameObject.SetActive(true);
+        tag.text = "CRIT!";
+
+        var rt = tag.rectTransform;
+        if (rt)
+        {
+            LeanTween.cancel(rt.gameObject);
+            var baseScale = rt.localScale;
+            rt.localScale = baseScale;
+
+            LeanTween.scale(rt, baseScale * critTagPunch, 0.08f)
+                .setEaseOutBack()
+                .setIgnoreTimeScale(true)
+                .setOnComplete(() =>
+                {
+                    if (!rt) return;
+                    LeanTween.scale(rt, baseScale, 0.10f).setEaseOutQuad().setIgnoreTimeScale(true);
+                });
+        }
+
+        StartCoroutine(Co_HideCritTag(tag, critTagSeconds));
+    }
+
+    private IEnumerator Co_HideCritTag(TMP_Text tag, float seconds)
+    {
+        float t = 0f;
+        while (t < seconds)
+        {
+            t += Time.unscaledDeltaTime;
+            yield return null;
+        }
+        if (tag) tag.gameObject.SetActive(false);
+    }
+
 
     public void ResetIconVisuals()
     {

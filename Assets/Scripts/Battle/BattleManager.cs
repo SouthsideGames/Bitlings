@@ -237,6 +237,39 @@ public class BattleManager : MonoBehaviour
     private float startTime;
     private Coroutine turnCR;
 
+
+
+    // ─────────────────────────────────────────────────────────────
+    // GC / Allocation Scratch (mobile smoothness)
+    // ─────────────────────────────────────────────────────────────
+    private readonly List<int> _scratchOthers = new List<int>(4);
+    private readonly string[] _roundLineCache = new string[256];
+
+    private void FillOtherIndices(List<int> dst)
+    {
+        if (dst == null) return;
+        dst.Clear();
+        for (int i = 0; i < teamCount; i++)
+            if (i != activeIndex) dst.Add(i);
+    }
+
+    private string GetRoundLine(int round)
+    {
+        if (round < 0) round = 0;
+        if (round < _roundLineCache.Length)
+        {
+            var s = _roundLineCache[round];
+            if (s == null)
+            {
+                s = "— Round " + round.ToString() + " —";
+                _roundLineCache[round] = s;
+            }
+            return s;
+        }
+
+        return "— Round " + round.ToString() + " —";
+    }
+
     private bool playerTookFirstIncomingThisBattle = false;
     private bool playerLandedFirstHitThisBattle = false;
 
@@ -323,6 +356,31 @@ public class BattleManager : MonoBehaviour
         pendingAction = a;
         GameEvents.OnBattleStateChanged?.Invoke();
     }
+    // ─────────────────────────────────────────────────────────────
+    // Queued Action (Manual Turns) – used by UI to feel instant
+    // ─────────────────────────────────────────────────────────────
+    public bool HasQueuedPlayerAction => pendingAction != PlayerAction.None;
+
+    /// <summary>
+    /// Returns a stable code so UI doesn't need access to the private enum.
+    /// 0=None, 1=Attack, 2=Defend, 3=Focus, 4=Swap, 5=Run
+    /// </summary>
+    public int QueuedPlayerActionCode
+    {
+        get
+        {
+            switch (pendingAction)
+            {
+                case PlayerAction.Attack: return 1;
+                case PlayerAction.Defend: return 2;
+                case PlayerAction.Focus:  return 3;
+                case PlayerAction.Swap:   return 4;
+                case PlayerAction.Run:    return 5;
+                default: return 0;
+            }
+        }
+    }
+
 
 
 private static void HardResetIconVisual(Image img)
@@ -345,7 +403,7 @@ private static void HardResetIconVisual(Image img)
 private IEnumerator SayKO(string displayName)
 {
     if (string.IsNullOrWhiteSpace(displayName)) yield break;
-    yield return Say($"{displayName} KO'ed!");
+    yield return Say($"{displayName} KO'ed!", BattleLineTag.Result);
 }
 
 private IEnumerator MaybeSayKO_Player(string victimName, float preHP, float postHP)
@@ -587,7 +645,7 @@ private IEnumerator MaybeSayKO_Wild(string victimName, float preHP, float postHP
         if (feedback != null)
             yield return feedback.Co_RevealPanels(wildCG, playerCG, duration);
         else
-            yield return new WaitForSecondsRealtime(Mathf.Max(0f, duration));
+            yield return CoWaitUnscaled(Mathf.Max(0f, duration));
 
         if (wildCG) { wildCG.alpha = 1f; wildCG.blocksRaycasts = true; wildCG.interactable = true; }
         if (playerCG) { playerCG.alpha = 1f; playerCG.blocksRaycasts = true; playerCG.interactable = true; }
@@ -638,7 +696,7 @@ private IEnumerator MaybeSayKO_Wild(string victimName, float preHP, float postHP
     private IEnumerator TurnLoop()
     {
         int round = 0;
-        yield return Wait(0.4f);
+        yield return CoWaitScaled(0.4f);
 
         while (inBattle)
         {
@@ -666,8 +724,9 @@ private IEnumerator MaybeSayKO_Wild(string victimName, float preHP, float postHP
             // Sync status icons after round reset + shield application
             RefreshStatusIconsFromState();
 
-            BattleLogger.Log($"— Round {round} —", LogScope.Battle);
-            yield return Wait(beginRoundDelay);
+            if (!(EncounterManager.I != null && EncounterManager.I.IsAutoMode))
+                BattleLogger.Log(GetRoundLine(round), LogScope.Battle);
+            yield return CoWaitScaled(beginRoundDelay);
 
             _turnIndex++;
             TitlesAdapter.OnTurnAdvanced(_turnIndex);
@@ -746,7 +805,7 @@ private IEnumerator MaybeSayKO_Wild(string victimName, float preHP, float postHP
                     RefreshStatusIconsFromState();
 
                     if (CheckEnd()) break;
-                    yield return Wait(hitPause);
+                    yield return CoWaitScaled(hitPause);
 
                     if (!IsTeamKO() && teamHP[activeIndex] <= 0.01f)
                     {
@@ -764,7 +823,7 @@ private IEnumerator MaybeSayKO_Wild(string victimName, float preHP, float postHP
                         RefreshStatusIconsFromState();
 
                         if (CheckEnd()) break;
-                        yield return Wait(hitPause);
+                        yield return CoWaitScaled(hitPause);
                     }
                 }
             }
@@ -877,7 +936,7 @@ private IEnumerator MaybeSayKO_Wild(string victimName, float preHP, float postHP
                     RefreshStatusIconsFromState();
 
                     if (CheckEnd()) break;
-                    yield return Wait(hitPause);
+                    yield return CoWaitScaled(hitPause);
 
                     // If the wild KO'ed our active slot, we must auto-swap (if possible) and the queued action is lost.
                 if (!IsTeamKO() && teamHP[activeIndex] <= 0.01f)
@@ -999,7 +1058,7 @@ private IEnumerator MaybeSayKO_Wild(string victimName, float preHP, float postHP
                         }
 
                         if (CheckEnd()) break;
-                        yield return Wait(hitPause);
+                        yield return CoWaitScaled(hitPause);
                     }
                 }
             }
@@ -1014,7 +1073,7 @@ private IEnumerator MaybeSayKO_Wild(string victimName, float preHP, float postHP
                     if (jobCtx[activeIndex].dmgReduceBuffTurns > 0) jobCtx[activeIndex].dmgReduceBuffTurns--;
                 }
 
-                yield return Wait(endRoundDelay);
+                yield return CoWaitScaled(endRoundDelay);
             }
 
             // Booster system: tick durations/cooldowns once per completed round.
@@ -1182,13 +1241,14 @@ private IEnumerator MaybeSayKO_Wild(string victimName, float preHP, float postHP
         string move = GetBasicMoveName(playerDef);
         string foeName = wildDef ? wildDef.displayName : "Foe";
 
-        yield return Say($"{attacker} used {move}!");
+        if (!ShouldSkipNarration(BattleLineTag.Flavor))
+            yield return Say($"{attacker} used {move}!", BattleLineTag.Flavor);
         if (feedback) feedback.PlayAttackWindup(BattleFeedbackManager.BattleFeedbackSide.Player);
 
         if (feedback)
             feedback.SpawnBasicAttackVfx(isPlayerSide: true, playerDef: playerDef, wildDef: wildDef);
 
-        yield return Wait(0.10f);
+        yield return CoWaitScaled(0.10f);
 
         // Baseline TOTAL ATK (SpeciesBase + LevelGrowth + Training + flatAtkBonus w/ legacy guard)
         GetProgressionTotalsForIndex(activeIndex, out _, out int atkBaseTotal, out _, out _, out _);
@@ -1244,7 +1304,8 @@ private IEnumerator MaybeSayKO_Wild(string victimName, float preHP, float postHP
             slotDamageBuffPct[activeIndex] > 0f)
         {
             dr.damage = Mathf.Max(1, Mathf.RoundToInt(dr.damage * (1f + slotDamageBuffPct[activeIndex])));
-            yield return Say($"+{Mathf.RoundToInt(slotDamageBuffPct[activeIndex] * 100f)}% damage buff active.");
+            if (!ShouldSkipNarration(BattleLineTag.Flavor))
+                yield return Say($"+{Mathf.RoundToInt(slotDamageBuffPct[activeIndex] * 100f)}% damage buff active.", BattleLineTag.Flavor);
 
             slotDamageBuffTurns[activeIndex]--;
             if (slotDamageBuffTurns[activeIndex] <= 0)
@@ -1260,7 +1321,8 @@ private IEnumerator MaybeSayKO_Wild(string victimName, float preHP, float postHP
             dr.damage = Mathf.Max(1, Mathf.RoundToInt(dr.damage * (1f + chargeBonusPct)));
             chargedNextAttack[activeIndex] = false;
 
-            yield return Say($"{GetName(activeIndex)} unleashes a charged attack (+{Mathf.RoundToInt(chargeBonusPct * 100f)}% damage)!");
+            if (!ShouldSkipNarration(BattleLineTag.Flavor))
+                yield return Say($"{GetName(activeIndex)} unleashes a charged attack (+{Mathf.RoundToInt(chargeBonusPct * 100f)}% damage)!", BattleLineTag.Flavor);
         }
 
         float preventedByWildGuard = 0f;
@@ -1278,21 +1340,26 @@ private IEnumerator MaybeSayKO_Wild(string victimName, float preHP, float postHP
                 feedback.PlayDefendShieldFX(isPlayer: false);
         }
 
+        float absorbedByWildShield = 0f;
+
         if (wildShieldHP > 0f && dmgToApply > 0)
         {
             float absorb = Mathf.Min(wildShieldHP, dmgToApply);
+            absorbedByWildShield = absorb;
             wildShieldHP = Mathf.Max(0f, wildShieldHP - absorb);
             dmgToApply = Mathf.Max(0, dmgToApply - Mathf.RoundToInt(absorb));
 
             if (absorb > 0f)
-                yield return Say($"{foeName}'s shield absorbed {Mathf.RoundToInt(absorb)}!");
+                if (!ShouldSkipNarration(BattleLineTag.Shield | BattleLineTag.Flavor))
+                    yield return Say($"{foeName}'s shield absorbed {Mathf.RoundToInt(absorb)}!", BattleLineTag.Shield | BattleLineTag.Flavor);
         }
 
         if (preventedByWildGuard > 0f && guardConvertPct > 0f)
         {
             float gain = preventedByWildGuard * guardConvertPct;
             wildPendingGuardShield += gain;
-            yield return Say($"{foeName} stores {Mathf.RoundToInt(gain)} damage as a guard shield for the next round.");
+            if (!ShouldSkipNarration(BattleLineTag.Shield | BattleLineTag.Flavor))
+                yield return Say($"{foeName} stores {Mathf.RoundToInt(gain)} damage as a guard shield for the next round.", BattleLineTag.Shield | BattleLineTag.Flavor);
         }
 
         float preWildHP = wildHP;
@@ -1301,19 +1368,31 @@ private IEnumerator MaybeSayKO_Wild(string victimName, float preHP, float postHP
         PushHPBars();
 
         float wRatio = wildMaxHP > 0.01f ? (float)dmgToApply / wildMaxHP : 0f;
-        if (feedback) feedback.PlayHitReaction(BattleFeedbackManager.BattleFeedbackSide.Wild, dr.crit, wRatio);
+        if (feedback) feedback.PlayHitReaction(BattleFeedbackManager.BattleFeedbackSide.Wild, dr.crit, wRatio, wasGuarded: (preventedByWildGuard > 0f) || (absorbedByWildShield > 0f));
 
         if (!playerLandedFirstHitThisBattle && dr.damage > 0)
             playerLandedFirstHitThisBattle = true;
 
-        yield return Say($"{attacker} hits {foeName} for {dmgToApply}!");
+        yield return Say($"{attacker} hits {foeName} for {dmgToApply}!", BattleLineTag.Result);
 
         if (showEffectivenessText)
         {
-            if (dr.effectiveness > 1.25f) yield return Say("It's super effective!");
-            else if (dr.effectiveness < 0.85f) yield return Say("It's not very effective...");
+            if (dr.effectiveness > 1.25f)
+            {
+                if (!ShouldSkipNarration(BattleLineTag.SuperEffective | BattleLineTag.Flavor))
+                    yield return Say("It's super effective!", BattleLineTag.SuperEffective | BattleLineTag.Flavor);
+            }
+            else if (dr.effectiveness < 0.85f)
+            {
+                if (!ShouldSkipNarration(BattleLineTag.NotEffective | BattleLineTag.Flavor))
+                    yield return Say("It's not very effective...", BattleLineTag.NotEffective | BattleLineTag.Flavor);
+            }
         }
-        if (dr.crit) yield return Say("Critical hit!");
+        if (dr.crit)
+        {
+            if (!ShouldSkipNarration(BattleLineTag.Crit | BattleLineTag.Flavor))
+                yield return Say("Critical hit!", BattleLineTag.Crit | BattleLineTag.Flavor);
+        }
 
         // Centralized KO messaging (fires only on HP crossing >0 → 0)
         yield return MaybeSayKO_Wild(foeName, preWildHP, wildHP);
@@ -1326,7 +1405,8 @@ private IEnumerator MaybeSayKO_Wild(string victimName, float preHP, float postHP
                 float healAmt = GetFinalMaxHPForIndex(activeIndex) * jctx.endTurnHealPct;
                 TryAddHPToActive(healAmt);
                 if (jctx.regenTurns != int.MaxValue) jctx.regenTurns--;
-                yield return Say($"{GetName(activeIndex)} regenerates {Mathf.RoundToInt(healAmt)} HP.");
+                if (!ShouldSkipNarration(BattleLineTag.Flavor))
+                    yield return Say($"{GetName(activeIndex)} regenerates {Mathf.RoundToInt(healAmt)} HP.", BattleLineTag.Flavor);
             }
         }
 
@@ -1341,7 +1421,7 @@ private IEnumerator MaybeSayKO_Wild(string victimName, float preHP, float postHP
             yield break;
 
         if (choice != EnemyAction.Defend)
-            yield return Wait(0.15f);
+            yield return CoWaitScaled(0.15f);
 
         if (choice != EnemyAction.Defend)
             ResetEnemyDefendStreak();
@@ -1360,12 +1440,12 @@ private IEnumerator MaybeSayKO_Wild(string victimName, float preHP, float postHP
 
             if (success)
             {
-                yield return Say($"{name} is defending.");
-                yield return Say($"{name} will reduce the next hit and convert it into a shield for the following round.");
+                yield return Say($"{name} is defending.", BattleLineTag.Result);
+                yield return Say($"{name} will reduce the next hit and convert it into a shield for the following round.", BattleLineTag.Result);
             }
             else
             {
-                yield return Say($"{name} tried to defend, but it failed!");
+                yield return Say($"{name} tried to defend, but it failed!", BattleLineTag.Result);
             }
 
             yield break;
@@ -1376,8 +1456,10 @@ private IEnumerator MaybeSayKO_Wild(string victimName, float preHP, float postHP
             wildChargedNextAttack = true;
 
             string name = wildDef ? wildDef.displayName : "Foe";
-            yield return Say($"{name} is charging up.");
-            yield return Say($"Their next attack will deal +{Mathf.RoundToInt(chargeBonusPct * 100f)}% damage.");
+            if (!ShouldSkipNarration(BattleLineTag.Flavor))
+                yield return Say($"{name} is charging up.", BattleLineTag.Flavor);
+            if (!ShouldSkipNarration(BattleLineTag.Flavor))
+                yield return Say($"Their next attack will deal +{Mathf.RoundToInt(chargeBonusPct * 100f)}% damage.", BattleLineTag.Flavor);
 
             if (feedback) feedback.PlayActionQueued(
                 BattleFeedbackManager.BattleFeedbackSide.Wild,
@@ -1395,13 +1477,13 @@ private IEnumerator MaybeSayKO_Wild(string victimName, float preHP, float postHP
 
             if (fled)
             {
-                yield return Say($"{name} fled! (Run chance {Mathf.RoundToInt(chance * 100f)}%)");
+                yield return Say($"{name} fled! (Run chance {Mathf.RoundToInt(chance * 100f)}%)", BattleLineTag.Result);
                 EndBattle(false, escaped: true);
                 yield break;
             }
             else
             {
-                yield return Say($"{name} tried to flee, but couldn't! (Run chance {Mathf.RoundToInt(chance * 100f)}%)");
+                yield return Say($"{name} tried to flee, but couldn't! (Run chance {Mathf.RoundToInt(chance * 100f)}%)", BattleLineTag.Result);
                 yield break;
             }
         }
@@ -1412,13 +1494,14 @@ private IEnumerator MaybeSayKO_Wild(string victimName, float preHP, float postHP
         string attackerName = wildDef ? wildDef.displayName : "Foe";
         string move = GetBasicMoveName(wildDef);
 
-        yield return Say($"{attackerName} used {move}!");
+        if (!ShouldSkipNarration(BattleLineTag.Flavor))
+            yield return Say($"{attackerName} used {move}!", BattleLineTag.Flavor);
         if (feedback) feedback.PlayAttackWindup(BattleFeedbackManager.BattleFeedbackSide.Wild);
 
         if (feedback)
             feedback.SpawnBasicAttackVfx(isPlayerSide: false, playerDef: teamDefs[activeIndex], wildDef: wildDef);
 
-        yield return Wait(0.10f);
+        yield return CoWaitScaled(0.10f);
 
         int enemyAtk = Mathf.Max(1, Mathf.RoundToInt(wildAttackPerTurn));
         int defFlatBooster = BattleTempBuffs.I ? BattleTempBuffs.I.GetPlayerDefenseBonus() : 0;
@@ -1462,7 +1545,8 @@ private IEnumerator MaybeSayKO_Wild(string victimName, float preHP, float postHP
             dr.damage = Mathf.Max(1, Mathf.RoundToInt(dr.damage * (1f + chargeBonusPct)));
             wildChargedNextAttack = false;
 
-            yield return Say($"{attackerName} unleashes a charged attack (+{Mathf.RoundToInt(chargeBonusPct * 100f)}% dmg)!");
+            if (!ShouldSkipNarration(BattleLineTag.Flavor))
+                yield return Say($"{attackerName} unleashes a charged attack (+{Mathf.RoundToInt(chargeBonusPct * 100f)}% dmg)!", BattleLineTag.Flavor);
         }
 
         float incomingScalar = 1f;
@@ -1514,7 +1598,8 @@ private IEnumerator MaybeSayKO_Wild(string victimName, float preHP, float postHP
             dmg_final = Mathf.Max(0, dmg_final - Mathf.RoundToInt(shieldAbsorbF));
 
             if (shieldAbsorbF > 0f)
-                yield return Say($"{GetName(activeIndex)}'s shield absorbed {Mathf.RoundToInt(shieldAbsorbF)}!");
+                if (!ShouldSkipNarration(BattleLineTag.Shield | BattleLineTag.Flavor))
+                    yield return Say($"{GetName(activeIndex)}'s shield absorbed {Mathf.RoundToInt(shieldAbsorbF)}!", BattleLineTag.Shield | BattleLineTag.Flavor);
         }
 
         string victimName = GetName(activeIndex);
@@ -1524,7 +1609,7 @@ private IEnumerator MaybeSayKO_Wild(string victimName, float preHP, float postHP
 
         float maxHP = GetFinalMaxHPForIndex(activeIndex);
         float ratio = maxHP > 0.01f ? (float)dmg_final / maxHP : 0f;
-        if (feedback) feedback.PlayHitReaction(BattleFeedbackManager.BattleFeedbackSide.Player, dr.crit && !df.cannotBeCrit, ratio);
+        if (feedback) feedback.PlayHitReaction(BattleFeedbackManager.BattleFeedbackSide.Player, dr.crit && !df.cannotBeCrit, ratio, wasGuarded: (preventedByGuardRaw > 0f) || (shieldAbsorbF > 0f));
 
         if (preventedByGuardRaw > 0f &&
             pendingGuardShield != null &&
@@ -1534,22 +1619,32 @@ private IEnumerator MaybeSayKO_Wild(string victimName, float preHP, float postHP
         {
             float shieldGain = preventedByGuardRaw * guardConvertPct;
             pendingGuardShield[activeIndex] += shieldGain;
-            yield return Say($"{GetName(activeIndex)} stores {Mathf.RoundToInt(shieldGain)} damage as a guard shield for the next round.");
+            if (!ShouldSkipNarration(BattleLineTag.Shield | BattleLineTag.Flavor))
+                yield return Say($"{GetName(activeIndex)} stores {Mathf.RoundToInt(shieldGain)} damage as a guard shield for the next round.", BattleLineTag.Shield | BattleLineTag.Flavor);
         }
 
         TitlesAdapter.OnHitTaken(teamIds[activeIndex], dmg_final, dr.crit && !df.cannotBeCrit);
 
-        yield return Say($"{attackerName} hits {GetName(activeIndex)} for {dmg_final}!");
+        yield return Say($"{attackerName} hits {GetName(activeIndex)} for {dmg_final}!", BattleLineTag.Result);
 
         if (showEffectivenessText)
         {
-            if (dr.effectiveness > 1.25f) yield return Say("It's super effective!");
-            else if (dr.effectiveness < 0.85f) yield return Say("It's not very effective...");
+            if (dr.effectiveness > 1.25f)
+            {
+                if (!ShouldSkipNarration(BattleLineTag.SuperEffective | BattleLineTag.Flavor))
+                    yield return Say("It's super effective!", BattleLineTag.SuperEffective | BattleLineTag.Flavor);
+            }
+            else if (dr.effectiveness < 0.85f)
+            {
+                if (!ShouldSkipNarration(BattleLineTag.NotEffective | BattleLineTag.Flavor))
+                    yield return Say("It's not very effective...", BattleLineTag.NotEffective | BattleLineTag.Flavor);
+            }
         }
 
         if (dr.crit && !df.cannotBeCrit)
         {
-            yield return Say("Critical hit!");
+            if (!ShouldSkipNarration(BattleLineTag.Crit | BattleLineTag.Flavor))
+                yield return Say("Critical hit!", BattleLineTag.Crit | BattleLineTag.Flavor);
             _totalCritsThisBattle++;
         }
 
@@ -1570,7 +1665,7 @@ private IEnumerator MaybeSayKO_Wild(string victimName, float preHP, float postHP
                 ctx.rescueUsed = true;
                 float healAmt = curMax * ctx.rescueHealPct;
                 TryAddHPToActive(healAmt);
-                yield return Say($"{GetName(activeIndex)} triage heals {Mathf.RoundToInt(healAmt)} HP!");
+                yield return Say($"{GetName(activeIndex)} triage heals {Mathf.RoundToInt(healAmt)} HP!", BattleLineTag.Result);
                 AudioManager.I?.PlaySfx(SfxType.Heal);
             }
         }
@@ -1582,7 +1677,7 @@ private IEnumerator MaybeSayKO_Wild(string victimName, float preHP, float postHP
             {
                 ctx.surgeApplied = true;
                 ctx.attackBonusPct += ctx.surgeAtkBonusPct;
-                yield return Say($"{GetName(activeIndex)} becomes enraged (+{Mathf.RoundToInt(ctx.surgeAtkBonusPct * 100f)}% ATK)!");
+                yield return Say($"{GetName(activeIndex)} becomes enraged (+{Mathf.RoundToInt(ctx.surgeAtkBonusPct * 100f)}% ATK)!", BattleLineTag.Result);
                 AudioManager.I?.PlaySfx(SfxType.Clutch);
             }
         }
@@ -1927,10 +2022,10 @@ private IEnumerator MaybeSayKO_Wild(string victimName, float preHP, float postHP
 
     private void RefreshBenchUI()
     {
-        List<int> others = new();
-        for (int i = 0; i < teamCount; i++) if (i != activeIndex) others.Add(i);
+        FillOtherIndices(_scratchOthers);
+        List<int> others = _scratchOthers;
 
-        if (benchImg1)
+if (benchImg1)
         {
             if (others.Count > 0)
             {
@@ -1988,9 +2083,8 @@ private void ResolveQueuedSwap()
 {
     if (pendingSwapBenchSlot < 0) return;
 
-    List<int> others = new();
-    for (int i = 0; i < teamCount; i++)
-        if (i != activeIndex) others.Add(i);
+    FillOtherIndices(_scratchOthers);
+    List<int> others = _scratchOthers;
 
     int benchSlot = pendingSwapBenchSlot;
     pendingSwapBenchSlot = -1;
@@ -2288,6 +2382,34 @@ private bool AutoSwapToAlive()
     }
 
 
+    // ─────────────────────────────────────────────────────────────
+    // Allocation-free waits
+    //
+    // WaitForSecondsRealtime allocates per call. In long battles (and especially auto-battles),
+    // those tiny allocations can accumulate into GC spikes.
+    //
+    // Use these helpers in hot coroutines (TurnLoop / PlayerTurn / EnemyTurn / telegraphs).
+    // They yield `null` until the target time is reached, so no GC.
+    // ─────────────────────────────────────────────────────────────
+    private IEnumerator CoWaitScaled(float t)
+    {
+        float scaled = Mathf.Max(0.01f, t / Mathf.Max(0.01f, battleSpeed));
+        float end = Time.unscaledTime + scaled;
+        while (Time.unscaledTime < end)
+            yield return null;
+    }
+
+    private IEnumerator CoWaitUnscaled(float seconds)
+    {
+        float s = Mathf.Max(0f, seconds);
+        if (s <= 0f) yield break;
+
+        float end = Time.unscaledTime + s;
+        while (Time.unscaledTime < end)
+            yield return null;
+    }
+
+    // Keep the old API for compatibility (non-hot paths), but prefer CoWaitScaled in loops.
     private WaitForSecondsRealtime Wait(float t)
     {
         float scaled = Mathf.Max(0.01f, t / Mathf.Max(0.01f, battleSpeed));
@@ -2609,7 +2731,7 @@ private bool AutoSwapToAlive()
 
         // Even without text, give the player a moment to register the icon.
         if (wildIntentTelegraphPause > 0f)
-            yield return new WaitForSecondsRealtime(wildIntentTelegraphPause);
+            yield return CoWaitUnscaled(wildIntentTelegraphPause);
     }
 
     private EnemyAction ChooseEnemyAction()
@@ -2785,6 +2907,27 @@ private bool AutoSwapToAlive()
 
         onEnd?.Invoke(result);
         GameEvents.BattleFinished?.Invoke(result);
+    }
+
+
+    /// <summary>
+    /// Returns true if a line with the given tags would be suppressed by current settings (condensed/auto-compress).
+    /// Use this to avoid constructing strings that would be immediately skipped (GC savings in auto battles).
+    /// </summary>
+    private bool ShouldSkipNarration(BattleLineTag tags)
+    {
+        bool condensed = SettingsManager.I != null && SettingsManager.I.GetCondensedBattleText();
+        bool autoCompress = SettingsManager.I != null && SettingsManager.I.GetCompressAutoBattleText();
+
+        bool isAuto = (EncounterManager.I != null && EncounterManager.I.IsAutoMode) || !manualTurns;
+
+        if (condensed && (tags & BattleLineTag.Result) == 0)
+            return true;
+
+        if (isAuto && autoCompress && (tags & BattleLineTag.Flavor) != 0)
+            return true;
+
+        return false;
     }
 
     private IEnumerator Say(string line, BattleLineTag tags = BattleLineTag.None)

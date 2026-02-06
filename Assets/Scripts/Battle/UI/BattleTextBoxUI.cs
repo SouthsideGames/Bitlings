@@ -21,6 +21,17 @@ public class BattleTextBoxUI : MonoBehaviour
     [SerializeField] private float typeSecondsPerChar = 0.02f;
     [SerializeField] private float lineHoldSeconds = 0.25f;
 
+    // Allocation-free unscaled wait (avoid WaitForSecondsRealtime churn during long battles).
+    private IEnumerator CoWaitUnscaled(float seconds)
+    {
+        float s = Mathf.Max(0f, seconds);
+        if (s <= 0f) yield break;
+
+        float end = Time.unscaledTime + s;
+        while (Time.unscaledTime < end)
+            yield return null;
+    }
+
     public IEnumerator ShowLine(string line, float battleSpeed)
         => ShowLine(new BattleLine(line, BattleLineTag.None), battleSpeed);
 
@@ -54,9 +65,10 @@ public class BattleTextBoxUI : MonoBehaviour
             if (effectiveIcon) effectiveIcon.enabled = false;
         }
 
-        // Simple typewriter (use your existing logic if different)
-        lineText.text = "";
+        // Typewriter with TMP maxVisibleCharacters to avoid per-character string allocations.
         string full = line.text ?? "";
+        lineText.text = full;
+        lineText.maxVisibleCharacters = 0;
 
         bool isAuto = (EncounterManager.I != null && EncounterManager.I.IsAutoMode);
         bool compressAuto = isAuto && (SettingsManager.I == null || SettingsManager.I.GetCompressAutoBattleText());
@@ -64,34 +76,46 @@ public class BattleTextBoxUI : MonoBehaviour
         float cps = Mathf.Max(0.001f, typeSecondsPerChar);
         float scaled = cps / Mathf.Max(0.25f, battleSpeed);
 
-        // Auto-battle should never feel "stuck" on long lines.
-        // If the player enabled compressed auto-battle text, we render instantly and only hold briefly.
         if (compressAuto)
         {
             lineText.text = full;
+            lineText.maxVisibleCharacters = int.MaxValue;
             float autoHold = Mathf.Max(0.05f, 0.2f / Mathf.Max(0.25f, battleSpeed));
-            yield return new WaitForSecondsRealtime(autoHold);
+            yield return CoWaitUnscaled(autoHold);
             yield break;
         }
 
-        // Otherwise, still speed up the typewriter while in auto-mode.
         if (isAuto) scaled *= 0.25f;
 
-        // Hard-cap total type time so very long lines don't drag.
         if (full.Length * scaled > 0.75f)
         {
             lineText.text = full;
-            yield return new WaitForSecondsRealtime(0.25f / Mathf.Max(0.25f, battleSpeed));
+            lineText.maxVisibleCharacters = int.MaxValue;
+            yield return CoWaitUnscaled(0.25f / Mathf.Max(0.25f, battleSpeed));
             yield break;
         }
 
-        for (int i = 0; i < full.Length; i++)
+        int len = full.Length;
+        if (len > 0)
         {
-            lineText.text += full[i];
-            yield return new WaitForSecondsRealtime(scaled);
+            float perChar = Mathf.Max(0.0001f, scaled);
+            float next = Time.unscaledTime + perChar;
+
+            for (int visible = 1; visible <= len; visible++)
+            {
+                while (Time.unscaledTime < next)
+                    yield return null;
+
+                lineText.maxVisibleCharacters = visible;
+                next += perChar;
+            }
+        }
+        else
+        {
+            lineText.maxVisibleCharacters = int.MaxValue;
         }
 
         float hold = Mathf.Max(0f, lineHoldSeconds / Mathf.Max(0.25f, battleSpeed));
-        if (hold > 0f) yield return new WaitForSecondsRealtime(hold);
+        if (hold > 0f) yield return CoWaitUnscaled(hold);
     }
 }

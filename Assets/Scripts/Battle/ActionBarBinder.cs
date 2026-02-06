@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.UI;
+using TMPro;
 
 [DisallowMultipleComponent]
 public sealed class ActionBarBinder : MonoBehaviour
@@ -11,6 +12,22 @@ public sealed class ActionBarBinder : MonoBehaviour
     [SerializeField] private Button defendBtn;
     [SerializeField] private Button focusBtn;
     [SerializeField] private Button runBtn;
+
+
+    [Header("Queued UI (Optional)")]
+    [Tooltip("Optional label that will show the currently queued action (e.g., 'Queued: Attack').")]
+    [SerializeField] private TMP_Text queuedText;
+
+    [Tooltip("If set, selected/queued action button gets a subtle highlight tint.")]
+    [SerializeField] private Color queuedHighlightTint = new Color(1f, 1f, 1f, 1f);
+
+    [SerializeField] private bool disableButtonsOnceQueued = true;
+
+    private ColorBlock _attackBaseColors;
+    private ColorBlock _defendBaseColors;
+    private ColorBlock _focusBaseColors;
+    private ColorBlock _runBaseColors;
+    private bool _cachedBaseColors;
 
     [Header("UX")]
     [Tooltip("If true, buttons auto-disable when it isn't the player's turn.")]
@@ -40,12 +57,14 @@ public sealed class ActionBarBinder : MonoBehaviour
 
     void Awake()
     {
+        CacheBaseColors();
         WireButtons();
     }
 
     void OnEnable()
     {
         EnsureRefs();
+        CacheBaseColors();
 
         GameEvents.OnBattleStateChanged += Refresh;
         GameEvents.OnEncounterAutoModeChanged += Refresh;
@@ -75,6 +94,54 @@ public sealed class ActionBarBinder : MonoBehaviour
             feedback = GetComponentInParent<BattleFeedbackManager>();
             if (!feedback) feedback = FindFirstObjectByType<BattleFeedbackManager>();
         }
+    }
+
+
+    private void CacheBaseColors()
+    {
+        if (_cachedBaseColors) return;
+        _cachedBaseColors = true;
+
+        if (attackBtn) _attackBaseColors = attackBtn.colors;
+        if (defendBtn) _defendBaseColors = defendBtn.colors;
+        if (focusBtn)  _focusBaseColors  = focusBtn.colors;
+        if (runBtn)    _runBaseColors    = runBtn.colors;
+    }
+
+    private void ClearQueuedHighlights()
+    {
+        if (attackBtn) attackBtn.colors = _attackBaseColors;
+        if (defendBtn) defendBtn.colors = _defendBaseColors;
+        if (focusBtn)  focusBtn.colors  = _focusBaseColors;
+        if (runBtn)    runBtn.colors    = _runBaseColors;
+    }
+
+    private void ApplyQueuedHighlight(int actionCode)
+    {
+        // 0=None, 1=Attack, 2=Defend, 3=Focus, 4=Swap, 5=Run
+        ClearQueuedHighlights();
+
+        if (actionCode == 0) return;
+
+        Button b = null;
+        ColorBlock baseCb = default;
+
+        switch (actionCode)
+        {
+            case 1: b = attackBtn; baseCb = _attackBaseColors; break;
+            case 2: b = defendBtn; baseCb = _defendBaseColors; break;
+            case 3: b = focusBtn;  baseCb = _focusBaseColors;  break;
+            case 5: b = runBtn;    baseCb = _runBaseColors;    break;
+            default: return; // Swap highlight is handled elsewhere (bench UI)
+        }
+
+        if (!b) return;
+
+        // Subtle highlight: brighten normal/highlighted states only.
+        var cb = baseCb;
+        cb.normalColor = queuedHighlightTint;
+        cb.highlightedColor = queuedHighlightTint;
+        b.colors = cb;
     }
 
     private void WireButtons()
@@ -162,6 +229,23 @@ public sealed class ActionBarBinder : MonoBehaviour
 
         bool enable = ComputeEnable();
 
+        // Queued action UI (instant feedback)
+        int queuedCode = (battle != null) ? battle.QueuedPlayerActionCode : 0;
+        bool hasQueued = (battle != null) && battle.HasQueuedPlayerAction;
+
+        if (queuedText)
+        {
+            queuedText.gameObject.SetActive(hasQueued);
+            if (hasQueued)
+                queuedText.text = queuedCode == 0 ? "Queued" : $"Queued: {ActionCodeToLabel(queuedCode)}";
+        }
+
+        ApplyQueuedHighlight(queuedCode);
+
+        // Optional: disable inputs once queued to prevent 'dead clicks'
+        if (disableButtonsOnceQueued && hasQueued)
+            enable = false;
+
         // Apply only if changed
         if (_hasLast && enable == _lastEnable)
             return;
@@ -196,6 +280,20 @@ public sealed class ActionBarBinder : MonoBehaviour
         }
 
         return enable;
+    }
+
+
+    private static string ActionCodeToLabel(int code)
+    {
+        switch (code)
+        {
+            case 1: return "Attack";
+            case 2: return "Defend";
+            case 3: return "Focus";
+            case 4: return "Swap";
+            case 5: return "Run";
+            default: return "Action";
+        }
     }
 
     private void ApplyInteractable(bool enable)
