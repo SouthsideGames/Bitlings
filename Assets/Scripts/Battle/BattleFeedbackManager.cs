@@ -10,6 +10,12 @@ public sealed class BattleFeedbackManager : MonoBehaviour
     public enum BattleFeedbackSide { Player, Wild }
     public enum BattleFeedbackAction { Attack, Defend, Focus, Swap, Run }
 
+    [Header("Battle Events")]
+    [Tooltip("If set, FeedbackManager will subscribe to BattleManager's Battle Events. If left empty it will auto-find one.")]
+    [SerializeField] private BattleManager battleManager;
+
+    private BattleManager _battleManager;
+
     [Header("Icon Targets")]
     [SerializeField] private Graphic playerIcon;
     [SerializeField] private Graphic wildIcon;
@@ -185,7 +191,10 @@ public sealed class BattleFeedbackManager : MonoBehaviour
 
     private void OnEnable()
     {
-        CacheBaseScales();
+        BindBattleManager();
+        Subscribe();
+
+CacheBaseScales();
 
         ResetStatusIcons();
         ResetMicroJuiceOptionals();
@@ -193,7 +202,9 @@ public sealed class BattleFeedbackManager : MonoBehaviour
 
     private void OnDisable()
     {
-        // Ensure nothing stays visible if this panel/scene is disabled mid-animation.
+        Unsubscribe();
+
+// Ensure nothing stays visible if this panel/scene is disabled mid-animation.
         ResetMicroJuiceOptionals();
     }
 
@@ -241,7 +252,120 @@ public sealed class BattleFeedbackManager : MonoBehaviour
         if (runBtn) runBtn.onClick.AddListener(() => PlayButtonPress(BattleFeedbackAction.Run));
     }
 
+    
     // ─────────────────────────────────────────────────────────────
+    // Battle Events wiring
+    // ─────────────────────────────────────────────────────────────
+
+    private void BindBattleManager()
+    {
+        if (_battleManager != null) return;
+
+        _battleManager = battleManager != null
+            ? battleManager
+            : (GetComponentInParent<BattleManager>() ?? FindFirstObjectByType<BattleManager>());
+
+        // Register so BattleManager can avoid legacy direct-calls when we are present.
+        if (_battleManager != null)
+            _battleManager.RegisterBattleEventConsumer();
+    }
+
+    private void Subscribe()
+    {
+        if (_battleManager == null) return;
+        _battleManager.OnBattleEvent -= HandleBattleEvent;
+        _battleManager.OnBattleEvent += HandleBattleEvent;
+    }
+
+    private void Unsubscribe()
+    {
+        if (_battleManager != null)
+        {
+            _battleManager.OnBattleEvent -= HandleBattleEvent;
+            _battleManager.UnregisterBattleEventConsumer();
+            _battleManager = null;
+        }
+    }
+
+    private void HandleBattleEvent(BattleEvent e)
+    {
+        switch (e.kind)
+        {
+            case BattleEvent.Kind.ActionWindup:
+                PlayAttackWindup(ToFeedbackSide(e.source));
+                break;
+
+            case BattleEvent.Kind.StatusApplied:
+                if (e.statusId == "DefendShieldFX")
+                    PlayDefendShieldFX(isPlayer: e.source == BattleSide.Player);
+                break;
+
+            case BattleEvent.Kind.Damage:
+                PlayHitReaction(ToFeedbackSide(e.target), e.crit, e.ratio01, wasGuarded: e.wasGuardedOrShielded);
+                break;
+
+            case BattleEvent.Kind.DefendResult:
+                PlayDefendResult(ToFeedbackSide(e.source), e.success);
+                break;
+
+            case BattleEvent.Kind.KO:
+                PlayKO(ToFeedbackSide(e.target));
+                break;
+
+            case BattleEvent.Kind.Swap:
+                // Reuse your existing "Swap" micro-juice pathway.
+                PlayButtonPress(BattleFeedbackAction.Swap);
+                break;
+
+            case BattleEvent.Kind.GuardChanged:
+                SetGuard(ToFeedbackSide(e.source), e.stateEnabled);
+                break;
+
+            case BattleEvent.Kind.ChargeChanged:
+                SetCharge(ToFeedbackSide(e.source), e.stateEnabled);
+                break;
+
+            case BattleEvent.Kind.IntentTelegraph:
+                // Uses statusId as intent token: "Attack"/"Defend"/"Focus"/"Run"
+                ShowWildIntent(e.statusId);
+                break;
+
+            case BattleEvent.Kind.ActionQueued:
+                // Optional: micro pulse on queue for instant-feel (manual turns)
+                PulseQueuedAction(e.statusId);
+                break;
+        }
+    }
+
+    private BattleFeedbackSide ToFeedbackSide(BattleSide s)
+        => s == BattleSide.Player ? BattleFeedbackSide.Player : BattleFeedbackSide.Wild;
+
+    // Minimal helpers to avoid leaking UI into BattleManager.
+    private void ShowWildIntent(string intentId)
+    {
+        if (string.IsNullOrEmpty(intentId)) return;
+
+        BattleFeedbackAction a = BattleFeedbackAction.Attack;
+        if (intentId == "Defend") a = BattleFeedbackAction.Defend;
+        else if (intentId == "Focus") a = BattleFeedbackAction.Focus;
+        else if (intentId == "Run") a = BattleFeedbackAction.Run;
+
+        // Duration is controlled by BattleManager for auto/manual readability.
+        ShowWildIntent(a, durationSeconds: 0.6f, showText: false, textOverride: null);
+    }
+
+    private void PulseQueuedAction(string actionId)
+    {
+        // If you already bind button presses, this is optional. Keep it tiny + safe.
+        if (string.IsNullOrEmpty(actionId)) return;
+
+        if (actionId == "Attack") PlayButtonPress(BattleFeedbackAction.Attack);
+        else if (actionId == "Defend") PlayButtonPress(BattleFeedbackAction.Defend);
+        else if (actionId == "Focus") PlayButtonPress(BattleFeedbackAction.Focus);
+        else if (actionId == "Run") PlayButtonPress(BattleFeedbackAction.Run);
+    }
+
+// ─────────────────────────────────────────────────────────────
     // Status icon toggles (GameObject active/inactive)
     // ─────────────────────────────────────────────────────────────
 

@@ -24,84 +24,68 @@ public struct BattleResult
 }
 
 
-public class BattleManager : MonoBehaviour
+public partial class BattleManager : MonoBehaviour
 {
     private enum PlayerAction { None, Attack, Defend, Focus, Swap, Run }
     private enum EnemyAction { Attack, Defend, Focus, Run }
+
+
+    // ─────────────────────────────────────────────────────────
+    // Battle Events (logic emits, UI/FX consumes)
+    // This keeps BattleManager focused on rules/state while allowing
+    // visuals/narration polish without risking combat logic regressions.
+    // ─────────────────────────────────────────────────────────
+
+
+// ─────────────────────────────────────────────────────────
+// Battle Events (logic emits, UI/FX consumes)
+// ─────────────────────────────────────────────────────────
+
+private readonly BattleEventBus _eventBus = new BattleEventBus();
+
+public event Action<BattleEvent> OnBattleEvent
+{
+    add { _eventBus.OnEvent += value; }
+    remove { _eventBus.OnEvent -= value; }
+}
+
+public void RegisterBattleEventConsumer() => _eventBus.RegisterConsumer();
+public void UnregisterBattleEventConsumer() => _eventBus.UnregisterConsumer();
+private bool HasBattleEventConsumers => _eventBus.HasConsumers;
+
+private void Emit(BattleEvent e) => _eventBus.Emit(e);
+
 
     // ─────────────────────────────────────────────────────────
     // Deterministic battle RNG (debuggable + daily seeds ready)
     // One RNG per battle, seeded.
     // ─────────────────────────────────────────────────────────
 
-    private static int _battleSerial;
-    private System.Random _battleRng;
-    private int _battleSeed;
-    private string _battleSeedLabel;
 
-    public int BattleSeed => _battleSeed;
-    public string BattleSeedLabel => _battleSeedLabel;
+// ─────────────────────────────────────────────────────────
+// Deterministic battle RNG (debuggable + daily seeds ready)
+// One RNG per battle, seeded.
+// ─────────────────────────────────────────────────────────
 
-    /// <summary>
-    /// Optional: EncounterManager can set the battle seed before calling Begin(...).
-    /// If not set, a deterministic seed will be derived from the active session/daily/custom seed.
-    /// </summary>
-    public void SetBattleSeed(int seed, string seedLabel = null)
-    {
-        _battleSeed = seed == 0 ? 1 : seed;
-        _battleSeedLabel = seedLabel;
-    }
+private static int _battleSerial;
+private readonly BattleRngService _rng = new BattleRngService();
 
-    private float Rng01()
-    {
-        if (_battleRng == null)
-            return UnityEngine.Random.value; // fallback
-        // NextDouble returns [0,1)
-        return (float)_battleRng.NextDouble();
-    }
+public int BattleSeed => _rng.BattleSeed;
+public string BattleSeedLabel => _rng.BattleSeedLabel;
 
-    private void EnsureBattleRngInitialized()
-    {
-        // If EncounterManager provided a seed, respect it.
-        // Otherwise derive a deterministic one based on the active global seed
-        // (session / daily / custom) + a per-battle serial.
-        if (_battleSeed == 0)
-        {
-            SeedService.ApplyGlobalSeedForSession();
+/// <summary>
+/// Optional: EncounterManager can set the battle seed before calling Begin(...).
+/// If not set, a deterministic seed will be derived from the active session/daily/custom seed.
+/// </summary>
+public void SetBattleSeed(int seed, string seedLabel = null) => _rng.SetBattleSeed(seed, seedLabel);
 
-            _battleSerial++;
-            int baseSeed = SeedService.ActiveSeed != 0 ? SeedService.ActiveSeed : 1;
+private float Rng01() => _rng.Rng01();
 
-            string wildId = (wildDef != null && !string.IsNullOrEmpty(wildDef.id)) ? wildDef.id : "UNKNOWN";
-            string raw = $"{baseSeed}|{_battleSerial}|{wildId}|{wildLevel}";
-            _battleSeed = StableHash(raw);
-            if (_battleSeed == 0) _battleSeed = 1;
+private void EnsureBattleRngInitialized()
+{
+    _rng.EnsureInitialized(ref _battleSerial, wildDef, wildLevel);
+}
 
-            // Default label includes the active seed token (useful for bug reports)
-            if (string.IsNullOrEmpty(_battleSeedLabel))
-                _battleSeedLabel = $"{SeedService.GetDisplaySeedPrefix()}{SeedService.GetDisplaySeedToken()}";
-        }
-
-        if (_battleRng == null)
-            _battleRng = new System.Random(_battleSeed);
-
-        // Inject into BattleCalc (crits)
-        BattleCalc.SetRng(Rng01);
-    }
-
-    private static int StableHash(string s)
-    {
-        unchecked
-        {
-            int hash = 17;
-            if (!string.IsNullOrEmpty(s))
-            {
-                for (int i = 0; i < s.Length; i++)
-                    hash = hash * 31 + s[i];
-            }
-            return hash;
-        }
-    }
 
     
     [Header("Wild Intent Telegraph")]
@@ -317,7 +301,7 @@ public class BattleManager : MonoBehaviour
     // GC / Allocation Scratch (mobile smoothness)
     // ─────────────────────────────────────────────────────────────
     private readonly List<int> _scratchOthers = new List<int>(4);
-    private readonly string[] _roundLineCache = new string[256];
+    private readonly BattleLogBuffer _logBuffer = new BattleLogBuffer();
 
     private void FillOtherIndices(List<int> dst)
     {
@@ -325,23 +309,6 @@ public class BattleManager : MonoBehaviour
         dst.Clear();
         for (int i = 0; i < teamCount; i++)
             if (i != activeIndex) dst.Add(i);
-    }
-
-    private string GetRoundLine(int round)
-    {
-        if (round < 0) round = 0;
-        if (round < _roundLineCache.Length)
-        {
-            var s = _roundLineCache[round];
-            if (s == null)
-            {
-                s = "— Round " + round.ToString() + " —";
-                _roundLineCache[round] = s;
-            }
-            return s;
-        }
-
-        return "— Round " + round.ToString() + " —";
     }
 
     private bool playerTookFirstIncomingThisBattle = false;
@@ -358,7 +325,6 @@ public class BattleManager : MonoBehaviour
     private bool wildDefendActiveThisRound = false;
     private float wildShieldHP = 0f;
     private float wildPendingGuardShield = 0f;
-    private System.Random _enemyRng = new System.Random();
 
     private int runAttempts = 0;
     private bool wildChargedNextAttack = false;
@@ -433,6 +399,8 @@ public class BattleManager : MonoBehaviour
         if (pendingAction != PlayerAction.None) return;
 
         pendingAction = a;
+        Emit(BattleEvent.ActionQueued(BattleSide.Player, a.ToString()));
+        if (!HasBattleEventConsumers && feedback) feedback.PlayActionQueued(BattleFeedbackManager.BattleFeedbackSide.Player, ToFeedbackAction(a));
         GameEvents.OnBattleStateChanged?.Invoke();
     }
     // ─────────────────────────────────────────────────────────────
@@ -461,6 +429,20 @@ public class BattleManager : MonoBehaviour
     }
 
 
+
+
+    private BattleFeedbackManager.BattleFeedbackAction ToFeedbackAction(PlayerAction a)
+    {
+        switch (a)
+        {
+            case PlayerAction.Attack: return BattleFeedbackManager.BattleFeedbackAction.Attack;
+            case PlayerAction.Defend: return BattleFeedbackManager.BattleFeedbackAction.Defend;
+            case PlayerAction.Focus:  return BattleFeedbackManager.BattleFeedbackAction.Focus;
+            case PlayerAction.Run:    return BattleFeedbackManager.BattleFeedbackAction.Run;
+            case PlayerAction.Swap:   return BattleFeedbackManager.BattleFeedbackAction.Swap;
+            default: return BattleFeedbackManager.BattleFeedbackAction.Attack;
+        }
+    }
 
 private static void HardResetIconVisual(Image img)
 {
@@ -508,6 +490,8 @@ private IEnumerator MaybeSayKO_Wild(string victimName, float preHP, float postHP
         var roster = SaveManager.Data.team;
         if (roster == null || roster.Count == 0) { ForceEndBattleEarly(false); return; }
 
+        // Reset per-battle deterministic RNG state.
+        _rng.ResetForBegin();
         playerNoDmgTurns = 0;
         playerNoCritTurns = 0;
         runAttempts = 0;
@@ -720,1079 +704,7 @@ private IEnumerator MaybeSayKO_Wild(string victimName, float preHP, float postHP
         ResetStatusIcons();
     }
 
-    private IEnumerator Co_RevealPanelsThenStart(CanvasGroup wildCG, CanvasGroup playerCG, float duration)
-    {
-        if (feedback != null)
-            yield return feedback.Co_RevealPanels(wildCG, playerCG, duration);
-        else
-            yield return CoWaitUnscaled(Mathf.Max(0f, duration));
 
-        if (wildCG) { wildCG.alpha = 1f; wildCG.blocksRaycasts = true; wildCG.interactable = true; }
-        if (playerCG) { playerCG.alpha = 1f; playerCG.blocksRaycasts = true; playerCG.interactable = true; }
-
-        yield return Co_StartBattleNow();
-    }
-
-    private IEnumerator Co_StartBattleNow()
-    {
-        _turnIndex = 0;
-        EnsureBattleRngInitialized();
-        inBattle = true;
-        startTime = Time.unscaledTime;
-
-        var vsName = wildDef ? $"{wildDef.displayName} (Lv {wildLevel})" : "Unknown";
-        BattleLogger.BeginBattle(vsName, _battleSeed, _battleSeedLabel);
-        // Reset key moment snapshot for this battle.
-        BattleLogger.SetKeyMomentsCap(20);
-        BattleLogger.ClearKeyMoments();
-
-        if (wildDef)
-            BattleLogger.Log($"A wild {wildDef.displayName} (Lv {wildLevel}) appeared!", LogScope.Battle);
-        else
-            BattleLogger.Log("A wild foe appeared!", LogScope.Battle);
-
-        string personalityLabel = GetWildPersonalityLabel();
-        if (!string.IsNullOrEmpty(personalityLabel) && wildDef && wildDef.Personality != null)
-        {
-            if (!string.IsNullOrEmpty(wildDef.Personality.description))
-                BattleLogger.Log($"Personality: {personalityLabel} – {wildDef.Personality.description}", LogScope.Battle);
-            else
-                BattleLogger.Log($"Personality: {personalityLabel}.", LogScope.Battle);
-        }
-
-        PostBattleSummaryManager.I?.NotifyBattleStart();
-
-        if (activeIndex >= 0 && teamIds != null && activeIndex < teamIds.Length)
-            TitlesAdapter.OnBattleStart(teamIds[activeIndex], wildDef, wildLevel);
-
-        Debug_LogActiveTitlesSnapshot("BattleStart");
-
-        UpdateHPTextUI();
-
-        ResetStatusIcons();
-        RefreshStatusIconsFromState();
-
-        if (turnCR != null) StopCoroutine(turnCR);
-        turnCR = StartCoroutine(TurnLoop());
-        yield break;
-    }
-
-    private IEnumerator TurnLoop()
-    {
-        int round = 0;
-        yield return CoWaitScaled(0.4f);
-
-        while (inBattle)
-        {
-            bool swappedFromKO = false;
-
-            if (teamHP[activeIndex] <= 0.01f)
-            {
-                if (!AutoSwapToAlive())
-                {
-                    BattleLogger.Log("Your team is unable to battle!", LogScope.Battle);
-                    EndBattle(false);
-                    break;
-                }
-                swappedFromKO = true;
-            }
-
-            // Apply any stored guard shields (from last round)
-            ApplyPendingGuardShieldForActive();
-            ApplyPendingGuardShieldForWild();
-
-            // New round: clear defend stances (they are "this round only")
-            defendActiveThisRound = false;
-            wildDefendActiveThisRound = false;
-
-            // Sync status icons after round reset + shield application
-            RefreshStatusIconsFromState();
-
-            if (!(EncounterManager.I != null && EncounterManager.I.IsAutoMode))
-                BattleLogger.Log(GetRoundLine(round), LogScope.Battle);
-            yield return CoWaitScaled(beginRoundDelay);
-
-            _turnIndex++;
-            TitlesAdapter.OnTurnAdvanced(_turnIndex);
-            GameEvents.RaiseBattleStatsChanged();
-
-            if (debugTitles && debugTitlesEveryTurn)
-                Debug_LogActiveTitlesSnapshot("TurnAdvanced");
-
-            if (swappedFromKO)
-            {
-                ClampAndPushActiveHP();
-                ApplyActiveToUI();
-                RefreshBenchUI();
-
-                // Swap can change which slot has charge queued
-                RefreshStatusIconsFromState();
-            }
-
-            if (IsWildKO() || IsTeamKO())
-            {
-                if (CheckEnd()) break;
-                round++;
-                continue;
-            }
-
-            int pSpeedBase = GetProgressionTotalSPDForIndex(activeIndex);
-
-            var jSpeed = (jobCtx != null && activeIndex >= 0 && activeIndex < jobCtx.Length) ? jobCtx[activeIndex] : null;
-            if (jSpeed != null && jSpeed.speedBuffTurns > 0 && jSpeed.speedBonusPctFirstTurns != 0f)
-                pSpeedBase = Mathf.Max(1, Mathf.RoundToInt(pSpeedBase * (1f + jSpeed.speedBonusPctFirstTurns)));
-
-            var titleCtx = BuildTitleContextForActive();
-            float pSpeedAfterTitlesF = TitlesAdapter.GetStatValue(
-                teamIds[activeIndex],
-                teamDefs[activeIndex],
-                teamLevels[activeIndex],
-                "SPD",
-                titleCtx,
-                pSpeedBase
-            );
-            int pSpeedAfterTitles = Mathf.Max(1, Mathf.RoundToInt(pSpeedAfterTitlesF));
-
-            var cmods = GetConditionalModsForActive();
-            float pSpeedWithConditionalsF =
-                (pSpeedAfterTitles + Mathf.Max(0, cmods.spdFlat)) *
-                (1f + Mathf.Max(0f, cmods.spdPct));
-            int pSpeedWithConditionals = Mathf.Max(1, Mathf.RoundToInt(pSpeedWithConditionalsF));
-
-            int tempSPDFlat = BattleTempBuffs.I ? BattleTempBuffs.I.GetPlayerSpeedFlatBonus() : 0;
-            int pSpeed = Mathf.Max(1, pSpeedWithConditionals + Mathf.Max(0, tempSPDFlat));
-
-            int wSpeed = BattleCalc.CalcSpeed(wildDef, wildLevel);
-
-            bool playerFirst;
-            if (pSpeed > wSpeed) playerFirst = true;
-            else if (pSpeed < wSpeed) playerFirst = false;
-            else playerFirst = Rng01() < 0.5f;
-
-            EnemyAction wildChoice = ChooseEnemyAction();
-
-            yield return Co_TelegraphWildIntent(wildChoice);
-
-            if (playerFirst)
-            {
-                if (wildChoice == EnemyAction.Defend)
-                {
-                    ApplyWildDefendStance();
-                    RefreshStatusIconsFromState();
-                }
-
-                if (!IsWildKO() && !IsTeamKO())
-                {
-                    if (manualTurns) yield return WaitForPlayerChoiceAndResolve();
-                    else yield return PlayerTurn();
-
-                    RefreshStatusIconsFromState();
-
-                    if (CheckEnd()) break;
-                    yield return CoWaitScaled(hitPause);
-
-                    if (!IsTeamKO() && teamHP[activeIndex] <= 0.01f)
-                    {
-                        AutoSwapToAlive();
-                        RefreshStatusIconsFromState();
-                    }
-                }
-
-                if (!IsWildKO() && !IsTeamKO())
-                {
-                    if (wildChoice != EnemyAction.Defend)
-                    {
-                        yield return EnemyTurn(wildChoice);
-
-                        RefreshStatusIconsFromState();
-
-                        if (CheckEnd()) break;
-                        yield return CoWaitScaled(hitPause);
-                    }
-                }
-            }
-            else
-            {
-                if (!IsWildKO() && !IsTeamKO())
-                {
-                    PlayerAction queuedChoice = PlayerAction.Attack;
-
-                    if (manualTurns)
-                    {
-                        SetIsPlayerTurn(true);
-                        pendingAction = PlayerAction.None;
-
-                        float choiceStart = Time.unscaledTime;
-
-                        while (inBattle && pendingAction == PlayerAction.None)
-                        {
-                            if (enableAutoQueueAttack && autoQueueAttackAfterSeconds > 0f && !_narrationLock)
-                            {
-                                if (Time.unscaledTime - choiceStart >= autoQueueAttackAfterSeconds)
-                                {
-                                    pendingAction = PlayerAction.Attack;
-                                    BattleLogger.Log($"[Battle] Failsafe: auto-queued Attack after {autoQueueAttackAfterSeconds:0}s idle.", LogScope.Battle);
-                                    break;
-                                }
-                            }
-
-                            yield return null;
-                        }
-
-                        queuedChoice = pendingAction;
-                        pendingAction = PlayerAction.None;
-                        GameEvents.OnBattleStateChanged?.Invoke();
-                        SetIsPlayerTurn(false);
-
-                        if (queuedChoice == PlayerAction.Defend)
-                        {
-                            string name = GetName(activeIndex);
-                            bool success = RollDefendSuccess();
-
-                            defendActiveThisRound = success;
-
-                            if (!success)
-                            {
-                                // ✅ Critical fix: failure must not leave guard state on.
-                                ClearPlayerGuardStateForActive();
-                            }
-
-                            if (feedback)
-                                feedback.PlayDefendResult(BattleFeedbackManager.BattleFeedbackSide.Player, success);
-
-                            RefreshStatusIconsFromState();
-
-                            if (success)
-                            {
-                                BattleLogger.Log($"{name} is defending.", LogScope.Battle);
-                                BattleLogger.Log($"{name} will reduce the next hit and convert it into a shield for the following round.", LogScope.Battle);
-                            }
-                            else
-                            {
-                                BattleLogger.Log($"{name} tried to defend, but it failed!", LogScope.Battle);
-                            }
-                        }
-                        else
-                        {
-                            ResetDefendStreak();
-                            ClearPlayerGuardStateForActive(); // ✅ consistent: no guard unless defend succeeded
-                            RefreshStatusIconsFromState();
-                        }
-
-                    }
-
-                    // ─────────────────────────────────────────────────────────
-                    // Swap priority (Pokemon-style):
-                    // If the player queued a Swap during the enemy-first branch,
-                    // resolve the swap BEFORE the wild executes its action so the
-                    // incoming hit targets the swapped-in monster.
-                    // (Swap consumes the player's action for the round.)
-                    // ─────────────────────────────────────────────────────────
-                    if (manualTurns && queuedChoice == PlayerAction.Swap)
-                    {
-                        // If the current active was KO'ed somehow before swap resolution,
-                        // the queued action is lost (handled below after enemy turn).
-                        if (teamHP[activeIndex] > 0.01f)
-                        {
-                            ResetDefendStreak();
-                            ResolveQueuedSwap();
-                            RefreshStatusIconsFromState();
-                        }
-
-                        // Swap consumes the turn.
-                        queuedChoice = PlayerAction.None;
-                    }
-
-                    // In the enemy-first branch, if the wild is defending this round,
-                    // apply the defend stance BEFORE its action would execute.
-                    // (We do NOT call EnemyTurn(Defend) to avoid double-rolling.)
-                    if (wildChoice == EnemyAction.Defend)
-                    {
-                        ApplyWildDefendStance();
-                        RefreshStatusIconsFromState();
-                    }
-                    else
-                    {
-                        yield return EnemyTurn(wildChoice);
-                    }
-
-                    // Enemy turn can set defend/charge/consume charge
-                    RefreshStatusIconsFromState();
-
-                    if (CheckEnd()) break;
-                    yield return CoWaitScaled(hitPause);
-
-                    // If the wild KO'ed our active slot, we must auto-swap (if possible) and the queued action is lost.
-                if (!IsTeamKO() && teamHP[activeIndex] <= 0.01f)
-                    {
-                        // ✅ Guard was tied to the KO'd monster; never carry to the swapped-in one.
-                        ClearPlayerGuardStateForActive();
-
-                        AutoSwapToAlive();
-                        queuedChoice = PlayerAction.None;
-                        RefreshStatusIconsFromState();
-                    }
-
-                    if (!IsWildKO() && !IsTeamKO())
-                    {
-                        if (manualTurns)
-                        {
-                            switch (queuedChoice)
-                            {
-                                case PlayerAction.Attack:
-                                    // If the active slot was KO'ed by the wild acting first, the player's queued action is lost.
-                                    if (teamHP[activeIndex] > 0.01f)
-                                        yield return PlayerTurn();
-                                    RefreshStatusIconsFromState();
-                                    break;
-
-                                case PlayerAction.Focus:
-                                    {
-                                        // If the active slot was KO'ed by the wild acting first, the player's queued action is lost.
-                                        if (teamHP[activeIndex] <= 0.01f)
-                                        {
-                                            RefreshStatusIconsFromState();
-                                            break;
-                                        }
-
-                                        ResetDefendStreak();
-
-                                        if (chargedNextAttack != null &&
-                                            activeIndex >= 0 &&
-                                            activeIndex < chargedNextAttack.Length)
-                                        {
-                                            chargedNextAttack[activeIndex] = true;
-                                        }
-
-                                        BattleLogger.Log($"{GetName(activeIndex)} is charging.", LogScope.Battle);
-                                        BattleLogger.Log($"Their next attack will deal +{Mathf.RoundToInt(chargeBonusPct * 100f)}% damage.", LogScope.Battle);
-
-                                        if (feedback) feedback.PlayActionQueued(
-                                            BattleFeedbackManager.BattleFeedbackSide.Player,
-                                            BattleFeedbackManager.BattleFeedbackAction.Focus
-                                        );
-
-                                        RefreshStatusIconsFromState();
-                                        break;
-                                    }
-
-                                case PlayerAction.Swap:
-                                    {
-                                        // If the active slot was KO'ed by the wild acting first, the player's queued action is lost.
-                                        if (teamHP[activeIndex] <= 0.01f)
-                                        {
-                                            RefreshStatusIconsFromState();
-                                            break;
-                                        }
-
-                                        ResetDefendStreak();
-                                        ResolveQueuedSwap();
-                                        RefreshStatusIconsFromState();
-                                        break;
-                                    }
-
-                                case PlayerAction.Run:
-                                    {
-                                        // If the active slot was KO'ed by the wild acting first, the player's queued action is lost.
-                                        if (teamHP[activeIndex] <= 0.01f)
-                                        {
-                                            RefreshStatusIconsFromState();
-                                            break;
-                                        }
-
-                                        ResetDefendStreak();
-
-                                        float chance = ComputeRunChance();
-                                        bool escaped = Rng01() < chance;
-
-                                        string name = GetName(activeIndex);
-
-                                        if (feedback) feedback.PlayActionQueued(
-                                            BattleFeedbackManager.BattleFeedbackSide.Player,
-                                            BattleFeedbackManager.BattleFeedbackAction.Run
-                                        );
-
-                                        // Run does not affect guard/charge, but keep icons correct anyway
-                                        RefreshStatusIconsFromState();
-
-                                        if (escaped)
-                                        {
-                                            BattleLogger.Log($"{name} has fled! (Run chance {Mathf.RoundToInt(chance * 100f)}%)", LogScope.Battle);
-                                            EndBattle(false, true);
-                                            yield break;
-                                        }
-                                        else
-                                        {
-                                            runAttempts++;
-                                            BattleLogger.Log($"Couldn't escape! (Run chance was {Mathf.RoundToInt(chance * 100f)}%)", LogScope.Battle);
-                                        }
-                                        break;
-                                    }
-
-                                case PlayerAction.Defend:
-                                default:
-                                    // Defend is resolved before the wild acts in the enemy-first branch.
-                                    break;
-                            }
-                        }
-                        else
-                        {
-                            yield return PlayerTurn();
-                            RefreshStatusIconsFromState();
-                        }
-
-                        if (CheckEnd()) break;
-                        yield return CoWaitScaled(hitPause);
-                    }
-                }
-            }
-
-            if (!IsWildKO() && !IsTeamKO())
-            {
-                if (jobCtx != null && activeIndex >= 0 && activeIndex < jobCtx.Length && jobCtx[activeIndex] != null)
-                {
-                    if (jobCtx[activeIndex].speedBuffTurns > 0) jobCtx[activeIndex].speedBuffTurns--;
-                    if (jobCtx[activeIndex].critBuffTurns > 0) jobCtx[activeIndex].critBuffTurns--;
-                    if (jobCtx[activeIndex].critResistBuffTurns > 0) jobCtx[activeIndex].critResistBuffTurns--;
-                    if (jobCtx[activeIndex].dmgReduceBuffTurns > 0) jobCtx[activeIndex].dmgReduceBuffTurns--;
-                }
-
-                yield return CoWaitScaled(endRoundDelay);
-            }
-
-            // Booster system: tick durations/cooldowns once per completed round.
-            if (BattleBoosterController.I != null)
-                BattleBoosterController.I.OnTurnEnd();
-
-            defendActiveThisRound = false;
-            wildDefendActiveThisRound = false;
-            RefreshStatusIconsFromState();
-
-            round++;
-        }
-
-        turnCR = null;
-    }
-
-
-    private IEnumerator WaitForPlayerChoiceAndResolve()
-    {
-        SetIsPlayerTurn(true);
-
-        float choiceStart = Time.unscaledTime;
-
-        while (inBattle && pendingAction == PlayerAction.None)
-        {
-            if (enableAutoQueueAttack && autoQueueAttackAfterSeconds > 0f && !_narrationLock)
-            {
-                if (Time.unscaledTime - choiceStart >= autoQueueAttackAfterSeconds)
-                {
-                    pendingAction = PlayerAction.Attack;
-                    BattleLogger.Log($"[Battle] Failsafe: auto-queued Attack after {autoQueueAttackAfterSeconds:0}s idle.", LogScope.Battle);
-                    break;
-                }
-            }
-
-            yield return null;
-        }
-
-        var choice = pendingAction;
-        pendingAction = PlayerAction.None;
-        GameEvents.OnBattleStateChanged?.Invoke();
-        SetIsPlayerTurn(false);
-
-        switch (choice)
-        {
-            case PlayerAction.Attack:
-                ResetDefendStreak();
-                ClearPlayerGuardStateForActive(); // safety: attack implies no guard this round
-                yield return PlayerTurn();
-                break;
-
-            case PlayerAction.Defend:
-            {
-                string name = GetName(activeIndex);
-                bool success = RollDefendSuccess();
-
-                defendActiveThisRound = success;
-
-                if (!success)
-                {
-                    // ✅ Critical fix: failed defend must never leave guard state enabled.
-                    ClearPlayerGuardStateForActive();
-                }
-
-                if (feedback)
-                    feedback.PlayDefendResult(BattleFeedbackManager.BattleFeedbackSide.Player, success);
-
-                // Keep icons correct immediately
-                RefreshStatusIconsFromState();
-
-                if (success)
-                {
-                    BattleLogger.Log($"{name} is defending.", LogScope.Battle);
-                    BattleLogger.Log($"{name} will reduce the next hit and convert it into a shield for the following round.", LogScope.Battle);
-                }
-                else
-                {
-                    BattleLogger.Log($"{name} tried to defend, but it failed!", LogScope.Battle);
-                }
-
-                break;
-            }
-
-            case PlayerAction.Focus:
-            {
-                ResetDefendStreak();
-                ClearPlayerGuardStateForActive(); // safety
-
-                if (chargedNextAttack != null && activeIndex >= 0 && activeIndex < chargedNextAttack.Length)
-                    chargedNextAttack[activeIndex] = true;
-
-                BattleLogger.Log($"{GetName(activeIndex)} is charging.", LogScope.Battle);
-                BattleLogger.Log($"Their next attack will deal +{Mathf.RoundToInt(chargeBonusPct * 100f)}% damage.", LogScope.Battle);
-
-                if (feedback) feedback.PlayActionQueued(
-                    BattleFeedbackManager.BattleFeedbackSide.Player,
-                    BattleFeedbackManager.BattleFeedbackAction.Focus
-                );
-
-                RefreshStatusIconsFromState();
-                break;
-            }
-
-            case PlayerAction.Swap:
-            {
-                ResetDefendStreak();
-                ClearPlayerGuardStateForActive(); // ✅ guard must never carry to a swapped-in monster
-                ResolveQueuedSwap();
-                RefreshStatusIconsFromState();
-                break;
-            }
-
-            case PlayerAction.Run:
-            {
-                ResetDefendStreak();
-                ClearPlayerGuardStateForActive(); // safety
-
-                float chance = ComputeRunChance();
-                bool escaped = Rng01() < chance;
-
-                string name = GetName(activeIndex);
-
-                if (feedback) feedback.PlayActionQueued(
-                    BattleFeedbackManager.BattleFeedbackSide.Player,
-                    BattleFeedbackManager.BattleFeedbackAction.Run
-                );
-
-                RefreshStatusIconsFromState();
-
-                if (escaped)
-                {
-                    BattleLogger.Log($"{name} has fled! (Run chance {Mathf.RoundToInt(chance * 100f)}%)", LogScope.Battle);
-                    EndBattle(false, true);
-                    yield break;
-                }
-                else
-                {
-                    runAttempts++;
-                    BattleLogger.Log($"Couldn't escape! (Run chance was {Mathf.RoundToInt(chance * 100f)}%)", LogScope.Battle);
-                }
-                break;
-            }
-
-            default:
-                break;
-        }
-    }
-
-
-    private IEnumerator PlayerTurn()
-    {
-        if (isResolvingPlayerTurn)
-            yield break;
-
-        isResolvingPlayerTurn = true;
-
-        if (teamHP[activeIndex] <= 0.01f && !AutoSwapToAlive())
-        {
-            isResolvingPlayerTurn = false;
-            yield break;
-        }
-
-        var playerDef = teamDefs[activeIndex];
-        string attacker = GetName(activeIndex);
-        string move = GetBasicMoveName(playerDef);
-        string foeName = wildDef ? wildDef.displayName : "Foe";
-
-        if (!ShouldSkipNarration(BattleLineTag.Flavor))
-            yield return Say($"{attacker} used {move}!", BattleLineTag.Flavor);
-        if (feedback) feedback.PlayAttackWindup(BattleFeedbackManager.BattleFeedbackSide.Player);
-
-        if (feedback)
-            feedback.SpawnBasicAttackVfx(isPlayerSide: true, playerDef: playerDef, wildDef: wildDef);
-
-        yield return CoWaitScaled(0.10f);
-
-        // Baseline TOTAL ATK (SpeciesBase + LevelGrowth + Training + flatAtkBonus w/ legacy guard)
-        GetProgressionTotalsForIndex(activeIndex, out _, out int atkBaseTotal, out _, out _, out _);
-
-        // Conditionals apply on top of baseline totals
-        var cond = GetConditionalModsForActive();
-        int atkWithCondFlat = Mathf.Max(1, atkBaseTotal + Mathf.Max(0, cond.atkFlat));
-        int atkForResolve = Mathf.Max(1, Mathf.RoundToInt(atkWithCondFlat * (1f + Mathf.Max(0f, cond.atkPct))));
-
-        // Temp boosters are additive flat on top (do NOT recalc BattleCalc to create a multiplier)
-        int tempFlatFromBoosters = BattleTempBuffs.I ? BattleTempBuffs.I.GetPlayerAtkBonus() : 0;
-        if (tempFlatFromBoosters > 0)
-            atkForResolve = Mathf.Max(1, atkForResolve + Mathf.Max(0, tempFlatFromBoosters));
-
-
-        var jctx = (jobCtx != null) ? jobCtx[activeIndex] : null;
-        float playerCrit = critChancePlayer;
-        if (jctx != null)
-        {
-            playerCrit += jctx.critChanceFlat;
-            if (jctx.critBuffTurns > 0)
-                playerCrit += jctx.critChanceBonusFirstTurns;
-        }
-        playerCrit = Mathf.Clamp01(playerCrit);
-
-        var dr = BattleCalc.ResolveHit(
-            teamIds[activeIndex], teamDefs[activeIndex], teamLevels[activeIndex],
-            null, wildDef, wildLevel,
-            atkForResolve,
-            playerCrit,
-            critMultiplier,
-            0
-        );
-
-        TitlesAdapter.OnAttackLanded(teamIds[activeIndex], dr.crit);
-        if (dr.crit) _totalCritsThisBattle++;
-
-        if (jctx != null && jctx.attackBonusPct > 0f)
-            dr.damage = Mathf.Max(1, Mathf.RoundToInt(dr.damage * (1f + jctx.attackBonusPct)));
-
-        if (jctx != null && jctx.usedFirstOutgoing == false && jctx.firstOutgoingBonus > 0f)
-        {
-            jctx.usedFirstOutgoing = true;
-            dr.damage = Mathf.Max(1, Mathf.RoundToInt(dr.damage * (1f + jctx.firstOutgoingBonus)));
-        }
-
-        if (jctx != null && jctx.surgeApplied && jctx.surgeAtkBonusPct > 0f)
-            dr.damage = Mathf.Max(1, Mathf.RoundToInt(dr.damage * (1f + jctx.surgeAtkBonusPct)));
-
-        if (slotDamageBuffPct != null && slotDamageBuffTurns != null &&
-            activeIndex >= 0 && activeIndex < slotDamageBuffPct.Length &&
-            slotDamageBuffTurns[activeIndex] > 0 &&
-            slotDamageBuffPct[activeIndex] > 0f)
-        {
-            dr.damage = Mathf.Max(1, Mathf.RoundToInt(dr.damage * (1f + slotDamageBuffPct[activeIndex])));
-            if (!ShouldSkipNarration(BattleLineTag.Flavor))
-                yield return Say($"+{Mathf.RoundToInt(slotDamageBuffPct[activeIndex] * 100f)}% damage buff active.", BattleLineTag.Flavor);
-
-            slotDamageBuffTurns[activeIndex]--;
-            if (slotDamageBuffTurns[activeIndex] <= 0)
-                slotDamageBuffPct[activeIndex] = 0f;
-        }
-
-        if (chargedNextAttack != null &&
-            activeIndex >= 0 &&
-            activeIndex < chargedNextAttack.Length &&
-            chargedNextAttack[activeIndex] &&
-            chargeBonusPct > 0f)
-        {
-            dr.damage = Mathf.Max(1, Mathf.RoundToInt(dr.damage * (1f + chargeBonusPct)));
-            chargedNextAttack[activeIndex] = false;
-
-            if (!ShouldSkipNarration(BattleLineTag.Flavor))
-                yield return Say($"{GetName(activeIndex)} unleashes a charged attack (+{Mathf.RoundToInt(chargeBonusPct * 100f)}% damage)!", BattleLineTag.Flavor);
-        }
-
-        float preventedByWildGuard = 0f;
-        int dmgToApply = dr.damage;
-
-        if (wildDefendActiveThisRound && defendReducePct > 0f)
-        {
-            float guardPct = Mathf.Clamp01(defendReducePct);
-            int before = dmgToApply;
-            int after = Mathf.Max(1, Mathf.RoundToInt(dmgToApply * (1f - guardPct)));
-            preventedByWildGuard = Mathf.Max(0, before - after);
-            dmgToApply = after;
-
-            if (preventedByWildGuard > 0f && feedback)
-                feedback.PlayDefendShieldFX(isPlayer: false);
-        }
-
-        float absorbedByWildShield = 0f;
-
-        if (wildShieldHP > 0f && dmgToApply > 0)
-        {
-            float absorb = Mathf.Min(wildShieldHP, dmgToApply);
-            absorbedByWildShield = absorb;
-            wildShieldHP = Mathf.Max(0f, wildShieldHP - absorb);
-            dmgToApply = Mathf.Max(0, dmgToApply - Mathf.RoundToInt(absorb));
-
-            if (absorb > 0f)
-                if (!ShouldSkipNarration(BattleLineTag.Shield | BattleLineTag.Flavor))
-                    yield return Say($"{foeName}'s shield absorbed {Mathf.RoundToInt(absorb)}!", BattleLineTag.Shield | BattleLineTag.Flavor);
-        }
-
-        if (preventedByWildGuard > 0f && guardConvertPct > 0f)
-        {
-            float gain = preventedByWildGuard * guardConvertPct;
-            wildPendingGuardShield += gain;
-            if (!ShouldSkipNarration(BattleLineTag.Shield | BattleLineTag.Flavor))
-                yield return Say($"{foeName} stores {Mathf.RoundToInt(gain)} damage as a guard shield for the next round.", BattleLineTag.Shield | BattleLineTag.Flavor);
-        }
-
-        float preWildHP = wildHP;
-        wildHP = Mathf.Max(0f, wildHP - dmgToApply);
-        _totalDamageDealtThisBattle += Mathf.Max(0, dmgToApply);
-        PushHPBars();
-
-        float wRatio = wildMaxHP > 0.01f ? (float)dmgToApply / wildMaxHP : 0f;
-        if (feedback) feedback.PlayHitReaction(BattleFeedbackManager.BattleFeedbackSide.Wild, dr.crit, wRatio, wasGuarded: (preventedByWildGuard > 0f) || (absorbedByWildShield > 0f));
-
-        if (!playerLandedFirstHitThisBattle && dr.damage > 0)
-            playerLandedFirstHitThisBattle = true;
-
-        yield return Say($"{attacker} hits {foeName} for {dmgToApply}!", BattleLineTag.Result);
-
-        if (dr.crit)
-            BattleLogger.AddKeyMoment($"CRIT: {attacker} → {foeName} ({dmgToApply})");
-
-        if (showEffectivenessText)
-        {
-            if (dr.effectiveness > 1.25f)
-            {
-                if (!ShouldSkipNarration(BattleLineTag.SuperEffective | BattleLineTag.Flavor))
-                    yield return Say("It's super effective!", BattleLineTag.SuperEffective | BattleLineTag.Flavor);
-            }
-            else if (dr.effectiveness < 0.85f)
-            {
-                if (!ShouldSkipNarration(BattleLineTag.NotEffective | BattleLineTag.Flavor))
-                    yield return Say("It's not very effective...", BattleLineTag.NotEffective | BattleLineTag.Flavor);
-            }
-        }
-        if (dr.crit)
-        {
-            if (!ShouldSkipNarration(BattleLineTag.Crit | BattleLineTag.Flavor))
-                yield return Say("Critical hit!", BattleLineTag.Crit | BattleLineTag.Flavor);
-        }
-
-        // Centralized KO messaging (fires only on HP crossing >0 → 0)
-        yield return MaybeSayKO_Wild(foeName, preWildHP, wildHP);
-
-        if (jctx != null && jctx.endTurnHealPct > 0f)
-        {
-            bool canHeal = (jctx.regenTurns == int.MaxValue) || (jctx.regenTurns > 0);
-            if (canHeal)
-            {
-                float healAmt = GetFinalMaxHPForIndex(activeIndex) * jctx.endTurnHealPct;
-                TryAddHPToActive(healAmt);
-                if (jctx.regenTurns != int.MaxValue) jctx.regenTurns--;
-                if (!ShouldSkipNarration(BattleLineTag.Flavor))
-                    yield return Say($"{GetName(activeIndex)} regenerates {Mathf.RoundToInt(healAmt)} HP.", BattleLineTag.Flavor);
-            }
-        }
-
-        FirePlayerEndTurnTicks(dealtDamageThisTurn: dr.damage > 0, critThisTurn: dr.crit);
-
-        isResolvingPlayerTurn = false;
-    }
-
-    private IEnumerator EnemyTurn(EnemyAction choice)
-    {
-        if (teamHP[activeIndex] <= 0.01f && !AutoSwapToAlive())
-            yield break;
-
-        if (choice != EnemyAction.Defend)
-            yield return CoWaitScaled(0.15f);
-
-        if (choice != EnemyAction.Defend)
-            ResetEnemyDefendStreak();
-
-        if (choice == EnemyAction.Defend)
-        {
-            string name = wildDef ? wildDef.displayName : "Foe";
-            bool success = RollEnemyDefendSuccess();
-
-            wildDefendActiveThisRound = success;
-
-            if (feedback)
-            {
-                feedback.PlayDefendResult(BattleFeedbackManager.BattleFeedbackSide.Wild, success);
-            }
-
-            if (success)
-            {
-                yield return Say($"{name} is defending.", BattleLineTag.Result);
-                yield return Say($"{name} will reduce the next hit and convert it into a shield for the following round.", BattleLineTag.Result);
-            }
-            else
-            {
-                yield return Say($"{name} tried to defend, but it failed!", BattleLineTag.Result);
-            }
-
-            yield break;
-        }
-
-        if (choice == EnemyAction.Focus)
-        {
-            wildChargedNextAttack = true;
-
-            string name = wildDef ? wildDef.displayName : "Foe";
-            if (!ShouldSkipNarration(BattleLineTag.Flavor))
-                yield return Say($"{name} is charging up.", BattleLineTag.Flavor);
-            if (!ShouldSkipNarration(BattleLineTag.Flavor))
-                yield return Say($"Their next attack will deal +{Mathf.RoundToInt(chargeBonusPct * 100f)}% damage.", BattleLineTag.Flavor);
-
-            if (feedback) feedback.PlayActionQueued(
-                BattleFeedbackManager.BattleFeedbackSide.Wild,
-                BattleFeedbackManager.BattleFeedbackAction.Swap
-            );
-
-            yield break;
-        }
-
-        if (choice == EnemyAction.Run)
-        {
-            string name = wildDef ? wildDef.displayName : "Foe";
-            float chance = ComputeEnemyRunChance();
-            bool fled = Rng01() < chance;
-
-            if (fled)
-            {
-                yield return Say($"{name} fled! (Run chance {Mathf.RoundToInt(chance * 100f)}%)", BattleLineTag.Result);
-                EndBattle(false, escaped: true);
-                yield break;
-            }
-            else
-            {
-                yield return Say($"{name} tried to flee, but couldn't! (Run chance {Mathf.RoundToInt(chance * 100f)}%)", BattleLineTag.Result);
-                yield break;
-            }
-        }
-
-        if (teamHP[activeIndex] <= 0.01f && !AutoSwapToAlive())
-            yield break;
-
-        string attackerName = wildDef ? wildDef.displayName : "Foe";
-        string move = GetBasicMoveName(wildDef);
-
-        if (!ShouldSkipNarration(BattleLineTag.Flavor))
-            yield return Say($"{attackerName} used {move}!", BattleLineTag.Flavor);
-        if (feedback) feedback.PlayAttackWindup(BattleFeedbackManager.BattleFeedbackSide.Wild);
-
-        if (feedback)
-            feedback.SpawnBasicAttackVfx(isPlayerSide: false, playerDef: teamDefs[activeIndex], wildDef: wildDef);
-
-        yield return CoWaitScaled(0.10f);
-
-        int enemyAtk = Mathf.Max(1, Mathf.RoundToInt(wildAttackPerTurn));
-        int defFlatBooster = BattleTempBuffs.I ? BattleTempBuffs.I.GetPlayerDefenseBonus() : 0;
-
-        var ctx = (jobCtx != null) ? jobCtx[activeIndex] : null;
-        float preHP = teamHP[activeIndex];
-
-
-        var cmods = GetConditionalModsForActive();
-
-        var df = TitlesAdapter.GetDamageFilter(teamIds[activeIndex], teamDefs[activeIndex], teamLevels[activeIndex]);
-
-        float playerCritResist = 0f;
-        if (ctx != null)
-        {
-            playerCritResist += ctx.critResistFlat;
-            if (ctx.critResistBuffTurns > 0)
-                playerCritResist += ctx.critResistBonusFirstTurns;
-        }
-
-        float wildCritChance = df.cannotBeCrit ? 0f : Mathf.Clamp01(critChanceWild - playerCritResist);
-
-        // Baseline TOTAL DEF (SpeciesBase + LevelGrowth + Training)
-        GetProgressionTotalsForIndex(activeIndex, out _, out _, out int defBaseTotal, out _, out _);
-
-        // Flat defense sources stack onto DEF as a STAT (boosters + conditional flat)
-        int defenderEffectiveDefenseStat =
-            Mathf.Max(0, defBaseTotal + Mathf.Max(0, defFlatBooster) + Mathf.Max(0, cmods.defFlat));
-
-        var dr = BattleCalc.ResolveHit(
-            null, wildDef, wildLevel,
-            teamIds[activeIndex], teamDefs[activeIndex], teamLevels[activeIndex],
-            enemyAtk, wildCritChance, critMultiplier,
-            defenderFlatDefenseBonus: 0,
-            defenderEffectiveDefenseStat: defenderEffectiveDefenseStat
-        );
-
-
-        if (wildChargedNextAttack && chargeBonusPct > 0f)
-        {
-            dr.damage = Mathf.Max(1, Mathf.RoundToInt(dr.damage * (1f + chargeBonusPct)));
-            wildChargedNextAttack = false;
-
-            if (!ShouldSkipNarration(BattleLineTag.Flavor))
-                yield return Say($"{attackerName} unleashes a charged attack (+{Mathf.RoundToInt(chargeBonusPct * 100f)}% dmg)!", BattleLineTag.Flavor);
-        }
-
-        float incomingScalar = 1f;
-
-        if (cmods.defPct > 0f)
-            incomingScalar *= 1f - Mathf.Clamp01(cmods.defPct);
-
-        if (ctx != null && !ctx.usedFirstIncoming && ctx.firstIncomingReduce > 0f)
-        {
-            ctx.usedFirstIncoming = true;
-            incomingScalar *= 1f - ctx.firstIncomingReduce;
-        }
-
-        if (ctx != null && ctx.baseDamageReducePct > 0f)
-            incomingScalar *= 1f - ctx.baseDamageReducePct;
-
-        if (ctx != null && ctx.defenseBonusPct > 0f)
-            incomingScalar *= 1f - ctx.defenseBonusPct;
-
-        if (ctx != null && ctx.dmgReduceBuffTurns > 0 && ctx.dmgReduceFirstTurns > 0f)
-            incomingScalar *= 1f - ctx.dmgReduceFirstTurns;
-
-        float scalarBeforeGuard = incomingScalar;
-        float preventedByGuardRaw = 0f;
-
-        if (defendActiveThisRound && defendReducePct > 0f)
-        {
-            float guardPct = Mathf.Clamp01(defendReducePct);
-            incomingScalar *= (1f - guardPct);
-
-            float dmgBeforeGuard = dr.damage * scalarBeforeGuard;
-            float dmgAfterGuard = dr.damage * incomingScalar;
-            preventedByGuardRaw = Mathf.Max(0f, dmgBeforeGuard - dmgAfterGuard);
-
-            if (preventedByGuardRaw > 0f && feedback)
-                feedback.PlayDefendShieldFX(isPlayer: true);
-        }
-
-        int dmg_afterScalar = Mathf.Max(1, Mathf.RoundToInt(dr.damage * incomingScalar));
-
-        float shieldBefore = (shieldHP != null && shieldHP.Length > activeIndex) ? shieldHP[activeIndex] : 0f;
-        float shieldAbsorbF = 0f;
-
-        int dmg_final = dmg_afterScalar;
-        if (shieldBefore > 0f && dmg_final > 0)
-        {
-            shieldAbsorbF = Mathf.Min(shieldBefore, dmg_final);
-            shieldHP[activeIndex] = Mathf.Max(0f, shieldBefore - shieldAbsorbF);
-            dmg_final = Mathf.Max(0, dmg_final - Mathf.RoundToInt(shieldAbsorbF));
-
-            if (shieldAbsorbF > 0f)
-                if (!ShouldSkipNarration(BattleLineTag.Shield | BattleLineTag.Flavor))
-                    yield return Say($"{GetName(activeIndex)}'s shield absorbed {Mathf.RoundToInt(shieldAbsorbF)}!", BattleLineTag.Shield | BattleLineTag.Flavor);
-        }
-
-        string victimName = GetName(activeIndex);
-        float prePlayerHP = teamHP[activeIndex];
-        teamHP[activeIndex] = Mathf.Max(0f, teamHP[activeIndex] - dmg_final);
-        ClampAndPushActiveHP();
-
-        float maxHP = GetFinalMaxHPForIndex(activeIndex);
-        float ratio = maxHP > 0.01f ? (float)dmg_final / maxHP : 0f;
-        if (feedback) feedback.PlayHitReaction(BattleFeedbackManager.BattleFeedbackSide.Player, dr.crit && !df.cannotBeCrit, ratio, wasGuarded: (preventedByGuardRaw > 0f) || (shieldAbsorbF > 0f));
-
-        if (preventedByGuardRaw > 0f &&
-            pendingGuardShield != null &&
-            activeIndex >= 0 &&
-            activeIndex < pendingGuardShield.Length &&
-            guardConvertPct > 0f)
-        {
-            float shieldGain = preventedByGuardRaw * guardConvertPct;
-            pendingGuardShield[activeIndex] += shieldGain;
-            if (!ShouldSkipNarration(BattleLineTag.Shield | BattleLineTag.Flavor))
-                yield return Say($"{GetName(activeIndex)} stores {Mathf.RoundToInt(shieldGain)} damage as a guard shield for the next round.", BattleLineTag.Shield | BattleLineTag.Flavor);
-        }
-
-        TitlesAdapter.OnHitTaken(teamIds[activeIndex], dmg_final, dr.crit && !df.cannotBeCrit);
-
-        yield return Say($"{attackerName} hits {GetName(activeIndex)} for {dmg_final}!", BattleLineTag.Result);
-
-        if (dr.crit && !df.cannotBeCrit)
-            BattleLogger.AddKeyMoment($"CRIT: {attackerName} → {GetName(activeIndex)} ({dmg_final})");
-
-        if (showEffectivenessText)
-        {
-            if (dr.effectiveness > 1.25f)
-            {
-                if (!ShouldSkipNarration(BattleLineTag.SuperEffective | BattleLineTag.Flavor))
-                    yield return Say("It's super effective!", BattleLineTag.SuperEffective | BattleLineTag.Flavor);
-            }
-            else if (dr.effectiveness < 0.85f)
-            {
-                if (!ShouldSkipNarration(BattleLineTag.NotEffective | BattleLineTag.Flavor))
-                    yield return Say("It's not very effective...", BattleLineTag.NotEffective | BattleLineTag.Flavor);
-            }
-        }
-
-        if (dr.crit && !df.cannotBeCrit)
-        {
-            if (!ShouldSkipNarration(BattleLineTag.Crit | BattleLineTag.Flavor))
-                yield return Say("Critical hit!", BattleLineTag.Crit | BattleLineTag.Flavor);
-            _totalCritsThisBattle++;
-        }
-
-        // Centralized KO messaging (fires only on HP crossing >0 → 0)
-        yield return MaybeSayKO_Player(victimName, prePlayerHP, teamHP[activeIndex]);
-
-        _totalDamageTakenThisBattle += dmg_final;
-
-        if (!playerTookFirstIncomingThisBattle)
-            playerTookFirstIncomingThisBattle = true;
-
-        if (ctx != null && !ctx.rescueUsed && ctx.rescueHealPct > 0f && teamHP[activeIndex] > 0f)
-        {
-            float curMax = GetFinalMaxHPForIndex(activeIndex);
-            float thresholdHP = curMax * (ctx.rescueThreshold > 0f ? ctx.rescueThreshold : 0.4f);
-            if (preHP > thresholdHP && teamHP[activeIndex] <= thresholdHP)
-            {
-                ctx.rescueUsed = true;
-                float healAmt = curMax * ctx.rescueHealPct;
-                TryAddHPToActive(healAmt);
-                yield return Say($"{GetName(activeIndex)} triage heals {Mathf.RoundToInt(healAmt)} HP!", BattleLineTag.Result);
-                AudioManager.I?.PlaySfx(SfxType.Heal);
-            }
-        }
-
-        if (ctx != null && !ctx.surgeApplied)
-        {
-            float curMax = GetFinalMaxHPForIndex(activeIndex);
-            if (teamHP[activeIndex] <= curMax * 0.5f && ctx.surgeAtkBonusPct > 0f)
-            {
-                ctx.surgeApplied = true;
-                ctx.attackBonusPct += ctx.surgeAtkBonusPct;
-                yield return Say($"{GetName(activeIndex)} becomes enraged (+{Mathf.RoundToInt(ctx.surgeAtkBonusPct * 100f)}% ATK)!", BattleLineTag.Result);
-                AudioManager.I?.PlaySfx(SfxType.Clutch);
-            }
-        }
-    }
-
-    private bool CheckEnd()
-    {
-        if (IsWildKO())
-        {
-            BattleLogger.Log("Wild monster fainted!", LogScope.Battle);
-            AudioManager.I?.PlaySfx(SfxType.KO);
-            if (feedback) feedback.PlayKO(BattleFeedbackManager.BattleFeedbackSide.Wild);
-            EndBattle(true);
-            return true;
-        }
-        if (IsTeamKO())
-        {
-            BattleLogger.Log("Your team is unable to battle!", LogScope.Battle);
-            AudioManager.I?.PlaySfx(SfxType.KO);
-            if (feedback) feedback.PlayKO(BattleFeedbackManager.BattleFeedbackSide.Player);
-            EndBattle(false);
-            return true;
-        }
-        return false;
-    }
 
     private void EndBattle(bool victory, bool escaped = false)
     {
@@ -1817,8 +729,7 @@ private IEnumerator MaybeSayKO_Wild(string victimName, float preHP, float postHP
 
         // Restore BattleCalc RNG to default (UnityEngine.Random)
         BattleCalc.ResetRng();
-        _battleRng = null;
-
+        _rng.ClearAll();
         float survived = Mathf.Max(0f, Time.unscaledTime - startTime);
 
         int basecredits = 0;
@@ -1979,7 +890,7 @@ private IEnumerator MaybeSayKO_Wild(string victimName, float preHP, float postHP
             gotFirstHit = playerLandedFirstHitThisBattle
         };
 
-        if (!victory && !escaped && EncounterManager.I != null && EncounterManager.I.IsAutoMode)
+        if (!victory && !escaped && AutoResolveActive)
         {
             EncounterManager.I?.NotifyAuto_TeamKO();
         }
@@ -1993,185 +904,7 @@ private IEnumerator MaybeSayKO_Wild(string victimName, float preHP, float postHP
         GameEvents.BattleFinished?.Invoke(result);
     }
 
-    private void ClampAndPushActiveHP()
-    {
-        float curMax = GetFinalMaxHPForIndex(activeIndex);
-        teamHP[activeIndex] = Mathf.Min(teamHP[activeIndex], curMax);
 
-        if (feedback != null)
-        {
-            feedback.SetHPBars(
-                playerCur: teamHP[activeIndex],
-                playerMax: curMax,
-                wildCur: wildHP,
-                wildMax: wildMaxHP
-            );
-        }
-        else
-        {
-            if (playerHPBar)
-            {
-                playerHPBar.maxValue = curMax;
-                playerHPBar.value = Mathf.Clamp(teamHP[activeIndex], 0f, curMax);
-            }
-            if (wildHPBar)
-            {
-                wildHPBar.maxValue = wildMaxHP;
-                wildHPBar.value = Mathf.Clamp(wildHP, 0f, wildMaxHP);
-            }
-        }
-
-        UpdatePlayerInfoUI();
-        UpdateHPTextUI();
-    }
-
-    private void PushHPBars()
-    {
-        float curMax = GetFinalMaxHPForIndex(activeIndex);
-
-        if (feedback != null)
-        {
-            feedback.SetHPBars(
-                playerCur: teamHP[activeIndex],
-                playerMax: curMax,
-                wildCur: wildHP,
-                wildMax: wildMaxHP
-            );
-        }
-        else
-        {
-            if (wildHPBar)
-            {
-                wildHPBar.maxValue = wildMaxHP;
-                wildHPBar.value = Mathf.Clamp(wildHP, 0f, wildMaxHP);
-            }
-            if (playerHPBar)
-            {
-                playerHPBar.maxValue = curMax;
-                playerHPBar.value = Mathf.Clamp(teamHP[activeIndex], 0f, curMax);
-            }
-        }
-
-        UpdatePlayerInfoUI();
-        UpdateHPTextUI();
-    }
-
-
-    private void UpdateHPTextUI()
-    {
-        float playerMax = GetFinalMaxHPForIndex(activeIndex);
-        playerMax = Mathf.Max(1f, playerMax);
-
-        float playerCur =
-            (teamHP != null && activeIndex >= 0 && activeIndex < teamHP.Length)
-                ? teamHP[activeIndex]
-                : playerMax;
-
-        playerCur = Mathf.Clamp(playerCur, 0f, playerMax);
-
-        float wildMax = Mathf.Max(1f, wildMaxHP);
-        float wildCur = Mathf.Clamp(wildHP, 0f, wildMax);
-
-        if (feedback != null && feedback.HasHPTextWired)
-        {
-            feedback.SetHPTexts(
-                playerCur: playerCur,
-                playerMax: playerMax,
-                wildCur: wildCur,
-                wildMax: wildMax
-            );
-            return;
-        }
-
-        int pCurI = Mathf.CeilToInt(playerCur);
-        int pMaxI = Mathf.CeilToInt(playerMax);
-        int wCurI = Mathf.CeilToInt(wildCur);
-        int wMaxI = Mathf.CeilToInt(wildMax);
-
-        if (playerHPText)
-        {
-            playerHPText.text = $"HP: {pCurI}/{pMaxI}";
-            playerHPText.color = StatNeutral;
-        }
-
-        if (wildHPText)
-        {
-            wildHPText.text = $"HP: {wCurI}/{wMaxI}";
-            wildHPText.color = StatNeutral;
-        }
-
-        if (playerHPBar)
-        {
-            playerHPBar.maxValue = playerMax;
-            playerHPBar.value = playerCur;
-        }
-
-        if (wildHPBar)
-        {
-            wildHPBar.maxValue = wildMax;
-            wildHPBar.value = wildCur;
-        }
-    }
-
-
-    private void RefreshBenchUI()
-    {
-        FillOtherIndices(_scratchOthers);
-        List<int> others = _scratchOthers;
-
-if (benchImg1)
-        {
-            if (others.Count > 0)
-            {
-                benchImg1.enabled = true;
-                benchImg1.sprite = teamDefs[others[0]]?.icon;
-                benchImg1.color = teamHP[others[0]] > 0 ? Color.white : new Color(1, 1, 1, 0.35f);
-            }
-            else benchImg1.enabled = false;
-        }
-        if (benchBtn1) benchBtn1.interactable = others.Count > 0 && teamHP[others[0]] > 0f;
-
-        if (benchHPText1)
-        {
-            if (others.Count > 0) SetBenchHP(benchHPText1, others[0]);
-            else benchHPText1.gameObject.SetActive(false);
-        }
-
-        if (benchImg2)
-        {
-            if (others.Count > 1)
-            {
-                benchImg2.enabled = true;
-                benchImg2.sprite = teamDefs[others[1]]?.icon;
-                benchImg2.color = teamHP[others[1]] > 0 ? Color.white : new Color(1, 1, 1, 0.35f);
-            }
-            else benchImg2.enabled = false;
-        }
-        if (benchBtn2) benchBtn2.interactable = others.Count > 1 && teamHP[others[1]] > 0f;
-
-        if (benchHPText2)
-        {
-            if (others.Count > 1) SetBenchHP(benchHPText2, others[1]);
-            else benchHPText2.gameObject.SetActive(false);
-        }
-    }
-
-    private void ClickBench(int benchSlot)
-{
-    if (!inBattle) return;
-    if (!manualTurns) return; // swapping is a manual-turn action
-    if (!IsPlayerTurn) return;
-    if (isResolvingPlayerTurn) return;
-    if (_narrationLock) return;
-
-    // Lock swapping once an action is queued.
-    if (pendingAction != PlayerAction.None) return;
-
-    // Queue a Swap action (swapping costs the turn).
-    pendingSwapBenchSlot = benchSlot;
-    pendingAction = PlayerAction.Swap;
-    GameEvents.OnBattleStateChanged?.Invoke();
-}
 
 private void ResolveQueuedSwap()
 {
@@ -2212,13 +945,11 @@ private void ResolveQueuedSwap()
     }
 
     BattleLogger.Log($"Swapped to {GetName(activeIndex)}! (turn consumed)", LogScope.Battle);
-    BattleLogger.AddKeyMoment($"SWAP: {GetName(activeIndex)}");
-
-    if (feedback) feedback.PlayActionQueued(
-        BattleFeedbackManager.BattleFeedbackSide.Player,
-        BattleFeedbackManager.BattleFeedbackAction.Swap
-    );
-
+    BattleLogger.AddKeyMoment($"SWAP: {GetName(activeIndex)}");                                        Emit(BattleEvent.ActionQueued(BattleSide.Player, "Swap"));
+                                        if (!HasBattleEventConsumers && feedback) feedback.PlayActionQueued(
+                                            BattleFeedbackManager.BattleFeedbackSide.Player,
+                                            BattleFeedbackManager.BattleFeedbackAction.Swap
+                                        );
     if (debugTitles && debugTitlesOnSwap)
         Debug_LogActiveTitlesSnapshot("Swap");
 }
@@ -2283,200 +1014,9 @@ private bool AutoSwapToAlive()
         ClampAndPushActiveHP();
     }
 
-    private void FirePlayerEndTurnTicks(bool dealtDamageThisTurn, bool critThisTurn)
-    {
-        playerNoDmgTurns = dealtDamageThisTurn ? 0 : Mathf.Min(playerNoDmgTurns + 1, 99);
-        playerNoCritTurns = critThisTurn ? 0 : Mathf.Min(playerNoCritTurns + 1, 99);
-    }
-
-    private void UpdateWildInfoUI()
-    {
-        if (!wildDef) return;
-
-        int baseHP = Mathf.RoundToInt(BattleCalc.CalcHP(wildDef, wildLevel));
-        int baseATK = Mathf.RoundToInt(BattleCalc.CalcBaseAttack(wildDef, wildLevel, 0, 0));
-        int baseDEF = BattleCalc.CalcDefense(wildDef, wildLevel);
-        int baseSPD = BattleCalc.CalcSpeed(wildDef, wildLevel);
-
-        int effHP = Mathf.RoundToInt(wildMaxHP);
-        int effATK = Mathf.RoundToInt(wildAttackPerTurn);
-
-        int effDEF = baseDEF;
-        int effSPD = baseSPD;
-
-        if (wildIdText) wildIdText.text = $"ID: {wildDef.id}";
-        if (wildTypeText) wildTypeText.text = $"TYPE: {wildDef.type}";
-        if (wildRarityText) wildRarityText.text = $"RARITY: {wildDef.rarity}";
-        if (wildLevelText) wildLevelText.text = $"LVL: {wildLevel}";
-
-        if (wildHPText) SetStatRowColorAndText(wildHPText, "HP", baseHP, effHP, minFinal: 1);
-        if (wildATKText) SetStatRowColorAndText(wildATKText, "ATK", baseATK, effATK, minFinal: 1);
-        if (wildDEFText) SetStatRowColorAndText(wildDEFText, "DEF", baseDEF, effDEF, minFinal: 0);
-        if (wildSPDText) SetStatRowColorAndText(wildSPDText, "SPD", baseSPD, effSPD, minFinal: 1);
-    }
-
-    private void UpdatePlayerInfoUI()
-    {
-        if (activeIndex < 0 || teamDefs == null || activeIndex >= teamDefs.Length) return;
-
-        var def = teamDefs[activeIndex];
-        if (!def) return;
-
-        int lvl = (teamLevels != null && activeIndex < teamLevels.Length) ? teamLevels[activeIndex] : 1;
-
-        // ─────────────────────────────────────────────────────────────────────────
-        // Baseline TOTALS (SpeciesBase + LevelGrowth + TrainingBonus + flatAtkBonus*)
-        // *flatAtkBonus is treated as permanent progression ATK bonus and included in total ATK.
-        // Legacy guard: if old saves mirrored training into flatAtkBonus, we avoid double counting.
-        // ─────────────────────────────────────────────────────────────────────────
-        GetProgressionTotalsForIndex(
-            activeIndex,
-            out int baseTotalHP,
-            out int baseTotalATK,
-            out int baseTotalDEF,
-            out int baseTotalSPD,
-            out _ 
-        );
-
-        int tempHPFlat  = BattleTempBuffs.I ? BattleTempBuffs.I.GetPlayerHPBonus() : 0;
-        int tempATKFlat = BattleTempBuffs.I ? BattleTempBuffs.I.GetPlayerAtkBonus() : 0;
-        int tempDEFFlat = BattleTempBuffs.I ? BattleTempBuffs.I.GetPlayerDefenseBonus() : 0;
-        int tempSPDFlat = BattleTempBuffs.I ? BattleTempBuffs.I.GetPlayerSpeedFlatBonus() : 0;
-
-        var ctx = TitleContext.Empty;
-        ctx.ownedId = (teamIds != null && activeIndex < teamIds.Length) ? teamIds[activeIndex] : "";
-
-        float maxNoConds = GetActiveMaxHP_NoConditionals(teamMaxHP[activeIndex], activeIndex);
-        maxNoConds = Mathf.Max(1f, maxNoConds);
-
-        float currentHP = (teamHP != null && activeIndex < teamHP.Length) ? teamHP[activeIndex] : maxNoConds;
-        ctx.selfHp01 = Mathf.Clamp01(currentHP / maxNoConds);
 
 
-        ctx.alliesAlive = GetAlliesAliveNotIncludingActive();
-        ctx.winStreak = GetWinStreakSafe();
 
-        var cmods = GetConditionalModsForActive();
-
-        // Header rows
-        if (playerIdText) playerIdText.text = $"ID: {def.id}";
-        if (playerTypeText) playerTypeText.text = $"TYPE: {def.type}";
-        if (playerRarityText) playerRarityText.text = $"RARITY: {def.rarity}";
-        if (playerLevelText) playerLevelText.text = $"LVL: {lvl}";
-
-        // ─────────────────────────────────────────────────────────────────────────
-        // HP
-        // Base for display = baseline totals + temp HP
-        // Titles first, then conditionals (for coloring and delta)
-        // ─────────────────────────────────────────────────────────────────────────
-        int hpBaseForDisplay = Mathf.RoundToInt(maxNoConds);
-        float hpFinalF = TitlesAdapter.GetStatValue(ctx.ownedId, def, lvl, "HP", ctx, hpBaseForDisplay);
-        int hpTitleFinal = Mathf.Max(1, Mathf.RoundToInt(hpFinalF));
-
-        if (playerHPText)
-        {
-            SetPlayerStatRowWithConditionals(
-                playerHPText, "HP",
-                hpBaseForDisplay, hpTitleFinal,
-                condFlat: 0, condPct: cmods.hpPct,
-                minFinal: 1
-            );
-        }
-
-        // ─────────────────────────────────────────────────────────────────────────
-        // ATK
-        // Base for display = baseline totals (already includes training + flatAtkBonus w/ legacy guard) + temp ATK
-        // Titles first, then conditionals
-        // ─────────────────────────────────────────────────────────────────────────
-        int atkBaseForDisplay = Mathf.Max(1, baseTotalATK + tempATKFlat);
-        float atkFinalF = TitlesAdapter.GetStatValue(ctx.ownedId, def, lvl, "Attack", ctx, atkBaseForDisplay);
-        int atkTitleFinal = Mathf.Max(1, Mathf.RoundToInt(atkFinalF));
-
-        if (playerATKText)
-        {
-            SetPlayerStatRowWithConditionals(
-                playerATKText, "ATK",
-                atkBaseForDisplay, atkTitleFinal,
-                condFlat: cmods.atkFlat, condPct: cmods.atkPct,
-                minFinal: 1
-            );
-        }
-
-        // ─────────────────────────────────────────────────────────────────────────
-        // DEF
-        // Base for display = baseline totals + temp DEF
-        // Titles first, then conditionals
-        // ─────────────────────────────────────────────────────────────────────────
-        int defBaseForDisplay = Mathf.Max(0, baseTotalDEF + tempDEFFlat);
-        float defFinalF = TitlesAdapter.GetStatValue(ctx.ownedId, def, lvl, "Defense", ctx, defBaseForDisplay);
-        int defTitleFinal = Mathf.Max(0, Mathf.RoundToInt(defFinalF));
-
-        if (playerDEFText)
-        {
-            SetPlayerStatRowWithConditionals(
-                playerDEFText, "DEF",
-                defBaseForDisplay, defTitleFinal,
-                condFlat: cmods.defFlat, condPct: cmods.defPct,
-                minFinal: 0
-            );
-        }
-
-        // ─────────────────────────────────────────────────────────────────────────
-        // SPD
-        // Base for display = baseline totals + temp SPD
-        // Titles first, then conditionals
-        // ─────────────────────────────────────────────────────────────────────────
-        int spdBaseForDisplay = Mathf.Max(1, baseTotalSPD + tempSPDFlat);
-        float spdFinalF = TitlesAdapter.GetStatValue(ctx.ownedId, def, lvl, "Speed", ctx, spdBaseForDisplay);
-        int spdTitleFinal = Mathf.Max(1, Mathf.RoundToInt(spdFinalF));
-
-        if (playerSPDText)
-        {
-            SetPlayerStatRowWithConditionals(
-                playerSPDText, "SPD",
-                spdBaseForDisplay, spdTitleFinal,
-                condFlat: cmods.spdFlat, condPct: cmods.spdPct,
-                minFinal: 1
-            );
-        }
-
-        bool resistOn = BattleTempBuffs.I && BattleTempBuffs.I.IsTypeResistActive();
-        if (resistOn && playerRarityText) playerRarityText.text += " [Resist]";
-    }
-
-
-    private void ApplyActiveToUI()
-    {
-        var def = teamDefs[activeIndex];
-        var lvl = teamLevels[activeIndex];
-
-        // Shiny-aware display (team entries carry isShiny/shinyTier)
-        bool isShiny = false;
-        var data = SaveManager.Data;
-        if (data != null && data.team != null && activeIndex >= 0 && activeIndex < data.team.Count)
-        {
-            var om = data.team[activeIndex];
-            isShiny = om != null && (om.isShiny || om.shinyTier > 0);
-        }
-
-        if (playerIcon)
-        {
-            if (def)
-            {
-                var s = MonsterNameFormatter.GetIcon(def, isShiny, backIcon: true);
-                playerIcon.sprite = s ? s : (def.backIcon ? def.backIcon : def.icon);
-            }
-            else
-            {
-                playerIcon.sprite = null;
-            }
-        }
-
-        if (playerNameText) playerNameText.text = def ? MonsterNameFormatter.Format(def, isShiny) : "";
-        if (playerLevelText) playerLevelText.text = $"Lv {lvl}";
-        UpdatePlayerInfoUI();
-        UpdateHPTextUI();
-    }
 
 
     // ─────────────────────────────────────────────────────────────
@@ -2488,62 +1028,12 @@ private bool AutoSwapToAlive()
     // Use these helpers in hot coroutines (TurnLoop / PlayerTurn / EnemyTurn / telegraphs).
     // They yield `null` until the target time is reached, so no GC.
     // ─────────────────────────────────────────────────────────────
-    private IEnumerator CoWaitScaled(float t)
-    {
-        float scaled = Mathf.Max(0.01f, t / Mathf.Max(0.01f, battleSpeed));
-        float end = Time.unscaledTime + scaled;
-        while (Time.unscaledTime < end)
-            yield return null;
-    }
 
-    private IEnumerator CoWaitUnscaled(float seconds)
-    {
-        float s = Mathf.Max(0f, seconds);
-        if (s <= 0f) yield break;
 
-        float end = Time.unscaledTime + s;
-        while (Time.unscaledTime < end)
-            yield return null;
-    }
 
     // Keep the old API for compatibility (non-hot paths), but prefer CoWaitScaled in loops.
-    private WaitForSecondsRealtime Wait(float t)
-    {
-        float scaled = Mathf.Max(0.01f, t / Mathf.Max(0.01f, battleSpeed));
-        return new WaitForSecondsRealtime(scaled);
-    }
 
-    public void SetBattleSpeed(float s)
-    {
-        battleSpeed = Mathf.Clamp(s, 0.25f, 5f);
-        if (SaveManager.Data != null && SaveManager.Data.settings != null)
-        {
-            SaveManager.Data.settings.battleSpeed = battleSpeed;
-            SaveManager.Save();
-        }
-    }
 
-    public void CycleBattleSpeed()
-    {
-        if (battleSpeed < 1.5f) SetBattleSpeed(2f);
-        else if (battleSpeed < 2.5f) SetBattleSpeed(3f);
-        else SetBattleSpeed(1f);
-    }
-
-    private void SetBenchHP(TextMeshProUGUI label, int teamIdx)
-    {
-        if (!label) return;
-        if (teamIdx < 0 || teamIdx >= teamCount) { label.gameObject.SetActive(false); return; }
-
-        float cur = Mathf.Max(0f, teamHP[teamIdx]);
-        float max = Mathf.Max(1f, GetFinalMaxHPForIndex(teamIdx));
-        int icur = Mathf.CeilToInt(cur);
-        int imax = Mathf.CeilToInt(max);
-
-        label.gameObject.SetActive(true);
-        label.text = $"{icur}/{imax}";
-        label.alpha = cur > 0f ? 1f : 0.35f;
-    }
 
     private TitleStatMods GetTitleModsForIndex(int idx)
     {
@@ -2663,378 +1153,28 @@ private bool AutoSwapToAlive()
         return ctx;
     }
 
-    private void HandleBattleFinishedUIRefresh(BattleResult _)
-    {
-        if (playerPanel != null && playerPanel.activeInHierarchy)
-        {
-            ApplyActiveToUI();
-            ClampAndPushActiveHP();
-            RefreshBenchUI();
-        }
-    }
 
-    private int GetPlayerEffectiveSpeedForRun()
-    {
-        if (activeIndex < 0 || teamDefs == null || activeIndex >= teamDefs.Length || teamDefs[activeIndex] == null)
-            return 1;
 
-        int spd = GetProgressionTotalSPDForIndex(activeIndex);
 
-        var j = (jobCtx != null) ? jobCtx[activeIndex] : null;
-        if (j != null && j.speedBuffTurns > 0 && j.speedBonusPctFirstTurns != 0f)
-            spd = Mathf.Max(1, Mathf.RoundToInt(spd * (1f + j.speedBonusPctFirstTurns)));
 
-        var cmods = GetConditionalModsForActive();
-        spd = Mathf.Max(1, Mathf.RoundToInt((spd + Mathf.Max(0, cmods.spdFlat)) * (1f + Mathf.Max(0f, cmods.spdPct))));
 
-        return Mathf.Max(1, spd);
-    }
 
-    private int GetWildEffectiveSpeedForRun()
-    {
-        if (!wildDef) return 1;
-        return Mathf.Max(1, BattleCalc.CalcSpeed(wildDef, wildLevel));
-    }
 
-    private float ComputeRunChance()
-    {
-        int pSpd = GetPlayerEffectiveSpeedForRun();
-        int wSpd = GetWildEffectiveSpeedForRun();
-        float speedTerm = (pSpd + wSpd) > 0 ? (float)pSpd / (pSpd + wSpd) : 0.5f;
-
-        float hp01 = 1f - (wildHP / Mathf.Max(1f, wildMaxHP));
-        float attemptsBonus = runAttemptBonus * Mathf.Max(0, runAttempts);
-
-        float chance =
-            runBaseChance +
-            runSpeedWeight * (speedTerm - 0.5f) +
-            runHpWeight * hp01 +
-            attemptsBonus;
-
-        return Mathf.Clamp(chance, runMinChance, runMaxChance);
-    }
-
-    private void ApplyPendingGuardShieldForActive()
-    {
-        if (pendingGuardShield == null || shieldHP == null) return;
-        if (activeIndex < 0 || activeIndex >= pendingGuardShield.Length) return;
-
-        float gain = pendingGuardShield[activeIndex];
-        if (gain <= 0.01f) return;
-
-        shieldHP[activeIndex] += gain;
-        pendingGuardShield[activeIndex] = 0f;
-
-        BattleLogger.Log($"{GetName(activeIndex)} gains a guard shield of {Mathf.RoundToInt(gain)}!", LogScope.Battle);
-        ClampAndPushActiveHP();
-    }
-
-    private string GetWildPersonalityLabel()
-    {
-        if (!wildDef || wildDef.Personality == null) return null;
-        return wildDef.Personality.group.ToString();
-    }
-
-    private string GetBasicMoveName(MonsterDataSO def)
-    {
-        if (!def) return "Attack";
-        return !string.IsNullOrEmpty(def.basicAttackName) ? def.basicAttackName : "Attack";
-    }
-
-    private bool RollDefendSuccess()
-    {
-        float chance = Mathf.Clamp01(currentDefendSuccess);
-        bool ok = Rng01() <= chance;
-
-        if (ok)
-        {
-            defendConsecutiveUses++;
-            float next = defendFirstUseSuccess * Mathf.Pow(defendRepeatMultiplier, defendConsecutiveUses);
-            currentDefendSuccess = Mathf.Max(defendMinSuccess, next);
-        }
-        else
-        {
-            defendConsecutiveUses = 0;
-            currentDefendSuccess = defendFirstUseSuccess;
-        }
-
-        return ok;
-    }
-
-    private void ResetDefendStreak()
-    {
-        defendConsecutiveUses = 0;
-        currentDefendSuccess = defendFirstUseSuccess;
-    }
-
-    
-    private bool ShouldShowWildTelegraphText()
-    {
-        // Manual: always show text. Auto: show only for first N turns.
-        if (!EncounterManager.I || !EncounterManager.I.IsAutoMode)
-            return true;
-
-        return _turnIndex < autoTelegraphTextFirstTurns;
-    }
-
-    private float GetWildIntentIconDuration()
-    {
-        if (EncounterManager.I && EncounterManager.I.IsAutoMode)
-            return wildIntentIconDurationAuto;
-
-        return wildIntentIconDurationManual;
-    }
-
-    private string GetWildTelegraphLine(EnemyAction action)
-    {
-        switch (action)
-        {
-            case EnemyAction.Attack: return telegraphAttack;
-            case EnemyAction.Defend: return telegraphDefend;
-            case EnemyAction.Focus:  return telegraphFocus;
-            case EnemyAction.Run:    return telegraphRun;
-            default: return string.Empty;
-        }
-    }
-
-    private IEnumerator Co_TelegraphWildIntent(EnemyAction action)
-    {
-        if (!showWildIntentIcons)
-            yield break;
-
-        if (feedback != null)
-        {
-            // Map to feedback action enum
-            var fbAction = BattleFeedbackManager.BattleFeedbackAction.Attack;
-
-            switch (action)
-            {
-                case EnemyAction.Attack: fbAction = BattleFeedbackManager.BattleFeedbackAction.Attack; break;
-                case EnemyAction.Defend: fbAction = BattleFeedbackManager.BattleFeedbackAction.Defend; break;
-                case EnemyAction.Focus:  fbAction = BattleFeedbackManager.BattleFeedbackAction.Focus;  break;
-                case EnemyAction.Run:    fbAction = BattleFeedbackManager.BattleFeedbackAction.Run;    break;
-            }
-
-            feedback.ShowWildIntent(fbAction, GetWildIntentIconDuration(), false);
-        }
-
-        // Manual: always narration. Auto: narration only for first N turns.
-        if (ShouldShowWildTelegraphText())
-        {
-            string line = GetWildTelegraphLine(action);
-            if (!string.IsNullOrEmpty(line))
-                yield return Say(line);
-        }
-
-        // Even without text, give the player a moment to register the icon.
-        if (wildIntentTelegraphPause > 0f)
-            yield return CoWaitUnscaled(wildIntentTelegraphPause);
-    }
-
-    private EnemyAction ChooseEnemyAction()
-    {
-        if (!wildDef || wildMaxHP <= 0.01f)
-            return EnemyAction.Attack;
-
-        float hpRatio = Mathf.Clamp01(wildHP / Mathf.Max(1f, wildMaxHP));
-        BattleAction action = BattleAction.Attack;
-
-        if (wildDef.Personality != null)
-        {
-            var ctx = new PersonalityContext
-            {
-                selfHpRatio = hpRatio,
-                hasSuperEffectiveMove = false,
-                isBadlyMatched = false,
-                turnNumber = Mathf.Max(1, _turnIndex + 1)
-            };
-
-            action = wildDef.Personality.ChooseAction(in ctx, _enemyRng);
-        }
-
-        EnemyAction Fallback()
-        {
-            if (hpRatio < 0.25f && Rng01() < 0.40f)
-                return EnemyAction.Run;
-            if (hpRatio < 0.50f && Rng01() < 0.30f)
-                return EnemyAction.Defend;
-            if (Rng01() < 0.15f)
-                return EnemyAction.Focus;
-            return EnemyAction.Attack;
-        }
-
-        switch (action)
-        {
-            case BattleAction.Attack: return EnemyAction.Attack;
-            case BattleAction.Defend: return EnemyAction.Defend;
-            case BattleAction.Focus: return EnemyAction.Focus;
-            case BattleAction.Run: return EnemyAction.Run;
-            default: return Fallback();
-        }
-    }
-
-    private float ComputeEnemyRunChance()
-    {
-        if (!wildDef || wildMaxHP <= 0.01f)
-            return 0f;
-
-        float hpLost01 = 1f - Mathf.Clamp01(wildHP / wildMaxHP);
-        float baseChance = 0.05f;
-        float hpBonus = hpLost01 * 0.70f;
-
-        string groupName = null;
-        if (wildDef.Personality != null)
-        {
-            try { groupName = wildDef.Personality.group.ToString(); }
-            catch { groupName = null; }
-        }
-
-        if (groupName == "Evasive")
-            hpBonus *= 1.3f;
-
-        float chance = baseChance + hpBonus;
-        return Mathf.Clamp01(chance);
-    }
-
-    private void ApplyPendingGuardShieldForWild()
-    {
-        if (wildPendingGuardShield <= 0.01f) return;
-
-        string name = wildDef ? wildDef.displayName : "Foe";
-        float gain = wildPendingGuardShield;
-        wildShieldHP += gain;
-        wildPendingGuardShield = 0f;
-
-        BattleLogger.Log($"{name} gains a guard shield of {Mathf.RoundToInt(gain)}!", LogScope.Battle);
-    }
-
-    private bool RollEnemyDefendSuccess()
-    {
-        float chance = Mathf.Clamp01(wildDefendCurrentSuccess);
-        bool ok = Rng01() <= chance;
-
-        if (ok)
-        {
-            wildDefendConsecutiveUses++;
-            float next = defendFirstUseSuccess * Mathf.Pow(defendRepeatMultiplier, wildDefendConsecutiveUses);
-            wildDefendCurrentSuccess = Mathf.Max(defendMinSuccess, next);
-        }
-        else
-        {
-            wildDefendConsecutiveUses = 0;
-            wildDefendCurrentSuccess = defendFirstUseSuccess;
-        }
-
-        return ok;
-    }
-
-    private void ResetEnemyDefendStreak()
-    {
-        wildDefendConsecutiveUses = 0;
-        wildDefendCurrentSuccess = defendFirstUseSuccess;
-    }
-
-    private void ApplyWildDefendStance()
-    {
-        string name = wildDef ? wildDef.displayName : "Foe";
-        bool success = RollEnemyDefendSuccess();
-
-        wildDefendActiveThisRound = success;
-
-        if (feedback)
-        {
-            feedback.PlayDefendResult(BattleFeedbackManager.BattleFeedbackSide.Wild, success);
-        }
-
-        if (success)
-        {
-            BattleLogger.Log($"{name} is defending.", LogScope.Battle);
-            BattleLogger.Log($"{name} will reduce the next hit and convert it into a shield for the following round.", LogScope.Battle);
-        }
-        else
-        {
-            BattleLogger.Log($"{name} tried to defend, but it failed!", LogScope.Battle);
-        }
-    }
-
-    private void SetPostBattleWinnerVisible(bool victory, bool escaped)
-    {
-        if (escaped)
-        {
-            if (playerPanel) playerPanel.SetActive(true);
-            if (wildPanel) wildPanel.SetActive(false);
-            return;
-        }
-
-        if (victory)
-        {
-            if (playerPanel) playerPanel.SetActive(true);
-            if (wildPanel) wildPanel.SetActive(false);
-        }
-        else
-        {
-            if (playerPanel) playerPanel.SetActive(false);
-            if (wildPanel) wildPanel.SetActive(true);
-        }
-    }
-
-    private void ForceEndBattleEarly(bool victory, bool escaped = false)
-    {
-        BattleCalc.ResetRng();
-        _battleRng = null;
-        SetIsPlayerTurn(false);
-        pendingAction = PlayerAction.None;
-        ResetStatusIcons();
-
-        if (benchBtn1) benchBtn1.interactable = false;
-        if (benchBtn2) benchBtn2.interactable = false;
-
-        var result = new BattleResult
-        {
-            victory = victory,
-            escaped = escaped,
-            creditsGained = 0,
-            wildDef = wildDef,
-            wildLevel = wildLevel,
-            secondsSurvived = 0f,
-            critCount = 0,
-            turnsSurvived = 0,
-            damageTaken = 0,
-            damageDealt = 0,
-            gotFirstHit = false
-        };
-
-        onEnd?.Invoke(result);
-        GameEvents.BattleFinished?.Invoke(result);
-    }
 
 
     /// <summary>
     /// Returns true if a line with the given tags would be suppressed by current settings (condensed/auto-compress).
     /// Use this to avoid constructing strings that would be immediately skipped (GC savings in auto battles).
     /// </summary>
-    private bool ShouldSkipNarration(BattleLineTag tags)
-    {
-        bool condensed = SettingsManager.I != null && SettingsManager.I.GetCondensedBattleText();
-        bool autoCompress = SettingsManager.I != null && SettingsManager.I.GetCompressAutoBattleText();
 
-        bool isAuto = (EncounterManager.I != null && EncounterManager.I.IsAutoMode) || !manualTurns;
 
-        if (condensed && (tags & BattleLineTag.Result) == 0)
-            return true;
-
-        if (isAuto && autoCompress && (tags & BattleLineTag.Flavor) != 0)
-            return true;
-
-        return false;
-    }
 
     private IEnumerator Say(string line, BattleLineTag tags = BattleLineTag.None)
     {
         bool condensed = SettingsManager.I != null && SettingsManager.I.GetCondensedBattleText();
         bool autoCompress = SettingsManager.I != null && SettingsManager.I.GetCompressAutoBattleText();
 
-        bool isAuto = (EncounterManager.I != null && EncounterManager.I.IsAutoMode) || !manualTurns;
+        bool isAuto = AutoResolveActive || !manualTurns;
 
         if (condensed && (tags & BattleLineTag.Result) == 0)
             yield break;
@@ -3079,40 +1219,7 @@ private bool AutoSwapToAlive()
         return v;
     }
 
-    private void SetStatRowColorAndText(TextMeshProUGUI label, string statName, int baseVal, int finalVal, int minFinal = 1)
-    {
-        if (!label) return;
 
-        finalVal = Mathf.Max(minFinal, finalVal);
-        baseVal = Mathf.Max(minFinal, baseVal);
-
-        int delta = finalVal - baseVal;
-
-        if (delta > 0) label.color = StatBuff;
-        else if (delta < 0) label.color = StatNerf;
-        else label.color = StatNeutral;
-
-        if (delta == 0)
-            label.text = $"{statName}: {finalVal}";
-        else
-            label.text = $"{statName}: {finalVal} ({(delta > 0 ? "+" : "")}{delta})";
-    }
-
-    private void SetPlayerStatRowWithConditionals(
-        TextMeshProUGUI label,
-        string statName,
-        int baseVal,
-        int titleFinalVal,
-        int condFlat,
-        float condPct,
-        int minFinal = 1)
-    {
-        int condDelta = Mathf.RoundToInt(condFlat + (baseVal * condPct));
-        int combinedFinal = titleFinalVal + condDelta;
-        combinedFinal = Mathf.Max(minFinal, combinedFinal);
-
-        SetStatRowColorAndText(label, statName, baseVal, combinedFinal, minFinal);
-    }
 
     private List<TitleSO> GetTitlesForOwnedIdSafe(string ownedId)
     {
@@ -3176,39 +1283,14 @@ private bool AutoSwapToAlive()
         return trainingAtk > 0 && flatAtkBonus >= trainingAtk;
     }
 
-    private void ResetStatusIcons()
-    {
-        if (!feedback) return;
 
-        feedback.SetGuard(BattleFeedbackManager.BattleFeedbackSide.Player, false);
-        feedback.SetGuard(BattleFeedbackManager.BattleFeedbackSide.Wild, false);
-
-        feedback.SetCharge(BattleFeedbackManager.BattleFeedbackSide.Player, false);
-        feedback.SetCharge(BattleFeedbackManager.BattleFeedbackSide.Wild, false);
-    }
 
     /// <summary>
     /// Call after swaps / at round boundaries to reflect the CURRENT logical status.
     /// (Guard = defending this round, Charge = has charged next attack queued)
     /// </summary>
-    private void RefreshStatusIconsFromState()
-    {
-        if (!feedback) return;
 
-        // Guard status (this round only)
-        feedback.SetGuard(BattleFeedbackManager.BattleFeedbackSide.Player, defendActiveThisRound);
-        feedback.SetGuard(BattleFeedbackManager.BattleFeedbackSide.Wild, wildDefendActiveThisRound);
 
-        // Charge status (persists until spent)
-        bool playerCharged =
-            chargedNextAttack != null &&
-            activeIndex >= 0 &&
-            activeIndex < chargedNextAttack.Length &&
-            chargedNextAttack[activeIndex];
-
-        feedback.SetCharge(BattleFeedbackManager.BattleFeedbackSide.Player, playerCharged);
-        feedback.SetCharge(BattleFeedbackManager.BattleFeedbackSide.Wild, wildChargedNextAttack);
-    }
     
     // ─────────────────────────────────────────────────────────────────────────────
     // Progression Totals Helpers
@@ -3287,25 +1369,7 @@ private bool AutoSwapToAlive()
         return Mathf.Max(1, spd);
     }
 
-    private void HandleBattleStatsChanged()
-    {
-        if (!inBattle) return;
 
-        UpdatePlayerInfoUI();
-        UpdateWildInfoUI();
-    }
-
-    private void ClearPlayerGuardStateForActive()
-    {
-        defendActiveThisRound = false;
-
-        // Extra safety: ensure no lingering "stored guard shield" is applied later due to stale data.
-        if (pendingGuardShield != null &&
-            activeIndex >= 0 && activeIndex < pendingGuardShield.Length)
-        {
-            pendingGuardShield[activeIndex] = 0f;
-        }
-    }
 
 
 

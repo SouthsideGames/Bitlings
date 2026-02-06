@@ -27040,6 +27040,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a8742e5e885780a4b8aefda995a0accd, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  battleManager: {fileID: 0}
   playerIcon: {fileID: 1888576084}
   wildIcon: {fileID: 977078553}
   playerHPShakeRoot: {fileID: 1838927774}
