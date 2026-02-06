@@ -114,6 +114,31 @@ public sealed class BattleFeedbackManager : MonoBehaviour
     private Vector3 _playerIconBaseScale = Vector3.one;
     private Vector3 _wildIconBaseScale = Vector3.one;
 
+    /// <summary>
+    /// True while coroutine-driven UI FX (currently HP bar smooth animations) are running.
+    /// BattleManager can yield on this to prevent stacked turn resolution.
+    /// </summary>
+    public bool IsFXBusy => (_playerHPAnimCR != null) || (_wildHPAnimCR != null);
+
+    /// <summary>
+    /// Waits until FeedbackManager has finished its coroutine-driven FX, with an optional timeout.
+    /// Uses unscaled time.
+    /// </summary>
+    public IEnumerator WaitForFX(float timeoutSeconds = 1.5f)
+    {
+        // Let any LeanTween/coroutine starts happen this frame.
+        yield return null;
+
+        float timeout = Mathf.Max(0.05f, timeoutSeconds);
+        float t = 0f;
+
+        while (IsFXBusy && t < timeout)
+        {
+            t += Time.unscaledDeltaTime;
+            yield return null;
+        }
+    }
+
     private void Awake()
     {
         CacheBaseScales();
@@ -539,28 +564,40 @@ public sealed class BattleFeedbackManager : MonoBehaviour
         }
 
         if (animCR != null) StopCoroutine(animCR);
-        animCR = StartCoroutine(Co_AnimateHPBar(bar, current, targetValue));
+
+        // Start an animation coroutine that will clear the appropriate field when done,
+        // so BattleManager can reliably detect when FX are finished.
+        animCR = StartCoroutine(Co_AnimateHPBar(bar, current, targetValue, isPlayer));
     }
 
-    private IEnumerator Co_AnimateHPBar(Slider bar, float start, float end)
+    private IEnumerator Co_AnimateHPBar(Slider bar, float start, float end, bool isPlayer)
     {
-        if (!bar) yield break;
-
-        float max = Mathf.Max(1f, bar.maxValue);
-        float distance = Mathf.Abs(end - start);
-
-        float duration = hpBarSecondsForFull * (distance / max);
-        duration = Mathf.Max(0.05f, duration);
-
-        float t = 0f;
-        while (t < 1f)
+        try
         {
-            t += Time.unscaledDeltaTime / duration;
-            bar.value = Mathf.Lerp(start, end, t);
-            yield return null;
-        }
+            if (!bar) yield break;
 
-        bar.value = end;
+            float max = Mathf.Max(1f, bar.maxValue);
+            float distance = Mathf.Abs(end - start);
+
+            float duration = hpBarSecondsForFull * (distance / max);
+            duration = Mathf.Max(0.05f, duration);
+
+            float t = 0f;
+            while (t < 1f)
+            {
+                t += Time.unscaledDeltaTime / duration;
+                bar.value = Mathf.Lerp(start, end, t);
+                yield return null;
+            }
+
+            bar.value = end;
+        }
+        finally
+        {
+            // Only clear the matching handle. (If the coroutine was stopped early, finally still runs.)
+            if (isPlayer) _playerHPAnimCR = null;
+            else _wildHPAnimCR = null;
+        }
     }
 
     private void PunchTMP(TextMeshProUGUI tmp)

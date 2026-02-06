@@ -154,6 +154,23 @@ private int pendingSwapBenchSlot = -1;
     [SerializeField, Min(0.05f)] private float hitPause = 0.25f;
     [SerializeField, Min(0.05f)] private float endRoundDelay = 0.60f;
 
+    [Header("Turn Pacing Gate (unscaled)")]
+    [Tooltip("Impact pause after a damage event (feel of hitstop).")]
+    [SerializeField, Min(0.05f)] private float damageImpactPause = 0.20f;
+    [Tooltip("Longer pause when a monster is KO'd.")]
+    [SerializeField, Min(0.05f)] private float koPause = 0.45f;
+    [Tooltip("Pause after a swap for clarity.")]
+    [SerializeField, Min(0.05f)] private float swapPause = 0.30f;
+
+    [Tooltip("Maximum time to wait for UI FX to finish before continuing.")]
+    [SerializeField, Min(0.05f)] private float fxWaitTimeout = 1.5f;
+
+    [Tooltip("Maximum time to wait for narration to unlock before continuing.")]
+    [SerializeField, Min(0.05f)] private float narrationWaitTimeout = 1.5f;
+
+    [Tooltip("Auto-battle pacing multiplier. Lower = faster.")]
+    [SerializeField, Range(0.10f, 1.0f)] private float autoPacingMultiplier = 0.55f;
+
     [Header("Combat Tunables")]
     [Range(0f, 1f)][SerializeField] private float critChancePlayer = 0.10f;
     [Range(0f, 1f)][SerializeField] private float critChanceWild = 0.08f;
@@ -669,6 +686,56 @@ private IEnumerator MaybeSayKO_Wild(string victimName, float preHP, float postHP
         yield break;
     }
 
+    // ─────────────────────────────────────────────────────────────
+    // Turn Pacing Gate
+    // ─────────────────────────────────────────────────────────────
+
+    private float GetPacingMult()
+    {
+        // Auto battles should feel snappy, but still readable.
+        bool isAuto = (EncounterManager.I != null && EncounterManager.I.IsAutoMode) || !manualTurns || AutoResolveActive;
+        return isAuto ? Mathf.Clamp(autoPacingMultiplier, 0.10f, 1f) : 1f;
+    }
+
+    private IEnumerator WaitForNarrationUnlock(float timeoutSeconds)
+    {
+        if (!_narrationLock) yield break;
+
+        float timeout = Mathf.Max(0.05f, timeoutSeconds);
+        float t = 0f;
+        while (_narrationLock && t < timeout)
+        {
+            t += Time.unscaledDeltaTime;
+            yield return null;
+        }
+    }
+
+    private IEnumerator TurnPace(float pauseSeconds, bool waitFX = true, bool waitNarration = true)
+    {
+        if (waitNarration)
+            yield return WaitForNarrationUnlock(narrationWaitTimeout);
+
+        if (waitFX && feedback != null)
+            yield return feedback.WaitForFX(fxWaitTimeout);
+
+        float mult = GetPacingMult();
+        float p = Mathf.Max(0f, pauseSeconds) * mult;
+        if (p > 0f)
+            yield return Wait(p);
+    }
+
+    private IEnumerator TurnPaceAfterAction()
+    {
+        // If a KO happened, let it breathe longer.
+        bool ko = IsWildKO() || IsTeamKO();
+        yield return TurnPace(ko ? koPause : damageImpactPause);
+    }
+
+    private IEnumerator TurnPaceSwap()
+    {
+        yield return TurnPace(swapPause);
+    }
+
     private IEnumerator TurnLoop()
     {
         int round = 0;
@@ -701,7 +768,8 @@ private IEnumerator MaybeSayKO_Wild(string victimName, float preHP, float postHP
             RefreshStatusIconsFromState();
 
             BattleLogger.Log($"— Round {round} —", LogScope.Battle);
-            yield return Wait(beginRoundDelay);
+            // Brief breathing room at the top of the round. Don't block on narration here.
+            yield return TurnPace(beginRoundDelay, waitFX: true, waitNarration: false);
 
             _turnIndex++;
             TitlesAdapter.OnTurnAdvanced(_turnIndex);
@@ -778,7 +846,7 @@ private IEnumerator MaybeSayKO_Wild(string victimName, float preHP, float postHP
                     RefreshStatusIconsFromState();
 
                     if (CheckEnd()) break;
-                    yield return Wait(hitPause);
+                    yield return TurnPaceAfterAction();
 
                     if (!IsTeamKO() && teamHP[activeIndex] <= 0.01f)
                     {
@@ -796,7 +864,7 @@ private IEnumerator MaybeSayKO_Wild(string victimName, float preHP, float postHP
                         RefreshStatusIconsFromState();
 
                         if (CheckEnd()) break;
-                        yield return Wait(hitPause);
+                        yield return TurnPaceAfterAction();
                     }
                 }
             }
@@ -881,6 +949,7 @@ private IEnumerator MaybeSayKO_Wild(string victimName, float preHP, float postHP
                         {
                             ResetDefendStreak();
                             ResolveQueuedSwap();
+	                    	    yield return TurnPaceSwap();
                             RefreshStatusIconsFromState();
                         }
 
@@ -905,7 +974,7 @@ private IEnumerator MaybeSayKO_Wild(string victimName, float preHP, float postHP
                     RefreshStatusIconsFromState();
 
                     if (CheckEnd()) break;
-                    yield return Wait(hitPause);
+                    yield return TurnPaceAfterAction();
 
                     // If the wild KO'ed our active slot, we must auto-swap (if possible) and the queued action is lost.
                     if (!IsTeamKO() && teamHP[activeIndex] <= 0.01f)
@@ -969,6 +1038,7 @@ private IEnumerator MaybeSayKO_Wild(string victimName, float preHP, float postHP
 
                                         ResetDefendStreak();
                                         ResolveQueuedSwap();
+	                                        yield return TurnPaceSwap();
                                         RefreshStatusIconsFromState();
                                         break;
                                     }
@@ -1024,7 +1094,7 @@ private IEnumerator MaybeSayKO_Wild(string victimName, float preHP, float postHP
                         }
 
                         if (CheckEnd()) break;
-                        yield return Wait(hitPause);
+                        yield return TurnPaceAfterAction();
                     }
                 }
             }
@@ -1039,7 +1109,8 @@ private IEnumerator MaybeSayKO_Wild(string victimName, float preHP, float postHP
                     if (jobCtx[activeIndex].dmgReduceBuffTurns > 0) jobCtx[activeIndex].dmgReduceBuffTurns--;
                 }
 
-                yield return Wait(endRoundDelay);
+                // End-of-round breathing room.
+                yield return TurnPace(endRoundDelay, waitFX: true, waitNarration: true);
             }
 
             // Booster system: tick durations/cooldowns once per completed round.
@@ -1134,7 +1205,8 @@ private IEnumerator MaybeSayKO_Wild(string victimName, float preHP, float postHP
             case PlayerAction.Swap:
                 {
                     ResetDefendStreak();
-                    ResolveQueuedSwap();
+	                ResolveQueuedSwap();
+	                yield return TurnPaceSwap();
                     break;
                 }
 
