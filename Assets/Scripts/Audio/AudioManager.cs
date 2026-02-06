@@ -406,6 +406,28 @@ public class AudioManager : MonoBehaviour
         src.PlayOneShot(clip, volume);
     }
 
+    /// <summary>
+    /// Plays an SFX with an optional pitch & volume multiplier.
+    /// Additive API (keeps existing inspector-driven pitchMin/pitchMax ranges intact).
+    /// </summary>
+    public void PlaySfx(SfxType type, float pitchMult, float volumeMult = 1f)
+    {
+        if (type == SfxType.None) return;
+
+        if (!_map.TryGetValue(type, out var entry)) return;
+        if (!PassCooldown(type, entry)) return;
+        if (entry.clips == null || entry.clips.Count == 0) return;
+
+        var clip = entry.clips[UnityEngine.Random.Range(0, entry.clips.Count)];
+        var src = NextSfxSource();
+
+        float basePitch = UnityEngine.Random.Range(entry.pitchMin, entry.pitchMax);
+        src.pitch = Mathf.Clamp(basePitch * Mathf.Max(0.01f, pitchMult), 0.1f, 3f);
+
+        float volume = entry.volume * GetSfxScale() * Mathf.Clamp(volumeMult, 0f, 2f);
+        src.PlayOneShot(clip, volume);
+    }
+
     public void PreviewSfx(SfxType type = SfxType.Click)
     {
         if (type == SfxType.None)

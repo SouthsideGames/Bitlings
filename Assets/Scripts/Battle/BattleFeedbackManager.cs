@@ -46,9 +46,9 @@ public sealed class BattleFeedbackManager : MonoBehaviour
     [Header("Wild Intent FX")]
     [SerializeField, Min(0.01f)] private float wildIntentPopTime = 0.10f;
     [SerializeField, Min(0f)] private float wildIntentStartScale = 0.85f;
-
     private Coroutine _wildIntentCR;
-[Header("Optional: Action Buttons (press feedback)")]
+    
+    [Header("Optional: Action Buttons (press feedback)")]
     [SerializeField] private Button attackBtn;
     [SerializeField] private Button defendBtn;
     [SerializeField] private Button focusBtn;
@@ -140,6 +140,8 @@ public sealed class BattleFeedbackManager : MonoBehaviour
     [SerializeField, Range(0f, 60f)] private float maxScreenShake = 10f;
 
     private Coroutine _timeScaleCR;
+    private Coroutine _playerCritHideCR;
+    private Coroutine _wildCritHideCR;
 
     [Header("HP Text Feedback (Current/Max)")]
     [SerializeField] private TextMeshProUGUI playerHPValueText;
@@ -178,6 +180,7 @@ public sealed class BattleFeedbackManager : MonoBehaviour
         WireOptionalButtonPresses();
 
         ResetStatusIcons();
+        ResetMicroJuiceOptionals();
     }
 
     private void OnEnable()
@@ -185,6 +188,43 @@ public sealed class BattleFeedbackManager : MonoBehaviour
         CacheBaseScales();
 
         ResetStatusIcons();
+        ResetMicroJuiceOptionals();
+    }
+
+    private void OnDisable()
+    {
+        // Ensure nothing stays visible if this panel/scene is disabled mid-animation.
+        ResetMicroJuiceOptionals();
+    }
+
+    private void ResetMicroJuiceOptionals()
+    {
+        // Vignette should be inactive when not being used.
+        if (vignetteFlash)
+        {
+            LeanTween.cancel(vignetteFlash.gameObject);
+            var c = vignetteFlash.color;
+            c.a = 0f;
+            vignetteFlash.color = c;
+            vignetteFlash.gameObject.SetActive(false);
+        }
+
+        // Crit tags are meant to start inactive; the script activates them temporarily.
+        if (playerCritTag)
+            playerCritTag.gameObject.SetActive(false);
+        if (wildCritTag)
+            wildCritTag.gameObject.SetActive(false);
+
+        if (_playerCritHideCR != null)
+        {
+            StopCoroutine(_playerCritHideCR);
+            _playerCritHideCR = null;
+        }
+        if (_wildCritHideCR != null)
+        {
+            StopCoroutine(_wildCritHideCR);
+            _wildCritHideCR = null;
+        }
     }
 
     private void CacheBaseScales()
@@ -436,6 +476,10 @@ public void SetGuard(BattleFeedbackSide side, bool on)
         Flash(icon, crit ? flashCrit : (wasGuarded ? flashDefend : flashNormal), hitFlashTime);
         Shake(icon.rectTransform, hitShakePixels * shakeMult, hitShakeTime);
 
+        // Crit reads best with a tiny punch-scale on the target icon.
+        if (crit)
+            PunchScale(icon, 1.08f, Mathf.Min(0.08f, hitFlashTime));
+
         var hpRoot = (targetSide == BattleFeedbackSide.Player) ? playerHPShakeRoot : wildHPShakeRoot;
         if (hpRoot) PlayHPShake(hpRoot);
 
@@ -454,12 +498,13 @@ public void SetGuard(BattleFeedbackSide side, bool on)
         if (crit)
         {
             PlayCritTag(targetSide);
-            AudioManager.I?.PlaySfx(SfxType.CritHit);
+            // Slightly higher pitch on crit for extra satisfaction.
+            AudioManager.I?.PlaySfx(SfxType.CritHit, 1.15f);
         }
         else if (wasGuarded)
         {
             // Distinct "clank"
-            AudioManager.I?.PlaySfx(SfxType.Defend);
+            AudioManager.I?.PlaySfx(SfxType.Defend, 0.95f);
         }
     }
 
@@ -474,6 +519,12 @@ public void SetGuard(BattleFeedbackSide side, bool on)
 
         if (!success)
             Shake(icon.rectTransform, hitShakePixels * 0.6f, hitShakeTime * 0.75f);
+
+        // Optional audio read: successful defend is a satisfying clank, failure is a softer fail.
+        if (success)
+            AudioManager.I?.PlaySfx(SfxType.Defend, 0.98f);
+        else
+            AudioManager.I?.PlaySfx(SfxType.Defend, 0.92f);
     }
 
 
@@ -585,6 +636,18 @@ public void SetGuard(BattleFeedbackSide side, bool on)
         TMP_Text tag = (side == BattleFeedbackSide.Player) ? playerCritTag : wildCritTag;
         if (!tag) return;
 
+        // Ensure only one hide coroutine runs per-side.
+        if (side == BattleFeedbackSide.Player)
+        {
+            if (_playerCritHideCR != null) StopCoroutine(_playerCritHideCR);
+            _playerCritHideCR = null;
+        }
+        else
+        {
+            if (_wildCritHideCR != null) StopCoroutine(_wildCritHideCR);
+            _wildCritHideCR = null;
+        }
+
         tag.gameObject.SetActive(true);
         tag.text = "CRIT!";
 
@@ -605,10 +668,13 @@ public void SetGuard(BattleFeedbackSide side, bool on)
                 });
         }
 
-        StartCoroutine(Co_HideCritTag(tag, critTagSeconds));
+        if (side == BattleFeedbackSide.Player)
+            _playerCritHideCR = StartCoroutine(Co_HideCritTag(tag, critTagSeconds, BattleFeedbackSide.Player));
+        else
+            _wildCritHideCR = StartCoroutine(Co_HideCritTag(tag, critTagSeconds, BattleFeedbackSide.Wild));
     }
 
-    private IEnumerator Co_HideCritTag(TMP_Text tag, float seconds)
+    private IEnumerator Co_HideCritTag(TMP_Text tag, float seconds, BattleFeedbackSide side)
     {
         float t = 0f;
         while (t < seconds)
@@ -617,6 +683,11 @@ public void SetGuard(BattleFeedbackSide side, bool on)
             yield return null;
         }
         if (tag) tag.gameObject.SetActive(false);
+
+        if (side == BattleFeedbackSide.Player)
+            _playerCritHideCR = null;
+        else
+            _wildCritHideCR = null;
     }
 
 
