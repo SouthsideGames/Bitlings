@@ -504,7 +504,39 @@ public partial class EncounterManager : MonoBehaviour
         _manualHirePending = false;
 
         battleManager.ConfigureForAuto(_autoResolveSnapshot);
+        // Deterministic battle RNG: derive a per-battle seed from the active global seed
+        // (daily/custom/session) + encounter serial + wild identifiers.
+        // This makes battles reproducible for debugging and daily runs.
+        int battleSeed = BuildBattleSeed(wild, wildLevel, _currentEncounterIsBoss);
+        string seedLabel = $"{SeedService.GetDisplaySeedPrefix()}{SeedService.GetDisplaySeedToken()}";
+        battleManager.SetBattleSeed(battleSeed, seedLabel);
         battleManager.Begin(wild, wildLevel, OnBattleEnded);
+    }
+
+    private int BuildBattleSeed(MonsterDataSO wild, int level, bool isBoss)
+    {
+        SeedService.ApplyGlobalSeedForSession();
+        int baseSeed = SeedService.ActiveSeed != 0 ? SeedService.ActiveSeed : 1;
+
+        string wildId = (wild != null && !string.IsNullOrEmpty(wild.id)) ? wild.id : "UNKNOWN";
+        string raw = $"{baseSeed}|{_wildEncounterSerial}|{(isBoss ? 1 : 0)}|{wildId}|{Mathf.Max(1, level)}";
+        int h = StableHash(raw);
+        if (h == 0) h = 1;
+        return h;
+    }
+
+    private static int StableHash(string s)
+    {
+        unchecked
+        {
+            int hash = 17;
+            if (!string.IsNullOrEmpty(s))
+            {
+                for (int i = 0; i < s.Length; i++)
+                    hash = hash * 31 + s[i];
+            }
+            return hash;
+        }
     }
 
     void OnBattleEnded(BattleResult result)

@@ -29,6 +29,80 @@ public class BattleManager : MonoBehaviour
     private enum PlayerAction { None, Attack, Defend, Focus, Swap, Run }
     private enum EnemyAction { Attack, Defend, Focus, Run }
 
+    // ─────────────────────────────────────────────────────────
+    // Deterministic battle RNG (debuggable + daily seeds ready)
+    // One RNG per battle, seeded.
+    // ─────────────────────────────────────────────────────────
+
+    private static int _battleSerial;
+    private System.Random _battleRng;
+    private int _battleSeed;
+    private string _battleSeedLabel;
+
+    public int BattleSeed => _battleSeed;
+    public string BattleSeedLabel => _battleSeedLabel;
+
+    /// <summary>
+    /// Optional: EncounterManager can set the battle seed before calling Begin(...).
+    /// If not set, a deterministic seed will be derived from the active session/daily/custom seed.
+    /// </summary>
+    public void SetBattleSeed(int seed, string seedLabel = null)
+    {
+        _battleSeed = seed == 0 ? 1 : seed;
+        _battleSeedLabel = seedLabel;
+    }
+
+    private float Rng01()
+    {
+        if (_battleRng == null)
+            return UnityEngine.Random.value; // fallback
+        // NextDouble returns [0,1)
+        return (float)_battleRng.NextDouble();
+    }
+
+    private void EnsureBattleRngInitialized()
+    {
+        // If EncounterManager provided a seed, respect it.
+        // Otherwise derive a deterministic one based on the active global seed
+        // (session / daily / custom) + a per-battle serial.
+        if (_battleSeed == 0)
+        {
+            SeedService.ApplyGlobalSeedForSession();
+
+            _battleSerial++;
+            int baseSeed = SeedService.ActiveSeed != 0 ? SeedService.ActiveSeed : 1;
+
+            string wildId = (wildDef != null && !string.IsNullOrEmpty(wildDef.id)) ? wildDef.id : "UNKNOWN";
+            string raw = $"{baseSeed}|{_battleSerial}|{wildId}|{wildLevel}";
+            _battleSeed = StableHash(raw);
+            if (_battleSeed == 0) _battleSeed = 1;
+
+            // Default label includes the active seed token (useful for bug reports)
+            if (string.IsNullOrEmpty(_battleSeedLabel))
+                _battleSeedLabel = $"{SeedService.GetDisplaySeedPrefix()}{SeedService.GetDisplaySeedToken()}";
+        }
+
+        if (_battleRng == null)
+            _battleRng = new System.Random(_battleSeed);
+
+        // Inject into BattleCalc (crits)
+        BattleCalc.SetRng(Rng01);
+    }
+
+    private static int StableHash(string s)
+    {
+        unchecked
+        {
+            int hash = 17;
+            if (!string.IsNullOrEmpty(s))
+            {
+                for (int i = 0; i < s.Length; i++)
+                    hash = hash * 31 + s[i];
+            }
+            return hash;
+        }
+    }
+
     
     [Header("Wild Intent Telegraph")]
     [SerializeField] private bool showWildIntentIcons = true;
@@ -318,6 +392,11 @@ public class BattleManager : MonoBehaviour
     {
         GameEvents.BattleFinished -= HandleBattleFinishedUIRefresh;
         GameEvents.BattleStatsChanged -= HandleBattleStatsChanged;
+
+        // If the battle is being aborted (scene unload, disable, etc.), dump the recent
+        // combat snapshot for debugging.
+        if (inBattle)
+            BattleLogger.DumpSnapshotToConsole("BattleManager disabled");
     }
 
     void OnDestroy()
@@ -403,6 +482,7 @@ private static void HardResetIconVisual(Image img)
 private IEnumerator SayKO(string displayName)
 {
     if (string.IsNullOrWhiteSpace(displayName)) yield break;
+    BattleLogger.AddKeyMoment($"KO: {displayName}");
     yield return Say($"{displayName} KO'ed!", BattleLineTag.Result);
 }
 
@@ -656,11 +736,15 @@ private IEnumerator MaybeSayKO_Wild(string victimName, float preHP, float postHP
     private IEnumerator Co_StartBattleNow()
     {
         _turnIndex = 0;
+        EnsureBattleRngInitialized();
         inBattle = true;
         startTime = Time.unscaledTime;
 
         var vsName = wildDef ? $"{wildDef.displayName} (Lv {wildLevel})" : "Unknown";
-        BattleLogger.BeginBattle(vsName);
+        BattleLogger.BeginBattle(vsName, _battleSeed, _battleSeedLabel);
+        // Reset key moment snapshot for this battle.
+        BattleLogger.SetKeyMomentsCap(20);
+        BattleLogger.ClearKeyMoments();
 
         if (wildDef)
             BattleLogger.Log($"A wild {wildDef.displayName} (Lv {wildLevel}) appeared!", LogScope.Battle);
@@ -783,7 +867,7 @@ private IEnumerator MaybeSayKO_Wild(string victimName, float preHP, float postHP
             bool playerFirst;
             if (pSpeed > wSpeed) playerFirst = true;
             else if (pSpeed < wSpeed) playerFirst = false;
-            else playerFirst = UnityEngine.Random.value < 0.5f;
+            else playerFirst = Rng01() < 0.5f;
 
             EnemyAction wildChoice = ChooseEnemyAction();
 
@@ -1019,7 +1103,7 @@ private IEnumerator MaybeSayKO_Wild(string victimName, float preHP, float postHP
                                         ResetDefendStreak();
 
                                         float chance = ComputeRunChance();
-                                        bool escaped = UnityEngine.Random.value < chance;
+                                        bool escaped = Rng01() < chance;
 
                                         string name = GetName(activeIndex);
 
@@ -1192,7 +1276,7 @@ private IEnumerator MaybeSayKO_Wild(string victimName, float preHP, float postHP
                 ClearPlayerGuardStateForActive(); // safety
 
                 float chance = ComputeRunChance();
-                bool escaped = UnityEngine.Random.value < chance;
+                bool escaped = Rng01() < chance;
 
                 string name = GetName(activeIndex);
 
@@ -1375,6 +1459,9 @@ private IEnumerator MaybeSayKO_Wild(string victimName, float preHP, float postHP
 
         yield return Say($"{attacker} hits {foeName} for {dmgToApply}!", BattleLineTag.Result);
 
+        if (dr.crit)
+            BattleLogger.AddKeyMoment($"CRIT: {attacker} → {foeName} ({dmgToApply})");
+
         if (showEffectivenessText)
         {
             if (dr.effectiveness > 1.25f)
@@ -1473,7 +1560,7 @@ private IEnumerator MaybeSayKO_Wild(string victimName, float preHP, float postHP
         {
             string name = wildDef ? wildDef.displayName : "Foe";
             float chance = ComputeEnemyRunChance();
-            bool fled = UnityEngine.Random.value < chance;
+            bool fled = Rng01() < chance;
 
             if (fled)
             {
@@ -1627,6 +1714,9 @@ private IEnumerator MaybeSayKO_Wild(string victimName, float preHP, float postHP
 
         yield return Say($"{attackerName} hits {GetName(activeIndex)} for {dmg_final}!", BattleLineTag.Result);
 
+        if (dr.crit && !df.cannotBeCrit)
+            BattleLogger.AddKeyMoment($"CRIT: {attackerName} → {GetName(activeIndex)} ({dmg_final})");
+
         if (showEffectivenessText)
         {
             if (dr.effectiveness > 1.25f)
@@ -1724,6 +1814,10 @@ private IEnumerator MaybeSayKO_Wild(string victimName, float preHP, float postHP
         ResetStatusIcons();
 
         if (turnCR != null) { StopCoroutine(turnCR); turnCR = null; }
+
+        // Restore BattleCalc RNG to default (UnityEngine.Random)
+        BattleCalc.ResetRng();
+        _battleRng = null;
 
         float survived = Mathf.Max(0f, Time.unscaledTime - startTime);
 
@@ -2118,6 +2212,7 @@ private void ResolveQueuedSwap()
     }
 
     BattleLogger.Log($"Swapped to {GetName(activeIndex)}! (turn consumed)", LogScope.Battle);
+    BattleLogger.AddKeyMoment($"SWAP: {GetName(activeIndex)}");
 
     if (feedback) feedback.PlayActionQueued(
         BattleFeedbackManager.BattleFeedbackSide.Player,
@@ -2140,6 +2235,8 @@ private bool AutoSwapToAlive()
             ApplyActiveToUI();
             ClampAndPushActiveHP();
             RefreshBenchUI();
+
+            BattleLogger.AddKeyMoment($"SWAP: {GetName(activeIndex)}");
 
             if (teamPendingBuffPct != null && teamPendingBuffTurns != null &&
                 slotDamageBuffPct != null && slotDamageBuffTurns != null &&
@@ -2647,7 +2744,7 @@ private bool AutoSwapToAlive()
     private bool RollDefendSuccess()
     {
         float chance = Mathf.Clamp01(currentDefendSuccess);
-        bool ok = UnityEngine.Random.value <= chance;
+        bool ok = Rng01() <= chance;
 
         if (ok)
         {
@@ -2757,11 +2854,11 @@ private bool AutoSwapToAlive()
 
         EnemyAction Fallback()
         {
-            if (hpRatio < 0.25f && UnityEngine.Random.value < 0.40f)
+            if (hpRatio < 0.25f && Rng01() < 0.40f)
                 return EnemyAction.Run;
-            if (hpRatio < 0.50f && UnityEngine.Random.value < 0.30f)
+            if (hpRatio < 0.50f && Rng01() < 0.30f)
                 return EnemyAction.Defend;
-            if (UnityEngine.Random.value < 0.15f)
+            if (Rng01() < 0.15f)
                 return EnemyAction.Focus;
             return EnemyAction.Attack;
         }
@@ -2814,7 +2911,7 @@ private bool AutoSwapToAlive()
     private bool RollEnemyDefendSuccess()
     {
         float chance = Mathf.Clamp01(wildDefendCurrentSuccess);
-        bool ok = UnityEngine.Random.value <= chance;
+        bool ok = Rng01() <= chance;
 
         if (ok)
         {
@@ -2883,6 +2980,8 @@ private bool AutoSwapToAlive()
 
     private void ForceEndBattleEarly(bool victory, bool escaped = false)
     {
+        BattleCalc.ResetRng();
+        _battleRng = null;
         SetIsPlayerTurn(false);
         pendingAction = PlayerAction.None;
         ResetStatusIcons();

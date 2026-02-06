@@ -32,6 +32,10 @@ public class PostBattleSummaryPanelUI : MonoBehaviour
     [SerializeField] private TextMeshProUGUI firstHitLabel;
     [SerializeField] private TextMeshProUGUI timeLabel;
 
+    [Header("Key Moments (Optional)")]
+    [Tooltip("Optional: shows the last ~20 key battle events (crits, KOs, swaps).")]
+    [SerializeField] private TextMeshProUGUI keyMomentsLabel;
+
     [Header("Controls")]
     [SerializeField] private Button continueButton;
 
@@ -284,6 +288,25 @@ public class PostBattleSummaryPanelUI : MonoBehaviour
         if (critsLabel) critsLabel.text = $"Crits: {Mathf.Max(0, result.critCount)}";
         if (firstHitLabel) firstHitLabel.text = $"First Hit: {(result.gotFirstHit ? "Yes" : "No")}";
         if (timeLabel) timeLabel.text = $"Time: {FormatTime(result.secondsSurvived)}";
+
+        // Key moments (debug + UX)
+        if (keyMomentsLabel)
+        {
+            var km = BattleLogger.GetKeyMomentsSnapshot(20);
+            if (km != null && km.Count > 0)
+            {
+                // bullet-ish formatting without rich text dependency
+                var sb = new System.Text.StringBuilder(512);
+                sb.AppendLine("Key Moments:");
+                for (int i = 0; i < km.Count; i++)
+                    sb.AppendLine($"• {km[i]}");
+                keyMomentsLabel.text = sb.ToString();
+            }
+            else
+            {
+                keyMomentsLabel.text = "Key Moments:\n• (none)";
+            }
+        }
     }
 
     private Sprite GetBestPortraitSprite(MonsterDataSO def, bool shiny)

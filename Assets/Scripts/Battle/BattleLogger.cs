@@ -190,6 +190,23 @@ public static class BattleLogger
     static string _currentBattleLabel;
     static string _currentEncounterLabel;
 
+    // ─────────────────────────────────────────────────────────
+    // Combat snapshot (last N key moments)
+    // ─────────────────────────────────────────────────────────
+    static readonly List<string> _keyMoments = new List<string>(32);
+    static int _keyMomentsCap = 20;
+
+    public static int CurrentBattleSeed { get; private set; }
+    public static string CurrentBattleSeedLabel { get; private set; }
+
+    static bool _subscribedToCrash;
+    static bool _dumping;
+
+    static BattleLogger()
+    {
+        TrySubscribeCrashDump();
+    }
+
     public static IReadOnlyList<LogEntry> Entries => _entries;
 
     // Snapshot helper for modal rebuild
@@ -234,6 +251,47 @@ public static class BattleLogger
         TrimToMax();
     }
 
+    public static void SetKeyMomentsCap(int cap)
+    {
+        _keyMomentsCap = Mathf.Clamp(cap, 5, 200);
+        TrimKeyMoments();
+    }
+
+    public static IReadOnlyList<string> GetKeyMomentsSnapshot(int max = 20)
+    {
+        if (max <= 0) max = _keyMomentsCap;
+        int count = Mathf.Min(max, _keyMoments.Count);
+        if (count <= 0) return Array.Empty<string>();
+
+        int start = Mathf.Max(0, _keyMoments.Count - count);
+        var list = new List<string>(count);
+        for (int i = start; i < _keyMoments.Count; i++)
+            list.Add(_keyMoments[i]);
+        return list;
+    }
+
+    public static void AddKeyMoment(string line)
+    {
+        if (!Enabled) return;
+        if (string.IsNullOrWhiteSpace(line)) return;
+
+        _keyMoments.Add(line);
+        TrimKeyMoments();
+    }
+
+    public static void ClearKeyMoments()
+    {
+        _keyMoments.Clear();
+    }
+
+    static void TrimKeyMoments()
+    {
+        if (_keyMomentsCap <= 0) return;
+        int over = _keyMoments.Count - _keyMomentsCap;
+        if (over <= 0) return;
+        _keyMoments.RemoveRange(0, over);
+    }
+
     // ─────────────────────────────────────────────────────────
     // Battle / Encounter lifecycle
     // ─────────────────────────────────────────────────────────
@@ -243,10 +301,19 @@ public static class BattleLogger
         OnBattleBegan?.Invoke(_currentBattleLabel);
     }
 
+    // New overload: include deterministic battle seed (debug reports)
+    public static void BeginBattle(string label, int seed, string seedLabel)
+    {
+        CurrentBattleSeed = seed;
+        CurrentBattleSeedLabel = seedLabel;
+        BeginBattle(label);
+    }
+
     public static void EndBattle(bool victory)
     {
         OnBattleEnded?.Invoke(victory);
         _currentBattleLabel = null;
+        // Keep seed values for diagnostics even after battle ends.
     }
 
     public static void BeginEncounter(string label)
@@ -503,6 +570,8 @@ public static class BattleLogger
         _entries.Clear();
         OnLogCleared?.Invoke();
 
+        _keyMoments.Clear();
+
         if (emitSystemLine && Enabled)
         {
             var e = new LogEntry
@@ -526,5 +595,72 @@ public static class BattleLogger
         if (overflow <= 0) return;
 
         _entries.RemoveRange(0, overflow);
+    }
+
+    // ─────────────────────────────────────────────────────────
+    // Crash/abort dump (Exceptions/Errors)
+    // ─────────────────────────────────────────────────────────
+    static void TrySubscribeCrashDump()
+    {
+        if (_subscribedToCrash) return;
+        _subscribedToCrash = true;
+
+        Application.logMessageReceived += HandleUnityLog;
+    }
+
+    static void HandleUnityLog(string condition, string stackTrace, LogType type)
+    {
+        if (type != LogType.Exception && type != LogType.Error && type != LogType.Assert)
+            return;
+
+        // Only dump if a battle or encounter is active.
+        if (string.IsNullOrEmpty(_currentBattleLabel) && string.IsNullOrEmpty(_currentEncounterLabel))
+            return;
+
+        if (_dumping) return;
+        _dumping = true;
+        try
+        {
+            DumpSnapshotToConsole(context: type.ToString());
+        }
+        finally
+        {
+            _dumping = false;
+        }
+    }
+
+    public static void DumpSnapshotToConsole(string context = "")
+    {
+        var sb = new StringBuilder(2048);
+
+        sb.AppendLine("=== BITLINGS COMBAT SNAPSHOT ===");
+        if (!string.IsNullOrEmpty(context)) sb.AppendLine($"Context: {context}");
+        if (!string.IsNullOrEmpty(_currentBattleLabel)) sb.AppendLine($"Battle: {_currentBattleLabel}");
+        if (!string.IsNullOrEmpty(_currentEncounterLabel)) sb.AppendLine($"Encounter: {_currentEncounterLabel}");
+        if (CurrentBattleSeed != 0)
+        {
+            sb.AppendLine($"BattleSeed: {CurrentBattleSeed}" + (string.IsNullOrEmpty(CurrentBattleSeedLabel) ? "" : $" ({CurrentBattleSeedLabel})"));
+        }
+
+        var km = GetKeyMomentsSnapshot(_keyMomentsCap);
+        sb.AppendLine("— Key Moments —");
+        if (km.Count == 0) sb.AppendLine("(none)");
+        else
+        {
+            for (int i = 0; i < km.Count; i++)
+                sb.AppendLine($"  - {km[i]}");
+        }
+
+        // Last 20 log lines (plain)
+        sb.AppendLine("— Last Lines —");
+        var lastLines = GetLinesSnapshot(20);
+        if (lastLines.Count == 0) sb.AppendLine("(none)");
+        else
+        {
+            for (int i = 0; i < lastLines.Count; i++)
+                sb.AppendLine($"  {lastLines[i]}");
+        }
+
+        Debug.Log(sb.ToString());
     }
 }

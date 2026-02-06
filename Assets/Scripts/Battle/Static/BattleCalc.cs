@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 using Random = UnityEngine.Random;
 
@@ -10,6 +11,41 @@ public struct DamageResult
 
 public static class BattleCalc
 {
+    // ─────────────────────────────────────────────────────────────────────────────
+    // Deterministic RNG hook (battle-scoped)
+    //
+    // BattleManager injects a per-battle RNG so combat randomness is replayable and
+    // debuggable (daily/custom seeds ready).
+    //
+    // IMPORTANT: This only affects randomness used inside BattleCalc (crits).
+    // BattleManager should also route any other combat RNG (run/defend/tie-breaks)
+    // through its own RNG.
+    // ─────────────────────────────────────────────────────────────────────────────
+
+    private static Func<float> _rng01;
+
+    /// <summary>
+    /// Inject a deterministic RNG for battle calculations.
+    /// Pass a function returning a float in [0,1).
+    /// </summary>
+    public static void SetRng(Func<float> rng01) => _rng01 = rng01;
+
+    /// <summary>Clear the injected RNG (returns to UnityEngine.Random).</summary>
+    public static void ResetRng() => _rng01 = null;
+
+    private static float Rng01()
+    {
+        // NOTE: Clamp to [0, 0.999999...] to prevent edge-case 1.0f.
+        try
+        {
+            if (_rng01 != null)
+                return Mathf.Clamp(_rng01(), 0f, 0.999999f);
+        }
+        catch { /* fall back to Unity RNG */ }
+
+        return Random.value;
+    }
+
     // ─────────────────────────────────────────────────────────────────────────────
     // Core stat curves (back-compat)
     // ─────────────────────────────────────────────────────────────────────────────
@@ -122,7 +158,7 @@ public static class BattleCalc
         if (float.IsNaN(eff) || float.IsInfinity(eff)) eff = 1f;
 
         bool defenderIsRock = defDef && defDef.type == MonsterType.Rock;
-        bool crit = !defenderIsRock && (Random.value < critChance);
+        bool crit = !defenderIsRock && (Rng01() < critChance);
 
         float preMit = baseDamage * Mathf.Max(0.25f, eff) * (crit ? critMultiplier : 1f);
 
@@ -243,7 +279,7 @@ public static class BattleCalc
         }
 
         bool defenderIsRock = defDef && defDef.type == MonsterType.Rock;
-        bool crit = !defenderIsRock && !blockCrit && (Random.value < critChance);
+        bool crit = !defenderIsRock && !blockCrit && (Rng01() < critChance);
 
         float preMit = baseDamage * Mathf.Max(0.25f, eff) * (crit ? critMultiplier : 1f);
 
