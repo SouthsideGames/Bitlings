@@ -29,7 +29,28 @@ public class BattleManager : MonoBehaviour
     private enum PlayerAction { None, Attack, Defend, Focus, Swap, Run }
     private enum EnemyAction { Attack, Defend, Focus, Run }
 
-    [Header("Manual Turn Settings")]
+    
+    [Header("Wild Intent Telegraph")]
+    [SerializeField] private bool showWildIntentIcons = true;
+
+    [Tooltip("In manual battles, we always show telegraph text. In auto battles, we only show text for the first N turns (icons always).")]
+    [SerializeField, Min(0)] private int autoTelegraphTextFirstTurns = 3;
+
+    [Tooltip("Unscaled seconds to keep the wild intent icon visible (manual).")]
+    [SerializeField, Min(0.05f)] private float wildIntentIconDurationManual = 0.60f;
+
+    [Tooltip("Unscaled seconds to keep the wild intent icon visible (auto).")]
+    [SerializeField, Min(0.05f)] private float wildIntentIconDurationAuto = 0.30f;
+
+    [Tooltip("Small unscaled pause after showing the intent icon (for readability, even when no text is shown).")]
+    [SerializeField, Min(0f)] private float wildIntentTelegraphPause = 0.10f;
+
+    [Header("Wild Intent Text")]
+    [SerializeField] private string telegraphAttack = "Wild presses the attack!";
+    [SerializeField] private string telegraphDefend = "Wild braces!";
+    [SerializeField] private string telegraphFocus  = "Wild looks for an opening...";
+    [SerializeField] private string telegraphRun    = "Wild tries to get away!";
+[Header("Manual Turn Settings")]
     [SerializeField] private bool manualTurns = true;
     [SerializeField, Range(0f, 1f)] private float defendReducePct = 0.50f;
     [SerializeField, Range(0f, 1f)] private float guardConvertPct = 1.0f;
@@ -110,7 +131,7 @@ public class BattleManager : MonoBehaviour
 
     private bool isResolvingPlayerTurn = false;
     private PlayerAction pendingAction = PlayerAction.None;
-private int pendingSwapBenchSlot = -1;
+    private int pendingSwapBenchSlot = -1;
     private bool defendActiveThisRound = false;
 
     [Header("Wild UI")]
@@ -153,23 +174,6 @@ private int pendingSwapBenchSlot = -1;
     [SerializeField, Min(0.05f)] private float beginRoundDelay = 0.15f;
     [SerializeField, Min(0.05f)] private float hitPause = 0.25f;
     [SerializeField, Min(0.05f)] private float endRoundDelay = 0.60f;
-
-    [Header("Turn Pacing Gate (unscaled)")]
-    [Tooltip("Impact pause after a damage event (feel of hitstop).")]
-    [SerializeField, Min(0.05f)] private float damageImpactPause = 0.20f;
-    [Tooltip("Longer pause when a monster is KO'd.")]
-    [SerializeField, Min(0.05f)] private float koPause = 0.45f;
-    [Tooltip("Pause after a swap for clarity.")]
-    [SerializeField, Min(0.05f)] private float swapPause = 0.30f;
-
-    [Tooltip("Maximum time to wait for UI FX to finish before continuing.")]
-    [SerializeField, Min(0.05f)] private float fxWaitTimeout = 1.5f;
-
-    [Tooltip("Maximum time to wait for narration to unlock before continuing.")]
-    [SerializeField, Min(0.05f)] private float narrationWaitTimeout = 1.5f;
-
-    [Tooltip("Auto-battle pacing multiplier. Lower = faster.")]
-    [SerializeField, Range(0.10f, 1.0f)] private float autoPacingMultiplier = 0.55f;
 
     [Header("Combat Tunables")]
     [Range(0f, 1f)][SerializeField] private float critChancePlayer = 0.10f;
@@ -279,11 +283,6 @@ private int pendingSwapBenchSlot = -1;
 
     void OnDisable()
     {
-        // Safety: if this object is disabled mid-battle (panel stack / scene change),
-        // stop the turn loop and clear locks to avoid soft-locks or stray coroutines.
-        if (inBattle || turnCR != null)
-            AbortBattleInternal();
-
         GameEvents.BattleFinished -= HandleBattleFinishedUIRefresh;
         GameEvents.BattleStatsChanged -= HandleBattleStatsChanged;
     }
@@ -294,41 +293,7 @@ private int pendingSwapBenchSlot = -1;
         if (benchBtn2) benchBtn2.onClick.RemoveAllListeners();
     }
 
-    
-/// <summary>
-/// Hard-aborts the current battle without awarding rewards.
-/// Used as a safety net when the BattleManager is disabled mid-battle.
-/// </summary>
-private void AbortBattleInternal()
-{
-    inBattle = false;
-    SetIsPlayerTurn(false);
-
-    // Clear any locks / queued input so UI can't get stuck.
-    _narrationLock = false;
-    isResolvingPlayerTurn = false;
-    pendingAction = PlayerAction.None;
-    pendingSwapBenchSlot = -1;
-
-    defendActiveThisRound = false;
-    wildDefendActiveThisRound = false;
-    wildChargedNextAttack = false;
-    wildPendingGuardShield = 0f;
-
-    if (turnCR != null)
-    {
-        StopCoroutine(turnCR);
-        turnCR = null;
-    }
-
-    ConfigureForAuto(false);
-    ResetStatusIcons();
-
-    if (benchBtn1) benchBtn1.interactable = false;
-    if (benchBtn2) benchBtn2.interactable = false;
-}
-
-private void SetIsPlayerTurn(bool value)
+    private void SetIsPlayerTurn(bool value)
     {
         if (_isPlayerTurn == value) return;
         _isPlayerTurn = value;
@@ -404,22 +369,6 @@ private IEnumerator MaybeSayKO_Wild(string victimName, float preHP, float postHP
     {
         var roster = SaveManager.Data.team;
         if (roster == null || roster.Count == 0) { ForceEndBattleEarly(false); return; }
-
-        // Safety: if Begin is invoked while a prior battle coroutine is still around,
-        // stop it and clear any lingering per-battle state.
-        if (turnCR != null)
-        {
-            StopCoroutine(turnCR);
-            turnCR = null;
-        }
-
-        inBattle = false;
-        _narrationLock = false;
-        isResolvingPlayerTurn = false;
-        pendingAction = PlayerAction.None;
-        pendingSwapBenchSlot = -1;
-        defendActiveThisRound = false;
-        wildDefendActiveThisRound = false;
 
         playerNoDmgTurns = 0;
         playerNoCritTurns = 0;
@@ -686,56 +635,6 @@ private IEnumerator MaybeSayKO_Wild(string victimName, float preHP, float postHP
         yield break;
     }
 
-    // ─────────────────────────────────────────────────────────────
-    // Turn Pacing Gate
-    // ─────────────────────────────────────────────────────────────
-
-    private float GetPacingMult()
-    {
-        // Auto battles should feel snappy, but still readable.
-        bool isAuto = (EncounterManager.I != null && EncounterManager.I.IsAutoMode) || !manualTurns || AutoResolveActive;
-        return isAuto ? Mathf.Clamp(autoPacingMultiplier, 0.10f, 1f) : 1f;
-    }
-
-    private IEnumerator WaitForNarrationUnlock(float timeoutSeconds)
-    {
-        if (!_narrationLock) yield break;
-
-        float timeout = Mathf.Max(0.05f, timeoutSeconds);
-        float t = 0f;
-        while (_narrationLock && t < timeout)
-        {
-            t += Time.unscaledDeltaTime;
-            yield return null;
-        }
-    }
-
-    private IEnumerator TurnPace(float pauseSeconds, bool waitFX = true, bool waitNarration = true)
-    {
-        if (waitNarration)
-            yield return WaitForNarrationUnlock(narrationWaitTimeout);
-
-        if (waitFX && feedback != null)
-            yield return feedback.WaitForFX(fxWaitTimeout);
-
-        float mult = GetPacingMult();
-        float p = Mathf.Max(0f, pauseSeconds) * mult;
-        if (p > 0f)
-            yield return Wait(p);
-    }
-
-    private IEnumerator TurnPaceAfterAction()
-    {
-        // If a KO happened, let it breathe longer.
-        bool ko = IsWildKO() || IsTeamKO();
-        yield return TurnPace(ko ? koPause : damageImpactPause);
-    }
-
-    private IEnumerator TurnPaceSwap()
-    {
-        yield return TurnPace(swapPause);
-    }
-
     private IEnumerator TurnLoop()
     {
         int round = 0;
@@ -768,8 +667,7 @@ private IEnumerator MaybeSayKO_Wild(string victimName, float preHP, float postHP
             RefreshStatusIconsFromState();
 
             BattleLogger.Log($"— Round {round} —", LogScope.Battle);
-            // Brief breathing room at the top of the round. Don't block on narration here.
-            yield return TurnPace(beginRoundDelay, waitFX: true, waitNarration: false);
+            yield return Wait(beginRoundDelay);
 
             _turnIndex++;
             TitlesAdapter.OnTurnAdvanced(_turnIndex);
@@ -830,6 +728,8 @@ private IEnumerator MaybeSayKO_Wild(string victimName, float preHP, float postHP
 
             EnemyAction wildChoice = ChooseEnemyAction();
 
+            yield return Co_TelegraphWildIntent(wildChoice);
+
             if (playerFirst)
             {
                 if (wildChoice == EnemyAction.Defend)
@@ -846,7 +746,7 @@ private IEnumerator MaybeSayKO_Wild(string victimName, float preHP, float postHP
                     RefreshStatusIconsFromState();
 
                     if (CheckEnd()) break;
-                    yield return TurnPaceAfterAction();
+                    yield return Wait(hitPause);
 
                     if (!IsTeamKO() && teamHP[activeIndex] <= 0.01f)
                     {
@@ -864,7 +764,7 @@ private IEnumerator MaybeSayKO_Wild(string victimName, float preHP, float postHP
                         RefreshStatusIconsFromState();
 
                         if (CheckEnd()) break;
-                        yield return TurnPaceAfterAction();
+                        yield return Wait(hitPause);
                     }
                 }
             }
@@ -908,12 +808,15 @@ private IEnumerator MaybeSayKO_Wild(string victimName, float preHP, float postHP
 
                             defendActiveThisRound = success;
 
-                            if (feedback)
+                            if (!success)
                             {
-                                feedback.PlayDefendResult(BattleFeedbackManager.BattleFeedbackSide.Player, success);
+                                // ✅ Critical fix: failure must not leave guard state on.
+                                ClearPlayerGuardStateForActive();
                             }
 
-                            // Defend icon should only show if success
+                            if (feedback)
+                                feedback.PlayDefendResult(BattleFeedbackManager.BattleFeedbackSide.Player, success);
+
                             RefreshStatusIconsFromState();
 
                             if (success)
@@ -929,9 +832,10 @@ private IEnumerator MaybeSayKO_Wild(string victimName, float preHP, float postHP
                         else
                         {
                             ResetDefendStreak();
-                            defendActiveThisRound = false;
+                            ClearPlayerGuardStateForActive(); // ✅ consistent: no guard unless defend succeeded
                             RefreshStatusIconsFromState();
                         }
+
                     }
 
                     // ─────────────────────────────────────────────────────────
@@ -949,7 +853,6 @@ private IEnumerator MaybeSayKO_Wild(string victimName, float preHP, float postHP
                         {
                             ResetDefendStreak();
                             ResolveQueuedSwap();
-	                    	    yield return TurnPaceSwap();
                             RefreshStatusIconsFromState();
                         }
 
@@ -974,11 +877,14 @@ private IEnumerator MaybeSayKO_Wild(string victimName, float preHP, float postHP
                     RefreshStatusIconsFromState();
 
                     if (CheckEnd()) break;
-                    yield return TurnPaceAfterAction();
+                    yield return Wait(hitPause);
 
                     // If the wild KO'ed our active slot, we must auto-swap (if possible) and the queued action is lost.
-                    if (!IsTeamKO() && teamHP[activeIndex] <= 0.01f)
+                if (!IsTeamKO() && teamHP[activeIndex] <= 0.01f)
                     {
+                        // ✅ Guard was tied to the KO'd monster; never carry to the swapped-in one.
+                        ClearPlayerGuardStateForActive();
+
                         AutoSwapToAlive();
                         queuedChoice = PlayerAction.None;
                         RefreshStatusIconsFromState();
@@ -1038,7 +944,6 @@ private IEnumerator MaybeSayKO_Wild(string victimName, float preHP, float postHP
 
                                         ResetDefendStreak();
                                         ResolveQueuedSwap();
-	                                        yield return TurnPaceSwap();
                                         RefreshStatusIconsFromState();
                                         break;
                                     }
@@ -1094,7 +999,7 @@ private IEnumerator MaybeSayKO_Wild(string victimName, float preHP, float postHP
                         }
 
                         if (CheckEnd()) break;
-                        yield return TurnPaceAfterAction();
+                        yield return Wait(hitPause);
                     }
                 }
             }
@@ -1109,8 +1014,7 @@ private IEnumerator MaybeSayKO_Wild(string victimName, float preHP, float postHP
                     if (jobCtx[activeIndex].dmgReduceBuffTurns > 0) jobCtx[activeIndex].dmgReduceBuffTurns--;
                 }
 
-                // End-of-round breathing room.
-                yield return TurnPace(endRoundDelay, waitFX: true, waitNarration: true);
+                yield return Wait(endRoundDelay);
             }
 
             // Booster system: tick durations/cooldowns once per completed round.
@@ -1158,90 +1062,107 @@ private IEnumerator MaybeSayKO_Wild(string victimName, float preHP, float postHP
         {
             case PlayerAction.Attack:
                 ResetDefendStreak();
+                ClearPlayerGuardStateForActive(); // safety: attack implies no guard this round
                 yield return PlayerTurn();
                 break;
 
             case PlayerAction.Defend:
+            {
+                string name = GetName(activeIndex);
+                bool success = RollDefendSuccess();
+
+                defendActiveThisRound = success;
+
+                if (!success)
                 {
-                    string name = GetName(activeIndex);
-                    bool success = RollDefendSuccess();
-
-                    defendActiveThisRound = success;
-
-                    if (feedback)
-                    {
-                        feedback.PlayDefendResult(BattleFeedbackManager.BattleFeedbackSide.Player, success);
-                    }
-
-                    if (success)
-                    {
-                        BattleLogger.Log($"{name} is defending.", LogScope.Battle);
-                        BattleLogger.Log($"{name} will reduce the next hit and convert it into a shield for the following round.", LogScope.Battle);
-                    }
-                    else
-                    {
-                        BattleLogger.Log($"{name} tried to defend, but it failed!", LogScope.Battle);
-                    }
-                    break;
+                    // ✅ Critical fix: failed defend must never leave guard state enabled.
+                    ClearPlayerGuardStateForActive();
                 }
+
+                if (feedback)
+                    feedback.PlayDefendResult(BattleFeedbackManager.BattleFeedbackSide.Player, success);
+
+                // Keep icons correct immediately
+                RefreshStatusIconsFromState();
+
+                if (success)
+                {
+                    BattleLogger.Log($"{name} is defending.", LogScope.Battle);
+                    BattleLogger.Log($"{name} will reduce the next hit and convert it into a shield for the following round.", LogScope.Battle);
+                }
+                else
+                {
+                    BattleLogger.Log($"{name} tried to defend, but it failed!", LogScope.Battle);
+                }
+
+                break;
+            }
 
             case PlayerAction.Focus:
-                {
-                    ResetDefendStreak();
+            {
+                ResetDefendStreak();
+                ClearPlayerGuardStateForActive(); // safety
 
-                    if (chargedNextAttack != null && activeIndex >= 0 && activeIndex < chargedNextAttack.Length)
-                        chargedNextAttack[activeIndex] = true;
+                if (chargedNextAttack != null && activeIndex >= 0 && activeIndex < chargedNextAttack.Length)
+                    chargedNextAttack[activeIndex] = true;
 
-                    BattleLogger.Log($"{GetName(activeIndex)} is charging.", LogScope.Battle);
-                    BattleLogger.Log($"Their next attack will deal +{Mathf.RoundToInt(chargeBonusPct * 100f)}% damage.", LogScope.Battle);
+                BattleLogger.Log($"{GetName(activeIndex)} is charging.", LogScope.Battle);
+                BattleLogger.Log($"Their next attack will deal +{Mathf.RoundToInt(chargeBonusPct * 100f)}% damage.", LogScope.Battle);
 
-                    if (feedback) feedback.PlayActionQueued(
-                        BattleFeedbackManager.BattleFeedbackSide.Player,
-                        BattleFeedbackManager.BattleFeedbackAction.Focus
-                    );
-                    break;
-                }
+                if (feedback) feedback.PlayActionQueued(
+                    BattleFeedbackManager.BattleFeedbackSide.Player,
+                    BattleFeedbackManager.BattleFeedbackAction.Focus
+                );
+
+                RefreshStatusIconsFromState();
+                break;
+            }
 
             case PlayerAction.Swap:
-                {
-                    ResetDefendStreak();
-	                ResolveQueuedSwap();
-	                yield return TurnPaceSwap();
-                    break;
-                }
+            {
+                ResetDefendStreak();
+                ClearPlayerGuardStateForActive(); // ✅ guard must never carry to a swapped-in monster
+                ResolveQueuedSwap();
+                RefreshStatusIconsFromState();
+                break;
+            }
 
             case PlayerAction.Run:
+            {
+                ResetDefendStreak();
+                ClearPlayerGuardStateForActive(); // safety
+
+                float chance = ComputeRunChance();
+                bool escaped = UnityEngine.Random.value < chance;
+
+                string name = GetName(activeIndex);
+
+                if (feedback) feedback.PlayActionQueued(
+                    BattleFeedbackManager.BattleFeedbackSide.Player,
+                    BattleFeedbackManager.BattleFeedbackAction.Run
+                );
+
+                RefreshStatusIconsFromState();
+
+                if (escaped)
                 {
-                    ResetDefendStreak();
-
-                    float chance = ComputeRunChance();
-                    bool escaped = UnityEngine.Random.value < chance;
-
-                    string name = GetName(activeIndex);
-
-                    if (feedback) feedback.PlayActionQueued(
-                        BattleFeedbackManager.BattleFeedbackSide.Player,
-                        BattleFeedbackManager.BattleFeedbackAction.Run
-                    );
-
-                    if (escaped)
-                    {
-                        BattleLogger.Log($"{name} has fled! (Run chance {Mathf.RoundToInt(chance * 100f)}%)", LogScope.Battle);
-                        EndBattle(false, true);
-                        yield break;
-                    }
-                    else
-                    {
-                        runAttempts++;
-                        BattleLogger.Log($"Couldn't escape! (Run chance was {Mathf.RoundToInt(chance * 100f)}%)", LogScope.Battle);
-                    }
-                    break;
+                    BattleLogger.Log($"{name} has fled! (Run chance {Mathf.RoundToInt(chance * 100f)}%)", LogScope.Battle);
+                    EndBattle(false, true);
+                    yield break;
                 }
+                else
+                {
+                    runAttempts++;
+                    BattleLogger.Log($"Couldn't escape! (Run chance was {Mathf.RoundToInt(chance * 100f)}%)", LogScope.Battle);
+                }
+                break;
+            }
 
             default:
                 break;
         }
     }
+
 
     private IEnumerator PlayerTurn()
     {
@@ -1702,9 +1623,6 @@ private IEnumerator MaybeSayKO_Wild(string victimName, float preHP, float postHP
         if (benchBtn2) benchBtn2.interactable = false;
 
         pendingAction = PlayerAction.None;
-        pendingSwapBenchSlot = -1;
-        _narrationLock = false;
-        isResolvingPlayerTurn = false;
         defendActiveThisRound = false;
         wildDefendActiveThisRound = false;
         wildChargedNextAttack = false;
@@ -2630,6 +2548,70 @@ private bool AutoSwapToAlive()
         currentDefendSuccess = defendFirstUseSuccess;
     }
 
+    
+    private bool ShouldShowWildTelegraphText()
+    {
+        // Manual: always show text. Auto: show only for first N turns.
+        if (!EncounterManager.I || !EncounterManager.I.IsAutoMode)
+            return true;
+
+        return _turnIndex < autoTelegraphTextFirstTurns;
+    }
+
+    private float GetWildIntentIconDuration()
+    {
+        if (EncounterManager.I && EncounterManager.I.IsAutoMode)
+            return wildIntentIconDurationAuto;
+
+        return wildIntentIconDurationManual;
+    }
+
+    private string GetWildTelegraphLine(EnemyAction action)
+    {
+        switch (action)
+        {
+            case EnemyAction.Attack: return telegraphAttack;
+            case EnemyAction.Defend: return telegraphDefend;
+            case EnemyAction.Focus:  return telegraphFocus;
+            case EnemyAction.Run:    return telegraphRun;
+            default: return string.Empty;
+        }
+    }
+
+    private IEnumerator Co_TelegraphWildIntent(EnemyAction action)
+    {
+        if (!showWildIntentIcons)
+            yield break;
+
+        if (feedback != null)
+        {
+            // Map to feedback action enum
+            var fbAction = BattleFeedbackManager.BattleFeedbackAction.Attack;
+
+            switch (action)
+            {
+                case EnemyAction.Attack: fbAction = BattleFeedbackManager.BattleFeedbackAction.Attack; break;
+                case EnemyAction.Defend: fbAction = BattleFeedbackManager.BattleFeedbackAction.Defend; break;
+                case EnemyAction.Focus:  fbAction = BattleFeedbackManager.BattleFeedbackAction.Focus;  break;
+                case EnemyAction.Run:    fbAction = BattleFeedbackManager.BattleFeedbackAction.Run;    break;
+            }
+
+            feedback.ShowWildIntent(fbAction, GetWildIntentIconDuration(), false);
+        }
+
+        // Manual: always narration. Auto: narration only for first N turns.
+        if (ShouldShowWildTelegraphText())
+        {
+            string line = GetWildTelegraphLine(action);
+            if (!string.IsNullOrEmpty(line))
+                yield return Say(line);
+        }
+
+        // Even without text, give the player a moment to register the icon.
+        if (wildIntentTelegraphPause > 0f)
+            yield return new WaitForSecondsRealtime(wildIntentTelegraphPause);
+    }
+
     private EnemyAction ChooseEnemyAction()
     {
         if (!wildDef || wildMaxHP <= 0.01f)
@@ -2779,31 +2761,11 @@ private bool AutoSwapToAlive()
 
     private void ForceEndBattleEarly(bool victory, bool escaped = false)
     {
-        // Early-outs can happen before the normal EndBattle path.
-        // Keep this path safe: stop coroutines, restore defaults, and clear input/locks.
-        inBattle = false;
         SetIsPlayerTurn(false);
-
         pendingAction = PlayerAction.None;
-        pendingSwapBenchSlot = -1;
-        _narrationLock = false;
-        isResolvingPlayerTurn = false;
-
-        defendActiveThisRound = false;
-        wildDefendActiveThisRound = false;
-        wildChargedNextAttack = false;
-        wildPendingGuardShield = 0f;
-
-        if (turnCR != null)
-        {
-            StopCoroutine(turnCR);
-            turnCR = null;
-        }
-
-        ConfigureForAuto(false);
         ResetStatusIcons();
 
-if (benchBtn1) benchBtn1.interactable = false;
+        if (benchBtn1) benchBtn1.interactable = false;
         if (benchBtn2) benchBtn2.interactable = false;
 
         var result = new BattleResult
@@ -2843,46 +2805,8 @@ if (benchBtn1) benchBtn1.interactable = false;
         _narrationLock = true;
         GameEvents.OnBattleStateChanged?.Invoke();
 
-        // Safety: narration should never hard-deadlock the battle if the text UI is disabled
-        // or a tween/coroutine is interrupted. We enforce a realtime timeout.
         if (battleTextBox != null)
-        {
-            IEnumerator lineCR = null;
-            try
-            {
-                lineCR = battleTextBox.ShowLine(new BattleLine(line, tags), battleSpeed);
-            }
-            catch (Exception e)
-            {
-                Debug.LogWarning($"[BattleManager] battleTextBox.ShowLine threw: {e.Message}");
-            }
-
-            if (lineCR != null)
-            {
-                float t0 = Time.unscaledTime;
-                while (true)
-                {
-                    bool movedNext = false;
-                    try
-                    {
-                        movedNext = lineCR.MoveNext();
-                    }
-                    catch (Exception e)
-                    {
-                        Debug.LogWarning($"[BattleManager] ShowLine iterator threw: {e.Message}");
-                        break;
-                    }
-
-                    if (!movedNext) break;
-
-                    yield return lineCR.Current;
-
-                    // Break if UI gets disabled or something hangs too long.
-                    if (!isActiveAndEnabled) break;
-                    if (Time.unscaledTime - t0 > 8f) break;
-                }
-            }
-        }
+            yield return battleTextBox.ShowLine(new BattleLine(line, tags), battleSpeed);
 
         _narrationLock = false;
         GameEvents.OnBattleStateChanged?.Invoke();
@@ -3128,6 +3052,19 @@ if (benchBtn1) benchBtn1.interactable = false;
         UpdatePlayerInfoUI();
         UpdateWildInfoUI();
     }
+
+    private void ClearPlayerGuardStateForActive()
+    {
+        defendActiveThisRound = false;
+
+        // Extra safety: ensure no lingering "stored guard shield" is applied later due to stale data.
+        if (pendingGuardShield != null &&
+            activeIndex >= 0 && activeIndex < pendingGuardShield.Length)
+        {
+            pendingGuardShield[activeIndex] = 0f;
+        }
+    }
+
 
 
 }

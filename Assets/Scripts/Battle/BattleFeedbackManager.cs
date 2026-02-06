@@ -26,7 +26,29 @@ public sealed class BattleFeedbackManager : MonoBehaviour
     [SerializeField] private Image playerChargeIcon;
     [SerializeField] private Image wildChargeIcon;
 
-    [Header("Optional: Action Buttons (press feedback)")]
+    
+    [Header("Optional: Wild Intent Telegraph (icon bubble)")]
+    [Tooltip("Optional root GameObject for the wild intent bubble. If not set, intent icons will not display.")]
+    [SerializeField] private GameObject wildIntentRoot;
+
+    [Tooltip("Icon inside the wild intent bubble.")]
+    [SerializeField] private Image wildIntentIcon;
+
+    [Tooltip("Optional text inside the wild intent bubble (kept off by default; BattleManager may use narration instead).")]
+    [SerializeField] private TMP_Text wildIntentText;
+
+    [Header("Wild Intent Sprites")]
+    [SerializeField] private Sprite wildIntentAttackSprite;
+    [SerializeField] private Sprite wildIntentDefendSprite;
+    [SerializeField] private Sprite wildIntentFocusSprite;
+    [SerializeField] private Sprite wildIntentRunSprite;
+
+    [Header("Wild Intent FX")]
+    [SerializeField, Min(0.01f)] private float wildIntentPopTime = 0.10f;
+    [SerializeField, Min(0f)] private float wildIntentStartScale = 0.85f;
+
+    private Coroutine _wildIntentCR;
+[Header("Optional: Action Buttons (press feedback)")]
     [SerializeField] private Button attackBtn;
     [SerializeField] private Button defendBtn;
     [SerializeField] private Button focusBtn;
@@ -114,31 +136,6 @@ public sealed class BattleFeedbackManager : MonoBehaviour
     private Vector3 _playerIconBaseScale = Vector3.one;
     private Vector3 _wildIconBaseScale = Vector3.one;
 
-    /// <summary>
-    /// True while coroutine-driven UI FX (currently HP bar smooth animations) are running.
-    /// BattleManager can yield on this to prevent stacked turn resolution.
-    /// </summary>
-    public bool IsFXBusy => (_playerHPAnimCR != null) || (_wildHPAnimCR != null);
-
-    /// <summary>
-    /// Waits until FeedbackManager has finished its coroutine-driven FX, with an optional timeout.
-    /// Uses unscaled time.
-    /// </summary>
-    public IEnumerator WaitForFX(float timeoutSeconds = 1.5f)
-    {
-        // Let any LeanTween/coroutine starts happen this frame.
-        yield return null;
-
-        float timeout = Mathf.Max(0.05f, timeoutSeconds);
-        float t = 0f;
-
-        while (IsFXBusy && t < timeout)
-        {
-            t += Time.unscaledDeltaTime;
-            yield return null;
-        }
-    }
-
     private void Awake()
     {
         CacheBaseScales();
@@ -195,7 +192,86 @@ public sealed class BattleFeedbackManager : MonoBehaviour
     public void SetChargePlayer(bool on) => SetCharge(BattleFeedbackSide.Player, on);
     public void SetChargeWild(bool on) => SetCharge(BattleFeedbackSide.Wild, on);
 
-    public void SetGuard(BattleFeedbackSide side, bool on)
+    
+    // ─────────────────────────────────────────────────────────────
+    // Wild Intent Telegraph (readable AI)
+    // ─────────────────────────────────────────────────────────────
+    public void ShowWildIntent(BattleFeedbackAction action, float durationSeconds = 0.6f, bool showText = false, string textOverride = null)
+    {
+        if (wildIntentRoot == null || wildIntentIcon == null)
+            return;
+
+        // Stop any previous telegraph
+        if (_wildIntentCR != null)
+            StopCoroutine(_wildIntentCR);
+
+        _wildIntentCR = StartCoroutine(Co_ShowWildIntent(action, durationSeconds, showText, textOverride));
+    }
+
+    public void HideWildIntent()
+    {
+        if (_wildIntentCR != null)
+        {
+            StopCoroutine(_wildIntentCR);
+            _wildIntentCR = null;
+        }
+
+        if (wildIntentRoot) wildIntentRoot.SetActive(false);
+    }
+
+    private IEnumerator Co_ShowWildIntent(BattleFeedbackAction action, float durationSeconds, bool showText, string textOverride)
+    {
+        // Choose sprite; fall back to existing status sprites when possible.
+        Sprite sprite = null;
+
+        switch (action)
+        {
+            case BattleFeedbackAction.Attack: sprite = wildIntentAttackSprite; break;
+            case BattleFeedbackAction.Defend: sprite = wildIntentDefendSprite ? wildIntentDefendSprite : (wildGuardIcon ? wildGuardIcon.sprite : null); break;
+            case BattleFeedbackAction.Focus:  sprite = wildIntentFocusSprite  ? wildIntentFocusSprite  : (wildChargeIcon ? wildChargeIcon.sprite : null); break;
+            case BattleFeedbackAction.Run:    sprite = wildIntentRunSprite; break;
+            default: sprite = null; break;
+        }
+
+        if (sprite == null)
+        {
+            // Nothing to show
+            wildIntentRoot.SetActive(false);
+            yield break;
+        }
+
+        wildIntentIcon.sprite = sprite;
+
+        if (wildIntentText)
+        {
+            wildIntentText.gameObject.SetActive(showText);
+            if (showText)
+                wildIntentText.text = string.IsNullOrEmpty(textOverride) ? action.ToString() : textOverride;
+        }
+
+        wildIntentRoot.SetActive(true);
+
+        // Animate: quick pop-in (LeanTween if available, otherwise direct)
+        var rt = wildIntentRoot.transform as RectTransform;
+        if (rt != null)
+        {
+            rt.localScale = Vector3.one * Mathf.Max(0.01f, wildIntentStartScale);
+
+            LeanTween.scale(rt, Vector3.one, wildIntentPopTime).setEaseOutBack().setIgnoreTimeScale(true);
+        }
+
+        // Hold
+        float t = 0f;
+        while (t < durationSeconds)
+        {
+            t += Time.unscaledDeltaTime;
+            yield return null;
+        }
+
+        wildIntentRoot.SetActive(false);
+        _wildIntentCR = null;
+    }
+public void SetGuard(BattleFeedbackSide side, bool on)
     {
         var icon = (side == BattleFeedbackSide.Player) ? playerGuardIcon : wildGuardIcon;
 
@@ -564,40 +640,28 @@ public sealed class BattleFeedbackManager : MonoBehaviour
         }
 
         if (animCR != null) StopCoroutine(animCR);
-
-        // Start an animation coroutine that will clear the appropriate field when done,
-        // so BattleManager can reliably detect when FX are finished.
-        animCR = StartCoroutine(Co_AnimateHPBar(bar, current, targetValue, isPlayer));
+        animCR = StartCoroutine(Co_AnimateHPBar(bar, current, targetValue));
     }
 
-    private IEnumerator Co_AnimateHPBar(Slider bar, float start, float end, bool isPlayer)
+    private IEnumerator Co_AnimateHPBar(Slider bar, float start, float end)
     {
-        try
+        if (!bar) yield break;
+
+        float max = Mathf.Max(1f, bar.maxValue);
+        float distance = Mathf.Abs(end - start);
+
+        float duration = hpBarSecondsForFull * (distance / max);
+        duration = Mathf.Max(0.05f, duration);
+
+        float t = 0f;
+        while (t < 1f)
         {
-            if (!bar) yield break;
-
-            float max = Mathf.Max(1f, bar.maxValue);
-            float distance = Mathf.Abs(end - start);
-
-            float duration = hpBarSecondsForFull * (distance / max);
-            duration = Mathf.Max(0.05f, duration);
-
-            float t = 0f;
-            while (t < 1f)
-            {
-                t += Time.unscaledDeltaTime / duration;
-                bar.value = Mathf.Lerp(start, end, t);
-                yield return null;
-            }
-
-            bar.value = end;
+            t += Time.unscaledDeltaTime / duration;
+            bar.value = Mathf.Lerp(start, end, t);
+            yield return null;
         }
-        finally
-        {
-            // Only clear the matching handle. (If the coroutine was stopped early, finally still runs.)
-            if (isPlayer) _playerHPAnimCR = null;
-            else _wildHPAnimCR = null;
-        }
+
+        bar.value = end;
     }
 
     private void PunchTMP(TextMeshProUGUI tmp)
