@@ -10,7 +10,9 @@ public partial class EncounterManager
     [SerializeField, Min(1)] private int fallbackEncounterCost = 1;
 
     [Tooltip("Seconds required to regenerate 1 energy point.")]
-    [SerializeField, Min(1f)] private float energySecondsPerPoint = 3600f;
+    // NOTE: Keep this in sync with EncounterPanelUI's ETA default.
+    // 1200s = 20 minutes per energy.
+    [SerializeField, Min(1f)] private float energySecondsPerPoint = 1200f;
 
     float _tickAccum;
 

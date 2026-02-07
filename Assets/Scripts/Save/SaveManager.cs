@@ -153,6 +153,10 @@ public static class SaveManager
 
         NormalizeAfterLoad();
 
+        // Apply energy offline catch-up even if EncounterManager is not active yet (menu-first boot).
+        // Safe to call multiple times; it advances Data.energyLastUnix.
+        EnergyRegenSystem.TryApplyOfflineRegen();
+
         if (!File.Exists(SavePath) && !IsHardWiping)
             Save();
 
@@ -203,6 +207,7 @@ public static class SaveManager
 
         JobManager.I?.ProcessOfflineAllSites();
         HealthRegenSystem.I?.TryApplyOfflineRegen();
+        EnergyRegenSystem.TryApplyOfflineRegen();
     }
 
     // ─────────────────────────────────────────────
