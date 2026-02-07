@@ -24,7 +24,8 @@ public readonly struct BattleEvent
         GuardChanged = 7,
         ChargeChanged = 8,
         IntentTelegraph = 9,
-        ActionQueued = 10
+        ActionQueued = 10,
+        UIRefreshHP = 11
     }
 
     public readonly Kind kind;
@@ -124,4 +125,7 @@ public readonly struct BattleEvent
 
     public static BattleEvent ActionQueued(BattleSide side, string actionId)
         => new BattleEvent(Kind.ActionQueued, side, side, 0, false, 1f, 0f, false, actionId, 0, 0f, false, false, -1, -1, 0);
+
+    public static BattleEvent UIRefreshHP()
+        => new BattleEvent(Kind.UIRefreshHP, BattleSide.Player, BattleSide.Player, 0, false, 1f, 0f, false, null, 0, 0f, false, false, -1, -1, 0);
 }

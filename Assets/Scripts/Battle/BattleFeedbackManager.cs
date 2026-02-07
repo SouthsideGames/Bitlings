@@ -334,6 +334,10 @@ CacheBaseScales();
                 // Optional: micro pulse on queue for instant-feel (manual turns)
                 PulseQueuedAction(e.statusId);
                 break;
+
+           case BattleEvent.Kind.UIRefreshHP:
+                RefreshHPFromBattle();
+                break;
         }
     }
 
@@ -630,6 +634,8 @@ public void SetGuard(BattleFeedbackSide side, bool on)
             // Distinct "clank"
             AudioManager.I?.PlaySfx(SfxType.Defend, 0.95f);
         }
+
+        
     }
 
 
@@ -1363,4 +1369,19 @@ public void SetGuard(BattleFeedbackSide side, bool on)
                 });
         }
     }
+
+    private void RefreshHPFromBattle()
+    {
+        if (_battleManager == null)
+            return;
+
+        float pCur = _battleManager.GetActivePlayerCurHP();
+        float pMax = _battleManager.GetActivePlayerMaxHP();
+        float wCur = _battleManager.GetWildCurHP();
+        float wMax = _battleManager.GetWildMaxHP();
+
+        SetHPBars(pCur, pMax, wCur, wMax);
+        SetHPTexts(pCur, pMax, wCur, wMax);
+    }
+
 }

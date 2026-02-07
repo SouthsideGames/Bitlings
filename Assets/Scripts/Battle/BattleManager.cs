@@ -291,6 +291,29 @@ private void EnsureBattleRngInitialized()
     private int _turnIndex = 0;
     private bool inBattle;
     public bool InBattle => inBattle;
+
+    // Read-only UI helpers (used by BattleFeedbackManager when consuming battle events)
+    public float GetActivePlayerCurHP()
+    {
+        if (teamHP == null || activeIndex < 0 || activeIndex >= teamHP.Length) return 0f;
+        return teamHP[activeIndex];
+    }
+
+    public float GetActivePlayerMaxHP()
+    {
+        return GetFinalMaxHPForIndex(activeIndex);
+    }
+
+    public float GetWildCurHP()
+    {
+        return wildHP;
+    }
+
+    public float GetWildMaxHP()
+    {
+        return wildMaxHP;
+    }
+
     private Action<BattleResult> onEnd;
     private float startTime;
     private Coroutine turnCR;

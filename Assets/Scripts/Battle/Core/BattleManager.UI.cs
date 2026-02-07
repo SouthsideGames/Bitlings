@@ -13,31 +13,38 @@ public partial class BattleManager : MonoBehaviour
         float curMax = GetFinalMaxHPForIndex(activeIndex);
         teamHP[activeIndex] = Mathf.Min(teamHP[activeIndex], curMax);
 
-        if (feedback != null)
-        {
-            feedback.SetHPBars(
-                playerCur: teamHP[activeIndex],
-                playerMax: curMax,
-                wildCur: wildHP,
-                wildMax: wildMaxHP
-            );
-        }
-        else
-        {
-            if (playerHPBar)
-            {
-                playerHPBar.maxValue = curMax;
-                playerHPBar.value = Mathf.Clamp(teamHP[activeIndex], 0f, curMax);
-            }
-            if (wildHPBar)
-            {
-                wildHPBar.maxValue = wildMaxHP;
-                wildHPBar.value = Mathf.Clamp(wildHP, 0f, wildMaxHP);
-            }
-        }
+        // UI/FX should be driven by events when consumers exist.
+        Emit(BattleEvent.UIRefreshHP());
 
-        UpdatePlayerInfoUI();
-        UpdateHPTextUI();
+        // Legacy fallback (no event consumers): keep old direct wiring working.
+        if (!HasBattleEventConsumers)
+        {
+            if (feedback != null)
+            {
+                feedback.SetHPBars(
+                    playerCur: teamHP[activeIndex],
+                    playerMax: curMax,
+                    wildCur: wildHP,
+                    wildMax: wildMaxHP
+                );
+            }
+            else
+            {
+                if (playerHPBar)
+                {
+                    playerHPBar.maxValue = curMax;
+                    playerHPBar.value = Mathf.Clamp(teamHP[activeIndex], 0f, curMax);
+                }
+                if (wildHPBar)
+                {
+                    wildHPBar.maxValue = wildMaxHP;
+                    wildHPBar.value = Mathf.Clamp(wildHP, 0f, wildMaxHP);
+                }
+            }
+
+            UpdatePlayerInfoUI();
+            UpdateHPTextUI();
+        }
     }
 
 
@@ -47,31 +54,36 @@ public partial class BattleManager : MonoBehaviour
     {
         float curMax = GetFinalMaxHPForIndex(activeIndex);
 
-        if (feedback != null)
-        {
-            feedback.SetHPBars(
-                playerCur: teamHP[activeIndex],
-                playerMax: curMax,
-                wildCur: wildHP,
-                wildMax: wildMaxHP
-            );
-        }
-        else
-        {
-            if (wildHPBar)
-            {
-                wildHPBar.maxValue = wildMaxHP;
-                wildHPBar.value = Mathf.Clamp(wildHP, 0f, wildMaxHP);
-            }
-            if (playerHPBar)
-            {
-                playerHPBar.maxValue = curMax;
-                playerHPBar.value = Mathf.Clamp(teamHP[activeIndex], 0f, curMax);
-            }
-        }
+        Emit(BattleEvent.UIRefreshHP());
 
-        UpdatePlayerInfoUI();
-        UpdateHPTextUI();
+        if (!HasBattleEventConsumers)
+        {
+            if (feedback != null)
+            {
+                feedback.SetHPBars(
+                    playerCur: teamHP[activeIndex],
+                    playerMax: curMax,
+                    wildCur: wildHP,
+                    wildMax: wildMaxHP
+                );
+            }
+            else
+            {
+                if (wildHPBar)
+                {
+                    wildHPBar.maxValue = wildMaxHP;
+                    wildHPBar.value = Mathf.Clamp(wildHP, 0f, wildMaxHP);
+                }
+                if (playerHPBar)
+                {
+                    playerHPBar.maxValue = curMax;
+                    playerHPBar.value = Mathf.Clamp(teamHP[activeIndex], 0f, curMax);
+                }
+            }
+
+            UpdatePlayerInfoUI();
+            UpdateHPTextUI();
+        }
     }
 
 
