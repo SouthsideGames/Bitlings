@@ -157,6 +157,7 @@ public class JobPanelUI : MonoBehaviour
 
             // Slots
             int max = t.slots != null ? t.slots.Length : 0;
+            int cap = Mathf.Clamp(s.config.maxWorkers, 1, 3);
             for (int i = 0; i < max; i++)
             {
                 var ui = t.slots[i];
@@ -164,6 +165,16 @@ public class JobPanelUI : MonoBehaviour
 
                 ui.job = t.job;
                 ui.slotIndex = i;
+
+                // If the tile has more slot buttons than this site supports, show them as locked and prevent assignment.
+                if (i >= cap)
+                {
+                    ui.job = t.job;
+                    ui.slotIndex = i;
+                    ui.SetEmpty(emptySlotSprite, new Color(emptySlotColor.r, emptySlotColor.g, emptySlotColor.b, 0.15f));
+                    ui.SetInteractable(false);
+                    continue;
+                }
 
                 WorkerRef worker = (i < s.workers.Count) ? s.workers[i] : null;
                 if (worker != null && worker.def != null)
@@ -182,6 +193,7 @@ public class JobPanelUI : MonoBehaviour
                     ui.SetEmpty(emptySlotSprite, emptySlotColor);
                 }
 
+                ui.SetInteractable(true);
                 ui.WireToPicker();
             }
         }

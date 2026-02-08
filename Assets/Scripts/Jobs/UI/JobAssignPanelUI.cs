@@ -365,11 +365,14 @@ public class JobAssignPanelUI : MonoBehaviour
             return;
         }
 
-        float currentRate = ComputeRatePerHour_WithTitles(_cachedState);
+        // IMPORTANT:
+        // Use JobManager as the single source of truth for output math.
+        // This prevents UI panels from drifting from runtime production.
+        float currentRate = JobManager.I.EstimateSiteOutputPerHour(_job);
         float previewRate = currentRate;
 
         if (!currentOnly && _pendingDef != null)
-            previewRate = ComputeRatePerHour_WithCandidate(_cachedState, _pendingDef, _pendingId, _slotIndex);
+            previewRate = JobManager.I.EstimateSiteOutputPerHour(_job, _pendingDef, _pendingId, _slotIndex);
 
         int cur = Mathf.FloorToInt(currentRate);
         int next = Mathf.FloorToInt(previewRate);

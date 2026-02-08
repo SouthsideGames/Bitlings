@@ -37,5 +37,15 @@ public class JobSlotUI : MonoBehaviour
 
         });
     }
+
+    /// <summary>
+    /// Enables/disables interaction on this slot button (safe even if button is null).
+    /// </summary>
+    public void SetInteractable(bool on)
+    {
+        if (!button) return;
+        button.interactable = on;
+        if (!on) button.onClick.RemoveAllListeners();
+    }
     
 }

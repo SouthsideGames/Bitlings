@@ -152,7 +152,7 @@ public class PlayerManager
     public int winStreak;
     public int encounterPoints = 0;
     public int encounterMax = 50;
-    public int encounterCost = 5;
+    public int encounterCost = 1;
     public int lastEncounterResetYMD = 0;
     public int dailyBonusDay = 1;         
     public int lastDailyClaimDayIndex = -1;

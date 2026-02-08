@@ -25,12 +25,29 @@ public class IdleBattleManager : MonoBehaviour
     {
         GameEvents.BattleFinished += HandleBattleFinished;
         GameEvents.MonsterCaptured += HandleMonsterCaptured;
+
+        // Keep idle battling in sync with the player's AUTO toggle.
+        // AUTO may remain on while panels are closed or the app is backgrounded.
+        // Idle battling should stop only when the player turns AUTO off,
+        // the team is defeated, or energy is exhausted.
+        GameEvents.AutoBattleModeChanged += HandleAutoBattleModeChanged;
     }
 
     void OnDisable()
     {
         GameEvents.BattleFinished -= HandleBattleFinished;
         GameEvents.MonsterCaptured -= HandleMonsterCaptured;
+
+        GameEvents.AutoBattleModeChanged -= HandleAutoBattleModeChanged;
+    }
+
+    private void HandleAutoBattleModeChanged(bool isAuto)
+    {
+        if (!IsIdleBattleUnlocked()) return;
+
+        // Encounter auto toggle is the user's intent.
+        if (isAuto) EnableAuto();
+        else DisableAuto();
     }
 
     private void HandleMonsterCaptured(string monsterId, MonsterType _)
@@ -118,7 +135,12 @@ public class IdleBattleManager : MonoBehaviour
         if (IsIdleBattleUnlocked())
         {
 
-            ResolveOfflineIfAny();
+            // Offline simulation should only run if the player left AUTO/idle battling ON.
+            // If AUTO was turned off before closing the app, we must not consume energy
+            // or run encounters on next boot.
+            var s = IdleBattleStore.Load();
+            if (s != null && s.autoBattling)
+                ResolveOfflineIfAny();
         }
         else
         {
@@ -224,6 +246,17 @@ public class IdleBattleManager : MonoBehaviour
 
         var s = IdleBattleStore.Load();
         if (!s.autoBattling) return;
+
+        // Stop conditions (must match design):
+        // - Player turned AUTO off (handled via AutoBattleModeChanged)
+        // - No team / all team members down
+        // - No energy (handled later)
+        if (!HasAnyAliveTeamMember())
+        {
+            DisableAuto();
+            MarkSummaryPendingIfLogExists();
+            return;
+        }
 
         long now = NowUnix();
         float dt = Mathf.Max(0, now - s.lastTickUnix);
@@ -501,6 +534,25 @@ public class IdleBattleManager : MonoBehaviour
         if (encounterManager != null) return Mathf.Max(1, encounterManager.GetEncounterCost());
         if (EncounterManager.I != null) return Mathf.Max(1, EncounterManager.I.GetEncounterCost());
         return Mathf.Max(1, SaveManager.Data != null ? SaveManager.Data.encounterCost : 1);
+    }
+
+    private static bool HasAnyAliveTeamMember()
+    {
+        var team = SaveManager.Data?.team;
+        if (team == null || team.Count == 0) return false;
+
+        int n = Mathf.Min(3, team.Count);
+        for (int i = 0; i < n; i++)
+        {
+            var m = team[i];
+            if (m == null) continue;
+            if (string.IsNullOrEmpty(m.monsterId)) continue;
+
+            // Convention across the project: HP == 0 means down; -1 means "uninitialized" and is treated as alive.
+            if (m.currentHP != 0) return true;
+        }
+
+        return false;
     }
 
     private static int RollWildLevel()

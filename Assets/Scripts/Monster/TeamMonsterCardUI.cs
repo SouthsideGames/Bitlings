@@ -13,11 +13,11 @@ public class TeamMonsterCardUI : MonoBehaviour
     [SerializeField] private Button rootButton;
     [SerializeField] private Button healBtn;
 
-    [Header("Heal Settings (credits Fallback)")]
+    [Header("Credit Heal Settings (Credits Fallback)")]
     [SerializeField, Range(0f, 1f)] private float partialHealPct = 0.25f;
     [SerializeField] private ResourceType healCostType = ResourceType.Credits;
-    [SerializeField] private int partialHealCost = 1;
-    [SerializeField] private int fullHealCost = 3;
+    [SerializeField] private int creditHealCost = 1;
+    [SerializeField] private int fullCreditHealCost = 3;
 
     [Header("Heal Settings (Medkits First)")]
     [SerializeField] private ResourceType medkitResourceType = ResourceType.Medkit;
@@ -29,17 +29,29 @@ public class TeamMonsterCardUI : MonoBehaviour
     [SerializeField] private GameObject favoriteAlert;
 
     private OwnedMonsterData _data;
+    private OwnedMonsterData _boundInstance;
     private MonsterDataSO _def;
     private Action<OwnedMonsterData> _onClick;
     private Action _onAnyChanged;
 
-    // Legacy support: caller might only provide monsterId.
     private string _monsterId;
-
-    // Preferred support: bind to an ownedUID when possible.
     private string _ownedUid;
 
-    bool _bound;
+    private bool _bound;
+
+    // NEW: Team-slot binding (hard source of truth)
+    [SerializeField] private int _teamSlotIndex = -1;
+    private bool _isTeamSlotBound;
+
+    // ----------------------------------------------------------
+    // NEW: Bind this UI to a concrete team slot index.
+    // Team row cards MUST use this to avoid collapsing to preferred variants.
+    // ----------------------------------------------------------
+    public void BindTeamSlot(int teamSlotIndex)
+    {
+        _isTeamSlotBound = true;
+        _teamSlotIndex = teamSlotIndex;
+    }
 
     // ----------------------------------------------------------
     // Setup
@@ -51,6 +63,7 @@ public class TeamMonsterCardUI : MonoBehaviour
         Action onAnyChanged)
     {
         _data = data;
+        _boundInstance = data;
         _def = def;
         _onClick = onClick;
         _onAnyChanged = onAnyChanged;
@@ -68,6 +81,12 @@ public class TeamMonsterCardUI : MonoBehaviour
     {
         _monsterId = monsterId;
         _ownedUid = null;
+        _boundInstance = null;
+
+        // If someone uses this legacy path, treat it as NOT team-slot bound.
+        _isTeamSlotBound = false;
+        _teamSlotIndex = -1;
+
         Refresh();
     }
 
@@ -76,6 +95,9 @@ public class TeamMonsterCardUI : MonoBehaviour
     {
         _ownedUid = ownedUid;
         _monsterId = null;
+        _boundInstance = null;
+
+        // Not necessarily a team slot; leave slot binding as-is unless explicitly bound.
         Refresh();
     }
 
@@ -247,7 +269,7 @@ public class TeamMonsterCardUI : MonoBehaviour
             int credits = GetResource(healCostType);
 
             bool canHealWithMedkits = (partialHealMedkitCost > 0) && medkits >= partialHealMedkitCost;
-            bool canHealWithCredits = (partialHealCost > 0) && credits >= partialHealCost;
+            bool canHealWithCredits = (creditHealCost > 0) && credits >= creditHealCost;
 
             enable = needsHeal && (canHealWithMedkits || canHealWithCredits);
         }
@@ -270,7 +292,7 @@ public class TeamMonsterCardUI : MonoBehaviour
         }
 
         int medkitCost = partial ? partialHealMedkitCost : fullHealMedkitCost;
-        int creditCost = partial ? partialHealCost : fullHealCost;
+        int creditCost = partial ? creditHealCost : fullCreditHealCost;
 
         bool paid = false;
 
@@ -289,14 +311,32 @@ public class TeamMonsterCardUI : MonoBehaviour
             ? Mathf.CeilToInt(maxHP * Mathf.Clamp01(partialHealPct))
             : (maxHP - curHP);
 
-        _data.currentHP = Mathf.Clamp(curHP + restore, 0, maxHP);
+        int newHP = Mathf.Clamp(curHP + restore, 0, maxHP);
+
+        // IMPORTANT: if this is a team-slot bound card, write back to that slot explicitly.
+        if (_isTeamSlotBound)
+        {
+            var save = SaveManager.Data;
+            var team = save?.team;
+            if (team != null && _teamSlotIndex >= 0 && _teamSlotIndex < team.Count && team[_teamSlotIndex] != null)
+            {
+                team[_teamSlotIndex].currentHP = newHP;
+                _data = team[_teamSlotIndex]; // keep local ref in sync
+            }
+            else
+            {
+                // Fallback if somehow slot no longer valid
+                _data.currentHP = newHP;
+            }
+        }
+        else
+        {
+            _data.currentHP = newHP;
+        }
 
         SaveManager.Save();
 
-        // Notify cross-system listeners (Encounter button guard, team panels, etc.)
-        // that team HP has changed.
         GameEvents.OnTeamHealthChanged?.Invoke();
-        // Also raise the broader team-change hook for any legacy listeners.
         GameEvents.OnTeamChanged?.Invoke();
 
         UpdateHpText();
@@ -315,15 +355,58 @@ public class TeamMonsterCardUI : MonoBehaviour
     // ----------------------------------------------------------
     void Refresh()
     {
-        // 1) Prefer ownedUID binding if present
-        if (!string.IsNullOrEmpty(_ownedUid))
+        // HARD RULE: team-slot bound cards resolve ONLY from SaveManager.Data.team[slot].
+        if (_isTeamSlotBound)
+        {
+            var save = SaveManager.Data;
+            var team = save?.team;
+
+            if (team != null && _teamSlotIndex >= 0 && _teamSlotIndex < team.Count)
+            {
+                _data = team[_teamSlotIndex];
+
+                if (_data != null)
+                {
+                    if (!string.IsNullOrEmpty(_data.ownedUID)) _ownedUid = _data.ownedUID;
+                    if (!string.IsNullOrEmpty(_data.monsterId)) _monsterId = _data.monsterId;
+                }
+            }
+            else
+            {
+                _data = null;
+            }
+
+            string finalId = _data != null ? _data.monsterId : _monsterId;
+            _def = (!string.IsNullOrEmpty(finalId)) ? MonsterLibraryLocator.GetById(finalId) : null;
+
+            RefreshVisuals();
+            RefreshFavoriteIcon();
+            return;
+        }
+
+        // ---------------- Legacy / non-team views ----------------
+
+        // 1) If we were bound to a specific owned instance (team slot), try to keep that exact instance.
+        if (_boundInstance != null)
+        {
+            var exact = FindInTeamByReference(_boundInstance);
+            if (exact != null)
+            {
+                _data = exact;
+                if (!string.IsNullOrEmpty(_data.ownedUID)) _ownedUid = _data.ownedUID;
+                if (!string.IsNullOrEmpty(_data.monsterId)) _monsterId = _data.monsterId;
+            }
+        }
+
+        // 2) Prefer ownedUID binding if present
+        if (_data == null && !string.IsNullOrEmpty(_ownedUid))
         {
             _data = FindInTeamByOwnedUid(_ownedUid);
             _monsterId = _data != null ? _data.monsterId : _monsterId;
         }
 
-        // 2) If only monsterId was provided (legacy), prefer the globally preferred variant
-        if (_data == null && !string.IsNullOrEmpty(_monsterId))
+        // 3) If only monsterId was provided (legacy / non-team views), prefer the globally preferred variant.
+        if (_data == null && _boundInstance == null && !string.IsNullOrEmpty(_monsterId))
         {
             var pref = MonsterVariantPreference.GetPreferredOwned(_monsterId);
             if (pref != null && !string.IsNullOrEmpty(pref.ownedUID))
@@ -333,13 +416,12 @@ public class TeamMonsterCardUI : MonoBehaviour
             }
         }
 
-        // 3) Fallback: first team entry matching monsterId
+        // 4) Fallback: first team entry matching monsterId
         if (_data == null && !string.IsNullOrEmpty(_monsterId))
             _data = FindInTeamByMonsterId(_monsterId);
 
-        // Resolve def from the resolved team entry if possible
-        string finalId = _data != null ? _data.monsterId : _monsterId;
-        _def = (!string.IsNullOrEmpty(finalId)) ? MonsterLibraryLocator.GetById(finalId) : null;
+        string finalId2 = _data != null ? _data.monsterId : _monsterId;
+        _def = (!string.IsNullOrEmpty(finalId2)) ? MonsterLibraryLocator.GetById(finalId2) : null;
 
         RefreshVisuals();
         RefreshFavoriteIcon();
@@ -350,6 +432,22 @@ public class TeamMonsterCardUI : MonoBehaviour
         var data = SaveManager.Data;
         if (data == null || data.team == null || string.IsNullOrEmpty(ownedUid)) return null;
         return data.team.Find(m => m != null && !string.IsNullOrEmpty(m.ownedUID) && m.ownedUID == ownedUid);
+    }
+
+    OwnedMonsterData FindInTeamByReference(OwnedMonsterData reference)
+    {
+        var data = SaveManager.Data;
+        if (data == null || data.team == null || reference == null) return null;
+
+        for (int i = 0; i < data.team.Count; i++)
+        {
+            var m = data.team[i];
+            if (m == null) continue;
+            if (ReferenceEquals(m, reference))
+                return m;
+        }
+
+        return null;
     }
 
     OwnedMonsterData FindInTeamByMonsterId(string monsterId)

@@ -663,8 +663,21 @@ public class AudioManager : MonoBehaviour
         bool encounterOpen = ui != null && ui.IsOpen(PanelId.Encounter);
         bool summaryOpen = ui != null && ui.IsOpen(PanelId.PostBattleSummary);
 
+        // Home can be shown while Encounter remains active in the hierarchy (or was closed
+        // outside of UIManager). If Home is open, we treat it as higher priority than Encounter
+        // for music purposes.
+        bool homeOpen = ui != null && ui.IsOpen(PanelId.Home);
+
+        // When a battle is actively running, music should stay on the battle/boss track even if
+        // the Encounter panel temporarily closes (e.g., dedicated battle view, blinder overlays,
+        // auto-battle UI swaps, etc.).
+        bool isInBattle = (EncounterManager.I != null) && EncounterManager.I.IsInBattle;
+
         // "Encounter View" means the encounter panel is visible and we are NOT on the results screen.
-        bool encounterViewOpen = encounterOpen && !summaryOpen;
+        // Additionally:
+        // - If Home is open, we consider Encounter "not the active view" unless a battle is running.
+        // - If a battle is running, we treat that as Encounter/Battle view for music.
+        bool encounterViewOpen = (encounterOpen && !summaryOpen && !homeOpen) || isInBattle;
 
         // Track transitions into the encounter view to pick a battle track once per entry.
         if (encounterViewOpen && !_prevEncounterViewOpen)

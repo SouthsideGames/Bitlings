@@ -46,6 +46,8 @@ public class CodexPanelUI : MonoBehaviour
     private int selectedTeamIndex = 0;
     private OwnedSortMode _lastSortMode = OwnedSortMode.ByIdAsc;
     private readonly List<RectTransform> _teamCardRoots = new List<RectTransform>();
+    // Maps visible team card index -> actual SaveManager.Data.team slot index.
+    private readonly List<int> _teamSlotIndexByVisible = new List<int>();
 
     private bool _capturedOnlyFilter = false;
     private bool _favoritesOnlyFilter = false;
@@ -254,41 +256,54 @@ public class CodexPanelUI : MonoBehaviour
     {
         ClearAllChildren(teamContent);
         _teamCardRoots.Clear();
+        _teamSlotIndexByVisible.Clear();
 
         if (team == null) team = new List<OwnedMonsterData>();
 
-        // Only show filled slots (monsterId present)
-        var filled = team
-            .Where(m => m != null && !string.IsNullOrEmpty(m.monsterId))
-            .ToList();
-
-        for (int i = 0; i < filled.Count; i++)
+        // Only show filled slots (monsterId present) BUT preserve the actual team slot index.
+        for (int teamSlot = 0; teamSlot < team.Count; teamSlot++)
         {
+            var member = team[teamSlot];
+            if (member == null || string.IsNullOrEmpty(member.monsterId))
+                continue;
+
             // IMPORTANT: capture locals per-iteration so UI callbacks can't
             // accidentally reference the wrong monster if this method is
             // rebuilt frequently.
-            var member = filled[i];
             var memberLocal = member;
+            int teamSlotLocal = teamSlot;
             var def = MonsterLibraryLocator.GetById(memberLocal.monsterId);
 
             var go = Instantiate(teamCardPrefab, teamContent);
             var card = go.GetComponent<TeamMonsterCardUI>();
             var rt = go.transform as RectTransform;
             if (rt) _teamCardRoots.Add(rt);
+            _teamSlotIndexByVisible.Add(teamSlotLocal);
 
             // If we only generate filled slots, HP bar can always be on.
             SetTeamHpBarActive(go, active: true);
 
             if (card)
             {
-                int uiIndex = i; // index in the visible list
+                int visibleIndex = _teamCardRoots.Count - 1;
+
+                // If this prefab uses HealButtonController, bind it to the correct team slot.
+                // Also select the card before healing so the bounce/selection feedback matches the button pressed.
+                var healCtrl = go.GetComponent<HealButtonController>();
+                if (!healCtrl) healCtrl = go.GetComponentInChildren<HealButtonController>(true);
+                if (healCtrl)
+                {
+                    healCtrl.BindTeamIndex(teamSlotLocal);
+                    healCtrl.OnBeforeHeal = () => SelectTeamSlot(visibleIndex);
+                }
+
                 card.Setup(
                     data: memberLocal,
                     def: def,
                     onClick: _ =>
                     {
-                        SelectTeamSlot(uiIndex);
-                        OpenTeamDetail(uiIndex, memberLocal);
+                        SelectTeamSlot(visibleIndex);
+                        OpenTeamDetail(teamSlotLocal, memberLocal);
                     },
                     onAnyChanged: RefreshAll
                 );

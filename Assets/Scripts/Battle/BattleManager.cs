@@ -799,6 +799,10 @@ private IEnumerator MaybeSayKO_Wild(string victimName, float preHP, float postHP
             growthCoreTotal = Mathf.RoundToInt(baseAfterShiny * titleCoreMul);
             growthCoreTitleBonus = Mathf.Max(0, growthCoreTotal - baseAfterShiny);
 
+            // Global tuning knob (progression lever). Safe no-op if GameBalance asset is missing.
+            if (GameBalance.TryGet(out var bal))
+                growthCoreTotal = Mathf.RoundToInt(growthCoreTotal * Mathf.Max(0f, bal.xpGainMultiplier));
+
             if (growthCoreTotal > 0)
                 ResourceManager.I?.Add(ResourceType.GrowthCore, growthCoreTotal);
 

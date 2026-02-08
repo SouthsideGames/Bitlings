@@ -249,7 +249,7 @@ public static class SaveManager
             ResourceBank.Set(ResourceType.PackVoucher, 0);
 
             Data.encounterMax = 50;
-            Data.encounterCost = 5;
+            Data.encounterCost = 1;
             Data.lastEncounterResetYMD = 0;
             Data.energyLastUnix = NowUnix();
             Data.energyRemainderSecs = 0f;
@@ -341,7 +341,7 @@ public static class SaveManager
             ResourceBank.Set(ResourceType.PackVoucher, 0);
 
             Data.encounterMax = 50;
-            Data.encounterCost = 5;
+            Data.encounterCost = 1;
             Data.lastEncounterResetYMD = 0;
             Data.energyLastUnix = NowUnix();
             Data.energyRemainderSecs = 0f;
@@ -518,7 +518,7 @@ public static class SaveManager
             playerName = GeneratePlayerName(),
 
             encounterMax = 50,
-            encounterCost = 5,
+            encounterCost = 1,
             lastEncounterResetYMD = TodayYMD(),
             lastSavedUnix = NowUnix(),
 
@@ -589,7 +589,11 @@ public static class SaveManager
 
         // Encounter config
         if (Data.encounterMax <= 0) Data.encounterMax = 50;
-        if (Data.encounterCost <= 0) Data.encounterCost = 5;
+        if (Data.encounterCost <= 0) Data.encounterCost = 1;
+
+        // Balance migration: Encounter cost is a tuning value (not player preference).
+        // If older saves have the previous default (5), migrate them to the new default (1).
+        if (Data.encounterCost == 5) Data.encounterCost = 1;
         if (Data.lastEncounterResetYMD == 0) Data.lastEncounterResetYMD = TodayYMD();
 
         // Energy timing
@@ -643,6 +647,31 @@ public static class SaveManager
         }
 
         // Ensure team entries reference the owned instance (canonicalize)
+        // IMPORTANT: Team slots can contain duplicate monsterIds. We must map each slot to a UNIQUE owned instance.
+        // Otherwise multiple slots can end up sharing the same reference, causing HP/heal to affect multiple cards.
+        var ownedUidMap = new Dictionary<string, OwnedMonsterData>(StringComparer.Ordinal);
+        var ownedByMonsterId = new Dictionary<string, List<OwnedMonsterData>>(StringComparer.Ordinal);
+        var usedOwnedUids = new HashSet<string>(StringComparer.Ordinal);
+
+        if (Data.owned != null)
+        {
+            for (int oi = 0; oi < Data.owned.Count; oi++)
+            {
+                var o = Data.owned[oi];
+                if (o == null || string.IsNullOrEmpty(o.monsterId)) continue;
+
+                if (!string.IsNullOrEmpty(o.ownedUID) && !ownedUidMap.ContainsKey(o.ownedUID))
+                    ownedUidMap.Add(o.ownedUID, o);
+
+                if (!ownedByMonsterId.TryGetValue(o.monsterId, out var list))
+                {
+                    list = new List<OwnedMonsterData>();
+                    ownedByMonsterId.Add(o.monsterId, list);
+                }
+                list.Add(o);
+            }
+        }
+
         for (int i = 0; i < Data.team.Count; i++)
         {
             var t = Data.team[i];
@@ -650,98 +679,72 @@ public static class SaveManager
 
             OwnedMonsterData canonical = null;
 
-            // 1) Strong match: ownedUID
-            if (!string.IsNullOrEmpty(t.ownedUID))
-                canonical = Data.owned.Find(o => o != null && o.ownedUID == t.ownedUID);
-
-            // 2) Safe fallback: monsterId ONLY if unique in owned list (prevents duplicate cross-contamination)
-            if (canonical == null)
+            // 1) Strong match: ownedUID (preferred)
+            if (!string.IsNullOrEmpty(t.ownedUID) && ownedUidMap.TryGetValue(t.ownedUID, out var byUid))
             {
-                int count = 0;
-                OwnedMonsterData single = null;
-
-                for (int k = 0; k < Data.owned.Count; k++)
-                {
-                    var o = Data.owned[k];
-                    if (o != null && o.monsterId == t.monsterId)
-                    {
-                        count++;
-                        if (count == 1) single = o;
-                        else break; // not unique
-                    }
-                }
-
-                if (count == 1)
-                    canonical = single;
-            }
-
-            // 3) If still null, create a new canonical owned entry from the team entry
-            if (canonical == null)
-            {
-                canonical = new OwnedMonsterData
-                {
-                    monsterId = t.monsterId,
-                    level = Mathf.Max(1, t.level),
-                    // Preserve HP if it is known (>=0). -1 means "full/unknown" in this project.
-                    currentHP = (t.currentHP >= 0) ? t.currentHP : -1,
-                    currentXP = Mathf.Max(0, t.currentXP),
-
-                    // Preserve identity
-                    ownedUID = string.IsNullOrEmpty(t.ownedUID) ? Guid.NewGuid().ToString("N") : t.ownedUID,
-
-                    // Preserve progression fields if present on OwnedMonsterData
-                    unspentStatPoints = Mathf.Max(0, t.unspentStatPoints),
-                    trainingBonus = t.trainingBonus,
-                    lastBucketId = t.lastBucketId,
-                    autoApply = t.autoApply,
-                    autoApplyTargetLevel = t.autoApplyTargetLevel,
-                    trainingLastUnix = t.trainingLastUnix,
-                    lastLevelClaimDay = t.lastLevelClaimDay,
-                    pendingLevels = Mathf.Max(0, t.pendingLevels),
-
-                    // ✅ Preserve shiny identity from the team entry
-                    isShiny = t.isShiny,
-                    shinyTier = Mathf.Max(0, t.shinyTier),
-                };
-
-                // Shiny normalization (legacy safety)
-                if (canonical.shinyTier > 0 && !canonical.isShiny) canonical.isShiny = true;
-                if (canonical.isShiny && canonical.shinyTier <= 0) canonical.shinyTier = 1;
-
-                Data.owned.Add(canonical);
+                canonical = byUid;
             }
             else
             {
-                // ✅ If we found a canonical owned entry, merge team fields without stripping shiny identity.
-                canonical.level = Mathf.Max(1, t.level);
-                canonical.currentHP = t.currentHP; // team HP authoritative
-                canonical.currentXP = Mathf.Max(0, t.currentXP);
+                // 2) Weak match: monsterId BUT pick an UNUSED owned instance for this slot.
+                if (ownedByMonsterId.TryGetValue(t.monsterId, out var candidates))
+                {
+                    for (int ci = 0; ci < candidates.Count; ci++)
+                    {
+                        var cand = candidates[ci];
+                        if (cand == null) continue;
+                        if (string.IsNullOrEmpty(cand.ownedUID)) continue;
+                        if (usedOwnedUids.Contains(cand.ownedUID)) continue;
 
-                // Merge progression fields (team may be newest in some flows)
-                canonical.unspentStatPoints = Mathf.Max(canonical.unspentStatPoints, t.unspentStatPoints);
-                if (!string.IsNullOrEmpty(t.lastBucketId)) canonical.lastBucketId = t.lastBucketId;
-                canonical.trainingBonus = t.trainingBonus;
-                canonical.autoApply = t.autoApply;
-                canonical.autoApplyTargetLevel = t.autoApplyTargetLevel;
-                canonical.trainingLastUnix = t.trainingLastUnix != 0 ? t.trainingLastUnix : canonical.trainingLastUnix;
-                canonical.lastLevelClaimDay = t.lastLevelClaimDay != 0 ? t.lastLevelClaimDay : canonical.lastLevelClaimDay;
-                canonical.pendingLevels = Mathf.Max(canonical.pendingLevels, t.pendingLevels);
-
-                // ✅ Merge shiny identity (never erase if either side says shiny)
-                if (t.shinyTier > canonical.shinyTier) canonical.shinyTier = t.shinyTier;
-                if (t.isShiny) canonical.isShiny = true;
-                if (canonical.shinyTier > 0 && !canonical.isShiny) canonical.isShiny = true;
-                if (canonical.isShiny && canonical.shinyTier <= 0) canonical.shinyTier = 1;
-
-                // Ensure ownedUID exists
-                if (string.IsNullOrEmpty(canonical.ownedUID))
-                    canonical.ownedUID = string.IsNullOrEmpty(t.ownedUID) ? Guid.NewGuid().ToString("N") : t.ownedUID;
+                        canonical = cand;
+                        break;
+                    }
+                }
             }
 
+            // 3) If we still didn't find a unique owned instance, clone the TEAM entry into OWNED.
+            if (canonical == null)
+            {
+                try
+                {
+                    canonical = JsonUtility.FromJson<OwnedMonsterData>(JsonUtility.ToJson(t));
+                }
+                catch
+                {
+                    canonical = t;
+                }
+
+                if (canonical == null) canonical = t;
+
+                if (string.IsNullOrEmpty(canonical.ownedUID))
+                    canonical.ownedUID = Guid.NewGuid().ToString("N");
+
+                Data.owned ??= new List<OwnedMonsterData>();
+                Data.owned.Add(canonical);
+
+                // update maps so subsequent slots can find it
+                if (!ownedUidMap.ContainsKey(canonical.ownedUID))
+                    ownedUidMap.Add(canonical.ownedUID, canonical);
+
+                if (!ownedByMonsterId.TryGetValue(canonical.monsterId, out var list))
+                {
+                    list = new List<OwnedMonsterData>();
+                    ownedByMonsterId.Add(canonical.monsterId, list);
+                }
+                list.Add(canonical);
+            }
+
+            // Prefer TEAM HP snapshot if present (prevents losing battle damage on load)
+            if (t.currentHP >= 0)
+                canonical.currentHP = t.currentHP;
+
+            // Ensure canonical ownedUID exists
             if (string.IsNullOrEmpty(canonical.ownedUID))
                 canonical.ownedUID = Guid.NewGuid().ToString("N");
 
-            // Replace team entry with canonical owned instance
+            usedOwnedUids.Add(canonical.ownedUID);
+
+            // Replace team entry with canonical owned instance (unique per slot)
             Data.team[i] = canonical;
 
             if (!string.IsNullOrEmpty(canonical.monsterId))

@@ -17,6 +17,26 @@ public class EncounterPanelUI : MonoBehaviour
     [SerializeField, Min(1f)] private float energySecondsPerPoint = 1200f;
 
     // ─────────────────────────────────────────────────────────────
+    // Fatigue Forecast (QOL)
+    //
+    // Goal: Show a quick heads-up before entering battle to prevent
+    // "surprise downtime" and reinforce fatigue as a strategic resource.
+    //
+    // Wiring:
+    // - Optional. If fatigueForecastLabel is null, this feature is disabled.
+    // - Place this label near the encounter button (ex: under the button).
+    // ─────────────────────────────────────────────────────────────
+    [Header("Fatigue Forecast")]
+    [SerializeField] private TextMeshProUGUI fatigueForecastLabel;
+    [SerializeField] private bool showFatigueForecast = true;
+
+    [Tooltip("How many team slots participate in a battle (used for forecast count).")]
+    [SerializeField, Range(1, 6)] private int battleTeamSlots = 3;
+
+    [Tooltip("Template used for the forecast. Use {0} for the number.")]
+    [SerializeField] private string fatigueForecastTemplate = "This battle will exhaust {0} Bitling{1}";
+
+    // ─────────────────────────────────────────────────────────────
     // Encounter Bar Buttons + Labels (Icon + TMP under it)
     // ─────────────────────────────────────────────────────────────
     [Header("Encounter Bar Buttons")]
@@ -205,6 +225,10 @@ public class EncounterPanelUI : MonoBehaviour
 
         RefreshBlinderTint();
         PickAndApplyBlinderLine(forcePick: true);
+
+        // Fatigue forecast is optional; keep hidden until first refresh.
+        if (fatigueForecastLabel)
+            fatigueForecastLabel.gameObject.SetActive(false);
     }
 
     void OnEnable()
@@ -236,6 +260,8 @@ public class EncounterPanelUI : MonoBehaviour
         GameEvents.OnBattleStateChanged += HandleBattleStateChanged;
         GameEvents.OnTeamChanged += OnTeamChanged;
         GameEvents.OnEncounterAutoModeChanged += ApplyCloseLock;
+
+        RefreshFatigueForecast();
 
         if (!IsInBattle())
         {
@@ -313,6 +339,8 @@ public class EncounterPanelUI : MonoBehaviour
         RefreshEncounterBoostIconsAndTooltips(force: true);
         RefreshEnergy();
 
+        RefreshFatigueForecast();
+
         // Team can change due to hires/captures, etc.
         EnsureTeamPreviewForCurrentState(forceRebuild: !IsInBattle());
 
@@ -325,6 +353,8 @@ public class EncounterPanelUI : MonoBehaviour
         // Team can change due to healing, level-ups, swaps, etc.
         EnsureTeamPreviewForCurrentState(forceRebuild: !IsInBattle());
         RefreshEncounterButtonInteractivity();
+
+        RefreshFatigueForecast();
     }
 
     // ─────────────────────────────────────────────────────────────
@@ -336,6 +366,76 @@ public class EncounterPanelUI : MonoBehaviour
         RefreshEnergy();
         UpdateEnergyEtaUI();
         RefreshEncounterButtonInteractivity();
+
+        RefreshFatigueForecast();
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // Fatigue Forecast
+    // ─────────────────────────────────────────────────────────────
+    void RefreshFatigueForecast()
+    {
+        if (!fatigueForecastLabel) return;              // feature not wired
+        if (!showFatigueForecast)
+        {
+            fatigueForecastLabel.gameObject.SetActive(false);
+            return;
+        }
+
+        // Only meaningful when we're about to start an encounter.
+        if (IsInBattle() || IsHireDecisionOpen)
+        {
+            fatigueForecastLabel.gameObject.SetActive(false);
+            return;
+        }
+
+        int projected = CountProjectedExhaustedBitlings();
+        if (projected <= 0)
+        {
+            fatigueForecastLabel.gameObject.SetActive(false);
+            return;
+        }
+
+        int n = Mathf.Max(0, projected);
+        string plural = (n == 1) ? "" : "s";
+
+        // Template supports {0} for count, {1} for plural suffix.
+        string tpl = string.IsNullOrEmpty(fatigueForecastTemplate)
+            ? "This battle will exhaust {0} Bitling{1}"
+            : fatigueForecastTemplate;
+
+        fatigueForecastLabel.text = string.Format(tpl, n, plural);
+        fatigueForecastLabel.gameObject.SetActive(true);
+    }
+
+    int CountProjectedExhaustedBitlings()
+    {
+        // Design intent: forecast how many Bitlings will be *committed* to the
+        // battle (and therefore may end up exhausted / on downtime).
+        //
+        // We use the number of alive team members participating (first N slots).
+        // This keeps the forecast deterministic and cheap, and avoids guessing
+        // the outcome of battle.
+
+        var data = SaveManager.Data;
+        if (data == null || data.team == null) return 0;
+
+        int slots = Mathf.Clamp(battleTeamSlots, 1, 6);
+        int count = 0;
+
+        for (int i = 0; i < data.team.Count && i < slots; i++)
+        {
+            var om = data.team[i];
+            if (om == null) continue;
+            if (string.IsNullOrEmpty(om.monsterId)) continue;
+
+            // currentHP == 0 is the existing “exhausted” / KO state in your UI logic.
+            // currentHP < 0 means “uninitialized”; treat as alive for forecast.
+            if (om.currentHP == 0) continue;
+            count++;
+        }
+
+        return count;
     }
 
     // ─────────────────────────────────────────────────────────────

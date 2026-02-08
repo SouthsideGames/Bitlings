@@ -687,8 +687,11 @@ public partial class EncounterManager : MonoBehaviour
     private int ApplycreditsGainedMultiplier(int basecredits)
     {
         if (basecredits <= 0) return 0;
-        const float MULT = 1f;
-        return Mathf.Max(0, Mathf.FloorToInt(basecredits * MULT));
+        float mult = 1f;
+        if (GameBalance.TryGet(out var bal))
+            mult = Mathf.Max(0f, bal.creditGainMultiplier);
+
+        return Mathf.Max(0, Mathf.FloorToInt(basecredits * mult));
     }
 
     IEnumerator PostResultFlow(bool victory, bool escaped)

@@ -400,7 +400,7 @@ public sealed class JobManager : MonoBehaviour
         }
     }
 
-    private float ComputeRatePerHour(JobSiteState s)
+    private float ComputeRatePerHour(JobSiteState s, Dictionary<JobType, float> auraByJobOverride = null)
     {
         if (!HasAnyWorker(s.workers))
             return 0f;
@@ -433,14 +433,83 @@ public sealed class JobManager : MonoBehaviour
         perHour *= BossDebuffSystem.GetMultiplier(s.config.jobType, SaveManager.NowUnix());
 
         float auraPct = 0f;
-        if (_auraByJob != null) _auraByJob.TryGetValue(s.config.jobType, out auraPct);
+        var auraDict = auraByJobOverride ?? _auraByJob;
+        if (auraDict != null) auraDict.TryGetValue(s.config.jobType, out auraPct);
         if (auraPct > 0f) perHour *= (1f + auraPct);
 
         float shinyAura = ShinySystems.SiteShinyAuraMult(s.workers);
         int shinyCount = CountShinies(s.workers);
         float shinySet = 1f + (shinyCount >= 3 ? shiny3Bonus : (shinyCount == 2 ? shiny2Bonus : (shinyCount == 1 ? shiny1Bonus : 0f)));
 
-        return perHour * shinyAura * shinySet;
+        float finalPerHour = perHour * shinyAura * shinySet;
+
+        // Global tuning knob (economy lever). Safe no-op if GameBalance asset is missing.
+        if (GameBalance.TryGet(out var bal))
+            finalPerHour *= Mathf.Max(0f, bal.jobYieldMultiplier);
+
+        return finalPerHour;
+    }
+
+    // ---------------------------- Public: Output preview (UI) ----------------------------
+    /// <summary>
+    /// Computes a non-mutating estimate of the site's current output per hour (post-fatigue),
+    /// optionally previewing a different worker in a given slot.
+    /// This is intended for UI preview so we don't duplicate rate formulas in panels.
+    /// </summary>
+    public float EstimateSiteOutputPerHour(JobType job, MonsterDataSO previewDef = null, string previewKey = null, int previewSlotIndex = -1)
+    {
+        var s = FindState(job);
+        if (s == null || s.config == null) return 0f;
+
+        // Build a scratch state that references the same config/arrays but has its own worker list.
+        int cap = Mathf.Clamp(s.config.maxWorkers, 1, 3);
+        var workers = new List<WorkerRef>(cap);
+        if (s.workers != null)
+        {
+            // copy current workers (references are fine; we will only overwrite one slot for preview)
+            for (int i = 0; i < s.workers.Count; i++) workers.Add(s.workers[i]);
+        }
+        while (workers.Count < cap) workers.Add(null);
+        while (workers.Count > cap) workers.RemoveAt(workers.Count - 1);
+
+        if (previewDef != null)
+        {
+            int idx = (previewSlotIndex >= 0 && previewSlotIndex < workers.Count) ? previewSlotIndex : 0;
+
+            // Prefer ownedUID for identity (titles/fatigue/cooldowns), but always keep monsterId as current species.
+            var wr = new WorkerRef
+            {
+                ownedUID = string.IsNullOrEmpty(previewKey) ? null : previewKey,
+                monsterId = previewDef.id,
+                def = previewDef
+            };
+            workers[idx] = wr;
+        }
+
+        var scratch = new JobSiteState
+        {
+            config = s.config,
+            workers = workers,
+            slotFatigue01 = s.slotFatigue01,
+            slotCooldownUntilUnix = s.slotCooldownUntilUnix,
+            storedAmount = s.storedAmount,
+            cachedRatePerHour = s.cachedRatePerHour,
+            level = s.level,
+            currentXP = s.currentXP,
+            maxXPForLevel = s.maxXPForLevel,
+            fatigue01 = s.fatigue01,
+            allowClinicRelief = s.allowClinicRelief
+        };
+
+        // UI can be opened before the next Produce tick, so compute auras fresh.
+        Dictionary<JobType, float> auras = null;
+        try { auras = TitlesAdapter.BuildJobAuras(SaveManager.Data?.team); }
+        catch { auras = null; }
+
+        float grossRateHr = ComputeRatePerHour(scratch, auras);
+        float avgFatigue = AverageWorkingSlotFatigue(scratch);
+        float finalRateHr = grossRateHr * (1f - Mathf.Clamp01(avgFatigue));
+        return Mathf.Max(0f, finalRateHr);
     }
 
     // ---------------------------- Assignment API ----------------------------

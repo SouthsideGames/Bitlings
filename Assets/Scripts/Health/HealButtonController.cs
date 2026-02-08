@@ -4,7 +4,10 @@ using TMPro;
 
 public class HealButtonController : MonoBehaviour
 {
-    [SerializeField] private int teamIndex = 0;
+    // IMPORTANT:
+    // This controller MUST be bound to a specific team slot index.
+    // Leaving it at a default like 0 causes every heal button to target the first team member.
+    [SerializeField] private int teamIndex = -1;
 
     [SerializeField] private Button healButton;
     [SerializeField] private TextMeshProUGUI costLabel;
@@ -17,6 +20,21 @@ public class HealButtonController : MonoBehaviour
 
     private bool _ready;
 
+    /// <summary>
+    /// Optional hook for the owning UI to run logic before healing (e.g., selecting the card).
+    /// </summary>
+    public System.Action OnBeforeHeal;
+
+    /// <summary>
+    /// Bind this heal button to a specific team slot.
+    /// Call this immediately after instantiating the prefab.
+    /// </summary>
+    public void BindTeamIndex(int index)
+    {
+        teamIndex = index;
+        Refresh();
+    }
+
     void Awake()
     {
         if (library == null)
@@ -25,6 +43,13 @@ public class HealButtonController : MonoBehaviour
             config = Resources.Load<HealingConfigSO>("HealingConfig");
 
         _ready = library != null && config != null;
+
+        // Ensure this button instance is wired to THIS component, not an inspector-stale target.
+        if (healButton)
+        {
+            healButton.onClick.RemoveAllListeners();
+            healButton.onClick.AddListener(OnClickHeal);
+        }
 
         if (!_ready)
         {
@@ -47,6 +72,15 @@ public class HealButtonController : MonoBehaviour
     {
         if (!_ready)
             return;
+
+        // If not bound yet, keep the UI safely disabled.
+        if (teamIndex < 0)
+        {
+            if (hpLabel != null)   hpLabel.text = "";
+            if (costLabel != null) costLabel.text = "";
+            if (healButton != null) healButton.interactable = false;
+            return;
+        }
 
         var team = SaveManager.Data?.team;
         if (team == null || teamIndex < 0 || teamIndex >= team.Count) return;
@@ -111,8 +145,16 @@ public class HealButtonController : MonoBehaviour
 
     public void OnClickHeal()
     {
+        OnBeforeHeal?.Invoke();
+
         if (!_ready)
             return;
+
+        if (teamIndex < 0)
+        {
+            Refresh();
+            return;
+        }
 
         var team = SaveManager.Data?.team;
         if (team == null || teamIndex < 0 || teamIndex >= team.Count) return;
