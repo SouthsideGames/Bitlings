@@ -274,6 +274,8 @@ private void EnsureBattleRngInitialized()
     private JobBattlePassives.Ctx[] jobCtx;
 
     private float[] shieldHP;
+    private float[] titleShieldHP; // Title battle-start shield (separate from job/guard shield)
+    private float wildTitleShieldHP = 0f;
     private float[] pendingGuardShield;
     private bool[] chargedNextAttack;
 
@@ -636,6 +638,8 @@ private IEnumerator MaybeSayKO_Wild(string victimName, float preHP, float postHP
 
         jobCtx = new JobBattlePassives.Ctx[teamCount];
         shieldHP = new float[teamCount];
+        titleShieldHP = new float[teamCount];
+        wildTitleShieldHP = 0f;
         teamPendingBuffPct = new float[teamCount];
         teamPendingBuffTurns = new int[teamCount];
 

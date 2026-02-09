@@ -105,13 +105,39 @@ public partial class BattleManager : MonoBehaviour
         float wildMax = Mathf.Max(1f, wildMaxHP);
         float wildCur = Mathf.Clamp(wildHP, 0f, wildMax);
 
+        // ---------- SHIELD (Player) ----------
+        int pShield = 0;
+        if (shieldHP != null && activeIndex >= 0 && activeIndex < shieldHP.Length)
+            pShield += Mathf.RoundToInt(shieldHP[activeIndex]);
+        if (titleShieldHP != null && activeIndex >= 0 && activeIndex < titleShieldHP.Length)
+            pShield += Mathf.RoundToInt(titleShieldHP[activeIndex]);
+        pShield = Mathf.Max(0, pShield);
+
+        // ---------- SHIELD (Wild) ----------
+        // Supports BOTH:
+        //  - existing wild shield (if you have wildShieldHP float)
+        //  - future wild title shield (if you later add wildTitleShieldHP float)
+        int wShield = 0;
+
+        // If you have a float wildShieldHP in BattleManager, this will compile.
+        // If you DON'T, delete this block.
+        try { wShield += Mathf.RoundToInt(Mathf.Max(0f, wildShieldHP)); } catch { /* ignored */ }
+
+        // If you have a float wildTitleShieldHP in BattleManager, this will compile.
+        // If you DON'T, delete this block.
+        try { wShield += Mathf.RoundToInt(Mathf.Max(0f, wildTitleShieldHP)); } catch { /* ignored */ }
+
+        wShield = Mathf.Max(0, wShield);
+
         if (feedback != null && feedback.HasHPTextWired)
         {
             feedback.SetHPTexts(
                 playerCur: playerCur,
                 playerMax: playerMax,
                 wildCur: wildCur,
-                wildMax: wildMax
+                wildMax: wildMax,
+                playerShield: pShield,
+                wildShield: wShield
             );
             return;
         }
@@ -123,13 +149,17 @@ public partial class BattleManager : MonoBehaviour
 
         if (playerHPText)
         {
-            playerHPText.text = $"HP: {pCurI}/{pMaxI}";
+            playerHPText.text = (pShield > 0)
+                ? $"HP: {pCurI}/{pMaxI}  (+{pShield} Shield)"
+                : $"HP: {pCurI}/{pMaxI}";
             playerHPText.color = StatNeutral;
         }
 
         if (wildHPText)
         {
-            wildHPText.text = $"HP: {wCurI}/{wMaxI}";
+            wildHPText.text = (wShield > 0)
+                ? $"HP: {wCurI}/{wMaxI}  (+{wShield} Shield)"
+                : $"HP: {wCurI}/{wMaxI}";
             wildHPText.color = StatNeutral;
         }
 
@@ -304,7 +334,8 @@ if (benchImg1)
         // Base for display = baseline totals + temp HP
         // Titles first, then conditionals (for coloring and delta)
         // ─────────────────────────────────────────────────────────────────────────
-        int hpBaseForDisplay = Mathf.RoundToInt(maxNoConds);
+        // Base for display = baseline totals (teamMaxHP already includes training) + temp HP (no title hpPct here)
+        int hpBaseForDisplay = Mathf.RoundToInt(Mathf.Max(1f, teamMaxHP[activeIndex]));
         float hpFinalF = TitlesAdapter.GetStatValue(ctx.ownedId, def, lvl, "HP", ctx, hpBaseForDisplay);
         int hpTitleFinal = Mathf.Max(1, Mathf.RoundToInt(hpFinalF));
 

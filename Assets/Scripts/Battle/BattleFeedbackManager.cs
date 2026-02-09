@@ -176,6 +176,8 @@ public sealed class BattleFeedbackManager : MonoBehaviour
     private int _lastPlayerMax = int.MinValue;
     private int _lastWildCur = int.MinValue;
     private int _lastWildMax = int.MinValue;
+    private int _lastPlayerShield = int.MinValue;
+    private int _lastWildShield = int.MinValue;
 
     private Vector3 _playerIconBaseScale = Vector3.one;
     private Vector3 _wildIconBaseScale = Vector3.one;
@@ -967,26 +969,39 @@ public void SetGuard(BattleFeedbackSide side, bool on)
     /// </summary>
     public void SetHPTexts(float playerCur, float playerMax, float wildCur, float wildMax)
     {
+        // Backwards-compatible call site (no shield info).
+        SetHPTexts(playerCur, playerMax, wildCur, wildMax, 0, 0);
+    }
+
+    /// <summary>
+    /// UI-only. Call whenever HP changes, when swapping, and at battle start.
+    /// Supports optional shield display (e.g., Title battle-start shield).
+    /// </summary>
+    public void SetHPTexts(float playerCur, float playerMax, float wildCur, float wildMax, int playerShield, int wildShield)
+    {
         int pCur = Mathf.CeilToInt(Mathf.Max(0f, playerCur));
         int pMax = Mathf.CeilToInt(Mathf.Max(1f, playerMax));
         int wCur = Mathf.CeilToInt(Mathf.Max(0f, wildCur));
         int wMax = Mathf.CeilToInt(Mathf.Max(1f, wildMax));
 
-        bool pChanged = (pCur != _lastPlayerCur) || (pMax != _lastPlayerMax);
-        bool wChanged = (wCur != _lastWildCur) || (wMax != _lastWildMax);
+        int pSh  = Mathf.Max(0, playerShield);
+        int wSh  = Mathf.Max(0, wildShield);
 
-        _lastPlayerCur = pCur; _lastPlayerMax = pMax;
-        _lastWildCur = wCur; _lastWildMax = wMax;
+        bool pChanged = (pCur != _lastPlayerCur) || (pMax != _lastPlayerMax) || (pSh != _lastPlayerShield);
+        bool wChanged = (wCur != _lastWildCur) || (wMax != _lastWildMax) || (wSh != _lastWildShield);
+
+        _lastPlayerCur = pCur; _lastPlayerMax = pMax; _lastPlayerShield = pSh;
+        _lastWildCur = wCur; _lastWildMax = wMax; _lastWildShield = wSh;
 
         if (playerHPValueText)
         {
-            playerHPValueText.text = $"{pCur}/{pMax}";
+            playerHPValueText.text = (pSh > 0) ? $"{pCur}/{pMax} (+{pSh})" : $"{pCur}/{pMax}";
             if (hpTextPunchOnChange && pChanged) PunchTMP(playerHPValueText);
         }
 
         if (wildHPValueText)
         {
-            wildHPValueText.text = $"{wCur}/{wMax}";
+            wildHPValueText.text = (wSh > 0) ? $"{wCur}/{wMax} (+{wSh})" : $"{wCur}/{wMax}";
             if (hpTextPunchOnChange && wChanged) PunchTMP(wildHPValueText);
         }
     }

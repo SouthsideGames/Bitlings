@@ -56,6 +56,11 @@ public partial class BattleManager : MonoBehaviour
         if (activeIndex >= 0 && teamIds != null && activeIndex < teamIds.Length)
             TitlesAdapter.OnBattleStart(teamIds[activeIndex], wildDef, wildLevel);
 
+        // Pull any Title battle-start shield into battle state so the damage pipeline and UI can consume/display it.
+        if (titleShieldHP != null && activeIndex >= 0 && activeIndex < titleShieldHP.Length)
+            titleShieldHP[activeIndex] = TitlesAdapter.GetBattleStartShieldRemaining(teamIds[activeIndex]);
+        wildTitleShieldHP = 0f;
+
         Debug_LogActiveTitlesSnapshot("BattleStart");
 
         UpdateHPTextUI();
@@ -724,6 +729,20 @@ if (feedback)
 
         float absorbedByWildShield = 0f;
 
+        float absorbedByWildTitleShield = 0f;
+
+        if (wildTitleShieldHP > 0f && dmgToApply > 0)
+        {
+            float absorb = Mathf.Min(wildTitleShieldHP, dmgToApply);
+            absorbedByWildTitleShield = absorb;
+            wildTitleShieldHP = Mathf.Max(0f, wildTitleShieldHP - absorb);
+            dmgToApply = Mathf.Max(0, dmgToApply - Mathf.RoundToInt(absorb));
+
+            if (absorb > 0f)
+                if (!ShouldSkipNarration(BattleLineTag.Shield | BattleLineTag.Flavor))
+                    yield return Say($"{foeName}'s title shield absorbed {Mathf.RoundToInt(absorb)}!", BattleLineTag.Shield | BattleLineTag.Flavor);
+        }
+
         if (wildShieldHP > 0f && dmgToApply > 0)
         {
             float absorb = Mathf.Min(wildShieldHP, dmgToApply);
@@ -750,8 +769,8 @@ if (feedback)
         PushHPBars();
 
         float wRatio = wildMaxHP > 0.01f ? (float)dmgToApply / wildMaxHP : 0f;
-        Emit(BattleEvent.Damage(BattleSide.Player, BattleSide.Wild, dmgToApply, dr.crit, dr.effectiveness, wRatio, (preventedByWildGuard > 0f) || (absorbedByWildShield > 0f)));
-        if (!HasBattleEventConsumers && feedback) feedback.PlayHitReaction(BattleFeedbackManager.BattleFeedbackSide.Wild, dr.crit, wRatio, wasGuarded: (preventedByWildGuard > 0f) || (absorbedByWildShield > 0f));
+        Emit(BattleEvent.Damage(BattleSide.Player, BattleSide.Wild, dmgToApply, dr.crit, dr.effectiveness, wRatio, (preventedByWildGuard > 0f) || (absorbedByWildShield > 0f) || (absorbedByWildTitleShield > 0f)));
+        if (!HasBattleEventConsumers && feedback) feedback.PlayHitReaction(BattleFeedbackManager.BattleFeedbackSide.Wild, dr.crit, wRatio, wasGuarded: (preventedByWildGuard > 0f) || (absorbedByWildShield > 0f) || (absorbedByWildTitleShield > 0f));
 if (!playerLandedFirstHitThisBattle && dr.damage > 0)
             playerLandedFirstHitThisBattle = true;
 
@@ -977,10 +996,28 @@ if (feedback)
 
         int dmg_afterScalar = Mathf.Max(1, Mathf.RoundToInt(dr.damage * incomingScalar));
 
-        float shieldBefore = (shieldHP != null && shieldHP.Length > activeIndex) ? shieldHP[activeIndex] : 0f;
+        // Title battle-start shield (separate pool, consumed before normal shields)
+        float titleShieldBefore = (titleShieldHP != null && activeIndex >= 0 && activeIndex < titleShieldHP.Length) ? titleShieldHP[activeIndex] : 0f;
+        float titleShieldAbsorbF = 0f;
+
+        int dmg_incoming = dmg_afterScalar;
+
+        int dmg_final = dmg_incoming;
+        if (titleShieldBefore > 0f && dmg_final > 0)
+        {
+            titleShieldAbsorbF = Mathf.Min(titleShieldBefore, dmg_final);
+            if (titleShieldHP != null && activeIndex >= 0 && activeIndex < titleShieldHP.Length)
+                titleShieldHP[activeIndex] = Mathf.Max(0f, titleShieldBefore - titleShieldAbsorbF);
+            dmg_final = Mathf.Max(0, dmg_final - Mathf.RoundToInt(titleShieldAbsorbF));
+
+            if (titleShieldAbsorbF > 0f)
+                if (!ShouldSkipNarration(BattleLineTag.Shield | BattleLineTag.Flavor))
+                    yield return Say($"{GetName(activeIndex)}'s title shield absorbed {Mathf.RoundToInt(titleShieldAbsorbF)}!", BattleLineTag.Shield | BattleLineTag.Flavor);
+        }
+
+        float shieldBefore = (shieldHP != null && activeIndex >= 0 && activeIndex < shieldHP.Length) ? shieldHP[activeIndex] : 0f;
         float shieldAbsorbF = 0f;
 
-        int dmg_final = dmg_afterScalar;
         if (shieldBefore > 0f && dmg_final > 0)
         {
             shieldAbsorbF = Mathf.Min(shieldBefore, dmg_final);
@@ -999,8 +1036,8 @@ if (feedback)
 
         float maxHP = GetFinalMaxHPForIndex(activeIndex);
         float ratio = maxHP > 0.01f ? (float)dmg_final / maxHP : 0f;
-        Emit(BattleEvent.Damage(BattleSide.Wild, BattleSide.Player, dmg_final, (dr.crit && !df.cannotBeCrit), dr.effectiveness, ratio, (preventedByGuardRaw > 0f) || (shieldAbsorbF > 0f)));
-        if (!HasBattleEventConsumers && feedback) feedback.PlayHitReaction(BattleFeedbackManager.BattleFeedbackSide.Player, dr.crit && !df.cannotBeCrit, ratio, wasGuarded: (preventedByGuardRaw > 0f) || (shieldAbsorbF > 0f));
+        Emit(BattleEvent.Damage(BattleSide.Wild, BattleSide.Player, dmg_final, (dr.crit && !df.cannotBeCrit), dr.effectiveness, ratio, (preventedByGuardRaw > 0f) || (shieldAbsorbF > 0f) || (titleShieldAbsorbF > 0f)));
+        if (!HasBattleEventConsumers && feedback) feedback.PlayHitReaction(BattleFeedbackManager.BattleFeedbackSide.Player, dr.crit && !df.cannotBeCrit, ratio, wasGuarded: (preventedByGuardRaw > 0f) || (shieldAbsorbF > 0f) || (titleShieldAbsorbF > 0f));
 
         if (preventedByGuardRaw > 0f &&
             pendingGuardShield != null &&
@@ -1014,7 +1051,7 @@ if (feedback)
                 yield return Say($"{GetName(activeIndex)} stores {Mathf.RoundToInt(shieldGain)} damage as a guard shield for the next round.", BattleLineTag.Shield | BattleLineTag.Flavor);
         }
 
-        TitlesAdapter.OnHitTaken(teamIds[activeIndex], dmg_final, dr.crit && !df.cannotBeCrit);
+        TitlesAdapter.OnHitTaken(teamIds[activeIndex], dmg_incoming, dr.crit && !df.cannotBeCrit);
 
         yield return Say($"{attackerName} hits {GetName(activeIndex)} for {dmg_final}!", BattleLineTag.Result);
 

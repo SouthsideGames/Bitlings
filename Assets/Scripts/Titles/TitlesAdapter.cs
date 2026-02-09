@@ -248,7 +248,22 @@ public static class TitlesAdapter
         if (!TryInvoke("OnHitTaken", new object[] { defenderId, damage, wasCrit }, out _)) { }
     }
 
-    public static void OnBattleStart(string activeMonsterId, MonsterDataSO wild, int wildLevel)
+    
+    public static float GetBattleStartShieldRemaining(string monsterId)
+    {
+        if (!TryInvoke("GetBattleStartShieldRemaining", new object[] { monsterId }, out object ret))
+            return 0f;
+
+        try
+        {
+            if (ret is float f) return f;
+            if (ret is int i) return i;
+            return Convert.ToSingle(ret);
+        }
+        catch { return 0f; }
+    }
+
+public static void OnBattleStart(string activeMonsterId, MonsterDataSO wild, int wildLevel)
     {
         if (!TryInvoke("OnBattleStart", new object[] { activeMonsterId, wild, wildLevel }, out _)) { }
     }

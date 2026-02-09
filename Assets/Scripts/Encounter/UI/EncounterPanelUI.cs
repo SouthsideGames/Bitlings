@@ -16,16 +16,6 @@ public class EncounterPanelUI : MonoBehaviour
     [SerializeField] private TextMeshProUGUI energyEtaLabel;
     [SerializeField, Min(1f)] private float energySecondsPerPoint = 1200f;
 
-    // ─────────────────────────────────────────────────────────────
-    // Fatigue Forecast (QOL)
-    //
-    // Goal: Show a quick heads-up before entering battle to prevent
-    // "surprise downtime" and reinforce fatigue as a strategic resource.
-    //
-    // Wiring:
-    // - Optional. If fatigueForecastLabel is null, this feature is disabled.
-    // - Place this label near the encounter button (ex: under the button).
-    // ─────────────────────────────────────────────────────────────
     [Header("Fatigue Forecast")]
     [SerializeField] private TextMeshProUGUI fatigueForecastLabel;
     [SerializeField] private bool showFatigueForecast = true;

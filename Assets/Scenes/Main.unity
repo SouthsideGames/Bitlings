@@ -85215,9 +85215,41 @@ MonoBehaviour:
   typewriterCharDelay: 0.03
   blinderBackground: {fileID: 428714123}
   defaultBlinderTint: {r: 0.10980392, g: 0.14901961, b: 0.18039216, a: 1}
-  bossImminentTint: {r: 0.8, g: 0.25, b: 0.25, a: 0.8}
+  bossImminentTint: {r: 0.8, g: 0.25, b: 0.25, a: 1}
   genericLureTint: {r: 0.10980392, g: 0.14901961, b: 0.18039216, a: 1}
-  lureTints: []
+  lureTints:
+  - type: 2
+    tint: {r: 0.1764706, g: 0.6117647, b: 1, a: 1}
+  - type: 1
+    tint: {r: 1, g: 0.3019608, b: 0.22745098, a: 1}
+  - type: 4
+    tint: {r: 1, g: 0.83137256, b: 0, a: 1}
+  - type: 5
+    tint: {r: 0.3882353, g: 0.8392157, b: 1, a: 1}
+  - type: 3
+    tint: {r: 0.18039216, g: 0.8156863, b: 0.43137255, a: 1}
+  - type: 12
+    tint: {r: 0.6627451, g: 0.4862745, b: 0.3137255, a: 1}
+  - type: 8
+    tint: {r: 0.81960785, g: 0.54509807, b: 0.22745098, a: 1}
+  - type: 10
+    tint: {r: 0.6901961, g: 0.42352942, b: 1, a: 1}
+  - type: 14
+    tint: {r: 1, g: 0.30980393, b: 0.7019608, a: 1}
+  - type: 15
+    tint: {r: 0, g: 0, b: 0, a: 1}
+  - type: 16
+    tint: {r: 0.72156864, g: 0.7607843, b: 0.8, a: 1}
+  - type: 9
+    tint: {r: 0.4, g: 0.7137255, b: 1, a: 1}
+  - type: 13
+    tint: {r: 0.47843137, g: 0.90588236, b: 0.8392157, a: 1}
+  - type: 6
+    tint: {r: 1, g: 0.47843137, b: 0, a: 1}
+  - type: 7
+    tint: {r: 0.49056602, g: 0.1689213, b: 0.35167405, a: 1}
+  - type: 11
+    tint: {r: 0.6039216, g: 0.79607844, b: 0.1764706, a: 1}
   useRandomBlinder: 1
   preferredLanguageCode: Engllish
   overridePack: {fileID: 11400000, guid: acdaed34360255544864872536cc7b71, type: 2}
