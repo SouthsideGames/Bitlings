@@ -153,7 +153,10 @@ public partial class BattleManager : MonoBehaviour
                 (1f + Mathf.Max(0f, cmods.spdPct));
             int pSpeedWithConditionals = Mathf.Max(1, Mathf.RoundToInt(pSpeedWithConditionalsF));
 
-            int tempSPDFlat = BattleTempBuffs.I ? BattleTempBuffs.I.GetPlayerSpeedFlatBonus() : 0;
+            int tempSPDFlat = (BattleTempBuffs.I ? BattleTempBuffs.I.GetPlayerSpeedFlatBonus() : 0);
+
+            if (BattleBoosterController.I != null)
+                tempSPDFlat += Mathf.Max(0, BattleBoosterController.I.ConsumeSpeedBonusForInitiative());
             int pSpeed = Mathf.Max(1, pSpeedWithConditionals + Mathf.Max(0, tempSPDFlat));
 
             int wSpeed = BattleCalc.CalcSpeed(wildDef, wildLevel);
@@ -635,7 +638,7 @@ if (feedback)
         int atkForResolve = Mathf.Max(1, Mathf.RoundToInt(atkWithCondFlat * (1f + Mathf.Max(0f, cond.atkPct))));
 
         // Temp boosters are additive flat on top (do NOT recalc BattleCalc to create a multiplier)
-        int tempFlatFromBoosters = BattleTempBuffs.I ? BattleTempBuffs.I.GetPlayerAtkBonus() : 0;
+        int tempFlatFromBoosters = (BattleTempBuffs.I ? BattleTempBuffs.I.GetPlayerAtkBonus() : 0) + (BattleBoosterController.I ? Mathf.Max(0, BattleBoosterController.I.GetAttackBonus()) : 0);
         if (tempFlatFromBoosters > 0)
             atkForResolve = Mathf.Max(1, atkForResolve + Mathf.Max(0, tempFlatFromBoosters));
 

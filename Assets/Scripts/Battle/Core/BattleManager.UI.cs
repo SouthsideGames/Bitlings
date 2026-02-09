@@ -269,6 +269,14 @@ if (benchImg1)
         int tempATKFlat = BattleTempBuffs.I ? BattleTempBuffs.I.GetPlayerAtkBonus() : 0;
         int tempDEFFlat = BattleTempBuffs.I ? BattleTempBuffs.I.GetPlayerDefenseBonus() : 0;
         int tempSPDFlat = BattleTempBuffs.I ? BattleTempBuffs.I.GetPlayerSpeedFlatBonus() : 0;
+        // Turn-based boosters (BattleBoosterController) also contribute flat bonuses.
+        var boosterCtrl = BattleBoosterController.I;
+        if (boosterCtrl != null)
+        {
+            tempATKFlat += Mathf.Max(0, boosterCtrl.GetAttackBonus());
+            tempSPDFlat += Mathf.Max(0, boosterCtrl.GetSpeedBonus());
+        }
+
 
         var ctx = TitleContext.Empty;
         ctx.ownedId = (teamIds != null && activeIndex < teamIds.Length) ? teamIds[activeIndex] : "";
@@ -315,57 +323,58 @@ if (benchImg1)
         // Base for display = baseline totals (already includes training + flatAtkBonus w/ legacy guard) + temp ATK
         // Titles first, then conditionals
         // ─────────────────────────────────────────────────────────────────────────
-        int atkBaseForDisplay = Mathf.Max(1, baseTotalATK + tempATKFlat);
-        float atkFinalF = TitlesAdapter.GetStatValue(ctx.ownedId, def, lvl, "Attack", ctx, atkBaseForDisplay);
-        int atkTitleFinal = Mathf.Max(1, Mathf.RoundToInt(atkFinalF));
+        // IMPORTANT: For coloring, compare FINAL against BASELINE totals (no temp/booster).
+        // Otherwise, temporary boosts (like in-battle boosters) appear "neutral".
+        int atkBaselineForColor = Mathf.Max(1, baseTotalATK);
+
+        // Display/value resolution uses baseline + temp/boosters, then titles, then conditionals.
+        int atkPreTitle = Mathf.Max(1, baseTotalATK + tempATKFlat);
+        float atkFinalF = TitlesAdapter.GetStatValue(ctx.ownedId, def, lvl, "Attack", ctx, atkPreTitle);
+        int atkAfterTitles = Mathf.Max(1, Mathf.RoundToInt(atkFinalF));
+
+        // Conditionals are applied on top of the post-title value.
+        int atkCondFlat = Mathf.Max(0, cmods.atkFlat);
+        float atkCondPct = Mathf.Max(0f, cmods.atkPct);
+        int atkCombinedFinal = Mathf.Max(1, Mathf.RoundToInt((atkAfterTitles + atkCondFlat) * (1f + atkCondPct)));
 
         if (playerATKText)
-        {
-            SetPlayerStatRowWithConditionals(
-                playerATKText, "ATK",
-                atkBaseForDisplay, atkTitleFinal,
-                condFlat: cmods.atkFlat, condPct: cmods.atkPct,
-                minFinal: 1
-            );
-        }
+            SetStatRowColorAndText(playerATKText, "ATK", atkBaselineForColor, atkCombinedFinal, minFinal: 1);
 
         // ─────────────────────────────────────────────────────────────────────────
         // DEF
         // Base for display = baseline totals + temp DEF
         // Titles first, then conditionals
         // ─────────────────────────────────────────────────────────────────────────
-        int defBaseForDisplay = Mathf.Max(0, baseTotalDEF + tempDEFFlat);
-        float defFinalF = TitlesAdapter.GetStatValue(ctx.ownedId, def, lvl, "Defense", ctx, defBaseForDisplay);
-        int defTitleFinal = Mathf.Max(0, Mathf.RoundToInt(defFinalF));
+        int defBaselineForColor = Mathf.Max(0, baseTotalDEF);
+
+        int defPreTitle = Mathf.Max(0, baseTotalDEF + tempDEFFlat);
+        float defFinalF = TitlesAdapter.GetStatValue(ctx.ownedId, def, lvl, "Defense", ctx, defPreTitle);
+        int defAfterTitles = Mathf.Max(0, Mathf.RoundToInt(defFinalF));
+
+        int defCondFlat = Mathf.Max(0, cmods.defFlat);
+        float defCondPct = Mathf.Max(0f, cmods.defPct);
+        int defCombinedFinal = Mathf.Max(0, Mathf.RoundToInt((defAfterTitles + defCondFlat) * (1f + defCondPct)));
 
         if (playerDEFText)
-        {
-            SetPlayerStatRowWithConditionals(
-                playerDEFText, "DEF",
-                defBaseForDisplay, defTitleFinal,
-                condFlat: cmods.defFlat, condPct: cmods.defPct,
-                minFinal: 0
-            );
-        }
+            SetStatRowColorAndText(playerDEFText, "DEF", defBaselineForColor, defCombinedFinal, minFinal: 0);
 
         // ─────────────────────────────────────────────────────────────────────────
         // SPD
         // Base for display = baseline totals + temp SPD
         // Titles first, then conditionals
         // ─────────────────────────────────────────────────────────────────────────
-        int spdBaseForDisplay = Mathf.Max(1, baseTotalSPD + tempSPDFlat);
-        float spdFinalF = TitlesAdapter.GetStatValue(ctx.ownedId, def, lvl, "Speed", ctx, spdBaseForDisplay);
-        int spdTitleFinal = Mathf.Max(1, Mathf.RoundToInt(spdFinalF));
+        int spdBaselineForColor = Mathf.Max(1, baseTotalSPD);
+
+        int spdPreTitle = Mathf.Max(1, baseTotalSPD + tempSPDFlat);
+        float spdFinalF = TitlesAdapter.GetStatValue(ctx.ownedId, def, lvl, "Speed", ctx, spdPreTitle);
+        int spdAfterTitles = Mathf.Max(1, Mathf.RoundToInt(spdFinalF));
+
+        int spdCondFlat = Mathf.Max(0, cmods.spdFlat);
+        float spdCondPct = Mathf.Max(0f, cmods.spdPct);
+        int spdCombinedFinal = Mathf.Max(1, Mathf.RoundToInt((spdAfterTitles + spdCondFlat) * (1f + spdCondPct)));
 
         if (playerSPDText)
-        {
-            SetPlayerStatRowWithConditionals(
-                playerSPDText, "SPD",
-                spdBaseForDisplay, spdTitleFinal,
-                condFlat: cmods.spdFlat, condPct: cmods.spdPct,
-                minFinal: 1
-            );
-        }
+            SetStatRowColorAndText(playerSPDText, "SPD", spdBaselineForColor, spdCombinedFinal, minFinal: 1);
 
         bool resistOn = BattleTempBuffs.I && BattleTempBuffs.I.IsTypeResistActive();
         if (resistOn && playerRarityText) playerRarityText.text += " [Resist]";

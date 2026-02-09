@@ -7,7 +7,6 @@ public static class GameEvents
     // Global / Common
     // ─────────────────────────────────────────────────────────
     public static Action OnTeamChanged;
-
     public static Action OnTeamHealthChanged;
     public static Action OnResourcesChanged;
     public static Action OnJobsChanged;

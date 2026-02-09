@@ -200,9 +200,27 @@ public sealed class BattleBoosterController : MonoBehaviour
     }
 
     public (int atk, int hp, int spd, int res) Cooldowns() => (cdAtk, cdHp, cdSpd, cdRes);
+
+    public int ConsumeSpeedBonusForInitiative()
+    {
+        if (speedDur <= 0)
+            return 0;
+
+        int bonus = speedFlatBonus;
+
+        speedDur = 0;
+
+        GameEvents.OnBoostersChanged?.Invoke();
+        GameEvents.RaiseBattleStatsChanged();
+
+        return bonus;
+    }
+
 }
 
 public struct BattleRuntimeHooks
 {
     public Func<int, int> HealPlayer;
 }
+
+
