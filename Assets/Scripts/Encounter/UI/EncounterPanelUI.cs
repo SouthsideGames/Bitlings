@@ -1076,6 +1076,8 @@ public class EncounterPanelUI : MonoBehaviour
 
         ShowBlinder(false, instant: true);
         hireDecisionRoot.SetActive(true);
+        RefreshEncounterButtonInteractivity();
+
     }
 
     void OnClickHireYes()
@@ -1121,6 +1123,8 @@ public class EncounterPanelUI : MonoBehaviour
             return;
 
         if (hireDecisionRoot) hireDecisionRoot.SetActive(false);
+
+        RefreshEncounterButtonInteractivity();
 
         EncounterManager.I?.OnHireDecisionResolved(_hireChoseYes, _hireCaptureSucceeded);
 
@@ -1635,5 +1639,6 @@ public class EncounterPanelUI : MonoBehaviour
         bool inBattle = IsInBattle();
         closeButtonRoot.SetActive(!inBattle);
     }
+
 
 }

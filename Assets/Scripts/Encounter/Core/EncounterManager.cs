@@ -1053,6 +1053,8 @@ public partial class EncounterManager : MonoBehaviour
         return true;
     }
 
+
+
     // ─────────────────────────────────────────────────────────
     // DEV / TEST OVERRIDES (PlayerPrefs driven)
     // ─────────────────────────────────────────────────────────

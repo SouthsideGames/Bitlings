@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
-using System.Linq;
 
 public sealed class TitleManager : MonoBehaviour
 {
@@ -26,6 +25,7 @@ public sealed class TitleManager : MonoBehaviour
     private readonly Dictionary<string, int> _eventStacks = new();          // grows on triggers (EventStacks)
     private readonly Dictionary<string, int> _eventMax = new();             // cache max for UI/debug (optional)
     private readonly Dictionary<string, int> _eventDecayPerTurn = new();    // how many stacks to decay each turn
+    private readonly List<string> _scratchEventKeys = new List<string>(16);
     private readonly Dictionary<string, int> _flatStartUntilTurn = new();   // inclusive last turn index where flat buff applies
     private readonly Dictionary<string, int> _flatStartAmountAtk = new();   // flat ATK from BattleStartFlatTitleSO
     private readonly Dictionary<string, int> _flatStartAmountDef = new();   // flat DEF from BattleStartFlatTitleSO
@@ -223,16 +223,28 @@ public sealed class TitleManager : MonoBehaviour
                 _idToTitle.Add(t.titleId, t);
         }
 
+        // Duplicate titleId detection (non-LINQ, editor-friendly)
         if (allCandidates.Count > 0)
         {
-            var dupGroups = allCandidates
-                .Where(t => t && !string.IsNullOrEmpty(t.titleId))
-                .GroupBy(t => t.titleId)
-                .Where(g => g.Count() > 1);
-
-            foreach (var g in dupGroups)
+            var byId = new Dictionary<string, List<TitleSO>>(StringComparer.Ordinal);
+            for (int i = 0; i < allCandidates.Count; i++)
             {
-                Debug.LogError(BuildDuplicateTitleIdLog(g.Key, g));
+                var t = allCandidates[i];
+                if (!t || string.IsNullOrEmpty(t.titleId)) continue;
+
+                if (!byId.TryGetValue(t.titleId, out var list))
+                {
+                    list = new List<TitleSO>(2);
+                    byId.Add(t.titleId, list);
+                }
+                list.Add(t);
+            }
+
+            foreach (var kv in byId)
+            {
+                var list = kv.Value;
+                if (list == null || list.Count <= 1) continue;
+                Debug.LogError(BuildDuplicateTitleIdLog(kv.Key, list));
             }
         }
     }
@@ -318,7 +330,16 @@ public sealed class TitleManager : MonoBehaviour
 
         // Must be among that tier's choices
         var tier = tiers[tierIndex];
-        if (tier.unlockChoices == null || !tier.unlockChoices.Any(t => t && t.titleId == choose.titleId)) return false;
+        if (tier.unlockChoices == null) return false;
+
+        // Must be among that tier's choices (non-LINQ)
+        bool found = false;
+        for (int i = 0; i < tier.unlockChoices.Count; i++)
+        {
+            var t = tier.unlockChoices[i];
+            if (t && t.titleId == choose.titleId) { found = true; break; }
+        }
+        if (!found) return false;
 
         var save = TitleSaveStore.GetOrCreateEquip(monsterId);
         if (save == null) return false;
@@ -740,11 +761,43 @@ if (_flatStartRemainingTurns.TryGetValue(monsterId, out int remTurns) && remTurn
 
     public float GetStatValueRouter(string monsterId, MonsterDataSO def, int level, string statKind, TitleContext ctx, float baseValue)
     {
-        var norm = NormalizeStatKey(statKind);
+        // Battle uses both "real stat" keys (HP/Attack/Defense/Speed) and "mod keys" (atkFlat/atkPct/etc).
+        if (string.IsNullOrEmpty(statKind))
+            return baseValue;
+
+        string key = statKind.Trim();
+
+        // Mod-key routing (BattleManager requests these with baseValue=0)
+        if (IsModKey(key))
+        {
+            var mods = GetBattleStatModsRuntime(monsterId, def, level, in ctx);
+            if (key.Equals("atkFlat", StringComparison.OrdinalIgnoreCase)) return mods.atkFlat;
+            if (key.Equals("defFlat", StringComparison.OrdinalIgnoreCase)) return mods.defFlat;
+            if (key.Equals("spdFlat", StringComparison.OrdinalIgnoreCase)) return mods.spdFlat;
+            if (key.Equals("atkPct", StringComparison.OrdinalIgnoreCase)) return mods.atkPct;
+            if (key.Equals("defPct", StringComparison.OrdinalIgnoreCase)) return mods.defPct;
+            if (key.Equals("spdPct", StringComparison.OrdinalIgnoreCase)) return mods.spdPct;
+            if (key.Equals("hpPct",  StringComparison.OrdinalIgnoreCase)) return mods.hpPct;
+            return baseValue;
+        }
+
+        // Normal stat routing (returns final stat value)
+        var norm = NormalizeStatKey(key);
         if (!Enum.TryParse<StatKind>(norm, ignoreCase: true, out var kind))
             return baseValue;
 
         return GetStatValue(monsterId, def, level, kind, in ctx, baseValue);
+    }
+
+    private static bool IsModKey(string key)
+    {
+        return key.Equals("atkFlat", StringComparison.OrdinalIgnoreCase) ||
+               key.Equals("defFlat", StringComparison.OrdinalIgnoreCase) ||
+               key.Equals("spdFlat", StringComparison.OrdinalIgnoreCase) ||
+               key.Equals("atkPct",  StringComparison.OrdinalIgnoreCase) ||
+               key.Equals("defPct",  StringComparison.OrdinalIgnoreCase) ||
+               key.Equals("spdPct",  StringComparison.OrdinalIgnoreCase) ||
+               key.Equals("hpPct",   StringComparison.OrdinalIgnoreCase);
     }
 
     private static bool TryReadFloat(object obj, out float value, params string[] names)
@@ -921,8 +974,6 @@ if (_flatStartRemainingTurns.TryGetValue(monsterId, out int remTurns) && remTurn
         _flatStartAmountSpd.Clear();
         _flatStartAmountHp.Clear();
         _flatStartRemainingTurns.Clear();
-        _flatStartRemainingTurns.Clear();
-        _flatStartRemainingTurns.Clear();
         _shieldRemaining.Clear();
 
         _activeBattleMonsterId = activeMonsterId;
@@ -955,11 +1006,14 @@ if (_flatStartRemainingTurns.TryGetValue(monsterId, out int remTurns) && remTurn
     {
         _turnIndex = Mathf.Max(0, turnIndex);
 
-        // decay event stacks
-        var keys = _eventStacks.Keys.ToArray();
-        for (int i = 0; i < keys.Length; i++)
+        // decay event stacks (no allocations)
+        _scratchEventKeys.Clear();
+        foreach (var kv in _eventStacks)
+            _scratchEventKeys.Add(kv.Key);
+
+        for (int i = 0; i < _scratchEventKeys.Count; i++)
         {
-            var id = keys[i];
+            var id = _scratchEventKeys[i];
             if (!_eventStacks.TryGetValue(id, out var cur)) continue;
 
             int decay = _eventDecayPerTurn.TryGetValue(id, out var d) ? d : 0;
@@ -1010,6 +1064,14 @@ if (_flatStartRemainingTurns.TryGetValue(monsterId, out int remTurns) && remTurn
             }
         }
     }
+
+    /// <summary> Remaining BattleStartShield HP for UI (0 if none). </summary>
+    public float GetBattleStartShieldRemaining(string monsterId)
+    {
+        if (string.IsNullOrEmpty(monsterId)) return 0f;
+        return _shieldRemaining.TryGetValue(monsterId, out var v) ? Mathf.Max(0f, v) : 0f;
+    }
+
 
 
     public void OnAttackLanded(string attackerId, bool wasCrit)
@@ -1260,7 +1322,299 @@ if (_flatStartRemainingTurns.TryGetValue(monsterId, out int remTurns) && remTurn
         return null;
     }
 
-        public TitleStatMods GetBattleStatMods(string monsterId)
+    // ─────────────────────────────────────────────────────────────────────
+    // Battle mods (flat + pct) including conditional + stateful battle titles
+    // ─────────────────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Returns complete battle stat mods for this combatant, including:
+    /// - StatBooster / DuoStatBooster
+    /// - ConditionalStatBooster / DuoConditionalStatBooster (evaluated against ctx)
+    /// - BattleStartFlat (while remaining turns > 0)
+    /// - TurnBooster stacks, EventStacks, ClutchBooster (multipliers)
+    /// </summary>
+    private TitleStatMods GetBattleStatModsRuntime(string monsterId, MonsterDataSO def, int level, in TitleContext ctx)
+    {
+        if (string.IsNullOrEmpty(monsterId))
+            return default;
+
+        if (!def)
+            def = MonsterLibraryLocator.GetById(monsterId);
+
+        if (!def)
+            return default;
+
+        // Resolve baseline stats so HP flat can be converted to pct correctly.
+        float baseHP, baseATK, baseDEF, baseSPD;
+
+        OwnedMonsterData ownedForBase = null;
+        var data = SaveManager.Data;
+        if (data != null)
+        {
+            if (data.team != null)
+            {
+                for (int i = 0; i < data.team.Count; i++)
+                {
+                    var om = data.team[i];
+                    if (om != null && om.monsterId == monsterId) { ownedForBase = om; break; }
+                }
+            }
+            if (ownedForBase == null && data.owned != null)
+            {
+                for (int i = 0; i < data.owned.Count; i++)
+                {
+                    var om = data.owned[i];
+                    if (om != null && om.monsterId == monsterId) { ownedForBase = om; break; }
+                }
+            }
+        }
+
+        if (ownedForBase != null)
+        {
+            var ps = ProgressionStatCalc.Get(ownedForBase);
+            baseHP  = Mathf.Max(1f, ps.totalHP);
+            baseATK = Mathf.Max(1f, ps.totalATK);
+            baseDEF = Mathf.Max(1f, ps.totalDEF);
+            baseSPD = Mathf.Max(1f, ps.totalSPD);
+        }
+        else
+        {
+            baseHP  = Mathf.Max(1f, BattleCalc.CalcHP(def, level));
+            baseATK = Mathf.Max(1f, BattleCalc.CalcBaseAttack(def, level, 0, 0));
+            baseDEF = Mathf.Max(1f, BattleCalc.CalcDefense(def, level));
+            baseSPD = Mathf.Max(1f, BattleCalc.CalcSpeed(def, level));
+        }
+
+        var titles = GetEquippedList(monsterId, def, level);
+
+        int atkFlat = 0, defFlat = 0, spdFlat = 0;
+        float hpMult = 1f, atkMult = 1f, defMult = 1f, spdMult = 1f;
+        float hpFlatAdd = 0f;
+
+        void ApplyOne(StatKind stat, OpKind op, float value)
+        {
+            float FactorFromOp()
+            {
+                if (op == OpKind.Multiply) return value;
+                if (op == OpKind.Divide)   return (Mathf.Approximately(value, 0f) ? 1f : 1f / value);
+                return 1f;
+            }
+
+            switch (stat)
+            {
+                case StatKind.HP:
+                    if (op == OpKind.Add) hpFlatAdd += value;
+                    else if (op == OpKind.Subtract) hpFlatAdd -= value;
+                    else hpMult *= Mathf.Max(0.01f, FactorFromOp());
+                    break;
+
+                case StatKind.Attack:
+                    if (op == OpKind.Add) atkFlat += Mathf.RoundToInt(value);
+                    else if (op == OpKind.Subtract) atkFlat -= Mathf.RoundToInt(value);
+                    else atkMult *= Mathf.Max(0.01f, FactorFromOp());
+                    break;
+
+                case StatKind.Defense:
+                    if (op == OpKind.Add) defFlat += Mathf.RoundToInt(value);
+                    else if (op == OpKind.Subtract) defFlat -= Mathf.RoundToInt(value);
+                    else defMult *= Mathf.Max(0.01f, FactorFromOp());
+                    break;
+
+                case StatKind.Speed:
+                    if (op == OpKind.Add) spdFlat += Mathf.RoundToInt(value);
+                    else if (op == OpKind.Subtract) spdFlat -= Mathf.RoundToInt(value);
+                    else spdMult *= Mathf.Max(0.01f, FactorFromOp());
+                    break;
+            }
+        }
+
+        // Static + conditional boosters
+        for (int i = 0; i < titles.Count; i++)
+        {
+            var t = titles[i];
+            if (!t) continue;
+
+            if (t is StatBoosterTitleSO sb)
+            {
+                ApplyOne(sb.stat, sb.operation, sb.value);
+            }
+            else if (t is ConditionalStatBoosterTitleSO cb)
+            {
+                if (TitleUtility.CheckCondition(cb, ctx))
+                    ApplyOne(cb.stat, cb.operation, cb.value);
+            }
+            else if (t is DuoStatBoosterTitleSO duo && duo.enabled)
+            {
+                ApplyOne(duo.statA, duo.opA, duo.valueA);
+                ApplyOne(duo.statB, duo.opB, duo.valueB);
+            }
+            else if (t is DuoConditionalStatBoosterTitleSO dcb)
+            {
+                if (TitleUtility.CheckCondition(dcb.condition, dcb.threshold01, dcb.countN, in ctx))
+                {
+                    ApplyOne(dcb.statA, dcb.opA, dcb.valueA);
+                    ApplyOne(dcb.statB, dcb.opB, dcb.valueB);
+                }
+            }
+        }
+
+        // BattleStartFlat (owner-turn ticking)
+        if (_flatStartRemainingTurns.TryGetValue(monsterId, out int remTurns) && remTurns > 0)
+        {
+            if (_flatStartAmountAtk.TryGetValue(monsterId, out int fAtk)) atkFlat += fAtk;
+            if (_flatStartAmountDef.TryGetValue(monsterId, out int fDef)) defFlat += fDef;
+            if (_flatStartAmountSpd.TryGetValue(monsterId, out int fSpd)) spdFlat += fSpd;
+            if (_flatStartAmountHp.TryGetValue(monsterId, out int fHp)) hpFlatAdd += fHp;
+        }
+
+        // TurnBooster (percent per stack)
+        var tb = GetFirstTitle<TurnBoosterTitleSO>(monsterId, def, level);
+        if (tb != null && _turnStacks.TryGetValue(monsterId, out int tStacks) && tStacks > 0)
+        {
+            float pct = Mathf.Max(0f, tb.percentPerTurn) / 100f;
+            int stacks = Mathf.Min(tStacks, Mathf.Max(1, tb.maxStacks));
+            float factor = 1f + pct * stacks;
+
+            if (MatchesStat(StatKind.HP, tb.stat))  hpMult  *= factor;
+            if (MatchesStat(StatKind.Attack, tb.stat)) atkMult *= factor;
+            if (MatchesStat(StatKind.Defense, tb.stat)) defMult *= factor;
+            if (MatchesStat(StatKind.Speed, tb.stat)) spdMult *= factor;
+        }
+
+        // EventStacks (percent per stack)
+        var es = GetFirstTitle<EventStacksTitleSO>(monsterId, def, level);
+        if (es != null && _eventStacks.TryGetValue(monsterId, out int eStacks) && eStacks > 0)
+        {
+            float pct = Mathf.Max(0f, es.percentPerStack) / 100f;
+            int stacks = Mathf.Min(eStacks, Mathf.Max(1, es.maxStacks));
+            float factor = 1f + pct * stacks;
+
+            if (MatchesStat(StatKind.HP, es.stat))  hpMult  *= factor;
+            if (MatchesStat(StatKind.Attack, es.stat)) atkMult *= factor;
+            if (MatchesStat(StatKind.Defense, es.stat)) defMult *= factor;
+            if (MatchesStat(StatKind.Speed, es.stat)) spdMult *= factor;
+        }
+
+        // ClutchBooster (hp threshold)
+        var clutch = GetFirstTitle<ClutchBoosterTitleSO>(monsterId, def, level);
+        float hp01 = ReadHp01(ctx);
+        if (clutch != null && hp01 <= Mathf.Clamp01(clutch.hpBelowThreshold01))
+        {
+            if (clutch.atkPct > 0f) atkMult *= 1f + (clutch.atkPct / 100f);
+            if (clutch.defPct > 0f) defMult *= 1f + (clutch.defPct / 100f);
+            if (clutch.spdPct > 0f) spdMult *= 1f + (clutch.spdPct / 100f);
+        }
+
+        // Convert HP flat into pct factor relative to baseline HP.
+        if (!Mathf.Approximately(hpFlatAdd, 0f))
+        {
+            float hpFactorFromFlat = Mathf.Max(0.01f, (baseHP + hpFlatAdd) / baseHP);
+            hpMult *= hpFactorFromFlat;
+        }
+
+        TitleStatMods mods = default;
+        mods.atkFlat = atkFlat;
+        mods.defFlat = defFlat;
+        mods.spdFlat = spdFlat;
+
+        mods.hpPct  = hpMult  - 1f;
+        mods.atkPct = atkMult - 1f;
+        mods.defPct = defMult - 1f;
+        mods.spdPct = spdMult - 1f;
+
+        return mods;
+    }
+
+    /// <summary>
+    /// Adapter hook: returns ONLY conditional boosters as a TitleStatMods block.
+    /// </summary>
+    public TitleStatMods GetConditionalBattleMods(TitleContext ctx)
+    {
+        if (string.IsNullOrEmpty(ctx.ownedId))
+            return default;
+
+        var def = MonsterLibraryLocator.GetById(ctx.ownedId);
+        int lvl = GetLevelOr1(ctx.ownedId);
+        var titles = GetEquippedList(ctx.ownedId, def, lvl);
+
+        int atkFlat = 0, defFlat = 0, spdFlat = 0;
+        float hpMult = 1f, atkMult = 1f, defMult = 1f, spdMult = 1f;
+        float hpFlatAdd = 0f;
+
+        void ApplyOne(StatKind stat, OpKind op, float value)
+        {
+            float FactorFromOp()
+            {
+                if (op == OpKind.Multiply) return value;
+                if (op == OpKind.Divide)   return (Mathf.Approximately(value, 0f) ? 1f : 1f / value);
+                return 1f;
+            }
+
+            switch (stat)
+            {
+                case StatKind.HP:
+                    if (op == OpKind.Add) hpFlatAdd += value;
+                    else if (op == OpKind.Subtract) hpFlatAdd -= value;
+                    else hpMult *= Mathf.Max(0.01f, FactorFromOp());
+                    break;
+                case StatKind.Attack:
+                    if (op == OpKind.Add) atkFlat += Mathf.RoundToInt(value);
+                    else if (op == OpKind.Subtract) atkFlat -= Mathf.RoundToInt(value);
+                    else atkMult *= Mathf.Max(0.01f, FactorFromOp());
+                    break;
+                case StatKind.Defense:
+                    if (op == OpKind.Add) defFlat += Mathf.RoundToInt(value);
+                    else if (op == OpKind.Subtract) defFlat -= Mathf.RoundToInt(value);
+                    else defMult *= Mathf.Max(0.01f, FactorFromOp());
+                    break;
+                case StatKind.Speed:
+                    if (op == OpKind.Add) spdFlat += Mathf.RoundToInt(value);
+                    else if (op == OpKind.Subtract) spdFlat -= Mathf.RoundToInt(value);
+                    else spdMult *= Mathf.Max(0.01f, FactorFromOp());
+                    break;
+            }
+        }
+
+        float baseHP = Mathf.Max(1f, BattleCalc.CalcHP(def, lvl));
+
+        for (int i = 0; i < titles.Count; i++)
+        {
+            var t = titles[i];
+            if (!t) continue;
+
+            if (t is ConditionalStatBoosterTitleSO cb)
+            {
+                if (TitleUtility.CheckCondition(cb, ctx))
+                    ApplyOne(cb.stat, cb.operation, cb.value);
+            }
+            else if (t is DuoConditionalStatBoosterTitleSO dcb)
+            {
+                if (TitleUtility.CheckCondition(dcb.condition, dcb.threshold01, dcb.countN, in ctx))
+                {
+                    ApplyOne(dcb.statA, dcb.opA, dcb.valueA);
+                    ApplyOne(dcb.statB, dcb.opB, dcb.valueB);
+                }
+            }
+        }
+
+        if (!Mathf.Approximately(hpFlatAdd, 0f))
+        {
+            float hpFactorFromFlat = Mathf.Max(0.01f, (baseHP + hpFlatAdd) / baseHP);
+            hpMult *= hpFactorFromFlat;
+        }
+
+        TitleStatMods mods = default;
+        mods.atkFlat = atkFlat;
+        mods.defFlat = defFlat;
+        mods.spdFlat = spdFlat;
+        mods.hpPct  = hpMult  - 1f;
+        mods.atkPct = atkMult - 1f;
+        mods.defPct = defMult - 1f;
+        mods.spdPct = spdMult - 1f;
+        return mods;
+    }
+
+    public TitleStatMods GetBattleStatMods(string monsterId)
     {
         if (string.IsNullOrEmpty(monsterId))
             return default;
