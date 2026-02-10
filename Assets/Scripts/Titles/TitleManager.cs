@@ -247,6 +247,12 @@ public sealed class TitleManager : MonoBehaviour
                 Debug.LogError(BuildDuplicateTitleIdLog(kv.Key, list));
             }
         }
+
+        // Debug: report how many titles were indexed so we can verify runtime loading.
+        if (_idToTitle.Count == 0)
+            Debug.LogWarning("TitleManager: no TitleSO assets indexed. Ensure TitleSO assets are in a Resources folder or assigned to 'preloadTitles' in the inspector.");
+        else
+            Debug.Log($"TitleManager: indexed {_idToTitle.Count} TitleSO assets.");
     }
 
     private static string BuildDuplicateTitleIdLog(string titleId, IEnumerable<TitleSO> titles)
@@ -1440,8 +1446,10 @@ if (_flatStartRemainingTurns.TryGetValue(monsterId, out int remTurns) && remTurn
             }
             else if (t is ConditionalStatBoosterTitleSO cb)
             {
-                if (TitleUtility.CheckCondition(cb, ctx))
-                    ApplyOne(cb.stat, cb.operation, cb.value);
+                bool ok = TitleUtility.CheckCondition(cb, ctx);
+                if (debugEffectiveness)
+                    Debug.Log($"TitleManager: Conditional check for {cb.titleId} on {monsterId} -> {ok} (hp01={ctx.selfHp01:F2}, allies={ctx.alliesAlive}, winStreak={ctx.winStreak})");
+                if (ok) ApplyOne(cb.stat, cb.operation, cb.value);
             }
             else if (t is DuoStatBoosterTitleSO duo && duo.enabled)
             {
@@ -1450,7 +1458,10 @@ if (_flatStartRemainingTurns.TryGetValue(monsterId, out int remTurns) && remTurn
             }
             else if (t is DuoConditionalStatBoosterTitleSO dcb)
             {
-                if (TitleUtility.CheckCondition(dcb.condition, dcb.threshold01, dcb.countN, in ctx))
+                bool ok = TitleUtility.CheckCondition(dcb.condition, dcb.threshold01, dcb.countN, in ctx);
+                if (debugEffectiveness)
+                    Debug.Log($"TitleManager: DuoConditional check for {dcb.titleId} on {monsterId} -> {ok} (hp01={ctx.selfHp01:F2}, allies={ctx.alliesAlive}, winStreak={ctx.winStreak})");
+                if (ok)
                 {
                     ApplyOne(dcb.statA, dcb.opA, dcb.valueA);
                     ApplyOne(dcb.statB, dcb.opB, dcb.valueB);
