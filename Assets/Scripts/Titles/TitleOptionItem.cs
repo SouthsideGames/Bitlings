@@ -90,7 +90,7 @@ public sealed class TitleOptionItem : MonoBehaviour
 
     void RefreshButtonVisuals()
     {
-        bool isThisEquipped = _equippedInTier != null && _equippedInTier == _option;
+        bool isThisEquipped = _equippedInTier != null && _option != null && !string.IsNullOrEmpty(_equippedInTier.titleId) && _equippedInTier.titleId == _option.titleId;
 
         if (_assignBtnLabel) _assignBtnLabel.text = isThisEquipped ? "Remove" : "Assign";
         if (_assignBtnImage)
@@ -101,7 +101,7 @@ public sealed class TitleOptionItem : MonoBehaviour
     {
         if (_option == null || _def == null) return;
 
-        bool isThisEquipped = _equippedInTier != null && _equippedInTier == _option;
+        bool isThisEquipped = _equippedInTier != null && _option != null && !string.IsNullOrEmpty(_equippedInTier.titleId) && _equippedInTier.titleId == _option.titleId;
 
         if (isThisEquipped)
         {
@@ -130,7 +130,6 @@ public sealed class TitleOptionItem : MonoBehaviour
         if (_option == null)
             return;
 
-        // Allow override via inspector; otherwise use generic Title info entry.
         var id = string.IsNullOrWhiteSpace(infoId) ? "title.generic" : infoId;
 
         string fallbackTitle      = _option.displayName;

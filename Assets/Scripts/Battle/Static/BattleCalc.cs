@@ -307,9 +307,12 @@ public static class BattleCalc
         if (defenderFlatDefenseBonus != 0)
             defenseStat = Mathf.Max(0, defenseStat + Mathf.Max(0, defenderFlatDefenseBonus));
 
-        // Apply Titles/conditionals to defense stat, if we have defender ID.
-        // This keeps titles as "moveable/removable" on top of progression totals.
-        if (!string.IsNullOrEmpty(defenderMonsterId))
+        // Apply Titles/conditionals to defense stat, if we have defender ID AND the caller
+        // did not already supply a titled effective defense stat.
+        //
+        // If caller supplies defenderEffectiveDefenseStat we treat it as the FINAL defense stat
+        // for this hit (it may already include conditional title context like hp%).
+        if (!defenderEffectiveDefenseStat.HasValue && !string.IsNullOrEmpty(defenderMonsterId))
         {
             try
             {

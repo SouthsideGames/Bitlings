@@ -52,17 +52,13 @@ public partial class BattleManager : MonoBehaviour
         }
 
         PostBattleSummaryManager.I?.NotifyBattleStart();
-
-        if (activeIndex >= 0 && teamIds != null && activeIndex < teamIds.Length)
-            TitlesAdapter.OnBattleStart(teamIds[activeIndex], wildDef, wildLevel);
-
-        // Pull any Title battle-start shield into battle state so the damage pipeline and UI can consume/display it.
-        if (titleShieldHP != null && activeIndex >= 0 && activeIndex < titleShieldHP.Length)
-            titleShieldHP[activeIndex] = TitlesAdapter.GetBattleStartShieldRemaining(teamIds[activeIndex]);
-        wildTitleShieldHP = 0f;
-
+        // BattleStart titles are applied once in Begin() via ApplyBattleStartTitles().
         Debug_LogActiveTitlesSnapshot("BattleStart");
 
+        // Ensure max HP is synced with titles before first UI paint.
+        if (_stats != null) _stats.MarkDirtyAll();
+        SyncEffectiveMaxHPFromStats(force: true);
+        PushHPBars();
         UpdateHPTextUI();
 
         ResetStatusIcons();
@@ -135,36 +131,22 @@ public partial class BattleManager : MonoBehaviour
                 continue;
             }
 
-            int pSpeedBase = GetProgressionTotalSPDForIndex(activeIndex);
+            // Initiative uses centralized battle stats (Adjusted + job + titles + boosters + temp).
+            int pSpeed = 1;
+            if (_stats != null)
+                pSpeed = Mathf.Max(1, _stats.GetEffectivePlayer(activeIndex).spd);
+            else
+                pSpeed = Mathf.Max(1, GetProgressionTotalSPDForIndex(activeIndex));
 
-            var jSpeed = (jobCtx != null && activeIndex >= 0 && activeIndex < jobCtx.Length) ? jobCtx[activeIndex] : null;
-            if (jSpeed != null && jSpeed.speedBuffTurns > 0 && jSpeed.speedBonusPctFirstTurns != 0f)
-                pSpeedBase = Mathf.Max(1, Mathf.RoundToInt(pSpeedBase * (1f + jSpeed.speedBonusPctFirstTurns)));
-
-            var titleCtx = BuildTitleContextForActive();
-            float pSpeedAfterTitlesF = TitlesAdapter.GetStatValue(
-                teamIds[activeIndex],
-                teamDefs[activeIndex],
-                teamLevels[activeIndex],
-                "SPD",
-                titleCtx,
-                pSpeedBase
-            );
-            int pSpeedAfterTitles = Mathf.Max(1, Mathf.RoundToInt(pSpeedAfterTitlesF));
-
-            var cmods = GetConditionalModsForActive();
-            float pSpeedWithConditionalsF =
-                (pSpeedAfterTitles + Mathf.Max(0, cmods.spdFlat)) *
-                (1f + Mathf.Max(0f, cmods.spdPct));
-            int pSpeedWithConditionals = Mathf.Max(1, Mathf.RoundToInt(pSpeedWithConditionalsF));
-
-            int tempSPDFlat = (BattleTempBuffs.I ? BattleTempBuffs.I.GetPlayerSpeedFlatBonus() : 0);
-
+            // Speed boosters that are "spent" on initiative should apply here.
             if (BattleBoosterController.I != null)
-                tempSPDFlat += Mathf.Max(0, BattleBoosterController.I.ConsumeSpeedBonusForInitiative());
-            int pSpeed = Mathf.Max(1, pSpeedWithConditionals + Mathf.Max(0, tempSPDFlat));
+                pSpeed = Mathf.Max(1, pSpeed + Mathf.Max(0, BattleBoosterController.I.ConsumeSpeedBonusForInitiative()));
 
-            int wSpeed = BattleCalc.CalcSpeed(wildDef, wildLevel);
+            int wSpeed = 1;
+            if (_stats != null)
+                wSpeed = Mathf.Max(1, _stats.GetEffectiveWild().spd);
+            else
+                wSpeed = Mathf.Max(1, BattleCalc.CalcSpeed(wildDef, wildLevel));
 
             bool playerFirst;
             if (pSpeed > wSpeed) playerFirst = true;
@@ -614,8 +596,12 @@ RefreshStatusIconsFromState();
 
         isResolvingPlayerTurn = true;
 
-        if (teamHP[activeIndex] <= 0.01f && !AutoSwapToAlive())
+        string _playerTurnOwnerId = (teamIds != null && activeIndex >= 0 && activeIndex < teamIds.Length) ? teamIds[activeIndex] : null;
+
+        try
         {
+            if (teamHP[activeIndex] <= 0.01f && !AutoSwapToAlive())
+            {
             isResolvingPlayerTurn = false;
             yield break;
         }
@@ -634,18 +620,12 @@ if (feedback)
 
         yield return CoWaitScaled(0.10f);
 
-        // Baseline TOTAL ATK (SpeciesBase + LevelGrowth + Training + flatAtkBonus w/ legacy guard)
-        GetProgressionTotalsForIndex(activeIndex, out _, out int atkBaseTotal, out _, out _, out _);
-
-        // Conditionals apply on top of baseline totals
-        var cond = GetConditionalModsForActive();
-        int atkWithCondFlat = Mathf.Max(1, atkBaseTotal + Mathf.Max(0, cond.atkFlat));
-        int atkForResolve = Mathf.Max(1, Mathf.RoundToInt(atkWithCondFlat * (1f + Mathf.Max(0f, cond.atkPct))));
-
-        // Temp boosters are additive flat on top (do NOT recalc BattleCalc to create a multiplier)
-        int tempFlatFromBoosters = (BattleTempBuffs.I ? BattleTempBuffs.I.GetPlayerAtkBonus() : 0) + (BattleBoosterController.I ? Mathf.Max(0, BattleBoosterController.I.GetAttackBonus()) : 0);
-        if (tempFlatFromBoosters > 0)
-            atkForResolve = Mathf.Max(1, atkForResolve + Mathf.Max(0, tempFlatFromBoosters));
+                // Centralized ATK stat for this attacker (Adjusted + job + titles + boosters + temp).
+        int atkForResolve = 1;
+        if (_stats != null)
+            atkForResolve = Mathf.Max(1, _stats.GetEffectivePlayer(activeIndex).atk);
+        else
+            GetProgressionTotalsForIndex(activeIndex, out _, out atkForResolve, out _, out _, out _);
 
 
         var jctx = (jobCtx != null) ? jobCtx[activeIndex] : null;
@@ -815,8 +795,18 @@ if (!playerLandedFirstHitThisBattle && dr.damage > 0)
         }
 
         FirePlayerEndTurnTicks(dealtDamageThisTurn: dr.damage > 0, critThisTurn: dr.crit);
+        }
+        finally
+        {
+            // Tick owner-turn-based Title durations (e.g., BattleStartFlat durationTurns).
+            if (inBattle && !string.IsNullOrEmpty(_playerTurnOwnerId))
+            {
+                TitlesAdapter.OnCombatantTurnEnded(_playerTurnOwnerId);
+                GameEvents.RaiseBattleStatsChanged();
+            }
 
-        isResolvingPlayerTurn = false;
+            isResolvingPlayerTurn = false;
+        }
     }
 
 
@@ -824,6 +814,10 @@ if (!playerLandedFirstHitThisBattle && dr.damage > 0)
 
     private IEnumerator EnemyTurn(EnemyAction choice)
     {
+        string _wildTurnOwnerId = _wildCombatIdForTitles;
+
+        try
+        {
         if (teamHP[activeIndex] <= 0.01f && !AutoSwapToAlive())
             yield break;
 
@@ -867,11 +861,14 @@ if (!playerLandedFirstHitThisBattle && dr.damage > 0)
             if (!ShouldSkipNarration(BattleLineTag.Flavor))
                 yield return Say($"{name} is charging up.", BattleLineTag.Flavor);
             if (!ShouldSkipNarration(BattleLineTag.Flavor))
-                yield return Say($"Their next attack will deal +{Mathf.RoundToInt(chargeBonusPct * 100f)}% damage.", BattleLineTag.Flavor);                                        Emit(BattleEvent.ActionQueued(BattleSide.Wild, "Swap"));
-                                        if (!HasBattleEventConsumers && feedback) feedback.PlayActionQueued(
-                                            BattleFeedbackManager.BattleFeedbackSide.Wild,
-                                            BattleFeedbackManager.BattleFeedbackAction.Swap
-                                        );
+                yield return Say($"Their next attack will deal +{Mathf.RoundToInt(chargeBonusPct * 100f)}% damage.", BattleLineTag.Flavor);
+
+            Emit(BattleEvent.ActionQueued(BattleSide.Wild, "Focus"));
+            if (!HasBattleEventConsumers && feedback) feedback.PlayActionQueued(
+                BattleFeedbackManager.BattleFeedbackSide.Wild,
+                BattleFeedbackManager.BattleFeedbackAction.Focus
+            );
+
             yield break;
         }
 
@@ -909,12 +906,14 @@ if (feedback)
 
         yield return CoWaitScaled(0.10f);
 
-        int enemyAtk = Mathf.Max(1, Mathf.RoundToInt(wildAttackPerTurn));
-        int defFlatBooster = BattleTempBuffs.I ? BattleTempBuffs.I.GetPlayerDefenseBonus() : 0;
+        int enemyAtk = 1;
+        if (_stats != null)
+            enemyAtk = Mathf.Max(1, _stats.GetEffectiveWild().atk);
+        else
+            enemyAtk = Mathf.Max(1, Mathf.RoundToInt(wildAttackPerTurn));
 
         var ctx = (jobCtx != null) ? jobCtx[activeIndex] : null;
         float preHP = teamHP[activeIndex];
-
 
         var cmods = GetConditionalModsForActive();
 
@@ -930,12 +929,12 @@ if (feedback)
 
         float wildCritChance = df.cannotBeCrit ? 0f : Mathf.Clamp01(critChanceWild - playerCritResist);
 
-        // Baseline TOTAL DEF (SpeciesBase + LevelGrowth + Training)
-        GetProgressionTotalsForIndex(activeIndex, out _, out _, out int defBaseTotal, out _, out _);
-
-        // Flat defense sources stack onto DEF as a STAT (boosters + conditional flat)
-        int defenderEffectiveDefenseStat =
-            Mathf.Max(0, defBaseTotal + Mathf.Max(0, defFlatBooster) + Mathf.Max(0, cmods.defFlat));
+        // Centralized DEF stat for the defender (Adjusted + job + titles + boosters + temp).
+        int defenderEffectiveDefenseStat = 0;
+        if (_stats != null)
+            defenderEffectiveDefenseStat = Mathf.Max(0, _stats.GetEffectivePlayer(activeIndex).def);
+        else
+            GetProgressionTotalsForIndex(activeIndex, out _, out _, out defenderEffectiveDefenseStat, out _, out _);
 
         var dr = BattleCalc.ResolveHit(
             null, wildDef, wildLevel,
@@ -1112,6 +1111,19 @@ if (feedback)
                 AudioManager.I?.PlaySfx(SfxType.Clutch);
             }
         }
+        }
+        finally
+        {
+            // Tick owner-turn-based Title durations for the wild side.
+            if (inBattle && !string.IsNullOrEmpty(_wildTurnOwnerId))
+            {
+                TitlesAdapter.OnCombatantTurnEnded(_wildTurnOwnerId);
+                GameEvents.RaiseBattleStatsChanged();
+            }
+        }
+
+        yield break;
+
     }
 
 

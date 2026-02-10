@@ -262,6 +262,11 @@ private void EnsureBattleRngInitialized()
 
     private MonsterDataSO wildDef;
     private int wildLevel;
+    // Wild baseline (adjusted by level + encounterThreatScalar). Titles/conditionals stack on top.
+    private float wildBaseMaxHP;
+    private float wildBaseAttackPerTurn;
+
+    // Wild current effective (may include title-driven max HP; HP is tracked against this).
     private float wildMaxHP, wildHP;
     private float wildAttackPerTurn;
 
@@ -361,6 +366,114 @@ private void EnsureBattleRngInitialized()
     private static readonly Color StatNeutral = Color.white;
     private static readonly Color StatBuff = new Color(0.35f, 1f, 0.35f);
     private static readonly Color StatNerf = new Color(1f, 0.35f, 0.35f);
+
+    // ─────────────────────────────────────────────────────────────
+    // UI baseline snapshots (Adjusted stats without Titles)
+    // Captured once at battle start so buff/debuff coloring persists
+    // until effects truly expire (or battle ends).
+    // ─────────────────────────────────────────────────────────────
+    private int[] _uiBaseAtk;
+    private int[] _uiBaseDef;
+    private int[] _uiBaseSpd;
+    private int[] _uiBaseMaxHp;
+
+    private int _uiBaseWildAtk;
+    private int _uiBaseWildDef;
+    private int _uiBaseWildSpd;
+    private int _uiBaseWildMaxHp;
+
+    // Wild Titles routing id (set from EncounterManager if available).
+    private string _wildCombatIdForTitles;
+
+    // ─────────────────────────────────────────────────────────────
+    // Battle Stats System (centralized stat pipeline)
+    // ─────────────────────────────────────────────────────────────
+    private BattleStatsSystem _stats;
+    public BattleStatsSystem Stats => _stats;
+
+    // Effective MaxHP cache (so when max HP changes from titles/boosters we can preserve HP%).
+    private float[] _effMaxHpCache;
+    private float _wildEffMaxHpCache;
+
+    // Exposed read-only hooks for BattleStatsSystem (keep BattleManager internals private)
+    public int TeamCountSafe => teamCount;
+    public float WildBaseMaxHP => wildBaseMaxHP;
+    public float WildBaseAttackPerTurn => wildBaseAttackPerTurn;
+    public string WildCombatIdForTitles => _wildCombatIdForTitles;
+
+    public MonsterDataSO GetTeamDefSafe(int idx)
+        => (teamDefs != null && idx >= 0 && idx < teamDefs.Length) ? teamDefs[idx] : null;
+
+    public string GetTeamIdSafe(int idx)
+        => (teamIds != null && idx >= 0 && idx < teamIds.Length) ? teamIds[idx] : null;
+
+    public int GetTeamLevelSafe(int idx)
+        => (teamLevels != null && idx >= 0 && idx < teamLevels.Length) ? Mathf.Max(1, teamLevels[idx]) : 1;
+
+    public JobBattlePassives.Ctx GetJobCtxSafe(int idx)
+        => (jobCtx != null && idx >= 0 && idx < jobCtx.Length) ? jobCtx[idx] : null;
+
+    public TitleStatMods GetConditionalModsForIndexSafe(int idx)
+        => GetConditionalModsForIndex(idx);
+
+    public TitleContext BuildTitleContextForIndexSafe(int idx)
+    {
+        // Mirrors BuildTitleContextForActive but for any index.
+        float curMax = GetFinalMaxHPForIndex(idx);
+        float hpPct = (curMax > 0.01f && teamHP != null && idx >= 0 && idx < teamHP.Length)
+            ? Mathf.Clamp01(teamHP[idx] / curMax)
+            : 0f;
+
+        int alliesAlive = 0;
+        for (int i = 0; i < teamCount; i++)
+        {
+            if (i == idx) continue;
+            if (teamHP != null && i >= 0 && i < teamHP.Length && teamHP[i] > 0.01f)
+                alliesAlive++;
+        }
+
+        int streak = GetWinStreakSafe();
+        return new TitleContext
+        {
+            selfHp01 = hpPct,
+            alliesAlive = alliesAlive,
+            winStreak = streak,
+            isBattle = true,
+            ownedId = GetTeamIdSafe(idx)
+        };
+    }
+
+    /// <summary>
+    /// Safe TitleContext builder that does NOT call GetFinalMaxHPForIndex.
+    /// Use this from BattleStatsSystem to avoid recursion (effective stats -> title ctx -> effective stats).
+    /// maxHpForContext should be the caller's current working max HP (typically adjusted + job, before titles).
+    /// </summary>
+    public TitleContext BuildTitleContextForIndexUsingMaxSafe(int idx, float maxHpForContext)
+    {
+        float curMax = Mathf.Max(1f, maxHpForContext);
+        float hpPct = (teamHP != null && idx >= 0 && idx < teamHP.Length)
+            ? Mathf.Clamp01(teamHP[idx] / curMax)
+            : 0f;
+
+        int alliesAlive = 0;
+        for (int i = 0; i < teamCount; i++)
+        {
+            if (i == idx) continue;
+            if (teamHP != null && i >= 0 && i < teamHP.Length && teamHP[i] > 0.01f)
+                alliesAlive++;
+        }
+
+        int streak = GetWinStreakSafe();
+        return new TitleContext
+        {
+            selfHp01 = hpPct,
+            alliesAlive = alliesAlive,
+            winStreak = streak,
+            isBattle = true,
+            ownedId = GetTeamIdSafe(idx)
+        };
+    }
+
 
     void Start()
     {
@@ -505,7 +618,114 @@ private IEnumerator MaybeSayKO_Wild(string victimName, float preHP, float postHP
         yield return SayKO(victimName);
 }
 
-    public void BeginBattle(MonsterDataSO wild, int level, Action<BattleResult> onEnded)
+    
+    // ─────────────────────────────────────────────────────────────
+    // UI Baseline Snapshot (Adjusted stats without Titles)
+    // ─────────────────────────────────────────────────────────────
+    private void CaptureUiBaselines_NoTitles()
+    {
+        if (teamCount <= 0 || teamDefs == null) return;
+
+        _uiBaseAtk = new int[teamCount];
+        _uiBaseDef = new int[teamCount];
+        _uiBaseSpd = new int[teamCount];
+        _uiBaseMaxHp = new int[teamCount];
+
+        // Prefer the centralized stats system so baseline snapshots always match combat.
+        // (Adjusted baselines = level/training/threat; excludes titles/conditionals/boosters.)
+        if (_stats != null)
+        {
+            _stats.MarkDirtyAll();
+            _stats.RebuildAdjustedBaselines();
+
+            for (int i = 0; i < teamCount; i++)
+            {
+                if (teamDefs[i] == null) continue;
+                var adj = _stats.GetAdjustedPlayer(i);
+                _uiBaseMaxHp[i] = Mathf.Max(1, adj.maxHP);
+                _uiBaseAtk[i]   = Mathf.Max(1, adj.atk);
+                _uiBaseDef[i]   = Mathf.Max(0, adj.def);
+                _uiBaseSpd[i]   = Mathf.Max(1, adj.spd);
+            }
+
+            var wadj = _stats.GetAdjustedWild();
+            _uiBaseWildMaxHp = Mathf.Max(1, wadj.maxHP);
+            _uiBaseWildAtk   = Mathf.Max(1, wadj.atk);
+            _uiBaseWildDef   = Mathf.Max(0, wadj.def);
+            _uiBaseWildSpd   = Mathf.Max(1, wadj.spd);
+        }
+        else
+        {
+            // Fallback to legacy computation.
+            for (int i = 0; i < teamCount; i++)
+            {
+                if (teamDefs[i] == null) continue;
+
+                GetProgressionTotalsForIndex(i, out int hp, out int atk, out int def, out int spd, out _);
+                if (teamMaxHP != null && i < teamMaxHP.Length)
+                    hp = Mathf.RoundToInt(Mathf.Max(1f, teamMaxHP[i]));
+
+                _uiBaseMaxHp[i] = Mathf.Max(1, hp);
+                _uiBaseAtk[i]   = Mathf.Max(1, atk);
+                _uiBaseDef[i]   = Mathf.Max(0, def);
+                _uiBaseSpd[i]   = Mathf.Max(1, spd);
+            }
+
+            _uiBaseWildMaxHp = Mathf.RoundToInt(Mathf.Max(1f, wildBaseMaxHP));
+            _uiBaseWildAtk   = Mathf.RoundToInt(Mathf.Max(1f, wildBaseAttackPerTurn));
+            _uiBaseWildDef   = wildDef ? BattleCalc.CalcDefense(wildDef, wildLevel) : 0;
+            _uiBaseWildSpd   = wildDef ? BattleCalc.CalcSpeed(wildDef, wildLevel) : 1;
+        }
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // Battle-start Titles application
+    // ─────────────────────────────────────────────────────────────
+    private void ApplyBattleStartTitles()
+    {
+        // Player (active slot)
+        try
+        {
+            if (teamIds != null && activeIndex >= 0 && activeIndex < teamIds.Length)
+            {
+                string ownedId = teamIds[activeIndex];
+                if (!string.IsNullOrEmpty(ownedId))
+                {
+                    TitlesAdapter.OnBattleStart(ownedId, wildDef, wildLevel);
+
+                    if (titleShieldHP != null && activeIndex < titleShieldHP.Length)
+                        titleShieldHP[activeIndex] = Mathf.Max(0f, TitlesAdapter.GetBattleStartShieldRemaining(ownedId));
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            BattleLogger.Log($"[Titles] OnBattleStart(player) exception: {ex.Message}", LogScope.Battle);
+        }
+
+        // Wild
+        try
+        {
+            if (string.IsNullOrEmpty(_wildCombatIdForTitles))
+                _wildCombatIdForTitles = (EncounterManager.I != null) ? EncounterManager.I.WildCombatId : "WILD";
+
+            if (!string.IsNullOrEmpty(_wildCombatIdForTitles))
+            {
+                TitlesAdapter.OnBattleStart(_wildCombatIdForTitles, wildDef, wildLevel);
+                wildTitleShieldHP = Mathf.Max(0f, TitlesAdapter.GetBattleStartShieldRemaining(_wildCombatIdForTitles));
+            }
+
+            RefreshWildEffectiveStatsFromTitles();
+        }
+        catch (Exception ex)
+        {
+            BattleLogger.Log($"[Titles] OnBattleStart(wild) exception: {ex.Message}", LogScope.Battle);
+        }
+
+        GameEvents.BattleStatsChanged?.Invoke();
+    }
+
+public void BeginBattle(MonsterDataSO wild, int level, Action<BattleResult> onEnded)
     {
         Begin(wild, level, onEnded);
     }
@@ -541,13 +761,20 @@ private IEnumerator MaybeSayKO_Wild(string victimName, float preHP, float postHP
         wildDef = wild;
         wildLevel = Mathf.Max(1, level);
 
+        // Titles routing id for wild (stable across battle)
+        _wildCombatIdForTitles = (EncounterManager.I != null) ? EncounterManager.I.WildCombatId : "WILD";
+
         float wHpBase = BattleCalc.CalcHP(wildDef, wildLevel);
         float wAtkBase = BattleCalc.CalcBaseAttack(wildDef, wildLevel, 0, 0);
 
-        wildMaxHP = Mathf.Max(1f, wHpBase * encounterThreatScalar);
-        wildHP = wildMaxHP;
+        // Baseline adjusted stats for this encounter (level-scaled + threat scalar).
+        wildBaseMaxHP = Mathf.Max(1f, wHpBase * encounterThreatScalar);
+        wildBaseAttackPerTurn = Mathf.Max(1f, wAtkBase * encounterThreatScalar);
 
-        wildAttackPerTurn = Mathf.Max(1f, wAtkBase * encounterThreatScalar);
+        // Effective values will be finalized after BattleStart titles are applied.
+        wildMaxHP = wildBaseMaxHP;
+        wildHP = wildMaxHP;
+        wildAttackPerTurn = wildBaseAttackPerTurn;
 
         // IMPORTANT: clear any lingering icon tweens/alphas from the prior battle.
         if (feedback != null) feedback.ResetIconVisuals();
@@ -669,6 +896,10 @@ private IEnumerator MaybeSayKO_Wild(string victimName, float preHP, float postHP
             }
         }
 
+        // Central battle stat pipeline.
+        _stats = new BattleStatsSystem(this);
+        _stats.RebuildAdjustedBaselines();
+
         playerTookFirstIncomingThisBattle = false;
         playerLandedFirstHitThisBattle = false;
 
@@ -682,6 +913,14 @@ private IEnumerator MaybeSayKO_Wild(string victimName, float preHP, float postHP
             if (teamHP[i] > 0f) { activeIndex = i; break; }
 
         if (activeIndex < 0) { EndBattle(false); return; }
+
+        CaptureUiBaselines_NoTitles();
+
+        ApplyBattleStartTitles();
+
+        // Titles can change effective max HP; sync max caches and preserve HP% before first UI render.
+        if (_stats != null) _stats.MarkDirtyAll();
+        SyncEffectiveMaxHPFromStats(force: true);
 
         ApplyActiveToUI();
         ClampAndPushActiveHP();
@@ -1137,11 +1376,61 @@ private bool AutoSwapToAlive()
 
     private float GetFinalMaxHPForIndex(int idx)
     {
+        if (_stats != null)
+            return Mathf.Max(1f, _stats.GetEffectivePlayer(idx).maxHP);
+
         if (teamMaxHP == null || idx < 0 || idx >= teamMaxHP.Length) return 1f;
         return GetActiveMaxHP(teamMaxHP[idx], idx);
     }
 
-    private int GetAlliesAliveNotIncludingActive()
+    
+
+    /// <summary>
+    /// When max HP changes due to titles/boosters, preserve current HP percent and update max caches.
+    /// Call this whenever BattleStatsSystem becomes dirty (battle start, turn advance, combatant turn end).
+    /// </summary>
+    private void SyncEffectiveMaxHPFromStats(bool force = false)
+    {
+        if (_stats == null) return;
+
+        // Wild
+        {
+            float newMax = Mathf.Max(1f, _stats.GetEffectiveWild().maxHP);
+            float oldMax = (_wildEffMaxHpCache > 0.01f) ? _wildEffMaxHpCache : Mathf.Max(1f, wildMaxHP);
+
+            if (force || Mathf.Abs(newMax - oldMax) > 0.01f)
+            {
+                float hp01 = oldMax > 0.01f ? Mathf.Clamp01(wildHP / oldMax) : 1f;
+                wildMaxHP = newMax;
+                wildHP = Mathf.Clamp(newMax * hp01, 0f, newMax);
+                _wildEffMaxHpCache = newMax;
+            }
+        }
+
+        // Player slots
+        if (teamCount <= 0 || teamHP == null || teamHP.Length == 0) return;
+
+        if (_effMaxHpCache == null || _effMaxHpCache.Length != teamCount)
+            _effMaxHpCache = new float[teamCount];
+
+        for (int i = 0; i < teamCount; i++)
+        {
+            float newMax = Mathf.Max(1f, _stats.GetEffectivePlayer(i).maxHP);
+
+            float oldMax = _effMaxHpCache[i];
+            if (oldMax <= 0.01f)
+                oldMax = Mathf.Max(1f, (teamMaxHP != null && i < teamMaxHP.Length) ? teamMaxHP[i] : 1f);
+
+            if (force || Mathf.Abs(newMax - oldMax) > 0.01f)
+            {
+                float hp01 = oldMax > 0.01f ? Mathf.Clamp01(teamHP[i] / oldMax) : 1f;
+                teamHP[i] = Mathf.Clamp(newMax * hp01, 0f, newMax);
+                _effMaxHpCache[i] = newMax;
+            }
+        }
+    }
+
+private int GetAlliesAliveNotIncludingActive()
     {
         int alive = 0;
         for (int i = 0; i < teamCount; i++)
@@ -1182,6 +1471,43 @@ private bool AutoSwapToAlive()
             isBattle = true
         };
         return ctx;
+    }
+
+    internal TitleContext BuildTitleContextForWild()
+    {
+        // Wild has no allies in 1v1 battles.
+        float max = Mathf.Max(1f, wildMaxHP);
+        float hp01 = max > 0.01f ? Mathf.Clamp01(wildHP / max) : 0f;
+
+        return new TitleContext
+        {
+            selfHp01 = hp01,
+            alliesAlive = 0,
+            winStreak = 0,
+            isBattle = true
+        };
+    }
+
+    private void RefreshWildEffectiveStatsFromTitles()
+    {
+        if (!wildDef) return;
+        if (string.IsNullOrEmpty(_wildCombatIdForTitles)) return;
+
+        // Preserve current HP percent when max HP changes (e.g., temporary HP flats).
+        float prevMax = Mathf.Max(1f, wildMaxHP);
+        float hp01 = prevMax > 0.01f ? Mathf.Clamp01(wildHP / prevMax) : 0f;
+
+        var wCtx = BuildTitleContextForWild();
+
+        float wMaxF = TitlesAdapter.GetStatValue(_wildCombatIdForTitles, wildDef, wildLevel, "HP", wCtx, wildBaseMaxHP);
+        if (!float.IsNaN(wMaxF) && !float.IsInfinity(wMaxF))
+            wildMaxHP = Mathf.Max(1f, wMaxF);
+
+        wildHP = Mathf.Clamp(wildMaxHP * hp01, 0f, wildMaxHP);
+
+        float wAtkF = TitlesAdapter.GetStatValue(_wildCombatIdForTitles, wildDef, wildLevel, "Attack", wCtx, wildBaseAttackPerTurn);
+        if (!float.IsNaN(wAtkF) && !float.IsInfinity(wAtkF))
+            wildAttackPerTurn = Mathf.Max(1f, wAtkF);
     }
 
 
@@ -1339,7 +1665,7 @@ private bool AutoSwapToAlive()
         return om != null;
     }
 
-    private void GetProgressionTotalsForIndex(
+    internal void GetProgressionTotalsForIndex(
         int idx,
         out int totalHP,
         out int totalATK,

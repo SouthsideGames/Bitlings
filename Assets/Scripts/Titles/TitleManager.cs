@@ -31,6 +31,7 @@ public sealed class TitleManager : MonoBehaviour
     private readonly Dictionary<string, int> _flatStartAmountDef = new();   // flat DEF from BattleStartFlatTitleSO
     private readonly Dictionary<string, int> _flatStartAmountSpd = new();   // flat SPD from BattleStartFlatTitleSO
     private readonly Dictionary<string, int> _flatStartAmountHp  = new();   // flat HP from BattleStartFlatTitleSO
+    private readonly Dictionary<string, int> _flatStartRemainingTurns = new(); // remaining OWNER turns for BattleStartFlatTitleSO
     private readonly Dictionary<string, float> _shieldRemaining = new();    // BattleStartShieldTitleSO: remaining shield HP
     private int _turnIndex;
 
@@ -128,8 +129,8 @@ public sealed class TitleManager : MonoBehaviour
                 }
                 else if (t is BattleStartFlatTitleSO)
                 {
-                    if (_flatStartUntilTurn.TryGetValue(ownedMonsterId, out int until))
-                        s.isActive = _turnIndex <= until;
+                    if (_flatStartRemainingTurns.TryGetValue(ownedMonsterId, out int rem))
+                        s.isActive = rem > 0;
                 }
                 else
                 {
@@ -196,27 +197,74 @@ public sealed class TitleManager : MonoBehaviour
     {
         _idToTitle.Clear();
 
-        // 1) Include any preloaded titles (drag & drop in inspector)
+        var allCandidates = new List<TitleSO>(64);
+
         if (preloadTitles != null)
         {
             for (int i = 0; i < preloadTitles.Count; i++)
             {
                 var t = preloadTitles[i];
                 if (!t || string.IsNullOrEmpty(t.titleId)) continue;
+                allCandidates.Add(t);
+
                 if (!_idToTitle.ContainsKey(t.titleId))
                     _idToTitle.Add(t.titleId, t);
             }
         }
 
-        // 2) Also scan Resources for TitleSO
         var all = Resources.LoadAll<TitleSO>("");
         for (int i = 0; i < all.Length; i++)
         {
             var t = all[i];
             if (!t || string.IsNullOrEmpty(t.titleId)) continue;
+            allCandidates.Add(t);
+
             if (!_idToTitle.ContainsKey(t.titleId))
                 _idToTitle.Add(t.titleId, t);
         }
+
+        if (allCandidates.Count > 0)
+        {
+            var dupGroups = allCandidates
+                .Where(t => t && !string.IsNullOrEmpty(t.titleId))
+                .GroupBy(t => t.titleId)
+                .Where(g => g.Count() > 1);
+
+            foreach (var g in dupGroups)
+            {
+                Debug.LogError(BuildDuplicateTitleIdLog(g.Key, g));
+            }
+        }
+    }
+
+    private static string BuildDuplicateTitleIdLog(string titleId, IEnumerable<TitleSO> titles)
+    {
+        var sb = new System.Text.StringBuilder(256);
+        sb.Append("[Titles] Duplicate titleId detected: ").Append(titleId).Append("\n");
+        sb.Append("These are different TitleSO assets sharing the same titleId. This will break equip/UI state.\n");
+
+        int i = 0;
+        foreach (var t in titles)
+        {
+            if (!t) continue;
+
+            sb.Append("  • [").Append(i).Append("] ").Append(t.name).Append(" (").Append(t.GetType().Name).Append(")");
+
+#if UNITY_EDITOR
+            try
+            {
+                string path = UnityEditor.AssetDatabase.GetAssetPath(t);
+                if (!string.IsNullOrEmpty(path))
+                    sb.Append("  ->  ").Append(path);
+            }
+            catch { }
+#endif
+            sb.Append("\n");
+            i++;
+        }
+
+        sb.Append("Fix: ensure every TitleSO has a unique titleId, and remove/merge duplicates.");
+        return sb.ToString();
     }
 
     // ─────────────────────────────────────────────────────────────────────
@@ -243,7 +291,6 @@ public sealed class TitleManager : MonoBehaviour
 
     public int GetTierCount(MonsterDataSO def) => def && def.titleTrack ? def.titleTrack.tiers?.Count ?? 0 : 0;
 
-    // Convenience for UI
     public string GetEquippedTitleIdForTier(string monsterId, MonsterDataSO def, int tierIndex)
     {
         if (string.IsNullOrEmpty(monsterId) || !def || !def.titleTrack) return "";
@@ -262,9 +309,6 @@ public sealed class TitleManager : MonoBehaviour
     // (Fires JobGlobalModsChanged for UI/logic that depends on titles)
     // ─────────────────────────────────────────────────────────────────────
 
-    /// <summary>
-    /// Equip a title in a specific tier. Enforces ONE active title total (clears all other tiers).
-    /// </summary>
     public bool Equip(string monsterId, MonsterDataSO def, int tierIndex, TitleSO choose)
     {
         if (string.IsNullOrEmpty(monsterId) || !def || !def.titleTrack) return false;
@@ -274,7 +318,7 @@ public sealed class TitleManager : MonoBehaviour
 
         // Must be among that tier's choices
         var tier = tiers[tierIndex];
-        if (tier.unlockChoices == null || !tier.unlockChoices.Contains(choose)) return false;
+        if (tier.unlockChoices == null || !tier.unlockChoices.Any(t => t && t.titleId == choose.titleId)) return false;
 
         var save = TitleSaveStore.GetOrCreateEquip(monsterId);
         if (save == null) return false;
@@ -415,8 +459,8 @@ public sealed class TitleManager : MonoBehaviour
         }
 
         
-// ── BattleStartFlatTitleSO (temporary flat bonus at battle start)
-if (_flatStartUntilTurn.TryGetValue(monsterId, out int untilTurn) && _turnIndex <= untilTurn)
+// ── BattleStartFlatTitleSO (temporary flat bonus at battle start; ticks down on OWNER turns)
+if (_flatStartRemainingTurns.TryGetValue(monsterId, out int remTurns) && remTurns > 0)
 {
     if (stat == StatKind.Attack && _flatStartAmountAtk.TryGetValue(monsterId, out int fAtk)) current += fAtk;
     else if (stat == StatKind.Defense && _flatStartAmountDef.TryGetValue(monsterId, out int fDef)) current += fDef;
@@ -876,6 +920,9 @@ if (_flatStartUntilTurn.TryGetValue(monsterId, out int untilTurn) && _turnIndex 
         _flatStartAmountDef.Clear();
         _flatStartAmountSpd.Clear();
         _flatStartAmountHp.Clear();
+        _flatStartRemainingTurns.Clear();
+        _flatStartRemainingTurns.Clear();
+        _flatStartRemainingTurns.Clear();
         _shieldRemaining.Clear();
 
         _activeBattleMonsterId = activeMonsterId;
@@ -896,15 +943,13 @@ if (_flatStartUntilTurn.TryGetValue(monsterId, out int untilTurn) && _turnIndex 
         _flatStartAmountDef.Clear();
         _flatStartAmountSpd.Clear();
         _flatStartAmountHp.Clear();
+        _flatStartRemainingTurns.Clear();
         _shieldRemaining.Clear();
 
         _activeBattleMonsterId = "";
         _turnIndex = 0;
     }
 
-    public void OnMonsterLeveled(string monsterId, int newLevel) { }
-    public void OnMonsterCaptured(string monsterId, MonsterType type, int level, bool isShiny) { }
-    public void OnMonsterEvolved(string newMonsterId) { }
 
     public void OnTurnAdvanced(int turnIndex)
     {
@@ -922,7 +967,6 @@ if (_flatStartUntilTurn.TryGetValue(monsterId, out int untilTurn) && _turnIndex 
                 _eventStacks[id] = Mathf.Max(0, cur - decay);
         }
 
-        // TurnBooster: gain 1 stack each turn up to max, on the active monster
         if (!string.IsNullOrEmpty(_activeBattleMonsterId))
         {
             var def = MonsterLibraryLocator.GetById(_activeBattleMonsterId);
@@ -943,6 +987,30 @@ if (_flatStartUntilTurn.TryGetValue(monsterId, out int untilTurn) && _turnIndex 
             }
         }
     }
+
+    
+    /// <summary>
+    /// Per-combatant turn tick. Use this for durations that should decrement on the
+    /// owner’s turns (not global rounds).
+    /// </summary>
+    public void OnCombatantTurnEnded(string combatantId)
+    {
+        if (string.IsNullOrEmpty(combatantId)) return;
+
+        if (_flatStartRemainingTurns.TryGetValue(combatantId, out int rem) && rem > 0)
+        {
+            rem = Mathf.Max(0, rem - 1);
+            if (rem <= 0)
+            {
+                _flatStartRemainingTurns.Remove(combatantId);
+            }
+            else
+            {
+                _flatStartRemainingTurns[combatantId] = rem;
+            }
+        }
+    }
+
 
     public void OnAttackLanded(string attackerId, bool wasCrit)
     {
@@ -998,86 +1066,86 @@ if (_flatStartUntilTurn.TryGetValue(monsterId, out int untilTurn) && _turnIndex 
     // Helpers
     // ─────────────────────────────────────────────────────────────────────
     
-private void ApplyBattleStartBonuses(string id)
-{
-    var def = MonsterLibraryLocator.GetById(id);
-    int lvl = GetLevelOr1(id);
-
-    // Flat start buff (ATK/DEF/SPD/HP)
-    var flat = GetFirstTitle<BattleStartFlatTitleSO>(id, def, lvl);
-    if (flat != null)
+    private void ApplyBattleStartBonuses(string id)
     {
-        int amt = Mathf.Max(0, flat.flatAmount);
-        int dur = Mathf.Max(1, flat.durationTurns <= 0 ? 1 : flat.durationTurns);
+        var def = MonsterLibraryLocator.GetById(id);
+        int lvl = GetLevelOr1(id);
 
-        // dur=1 => only turnIndex 0. dur=2 => turnIndex 0 and 1.
-        _flatStartUntilTurn[id] = _turnIndex + (dur - 1);
-
-        switch (flat.stat)
+        // Flat start buff (ATK/DEF/SPD/HP)
+        var flat = GetFirstTitle<BattleStartFlatTitleSO>(id, def, lvl);
+        if (flat != null)
         {
-            case BattleStatKind.ATK: _flatStartAmountAtk[id] = amt; break;
-            case BattleStatKind.DEF: _flatStartAmountDef[id] = amt; break;
-            case BattleStatKind.SPD: _flatStartAmountSpd[id] = amt; break;
-            case BattleStatKind.HP:  _flatStartAmountHp[id]  = amt; break;
-        }
+            int amt = Mathf.Max(0, flat.flatAmount);
+            int dur = Mathf.Max(1, flat.durationTurns <= 0 ? 1 : flat.durationTurns);
 
-        BattleLogger.LogTitleActivation(
-            ownerName: def != null ? def.displayName : id,
-            titleName: string.IsNullOrEmpty(flat.displayName) ? flat.titleId : flat.displayName,
-            summary: $"+{amt} {flat.stat} for {dur} turn(s)"
-        );
-    }
+            // dur=1 => only turnIndex 0. dur=2 => turnIndex 0 and 1.
+            _flatStartUntilTurn[id] = _turnIndex + (dur - 1); // legacy round-index marker
+            _flatStartRemainingTurns[id] = dur; // owner-turn based duration
 
-    // Shield from MaxHP % (scale from adjusted MaxHP: base+level+training)
-    var shield = GetFirstTitle<BattleStartShieldTitleSO>(id, def, lvl);
-    if (shield != null)
-    {
-        float maxHP = 1f;
-
-        try
-        {
-            OwnedMonsterData owned = null;
-            var data = SaveManager.Data;
-            if (data != null)
+            switch (flat.stat)
             {
-                if (data.team != null)
-                {
-                    for (int i = 0; i < data.team.Count; i++)
-                    {
-                        var om = data.team[i];
-                        if (om != null && om.monsterId == id) { owned = om; break; }
-                    }
-                }
-                if (owned == null && data.owned != null)
-                {
-                    for (int i = 0; i < data.owned.Count; i++)
-                    {
-                        var om = data.owned[i];
-                        if (om != null && om.monsterId == id) { owned = om; break; }
-                    }
-                }
+                case BattleStatKind.ATK: _flatStartAmountAtk[id] = amt; break;
+                case BattleStatKind.DEF: _flatStartAmountDef[id] = amt; break;
+                case BattleStatKind.SPD: _flatStartAmountSpd[id] = amt; break;
+                case BattleStatKind.HP:  _flatStartAmountHp[id]  = amt; break;
             }
 
-            if (owned != null)
-                maxHP = Mathf.Max(1f, ProgressionStatCalc.GetTotalMaxHP(owned));
-            else
-                maxHP = Mathf.Max(1f, BattleCalc.CalcHP(def, Mathf.Max(1, lvl)));
+            BattleLogger.LogTitleActivation(
+                ownerName: def != null ? def.displayName : id,
+                titleName: string.IsNullOrEmpty(flat.displayName) ? flat.titleId : flat.displayName,
+                summary: $"+{amt} {flat.stat} for {dur} turn(s)"
+            );
         }
-        catch
+
+        var shield = GetFirstTitle<BattleStartShieldTitleSO>(id, def, lvl);
+        if (shield != null)
         {
-            maxHP = Mathf.Max(1f, BattleCalc.CalcHP(def, Mathf.Max(1, lvl)));
+            float maxHP = 1f;
+
+            try
+            {
+                OwnedMonsterData owned = null;
+                var data = SaveManager.Data;
+                if (data != null)
+                {
+                    if (data.team != null)
+                    {
+                        for (int i = 0; i < data.team.Count; i++)
+                        {
+                            var om = data.team[i];
+                            if (om != null && om.monsterId == id) { owned = om; break; }
+                        }
+                    }
+                    if (owned == null && data.owned != null)
+                    {
+                        for (int i = 0; i < data.owned.Count; i++)
+                        {
+                            var om = data.owned[i];
+                            if (om != null && om.monsterId == id) { owned = om; break; }
+                        }
+                    }
+                }
+
+                if (owned != null)
+                    maxHP = Mathf.Max(1f, ProgressionStatCalc.GetTotalMaxHP(owned));
+                else
+                    maxHP = Mathf.Max(1f, BattleCalc.CalcHP(def, Mathf.Max(1, lvl)));
+            }
+            catch
+            {
+                maxHP = Mathf.Max(1f, BattleCalc.CalcHP(def, Mathf.Max(1, lvl)));
+            }
+
+            float shieldHP = Mathf.Max(0f, maxHP * (Mathf.Max(0f, shield.shieldPct) / 100f));
+            _shieldRemaining[id] = shieldHP;
+
+            BattleLogger.LogTitleActivation(
+                ownerName: def != null ? def.displayName : id,
+                titleName: string.IsNullOrEmpty(shield.displayName) ? shield.titleId : shield.displayName,
+                summary: $"+Shield {Mathf.RoundToInt(shieldHP)}"
+            );
         }
-
-        float shieldHP = Mathf.Max(0f, maxHP * (Mathf.Max(0f, shield.shieldPct) / 100f));
-        _shieldRemaining[id] = shieldHP;
-
-        BattleLogger.LogTitleActivation(
-            ownerName: def != null ? def.displayName : id,
-            titleName: string.IsNullOrEmpty(shield.displayName) ? shield.titleId : shield.displayName,
-            summary: $"+Shield {Mathf.RoundToInt(shieldHP)}"
-        );
     }
-}
 
 
     private void BumpEventStacks(string id, int maxStacks, int decayPerTurn)
@@ -1197,12 +1265,10 @@ private void ApplyBattleStartBonuses(string id)
         if (string.IsNullOrEmpty(monsterId))
             return default;
 
-        // Resolve monster def
         var def = MonsterLibraryLocator.GetById(monsterId);
         if (!def)
             return default;
 
-        // Resolve a best-guess level from save (team preferred)
         int level = 1;
         var data = SaveManager.Data;
         if (data != null)
@@ -1219,57 +1285,52 @@ private void ApplyBattleStartBonuses(string id)
                 level = Mathf.Max(1, found.level);
         }
 
-        // Titles that apply here should be "always-on" boosters. Battle-start/turn-stack/etc.
-        // are handled by your existing TitleManager runtime state (not via this simple struct).
         var titles = GetEquippedList(monsterId, def, level);
 
         
-// Base stats (no title mods) — use adjusted totals (base+level+training) when possible.
-float baseHP;
-float baseATK;
-float baseDEF;
-float baseSPD;
+    float baseHP;
+    float baseATK;
+    float baseDEF;
+    float baseSPD;
 
-OwnedMonsterData ownedForBase = null;
-var data2 = SaveManager.Data;
-if (data2 != null)
-{
-    if (data2.team != null)
+    OwnedMonsterData ownedForBase = null;
+    var data2 = SaveManager.Data;
+    if (data2 != null)
     {
-        for (int i = 0; i < data2.team.Count; i++)
+        if (data2.team != null)
         {
-            var om = data2.team[i];
-            if (om != null && om.monsterId == monsterId) { ownedForBase = om; break; }
+            for (int i = 0; i < data2.team.Count; i++)
+            {
+                var om = data2.team[i];
+                if (om != null && om.monsterId == monsterId) { ownedForBase = om; break; }
+            }
+        }
+        if (ownedForBase == null && data2.owned != null)
+        {
+            for (int i = 0; i < data2.owned.Count; i++)
+            {
+                var om = data2.owned[i];
+                if (om != null && om.monsterId == monsterId) { ownedForBase = om; break; }
+            }
         }
     }
-    if (ownedForBase == null && data2.owned != null)
+
+    if (ownedForBase != null)
     {
-        for (int i = 0; i < data2.owned.Count; i++)
-        {
-            var om = data2.owned[i];
-            if (om != null && om.monsterId == monsterId) { ownedForBase = om; break; }
-        }
+        var ps = ProgressionStatCalc.Get(ownedForBase);
+        baseHP  = Mathf.Max(1f, ps.totalHP);
+        baseATK = Mathf.Max(1f, ps.totalATK);
+        baseDEF = Mathf.Max(1f, ps.totalDEF);
+        baseSPD = Mathf.Max(1f, ps.totalSPD);
     }
-}
+    else
+    {
+        baseHP  = Mathf.Max(1f, BattleCalc.CalcHP(def, level));
+        baseATK = Mathf.Max(1f, BattleCalc.CalcBaseAttack(def, level, 0, 0));
+        baseDEF = Mathf.Max(1f, BattleCalc.CalcDefense(def, level));
+        baseSPD = Mathf.Max(1f, BattleCalc.CalcSpeed(def, level));
+    }
 
-if (ownedForBase != null)
-{
-    var ps = ProgressionStatCalc.Get(ownedForBase);
-    baseHP  = Mathf.Max(1f, ps.totalHP);
-    baseATK = Mathf.Max(1f, ps.totalATK);
-    baseDEF = Mathf.Max(1f, ps.totalDEF);
-    baseSPD = Mathf.Max(1f, ps.totalSPD);
-}
-else
-{
-    baseHP  = Mathf.Max(1f, BattleCalc.CalcHP(def, level));
-    baseATK = Mathf.Max(1f, BattleCalc.CalcBaseAttack(def, level, 0, 0));
-    baseDEF = Mathf.Max(1f, BattleCalc.CalcDefense(def, level));
-    baseSPD = Mathf.Max(1f, BattleCalc.CalcSpeed(def, level));
-}
-
-        // Accumulators in the same order BattleCalc applies them:
-        // flat first, then percent multiplier.
         int atkFlat = 0;
         int defFlat = 0;
         int spdFlat = 0;
@@ -1279,12 +1340,10 @@ else
         float defMult = 1f;
         float spdMult = 1f;
 
-        // HP flat gets converted to a multiplier using baseHP (since TitleStatMods only supports hpPct)
         float hpFlatAdd = 0f;
 
         void ApplyOne(StatKind stat, OpKind op, float value)
         {
-            // Normalize divide
             float FactorFromOp()
             {
                 if (op == OpKind.Multiply) return value;
@@ -1349,7 +1408,6 @@ else
             // - Damage filters / effectiveness mods (handled via existing adapter calls)
         }
 
-        // Convert HP flat to multiplier (since BattleCalc applies hpPct multiplicatively)
         if (!Mathf.Approximately(hpFlatAdd, 0f))
         {
             float hpFactorFromFlat = Mathf.Max(0.01f, (baseHP + hpFlatAdd) / baseHP);
@@ -1369,4 +1427,8 @@ else
 
         return mods;
     }
+
+    public void OnMonsterLeveled(string monsterId, int newLevel) { }
+    public void OnMonsterCaptured(string monsterId, MonsterType type, int level, bool isShiny) { }
+    public void OnMonsterEvolved(string newMonsterId) { }
 }

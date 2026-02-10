@@ -100,6 +100,26 @@ public static class TitlesAdapter
         _localTitlesById.Clear();
     }
 
+
+    // ─────────────────────────────────────────────────────────────────────────────
+    // Turn hooks (per-combatant)
+    // ─────────────────────────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Notifies the Title runtime that a specific combatant has completed a turn/action.
+    /// Used for durations that should tick down on the owner’s turns (not global rounds).
+    /// Safe no-op if your Title runtime doesn’t implement it.
+    /// </summary>
+    public static void OnCombatantTurnEnded(string combatantId)
+    {
+        if (string.IsNullOrEmpty(combatantId)) return;
+
+        // Prefer the newer per-combatant hook when available.
+        if (TryInvoke("OnCombatantTurnEnded", new object[] { combatantId }, out _))
+            return;
+
+        // Legacy runtimes: no-op. (Do NOT fall back to OnTurnAdvanced; that’s round-based.)
+    }
     // ─────────────────────────────────────────────────────────────────────────────
     // Bootstrap
     // ─────────────────────────────────────────────────────────────────────────────

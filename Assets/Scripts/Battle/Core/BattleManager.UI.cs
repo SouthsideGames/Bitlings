@@ -243,20 +243,57 @@ if (benchImg1)
 }
 
 
-    private void UpdateWildInfoUI()
+    
+    // ─────────────────────────────────────────────────────────────────────────
+    // UI Baseline getters (adjusted stats without Titles) captured once per battle.
+    // ─────────────────────────────────────────────────────────────────────────
+    private int GetUiBaselineAtk(int idx, int fallback) => (_uiBaseAtk != null && idx >= 0 && idx < _uiBaseAtk.Length && _uiBaseAtk[idx] > 0) ? _uiBaseAtk[idx] : fallback;
+    private int GetUiBaselineDef(int idx, int fallback) => (_uiBaseDef != null && idx >= 0 && idx < _uiBaseDef.Length && _uiBaseDef[idx] >= 0) ? _uiBaseDef[idx] : fallback;
+    private int GetUiBaselineSpd(int idx, int fallback) => (_uiBaseSpd != null && idx >= 0 && idx < _uiBaseSpd.Length && _uiBaseSpd[idx] > 0) ? _uiBaseSpd[idx] : fallback;
+    private int GetUiBaselineMaxHp(int idx, int fallback) => (_uiBaseMaxHp != null && idx >= 0 && idx < _uiBaseMaxHp.Length && _uiBaseMaxHp[idx] > 0) ? _uiBaseMaxHp[idx] : fallback;
+
+private void UpdateWildInfoUI()
     {
         if (!wildDef) return;
 
-        int baseHP = Mathf.RoundToInt(BattleCalc.CalcHP(wildDef, wildLevel));
-        int baseATK = Mathf.RoundToInt(BattleCalc.CalcBaseAttack(wildDef, wildLevel, 0, 0));
-        int baseDEF = BattleCalc.CalcDefense(wildDef, wildLevel);
-        int baseSPD = BattleCalc.CalcSpeed(wildDef, wildLevel);
+        // Preferred path: central stat pipeline.
+        if (Stats != null)
+        {
+            BattleStatBlock baseB = Stats.GetAdjustedWild();
+            BattleStatBlock effB = Stats.GetEffectiveWild();
 
-        int effHP = Mathf.RoundToInt(wildMaxHP);
-        int effATK = Mathf.RoundToInt(wildAttackPerTurn);
+            if (wildIdText) wildIdText.text = $"ID: {wildDef.id}";
+            if (wildTypeText) wildTypeText.text = $"TYPE: {wildDef.type}";
+            if (wildRarityText) wildRarityText.text = $"RARITY: {wildDef.rarity}";
+            if (wildLevelText) wildLevelText.text = $"LVL: {wildLevel}";
+
+            if (wildHPText) SetStatRowColorAndText(wildHPText, "HP", baseB.maxHP, effB.maxHP, minFinal: 1);
+            if (wildATKText) SetStatRowColorAndText(wildATKText, "ATK", baseB.atk, effB.atk, minFinal: 1);
+            if (wildDEFText) SetStatRowColorAndText(wildDEFText, "DEF", baseB.def, effB.def, minFinal: 0);
+            if (wildSPDText) SetStatRowColorAndText(wildSPDText, "SPD", baseB.spd, effB.spd, minFinal: 1);
+            return;
+        }
+
+        // "Base" here means the adjusted stat the battle is tuned to (level-scaled + encounter threat).
+        int baseHP  = (_uiBaseWildMaxHp > 0) ? _uiBaseWildMaxHp : Mathf.RoundToInt(Mathf.Max(1f, wildBaseMaxHP));
+        int baseATK = (_uiBaseWildAtk > 0) ? _uiBaseWildAtk : Mathf.RoundToInt(Mathf.Max(1f, wildBaseAttackPerTurn));
+        int baseDEF = (_uiBaseWildDef >= 0) ? _uiBaseWildDef : BattleCalc.CalcDefense(wildDef, wildLevel);
+        int baseSPD = (_uiBaseWildSpd > 0) ? _uiBaseWildSpd : BattleCalc.CalcSpeed(wildDef, wildLevel);
+
+        int effHP = Mathf.RoundToInt(Mathf.Max(1f, wildMaxHP));
+        int effATK = Mathf.RoundToInt(Mathf.Max(1f, wildAttackPerTurn));
 
         int effDEF = baseDEF;
         int effSPD = baseSPD;
+
+        if (wildDef && !string.IsNullOrEmpty(_wildCombatIdForTitles))
+        {
+            var wCtx = BuildTitleContextForWild();
+            float defF = TitlesAdapter.GetStatValue(_wildCombatIdForTitles, wildDef, wildLevel, "Defense", wCtx, baseDEF);
+            float spdF = TitlesAdapter.GetStatValue(_wildCombatIdForTitles, wildDef, wildLevel, "Speed", wCtx, baseSPD);
+            if (!float.IsNaN(defF) && !float.IsInfinity(defF)) effDEF = Mathf.Max(0, Mathf.RoundToInt(defF));
+            if (!float.IsNaN(spdF) && !float.IsInfinity(spdF)) effSPD = Mathf.Max(1, Mathf.RoundToInt(spdF));
+        }
 
         if (wildIdText) wildIdText.text = $"ID: {wildDef.id}";
         if (wildTypeText) wildTypeText.text = $"TYPE: {wildDef.type}";
@@ -280,6 +317,24 @@ if (benchImg1)
         if (!def) return;
 
         int lvl = (teamLevels != null && activeIndex < teamLevels.Length) ? teamLevels[activeIndex] : 1;
+
+        // Preferred path: central stat pipeline.
+        if (Stats != null)
+        {
+            BattleStatBlock baseB = Stats.GetAdjustedPlayer(activeIndex);
+            BattleStatBlock effB = Stats.GetEffectivePlayer(activeIndex);
+
+            if (playerIdText) playerIdText.text = $"ID: {def.id}";
+            if (playerTypeText) playerTypeText.text = $"TYPE: {def.type}";
+            if (playerRarityText) playerRarityText.text = $"RARITY: {def.rarity}";
+            if (playerLevelText) playerLevelText.text = $"LVL: {lvl}";
+
+            if (playerHPText) SetStatRowColorAndText(playerHPText, "HP", baseB.maxHP, effB.maxHP, minFinal: 1);
+            if (playerATKText) SetStatRowColorAndText(playerATKText, "ATK", baseB.atk, effB.atk, minFinal: 1);
+            if (playerDEFText) SetStatRowColorAndText(playerDEFText, "DEF", baseB.def, effB.def, minFinal: 0);
+            if (playerSPDText) SetStatRowColorAndText(playerSPDText, "SPD", baseB.spd, effB.spd, minFinal: 1);
+            return;
+        }
 
         // ─────────────────────────────────────────────────────────────────────────
         // Baseline TOTALS (SpeciesBase + LevelGrowth + TrainingBonus + flatAtkBonus*)
@@ -583,6 +638,9 @@ if (benchImg1)
     {
         if (!inBattle) return;
 
+        // Stats can change max HP (titles/boosters). Preserve HP% then refresh UI.
+        SyncEffectiveMaxHPFromStats();
+        PushHPBars();
         UpdatePlayerInfoUI();
         UpdateWildInfoUI();
     }
