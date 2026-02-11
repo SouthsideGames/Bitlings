@@ -16,4 +16,5 @@ MonoBehaviour:
   displayName: Locksmith
   description: Double coin gains
   icon: {fileID: -3496002049442729487, guid: c44d43bdac301486ebb1095a25c33894, type: 3}
-  creditMultiplier: 1.1
+  canRollOnWild: 0
+  CreditMultiplier: 2

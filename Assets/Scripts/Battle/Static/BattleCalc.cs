@@ -250,12 +250,14 @@ public static class BattleCalc
             catch { /* keep resilient */ }
         }
 
-        // Defender-side incoming effectiveness multiplier (e.g., nullify or weaken type)
+        // Defender-side incoming effectiveness multiplier (e.g., nullify or weaken type).
+        // IMPORTANT: pass the incoming attack type so per-type resist titles (TypeResistTitleSO)
+        // can apply correctly.
         if (!string.IsNullOrEmpty(defenderMonsterId))
         {
             try
             {
-                float inMul = TitlesAdapter.GetIncomingEffectivenessMult(defenderMonsterId, defDef, defLevel);
+                float inMul = TitlesAdapter.GetIncomingEffectivenessMult(defenderMonsterId, defDef, defLevel, atkType);
                 if (!float.IsNaN(inMul) && !float.IsInfinity(inMul) && inMul >= 0f) eff *= inMul;
             }
             catch { /* default to 1f if not implemented */ }

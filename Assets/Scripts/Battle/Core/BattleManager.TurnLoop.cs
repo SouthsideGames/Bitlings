@@ -772,6 +772,7 @@ if (!playerLandedFirstHitThisBattle && dr.damage > 0)
                     yield return Say("It's not very effective...", BattleLineTag.NotEffective | BattleLineTag.Flavor);
             }
         }
+
         if (dr.crit)
         {
             if (!ShouldSkipNarration(BattleLineTag.Crit | BattleLineTag.Flavor))
@@ -936,6 +937,20 @@ if (feedback)
         else
             GetProgressionTotalsForIndex(activeIndex, out _, out _, out defenderEffectiveDefenseStat, out _, out _);
 
+        // Pre-check defender-side per-type resist titles so we can give a clear UX cue when
+        // a Title reduces incoming damage via effectiveness mitigation.
+        float incomingTypeResistMul = 1f;
+        try
+        {
+            incomingTypeResistMul = TitlesAdapter.GetIncomingEffectivenessMult(
+                teamIds[activeIndex],
+                teamDefs[activeIndex],
+                teamLevels[activeIndex],
+                wildDef ? wildDef.type : MonsterType.None
+            );
+        }
+        catch { incomingTypeResistMul = 1f; }
+
         var dr = BattleCalc.ResolveHit(
             null, wildDef, wildLevel,
             teamIds[activeIndex], teamDefs[activeIndex], teamLevels[activeIndex],
@@ -1000,6 +1015,21 @@ if (feedback)
         float titleShieldAbsorbF = 0f;
 
         int dmg_incoming = dmg_afterScalar;
+
+        // Option A (recommended): one-line battle text + tiny icon punch when a Type Resist
+        // title reduced incoming damage. We key off the defender-side per-type effectiveness
+        // multiplier (< 1), computed earlier as incomingTypeResistMul.
+        if (incomingTypeResistMul < 0.999f && dmg_incoming > 0)
+        {
+            if (!ShouldSkipNarration(BattleLineTag.NotEffective | BattleLineTag.Flavor))
+            {
+                string multText = incomingTypeResistMul.ToString("0.##");
+                yield return Say($"Type Resist reduced the damage (x{multText})!", BattleLineTag.NotEffective | BattleLineTag.Flavor);
+            }
+
+            if (feedback != null && playerTypeText)
+                feedback.Punch(playerTypeText);
+        }
 
         int dmg_final = dmg_incoming;
         if (titleShieldBefore > 0f && dmg_final > 0)
