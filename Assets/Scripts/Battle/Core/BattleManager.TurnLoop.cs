@@ -759,6 +759,14 @@ if (!playerLandedFirstHitThisBattle && dr.damage > 0)
         if (dr.crit)
             BattleLogger.AddKeyMoment($"CRIT: {attacker} → {foeName} ({dmgToApply})");
 
+        // Titles can override/modify effectiveness (nullify/mod). Give an instant callout + log details.
+        yield return Co_TitleEffectivenessTitleNote(
+            teamIds[activeIndex], teamDefs[activeIndex], teamLevels[activeIndex],
+            null, wildDef, wildLevel,
+            teamDefs[activeIndex] ? teamDefs[activeIndex].type : MonsterType.None,
+            dr.effectiveness
+        );
+
         if (showEffectivenessText)
         {
             if (dr.effectiveness > 1.25f)
@@ -1108,6 +1116,14 @@ int dmg_afterScalar = Mathf.Max(1, Mathf.RoundToInt(dr.damage * incomingScalar))
         if (dr.crit && !df.cannotBeCrit)
             BattleLogger.AddKeyMoment($"CRIT: {attackerName} → {GetName(activeIndex)} ({dmg_final})");
 
+        // Titles can override/modify effectiveness (nullify/mod). Give an instant callout + log details.
+        yield return Co_TitleEffectivenessTitleNote(
+            wildDef ? wildDef.id : null, wildDef, wildLevel,
+            teamIds[activeIndex], teamDefs[activeIndex], teamLevels[activeIndex],
+            wildDef ? wildDef.type : MonsterType.None,
+            dr.effectiveness
+        );
+
         if (showEffectivenessText)
         {
             if (dr.effectiveness > 1.25f)
@@ -1258,6 +1274,68 @@ EndBattle(false);
             return true;
 
         return false;
+    }
+
+    // -------------------------------------------------------------------------
+    // Title feedback: Effectiveness Nullify / Mod
+    // -------------------------------------------------------------------------
+    private IEnumerator Co_TitleEffectivenessTitleNote(
+        string attackerId, MonsterDataSO attackerDef, int attackerLevel,
+        string defenderId, MonsterDataSO defenderDef, int defenderLevel,
+        MonsterType attackType, float finalEffectiveness)
+    {
+        if (!attackerDef || !defenderDef) yield break;
+        if (attackType == MonsterType.None) yield break;
+
+        // Base chart effectiveness (no titles)
+        float baseEff = BattleTypeChart.GetMultiplier(attackType, defenderDef.type);
+
+        // Title modifiers
+        float outMul = 1f;
+        float inMul  = 1f;
+        float add    = 0f;
+
+        try
+        {
+            outMul = TitlesAdapter.GetEffectivenessMult(attackerId, attackerDef, Mathf.Max(1, attackerLevel));
+            add    = TitlesAdapter.GetEffectivenessAdd(attackerId, attackerDef, Mathf.Max(1, attackerLevel));
+            inMul  = TitlesAdapter.GetIncomingEffectivenessMult(defenderId, defenderDef, Mathf.Max(1, defenderLevel), attackType);
+        }
+        catch { /* keep defaults */ }
+
+        bool modifiedByTitles = (Mathf.Abs(outMul - 1f) > 0.001f) || (Mathf.Abs(inMul - 1f) > 0.001f) || (Mathf.Abs(add) > 0.001f);
+        if (!modifiedByTitles) yield break;
+
+        bool changedOutcome = Mathf.Abs(finalEffectiveness - baseEff) > 0.001f;
+        if (!changedOutcome) yield break;
+
+        // Mathy logger line (keep the textbox callout simple)
+        try
+        {
+            float preMul = Mathf.Max(0f, baseEff + add);
+            BattleLogger.Log(
+                $"[Titles] Effectiveness: base {baseEff:0.##} + add {add:+0.##;-0.##;0} = {preMul:0.##}; x out {outMul:0.##} x in {inMul:0.##} => final {finalEffectiveness:0.##}",
+                LogScope.Battle);
+        }
+        catch { /* ignore */ }
+
+        // Poppy battle text callout
+        if (ShouldSkipNarration(BattleLineTag.Flavor)) yield break;
+
+        const float eps = 0.05f;
+        if (Mathf.Abs(finalEffectiveness - 1f) < eps && Mathf.Abs(baseEff - 1f) > eps)
+        {
+            // Most common & readable: a title nullified type matchups
+            yield return Say("Nullified!", BattleLineTag.Flavor);
+        }
+        else if (finalEffectiveness < baseEff)
+        {
+            yield return Say("Effectiveness Down!", BattleLineTag.NotEffective);
+        }
+        else
+        {
+            yield return Say("Effectiveness Up!", BattleLineTag.SuperEffective);
+        }
     }
 
     private WaitForSecondsRealtime Wait(float t)

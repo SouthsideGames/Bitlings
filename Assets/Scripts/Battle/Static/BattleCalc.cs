@@ -225,11 +225,16 @@ public static class BattleCalc
         float eff = BattleTypeChart.GetMultiplier(atkType, defType);
         if (float.IsNaN(eff) || float.IsInfinity(eff)) eff = 1f;
 
-        // Attacker-side title effectiveness multiplier
+        // Attacker-side title effectiveness add/multiplier
         if (!string.IsNullOrEmpty(attackerMonsterId))
         {
             try
             {
+                // Add is applied on top of the base chart BEFORE multipliers.
+                float add = TitlesAdapter.GetEffectivenessAdd(attackerMonsterId, atkDef, atkLevel);
+                if (!float.IsNaN(add) && !float.IsInfinity(add))
+                    eff = Mathf.Max(0f, eff + add);
+
                 float outMul = TitlesAdapter.GetEffectivenessMult(attackerMonsterId, atkDef, atkLevel);
                 if (!float.IsNaN(outMul) && !float.IsInfinity(outMul) && outMul > 0f) eff *= outMul;
             }
@@ -246,7 +251,6 @@ public static class BattleCalc
                 float inMul = TitlesAdapter.GetIncomingEffectivenessMult(defenderMonsterId, defDef, defLevel, atkType);
                 if (!float.IsNaN(inMul) && !float.IsInfinity(inMul) && inMul >= 0f)
                 {
-                    incomingMul = inMul;
                     incomingMul = inMul;
                     eff *= inMul;
                 }
