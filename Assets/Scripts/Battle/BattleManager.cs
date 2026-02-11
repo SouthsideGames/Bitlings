@@ -11,6 +11,15 @@ public struct BattleResult
     public bool escaped;
 
     public int creditsGained;
+    public int creditsBase;
+    public int creditsTitleBonus;
+    public float creditsMultiplier;
+
+    public int growthCoresGained;
+    public int growthCoresBase;
+    public int growthCoresTitleBonus;
+
+    public string activeMonsterOwnedId;  
     public MonsterDataSO wildDef;
     public int wildLevel;
     public float secondsSurvived;
@@ -18,9 +27,9 @@ public struct BattleResult
     public int critCount;
     public int turnsSurvived;
     public int damageTaken;
-
     public int damageDealt;
     public bool gotFirstHit;
+
 }
 
 
@@ -289,6 +298,9 @@ private void EnsureBattleRngInitialized()
 
     private float[] slotDamageBuffPct;
     private int[] slotDamageBuffTurns;
+
+    // Cached title multipliers computed at battle start to avoid timing/order issues.
+    private float _cachedCreditMult = 1f;
 
     [Header("Debug - Titles")]
     [SerializeField] private bool debugTitles = false;
@@ -693,6 +705,18 @@ private IEnumerator MaybeSayKO_Wild(string victimName, float preHP, float postHP
                 {
                     TitlesAdapter.OnBattleStart(ownedId, wildDef, wildLevel);
 
+                        // Cache credit multiplier for the active monster at battle start.
+                        try
+                        {
+                            _cachedCreditMult = Mathf.Max(0f, TitlesAdapter.GetCreditMultOnVictory(ownedId, wildDef, wildLevel));
+                            Debug.Log($"[BattleManager] Cached credit multiplier for {ownedId} = {_cachedCreditMult}");
+                        }
+                        catch (Exception ex)
+                        {
+                            Debug.Log($"[BattleManager] Failed to cache credit multiplier: {ex.Message}");
+                            _cachedCreditMult = 1f;
+                        }
+
                     if (titleShieldHP != null && activeIndex < titleShieldHP.Length)
                         titleShieldHP[activeIndex] = Mathf.Max(0f, TitlesAdapter.GetBattleStartShieldRemaining(ownedId));
                 }
@@ -1009,11 +1033,14 @@ public void BeginBattle(MonsterDataSO wild, int level, Action<BattleResult> onEn
 
             if (victory && teamIds != null && activeIndex >= 0 && activeIndex < teamIds.Length)
             {
-                float cm = TitlesAdapter.GetcreditMultOnVictory(teamIds[activeIndex], wildDef, wildLevel);
+                string leadId = teamIds[activeIndex];
+                float cm = _cachedCreditMult;
+                Debug.Log($"[BattleManager] Title mult for lead '{leadId}': {cm} (basecredits={basecredits}) [cached]");
                 if (cm > 0f)
                 {
                     finalcredits = Mathf.Max(0, Mathf.RoundToInt(basecredits * cm));
                     creditTitleBonus = Mathf.Max(0, finalcredits - basecredits);
+                    Debug.Log($"[BattleManager] finalcredits={finalcredits}, creditTitleBonus={creditTitleBonus}");
                 }
             }
 
@@ -1021,6 +1048,7 @@ public void BeginBattle(MonsterDataSO wild, int level, Action<BattleResult> onEn
         }
 
         int baseCores = Mathf.Max(1, 2 + wildLevel);
+        int growthCoreBaseAfterShiny = 0;
         int growthCoreTitleBonus = 0;
         int growthCoreTotal = 0;
 
@@ -1034,17 +1062,22 @@ public void BeginBattle(MonsterDataSO wild, int level, Action<BattleResult> onEn
 
             float shinyMul = ShinySystems.TrainingXpMult(m);
             int baseAfterShiny = Mathf.RoundToInt(baseCores * shinyMul);
+            growthCoreBaseAfterShiny = Mathf.Max(0, baseAfterShiny);
+            growthCoreBaseAfterShiny = Mathf.Max(0, baseAfterShiny);
 
             float titleCoreMul = 1f;
             if (teamIds != null && activeIndex >= 0 && activeIndex < teamIds.Length)
                 titleCoreMul = Mathf.Max(0f, TitlesAdapter.GetGrowthCoreMultOnVictory(teamIds[activeIndex], wildDef, wildLevel));
 
             growthCoreTotal = Mathf.RoundToInt(baseAfterShiny * titleCoreMul);
-            growthCoreTitleBonus = Mathf.Max(0, growthCoreTotal - baseAfterShiny);
 
             // Global tuning knob (progression lever). Safe no-op if GameBalance asset is missing.
             if (GameBalance.TryGet(out var bal))
                 growthCoreTotal = Mathf.RoundToInt(growthCoreTotal * Mathf.Max(0f, bal.xpGainMultiplier));
+
+            // Bonus shown in the summary: everything above the base-after-shiny amount.
+            // Bonus shown in the summary: everything above the base-after-shiny amount.
+            growthCoreTitleBonus = Mathf.Max(0, growthCoreTotal - growthCoreBaseAfterShiny);
 
             if (growthCoreTotal > 0)
                 ResourceManager.I?.Add(ResourceType.GrowthCore, growthCoreTotal);
@@ -1150,6 +1183,15 @@ public void BeginBattle(MonsterDataSO wild, int level, Action<BattleResult> onEn
             victory = victory,
             escaped = escaped,
             creditsGained = finalcredits,
+            creditsBase = basecredits,
+            creditsTitleBonus = creditTitleBonus,
+            creditsMultiplier = _cachedCreditMult,
+
+            growthCoresGained = growthCoreTotal,
+            growthCoresBase = growthCoreBaseAfterShiny,
+            growthCoresTitleBonus = growthCoreTitleBonus,
+
+            activeMonsterOwnedId = (teamIds != null && activeIndex >= 0 && activeIndex < teamIds.Length) ? teamIds[activeIndex] : null,
             wildDef = wildDef,
             wildLevel = wildLevel,
             secondsSurvived = survived,
@@ -1159,6 +1201,8 @@ public void BeginBattle(MonsterDataSO wild, int level, Action<BattleResult> onEn
             damageDealt = _totalDamageDealtThisBattle,
             gotFirstHit = playerLandedFirstHitThisBattle
         };
+
+        Debug.Log($"[BattleManager] BattleResult: base={result.creditsBase}, bonus={result.creditsTitleBonus}, totalPreScale={result.creditsGained}, active={result.activeMonsterOwnedId}");
 
         if (!victory && !escaped && AutoResolveActive)
         {

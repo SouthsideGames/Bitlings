@@ -19,4 +19,4 @@ MonoBehaviour:
   canRollOnWild: 1
   stat: 0
   flatAmount: 10
-  durationTurns: 2
+  durationTurns: 20

@@ -182,11 +182,73 @@ public static class TitlesAdapter
         return rt.GetStatValueRouter(ownedId, def, level, statKind, ctx, baseValue);
     }
 
-    public static float GetcreditMultOnVictory(string monsterId, MonsterDataSO wild, int wildLevel)
+    public static float GetCreditMultOnVictory(string monsterId, MonsterDataSO wild, int wildLevel)
     {
         var rt = Runtime;
         if (rt == null) return 1f;
-        return Mathf.Max(0f, rt.GetcreditMultOnVictory(monsterId, wild, wildLevel));
+
+        var titles = GetTitles(monsterId);
+        if (titles == null || titles.Count == 0)
+        {
+            Debug.Log($"[TitlesAdapter] Equipped for {monsterId}: none");
+        }
+        else
+        {
+            string list = "";
+            for (int i = 0; i < titles.Count; i++)
+            {
+                var t = titles[i];
+                if (i > 0) list += ",";
+                if (t == null) list += "null";
+                else
+                {
+                    string tid = string.IsNullOrEmpty(t.titleId) ? "<no-id>" : t.titleId;
+                    string typ = t.GetType().Name;
+                    list += $"{tid}({typ})";
+                }
+            }
+            Debug.Log($"[TitlesAdapter] Equipped for {monsterId}: {list}");
+        }
+
+        float mult = rt.GetcreditMultOnVictory(monsterId, wild, wildLevel);
+        Debug.Log($"[TitlesAdapter] GetcreditMultOnVictory for {monsterId} => {mult}");
+        // If TitleManager returned a neutral multiplier but we can directly
+        // inspect an equipped CreditBonusOnVictoryTitleSO, prefer its explicit value
+        // — this helps avoid timing/order issues where TitleManager may not expose
+        // the multiplier at this call site.
+        if (Mathf.Approximately(mult, 1f) && titles != null)
+        {
+            for (int i = 0; i < titles.Count; i++)
+            {
+                var t = titles[i] as CreditBonusOnVictoryTitleSO;
+                if (t == null) continue;
+                // Try to read public field/property values heuristically.
+                try
+                {
+                    var ty = t.GetType();
+                    var f = ty.GetField("CreditMultiplier");
+                    if (f != null)
+                    {
+                        var val = Convert.ToSingle(f.GetValue(t));
+                        Debug.Log($"[TitlesAdapter] Direct read CreditMultiplier for {monsterId} => {val}");
+                        return Mathf.Max(0f, val);
+                    }
+                    var p = ty.GetProperty("CreditMultiplier");
+                    if (p != null)
+                    {
+                        var val = Convert.ToSingle(p.GetValue(t, null));
+                        Debug.Log($"[TitlesAdapter] Direct read CreditMultiplier(prop) for {monsterId} => {val}");
+                        return Mathf.Max(0f, val);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Debug.Log($"[TitlesAdapter] Failed direct read of CreditMultiplier: {ex.Message}");
+                }
+            }
+        }
+
+        return Mathf.Max(0f, mult);
     }
 
     public static float GetGrowthCoreMultOnVictory(string monsterId, MonsterDataSO wild, int wildLevel)

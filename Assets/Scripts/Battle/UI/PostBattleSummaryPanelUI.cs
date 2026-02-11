@@ -159,6 +159,14 @@ public class PostBattleSummaryPanelUI : MonoBehaviour
             return $"{label}: {Mathf.Max(0, display)}";
         }
 
+        // For currency (credits/coins) show total with an explicit +Bonus.
+        // Example: "Credits: 40 (+12 Bonus)".
+        if (string.Equals(label, "coins", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(label, "credits", StringComparison.OrdinalIgnoreCase))
+        {
+            return $"{label}: {Mathf.Max(0, total)} (<color={GREEN}>+{Mathf.Max(0, titleBonus)} Bonus</color>)";
+        }
+
         float multiplier = total > 0 && baseValue > 0 ? (float)total / baseValue : 1f;
         string multText = multiplier.ToString("0.##");
 
@@ -202,7 +210,23 @@ public class PostBattleSummaryPanelUI : MonoBehaviour
 
         int creditsTotal = Mathf.Max(0, creditsBase + creditsTitleBonus);
         if (creditsLabel)
-            creditsLabel.text = BuildRewardLine("credits", creditsBase, creditsTitleBonus, creditsTotal);
+        {
+            Debug.Log($"[PostBattleSummaryPanelUI] Credits: base={creditsBase}, bonus={creditsTitleBonus}, total={creditsTotal}");
+            if (creditsTitleBonus > 0)
+            {
+                creditsLabel.text = $"Credits: {creditsTotal} (<color={GREEN}>+{creditsTitleBonus} Bonus</color>)";
+
+                // small pop animation to draw attention to the bonus
+                var rt = creditsLabel.rectTransform;
+                LeanTween.cancel(rt.gameObject);
+                rt.localScale = Vector3.one;
+                LeanTween.scale(rt, Vector3.one * 1.08f, 0.12f).setLoopPingPong(1).setEase(LeanTweenType.easeOutBack);
+            }
+            else
+            {
+                creditsLabel.text = BuildRewardLine("Credits", creditsBase, creditsTitleBonus, creditsTotal);
+            }
+        }
 
         int coresTotal = Mathf.Max(0, growthCoresBase + growthCoresTitleBonus);
         if (growthCoresLabel)

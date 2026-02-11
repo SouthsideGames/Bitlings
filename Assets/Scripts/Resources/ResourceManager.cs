@@ -145,7 +145,7 @@ public class ResourceManager : MonoBehaviour
         int scaled = Mathf.Max(0, baseCredits);
         if (!string.IsNullOrEmpty(leadMonsterId))
         {
-            float cm = TitlesAdapter.GetcreditMultOnVictory(leadMonsterId, wild, wildLevel);
+            float cm = TitlesAdapter.GetCreditMultOnVictory(leadMonsterId, wild, wildLevel);
             if (cm > 0f) scaled = Mathf.RoundToInt(scaled * cm);
         }
         return AddCredits(scaled);
@@ -157,7 +157,7 @@ public class ResourceManager : MonoBehaviour
         int scaled = Mathf.Max(0, baseCredits);
         if (!string.IsNullOrEmpty(leadMonsterId))
         {
-            float cm = TitlesAdapter.GetcreditMultOnVictory(leadMonsterId, null, 0);
+            float cm = TitlesAdapter.GetCreditMultOnVictory(leadMonsterId, null, 0);
             if (cm > 0f) scaled = Mathf.RoundToInt(scaled * cm);
         }
         return AddCredits(scaled);

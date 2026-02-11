@@ -317,69 +317,7 @@ public partial class EncounterManager : MonoBehaviour
     public void RequestEncounterTap()
     {
         if (inBattle) return;
-
-        if (!autoMode && nextEncounterFree)
-        {
-            nextEncounterFree = false;
-            OnStateChanged?.Invoke();
-            StartEncounter(spendEnergy: false);
-            return;
-        }
-
-        if (!HasEnergy())
-        {
-            EmitStatus("Out of energy!", LogScope.System);
-            return;
-        }
-
         StartEncounter(spendEnergy: true);
-    }
-
-    public void ToggleAutoMode()
-    {
-        autoMode = !autoMode;
-
-        if (autoMode) IdleBattleManager.I?.EnableAuto();
-        else IdleBattleManager.I?.DisableAuto();
-
-        if (autoMode)
-        {
-            PostBattleSummaryManager.I?.ClearQueuedSummaries();
-
-            nextEncounterFree = false;
-            autoRunPaidEnergy = false;
-
-            if (autoLoopCo != null)
-            {
-                StopCoroutine(autoLoopCo);
-                autoLoopCo = null;
-            }
-
-            autoLoopCo = StartCoroutine(AutoLoop());
-            PostBattleSummaryManager.I?.SetAutoBattling(true);
-
-            if (!inBattle)
-                EmitStatus("AUTO mode ON. Battling until defeat…", LogScope.System);
-            else
-                EmitStatus("AUTO mode ON. Will continue after this battle…", LogScope.System);
-        }
-        else
-        {
-            autoRunPaidEnergy = false;
-
-            if (autoLoopCo != null)
-            {
-                StopCoroutine(autoLoopCo);
-                autoLoopCo = null;
-            }
-
-            PostBattleSummaryManager.I?.SetAutoBattling(false);
-            EmitStatus("AUTO mode OFF. Tap ENCOUNTER for the next fight.", LogScope.System);
-        }
-        
-        GameEvents.RaiseAutoBattleModeChanged(autoMode);
-
-        OnStateChanged?.Invoke();
     }
 
     // ============================= ENCOUNTER FLOW ===============================
@@ -543,6 +481,8 @@ public partial class EncounterManager : MonoBehaviour
     {
         _lastBattleResult = result;
 
+        Debug.Log($"[EncounterManager] OnBattleEnded incoming result: base={result.creditsBase}, bonus={result.creditsTitleBonus}, totalPreScale={result.creditsGained}, active={result.activeMonsterOwnedId}");
+
         // Reset encounter-spawn presentation state.
         _lastWildWasShiny = _currentWildIsShiny;
         _currentWildIsShiny = false;
@@ -560,14 +500,38 @@ public partial class EncounterManager : MonoBehaviour
         }
 
         int finalcredits = 0;
+        int creditTitleBonus = 0;
         if (!escaped)
         {
-            finalcredits = ApplycreditsGainedMultiplier(result.creditsGained);
+            finalcredits = ApplyCreditsGainedMultiplier(result.creditsGained);
             finalcredits = Mathf.Max(0, finalcredits);
+
+            // Apply title-based credit multiplier (if any) and compute the explicit title bonus
+            try
+            {
+                // Use the actual active monster from the battle, not just team[0]
+                string leadId = !string.IsNullOrEmpty(result.activeMonsterOwnedId) ? result.activeMonsterOwnedId : null;
+
+                if (!string.IsNullOrEmpty(leadId))
+                {
+                    float cm = TitlesAdapter.GetCreditMultOnVictory(leadId, result.wildDef, result.wildLevel);
+                    Debug.Log($"[EncounterManager] Title credit mult for {leadId}: {cm}");
+                    if (cm > 0f && cm != 1f)
+                    {
+                        int withTitles = Mathf.Max(0, Mathf.RoundToInt(finalcredits * cm));
+                        creditTitleBonus = Mathf.Max(0, withTitles - finalcredits);
+                        finalcredits = withTitles;
+                        Debug.Log($"[EncounterManager] Applied title bonus: base={finalcredits - creditTitleBonus}, bonus={creditTitleBonus}, total={finalcredits}");
+                    }
+                }
+            }
+            catch (Exception)
+            {
+                // Safe no-op if TitlesAdapter or Save data is unavailable at runtime
+            }
 
             if (finalcredits > 0)
             {
-
                 if (ResourceManager.I != null)
                 {
                     ResourceManager.I?.Add(ResourceType.Credits, finalcredits);
@@ -662,10 +626,12 @@ public partial class EncounterManager : MonoBehaviour
         else
             PostBattleSummaryManager.I?.SetAutoBattling(_autoResolveSnapshot);
 
+        int displayCreditsBase = Mathf.Max(0, finalcredits - creditTitleBonus);
+        Debug.Log($"[PostBattleSummary] Passing credits: base={displayCreditsBase}, bonus={creditTitleBonus}");
         PostBattleSummaryManager.I?.NotifyBattleEnd(
             finished,
             isAuto: _autoResolveSnapshot,
-            growthCoresGained: 0,
+            growthCoresGained: Mathf.Max(0, result.growthCoresGained),
             monstersLeveledUp: 0,
             captured: false,
             capturedMonsterId: null,
@@ -673,10 +639,10 @@ public partial class EncounterManager : MonoBehaviour
             capturedShiny: false,
             wildWasShiny: _lastWildWasShiny,
             levelUpSummaries: null,
-            creditsBase: finalcredits,
-            creditsTitleBonus: 0,
-            growthCoresBase: 0,
-            growthCoresTitleBonus: 0,
+            creditsBase: displayCreditsBase,
+            creditsTitleBonus: creditTitleBonus,
+            growthCoresBase: result.growthCoresBase,
+            growthCoresTitleBonus: result.growthCoresTitleBonus,
             growthCoresDetailLines: null
         );
 
@@ -684,7 +650,7 @@ public partial class EncounterManager : MonoBehaviour
         postResultCo = StartCoroutine(PostResultFlow(victory, escaped));
     }
 
-    private int ApplycreditsGainedMultiplier(int basecredits)
+    private int ApplyCreditsGainedMultiplier(int basecredits)
     {
         if (basecredits <= 0) return 0;
         float mult = 1f;
@@ -817,6 +783,38 @@ public partial class EncounterManager : MonoBehaviour
 
     public bool IsInBattle => inBattle;
     public bool IsAutoMode => autoMode;
+
+    public void ToggleAutoMode()
+    {
+        autoMode = !autoMode;
+
+        if (autoMode)
+        {
+            if (!inBattle)
+            {
+                if (!HasEnergy())
+                {
+                    EmitStatus("Out of energy!", LogScope.System);
+                    autoMode = false;
+                    GameEvents.RaiseAutoBattleModeChanged(autoMode);
+                    return;
+                }
+
+                // Start an encounter immediately in auto-mode and spend energy
+                StartEncounter(spendEnergy: true);
+            }
+            else
+            {
+                EmitStatus("AUTO mode ON. Will continue after this battle…", LogScope.System);
+            }
+        }
+        else
+        {
+            EmitStatus("AUTO mode OFF. Tap ENCOUNTER for the next fight.", LogScope.System);
+        }
+
+        GameEvents.RaiseAutoBattleModeChanged(autoMode);
+    }
     public bool NextEncounterIsFree => nextEncounterFree;
 
     void EmitStatus(string msg, LogScope scope = LogScope.Encounter)

@@ -922,13 +922,22 @@ if (_flatStartRemainingTurns.TryGetValue(monsterId, out int remTurns) && remTurn
             var t = titles[i];
             if (!t) continue;
 
-            if (t is creditBonusOnVictoryTitleSO credit)
+            if (t is CreditBonusOnVictoryTitleSO credit)
             {
-                mul *= Mathf.Max(0f, credit.creditMultiplier);
+                if (TryReadFloat(credit, out var credVal, "CreditMultiplier", "creditMultiplier", "creditsMultiplier", "rewardcreditMult"))
+                {
+                    Debug.Log($"[TitleManager] Credit title '{credit.titleId}' multiplier={credVal}");
+                    mul *= Mathf.Max(0f, credVal);
+                }
+                else
+                {
+                    Debug.Log($"[TitleManager] Credit title '{credit.titleId}' has no readable multiplier field - dumping fields...");
+                    DumpTitleFields(credit);
+                }
                 continue;
             }
 
-            if (TryReadFloat(t, out var v, "creditMultiplier", "creditsMultiplier", "rewardcreditMult"))
+            if (TryReadFloat(t, out var v, "CreditMultiplier", "creditMultiplier", "creditsMultiplier", "rewardcreditMult"))
                 mul *= Mathf.Max(0f, v);
         }
 
@@ -938,6 +947,34 @@ if (_flatStartRemainingTurns.TryGetValue(monsterId, out int remTurns) && remTurn
     // Optional nicer alias (won’t break existing callers)
     public float GetCreditMultOnVictory(string monsterId, MonsterDataSO wild, int wildLevel)
         => GetcreditMultOnVictory(monsterId, wild, wildLevel);
+
+    private void DumpTitleFields(TitleSO t)
+    {
+        if (t == null)
+        {
+            Debug.Log("[TitleManager] DumpTitleFields: title is null");
+            return;
+        }
+
+        var ty = t.GetType();
+        var fields = ty.GetFields();
+        string outStr = $"[TitleManager] Fields for {t.titleId} ({ty.Name}): ";
+        for (int i = 0; i < fields.Length; i++)
+        {
+            try { var val = fields[i].GetValue(t); outStr += $"{fields[i].Name}={val}, "; } catch { outStr += $"{fields[i].Name}=<err>, "; }
+        }
+        var props = ty.GetProperties();
+        if (props != null && props.Length > 0)
+        {
+            outStr += " | Props: ";
+            for (int i = 0; i < props.Length; i++)
+            {
+                try { var val = props[i].GetValue(t, null); outStr += $"{props[i].Name}={val}, "; } catch { outStr += $"{props[i].Name}=<err>, "; }
+            }
+        }
+
+        Debug.Log(outStr);
+    }
 
     public float GetGrowthCoreMultOnVictory(string monsterId, MonsterDataSO wild, int wildLevel)
     {
@@ -1048,9 +1085,6 @@ if (_flatStartRemainingTurns.TryGetValue(monsterId, out int remTurns) && remTurn
         }
     }
 
-    
-    /// <summary>
-    /// Per-combatant turn tick. Use this for durations that should decrement on the
     /// owner’s turns (not global rounds).
     /// </summary>
     public void OnCombatantTurnEnded(string combatantId)
@@ -1470,17 +1504,17 @@ if (_flatStartRemainingTurns.TryGetValue(monsterId, out int remTurns) && remTurn
         }
 
         // BattleStartFlat (owner-turn ticking)
-        if (_flatStartRemainingTurns.TryGetValue(monsterId, out int remTurns) && remTurns > 0)
+        if (_flatStartRemainingTurns.TryGetValue(ctx.ownedId, out int remTurns) && remTurns > 0)
         {
-            if (_flatStartAmountAtk.TryGetValue(monsterId, out int fAtk)) atkFlat += fAtk;
-            if (_flatStartAmountDef.TryGetValue(monsterId, out int fDef)) defFlat += fDef;
-            if (_flatStartAmountSpd.TryGetValue(monsterId, out int fSpd)) spdFlat += fSpd;
-            if (_flatStartAmountHp.TryGetValue(monsterId, out int fHp)) hpFlatAdd += fHp;
+            if (_flatStartAmountAtk.TryGetValue(ctx.ownedId, out int fAtk)) atkFlat += fAtk;
+            if (_flatStartAmountDef.TryGetValue(ctx.ownedId, out int fDef)) defFlat += fDef;
+            if (_flatStartAmountSpd.TryGetValue(ctx.ownedId, out int fSpd)) spdFlat += fSpd;
+            if (_flatStartAmountHp.TryGetValue(ctx.ownedId, out int fHp)) hpFlatAdd += fHp;
         }
 
         // TurnBooster (percent per stack)
-        var tb = GetFirstTitle<TurnBoosterTitleSO>(monsterId, def, level);
-        if (tb != null && _turnStacks.TryGetValue(monsterId, out int tStacks) && tStacks > 0)
+        var tb = GetFirstTitle<TurnBoosterTitleSO>(ctx.ownedId, def, level);
+        if (tb != null && _turnStacks.TryGetValue(ctx.ownedId, out int tStacks) && tStacks > 0)
         {
             float pct = Mathf.Max(0f, tb.percentPerTurn) / 100f;
             int stacks = Mathf.Min(tStacks, Mathf.Max(1, tb.maxStacks));
@@ -1606,6 +1640,15 @@ if (_flatStartRemainingTurns.TryGetValue(monsterId, out int remTurns) && remTurn
                     ApplyOne(dcb.statB, dcb.opB, dcb.valueB);
                 }
             }
+        }
+
+        // BattleStartFlat (owner-turn ticking)
+        if (_flatStartRemainingTurns.TryGetValue(ctx.ownedId, out int remTurns) && remTurns > 0)
+        {
+            if (_flatStartAmountAtk.TryGetValue(ctx.ownedId, out int fAtk)) atkFlat += fAtk;
+            if (_flatStartAmountDef.TryGetValue(ctx.ownedId, out int fDef)) defFlat += fDef;
+            if (_flatStartAmountSpd.TryGetValue(ctx.ownedId, out int fSpd)) spdFlat += fSpd;
+            if (_flatStartAmountHp.TryGetValue(ctx.ownedId, out int fHp)) hpFlatAdd += fHp;
         }
 
         if (!Mathf.Approximately(hpFlatAdd, 0f))

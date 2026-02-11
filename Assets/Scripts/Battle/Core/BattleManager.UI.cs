@@ -324,6 +324,26 @@ private void UpdateWildInfoUI()
             BattleStatBlock baseB = Stats.GetAdjustedPlayer(activeIndex);
             BattleStatBlock effB = Stats.GetEffectivePlayer(activeIndex);
 
+                // Debug: inspect title-applied flat values via adapter when BattleStartFlat present
+                try
+                {
+                    var ownedId = (teamIds != null && activeIndex < teamIds.Length) ? teamIds[activeIndex] : null;
+                    if (!string.IsNullOrEmpty(ownedId))
+                    {
+                        var mods = TitlesAdapter.GetBattleStatMods(ownedId);
+                        int atkFlatFromMods = mods.atkFlat;
+                        float atkFromStatValue = TitlesAdapter.GetStatValue(ownedId, teamDefs[activeIndex], lvl, "Attack", BuildTitleContextForActive(), baseB.atk);
+                        int baseAtk = baseB.atk;
+                        int effAtk = effB.atk;
+
+                        if (atkFlatFromMods != 0 || Mathf.RoundToInt(atkFromStatValue) != baseAtk)
+                        {
+                            Debug.Log($"[Titles DEBUG] owned={ownedId} mods.atkFlat={atkFlatFromMods} TitlesAdapter.AttackValue={Mathf.RoundToInt(atkFromStatValue)} base={baseAtk} eff={effAtk}");
+                        }
+                    }
+                }
+                catch { }
+
             if (playerIdText) playerIdText.text = $"ID: {def.id}";
             if (playerTypeText) playerTypeText.text = $"TYPE: {def.type}";
             if (playerRarityText) playerRarityText.text = $"RARITY: {def.rarity}";

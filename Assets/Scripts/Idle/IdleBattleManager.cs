@@ -395,10 +395,10 @@ public class IdleBattleManager : MonoBehaviour
 
             int creditsBase = Mathf.Max(0, Mathf.FloorToInt(hb.credits * Mathf.Max(0f, creditMulNeutral)));
 
+            string leadIdForGrant = (teamIds.Count > 0) ? teamIds[0] : null;
             int awarded = 0;
             if (hb.victory && creditsBase > 0)
             {
-                string leadIdForGrant = (teamIds.Count > 0) ? teamIds[0] : null;
                 awarded = ResourceManager.I.AddCreditsWithTitles(creditsBase, leadIdForGrant, wild, wildLevel);
             }
 
@@ -425,6 +425,9 @@ public class IdleBattleManager : MonoBehaviour
             {
                 victory = hb.victory,
                 creditsGained = awarded,
+                creditsBase = 0,
+                creditsTitleBonus = 0,
+                activeMonsterOwnedId = leadIdForGrant,
                 wildDef = wild,
                 wildLevel = wildLevel
             });
