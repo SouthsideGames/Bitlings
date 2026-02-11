@@ -7,35 +7,20 @@ public struct DamageResult
     public int damage;
     public bool crit;
     public float effectiveness;
+    public float incomingTypeResistMul;
 }
 
 public static class BattleCalc
 {
-    // ─────────────────────────────────────────────────────────────────────────────
-    // Deterministic RNG hook (battle-scoped)
-    //
-    // BattleManager injects a per-battle RNG so combat randomness is replayable and
-    // debuggable (daily/custom seeds ready).
-    //
-    // IMPORTANT: This only affects randomness used inside BattleCalc (crits).
-    // BattleManager should also route any other combat RNG (run/defend/tie-breaks)
-    // through its own RNG.
-    // ─────────────────────────────────────────────────────────────────────────────
 
     private static Func<float> _rng01;
 
-    /// <summary>
-    /// Inject a deterministic RNG for battle calculations.
-    /// Pass a function returning a float in [0,1).
-    /// </summary>
     public static void SetRng(Func<float> rng01) => _rng01 = rng01;
 
-    /// <summary>Clear the injected RNG (returns to UnityEngine.Random).</summary>
     public static void ResetRng() => _rng01 = null;
 
     private static float Rng01()
     {
-        // NOTE: Clamp to [0, 0.999999...] to prevent edge-case 1.0f.
         try
         {
             if (_rng01 != null)
@@ -174,7 +159,8 @@ public static class BattleCalc
         {
             damage = dealt,
             crit = crit,
-            effectiveness = eff
+            effectiveness = eff,
+            incomingTypeResistMul = 1f
         };
     }
 
@@ -250,15 +236,20 @@ public static class BattleCalc
             catch { /* keep resilient */ }
         }
 
-        // Defender-side incoming effectiveness multiplier (e.g., nullify or weaken type).
-        // IMPORTANT: pass the incoming attack type so per-type resist titles (TypeResistTitleSO)
-        // can apply correctly.
+        // Defender-side incoming effectiveness multiplier (e.g., nullify or weaken type)
+        float incomingMul = 1f;
         if (!string.IsNullOrEmpty(defenderMonsterId))
         {
             try
             {
+                // Defender-side incoming effectiveness (Titles). Prefer type-aware path so TypeResist titles work.
                 float inMul = TitlesAdapter.GetIncomingEffectivenessMult(defenderMonsterId, defDef, defLevel, atkType);
-                if (!float.IsNaN(inMul) && !float.IsInfinity(inMul) && inMul >= 0f) eff *= inMul;
+                if (!float.IsNaN(inMul) && !float.IsInfinity(inMul) && inMul >= 0f)
+                {
+                    incomingMul = inMul;
+                    incomingMul = inMul;
+                    eff *= inMul;
+                }
             }
             catch { /* default to 1f if not implemented */ }
         }
@@ -341,7 +332,8 @@ public static class BattleCalc
         {
             damage = dealt,
             crit = crit,
-            effectiveness = eff
+            effectiveness = eff,
+            incomingTypeResistMul = incomingMul
         };
     }
 }

@@ -1770,6 +1770,12 @@ private int GetAlliesAliveNotIncludingActive()
         return Mathf.Max(1, spd);
     }
 
+    private void AddBattleLine(string line, BattleLineTag tags = BattleLineTag.None)
+    {
+        if (!isActiveAndEnabled) return;
+        StartCoroutine(Say(line, tags));
+    }
+
 
 
 

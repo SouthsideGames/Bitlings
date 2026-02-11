@@ -10,10 +10,10 @@ public class BattleTextBoxUI : MonoBehaviour
     [SerializeField] private TextMeshProUGUI lineText;
 
     [Header("Inline Icons")]
-    [SerializeField] private GameObject iconsRoot; // optional holder
+    [SerializeField] private GameObject iconsRoot; 
     [SerializeField] private Image critIcon;
     [SerializeField] private Image shieldIcon;
-    [SerializeField] private Image effectiveIcon;      // reuse for both SE / NVE (swap sprite)
+    [SerializeField] private Image effectiveIcon;     
     [SerializeField] private Sprite superEffectiveSprite;
     [SerializeField] private Sprite notEffectiveSprite;
 
@@ -21,7 +21,6 @@ public class BattleTextBoxUI : MonoBehaviour
     [SerializeField] private float typeSecondsPerChar = 0.02f;
     [SerializeField] private float lineHoldSeconds = 0.25f;
 
-    // Allocation-free unscaled wait (avoid WaitForSecondsRealtime churn during long battles).
     private IEnumerator CoWaitUnscaled(float seconds)
     {
         float s = Mathf.Max(0f, seconds);
@@ -34,6 +33,11 @@ public class BattleTextBoxUI : MonoBehaviour
 
     public IEnumerator ShowLine(string line, float battleSpeed)
         => ShowLine(new BattleLine(line, BattleLineTag.None), battleSpeed);
+
+    public void ShowLineInstant(string line, BattleLineTag tags, float battleSpeed)
+    {
+        StartCoroutine(ShowLine(new BattleLine(line, tags), battleSpeed));
+    }
 
     public IEnumerator ShowLine(BattleLine line, float battleSpeed)
     {
@@ -65,7 +69,13 @@ public class BattleTextBoxUI : MonoBehaviour
             if (effectiveIcon) effectiveIcon.enabled = false;
         }
 
-        // Typewriter with TMP maxVisibleCharacters to avoid per-character string allocations.
+        if (showIcons)
+        {
+            if (critIcon && critIcon.enabled) PunchIcon(critIcon);
+            else if (shieldIcon && shieldIcon.enabled) PunchIcon(shieldIcon);
+            else if (effectiveIcon && effectiveIcon.enabled) PunchIcon(effectiveIcon);
+        }
+
         string full = line.text ?? "";
         lineText.text = full;
         lineText.maxVisibleCharacters = 0;
@@ -117,5 +127,27 @@ public class BattleTextBoxUI : MonoBehaviour
 
         float hold = Mathf.Max(0f, lineHoldSeconds / Mathf.Max(0.25f, battleSpeed));
         if (hold > 0f) yield return CoWaitUnscaled(hold);
+    }
+
+    private void PunchIcon(Image img)
+    {
+        if (!img || !img.gameObject) return;
+
+        LeanTween.cancel(img.gameObject);
+
+        var t = img.transform;
+        t.localScale = Vector3.one;
+
+        // Small, quick punch.
+        LeanTween.scale(img.gameObject, Vector3.one * 1.15f, 0.08f)
+            .setEaseOutBack()
+            .setIgnoreTimeScale(true)
+            .setOnComplete(() =>
+            {
+                if (!img) return;
+                LeanTween.scale(img.gameObject, Vector3.one, 0.10f)
+                    .setEaseOutQuad()
+                    .setIgnoreTimeScale(true);
+            });
     }
 }

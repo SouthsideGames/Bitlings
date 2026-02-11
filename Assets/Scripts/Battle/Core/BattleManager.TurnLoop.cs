@@ -772,7 +772,6 @@ if (!playerLandedFirstHitThisBattle && dr.damage > 0)
                     yield return Say("It's not very effective...", BattleLineTag.NotEffective | BattleLineTag.Flavor);
             }
         }
-
         if (dr.crit)
         {
             if (!ShouldSkipNarration(BattleLineTag.Crit | BattleLineTag.Flavor))
@@ -937,20 +936,6 @@ if (feedback)
         else
             GetProgressionTotalsForIndex(activeIndex, out _, out _, out defenderEffectiveDefenseStat, out _, out _);
 
-        // Pre-check defender-side per-type resist titles so we can give a clear UX cue when
-        // a Title reduces incoming damage via effectiveness mitigation.
-        float incomingTypeResistMul = 1f;
-        try
-        {
-            incomingTypeResistMul = TitlesAdapter.GetIncomingEffectivenessMult(
-                teamIds[activeIndex],
-                teamDefs[activeIndex],
-                teamLevels[activeIndex],
-                wildDef ? wildDef.type : MonsterType.None
-            );
-        }
-        catch { incomingTypeResistMul = 1f; }
-
         var dr = BattleCalc.ResolveHit(
             null, wildDef, wildLevel,
             teamIds[activeIndex], teamDefs[activeIndex], teamLevels[activeIndex],
@@ -1008,28 +993,64 @@ if (feedback)
         }
 }
 
-        int dmg_afterScalar = Mathf.Max(1, Mathf.RoundToInt(dr.damage * incomingScalar));
+        
+        // Titles: defender-side type resist + damage filter (post-DEF modifiers, before shields)
+        float title_scalarBeforeDefTitles = incomingScalar;
+
+        float title_typeResistMul = 1f;
+        float title_dmgFilterPct = 0f;
+        int title_dmgFilterFlat = 0;
+
+        try
+        {
+            var incomingType = (wildDef != null) ? wildDef.type : MonsterType.None;
+            title_typeResistMul = TitlesAdapter.GetIncomingEffectivenessMult(teamIds[activeIndex], teamDefs[activeIndex], teamLevels[activeIndex], incomingType);
+        }
+        catch { title_typeResistMul = 1f; }
+
+        try
+        {
+            // NOTE: avoid shadowing the earlier 'df' (used for cannotBeCrit) in this method.
+            var df2 = TitlesAdapter.GetDamageFilter(teamIds[activeIndex], teamDefs[activeIndex], teamLevels[activeIndex]);
+            title_dmgFilterPct = Mathf.Clamp01(df2.percentReduce);
+            title_dmgFilterFlat = Mathf.Max(0, df2.flatReduce);
+        }
+        catch { title_dmgFilterPct = 0f; title_dmgFilterFlat = 0; }
+
+        float title_scalarAfterTypeResist = incomingScalar * Mathf.Max(0f, title_typeResistMul);
+        float title_scalarAfterPct = title_scalarAfterTypeResist * Mathf.Max(0f, 1f - title_dmgFilterPct);
+
+        // Precompute reductions for quick UX + mathy logger
+        int title_dmg_pre = Mathf.Max(1, Mathf.RoundToInt(dr.damage * title_scalarBeforeDefTitles));
+        int title_dmg_afterTypeResist = Mathf.Max(1, Mathf.RoundToInt(dr.damage * title_scalarAfterTypeResist));
+        int title_dmg_afterPct = Mathf.Max(1, Mathf.RoundToInt(dr.damage * title_scalarAfterPct));
+
+        int title_reducedByTypeResist = Mathf.Max(0, title_dmg_pre - title_dmg_afterTypeResist);
+        int title_reducedByDmgFilterPct = Mathf.Max(0, title_dmg_afterTypeResist - title_dmg_afterPct);
+        int title_reducedByDmgFilterFlat = 0;
+
+        incomingScalar = title_scalarAfterPct;
+
+int dmg_afterScalar = Mathf.Max(1, Mathf.RoundToInt(dr.damage * incomingScalar));
+
+        if (title_dmgFilterFlat > 0)
+        {
+            int beforeFlat = dmg_afterScalar;
+            dmg_afterScalar = Mathf.Max(1, dmg_afterScalar - title_dmgFilterFlat);
+            title_reducedByDmgFilterFlat = Mathf.Max(0, beforeFlat - dmg_afterScalar);
+        }
+
+        if (BattleLogger.Enabled && (title_reducedByTypeResist > 0 || title_reducedByDmgFilterPct > 0 || title_reducedByDmgFilterFlat > 0))
+        {
+            BattleLogger.Log($"[Titles][DefensiveReductions] typeResistMul={title_typeResistMul:0.###} (-{title_reducedByTypeResist}) dmgFilterPct={title_dmgFilterPct:0.###} (-{title_reducedByDmgFilterPct}) dmgFilterFlat={title_dmgFilterFlat} (-{title_reducedByDmgFilterFlat})");
+        }
+
 
         // Title battle-start shield (separate pool, consumed before normal shields)
         float titleShieldBefore = (titleShieldHP != null && activeIndex >= 0 && activeIndex < titleShieldHP.Length) ? titleShieldHP[activeIndex] : 0f;
         float titleShieldAbsorbF = 0f;
 
         int dmg_incoming = dmg_afterScalar;
-
-        // Option A (recommended): one-line battle text + tiny icon punch when a Type Resist
-        // title reduced incoming damage. We key off the defender-side per-type effectiveness
-        // multiplier (< 1), computed earlier as incomingTypeResistMul.
-        if (incomingTypeResistMul < 0.999f && dmg_incoming > 0)
-        {
-            if (!ShouldSkipNarration(BattleLineTag.NotEffective | BattleLineTag.Flavor))
-            {
-                string multText = incomingTypeResistMul.ToString("0.##");
-                yield return Say($"Type Resist reduced the damage (x{multText})!", BattleLineTag.NotEffective | BattleLineTag.Flavor);
-            }
-
-            if (feedback != null && playerTypeText)
-                feedback.Punch(playerTypeText);
-        }
 
         int dmg_final = dmg_incoming;
         if (titleShieldBefore > 0f && dmg_final > 0)
@@ -1101,7 +1122,15 @@ if (feedback)
             }
         }
 
-        if (dr.crit && !df.cannotBeCrit)
+        
+        // Titles: quick UX callouts (mathy details stay in BattleLogger)
+        if (title_reducedByTypeResist > 0 && !ShouldSkipNarration(BattleLineTag.NotEffective))
+            yield return Say("Resisted!", BattleLineTag.NotEffective);
+
+        if ((title_reducedByDmgFilterPct + title_reducedByDmgFilterFlat) > 0 && !ShouldSkipNarration(BattleLineTag.Shield))
+            yield return Say("Reduced!", BattleLineTag.Shield);
+
+if (dr.crit && !df.cannotBeCrit)
         {
             if (!ShouldSkipNarration(BattleLineTag.Crit | BattleLineTag.Flavor))
                 yield return Say("Critical hit!", BattleLineTag.Crit | BattleLineTag.Flavor);
