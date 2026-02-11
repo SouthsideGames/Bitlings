@@ -22,6 +22,7 @@ public enum ConditionKind
     HealthBelowPercent = 1,
     HealthAbovePercent = 2,
     AllyCountBelow = 3,
+    AllyCountAbove = 5,
     WinStreakAbove = 4
 }
 

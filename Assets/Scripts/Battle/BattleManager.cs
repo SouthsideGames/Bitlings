@@ -1054,7 +1054,7 @@ public void BeginBattle(MonsterDataSO wild, int level, Action<BattleResult> onEn
 
         var data = SaveManager.Data;
 
-        if (victory && !escaped)
+         if (victory && !escaped)
         {
             var m = (data != null && data.team != null && activeIndex >= 0 && activeIndex < data.team.Count)
                 ? data.team[activeIndex]
@@ -1063,21 +1063,20 @@ public void BeginBattle(MonsterDataSO wild, int level, Action<BattleResult> onEn
             float shinyMul = ShinySystems.TrainingXpMult(m);
             int baseAfterShiny = Mathf.RoundToInt(baseCores * shinyMul);
             growthCoreBaseAfterShiny = Mathf.Max(0, baseAfterShiny);
-            growthCoreBaseAfterShiny = Mathf.Max(0, baseAfterShiny);
 
             float titleCoreMul = 1f;
             if (teamIds != null && activeIndex >= 0 && activeIndex < teamIds.Length)
                 titleCoreMul = Mathf.Max(0f, TitlesAdapter.GetGrowthCoreMultOnVictory(teamIds[activeIndex], wildDef, wildLevel));
 
-            growthCoreTotal = Mathf.RoundToInt(baseAfterShiny * titleCoreMul);
+            int growthCoreAfterTitles = Mathf.Max(0, Mathf.RoundToInt(baseAfterShiny * titleCoreMul));
 
-            // Global tuning knob (progression lever). Safe no-op if GameBalance asset is missing.
+            float globalMul = 1f;
             if (GameBalance.TryGet(out var bal))
-                growthCoreTotal = Mathf.RoundToInt(growthCoreTotal * Mathf.Max(0f, bal.xpGainMultiplier));
+                globalMul = Mathf.Max(0f, bal.xpGainMultiplier);
 
-            // Bonus shown in the summary: everything above the base-after-shiny amount.
-            // Bonus shown in the summary: everything above the base-after-shiny amount.
-            growthCoreTitleBonus = Mathf.Max(0, growthCoreTotal - growthCoreBaseAfterShiny);
+            growthCoreTotal = Mathf.Max(0, Mathf.RoundToInt(growthCoreAfterTitles * globalMul));
+
+            growthCoreTitleBonus = Mathf.Max(0, growthCoreAfterTitles - growthCoreBaseAfterShiny);
 
             if (growthCoreTotal > 0)
                 ResourceManager.I?.Add(ResourceType.GrowthCore, growthCoreTotal);
@@ -1220,55 +1219,55 @@ public void BeginBattle(MonsterDataSO wild, int level, Action<BattleResult> onEn
 
 
 
-private void ResolveQueuedSwap()
-{
-    if (pendingSwapBenchSlot < 0) return;
-
-    FillOtherIndices(_scratchOthers);
-    List<int> others = _scratchOthers;
-
-    int benchSlot = pendingSwapBenchSlot;
-    pendingSwapBenchSlot = -1;
-
-    if (benchSlot < 0 || benchSlot >= others.Count) return;
-
-    int targetIndex = others[benchSlot];
-    if (teamHP[targetIndex] <= 0f) return;
-
-    activeIndex = targetIndex;
-
-    ApplyActiveToUI();
-    ClampAndPushActiveHP();
-    RefreshBenchUI();
-
-    if (teamPendingBuffPct != null && teamPendingBuffTurns != null &&
-        slotDamageBuffPct != null && slotDamageBuffTurns != null &&
-        activeIndex >= 0 && activeIndex < teamPendingBuffPct.Length)
+    private void ResolveQueuedSwap()
     {
-        if (teamPendingBuffPct[activeIndex] > 0f)
+        if (pendingSwapBenchSlot < 0) return;
+
+        FillOtherIndices(_scratchOthers);
+        List<int> others = _scratchOthers;
+
+        int benchSlot = pendingSwapBenchSlot;
+        pendingSwapBenchSlot = -1;
+
+        if (benchSlot < 0 || benchSlot >= others.Count) return;
+
+        int targetIndex = others[benchSlot];
+        if (teamHP[targetIndex] <= 0f) return;
+
+        activeIndex = targetIndex;
+
+        ApplyActiveToUI();
+        ClampAndPushActiveHP();
+        RefreshBenchUI();
+
+        if (teamPendingBuffPct != null && teamPendingBuffTurns != null &&
+            slotDamageBuffPct != null && slotDamageBuffTurns != null &&
+            activeIndex >= 0 && activeIndex < teamPendingBuffPct.Length)
         {
-            slotDamageBuffPct[activeIndex] += teamPendingBuffPct[activeIndex];
-            slotDamageBuffTurns[activeIndex] =
-                Mathf.Max(slotDamageBuffTurns[activeIndex], teamPendingBuffTurns[activeIndex]);
+            if (teamPendingBuffPct[activeIndex] > 0f)
+            {
+                slotDamageBuffPct[activeIndex] += teamPendingBuffPct[activeIndex];
+                slotDamageBuffTurns[activeIndex] =
+                    Mathf.Max(slotDamageBuffTurns[activeIndex], teamPendingBuffTurns[activeIndex]);
 
-            BattleLogger.Log($"{GetName(activeIndex)} carries over +{Mathf.RoundToInt(teamPendingBuffPct[activeIndex] * 100f)}% damage from bench.", LogScope.Battle);
+                BattleLogger.Log($"{GetName(activeIndex)} carries over +{Mathf.RoundToInt(teamPendingBuffPct[activeIndex] * 100f)}% damage from bench.", LogScope.Battle);
 
-            teamPendingBuffPct[activeIndex] = 0f;
-            teamPendingBuffTurns[activeIndex] = 0;
+                teamPendingBuffPct[activeIndex] = 0f;
+                teamPendingBuffTurns[activeIndex] = 0;
+            }
         }
+
+        BattleLogger.Log($"Swapped to {GetName(activeIndex)}! (turn consumed)", LogScope.Battle);
+        BattleLogger.AddKeyMoment($"SWAP: {GetName(activeIndex)}");                                        Emit(BattleEvent.ActionQueued(BattleSide.Player, "Swap"));
+                                            if (!HasBattleEventConsumers && feedback) feedback.PlayActionQueued(
+                                                BattleFeedbackManager.BattleFeedbackSide.Player,
+                                                BattleFeedbackManager.BattleFeedbackAction.Swap
+                                            );
+        if (debugTitles && debugTitlesOnSwap)
+            Debug_LogActiveTitlesSnapshot("Swap");
     }
 
-    BattleLogger.Log($"Swapped to {GetName(activeIndex)}! (turn consumed)", LogScope.Battle);
-    BattleLogger.AddKeyMoment($"SWAP: {GetName(activeIndex)}");                                        Emit(BattleEvent.ActionQueued(BattleSide.Player, "Swap"));
-                                        if (!HasBattleEventConsumers && feedback) feedback.PlayActionQueued(
-                                            BattleFeedbackManager.BattleFeedbackSide.Player,
-                                            BattleFeedbackManager.BattleFeedbackAction.Swap
-                                        );
-    if (debugTitles && debugTitlesOnSwap)
-        Debug_LogActiveTitlesSnapshot("Swap");
-}
-
-private bool AutoSwapToAlive()
+    private bool AutoSwapToAlive()
     {
         for (int i = 0; i < teamCount; i++)
         {
@@ -1327,26 +1326,6 @@ private bool AutoSwapToAlive()
         teamHP[activeIndex] = Mathf.Clamp(teamHP[activeIndex] + amount, 0f, curMax);
         ClampAndPushActiveHP();
     }
-
-
-
-
-
-
-    // ─────────────────────────────────────────────────────────────
-    // Allocation-free waits
-    //
-    // WaitForSecondsRealtime allocates per call. In long battles (and especially auto-battles),
-    // those tiny allocations can accumulate into GC spikes.
-    //
-    // Use these helpers in hot coroutines (TurnLoop / PlayerTurn / EnemyTurn / telegraphs).
-    // They yield `null` until the target time is reached, so no GC.
-    // ─────────────────────────────────────────────────────────────
-
-
-
-    // Keep the old API for compatibility (non-hot paths), but prefer CoWaitScaled in loops.
-
 
 
     private TitleStatMods GetTitleModsForIndex(int idx)
@@ -1500,6 +1479,147 @@ private int GetAlliesAliveNotIncludingActive()
         return 0;
     }
 
+    // ─────────────────────────────────────────────────────────────────────────
+    // Conditional Title feedback (battle textbox + BattleLogger)
+    // ─────────────────────────────────────────────────────────────────────────
+
+    // Tracks the last conditional-mod snapshot so we only notify on changes.
+    // We keep this in BattleManager so it survives across partials and avoids per-frame allocations.
+    private bool _condModsInit;
+    private int _condModsHashLast;
+    private TitleStatMods _condModsLast;
+
+    private static int HashTitleStatMods(in TitleStatMods m)
+    {
+        unchecked
+        {
+            int h = 17;
+            h = (h * 31) ^ BitConverter.SingleToInt32Bits(m.hpPct);
+            h = (h * 31) ^ BitConverter.SingleToInt32Bits(m.atkPct);
+            h = (h * 31) ^ BitConverter.SingleToInt32Bits(m.defPct);
+            h = (h * 31) ^ BitConverter.SingleToInt32Bits(m.spdPct);
+            h = (h * 31) ^ m.atkFlat;
+            h = (h * 31) ^ m.defFlat;
+            h = (h * 31) ^ m.spdFlat;
+            return h;
+        }
+    }
+
+    private static bool HasAnyConditional(in TitleStatMods m)
+    {
+        const float EPS = 0.0001f;
+        return
+            Mathf.Abs(m.hpPct)  > EPS ||
+            Mathf.Abs(m.atkPct) > EPS ||
+            Mathf.Abs(m.defPct) > EPS ||
+            Mathf.Abs(m.spdPct) > EPS ||
+            m.atkFlat != 0 || m.defFlat != 0 || m.spdFlat != 0;
+    }
+
+    private static string BuildCondSummaryShort(in TitleStatMods m)
+    {
+        List<string> parts = null;
+
+        void Add(string s)
+        {
+            parts ??= new List<string>(4);
+            parts.Add(s);
+        }
+
+        bool anyUp = false;
+        bool anyDown = false;
+
+        if (m.atkPct > 0f || m.atkFlat > 0) { Add("ATK↑"); anyUp = true; }
+        else if (m.atkPct < 0f || m.atkFlat < 0) { Add("ATK↓"); anyDown = true; }
+
+        if (m.defPct > 0f || m.defFlat > 0) { Add("DEF↑"); anyUp = true; }
+        else if (m.defPct < 0f || m.defFlat < 0) { Add("DEF↓"); anyDown = true; }
+
+        if (m.spdPct > 0f || m.spdFlat > 0) { Add("SPD↑"); anyUp = true; }
+        else if (m.spdPct < 0f || m.spdFlat < 0) { Add("SPD↓"); anyDown = true; }
+
+        if (m.hpPct > 0f) { Add("HP↑"); anyUp = true; }
+        else if (m.hpPct < 0f) { Add("HP↓"); anyDown = true; }
+
+        if (parts == null || parts.Count == 0) return null;
+
+        string prefix = anyUp && !anyDown ? "Title Boost" : (anyDown && !anyUp ? "Title Drag" : "Title Shift");
+        return $"{prefix}: {string.Join(" ", parts)}";
+    }
+
+    private static string BuildCondSummaryMathy(in TitleStatMods m)
+    {
+        return $"COND hpPct={m.hpPct:0.###} atkPct={m.atkPct:0.###} defPct={m.defPct:0.###} spdPct={m.spdPct:0.###} atkFlat={m.atkFlat} defFlat={m.defFlat} spdFlat={m.spdFlat}";
+    }
+
+    private bool TryConsumeConditionalTitleFeedback(out TitleStatMods mods, out string battleLine, out string logLine)
+    {
+        mods = default;
+        battleLine = null;
+        logLine = null;
+
+        string ownedId = (teamIds != null && activeIndex >= 0 && activeIndex < teamIds.Length)
+            ? teamIds[activeIndex]
+            : null;
+        if (string.IsNullOrEmpty(ownedId)) return false;
+
+        float activeHp = Mathf.Max(0f, GetActivePlayerCurHP());
+        float baseMax  = (teamMaxHP != null && activeIndex >= 0 && activeIndex < teamMaxHP.Length) ? Mathf.Max(1f, teamMaxHP[activeIndex]) : 1f;
+        float maxHp    = Mathf.Max(1f, GetActiveMaxHP(baseMax, activeIndex));
+        float hpPct    = Mathf.Clamp01(activeHp / maxHp);
+        int alliesAlive = GetAlliesAliveNotIncludingActive();
+        int winStreak = GetWinStreakSafe();
+
+        TitleStatMods cond = TitlesAdapter.GetConditionalBattleMods(ownedId, hpPct, alliesAlive, winStreak);
+        mods = cond;
+        int hash = HashTitleStatMods(cond);
+
+        if (!_condModsInit)
+        {
+            _condModsInit = true;
+            _condModsLast = cond;
+            _condModsHashLast = hash;
+
+            if (HasAnyConditional(cond))
+            {
+                battleLine = BuildCondSummaryShort(cond);
+                logLine = BuildCondSummaryMathy(cond);
+                return !string.IsNullOrEmpty(battleLine);
+            }
+
+            return false;
+        }
+
+        if (hash == _condModsHashLast)
+            return false;
+
+        bool had = HasAnyConditional(_condModsLast);
+        bool has = HasAnyConditional(cond);
+
+        _condModsLast = cond;
+        _condModsHashLast = hash;
+
+        if (!had && !has) return false;
+
+        if (!has)
+        {
+            battleLine = "Title Boost ended";
+            logLine = "COND ended";
+            return true;
+        }
+
+        battleLine = BuildCondSummaryShort(cond);
+        logLine = BuildCondSummaryMathy(cond);
+        return !string.IsNullOrEmpty(battleLine);
+    }
+
+    private void ResetConditionalTitleFeedbackCache()
+    {
+        _condModsInit = false;
+        _condModsHashLast = 0;
+        _condModsLast = default;
+    }
+
     private TitleContext BuildTitleContextForActive()
     {
         float curMax = GetFinalMaxHPForIndex(activeIndex);
@@ -1519,7 +1639,6 @@ private int GetAlliesAliveNotIncludingActive()
 
     internal TitleContext BuildTitleContextForWild()
     {
-        // Wild has no allies in 1v1 battles.
         float max = Mathf.Max(1f, wildMaxHP);
         float hp01 = max > 0.01f ? Mathf.Clamp01(wildHP / max) : 0f;
 
@@ -1537,7 +1656,6 @@ private int GetAlliesAliveNotIncludingActive()
         if (!wildDef) return;
         if (string.IsNullOrEmpty(_wildCombatIdForTitles)) return;
 
-        // Preserve current HP percent when max HP changes (e.g., temporary HP flats).
         float prevMax = Mathf.Max(1f, wildMaxHP);
         float hp01 = prevMax > 0.01f ? Mathf.Clamp01(wildHP / prevMax) : 0f;
 

@@ -211,18 +211,13 @@ public static class TitlesAdapter
         }
 
         float mult = rt.GetcreditMultOnVictory(monsterId, wild, wildLevel);
-        Debug.Log($"[TitlesAdapter] GetcreditMultOnVictory for {monsterId} => {mult}");
-        // If TitleManager returned a neutral multiplier but we can directly
-        // inspect an equipped CreditBonusOnVictoryTitleSO, prefer its explicit value
-        // — this helps avoid timing/order issues where TitleManager may not expose
-        // the multiplier at this call site.
+
         if (Mathf.Approximately(mult, 1f) && titles != null)
         {
             for (int i = 0; i < titles.Count; i++)
             {
                 var t = titles[i] as CreditBonusOnVictoryTitleSO;
                 if (t == null) continue;
-                // Try to read public field/property values heuristically.
                 try
                 {
                     var ty = t.GetType();
@@ -262,7 +257,7 @@ public static class TitlesAdapter
     {
         var rt = Runtime;
         if (rt == null) return 1f;
-        return 1f; // no dedicated capture title runtime in this project build
+        return 1f;
     }
 
     public static float GetJobRateMult(string workerOwnedOrDefId, JobType site)
@@ -295,7 +290,6 @@ public static class TitlesAdapter
 
     public static Dictionary<JobType, float> BuildJobAuras(System.Collections.IEnumerable teamEnumerable)
     {
-        // Scan titles (equipped or locally injected) and accumulate aura % by site.
         var dict = new Dictionary<JobType, float>();
         if (teamEnumerable == null) return dict;
 
@@ -303,7 +297,6 @@ public static class TitlesAdapter
         {
             if (obj == null) continue;
 
-            // Try to read monsterId + def/level via common patterns (OwnedMonsterData etc.)
             string id = null;
             try
             {
@@ -336,16 +329,12 @@ public static class TitlesAdapter
 
     public static int GetJobCapacityBonus(JobType site)
     {
-        // Sum of flat capacity bonuses across workers assigned to this job site.
-        // This matches the legacy adapter behavior and does not require TitleManager
-        // to expose any new job-layer API.
 
         int bonus = 0;
 
         var jm = JobManager.I;
         if (jm == null || jm.States == null) return 0;
 
-        // Find the site state and sum bonuses from workers actually assigned there.
         for (int si = 0; si < jm.States.Count; si++)
         {
             var st = jm.States[si];
@@ -372,7 +361,7 @@ public static class TitlesAdapter
                 }
             }
 
-            break; // site processed
+            break; 
         }
 
         return Mathf.Max(0, bonus);
@@ -418,8 +407,6 @@ public static class TitlesAdapter
     {
         var rt = Runtime;
         if (rt == null) return default;
-        // TitleManager exposes an internal/nested filter type; convert it into
-        // the adapter's public struct.
         var f = rt.GetDamageFilter(ownedId, def, level);
         return new TitleDamageFilter
         {
@@ -446,7 +433,7 @@ public static class TitlesAdapter
     // Global victory multipliers (optional)
     // ─────────────────────────────────────────────────────────────────────────────
 
-    public static float GetVictorycreditMult()
+    public static float GetVictoryCreditMult()
     {
         var rt = Runtime;
         if (rt == null) return 1f;
@@ -460,6 +447,4 @@ public static class TitlesAdapter
         return 1f;
     }
 
-    // Legacy: adapter used to support runtime injection; keep as no-op for API stability.
-    public static void SetRuntime(object runtimeInstance) { /* no-op (direct runtime) */ }
 }

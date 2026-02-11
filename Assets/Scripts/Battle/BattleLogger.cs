@@ -464,7 +464,39 @@ public static class BattleLogger
     /// Logs a title activation/proc line and emits the TitleProcEvent for UI toasts.
     /// Use this when an effect actually triggers (not just passively exists).
     /// </summary>
-    public static void LogTitleActivation(string ownerName, string titleName, string summary)
+    
+    /// <summary>
+    /// Logs when a conditional title's condition becomes active/inactive (edge-triggered by BattleManager).
+    /// This is meant for debugging "why did stats change?" without spamming every turn.
+    /// </summary>
+    public static void LogTitleConditionState(
+        string ownerName,
+        string titleName,
+        string conditionText,
+        bool isActive,
+        bool isInitial = false,
+        LogScope scope = LogScope.Battle)
+    {
+        if (string.IsNullOrEmpty(ownerName)) ownerName = "Unknown";
+        if (string.IsNullOrEmpty(titleName)) titleName = "None";
+        if (string.IsNullOrEmpty(conditionText)) conditionText = "Unknown condition";
+
+        string state = isActive ? "ON" : "OFF";
+        string startTag = isInitial ? " (Start)" : "";
+
+        string col = isActive ? BattleLogColors.Buff : BattleLogColors.Debuff;
+
+        Log(
+            $"<color={BattleLogColors.Title}>[TITLE {state}]</color> " +
+            $"<color={BattleLogColors.Name}>{ownerName}</color> — " +
+            $"<color={BattleLogColors.Title}>{titleName}</color>{startTag}: " +
+            $"<color={BattleLogColors.Dim}>({conditionText})</color> " +
+            $"<color={col}>{state}</color>",
+            scope
+        );
+    }
+
+public static void LogTitleActivation(string ownerName, string titleName, string summary)
     {
         // Fire proc event FIRST so UI can react
         OnTitleProc?.Invoke(new TitleProcEvent(ownerName, titleName, summary));
@@ -475,6 +507,16 @@ public static class BattleLogger
             $"<color={BattleLogColors.Title}>{titleName}</color>: {summary}",
             LogScope.Battle
         );
+    }
+
+    /// <summary>
+    /// Back-compat helper used by some battle-loop callsites.
+    /// Treats <paramref name="summary"/> as a proc line under a generic "Title" bucket.
+    /// </summary>
+    public static void LogTitleProc(string ownerNameOrId, string summary)
+    {
+        if (string.IsNullOrEmpty(summary)) return;
+        LogTitleActivation(string.IsNullOrEmpty(ownerNameOrId) ? "Unknown" : ownerNameOrId, "Title", summary);
     }
 
     /// <summary>
