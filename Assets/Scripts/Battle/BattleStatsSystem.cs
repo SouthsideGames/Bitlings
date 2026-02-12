@@ -226,11 +226,26 @@ public sealed class BattleStatsSystem
         string wildId = _bm.WildCombatIdForTitles;
         if (!string.IsNullOrEmpty(wildId))
         {
-            var ctx = _bm.BuildTitleContextForWild();
+            // Build context against the caller's current working max HP to avoid
+            // HP% drift when titles modify wild max HP.
+            var ctx = _bm.BuildTitleContextForWildUsingMaxSafe(hp);
+
+            // 3) Titles (non-conditional)
             hp = TitlesAdapter.GetStatValue(wildId, _bm.WildDef, _bm.WildLevel, "HP", ctx, hp);
             atk = TitlesAdapter.GetStatValue(wildId, _bm.WildDef, _bm.WildLevel, "Attack", ctx, atk);
             def = TitlesAdapter.GetStatValue(wildId, _bm.WildDef, _bm.WildLevel, "Defense", ctx, def);
             spd = TitlesAdapter.GetStatValue(wildId, _bm.WildDef, _bm.WildLevel, "Speed", ctx, spd);
+
+            // 4) Conditional title mods (Clutch Booster, AllyCount conditions, etc.)
+            // Player side already applies these in GetEffectivePlayer; wild must do the same.
+            // Use HP% based on *effective* max HP after the non-conditional title pass.
+            float hp01 = _bm.GetWildHp01UsingMaxSafe(hp);
+            var wmods = TitlesAdapter.GetConditionalBattleMods(wildId, hp01, alliesAlive: 0, winStreak: 0);
+
+            atk = (atk + Mathf.Max(0, wmods.atkFlat)) * (1f + Mathf.Max(0f, wmods.atkPct));
+            def = (def + Mathf.Max(0, wmods.defFlat));
+            spd = (spd + Mathf.Max(0, wmods.spdFlat)) * (1f + Mathf.Max(0f, wmods.spdPct));
+            hp = hp * (1f + Mathf.Max(0f, wmods.hpPct));
         }
 
         return new BattleStatBlock

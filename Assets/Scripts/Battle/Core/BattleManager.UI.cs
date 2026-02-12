@@ -271,10 +271,7 @@ private void UpdateWildInfoUI()
             if (wildATKText)
             {
                 SetStatRowColorAndText(wildATKText, "ATK", baseB.atk, effB.atk, minFinal: 1);
-                #if UNITY_EDITOR || DEVELOPMENT_BUILD
-                int tb = TitlesAdapter.Debug_GetTurnBoosterStacks(_wildCombatIdForTitles);
-                wildATKText.text += $" <size=70%><color=#AAAAAA>(TB:{tb} id:{_wildCombatIdForTitles} base:{baseB.atk} eff:{effB.atk})</color></size>";
-                #endif
+
             }
             if (wildDEFText) SetStatRowColorAndText(wildDEFText, "DEF", baseB.def, effB.def, minFinal: 0);
             if (wildSPDText) SetStatRowColorAndText(wildSPDText, "SPD", baseB.spd, effB.spd, minFinal: 1);
@@ -311,10 +308,6 @@ private void UpdateWildInfoUI()
         if (wildATKText)
         {
             SetStatRowColorAndText(wildATKText, "ATK", baseATK, effATK, minFinal: 1);
-            #if UNITY_EDITOR || DEVELOPMENT_BUILD
-            int tb = TitlesAdapter.Debug_GetTurnBoosterStacks(_wildCombatIdForTitles);
-            wildATKText.text += $" <size=70%><color=#AAAAAA>(TB:{tb} id:{_wildCombatIdForTitles} base:{baseATK} eff:{effATK})</color></size>";
-            #endif
         }
         if (wildDEFText) SetStatRowColorAndText(wildDEFText, "DEF", baseDEF, effDEF, minFinal: 0);
         if (wildSPDText) SetStatRowColorAndText(wildSPDText, "SPD", baseSPD, effSPD, minFinal: 1);

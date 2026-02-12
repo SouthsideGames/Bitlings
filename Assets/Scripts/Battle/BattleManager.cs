@@ -486,6 +486,36 @@ private void EnsureBattleRngInitialized()
         };
     }
 
+    /// <summary>
+    /// Safe TitleContext builder for the wild combatant that does NOT depend on wildMaxHP.
+    /// This is required so conditional titles (e.g., Clutch Booster at HP &lt;= 25%)
+    /// evaluate against the effective max HP the caller is working with.
+    /// </summary>
+    public TitleContext BuildTitleContextForWildUsingMaxSafe(float maxHpForContext)
+    {
+        float curMax = Mathf.Max(1f, maxHpForContext);
+        float hpPct = curMax > 0.01f ? Mathf.Clamp01(wildHP / curMax) : 0f;
+
+        return new TitleContext
+        {
+            selfHp01 = hpPct,
+            alliesAlive = 0,
+            winStreak = 0,
+            isBattle = true,
+            ownedId = _wildCombatIdForTitles
+        };
+    }
+
+    /// <summary>
+    /// Wild HP% helper against a caller-provided max HP.
+    /// Used by BattleStatsSystem to apply conditional title mods correctly.
+    /// </summary>
+    public float GetWildHp01UsingMaxSafe(float maxHpForContext)
+    {
+        float curMax = Mathf.Max(1f, maxHpForContext);
+        return curMax > 0.01f ? Mathf.Clamp01(wildHP / curMax) : 0f;
+    }
+
 
     void Start()
     {

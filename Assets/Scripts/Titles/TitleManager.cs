@@ -1398,23 +1398,33 @@ if (_flatStartRemainingTurns.TryGetValue(monsterId, out int remTurns) && remTurn
     }
 
     private static float ReadHp01(TitleContext ctx)
+{
+    // Prefer the explicit field on TitleContext (no reflection).
+    // Gate to battle-only so conditionals never leak into menus.
+    if (!ctx.isBattle) return 1f;
+
+    // selfHp01 should already be current/max (0..1). Clamp defensively.
+    float v = Mathf.Clamp01(ctx.selfHp01);
+
+    // Legacy reflection fallback for older contexts (rare). Keep this safe.
+    #if TITLE_CONTEXT_REFLECTION_FALLBACK
+    try
     {
-        try
-        {
-            var t = ctx.GetType();
+        var t = ctx.GetType();
 
-            var f = t.GetField("hpPct") ?? t.GetField("hp01") ?? t.GetField("hp") ?? t.GetField("health01");
-            if (f != null)
-                return Mathf.Clamp01(Convert.ToSingle(f.GetValue(ctx)));
+        var f = t.GetField("hpPct") ?? t.GetField("hp01") ?? t.GetField("hp") ?? t.GetField("health01");
+        if (f != null)
+            return Mathf.Clamp01(Convert.ToSingle(f.GetValue(ctx)));
 
-            var p = t.GetProperty("hpPct") ?? t.GetProperty("hp01") ?? t.GetProperty("HP01") ?? t.GetProperty("Health01");
-            if (p != null)
-                return Mathf.Clamp01(Convert.ToSingle(p.GetValue(ctx, null)));
-        }
-        catch { }
-
-        return 1f;
+        var p = t.GetProperty("hpPct") ?? t.GetProperty("hp01") ?? t.GetProperty("HP01") ?? t.GetProperty("Health01");
+        if (p != null)
+            return Mathf.Clamp01(Convert.ToSingle(p.GetValue(ctx, null)));
     }
+    catch { }
+    #endif
+
+    return v;
+}
 
     public Sprite TryGetIconByTitleName(string titleName)
     {

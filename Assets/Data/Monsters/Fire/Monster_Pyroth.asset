@@ -40,7 +40,7 @@ MonoBehaviour:
   bossWeight: 1
   spawnWeight: 0
   jobSkill: 1
-  titleTrack: {fileID: 0}
+  titleTrack: {fileID: 11400000, guid: 4895c73be63a3473b9047daee4b3c0f9, type: 2}
   defaultAlwaysOnTitles: []
   Personality: {fileID: 11400000, guid: 1bd4805a0ba8f476b9f7b480b0cbb31d, type: 2}
   basicAttackName: Worldburn
