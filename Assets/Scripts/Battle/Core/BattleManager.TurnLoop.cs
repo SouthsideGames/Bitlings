@@ -108,6 +108,12 @@ public partial class BattleManager : MonoBehaviour
             yield return CoWaitScaled(beginRoundDelay);
 
             _turnIndex++;
+
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            if (debugTitles && debugTitlesEveryTurn)
+                Debug.Log($"[TurnLoop] ROUND {round} -> TurnIndex advanced to {_turnIndex} (one full round: player + wild act)", this);
+#endif
+
             TitlesAdapter.OnTurnAdvanced(_turnIndex);
             GameEvents.RaiseBattleStatsChanged();
 

@@ -128,10 +128,13 @@ public class JobPanelUI : MonoBehaviour
                 if (baseHr > 0.0001f)
                     deltaPct = (boostedHr / baseHr - 1f) * 100f;
 
+                string rateText;
                 if (Mathf.Abs(deltaPct) >= 0.5f)
-                    t.rate.text = $"{shownText}/hr  {(deltaPct >= 0 ? "+" : string.Empty)}{deltaPct:0}%";
+                    rateText = $"{shownText}/hr  {(deltaPct >= 0 ? "+" : string.Empty)}{deltaPct:0}%";
                 else
-                    t.rate.text = $"{shownText}/hr";
+                    rateText = $"{shownText}/hr";
+
+                t.rate.text = rateText;
 
                 if (deltaPct > 0.5f)       t.rate.color = rateUp;
                 else if (deltaPct < -0.5f) t.rate.color = rateDown;

@@ -182,6 +182,40 @@ public static class TitlesAdapter
         return rt.GetStatValueRouter(ownedId, def, level, statKind, ctx, baseValue);
     }
 
+    // ─────────────────────────────────────────────────────────────────────────────
+    // DEV/Editor debug helpers (used by Battle UI overlays)
+    // ─────────────────────────────────────────────────────────────────────────────
+    public static int Debug_GetTurnBoosterStacks(string monsterId)
+    {
+        #if UNITY_EDITOR || DEVELOPMENT_BUILD
+        var rt = Runtime;
+        if (rt == null) return 0;
+        return rt.Debug_GetTurnBoosterStacks(monsterId);
+        #else
+        return 0;
+        #endif
+    }
+
+    public static string Debug_GetActiveBattleMonsterId()
+    {
+        #if UNITY_EDITOR || DEVELOPMENT_BUILD
+        var rt = Runtime;
+        return rt != null ? rt.ActiveBattleMonsterId : "";
+        #else
+        return "";
+        #endif
+    }
+
+    public static int Debug_GetTurnIndex()
+    {
+        #if UNITY_EDITOR || DEVELOPMENT_BUILD
+        var rt = Runtime;
+        return rt != null ? rt.CurrentTurnIndex : 0;
+        #else
+        return 0;
+        #endif
+    }
+
     public static float GetCreditMultOnVictory(string monsterId, MonsterDataSO wild, int wildLevel)
     {
         var rt = Runtime;
@@ -266,6 +300,7 @@ public static class TitlesAdapter
         if (rt == null) return 1f;
         return Mathf.Max(0f, rt.GetJobRateMult(workerOwnedOrDefId, site));
     }
+
 
     public static float GetJobFatigueMult(string ownedId, MonsterDataSO def, int level, JobType site)
     {

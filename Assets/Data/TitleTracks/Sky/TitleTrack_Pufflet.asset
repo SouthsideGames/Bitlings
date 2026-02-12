@@ -15,7 +15,7 @@ MonoBehaviour:
   tiers:
   - levelRequired: 3
     unlockChoices:
-    - {fileID: 11400000, guid: 5958b4a3fb292447ba36114918d5c814, type: 2}
+    - {fileID: 11400000, guid: f4f16d356f6ee6a429dc02accccf7654, type: 2}
   - levelRequired: 10
     unlockChoices:
     - {fileID: 11400000, guid: a289ace2a61ca0e47b454f4b80ebec49, type: 2}

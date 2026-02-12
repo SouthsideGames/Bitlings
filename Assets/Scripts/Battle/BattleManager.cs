@@ -709,7 +709,6 @@ private IEnumerator MaybeSayKO_Wild(string victimName, float preHP, float postHP
                         try
                         {
                             _cachedCreditMult = Mathf.Max(0f, TitlesAdapter.GetCreditMultOnVictory(ownedId, wildDef, wildLevel));
-                            Debug.Log($"[BattleManager] Cached credit multiplier for {ownedId} = {_cachedCreditMult}");
                         }
                         catch (Exception ex)
                         {

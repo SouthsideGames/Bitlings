@@ -19,7 +19,7 @@ MonoBehaviour:
   canRollOnWild: 1
   condition: 4
   threshold01: 0.5
-  countN: 3
+  countN: 1
   stat: 3
   operation: 2
   value: 1.3

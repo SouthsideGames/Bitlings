@@ -268,7 +268,14 @@ private void UpdateWildInfoUI()
             if (wildLevelText) wildLevelText.text = $"LVL: {wildLevel}";
 
             if (wildHPText) SetStatRowColorAndText(wildHPText, "HP", baseB.maxHP, effB.maxHP, minFinal: 1);
-            if (wildATKText) SetStatRowColorAndText(wildATKText, "ATK", baseB.atk, effB.atk, minFinal: 1);
+            if (wildATKText)
+            {
+                SetStatRowColorAndText(wildATKText, "ATK", baseB.atk, effB.atk, minFinal: 1);
+                #if UNITY_EDITOR || DEVELOPMENT_BUILD
+                int tb = TitlesAdapter.Debug_GetTurnBoosterStacks(_wildCombatIdForTitles);
+                wildATKText.text += $" <size=70%><color=#AAAAAA>(TB:{tb} id:{_wildCombatIdForTitles} base:{baseB.atk} eff:{effB.atk})</color></size>";
+                #endif
+            }
             if (wildDEFText) SetStatRowColorAndText(wildDEFText, "DEF", baseB.def, effB.def, minFinal: 0);
             if (wildSPDText) SetStatRowColorAndText(wildSPDText, "SPD", baseB.spd, effB.spd, minFinal: 1);
             return;
@@ -301,7 +308,14 @@ private void UpdateWildInfoUI()
         if (wildLevelText) wildLevelText.text = $"LVL: {wildLevel}";
 
         if (wildHPText) SetStatRowColorAndText(wildHPText, "HP", baseHP, effHP, minFinal: 1);
-        if (wildATKText) SetStatRowColorAndText(wildATKText, "ATK", baseATK, effATK, minFinal: 1);
+        if (wildATKText)
+        {
+            SetStatRowColorAndText(wildATKText, "ATK", baseATK, effATK, minFinal: 1);
+            #if UNITY_EDITOR || DEVELOPMENT_BUILD
+            int tb = TitlesAdapter.Debug_GetTurnBoosterStacks(_wildCombatIdForTitles);
+            wildATKText.text += $" <size=70%><color=#AAAAAA>(TB:{tb} id:{_wildCombatIdForTitles} base:{baseATK} eff:{effATK})</color></size>";
+            #endif
+        }
         if (wildDEFText) SetStatRowColorAndText(wildDEFText, "DEF", baseDEF, effDEF, minFinal: 0);
         if (wildSPDText) SetStatRowColorAndText(wildSPDText, "SPD", baseSPD, effSPD, minFinal: 1);
     }
@@ -444,7 +458,18 @@ private void UpdateWildInfoUI()
         int atkCombinedFinal = Mathf.Max(1, Mathf.RoundToInt((atkAfterTitles + atkCondFlat) * (1f + atkCondPct)));
 
         if (playerATKText)
+        {
             SetStatRowColorAndText(playerATKText, "ATK", atkBaselineForColor, atkCombinedFinal, minFinal: 1);
+
+            #if UNITY_EDITOR || DEVELOPMENT_BUILD
+            // DEV overlay: show TurnBooster stacks + raw value to diagnose rounding / id mismatches.
+            int tbOwned = TitlesAdapter.Debug_GetTurnBoosterStacks(ctx.ownedId);
+            int tbDef = (def != null) ? TitlesAdapter.Debug_GetTurnBoosterStacks(def.id) : 0;
+            string activeId = TitlesAdapter.Debug_GetActiveBattleMonsterId();
+            int tIdx = TitlesAdapter.Debug_GetTurnIndex();
+            playerATKText.text += $" <size=70%><color=#AAAAAA>(TB o:{tbOwned} d:{tbDef} active:{activeId} t:{tIdx} raw:{atkFinalF:0.##} pre:{atkPreTitle})</color></size>";
+            #endif
+        }
 
         // ─────────────────────────────────────────────────────────────────────────
         // DEF

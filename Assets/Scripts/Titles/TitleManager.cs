@@ -18,6 +18,13 @@ public sealed class TitleManager : MonoBehaviour
 
     private string _activeBattleMonsterId;
 
+    // Battle sessions can include multiple combatants (e.g., player + wild).
+    // Most per-battle state is keyed by combatant id; we track participants so
+    // turn-based effects (TurnBooster) can apply to all relevant combatants.
+    private bool _battleSessionActive;
+    private readonly HashSet<string> _battleParticipants = new HashSet<string>(StringComparer.Ordinal);
+    private readonly List<string> _scratchParticipants = new List<string>(8);
+
     // ─────────────────────────────────────────────────────────────────────
     // Per-battle state (TurnBooster / EventStacks / BattleStart)
     // ─────────────────────────────────────────────────────────────────────
@@ -752,14 +759,33 @@ if (_flatStartRemainingTurns.TryGetValue(monsterId, out int remTurns) && remTurn
             var t = titles[i];
             if (!t) continue;
 
-            if (t is ConditionalJobRateBoosterTitleSO jr)
+            // Job-rate modifiers are read generically via reflection and (optionally) respect a site restriction field.
+            if (TryReadFloat(t, out var v, "rateMultiplier", "jobRateMultiplier", "productionMultiplier", "jobProdMult"))
             {
-                if (jr.restrictTo == JobType.None || jr.restrictTo == site)
-                    mul *= Mathf.Max(0f, jr.rateMultiplier);
-            }
-            else if (TryReadFloat(t, out var v, "rateMultiplier", "jobRateMultiplier", "productionMultiplier", "jobProdMult"))
-            {
-                mul *= Mathf.Max(0f, v);
+                bool applies = true;
+                try
+                {
+                    // Prefer an AppliesTo(JobType) method if present.
+                    var m = t.GetType().GetMethod("AppliesTo");
+                    if (m != null)
+                    {
+                        applies = (bool)m.Invoke(t, new object[] { site });
+                    }
+                    else
+                    {
+                        // Common restriction field names used by job-related titles.
+                        var f = t.GetType().GetField("restrictTo") ?? t.GetType().GetField("targetJobSite");
+                        if (f != null && f.FieldType == typeof(JobType))
+                        {
+                            var val = (JobType)f.GetValue(t);
+                            applies = (val == JobType.None || val == site);
+                        }
+                    }
+                }
+                catch { applies = true; }
+
+                if (applies)
+                    mul *= Mathf.Max(0f, v);
             }
         }
         return Mathf.Max(0f, mul);
@@ -1007,27 +1033,58 @@ if (_flatStartRemainingTurns.TryGetValue(monsterId, out int remTurns) && remTurn
     // ─────────────────────────────────────────────────────────────────────
     public void OnBattleStart(string activeMonsterId, MonsterDataSO wild, int wildLevel)
     {
-        _turnStacks.Clear();
-        _eventStacks.Clear();
-        _eventMax.Clear();
-        _eventDecayPerTurn.Clear();
-        _flatStartUntilTurn.Clear();
-        _flatStartAmountAtk.Clear();
-        _flatStartAmountDef.Clear();
-        _flatStartAmountSpd.Clear();
-        _flatStartAmountHp.Clear();
-        _flatStartRemainingTurns.Clear();
-        _shieldRemaining.Clear();
+        // BattleManager currently calls OnBattleStart for BOTH the player combatant
+        // and the wild combatant. Previously, each call cleared per-battle state,
+        // causing the second call to overwrite the first (and breaking player-side
+        // turn-based titles like TurnBooster).
+        //
+        // Fix: clear per-battle state ONLY once per battle session, then register
+        // each combatant as a participant.
+        if (!_battleSessionActive)
+        {
+            _turnStacks.Clear();
+            _eventStacks.Clear();
+            _eventMax.Clear();
+            _eventDecayPerTurn.Clear();
+            _flatStartUntilTurn.Clear();
+            _flatStartAmountAtk.Clear();
+            _flatStartAmountDef.Clear();
+            _flatStartAmountSpd.Clear();
+            _flatStartAmountHp.Clear();
+            _flatStartRemainingTurns.Clear();
+            _shieldRemaining.Clear();
 
-        _activeBattleMonsterId = activeMonsterId;
-        _turnIndex = 0;
+            _battleParticipants.Clear();
+            _scratchParticipants.Clear();
+
+            _turnIndex = 0;
+            _battleSessionActive = true;
+        }
+
+        _activeBattleMonsterId = activeMonsterId; // legacy/diagnostics
 
         if (!string.IsNullOrEmpty(activeMonsterId))
+        {
+            _battleParticipants.Add(activeMonsterId);
             ApplyBattleStartBonuses(activeMonsterId);
+        }
     }
 
     public void OnBattleEnd(string activeMonsterId, bool victory, MonsterDataSO wild, int wildLevel)
     {
+        // BattleManager may call OnBattleEnd for multiple combatants. We only
+        // fully clear per-battle state once all registered participants have
+        // ended the battle.
+        if (!string.IsNullOrEmpty(activeMonsterId))
+            _battleParticipants.Remove(activeMonsterId);
+
+        if (_battleParticipants.Count > 0)
+        {
+            // Keep session alive for remaining combatant(s).
+            _activeBattleMonsterId = activeMonsterId;
+            return;
+        }
+
         _turnStacks.Clear();
         _eventStacks.Clear();
         _eventMax.Clear();
@@ -1039,6 +1096,10 @@ if (_flatStartRemainingTurns.TryGetValue(monsterId, out int remTurns) && remTurn
         _flatStartAmountHp.Clear();
         _flatStartRemainingTurns.Clear();
         _shieldRemaining.Clear();
+
+        _battleParticipants.Clear();
+        _scratchParticipants.Clear();
+        _battleSessionActive = false;
 
         _activeBattleMonsterId = "";
         _turnIndex = 0;
@@ -1064,24 +1125,35 @@ if (_flatStartRemainingTurns.TryGetValue(monsterId, out int remTurns) && remTurn
                 _eventStacks[id] = Mathf.Max(0, cur - decay);
         }
 
-        if (!string.IsNullOrEmpty(_activeBattleMonsterId))
+        // TurnBooster: apply stack growth to ALL battle participants that have a TurnBooster title.
+        // This ensures both player and wild combatants can use turn-based abilities.
+        if (_battleParticipants.Count <= 0) return;
+
+        // Copy keys defensively (HashSet cannot be safely iterated if mutated by other calls).
+        _scratchParticipants.Clear();
+        foreach (var id in _battleParticipants)
+            _scratchParticipants.Add(id);
+
+        for (int i = 0; i < _scratchParticipants.Count; i++)
         {
-            var def = MonsterLibraryLocator.GetById(_activeBattleMonsterId);
-            int lvl = GetLevelOr1(_activeBattleMonsterId);
-            var tb = GetFirstTitle<TurnBoosterTitleSO>(_activeBattleMonsterId, def, lvl);
+            var id = _scratchParticipants[i];
+            if (string.IsNullOrEmpty(id)) continue;
 
-            if (tb != null)
-            {
-                _turnStacks.TryGetValue(_activeBattleMonsterId, out int cur);
-                int next = Mathf.Min(cur + 1, Mathf.Max(1, tb.maxStacks));
-                _turnStacks[_activeBattleMonsterId] = next;
+            var def = MonsterLibraryLocator.GetById(id);
+            int lvl = GetLevelOr1(id);
+            var tb = GetFirstTitle<TurnBoosterTitleSO>(id, def, lvl);
+            if (tb == null) continue;
 
-                BattleLogger.LogTitleActivation(
-                    ownerName: def != null ? def.displayName : _activeBattleMonsterId,
-                    titleName: string.IsNullOrEmpty(tb.displayName) ? tb.titleId : tb.displayName,
-                    summary: $"+1 stack ({next}/{tb.maxStacks})"
-                );
-            }
+            _turnStacks.TryGetValue(id, out int cur);
+            int max = Mathf.Max(1, tb.maxStacks);
+            int next = Mathf.Min(cur + 1, max);
+            _turnStacks[id] = next;
+
+            BattleLogger.LogTitleActivation(
+                ownerName: def != null ? def.displayName : id,
+                titleName: string.IsNullOrEmpty(tb.displayName) ? tb.titleId : tb.displayName,
+                summary: $"+1 stack ({next}/{max})"
+            );
         }
     }
 
@@ -1839,4 +1911,21 @@ if (_flatStartRemainingTurns.TryGetValue(monsterId, out int remTurns) && remTurn
     public void OnMonsterLeveled(string monsterId, int newLevel) { }
     public void OnMonsterCaptured(string monsterId, MonsterType type, int level, bool isShiny) { }
     public void OnMonsterEvolved(string newMonsterId) { }
+
+
+    // ─────────────────────────────────────────────────────────────────────
+    // Debug / UI helpers (used by TitlesAdapter in dev builds)
+    // ─────────────────────────────────────────────────────────────────────
+    public string ActiveBattleMonsterId => _activeBattleMonsterId;
+    public int CurrentTurnIndex => _turnIndex;
+
+    /// <summary>
+    /// Returns current TurnBooster stacks for a combatant id (0 if none).
+    /// </summary>
+    public int Debug_GetTurnBoosterStacks(string combatantId)
+    {
+        if (string.IsNullOrEmpty(combatantId)) return 0;
+        return _turnStacks.TryGetValue(combatantId, out int v) ? v : 0;
+    }
+
 }
