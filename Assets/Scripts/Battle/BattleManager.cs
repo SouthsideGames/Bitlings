@@ -38,6 +38,19 @@ public partial class BattleManager : MonoBehaviour
     private enum PlayerAction { None, Attack, Defend, Focus, Swap, Run }
     private enum EnemyAction { Attack, Defend, Focus, Run }
 
+    // Wild combatants must use a synthetic combat id (e.g., "WILD::<...>") so they
+    // never collide with a real owned monsterId like "M-039".
+    // If they collide, the TitleManager will treat the wild as the player's monster
+    // and incorrectly apply the player's equipped titles to the wild.
+    private static int _wildCombatSerial = 0;
+
+    private string BuildFallbackWildCombatId(MonsterDataSO def)
+    {
+        _wildCombatSerial++;
+        string baseId = (def != null && !string.IsNullOrEmpty(def.id)) ? def.id : "UNKNOWN";
+        return $"WILD::{baseId}::{_wildCombatSerial}";
+    }
+
 
     // ─────────────────────────────────────────────────────────
     // Battle Events (logic emits, UI/FX consumes)
@@ -331,6 +344,26 @@ private void EnsureBattleRngInitialized()
     public float GetWildMaxHP()
     {
         return wildMaxHP;
+    }
+
+    // Read-only UI helpers (shield pools)
+    // NOTE: Title battle-start shields should be displayed as (+X) shield, but should NOT change the HP number.
+    public int GetActivePlayerShieldTotal()
+    {
+        int s = 0;
+        if (shieldHP != null && activeIndex >= 0 && activeIndex < shieldHP.Length)
+            s += Mathf.RoundToInt(Mathf.Max(0f, shieldHP[activeIndex]));
+        if (titleShieldHP != null && activeIndex >= 0 && activeIndex < titleShieldHP.Length)
+            s += Mathf.RoundToInt(Mathf.Max(0f, titleShieldHP[activeIndex]));
+        return Mathf.Max(0, s);
+    }
+
+    public int GetWildShieldTotal()
+    {
+        int s = 0;
+        s += Mathf.RoundToInt(Mathf.Max(0f, wildShieldHP));
+        s += Mathf.RoundToInt(Mathf.Max(0f, wildTitleShieldHP));
+        return Mathf.Max(0, s);
     }
 
     private Action<BattleResult> onEnd;
@@ -759,8 +792,11 @@ private IEnumerator MaybeSayKO_Wild(string victimName, float preHP, float postHP
         // Wild
         try
         {
-            if (string.IsNullOrEmpty(_wildCombatIdForTitles))
-                _wildCombatIdForTitles = (EncounterManager.I != null) ? EncounterManager.I.WildCombatId : "WILD";
+            if (string.IsNullOrEmpty(_wildCombatIdForTitles) || !_wildCombatIdForTitles.StartsWith("WILD::", StringComparison.OrdinalIgnoreCase))
+                _wildCombatIdForTitles = (EncounterManager.I != null) ? EncounterManager.I.WildCombatId : null;
+
+            if (string.IsNullOrEmpty(_wildCombatIdForTitles) || !_wildCombatIdForTitles.StartsWith("WILD::", StringComparison.OrdinalIgnoreCase))
+                _wildCombatIdForTitles = BuildFallbackWildCombatId(wildDef);
 
             if (!string.IsNullOrEmpty(_wildCombatIdForTitles))
             {
@@ -815,7 +851,10 @@ public void BeginBattle(MonsterDataSO wild, int level, Action<BattleResult> onEn
         wildLevel = Mathf.Max(1, level);
 
         // Titles routing id for wild (stable across battle)
-        _wildCombatIdForTitles = (EncounterManager.I != null) ? EncounterManager.I.WildCombatId : "WILD";
+        // IMPORTANT: must be synthetic (WILD::<...>) so it never collides with a real monster id.
+        _wildCombatIdForTitles = (EncounterManager.I != null) ? EncounterManager.I.WildCombatId : null;
+        if (string.IsNullOrEmpty(_wildCombatIdForTitles) || !_wildCombatIdForTitles.StartsWith("WILD::", StringComparison.OrdinalIgnoreCase))
+            _wildCombatIdForTitles = BuildFallbackWildCombatId(wildDef);
 
         float wHpBase = BattleCalc.CalcHP(wildDef, wildLevel);
         float wAtkBase = BattleCalc.CalcBaseAttack(wildDef, wildLevel, 0, 0);
@@ -1239,8 +1278,26 @@ public void BeginBattle(MonsterDataSO wild, int level, Action<BattleResult> onEn
 
         SetPostBattleWinnerVisible(victory, escaped);
 
-        if (teamIds != null && activeIndex >= 0 && activeIndex < teamIds.Length)
-            TitlesAdapter.OnBattleEnd(teamIds[activeIndex], victory, wildDef, wildLevel);
+        // Titles: make sure BOTH combatants end the session so per-battle stacks/buffs reset.
+        // TitleManager registers multiple participants (player + wild) on battle start.
+        // If we only call OnBattleEnd for the player, the wild participant remains registered
+        // and the session never fully clears.
+        try
+        {
+            if (teamIds != null && activeIndex >= 0 && activeIndex < teamIds.Length)
+            {
+                string ownedId = teamIds[activeIndex];
+                if (!string.IsNullOrEmpty(ownedId))
+                    TitlesAdapter.OnBattleEnd(ownedId, victory, wildDef, wildLevel);
+            }
+
+            if (!string.IsNullOrEmpty(_wildCombatIdForTitles))
+                TitlesAdapter.OnBattleEnd(_wildCombatIdForTitles, victory, wildDef, wildLevel);
+        }
+        catch (Exception ex)
+        {
+            BattleLogger.Log($"[Titles] OnBattleEnd exception: {ex.Message}", LogScope.Battle);
+        }
 
         onEnd?.Invoke(result);
         GameEvents.BattleFinished?.Invoke(result);
@@ -1676,7 +1733,8 @@ private int GetAlliesAliveNotIncludingActive()
             selfHp01 = hp01,
             alliesAlive = 0,
             winStreak = 0,
-            isBattle = true
+            isBattle = true,
+            ownedId = _wildCombatIdForTitles
         };
     }
 
@@ -1685,6 +1743,19 @@ private int GetAlliesAliveNotIncludingActive()
         if (!wildDef) return;
         if (string.IsNullOrEmpty(_wildCombatIdForTitles)) return;
 
+        // Preferred path: use centralized stat pipeline so wild titles affect ALL stats consistently.
+        // This also ensures conditional titles that depend on HP% evaluate against the effective max HP.
+        if (_stats != null)
+        {
+            // Max HP can change from titles/conditionals; preserve HP%.
+            SyncEffectiveMaxHPFromStats();
+
+            // Keep legacy fields in sync for older code paths that still read them.
+            wildAttackPerTurn = Mathf.Max(1f, _stats.GetEffectiveWild().atk);
+            return;
+        }
+
+        // Fallback: legacy title evaluation (HP/ATK only). Kept for safety when _stats is unavailable.
         float prevMax = Mathf.Max(1f, wildMaxHP);
         float hp01 = prevMax > 0.01f ? Mathf.Clamp01(wildHP / prevMax) : 0f;
 

@@ -655,13 +655,22 @@ if (feedback)
         }
         playerCrit = Mathf.Clamp01(playerCrit);
 
+        // IMPORTANT: pass the wild combatant id so wild Titles participate in damage filters,
+        // effectiveness modifiers, and defender-side defenses.
+        int wildDefForResolve = 0;
+        if (_stats != null)
+            wildDefForResolve = Mathf.Max(0, _stats.GetEffectiveWild().def);
+        else
+            wildDefForResolve = Mathf.Max(0, BattleCalc.CalcDefense(wildDef, wildLevel));
+
         var dr = BattleCalc.ResolveHit(
             teamIds[activeIndex], teamDefs[activeIndex], teamLevels[activeIndex],
-            null, wildDef, wildLevel,
+            _wildCombatIdForTitles, wildDef, wildLevel,
             atkForResolve,
             playerCrit,
             critMultiplier,
-            0
+            defenderFlatDefenseBonus: 0,
+            defenderEffectiveDefenseStat: wildDefForResolve
         );
 
         TitlesAdapter.OnAttackLanded(teamIds[activeIndex], dr.crit);
@@ -724,6 +733,11 @@ if (feedback)
             }
 }
 
+        // Capture the incoming damage amount AFTER guard reduction but BEFORE shields.
+        // TitlesAdapter.OnHitTaken expects a pre-shield damage amount so BattleStartShield consumption
+        // remains in sync between BattleManager and TitleManager.
+        int dmg_incoming_wild = dmgToApply;
+
         float absorbedByWildShield = 0f;
 
         float absorbedByWildTitleShield = 0f;
@@ -764,6 +778,11 @@ if (feedback)
         wildHP = Mathf.Max(0f, wildHP - dmgToApply);
         _totalDamageDealtThisBattle += Mathf.Max(0, dmgToApply);
         PushHPBars();
+
+        // Titles: defender hit hooks for wild (e.g., EventStacks, defensive triggers)
+        // Use the pre-shield damage amount so BattleStartShieldTitle consumption is correct.
+        if (!string.IsNullOrEmpty(_wildCombatIdForTitles) && dmg_incoming_wild > 0)
+            TitlesAdapter.OnHitTaken(_wildCombatIdForTitles, dmg_incoming_wild, dr.crit);
 
         // Wild conditional titles (e.g., Clutch Booster) depend on current HP.
         // Recompute wild effective stats after HP changes and refresh the UI so stat numbers/colors update.
@@ -960,12 +979,16 @@ if (feedback)
             GetProgressionTotalsForIndex(activeIndex, out _, out _, out defenderEffectiveDefenseStat, out _, out _);
 
         var dr = BattleCalc.ResolveHit(
-            null, wildDef, wildLevel,
+            _wildCombatIdForTitles, wildDef, wildLevel,
             teamIds[activeIndex], teamDefs[activeIndex], teamLevels[activeIndex],
             enemyAtk, wildCritChance, critMultiplier,
             defenderFlatDefenseBonus: 0,
             defenderEffectiveDefenseStat: defenderEffectiveDefenseStat
         );
+
+        // Titles: attacker hit hooks for wild
+        if (!string.IsNullOrEmpty(_wildCombatIdForTitles))
+            TitlesAdapter.OnAttackLanded(_wildCombatIdForTitles, dr.crit);
 
 
         if (wildChargedNextAttack && chargeBonusPct > 0f)

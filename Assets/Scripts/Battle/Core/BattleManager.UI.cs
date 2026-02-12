@@ -105,7 +105,12 @@ public partial class BattleManager : MonoBehaviour
         float wildMax = Mathf.Max(1f, wildMaxHP);
         float wildCur = Mathf.Clamp(wildHP, 0f, wildMax);
 
-        // ---------- SHIELD (Player) ----------
+                // ---------- SHIELD (Player) ----------
+        // Visible shield indicator should reflect BOTH:
+        //   1) regular shields (Defend/job/guard shields) and
+        //   2) BattleStartShieldTitle (title shield buffer)
+        // IMPORTANT UX: Title shield should NOT change the HP number itself (it absorbs damage first),
+        // but it SHOULD remain visible as (+X) until depleted.
         int pShield = 0;
         if (shieldHP != null && activeIndex >= 0 && activeIndex < shieldHP.Length)
             pShield += Mathf.RoundToInt(shieldHP[activeIndex]);
@@ -114,21 +119,10 @@ public partial class BattleManager : MonoBehaviour
         pShield = Mathf.Max(0, pShield);
 
         // ---------- SHIELD (Wild) ----------
-        // Supports BOTH:
-        //  - existing wild shield (if you have wildShieldHP float)
-        //  - future wild title shield (if you later add wildTitleShieldHP float)
         int wShield = 0;
-
-        // If you have a float wildShieldHP in BattleManager, this will compile.
-        // If you DON'T, delete this block.
         try { wShield += Mathf.RoundToInt(Mathf.Max(0f, wildShieldHP)); } catch { /* ignored */ }
-
-        // If you have a float wildTitleShieldHP in BattleManager, this will compile.
-        // If you DON'T, delete this block.
         try { wShield += Mathf.RoundToInt(Mathf.Max(0f, wildTitleShieldHP)); } catch { /* ignored */ }
-
         wShield = Mathf.Max(0, wShield);
-
         if (feedback != null && feedback.HasHPTextWired)
         {
             feedback.SetHPTexts(

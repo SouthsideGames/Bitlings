@@ -32,6 +32,8 @@ public sealed class TitleManager : MonoBehaviour
     private readonly Dictionary<string, int> _eventStacks = new();          // grows on triggers (EventStacks)
     private readonly Dictionary<string, int> _eventMax = new();             // cache max for UI/debug (optional)
     private readonly Dictionary<string, int> _eventDecayPerTurn = new();    // how many stacks to decay each turn
+    private readonly Dictionary<string, List<int>> _eventStackGainedTurns = new(); // per-stack gained turn index (for 1-turn grace decay)
+    private readonly Dictionary<string, bool> _eventCooldownActive = new(); // true once max reached; blocks gains until stacks return to 0
     private readonly List<string> _scratchEventKeys = new List<string>(16);
     private readonly Dictionary<string, int> _flatStartUntilTurn = new();   // inclusive last turn index where flat buff applies
     private readonly Dictionary<string, int> _flatStartAmountAtk = new();   // flat ATK from BattleStartFlatTitleSO
@@ -1046,6 +1048,8 @@ if (_flatStartRemainingTurns.TryGetValue(monsterId, out int remTurns) && remTurn
             _eventStacks.Clear();
             _eventMax.Clear();
             _eventDecayPerTurn.Clear();
+            _eventStackGainedTurns.Clear();
+        _eventCooldownActive.Clear();
             _flatStartUntilTurn.Clear();
             _flatStartAmountAtk.Clear();
             _flatStartAmountDef.Clear();
@@ -1089,6 +1093,7 @@ if (_flatStartRemainingTurns.TryGetValue(monsterId, out int remTurns) && remTurn
         _eventStacks.Clear();
         _eventMax.Clear();
         _eventDecayPerTurn.Clear();
+        _eventStackGainedTurns.Clear();
         _flatStartUntilTurn.Clear();
         _flatStartAmountAtk.Clear();
         _flatStartAmountDef.Clear();
@@ -1110,7 +1115,7 @@ if (_flatStartRemainingTurns.TryGetValue(monsterId, out int remTurns) && remTurn
     {
         _turnIndex = Mathf.Max(0, turnIndex);
 
-        // decay event stacks (no allocations)
+        // decay event stacks (1-turn grace: stacks gained this turn do not decay on the very next turn advance)
         _scratchEventKeys.Clear();
         foreach (var kv in _eventStacks)
             _scratchEventKeys.Add(kv.Key);
@@ -1118,11 +1123,65 @@ if (_flatStartRemainingTurns.TryGetValue(monsterId, out int remTurns) && remTurn
         for (int i = 0; i < _scratchEventKeys.Count; i++)
         {
             var id = _scratchEventKeys[i];
-            if (!_eventStacks.TryGetValue(id, out var cur)) continue;
+
+            if (!_eventStacks.TryGetValue(id, out var cur) || cur <= 0) continue;
+
+            if (!_eventCooldownActive.TryGetValue(id, out bool coolingDown) || !coolingDown)
+                continue; // No decay until max has been reached (cooldown phase)
+
 
             int decay = _eventDecayPerTurn.TryGetValue(id, out var d) ? d : 0;
-            if (decay > 0)
-                _eventStacks[id] = Mathf.Max(0, cur - decay);
+            if (decay <= 0) continue;
+
+            // If we have per-stack gained-turn data, decay only stacks that are at least 1 full turn old.
+            if (_eventStackGainedTurns.TryGetValue(id, out var gainedTurns) && gainedTurns != null && gainedTurns.Count > 0)
+            {
+                // Defensive sync (in case max changed or older data existed)
+                if (gainedTurns.Count != cur)
+                {
+                    // If counts disagree, rebuild as "old" stacks so decay remains sane.
+                    gainedTurns.Clear();
+                    for (int s = 0; s < cur; s++)
+                        gainedTurns.Add(_turnIndex - 2);
+                }
+
+                int removedStacks = 0;
+                // remove oldest eligible stacks first
+                for (int s = 0; s < gainedTurns.Count && removedStacks < decay; )
+                {
+                    // eligible only if gained at least 1 full turn ago
+                    if (gainedTurns[s] <= (_turnIndex - 2))
+                    {
+                        gainedTurns.RemoveAt(s);
+                        removedStacks++;
+                        continue;
+                    }
+                    s++;
+                }
+
+                _eventStacks[id] = gainedTurns.Count;
+                if (removedStacks > 0)
+                {
+                    int maxStacksValue = _eventMax.TryGetValue(id, out var mx) ? mx : Mathf.Max(gainedTurns.Count, 1);
+                    LogEventStackDecay(id, removedStacks, gainedTurns.Count, maxStacksValue);
+                }
+                continue;
+            }
+
+            // Fallback: old behavior (no grace) if gained-turn list doesn't exist for this id.
+            int beforeStacks = cur;
+            int afterStacks = Mathf.Max(0, cur - decay);
+            _eventStacks[id] = afterStacks;
+
+            int removedStacksFallback = beforeStacks - afterStacks;
+            if (removedStacksFallback > 0)
+            {
+                int maxStacksValue = _eventMax.TryGetValue(id, out var mx) ? mx : Mathf.Max(afterStacks, 1);
+                LogEventStackDecay(id, removedStacksFallback, afterStacks, maxStacksValue);
+
+                if (afterStacks <= 0)
+                    _eventCooldownActive[id] = false;
+            }
         }
 
         // TurnBooster: apply stack growth to ALL battle participants that have a TurnBooster title.
@@ -1155,6 +1214,30 @@ if (_flatStartRemainingTurns.TryGetValue(monsterId, out int remTurns) && remTurn
                 summary: $"+1 stack ({next}/{max})"
             );
         }
+    }
+
+    // ─────────────────────────────────────────────────────────────────────
+    // Battle logging helpers
+    // ─────────────────────────────────────────────────────────────────────
+    private void LogEventStackDecay(string combatantId, int removedStacks, int newStacks, int maxStacksValue)
+    {
+        if (removedStacks <= 0) return;
+
+        // Owner label: wild combatants use a dedicated id prefix in this project.
+        string ownerLabel = (!string.IsNullOrEmpty(combatantId) && combatantId.StartsWith("WILD", StringComparison.OrdinalIgnoreCase))
+            ? "Wild"
+            : "Player";
+
+        // Title name: resolve the active EventStacks title equipped on this combatant.
+        var def = MonsterLibraryLocator.GetById(combatantId);
+        int lvl = GetLevelOr1(combatantId);
+        var eso = GetFirstTitle<EventStacksTitleSO>(combatantId, def, lvl);
+        string titleName = (eso != null && !string.IsNullOrEmpty(eso.displayName))
+            ? eso.displayName
+            : (eso != null ? eso.titleId : "Event Stacks");
+
+        string msg = $"{ownerLabel} - {titleName} stacks decayed: -{removedStacks} ({newStacks}/{maxStacksValue})";
+        BattleLogger.Log(msg);
     }
 
     /// owner’s turns (not global rounds).
@@ -1324,12 +1407,57 @@ if (_flatStartRemainingTurns.TryGetValue(monsterId, out int remTurns) && remTurn
 
     private void BumpEventStacks(string id, int maxStacks, int decayPerTurn)
     {
+        if (string.IsNullOrEmpty(id)) return;
+
+        maxStacks = Mathf.Max(1, maxStacks);
+        decayPerTurn = Mathf.Max(0, decayPerTurn);
+
+        // If we've entered cooldown (max reached), we do NOT gain stacks again until stacks return to 0.
+        if (_eventCooldownActive.TryGetValue(id, out bool coolingDown) && coolingDown)
+            return;
+
+        // Maintain a per-stack gained-turn list so decay has a 1-turn grace period.
+        if (!_eventStackGainedTurns.TryGetValue(id, out var gainedTurns) || gainedTurns == null)
+        {
+            gainedTurns = new List<int>(maxStacks);
+            _eventStackGainedTurns[id] = gainedTurns;
+        }
+
+        // Defensive sync: if legacy _eventStacks count exists without gainedTurns, backfill as "old" stacks.
         _eventStacks.TryGetValue(id, out int cur);
-        int next = Mathf.Min(cur + 1, maxStacks);
+        if (cur > 0 && gainedTurns.Count != cur)
+        {
+            gainedTurns.Clear();
+            for (int s = 0; s < cur; s++)
+                gainedTurns.Add(_turnIndex - 2); // old enough to decay
+        }
+
+        // Add one stack (gained this turn index)
+        if (gainedTurns.Count < maxStacks)
+            gainedTurns.Add(_turnIndex);
+        else
+        {
+            // At cap: refresh the most recent stack's timestamp (keeps cap behavior consistent, avoids overgrowth).
+            // This also prevents "dead" stacks from instantly decaying if player keeps triggering.
+            gainedTurns[gainedTurns.Count - 1] = _turnIndex;
+        }
+
+        // Enforce cap (in case cap changed downward)
+        while (gainedTurns.Count > maxStacks)
+            gainedTurns.RemoveAt(0);
+
+        int next = gainedTurns.Count;
 
         _eventStacks[id] = next;
         _eventMax[id] = maxStacks;
-        _eventDecayPerTurn[id] = Mathf.Max(0, decayPerTurn);
+        _eventDecayPerTurn[id] = decayPerTurn;
+
+
+        // Enter cooldown once we reach max. While cooling down, triggers will not add stacks.
+        if (next >= maxStacks)
+            _eventCooldownActive[id] = true;
+        else
+            _eventCooldownActive[id] = false;
 
         var def = MonsterLibraryLocator.GetById(id);
         int lvl = GetLevelOr1(id);
@@ -1937,5 +2065,7 @@ if (_flatStartRemainingTurns.TryGetValue(monsterId, out int remTurns) && remTurn
         if (string.IsNullOrEmpty(combatantId)) return 0;
         return _turnStacks.TryGetValue(combatantId, out int v) ? v : 0;
     }
+
+    
 
 }
