@@ -555,7 +555,7 @@ public class MonsterDetailPanelUI : MonoBehaviour
 
         ResolveVariantState(current ? current.id : null, _currentOwned);
         SetupShinyVariantUI();
-        UpdateShinyVariantToggleLabel(); // ✅
+        UpdateShinyVariantToggleLabel();
         SafeOpen(current);
     }
 
@@ -579,7 +579,7 @@ public class MonsterDetailPanelUI : MonoBehaviour
         _statsOwned = _preferredOwned;
         _viewShinyCosmetic = _codexViewingShiny;
         SetupShinyVariantUI();
-        UpdateShinyVariantToggleLabel(); // ✅
+        UpdateShinyVariantToggleLabel(); 
         SafeOpen(monster);
     }
 
@@ -607,7 +607,7 @@ public class MonsterDetailPanelUI : MonoBehaviour
 
         ResolveVariantState(monster ? monster.id : null);
         SetupShinyVariantUI();
-        UpdateShinyVariantToggleLabel(); // ✅
+        UpdateShinyVariantToggleLabel();
         SafeOpen(monster);
     }
 
@@ -730,7 +730,7 @@ public class MonsterDetailPanelUI : MonoBehaviour
         if (!show)
             return;
 
-        UpdateShinyVariantToggleLabel(); // ✅ always correct label based on active view
+        UpdateShinyVariantToggleLabel(); 
     }
 
     private void ToggleCodexShinyVariant()
@@ -738,7 +738,6 @@ public class MonsterDetailPanelUI : MonoBehaviour
         if (current == null || string.IsNullOrEmpty(current.id))
             return;
 
-        // Requires that the player owns both cosmetic variants.
         if (!MonsterVariantPreference.PlayerHasBothVariants(current.id, out var shiny, out var non))
             return;
 
@@ -747,7 +746,6 @@ public class MonsterDetailPanelUI : MonoBehaviour
 
         bool viewingShiny = IsViewingShinyNow();
 
-        // Flip cosmetic only (stats source must remain stable).
         var next = viewingShiny ? non : shiny;
         var other = viewingShiny ? shiny : non;
 
@@ -760,18 +758,13 @@ public class MonsterDetailPanelUI : MonoBehaviour
 
         _viewShinyCosmetic = !_viewShinyCosmetic;
 
-        // Persist cosmetic preference so JobAssign / other UIs can match what the player last selected.
         if (next != null && !string.IsNullOrEmpty(next.ownedUID))
             MonsterVariantPreference.SetPreferred(current.id, next.ownedUID);
-
-        // IMPORTANT: do NOT swap _currentOwned / _statsOwned here.
-        // Shiny is cosmetic-only; the currently viewed instance remains the stats source.
 
         SetupShinyVariantUI();
         UpdateShinyVariantToggleLabel();
         SafeOpen(current);
 
-        // Codex toggling can affect multiple views; keep the existing refresh calls there.
         if (_mode != MonsterDetailMode.AssignToTeam)
         {
             GameEvents.OnTeamChanged?.Invoke();
@@ -788,7 +781,7 @@ public class MonsterDetailPanelUI : MonoBehaviour
 
         bool shiny = (_mode == MonsterDetailMode.AssignToTeam || _mode == MonsterDetailMode.CodexView) ? _viewShinyCosmetic : false;
 
-if (shiny && monster.shinyIcon != null)
+        if (shiny && monster.shinyIcon != null)
             return monster.shinyIcon;
 
         return monster.icon;
@@ -802,7 +795,7 @@ if (shiny && monster.shinyIcon != null)
 
         bool shiny = (_mode == MonsterDetailMode.AssignToTeam || _mode == MonsterDetailMode.CodexView) ? _viewShinyCosmetic : false;
 
-if (!shiny)
+        if (!shiny)
             return baseName;
 
         return $"{baseName} <color=#FFD54F>(Shiny)</color>";
@@ -851,7 +844,7 @@ if (!shiny)
 
                     typeText.color = Color.white;
                     typeText.richText = true;
-                    typeText.text = $"<color=#FFFFFF>TYPE:</color> <color=#{typeHex}>{typeName}</color>";
+                    typeText.text = $"<color=#{typeHex}>{typeName}</color>";
                 }
 
                 if (rarityText)
