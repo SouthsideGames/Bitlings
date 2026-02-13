@@ -507,13 +507,27 @@ private void UpdateWildInfoUI()
         var def = teamDefs[activeIndex];
         var lvl = teamLevels[activeIndex];
 
-        // Shiny-aware display (team entries carry isShiny/shinyTier)
+        // Shiny-aware display
+        // IMPORTANT: the player can set a preferred variant (shiny/non-shiny) without changing the team list.
+        // Battle UI should reflect that preference.
         bool isShiny = false;
-        var data = SaveManager.Data;
-        if (data != null && data.team != null && activeIndex >= 0 && activeIndex < data.team.Count)
+
+        if (def != null && !string.IsNullOrEmpty(def.id))
         {
-            var om = data.team[activeIndex];
-            isShiny = om != null && (om.isShiny || om.shinyTier > 0);
+            var pref = MonsterVariantPreference.GetPreferredOwned(def.id);
+            if (pref != null)
+            {
+                isShiny = pref.isShiny || pref.shinyTier > 0;
+            }
+            else
+            {
+                var data = SaveManager.Data;
+                if (data != null && data.team != null && activeIndex >= 0 && activeIndex < data.team.Count)
+                {
+                    var om = data.team[activeIndex];
+                    isShiny = om != null && (om.isShiny || om.shinyTier > 0);
+                }
+            }
         }
 
         if (playerIcon)

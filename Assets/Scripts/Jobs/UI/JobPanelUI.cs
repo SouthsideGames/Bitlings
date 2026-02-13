@@ -182,14 +182,12 @@ public class JobPanelUI : MonoBehaviour
                 WorkerRef worker = (i < s.workers.Count) ? s.workers[i] : null;
                 if (worker != null && worker.def != null)
                 {
-                    // ✅ FIX: use shiny-aware icon
+                    // ✅ FIX: use shiny-aware resolver + ensure the SLOT uses MonsterDataSO.shinyIcon (front)
                     bool shiny = ResolveWorkerShiny(worker);
 
-                    Sprite spr = MonsterNameFormatter.GetIcon(worker.def, shiny, backIcon: false);
-                    if (spr == null) spr = worker.def.icon;
-                    if (spr == null) spr = emptySlotSprite;
-
-                    ui.SetWorker(spr, filledSlotColor);
+                    // IMPORTANT: Don't pass raw Sprite here (it can be stomped by other callers / refresh paths).
+                    // Let JobSlotUI resolve from def + shiny so it always uses def.icon / def.shinyIcon (front).
+                    ui.SetWorker(worker.def, shiny, filledSlotColor);
                 }
                 else
                 {
@@ -340,19 +338,10 @@ public class JobPanelUI : MonoBehaviour
     {
         if (w == null) return false;
 
-        var ownedId = w.monsterId;
-        if (!string.IsNullOrEmpty(ownedId))
-        {
-            var ownedList = SaveManager.Data?.owned;
-            if (ownedList != null)
-            {
-                for (int i = 0; i < ownedList.Count; i++)
-                {
-                    var om = ownedList[i];
-                    if (om != null && om.monsterId == ownedId) return om.isShiny;
-                }
-            }
-        }
+        // Prefer ownedUID (exact owned instance) and support legacy monsterId-as-uid.
+        var owned = ShinySystems.ResolveOwned(w);
+        if (owned != null)
+            return (owned.isShiny || owned.shinyTier > 0);
 
         var def = w.def;
         if (!def) return false;
@@ -387,34 +376,12 @@ public class JobPanelUI : MonoBehaviour
                 return om.isShiny || om.shinyTier > 0;
         }
 
-        // 3) Fallback by monsterId (less precise if multiple copies exist, but better than always normal).
+        // 3) Fallback by species id.
+        // IMPORTANT: If multiple copies exist (shiny + non-shiny), we must respect the user's saved preference,
+        // not "any shiny exists".
         string id = w.monsterId;
         if (!string.IsNullOrEmpty(id))
-        {
-            var ownedList = SaveManager.Data?.owned;
-            if (ownedList != null)
-            {
-                for (int i = 0; i < ownedList.Count; i++)
-                {
-                    var om = ownedList[i];
-                    if (om == null) continue;
-                    if (!string.Equals(om.monsterId, id, StringComparison.Ordinal)) continue;
-                    if (om.isShiny || om.shinyTier > 0) return true;
-                }
-            }
-
-            var team = SaveManager.Data?.team;
-            if (team != null)
-            {
-                for (int i = 0; i < team.Count; i++)
-                {
-                    var om = team[i];
-                    if (om == null) continue;
-                    if (!string.Equals(om.monsterId, id, StringComparison.Ordinal)) continue;
-                    if (om.isShiny || om.shinyTier > 0) return true;
-                }
-            }
-        }
+            return MonsterVariantPreference.IsPreferredShiny(id);
 
         return false;
     }

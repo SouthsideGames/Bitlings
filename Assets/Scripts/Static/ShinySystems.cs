@@ -5,37 +5,35 @@ using UnityEngine;
 public static class ShinySystems
 {
     // ---------- Tuning ----------
-    public const float JobAuraSlot1Min = 0.03f;   // +3%
-    public const float JobAuraSlot1Max = 0.05f;   // +5%
-    public const float JobAuraCap      = 0.10f;   // up to +10% per site
+    public const float JobAuraSlot1Min = 0.03f;   
+    public const float JobAuraSlot1Max = 0.05f;   
+    public const float JobAuraCap      = 0.10f;  
 
-    public const float TrainingSpark   = 0.05f;   // +5% training XP (self only)
+    public const float TrainingSpark   = 0.05f;  
 
-    public const float SanctumPerShiny = 0.03f;   // -3% time each shiny present
-    public const float SanctumCap      = 0.10f;   // cap -10%
+    public const float SanctumPerShiny = 0.03f;   
+    public const float SanctumCap      = 0.10f;  
 
-    public const int   SynergyEveryN   = 5;       // +1% pickup range per 5 shinies
-    public const float SynergyStep     = 0.01f;   // +1% each step
-    public const float SynergyCap      = 0.05f;   // up to +5%
+    public const int   SynergyEveryN   = 5;     
+    public const float SynergyStep     = 0.01f;   
+    public const float SynergyCap      = 0.05f;   
 
-    public const float LeadCaptureBonus = 0.01f;  // +1% capture chance if lead shiny
+    public const float LeadCaptureBonus = 0.01f;  
 
-    // ---------- Resolve helpers ----------
-    // Try to find the exact OwnedMonsterData used for a job WorkerRef.
-    // Priority:
-    //  1) If WorkerRef.monsterId looks like a UID, match ownedUID exactly.
-    //  2) Otherwise, if it matches a species id (def.id), and there is exactly ONE owned copy of that species, use that.
-    //  3) Otherwise, return null (cannot safely infer shiny).
     public static OwnedMonsterData ResolveOwned(WorkerRef w)
     {
         if (w == null) return null;
         var data = SaveManager.Data;
         if (data == null) return null;
 
-        string token = w.monsterId; // may be ownedUID OR species id
+        // 1) Prefer explicit ownedUID
+        string uid = w.ownedUID;
+
+        string token = !string.IsNullOrEmpty(uid) ? uid : w.monsterId;
+        if (string.IsNullOrEmpty(token))
+            token = w.monsterId;
         if (string.IsNullOrEmpty(token)) return null;
 
-        // 1) Try ownedUID
         var list = data.owned;
         if (list != null)
         {
@@ -47,7 +45,6 @@ public static class ShinySystems
             }
         }
 
-        // 2) Try "only copy of species"
         OwnedMonsterData found = null;
         int count = 0;
         if (list != null)

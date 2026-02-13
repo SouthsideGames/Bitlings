@@ -181,7 +181,21 @@ public class TeamMonsterCardUI : MonoBehaviour
     // ----------------------------------------------------------
     public void RefreshVisuals()
     {
-        bool isShiny = (_data != null) && (_data.isShiny || _data.shinyTier > 0);
+        bool isShiny = false;
+
+        // Cosmetic-only: prefer the saved variant preference for this monsterId when available.
+        if (_def != null && !string.IsNullOrEmpty(_def.id))
+        {
+            var pref = MonsterVariantPreference.GetPreferredOwned(_def.id);
+            if (pref != null)
+                isShiny = pref.isShiny || pref.shinyTier > 0;
+            else if (_data != null)
+                isShiny = _data.isShiny || _data.shinyTier > 0;
+        }
+        else if (_data != null)
+        {
+            isShiny = _data.isShiny || _data.shinyTier > 0;
+        }
 
         if (img)
         {

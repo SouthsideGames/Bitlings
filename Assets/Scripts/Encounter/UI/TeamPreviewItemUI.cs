@@ -111,7 +111,13 @@ public class TeamPreviewItemUI : MonoBehaviour
                 {
                     if (def != null)
                     {
-                        var s = MonsterNameFormatter.GetIcon(def, om.isShiny, backIcon: false);
+                        bool preferShiny = false;
+                        if (def != null && !string.IsNullOrEmpty(def.id))
+                            preferShiny = MonsterVariantPreference.IsPreferredShiny(def.id);
+                        else
+                            preferShiny = om != null && (om.isShiny || om.shinyTier > 0);
+
+                        var s = MonsterNameFormatter.GetIcon(def, preferShiny, backIcon: false);
                         icon.enabled = s != null;
                         icon.sprite = s;
                         icon.color = Color.white;

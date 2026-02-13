@@ -512,11 +512,13 @@ public class MonsterDetailPanelUI : MonoBehaviour
 
         
         _statsOwned = _currentOwned;
-        _viewShinyCosmetic = _currentOwned.isShiny || _currentOwned.shinyTier > 0;
 
-        
-
-        current = MonsterLibraryLocator.GetById(_currentOwned.monsterId);
+        // Cosmetic-only: use global preferred variant if set, otherwise fall back to this instance.
+        var prefCos = MonsterVariantPreference.GetPreferredOwned(_currentOwned.monsterId);
+        _viewShinyCosmetic = (prefCos != null)
+            ? (prefCos.isShiny || prefCos.shinyTier > 0)
+            : (_currentOwned.isShiny || _currentOwned.shinyTier > 0);
+current = MonsterLibraryLocator.GetById(_currentOwned.monsterId);
         onConfirm = null;
         onCancel = null;
 
@@ -524,9 +526,14 @@ public class MonsterDetailPanelUI : MonoBehaviour
         RefreshEvolveButton();
         SetupFavoriteButton();
 
-        ResolveVariantState(current ? current.id : null, _currentOwned);
+        ResolveVariantState(current ? current.id : null);
+        // Sync cosmetic view to preferred after resolving.
+        if (_preferredOwned != null)
+            _viewShinyCosmetic = (_preferredOwned.isShiny || _preferredOwned.shinyTier > 0);
+
         SetupShinyVariantUI();
         UpdateShinyVariantToggleLabel(); // ✅
+        ApplyVariantCosmeticImmediate();
         SafeOpen(current);
     }
 
@@ -543,9 +550,13 @@ public class MonsterDetailPanelUI : MonoBehaviour
         _currentOwned = member;
 
         _statsOwned = _currentOwned;
-        _viewShinyCosmetic = _currentOwned.isShiny || _currentOwned.shinyTier > 0;
 
-        current = MonsterLibraryLocator.GetById(_currentOwned.monsterId);
+        // Cosmetic-only: use global preferred variant if set, otherwise fall back to this instance.
+        var prefCos = MonsterVariantPreference.GetPreferredOwned(_currentOwned.monsterId);
+        _viewShinyCosmetic = (prefCos != null)
+            ? (prefCos.isShiny || prefCos.shinyTier > 0)
+            : (_currentOwned.isShiny || _currentOwned.shinyTier > 0);
+current = MonsterLibraryLocator.GetById(_currentOwned.monsterId);
         onConfirm = null;
         onCancel = null;
 
@@ -553,9 +564,14 @@ public class MonsterDetailPanelUI : MonoBehaviour
         RefreshEvolveButton();
         SetupFavoriteButton();
 
-        ResolveVariantState(current ? current.id : null, _currentOwned);
+        ResolveVariantState(current ? current.id : null);
+        // Sync cosmetic view to preferred after resolving.
+        if (_preferredOwned != null)
+            _viewShinyCosmetic = (_preferredOwned.isShiny || _preferredOwned.shinyTier > 0);
+
         SetupShinyVariantUI();
         UpdateShinyVariantToggleLabel();
+        ApplyVariantCosmeticImmediate();
         SafeOpen(current);
     }
 
@@ -756,26 +772,48 @@ public class MonsterDetailPanelUI : MonoBehaviour
         _codexHasNormal = non != null;
         _codexViewingShiny = next != null && (next.isShiny || next.shinyTier > 0);
 
-        _viewShinyCosmetic = !_viewShinyCosmetic;
+        _viewShinyCosmetic = (next != null && (next.isShiny || next.shinyTier > 0));
 
         if (next != null && !string.IsNullOrEmpty(next.ownedUID))
             MonsterVariantPreference.SetPreferred(current.id, next.ownedUID);
 
         SetupShinyVariantUI();
         UpdateShinyVariantToggleLabel();
+        ApplyVariantCosmeticImmediate();
         SafeOpen(current);
 
-        if (_mode != MonsterDetailMode.AssignToTeam)
-        {
-            GameEvents.OnTeamChanged?.Invoke();
-            GameEvents.OnJobsChanged?.Invoke();
-            GameEvents.FavoritesChanged?.Invoke();
-        }
+        GameEvents.OnTeamChanged?.Invoke();
+        GameEvents.OnJobsChanged?.Invoke();
+        GameEvents.FavoritesChanged?.Invoke();
 
         AudioManager.I?.PlayClick();
     }
 
-    private Sprite GetVariantIcon(MonsterDataSO monster)
+    
+private void ApplyVariantCosmeticImmediate()
+{
+    if (current == null) return;
+
+    // Force-refresh the cosmetic pieces immediately (independent of staged rendering / safe flags).
+    try
+    {
+        if (icon)
+        {
+            var spr = GetVariantIcon(current);
+            if (spr != null)
+            {
+                icon.sprite = spr;
+                icon.enabled = true;
+            }
+        }
+
+        if (nameText)
+            nameText.text = BuildVariantDisplayName(current);
+    }
+    catch { /* cosmetic-only; never break panel */ }
+}
+
+private Sprite GetVariantIcon(MonsterDataSO monster)
     {
         if (monster == null) return null;
 
@@ -880,7 +918,7 @@ public class MonsterDetailPanelUI : MonoBehaviour
                 // ✅ CRITICAL FIX:
                 // Preserve focused owned instance during staged refresh so Team/Assign doesn’t
                 // accidentally revert to global codex preference mid-render.
-                ResolveVariantState(monster ? monster.id : null, (_mode == MonsterDetailMode.AssignToTeam) ? _currentOwned : null);
+                ResolveVariantState(monster ? monster.id : null);
                 SetupShinyVariantUI();
                 UpdateShinyVariantToggleLabel();
 

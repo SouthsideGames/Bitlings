@@ -298,6 +298,11 @@ private void EnsureBattleRngInitialized()
     private float[] teamMaxHP, teamHP;
     private string[] teamIds;
 
+    // Preferred-variant aware "effective" owned data used for battle.
+    // This allows players to choose shiny/non-shiny display & usage without having to rearrange the team list.
+    private OwnedMonsterData[] teamOwnedEffective;
+    private string[] teamOwnedUidEffective;
+
     private JobBattlePassives.Ctx[] jobCtx;
 
     private float[] shieldHP;
@@ -923,9 +928,14 @@ public void BeginBattle(MonsterDataSO wild, int level, Action<BattleResult> onEn
         teamHP = new float[teamCount];
         teamIds = new string[teamCount];
 
+        teamOwnedEffective = new OwnedMonsterData[teamCount];
+        teamOwnedUidEffective = new string[teamCount];
+
         for (int i = 0; i < teamCount; i++)
         {
-            var owned = roster[i];
+            var slotOwned = roster[i];
+            var owned = ResolveEffectiveTeamOwnedForBattle(i, slotOwned);
+
             teamIds[i] = owned != null ? owned.monsterId : null;
 
             var def = (owned != null && !string.IsNullOrEmpty(owned.monsterId))
@@ -970,7 +980,8 @@ public void BeginBattle(MonsterDataSO wild, int level, Action<BattleResult> onEn
 
         for (int i = 0; i < teamCount; i++)
         {
-            var owned = SaveManager.Data.team[i];
+            var owned = (teamOwnedEffective != null && i >= 0 && i < teamOwnedEffective.Length) ? teamOwnedEffective[i] : (SaveManager.Data != null && SaveManager.Data.team != null && i < SaveManager.Data.team.Count ? SaveManager.Data.team[i] : null);
+
             var (job, hours) = JobManager.I ? JobManager.I.GetCurrentJobAndHours(owned.monsterId) : (JobType.None, 0f);
             jobCtx[i] = JobBattlePassives.Build(job, hours);
 
@@ -1124,9 +1135,9 @@ public void BeginBattle(MonsterDataSO wild, int level, Action<BattleResult> onEn
 
          if (victory && !escaped)
         {
-            var m = (data != null && data.team != null && activeIndex >= 0 && activeIndex < data.team.Count)
-                ? data.team[activeIndex]
-                : default;
+            var m = (teamOwnedEffective != null && activeIndex >= 0 && activeIndex < teamOwnedEffective.Length)
+                ? teamOwnedEffective[activeIndex]
+                : ((data != null && data.team != null && activeIndex >= 0 && activeIndex < data.team.Count) ? data.team[activeIndex] : default);
 
             float shinyMul = ShinySystems.TrainingXpMult(m);
             int baseAfterShiny = Mathf.RoundToInt(baseCores * shinyMul);
@@ -1155,6 +1166,35 @@ public void BeginBattle(MonsterDataSO wild, int level, Action<BattleResult> onEn
         var teamList = data != null && data.team != null ? data.team : new List<OwnedMonsterData>();
         var ownedList = data != null && data.owned != null ? data.owned : new List<OwnedMonsterData>();
         long nowUnix = SaveManager.NowUnix();
+
+        // If the player has a preferred variant (shiny/non-shiny) for a given monsterId,
+        // battles may have been simulated using that preferred OwnedMonsterData (ownedUID).
+        // Ensure the team list points at the same owned copy so HP/progression writes back to the correct variant.
+        if (teamOwnedUidEffective != null && ownedList != null && teamList != null)
+        {
+            var uidMap = new Dictionary<string, OwnedMonsterData>(StringComparer.Ordinal);
+            for (int j = 0; j < ownedList.Count; j++)
+            {
+                var o = ownedList[j];
+                if (o == null) continue;
+                if (string.IsNullOrEmpty(o.ownedUID)) continue;
+                if (!uidMap.ContainsKey(o.ownedUID))
+                    uidMap.Add(o.ownedUID, o);
+            }
+
+            int max = Mathf.Min(teamCount, Mathf.Min(teamList.Count, teamOwnedUidEffective.Length));
+            for (int i = 0; i < max; i++)
+            {
+                string uid = teamOwnedUidEffective[i];
+                if (string.IsNullOrEmpty(uid)) continue;
+
+                if (uidMap.TryGetValue(uid, out var preferredOwned) && preferredOwned != null)
+                {
+                    // Swap the team slot to the preferred owned copy (same monsterId).
+                    teamList[i] = preferredOwned;
+                }
+            }
+        }
 
         for (int i = 0; i < teamCount && i < teamList.Count; i++)
         {
@@ -1917,9 +1957,48 @@ private int GetAlliesAliveNotIncludingActive()
     // Titles/equipment/temp/conditionals stack elsewhere.
     // ─────────────────────────────────────────────────────────────────────────────
 
+    /// <summary>
+    /// Resolves the OwnedMonsterData that should be used for a given team slot during battle.
+    /// If the player has both variants (shiny/non-shiny) and has set a preference, we use that preferred OwnedMonsterData.
+    /// </summary>
+    private OwnedMonsterData ResolveEffectiveTeamOwnedForBattle(int teamIndex, OwnedMonsterData teamSlotOwned)
+    {
+        if (teamSlotOwned == null || string.IsNullOrEmpty(teamSlotOwned.monsterId))
+            return teamSlotOwned;
+
+        // Preference is stored separately from the team list.
+        // If a preferred owned copy exists, use it (this is what the player expects when they toggle "use shiny").
+        var preferred = MonsterVariantPreference.GetPreferredOwned(teamSlotOwned.monsterId);
+        if (preferred != null && preferred.monsterId == teamSlotOwned.monsterId)
+        {
+            // Cache for use across battle systems (progression totals, UI, reward mults, etc.)
+            if (teamOwnedEffective != null && teamIndex >= 0 && teamIndex < teamOwnedEffective.Length)
+            {
+                teamOwnedEffective[teamIndex] = preferred;
+                teamOwnedUidEffective[teamIndex] = preferred.ownedUID;
+            }
+            return preferred;
+        }
+
+        if (teamOwnedEffective != null && teamIndex >= 0 && teamIndex < teamOwnedEffective.Length)
+        {
+            teamOwnedEffective[teamIndex] = teamSlotOwned;
+            teamOwnedUidEffective[teamIndex] = teamSlotOwned.ownedUID;
+        }
+        return teamSlotOwned;
+    }
+
     private bool TryGetOwnedAtIndex(int idx, out OwnedMonsterData om)
     {
         om = null;
+
+        // Prefer the effective owned (preferred shiny/non-shiny variant) used for the current battle.
+        if (teamOwnedEffective != null && idx >= 0 && idx < teamOwnedEffective.Length)
+        {
+            om = teamOwnedEffective[idx];
+            return om != null;
+        }
+
         var roster = SaveManager.Data?.team;
         if (roster == null) return false;
         if (idx < 0 || idx >= roster.Count) return false;

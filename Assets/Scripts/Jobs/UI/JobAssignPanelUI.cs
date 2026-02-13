@@ -81,7 +81,15 @@ public class JobAssignPanelUI : MonoBehaviour
 
         if (_currentWorker != null && _currentWorker.def != null)
         {
+            // IMPORTANT:
+            // WorkerRef.monsterId = species id
+            // WorkerRef.ownedUID  = owned instance id (shiny lives here)
             bool isShiny = IsWorkerShiny(_currentWorker);
+            // If this slot is in legacy "species-only" mode (no ownedUID), ResolveOwned can return null when the
+            // player owns multiple copies. In that case, fall back to the saved preferred variant.
+            if (!isShiny && _currentWorker.def != null && !string.IsNullOrEmpty(_currentWorker.def.id))
+                isShiny = MonsterVariantPreference.IsPreferredShiny(_currentWorker.def.id);
+            // Jobs should use the FRONT icon (MonsterDataSO.icon / MonsterDataSO.shinyIcon).
             var spr = MonsterNameFormatter.GetIcon(_currentWorker.def, isShiny, backIcon: false);
             if (spr == null) spr = _currentWorker.def.icon;
 
@@ -119,39 +127,26 @@ public class JobAssignPanelUI : MonoBehaviour
             return;
         }
 
-        // Pick a single "best" owned monster per monsterId (shiny is cosmetic-only).
-        // We intentionally DO NOT create separate entries for shiny vs non-shiny.
-        var bestById = new Dictionary<string, OwnedMonsterData>(64);
+        // Build one entry per species, but ALWAYS respect the player's saved shiny/non-shiny preference.
+        // This mirrors battle behavior and prevents "selected shiny" from silently assigning the base variant.
+        //
+        // NOTE: We still only show one entry per monsterId to keep the picker clean.
+        var seenMonsterIds = new HashSet<string>(64);
         for (int i = 0; i < data.owned.Count; i++)
         {
             var o = data.owned[i];
             if (o == null || string.IsNullOrEmpty(o.monsterId)) continue;
-
-            if (string.IsNullOrEmpty(o.ownedUID))
-                o.ownedUID = Guid.NewGuid().ToString("N");
-
-            string key = o.monsterId;
-
-            if (!bestById.TryGetValue(key, out var cur))
-            {
-                bestById[key] = o;
-            }
-            else
-            {
-                // Keep the strongest progression record as the canonical worker identity.
-                bool better =
-                    o.level > cur.level ||
-                    (o.level == cur.level && o.currentXP > cur.currentXP);
-
-                if (better) bestById[key] = o;
-            }
+            if (string.IsNullOrEmpty(o.ownedUID)) o.ownedUID = Guid.NewGuid().ToString("N");
+            seenMonsterIds.Add(o.monsterId);
         }
 
         // include owned reference + fatigue display
         var entries = new List<(MonsterDataSO def, OwnedMonsterData owned, string ownedUid, float score)>();
-        foreach (var kv in bestById)
+        foreach (var monsterId in seenMonsterIds)
         {
-            var owned = kv.Value;
+            var owned = MonsterVariantPreference.GetPreferredOwned(monsterId);
+            if (owned == null || string.IsNullOrEmpty(owned.ownedUID)) continue;
+
             var def = MonsterLibraryLocator.GetById(owned.monsterId);
             if (!def) continue;
 
@@ -175,7 +170,7 @@ public class JobAssignPanelUI : MonoBehaviour
         foreach (var e in entries)
         {
             bool isFatigued = TryGetFatigueState(e.owned, e.ownedUid, out string etaText);
-            bool isShiny = GetPreferredCosmeticShiny(e.def != null ? e.def.id : null);
+            bool isShiny = (e.owned != null) && (e.owned.isShiny || e.owned.shinyTier > 0);
 
             var go = Instantiate(monsterButtonPrefab, listContent);
             var ui = go.GetComponent<JobMonsterEntryUI>();
@@ -264,7 +259,7 @@ public class JobAssignPanelUI : MonoBehaviour
 
         if (_pendingDef != null)
         {
-            bool isShiny = GetPreferredCosmeticShiny(_pendingDef != null ? _pendingDef.id : null);
+            bool isShiny = (_pendingOwned != null) && (_pendingOwned.isShiny || _pendingOwned.shinyTier > 0);
             var spr = MonsterNameFormatter.GetIcon(_pendingDef, isShiny, backIcon: false);
             if (spr == null) spr = _pendingDef.icon;
 
@@ -326,9 +321,13 @@ public class JobAssignPanelUI : MonoBehaviour
         if (JobManager.I == null) { Close(); return; }
         if (_currentWorker != null)
         {
-            string id = !string.IsNullOrEmpty(_currentWorker.monsterId)
-                        ? _currentWorker.monsterId
-                        : _currentWorker.def?.id;
+            // Prefer ownedUID (exact instance, preserves shiny + avoids ambiguity).
+            // Fallback to species id for legacy saves.
+            string id = !string.IsNullOrEmpty(_currentWorker.ownedUID)
+                        ? _currentWorker.ownedUID
+                        : (!string.IsNullOrEmpty(_currentWorker.monsterId)
+                            ? _currentWorker.monsterId
+                            : _currentWorker.def?.id);
             if (!string.IsNullOrEmpty(id))
                 JobManager.I.RemoveWorker(_job, id);
         }
@@ -532,63 +531,32 @@ public class JobAssignPanelUI : MonoBehaviour
         }
         return c;
     }
-    private bool GetPreferredCosmeticShiny(string monsterId)
-    {
-        if (string.IsNullOrEmpty(monsterId)) return false;
-        var pref = MonsterVariantPreference.GetPreferredOwned(monsterId);
-        return pref != null && (pref.isShiny || pref.shinyTier > 0);
-    }
 
     bool IsWorkerShiny(WorkerRef w)
     {
         if (w == null) return false;
 
-        string monsterId = null;
+        // Prefer the stable ownedUID identity (new format). Fall back to legacy monsterId-as-uid.
+        var owned = ShinySystems.ResolveOwned(w);
+        if (owned != null)
+            return (owned.isShiny || owned.shinyTier > 0);
 
-        // WorkerRef.monsterId is typically ownedUID in jobs.
-        var ownedUid = w.monsterId;
-        if (!string.IsNullOrEmpty(ownedUid))
+        var def = w.def;
+        if (!def) return false;
+
+        // Fallback: reflection on def flags (legacy)
+        try
         {
-            var ownedList = SaveManager.Data?.owned;
-            if (ownedList != null)
-            {
-                for (int i = 0; i < ownedList.Count; i++)
-                {
-                    var om = ownedList[i];
-                    if (om != null && om.ownedUID == ownedUid)
-                    {
-                        monsterId = om.monsterId;
-                        break;
-                    }
-                }
-            }
-        }
+            var f = def.GetType().GetField("isShiny", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+            if (f != null && f.FieldType == typeof(bool)) return (bool)f.GetValue(def);
 
-        if (string.IsNullOrEmpty(monsterId) && w.def != null)
-            monsterId = w.def.id;
+            var p = def.GetType().GetProperty("isShiny", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+            if (p != null && p.PropertyType == typeof(bool)) return (bool)p.GetValue(def, null);
 
-        // Cosmetic-only: prefer the player's selected variant if available.
-        if (!string.IsNullOrEmpty(monsterId))
-        {
-            var pref = MonsterVariantPreference.GetPreferredOwned(monsterId);
-            if (pref != null)
-                return (pref.isShiny || pref.shinyTier > 0);
+            var p2 = def.GetType().GetProperty("IsShiny", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+            if (p2 != null && p2.PropertyType == typeof(bool)) return (bool)p2.GetValue(def, null);
         }
-
-        // Fallback: if we found the owned record by uid, use its stored shiny flag.
-        if (!string.IsNullOrEmpty(ownedUid))
-        {
-            var ownedList = SaveManager.Data?.owned;
-            if (ownedList != null)
-            {
-                for (int i = 0; i < ownedList.Count; i++)
-                {
-                    var om = ownedList[i];
-                    if (om != null && om.ownedUID == ownedUid)
-                        return (om.isShiny || om.shinyTier > 0);
-                }
-            }
-        }
+        catch { }
 
         return false;
     }
