@@ -18,6 +18,24 @@ public sealed class TitleManager : MonoBehaviour
 
     private string _activeBattleMonsterId;
 
+    // ─────────────────────────────────────────────────────────────────────
+    // Battle-scoped overrides (e.g., rolled wild titles)
+    // ─────────────────────────────────────────────────────────────────────
+    // Key: combatant id (owned id or synthetic id like "WILD::<...>")
+    // Value: list of titles to treat as equipped for the duration of the battle.
+    // Notes:
+    // - This intentionally bypasses TitleSaveStore equip selections.
+    // - EncounterManager injects rolled wild titles via TitlesAdapter.SetLocalTitles(...)
+    //   which forwards to these APIs.
+    private readonly Dictionary<string, List<TitleSO>> _battleOverrideTitles =
+        new Dictionary<string, List<TitleSO>>(System.StringComparer.Ordinal);
+
+    // Battle context for synthetic ids (so conditional titles can resolve def/level safely)
+    private readonly Dictionary<string, MonsterDataSO> _battleContextDef =
+        new Dictionary<string, MonsterDataSO>(System.StringComparer.Ordinal);
+    private readonly Dictionary<string, int> _battleContextLevel =
+        new Dictionary<string, int>(System.StringComparer.Ordinal);
+
     // Battle sessions can include multiple combatants (e.g., player + wild).
     // Most per-battle state is keyed by combatant id; we track participants so
     // turn-based effects (TurnBooster) can apply to all relevant combatants.
@@ -405,6 +423,11 @@ public sealed class TitleManager : MonoBehaviour
     /// </summary>
     public List<TitleSO> GetEquippedList(string monsterId, MonsterDataSO def, int level)
     {
+        // 0) Battle-scoped override (e.g., rolled wild titles injected per encounter)
+        // If present, treat as the equipped list for the duration of the battle.
+        if (TryGetBattleOverrideTitles(monsterId, out var overrideTitles) && overrideTitles != null)
+            return new List<TitleSO>(overrideTitles);
+
         var res = new List<TitleSO>();
 
         // Always-on defaults
@@ -444,6 +467,11 @@ public sealed class TitleManager : MonoBehaviour
     public List<TitleSO> GetTitlesForMonster(string monsterId)
     {
         if (string.IsNullOrEmpty(monsterId)) return new List<TitleSO>();
+
+        // If a battle override exists (e.g., wild synthetic id), return that.
+        if (TryGetBattleOverrideTitles(monsterId, out var overrideTitles) && overrideTitles != null)
+            return new List<TitleSO>(overrideTitles);
+
         var def = MonsterLibraryLocator.GetById(monsterId);
         int lvl = GetLevelOr1(monsterId);
         return GetEquippedList(monsterId, def, lvl);
@@ -453,6 +481,76 @@ public sealed class TitleManager : MonoBehaviour
     {
         if (string.IsNullOrEmpty(titleId)) return null;
         return _idToTitle.TryGetValue(titleId, out var so) ? so : null;
+    }
+
+    // ─────────────────────────────────────────────────────────────────────
+    // Battle override API (used for rolled wild titles)
+    // ─────────────────────────────────────────────────────────────────────
+    /// <summary>
+    /// Sets a battle-scoped override title list for a combatant id.
+    /// This is intended for synthetic ids (e.g., wild encounters) and temporary effects.
+    /// </summary>
+    public void SetBattleOverrideTitles(string combatantId, List<TitleSO> titles)
+    {
+        if (string.IsNullOrEmpty(combatantId)) return;
+        if (titles == null)
+        {
+            _battleOverrideTitles.Remove(combatantId);
+            return;
+        }
+
+        _battleOverrideTitles[combatantId] = titles;
+    }
+
+    public void ClearBattleOverrideTitles(string combatantId)
+    {
+        if (string.IsNullOrEmpty(combatantId)) return;
+        _battleOverrideTitles.Remove(combatantId);
+        _battleContextDef.Remove(combatantId);
+        _battleContextLevel.Remove(combatantId);
+    }
+
+    public void ClearAllBattleOverrideTitles()
+    {
+        _battleOverrideTitles.Clear();
+        _battleContextDef.Clear();
+        _battleContextLevel.Clear();
+    }
+
+    private bool TryGetBattleOverrideTitles(string combatantId, out List<TitleSO> titles)
+    {
+        if (!string.IsNullOrEmpty(combatantId) && _battleOverrideTitles.TryGetValue(combatantId, out titles) && titles != null)
+            return true;
+        titles = null;
+        return false;
+    }
+
+    private void RegisterBattleContext(string combatantId, MonsterDataSO def, int level)
+    {
+        if (string.IsNullOrEmpty(combatantId) || def == null) return;
+        _battleContextDef[combatantId] = def;
+        _battleContextLevel[combatantId] = Mathf.Max(1, level);
+    }
+
+    private bool TryResolveBattleContext(string combatantId, out MonsterDataSO def, out int level)
+    {
+        def = null;
+        level = 1;
+
+        if (!string.IsNullOrEmpty(combatantId))
+        {
+            if (_battleContextDef.TryGetValue(combatantId, out def) && def != null)
+            {
+                if (_battleContextLevel.TryGetValue(combatantId, out int lvl)) level = Mathf.Max(1, lvl);
+                return true;
+            }
+        }
+
+        // Fallback (owned monsters)
+        if (string.IsNullOrEmpty(combatantId)) return false;
+        def = MonsterLibraryLocator.GetById(combatantId);
+        level = GetLevelOr1(combatantId);
+        return def != null;
     }
 
     // ─────────────────────────────────────────────────────────────────────
@@ -1058,6 +1156,11 @@ if (_flatStartRemainingTurns.TryGetValue(monsterId, out int remTurns) && remTurn
             _flatStartRemainingTurns.Clear();
             _shieldRemaining.Clear();
 
+            // Clear per-battle context (but DO NOT clear _battleOverrideTitles here:
+            // EncounterManager injects rolled wild titles prior to battle start.)
+            _battleContextDef.Clear();
+            _battleContextLevel.Clear();
+
             _battleParticipants.Clear();
             _scratchParticipants.Clear();
 
@@ -1070,6 +1173,11 @@ if (_flatStartRemainingTurns.TryGetValue(monsterId, out int remTurns) && remTurn
         if (!string.IsNullOrEmpty(activeMonsterId))
         {
             _battleParticipants.Add(activeMonsterId);
+
+            // Register context for synthetic ids so conditional titles can resolve def/level safely.
+            if (activeMonsterId.StartsWith("WILD::", StringComparison.Ordinal) && wild != null)
+                RegisterBattleContext(activeMonsterId, wild, wildLevel);
+
             ApplyBattleStartBonuses(activeMonsterId);
         }
     }
@@ -1105,6 +1213,9 @@ if (_flatStartRemainingTurns.TryGetValue(monsterId, out int remTurns) && remTurn
         _battleParticipants.Clear();
         _scratchParticipants.Clear();
         _battleSessionActive = false;
+
+        // Clear battle-scoped title overrides + synthetic context.
+        ClearAllBattleOverrideTitles();
 
         _activeBattleMonsterId = "";
         _turnIndex = 0;
@@ -1788,8 +1899,10 @@ if (_flatStartRemainingTurns.TryGetValue(monsterId, out int remTurns) && remTurn
         if (string.IsNullOrEmpty(ctx.ownedId))
             return default;
 
-        var def = MonsterLibraryLocator.GetById(ctx.ownedId);
-        int lvl = GetLevelOr1(ctx.ownedId);
+        // Resolve def/level safely for synthetic ids (e.g., wild combat ids)
+        if (!TryResolveBattleContext(ctx.ownedId, out var def, out int lvl) || def == null)
+            return default;
+
         var titles = GetEquippedList(ctx.ownedId, def, lvl);
 
         int atkFlat = 0, defFlat = 0, spdFlat = 0;

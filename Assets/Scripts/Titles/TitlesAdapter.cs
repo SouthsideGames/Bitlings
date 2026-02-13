@@ -56,15 +56,31 @@ public static class TitlesAdapter
             if (t == null) continue;
             list.Add(t);
         }
+
+        // Mirror into TitleManager so the main evaluation path (GetEquippedList / GetStatValue / ApplyBattleStartBonuses)
+        // can see rolled wild titles when the combatant id is synthetic (e.g., WILD::...).
+        var rt = Runtime;
+        if (rt != null)
+            rt.SetBattleOverrideTitles(id, list);
     }
 
     public static void ClearLocalTitles(string id)
     {
         if (string.IsNullOrEmpty(id)) return;
         _localTitlesById.Remove(id);
+
+        var rt = Runtime;
+        if (rt != null)
+            rt.ClearBattleOverrideTitles(id);
     }
 
-    public static void ClearAllLocalTitles() => _localTitlesById.Clear();
+    public static void ClearAllLocalTitles()
+    {
+        _localTitlesById.Clear();
+        var rt = Runtime;
+        if (rt != null)
+            rt.ClearAllBattleOverrideTitles();
+    }
 
     // ─────────────────────────────────────────────────────────────────────────────
     // Runtime access

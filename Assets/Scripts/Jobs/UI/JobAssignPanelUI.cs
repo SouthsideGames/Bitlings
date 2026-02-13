@@ -119,8 +119,9 @@ public class JobAssignPanelUI : MonoBehaviour
             return;
         }
 
-        // Pick "best" owned monster per monsterId + shiny key.
-        var bestByKey = new Dictionary<string, OwnedMonsterData>(64);
+        // Pick a single "best" owned monster per monsterId (shiny is cosmetic-only).
+        // We intentionally DO NOT create separate entries for shiny vs non-shiny.
+        var bestById = new Dictionary<string, OwnedMonsterData>(64);
         for (int i = 0; i < data.owned.Count; i++)
         {
             var o = data.owned[i];
@@ -129,27 +130,26 @@ public class JobAssignPanelUI : MonoBehaviour
             if (string.IsNullOrEmpty(o.ownedUID))
                 o.ownedUID = Guid.NewGuid().ToString("N");
 
-            bool isShiny = (o.isShiny || o.shinyTier > 0);
-            string key = o.monsterId + (isShiny ? "|S" : "|N");
+            string key = o.monsterId;
 
-            if (!bestByKey.TryGetValue(key, out var cur))
+            if (!bestById.TryGetValue(key, out var cur))
             {
-                bestByKey[key] = o;
+                bestById[key] = o;
             }
             else
             {
+                // Keep the strongest progression record as the canonical worker identity.
                 bool better =
                     o.level > cur.level ||
-                    (o.level == cur.level && o.currentXP > cur.currentXP) ||
-                    (o.level == cur.level && o.currentXP == cur.currentXP && o.shinyTier > cur.shinyTier);
+                    (o.level == cur.level && o.currentXP > cur.currentXP);
 
-                if (better) bestByKey[key] = o;
+                if (better) bestById[key] = o;
             }
         }
 
         // include owned reference + fatigue display
         var entries = new List<(MonsterDataSO def, OwnedMonsterData owned, string ownedUid, float score)>();
-        foreach (var kv in bestByKey)
+        foreach (var kv in bestById)
         {
             var owned = kv.Value;
             var def = MonsterLibraryLocator.GetById(owned.monsterId);
@@ -175,7 +175,7 @@ public class JobAssignPanelUI : MonoBehaviour
         foreach (var e in entries)
         {
             bool isFatigued = TryGetFatigueState(e.owned, e.ownedUid, out string etaText);
-            bool isShiny = (e.owned != null) && (e.owned.isShiny || e.owned.shinyTier > 0);
+            bool isShiny = GetPreferredCosmeticShiny(e.def != null ? e.def.id : null);
 
             var go = Instantiate(monsterButtonPrefab, listContent);
             var ui = go.GetComponent<JobMonsterEntryUI>();
@@ -264,7 +264,7 @@ public class JobAssignPanelUI : MonoBehaviour
 
         if (_pendingDef != null)
         {
-            bool isShiny = (_pendingOwned != null) && (_pendingOwned.isShiny || _pendingOwned.shinyTier > 0);
+            bool isShiny = GetPreferredCosmeticShiny(_pendingDef != null ? _pendingDef.id : null);
             var spr = MonsterNameFormatter.GetIcon(_pendingDef, isShiny, backIcon: false);
             if (spr == null) spr = _pendingDef.icon;
 
@@ -532,13 +532,50 @@ public class JobAssignPanelUI : MonoBehaviour
         }
         return c;
     }
+    private bool GetPreferredCosmeticShiny(string monsterId)
+    {
+        if (string.IsNullOrEmpty(monsterId)) return false;
+        var pref = MonsterVariantPreference.GetPreferredOwned(monsterId);
+        return pref != null && (pref.isShiny || pref.shinyTier > 0);
+    }
 
     bool IsWorkerShiny(WorkerRef w)
     {
         if (w == null) return false;
 
-        // Primary: WorkerRef.monsterId is your ownedUID key in this panel.
+        string monsterId = null;
+
+        // WorkerRef.monsterId is typically ownedUID in jobs.
         var ownedUid = w.monsterId;
+        if (!string.IsNullOrEmpty(ownedUid))
+        {
+            var ownedList = SaveManager.Data?.owned;
+            if (ownedList != null)
+            {
+                for (int i = 0; i < ownedList.Count; i++)
+                {
+                    var om = ownedList[i];
+                    if (om != null && om.ownedUID == ownedUid)
+                    {
+                        monsterId = om.monsterId;
+                        break;
+                    }
+                }
+            }
+        }
+
+        if (string.IsNullOrEmpty(monsterId) && w.def != null)
+            monsterId = w.def.id;
+
+        // Cosmetic-only: prefer the player's selected variant if available.
+        if (!string.IsNullOrEmpty(monsterId))
+        {
+            var pref = MonsterVariantPreference.GetPreferredOwned(monsterId);
+            if (pref != null)
+                return (pref.isShiny || pref.shinyTier > 0);
+        }
+
+        // Fallback: if we found the owned record by uid, use its stored shiny flag.
         if (!string.IsNullOrEmpty(ownedUid))
         {
             var ownedList = SaveManager.Data?.owned;
@@ -552,23 +589,6 @@ public class JobAssignPanelUI : MonoBehaviour
                 }
             }
         }
-
-        var def = w.def;
-        if (!def) return false;
-
-        // Fallback: reflection on def flags (legacy)
-        try
-        {
-            var f = def.GetType().GetField("isShiny", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
-            if (f != null && f.FieldType == typeof(bool)) return (bool)f.GetValue(def);
-
-            var p = def.GetType().GetProperty("isShiny", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
-            if (p != null && p.PropertyType == typeof(bool)) return (bool)p.GetValue(def, null);
-
-            var p2 = def.GetType().GetProperty("IsShiny", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
-            if (p2 != null && p2.PropertyType == typeof(bool)) return (bool)p2.GetValue(def, null);
-        }
-        catch { }
 
         return false;
     }

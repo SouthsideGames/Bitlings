@@ -82,8 +82,6 @@ public class MonsterDetailPanelUI : MonoBehaviour
     [SerializeField] private Button favoriteButton;
     [SerializeField] private GameObject favoriteOnIcon;
 
-
-
     [Header("Shiny Variant Toggle (Codex)")]
     [Tooltip("Optional. If wired, shows a toggle in Codex detail view when you own BOTH the normal and shiny variant.")]
     [SerializeField] private GameObject shinyVariantRoot;
@@ -93,6 +91,7 @@ public class MonsterDetailPanelUI : MonoBehaviour
 
     [Tooltip("Optional. Label for the toggle button (e.g., 'View Shiny' / 'View Normal').")]
     [SerializeField] private TextMeshProUGUI shinyVariantToggleLabel;
+
     [Header("Stats View Toggle")]
     [Tooltip("Optional: button that toggles Base Stats vs Adjusted Stats.")]
     [SerializeField] private Button statsViewToggleButton;
@@ -141,11 +140,18 @@ public class MonsterDetailPanelUI : MonoBehaviour
     private OwnedMonsterData _preferredOwned;
     private OwnedMonsterData _otherVariantOwned;
 
+    
 
-    // Codex shiny/normal view state (variant toggle)
+    // Stats source should remain stable; shiny is cosmetic-only.
+    private OwnedMonsterData _statsOwned;
+
+    // Cosmetic view flag (drives icon/name only)
+    private bool _viewShinyCosmetic;
+// Codex shiny/normal view state (variant toggle)
     private bool _codexHasNormal;
     private bool _codexHasShiny;
     private bool _codexViewingShiny;
+
     // Browse session (Codex/Starter swipe)
     private IReadOnlyList<MonsterDataSO> _browseDefs;
     private int _browseIndex = -1;
@@ -224,15 +230,13 @@ public class MonsterDetailPanelUI : MonoBehaviour
             statsViewToggleButton.onClick.AddListener(ToggleStatsView);
         }
 
-
-
         if (shinyVariantToggleButton)
         {
             shinyVariantToggleButton.onClick.RemoveAllListeners();
             shinyVariantToggleButton.onClick.AddListener(ToggleCodexShinyVariant);
         }
-        RefreshStatsViewToggleLabel();
 
+        RefreshStatsViewToggleLabel();
         ResolveTitleButton();
 
         TitleAssignPanelUI.OnTitlesChanged -= HandleTitlesChanged;
@@ -296,17 +300,15 @@ public class MonsterDetailPanelUI : MonoBehaviour
         int dispLvl = GetDisplayLevel();
         if (lvlText) lvlText.text = $"LVL: {dispLvl}";
 
-        // ─────────────────────────────────────────────────────────────
-        // BASE view: raw MonsterDataSO stats (no scaling, no training, no titles)
-        // ─────────────────────────────────────────────────────────────
+        // BASE view
         if (_showBaseStats)
         {
-            int hpB  = Mathf.RoundToInt(current.baseHP);
+            int hpB = Mathf.RoundToInt(current.baseHP);
             int atkB = Mathf.RoundToInt(current.baseAttack);
             int defB = Mathf.RoundToInt(current.baseDefense);
             float spdB = current.baseSpeed;
 
-            if (hpText)  hpText.text  = hpB  > 0 ? $"HP: {hpB}" : "HP: —";
+            if (hpText) hpText.text = hpB > 0 ? $"HP: {hpB}" : "HP: —";
             if (atkText) atkText.text = atkB > 0 ? $"ATK: {atkB}" : "ATK: —";
             if (defText) defText.text = $"DEF: {defB}";
             if (spdText) spdText.text = $"SPD: {spdB:0.##}";
@@ -315,13 +317,8 @@ public class MonsterDetailPanelUI : MonoBehaviour
             return;
         }
 
-        // ─────────────────────────────────────────────────────────────
-        // ADJ view: level growth + (owned only) training + flatAtkBonus
-        // Titles/equipment are removable layers; they are not shown here as "progression totals".
-        // ─────────────────────────────────────────────────────────────
-
-        // Baseline (species + level growth) via BattleCalc
-        int hpBaseAdj  = 0;
+        // ADJ view
+        int hpBaseAdj = 0;
         int atkBaseAdj = 0;
         int defBaseAdj = 0;
         int spdBaseAdj = 0;
@@ -342,50 +339,46 @@ public class MonsterDetailPanelUI : MonoBehaviour
         }
         else
         {
-            hpBaseAdj  = Mathf.RoundToInt(current.baseHP);
+            hpBaseAdj = Mathf.RoundToInt(current.baseHP);
             atkBaseAdj = Mathf.RoundToInt(current.baseAttack);
             defBaseAdj = Mathf.RoundToInt(current.baseDefense);
             spdBaseAdj = Mathf.RoundToInt(current.baseSpeed);
         }
 
-        // Owned-only progression adds
         int trainHp = 0, trainAtk = 0, trainDef = 0, trainSpd = 0;
         int flatAtkBonus = 0;
 
-        bool hasOwnedInstance = (_currentOwned != null) && !string.IsNullOrEmpty(_currentOwned.monsterId);
+        var srcOwned = _statsOwned ?? _currentOwned;
+        bool hasOwnedInstance = (srcOwned != null) && !string.IsNullOrEmpty(srcOwned.monsterId);
 
-if (hasOwnedInstance)
+        if (hasOwnedInstance)
         {
-            trainHp  = Mathf.Max(0, _currentOwned.trainingBonus.hp);
-            trainAtk = Mathf.Max(0, _currentOwned.trainingBonus.atk);
-            trainDef = Mathf.Max(0, _currentOwned.trainingBonus.def);
-            trainSpd = Mathf.Max(0, _currentOwned.trainingBonus.spd);
+            trainHp = Mathf.Max(0, srcOwned.trainingBonus.hp);
+            trainAtk = Mathf.Max(0, srcOwned.trainingBonus.atk);
+            trainDef = Mathf.Max(0, srcOwned.trainingBonus.def);
+            trainSpd = Mathf.Max(0, srcOwned.trainingBonus.spd);
 
-            flatAtkBonus = Mathf.Max(0, _currentOwned.flatAtkBonus);
+            flatAtkBonus = Mathf.Max(0, srcOwned.flatAtkBonus);
         }
 
-        // Apply training (EV-like) + permanent flatAtkBonus (with legacy guard)
-        int hpAdj  = Mathf.Max(1, hpBaseAdj + (hasOwnedInstance ? trainHp : 0));
+        int hpAdj = Mathf.Max(1, hpBaseAdj + (hasOwnedInstance ? trainHp : 0));
         int defAdj = Mathf.Max(0, defBaseAdj + (hasOwnedInstance ? trainDef : 0));
         int spdAdj = Mathf.Max(1, spdBaseAdj + (hasOwnedInstance ? trainSpd : 0));
 
         int atkTrainingPlusFlat = 0;
         if (hasOwnedInstance)
         {
-            // Normal: base + training + flat
             atkTrainingPlusFlat = trainAtk + flatAtkBonus;
 
-            // Legacy: flat already contained training; avoid double add
             if (LooksLikeLegacyTrainingWasMirroredIntoFlat(flatAtkBonus, trainAtk))
                 atkTrainingPlusFlat = Mathf.Max(0, flatAtkBonus);
         }
 
         int atkAdj = Mathf.Max(1, atkBaseAdj + atkTrainingPlusFlat);
 
-        // HP display for owned (currentHP/KO)
         int curHP = hpAdj;
         if (hasOwnedInstance)
-            curHP = Mathf.Clamp(_currentOwned.currentHP < 0 ? hpAdj : _currentOwned.currentHP, 0, hpAdj);
+            curHP = Mathf.Clamp(srcOwned.currentHP < 0 ? hpAdj : srcOwned.currentHP, 0, hpAdj);
 
         if (hpText)
         {
@@ -395,10 +388,12 @@ if (hasOwnedInstance)
                 hpText.text = hpAdj > 0 ? $"HP: {hpAdj}" : "HP: —";
         }
 
-        // Training breakdown (owned only)
         if (hasOwnedInstance)
         {
-            if (atkText) atkText.text = FormatAdjInt("ATK", atkBaseAdj + (LooksLikeLegacyTrainingWasMirroredIntoFlat(flatAtkBonus, trainAtk) ? flatAtkBonus : flatAtkBonus), LooksLikeLegacyTrainingWasMirroredIntoFlat(flatAtkBonus, trainAtk) ? 0 : trainAtk);
+            if (atkText) atkText.text = FormatAdjInt("ATK",
+                atkBaseAdj + (LooksLikeLegacyTrainingWasMirroredIntoFlat(flatAtkBonus, trainAtk) ? flatAtkBonus : flatAtkBonus),
+                LooksLikeLegacyTrainingWasMirroredIntoFlat(flatAtkBonus, trainAtk) ? 0 : trainAtk);
+
             if (defText) defText.text = FormatAdjInt("DEF", defBaseAdj, trainDef);
             if (spdText) spdText.text = FormatAdjInt("SPD", spdBaseAdj, trainSpd);
         }
@@ -475,7 +470,6 @@ if (hasOwnedInstance)
 
     public void Show(MonsterDataSO monster, Action<MonsterDataSO> onConfirmCallback, Action onCancelCallback = null)
     {
-        // Prevent stale shiny/variant state carrying across openings.
         ClearVariantState();
 
         _mode = MonsterDetailMode.StarterSelect;
@@ -491,7 +485,11 @@ if (hasOwnedInstance)
         SetupFavoriteButton();
 
         ResolveVariantState(monster ? monster.id : null);
+        _viewShinyCosmetic = (_preferredOwned != null)
+            ? (_preferredOwned.isShiny || _preferredOwned.shinyTier > 0)
+            : (_statsOwned != null && (_statsOwned.isShiny || _statsOwned.shinyTier > 0));
         SetupShinyVariantUI();
+        UpdateShinyVariantToggleLabel(); // ✅ ensure label correct at open
         SafeOpen(monster);
     }
 
@@ -504,7 +502,6 @@ if (hasOwnedInstance)
     {
         if (owned == null || string.IsNullOrEmpty(owned.monsterId)) return;
 
-        // Assign/team views should reflect the specific owned instance, not a stale global variant.
         ClearVariantState();
 
         _mode = MonsterDetailMode.AssignToTeam;
@@ -513,6 +510,12 @@ if (hasOwnedInstance)
 
         _currentOwned = owned;
 
+        
+        _statsOwned = _currentOwned;
+        _viewShinyCosmetic = _currentOwned.isShiny || _currentOwned.shinyTier > 0;
+
+        
+
         current = MonsterLibraryLocator.GetById(_currentOwned.monsterId);
         onConfirm = null;
         onCancel = null;
@@ -520,6 +523,10 @@ if (hasOwnedInstance)
         UpdateTitleButtonBinding();
         RefreshEvolveButton();
         SetupFavoriteButton();
+
+        ResolveVariantState(current ? current.id : null, _currentOwned);
+        SetupShinyVariantUI();
+        UpdateShinyVariantToggleLabel(); // ✅
         SafeOpen(current);
     }
 
@@ -527,7 +534,6 @@ if (hasOwnedInstance)
     {
         if (member == null || string.IsNullOrEmpty(member.monsterId)) return;
 
-        // Assign/team views should reflect the specific owned instance, not a stale global variant.
         ClearVariantState();
 
         _mode = MonsterDetailMode.AssignToTeam;
@@ -536,6 +542,9 @@ if (hasOwnedInstance)
 
         _currentOwned = member;
 
+        _statsOwned = _currentOwned;
+        _viewShinyCosmetic = _currentOwned.isShiny || _currentOwned.shinyTier > 0;
+
         current = MonsterLibraryLocator.GetById(_currentOwned.monsterId);
         onConfirm = null;
         onCancel = null;
@@ -543,12 +552,15 @@ if (hasOwnedInstance)
         UpdateTitleButtonBinding();
         RefreshEvolveButton();
         SetupFavoriteButton();
+
+        ResolveVariantState(current ? current.id : null, _currentOwned);
+        SetupShinyVariantUI();
+        UpdateShinyVariantToggleLabel(); // ✅
         SafeOpen(current);
     }
 
     public void ShowCodex(MonsterDataSO monster)
     {
-        // Prevent stale shiny/variant state carrying across openings.
         ClearVariantState();
 
         _mode = MonsterDetailMode.CodexView;
@@ -562,24 +574,20 @@ if (hasOwnedInstance)
 
         RefreshEvolveButton();
         SetupFavoriteButton();
+
         ResolveVariantState(monster ? monster.id : null);
+        _statsOwned = _preferredOwned;
+        _viewShinyCosmetic = _codexViewingShiny;
         SetupShinyVariantUI();
+        UpdateShinyVariantToggleLabel(); // ✅
         SafeOpen(monster);
     }
 
-
-    /// <summary>
-    /// Codex detail open that also carries the concrete owned instance (when revealed/captured).
-    /// This enables:
-    /// - Evolve button (if level requirement met)
-    /// - Adjusted stats using owned level + training + currentHP
-    /// </summary>
     public void ShowCodexOwned(MonsterDataSO monster, OwnedMonsterData owned)
     {
         if (monster == null)
             return;
 
-        // Prevent stale shiny/variant state carrying across openings.
         ClearVariantState();
 
         _mode = MonsterDetailMode.CodexView;
@@ -588,6 +596,7 @@ if (hasOwnedInstance)
 
         current = monster;
         _currentOwned = owned;
+        _statsOwned = _currentOwned;
 
         onConfirm = null;
         onCancel = null;
@@ -595,15 +604,15 @@ if (hasOwnedInstance)
         UpdateTitleButtonBinding();
         RefreshEvolveButton();
         SetupFavoriteButton();
+
         ResolveVariantState(monster ? monster.id : null);
         SetupShinyVariantUI();
+        UpdateShinyVariantToggleLabel(); // ✅
         SafeOpen(monster);
     }
 
-
     public void Hide()
     {
-        // Stop any staged render from continuing after we begin closing.
         if (_stageCR != null)
         {
             StopCoroutine(_stageCR);
@@ -677,81 +686,25 @@ if (hasOwnedInstance)
     }
 
     // ─────────────────────────────────────────────────────────────
-    // Shiny variant toggle (Codex only)
+    // Shiny variant toggle UI + label
     // ─────────────────────────────────────────────────────────────
 
-    private void ResolveCodexShinyState(string monsterId)
+    private bool IsViewingShinyNow()
     {
-        _codexHasNormal = false;
-        _codexHasShiny = false;
-        _codexViewingShiny = false;
+        // Shiny is cosmetic-only. The active cosmetic flag drives icon/name.
+        if (_mode == MonsterDetailMode.AssignToTeam || _mode == MonsterDetailMode.CodexView)
+            return _viewShinyCosmetic;
 
-        if (_mode != MonsterDetailMode.CodexView)
-            return;
+        return false;
+    }
 
-        if (string.IsNullOrEmpty(monsterId) || SaveManager.Data == null)
-            return;
+    private void UpdateShinyVariantToggleLabel()
+    {
+        if (!shinyVariantToggleLabel) return;
+        if (!shinyVariantRoot || !shinyVariantRoot.activeSelf) return;
 
-        // IMPORTANT:
-        // Use owned-only for "what the player actually has" to avoid false positives
-        // from placeholder team entries. Then optionally supplement with team entries
-        // ONLY if they look like a real owned monster (ownedUID present).
-
-        var ownedOnly = SaveManager.Data.GetAllOwnedMonsters(includeTeam: false);
-        if (ownedOnly != null)
-        {
-            for (int i = 0; i < ownedOnly.Count; i++)
-            {
-                var om = ownedOnly[i];
-                if (om == null) continue;
-                if (!string.Equals(om.monsterId, monsterId, StringComparison.Ordinal)) continue;
-
-                bool shiny = om.isShiny || om.shinyTier > 0;
-                if (shiny) _codexHasShiny = true;
-                else _codexHasNormal = true;
-
-                if (_codexHasNormal && _codexHasShiny)
-                    break;
-            }
-        }
-
-        // If we still don't have enough info, look at team entries, but only count
-        // entries that appear to be real owned monsters (ownedUID populated).
-        if ((!_codexHasNormal || !_codexHasShiny) && SaveManager.Data.team != null)
-        {
-            var team = SaveManager.Data.team;
-            for (int i = 0; i < team.Count; i++)
-            {
-                var om = team[i];
-                if (om == null) continue;
-                if (string.IsNullOrEmpty(om.ownedUID)) continue;
-                if (!string.Equals(om.monsterId, monsterId, StringComparison.Ordinal)) continue;
-
-                bool shiny = om.isShiny || om.shinyTier > 0;
-                if (shiny) _codexHasShiny = true;
-                else _codexHasNormal = true;
-
-                if (_codexHasNormal && _codexHasShiny)
-                    break;
-            }
-        }
-
-        // Default view:
-        // 1) If only shiny is owned, default to shiny.
-        // 2) If both exist, prefer the last-viewed variant from settings.
-        // 3) Otherwise default to normal.
-        if (_codexHasShiny && !_codexHasNormal)
-        {
-            _codexViewingShiny = true;
-        }
-        else if (_codexHasShiny && _codexHasNormal)
-        {
-            _codexViewingShiny = GetCodexPreferredShiny(monsterId);
-        }
-        else
-        {
-            _codexViewingShiny = false;
-        }
+        bool viewingShiny = IsViewingShinyNow();
+        shinyVariantToggleLabel.text = viewingShiny ? "Normal" : "Shiny";
     }
 
     private void SetupShinyVariantUI()
@@ -759,8 +712,8 @@ if (hasOwnedInstance)
         if (!shinyVariantRoot)
             return;
 
-        // The variant toggle is Codex-only. In team/assign/starter modes, never show it.
-        if (_mode != MonsterDetailMode.CodexView)
+        // Show in Codex + Assign/Team. Never in StarterSelect.
+        if (_mode != MonsterDetailMode.CodexView && _mode != MonsterDetailMode.AssignToTeam)
         {
             shinyVariantRoot.SetActive(false);
             return;
@@ -777,99 +730,65 @@ if (hasOwnedInstance)
         if (!show)
             return;
 
-        if (shinyVariantToggleLabel)
-            shinyVariantToggleLabel.text = _codexViewingShiny ? "View Normal" : "View Shiny";
+        UpdateShinyVariantToggleLabel(); // ✅ always correct label based on active view
     }
-
 
     private void ToggleCodexShinyVariant()
     {
         if (current == null || string.IsNullOrEmpty(current.id))
             return;
 
-        if (!_codexHasNormal || !_codexHasShiny || _preferredOwned == null || _otherVariantOwned == null)
+        // Requires that the player owns both cosmetic variants.
+        if (!MonsterVariantPreference.PlayerHasBothVariants(current.id, out var shiny, out var non))
             return;
 
-        _preferredOwned = _otherVariantOwned;
-        _otherVariantOwned = MonsterVariantPreference.GetOtherVariant(current.id, _preferredOwned);
+        if (shiny == null || non == null)
+            return;
 
-        if (!string.IsNullOrEmpty(_preferredOwned.ownedUID))
-            MonsterVariantPreference.SetPreferred(current.id, _preferredOwned.ownedUID);
+        bool viewingShiny = IsViewingShinyNow();
 
-        _codexViewingShiny = _preferredOwned.isShiny || _preferredOwned.shinyTier > 0;
+        // Flip cosmetic only (stats source must remain stable).
+        var next = viewingShiny ? non : shiny;
+        var other = viewingShiny ? shiny : non;
+
+        _preferredOwned = next;
+        _otherVariantOwned = other;
+
+        _codexHasShiny = shiny != null;
+        _codexHasNormal = non != null;
+        _codexViewingShiny = next != null && (next.isShiny || next.shinyTier > 0);
+
+        _viewShinyCosmetic = !_viewShinyCosmetic;
+
+        // Persist cosmetic preference so JobAssign / other UIs can match what the player last selected.
+        if (next != null && !string.IsNullOrEmpty(next.ownedUID))
+            MonsterVariantPreference.SetPreferred(current.id, next.ownedUID);
+
+        // IMPORTANT: do NOT swap _currentOwned / _statsOwned here.
+        // Shiny is cosmetic-only; the currently viewed instance remains the stats source.
 
         SetupShinyVariantUI();
-
+        UpdateShinyVariantToggleLabel();
         SafeOpen(current);
 
-        GameEvents.OnTeamChanged?.Invoke();
-        GameEvents.OnJobsChanged?.Invoke();
-        GameEvents.FavoritesChanged?.Invoke();
+        // Codex toggling can affect multiple views; keep the existing refresh calls there.
+        if (_mode != MonsterDetailMode.AssignToTeam)
+        {
+            GameEvents.OnTeamChanged?.Invoke();
+            GameEvents.OnJobsChanged?.Invoke();
+            GameEvents.FavoritesChanged?.Invoke();
+        }
 
         AudioManager.I?.PlayClick();
-    }
-
-    private bool GetCodexPreferredShiny(string monsterId)
-    {
-        var data = SaveManager.Data;
-        if (data == null) return false;
-        if (data.settings == null) data.settings = new SettingsState();
-
-        var list = data.settings.codexPreferShinyIds;
-        if (list == null) { list = new System.Collections.Generic.List<string>(); data.settings.codexPreferShinyIds = list; }
-
-        return list.Contains(monsterId);
-    }
-
-    private void SetCodexPreferredShiny(string monsterId, bool preferShiny)
-    {
-        var data = SaveManager.Data;
-        if (data == null) return;
-        if (data.settings == null) data.settings = new SettingsState();
-
-        var list = data.settings.codexPreferShinyIds;
-        if (list == null) { list = new System.Collections.Generic.List<string>(); data.settings.codexPreferShinyIds = list; }
-
-        if (preferShiny)
-        {
-            if (!list.Contains(monsterId)) list.Add(monsterId);
-        }
-        else
-        {
-            list.Remove(monsterId);
-        }
-
-        SaveManager.Save();
     }
 
     private Sprite GetVariantIcon(MonsterDataSO monster)
     {
         if (monster == null) return null;
 
-        bool shiny = false;
+        bool shiny = (_mode == MonsterDetailMode.AssignToTeam || _mode == MonsterDetailMode.CodexView) ? _viewShinyCosmetic : false;
 
-        // IMPORTANT: Prevent stale Codex variant state from leaking into Assign/Team views.
-        // Priority:
-        // 1) Assign/Team: the конкрет owned instance being viewed
-        // 2) Codex: preferred owned (if resolved) else last-viewed flag
-        // 3) StarterSelect: never show shiny here
-        if (_mode == MonsterDetailMode.AssignToTeam && _currentOwned != null)
-        {
-            shiny = _currentOwned.isShiny || _currentOwned.shinyTier > 0;
-        }
-        else if (_mode == MonsterDetailMode.CodexView)
-        {
-            if (_preferredOwned != null)
-                shiny = _preferredOwned.isShiny || _preferredOwned.shinyTier > 0;
-            else
-                shiny = _codexViewingShiny;
-        }
-        else
-        {
-            shiny = false;
-        }
-
-        if (shiny && monster.shinyIcon != null)
+if (shiny && monster.shinyIcon != null)
             return monster.shinyIcon;
 
         return monster.icon;
@@ -881,30 +800,13 @@ if (hasOwnedInstance)
 
         string baseName = string.IsNullOrEmpty(monster.displayName) ? monster.name : monster.displayName;
 
-        bool shiny = false;
+        bool shiny = (_mode == MonsterDetailMode.AssignToTeam || _mode == MonsterDetailMode.CodexView) ? _viewShinyCosmetic : false;
 
-        if (_mode == MonsterDetailMode.AssignToTeam && _currentOwned != null)
-        {
-            shiny = _currentOwned.isShiny || _currentOwned.shinyTier > 0;
-        }
-        else if (_mode == MonsterDetailMode.CodexView)
-        {
-            if (_preferredOwned != null)
-                shiny = _preferredOwned.isShiny || _preferredOwned.shinyTier > 0;
-            else
-                shiny = _codexViewingShiny;
-        }
-        else
-        {
-            shiny = false;
-        }
-
-        if (!shiny)
+if (!shiny)
             return baseName;
 
         return $"{baseName} <color=#FFD54F>(Shiny)</color>";
     }
-
 
     // ─────────────────────────────────────────────────────────────
     // Staged render
@@ -936,9 +838,10 @@ if (hasOwnedInstance)
         {
             TryStep("Header & Static Fields", () =>
             {
-                                if (!safeSkipMonsterIcon && icon) icon.sprite = GetVariantIcon(monster);
+                if (!safeSkipMonsterIcon && icon) icon.sprite = GetVariantIcon(monster);
                 if (idText) idText.text = monster ? $"ID: {monster.id}" : "ID: -";
-                                if (nameText) nameText.text = BuildVariantDisplayName(monster);
+                if (nameText) nameText.text = BuildVariantDisplayName(monster);
+
                 if (typeText)
                 {
                     string typeName = monster ? monster.type.ToString() : "-";
@@ -981,9 +884,12 @@ if (hasOwnedInstance)
 
                 RefreshStatsViewToggleLabel();
 
-                
-                ResolveVariantState(monster ? monster.id : null);
+                // ✅ CRITICAL FIX:
+                // Preserve focused owned instance during staged refresh so Team/Assign doesn’t
+                // accidentally revert to global codex preference mid-render.
+                ResolveVariantState(monster ? monster.id : null, (_mode == MonsterDetailMode.AssignToTeam) ? _currentOwned : null);
                 SetupShinyVariantUI();
+                UpdateShinyVariantToggleLabel();
 
                 RenderStatsSection();
 
@@ -1249,7 +1155,6 @@ if (hasOwnedInstance)
             return;
         }
 
-
         if (_mode != MonsterDetailMode.AssignToTeam
             || _currentOwned == null
             || string.IsNullOrEmpty(_currentOwned.monsterId))
@@ -1338,7 +1243,6 @@ if (hasOwnedInstance)
         backgroundImage.color = c;
     }
 
-    // Clears Codex/variant state so we never carry a shiny preference across sessions.
     private void ClearVariantState()
     {
         _codexHasNormal = false;
@@ -1348,13 +1252,15 @@ if (hasOwnedInstance)
         _preferredOwned = null;
         _otherVariantOwned = null;
 
-        if (shinyVariantRoot) shinyVariantRoot.SetActive(false);
+        
+        _statsOwned = null;
+        _viewShinyCosmetic = false;
+if (shinyVariantRoot) shinyVariantRoot.SetActive(false);
         if (shinyVariantToggleLabel) shinyVariantToggleLabel.text = string.Empty;
     }
 
     private void ResetVisualsImmediate()
     {
-        // Stop any staged render coroutine immediately.
         if (_stageCR != null)
         {
             StopCoroutine(_stageCR);
@@ -1399,7 +1305,6 @@ if (hasOwnedInstance)
         if (favoriteButton) favoriteButton.gameObject.SetActive(false);
         if (favoriteOnIcon) favoriteOnIcon.SetActive(false);
 
-        // Critical: clear variant state last so no UI element (icon/name) can remain "shiny".
         ClearVariantState();
 
         _swipeTracking = false;
@@ -1441,30 +1346,26 @@ if (hasOwnedInstance)
 
         int evoLvl = Mathf.Max(1, m.evolutionLevel);
 
-        // Determine whether we have an owned instance (so we can carry training/flatAtkBonus forward)
-        bool hasOwnedInstance = (_currentOwned != null) && !string.IsNullOrEmpty(_currentOwned.monsterId);
+        var srcOwned = _statsOwned ?? _currentOwned;
+        bool hasOwnedInstance = (srcOwned != null) && !string.IsNullOrEmpty(srcOwned.monsterId);
 
-// Training/permanent bonuses that persist across evolution
         int trainHP = 0, trainATK = 0, trainDEF = 0, trainSPD = 0;
         int flatAtkBonus = 0;
 
         if (hasOwnedInstance)
         {
-            trainHP  = Mathf.Max(0, _currentOwned.trainingBonus.hp);
-            trainATK = Mathf.Max(0, _currentOwned.trainingBonus.atk);
-            trainDEF = Mathf.Max(0, _currentOwned.trainingBonus.def);
-            trainSPD = Mathf.Max(0, _currentOwned.trainingBonus.spd);
-            flatAtkBonus = Mathf.Max(0, _currentOwned.flatAtkBonus);
+            trainHP = Mathf.Max(0, srcOwned.trainingBonus.hp);
+            trainATK = Mathf.Max(0, srcOwned.trainingBonus.atk);
+            trainDEF = Mathf.Max(0, srcOwned.trainingBonus.def);
+            trainSPD = Mathf.Max(0, srcOwned.trainingBonus.spd);
+            flatAtkBonus = Mathf.Max(0, srcOwned.flatAtkBonus);
 
-            // Legacy guard: if old saves mirrored training into flatAtkBonus, avoid double counting.
             if (LooksLikeLegacyTrainingWasMirroredIntoFlat(flatAtkBonus, trainATK))
                 trainATK = 0;
         }
 
-        // Compute adjusted totals at the evolution level for current form and next form.
-        // IMPORTANT: We intentionally do NOT apply Titles/equipment here (moveable layers).
-        int curHP  = Mathf.RoundToInt(BattleCalc.CalcHP(m, evoLvl));
-        int nxtHP  = Mathf.RoundToInt(BattleCalc.CalcHP(nextDef, evoLvl));
+        int curHP = Mathf.RoundToInt(BattleCalc.CalcHP(m, evoLvl));
+        int nxtHP = Mathf.RoundToInt(BattleCalc.CalcHP(nextDef, evoLvl));
 
         int curATK = Mathf.RoundToInt(BattleCalc.CalcBaseAttack(m, evoLvl, 0, 0));
         int nxtATK = Mathf.RoundToInt(BattleCalc.CalcBaseAttack(nextDef, evoLvl, 0, 0));
@@ -1477,21 +1378,19 @@ if (hasOwnedInstance)
 
         if (hasOwnedInstance)
         {
-            curHP  += trainHP;  nxtHP  += trainHP;
-            curATK += (trainATK + flatAtkBonus);  nxtATK += (trainATK + flatAtkBonus);
+            curHP += trainHP; nxtHP += trainHP;
+            curATK += (trainATK + flatAtkBonus); nxtATK += (trainATK + flatAtkBonus);
             curDEF += trainDEF; nxtDEF += trainDEF;
             curSPD += trainSPD; nxtSPD += trainSPD;
         }
 
-        int dHp  = nxtHP  - curHP;
+        int dHp = nxtHP - curHP;
         int dAtk = nxtATK - curATK;
         int dDef = nxtDEF - curDEF;
         int dSpd = nxtSPD - curSPD;
 
-        // Build a compact delta string with only meaningful changes.
-        // Example: "(+15 HP, +6 ATK)"
         List<string> parts = new List<string>(4);
-        if (dHp != 0)  parts.Add($"{(dHp > 0 ? "+" : "")}{dHp} HP");
+        if (dHp != 0) parts.Add($"{(dHp > 0 ? "+" : "")}{dHp} HP");
         if (dAtk != 0) parts.Add($"{(dAtk > 0 ? "+" : "")}{dAtk} ATK");
         if (dDef != 0) parts.Add($"{(dDef > 0 ? "+" : "")}{dDef} DEF");
         if (dSpd != 0) parts.Add($"{(dSpd > 0 ? "+" : "")}{dSpd} SPD");
@@ -1500,7 +1399,6 @@ if (hasOwnedInstance)
 
         return $"EVO: Lv {evoLvl} → {nextName}{deltas}";
     }
-
 
     private void TryStep(string label, Action step)
     {
@@ -1524,10 +1422,10 @@ if (hasOwnedInstance)
 
     private int GetDisplayLevel()
     {
-        // If we have a concrete owned instance (team OR owned-from-codex), use its level.
-        // Otherwise fall back to 1 for pure-def views (StarterSelect / unrevealed codex).
-        if (_currentOwned != null && _currentOwned.level > 0)
-            return _currentOwned.level;
+        // Stats source is stable; shiny is cosmetic-only.
+        var src = _statsOwned ?? _currentOwned;
+        if (src != null && src.level > 0)
+            return src.level;
 
         return 1;
     }
@@ -1537,9 +1435,8 @@ if (hasOwnedInstance)
         if (!evolveButton)
             return;
 
-        // We want evolve available anywhere we're looking at a REAL owned instance
-        // (team slot OR owned-from-codex). Pure-def Codex/Starter views should hide it.
-        bool hasOwned = (_currentOwned != null) && !string.IsNullOrEmpty(_currentOwned.monsterId);
+        var srcOwned = _statsOwned ?? _currentOwned;
+        bool hasOwned = (srcOwned != null) && !string.IsNullOrEmpty(srcOwned.monsterId);
 
         if (!hasOwned || current == null)
         {
@@ -1556,7 +1453,7 @@ if (hasOwnedInstance)
 
         bool canActuallyEvolve = false;
         if (meetsLevel)
-            canActuallyEvolve = EvolutionHelper.CanEvolve(_currentOwned, current);
+            canActuallyEvolve = EvolutionHelper.CanEvolve(srcOwned, current);
 
         evolveButton.interactable = canActuallyEvolve;
     }
@@ -1573,8 +1470,10 @@ if (hasOwnedInstance)
 
         string key = null;
 
-        if (_currentOwned != null && !string.IsNullOrEmpty(_currentOwned.monsterId))
-            key = _currentOwned.monsterId;
+        var srcOwned = _statsOwned ?? _currentOwned;
+
+        if (srcOwned != null && !string.IsNullOrEmpty(srcOwned.monsterId))
+            key = srcOwned.monsterId;
         else if (current != null && !string.IsNullOrEmpty(current.id))
             key = current.id;
 
@@ -1590,9 +1489,10 @@ if (hasOwnedInstance)
 
     private void HandleTitlesChanged(string ownedId)
     {
-        if (_currentOwned != null
-            && !string.IsNullOrEmpty(_currentOwned.monsterId)
-            && _currentOwned.monsterId == ownedId)
+        var srcOwned = _statsOwned ?? _currentOwned;
+        if (srcOwned != null
+            && !string.IsNullOrEmpty(srcOwned.monsterId)
+            && srcOwned.monsterId == ownedId)
         {
             UpdateTitleButtonBinding();
         }
@@ -1630,17 +1530,18 @@ if (hasOwnedInstance)
 
     private void HandleMonsterLeveled(string ownedIdOrDefId, int newLevel)
     {
-        if (_currentOwned == null || string.IsNullOrEmpty(_currentOwned.monsterId))
+        var srcOwned = _statsOwned ?? _currentOwned;
+        if (srcOwned == null || string.IsNullOrEmpty(srcOwned.monsterId))
             return;
 
-        string myKey = !string.IsNullOrEmpty(_currentOwned.ownedUID)
-            ? _currentOwned.ownedUID
-            : _currentOwned.monsterId;
+        string myKey = !string.IsNullOrEmpty(srcOwned.ownedUID)
+            ? srcOwned.ownedUID
+            : srcOwned.monsterId;
 
         if (myKey != ownedIdOrDefId)
             return;
 
-        _currentOwned.level = newLevel;
+        srcOwned.level = newLevel;
 
         if (lvlText)
             lvlText.text = $"LVL: {GetDisplayLevel()}";
@@ -1679,27 +1580,24 @@ if (hasOwnedInstance)
         return $"{label}: {total} ({baseVal} + <color={TRAINING_GREEN}>{trainingVal}</color>)";
     }
 
-    private string FormatAdjFloat(string label, float baseVal, int trainingVal)
-    {
-        float total = baseVal + trainingVal;
-        string baseStr = baseVal.ToString("0.##");
-        string totalStr = total.ToString("0.##");
-        return $"{label}: {totalStr} ({baseStr} + <color={TRAINING_GREEN}>{trainingVal}</color>)";
-    }
-
     private bool LooksLikeLegacyTrainingWasMirroredIntoFlat(int flatAtkBonus, int trainingAtk)
     {
         if (flatAtkBonus <= 0 || trainingAtk <= 0) return false;
-
         return flatAtkBonus >= trainingAtk && flatAtkBonus >= 10;
     }
 
     // ─────────────────────────────────────────────────────────────
-    // Shiny variant toggle (GLOBAL preference, shown when you own BOTH)
+    // Variant state resolution (unchanged API, improved usage)
     // ─────────────────────────────────────────────────────────────
 
-
     private void ResolveVariantState(string monsterId)
+    {
+        ResolveVariantState(monsterId, focusOwned: null);
+    }
+
+    // Overload: when opening from a specific owned instance (team card / owned list),
+    // we want the detail panel to start from THAT instance (not a saved global preference).
+    void ResolveVariantState(string monsterId, OwnedMonsterData focusOwned)
     {
         _codexHasNormal = false;
         _codexHasShiny = false;
@@ -1711,13 +1609,16 @@ if (hasOwnedInstance)
         if (string.IsNullOrEmpty(monsterId) || SaveManager.Data == null)
             return;
 
-        // Determine if player owns both variants (owned list only)
         if (MonsterVariantPreference.PlayerHasBothVariants(monsterId, out var shiny, out var non))
         {
             _codexHasShiny = shiny != null;
             _codexHasNormal = non != null;
 
-            _preferredOwned = MonsterVariantPreference.GetPreferredOwned(monsterId);
+            if (focusOwned != null && focusOwned.monsterId == monsterId)
+                _preferredOwned = focusOwned;
+            else
+                _preferredOwned = MonsterVariantPreference.GetPreferredOwned(monsterId);
+
             if (_preferredOwned == null)
                 _preferredOwned = non ?? shiny;
 
@@ -1727,8 +1628,10 @@ if (hasOwnedInstance)
             return;
         }
 
-        // Only one variant exists (or none)
-        var pref = MonsterVariantPreference.GetPreferredOwned(monsterId);
+        var pref = (focusOwned != null && focusOwned.monsterId == monsterId)
+            ? focusOwned
+            : MonsterVariantPreference.GetPreferredOwned(monsterId);
+
         if (pref != null)
         {
             bool s = pref.isShiny || pref.shinyTier > 0;
@@ -1738,6 +1641,4 @@ if (hasOwnedInstance)
             _codexViewingShiny = s;
         }
     }
-
-
 }
