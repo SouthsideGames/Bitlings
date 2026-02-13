@@ -17,6 +17,10 @@ public class PostBattleSummaryPanelUI : MonoBehaviour
     [SerializeField] private TextMeshProUGUI growthCoresLabel;
     [SerializeField] private TextMeshProUGUI captureLabel;
 
+    [Header("Level Ups")]
+    [Tooltip("Optional: shows the provided level-up summary lines.")]
+    [SerializeField] private TextMeshProUGUI levelUpsLabel;
+
     [Header("Monster Info")]
     [SerializeField] private Image enemyPortraitImage;
     [SerializeField] private TextMeshProUGUI enemyNameLabel;
@@ -46,8 +50,14 @@ public class PostBattleSummaryPanelUI : MonoBehaviour
 
     const string GREEN = "#3CDE74";
 
+    [Header("Micro-Juice")]
+    [SerializeField] private float revealStartDelay = 0.05f;
+    [SerializeField] private float revealStepDelay = 0.08f;
+    [SerializeField] private float countUpDuration = 0.35f;
+
     private bool _hasClosed;
     private BattleResult? _lastResult;
+
 
     private static readonly Dictionary<Rarity, Color> RARITY_COLORS = new()
     {
@@ -151,6 +161,73 @@ public class PostBattleSummaryPanelUI : MonoBehaviour
 
     private bool IsAutoBattleMode() => EncounterManager.I && EncounterManager.I.IsAutoMode;
 
+    private void CancelRowTweens(GameObject row)
+    {
+        if (!row) return;
+        LeanTween.cancel(row);
+        var rt = row.transform as RectTransform;
+        if (rt) rt.localScale = Vector3.one;
+    }
+
+    private void HideRow(TextMeshProUGUI label)
+    {
+        if (!label) return;
+        CancelRowTweens(label.gameObject);
+        label.gameObject.SetActive(false);
+    }
+
+    private void ShowRowDelayed(TextMeshProUGUI label, float delaySeconds)
+    {
+        if (!label) return;
+        CancelRowTweens(label.gameObject);
+        label.gameObject.SetActive(false);
+
+        LeanTween.delayedCall(label.gameObject, Mathf.Max(0f, delaySeconds), () =>
+        {
+            if (!label) return;
+            label.gameObject.SetActive(true);
+            // subtle appear pop
+            var rt = label.rectTransform;
+            rt.localScale = Vector3.one;
+            LeanTween.scale(rt, Vector3.one * 1.03f, 0.10f).setLoopPingPong(1).setEase(LeanTweenType.easeOutBack);
+        });
+    }
+
+    private void AnimateCountUp(TextMeshProUGUI label, int from, int to, float duration, Func<int, string> textBuilder)
+    {
+        if (!label) return;
+
+        from = Mathf.Max(0, from);
+        to = Mathf.Max(0, to);
+        duration = Mathf.Max(0.01f, duration);
+
+        // Ensure active before we animate.
+        label.gameObject.SetActive(true);
+
+        LeanTween.cancel(label.gameObject);
+        LeanTween.value(label.gameObject, from, to, duration)
+            .setEase(LeanTweenType.easeOutQuad)
+            .setOnUpdate((float v) =>
+            {
+                if (!label) return;
+                label.text = textBuilder(Mathf.RoundToInt(v));
+            })
+            .setOnComplete(() =>
+            {
+                if (!label) return;
+                label.text = textBuilder(to);
+            });
+    }
+
+    private void PunchIfBonus(TextMeshProUGUI label)
+    {
+        if (!label) return;
+        var rt = label.rectTransform;
+        LeanTween.cancel(rt.gameObject);
+        rt.localScale = Vector3.one;
+        LeanTween.scale(rt, Vector3.one * 1.08f, 0.12f).setLoopPingPong(1).setEase(LeanTweenType.easeOutBack);
+    }
+
     private string BuildRewardLine(string label, int baseValue, int titleBonus, int total)
     {
         if (titleBonus <= 0 || baseValue <= 0)
@@ -208,50 +285,131 @@ public class PostBattleSummaryPanelUI : MonoBehaviour
         if (titleLabel)
             titleLabel.text = result.victory ? "Victory!" : "Defeat";
 
+        // ─────────────────────────────────────────────
+        // Rewards: hide empty lines + micro-juice (count-up + stagger)
+        // ─────────────────────────────────────────────
+        float delay = Mathf.Max(0f, revealStartDelay);
+
         int creditsTotal = Mathf.Max(0, creditsBase + creditsTitleBonus);
+
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        Debug.Log($"[PostBattleSummaryPanelUI] Credits: base={creditsBase}, bonus={creditsTitleBonus}, total={creditsTotal}");
+#endif
+
         if (creditsLabel)
         {
-            Debug.Log($"[PostBattleSummaryPanelUI] Credits: base={creditsBase}, bonus={creditsTitleBonus}, total={creditsTotal}");
-            if (creditsTitleBonus > 0)
+            if (creditsTotal <= 0)
             {
-                creditsLabel.text = $"Credits: {creditsTotal} (<color={GREEN}>+{creditsTitleBonus} Bonus</color>)";
-
-                // small pop animation to draw attention to the bonus
-                var rt = creditsLabel.rectTransform;
-                LeanTween.cancel(rt.gameObject);
-                rt.localScale = Vector3.one;
-                LeanTween.scale(rt, Vector3.one * 1.08f, 0.12f).setLoopPingPong(1).setEase(LeanTweenType.easeOutBack);
+                HideRow(creditsLabel);
             }
             else
             {
-                creditsLabel.text = BuildRewardLine("Credits", creditsBase, creditsTitleBonus, creditsTotal);
+                ShowRowDelayed(creditsLabel, delay);
+
+                int bonus = Mathf.Max(0, creditsTitleBonus);
+                Func<int, string> builder = (val) =>
+                    bonus > 0
+                        ? $"Credits: {val} (<color={GREEN}>+{bonus} Bonus</color>)"
+                        : $"Credits: {val}";
+
+                // Start at 0 for punchier feel.
+                LeanTween.delayedCall(creditsLabel.gameObject, delay, () =>
+                {
+                    AnimateCountUp(creditsLabel, 0, creditsTotal, countUpDuration, builder);
+                    if (bonus > 0) PunchIfBonus(creditsLabel);
+                });
+
+                delay += revealStepDelay;
             }
         }
 
         int coresTotal = Mathf.Max(0, growthCoresBase + growthCoresTitleBonus);
+        int coresDisplay = (growthCoresBase <= 0 && growthCoresTitleBonus <= 0 && growthCoresGained > 0)
+            ? Mathf.Max(0, growthCoresGained)
+            : coresTotal;
+
         if (growthCoresLabel)
         {
-            if (growthCoresBase <= 0 && growthCoresTitleBonus <= 0 && growthCoresGained > 0)
-                growthCoresLabel.text = $"Growth Cores: {growthCoresGained}";
+            if (coresDisplay <= 0)
+            {
+                HideRow(growthCoresLabel);
+            }
             else
-                growthCoresLabel.text = BuildRewardLine("Growth Cores", growthCoresBase, growthCoresTitleBonus, coresTotal);
+            {
+                ShowRowDelayed(growthCoresLabel, delay);
+
+                int bonus = Mathf.Max(0, growthCoresTitleBonus);
+                Func<int, string> builder = (val) =>
+                    bonus > 0
+                        ? $"Growth Cores: {val} (<color={GREEN}>+{bonus} Bonus</color>)"
+                        : $"Growth Cores: {val}";
+
+                LeanTween.delayedCall(growthCoresLabel.gameObject, delay, () =>
+                {
+                    AnimateCountUp(growthCoresLabel, 0, coresDisplay, countUpDuration, builder);
+                    if (bonus > 0) PunchIfBonus(growthCoresLabel);
+                });
+
+                delay += revealStepDelay;
+            }
         }
 
         // Capture line (UPDATED: wraps shiny name in *)
         if (captureLabel)
         {
-            if (captured)
+            if (!captured)
             {
+                // QoL: hide the line entirely if no capture.
+                HideRow(captureLabel);
+            }
+            else
+            {
+                ShowRowDelayed(captureLabel, delay);
+
                 // Use display name, but still fall back safely if needed.
-                string baseName = (result.wildDef != null) ? MonsterNameFormatter.GetDisplayName(result.wildDef) : (!string.IsNullOrEmpty(capturedMonsterId) ? capturedMonsterId : "Unknown");
+                string baseName = (result.wildDef != null)
+                    ? MonsterNameFormatter.GetDisplayName(result.wildDef)
+                    : (!string.IsNullOrEmpty(capturedMonsterId) ? capturedMonsterId : "Unknown");
+
                 string name = MonsterNameFormatter.Format(baseName, effectiveShiny);
 
                 int lvl = capturedLevel > 0 ? capturedLevel : Mathf.Max(1, result.wildLevel);
                 captureLabel.text = $"Captured: {name} (Lv {lvl})";
+
+                delay += revealStepDelay;
+            }
+        }
+
+        // Level ups (delta-only): render the provided summary lines if present.
+        if (levelUpsLabel)
+        {
+            if (levelUpSummaries == null || levelUpSummaries.Count == 0)
+            {
+                HideRow(levelUpsLabel);
             }
             else
             {
-                captureLabel.text = "No capture";
+                ShowRowDelayed(levelUpsLabel, delay);
+
+                var sb = new System.Text.StringBuilder(256);
+                sb.AppendLine("Level Ups:");
+                for (int i = 0; i < levelUpSummaries.Count; i++)
+                {
+                    if (string.IsNullOrWhiteSpace(levelUpSummaries[i])) continue;
+                    sb.AppendLine($"• {levelUpSummaries[i]}");
+                }
+                levelUpsLabel.text = sb.ToString();
+
+                // Tiny pop to make it feel like a meaningful change.
+                LeanTween.delayedCall(levelUpsLabel.gameObject, delay, () =>
+                {
+                    if (!levelUpsLabel) return;
+                    var rt = levelUpsLabel.rectTransform;
+                    rt.localScale = Vector3.one;
+                    LeanTween.scale(rt, Vector3.one * 1.04f, 0.12f).setLoopPingPong(1).setEase(LeanTweenType.easeOutBack);
+                });
+
+                delay += revealStepDelay;
             }
         }
 

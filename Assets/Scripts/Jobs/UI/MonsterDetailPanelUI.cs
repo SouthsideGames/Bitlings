@@ -526,7 +526,7 @@ current = MonsterLibraryLocator.GetById(_currentOwned.monsterId);
         RefreshEvolveButton();
         SetupFavoriteButton();
 
-        ResolveVariantState(current ? current.id : null);
+        ResolveVariantState(current ? current.id : null, _currentOwned);
         // Sync cosmetic view to preferred after resolving.
         if (_preferredOwned != null)
             _viewShinyCosmetic = (_preferredOwned.isShiny || _preferredOwned.shinyTier > 0);
@@ -564,7 +564,7 @@ current = MonsterLibraryLocator.GetById(_currentOwned.monsterId);
         RefreshEvolveButton();
         SetupFavoriteButton();
 
-        ResolveVariantState(current ? current.id : null);
+        ResolveVariantState(current ? current.id : null, _currentOwned);
         // Sync cosmetic view to preferred after resolving.
         if (_preferredOwned != null)
             _viewShinyCosmetic = (_preferredOwned.isShiny || _preferredOwned.shinyTier > 0);
@@ -621,7 +621,16 @@ current = MonsterLibraryLocator.GetById(_currentOwned.monsterId);
         RefreshEvolveButton();
         SetupFavoriteButton();
 
-        ResolveVariantState(monster ? monster.id : null);
+        ResolveVariantState(monster ? monster.id : null, owned);
+
+        // Ensure the cosmetic view matches the instance we opened from.
+        // Without this, if the panel was previously opened from a shiny team member,
+        // clicking a non-shiny owned row could keep the "Shiny" tab selected.
+        _viewShinyCosmetic = _codexViewingShiny;
+
+        // In Codex mode, stats are driven by the focused owned instance, but shiny is cosmetic-only.
+        // Apply cosmetic immediately so icon + name are correct even if the panel was already open.
+        ApplyVariantCosmeticImmediate();
         SetupShinyVariantUI();
         UpdateShinyVariantToggleLabel();
         SafeOpen(monster);

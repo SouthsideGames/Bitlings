@@ -1201,6 +1201,17 @@ public void BeginBattle(MonsterDataSO wild, int level, Action<BattleResult> onEn
             var t = teamList[i];
             if (t == null || string.IsNullOrEmpty(t.monsterId)) continue;
             int hp = Mathf.CeilToInt(Mathf.Max(0f, teamHP[i]));
+
+            // AUTO-REMOVE DEAD TEAM MEMBERS:
+            // When a team monster hits 0 HP in battle, it is automatically removed from the player's team.
+            // We clear the slot (instead of removing list entries) to preserve stable UI slot indices.
+            if (hp <= 0)
+            {
+                // Clear slot
+                teamList[i] = new OwnedMonsterData { monsterId = null, currentHP = 0 };
+                continue;
+            }
+
             t.currentHP = hp;
             teamList[i] = t;
         }

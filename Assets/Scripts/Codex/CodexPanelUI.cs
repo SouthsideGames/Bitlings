@@ -13,7 +13,8 @@ public enum OwnedSortMode
     ByType,
     ByLevelLowToHigh,
     ByLevelHighToLow,
-    ShinyMonsters
+    ShinyMonsters,
+    BitlingPack
 }
 
 public enum CodexViewMode
@@ -72,7 +73,7 @@ public class CodexPanelUI : MonoBehaviour
             BuildSortDropdownOptions();
 
             int saved = LoadSortIndexFromJson();
-            saved = Mathf.Clamp(saved, 0, (int)OwnedSortMode.ShinyMonsters);
+            saved = Mathf.Clamp(saved, 0, (int)OwnedSortMode.BitlingPack);
 
             sortDropdown.onValueChanged.RemoveAllListeners();
             sortDropdown.SetValueWithoutNotify(saved);
@@ -165,7 +166,7 @@ public class CodexPanelUI : MonoBehaviour
         if (!sortDropdown) return;
 
         var options = new List<TMP_Dropdown.OptionData>();
-        for (int i = 0; i <= (int)OwnedSortMode.ShinyMonsters; i++)
+        for (int i = 0; i <= (int)OwnedSortMode.BitlingPack; i++)
             options.Add(new TMP_Dropdown.OptionData(GetSortLabel((OwnedSortMode)i)));
 
         sortDropdown.options = options;
@@ -183,13 +184,14 @@ public class CodexPanelUI : MonoBehaviour
             case OwnedSortMode.ByLevelLowToHigh: return "Level ↑";
             case OwnedSortMode.ByLevelHighToLow: return "Level ↓";
             case OwnedSortMode.ShinyMonsters: return "Shiny First";
+            case OwnedSortMode.BitlingPack: return "Bitling Pack";
             default: return mode.ToString();
         }
     }
 
     void OnSortChanged(int value)
     {
-        var mode = (OwnedSortMode)Mathf.Clamp(value, 0, (int)OwnedSortMode.ShinyMonsters);
+        var mode = (OwnedSortMode)Mathf.Clamp(value, 0, (int)OwnedSortMode.BitlingPack);
         if (mode == _lastSortMode) return;
 
         _lastSortMode = mode;
@@ -267,9 +269,6 @@ public class CodexPanelUI : MonoBehaviour
             if (member == null || string.IsNullOrEmpty(member.monsterId))
                 continue;
 
-            // IMPORTANT: capture locals per-iteration so UI callbacks can't
-            // accidentally reference the wrong monster if this method is
-            // rebuilt frequently.
             var memberLocal = member;
             int teamSlotLocal = teamSlot;
             var def = MonsterLibraryLocator.GetById(memberLocal.monsterId);
@@ -287,8 +286,6 @@ public class CodexPanelUI : MonoBehaviour
             {
                 int visibleIndex = _teamCardRoots.Count - 1;
 
-                // If this prefab uses HealButtonController, bind it to the correct team slot.
-                // Also select the card before healing so the bounce/selection feedback matches the button pressed.
                 var healCtrl = go.GetComponent<HealButtonController>();
                 if (!healCtrl) healCtrl = go.GetComponentInChildren<HealButtonController>(true);
                 if (healCtrl)
@@ -310,7 +307,6 @@ public class CodexPanelUI : MonoBehaviour
             }
         }
 
-        // If there are no cards, ensure selection doesn't break.
         if (_teamCardRoots.Count == 0)
         {
             selectedTeamIndex = 0;
@@ -320,7 +316,6 @@ public class CodexPanelUI : MonoBehaviour
         SelectTeamSlot(Mathf.Clamp(selectedTeamIndex, 0, _teamCardRoots.Count - 1));
     }
 
-    // Finds the HP Slider under this team card and toggles it.
     private void SetTeamHpBarActive(GameObject teamCardGO, bool active)
     {
         if (!teamCardGO) return;
@@ -371,13 +366,11 @@ public class CodexPanelUI : MonoBehaviour
     }
 
     // ─────────────────────────────────────────────
-    // Codex grid: ALL defs = MonsterLibrary + unlocked pack monsters
+    // Codex grid
     // ─────────────────────────────────────────────
 
     void BuildOwned(List<OwnedMonsterData> owned, List<OwnedMonsterData> team, OwnedSortMode sortMode)
     {
-        // IMPORTANT: only clear instantiated list items, do NOT nuke the entire ownedContent
-        // (otherwise you can destroy your filter bar/buttons if they live under ownedContent).
         ClearOwnedListItemsOnly(ownedContent);
 
         _lastVisibleCodexDefs = new List<MonsterDataSO>();
@@ -390,23 +383,24 @@ public class CodexPanelUI : MonoBehaviour
             return;
 
         // Build "best owned per monsterId" dictionaries (normal + shiny).
-        // We prefer owned-only, then supplement with team entries only if they look real (ownedUID present)
-        // to avoid placeholder team slots creating false "normal" ownership.
-
         var ownedById = new Dictionary<string, OwnedMonsterData>(StringComparer.Ordinal);
         var normalById = new Dictionary<string, OwnedMonsterData>(StringComparer.Ordinal);
         var shinyById = new Dictionary<string, OwnedMonsterData>(StringComparer.Ordinal);
+
+
+        // Team-aware variant preference: if a monster is on the active team, we want the Codex row
+        // to reflect that exact instance (especially Shiny) so the UI is consistent.
+        var teamNormalById = new Dictionary<string, OwnedMonsterData>(StringComparer.Ordinal);
+        var teamShinyById  = new Dictionary<string, OwnedMonsterData>(StringComparer.Ordinal);
 
         void Consider(OwnedMonsterData om)
         {
             if (om == null || string.IsNullOrEmpty(om.monsterId)) return;
             bool shiny = om.isShiny || om.shinyTier > 0;
 
-            // Best-any
             if (!ownedById.TryGetValue(om.monsterId, out var existingAny) || (existingAny != null && om.level > existingAny.level))
                 ownedById[om.monsterId] = om;
 
-            // Best-normal / best-shiny
             if (shiny)
             {
                 if (!shinyById.TryGetValue(om.monsterId, out var existingShiny) || (existingShiny != null && om.level > existingShiny.level))
@@ -429,21 +423,43 @@ public class CodexPanelUI : MonoBehaviour
                 var t = data.team[i];
                 if (t == null) continue;
                 if (string.IsNullOrEmpty(t.ownedUID)) continue; // ignore placeholders
+
                 Consider(t);
+
+                bool shiny = t.isShiny || t.shinyTier > 0;
+                if (shiny)
+                {
+                    if (!teamShinyById.TryGetValue(t.monsterId, out var existing) || (existing != null && t.level > existing.level))
+                        teamShinyById[t.monsterId] = t;
+                }
+                else
+                {
+                    if (!teamNormalById.TryGetValue(t.monsterId, out var existing) || (existing != null && t.level > existing.level))
+                        teamNormalById[t.monsterId] = t;
+                }
             }
         }
 
-        // Pack-discovered set based on unlocked packs
         var discoveredByPack = BuildDiscoveredMonsterIdSetFromUnlockedPacks(data);
 
-        // Build defs from BOTH the main library and the unlocked packs
         var defs = BuildAllCodexDefsFromLibraryAndUnlockedPacks(data);
         if (defs == null || defs.Count == 0)
             return;
 
+        if (sortMode == OwnedSortMode.BitlingPack)
+        {
+            defs = defs
+                .Where(d => d != null &&
+                            !string.IsNullOrEmpty(d.id) &&
+                            MonsterPackTagCache.IsInUnlockedPack(d.id, data.unlockedPacks))
+                .ToList();
+
+            if (defs.Count == 0)
+                return;
+        }
+
         var sortedDefs = SortDefs(defs, sortMode, ownedById, shinyById);
 
-        // NEW: collect spawned codex items so we can inject browse list after we know it
         var spawnedItems = new List<OwnedMonsterListItemUI>();
 
         foreach (var def in sortedDefs)
@@ -454,38 +470,47 @@ public class CodexPanelUI : MonoBehaviour
             OwnedMonsterData normalData = null;
             OwnedMonsterData shinyData = null;
 
-            // capturedReal = truly owned (in ShinyFirst mode this is still "owned or not"
-            // for filtering; we keep capturedReal based on normal ownership).
             bool capturedReal = ownedById.TryGetValue(def.id, out ownedData);
             normalById.TryGetValue(def.id, out normalData);
             shinyById.TryGetValue(def.id, out shinyData);
 
-            // Choose which variant to display in the Codex grid.
-            // - If only shiny exists, show shiny.
-            // - If only normal exists, show normal.
-            // - If both exist, show the last-used variant (stored in settings).
             OwnedMonsterData displayOwned = ownedData;
-            if (shinyData != null && normalData == null)
+
+            // If this monster is currently on the team, force the Codex row to reflect that team instance.
+            // This keeps icon + name consistent between the Team strip and the Owned list (especially for Shiny).
+            if (teamShinyById.TryGetValue(def.id, out var teamShiny) && teamShiny != null)
             {
-                displayOwned = shinyData;
+                displayOwned = teamShiny;
             }
-            else if (shinyData != null && normalData != null)
+            else if (teamNormalById.TryGetValue(def.id, out var teamNormal) && teamNormal != null)
             {
-                bool preferShiny = (data.settings != null && data.settings.codexPreferShinyIds != null && data.settings.codexPreferShinyIds.Contains(def.id));
-                displayOwned = preferShiny ? shinyData : normalData;
+                displayOwned = teamNormal;
             }
-            else if (normalData != null)
+            else
             {
-                displayOwned = normalData;
+                if (shinyData != null && normalData == null)
+                {
+                    displayOwned = shinyData;
+                }
+                else if (shinyData != null && normalData != null)
+                {
+                    bool preferShiny = (data.settings != null &&
+                                       data.settings.codexPreferShinyIds != null &&
+                                       data.settings.codexPreferShinyIds.Contains(def.id));
+                    displayOwned = preferShiny ? shinyData : normalData;
+                }
+                else if (normalData != null)
+                {
+                    displayOwned = normalData;
+                }
             }
 
             // discovered = reveal in codex even if not owned yet
             bool discovered =
                 capturedReal ||
                 (discoveredByPack != null && discoveredByPack.Contains(def.id)) ||
-                SaveManager.IsDiscovered(def.id); // optional safety: supports manual discovery too
+                SaveManager.IsDiscovered(def.id);
 
-            // View dropdown filter (if you wire a view dropdown later)
             if (_viewMode == CodexViewMode.Captured && !capturedReal)
                 continue;
 
@@ -494,7 +519,6 @@ public class CodexPanelUI : MonoBehaviour
 
             bool isFavorite = FavoriteService.IsFavorite(def.id);
 
-            // captured-only filter uses capturedReal (not discovered)
             if (_capturedOnlyFilter && !capturedReal)
                 continue;
 
@@ -506,7 +530,6 @@ public class CodexPanelUI : MonoBehaviour
                 if (!isFavorite) continue;
             }
 
-            // This entry is visible in the current list (post-filter)
             _lastVisibleCodexDefs.Add(def);
 
             var go = Instantiate(ownedListItemPrefab, ownedContent);
@@ -515,7 +538,6 @@ public class CodexPanelUI : MonoBehaviour
             {
                 spawnedItems.Add(item);
 
-                // Pass "captured: discovered" so silhouettes become visible for pack monsters
                 item.SetupForCodex(
                     def,
                     displayOwned,
@@ -527,7 +549,6 @@ public class CodexPanelUI : MonoBehaviour
             }
         }
 
-        // push browse context into every spawned item so swipe works inside detail panel
         for (int i = 0; i < spawnedItems.Count; i++)
         {
             if (spawnedItems[i] != null)
@@ -535,16 +556,11 @@ public class CodexPanelUI : MonoBehaviour
         }
     }
 
-    /// <summary>
-    /// Union of MonsterLibrary monsters + any monsters referenced by unlocked packs.
-    /// This ensures pack-only monsters appear in the Codex (as silhouettes if discovered).
-    /// </summary>
     private List<MonsterDataSO> BuildAllCodexDefsFromLibraryAndUnlockedPacks(PlayerManager data)
     {
         var result = new List<MonsterDataSO>();
         var seen = new HashSet<string>(StringComparer.Ordinal);
 
-        // 1) Main library
         var lib = MonsterLibraryLocator.Lib;
         if (lib && lib.monsters != null)
         {
@@ -555,7 +571,6 @@ public class CodexPanelUI : MonoBehaviour
             }
         }
 
-        // 2) Unlocked packs
         if (data == null || data.unlockedPacks == null || data.unlockedPacks.Count == 0)
             return result;
 
@@ -583,9 +598,6 @@ public class CodexPanelUI : MonoBehaviour
         return result;
     }
 
-    /// <summary>
-    /// Builds a set of monster IDs that should be revealed because they belong to any unlocked pack.
-    /// </summary>
     private HashSet<string> BuildDiscoveredMonsterIdSetFromUnlockedPacks(PlayerManager data)
     {
         if (data == null) return null;
@@ -624,7 +636,7 @@ public class CodexPanelUI : MonoBehaviour
     OwnedSortMode GetSortMode()
     {
         if (!sortDropdown) return _lastSortMode;
-        return (OwnedSortMode)Mathf.Clamp(sortDropdown.value, 0, (int)OwnedSortMode.ShinyMonsters);
+        return (OwnedSortMode)Mathf.Clamp(sortDropdown.value, 0, (int)OwnedSortMode.BitlingPack);
     }
 
     static List<MonsterDataSO> SortDefs(
@@ -637,6 +649,14 @@ public class CodexPanelUI : MonoBehaviour
 
         switch (mode)
         {
+            case OwnedSortMode.BitlingPack:
+                // In this mode we already FILTERED to pack monsters only.
+                // Now sort by PackId then MonsterId.
+                query = defs
+                    .OrderBy(d => MonsterPackTagCache.GetPackId(d ? d.id : null) ?? string.Empty)
+                    .ThenBy(d => d ? d.id : string.Empty);
+                break;
+
             case OwnedSortMode.ByNameAZ:
                 query = defs
                     .OrderBy(d => SafeName(d))
@@ -668,7 +688,6 @@ public class CodexPanelUI : MonoBehaviour
                 break;
 
             case OwnedSortMode.ShinyMonsters:
-                // Shiny FIRST (do not filter out non-shiny)
                 query = defs
                     .OrderByDescending(d => d && shinyById != null && shinyById.ContainsKey(d.id))
                     .ThenByDescending(d => GetOwnedLevel(d, ownedById))
@@ -707,7 +726,6 @@ public class CodexPanelUI : MonoBehaviour
     {
         _capturedOnlyFilter = !_capturedOnlyFilter;
 
-        // optional: keep filters from stacking into "empty list" confusion
         if (_capturedOnlyFilter) _favoritesOnlyFilter = false;
 
         RebuildOwnedOnly();
@@ -717,7 +735,6 @@ public class CodexPanelUI : MonoBehaviour
     {
         _favoritesOnlyFilter = !_favoritesOnlyFilter;
 
-        // optional: keep filters from stacking into "empty list" confusion
         if (_favoritesOnlyFilter) _capturedOnlyFilter = false;
 
         RebuildOwnedOnly();
@@ -731,13 +748,9 @@ public class CodexPanelUI : MonoBehaviour
     {
         if (!parent) return;
         for (int i = parent.childCount - 1; i >= 0; i--)
-            UnityEngine.Object.Destroy(parent.GetChild(i).gameObject);
+            Destroy(parent.GetChild(i).gameObject);
     }
 
-    /// <summary>
-    /// Clears ONLY the instantiated OwnedMonsterListItemUI rows under ownedContent.
-    /// This prevents destroying static UI like headers/filter bars/buttons if they live under ownedContent.
-    /// </summary>
     private static void ClearOwnedListItemsOnly(RectTransform parent)
     {
         if (!parent) return;
@@ -748,7 +761,7 @@ public class CodexPanelUI : MonoBehaviour
             if (!child) continue;
 
             if (child.GetComponent<OwnedMonsterListItemUI>() != null)
-                UnityEngine.Object.Destroy(child.gameObject);
+                Destroy(child.gameObject);
         }
     }
 }

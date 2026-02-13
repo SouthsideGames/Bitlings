@@ -14,6 +14,11 @@ public class OwnedMonsterListItemUI : MonoBehaviour
     [SerializeField] private Button rootButton;
     [SerializeField] private TextMeshProUGUI cooldownText;
 
+    [Header("Codex / Badge (optional)")]
+    [Tooltip("Optional: small pill/label that shows CORE or the PackId (e.g., MP-001).")]
+    [SerializeField] private GameObject packBadgeRoot;
+    [SerializeField] private TextMeshProUGUI packBadgeText;
+
     [Header("Alerts")]
     [SerializeField] private GameObject evolveAlert;
     [SerializeField] private GameObject favoriteAlert;
@@ -143,6 +148,8 @@ public class OwnedMonsterListItemUI : MonoBehaviour
         if (idText)
             idText.text = HasValidMonster(data) ? data.monsterId : "—";
 
+        RefreshPackBadge(def);
+
         // Favorites are only shown for Codex entries; hide here.
         if (favoriteAlert)
             favoriteAlert.SetActive(false);
@@ -181,6 +188,7 @@ public class OwnedMonsterListItemUI : MonoBehaviour
         _data = captured ? ownedData : null; // unrevealed entries have no OwnedMonsterData
 
         bool isShiny = captured && ownedData != null && (ownedData.isShiny || ownedData.shinyTier > 0);
+        bool isOwned = captured && ownedData != null;
 
         // Icon
         if (icon)
@@ -193,8 +201,18 @@ public class OwnedMonsterListItemUI : MonoBehaviour
                     icon.enabled = true;
                     icon.sprite = s;
 
-                    // Silhouette effect for unrevealed
-                    icon.color = captured ? Color.white : Color.black;
+                    // Silhouette effect for unrevealed.
+                    // If revealed but NOT owned, reduce alpha so players can tell at a glance.
+                    if (!captured)
+                    {
+                        icon.color = Color.black;
+                    }
+                    else
+                    {
+                        var c = Color.white;
+                        if (!isOwned) c.a = 0.5f;
+                        icon.color = c;
+                    }
                 }
                 else
                 {
@@ -226,6 +244,12 @@ public class OwnedMonsterListItemUI : MonoBehaviour
                 idText.text = "???";
         }
 
+        // Pack badge shows for revealed entries (owned OR discovered).
+        if (captured && def)
+            RefreshPackBadge(def);
+        else
+            SetPackBadgeActive(false, null);
+
         // Favorites icon (only for captured + feature unlocked)
         if (favoriteAlert)
         {
@@ -248,6 +272,40 @@ public class OwnedMonsterListItemUI : MonoBehaviour
         if (!IsUsable(_data)) UpdateKOCountdown();
 
         RefreshEvolutionAlert();
+    }
+
+    // ---------------------------------------------------------------------
+    // Pack badge
+    // ---------------------------------------------------------------------
+
+    private void RefreshPackBadge(MonsterDataSO def)
+    {
+        if (!packBadgeRoot && !packBadgeText) return;
+
+        if (!def || string.IsNullOrEmpty(def.id))
+        {
+            SetPackBadgeActive(false, null);
+            return;
+        }
+
+        var badge = MonsterPackTagCache.GetBadge(def.id);
+
+        bool isPackMonster = !string.IsNullOrEmpty(badge) && !badge.Equals("CORE", StringComparison.OrdinalIgnoreCase);
+
+        if (!isPackMonster)
+        {
+            SetPackBadgeActive(false, null);
+            return;
+        }
+
+        SetPackBadgeActive(true, badge); 
+    }
+
+    private void SetPackBadgeActive(bool active, string text)
+    {
+        if (packBadgeRoot) packBadgeRoot.SetActive(active);
+        if (packBadgeText)
+            packBadgeText.text = active ? (text ?? string.Empty) : string.Empty;
     }
 
     /// <summary>

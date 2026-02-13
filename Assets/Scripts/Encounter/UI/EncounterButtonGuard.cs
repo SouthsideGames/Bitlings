@@ -16,10 +16,21 @@ public sealed class EncounterButtonGuard : MonoBehaviour
     private Button _button;
     private Coroutine _shakeRoutine;
 
+    // EncounterManager can be created/destroyed across scenes.
+    // Hook its OnStateChanged so the button refreshes when battles start/end.
+    private EncounterManager _hookedEncounter;
+
     private void Awake()
     {
         _button = GetComponent<Button>();
         if (!shakeTarget) shakeTarget = GetComponent<RectTransform>();
+        Apply();
+    }
+
+    private void Start()
+    {
+        // In case EncounterManager comes up after this UI.
+        TryHookEncounterEvents();
         Apply();
     }
 
@@ -31,6 +42,8 @@ public sealed class EncounterButtonGuard : MonoBehaviour
         GameEvents.OnTeamHealthChanged += HandleTeamChanged;
 
         _button.onClick.AddListener(OnButtonClicked);
+
+        TryHookEncounterEvents();
         Apply();
     }
 
@@ -41,7 +54,43 @@ public sealed class EncounterButtonGuard : MonoBehaviour
         GameEvents.OnTeamChanged -= HandleTeamChanged;
         GameEvents.OnTeamHealthChanged -= HandleTeamChanged;
 
+        UnhookEncounterEvents();
+
         _button.onClick.RemoveListener(OnButtonClicked);
+    }
+
+    private void Update()
+    {
+        // Cheap guard: if EncounterManager instance changes across scenes, re-hook.
+        // This prevents the button getting stuck disabled after a battle when no
+        // energy/team events fire.
+        if (_hookedEncounter != EncounterManager.I)
+            TryHookEncounterEvents();
+    }
+
+    private void TryHookEncounterEvents()
+    {
+        var em = EncounterManager.I;
+        if (em == null)
+        {
+            UnhookEncounterEvents();
+            return;
+        }
+
+        if (_hookedEncounter == em) return;
+
+        UnhookEncounterEvents();
+        _hookedEncounter = em;
+        _hookedEncounter.OnStateChanged += Apply;
+    }
+
+    private void UnhookEncounterEvents()
+    {
+        if (_hookedEncounter != null)
+        {
+            _hookedEncounter.OnStateChanged -= Apply;
+            _hookedEncounter = null;
+        }
     }
 
     private void HandleEnergy(int a, int b) => Apply();
@@ -54,7 +103,7 @@ public sealed class EncounterButtonGuard : MonoBehaviour
 
         // Encounter is only actionable when:
         //  - We are not currently inside a battle
-        //  - The player has at least N team members that are alive (HP != 0)
+        //  - The player has at least N team members that are alive (HP > 0)
         //  - The player has enough Energy to pay the encounter cost (unless the next encounter is free)
         bool inBattle = EncounterManager.I != null && EncounterManager.I.IsInBattle;
 
@@ -116,7 +165,8 @@ public sealed class EncounterButtonGuard : MonoBehaviour
             var entry = data.team[i];
             if (entry != null && !string.IsNullOrEmpty(entry.monsterId))
             {
-                if (entry.currentHP != 0)
+                // Alive means HP > 0. (HP can briefly go negative during battle calc.)
+                if (entry.currentHP > 0)
                 {
                     count++;
                     if (count >= minMembers) return true;

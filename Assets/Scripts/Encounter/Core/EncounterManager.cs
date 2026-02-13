@@ -664,6 +664,9 @@ public partial class EncounterManager : MonoBehaviour
     {
         yield return new WaitForSeconds(postResultDelay);
         inBattle = false;
+        // IMPORTANT: many UI elements (including Encounter button interactivity)
+        // depend on this event to refresh when a battle ends.
+        OnStateChanged?.Invoke();
 
         if (escaped)
         {
