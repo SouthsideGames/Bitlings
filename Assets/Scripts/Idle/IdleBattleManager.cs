@@ -135,6 +135,22 @@ public class IdleBattleManager : MonoBehaviour
         if (IsIdleBattleUnlocked())
         {
 
+            // Save-State Guard: if a batch was interrupted (crash/force-close),
+            // do NOT run offline simulation automatically. Instead, flag recovery
+            // so UI can prompt Resume vs Discard.
+            if (IdleBattleSaveStateGuard.HasPending())
+            {
+                var s0 = IdleBattleStore.Load();
+                if (s0 != null)
+                {
+                    s0.hasPendingRecovery = true;
+                    // Pause auto until a recovery decision is made.
+                    s0.autoBattling = false;
+                    IdleBattleStore.Save(s0);
+                }
+                return;
+            }
+
             // Offline simulation should only run if the player left AUTO/idle battling ON.
             // If AUTO was turned off before closing the app, we must not consume energy
             // or run encounters on next boot.
@@ -191,6 +207,7 @@ public class IdleBattleManager : MonoBehaviour
         if (!s.autoBattling)
         {
             s.autoBattling = true;
+            s.hasPendingRecovery = false;
             s.sessionStartUnix = NowUnix();
             s.lastTickUnix = s.sessionStartUnix;
 
@@ -212,6 +229,63 @@ public class IdleBattleManager : MonoBehaviour
             s.autoBattling = false;
             IdleBattleStore.Save(s);
         }
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // Save-State Guard recovery controls
+    // ─────────────────────────────────────────────────────────────
+    public bool HasPendingRecovery()
+    {
+        try
+        {
+            var s = IdleBattleStore.Load();
+            return (s != null && s.hasPendingRecovery) || IdleBattleSaveStateGuard.HasPending();
+        }
+        catch { return IdleBattleSaveStateGuard.HasPending(); }
+    }
+
+    /// <summary>
+    /// Resume auto battling after an interrupted batch.
+    /// This clears the guard and re-enables auto; the next tick will safely run batches again.
+    /// </summary>
+    public void ResumePendingRecovery(string biomeId = null)
+    {
+        var s = IdleBattleStore.Load();
+        if (s != null)
+        {
+            s.hasPendingRecovery = false;
+            s.autoBattling = true;
+            if (!string.IsNullOrEmpty(biomeId)) s.biomeId = biomeId;
+            s.lastTickUnix = NowUnix();
+            IdleBattleStore.Save(s);
+        }
+
+        // Clear the guard so Start() won't re-pause.
+        IdleBattleSaveStateGuard.Discard();
+    }
+
+    /// <summary>
+    /// Discard an interrupted batch cleanly.
+    /// This clears the guard and leaves auto OFF.
+    /// </summary>
+    public void DiscardPendingRecovery(bool clearLogs = false)
+    {
+        var s = IdleBattleStore.Load();
+        if (s != null)
+        {
+            s.hasPendingRecovery = false;
+            s.autoBattling = false;
+            s.lastTickUnix = NowUnix();
+            if (clearLogs)
+            {
+                s.log?.Clear();
+                s.capturedLog?.Clear();
+                s.hasPendingSummary = false;
+            }
+            IdleBattleStore.Save(s);
+        }
+
+        IdleBattleSaveStateGuard.Discard();
     }
 
     private void ResolveOfflineIfAny()
@@ -289,13 +363,24 @@ public class IdleBattleManager : MonoBehaviour
         if (config == null) return;
 
         _headlessBatchRunning = true;
+
+        // Save-State Guard: mark batch as in-progress BEFORE doing any work.
+        // If the app crashes mid-batch, we can resume safely or discard cleanly.
+        string guardId;
+        var s = IdleBattleStore.Load();
+        int sessionSeed = SeedForSession(s);
+        IdleBattleSaveStateGuard.Begin(count, sessionSeed, out guardId);
+
+        // IMPORTANT: We stage changes (energy spend / rewards / captures) and only apply
+        // them during a commit phase at the end of the batch. This is what makes the
+        // save-state guard effective.
+
         ResourceBank.BeginBatch();
 
         try
         {
-            var s = IdleBattleStore.Load();
-        var rng = new System.Random(SeedForSession(s));
-        var teamP = JobIdlePassives.ComputeForActiveTeam();
+            var rng = new System.Random(sessionSeed);
+            var teamP = JobIdlePassives.ComputeForActiveTeam();
 
         var team = SaveManager.Data?.team;
         var teamIds = new List<string>();
@@ -324,12 +409,16 @@ public class IdleBattleManager : MonoBehaviour
         int baseCost = GetEncounterCostSafe();
         int effectiveCost = Mathf.Max(1, Mathf.RoundToInt(baseCost * Mathf.Clamp(teamP.energyCostMul, 0.5f, 1f)));
 
+        int energyRemaining = GetEnergySafe();
+        int totalSpentLocal = 0;
+
+        var pending = new List<PendingIdleEncounter>(Mathf.Clamp(count, 1, 256));
+
         for (int i = 0; i < count; i++)
         {
-            if (!SpendEnergy(effectiveCost)) break;
-
-            s.totalEnergySpent += effectiveCost;
-            encounterManager?.RequestStateRefresh();
+            if (energyRemaining < effectiveCost) break;
+            energyRemaining -= effectiveCost;
+            totalSpentLocal += effectiveCost;
 
             var wild = encounterManager != null
                 ? encounterManager.PickWildConsideringFlyers()
@@ -395,42 +484,92 @@ public class IdleBattleManager : MonoBehaviour
 
             int creditsBase = Mathf.Max(0, Mathf.FloorToInt(hb.credits * Mathf.Max(0f, creditMulNeutral)));
 
-            string leadIdForGrant = (teamIds.Count > 0) ? teamIds[0] : null;
-            int awarded = 0;
-            if (hb.victory && creditsBase > 0)
-            {
-                awarded = ResourceManager.I.AddCreditsWithTitles(creditsBase, leadIdForGrant, wild, wildLevel);
-            }
-
-            AddToLogMerged(s.log, wild.id, awarded, shiny);
-
-            // Offline/idle capture attempts (headless batches only).
-            // This is gated behind a feature unlock and uses a lightweight roll.
+            bool captured = false;
             if (hb.victory && IsOfflineCaptureUnlocked() && wild != null && !wild.uncatchable)
             {
                 float chance = CalcIdleCaptureChance01(wild);
                 if (rng.NextDouble() <= chance)
+                    captured = true;
+            }
+
+            pending.Add(new PendingIdleEncounter
+            {
+                wildDef = wild,
+                wildLevel = wildLevel,
+                shiny = shiny,
+                victory = hb.victory,
+                creditsBase = creditsBase,
+                capture = captured
+            });
+        }
+
+        // ─────────────────────────────────────────────
+        // Commit Phase (atomic-ish): apply staged changes
+        // ─────────────────────────────────────────────
+
+        // Spend energy in one shot.
+        if (totalSpentLocal > 0)
+        {
+            int available = Mathf.Max(0, ResourceBank.Get(ResourceType.Energy));
+            int toSpend = Mathf.Min(available, Mathf.Max(0, totalSpentLocal));
+            if (toSpend > 0)
+            {
+                ResourceBank.TrySpend(ResourceType.Energy, toSpend);
+                GameEvents.EnergyChanged?.Invoke();
+            }
+            s.totalEnergySpent += Mathf.Max(0, toSpend);
+        }
+
+        // Apply rewards/captures & write logs.
+        string leadIdForGrant = (teamIds.Count > 0) ? teamIds[0] : null;
+        for (int i = 0; i < pending.Count; i++)
+        {
+            var p = pending[i];
+            if (p == null || p.wildDef == null) continue;
+
+            int awarded = 0;
+            if (p.victory && p.creditsBase > 0)
+            {
+                try
                 {
-                    bool applied = ApplyIdleCaptureToSave(wild, wildLevel, isShiny: shiny);
-                    if (applied)
-                    {
-                        s.capturedLog ??= new List<IdleEncounterLogEntry>();
-                        AddToLogMerged(s.capturedLog, wild.id, credits: 0, shiny: shiny);
-                        TrimLog(s.capturedLog, config != null ? config.encounterLogMaxEntries : 50);
-                    }
+                    awarded = ResourceManager.I != null
+                        ? ResourceManager.I.AddCreditsWithTitles(p.creditsBase, leadIdForGrant, p.wildDef, p.wildLevel)
+                        : 0;
+                }
+                catch { awarded = 0; }
+            }
+
+            AddToLogMerged(s.log, p.wildDef.id, awarded, p.shiny);
+
+            if (p.victory && p.capture && IsOfflineCaptureUnlocked() && p.wildDef != null && !p.wildDef.uncatchable)
+            {
+                bool applied = false;
+                try { applied = ApplyIdleCaptureToSave(p.wildDef, p.wildLevel, isShiny: p.shiny); }
+                catch { applied = false; }
+
+                if (applied)
+                {
+                    s.capturedLog ??= new List<IdleEncounterLogEntry>();
+                    AddToLogMerged(s.capturedLog, p.wildDef.id, credits: 0, shiny: p.shiny);
+                    TrimLog(s.capturedLog, config != null ? config.encounterLogMaxEntries : 50);
                 }
             }
 
-            GameEvents.BattleFinished?.Invoke(new BattleResult
+            // Notify (for UI/battle loggers). Guarded by _headlessBatchRunning in HandleBattleFinished.
+            try
             {
-                victory = hb.victory,
-                creditsGained = awarded,
-                creditsBase = 0,
-                creditsTitleBonus = 0,
-                activeMonsterOwnedId = leadIdForGrant,
-                wildDef = wild,
-                wildLevel = wildLevel
-            });
+                GameEvents.BattleFinished?.Invoke(new BattleResult
+                {
+                    victory = p.victory,
+                    creditsGained = awarded,
+                    creditsBase = 0,
+                    creditsTitleBonus = 0,
+                    activeMonsterOwnedId = leadIdForGrant,
+                    wildDef = p.wildDef,
+                    wildLevel = p.wildLevel
+                });
+            }
+            catch { }
         }
 
         TrimLog(s.log, config.encounterLogMaxEntries);
@@ -440,12 +579,25 @@ public class IdleBattleManager : MonoBehaviour
 
         encounterManager?.RequestStateRefresh();
 
-            ResourceBank.EndBatch();
+            // Save-State Guard: batch committed successfully.
+            IdleBattleSaveStateGuard.Complete(guardId);
         }
         finally
         {
+            try { ResourceBank.EndBatch(); } catch { }
             _headlessBatchRunning = false;
         }
+    }
+
+    [Serializable]
+    private class PendingIdleEncounter
+    {
+        public MonsterDataSO wildDef;
+        public int wildLevel;
+        public bool shiny;
+        public bool victory;
+        public int creditsBase;
+        public bool capture;
     }
 
     private void MarkSummaryPendingIfLogExists()

@@ -71,7 +71,7 @@ public class JobPanelUI : MonoBehaviour
             if (s == null || s.config == null) continue;
 
             // Title: "Quarry (2/3)"
-            if (t.title) t.title.text = $"{t.job} ({CountWorkers(s)}/{s.config.maxWorkers})";
+            if (t.title) t.title.text = $"{t.job}";
 
             // ─────────────────────────────────────────────────────────────
             // Capacity text with colored delta (titles vs. no titles)

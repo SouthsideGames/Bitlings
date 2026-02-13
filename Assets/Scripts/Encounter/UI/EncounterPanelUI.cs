@@ -170,6 +170,20 @@ public class EncounterPanelUI : MonoBehaviour
 
     public bool IsHireDecisionOpen => hireDecisionRoot && hireDecisionRoot.activeSelf;
 
+    // ─────────────────────────────────────────────────────────────
+    // Idle/Auto Save-State Guard Recovery
+    // ─────────────────────────────────────────────────────────────
+    [Header("Auto Recovery Decision")]
+    [Tooltip("Shown when an idle/auto batch was interrupted (crash/force-close) and the player must choose Resume or Discard.")]
+    [SerializeField] private GameObject recoveryDecisionRoot;
+    [SerializeField] private TextMeshProUGUI recoveryPromptText;
+    [SerializeField] private Button recoveryResumeButton;
+    [SerializeField] private Button recoveryDiscardButton;
+    [Tooltip("If true, hides the close button while the recovery panel is open so the player resolves it first.")]
+    [SerializeField] private bool hideCloseDuringRecovery = true;
+
+    public bool IsRecoveryDecisionOpen => recoveryDecisionRoot && recoveryDecisionRoot.activeSelf;
+
     private TextMeshProUGUI encounterLabel;
     float _etaTickAccum = 0f;
     bool _isFading;
@@ -201,6 +215,9 @@ public class EncounterPanelUI : MonoBehaviour
 
         if (hireDecisionRoot)
             hireDecisionRoot.SetActive(false);
+
+        if (recoveryDecisionRoot)
+            recoveryDecisionRoot.SetActive(false);
 
         if (hireContinueButton)
             hireContinueButton.gameObject.SetActive(false);
@@ -283,8 +300,22 @@ public class EncounterPanelUI : MonoBehaviour
             hireContinueButton.onClick.AddListener(OnClickHireContinue);
         }
 
+        if (recoveryResumeButton)
+        {
+            recoveryResumeButton.onClick.RemoveAllListeners();
+            recoveryResumeButton.onClick.AddListener(OnClickRecoveryResume);
+        }
+        if (recoveryDiscardButton)
+        {
+            recoveryDiscardButton.onClick.RemoveAllListeners();
+            recoveryDiscardButton.onClick.AddListener(OnClickRecoveryDiscard);
+        }
+
         RefreshAll();
         RefreshEncounterBoostIconsAndTooltips(force: true);
+
+        // If an idle/auto batch was interrupted, force the player to resolve it here.
+        TryOpenRecoveryDecisionIfNeeded();
     }
 
     void OnDisable()
@@ -304,6 +335,8 @@ public class EncounterPanelUI : MonoBehaviour
         GameEvents.OnEncounterAutoModeChanged -= ApplyCloseLock;
 
         if (encounterBtn) encounterBtn.onClick.RemoveAllListeners();
+        if (recoveryResumeButton) recoveryResumeButton.onClick.RemoveAllListeners();
+        if (recoveryDiscardButton) recoveryDiscardButton.onClick.RemoveAllListeners();
         if (_fadeCo != null) StopCoroutine(_fadeCo);
         if (_typewriterCo != null) StopCoroutine(_typewriterCo);
         _isFading = false;
@@ -794,7 +827,17 @@ public class EncounterPanelUI : MonoBehaviour
         //  - player has at least one monster on the team that is alive (HP != 0)
         //  - enough energy to pay the cost, unless the next encounter is free
         bool inBattle = IsInBattle();
-        bool busy = _isFading || IsHireDecisionOpen;
+        bool pendingRecovery = IsRecoveryDecisionOpen;
+        try
+        {
+            // Even if the panel isn't wired, still block the button when a guard is pending,
+            // to avoid letting the player start new encounters while the previous idle batch is unresolved.
+            if (!pendingRecovery && IdleBattleManager.I != null && IdleBattleManager.I.HasPendingRecovery())
+                pendingRecovery = true;
+        }
+        catch { }
+
+        bool busy = _isFading || IsHireDecisionOpen || pendingRecovery;
         bool hasAliveTeam = HasAliveTeamMember();
         bool hasEnergyOrFree = NextEncounterIsFree() || HasEnergy() || HasFallbackEnergy();
 
@@ -1143,6 +1186,92 @@ public class EncounterPanelUI : MonoBehaviour
             EnsureTeamPreviewForCurrentState(forceRebuild: true);
             PickAndApplyBlinderLine();
         }
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // Save-State Guard Recovery UI
+    // ─────────────────────────────────────────────────────────────
+    void TryOpenRecoveryDecisionIfNeeded()
+    {
+        if (!recoveryDecisionRoot) return; // not wired
+
+        // Never interrupt battle or hire decision UI.
+        if (IsInBattle() || IsHireDecisionOpen)
+        {
+            // Keep closed during these states.
+            if (recoveryDecisionRoot.activeSelf)
+                recoveryDecisionRoot.SetActive(false);
+            return;
+        }
+
+        bool pending = false;
+        try
+        {
+            pending = (IdleBattleManager.I != null) && IdleBattleManager.I.HasPendingRecovery();
+        }
+        catch { pending = false; }
+
+        if (pending)
+        {
+            OpenRecoveryDecision();
+        }
+        else
+        {
+            if (recoveryDecisionRoot.activeSelf)
+            {
+                recoveryDecisionRoot.SetActive(false);
+                RefreshEncounterButtonInteractivity();
+                ApplyCloseLock();
+            }
+        }
+    }
+
+    void OpenRecoveryDecision()
+    {
+        if (!recoveryDecisionRoot) return;
+
+        if (recoveryPromptText)
+        {
+            recoveryPromptText.text = "Auto Battle was interrupted. Resume to continue, or discard to clear the pending run.";
+        }
+
+        recoveryDecisionRoot.SetActive(true);
+        RefreshEncounterButtonInteractivity();
+        ApplyCloseLock();
+    }
+
+    void CloseRecoveryDecision()
+    {
+        if (!recoveryDecisionRoot) return;
+        recoveryDecisionRoot.SetActive(false);
+        RefreshEncounterButtonInteractivity();
+        ApplyCloseLock();
+    }
+
+    void OnClickRecoveryResume()
+    {
+        if (_isFading) return;
+
+        try
+        {
+            IdleBattleManager.I?.ResumePendingRecovery();
+        }
+        catch { }
+
+        CloseRecoveryDecision();
+    }
+
+    void OnClickRecoveryDiscard()
+    {
+        if (_isFading) return;
+
+        try
+        {
+            IdleBattleManager.I?.DiscardPendingRecovery(clearLogs: false);
+        }
+        catch { }
+
+        CloseRecoveryDecision();
     }
 
     void SetHirePromptForResult(bool choseYes, bool captureSucceeded)
@@ -1616,12 +1745,21 @@ public class EncounterPanelUI : MonoBehaviour
         }
 
         EnsureTeamPreviewForCurrentState(forceRebuild: true);
+
+        // When returning to the hub, surface the idle/auto recovery decision if applicable.
+        TryOpenRecoveryDecisionIfNeeded();
     }
 
 
     private void ApplyCloseLock()
     {
         if (!closeButtonRoot) return;
+
+        if (hideCloseDuringRecovery && IsRecoveryDecisionOpen)
+        {
+            closeButtonRoot.SetActive(false);
+            return;
+        }
 
         bool isAuto = IsAutoMode();
         if (isAuto)

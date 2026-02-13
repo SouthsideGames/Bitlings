@@ -3,7 +3,6 @@ using UnityEngine;
 using UnityEngine.UI;
 using System;
 using System.Collections;
-using System.Collections.Generic;
 
 public class JobSiteView : MonoBehaviour
 {
@@ -184,7 +183,7 @@ public class JobSiteView : MonoBehaviour
             : null;
 
         // Treat monsterId as “present” even if def resolves late.
-        bool hasWorker = (w != null && (w.def != null || !string.IsNullOrEmpty(w.monsterId)));
+        bool hasWorker = w != null && (w.def != null || !string.IsNullOrEmpty(w.monsterId));
 
         if (!hasWorker)
         {
@@ -313,7 +312,7 @@ public class JobSiteView : MonoBehaviour
     {
         if (seconds <= 0) return "0m";
         long h = seconds / 3600;
-        long m = (seconds % 3600) / 60;
+        long m = seconds % 3600 / 60;
 
         if (h > 0) return $"{h}h {m}m";
         return $"{Mathf.Max(1, (int)m)}m";

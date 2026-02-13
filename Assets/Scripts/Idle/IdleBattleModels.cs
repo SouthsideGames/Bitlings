@@ -14,6 +14,13 @@ public class IdleEncounterLogEntry
 public class IdleBattleSession
 {
     public bool autoBattling;
+    
+    // If true, the app detected an interrupted auto/idle batch (crash/force-close)
+    // and the player should choose whether to resume or discard.
+    public bool hasPendingRecovery;
+
+    // Used by IdleBattleManager to decide whether to open the summary panel.
+    public bool hasPendingSummary;
     public string biomeId;
     public int energyAtStart;
     public int totalEnergySpent;
