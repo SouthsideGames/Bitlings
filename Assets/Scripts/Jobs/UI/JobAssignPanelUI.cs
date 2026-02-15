@@ -294,16 +294,11 @@ public class JobAssignPanelUI : MonoBehaviour
         if (JobManager.I == null) { Close(); return; }
         if (_pendingDef == null) { Close(); return; }
 
-        // hard-block assignment if fatigued (even if UI somehow allowed it).
-        if (TryGetFatigueState(_pendingOwned, _pendingId, out _))
+        // Centralized job eligibility (jobs are NOT HP-gated by design).
+        if (!EligibilityRules.CanAssignWorkerToJobSlot(_job, _slotIndex, _pendingDef, _pendingId, out string reason))
         {
             AudioManager.I?.PlayDenied();
-            return;
-        }
-
-        if (!JobManager.I.IsTypeEligibleFor(_job, _pendingDef.type))
-        {
-            Close();
+            if (!string.IsNullOrEmpty(reason)) GameEvents.RaiseToast(reason);
             return;
         }
 

@@ -93,6 +93,7 @@ public partial class BattleManager : MonoBehaviour
             }
 
             // Apply any stored guard shields (from last round)
+            BeginAtomicStatusUI();
             ApplyPendingGuardShieldForActive();
             ApplyPendingGuardShieldForWild();
 
@@ -100,8 +101,9 @@ public partial class BattleManager : MonoBehaviour
             defendActiveThisRound = false;
             wildDefendActiveThisRound = false;
 
-            // Sync status icons after round reset + shield application
+            // Sync status icons after round reset + shield application (batched)
             RefreshStatusIconsFromState();
+            EndAtomicStatusUI(forceRefresh: true);
 
             if (!AutoResolveActive)
                 BattleLogger.Log(_logBuffer.GetRoundLine(round), LogScope.Battle);
@@ -115,12 +117,14 @@ public partial class BattleManager : MonoBehaviour
 #endif
 
             TitlesAdapter.OnTurnAdvanced(_turnIndex);
-            GameEvents.RaiseBattleStatsChanged();
+            RequestBattleStatRebuild(BattleStatRebuildReason.TurnStart, immediate: true);
 
             // Conditional Titles: show brief feedback when conditional effects become active/inactive.
             // (We keep the detailed math in BattleLogger.)
             if (TryConsumeConditionalTitleFeedback(out var _condMods, out var _condBattleLine, out var _condLogLine))
             {
+                RequestBattleStatRebuild(BattleStatRebuildReason.TitleConditionChanged, immediate: true);
+
                 if (!string.IsNullOrEmpty(_condLogLine))
                     BattleLogger.LogTitleProc("Conditional Titles", _condLogLine);
 
@@ -133,12 +137,14 @@ public partial class BattleManager : MonoBehaviour
 
             if (swappedFromKO)
             {
+                BeginAtomicStatusUI();
                 ClampAndPushActiveHP();
                 ApplyActiveToUI();
                 RefreshBenchUI();
 
                 // Swap can change which slot has charge queued
                 RefreshStatusIconsFromState();
+                EndAtomicStatusUI(forceRefresh: true);
             }
 
             if (IsWildKO() || IsTeamKO())
@@ -178,16 +184,19 @@ public partial class BattleManager : MonoBehaviour
             {
                 if (wildChoice == EnemyAction.Defend)
                 {
+                    BeginAtomicStatusUI();
                     ApplyWildDefendStance();
                     RefreshStatusIconsFromState();
+                    EndAtomicStatusUI(forceRefresh: true);
                 }
 
                 if (!IsWildKO() && !IsTeamKO())
                 {
+                    BeginAtomicStatusUI();
                     if (manualTurns) yield return WaitForPlayerChoiceAndResolve();
                     else yield return PlayerTurn();
-
-                    RefreshStatusIconsFromState();
+                    // Flush any guard/charge/status changes caused during the action.
+                    EndAtomicStatusUI(forceRefresh: true);
 
                     if (CheckEnd()) break;
                     yield return CoWaitScaled(hitPause);
@@ -195,7 +204,9 @@ public partial class BattleManager : MonoBehaviour
                     if (!IsTeamKO() && teamHP[activeIndex] <= 0.01f)
                     {
                         AutoSwapToAlive();
+                        BeginAtomicStatusUI();
                         RefreshStatusIconsFromState();
+                        EndAtomicStatusUI(forceRefresh: true);
                     }
                 }
 
@@ -203,9 +214,9 @@ public partial class BattleManager : MonoBehaviour
                 {
                     if (wildChoice != EnemyAction.Defend)
                     {
+                        BeginAtomicStatusUI();
                         yield return EnemyTurn(wildChoice);
-
-                        RefreshStatusIconsFromState();
+                        EndAtomicStatusUI(forceRefresh: true);
 
                         if (CheckEnd()) break;
                         yield return CoWaitScaled(hitPause);
@@ -296,8 +307,10 @@ RefreshStatusIconsFromState();
                         if (teamHP[activeIndex] > 0.01f)
                         {
                             ResetDefendStreak();
+                            BeginAtomicStatusUI();
                             ResolveQueuedSwap();
                             RefreshStatusIconsFromState();
+                            EndAtomicStatusUI(forceRefresh: true);
                         }
 
                         // Swap consumes the turn.
@@ -309,16 +322,19 @@ RefreshStatusIconsFromState();
                     // (We do NOT call EnemyTurn(Defend) to avoid double-rolling.)
                     if (wildChoice == EnemyAction.Defend)
                     {
+                        BeginAtomicStatusUI();
                         ApplyWildDefendStance();
                         RefreshStatusIconsFromState();
+                        EndAtomicStatusUI(forceRefresh: true);
                     }
                     else
                     {
+                        BeginAtomicStatusUI();
                         yield return EnemyTurn(wildChoice);
+                        EndAtomicStatusUI(forceRefresh: true);
                     }
 
-                    // Enemy turn can set defend/charge/consume charge
-                    RefreshStatusIconsFromState();
+                    // Enemy turn can set defend/charge/consume charge (already flushed above)
 
                     if (CheckEnd()) break;
                     yield return CoWaitScaled(hitPause);
@@ -331,7 +347,9 @@ RefreshStatusIconsFromState();
 
                         AutoSwapToAlive();
                         queuedChoice = PlayerAction.None;
+                        BeginAtomicStatusUI();
                         RefreshStatusIconsFromState();
+                        EndAtomicStatusUI(forceRefresh: true);
                     }
 
                     if (!IsWildKO() && !IsTeamKO())
@@ -343,8 +361,11 @@ RefreshStatusIconsFromState();
                                 case PlayerAction.Attack:
                                     // If the active slot was KO'ed by the wild acting first, the player's queued action is lost.
                                     if (teamHP[activeIndex] > 0.01f)
+                                    {
+                                        BeginAtomicStatusUI();
                                         yield return PlayerTurn();
-                                    RefreshStatusIconsFromState();
+                                        EndAtomicStatusUI(forceRefresh: true);
+                                    }
                                     break;
 
                                 case PlayerAction.Focus:
@@ -385,8 +406,10 @@ RefreshStatusIconsFromState();
                                         }
 
                                         ResetDefendStreak();
+                                        BeginAtomicStatusUI();
                                         ResolveQueuedSwap();
                                         RefreshStatusIconsFromState();
+                                        EndAtomicStatusUI(forceRefresh: true);
                                         break;
                                     }
 
@@ -434,8 +457,9 @@ RefreshStatusIconsFromState();
                         }
                         else
                         {
+                            BeginAtomicStatusUI();
                             yield return PlayerTurn();
-                            RefreshStatusIconsFromState();
+                            EndAtomicStatusUI(forceRefresh: true);
                         }
 
                         if (CheckEnd()) break;
@@ -828,7 +852,7 @@ if (!playerLandedFirstHitThisBattle && dr.damage > 0)
             bool canHeal = (jctx.regenTurns == int.MaxValue) || (jctx.regenTurns > 0);
             if (canHeal)
             {
-                float healAmt = GetFinalMaxHPForIndex(activeIndex) * jctx.endTurnHealPct;
+                float healAmt = GetCachedMaxHPForIndex(activeIndex) * jctx.endTurnHealPct;
                 TryAddHPToActive(healAmt);
                 if (jctx.regenTurns != int.MaxValue) jctx.regenTurns--;
                 if (!ShouldSkipNarration(BattleLineTag.Flavor))
@@ -844,7 +868,7 @@ if (!playerLandedFirstHitThisBattle && dr.damage > 0)
             if (inBattle && !string.IsNullOrEmpty(_playerTurnOwnerId))
             {
                 TitlesAdapter.OnCombatantTurnEnded(_playerTurnOwnerId);
-                GameEvents.RaiseBattleStatsChanged();
+                RequestBattleStatRebuild(BattleStatRebuildReason.BuffChanged, immediate: true);
             }
 
             isResolvingPlayerTurn = false;
@@ -1130,7 +1154,7 @@ int dmg_afterScalar = Mathf.Max(1, Mathf.RoundToInt(dr.damage * incomingScalar))
         teamHP[activeIndex] = Mathf.Max(0f, teamHP[activeIndex] - dmg_final);
         ClampAndPushActiveHP();
 
-        float maxHP = GetFinalMaxHPForIndex(activeIndex);
+        float maxHP = GetCachedMaxHPForIndex(activeIndex);
         float ratio = maxHP > 0.01f ? (float)dmg_final / maxHP : 0f;
         Emit(BattleEvent.Damage(BattleSide.Wild, BattleSide.Player, dmg_final, (dr.crit && !df.cannotBeCrit), dr.effectiveness, ratio, (preventedByGuardRaw > 0f) || (shieldAbsorbF > 0f) || (titleShieldAbsorbF > 0f)));
         if (!HasBattleEventConsumers && feedback) feedback.PlayHitReaction(BattleFeedbackManager.BattleFeedbackSide.Player, dr.crit && !df.cannotBeCrit, ratio, wasGuarded: (preventedByGuardRaw > 0f) || (shieldAbsorbF > 0f) || (titleShieldAbsorbF > 0f));
@@ -1193,7 +1217,7 @@ if (dr.crit && !df.cannotBeCrit)
 
         if (ctx != null && !ctx.rescueUsed && ctx.rescueHealPct > 0f && teamHP[activeIndex] > 0f)
         {
-            float curMax = GetFinalMaxHPForIndex(activeIndex);
+            float curMax = GetCachedMaxHPForIndex(activeIndex);
             float thresholdHP = curMax * (ctx.rescueThreshold > 0f ? ctx.rescueThreshold : 0.4f);
             if (preHP > thresholdHP && teamHP[activeIndex] <= thresholdHP)
             {
@@ -1207,7 +1231,7 @@ if (dr.crit && !df.cannotBeCrit)
 
         if (ctx != null && !ctx.surgeApplied)
         {
-            float curMax = GetFinalMaxHPForIndex(activeIndex);
+            float curMax = GetCachedMaxHPForIndex(activeIndex);
             if (teamHP[activeIndex] <= curMax * 0.5f && ctx.surgeAtkBonusPct > 0f)
             {
                 ctx.surgeApplied = true;
@@ -1223,7 +1247,7 @@ if (dr.crit && !df.cannotBeCrit)
             if (inBattle && !string.IsNullOrEmpty(_wildTurnOwnerId))
             {
                 TitlesAdapter.OnCombatantTurnEnded(_wildTurnOwnerId);
-                GameEvents.RaiseBattleStatsChanged();
+                RequestBattleStatRebuild(BattleStatRebuildReason.BuffChanged, immediate: true);
             }
         }
 
@@ -1308,13 +1332,15 @@ EndBattle(false);
 
     private WaitForSecondsRealtime Wait(float t)
     {
-        float scaled = Mathf.Max(0.01f, t / Mathf.Max(0.01f, battleSpeed));
+        float speed = GetEffectiveBattleSpeedForPacing();
+        float scaled = Mathf.Max(0.01f, t / Mathf.Max(0.01f, speed));
         return new WaitForSecondsRealtime(scaled);
     }
 
     private IEnumerator CoWaitScaled(float t)
     {
-        float scaled = Mathf.Max(0.01f, t / Mathf.Max(0.01f, battleSpeed));
+        float speed = GetEffectiveBattleSpeedForPacing();
+        float scaled = Mathf.Max(0.01f, t / Mathf.Max(0.01f, speed));
         float end = Time.unscaledTime + scaled;
         while (Time.unscaledTime < end)
             yield return null;
@@ -1328,9 +1354,31 @@ EndBattle(false);
         float s = Mathf.Max(0f, seconds);
         if (s <= 0f) yield break;
 
+        // Optional fast-forward: reduce unscaled waits too (pure UX; does not affect RNG).
+        float speed = GetEffectiveBattleSpeedForPacing();
+        if (speed > 0.01f)
+            s = s / Mathf.Max(0.01f, speed);
+
         float end = Time.unscaledTime + s;
         while (Time.unscaledTime < end)
             yield return null;
+    }
+
+    /// <summary>
+    /// Returns the effective pacing multiplier for battle waits/text.
+    /// This intentionally does NOT change any RNG; it only shortens delays.
+    /// </summary>
+    private float GetEffectiveBattleSpeedForPacing()
+    {
+        float s = Mathf.Max(0.01f, battleSpeed);
+
+        // Fast-forward is only relevant in auto battles (AutoResolve or non-manual turns).
+        bool isAuto = AutoResolveActive || !manualTurns;
+
+        if (isAuto && SettingsManager.I != null && SettingsManager.I.GetFastForwardBattle())
+            s *= 2.5f;
+
+        return s;
     }
 
 }

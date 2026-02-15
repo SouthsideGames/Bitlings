@@ -838,15 +838,23 @@ public class EncounterPanelUI : MonoBehaviour
         catch { }
 
         bool busy = _isFading || IsHireDecisionOpen || pendingRecovery;
-        bool hasAliveTeam = HasAliveTeamMember();
-        bool hasEnergyOrFree = NextEncounterIsFree() || HasEnergy() || HasFallbackEnergy();
 
         // NOTE: We still allow the button to be interactable during battle IF auto-mode is currently enabled.
         // This enables the player to HOLD the button to disable auto-mode for the next battle,
         // while still preventing taps from starting a new encounter (EncounterManager blocks when in battle).
         bool allowDuringBattleForAutoToggle = inBattle && EncounterManager.I != null && EncounterManager.I.IsAutoMode;
 
-        encounterBtn.interactable = !busy && hasAliveTeam && hasEnergyOrFree && (!inBattle || allowDuringBattleForAutoToggle);
+        if (allowDuringBattleForAutoToggle)
+        {
+            // Don't run encounter-start eligibility while in-battle; this is only for toggling auto.
+            encounterBtn.interactable = !busy;
+            return;
+        }
+
+        // Centralized eligibility (prevents drift with EncounterButtonGuard / EncounterManager).
+        bool hasAliveTeam = EligibilityRules.HasMinimumAliveTeam(minMembers: 1);
+        bool hasEnergyOrFree = EligibilityRules.HasRequiredEnergyOrFree(out _, out _);
+        encounterBtn.interactable = !busy && !inBattle && hasAliveTeam && hasEnergyOrFree;
     }
 
     bool HasAliveTeamMember()

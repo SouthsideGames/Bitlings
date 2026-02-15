@@ -101,22 +101,13 @@ public sealed class EncounterButtonGuard : MonoBehaviour
     {
         if (_button == null) return;
 
-        // Encounter is only actionable when:
-        //  - We are not currently inside a battle
-        //  - The player has at least N team members that are alive (HP > 0)
-        //  - The player has enough Energy to pay the encounter cost (unless the next encounter is free)
-        bool inBattle = EncounterManager.I != null && EncounterManager.I.IsInBattle;
-
-        bool hasTeamAlive = HasMinimumTeam(minRequiredTeamMembers);
-        bool hasEnergyOrFree = HasRequiredEnergyOrFree();
-
-        _button.interactable = !inBattle && hasTeamAlive && hasEnergyOrFree;
+        _button.interactable = EligibilityRules.CanStartEncounter(minRequiredTeamMembers, out _);
     }
 
     private void OnButtonClicked()
     {
         // If the button was force-enabled by some other script, still guard click feedback.
-        if (!HasRequiredEnergyOrFree())
+        if (!EligibilityRules.CanStartEncounter(minRequiredTeamMembers, out _))
         {
             StartShake();
             return;
@@ -153,50 +144,4 @@ public sealed class EncounterButtonGuard : MonoBehaviour
         _shakeRoutine = null;
     }
 
-    private static bool HasMinimumTeam(int minMembers)
-    {
-        var data = SaveManager.Data;
-        if (data == null || data.team == null) return false;
-
-        int count = 0;
-
-        for (int i = 0; i < data.team.Count; i++)
-        {
-            var entry = data.team[i];
-            if (entry != null && !string.IsNullOrEmpty(entry.monsterId))
-            {
-                // Alive means HP > 0. (HP can briefly go negative during battle calc.)
-                if (entry.currentHP > 0)
-                {
-                    count++;
-                    if (count >= minMembers) return true;
-                }
-            }
-        }
-
-        return false;
-    }
-
-    private static bool HasRequiredEnergyOrFree()
-    {
-        // Free encounter bypasses the energy check.
-        if (EncounterManager.I != null && EncounterManager.I.NextEncounterIsFree)
-            return true;
-
-        int needed = 1;
-        int current = 0;
-
-        if (EncounterManager.I != null)
-        {
-            needed = Mathf.Max(1, EncounterManager.I.GetEncounterCost());
-            current = Mathf.Max(0, EncounterManager.I.GetEnergyPoints());
-        }
-        else
-        {
-            needed = 1;
-            current = Mathf.Max(0, ResourceBank.Get(ResourceType.Energy));
-        }
-
-        return current >= needed;
-    }
 }

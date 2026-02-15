@@ -212,6 +212,134 @@ public sealed class BattleStatsSystem
         };
     }
 
+    // ─────────────────────────────────────────────────────────
+    // Stat breakdown helpers (for tooltips / explainability)
+    // ─────────────────────────────────────────────────────────
+
+    public struct StatBreakdownStages
+    {
+        public BattleStatBlock adjusted;
+        public BattleStatBlock afterJob;
+        public BattleStatBlock afterTitles;
+        public BattleStatBlock afterConditionals;
+        public BattleStatBlock afterTemp;
+        public BattleStatBlock afterBoosters;
+        public BattleStatBlock final;
+    }
+
+    /// <summary>
+    /// Builds intermediate stage values for the player's active slot.
+    /// Intended for UI explainability (tooltips). Does not change RNG.
+    /// </summary>
+    public StatBreakdownStages GetPlayerBreakdownStages(int idx)
+    {
+        EnsureAdjustedReady();
+
+        var stages = new StatBreakdownStages();
+        stages.adjusted = GetAdjustedPlayer(idx);
+
+        if (_bm == null)
+        {
+            stages.afterJob = stages.afterTitles = stages.afterConditionals = stages.afterTemp = stages.afterBoosters = stages.final = stages.adjusted;
+            return stages;
+        }
+
+        // Start from adjusted.
+        float hp = stages.adjusted.maxHP;
+        float atk = stages.adjusted.atk;
+        float def = stages.adjusted.def;
+        float spd = stages.adjusted.spd;
+
+        // 2) Job
+        var jctx = _bm.GetJobCtxSafe(idx);
+        if (jctx != null && jctx.maxHpBonusPct > 0f)
+            hp = hp * (1f + jctx.maxHpBonusPct);
+
+        // First-turn job speed bonuses
+        if (jctx != null && jctx.speedBuffTurns > 0 && jctx.speedBonusPctFirstTurns != 0f)
+            spd = spd * (1f + jctx.speedBonusPctFirstTurns);
+
+        stages.afterJob = new BattleStatBlock
+        {
+            maxHP = Mathf.Max(1, Mathf.RoundToInt(hp)),
+            atk = Mathf.Max(1, Mathf.RoundToInt(atk)),
+            def = Mathf.Max(0, Mathf.RoundToInt(def)),
+            spd = Mathf.Max(1, Mathf.RoundToInt(spd)),
+        };
+
+        // Build Title context.
+        var ctx = _bm.BuildTitleContextForIndexUsingMaxSafe(idx, hp);
+
+        string ownedId = _bm.GetTeamIdSafe(idx);
+        var defSO = _bm.GetTeamDefSafe(idx);
+        int lvl = _bm.GetTeamLevelSafe(idx);
+
+        // 3) Titles (non-conditional)
+        if (!string.IsNullOrEmpty(ownedId) && defSO != null)
+        {
+            hp = TitlesAdapter.GetStatValue(ownedId, defSO, lvl, "HP", ctx, hp);
+            atk = TitlesAdapter.GetStatValue(ownedId, defSO, lvl, "Attack", ctx, atk);
+            def = TitlesAdapter.GetStatValue(ownedId, defSO, lvl, "Defense", ctx, def);
+            spd = TitlesAdapter.GetStatValue(ownedId, defSO, lvl, "Speed", ctx, spd);
+        }
+
+        stages.afterTitles = new BattleStatBlock
+        {
+            maxHP = Mathf.Max(1, Mathf.RoundToInt(hp)),
+            atk = Mathf.Max(1, Mathf.RoundToInt(atk)),
+            def = Mathf.Max(0, Mathf.RoundToInt(def)),
+            spd = Mathf.Max(1, Mathf.RoundToInt(spd)),
+        };
+
+        // 4) Conditional title mods
+        var cmods = _bm.GetConditionalModsForIndexSafe(idx);
+        atk = (atk + Mathf.Max(0, cmods.atkFlat)) * (1f + Mathf.Max(0f, cmods.atkPct));
+        def = (def + Mathf.Max(0, cmods.defFlat));
+        spd = (spd + Mathf.Max(0, cmods.spdFlat)) * (1f + Mathf.Max(0f, cmods.spdPct));
+        hp = hp * (1f + Mathf.Max(0f, cmods.hpPct));
+
+        stages.afterConditionals = new BattleStatBlock
+        {
+            maxHP = Mathf.Max(1, Mathf.RoundToInt(hp)),
+            atk = Mathf.Max(1, Mathf.RoundToInt(atk)),
+            def = Mathf.Max(0, Mathf.RoundToInt(def)),
+            spd = Mathf.Max(1, Mathf.RoundToInt(spd)),
+        };
+
+        // 5) Temp boosters
+        if (BattleTempBuffs.I != null)
+        {
+            hp += Mathf.Max(0, BattleTempBuffs.I.GetPlayerHPBonus());
+            atk += Mathf.Max(0, BattleTempBuffs.I.GetPlayerAtkBonus());
+            def += Mathf.Max(0, BattleTempBuffs.I.GetPlayerDefenseBonus());
+            spd += Mathf.Max(0, BattleTempBuffs.I.GetPlayerSpeedFlatBonus());
+        }
+
+        stages.afterTemp = new BattleStatBlock
+        {
+            maxHP = Mathf.Max(1, Mathf.RoundToInt(hp)),
+            atk = Mathf.Max(1, Mathf.RoundToInt(atk)),
+            def = Mathf.Max(0, Mathf.RoundToInt(def)),
+            spd = Mathf.Max(1, Mathf.RoundToInt(spd)),
+        };
+
+        // 6) Booster controller (currently only ATK flat, per existing design)
+        var booster = BattleBoosterController.I;
+        if (booster != null)
+            atk += Mathf.Max(0, booster.GetAttackBonus());
+
+        stages.afterBoosters = new BattleStatBlock
+        {
+            maxHP = Mathf.Max(1, Mathf.RoundToInt(hp)),
+            atk = Mathf.Max(1, Mathf.RoundToInt(atk)),
+            def = Mathf.Max(0, Mathf.RoundToInt(def)),
+            spd = Mathf.Max(1, Mathf.RoundToInt(spd)),
+        };
+
+        stages.final = stages.afterBoosters;
+        return stages;
+    }
+
     public BattleStatBlock GetEffectiveWild()
     {
         EnsureAdjustedReady();
@@ -255,5 +383,74 @@ public sealed class BattleStatsSystem
             def = Mathf.Max(0, Mathf.RoundToInt(def)),
             spd = Mathf.Max(1, Mathf.RoundToInt(spd)),
         };
+    }
+
+    /// <summary>
+    /// Wild stat breakdown stages for UI explainability.
+    /// </summary>
+    public StatBreakdownStages GetWildBreakdownStages()
+    {
+        EnsureAdjustedReady();
+
+        var stages = new StatBreakdownStages();
+        stages.adjusted = _wildAdjusted;
+
+        if (_bm == null || _bm.WildDef == null)
+        {
+            stages.afterJob = stages.afterTitles = stages.afterConditionals = stages.afterTemp = stages.afterBoosters = stages.final = stages.adjusted;
+            return stages;
+        }
+
+        // Wild currently has no job modifiers and no temp boosters (design).
+        float hp = stages.adjusted.maxHP;
+        float atk = stages.adjusted.atk;
+        float def = stages.adjusted.def;
+        float spd = stages.adjusted.spd;
+
+        stages.afterJob = stages.adjusted;
+
+        string wildId = _bm.WildCombatIdForTitles;
+        if (!string.IsNullOrEmpty(wildId))
+        {
+            var ctx = _bm.BuildTitleContextForWildUsingMaxSafe(hp);
+
+            // Titles (non-conditional)
+            hp = TitlesAdapter.GetStatValue(wildId, _bm.WildDef, _bm.WildLevel, "HP", ctx, hp);
+            atk = TitlesAdapter.GetStatValue(wildId, _bm.WildDef, _bm.WildLevel, "Attack", ctx, atk);
+            def = TitlesAdapter.GetStatValue(wildId, _bm.WildDef, _bm.WildLevel, "Defense", ctx, def);
+            spd = TitlesAdapter.GetStatValue(wildId, _bm.WildDef, _bm.WildLevel, "Speed", ctx, spd);
+        }
+
+        stages.afterTitles = new BattleStatBlock
+        {
+            maxHP = Mathf.Max(1, Mathf.RoundToInt(hp)),
+            atk = Mathf.Max(1, Mathf.RoundToInt(atk)),
+            def = Mathf.Max(0, Mathf.RoundToInt(def)),
+            spd = Mathf.Max(1, Mathf.RoundToInt(spd)),
+        };
+
+        if (!string.IsNullOrEmpty(wildId))
+        {
+            float hp01 = _bm.GetWildHp01UsingMaxSafe(hp);
+            var wmods = TitlesAdapter.GetConditionalBattleMods(wildId, hp01, alliesAlive: 0, winStreak: 0);
+
+            atk = (atk + Mathf.Max(0, wmods.atkFlat)) * (1f + Mathf.Max(0f, wmods.atkPct));
+            def = (def + Mathf.Max(0, wmods.defFlat));
+            spd = (spd + Mathf.Max(0, wmods.spdFlat)) * (1f + Mathf.Max(0f, wmods.spdPct));
+            hp = hp * (1f + Mathf.Max(0f, wmods.hpPct));
+        }
+
+        stages.afterConditionals = new BattleStatBlock
+        {
+            maxHP = Mathf.Max(1, Mathf.RoundToInt(hp)),
+            atk = Mathf.Max(1, Mathf.RoundToInt(atk)),
+            def = Mathf.Max(0, Mathf.RoundToInt(def)),
+            spd = Mathf.Max(1, Mathf.RoundToInt(spd)),
+        };
+
+        stages.afterTemp = stages.afterConditionals;
+        stages.afterBoosters = stages.afterConditionals;
+        stages.final = stages.afterConditionals;
+        return stages;
     }
 }

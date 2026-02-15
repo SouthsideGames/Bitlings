@@ -153,6 +153,19 @@ public class SettingsManager : MonoBehaviour
         Persist();
     }
 
+    // ─────────────────────────────────────────────────────────
+    // Battle QoL
+    // ─────────────────────────────────────────────────────────
+
+    public bool GetFastForwardBattle() => S.fastForwardBattle;
+
+    public void SetFastForwardBattle(bool enabled)
+    {
+        if (S.fastForwardBattle == enabled) return;
+        S.fastForwardBattle = enabled;
+        Persist();
+    }
+
     public string GetCustomSeed() => S.customSeed ?? string.Empty;
 
     public void SetCustomSeed(string seed)

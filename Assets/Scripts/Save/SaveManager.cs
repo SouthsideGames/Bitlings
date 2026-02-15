@@ -29,6 +29,26 @@ public class JobRuntimeSave
     public long savedAtUnix;
 }
 
+// ─────────────────────────────────────────────
+// World Events save (rotation + cooldowns)
+// ─────────────────────────────────────────────
+
+[Serializable]
+public class WorldEventRollCooldown
+{
+    public string id;
+    public long lastRolledUnix;
+}
+
+[Serializable]
+public class WorldEventSaveData
+{
+    public string rotationActiveEventId;
+    public long rotationUntilUnix;
+    public long nextRotationRollUnix;
+    public List<WorldEventRollCooldown> cooldowns = new();
+}
+
 #endregion
 
 public static class SaveManager
@@ -54,6 +74,7 @@ public static class SaveManager
         public List<string> tutorialCompleted = new List<string>();
         public JobRuntimeSave jobRuntime;
         public TitleSaveData titles;
+        public WorldEventSaveData worldEvents;
     }
 
     private static bool _loaded;
@@ -62,6 +83,7 @@ public static class SaveManager
     // Cached sidecar blobs now stored inside PlayerSave.json
     private static JobRuntimeSave _jobRuntimeCache;
     private static TitleSaveData _titlesCache;
+    private static WorldEventSaveData _worldEventsCache;
 
     // ─────────────────────────────────────────────
     // Hard reset guard (prevents sidecar/runtime re-saves during scene reload)
@@ -150,6 +172,7 @@ public static class SaveManager
         LoadTutorialFromRoot(root);
         _jobRuntimeCache = root?.jobRuntime;
         _titlesCache = root?.titles;
+        _worldEventsCache = root?.worldEvents;
 
         NormalizeAfterLoad();
 
@@ -435,6 +458,7 @@ public static class SaveManager
         // Job runtime + titles blobs
         root.jobRuntime = _jobRuntimeCache;
         root.titles = _titlesCache;
+        root.worldEvents = _worldEventsCache;
         return root;
     }
 
@@ -1342,6 +1366,19 @@ public static class SaveManager
     {
         if (IsHardWiping) return;
         _titlesCache = data;
+        Save();
+    }
+
+    // ─────────────────────────────────────────────
+    // World Events blob
+    // ─────────────────────────────────────────────
+
+    public static WorldEventSaveData GetWorldEventsBlob() => _worldEventsCache;
+
+    public static void SetWorldEventsBlob(WorldEventSaveData data)
+    {
+        if (IsHardWiping) return;
+        _worldEventsCache = data;
         Save();
     }
 

@@ -63,6 +63,11 @@ public static class GameEvents
     // ─────────────────────────────────────────────────────────────────────────────
     public static Action BattleStatsChanged;
 
+    // ─────────────────────────────────────────────────────────
+    // World Events
+    // ─────────────────────────────────────────────────────────
+    public static Action WorldEventsChanged;
+
     public static event Action AutoApplyRequested;
     
 

@@ -58,6 +58,7 @@ public class JobSiteView : MonoBehaviour
     void OnEnable()
     {
         GameEvents.OnJobsChanged += Refresh;
+        GameEvents.WorldEventsChanged += Refresh;
 
         // Boot-order safety: SaveManager/JobManager might not be ready on the same frame.
         if (_refreshCR != null) StopCoroutine(_refreshCR);
@@ -67,6 +68,7 @@ public class JobSiteView : MonoBehaviour
     void OnDisable()
     {
         GameEvents.OnJobsChanged -= Refresh;
+        GameEvents.WorldEventsChanged -= Refresh;
 
         if (_refreshCR != null)
         {
@@ -120,6 +122,13 @@ public class JobSiteView : MonoBehaviour
 
         var st = GetRuntimeState(site);
 
+        // World Events placeholder integration: if a site is disabled, surface it clearly.
+        bool disabled = (WorldEventSystem.I != null) && WorldEventSystem.I.IsJobSiteDisabled(site);
+        if (disabled)
+        {
+            if (levelText) levelText.text = "MAINTENANCE";
+        }
+
         if (st == null || st.config == null)
         {
             if (levelText) levelText.text = "";
@@ -132,7 +141,7 @@ public class JobSiteView : MonoBehaviour
         // ─────────────────────────────────────────────────────────────
         // Level display (kept updated from runtime state)
         // ─────────────────────────────────────────────────────────────
-        if (levelText)
+        if (!disabled && levelText)
         {
             int maxLvl = 0;
             try { maxLvl = JobLeveling.MaxLevel; }

@@ -26,7 +26,8 @@ public partial class EncounterManager : MonoBehaviour
         if (CurrentShinyBoost != null)
             return true;
 
-        float chance = Mathf.Clamp01(baseWildShinyChance);
+        float mul = (WorldEventSystem.I != null) ? WorldEventSystem.I.GetWildShinyChanceMultiplier() : 1f;
+        float chance = Mathf.Clamp01(baseWildShinyChance * Mathf.Max(0f, mul));
         return Random.value <= chance;
     }
     public static EncounterManager I { get; private set; }
@@ -325,6 +326,50 @@ public partial class EncounterManager : MonoBehaviour
     void StartEncounter(bool spendEnergy)
     {
         ClearWildTitleInjection();
+
+        // World Events placeholder integration
+        if (WorldEventSystem.I != null && WorldEventSystem.I.AreEncountersDisabled())
+        {
+            EmitStatus("Encounters are temporarily suspended.", LogScope.System);
+            StopAuto_NoEnergy();
+            return;
+        }
+
+        // Authority-side eligibility guard (prevents UI drift).
+        // NOTE: EncounterPanelUI may allow the encounter button during battle for auto-toggle,
+        // but starting a new encounter while in battle is never allowed.
+        if (inBattle)
+        {
+            EmitStatus("Already in battle.", LogScope.System);
+            return;
+        }
+
+        // Must have a team.
+        var preData = SaveManager.Data;
+        if (preData == null || preData.team == null || preData.team.Count == 0)
+        {
+            EmitStatus("No team yet. Catch something to begin!", LogScope.System);
+            StopAuto_NoEnergy();
+            return;
+        }
+
+        // Must have at least one alive team member.
+        if (!EligibilityRules.HasMinimumAliveTeam(minMembers: 1))
+        {
+            EmitStatus("All team members are down. Heal up first.", LogScope.System);
+            StopAuto_NoEnergy();
+            return;
+        }
+
+        if (spendEnergy)
+        {
+            if (!EligibilityRules.HasRequiredEnergyOrFree(out int needed, out int current))
+            {
+                StopAuto_NoEnergy();
+                EmitStatus($"Need {needed} energy (have {current}).", LogScope.System);
+                return;
+            }
+        }
 
         var data = SaveManager.Data;
 

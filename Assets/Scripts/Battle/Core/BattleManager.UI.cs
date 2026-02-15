@@ -8,51 +8,96 @@ using TMPro;
 public partial class BattleManager : MonoBehaviour
 {
 
-    private void ClampAndPushActiveHP()
+    // ─────────────────────────────────────────────────────────
+    // Atomic UI batching (status icons / guard / charge)
+    // Prevents mid-action flicker and redundant tween churn.
+    // ─────────────────────────────────────────────────────────
+    private int _statusUiSuppressDepth = 0;
+    private bool _statusUiDirty = false;
+
+    /// <summary>
+    /// Call before a multi-step action resolution (attack/defend/swap) to avoid refreshing
+    /// status icons mid-action. Pair with EndAtomicStatusUI().
+    /// </summary>
+    private void BeginAtomicStatusUI()
     {
-        float curMax = GetFinalMaxHPForIndex(activeIndex);
-        teamHP[activeIndex] = Mathf.Min(teamHP[activeIndex], curMax);
+        _statusUiSuppressDepth++;
+    }
 
-        // UI/FX should be driven by events when consumers exist.
-        Emit(BattleEvent.UIRefreshHP());
+    /// <summary>
+    /// Call after an action resolution to flush any pending status icon refresh.
+    /// </summary>
+    private void EndAtomicStatusUI(bool forceRefresh = false)
+    {
+        _statusUiSuppressDepth = Mathf.Max(0, _statusUiSuppressDepth - 1);
 
-        // Legacy fallback (no event consumers): keep old direct wiring working.
-        if (!HasBattleEventConsumers)
+        if (_statusUiSuppressDepth == 0 && (_statusUiDirty || forceRefresh))
         {
-            if (feedback != null)
-            {
-                feedback.SetHPBars(
-                    playerCur: teamHP[activeIndex],
-                    playerMax: curMax,
-                    wildCur: wildHP,
-                    wildMax: wildMaxHP
-                );
-            }
-            else
-            {
-                if (playerHPBar)
-                {
-                    playerHPBar.maxValue = curMax;
-                    playerHPBar.value = Mathf.Clamp(teamHP[activeIndex], 0f, curMax);
-                }
-                if (wildHPBar)
-                {
-                    wildHPBar.maxValue = wildMaxHP;
-                    wildHPBar.value = Mathf.Clamp(wildHP, 0f, wildMaxHP);
-                }
-            }
-
-            UpdatePlayerInfoUI();
-            UpdateHPTextUI();
+            _statusUiDirty = false;
+            RefreshStatusIconsFromState_Internal();
         }
     }
 
+    /// <summary>
+    /// Safe to call any time; will be deferred if inside an atomic batch.
+    /// </summary>
+    private void RequestStatusIconsRefresh()
+    {
+        if (_statusUiSuppressDepth > 0)
+        {
+            _statusUiDirty = true;
+            return;
+        }
 
+        RefreshStatusIconsFromState_Internal();
+    }
+
+    private void ClampAndPushActiveHP()
+{
+    float curMax = GetCachedMaxHPForIndex(activeIndex);
+    teamHP[activeIndex] = Mathf.Min(teamHP[activeIndex], curMax);
+
+    // UI/FX should be driven by events when consumers exist.
+    Emit(BattleEvent.UIRefreshHP());
+
+    // Legacy fallback (no event consumers): keep old direct wiring working.
+    if (!HasBattleEventConsumers)
+    {
+        if (feedback != null)
+        {
+            feedback.SetHPBars(
+                playerCur: teamHP[activeIndex],
+                playerMax: curMax,
+                wildCur: wildHP,
+                wildMax: wildMaxHP
+            );
+        }
+        else
+        {
+            if (playerHPBar)
+            {
+                playerHPBar.maxValue = curMax;
+                playerHPBar.value = Mathf.Clamp(teamHP[activeIndex], 0f, curMax);
+            }
+            if (wildHPBar)
+            {
+                wildHPBar.maxValue = wildMaxHP;
+                wildHPBar.value = Mathf.Clamp(wildHP, 0f, wildMaxHP);
+            }
+        }
+
+        UpdatePlayerInfoUI();
+        UpdateHPTextUI();
+    }
+
+    // HP changes can activate/deactivate HP-based conditional titles. Rebuild once per frame.
+    RequestBattleStatRebuild(BattleStatRebuildReason.HpChanged);
+}
 
 
     private void PushHPBars()
     {
-        float curMax = GetFinalMaxHPForIndex(activeIndex);
+        float curMax = GetCachedMaxHPForIndex(activeIndex);
 
         Emit(BattleEvent.UIRefreshHP());
 
@@ -92,7 +137,7 @@ public partial class BattleManager : MonoBehaviour
 
     private void UpdateHPTextUI()
     {
-        float playerMax = GetFinalMaxHPForIndex(activeIndex);
+        float playerMax = GetCachedMaxHPForIndex(activeIndex);
         playerMax = Mathf.Max(1f, playerMax);
 
         float playerCur =
@@ -105,22 +150,15 @@ public partial class BattleManager : MonoBehaviour
         float wildMax = Mathf.Max(1f, wildMaxHP);
         float wildCur = Mathf.Clamp(wildHP, 0f, wildMax);
 
-                // ---------- SHIELD (Player) ----------
-        // Visible shield indicator should reflect BOTH:
-        //   1) regular shields (Defend/job/guard shields) and
-        //   2) BattleStartShieldTitle (title shield buffer)
-        // IMPORTANT UX: Title shield should NOT change the HP number itself (it absorbs damage first),
-        // but it SHOULD remain visible as (+X) until depleted.
+                // ---------- SHIELD (Title Only) ----------
+        // HP text should ONLY show BattleStartShieldTitle shields.
+        // Defend/guard shields are handled by guard icon/fx and should not appear as (+Shield) in the HP label.
         int pShield = 0;
-        if (shieldHP != null && activeIndex >= 0 && activeIndex < shieldHP.Length)
-            pShield += Mathf.RoundToInt(shieldHP[activeIndex]);
         if (titleShieldHP != null && activeIndex >= 0 && activeIndex < titleShieldHP.Length)
             pShield += Mathf.RoundToInt(titleShieldHP[activeIndex]);
         pShield = Mathf.Max(0, pShield);
 
-        // ---------- SHIELD (Wild) ----------
         int wShield = 0;
-        try { wShield += Mathf.RoundToInt(Mathf.Max(0f, wildShieldHP)); } catch { /* ignored */ }
         try { wShield += Mathf.RoundToInt(Mathf.Max(0f, wildTitleShieldHP)); } catch { /* ignored */ }
         wShield = Mathf.Max(0, wShield);
         if (feedback != null && feedback.HasHPTextWired)
@@ -255,20 +293,33 @@ private void UpdateWildInfoUI()
         {
             BattleStatBlock baseB = Stats.GetAdjustedWild();
             BattleStatBlock effB = Stats.GetEffectiveWild();
+            var stages = Stats.GetWildBreakdownStages();
 
             if (wildIdText) wildIdText.text = $"ID: {wildDef.id}";
             if (wildTypeText) wildTypeText.text = $"TYPE: {wildDef.type}";
             if (wildRarityText) wildRarityText.text = $"RARITY: {wildDef.rarity}";
             if (wildLevelText) wildLevelText.text = $"LVL: {wildLevel}";
 
-            if (wildHPText) SetStatRowColorAndText(wildHPText, "HP", baseB.maxHP, effB.maxHP, minFinal: 1);
+            if (wildHPText)
+            {
+                SetStatRowColorAndText(wildHPText, "HP", baseB.maxHP, effB.maxHP, minFinal: 1);
+                SetStatTooltip(wildHPText, $"HP: {effB.maxHP}", BuildStatBreakdownSubtitle(BattleStatKind.HP, stages));
+            }
             if (wildATKText)
             {
                 SetStatRowColorAndText(wildATKText, "ATK", baseB.atk, effB.atk, minFinal: 1);
-
+                SetStatTooltip(wildATKText, $"ATK: {effB.atk}", BuildStatBreakdownSubtitle(BattleStatKind.ATK, stages));
             }
-            if (wildDEFText) SetStatRowColorAndText(wildDEFText, "DEF", baseB.def, effB.def, minFinal: 0);
-            if (wildSPDText) SetStatRowColorAndText(wildSPDText, "SPD", baseB.spd, effB.spd, minFinal: 1);
+            if (wildDEFText)
+            {
+                SetStatRowColorAndText(wildDEFText, "DEF", baseB.def, effB.def, minFinal: 0);
+                SetStatTooltip(wildDEFText, $"DEF: {effB.def}", BuildStatBreakdownSubtitle(BattleStatKind.DEF, stages));
+            }
+            if (wildSPDText)
+            {
+                SetStatRowColorAndText(wildSPDText, "SPD", baseB.spd, effB.spd, minFinal: 1);
+                SetStatTooltip(wildSPDText, $"SPD: {effB.spd}", BuildStatBreakdownSubtitle(BattleStatKind.SPD, stages));
+            }
             return;
         }
 
@@ -324,6 +375,7 @@ private void UpdateWildInfoUI()
         {
             BattleStatBlock baseB = Stats.GetAdjustedPlayer(activeIndex);
             BattleStatBlock effB = Stats.GetEffectivePlayer(activeIndex);
+            var stages = Stats.GetPlayerBreakdownStages(activeIndex);
 
                 // Debug: inspect title-applied flat values via adapter when BattleStartFlat present
                 try
@@ -350,10 +402,26 @@ private void UpdateWildInfoUI()
             if (playerRarityText) playerRarityText.text = $"RARITY: {def.rarity}";
             if (playerLevelText) playerLevelText.text = $"LVL: {lvl}";
 
-            if (playerHPText) SetStatRowColorAndText(playerHPText, "HP", baseB.maxHP, effB.maxHP, minFinal: 1);
-            if (playerATKText) SetStatRowColorAndText(playerATKText, "ATK", baseB.atk, effB.atk, minFinal: 1);
-            if (playerDEFText) SetStatRowColorAndText(playerDEFText, "DEF", baseB.def, effB.def, minFinal: 0);
-            if (playerSPDText) SetStatRowColorAndText(playerSPDText, "SPD", baseB.spd, effB.spd, minFinal: 1);
+            if (playerHPText)
+            {
+                SetStatRowColorAndText(playerHPText, "HP", baseB.maxHP, effB.maxHP, minFinal: 1);
+                SetStatTooltip(playerHPText, $"HP: {effB.maxHP}", BuildStatBreakdownSubtitle(BattleStatKind.HP, stages));
+            }
+            if (playerATKText)
+            {
+                SetStatRowColorAndText(playerATKText, "ATK", baseB.atk, effB.atk, minFinal: 1);
+                SetStatTooltip(playerATKText, $"ATK: {effB.atk}", BuildStatBreakdownSubtitle(BattleStatKind.ATK, stages));
+            }
+            if (playerDEFText)
+            {
+                SetStatRowColorAndText(playerDEFText, "DEF", baseB.def, effB.def, minFinal: 0);
+                SetStatTooltip(playerDEFText, $"DEF: {effB.def}", BuildStatBreakdownSubtitle(BattleStatKind.DEF, stages));
+            }
+            if (playerSPDText)
+            {
+                SetStatRowColorAndText(playerSPDText, "SPD", baseB.spd, effB.spd, minFinal: 1);
+                SetStatTooltip(playerSPDText, $"SPD: {effB.spd}", BuildStatBreakdownSubtitle(BattleStatKind.SPD, stages));
+            }
             return;
         }
 
@@ -581,7 +649,7 @@ private void UpdateWildInfoUI()
         if (teamIdx < 0 || teamIdx >= teamCount) { label.gameObject.SetActive(false); return; }
 
         float cur = Mathf.Max(0f, teamHP[teamIdx]);
-        float max = Mathf.Max(1f, GetFinalMaxHPForIndex(teamIdx));
+        float max = Mathf.Max(1f, GetCachedMaxHPForIndex(teamIdx));
         int icur = Mathf.CeilToInt(cur);
         int imax = Mathf.CeilToInt(max);
 
@@ -608,6 +676,57 @@ private void UpdateWildInfoUI()
             label.text = $"{statName}: {finalVal}";
         else
             label.text = $"{statName}: {finalVal} ({(delta > 0 ? "+" : "")}{delta})";
+    }
+
+    // ─────────────────────────────────────────────────────────
+    // Stat explainability tooltips (long-press)
+    // ─────────────────────────────────────────────────────────
+
+    private void SetStatTooltip(TextMeshProUGUI label, string message, string subtitle)
+    {
+        if (label == null) return;
+
+        var tt = label.GetComponent<TooltipTrigger>();
+        if (tt == null)
+            tt = label.gameObject.AddComponent<TooltipTrigger>();
+
+        tt.message = message ?? string.Empty;
+        tt.subtitle = subtitle ?? string.Empty;
+
+        // Slightly shorter hold on stat lines feels better on mobile.
+        if (tt.holdTime < 0.25f || tt.holdTime > 0.5f)
+            tt.holdTime = 0.35f;
+    }
+
+    private static string BuildStatBreakdownSubtitle(BattleStatKind kind, BattleStatsSystem.StatBreakdownStages s)
+    {
+        int a = s.adjusted.Get(kind);
+        int j = s.afterJob.Get(kind);
+        int t = s.afterTitles.Get(kind);
+        int c = s.afterConditionals.Get(kind);
+        int tmp = s.afterTemp.Get(kind);
+        int b = s.afterBoosters.Get(kind);
+        int f = s.final.Get(kind);
+
+        int dJob = j - a;
+        int dTitles = t - j;
+        int dCond = c - t;
+        int dTemp = tmp - c;
+        int dBoost = b - tmp;
+
+        var lines = new List<string>(8)
+        {
+            $"Adjusted: {a}"
+        };
+
+        if (dJob != 0) lines.Add($"Job: {(dJob > 0 ? "+" : "")}{dJob}");
+        if (dTitles != 0) lines.Add($"Titles: {(dTitles > 0 ? "+" : "")}{dTitles}");
+        if (dCond != 0) lines.Add($"Conditional: {(dCond > 0 ? "+" : "")}{dCond}");
+        if (dTemp != 0) lines.Add($"Temp: {(dTemp > 0 ? "+" : "")}{dTemp}");
+        if (dBoost != 0) lines.Add($"Boosters: {(dBoost > 0 ? "+" : "")}{dBoost}");
+
+        lines.Add($"Final: {f}");
+        return string.Join("\n", lines);
     }
 
 
@@ -657,6 +776,13 @@ private void UpdateWildInfoUI()
     }
 
     private void RefreshStatusIconsFromState()
+    {
+        // Kept for API compatibility: callers can still invoke this freely.
+        // Actual refresh may be deferred during atomic resolution.
+        RequestStatusIconsRefresh();
+    }
+
+    private void RefreshStatusIconsFromState_Internal()
     {
         if (!feedback) return;
 

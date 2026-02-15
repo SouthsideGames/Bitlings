@@ -24,6 +24,12 @@ public sealed class BattleFeedbackManager : MonoBehaviour
     [SerializeField] private RectTransform playerHPShakeRoot;
     [SerializeField] private RectTransform wildHPShakeRoot;
 
+    [Header("Optional: Impact Roots (recoil/squash on hit)")]
+    [Tooltip("Optional root for hit impact recoil/squash. If null, uses the icon RectTransform.")]
+    [SerializeField] private RectTransform playerImpactRoot;
+    [Tooltip("Optional root for hit impact recoil/squash. If null, uses the icon RectTransform.")]
+    [SerializeField] private RectTransform wildImpactRoot;
+
     [Header("Optional: Guard Icons (defend FX)")]
     [SerializeField] private Image playerGuardIcon;
     [SerializeField] private Image wildGuardIcon;
@@ -181,6 +187,15 @@ public sealed class BattleFeedbackManager : MonoBehaviour
 
     private Vector3 _playerIconBaseScale = Vector3.one;
     private Vector3 _wildIconBaseScale = Vector3.one;
+
+    [Header("Impact Micro-Juice (Optional)")]
+    [Tooltip("If enabled, applies a small recoil + squash/stretch on the target when hit.")]
+    [SerializeField] private bool enableImpactSquash = true;
+
+    [SerializeField, Min(0.01f)] private float impactSquashTime = 0.08f;
+    [SerializeField, Range(1.01f, 1.25f)] private float impactSquashX = 1.10f;
+    [SerializeField, Range(0.75f, 0.99f)] private float impactSquashY = 0.90f;
+    [SerializeField, Range(0f, 30f)] private float impactRecoilPixels = 10f;
 
     private void Awake()
     {
@@ -570,6 +585,13 @@ public void SetGuard(BattleFeedbackSide side, bool on)
 
         PunchScale(icon, windupScale, windupTime);
         Nudge(icon.rectTransform, attackerSide == BattleFeedbackSide.Player ? +10f : -10f, windupTime);
+
+        // Optional: a tiny anticipation on the portrait/visual root.
+        if (enableImpactSquash)
+        {
+            var rt = GetImpactRoot(attackerSide, icon);
+            if (rt) ImpactAnticipation(rt, attackerSide);
+        }
     }
 
     
@@ -606,6 +628,13 @@ public void SetGuard(BattleFeedbackSide side, bool on)
         Flash(icon, crit ? flashCrit : (wasGuarded ? flashDefend : flashNormal), hitFlashTime);
         Shake(icon.rectTransform, hitShakePixels * shakeMult, hitShakeTime);
 
+        // Optional: squash/recoil on the target portrait/visual root.
+        if (enableImpactSquash)
+        {
+            var rt = GetImpactRoot(targetSide, icon);
+            if (rt) ImpactHit(rt, targetSide, crit, wasGuarded, shakeT);
+        }
+
         // Crit reads best with a tiny punch-scale on the target icon.
         if (crit)
             PunchScale(icon, 1.08f, Mathf.Min(0.08f, hitFlashTime));
@@ -638,6 +667,96 @@ public void SetGuard(BattleFeedbackSide side, bool on)
         }
 
         
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // Impact Squash / Recoil (clarity + feel)
+    // ─────────────────────────────────────────────────────────────
+
+    private RectTransform GetImpactRoot(BattleFeedbackSide side, Graphic icon)
+    {
+        if (side == BattleFeedbackSide.Player)
+            return playerImpactRoot != null ? playerImpactRoot : icon.rectTransform;
+        return wildImpactRoot != null ? wildImpactRoot : icon.rectTransform;
+    }
+
+    private void ImpactAnticipation(RectTransform rt, BattleFeedbackSide side)
+    {
+        if (!rt) return;
+
+        // Very small pre-squash to make actions read more tactile.
+        LeanTween.cancel(rt.gameObject);
+        rt.localScale = Vector3.one;
+
+        float dir = (side == BattleFeedbackSide.Player) ? +1f : -1f;
+        Vector2 basePos = rt.anchoredPosition;
+        Vector2 nudge = basePos + new Vector2(dir * (impactRecoilPixels * 0.35f), 0f);
+
+        LeanTween.value(rt.gameObject, 0f, 1f, Mathf.Min(0.06f, impactSquashTime * 0.75f))
+            .setIgnoreTimeScale(true)
+            .setOnUpdate((float t) =>
+            {
+                if (!rt) return;
+                rt.anchoredPosition = Vector2.Lerp(basePos, nudge, t);
+                rt.localScale = Vector3.Lerp(Vector3.one, new Vector3(impactSquashX, impactSquashY, 1f), t);
+            })
+            .setOnComplete(() =>
+            {
+                if (!rt) return;
+                rt.anchoredPosition = basePos;
+                rt.localScale = Vector3.one;
+            });
+    }
+
+    private void ImpactHit(RectTransform rt, BattleFeedbackSide side, bool crit, bool wasGuarded, float scaled01)
+    {
+        if (!rt) return;
+
+        // Guarded hits should feel less "juicy".
+        float guardMult = wasGuarded ? 0.55f : 1f;
+        float critMult = crit ? 1.15f : 1f;
+        float heavyMult = Mathf.Lerp(0.9f, 1.25f, Mathf.Clamp01(scaled01));
+
+        float dir = (side == BattleFeedbackSide.Player) ? -1f : +1f;
+        float px = impactRecoilPixels * guardMult * critMult * heavyMult;
+
+        Vector2 basePos = rt.anchoredPosition;
+        Vector2 hitPos = basePos + new Vector2(dir * px, 0f);
+
+        float t = Mathf.Max(0.04f, impactSquashTime);
+        LeanTween.cancel(rt.gameObject);
+
+        // Hit phase
+        LeanTween.value(rt.gameObject, 0f, 1f, t)
+            .setEaseOutQuad()
+            .setIgnoreTimeScale(true)
+            .setOnUpdate((float a) =>
+            {
+                if (!rt) return;
+                rt.anchoredPosition = Vector2.Lerp(basePos, hitPos, a);
+                rt.localScale = Vector3.Lerp(Vector3.one, new Vector3(impactSquashX, impactSquashY, 1f), a);
+            })
+            .setOnComplete(() =>
+            {
+                if (!rt) return;
+
+                // Return phase
+                LeanTween.value(rt.gameObject, 0f, 1f, t * 1.15f)
+                    .setEaseOutBack()
+                    .setIgnoreTimeScale(true)
+                    .setOnUpdate((float b) =>
+                    {
+                        if (!rt) return;
+                        rt.anchoredPosition = Vector2.Lerp(hitPos, basePos, b);
+                        rt.localScale = Vector3.Lerp(new Vector3(impactSquashX, impactSquashY, 1f), Vector3.one, b);
+                    })
+                    .setOnComplete(() =>
+                    {
+                        if (!rt) return;
+                        rt.anchoredPosition = basePos;
+                        rt.localScale = Vector3.one;
+                    });
+            });
     }
 
 
@@ -1398,8 +1517,8 @@ public void SetGuard(BattleFeedbackSide side, bool on)
         // IMPORTANT: Always include shield pools here.
         // A common UI pattern in this project is to emit a UIRefreshHP event after micro-juice.
         // If this refresh omits shield data, the (+Shield) suffix will appear briefly then get wiped.
-        int pShield = _battleManager.GetActivePlayerShieldTotal();
-        int wShield = _battleManager.GetWildShieldTotal();
+        int pShield = _battleManager.GetActivePlayerTitleShieldTotal();
+        int wShield = _battleManager.GetWildTitleShieldTotal();
 
         SetHPBars(pCur, pMax, wCur, wMax);
         SetHPTexts(pCur, pMax, wCur, wMax, pShield, wShield);

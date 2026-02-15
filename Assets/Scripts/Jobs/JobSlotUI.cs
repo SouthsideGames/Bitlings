@@ -116,8 +116,21 @@ public class JobSlotUI : MonoBehaviour
         button.onClick.RemoveAllListeners();
         button.onClick.AddListener(() =>
         {
-            if (jobAssignPanelUI)
-                jobAssignPanelUI.Open(job, slotIndex);
+            if (!jobAssignPanelUI) return;
+
+            // If the slot is empty and currently resting/exhausted, don't open the picker.
+            // (If a worker is present, we still allow opening so the player can remove/swap.)
+            if (!_hasCachedWorker)
+            {
+                if (!EligibilityRules.CanUseJobSlot(job, slotIndex, out string reason, out _))
+                {
+                    AudioManager.I?.PlayDenied();
+                    if (!string.IsNullOrEmpty(reason)) GameEvents.RaiseToast(reason);
+                    return;
+                }
+            }
+
+            jobAssignPanelUI.Open(job, slotIndex);
         });
     }
 

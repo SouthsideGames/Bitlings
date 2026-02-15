@@ -28,9 +28,23 @@ public partial class EncounterManager
             : fallbackEncounterMax;
 
     public int GetEncounterCost() =>
-        (SaveManager.Data != null && SaveManager.Data.encounterCost > 0)
+        GetEncounterCost_Internal();
+
+    private int GetEncounterCost_Internal()
+    {
+        int baseCost = (SaveManager.Data != null && SaveManager.Data.encounterCost > 0)
             ? SaveManager.Data.encounterCost
             : fallbackEncounterCost;
+
+        float mul = (WorldEventSystem.I != null) ? WorldEventSystem.I.GetEncounterEnergyCostMultiplier() : 1f;
+        if (mul <= 0f) return 0;
+
+        int next = Mathf.RoundToInt(baseCost * mul);
+
+        // Preserve the “at least 1” semantics if baseCost is positive.
+        if (baseCost > 0) next = Mathf.Max(1, next);
+        return next;
+    }
 
     public bool HasEnergy() => GetEnergyPoints() >= GetEncounterCost();
 

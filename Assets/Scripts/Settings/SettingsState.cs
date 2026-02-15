@@ -32,6 +32,11 @@ public class SettingsState
     public bool battleHistoryEnabled = true;        // GetBattleHistoryEnabled()
     public bool showInlineBattleIcons = true;       // GetShowInlineBattleIcons()
 
+    // ───────── Battle QoL ─────────
+    // If enabled, battle waits + text pacing are further accelerated (without changing RNG/determinism).
+    // Intentionally separate from battleSpeed (user-facing multiplier).
+    public bool fastForwardBattle = false;
+
     // ───────── Seeds / RNG ─────────
     public bool   useCustomSeed = false;
     public string customSeed    = "";

@@ -313,19 +313,36 @@ public sealed class JobManager : MonoBehaviour
             var s = States[si];
             if (s?.config == null) continue;
 
+            // World Events placeholder integration:
+            // - Maintenance can disable a site (no production; workers rest)
+            bool siteDisabled = (WorldEventSystem.I != null) && WorldEventSystem.I.IsJobSiteDisabled(s.config.jobType);
+            float worldRateMul = (WorldEventSystem.I != null) ? WorldEventSystem.I.GetJobRateMultiplier(s.config.jobType) : 1f;
+
             // Opportunistic refresh: if a worker ref is keyed by ownedUID but def is stale/null, fix it.
             // This helps if any edge case evolved without event propagation.
             RefreshSiteWorkerDefsIfNeeded(s);
 
-            float grossRateHr = ComputeRatePerHour(s);
+            if (siteDisabled)
+            {
+                // When a site is disabled, we treat it as “not working”:
+                // - No production
+                // - No fatigue gain
+                // - Existing fatigue decays (rest) for any assigned worker
+                DecayFatigueWhenSiteDisabled(dtHours, s);
+                s.cachedRatePerHour = 0f;
+            }
+            else
+            {
+                float grossRateHr = ComputeRatePerHour(s) * Mathf.Max(0f, worldRateMul);
 
-            ApplyPerSlotFatigue(dtHours, s);
+                ApplyPerSlotFatigue(dtHours, s);
 
-            float avgFatigue = AverageWorkingSlotFatigue(s);
-            float finalRateHr = grossRateHr * (1f - Mathf.Clamp01(avgFatigue));
-            s.cachedRatePerHour = finalRateHr;
+                float avgFatigue = AverageWorkingSlotFatigue(s);
+                float finalRateHr = grossRateHr * (1f - Mathf.Clamp01(avgFatigue));
+                s.cachedRatePerHour = finalRateHr;
 
-            s.storedAmount = Mathf.Min(GetEffectiveStorageCap(s.config), s.storedAmount + finalRateHr * dtHours);
+                s.storedAmount = Mathf.Min(GetEffectiveStorageCap(s.config), s.storedAmount + finalRateHr * dtHours);
+            }
         }
 
         if (autoReliefEnabled) ApplyClinicRelief(dtHours);
@@ -397,6 +414,26 @@ public sealed class JobManager : MonoBehaviour
                 SaveAssignmentsToSave();
                 GameEvents.OnJobsChanged?.Invoke();
             }
+        }
+    }
+
+    /// <summary>
+    /// If a site is disabled by a World Event, workers should not accrue fatigue.
+    /// Instead we decay any existing fatigue (rest) so a maintenance week doesn't
+    /// permanently punish the player.
+    /// </summary>
+    private void DecayFatigueWhenSiteDisabled(float dtHours, JobSiteState s)
+    {
+        if (s == null || s.config == null || s.slotFatigue01 == null) return;
+
+        int cap = Mathf.Clamp(s.config.maxWorkers, 1, 3);
+        EnsureWorkerListSize(s, cap);
+
+        for (int i = 0; i < cap; i++)
+        {
+            // Cooldowns still count down naturally via unix, no change needed here.
+            if (s.slotFatigue01[i] > 0f)
+                s.slotFatigue01[i] = Mathf.Max(0f, s.slotFatigue01[i] - siteRestDecayPerHour * dtHours);
         }
     }
 
@@ -666,6 +703,45 @@ public sealed class JobManager : MonoBehaviour
     }
 
     public int GymWorkerCount => GetWorkerCount(JobType.Gym);
+
+    // ─────────────────────────────────────────────────────────────────────────────
+    // Eligibility helpers (data accessors; UI should prefer EligibilityRules)
+    // ─────────────────────────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Public wrapper for internal job state lookup.
+    /// </summary>
+    public JobSiteState GetState(JobType job) => FindState(job);
+
+    /// <summary>
+    /// Returns remaining cooldown seconds for a specific slot, if any, plus whether the slot is exhausted.
+    /// Jobs are NOT HP-gated by design.
+    /// </summary>
+    public bool TryGetSlotCooldownRemainingSeconds(JobType job, int slotIndex, out long remainingSeconds, out bool exhausted)
+    {
+        remainingSeconds = 0;
+        exhausted = false;
+
+        var st = FindState(job);
+        if (st == null || st.config == null) return false;
+
+        int cap = Mathf.Clamp(st.config.maxWorkers, 1, 3);
+        if (slotIndex < 0 || slotIndex >= cap) return false;
+
+        long now = SaveManager.NowUnix();
+
+        if (st.slotCooldownUntilUnix != null && slotIndex < st.slotCooldownUntilUnix.Length)
+        {
+            long until = st.slotCooldownUntilUnix[slotIndex];
+            if (until > now)
+                remainingSeconds = until - now;
+        }
+
+        if (st.slotFatigue01 != null && slotIndex < st.slotFatigue01.Length)
+            exhausted = Mathf.Clamp01(st.slotFatigue01[slotIndex]) >= 1f;
+
+        return true;
+    }
 
     // ---------------------------- Save / Load (assignments/progress) ----------------------------
     public void SaveAssignmentsToSave()
