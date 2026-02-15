@@ -50,6 +50,8 @@ public sealed class BattleTitleStatusBarUI : MonoBehaviour
         GameEvents.OnBattleStateChanged += HandleExternalChanged;
 
         HookBattleChangedEvent();
+
+        BattleLogger.OnTitleConditionChanged += HandleTitleConditionChanged;
         ForceRefresh();
     }
 
@@ -59,6 +61,8 @@ public sealed class BattleTitleStatusBarUI : MonoBehaviour
         GameEvents.OnBattleStateChanged -= HandleExternalChanged;
 
         UnhookBattleChangedEvent();
+
+        BattleLogger.OnTitleConditionChanged -= HandleTitleConditionChanged;
 
         if (infoButton) infoButton.onClick.RemoveAllListeners();
     }
@@ -211,6 +215,36 @@ public sealed class BattleTitleStatusBarUI : MonoBehaviour
         if (cg) cg.alpha = interactable ? 1f : 0.35f;
     }
 
+
+
+private void HandleTitleConditionChanged(string ownerName, string titleName, bool isActive)
+{
+    if (!isActive) return;
+    if (_currentTitle == null) return;
+
+    // Match by title display name (safe across player/wild routing)
+    if (!string.Equals(titleName, _currentTitle.displayName, StringComparison.Ordinal))
+        return;
+
+    PopIcon();
+}
+
+private void PopIcon()
+{
+    if (iconImage == null) return;
+    var tr = iconImage.transform;
+    if (!tr) return;
+
+    LeanTween.cancel(tr.gameObject);
+    tr.localScale = Vector3.one;
+    LeanTween.scale(tr.gameObject, Vector3.one * 1.15f, 0.08f)
+             .setEaseOutBack()
+             .setOnComplete(() =>
+             {
+                 if (!tr) return;
+                 LeanTween.scale(tr.gameObject, Vector3.one, 0.10f).setEaseInOutQuad();
+             });
+}
     private void OpenInfo()
     {
         if (_currentTitle == null) return;

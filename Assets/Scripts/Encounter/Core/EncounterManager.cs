@@ -46,6 +46,14 @@ public partial class EncounterManager : MonoBehaviour
     [Tooltip("Flat level bonus applied to boss encounters")]
     [SerializeField, Min(0)] private int bossLevelBonus = 2;
 
+    /// <summary>
+    /// UI-only helper for previewing how many bonus levels a boss encounter receives.
+    /// Mirrors the runtime application (see StartEncounter -> wildLevel adjustment).
+    /// </summary>
+    public int BossLevelBonusPreview => Mathf.Max(0, bossLevelBonus);
+
+    public int BossLevelBonusPreviewValue() => BossLevelBonusPreview;
+
     [Header("Wild Titles (Encounter-only)")]
     [SerializeField, Range(0f, 1f)] private float wildTitleRollChance = 0.35f;
     [SerializeField] private string unemployedLabel = "Unemployed";
@@ -233,7 +241,7 @@ public partial class EncounterManager : MonoBehaviour
 
         if (shouldRoll)
         {
-            _wildRolledTitle = candidates[Random.Range(0, candidates.Count)];
+            _wildRolledTitle = PickWildTitleWeighted(candidates);
             if (_wildRolledTitle != null && !_wildActiveTitles.Contains(_wildRolledTitle))
                 _wildActiveTitles.Add(_wildRolledTitle);
         }
@@ -247,7 +255,43 @@ public partial class EncounterManager : MonoBehaviour
         TitlesAdapter.SetLocalTitles(_wildCombatId, _wildActiveTitles);
     }
 
-    // ─────────────────────────────────────────────────────────────────────────────
+    
+
+private TitleSO PickWildTitleWeighted(List<TitleSO> candidates)
+{
+    if (candidates == null || candidates.Count == 0) return null;
+
+    int total = 0;
+    for (int i = 0; i < candidates.Count; i++)
+        total += GetRarityWeight(candidates[i]);
+
+    if (total <= 0)
+        return candidates[Random.Range(0, candidates.Count)];
+
+    int roll = Random.Range(0, total);
+    int acc = 0;
+    for (int i = 0; i < candidates.Count; i++)
+    {
+        acc += GetRarityWeight(candidates[i]);
+        if (roll < acc)
+            return candidates[i];
+    }
+    return candidates[candidates.Count - 1];
+}
+
+private int GetRarityWeight(TitleSO t)
+{
+    if (!t) return 0;
+    switch (t.Rarity)
+    {
+        default:
+        case TitleRarity.Common: return 100;
+        case TitleRarity.Rare:   return 40;
+        case TitleRarity.Epic:   return 15;
+        case TitleRarity.Mythic: return 5;
+    }
+}
+// ─────────────────────────────────────────────────────────────────────────────
 
     void Awake()
     {

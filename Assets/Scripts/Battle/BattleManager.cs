@@ -452,6 +452,13 @@ private void EnsureBattleRngInitialized()
     // Wild Titles routing id (set from EncounterManager if available).
     private string _wildCombatIdForTitles;
 
+
+// ─────────────────────────────────────────────────────────────
+// Conditional title activation edge detection (UI pulse / event feed)
+// Key = monsterId + "|" + titleId
+// ─────────────────────────────────────────────────────────────
+private readonly Dictionary<string, bool> _condTitleActive = new Dictionary<string, bool>(256);
+
     // ─────────────────────────────────────────────────────────────
     // Battle Stats System (centralized stat pipeline)
     // ─────────────────────────────────────────────────────────────
@@ -552,9 +559,88 @@ private void RebuildBattleStats(bool forceMaxHpSync)
         UpdateWildInfoUI();
     }
 
+    // Conditional title pulses / event feed (edge detection)
+    CheckConditionalTitleTransitions();
+
     _battleStatsRebuildQueued = false;
     _battleStatsRebuildReasons = BattleStatRebuildReason.None;
 }
+
+private void CheckConditionalTitleTransitions()
+{
+    if (!inBattle) return;
+    if (TitleManager.I == null) return;
+
+    // Active player
+    if (activeIndex >= 0 && activeIndex < teamCount)
+    {
+        string pid = ActivePlayerMonsterId;
+        var def = GetTeamDefSafe(activeIndex);
+        int lvl = GetTeamLevelSafe(activeIndex);
+        var ctx = BuildTitleContextForIndexSafe(activeIndex);
+        ScanConditionalTitles(pid, def, lvl, ctx, ownerLabel: GetSafeMonsterName(def, pid));
+    }
+
+    // Wild
+    if (wildDef != null && !string.IsNullOrEmpty(_wildCombatIdForTitles))
+    {
+        float maxHp = Mathf.Max(1f, (_wildEffMaxHpCache > 0.01f ? _wildEffMaxHpCache : wildMaxHP));
+        float hp01 = Mathf.Clamp01(wildHP / maxHp);
+        var ctx = new TitleContext
+        {
+            selfHp01 = hp01,
+            alliesAlive = 0,
+            winStreak = GetWinStreakSafe(),
+            isBattle = true,
+            ownedId = _wildCombatIdForTitles
+        };
+        ScanConditionalTitles(_wildCombatIdForTitles, wildDef, Mathf.Max(1, wildLevel), ctx, ownerLabel: GetSafeMonsterName(wildDef, "Wild"));
+    }
+}
+
+private void ScanConditionalTitles(string monsterId, MonsterDataSO def, int level, TitleContext ctx, string ownerLabel)
+{
+    if (string.IsNullOrEmpty(monsterId) || def == null) return;
+
+    var list = TitleManager.I.GetEquippedList(monsterId, def, level);
+    if (list == null || list.Count == 0) return;
+
+    for (int i = 0; i < list.Count; i++)
+    {
+        var t = list[i];
+        if (!t) continue;
+
+        bool isConditional = (t is ConditionalStatBoosterTitleSO) || (t is DuoConditionalStatBoosterTitleSO);
+        if (!isConditional) continue;
+
+        bool activeNow = false;
+        if (t is ConditionalStatBoosterTitleSO cb)
+        {
+            activeNow = TitleUtility.CheckCondition(cb, ctx);
+        }
+        else if (t is DuoConditionalStatBoosterTitleSO dcb)
+        {
+            activeNow = TitleUtility.CheckCondition(dcb.condition, dcb.threshold01, dcb.countN, in ctx);
+        }
+
+        string key = monsterId + "|" + t.titleId;
+        bool had = _condTitleActive.TryGetValue(key, out bool prev);
+        if (!had || prev != activeNow)
+        {
+            _condTitleActive[key] = activeNow;
+            BattleLogger.LogTitleConditionChanged(ownerLabel, t.displayName, activeNow);
+        }
+    }
+}
+
+private string GetSafeMonsterName(MonsterDataSO def, string fallback)
+{
+    if (def == null) return fallback;
+    if (!string.IsNullOrEmpty(def.displayName)) return def.displayName;
+    if (!string.IsNullOrEmpty(def.name)) return def.name;
+    return fallback;
+}
+
 
     // Exposed read-only hooks for BattleStatsSystem (keep BattleManager internals private)
     public int TeamCountSafe => teamCount;

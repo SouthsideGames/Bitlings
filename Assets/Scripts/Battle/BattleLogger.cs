@@ -186,6 +186,9 @@ public static class BattleLogger
     // Fired whenever a Title proc happens (UI toast / side panel / etc.)
     public static event Action<TitleProcEvent> OnTitleProc;
 
+    // Fired whenever a conditional title toggles ON/OFF (battle UI pulses / event feed)
+    public static event Action<string, string, bool> OnTitleConditionChanged;
+
     static readonly List<LogEntry> _entries = new List<LogEntry>(512);
     static string _currentBattleLabel;
     static string _currentEncounterLabel;
@@ -518,6 +521,26 @@ public static void LogTitleActivation(string ownerName, string titleName, string
         if (string.IsNullOrEmpty(summary)) return;
         LogTitleActivation(string.IsNullOrEmpty(ownerNameOrId) ? "Unknown" : ownerNameOrId, "Title", summary);
     }
+
+public static void LogTitleConditionChanged(string ownerName, string titleName, bool isActive)
+{
+    if (string.IsNullOrEmpty(ownerName)) ownerName = "Unknown";
+    if (string.IsNullOrEmpty(titleName)) titleName = "Title";
+
+    string state = isActive ? "Activated" : "Deactivated";
+    string col = isActive ? BattleLogColors.Buff : BattleLogColors.Debuff;
+
+    Log(
+        $"<color={BattleLogColors.Title}>[TITLE]</color> " +
+        $"<color={BattleLogColors.Name}>{ownerName}</color> — " +
+        $"<color={BattleLogColors.Title}>{titleName}</color> " +
+        $"<color={col}>{state}</color>",
+        LogScope.Battle
+    );
+
+    OnTitleConditionChanged?.Invoke(ownerName, titleName, isActive);
+}
+
 
     /// <summary>
     /// Optional: one-liner summary of title stat mods (useful for debugging).

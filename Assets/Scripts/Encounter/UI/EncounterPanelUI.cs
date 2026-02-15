@@ -20,6 +20,11 @@ public class EncounterPanelUI : MonoBehaviour
     [SerializeField] private TextMeshProUGUI fatigueForecastLabel;
     [SerializeField] private bool showFatigueForecast = true;
 
+    [Header("Encounter Difficulty Preview")]
+    [Tooltip("Optional label: show estimated wild level, expected title count, and fatigue cost.")]
+    [SerializeField] private TextMeshProUGUI encounterPreviewLabel;
+    [SerializeField] private bool showEncounterPreview = true;
+
     [Tooltip("How many team slots participate in a battle (used for forecast count).")]
     [SerializeField, Range(1, 6)] private int battleTeamSlots = 3;
 
@@ -391,6 +396,8 @@ public class EncounterPanelUI : MonoBehaviour
         RefreshEncounterButtonInteractivity();
 
         RefreshFatigueForecast();
+
+        RefreshEncounterDifficultyPreview();
     }
 
     // ─────────────────────────────────────────────────────────────
@@ -459,6 +466,81 @@ public class EncounterPanelUI : MonoBehaviour
         }
 
         return count;
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // Encounter Difficulty Preview
+    // ─────────────────────────────────────────────────────────────
+    void RefreshEncounterDifficultyPreview()
+    {
+        if (!encounterPreviewLabel) return;
+        if (!showEncounterPreview)
+        {
+            encounterPreviewLabel.gameObject.SetActive(false);
+            return;
+        }
+
+        // Only meaningful when we're about to start an encounter.
+        if (IsInBattle() || IsHireDecisionOpen)
+        {
+            encounterPreviewLabel.gameObject.SetActive(false);
+            return;
+        }
+
+        var data = SaveManager.Data;
+        if (data == null || data.team == null || data.team.Count == 0)
+        {
+            encounterPreviewLabel.gameObject.SetActive(false);
+            return;
+        }
+
+        // Estimated wild level: based on participating team average, with boss cadence hint.
+        int slots = Mathf.Clamp(battleTeamSlots, 1, 6);
+        int sumLvl = 0; int cnt = 0;
+        for (int i = 0; i < data.team.Count && i < slots; i++)
+        {
+            var om = data.team[i];
+            if (om == null) continue;
+            if (string.IsNullOrEmpty(om.monsterId)) continue;
+            if (om.currentHP == 0) continue;
+
+            int lvl = Mathf.Max(1, om.level);
+            sumLvl += lvl;
+            cnt++;
+        }
+        int avg = cnt > 0 ? Mathf.RoundToInt((float)sumLvl / cnt) : 1;
+
+        bool boss = false;
+        int bossBonus = 0;
+        if (EncounterManager.I != null)
+        {
+            var d = SaveManager.Data;
+            int cadence = 10;
+            if (d != null && d.bossEveryN > 0) cadence = d.bossEveryN;
+            boss = (d != null) && d.encountersSinceBoss >= cadence;
+            bossBonus = EncounterManager.I.BossLevelBonusPreview;
+        }
+        int est = Mathf.Max(1, avg + (boss ? bossBonus : 0));
+
+        // Wild title count: show current known count if a wild is already resolved; otherwise show expected range.
+        int knownTitles = (EncounterManager.I != null && EncounterManager.I.WildActiveTitles != null)
+            ? EncounterManager.I.WildActiveTitles.Count
+            : -1;
+
+        string titleText;
+        if (knownTitles >= 0)
+            titleText = knownTitles.ToString();
+        else
+        {
+            // We can at least surface the roll model: up to 1 rolled + always-on list (if any in library).
+            titleText = boss ? "1–2" : "0–1";
+        }
+
+        int fatigueCost = CountProjectedExhaustedBitlings();
+
+        string bossTag = boss ? " (Boss)" : "";
+        encounterPreviewLabel.text = $"Wild Lv ~{est}{bossTag}  •  Titles: {titleText}  •  Fatigue: {fatigueCost}";
+        encounterPreviewLabel.gameObject.SetActive(true);
     }
 
     // ─────────────────────────────────────────────────────────────
@@ -838,23 +920,15 @@ public class EncounterPanelUI : MonoBehaviour
         catch { }
 
         bool busy = _isFading || IsHireDecisionOpen || pendingRecovery;
+        bool hasAliveTeam = HasAliveTeamMember();
+        bool hasEnergyOrFree = NextEncounterIsFree() || HasEnergy() || HasFallbackEnergy();
 
         // NOTE: We still allow the button to be interactable during battle IF auto-mode is currently enabled.
         // This enables the player to HOLD the button to disable auto-mode for the next battle,
         // while still preventing taps from starting a new encounter (EncounterManager blocks when in battle).
         bool allowDuringBattleForAutoToggle = inBattle && EncounterManager.I != null && EncounterManager.I.IsAutoMode;
 
-        if (allowDuringBattleForAutoToggle)
-        {
-            // Don't run encounter-start eligibility while in-battle; this is only for toggling auto.
-            encounterBtn.interactable = !busy;
-            return;
-        }
-
-        // Centralized eligibility (prevents drift with EncounterButtonGuard / EncounterManager).
-        bool hasAliveTeam = EligibilityRules.HasMinimumAliveTeam(minMembers: 1);
-        bool hasEnergyOrFree = EligibilityRules.HasRequiredEnergyOrFree(out _, out _);
-        encounterBtn.interactable = !busy && !inBattle && hasAliveTeam && hasEnergyOrFree;
+        encounterBtn.interactable = !busy && hasAliveTeam && hasEnergyOrFree && (!inBattle || allowDuringBattleForAutoToggle);
     }
 
     bool HasAliveTeamMember()

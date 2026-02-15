@@ -342,8 +342,8 @@ public sealed class JobManager : MonoBehaviour
 
                 ApplyPerSlotFatigue(dtHours, s);
 
-                float avgFatigue = AverageWorkingSlotFatigue(s);
-                float finalRateHr = grossRateHr * (1f - Mathf.Clamp01(avgFatigue));
+                float eff = AverageWorkingSlotEfficiency(s);
+            float finalRateHr = grossRateHr * eff;
                 s.cachedRatePerHour = finalRateHr;
 
                 int cap = GetEffectiveStorageCap(s.config);
@@ -363,7 +363,46 @@ public sealed class JobManager : MonoBehaviour
         SaveRuntimeToSave();
     }
 
-    private static float AverageWorkingSlotFatigue(JobSiteState s)
+    
+
+// ─────────────────────────────────────────────────────────────
+// Fatigue efficiency curve (output modifier)
+// fatigue01: 0 = rested, 1 = exhausted
+// stamina01 = 1 - fatigue01
+// 75–100% stamina → 100%
+// 50–75% → 90%
+// 25–50% → 75%
+// 0–25% → 0%
+// ─────────────────────────────────────────────────────────────
+private static float FatigueEfficiencyMultiplier(float fatigue01)
+{
+    float stamina01 = 1f - UnityEngine.Mathf.Clamp01(fatigue01);
+    if (stamina01 >= 0.75f) return 1f;
+    if (stamina01 >= 0.50f) return 0.90f;
+    if (stamina01 >= 0.25f) return 0.75f;
+    return 0f;
+}
+
+private static float AverageWorkingSlotEfficiency(JobSiteState s)
+{
+    if (s == null || s.workers == null || s.slotFatigue01 == null) return 1f;
+
+    int cap = UnityEngine.Mathf.Min(s.workers.Count, s.slotFatigue01.Length);
+    if (cap <= 0) return 1f;
+
+    float sum = 0f;
+    int count = 0;
+    for (int i = 0; i < cap; i++)
+    {
+        if (s.workers[i] == null) continue;
+        sum += FatigueEfficiencyMultiplier(s.slotFatigue01[i]);
+        count++;
+    }
+
+    if (count <= 0) return 1f;
+    return UnityEngine.Mathf.Clamp01(sum / count);
+}
+private static float AverageWorkingSlotFatigue(JobSiteState s)
     {
         if (s == null || s.workers == null || s.slotFatigue01 == null) return 0f;
         float sum = 0f; int count = 0;
@@ -575,8 +614,8 @@ public sealed class JobManager : MonoBehaviour
         catch { auras = null; }
 
         float grossRateHr = ComputeRatePerHour(scratch, auras);
-        float avgFatigue = AverageWorkingSlotFatigue(scratch);
-        float finalRateHr = grossRateHr * (1f - Mathf.Clamp01(avgFatigue));
+        float eff = AverageWorkingSlotEfficiency(scratch);
+        float finalRateHr = grossRateHr * eff;
         return Mathf.Max(0f, finalRateHr);
     }
 
