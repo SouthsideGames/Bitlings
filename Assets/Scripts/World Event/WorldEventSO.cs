@@ -9,6 +9,12 @@ public class WorldEventSO : ScriptableObject
     public string id;
     public string displayName;
 
+    [Header("Category")]
+    public WorldEventCategory category = WorldEventCategory.Flavor;
+
+    [Tooltip("If true, this is considered a holiday-style ticker item. (May be scheduled or rotate.)")]
+    public bool isHoliday = false;
+
     [Header("Ticker")]
     [TextArea(2, 4)] public string tickerMessage;
 
@@ -42,6 +48,14 @@ public class WorldEventSO : ScriptableObject
     }
 }
 
+public enum WorldEventCategory
+{
+    Job = 0,
+    Encounter = 1,
+    Meta = 2,
+    Flavor = 3
+}
+
 [Serializable]
 public struct WorldEventEffect
 {
@@ -50,6 +64,12 @@ public struct WorldEventEffect
     [Tooltip("Optional job target (used by DisableJobSite / JobRateMultiplier).")]
     public JobType job;
 
+    [Tooltip("Optional resource target (used by ResourceGainMultiplier).")]
+    public ResourceType resource;
+
     [Tooltip("Generic numeric value (multipliers, etc.).")]
     public float value;
+
+    [Tooltip("Optional boolean (used by JobCollectDisabled when you want explicit true/false).")]
+    public bool flag;
 }

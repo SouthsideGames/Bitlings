@@ -10,6 +10,9 @@ public enum FeatureId
     IdleBattle_LogArchive = 14,        // Save auto-battle logs for later review
     IdleBattle_SpeedControl = 15,  
 
+    // ───── World Events ─────
+    WorldEvents_Basic = 16,        // Enables weekly world events + ticker
+
     // ───── Auto-Growth System ─────
     AutoGrowth_Basic = 4,          // Auto-spend Growth Cores over threshold
     AutoGrowth_UsePresets = 5,     // Auto-apply bucket presets
@@ -60,16 +63,16 @@ public static class FeatureIdJobs
             case JobType.Gym:          feature = FeatureId.Job_Gym; break;
             case JobType.Quarry:       feature = FeatureId.Job_Quarry; break;
             case JobType.Mine:         feature = FeatureId.Job_Mine; break;
-            case JobType.PowerPlant:   feature = FeatureId.Job_PowerPlant; break;
+            case JobType.Power_Plant:   feature = FeatureId.Job_PowerPlant; break;
             case JobType.Grove:        feature = FeatureId.Job_Grove; break;
             case JobType.Forge:        feature = FeatureId.Job_Forge; break;
             case JobType.Workshop:     feature = FeatureId.Job_Workshop; break;
             case JobType.Harbor:       feature = FeatureId.Job_Harbor; break;
-            case JobType.CryoLab:      feature = FeatureId.Job_CryoLab; break;
+            case JobType.Cryo_Lab:      feature = FeatureId.Job_CryoLab; break;
             case JobType.Observatory:  feature = FeatureId.Job_Observatory; break;
             case JobType.Containment:  feature = FeatureId.Job_Containment; break;
-            case JobType.WyrmDen:      feature = FeatureId.Job_WyrmDen; break;
-            case JobType.ShadowMarket: feature = FeatureId.Job_ShadowMarket; break;
+            case JobType.Wyrm_Den:      feature = FeatureId.Job_WyrmDen; break;
+            case JobType.Shadow_Market: feature = FeatureId.Job_ShadowMarket; break;
             case JobType.Sanctum:      feature = FeatureId.Job_Sanctum; break;
             case JobType.Clinic:       feature = FeatureId.Job_Clinic; break;
             case JobType.Expedition:   feature = FeatureId.Job_Expedition; break;
@@ -90,16 +93,16 @@ public static class FeatureIdJobs
             case FeatureId.Job_Gym:          job = JobType.Gym; break;
             case FeatureId.Job_Quarry:       job = JobType.Quarry; break;
             case FeatureId.Job_Mine:         job = JobType.Mine; break;
-            case FeatureId.Job_PowerPlant:   job = JobType.PowerPlant; break;
+            case FeatureId.Job_PowerPlant:   job = JobType.Power_Plant; break;
             case FeatureId.Job_Grove:        job = JobType.Grove; break;
             case FeatureId.Job_Forge:        job = JobType.Forge; break;
             case FeatureId.Job_Workshop:     job = JobType.Workshop; break;
             case FeatureId.Job_Harbor:       job = JobType.Harbor; break;
-            case FeatureId.Job_CryoLab:      job = JobType.CryoLab; break;
+            case FeatureId.Job_CryoLab:      job = JobType.Cryo_Lab; break;
             case FeatureId.Job_Observatory:  job = JobType.Observatory; break;
             case FeatureId.Job_Containment:  job = JobType.Containment; break;
-            case FeatureId.Job_WyrmDen:      job = JobType.WyrmDen; break;
-            case FeatureId.Job_ShadowMarket: job = JobType.ShadowMarket; break;
+            case FeatureId.Job_WyrmDen:      job = JobType.Wyrm_Den; break;
+            case FeatureId.Job_ShadowMarket: job = JobType.Shadow_Market; break;
             case FeatureId.Job_Sanctum:      job = JobType.Sanctum; break;
             case FeatureId.Job_Clinic:       job = JobType.Clinic; break;
             case FeatureId.Job_Expedition:   job = JobType.Expedition; break;

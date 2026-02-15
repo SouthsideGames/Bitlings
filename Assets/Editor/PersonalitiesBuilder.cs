@@ -2,7 +2,7 @@
 using UnityEngine;
 using UnityEditor;
 
-public static class CreateFortyMonsterPersonalities
+public static class PersonalitiesBuilder
 {
     private const string OutputFolder = "Assets/Resources/MonsterPersonalities";
 

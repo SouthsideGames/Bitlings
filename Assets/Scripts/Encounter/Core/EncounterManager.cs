@@ -401,6 +401,13 @@ public partial class EncounterManager : MonoBehaviour
             ? bossEveryNOverride
             : (data != null && data.bossEveryN > 0 ? data.bossEveryN : 10);
 
+        // World Events: High Alert can increase boss frequency by reducing cadence.
+        if (WorldEventSystem.I != null)
+        {
+            float mul = WorldEventSystem.I.GetBossCadenceMultiplier();
+            cadence = Mathf.Max(1, Mathf.RoundToInt(cadence * mul));
+        }
+
         _currentEncounterIsBoss = ShouldSpawnBoss(
             data != null ? data.encountersSinceBoss : 0,
             cadence

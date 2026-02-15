@@ -1,0 +1,105 @@
+id,displayName,tickerMessage,category,weight,canRotate,isFlavorOnly,isHoliday,scheduledOnly,startDate,endDate,minWeeksBetween,effects
+WE-001,Gym Maintenance Week,"Gym closed for equipment recalibration.",Job,3,TRUE,FALSE,FALSE,FALSE,,,6,"JOB_DISABLE|Gym"
+WE-002,Gym Staff Walkout,"Gym staff walkout reduces training throughput.",Job,7,TRUE,FALSE,FALSE,FALSE,,,3,"JOB_RATE|Gym|0.70;JOB_STORAGE_CAP|Gym|0.75;JOB_COLLECT_DISABLED|Gym|true"
+WE-003,Gym Training Boom,"Gym attendance surges—training output spikes!",Job,10,TRUE,FALSE,FALSE,FALSE,,,2,"JOB_RATE|Gym|1.30"
+WE-004,Quarry Maintenance Week,"Quarry operations paused for safety repairs.",Job,3,TRUE,FALSE,FALSE,FALSE,,,6,"JOB_DISABLE|Quarry"
+WE-005,Quarry Protest,"Quarry protest slows extraction and deliveries.",Job,7,TRUE,FALSE,FALSE,FALSE,,,3,"JOB_RATE|Quarry|0.70;JOB_STORAGE_CAP|Quarry|0.75"
+WE-006,Quarry Overhaul Output,"Quarry output rises after a major equipment upgrade!",Job,10,TRUE,FALSE,FALSE,FALSE,,,2,"JOB_RATE|Quarry|1.30"
+WE-007,Mine Maintenance Week,"Mine sealed for structural inspection.",Job,3,TRUE,FALSE,FALSE,FALSE,,,6,"JOB_DISABLE|Mine"
+WE-008,Mine Safety Inspection,"Mine safety inspection reduces output and increases fatigue.",Job,7,TRUE,FALSE,FALSE,FALSE,,,3,"JOB_RATE|Mine|0.85;JOB_FATIGUE|Mine|1.35"
+WE-009,Rich Vein Discovered,"A rich vein is discovered—mine production surges!",Job,10,TRUE,FALSE,FALSE,FALSE,,,2,"JOB_RATE|Mine|1.30"
+WE-010,Power Plant Maintenance Week,"Power grid offline for scheduled maintenance.",Job,3,TRUE,FALSE,FALSE,FALSE,,,6,"JOB_DISABLE|Power_Plant"
+WE-011,Power Plant Audit,"Regulatory audit slows output across the plant.",Job,7,TRUE,FALSE,FALSE,FALSE,,,3,"JOB_RATE|Power_Plant|0.80;JOB_STORAGE_CAP|Power_Plant|0.85"
+WE-012,Energy Demand Spike,"Energy demand spikes—Power Plant output increases!",Job,10,TRUE,FALSE,FALSE,FALSE,,,2,"JOB_RATE|Power_Plant|1.30"
+WE-013,Grove Maintenance Week,"Grove access restricted for habitat restoration.",Job,3,TRUE,FALSE,FALSE,FALSE,,,6,"JOB_DISABLE|Grove"
+WE-014,Grove Preservation Protest,"Preservation protest reduces harvesting throughput.",Job,7,TRUE,FALSE,FALSE,FALSE,,,3,"JOB_RATE|Grove|0.70;JOB_STORAGE_CAP|Grove|0.75"
+WE-015,Bountiful Season,"Bountiful season—Grove yields increase significantly!",Job,10,TRUE,FALSE,FALSE,FALSE,,,2,"JOB_RATE|Grove|1.30"
+WE-016,Forge Maintenance Week,"Forge furnaces offline for repair.",Job,3,TRUE,FALSE,FALSE,FALSE,,,6,"JOB_DISABLE|Forge"
+WE-017,Forge Labor Dispute,"Forge labor dispute reduces output and slows collection.",Job,7,TRUE,FALSE,FALSE,FALSE,,,3,"JOB_RATE|Forge|0.70;JOB_STORAGE_CAP|Forge|0.75;JOB_COLLECT_DISABLED|Forge|true"
+WE-018,Metal Surplus,"Metal surplus boosts Forge production!",Job,10,TRUE,FALSE,FALSE,FALSE,,,2,"JOB_RATE|Forge|1.30"
+WE-019,Workshop Maintenance Week,"Workshop tools undergoing recalibration.",Job,3,TRUE,FALSE,FALSE,FALSE,,,6,"JOB_DISABLE|Workshop"
+WE-020,Workshop Safety Drill,"Mandatory safety drills reduce output and increase fatigue.",Job,7,TRUE,FALSE,FALSE,FALSE,,,3,"JOB_RATE|Workshop|0.85;JOB_FATIGUE|Workshop|1.35"
+WE-021,Workshop Overdrive,"Workshop enters production overdrive!",Job,10,TRUE,FALSE,FALSE,FALSE,,,2,"JOB_RATE|Workshop|1.30"
+WE-022,Harbor Maintenance Week,"Harbor closed for structural inspection.",Job,3,TRUE,FALSE,FALSE,FALSE,,,6,"JOB_DISABLE|Harbor"
+WE-023,Dockworkers Strike,"Dockworkers strike slows shipments.",Job,7,TRUE,FALSE,FALSE,FALSE,,,3,"JOB_RATE|Harbor|0.70;JOB_STORAGE_CAP|Harbor|0.75;JOB_COLLECT_DISABLED|Harbor|true"
+WE-024,Shipping Boom,"International trade surges through the Harbor!",Job,10,TRUE,FALSE,FALSE,FALSE,,,2,"JOB_RATE|Harbor|1.30"
+WE-025,Cryo Lab Maintenance Week,"Cryo containment systems undergoing maintenance.",Job,3,TRUE,FALSE,FALSE,FALSE,,,6,"JOB_DISABLE|Cryo_Lab"
+WE-026,Cryo Lab Inspection,"Cryo safety inspectors on site—output slows and fatigue rises.",Job,7,TRUE,FALSE,FALSE,FALSE,,,3,"JOB_RATE|Cryo_Lab|0.85;JOB_FATIGUE|Cryo_Lab|1.35"
+WE-027,Cryo Breakthrough,"Cryo Lab breakthrough boosts production!",Job,10,TRUE,FALSE,FALSE,FALSE,,,2,"JOB_RATE|Cryo_Lab|1.30"
+WE-028,Observatory Maintenance Week,"Observatory systems offline for lens calibration.",Job,3,TRUE,FALSE,FALSE,FALSE,,,6,"JOB_DISABLE|Observatory"
+WE-029,Observatory Protest,"Debate over funding slows Observatory operations.",Job,7,TRUE,FALSE,FALSE,FALSE,,,3,"JOB_RATE|Observatory|0.70;JOB_STORAGE_CAP|Observatory|0.80"
+WE-030,Clear Skies Week,"Clear skies—Observatory output increases!",Job,10,TRUE,FALSE,FALSE,FALSE,,,2,"JOB_RATE|Observatory|1.30"
+WE-031,Containment Maintenance Week,"Containment locked down for system tests.",Job,3,TRUE,FALSE,FALSE,FALSE,,,6,"JOB_DISABLE|Containment"
+WE-032,Containment Inspection,"Containment protocols tightened—output reduced and fatigue rises.",Job,7,TRUE,FALSE,FALSE,FALSE,,,3,"JOB_RATE|Containment|0.85;JOB_FATIGUE|Containment|1.35"
+WE-033,Containment Efficiency,"Containment efficiencies discovered—output boosted!",Job,10,TRUE,FALSE,FALSE,FALSE,,,2,"JOB_RATE|Containment|1.30"
+WE-034,Wyrm Den Maintenance Week,"Wyrm Den access restricted for reinforcement work.",Job,3,TRUE,FALSE,FALSE,FALSE,,,6,"JOB_DISABLE|WyrmDen"
+WE-035,Wyrm Den Unrest,"Wyrm Den unrest reduces throughput and storage capacity.",Job,7,TRUE,FALSE,FALSE,FALSE,,,3,"JOB_RATE|WyrmDen|0.70;JOB_STORAGE_CAP|WyrmDen|0.75"
+WE-036,Wyrm Activity Surge,"Wyrm activity surge increases yields!",Job,10,TRUE,FALSE,FALSE,FALSE,,,2,"JOB_RATE|WyrmDen|1.30"
+WE-037,Shadow Market Maintenance Week,"Shadow Market shutters temporarily for 'reorganization'.",Job,3,TRUE,FALSE,FALSE,FALSE,,,6,"JOB_DISABLE|Shadow_Market"
+WE-038,Shadow Market Crackdown,"Crackdown reduces Shadow Market throughput and storage.",Job,7,TRUE,FALSE,FALSE,FALSE,,,3,"JOB_RATE|Shadow_Market|0.70;JOB_STORAGE_CAP|Shadow_Market|0.75;JOB_COLLECT_DISABLED|Shadow_Market|true"
+WE-039,Black Friday Surge,"Shadow Market demand surges—output increases!",Job,10,TRUE,FALSE,FALSE,FALSE,,,2,"JOB_RATE|Shadow_Market|1.30"
+WE-040,Sanctum Maintenance Week,"Sanctum sealed for ward repairs.",Job,3,TRUE,FALSE,FALSE,FALSE,,,6,"JOB_DISABLE|Sanctum"
+WE-041,Sanctum Protest,"Internal dispute reduces Sanctum output and storage.",Job,7,TRUE,FALSE,FALSE,FALSE,,,3,"JOB_RATE|Sanctum|0.70;JOB_STORAGE_CAP|Sanctum|0.75"
+WE-042,Sanctum Blessing,"A rare blessing boosts Sanctum output!",Job,10,TRUE,FALSE,FALSE,FALSE,,,2,"JOB_RATE|Sanctum|1.30"
+WE-043,Clinic Maintenance Week,"Clinic systems offline for sterilization overhaul.",Job,3,TRUE,FALSE,FALSE,FALSE,,,6,"JOB_DISABLE|Clinic"
+WE-044,Clinic Supply Shortage,"Supply shortage reduces Clinic throughput.",Job,7,TRUE,FALSE,FALSE,FALSE,,,3,"JOB_RATE|Clinic|0.70;JOB_STORAGE_CAP|Clinic|0.80"
+WE-045,Public Health Initiative,"Public initiative boosts Clinic productivity!",Job,10,TRUE,FALSE,FALSE,FALSE,,,2,"JOB_RATE|Clinic|1.30"
+WE-046,Expedition Maintenance Week,"Expedition routes closed for mapping updates.",Job,3,TRUE,FALSE,FALSE,FALSE,,,6,"JOB_DISABLE|Expedition"
+WE-047,Expedition Delays,"Expedition delays reduce output and storage capacity.",Job,7,TRUE,FALSE,FALSE,FALSE,,,3,"JOB_RATE|Expedition|0.70;JOB_STORAGE_CAP|Expedition|0.75"
+WE-048,Expedition Windfall,"Expedition returns with unexpected windfalls!",Job,10,TRUE,FALSE,FALSE,FALSE,,,2,"JOB_RATE|Expedition|1.30"
+WE-100,Citywide Curfew,"Citywide curfew in effect. Encounters suspended.",Encounter,10,TRUE,FALSE,FALSE,FALSE,,,4,"ENCOUNTER_DISABLE|true"
+WE-101,High Alert,"High Alert: hostile activity increasing.",Encounter,10,TRUE,FALSE,FALSE,FALSE,,,3,"BOSS_CADENCE|0.75"
+WE-102,Tourist Season,"Tourist season lowers encounter costs.",Encounter,10,TRUE,FALSE,FALSE,FALSE,,,2,"ENCOUNTER_COST|0.80"
+WE-103,Quiet Streets,"Quiet streets reduce hostile activity.",Encounter,8,TRUE,FALSE,FALSE,FALSE,,,2,"BOSS_CADENCE|1.20"
+WE-104,Festival Crowds,"Festival crowds make encounters cheaper but rarer.",Encounter,8,TRUE,FALSE,FALSE,FALSE,,,2,"ENCOUNTER_COST|0.85"
+WE-105,Security Sweep,"Security sweep disrupts encounter availability.",Encounter,7,TRUE,FALSE,FALSE,FALSE,,,3,"ENCOUNTER_DISABLE|true"
+WE-106,Storm Front,"Storm front increases danger—bosses come sooner.",Encounter,7,TRUE,FALSE,FALSE,FALSE,,,3,"BOSS_CADENCE|0.85"
+WE-107,Free Pass Week,"Free pass promotions lower encounter energy costs.",Encounter,7,TRUE,FALSE,FALSE,FALSE,,,2,"ENCOUNTER_COST|0.75"
+WE-200,Inflation,"Inflation drives up market prices.",Meta,10,TRUE,FALSE,FALSE,FALSE,,,3,"SHOP_PRICE|1.20"
+WE-201,Deflation,"Market downturn lowers prices.",Meta,10,TRUE,FALSE,FALSE,FALSE,,,3,"SHOP_PRICE|0.85"
+WE-202,Voucher Drive,"Voucher drive increases special rewards.",Meta,10,TRUE,FALSE,FALSE,FALSE,,,2,"RESOURCE_GAIN|Vouchers|1.50"
+WE-203,Supply Chain Relief,"Supply chain relief reduces shop costs.",Meta,8,TRUE,FALSE,FALSE,FALSE,,,2,"SHOP_PRICE|0.90"
+WE-204,Market Panic,"Market panic increases shop costs.",Meta,8,TRUE,FALSE,FALSE,FALSE,,,3,"SHOP_PRICE|1.10"
+WE-205,Bonus Payout Week,"Bonus payouts increase resource yields.",Meta,7,TRUE,FALSE,FALSE,FALSE,,,2,"RESOURCE_GAIN|All|1.10"
+WE-206,Rationing Week,"Rationing reduces resource yields slightly.",Meta,7,TRUE,FALSE,FALSE,FALSE,,,2,"RESOURCE_GAIN|All|0.95"
+WE-207,Collector Craze,"Collector craze boosts voucher-style drops.",Meta,7,TRUE,FALSE,FALSE,FALSE,,,2,"RESOURCE_GAIN|Vouchers|1.25"
+WE-300,Local News,"Local headlines: a Bitling parade draws crowds downtown.",Flavor,10,TRUE,TRUE,FALSE,FALSE,,,1,
+WE-301,Weather Report,"Weather report: mild conditions across the region.",Flavor,10,TRUE,TRUE,FALSE,FALSE,,,1,
+WE-302,Radio Chatter,"Radio chatter: strange signals reported near the Observatory.",Flavor,10,TRUE,TRUE,FALSE,FALSE,,,1,
+WE-303,Transit Delay,"Transit delay: shipments delayed on the outer routes.",Flavor,10,TRUE,TRUE,FALSE,FALSE,,,1,
+WE-304,Community Notice,"Community notice: volunteer cleanup scheduled this weekend.",Flavor,10,TRUE,TRUE,FALSE,FALSE,,,1,
+WE-305,Street Market,"Street market expands into new neighborhoods.",Flavor,10,TRUE,TRUE,FALSE,FALSE,,,1,
+WE-306,City Council,"City council debates new infrastructure policies.",Flavor,10,TRUE,TRUE,FALSE,FALSE,,,1,
+WE-307,Lost And Found,"Lost and found: a shiny trinket returned to its owner.",Flavor,10,TRUE,TRUE,FALSE,FALSE,,,1,
+WE-308,Public Service,"Public service announcement: stay hydrated and rest.",Flavor,10,TRUE,TRUE,FALSE,FALSE,,,1,
+WE-309,Neighborhood Watch,"Neighborhood watch reports increased late-night activity.",Flavor,10,TRUE,TRUE,FALSE,FALSE,,,1,
+WE-310,Photo Contest,"Photo contest: best Bitling snapshot wins a prize.",Flavor,10,TRUE,TRUE,FALSE,FALSE,,,1,
+WE-311,Local Sports,"Local sports: Gym hosts a citywide tournament.",Flavor,10,TRUE,TRUE,FALSE,FALSE,,,1,
+WE-312,Art Exhibit,"Art exhibit opens featuring rare Grove sculptures.",Flavor,10,TRUE,TRUE,FALSE,FALSE,,,1,
+WE-313,Science Fair,"Science fair draws crowds near the Cryo Lab district.",Flavor,10,TRUE,TRUE,FALSE,FALSE,,,1,
+WE-314,Minor Tremors,"Minor tremors reported near the Quarry.",Flavor,10,TRUE,TRUE,FALSE,FALSE,,,1,
+WE-315,Workshop Rumor,"Workshop rumor: a prototype device went missing.",Flavor,10,TRUE,TRUE,FALSE,FALSE,,,1,
+WE-316,Harbor Lights,"Harbor lights seen flickering late at night.",Flavor,10,TRUE,TRUE,FALSE,FALSE,,,1,
+WE-317,Clinic Update,"Clinic update: community wellness checks continue.",Flavor,10,TRUE,TRUE,FALSE,FALSE,,,1,
+WE-318,Power Fluctuation,"Power fluctuation: brief outage reported and resolved.",Flavor,10,TRUE,TRUE,FALSE,FALSE,,,1,
+WE-319,Supply Shipment,"Supply shipment arrives ahead of schedule.",Flavor,10,TRUE,TRUE,FALSE,FALSE,,,1,
+WE-320,Lost Cat,"Workshop cat still missing. Reward offered.",Flavor,10,TRUE,TRUE,FALSE,FALSE,,,1,
+WE-321,Public Debate,"Public debate: should the Shadow Market be regulated?",Flavor,10,TRUE,TRUE,FALSE,FALSE,,,1,
+WE-322,Containment Drill,"Containment conducts a routine drill. No danger reported.",Flavor,10,TRUE,TRUE,FALSE,FALSE,,,1,
+WE-323,Stargazing Week,"Stargazing week declared by the Observatory.",Flavor,10,TRUE,TRUE,FALSE,FALSE,,,1,
+WE-324,New Route,"New Expedition route opens for civilian travel.",Flavor,10,TRUE,TRUE,FALSE,FALSE,,,1,
+WE-325,Local Celebrity,"Local celebrity Bitling spotted downtown.",Flavor,10,TRUE,TRUE,FALSE,FALSE,,,1,
+WE-326,Donation Drive,"Donation drive: supplies collected for the Clinic.",Flavor,10,TRUE,TRUE,FALSE,FALSE,,,1,
+WE-327,Street Music,"Street musicians perform outside the Harbor gates.",Flavor,10,TRUE,TRUE,FALSE,FALSE,,,1,
+WE-328,Maintenance Notice,"Maintenance notice: minor repairs ongoing across the city.",Flavor,10,TRUE,TRUE,FALSE,FALSE,,,1,
+WE-329,Quiet Week,"A quiet week settles over the region.",Flavor,10,TRUE,TRUE,FALSE,FALSE,,,1,
+WE-330,Food Festival,"Food festival draws crowds to the central plaza.",Flavor,10,TRUE,TRUE,FALSE,FALSE,,,1,
+WE-331,Book Fair,"Book fair announces rare volumes from the Sanctum.",Flavor,10,TRUE,TRUE,FALSE,FALSE,,,1,
+WE-332,New Sculpture,"New sculpture installed near the Grove entrance.",Flavor,10,TRUE,TRUE,FALSE,FALSE,,,1,
+WE-333,Repair Completed,"City notice: multiple repairs completed ahead of schedule.",Flavor,10,TRUE,TRUE,FALSE,FALSE,,,1,
+WE-334,Market Gossip,"Market gossip spreads—prices may change soon.",Flavor,10,TRUE,TRUE,FALSE,FALSE,,,1,
+WE-335,Safety Reminder,"Safety reminder issued for all job sites.",Flavor,10,TRUE,TRUE,FALSE,FALSE,,,1,
+WE-336,Observatory Buzz,"Observatory buzz: rare alignment expected tonight.",Flavor,10,TRUE,TRUE,FALSE,FALSE,,,1,
+WE-337,Harbor Parade,"Harbor hosts a small ceremonial procession.",Flavor,10,TRUE,TRUE,FALSE,FALSE,,,1,
+WE-338,Clinic Seminar,"Clinic hosts a public seminar on recovery and rest.",Flavor,10,TRUE,TRUE,FALSE,FALSE,,,1,
+WE-339,Power Station Tour,"Public tours offered at the Power Plant.",Flavor,10,TRUE,TRUE,FALSE,FALSE,,,1,

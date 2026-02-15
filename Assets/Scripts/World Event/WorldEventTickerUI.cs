@@ -66,6 +66,13 @@ public sealed class WorldEventTickerUI : MonoBehaviour
 
     private void RefreshVisibility()
     {
+        // Feature gate: if the World Events feature is locked, hide the bar.
+        if (WorldEventSystem.I != null && !WorldEventSystem.I.IsFeatureActive())
+        {
+            if (barRoot) barRoot.SetActive(false);
+            return;
+        }
+
         bool hasFeed = WorldEventManager.I != null && WorldEventManager.I.Items != null && WorldEventManager.I.Items.Count > 0;
 
         if (onlyShowOnHome)

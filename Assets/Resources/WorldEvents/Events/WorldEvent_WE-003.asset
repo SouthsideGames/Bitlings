@@ -10,18 +10,17 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 2f3afd814a60149de963f36c9dd5f633, type: 3}
-  m_Name: WorldEvent_
+  m_Name: WorldEvent_WE-003
   m_EditorClassIdentifier: 
-  id: 
-  displayName: 
-  tickerMessage: 
+  id: WE-003
+  displayName: Gym Training Boom
+  category: 0
+  isHoliday: 0
+  tickerMessage: "Gym attendance surges\u2014training output spikes!"
   scheduledOnly: 0
   startUnix: 0
   endUnix: 0
   canRotate: 1
-  weight: 1
+  weight: 10
   minDaysBetween: 0
-  effects:
-  - kind: 0
-    job: 0
-    value: 0
+  effects: []

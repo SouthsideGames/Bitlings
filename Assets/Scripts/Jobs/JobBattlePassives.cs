@@ -67,7 +67,7 @@ public static class JobBattlePassives
                     FORGE_FIRST_HIT_BASE + Mathf.Min(FORGE_PER_HOUR * c.hours, FORGE_CAP - FORGE_FIRST_HIT_BASE)
                 ); break;
 
-            case JobType.PowerPlant:
+            case JobType.Power_Plant:
                 c.speedBuffTurns = 2; c.speedBonusPctFirstTurns = POWER_SPEED_FIRST2; break;
 
             case JobType.Quarry:
@@ -86,7 +86,7 @@ public static class JobBattlePassives
             case JobType.Harbor:
                 c.startShieldPctMaxHp = HARBOR_START_SHIELD; c.regenTurns = 2; c.endTurnHealPct = HARBOR_TRICKLE; break;
 
-            case JobType.CryoLab:
+            case JobType.Cryo_Lab:
                 c.critResistFlat = Mathf.Clamp(
                     CRYO_CRITRES_BASE + Mathf.Min(CRYO_PER_HOUR * c.hours, CRYO_CRITRES_CAP - CRYO_CRITRES_BASE),
                     0f, CRYO_CRITRES_CAP
@@ -109,10 +109,10 @@ public static class JobBattlePassives
                 );
                 break;
 
-            case JobType.WyrmDen:
+            case JobType.Wyrm_Den:
                 c.surgeAtkBonusPct = WYRM_SURGE_ATK; break;
 
-            case JobType.ShadowMarket:
+            case JobType.Shadow_Market:
                 c.firstIncomingReduce = SHADOW_FIRST_INCOMING_REDUCE; break;
 
             case JobType.Sanctum:

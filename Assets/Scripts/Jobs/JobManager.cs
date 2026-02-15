@@ -53,6 +53,11 @@ public class JobSiteState
     public float storedAmount;
     public float cachedRatePerHour;
 
+    // Auto-collect (per-site)
+    // Only collects when enabled AND storage is full.
+    // This prevents "invisible" stored growth.
+    public bool autoCollectEnabled;
+
     [Range(1, 3)] public int level = 1;
     public int currentXP = 0;
     public int maxXPForLevel = 20;
@@ -98,7 +103,7 @@ public sealed class JobManager : MonoBehaviour
     {
         JobType.Gym,
         JobType.Quarry,
-        JobType.PowerPlant
+        JobType.Power_Plant
     };
 
 #if UNITY_EDITOR
@@ -341,7 +346,15 @@ public sealed class JobManager : MonoBehaviour
                 float finalRateHr = grossRateHr * (1f - Mathf.Clamp01(avgFatigue));
                 s.cachedRatePerHour = finalRateHr;
 
-                s.storedAmount = Mathf.Min(GetEffectiveStorageCap(s.config), s.storedAmount + finalRateHr * dtHours);
+                int cap = GetEffectiveStorageCap(s.config);
+                s.storedAmount = Mathf.Min(cap, s.storedAmount + finalRateHr * dtHours);
+
+                // Auto-collect ONLY when enabled AND storage is full.
+                // Do not auto-collect on partial storage.
+                if (cap > 0 && s.autoCollectEnabled && s.storedAmount >= cap - 0.0001f)
+                {
+                    Collect(s.config.jobType);
+                }
             }
         }
 
@@ -383,6 +396,13 @@ public sealed class JobManager : MonoBehaviour
 
             float perHour = Mathf.Max(0f, w.def.fatigueRatePerHour);
 
+            // World Event fatigue modifiers (e.g., Safety Inspection week).
+            if (WorldEventSystem.I != null)
+            {
+                try { perHour *= Mathf.Max(0f, WorldEventSystem.I.GetJobFatigueRateMultiplier(s.config.jobType)); }
+                catch { }
+            }
+
             try
             {
                 string key = GetWorkerKey(w);
@@ -407,14 +427,25 @@ public sealed class JobManager : MonoBehaviour
                 s.workers[i] = null;
                 RemoveAssignedUnix(key);
 
-                Collect(s.config.jobType);
-
                 s.slotFatigue01[i] = 1f;
 
                 SaveAssignmentsToSave();
                 GameEvents.OnJobsChanged?.Invoke();
             }
         }
+    }
+
+    /// <summary>
+    /// Enables/disables auto-collect for a specific job site.
+    /// Auto-collect only triggers when storage is full.
+    /// </summary>
+    public void SetAutoCollect(JobType job, bool enabled)
+    {
+        var s = FindState(job);
+        if (s == null) return;
+        s.autoCollectEnabled = enabled;
+        SaveRuntimeToSave();
+        GameEvents.OnJobsChanged?.Invoke();
     }
 
     /// <summary>
@@ -656,6 +687,13 @@ public sealed class JobManager : MonoBehaviour
         var s = FindState(job);
         if (s == null) return 0;
 
+        // World Event gate: some events can disable collection or the entire site.
+        if (WorldEventSystem.I != null)
+        {
+            if (WorldEventSystem.I.IsJobSiteDisabled(job)) return 0;
+            if (WorldEventSystem.I.IsJobCollectDisabled(job)) return 0;
+        }
+
         int whole = Mathf.FloorToInt(s.storedAmount);
         if (whole <= 0) return 0;
 
@@ -863,7 +901,8 @@ public sealed class JobManager : MonoBehaviour
                 {
                     job = s.config.jobType,
                     slotFatigue01 = (float[])(s.slotFatigue01?.Clone() ?? Array.Empty<float>()),
-                    slotCooldownUntilUnix = (long[])(s.slotCooldownUntilUnix?.Clone() ?? Array.Empty<long>())
+                    slotCooldownUntilUnix = (long[])(s.slotCooldownUntilUnix?.Clone() ?? Array.Empty<long>()),
+                    autoCollectEnabled = s.autoCollectEnabled
                 });
             }
 
@@ -910,6 +949,9 @@ public sealed class JobManager : MonoBehaviour
 
                     if (rs.slotCooldownUntilUnix != null && rs.slotCooldownUntilUnix.Length == cap)
                         Array.Copy(rs.slotCooldownUntilUnix, st.slotCooldownUntilUnix, cap);
+
+                    // Safe default for older saves.
+                    st.autoCollectEnabled = rs.autoCollectEnabled;
                 }
             }
         }
@@ -1218,7 +1260,12 @@ public sealed class JobManager : MonoBehaviour
         float levelMul = (st != null) ? JobLeveling.StorageMultForLevel(st.level) : 1f;
 
         int preMultFlat = Mathf.Max(0, baseCap + extraFromSave + flatFromTitles + tempFromBlessings);
-        return Mathf.Max(0, Mathf.RoundToInt(preMultFlat * levelMul));
+
+        float worldCapMul = 1f;
+        if (WorldEventSystem.I != null)
+            worldCapMul = Mathf.Max(0f, WorldEventSystem.I.GetJobStorageCapMultiplier(site.jobType));
+
+        return Mathf.Max(0, Mathf.RoundToInt(preMultFlat * levelMul * worldCapMul));
     }
 
     public (JobType job, float hours) GetCurrentJobAndHours(string key)

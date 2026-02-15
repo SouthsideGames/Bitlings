@@ -12,13 +12,13 @@ public static class BuiltInFallbackEvents
         _cache = new List<WorldEventSO>(12)
         {
             Make("WE-001", "Cryo Lab Maintenance", "🧊 Cryo Lab maintenance week — Cryo Lab is offline.",
-                new WorldEventEffect { kind = WorldEventEffectKind.DisableJobSite, job = JobType.CryoLab, value = 1f }),
+                new WorldEventEffect { kind = WorldEventEffectKind.DisableJobSite, job = JobType.Cryo_Lab, value = 1f }),
 
             Make("WE-002", "Harbor Strike", "⚓ Harbor strike reported — delays expected at Harbor.",
                 new WorldEventEffect { kind = WorldEventEffectKind.JobRateMultiplier, job = JobType.Harbor, value = 0.75f }),
 
             Make("WE-003", "Power Plant Inspection", "⚡ Power Plant inspection — output temporarily reduced.",
-                new WorldEventEffect { kind = WorldEventEffectKind.JobRateMultiplier, job = JobType.PowerPlant, value = 0.80f }),
+                new WorldEventEffect { kind = WorldEventEffectKind.JobRateMultiplier, job = JobType.Power_Plant, value = 0.80f }),
 
             Make("WE-004", "Clinic Supply Shortage", "🩺 Clinic supply shortage — relief services limited.",
                 new WorldEventEffect { kind = WorldEventEffectKind.JobRateMultiplier, job = JobType.Clinic, value = 0.90f }),

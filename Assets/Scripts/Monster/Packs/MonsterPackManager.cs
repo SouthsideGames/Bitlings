@@ -276,7 +276,11 @@ public class MonsterPackManager : MonoBehaviour
 
         int baseCost = Mathf.Max(0, pack.baseCost);
         float combinedMul = (1f - Mathf.Clamp01(pack.saleOff01)) * (1f - Mathf.Clamp01(globalDiscount01));
-        finalCost = Mathf.CeilToInt(baseCost * Mathf.Clamp(combinedMul, 0f, 1f));
+        float worldMul = 1f;
+        if (WorldEventSystem.I != null)
+            worldMul = Mathf.Max(0f, WorldEventSystem.I.GetShopPriceMultiplier());
+
+        finalCost = Mathf.CeilToInt(baseCost * Mathf.Clamp(combinedMul, 0f, 1f) * worldMul);
         return true;
     }
 

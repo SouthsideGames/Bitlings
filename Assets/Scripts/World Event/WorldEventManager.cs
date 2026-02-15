@@ -2,12 +2,7 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 
-/// <summary>
-/// Lightweight runtime feed used by the ticker UI.
-///
-/// WorldEventSystem writes into this feed, but you can also post ad-hoc messages
-/// (e.g., patch notes, server notices, etc.).
-/// </summary>
+
 public sealed class WorldEventManager : MonoBehaviour
 {
     public static WorldEventManager I { get; private set; }

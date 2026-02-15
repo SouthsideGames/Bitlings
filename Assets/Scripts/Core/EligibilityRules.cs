@@ -1,14 +1,6 @@
 using UnityEngine;
 
-/// <summary>
-/// Centralized eligibility rules so UI buttons / panels don't drift.
-///
-/// Design rules:
-/// - Battle eligibility IS HP-gated (0 HP can't battle).
-/// - Job eligibility is NOT HP-gated (per design); jobs are gated by slot cooldown/fatigue + type rules.
-///
-/// Keep this class dependency-light and side-effect free.
-/// </summary>
+
 public static class EligibilityRules
 {
     // ─────────────────────────────────────────────────────────────────────────────

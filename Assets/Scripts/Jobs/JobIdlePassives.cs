@@ -64,7 +64,7 @@ public static class JobIdlePassives
 
             defAccum += Mathf.Max(0f, defPct);
 
-            if (job == JobType.PowerPlant)
+            if (job == JobType.Power_Plant)
                 bestPowerPlantHours = Mathf.Max(bestPowerPlantHours, hours);
             if (c.speedBuffTurns > 0 && c.speedBonusPctFirstTurns > 0f)
                 edgeAccum += SPD_TO_EDGE;

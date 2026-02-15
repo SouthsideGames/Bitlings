@@ -12,6 +12,9 @@ public class JobRuntimeSite
     public JobType job;
     public float[] slotFatigue01;
     public long[] slotCooldownUntilUnix;
+
+    // Per-site auto-collect toggle. Only triggers collection when storage is full.
+    public bool autoCollectEnabled;
 }
 
 [Serializable]
@@ -43,9 +46,18 @@ public class WorldEventRollCooldown
 [Serializable]
 public class WorldEventSaveData
 {
+    // Legacy rotation fields (kept for backward compatibility)
     public string rotationActiveEventId;
     public long rotationUntilUnix;
     public long nextRotationRollUnix;
+
+    // Weekly system
+    public string weeklyActiveEventId;
+    public long weeklyWeekStartUnix;
+
+    // First week after unlocking World Events should force a Flavor roll.
+    public bool firstUnlockFlavorConsumed;
+
     public List<WorldEventRollCooldown> cooldowns = new();
 }
 

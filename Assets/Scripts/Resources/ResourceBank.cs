@@ -106,6 +106,16 @@ public static class ResourceBank
     public static void Add(ResourceType t, int delta)
     {
         if (delta == 0) return;
+
+        // World Events: optional resource gain multipliers (e.g., Voucher Drives).
+        // Apply ONLY to positive gains.
+        if (delta > 0 && WorldEventSystem.I != null)
+        {
+            float mul = 1f;
+            try { mul = WorldEventSystem.I.GetResourceGainMultiplier(t); } catch { mul = 1f; }
+            if (!Mathf.Approximately(mul, 1f))
+                delta = Mathf.CeilToInt(delta * Mathf.Max(0f, mul));
+        }
         EnsureSize();
         int i = Index(t);
         if (i < 0 || i >= L.Count) return;

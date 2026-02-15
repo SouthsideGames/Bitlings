@@ -71,7 +71,10 @@ public class JobPanelUI : MonoBehaviour
             if (s == null || s.config == null) continue;
 
             // Title: "Quarry (2/3)"
-            if (t.title) t.title.text = $"{t.job}";
+            if (t.title)
+            {
+                t.title.text = t.job.ToString().Replace("_", " ");
+            }
 
             // ─────────────────────────────────────────────────────────────
             // Capacity text with colored delta (titles vs. no titles)
@@ -95,19 +98,24 @@ public class JobPanelUI : MonoBehaviour
 
             int deltaCap = capWithTitles - capNoTitles;
 
+            // NOTE: Many early sites have low rates (< 1/hr). If we only show whole numbers,
+            // the player may never "see" progress for a long time. Show decimals while < 1.
             int storedWhole = Mathf.FloorToInt(s.storedAmount);
+            string storedShown = (s.storedAmount < 1f)
+                ? s.storedAmount.ToString("0.##")
+                : storedWhole.ToString();
             if (t.stored)
             {
                 if (deltaCap == 0)
                 {
-                    t.stored.text = $"Stored: {storedWhole}/{capWithTitles}";
+                    t.stored.text = $"Stored: {storedShown}/{capWithTitles}";
                 }
                 else
                 {
                     var c = deltaCap > 0 ? capUpColor : capDownColor;
                     string hex = ColorUtility.ToHtmlStringRGB(c);
                     string sign = deltaCap > 0 ? "+" : ""; // negatives already have '-'
-                    t.stored.text = $"Stored: {storedWhole}/{capWithTitles} <color=#{hex}>({sign}{deltaCap})</color>";
+                    t.stored.text = $"Stored: {storedShown}/{capWithTitles} <color=#{hex}>({sign}{deltaCap})</color>";
                 }
             }
 
