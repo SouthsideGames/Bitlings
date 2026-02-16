@@ -20,6 +20,9 @@ public class EncounterPanelUI : MonoBehaviour
     [SerializeField] private TextMeshProUGUI fatigueForecastLabel;
     [SerializeField] private bool showFatigueForecast = true;
 
+    [Tooltip("Template used for the forecast. Use {0} for the number.")]
+    [SerializeField] private string fatigueForecastTemplate = "This battle will exhaust {0} Bitling{1}";
+
     [Header("Encounter Difficulty Preview")]
     [Tooltip("Optional label: show estimated wild level, expected title count, and fatigue cost.")]
     [SerializeField] private TextMeshProUGUI encounterPreviewLabel;
@@ -27,9 +30,6 @@ public class EncounterPanelUI : MonoBehaviour
 
     [Tooltip("How many team slots participate in a battle (used for forecast count).")]
     [SerializeField, Range(1, 6)] private int battleTeamSlots = 3;
-
-    [Tooltip("Template used for the forecast. Use {0} for the number.")]
-    [SerializeField] private string fatigueForecastTemplate = "This battle will exhaust {0} Bitling{1}";
 
     // ─────────────────────────────────────────────────────────────
     // Encounter Bar Buttons + Labels (Icon + TMP under it)

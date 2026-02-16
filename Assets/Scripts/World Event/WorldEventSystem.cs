@@ -55,6 +55,11 @@ public sealed class WorldEventSystem : MonoBehaviour
 
     private float _accum;
 
+    // Execution-order safety: FeatureUnlockManager may initialize after this system.
+    private FeatureUnlockManager _featureMgr;
+    private bool _featureMgrHooked;
+    private bool _wasFeatureActive;
+
     public IReadOnlyList<WorldEventSO> ActiveEvents => _active;
 
     private void Awake()
@@ -63,32 +68,86 @@ public sealed class WorldEventSystem : MonoBehaviour
         I = this;
         DontDestroyOnLoad(gameObject);
 
+        EnsureWorldEventManagerExists();
+
+
         if (!library)
             library = Resources.Load<WorldEventLibrarySO>("WorldEvents/WorldEventLibrary");
 
         if (SaveManager.Data == null) SaveManager.LoadOrCreate();
 
-        if (FeatureUnlockManager.I != null)
-            FeatureUnlockManager.I.OnFeatureUnlocked += HandleFeatureUnlocked;
+        // Try to hook the feature manager now, but also keep trying in Update.
+        TryHookFeatureManager();
+        _wasFeatureActive = IsFeatureActive();
 
         RefreshNow(forceRollIfNeeded: true);
     }
 
+    private void EnsureWorldEventManagerExists()
+    {
+        if (WorldEventManager.I != null) return;
+
+        var existing = FindObjectOfType<WorldEventManager>();
+        if (existing != null) return;
+
+        var go = new GameObject("WorldEventManager");
+        go.AddComponent<WorldEventManager>();
+    }
+
     private void OnDestroy()
     {
-        if (FeatureUnlockManager.I != null)
-            FeatureUnlockManager.I.OnFeatureUnlocked -= HandleFeatureUnlocked;
+        UnhookFeatureManager();
 
         if (I == this) I = null;
     }
 
     private void Update()
     {
+        // Late-bind FeatureUnlockManager if it wasn't ready during Awake.
+        TryHookFeatureManager();
+
+        // If we were previously locked due to missing FeatureUnlockManager, but it becomes
+        // available (and the feature is already unlocked), we need to refresh once so UI appears.
+        bool activeNow = IsFeatureActive();
+        if (activeNow && !_wasFeatureActive)
+        {
+            _wasFeatureActive = true;
+            RefreshNow(forceRollIfNeeded: true);
+        }
+        else
+        {
+            _wasFeatureActive = activeNow;
+        }
+
         _accum += Time.unscaledDeltaTime;
         if (_accum < refreshCheckSeconds) return;
         _accum = 0f;
 
         RefreshNow(forceRollIfNeeded: false);
+    }
+
+    private void TryHookFeatureManager()
+    {
+        // If a different instance becomes active, re-hook.
+        var mgr = FeatureUnlockManager.I;
+        if (mgr == null) return;
+
+        if (_featureMgr == mgr && _featureMgrHooked) return;
+
+        UnhookFeatureManager();
+
+        _featureMgr = mgr;
+        _featureMgr.OnFeatureUnlocked += HandleFeatureUnlocked;
+        _featureMgrHooked = true;
+    }
+
+    private void UnhookFeatureManager()
+    {
+        if (_featureMgrHooked && _featureMgr != null)
+            _featureMgr.OnFeatureUnlocked -= HandleFeatureUnlocked;
+
+        _featureMgrHooked = false;
+        _featureMgr = null;
     }
 
     private void HandleFeatureUnlocked(FeatureId id)
@@ -253,7 +312,10 @@ public sealed class WorldEventSystem : MonoBehaviour
             weightSum += e.weight;
         }
 
-        // Fallback: if category is empty, roll any Flavor, else any event.
+        // Fallbacks:
+        // 1) If we rolled a non-Flavor category and it's empty, try Flavor.
+        // 2) If we *forced* Flavor (first week after unlock) but there are no Flavor events authored yet,
+        //    fall back to ANY rotatable event so the ticker still appears.
         if (candidates.Count == 0)
         {
             if (chosenCat != WorldEventCategory.Flavor)
@@ -267,6 +329,23 @@ public sealed class WorldEventSystem : MonoBehaviour
                     if (!e.canRotate) continue;
                     if (e.weight <= 0) continue;
                     if (e.category != chosenCat) continue;
+
+                    if (e.minDaysBetween > 0f && WasRolledTooRecently(blob, e, nowUtc))
+                        continue;
+
+                    candidates.Add(e);
+                    weightSum += e.weight;
+                }
+            }
+            else
+            {
+                for (int i = 0; i < all.Count; i++)
+                {
+                    var e = all[i];
+                    if (!e) continue;
+                    if (e.scheduledOnly) continue;
+                    if (!e.canRotate) continue;
+                    if (e.weight <= 0) continue;
 
                     if (e.minDaysBetween > 0f && WasRolledTooRecently(blob, e, nowUtc))
                         continue;

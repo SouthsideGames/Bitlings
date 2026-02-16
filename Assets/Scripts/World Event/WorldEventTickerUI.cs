@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using TMPro;
 using UnityEngine;
@@ -26,7 +27,16 @@ public sealed class WorldEventTickerUI : MonoBehaviour
     [SerializeField] private float pauseAtStartSeconds = 0.25f;
     [SerializeField] private float pauseAtEndSeconds = 0.15f;
 
+    [Header("Loop Timing")]
+    [SerializeField] private float loopDelaySeconds = 3f;
+    [SerializeField] private float betweenMessageDelay = 1.5f;
+
     private Coroutine _loop;
+
+    private bool _subscribed;
+
+    // Cached fallback home root (for projects where UIManager.IsOpen(PanelId.Home) isn't authoritative).
+    private GameObject _cachedHomePanel;
 
     private void Awake()
     {
@@ -36,18 +46,42 @@ public sealed class WorldEventTickerUI : MonoBehaviour
 
     private void OnEnable()
     {
-        if (WorldEventManager.I != null)
-            WorldEventManager.I.Changed += HandleChanged;
-
+        TryHookFeed();
         HandleChanged();
+    }
+
+    private void Update()
+    {
+        // Execution-order safety:
+        // If this component enables before WorldEventManager exists, we won't get events.
+        // Keep trying to hook until it appears.
+        if (!_subscribed)
+            TryHookFeed();
     }
 
     private void OnDisable()
     {
+        UnhookFeed();
+        StopLoop();
+    }
+
+    private void TryHookFeed()
+    {
+        if (_subscribed) return;
+
+        var feed = WorldEventManager.I;
+        if (feed == null) return;
+
+        feed.Changed += HandleChanged;
+        _subscribed = true;
+    }
+
+    private void UnhookFeed()
+    {
+        if (!_subscribed) return;
         if (WorldEventManager.I != null)
             WorldEventManager.I.Changed -= HandleChanged;
-
-        StopLoop();
+        _subscribed = false;
     }
 
     private void HandleChanged()
@@ -78,7 +112,25 @@ public sealed class WorldEventTickerUI : MonoBehaviour
         if (onlyShowOnHome)
         {
             // Safe check: UIManager may not exist in all scenes.
-            bool onHome = UIManager.I != null && UIManager.I.IsOpen(PanelId.Home);
+            bool onHome = false;
+
+            if (UIManager.I != null)
+            {
+                // Depending on your panel stack rules, Home may remain active while sub-panels open.
+                // We'll accept UIManager's state when it reports true.
+                onHome = UIManager.I.IsOpen(PanelId.Home);
+            }
+
+            // Fallback: if UIManager isn't authoritative, detect by actual Home panel GameObject state.
+            if (!onHome)
+            {
+                if (!_cachedHomePanel)
+                    _cachedHomePanel = GameObject.Find("Panel_Home");
+
+                if (_cachedHomePanel)
+                    onHome = _cachedHomePanel.activeInHierarchy;
+            }
+
             hasFeed = hasFeed && onHome;
         }
 
@@ -98,16 +150,39 @@ public sealed class WorldEventTickerUI : MonoBehaviour
                 continue;
             }
 
-            for (int i = 0; i < feed.Items.Count; i++)
+            // Snapshot count each pass; items might change mid-loop.
+            int count = feed.Items.Count;
+
+            for (int i = 0; i < count; i++)
             {
                 if (!barRoot || !barRoot.activeInHierarchy) break;
 
+                // Feed might have changed size; clamp.
+                if (i >= feed.Items.Count) break;
+
                 var it = feed.Items[i];
-                if (it == null || string.IsNullOrWhiteSpace(it.message)) continue;
+                if (it == null || string.IsNullOrWhiteSpace(it.message))
+                    continue;
 
                 SetMessage(it.message);
+
+                // Scroll it fully across.
                 yield return ScrollOnce();
+
+                // After each message, pause a bit to avoid instant snap/restart feel.
+                // If there's only one message, use the longer loop delay.
+                float delay = (feed.Items.Count > 1) ? betweenMessageDelay : loopDelaySeconds;
+                if (delay > 0f)
+                    yield return new WaitForSecondsRealtime(delay);
+
+                // If the feed changed while waiting, re-evaluate visibility immediately.
+                RefreshVisibility();
+                if (!barRoot || !barRoot.activeInHierarchy) break;
             }
+
+            // If there are multiple messages, add a small loop delay before the list repeats.
+            if (feed.Items.Count > 1 && loopDelaySeconds > 0f)
+                yield return new WaitForSecondsRealtime(loopDelaySeconds);
 
             yield return null;
         }
