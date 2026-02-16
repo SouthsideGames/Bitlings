@@ -423,6 +423,7 @@ public class CodexPanelUI : MonoBehaviour
                 var t = data.team[i];
                 if (t == null) continue;
                 if (string.IsNullOrEmpty(t.ownedUID)) continue; // ignore placeholders
+	                if (string.IsNullOrEmpty(t.monsterId)) continue; // defensive: avoid null key in dictionaries
 
                 Consider(t);
 

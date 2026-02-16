@@ -390,6 +390,8 @@ public class JobAssignPanelUI : MonoBehaviour
             workers = new List<WorkerRef>(src.workers ?? new List<WorkerRef>()),
             slotFatigue01 = src.slotFatigue01,
             slotCooldownUntilUnix = src.slotCooldownUntilUnix,
+            storedUnits = src.storedUnits,
+            storedRemainder = src.storedRemainder,
             storedAmount = src.storedAmount,
             cachedRatePerHour = src.cachedRatePerHour,
             level = src.level,

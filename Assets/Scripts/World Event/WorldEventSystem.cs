@@ -256,7 +256,14 @@ public sealed class WorldEventSystem : MonoBehaviour
             bool needsWeekRoll = string.IsNullOrEmpty(blob.weeklyActiveEventId)
                                  || blob.weeklyWeekStartUnix != weekStartUnixLocal;
 
-            if (needsWeekRoll || forceRollIfNeeded)
+            // IMPORTANT:
+            // We only want *one* rolled event per week.
+            // `forceRollIfNeeded` exists to cover startup / unlock timing (when systems init out of order),
+            // but it must NOT re-roll if we already have a valid event for the current week.
+            bool shouldRoll = needsWeekRoll
+                              || (forceRollIfNeeded && string.IsNullOrEmpty(blob.weeklyActiveEventId));
+
+            if (shouldRoll)
             {
                 // First week after unlock must be Flavor.
                 bool forceFlavor = !blob.firstUnlockFlavorConsumed;

@@ -21,6 +21,7 @@ public enum CheatEffectKind
     HealTeamFull,
     UnlockAllPacks,
     Add500ToAllResources,
+    Add5000ToAllResources,
     ToggleDiagnosticsPanel,
 }
 
@@ -309,6 +310,9 @@ public class CheatCodeManager : MonoBehaviour
             case CheatEffectKind.Add500ToAllResources:
                 return ExecuteAdd500ToAllResources(out message);
 
+            case CheatEffectKind.Add5000ToAllResources:
+                return ExecuteAdd5000ToAllResources(out message);
+
             case CheatEffectKind.ToggleDiagnosticsPanel:
                 return ExecuteToggleDiagnosticsPanel(out message);
 
@@ -454,6 +458,46 @@ public class CheatCodeManager : MonoBehaviour
         }
 
         const int AMOUNT = 500;
+        int touched = 0;
+
+        ResourceBank.BeginBatch();
+        try
+        {
+            foreach (ResourceType t in Enum.GetValues(typeof(ResourceType)))
+            {
+                if (t == ResourceType.None) continue;
+
+                // Use the same path you used before (ResourceManager if present),
+                // but per-type booster capping is enforced by ResourceBank regardless.
+                if (ResourceManager.I != null) ResourceManager.I.Add(t, AMOUNT);
+                else ResourceBank.Add(t, AMOUNT);
+
+                GameEvents.ResourceAdded?.Invoke(t, AMOUNT);
+                touched++;
+            }
+        }
+        finally
+        {
+            ResourceBank.EndBatch();
+        }
+
+        GameEvents.OnResourcesChanged?.Invoke();
+
+        message = $"Applied cheat: +{AMOUNT} to each resource (boosters capped at {ResourceBank.BoosterCapPerType}). Updated {touched} entries.";
+        return true;
+    }
+
+    bool ExecuteAdd5000ToAllResources(out string message)
+    {
+        message = string.Empty;
+
+        if (SaveManager.Data == null)
+        {
+            message = "Save data not loaded.";
+            return false;
+        }
+
+        const int AMOUNT = 5000;
         int touched = 0;
 
         ResourceBank.BeginBatch();

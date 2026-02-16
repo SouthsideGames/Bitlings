@@ -220,7 +220,7 @@ public class NotificationManager : MonoBehaviour
                 int cap = JobManager.I.GetEffectiveStorageCap(st.config);
                 if (cap <= 0) continue;
 
-                if (st.storedAmount >= cap)
+                if (st.storedUnits >= cap)
                 {
                     bestSeconds = Mathf.Min(bestSeconds, 60f);
                     continue;
@@ -229,7 +229,7 @@ public class NotificationManager : MonoBehaviour
                 float ratePerHour = Mathf.Max(0f, st.cachedRatePerHour);
                 if (ratePerHour <= 0.0001f) continue;
 
-                float remaining = Mathf.Max(0f, cap - st.storedAmount);
+                float remaining = Mathf.Max(0f, cap - (st.storedUnits + st.storedRemainder));
                 float hours = remaining / ratePerHour;
                 float secs = hours * 3600f;
 

@@ -98,12 +98,9 @@ public class JobPanelUI : MonoBehaviour
 
             int deltaCap = capWithTitles - capNoTitles;
 
-            // NOTE: Many early sites have low rates (< 1/hr). If we only show whole numbers,
-            // the player may never "see" progress for a long time. Show decimals while < 1.
-            int storedWhole = Mathf.FloorToInt(s.storedAmount);
-            string storedShown = (s.storedAmount < 1f)
-                ? s.storedAmount.ToString("0.##")
-                : storedWhole.ToString();
+            // Stored is whole-units only (no fractional resources).
+            int storedWhole = s.storedUnits;
+            string storedShown = storedWhole.ToString();
             if (t.stored)
             {
                 if (deltaCap == 0)
@@ -127,10 +124,29 @@ public class JobPanelUI : MonoBehaviour
                 float baseHr    = ComputeRatePerHour_NoTitles(s);
                 float boostedHr = ComputeRatePerHour_WithTitles(s);
 
-                // NEW: show decimals for low rates (Clinic/Sanctum/etc.)
-                string shownText = boostedHr < 10f
-                    ? boostedHr.ToString("0.##")
-                    : Mathf.FloorToInt(boostedHr).ToString();
+                // Whole-number display only.
+                // If production is < 1/hr, show time-per-1 instead of "0/hr".
+                string shownText;
+                int wholePerHour = Mathf.FloorToInt(boostedHr);
+                if (wholePerHour >= 1)
+                {
+                    shownText = $"{wholePerHour}/hr";
+                }
+                else if (boostedHr > 0.0001f)
+                {
+                    float secondsPerUnit = 3600f / boostedHr;
+                    int minutes = Mathf.Max(1, Mathf.RoundToInt(secondsPerUnit / 60f));
+                    int h = minutes / 60;
+                    int m = minutes % 60;
+
+                    if (h <= 0) shownText = $"1/{m}m";
+                    else if (m == 0) shownText = $"1/{h}h";
+                    else shownText = $"1/{h}h {m}m";
+                }
+                else
+                {
+                    shownText = "0/hr";
+                }
 
                 float deltaPct = 0f;
                 if (baseHr > 0.0001f)
@@ -138,9 +154,9 @@ public class JobPanelUI : MonoBehaviour
 
                 string rateText;
                 if (Mathf.Abs(deltaPct) >= 0.5f)
-                    rateText = $"{shownText}/hr  {(deltaPct >= 0 ? "+" : string.Empty)}{deltaPct:0}%";
+                    rateText = $"{shownText}  {(deltaPct >= 0 ? "+" : string.Empty)}{deltaPct:0}%";
                 else
-                    rateText = $"{shownText}/hr";
+                    rateText = $"{shownText}";
 
                 t.rate.text = rateText;
 

@@ -1,68 +1,119 @@
-using System;
 using System.Collections;
 using TMPro;
 using UnityEngine;
+using UnityEngine.UI;
 
 /// <summary>
 /// TV-style scrolling ticker.
 ///
-/// IMPORTANT: This component should live on an always-active GameObject.
-/// It toggles barRoot active/inactive based on whether there is content.
+/// Key behavior:
+/// - Stages message just outside the viewport on the RIGHT.
+/// - Waits pauseBeforeScrollSeconds (visible pause).
+/// - Scrolls left until the message RIGHT edge clears the viewport LEFT edge.
+/// - Waits pauseAfterClearSeconds (optional blank pause).
+///
+/// IMPORTANT:
+/// - Uses viewport-local edge checks (robust under CanvasScaler, ScreenSpace-Camera, WorldSpace).
+/// - Avoid putting the message under LayoutGroups/ContentSizeFitter that fight manual positioning.
 /// </summary>
 public sealed class WorldEventTickerUI : MonoBehaviour
 {
-    [Header("Wiring")]
+    [Header("Wiring (Optional)")]
+    [Tooltip("Optional: root GameObject of the ticker bar to show/hide. If null, uses this GameObject.")]
     [SerializeField] private GameObject barRoot;
-    [SerializeField] private RectTransform viewportRect;
+
+    [Tooltip("Optional: TMP text. If null, auto-finds the first TextMeshProUGUI under barRoot.")]
     [SerializeField] private TextMeshProUGUI messageText;
-    [SerializeField] private RectTransform messageRect;
 
     [Header("Behavior")]
     [SerializeField] private bool onlyShowOnHome = false;
 
-    [Tooltip("Units per second")]
+    [Tooltip("Units per second (UI units).")]
     [SerializeField] private float scrollSpeed = 220f;
 
-    [SerializeField] private float edgePadding = 40f;
-    [SerializeField] private float pauseAtStartSeconds = 0.25f;
-    [SerializeField] private float pauseAtEndSeconds = 0.15f;
+    [Tooltip("Wait time BEFORE the message starts moving (message staged just off the right edge).")]
+    [SerializeField] private float pauseBeforeScrollSeconds = 0.75f;
 
-    [Header("Loop Timing")]
-    [SerializeField] private float loopDelaySeconds = 3f;
-    [SerializeField] private float betweenMessageDelay = 1.5f;
+    [Tooltip("Wait time AFTER the message fully clears the viewport before restarting (blank time).")]
+    [SerializeField] private float pauseAfterClearSeconds = 2.0f;
+
+    // Auto-resolved runtime refs (keeps inspector light)
+    private RectTransform _viewportRect;
+    private RectTransform _messageRect;
 
     private Coroutine _loop;
-
     private bool _subscribed;
 
-    // Cached fallback home root (for projects where UIManager.IsOpen(PanelId.Home) isn't authoritative).
+    // Optional fallback for projects where UIManager.IsOpen(PanelId.Home) isn't authoritative.
     private GameObject _cachedHomePanel;
 
     private void Awake()
     {
         if (!barRoot) barRoot = gameObject;
-        if (!messageRect && messageText) messageRect = messageText.rectTransform;
+        ResolveRefs();
     }
 
     private void OnEnable()
     {
+        ResolveRefs();
         TryHookFeed();
         HandleChanged();
     }
 
     private void Update()
     {
-        // Execution-order safety:
-        // If this component enables before WorldEventManager exists, we won't get events.
-        // Keep trying to hook until it appears.
         if (!_subscribed)
             TryHookFeed();
+
+        if (_viewportRect == null || _messageRect == null || messageText == null)
+            ResolveRefs();
     }
 
     private void OnDisable()
     {
         UnhookFeed();
         StopLoop();
+    }
+
+    /// <summary>
+    /// Auto-wires viewport + message refs to reduce inspector setup.
+    /// </summary>
+    private void ResolveRefs()
+    {
+        if (!barRoot) barRoot = gameObject;
+
+        // Resolve message text
+        if (!messageText)
+        {
+            if (barRoot)
+                messageText = barRoot.GetComponentInChildren<TextMeshProUGUI>(true);
+
+            if (!messageText)
+                messageText = GetComponentInChildren<TextMeshProUGUI>(true);
+        }
+
+        _messageRect = messageText ? messageText.rectTransform : null;
+
+        // Resolve viewport: prefer a RectMask2D/Mask ancestor (clipped viewport), else barRoot rect.
+        _viewportRect = null;
+
+        if (messageText)
+        {
+            var rectMask = messageText.GetComponentInParent<RectMask2D>(true);
+            if (rectMask) _viewportRect = rectMask.rectTransform;
+
+            if (_viewportRect == null)
+            {
+                var mask = messageText.GetComponentInParent<Mask>(true);
+                if (mask) _viewportRect = mask.rectTransform as RectTransform;
+            }
+        }
+
+        if (_viewportRect == null && barRoot)
+            _viewportRect = barRoot.GetComponent<RectTransform>();
+
+        if (_viewportRect == null)
+            _viewportRect = GetComponent<RectTransform>();
     }
 
     private void TryHookFeed()
@@ -79,8 +130,10 @@ public sealed class WorldEventTickerUI : MonoBehaviour
     private void UnhookFeed()
     {
         if (!_subscribed) return;
+
         if (WorldEventManager.I != null)
             WorldEventManager.I.Changed -= HandleChanged;
+
         _subscribed = false;
     }
 
@@ -100,28 +153,24 @@ public sealed class WorldEventTickerUI : MonoBehaviour
 
     private void RefreshVisibility()
     {
-        // Feature gate: if the World Events feature is locked, hide the bar.
+        // Feature gate: if World Events feature is locked, hide the bar.
         if (WorldEventSystem.I != null && !WorldEventSystem.I.IsFeatureActive())
         {
             if (barRoot) barRoot.SetActive(false);
             return;
         }
 
-        bool hasFeed = WorldEventManager.I != null && WorldEventManager.I.Items != null && WorldEventManager.I.Items.Count > 0;
+        bool hasFeed = WorldEventManager.I != null &&
+                       WorldEventManager.I.Items != null &&
+                       WorldEventManager.I.Items.Count > 0;
 
         if (onlyShowOnHome)
         {
-            // Safe check: UIManager may not exist in all scenes.
             bool onHome = false;
 
             if (UIManager.I != null)
-            {
-                // Depending on your panel stack rules, Home may remain active while sub-panels open.
-                // We'll accept UIManager's state when it reports true.
                 onHome = UIManager.I.IsOpen(PanelId.Home);
-            }
 
-            // Fallback: if UIManager isn't authoritative, detect by actual Home panel GameObject state.
             if (!onHome)
             {
                 if (!_cachedHomePanel)
@@ -150,14 +199,10 @@ public sealed class WorldEventTickerUI : MonoBehaviour
                 continue;
             }
 
-            // Snapshot count each pass; items might change mid-loop.
-            int count = feed.Items.Count;
-
-            for (int i = 0; i < count; i++)
+            for (int i = 0; i < feed.Items.Count; i++)
             {
                 if (!barRoot || !barRoot.activeInHierarchy) break;
 
-                // Feed might have changed size; clamp.
                 if (i >= feed.Items.Count) break;
 
                 var it = feed.Items[i];
@@ -166,72 +211,57 @@ public sealed class WorldEventTickerUI : MonoBehaviour
 
                 SetMessage(it.message);
 
-                // Scroll it fully across.
-                yield return ScrollOnce();
+                yield return ScrollUntilCleared();
 
-                // After each message, pause a bit to avoid instant snap/restart feel.
-                // If there's only one message, use the longer loop delay.
-                float delay = (feed.Items.Count > 1) ? betweenMessageDelay : loopDelaySeconds;
-                if (delay > 0f)
-                    yield return new WaitForSecondsRealtime(delay);
-
-                // If the feed changed while waiting, re-evaluate visibility immediately.
                 RefreshVisibility();
                 if (!barRoot || !barRoot.activeInHierarchy) break;
             }
 
-            // If there are multiple messages, add a small loop delay before the list repeats.
-            if (feed.Items.Count > 1 && loopDelaySeconds > 0f)
-                yield return new WaitForSecondsRealtime(loopDelaySeconds);
-
             yield return null;
         }
     }
 
-    private IEnumerator ScrollOnce()
+    private IEnumerator ScrollUntilCleared()
     {
-        if (!viewportRect || !messageRect) yield break;
+        ResolveRefs();
+        if (_viewportRect == null || _messageRect == null) yield break;
 
-        // Layout update
+        // Ensure text sizing/layout is up to date before positioning.
         Canvas.ForceUpdateCanvases();
 
-        float viewW = viewportRect.rect.width;
-        float msgW = messageRect.rect.width;
+        // Stage just outside viewport right edge.
+        PositionMessageJustOutsideViewportRight_Local(_viewportRect, _messageRect);
 
-        float startX = viewW + edgePadding;
-        float endX = -msgW - edgePadding;
+        // Visible pause at start position.
+        if (pauseBeforeScrollSeconds > 0f)
+            yield return new WaitForSecondsRealtime(pauseBeforeScrollSeconds);
 
-        SetMessageX(startX);
-
-        if (pauseAtStartSeconds > 0f)
-            yield return new WaitForSecondsRealtime(pauseAtStartSeconds);
-
-        float x = startX;
-        while (x > endX)
+        // Scroll left until message right edge clears viewport left edge (in viewport-local space).
+        while (!IsMessageRightPastViewportLeft_Local(_viewportRect, _messageRect))
         {
             if (!barRoot || !barRoot.activeInHierarchy) yield break;
 
-            x -= scrollSpeed * Time.unscaledDeltaTime;
-            SetMessageX(x);
+            // Move in viewport-local X direction (robust in ScreenSpace-Camera/WorldSpace)
+            float dx = scrollSpeed * Time.unscaledDeltaTime;
+            _messageRect.position -= _viewportRect.right * dx;
+
             yield return null;
         }
 
-        if (pauseAtEndSeconds > 0f)
-            yield return new WaitForSecondsRealtime(pauseAtEndSeconds);
+        // Optional blank pause after clear.
+        if (pauseAfterClearSeconds > 0f)
+            yield return new WaitForSecondsRealtime(pauseAfterClearSeconds);
     }
 
     private void SetMessage(string msg)
     {
+        ResolveRefs();
         if (!messageText) return;
-        messageText.text = msg;
-        Canvas.ForceUpdateCanvases();
-    }
 
-    private void SetMessageX(float x)
-    {
-        var p = messageRect.anchoredPosition;
-        p.x = x;
-        messageRect.anchoredPosition = p;
+        messageText.text = msg;
+
+        // Force layout so message rect/corners reflect the new string before scrolling.
+        Canvas.ForceUpdateCanvases();
     }
 
     private void StopLoop()
@@ -241,5 +271,53 @@ public sealed class WorldEventTickerUI : MonoBehaviour
             StopCoroutine(_loop);
             _loop = null;
         }
+    }
+
+    // --------------------------------------------------------------------
+    // Robust edge math in viewport-local space
+    // --------------------------------------------------------------------
+
+    /// <summary>
+    /// Place message just outside viewport right edge:
+    /// message left edge == viewport right edge (in viewport-local space).
+    /// </summary>
+    private static void PositionMessageJustOutsideViewportRight_Local(RectTransform viewport, RectTransform message)
+    {
+        if (!viewport || !message) return;
+
+        Vector3[] v = new Vector3[4];
+        Vector3[] m = new Vector3[4];
+
+        viewport.GetWorldCorners(v);
+        message.GetWorldCorners(m);
+
+        // Convert world corners to viewport-local coordinates
+        float viewportRight = viewport.InverseTransformPoint(v[2]).x; // TR
+        float messageLeft = viewport.InverseTransformPoint(m[0]).x;   // BL
+
+        float dxLocal = viewportRight - messageLeft;
+
+        // Move message along viewport's local +X direction in world space
+        message.position += viewport.right * dxLocal;
+    }
+
+    /// <summary>
+    /// True when message right edge <= viewport left edge (fully cleared),
+    /// comparing in viewport-local coordinates.
+    /// </summary>
+    private static bool IsMessageRightPastViewportLeft_Local(RectTransform viewport, RectTransform message)
+    {
+        if (!viewport || !message) return true;
+
+        Vector3[] v = new Vector3[4];
+        Vector3[] m = new Vector3[4];
+
+        viewport.GetWorldCorners(v);
+        message.GetWorldCorners(m);
+
+        float viewportLeft = viewport.InverseTransformPoint(v[0]).x;  // BL
+        float messageRight = viewport.InverseTransformPoint(m[2]).x;  // TR
+
+        return messageRight <= viewportLeft;
     }
 }

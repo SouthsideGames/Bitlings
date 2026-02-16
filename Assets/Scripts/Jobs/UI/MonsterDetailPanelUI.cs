@@ -1174,7 +1174,7 @@ private Sprite GetVariantIcon(MonsterDataSO monster)
             if (data == null) { Debug.LogError("[MonsterDetailPanel] SaveManager.Data is null in AssignToSlot (CodexView)."); Hide(); return; }
 
             var team = data.team ?? new List<OwnedMonsterData>();
-            while (team.Count < 3) team.Add(new OwnedMonsterData());
+            TeamUtils.EnsureTeamSize(team, 3);
 
             var preferred = MonsterVariantPreference.GetPreferredOwned(current.id);
             if (preferred == null)
@@ -1185,6 +1185,9 @@ private Sprite GetVariantIcon(MonsterDataSO monster)
             }
 
             var clone = XPManager.Resolve(preferred) ?? preferred;
+
+            // Enforce: one owned monster instance per team slot.
+            TeamUtils.RemoveDuplicatesForAssignment(team, clone, slotIndex);
             team[slotIndex] = clone;
 
             data.team = team;
@@ -1219,9 +1222,12 @@ private Sprite GetVariantIcon(MonsterDataSO monster)
         }
 
         var team2 = data2.team ?? new List<OwnedMonsterData>();
-        while (team2.Count < 3) team2.Add(new OwnedMonsterData());
+        TeamUtils.EnsureTeamSize(team2, 3);
 
         var canonical = XPManager.Resolve(_currentOwned) ?? _currentOwned;
+
+        // Enforce: one owned monster instance per team slot.
+        TeamUtils.RemoveDuplicatesForAssignment(team2, canonical, slotIndex);
         team2[slotIndex] = canonical;
 
         data2.team = team2;

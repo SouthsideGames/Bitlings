@@ -50,10 +50,16 @@ public class JobSiteState
     public bool allowClinicRelief = true;
 
     // Production bookkeeping
-    public float storedAmount;
-    public float cachedRatePerHour;
+// NOTE: We store whole units to keep the economy clean and avoid float drift.
+// storedRemainder accumulates fractional progress internally until it becomes whole units.
+public int storedUnits;
+public float storedRemainder;
 
-    // Auto-collect (per-site)
+// Legacy (kept to avoid null refs in any older code paths; do not use for storage/UI)
+public float storedAmount;
+
+public float cachedRatePerHour;
+// Auto-collect (per-site)
     // Only collects when enabled AND storage is full.
     // This prevents "invisible" stored growth.
     public bool autoCollectEnabled;
@@ -268,7 +274,7 @@ public sealed class JobManager : MonoBehaviour
         {
             if (!so) continue;
 
-            var st = new JobSiteState { config = so, storedAmount = 0f };
+            var st = new JobSiteState { config = so, storedUnits = 0, storedRemainder = 0f, storedAmount = 0f };
 
             int cap = Mathf.Clamp(so.maxWorkers, 1, 3);
             for (int i = 0; i < cap; i++) st.workers.Add(null);
@@ -347,11 +353,46 @@ public sealed class JobManager : MonoBehaviour
                 s.cachedRatePerHour = finalRateHr;
 
                 int cap = GetEffectiveStorageCap(s.config);
-                s.storedAmount = Mathf.Min(cap, s.storedAmount + finalRateHr * dtHours);
+
+                // Produce into an internal remainder accumulator, then convert to whole units.
+                // This keeps storage/resources as whole numbers (no 0.01 resources).
+                if (cap > 0)
+                {
+                    float produced = finalRateHr * dtHours;
+                    if (produced > 0f)
+                    {
+                        s.storedRemainder += produced;
+
+                        int wholeToAdd = Mathf.FloorToInt(s.storedRemainder);
+                        if (wholeToAdd > 0)
+                        {
+                            int space = cap - s.storedUnits;
+                            int toAdd = Mathf.Clamp(wholeToAdd, 0, Mathf.Max(0, space));
+
+                            if (toAdd > 0)
+                            {
+                                s.storedUnits += toAdd;
+                                s.storedRemainder -= toAdd; // subtract only what we actually stored
+                            }
+
+                            // If we're full, stop accumulating remainder.
+                            if (s.storedUnits >= cap)
+                                s.storedRemainder = 0f;
+                        }
+                    }
+                }
+                else
+                {
+                    s.storedUnits = 0;
+                    s.storedRemainder = 0f;
+                }
+
+                // Keep legacy mirror (avoid stale values in any older code paths).
+                s.storedAmount = s.storedUnits + s.storedRemainder;
 
                 // Auto-collect ONLY when enabled AND storage is full.
                 // Do not auto-collect on partial storage.
-                if (cap > 0 && s.autoCollectEnabled && s.storedAmount >= cap - 0.0001f)
+                if (cap > 0 && s.autoCollectEnabled && s.storedUnits >= cap)
                 {
                     Collect(s.config.jobType);
                 }
@@ -599,6 +640,8 @@ private static float AverageWorkingSlotFatigue(JobSiteState s)
             workers = workers,
             slotFatigue01 = s.slotFatigue01,
             slotCooldownUntilUnix = s.slotCooldownUntilUnix,
+            storedUnits = s.storedUnits,
+            storedRemainder = s.storedRemainder,
             storedAmount = s.storedAmount,
             cachedRatePerHour = s.cachedRatePerHour,
             level = s.level,
@@ -733,10 +776,14 @@ private static float AverageWorkingSlotFatigue(JobSiteState s)
             if (WorldEventSystem.I.IsJobCollectDisabled(job)) return 0;
         }
 
-        int whole = Mathf.FloorToInt(s.storedAmount);
+        int whole = s.storedUnits;
         if (whole <= 0) return 0;
 
-        s.storedAmount -= whole;
+        s.storedUnits = 0;
+        s.storedRemainder = 0f;
+
+        // Keep legacy mirror (avoid stale values in any older code paths).
+        s.storedAmount = 0f;
 
         var res = JobOutput.Output(job);
         switch (res)

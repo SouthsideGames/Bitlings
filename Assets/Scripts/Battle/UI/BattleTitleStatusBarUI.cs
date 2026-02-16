@@ -24,6 +24,9 @@ public sealed class BattleTitleStatusBarUI : MonoBehaviour
     [Tooltip("For Wild target, this is ignored (wild bar always shows Unemployed or a title).")]
     [SerializeField] private bool hideIfNoTitle = true;
 
+    [Tooltip("Label to show when there is no title to display.")]
+    [SerializeField] private string noTitleLabel = "Unemployed";
+
     [Tooltip("If true, wild bar shows rolled title first; if none rolled, shows first always-on title if present; otherwise Unemployed.")]
     [SerializeField] private bool wildPreferRolledTitle = true;
 
@@ -110,7 +113,7 @@ public sealed class BattleTitleStatusBarUI : MonoBehaviour
             // Wild bar should not disappear in battle, but if EM is missing, do something sensible.
             _currentTitle = null;
             if (iconImage) iconImage.sprite = null;
-            if (titleLabel) titleLabel.text = "Unemployed";
+            if (titleLabel) titleLabel.text = string.IsNullOrEmpty(noTitleLabel) ? "Unemployed" : noTitleLabel;
             SetVisible(true);
             SetInfoInteractable(false);
             return;
@@ -190,11 +193,22 @@ public sealed class BattleTitleStatusBarUI : MonoBehaviour
         _currentTitle = null;
 
         if (iconImage) iconImage.sprite = null;
-        if (titleLabel) titleLabel.text = "";
 
-        // For wild we never call ApplyEmpty() while in battle, but keep behavior consistent.
-        bool visible = (target == TargetKind.Wild) ? true : !hideIfNoTitle;
-        SetVisible(visible);
+        // In-battle, both sides should show a consistent "no title" state (Unemployed).
+        // Out of battle, respect legacy behavior (optional hide for player).
+        if (battle != null && battle.InBattle)
+        {
+            if (titleLabel) titleLabel.text = string.IsNullOrEmpty(noTitleLabel) ? "Unemployed" : noTitleLabel;
+            SetVisible(true);
+        }
+        else
+        {
+            if (titleLabel) titleLabel.text = "";
+            // For wild we never call ApplyEmpty() while in battle, but keep behavior consistent.
+            bool visible = (target == TargetKind.Wild) ? true : !hideIfNoTitle;
+            SetVisible(visible);
+        }
+
         SetInfoInteractable(false);
     }
 
