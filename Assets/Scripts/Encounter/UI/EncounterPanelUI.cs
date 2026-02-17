@@ -16,19 +16,12 @@ public class EncounterPanelUI : MonoBehaviour
     [SerializeField] private TextMeshProUGUI energyEtaLabel;
     [SerializeField, Min(1f)] private float energySecondsPerPoint = 1200f;
 
-    [Header("Fatigue Forecast")]
-    [SerializeField] private TextMeshProUGUI fatigueForecastLabel;
-    [SerializeField] private bool showFatigueForecast = true;
-
-    [Tooltip("Template used for the forecast. Use {0} for the number.")]
-    [SerializeField] private string fatigueForecastTemplate = "This battle will exhaust {0} Bitling{1}";
-
     [Header("Encounter Difficulty Preview")]
-    [Tooltip("Optional label: show estimated wild level, expected title count, and fatigue cost.")]
+    [Tooltip("Optional label: show estimated wild level and expected title count.")]
     [SerializeField] private TextMeshProUGUI encounterPreviewLabel;
     [SerializeField] private bool showEncounterPreview = true;
 
-    [Tooltip("How many team slots participate in a battle (used for forecast count).")]
+    [Tooltip("How many team slots participate in a battle (used for preview estimates).")]
     [SerializeField, Range(1, 6)] private int battleTeamSlots = 3;
 
     // ─────────────────────────────────────────────────────────────
@@ -237,10 +230,6 @@ public class EncounterPanelUI : MonoBehaviour
 
         RefreshBlinderTint();
         PickAndApplyBlinderLine(forcePick: true);
-
-        // Fatigue forecast is optional; keep hidden until first refresh.
-        if (fatigueForecastLabel)
-            fatigueForecastLabel.gameObject.SetActive(false);
     }
 
     void OnEnable()
@@ -272,8 +261,6 @@ public class EncounterPanelUI : MonoBehaviour
         GameEvents.OnBattleStateChanged += HandleBattleStateChanged;
         GameEvents.OnTeamChanged += OnTeamChanged;
         GameEvents.OnEncounterAutoModeChanged += ApplyCloseLock;
-
-        RefreshFatigueForecast();
 
         if (!IsInBattle())
         {
@@ -367,13 +354,13 @@ public class EncounterPanelUI : MonoBehaviour
         RefreshEncounterBoostIconsAndTooltips(force: true);
         RefreshEnergy();
 
-        RefreshFatigueForecast();
-
         // Team can change due to hires/captures, etc.
         EnsureTeamPreviewForCurrentState(forceRebuild: !IsInBattle());
 
         // Button state depends on both energy and team health.
         RefreshEncounterButtonInteractivity();
+
+        RefreshEncounterDifficultyPreview();
     }
 
     void OnTeamChanged()
@@ -382,7 +369,7 @@ public class EncounterPanelUI : MonoBehaviour
         EnsureTeamPreviewForCurrentState(forceRebuild: !IsInBattle());
         RefreshEncounterButtonInteractivity();
 
-        RefreshFatigueForecast();
+        RefreshEncounterDifficultyPreview();
     }
 
     // ─────────────────────────────────────────────────────────────
@@ -395,81 +382,11 @@ public class EncounterPanelUI : MonoBehaviour
         UpdateEnergyEtaUI();
         RefreshEncounterButtonInteractivity();
 
-        RefreshFatigueForecast();
-
         RefreshEncounterDifficultyPreview();
     }
 
     // ─────────────────────────────────────────────────────────────
-    // Fatigue Forecast
-    // ─────────────────────────────────────────────────────────────
-    void RefreshFatigueForecast()
-    {
-        if (!fatigueForecastLabel) return;              // feature not wired
-        if (!showFatigueForecast)
-        {
-            fatigueForecastLabel.gameObject.SetActive(false);
-            return;
-        }
-
-        // Only meaningful when we're about to start an encounter.
-        if (IsInBattle() || IsHireDecisionOpen)
-        {
-            fatigueForecastLabel.gameObject.SetActive(false);
-            return;
-        }
-
-        int projected = CountProjectedExhaustedBitlings();
-        if (projected <= 0)
-        {
-            fatigueForecastLabel.gameObject.SetActive(false);
-            return;
-        }
-
-        int n = Mathf.Max(0, projected);
-        string plural = (n == 1) ? "" : "s";
-
-        // Template supports {0} for count, {1} for plural suffix.
-        string tpl = string.IsNullOrEmpty(fatigueForecastTemplate)
-            ? "This battle will exhaust {0} Bitling{1}"
-            : fatigueForecastTemplate;
-
-        fatigueForecastLabel.text = string.Format(tpl, n, plural);
-        fatigueForecastLabel.gameObject.SetActive(true);
-    }
-
-    int CountProjectedExhaustedBitlings()
-    {
-        // Design intent: forecast how many Bitlings will be *committed* to the
-        // battle (and therefore may end up exhausted / on downtime).
-        //
-        // We use the number of alive team members participating (first N slots).
-        // This keeps the forecast deterministic and cheap, and avoids guessing
-        // the outcome of battle.
-
-        var data = SaveManager.Data;
-        if (data == null || data.team == null) return 0;
-
-        int slots = Mathf.Clamp(battleTeamSlots, 1, 6);
-        int count = 0;
-
-        for (int i = 0; i < data.team.Count && i < slots; i++)
-        {
-            var om = data.team[i];
-            if (om == null) continue;
-            if (string.IsNullOrEmpty(om.monsterId)) continue;
-
-            // currentHP == 0 is the existing “exhausted” / KO state in your UI logic.
-            // currentHP < 0 means “uninitialized”; treat as alive for forecast.
-            if (om.currentHP == 0) continue;
-            count++;
-        }
-
-        return count;
-    }
-
-    // ─────────────────────────────────────────────────────────────
-    // Encounter Difficulty Preview
+    // Encounter Difficulty Preview (NO FATIGUE)
     // ─────────────────────────────────────────────────────────────
     void RefreshEncounterDifficultyPreview()
     {
@@ -481,7 +398,7 @@ public class EncounterPanelUI : MonoBehaviour
         }
 
         // Only meaningful when we're about to start an encounter.
-        if (IsInBattle() || IsHireDecisionOpen)
+        if (IsInBattle() || IsHireDecisionOpen || IsRecoveryDecisionOpen)
         {
             encounterPreviewLabel.gameObject.SetActive(false);
             return;
@@ -531,15 +448,10 @@ public class EncounterPanelUI : MonoBehaviour
         if (knownTitles >= 0)
             titleText = knownTitles.ToString();
         else
-        {
-            // We can at least surface the roll model: up to 1 rolled + always-on list (if any in library).
             titleText = boss ? "1–2" : "0–1";
-        }
-
-        int fatigueCost = CountProjectedExhaustedBitlings();
 
         string bossTag = boss ? " (Boss)" : "";
-        encounterPreviewLabel.text = $"Wild Lv ~{est}{bossTag}  •  Titles: {titleText}  •  Fatigue: {fatigueCost}";
+        encounterPreviewLabel.text = $"Wild Lv ~{est}{bossTag}  •  Titles: {titleText}";
         encounterPreviewLabel.gameObject.SetActive(true);
     }
 
@@ -860,6 +772,7 @@ public class EncounterPanelUI : MonoBehaviour
         }
 
         RefreshEncounterBoostIconsAndTooltips(force: true);
+        RefreshEncounterDifficultyPreview();
     }
 
     public void ForceBlinderAlphaToOne()
@@ -868,6 +781,20 @@ public class EncounterPanelUI : MonoBehaviour
 
         if (_fadeCo != null) { StopCoroutine(_fadeCo); _fadeCo = null; }
         _isFading = false;
+
+// Defensive: some transitions may have disabled child visuals in the prefab hierarchy.
+// Ensure the blinder visuals are active when we force it visible.
+if (!blinderGroup.gameObject.activeSelf) blinderGroup.gameObject.SetActive(true);
+if (blinderText)
+{
+    if (!blinderText.gameObject.activeSelf) blinderText.gameObject.SetActive(true);
+    blinderText.enabled = true;
+}
+if (blinderBackground)
+{
+    if (!blinderBackground.gameObject.activeSelf) blinderBackground.gameObject.SetActive(true);
+    blinderBackground.enabled = true;
+}
 
         blinderGroup.alpha = 1f;
         blinderGroup.blocksRaycasts = true;
@@ -912,8 +839,6 @@ public class EncounterPanelUI : MonoBehaviour
         bool pendingRecovery = IsRecoveryDecisionOpen;
         try
         {
-            // Even if the panel isn't wired, still block the button when a guard is pending,
-            // to avoid letting the player start new encounters while the previous idle batch is unresolved.
             if (!pendingRecovery && IdleBattleManager.I != null && IdleBattleManager.I.HasPendingRecovery())
                 pendingRecovery = true;
         }
@@ -923,9 +848,6 @@ public class EncounterPanelUI : MonoBehaviour
         bool hasAliveTeam = HasAliveTeamMember();
         bool hasEnergyOrFree = NextEncounterIsFree() || HasEnergy() || HasFallbackEnergy();
 
-        // NOTE: We still allow the button to be interactable during battle IF auto-mode is currently enabled.
-        // This enables the player to HOLD the button to disable auto-mode for the next battle,
-        // while still preventing taps from starting a new encounter (EncounterManager blocks when in battle).
         bool allowDuringBattleForAutoToggle = inBattle && EncounterManager.I != null && EncounterManager.I.IsAutoMode;
 
         encounterBtn.interactable = !busy && hasAliveTeam && hasEnergyOrFree && (!inBattle || allowDuringBattleForAutoToggle);
@@ -948,7 +870,6 @@ public class EncounterPanelUI : MonoBehaviour
 
     bool HasFallbackEnergy()
     {
-        // Safety fallback when EncounterManager isn't available yet.
         if (EncounterManager.I != null) return false;
 
         int current = Mathf.Max(0, ResourceBank.Get(ResourceType.Energy));
@@ -1021,12 +942,14 @@ public class EncounterPanelUI : MonoBehaviour
         RefreshEncounterBoostIconsAndTooltips(force: true);
         ApplyCloseLock();
         RefreshEncounterButtonInteractivity();
+        RefreshEncounterDifficultyPreview();
     }
 
     void OnClickEncounter()
     {
         if (_isFading) return;
         if (IsHireDecisionOpen) return;
+        if (IsRecoveryDecisionOpen) return;
 
         bool auto = IsAutoMode();
         bool inBattle = IsInBattle();
@@ -1040,7 +963,6 @@ public class EncounterPanelUI : MonoBehaviour
             return;
         }
 
-        // NEW: suppress auto blinder re-show until battle state flips
         _suppressAutoBlinderUntilBattle = true;
 
         if (blinderGroup && blinderGroup.alpha > 0.01f)
@@ -1104,6 +1026,21 @@ public class EncounterPanelUI : MonoBehaviour
 
         if (instant)
         {
+if (show)
+{
+    if (!blinderGroup.gameObject.activeSelf) blinderGroup.gameObject.SetActive(true);
+    if (blinderText)
+    {
+        if (!blinderText.gameObject.activeSelf) blinderText.gameObject.SetActive(true);
+        blinderText.enabled = true;
+    }
+    if (blinderBackground)
+    {
+        if (!blinderBackground.gameObject.activeSelf) blinderBackground.gameObject.SetActive(true);
+        blinderBackground.enabled = true;
+    }
+}
+
             blinderGroup.alpha = show ? 1f : 0f;
             blinderGroup.blocksRaycasts = show;
             blinderGroup.interactable = show;
@@ -1114,7 +1051,6 @@ public class EncounterPanelUI : MonoBehaviour
                 PickAndApplyBlinderLine();
             }
 
-            // IMPORTANT: team preview is NOT tied to blinder visibility anymore
             EnsureTeamPreviewForCurrentState(forceRebuild: false);
         }
         else
@@ -1127,6 +1063,21 @@ public class EncounterPanelUI : MonoBehaviour
     IEnumerator Co_FadeTo(float target)
     {
         _isFading = true;
+if (target > 0.01f)
+{
+    if (!blinderGroup.gameObject.activeSelf) blinderGroup.gameObject.SetActive(true);
+    if (blinderText)
+    {
+        if (!blinderText.gameObject.activeSelf) blinderText.gameObject.SetActive(true);
+        blinderText.enabled = true;
+    }
+    if (blinderBackground)
+    {
+        if (!blinderBackground.gameObject.activeSelf) blinderBackground.gameObject.SetActive(true);
+        blinderBackground.enabled = true;
+    }
+}
+
         float start = blinderGroup.alpha;
         float dur = Mathf.Max(0.1f, fadeDuration);
         float t = 0f;
@@ -1202,7 +1153,7 @@ public class EncounterPanelUI : MonoBehaviour
         ShowBlinder(false, instant: true);
         hireDecisionRoot.SetActive(true);
         RefreshEncounterButtonInteractivity();
-
+        RefreshEncounterDifficultyPreview();
     }
 
     void OnClickHireYes()
@@ -1250,6 +1201,7 @@ public class EncounterPanelUI : MonoBehaviour
         if (hireDecisionRoot) hireDecisionRoot.SetActive(false);
 
         RefreshEncounterButtonInteractivity();
+        RefreshEncounterDifficultyPreview();
 
         EncounterManager.I?.OnHireDecisionResolved(_hireChoseYes, _hireCaptureSucceeded);
 
@@ -1275,28 +1227,20 @@ public class EncounterPanelUI : MonoBehaviour
     // ─────────────────────────────────────────────────────────────
     void TryOpenRecoveryDecisionIfNeeded()
     {
-        if (!recoveryDecisionRoot) return; // not wired
+        if (!recoveryDecisionRoot) return;
 
-        // Never interrupt battle or hire decision UI.
         if (IsInBattle() || IsHireDecisionOpen)
         {
-            // Keep closed during these states.
             if (recoveryDecisionRoot.activeSelf)
                 recoveryDecisionRoot.SetActive(false);
             return;
         }
 
         bool pending = false;
-        try
-        {
-            pending = (IdleBattleManager.I != null) && IdleBattleManager.I.HasPendingRecovery();
-        }
+        try { pending = (IdleBattleManager.I != null) && IdleBattleManager.I.HasPendingRecovery(); }
         catch { pending = false; }
 
-        if (pending)
-        {
-            OpenRecoveryDecision();
-        }
+        if (pending) OpenRecoveryDecision();
         else
         {
             if (recoveryDecisionRoot.activeSelf)
@@ -1313,13 +1257,12 @@ public class EncounterPanelUI : MonoBehaviour
         if (!recoveryDecisionRoot) return;
 
         if (recoveryPromptText)
-        {
             recoveryPromptText.text = "Auto Battle was interrupted. Resume to continue, or discard to clear the pending run.";
-        }
 
         recoveryDecisionRoot.SetActive(true);
         RefreshEncounterButtonInteractivity();
         ApplyCloseLock();
+        RefreshEncounterDifficultyPreview();
     }
 
     void CloseRecoveryDecision()
@@ -1328,16 +1271,14 @@ public class EncounterPanelUI : MonoBehaviour
         recoveryDecisionRoot.SetActive(false);
         RefreshEncounterButtonInteractivity();
         ApplyCloseLock();
+        RefreshEncounterDifficultyPreview();
     }
 
     void OnClickRecoveryResume()
     {
         if (_isFading) return;
 
-        try
-        {
-            IdleBattleManager.I?.ResumePendingRecovery();
-        }
+        try { IdleBattleManager.I?.ResumePendingRecovery(); }
         catch { }
 
         CloseRecoveryDecision();
@@ -1347,10 +1288,7 @@ public class EncounterPanelUI : MonoBehaviour
     {
         if (_isFading) return;
 
-        try
-        {
-            IdleBattleManager.I?.DiscardPendingRecovery(clearLogs: false);
-        }
+        try { IdleBattleManager.I?.DiscardPendingRecovery(clearLogs: false); }
         catch { }
 
         CloseRecoveryDecision();
@@ -1580,7 +1518,7 @@ public class EncounterPanelUI : MonoBehaviour
     }
 
     // ─────────────────────────────────────────────────────────────
-    // Team preview (FIXED: governed by battle state, not blinder)
+    // Team preview (governed by battle state, not blinder)
     // ─────────────────────────────────────────────────────────────
     void EnsureTeamPreviewForCurrentState(bool forceRebuild)
     {
@@ -1764,9 +1702,7 @@ public class EncounterPanelUI : MonoBehaviour
 
         var label = go.GetComponentInChildren<TextMeshProUGUI>();
         if (label)
-        {
             label.text = $"+{gained} Energy";
-        }
 
         Vector2 startPos = rt.anchoredPosition;
         Vector2 endPos = startPos + new Vector2(0f, energyToastRiseY);
@@ -1814,10 +1750,10 @@ public class EncounterPanelUI : MonoBehaviour
 
             ShowBlinder(false, instant: true);
             EnsureTeamPreviewForCurrentState(forceRebuild: false);
+            RefreshEncounterDifficultyPreview();
             return;
         }
 
-        // Not in battle
         if (!_suppressAutoBlinderUntilBattle)
         {
             ShowBlinder(true, instant: true);
@@ -1828,10 +1764,10 @@ public class EncounterPanelUI : MonoBehaviour
 
         EnsureTeamPreviewForCurrentState(forceRebuild: true);
 
-        // When returning to the hub, surface the idle/auto recovery decision if applicable.
         TryOpenRecoveryDecisionIfNeeded();
-    }
 
+        RefreshEncounterDifficultyPreview();
+    }
 
     private void ApplyCloseLock()
     {
@@ -1859,6 +1795,4 @@ public class EncounterPanelUI : MonoBehaviour
         bool inBattle = IsInBattle();
         closeButtonRoot.SetActive(!inBattle);
     }
-
-
 }

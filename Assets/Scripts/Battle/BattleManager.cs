@@ -141,6 +141,20 @@ private void EnsureBattleRngInitialized()
     [SerializeField] private bool enableAutoQueueAttack = true;
     [SerializeField, Min(1f)] private float autoQueueAttackAfterSeconds = 20f;
 
+    [Header("Auto-Queue Countdown UI (Optional)")]
+    [Tooltip("If > 0, the countdown UI is considered 'active' when remaining seconds are <= this value.")]
+    [SerializeField, Min(0f)] private float autoQueueCountdownShowAtSeconds = 10f;
+
+    /// <summary>
+    /// Fired while waiting for player input when the auto-queue failsafe is enabled.
+    /// float = seconds remaining (clamped >= 0), bool = whether countdown should be shown.
+    /// </summary>
+    public event Action<float, bool> OnAutoQueueCountdown;
+
+    // Tracks last emitted state to avoid spamming listeners.
+    private bool _autoQueueCountdownShown;
+    private int _autoQueueCountdownLastInt = int.MinValue;
+
     // Runtime overrides (so auto-battle can resolve quickly without altering prefab defaults)
     private bool _manualTurnsDefault;
     private bool _enableAutoQueueDefault;
@@ -189,6 +203,34 @@ private void EnsureBattleRngInitialized()
             manualTurns = _manualTurnsDefault;
             enableAutoQueueAttack = _enableAutoQueueDefault;
             autoQueueAttackAfterSeconds = _autoQueueSecondsDefault;
+        }
+    }
+
+    private void EmitAutoQueueCountdown(float remainingSeconds, bool show)
+    {
+        // Clamp for safety.
+        if (remainingSeconds < 0f) remainingSeconds = 0f;
+
+        // If no one is listening, still keep internal state coherent.
+        // Only emit on state changes or when the displayed integer would change.
+        int displayInt = Mathf.CeilToInt(remainingSeconds);
+
+        if (!show)
+        {
+            if (_autoQueueCountdownShown)
+            {
+                _autoQueueCountdownShown = false;
+                _autoQueueCountdownLastInt = int.MinValue;
+                OnAutoQueueCountdown?.Invoke(0f, false);
+            }
+            return;
+        }
+
+        if (!_autoQueueCountdownShown || _autoQueueCountdownLastInt != displayInt)
+        {
+            _autoQueueCountdownShown = true;
+            _autoQueueCountdownLastInt = displayInt;
+            OnAutoQueueCountdown?.Invoke(remainingSeconds, true);
         }
     }
 
@@ -371,23 +413,6 @@ private void EnsureBattleRngInitialized()
         return Mathf.Max(0, s);
     }
 
-    // Title-only shield helpers (BattleStartShieldTitle)
-    // These are used by HP text UI so we don't show (+Shield) for non-title shields (Defend/Guard/etc.)
-    public int GetActivePlayerTitleShieldTotal()
-    {
-        int s = 0;
-        if (titleShieldHP != null && activeIndex >= 0 && activeIndex < titleShieldHP.Length)
-            s += Mathf.RoundToInt(Mathf.Max(0f, titleShieldHP[activeIndex]));
-        return Mathf.Max(0, s);
-    }
-
-    public int GetWildTitleShieldTotal()
-    {
-        int s = 0;
-        s += Mathf.RoundToInt(Mathf.Max(0f, wildTitleShieldHP));
-        return Mathf.Max(0, s);
-    }
-
     private Action<BattleResult> onEnd;
     private float startTime;
     private Coroutine turnCR;
@@ -452,13 +477,6 @@ private void EnsureBattleRngInitialized()
     // Wild Titles routing id (set from EncounterManager if available).
     private string _wildCombatIdForTitles;
 
-
-// ─────────────────────────────────────────────────────────────
-// Conditional title activation edge detection (UI pulse / event feed)
-// Key = monsterId + "|" + titleId
-// ─────────────────────────────────────────────────────────────
-private readonly Dictionary<string, bool> _condTitleActive = new Dictionary<string, bool>(256);
-
     // ─────────────────────────────────────────────────────────────
     // Battle Stats System (centralized stat pipeline)
     // ─────────────────────────────────────────────────────────────
@@ -468,179 +486,6 @@ private readonly Dictionary<string, bool> _condTitleActive = new Dictionary<stri
     // Effective MaxHP cache (so when max HP changes from titles/boosters we can preserve HP%).
     private float[] _effMaxHpCache;
     private float _wildEffMaxHpCache;
-
-
-[Flags]
-private enum BattleStatRebuildReason
-{
-    None = 0,
-    BattleStart = 1 << 0,
-    TurnStart = 1 << 1,
-    TitleConditionChanged = 1 << 2,
-    BuffChanged = 1 << 3,
-    HpChanged = 1 << 4,
-}
-
-private bool _battleStatsRebuildQueued;
-private int _battleStatsRebuildQueuedFrame = -1;
-private BattleStatRebuildReason _battleStatsRebuildReasons;
-
-/// <summary>
-/// Prefer cached effective max HP to avoid re-entering the stat pipeline during UI refresh.
-/// Falls back to computing if cache is missing (should be rare after first rebuild).
-/// </summary>
-private float GetCachedMaxHPForIndex(int idx)
-{
-    if (_effMaxHpCache != null && idx >= 0 && idx < _effMaxHpCache.Length)
-    {
-        float v = _effMaxHpCache[idx];
-        if (v > 0.01f) return v;
-    }
-
-    return GetFinalMaxHPForIndex(idx);
-}
-
-/// <summary>
-/// Single entry point for any stat/UI recompute during battle.
-/// This prevents double stacking, UI flicker, and title parity bugs (player vs wild).
-/// </summary>
-private void RequestBattleStatRebuild(BattleStatRebuildReason reason, bool immediate = false, bool forceMaxHpSync = false)
-{
-    _battleStatsRebuildReasons |= reason;
-
-    if (!inBattle && reason != BattleStatRebuildReason.BattleStart)
-        return;
-
-    if (immediate)
-    {
-        RebuildBattleStats(forceMaxHpSync);
-        return;
-    }
-
-    // Debounce: at most one rebuild per frame, even if multiple systems request it.
-    if (_battleStatsRebuildQueued && _battleStatsRebuildQueuedFrame == Time.frameCount)
-        return;
-
-    _battleStatsRebuildQueued = true;
-    _battleStatsRebuildQueuedFrame = Time.frameCount;
-
-    StartCoroutine(Co_BattleStatRebuildEndOfFrame());
-}
-
-private IEnumerator Co_BattleStatRebuildEndOfFrame()
-{
-    // Allow the current action/animation batch to finish its HP mutations this frame,
-    // then rebuild once.
-    yield return null;
-
-    if (!this) yield break;
-
-    RebuildBattleStats(forceMaxHpSync: false);
-}
-
-private void RebuildBattleStats(bool forceMaxHpSync)
-{
-    if (_stats != null)
-        _stats.MarkDirtyAll();
-
-    // Titles/boosters can change max HP. Preserve HP% and update caches.
-    SyncEffectiveMaxHPFromStats(force: forceMaxHpSync);
-
-    // Keep legacy fields in sync for older code paths.
-    if (_stats != null)
-        wildAttackPerTurn = Mathf.Max(1f, _stats.GetEffectiveWild().atk);
-
-    // Refresh UI in one place (no scattered recompute calls).
-    if (inBattle)
-    {
-        PushHPBars();
-        UpdateHPTextUI();
-        UpdatePlayerInfoUI();
-        UpdateWildInfoUI();
-    }
-
-    // Conditional title pulses / event feed (edge detection)
-    CheckConditionalTitleTransitions();
-
-    _battleStatsRebuildQueued = false;
-    _battleStatsRebuildReasons = BattleStatRebuildReason.None;
-}
-
-private void CheckConditionalTitleTransitions()
-{
-    if (!inBattle) return;
-    if (TitleManager.I == null) return;
-
-    // Active player
-    if (activeIndex >= 0 && activeIndex < teamCount)
-    {
-        string pid = ActivePlayerMonsterId;
-        var def = GetTeamDefSafe(activeIndex);
-        int lvl = GetTeamLevelSafe(activeIndex);
-        var ctx = BuildTitleContextForIndexSafe(activeIndex);
-        ScanConditionalTitles(pid, def, lvl, ctx, ownerLabel: GetSafeMonsterName(def, pid));
-    }
-
-    // Wild
-    if (wildDef != null && !string.IsNullOrEmpty(_wildCombatIdForTitles))
-    {
-        float maxHp = Mathf.Max(1f, (_wildEffMaxHpCache > 0.01f ? _wildEffMaxHpCache : wildMaxHP));
-        float hp01 = Mathf.Clamp01(wildHP / maxHp);
-        var ctx = new TitleContext
-        {
-            selfHp01 = hp01,
-            alliesAlive = 0,
-            winStreak = GetWinStreakSafe(),
-            isBattle = true,
-            ownedId = _wildCombatIdForTitles
-        };
-        ScanConditionalTitles(_wildCombatIdForTitles, wildDef, Mathf.Max(1, wildLevel), ctx, ownerLabel: GetSafeMonsterName(wildDef, "Wild"));
-    }
-}
-
-private void ScanConditionalTitles(string monsterId, MonsterDataSO def, int level, TitleContext ctx, string ownerLabel)
-{
-    if (string.IsNullOrEmpty(monsterId) || def == null) return;
-
-    var list = TitleManager.I.GetEquippedList(monsterId, def, level);
-    if (list == null || list.Count == 0) return;
-
-    for (int i = 0; i < list.Count; i++)
-    {
-        var t = list[i];
-        if (!t) continue;
-
-        bool isConditional = (t is ConditionalStatBoosterTitleSO) || (t is DuoConditionalStatBoosterTitleSO);
-        if (!isConditional) continue;
-
-        bool activeNow = false;
-        if (t is ConditionalStatBoosterTitleSO cb)
-        {
-            activeNow = TitleUtility.CheckCondition(cb, ctx);
-        }
-        else if (t is DuoConditionalStatBoosterTitleSO dcb)
-        {
-            activeNow = TitleUtility.CheckCondition(dcb.condition, dcb.threshold01, dcb.countN, in ctx);
-        }
-
-        string key = monsterId + "|" + t.titleId;
-        bool had = _condTitleActive.TryGetValue(key, out bool prev);
-        if (!had || prev != activeNow)
-        {
-            _condTitleActive[key] = activeNow;
-            BattleLogger.LogTitleConditionChanged(ownerLabel, t.displayName, activeNow);
-        }
-    }
-}
-
-private string GetSafeMonsterName(MonsterDataSO def, string fallback)
-{
-    if (def == null) return fallback;
-    if (!string.IsNullOrEmpty(def.displayName)) return def.displayName;
-    if (!string.IsNullOrEmpty(def.name)) return def.name;
-    return fallback;
-}
-
 
     // Exposed read-only hooks for BattleStatsSystem (keep BattleManager internals private)
     public int TeamCountSafe => teamCount;
@@ -1006,13 +851,14 @@ private IEnumerator MaybeSayKO_Wild(string victimName, float preHP, float postHP
                 wildTitleShieldHP = Mathf.Max(0f, TitlesAdapter.GetBattleStartShieldRemaining(_wildCombatIdForTitles));
             }
 
+            RefreshWildEffectiveStatsFromTitles();
         }
         catch (Exception ex)
         {
             BattleLogger.Log($"[Titles] OnBattleStart(wild) exception: {ex.Message}", LogScope.Battle);
         }
 
-        RequestBattleStatRebuild(BattleStatRebuildReason.BattleStart, immediate: true, forceMaxHpSync: true);
+        GameEvents.BattleStatsChanged?.Invoke();
     }
 
 public void BeginBattle(MonsterDataSO wild, int level, Action<BattleResult> onEnded)
@@ -1050,6 +896,10 @@ public void BeginBattle(MonsterDataSO wild, int level, Action<BattleResult> onEn
 
         wildDef = wild;
         wildLevel = Mathf.Max(1, level);
+
+        // Backgrounds: pick + apply immediately so the reveal anims show the correct scene.
+        // Both player and wild use the same background, driven by the wild monster's type.
+        TryApplyBattleBackgroundFromWild();
 
         // Titles routing id for wild (stable across battle)
         // IMPORTANT: must be synthetic (WILD::<...>) so it never collides with a real monster id.
@@ -2054,7 +1904,7 @@ private int GetAlliesAliveNotIncludingActive()
         GameEvents.OnBattleStateChanged?.Invoke();
 
         if (battleTextBox != null)
-            yield return battleTextBox.ShowLine(new BattleLine(line, tags), GetEffectiveBattleSpeedForPacing());
+            yield return battleTextBox.ShowLine(new BattleLine(line, tags), battleSpeed);
 
         _narrationLock = false;
         GameEvents.OnBattleStateChanged?.Invoke();
