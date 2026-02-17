@@ -1206,12 +1206,8 @@ private Sprite GetVariantIcon(MonsterDataSO monster)
             return;
         }
 
-        if (_currentOwned.currentHP == 0)
-        {
-            Debug.LogWarning("[MonsterDetailPanel] Cannot assign a KO'd monster. Heal or wait for regen first.");
-            Hide();
-            return;
-        }
+        // Allow assigning KO'd monsters back onto the team so the player can use team healing.
+        // Battle eligibility is enforced elsewhere (EligibilityRules / EncounterManager).
 
         var data2 = SaveManager.Data;
         if (data2 == null)

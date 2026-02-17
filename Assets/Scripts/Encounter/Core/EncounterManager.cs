@@ -961,7 +961,12 @@ private int GetRarityWeight(TitleSO t)
         for (int i = 0; i < team.Count && i < 3; i++)
         {
             var m = team[i];
-            if (m.currentHP != 0) return true;
+            if (m == null) continue;
+            if (string.IsNullOrEmpty(m.monsterId)) continue;
+
+            // Healthy means HP > 0.
+            // HP < 0 is "uninitialized" (treated as full by InitializeUninitializedTeamHp), so count it as healthy.
+            if (m.currentHP > 0 || m.currentHP < 0) return true;
         }
         return false;
     }

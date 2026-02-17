@@ -79,7 +79,7 @@ public class OwnedMonsterListItemUI : MonoBehaviour
     void Update()
     {
         if (!HasValidMonster(_data)) return;
-        if (IsUsable(_data)) return;
+        if (!IsKO(_data)) return;
 
         if (Time.unscaledTime >= _nextUiRefreshAt)
         {
@@ -328,7 +328,8 @@ public class OwnedMonsterListItemUI : MonoBehaviour
             if (_isCodexRow)
                 rootButton.interactable = on && _allowDetail && _def != null;
             else
-                rootButton.interactable = on && HasValidMonster(_data) && IsUsable(_data) && _allowDetail;
+                // Allow interacting with KO'd monsters so players can assign them to the team for healing.
+                rootButton.interactable = on && HasValidMonster(_data) && _allowDetail;
         }
 
         ApplyKOVisualsOnly();
@@ -383,7 +384,6 @@ public class OwnedMonsterListItemUI : MonoBehaviour
 
         // Owned/team behavior
         if (!HasValidMonster(_data)) return;
-        if (!IsUsable(_data)) return;
 
         panel.ShowAssign(_data);
     }
@@ -395,7 +395,8 @@ public class OwnedMonsterListItemUI : MonoBehaviour
             if (_isCodexRow)
                 rootButton.interactable = (_def != null) && _allowDetail;
             else
-                rootButton.interactable = HasValidMonster(_data) && IsUsable(_data) && _allowDetail;
+                // Allow interacting with KO'd monsters so players can assign them to the team for healing.
+                rootButton.interactable = HasValidMonster(_data) && _allowDetail;
         }
 
         ApplyKOVisualsOnly();
@@ -404,7 +405,7 @@ public class OwnedMonsterListItemUI : MonoBehaviour
 
     private void ApplyKOVisualsOnly()
     {
-        bool isKO = HasValidMonster(_data) && !IsUsable(_data);
+        bool isKO = IsKO(_data);
 
         if (cooldownText)
             cooldownText.gameObject.SetActive(isKO);
@@ -414,7 +415,7 @@ public class OwnedMonsterListItemUI : MonoBehaviour
     {
         if (!cooldownText) return;
         if (!HasValidMonster(_data)) { cooldownText.gameObject.SetActive(false); return; }
-        if (IsUsable(_data)) { cooldownText.gameObject.SetActive(false); return; }
+        if (!IsKO(_data)) { cooldownText.gameObject.SetActive(false); return; }
 
         var (ok, eta) = TryGetETAForNextHP(_data, _def);
         cooldownText.gameObject.SetActive(true);
@@ -450,7 +451,15 @@ public class OwnedMonsterListItemUI : MonoBehaviour
 
     private static bool IsUsable(OwnedMonsterData d)
     {
+        // NOTE: currentHP == -1 means "uninitialized" and should be treated as usable.
         return HasValidMonster(d) && d.currentHP != 0;
+    }
+
+    private static bool IsKO(OwnedMonsterData d)
+    {
+        // KO is specifically 0 HP.
+        // (We do NOT treat negative/uninitialized HP as KO.)
+        return HasValidMonster(d) && d.currentHP == 0;
     }
 
     private static (bool ok, TimeSpan eta) TryGetETAForNextHP(OwnedMonsterData d, MonsterDataSO def)

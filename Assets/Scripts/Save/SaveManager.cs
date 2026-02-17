@@ -1249,6 +1249,31 @@ public static class SaveManager
     public static long NowUnix() => DateTimeOffset.UtcNow.ToUnixTimeSeconds();
     public static int TodayDayIndexUTC() => (int)(NowUnix() / 86400L);
 
+    // ─────────────────────────────────────────────
+    // Owned monster helpers
+    // ─────────────────────────────────────────────
+
+    /// <summary>
+    /// Returns the first owned monster entry matching the provided ownedUID.
+    /// This is a convenience helper used by systems that need stable identity
+    /// across Owned vs Team lists.
+    /// </summary>
+    public static OwnedMonsterData GetOwnedByUid(string ownedUid)
+    {
+        if (string.IsNullOrEmpty(ownedUid)) return null;
+        if (Data == null || Data.owned == null) return null;
+
+        for (int i = 0; i < Data.owned.Count; i++)
+        {
+            var e = Data.owned[i];
+            if (e == null) continue;
+            if (!string.IsNullOrEmpty(e.ownedUID) && e.ownedUID == ownedUid)
+                return e;
+        }
+
+        return null;
+    }
+
     private static bool TryLoad(string path, out PlayerManager data)
     {
         data = null;

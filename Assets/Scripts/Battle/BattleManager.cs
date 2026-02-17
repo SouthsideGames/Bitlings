@@ -1028,7 +1028,15 @@ public void BeginBattle(MonsterDataSO wild, int level, Action<BattleResult> onEn
         {
             var owned = (teamOwnedEffective != null && i >= 0 && i < teamOwnedEffective.Length) ? teamOwnedEffective[i] : (SaveManager.Data != null && SaveManager.Data.team != null && i < SaveManager.Data.team.Count ? SaveManager.Data.team[i] : null);
 
-            var (job, hours) = JobManager.I ? JobManager.I.GetCurrentJobAndHours(owned.monsterId) : (JobType.None, 0f);
+            string ownedMonsterId = (owned != null) ? owned.monsterId : null;
+            JobType job = JobType.None;
+            float hours = 0f;
+            if (JobManager.I != null && !string.IsNullOrEmpty(ownedMonsterId))
+            {
+                var jh = JobManager.I.GetCurrentJobAndHours(ownedMonsterId);
+                job = jh.Item1;
+                hours = jh.Item2;
+            }
             jobCtx[i] = JobBattlePassives.Build(job, hours);
 
             if (jobCtx[i].maxHpBonusPct > 0f)
@@ -1253,6 +1261,61 @@ public void BeginBattle(MonsterDataSO wild, int level, Action<BattleResult> onEn
             // We clear the slot (instead of removing list entries) to preserve stable UI slot indices.
             if (hp <= 0)
             {
+                // IMPORTANT:
+                // Even though we auto-remove dead team members from the TEAM list,
+                // we must still persist the KO state back to the OWNED instance so:
+                // - cooldown timers can show (OwnedMonsterListItemUI)
+                // - battle eligibility correctly blocks 0 HP monsters
+                // - healing services can find + heal the KO'd monster
+
+                // Write KO back to owned list using ownedUID first (strong match).
+                if (ownedList != null)
+                {
+                    int ownedIdx = -1;
+
+                    if (!string.IsNullOrEmpty(t.ownedUID))
+                    {
+                        for (int j = 0; j < ownedList.Count; j++)
+                        {
+                            var o = ownedList[j];
+                            if (o != null && !string.IsNullOrEmpty(o.ownedUID) && o.ownedUID == t.ownedUID)
+                            {
+                                ownedIdx = j;
+                                break;
+                            }
+                        }
+                    }
+
+                    // Fallback: monsterId only if unique.
+                    if (ownedIdx < 0)
+                    {
+                        int count = 0;
+                        int singleIdx = -1;
+                        for (int j = 0; j < ownedList.Count; j++)
+                        {
+                            var o = ownedList[j];
+                            if (o != null && !string.IsNullOrEmpty(o.monsterId) && o.monsterId == t.monsterId)
+                            {
+                                count++;
+                                singleIdx = j;
+                                if (count > 1) break;
+                            }
+                        }
+                        if (count == 1) ownedIdx = singleIdx;
+                    }
+
+                    if (ownedIdx >= 0 && ownedIdx < ownedList.Count)
+                    {
+                        var o = ownedList[ownedIdx];
+                        if (o != null)
+                        {
+                            o.currentHP = 0;
+                            o.lastHPUnix = nowUnix;
+                            ownedList[ownedIdx] = o;
+                        }
+                    }
+                }
+
                 // Clear slot
                 teamList[i] = new OwnedMonsterData { monsterId = null, currentHP = 0 };
                 continue;
@@ -2022,6 +2085,20 @@ private int GetAlliesAliveNotIncludingActive()
     {
         if (teamSlotOwned == null || string.IsNullOrEmpty(teamSlotOwned.monsterId))
             return teamSlotOwned;
+
+        // If the team slot already references a specific owned instance (ownedUID),
+        // we MUST respect that exact instance.
+        // Preference-by-monsterId is only a fallback for older saves or empty ownedUIDs.
+        if (!string.IsNullOrEmpty(teamSlotOwned.ownedUID))
+        {
+            var resolved = XPManager.Resolve(teamSlotOwned) ?? teamSlotOwned;
+            if (teamOwnedEffective != null && teamIndex >= 0 && teamIndex < teamOwnedEffective.Length)
+            {
+                teamOwnedEffective[teamIndex] = resolved;
+                teamOwnedUidEffective[teamIndex] = resolved.ownedUID;
+            }
+            return resolved;
+        }
 
         // Preference is stored separately from the team list.
         // If a preferred owned copy exists, use it (this is what the player expects when they toggle "use shiny").
