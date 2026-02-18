@@ -189,10 +189,9 @@ public partial class AutoApplyService : MonoBehaviour
 
         if (!def) return;
 
-        int basePlusLevel = Mathf.RoundToInt(BattleCalc.CalcHP(def, om.level));
-        int totalMaxHP = basePlusLevel + Mathf.Max(0, om.trainingBonus.hp);
+        int totalMaxHP = HealingService.CalcMaxHP(def, om.level, includeTraining: true, includeTitles: false);
 
         if (om.currentHP > totalMaxHP)
-            om.currentHP = totalMaxHP;
+            SaveManager.SetMonsterHP(om, om.currentHP, stampLastHpUnix: false, save: false, fireEvents: false);
     }
 }

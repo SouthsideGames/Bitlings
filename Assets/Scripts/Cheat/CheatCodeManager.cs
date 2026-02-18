@@ -858,10 +858,8 @@ public class CheatCodeManager : MonoBehaviour
 
             int maxHP = HealingService.CalcMaxHP(def, t.level);
 
-            t.currentHP = 1;
-            t.lastHPUnix = now;
-
-            data.team[i] = t;
+            // Centralized HP write (also syncs owned via ownedUID when present)
+            SaveManager.SetTeamSlotHP(i, 1, stampLastHpUnix: true, nowUnix: now, save: false, fireEvents: false);
             revived++;
         }
 
@@ -912,10 +910,8 @@ public class CheatCodeManager : MonoBehaviour
             int curHP = (t.currentHP >= 0) ? Mathf.Clamp(t.currentHP, 0, maxHP) : maxHP;
             if (curHP >= maxHP) continue;
 
-            t.currentHP = maxHP;
-            t.lastHPUnix = now;
-
-            data.team[i] = t;
+            // Centralized HP write (also syncs owned via ownedUID when present)
+            SaveManager.SetTeamSlotHP(i, maxHP, stampLastHpUnix: true, nowUnix: now, save: false, fireEvents: false);
             healed++;
         }
 

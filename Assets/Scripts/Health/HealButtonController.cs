@@ -190,12 +190,11 @@ public class HealButtonController : MonoBehaviour
             if (!spent) { Refresh(); return; }
         }
 
-        owned.currentHP = maxHP;
-        SaveManager.Data.team[teamIndex] = owned;
-        SaveManager.Save();
+        // Centralized HP contract (syncs owned via ownedUID when present)
+        SaveManager.SetTeamSlotHP(teamIndex, maxHP, stampLastHpUnix: true, nowUnix: SaveManager.NowUnix(), save: true, fireEvents: true);
 
-        GameEvents.OnTeamChanged?.Invoke();
-        GameEvents.OnTeamHealthChanged?.Invoke();
+        // HP changes are already evented by SaveManager.SetTeamSlotHP, but we still need resources/UI.
+
         GameEvents.OnResourcesChanged?.Invoke();
 
         Refresh();

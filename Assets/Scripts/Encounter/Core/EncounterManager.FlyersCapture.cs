@@ -547,13 +547,13 @@ public partial class EncounterManager
         else
             target.shinyTier = 0;
 
-        // Clamp HP to new max (baseline HP grows with level)
+        // Clamp HP to new max (baseline HP grows with level).
         if (def != null)
         {
-            int basePlusLevel = Mathf.RoundToInt(BattleCalc.CalcHP(def, target.level));
-            int totalMaxHP = basePlusLevel + Mathf.Max(0, target.trainingBonus.hp);
+            int totalMaxHP = HealingService.CalcMaxHP(def, target.level, includeTraining: true, includeTitles: false);
             if (target.currentHP > totalMaxHP)
-                target.currentHP = totalMaxHP;
+                // Centralized HP contract: clamp without stamping timers.
+                SaveManager.SetMonsterHP(target, target.currentHP, stampLastHpUnix: false, save: false, fireEvents: false);
         }
     }
 
@@ -580,8 +580,8 @@ public partial class EncounterManager
             // Mirror key gameplay fields (keep this conservative)
             t.level = owned.level;
             t.currentXP = owned.currentXP;
-            t.currentHP = owned.currentHP;
-            t.lastHPUnix = owned.lastHPUnix;
+            // Centralized HP contract: mirror HP + timestamp (remainder-accurate)
+            SaveManager.SetTeamSlotHPExact(i, owned.currentHP, owned.lastHPUnix, save: false, fireEvents: false);
             t.flatAtkBonus = owned.flatAtkBonus;
             t.isTraining = owned.isTraining;
             t.trainingLastUnix = owned.trainingLastUnix;

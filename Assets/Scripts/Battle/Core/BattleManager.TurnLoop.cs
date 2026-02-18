@@ -115,7 +115,7 @@ public partial class BattleManager : MonoBehaviour
 #endif
 
             TitlesAdapter.OnTurnAdvanced(_turnIndex);
-            GameEvents.RaiseBattleStatsChanged();
+            RequestBattleStatRebuild(BattleStatRebuildReason.TurnAdvanced);
 
             // Conditional Titles: show brief feedback when conditional effects become active/inactive.
             // (We keep the detailed math in BattleLogger.)
@@ -872,7 +872,7 @@ if (!playerLandedFirstHitThisBattle && dr.damage > 0)
             if (inBattle && !string.IsNullOrEmpty(_playerTurnOwnerId))
             {
                 TitlesAdapter.OnCombatantTurnEnded(_playerTurnOwnerId);
-                GameEvents.RaiseBattleStatsChanged();
+                RequestBattleStatRebuild(BattleStatRebuildReason.HPChanged);
             }
 
             isResolvingPlayerTurn = false;
@@ -1251,7 +1251,7 @@ if (dr.crit && !df.cannotBeCrit)
             if (inBattle && !string.IsNullOrEmpty(_wildTurnOwnerId))
             {
                 TitlesAdapter.OnCombatantTurnEnded(_wildTurnOwnerId);
-                GameEvents.RaiseBattleStatsChanged();
+                RequestBattleStatRebuild(BattleStatRebuildReason.HPChanged);
             }
         }
 

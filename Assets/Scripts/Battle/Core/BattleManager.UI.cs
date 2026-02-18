@@ -684,11 +684,17 @@ private void UpdateWildInfoUI()
     {
         if (!inBattle) return;
 
-        // Stats can change max HP (titles/boosters). Preserve HP% then refresh UI.
-        SyncEffectiveMaxHPFromStats();
-        PushHPBars();
-        UpdatePlayerInfoUI();
-        UpdateWildInfoUI();
+        // If this event was raised by RequestBattleStatRebuild, the rebuild already happened.
+        // Keep the event for any other subscribers, but ignore it here to prevent recursion.
+        if (_ignoreNextBattleStatsEvent)
+        {
+            _ignoreNextBattleStatsEvent = false;
+            return;
+        }
+
+        // Route ALL stat-change notifications through the unified pipeline.
+        // External systems (boosters, etc.) may raise GameEvents.BattleStatsChanged.
+        RequestBattleStatRebuild(BattleStatRebuildReason.ExternalEvent);
     }
 
 

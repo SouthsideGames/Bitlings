@@ -483,6 +483,96 @@ private void EnsureBattleRngInitialized()
     private BattleStatsSystem _stats;
     public BattleStatsSystem Stats => _stats;
 
+    // ─────────────────────────────────────────────────────────────
+    // Battle stat rebuild contract
+    // - One entrypoint for any "stats may have changed" situation.
+    // - Centralizes maxHP % preservation + UI refresh ordering.
+    // - Call RequestBattleStatRebuild(...) instead of sprinkling
+    //   SyncEffectiveMaxHPFromStats / RaiseBattleStatsChanged / UI refresh.
+    // ─────────────────────────────────────────────────────────────
+    [Flags]
+    public enum BattleStatRebuildReason
+    {
+        None          = 0,
+        BattleStart   = 1 << 0,
+        TurnAdvanced  = 1 << 1,
+        Swap          = 1 << 2,
+        HPChanged     = 1 << 3,
+        Boosters      = 1 << 4,
+        Titles        = 1 << 5,
+        ExternalEvent = 1 << 6,
+        Force         = 1 << 7,
+    }
+
+    private BattleStatRebuildReason _pendingStatRebuildReasons = BattleStatRebuildReason.None;
+    private bool _isRebuildingStats;
+    private bool _ignoreNextBattleStatsEvent;
+
+    /// <summary>
+    /// Single, strict entrypoint for "effective stats may have changed".
+    /// This method:
+    /// - rebuilds adjusted baselines when needed
+    /// - preserves HP% when maxHP changes
+    /// - refreshes UI (HP bars + stat labels)
+    ///
+    /// IMPORTANT:
+    /// Prefer calling this from BattleManager / battle loop instead of calling
+    /// GameEvents.RaiseBattleStatsChanged() directly.
+    /// External systems may still raise GameEvents.BattleStatsChanged; the
+    /// handler routes here with ExternalEvent.
+    /// </summary>
+    public void RequestBattleStatRebuild(BattleStatRebuildReason reason, bool forceRebuildAdjusted = false)
+    {
+        if (!inBattle) return;
+        _pendingStatRebuildReasons |= reason;
+        RebuildBattleStatsInternal(forceRebuildAdjusted);
+
+        // Notify any external listeners (UI panels, debug overlays, etc.) that subscribe to GameEvents.
+        // We ignore the immediate callback in our own handler to avoid recursion.
+        _ignoreNextBattleStatsEvent = true;
+        GameEvents.RaiseBattleStatsChanged();
+    }
+
+    private void RebuildBattleStatsInternal(bool forceRebuildAdjusted)
+    {
+        if (!inBattle) return;
+        if (_isRebuildingStats) return;
+
+        _isRebuildingStats = true;
+        try
+        {
+            // If anything about baselines could have changed, rebuild adjusted caches.
+            // Titles/boosters/conditionals are applied on top of adjusted and do not require
+            // adjusted rebuilds, but battle start / roster swaps can.
+            bool wantsAdjusted = forceRebuildAdjusted || (_pendingStatRebuildReasons & (BattleStatRebuildReason.BattleStart | BattleStatRebuildReason.Swap | BattleStatRebuildReason.Force)) != 0;
+
+            if (_stats != null)
+            {
+                if (wantsAdjusted)
+                {
+                    _stats.MarkDirtyAll();
+                    _stats.RebuildAdjustedBaselines();
+                }
+            }
+
+            // Stats can change max HP (titles/boosters/conditionals). Preserve HP% then refresh UI.
+            SyncEffectiveMaxHPFromStats(force: (_pendingStatRebuildReasons & BattleStatRebuildReason.BattleStart) != 0);
+
+            // Keep legacy fields in sync where required.
+            RefreshWildEffectiveStatsFromTitles();
+
+            // UI sync contract.
+            PushHPBars();
+            UpdatePlayerInfoUI();
+            UpdateWildInfoUI();
+        }
+        finally
+        {
+            _pendingStatRebuildReasons = BattleStatRebuildReason.None;
+            _isRebuildingStats = false;
+        }
+    }
+
     // Effective MaxHP cache (so when max HP changes from titles/boosters we can preserve HP%).
     private float[] _effMaxHpCache;
     private float _wildEffMaxHpCache;
@@ -859,7 +949,8 @@ private IEnumerator MaybeSayKO_Wild(string victimName, float preHP, float postHP
             BattleLogger.Log($"[Titles] OnBattleStart(wild) exception: {ex.Message}", LogScope.Battle);
         }
 
-        GameEvents.BattleStatsChanged?.Invoke();
+        // Unified stat/UI sync contract.
+        RequestBattleStatRebuild(BattleStatRebuildReason.BattleStart, forceRebuildAdjusted: true);
     }
 
 public void BeginBattle(MonsterDataSO wild, int level, Action<BattleResult> onEnded)
@@ -1310,9 +1401,11 @@ public void BeginBattle(MonsterDataSO wild, int level, Action<BattleResult> onEn
                         var o = ownedList[ownedIdx];
                         if (o != null)
                         {
-                            o.currentHP = 0;
-                            o.lastHPUnix = nowUnix;
-                            ownedList[ownedIdx] = o;
+                            // Centralized HP contract (no Save() here; battle end saves once)
+                            SaveManager.SetOwnedMonsterHP(o.ownedUID, 0, stampLastHpUnix: true, nowUnix: nowUnix, save: false, fireEvents: false);
+                            // Refresh local list entry from SaveManager in case of clamping/normalization
+                            var refreshed = SaveManager.GetOwnedByUid(o.ownedUID);
+                            if (refreshed != null) ownedList[ownedIdx] = refreshed;
                         }
                     }
                 }
@@ -1322,8 +1415,9 @@ public void BeginBattle(MonsterDataSO wild, int level, Action<BattleResult> onEn
                 continue;
             }
 
-            t.currentHP = hp;
-            teamList[i] = t;
+            // Centralized HP contract: update team slot (syncs owned via ownedUID / unique monsterId).
+            SaveManager.SetTeamSlotHP(i, hp, stampLastHpUnix: true, nowUnix: nowUnix, save: false, fireEvents: false);
+            // teamList references SaveManager.Data.team, so it is already updated in-place.
         }
 
         // Sync HP back to owned list.
@@ -1373,9 +1467,18 @@ public void BeginBattle(MonsterDataSO wild, int level, Action<BattleResult> onEn
                 var o = ownedList[idx];
                 if (o != null)
                 {
-                    o.currentHP = Mathf.Max(0, t.currentHP);
-                    o.lastHPUnix = nowUnix;
-                    ownedList[idx] = o;
+                                        if (!string.IsNullOrEmpty(o.ownedUID))
+                    {
+                        SaveManager.SetOwnedMonsterHP(o.ownedUID, Mathf.Max(0, t.currentHP), stampLastHpUnix: true, nowUnix: nowUnix, save: false, fireEvents: false);
+                        var refreshed = SaveManager.GetOwnedByUid(o.ownedUID);
+                        if (refreshed != null) ownedList[idx] = refreshed;
+                    }
+                    else
+                    {
+                        // No ownedUID on owned entry: rely on team-slot HP contract fallback (unique monsterId)
+                        // to propagate HP safely without cross-contamination.
+                        SaveManager.SetTeamSlotHP(i, Mathf.Max(0, t.currentHP), stampLastHpUnix: true, nowUnix: nowUnix, save: false, fireEvents: false);
+                    }
                 }
             }
         }

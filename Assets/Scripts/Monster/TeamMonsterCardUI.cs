@@ -327,31 +327,36 @@ public class TeamMonsterCardUI : MonoBehaviour
 
         int newHP = Mathf.Clamp(curHP + restore, 0, maxHP);
 
-        // IMPORTANT: if this is a team-slot bound card, write back to that slot explicitly.
+        // Centralized HP contract:
+        // - If team-slot bound: write via SaveManager.SetTeamSlotHP (syncs owned via ownedUID).
+        // - Else if we have an ownedUID: write via SaveManager.SetOwnedMonsterHP.
+        // - Else fallback to local write (legacy) and Save().
+        bool hpChanged = false;
+
         if (_isTeamSlotBound)
         {
-            var save = SaveManager.Data;
-            var team = save?.team;
-            if (team != null && _teamSlotIndex >= 0 && _teamSlotIndex < team.Count && team[_teamSlotIndex] != null)
-            {
-                team[_teamSlotIndex].currentHP = newHP;
-                _data = team[_teamSlotIndex]; // keep local ref in sync
-            }
-            else
-            {
-                // Fallback if somehow slot no longer valid
-                _data.currentHP = newHP;
-            }
+            hpChanged = SaveManager.SetTeamSlotHP(_teamSlotIndex, newHP, stampLastHpUnix: true, nowUnix: SaveManager.NowUnix(), save: true, fireEvents: true);
+
+            // keep local ref in sync
+            var team = SaveManager.Data?.team;
+            if (team != null && _teamSlotIndex >= 0 && _teamSlotIndex < team.Count)
+                _data = team[_teamSlotIndex];
+        }
+        else if (!string.IsNullOrEmpty(_ownedUid))
+        {
+            hpChanged = SaveManager.SetOwnedMonsterHP(_ownedUid, newHP, stampLastHpUnix: true, nowUnix: SaveManager.NowUnix(), save: true, fireEvents: true);
+
+            // refresh local ref from owned if possible
+            var refreshed = SaveManager.GetOwnedByUid(_ownedUid);
+            if (refreshed != null) _data = refreshed;
         }
         else
         {
-            _data.currentHP = newHP;
+            // Last-resort fallback: route through the reference-based HP contract.
+            // This keeps clamping + timer stamping consistent even when we don't know slot/UID.
+            SaveManager.SetMonsterHP(_data, newHP, stampLastHpUnix: true, nowUnix: SaveManager.NowUnix(), save: true, fireEvents: true);
+            hpChanged = true;
         }
-
-        SaveManager.Save();
-
-        GameEvents.OnTeamHealthChanged?.Invoke();
-        GameEvents.OnTeamChanged?.Invoke();
 
         UpdateHpText();
         UpdateHealInteractable();

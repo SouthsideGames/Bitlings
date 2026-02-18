@@ -40,7 +40,8 @@ public static class EvolutionHelper
     public static void FullHealToMax(OwnedMonsterData m, MonsterDataSO def)
     {
         if (m == null || def == null) return;
-        m.currentHP = CalcMaxHP(m, def);
+        // Centralized HP contract (do not stamp timers during evolution heal unless you explicitly want to)
+        SaveManager.SetMonsterHP(m, CalcMaxHP(m, def), stampLastHpUnix: false, save: false, fireEvents: false);
     }
 
     public static void RebuildStatsAdditive(OwnedMonsterData m, MonsterDataSO newForm, float carryScale = 1f)

@@ -301,9 +301,8 @@ public class StarterSelector : MonoBehaviour
                             var def = lib.GetById(om.monsterId);
                             if (!def) continue;
 
-                            int maxHP = Mathf.RoundToInt(BattleCalc.CalcHP(def, Mathf.Max(1, om.level)));
-                            om.currentHP = Mathf.Max(1, maxHP);
-                            team[i] = om;
+                            int maxHP = HealingService.CalcMaxHP(def, Mathf.Max(1, om.level), includeTraining: true, includeTitles: false);
+                            SaveManager.SetTeamSlotHP(i, Mathf.Max(1, maxHP), stampLastHpUnix: true, nowUnix: SaveManager.NowUnix(), save: false, fireEvents: false);
                         }
                     }
                 }

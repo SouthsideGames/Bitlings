@@ -54,15 +54,6 @@ public static class XPManager
         return canonical ?? source;
     }
 
-    /// <summary>
-    /// Perform a single manual level-up:
-    /// - Spend Growth Cores
-    /// - Increment level
-    /// - Add unspent stat points
-    /// - Clamp HP to new max
-    /// - Save + fire OnTeamChanged
-    /// Returns true if level-up succeeded.
-    /// </summary>
     public static bool TryManualLevelUp(
         OwnedMonsterData raw,
         int pointsPerLevel,
@@ -109,7 +100,7 @@ public static class XPManager
             int totalMaxHP = basePlusLevel + Mathf.Max(0, target.trainingBonus.hp);
 
             if (target.currentHP > totalMaxHP)
-                target.currentHP = totalMaxHP;
+                SaveManager.SetMonsterHP(target, target.currentHP, stampLastHpUnix: false, save: false, fireEvents: false);
         }
 
         // Ensure this canonical monster exists in Data.owned and uses THIS reference (or merges correctly)
@@ -217,10 +208,6 @@ public static class XPManager
         if (!om.isShiny && om.shinyTier < 0) om.shinyTier = 0;
     }
 
-    /// <summary>
-    /// Copies all gameplay-relevant fields used across systems (team preview, job assignment, codex, etc.).
-    /// CRITICAL: includes shiny identity fields so UI pulls the correct icon/name formatting.
-    /// </summary>
     private static void CopyAllGameplayFields(OwnedMonsterData from, OwnedMonsterData to)
     {
         if (from == null || to == null) return;
@@ -232,7 +219,8 @@ public static class XPManager
         // Core progression
         to.level     = from.level;
         to.currentXP = from.currentXP;
-        to.currentHP = from.currentHP;
+        // Centralized HP contract: copy HP without re-stamping timers.
+        SaveManager.SetMonsterHPExact(to, from.currentHP, from.lastHPUnix, save: false, fireEvents: false);
 
         // HP regen / KO cooldown tracking
         // CRITICAL: must mirror so KO timers don't "tie together" across UI rows,
@@ -258,7 +246,5 @@ public static class XPManager
         to.shinyTier = Mathf.Max(to.shinyTier, from.shinyTier);
         NormalizeShinyFields(to);
 
-        // If OwnedMonsterData gains more fields in the future,
-        // add them here rather than letting them silently desync.
     }
 }

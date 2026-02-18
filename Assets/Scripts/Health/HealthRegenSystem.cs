@@ -80,8 +80,8 @@ public class HealthRegenSystem : MonoBehaviour
             // Initialize unknown HP to full.
             if (e.currentHP < 0)
             {
-                updated.currentHP = maxHP;
-                updated.lastHPUnix = nowUnix;
+                // Centralized HP contract: initialize unknown HP to full without creating shared timer issues.
+                SaveManager.SetMonsterHPExact(updated, maxHP, nowUnix, save: false, fireEvents: false);
                 return true;
             }
 
@@ -119,8 +119,8 @@ public class HealthRegenSystem : MonoBehaviour
             long newLast = Math.Min(nowUnix, last + Math.Max(0, consumedSeconds));
             if (newLast < 0) newLast = nowUnix;
 
-            updated.currentHP = after;
-            updated.lastHPUnix = newLast;
+            // Centralized HP contract: apply regen with remainder-accurate timestamp.
+            SaveManager.SetMonsterHPExact(updated, after, newLast, save: false, fireEvents: false);
             return true;
         }
 
@@ -156,9 +156,8 @@ public class HealthRegenSystem : MonoBehaviour
                 {
                     if (t.currentHP != ownedMatch.currentHP || t.lastHPUnix != ownedMatch.lastHPUnix)
                     {
-                        t.currentHP = ownedMatch.currentHP;
-                        t.lastHPUnix = ownedMatch.lastHPUnix;
-                        team[i] = t;
+                        // Centralized HP contract: mirror HP + timestamp (remainder-accurate)
+                        SaveManager.SetTeamSlotHPExact(i, ownedMatch.currentHP, ownedMatch.lastHPUnix, save: false, fireEvents: false);
                         changed = true;
                     }
                     continue;

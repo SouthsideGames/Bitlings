@@ -67,6 +67,11 @@ public static class SaveManager
 {
     public static PlayerManager Data;
 
+    // Save schema versioning
+    // Increment CURRENT_SAVE_VERSION whenever the on-disk JSON layout/semantics change.
+    private const int CURRENT_SAVE_VERSION = 2;
+
+
     // ─────────────────────────────────────────────
     // Combined Save Root (Option B)
     // - PlayerManager (main state)
@@ -178,6 +183,8 @@ public static class SaveManager
             }
         }
 
+        root = MigrateRootIfNeeded(root);
+
         Data = root?.player ?? NewFreshPlayer();
 
         // Hydrate caches from root.
@@ -197,6 +204,44 @@ public static class SaveManager
 
         EndHardReset();
     }
+
+/// <summary>
+/// Lightweight schema migration framework for PlayerSave.json.
+/// Keep migrations:
+/// - deterministic
+/// - additive (do not delete fields)
+/// - safe for partially-authored/older saves
+/// </summary>
+private static PlayerSaveRoot MigrateRootIfNeeded(PlayerSaveRoot root)
+{
+    // Null root means we will create fresh downstream.
+    if (root == null) return null;
+
+    int v = root.version <= 0 ? 1 : root.version;
+    if (v >= CURRENT_SAVE_VERSION) return root;
+
+    // v1 → v2: formalize sidecar presence + world events blob defaults.
+    if (v < 2)
+    {
+        root.jobRuntime ??= new JobRuntimeSave();
+        root.titles ??= new TitleSaveData();
+        root.worldEvents ??= new WorldEventSaveData();
+
+        // Ensure lists exist (JsonUtility can leave them null for empty lists).
+        root.tutorialCompleted ??= new List<string>();
+        root.jobRuntime.sites ??= new List<JobRuntimeSite>();
+        root.jobRuntime.cooldowns ??= new List<MonsterCooldownKV>();
+        root.worldEvents.cooldowns ??= new List<WorldEventRollCooldown>();
+
+        v = 2;
+    }
+
+    // Future migrations go here (v2 → v3, etc.)
+
+    root.version = v;
+    return root;
+}
+
 
     public static void Save()
     {
@@ -460,6 +505,7 @@ public static class SaveManager
     private static PlayerSaveRoot BuildRootForSave()
     {
         var root = new PlayerSaveRoot();
+        root.version = CURRENT_SAVE_VERSION;
         root.player = Data;
 
         // Tutorial flags
@@ -1294,6 +1340,404 @@ public static class SaveManager
 
         return null;
     }
+
+/// <summary>
+/// Centralized HP write contract.
+/// - Clamps HP to [0..MaxHP] based on MonsterDataSO + level (+ training; no battle-only title conditionals).
+/// - Optionally stamps lastHPUnix (used by regen + KO cooldown UI).
+/// - Optionally syncs TEAM mirrors that point at the same ownedUID.
+/// </summary>
+public static bool SetOwnedMonsterHP(
+    string ownedUid,
+    int newHP,
+    bool stampLastHpUnix = true,
+    long? nowUnix = null,
+    bool save = true,
+    bool fireEvents = true,
+    bool syncTeamMirrors = true)
+{
+    if (IsHardWiping) return false;
+    if (string.IsNullOrEmpty(ownedUid)) return false;
+    if (Data == null) return false;
+
+    Data.owned ??= new List<OwnedMonsterData>();
+    Data.team ??= new List<OwnedMonsterData>();
+
+    int ownedIdx = -1;
+    for (int i = 0; i < Data.owned.Count; i++)
+    {
+        var e = Data.owned[i];
+        if (e == null) continue;
+        if (!string.IsNullOrEmpty(e.ownedUID) && e.ownedUID == ownedUid)
+        {
+            ownedIdx = i;
+            break;
+        }
+    }
+
+    if (ownedIdx < 0) return false;
+
+    var owned = Data.owned[ownedIdx];
+    if (owned == null || string.IsNullOrEmpty(owned.monsterId)) return false;
+
+    var def = MonsterLibraryLocator.GetById(owned.monsterId);
+    int maxHP = def ? HealingService.CalcMaxHP(def, Mathf.Max(1, owned.level), includeTraining: true, includeTitles: false) : 1;
+    int clamped = Mathf.Clamp(newHP, 0, Mathf.Max(1, maxHP));
+
+    bool changed = owned.currentHP != clamped;
+    if (!changed && !stampLastHpUnix) return false;
+
+    owned.currentHP = clamped;
+
+    if (stampLastHpUnix)
+        owned.lastHPUnix = nowUnix ?? NowUnix();
+
+    Data.owned[ownedIdx] = owned;
+
+    if (syncTeamMirrors && Data.team != null)
+    {
+        for (int i = 0; i < Data.team.Count; i++)
+        {
+            var t = Data.team[i];
+            if (t == null) continue;
+            if (string.IsNullOrEmpty(t.ownedUID)) continue;
+            if (!string.Equals(t.ownedUID, ownedUid, StringComparison.Ordinal)) continue;
+
+            if (t.currentHP != owned.currentHP || (stampLastHpUnix && t.lastHPUnix != owned.lastHPUnix))
+            {
+                t.currentHP = owned.currentHP;
+                if (stampLastHpUnix) t.lastHPUnix = owned.lastHPUnix;
+                Data.team[i] = t;
+                changed = true;
+            }
+        }
+    }
+
+    if (save) Save();
+    if (fireEvents && changed)
+    {
+        GameEvents.OnTeamChanged?.Invoke();
+        GameEvents.OnTeamHealthChanged?.Invoke();
+    }
+
+    return changed;
+}
+
+/// <summary>
+/// Centralized team-slot HP write contract.
+/// Writes to team slot AND syncs back to owned entry via ownedUID when available.
+/// </summary>
+public static bool SetTeamSlotHP(
+    int teamIndex,
+    int newHP,
+    bool stampLastHpUnix = true,
+    long? nowUnix = null,
+    bool save = true,
+    bool fireEvents = true)
+{
+    if (IsHardWiping) return false;
+    if (Data == null) return false;
+
+    Data.team ??= new List<OwnedMonsterData>();
+    if (teamIndex < 0 || teamIndex >= Data.team.Count) return false;
+
+    var t = Data.team[teamIndex];
+    if (t == null || string.IsNullOrEmpty(t.monsterId)) return false;
+
+    var def = MonsterLibraryLocator.GetById(t.monsterId);
+    int maxHP = def ? HealingService.CalcMaxHP(def, Mathf.Max(1, t.level), includeTraining: true, includeTitles: false) : 1;
+    int clamped = Mathf.Clamp(newHP, 0, Mathf.Max(1, maxHP));
+
+    bool changed = t.currentHP != clamped;
+    if (!changed && !stampLastHpUnix) return false;
+
+    t.currentHP = clamped;
+    if (stampLastHpUnix)
+        t.lastHPUnix = nowUnix ?? NowUnix();
+
+    Data.team[teamIndex] = t;
+
+    // Sync to owned via ownedUID (preferred), otherwise try unique monsterId fallback.
+    if (!string.IsNullOrEmpty(t.ownedUID))
+    {
+        SetOwnedMonsterHP(t.ownedUID, t.currentHP, stampLastHpUnix, t.lastHPUnix, save: false, fireEvents: false, syncTeamMirrors: false);
+    }
+    else
+    {
+        // Unique monsterId fallback (only if exactly 1 owned entry matches).
+        if (Data.owned != null)
+        {
+            int count = 0;
+            int idx = -1;
+            for (int i = 0; i < Data.owned.Count; i++)
+            {
+                var o = Data.owned[i];
+                if (o == null || string.IsNullOrEmpty(o.monsterId)) continue;
+                if (string.Equals(o.monsterId, t.monsterId, StringComparison.Ordinal))
+                {
+                    count++;
+                    idx = i;
+                    if (count > 1) break;
+                }
+            }
+
+            if (count == 1 && idx >= 0)
+            {
+                var o = Data.owned[idx];
+                o.currentHP = t.currentHP;
+                if (stampLastHpUnix) o.lastHPUnix = t.lastHPUnix;
+                Data.owned[idx] = o;
+            }
+        }
+    }
+
+    if (save) Save();
+    if (fireEvents && changed)
+    {
+        GameEvents.OnTeamChanged?.Invoke();
+        GameEvents.OnTeamHealthChanged?.Invoke();
+    }
+
+    return changed;
+}
+
+
+
+/// <summary>
+/// Centralized HP write contract for a specific owned monster, but with an explicit lastHPUnix value.
+/// Useful for regen systems that need to preserve fractional remainder time.
+/// </summary>
+public static bool SetOwnedMonsterHPExact(
+    string ownedUid,
+    int newHP,
+    long lastHpUnix,
+    bool save = true,
+    bool fireEvents = true,
+    bool syncTeamMirrors = true)
+{
+    if (IsHardWiping) return false;
+    if (string.IsNullOrEmpty(ownedUid)) return false;
+    if (Data == null) return false;
+
+    Data.owned ??= new List<OwnedMonsterData>();
+    Data.team ??= new List<OwnedMonsterData>();
+
+    int ownedIdx = -1;
+    for (int i = 0; i < Data.owned.Count; i++)
+    {
+        var e = Data.owned[i];
+        if (e == null) continue;
+        if (!string.IsNullOrEmpty(e.ownedUID) && e.ownedUID == ownedUid)
+        {
+            ownedIdx = i;
+            break;
+        }
+    }
+
+    if (ownedIdx < 0) return false;
+
+    var owned = Data.owned[ownedIdx];
+    if (owned == null || string.IsNullOrEmpty(owned.monsterId)) return false;
+
+    var def = MonsterLibraryLocator.GetById(owned.monsterId);
+    int maxHP = def ? HealingService.CalcMaxHP(def, Mathf.Max(1, owned.level), includeTraining: true, includeTitles: false) : 1;
+    int clamped = Mathf.Clamp(newHP, 0, Mathf.Max(1, maxHP));
+
+    bool changed = owned.currentHP != clamped || owned.lastHPUnix != lastHpUnix;
+
+    owned.currentHP = clamped;
+    owned.lastHPUnix = lastHpUnix;
+    Data.owned[ownedIdx] = owned;
+
+    if (syncTeamMirrors && Data.team != null)
+    {
+        for (int i = 0; i < Data.team.Count; i++)
+        {
+            var t = Data.team[i];
+            if (t == null) continue;
+            if (string.IsNullOrEmpty(t.ownedUID)) continue;
+            if (!string.Equals(t.ownedUID, ownedUid, StringComparison.Ordinal)) continue;
+
+            if (t.currentHP != owned.currentHP || t.lastHPUnix != owned.lastHPUnix)
+            {
+                t.currentHP = owned.currentHP;
+                t.lastHPUnix = owned.lastHPUnix;
+                Data.team[i] = t;
+                changed = true;
+            }
+        }
+    }
+
+    if (save) Save();
+    if (fireEvents && changed)
+    {
+        GameEvents.OnTeamChanged?.Invoke();
+        GameEvents.OnTeamHealthChanged?.Invoke();
+    }
+
+    return changed;
+}
+
+/// <summary>
+/// Centralized team-slot HP write contract with an explicit lastHPUnix value.
+/// Useful for regen systems that need to preserve fractional remainder time.
+/// </summary>
+public static bool SetTeamSlotHPExact(
+    int teamIndex,
+    int newHP,
+    long lastHpUnix,
+    bool save = true,
+    bool fireEvents = true)
+{
+    if (IsHardWiping) return false;
+    if (Data == null) return false;
+
+    Data.team ??= new List<OwnedMonsterData>();
+    if (teamIndex < 0 || teamIndex >= Data.team.Count) return false;
+
+    var t = Data.team[teamIndex];
+    if (t == null || string.IsNullOrEmpty(t.monsterId)) return false;
+
+    var def = MonsterLibraryLocator.GetById(t.monsterId);
+    int maxHP = def ? HealingService.CalcMaxHP(def, Mathf.Max(1, t.level), includeTraining: true, includeTitles: false) : 1;
+    int clamped = Mathf.Clamp(newHP, 0, Mathf.Max(1, maxHP));
+
+    bool changed = t.currentHP != clamped || t.lastHPUnix != lastHpUnix;
+
+    t.currentHP = clamped;
+    t.lastHPUnix = lastHpUnix;
+    Data.team[teamIndex] = t;
+
+    // Sync to owned via ownedUID (preferred), otherwise try unique monsterId fallback.
+    if (!string.IsNullOrEmpty(t.ownedUID))
+    {
+        SetOwnedMonsterHPExact(t.ownedUID, t.currentHP, t.lastHPUnix, save: false, fireEvents: false, syncTeamMirrors: false);
+    }
+    else
+    {
+        // Unique monsterId fallback (only if exactly 1 owned entry matches).
+        if (Data.owned != null)
+        {
+            int count = 0;
+            int idx = -1;
+            for (int i = 0; i < Data.owned.Count; i++)
+            {
+                var o = Data.owned[i];
+                if (o == null || string.IsNullOrEmpty(o.monsterId)) continue;
+                if (string.Equals(o.monsterId, t.monsterId, StringComparison.Ordinal))
+                {
+                    count++;
+                    idx = i;
+                    if (count > 1) break;
+                }
+            }
+
+            if (count == 1 && idx >= 0)
+            {
+                var o = Data.owned[idx];
+                o.currentHP = t.currentHP;
+                o.lastHPUnix = t.lastHPUnix;
+                Data.owned[idx] = o;
+            }
+        }
+    }
+
+    if (save) Save();
+    if (fireEvents && changed)
+    {
+        GameEvents.OnTeamChanged?.Invoke();
+        GameEvents.OnTeamHealthChanged?.Invoke();
+    }
+
+    return changed;
+}
+
+/// <summary>
+/// Centralized HP write contract for an arbitrary OwnedMonsterData reference.
+/// Prefer SetOwnedMonsterHP / SetTeamSlotHP when you have identity (ownedUID or team index).
+/// This helper exists to eliminate direct .currentHP writes in call sites that only hold a reference.
+/// </summary>
+public static bool SetMonsterHP(
+    OwnedMonsterData m,
+    int newHP,
+    bool stampLastHpUnix = true,
+    long? nowUnix = null,
+    bool save = false,
+    bool fireEvents = false)
+{
+    if (m == null) return false;
+
+    // If this is a canonical owned entry, route through ownedUID contract.
+    if (!string.IsNullOrEmpty(m.ownedUID) && Data != null && Data.owned != null)
+    {
+        // Only route if this UID actually exists in the save.
+        var owned = GetOwnedByUid(m.ownedUID);
+        if (owned != null)
+            return SetOwnedMonsterHP(m.ownedUID, newHP, stampLastHpUnix, nowUnix, save, fireEvents, syncTeamMirrors: true);
+    }
+
+    if (string.IsNullOrEmpty(m.monsterId)) return false;
+
+    var def = MonsterLibraryLocator.GetById(m.monsterId);
+    int maxHP = def ? HealingService.CalcMaxHP(def, Mathf.Max(1, m.level), includeTraining: true, includeTitles: false) : 1;
+    int clamped = Mathf.Clamp(newHP, 0, Mathf.Max(1, maxHP));
+
+    bool changed = m.currentHP != clamped;
+    m.currentHP = clamped;
+
+    if (stampLastHpUnix)
+        m.lastHPUnix = nowUnix ?? NowUnix();
+
+    if (save) Save();
+    if (fireEvents && changed)
+    {
+        GameEvents.OnTeamChanged?.Invoke();
+        GameEvents.OnTeamHealthChanged?.Invoke();
+    }
+
+    return changed;
+}
+
+/// <summary>
+/// Centralized HP write contract for an arbitrary OwnedMonsterData reference, with explicit lastHPUnix.
+/// Used for regen systems that need remainder-accurate timestamps.
+/// </summary>
+public static bool SetMonsterHPExact(
+    OwnedMonsterData m,
+    int newHP,
+    long lastHpUnix,
+    bool save = false,
+    bool fireEvents = false)
+{
+    if (m == null) return false;
+
+    // If this is a canonical owned entry, route through ownedUID exact contract.
+    if (!string.IsNullOrEmpty(m.ownedUID) && Data != null && Data.owned != null)
+    {
+        var owned = GetOwnedByUid(m.ownedUID);
+        if (owned != null)
+            return SetOwnedMonsterHPExact(m.ownedUID, newHP, lastHpUnix, save: save, fireEvents: fireEvents, syncTeamMirrors: true);
+    }
+
+    if (string.IsNullOrEmpty(m.monsterId)) return false;
+
+    var def = MonsterLibraryLocator.GetById(m.monsterId);
+    int maxHP = def ? HealingService.CalcMaxHP(def, Mathf.Max(1, m.level), includeTraining: true, includeTitles: false) : 1;
+    int clamped = Mathf.Clamp(newHP, 0, Mathf.Max(1, maxHP));
+
+    bool changed = m.currentHP != clamped || m.lastHPUnix != lastHpUnix;
+    m.currentHP = clamped;
+    m.lastHPUnix = lastHpUnix;
+
+    if (save) Save();
+    if (fireEvents && changed)
+    {
+        GameEvents.OnTeamChanged?.Invoke();
+        GameEvents.OnTeamHealthChanged?.Invoke();
+    }
+
+    return changed;
+}
 
     private static bool TryLoad(string path, out PlayerManager data)
     {
