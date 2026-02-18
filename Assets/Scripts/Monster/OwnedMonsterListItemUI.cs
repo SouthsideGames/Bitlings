@@ -451,15 +451,14 @@ public class OwnedMonsterListItemUI : MonoBehaviour
 
     private static bool IsUsable(OwnedMonsterData d)
     {
-        // NOTE: currentHP == -1 means "uninitialized" and should be treated as usable.
-        return HasValidMonster(d) && d.currentHP != 0;
+        // HP invariant: 0 = KO, >0 = usable.
+        return HasValidMonster(d) && d.currentHP > 0;
     }
 
     private static bool IsKO(OwnedMonsterData d)
     {
-        // KO is specifically 0 HP.
-        // (We do NOT treat negative/uninitialized HP as KO.)
-        return HasValidMonster(d) && d.currentHP == 0;
+        // KO is 0 HP (defensive: treat <=0 as KO).
+        return HasValidMonster(d) && d.currentHP <= 0;
     }
 
     private static (bool ok, TimeSpan eta) TryGetETAForNextHP(OwnedMonsterData d, MonsterDataSO def)

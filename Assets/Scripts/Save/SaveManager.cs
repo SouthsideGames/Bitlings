@@ -887,9 +887,18 @@ public static class SaveManager
                 om = list[i];
             }
 
-            if (om.level <= 0) om.level = 1;
-            if (om.currentXP < 0) om.currentXP = 0;
-            if (om.currentHP < -1) om.currentHP = -1;
+	            if (om.level <= 0) om.level = 1;
+	            if (om.currentXP < 0) om.currentXP = 0;
+
+	            // HP invariant:
+	            // - currentHP should never be negative in persisted data.
+	            // - legacy saves used -1 to mean "uninitialized" (treat as full HP).
+	            // Normalize any negative HP to a sensible full-health value.
+	            if (om.currentHP < 0)
+	                om.currentHP = ResolveFullHPFor(om);
+
+	            // Absolute floor: never allow negative.
+	            if (om.currentHP < 0) om.currentHP = 0;
 
             if (string.IsNullOrEmpty(om.ownedUID))
                 om.ownedUID = Guid.NewGuid().ToString("N");
@@ -904,6 +913,18 @@ public static class SaveManager
                 Data.ownedIds.Add(om.monsterId);
         }
     }
+
+	    private static int ResolveFullHPFor(OwnedMonsterData om)
+	    {
+	        if (om == null) return 1;
+	        if (string.IsNullOrEmpty(om.monsterId)) return 1;
+
+	        var def = MonsterLibraryLocator.GetById(om.monsterId);
+	        if (def == null) return 1;
+
+	        // Menu-safe HP (includes training, excludes battle-only title conditionals).
+	        return HealingService.CalcMaxHP(def, Mathf.Max(1, om.level), includeTraining: true, includeTitles: false);
+	    }
 
     // ─────────────────────────────────────────────
     // ownedUID collision guards

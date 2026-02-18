@@ -224,7 +224,7 @@ public class TeamMonsterCardUI : MonoBehaviour
         if (!hpText || _def == null || _data == null) { if (hpText) hpText.text = ""; return; }
 
         int maxHP = HealingService.CalcMaxHP(_def, _data.level);
-        int curHP = _data.currentHP >= 0 ? Mathf.Min(_data.currentHP, maxHP) : maxHP;
+        int curHP = _data.currentHP >= 0 ? Mathf.Min(_data.currentHP, maxHP) : 0; // never auto-heal from negative HP
 
         hpText.text = $"HP: {Mathf.Max(0, curHP)}/{maxHP}";
     }
@@ -275,7 +275,7 @@ public class TeamMonsterCardUI : MonoBehaviour
         if (_def != null && _data != null)
         {
             int maxHP = HealingService.CalcMaxHP(_def, _data.level);
-            int curHP = _data.currentHP >= 0 ? Mathf.Min(_data.currentHP, maxHP) : maxHP;
+            int curHP = _data.currentHP >= 0 ? Mathf.Min(_data.currentHP, maxHP) : 0; // never auto-heal from negative HP
 
             bool needsHeal = curHP < maxHP;
 
@@ -297,7 +297,7 @@ public class TeamMonsterCardUI : MonoBehaviour
         if (_def == null || _data == null) return;
 
         int maxHP = HealingService.CalcMaxHP(_def, _data.level);
-        int curHP = _data.currentHP >= 0 ? Mathf.Min(_data.currentHP, maxHP) : maxHP;
+        int curHP = _data.currentHP >= 0 ? Mathf.Min(_data.currentHP, maxHP) : 0; // never auto-heal from negative HP
 
         if (curHP >= maxHP)
         {

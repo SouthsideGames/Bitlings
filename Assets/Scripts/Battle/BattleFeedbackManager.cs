@@ -349,7 +349,9 @@ CacheBaseScales();
 
             case BattleEvent.Kind.ActionQueued:
                 // Optional: micro pulse on queue for instant-feel (manual turns)
-                PulseQueuedAction(e.source, e.statusId);
+                // IMPORTANT: only pulse player-facing buttons when the PLAYER queues an action.
+                if (e.source == BattleSide.Player)
+                    PulseQueuedAction(e.statusId);
                 break;
 
            case BattleEvent.Kind.UIRefreshHP:
@@ -375,43 +377,15 @@ CacheBaseScales();
         ShowWildIntent(a, durationSeconds: 0.6f, showText: false, textOverride: null);
     }
 
-    private static BattleFeedbackAction ParseActionId(string actionId)
-    {
-        // Defensive: BattleManager emits string tokens ("Attack", "Defend", "Focus", "Run", "Swap").
-        if (string.IsNullOrEmpty(actionId)) return BattleFeedbackAction.Attack;
-
-        if (actionId == "Defend") return BattleFeedbackAction.Defend;
-        if (actionId == "Focus")  return BattleFeedbackAction.Focus;
-        if (actionId == "Run")    return BattleFeedbackAction.Run;
-        if (actionId == "Swap")   return BattleFeedbackAction.Swap;
-
-        // Default/fallback (covers "Attack" and any unknown tokens).
-        return BattleFeedbackAction.Attack;
-    }
-
-    private void PulseQueuedAction(BattleSide source, string actionId)
+    private void PulseQueuedAction(string actionId)
     {
         // If you already bind button presses, this is optional. Keep it tiny + safe.
-        // IMPORTANT: Never pulse the player's input buttons for WILD queued actions.
-        // Wild intent/queue feedback should animate the WILD portrait/icon instead.
         if (string.IsNullOrEmpty(actionId)) return;
 
-        var a = ParseActionId(actionId);
-
-        if (source == BattleSide.Player)
-        {
-            // Player: keep the existing tactile cue on the action bar.
-            // (This is small and only fires when a player queue event is emitted.)
-            if (a == BattleFeedbackAction.Attack) PlayButtonPress(BattleFeedbackAction.Attack);
-            else if (a == BattleFeedbackAction.Defend) PlayButtonPress(BattleFeedbackAction.Defend);
-            else if (a == BattleFeedbackAction.Focus) PlayButtonPress(BattleFeedbackAction.Focus);
-            else if (a == BattleFeedbackAction.Run) PlayButtonPress(BattleFeedbackAction.Run);
-            else if (a == BattleFeedbackAction.Swap) PlayButtonPress(BattleFeedbackAction.Swap);
-            return;
-        }
-
-        // Wild: animate the wild portrait/icon (NOT the player's buttons).
-        PlayActionQueued(BattleFeedbackSide.Wild, a);
+        if (actionId == "Attack") PlayButtonPress(BattleFeedbackAction.Attack);
+        else if (actionId == "Defend") PlayButtonPress(BattleFeedbackAction.Defend);
+        else if (actionId == "Focus") PlayButtonPress(BattleFeedbackAction.Focus);
+        else if (actionId == "Run") PlayButtonPress(BattleFeedbackAction.Run);
     }
 
 // ─────────────────────────────────────────────────────────────

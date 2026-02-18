@@ -234,6 +234,11 @@ public static class XPManager
         to.currentXP = from.currentXP;
         to.currentHP = from.currentHP;
 
+        // HP regen / KO cooldown tracking
+        // CRITICAL: must mirror so KO timers don't "tie together" across UI rows,
+        // and so assigning to team preserves cooldown state correctly.
+        to.lastHPUnix = from.lastHPUnix;
+
         // Stat/training progression
         to.unspentStatPoints    = from.unspentStatPoints;
         to.trainingBonus        = from.trainingBonus;
@@ -245,14 +250,15 @@ public static class XPManager
         to.pendingLevels        = from.pendingLevels;
         to.isTraining           = from.isTraining;
 
+        // Misc combat/training modifiers
+        to.flatAtkBonus = from.flatAtkBonus;
+
         // ✅ Shiny identity (MUST persist + mirror)
         to.isShiny   = from.isShiny || from.shinyTier > 0 || to.isShiny;
         to.shinyTier = Mathf.Max(to.shinyTier, from.shinyTier);
         NormalizeShinyFields(to);
 
-        // If your OwnedMonsterData has more fields (KO timers, job state, etc.),
+        // If OwnedMonsterData gains more fields in the future,
         // add them here rather than letting them silently desync.
-        // Example (only if these fields exist in your class):
-        // to.lastHPUnix = from.lastHPUnix;
     }
 }

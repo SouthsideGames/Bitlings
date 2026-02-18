@@ -817,12 +817,15 @@ public class IdleBattleManager : MonoBehaviour
 
         if (existing == null)
         {
+            int startHP = 1;
+            if (def != null)
+                startHP = HealingService.CalcMaxHP(def, Mathf.Clamp(level <= 0 ? 1 : level, 1, maxLv), includeTraining: true, includeTitles: false);
             var om = new OwnedMonsterData
             {
                 monsterId = def.id,
                 level = Mathf.Clamp(level <= 0 ? 1 : level, 1, maxLv),
                 currentXP = 0,
-                currentHP = -1,
+                currentHP = Mathf.Max(0, startHP),
                 lastHPUnix = 0,
                 ownedUID = System.Guid.NewGuid().ToString("N"),
                 isShiny = isShiny,

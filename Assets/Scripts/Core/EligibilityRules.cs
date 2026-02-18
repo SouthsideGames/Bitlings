@@ -1,4 +1,5 @@
 using UnityEngine;
+using System.Collections.Generic;
 
 
 public static class EligibilityRules
@@ -62,6 +63,90 @@ public static class EligibilityRules
 
         return true;
     }
+
+/// <summary>
+/// Build an ordered roster of battle-ready team members (HP > 0), compacted so dead/empty
+/// slots are ignored. This implements the "slide down" behavior for previews and battle start.
+/// </summary>
+public static void BuildBattleReadyRoster(List<OwnedMonsterData> outRoster, int maxSlots = 3)
+{
+    if (outRoster == null) return;
+    outRoster.Clear();
+
+    var data = SaveManager.Data;
+    if (data == null || data.team == null) return;
+
+    for (int i = 0; i < data.team.Count && outRoster.Count < Mathf.Max(1, maxSlots); i++)
+    {
+        var entry = data.team[i];
+        if (entry == null) continue;
+        if (string.IsNullOrEmpty(entry.monsterId)) continue;
+
+        // Treat <= 0 as not battle-ready (KO / downed).
+        if (entry.currentHP <= 0) continue;
+
+        outRoster.Add(entry);
+    }
+}
+
+/// <summary>
+/// Returns the first battle-ready team entry (HP > 0). If none exist, returns null.
+/// originalIndex returns the index in SaveManager.Data.team that the entry came from.
+/// </summary>
+public static OwnedMonsterData GetFirstBattleReady(out int originalIndex, int maxSlotsScan = 3)
+{
+    originalIndex = -1;
+
+    var data = SaveManager.Data;
+    if (data == null || data.team == null) return null;
+
+    int scan = Mathf.Min(data.team.Count, Mathf.Max(1, maxSlotsScan));
+    for (int i = 0; i < scan; i++)
+    {
+        var entry = data.team[i];
+        if (entry == null) continue;
+        if (string.IsNullOrEmpty(entry.monsterId)) continue;
+        if (entry.currentHP <= 0) continue;
+
+        originalIndex = i;
+        return entry;
+    }
+
+    // If the first N slots are all invalid, continue scanning the rest (still respecting slide-down intent).
+    for (int i = scan; i < data.team.Count; i++)
+    {
+        var entry = data.team[i];
+        if (entry == null) continue;
+        if (string.IsNullOrEmpty(entry.monsterId)) continue;
+        if (entry.currentHP <= 0) continue;
+
+        originalIndex = i;
+        return entry;
+    }
+
+    return null;
+}
+
+public static int CountBattleReady(int maxSlots = 3)
+{
+    int count = 0;
+
+    var data = SaveManager.Data;
+    if (data == null || data.team == null) return 0;
+
+    for (int i = 0; i < data.team.Count && count < Mathf.Max(1, maxSlots); i++)
+    {
+        var entry = data.team[i];
+        if (entry == null) continue;
+        if (string.IsNullOrEmpty(entry.monsterId)) continue;
+        if (entry.currentHP <= 0) continue;
+
+        count++;
+    }
+
+    return count;
+}
+
 
     public static bool HasMinimumAliveTeam(int minMembers)
     {

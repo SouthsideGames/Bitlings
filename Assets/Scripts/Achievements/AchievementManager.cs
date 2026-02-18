@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 public sealed class AchievementManager : MonoBehaviour
 {
@@ -23,21 +24,34 @@ public sealed class AchievementManager : MonoBehaviour
     private bool _initialized;
     private int _maxWinStreakSeen;
 
+
+    // ─────────────────────────────────────────────
+    // Toast delivery reliability
+    // ─────────────────────────────────────────────
+    private readonly Queue<AchievementEntrySO> _pendingToasts = new Queue<AchievementEntrySO>();
+    private readonly HashSet<string> _pendingToastIds = new HashSet<string>(StringComparer.Ordinal);
+
     private void Awake()
     {
         if (I != null && I != this) { Destroy(gameObject); return; }
         I = this;
+
+        DontDestroyOnLoad(gameObject);
     }
 
     private void OnEnable()
     {
         TryInitialize();
         HookEvents();
+
+        SceneManager.sceneLoaded += OnSceneLoaded;
+        FlushPendingToasts();
     }
 
     private void OnDisable()
     {
         UnhookEvents();
+        SceneManager.sceneLoaded -= OnSceneLoaded;
     }
 
     private void TryInitialize()
@@ -364,12 +378,61 @@ public sealed class AchievementManager : MonoBehaviour
 
         OnUnlocked?.Invoke(e);
 
-        // Robust toast call: works even if toast object started disabled
-        if (AchievementToastUI.I != null)
-            AchievementToastUI.I?.QueueUnlocked(e);
+        // Robust toast delivery: queue if toast UI is not present yet (battle/scene transitions).
+        EnqueueToast(e);
 
         SaveManager.Save();
     }
 
     private void FireProgress(AchievementEntrySO e, AchievementProgressData p) => OnProgressed?.Invoke(e, p.value, e.goal);
+
+    // ─────────────────────────────────────────────
+    // Toast Reliability
+    // ─────────────────────────────────────────────
+
+    private void EnqueueToast(AchievementEntrySO entry)
+    {
+        if (entry == null) return;
+
+        // If toast exists now, deliver immediately.
+        if (AchievementToastUI.I != null)
+        {
+            AchievementToastUI.I.QueueUnlocked(entry);
+            return;
+        }
+
+        // Otherwise queue and dedupe by id.
+        if (string.IsNullOrEmpty(entry.id)) return;
+        if (_pendingToastIds.Contains(entry.id)) return;
+
+        _pendingToastIds.Add(entry.id);
+        _pendingToasts.Enqueue(entry);
+    }
+
+    private void FlushPendingToasts()
+    {
+        var toast = AchievementToastUI.I;
+        if (toast == null) return;
+        if (_pendingToasts.Count == 0) return;
+
+        while (_pendingToasts.Count > 0)
+        {
+            var e = _pendingToasts.Dequeue();
+            if (e == null) continue;
+            if (!string.IsNullOrEmpty(e.id)) _pendingToastIds.Remove(e.id);
+            toast.QueueUnlocked(e);
+        }
+    }
+
+    private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
+    {
+        FlushPendingToasts();
+    }
+
+    private void Update()
+    {
+        if (_pendingToasts.Count > 0 && AchievementToastUI.I != null)
+            FlushPendingToasts();
+    }
 }
+

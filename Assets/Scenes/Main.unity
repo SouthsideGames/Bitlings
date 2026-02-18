@@ -27541,6 +27541,7 @@ GameObject:
   - component: {fileID: 350265114}
   - component: {fileID: 350265109}
   - component: {fileID: 350265110}
+  - component: {fileID: 350265116}
   m_Layer: 0
   m_Name: BattleSystem
   m_TagString: Untagged
@@ -28040,6 +28041,19 @@ MonoBehaviour:
   impactSquashX: 1.1
   impactSquashY: 0.9
   impactRecoilPixels: 10
+--- !u!114 &350265116
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 350265103}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ae976d05e8bc8f04c8110723930d0d80, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  postBattleSummaryPanelUI: {fileID: 1847555329}
 --- !u!1 &350598962
 GameObject:
   m_ObjectHideFlags: 0
@@ -82553,7 +82567,6 @@ Transform:
   - {fileID: 1809641530}
   - {fileID: 435257244}
   - {fileID: 2007558237}
-  - {fileID: 1694493679}
   - {fileID: 123297058}
   - {fileID: 937411615}
   - {fileID: 418898347}
@@ -134613,51 +134626,6 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1690846469}
   m_CullTransparentMesh: 1
---- !u!1 &1694493678
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 1694493679}
-  - component: {fileID: 1694493681}
-  m_Layer: 0
-  m_Name: RewardSystem
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!4 &1694493679
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1694493678}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 1034244172}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &1694493681
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1694493678}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: ae976d05e8bc8f04c8110723930d0d80, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  postBattleSummaryPanelUI: {fileID: 1847555329}
 --- !u!1 &1697083000
 GameObject:
   m_ObjectHideFlags: 0

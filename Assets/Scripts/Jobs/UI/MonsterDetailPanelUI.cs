@@ -378,7 +378,7 @@ public class MonsterDetailPanelUI : MonoBehaviour
 
         int curHP = hpAdj;
         if (hasOwnedInstance)
-            curHP = Mathf.Clamp(srcOwned.currentHP < 0 ? hpAdj : srcOwned.currentHP, 0, hpAdj);
+            curHP = Mathf.Clamp(srcOwned.currentHP, 0, hpAdj);
 
         if (hpText)
         {

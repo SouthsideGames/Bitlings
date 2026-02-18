@@ -795,8 +795,9 @@ private IEnumerator MaybeSayKO_Wild(string victimName, float preHP, float postHP
 
             _uiBaseWildMaxHp = Mathf.RoundToInt(Mathf.Max(1f, wildBaseMaxHP));
             _uiBaseWildAtk   = Mathf.RoundToInt(Mathf.Max(1f, wildBaseAttackPerTurn));
-            _uiBaseWildDef   = wildDef ? BattleCalc.CalcDefense(wildDef, wildLevel) : 0;
-            _uiBaseWildSpd   = wildDef ? BattleCalc.CalcSpeed(wildDef, wildLevel) : 1;
+	        	// Use explicit null checks (avoids CS0126 if MonsterDataSO is not a UnityEngine.Object).
+	        	_uiBaseWildDef   = (wildDef != null) ? BattleCalc.CalcDefense(wildDef, wildLevel) : 0;
+	        	_uiBaseWildSpd   = (wildDef != null) ? BattleCalc.CalcSpeed(wildDef, wildLevel) : 1;
         }
     }
 
@@ -938,8 +939,8 @@ public void BeginBattle(MonsterDataSO wild, int level, Action<BattleResult> onEn
         // Wild icon: use shiny icon if shiny encounter and one exists.
         if (wildIcon)
         {
-            if (shinyWild && wildDef && wildDef.shinyIcon) wildIcon.sprite = wildDef.shinyIcon;
-            else wildIcon.sprite = wildDef ? wildDef.icon : null;
+	        	if (shinyWild && wildDef != null && wildDef.shinyIcon != null) wildIcon.sprite = wildDef.shinyIcon;
+	        	else wildIcon.sprite = (wildDef != null) ? wildDef.icon : null;
             HardResetIconVisual(wildIcon);
         }
 
@@ -948,7 +949,7 @@ public void BeginBattle(MonsterDataSO wild, int level, Action<BattleResult> onEn
         // Ensure MonsterNameFormatter.Format returns "*<i>Name</i>*" when isShiny=true.
         if (wildNameText)
         {
-            if (wildDef)
+	        	if (wildDef != null)
                 wildNameText.text = MonsterNameFormatter.Format(wildDef, shinyWild);
             else
                 wildNameText.text = "Wild";

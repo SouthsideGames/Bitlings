@@ -1563,6 +1563,9 @@ if (target > 0.01f)
             var om = team[i];
             if (om == null || string.IsNullOrEmpty(om.monsterId)) continue;
 
+            // Monsters at 0 HP are not battle-eligible and should not appear in the preview.
+            if (om.currentHP <= 0) continue;
+
             var item = Instantiate(teamItemPrefab, teamPreviewRoot);
             item.Bind(om);
             _previewItems.Add(item);

@@ -18,7 +18,9 @@ public class OwnedMonsterData
     public string monsterId;
     public int level = 1;
     public int currentXP = 0;
-    public int currentHP = -1;
+    // HP invariant (authoritative): 0..MaxHP. 0 = KO.
+    // Legacy saves may contain negative values (treated as "uninitialized"); SaveManager normalizes those on load.
+    public int currentHP = 0;
     public long lastHPUnix = 0;
     public int flatAtkBonus = 0;
     public bool isTraining = false;

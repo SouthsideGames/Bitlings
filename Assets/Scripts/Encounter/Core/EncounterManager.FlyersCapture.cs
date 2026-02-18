@@ -436,11 +436,14 @@ public partial class EncounterManager
             }
 
             // First time for this variant → add a new owned instance.
+            int startHP = 1;
+            if (def != null)
+                startHP = HealingService.CalcMaxHP(def, Mathf.Max(1, level), includeTraining: true, includeTitles: false);
             var om = new OwnedMonsterData
             {
                 monsterId = def.id,
                 level = Mathf.Max(1, level),
-                currentHP = -1,
+                currentHP = Mathf.Max(0, startHP),
                 currentXP = 0,
                 ownedUID = Guid.NewGuid().ToString("N"),
 

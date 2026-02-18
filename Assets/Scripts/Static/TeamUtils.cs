@@ -12,7 +12,7 @@ public static class TeamUtils
         {
             var e = data.team[i];
 
-            if (e != null && !string.IsNullOrEmpty(e.monsterId) && (e.currentHP > 0 || e.currentHP < 0))
+            if (e != null && !string.IsNullOrEmpty(e.monsterId) && e.currentHP > 0)
             {
                 filled++;
                 if (filled >= minRequired) return true;

@@ -86,6 +86,7 @@ public partial class EncounterManager : MonoBehaviour
     private bool autoRunPaidEnergy;
 
     private Coroutine postResultCo;
+    private Coroutine _coBeginBattle;
     private Coroutine autoLoopCo;
 
     private int _currentWinStreak = 0;
@@ -504,13 +505,13 @@ private int GetRarityWeight(TitleSO t)
 
         PlayEncounterSfx(wild);
 
-        var p = data.team[0];
+        var p = GetFirstAliveTeamMember(data != null ? data.team : null);
         string titleSuffix = string.IsNullOrEmpty(WildTitleLabel) ? "" : $" — {WildTitleLabel}";
 
         if (_currentEncounterIsBoss)
-            EmitStatus($"⚠️ BOSS ENCOUNTER! {wild.displayName} (Lv {wildLevel}){titleSuffix} appears.{(p.flatAtkBonus > 0 ? $" (+ATK {p.flatAtkBonus})" : "")}");
+            EmitStatus($"⚠️ BOSS ENCOUNTER! {wild.displayName} (Lv {wildLevel}){titleSuffix} appears.{((p != null && p.flatAtkBonus > 0) ? $" (+ATK {p.flatAtkBonus})" : "")}");
         else
-            EmitStatus($"Encounter! A wild {wild.displayName} (Lv {wildLevel}){titleSuffix} appears.{(p.flatAtkBonus > 0 ? $" (+ATK {p.flatAtkBonus})" : "")}");
+            EmitStatus($"Encounter! A wild {wild.displayName} (Lv {wildLevel}){titleSuffix} appears.{((p != null && p.flatAtkBonus > 0) ? $" (+ATK {p.flatAtkBonus})" : "")}");
 
         BattleLogger.BeginEncounter(_currentEncounterIsBoss
             ? $"BOSS: {wild.displayName} Lv{wildLevel}{titleSuffix}"
@@ -537,14 +538,15 @@ private int GetRarityWeight(TitleSO t)
 
         _manualHirePending = false;
 
-        battleManager.ConfigureForAuto(_autoResolveSnapshot);
+        // Gate Begin() so UI is settled before battle logic starts.
+        if (_coBeginBattle != null) StopCoroutine(_coBeginBattle);
+
         // Deterministic battle RNG: derive a per-battle seed from the active global seed
         // (daily/custom/session) + encounter serial + wild identifiers.
-        // This makes battles reproducible for debugging and daily runs.
         int battleSeed = BuildBattleSeed(wild, wildLevel, _currentEncounterIsBoss);
         string seedLabel = $"{SeedService.GetDisplaySeedPrefix()}{SeedService.GetDisplaySeedToken()}";
-        battleManager.SetBattleSeed(battleSeed, seedLabel);
-        battleManager.Begin(wild, wildLevel, OnBattleEnded);
+
+        _coBeginBattle = StartCoroutine(Co_BeginBattleAfterUI(wild, wildLevel, _autoResolveSnapshot, battleSeed, seedLabel));
     }
 
     private int BuildBattleSeed(MonsterDataSO wild, int level, bool isBoss)
@@ -1130,9 +1132,9 @@ private int GetRarityWeight(TitleSO t)
 
         PlayEncounterSfx(wild);
 
-        var p = data.team[0];
+        var p = GetFirstAliveTeamMember(data != null ? data.team : null);
         string titleSuffix = string.IsNullOrEmpty(WildTitleLabel) ? "" : $" — {WildTitleLabel}";
-        EmitStatus($"Encounter! A wild {wild.displayName} (Lv {wildLevel}){titleSuffix} appears.{(p.flatAtkBonus > 0 ? $" (+ATK {p.flatAtkBonus})" : "")}");
+        EmitStatus($"Encounter! A wild {wild.displayName} (Lv {wildLevel}){titleSuffix} appears.{((p != null && p.flatAtkBonus > 0) ? $" (+ATK {p.flatAtkBonus})" : "")}");
 
         BattleLogger.BeginEncounter($"{wild.displayName} Lv{wildLevel}{titleSuffix}");
 
@@ -1151,7 +1153,13 @@ private int GetRarityWeight(TitleSO t)
         PostBattleSummaryManager.I?.NotifyBattleStart();
 
         _manualHirePending = false;
-        battleManager.Begin(wild, wildLevel, OnBattleEnded);
+        // Gate Begin() so UI is settled before battle logic starts.
+        if (_coBeginBattle != null) StopCoroutine(_coBeginBattle);
+
+        int battleSeed = BuildBattleSeed(wild, wildLevel, false);
+        string seedLabel = $"{SeedService.GetDisplaySeedPrefix()}{SeedService.GetDisplaySeedToken()}";
+
+        _coBeginBattle = StartCoroutine(Co_BeginBattleAfterUI(wild, wildLevel, false, battleSeed, seedLabel));
         return true;
     }
 
@@ -1176,4 +1184,80 @@ private int GetRarityWeight(TitleSO t)
         set { PlayerPrefs.SetString(PP_ForceWildTitleId, value ?? ""); PlayerPrefs.Save(); }
     }
 #endif
+    // ─────────────────────────────────────────────────────────
+    // Battle gating helpers (UI must refresh before Begin)
+    // ─────────────────────────────────────────────────────────
+
+    private OwnedMonsterData GetFirstAliveTeamMember(List<OwnedMonsterData> team)
+    {
+        if (team == null) return null;
+
+        for (int i = 0; i < team.Count; i++)
+        {
+            var m = team[i];
+            if (m == null) continue;
+            if (string.IsNullOrEmpty(m.monsterId)) continue;
+
+            // Alive only. KO monsters are ignored for encounter messaging and battle eligibility.
+            if (m.currentHP > 0)
+                return m;
+        }
+
+        return null;
+    }
+
+    private IEnumerator Co_BeginBattleAfterUI(MonsterDataSO wild, int wildLevel, bool autoResolveSnapshot, int battleSeed, string seedLabel)
+    {
+        // Ensure the encounter UI reflects the latest team state (KO filtering / slide-down preview).
+        EncounterPanelUI.I?.RefreshAll();
+
+        // Give Unity one frame so layout rebuilds, TMP updates, and any previous UI transitions finish.
+        yield return null;
+
+        // If the player has no battle-ready monsters, do not start a battle.
+        var data = SaveManager.Data;
+        if (data == null || data.team == null)
+        {
+            EmitStatus("No team assigned.", LogScope.System);
+            inBattle = false;
+            OnStateChanged?.Invoke();
+            ClearWildTitleInjection();
+            yield break;
+        }
+
+        int readyCount = 0;
+        for (int i = 0; i < data.team.Count; i++)
+        {
+            var m = data.team[i];
+            if (m == null) continue;
+            if (string.IsNullOrEmpty(m.monsterId)) continue;
+            if (m.currentHP > 0) readyCount++;
+        }
+
+        if (readyCount <= 0)
+        {
+            EmitStatus("No battle-ready monsters (all are KO).", LogScope.System);
+            inBattle = false;
+            OnStateChanged?.Invoke();
+            ClearWildTitleInjection();
+            yield break;
+        }
+
+        if (!battleManager)
+        {
+            EmitStatus("No BattleManager assigned.", LogScope.System);
+            inBattle = false;
+            OnStateChanged?.Invoke();
+            ClearWildTitleInjection();
+            yield break;
+        }
+
+        // Deterministic battle RNG (BattleManager owns the battle RNG).
+        battleManager.SetBattleSeed(battleSeed, seedLabel);
+
+        // Begin the battle after UI is settled.
+        battleManager.Begin(wild, wildLevel, OnBattleEnded);
+
+        // Auto-mode is handled by the battle loop; we just snapshot the intent here.
+    }
 }
