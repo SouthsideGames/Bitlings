@@ -210,6 +210,7 @@ public class IdleBattleManager : MonoBehaviour
             s.hasPendingRecovery = false;
             s.sessionStartUnix = NowUnix();
             s.lastTickUnix = s.sessionStartUnix;
+            s.offlineLastResolvedUnix = s.lastTickUnix;
 
             s.energyAtStart = ResourceBank.Get(ResourceType.Energy);
 
@@ -257,6 +258,7 @@ public class IdleBattleManager : MonoBehaviour
             s.autoBattling = true;
             if (!string.IsNullOrEmpty(biomeId)) s.biomeId = biomeId;
             s.lastTickUnix = NowUnix();
+            s.offlineLastResolvedUnix = s.lastTickUnix;
             IdleBattleStore.Save(s);
         }
 
@@ -276,6 +278,7 @@ public class IdleBattleManager : MonoBehaviour
             s.hasPendingRecovery = false;
             s.autoBattling = false;
             s.lastTickUnix = NowUnix();
+            s.offlineLastResolvedUnix = s.lastTickUnix;
             if (clearLogs)
             {
                 s.log?.Clear();
@@ -293,10 +296,23 @@ public class IdleBattleManager : MonoBehaviour
         if (SaveManager.Data == null) return;
         if (config == null) return;
 
-        long lastSaved = SaveManager.Data.lastSavedUnix;
+                // Apply-once ledger: offline simulation is allowed only once per offline window.
+        // Prefer IdleBattleSession timestamps over SaveManager.lastSavedUnix.
+        var store = IdleBattleStore.Load();
         long now = NowUnix();
-        float elapsed = Mathf.Max(0, now - lastSaved);
-        if (elapsed <= 0.1f) return;
+        long last = 0;
+        if (store != null)
+        {
+            last = (long)Mathf.Max(last, store.offlineLastResolvedUnix);
+            last = (long)Mathf.Max(last, store.lastTickUnix);
+        }
+        // lastClosedUnix is authoritative boundary for time spent away from the app.
+        if (SaveManager.Data.lastClosedUnix > 0)
+            last = (long)Mathf.Max(last, SaveManager.Data.lastClosedUnix);
+        // Fallback for legacy sessions.
+        if (last <= 0) last = SaveManager.Data.lastSavedUnix;
+        float elapsed = Mathf.Max(0, now - last);
+if (elapsed <= 0.1f) return;
 
         float clamped = Mathf.Min(elapsed, config.maxOfflineHours * 3600f);
         int timeEnc = Mathf.FloorToInt(clamped / config.secondsPerEncounter);
@@ -310,6 +326,15 @@ public class IdleBattleManager : MonoBehaviour
         if (toRun <= 0) return;
 
         RunBatchEncounters(toRun);
+
+        // Stamp ledger after work completes so we can safely resume if a crash occurred mid-batch.
+        var s2 = IdleBattleStore.Load();
+        if (s2 != null)
+        {
+            s2.offlineLastResolvedUnix = now;
+            s2.lastTickUnix = now;
+            IdleBattleStore.Save(s2);
+        }
 
         MarkSummaryPendingIfLogExists();
     }
@@ -333,8 +358,10 @@ public class IdleBattleManager : MonoBehaviour
         }
 
         long now = NowUnix();
-        float dt = Mathf.Max(0, now - s.lastTickUnix);
-        int canRun = Mathf.FloorToInt(dt / config.secondsPerEncounter);
+                float dtRaw = Mathf.Max(0, now - s.lastTickUnix);
+        // Clamp foreground backlog too (OnApplicationPause/Focus can create large dt when returning).
+        float dt = Mathf.Min(dtRaw, config.maxOfflineHours * 3600f);
+int canRun = Mathf.FloorToInt(dt / config.secondsPerEncounter);
         if (canRun <= 0) return;
 
         int baseCost = GetEncounterCostSafe();
@@ -347,6 +374,7 @@ public class IdleBattleManager : MonoBehaviour
         RunBatchEncounters(toRun);
 
         s.lastTickUnix = now;
+        s.offlineLastResolvedUnix = now;
         IdleBattleStore.Save(s);
 
         if (GetEnergySafe() < baseCost)

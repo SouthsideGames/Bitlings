@@ -1171,7 +1171,19 @@ private static float AverageWorkingSlotFatigue(JobSiteState s)
     {
         if (SaveManager.Data == null) return;
 
-        long last = SaveManager.Data.lastSavedUnix;
+        // Apply-once ledger:
+        // Jobs offline sim used to key off lastSavedUnix, which can cause double-apply
+        // if multiple systems call ProcessOfflineAllSites() before a Save() updates lastSavedUnix.
+        // We instead track a dedicated jobsOfflineLastUnix.
+        long last = SaveManager.Data.jobsOfflineLastUnix;
+        // Never simulate "offline" time that occurred while the app was running.
+        // lastClosedUnix is stamped by AppLifecycle on pause/quit.
+        if (SaveManager.Data.lastClosedUnix > last)
+            last = SaveManager.Data.lastClosedUnix;
+
+        if (last <= 0)
+            last = Math.Max(SaveManager.Data.lastClosedUnix, SaveManager.Data.lastSavedUnix);
+
         long now = SaveManager.NowUnix();
         float elapsed = Mathf.Max(0f, now - last);
         if (elapsed < 1f) return;
@@ -1186,6 +1198,9 @@ private static float AverageWorkingSlotFatigue(JobSiteState s)
             Produce(dt);
             remaining -= dt;
         }
+
+        // Stamp ledger immediately so subsequent calls in the same session cannot re-apply.
+        SaveManager.Data.jobsOfflineLastUnix = now;
     }
 
     private void ApplyClinicRelief(float dtHours)

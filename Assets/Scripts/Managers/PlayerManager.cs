@@ -167,6 +167,15 @@ public class PlayerManager
     public bool hasSeenStory = false;
     public long lastClosedUnix = 0;
     public long lastSavedUnix = 0;
+
+    // Offline reconciliation (apply-once ledgers)
+    // These timestamps prevent double-applying offline simulation when multiple
+    // systems call their offline processors during the same boot/resume flow.
+    //
+    // jobsOfflineLastUnix: last unix time that JobManager offline production was applied.
+    // (Jobs previously used lastSavedUnix which can cause double-apply if offline is processed
+    // multiple times before a save updates lastSavedUnix.)
+    public long jobsOfflineLastUnix = 0;
     public long energyLastUnix;
     public float energyRemainderSecs;
 

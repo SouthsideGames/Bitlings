@@ -27,6 +27,9 @@ public class IdleBattleSession
     public long sessionStartUnix;
     public long lastTickUnix;
 
+
+    // Apply-once ledger for offline simulation (prevents double-run if ResolveOfflineIfAny is invoked multiple times before store is saved).
+    public long offlineLastResolvedUnix;
     // Encountered (fought)
     public List<IdleEncounterLogEntry> log = new();
 

@@ -285,9 +285,17 @@ private static PlayerSaveRoot MigrateRootIfNeeded(PlayerSaveRoot root)
         PruneExpiredLures(saveIfChanged: true);
         PruneExpiredLuckBoosts(saveIfChanged: true);
 
+        // Offline reconciliation ordering (single pass):
+        // 1) Jobs (production)
+        // 2) Health regen (KO cooldown / clinic recovery)
+        // 3) Energy regen
+        // 4) Save once at the end to persist ledgers + timestamps
         JobManager.I?.ProcessOfflineAllSites();
         HealthRegenSystem.I?.TryApplyOfflineRegen();
         EnergyRegenSystem.TryApplyOfflineRegen();
+
+        // Persist any ledger/timestamp updates so they cannot be double-applied on the next scene/UI refresh.
+        Save();
     }
 
     // ─────────────────────────────────────────────
@@ -681,6 +689,18 @@ private static PlayerSaveRoot MigrateRootIfNeeded(PlayerSaveRoot root)
         // Energy timing
         if (Data.energyLastUnix <= 0) Data.energyLastUnix = NowUnix();
         if (Data.energyRemainderSecs < 0f) Data.energyRemainderSecs = 0f;
+
+        // Offline reconciliation ledgers
+        // Jobs offline sim should not be keyed off lastSavedUnix (can double-apply during boot/resume).
+        // Default to lastClosedUnix if present, else lastSavedUnix, else now.
+        if (Data.jobsOfflineLastUnix <= 0)
+        {
+            long seed = 0;
+            if (Data.lastClosedUnix > 0) seed = Data.lastClosedUnix;
+            if (Data.lastSavedUnix > seed) seed = Data.lastSavedUnix;
+            if (seed <= 0) seed = NowUnix();
+            Data.jobsOfflineLastUnix = seed;
+        }
 
         if (Data.winStreak < 0) Data.winStreak = 0;
 
