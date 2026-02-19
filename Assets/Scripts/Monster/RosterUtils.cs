@@ -12,7 +12,9 @@ public static class RosterUtils
         var data = SaveManager.Data;
         if (data == null)
         {
+            #if UNITY_EDITOR || DEVELOPMENT_BUILD
             Debug.LogWarning("[RosterUtils] SaveManager.Data is null.");
+            #endif
             return new List<OwnedMonsterData>();
         }
 

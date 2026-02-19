@@ -125,7 +125,9 @@ public class SeedLabel : MonoBehaviour, IPointerClickHandler
         GUIUtility.systemCopyBuffer = toCopy;
 
         if (logOnCopy)
+            #if UNITY_EDITOR || DEVELOPMENT_BUILD
             Debug.Log($"[SeedLabel] {copiedMessage} ({toCopy})");
+            #endif
 
         GameEvents.RaiseToast("Copied seed!");
     }

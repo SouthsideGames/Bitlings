@@ -30,7 +30,6 @@ public sealed class AchievementToastUI : MonoBehaviour
         if (I != null && I != this) { Destroy(gameObject); return; }
         I = this;
 
-
         DontDestroyOnLoad(gameObject);
 
         if (!canvasGroup) canvasGroup = GetComponent<CanvasGroup>();
@@ -53,20 +52,17 @@ public sealed class AchievementToastUI : MonoBehaviour
         }
 
         // Try to find an inactive instance first.
-        var found = Object.FindObjectOfType<AchievementToastUI>(includeInactive: true);
+        var found = Object.FindFirstObjectByType<AchievementToastUI>(FindObjectsInactive.Include);
         if (found != null)
         {
-            // Awake may not have run if the object is inactive. Ensure it's active.
             if (!found.gameObject.activeInHierarchy)
                 found.gameObject.SetActive(true);
 
-            // Awake will set I, but be defensive.
             I = found;
             I.QueueUnlocked(entry);
             return;
         }
 
-        // No prefab instance exists in this scene stack -> build a small runtime UI.
         CreateRuntimeToast();
         if (I != null)
             I.QueueUnlocked(entry);
@@ -135,12 +131,14 @@ public sealed class AchievementToastUI : MonoBehaviour
 
         var tmp = labelGO.AddComponent<TextMeshProUGUI>();
         tmp.raycastTarget = false;
-        tmp.enableWordWrapping = true;
+
+        // FIX: TMP_Text.enableWordWrapping is obsolete -> use textWrappingMode
+        tmp.textWrappingMode = TextWrappingModes.Normal;
+
         tmp.fontSize = 42f;
         tmp.alignment = TextAlignmentOptions.Left | TextAlignmentOptions.Midline;
         tmp.color = Color.white;
 
-        // Add the toast behaviour on the panel (so CanvasGroup/LeanTween targets are localized)
         var toast = panelGO.AddComponent<AchievementToastUI>();
         toast.canvasGroup = cg;
         toast.iconImage = iconImg;

@@ -232,7 +232,9 @@ public class ResourceManager : MonoBehaviour
         }
         catch (Exception e)
         {
+            #if UNITY_EDITOR || DEVELOPMENT_BUILD
             Debug.LogWarning($"SaveMigrationFlags failed: {e.Message}");
+            #endif
         }
     }
 

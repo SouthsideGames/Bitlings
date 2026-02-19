@@ -16,7 +16,12 @@ public static class GameBalance
             if (_cached) return _cached;
             _cached = Resources.Load<GameBalanceSO>(ResourcesPath);
             if (!_cached)
-                Debug.LogError($"[GameBalance] Missing GameBalanceSO at Resources/{ResourcesPath}.asset");
+            {
+                // Fail-soft: allow boot with a runtime default instance.
+                // This prevents hard blocks in release builds if the asset is missing.
+                Debug.LogWarning($"[GameBalance] Missing GameBalanceSO at Resources/{ResourcesPath}.asset. Using runtime defaults.");
+                _cached = ScriptableObject.CreateInstance<GameBalanceSO>();
+            }
             return _cached;
         }
     }

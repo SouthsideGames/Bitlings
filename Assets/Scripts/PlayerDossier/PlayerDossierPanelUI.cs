@@ -11,8 +11,8 @@ public class PlayerDossierPanelUI : MonoBehaviour
     [SerializeField] private Button nextButton;
     [SerializeField] private Button closeButton;
 
-    [SerializeField] private TextMeshProUGUI pageLabelText;   // "PAGE 1 / 6"
-    [SerializeField] private TextMeshProUGUI dotsText;        // "• ○ ○ ○ ○ ○"
+    [SerializeField] private TextMeshProUGUI pageLabelText;  
+    [SerializeField] private TextMeshProUGUI dotsText;      
 
     [Header("Pages (in order)")]
     [Tooltip("Order MUST be: Page_1_Overview, Page_2_JobSites, Page_3_FieldOps, Page_4_Resources, Page_5_Resume, Page_6_Achievements")]
@@ -153,7 +153,9 @@ public class PlayerDossierPanelUI : MonoBehaviour
         }
         else
         {
+            #if UNITY_EDITOR || DEVELOPMENT_BUILD
             Debug.LogWarning("[PlayerDossierPanelUI] No PlayerDossierManager found in scene.");
+            #endif
             PopulatePage1(null);
             PopulatePage2(null);
             PopulatePage3(null);
@@ -444,7 +446,9 @@ public class PlayerDossierPanelUI : MonoBehaviour
     {
         if (achievementRowParent == null || achievementRowPrefab == null)
         {
+            #if UNITY_EDITOR || DEVELOPMENT_BUILD
             Debug.LogWarning("[PlayerDossierPanelUI] Achievements refs missing: achievementRowParent or achievementRowPrefab.");
+            #endif
             return;
         }
 

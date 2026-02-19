@@ -93,7 +93,7 @@ public class ExpeditionUI : MonoBehaviour
         if (_loggedMissingMgrOnce) return;
         _loggedMissingMgrOnce = true;
 
-        Debug.LogError(
+        Debug.LogWarning(
             "[ExpeditionUI] MonsterPackManager reference is missing.\n" +
             "Fix: Assign the MonsterPackManager in the ExpeditionUI inspector (preferred).\n" +
             "If you rely on MonsterPackManager.I, ensure it initializes before this UI enables."

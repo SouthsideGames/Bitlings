@@ -69,6 +69,12 @@ public class CheatCodeManager : MonoBehaviour
     [SerializeField] private int maxInvalidAttempts = 3;
     [SerializeField] private int lockHours = 24;
 
+    [Tooltip("If false, cheats are only usable in UNITY_EDITOR or DEVELOPMENT_BUILD.")]
+    [SerializeField] private bool allowCheatsInReleaseBuilds = false;
+
+    [Tooltip("If true, release-build cheats require diagnosticsUnlocked=true in save data.")]
+    [SerializeField] private bool requireDiagnosticsUnlockedInRelease = true;
+
     const long SECONDS_PER_HOUR = 3600;
     const long SECONDS_PER_DAY = 86400;
 
@@ -96,6 +102,27 @@ public class CheatCodeManager : MonoBehaviour
         return string.IsNullOrWhiteSpace(raw)
             ? string.Empty
             : raw.Trim().ToUpperInvariant();
+    }
+
+    bool CheatsAllowed()
+    {
+        // NOTE:
+        // We intentionally use runtime checks (Application.isEditor / Debug.isDebugBuild)
+        // instead of #if UNITY_EDITOR / #if DEVELOPMENT_BUILD so the serialized security
+        // fields are referenced in all builds and don't produce CS0414 warnings.
+
+        if (Application.isEditor)
+            return true;
+
+        // Debug.isDebugBuild is true for Development Builds (and editor playmode),
+        // but we already handled editor above. In dev builds, always allow cheats.
+        if (Debug.isDebugBuild)
+            return true;
+
+        // Release build logic
+        if (!allowCheatsInReleaseBuilds) return false;
+        if (!requireDiagnosticsUnlockedInRelease) return true;
+        return SaveManager.Data != null && SaveManager.Data.diagnosticsUnlocked;
     }
 
     // ─────────────────────────────────────────────────────────────
@@ -219,6 +246,13 @@ public class CheatCodeManager : MonoBehaviour
         if (IsLocked(out _))
         {
             message = GetLockedMessage();
+            return false;
+        }
+
+        // Build gating: keep cheats from accidentally shipping live.
+        if (!CheatsAllowed())
+        {
+            message = "Cheats are disabled in this build.";
             return false;
         }
 
@@ -956,12 +990,14 @@ public class CheatCodeManager : MonoBehaviour
         ResourceBank.EnsureSize(); // important if enum changed recently
         ResourceBank.Add(ResourceType.PackVoucher, amount);
 
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
         Debug.Log($"[CHEAT] PackVoucher now = {ResourceBank.Get(ResourceType.PackVoucher)} (+{amount})");
+#endif
 
         GameEvents.OnResourcesChanged?.Invoke();
     }
 
-   bool ExecuteToggleDiagnosticsPanel(out string message)
+    bool ExecuteToggleDiagnosticsPanel(out string message)
     {
         message = string.Empty;
 
@@ -971,28 +1007,39 @@ public class CheatCodeManager : MonoBehaviour
             return false;
         }
 
+        if (SaveManager.Data.diagnosticsUnlocked)
+        {
+            message = "Diagnostics already unlocked.";
+            return true;
+        }
+
+        // One-way unlock (safe for release builds).
         SaveManager.Data.diagnosticsUnlocked = true;
         SaveManager.Save();
 
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
         Debug.Log("[DIAG] diagnosticsUnlocked set TRUE and saved.");
+#endif
 
-        var btnUI = DiagnosticsButtonUI.I != null ? DiagnosticsButtonUI.I : FindFirstObjectByType<DiagnosticsButtonUI>(FindObjectsInactive.Include);
+        var btnUI = DiagnosticsButtonUI.I != null
+            ? DiagnosticsButtonUI.I
+            : FindFirstObjectByType<DiagnosticsButtonUI>(FindObjectsInactive.Include);
+
         if (btnUI != null)
         {
             btnUI.ApplyFromSave("CheatUnlock");
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
             Debug.Log("[DIAG] Forced DiagnosticsButtonUI.ApplyFromSave()");
+#endif
         }
         else
         {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
             Debug.LogWarning("[DIAG] DiagnosticsButtonUI not found in scene.");
+#endif
         }
 
         message = "Diagnostics unlocked.";
         return true;
     }
-
-
-
-
-
 }

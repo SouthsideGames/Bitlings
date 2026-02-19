@@ -71,6 +71,40 @@ public static class SaveManager
     // Increment CURRENT_SAVE_VERSION whenever the on-disk JSON layout/semantics change.
     private const int CURRENT_SAVE_VERSION = 2;
 
+    // Optional: last integrity/migration diagnostics. Useful for QA screenshots or a debug panel.
+    private static string _lastValidationReport;
+    public static string LastValidationReport => _lastValidationReport;
+
+    // Migration table scaffold (keeps future v3+ additions disciplined).
+    // NOTE: We still keep MigrateRootIfNeeded deterministic + additive.
+    private sealed class MigrationStep
+    {
+        public int from;
+        public int to;
+        public Action<PlayerSaveRoot> apply;
+    }
+
+    private static readonly MigrationStep[] _migrations = new MigrationStep[]
+    {
+        new MigrationStep
+        {
+            from = 1,
+            to = 2,
+            apply = (root) =>
+            {
+                root.jobRuntime ??= new JobRuntimeSave();
+                root.titles ??= new TitleSaveData();
+                root.worldEvents ??= new WorldEventSaveData();
+
+                // Ensure lists exist (JsonUtility can leave them null for empty lists).
+                root.tutorialCompleted ??= new List<string>();
+                root.jobRuntime.sites ??= new List<JobRuntimeSite>();
+                root.jobRuntime.cooldowns ??= new List<MonsterCooldownKV>();
+                root.worldEvents.cooldowns ??= new List<WorldEventRollCooldown>();
+            }
+        }
+    };
+
 
     // ─────────────────────────────────────────────
     // Combined Save Root (Option B)
@@ -220,20 +254,22 @@ private static PlayerSaveRoot MigrateRootIfNeeded(PlayerSaveRoot root)
     int v = root.version <= 0 ? 1 : root.version;
     if (v >= CURRENT_SAVE_VERSION) return root;
 
-    // v1 → v2: formalize sidecar presence + world events blob defaults.
-    if (v < 2)
+    // Apply ordered migration steps.
+    // Keep steps deterministic and additive; never delete fields.
+    for (int i = 0; i < _migrations.Length; i++)
     {
-        root.jobRuntime ??= new JobRuntimeSave();
-        root.titles ??= new TitleSaveData();
-        root.worldEvents ??= new WorldEventSaveData();
-
-        // Ensure lists exist (JsonUtility can leave them null for empty lists).
-        root.tutorialCompleted ??= new List<string>();
-        root.jobRuntime.sites ??= new List<JobRuntimeSite>();
-        root.jobRuntime.cooldowns ??= new List<MonsterCooldownKV>();
-        root.worldEvents.cooldowns ??= new List<WorldEventRollCooldown>();
-
-        v = 2;
+        var step = _migrations[i];
+        if (v != step.from) continue;
+        try
+        {
+            step.apply?.Invoke(root);
+            v = step.to;
+        }
+        catch (Exception e)
+        {
+            Debug.LogError($"SaveManager migration v{step.from}→v{step.to} failed: {e}");
+            break;
+        }
     }
 
     // Future migrations go here (v2 → v3, etc.)
@@ -1337,6 +1373,8 @@ private static bool ValidateAndRepairSave(bool saveIfChanged)
     if (Data == null) return false;
 
     bool changed = false;
+    int removedTeamEntries = 0;
+    bool fixedJobsOffline = false;
 
     Data.owned ??= new List<OwnedMonsterData>();
     Data.team ??= new List<OwnedMonsterData>();
@@ -1349,6 +1387,7 @@ private static bool ValidateAndRepairSave(bool saveIfChanged)
         {
             Data.team.RemoveAt(i);
             changed = true;
+            removedTeamEntries++;
         }
     }
 
@@ -1361,6 +1400,17 @@ private static bool ValidateAndRepairSave(bool saveIfChanged)
     {
         Data.jobsOfflineLastUnix = NowUnix();
         changed = true;
+        fixedJobsOffline = true;
+    }
+
+    // Cache a human-readable report for QA/debug panels.
+    if (changed)
+    {
+        _lastValidationReport = $"Repaired save: removedTeamEntries={removedTeamEntries}, fixedJobsOffline={fixedJobsOffline}";
+    }
+    else
+    {
+        _lastValidationReport = "Save integrity: no repairs needed.";
     }
 
     if (saveIfChanged && changed) Save();

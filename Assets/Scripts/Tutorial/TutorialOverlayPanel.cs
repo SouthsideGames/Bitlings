@@ -165,7 +165,7 @@ public sealed class TutorialOverlayPanel : MonoBehaviour
         _openedThisSession = true;
         ShowOverlay(false);
 
-        AudioManager.I.PlayClick();
+        AudioManager.I?.PlayClick();
     }
 
     private void RenderPage()

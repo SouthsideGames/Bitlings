@@ -28,7 +28,9 @@ public static class InfoRouter
         // Still null? Then the scene does not have an InfoPanelUI on the PanelId.Info root (or not in UIManager list).
         if (InfoPanelUI.I == null)
         {
+            #if UNITY_EDITOR || DEVELOPMENT_BUILD
             Debug.LogWarning(
+            #endif
                 $"[InfoRouter] Cannot open info '{infoId}' because InfoPanelUI.I is null. " +
                 $"Ensure the Info panel root is registered in UIManager as PanelId.Info and contains an InfoPanelUI component.");
             return;

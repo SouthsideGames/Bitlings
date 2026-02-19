@@ -48,13 +48,17 @@ public partial class AutoApplyService : MonoBehaviour
         var data = SaveManager.Data;
         if (data == null)
         {
+            #if UNITY_EDITOR || DEVELOPMENT_BUILD
             Debug.LogWarning("[AutoApplyService] SaveManager.Data is null.");
+            #endif
             return;
         }
 
         if (levelCostCurve == null)
         {
+            #if UNITY_EDITOR || DEVELOPMENT_BUILD
             Debug.LogWarning("[AutoApplyService] levelCostCurve is not assigned.");
+            #endif
             return;
         }
 

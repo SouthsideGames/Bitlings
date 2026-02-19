@@ -81,11 +81,13 @@ public class UpgradeRowUI : MonoBehaviour
         {
             _hasValidEntry = false;
 
+            #if UNITY_EDITOR || DEVELOPMENT_BUILD
             Debug.LogError(
                 $"[UpgradeRowUI] Init called with null UpgradeCatalogEntry on '{gameObject.name}'. " +
                 "This row will be disabled to prevent UI crashes. Check your Upgrade Catalog / references.",
                 this
             );
+            #endif
 
             _featureId = FeatureId.None;
             _creditCost = 0;

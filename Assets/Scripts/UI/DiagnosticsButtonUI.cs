@@ -46,12 +46,17 @@ public class DiagnosticsButtonUI : MonoBehaviour
 
    public void ApplyUnlockedState(bool unlocked, string context = "")
     {
+        #if UNITY_EDITOR || DEVELOPMENT_BUILD
         if (debugLogs)
             Debug.Log($"[DIAG BTN] ApplyUnlockedState({unlocked}) ctx={context}");
+        #endif
 
         if (diagnosticsButtonGO == null)
         {
-            Debug.LogError("[DIAG BTN] diagnosticsButtonGO is not assigned.");
+            #if UNITY_EDITOR || DEVELOPMENT_BUILD
+            if (debugLogs)
+                Debug.LogError("[DIAG BTN] diagnosticsButtonGO is not assigned.");
+            #endif
             return;
         }
 

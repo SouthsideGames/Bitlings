@@ -46,8 +46,12 @@ public class TitleScreenController : MonoBehaviour
 
     void OnEnable()
     {
+        #if UNITY_EDITOR || DEVELOPMENT_BUILD
         if (pressToContinueButton == null) Debug.LogError("pressToContinueButton is NULL");
+        #endif
+        #if UNITY_EDITOR || DEVELOPMENT_BUILD
         if (pressToContinueCanvas == null) Debug.LogWarning("pressToContinueCanvas is NULL (flashing disabled)");
+        #endif
         if (pressToContinueButton) pressToContinueButton.onClick.AddListener(OnTap);
         StartFlash();
     }
@@ -165,7 +169,9 @@ public class TitleScreenController : MonoBehaviour
                 }
 
                 if (starterSelector) starterSelector.Show();
+                #if UNITY_EDITOR || DEVELOPMENT_BUILD
                 else Debug.LogWarning("StarterSelector not found on starter panel root.");
+                #endif
             });
     }
 

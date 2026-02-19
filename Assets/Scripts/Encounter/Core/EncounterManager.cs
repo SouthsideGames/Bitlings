@@ -298,6 +298,17 @@ private int GetRarityWeight(TitleSO t)
         if (I != null && I != this) { Destroy(gameObject); return; }
         I = this;
 
+        // Reduce scene-order brittleness: if BattleManager isn't wired in the inspector,
+        // try to locate it so encounters can still proceed.
+        if (battleManager == null)
+        {
+            if (battleManager == null)
+                battleManager = FindObjectOfType<BattleManager>(includeInactive: true);
+
+            if (battleManager == null)
+                Debug.LogWarning("[EncounterManager] BattleManager reference is missing. Encounters cannot start battles until a BattleManager exists.");
+        }
+
         _currentWinStreak = LoadWinStreakOr(0);
         _currentWinStreak = Mathf.Max(0, _currentWinStreak);
 

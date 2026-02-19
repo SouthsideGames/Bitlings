@@ -112,7 +112,9 @@ public sealed class GymPanelUI : MonoBehaviour
     {
         if (!listParent || !itemPrefab)
         {
-            Debug.LogError("[GymPanelUI] listParent or itemPrefab not assigned.");
+            // Prefab/scene wiring issue. Disable the panel to avoid repeated errors.
+            Debug.LogWarning("[GymPanelUI] listParent or itemPrefab not assigned. Disabling panel until wired.");
+            gameObject.SetActive(false);
             return;
         }
 

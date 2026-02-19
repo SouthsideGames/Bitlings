@@ -1171,7 +1171,13 @@ private Sprite GetVariantIcon(MonsterDataSO monster)
             if (current == null || string.IsNullOrEmpty(current.id)) { Hide(); return; }
 
             var data = SaveManager.Data;
-            if (data == null) { Debug.LogError("[MonsterDetailPanel] SaveManager.Data is null in AssignToSlot (CodexView)."); Hide(); return; }
+            if (data == null)
+            {
+                Debug.LogWarning("[MonsterDetailPanel] SaveManager.Data is null in AssignToSlot (CodexView). Attempting LoadOrCreate.");
+                SaveManager.LoadOrCreate();
+                data = SaveManager.Data;
+                if (data == null) { Hide(); return; }
+            }
 
             var team = data.team ?? new List<OwnedMonsterData>();
             TeamUtils.EnsureTeamSize(team, 3);
@@ -1212,7 +1218,9 @@ private Sprite GetVariantIcon(MonsterDataSO monster)
         var data2 = SaveManager.Data;
         if (data2 == null)
         {
-            Debug.LogError("[MonsterDetailPanel] SaveManager.Data is null in AssignToSlot.");
+            Debug.LogWarning("[MonsterDetailPanel] SaveManager.Data is null in AssignToSlot. Attempting LoadOrCreate.");
+            SaveManager.LoadOrCreate();
+            if (SaveManager.Data == null) return;
             Hide();
             return;
         }

@@ -28,13 +28,17 @@ public sealed class ImagePreviewPanelUI : MonoBehaviour
     {
         if (!sprite)
         {
+            #if UNITY_EDITOR || DEVELOPMENT_BUILD
             Debug.LogWarning("[ImagePreviewPanelUI] Open called with null sprite.");
+            #endif
             return;
         }
 
         if (!previewImage)
         {
+            #if UNITY_EDITOR || DEVELOPMENT_BUILD
             Debug.LogWarning("[ImagePreviewPanelUI] previewImage not assigned.");
+            #endif
             return;
         }
 

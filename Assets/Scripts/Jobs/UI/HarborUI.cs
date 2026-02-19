@@ -33,7 +33,7 @@ public class HarborUI : MonoBehaviour
 
         _typeIconLib = Resources.Load<TypeIconLibrary>(typeIconLibraryResourcePath);
         if (_typeIconLib == null)
-            Debug.LogError($"HarborUI: TypeIconLibrary not found at Resources path '{typeIconLibraryResourcePath}'.");
+            Debug.LogWarning($"HarborUI: TypeIconLibrary not found at Resources path '{typeIconLibraryResourcePath}'. Icons will be blank until fixed.");
 
         BuildTypeOptions();
         Wire();

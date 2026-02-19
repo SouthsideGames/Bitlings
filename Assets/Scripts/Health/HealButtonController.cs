@@ -12,8 +12,14 @@ public class HealButtonController : MonoBehaviour
 
     [SerializeField] private int hpPerMedkit = 50;
 
-    private HealingConfigSO config;
-    private MonsterLibrarySO library;
+    [Header("Optional Wiring (avoids Resources lookups)")]
+    [SerializeField] private HealingConfigSO config;
+    [SerializeField] private MonsterLibrarySO library;
+
+    // If you still want Resources fallback, keep these paths consistent.
+    [Header("Resources Fallback Paths")]
+    [SerializeField] private string monsterLibraryResourcePath = "MonsterLibrary";
+    [SerializeField] private string healingConfigResourcePath = "HealingConfig";
 
     private bool _ready;
 
@@ -34,10 +40,11 @@ public class HealButtonController : MonoBehaviour
 
     void Awake()
     {
+        // Prefer inspector references; fall back to Resources for older scenes.
         if (library == null)
-            library = Resources.Load<MonsterLibrarySO>("MonsterLibrary");
+            library = Resources.Load<MonsterLibrarySO>(monsterLibraryResourcePath);
         if (config == null)
-            config = Resources.Load<HealingConfigSO>("HealingConfig");
+            config = Resources.Load<HealingConfigSO>(healingConfigResourcePath);
 
         _ready = library != null && config != null;
 
@@ -50,10 +57,12 @@ public class HealButtonController : MonoBehaviour
 
         if (!_ready)
         {
-            Debug.LogError(
-                "[HealButtonController] Missing required Resources assets. " +
+            // This is almost always a wiring/content issue, not a logic failure.
+            // Keep it as a warning so release builds aren't polluted with false "errors".
+            Debug.LogWarning(
+                "[HealButtonController] Missing required assets. " +
                 $"MonsterLibrary loaded={library != null}, HealingConfig loaded={config != null}. " +
-                "Heal UI will be disabled.",
+                "Heal UI will be disabled until references are fixed.",
                 this
             );
 
@@ -69,6 +78,10 @@ public class HealButtonController : MonoBehaviour
     {
         if (!_ready)
             return;
+
+        // Ensure save state exists (menu-first boot can call UI before SaveManager loads).
+        if (SaveManager.Data == null)
+            SaveManager.LoadOrCreate();
 
         // If not bound yet, keep the UI safely disabled.
         if (teamIndex < 0)

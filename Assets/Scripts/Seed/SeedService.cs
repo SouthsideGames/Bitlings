@@ -14,8 +14,15 @@ public static class SeedService
     {
         if (_seedApplied) return;
 
+        // Launch-safe: always ensure a save root exists before attempting to read seed state.
+        // If SaveManager is not ready for any reason, fall back to a session seed.
+        try { SaveManager.LoadOrCreate(); } catch { /* ignore */ }
+
         if (SaveManager.Data == null)
+        {
+            ApplySessionSeed();
             return;
+        }
 
         var fu = FeatureUnlockManager.I;
         var sm = SettingsManager.I;
@@ -30,8 +37,8 @@ public static class SeedService
         bool dailyUnlocked = fu.IsUnlocked(FeatureId.Seeds_DailyBasic);
 
         var settings = (sm != null) ? sm.S : null;
-        if (customUnlocked && settings == null)
-            return;
+        // If settings aren't available yet (boot order), simply skip custom-seed evaluation
+        // rather than aborting seed application entirely.
 
         if (customUnlocked &&
             settings != null &&
@@ -81,8 +88,8 @@ public static class SeedService
 
     public static string GetCurrentDailySeedString()
     {
-        if (SaveManager.Data == null)
-            return string.Empty;
+        try { SaveManager.LoadOrCreate(); } catch { /* ignore */ }
+        if (SaveManager.Data == null) return string.Empty;
 
         var ss = SaveManager.Data.seedState;
         if (ss == null)
@@ -137,8 +144,8 @@ public static class SeedService
     {
         newSeed = null;
 
-        if (SaveManager.Data == null)
-            return false;
+        try { SaveManager.LoadOrCreate(); } catch { /* ignore */ }
+        if (SaveManager.Data == null) return false;
 
         var fu = FeatureUnlockManager.I;
         var sm = SettingsManager.I;
@@ -188,6 +195,7 @@ public static class SeedService
 
     private static void EnsureDailySeedForToday()
     {
+        if (SaveManager.Data == null) return;
         var ss = SaveManager.Data.seedState ?? (SaveManager.Data.seedState = new SeedState());
         int today = SaveManager.TodayDayIndexUTC();
 

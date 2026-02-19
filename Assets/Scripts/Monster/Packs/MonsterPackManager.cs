@@ -46,8 +46,14 @@ public class MonsterPackManager : MonoBehaviour
 
         if (!_packLibrary)
         {
-            Debug.LogError("[MonsterPackManager] Could not resolve MonsterPackLibrarySO. " +
-                           "Set it in the Inspector OR create Assets/Resources/MonsterPackLibrary.asset");
+            // Fail-soft: keep the manager instance alive so callers can safely query.
+            // Pack shop features will remain unavailable until the library is provided.
+            #if UNITY_EDITOR || DEVELOPMENT_BUILD
+            Debug.LogWarning("[MonsterPackManager] Could not resolve MonsterPackLibrarySO. " +
+            #endif
+                             "Set it in the Inspector OR create Assets/Resources/MonsterPackLibrary.asset. " +
+                             "Disabling MonsterPackManager.");
+            enabled = false;
             return;
         }
 
@@ -56,7 +62,9 @@ public class MonsterPackManager : MonoBehaviour
         _monsterLibrary = MonsterLibraryLocator.Lib;
         if (!_monsterLibrary)
         {
+            #if UNITY_EDITOR || DEVELOPMENT_BUILD
             Debug.LogWarning("[MonsterPackManager] MonsterLibraryLocator.Lib could not load. " +
+            #endif
                              "Ensure Assets/Resources/MonsterLibrary.asset exists.");
         }
 
@@ -76,7 +84,9 @@ public class MonsterPackManager : MonoBehaviour
         {
             if (!p) continue;
             if (p.costType != ResourceType.PackVoucher)
+                #if UNITY_EDITOR || DEVELOPMENT_BUILD
                 Debug.LogWarning($"[MonsterPackManager] '{p.name}' has costType={p.costType} but shop is shards-only.");
+                #endif
         }
 #endif
 

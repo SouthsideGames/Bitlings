@@ -29,6 +29,13 @@ public class IntroManager : MonoBehaviour
 
     private bool _consumed;
 
+    UIManager GetUI()
+    {
+        // Recover if singleton isn't initialized yet (boot-order guardrail).
+        if (UIManager.I != null) return UIManager.I;
+        return FindFirstObjectByType<UIManager>(FindObjectsInactive.Include);
+    }
+
     void Awake()
     {
         if (pressToContinueCanvas)
@@ -92,7 +99,17 @@ public class IntroManager : MonoBehaviour
 
         if (!hasSeenStory)
         {
-            UIManager.I?.Show(storyPanelId);
+            GetUI()?.Show(storyPanelId);
+            return;
+        }
+
+
+        // Boot-order guard: if UIManager isn't present, don't consume the click (prevents soft-lock).
+        if (GetUI() == null)
+        {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            Debug.LogWarning("[IntroManager] UIManager not found; cannot advance intro flow yet.");
+#endif
             return;
         }
 
@@ -108,8 +125,8 @@ public class IntroManager : MonoBehaviour
 
         if (hasStarter)
         {
-            UIManager.I?.Show(homePanelId);
-            UIManager.I?.Hide(titlePanelId);
+            GetUI()?.Show(homePanelId);
+            GetUI()?.Hide(titlePanelId);
 
             StartCoroutine(OpenIdleRewardsAfterContinue());
             return;
@@ -153,9 +170,10 @@ public class IntroManager : MonoBehaviour
 
     void OpenStarterPanelAndShowSelector()
     {
-        UIManager.I?.Show(starterPanelId);
+        GetUI()?.Show(starterPanelId);
 
-        var starterRoot = UIManager.I ? UIManager.I.GetRoot(starterPanelId) : null;
+        var ui = GetUI();
+        var starterRoot = ui ? ui.GetRoot(starterPanelId) : null;
         if (!_starterSelector && starterRoot)
             _starterSelector = starterRoot.GetComponentInChildren<StarterSelector>(true);
 
@@ -174,14 +192,14 @@ public class IntroManager : MonoBehaviour
             }
         }
 
-        if (UIManager.I)
+        if (ui)
         {
-            var introRoot = UIManager.I.GetRoot(titlePanelId);
+            var introRoot = ui.GetRoot(titlePanelId);
             bool starterIsUnderIntro = starterRoot && introRoot && starterRoot.transform.IsChildOf(introRoot.transform);
 
             if (!starterIsUnderIntro)
             {
-                UIManager.I.Hide(titlePanelId);
+                ui.Hide(titlePanelId);
             }
             else
             {
@@ -196,7 +214,9 @@ public class IntroManager : MonoBehaviour
         }
         else
         {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
             Debug.LogError("[IntroManager] StarterSelector not found under StarterPicker panel root.");
+#endif
         }
     }
 }

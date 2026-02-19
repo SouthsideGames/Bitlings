@@ -207,7 +207,9 @@ public class UIManager : MonoBehaviour
     {
         if (!_map.TryGetValue(id, out var p) || p.root == null)
         {
+            #if UNITY_EDITOR || DEVELOPMENT_BUILD
             Debug.LogWarning($"[UIManager] No panel root for {id}");
+            #endif
             return;
         }
 

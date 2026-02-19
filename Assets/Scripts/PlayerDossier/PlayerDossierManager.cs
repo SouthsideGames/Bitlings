@@ -220,7 +220,7 @@ public class PlayerDossierManager : MonoBehaviour
         // Identity
         string displayName = string.IsNullOrEmpty(data.playerName) ? "BRN Operator" : data.playerName;
         snapshot.handlerName = $"Handler: {displayName}";
-        snapshot.rankName = "Rank: Trainee"; // TODO: derive later
+        snapshot.rankName = $"Rank: {DeriveRankName(data)}";
         snapshot.operationId = $"Operation ID: {FormatOperationId(data.playerId)}";
 
         // Owned monsters
@@ -591,7 +591,9 @@ public class PlayerDossierManager : MonoBehaviour
         var bank = ResourceManager.I;
         if (bank == null)
         {
+            #if UNITY_EDITOR || DEVELOPMENT_BUILD
             Debug.LogWarning("ResourceManager not found for dossier Page 4.");
+            #endif
             return;
         }
 
@@ -935,6 +937,48 @@ public class PlayerDossierManager : MonoBehaviour
             seed = (seed * 31) ^ DateTime.UtcNow.Date.GetHashCode();
             return seed;
         }
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // Rank derivation
+    // - Deterministic + safe for older saves.
+    // - Uses available progression signals; falls back gracefully.
+    // ─────────────────────────────────────────────────────────────
+    private static string DeriveRankName(PlayerManager data)
+    {
+        if (data == null) return "Rookie";
+
+        int battleLvl = 0, idleLvl = 0, tapLvl = 0;
+        try { battleLvl = Mathf.Max(0, data.battleXPLevel); } catch { }
+        try { idleLvl = Mathf.Max(0, data.idleLevel); } catch { }
+        try { tapLvl = Mathf.Max(0, data.tapLevel); } catch { }
+
+        int ownedCount = data.owned != null ? data.owned.Count : 0;
+        int bestLevel = 1;
+        if (data.owned != null)
+        {
+            for (int i = 0; i < data.owned.Count; i++)
+            {
+                var om = data.owned[i];
+                if (om == null) continue;
+                if (om.level > bestLevel) bestLevel = om.level;
+            }
+        }
+
+        bool streakBoost = data.winStreak >= 10;
+
+        // Composite score (tuned for stability, not precision).
+        int score = battleLvl + idleLvl + tapLvl;
+        score += Mathf.Clamp(ownedCount / 5, 0, 10);
+        score += Mathf.Clamp(bestLevel / 5, 0, 10);
+        if (streakBoost) score += 2;
+
+        if (score >= 40) return "Prime Overseer";
+        if (score >= 28) return "Overseer";
+        if (score >= 18) return "Veteran";
+        if (score >= 10) return "Specialist";
+        if (score >= 5) return "Operator";
+        return "Rookie";
     }
 
     // ─────────────────────────────────────────────────────────────

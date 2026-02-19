@@ -343,7 +343,9 @@ public class OwnedMonsterListItemUI : MonoBehaviour
         var panel = _detailPanelOverride ? _detailPanelOverride : detailPanel;
         if (panel == null)
         {
+            #if UNITY_EDITOR || DEVELOPMENT_BUILD
             Debug.LogWarning("[OwnedMonsterListItemUI] MonsterDetailPanelUI not found in scene.");
+            #endif
             return;
         }
 

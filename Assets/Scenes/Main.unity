@@ -40105,6 +40105,8 @@ MonoBehaviour:
     spendEnergy: 0
   maxInvalidAttempts: 3
   lockHours: 24
+  allowCheatsInReleaseBuilds: 0
+  requireDiagnosticsUnlockedInRelease: 1
 --- !u!1 &510952519
 GameObject:
   m_ObjectHideFlags: 0
@@ -155902,7 +155904,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: Beta 1.3.7
+  m_text: Beta 1.3.8
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: ca247a3092b7b404dbaa6f4ab43e450c, type: 2}
   m_sharedMaterial: {fileID: -403277894513911722, guid: ca247a3092b7b404dbaa6f4ab43e450c, type: 2}

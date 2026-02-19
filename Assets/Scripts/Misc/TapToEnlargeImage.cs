@@ -21,7 +21,9 @@ public sealed class TapToEnlargeImage : MonoBehaviour, IPointerClickHandler
     {
         if (!sourceImage)
         {
+            #if UNITY_EDITOR || DEVELOPMENT_BUILD
             Debug.LogWarning("[TapToEnlargeImage] Missing sourceImage.");
+            #endif
             return;
         }
 
@@ -29,14 +31,18 @@ public sealed class TapToEnlargeImage : MonoBehaviour, IPointerClickHandler
 
         if (requireSprite && sprite == null)
         {
+            #if UNITY_EDITOR || DEVELOPMENT_BUILD
             Debug.LogWarning($"[TapToEnlargeImage] No sprite on '{name}'.");
+            #endif
             return;
         }
 
         var preview = ImagePreviewPanelUI.I;
         if (preview == null)
         {
+            #if UNITY_EDITOR || DEVELOPMENT_BUILD
             Debug.LogWarning("[TapToEnlargeImage] No ImagePreviewPanelUI found in scene (even inactive).");
+            #endif
             return;
         }
 
