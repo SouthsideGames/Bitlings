@@ -2,12 +2,7 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 
-/// <summary>
-/// Applies passive HP regeneration to owned + team monsters.
-/// - Uses MonsterDataSO.hpRegenPerHour if set; otherwise a default.
-/// - Works on resume (offline catch-up) and light online ticks.
-/// - KO stays KO until regen lifts HP above 0.
-/// </summary>
+
 [DefaultExecutionOrder(-275)]
 public class HealthRegenSystem : MonoBehaviour
 {
@@ -77,11 +72,11 @@ public class HealthRegenSystem : MonoBehaviour
             int lvl = Mathf.Max(1, e.level);
             int maxHP = HealingService.CalcMaxHP(def, lvl);
 
-            // Initialize unknown HP to full.
-            if (e.currentHP < 0)
+            // Normalize legacy/uninitialized HP (never negative).
+            // If it was negative, treat as full HP.
+            if (updated.currentHP < 0)
             {
-                // Centralized HP contract: initialize unknown HP to full without creating shared timer issues.
-                SaveManager.SetMonsterHPExact(updated, maxHP, nowUnix, save: false, fireEvents: false);
+                OwnedMonsterHP.Normalize(ref updated, nowUnix, OwnedMonsterHP.Reason.OfflineRegen);
                 return true;
             }
 
@@ -108,7 +103,7 @@ public class HealthRegenSystem : MonoBehaviour
                 return false;
             }
 
-            int before = e.currentHP;
+            int before = Mathf.Clamp(e.currentHP, 0, maxHP);
             int after = Mathf.Clamp(before + gained, 0, maxHP);
             int actualGained = after - before;
             if (actualGained <= 0) return false;
@@ -119,8 +114,11 @@ public class HealthRegenSystem : MonoBehaviour
             long newLast = Math.Min(nowUnix, last + Math.Max(0, consumedSeconds));
             if (newLast < 0) newLast = nowUnix;
 
-            // Centralized HP contract: apply regen with remainder-accurate timestamp.
-            SaveManager.SetMonsterHPExact(updated, after, newLast, save: false, fireEvents: false);
+            updated.currentHP = after;
+            updated.lastHPUnix = newLast;
+
+            // Final invariant safety.
+            if (updated.currentHP < 0) updated.currentHP = 0;
             return true;
         }
 
@@ -156,8 +154,9 @@ public class HealthRegenSystem : MonoBehaviour
                 {
                     if (t.currentHP != ownedMatch.currentHP || t.lastHPUnix != ownedMatch.lastHPUnix)
                     {
-                        // Centralized HP contract: mirror HP + timestamp (remainder-accurate)
-                        SaveManager.SetTeamSlotHPExact(i, ownedMatch.currentHP, ownedMatch.lastHPUnix, save: false, fireEvents: false);
+                        t.currentHP = ownedMatch.currentHP;
+                        t.lastHPUnix = ownedMatch.lastHPUnix;
+                        team[i] = t;
                         changed = true;
                     }
                     continue;

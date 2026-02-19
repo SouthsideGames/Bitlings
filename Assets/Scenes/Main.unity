@@ -7523,6 +7523,7 @@ MonoBehaviour:
     hasSeenStory: 0
     lastClosedUnix: 0
     lastSavedUnix: 0
+    jobsOfflineLastUnix: 0
     energyLastUnix: 0
     energyRemainderSecs: 0
     encountersSinceBoss: 0
@@ -83797,7 +83798,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!224 &1057637664
 RectTransform:
   m_ObjectHideFlags: 0
@@ -155901,7 +155902,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: Beta 1.3.6
+  m_text: Beta 1.3.7
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: ca247a3092b7b404dbaa6f4ab43e450c, type: 2}
   m_sharedMaterial: {fileID: -403277894513911722, guid: ca247a3092b7b404dbaa6f4ab43e450c, type: 2}

@@ -4,9 +4,6 @@ using TMPro;
 
 public class HealButtonController : MonoBehaviour
 {
-    // IMPORTANT:
-    // This controller MUST be bound to a specific team slot index.
-    // Leaving it at a default like 0 causes every heal button to target the first team member.
     [SerializeField] private int teamIndex = -1;
 
     [SerializeField] private Button healButton;
@@ -97,7 +94,8 @@ public class HealButtonController : MonoBehaviour
             return;
         }
         int maxHP = HealingService.CalcMaxHP(def, owned.level);
-        int curHP = owned.currentHP >= 0 ? Mathf.Min(owned.currentHP, maxHP) : maxHP;
+        // Enforce HP invariant.
+        int curHP = Mathf.Clamp(owned.currentHP, 0, maxHP);
         int missing = HealingService.MissingHP(curHP, maxHP);
 
         int kitsNeeded = HealingService.MedkitsToHealFull(missing, hpPerMedkit);
@@ -165,7 +163,8 @@ public class HealButtonController : MonoBehaviour
         var def = (library != null) ? library.GetById(owned.monsterId) : null;
         if (def == null) { Refresh(); return; }
         int maxHP = HealingService.CalcMaxHP(def, owned.level);
-        int curHP = owned.currentHP >= 0 ? Mathf.Min(owned.currentHP, maxHP) : maxHP;
+        // Enforce HP invariant.
+        int curHP = Mathf.Clamp(owned.currentHP, 0, maxHP);
         int missing = HealingService.MissingHP(curHP, maxHP);
         if (missing <= 0) { Refresh(); return; }
         if (!config.allowHealingIfKO && curHP <= 0) { Refresh(); return; }
@@ -190,11 +189,15 @@ public class HealButtonController : MonoBehaviour
             if (!spent) { Refresh(); return; }
         }
 
-        // Centralized HP contract (syncs owned via ownedUID when present)
-        SaveManager.SetTeamSlotHP(teamIndex, maxHP, stampLastHpUnix: true, nowUnix: SaveManager.NowUnix(), save: true, fireEvents: true);
+        // One authoritative write path.
+        long now = SaveManager.NowUnix();
+        OwnedMonsterHP.SetFull(ref owned, now, OwnedMonsterHP.Reason.HealButton);
 
-        // HP changes are already evented by SaveManager.SetTeamSlotHP, but we still need resources/UI.
+        SaveManager.Data.team[teamIndex] = owned;
+        SaveManager.Save();
 
+        GameEvents.OnTeamChanged?.Invoke();
+        GameEvents.OnTeamHealthChanged?.Invoke();
         GameEvents.OnResourcesChanged?.Invoke();
 
         Refresh();

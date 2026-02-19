@@ -323,7 +323,7 @@ private static PlayerSaveRoot MigrateRootIfNeeded(PlayerSaveRoot root)
 
             _jobRuntimeCache = null;
             _titlesCache = null;
-
+            _worldEventsCache = null;
             Data = NewFreshPlayer();
             EnsureDefaults();
 
@@ -406,7 +406,7 @@ private static PlayerSaveRoot MigrateRootIfNeeded(PlayerSaveRoot root)
 
             _jobRuntimeCache = null;
             _titlesCache = null;
-
+            _worldEventsCache = null;
             // 4) Rebuild a truly fresh PlayerManager in memory.
             Data = NewFreshPlayer();
             JobUnlockBridge.ResetAllJobUnlocks(alsoResetPurchasedFlags: true);
@@ -496,6 +496,8 @@ private static PlayerSaveRoot MigrateRootIfNeeded(PlayerSaveRoot root)
         PruneExpiredLuckBoosts(saveIfChanged: true);
 
         RebuildTransientSetsFromLists();
+
+        ValidateAndRepairSave(saveIfChanged: true);
 
         EnsureTutorialFlagsLoaded();
     }
@@ -1323,6 +1325,47 @@ private static PlayerSaveRoot MigrateRootIfNeeded(PlayerSaveRoot root)
         return changed;
     }
 
+
+// ─────────────────────────────────────────────
+// Save integrity (Bundle A)
+// - Defensive repair pass to prevent null/invalid entries from breaking UI or combat.
+// - Keeps changes minimal and non-destructive.
+// ─────────────────────────────────────────────
+private static bool ValidateAndRepairSave(bool saveIfChanged)
+{
+    if (IsHardWiping) return false;
+    if (Data == null) return false;
+
+    bool changed = false;
+
+    Data.owned ??= new List<OwnedMonsterData>();
+    Data.team ??= new List<OwnedMonsterData>();
+
+    // Remove null/empty team entries (empty slots should not be persisted as objects).
+    for (int i = Data.team.Count - 1; i >= 0; i--)
+    {
+        var t = Data.team[i];
+        if (t == null || string.IsNullOrEmpty(t.monsterId))
+        {
+            Data.team.RemoveAt(i);
+            changed = true;
+        }
+    }
+
+    // Normalize HP invariants (no negative HP).
+    NormalizeOwnedEntries(Data.owned);
+    NormalizeOwnedEntries(Data.team);
+
+    // If older data serialized a negative offline marker, correct it.
+    if (Data.jobsOfflineLastUnix < 0)
+    {
+        Data.jobsOfflineLastUnix = NowUnix();
+        changed = true;
+    }
+
+    if (saveIfChanged && changed) Save();
+    return changed;
+}
     // ─────────────────────────────────────────────
     // Utilities
     // ─────────────────────────────────────────────
@@ -1698,17 +1741,18 @@ public static bool SetMonsterHP(
 
     if (string.IsNullOrEmpty(m.monsterId)) return false;
 
-    var def = MonsterLibraryLocator.GetById(m.monsterId);
-    int maxHP = def ? HealingService.CalcMaxHP(def, Mathf.Max(1, m.level), includeTraining: true, includeTitles: false) : 1;
-    int clamped = Mathf.Clamp(newHP, 0, Mathf.Max(1, maxHP));
+    int beforeHP = m.currentHP;
+    long beforeLast = m.lastHPUnix;
 
-    bool changed = m.currentHP != clamped;
-    m.currentHP = clamped;
+    long now = nowUnix ?? NowUnix();
+    OwnedMonsterHP.SetHP(ref m, newHP, now, OwnedMonsterHP.Reason.Unknown);
 
-    if (stampLastHpUnix)
-        m.lastHPUnix = nowUnix ?? NowUnix();
+    if (!stampLastHpUnix)
+        m.lastHPUnix = beforeLast;
 
-    if (save) Save();
+    bool changed = (m.currentHP != beforeHP) || (m.lastHPUnix != beforeLast);
+
+if (save) Save();
     if (fireEvents && changed)
     {
         GameEvents.OnTeamChanged?.Invoke();
@@ -1741,15 +1785,16 @@ public static bool SetMonsterHPExact(
 
     if (string.IsNullOrEmpty(m.monsterId)) return false;
 
-    var def = MonsterLibraryLocator.GetById(m.monsterId);
-    int maxHP = def ? HealingService.CalcMaxHP(def, Mathf.Max(1, m.level), includeTraining: true, includeTitles: false) : 1;
-    int clamped = Mathf.Clamp(newHP, 0, Mathf.Max(1, maxHP));
+    int beforeHP = m.currentHP;
+    long beforeLast = m.lastHPUnix;
 
-    bool changed = m.currentHP != clamped || m.lastHPUnix != lastHpUnix;
-    m.currentHP = clamped;
+    // Use HP authority for clamping, then force timestamp explicitly.
+    OwnedMonsterHP.SetHP(ref m, newHP, lastHpUnix, OwnedMonsterHP.Reason.Unknown);
     m.lastHPUnix = lastHpUnix;
 
-    if (save) Save();
+    bool changed = (m.currentHP != beforeHP) || (m.lastHPUnix != beforeLast);
+
+if (save) Save();
     if (fireEvents && changed)
     {
         GameEvents.OnTeamChanged?.Invoke();
@@ -1813,11 +1858,16 @@ public static bool SetMonsterHPExact(
         var ownedMonster = Data.owned.Find(o => o != null && o.monsterId == monsterId);
         if (ownedMonster == null)
         {
+            int starterHP = 1;
+            var starterDef = MonsterLibraryLocator.GetById(monsterId);
+            if (starterDef != null)
+                starterHP = HealingService.CalcMaxHP(starterDef, Mathf.Max(1, level), includeTraining: true, includeTitles: false);
+
             ownedMonster = new OwnedMonsterData
             {
                 monsterId = monsterId,
                 level = Mathf.Max(1, level),
-                currentHP = -1,
+                currentHP = starterHP,
                 currentXP = 0,
                 ownedUID = Guid.NewGuid().ToString("N"),
 
@@ -1830,7 +1880,16 @@ public static bool SetMonsterHPExact(
         else
         {
             if (ownedMonster.level <= 0) ownedMonster.level = Mathf.Max(1, level);
-            if (ownedMonster.currentHP == 0) ownedMonster.currentHP = -1;
+
+            // Legacy safety: normalize any negative HP to full HP.
+            if (ownedMonster.currentHP < 0)
+            {
+                var normDef = MonsterLibraryLocator.GetById(monsterId);
+                ownedMonster.currentHP = (normDef != null)
+                    ? HealingService.CalcMaxHP(normDef, ownedMonster.level, includeTraining: true, includeTitles: false)
+                    : 1;
+            }
+
             if (string.IsNullOrEmpty(ownedMonster.ownedUID))
                 ownedMonster.ownedUID = Guid.NewGuid().ToString("N");
 
