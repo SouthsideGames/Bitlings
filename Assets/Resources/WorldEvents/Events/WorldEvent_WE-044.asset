@@ -23,4 +23,9 @@ MonoBehaviour:
   canRotate: 1
   weight: 7
   minDaysBetween: 0
-  effects: []
+  effects:
+  - kind: 11
+    job: 14
+    resource: 0
+    value: 0.5
+    flag: 0

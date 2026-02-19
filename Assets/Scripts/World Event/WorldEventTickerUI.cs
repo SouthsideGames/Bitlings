@@ -1,267 +1,102 @@
 using System.Collections;
 using TMPro;
 using UnityEngine;
-using UnityEngine.UI;
 
 /// <summary>
-/// TV-style scrolling ticker.
+/// WorldEventTickerUI (Fade Mode)
 ///
-/// Key behavior:
-/// - Stages message just outside the viewport on the RIGHT.
-/// - Waits pauseBeforeScrollSeconds (visible pause).
-/// - Scrolls left until the message RIGHT edge clears the viewport LEFT edge.
-/// - Waits pauseAfterClearSeconds (optional blank pause).
+/// Logic:
+/// - If the World Events feature is unlocked:
+///     - World Event Bar GameObject is active
+///     - The message text fades in -> stays -> fades out -> waits 10 seconds -> repeats
+/// - If the feature is locked:
+///     - World Event Bar GameObject is inactive
 ///
-/// IMPORTANT:
-/// - Uses viewport-local edge checks (robust under CanvasScaler, ScreenSpace-Camera, WorldSpace).
-/// - Avoid putting the message under LayoutGroups/ContentSizeFitter that fight manual positioning.
+/// Notes:
+/// - Uses unscaled time (works regardless of Time.timeScale).
+/// - Requires a CanvasGroup on the bar root (auto-added if missing).
+/// - Assumes WorldEventManager provides an Items list with .message strings.
 /// </summary>
 public sealed class WorldEventTickerUI : MonoBehaviour
 {
-    [Header("Wiring (Optional)")]
-    [Tooltip("Optional: root GameObject of the ticker bar to show/hide. If null, uses this GameObject.")]
-    [SerializeField] private GameObject barRoot;
+    [Header("Wiring")]
+    [Tooltip("The root GameObject of the bar (background + text). This will be toggled active/inactive.")]
+    [SerializeField] private GameObject worldEventBar;
 
-    [Tooltip("Optional: TMP text. If null, auto-finds the first TextMeshProUGUI under barRoot.")]
+    [Tooltip("TMP text that displays the message.")]
     [SerializeField] private TextMeshProUGUI messageText;
 
-    [Header("Behavior")]
-    [SerializeField] private bool onlyShowOnHome = false;
+    [Header("Timing")]
+    [SerializeField, Min(0f)] private float fadeInSeconds = 0.35f;
+    [SerializeField, Min(0f)] private float holdSeconds = 4.0f;
+    [SerializeField, Min(0f)] private float fadeOutSeconds = 0.35f;
 
-    [Tooltip("Units per second (UI units).")]
-    [SerializeField] private float scrollSpeed = 220f;
+    [Tooltip("Wait after fade-out before repeating.")]
+    [SerializeField, Min(0f)] private float waitSeconds = 10.0f;
 
-    [Tooltip("Wait time BEFORE the message starts moving (message staged just off the right edge).")]
-    [SerializeField] private float pauseBeforeScrollSeconds = 0.75f;
-
-    [Tooltip("Wait time AFTER the message fully clears the viewport before restarting (blank time).")]
-    [SerializeField] private float pauseAfterClearSeconds = 2.0f;
-
-    // Auto-resolved runtime refs (keeps inspector light)
-    private RectTransform _viewportRect;
-    private RectTransform _messageRect;
-
+    private CanvasGroup _barCanvasGroup;
     private Coroutine _loop;
-    private bool _subscribed;
-
-    // Optional fallback for projects where UIManager.IsOpen(PanelId.Home) isn't authoritative.
-    private GameObject _cachedHomePanel;
+    private int _messageIndex;
 
     private void Awake()
     {
-        if (!barRoot) barRoot = gameObject;
-        ResolveRefs();
+        if (!worldEventBar) worldEventBar = gameObject;
+        EnsureCanvasGroup();
+        SetAlphaInstant(0f);
     }
 
     private void OnEnable()
     {
-        ResolveRefs();
-        TryHookFeed();
-        HandleChanged();
-    }
+        EnsureCanvasGroup();
+        RefreshBarActive();
 
-    private void Update()
-    {
-        if (!_subscribed)
-            TryHookFeed();
-
-        if (_viewportRect == null || _messageRect == null || messageText == null)
-            ResolveRefs();
+        // Start/stop loop based on unlock state.
+        if (IsFeatureUnlocked())
+            StartLoopIfNeeded();
+        else
+            StopLoopAndHide();
     }
 
     private void OnDisable()
     {
-        UnhookFeed();
         StopLoop();
     }
 
-    /// <summary>
-    /// Auto-wires viewport + message refs to reduce inspector setup.
-    /// </summary>
-    private void ResolveRefs()
+    private void Update()
     {
-        if (!barRoot) barRoot = gameObject;
+        // Keep this simple and robust: enforce state continuously.
+        // If unlock state changes at runtime, the bar responds immediately.
+        bool unlocked = IsFeatureUnlocked();
 
-        // Resolve message text
-        if (!messageText)
+        if (!unlocked)
         {
-            if (barRoot)
-                messageText = barRoot.GetComponentInChildren<TextMeshProUGUI>(true);
-
-            if (!messageText)
-                messageText = GetComponentInChildren<TextMeshProUGUI>(true);
-        }
-
-        _messageRect = messageText ? messageText.rectTransform : null;
-
-        // Resolve viewport: prefer a RectMask2D/Mask ancestor (clipped viewport), else barRoot rect.
-        _viewportRect = null;
-
-        if (messageText)
-        {
-            var rectMask = messageText.GetComponentInParent<RectMask2D>(true);
-            if (rectMask) _viewportRect = rectMask.rectTransform;
-
-            if (_viewportRect == null)
-            {
-                var mask = messageText.GetComponentInParent<Mask>(true);
-                if (mask) _viewportRect = mask.rectTransform as RectTransform;
-            }
-        }
-
-        if (_viewportRect == null && barRoot)
-            _viewportRect = barRoot.GetComponent<RectTransform>();
-
-        if (_viewportRect == null)
-            _viewportRect = GetComponent<RectTransform>();
-    }
-
-    private void TryHookFeed()
-    {
-        if (_subscribed) return;
-
-        var feed = WorldEventManager.I;
-        if (feed == null) return;
-
-        feed.Changed += HandleChanged;
-        _subscribed = true;
-    }
-
-    private void UnhookFeed()
-    {
-        if (!_subscribed) return;
-
-        if (WorldEventManager.I != null)
-            WorldEventManager.I.Changed -= HandleChanged;
-
-        _subscribed = false;
-    }
-
-    private void HandleChanged()
-    {
-        RefreshVisibility();
-
-        if (!barRoot || !barRoot.activeSelf)
-        {
-            StopLoop();
+            if (worldEventBar && worldEventBar.activeSelf)
+                StopLoopAndHide();
             return;
         }
 
-        if (_loop == null)
-            _loop = StartCoroutine(Loop());
+        // Unlocked
+        if (worldEventBar && !worldEventBar.activeSelf)
+            worldEventBar.SetActive(true);
+
+        StartLoopIfNeeded();
     }
 
-    private void RefreshVisibility()
+    // ─────────────────────────────────────────────────────────────
+    // Core loop
+    // ─────────────────────────────────────────────────────────────
+
+    private void StartLoopIfNeeded()
     {
-        // Feature gate: if World Events feature is locked, hide the bar.
-        if (WorldEventSystem.I != null && !WorldEventSystem.I.IsFeatureActive())
-        {
-            if (barRoot) barRoot.SetActive(false);
-            return;
-        }
-
-        bool hasFeed = WorldEventManager.I != null &&
-                       WorldEventManager.I.Items != null &&
-                       WorldEventManager.I.Items.Count > 0;
-
-        if (onlyShowOnHome)
-        {
-            bool onHome = false;
-
-            if (UIManager.I != null)
-                onHome = UIManager.I.IsOpen(PanelId.Home);
-
-            if (!onHome)
-            {
-                if (!_cachedHomePanel)
-                    _cachedHomePanel = GameObject.Find("Panel_Home");
-
-                if (_cachedHomePanel)
-                    onHome = _cachedHomePanel.activeInHierarchy;
-            }
-
-            hasFeed = hasFeed && onHome;
-        }
-
-        if (barRoot)
-            barRoot.SetActive(hasFeed);
+        if (_loop != null) return;
+        _loop = StartCoroutine(FadeLoop());
     }
 
-    private IEnumerator Loop()
+    private void StopLoopAndHide()
     {
-        while (true)
-        {
-            var feed = WorldEventManager.I;
-            if (feed == null || feed.Items == null || feed.Items.Count == 0)
-            {
-                RefreshVisibility();
-                yield return null;
-                continue;
-            }
-
-            for (int i = 0; i < feed.Items.Count; i++)
-            {
-                if (!barRoot || !barRoot.activeInHierarchy) break;
-
-                if (i >= feed.Items.Count) break;
-
-                var it = feed.Items[i];
-                if (it == null || string.IsNullOrWhiteSpace(it.message))
-                    continue;
-
-                SetMessage(it.message);
-
-                yield return ScrollUntilCleared();
-
-                RefreshVisibility();
-                if (!barRoot || !barRoot.activeInHierarchy) break;
-            }
-
-            yield return null;
-        }
-    }
-
-    private IEnumerator ScrollUntilCleared()
-    {
-        ResolveRefs();
-        if (_viewportRect == null || _messageRect == null) yield break;
-
-        // Ensure text sizing/layout is up to date before positioning.
-        Canvas.ForceUpdateCanvases();
-
-        // Stage just outside viewport right edge.
-        PositionMessageJustOutsideViewportRight_Local(_viewportRect, _messageRect);
-
-        // Visible pause at start position.
-        if (pauseBeforeScrollSeconds > 0f)
-            yield return new WaitForSecondsRealtime(pauseBeforeScrollSeconds);
-
-        // Scroll left until message right edge clears viewport left edge (in viewport-local space).
-        while (!IsMessageRightPastViewportLeft_Local(_viewportRect, _messageRect))
-        {
-            if (!barRoot || !barRoot.activeInHierarchy) yield break;
-
-            // Move in viewport-local X direction (robust in ScreenSpace-Camera/WorldSpace)
-            float dx = scrollSpeed * Time.unscaledDeltaTime;
-            _messageRect.position -= _viewportRect.right * dx;
-
-            yield return null;
-        }
-
-        // Optional blank pause after clear.
-        if (pauseAfterClearSeconds > 0f)
-            yield return new WaitForSecondsRealtime(pauseAfterClearSeconds);
-    }
-
-    private void SetMessage(string msg)
-    {
-        ResolveRefs();
-        if (!messageText) return;
-
-        messageText.text = msg;
-
-        // Force layout so message rect/corners reflect the new string before scrolling.
-        Canvas.ForceUpdateCanvases();
+        StopLoop();
+        if (worldEventBar) worldEventBar.SetActive(false);
+        SetAlphaInstant(0f);
     }
 
     private void StopLoop()
@@ -273,51 +108,171 @@ public sealed class WorldEventTickerUI : MonoBehaviour
         }
     }
 
-    // --------------------------------------------------------------------
-    // Robust edge math in viewport-local space
-    // --------------------------------------------------------------------
-
-    /// <summary>
-    /// Place message just outside viewport right edge:
-    /// message left edge == viewport right edge (in viewport-local space).
-    /// </summary>
-    private static void PositionMessageJustOutsideViewportRight_Local(RectTransform viewport, RectTransform message)
+    private IEnumerator FadeLoop()
     {
-        if (!viewport || !message) return;
+        // Ensure bar is visible (active), but start transparent.
+        if (worldEventBar && !worldEventBar.activeSelf)
+            worldEventBar.SetActive(true);
 
-        Vector3[] v = new Vector3[4];
-        Vector3[] m = new Vector3[4];
+        SetAlphaInstant(0f);
 
-        viewport.GetWorldCorners(v);
-        message.GetWorldCorners(m);
+        while (true)
+        {
+            // Safety: if feature becomes locked while running, shut down.
+            if (!IsFeatureUnlocked())
+            {
+                StopLoopAndHide();
+                yield break;
+            }
 
-        // Convert world corners to viewport-local coordinates
-        float viewportRight = viewport.InverseTransformPoint(v[2]).x; // TR
-        float messageLeft = viewport.InverseTransformPoint(m[0]).x;   // BL
+            // Pull next message (or keep hidden if none).
+            string msg = GetNextMessageSafe();
+            if (string.IsNullOrWhiteSpace(msg))
+            {
+                SetAlphaInstant(0f);
+                yield return null;
+                continue;
+            }
 
-        float dxLocal = viewportRight - messageLeft;
+            if (messageText)
+            {
+                messageText.text = msg;
+                Canvas.ForceUpdateCanvases();
+            }
 
-        // Move message along viewport's local +X direction in world space
-        message.position += viewport.right * dxLocal;
+            // Fade in
+            yield return FadeTo(1f, fadeInSeconds);
+
+            // Hold
+            yield return WaitUnscaled(holdSeconds);
+
+            // Fade out
+            yield return FadeTo(0f, fadeOutSeconds);
+
+            // Wait 10 seconds (or configured)
+            yield return WaitUnscaled(waitSeconds);
+        }
     }
 
-    /// <summary>
-    /// True when message right edge <= viewport left edge (fully cleared),
-    /// comparing in viewport-local coordinates.
-    /// </summary>
-    private static bool IsMessageRightPastViewportLeft_Local(RectTransform viewport, RectTransform message)
+    // ─────────────────────────────────────────────────────────────
+    // Message selection
+    // ─────────────────────────────────────────────────────────────
+
+    private string GetNextMessageSafe()
     {
-        if (!viewport || !message) return true;
+        var mgr = WorldEventManager.I;
+        if (mgr == null || mgr.Items == null || mgr.Items.Count == 0)
+            return null;
 
-        Vector3[] v = new Vector3[4];
-        Vector3[] m = new Vector3[4];
+        // Cycle through items until we find a valid message, at most Count tries.
+        int tries = 0;
+        while (tries < mgr.Items.Count)
+        {
+            if (_messageIndex >= mgr.Items.Count) _messageIndex = 0;
 
-        viewport.GetWorldCorners(v);
-        message.GetWorldCorners(m);
+            var it = mgr.Items[_messageIndex];
+            _messageIndex++;
 
-        float viewportLeft = viewport.InverseTransformPoint(v[0]).x;  // BL
-        float messageRight = viewport.InverseTransformPoint(m[2]).x;  // TR
+            string msg = it != null ? it.message : null;
+            if (!string.IsNullOrWhiteSpace(msg))
+                return msg;
 
-        return messageRight <= viewportLeft;
+            tries++;
+        }
+
+        return null;
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // Unlock gating
+    // ─────────────────────────────────────────────────────────────
+
+    private bool IsFeatureUnlocked()
+    {
+        // WorldEventSystem is your feature gate. If it's missing, treat as locked for safety.
+        if (WorldEventSystem.I == null) return false;
+        return WorldEventSystem.I.IsFeatureActive();
+    }
+
+    private void RefreshBarActive()
+    {
+        bool unlocked = IsFeatureUnlocked();
+        if (worldEventBar) worldEventBar.SetActive(unlocked);
+        if (!unlocked) SetAlphaInstant(0f);
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // CanvasGroup helpers
+    // ─────────────────────────────────────────────────────────────
+
+    private void EnsureCanvasGroup()
+    {
+        if (!worldEventBar) worldEventBar = gameObject;
+
+        if (worldEventBar)
+        {
+            _barCanvasGroup = worldEventBar.GetComponent<CanvasGroup>();
+            if (_barCanvasGroup == null)
+                _barCanvasGroup = worldEventBar.AddComponent<CanvasGroup>();
+        }
+        else
+        {
+            _barCanvasGroup = GetComponent<CanvasGroup>();
+            if (_barCanvasGroup == null)
+                _barCanvasGroup = gameObject.AddComponent<CanvasGroup>();
+        }
+    }
+
+    private void SetAlphaInstant(float a)
+    {
+        if (_barCanvasGroup) _barCanvasGroup.alpha = Mathf.Clamp01(a);
+    }
+
+    private IEnumerator FadeTo(float targetAlpha, float seconds)
+    {
+        if (_barCanvasGroup == null)
+        {
+            yield break;
+        }
+
+        targetAlpha = Mathf.Clamp01(targetAlpha);
+
+        if (seconds <= 0f)
+        {
+            _barCanvasGroup.alpha = targetAlpha;
+            yield break;
+        }
+
+        float startAlpha = _barCanvasGroup.alpha;
+        float t = 0f;
+
+        while (t < seconds)
+        {
+            // If feature locks mid-fade, stop immediately.
+            if (!IsFeatureUnlocked())
+            {
+                StopLoopAndHide();
+                yield break;
+            }
+
+            t += Time.unscaledDeltaTime;
+            float u = Mathf.Clamp01(t / seconds);
+            _barCanvasGroup.alpha = Mathf.Lerp(startAlpha, targetAlpha, u);
+            yield return null;
+        }
+
+        _barCanvasGroup.alpha = targetAlpha;
+    }
+
+    private static IEnumerator WaitUnscaled(float seconds)
+    {
+        if (seconds <= 0f) yield break;
+
+        float t = 0f;
+        while (t < seconds)
+        {
+            t += Time.unscaledDeltaTime;
+            yield return null;
+        }
     }
 }
