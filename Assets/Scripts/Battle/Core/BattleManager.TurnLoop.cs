@@ -401,7 +401,9 @@ RefreshStatusIconsFromState();
                                         if (teamHP[activeIndex] <= 0.01f)
                                         {
                                             RefreshStatusIconsFromState();
-                                            break;
+                                            
+                                        NotifyPlayerActionResolved_ForForesight(activeIndex, PlayerAction.Focus);
+break;
                                         }
 
                                         ResetDefendStreak();
@@ -444,7 +446,9 @@ RefreshStatusIconsFromState();
                                         if (teamHP[activeIndex] <= 0.01f)
                                         {
                                             RefreshStatusIconsFromState();
-                                            break;
+                                            
+                                        NotifyPlayerActionResolved_ForForesight(activeIndex, PlayerAction.Run);
+break;
                                         }
 
                                         ResetDefendStreak();
@@ -477,7 +481,9 @@ RefreshStatusIconsFromState();
                                 case PlayerAction.Defend:
                                 default:
                                     // Defend is resolved before the wild acts in the enemy-first branch.
-                                    break;
+                                    
+                                        NotifyPlayerActionResolved_ForForesight(activeIndex, PlayerAction.Defend);
+break;
                             }
                         }
                         else
@@ -846,6 +852,17 @@ if (rallyBonusPct > 0f)
     if (BattleLogger.Enabled)
         BattleLogger.Log($"[Status] Rally boosts {attacker}'s damage: {before}→{dr.damage} (+{Mathf.RoundToInt(rallyBonusPct * 100f)}%).", LogScope.Battle);
 }
+// Status: Tailwind (Sky) — first attack during effect deals bonus damage (consumed on use).
+float tailwindBonusPct = GetActivePlayerTailwindBonusPct();
+bool tailwindConsumed = false;
+if (tailwindBonusPct > 0f)
+{
+    int before = dr.damage;
+    dr.damage = Mathf.Max(1, Mathf.RoundToInt(dr.damage * (1f + tailwindBonusPct)));
+    tailwindConsumed = true;
+    if (BattleLogger.Enabled)
+        BattleLogger.Log($"[Status] Tailwind empowers {attacker}'s first strike: {before}→{dr.damage} (+{Mathf.RoundToInt(tailwindBonusPct * 100f)}%).", LogScope.Battle);
+}
 
 float preventedByWildGuard = 0f;
         bool shadowVeilBlockedWild = false;
@@ -953,6 +970,33 @@ if (!playerLandedFirstHitThisBattle && dr.damage > 0)
         {
             yield return Say($"{attacker} hits {foeName} for {dmgToApply}!", BattleLineTag.Result);
         }
+
+        // Status: Tailwind is consumed on the first attack it empowers.
+        if (tailwindConsumed && activeIndex >= 0 && teamStatus != null && activeIndex < teamStatus.Length && teamStatus[activeIndex] == StatusType.Tailwind)
+            ClearTeamStatus(activeIndex, reason: "spent");
+
+        // Status: Leeching (Bug) — heal a portion of damage dealt.
+        ApplyLeechHeal(BattleSide.Player, dmgToApply);
+
+        // Status: Phantasmal (Specter) — lose HP when attacking.
+        float phantasmalPct = GetActivePlayerPhantasmalSelfDmgPct();
+        if (phantasmalPct > 0f && activeIndex >= 0 && teamHP != null && activeIndex < teamHP.Length)
+        {
+            int selfDmg = Mathf.Max(1, Mathf.RoundToInt(GetFinalMaxHPForIndex(activeIndex) * Mathf.Clamp(phantasmalPct, 0f, 0.9f)));
+            float pre = teamHP[activeIndex];
+            teamHP[activeIndex] = Mathf.Max(0f, teamHP[activeIndex] - selfDmg);
+            PushHPBars();
+
+            if (BattleLogger.Enabled)
+                BattleLogger.Log($"[Status] {GetName(activeIndex)} loses {selfDmg} HP from Phantasmal backlash. ({Mathf.CeilToInt(pre)}→{Mathf.CeilToInt(teamHP[activeIndex])})", LogScope.Battle);
+
+            if (!ShouldSkipNarration(BattleLineTag.Flavor))
+                yield return Say($"{GetName(activeIndex)} is hurt by Phantasmal backlash (-{selfDmg})!", BattleLineTag.Flavor);
+        }
+
+        // Status: Foresight — check repeat action to schedule a stun next turn.
+        NotifyPlayerActionResolved_ForForesight(activeIndex, PlayerAction.Attack);
+
 
         if (dr.crit)
             BattleLogger.AddKeyMoment($"CRIT: {attacker} → {foeName} ({dmgToApply})");
@@ -1179,7 +1223,8 @@ if (!playerLandedFirstHitThisBattle && dr.damage > 0)
 
                 if (!ShouldSkipNarration(BattleLineTag.Flavor))
                     yield return Say($"{attackerName} unleashes a charged attack (+{Mathf.RoundToInt(chargeBonusPct * 100f)}% dmg)!", BattleLineTag.Flavor);
-            
+            }
+
 // Status: Rally (Clash) — allies gain minor Attack boost.
 float wildRallyBonusPct = GetWildRallyBonusPct();
 if (wildRallyBonusPct > 0f)
@@ -1190,6 +1235,17 @@ if (wildRallyBonusPct > 0f)
         BattleLogger.Log($"[Status] Rally boosts Wild damage: {before}→{dr.damage} (+{Mathf.RoundToInt(wildRallyBonusPct * 100f)}%).", LogScope.Battle);
 }
 
+
+// Status: Tailwind (Sky) — first attack during effect deals bonus damage (consumed on use).
+float wildTailwindBonusPct = GetWildTailwindBonusPct();
+bool wildTailwindConsumed = false;
+if (wildTailwindBonusPct > 0f)
+{
+    int before = dr.damage;
+    dr.damage = Mathf.Max(1, Mathf.RoundToInt(dr.damage * (1f + wildTailwindBonusPct)));
+    wildTailwindConsumed = true;
+    if (BattleLogger.Enabled)
+        BattleLogger.Log($"[Status] Tailwind empowers Wild's first strike: {before}→{dr.damage} (+{Mathf.RoundToInt(wildTailwindBonusPct * 100f)}%).", LogScope.Battle);
 }
 
             float incomingScalar = 1f;
@@ -1367,6 +1423,33 @@ int dmg_afterScalar = Mathf.Max(1, Mathf.RoundToInt(dr.damage * incomingScalar))
             yield return Say($"{attackerName} hits {GetName(activeIndex)} for {dmg_final}!", BattleLineTag.Result);
         }
 
+
+
+        // Status: Tailwind is consumed on the first attack it empowers.
+        if (wildTailwindConsumed && wildStatus == StatusType.Tailwind)
+            ClearWildStatus(reason: "spent");
+
+        // Status: Leeching (Bug) — heal a portion of damage dealt.
+        ApplyLeechHeal(BattleSide.Wild, dmg_final);
+
+        // Status: Phantasmal (Specter) — lose HP when attacking.
+        float wildPhantasmalPct = GetWildPhantasmalSelfDmgPct();
+        if (wildPhantasmalPct > 0f)
+        {
+            int selfDmg = Mathf.Max(1, Mathf.RoundToInt(Mathf.Max(1f, wildMaxHP) * Mathf.Clamp(wildPhantasmalPct, 0f, 0.9f)));
+            float pre = wildHP;
+            wildHP = Mathf.Max(0f, wildHP - selfDmg);
+            PushHPBars();
+
+            if (BattleLogger.Enabled)
+                BattleLogger.Log($"[Status] Wild loses {selfDmg} HP from Phantasmal backlash. ({Mathf.CeilToInt(pre)}→{Mathf.CeilToInt(wildHP)})", LogScope.Battle);
+
+            if (!ShouldSkipNarration(BattleLineTag.Flavor))
+                yield return Say($"Wild is hurt by Phantasmal backlash (-{selfDmg})!", BattleLineTag.Flavor);
+        }
+
+        // Status: Foresight — check repeat action to schedule a stun next turn.
+        NotifyWildActionResolved_ForForesight(EnemyAction.Attack);
         if (dr.crit && !df.cannotBeCrit)
             BattleLogger.AddKeyMoment($"CRIT: {attackerName} → {GetName(activeIndex)} ({dmg_final})");
 
@@ -1432,7 +1515,13 @@ if (dr.crit && !df.cannotBeCrit)
                 AudioManager.I?.PlaySfx(SfxType.Clutch);
             }
         }
+
+            // Status: Foresight — record the wild action for repeat detection (Attack already recorded at hit-time).
+            if (choice != EnemyAction.Attack)
+                NotifyWildActionResolved_ForForesight(choice);
+
         }
+
         finally
         {
             // Tick owner-turn-based Title durations for the wild side.

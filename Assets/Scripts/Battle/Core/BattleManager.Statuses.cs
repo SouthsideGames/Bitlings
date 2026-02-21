@@ -28,6 +28,143 @@ private void EnsureShieldGrantPools()
 }
 
 
+
+// ─────────────────────────────────────────────────────────────
+// Status: Tailwind + Foresight runtime sidecars
+// - Tailwind: first attack during effect deals bonus damage (consumed on first attack).
+// - Foresight: repeating the same action twice causes a "stun" (skip) on the next turn.
+//   Implemented via per-unit pending-skip flags (does not overwrite the active status).
+// ─────────────────────────────────────────────────────────────
+
+private PlayerAction[] _foresightLastPlayerAction;
+private bool[] _foresightStunPendingTeam;
+
+private EnemyAction _foresightLastWildAction = EnemyAction.None;
+private bool _foresightStunPendingWild = false;
+
+private void EnsureForesightSidecars()
+{
+    if (teamStatus != null)
+    {
+        if (_foresightLastPlayerAction == null || _foresightLastPlayerAction.Length != teamStatus.Length)
+            _foresightLastPlayerAction = new PlayerAction[teamStatus.Length];
+
+        if (_foresightStunPendingTeam == null || _foresightStunPendingTeam.Length != teamStatus.Length)
+            _foresightStunPendingTeam = new bool[teamStatus.Length];
+    }
+    else
+    {
+        _foresightLastPlayerAction = null;
+        _foresightStunPendingTeam = null;
+    }
+}
+
+// Called after a player slot successfully performs an action.
+private void NotifyPlayerActionResolved_ForForesight(int slot, PlayerAction action)
+{
+    EnsureForesightSidecars();
+
+    if (!inBattle) return;
+    if (teamStatus == null || slot < 0 || slot >= teamStatus.Length) return;
+    if (teamStatus[slot] != StatusType.Foresight) return;
+
+    // Ignore "None" to avoid false repeats due to state plumbing.
+    if (action == PlayerAction.None) return;
+
+    var last = (_foresightLastPlayerAction != null && slot < _foresightLastPlayerAction.Length)
+        ? _foresightLastPlayerAction[slot]
+        : PlayerAction.None;
+
+    if (last == action)
+    {
+        if (_foresightStunPendingTeam != null && slot < _foresightStunPendingTeam.Length)
+            _foresightStunPendingTeam[slot] = true;
+
+        if (BattleLogger.Enabled)
+            BattleLogger.Log($"[Status] Foresight backlash: {GetName(slot)} repeated {action} and will be stunned next turn.", LogScope.Battle);
+    }
+
+    if (_foresightLastPlayerAction != null && slot < _foresightLastPlayerAction.Length)
+        _foresightLastPlayerAction[slot] = action;
+}
+
+// Called after the wild successfully performs an action.
+private void NotifyWildActionResolved_ForForesight(EnemyAction action)
+{
+    if (!inBattle) return;
+    if (wildStatus != StatusType.Foresight) return;
+
+    if (action == EnemyAction.None) return;
+
+    if (_foresightLastWildAction == action)
+    {
+        _foresightStunPendingWild = true;
+
+        if (BattleLogger.Enabled)
+            BattleLogger.Log($"[Status] Foresight backlash: Wild repeated {action} and will be stunned next turn.", LogScope.Battle);
+    }
+
+    _foresightLastWildAction = action;
+}
+
+private bool TryConsumeForesightStun_Player(int slot)
+{
+    EnsureForesightSidecars();
+
+    if (!inBattle) return false;
+    if (_foresightStunPendingTeam == null || slot < 0 || slot >= _foresightStunPendingTeam.Length) return false;
+    if (!_foresightStunPendingTeam[slot]) return false;
+
+    _foresightStunPendingTeam[slot] = false;
+    return true;
+}
+
+private bool TryConsumeForesightStun_Wild()
+{
+    if (!inBattle) return false;
+    if (!_foresightStunPendingWild) return false;
+
+    _foresightStunPendingWild = false;
+    return true;
+}
+
+private float GetActivePlayerTailwindBonusPct()
+{
+    if (!inBattle) return 0f;
+    if (teamStatus == null || activeIndex < 0 || activeIndex >= teamStatus.Length) return 0f;
+    if (teamStatus[activeIndex] != StatusType.Tailwind) return 0f;
+
+    float mag = (teamStatusMagnitude != null && activeIndex < teamStatusMagnitude.Length) ? teamStatusMagnitude[activeIndex] : 0f;
+    return (mag > 0f) ? mag : 0.25f;
+}
+
+private float GetWildTailwindBonusPct()
+{
+    if (!inBattle) return 0f;
+    if (wildStatus != StatusType.Tailwind) return 0f;
+
+    float mag = wildStatusMagnitude;
+    return (mag > 0f) ? mag : 0.25f;
+}
+
+private float GetActivePlayerPhantasmalSelfDmgPct()
+{
+    if (!inBattle) return 0f;
+    if (teamStatus == null || activeIndex < 0 || activeIndex >= teamStatus.Length) return 0f;
+    if (teamStatus[activeIndex] != StatusType.Phantasmal) return 0f;
+
+    float mag = (teamStatusMagnitude != null && activeIndex < teamStatusMagnitude.Length) ? teamStatusMagnitude[activeIndex] : 0f;
+    return (mag > 0f) ? mag : 0.05f;
+}
+
+private float GetWildPhantasmalSelfDmgPct()
+{
+    if (!inBattle) return 0f;
+    if (wildStatus != StatusType.Phantasmal) return 0f;
+
+    float mag = wildStatusMagnitude;
+    return (mag > 0f) ? mag : 0.05f;
+}
 // ─────────────────────────────────────────────────────────────
     // Synergy → Status (battle start only)
     // Phase 3: Apply-only + UI + logging. Phase 4 will add ticking.
@@ -400,6 +537,14 @@ private void EnsureShieldGrantPools()
 
         bool skipAction = false;
 
+        // Foresight: if a repeat was detected last turn, stun (skip) this turn.
+        if (st == StatusType.Foresight && TryConsumeForesightStun_Player(slot))
+        {
+            skipAction = true;
+            skippedBy = StatusType.Foresight;
+            BattleLogger.Log($"[Status] {GetName(slot)} is stunned by Foresight backlash and skips its action.", LogScope.Battle);
+        }
+
         // Apply turn-start effect
         switch (st)
         {
@@ -478,6 +623,14 @@ private void EnsureShieldGrantPools()
         }
 
         bool skipAction = false;
+
+        // Foresight: if a repeat was detected last turn, stun (skip) this turn.
+        if (wildStatus == StatusType.Foresight && TryConsumeForesightStun_Wild())
+        {
+            skipAction = true;
+            skippedBy = StatusType.Foresight;
+            BattleLogger.Log("[Status] Wild is stunned by Foresight backlash and skips its action.", LogScope.Battle);
+        }
 
         switch (wildStatus)
         {
