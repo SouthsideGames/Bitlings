@@ -203,6 +203,28 @@ public sealed class BattleStatsSystem
         if (jctx != null && jctx.speedBuffTurns > 0 && jctx.speedBonusPctFirstTurns != 0f)
             spd = spd * (1f + jctx.speedBonusPctFirstTurns);
 
+        // 6) Status-based stat presentation modifiers.
+        // We use this layer so status effects show red/green deltas in the same UI pipeline as Titles.
+        try
+        {
+            StatusType st = _bm.GetTeamStatusTypeSafe(idx);
+            float mag = _bm.GetTeamStatusMagnitudeSafe(idx);
+
+            // Soaked: speed reduced (magnitude = pct). Default = 25%.
+            if (st == StatusType.Soaked)
+            {
+                float pct = (mag > 0f) ? mag : 0.25f;
+                pct = Mathf.Clamp01(pct);
+                spd = spd * (1f - pct);
+            }
+
+            // Rally: allies gain minor ATK boost (aura). Default = +10%.
+            float rallyPct = _bm.GetPlayerTeamRallyBonusPctSafe();
+            if (rallyPct > 0f)
+                atk = atk * (1f + rallyPct);
+        }
+        catch { /* don't break stats UI if status arrays are mis-sized */ }
+
         return new BattleStatBlock
         {
             maxHP = Mathf.Max(1, Mathf.RoundToInt(hp)),
@@ -336,7 +358,33 @@ public sealed class BattleStatsSystem
             spd = Mathf.Max(1, Mathf.RoundToInt(spd)),
         };
 
-        stages.final = stages.afterBoosters;
+        // Status-based stat presentation modifiers (so tooltips match UI colors).
+        float atkF = stages.afterBoosters.atk;
+        float spdF = stages.afterBoosters.spd;
+        try
+        {
+            StatusType st = _bm.GetTeamStatusTypeSafe(idx);
+            float mag = _bm.GetTeamStatusMagnitudeSafe(idx);
+            if (st == StatusType.Soaked)
+            {
+                float pct = (mag > 0f) ? mag : 0.25f;
+                pct = Mathf.Clamp01(pct);
+                spdF = spdF * (1f - pct);
+            }
+
+            float rallyPct = _bm.GetPlayerTeamRallyBonusPctSafe();
+            if (rallyPct > 0f)
+                atkF = atkF * (1f + rallyPct);
+        }
+        catch { }
+
+        stages.final = new BattleStatBlock
+        {
+            maxHP = stages.afterBoosters.maxHP,
+            atk = Mathf.Max(1, Mathf.RoundToInt(atkF)),
+            def = stages.afterBoosters.def,
+            spd = Mathf.Max(1, Mathf.RoundToInt(spdF)),
+        };
         return stages;
     }
 
@@ -375,6 +423,25 @@ public sealed class BattleStatsSystem
             spd = (spd + Mathf.Max(0, wmods.spdFlat)) * (1f + Mathf.Max(0f, wmods.spdPct));
             hp = hp * (1f + Mathf.Max(0f, wmods.hpPct));
         }
+
+        // Status-based stat presentation modifiers (for red/green stat rows).
+        try
+        {
+            StatusType st = _bm.GetWildStatusTypeSafe();
+            float mag = _bm.GetWildStatusMagnitudeSafe();
+
+            if (st == StatusType.Soaked)
+            {
+                float pct = (mag > 0f) ? mag : 0.25f;
+                pct = Mathf.Clamp01(pct);
+                spd = spd * (1f - pct);
+            }
+
+            float rallyPct = _bm.GetWildRallyBonusPctSafe();
+            if (rallyPct > 0f)
+                atk = atk * (1f + rallyPct);
+        }
+        catch { }
 
         return new BattleStatBlock
         {
@@ -450,7 +517,34 @@ public sealed class BattleStatsSystem
 
         stages.afterTemp = stages.afterConditionals;
         stages.afterBoosters = stages.afterConditionals;
-        stages.final = stages.afterConditionals;
+
+        // Status-based stat presentation modifiers.
+        float atkF = stages.afterBoosters.atk;
+        float spdF = stages.afterBoosters.spd;
+        try
+        {
+            StatusType st = _bm.GetWildStatusTypeSafe();
+            float mag = _bm.GetWildStatusMagnitudeSafe();
+            if (st == StatusType.Soaked)
+            {
+                float pct = (mag > 0f) ? mag : 0.25f;
+                pct = Mathf.Clamp01(pct);
+                spdF = spdF * (1f - pct);
+            }
+
+            float rallyPct = _bm.GetWildRallyBonusPctSafe();
+            if (rallyPct > 0f)
+                atkF = atkF * (1f + rallyPct);
+        }
+        catch { }
+
+        stages.final = new BattleStatBlock
+        {
+            maxHP = stages.afterBoosters.maxHP,
+            atk = Mathf.Max(1, Mathf.RoundToInt(atkF)),
+            def = stages.afterBoosters.def,
+            spd = Mathf.Max(1, Mathf.RoundToInt(spdF)),
+        };
         return stages;
     }
 }

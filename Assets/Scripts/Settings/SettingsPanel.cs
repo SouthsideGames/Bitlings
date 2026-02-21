@@ -51,6 +51,10 @@ public class SettingsPanel : MonoBehaviour
     [SerializeField] private Toggle autoConvertDupesToggle;
     [SerializeField] private Toggle autoScrollLogToggle;
 
+    [Header("Difficulty")]
+    [SerializeField] private TMP_Dropdown difficultyDropdown;
+    [SerializeField] private TextMeshProUGUI difficultyLockLabel;
+
     [Header("Notifications")]
     [SerializeField] private Toggle notificationsEnabledToggle;
     [SerializeField] private Toggle notifyJobStorageFullToggle;
@@ -99,6 +103,7 @@ public class SettingsPanel : MonoBehaviour
     void Start()
     {
         SafeSubscribe();
+        EnsureDifficultyDropdownOptions();
         Refresh();
 
         WireSectionTabs();
@@ -113,6 +118,7 @@ public class SettingsPanel : MonoBehaviour
     void OnEnable()
     {
         SafeSubscribe();
+        EnsureDifficultyDropdownOptions();
         Refresh();
 
         if (resetButton)
@@ -313,7 +319,24 @@ public class SettingsPanel : MonoBehaviour
             _activeSection = SettingsSection.Audio;
     }
 
-    public void ShowSection(SettingsSection section, bool instant = false)
+        void EnsureDifficultyDropdownOptions()
+    {
+        if (!difficultyDropdown) return;
+
+        // Build options once (safe to call repeatedly).
+        if (difficultyDropdown.options == null || difficultyDropdown.options.Count != 3)
+        {
+            difficultyDropdown.ClearOptions();
+            difficultyDropdown.AddOptions(new System.Collections.Generic.List<string>
+            {
+                "Normal",
+                "Hard",
+                "Insane"
+            });
+        }
+    }
+
+public void ShowSection(SettingsSection section, bool instant = false)
     {
         if (section == SettingsSection.Seeds && !IsSeedsTabUnlocked())
             section = SettingsSection.Audio;
@@ -409,7 +432,7 @@ public class SettingsPanel : MonoBehaviour
             if (sfxSlider) sfxSlider.SetValueWithoutNotify(AudioManager.I.GetSfxVolume());
         }
 
-        var s = SettingsManager.I ? SettingsManager.I.S : SaveManager.Data?.settings;
+        var s = SettingsManager.I ? SettingsManager.I.settingsState : SaveManager.Data?.settings;
         if (s != null)
         {
             if (muteAllToggle) muteAllToggle.SetIsOnWithoutNotify(s.muteAll);
@@ -421,6 +444,25 @@ public class SettingsPanel : MonoBehaviour
 
             if (autoScrollLogToggle)
                 autoScrollLogToggle.SetIsOnWithoutNotify(s.autoScrollBattleLog);
+
+
+            // Difficulty
+            if (difficultyDropdown)
+            {
+                EnsureDifficultyDropdownOptions();
+
+                int mode = Mathf.Clamp(s.difficultyMode, 0, 2);
+                difficultyDropdown.SetValueWithoutNotify(mode);
+
+                bool unlocked = SaveManager.Data != null && SaveManager.Data.promotionRank >= 15;
+                difficultyDropdown.interactable = unlocked;
+
+                if (difficultyLockLabel)
+                {
+                    difficultyLockLabel.gameObject.SetActive(!unlocked);
+                    if (!unlocked) difficultyLockLabel.text = "Unlocks at Rank 15";
+                }
+            }
 
             if (notificationsEnabledToggle)
                 notificationsEnabledToggle.SetIsOnWithoutNotify(s.notificationsEnabled);
@@ -498,6 +540,12 @@ public class SettingsPanel : MonoBehaviour
             autoScrollLogToggle.onValueChanged.AddListener(OnAutoScrollChanged);
         }
 
+        if (difficultyDropdown)
+        {
+            difficultyDropdown.onValueChanged.RemoveListener(OnDifficultyChanged);
+            difficultyDropdown.onValueChanged.AddListener(OnDifficultyChanged);
+        }
+
         if (notificationsEnabledToggle)
         {
             notificationsEnabledToggle.onValueChanged.RemoveListener(OnNotificationsEnabledChanged);
@@ -555,6 +603,9 @@ public class SettingsPanel : MonoBehaviour
         if (autoScrollLogToggle)
             autoScrollLogToggle.onValueChanged.RemoveListener(OnAutoScrollChanged);
 
+        if (difficultyDropdown)
+            difficultyDropdown.onValueChanged.RemoveListener(OnDifficultyChanged);
+
         if (notificationsEnabledToggle)
             notificationsEnabledToggle.onValueChanged.RemoveListener(OnNotificationsEnabledChanged);
         if (notifyJobStorageFullToggle)
@@ -590,6 +641,14 @@ public class SettingsPanel : MonoBehaviour
     {
         var mgr = SettingsManager.I;
         if (mgr != null) mgr.SetAutoScrollBattleLog(on);
+    }
+
+    void OnDifficultyChanged(int idx)
+    {
+        var mgr = SettingsManager.I;
+        if (mgr != null) mgr.SetDifficultyMode(idx);
+
+        Refresh();
     }
 
     void OnNotificationsEnabledChanged(bool on)

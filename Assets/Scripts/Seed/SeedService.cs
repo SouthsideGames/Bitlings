@@ -36,7 +36,7 @@ public static class SeedService
         bool customUnlocked = fu.IsUnlocked(FeatureId.Seeds_CustomInput);
         bool dailyUnlocked = fu.IsUnlocked(FeatureId.Seeds_DailyBasic);
 
-        var settings = (sm != null) ? sm.S : null;
+        var settings = (sm != null) ? sm.settingsState : null;
         // If settings aren't available yet (boot order), simply skip custom-seed evaluation
         // rather than aborting seed application entirely.
 
@@ -106,16 +106,16 @@ public static class SeedService
     {
         var fu = FeatureUnlockManager.I;
         var sm = SettingsManager.I;
-        if (fu == null || sm == null || sm.S == null)
+        if (fu == null || sm == null || sm.settingsState == null)
             return string.Empty;
 
         if (!fu.IsUnlocked(FeatureId.Seeds_CustomInput))
             return string.Empty;
 
-        if (!sm.S.useCustomSeed)
+        if (!sm.settingsState.useCustomSeed)
             return string.Empty;
 
-        return sm.S.customSeed ?? string.Empty;
+        return sm.settingsState.customSeed ?? string.Empty;
     }
 
     public static string GetDisplaySeedToken()
@@ -158,7 +158,7 @@ public static class SeedService
             return false;
         }
 
-        var settings = (sm != null) ? sm.S : null;
+        var settings = (sm != null) ? sm.settingsState : null;
         bool customActive = fu.IsUnlocked(FeatureId.Seeds_CustomInput) &&
                             settings != null &&
                             settings.useCustomSeed &&

@@ -39,6 +39,16 @@ public sealed class BattleFeedbackManager : MonoBehaviour
     [SerializeField] private Image wildChargeIcon;
 
     
+
+    [Header("Optional: Primary Status (Synergy/Status System)")]
+    [Tooltip("Optional status icon shown for the unit (Burn/Freeze/etc). Leave null to ignore.")]
+    [SerializeField] private Image playerPrimaryStatusIcon;
+    [SerializeField] private Image wildPrimaryStatusIcon;
+
+    [Tooltip("Optional TMP counter for remaining turns. Hidden for persistent statuses and when no status.")]
+    [SerializeField] private TMP_Text playerPrimaryStatusTurns;
+    [SerializeField] private TMP_Text wildPrimaryStatusTurns;
+
     [Header("Optional: Wild Intent Telegraph (icon bubble)")]
     [Tooltip("Optional root GameObject for the wild intent bubble. If not set, intent icons will not display.")]
     [SerializeField] private GameObject wildIntentRoot;
@@ -404,6 +414,8 @@ CacheBaseScales();
         SetStatusIconVisible(wildGuardIcon, false);
         SetStatusIconVisible(playerChargeIcon, false);
         SetStatusIconVisible(wildChargeIcon, false);
+        ClearPrimaryStatus(BattleFeedbackSide.Player);
+        ClearPrimaryStatus(BattleFeedbackSide.Wild);
     }
 
     public void SetCharge(BattleFeedbackSide side, bool on)
@@ -416,6 +428,68 @@ CacheBaseScales();
     public void SetChargeWild(bool on) => SetCharge(BattleFeedbackSide.Wild, on);
 
     
+
+
+    // ─────────────────────────────────────────────────────────────
+    // Primary Status (Synergy/Status System) - Icon + Turn Counter
+    // ─────────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Clears the primary status UI for a side (icon + counter).
+    /// Safe to call even if refs are null.
+    /// </summary>
+    public void ClearPrimaryStatus(BattleFeedbackSide side)
+    {
+        var icon  = (side == BattleFeedbackSide.Player) ? playerPrimaryStatusIcon : wildPrimaryStatusIcon;
+        var turns = (side == BattleFeedbackSide.Player) ? playerPrimaryStatusTurns : wildPrimaryStatusTurns;
+
+        if (icon) icon.gameObject.SetActive(false);
+        if (turns) turns.gameObject.SetActive(false);
+    }
+
+    /// <summary>
+    /// Sets the primary status UI for a side.
+    /// - If sprite is null, clears the status.
+    /// - If persistent, hides the turn counter.
+    /// - If turnsRemaining &lt;= 0 and not persistent, clears.
+    /// </summary>
+    public void SetPrimaryStatus(BattleFeedbackSide side, Sprite sprite, int turnsRemaining, bool persistent)
+    {
+        var icon  = (side == BattleFeedbackSide.Player) ? playerPrimaryStatusIcon : wildPrimaryStatusIcon;
+        var turns = (side == BattleFeedbackSide.Player) ? playerPrimaryStatusTurns : wildPrimaryStatusTurns;
+
+        if (!icon)
+            return; // nothing to do (UI not wired)
+
+        if (sprite == null || (!persistent && turnsRemaining <= 0))
+        {
+            ClearPrimaryStatus(side);
+            return;
+        }
+
+        icon.sprite = sprite;
+        icon.gameObject.SetActive(true);
+
+        if (turns)
+        {
+            if (persistent)
+            {
+                turns.gameObject.SetActive(false);
+            }
+            else
+            {
+                turns.text = turnsRemaining.ToString();
+                turns.gameObject.SetActive(true);
+            }
+        }
+    }
+
+    public void SetPrimaryStatusPlayer(Sprite sprite, int turnsRemaining, bool persistent) =>
+        SetPrimaryStatus(BattleFeedbackSide.Player, sprite, turnsRemaining, persistent);
+
+    public void SetPrimaryStatusWild(Sprite sprite, int turnsRemaining, bool persistent) =>
+        SetPrimaryStatus(BattleFeedbackSide.Wild, sprite, turnsRemaining, persistent);
+
     // ─────────────────────────────────────────────────────────────
     // Wild Intent Telegraph (readable AI)
     // ─────────────────────────────────────────────────────────────

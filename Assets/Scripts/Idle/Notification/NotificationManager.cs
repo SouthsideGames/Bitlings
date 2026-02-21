@@ -77,7 +77,7 @@ public class NotificationManager : MonoBehaviour
         var data = SaveManager.Data;
         if (data == null) return;
 
-        var s = (SettingsManager.I != null) ? SettingsManager.I.S : data.settings;
+        var s = (SettingsManager.I != null) ? SettingsManager.I.settingsState : data.settings;
         if (s == null) return;
 
         if (!s.notificationsEnabled)

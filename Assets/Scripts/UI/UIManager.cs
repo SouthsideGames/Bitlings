@@ -60,6 +60,27 @@ public class UIManager : MonoBehaviour
     [Header("Panels")]
     [SerializeField] private List<PanelEntry> panels = new();
 
+    [Header("Navigation")]
+    [Tooltip("If enabled, opening a MAIN panel will automatically close any other MAIN panels (ex: Home won't stay open under Codex). Overlays/popups are not affected.")]
+    [SerializeField] private bool singleMainPanelMode = true;
+
+    [Tooltip("Panels treated as overlays/popups. They are allowed to stack and will NOT be auto-closed when opening a main panel.")]
+    [SerializeField] private List<PanelId> overlayPanels = new()
+    {
+        PanelId.RewardPopup,
+        PanelId.MonsterDetail,
+        PanelId.Evolution,
+        PanelId.TitleDetail,
+        PanelId.Info,
+        PanelId.Log,
+        PanelId.PostBattleSummary,
+        PanelId.Achievement,
+        PanelId.CheatCodes,
+        PanelId.PackDetails,
+        PanelId.ImagePreview,
+        PanelId.IdleBattleRewards,
+    };
+
     [Header("Animation")]
     [SerializeField] private float openFadeDuration = 0.18f;
     [SerializeField] private float closeFadeDuration = 0.16f;
@@ -207,14 +228,21 @@ public class UIManager : MonoBehaviour
     {
         if (!_map.TryGetValue(id, out var p) || p.root == null)
         {
-            #if UNITY_EDITOR || DEVELOPMENT_BUILD
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
             Debug.LogWarning($"[UIManager] No panel root for {id}");
-            #endif
+#endif
             return;
         }
 
         if (on)
         {
+            // NEW: Enforce "only one main panel" when opening a main panel.
+            // This will close Home when opening Codex/Jobs/etc, and prevents hidden panels running.
+            if (singleMainPanelMode && !IsOverlayPanel(id))
+            {
+                CloseAllMainPanelsExcept(id);
+            }
+
             if (_open.Add(id))
             {
                 AnimateOpen(p);
@@ -223,6 +251,10 @@ public class UIManager : MonoBehaviour
                 // IMPORTANT: whenever we arrive at Home, attempt to surface rewards.
                 if (id == PanelId.Home)
                     TryOpenIdleBattleRewardsNextFrame();
+            }
+            else
+            {
+                // Already open; no action.
             }
         }
         else
@@ -235,6 +267,29 @@ public class UIManager : MonoBehaviour
                     if (fireEvent) OnPanelChanged?.Invoke(id, false);
                 });
             }
+        }
+    }
+
+    // ─────────────────────────────────────────────────────────────────────
+    // Main/Overlay rules
+    // ─────────────────────────────────────────────────────────────────────
+
+    private bool IsOverlayPanel(PanelId id)
+    {
+        // Treat overlays as stackable (popups, detail panels, etc.)
+        // Everything else is considered a "main" panel.
+        return overlayPanels != null && overlayPanels.Contains(id);
+    }
+
+    private void CloseAllMainPanelsExcept(PanelId keepMain)
+    {
+        // Snapshot because SetActive mutates _open.
+        var list = new List<PanelId>(_open);
+        foreach (var id in list)
+        {
+            if (id == keepMain) continue;
+            if (IsOverlayPanel(id)) continue; // overlays remain open
+            SetActive(id, false);
         }
     }
 

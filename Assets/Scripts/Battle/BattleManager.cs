@@ -36,7 +36,7 @@ public struct BattleResult
 public partial class BattleManager : MonoBehaviour
 {
     private enum PlayerAction { None, Attack, Defend, Focus, Swap, Run }
-    private enum EnemyAction { Attack, Defend, Focus, Run }
+    private enum EnemyAction { None, Attack, Defend, Focus, Run }
 
     // Wild combatants must use a synthetic combat id (e.g., "WILD::<...>") so they
     // never collide with a real owned monsterId like "M-039".
@@ -318,6 +318,28 @@ private void EnsureBattleRngInitialized()
     [Header("Feedback")]
     [SerializeField] private BattleFeedbackManager feedback;
 
+    [Header("Status + Synergy (Battle Start)")]
+    [Tooltip("Icons + default durations/magnitudes for StatusType.")]
+    [SerializeField] private StatusLibrarySO statusLibrary;
+
+    [Tooltip("Synergy mapping: MonsterType + tier -> StatusType + scope.")]
+    [SerializeField] private SynergyLibrarySO synergyLibrary;
+
+    [Header("Debug - Synergy/Status")]
+    [Tooltip("For testing only: bypass unlocks/counts and force at least one synergy to apply so you can verify UI + logging.")]
+    [SerializeField] private bool debugForceSynergyApply = false;
+
+    [Tooltip("For testing only: tier used when debugForceSynergyApply is enabled.")]
+    [SerializeField] private SynergyTier debugForcePlayerSynergyTier = SynergyTier.Tier2;
+
+    [Tooltip("For testing only: also force a wild synergy tier (ignores difficulty/unlock).")]
+    [SerializeField] private bool debugForceWildSynergyTier = false;
+
+    [SerializeField] private SynergyTier debugWildSynergyTier = SynergyTier.Tier2;
+
+    [Tooltip("Logs why synergies/statuses did (or did not) apply at battle start.")]
+    [SerializeField] private bool debugSynergyLogs = true;
+
     public bool NarrationLocked => _narrationLock;
     private bool _narrationLock;
 
@@ -358,6 +380,20 @@ private void EnsureBattleRngInitialized()
 
     private float[] slotDamageBuffPct;
     private int[] slotDamageBuffTurns;
+
+    // ─────────────────────────────────────────────────────────────
+    // Status runtime (Phase 3: apply-only; Phase 4 will add ticking)
+    // One status per unit. No overwrites.
+    // ─────────────────────────────────────────────────────────────
+    private StatusType[] teamStatus;
+    private int[] teamStatusTurns;
+    private float[] teamStatusMagnitude;
+    private bool[] teamStatusPersistent;
+
+    private StatusType wildStatus = StatusType.None;
+    private int wildStatusTurns = 0;
+    private float wildStatusMagnitude = 0f;
+    private bool wildStatusPersistent = false;
 
     // Cached title multipliers computed at battle start to avoid timing/order issues.
     private float _cachedCreditMult = 1f;
@@ -744,14 +780,43 @@ private void EnsureBattleRngInitialized()
     {
         if (!inBattle || !manualTurns) return;
         if (!IsPlayerTurn) return;
+        if (IsActivePlayerFrozen()) return;
         if (isResolvingPlayerTurn) return;
         if (_narrationLock) return;
         if (pendingAction != PlayerAction.None) return;
+
+        // Status: Sundering blocks Defend/Run.
+        if (IsActivePlayerSundered())
+        {
+            if (a == PlayerAction.Defend || a == PlayerAction.Run)
+            {
+                SayInstant($"{GetName(activeIndex)} is Sundered! Cannot Defend or Run.");
+                return;
+            }
+        }
+
+        // Status: Wyrm Fury blocks Focus/Charge (Focus action).
+        if (IsActivePlayerWyrmFury())
+        {
+            if (a == PlayerAction.Focus)
+            {
+                SayInstant($"{GetName(activeIndex)} is consumed by Wyrm Fury! Cannot Focus.");
+                return;
+            }
+        }
 
         pendingAction = a;
         Emit(BattleEvent.ActionQueued(BattleSide.Player, a.ToString()));
         if (!HasBattleEventConsumers && feedback) feedback.PlayActionQueued(BattleFeedbackManager.BattleFeedbackSide.Player, ToFeedbackAction(a));
         GameEvents.OnBattleStateChanged?.Invoke();
+    }
+
+    private void SayInstant(string line, BattleLineTag tags = BattleLineTag.None)
+    {
+        if (string.IsNullOrWhiteSpace(line)) return;
+        BattleLogger.Log(line, LogScope.Battle);
+        if (battleTextBox != null)
+            battleTextBox.ShowLineInstant(line, tags, battleSpeed);
     }
     // ─────────────────────────────────────────────────────────────
     // Queued Action (Manual Turns) – used by UI to feel instant
@@ -953,6 +1018,8 @@ private IEnumerator MaybeSayKO_Wild(string victimName, float preHP, float postHP
         RequestBattleStatRebuild(BattleStatRebuildReason.BattleStart, forceRebuildAdjusted: true);
     }
 
+        // Status + Synergy logic moved to Core/BattleManager.Statuses.cs (Phase 4)
+
 public void BeginBattle(MonsterDataSO wild, int level, Action<BattleResult> onEnded)
     {
         Begin(wild, level, onEnded);
@@ -1069,6 +1136,17 @@ public void BeginBattle(MonsterDataSO wild, int level, Action<BattleResult> onEn
         teamOwnedEffective = new OwnedMonsterData[teamCount];
         teamOwnedUidEffective = new string[teamCount];
 
+        // Status runtime (one-status-per-unit)
+        teamStatus = new StatusType[teamCount];
+        teamStatusTurns = new int[teamCount];
+        teamStatusMagnitude = new float[teamCount];
+        teamStatusPersistent = new bool[teamCount];
+
+        wildStatus = StatusType.None;
+        wildStatusTurns = 0;
+        wildStatusMagnitude = 0f;
+        wildStatusPersistent = false;
+
         for (int i = 0; i < teamCount; i++)
         {
             var slotOwned = roster[i];
@@ -1170,6 +1248,10 @@ public void BeginBattle(MonsterDataSO wild, int level, Action<BattleResult> onEn
         // Titles can change effective max HP; sync max caches and preserve HP% before first UI render.
         if (_stats != null) _stats.MarkDirtyAll();
         SyncEffectiveMaxHPFromStats(force: true);
+
+        // Synergy-driven statuses apply once at battle start (Phase 3).
+        // Deterministic. One-status-per-unit (no overwrites).
+        ApplyBattleStartSynergies();
 
         ApplyActiveToUI();
         ClampAndPushActiveHP();
@@ -2168,31 +2250,11 @@ private int GetAlliesAliveNotIncludingActive()
 
 
 
-    /// <summary>
-    /// Call after swaps / at round boundaries to reflect the CURRENT logical status.
-    /// (Guard = defending this round, Charge = has charged next attack queued)
-    /// </summary>
-
-
-    
-    // ─────────────────────────────────────────────────────────────────────────────
-    // Progression Totals Helpers
-    // Baseline Totals = (SpeciesBase + LevelGrowth + TrainingBonus) + PermanentFlat (flatAtkBonus only)
-    // Titles/equipment/temp/conditionals stack elsewhere.
-    // ─────────────────────────────────────────────────────────────────────────────
-
-    /// <summary>
-    /// Resolves the OwnedMonsterData that should be used for a given team slot during battle.
-    /// If the player has both variants (shiny/non-shiny) and has set a preference, we use that preferred OwnedMonsterData.
-    /// </summary>
     private OwnedMonsterData ResolveEffectiveTeamOwnedForBattle(int teamIndex, OwnedMonsterData teamSlotOwned)
     {
         if (teamSlotOwned == null || string.IsNullOrEmpty(teamSlotOwned.monsterId))
             return teamSlotOwned;
 
-        // If the team slot already references a specific owned instance (ownedUID),
-        // we MUST respect that exact instance.
-        // Preference-by-monsterId is only a fallback for older saves or empty ownedUIDs.
         if (!string.IsNullOrEmpty(teamSlotOwned.ownedUID))
         {
             var resolved = XPManager.Resolve(teamSlotOwned) ?? teamSlotOwned;
@@ -2204,12 +2266,9 @@ private int GetAlliesAliveNotIncludingActive()
             return resolved;
         }
 
-        // Preference is stored separately from the team list.
-        // If a preferred owned copy exists, use it (this is what the player expects when they toggle "use shiny").
         var preferred = MonsterVariantPreference.GetPreferredOwned(teamSlotOwned.monsterId);
         if (preferred != null && preferred.monsterId == teamSlotOwned.monsterId)
         {
-            // Cache for use across battle systems (progression totals, UI, reward mults, etc.)
             if (teamOwnedEffective != null && teamIndex >= 0 && teamIndex < teamOwnedEffective.Length)
             {
                 teamOwnedEffective[teamIndex] = preferred;

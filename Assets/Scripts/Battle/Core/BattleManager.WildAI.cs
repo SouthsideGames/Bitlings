@@ -91,6 +91,9 @@ public partial class BattleManager : MonoBehaviour
         if (!wildDef || wildMaxHP <= 0.01f)
             return EnemyAction.Attack;
 
+if (IsWildFrozen())
+    return EnemyAction.None;
+
         float hpRatio = Mathf.Clamp01(wildHP / Mathf.Max(1f, wildMaxHP));
         BattleAction action = BattleAction.Attack;
 
@@ -120,10 +123,34 @@ public partial class BattleManager : MonoBehaviour
 
         switch (action)
         {
+            case BattleAction.Attack: action = BattleAction.Attack; break;
+            case BattleAction.Defend: action = BattleAction.Defend; break;
+            case BattleAction.Focus:  action = BattleAction.Focus;  break;
+            case BattleAction.Run:    action = BattleAction.Run;    break;
+            default: action = BattleAction.Attack; break;
+        }
+
+        // Status gating for wild actions.
+        // Sundering: cannot Defend or Run.
+        if (IsWildSundered())
+        {
+            if (action == BattleAction.Defend || action == BattleAction.Run)
+                action = BattleAction.Attack;
+        }
+
+        // Wyrm Fury: cannot Focus/Charge.
+        if (IsWildWyrmFury())
+        {
+            if (action == BattleAction.Focus)
+                action = BattleAction.Attack;
+        }
+
+        switch (action)
+        {
             case BattleAction.Attack: return EnemyAction.Attack;
             case BattleAction.Defend: return EnemyAction.Defend;
-            case BattleAction.Focus: return EnemyAction.Focus;
-            case BattleAction.Run: return EnemyAction.Run;
+            case BattleAction.Focus:  return EnemyAction.Focus;
+            case BattleAction.Run:    return EnemyAction.Run;
             default: return Fallback();
         }
     }

@@ -20,7 +20,7 @@ public class BattleLogPanelUI : MonoBehaviour
 
     private readonly List<LogRowUI> _rows = new List<LogRowUI>(256);
 
-    private bool AutoScroll => SettingsManager.I == null || SettingsManager.I.S.autoScrollBattleLog;
+    private bool AutoScroll => SettingsManager.I == null || SettingsManager.I.settingsState.autoScrollBattleLog;
 
     void OnEnable()
     {

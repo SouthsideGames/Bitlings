@@ -1414,7 +1414,7 @@ private static float AverageWorkingSlotFatigue(JobSiteState s)
     // ---------------------------- Settings hookup ----------------------------
     private void PullSettings()
     {
-        var s = SettingsManager.I?.S;
+        var s = SettingsManager.I?.settingsState;
         if (s == null) return;
 
         autoBenchEnabled = s.autoBenchEnabled;

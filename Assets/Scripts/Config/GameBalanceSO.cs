@@ -1,10 +1,6 @@
 using UnityEngine;
 
-/// <summary>
-/// Global tuning knobs for Bitlings. Keep this to broad, game-wide multipliers / caps.
-/// Create an asset at: Assets/Resources/GameBalance.asset
-/// </summary>
-[CreateAssetMenu(menuName = "Bitlings/Config/Game Balance", fileName = "GameBalance")]
+[CreateAssetMenu(menuName = "Data/Config/Game Balance", fileName = "GameBalance")]
 public sealed class GameBalanceSO : ScriptableObject
 {
     [Header("Encounter")]

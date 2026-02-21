@@ -159,11 +159,18 @@ public partial class BattleManager : MonoBehaviour
             if (BattleBoosterController.I != null)
                 pSpeed = Mathf.Max(1, pSpeed + Mathf.Max(0, BattleBoosterController.I.ConsumeSpeedBonusForInitiative()));
 
+            // Status: Soaked reduces speed (initiative).
+            pSpeed = Mathf.Max(1, Mathf.RoundToInt(pSpeed * Mathf.Max(0.1f, GetActivePlayerSoakedSpeedMultiplier())));
+
             int wSpeed = 1;
             if (_stats != null)
                 wSpeed = Mathf.Max(1, _stats.GetEffectiveWild().spd);
             else
                 wSpeed = Mathf.Max(1, BattleCalc.CalcSpeed(wildDef, wildLevel));
+
+
+            // Status: Soaked reduces speed (initiative).
+            wSpeed = Mathf.Max(1, Mathf.RoundToInt(wSpeed * Mathf.Max(0.1f, GetWildSoakedSpeedMultiplier())));
 
             bool playerFirst;
             if (pSpeed > wSpeed) playerFirst = true;
@@ -172,7 +179,10 @@ public partial class BattleManager : MonoBehaviour
 
             EnemyAction wildChoice = ChooseEnemyAction();
 
-            yield return Co_TelegraphWildIntent(wildChoice);
+            if (wildChoice != EnemyAction.None)
+                yield return Co_TelegraphWildIntent(wildChoice);
+            else
+                RefreshStatusIconsFromState();
 
             if (playerFirst)
             {
@@ -223,9 +233,31 @@ public partial class BattleManager : MonoBehaviour
                         SetIsPlayerTurn(true);
                         pendingAction = PlayerAction.None;
 
-                        float choiceStart = Time.unscaledTime;
+                        // Status tick at start of the player's turn (Phase 4).
+                        // If an action-skip status triggers (Freeze/Shock), skip input + action entirely this turn.
+                        if (TryProcessTurnStartStatus_PlayerActive(out var skipBy))
+                        {
+                            SetIsPlayerTurn(false);
+                            pendingAction = PlayerAction.None;
+                            GameEvents.OnBattleStateChanged?.Invoke();
 
-                        while (inBattle && pendingAction == PlayerAction.None)
+                            if (!ShouldSkipNarration(BattleLineTag.Result))
+                            {
+                                string who = GetName(activeIndex);
+                                if (skipBy == StatusType.Shock)
+                                    yield return Say($"{who} is Shocked! Action failed!", BattleLineTag.Result);
+                                else
+                                    yield return Say($"{who} is Frozen and can't act!", BattleLineTag.Result);
+                            }
+
+                            queuedChoice = PlayerAction.None;
+                        }
+
+                        if (queuedChoice != PlayerAction.None)
+                        {
+                            float choiceStart = Time.unscaledTime;
+
+                            while (inBattle && pendingAction == PlayerAction.None)
                         {
                             if (enableAutoQueueAttack && autoQueueAttackAfterSeconds > 0f && !_narrationLock)
                             {
@@ -251,8 +283,10 @@ public partial class BattleManager : MonoBehaviour
 
                             yield return null;
                         }
+                        }
 
-                        queuedChoice = pendingAction;
+                        if (queuedChoice != PlayerAction.None)
+                            queuedChoice = pendingAction;
                         pendingAction = PlayerAction.None;
                         // Ensure countdown is hidden once a choice is made.
                         EmitAutoQueueCountdown(0f, false);
@@ -492,6 +526,39 @@ RefreshStatusIconsFromState();
     private IEnumerator WaitForPlayerChoiceAndResolve()
     {
         SetIsPlayerTurn(true);
+// Status tick at start of the player's turn (Phase 4)
+// If an action-skip status triggers (Freeze/Shock), skip input + action entirely this turn.
+if (TryProcessTurnStartStatus_PlayerActive(out var skipBy))
+{
+    // Immediately end the player's turn so the action bar cannot be used.
+    SetIsPlayerTurn(false);
+    pendingAction = PlayerAction.None;
+    GameEvents.OnBattleStateChanged?.Invoke();
+
+    {
+        string who = GetName(activeIndex);
+        if (skipBy == StatusType.Shock)
+            yield return Say($"{who} is Shocked! Action failed!", BattleLineTag.Result);
+        else
+            yield return Say($"{who} is Frozen and can't act!", BattleLineTag.Result);
+    }
+
+    // If the tick caused a KO, handle it the same way as any other KO would be handled later.
+    if (teamHP != null && activeIndex >= 0 && activeIndex < teamHP.Length && teamHP[activeIndex] <= 0.01f)
+        yield return MaybeSayKO_Player(GetName(activeIndex), 1f, 0f);
+
+    yield break;
+}
+
+// If a DOT tick KO'd the active monster, stop here (battle loop will detect KO and swap/end).
+if (teamHP != null && activeIndex >= 0 && activeIndex < teamHP.Length && teamHP[activeIndex] <= 0.01f)
+{
+    SetIsPlayerTurn(false);
+    pendingAction = PlayerAction.None;
+    GameEvents.OnBattleStateChanged?.Invoke();
+    yield break;
+}
+
 
         float choiceStart = Time.unscaledTime;
 
@@ -641,6 +708,31 @@ RefreshStatusIconsFromState();
 
         isResolvingPlayerTurn = true;
 
+        // Auto-resolve: status tick at start of the player's action (manual path ticks before input).
+        if (!manualTurns)
+        {
+            if (TryProcessTurnStartStatus_PlayerActive(out var skipBy))
+            {
+                if (!ShouldSkipNarration(BattleLineTag.Result))
+                {
+                    string who = GetName(activeIndex);
+                    if (skipBy == StatusType.Shock)
+                        yield return Say($"{who} is Shocked! Action failed!", BattleLineTag.Result);
+                    else
+                        yield return Say($"{who} is Frozen and can't act!", BattleLineTag.Result);
+                }
+                isResolvingPlayerTurn = false;
+                yield break;
+            }
+
+            // If a DOT tick KO'd the active monster, stop here (battle loop will detect KO and swap/end).
+            if (teamHP != null && activeIndex >= 0 && activeIndex < teamHP.Length && teamHP[activeIndex] <= 0.01f)
+            {
+                isResolvingPlayerTurn = false;
+                yield break;
+            }
+        }
+
         string _playerTurnOwnerId = (teamIds != null && activeIndex >= 0 && activeIndex < teamIds.Length) ? teamIds[activeIndex] : null;
 
         try
@@ -743,7 +835,20 @@ if (feedback)
                 yield return Say($"{GetName(activeIndex)} unleashes a charged attack (+{Mathf.RoundToInt(chargeBonusPct * 100f)}% damage)!", BattleLineTag.Flavor);
         }
 
-        float preventedByWildGuard = 0f;
+        
+// Status: Rally (Clash) — allies gain minor Attack boost.
+// Applies to outgoing damage while any living ally has Rally.
+float rallyBonusPct = GetPlayerTeamRallyBonusPct();
+if (rallyBonusPct > 0f)
+{
+    int before = dr.damage;
+    dr.damage = Mathf.Max(1, Mathf.RoundToInt(dr.damage * (1f + rallyBonusPct)));
+    if (BattleLogger.Enabled)
+        BattleLogger.Log($"[Status] Rally boosts {attacker}'s damage: {before}→{dr.damage} (+{Mathf.RoundToInt(rallyBonusPct * 100f)}%).", LogScope.Battle);
+}
+
+float preventedByWildGuard = 0f;
+        bool shadowVeilBlockedWild = false;
         int dmgToApply = dr.damage;
 
         if (wildDefendActiveThisRound && defendReducePct > 0f)
@@ -770,6 +875,17 @@ if (feedback)
 
         float absorbedByWildTitleShield = 0f;
 
+        // ShadowVeil: immune to damage for the duration.
+        if (dmgToApply > 0 && IsWildShadowVeiled())
+        {
+            shadowVeilBlockedWild = true;
+            BattleLogger.AddKeyMoment($"Shadow Veil: {foeName} ignored damage.");
+            if (!ShouldSkipNarration(BattleLineTag.Flavor))
+                yield return Say($"{foeName} fades into a Shadow Veil—no damage!", BattleLineTag.Flavor);
+
+            dmgToApply = 0;
+        }
+
         if (wildTitleShieldHP > 0f && dmgToApply > 0)
         {
             float absorb = Mathf.Min(wildTitleShieldHP, dmgToApply);
@@ -787,6 +903,10 @@ if (feedback)
             float absorb = Mathf.Min(wildShieldHP, dmgToApply);
             absorbedByWildShield = absorb;
             wildShieldHP = Mathf.Max(0f, wildShieldHP - absorb);
+
+            // If this shield came from the Shielded status, track remaining so cleanup only removes the unspent portion.
+            _shieldedGrantWild = Mathf.Max(0f, _shieldedGrantWild - absorb);
+
             dmgToApply = Mathf.Max(0, dmgToApply - Mathf.RoundToInt(absorb));
 
             if (absorb > 0f)
@@ -824,7 +944,15 @@ if (feedback)
 if (!playerLandedFirstHitThisBattle && dr.damage > 0)
             playerLandedFirstHitThisBattle = true;
 
-        yield return Say($"{attacker} hits {foeName} for {dmgToApply}!", BattleLineTag.Result);
+        if (shadowVeilBlockedWild)
+        {
+            // Already narrated the veil; keep result line compact.
+            yield return Say($"{foeName} takes no damage!", BattleLineTag.Result);
+        }
+        else
+        {
+            yield return Say($"{attacker} hits {foeName} for {dmgToApply}!", BattleLineTag.Result);
+        }
 
         if (dr.crit)
             BattleLogger.AddKeyMoment($"CRIT: {attacker} → {foeName} ({dmgToApply})");
@@ -890,182 +1018,218 @@ if (!playerLandedFirstHitThisBattle && dr.damage > 0)
         {
         if (teamHP[activeIndex] <= 0.01f && !AutoSwapToAlive())
             yield break;
+    // Status tick at start of the wild's turn (Phase 4)
+    // If an action-skip status triggers (Freeze/Shock), skip action entirely this turn.
+    if (TryProcessTurnStartStatus_Wild(out var skipBy))
+    {
+        string who = !string.IsNullOrEmpty(wildNameText?.text) ? wildNameText.text : (wildDef ? wildDef.displayName : "Wild");
+        if (skipBy == StatusType.Shock)
+            yield return Say($"{who} is Shocked! Action failed!", BattleLineTag.Result);
+        else
+            yield return Say($"{who} is Frozen and can't act!", BattleLineTag.Result);
 
-        if (choice != EnemyAction.Defend)
-            yield return CoWaitScaled(0.15f);
-
-        if (choice != EnemyAction.Defend)
-            ResetEnemyDefendStreak();
-
-        if (choice == EnemyAction.Defend)
-        {
-            string name = wildDef ? wildDef.displayName : "Foe";
-            bool success = RollEnemyDefendSuccess();
-
-            wildDefendActiveThisRound = success;
-
-            if (feedback)
-            {
-                Emit(BattleEvent.DefendResult(BattleSide.Wild, success));
-                if (!HasBattleEventConsumers && feedback) feedback.PlayDefendResult(BattleFeedbackManager.BattleFeedbackSide.Wild, success);
-}
-
-            if (success)
-            {
-                yield return Say($"{name} is defending.", BattleLineTag.Result);
-                yield return Say($"{name} will reduce the next hit and convert it into a shield for the following round.", BattleLineTag.Result);
-            }
-            else
-            {
-                yield return Say($"{name} tried to defend, but it failed!", BattleLineTag.Result);
-            }
-
+        // If the tick caused a KO, stop here (battle loop will detect KO and end).
+        if (wildHP <= 0.01f)
             yield break;
-        }
 
-        if (choice == EnemyAction.Focus)
-        {
-            wildChargedNextAttack = true;
+        yield break;
+    }
 
-            string name = wildDef ? wildDef.displayName : "Foe";
+    // If a DOT tick KO'd the wild, stop here.
+    if (wildHP <= 0.01f)
+        yield break;
+
+            // If the wild's AI returned no action (usually due to a status), do nothing.
+            if (choice == EnemyAction.None)
+                yield break;
+
+
+            if (choice != EnemyAction.Defend)
+                yield return CoWaitScaled(0.15f);
+
+            if (choice != EnemyAction.Defend)
+                ResetEnemyDefendStreak();
+
+            if (choice == EnemyAction.Defend)
+            {
+                string name = wildDef ? wildDef.displayName : "Foe";
+                bool success = RollEnemyDefendSuccess();
+
+                wildDefendActiveThisRound = success;
+
+                if (feedback)
+                {
+                    Emit(BattleEvent.DefendResult(BattleSide.Wild, success));
+                    if (!HasBattleEventConsumers && feedback) feedback.PlayDefendResult(BattleFeedbackManager.BattleFeedbackSide.Wild, success);
+    }
+
+                if (success)
+                {
+                    yield return Say($"{name} is defending.", BattleLineTag.Result);
+                    yield return Say($"{name} will reduce the next hit and convert it into a shield for the following round.", BattleLineTag.Result);
+                }
+                else
+                {
+                    yield return Say($"{name} tried to defend, but it failed!", BattleLineTag.Result);
+                }
+
+                yield break;
+            }
+
+            if (choice == EnemyAction.Focus)
+            {
+                wildChargedNextAttack = true;
+
+                string name = wildDef ? wildDef.displayName : "Foe";
+                if (!ShouldSkipNarration(BattleLineTag.Flavor))
+                    yield return Say($"{name} is charging up.", BattleLineTag.Flavor);
+                if (!ShouldSkipNarration(BattleLineTag.Flavor))
+                    yield return Say($"Their next attack will deal +{Mathf.RoundToInt(chargeBonusPct * 100f)}% damage.", BattleLineTag.Flavor);
+
+                Emit(BattleEvent.ActionQueued(BattleSide.Wild, "Focus"));
+                if (!HasBattleEventConsumers && feedback) feedback.PlayActionQueued(
+                    BattleFeedbackManager.BattleFeedbackSide.Wild,
+                    BattleFeedbackManager.BattleFeedbackAction.Focus
+                );
+
+                yield break;
+            }
+
+            if (choice == EnemyAction.Run)
+            {
+                string name = wildDef ? wildDef.displayName : "Foe";
+                float chance = ComputeEnemyRunChance();
+                bool fled = Rng01() < chance;
+
+                if (fled)
+                {
+                    yield return Say($"{name} fled! (Run chance {Mathf.RoundToInt(chance * 100f)}%)", BattleLineTag.Result);
+                    EndBattle(false, escaped: true);
+                    yield break;
+                }
+                else
+                {
+                    yield return Say($"{name} tried to flee, but couldn't! (Run chance {Mathf.RoundToInt(chance * 100f)}%)", BattleLineTag.Result);
+                    yield break;
+                }
+            }
+
+            if (teamHP[activeIndex] <= 0.01f && !AutoSwapToAlive())
+                yield break;
+
+            string attackerName = wildDef ? wildDef.displayName : "Foe";
+            string move = GetBasicMoveName(wildDef);
+
             if (!ShouldSkipNarration(BattleLineTag.Flavor))
-                yield return Say($"{name} is charging up.", BattleLineTag.Flavor);
-            if (!ShouldSkipNarration(BattleLineTag.Flavor))
-                yield return Say($"Their next attack will deal +{Mathf.RoundToInt(chargeBonusPct * 100f)}% damage.", BattleLineTag.Flavor);
+                yield return Say($"{attackerName} used {move}!", BattleLineTag.Flavor);
+            Emit(BattleEvent.ActionWindup(BattleSide.Wild));
+            if (!HasBattleEventConsumers && feedback) feedback.PlayAttackWindup(BattleFeedbackManager.BattleFeedbackSide.Wild);
+    if (feedback)
+                feedback.SpawnBasicAttackVfx(isPlayerSide: false, playerDef: teamDefs[activeIndex], wildDef: wildDef);
 
-            Emit(BattleEvent.ActionQueued(BattleSide.Wild, "Focus"));
-            if (!HasBattleEventConsumers && feedback) feedback.PlayActionQueued(
-                BattleFeedbackManager.BattleFeedbackSide.Wild,
-                BattleFeedbackManager.BattleFeedbackAction.Focus
+            yield return CoWaitScaled(0.10f);
+
+            int enemyAtk = 1;
+            if (_stats != null)
+                enemyAtk = Mathf.Max(1, _stats.GetEffectiveWild().atk);
+            else
+                enemyAtk = Mathf.Max(1, Mathf.RoundToInt(wildAttackPerTurn));
+
+            var ctx = (jobCtx != null) ? jobCtx[activeIndex] : null;
+            float preHP = teamHP[activeIndex];
+
+            var cmods = GetConditionalModsForActive();
+
+            var df = TitlesAdapter.GetDamageFilter(teamIds[activeIndex], teamDefs[activeIndex], teamLevels[activeIndex]);
+
+            float playerCritResist = 0f;
+            if (ctx != null)
+            {
+                playerCritResist += ctx.critResistFlat;
+                if (ctx.critResistBuffTurns > 0)
+                    playerCritResist += ctx.critResistBonusFirstTurns;
+            }
+
+            float wildCritChance = df.cannotBeCrit ? 0f : Mathf.Clamp01(critChanceWild - playerCritResist);
+
+            // Centralized DEF stat for the defender (Adjusted + job + titles + boosters + temp).
+            int defenderEffectiveDefenseStat = 0;
+            if (_stats != null)
+                defenderEffectiveDefenseStat = Mathf.Max(0, _stats.GetEffectivePlayer(activeIndex).def);
+            else
+                GetProgressionTotalsForIndex(activeIndex, out _, out _, out defenderEffectiveDefenseStat, out _, out _);
+
+            var dr = BattleCalc.ResolveHit(
+                _wildCombatIdForTitles, wildDef, wildLevel,
+                teamIds[activeIndex], teamDefs[activeIndex], teamLevels[activeIndex],
+                enemyAtk, wildCritChance, critMultiplier,
+                defenderFlatDefenseBonus: 0,
+                defenderEffectiveDefenseStat: defenderEffectiveDefenseStat
             );
 
-            yield break;
-        }
+            // Titles: attacker hit hooks for wild
+            if (!string.IsNullOrEmpty(_wildCombatIdForTitles))
+                TitlesAdapter.OnAttackLanded(_wildCombatIdForTitles, dr.crit);
 
-        if (choice == EnemyAction.Run)
-        {
-            string name = wildDef ? wildDef.displayName : "Foe";
-            float chance = ComputeEnemyRunChance();
-            bool fled = Rng01() < chance;
 
-            if (fled)
+            if (wildChargedNextAttack && chargeBonusPct > 0f)
             {
-                yield return Say($"{name} fled! (Run chance {Mathf.RoundToInt(chance * 100f)}%)", BattleLineTag.Result);
-                EndBattle(false, escaped: true);
-                yield break;
-            }
-            else
-            {
-                yield return Say($"{name} tried to flee, but couldn't! (Run chance {Mathf.RoundToInt(chance * 100f)}%)", BattleLineTag.Result);
-                yield break;
-            }
-        }
+                dr.damage = Mathf.Max(1, Mathf.RoundToInt(dr.damage * (1f + chargeBonusPct)));
+                wildChargedNextAttack = false;
 
-        if (teamHP[activeIndex] <= 0.01f && !AutoSwapToAlive())
-            yield break;
-
-        string attackerName = wildDef ? wildDef.displayName : "Foe";
-        string move = GetBasicMoveName(wildDef);
-
-        if (!ShouldSkipNarration(BattleLineTag.Flavor))
-            yield return Say($"{attackerName} used {move}!", BattleLineTag.Flavor);
-        Emit(BattleEvent.ActionWindup(BattleSide.Wild));
-        if (!HasBattleEventConsumers && feedback) feedback.PlayAttackWindup(BattleFeedbackManager.BattleFeedbackSide.Wild);
-if (feedback)
-            feedback.SpawnBasicAttackVfx(isPlayerSide: false, playerDef: teamDefs[activeIndex], wildDef: wildDef);
-
-        yield return CoWaitScaled(0.10f);
-
-        int enemyAtk = 1;
-        if (_stats != null)
-            enemyAtk = Mathf.Max(1, _stats.GetEffectiveWild().atk);
-        else
-            enemyAtk = Mathf.Max(1, Mathf.RoundToInt(wildAttackPerTurn));
-
-        var ctx = (jobCtx != null) ? jobCtx[activeIndex] : null;
-        float preHP = teamHP[activeIndex];
-
-        var cmods = GetConditionalModsForActive();
-
-        var df = TitlesAdapter.GetDamageFilter(teamIds[activeIndex], teamDefs[activeIndex], teamLevels[activeIndex]);
-
-        float playerCritResist = 0f;
-        if (ctx != null)
-        {
-            playerCritResist += ctx.critResistFlat;
-            if (ctx.critResistBuffTurns > 0)
-                playerCritResist += ctx.critResistBonusFirstTurns;
-        }
-
-        float wildCritChance = df.cannotBeCrit ? 0f : Mathf.Clamp01(critChanceWild - playerCritResist);
-
-        // Centralized DEF stat for the defender (Adjusted + job + titles + boosters + temp).
-        int defenderEffectiveDefenseStat = 0;
-        if (_stats != null)
-            defenderEffectiveDefenseStat = Mathf.Max(0, _stats.GetEffectivePlayer(activeIndex).def);
-        else
-            GetProgressionTotalsForIndex(activeIndex, out _, out _, out defenderEffectiveDefenseStat, out _, out _);
-
-        var dr = BattleCalc.ResolveHit(
-            _wildCombatIdForTitles, wildDef, wildLevel,
-            teamIds[activeIndex], teamDefs[activeIndex], teamLevels[activeIndex],
-            enemyAtk, wildCritChance, critMultiplier,
-            defenderFlatDefenseBonus: 0,
-            defenderEffectiveDefenseStat: defenderEffectiveDefenseStat
-        );
-
-        // Titles: attacker hit hooks for wild
-        if (!string.IsNullOrEmpty(_wildCombatIdForTitles))
-            TitlesAdapter.OnAttackLanded(_wildCombatIdForTitles, dr.crit);
-
-
-        if (wildChargedNextAttack && chargeBonusPct > 0f)
-        {
-            dr.damage = Mathf.Max(1, Mathf.RoundToInt(dr.damage * (1f + chargeBonusPct)));
-            wildChargedNextAttack = false;
-
-            if (!ShouldSkipNarration(BattleLineTag.Flavor))
-                yield return Say($"{attackerName} unleashes a charged attack (+{Mathf.RoundToInt(chargeBonusPct * 100f)}% dmg)!", BattleLineTag.Flavor);
-        }
-
-        float incomingScalar = 1f;
-
-        if (cmods.defPct > 0f)
-            incomingScalar *= 1f - Mathf.Clamp01(cmods.defPct);
-
-        if (ctx != null && !ctx.usedFirstIncoming && ctx.firstIncomingReduce > 0f)
-        {
-            ctx.usedFirstIncoming = true;
-            incomingScalar *= 1f - ctx.firstIncomingReduce;
-        }
-
-        if (ctx != null && ctx.baseDamageReducePct > 0f)
-            incomingScalar *= 1f - ctx.baseDamageReducePct;
-
-        if (ctx != null && ctx.defenseBonusPct > 0f)
-            incomingScalar *= 1f - ctx.defenseBonusPct;
-
-        if (ctx != null && ctx.dmgReduceBuffTurns > 0 && ctx.dmgReduceFirstTurns > 0f)
-            incomingScalar *= 1f - ctx.dmgReduceFirstTurns;
-
-        float scalarBeforeGuard = incomingScalar;
-        float preventedByGuardRaw = 0f;
-
-        if (defendActiveThisRound && defendReducePct > 0f)
-        {
-            float guardPct = Mathf.Clamp01(defendReducePct);
-            incomingScalar *= (1f - guardPct);
-
-            float dmgBeforeGuard = dr.damage * scalarBeforeGuard;
-            float dmgAfterGuard = dr.damage * incomingScalar;
-            preventedByGuardRaw = Mathf.Max(0f, dmgBeforeGuard - dmgAfterGuard);
-
-            if (preventedByGuardRaw > 0f)
-        {
-            Emit(BattleEvent.StatusApplied(BattleSide.Player, BattleSide.Player, "DefendShieldFX"));
-            if (!HasBattleEventConsumers && feedback) feedback.PlayDefendShieldFX(isPlayer: true);
-        }
+                if (!ShouldSkipNarration(BattleLineTag.Flavor))
+                    yield return Say($"{attackerName} unleashes a charged attack (+{Mathf.RoundToInt(chargeBonusPct * 100f)}% dmg)!", BattleLineTag.Flavor);
+            
+// Status: Rally (Clash) — allies gain minor Attack boost.
+float wildRallyBonusPct = GetWildRallyBonusPct();
+if (wildRallyBonusPct > 0f)
+{
+    int before = dr.damage;
+    dr.damage = Mathf.Max(1, Mathf.RoundToInt(dr.damage * (1f + wildRallyBonusPct)));
+    if (BattleLogger.Enabled)
+        BattleLogger.Log($"[Status] Rally boosts Wild damage: {before}→{dr.damage} (+{Mathf.RoundToInt(wildRallyBonusPct * 100f)}%).", LogScope.Battle);
 }
+
+}
+
+            float incomingScalar = 1f;
+
+            if (cmods.defPct > 0f)
+                incomingScalar *= 1f - Mathf.Clamp01(cmods.defPct);
+
+            if (ctx != null && !ctx.usedFirstIncoming && ctx.firstIncomingReduce > 0f)
+            {
+                ctx.usedFirstIncoming = true;
+                incomingScalar *= 1f - ctx.firstIncomingReduce;
+            }
+
+            if (ctx != null && ctx.baseDamageReducePct > 0f)
+                incomingScalar *= 1f - ctx.baseDamageReducePct;
+
+            if (ctx != null && ctx.defenseBonusPct > 0f)
+                incomingScalar *= 1f - ctx.defenseBonusPct;
+
+            if (ctx != null && ctx.dmgReduceBuffTurns > 0 && ctx.dmgReduceFirstTurns > 0f)
+                incomingScalar *= 1f - ctx.dmgReduceFirstTurns;
+
+            float scalarBeforeGuard = incomingScalar;
+            float preventedByGuardRaw = 0f;
+
+            if (defendActiveThisRound && defendReducePct > 0f)
+            {
+                float guardPct = Mathf.Clamp01(defendReducePct);
+                incomingScalar *= (1f - guardPct);
+
+                float dmgBeforeGuard = dr.damage * scalarBeforeGuard;
+                float dmgAfterGuard = dr.damage * incomingScalar;
+                preventedByGuardRaw = Mathf.Max(0f, dmgBeforeGuard - dmgAfterGuard);
+
+                if (preventedByGuardRaw > 0f)
+            {
+                Emit(BattleEvent.StatusApplied(BattleSide.Player, BattleSide.Player, "DefendShieldFX"));
+                if (!HasBattleEventConsumers && feedback) feedback.PlayDefendShieldFX(isPlayer: true);
+            }
+    }
 
         
         // Titles: defender-side type resist + damage filter (post-DEF modifiers, before shields)
@@ -1125,8 +1289,20 @@ int dmg_afterScalar = Mathf.Max(1, Mathf.RoundToInt(dr.damage * incomingScalar))
         float titleShieldAbsorbF = 0f;
 
         int dmg_incoming = dmg_afterScalar;
+        bool shadowVeilBlockedPlayer = false;
 
         int dmg_final = dmg_incoming;
+        // ShadowVeil: immune to damage for the duration.
+        if (dmg_final > 0 && IsActivePlayerShadowVeiled())
+        {
+            shadowVeilBlockedPlayer = true;
+            BattleLogger.AddKeyMoment($"Shadow Veil: {GetName(activeIndex)} ignored damage.");
+            if (!ShouldSkipNarration(BattleLineTag.Flavor))
+                yield return Say($"{GetName(activeIndex)} fades into a Shadow Veil—no damage!", BattleLineTag.Flavor);
+
+            dmg_final = 0;
+        }
+
         if (titleShieldBefore > 0f && dmg_final > 0)
         {
             titleShieldAbsorbF = Mathf.Min(titleShieldBefore, dmg_final);
@@ -1146,6 +1322,11 @@ int dmg_afterScalar = Mathf.Max(1, Mathf.RoundToInt(dr.damage * incomingScalar))
         {
             shieldAbsorbF = Mathf.Min(shieldBefore, dmg_final);
             shieldHP[activeIndex] = Mathf.Max(0f, shieldBefore - shieldAbsorbF);
+
+            // If this shield came from the Shielded status, track remaining so cleanup only removes the unspent portion.
+            if (_shieldedGrantTeam != null && activeIndex >= 0 && activeIndex < _shieldedGrantTeam.Length)
+                _shieldedGrantTeam[activeIndex] = Mathf.Max(0f, _shieldedGrantTeam[activeIndex] - shieldAbsorbF);
+
             dmg_final = Mathf.Max(0, dmg_final - Mathf.RoundToInt(shieldAbsorbF));
 
             if (shieldAbsorbF > 0f)
@@ -1177,7 +1358,14 @@ int dmg_afterScalar = Mathf.Max(1, Mathf.RoundToInt(dr.damage * incomingScalar))
 
         TitlesAdapter.OnHitTaken(teamIds[activeIndex], dmg_incoming, dr.crit && !df.cannotBeCrit);
 
-        yield return Say($"{attackerName} hits {GetName(activeIndex)} for {dmg_final}!", BattleLineTag.Result);
+        if (shadowVeilBlockedPlayer)
+        {
+            yield return Say($"{GetName(activeIndex)} takes no damage!", BattleLineTag.Result);
+        }
+        else
+        {
+            yield return Say($"{attackerName} hits {GetName(activeIndex)} for {dmg_final}!", BattleLineTag.Result);
+        }
 
         if (dr.crit && !df.cannotBeCrit)
             BattleLogger.AddKeyMoment($"CRIT: {attackerName} → {GetName(activeIndex)} ({dmg_final})");

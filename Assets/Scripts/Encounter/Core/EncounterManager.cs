@@ -512,6 +512,19 @@ private int GetRarityWeight(TitleSO t)
         if (_currentEncounterIsBoss)
             wildLevel = Mathf.Max(1, wildLevel + bossLevelBonus);
 
+        // Difficulty level adjustment (unlocks at Promotion Rank 15)
+        int difficultyMode = 0; // 0 Normal, 1 Hard, 2 Insane
+        if (SaveManager.Data != null && SaveManager.Data.promotionRank >= 15)
+        {
+            var s = SaveManager.Data.settings;
+            if (s != null) difficultyMode = Mathf.Clamp(s.difficultyMode, 0, 2);
+        }
+
+        if (difficultyMode == 1) wildLevel += 2;
+        else if (difficultyMode == 2) wildLevel += 5;
+
+        wildLevel = Mathf.Clamp(wildLevel, 1, 99);
+
         ResolveWildTitles(wild, wildLevel);
 
         _currentWildIsShiny = RollWildShiny(wild);

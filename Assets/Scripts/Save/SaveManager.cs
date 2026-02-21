@@ -69,7 +69,7 @@ public static class SaveManager
 
     // Save schema versioning
     // Increment CURRENT_SAVE_VERSION whenever the on-disk JSON layout/semantics change.
-    private const int CURRENT_SAVE_VERSION = 2;
+    private const int CURRENT_SAVE_VERSION = 3;
 
     // Optional: last integrity/migration diagnostics. Useful for QA screenshots or a debug panel.
     private static string _lastValidationReport;
@@ -101,6 +101,24 @@ public static class SaveManager
                 root.jobRuntime.sites ??= new List<JobRuntimeSite>();
                 root.jobRuntime.cooldowns ??= new List<MonsterCooldownKV>();
                 root.worldEvents.cooldowns ??= new List<WorldEventRollCooldown>();
+            }
+        },
+        new MigrationStep
+        {
+            from = 2,
+            to = 3,
+            apply = (root) =>
+            {
+                // Promotion / Difficulty bootstrap
+                if (root.player != null)
+                {
+                    // Promotion fields default to Rank 1 if missing
+                    if (root.player.promotionRank <= 0) root.player.promotionRank = 1;
+
+                    // Settings now contains difficultyMode; ensure settings exists and is normalized
+                    root.player.settings ??= new SettingsState();
+                    root.player.settings.difficultyMode = Mathf.Clamp(root.player.settings.difficultyMode, 0, 2);
+                }
             }
         }
     };

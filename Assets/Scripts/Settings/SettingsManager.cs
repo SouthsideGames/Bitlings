@@ -7,9 +7,9 @@ public class SettingsManager : MonoBehaviour
     public static SettingsManager I { get; private set; }
     public event Action OnSettingsChanged;
 
-    public SettingsState S => Ensure();
+    public SettingsState settingsState => Ensure();
+    private PlayerManager playerManager => SaveManager.Data;
     private SettingsState _fallback;
-
     private bool _bootstrapped;
 
     void Awake()
@@ -26,7 +26,6 @@ public class SettingsManager : MonoBehaviour
 
     private SettingsState Ensure()
     {
-        // During boot / hard reset windows, some systems may query settings before SaveManager has loaded.
         if (SaveManager.Data == null)
             return _fallback ??= new SettingsState();
 
@@ -34,13 +33,10 @@ public class SettingsManager : MonoBehaviour
         {
             SaveManager.Data.settings = new SettingsState();
 
-            // During hard wipe/reset flows, avoid writing mid-rebuild.
             if (!SaveManager.IsHardWiping)
                 SaveManager.Save();
         }
 
-        // One-time bootstrap: make sure new fields have sane defaults.
-        // IMPORTANT: do not overwrite existing user preferences; only normalize missing/invalid.
         if (!_bootstrapped)
         {
             _bootstrapped = true;
@@ -78,7 +74,6 @@ public class SettingsManager : MonoBehaviour
 
     private void Persist()
     {
-        // Never write during a reset/reload cycle.
         if (SaveManager.Data != null && !SaveManager.IsHardWiping)
             SaveManager.Save();
 
@@ -128,28 +123,27 @@ public class SettingsManager : MonoBehaviour
         // Re-enable after reload; scene reload will rebuild singletons cleanly.
         SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
 
-        // (No need to invoke HardResetting(false) here because the scene is reloading.)
     }
 
     // ─────────────────────────────────────────────────────────
     // Existing settings
     // ─────────────────────────────────────────────────────────
 
-    public bool GetAutoConvertDuplicates() => S.autoConvertDuplicates;
+    public bool GetAutoConvertDuplicates() => settingsState.autoConvertDuplicates;
 
     public void SetAutoConvertDuplicates(bool enabled)
     {
-        if (S.autoConvertDuplicates == enabled) return;
-        S.autoConvertDuplicates = enabled;
+        if (settingsState.autoConvertDuplicates == enabled) return;
+        settingsState.autoConvertDuplicates = enabled;
         Persist();
     }
 
-    public bool GetAutoScrollBattleLog() => S.autoScrollBattleLog;
+    public bool GetAutoScrollBattleLog() => settingsState.autoScrollBattleLog;
 
     public void SetAutoScrollBattleLog(bool enabled)
     {
-        if (S.autoScrollBattleLog == enabled) return;
-        S.autoScrollBattleLog = enabled;
+        if (settingsState.autoScrollBattleLog == enabled) return;
+        settingsState.autoScrollBattleLog = enabled;
         Persist();
     }
 
@@ -157,36 +151,36 @@ public class SettingsManager : MonoBehaviour
     // Battle QoL
     // ─────────────────────────────────────────────────────────
 
-    public bool GetFastForwardBattle() => S.fastForwardBattle;
+    public bool GetFastForwardBattle() => settingsState.fastForwardBattle;
 
     public void SetFastForwardBattle(bool enabled)
     {
-        if (S.fastForwardBattle == enabled) return;
-        S.fastForwardBattle = enabled;
+        if (settingsState.fastForwardBattle == enabled) return;
+        settingsState.fastForwardBattle = enabled;
         Persist();
     }
 
-    public string GetCustomSeed() => S.customSeed ?? string.Empty;
+    public string GetCustomSeed() => settingsState.customSeed ?? string.Empty;
 
     public void SetCustomSeed(string seed)
     {
         seed ??= string.Empty;
-        if (S.customSeed == seed) return;
+        if (settingsState.customSeed == seed) return;
 
-        S.customSeed = seed;
+        settingsState.customSeed = seed;
         Persist();
 
         SeedService.ClearSessionSeed();
         SeedService.ApplyGlobalSeedForSession();
     }
 
-    public bool GetUseCustomSeed() => S.useCustomSeed;
+    public bool GetUseCustomSeed() => settingsState.useCustomSeed;
 
     public void SetUseCustomSeed(bool enabled)
     {
-        if (S.useCustomSeed == enabled) return;
+        if (settingsState.useCustomSeed == enabled) return;
 
-        S.useCustomSeed = enabled;
+        settingsState.useCustomSeed = enabled;
         Persist();
 
         SeedService.ClearSessionSeed();
@@ -198,50 +192,50 @@ public class SettingsManager : MonoBehaviour
     // JOB / IDLE (matches JobManager.PullSettings())
     // ─────────────────────────────────────────────────────────
 
-    public bool GetAutoBenchEnabled() => S.autoBenchEnabled;
+    public bool GetAutoBenchEnabled() => settingsState.autoBenchEnabled;
 
     public void SetAutoBenchEnabled(bool enabled)
     {
-        if (S.autoBenchEnabled == enabled) return;
-        S.autoBenchEnabled = enabled;
+        if (settingsState.autoBenchEnabled == enabled) return;
+        settingsState.autoBenchEnabled = enabled;
         Persist();
     }
 
-    public float GetAutoBenchThreshold01() => Mathf.Clamp01(S.autoBenchThreshold01);
+    public float GetAutoBenchThreshold01() => Mathf.Clamp01(settingsState.autoBenchThreshold01);
 
     public void SetAutoBenchThreshold01(float threshold01)
     {
         threshold01 = Mathf.Clamp01(threshold01);
-        if (Mathf.Approximately(S.autoBenchThreshold01, threshold01)) return;
-        S.autoBenchThreshold01 = threshold01;
+        if (Mathf.Approximately(settingsState.autoBenchThreshold01, threshold01)) return;
+        settingsState.autoBenchThreshold01 = threshold01;
         Persist();
     }
 
-    public bool GetAutoBenchAutoFill() => S.autoBenchAutoFill;
+    public bool GetAutoBenchAutoFill() => settingsState.autoBenchAutoFill;
 
     public void SetAutoBenchAutoFill(bool enabled)
     {
-        if (S.autoBenchAutoFill == enabled) return;
-        S.autoBenchAutoFill = enabled;
+        if (settingsState.autoBenchAutoFill == enabled) return;
+        settingsState.autoBenchAutoFill = enabled;
         Persist();
     }
 
-    public bool GetAutoClinicReliefEnabled() => S.autoClinicReliefEnabled;
+    public bool GetAutoClinicReliefEnabled() => settingsState.autoClinicReliefEnabled;
 
     public void SetAutoClinicReliefEnabled(bool enabled)
     {
-        if (S.autoClinicReliefEnabled == enabled) return;
-        S.autoClinicReliefEnabled = enabled;
+        if (settingsState.autoClinicReliefEnabled == enabled) return;
+        settingsState.autoClinicReliefEnabled = enabled;
         Persist();
     }
 
 #if UNITY_EDITOR
-    public bool GetLogProductionBreakdown() => S.logProductionBreakdown;
+    public bool GetLogProductionBreakdown() => settingsState.logProductionBreakdown;
 
     public void SetLogProductionBreakdown(bool enabled)
     {
-        if (S.logProductionBreakdown == enabled) return;
-        S.logProductionBreakdown = enabled;
+        if (settingsState.logProductionBreakdown == enabled) return;
+        settingsState.logProductionBreakdown = enabled;
         Persist();
     }
 #endif
@@ -250,39 +244,39 @@ public class SettingsManager : MonoBehaviour
     // BATTLE / UI SETTINGS
     // ─────────────────────────────────────────────────────────
 
-    public bool GetCondensedBattleText() => S.condensedBattleText;
+    public bool GetCondensedBattleText() => settingsState.condensedBattleText;
 
     public void SetCondensedBattleText(bool enabled)
     {
-        if (S.condensedBattleText == enabled) return;
-        S.condensedBattleText = enabled;
+        if (settingsState.condensedBattleText == enabled) return;
+        settingsState.condensedBattleText = enabled;
         Persist();
     }
 
-    public bool GetCompressAutoBattleText() => S.compressAutoBattleText;
+    public bool GetCompressAutoBattleText() => settingsState.compressAutoBattleText;
 
     public void SetCompressAutoBattleText(bool enabled)
     {
-        if (S.compressAutoBattleText == enabled) return;
-        S.compressAutoBattleText = enabled;
+        if (settingsState.compressAutoBattleText == enabled) return;
+        settingsState.compressAutoBattleText = enabled;
         Persist();
     }
 
-    public bool GetBattleHistoryEnabled() => S.battleHistoryEnabled;
+    public bool GetBattleHistoryEnabled() => settingsState.battleHistoryEnabled;
 
     public void SetBattleHistoryEnabled(bool enabled)
     {
-        if (S.battleHistoryEnabled == enabled) return;
-        S.battleHistoryEnabled = enabled;
+        if (settingsState.battleHistoryEnabled == enabled) return;
+        settingsState.battleHistoryEnabled = enabled;
         Persist();
     }
 
-    public bool GetShowInlineBattleIcons() => S.showInlineBattleIcons;
+    public bool GetShowInlineBattleIcons() => settingsState.showInlineBattleIcons;
 
     public void SetShowInlineBattleIcons(bool enabled)
     {
-        if (S.showInlineBattleIcons == enabled) return;
-        S.showInlineBattleIcons = enabled;
+        if (settingsState.showInlineBattleIcons == enabled) return;
+        settingsState.showInlineBattleIcons = enabled;
         Persist();
     }
 
@@ -290,48 +284,73 @@ public class SettingsManager : MonoBehaviour
     // Notifications
     // ─────────────────────────────────────────────────────────
 
-    public bool GetNotificationsEnabled() => S.notificationsEnabled;
+    public bool GetNotificationsEnabled() => settingsState.notificationsEnabled;
 
     public void SetNotificationsEnabled(bool enabled)
     {
-        if (S.notificationsEnabled == enabled) return;
-        S.notificationsEnabled = enabled;
+        if (settingsState.notificationsEnabled == enabled) return;
+        settingsState.notificationsEnabled = enabled;
         Persist();
     }
 
-    public bool GetNotifyJobStorageFull() => S.notifyJobStorageFull;
+    public bool GetNotifyJobStorageFull() => settingsState.notifyJobStorageFull;
 
     public void SetNotifyJobStorageFull(bool enabled)
     {
-        if (S.notifyJobStorageFull == enabled) return;
-        S.notifyJobStorageFull = enabled;
+        if (settingsState.notifyJobStorageFull == enabled) return;
+        settingsState.notifyJobStorageFull = enabled;
         Persist();
     }
 
-    public bool GetNotifyEnergyFull() => S.notifyEnergyFull;
+    public bool GetNotifyEnergyFull() => settingsState.notifyEnergyFull;
 
     public void SetNotifyEnergyFull(bool enabled)
     {
-        if (S.notifyEnergyFull == enabled) return;
-        S.notifyEnergyFull = enabled;
+        if (settingsState.notifyEnergyFull == enabled) return;
+        settingsState.notifyEnergyFull = enabled;
         Persist();
     }
 
-    public bool GetNotifyBoostExpiry() => S.notifyBoostExpiry;
+    public bool GetNotifyBoostExpiry() => settingsState.notifyBoostExpiry;
 
     public void SetNotifyBoostExpiry(bool enabled)
     {
-        if (S.notifyBoostExpiry == enabled) return;
-        S.notifyBoostExpiry = enabled;
+        if (settingsState.notifyBoostExpiry == enabled) return;
+        settingsState.notifyBoostExpiry = enabled;
         Persist();
     }
 
-    public bool GetNotifyFallback24h() => S.notifyFallback24h;
+    public bool GetNotifyFallback24h() => settingsState.notifyFallback24h;
 
     public void SetNotifyFallback24h(bool enabled)
     {
-        if (S.notifyFallback24h == enabled) return;
-        S.notifyFallback24h = enabled;
+        if (settingsState.notifyFallback24h == enabled) return;
+        settingsState.notifyFallback24h = enabled;
         Persist();
+    }
+
+    public int GetDifficultyMode()
+    {
+        if (playerManager == null) return 0;
+
+        // Lock until Rank 15
+        if (playerManager.promotionRank < 15) return 0;
+
+        playerManager.settings ??= new SettingsState();
+        return Mathf.Clamp(playerManager.settings.difficultyMode, 0, 2);
+    }
+
+    public void SetDifficultyMode(int mode)
+    {
+        if (playerManager == null) return;
+
+        // Lock until Rank 15
+        if (playerManager.promotionRank < 15)
+            mode = 0;
+
+        playerManager.settings ??= new SettingsState();
+        playerManager.settings.difficultyMode = Mathf.Clamp(mode, 0, 2);
+
+        SaveManager.Save();
     }
 }

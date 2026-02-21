@@ -24,6 +24,9 @@ public partial class BattleManager : MonoBehaviour
         var cmods = GetConditionalModsForActive();
         spd = Mathf.Max(1, Mathf.RoundToInt((spd + Mathf.Max(0, cmods.spdFlat)) * (1f + Mathf.Max(0f, cmods.spdPct))));
 
+        // Status: Soaked reduces speed (run chance).
+        spd = Mathf.Max(1, Mathf.RoundToInt(spd * Mathf.Max(0.1f, GetActivePlayerSoakedSpeedMultiplier())));
+
         return Mathf.Max(1, spd);
     }
 
@@ -33,7 +36,10 @@ public partial class BattleManager : MonoBehaviour
     private int GetWildEffectiveSpeedForRun()
     {
         if (!wildDef) return 1;
-        return Mathf.Max(1, BattleCalc.CalcSpeed(wildDef, wildLevel));
+        int spd = Mathf.Max(1, BattleCalc.CalcSpeed(wildDef, wildLevel));
+        // Status: Soaked reduces speed (run chance).
+        spd = Mathf.Max(1, Mathf.RoundToInt(spd * Mathf.Max(0.1f, GetWildSoakedSpeedMultiplier())));
+        return spd;
     }
 
 

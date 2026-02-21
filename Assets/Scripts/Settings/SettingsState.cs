@@ -27,7 +27,11 @@ public class SettingsState
     public bool  autoScrollBattleLog = true;
     public float battleSpeed = 1f;
 
-    public bool condensedBattleText = false;        // GetCondensedBattleText()
+        // ───────── Difficulty ─────────
+    // 0 = Normal, 1 = Hard, 2 = Insane
+    public int difficultyMode = 0;
+
+public bool condensedBattleText = false;        // GetCondensedBattleText()
     public bool compressAutoBattleText = false;     // GetCompressAutoBattleText()
     public bool battleHistoryEnabled = true;        // GetBattleHistoryEnabled()
     public bool showInlineBattleIcons = true;       // GetShowInlineBattleIcons()

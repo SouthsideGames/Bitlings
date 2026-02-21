@@ -254,6 +254,28 @@ public sealed class ActionBarBinder : MonoBehaviour
         _lastEnable = enable;
 
         ApplyInteractable(enable);
+
+        // Per-action gating (statuses). We still keep a global enable/disable, but some
+        // statuses restrict specific actions while allowing others.
+        if (enable && battle != null)
+        {
+            bool sundered = false;
+            bool wyrmFury = false;
+
+            try { sundered = battle.IsActivePlayerSundered(); } catch { /* ignore if API differs */ }
+            try { wyrmFury = battle.IsActivePlayerWyrmFury(); } catch { /* ignore if API differs */ }
+
+            if (sundered)
+            {
+                if (defendBtn) defendBtn.interactable = false;
+                if (runBtn) runBtn.interactable = false;
+            }
+
+            if (wyrmFury)
+            {
+                if (focusBtn) focusBtn.interactable = false;
+            }
+        }
     }
 
     private bool ComputeEnable()
@@ -262,6 +284,20 @@ public sealed class ActionBarBinder : MonoBehaviour
             return false;
 
         bool enable = battle.IsPlayerTurn;
+
+        // Hard-gate input when the active player is Frozen (status system).
+        if (enable)
+        {
+            try
+            {
+                if (battle != null && battle.IsActivePlayerFrozen())
+                    enable = false;
+            }
+            catch
+            {
+                // ignore if API differs
+            }
+        }
 
         // Optionally also gate by Encounter auto-mode if present
         if (enable && alsoDisableDuringEncounterAutoMode)
@@ -294,6 +330,14 @@ public sealed class ActionBarBinder : MonoBehaviour
             case 5: return "Run";
             default: return "Action";
         }
+    }
+
+    
+    public void SetInteractable(bool on)
+    {
+        _hasLast = false;
+        _lastEnable = on;
+        ApplyInteractable(on);
     }
 
     private void ApplyInteractable(bool enable)

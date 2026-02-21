@@ -645,6 +645,10 @@ private void UpdateWildInfoUI()
     {
         if (!feedback) return;
 
+        // Primary status UI (Phase 2) is cleared here so a new battle always starts clean.
+        feedback.ClearPrimaryStatus(BattleFeedbackManager.BattleFeedbackSide.Player);
+        feedback.ClearPrimaryStatus(BattleFeedbackManager.BattleFeedbackSide.Wild);
+
         Emit(BattleEvent.GuardChanged(BattleSide.Player, false));
         if (!HasBattleEventConsumers && feedback) feedback.SetGuard(BattleFeedbackManager.BattleFeedbackSide.Player, false);
         Emit(BattleEvent.GuardChanged(BattleSide.Wild, false));
@@ -677,6 +681,34 @@ private void UpdateWildInfoUI()
         if (!HasBattleEventConsumers && feedback) feedback.SetCharge(BattleFeedbackManager.BattleFeedbackSide.Player, playerCharged);
         Emit(BattleEvent.ChargeChanged(BattleSide.Wild, wildChargedNextAttack));
         if (!HasBattleEventConsumers && feedback) feedback.SetCharge(BattleFeedbackManager.BattleFeedbackSide.Wild, wildChargedNextAttack);
+
+        // Primary status UI (Phase 2/3)
+        if (teamStatus != null && activeIndex >= 0 && activeIndex < teamStatus.Length)
+        {
+            var st = teamStatus[activeIndex];
+            if (st == StatusType.None)
+            {
+                feedback.ClearPrimaryStatus(BattleFeedbackManager.BattleFeedbackSide.Player);
+            }
+            else
+            {
+                var icon = statusLibrary != null ? statusLibrary.GetIcon(st) : null;
+                bool persistent = teamStatusPersistent != null && activeIndex < teamStatusPersistent.Length && teamStatusPersistent[activeIndex];
+                int turns = persistent ? 0 : (teamStatusTurns != null && activeIndex < teamStatusTurns.Length ? Mathf.Max(0, teamStatusTurns[activeIndex]) : 0);
+                feedback.SetPrimaryStatus(BattleFeedbackManager.BattleFeedbackSide.Player, icon, turns, persistent);
+            }
+        }
+
+        if (wildStatus == StatusType.None)
+        {
+            feedback.ClearPrimaryStatus(BattleFeedbackManager.BattleFeedbackSide.Wild);
+        }
+        else
+        {
+            var icon = statusLibrary != null ? statusLibrary.GetIcon(wildStatus) : null;
+            int turns = wildStatusPersistent ? 0 : Mathf.Max(0, wildStatusTurns);
+            feedback.SetPrimaryStatus(BattleFeedbackManager.BattleFeedbackSide.Wild, icon, turns, wildStatusPersistent);
+        }
     }
 
 
