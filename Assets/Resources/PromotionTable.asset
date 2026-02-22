@@ -14,11 +14,52 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   maxRank: 20
   ranks:
-  - rank: 0
+  - rank: 1
     totalXpToReach: 0
-    displayName: 
+    displayName: Intern
     rewardSummary: 
-  - rank: 0
-    totalXpToReach: 0
-    displayName: 
-    rewardSummary: 
+  - rank: 2
+    totalXpToReach: 50
+    displayName: Assistant
+    rewardSummary: "Credits +200 \u2022 Energy +10 \u2022 Material +15 \u2022 GrowthCore
+      +2"
+  - rank: 3
+    totalXpToReach: 120
+    displayName: Courier
+    rewardSummary: "Credits +250 \u2022 Energy +12 \u2022 Material +20 \u2022 Medkit
+      +2 \u2022 TrainingVoucher +1"
+  - rank: 4
+    totalXpToReach: 210
+    displayName: Operator
+    rewardSummary: "Credits +300 \u2022 Energy +14 \u2022 Material +25 \u2022 GrowthCore
+      +2 \u2022 PPEPermit +1"
+  - rank: 5
+    totalXpToReach: 320
+    displayName: Supervisor
+    rewardSummary: "Credits +350 \u2022 Energy +16 \u2022 Material +30 \u2022 Medkit
+      +3 \u2022 PackVoucher +25 "
+  - rank: 6
+    totalXpToReach: 450
+    displayName: Trainer
+    rewardSummary: "Credits +350 \u2022 Energy +16 \u2022 Material +30 \u2022 WorkOrder
+      +1"
+  - rank: 7
+    totalXpToReach: 600
+    displayName: Specialist
+    rewardSummary: "Credits +400 \u2022 Energy +18 \u2022 Material +35 \u2022 Flyer
+      +1"
+  - rank: 8
+    totalXpToReach: 770
+    displayName: Compliance Officer
+    rewardSummary: "Credits +450 \u2022 Energy +20 \u2022 Material +40 \u2022 TrainingVoucher
+      +1 \u2022 PPEPermit +1"
+  - rank: 9
+    totalXpToReach: 960
+    displayName: Operations Lead
+    rewardSummary: "Credits +500 \u2022 Energy +22 \u2022 Material +45 \u2022 WorkOrder
+      +1 \u2022 EfficiencyVoucher +1"
+  - rank: 10
+    totalXpToReach: 1170
+    displayName: Operations Lead
+    rewardSummary: "Credits +500 \u2022 Energy +22 \u2022 Material +45 \u2022 WorkOrder
+      +1 \u2022 EfficiencyVoucher +1"
