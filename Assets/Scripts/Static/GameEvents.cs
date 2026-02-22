@@ -53,6 +53,14 @@ public static class GameEvents
     public static Action Tutorial_FirstJobAssigned;
     public static Action OnBoostersChanged;
 
+    // ─────────────────────────────────────────────────────────
+    // Promotions (Ranks)
+    // ─────────────────────────────────────────────────────────
+    // (rank, xp, xpThisRank, xpToNext)
+    public static Action<int, int, int, int> PromotionProgressChanged;
+    // (oldRank, newRank)
+    public static Action<int, int> PromotionRankChanged;
+
         // ───────────────────────────────────────────────────────
     // Features / Unlocks
     // ─────────────────────────────────────────────────────────

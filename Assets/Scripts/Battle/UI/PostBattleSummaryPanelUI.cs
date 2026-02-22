@@ -17,10 +17,6 @@ public class PostBattleSummaryPanelUI : MonoBehaviour
     [SerializeField] private TextMeshProUGUI growthCoresLabel;
     [SerializeField] private TextMeshProUGUI captureLabel;
 
-    [Header("Level Ups")]
-    [Tooltip("Optional: shows the provided level-up summary lines.")]
-    [SerializeField] private TextMeshProUGUI levelUpsLabel;
-
     [Header("Monster Info")]
     [SerializeField] private Image enemyPortraitImage;
     [SerializeField] private TextMeshProUGUI enemyNameLabel;
@@ -36,9 +32,24 @@ public class PostBattleSummaryPanelUI : MonoBehaviour
     [SerializeField] private TextMeshProUGUI firstHitLabel;
     [SerializeField] private TextMeshProUGUI timeLabel;
 
-    [Header("Key Moments (Optional)")]
-    [Tooltip("Optional: shows the last ~20 key battle events (crits, KOs, swaps).")]
-    [SerializeField] private TextMeshProUGUI keyMomentsLabel;
+    [Header("Promotion Rank XP (Phase 5)")]
+    [Tooltip("Optional: root container for the rank XP section. If null, labels/sliders are still updated if assigned.")]
+    [SerializeField] private GameObject promotionSectionRoot;
+
+    [Tooltip("Optional: e.g., 'Rank 7'")]
+    [SerializeField] private TextMeshProUGUI promotionRankLabel;
+
+    [Tooltip("Optional: e.g., 'XP: 120 / 175 (to Rank 8)'")]
+    [SerializeField] private TextMeshProUGUI promotionProgressLabel;
+
+    [Tooltip("Optional: e.g., '+18 XP this battle'")]
+    [SerializeField] private TextMeshProUGUI promotionDeltaLabel;
+
+    [Tooltip("Optional: slider showing progress within current rank.")]
+    [SerializeField] private Slider promotionProgressSlider;
+
+    [Tooltip("If false, the Key Moments block is hidden (recommended once Promotion XP is live).")]
+    [SerializeField] private bool showKeyMoments = false;
 
     [Header("Controls")]
     [SerializeField] private Button continueButton;
@@ -380,38 +391,6 @@ public class PostBattleSummaryPanelUI : MonoBehaviour
             }
         }
 
-        // Level ups (delta-only): render the provided summary lines if present.
-        if (levelUpsLabel)
-        {
-            if (levelUpSummaries == null || levelUpSummaries.Count == 0)
-            {
-                HideRow(levelUpsLabel);
-            }
-            else
-            {
-                ShowRowDelayed(levelUpsLabel, delay);
-
-                var sb = new System.Text.StringBuilder(256);
-                sb.AppendLine("Level Ups:");
-                for (int i = 0; i < levelUpSummaries.Count; i++)
-                {
-                    if (string.IsNullOrWhiteSpace(levelUpSummaries[i])) continue;
-                    sb.AppendLine($"• {levelUpSummaries[i]}");
-                }
-                levelUpsLabel.text = sb.ToString();
-
-                // Tiny pop to make it feel like a meaningful change.
-                LeanTween.delayedCall(levelUpsLabel.gameObject, delay, () =>
-                {
-                    if (!levelUpsLabel) return;
-                    var rt = levelUpsLabel.rectTransform;
-                    rt.localScale = Vector3.one;
-                    LeanTween.scale(rt, Vector3.one * 1.04f, 0.12f).setLoopPingPong(1).setEase(LeanTweenType.easeOutBack);
-                });
-
-                delay += revealStepDelay;
-            }
-        }
 
         MonsterDataSO wildDef = result.wildDef;
 
@@ -471,24 +450,79 @@ public class PostBattleSummaryPanelUI : MonoBehaviour
         if (firstHitLabel) firstHitLabel.text = $"First Hit: {(result.gotFirstHit ? "Yes" : "No")}";
         if (timeLabel) timeLabel.text = $"Time: {FormatTime(result.secondsSurvived)}";
 
-        // Key moments (debug + UX)
-        if (keyMomentsLabel)
+        // ─────────────────────────────────────────────
+        // Promotion XP (Phase 5)
+        // Shows current rank + progress to next rank + XP gained from this battle.
+        // NOTE: PromotionManager should have already applied XP via GameEvents.BattleFinished.
+        // ─────────────────────────────────────────────
+        if (promotionSectionRoot != null)
+            promotionSectionRoot.SetActive(SaveManager.Data != null);
+
+        if (SaveManager.Data != null)
         {
-            var km = BattleLogger.GetKeyMomentsSnapshot(20);
-            if (km != null && km.Count > 0)
+            int rank = Mathf.Max(1, SaveManager.Data.promotionRank);
+            int totalXp = Mathf.Max(0, SaveManager.Data.promotionXP);
+            int delta = 0;
+
+            if (PromotionManager.I != null)
+                delta = Mathf.Max(0, PromotionManager.I.ComputeXpGain(result));
+
+            if (promotionRankLabel)
+                promotionRankLabel.text = $"Rank {rank}";
+
+            if (PromotionManager.I != null)
             {
-                // bullet-ish formatting without rich text dependency
-                var sb = new System.Text.StringBuilder(512);
-                sb.AppendLine("Key Moments:");
-                for (int i = 0; i < km.Count; i++)
-                    sb.AppendLine($"• {km[i]}");
-                keyMomentsLabel.text = sb.ToString();
+                int curFloor = PromotionManager.I.GetTotalXpToReach(rank);
+                int nextFloor = PromotionManager.I.GetTotalXpToReach(rank + 1);
+
+                int inRank = Mathf.Max(0, totalXp - curFloor);
+                int toNext = Mathf.Max(0, nextFloor - curFloor);
+
+                if (promotionProgressLabel)
+                {
+                    if (toNext <= 0)
+                        promotionProgressLabel.text = "Max Rank";
+                    else
+                        promotionProgressLabel.text = $"XP: {inRank} / {toNext} (to Rank {rank + 1})";
+                }
+
+                if (promotionProgressSlider)
+                {
+                    promotionProgressSlider.minValue = 0f;
+                    promotionProgressSlider.maxValue = Mathf.Max(1f, toNext);
+                    promotionProgressSlider.value = Mathf.Clamp(inRank, 0, Mathf.Max(1, toNext));
+                }
             }
             else
             {
-                keyMomentsLabel.text = "Key Moments:\n• (none)";
+                // Fallback if PromotionManager isn't in the scene yet.
+                if (promotionProgressLabel)
+                    promotionProgressLabel.text = $"XP: {totalXp}";
+                if (promotionProgressSlider)
+                {
+                    promotionProgressSlider.minValue = 0f;
+                    promotionProgressSlider.maxValue = 1f;
+                    promotionProgressSlider.value = 1f;
+                }
+            }
+
+            if (promotionDeltaLabel)
+                promotionDeltaLabel.text = delta > 0 ? $"<color={GREEN}>+{delta} XP</color>" : string.Empty;
+        }
+        else
+        {
+            if (promotionRankLabel) promotionRankLabel.text = string.Empty;
+            if (promotionProgressLabel) promotionProgressLabel.text = string.Empty;
+            if (promotionDeltaLabel) promotionDeltaLabel.text = string.Empty;
+            if (promotionProgressSlider)
+            {
+                promotionProgressSlider.minValue = 0f;
+                promotionProgressSlider.maxValue = 1f;
+                promotionProgressSlider.value = 0f;
             }
         }
+
+       
     }
 
     private Sprite GetBestPortraitSprite(MonsterDataSO def, bool shiny)

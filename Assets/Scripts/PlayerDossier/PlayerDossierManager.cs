@@ -13,6 +13,13 @@ public class PlayerDossierSnapshot
     public string rankName;
     public string operationId;
 
+    [Header("Promotions")]
+    public int promotionRank;
+    public int promotionXP;
+    public int promotionXpIntoRank;
+    public int promotionXpToNext;
+    [Range(0f, 1f)] public float promotionProgress01;
+
     [Header("Overview Stats")]
     public int totalOwnedBitlings;
     public int discoveredSpecies;
@@ -84,6 +91,11 @@ public class PlayerDossierSnapshot
     public int achievementsUnlocked;
     public int achievementsTotal;
     public AchievementRowSnapshot[] achievements;
+
+    // ─────────────────────────────────────────────────────────────
+    // PAGE 7 – RANKS (scroll list)
+    // (UI builds rows from PromotionTableSO; snapshot keeps the current totals.)
+    // ─────────────────────────────────────────────────────────────
 }
 
 [Serializable]
@@ -222,6 +234,23 @@ public class PlayerDossierManager : MonoBehaviour
         snapshot.handlerName = $"Handler: {displayName}";
         snapshot.rankName = $"Rank: {DeriveRankName(data)}";
         snapshot.operationId = $"Operation ID: {FormatOperationId(data.playerId)}";
+
+        // Promotions
+        snapshot.promotionRank = Mathf.Max(1, data.promotionRank);
+        snapshot.promotionXP = Mathf.Max(0, data.promotionXP);
+
+        int floor = (PromotionManager.I != null)
+            ? PromotionManager.I.GetTotalXpToReach(snapshot.promotionRank)
+            : GetTotalXpToReach_Fallback(snapshot.promotionRank);
+
+        int xpInto = Mathf.Max(0, snapshot.promotionXP - Mathf.Max(0, floor));
+        int xpToNext = (PromotionManager.I != null)
+            ? PromotionManager.I.GetXpToNext(snapshot.promotionRank, snapshot.promotionXP)
+            : GetXpToNext_Fallback(snapshot.promotionRank, snapshot.promotionXP);
+
+        snapshot.promotionXpIntoRank = xpInto;
+        snapshot.promotionXpToNext = xpToNext;
+        snapshot.promotionProgress01 = (xpToNext <= 0) ? 1f : Mathf.Clamp01((float)xpInto / (xpInto + xpToNext));
 
         // Owned monsters
         int totalOwned = 0;
@@ -984,6 +1013,39 @@ public class PlayerDossierManager : MonoBehaviour
     // ─────────────────────────────────────────────────────────────
     // Helpers
     // ─────────────────────────────────────────────────────────────
+
+    // Fallback promotion curve (must match PromotionManager's fallback so UI is consistent
+    // even if PromotionManager is not present in a scene).
+    private int GetTotalXpToReach_Fallback(int rank)
+    {
+        rank = Mathf.Max(1, rank);
+        if (rank == 1) return 0;
+
+        int total = 0;
+        for (int r = 2; r <= rank; r++)
+        {
+            // Rank 2 requires 50 XP, then +20 per subsequent rank step.
+            int reqForThisStep = 50 + 20 * (r - 2);
+            total += Mathf.Max(1, reqForThisStep);
+        }
+        return total;
+    }
+
+    private int GetXpToNext_Fallback(int currentRank, int totalXp)
+    {
+        currentRank = Mathf.Max(1, currentRank);
+        totalXp = Mathf.Max(0, totalXp);
+
+        const int maxRank = 20;
+        if (currentRank >= maxRank) return 0;
+
+        int curFloor = GetTotalXpToReach_Fallback(currentRank);
+        int nextReq = GetTotalXpToReach_Fallback(currentRank + 1);
+
+        int xpInto = Mathf.Max(0, totalXp - curFloor);
+        int xpNeededThisRank = Mathf.Max(1, nextReq - curFloor);
+        return Mathf.Max(0, xpNeededThisRank - xpInto);
+    }
 
     private string FormatOperationId(string playerId)
     {

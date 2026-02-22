@@ -15,7 +15,7 @@ public class PlayerDossierPanelUI : MonoBehaviour
     [SerializeField] private TextMeshProUGUI dotsText;      
 
     [Header("Pages (in order)")]
-    [Tooltip("Order MUST be: Page_1_Overview, Page_2_JobSites, Page_3_FieldOps, Page_4_Resources, Page_5_Resume, Page_6_Achievements")]
+    [Tooltip("Order MUST be: Page_1_Overview, Page_2_JobSites, Page_3_FieldOps, Page_4_Resources, Page_5_Resume, Page_6_Achievements, Page_7_Ranks")]
     [SerializeField] private GameObject[] pages;
 
     // ─────────────────────────────────────────────────────────────
@@ -100,6 +100,18 @@ public class PlayerDossierPanelUI : MonoBehaviour
 
     private readonly List<PlayerDossierAchievementRowUI> _achievementRows = new List<PlayerDossierAchievementRowUI>();
 
+    // ─────────────────────────────────────────────────────────────
+    // PAGE 7 – RANKS
+    // ─────────────────────────────────────────────────────────────
+    [Header("Page 7 - Ranks")]
+    [SerializeField] private PromotionTableSO promotionTable;
+    [SerializeField] private TextMeshProUGUI rankHeaderText;
+    [SerializeField] private TextMeshProUGUI rankProgressText;
+    [SerializeField] private RectTransform rankListContent;
+    [SerializeField] private PromotionRankRowUI rankRowPrefab;
+
+    private readonly List<PromotionRankRowUI> _rankRows = new List<PromotionRankRowUI>();
+
     private int _currentPageIndex = 0;
 
     private void Awake()
@@ -150,6 +162,7 @@ public class PlayerDossierPanelUI : MonoBehaviour
             PopulatePage4Resources(snapshot);
             PopulatePage5Resume(snapshot);
             PopulatePage6Achievements(snapshot);
+            PopulatePage7Ranks(snapshot);
         }
         else
         {
@@ -162,6 +175,7 @@ public class PlayerDossierPanelUI : MonoBehaviour
             PopulatePage4Resources(null);
             PopulatePage5Resume(null);
             PopulatePage6Achievements(null);
+            PopulatePage7Ranks(null);
         }
     }
 
@@ -504,6 +518,98 @@ public class PlayerDossierPanelUI : MonoBehaviour
                 _achievementRows[i].Bind(stats.achievements[i]);
             else
                 _achievementRows[i].gameObject.SetActive(false);
+        }
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // Page 7 - Ranks
+    // ─────────────────────────────────────────────────────────────
+    private void PopulatePage7Ranks(PlayerDossierSnapshot stats)
+    {
+        if (rankHeaderText)
+        {
+            int r = (stats != null) ? Mathf.Max(1, stats.promotionRank) : 1;
+            rankHeaderText.text = $"Promotion Rank: {r}";
+        }
+
+        if (rankProgressText)
+        {
+            if (stats == null)
+                rankProgressText.text = "XP: 0";
+            else
+            {
+                if (stats.promotionXpToNext <= 0)
+                    rankProgressText.text = $"XP: {Mathf.Max(0, stats.promotionXP)} (MAX)";
+                else
+                    rankProgressText.text = $"XP: {Mathf.Max(0, stats.promotionXP)}  (+{Mathf.Max(0, stats.promotionXpIntoRank)} / {Mathf.Max(0, stats.promotionXpIntoRank + stats.promotionXpToNext)})";
+            }
+        }
+
+        if (rankListContent == null || rankRowPrefab == null)
+        {
+            #if UNITY_EDITOR || DEVELOPMENT_BUILD
+            Debug.LogWarning("[PlayerDossierPanelUI] Rank page refs missing: rankListContent or rankRowPrefab.");
+            #endif
+            return;
+        }
+
+        int currentRank = (stats != null) ? Mathf.Max(1, stats.promotionRank) : 1;
+
+        int maxRank = 20;
+        if (promotionTable != null)
+            maxRank = Mathf.Max(1, promotionTable.MaxRank);
+
+        // Ensure rows
+        while (_rankRows.Count < maxRank)
+            _rankRows.Add(Instantiate(rankRowPrefab, rankListContent));
+
+        for (int i = 0; i < _rankRows.Count; i++)
+        {
+            int rank = i + 1;
+            if (rank <= maxRank)
+            {
+                var row = _rankRows[i];
+                if (row == null) continue;
+
+                bool unlocked = rank <= currentRank;
+                bool isCurrent = rank == currentRank;
+
+                int totalXpToReach = 0;
+                string displayName = null;
+                string reward = null;
+
+                if (promotionTable != null)
+                {
+                    var e = promotionTable.Get(rank);
+                    if (e != null)
+                    {
+                        totalXpToReach = Mathf.Max(0, e.totalXpToReach);
+                        displayName = e.displayName;
+                        reward = e.rewardSummary;
+                    }
+                    else
+                    {
+                        // If the table doesn't define this rank, show fallback numbers.
+                        totalXpToReach = (PromotionManager.I != null)
+                            ? PromotionManager.I.GetTotalXpToReach(rank)
+                            : 0;
+                    }
+                }
+                else
+                {
+                    totalXpToReach = (PromotionManager.I != null)
+                        ? PromotionManager.I.GetTotalXpToReach(rank)
+                        : 0;
+                }
+
+                row.gameObject.SetActive(true);
+                row.Bind(rank, unlocked, isCurrent, totalXpToReach, displayName, reward);
+            }
+            else
+            {
+                if (_rankRows[i] != null)
+                    _rankRows[i].gameObject.SetActive(false);
+            }
         }
     }
 }
