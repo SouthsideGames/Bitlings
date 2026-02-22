@@ -18,3 +18,7 @@ MonoBehaviour:
     totalXpToReach: 0
     displayName: 
     rewardSummary: 
+  - rank: 0
+    totalXpToReach: 0
+    displayName: 
+    rewardSummary: 

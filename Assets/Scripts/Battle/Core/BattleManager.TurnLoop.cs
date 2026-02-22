@@ -27,6 +27,9 @@ public partial class BattleManager : MonoBehaviour
     private IEnumerator Co_StartBattleNow()
     {
         _turnIndex = 0;
+        // Reset status tick guards for this battle.
+        _lastPlayerStatusTickTurnIndex = int.MinValue;
+        _lastWildStatusTickTurnIndex = int.MinValue;
         EnsureBattleRngInitialized();
         inBattle = true;
         startTime = Time.unscaledTime;
@@ -235,7 +238,7 @@ public partial class BattleManager : MonoBehaviour
 
                         // Status tick at start of the player's turn (Phase 4).
                         // If an action-skip status triggers (Freeze/Shock), skip input + action entirely this turn.
-                        if (TryProcessTurnStartStatus_PlayerActive(out var skipBy))
+                        if (TryProcessTurnStartStatus_PlayerActive_OncePerRound(out var skipBy))
                         {
                             SetIsPlayerTurn(false);
                             pendingAction = PlayerAction.None;
@@ -534,7 +537,7 @@ break;
         SetIsPlayerTurn(true);
 // Status tick at start of the player's turn (Phase 4)
 // If an action-skip status triggers (Freeze/Shock), skip input + action entirely this turn.
-if (TryProcessTurnStartStatus_PlayerActive(out var skipBy))
+if (TryProcessTurnStartStatus_PlayerActive_OncePerRound(out var skipBy))
 {
     // Immediately end the player's turn so the action bar cannot be used.
     SetIsPlayerTurn(false);
@@ -717,7 +720,7 @@ if (teamHP != null && activeIndex >= 0 && activeIndex < teamHP.Length && teamHP[
         // Auto-resolve: status tick at start of the player's action (manual path ticks before input).
         if (!manualTurns)
         {
-            if (TryProcessTurnStartStatus_PlayerActive(out var skipBy))
+            if (TryProcessTurnStartStatus_PlayerActive_OncePerRound(out var skipBy))
             {
                 if (!ShouldSkipNarration(BattleLineTag.Result))
                 {
@@ -1064,7 +1067,7 @@ if (!playerLandedFirstHitThisBattle && dr.damage > 0)
             yield break;
     // Status tick at start of the wild's turn (Phase 4)
     // If an action-skip status triggers (Freeze/Shock), skip action entirely this turn.
-    if (TryProcessTurnStartStatus_Wild(out var skipBy))
+    if (TryProcessTurnStartStatus_Wild_OncePerRound(out var skipBy))
     {
         string who = !string.IsNullOrEmpty(wildNameText?.text) ? wildNameText.text : (wildDef ? wildDef.displayName : "Wild");
         if (skipBy == StatusType.Shock)

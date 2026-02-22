@@ -8,6 +8,77 @@ using UnityEngine;
 /// </summary>
 public partial class BattleManager
 {
+    // ─────────────────────────────────────────────────────────────
+    // Phase 4 rule enforcement
+    // - One active status per SIDE (Player team as a whole, and Wild).
+    // - No stacking, no refresh. Attempting to apply a new status while one
+    //   is active is blocked.
+    // - Status is treated as a "field" effect for the player side: swapping
+    //   monsters does NOT change/transfer/refresh anything; the active slot
+    //   simply experiences the current field status.
+    //
+    // This keeps the implementation simple and avoids per-OwnedMonster state.
+    // ─────────────────────────────────────────────────────────────
+    [Header("Statuses")]
+    [SerializeField] private bool playerStatusesAreFieldWide = true;
+
+    // Turn-start tick guards (prevents accidental double tick in a single round).
+    // _turnIndex advances once per full round (player + wild).
+    private int _lastPlayerStatusTickTurnIndex = int.MinValue;
+    private int _lastWildStatusTickTurnIndex = int.MinValue;
+
+    private bool TryProcessTurnStartStatus_PlayerActive_OncePerRound(out StatusType skippedBy)
+    {
+        skippedBy = StatusType.None;
+        if (!inBattle) return false;
+        if (_lastPlayerStatusTickTurnIndex == _turnIndex) return false;
+        _lastPlayerStatusTickTurnIndex = _turnIndex;
+        return TryProcessTurnStartStatus_PlayerActive(out skippedBy);
+    }
+
+    private bool TryProcessTurnStartStatus_Wild_OncePerRound(out StatusType skippedBy)
+    {
+        skippedBy = StatusType.None;
+        if (!inBattle) return false;
+        if (_lastWildStatusTickTurnIndex == _turnIndex) return false;
+        _lastWildStatusTickTurnIndex = _turnIndex;
+        return TryProcessTurnStartStatus_Wild(out skippedBy);
+    }
+
+    // Field-wide syncing helpers (player team)
+    private bool PlayerTeamHasAnyActiveStatus()
+    {
+        if (teamStatus == null) return false;
+        for (int i = 0; i < teamStatus.Length; i++)
+        {
+            if (teamDefs != null && i < teamDefs.Length && teamDefs[i] == null) continue;
+            if (teamHP != null && i < teamHP.Length && teamHP[i] <= 0.01f) continue;
+            if (teamStatus[i] != StatusType.None) return true;
+        }
+        return false;
+    }
+
+    private void SyncPlayerFieldStatusFromSlot(int sourceSlot)
+    {
+        if (!playerStatusesAreFieldWide) return;
+        if (teamStatus == null || teamStatusTurns == null || teamStatusMagnitude == null || teamStatusPersistent == null) return;
+        if (sourceSlot < 0 || sourceSlot >= teamStatus.Length) return;
+
+        var st = teamStatus[sourceSlot];
+        int turns = (sourceSlot < teamStatusTurns.Length) ? teamStatusTurns[sourceSlot] : 0;
+        float mag = (sourceSlot < teamStatusMagnitude.Length) ? teamStatusMagnitude[sourceSlot] : 0f;
+        bool persistent = (sourceSlot < teamStatusPersistent.Length) && teamStatusPersistent[sourceSlot];
+
+        for (int i = 0; i < teamStatus.Length; i++)
+        {
+            if (teamDefs != null && i < teamDefs.Length && teamDefs[i] == null) continue;
+
+            teamStatus[i] = st;
+            if (i < teamStatusTurns.Length) teamStatusTurns[i] = turns;
+            if (i < teamStatusMagnitude.Length) teamStatusMagnitude[i] = mag;
+            if (i < teamStatusPersistent.Length) teamStatusPersistent[i] = persistent;
+        }
+    }
 // ─────────────────────────────────────────────────────────────
 // Status: Shielded grant pools
 // ─────────────────────────────────────────────────────────────
@@ -363,6 +434,20 @@ private float GetWildPhantasmalSelfDmgPct()
         if (teamStatus == null || slot < 0 || slot >= teamStatus.Length) return;
         if (type == StatusType.None) return;
 
+        // Phase 4 rule: Player side uses a single "field" status (one status total across the team).
+        // No refresh, no overwrite.
+        if (playerStatusesAreFieldWide && PlayerTeamHasAnyActiveStatus())
+        {
+            // Special case: Reinforce blocks new statuses.
+            // Otherwise just state that the field already has a status.
+            var existing = teamStatus != null && activeIndex >= 0 && activeIndex < teamStatus.Length ? teamStatus[activeIndex] : StatusType.None;
+            if (existing == StatusType.Reinforce)
+                BattleLogger.Log($"[Status] Apply blocked (Reinforce): Player field is Reinforced and immune to {type}.", LogScope.Battle);
+            else
+                BattleLogger.Log($"[Status] Apply blocked (field already has {existing}): Player cannot receive {type}.", LogScope.Battle);
+            return;
+        }
+
         // One status per unit. No overwrite.
         if (teamStatus[slot] != StatusType.None)
         {
@@ -380,17 +465,45 @@ private float GetWildPhantasmalSelfDmgPct()
         teamStatusMagnitude[slot] = magnitude;
         teamStatusPersistent[slot] = persistent;
 
+        // If we are treating player statuses as field-wide, mirror the status onto every slot.
+        // This ensures swapping monsters does not change the status or its remaining turns.
+        SyncPlayerFieldStatusFromSlot(slot);
+
         // Apply-once statuses
         if (type == StatusType.Shielded)
         {
-            float maxHp = GetFinalMaxHPForIndex(slot);
-            int shieldAdd = Mathf.Max(1, Mathf.RoundToInt(maxHp * Mathf.Max(0f, magnitude)));
-            if (shieldHP != null && slot >= 0 && slot < shieldHP.Length)
-                shieldHP[slot] = Mathf.Max(0f, shieldHP[slot]) + shieldAdd;
-            if (_shieldedGrantTeam != null && slot >= 0 && slot < _shieldedGrantTeam.Length)
-                _shieldedGrantTeam[slot] += shieldAdd;
-            BattleLogger.Log($"[Status] {GetName(slot)} gains {shieldAdd} Shield from Shielded.", LogScope.Battle);
-            PushHPBars();
+            EnsureShieldGrantPools();
+
+            if (playerStatusesAreFieldWide)
+            {
+                // Field-wide Shielded: grant shields to all living slots once.
+                for (int i = 0; i < teamCount; i++)
+                {
+                    if (teamDefs == null || i < 0 || i >= teamCount || teamDefs[i] == null) continue;
+                    if (teamHP != null && i < teamHP.Length && teamHP[i] <= 0.01f) continue;
+
+                    float maxHp = GetFinalMaxHPForIndex(i);
+                    int shieldAdd = Mathf.Max(1, Mathf.RoundToInt(maxHp * Mathf.Max(0f, magnitude)));
+                    if (shieldHP != null && i >= 0 && i < shieldHP.Length)
+                        shieldHP[i] = Mathf.Max(0f, shieldHP[i]) + shieldAdd;
+                    if (_shieldedGrantTeam != null && i >= 0 && i < _shieldedGrantTeam.Length)
+                        _shieldedGrantTeam[i] += shieldAdd;
+
+                    BattleLogger.Log($"[Status] {GetName(i)} gains {shieldAdd} Shield from Shielded.", LogScope.Battle);
+                }
+                PushHPBars();
+            }
+            else
+            {
+                float maxHp = GetFinalMaxHPForIndex(slot);
+                int shieldAdd = Mathf.Max(1, Mathf.RoundToInt(maxHp * Mathf.Max(0f, magnitude)));
+                if (shieldHP != null && slot >= 0 && slot < shieldHP.Length)
+                    shieldHP[slot] = Mathf.Max(0f, shieldHP[slot]) + shieldAdd;
+                if (_shieldedGrantTeam != null && slot >= 0 && slot < _shieldedGrantTeam.Length)
+                    _shieldedGrantTeam[slot] += shieldAdd;
+                BattleLogger.Log($"[Status] {GetName(slot)} gains {shieldAdd} Shield from Shielded.", LogScope.Battle);
+                PushHPBars();
+            }
         }
 
         Emit(BattleEvent.StatusApplied(sourceSide, BattleSide.Player, type.ToString(), stacks: persistent ? 0 : teamStatusTurns[slot], seconds: magnitude));
@@ -450,11 +563,13 @@ private float GetWildPhantasmalSelfDmgPct()
             if (st != StatusType.None)
             {
                 var icon = statusLibrary != null ? statusLibrary.GetIcon(st) : null;
+                string ttTitle = statusLibrary != null ? statusLibrary.GetDisplayName(st) : st.ToString();
+                string ttDesc  = statusLibrary != null ? statusLibrary.GetDescription(st) : string.Empty;
                 int turns = (teamStatusPersistent != null && activeIndex < teamStatusPersistent.Length && teamStatusPersistent[activeIndex])
                     ? 0
                     : (teamStatusTurns != null && activeIndex < teamStatusTurns.Length ? Mathf.Max(0, teamStatusTurns[activeIndex]) : 0);
                 bool persistent = (teamStatusPersistent != null && activeIndex < teamStatusPersistent.Length) && teamStatusPersistent[activeIndex];
-                feedback.SetPrimaryStatus(BattleFeedbackManager.BattleFeedbackSide.Player, icon, turns, persistent);
+                feedback.SetPrimaryStatus(BattleFeedbackManager.BattleFeedbackSide.Player, icon, turns, persistent, ttTitle, ttDesc);
             }
             else
             {
@@ -471,7 +586,9 @@ private float GetWildPhantasmalSelfDmgPct()
         {
             var icon = statusLibrary != null ? statusLibrary.GetIcon(wildStatus) : null;
             int turns = wildStatusPersistent ? 0 : Mathf.Max(0, wildStatusTurns);
-            feedback.SetPrimaryStatus(BattleFeedbackManager.BattleFeedbackSide.Wild, icon, turns, wildStatusPersistent);
+            string ttTitle = statusLibrary != null ? statusLibrary.GetDisplayName(wildStatus) : wildStatus.ToString();
+            string ttDesc  = statusLibrary != null ? statusLibrary.GetDescription(wildStatus) : string.Empty;
+            feedback.SetPrimaryStatus(BattleFeedbackManager.BattleFeedbackSide.Wild, icon, turns, wildStatusPersistent, ttTitle, ttDesc);
         }
         else
         {
@@ -594,6 +711,10 @@ private float GetWildPhantasmalSelfDmgPct()
         turns = Mathf.Max(0, turns - 1);
         if (teamStatusTurns != null && slot < teamStatusTurns.Length) teamStatusTurns[slot] = turns;
 
+        // Field-wide: keep all slots on the same remaining duration.
+        if (playerStatusesAreFieldWide && turns > 0)
+            SyncPlayerFieldStatusFromSlot(slot);
+
         if (turns <= 0)
             ClearTeamStatus(slot, reason: "ended");
 
@@ -682,6 +803,50 @@ private float GetWildPhantasmalSelfDmgPct()
         if (teamStatus == null || slot < 0 || slot >= teamStatus.Length) return;
         var prev = teamStatus[slot];
         if (prev == StatusType.None) return;
+
+        // Field-wide: clearing any slot clears the entire player field status.
+        if (playerStatusesAreFieldWide)
+        {
+            // If Shielded is expiring/clearing, remove the remaining portion of shield granted by this status for ALL slots.
+            if (prev == StatusType.Shielded)
+            {
+                EnsureShieldGrantPools();
+                for (int i = 0; i < teamStatus.Length; i++)
+                {
+                    float remove = (_shieldedGrantTeam != null && i >= 0 && i < _shieldedGrantTeam.Length) ? _shieldedGrantTeam[i] : 0f;
+                    if (remove > 0f)
+                    {
+                        float curShield = (shieldHP != null && i >= 0 && i < shieldHP.Length) ? Mathf.Max(0f, shieldHP[i]) : 0f;
+                        float used = Mathf.Min(curShield, remove);
+
+                        if (shieldHP != null && i >= 0 && i < shieldHP.Length)
+                            shieldHP[i] = Mathf.Max(0f, curShield - used);
+
+                        if (_shieldedGrantTeam != null && i >= 0 && i < _shieldedGrantTeam.Length)
+                            _shieldedGrantTeam[i] = 0f;
+                    }
+                    else
+                    {
+                        if (_shieldedGrantTeam != null && i >= 0 && i < _shieldedGrantTeam.Length)
+                            _shieldedGrantTeam[i] = 0f;
+                    }
+                }
+                PushHPBars();
+            }
+
+            for (int i = 0; i < teamStatus.Length; i++)
+            {
+                teamStatus[i] = StatusType.None;
+                if (teamStatusTurns != null && i < teamStatusTurns.Length) teamStatusTurns[i] = 0;
+                if (teamStatusMagnitude != null && i < teamStatusMagnitude.Length) teamStatusMagnitude[i] = 0f;
+                if (teamStatusPersistent != null && i < teamStatusPersistent.Length) teamStatusPersistent[i] = false;
+            }
+
+            BattleLogger.Log($"[Status] Player field {reason}: {prev}.", LogScope.Battle);
+            RefreshPrimaryStatusUI();
+            GameEvents.OnBattleStateChanged?.Invoke();
+            return;
+        }
 
         // If Shielded is expiring/clearing, remove only the remaining portion of shield granted by this status.
         if (prev == StatusType.Shielded)

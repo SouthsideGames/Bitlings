@@ -11,6 +11,10 @@ public sealed class StatusLibrarySO : ScriptableObject
         public StatusType type = StatusType.None;
         public Sprite icon;
 
+        [Header("Tooltip")]
+        [Tooltip("Optional display name used for tooltips/UI. If empty, the StatusType name is used.")]
+        public string displayName;
+
         [TextArea(2, 6)]
         public string descriptionText;
 
@@ -35,6 +39,22 @@ public sealed class StatusLibrarySO : ScriptableObject
         EnsureMap();
         _map.TryGetValue(type, out var e);
         return e;
+    }
+
+    public string GetDisplayName(StatusType type)
+    {
+        if (type == StatusType.None) return string.Empty;
+        var e = Get(type);
+        if (e != null && !string.IsNullOrEmpty(e.displayName))
+            return e.displayName;
+        return type.ToString();
+    }
+
+    public string GetDescription(StatusType type)
+    {
+        if (type == StatusType.None) return string.Empty;
+        var e = Get(type);
+        return e != null ? (e.descriptionText ?? string.Empty) : string.Empty;
     }
 
     public Sprite GetIcon(StatusType type)

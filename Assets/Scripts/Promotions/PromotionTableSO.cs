@@ -2,10 +2,6 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 
-/// <summary>
-/// Defines Promotion Rank requirements + (optional) reward text shown in UI.
-/// This is Phase 5 data scaffolding; actual reward application can be layered later.
-/// </summary>
 [CreateAssetMenu(menuName = "Data/Promotions/Promotion Table", fileName = "PromotionTable")]
 public sealed class PromotionTableSO : ScriptableObject
 {
@@ -28,7 +24,7 @@ public sealed class PromotionTableSO : ScriptableObject
     [Header("Config")]
     [SerializeField, Min(1)] private int maxRank = 20;
 
-    [Header("Rank Entries (optional)")]
+    [Header("Rank Entries")]
     [Tooltip("If empty, PromotionManager uses a fallback XP curve.")]
     [SerializeField] private List<RankEntry> ranks = new();
 

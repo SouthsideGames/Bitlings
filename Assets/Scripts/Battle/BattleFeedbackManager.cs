@@ -455,6 +455,15 @@ CacheBaseScales();
     /// </summary>
     public void SetPrimaryStatus(BattleFeedbackSide side, Sprite sprite, int turnsRemaining, bool persistent)
     {
+        SetPrimaryStatus(side, sprite, turnsRemaining, persistent, tooltipTitle: null, tooltipDescription: null);
+    }
+
+    /// <summary>
+    /// Sets the primary status UI for a side, with optional tooltip text.
+    /// If a TooltipTrigger component is present on the icon GameObject, its message/subtitle are updated.
+    /// </summary>
+    public void SetPrimaryStatus(BattleFeedbackSide side, Sprite sprite, int turnsRemaining, bool persistent, string tooltipTitle, string tooltipDescription)
+    {
         var icon  = (side == BattleFeedbackSide.Player) ? playerPrimaryStatusIcon : wildPrimaryStatusIcon;
         var turns = (side == BattleFeedbackSide.Player) ? playerPrimaryStatusTurns : wildPrimaryStatusTurns;
 
@@ -470,6 +479,9 @@ CacheBaseScales();
         icon.sprite = sprite;
         icon.gameObject.SetActive(true);
 
+        // Optional: status tooltip
+        TryConfigureStatusTooltip(icon.gameObject, tooltipTitle, tooltipDescription);
+
         if (turns)
         {
             if (persistent)
@@ -482,6 +494,19 @@ CacheBaseScales();
                 turns.gameObject.SetActive(true);
             }
         }
+    }
+
+    private static void TryConfigureStatusTooltip(GameObject iconGO, string title, string description)
+    {
+        if (iconGO == null) return;
+
+        var tt = iconGO.GetComponent<TooltipTrigger>();
+        if (tt == null) return;
+
+        // Title goes on the main line, description goes on the smaller secondary line.
+        // TooltipTrigger will handle formatting.
+        tt.message = title ?? string.Empty;
+        tt.subtitle = description ?? string.Empty;
     }
 
     public void SetPrimaryStatusPlayer(Sprite sprite, int turnsRemaining, bool persistent) =>
