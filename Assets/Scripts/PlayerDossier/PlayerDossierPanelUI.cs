@@ -22,8 +22,7 @@ public class PlayerDossierPanelUI : MonoBehaviour
     // PAGE 1 – OVERVIEW UI REFERENCES
     // ─────────────────────────────────────────────────────────────
     [Header("Page 1 - Overview")]
-    [SerializeField] private Image avatarImage; // placeholder
-    [SerializeField] private TextMeshProUGUI handlerNameText;
+    [SerializeField] private Image avatarImage;
     [SerializeField] private TextMeshProUGUI rankText;
     [SerializeField] private TextMeshProUGUI operationIdText;
 
@@ -266,7 +265,6 @@ public class PlayerDossierPanelUI : MonoBehaviour
     {
         if (stats == null)
         {
-            if (handlerNameText != null) handlerNameText.text = "Handler: BRN Operator";
             if (rankText != null) rankText.text = "Rank: Trainee";
             if (operationIdText != null) operationIdText.text = "Operation ID: BRN-0000-XXXX";
 
@@ -288,7 +286,6 @@ public class PlayerDossierPanelUI : MonoBehaviour
             return;
         }
 
-        if (handlerNameText != null) handlerNameText.text = stats.handlerName;
         if (rankText != null) rankText.text = stats.rankName;
         if (operationIdText != null) operationIdText.text = stats.operationId;
 

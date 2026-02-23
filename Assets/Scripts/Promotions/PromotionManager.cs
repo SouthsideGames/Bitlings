@@ -1,17 +1,5 @@
 using UnityEngine;
 
-/// <summary>
-/// Phase 5: Promotion XP + Rank progression (1–20).
-///
-/// - XP is awarded at battle end.
-/// - Rank-ups are automatic once XP threshold is met.
-/// - Uses PromotionTableSO if assigned; otherwise uses a fallback XP curve.
-///
-/// UI hooks:
-/// - GameEvents.PromotionProgressChanged
-/// - GameEvents.PromotionRankChanged
-/// - GameEvents.ToastRequested ("XP gained" nudges player to Player Dossier > Ranks)
-/// </summary>
 public sealed class PromotionManager : MonoBehaviour
 {
     public static PromotionManager I { get; private set; }
@@ -64,7 +52,8 @@ public sealed class PromotionManager : MonoBehaviour
         int gain = ComputeXpGain(result);
         if (gain <= 0) return;
 
-        AddPromotionXp(gain, showToast: true);
+        // ✅ UX change: no toast popups.
+        AddPromotionXp(gain, showToast: false);
     }
 
     public int ComputeXpGain(BattleResult result)
@@ -103,13 +92,9 @@ public sealed class PromotionManager : MonoBehaviour
         if (rankedUp)
             GameEvents.PromotionRankChanged?.Invoke(oldRank, newRank);
 
-        if (showToast)
-        {
-            if (rankedUp)
-                GameEvents.RaiseToast($"Promotion XP +{amount}. Rank up! Check Player Dossier → Ranks.");
-            else
-                GameEvents.RaiseToast($"Promotion XP +{amount}. Check Player Dossier → Ranks.");
-        }
+        // ✅ Toasts disabled intentionally (do not emit even if showToast==true).
+        // If you later want a subtle non-toast indicator, do it via UI (badge/pulse on dossier button).
+        _ = showToast;
     }
 
     private bool TryProcessRankUps(out int newRank)
@@ -164,10 +149,6 @@ public sealed class PromotionManager : MonoBehaviour
             if (v >= 0) return v;
         }
 
-        // Fallback curve (Rank 1–20):
-        // Rank 2 requires 50 XP, then each subsequent rank step requires +20 more than the prior step.
-        // (Step requirements: 50, 70, 90, ... up to 410 for Rank 20.)
-        // Total XP to reach rank N is sum of requirements for ranks 2..N.
         if (rank == 1) return 0;
 
         int total = 0;
@@ -205,5 +186,43 @@ public sealed class PromotionManager : MonoBehaviour
         int xpNeededThisRank = Mathf.Max(1, nextReq - curFloor);
         int remaining = Mathf.Max(0, xpNeededThisRank - xpThisRank);
         return remaining;
+    }
+
+    public string GetRankDisplayName(int rank)
+    {
+        rank = Mathf.Max(1, rank);
+
+        if (promotionTable != null)
+        {
+            var e = promotionTable.Get(rank);
+            if (e != null && !string.IsNullOrEmpty(e.displayName))
+                return e.displayName; // ✅ name only
+        }
+
+        // Fallback titles (first option per rank from design).
+        switch (rank)
+        {
+            case 1: return "Intern";
+            case 2: return "Clerk";
+            case 3: return "Technician";
+            case 4: return "Coordinator";
+            case 5: return "Supervisor";
+            case 6: return "Auditor";
+            case 7: return "Recruiter";
+            case 8: return "Compliance Officer";
+            case 9: return "Operations Lead";
+            case 10: return "Manager";
+            case 11: return "Project Lead";
+            case 12: return "Department Head";
+            case 13: return "Program Lead";
+            case 14: return "Regional Manager";
+            case 15: return "Director";
+            case 16: return "Executive Manager";
+            case 17: return "Division Head";
+            case 18: return "Senior Director";
+            case 19: return "Executive Director";
+            case 20: return "Commissioner";
+            default: return $"Rank {rank}";
+        }
     }
 }

@@ -9,7 +9,6 @@ using UnityEngine;
 public class PlayerDossierSnapshot
 {
     [Header("Identity")]
-    public string handlerName;
     public string rankName;
     public string operationId;
 
@@ -193,7 +192,6 @@ public class PlayerDossierManager : MonoBehaviour
         var data = SaveManager.Data;
         if (data == null)
         {
-            snapshot.handlerName = "Handler: BRN Operator";
             snapshot.rankName = "Rank: Trainee";
             snapshot.operationId = "Operation ID: BRN-0000-XXXX";
 
@@ -229,10 +227,8 @@ public class PlayerDossierManager : MonoBehaviour
 
         data.EnsureTransientSets();
 
-        // Identity
-        string displayName = string.IsNullOrEmpty(data.playerName) ? "BRN Operator" : data.playerName;
-        snapshot.handlerName = $"Handler: {displayName}";
-        snapshot.rankName = $"Rank: {DeriveRankName(data)}";
+        // Page 1 shows the title/name of the player's current Promotion Rank (e.g., "Intern").
+        snapshot.rankName = DeriveRankName(data);
         snapshot.operationId = $"Operation ID: {FormatOperationId(data.playerId)}";
 
         // Promotions
@@ -975,39 +971,40 @@ public class PlayerDossierManager : MonoBehaviour
     // ─────────────────────────────────────────────────────────────
     private static string DeriveRankName(PlayerManager data)
     {
-        if (data == null) return "Rookie";
+        // Phase 5: Rank name is driven by Promotion Rank (1–20).
+        if (data == null) return "Intern";
 
-        int battleLvl = 0, idleLvl = 0, tapLvl = 0;
-        try { battleLvl = Mathf.Max(0, data.battleXPLevel); } catch { }
-        try { idleLvl = Mathf.Max(0, data.idleLevel); } catch { }
-        try { tapLvl = Mathf.Max(0, data.tapLevel); } catch { }
+        int rank = 1;
+        try { rank = Mathf.Max(1, data.promotionRank); } catch { rank = 1; }
 
-        int ownedCount = data.owned != null ? data.owned.Count : 0;
-        int bestLevel = 1;
-        if (data.owned != null)
+        if (PromotionManager.I != null)
+            return PromotionManager.I.GetRankDisplayName(rank);
+
+        // Safe fallback if PromotionManager is not present in the scene.
+        switch (rank)
         {
-            for (int i = 0; i < data.owned.Count; i++)
-            {
-                var om = data.owned[i];
-                if (om == null) continue;
-                if (om.level > bestLevel) bestLevel = om.level;
-            }
+            case 1: return "Intern";
+            case 2: return "Clerk";
+            case 3: return "Technician";
+            case 4: return "Coordinator";
+            case 5: return "Supervisor";
+            case 6: return "Auditor";
+            case 7: return "Recruiter";
+            case 8: return "Compliance Officer";
+            case 9: return "Operations Lead";
+            case 10: return "Manager";
+            case 11: return "Project Lead";
+            case 12: return "Department Head";
+            case 13: return "Program Lead";
+            case 14: return "Regional Manager";
+            case 15: return "Director";
+            case 16: return "Executive Manager";
+            case 17: return "Division Head";
+            case 18: return "Senior Director";
+            case 19: return "Executive Director";
+            case 20: return "Commissioner";
+            default: return $"Rank {rank}";
         }
-
-        bool streakBoost = data.winStreak >= 10;
-
-        // Composite score (tuned for stability, not precision).
-        int score = battleLvl + idleLvl + tapLvl;
-        score += Mathf.Clamp(ownedCount / 5, 0, 10);
-        score += Mathf.Clamp(bestLevel / 5, 0, 10);
-        if (streakBoost) score += 2;
-
-        if (score >= 40) return "Prime Overseer";
-        if (score >= 28) return "Overseer";
-        if (score >= 18) return "Veteran";
-        if (score >= 10) return "Specialist";
-        if (score >= 5) return "Operator";
-        return "Rookie";
     }
 
     // ─────────────────────────────────────────────────────────────

@@ -14,33 +14,29 @@ public sealed class BattleFeedbackManager : MonoBehaviour
     [Tooltip("If set, FeedbackManager will subscribe to BattleManager's Battle Events. If left empty it will auto-find one.")]
     [SerializeField] private BattleManager battleManager;
 
-    private BattleManager _battleManager;
-
     [Header("Icon Targets")]
     [SerializeField] private Graphic playerIcon;
     [SerializeField] private Graphic wildIcon;
 
-    [Header("Optional: HP Roots (shake on damage)")]
+    [Header("HP Roots (shake on damage)")]
     [SerializeField] private RectTransform playerHPShakeRoot;
     [SerializeField] private RectTransform wildHPShakeRoot;
 
-    [Header("Optional: Impact Roots (recoil/squash on hit)")]
+    [Header("Impact Roots (recoil/squash on hit)")]
     [Tooltip("Optional root for hit impact recoil/squash. If null, uses the icon RectTransform.")]
     [SerializeField] private RectTransform playerImpactRoot;
     [Tooltip("Optional root for hit impact recoil/squash. If null, uses the icon RectTransform.")]
     [SerializeField] private RectTransform wildImpactRoot;
 
-    [Header("Optional: Guard Icons (defend FX)")]
+    [Header("Guard Icons (defend FX)")]
     [SerializeField] private Image playerGuardIcon;
     [SerializeField] private Image wildGuardIcon;
 
-    [Header("Optional: Charge Icons (focus/charge status)")]
+    [Header("Charge Icons (focus/charge status)")]
     [SerializeField] private Image playerChargeIcon;
     [SerializeField] private Image wildChargeIcon;
 
-    
-
-    [Header("Optional: Primary Status (Synergy/Status System)")]
+    [Header("Primary Status (Synergy/Status System)")]
     [Tooltip("Optional status icon shown for the unit (Burn/Freeze/etc). Leave null to ignore.")]
     [SerializeField] private Image playerPrimaryStatusIcon;
     [SerializeField] private Image wildPrimaryStatusIcon;
@@ -49,7 +45,7 @@ public sealed class BattleFeedbackManager : MonoBehaviour
     [SerializeField] private TMP_Text playerPrimaryStatusTurns;
     [SerializeField] private TMP_Text wildPrimaryStatusTurns;
 
-    [Header("Optional: Wild Intent Telegraph (icon bubble)")]
+    [Header("Wild Intent Telegraph (icon bubble)")]
     [Tooltip("Optional root GameObject for the wild intent bubble. If not set, intent icons will not display.")]
     [SerializeField] private GameObject wildIntentRoot;
 
@@ -68,9 +64,8 @@ public sealed class BattleFeedbackManager : MonoBehaviour
     [Header("Wild Intent FX")]
     [SerializeField, Min(0.01f)] private float wildIntentPopTime = 0.10f;
     [SerializeField, Min(0f)] private float wildIntentStartScale = 0.85f;
-    private Coroutine _wildIntentCR;
     
-    [Header("Optional: Action Buttons (press feedback)")]
+    [Header("Action Buttons (press feedback)")]
     [SerializeField] private Button attackBtn;
     [SerializeField] private Button defendBtn;
     [SerializeField] private Button focusBtn;
@@ -115,12 +110,6 @@ public sealed class BattleFeedbackManager : MonoBehaviour
     [Header("Attack Prefab VFX (optional)")]
     [SerializeField] private bool spawnAttackPrefabs = true;
 
-    [Header("Damage Number Colors (optional)")]
-    [SerializeField] private Color dmgNormalColor = Color.white;
-    [SerializeField] private Color dmgCritColor = new Color(1f, 0.9f, 0.35f);
-    [SerializeField] private Color dmgWeakColor = new Color(0.55f, 0.8f, 1f);
-    [SerializeField] private Color dmgResistColor = new Color(0.75f, 0.75f, 0.75f);
-
     [Header("Screen Shake (optional)")]
     [Tooltip("If empty, will fall back to Camera.main.transform")]
     [SerializeField] private Transform screenShakeRoot;
@@ -161,10 +150,6 @@ public sealed class BattleFeedbackManager : MonoBehaviour
     [SerializeField, Range(0f, 30f)] private float minScreenShake = 1.5f;
     [SerializeField, Range(0f, 60f)] private float maxScreenShake = 10f;
 
-    private Coroutine _timeScaleCR;
-    private Coroutine _playerCritHideCR;
-    private Coroutine _wildCritHideCR;
-
     [Header("HP Text Feedback (Current/Max)")]
     [SerializeField] private TextMeshProUGUI playerHPValueText;
     [SerializeField] private TextMeshProUGUI wildHPValueText;
@@ -182,11 +167,16 @@ public sealed class BattleFeedbackManager : MonoBehaviour
     [SerializeField] private bool smoothHPBars = true;
     [SerializeField, Min(0.01f)] private float hpBarSecondsForFull = 0.6f;
 
-    private Coroutine _playerHPAnimCR;
-    private Coroutine _wildHPAnimCR;
+    [Header("Impact Micro-Juice (Optional)")]
+    [Tooltip("If enabled, applies a small recoil + squash/stretch on the target when hit.")]
+    [SerializeField] private bool enableImpactSquash = true;
 
-    private Coroutine _playerGuardAutoHideCR;
-    private Coroutine _wildGuardAutoHideCR;
+    [SerializeField, Min(0.01f)] private float impactSquashTime = 0.08f;
+    [SerializeField, Range(1.01f, 1.25f)] private float impactSquashX = 1.10f;
+    [SerializeField, Range(0.75f, 0.99f)] private float impactSquashY = 0.90f;
+    [SerializeField, Range(0f, 30f)] private float impactRecoilPixels = 10f;
+
+    private BattleManager _battleManager;
 
     private int _lastPlayerCur = int.MinValue;
     private int _lastPlayerMax = int.MinValue;
@@ -198,14 +188,15 @@ public sealed class BattleFeedbackManager : MonoBehaviour
     private Vector3 _playerIconBaseScale = Vector3.one;
     private Vector3 _wildIconBaseScale = Vector3.one;
 
-    [Header("Impact Micro-Juice (Optional)")]
-    [Tooltip("If enabled, applies a small recoil + squash/stretch on the target when hit.")]
-    [SerializeField] private bool enableImpactSquash = true;
+    private Coroutine _timeScaleCR;
+    private Coroutine _playerCritHideCR;
+    private Coroutine _wildCritHideCR;
+    private Coroutine _wildIntentCR;
+    private Coroutine _playerHPAnimCR;
+    private Coroutine _wildHPAnimCR;
+    private Coroutine _playerGuardAutoHideCR;
+    private Coroutine _wildGuardAutoHideCR;
 
-    [SerializeField, Min(0.01f)] private float impactSquashTime = 0.08f;
-    [SerializeField, Range(1.01f, 1.25f)] private float impactSquashX = 1.10f;
-    [SerializeField, Range(0.75f, 0.99f)] private float impactSquashY = 0.90f;
-    [SerializeField, Range(0f, 30f)] private float impactRecoilPixels = 10f;
 
     private void Awake()
     {

@@ -13,7 +13,6 @@ public class JobRuntimeSite
     public float[] slotFatigue01;
     public long[] slotCooldownUntilUnix;
 
-    // Per-site auto-collect toggle. Only triggers collection when storage is full.
     public bool autoCollectEnabled;
 }
 
@@ -114,10 +113,16 @@ public static class SaveManager
                 {
                     // Promotion fields default to Rank 1 if missing
                     if (root.player.promotionRank <= 0) root.player.promotionRank = 1;
+                    if (root.player.promotionXP < 0) root.player.promotionXP = 0;
 
                     // Settings now contains difficultyMode; ensure settings exists and is normalized
                     root.player.settings ??= new SettingsState();
                     root.player.settings.difficultyMode = Mathf.Clamp(root.player.settings.difficultyMode, 0, 2);
+
+                    // Difficulty is locked until Promotion Rank 15. If the save somehow contains a
+                    // non-Normal value before unlock (older dev saves / manual edits), force Normal.
+                    if (root.player.promotionRank < 15)
+                        root.player.settings.difficultyMode = 0;
                 }
             }
         }
@@ -759,6 +764,18 @@ private static PlayerSaveRoot MigrateRootIfNeeded(PlayerSaveRoot root)
         }
 
         if (Data.winStreak < 0) Data.winStreak = 0;
+
+        // Promotions (Phase 5)
+        if (Data.promotionRank <= 0) Data.promotionRank = 1;
+        if (Data.promotionXP < 0) Data.promotionXP = 0;
+
+        // Difficulty lock (Rank 15): keep stored value sane even if UI doesn't touch it.
+        if (Data.settings != null)
+        {
+            Data.settings.difficultyMode = Mathf.Clamp(Data.settings.difficultyMode, 0, 2);
+            if (Data.promotionRank < 15)
+                Data.settings.difficultyMode = 0;
+        }
 
         EnsureResourceCountsSized();
 
