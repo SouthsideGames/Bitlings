@@ -38,6 +38,24 @@ public enum PanelId
     PlayerDossier = 31,
     ImagePreview = 32,
     IdleBattleRewards = 33,
+
+    // ─────────────────────────────────────────────────────────────
+    // Iron Career (sealed mode) MAIN container panel
+    // This maps to: Canvas/Panel_IronCareerEncounter
+    // ─────────────────────────────────────────────────────────────
+    IronCareerEncounter = 34,
+
+    // ─────────────────────────────────────────────────────────────
+    // Iron Career (sealed mode) overlays (children inside IronCareerEncounter)
+    // ─────────────────────────────────────────────────────────────
+    IronCareerStarter = 35,
+    IronCareerHire = 36,
+    IronCareerReplace = 37,
+    IronCareerPost = 38,
+    IronCareerForcedEvolve = 39,
+    IronCareerRest = 40,
+    IronCareerGameOver = 41,
+    IronCareerRules = 42,
 }
 
 [Serializable]
@@ -79,6 +97,16 @@ public class UIManager : MonoBehaviour
         PanelId.PackDetails,
         PanelId.ImagePreview,
         PanelId.IdleBattleRewards,
+
+        // Iron overlays/popups
+        PanelId.IronCareerStarter,
+        PanelId.IronCareerHire,
+        PanelId.IronCareerReplace,
+        PanelId.IronCareerPost,
+        PanelId.IronCareerForcedEvolve,
+        PanelId.IronCareerRest,
+        PanelId.IronCareerGameOver,
+        PanelId.IronCareerRules,
     };
 
     [Header("Animation")]
@@ -91,8 +119,6 @@ public class UIManager : MonoBehaviour
     private readonly Dictionary<PanelId, PanelEntry> _map = new();
     private readonly HashSet<PanelId> _open = new();
 
-    // When we arrive at Home (including after Intro/app resume), we attempt to
-    // surface any pending Idle/Auto-battle rewards.
     private Coroutine _idleRewardCo;
 
     void Awake()
@@ -108,10 +134,8 @@ public class UIManager : MonoBehaviour
             if (!_map.ContainsKey(p.id))
                 _map.Add(p.id, p);
 
-            // Ensure the current scene state is tracked and consistent
             SetImmediate(p.id, p.root.activeSelf, fireEvent: false);
 
-            // If panel is active in scene and uses fade, ensure it's fully interactive/visible
             if (p.root.activeSelf && p.useFade)
             {
                 var cg = EnsureCanvasGroup(p.root);
@@ -157,8 +181,6 @@ public class UIManager : MonoBehaviour
 
     public GameObject GetRoot(PanelId id) => _map.TryGetValue(id, out var e) ? e.root : null;
 
-    // When the player returns to the Home panel (including after app resume),
-    // surface any pending idle/auto-battle rewards.
     void TryOpenIdleBattleRewardsNextFrame()
     {
         if (_idleRewardCo != null) StopCoroutine(_idleRewardCo);
@@ -167,10 +189,7 @@ public class UIManager : MonoBehaviour
 
     IEnumerator Co_TryOpenIdleBattleRewardsNextFrame()
     {
-        // Let the UI settle for a frame so panel transitions don't collide.
         yield return null;
-
-        // IdleBattleManager handles gating and will no-op if nothing is pending.
         IdleBattleManager.I?.TryOpenSummaryIfNeeded();
     }
 
@@ -178,7 +197,6 @@ public class UIManager : MonoBehaviour
     {
         if (!_map.TryGetValue(id, out var p) || p.root == null) return;
 
-        // Cancel any running tweens to avoid "stuck half-faded" panels
         CancelTweens(p.root);
 
         if (on)
@@ -193,7 +211,6 @@ public class UIManager : MonoBehaviour
                 cg.blocksRaycasts = true;
             }
 
-            // Ensure slide position is normalized (open position)
             var rt = p.root.GetComponent<RectTransform>();
             if (rt && p.useSlide)
             {
@@ -205,7 +222,6 @@ public class UIManager : MonoBehaviour
         }
         else
         {
-            // Before deactivating, ensure it won't intercept input if a CanvasGroup exists
             if (p.useFade)
             {
                 var cg = p.root.GetComponent<CanvasGroup>();
@@ -236,8 +252,6 @@ public class UIManager : MonoBehaviour
 
         if (on)
         {
-            // NEW: Enforce "only one main panel" when opening a main panel.
-            // This will close Home when opening Codex/Jobs/etc, and prevents hidden panels running.
             if (singleMainPanelMode && !IsOverlayPanel(id))
             {
                 CloseAllMainPanelsExcept(id);
@@ -248,13 +262,8 @@ public class UIManager : MonoBehaviour
                 AnimateOpen(p);
                 if (fireEvent) OnPanelChanged?.Invoke(id, true);
 
-                // IMPORTANT: whenever we arrive at Home, attempt to surface rewards.
                 if (id == PanelId.Home)
                     TryOpenIdleBattleRewardsNextFrame();
-            }
-            else
-            {
-                // Already open; no action.
             }
         }
         else
@@ -270,45 +279,31 @@ public class UIManager : MonoBehaviour
         }
     }
 
-    // ─────────────────────────────────────────────────────────────────────
-    // Main/Overlay rules
-    // ─────────────────────────────────────────────────────────────────────
-
     private bool IsOverlayPanel(PanelId id)
     {
-        // Treat overlays as stackable (popups, detail panels, etc.)
-        // Everything else is considered a "main" panel.
         return overlayPanels != null && overlayPanels.Contains(id);
     }
 
     private void CloseAllMainPanelsExcept(PanelId keepMain)
     {
-        // Snapshot because SetActive mutates _open.
         var list = new List<PanelId>(_open);
         foreach (var id in list)
         {
             if (id == keepMain) continue;
-            if (IsOverlayPanel(id)) continue; // overlays remain open
+            if (IsOverlayPanel(id)) continue;
             SetActive(id, false);
         }
     }
 
-    // ─────────────────────────────────────────────────────────────────────
-    // Animation
-    // ─────────────────────────────────────────────────────────────────────
-
     private void AnimateOpen(PanelEntry p)
     {
         var root = p.root;
-
-        // Cancel any existing tweens (important when toggling quickly)
         CancelTweens(root);
 
         root.SetActive(true);
 
         RectTransform rt = root.GetComponent<RectTransform>();
 
-        // Optional slide-in
         if (p.useSlide && rt)
         {
             var pos = rt.anchoredPosition;
@@ -316,12 +311,9 @@ public class UIManager : MonoBehaviour
             LeanTween.moveY(rt, 0f, openFadeDuration).setEaseOutCubic();
         }
 
-        // Fade only if enabled
         if (p.useFade)
         {
             CanvasGroup cg = EnsureCanvasGroup(root);
-
-            // Enable interaction immediately on open
             cg.interactable = true;
             cg.blocksRaycasts = true;
 
@@ -333,8 +325,6 @@ public class UIManager : MonoBehaviour
     private void AnimateClose(PanelEntry p, Action onComplete)
     {
         var root = p.root;
-
-        // Cancel any existing tweens (important when toggling quickly)
         CancelTweens(root);
 
         RectTransform rt = root.GetComponent<RectTransform>();
@@ -347,8 +337,6 @@ public class UIManager : MonoBehaviour
             anyTween = true;
 
             CanvasGroup cg = EnsureCanvasGroup(root);
-
-            // Disable interaction immediately on close (prevents ghost clicks during fade)
             cg.interactable = false;
             cg.blocksRaycasts = false;
 
@@ -367,10 +355,6 @@ public class UIManager : MonoBehaviour
             onComplete?.Invoke();
     }
 
-    // ─────────────────────────────────────────────────────────────────────
-    // Helpers
-    // ─────────────────────────────────────────────────────────────────────
-
     private static CanvasGroup EnsureCanvasGroup(GameObject root)
     {
         var cg = root.GetComponent<CanvasGroup>();
@@ -381,11 +365,8 @@ public class UIManager : MonoBehaviour
     private static void CancelTweens(GameObject root)
     {
         if (!root) return;
-
-        // Cancel all tweens associated with this GameObject
         LeanTween.cancel(root);
 
-        // Also cancel tweens on RectTransform if present
         var rt = root.GetComponent<RectTransform>();
         if (rt) LeanTween.cancel(rt.gameObject);
     }

@@ -82,6 +82,13 @@ public static class TitlesAdapter
             rt.ClearAllBattleOverrideTitles();
     }
 
+    public static void RegisterBattleContext(string combatantId, MonsterDataSO def, int level)
+    {
+        var rt = Runtime;
+        if (rt == null) return;
+        rt.RegisterBattleContextPublic(combatantId, def, level);
+    }
+
     // ─────────────────────────────────────────────────────────────────────────────
     // Runtime access
     // ─────────────────────────────────────────────────────────────────────────────

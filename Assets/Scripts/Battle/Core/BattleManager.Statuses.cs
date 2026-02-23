@@ -85,16 +85,23 @@ public partial class BattleManager
 private float[] _shieldedGrantTeam; // per team slot
 private float _shieldedGrantWild;
 
+// Iron: imported shield carry flags (skip grant-pool subtraction on Shielded expiry)
+private bool[] _ironShieldCarrySlots;
+
 private void EnsureShieldGrantPools()
 {
     if (teamStatus != null)
     {
         if (_shieldedGrantTeam == null || _shieldedGrantTeam.Length != teamStatus.Length)
             _shieldedGrantTeam = new float[teamStatus.Length];
+
+        if (_ironShieldCarrySlots == null || _ironShieldCarrySlots.Length != teamStatus.Length)
+            _ironShieldCarrySlots = new bool[teamStatus.Length];
     }
     else
     {
         _shieldedGrantTeam = null;
+        _ironShieldCarrySlots = null;
     }
 }
 
@@ -813,6 +820,15 @@ private float GetWildPhantasmalSelfDmgPct()
                 EnsureShieldGrantPools();
                 for (int i = 0; i < teamStatus.Length; i++)
                 {
+                    // Iron carry safety: never subtract imported shields on Shielded expiry.
+                    if (IronCareerRuntime.IsActive && _ironShieldCarrySlots != null && i >= 0 && i < _ironShieldCarrySlots.Length && _ironShieldCarrySlots[i])
+                    {
+                        if (_shieldedGrantTeam != null && i >= 0 && i < _shieldedGrantTeam.Length)
+                            _shieldedGrantTeam[i] = 0f;
+                        _ironShieldCarrySlots[i] = false;
+                        continue;
+                    }
+
                     float remove = (_shieldedGrantTeam != null && i >= 0 && i < _shieldedGrantTeam.Length) ? _shieldedGrantTeam[i] : 0f;
                     if (remove > 0f)
                     {
@@ -852,6 +868,14 @@ private float GetWildPhantasmalSelfDmgPct()
         if (prev == StatusType.Shielded)
         {
             EnsureShieldGrantPools();
+
+            // Iron carry safety: never subtract imported shields on Shielded expiry.
+            if (IronCareerRuntime.IsActive && _ironShieldCarrySlots != null && slot >= 0 && slot < _ironShieldCarrySlots.Length && _ironShieldCarrySlots[slot])
+            {
+                if (_shieldedGrantTeam != null && slot >= 0 && slot < _shieldedGrantTeam.Length)
+                    _shieldedGrantTeam[slot] = 0f;
+                _ironShieldCarrySlots[slot] = false;
+            }
 
             float remove = (_shieldedGrantTeam != null && slot >= 0 && slot < _shieldedGrantTeam.Length) ? _shieldedGrantTeam[slot] : 0f;
             if (remove > 0f)

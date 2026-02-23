@@ -89,7 +89,7 @@ public partial class BattleManager : MonoBehaviour
                 if (!AutoSwapToAlive())
                 {
                     BattleLogger.Log("Your team is unable to battle!", LogScope.Battle);
-                    EndBattle(false);
+                    EndBattleRouted(false);
                     break;
                 }
                 swappedFromKO = true;
@@ -470,7 +470,7 @@ break;
                                         if (escaped)
                                         {
                                             BattleLogger.Log($"{name} has fled! (Run chance {Mathf.RoundToInt(chance * 100f)}%)", LogScope.Battle);
-                                            EndBattle(false, true);
+                                            EndBattleRouted(false, true);
                                             yield break;
                                         }
                                         else
@@ -690,7 +690,7 @@ if (teamHP != null && activeIndex >= 0 && activeIndex < teamHP.Length && teamHP[
                 if (escaped)
                 {
                     BattleLogger.Log($"{name} has fled! (Run chance {Mathf.RoundToInt(chance * 100f)}%)", LogScope.Battle);
-                    EndBattle(false, true);
+                    EndBattleRouted(false, true);
                     yield break;
                 }
                 else
@@ -802,7 +802,7 @@ if (feedback)
             defenderEffectiveDefenseStat: wildDefForResolve
         );
 
-        TitlesAdapter.OnAttackLanded(teamIds[activeIndex], dr.crit);
+        TitlesAdapter.OnAttackLanded(teamTitleIds[activeIndex], dr.crit);
         if (dr.crit) _totalCritsThisBattle++;
 
         if (jctx != null && jctx.attackBonusPct > 0f)
@@ -1151,7 +1151,7 @@ if (!playerLandedFirstHitThisBattle && dr.damage > 0)
                 if (fled)
                 {
                     yield return Say($"{name} fled! (Run chance {Mathf.RoundToInt(chance * 100f)}%)", BattleLineTag.Result);
-                    EndBattle(false, escaped: true);
+                    EndBattleRouted(false, escaped: true);
                     yield break;
                 }
                 else
@@ -1187,7 +1187,7 @@ if (!playerLandedFirstHitThisBattle && dr.damage > 0)
 
             var cmods = GetConditionalModsForActive();
 
-            var df = TitlesAdapter.GetDamageFilter(teamIds[activeIndex], teamDefs[activeIndex], teamLevels[activeIndex]);
+            var df = TitlesAdapter.GetDamageFilter(teamTitleIds[activeIndex], teamDefs[activeIndex], teamLevels[activeIndex]);
 
             float playerCritResist = 0f;
             if (ctx != null)
@@ -1301,14 +1301,14 @@ if (wildTailwindBonusPct > 0f)
         try
         {
             var incomingType = (wildDef != null) ? wildDef.type : MonsterType.None;
-            title_typeResistMul = TitlesAdapter.GetIncomingEffectivenessMult(teamIds[activeIndex], teamDefs[activeIndex], teamLevels[activeIndex], incomingType);
+            title_typeResistMul = TitlesAdapter.GetIncomingEffectivenessMult(teamTitleIds[activeIndex], teamDefs[activeIndex], teamLevels[activeIndex], incomingType);
         }
         catch { title_typeResistMul = 1f; }
 
         try
         {
             // NOTE: avoid shadowing the earlier 'df' (used for cannotBeCrit) in this method.
-            var df2 = TitlesAdapter.GetDamageFilter(teamIds[activeIndex], teamDefs[activeIndex], teamLevels[activeIndex]);
+            var df2 = TitlesAdapter.GetDamageFilter(teamTitleIds[activeIndex], teamDefs[activeIndex], teamLevels[activeIndex]);
             title_dmgFilterPct = Mathf.Clamp01(df2.percentReduce);
             title_dmgFilterFlat = Mathf.Max(0, df2.flatReduce);
         }
@@ -1415,7 +1415,7 @@ int dmg_afterScalar = Mathf.Max(1, Mathf.RoundToInt(dr.damage * incomingScalar))
                 yield return Say($"{GetName(activeIndex)} stores {Mathf.RoundToInt(shieldGain)} damage as a guard shield for the next round.", BattleLineTag.Shield | BattleLineTag.Flavor);
         }
 
-        TitlesAdapter.OnHitTaken(teamIds[activeIndex], dmg_incoming, dr.crit && !df.cannotBeCrit);
+        TitlesAdapter.OnHitTaken(teamTitleIds[activeIndex], dmg_incoming, dr.crit && !df.cannotBeCrit);
 
         if (shadowVeilBlockedPlayer)
         {
@@ -1550,7 +1550,7 @@ if (dr.crit && !df.cannotBeCrit)
             AudioManager.I?.PlaySfx(SfxType.KO);
             Emit(BattleEvent.KO(BattleSide.Wild));
             if (!HasBattleEventConsumers && feedback) feedback.PlayKO(BattleFeedbackManager.BattleFeedbackSide.Wild);
-EndBattle(true);
+EndBattleRouted(true);
             return true;
         }
         if (IsTeamKO())
@@ -1559,14 +1559,14 @@ EndBattle(true);
             AudioManager.I?.PlaySfx(SfxType.KO);
             Emit(BattleEvent.KO(BattleSide.Player));
             if (!HasBattleEventConsumers && feedback) feedback.PlayKO(BattleFeedbackManager.BattleFeedbackSide.Player);
-EndBattle(false);
+EndBattleRouted(false);
             return true;
         }
         return false;
     }
 
 
-    private void ForceEndBattleEarly(bool victory, bool escaped = false)
+    public void ForceEndBattleEarly(bool victory, bool escaped = false)
     {
         BattleCalc.ResetRng();
         SetIsPlayerTurn(false);
@@ -1595,7 +1595,9 @@ EndBattle(false);
         };
 
         onEnd?.Invoke(result);
-        GameEvents.BattleFinished?.Invoke(result);
+
+        if (!IronCareerRuntime.IsActive)
+            GameEvents.BattleFinished?.Invoke(result);
     }
 
     private bool ShouldSkipNarration(BattleLineTag tags)

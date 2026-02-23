@@ -21,23 +21,7 @@ public struct BattleStatBlock
     }
 }
 
-/// <summary>
-/// BattleStatsSystem is a single source of truth for all battle-time stat values.
-///
-/// It is intentionally designed as a pure computation layer sitting next to BattleManager.
-/// Over time, other scripts should stop computing stats directly and instead query this.
-///
-/// Hierarchy per combatant:
-///  1) Adjusted baseline (player: level + training + permanent; wild: level + encounter scalar)
-///  2) Job modifiers (where applicable)
-///  3) Title modifiers (BattleStart/StatBooster/etc.)
-///  4) Conditional title modifiers (HP% thresholds, allies alive, win streak, etc.)
-///  5) Temporary boosters (BattleTempBuffs, BattleBoosterController)
-///
-/// Notes
-///  - DEF minimum is 0, others minimum is 1.
-///  - HP here refers to MAX HP.
-/// </summary>
+
 public sealed class BattleStatsSystem
 {
     private readonly BattleManager _bm;
@@ -153,8 +137,11 @@ public sealed class BattleStatsSystem
         float def = adj.def;
         float spd = adj.spd;
 
-        // 2) Job (max HP already baked into teamMaxHP elsewhere, but keep defensive).
-        var jctx = _bm.GetJobCtxSafe(idx);
+        bool allowJobs = _bm.Rules.allowJobPassives;
+        bool allowBoosters = _bm.Rules.allowBoosters;
+
+        // 2) Job (optional)
+        var jctx = allowJobs ? _bm.GetJobCtxSafe(idx) : null;
         if (jctx != null && jctx.maxHpBonusPct > 0f)
             hp = hp * (1f + jctx.maxHpBonusPct);
 
@@ -164,7 +151,7 @@ public sealed class BattleStatsSystem
         var ctx = _bm.BuildTitleContextForIndexUsingMaxSafe(idx, hp);
 
         // 3) Titles (non-conditional). These keys match TitlesAdapter conventions in your project.
-        string ownedId = _bm.GetTeamIdSafe(idx);
+        string ownedId = _bm.GetTeamTitleIdSafe(idx);
         var defSO = _bm.GetTeamDefSafe(idx);
         int lvl = _bm.GetTeamLevelSafe(idx);
 
@@ -184,8 +171,8 @@ public sealed class BattleStatsSystem
         spd = (spd + Mathf.Max(0, cmods.spdFlat)) * (1f + Mathf.Max(0f, cmods.spdPct));
         hp = hp * (1f + Mathf.Max(0f, cmods.hpPct));
 
-        // 5) Temp boosters (flat)
-        if (BattleTempBuffs.I != null)
+        // 5) Temp boosters (flat) (optional)
+        if (allowBoosters && BattleTempBuffs.I != null)
         {
             hp += Mathf.Max(0, BattleTempBuffs.I.GetPlayerHPBonus());
             atk += Mathf.Max(0, BattleTempBuffs.I.GetPlayerAtkBonus());
@@ -193,7 +180,7 @@ public sealed class BattleStatsSystem
             spd += Mathf.Max(0, BattleTempBuffs.I.GetPlayerSpeedFlatBonus());
         }
 
-        var booster = BattleBoosterController.I;
+        var booster = allowBoosters ? BattleBoosterController.I : null;
         if (booster != null)
         {
             atk += Mathf.Max(0, booster.GetAttackBonus());
@@ -292,7 +279,7 @@ public sealed class BattleStatsSystem
         // Build Title context.
         var ctx = _bm.BuildTitleContextForIndexUsingMaxSafe(idx, hp);
 
-        string ownedId = _bm.GetTeamIdSafe(idx);
+        string ownedId = _bm.GetTeamTitleIdSafe(idx);
         var defSO = _bm.GetTeamDefSafe(idx);
         int lvl = _bm.GetTeamLevelSafe(idx);
 

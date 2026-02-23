@@ -63,19 +63,19 @@ public partial class BattleManager : MonoBehaviour
 // Battle Events (logic emits, UI/FX consumes)
 // ─────────────────────────────────────────────────────────
 
-private readonly BattleEventBus _eventBus = new BattleEventBus();
+    private readonly BattleEventBus _eventBus = new BattleEventBus();
 
-public event Action<BattleEvent> OnBattleEvent
+    public event Action<BattleEvent> OnBattleEvent
 {
     add { _eventBus.OnEvent += value; }
     remove { _eventBus.OnEvent -= value; }
 }
 
-public void RegisterBattleEventConsumer() => _eventBus.RegisterConsumer();
-public void UnregisterBattleEventConsumer() => _eventBus.UnregisterConsumer();
-private bool HasBattleEventConsumers => _eventBus.HasConsumers;
+    public void RegisterBattleEventConsumer() => _eventBus.RegisterConsumer();
+    public void UnregisterBattleEventConsumer() => _eventBus.UnregisterConsumer();
+    private bool HasBattleEventConsumers => _eventBus.HasConsumers;
 
-private void Emit(BattleEvent e) => _eventBus.Emit(e);
+    private void Emit(BattleEvent e) => _eventBus.Emit(e);
 
 
     // ─────────────────────────────────────────────────────────
@@ -89,21 +89,21 @@ private void Emit(BattleEvent e) => _eventBus.Emit(e);
 // One RNG per battle, seeded.
 // ─────────────────────────────────────────────────────────
 
-private static int _battleSerial;
-private readonly BattleRngService _rng = new BattleRngService();
+    private static int _battleSerial;
+    private readonly BattleRngService _rng = new BattleRngService();
 
-public int BattleSeed => _rng.BattleSeed;
-public string BattleSeedLabel => _rng.BattleSeedLabel;
+    public int BattleSeed => _rng.BattleSeed;
+    public string BattleSeedLabel => _rng.BattleSeedLabel;
 
 /// <summary>
 /// Optional: EncounterManager can set the battle seed before calling Begin(...).
 /// If not set, a deterministic seed will be derived from the active session/daily/custom seed.
 /// </summary>
-public void SetBattleSeed(int seed, string seedLabel = null) => _rng.SetBattleSeed(seed, seedLabel);
+    public void SetBattleSeed(int seed, string seedLabel = null) => _rng.SetBattleSeed(seed, seedLabel);
 
-private float Rng01() => _rng.Rng01();
+    private float Rng01() => _rng.Rng01();
 
-private void EnsureBattleRngInitialized()
+    private void EnsureBattleRngInitialized()
 {
     _rng.EnsureInitialized(ref _battleSerial, wildDef, wildLevel);
 }
@@ -130,7 +130,8 @@ private void EnsureBattleRngInitialized()
     [SerializeField] private string telegraphDefend = "Wild braces!";
     [SerializeField] private string telegraphFocus  = "Wild looks for an opening...";
     [SerializeField] private string telegraphRun    = "Wild tries to get away!";
-[Header("Manual Turn Settings")]
+
+    [Header("Manual Turn Settings")]
     [SerializeField] private bool manualTurns = true;
     [SerializeField, Range(0f, 1f)] private float defendReducePct = 0.50f;
     [SerializeField, Range(0f, 1f)] private float guardConvertPct = 1.0f;
@@ -343,6 +344,8 @@ private void EnsureBattleRngInitialized()
     public bool NarrationLocked => _narrationLock;
     private bool _narrationLock;
 
+    public BattleRules Rules => _rules;
+
     public MonsterDataSO WildDef => wildDef;
     public int WildLevel => wildLevel;
 
@@ -361,6 +364,13 @@ private void EnsureBattleRngInitialized()
     private int[] teamLevels;
     private float[] teamMaxHP, teamHP;
     private string[] teamIds;
+    // Title routing ids (normal: same as teamIds; Iron: per-instance combatant ids)
+    private string[] teamTitleIds;
+
+    // Iron / custom battle context (optional)
+    private IBattleRosterProvider _rosterProvider;
+    private IBattleContext _battleContext;
+    private BattleRules _rules = BattleRules.Default;
 
     // Preferred-variant aware "effective" owned data used for battle.
     // This allows players to choose shiny/non-shiny display & usage without having to rearrange the team list.
@@ -625,6 +635,10 @@ private void EnsureBattleRngInitialized()
     public string GetTeamIdSafe(int idx)
         => (teamIds != null && idx >= 0 && idx < teamIds.Length) ? teamIds[idx] : null;
 
+
+    public string GetTeamTitleIdSafe(int idx)
+        => (teamTitleIds != null && idx >= 0 && idx < teamTitleIds.Length) ? teamTitleIds[idx] : GetTeamIdSafe(idx);
+
     public int GetTeamLevelSafe(int idx)
         => (teamLevels != null && idx >= 0 && idx < teamLevels.Length) ? Mathf.Max(1, teamLevels[idx]) : 1;
 
@@ -657,7 +671,7 @@ private void EnsureBattleRngInitialized()
             alliesAlive = alliesAlive,
             winStreak = streak,
             isBattle = true,
-            ownedId = GetTeamIdSafe(idx)
+            ownedId = GetTeamTitleIdSafe(idx)
         };
     }
 
@@ -688,7 +702,7 @@ private void EnsureBattleRngInitialized()
             alliesAlive = alliesAlive,
             winStreak = streak,
             isBattle = true,
-            ownedId = GetTeamIdSafe(idx)
+            ownedId = GetTeamTitleIdSafe(idx)
         };
     }
 
@@ -966,7 +980,7 @@ private IEnumerator MaybeSayKO_Wild(string victimName, float preHP, float postHP
         {
             if (teamIds != null && activeIndex >= 0 && activeIndex < teamIds.Length)
             {
-                string ownedId = teamIds[activeIndex];
+                string ownedId = GetTeamTitleIdSafe(activeIndex);
                 if (!string.IsNullOrEmpty(ownedId))
                 {
                     TitlesAdapter.OnBattleStart(ownedId, wildDef, wildLevel);
@@ -1022,13 +1036,43 @@ private IEnumerator MaybeSayKO_Wild(string victimName, float preHP, float postHP
 
 public void BeginBattle(MonsterDataSO wild, int level, Action<BattleResult> onEnded)
     {
-        Begin(wild, level, onEnded);
+        Begin(wild, level, onEnded, null, null);
     }
 
+    // Normal entry point (Save-driven). Iron/custom callers should use the overload that accepts a roster provider + context.
     public void Begin(MonsterDataSO wild, int level, Action<BattleResult> onEnded)
     {
-        var roster = SaveManager.Data.team;
-        if (roster == null || roster.Count == 0) { ForceEndBattleEarly(false); return; }
+        Begin(wild, level, onEnded, null, null);
+    }
+
+    public void Begin(MonsterDataSO wild, int level, Action<BattleResult> onEnded, IBattleRosterProvider rosterProvider, IBattleContext battleContext)
+    {
+        _rosterProvider = rosterProvider;
+        _battleContext = battleContext;
+        _rules = (battleContext != null) ? battleContext.Rules : BattleRules.Default;
+
+        // Hard enforcement: Iron battles must NEVER touch SaveManager team/owned.
+        if (IronCareerRuntime.IsActive && rosterProvider == null)
+        {
+            Debug.LogError("[BattleManager] IronCareerRuntime.IsActive but Begin(...) was called without a rosterProvider. Forfeiting battle.");
+            ForceEndBattleEarly(false);
+            return;
+        }
+
+        var injectedTeam = (rosterProvider != null) ? rosterProvider.GetPlayerTeam() : null;
+        bool usingInjected = (injectedTeam != null && injectedTeam.Count > 0);
+
+        // Normal battles are Save-driven. Injected battles must NOT read SaveManager.
+        var roster = usingInjected ? null : SaveManager.Data.team;
+
+        if (usingInjected)
+        {
+            // OK
+        }
+        else
+        {
+            if (roster == null || roster.Count == 0) { ForceEndBattleEarly(false); return; }
+        }
 
         // Reset per-battle deterministic RNG state.
         _rng.ResetForBegin();
@@ -1088,9 +1132,9 @@ public void BeginBattle(MonsterDataSO wild, int level, Action<BattleResult> onEn
         // ─────────────────────────────────────────────────────────────
         bool shinyWild = (EncounterManager.I != null) && EncounterManager.I.CurrentWildIsShiny;
 
-        bool isAuto = (EncounterManager.I != null) && EncounterManager.I.IsAutoMode;
+        bool isAuto = _rules.allowAutoBattle && (EncounterManager.I != null) && EncounterManager.I.IsAutoMode;
 
-        // If you want BattleManager rules to also snap to auto:
+        // Auto-battle hard-disable in sealed modes (Iron).
         ConfigureForAuto(isAuto);
 
 
@@ -1124,7 +1168,7 @@ public void BeginBattle(MonsterDataSO wild, int level, Action<BattleResult> onEn
 
         UpdateWildInfoUI();
 
-        teamCount = Mathf.Min(3, roster.Count);
+        teamCount = Mathf.Min(3, (injectedTeam != null) ? injectedTeam.Count : roster.Count);
         if (teamCount <= 0) { inBattle = false; return; }
 
         teamDefs = new MonsterDataSO[teamCount];
@@ -1132,6 +1176,7 @@ public void BeginBattle(MonsterDataSO wild, int level, Action<BattleResult> onEn
         teamMaxHP = new float[teamCount];
         teamHP = new float[teamCount];
         teamIds = new string[teamCount];
+        teamTitleIds = new string[teamCount];
 
         teamOwnedEffective = new OwnedMonsterData[teamCount];
         teamOwnedUidEffective = new string[teamCount];
@@ -1142,17 +1187,56 @@ public void BeginBattle(MonsterDataSO wild, int level, Action<BattleResult> onEn
         teamStatusMagnitude = new float[teamCount];
         teamStatusPersistent = new bool[teamCount];
 
+        // Iron carry safety: reset imported shield-carry flags each battle.
+        EnsureShieldGrantPools();
+        if (_ironShieldCarrySlots != null) Array.Clear(_ironShieldCarrySlots, 0, _ironShieldCarrySlots.Length);
+
         wildStatus = StatusType.None;
         wildStatusTurns = 0;
         wildStatusMagnitude = 0f;
         wildStatusPersistent = false;
 
-        for (int i = 0; i < teamCount; i++)
+        if (injectedTeam != null)
+        {
+            for (int i = 0; i < teamCount; i++)
+            {
+                var c = injectedTeam[i];
+
+                // Core identity
+                teamTitleIds[i] = !string.IsNullOrEmpty(c.combatantId) ? c.combatantId : $"IRON::P::{i}";
+                teamDefs[i] = c.def;
+                teamLevels[i] = Mathf.Max(1, c.level);
+                teamIds[i] = (c.def != null) ? c.def.id : null;
+
+                if (c.def == null)
+                {
+                    teamMaxHP[i] = 1f;
+                    teamHP[i] = 0f;
+                    BattleLogger.Log($"[Iron] WARNING: injected team slot {i} has missing MonsterData. Marking as KO/unusable.", LogScope.Battle);
+                    continue;
+                }
+
+                float baseMax = Mathf.Max(1f, BattleCalc.CalcHP(c.def, teamLevels[i]));
+                teamMaxHP[i] = baseMax;
+                teamHP[i] = Mathf.Clamp(c.hp, 0, Mathf.RoundToInt(baseMax));
+
+                // Titles: locked per instance (local override). Also register battle context for synthetic ids.
+                if (_rules.allowTitles && c.lockedTitle != null)
+                {
+                    TitlesAdapter.SetLocalTitles(teamTitleIds[i], new[] { c.lockedTitle });
+                    TitlesAdapter.RegisterBattleContext(teamTitleIds[i], c.def, teamLevels[i]);
+                }
+            }
+        }
+        else
+        {
+            for (int i = 0; i < teamCount; i++)
         {
             var slotOwned = roster[i];
             var owned = ResolveEffectiveTeamOwnedForBattle(i, slotOwned);
 
             teamIds[i] = owned != null ? owned.monsterId : null;
+            teamTitleIds[i] = teamIds[i];
 
             var def = (owned != null && !string.IsNullOrEmpty(owned.monsterId))
                 ? MonsterLibraryLocator.GetById(owned.monsterId)
@@ -1180,6 +1264,7 @@ public void BeginBattle(MonsterDataSO wild, int level, Action<BattleResult> onEn
                 ? Mathf.Clamp(savedHP, 0, Mathf.RoundToInt(finalMax))
                 : finalMax;
         }
+        }
 
         jobCtx = new JobBattlePassives.Ctx[teamCount];
         shieldHP = new float[teamCount];
@@ -1196,7 +1281,13 @@ public void BeginBattle(MonsterDataSO wild, int level, Action<BattleResult> onEn
 
         for (int i = 0; i < teamCount; i++)
         {
-            var owned = (teamOwnedEffective != null && i >= 0 && i < teamOwnedEffective.Length) ? teamOwnedEffective[i] : (SaveManager.Data != null && SaveManager.Data.team != null && i < SaveManager.Data.team.Count ? SaveManager.Data.team[i] : null);
+            var owned = (teamOwnedEffective != null && i >= 0 && i < teamOwnedEffective.Length) ? teamOwnedEffective[i] : null;
+
+            if (!_rules.allowJobPassives)
+            {
+                jobCtx[i] = default;
+                continue;
+            }
 
             string ownedMonsterId = (owned != null) ? owned.monsterId : null;
             JobType job = JobType.None;
@@ -1239,7 +1330,7 @@ public void BeginBattle(MonsterDataSO wild, int level, Action<BattleResult> onEn
         for (int i = 0; i < teamCount; i++)
             if (teamHP[i] > 0f) { activeIndex = i; break; }
 
-        if (activeIndex < 0) { EndBattle(false); return; }
+        if (activeIndex < 0) { EndBattleRouted(false); return; }
 
         CaptureUiBaselines_NoTitles();
 
@@ -1257,8 +1348,8 @@ public void BeginBattle(MonsterDataSO wild, int level, Action<BattleResult> onEn
         ClampAndPushActiveHP();
         RefreshBenchUI();
 
-        // Booster system: provide runtime hooks so UI boosters can perform actions (e.g., Health booster healing).
-        if (BattleBoosterController.I != null)
+        // Booster system (optional)
+        if (_rules.allowBoosters && BattleBoosterController.I != null)
         {
             BattleBoosterController.I.SetHooks(new BattleRuntimeHooks
             {
@@ -1301,6 +1392,199 @@ public void BeginBattle(MonsterDataSO wild, int level, Action<BattleResult> onEn
         ResetStatusIcons();
     }
 
+    private void EndBattleRouted(bool victory, bool escaped = false)
+    {
+        if (IronCareerRuntime.IsActive)
+            EndBattle_Iron(victory, escaped);
+        else
+            EndBattle(victory, escaped);
+    }
+
+    private void EndBattle_Iron(bool victory, bool escaped = false)
+    {
+        if (!inBattle) return;
+
+        inBattle = false;
+        SetIsPlayerTurn(false);
+
+        // Iron: do NOT broadcast global battle state events (they can trigger rewards/UI flows).
+        ConfigureForAuto(false);
+
+        if (benchBtn1) benchBtn1.interactable = false;
+        if (benchBtn2) benchBtn2.interactable = false;
+
+        pendingAction = PlayerAction.None;
+        defendActiveThisRound = false;
+        wildDefendActiveThisRound = false;
+        wildChargedNextAttack = false;
+        ResetStatusIcons();
+
+        if (turnCR != null) { StopCoroutine(turnCR); turnCR = null; }
+
+        BattleCalc.ResetRng();
+        _rng.ClearAll();
+        float survived = Mathf.Max(0f, Time.unscaledTime - startTime);
+
+        // Titles: end for all participants so per-battle stacks clear.
+        try
+        {
+            if (teamTitleIds != null && activeIndex >= 0 && activeIndex < teamTitleIds.Length)
+            {
+                string tid = teamTitleIds[activeIndex];
+                if (!string.IsNullOrEmpty(tid))
+                    TitlesAdapter.OnBattleEnd(tid, victory, wildDef, wildLevel);
+            }
+
+            if (!string.IsNullOrEmpty(_wildCombatIdForTitles))
+                TitlesAdapter.OnBattleEnd(_wildCombatIdForTitles, victory, wildDef, wildLevel);
+        }
+        catch (Exception ex)
+        {
+            BattleLogger.Log($"[Titles] OnBattleEnd(Iron) exception: {ex.Message}", LogScope.Battle);
+        }
+
+        // Build Iron snapshot (no rewards/persistence).
+        ExtractIronCarryFromPlayerField(out var carryStatus, out var carryShield);
+
+        var snap = new IronBattleOutcome
+        {
+            victory = victory,
+            escaped = escaped,
+            wildDef = wildDef,
+            wildLevel = wildLevel,
+            secondsSurvived = survived,
+            turnsSurvived = _turnIndex,
+            teamHP = (teamHP != null) ? (float[])teamHP.Clone() : null,
+            teamMaxHP = (teamMaxHP != null) ? (float[])teamMaxHP.Clone() : null,
+
+            // Player-only carryover fields (Phase 1)
+            shieldHP = carryShield,
+            playerFieldStatus = carryStatus,
+        };
+
+        _battleContext?.OnBattleResolved(snap);
+
+        // Also invoke onEnd for local callers that still rely on BattleResult callback.
+        var result = new BattleResult
+        {
+            victory = victory,
+            escaped = escaped,
+            creditsGained = 0,
+            creditsBase = 0,
+            creditsTitleBonus = 0,
+            creditsMultiplier = 1f,
+            growthCoresGained = 0,
+            growthCoresBase = 0,
+            growthCoresTitleBonus = 0,
+            activeMonsterOwnedId = null,
+            wildDef = wildDef,
+            wildLevel = wildLevel,
+            secondsSurvived = survived,
+            critCount = _totalCritsThisBattle,
+            turnsSurvived = _turnIndex,
+            damageTaken = _totalDamageTakenThisBattle,
+            damageDealt = _totalDamageDealtThisBattle,
+            gotFirstHit = playerLandedFirstHitThisBattle
+        };
+
+        onEnd?.Invoke(result);
+    }
+
+    private IronFieldStatusSnapshot GetPlayerFieldStatusSnapshot()
+    {
+        // Iron carries a single primary player field-wide status between battles.
+        // Current rule: player-only carry; field-wide single status; no between-battle ticking.
+        // This snapshot is stored on the battle outcome and re-applied by the Iron run loop.
+        var snap = new IronFieldStatusSnapshot
+        {
+            type = StatusType.None,
+            turns = 0,
+            magnitude = 0f,
+            persistent = false
+        };
+
+        if (teamStatus == null || teamStatusTurns == null || teamStatusMagnitude == null || teamStatusPersistent == null)
+            return snap;
+
+        int bestIdx = -1;
+        int bestTurns = -1;
+
+        for (int i = 0; i < teamStatus.Length; i++)
+        {
+            var t = teamStatus[i];
+            if (t == StatusType.None) continue;
+
+            int turns = (i < teamStatusTurns.Length) ? teamStatusTurns[i] : 0;
+            if (turns > bestTurns)
+            {
+                bestTurns = turns;
+                bestIdx = i;
+            }
+        }
+
+        if (bestIdx >= 0)
+        {
+            snap.type = teamStatus[bestIdx];
+            snap.turns = (bestIdx < teamStatusTurns.Length) ? teamStatusTurns[bestIdx] : 0;
+            snap.magnitude = (bestIdx < teamStatusMagnitude.Length) ? teamStatusMagnitude[bestIdx] : 0f;
+            snap.persistent = (bestIdx < teamStatusPersistent.Length) && teamStatusPersistent[bestIdx];
+        }
+
+        return snap;
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // Iron carry-over helpers (Phase 1)
+    // Player-only carry. Field-wide single primary status. No between-battle ticking.
+    // ShieldHP carries per slot. Imported shields must NOT be auto-removed by Shielded expiry logic.
+    // ─────────────────────────────────────────────────────────────
+    public void ApplyIronCarryToPlayerField(IronFieldStatusSnapshot snap, float[] shieldBySlot)
+    {
+        if (!IronCareerRuntime.IsActive) return;
+
+        // Restore field-wide status onto all occupied team slots.
+        if (teamStatus != null && teamStatusTurns != null && teamStatusMagnitude != null && teamStatusPersistent != null)
+        {
+            for (int i = 0; i < teamStatus.Length; i++)
+            {
+                if (teamDefs != null && i < teamDefs.Length && teamDefs[i] == null) continue;
+
+                teamStatus[i] = snap.type;
+                if (i < teamStatusTurns.Length) teamStatusTurns[i] = snap.turns;
+                if (i < teamStatusMagnitude.Length) teamStatusMagnitude[i] = snap.magnitude;
+                if (i < teamStatusPersistent.Length) teamStatusPersistent[i] = snap.persistent;
+            }
+
+            RefreshPrimaryStatusUI();
+        }
+
+        // Restore carried shields (player-only).
+        if (shieldHP != null && shieldBySlot != null)
+        {
+            EnsureShieldGrantPools();
+
+            int n = Mathf.Min(shieldHP.Length, shieldBySlot.Length);
+            for (int i = 0; i < n; i++)
+            {
+                shieldHP[i] = Mathf.Max(0f, shieldBySlot[i]);
+
+                // Imported carry should never be removed by grant-pool subtraction.
+                if (_shieldedGrantTeam != null && i < _shieldedGrantTeam.Length)
+                    _shieldedGrantTeam[i] = 0f;
+
+                if (_ironShieldCarrySlots != null && i < _ironShieldCarrySlots.Length)
+                    _ironShieldCarrySlots[i] = (shieldHP[i] > 0f);
+            }
+
+            PushHPBars();
+        }
+    }
+
+    public void ExtractIronCarryFromPlayerField(out IronFieldStatusSnapshot snap, out float[] shieldBySlot)
+    {
+        snap = GetPlayerFieldStatusSnapshot();
+        shieldBySlot = (shieldHP != null) ? (float[])shieldHP.Clone() : null;
+    }
 
 
     private void EndBattle(bool victory, bool escaped = false)
@@ -1373,7 +1657,7 @@ public void BeginBattle(MonsterDataSO wild, int level, Action<BattleResult> onEn
 
             float titleCoreMul = 1f;
             if (teamIds != null && activeIndex >= 0 && activeIndex < teamIds.Length)
-                titleCoreMul = Mathf.Max(0f, TitlesAdapter.GetGrowthCoreMultOnVictory(teamIds[activeIndex], wildDef, wildLevel));
+                titleCoreMul = Mathf.Max(0f, TitlesAdapter.GetGrowthCoreMultOnVictory(teamTitleIds[activeIndex], wildDef, wildLevel));
 
             int growthCoreAfterTitles = Mathf.Max(0, Mathf.RoundToInt(baseAfterShiny * titleCoreMul));
 
@@ -1632,7 +1916,7 @@ public void BeginBattle(MonsterDataSO wild, int level, Action<BattleResult> onEn
         {
             if (teamIds != null && activeIndex >= 0 && activeIndex < teamIds.Length)
             {
-                string ownedId = teamIds[activeIndex];
+                string ownedId = GetTeamTitleIdSafe(activeIndex);
                 if (!string.IsNullOrEmpty(ownedId))
                     TitlesAdapter.OnBattleEnd(ownedId, victory, wildDef, wildLevel);
             }
@@ -1690,11 +1974,15 @@ public void BeginBattle(MonsterDataSO wild, int level, Action<BattleResult> onEn
         }
 
         BattleLogger.Log($"Swapped to {GetName(activeIndex)}! (turn consumed)", LogScope.Battle);
-        BattleLogger.AddKeyMoment($"SWAP: {GetName(activeIndex)}");                                        Emit(BattleEvent.ActionQueued(BattleSide.Player, "Swap"));
-                                            if (!HasBattleEventConsumers && feedback) feedback.PlayActionQueued(
-                                                BattleFeedbackManager.BattleFeedbackSide.Player,
-                                                BattleFeedbackManager.BattleFeedbackAction.Swap
-                                            );
+        BattleLogger.AddKeyMoment($"SWAP: {GetName(activeIndex)}");
+        Emit(BattleEvent.ActionQueued(BattleSide.Player, "Swap"));
+
+        if (!HasBattleEventConsumers && feedback)
+            feedback.PlayActionQueued(
+                BattleFeedbackManager.BattleFeedbackSide.Player,
+                BattleFeedbackManager.BattleFeedbackAction.Swap
+            );
+
         if (debugTitles && debugTitlesOnSwap)
             Debug_LogActiveTitlesSnapshot("Swap");
     }
@@ -1763,7 +2051,7 @@ public void BeginBattle(MonsterDataSO wild, int level, Action<BattleResult> onEn
     private TitleStatMods GetTitleModsForIndex(int idx)
     {
         if (teamIds != null && idx >= 0 && idx < teamIds.Length && !string.IsNullOrEmpty(teamIds[idx]))
-            return TitlesAdapter.GetBattleStatMods(teamIds[idx]);
+            return TitlesAdapter.GetBattleStatMods(teamTitleIds[idx]);
         return default;
     }
 
@@ -1791,7 +2079,7 @@ public void BeginBattle(MonsterDataSO wild, int level, Action<BattleResult> onEn
 
         var def = teamDefs[idx];
         int lvl = teamLevels[idx];
-        string ownedId = teamIds[idx];
+        string ownedId = GetTeamTitleIdSafe(idx);
 
         TitleStatMods mods = default;
         mods.atkFlat = Mathf.RoundToInt(TitlesAdapter.GetStatValue(ownedId, def, lvl, "atkFlat", ctx, 0f));
@@ -1990,9 +2278,7 @@ private int GetAlliesAliveNotIncludingActive()
         battleLine = null;
         logLine = null;
 
-        string ownedId = (teamIds != null && activeIndex >= 0 && activeIndex < teamIds.Length)
-            ? teamIds[activeIndex]
-            : null;
+        string ownedId = GetTeamTitleIdSafe(activeIndex);
         if (string.IsNullOrEmpty(ownedId)) return false;
 
         float activeHp = Mathf.Max(0f, GetActivePlayerCurHP());
@@ -2064,7 +2350,8 @@ private int GetAlliesAliveNotIncludingActive()
             selfHp01 = hpPct,
             alliesAlive = alliesAlive,
             winStreak = streak,
-            isBattle = true
+            isBattle = true,
+            ownedId = GetTeamTitleIdSafe(activeIndex)
         };
         return ctx;
     }
@@ -2206,7 +2493,7 @@ private int GetAlliesAliveNotIncludingActive()
         if (teamDefs == null || teamLevels == null || teamIds == null) return;
         if (activeIndex >= teamDefs.Length || activeIndex >= teamLevels.Length || activeIndex >= teamIds.Length) return;
 
-        string ownedId = teamIds[activeIndex];
+        string ownedId = GetTeamTitleIdSafe(activeIndex);
         var def = teamDefs[activeIndex];
         int lvl = teamLevels[activeIndex];
 
@@ -2252,6 +2539,16 @@ private int GetAlliesAliveNotIncludingActive()
 
     private OwnedMonsterData ResolveEffectiveTeamOwnedForBattle(int teamIndex, OwnedMonsterData teamSlotOwned)
     {
+        if (!_rules.allowPreferredVariants)
+        {
+            if (teamOwnedEffective != null && teamIndex >= 0 && teamIndex < teamOwnedEffective.Length)
+            {
+                teamOwnedEffective[teamIndex] = teamSlotOwned;
+                teamOwnedUidEffective[teamIndex] = teamSlotOwned != null ? teamSlotOwned.ownedUID : null;
+            }
+            return teamSlotOwned;
+        }
+
         if (teamSlotOwned == null || string.IsNullOrEmpty(teamSlotOwned.monsterId))
             return teamSlotOwned;
 
@@ -2295,6 +2592,8 @@ private int GetAlliesAliveNotIncludingActive()
             om = teamOwnedEffective[idx];
             return om != null;
         }
+
+        if (IronCareerRuntime.IsActive) return false;
 
         var roster = SaveManager.Data?.team;
         if (roster == null) return false;
