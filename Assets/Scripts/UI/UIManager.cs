@@ -39,23 +39,8 @@ public enum PanelId
     ImagePreview = 32,
     IdleBattleRewards = 33,
 
-    // ─────────────────────────────────────────────────────────────
-    // Iron Career (sealed mode) MAIN container panel
-    // This maps to: Canvas/Panel_IronCareerEncounter
-    // ─────────────────────────────────────────────────────────────
+    // Iron Career: ONLY the main container should be managed by UIManager
     IronCareerEncounter = 34,
-
-    // ─────────────────────────────────────────────────────────────
-    // Iron Career (sealed mode) overlays (children inside IronCareerEncounter)
-    // ─────────────────────────────────────────────────────────────
-    IronCareerStarter = 35,
-    IronCareerHire = 36,
-    IronCareerReplace = 37,
-    IronCareerPost = 38,
-    IronCareerForcedEvolve = 39,
-    IronCareerRest = 40,
-    IronCareerGameOver = 41,
-    IronCareerRules = 42,
 }
 
 [Serializable]
@@ -98,15 +83,10 @@ public class UIManager : MonoBehaviour
         PanelId.ImagePreview,
         PanelId.IdleBattleRewards,
 
-        // Iron overlays/popups
-        PanelId.IronCareerStarter,
-        PanelId.IronCareerHire,
-        PanelId.IronCareerReplace,
-        PanelId.IronCareerPost,
-        PanelId.IronCareerForcedEvolve,
-        PanelId.IronCareerRest,
-        PanelId.IronCareerGameOver,
-        PanelId.IronCareerRules,
+        // NOTE:
+        // Iron overlays are intentionally NOT included here.
+        // They are controlled by IronCareerEncounterPanelUI (or equivalent),
+        // not by UIManager.
     };
 
     [Header("Animation")]
@@ -158,7 +138,14 @@ public class UIManager : MonoBehaviour
 
     public bool Hide(PanelId id)
     {
-        if (!_map.TryGetValue(id, out var p) || p.root == null) return false;
+        if (!_map.TryGetValue(id, out var p) || p.root == null)
+        {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            Debug.Log($"[UIManager] Hide ignored (panel not registered): {id}");
+#endif
+            return false;
+        }
+
         SetActive(id, false);
         return true;
     }
@@ -195,7 +182,13 @@ public class UIManager : MonoBehaviour
 
     private void SetImmediate(PanelId id, bool on, bool fireEvent)
     {
-        if (!_map.TryGetValue(id, out var p) || p.root == null) return;
+        if (!_map.TryGetValue(id, out var p) || p.root == null)
+        {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            Debug.Log($"[UIManager] SetImmediate ignored (panel not registered): {id}");
+#endif
+            return;
+        }
 
         CancelTweens(p.root);
 
@@ -245,7 +238,7 @@ public class UIManager : MonoBehaviour
         if (!_map.TryGetValue(id, out var p) || p.root == null)
         {
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
-            Debug.LogWarning($"[UIManager] No panel root for {id}");
+            Debug.LogWarning($"[UIManager] No panel root for {id} (call ignored)");
 #endif
             return;
         }

@@ -15,6 +15,7 @@ public sealed class EncounterButtonGuard : MonoBehaviour
 
     private Button _button;
     private Coroutine _shakeRoutine;
+    private Coroutine _deferredApply;
 
     // EncounterManager can be created/destroyed across scenes.
     // Hook its OnStateChanged so the button refreshes when battles start/end.
@@ -24,6 +25,8 @@ public sealed class EncounterButtonGuard : MonoBehaviour
     {
         _button = GetComponent<Button>();
         if (!shakeTarget) shakeTarget = GetComponent<RectTransform>();
+
+        // Best-effort early Apply; we also do a deferred Apply to avoid boot-order brittleness.
         Apply();
     }
 
@@ -31,7 +34,11 @@ public sealed class EncounterButtonGuard : MonoBehaviour
     {
         // In case EncounterManager comes up after this UI.
         TryHookEncounterEvents();
-        Apply();
+
+        // Boot-order guard: on some scenes Save/Encounter systems may initialize
+        // after this button UI. Do one delayed refresh so it never gets stuck.
+        if (_deferredApply != null) StopCoroutine(_deferredApply);
+        _deferredApply = StartCoroutine(Co_DeferredApply());
     }
 
     private void OnEnable()
@@ -44,7 +51,11 @@ public sealed class EncounterButtonGuard : MonoBehaviour
         _button.onClick.AddListener(OnButtonClicked);
 
         TryHookEncounterEvents();
+
+        // Immediate + deferred refresh.
         Apply();
+        if (_deferredApply != null) StopCoroutine(_deferredApply);
+        _deferredApply = StartCoroutine(Co_DeferredApply());
     }
 
     private void OnDisable()
@@ -55,6 +66,12 @@ public sealed class EncounterButtonGuard : MonoBehaviour
         GameEvents.OnTeamHealthChanged -= HandleTeamChanged;
 
         UnhookEncounterEvents();
+
+        if (_deferredApply != null)
+        {
+            StopCoroutine(_deferredApply);
+            _deferredApply = null;
+        }
 
         _button.onClick.RemoveListener(OnButtonClicked);
     }
@@ -101,7 +118,19 @@ public sealed class EncounterButtonGuard : MonoBehaviour
     {
         if (_button == null) return;
 
-        _button.interactable = EligibilityRules.CanStartEncounter(minRequiredTeamMembers, out _);
+        bool ok = EligibilityRules.CanStartEncounter(minRequiredTeamMembers, out string reason);
+        _button.interactable = ok;
+
+        // Helpful diagnostics when something unexpected disables the button.
+        if (!ok && !string.IsNullOrEmpty(reason))
+            Debug.Log($"[EncounterButtonGuard] Encounter disabled: {reason}", this);
+    }
+
+    private IEnumerator Co_DeferredApply()
+    {
+        yield return new WaitForEndOfFrame();
+        Apply();
+        _deferredApply = null;
     }
 
     private void OnButtonClicked()
@@ -143,5 +172,4 @@ public sealed class EncounterButtonGuard : MonoBehaviour
         shakeTarget.localPosition = originalPos;
         _shakeRoutine = null;
     }
-
 }

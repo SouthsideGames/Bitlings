@@ -68,6 +68,9 @@ public sealed class IronCareerStarterPanelUI : MonoBehaviour
     [Tooltip("Extra delay between locking slot 1→2→3 (adds drama).")]
     [SerializeField] private float lockStepDelay = 0.10f;
 
+    // NEW: overlay controller (UIManager no longer owns Iron overlays)
+    private IronCareerEncounterPanelUI _ironUI;
+
     private IronCareerMetaData _metaData;
 
     private readonly List<MonsterDataSO> _offer = new List<MonsterDataSO>(3);
@@ -86,6 +89,10 @@ public sealed class IronCareerStarterPanelUI : MonoBehaviour
     {
         if (!iron) iron = FindFirstObjectByType<IronCareerManager>(FindObjectsInactive.Include);
 
+        // Find overlay controller (safe to be missing in early test scenes, but recommended)
+        _ironUI = IronCareerEncounterPanelUI.I;
+        if (!_ironUI) _ironUI = FindFirstObjectByType<IronCareerEncounterPanelUI>(FindObjectsInactive.Include);
+
         if (rerollButton) rerollButton.onClick.AddListener(OnRerollClicked);
         if (startButton) startButton.onClick.AddListener(StartRun);
         if (backButton) backButton.onClick.AddListener(BackToHome);
@@ -101,6 +108,13 @@ public sealed class IronCareerStarterPanelUI : MonoBehaviour
 
     private void OnEnable()
     {
+        // Refresh overlay controller (in case scene objects enable after Awake)
+        if (!_ironUI)
+        {
+            _ironUI = IronCareerEncounterPanelUI.I;
+            if (!_ironUI) _ironUI = FindFirstObjectByType<IronCareerEncounterPanelUI>(FindObjectsInactive.Include);
+        }
+
         // Daily meta load/reset (does NOT consume reroll).
         LoadOrResetDailyRerollsAndOffer();
 
@@ -524,12 +538,10 @@ public sealed class IronCareerStarterPanelUI : MonoBehaviour
 
     private void UpdateSelectionVisuals()
     {
-        // FX toggles
         if (slot1SelectedFX) slot1SelectedFX.SetActive(_selectedIndex == 0);
         if (slot2SelectedFX) slot2SelectedFX.SetActive(_selectedIndex == 1);
         if (slot3SelectedFX) slot3SelectedFX.SetActive(_selectedIndex == 2);
 
-        // Optional scale polish
         if (slot1VisualRoot) slot1VisualRoot.localScale = Vector3.one * ((_selectedIndex == 0) ? selectedScale : unselectedScale);
         if (slot2VisualRoot) slot2VisualRoot.localScale = Vector3.one * ((_selectedIndex == 1) ? selectedScale : unselectedScale);
         if (slot3VisualRoot) slot3VisualRoot.localScale = Vector3.one * ((_selectedIndex == 2) ? selectedScale : unselectedScale);
@@ -562,23 +574,28 @@ public sealed class IronCareerStarterPanelUI : MonoBehaviour
         MonsterDataSO starter = _offer[_selectedIndex];
         if (!starter) return;
 
-        // Pass ONLY the selected starter (keep existing manager signature).
+        // Pass ONLY the selected starter.
         iron.StartNewRunFromUI(mode, new List<MonsterDataSO> { starter });
     }
 
     private void BackToHome()
     {
-        if (UIManager.I)
-        {
-            UIManager.I.Hide(PanelId.IronCareerStarter);
-            UIManager.I.Hide(PanelId.IronCareerEncounter);
-            UIManager.I.Show(PanelId.Home);
-        }
+        // UIManager only manages top-level containers.
+        UIManager.I?.Hide(PanelId.IronCareerEncounter);
+        UIManager.I?.Show(PanelId.Home);
     }
 
     private void OpenRules()
     {
-        if (UIManager.I)
-            UIManager.I.Show(PanelId.IronCareerRules);
+        if (!_ironUI)
+        {
+            _ironUI = IronCareerEncounterPanelUI.I;
+            if (!_ironUI) _ironUI = FindFirstObjectByType<IronCareerEncounterPanelUI>(FindObjectsInactive.Include);
+        }
+
+        if (_ironUI)
+            _ironUI.ShowRules(immediate: true);
+        else
+            Debug.LogWarning("[IronCareerStarterPanelUI] OpenRules failed: missing IronCareerEncounterPanelUI.");
     }
 }

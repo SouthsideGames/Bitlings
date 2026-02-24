@@ -319,6 +319,44 @@ public partial class BattleManager : MonoBehaviour
     [Header("Feedback")]
     [SerializeField] private BattleFeedbackManager feedback;
 
+    // ─────────────────────────────────────────────────────────────
+    // UI routing overrides (Iron Career)
+    // ─────────────────────────────────────────────────────────────
+    private bool _uiDefaultsCaptured;
+    private BattleFeedbackManager _defaultFeedback;
+    private BattleTextBoxUI _defaultBattleTextBox;
+    private BattleSwitchToggle _defaultBottomToggle;
+
+    /// <summary>
+    /// Overrides the BattleManager's UI targets at runtime (used by Iron Career).
+    /// Additive only: does not remove any existing features.
+    /// </summary>
+    public void SetUIOverride(BattleFeedbackManager overrideFeedback, BattleTextBoxUI overrideTextBox, BattleSwitchToggle overrideBottomToggle)
+    {
+        if (!_uiDefaultsCaptured)
+        {
+            _uiDefaultsCaptured = true;
+            _defaultFeedback = feedback;
+            _defaultBattleTextBox = battleTextBox;
+            _defaultBottomToggle = _bottomToggle;
+        }
+
+        if (overrideFeedback) feedback = overrideFeedback;
+        if (overrideTextBox) battleTextBox = overrideTextBox;
+        if (overrideBottomToggle) _bottomToggle = overrideBottomToggle;
+    }
+
+    /// <summary>
+    /// Restores UI references back to their original inspector values.
+    /// </summary>
+    public void ClearUIOverride()
+    {
+        if (!_uiDefaultsCaptured) return;
+        feedback = _defaultFeedback;
+        battleTextBox = _defaultBattleTextBox;
+        _bottomToggle = _defaultBottomToggle;
+    }
+
     [Header("Status + Synergy (Battle Start)")]
     [Tooltip("Icons + default durations/magnitudes for StatusType.")]
     [SerializeField] private StatusLibrarySO statusLibrary;
