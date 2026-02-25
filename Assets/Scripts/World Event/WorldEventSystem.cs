@@ -18,6 +18,17 @@ public sealed class WorldEventSystem : MonoBehaviour
 {
     public static WorldEventSystem I { get; private set; }
 
+    // -------------------------------------------------------------------------
+    // Iron Career safety
+    // -------------------------------------------------------------------------
+    // During Iron Career we allow world events to continue ticking internally,
+    // but we suppress global UI broadcasts that would wake non-Iron systems.
+    private void FireWorldEventsChanged()
+    {
+        if (IronCareerRuntime.IsActive) return;
+        GameEvents.WorldEventsChanged?.Invoke();
+    }
+
     [Header("Feature Unlock")]
     [SerializeField] private FeatureId requiredFeature = FeatureId.WorldEvents_Basic;
 
@@ -228,7 +239,7 @@ public sealed class WorldEventSystem : MonoBehaviour
             _active.Clear();
             RebuildEffectCache();
             if (WorldEventManager.I != null) WorldEventManager.I.Clear();
-            GameEvents.WorldEventsChanged?.Invoke();
+            FireWorldEventsChanged();
             return;
         }
 
@@ -289,7 +300,7 @@ public sealed class WorldEventSystem : MonoBehaviour
         RebuildEffectCache();
         PushTicker();
 
-        GameEvents.WorldEventsChanged?.Invoke();
+        FireWorldEventsChanged();
     }
 
     private void RollWeeklyEvent(WorldEventSaveData blob, List<WorldEventSO> all, long nowUtc, bool forceFlavor)

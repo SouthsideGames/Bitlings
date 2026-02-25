@@ -43,6 +43,11 @@ public sealed class IronCareerManager : MonoBehaviour, IronBattleBridge.IIronBat
     [SerializeField] private MonsterDataSO debugFallbackWild;
     [SerializeField] private int debugFallbackWildLevel = 1;
 
+#if UNITY_EDITOR
+    [Header("DEV ONLY")]
+    [SerializeField] private bool devForceUnlockIron = false;
+#endif
+
     private readonly IronCareerRunState _state = new IronCareerRunState();
     private IronRoster _roster;
     private IronRngStream _rng;
@@ -53,6 +58,14 @@ public sealed class IronCareerManager : MonoBehaviour, IronBattleBridge.IIronBat
 
     public int Wins => Mathf.Max(0, _state.wins);
 
+    public bool IsUnlocked()
+    {
+    #if UNITY_EDITOR
+        if (devForceUnlockIron) return true;
+    #endif
+
+        return SaveManager.Data != null && SaveManager.Data.HasIronCareerUnlocked;
+    }
     public IReadOnlyList<BattleCombatant> GetPartyForNextBattle()
     {
         if (!_state.runActive) return Array.Empty<BattleCombatant>();
@@ -198,8 +211,9 @@ public sealed class IronCareerManager : MonoBehaviour, IronBattleBridge.IIronBat
 
     public void StartNewRun(Mode mode)
     {
-        var m = (mode == Mode.Hardcore) ? IronCareerRunState.IronCareerMode.Hardcore : IronCareerRunState.IronCareerMode.Standard;
-        StartNewRun_Internal(m, starterDefs: null);
+        // If someone wires a button to this by mistake, we should still show Starter first.
+        this.mode = mode;
+        OpenStarterFromHome();
     }
 
     public void StartNewRunFromUI(IronCareerRunState.IronCareerMode m, List<MonsterDataSO> starterDefs)
@@ -439,8 +453,6 @@ public sealed class IronCareerManager : MonoBehaviour, IronBattleBridge.IIronBat
         UIManager.I?.Show(PanelId.IronCareerEncounter);
 
         ironEncounterUI?.ShowBattleOnly(immediate: true);
-
-        ironBattleUI?.ShowBattleHud();
         ironBattleUI?.ApplyTo(battle);
 
         bridge.SetWins(_state.wins);
@@ -495,5 +507,16 @@ public sealed class IronCareerManager : MonoBehaviour, IronBattleBridge.IIronBat
     {
         UIManager.I?.Hide(PanelId.IronCareerEncounter);
         UIManager.I?.Show(PanelId.Home);
+    }
+
+    public void OpenStarterFromHome()
+    {
+        // Only route UI. Do NOT enter runtime; do NOT start battle.
+        UIManager.I?.Hide(PanelId.Encounter);
+        UIManager.I?.Hide(PanelId.PostBattleSummary);
+        UIManager.I?.Show(PanelId.IronCareerEncounter);
+        UIManager.I?.Hide(PanelId.Home);
+
+        ironEncounterUI?.ShowStarter(immediate: true);
     }
 }

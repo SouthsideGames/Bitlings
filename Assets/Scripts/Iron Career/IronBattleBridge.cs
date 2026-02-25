@@ -73,6 +73,14 @@ public sealed class IronBattleBridge : MonoBehaviour, IBattleRosterProvider, IBa
             return;
         }
 
+        if (Host != null) winsForId = Mathf.Max(0, Host.Wins);
+
+        // Ensure the Iron HUD is applied before the battle begins so BattleManager binds to the correct UI.
+        // Safe to call multiple times.
+        var ironHud = FindFirstObjectByType<IronBattleUIRoot>(FindObjectsInactive.Include);
+        if (ironHud != null)
+            ironHud.ApplyTo(battle);
+
         // Start the battle using injected roster.
         battle.Begin(wild.def, Mathf.Max(1, wild.level), onEnded, this, this);
 
@@ -154,7 +162,9 @@ public sealed class IronBattleBridge : MonoBehaviour, IBattleRosterProvider, IBa
     {
         string g = string.IsNullOrEmpty(IronCareerRuntime.RunGuid) ? "noguid" : IronCareerRuntime.RunGuid;
         int w = (Host != null) ? Mathf.Max(0, Host.Wins) : winsForId;
-        return $"IRON::W::{g}::F{w}";
+
+        // IMPORTANT: must start with "WILD::" so BattleManager will not replace it.
+        return $"WILD::IRON::{g}::F{w}";
     }
 
     private void InjectTitlesFor(BattleCombatant c)

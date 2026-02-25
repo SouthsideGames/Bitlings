@@ -146,6 +146,12 @@ public partial class BattleManager : MonoBehaviour
     [Tooltip("If > 0, the countdown UI is considered 'active' when remaining seconds are <= this value.")]
     [SerializeField, Min(0f)] private float autoQueueCountdownShowAtSeconds = 10f;
 
+     [Header("HUD Rig")]
+    [SerializeField] private BattleHudRig defaultHudRig;
+
+    private BattleHudRig _hudRigOverride;
+    private BattleHudRig _hudRigActive;
+
     /// <summary>
     /// Fired while waiting for player input when the auto-queue failsafe is enabled.
     /// float = seconds remaining (clamped >= 0), bool = whether countdown should be shown.
@@ -1138,13 +1144,31 @@ public void BeginBattle(MonsterDataSO wild, int level, Action<BattleResult> onEn
         wildDef = wild;
         wildLevel = Mathf.Max(1, level);
 
+        ApplyHudRigForThisBattle();
+
         // Backgrounds: pick + apply immediately so the reveal anims show the correct scene.
         // Both player and wild use the same background, driven by the wild monster's type.
         TryApplyBattleBackgroundFromWild();
 
-        // Titles routing id for wild (stable across battle)
+            // Titles routing id for wild (stable across battle)
         // IMPORTANT: must be synthetic (WILD::<...>) so it never collides with a real monster id.
-        _wildCombatIdForTitles = (EncounterManager.I != null) ? EncounterManager.I.WildCombatId : null;
+        // In injected (Iron/custom) battles, prefer rosterProvider's wild combatantId so TitlesAdapter context matches.
+        _wildCombatIdForTitles = null;
+
+        if (rosterProvider != null)
+        {
+            try
+            {
+                var injectedWild = rosterProvider.GetWild();
+                if (injectedWild != null && !string.IsNullOrEmpty(injectedWild.combatantId))
+                    _wildCombatIdForTitles = injectedWild.combatantId;
+            }
+            catch { }
+        }
+
+        if (string.IsNullOrEmpty(_wildCombatIdForTitles))
+            _wildCombatIdForTitles = (EncounterManager.I != null) ? EncounterManager.I.WildCombatId : null;
+
         if (string.IsNullOrEmpty(_wildCombatIdForTitles) || !_wildCombatIdForTitles.StartsWith("WILD::", StringComparison.OrdinalIgnoreCase))
             _wildCombatIdForTitles = BuildFallbackWildCombatId(wildDef);
 
@@ -2707,8 +2731,64 @@ private int GetAlliesAliveNotIncludingActive()
         StartCoroutine(Say(line, tags));
     }
 
+    
+  public void SetHudRigOverride(BattleHudRig rig)
+    {
+        _hudRigOverride = rig;
+    }
 
+    public void ClearHudRigOverride()
+    {
+        _hudRigOverride = null;
+    }
 
+    private void ApplyHudRigForThisBattle()
+    {
+        // Choose active rig
+        _hudRigActive = (_hudRigOverride != null) ? _hudRigOverride : defaultHudRig;
 
+        if (_hudRigActive == null)
+        {
+            Debug.LogWarning("[BattleManager] No HUD rig assigned (defaultHudRig missing). Using existing serialized references.");
+            return;
+        }
 
+        // Point BattleManager UI refs at the active rig
+        wildPanel = _hudRigActive.wildPanel;
+        playerPanel = _hudRigActive.playerPanel;
+
+        wildHPBar = _hudRigActive.wildHPBar;
+        wildIcon = _hudRigActive.wildIcon;
+        wildNameText = _hudRigActive.wildNameText;
+        wildLevelText = _hudRigActive.wildLevelText;
+        wildIdText = _hudRigActive.wildIdText;
+        wildTypeText = _hudRigActive.wildTypeText;
+        wildRarityText = _hudRigActive.wildRarityText;
+        wildHPText = _hudRigActive.wildHPText;
+        wildATKText = _hudRigActive.wildATKText;
+        wildDEFText = _hudRigActive.wildDEFText;
+        wildSPDText = _hudRigActive.wildSPDText;
+
+        playerHPBar = _hudRigActive.playerHPBar;
+        playerIcon = _hudRigActive.playerIcon;
+        playerNameText = _hudRigActive.playerNameText;
+        playerLevelText = _hudRigActive.playerLevelText;
+        playerIdText = _hudRigActive.playerIdText;
+        playerTypeText = _hudRigActive.playerTypeText;
+        playerRarityText = _hudRigActive.playerRarityText;
+        playerHPText = _hudRigActive.playerHPText;
+        playerATKText = _hudRigActive.playerATKText;
+        playerDEFText = _hudRigActive.playerDEFText;
+        playerSPDText = _hudRigActive.playerSPDText;
+
+        benchBtn1 = _hudRigActive.benchBtn1;
+        benchBtn2 = _hudRigActive.benchBtn2;
+        benchImg1 = _hudRigActive.benchImg1;
+        benchImg2 = _hudRigActive.benchImg2;
+        benchHPText1 = _hudRigActive.benchHPText1;
+        benchHPText2 = _hudRigActive.benchHPText2;
+
+        // Use your existing UI override system too (keeps things consistent)
+        SetUIOverride(_hudRigActive.feedback, _hudRigActive.battleTextBox, _hudRigActive.bottomToggle);
+    }
 }

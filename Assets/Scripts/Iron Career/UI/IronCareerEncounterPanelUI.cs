@@ -5,9 +5,6 @@ using UnityEngine;
 /// Iron-only Encounter Panel controller (like EncounterPanelUI but sealed).
 /// Purpose: keep Iron panel flow self-contained so UIManager isn't responsible
 /// for juggling multiple Iron overlay CanvasGroups.
-///
-/// This class ONLY controls visibility/fades of Iron overlay panels + the Iron battle HUD root.
-/// It does not touch SaveManager or GameEvents.
 /// </summary>
 public sealed class IronCareerEncounterPanelUI : MonoBehaviour
 {
@@ -36,9 +33,17 @@ public sealed class IronCareerEncounterPanelUI : MonoBehaviour
         if (I != null && I != this) { Destroy(gameObject); return; }
         I = this;
 
+        AutoWireIfNeeded();
+
         // Default: battle HUD visible, overlays hidden.
         if (battleRoot) battleRoot.SetActive(true);
         HideAllImmediate();
+    }
+
+    private void OnEnable()
+    {
+        // In case objects were instantiated/enabled late.
+        AutoWireIfNeeded();
     }
 
     private void OnDestroy()
@@ -115,7 +120,6 @@ public sealed class IronCareerEncounterPanelUI : MonoBehaviour
         if (immediate) HideAllImmediate();
         else
         {
-            // Fade-out any visible overlays.
             HideOnly(starter, false);
             HideOnly(hire, false);
             HideOnly(replace, false);
@@ -125,6 +129,51 @@ public sealed class IronCareerEncounterPanelUI : MonoBehaviour
             HideOnly(gameOver, false);
             HideOnly(rules, false);
         }
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // Auto-wire (prevents “null CanvasGroup → nothing shows”)
+    // ─────────────────────────────────────────────────────────────
+
+    private void AutoWireIfNeeded()
+    {
+        // Battle root
+        if (!battleRoot)
+        {
+            var t = transform.Find("IronCareerBattle");
+            if (t) battleRoot = t.gameObject;
+        }
+
+        // Overlays root is usually "IronOverlays"
+        // Children are typically named: IronCareerStarter, IronCareerHire, etc.
+        if (!starter) starter = FindCg("IronCareerStarter");
+        if (!hire) hire = FindCg("IronCareerHire");
+        if (!replace) replace = FindCg("IronCareerReplace");
+        if (!post) post = FindCg("IronCareerPost");
+        if (!forcedEvolve) forcedEvolve = FindCg("IronCareerForcedEvolve");
+        if (!rest) rest = FindCg("IronCareerRest");
+        if (!gameOver) gameOver = FindCg("IronCareerGameOver");
+        if (!rules) rules = FindCg("IronCareerRulePopup");
+    }
+
+    private CanvasGroup FindCg(string name)
+    {
+        // Search entire subtree (safe for prefab re-orgs)
+        var tr = transform.Find(name);
+        if (!tr)
+        {
+            var all = GetComponentsInChildren<Transform>(true);
+            for (int i = 0; i < all.Length; i++)
+            {
+                if (all[i] && all[i].name == name) { tr = all[i]; break; }
+            }
+        }
+
+        if (!tr) return null;
+
+        var cg = tr.GetComponent<CanvasGroup>();
+        if (!cg) cg = tr.gameObject.AddComponent<CanvasGroup>(); // guarantee fade/control works
+        return cg;
     }
 
     // ─────────────────────────────────────────────────────────────
@@ -182,7 +231,6 @@ public sealed class IronCareerEncounterPanelUI : MonoBehaviour
 
         if (show)
         {
-            // Ensure it receives input while fading in
             cg.gameObject.SetActive(true);
             cg.interactable = true;
             cg.blocksRaycasts = true;
@@ -218,4 +266,3 @@ public sealed class IronCareerEncounterPanelUI : MonoBehaviour
         cg.blocksRaycasts = on;
     }
 }
-

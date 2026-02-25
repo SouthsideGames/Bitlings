@@ -1,63 +1,52 @@
 using UnityEngine;
 
-
-public sealed class IronBattleUIRoot : MonoBehaviour
+/// <summary>
+/// Routes Iron Career battle UI bindings into BattleManager.
+/// Iron mode does not support party switching.
+/// Only handles binding overrides.
+/// </summary>
+public class IronBattleUIRoot : MonoBehaviour
 {
-    [Header("Iron HUD Root")]
-    [Tooltip("Root GameObject for the Iron battle HUD (usually: Panel_IronCareerEncounter/IronCareerBattle).")]
-    [SerializeField] private GameObject battleHudRoot;
+    [Header("Iron UI Bindings")]
+    [SerializeField] private BattleManager.BattleUIBindings ironBindings;
 
-    [Header("Iron HUD Components")]
-    [Tooltip("BattleFeedbackManager wired to IronCareerBattle UI.")]
+    [Header("Optional Iron Components (auto-find if null)")]
     [SerializeField] private BattleFeedbackManager ironFeedback;
-
-    [Tooltip("Optional: BattleTextBoxUI under IronCareerBattle (if you duplicated it).")]
     [SerializeField] private BattleTextBoxUI ironBattleTextBox;
 
-    [Tooltip("Optional: Bottom toggle under IronCareerBattle (if you duplicated it).")]
-    [SerializeField] private BattleSwitchToggle ironBottomToggle;
-
-    [Header("Auto-find (optional)")]
     [SerializeField] private bool autoFindInChildren = true;
 
     private void Awake()
     {
         if (!autoFindInChildren) return;
 
-        if (!battleHudRoot) battleHudRoot = gameObject;
+        if (!ironFeedback)
+            ironFeedback = GetComponentInChildren<BattleFeedbackManager>(true);
 
-        if (!ironFeedback) ironFeedback = GetComponentInChildren<BattleFeedbackManager>(includeInactive: true);
-        if (!ironBattleTextBox) ironBattleTextBox = GetComponentInChildren<BattleTextBoxUI>(includeInactive: true);
-        if (!ironBottomToggle) ironBottomToggle = GetComponentInChildren<BattleSwitchToggle>(includeInactive: true);
+        if (!ironBattleTextBox)
+            ironBattleTextBox = GetComponentInChildren<BattleTextBoxUI>(true);
     }
 
-    public void ShowBattleHud()
-    {
-        if (battleHudRoot) battleHudRoot.SetActive(true);
-    }
-
-    public void HideBattleHud()
-    {
-        if (battleHudRoot) battleHudRoot.SetActive(false);
-    }
-
-    /// <summary>
-    /// Routes BattleManager UI references to the Iron HUD.
-    /// Safe to call multiple times.
-    /// </summary>
     public void ApplyTo(BattleManager battle)
     {
         if (!battle) return;
-        battle.SetUIOverride(ironFeedback, ironBattleTextBox, ironBottomToggle);
+
+        battle.SetUIBindingsOverride(ironBindings);
+
+        // No bottom toggle override — Iron does not allow switching
+        battle.SetUIOverride(
+            ironFeedback,
+            ironBattleTextBox,
+            null
+        );
     }
 
-    /// <summary>
-    /// Restores BattleManager UI references back to what they were before Iron.
-    /// </summary>
     public void RestoreBattleManagerDefaults()
     {
         var battle = FindFirstObjectByType<BattleManager>();
         if (!battle) return;
+
+        battle.ClearUIBindingsOverride();
         battle.ClearUIOverride();
     }
 }

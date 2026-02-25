@@ -372,6 +372,12 @@ private int GetRarityWeight(TitleSO t)
 
     public void RequestEncounterTap()
     {
+        if (IronCareerRuntime.IsActive)
+        {
+            Debug.Log("[EncounterManager] Ignoring encounter tap while Iron is active.");
+            return;
+        }
+
         if (inBattle) return;
         StartEncounter(spendEnergy: true);
     }
@@ -380,6 +386,12 @@ private int GetRarityWeight(TitleSO t)
 
     void StartEncounter(bool spendEnergy)
     {
+        if (IronCareerRuntime.IsActive)
+        {
+            Debug.LogWarning("[EncounterManager] StartEncounter blocked during Iron.");
+            return;
+        }
+
         // Bundle A: Busy gate to prevent rapid-tap double starts.
         // Time-based so it auto-expires even if an early return happens.
         if (!BusyLock.TryEnter("EncounterStart", 0.35f))
@@ -567,6 +579,22 @@ private int GetRarityWeight(TitleSO t)
         _manualHirePending = false;
 
         battleManager.ConfigureForAuto(_autoResolveSnapshot);
+
+        // Safety: if we are NOT in Iron Career, make sure any Iron HUD override is cleared
+        // so regular battles always bind to the regular (yellow) HUD.
+        if (!IronCareerRuntime.IsActive)
+        {
+            var ironHud = FindFirstObjectByType<IronBattleUIRoot>(FindObjectsInactive.Include);
+            if (ironHud != null)
+                ironHud.RestoreBattleManagerDefaults();
+            else
+            {
+                // If no Iron HUD root exists in this scene, still ensure BattleManager isn't holding stale overrides.
+                battleManager.ClearUIBindingsOverride();
+                battleManager.ClearUIOverride();
+            }
+        }
+
         // Deterministic battle RNG: derive a per-battle seed from the active global seed
         // (daily/custom/session) + encounter serial + wild identifiers.
         // This makes battles reproducible for debugging and daily runs.
@@ -1180,6 +1208,20 @@ private int GetRarityWeight(TitleSO t)
         PostBattleSummaryManager.I?.NotifyBattleStart();
 
         _manualHirePending = false;
+
+        // Safety: ensure regular battles never inherit Iron HUD bindings.
+        if (!IronCareerRuntime.IsActive)
+        {
+            var ironHud = FindFirstObjectByType<IronBattleUIRoot>(FindObjectsInactive.Include);
+            if (ironHud != null)
+                ironHud.RestoreBattleManagerDefaults();
+            else
+            {
+                battleManager.ClearUIBindingsOverride();
+                battleManager.ClearUIOverride();
+            }
+        }
+
         battleManager.Begin(wild, wildLevel, OnBattleEnded);
         return true;
     }

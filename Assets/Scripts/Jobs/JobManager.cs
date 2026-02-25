@@ -73,6 +73,18 @@ public sealed class JobManager : MonoBehaviour
 {
     public static JobManager I;
 
+    // -------------------------------------------------------------------------
+    // Iron Career safety
+    // -------------------------------------------------------------------------
+    // In Iron, we still allow offline/online job simulation to run so resources
+    // accrue normally, but we must NOT broadcast global UI events that can wake
+    // non-Iron panels/systems.
+    private void FireJobsChanged()
+    {
+        if (IronCareerRuntime.IsActive) return;
+        GameEvents.OnJobsChanged?.Invoke();
+    }
+
     // ---------------------------- Config / Inspector ----------------------------
     [Header("Config")]
     [SerializeField] private List<JobSiteSO> jobSites = new();
@@ -223,7 +235,7 @@ public sealed class JobManager : MonoBehaviour
     private void OnJobModsChanged()
     {
         RefreshAllJobSiteViewsInScene();
-        GameEvents.OnJobsChanged?.Invoke();
+        FireJobsChanged();
     }
 
     private void HandleMonsterEvolved(string newDefId)
@@ -232,7 +244,7 @@ public sealed class JobManager : MonoBehaviour
         // Also cleans invalid keys.
         SanitizeAndRefreshWorkersFromSaveKeys(saveIfChanged: true);
         RefreshAllJobSiteViewsInScene();
-        GameEvents.OnJobsChanged?.Invoke();
+        FireJobsChanged();
     }
 
     private void HandleSaveReloaded()
@@ -249,7 +261,7 @@ public sealed class JobManager : MonoBehaviour
         if (lockSitesUntilEligible) RecalculateUnlocksFromSeenTypes();
 
         RefreshAllJobSiteViewsInScene();
-        GameEvents.OnJobsChanged?.Invoke();
+        FireJobsChanged();
     }
 
     // ---------------------------- Initialization ----------------------------
@@ -510,7 +522,7 @@ private static float AverageWorkingSlotFatigue(JobSiteState s)
                 s.slotFatigue01[i] = 1f;
 
                 SaveAssignmentsToSave();
-                GameEvents.OnJobsChanged?.Invoke();
+                FireJobsChanged();
             }
         }
     }
@@ -525,7 +537,7 @@ private static float AverageWorkingSlotFatigue(JobSiteState s)
         if (s == null) return;
         s.autoCollectEnabled = enabled;
         SaveRuntimeToSave();
-        GameEvents.OnJobsChanged?.Invoke();
+        FireJobsChanged();
     }
 
     /// <summary>
@@ -690,7 +702,7 @@ private static float AverageWorkingSlotFatigue(JobSiteState s)
         TouchAssignedUnix(GetWorkerKey(wr));
         SaveAssignmentsToSave();
         SaveRuntimeToSave();
-        GameEvents.OnJobsChanged?.Invoke();
+        FireJobsChanged();
         return true;
     }
 
@@ -718,7 +730,7 @@ private static float AverageWorkingSlotFatigue(JobSiteState s)
         TouchAssignedUnix(GetWorkerKey(wr));
         SaveAssignmentsToSave();
         SaveRuntimeToSave();
-        GameEvents.OnJobsChanged?.Invoke();
+        FireJobsChanged();
         return true;
     }
 
@@ -738,7 +750,7 @@ private static float AverageWorkingSlotFatigue(JobSiteState s)
 
             SaveAssignmentsToSave();
             SaveRuntimeToSave();
-            GameEvents.OnJobsChanged?.Invoke();
+            FireJobsChanged();
             return true;
         }
         return false;
@@ -761,7 +773,7 @@ private static float AverageWorkingSlotFatigue(JobSiteState s)
 
         SaveAssignmentsToSave();
         SaveRuntimeToSave();
-        GameEvents.OnJobsChanged?.Invoke();
+        FireJobsChanged();
     }
 
     public int Collect(JobType job)
@@ -808,7 +820,7 @@ private static float AverageWorkingSlotFatigue(JobSiteState s)
 
         SaveAssignmentsToSave();
         SaveRuntimeToSave();
-        GameEvents.OnJobsChanged?.Invoke();
+        FireJobsChanged();
         return whole;
     }
 
@@ -929,7 +941,7 @@ private static float AverageWorkingSlotFatigue(JobSiteState s)
             }
         }
 
-        GameEvents.OnJobsChanged?.Invoke();
+        FireJobsChanged();
     }
 
     public void SaveProgressToSave()
@@ -1081,7 +1093,7 @@ private static float AverageWorkingSlotFatigue(JobSiteState s)
             if (fallbackChanged)
             {
                 RefreshAllJobSiteViewsInScene();
-                GameEvents.OnJobsChanged?.Invoke();
+                FireJobsChanged();
             }
         }
 
@@ -1147,7 +1159,7 @@ private static float AverageWorkingSlotFatigue(JobSiteState s)
         if (changed)
         {
             RefreshAllJobSiteViewsInScene();
-            GameEvents.OnJobsChanged?.Invoke();
+            FireJobsChanged();
         }
     }
 
@@ -1164,7 +1176,7 @@ private static float AverageWorkingSlotFatigue(JobSiteState s)
     {
         ResolveOfflineIfAny();
         RefreshAllJobSiteViewsInScene();
-        GameEvents.OnJobsChanged?.Invoke();
+        FireJobsChanged();
     }
 
     private void ResolveOfflineIfAny()
@@ -1701,7 +1713,7 @@ private static float AverageWorkingSlotFatigue(JobSiteState s)
         if (changed)
         {
             RefreshAllJobSiteViewsInScene();
-            GameEvents.OnJobsChanged?.Invoke();
+            FireJobsChanged();
         }
 
         return true;
@@ -1755,7 +1767,7 @@ private static float AverageWorkingSlotFatigue(JobSiteState s)
             SaveManager.Save();
 
         RefreshAllJobSiteViewsInScene();
-        GameEvents.OnJobsChanged?.Invoke();
+        FireJobsChanged();
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -1778,7 +1790,7 @@ private static float AverageWorkingSlotFatigue(JobSiteState s)
 
         SaveRuntimeToSave();
         RefreshAllJobSiteViewsInScene();
-        GameEvents.OnJobsChanged?.Invoke();
+        FireJobsChanged();
         return cleared;
     }
 
@@ -1805,7 +1817,7 @@ private static float AverageWorkingSlotFatigue(JobSiteState s)
 
         SaveRuntimeToSave();
         RefreshAllJobSiteViewsInScene();
-        GameEvents.OnJobsChanged?.Invoke();
+        FireJobsChanged();
         return cleared;
     }
 
@@ -1842,7 +1854,7 @@ private static float AverageWorkingSlotFatigue(JobSiteState s)
         });
 
         RefreshAllJobSiteViewsInScene();
-        GameEvents.OnJobsChanged?.Invoke();
+        FireJobsChanged();
     }
 
     public int GetTemporaryStorageBonus(JobType job)

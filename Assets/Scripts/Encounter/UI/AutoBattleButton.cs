@@ -66,6 +66,8 @@ public class AutoBattleButton : MonoBehaviour,
 
     public void OnPointerUp(PointerEventData eventData)
     {
+        if (IronCareerRuntime.IsActive) return;
+
         if (!pressed) return;
 
         if (!firedHold)
