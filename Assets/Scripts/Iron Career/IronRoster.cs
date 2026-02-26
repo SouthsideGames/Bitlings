@@ -102,6 +102,40 @@ public sealed class IronRoster
         return true;
     }
 
+    public bool CanEvolveAny()
+    {
+        for (int i = 0; i < _state.party.Count; i++)
+        {
+            var m = _state.party[i];
+            if (m == null || m.def == null) continue;
+            if (m.def.evolutionForm == null) continue;
+            if (m.def.evolutionLevel > 0 && m.level < m.def.evolutionLevel) continue;
+            return true;
+        }
+        return false;
+    }
+
+    public bool TryForceEvolveAtIndex(int idx)
+    {
+        if (_state.party.Count <= 0) return false;
+        idx = Mathf.Clamp(idx, 0, _state.party.Count - 1);
+
+        var m = _state.party[idx];
+        if (m == null || m.def == null) return false;
+        if (m.def.evolutionForm == null) return false;
+        if (m.def.evolutionLevel > 0 && m.level < m.def.evolutionLevel) return false;
+
+        var evolved = m.def.evolutionForm;
+        float hp01 = m.Hp01;
+
+        m.def = evolved;
+        m.maxHp = Mathf.Max(1f, BattleCalc.CalcHP(m.def, Mathf.Max(1, m.level)));
+        m.hp = Mathf.Clamp(m.maxHp * hp01, 0f, m.maxHp);
+
+        _state.party[idx] = m;
+        return true;
+    }
+
     public void EnsureHpInitialized(IronMonster m)
     {
         if (m == null) return;

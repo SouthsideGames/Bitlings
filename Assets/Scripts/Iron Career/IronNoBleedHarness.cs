@@ -14,8 +14,11 @@ using UnityEngine;
 public static class IronNoBleedHarness
 {
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
+    public static bool BreakOnViolation { get; set; } = true;
+
     private static string _baselineHash;
     private static string _baselineJson;
+    private static string _lastReportedHash;
     private static bool _armed;
 
     private const int JsonPreviewChars = 1200;
@@ -53,6 +56,7 @@ public static class IronNoBleedHarness
         _armed = false;
         _baselineHash = null;
         _baselineJson = null;
+        _lastReportedHash = null;
     }
 
     public static void CaptureBaseline(string context)
@@ -62,7 +66,7 @@ public static class IronNoBleedHarness
         var snap = BuildSnapshotSanitized();
         _baselineJson = JsonUtility.ToJson(snap);
         _baselineHash = Hash(_baselineJson);
-        Debug.Log($"[IronNoBleedHarness] Baseline captured ({context}) hash={_baselineHash}");
+        _lastReportedHash = null;
     }
 
     public static void AssertUnchanged(string context)
@@ -79,19 +83,27 @@ public static class IronNoBleedHarness
         string json = JsonUtility.ToJson(snap);
         string h = Hash(json);
 
-        if (!string.Equals(h, _baselineHash, StringComparison.Ordinal))
+        if (h == _baselineHash)
         {
-            Debug.LogError(
-                $"[IronNoBleedHarness] NO-BLEED VIOLATION ({context}) baseline={_baselineHash} now={h}\n" +
-                $"Baseline JSON (preview):\n{Preview(_baselineJson)}\n\n" +
-                $"Current JSON (preview):\n{Preview(json)}"
-            );
+            _lastReportedHash = null;
+            return;
         }
-        else
-        {
-            // Keep this as Log (not Warning) so you can leave it on while iterating.
-            Debug.Log($"[IronNoBleedHarness] OK ({context}) hash={h}");
-        }
+
+        if (_lastReportedHash == h)
+            return;
+
+        _lastReportedHash = h;
+
+        Debug.LogError(
+            "[IronNoBleedHarness] SAVE BLEED DETECTED during Iron Career. " +
+            $"context='{context}' baselineHash={_baselineHash} currentHash={h}\n" +
+            $"BaselinePreview: {Preview(_baselineJson)}\n" +
+            $"CurrentPreview: {Preview(json)}");
+
+#if UNITY_EDITOR
+    if (BreakOnViolation)
+        Debug.Break();
+#endif
     }
 
     /// <summary>

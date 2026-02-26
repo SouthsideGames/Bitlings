@@ -3,6 +3,11 @@ using System.Collections.Generic;
 using System;
 using Random = UnityEngine.Random;
 
+// ─────────────────────────────────────────────────────────────
+// EncounterManager.FlyersCapture
+// Flyer/luck/shiny modifiers, weighted wild selection, and capture flow.
+// ─────────────────────────────────────────────────────────────
+
 public partial class EncounterManager
 {
     // ================= LURES / LUCK / SHINY / CAPTURE BAND =====================

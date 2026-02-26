@@ -43,7 +43,11 @@ public sealed class IronCareerHirePanelUI : MonoBehaviour
         if (levelLabel) levelLabel.text = offer != null ? $"Lv {Mathf.Max(1, offer.level)}" : string.Empty;
         if (titleLabel) titleLabel.text = (offer != null && offer.lockedTitle) ? offer.lockedTitle.displayName : "";
 
-        if (skipButton) skipButton.interactable = skipAllowed;
+        if (skipButton)
+        {
+            skipButton.interactable = skipAllowed;
+            skipButton.gameObject.SetActive(skipAllowed);
+        }
         if (skipLabel) skipLabel.text = skipAllowed ? "Skip" : "Skip (Hardcore)";
     }
 }

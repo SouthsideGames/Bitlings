@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
+using System.Linq;
 
 /// <summary>
 /// Deterministic wild selection + level scaling for Iron Career.
@@ -21,27 +22,58 @@ public sealed class IronEncounterService
 
     public IronMonster RollNextWild()
     {
-        // Cache so battle + hire offer share the same wild.
-        if (_state.lastRolledWild != null && _state.lastRolledWild.def != null)
-            return _state.lastRolledWild;
+        if (_state == null || _rng == null || _titleRoller == null)
+            return null;
 
-        var def = PickWildDefWeighted();
-        if (def == null)
+        // Grab the MonsterLibrarySO that exists in memory (ScriptableObject)
+        var libs = Resources.FindObjectsOfTypeAll<MonsterLibrarySO>();
+        MonsterLibrarySO library = (libs != null && libs.Length > 0) ? libs[0] : null;
+
+        // AllAvailable is a PROPERTY IEnumerable<MonsterDataSO> (NOT a method)
+        List<MonsterDataSO> all = (library != null && library.AllAvailable != null)
+            ? library.AllAvailable.Where(m => m != null).ToList()
+            : new List<MonsterDataSO>();
+
+        if (all.Count == 0)
         {
-            Debug.LogError("[IronEncounterService] No wild candidates available.");
+            Debug.LogError("[IronEncounterService] MonsterLibrary missing or AllAvailable is empty.");
             return null;
         }
 
-        int lvl = ComputeWildLevel(_state.wins, _rng);
-        var title = _titleRoller != null ? _titleRoller.RollLockedTitle(def, lvl, _rng, isWild: true) : null;
+        // Exclude current party defs so wild isn't the same as your starter unless necessary
+        var partyDefs = new HashSet<MonsterDataSO>();
+        if (_state.party != null)
+        {
+            foreach (var m in _state.party)
+                if (m != null && m.def != null)
+                    partyDefs.Add(m.def);
+        }
 
-        var m = new IronMonster(def, lvl, curHp: -1f, locked: title);
-        // if curHp < 0 -> auto-fill to max
-        m.maxHp = Mathf.Max(1f, BattleCalc.CalcHP(def, lvl));
-        m.hp = m.maxHp;
+        var candidates = new List<MonsterDataSO>();
+        for (int i = 0; i < all.Count; i++)
+        {
+            var def = all[i];
+            if (def == null) continue;
+            if (partyDefs.Contains(def)) continue;
+            candidates.Add(def);
+        }
 
-        _state.lastRolledWild = m;
-        return m;
+        if (candidates.Count == 0)
+            candidates = all; // fallback if everything is excluded
+
+        int index = _rng.NextInt(0, candidates.Count);
+        var chosen = candidates[index];
+
+        int level = ComputeWildLevel(_state.wins, _rng);
+
+        var title = _titleRoller.RollLockedTitle(chosen, level, _rng, isWild: true);
+        var wild = new IronMonster(chosen, level, curHp: -1f, locked: title);
+
+        // ensure full hp snapshot
+        wild.maxHp = Mathf.Max(1f, BattleCalc.CalcHP(chosen, level));
+        wild.hp = wild.maxHp;
+
+        return wild;
     }
 
     public void ClearWildCache()
@@ -49,56 +81,14 @@ public sealed class IronEncounterService
         _state.lastRolledWild = null;
     }
 
-    private MonsterDataSO PickWildDefWeighted()
-    {
-        // Prefer MonsterCatalog list.
-        var all = MonsterLibraryLocator.AllMonsters;
-        if (all == null || all.Count == 0) return null;
-
-        // Build weighted sum. We keep allocations minimal by two passes.
-        int total = 0;
-        for (int i = 0; i < all.Count; i++)
-        {
-            var d = all[i];
-            if (d == null) continue;
-            if (d.uncatchable) continue; // Iron battles are hire-driven; uncatchable doesn't belong.
-            if (d.isBoss) continue;
-            int w = (int)Mathf.Max(0, d.spawnWeight);
-            total += w;
-        }
-
-        if (total <= 0) return null;
-
-        int roll = _rng.NextInt(0, total);
-        for (int i = 0; i < all.Count; i++)
-        {
-            var d = all[i];
-            if (d == null) continue;
-            if (d.uncatchable) continue;
-            if (d.isBoss) continue;
-            int w = (int)Mathf.Max(0, d.spawnWeight);
-            if (w <= 0) continue;
-            roll -= w;
-            if (roll < 0)
-                return d;
-        }
-
-        // Fallback shouldn't happen.
-        return all[0];
-    }
-
     public static int ComputeWildLevel(int wins, IronRngStream rng)
     {
         wins = Mathf.Max(0, wins);
 
-        // base = 1 + wins
         int lvl = 1 + wins;
-
-        // variance -1..+1 clamp >= 1
         int var = rng != null ? rng.NextInt(-1, 2) : 0;
         lvl += var;
 
-        // milestone +1 on wins % 3 == 0 (but only after you have some wins)
         if (wins > 0 && (wins % 3) == 0)
             lvl += 1;
 

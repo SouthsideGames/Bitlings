@@ -1,6 +1,11 @@
 using UnityEngine;
 using System.Collections;
 
+// ─────────────────────────────────────────────────────────────
+// EncounterManager.Auto
+// Foreground auto-loop execution and auto-stop/auto-pause conditions.
+// ─────────────────────────────────────────────────────────────
+
 public partial class EncounterManager
 {
 

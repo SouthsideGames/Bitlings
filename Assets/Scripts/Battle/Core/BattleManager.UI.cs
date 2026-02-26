@@ -371,12 +371,12 @@ private void UpdateWildInfoUI()
             out _ 
         );
 
-        int tempHPFlat  = BattleTempBuffs.I ? BattleTempBuffs.I.GetPlayerHPBonus() : 0;
-        int tempATKFlat = BattleTempBuffs.I ? BattleTempBuffs.I.GetPlayerAtkBonus() : 0;
-        int tempDEFFlat = BattleTempBuffs.I ? BattleTempBuffs.I.GetPlayerDefenseBonus() : 0;
-        int tempSPDFlat = BattleTempBuffs.I ? BattleTempBuffs.I.GetPlayerSpeedFlatBonus() : 0;
+        int tempHPFlat  = (_rules.allowBoosters && BattleTempBuffs.I) ? BattleTempBuffs.I.GetPlayerHPBonus() : 0;
+        int tempATKFlat = (_rules.allowBoosters && BattleTempBuffs.I) ? BattleTempBuffs.I.GetPlayerAtkBonus() : 0;
+        int tempDEFFlat = (_rules.allowBoosters && BattleTempBuffs.I) ? BattleTempBuffs.I.GetPlayerDefenseBonus() : 0;
+        int tempSPDFlat = (_rules.allowBoosters && BattleTempBuffs.I) ? BattleTempBuffs.I.GetPlayerSpeedFlatBonus() : 0;
         // Turn-based boosters (BattleBoosterController) also contribute flat bonuses.
-        var boosterCtrl = BattleBoosterController.I;
+        var boosterCtrl = _rules.allowBoosters ? BattleBoosterController.I : null;
         if (boosterCtrl != null)
         {
             tempATKFlat += Mathf.Max(0, boosterCtrl.GetAttackBonus());
@@ -494,7 +494,7 @@ private void UpdateWildInfoUI()
         if (playerSPDText)
             SetStatRowColorAndText(playerSPDText, "SPD", spdBaselineForColor, spdCombinedFinal, minFinal: 1);
 
-        bool resistOn = BattleTempBuffs.I && BattleTempBuffs.I.IsTypeResistActive();
+        bool resistOn = _rules.allowBoosters && BattleTempBuffs.I && BattleTempBuffs.I.IsTypeResistActive();
         if (resistOn && playerRarityText) playerRarityText.text += " [Resist]";
     }
 
@@ -512,7 +512,7 @@ private void UpdateWildInfoUI()
         // Battle UI should reflect that preference.
         bool isShiny = false;
 
-        if (def != null && !string.IsNullOrEmpty(def.id))
+        if (_rules.allowPreferredVariants && def != null && !string.IsNullOrEmpty(def.id))
         {
             var pref = MonsterVariantPreference.GetPreferredOwned(def.id);
             if (pref != null)

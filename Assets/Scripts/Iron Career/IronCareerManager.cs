@@ -26,7 +26,6 @@ public sealed class IronCareerManager : MonoBehaviour, IronBattleBridge.IIronBat
     [SerializeField] private IronCareerForcedEvolutionUI forcedEvolvePanel;
     [SerializeField] private IronCareerRestPanelUI restPanel;
     [SerializeField] private IronCareerGameOverPanelUI gameOverPanel;
-    [SerializeField] private IronCareerRulesPopupUI rulesPopup;
 
     [Header("Mode")]
     [SerializeField] private Mode mode = Mode.Standard;
@@ -37,11 +36,6 @@ public sealed class IronCareerManager : MonoBehaviour, IronBattleBridge.IIronBat
     [Header("Debug Starter Party (Phase 2)")]
     [SerializeField] private List<MonsterDataSO> debugStarterParty = new List<MonsterDataSO>();
     [SerializeField] private List<int> debugStarterLevels = new List<int>();
-
-    [Header("Debug Wild Pool (Phase 2)")]
-    [SerializeField] private List<MonsterDataSO> debugWildPool = new List<MonsterDataSO>();
-    [SerializeField] private MonsterDataSO debugFallbackWild;
-    [SerializeField] private int debugFallbackWildLevel = 1;
 
 #if UNITY_EDITOR
     [Header("DEV ONLY")]
@@ -54,9 +48,26 @@ public sealed class IronCareerManager : MonoBehaviour, IronBattleBridge.IIronBat
     private IronTitleRoller _titleRoller;
     private IronEncounterService _encounters;
     private IronMonster _pendingHire;
-    private bool _forfeited;
+    private bool _pendingRotateAfterWin;
+    private bool _finalizedRunStats;
+
+    private void ResolveBattleRefsIfNeeded()
+    {
+        if (!battle) battle = FindFirstObjectByType<BattleManager>(FindObjectsInactive.Include);
+        if (!bridge) bridge = FindFirstObjectByType<IronBattleBridge>(FindObjectsInactive.Include);
+    }
 
     public int Wins => Mathf.Max(0, _state.wins);
+
+    // Back-compat for UI panels that read mode directly.
+    public bool IsHardcoreMode => _state.mode == IronCareerRunState.IronCareerMode.Hardcore;
+
+    // Back-compat for post/check panels that preview forced evolution availability.
+    public bool HasForcedEvolutionAvailable()
+    {
+        if (!_state.runActive || _roster == null) return false;
+        return _roster.CanEvolveAny();
+    }
 
     public bool IsUnlocked()
     {
@@ -153,7 +164,8 @@ public sealed class IronCareerManager : MonoBehaviour, IronBattleBridge.IIronBat
         }
 
         _state.wins++;
-        _roster.RotateActiveAfterWin();
+        ApplyPartyAutoLevelOnWin();
+        _pendingRotateAfterWin = true;
 
         _pendingHire = _state.lastRolledWild;
 
@@ -162,8 +174,7 @@ public sealed class IronCareerManager : MonoBehaviour, IronBattleBridge.IIronBat
 
     private void Awake()
     {
-        if (!battle) battle = FindFirstObjectByType<BattleManager>();
-        if (!bridge) bridge = FindFirstObjectByType<IronBattleBridge>();
+        ResolveBattleRefsIfNeeded();
         if (!ironEncounterUI) ironEncounterUI = FindFirstObjectByType<IronCareerEncounterPanelUI>(FindObjectsInactive.Include);
         if (!ironBattleUI) ironBattleUI = FindFirstObjectByType<IronBattleUIRoot>(FindObjectsInactive.Include);
 
@@ -174,7 +185,6 @@ public sealed class IronCareerManager : MonoBehaviour, IronBattleBridge.IIronBat
         if (!forcedEvolvePanel) forcedEvolvePanel = FindFirstObjectByType<IronCareerForcedEvolutionUI>(FindObjectsInactive.Include);
         if (!restPanel) restPanel = FindFirstObjectByType<IronCareerRestPanelUI>(FindObjectsInactive.Include);
         if (!gameOverPanel) gameOverPanel = FindFirstObjectByType<IronCareerGameOverPanelUI>(FindObjectsInactive.Include);
-        if (!rulesPopup) rulesPopup = FindFirstObjectByType<IronCareerRulesPopupUI>(FindObjectsInactive.Include);
     }
 
     private void OnApplicationPause(bool pauseStatus)
@@ -225,7 +235,10 @@ public sealed class IronCareerManager : MonoBehaviour, IronBattleBridge.IIronBat
     private void StartNewRun_Internal(IronCareerRunState.IronCareerMode m, List<MonsterDataSO> starterDefs)
     {
         IronCareerRuntime.Enter();
-        _forfeited = false;
+        _pendingRotateAfterWin = false;
+        _finalizedRunStats = false;
+
+        Debug.Log($"[IronCareerManager] StartNewRun_Internal: mode={m} starterDefs={(starterDefs != null ? starterDefs.Count : -1)} seed={seed}");
 
         if (seed == 0) seed = UnityEngine.Random.Range(1, int.MaxValue);
 
@@ -240,6 +253,24 @@ public sealed class IronCareerManager : MonoBehaviour, IronBattleBridge.IIronBat
         UIManager.I?.Show(PanelId.IronCareerEncounter);
 
         BuildStarterParty(starterDefs);
+
+        // DEBUG: dump starter party after build so we can see why the roster might be empty/invalid.
+        try
+        {
+            Debug.Log($"[IronCareerManager] Starter party built: count={_state.party?.Count ?? -1}");
+            if (_state.party != null)
+            {
+                for (int i = 0; i < _state.party.Count; i++)
+                {
+                    var pm = _state.party[i];
+                    Debug.Log($"[IronCareerManager] Party[{i}] def={(pm != null && pm.def != null ? pm.def.name : "NULL")} lvl={(pm != null ? pm.level : -1)} hp={(pm != null ? pm.hp : -1f)} maxHp={(pm != null ? pm.maxHp : -1f)} dead={(pm != null && pm.IsDead)}");
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Debug.LogWarning($"[IronCareerManager] Starter party dump failed: {ex.Message}");
+        }
         if (_roster.IsPartyEmpty)
         {
             Debug.LogError("[IronCareerManager] No starter party configured.");
@@ -286,6 +317,10 @@ public sealed class IronCareerManager : MonoBehaviour, IronBattleBridge.IIronBat
         var title = _titleRoller != null ? _titleRoller.RollLockedTitle(def, lvl, _rng, isWild: false) : null;
         var m = new IronMonster(def, lvl, curHp: -1f, locked: title);
         _roster.EnsureHpInitialized(m);
+
+        // FORCE full HP for starters
+        m.hp = m.maxHp;
+
         _state.party.Add(m);
     }
 
@@ -317,7 +352,17 @@ public sealed class IronCareerManager : MonoBehaviour, IronBattleBridge.IIronBat
         if (_roster.IsFull)
         {
             ironEncounterUI?.ShowReplace(immediate: true);
-            if (replacePanel) replacePanel.Bind(_roster.Party);
+            if (replacePanel)
+            {
+                // Pass the offered hire so the replace screen can show the incoming recruit.
+                replacePanel.Bind(_roster.Party, _pendingHire, hardcoreMode: IsHardcore);
+            }
+            else
+            {
+                Debug.LogWarning("[IronCareerManager] Replace panel missing; defaulting replace target to active slot.");
+                _roster.ReplaceMember(_roster.ActiveIndex, _pendingHire);
+                FinishHireStepAndContinue();
+            }
             return;
         }
 
@@ -328,7 +373,11 @@ public sealed class IronCareerManager : MonoBehaviour, IronBattleBridge.IIronBat
     public void OnHireSkipped()
     {
         if (!_state.runActive) return;
-        if (IsHardcore) return;
+        if (IsHardcore)
+        {
+            ShowHire();
+            return;
+        }
         FinishHireStepAndContinue();
     }
 
@@ -339,6 +388,17 @@ public sealed class IronCareerManager : MonoBehaviour, IronBattleBridge.IIronBat
 
         _roster.ReplaceMember(indexToReplace, _pendingHire);
         FinishHireStepAndContinue();
+    }
+
+    /// <summary>
+    /// Standard-mode only: return to the Hire panel without making a replacement.
+    /// Hardcore mode should never allow cancel.
+    /// </summary>
+    public void OnReplaceCancelled()
+    {
+        if (!_state.runActive) return;
+        if (IsHardcore) return;
+        ShowHire();
     }
 
     private void FinishHireStepAndContinue()
@@ -353,41 +413,47 @@ public sealed class IronCareerManager : MonoBehaviour, IronBattleBridge.IIronBat
     private void ShowPost()
     {
         ironEncounterUI?.ShowPost(immediate: true);
-        postPanel?.Bind(_roster.Party, _state.carryStatus);
+        postPanel?.Bind(_roster.Party, _state.carryStatus, _state.wins);
     }
 
     public void OnPostContinue()
     {
+        if (_pendingHire != null && _pendingHire.def != null)
+        {
+            ShowHireOrReplace();
+            return;
+        }
+
         ironEncounterUI?.HideAll(immediate: true);
         ShowForcedEvolveStep();
     }
 
     private void ShowForcedEvolveStep()
     {
-        string before = null;
-        string after = null;
         bool evolved = false;
+        int evolveCount = 0;
 
-        if (_roster != null && !_roster.IsPartyEmpty)
+        if (_roster != null && !_roster.IsPartyEmpty && _state.party != null)
         {
-            int idx = _roster.ActiveIndex;
-            if (idx >= 0 && idx < _state.party.Count)
-                before = _state.party[idx].def ? _state.party[idx].def.displayName : null;
-
-            evolved = _roster.TryForceEvolveActive();
-
-            if (idx >= 0 && idx < _state.party.Count)
-                after = _state.party[idx].def ? _state.party[idx].def.displayName : null;
+            for (int i = 0; i < _state.party.Count; i++)
+            {
+                if (_roster.TryForceEvolveAtIndex(i))
+                {
+                    evolved = true;
+                    evolveCount++;
+                }
+            }
         }
 
         ironEncounterUI?.ShowForcedEvolve(immediate: true);
-        forcedEvolvePanel?.Bind(evolved, before ?? "", after ?? "");
+        forcedEvolvePanel?.Bind(evolved, evolveCount);
     }
 
     public void OnForcedEvolveContinue()
     {
         if ((_state.wins % 3) == 0)
         {
+            restPanel?.Bind(_roster != null ? _roster.Party : null, _roster != null ? _roster.ActiveIndex : 0);
             ironEncounterUI?.ShowRest(immediate: true);
             return;
         }
@@ -414,26 +480,25 @@ public sealed class IronCareerManager : MonoBehaviour, IronBattleBridge.IIronBat
         BeginNextBattle();
     }
 
-    public void OnRestBuff()
+    public void OnRestBuffAt(int targetIndex)
     {
         if (_roster == null || _roster.IsPartyEmpty) return;
 
-        int tries = 0;
-        while (tries++ < 8)
+        targetIndex = Mathf.Clamp(targetIndex, 0, _state.party.Count - 1);
+        var m = _state.party[targetIndex];
+        if (m == null || m.def == null || m.IsDead)
         {
-            int idx = _rng != null ? _rng.NextInt(0, _state.party.Count) : UnityEngine.Random.Range(0, _state.party.Count);
-            var m = _state.party[idx];
-            if (m == null || m.def == null || m.IsDead) continue;
-
-            m.level = Mathf.Min(m.def.maxLevel > 0 ? m.def.maxLevel : 99, Mathf.Max(1, m.level + 1));
-
-            float hp01 = m.Hp01;
-            m.maxHp = Mathf.Max(1f, BattleCalc.CalcHP(m.def, m.level));
-            m.hp = Mathf.Clamp(m.maxHp * hp01, 0f, m.maxHp);
-
-            _state.party[idx] = m;
-            break;
+            ironEncounterUI?.ShowBattleOnly(immediate: true);
+            BeginNextBattle();
+            return;
         }
+
+        m.level = Mathf.Min(m.def.maxLevel > 0 ? m.def.maxLevel : 99, Mathf.Max(1, m.level + 1));
+
+        float hp01 = m.Hp01;
+        m.maxHp = Mathf.Max(1f, BattleCalc.CalcHP(m.def, m.level));
+        m.hp = Mathf.Clamp(m.maxHp * hp01, 0f, m.maxHp);
+        _state.party[targetIndex] = m;
 
         ironEncounterUI?.ShowBattleOnly(immediate: true);
         BeginNextBattle();
@@ -444,6 +509,14 @@ public sealed class IronCareerManager : MonoBehaviour, IronBattleBridge.IIronBat
         if (!_state.runActive) return;
         if (_roster == null || _roster.IsPartyEmpty) { ShowGameOver(forfeit: false); return; }
 
+        if (_pendingRotateAfterWin)
+        {
+            _roster.RotateActiveAfterWin();
+            _pendingRotateAfterWin = false;
+        }
+
+        ResolveBattleRefsIfNeeded();
+
         if (!battle || !bridge)
         {
             Debug.LogError("[IronCareerManager] Missing BattleManager or IronBattleBridge reference.");
@@ -453,7 +526,25 @@ public sealed class IronCareerManager : MonoBehaviour, IronBattleBridge.IIronBat
         UIManager.I?.Show(PanelId.IronCareerEncounter);
 
         ironEncounterUI?.ShowBattleOnly(immediate: true);
+
         ironBattleUI?.ApplyTo(battle);
+
+        // DEBUG: prove what we are about to inject.
+        try
+        {
+            var p = GetPartyForNextBattle();
+            var w = GetWildForNextBattle();
+            Debug.Log($"[IronCareerManager] BeginNextBattle inject preview: party={p.Count} wild={(w != null && w.def != null ? w.def.name : "NULL")}");
+            for (int i = 0; i < p.Count; i++)
+            {
+                var c = p[i];
+                Debug.Log($"[IronCareerManager] InjectParty[{i}] def={(c.def != null ? c.def.name : "NULL")} lvl={c.level} hp={c.hp} cid={c.combatantId}");
+            }
+        }
+        catch (Exception ex)
+        {
+            Debug.LogWarning($"[IronCareerManager] Inject preview failed: {ex.Message}");
+        }
 
         bridge.SetWins(_state.wins);
         bridge.BeginIronBattle(battle, null);
@@ -470,26 +561,26 @@ public sealed class IronCareerManager : MonoBehaviour, IronBattleBridge.IIronBat
     public void ConfirmQuitForfeit()
     {
         if (!_state.runActive) return;
-        ironEncounterUI?.ShowRules(immediate: false); // if your panel UI uses ShowRules(false) to hide, change to HideRules()
+        ironEncounterUI?.HideRules(immediate: true);
         Forfeit("Quit confirmed");
     }
 
     public void CancelQuit()
     {
-        // If your panel UI has HideRules(), call it instead.
-        ironEncounterUI?.ShowRules(immediate: false);
+        ironEncounterUI?.HideRules(immediate: true);
     }
 
     private void Forfeit(string reason)
     {
         if (!_state.runActive) return;
         Debug.LogWarning($"[IronCareerManager] FORFEIT: {reason}");
-        _forfeited = true;
         ShowGameOver(forfeit: true);
     }
 
     private void ShowGameOver(bool forfeit)
     {
+        FinalizeRunStats(forfeit);
+
         _state.runActive = false;
 
         ironEncounterUI?.ShowGameOver(immediate: true);
@@ -501,6 +592,31 @@ public sealed class IronCareerManager : MonoBehaviour, IronBattleBridge.IIronBat
 
         UIManager.I?.Hide(PanelId.IronCareerEncounter);
         // Do not force-show Encounter; regular flow opens it when needed.
+    }
+
+    private void ApplyPartyAutoLevelOnWin()
+    {
+        if (_state.party == null) return;
+
+        for (int i = 0; i < _state.party.Count; i++)
+        {
+            var m = _state.party[i];
+            if (m == null || m.def == null || m.IsDead) continue;
+
+            int nextLevel = Mathf.Max(1, m.level + 1);
+            int maxLevel = (m.def.maxLevel > 0) ? m.def.maxLevel : 99;
+            m.level = Mathf.Min(maxLevel, nextLevel);
+            m.RecomputeMaxHpPreservePct();
+            _state.party[i] = m;
+        }
+    }
+
+    private void FinalizeRunStats(bool forfeited)
+    {
+        if (_finalizedRunStats) return;
+        _finalizedRunStats = true;
+
+        IronCareerStats.RecordRunEnd(_state.mode, _state.wins, forfeited);
     }
 
     public void ReturnToMenuFromGameOver()

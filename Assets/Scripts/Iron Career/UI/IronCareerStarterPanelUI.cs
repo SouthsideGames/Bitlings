@@ -563,7 +563,13 @@ public sealed class IronCareerStarterPanelUI : MonoBehaviour
 
     private void StartRun()
     {
-        if (!CanStart()) return;
+        bool canStart = CanStart();
+        string selectedName = (_offer != null && _selectedIndex >= 0 && _selectedIndex < _offer.Count && _offer[_selectedIndex] != null)
+            ? _offer[_selectedIndex].name
+            : "NULL";
+        Debug.Log($"[IronCareerStarterPanelUI] StartRun clicked: canStart={canStart} spinning={_spinning} selectedIndex={_selectedIndex} offerCount={(_offer != null ? _offer.Count : -1)} selected={selectedName} standardOn={(standardToggle && standardToggle.isOn)} hardcoreOn={(hardcoreToggle && hardcoreToggle.isOn)}");
+
+        if (!canStart) return;
 
         bool hardcore = hardcoreToggle && hardcoreToggle.isOn;
 

@@ -122,7 +122,9 @@ public sealed class IronEventGuard : MonoBehaviour
 
     private void OnBoostersChanged()
     {
-        if (forbidBoosters) Violation(nameof(GameEvents.OnBoostersChanged));
+        // NOTE: Battle turn loop broadcasts this for HUD refresh.
+        // It does not represent a persistent/meta booster change, so we allow it in Iron.
+        // (We still guard real persistence via Save writes and other forbidden events.)
     }
 
     private void OnEnergyChanged()

@@ -2,6 +2,11 @@ using System;
 using UnityEngine;
 using UnityEngine.UI;
 
+// ─────────────────────────────────────────────────────────────
+// BattleManager.Backgrounds
+// Background assignment, transitions, and encounter-scene visuals.
+// ─────────────────────────────────────────────────────────────
+
 public partial class BattleManager : MonoBehaviour
 {
     [Serializable]
@@ -14,7 +19,6 @@ public partial class BattleManager : MonoBehaviour
 
         [Tooltip("Nighttime sprite pool for this type.")]
         public Sprite[] nightSprites;
-
     }
 
     private enum TimeOfDayOverride
@@ -56,6 +60,10 @@ public partial class BattleManager : MonoBehaviour
     [Tooltip("If true, disables background Images when no sprite can be resolved.")]
     [SerializeField] private bool disableImagesWhenMissing = true;
 
+    private bool _backgroundDefaultsCaptured;
+    private Image _defaultPlayerBackground;
+    private Image _defaultWildBackground;
+
     /// <summary>
     /// Applies the battle background based on the current wild monster type.
     /// Safe to call even if backgrounds are not wired.
@@ -74,9 +82,32 @@ public partial class BattleManager : MonoBehaviour
         TryApplyBattleBackgroundFromWild();
     }
 
+    public void SetBattleBackgroundOverride(Image overridePlayerBackground, Image overrideWildBackground)
+    {
+        if (!_backgroundDefaultsCaptured)
+        {
+            _backgroundDefaultsCaptured = true;
+            _defaultPlayerBackground = playerBackground;
+            _defaultWildBackground = wildBackground;
+        }
+
+        if (overridePlayerBackground) playerBackground = overridePlayerBackground;
+        if (overrideWildBackground) wildBackground = overrideWildBackground;
+
+        TryApplyBattleBackgroundFromWild();
+    }
+
+    public void ClearBattleBackgroundOverride()
+    {
+        if (!_backgroundDefaultsCaptured) return;
+
+        playerBackground = _defaultPlayerBackground;
+        wildBackground = _defaultWildBackground;
+        TryApplyBattleBackgroundFromWild();
+    }
+
     private void ApplyBattleBackground(MonsterType wildType)
     {
-        // Not wired? Nothing to do.
         if (!playerBackground && !wildBackground) return;
 
         Sprite s = ResolveBackgroundSprite(wildType);
@@ -120,7 +151,6 @@ public partial class BattleManager : MonoBehaviour
         if (!randomizeWithinType)
             return pool[0];
 
-        // Deterministic selection (seeded) so the same encounter + seed yields the same background.
         if (useDeterministicBattleRng)
             EnsureBattleRngInitialized();
 
@@ -131,24 +161,20 @@ public partial class BattleManager : MonoBehaviour
 
     private Sprite[] ResolvePoolForEntry(TypeBackgroundSet entry, bool isNight)
     {
-        // Night first.
         if (isNight)
         {
             if (entry.nightSprites != null && entry.nightSprites.Length > 0)
                 return entry.nightSprites;
 
-            // If no night pool configured, fall back to day.
             if (entry.daySprites != null && entry.daySprites.Length > 0)
                 return entry.daySprites;
 
             return null;
         }
 
-        // Day first.
         if (entry.daySprites != null && entry.daySprites.Length > 0)
             return entry.daySprites;
 
-        // If day isn't configured but night is, fall back.
         if (entry.nightSprites != null && entry.nightSprites.Length > 0)
             return entry.nightSprites;
 
@@ -165,20 +191,17 @@ public partial class BattleManager : MonoBehaviour
                 return true;
         }
 
-        // System local time.
         DateTime now = DateTime.Now;
         int hour = now.Hour;
 
         if (nightStartHour == nightEndHour)
-            return false; // Degenerate config: treat as always day.
+            return false;
 
         if (nightStartHour < nightEndHour)
         {
-            // Night is a normal window inside the same day.
             return (hour >= nightStartHour && hour < nightEndHour);
         }
 
-        // Night spans midnight.
         return (hour >= nightStartHour || hour < nightEndHour);
     }
 }

@@ -27,16 +27,18 @@ public sealed class IronCareerForcedEvolutionUI : MonoBehaviour
         if (continueButton) continueButton.onClick.RemoveAllListeners();
     }
 
-    public void Bind(bool evolved, string beforeName, string afterName)
+    public void Bind(bool evolved, int evolvedCount)
     {
         if (headerLabel) headerLabel.text = "Forced Evolution";
 
         if (bodyLabel)
         {
             if (evolved)
-                bodyLabel.text = $"{beforeName} evolved into {afterName}.";
+                bodyLabel.text = evolvedCount > 1
+                    ? $"{evolvedCount} party members evolved."
+                    : "1 party member evolved.";
             else
-                bodyLabel.text = "No evolution available for your active monster.";
+                bodyLabel.text = "No evolution available in your party.";
         }
     }
 }

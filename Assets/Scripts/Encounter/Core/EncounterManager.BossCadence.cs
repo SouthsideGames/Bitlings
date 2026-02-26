@@ -1,6 +1,11 @@
 using UnityEngine;
 using System.Collections.Generic;
 
+// ─────────────────────────────────────────────────────────────
+// EncounterManager.BossCadence
+// Boss spawn cadence, weighted boss selection, and cadence persistence updates.
+// ─────────────────────────────────────────────────────────────
+
 public partial class EncounterManager
 {
     // ------------- BOSS HELPERS -------------

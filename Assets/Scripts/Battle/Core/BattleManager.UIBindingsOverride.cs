@@ -3,6 +3,11 @@ using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 
+// ─────────────────────────────────────────────────────────────
+// BattleManager.UIBindingsOverride
+// Runtime HUD binding override/restore support for alternate battle UIs.
+// ─────────────────────────────────────────────────────────────
+
 public partial class BattleManager : MonoBehaviour
 {
     [Serializable]
@@ -45,14 +50,17 @@ public partial class BattleManager : MonoBehaviour
         public TextMeshProUGUI benchHPText2;
     }
 
-    // Defaults snapshot (so Iron can restore cleanly)
     private bool _uiBindingsDefaultsCaptured;
     private BattleUIBindings _uiBindingsDefaults;
 
-    // Tracks the currently active HUD binding set so we can deactivate the previous rig's panel roots
-    // when switching between rigs (Regular <-> Iron) without requiring scene hierarchy changes.
     private BattleUIBindings _uiBindingsCurrent;
     private bool _uiBindingsHasCurrent;
+
+    private void ReapplyRuntimeUIBindingsOverrideIfAny()
+    {
+        if (!_uiBindingsHasCurrent || _uiBindingsCurrent == null) return;
+        SetUIBindingsOverride(_uiBindingsCurrent);
+    }
 
     private void CaptureUIBindingsDefaults()
     {
@@ -108,12 +116,9 @@ public partial class BattleManager : MonoBehaviour
         if (o == null) return;
         CaptureUIBindingsDefaults();
 
-        // If we're switching to a different rig root, deactivate the previous panels so we don't
-        // keep rendering/animating the old HUD (or keep it hidden but still referenced).
         if (_uiBindingsHasCurrent)
             DeactivatePanelRoots(_uiBindingsCurrent, o);
 
-        // Wild
         if (o.wildPanel) wildPanel = o.wildPanel;
         if (o.wildHPBar) wildHPBar = o.wildHPBar;
         if (o.wildIcon) wildIcon = o.wildIcon;
@@ -127,7 +132,6 @@ public partial class BattleManager : MonoBehaviour
         if (o.wildDEFText) wildDEFText = o.wildDEFText;
         if (o.wildSPDText) wildSPDText = o.wildSPDText;
 
-        // Player
         if (o.playerPanel) playerPanel = o.playerPanel;
         if (o.playerHPBar) playerHPBar = o.playerHPBar;
         if (o.playerIcon) playerIcon = o.playerIcon;
@@ -141,7 +145,6 @@ public partial class BattleManager : MonoBehaviour
         if (o.playerDEFText) playerDEFText = o.playerDEFText;
         if (o.playerSPDText) playerSPDText = o.playerSPDText;
 
-        // Bench
         if (o.benchBtn1) benchBtn1 = o.benchBtn1;
         if (o.benchBtn2) benchBtn2 = o.benchBtn2;
         if (o.benchImg1) benchImg1 = o.benchImg1;
@@ -211,7 +214,6 @@ public partial class BattleManager : MonoBehaviour
     {
         if (prev == null) return;
 
-        // Only deactivate if the next binding isn't the same object.
         if (prev.wildPanel && (next == null || prev.wildPanel != next.wildPanel))
             prev.wildPanel.SetActive(false);
 

@@ -43,6 +43,9 @@ public sealed class BattleTitleStatusBarUI : MonoBehaviour
 
     void OnEnable()
     {
+        if (battle == null)
+            battle = FindFirstObjectByType<BattleManager>(FindObjectsInactive.Include);
+
         if (infoButton)
         {
             infoButton.onClick.RemoveAllListeners();
@@ -93,7 +96,9 @@ public sealed class BattleTitleStatusBarUI : MonoBehaviour
             return;
         }
 
-        string key = battle.ActivePlayerMonsterId;
+        string key = battle.ActivePlayerTitleOwnerId;
+        if (string.IsNullOrEmpty(key))
+            key = battle.ActivePlayerMonsterId;
 
         if (key == _lastKey && _currentTitle != null)
             return;
@@ -107,6 +112,28 @@ public sealed class BattleTitleStatusBarUI : MonoBehaviour
     // ---------------------------
     private void RefreshWild_FromEncounter()
     {
+        if (battle != null && battle.InBattle && TitleManager.I != null)
+        {
+            string wildOwnerId = battle.WildCombatIdForTitles;
+            if (!string.IsNullOrEmpty(wildOwnerId))
+            {
+                var states = TitleManager.I.GetActiveTitleUIStates(wildOwnerId);
+                if (states != null && states.Count > 0)
+                {
+                    var t = TitleManager.I.GetTitleById(states[0].titleId);
+                    if (t != null)
+                    {
+                        _currentTitle = t;
+                        if (iconImage) iconImage.sprite = t.icon;
+                        if (titleLabel) titleLabel.text = t.displayName;
+                        SetVisible(true);
+                        SetInfoInteractable(true);
+                        return;
+                    }
+                }
+            }
+        }
+
         var em = EncounterManager.I;
         if (em == null)
         {

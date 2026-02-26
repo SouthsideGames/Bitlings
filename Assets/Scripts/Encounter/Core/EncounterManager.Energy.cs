@@ -1,6 +1,11 @@
 using UnityEngine;
 using System;
 
+// ─────────────────────────────────────────────────────────────
+// EncounterManager.Energy
+// Energy economy: costs, spend/add operations, online/offline regeneration.
+// ─────────────────────────────────────────────────────────────
+
 public partial class EncounterManager
 {
     [Header("Energy (Regen)")]

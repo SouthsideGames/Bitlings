@@ -5,21 +5,20 @@ using System.Collections;
 using System.Collections.Generic;
 using TMPro;
 
+// ─────────────────────────────────────────────────────────────
+// BattleManager.WildAI
+// Wild action selection, telegraphing, and AI decision helpers.
+// ─────────────────────────────────────────────────────────────
+
 public partial class BattleManager : MonoBehaviour
 {
-
-    
     private bool ShouldShowWildTelegraphText()
     {
-        // Manual: always show text. Auto: show only for first N turns.
         if (!AutoResolveActive)
             return true;
 
         return _turnIndex < autoTelegraphTextFirstTurns;
     }
-
-
-
 
     private float GetWildIntentIconDuration()
     {
@@ -28,9 +27,6 @@ public partial class BattleManager : MonoBehaviour
 
         return wildIntentIconDurationManual;
     }
-
-
-
 
     private string GetWildTelegraphLine(EnemyAction action)
     {
@@ -44,9 +40,6 @@ public partial class BattleManager : MonoBehaviour
         }
     }
 
-
-
-
     private IEnumerator Co_TelegraphWildIntent(EnemyAction action)
     {
         if (!showWildIntentIcons)
@@ -54,7 +47,6 @@ public partial class BattleManager : MonoBehaviour
 
         if (feedback != null)
         {
-            // Map to feedback action enum
             var fbAction = BattleFeedbackManager.BattleFeedbackAction.Attack;
 
             switch (action)
@@ -78,21 +70,17 @@ public partial class BattleManager : MonoBehaviour
                 yield return Say(line);
         }
 
-        // Even without text, give the player a moment to register the icon.
         if (wildIntentTelegraphPause > 0f)
             yield return CoWaitUnscaled(wildIntentTelegraphPause);
     }
-
-
-
 
     private EnemyAction ChooseEnemyAction()
     {
         if (!wildDef || wildMaxHP <= 0.01f)
             return EnemyAction.Attack;
 
-if (IsWildFrozen())
-    return EnemyAction.None;
+        if (IsWildFrozen())
+            return EnemyAction.None;
 
         float hpRatio = Mathf.Clamp01(wildHP / Mathf.Max(1f, wildMaxHP));
         BattleAction action = BattleAction.Attack;
@@ -130,15 +118,12 @@ if (IsWildFrozen())
             default: action = BattleAction.Attack; break;
         }
 
-        // Status gating for wild actions.
-        // Sundering: cannot Defend or Run.
         if (IsWildSundered())
         {
             if (action == BattleAction.Defend || action == BattleAction.Run)
                 action = BattleAction.Attack;
         }
 
-        // Wyrm Fury: cannot Focus/Charge.
         if (IsWildWyrmFury())
         {
             if (action == BattleAction.Focus)
@@ -154,9 +139,6 @@ if (IsWildFrozen())
             default: return Fallback();
         }
     }
-
-
-
 
     private float ComputeEnemyRunChance()
     {
@@ -181,9 +163,6 @@ if (IsWildFrozen())
         return Mathf.Clamp01(chance);
     }
 
-
-
-
     private void ApplyPendingGuardShieldForWild()
     {
         if (wildPendingGuardShield <= 0.01f) return;
@@ -196,24 +175,17 @@ if (IsWildFrozen())
         BattleLogger.Log($"{name} gains a guard shield of {Mathf.RoundToInt(gain)}!", LogScope.Battle);
     }
 
-
     private string GetWildPersonalityLabel()
     {
         if (!wildDef || wildDef.Personality == null) return null;
         return wildDef.Personality.group.ToString();
     }
 
-
-
-
     private string GetBasicMoveName(MonsterDataSO def)
     {
         if (!def) return "Attack";
         return !string.IsNullOrEmpty(def.basicAttackName) ? def.basicAttackName : "Attack";
     }
-
-
-
 
     private bool RollEnemyDefendSuccess()
     {
@@ -235,17 +207,11 @@ if (IsWildFrozen())
         return ok;
     }
 
-
-
-
     private void ResetEnemyDefendStreak()
     {
         wildDefendConsecutiveUses = 0;
         wildDefendCurrentSuccess = defendFirstUseSuccess;
     }
-
-
-
 
     private void ApplyWildDefendStance()
     {

@@ -259,8 +259,11 @@ public sealed class BattleStatsSystem
         float def = stages.adjusted.def;
         float spd = stages.adjusted.spd;
 
+        bool allowJobs = _bm.Rules.allowJobPassives;
+        bool allowBoosters = _bm.Rules.allowBoosters;
+
         // 2) Job
-        var jctx = _bm.GetJobCtxSafe(idx);
+        var jctx = allowJobs ? _bm.GetJobCtxSafe(idx) : null;
         if (jctx != null && jctx.maxHpBonusPct > 0f)
             hp = hp * (1f + jctx.maxHpBonusPct);
 
@@ -316,7 +319,7 @@ public sealed class BattleStatsSystem
         };
 
         // 5) Temp boosters
-        if (BattleTempBuffs.I != null)
+        if (allowBoosters && BattleTempBuffs.I != null)
         {
             hp += Mathf.Max(0, BattleTempBuffs.I.GetPlayerHPBonus());
             atk += Mathf.Max(0, BattleTempBuffs.I.GetPlayerAtkBonus());
@@ -333,7 +336,7 @@ public sealed class BattleStatsSystem
         };
 
         // 6) Booster controller (currently only ATK flat, per existing design)
-        var booster = BattleBoosterController.I;
+        var booster = allowBoosters ? BattleBoosterController.I : null;
         if (booster != null)
             atk += Mathf.Max(0, booster.GetAttackBonus());
 
@@ -386,7 +389,7 @@ public sealed class BattleStatsSystem
         float def = _wildAdjusted.def;
         float spd = _wildAdjusted.spd;
 
-        string wildId = _bm.WildCombatIdForTitles;
+        string wildId = _bm.Rules.allowTitles ? _bm.WildCombatIdForTitles : null;
         if (!string.IsNullOrEmpty(wildId))
         {
             // Build context against the caller's current working max HP to avoid
@@ -463,7 +466,7 @@ public sealed class BattleStatsSystem
 
         stages.afterJob = stages.adjusted;
 
-        string wildId = _bm.WildCombatIdForTitles;
+        string wildId = _bm.Rules.allowTitles ? _bm.WildCombatIdForTitles : null;
         if (!string.IsNullOrEmpty(wildId))
         {
             var ctx = _bm.BuildTitleContextForWildUsingMaxSafe(hp);

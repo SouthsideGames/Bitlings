@@ -1,6 +1,6 @@
 using UnityEngine;
 
-[CreateAssetMenu(menuName = "Data/Titles/Jobs/Site Aura %", fileName = "JobAuraTitle")]
+[CreateAssetMenu(menuName = "Data/Titles/Jobs/Site Aura", fileName = "JobAuraTitle")]
 [Tooltip("Used to define Titles that provide an additive aura percentage to a specific job site's overall output while the wearer is assigned there.")]
 public sealed class JobAuraTitleSO : TitleSO
 {

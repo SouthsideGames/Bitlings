@@ -5,34 +5,6 @@ using System.Collections;
 using System.Collections.Generic;
 using TMPro;
 
-public struct BattleResult
-{
-    public bool victory;
-    public bool escaped;
-
-    public int creditsGained;
-    public int creditsBase;
-    public int creditsTitleBonus;
-    public float creditsMultiplier;
-
-    public int growthCoresGained;
-    public int growthCoresBase;
-    public int growthCoresTitleBonus;
-
-    public string activeMonsterOwnedId;  
-    public MonsterDataSO wildDef;
-    public int wildLevel;
-    public float secondsSurvived;
-
-    public int critCount;
-    public int turnsSurvived;
-    public int damageTaken;
-    public int damageDealt;
-    public bool gotFirstHit;
-
-}
-
-
 public partial class BattleManager : MonoBehaviour
 {
     private enum PlayerAction { None, Attack, Defend, Focus, Swap, Run }
@@ -50,26 +22,13 @@ public partial class BattleManager : MonoBehaviour
         string baseId = (def != null && !string.IsNullOrEmpty(def.id)) ? def.id : "UNKNOWN";
         return $"WILD::{baseId}::{_wildCombatSerial}";
     }
-
-
-    // ─────────────────────────────────────────────────────────
-    // Battle Events (logic emits, UI/FX consumes)
-    // This keeps BattleManager focused on rules/state while allowing
-    // visuals/narration polish without risking combat logic regressions.
-    // ─────────────────────────────────────────────────────────
-
-
-// ─────────────────────────────────────────────────────────
-// Battle Events (logic emits, UI/FX consumes)
-// ─────────────────────────────────────────────────────────
-
     private readonly BattleEventBus _eventBus = new BattleEventBus();
 
     public event Action<BattleEvent> OnBattleEvent
-{
-    add { _eventBus.OnEvent += value; }
-    remove { _eventBus.OnEvent -= value; }
-}
+    {
+        add { _eventBus.OnEvent += value; }
+        remove { _eventBus.OnEvent -= value; }
+    }
 
     public void RegisterBattleEventConsumer() => _eventBus.RegisterConsumer();
     public void UnregisterBattleEventConsumer() => _eventBus.UnregisterConsumer();
@@ -77,36 +36,24 @@ public partial class BattleManager : MonoBehaviour
 
     private void Emit(BattleEvent e) => _eventBus.Emit(e);
 
-
-    // ─────────────────────────────────────────────────────────
-    // Deterministic battle RNG (debuggable + daily seeds ready)
-    // One RNG per battle, seeded.
-    // ─────────────────────────────────────────────────────────
-
-
-// ─────────────────────────────────────────────────────────
-// Deterministic battle RNG (debuggable + daily seeds ready)
-// One RNG per battle, seeded.
-// ─────────────────────────────────────────────────────────
-
     private static int _battleSerial;
     private readonly BattleRngService _rng = new BattleRngService();
 
     public int BattleSeed => _rng.BattleSeed;
     public string BattleSeedLabel => _rng.BattleSeedLabel;
 
-/// <summary>
-/// Optional: EncounterManager can set the battle seed before calling Begin(...).
-/// If not set, a deterministic seed will be derived from the active session/daily/custom seed.
-/// </summary>
+    /// <summary>
+    /// Optional: EncounterManager can set the battle seed before calling Begin(...).
+    /// If not set, a deterministic seed will be derived from the active session/daily/custom seed.
+    /// </summary>
     public void SetBattleSeed(int seed, string seedLabel = null) => _rng.SetBattleSeed(seed, seedLabel);
 
     private float Rng01() => _rng.Rng01();
 
     private void EnsureBattleRngInitialized()
-{
-    _rng.EnsureInitialized(ref _battleSerial, wildDef, wildLevel);
-}
+    {
+        _rng.EnsureInitialized(ref _battleSerial, wildDef, wildLevel);
+    }
 
 
     
@@ -158,11 +105,9 @@ public partial class BattleManager : MonoBehaviour
     /// </summary>
     public event Action<float, bool> OnAutoQueueCountdown;
 
-    // Tracks last emitted state to avoid spamming listeners.
     private bool _autoQueueCountdownShown;
     private int _autoQueueCountdownLastInt = int.MinValue;
 
-    // Runtime overrides (so auto-battle can resolve quickly without altering prefab defaults)
     private bool _manualTurnsDefault;
     private bool _enableAutoQueueDefault;
     private float _autoQueueSecondsDefault;
@@ -198,15 +143,12 @@ public partial class BattleManager : MonoBehaviour
 
         if (isAuto)
         {
-            // Force automatic turn resolution.
             manualTurns = false;
             enableAutoQueueAttack = false;
-            // Ensure timeout can't drag turns out if any manual-turn checks remain.
             autoQueueAttackAfterSeconds = 0.25f;
         }
         else
         {
-            // Restore prefab defaults.
             manualTurns = _manualTurnsDefault;
             enableAutoQueueAttack = _enableAutoQueueDefault;
             autoQueueAttackAfterSeconds = _autoQueueSecondsDefault;
@@ -215,11 +157,7 @@ public partial class BattleManager : MonoBehaviour
 
     private void EmitAutoQueueCountdown(float remainingSeconds, bool show)
     {
-        // Clamp for safety.
         if (remainingSeconds < 0f) remainingSeconds = 0f;
-
-        // If no one is listening, still keep internal state coherent.
-        // Only emit on state changes or when the displayed integer would change.
         int displayInt = Mathf.CeilToInt(remainingSeconds);
 
         if (!show)
@@ -263,41 +201,41 @@ public partial class BattleManager : MonoBehaviour
     private int pendingSwapBenchSlot = -1;
     private bool defendActiveThisRound = false;
 
-    [Header("Wild UI")]
-    [SerializeField] private GameObject wildPanel;
-    [SerializeField] private Slider wildHPBar;
-    [SerializeField] private Image wildIcon;
-    [SerializeField] private TextMeshProUGUI wildNameText;
-    [SerializeField] private TextMeshProUGUI wildLevelText;
-    [SerializeField] private TextMeshProUGUI wildIdText;
-    [SerializeField] private TextMeshProUGUI wildTypeText;
-    [SerializeField] private TextMeshProUGUI wildRarityText;
-    [SerializeField] private TextMeshProUGUI wildHPText;
-    [SerializeField] private TextMeshProUGUI wildATKText;
-    [SerializeField] private TextMeshProUGUI wildDEFText;
-    [SerializeField] private TextMeshProUGUI wildSPDText;
+    // Wild UI (populated from HudRig at battle start)
+    private GameObject wildPanel;
+    private Slider wildHPBar;
+    private Image wildIcon;
+    private TextMeshProUGUI wildNameText;
+    private TextMeshProUGUI wildLevelText;
+    private TextMeshProUGUI wildIdText;
+    private TextMeshProUGUI wildTypeText;
+    private TextMeshProUGUI wildRarityText;
+    private TextMeshProUGUI wildHPText;
+    private TextMeshProUGUI wildATKText;
+    private TextMeshProUGUI wildDEFText;
+    private TextMeshProUGUI wildSPDText;
 
-    [Header("Player UI")]
-    [SerializeField] private GameObject playerPanel;
-    [SerializeField] private Slider playerHPBar;
-    [SerializeField] private Image playerIcon;
-    [SerializeField] private TextMeshProUGUI playerNameText;
-    [SerializeField] private TextMeshProUGUI playerLevelText;
-    [SerializeField] private TextMeshProUGUI playerIdText;
-    [SerializeField] private TextMeshProUGUI playerTypeText;
-    [SerializeField] private TextMeshProUGUI playerRarityText;
-    [SerializeField] private TextMeshProUGUI playerHPText;
-    [SerializeField] private TextMeshProUGUI playerATKText;
-    [SerializeField] private TextMeshProUGUI playerDEFText;
-    [SerializeField] private TextMeshProUGUI playerSPDText;
+    // Player UI (populated from HudRig at battle start)
+    private GameObject playerPanel;
+    private Slider playerHPBar;
+    private Image playerIcon;
+    private TextMeshProUGUI playerNameText;
+    private TextMeshProUGUI playerLevelText;
+    private TextMeshProUGUI playerIdText;
+    private TextMeshProUGUI playerTypeText;
+    private TextMeshProUGUI playerRarityText;
+    private TextMeshProUGUI playerHPText;
+    private TextMeshProUGUI playerATKText;
+    private TextMeshProUGUI playerDEFText;
+    private TextMeshProUGUI playerSPDText;
 
-    [Header("Bench UI")]
-    [SerializeField] private Button benchBtn1;
-    [SerializeField] private Button benchBtn2;
-    [SerializeField] private Image benchImg1;
-    [SerializeField] private Image benchImg2;
-    [SerializeField] private TextMeshProUGUI benchHPText1;
-    [SerializeField] private TextMeshProUGUI benchHPText2;
+    // Bench UI (populated from HudRig at battle start)
+    private Button benchBtn1;
+    private Button benchBtn2;
+    private Image benchImg1;
+    private Image benchImg2;
+    private TextMeshProUGUI benchHPText1;
+    private TextMeshProUGUI benchHPText2;
 
     [Header("Turn Pacing (unscaled)")]
     [SerializeField, Min(0.05f)] private float beginRoundDelay = 0.15f;
@@ -315,23 +253,23 @@ public partial class BattleManager : MonoBehaviour
     public float BattleSpeed => battleSpeed;
 
 
-    [Header("Battle Text Box")]
-    [SerializeField] private BattleTextBoxUI battleTextBox;
-    [SerializeField] private BattleSwitchToggle _bottomToggle;
+    // Battle Text Box (populated from HudRig at battle start)
+    private BattleTextBoxUI battleTextBox;
+    private BattleSwitchToggle _bottomToggle;
 
     [Header("Encounter Tuning")]
     [SerializeField, Range(0.5f, 2.0f)] private float encounterThreatScalar = 1.0f;
 
-    [Header("Feedback")]
-    [SerializeField] private BattleFeedbackManager feedback;
-
-    // ─────────────────────────────────────────────────────────────
-    // UI routing overrides (Iron Career)
-    // ─────────────────────────────────────────────────────────────
+    // Feedback (populated from HudRig at battle start)
+    private BattleFeedbackManager feedback;
     private bool _uiDefaultsCaptured;
     private BattleFeedbackManager _defaultFeedback;
     private BattleTextBoxUI _defaultBattleTextBox;
     private BattleSwitchToggle _defaultBottomToggle;
+    private bool _runtimeUIOverrideActive;
+    private BattleFeedbackManager _runtimeOverrideFeedback;
+    private BattleTextBoxUI _runtimeOverrideTextBox;
+    private BattleSwitchToggle _runtimeOverrideBottomToggle;
 
     /// <summary>
     /// Overrides the BattleManager's UI targets at runtime (used by Iron Career).
@@ -345,6 +283,14 @@ public partial class BattleManager : MonoBehaviour
             _defaultFeedback = feedback;
             _defaultBattleTextBox = battleTextBox;
             _defaultBottomToggle = _bottomToggle;
+        }
+
+        if (overrideFeedback || overrideTextBox || overrideBottomToggle)
+        {
+            _runtimeUIOverrideActive = true;
+            if (overrideFeedback) _runtimeOverrideFeedback = overrideFeedback;
+            if (overrideTextBox) _runtimeOverrideTextBox = overrideTextBox;
+            if (overrideBottomToggle) _runtimeOverrideBottomToggle = overrideBottomToggle;
         }
 
         if (overrideFeedback) feedback = overrideFeedback;
@@ -361,6 +307,16 @@ public partial class BattleManager : MonoBehaviour
         feedback = _defaultFeedback;
         battleTextBox = _defaultBattleTextBox;
         _bottomToggle = _defaultBottomToggle;
+        _runtimeUIOverrideActive = false;
+        _runtimeOverrideFeedback = null;
+        _runtimeOverrideTextBox = null;
+        _runtimeOverrideBottomToggle = null;
+    }
+
+    private void ReapplyRuntimeUIOverrideIfAny()
+    {
+        if (!_runtimeUIOverrideActive) return;
+        SetUIOverride(_runtimeOverrideFeedback, _runtimeOverrideTextBox, _runtimeOverrideBottomToggle);
     }
 
     [Header("Status + Synergy (Battle Start)")]
@@ -395,11 +351,8 @@ public partial class BattleManager : MonoBehaviour
 
     private MonsterDataSO wildDef;
     private int wildLevel;
-    // Wild baseline (adjusted by level + encounterThreatScalar). Titles/conditionals stack on top.
     private float wildBaseMaxHP;
     private float wildBaseAttackPerTurn;
-
-    // Wild current effective (may include title-driven max HP; HP is tracked against this).
     private float wildMaxHP, wildHP;
     private float wildAttackPerTurn;
 
@@ -408,23 +361,17 @@ public partial class BattleManager : MonoBehaviour
     private int[] teamLevels;
     private float[] teamMaxHP, teamHP;
     private string[] teamIds;
-    // Title routing ids (normal: same as teamIds; Iron: per-instance combatant ids)
     private string[] teamTitleIds;
-
-    // Iron / custom battle context (optional)
     private IBattleRosterProvider _rosterProvider;
     private IBattleContext _battleContext;
     private BattleRules _rules = BattleRules.Default;
-
-    // Preferred-variant aware "effective" owned data used for battle.
-    // This allows players to choose shiny/non-shiny display & usage without having to rearrange the team list.
     private OwnedMonsterData[] teamOwnedEffective;
     private string[] teamOwnedUidEffective;
 
     private JobBattlePassives.Ctx[] jobCtx;
 
     private float[] shieldHP;
-    private float[] titleShieldHP; // Title battle-start shield (separate from job/guard shield)
+    private float[] titleShieldHP;
     private float wildTitleShieldHP = 0f;
     private float[] pendingGuardShield;
     private bool[] chargedNextAttack;
@@ -435,10 +382,6 @@ public partial class BattleManager : MonoBehaviour
     private float[] slotDamageBuffPct;
     private int[] slotDamageBuffTurns;
 
-    // ─────────────────────────────────────────────────────────────
-    // Status runtime (Phase 3: apply-only; Phase 4 will add ticking)
-    // One status per unit. No overwrites.
-    // ─────────────────────────────────────────────────────────────
     private StatusType[] teamStatus;
     private int[] teamStatusTurns;
     private float[] teamStatusMagnitude;
@@ -449,7 +392,6 @@ public partial class BattleManager : MonoBehaviour
     private float wildStatusMagnitude = 0f;
     private bool wildStatusPersistent = false;
 
-    // Cached title multipliers computed at battle start to avoid timing/order issues.
     private float _cachedCreditMult = 1f;
 
     [Header("Debug - Titles")]
@@ -821,8 +763,6 @@ public partial class BattleManager : MonoBehaviour
         _isPlayerTurn = value;
         OnPlayerTurnChanged?.Invoke(_isPlayerTurn);
 
-
-        // Booster system: ensure turn gating is kept in sync (enables/disables booster buttons correctly).
         if (BattleBoosterController.I != null)
             BattleBoosterController.I.OnTurnStart(_isPlayerTurn);
 
@@ -843,7 +783,6 @@ public partial class BattleManager : MonoBehaviour
         if (_narrationLock) return;
         if (pendingAction != PlayerAction.None) return;
 
-        // Status: Sundering blocks Defend/Run.
         if (IsActivePlayerSundered())
         {
             if (a == PlayerAction.Defend || a == PlayerAction.Run)
@@ -853,7 +792,6 @@ public partial class BattleManager : MonoBehaviour
             }
         }
 
-        // Status: Wyrm Fury blocks Focus/Charge (Focus action).
         if (IsActivePlayerWyrmFury())
         {
             if (a == PlayerAction.Focus)
@@ -876,9 +814,6 @@ public partial class BattleManager : MonoBehaviour
         if (battleTextBox != null)
             battleTextBox.ShowLineInstant(line, tags, battleSpeed);
     }
-    // ─────────────────────────────────────────────────────────────
-    // Queued Action (Manual Turns) – used by UI to feel instant
-    // ─────────────────────────────────────────────────────────────
     public bool HasQueuedPlayerAction => pendingAction != PlayerAction.None;
 
     /// <summary>
@@ -901,9 +836,6 @@ public partial class BattleManager : MonoBehaviour
         }
     }
 
-
-
-
     private BattleFeedbackManager.BattleFeedbackAction ToFeedbackAction(PlayerAction a)
     {
         switch (a)
@@ -917,46 +849,41 @@ public partial class BattleManager : MonoBehaviour
         }
     }
 
-private static void HardResetIconVisual(Image img)
-{
-    if (!img) return;
+    private static void HardResetIconVisual(Image img)
+    {
+        if (!img) return;
 
-    // Cancel any lingering feedback tweens from the previous encounter/battle.
-    LeanTween.cancel(img.gameObject);
+        LeanTween.cancel(img.gameObject);
 
-    var c = img.color;
-    c.a = 1f;
-    img.color = c;
+        var c = img.color;
+        c.a = 1f;
+        img.color = c;
 
-    img.canvasRenderer.SetAlpha(1f);
+        img.canvasRenderer.SetAlpha(1f);
 
-    var cg = img.GetComponent<CanvasGroup>();
-    if (cg) cg.alpha = 1f;
-}
+        var cg = img.GetComponent<CanvasGroup>();
+        if (cg) cg.alpha = 1f;
+    }
 
-private IEnumerator SayKO(string displayName)
-{
-    if (string.IsNullOrWhiteSpace(displayName)) yield break;
-    BattleLogger.AddKeyMoment($"KO: {displayName}");
-    yield return Say($"{displayName} KO'ed!", BattleLineTag.Result);
-}
+    private IEnumerator SayKO(string displayName)
+    {
+        if (string.IsNullOrWhiteSpace(displayName)) yield break;
+        BattleLogger.AddKeyMoment($"KO: {displayName}");
+        yield return Say($"{displayName} KO'ed!", BattleLineTag.Result);
+    }
 
-private IEnumerator MaybeSayKO_Player(string victimName, float preHP, float postHP)
-{
-    if (preHP > 0.01f && postHP <= 0.01f)
-        yield return SayKO(victimName);
-}
+    private IEnumerator MaybeSayKO_Player(string victimName, float preHP, float postHP)
+    {
+        if (preHP > 0.01f && postHP <= 0.01f)
+            yield return SayKO(victimName);
+    }
 
-private IEnumerator MaybeSayKO_Wild(string victimName, float preHP, float postHP)
-{
-    if (preHP > 0.01f && postHP <= 0.01f)
-        yield return SayKO(victimName);
-}
+    private IEnumerator MaybeSayKO_Wild(string victimName, float preHP, float postHP)
+    {
+        if (preHP > 0.01f && postHP <= 0.01f)
+            yield return SayKO(victimName);
+    }
 
-    
-    // ─────────────────────────────────────────────────────────────
-    // UI Baseline Snapshot (Adjusted stats without Titles)
-    // ─────────────────────────────────────────────────────────────
     private void CaptureUiBaselines_NoTitles()
     {
         if (teamCount <= 0 || teamDefs == null) return;
@@ -1007,83 +934,17 @@ private IEnumerator MaybeSayKO_Wild(string victimName, float preHP, float postHP
             }
 
             _uiBaseWildMaxHp = Mathf.RoundToInt(Mathf.Max(1f, wildBaseMaxHP));
-            _uiBaseWildAtk   = Mathf.RoundToInt(Mathf.Max(1f, wildBaseAttackPerTurn));
-	        	// Use explicit null checks (avoids CS0126 if MonsterDataSO is not a UnityEngine.Object).
-	        	_uiBaseWildDef   = (wildDef != null) ? BattleCalc.CalcDefense(wildDef, wildLevel) : 0;
-	        	_uiBaseWildSpd   = (wildDef != null) ? BattleCalc.CalcSpeed(wildDef, wildLevel) : 1;
+            _uiBaseWildAtk = Mathf.RoundToInt(Mathf.Max(1f, wildBaseAttackPerTurn));
+            _uiBaseWildDef = (wildDef != null) ? BattleCalc.CalcDefense(wildDef, wildLevel) : 0;
+            _uiBaseWildSpd = (wildDef != null) ? BattleCalc.CalcSpeed(wildDef, wildLevel) : 1;
         }
     }
 
-    // ─────────────────────────────────────────────────────────────
-    // Battle-start Titles application
-    // ─────────────────────────────────────────────────────────────
-    private void ApplyBattleStartTitles()
-    {
-        // Player (active slot)
-        try
-        {
-            if (teamIds != null && activeIndex >= 0 && activeIndex < teamIds.Length)
-            {
-                string ownedId = GetTeamTitleIdSafe(activeIndex);
-                if (!string.IsNullOrEmpty(ownedId))
-                {
-                    TitlesAdapter.OnBattleStart(ownedId, wildDef, wildLevel);
-
-                        // Cache credit multiplier for the active monster at battle start.
-                        try
-                        {
-                            _cachedCreditMult = Mathf.Max(0f, TitlesAdapter.GetCreditMultOnVictory(ownedId, wildDef, wildLevel));
-                        }
-                        catch (Exception ex)
-                        {
-                            Debug.Log($"[BattleManager] Failed to cache credit multiplier: {ex.Message}");
-                            _cachedCreditMult = 1f;
-                        }
-
-                    if (titleShieldHP != null && activeIndex < titleShieldHP.Length)
-                        titleShieldHP[activeIndex] = Mathf.Max(0f, TitlesAdapter.GetBattleStartShieldRemaining(ownedId));
-                }
-            }
-        }
-        catch (Exception ex)
-        {
-            BattleLogger.Log($"[Titles] OnBattleStart(player) exception: {ex.Message}", LogScope.Battle);
-        }
-
-        // Wild
-        try
-        {
-            if (string.IsNullOrEmpty(_wildCombatIdForTitles) || !_wildCombatIdForTitles.StartsWith("WILD::", StringComparison.OrdinalIgnoreCase))
-                _wildCombatIdForTitles = (EncounterManager.I != null) ? EncounterManager.I.WildCombatId : null;
-
-            if (string.IsNullOrEmpty(_wildCombatIdForTitles) || !_wildCombatIdForTitles.StartsWith("WILD::", StringComparison.OrdinalIgnoreCase))
-                _wildCombatIdForTitles = BuildFallbackWildCombatId(wildDef);
-
-            if (!string.IsNullOrEmpty(_wildCombatIdForTitles))
-            {
-                TitlesAdapter.OnBattleStart(_wildCombatIdForTitles, wildDef, wildLevel);
-                wildTitleShieldHP = Mathf.Max(0f, TitlesAdapter.GetBattleStartShieldRemaining(_wildCombatIdForTitles));
-            }
-
-            RefreshWildEffectiveStatsFromTitles();
-        }
-        catch (Exception ex)
-        {
-            BattleLogger.Log($"[Titles] OnBattleStart(wild) exception: {ex.Message}", LogScope.Battle);
-        }
-
-        // Unified stat/UI sync contract.
-        RequestBattleStatRebuild(BattleStatRebuildReason.BattleStart, forceRebuildAdjusted: true);
-    }
-
-        // Status + Synergy logic moved to Core/BattleManager.Statuses.cs (Phase 4)
-
-public void BeginBattle(MonsterDataSO wild, int level, Action<BattleResult> onEnded)
+    public void BeginBattle(MonsterDataSO wild, int level, Action<BattleResult> onEnded)
     {
         Begin(wild, level, onEnded, null, null);
     }
 
-    // Normal entry point (Save-driven). Iron/custom callers should use the overload that accepts a roster provider + context.
     public void Begin(MonsterDataSO wild, int level, Action<BattleResult> onEnded)
     {
         Begin(wild, level, onEnded, null, null);
@@ -1095,7 +956,6 @@ public void BeginBattle(MonsterDataSO wild, int level, Action<BattleResult> onEn
         _battleContext = battleContext;
         _rules = (battleContext != null) ? battleContext.Rules : BattleRules.Default;
 
-        // Hard enforcement: Iron battles must NEVER touch SaveManager team/owned.
         if (IronCareerRuntime.IsActive && rosterProvider == null)
         {
             Debug.LogError("[BattleManager] IronCareerRuntime.IsActive but Begin(...) was called without a rosterProvider. Forfeiting battle.");
@@ -1106,19 +966,13 @@ public void BeginBattle(MonsterDataSO wild, int level, Action<BattleResult> onEn
         var injectedTeam = (rosterProvider != null) ? rosterProvider.GetPlayerTeam() : null;
         bool usingInjected = (injectedTeam != null && injectedTeam.Count > 0);
 
-        // Normal battles are Save-driven. Injected battles must NOT read SaveManager.
         var roster = usingInjected ? null : SaveManager.Data.team;
 
-        if (usingInjected)
-        {
-            // OK
-        }
-        else
+        if (!usingInjected)
         {
             if (roster == null || roster.Count == 0) { ForceEndBattleEarly(false); return; }
         }
 
-        // Reset per-battle deterministic RNG state.
         _rng.ResetForBegin();
         playerNoDmgTurns = 0;
         playerNoCritTurns = 0;
@@ -1146,13 +1000,8 @@ public void BeginBattle(MonsterDataSO wild, int level, Action<BattleResult> onEn
 
         ApplyHudRigForThisBattle();
 
-        // Backgrounds: pick + apply immediately so the reveal anims show the correct scene.
-        // Both player and wild use the same background, driven by the wild monster's type.
         TryApplyBattleBackgroundFromWild();
 
-            // Titles routing id for wild (stable across battle)
-        // IMPORTANT: must be synthetic (WILD::<...>) so it never collides with a real monster id.
-        // In injected (Iron/custom) battles, prefer rosterProvider's wild combatantId so TitlesAdapter context matches.
         _wildCombatIdForTitles = null;
 
         if (rosterProvider != null)
@@ -1175,51 +1024,38 @@ public void BeginBattle(MonsterDataSO wild, int level, Action<BattleResult> onEn
         float wHpBase = BattleCalc.CalcHP(wildDef, wildLevel);
         float wAtkBase = BattleCalc.CalcBaseAttack(wildDef, wildLevel, 0, 0);
 
-        // Baseline adjusted stats for this encounter (level-scaled + threat scalar).
         wildBaseMaxHP = Mathf.Max(1f, wHpBase * encounterThreatScalar);
         wildBaseAttackPerTurn = Mathf.Max(1f, wAtkBase * encounterThreatScalar);
 
-        // Effective values will be finalized after BattleStart titles are applied.
         wildMaxHP = wildBaseMaxHP;
         wildHP = wildMaxHP;
         wildAttackPerTurn = wildBaseAttackPerTurn;
 
-        // IMPORTANT: clear any lingering icon tweens/alphas from the prior battle.
         if (feedback != null) feedback.ResetIconVisuals();
         HardResetIconVisual(playerIcon);
         HardResetIconVisual(wildIcon);
 
-        // ─────────────────────────────────────────────────────────────
-        // Shiny encounter state (spawn-time), driven by EncounterManager
-        // ─────────────────────────────────────────────────────────────
         bool shinyWild = (EncounterManager.I != null) && EncounterManager.I.CurrentWildIsShiny;
 
         bool isAuto = _rules.allowAutoBattle && (EncounterManager.I != null) && EncounterManager.I.IsAutoMode;
 
-        // Auto-battle hard-disable in sealed modes (Iron).
         ConfigureForAuto(isAuto);
 
-
-        // Wild icon: use shiny icon if shiny encounter and one exists.
         if (wildIcon)
         {
-	        	if (shinyWild && wildDef != null && wildDef.shinyIcon != null) wildIcon.sprite = wildDef.shinyIcon;
-	        	else wildIcon.sprite = (wildDef != null) ? wildDef.icon : null;
+            if (shinyWild && wildDef != null && wildDef.shinyIcon != null) wildIcon.sprite = wildDef.shinyIcon;
+            else wildIcon.sprite = (wildDef != null) ? wildDef.icon : null;
             HardResetIconVisual(wildIcon);
         }
 
-
-        // Wild name: MUST apply formatter so we literally see * and italics.
-        // Ensure MonsterNameFormatter.Format returns "*<i>Name</i>*" when isShiny=true.
         if (wildNameText)
         {
-	        	if (wildDef != null)
+            if (wildDef != null)
                 wildNameText.text = MonsterNameFormatter.Format(wildDef, shinyWild);
             else
                 wildNameText.text = "Wild";
         }
 
-        // If this encounter spawned as shiny, play the shiny name sparkle feedback.
         if (shinyWild && feedback != null)
         {
             feedback.PlayShinyNameSparkle(wildNameText);
@@ -1243,13 +1079,11 @@ public void BeginBattle(MonsterDataSO wild, int level, Action<BattleResult> onEn
         teamOwnedEffective = new OwnedMonsterData[teamCount];
         teamOwnedUidEffective = new string[teamCount];
 
-        // Status runtime (one-status-per-unit)
         teamStatus = new StatusType[teamCount];
         teamStatusTurns = new int[teamCount];
         teamStatusMagnitude = new float[teamCount];
         teamStatusPersistent = new bool[teamCount];
 
-        // Iron carry safety: reset imported shield-carry flags each battle.
         EnsureShieldGrantPools();
         if (_ironShieldCarrySlots != null) Array.Clear(_ironShieldCarrySlots, 0, _ironShieldCarrySlots.Length);
 
@@ -1264,7 +1098,6 @@ public void BeginBattle(MonsterDataSO wild, int level, Action<BattleResult> onEn
             {
                 var c = injectedTeam[i];
 
-                // Core identity
                 teamTitleIds[i] = !string.IsNullOrEmpty(c.combatantId) ? c.combatantId : $"IRON::P::{i}";
                 teamDefs[i] = c.def;
                 teamLevels[i] = Mathf.Max(1, c.level);
@@ -1282,7 +1115,6 @@ public void BeginBattle(MonsterDataSO wild, int level, Action<BattleResult> onEn
                 teamMaxHP[i] = baseMax;
                 teamHP[i] = Mathf.Clamp(c.hp, 0, Mathf.RoundToInt(baseMax));
 
-                // Titles: locked per instance (local override). Also register battle context for synthetic ids.
                 if (_rules.allowTitles && c.lockedTitle != null)
                 {
                     TitlesAdapter.SetLocalTitles(teamTitleIds[i], new[] { c.lockedTitle });
@@ -1376,7 +1208,6 @@ public void BeginBattle(MonsterDataSO wild, int level, Action<BattleResult> onEn
             }
         }
 
-        // Central battle stat pipeline.
         _stats = new BattleStatsSystem(this);
         _stats.RebuildAdjustedBaselines();
 
@@ -1398,24 +1229,19 @@ public void BeginBattle(MonsterDataSO wild, int level, Action<BattleResult> onEn
 
         ApplyBattleStartTitles();
 
-        // Titles can change effective max HP; sync max caches and preserve HP% before first UI render.
         if (_stats != null) _stats.MarkDirtyAll();
         SyncEffectiveMaxHPFromStats(force: true);
 
-        // Synergy-driven statuses apply once at battle start (Phase 3).
-        // Deterministic. One-status-per-unit (no overwrites).
         ApplyBattleStartSynergies();
 
         ApplyActiveToUI();
         ClampAndPushActiveHP();
         RefreshBenchUI();
 
-        // Booster system (optional)
         if (_rules.allowBoosters && BattleBoosterController.I != null)
         {
             BattleBoosterController.I.SetHooks(new BattleRuntimeHooks
             {
-                // Heal the currently active team slot. Return actual healed amount.
                 HealPlayer = (amount) =>
                 {
                     if (teamHP == null || teamHP.Length == 0 || activeIndex < 0 || activeIndex >= teamHP.Length)
@@ -1453,549 +1279,6 @@ public void BeginBattle(MonsterDataSO wild, int level, Action<BattleResult> onEn
         turnCR = StartCoroutine(Co_RevealPanelsThenStart(wildCG, playerCG, 0.28f));
         ResetStatusIcons();
     }
-
-    private void EndBattleRouted(bool victory, bool escaped = false)
-    {
-        if (IronCareerRuntime.IsActive)
-            EndBattle_Iron(victory, escaped);
-        else
-            EndBattle(victory, escaped);
-    }
-
-    private void EndBattle_Iron(bool victory, bool escaped = false)
-    {
-        if (!inBattle) return;
-
-        inBattle = false;
-        SetIsPlayerTurn(false);
-
-        // Iron: do NOT broadcast global battle state events (they can trigger rewards/UI flows).
-        ConfigureForAuto(false);
-
-        if (benchBtn1) benchBtn1.interactable = false;
-        if (benchBtn2) benchBtn2.interactable = false;
-
-        pendingAction = PlayerAction.None;
-        defendActiveThisRound = false;
-        wildDefendActiveThisRound = false;
-        wildChargedNextAttack = false;
-        ResetStatusIcons();
-
-        if (turnCR != null) { StopCoroutine(turnCR); turnCR = null; }
-
-        BattleCalc.ResetRng();
-        _rng.ClearAll();
-        float survived = Mathf.Max(0f, Time.unscaledTime - startTime);
-
-        // Titles: end for all participants so per-battle stacks clear.
-        try
-        {
-            if (teamTitleIds != null && activeIndex >= 0 && activeIndex < teamTitleIds.Length)
-            {
-                string tid = teamTitleIds[activeIndex];
-                if (!string.IsNullOrEmpty(tid))
-                    TitlesAdapter.OnBattleEnd(tid, victory, wildDef, wildLevel);
-            }
-
-            if (!string.IsNullOrEmpty(_wildCombatIdForTitles))
-                TitlesAdapter.OnBattleEnd(_wildCombatIdForTitles, victory, wildDef, wildLevel);
-        }
-        catch (Exception ex)
-        {
-            BattleLogger.Log($"[Titles] OnBattleEnd(Iron) exception: {ex.Message}", LogScope.Battle);
-        }
-
-        // Build Iron snapshot (no rewards/persistence).
-        ExtractIronCarryFromPlayerField(out var carryStatus, out var carryShield);
-
-        var snap = new IronBattleOutcome
-        {
-            victory = victory,
-            escaped = escaped,
-            wildDef = wildDef,
-            wildLevel = wildLevel,
-            secondsSurvived = survived,
-            turnsSurvived = _turnIndex,
-            teamHP = (teamHP != null) ? (float[])teamHP.Clone() : null,
-            teamMaxHP = (teamMaxHP != null) ? (float[])teamMaxHP.Clone() : null,
-
-            // Player-only carryover fields (Phase 1)
-            shieldHP = carryShield,
-            playerFieldStatus = carryStatus,
-        };
-
-        _battleContext?.OnBattleResolved(snap);
-
-        // Also invoke onEnd for local callers that still rely on BattleResult callback.
-        var result = new BattleResult
-        {
-            victory = victory,
-            escaped = escaped,
-            creditsGained = 0,
-            creditsBase = 0,
-            creditsTitleBonus = 0,
-            creditsMultiplier = 1f,
-            growthCoresGained = 0,
-            growthCoresBase = 0,
-            growthCoresTitleBonus = 0,
-            activeMonsterOwnedId = null,
-            wildDef = wildDef,
-            wildLevel = wildLevel,
-            secondsSurvived = survived,
-            critCount = _totalCritsThisBattle,
-            turnsSurvived = _turnIndex,
-            damageTaken = _totalDamageTakenThisBattle,
-            damageDealt = _totalDamageDealtThisBattle,
-            gotFirstHit = playerLandedFirstHitThisBattle
-        };
-
-        onEnd?.Invoke(result);
-    }
-
-    private IronFieldStatusSnapshot GetPlayerFieldStatusSnapshot()
-    {
-        // Iron carries a single primary player field-wide status between battles.
-        // Current rule: player-only carry; field-wide single status; no between-battle ticking.
-        // This snapshot is stored on the battle outcome and re-applied by the Iron run loop.
-        var snap = new IronFieldStatusSnapshot
-        {
-            type = StatusType.None,
-            turns = 0,
-            magnitude = 0f,
-            persistent = false
-        };
-
-        if (teamStatus == null || teamStatusTurns == null || teamStatusMagnitude == null || teamStatusPersistent == null)
-            return snap;
-
-        int bestIdx = -1;
-        int bestTurns = -1;
-
-        for (int i = 0; i < teamStatus.Length; i++)
-        {
-            var t = teamStatus[i];
-            if (t == StatusType.None) continue;
-
-            int turns = (i < teamStatusTurns.Length) ? teamStatusTurns[i] : 0;
-            if (turns > bestTurns)
-            {
-                bestTurns = turns;
-                bestIdx = i;
-            }
-        }
-
-        if (bestIdx >= 0)
-        {
-            snap.type = teamStatus[bestIdx];
-            snap.turns = (bestIdx < teamStatusTurns.Length) ? teamStatusTurns[bestIdx] : 0;
-            snap.magnitude = (bestIdx < teamStatusMagnitude.Length) ? teamStatusMagnitude[bestIdx] : 0f;
-            snap.persistent = (bestIdx < teamStatusPersistent.Length) && teamStatusPersistent[bestIdx];
-        }
-
-        return snap;
-    }
-
-    // ─────────────────────────────────────────────────────────────
-    // Iron carry-over helpers (Phase 1)
-    // Player-only carry. Field-wide single primary status. No between-battle ticking.
-    // ShieldHP carries per slot. Imported shields must NOT be auto-removed by Shielded expiry logic.
-    // ─────────────────────────────────────────────────────────────
-    public void ApplyIronCarryToPlayerField(IronFieldStatusSnapshot snap, float[] shieldBySlot)
-    {
-        if (!IronCareerRuntime.IsActive) return;
-
-        // Restore field-wide status onto all occupied team slots.
-        if (teamStatus != null && teamStatusTurns != null && teamStatusMagnitude != null && teamStatusPersistent != null)
-        {
-            for (int i = 0; i < teamStatus.Length; i++)
-            {
-                if (teamDefs != null && i < teamDefs.Length && teamDefs[i] == null) continue;
-
-                teamStatus[i] = snap.type;
-                if (i < teamStatusTurns.Length) teamStatusTurns[i] = snap.turns;
-                if (i < teamStatusMagnitude.Length) teamStatusMagnitude[i] = snap.magnitude;
-                if (i < teamStatusPersistent.Length) teamStatusPersistent[i] = snap.persistent;
-            }
-
-            RefreshPrimaryStatusUI();
-        }
-
-        // Restore carried shields (player-only).
-        if (shieldHP != null && shieldBySlot != null)
-        {
-            EnsureShieldGrantPools();
-
-            int n = Mathf.Min(shieldHP.Length, shieldBySlot.Length);
-            for (int i = 0; i < n; i++)
-            {
-                shieldHP[i] = Mathf.Max(0f, shieldBySlot[i]);
-
-                // Imported carry should never be removed by grant-pool subtraction.
-                if (_shieldedGrantTeam != null && i < _shieldedGrantTeam.Length)
-                    _shieldedGrantTeam[i] = 0f;
-
-                if (_ironShieldCarrySlots != null && i < _ironShieldCarrySlots.Length)
-                    _ironShieldCarrySlots[i] = (shieldHP[i] > 0f);
-            }
-
-            PushHPBars();
-        }
-    }
-
-    public void ExtractIronCarryFromPlayerField(out IronFieldStatusSnapshot snap, out float[] shieldBySlot)
-    {
-        snap = GetPlayerFieldStatusSnapshot();
-        shieldBySlot = (shieldHP != null) ? (float[])shieldHP.Clone() : null;
-    }
-
-
-    private void EndBattle(bool victory, bool escaped = false)
-    {
-        if (!inBattle) return;
-
-        inBattle = false;
-        SetIsPlayerTurn(false);
-        GameEvents.OnBattleStateChanged?.Invoke();
-
-        ConfigureForAuto(false);
-
-        if (benchBtn1) benchBtn1.interactable = false;
-        if (benchBtn2) benchBtn2.interactable = false;
-
-        pendingAction = PlayerAction.None;
-        defendActiveThisRound = false;
-        wildDefendActiveThisRound = false;
-        wildChargedNextAttack = false;
-        ResetStatusIcons();
-
-        if (turnCR != null) { StopCoroutine(turnCR); turnCR = null; }
-
-        // Restore BattleCalc RNG to default (UnityEngine.Random)
-        BattleCalc.ResetRng();
-        _rng.ClearAll();
-        float survived = Mathf.Max(0f, Time.unscaledTime - startTime);
-
-        int basecredits = 0;
-        int finalcredits = 0;
-        int creditTitleBonus = 0;
-
-        if (!escaped)
-        {
-            basecredits = BattleRewards.creditsFor(victory, wildLevel, survived);
-            finalcredits = basecredits;
-
-            if (victory && teamIds != null && activeIndex >= 0 && activeIndex < teamIds.Length)
-            {
-                string leadId = teamIds[activeIndex];
-                float cm = _cachedCreditMult;
-                Debug.Log($"[BattleManager] Title mult for lead '{leadId}': {cm} (basecredits={basecredits}) [cached]");
-                if (cm > 0f)
-                {
-                    finalcredits = Mathf.Max(0, Mathf.RoundToInt(basecredits * cm));
-                    creditTitleBonus = Mathf.Max(0, finalcredits - basecredits);
-                    Debug.Log($"[BattleManager] finalcredits={finalcredits}, creditTitleBonus={creditTitleBonus}");
-                }
-            }
-
-            if (finalcredits < 0) finalcredits = 0;
-        }
-
-        int baseCores = Mathf.Max(1, 2 + wildLevel);
-        int growthCoreBaseAfterShiny = 0;
-        int growthCoreTitleBonus = 0;
-        int growthCoreTotal = 0;
-
-        var data = SaveManager.Data;
-
-         if (victory && !escaped)
-        {
-            var m = (teamOwnedEffective != null && activeIndex >= 0 && activeIndex < teamOwnedEffective.Length)
-                ? teamOwnedEffective[activeIndex]
-                : ((data != null && data.team != null && activeIndex >= 0 && activeIndex < data.team.Count) ? data.team[activeIndex] : default);
-
-            float shinyMul = ShinySystems.TrainingXpMult(m);
-            int baseAfterShiny = Mathf.RoundToInt(baseCores * shinyMul);
-            growthCoreBaseAfterShiny = Mathf.Max(0, baseAfterShiny);
-
-            float titleCoreMul = 1f;
-            if (teamIds != null && activeIndex >= 0 && activeIndex < teamIds.Length)
-                titleCoreMul = Mathf.Max(0f, TitlesAdapter.GetGrowthCoreMultOnVictory(teamTitleIds[activeIndex], wildDef, wildLevel));
-
-            int growthCoreAfterTitles = Mathf.Max(0, Mathf.RoundToInt(baseAfterShiny * titleCoreMul));
-
-            float globalMul = 1f;
-            if (GameBalance.TryGet(out var bal))
-                globalMul = Mathf.Max(0f, bal.xpGainMultiplier);
-
-            growthCoreTotal = Mathf.Max(0, Mathf.RoundToInt(growthCoreAfterTitles * globalMul));
-
-            growthCoreTitleBonus = Mathf.Max(0, growthCoreAfterTitles - growthCoreBaseAfterShiny);
-
-            if (growthCoreTotal > 0)
-                ResourceManager.I?.Add(ResourceType.GrowthCore, growthCoreTotal);
-
-            BattleLogger.Log($"Gained {growthCoreTotal} Growth Cores.", LogScope.Battle);
-        }
-
-        var teamList = data != null && data.team != null ? data.team : new List<OwnedMonsterData>();
-        var ownedList = data != null && data.owned != null ? data.owned : new List<OwnedMonsterData>();
-        long nowUnix = SaveManager.NowUnix();
-
-        // If the player has a preferred variant (shiny/non-shiny) for a given monsterId,
-        // battles may have been simulated using that preferred OwnedMonsterData (ownedUID).
-        // Ensure the team list points at the same owned copy so HP/progression writes back to the correct variant.
-        if (teamOwnedUidEffective != null && ownedList != null && teamList != null)
-        {
-            var uidMap = new Dictionary<string, OwnedMonsterData>(StringComparer.Ordinal);
-            for (int j = 0; j < ownedList.Count; j++)
-            {
-                var o = ownedList[j];
-                if (o == null) continue;
-                if (string.IsNullOrEmpty(o.ownedUID)) continue;
-                if (!uidMap.ContainsKey(o.ownedUID))
-                    uidMap.Add(o.ownedUID, o);
-            }
-
-            int max = Mathf.Min(teamCount, Mathf.Min(teamList.Count, teamOwnedUidEffective.Length));
-            for (int i = 0; i < max; i++)
-            {
-                string uid = teamOwnedUidEffective[i];
-                if (string.IsNullOrEmpty(uid)) continue;
-
-                if (uidMap.TryGetValue(uid, out var preferredOwned) && preferredOwned != null)
-                {
-                    // Swap the team slot to the preferred owned copy (same monsterId).
-                    teamList[i] = preferredOwned;
-                }
-            }
-        }
-
-        for (int i = 0; i < teamCount && i < teamList.Count; i++)
-        {
-            var t = teamList[i];
-            if (t == null || string.IsNullOrEmpty(t.monsterId)) continue;
-            int hp = Mathf.CeilToInt(Mathf.Max(0f, teamHP[i]));
-
-            // AUTO-REMOVE DEAD TEAM MEMBERS:
-            // When a team monster hits 0 HP in battle, it is automatically removed from the player's team.
-            // We clear the slot (instead of removing list entries) to preserve stable UI slot indices.
-            if (hp <= 0)
-            {
-                // IMPORTANT:
-                // Even though we auto-remove dead team members from the TEAM list,
-                // we must still persist the KO state back to the OWNED instance so:
-                // - cooldown timers can show (OwnedMonsterListItemUI)
-                // - battle eligibility correctly blocks 0 HP monsters
-                // - healing services can find + heal the KO'd monster
-
-                // Write KO back to owned list using ownedUID first (strong match).
-                if (ownedList != null)
-                {
-                    int ownedIdx = -1;
-
-                    if (!string.IsNullOrEmpty(t.ownedUID))
-                    {
-                        for (int j = 0; j < ownedList.Count; j++)
-                        {
-                            var o = ownedList[j];
-                            if (o != null && !string.IsNullOrEmpty(o.ownedUID) && o.ownedUID == t.ownedUID)
-                            {
-                                ownedIdx = j;
-                                break;
-                            }
-                        }
-                    }
-
-                    // Fallback: monsterId only if unique.
-                    if (ownedIdx < 0)
-                    {
-                        int count = 0;
-                        int singleIdx = -1;
-                        for (int j = 0; j < ownedList.Count; j++)
-                        {
-                            var o = ownedList[j];
-                            if (o != null && !string.IsNullOrEmpty(o.monsterId) && o.monsterId == t.monsterId)
-                            {
-                                count++;
-                                singleIdx = j;
-                                if (count > 1) break;
-                            }
-                        }
-                        if (count == 1) ownedIdx = singleIdx;
-                    }
-
-                    if (ownedIdx >= 0 && ownedIdx < ownedList.Count)
-                    {
-                        var o = ownedList[ownedIdx];
-                        if (o != null)
-                        {
-                            // Centralized HP contract (no Save() here; battle end saves once)
-                            SaveManager.SetOwnedMonsterHP(o.ownedUID, 0, stampLastHpUnix: true, nowUnix: nowUnix, save: false, fireEvents: false);
-                            // Refresh local list entry from SaveManager in case of clamping/normalization
-                            var refreshed = SaveManager.GetOwnedByUid(o.ownedUID);
-                            if (refreshed != null) ownedList[ownedIdx] = refreshed;
-                        }
-                    }
-                }
-
-                // Clear slot
-                teamList[i] = new OwnedMonsterData { monsterId = null, currentHP = 0 };
-                continue;
-            }
-
-            // Centralized HP contract: update team slot (syncs owned via ownedUID / unique monsterId).
-            SaveManager.SetTeamSlotHP(i, hp, stampLastHpUnix: true, nowUnix: nowUnix, save: false, fireEvents: false);
-            // teamList references SaveManager.Data.team, so it is already updated in-place.
-        }
-
-        // Sync HP back to owned list.
-        // Prefer ownedUID matching so shiny/normal variants (same monsterId) don't cross-contaminate.
-        for (int i = 0; i < teamList.Count; i++)
-        {
-            var t = teamList[i];
-            if (t == null || string.IsNullOrEmpty(t.monsterId)) continue;
-
-            int idx = -1;
-
-            // 1) Strong match: ownedUID
-            if (!string.IsNullOrEmpty(t.ownedUID))
-            {
-                for (int j = 0; j < ownedList.Count; j++)
-                {
-                    var o = ownedList[j];
-                    if (o != null && !string.IsNullOrEmpty(o.ownedUID) && o.ownedUID == t.ownedUID)
-                    {
-                        idx = j;
-                        break;
-                    }
-                }
-            }
-
-            // 2) Fallback: monsterId only if unique in owned list
-            if (idx < 0)
-            {
-                int count = 0;
-                int singleIdx = -1;
-                for (int j = 0; j < ownedList.Count; j++)
-                {
-                    var o = ownedList[j];
-                    if (o != null && !string.IsNullOrEmpty(o.monsterId) && o.monsterId == t.monsterId)
-                    {
-                        count++;
-                        singleIdx = j;
-                        if (count > 1) break;
-                    }
-                }
-
-                if (count == 1) idx = singleIdx;
-            }
-
-            if (idx >= 0 && idx < ownedList.Count)
-            {
-                var o = ownedList[idx];
-                if (o != null)
-                {
-                                        if (!string.IsNullOrEmpty(o.ownedUID))
-                    {
-                        SaveManager.SetOwnedMonsterHP(o.ownedUID, Mathf.Max(0, t.currentHP), stampLastHpUnix: true, nowUnix: nowUnix, save: false, fireEvents: false);
-                        var refreshed = SaveManager.GetOwnedByUid(o.ownedUID);
-                        if (refreshed != null) ownedList[idx] = refreshed;
-                    }
-                    else
-                    {
-                        // No ownedUID on owned entry: rely on team-slot HP contract fallback (unique monsterId)
-                        // to propagate HP safely without cross-contamination.
-                        SaveManager.SetTeamSlotHP(i, Mathf.Max(0, t.currentHP), stampLastHpUnix: true, nowUnix: nowUnix, save: false, fireEvents: false);
-                    }
-                }
-            }
-        }
-
-        for (int i = 0; i < teamList.Count; i++)
-        {
-            var e = teamList[i];
-            if (e == null || string.IsNullOrEmpty(e.monsterId)) continue;
-            e.lastHPUnix = nowUnix;
-            teamList[i] = e;
-        }
-
-        if (data != null)
-        {
-            data.owned = ownedList;
-            data.team = teamList;
-            SaveManager.Save();
-        }
-
-        GameEvents.OnTeamChanged?.Invoke();
-
-        BattleTempBuffs.I?.ClearPlayerAtkBonus();
-        BattleTempBuffs.I?.ClearPlayerSpeedBonus();
-        BattleTempBuffs.I?.ClearPlayerHPBonus();
-        BattleTempBuffs.I?.ClearPlayerDefenseBonus();
-
-        string outcomeLabel = escaped ? "Escaped" : (victory ? "Victory" : "Defeat");
-        BattleLogger.Log($"Battle ends: {outcomeLabel} (+{finalcredits} credits).", LogScope.Battle);
-        BattleLogger.EndBattle(victory);
-
-        var result = new BattleResult
-        {
-            victory = victory,
-            escaped = escaped,
-            creditsGained = finalcredits,
-            creditsBase = basecredits,
-            creditsTitleBonus = creditTitleBonus,
-            creditsMultiplier = _cachedCreditMult,
-
-            growthCoresGained = growthCoreTotal,
-            growthCoresBase = growthCoreBaseAfterShiny,
-            growthCoresTitleBonus = growthCoreTitleBonus,
-
-            activeMonsterOwnedId = (teamIds != null && activeIndex >= 0 && activeIndex < teamIds.Length) ? teamIds[activeIndex] : null,
-            wildDef = wildDef,
-            wildLevel = wildLevel,
-            secondsSurvived = survived,
-            critCount = _totalCritsThisBattle,
-            turnsSurvived = _turnIndex,
-            damageTaken = _totalDamageTakenThisBattle,
-            damageDealt = _totalDamageDealtThisBattle,
-            gotFirstHit = playerLandedFirstHitThisBattle
-        };
-
-        Debug.Log($"[BattleManager] BattleResult: base={result.creditsBase}, bonus={result.creditsTitleBonus}, totalPreScale={result.creditsGained}, active={result.activeMonsterOwnedId}");
-
-        if (!victory && !escaped && AutoResolveActive)
-        {
-            EncounterManager.I?.NotifyAuto_TeamKO();
-        }
-
-        SetPostBattleWinnerVisible(victory, escaped);
-
-        // Titles: make sure BOTH combatants end the session so per-battle stacks/buffs reset.
-        // TitleManager registers multiple participants (player + wild) on battle start.
-        // If we only call OnBattleEnd for the player, the wild participant remains registered
-        // and the session never fully clears.
-        try
-        {
-            if (teamIds != null && activeIndex >= 0 && activeIndex < teamIds.Length)
-            {
-                string ownedId = GetTeamTitleIdSafe(activeIndex);
-                if (!string.IsNullOrEmpty(ownedId))
-                    TitlesAdapter.OnBattleEnd(ownedId, victory, wildDef, wildLevel);
-            }
-
-            if (!string.IsNullOrEmpty(_wildCombatIdForTitles))
-                TitlesAdapter.OnBattleEnd(_wildCombatIdForTitles, victory, wildDef, wildLevel);
-        }
-        catch (Exception ex)
-        {
-            BattleLogger.Log($"[Titles] OnBattleEnd exception: {ex.Message}", LogScope.Battle);
-        }
-
-        onEnd?.Invoke(result);
-        GameEvents.BattleFinished?.Invoke(result);
-    }
-
-
 
     private void ResolveQueuedSwap()
     {
@@ -2110,86 +1393,6 @@ public void BeginBattle(MonsterDataSO wild, int level, Action<BattleResult> onEn
     }
 
 
-    private TitleStatMods GetTitleModsForIndex(int idx)
-    {
-        if (teamIds != null && idx >= 0 && idx < teamIds.Length && !string.IsNullOrEmpty(teamIds[idx]))
-            return TitlesAdapter.GetBattleStatMods(teamTitleIds[idx]);
-        return default;
-    }
-
-    private TitleStatMods GetConditionalModsForIndex(int idx)
-    {
-        if (teamIds == null || teamDefs == null || teamLevels == null) return default;
-        if (idx < 0 || idx >= teamIds.Length) return default;
-        if (string.IsNullOrEmpty(teamIds[idx]) || teamDefs[idx] == null) return default;
-
-        float curMax = GetActiveMaxHP_NoConditionals(teamMaxHP[idx], idx);
-
-        float curHp = (teamHP != null && idx >= 0 && idx < teamHP.Length) ? teamHP[idx] : curMax;
-        float hp01 = curMax > 0.01f ? Mathf.Clamp01(curHp / curMax) : 0f;
-
-        int alliesAlive = 0;
-        for (int i = 0; i < teamCount; i++)
-            if (i != idx && teamHP != null && i < teamHP.Length && teamHP[i] > 0.01f) alliesAlive++;
-
-        int winStreak = (EncounterManager.I != null) ? EncounterManager.I.CurrentWinStreak : 0;
-
-        TitleContext ctx = TitleContext.Empty;
-        ctx.selfHp01 = hp01;
-        ctx.alliesAlive = alliesAlive;
-        ctx.winStreak = winStreak;
-
-        var def = teamDefs[idx];
-        int lvl = teamLevels[idx];
-        string ownedId = GetTeamTitleIdSafe(idx);
-
-        TitleStatMods mods = default;
-        mods.atkFlat = Mathf.RoundToInt(TitlesAdapter.GetStatValue(ownedId, def, lvl, "atkFlat", ctx, 0f));
-        mods.atkPct = TitlesAdapter.GetStatValue(ownedId, def, lvl, "atkPct", ctx, 0f);
-
-        mods.defFlat = Mathf.RoundToInt(TitlesAdapter.GetStatValue(ownedId, def, lvl, "defFlat", ctx, 0f));
-        mods.defPct = TitlesAdapter.GetStatValue(ownedId, def, lvl, "defPct", ctx, 0f);
-
-        mods.spdFlat = Mathf.RoundToInt(TitlesAdapter.GetStatValue(ownedId, def, lvl, "spdFlat", ctx, 0f));
-        mods.spdPct = TitlesAdapter.GetStatValue(ownedId, def, lvl, "spdPct", ctx, 0f);
-
-        mods.hpPct = TitlesAdapter.GetStatValue(ownedId, def, lvl, "hpPct", ctx, 0f);
-
-        return mods;
-    }
-
-    private TitleStatMods GetConditionalModsForActive() =>GetConditionalModsForIndex(activeIndex);
-
-    public float GetActiveMaxHP(float baseMax, int idx = -1)
-    {
-        float v = Mathf.Max(1f, baseMax);
-
-        if (idx >= 0)
-        {
-            var tmods = GetTitleModsForIndex(idx);
-            if (tmods.hpPct > 0f) v *= 1f + tmods.hpPct;
-
-            var cmods = GetConditionalModsForIndex(idx);
-            if (cmods.hpPct > 0f) v *= 1f + Mathf.Max(0f, cmods.hpPct);
-        }
-
-        int hpBuff = BattleTempBuffs.I ? BattleTempBuffs.I.GetPlayerHPBonus() : 0;
-        v = Mathf.Max(1f, v + hpBuff);
-
-        return v;
-    }
-
-    private float GetFinalMaxHPForIndex(int idx)
-    {
-        if (_stats != null)
-            return Mathf.Max(1f, _stats.GetEffectivePlayer(idx).maxHP);
-
-        if (teamMaxHP == null || idx < 0 || idx >= teamMaxHP.Length) return 1f;
-        return GetActiveMaxHP(teamMaxHP[idx], idx);
-    }
-
-    
-
     /// <summary>
     /// When max HP changes due to titles/boosters, preserve current HP percent and update max caches.
     /// Call this whenever BattleStatsSystem becomes dirty (battle start, turn advance, combatant turn end).
@@ -2198,7 +1401,6 @@ public void BeginBattle(MonsterDataSO wild, int level, Action<BattleResult> onEn
     {
         if (_stats == null) return;
 
-        // Wild
         {
             float newMax = Mathf.Max(1f, _stats.GetEffectiveWild().maxHP);
             float oldMax = (_wildEffMaxHpCache > 0.01f) ? _wildEffMaxHpCache : Mathf.Max(1f, wildMaxHP);
@@ -2212,7 +1414,6 @@ public void BeginBattle(MonsterDataSO wild, int level, Action<BattleResult> onEn
             }
         }
 
-        // Player slots
         if (teamCount <= 0 || teamHP == null || teamHP.Length == 0) return;
 
         if (_effMaxHpCache == null || _effMaxHpCache.Length != teamCount)
@@ -2235,251 +1436,13 @@ public void BeginBattle(MonsterDataSO wild, int level, Action<BattleResult> onEn
         }
     }
 
-private int GetAlliesAliveNotIncludingActive()
-    {
-        int alive = 0;
-        for (int i = 0; i < teamCount; i++)
-            if (i != activeIndex && teamHP[i] > 0.01f) alive++;
-        return alive;
-    }
-
-    private int GetWinStreakSafe()
-    {
-        try
-        {
-            var em = EncounterManager.I;
-            if (em == null) return 0;
-
-            var t = em.GetType();
-            var p = t.GetProperty("CurrentWinStreak") ?? t.GetProperty("WinStreak");
-            if (p != null && p.PropertyType == typeof(int)) return (int)p.GetValue(em);
-
-            var m = t.GetMethod("GetWinStreak", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance);
-            if (m != null && m.ReturnType == typeof(int)) return (int)m.Invoke(em, null);
-        }
-        catch { }
-        return 0;
-    }
-
-    // ─────────────────────────────────────────────────────────────────────────
-    // Conditional Title feedback (battle textbox + BattleLogger)
-    // ─────────────────────────────────────────────────────────────────────────
-
-    // Tracks the last conditional-mod snapshot so we only notify on changes.
-    // We keep this in BattleManager so it survives across partials and avoids per-frame allocations.
-    private bool _condModsInit;
-    private int _condModsHashLast;
-    private TitleStatMods _condModsLast;
-
-    private static int HashTitleStatMods(in TitleStatMods m)
-    {
-        unchecked
-        {
-            int h = 17;
-            h = (h * 31) ^ BitConverter.SingleToInt32Bits(m.hpPct);
-            h = (h * 31) ^ BitConverter.SingleToInt32Bits(m.atkPct);
-            h = (h * 31) ^ BitConverter.SingleToInt32Bits(m.defPct);
-            h = (h * 31) ^ BitConverter.SingleToInt32Bits(m.spdPct);
-            h = (h * 31) ^ m.atkFlat;
-            h = (h * 31) ^ m.defFlat;
-            h = (h * 31) ^ m.spdFlat;
-            return h;
-        }
-    }
-
-    private static bool HasAnyConditional(in TitleStatMods m)
-    {
-        const float EPS = 0.0001f;
-        return
-            Mathf.Abs(m.hpPct)  > EPS ||
-            Mathf.Abs(m.atkPct) > EPS ||
-            Mathf.Abs(m.defPct) > EPS ||
-            Mathf.Abs(m.spdPct) > EPS ||
-            m.atkFlat != 0 || m.defFlat != 0 || m.spdFlat != 0;
-    }
-
-    private static string BuildCondSummaryShort(in TitleStatMods m)
-    {
-        List<string> parts = null;
-
-        void Add(string s)
-        {
-            parts ??= new List<string>(4);
-            parts.Add(s);
-        }
-
-        bool anyUp = false;
-        bool anyDown = false;
-
-        if (m.atkPct > 0f || m.atkFlat > 0) { Add("ATK↑"); anyUp = true; }
-        else if (m.atkPct < 0f || m.atkFlat < 0) { Add("ATK↓"); anyDown = true; }
-
-        if (m.defPct > 0f || m.defFlat > 0) { Add("DEF↑"); anyUp = true; }
-        else if (m.defPct < 0f || m.defFlat < 0) { Add("DEF↓"); anyDown = true; }
-
-        if (m.spdPct > 0f || m.spdFlat > 0) { Add("SPD↑"); anyUp = true; }
-        else if (m.spdPct < 0f || m.spdFlat < 0) { Add("SPD↓"); anyDown = true; }
-
-        if (m.hpPct > 0f) { Add("HP↑"); anyUp = true; }
-        else if (m.hpPct < 0f) { Add("HP↓"); anyDown = true; }
-
-        if (parts == null || parts.Count == 0) return null;
-
-        string prefix = anyUp && !anyDown ? "Title Boost" : (anyDown && !anyUp ? "Title Drag" : "Title Shift");
-        return $"{prefix}: {string.Join(" ", parts)}";
-    }
-
-    private static string BuildCondSummaryMathy(in TitleStatMods m)
-    {
-        return $"COND hpPct={m.hpPct:0.###} atkPct={m.atkPct:0.###} defPct={m.defPct:0.###} spdPct={m.spdPct:0.###} atkFlat={m.atkFlat} defFlat={m.defFlat} spdFlat={m.spdFlat}";
-    }
-
-    private bool TryConsumeConditionalTitleFeedback(out TitleStatMods mods, out string battleLine, out string logLine)
-    {
-        mods = default;
-        battleLine = null;
-        logLine = null;
-
-        string ownedId = GetTeamTitleIdSafe(activeIndex);
-        if (string.IsNullOrEmpty(ownedId)) return false;
-
-        float activeHp = Mathf.Max(0f, GetActivePlayerCurHP());
-        float baseMax  = (teamMaxHP != null && activeIndex >= 0 && activeIndex < teamMaxHP.Length) ? Mathf.Max(1f, teamMaxHP[activeIndex]) : 1f;
-        float maxHp    = Mathf.Max(1f, GetActiveMaxHP(baseMax, activeIndex));
-        float hpPct    = Mathf.Clamp01(activeHp / maxHp);
-        int alliesAlive = GetAlliesAliveNotIncludingActive();
-        int winStreak = GetWinStreakSafe();
-
-        TitleStatMods cond = TitlesAdapter.GetConditionalBattleMods(ownedId, hpPct, alliesAlive, winStreak);
-        mods = cond;
-        int hash = HashTitleStatMods(cond);
-
-        if (!_condModsInit)
-        {
-            _condModsInit = true;
-            _condModsLast = cond;
-            _condModsHashLast = hash;
-
-            if (HasAnyConditional(cond))
-            {
-                battleLine = BuildCondSummaryShort(cond);
-                logLine = BuildCondSummaryMathy(cond);
-                return !string.IsNullOrEmpty(battleLine);
-            }
-
-            return false;
-        }
-
-        if (hash == _condModsHashLast)
-            return false;
-
-        bool had = HasAnyConditional(_condModsLast);
-        bool has = HasAnyConditional(cond);
-
-        _condModsLast = cond;
-        _condModsHashLast = hash;
-
-        if (!had && !has) return false;
-
-        if (!has)
-        {
-            battleLine = "Title Boost ended";
-            logLine = "COND ended";
-            return true;
-        }
-
-        battleLine = BuildCondSummaryShort(cond);
-        logLine = BuildCondSummaryMathy(cond);
-        return !string.IsNullOrEmpty(battleLine);
-    }
-
-    private void ResetConditionalTitleFeedbackCache()
-    {
-        _condModsInit = false;
-        _condModsHashLast = 0;
-        _condModsLast = default;
-    }
-
-    private TitleContext BuildTitleContextForActive()
-    {
-        float curMax = GetFinalMaxHPForIndex(activeIndex);
-        float hpPct = curMax > 0.01f ? Mathf.Clamp01(teamHP[activeIndex] / curMax) : 0f;
-        int alliesAlive = GetAlliesAliveNotIncludingActive();
-        int streak = GetWinStreakSafe();
-
-        var ctx = new TitleContext
-        {
-            selfHp01 = hpPct,
-            alliesAlive = alliesAlive,
-            winStreak = streak,
-            isBattle = true,
-            ownedId = GetTeamTitleIdSafe(activeIndex)
-        };
-        return ctx;
-    }
-
-    internal TitleContext BuildTitleContextForWild()
-    {
-        float max = Mathf.Max(1f, wildMaxHP);
-        float hp01 = max > 0.01f ? Mathf.Clamp01(wildHP / max) : 0f;
-
-        return new TitleContext
-        {
-            selfHp01 = hp01,
-            alliesAlive = 0,
-            winStreak = 0,
-            isBattle = true,
-            ownedId = _wildCombatIdForTitles
-        };
-    }
-
-    private void RefreshWildEffectiveStatsFromTitles()
-    {
-        if (!wildDef) return;
-        if (string.IsNullOrEmpty(_wildCombatIdForTitles)) return;
-
-        // Preferred path: use centralized stat pipeline so wild titles affect ALL stats consistently.
-        // This also ensures conditional titles that depend on HP% evaluate against the effective max HP.
-        if (_stats != null)
-        {
-            // Max HP can change from titles/conditionals; preserve HP%.
-            SyncEffectiveMaxHPFromStats();
-
-            // Keep legacy fields in sync for older code paths that still read them.
-            wildAttackPerTurn = Mathf.Max(1f, _stats.GetEffectiveWild().atk);
-            return;
-        }
-
-        // Fallback: legacy title evaluation (HP/ATK only). Kept for safety when _stats is unavailable.
-        float prevMax = Mathf.Max(1f, wildMaxHP);
-        float hp01 = prevMax > 0.01f ? Mathf.Clamp01(wildHP / prevMax) : 0f;
-
-        var wCtx = BuildTitleContextForWild();
-
-        float wMaxF = TitlesAdapter.GetStatValue(_wildCombatIdForTitles, wildDef, wildLevel, "HP", wCtx, wildBaseMaxHP);
-        if (!float.IsNaN(wMaxF) && !float.IsInfinity(wMaxF))
-            wildMaxHP = Mathf.Max(1f, wMaxF);
-
-        wildHP = Mathf.Clamp(wildMaxHP * hp01, 0f, wildMaxHP);
-
-        float wAtkF = TitlesAdapter.GetStatValue(_wildCombatIdForTitles, wildDef, wildLevel, "Attack", wCtx, wildBaseAttackPerTurn);
-        if (!float.IsNaN(wAtkF) && !float.IsInfinity(wAtkF))
-            wildAttackPerTurn = Mathf.Max(1f, wAtkF);
-    }
+    
 
 
 
 
 
 
-
-
-
-
-    /// <summary>
-    /// Returns true if a line with the given tags would be suppressed by current settings (condensed/auto-compress).
-    /// Use this to avoid constructing strings that would be immediately skipped (GC savings in auto battles).
-    /// </summary>
 
 
 
@@ -2518,86 +1481,21 @@ private int GetAlliesAliveNotIncludingActive()
         }
     }
 
+    public string ActivePlayerTitleOwnerId
+    {
+        get
+        {
+            if (activeIndex < 0) return "";
+            return GetTeamTitleIdSafe(activeIndex) ?? "";
+        }
+    }
+
     public string ActiveWildMonsterId => wildDef ? wildDef.id : "";
-
-    private float GetActiveMaxHP_NoConditionals(float baseMax, int idx)
-    {
-        float v = Mathf.Max(1f, baseMax);
-
-        var tmods = GetTitleModsForIndex(idx);
-        if (tmods.hpPct > 0f) v *= (1f + tmods.hpPct);
-
-        int hpBuff = BattleTempBuffs.I ? BattleTempBuffs.I.GetPlayerHPBonus() : 0;
-        v = Mathf.Max(1f, v + hpBuff);
-
-        return v;
-    }
-
-
-
-    private List<TitleSO> GetTitlesForOwnedIdSafe(string ownedId)
-    {
-        if (string.IsNullOrEmpty(ownedId)) return null;
-
-        try
-        {
-            return TitleManager.I?.GetTitlesForMonster(ownedId);
-        }
-        catch { }
-
-        return null;
-    }
-
-    private void Debug_LogActiveTitlesSnapshot(string reason)
-    {
-        if (!debugTitles) return;
-        if (activeIndex < 0) return;
-        if (teamDefs == null || teamLevels == null || teamIds == null) return;
-        if (activeIndex >= teamDefs.Length || activeIndex >= teamLevels.Length || activeIndex >= teamIds.Length) return;
-
-        string ownedId = GetTeamTitleIdSafe(activeIndex);
-        var def = teamDefs[activeIndex];
-        int lvl = teamLevels[activeIndex];
-
-        if (string.IsNullOrEmpty(ownedId) || def == null) return;
-
-        var titles = GetTitlesForOwnedIdSafe(ownedId);
-
-        Debug.Log($"[Titles][{reason}] Turn={_turnIndex} OwnedId={ownedId} Monster={def.displayName} Lv={lvl}");
-
-        if (titles == null)
-        {
-            Debug.Log("[Titles] Title list unavailable (TitleManager.I.GetTitlesForMonster not reachable).");
-        }
-        else if (titles.Count == 0)
-        {
-            Debug.Log("[Titles] (No titles found)");
-        }
-        else
-        {
-            for (int i = 0; i < titles.Count; i++)
-            {
-                var t = titles[i];
-                if (!t) continue;
-
-                string id = "";
-                try { id = t.titleId; } catch { }
-
-                string extra = "";
-                if (t is BattleStartFlatTitleSO bsf)
-                    extra = $" stat={bsf.stat} flatAmount={bsf.flatAmount} durationTurns={bsf.durationTurns}";
-
-                Debug.Log($"  • [{i}] {id} {t.name} ({t.GetType().Name}){extra}");
-            }
-        }
-    }
 
     private static bool LooksLikeLegacyTrainingWasMirroredIntoFlat(int flatAtkBonus, int trainingAtk)
     {
         return trainingAtk > 0 && flatAtkBonus >= trainingAtk;
     }
-
-
 
     private OwnedMonsterData ResolveEffectiveTeamOwnedForBattle(int teamIndex, OwnedMonsterData teamSlotOwned)
     {
@@ -2648,7 +1546,6 @@ private int GetAlliesAliveNotIncludingActive()
     {
         om = null;
 
-        // Prefer the effective owned (preferred shiny/non-shiny variant) used for the current battle.
         if (teamOwnedEffective != null && idx >= 0 && idx < teamOwnedEffective.Length)
         {
             om = teamOwnedEffective[idx];
@@ -2682,16 +1579,12 @@ private int GetAlliesAliveNotIncludingActive()
 
         int lvl = Mathf.Max(1, teamLevels[idx]);
 
-        // SpeciesBase + LevelGrowth
         int hpBase  = Mathf.RoundToInt(BattleCalc.CalcHP(def, lvl));
         int atkBase = Mathf.RoundToInt(BattleCalc.CalcBaseAttack(def, lvl, 0, 0));
         int defBase = BattleCalc.CalcDefense(def, lvl);
         int spdBase = BattleCalc.CalcSpeed(def, lvl);
 
-        // Training (EV-like)
         int tHp = 0, tAtk = 0, tDef = 0, tSpd = 0;
-
-        // Permanent flat (separate system)
         int flatAtk = 0;
 
         if (TryGetOwnedAtIndex(idx, out var om))
@@ -2704,12 +1597,10 @@ private int GetAlliesAliveNotIncludingActive()
             flatAtk = Mathf.Max(0, om.flatAtkBonus);
         }
 
-        // Baseline totals
         totalHP  = Mathf.Max(1, hpBase + tHp);
         totalDEF = Mathf.Max(0, defBase + tDef);
         totalSPD = Mathf.Max(1, spdBase + tSpd);
 
-        // ATK baseline includes training + flatAtkBonus, with legacy guard:
         int atkTrainingPlusFlat = tAtk + flatAtk;
         if (LooksLikeLegacyTrainingWasMirroredIntoFlat(flatAtk, tAtk))
             atkTrainingPlusFlat = Mathf.Max(0, flatAtk); 
@@ -2730,9 +1621,7 @@ private int GetAlliesAliveNotIncludingActive()
         if (!isActiveAndEnabled) return;
         StartCoroutine(Say(line, tags));
     }
-
-    
-  public void SetHudRigOverride(BattleHudRig rig)
+        public void SetHudRigOverride(BattleHudRig rig)
     {
         _hudRigOverride = rig;
     }
@@ -2744,7 +1633,6 @@ private int GetAlliesAliveNotIncludingActive()
 
     private void ApplyHudRigForThisBattle()
     {
-        // Choose active rig
         _hudRigActive = (_hudRigOverride != null) ? _hudRigOverride : defaultHudRig;
 
         if (_hudRigActive == null)
@@ -2753,7 +1641,6 @@ private int GetAlliesAliveNotIncludingActive()
             return;
         }
 
-        // Point BattleManager UI refs at the active rig
         wildPanel = _hudRigActive.wildPanel;
         playerPanel = _hudRigActive.playerPanel;
 
@@ -2788,7 +1675,8 @@ private int GetAlliesAliveNotIncludingActive()
         benchHPText1 = _hudRigActive.benchHPText1;
         benchHPText2 = _hudRigActive.benchHPText2;
 
-        // Use your existing UI override system too (keeps things consistent)
         SetUIOverride(_hudRigActive.feedback, _hudRigActive.battleTextBox, _hudRigActive.bottomToggle);
+        ReapplyRuntimeUIBindingsOverrideIfAny();
+        ReapplyRuntimeUIOverrideIfAny();
     }
 }

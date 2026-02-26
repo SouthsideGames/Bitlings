@@ -2,28 +2,16 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 
-/// <summary>
-/// Status + Synergy logic (battle start application + turn-start ticking + combat hooks).
-/// Phase 4: status ticking + core effects (Burn, Freeze, Weakened, Shielded, Leeching, Corrupt).
-/// </summary>
+// ─────────────────────────────────────────────────────────────
+// BattleManager.Statuses
+// Status application, ticking, and status-driven combat effects.
+// ─────────────────────────────────────────────────────────────
+
 public partial class BattleManager
 {
-    // ─────────────────────────────────────────────────────────────
-    // Phase 4 rule enforcement
-    // - One active status per SIDE (Player team as a whole, and Wild).
-    // - No stacking, no refresh. Attempting to apply a new status while one
-    //   is active is blocked.
-    // - Status is treated as a "field" effect for the player side: swapping
-    //   monsters does NOT change/transfer/refresh anything; the active slot
-    //   simply experiences the current field status.
-    //
-    // This keeps the implementation simple and avoids per-OwnedMonster state.
-    // ─────────────────────────────────────────────────────────────
     [Header("Statuses")]
     [SerializeField] private bool playerStatusesAreFieldWide = true;
 
-    // Turn-start tick guards (prevents accidental double tick in a single round).
-    // _turnIndex advances once per full round (player + wild).
     private int _lastPlayerStatusTickTurnIndex = int.MinValue;
     private int _lastWildStatusTickTurnIndex = int.MinValue;
 
@@ -45,7 +33,6 @@ public partial class BattleManager
         return TryProcessTurnStartStatus_Wild(out skippedBy);
     }
 
-    // Field-wide syncing helpers (player team)
     private bool PlayerTeamHasAnyActiveStatus()
     {
         if (teamStatus == null) return false;
@@ -79,74 +66,59 @@ public partial class BattleManager
             if (i < teamStatusPersistent.Length) teamStatusPersistent[i] = persistent;
         }
     }
-// ─────────────────────────────────────────────────────────────
-// Status: Shielded grant pools
-// ─────────────────────────────────────────────────────────────
-private float[] _shieldedGrantTeam; // per team slot
-private float _shieldedGrantWild;
+    private float[] _shieldedGrantTeam;
+    private float _shieldedGrantWild;
 
-// Iron: imported shield carry flags (skip grant-pool subtraction on Shielded expiry)
-private bool[] _ironShieldCarrySlots;
+    private bool[] _ironShieldCarrySlots;
 
-private void EnsureShieldGrantPools()
-{
-    if (teamStatus != null)
+    private void EnsureShieldGrantPools()
     {
-        if (_shieldedGrantTeam == null || _shieldedGrantTeam.Length != teamStatus.Length)
-            _shieldedGrantTeam = new float[teamStatus.Length];
+        if (teamStatus != null)
+        {
+            if (_shieldedGrantTeam == null || _shieldedGrantTeam.Length != teamStatus.Length)
+                _shieldedGrantTeam = new float[teamStatus.Length];
 
-        if (_ironShieldCarrySlots == null || _ironShieldCarrySlots.Length != teamStatus.Length)
-            _ironShieldCarrySlots = new bool[teamStatus.Length];
+            if (_ironShieldCarrySlots == null || _ironShieldCarrySlots.Length != teamStatus.Length)
+                _ironShieldCarrySlots = new bool[teamStatus.Length];
+        }
+        else
+        {
+            _shieldedGrantTeam = null;
+            _ironShieldCarrySlots = null;
+        }
     }
-    else
+
+    private PlayerAction[] _foresightLastPlayerAction;
+    private bool[] _foresightStunPendingTeam;
+
+    private EnemyAction _foresightLastWildAction = EnemyAction.None;
+    private bool _foresightStunPendingWild = false;
+
+    private void EnsureForesightSidecars()
     {
-        _shieldedGrantTeam = null;
-        _ironShieldCarrySlots = null;
+        if (teamStatus != null)
+        {
+            if (_foresightLastPlayerAction == null || _foresightLastPlayerAction.Length != teamStatus.Length)
+                _foresightLastPlayerAction = new PlayerAction[teamStatus.Length];
+
+            if (_foresightStunPendingTeam == null || _foresightStunPendingTeam.Length != teamStatus.Length)
+                _foresightStunPendingTeam = new bool[teamStatus.Length];
+        }
+        else
+        {
+            _foresightLastPlayerAction = null;
+            _foresightStunPendingTeam = null;
+        }
     }
-}
 
-
-
-// ─────────────────────────────────────────────────────────────
-// Status: Tailwind + Foresight runtime sidecars
-// - Tailwind: first attack during effect deals bonus damage (consumed on first attack).
-// - Foresight: repeating the same action twice causes a "stun" (skip) on the next turn.
-//   Implemented via per-unit pending-skip flags (does not overwrite the active status).
-// ─────────────────────────────────────────────────────────────
-
-private PlayerAction[] _foresightLastPlayerAction;
-private bool[] _foresightStunPendingTeam;
-
-private EnemyAction _foresightLastWildAction = EnemyAction.None;
-private bool _foresightStunPendingWild = false;
-
-private void EnsureForesightSidecars()
-{
-    if (teamStatus != null)
+    private void NotifyPlayerActionResolved_ForForesight(int slot, PlayerAction action)
     {
-        if (_foresightLastPlayerAction == null || _foresightLastPlayerAction.Length != teamStatus.Length)
-            _foresightLastPlayerAction = new PlayerAction[teamStatus.Length];
-
-        if (_foresightStunPendingTeam == null || _foresightStunPendingTeam.Length != teamStatus.Length)
-            _foresightStunPendingTeam = new bool[teamStatus.Length];
-    }
-    else
-    {
-        _foresightLastPlayerAction = null;
-        _foresightStunPendingTeam = null;
-    }
-}
-
-// Called after a player slot successfully performs an action.
-private void NotifyPlayerActionResolved_ForForesight(int slot, PlayerAction action)
-{
-    EnsureForesightSidecars();
+        EnsureForesightSidecars();
 
     if (!inBattle) return;
     if (teamStatus == null || slot < 0 || slot >= teamStatus.Length) return;
     if (teamStatus[slot] != StatusType.Foresight) return;
 
-    // Ignore "None" to avoid false repeats due to state plumbing.
     if (action == PlayerAction.None) return;
 
     var last = (_foresightLastPlayerAction != null && slot < _foresightLastPlayerAction.Length)
@@ -166,8 +138,7 @@ private void NotifyPlayerActionResolved_ForForesight(int slot, PlayerAction acti
         _foresightLastPlayerAction[slot] = action;
 }
 
-// Called after the wild successfully performs an action.
-private void NotifyWildActionResolved_ForForesight(EnemyAction action)
+    private void NotifyWildActionResolved_ForForesight(EnemyAction action)
 {
     if (!inBattle) return;
     if (wildStatus != StatusType.Foresight) return;

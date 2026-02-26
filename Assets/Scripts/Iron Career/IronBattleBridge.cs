@@ -39,9 +39,42 @@ public sealed class IronBattleBridge : MonoBehaviour, IBattleRosterProvider, IBa
     [Header("Runtime")]
     [SerializeField] private int winsForId = 0;
 
-    private IIronBattleBridgeHost Host => hostBehaviour as IIronBattleBridgeHost;
+    private IIronBattleBridgeHost Host => ResolveHost();
 
     public BattleRules Rules => BattleRules.Iron;
+
+    private void Awake()
+    {
+        ResolveHost();
+    }
+
+    private IIronBattleBridgeHost ResolveHost()
+    {
+        if (hostBehaviour is IIronBattleBridgeHost typedHost)
+            return typedHost;
+
+        if (hostBehaviour != null)
+            Debug.LogWarning($"[IronBattleBridge] Assigned host '{hostBehaviour.name}' does not implement IIronBattleBridgeHost.");
+
+        var localBehaviours = GetComponents<MonoBehaviour>();
+        for (int i = 0; i < localBehaviours.Length; i++)
+        {
+            if (localBehaviours[i] is IIronBattleBridgeHost localHost)
+            {
+                hostBehaviour = localBehaviours[i];
+                return localHost;
+            }
+        }
+
+        var managerHost = FindFirstObjectByType<IronCareerManager>(FindObjectsInactive.Include);
+        if (managerHost != null)
+        {
+            hostBehaviour = managerHost;
+            return managerHost;
+        }
+
+        return null;
+    }
 
     /// <summary>Update wins used for the wild combatant id (IRON::W::<RunGuid>::F&lt;wins&gt;).</summary>
     public void SetWins(int wins)
@@ -56,6 +89,8 @@ public sealed class IronBattleBridge : MonoBehaviour, IBattleRosterProvider, IBa
     {
         if (battle == null) return;
 
+        Debug.Log($"[IronBattleBridge] BeginIronBattle: ironActive={IronCareerRuntime.IsActive} host={(hostBehaviour ? hostBehaviour.name : "NULL")} useDebugFallback={useDebugFallbackIfNoHost}");
+
         if (!IronCareerRuntime.IsActive)
         {
             Debug.LogError("[IronBattleBridge] BeginIronBattle called but IronCareerRuntime is not active. Forfeiting.");
@@ -66,6 +101,13 @@ public sealed class IronBattleBridge : MonoBehaviour, IBattleRosterProvider, IBa
         // Build and cache ids + title injection BEFORE Begin.
         var party = GetPlayerTeam();
         var wild = GetWild();
+
+        Debug.Log($"[IronBattleBridge] Pre-Begin snapshot: partyCount={party.Count} wild={(wild != null && wild.def != null ? wild.def.name : "NULL")}");
+        for (int i = 0; i < party.Count; i++)
+        {
+            var c = party[i];
+            Debug.Log($"[IronBattleBridge] Party[{i}] def={(c != null && c.def != null ? c.def.name : "NULL")} lvl={(c != null ? c.level : -1)} hp={(c != null ? c.hp : -1f)} cid={(c != null ? c.combatantId : "NULL")}");
+        }
         if (wild == null || wild.def == null)
         {
             Debug.LogError("[IronBattleBridge] Wild combatant is null/invalid. Forfeiting.");
@@ -75,19 +117,18 @@ public sealed class IronBattleBridge : MonoBehaviour, IBattleRosterProvider, IBa
 
         if (Host != null) winsForId = Mathf.Max(0, Host.Wins);
 
-        // Ensure the Iron HUD is applied before the battle begins so BattleManager binds to the correct UI.
-        // Safe to call multiple times.
-        var ironHud = FindFirstObjectByType<IronBattleUIRoot>(FindObjectsInactive.Include);
-        if (ironHud != null)
-            ironHud.ApplyTo(battle);
-
         // Start the battle using injected roster.
         battle.Begin(wild.def, Mathf.Max(1, wild.level), onEnded, this, this);
+
+        Debug.Log("[IronBattleBridge] battle.Begin(...) invoked with injected roster provider + context.");
 
         // Apply carry after arrays are initialized.
         var carryStatus = (Host != null) ? Host.GetCarryStatus() : IronFieldStatusSnapshot.None;
         var carryShield = (Host != null) ? Host.GetCarryShields() : null;
         battle.ApplyIronCarryToPlayerField(carryStatus, carryShield);
+
+        Debug.Log($"[IronBattleBridge] carryStatus snapshot = {carryStatus}");    
+        
     }
 
     // ─────────────────────────────────────────────────────────────
@@ -103,6 +144,8 @@ public sealed class IronBattleBridge : MonoBehaviour, IBattleRosterProvider, IBa
         else if (useDebugFallbackIfNoHost)
             src = debugParty;
 
+        Debug.Log($"[IronBattleBridge] GetPlayerTeam: host={(host != null ? host.GetType().Name : "NULL")} srcCount={(src != null ? src.Count : -1)}");
+
         if (src == null) return Array.Empty<BattleCombatant>();
 
         // Ensure stable combatant IDs and Title injection for each member.
@@ -117,6 +160,8 @@ public sealed class IronBattleBridge : MonoBehaviour, IBattleRosterProvider, IBa
             list.Add(c);
         }
 
+        Debug.Log($"[IronBattleBridge] GetPlayerTeam resultCount={list.Count}");
+
         return list;
     }
 
@@ -128,6 +173,8 @@ public sealed class IronBattleBridge : MonoBehaviour, IBattleRosterProvider, IBa
             c = host.GetWildForNextBattle();
         else if (useDebugFallbackIfNoHost)
             c = debugWild;
+
+        Debug.Log($"[IronBattleBridge] GetWild: host={(host != null ? host.GetType().Name : "NULL")} def={(c != null && c.def != null ? c.def.name : "NULL")}");
 
         if (c == null || c.def == null) return null;
 
@@ -142,6 +189,7 @@ public sealed class IronBattleBridge : MonoBehaviour, IBattleRosterProvider, IBa
 
     public void OnBattleResolved(IronBattleOutcome outcome)
     {
+        Debug.Log($"[IronBattleBridge] OnBattleResolved: victory={outcome.victory} escaped={outcome.escaped} turns={outcome.turnsSurvived}");
         // Forward to run host (IronCareerManager) and allow it to update runtime state.
         var host = Host;
         if (host != null)
