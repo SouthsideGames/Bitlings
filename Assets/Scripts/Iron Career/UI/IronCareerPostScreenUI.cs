@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
@@ -50,15 +51,24 @@ public sealed class IronCareerPostScreenUI : MonoBehaviour
     [SerializeField] private Button quitButton;
 
     private readonly List<IronCareerMonsterCardUI> _spawnedPartyCards = new List<IronCareerMonsterCardUI>(3);
+    private bool _continueQueued;
+    private Color _statusNameBaseColor = Color.white;
+    private Color _partyHeaderBaseColor = Color.white;
 
     private void Awake()
     {
         if (!manager) manager = FindFirstObjectByType<IronCareerManager>();
-        if (continueButton) continueButton.onClick.AddListener(() => manager?.OnPostContinue());
+        if (continueButton) continueButton.onClick.AddListener(OnContinuePressed);
         if (quitButton) quitButton.onClick.AddListener(() => manager?.RequestQuit());
 
         if (titleTMP && string.IsNullOrEmpty(titleTMP.text))
             titleTMP.text = "POST-BATTLE STATUS";
+
+        if (statusName)
+            _statusNameBaseColor = statusName.color;
+
+        if (partyHeaderTMP)
+            _partyHeaderBaseColor = partyHeaderTMP.color;
     }
 
     private void OnDestroy()
@@ -78,8 +88,26 @@ public sealed class IronCareerPostScreenUI : MonoBehaviour
         BindInternal(party, carry, wins, hasOutcome: true, outcome: outcome);
     }
 
+    private void OnContinuePressed()
+    {
+        if (_continueQueued) return;
+        _continueQueued = true;
+        if (continueButton) continueButton.interactable = false;
+        StartCoroutine(CoContinueNextFrame());
+    }
+
+    private IEnumerator CoContinueNextFrame()
+    {
+        yield return null;
+        manager?.OnPostContinue();
+        _continueQueued = false;
+        if (continueButton) continueButton.interactable = true;
+    }
+
     private void BindInternal(IReadOnlyList<IronMonster> party, IronFieldStatusSnapshot carry, int wins, bool hasOutcome, IronBattleOutcome outcome)
     {
+        if (bodyScrollRect) bodyScrollRect.normalizedPosition = new Vector2(0f, 1f);
+
         // Header/meta
         int safeWins = Mathf.Max(0, wins);
         int floor = safeWins + 1;
@@ -95,7 +123,7 @@ public sealed class IronCareerPostScreenUI : MonoBehaviour
             int turns = Mathf.Max(0, outcome.turnsSurvived);
             int secs = Mathf.Max(0, Mathf.RoundToInt(outcome.secondsSurvived));
             string result = outcome.victory ? "VICTORY" : (outcome.escaped ? "ESCAPED" : "DEFEAT");
-            summaryTMP.text = $"Result: {result}\nWild: {wildName} (Lv {wildLvl})\nTurns: {turns}   Time: {secs}s";
+            summaryTMP.text = $"<b>{result}</b>\nWild: {wildName} (Lv {wildLvl})\nTurns Survived: {turns}\nTime Survived: {secs}s";
         }
 
         // Party list (mobile vertical). If assigned, prefer spawned cards. Otherwise legacy 3-slot stays visible.
@@ -117,16 +145,46 @@ public sealed class IronCareerPostScreenUI : MonoBehaviour
                 _spawnedPartyCards.Add(card);
             }
 
-            if (partyHeaderTMP && string.IsNullOrEmpty(partyHeaderTMP.text))
-                partyHeaderTMP.text = "YOUR PARTY (HP CARRIES FORWARD)";
+            if (partyHeaderTMP)
+            {
+                string baseHeader = "YOUR PARTY (HP CARRIES FORWARD)";
+                partyHeaderTMP.text = (count > 0)
+                    ? baseHeader
+                    : $"{baseHeader}\n{BuildMutedLine("No active party members.", _partyHeaderBaseColor, 0.7f)}";
+                partyHeaderTMP.color = _partyHeaderBaseColor;
+            }
+        }
+        else if (partyHeaderTMP && string.IsNullOrEmpty(partyHeaderTMP.text))
+        {
+            partyHeaderTMP.text = "YOUR PARTY (HP CARRIES FORWARD)";
+            partyHeaderTMP.color = _partyHeaderBaseColor;
         }
 
         var type = carry.type;
-        if (statusIcon) statusIcon.sprite = statusLibrary ? statusLibrary.GetIcon(type) : null;
+        if (statusIcon)
+        {
+            var icon = (type != StatusType.None && statusLibrary) ? statusLibrary.GetIcon(type) : null;
+            statusIcon.sprite = icon;
+            statusIcon.gameObject.SetActive(icon != null);
+        }
         if (statusName)
         {
-            if (type == StatusType.None) statusName.text = "";
-            else statusName.text = statusLibrary ? statusLibrary.GetDisplayName(type) : type.ToString();
+            if (type == StatusType.None)
+            {
+                statusName.text = "No carried status";
+                var faded = _statusNameBaseColor;
+                faded.a = Mathf.Clamp01(_statusNameBaseColor.a * 0.7f);
+                statusName.color = faded;
+            }
+            else
+            {
+                statusName.text = statusLibrary ? statusLibrary.GetDisplayName(type) : "Unknown Status";
+                statusName.color = _statusNameBaseColor;
+#if UNITY_EDITOR
+                if (!statusLibrary)
+                    Debug.LogWarning("[IronCareerPostScreenUI] StatusLibrarySO is not assigned. Carry status name/icon fallback is being used.");
+#endif
+            }
         }
 
         // Checks + Milestones
@@ -160,5 +218,14 @@ public sealed class IronCareerPostScreenUI : MonoBehaviour
                 Destroy(_spawnedPartyCards[i].gameObject);
         }
         _spawnedPartyCards.Clear();
+    }
+
+    private static string BuildMutedLine(string line, Color baseColor, float alphaMultiplier)
+    {
+        int r = Mathf.Clamp(Mathf.RoundToInt(baseColor.r * 255f), 0, 255);
+        int g = Mathf.Clamp(Mathf.RoundToInt(baseColor.g * 255f), 0, 255);
+        int b = Mathf.Clamp(Mathf.RoundToInt(baseColor.b * 255f), 0, 255);
+        int a = Mathf.Clamp(Mathf.RoundToInt(baseColor.a * Mathf.Clamp01(alphaMultiplier) * 255f), 0, 255);
+        return $"<color=#{r:X2}{g:X2}{b:X2}{a:X2}>{line}</color>";
     }
 }
