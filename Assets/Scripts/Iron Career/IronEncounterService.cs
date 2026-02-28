@@ -33,10 +33,29 @@ public sealed class IronEncounterService
         var libs = Resources.FindObjectsOfTypeAll<MonsterLibrarySO>();
         MonsterLibrarySO library = (libs != null && libs.Length > 0) ? libs[0] : null;
 
-        // AllAvailable is a PROPERTY IEnumerable<MonsterDataSO> (NOT a method)
-        List<MonsterDataSO> all = (library != null && library.AllAvailable != null)
-            ? library.AllAvailable.Where(m => m != null).ToList()
-            : new List<MonsterDataSO>();
+        List<MonsterDataSO> all = new List<MonsterDataSO>();
+
+        try
+        {
+            // AllAvailable is a PROPERTY IEnumerable<MonsterDataSO> (NOT a method)
+            if (library != null && library.AllAvailable != null)
+                all = library.AllAvailable.Where(m => m != null).ToList();
+        }
+        catch (Exception ex)
+        {
+            Debug.LogWarning($"[IronEncounterService] Failed to read MonsterLibrary.AllAvailable. Error: {ex.Message}");
+        }
+
+        // Fallback to the raw monsters list if AllAvailable is empty/missing.
+        if ((all == null || all.Count == 0) && library != null && library.monsters != null)
+        {
+            all = new List<MonsterDataSO>(library.monsters.Length);
+            foreach (var m in library.monsters)
+            {
+                if (m != null)
+                    all.Add(m);
+            }
+        }
 
         if (all.Count == 0)
         {

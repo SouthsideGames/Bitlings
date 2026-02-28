@@ -16,38 +16,50 @@ public static class IronCareerMetaSave
 {
     private const string FileName = "IronCareerMetaSave.json";
 
+    private static IronCareerMetaData CreateDefault()
+    {
+        return new IronCareerMetaData
+        {
+            lastRerollDate = string.Empty,
+            rerollsRemaining = 0,
+            starterOfferIds = null
+        };
+    }
+
     private static string FilePath =>
         Path.Combine(Application.persistentDataPath, FileName);
 
     public static IronCareerMetaData Load()
     {
-        if (!File.Exists(FilePath))
+        try
         {
-            return new IronCareerMetaData
-            {
-                lastRerollDate = "",
-                rerollsRemaining = 0,
-                starterOfferIds = null
-            };
-        }
+            if (!File.Exists(FilePath))
+                return CreateDefault();
 
-        string json = File.ReadAllText(FilePath);
-        if (string.IsNullOrEmpty(json))
+            string json = File.ReadAllText(FilePath);
+            if (string.IsNullOrEmpty(json))
+                return CreateDefault();
+
+            var parsed = JsonUtility.FromJson<IronCareerMetaData>(json);
+            return parsed ?? CreateDefault();
+        }
+        catch (Exception ex)
         {
-            return new IronCareerMetaData
-            {
-                lastRerollDate = "",
-                rerollsRemaining = 0,
-                starterOfferIds = null
-            };
+            Debug.LogWarning($"[IronCareerMetaSave] Failed to load meta save. Resetting. Error: {ex.Message}");
+            return CreateDefault();
         }
-
-        return JsonUtility.FromJson<IronCareerMetaData>(json);
     }
 
     public static void Save(IronCareerMetaData data)
     {
-        string json = JsonUtility.ToJson(data, true);
-        File.WriteAllText(FilePath, json);
+        try
+        {
+            string json = JsonUtility.ToJson(data, true);
+            File.WriteAllText(FilePath, json);
+        }
+        catch (Exception ex)
+        {
+            Debug.LogWarning($"[IronCareerMetaSave] Failed to save meta. Error: {ex.Message}");
+        }
     }
 }

@@ -338,11 +338,7 @@ public sealed class IronCareerStarterPanelUI : MonoBehaviour
 
         if (_pool == null || _pool.Count == 0)
         {
-            Debug.LogWarning("[IronCareerStarterPanelUI] No valid starters found.");
-            _offer.Clear();
-            ClearSelection();
-            RefreshStartButton();
-            RefreshRerollUI();
+            HandleEmptyPool();
             return;
         }
 
@@ -412,6 +408,25 @@ public sealed class IronCareerStarterPanelUI : MonoBehaviour
 
         SetButtonsInteractable(true);
         RefreshRerollUI();
+    }
+
+    private void HandleEmptyPool()
+    {
+        Debug.LogError("[IronCareerStarterPanelUI] No valid starters found in MonsterLibrary. Starter selection disabled.");
+
+        _offer.Clear();
+        ClearSelection();
+        RefreshStartButton();
+        RefreshRerollUI();
+
+        if (rerollButton) rerollButton.interactable = false;
+        if (startButton) startButton.interactable = false;
+        if (slot1Button) slot1Button.interactable = false;
+        if (slot2Button) slot2Button.interactable = false;
+        if (slot3Button) slot3Button.interactable = false;
+
+        // Keep back/rules enabled so the player can exit gracefully.
+        if (modeDescText) modeDescText.text = "No starters available. Please return to Home.";
     }
 
     private void SetButtonsInteractable(bool on)

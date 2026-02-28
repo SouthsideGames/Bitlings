@@ -1,5 +1,6 @@
 // Assets/Scripts/Iron Career/IronCareerManager.cs
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -30,6 +31,13 @@ public sealed class IronCareerManager : MonoBehaviour, IronBattleBridge.IIronBat
     [Header("Mode")]
     [SerializeField] private Mode mode = Mode.Standard;
 
+    [Header("Runtime Safety")]
+    [Tooltip("If true, backgrounding (pause/focus loss) will auto-forfeit the current Iron run. Defaults off to avoid accidental losses.")]
+    [SerializeField] private bool forfeitOnBackground = false;
+
+    [Tooltip("Grace period (seconds) before applying background forfeit. Gives players a moment to alt-tab without ending the run.")]
+    [SerializeField] private float backgroundForfeitGraceSeconds = 0.5f;
+
     [Header("Hire Rules")]
     [Tooltip("Chance that a hire attempt succeeds when player chooses Yes. 1 = always succeeds.")]
     [Range(0f, 1f)]
@@ -55,9 +63,9 @@ public sealed class IronCareerManager : MonoBehaviour, IronBattleBridge.IIronBat
     private IronTitleRoller _titleRoller;
     private IronEncounterService _encounters;
     private IronMonster _pendingHire;
-    private bool _pendingRotateAfterWin;
     private bool _finalizedRunStats;
     private readonly List<int> _tmpLivingIndices = new List<int>(4);
+    private Coroutine _backgroundForfeitCo;
 
     private void ResolveBattleRefsIfNeeded()
     {
@@ -229,7 +237,6 @@ public sealed class IronCareerManager : MonoBehaviour, IronBattleBridge.IIronBat
         // Rotate the active slot immediately after a win, before any hire/replace flow.
         // This keeps newly hired monsters from becoming the default starter next battle.
         _roster?.RotateActiveAfterWin();
-        _pendingRotateAfterWin = false;
 
         var wildSnapshot = _state.lastRolledWild;
         if (wildSnapshot != null && wildSnapshot.def != null)
@@ -267,7 +274,9 @@ public sealed class IronCareerManager : MonoBehaviour, IronBattleBridge.IIronBat
     private void OnApplicationPause(bool pauseStatus)
     {
         if (!IronCareerRuntime.IsActive) return;
-        if (pauseStatus) Forfeit("Application paused");
+        if (!pauseStatus) return;
+
+        HandleBackgroundLoss("Application paused");
     }
 
     private void OnEnable()
@@ -278,12 +287,49 @@ public sealed class IronCareerManager : MonoBehaviour, IronBattleBridge.IIronBat
     private void OnDisable()
     {
         Application.focusChanged -= OnAppFocusChanged;
+
+        if (_backgroundForfeitCo != null)
+        {
+            StopCoroutine(_backgroundForfeitCo);
+            _backgroundForfeitCo = null;
+        }
     }
 
     private void OnAppFocusChanged(bool hasFocus)
     {
         if (!IronCareerRuntime.IsActive) return;
-        if (!hasFocus) Forfeit("Application lost focus");
+        if (hasFocus) return;
+
+        HandleBackgroundLoss("Application lost focus");
+    }
+
+    private bool ShouldForfeitOnBackground()
+    {
+        return _state.runActive && forfeitOnBackground;
+    }
+
+    private void HandleBackgroundLoss(string reason)
+    {
+        if (!ShouldForfeitOnBackground())
+        {
+            Debug.Log($"[IronCareerManager] Ignoring background event: {reason}");
+            return;
+        }
+
+        if (_backgroundForfeitCo != null)
+            StopCoroutine(_backgroundForfeitCo);
+
+        _backgroundForfeitCo = StartCoroutine(Co_ForfeitAfterBackground(reason));
+    }
+
+    private IEnumerator Co_ForfeitAfterBackground(string reason)
+    {
+        float delay = Mathf.Max(0f, backgroundForfeitGraceSeconds);
+        if (delay > 0f)
+            yield return new WaitForSecondsRealtime(delay);
+
+        _backgroundForfeitCo = null;
+        Forfeit(reason);
     }
 
     // Phase 2 debug entry points preserved
@@ -315,7 +361,6 @@ public sealed class IronCareerManager : MonoBehaviour, IronBattleBridge.IIronBat
         EncounterManager.I?.ForceStopForIron();
 
         IronCareerRuntime.Enter();
-        _pendingRotateAfterWin = false;
         _finalizedRunStats = false;
         _quitPromptActive = false;
         _suppressRulesThisRun = false;
@@ -369,8 +414,10 @@ public sealed class IronCareerManager : MonoBehaviour, IronBattleBridge.IIronBat
 #endif
         if (_roster.IsPartyEmpty)
         {
-            Debug.LogError("[IronCareerManager] No starter party configured.");
-            ShowGameOver(forfeit: false);
+            Debug.LogError("[IronCareerManager] No starter party configured. Returning to starter selection.");
+            _state.runActive = false;
+            IronCareerRuntime.Exit();
+            ironEncounterUI?.ShowStarter(immediate: true);
             return;
         }
 
@@ -699,10 +746,19 @@ public sealed class IronCareerManager : MonoBehaviour, IronBattleBridge.IIronBat
         if (!_state.runActive) return;
         if (_roster == null || _roster.IsPartyEmpty) { ShowGameOver(forfeit: false); return; }
 
-        if (_pendingRotateAfterWin)
+        if (!IronCareerRuntime.IsActive)
         {
-            _roster.RotateActiveAfterWin();
-            _pendingRotateAfterWin = false;
+            Debug.LogError("[IronCareerManager] Iron runtime inactive before battle start. Ending run gracefully.");
+            ShowGameOver(forfeit: false);
+            return;
+        }
+
+        var wildPreview = GetWildForNextBattle();
+        if (wildPreview == null || wildPreview.def == null)
+        {
+            Debug.LogError("[IronCareerManager] Encounter generation failed (wild null). Ending run gracefully.");
+            ShowGameOver(forfeit: false);
+            return;
         }
 
         ResolveBattleRefsIfNeeded();

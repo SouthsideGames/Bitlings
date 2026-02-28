@@ -1,3 +1,7 @@
+using System;
+using System.Collections;
+using System.Collections.Generic;
+using System.IO;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -6,6 +10,36 @@ using UnityEngine.UI;
 public class DiagnosticsOverlayUI : MonoBehaviour
 {
     public static DiagnosticsOverlayUI I { get; private set; }
+
+    [Serializable]
+    private sealed class PairResult
+    {
+        public string monsterA;
+        public string monsterB;
+        public int levelA;
+        public int levelB;
+        public int iterations;
+        public int winsA;
+        public int winsB;
+        public float winRateA;
+        public float winRateB;
+        public float offenseMulA;
+        public float defenseMulA;
+        public float incomingTypeResistMulA;
+        public string titleAId;
+        public string titleBId;
+        public string[] titlesA;
+        public string[] titlesB;
+    }
+
+    [Serializable]
+    private sealed class RunOutput
+    {
+        public string createdUtc;
+        public string mode;
+        public int baseSeed;
+        public List<PairResult> pairs;
+    }
 
     [Header("Unlock Behavior")]
     [SerializeField] private bool hideButtonUntilUnlocked = true;
@@ -19,8 +53,27 @@ public class DiagnosticsOverlayUI : MonoBehaviour
     [SerializeField] private TextMeshProUGUI text;
     [SerializeField] private Button closeButton;
 
-    [Header("Optional Actions")]
-    [SerializeField] private Button copyButton;
+    [Header("Balance Panel")]
+    [SerializeField] private CanvasGroup balanceGroup;
+    [SerializeField] private Button balanceToggleButton;
+    [SerializeField] private TextMeshProUGUI balanceButtonLabel;
+    [SerializeField] private Image backgroundImage;
+    [SerializeField, Range(0f, 1f)] private float backgroundAlphaNormal = 0.6f;
+    [SerializeField, Range(0f, 1f)] private float backgroundAlphaFull = 1f;
+
+    [Header("Balance Sim (dev)")]
+    [SerializeField] private bool enableBalanceSim = false;
+    [SerializeField] private TMP_InputField simMonsterAId;
+    [SerializeField] private TMP_InputField simMonsterBId;
+    [SerializeField] private TMP_InputField simLevelA;
+    [SerializeField] private TMP_InputField simLevelB;
+    [SerializeField] private TMP_InputField simIterations;
+    [SerializeField] private TMP_InputField simSeed;
+    [SerializeField] private TMP_InputField simTitleAId;
+    [SerializeField] private TMP_InputField simTitleBId;
+    [SerializeField] private Toggle simAVsAllToggle;
+    [SerializeField] private Button simRunButton;
+    [SerializeField] private TextMeshProUGUI simStatusText;
 
     [Header("Behavior")]
     [SerializeField, Min(0.05f)] private float refreshSeconds = 0.25f;
@@ -28,6 +81,9 @@ public class DiagnosticsOverlayUI : MonoBehaviour
 
     float _t;
     bool _panelVisible;
+    bool _balanceVisible;
+    readonly Dictionary<string, TitleSO> _titleCache = new Dictionary<string, TitleSO>(StringComparer.Ordinal);
+    bool _simRunning;
 
     void Awake()
     {
@@ -50,15 +106,22 @@ public class DiagnosticsOverlayUI : MonoBehaviour
             closeButton.onClick.AddListener(ClosePanel);
         }
 
-        if (copyButton)
+        if (balanceToggleButton)
         {
-            copyButton.onClick.RemoveAllListeners();
-            copyButton.onClick.AddListener(OnCopyPressed);
+            balanceToggleButton.onClick.RemoveAllListeners();
+            balanceToggleButton.onClick.AddListener(ToggleBalancePanel);
+        }
+
+        if (enableBalanceSim && simRunButton)
+        {
+            simRunButton.onClick.RemoveAllListeners();
+            simRunButton.onClick.AddListener(OnRunSimPressed);
         }
 
         SetPanelVisible(false, instant: true);
 
         ApplyUnlockedState(IsUnlocked());
+        SetBalanceVisible(false);
     }
 
     void OnDestroy()
@@ -130,6 +193,8 @@ public class DiagnosticsOverlayUI : MonoBehaviour
         SetPanelVisible(true, instant: true);
         Refresh("Open");
 
+        SetBalanceVisible(false);
+
         // Requirement: when panel opens, button becomes inactive
         if (diagnosticsButton)
             diagnosticsButton.interactable = false;
@@ -164,6 +229,7 @@ public class DiagnosticsOverlayUI : MonoBehaviour
     public void Refresh(string context = "")
     {
         if (!text) return;
+        if (_balanceVisible) return; // balance view owns its own UI
 
         text.text = DiagnosticsSnapshot.Build(context);
 
@@ -174,10 +240,302 @@ public class DiagnosticsOverlayUI : MonoBehaviour
         }
     }
 
-    void OnCopyPressed()
+
+    void ToggleBalancePanel()
     {
-        string snapshot = DiagnosticsSnapshot.Build("Copy");
-        GUIUtility.systemCopyBuffer = snapshot;
-        Debug.Log("[DIAG] Copied diagnostics snapshot to clipboard.");
+        SetBalanceVisible(!_balanceVisible);
+    }
+
+    void SetBalanceVisible(bool on)
+    {
+        _balanceVisible = on;
+
+        if (mainGroup)
+        {
+            mainGroup.alpha = on ? 0f : 1f;
+            mainGroup.blocksRaycasts = !on;
+            mainGroup.interactable = !on;
+        }
+
+        if (balanceGroup)
+        {
+            balanceGroup.alpha = on ? 1f : 0f;
+            balanceGroup.blocksRaycasts = on;
+            balanceGroup.interactable = on;
+        }
+
+        if (backgroundImage)
+        {
+            var c = backgroundImage.color;
+            c.a = on ? backgroundAlphaFull : backgroundAlphaNormal;
+            backgroundImage.color = c;
+        }
+
+        if (balanceButtonLabel)
+            balanceButtonLabel.text = on ? "Test" : "Balance";
+    }
+
+    System.Collections.IEnumerator Co_RunBalanceSim()
+    {
+        _simRunning = true;
+        SetSimStatus("Running...");
+
+        yield return null; // allow UI update
+
+        try
+        {
+            RunBalanceSim();
+            SetSimStatus("Done. See Logs/BalanceSim");
+        }
+        catch (Exception ex)
+        {
+            Debug.LogError($"[DIAG] BalanceSim error: {ex.Message}\n{ex.StackTrace}");
+            SetSimStatus("Error - see console");
+        }
+        finally
+        {
+            _simRunning = false;
+        }
+    }
+
+    void RunBalanceSim()
+    {
+        string aId = simMonsterAId ? simMonsterAId.text : string.Empty;
+        string bId = simMonsterBId ? simMonsterBId.text : string.Empty;
+        int levelA = ParseInt(simLevelA, 10);
+        int levelB = ParseInt(simLevelB, 10);
+        int iterations = Mathf.Max(1, ParseInt(simIterations, 20));
+        int seed = ParseInt(simSeed, 12345);
+        bool aVsAll = simAVsAllToggle ? simAVsAllToggle.isOn : true;
+
+        var lib = MonsterLibraryLocator.Lib;
+        if (lib == null || lib.monsters == null || lib.monsters.Length == 0)
+            throw new InvalidOperationException("MonsterLibrary not found");
+
+        var defA = MonsterLibraryLocator.GetById(aId);
+        if (defA == null)
+            throw new InvalidOperationException($"Monster A id not found: {aId}");
+
+        var titleA = ResolveTitle(simTitleAId ? simTitleAId.text : null);
+        var titleB = ResolveTitle(simTitleBId ? simTitleBId.text : null);
+
+        var pairs = new List<PairResult>();
+
+        if (aVsAll)
+        {
+            foreach (var def in lib.monsters)
+            {
+                if (def == null || def == defA) continue;
+                var pr = SimulatePair(defA, levelA, def, levelB, iterations, seed, titleA, titleB);
+                pairs.Add(pr);
+            }
+        }
+        else
+        {
+            var defB = MonsterLibraryLocator.GetById(bId);
+            if (defB == null)
+                throw new InvalidOperationException($"Monster B id not found: {bId}");
+
+            var pr = SimulatePair(defA, levelA, defB, levelB, iterations, seed, titleA, titleB);
+            pairs.Add(pr);
+        }
+
+        var output = new RunOutput
+        {
+            createdUtc = DateTime.UtcNow.ToString("o"),
+            mode = "HeadlessBattleApprox-Diagnostics",
+            baseSeed = seed,
+            pairs = pairs
+        };
+
+        string logsDir = Path.GetFullPath(Path.Combine(Application.dataPath, "..", "Logs", "BalanceSim"));
+        Directory.CreateDirectory(logsDir);
+        string fileName = $"diag_balance_sim_{DateTime.UtcNow:yyyyMMdd_HHmmss}.json";
+        string path = Path.Combine(logsDir, fileName);
+
+        var json = JsonUtility.ToJson(output, true);
+        File.WriteAllText(path, json);
+
+        Debug.Log($"[DIAG] BalanceSim wrote {path}");
+    }
+
+    PairResult SimulatePair(MonsterDataSO a, int levelA, MonsterDataSO b, int levelB, int iterations, int seed, TitleSO titleA, TitleSO titleB)
+    {
+        int winsA = 0;
+        int winsB = 0;
+
+        var stats = BuildInput(a, levelA, b, levelB, titleA, titleB, null, null, seed);
+        for (int i = 0; i < iterations; i++)
+        {
+            var input = stats.input;
+            input.rngSeed = seed + i;
+            var result = HeadlessBattle.Resolve(input);
+            if (result.victory) winsA++; else winsB++;
+        }
+
+        float total = iterations;
+        float rateA = (total > 0f) ? winsA / total : 0f;
+        float rateB = (total > 0f) ? winsB / total : 0f;
+
+        return new PairResult
+        {
+            monsterA = a ? a.id : "A",
+            monsterB = b ? b.id : "B",
+            levelA = levelA,
+            levelB = levelB,
+            iterations = iterations,
+            winsA = winsA,
+            winsB = winsB,
+            winRateA = rateA,
+            winRateB = rateB,
+            offenseMulA = stats.offenseMul,
+            defenseMulA = stats.defenseMul,
+            incomingTypeResistMulA = stats.incomingTypeResistMul,
+            titleAId = titleA ? titleA.titleId : null,
+            titleBId = titleB ? titleB.titleId : null,
+            titlesA = ToIds(stats.titlesA),
+            titlesB = ToIds(stats.titlesB)
+        };
+    }
+
+    TitleSO ResolveTitle(string titleId)
+    {
+        if (string.IsNullOrWhiteSpace(titleId)) return null;
+        if (_titleCache.TryGetValue(titleId, out var cached)) return cached;
+
+        TitleSO found = null;
+        var all = Resources.LoadAll<TitleSO>(string.Empty);
+        for (int i = 0; i < all.Length; i++)
+        {
+            var t = all[i];
+            if (t != null && string.Equals(t.titleId, titleId, StringComparison.Ordinal))
+            {
+                found = t;
+                break;
+            }
+        }
+
+        _titleCache[titleId] = found;
+        return found;
+    }
+
+    int ParseInt(TMP_InputField field, int fallback)
+    {
+        if (field == null || string.IsNullOrWhiteSpace(field.text)) return fallback;
+        if (int.TryParse(field.text, out var v)) return v;
+        return fallback;
+    }
+
+    void SetSimStatus(string msg)
+    {
+        if (simStatusText) simStatusText.text = msg;
+    }
+
+    (HeadlessBattle.Input input, float offenseMul, float defenseMul, float incomingTypeResistMul, List<TitleSO> titlesA, List<TitleSO> titlesB) BuildInput(
+        MonsterDataSO a,
+        int levelA,
+        MonsterDataSO b,
+        int levelB,
+        TitleSO titleA,
+        TitleSO titleB,
+        List<TitleSO> tierTitlesA,
+        List<TitleSO> tierTitlesB,
+        int seed)
+    {
+        const string idA = "SIM::A";
+        const string idB = "SIM::B";
+
+        TitlesAdapter.ClearLocalTitles(idA);
+        TitlesAdapter.ClearLocalTitles(idB);
+
+        var localA = BuildTitleListFor(a, levelA, titleA, tierTitlesA);
+        var localB = BuildTitleListFor(b, levelB, titleB, tierTitlesB);
+
+        if (localA.Count > 0) TitlesAdapter.SetLocalTitles(idA, localA);
+        if (localB.Count > 0) TitlesAdapter.SetLocalTitles(idB, localB);
+
+        if (a) TitlesAdapter.RegisterBattleContext(idA, a, levelA);
+        if (b) TitlesAdapter.RegisterBattleContext(idB, b, levelB);
+
+        float atkA = BattleCalc.CalcBaseAttack(a, levelA, 0, 0, idA);
+        float atkB = BattleCalc.CalcBaseAttack(b, levelB, 0, 0, idB);
+        float hpA = BattleCalc.CalcHP(a, levelA, idA);
+        float hpB = BattleCalc.CalcHP(b, levelB, idB);
+        float defA = BattleCalc.CalcDefense(a, levelA, idA);
+        float defB = BattleCalc.CalcDefense(b, levelB, idB);
+
+        float offenseMul = Mathf.Max(0.1f, atkA / Mathf.Max(1f, atkB));
+        float defenseMul = Mathf.Max(0.1f, (hpA * (100f / (100f + defA))) / Mathf.Max(1f, hpB * (100f / (100f + defB))));
+
+        float incomingTypeResistMul = 1f;
+        try
+        {
+            float eff = BattleTypeChart.GetMultiplier(b ? b.type : default, a ? a.type : default);
+            incomingTypeResistMul = Mathf.Clamp(1f / Mathf.Max(0.1f, eff), 0.1f, 4f);
+        }
+        catch { }
+
+        var input = new HeadlessBattle.Input
+        {
+            avgTeamLevel = levelA,
+            wildLevel = levelB,
+            basecreditPerWin = 0,
+            rewardMultiplier = 1f,
+            rngSeed = seed,
+            offenseMul = offenseMul,
+            defenseMul = defenseMul,
+            incomingTypeResistMul = incomingTypeResistMul,
+            earlyEdge = 0f,
+            creditMul = 1f
+        };
+
+        return (input, offenseMul, defenseMul, incomingTypeResistMul, localA, localB);
+    }
+
+    static List<TitleSO> BuildTitleListFor(MonsterDataSO def, int level, TitleSO single, List<TitleSO> tierSelections)
+    {
+        var list = new List<TitleSO>(8);
+        var seen = new HashSet<string>(StringComparer.Ordinal);
+
+        void AddIfValid(TitleSO t)
+        {
+            if (t == null || string.IsNullOrEmpty(t.titleId)) return;
+            if (seen.Add(t.titleId)) list.Add(t);
+        }
+
+        AddIfValid(single);
+
+        if (def != null && def.titleTrack != null && def.titleTrack.tiers != null && tierSelections != null)
+        {
+            var tiers = def.titleTrack.tiers;
+            int count = Mathf.Min(tiers.Count, tierSelections.Count);
+            for (int i = 0; i < count; i++)
+            {
+                var tier = tiers[i];
+                if (tier == null) continue;
+                if (level < Mathf.Max(1, tier.levelRequired)) continue;
+                AddIfValid(tierSelections[i]);
+            }
+        }
+
+        return list;
+    }
+
+    static string[] ToIds(List<TitleSO> titles)
+    {
+        if (titles == null) return Array.Empty<string>();
+        var arr = new string[titles.Count];
+        for (int i = 0; i < titles.Count; i++)
+        {
+            var t = titles[i];
+            arr[i] = t ? t.titleId : null;
+        }
+        return arr;
+    }
+
+    void OnRunSimPressed()
+    {
+        if (!enableBalanceSim || _simRunning) return;
+        StartCoroutine(Co_RunBalanceSim());
     }
 }

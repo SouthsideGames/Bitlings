@@ -106,8 +106,7 @@ public sealed class PromotionManager : MonoBehaviour
         int rank = Mathf.Max(1, pm.promotionRank);
         int xp = Mathf.Max(0, pm.promotionXP);
 
-        int maxRank = (promotionTable != null) ? promotionTable.MaxRank : 20;
-        maxRank = Mathf.Max(1, maxRank);
+        int maxRank = GetMaxRank();
 
         bool rankedUp = false;
 
@@ -132,6 +131,12 @@ public sealed class PromotionManager : MonoBehaviour
         pm.promotionRank = rank;
         newRank = rank;
         return rankedUp;
+    }
+
+    public int GetMaxRank()
+    {
+        int maxRank = (promotionTable != null) ? promotionTable.MaxRank : 20;
+        return Mathf.Max(1, maxRank);
     }
 
     // ─────────────────────────────────────────────────────────────

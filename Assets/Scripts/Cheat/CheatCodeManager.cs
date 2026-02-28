@@ -23,6 +23,7 @@ public enum CheatEffectKind
     Add500ToAllResources,
     Add5000ToAllResources,
     ToggleDiagnosticsPanel,
+    MaxPromotionRank,
 }
 
 [Serializable]
@@ -350,6 +351,9 @@ public class CheatCodeManager : MonoBehaviour
             case CheatEffectKind.ToggleDiagnosticsPanel:
                 return ExecuteToggleDiagnosticsPanel(out message);
 
+            case CheatEffectKind.MaxPromotionRank:
+                return ExecuteMaxPromotionRank(out message);
+
             default:
                 message = "Cheat not configured.";
                 return false;
@@ -559,6 +563,89 @@ public class CheatCodeManager : MonoBehaviour
 
         message = $"Applied cheat: +{AMOUNT} to each resource (boosters capped at {ResourceBank.BoosterCapPerType}). Updated {touched} entries.";
         return true;
+    }
+
+    bool ExecuteMaxPromotionRank(out string message)
+    {
+        message = string.Empty;
+
+        var data = SaveManager.Data;
+        if (data == null)
+        {
+            message = "Save data not loaded.";
+            return false;
+        }
+
+        int maxRank = GetPromotionMaxRankForCheat();
+        int oldRank = Mathf.Max(1, data.promotionRank);
+        int targetRank = Mathf.Max(1, maxRank);
+
+        int targetXp = GetPromotionTotalXpToReachForCheat(targetRank);
+        if (targetXp < 0) targetXp = data.promotionXP;
+
+        data.promotionRank = targetRank;
+        data.promotionXP = Mathf.Max(targetXp, data.promotionXP);
+
+        SaveManager.Save();
+
+        ComputePromotionProgressForCheat(out int xpThisRank, out int xpToNext);
+
+        GameEvents.PromotionProgressChanged?.Invoke(data.promotionRank, data.promotionXP, xpThisRank, xpToNext);
+        if (oldRank != data.promotionRank)
+            GameEvents.PromotionRankChanged?.Invoke(oldRank, data.promotionRank);
+
+        message = $"Promotion rank set to {data.promotionRank} (max). Synergy, difficulty, and Iron Career unlocked.";
+        return true;
+    }
+
+    int GetPromotionMaxRankForCheat()
+    {
+        if (PromotionManager.I != null)
+            return PromotionManager.I.GetMaxRank();
+        return 20;
+    }
+
+    int GetPromotionTotalXpToReachForCheat(int rank)
+    {
+        if (PromotionManager.I != null)
+            return PromotionManager.I.GetTotalXpToReach(rank);
+        return GetPromotionTotalXpFallback(rank);
+    }
+
+    int GetPromotionTotalXpFallback(int rank)
+    {
+        if (rank <= 1) return 0;
+
+        int total = 0;
+        for (int r = 2; r <= rank; r++)
+        {
+            int reqForThisStep = 50 + 20 * (r - 2);
+            total += Mathf.Max(1, reqForThisStep);
+        }
+        return total;
+    }
+
+    void ComputePromotionProgressForCheat(out int xpThisRank, out int xpToNext)
+    {
+        xpThisRank = 0;
+        xpToNext = 0;
+
+        var data = SaveManager.Data;
+        if (data == null) return;
+
+        if (PromotionManager.I != null)
+        {
+            xpThisRank = PromotionManager.I.GetXpIntoCurrentRank(data.promotionRank, data.promotionXP);
+            xpToNext = PromotionManager.I.GetXpToNext(data.promotionRank, data.promotionXP);
+            return;
+        }
+
+        int curFloor = GetPromotionTotalXpFallback(data.promotionRank);
+        int nextReq = GetPromotionTotalXpFallback(data.promotionRank + 1);
+        int maxRank = GetPromotionMaxRankForCheat();
+
+        xpThisRank = Mathf.Max(0, data.promotionXP - curFloor);
+        xpToNext = data.promotionRank >= maxRank ? 0 : Mathf.Max(0, nextReq - data.promotionXP);
     }
 
     // ─────────────────────────────────────────────────────────────

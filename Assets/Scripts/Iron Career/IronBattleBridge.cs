@@ -95,8 +95,7 @@ public sealed class IronBattleBridge : MonoBehaviour, IBattleRosterProvider, IBa
 
         if (!IronCareerRuntime.IsActive)
         {
-            Debug.LogError("[IronBattleBridge] BeginIronBattle called but IronCareerRuntime is not active. Forfeiting.");
-            battle.ForceEndBattleEarly(false);
+            Debug.LogError("[IronBattleBridge] BeginIronBattle called but IronCareerRuntime is not active. Aborting battle start.");
             return;
         }
 
@@ -109,8 +108,7 @@ public sealed class IronBattleBridge : MonoBehaviour, IBattleRosterProvider, IBa
 #endif
         if (wild == null || wild.def == null)
         {
-            Debug.LogError("[IronBattleBridge] Wild combatant is null/invalid. Forfeiting.");
-            battle.ForceEndBattleEarly(false);
+            Debug.LogError("[IronBattleBridge] Wild combatant is null/invalid. Aborting battle start.");
             return;
         }
 
