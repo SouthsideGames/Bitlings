@@ -109,6 +109,9 @@ public sealed class BattleFeedbackManager : MonoBehaviour
 
     [Header("Attack Prefab VFX (optional)")]
     [SerializeField] private bool spawnAttackPrefabs = true;
+    [Tooltip("Optional explicit spawn roots for attack prefabs. If null, falls back to active battle roots.")]
+    [SerializeField] private Transform playerAttackSpawnRoot;
+    [SerializeField] private Transform wildAttackSpawnRoot;
 
     [Header("Screen Shake (optional)")]
     [Tooltip("If empty, will fall back to Camera.main.transform")]
@@ -212,7 +215,7 @@ public sealed class BattleFeedbackManager : MonoBehaviour
         BindBattleManager();
         Subscribe();
 
-CacheBaseScales();
+        CacheBaseScales();
 
         ResetStatusIcons();
         ResetMicroJuiceOptionals();
@@ -222,7 +225,6 @@ CacheBaseScales();
     {
         Unsubscribe();
 
-// Ensure nothing stays visible if this panel/scene is disabled mid-animation.
         ResetMicroJuiceOptionals();
     }
 
@@ -288,6 +290,28 @@ CacheBaseScales();
             _battleManager.RegisterBattleEventConsumer();
     }
 
+    public void BindToBattleManager(BattleManager manager)
+    {
+        if (manager == null) return;
+
+        if (_battleManager == manager)
+        {
+            Subscribe();
+            return;
+        }
+
+        if (_battleManager != null)
+        {
+            _battleManager.OnBattleEvent -= HandleBattleEvent;
+            _battleManager.UnregisterBattleEventConsumer();
+        }
+
+        battleManager = manager;
+        _battleManager = manager;
+        _battleManager.RegisterBattleEventConsumer();
+        Subscribe();
+    }
+
     private void Subscribe()
     {
         if (_battleManager == null) return;
@@ -331,7 +355,6 @@ CacheBaseScales();
                 break;
 
             case BattleEvent.Kind.Swap:
-                // Reuse your existing "Swap" micro-juice pathway.
                 PlayButtonPress(BattleFeedbackAction.Swap);
                 break;
 
@@ -344,13 +367,10 @@ CacheBaseScales();
                 break;
 
             case BattleEvent.Kind.IntentTelegraph:
-                // Uses statusId as intent token: "Attack"/"Defend"/"Focus"/"Run"
                 ShowWildIntent(e.statusId);
                 break;
 
             case BattleEvent.Kind.ActionQueued:
-                // Optional: micro pulse on queue for instant-feel (manual turns)
-                // IMPORTANT: only pulse player-facing buttons when the PLAYER queues an action.
                 if (e.source == BattleSide.Player)
                     PulseQueuedAction(e.statusId);
                 break;
@@ -364,7 +384,6 @@ CacheBaseScales();
     private BattleFeedbackSide ToFeedbackSide(BattleSide s)
         => s == BattleSide.Player ? BattleFeedbackSide.Player : BattleFeedbackSide.Wild;
 
-    // Minimal helpers to avoid leaking UI into BattleManager.
     private void ShowWildIntent(string intentId)
     {
         if (string.IsNullOrEmpty(intentId)) return;
@@ -374,7 +393,6 @@ CacheBaseScales();
         else if (intentId == "Focus") a = BattleFeedbackAction.Focus;
         else if (intentId == "Run") a = BattleFeedbackAction.Run;
 
-        // Duration is controlled by BattleManager for auto/manual readability.
         ShowWildIntent(a, durationSeconds: 0.6f, showText: false, textOverride: null);
     }
 
@@ -701,6 +719,7 @@ public void SetGuard(BattleFeedbackSide side, bool on)
         if (!icon) return;
 
         float ratio01 = Mathf.Max(0f, damageRatio01);
+        bool heavy = (damageRatio01 >= 0f && ratio01 >= heavyHitThreshold01);
 
         // Shake scaling: consistent across HP values
         float shakeT = (damageRatio01 < 0f) ? 0f : Mathf.Clamp01(ratio01 / Mathf.Max(0.01f, ratioForMaxShake));
@@ -708,6 +727,7 @@ public void SetGuard(BattleFeedbackSide side, bool on)
 
         float shakeMult = 1f;
         if (crit) shakeMult *= critExtraShakeMult;
+        if (heavy) shakeMult *= heavyExtraShakeMult;
         if (damageRatio01 >= 0f && ratio01 >= heavyHitThreshold01) shakeMult *= heavyExtraShakeMult;
 
         // Guarded hits feel "clanky" and less violent
@@ -735,13 +755,16 @@ public void SetGuard(BattleFeedbackSide side, bool on)
         if (hpRoot) PlayHPShake(hpRoot);
 
         if (damageRatio01 >= 0f)
-            ScreenShake(screenMag, heavyHitShakeDuration);
+        {
+            float finalScreenMag = heavy ? Mathf.Max(screenMag, heavyHitShakeMagnitude) : screenMag;
+            float finalScreenDur = heavy ? heavyHitShakeDuration : hitShakeTime;
+            ScreenShake(finalScreenMag, finalScreenDur);
+        }
 
         // Micro-juice: hitstop on crit / heavy hits
         if (enableHitStop)
         {
-            bool heavy = (damageRatio01 >= 0f && ratio01 >= heavyHitThreshold01);
-            float seconds = crit ? hitStopCritSeconds : (heavy ? hitStopHeavySeconds : 0f);
+            float seconds = crit ? hitStopCritSeconds : heavy ? hitStopHeavySeconds : 0f;
             if (seconds > 0f && !wasGuarded)
                 HitStop(seconds);
         }
@@ -1072,11 +1095,36 @@ public void SetGuard(BattleFeedbackSide side, bool on)
         if (!def || !def.basicAttackPrefab) return;
 
         Transform spawnRoot = null;
-        if (EncounterManager.I != null)
+
+        if (isPlayerSide)
         {
-            spawnRoot = isPlayerSide
+            if (playerAttackSpawnRoot && playerAttackSpawnRoot.gameObject.activeInHierarchy)
+                spawnRoot = playerAttackSpawnRoot;
+        }
+        else
+        {
+            if (wildAttackSpawnRoot && wildAttackSpawnRoot.gameObject.activeInHierarchy)
+                spawnRoot = wildAttackSpawnRoot;
+        }
+
+        if (!spawnRoot && EncounterManager.I != null)
+        {
+            var encounterRoot = isPlayerSide
                 ? EncounterManager.I.EnemySpawnPoint
                 : EncounterManager.I.PlayerSpawnPoint;
+
+            if (encounterRoot && encounterRoot.gameObject.activeInHierarchy)
+                spawnRoot = encounterRoot;
+        }
+
+        if (!spawnRoot)
+        {
+            var iconRoot = isPlayerSide
+                ? (playerIcon != null ? playerIcon.transform : null)
+                : (wildIcon != null ? wildIcon.transform : null);
+
+            if (iconRoot && iconRoot.gameObject.activeInHierarchy)
+                spawnRoot = iconRoot;
         }
 
         Vector3 pos = spawnRoot ? spawnRoot.position : Vector3.zero;

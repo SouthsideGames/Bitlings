@@ -13,7 +13,6 @@ public sealed class IronEventGuard : MonoBehaviour
     [Header("Forbidden during Iron")]
     [SerializeField] private bool forbidBattleFinished = true;
     [SerializeField] private bool forbidTeamChanged = true;
-    [SerializeField] private bool forbidResourcesChanged = true;
     [SerializeField] private bool forbidWinStreakChanged = true;
     [SerializeField] private bool forbidPromotions = true;
     [SerializeField] private bool forbidBoosters = true;
@@ -102,7 +101,9 @@ public sealed class IronEventGuard : MonoBehaviour
 
     private void OnResourcesChanged()
     {
-        if (forbidResourcesChanged) Violation(nameof(GameEvents.OnResourcesChanged));
+        // Iron now intentionally banks run rewards (credits/growth cores) on battle resolution.
+        // That flow emits OnResourcesChanged and is valid during the game-over transition.
+        // Keep this event allowed to avoid false-positive guard breaks.
     }
 
     private void OnWinStreakChanged(int _)

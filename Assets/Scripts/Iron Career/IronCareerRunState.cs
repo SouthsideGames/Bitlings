@@ -28,6 +28,9 @@ public sealed class IronCareerRunState
     // Cache the last wild encounter rolled so battle + hire offer share the same outcome.
     [NonSerialized] public IronMonster lastRolledWild;
 
+    [Header("Run Summary")]
+    public IronCareerRunSummary runSummary;
+
     public void Reset(IronCareerMode newMode, int newSeed)
     {
         mode = newMode;
@@ -39,5 +42,29 @@ public sealed class IronCareerRunState
         carryStatus = IronFieldStatusSnapshot.None;
         carryShields = new float[3];
         lastRolledWild = null;
+        runSummary = IronCareerRunSummary.Empty;
     }
+}
+
+[Serializable]
+public struct IronCareerRunSummary
+{
+    public int totalBattles;
+    public int totalDamageDealt;
+    public int totalDamageTaken;
+    public int totalCrits;
+    public int totalGrowthCores;
+    public int totalCredits;
+    public float totalSecondsSurvived;
+
+    public static IronCareerRunSummary Empty => new IronCareerRunSummary
+    {
+        totalBattles = 0,
+        totalDamageDealt = 0,
+        totalDamageTaken = 0,
+        totalCrits = 0,
+        totalGrowthCores = 0,
+        totalCredits = 0,
+        totalSecondsSurvived = 0f,
+    };
 }

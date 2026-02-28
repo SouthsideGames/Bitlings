@@ -275,11 +275,6 @@ public sealed class TitleManager : MonoBehaviour
             }
         }
 
-        // Debug: report how many titles were indexed so we can verify runtime loading.
-        if (_idToTitle.Count == 0)
-            Debug.LogWarning("TitleManager: no TitleSO assets indexed. Ensure TitleSO assets are in a Resources folder or assigned to 'preloadTitles' in the inspector.");
-        else
-            Debug.Log($"TitleManager: indexed {_idToTitle.Count} TitleSO assets.");
     }
 
     private static string BuildDuplicateTitleIdLog(string titleId, IEnumerable<TitleSO> titles)

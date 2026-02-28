@@ -41,6 +41,58 @@ public partial class BattleManager : MonoBehaviour
         _rng.ClearAll();
         float survived = Mathf.Max(0f, Time.unscaledTime - startTime);
 
+        int basecredits = 0;
+        int finalcredits = 0;
+        int creditTitleBonus = 0;
+
+        if (!escaped)
+        {
+            basecredits = BattleRewards.creditsFor(victory, wildLevel, survived);
+            finalcredits = basecredits;
+
+            if (victory && teamTitleIds != null && activeIndex >= 0 && activeIndex < teamTitleIds.Length)
+            {
+                float cm = _cachedCreditMult;
+                if (cm > 0f)
+                {
+                    finalcredits = Mathf.Max(0, Mathf.RoundToInt(basecredits * cm));
+                    creditTitleBonus = Mathf.Max(0, finalcredits - basecredits);
+                }
+            }
+
+            if (finalcredits < 0) finalcredits = 0;
+        }
+
+        int growthCoreBaseAfterShiny = 0;
+        int growthCoreTitleBonus = 0;
+        int growthCoreTotal = 0;
+
+        if (victory && !escaped)
+        {
+            int baseCores = Mathf.Max(1, 2 + wildLevel);
+
+            var m = (teamOwnedEffective != null && activeIndex >= 0 && activeIndex < teamOwnedEffective.Length)
+                ? teamOwnedEffective[activeIndex]
+                : default;
+
+            float shinyMul = ShinySystems.TrainingXpMult(m);
+            int baseAfterShiny = Mathf.RoundToInt(baseCores * shinyMul);
+            growthCoreBaseAfterShiny = Mathf.Max(0, baseAfterShiny);
+
+            float titleCoreMul = 1f;
+            if (teamTitleIds != null && activeIndex >= 0 && activeIndex < teamTitleIds.Length)
+                titleCoreMul = Mathf.Max(0f, TitlesAdapter.GetGrowthCoreMultOnVictory(teamTitleIds[activeIndex], wildDef, wildLevel));
+
+            int growthCoreAfterTitles = Mathf.Max(0, Mathf.RoundToInt(baseAfterShiny * titleCoreMul));
+
+            float globalMul = 1f;
+            if (GameBalance.TryGet(out var bal))
+                globalMul = Mathf.Max(0f, bal.xpGainMultiplier);
+
+            growthCoreTotal = Mathf.Max(0, Mathf.RoundToInt(growthCoreAfterTitles * globalMul));
+            growthCoreTitleBonus = Mathf.Max(0, growthCoreAfterTitles - growthCoreBaseAfterShiny);
+        }
+
         try
         {
             if (teamTitleIds != null && activeIndex >= 0 && activeIndex < teamTitleIds.Length)
@@ -68,6 +120,15 @@ public partial class BattleManager : MonoBehaviour
             wildLevel = wildLevel,
             secondsSurvived = survived,
             turnsSurvived = _turnIndex,
+            critCount = _totalCritsThisBattle,
+            damageTaken = _totalDamageTakenThisBattle,
+            damageDealt = _totalDamageDealtThisBattle,
+            creditsGained = finalcredits,
+            creditsBase = basecredits,
+            creditsTitleBonus = creditTitleBonus,
+            growthCoresGained = growthCoreTotal,
+            growthCoresBase = growthCoreBaseAfterShiny,
+            growthCoresTitleBonus = growthCoreTitleBonus,
             teamHP = (teamHP != null) ? (float[])teamHP.Clone() : null,
             teamMaxHP = (teamMaxHP != null) ? (float[])teamMaxHP.Clone() : null,
             shieldHP = carryShield,
@@ -80,13 +141,13 @@ public partial class BattleManager : MonoBehaviour
         {
             victory = victory,
             escaped = escaped,
-            creditsGained = 0,
-            creditsBase = 0,
-            creditsTitleBonus = 0,
+            creditsGained = finalcredits,
+            creditsBase = basecredits,
+            creditsTitleBonus = creditTitleBonus,
             creditsMultiplier = 1f,
-            growthCoresGained = 0,
-            growthCoresBase = 0,
-            growthCoresTitleBonus = 0,
+            growthCoresGained = growthCoreTotal,
+            growthCoresBase = growthCoreBaseAfterShiny,
+            growthCoresTitleBonus = growthCoreTitleBonus,
             activeMonsterOwnedId = null,
             wildDef = wildDef,
             wildLevel = wildLevel,

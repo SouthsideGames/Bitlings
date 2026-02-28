@@ -234,6 +234,13 @@ public class EncounterPanelUI : MonoBehaviour
 
     void OnEnable()
     {
+        // IRON GUARD: if Iron Career is active, immediately disable this panel
+        if (IronCareerRuntime.IsActive)
+        {
+            gameObject.SetActive(false);
+            return;
+        }
+
         ForceBlinderAlphaToOne();
 
         if (encounterBtn)
@@ -275,6 +282,8 @@ public class EncounterPanelUI : MonoBehaviour
             EnsureTeamPreviewForCurrentState(forceRebuild: false);
             ApplyCloseLock();
         }
+
+        ApplyEncounterButtonBattleVisibility(IsInBattle());
 
         if (hireYesButton)
         {
@@ -920,6 +929,7 @@ if (blinderBackground)
     void OnEncounterStateChanged()
     {
         bool inBattle = IsInBattle();
+        ApplyEncounterButtonBattleVisibility(inBattle);
 
         if (inBattle)
         {
@@ -1746,6 +1756,7 @@ if (target > 0.01f)
         ApplyCloseLock();
 
         bool inBattle = IsInBattle();
+        ApplyEncounterButtonBattleVisibility(inBattle);
 
         if (inBattle)
         {
@@ -1797,5 +1808,16 @@ if (target > 0.01f)
 
         bool inBattle = IsInBattle();
         closeButtonRoot.SetActive(!inBattle);
+    }
+
+    private void ApplyEncounterButtonBattleVisibility(bool inBattle)
+    {
+        if (!encounterBtn) return;
+        var btnGO = encounterBtn.gameObject;
+        if (!btnGO) return;
+
+        bool shouldShow = !inBattle;
+        if (btnGO.activeSelf != shouldShow)
+            btnGO.SetActive(shouldShow);
     }
 }

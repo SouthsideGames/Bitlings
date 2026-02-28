@@ -48,9 +48,6 @@ public class PostBattleSummaryPanelUI : MonoBehaviour
     [Tooltip("Optional: slider showing progress within current rank.")]
     [SerializeField] private Slider promotionProgressSlider;
 
-    [Tooltip("If false, the Key Moments block is hidden (recommended once Promotion XP is live).")]
-    [SerializeField] private bool showKeyMoments = false;
-
     [Header("Controls")]
     [SerializeField] private Button continueButton;
 

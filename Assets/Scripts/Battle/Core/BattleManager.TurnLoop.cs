@@ -15,8 +15,8 @@ public partial class BattleManager : MonoBehaviour
         else
             yield return CoWaitUnscaled(Mathf.Max(0f, duration));
 
-        if (wildCG) { wildCG.alpha = 1f; wildCG.blocksRaycasts = true; wildCG.interactable = true; }
-        if (playerCG) { playerCG.alpha = 1f; playerCG.blocksRaycasts = true; playerCG.interactable = true; }
+        if (wildCG) wildCG.alpha = 1f;
+        if (playerCG) playerCG.alpha = 1f;
 
         yield return Co_StartBattleNow();
     }

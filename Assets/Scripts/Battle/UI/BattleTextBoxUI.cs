@@ -21,6 +21,93 @@ public class BattleTextBoxUI : MonoBehaviour
     [SerializeField] private float typeSecondsPerChar = 0.02f;
     [SerializeField] private float lineHoldSeconds = 0.25f;
 
+    [Header("Render Override")]
+    [SerializeField] private bool forceTopCanvasSorting = true;
+    [SerializeField] private int topCanvasSortingOrder = 5000;
+
+    [Header("Debug")]
+    [SerializeField] private bool debugTextTrace = true;
+
+    public bool HasRenderableTarget => lineText != null;
+
+    private EncounterManager _hookedEncounter;
+
+    private void Awake()
+    {
+        AutoWireIfNeeded();
+        RefreshEncounterHook();
+        ApplyRegularBattleIdleVisibility();
+    }
+
+    private void OnEnable()
+    {
+        AutoWireIfNeeded();
+        RefreshEncounterHook();
+        ApplyRegularBattleIdleVisibility();
+    }
+
+    private void OnDisable()
+    {
+        UnhookEncounterState();
+    }
+
+    private void LateUpdate()
+    {
+        if (_hookedEncounter != EncounterManager.I)
+        {
+            RefreshEncounterHook();
+            ApplyRegularBattleIdleVisibility();
+        }
+    }
+
+    private void AutoWireIfNeeded()
+    {
+        if (!lineText)
+            lineText = GetComponentInChildren<TextMeshProUGUI>(true);
+
+        if (!canvasGroup)
+            canvasGroup = GetComponentInChildren<CanvasGroup>(true);
+
+        EnsureTopCanvasSorting();
+    }
+
+    private void RefreshEncounterHook()
+    {
+        var em = EncounterManager.I;
+        if (_hookedEncounter == em) return;
+
+        UnhookEncounterState();
+
+        _hookedEncounter = em;
+        if (_hookedEncounter != null)
+            _hookedEncounter.OnStateChanged += HandleEncounterStateChanged;
+    }
+
+    private void UnhookEncounterState()
+    {
+        if (_hookedEncounter != null)
+            _hookedEncounter.OnStateChanged -= HandleEncounterStateChanged;
+
+        _hookedEncounter = null;
+    }
+
+    private void HandleEncounterStateChanged()
+    {
+        ApplyRegularBattleIdleVisibility();
+    }
+
+    private void ApplyRegularBattleIdleVisibility()
+    {
+        if (canvasGroup == null) return;
+        if (IronCareerRuntime.IsActive) return;
+
+        var em = EncounterManager.I;
+        if (em == null) return;
+
+        bool inRegularBattle = em.IsInBattle;
+        canvasGroup.alpha = inRegularBattle ? 1f : 0f;
+    }
+
     private IEnumerator CoWaitUnscaled(float seconds)
     {
         float s = Mathf.Max(0f, seconds);
@@ -41,7 +128,36 @@ public class BattleTextBoxUI : MonoBehaviour
 
     public IEnumerator ShowLine(BattleLine line, float battleSpeed)
     {
+        AutoWireIfNeeded();
+
+        EnsureVisibleChain();
+        transform.SetAsLastSibling();
+
+        if (canvasGroup)
+        {
+            canvasGroup.alpha = 1f;
+            canvasGroup.interactable = false;
+            canvasGroup.blocksRaycasts = false;
+            if (!canvasGroup.gameObject.activeSelf) canvasGroup.gameObject.SetActive(true);
+        }
+
         if (lineText == null) yield break;
+
+        if (!lineText.gameObject.activeSelf) lineText.gameObject.SetActive(true);
+        lineText.enabled = true;
+        var c = lineText.color;
+        c.a = 1f;
+        lineText.color = c;
+        lineText.canvasRenderer.SetAlpha(1f);
+
+#if UNITY_EDITOR
+        if (debugTextTrace)
+        {
+            string raw = line.text ?? string.Empty;
+            string preview = raw.Length > 80 ? raw.Substring(0, 80) + "..." : raw;
+            Debug.Log($"[IronTextTrace] TextBoxUI.ShowLine: obj={name} active={gameObject.activeInHierarchy} lineLen={raw.Length} preview='{preview}'");
+        }
+#endif
 
         bool showIcons = SettingsManager.I == null || SettingsManager.I.GetShowInlineBattleIcons();
 
@@ -127,6 +243,35 @@ public class BattleTextBoxUI : MonoBehaviour
 
         float hold = Mathf.Max(0f, lineHoldSeconds / Mathf.Max(0.25f, battleSpeed));
         if (hold > 0f) yield return CoWaitUnscaled(hold);
+    }
+
+    private void EnsureVisibleChain()
+    {
+        var t = transform;
+        while (t != null)
+        {
+            if (!t.gameObject.activeSelf) t.gameObject.SetActive(true);
+
+            var cg = t.GetComponent<CanvasGroup>();
+            if (cg)
+            {
+                cg.alpha = 1f;
+            }
+
+            t = t.parent;
+        }
+    }
+
+    private void EnsureTopCanvasSorting()
+    {
+        if (!forceTopCanvasSorting) return;
+
+        var c = GetComponent<Canvas>();
+        if (!c) return;
+
+        c.enabled = true;
+        c.overrideSorting = true;
+        c.sortingOrder = topCanvasSortingOrder;
     }
 
     private void PunchIcon(Image img)

@@ -7,6 +7,19 @@ public sealed class IronRoster
 {
     private readonly IronCareerRunState _state;
 
+    private static bool IsForcedEvolutionEligible(IronMonster monster)
+    {
+        if (monster == null || monster.def == null) return false;
+        if (monster.IsDead) return false;
+
+        var nextForm = monster.def.evolutionForm;
+        if (nextForm == null) return false;
+        if (ReferenceEquals(nextForm, monster.def)) return false;
+
+        if (monster.def.evolutionLevel > 0 && monster.level < monster.def.evolutionLevel) return false;
+        return true;
+    }
+
     public IronRoster(IronCareerRunState state)
     {
         _state = state;
@@ -81,12 +94,7 @@ public sealed class IronRoster
         if (idx < 0 || idx >= _state.party.Count) return false;
 
         var m = _state.party[idx];
-        if (m == null || m.def == null) return false;
-
-        // Evolution is defined on MonsterDataSO.
-        // Evolve when evolutionForm exists and level >= evolutionLevel (if evolutionLevel is set).
-        if (m.def.evolutionForm == null) return false;
-        if (m.def.evolutionLevel > 0 && m.level < m.def.evolutionLevel) return false;
+        if (!IsForcedEvolutionEligible(m)) return false;
 
         var evolved = m.def.evolutionForm;
 
@@ -107,9 +115,7 @@ public sealed class IronRoster
         for (int i = 0; i < _state.party.Count; i++)
         {
             var m = _state.party[i];
-            if (m == null || m.def == null) continue;
-            if (m.def.evolutionForm == null) continue;
-            if (m.def.evolutionLevel > 0 && m.level < m.def.evolutionLevel) continue;
+            if (!IsForcedEvolutionEligible(m)) continue;
             return true;
         }
         return false;
@@ -121,9 +127,7 @@ public sealed class IronRoster
         idx = Mathf.Clamp(idx, 0, _state.party.Count - 1);
 
         var m = _state.party[idx];
-        if (m == null || m.def == null) return false;
-        if (m.def.evolutionForm == null) return false;
-        if (m.def.evolutionLevel > 0 && m.level < m.def.evolutionLevel) return false;
+        if (!IsForcedEvolutionEligible(m)) return false;
 
         var evolved = m.def.evolutionForm;
         float hp01 = m.Hp01;

@@ -29,11 +29,7 @@ public class UpgradesPanelUI : MonoBehaviour
     [SerializeField] private Button codexButton;
     [SerializeField] private Button jobsButton;
 
-    [Header("Scroll Sizing (Optional)")]
-    [Tooltip("If assigned, will Refresh() after rebuilding the list.")]
-    [SerializeField] private ScrollContentAutoSizer scrollSizer;
-
-    [Header("Section Overrides (Optional)")]
+    [Header("Section Overrides")]
     [Tooltip("If provided, these entries will be used for that section instead of filtering from the Master Catalog.")]
     [SerializeField] private SectionOverride idleBattleOverride;
     [SerializeField] private SectionOverride autoGrowthOverride;
@@ -62,9 +58,6 @@ public class UpgradesPanelUI : MonoBehaviour
     {
         _isShuttingDown = false;
         AddButtonHooks();
-
-        // If not wired, try to find one on parents/children (safe convenience)
-        if (!scrollSizer) scrollSizer = GetComponentInChildren<ScrollContentAutoSizer>(true);
 
         ShowSection(_currentSection);
     }
@@ -139,7 +132,6 @@ public class UpgradesPanelUI : MonoBehaviour
         var (entries, prefab) = GetSectionData(section);
         BuildRows(entries, prefab);
 
-        RefreshScrollSizing();
     }
 
     private (List<UpgradeCatalogEntry> entries, GameObject prefab) GetSectionData(UpgradeSection section)
@@ -245,12 +237,6 @@ public class UpgradesPanelUI : MonoBehaviour
     // Row Building
     // ─────────────────────────────────────────────────────────────
 
-    void BuildRows()
-    {
-        BuildRows(catalog, rowPrefab);
-        RefreshScrollSizing();
-    }
-
     void BuildRows(List<UpgradeCatalogEntry> entries, GameObject prefabToUse)
     {
         if (_isShuttingDown) return;
@@ -282,29 +268,6 @@ public class UpgradesPanelUI : MonoBehaviour
         }
     }
 
-    // ─────────────────────────────────────────────────────────────
-    // Scroll sizing refresh
-    // ─────────────────────────────────────────────────────────────
 
-    private void RefreshScrollSizing()
-    {
-        if (_isShuttingDown) return;
-        if (!scrollSizer) return;
 
-        // Cancel any pending refresh and re-run cleanly.
-        if (_refreshCo != null) StopCoroutine(_refreshCo);
-        _refreshCo = StartCoroutine(CoRefreshSizer());
-    }
-
-    private IEnumerator CoRefreshSizer()
-    {
-        scrollSizer.Refresh(force: true);
-
-        yield return null;
-
-        if (!_isShuttingDown && scrollSizer)
-            scrollSizer.Refresh(force: true);
-
-        _refreshCo = null;
-    }
 }

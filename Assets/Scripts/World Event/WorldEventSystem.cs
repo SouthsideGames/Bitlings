@@ -77,7 +77,6 @@ public sealed class WorldEventSystem : MonoBehaviour
     {
         if (I != null && I != this) { Destroy(gameObject); return; }
         I = this;
-        DontDestroyOnLoad(gameObject);
 
         EnsureWorldEventManagerExists();
 
@@ -98,7 +97,7 @@ public sealed class WorldEventSystem : MonoBehaviour
     {
         if (WorldEventManager.I != null) return;
 
-        var existing = FindObjectOfType<WorldEventManager>();
+        var existing = FindFirstObjectByType<WorldEventManager>();
         if (existing != null) return;
 
         var go = new GameObject("WorldEventManager");

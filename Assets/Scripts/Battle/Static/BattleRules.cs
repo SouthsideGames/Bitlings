@@ -86,6 +86,17 @@ public struct IronBattleOutcome
 
     public float secondsSurvived;
     public int turnsSurvived;
+    public int critCount;
+    public int damageTaken;
+    public int damageDealt;
+
+    public int creditsGained;
+    public int creditsBase;
+    public int creditsTitleBonus;
+
+    public int growthCoresGained;
+    public int growthCoresBase;
+    public int growthCoresTitleBonus;
 
     public float[] teamHP;
     public float[] teamMaxHP;

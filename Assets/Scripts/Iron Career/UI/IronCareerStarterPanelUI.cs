@@ -5,15 +5,6 @@ using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 
-/// <summary>
-/// Iron Career starter selection:
-/// - Shows a DAILY locked offer (3 starters) so player can't spam open/close.
-/// - Allows limited DAILY rerolls (default 1).
-/// - Uses suspense spin animation when generating a new offer.
-/// - Mode toggles are mutually exclusive.
-/// - Player selects ONE starter from the 3.
-/// - Does NOT touch SaveManager.Data.team or SaveManager.Data.owned.
-/// </summary>
 public sealed class IronCareerStarterPanelUI : MonoBehaviour
 {
     [Header("Refs")]
@@ -30,19 +21,6 @@ public sealed class IronCareerStarterPanelUI : MonoBehaviour
     [SerializeField] private Button slot2Button;
     [SerializeField] private Button slot3Button;
 
-    [Tooltip("Optional highlight objects that turn ON when a slot is selected (e.g., border/glow).")]
-    [SerializeField] private GameObject slot1SelectedFX;
-    [SerializeField] private GameObject slot2SelectedFX;
-    [SerializeField] private GameObject slot3SelectedFX;
-
-    [Header("Selection Polish (Optional)")]
-    [SerializeField] private Transform slot1VisualRoot;
-    [SerializeField] private Transform slot2VisualRoot;
-    [SerializeField] private Transform slot3VisualRoot;
-
-    [SerializeField] private float selectedScale = 1.05f;
-    [SerializeField] private float unselectedScale = 1.00f;
-
     [Header("Mode UI")]
     [SerializeField] private Toggle standardToggle;
     [SerializeField] private Toggle hardcoreToggle;
@@ -54,7 +32,7 @@ public sealed class IronCareerStarterPanelUI : MonoBehaviour
     [SerializeField] private Button backButton;
     [SerializeField] private Button rulesButton;
 
-    [Header("Daily Reroll UI")]
+    [Header("Weekly Reroll UI")]
     [SerializeField] private TMP_Text rerollCountText;
     [SerializeField] private int dailyRerollsMax = 1;
 
@@ -68,14 +46,13 @@ public sealed class IronCareerStarterPanelUI : MonoBehaviour
     [Tooltip("Extra delay between locking slot 1→2→3 (adds drama).")]
     [SerializeField] private float lockStepDelay = 0.10f;
 
-    // NEW: overlay controller (UIManager no longer owns Iron overlays)
     private IronCareerEncounterPanelUI _ironUI;
 
     private IronCareerMetaData _metaData;
 
     private readonly List<MonsterDataSO> _offer = new List<MonsterDataSO>(3);
-    private List<MonsterDataSO> _pool; // cached starters pool
-    private Dictionary<string, MonsterDataSO> _byId; // id->def lookup for loading saved offer ids
+    private List<MonsterDataSO> _pool; 
+    private Dictionary<string, MonsterDataSO> _byId; 
     private Coroutine _spinCo;
     private bool _spinning;
 
@@ -89,7 +66,6 @@ public sealed class IronCareerStarterPanelUI : MonoBehaviour
     {
         if (!iron) iron = FindFirstObjectByType<IronCareerManager>(FindObjectsInactive.Include);
 
-        // Find overlay controller (safe to be missing in early test scenes, but recommended)
         _ironUI = IronCareerEncounterPanelUI.I;
         if (!_ironUI) _ironUI = FindFirstObjectByType<IronCareerEncounterPanelUI>(FindObjectsInactive.Include);
 
@@ -108,17 +84,14 @@ public sealed class IronCareerStarterPanelUI : MonoBehaviour
 
     private void OnEnable()
     {
-        // Refresh overlay controller (in case scene objects enable after Awake)
         if (!_ironUI)
         {
             _ironUI = IronCareerEncounterPanelUI.I;
             if (!_ironUI) _ironUI = FindFirstObjectByType<IronCareerEncounterPanelUI>(FindObjectsInactive.Include);
         }
 
-        // Daily meta load/reset (does NOT consume reroll).
         LoadOrResetDailyRerollsAndOffer();
 
-        // Ensure EXACTLY one mode is selected.
         _toggleGuard = true;
 
         bool std = standardToggle && standardToggle.isOn;
@@ -138,23 +111,19 @@ public sealed class IronCareerStarterPanelUI : MonoBehaviour
 
         RefreshModeDesc();
 
-        // Prevent panel-spam: if we have a saved offer for today, show it immediately (no spin).
-        // If we don't, generate first offer of the day (free) AND save it.
         EnsurePool();
         EnsureLookup();
 
         if (!TryLoadOfferFromMeta())
         {
-            // First open of the day: generate a new offer for FREE and save it.
             StartSpinReroll(consumesDaily: false);
         }
         else
         {
-            // Ensure stable UI state after being reopened
             _spinning = false;
             if (_spinCo != null) { StopCoroutine(_spinCo); _spinCo = null; }
 
-            ClearSelection(); // force the player to pick one each time they open
+            ClearSelection(); 
             SetButtonsInteractable(true);
             RefreshRerollUI();
             RefreshStartButton();
@@ -178,7 +147,7 @@ public sealed class IronCareerStarterPanelUI : MonoBehaviour
     private void OnStandardToggleChanged(bool on)
     {
         if (_toggleGuard) return;
-        if (!on) return; // only respond when turned on
+        if (!on) return;
 
         _toggleGuard = true;
         if (hardcoreToggle) hardcoreToggle.isOn = false;
@@ -200,19 +169,18 @@ public sealed class IronCareerStarterPanelUI : MonoBehaviour
     }
 
     // ─────────────────────────────────────────────────────────────
-    // Daily meta (rerolls + saved daily offer)
+    // Weekly meta (rerolls + saved weekly offer)
     // ─────────────────────────────────────────────────────────────
 
     private void LoadOrResetDailyRerollsAndOffer()
     {
         _metaData = IronCareerMetaSave.Load();
 
-        string today = DateTime.Now.ToString("yyyyMMdd");
+        string weekKey = BuildIsoWeekKey(DateTime.Now);
 
-        // New day: reset rerolls and clear offer so a fresh one is generated on first open.
-        if (_metaData.lastRerollDate != today)
+        if (_metaData.lastRerollDate != weekKey)
         {
-            _metaData.lastRerollDate = today;
+            _metaData.lastRerollDate = weekKey;
             _metaData.rerollsRemaining = Mathf.Max(0, dailyRerollsMax);
             _metaData.starterOfferIds = null;
 
@@ -246,7 +214,7 @@ public sealed class IronCareerStarterPanelUI : MonoBehaviour
     private void RefreshRerollUI()
     {
         if (rerollCountText)
-            rerollCountText.text = $"Rerolls: {_rerollsRemaining}/{Mathf.Max(0, dailyRerollsMax)}";
+            rerollCountText.text = $"{_rerollsRemaining}/{Mathf.Max(0, dailyRerollsMax)}";
 
         if (rerollButton)
             rerollButton.interactable = !_spinning && _rerollsRemaining > 0;
@@ -288,6 +256,17 @@ public sealed class IronCareerStarterPanelUI : MonoBehaviour
         if (string.IsNullOrEmpty(m.id)) return false;
         if (m.starterWeight <= 0) return false;
         return true;
+    }
+
+    private static string BuildIsoWeekKey(DateTime dt)
+    {
+        int isoDay = ((int)dt.DayOfWeek + 6) % 7 + 1; // Monday=1..Sunday=7
+        DateTime thursday = dt.Date.AddDays(4 - isoDay);
+        DateTime week1 = new DateTime(thursday.Year, 1, 4);
+        int week1IsoDay = ((int)week1.DayOfWeek + 6) % 7 + 1;
+        DateTime week1Thursday = week1.AddDays(4 - week1IsoDay);
+        int week = 1 + (int)((thursday - week1Thursday).TotalDays / 7d);
+        return $"{thursday.Year}-W{Mathf.Clamp(week, 1, 53):00}";
     }
 
     private bool TryLoadOfferFromMeta()
@@ -526,25 +505,13 @@ public sealed class IronCareerStarterPanelUI : MonoBehaviour
         if (index < 0 || index > 2) return;
 
         _selectedIndex = index;
-        UpdateSelectionVisuals();
         RefreshStartButton();
     }
 
     private void ClearSelection()
     {
         _selectedIndex = -1;
-        UpdateSelectionVisuals();
-    }
 
-    private void UpdateSelectionVisuals()
-    {
-        if (slot1SelectedFX) slot1SelectedFX.SetActive(_selectedIndex == 0);
-        if (slot2SelectedFX) slot2SelectedFX.SetActive(_selectedIndex == 1);
-        if (slot3SelectedFX) slot3SelectedFX.SetActive(_selectedIndex == 2);
-
-        if (slot1VisualRoot) slot1VisualRoot.localScale = Vector3.one * ((_selectedIndex == 0) ? selectedScale : unselectedScale);
-        if (slot2VisualRoot) slot2VisualRoot.localScale = Vector3.one * ((_selectedIndex == 1) ? selectedScale : unselectedScale);
-        if (slot3VisualRoot) slot3VisualRoot.localScale = Vector3.one * ((_selectedIndex == 2) ? selectedScale : unselectedScale);
     }
 
     private bool CanStart()

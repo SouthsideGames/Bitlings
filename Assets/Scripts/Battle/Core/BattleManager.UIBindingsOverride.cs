@@ -155,6 +155,7 @@ public partial class BattleManager : MonoBehaviour
         _uiBindingsCurrent = o;
         _uiBindingsHasCurrent = true;
         ActivatePanelRoots(_uiBindingsCurrent);
+        RebindBenchButtons();
     }
 
     /// <summary>Restores all HUD bindings back to inspector defaults.</summary>
@@ -201,6 +202,7 @@ public partial class BattleManager : MonoBehaviour
         _uiBindingsCurrent = _uiBindingsDefaults;
         _uiBindingsHasCurrent = true;
         ActivatePanelRoots(_uiBindingsCurrent);
+        RebindBenchButtons();
     }
 
     private static void ActivatePanelRoots(BattleUIBindings b)

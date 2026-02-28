@@ -235,6 +235,27 @@ public class UIManager : MonoBehaviour
 
     private void SetActive(PanelId id, bool on, bool fireEvent = true)
     {
+        // IRON GUARD: prevent regular Encounter from being shown during active Iron runs
+        if (on && id == PanelId.Encounter && IronCareerRuntime.IsActive)
+        {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            Debug.LogWarning("[UIManager] Blocked opening regular Encounter panel while Iron Career is active.");
+#endif
+            return;
+        }
+
+        // IRON GUARD: if Iron panel is being shown, immediately hide regular Encounter if still open
+        if (on && id == PanelId.IronCareerEncounter && IronCareerRuntime.IsActive)
+        {
+            if (_open.Contains(PanelId.Encounter))
+            {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+                Debug.Log("[UIManager] Iron Career panel opening; force-hiding regular Encounter panel.");
+#endif
+                SetImmediate(PanelId.Encounter, false, fireEvent: false);
+            }
+        }
+
         if (!_map.TryGetValue(id, out var p) || p.root == null)
         {
 #if UNITY_EDITOR || DEVELOPMENT_BUILD

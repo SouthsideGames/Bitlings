@@ -21,13 +21,39 @@ public class IronBattleUIRoot : MonoBehaviour
 
     private void Awake()
     {
+        ResolveOptionalRefs();
+    }
+
+    private void ResolveOptionalRefs()
+    {
         if (!autoFindInChildren) return;
 
         if (!ironFeedback)
             ironFeedback = GetComponentInChildren<BattleFeedbackManager>(true);
 
         if (!ironBattleTextBox)
-            ironBattleTextBox = GetComponentInChildren<BattleTextBoxUI>(true);
+        {
+            var allTextBoxes = GetComponentsInChildren<BattleTextBoxUI>(true);
+            Debug.Log($"[IronBattleUIRoot] Found {allTextBoxes.Length} BattleTextBoxUI components");
+            for (int i = 0; i < allTextBoxes.Length; i++)
+            {
+                var tb = allTextBoxes[i];
+                if (!tb) continue;
+                Debug.Log($"[IronBattleUIRoot]   [{i}] {tb.name} hasRenderable={tb.HasRenderableTarget} active={tb.gameObject.activeSelf}");
+                if (tb.HasRenderableTarget)
+                {
+                    ironBattleTextBox = tb;
+                    Debug.Log($"[IronBattleUIRoot] Assigned textbox (by HasRenderableTarget): {tb.name}");
+                    break;
+                }
+            }
+
+            if (!ironBattleTextBox && allTextBoxes.Length > 0)
+            {
+                ironBattleTextBox = allTextBoxes[0];
+                Debug.Log($"[IronBattleUIRoot] Assigned textbox (fallback first): {allTextBoxes[0].name}");
+            }
+        }
 
         if (!ironPlayerBackground)
         {
@@ -68,6 +94,14 @@ public class IronBattleUIRoot : MonoBehaviour
     {
         if (!battle) return;
 
+        // Ensure this UI root is active so child components can display
+        if (!gameObject.activeSelf)
+            gameObject.SetActive(true);
+
+        ResolveOptionalRefs();
+
+        Debug.Log($"[IronBattleUIRoot] ApplyTo called: textbox={(ironBattleTextBox ? ironBattleTextBox.name : "NULL")} active={(ironBattleTextBox ? ironBattleTextBox.gameObject.activeSelf : false)}");
+
         battle.SetUIBindingsOverride(ironBindings);
 
         // No bottom toggle override — Iron does not allow switching
@@ -76,6 +110,22 @@ public class IronBattleUIRoot : MonoBehaviour
             ironBattleTextBox,
             null
         );
+
+        // Ensure text box is active before battle starts
+        if (ironBattleTextBox && !ironBattleTextBox.gameObject.activeSelf)
+        {
+            ironBattleTextBox.gameObject.SetActive(true);
+            Debug.Log($"[IronBattleUIRoot] Activated textbox: {ironBattleTextBox.name}");
+        }
+
+#if UNITY_EDITOR
+        Debug.Log($"[IronTextTrace] ApplyTo: battle={battle.name} textbox={(ironBattleTextBox ? ironBattleTextBox.name : "NULL")} hasTarget={(ironBattleTextBox ? ironBattleTextBox.HasRenderableTarget : false)} active={(ironBattleTextBox ? ironBattleTextBox.gameObject.activeInHierarchy : false)}");
+#endif
+
+        if (!ironBattleTextBox)
+            Debug.LogWarning("[IronBattleUIRoot] No BattleTextBoxUI found in Iron battle UI root. Battle text will not display.");
+        else if (!ironBattleTextBox.gameObject.activeInHierarchy)
+            Debug.LogWarning($"[IronBattleUIRoot] BattleTextBoxUI '{ironBattleTextBox.name}' is assigned but not active in hierarchy.");
 
         battle.SetBattleBackgroundOverride(ironPlayerBackground, ironWildBackground);
     }

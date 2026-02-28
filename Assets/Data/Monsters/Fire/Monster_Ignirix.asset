@@ -42,6 +42,7 @@ MonoBehaviour:
   jobSkill: 1.08
   titleTrack: {fileID: 11400000, guid: 79936ff21507048bcaab651979784d4a, type: 2}
   defaultAlwaysOnTitles: []
+  ironTitles: []
   Personality: {fileID: 11400000, guid: 3733616cf9f0f4dddb5bee9d6ba2952f, type: 2}
   basicAttackName: Flame Bite
   basicAttackPrefab: {fileID: 126357351932672970, guid: a7524146891194bc4b7eb73ba1e38b46, type: 3}

@@ -16,12 +16,6 @@ public partial class BattleManager : MonoBehaviour
     // and incorrectly apply the player's equipped titles to the wild.
     private static int _wildCombatSerial = 0;
 
-    private string BuildFallbackWildCombatId(MonsterDataSO def)
-    {
-        _wildCombatSerial++;
-        string baseId = (def != null && !string.IsNullOrEmpty(def.id)) ? def.id : "UNKNOWN";
-        return $"WILD::{baseId}::{_wildCombatSerial}";
-    }
     private readonly BattleEventBus _eventBus = new BattleEventBus();
 
     public event Action<BattleEvent> OnBattleEvent
@@ -30,30 +24,8 @@ public partial class BattleManager : MonoBehaviour
         remove { _eventBus.OnEvent -= value; }
     }
 
-    public void RegisterBattleEventConsumer() => _eventBus.RegisterConsumer();
-    public void UnregisterBattleEventConsumer() => _eventBus.UnregisterConsumer();
-    private bool HasBattleEventConsumers => _eventBus.HasConsumers;
-
-    private void Emit(BattleEvent e) => _eventBus.Emit(e);
-
     private static int _battleSerial;
     private readonly BattleRngService _rng = new BattleRngService();
-
-    public int BattleSeed => _rng.BattleSeed;
-    public string BattleSeedLabel => _rng.BattleSeedLabel;
-
-    /// <summary>
-    /// Optional: EncounterManager can set the battle seed before calling Begin(...).
-    /// If not set, a deterministic seed will be derived from the active session/daily/custom seed.
-    /// </summary>
-    public void SetBattleSeed(int seed, string seedLabel = null) => _rng.SetBattleSeed(seed, seedLabel);
-
-    private float Rng01() => _rng.Rng01();
-
-    private void EnsureBattleRngInitialized()
-    {
-        _rng.EnsureInitialized(ref _battleSerial, wildDef, wildLevel);
-    }
 
 
     
@@ -113,71 +85,6 @@ public partial class BattleManager : MonoBehaviour
     private float _autoQueueSecondsDefault;
     private bool _autoResolveActive;
     private bool _defaultsCaptured;
-
-    void Awake()
-    {
-        CaptureDefaults();
-    }
-
-    private void CaptureDefaults()
-    {
-        if (_defaultsCaptured) return;
-        _defaultsCaptured = true;
-
-        _manualTurnsDefault = manualTurns;
-        _enableAutoQueueDefault = enableAutoQueueAttack;
-        _autoQueueSecondsDefault = autoQueueAttackAfterSeconds;
-    }
-
-    /// <summary>
-    /// Called by EncounterManager at battle start.
-    /// When true, the battle resolves in automatic mode (no manual input waits),
-    /// and text/pace can be accelerated in UI scripts that query this flag.
-    /// </summary>
-    public bool AutoResolveActive => _autoResolveActive;
-
-    public void ConfigureForAuto(bool isAuto)
-    {
-        CaptureDefaults();
-        _autoResolveActive = isAuto;
-
-        if (isAuto)
-        {
-            manualTurns = false;
-            enableAutoQueueAttack = false;
-            autoQueueAttackAfterSeconds = 0.25f;
-        }
-        else
-        {
-            manualTurns = _manualTurnsDefault;
-            enableAutoQueueAttack = _enableAutoQueueDefault;
-            autoQueueAttackAfterSeconds = _autoQueueSecondsDefault;
-        }
-    }
-
-    private void EmitAutoQueueCountdown(float remainingSeconds, bool show)
-    {
-        if (remainingSeconds < 0f) remainingSeconds = 0f;
-        int displayInt = Mathf.CeilToInt(remainingSeconds);
-
-        if (!show)
-        {
-            if (_autoQueueCountdownShown)
-            {
-                _autoQueueCountdownShown = false;
-                _autoQueueCountdownLastInt = int.MinValue;
-                OnAutoQueueCountdown?.Invoke(0f, false);
-            }
-            return;
-        }
-
-        if (!_autoQueueCountdownShown || _autoQueueCountdownLastInt != displayInt)
-        {
-            _autoQueueCountdownShown = true;
-            _autoQueueCountdownLastInt = displayInt;
-            OnAutoQueueCountdown?.Invoke(remainingSeconds, true);
-        }
-    }
 
     [Header("Run Settings")]
     [SerializeField, Range(0f, 1f)] private float runBaseChance = 0.25f;
@@ -271,54 +178,6 @@ public partial class BattleManager : MonoBehaviour
     private BattleTextBoxUI _runtimeOverrideTextBox;
     private BattleSwitchToggle _runtimeOverrideBottomToggle;
 
-    /// <summary>
-    /// Overrides the BattleManager's UI targets at runtime (used by Iron Career).
-    /// Additive only: does not remove any existing features.
-    /// </summary>
-    public void SetUIOverride(BattleFeedbackManager overrideFeedback, BattleTextBoxUI overrideTextBox, BattleSwitchToggle overrideBottomToggle)
-    {
-        if (!_uiDefaultsCaptured)
-        {
-            _uiDefaultsCaptured = true;
-            _defaultFeedback = feedback;
-            _defaultBattleTextBox = battleTextBox;
-            _defaultBottomToggle = _bottomToggle;
-        }
-
-        if (overrideFeedback || overrideTextBox || overrideBottomToggle)
-        {
-            _runtimeUIOverrideActive = true;
-            if (overrideFeedback) _runtimeOverrideFeedback = overrideFeedback;
-            if (overrideTextBox) _runtimeOverrideTextBox = overrideTextBox;
-            if (overrideBottomToggle) _runtimeOverrideBottomToggle = overrideBottomToggle;
-        }
-
-        if (overrideFeedback) feedback = overrideFeedback;
-        if (overrideTextBox) battleTextBox = overrideTextBox;
-        if (overrideBottomToggle) _bottomToggle = overrideBottomToggle;
-    }
-
-    /// <summary>
-    /// Restores UI references back to their original inspector values.
-    /// </summary>
-    public void ClearUIOverride()
-    {
-        if (!_uiDefaultsCaptured) return;
-        feedback = _defaultFeedback;
-        battleTextBox = _defaultBattleTextBox;
-        _bottomToggle = _defaultBottomToggle;
-        _runtimeUIOverrideActive = false;
-        _runtimeOverrideFeedback = null;
-        _runtimeOverrideTextBox = null;
-        _runtimeOverrideBottomToggle = null;
-    }
-
-    private void ReapplyRuntimeUIOverrideIfAny()
-    {
-        if (!_runtimeUIOverrideActive) return;
-        SetUIOverride(_runtimeOverrideFeedback, _runtimeOverrideTextBox, _runtimeOverrideBottomToggle);
-    }
-
     [Header("Status + Synergy (Battle Start)")]
     [Tooltip("Icons + default durations/magnitudes for StatusType.")]
     [SerializeField] private StatusLibrarySO statusLibrary;
@@ -403,48 +262,6 @@ public partial class BattleManager : MonoBehaviour
     private bool inBattle;
     public bool InBattle => inBattle;
 
-    // Read-only UI helpers (used by BattleFeedbackManager when consuming battle events)
-    public float GetActivePlayerCurHP()
-    {
-        if (teamHP == null || activeIndex < 0 || activeIndex >= teamHP.Length) return 0f;
-        return teamHP[activeIndex];
-    }
-
-    public float GetActivePlayerMaxHP()
-    {
-        return GetFinalMaxHPForIndex(activeIndex);
-    }
-
-    public float GetWildCurHP()
-    {
-        return wildHP;
-    }
-
-    public float GetWildMaxHP()
-    {
-        return wildMaxHP;
-    }
-
-    // Read-only UI helpers (shield pools)
-    // NOTE: Title battle-start shields should be displayed as (+X) shield, but should NOT change the HP number.
-    public int GetActivePlayerShieldTotal()
-    {
-        int s = 0;
-        if (shieldHP != null && activeIndex >= 0 && activeIndex < shieldHP.Length)
-            s += Mathf.RoundToInt(Mathf.Max(0f, shieldHP[activeIndex]));
-        if (titleShieldHP != null && activeIndex >= 0 && activeIndex < titleShieldHP.Length)
-            s += Mathf.RoundToInt(Mathf.Max(0f, titleShieldHP[activeIndex]));
-        return Mathf.Max(0, s);
-    }
-
-    public int GetWildShieldTotal()
-    {
-        int s = 0;
-        s += Mathf.RoundToInt(Mathf.Max(0f, wildShieldHP));
-        s += Mathf.RoundToInt(Mathf.Max(0f, wildTitleShieldHP));
-        return Mathf.Max(0, s);
-    }
-
     private Action<BattleResult> onEnd;
     private float startTime;
     private Coroutine turnCR;
@@ -456,14 +273,6 @@ public partial class BattleManager : MonoBehaviour
     // ─────────────────────────────────────────────────────────────
     private readonly List<int> _scratchOthers = new List<int>(4);
     private readonly BattleLogBuffer _logBuffer = new BattleLogBuffer();
-
-    private void FillOtherIndices(List<int> dst)
-    {
-        if (dst == null) return;
-        dst.Clear();
-        for (int i = 0; i < teamCount; i++)
-            if (i != activeIndex) dst.Add(i);
-    }
 
     private bool playerTookFirstIncomingThisBattle = false;
     private bool playerLandedFirstHitThisBattle = false;
@@ -725,8 +534,7 @@ public partial class BattleManager : MonoBehaviour
 
     void Start()
     {
-        if (benchBtn1) benchBtn1.onClick.AddListener(() => ClickBench(0));
-        if (benchBtn2) benchBtn2.onClick.AddListener(() => ClickBench(1));
+        RebindBenchButtons();
 
         if (SaveManager.Data != null && SaveManager.Data.settings != null)
             battleSpeed = Mathf.Clamp(SaveManager.Data.settings.battleSpeed, 0.25f, 5f);
@@ -753,8 +561,217 @@ public partial class BattleManager : MonoBehaviour
 
     void OnDestroy()
     {
+        UnbindBenchButtons();
+    }
+
+    private void RebindBenchButtons()
+    {
+        UnbindBenchButtons();
+
+        if (benchBtn1) benchBtn1.onClick.AddListener(() => ClickBench(0));
+        if (benchBtn2) benchBtn2.onClick.AddListener(() => ClickBench(1));
+    }
+
+    private void UnbindBenchButtons()
+    {
         if (benchBtn1) benchBtn1.onClick.RemoveAllListeners();
         if (benchBtn2) benchBtn2.onClick.RemoveAllListeners();
+    }
+
+    void Awake()
+    {
+        CaptureDefaults();
+    }
+
+    private void CaptureDefaults()
+    {
+        if (_defaultsCaptured) return;
+        _defaultsCaptured = true;
+
+        _manualTurnsDefault = manualTurns;
+        _enableAutoQueueDefault = enableAutoQueueAttack;
+        _autoQueueSecondsDefault = autoQueueAttackAfterSeconds;
+    }
+
+    public void RegisterBattleEventConsumer() => _eventBus.RegisterConsumer();
+    public void UnregisterBattleEventConsumer() => _eventBus.UnregisterConsumer();
+    private bool HasBattleEventConsumers => _eventBus.HasConsumers;
+
+    private void Emit(BattleEvent e) => _eventBus.Emit(e);
+
+    public int BattleSeed => _rng.BattleSeed;
+    public string BattleSeedLabel => _rng.BattleSeedLabel;
+
+    /// <summary>
+    /// Optional: EncounterManager can set the battle seed before calling Begin(...).
+    /// If not set, a deterministic seed will be derived from the active session/daily/custom seed.
+    /// </summary>
+    public void SetBattleSeed(int seed, string seedLabel = null) => _rng.SetBattleSeed(seed, seedLabel);
+
+    private float Rng01() => _rng.Rng01();
+
+    private void EnsureBattleRngInitialized()
+    {
+        _rng.EnsureInitialized(ref _battleSerial, wildDef, wildLevel);
+    }
+
+    private string BuildFallbackWildCombatId(MonsterDataSO def)
+    {
+        _wildCombatSerial++;
+        string baseId = (def != null && !string.IsNullOrEmpty(def.id)) ? def.id : "UNKNOWN";
+        return $"WILD::{baseId}::{_wildCombatSerial}";
+    }
+
+    /// <summary>
+    /// Called by EncounterManager at battle start.
+    /// When true, the battle resolves in automatic mode (no manual input waits),
+    /// and text/pace can be accelerated in UI scripts that query this flag.
+    /// </summary>
+    public bool AutoResolveActive => _autoResolveActive;
+
+    public void ConfigureForAuto(bool isAuto)
+    {
+        CaptureDefaults();
+        _autoResolveActive = isAuto;
+
+        if (isAuto)
+        {
+            manualTurns = false;
+            enableAutoQueueAttack = false;
+            autoQueueAttackAfterSeconds = 0.25f;
+        }
+        else
+        {
+            manualTurns = _manualTurnsDefault;
+            enableAutoQueueAttack = _enableAutoQueueDefault;
+            autoQueueAttackAfterSeconds = _autoQueueSecondsDefault;
+        }
+    }
+
+    private void EmitAutoQueueCountdown(float remainingSeconds, bool show)
+    {
+        if (remainingSeconds < 0f) remainingSeconds = 0f;
+        int displayInt = Mathf.CeilToInt(remainingSeconds);
+
+        if (!show)
+        {
+            if (_autoQueueCountdownShown)
+            {
+                _autoQueueCountdownShown = false;
+                _autoQueueCountdownLastInt = int.MinValue;
+                OnAutoQueueCountdown?.Invoke(0f, false);
+            }
+            return;
+        }
+
+        if (!_autoQueueCountdownShown || _autoQueueCountdownLastInt != displayInt)
+        {
+            _autoQueueCountdownShown = true;
+            _autoQueueCountdownLastInt = displayInt;
+            OnAutoQueueCountdown?.Invoke(remainingSeconds, true);
+        }
+    }
+
+    /// <summary>
+    /// Overrides the BattleManager's UI targets at runtime (used by Iron Career).
+    /// Additive only: does not remove any existing features.
+    /// </summary>
+    public void SetUIOverride(BattleFeedbackManager overrideFeedback, BattleTextBoxUI overrideTextBox, BattleSwitchToggle overrideBottomToggle)
+    {
+        if (!_uiDefaultsCaptured)
+        {
+            _uiDefaultsCaptured = true;
+            _defaultFeedback = feedback;
+            _defaultBattleTextBox = battleTextBox;
+            _defaultBottomToggle = _bottomToggle;
+        }
+
+        if (overrideFeedback || overrideTextBox || overrideBottomToggle)
+        {
+            _runtimeUIOverrideActive = true;
+            if (overrideFeedback) _runtimeOverrideFeedback = overrideFeedback;
+            if (overrideTextBox) _runtimeOverrideTextBox = overrideTextBox;
+            if (overrideBottomToggle) _runtimeOverrideBottomToggle = overrideBottomToggle;
+        }
+
+        if (overrideFeedback)
+        {
+            feedback = overrideFeedback;
+            feedback.BindToBattleManager(this);
+        }
+        if (overrideTextBox) battleTextBox = overrideTextBox;
+        if (overrideBottomToggle) _bottomToggle = overrideBottomToggle;
+    }
+
+    /// <summary>
+    /// Restores UI references back to their original inspector values.
+    /// </summary>
+    public void ClearUIOverride()
+    {
+        if (!_uiDefaultsCaptured) return;
+        feedback = _defaultFeedback;
+        battleTextBox = _defaultBattleTextBox;
+        _bottomToggle = _defaultBottomToggle;
+        _runtimeUIOverrideActive = false;
+        _runtimeOverrideFeedback = null;
+        _runtimeOverrideTextBox = null;
+        _runtimeOverrideBottomToggle = null;
+    }
+
+    private void ReapplyRuntimeUIOverrideIfAny()
+    {
+        if (!_runtimeUIOverrideActive) return;
+        SetUIOverride(_runtimeOverrideFeedback, _runtimeOverrideTextBox, _runtimeOverrideBottomToggle);
+    }
+
+    // Read-only UI helpers (used by BattleFeedbackManager when consuming battle events)
+    public float GetActivePlayerCurHP()
+    {
+        if (teamHP == null || activeIndex < 0 || activeIndex >= teamHP.Length) return 0f;
+        return teamHP[activeIndex];
+    }
+
+    public float GetActivePlayerMaxHP()
+    {
+        return GetFinalMaxHPForIndex(activeIndex);
+    }
+
+    public float GetWildCurHP()
+    {
+        return wildHP;
+    }
+
+    public float GetWildMaxHP()
+    {
+        return wildMaxHP;
+    }
+
+    // Read-only UI helpers (shield pools)
+    // NOTE: Title battle-start shields should be displayed as (+X) shield, but should NOT change the HP number.
+    public int GetActivePlayerShieldTotal()
+    {
+        int s = 0;
+        if (shieldHP != null && activeIndex >= 0 && activeIndex < shieldHP.Length)
+            s += Mathf.RoundToInt(Mathf.Max(0f, shieldHP[activeIndex]));
+        if (titleShieldHP != null && activeIndex >= 0 && activeIndex < titleShieldHP.Length)
+            s += Mathf.RoundToInt(Mathf.Max(0f, titleShieldHP[activeIndex]));
+        return Mathf.Max(0, s);
+    }
+
+    public int GetWildShieldTotal()
+    {
+        int s = 0;
+        s += Mathf.RoundToInt(Mathf.Max(0f, wildShieldHP));
+        s += Mathf.RoundToInt(Mathf.Max(0f, wildTitleShieldHP));
+        return Mathf.Max(0, s);
+    }
+
+    private void FillOtherIndices(List<int> dst)
+    {
+        if (dst == null) return;
+        dst.Clear();
+        for (int i = 0; i < teamCount; i++)
+            if (i != activeIndex) dst.Add(i);
     }
 
     private void SetIsPlayerTurn(bool value)
@@ -811,8 +828,47 @@ public partial class BattleManager : MonoBehaviour
     {
         if (string.IsNullOrWhiteSpace(line)) return;
         BattleLogger.Log(line, LogScope.Battle);
+        EnsureBattleTextBoxBound();
+
+#if UNITY_EDITOR
+        if (battleTextBox == null)
+            Debug.LogWarning("[IronTextTrace] SayInstant: battleTextBox is NULL after EnsureBattleTextBoxBound().");
+#endif
+
         if (battleTextBox != null)
             battleTextBox.ShowLineInstant(line, tags, battleSpeed);
+    }
+
+    private void EnsureBattleTextBoxBound()
+    {
+        if (battleTextBox != null && battleTextBox.HasRenderableTarget)
+            return;
+
+        if (_runtimeOverrideTextBox != null && _runtimeOverrideTextBox.HasRenderableTarget)
+        {
+            battleTextBox = _runtimeOverrideTextBox;
+            return;
+        }
+
+        if (_hudRigActive != null && _hudRigActive.battleTextBox != null && _hudRigActive.battleTextBox.HasRenderableTarget)
+        {
+            battleTextBox = _hudRigActive.battleTextBox;
+            return;
+        }
+
+        var any = FindObjectsByType<BattleTextBoxUI>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+        for (int i = 0; i < any.Length; i++)
+        {
+            var tb = any[i];
+            if (!tb || !tb.HasRenderableTarget) continue;
+
+            battleTextBox = tb;
+            if (_runtimeUIOverrideActive && _runtimeOverrideTextBox == null)
+                _runtimeOverrideTextBox = tb;
+            return;
+        }
+
+        Debug.LogWarning("[BattleManager] No valid BattleTextBoxUI found. Battle text cannot be displayed.");
     }
     public bool HasQueuedPlayerAction => pendingAction != PlayerAction.None;
 
@@ -1265,14 +1321,14 @@ public partial class BattleManager : MonoBehaviour
         if (wildPanel)
         {
             wildCG = wildPanel.GetComponent<CanvasGroup>();
-            if (!wildCG) wildCG = wildPanel.AddComponent<CanvasGroup>();
-            wildCG.alpha = 0f; wildCG.blocksRaycasts = false; wildCG.interactable = false;
+            if (wildCG)
+                wildCG.alpha = 0f;
         }
         if (playerPanel)
         {
             playerCG = playerPanel.GetComponent<CanvasGroup>();
-            if (!playerCG) playerCG = playerPanel.AddComponent<CanvasGroup>();
-            playerCG.alpha = 0f; playerCG.blocksRaycasts = false; playerCG.interactable = false;
+            if (playerCG)
+                playerCG.alpha = 0f;
         }
 
         if (turnCR != null) StopCoroutine(turnCR);
@@ -1454,15 +1510,34 @@ public partial class BattleManager : MonoBehaviour
         bool isAuto = AutoResolveActive || !manualTurns;
 
         if (condensed && (tags & BattleLineTag.Result) == 0)
+        {
+    #if UNITY_EDITOR
+            Debug.Log($"[IronTextTrace] Say suppressed by condensed text. tags={tags} line='{line}'");
+    #endif
             yield break;
+        }
 
         if (isAuto && autoCompress && (tags & BattleLineTag.Flavor) != 0)
+        {
+    #if UNITY_EDITOR
+            Debug.Log($"[IronTextTrace] Say suppressed by auto-compress flavor filter. tags={tags} line='{line}'");
+    #endif
             yield break;
+        }
 
         BattleLogger.Log(line, LogScope.Battle);
 
         _narrationLock = true;
         GameEvents.OnBattleStateChanged?.Invoke();
+
+        EnsureBattleTextBoxBound();
+
+#if UNITY_EDITOR
+        if (battleTextBox == null)
+            Debug.LogWarning("[IronTextTrace] Say: battleTextBox is NULL after EnsureBattleTextBoxBound().");
+        else
+            Debug.Log($"[IronTextTrace] Say rendering on textbox='{battleTextBox.name}' tags={tags} auto={isAuto} condensed={condensed} autoCompress={autoCompress}");
+#endif
 
         if (battleTextBox != null)
             yield return battleTextBox.ShowLine(new BattleLine(line, tags), battleSpeed);

@@ -9,7 +9,8 @@ using UnityEngine;
 /// IMPORTANT:
 /// - We DO want background systems (jobs, timers) to keep running.
 /// - Therefore we must ignore volatile fields that are expected to change (timestamps, tick markers).
-/// - We still flag meaningful persistence changes (credits, resources, team/owned composition, rank/xp, etc.).
+/// - We still flag meaningful persistence changes (team/owned composition, rank/xp, etc.).
+/// - Iron run rewards (Credits/Growth Cores) are intentionally persisted and are normalized out.
 /// </summary>
 public static class IronNoBleedHarness
 {
@@ -140,7 +141,13 @@ public static class IronNoBleedHarness
         NormalizeMonsters(teamCopy);
         NormalizeMonsters(ownedCopy);
 
-        // resourceCounts + credits are core no-bleed fields; DO NOT normalize.
+        // Resource rewards are now an intentional Iron persistence path.
+        // Keep guarding resources, but ignore Credit/GrowthCore buckets specifically.
+        var resourcesCopy = CloneIntList(p.resourceCounts);
+        NormalizeAllowedIronResourceDeltas(resourcesCopy);
+
+        int creditsCopy = 0;
+
         // promotionRank/XP also must not change during Iron; DO NOT normalize.
         // encounter points and related fields should not change during Iron; DO NOT normalize.
 
@@ -154,8 +161,8 @@ public static class IronNoBleedHarness
         {
             team = teamCopy,
             owned = ownedCopy,
-            resourceCounts = p.resourceCounts,
-            credits = p.credits,
+            resourceCounts = resourcesCopy,
+            credits = creditsCopy,
 
             promotionRank = p.promotionRank,
             promotionXP = p.promotionXP,
@@ -216,6 +223,25 @@ public static class IronNoBleedHarness
             // m.lastOnlineUnix = 0;
             // m.lastSaveUnix = 0;
         }
+    }
+
+    private static System.Collections.Generic.List<int> CloneIntList(System.Collections.Generic.List<int> src)
+    {
+        if (src == null) return null;
+        return new System.Collections.Generic.List<int>(src);
+    }
+
+    private static void NormalizeAllowedIronResourceDeltas(System.Collections.Generic.List<int> resourceCounts)
+    {
+        if (resourceCounts == null) return;
+
+        int creditsIdx = (int)ResourceType.Credits;
+        if (creditsIdx >= 0 && creditsIdx < resourceCounts.Count)
+            resourceCounts[creditsIdx] = 0;
+
+        int growthCoreIdx = (int)ResourceType.GrowthCore;
+        if (growthCoreIdx >= 0 && growthCoreIdx < resourceCounts.Count)
+            resourceCounts[growthCoreIdx] = 0;
     }
 
     private static string Hash(string s)

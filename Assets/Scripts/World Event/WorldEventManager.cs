@@ -26,7 +26,6 @@ public sealed class WorldEventManager : MonoBehaviour
     {
         if (I != null && I != this) { Destroy(gameObject); return; }
         I = this;
-        DontDestroyOnLoad(gameObject);
     }
 
     private void OnDestroy()

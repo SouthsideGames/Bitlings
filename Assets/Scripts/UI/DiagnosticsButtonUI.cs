@@ -33,38 +33,20 @@ public class DiagnosticsButtonUI : MonoBehaviour
         ApplyFromSave("Awake");
     }
 
-    void OnEnable()
-    {
-        ApplyFromSave("OnEnable");
-    }
+    void OnEnable() => ApplyFromSave("OnEnable");
 
     public void ApplyFromSave(string context = "")
     {
         bool unlocked = (SaveManager.Data != null) && SaveManager.Data.diagnosticsUnlocked;
-        ApplyUnlockedState(unlocked, context);
+        ApplyUnlockedState(unlocked);
     }
 
-   public void ApplyUnlockedState(bool unlocked, string context = "")
+   public void ApplyUnlockedState(bool unlocked)
     {
-        #if UNITY_EDITOR || DEVELOPMENT_BUILD
-        if (debugLogs)
-            Debug.Log($"[DIAG BTN] ApplyUnlockedState({unlocked}) ctx={context}");
-        #endif
-
-        if (diagnosticsButtonGO == null)
-        {
-            #if UNITY_EDITOR || DEVELOPMENT_BUILD
-            if (debugLogs)
-                Debug.LogError("[DIAG BTN] diagnosticsButtonGO is not assigned.");
-            #endif
-            return;
-        }
-
-        // Show / hide the button
+      
         if (hideUntilUnlocked)
             diagnosticsButtonGO.SetActive(unlocked);
 
-        // 🔑 IMPORTANT: enable interaction when unlocked
         if (diagnosticsButton != null)
             diagnosticsButton.interactable = unlocked;
     }

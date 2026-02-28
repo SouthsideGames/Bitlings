@@ -12,6 +12,7 @@ public sealed class IronEncounterService
     private readonly IronCareerRunState _state;
     private readonly IronRngStream _rng;
     private readonly IronTitleRoller _titleRoller;
+    private string _lastWildMonsterId;
 
     public IronEncounterService(IronCareerRunState state, IronRngStream rng, IronTitleRoller titleRoller)
     {
@@ -24,6 +25,9 @@ public sealed class IronEncounterService
     {
         if (_state == null || _rng == null || _titleRoller == null)
             return null;
+
+        if (_state.lastRolledWild != null && _state.lastRolledWild.def != null)
+            return _state.lastRolledWild;
 
         // Grab the MonsterLibrarySO that exists in memory (ScriptableObject)
         var libs = Resources.FindObjectsOfTypeAll<MonsterLibrarySO>();
@@ -61,17 +65,37 @@ public sealed class IronEncounterService
         if (candidates.Count == 0)
             candidates = all; // fallback if everything is excluded
 
+        if (!string.IsNullOrEmpty(_lastWildMonsterId) && candidates.Count > 1)
+        {
+            var noRepeat = new List<MonsterDataSO>(candidates.Count);
+            for (int i = 0; i < candidates.Count; i++)
+            {
+                var c = candidates[i];
+                if (c == null) continue;
+                if (string.Equals(c.id, _lastWildMonsterId, StringComparison.Ordinal)) continue;
+                noRepeat.Add(c);
+            }
+
+            if (noRepeat.Count > 0)
+                candidates = noRepeat;
+        }
+
         int index = _rng.NextInt(0, candidates.Count);
         var chosen = candidates[index];
+        _lastWildMonsterId = chosen != null ? chosen.id : null;
 
         int level = ComputeWildLevel(_state.wins, _rng);
 
+        // Wild enemies intentionally use normal track-based title rolls.
+        // Curated ironTitles are reserved for player-side starter/hire generation.
         var title = _titleRoller.RollLockedTitle(chosen, level, _rng, isWild: true);
         var wild = new IronMonster(chosen, level, curHp: -1f, locked: title);
 
         // ensure full hp snapshot
         wild.maxHp = Mathf.Max(1f, BattleCalc.CalcHP(chosen, level));
         wild.hp = wild.maxHp;
+
+        _state.lastRolledWild = wild;
 
         return wild;
     }

@@ -27,9 +27,6 @@ public sealed class AchievementManager : MonoBehaviour
     {
         if (I != null && I != this) { Destroy(gameObject); return; }
         I = this;
-
-        // Ensure achievement unlock popups can flush across scene transitions.
-        DontDestroyOnLoad(gameObject);
     }
 
     private void OnEnable()

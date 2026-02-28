@@ -67,6 +67,10 @@ public class MonsterDataSO : ScriptableObject
     public TitleTrackSO titleTrack;
     public TitleSO[] defaultAlwaysOnTitles;
 
+    [Header("Iron Career")]
+    [Tooltip("Optional curated titles used only in Iron Career title rolls.")]
+    public TitleSO[] ironTitles;
+
     [Header("Personality")]
     public MonsterPersonalitySO Personality;
 

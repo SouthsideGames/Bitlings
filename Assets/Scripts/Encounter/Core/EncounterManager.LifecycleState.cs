@@ -18,7 +18,7 @@ public partial class EncounterManager
         if (battleManager == null)
         {
             if (battleManager == null)
-                battleManager = FindObjectOfType<BattleManager>(includeInactive: true);
+                battleManager = FindFirstObjectByType<BattleManager>(FindObjectsInactive.Include);
 
             if (battleManager == null)
                 Debug.LogWarning("[EncounterManager] BattleManager reference is missing. Encounters cannot start battles until a BattleManager exists.");
@@ -86,6 +86,23 @@ public partial class EncounterManager
         if (coroutine == null) return;
         StopCoroutine(coroutine);
         coroutine = null;
+    }
+
+    // Hard stop used when Iron Career takes over: cancel any pending encounter flows
+    // without broadcasting auto-mode events (IronEventGuard forbids them during Iron).
+    public void ForceStopForIron()
+    {
+        // Kill any running encounter coroutines so they cannot resume after Iron exits.
+        StopAndClearCoroutine(ref autoLoopCo);
+        StopAndClearCoroutine(ref postResultCo);
+        StopAllCoroutines();
+
+        // Reset runtime flags quietly (no GameEvents) to avoid event guard violations.
+        inBattle = false;
+        autoMode = false;
+        nextEncounterFree = false;
+        autoRunPaidEnergy = false;
+        _manualHirePending = false;
     }
 
     private void CleanupEncounterRuntime()

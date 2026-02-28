@@ -30,8 +30,6 @@ public sealed class AchievementToastUI : MonoBehaviour
         if (I != null && I != this) { Destroy(gameObject); return; }
         I = this;
 
-        DontDestroyOnLoad(gameObject);
-
         if (!canvasGroup) canvasGroup = GetComponent<CanvasGroup>();
         if (canvasGroup) canvasGroup.alpha = 0f;
     }
