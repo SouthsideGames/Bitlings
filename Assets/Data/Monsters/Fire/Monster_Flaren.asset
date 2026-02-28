@@ -19,7 +19,7 @@ MonoBehaviour:
   icon: {fileID: 21300000, guid: 4db341f17ae9cdf4ea420bf3e462aa98, type: 3}
   backIcon: {fileID: 21300000, guid: 296252648303af442a3d71026e859834, type: 3}
   shinyIcon: {fileID: -801612624374383581, guid: 2277c2dbce3c04bfda0b083544faa5e6, type: 3}
-  shinyBackIcon: {fileID: -6488103128992921508, guid: 867204279608d47a38a861673866ee32, type: 3}
+  shinyBackIcon: {fileID: 21300000, guid: 867204279608d47a38a861673866ee32, type: 3}
   rarity: 3
   canBeStarter: 0
   starterWeight: 1
@@ -42,6 +42,7 @@ MonoBehaviour:
   jobSkill: 1.15
   titleTrack: {fileID: 11400000, guid: b36afc3751235433bbb3736d9b622303, type: 2}
   defaultAlwaysOnTitles: []
+  ironTitles: []
   Personality: {fileID: 11400000, guid: 1bd4805a0ba8f476b9f7b480b0cbb31d, type: 2}
   basicAttackName: Blaze Crush
   basicAttackPrefab: {fileID: 126357351932672970, guid: a7524146891194bc4b7eb73ba1e38b46, type: 3}

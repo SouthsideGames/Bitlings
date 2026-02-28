@@ -558,7 +558,7 @@ public sealed class IronCareerStarterPanelUI : MonoBehaviour
         UIManager.I?.Show(PanelId.Home);
     }
 
-    private void OpenRules()
+    public void OpenRules()
     {
         if (!_ironUI)
         {

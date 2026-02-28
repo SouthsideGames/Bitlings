@@ -57,6 +57,7 @@ public sealed class IronCareerManager : MonoBehaviour, IronBattleBridge.IIronBat
     private IronMonster _pendingHire;
     private bool _pendingRotateAfterWin;
     private bool _finalizedRunStats;
+    private readonly List<int> _tmpLivingIndices = new List<int>(4);
 
     private void ResolveBattleRefsIfNeeded()
     {
@@ -559,7 +560,7 @@ public sealed class IronCareerManager : MonoBehaviour, IronBattleBridge.IIronBat
 
         if (IsRestFloor(_state.wins))
         {
-            restPanel?.Bind(_roster.Party, _roster.ActiveIndex);
+            restPanel?.Bind(_roster.Party, _state.wins, mode == Mode.Hardcore);
             ironEncounterUI?.ShowRest(immediate: true);
             return;
         }
@@ -612,12 +613,64 @@ public sealed class IronCareerManager : MonoBehaviour, IronBattleBridge.IIronBat
             m.hp = Mathf.Min(m.maxHp, m.hp + add);
             _state.party[i] = m;
         }
+    }
+
+    /// <summary>
+    /// Rest Option B: +1 level to a random living party member. Returns the monster name (for UI feedback).
+    /// "Fair" randomness: chooses uniformly among living members only.
+    /// HP% is preserved when max HP changes due to level.
+    /// </summary>
+    public string OnRestRandomLevelUp()
+    {
+        if (_roster == null || _roster.IsPartyEmpty) return string.Empty;
+
+        // Gather living indices
+        _tmpLivingIndices.Clear();
+        for (int i = 0; i < _state.party.Count; i++)
+        {
+            var m = _state.party[i];
+            if (m == null || m.def == null || m.IsDead) continue;
+            _tmpLivingIndices.Add(i);
+        }
+
+        if (_tmpLivingIndices.Count == 0) return string.Empty;
+
+        int pick = (_rng != null) ? _rng.NextInt(0, _tmpLivingIndices.Count) : UnityEngine.Random.Range(0, _tmpLivingIndices.Count);
+        int targetIndex = _tmpLivingIndices[pick];
+
+        var target = _state.party[targetIndex];
+        if (target == null || target.def == null) return string.Empty;
+
+        int cap = target.def.maxLevel > 0 ? target.def.maxLevel : 99;
+        target.level = Mathf.Min(cap, Mathf.Max(1, target.level + 1));
+        target.RecomputeMaxHpPreservePct();
+
+        _state.party[targetIndex] = target;
+        return target.def != null ? target.def.name : string.Empty;
+    }
+
+    /// <summary>
+    /// Called by the Rest UI after an option is applied. Intentionally does not advance the run.
+    /// The UI is responsible for showing a Continue button.
+    /// </summary>
+    public void OnRestAppliedOnly()
+    {
+        // no-op by design (kept as a clear integration point)
+    }
+
+    /// <summary>
+    /// Called by the Rest UI "Continue" button to resume the run after the rest benefit is applied.
+    /// </summary>
+    public void OnRestContinue()
+    {
+        if (!_state.runActive) return;
 
         ironEncounterUI?.ShowBattleOnly(immediate: true);
         BeginNextBattle();
     }
 
     public void OnRestBuffAt(int targetIndex)
+
     {
         if (_roster == null || _roster.IsPartyEmpty) return;
 

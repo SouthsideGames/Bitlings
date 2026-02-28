@@ -2,271 +2,231 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 using System.Collections.Generic;
-using System;
 
-/// <summary>
-/// Phase 3.A: IronCareerRestPanelUI
-/// Appears only on wins % 3 == 0.
-/// Choices:
-/// - Heal party 25%
-/// - Training: +1 level to a chosen party member
-/// </summary>
+
 public sealed class IronCareerRestPanelUI : MonoBehaviour
 {
+    public enum RestOption
+    {
+        None = 0,
+        Heal25 = 1,
+        RandomLevelUp = 2
+    }
+
     [Header("Refs")]
     [SerializeField] private IronCareerManager manager;
 
-    [Header("UI")]
-    [SerializeField] private TextMeshProUGUI headerLabel;
-    [SerializeField] private Button healButton;
-    [SerializeField] private Button buffButton;
-    [SerializeField] private List<Button> trainingTargetButtons = new List<Button>(3);
-    [SerializeField] private List<TextMeshProUGUI> trainingTargetLabels = new List<TextMeshProUGUI>(3);
-    [SerializeField] private List<Image> trainingTargetIcons = new List<Image>(3);
-    [SerializeField] private List<TextMeshProUGUI> trainingTargetHpTexts = new List<TextMeshProUGUI>(3);
+    [Header("Canvas")]
+    [SerializeField] private CanvasGroup canvasGroup;
 
-    [Header("Selection Visuals (Optional)")]
-    [SerializeField] private List<GameObject> trainingTargetSelectedFX = new List<GameObject>(3);
-    [SerializeField] private Color selectedButtonTint = new Color(1f, 1f, 1f, 1f);
-    [SerializeField] private Color unselectedButtonTint = new Color(0.85f, 0.85f, 0.85f, 1f);
+    [Header("Header")]
+    [SerializeField] private TextMeshProUGUI titleTMP;
+    [SerializeField] private TextMeshProUGUI subtitleTMP;
+    [SerializeField] private TextMeshProUGUI metaTMP;
 
-    private bool _wired;
-    private int _selectedTargetIndex = -1;
+    [Header("Party List")]
+    [SerializeField] private TextMeshProUGUI partyHeaderTMP;
+    [SerializeField] private Transform partyListParent;
+    [SerializeField] private IronCareerMonsterCardUI partyCardPrefab;
+
+    [Header("Options")]
+    [SerializeField] private TextMeshProUGUI optionsHeaderTMP;
+    [SerializeField] private Transform optionListParent;
+    [SerializeField] private IronCareerRestOptionItemUI restOptionPrefab;
+
+    [Header("Bottom Bar")]
+    [SerializeField] private Button confirmButton;
+    [SerializeField] private TextMeshProUGUI confirmLabelTMP;
+    [SerializeField] private Button continueButton;
+    [SerializeField] private TextMeshProUGUI continueLabelTMP;
+
+    [Header("Optional Feedback")]
+    [SerializeField] private TextMeshProUGUI resultTMP;
+
+    private readonly List<IronCareerMonsterCardUI> _partyCards = new List<IronCareerMonsterCardUI>(4);
+    private readonly List<IronCareerRestOptionItemUI> _optionItems = new List<IronCareerRestOptionItemUI>(4);
+
+    private RestOption _selected = RestOption.None;
+    private bool _applied;
 
     private void Awake()
     {
         if (!manager) manager = FindFirstObjectByType<IronCareerManager>();
 
-        AutoWireTrainingTargetsIfNeeded();
-        WireButtons();
-    }
+        if (confirmButton) confirmButton.onClick.AddListener(OnConfirm);
+        if (continueButton) continueButton.onClick.AddListener(OnContinue);
 
-    private void OnEnable()
-    {
-        if (headerLabel) headerLabel.text = "Rest";
+        SetApplied(false);
+        SetSelected(RestOption.None);
     }
 
     private void OnDestroy()
     {
-        UnwireButtons();
+        if (confirmButton) confirmButton.onClick.RemoveListener(OnConfirm);
+        if (continueButton) continueButton.onClick.RemoveListener(OnContinue);
     }
 
-    public void Bind(IReadOnlyList<IronMonster> party, int defaultIndex)
+    public void Bind(IReadOnlyList<IronMonster> party, int wins, bool hardcoreMode)
     {
-        AutoWireTrainingTargetsIfNeeded();
-        AutoWireTargetVisualsIfNeeded();
+        if (titleTMP) titleTMP.text = "REST NODE";
+        if (subtitleTMP) subtitleTMP.text = "Choose one benefit. No revives allowed.";
+        if (metaTMP) metaTMP.text = $"Win Streak: {wins}   Mode: {(hardcoreMode ? "Hardcore" : "Standard")}";
 
-        if (trainingTargetButtons == null || trainingTargetButtons.Count == 0)
+        if (partyHeaderTMP) partyHeaderTMP.text = "YOUR PARTY (Current HP)";
+        if (optionsHeaderTMP) optionsHeaderTMP.text = "REST OPTIONS";
+
+        if (confirmLabelTMP) confirmLabelTMP.text = "CONFIRM CHOICE";
+        if (continueLabelTMP) continueLabelTMP.text = "CONTINUE";
+
+        if (resultTMP) resultTMP.text = string.Empty;
+
+        RebuildParty(party);
+        RebuildOptions();
+
+        SetOptionsInteractable(true);
+
+        SetApplied(false);
+        SetSelected(RestOption.None);
+
+        if (canvasGroup)
         {
-            if (buffButton) buffButton.interactable = true;
+            canvasGroup.alpha = 1f;
+            canvasGroup.interactable = true;
+            canvasGroup.blocksRaycasts = true;
+        }
+    }
+
+    private void RebuildParty(IReadOnlyList<IronMonster> party)
+    {
+        // Clear old
+        for (int i = 0; i < _partyCards.Count; i++)
+        {
+            if (_partyCards[i]) Destroy(_partyCards[i].gameObject);
+        }
+        _partyCards.Clear();
+
+        if (!partyListParent || !partyCardPrefab) return;
+
+        int count = (party != null) ? party.Count : 0;
+        for (int i = 0; i < count; i++)
+        {
+            var m = party[i];
+            if (m == null || m.def == null) continue;
+
+            var card = Instantiate(partyCardPrefab, partyListParent);
+            card.Bind(m, isLocked: false, isSelectable: false);
+            _partyCards.Add(card);
+        }
+    }
+
+    private void RebuildOptions()
+    {
+        for (int i = 0; i < _optionItems.Count; i++)
+        {
+            if (_optionItems[i]) Destroy(_optionItems[i].gameObject);
+        }
+        _optionItems.Clear();
+
+        if (!optionListParent || !restOptionPrefab) return;
+
+        // Option A: Heal 25%
+        var heal = Instantiate(restOptionPrefab, optionListParent);
+        heal.Bind(
+            option: RestOption.Heal25,
+            title: "🩹 HEAL PARTY (25%)",
+            desc: "Heal all living monsters by 25% of their max HP. No revives.",
+            preview: "Reliable attrition relief."
+        );
+        heal.SetSelected(false);
+        heal.SetOnClick(() => OnOptionClicked(RestOption.Heal25));
+        _optionItems.Add(heal);
+
+        // Option B: Training (random)
+        var train = Instantiate(restOptionPrefab, optionListParent);
+        train.Bind(
+            option: RestOption.RandomLevelUp,
+            title: "⭐ TRAINING (+1 Level)",
+            desc: "Random living monster gains +1 level. HP% is preserved.",
+            preview: "High variance. Long-term scaling."
+        );
+        train.SetSelected(false);
+        train.SetOnClick(() => OnOptionClicked(RestOption.RandomLevelUp));
+        _optionItems.Add(train);
+    }
+
+    private void OnOptionClicked(RestOption option)
+    {
+        if (_applied) return;
+        SetSelected(option);
+    }
+
+    private void SetSelected(RestOption option)
+    {
+        _selected = option;
+
+        for (int i = 0; i < _optionItems.Count; i++)
+        {
+            if (_optionItems[i]) _optionItems[i].SetSelected(_optionItems[i].Option == option);
+        }
+
+        if (confirmButton) confirmButton.interactable = option != RestOption.None;
+    }
+
+    private void SetApplied(bool applied)
+    {
+        _applied = applied;
+
+        if (confirmButton) confirmButton.gameObject.SetActive(!applied);
+        if (continueButton) continueButton.gameObject.SetActive(applied);
+
+        // Keep one of them interactable, prevent double apply.
+        if (confirmButton) confirmButton.interactable = !applied && _selected != RestOption.None;
+        if (continueButton) continueButton.interactable = applied;
+
+        SetOptionsInteractable(!applied);
+    }
+
+    private void SetOptionsInteractable(bool interactable)
+    {
+        for (int i = 0; i < _optionItems.Count; i++)
+        {
+            if (_optionItems[i]) _optionItems[i].gameObject.SetActive(interactable);
+        }
+    }
+
+    private void OnConfirm()
+    {
+        if (_applied) return;
+        if (_selected == RestOption.None) return;
+
+        if (!manager)
+        {
+            SetApplied(true);
             return;
         }
 
-        int safeDefault = Mathf.Clamp(defaultIndex, 0, Mathf.Max(0, trainingTargetButtons.Count - 1));
-        _selectedTargetIndex = safeDefault;
-
-        for (int i = 0; i < trainingTargetButtons.Count; i++)
+        switch (_selected)
         {
-            var btn = trainingTargetButtons[i];
-            if (!btn) continue;
+            case RestOption.Heal25:
+                manager.OnRestHeal();
+                if (resultTMP) resultTMP.text = "Healed party by 25% (living only).";
+                break;
 
-            var m = (party != null && i < party.Count) ? party[i] : null;
-            bool valid = m != null && m.def != null && !m.IsDead;
-
-            btn.interactable = valid;
-
-            if (trainingTargetIcons != null && i < trainingTargetIcons.Count && trainingTargetIcons[i])
-                trainingTargetIcons[i].sprite = (m != null && m.def != null) ? m.def.icon : null;
-
-            if (trainingTargetLabels != null && i < trainingTargetLabels.Count && trainingTargetLabels[i])
-            {
-                if (m != null && m.def != null)
-                    trainingTargetLabels[i].text = m.def.displayName;
-                else
-                    trainingTargetLabels[i].text = "-";
-            }
-
-            if (trainingTargetHpTexts != null && i < trainingTargetHpTexts.Count && trainingTargetHpTexts[i])
-            {
-                if (m != null && m.def != null)
-                    trainingTargetHpTexts[i].text = $"{Mathf.CeilToInt(m.hp)}/{Mathf.CeilToInt(m.maxHp)}";
-                else
-                    trainingTargetHpTexts[i].text = string.Empty;
-            }
+            case RestOption.RandomLevelUp:
+                string who = manager.OnRestRandomLevelUp();
+                if (resultTMP) resultTMP.text = string.IsNullOrEmpty(who) ? "Training applied." : $"Training: {who} gained +1 level.";
+                break;
         }
 
-        if (buffButton)
-        {
-            int idx = Mathf.Clamp(defaultIndex, 0, (party != null ? Mathf.Max(0, party.Count - 1) : 0));
-            bool fallbackValid = party != null && idx < party.Count && party[idx] != null && party[idx].def != null && !party[idx].IsDead;
-            buffButton.interactable = fallbackValid;
-        }
-
-        RefreshSelectionVisuals();
+        // Manager will not advance battle immediately anymore; this panel controls Continue.
+        // So we call the manager's "rest applied" hook, then we show Continue.
+        manager.OnRestAppliedOnly();
+        SetApplied(true);
     }
 
-    private void WireButtons()
+    private void OnContinue()
     {
-        if (_wired) return;
-        if (healButton) healButton.onClick.AddListener(() => manager?.OnRestHeal());
-        if (buffButton) buffButton.onClick.AddListener(OnBuffButtonClicked);
-
-        for (int i = 0; i < trainingTargetButtons.Count; i++)
-        {
-            int idx = i;
-            if (trainingTargetButtons[i])
-                trainingTargetButtons[i].onClick.AddListener(() => OnTrainingTargetClicked(idx));
-        }
-        _wired = true;
-    }
-
-    private void OnBuffButtonClicked()
-    {
-        int idx = _selectedTargetIndex;
-        if (idx < 0) idx = 0;
-        manager?.OnRestBuffAt(idx);
-    }
-
-    private void OnTrainingTargetClicked(int idx)
-    {
-        _selectedTargetIndex = idx;
-        RefreshSelectionVisuals();
-        manager?.OnRestBuffAt(idx);
-    }
-
-    private void RefreshSelectionVisuals()
-    {
-        EnsureListSize(trainingTargetSelectedFX, trainingTargetButtons != null ? trainingTargetButtons.Count : 0);
-
-        for (int i = 0; i < trainingTargetButtons.Count; i++)
-        {
-            bool selected = i == _selectedTargetIndex;
-
-            if (trainingTargetSelectedFX != null && i < trainingTargetSelectedFX.Count && trainingTargetSelectedFX[i])
-                trainingTargetSelectedFX[i].SetActive(selected);
-
-            var btn = trainingTargetButtons[i];
-            if (btn && btn.image)
-                btn.image.color = selected ? selectedButtonTint : unselectedButtonTint;
-        }
-    }
-
-    private void UnwireButtons()
-    {
-        if (!_wired) return;
-        if (healButton) healButton.onClick.RemoveAllListeners();
-        if (buffButton) buffButton.onClick.RemoveAllListeners();
-        for (int i = 0; i < trainingTargetButtons.Count; i++)
-            if (trainingTargetButtons[i]) trainingTargetButtons[i].onClick.RemoveAllListeners();
-        _wired = false;
-    }
-
-    private void AutoWireTrainingTargetsIfNeeded()
-    {
-        if (trainingTargetButtons != null && trainingTargetButtons.Count > 0)
-            return;
-
-        trainingTargetButtons = new List<Button>(3);
-
-        var allButtons = GetComponentsInChildren<Button>(true);
-        for (int i = 0; i < allButtons.Length; i++)
-        {
-            var b = allButtons[i];
-            if (!b) continue;
-            if (b == healButton || b == buffButton) continue;
-
-            string n = b.name ?? string.Empty;
-            bool looksTarget = n.IndexOf("target", StringComparison.OrdinalIgnoreCase) >= 0
-                || n.IndexOf("train", StringComparison.OrdinalIgnoreCase) >= 0
-                || n.IndexOf("slot", StringComparison.OrdinalIgnoreCase) >= 0;
-
-            if (!looksTarget) continue;
-
-            trainingTargetButtons.Add(b);
-            if (trainingTargetButtons.Count >= 3) break;
-        }
-
-        trainingTargetButtons.Sort((a, b) => string.CompareOrdinal(a != null ? a.name : string.Empty, b != null ? b.name : string.Empty));
-    }
-
-    private void AutoWireTargetVisualsIfNeeded()
-    {
-        if (trainingTargetButtons == null || trainingTargetButtons.Count == 0)
-            return;
-
-        EnsureListSize(trainingTargetIcons, trainingTargetButtons.Count);
-        EnsureListSize(trainingTargetLabels, trainingTargetButtons.Count);
-        EnsureListSize(trainingTargetHpTexts, trainingTargetButtons.Count);
-
-        for (int i = 0; i < trainingTargetButtons.Count; i++)
-        {
-            var btn = trainingTargetButtons[i];
-            if (!btn) continue;
-
-            if (trainingTargetLabels[i] == null)
-                trainingTargetLabels[i] = FindTextInButton(btn, "name", "label", "title");
-
-            if (trainingTargetHpTexts[i] == null)
-                trainingTargetHpTexts[i] = FindTextInButton(btn, "hp", "health");
-
-            if (trainingTargetIcons[i] == null)
-                trainingTargetIcons[i] = FindIconInButton(btn);
-        }
-    }
-
-    private static void EnsureListSize<T>(List<T> list, int size)
-    {
-        if (list == null) return;
-        while (list.Count < size) list.Add(default);
-    }
-
-    private static TextMeshProUGUI FindTextInButton(Button btn, params string[] preferredNameHints)
-    {
-        var texts = btn.GetComponentsInChildren<TextMeshProUGUI>(true);
-        if (texts == null || texts.Length == 0) return null;
-
-        for (int i = 0; i < preferredNameHints.Length; i++)
-        {
-            string hint = preferredNameHints[i] ?? string.Empty;
-            for (int j = 0; j < texts.Length; j++)
-            {
-                var t = texts[j];
-                if (!t) continue;
-                string n = t.name ?? string.Empty;
-                if (n.IndexOf(hint, StringComparison.OrdinalIgnoreCase) >= 0)
-                    return t;
-            }
-        }
-
-        return texts[0];
-    }
-
-    private static Image FindIconInButton(Button btn)
-    {
-        var images = btn.GetComponentsInChildren<Image>(true);
-        if (images == null || images.Length == 0) return null;
-
-        for (int i = 0; i < images.Length; i++)
-        {
-            var img = images[i];
-            if (!img) continue;
-            if (img == btn.image) continue;
-
-            string n = img.name ?? string.Empty;
-            if (n.IndexOf("icon", StringComparison.OrdinalIgnoreCase) >= 0
-                || n.IndexOf("portrait", StringComparison.OrdinalIgnoreCase) >= 0
-                || n.IndexOf("avatar", StringComparison.OrdinalIgnoreCase) >= 0)
-                return img;
-        }
-
-        for (int i = 0; i < images.Length; i++)
-        {
-            var img = images[i];
-            if (!img) continue;
-            if (img == btn.image) continue;
-            return img;
-        }
-
-        return null;
+        if (!manager) return;
+        manager.OnRestContinue();
     }
 }
