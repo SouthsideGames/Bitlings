@@ -103,6 +103,7 @@ MonoBehaviour:
   m_VerticalAlignment: 512
   m_textAlignment: 65535
   m_characterSpacing: 0
+  m_characterHorizontalScale: 1
   m_wordSpacing: 0
   m_lineSpacing: 0
   m_lineSpacingMax: 0
@@ -239,6 +240,7 @@ MonoBehaviour:
   m_VerticalAlignment: 512
   m_textAlignment: 65535
   m_characterSpacing: 0
+  m_characterHorizontalScale: 1
   m_wordSpacing: 0
   m_lineSpacing: 0
   m_lineSpacingMax: 0
@@ -415,7 +417,7 @@ MonoBehaviour:
   nameText: {fileID: 2387679976115977641}
   levelText: {fileID: 4309306759312742614}
   cg: {fileID: 4806695187116038979}
-  animRoot: {fileID: 0}
+  animRoot: {fileID: 656544609388491949}
   bobAmplitude: 6
   bobDuration: 1.2
   scaleAmplitude: 0.03

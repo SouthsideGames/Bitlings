@@ -14,10 +14,9 @@ public class OwnedMonsterListItemUI : MonoBehaviour
     [SerializeField] private Button rootButton;
     [SerializeField] private TextMeshProUGUI cooldownText;
 
-    [Header("Codex / Badge (optional)")]
-    [Tooltip("Optional: small pill/label that shows CORE or the PackId (e.g., MP-001).")]
+    [Header("Badge")]
+    [Tooltip("Small pill/label that shows CORE or the PackId (e.g., MP-001).")]
     [SerializeField] private GameObject packBadgeRoot;
-    [SerializeField] private TextMeshProUGUI packBadgeText;
 
     [Header("Alerts")]
     [SerializeField] private GameObject evolveAlert;
@@ -280,7 +279,7 @@ public class OwnedMonsterListItemUI : MonoBehaviour
 
     private void RefreshPackBadge(MonsterDataSO def)
     {
-        if (!packBadgeRoot && !packBadgeText) return;
+        if (!packBadgeRoot) return;
 
         if (!def || string.IsNullOrEmpty(def.id))
         {
@@ -304,8 +303,6 @@ public class OwnedMonsterListItemUI : MonoBehaviour
     private void SetPackBadgeActive(bool active, string text)
     {
         if (packBadgeRoot) packBadgeRoot.SetActive(active);
-        if (packBadgeText)
-            packBadgeText.text = active ? (text ?? string.Empty) : string.Empty;
     }
 
     /// <summary>

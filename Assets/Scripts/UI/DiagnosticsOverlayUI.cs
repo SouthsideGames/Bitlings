@@ -70,6 +70,8 @@ public class DiagnosticsOverlayUI : MonoBehaviour
     [SerializeField] private TMP_InputField simLevelB;
     [SerializeField] private TMP_InputField simIterations;
     [SerializeField] private TMP_InputField simSeed;
+    [SerializeField] private TMP_Dropdown simTitleADropdown;
+    [SerializeField] private TMP_Dropdown simTitleBDropdown;
     [SerializeField] private TMP_InputField simTitleAId;
     [SerializeField] private TMP_InputField simTitleBId;
     [SerializeField] private Toggle simAVsAllToggle;
@@ -85,6 +87,8 @@ public class DiagnosticsOverlayUI : MonoBehaviour
     bool _balanceVisible;
     readonly Dictionary<string, TitleSO> _titleCache = new Dictionary<string, TitleSO>(StringComparer.Ordinal);
     readonly List<string> _monsterDropdownIds = new List<string>(128);
+    readonly List<string> _titleOptionIdsA = new List<string>(16);
+    readonly List<string> _titleOptionIdsB = new List<string>(16);
     bool _simRunning;
 
     void Awake()
@@ -121,7 +125,11 @@ public class DiagnosticsOverlayUI : MonoBehaviour
         }
 
         if (enableBalanceSim)
+        {
+            SetupBalanceSimListeners();
             EnsureMonsterDropdownsPopulated();
+            RefreshTitleDropdowns();
+        }
 
         SetPanelVisible(false, instant: true);
 
@@ -258,6 +266,12 @@ public class DiagnosticsOverlayUI : MonoBehaviour
 
     void ToggleBalancePanel()
     {
+        if (!enableBalanceSim)
+        {
+            if (simStatusText) simStatusText.text = "Balance sim disabled (enable in inspector)";
+            return;
+        }
+
         SetBalanceVisible(!_balanceVisible);
     }
 
@@ -368,7 +382,7 @@ public class DiagnosticsOverlayUI : MonoBehaviour
             pairs = pairs
         };
 
-        string logsDir = Path.GetFullPath(Path.Combine(Application.dataPath, "..", "Logs", "BalanceSim"));
+        string logsDir = GetBalanceSimDir();
         Directory.CreateDirectory(logsDir);
         string fileName = $"diag_balance_sim_{DateTime.UtcNow:yyyyMMdd_HHmmss}.json";
         string path = Path.Combine(logsDir, fileName);
@@ -450,24 +464,87 @@ public class DiagnosticsOverlayUI : MonoBehaviour
     {
         if (!enableBalanceSim) return;
 
-        var allMonsters = MonsterLibraryLocator.AllMonsters;
-        if (allMonsters == null || allMonsters.Count == 0) return;
+        var collected = new List<MonsterDataSO>(256);
+        var seenIds = new HashSet<string>(StringComparer.Ordinal);
+
+        // Source 1: Explicit MonsterLibrary in Resources (declared by user)
+        var lib = MonsterLibraryLocator.Lib;
+        if (lib != null && lib.monsters != null)
+        {
+            for (int i = 0; i < lib.monsters.Length; i++)
+            {
+                var def = lib.monsters[i];
+                if (def == null || string.IsNullOrWhiteSpace(def.id)) continue;
+                if (seenIds.Add(def.id)) collected.Add(def);
+            }
+            if (simStatusText && collected.Count > 0)
+                simStatusText.text = $"Loaded {collected.Count} from MonsterLibrary";
+        }
+
+        // Source 2: Catalog union (in case it has more)
+        var catalogMonsters = MonsterLibraryLocator.AllMonsters;
+        if (catalogMonsters != null)
+        {
+            for (int i = 0; i < catalogMonsters.Count; i++)
+            {
+                var def = catalogMonsters[i];
+                if (def == null || string.IsNullOrWhiteSpace(def.id)) continue;
+                if (seenIds.Add(def.id)) collected.Add(def);
+            }
+        }
+
+        // Fallback 1: Resources sweep (build-safe)
+        if (collected.Count == 0)
+        {
+            var resourcesDefs = Resources.LoadAll<MonsterDataSO>(string.Empty);
+            var list = new List<MonsterDataSO>(resourcesDefs.Length);
+            for (int i = 0; i < resourcesDefs.Length; i++)
+            {
+                var def = resourcesDefs[i];
+                if (def != null && seenIds.Add(def.id)) list.Add(def);
+            }
+            collected.AddRange(list);
+            if (simStatusText && list.Count > 0) simStatusText.text = "Loaded monsters via Resources sweep";
+        }
+
+#if UNITY_EDITOR
+        // Fallback 2 (editor only): AssetDatabase search (works even if not in Resources)
+        if (collected.Count == 0 && UnityEditor.AssetDatabase.IsValidFolder("Assets"))
+        {
+            var guids = UnityEditor.AssetDatabase.FindAssets("t:MonsterDataSO");
+            var list = new List<MonsterDataSO>(guids.Length);
+            for (int i = 0; i < guids.Length; i++)
+            {
+                var path = UnityEditor.AssetDatabase.GUIDToAssetPath(guids[i]);
+                var def = UnityEditor.AssetDatabase.LoadAssetAtPath<MonsterDataSO>(path);
+                if (def != null && seenIds.Add(def.id)) list.Add(def);
+            }
+            collected.AddRange(list);
+            if (simStatusText && list.Count > 0) simStatusText.text = "Loaded monsters via AssetDatabase";
+        }
+#endif
+
+        if (collected.Count == 0)
+        {
+            if (simStatusText) simStatusText.text = "No monsters found";
+            return;
+        }
 
         _monsterDropdownIds.Clear();
 
-        var entries = new List<KeyValuePair<string, string>>(allMonsters.Count);
-        var seenIds = new HashSet<string>(StringComparer.Ordinal);
-
-        for (int i = 0; i < allMonsters.Count; i++)
+        var entries = new List<KeyValuePair<string, string>>(collected.Count);
+        for (int i = 0; i < collected.Count; i++)
         {
-            var def = allMonsters[i];
+            var def = collected[i];
             if (def == null || string.IsNullOrWhiteSpace(def.id)) continue;
-            if (!seenIds.Add(def.id)) continue;
-
             entries.Add(new KeyValuePair<string, string>(def.id, BuildMonsterOptionLabel(def)));
         }
 
-        if (entries.Count == 0) return;
+        if (entries.Count == 0)
+        {
+            if (simStatusText) simStatusText.text = "No monsters with IDs";
+            return;
+        }
 
         entries.Sort((a, b) =>
         {
@@ -486,6 +563,10 @@ public class DiagnosticsOverlayUI : MonoBehaviour
         ConfigureMonsterDropdown(simMonsterADropdown, options);
         ConfigureMonsterDropdown(simMonsterBDropdown, options);
 
+        RefreshTitleDropdowns();
+
+        if (simStatusText) simStatusText.text = $"Loaded {entries.Count} monsters";
+
     }
 
     void ConfigureMonsterDropdown(TMP_Dropdown dropdown, List<TMP_Dropdown.OptionData> options)
@@ -497,6 +578,127 @@ public class DiagnosticsOverlayUI : MonoBehaviour
 
         int index = Mathf.Clamp(dropdown.value, 0, options.Count - 1);
         dropdown.SetValueWithoutNotify(index);
+        dropdown.RefreshShownValue();
+    }
+
+    void SetupBalanceSimListeners()
+    {
+        if (simMonsterADropdown)
+        {
+            simMonsterADropdown.onValueChanged.RemoveAllListeners();
+            simMonsterADropdown.onValueChanged.AddListener(_ => OnMonsterSelectionChanged(true));
+        }
+
+        if (simMonsterBDropdown)
+        {
+            simMonsterBDropdown.onValueChanged.RemoveAllListeners();
+            simMonsterBDropdown.onValueChanged.AddListener(_ => OnMonsterSelectionChanged(false));
+        }
+
+        if (simTitleADropdown)
+        {
+            simTitleADropdown.onValueChanged.RemoveAllListeners();
+            simTitleADropdown.onValueChanged.AddListener(idx => ApplyTitleSelection(true, idx));
+        }
+
+        if (simTitleBDropdown)
+        {
+            simTitleBDropdown.onValueChanged.RemoveAllListeners();
+            simTitleBDropdown.onValueChanged.AddListener(idx => ApplyTitleSelection(false, idx));
+        }
+    }
+
+    void OnMonsterSelectionChanged(bool isA)
+    {
+        RefreshTitleDropdownFor(isA);
+    }
+
+    void RefreshTitleDropdowns()
+    {
+        RefreshTitleDropdownFor(true);
+        RefreshTitleDropdownFor(false);
+    }
+
+    void RefreshTitleDropdownFor(bool isA)
+    {
+        var dropdown = isA ? simTitleADropdown : simTitleBDropdown;
+        var input = isA ? simTitleAId : simTitleBId;
+        var ids = isA ? _titleOptionIdsA : _titleOptionIdsB;
+
+        if (!enableBalanceSim || dropdown == null)
+            return;
+
+        var monster = isA ? GetSelectedMonster(simMonsterADropdown) : GetSelectedMonster(simMonsterBDropdown);
+        var options = BuildTitleOptions(monster);
+
+        ids.Clear();
+        dropdown.ClearOptions();
+
+        var uiOptions = new List<TMP_Dropdown.OptionData>(options.Count + 1);
+        uiOptions.Add(new TMP_Dropdown.OptionData(monster ? "None" : "None (no track)"));
+        ids.Add(string.Empty);
+
+        for (int i = 0; i < options.Count; i++)
+        {
+            var t = options[i];
+            string label = string.IsNullOrWhiteSpace(t.displayName) ? t.titleId : t.displayName;
+            uiOptions.Add(new TMP_Dropdown.OptionData(label));
+            ids.Add(t.titleId);
+        }
+
+        dropdown.AddOptions(uiOptions);
+
+        int current = 0;
+        if (input && !string.IsNullOrWhiteSpace(input.text))
+        {
+            int idx = ids.IndexOf(input.text);
+            if (idx >= 0) current = idx;
+        }
+
+        dropdown.SetValueWithoutNotify(Mathf.Clamp(current, 0, uiOptions.Count - 1));
+        dropdown.RefreshShownValue();
+    }
+
+    void ApplyTitleSelection(bool isA, int index)
+    {
+        var ids = isA ? _titleOptionIdsA : _titleOptionIdsB;
+        var input = isA ? simTitleAId : simTitleBId;
+
+        if (input == null || ids.Count == 0)
+            return;
+
+        int clamped = Mathf.Clamp(index, 0, ids.Count - 1);
+        input.text = ids[clamped];
+    }
+
+    MonsterDataSO GetSelectedMonster(TMP_Dropdown dropdown)
+    {
+        var id = GetSelectedMonsterId(dropdown);
+        if (string.IsNullOrWhiteSpace(id)) return null;
+        return MonsterLibraryLocator.GetById(id);
+    }
+
+    static List<TitleSO> BuildTitleOptions(MonsterDataSO def)
+    {
+        var list = new List<TitleSO>();
+        if (!def || def.titleTrack == null || def.titleTrack.tiers == null) return list;
+
+        var seen = new HashSet<string>(StringComparer.Ordinal);
+        var tiers = def.titleTrack.tiers;
+        for (int i = 0; i < tiers.Count; i++)
+        {
+            var tier = tiers[i];
+            if (tier == null || tier.unlockChoices == null) continue;
+
+            for (int j = 0; j < tier.unlockChoices.Count; j++)
+            {
+                var t = tier.unlockChoices[j];
+                if (t == null || string.IsNullOrEmpty(t.titleId)) continue;
+                if (seen.Add(t.titleId)) list.Add(t);
+            }
+        }
+
+        return list;
     }
 
     string GetSelectedMonsterId(TMP_Dropdown dropdown)
@@ -624,6 +826,16 @@ public class DiagnosticsOverlayUI : MonoBehaviour
             arr[i] = t ? t.titleId : null;
         }
         return arr;
+    }
+
+    static string GetBalanceSimDir()
+    {
+#if UNITY_EDITOR
+        return Path.GetFullPath(Path.Combine(Application.dataPath, "..", "Logs", "BalanceSim"));
+#else
+        // In builds (including mobile), prefer persistent data so it’s writable.
+        return Path.Combine(Application.persistentDataPath, "BalanceSim");
+#endif
     }
 
     void OnRunSimPressed()
