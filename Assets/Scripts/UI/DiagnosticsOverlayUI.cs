@@ -46,9 +46,10 @@ public class DiagnosticsOverlayUI : MonoBehaviour
 
     [Header("Button (child)")]
     [SerializeField] private Button diagnosticsButton;
+    [SerializeField] private CanvasGroup mainGroup;
 
     [Header("Main Group (child)")]
-    [SerializeField] private CanvasGroup mainGroup;    
+    [SerializeField] private CanvasGroup diagnosticsGroup;    
     [SerializeField] private ScrollRect scrollRect;
     [SerializeField] private TextMeshProUGUI text;
     [SerializeField] private Button closeButton;
@@ -131,6 +132,16 @@ public class DiagnosticsOverlayUI : MonoBehaviour
 
     void Update()
     {
+        // Handles late unlock state changes (e.g. cheat/save changes after Awake).
+        if (diagnosticsButton && IsUnlocked())
+        {
+            if (hideButtonUntilUnlocked && !diagnosticsButton.gameObject.activeSelf)
+                diagnosticsButton.gameObject.SetActive(true);
+
+            if (!_panelVisible && !diagnosticsButton.interactable)
+                diagnosticsButton.interactable = true;
+        }
+
         if (!_panelVisible) return;
 
         _t += Time.unscaledDeltaTime;
@@ -250,11 +261,11 @@ public class DiagnosticsOverlayUI : MonoBehaviour
     {
         _balanceVisible = on;
 
-        if (mainGroup)
+        if (diagnosticsGroup)
         {
-            mainGroup.alpha = on ? 0f : 1f;
-            mainGroup.blocksRaycasts = !on;
-            mainGroup.interactable = !on;
+            diagnosticsGroup.alpha = on ? 0f : 1f;
+            diagnosticsGroup.blocksRaycasts = !on;
+            diagnosticsGroup.interactable = !on;
         }
 
         if (balanceGroup)
