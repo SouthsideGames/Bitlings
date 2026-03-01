@@ -64,8 +64,8 @@ public class DiagnosticsOverlayUI : MonoBehaviour
 
     [Header("Balance Sim (dev)")]
     [SerializeField] private bool enableBalanceSim = false;
-    [SerializeField] private TMP_InputField simMonsterAId;
-    [SerializeField] private TMP_InputField simMonsterBId;
+    [SerializeField] private TMP_Dropdown simMonsterADropdown;
+    [SerializeField] private TMP_Dropdown simMonsterBDropdown;
     [SerializeField] private TMP_InputField simLevelA;
     [SerializeField] private TMP_InputField simLevelB;
     [SerializeField] private TMP_InputField simIterations;
@@ -84,6 +84,7 @@ public class DiagnosticsOverlayUI : MonoBehaviour
     bool _panelVisible;
     bool _balanceVisible;
     readonly Dictionary<string, TitleSO> _titleCache = new Dictionary<string, TitleSO>(StringComparer.Ordinal);
+    readonly List<string> _monsterDropdownIds = new List<string>(128);
     bool _simRunning;
 
     void Awake()
@@ -118,6 +119,9 @@ public class DiagnosticsOverlayUI : MonoBehaviour
             simRunButton.onClick.RemoveAllListeners();
             simRunButton.onClick.AddListener(OnRunSimPressed);
         }
+
+        if (enableBalanceSim)
+            EnsureMonsterDropdownsPopulated();
 
         SetPanelVisible(false, instant: true);
 
@@ -261,6 +265,9 @@ public class DiagnosticsOverlayUI : MonoBehaviour
     {
         _balanceVisible = on;
 
+        if (on && enableBalanceSim)
+            EnsureMonsterDropdownsPopulated();
+
         if (diagnosticsGroup)
         {
             diagnosticsGroup.alpha = on ? 0f : 1f;
@@ -311,8 +318,10 @@ public class DiagnosticsOverlayUI : MonoBehaviour
 
     void RunBalanceSim()
     {
-        string aId = simMonsterAId ? simMonsterAId.text : string.Empty;
-        string bId = simMonsterBId ? simMonsterBId.text : string.Empty;
+        EnsureMonsterDropdownsPopulated();
+
+        string aId = GetSelectedMonsterId(simMonsterADropdown);
+        string bId = GetSelectedMonsterId(simMonsterBDropdown);
         int levelA = ParseInt(simLevelA, 10);
         int levelB = ParseInt(simLevelB, 10);
         int iterations = Mathf.Max(1, ParseInt(simIterations, 20));
@@ -435,6 +444,79 @@ public class DiagnosticsOverlayUI : MonoBehaviour
         if (field == null || string.IsNullOrWhiteSpace(field.text)) return fallback;
         if (int.TryParse(field.text, out var v)) return v;
         return fallback;
+    }
+
+    void EnsureMonsterDropdownsPopulated()
+    {
+        if (!enableBalanceSim) return;
+
+        var allMonsters = MonsterLibraryLocator.AllMonsters;
+        if (allMonsters == null || allMonsters.Count == 0) return;
+
+        _monsterDropdownIds.Clear();
+
+        var entries = new List<KeyValuePair<string, string>>(allMonsters.Count);
+        var seenIds = new HashSet<string>(StringComparer.Ordinal);
+
+        for (int i = 0; i < allMonsters.Count; i++)
+        {
+            var def = allMonsters[i];
+            if (def == null || string.IsNullOrWhiteSpace(def.id)) continue;
+            if (!seenIds.Add(def.id)) continue;
+
+            entries.Add(new KeyValuePair<string, string>(def.id, BuildMonsterOptionLabel(def)));
+        }
+
+        if (entries.Count == 0) return;
+
+        entries.Sort((a, b) =>
+        {
+            int byLabel = string.Compare(a.Value, b.Value, StringComparison.OrdinalIgnoreCase);
+            if (byLabel != 0) return byLabel;
+            return string.Compare(a.Key, b.Key, StringComparison.Ordinal);
+        });
+
+        var options = new List<TMP_Dropdown.OptionData>(entries.Count);
+        for (int i = 0; i < entries.Count; i++)
+        {
+            _monsterDropdownIds.Add(entries[i].Key);
+            options.Add(new TMP_Dropdown.OptionData(entries[i].Value));
+        }
+
+        ConfigureMonsterDropdown(simMonsterADropdown, options);
+        ConfigureMonsterDropdown(simMonsterBDropdown, options);
+
+    }
+
+    void ConfigureMonsterDropdown(TMP_Dropdown dropdown, List<TMP_Dropdown.OptionData> options)
+    {
+        if (!dropdown) return;
+
+        dropdown.ClearOptions();
+        dropdown.AddOptions(options);
+
+        int index = Mathf.Clamp(dropdown.value, 0, options.Count - 1);
+        dropdown.SetValueWithoutNotify(index);
+    }
+
+    string GetSelectedMonsterId(TMP_Dropdown dropdown)
+    {
+        if (!dropdown || _monsterDropdownIds.Count == 0)
+            return string.Empty;
+
+        int index = Mathf.Clamp(dropdown.value, 0, _monsterDropdownIds.Count - 1);
+        return _monsterDropdownIds[index];
+    }
+
+    static string BuildMonsterOptionLabel(MonsterDataSO def)
+    {
+        if (def == null) return string.Empty;
+
+        string readableName = string.IsNullOrWhiteSpace(def.name) ? def.id : def.name;
+        if (string.Equals(readableName, def.id, StringComparison.Ordinal))
+            return def.id;
+
+        return $"{readableName} ({def.id})";
     }
 
     void SetSimStatus(string msg)
