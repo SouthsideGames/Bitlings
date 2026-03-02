@@ -300,11 +300,19 @@ public class UIManager : MonoBehaviour
 
     private void CloseAllMainPanelsExcept(PanelId keepMain)
     {
+        var keepRoot = GetRoot(keepMain);
         var list = new List<PanelId>(_open);
         foreach (var id in list)
         {
             if (id == keepMain) continue;
             if (IsOverlayPanel(id)) continue;
+
+            // If the panel being opened is nested under an already-open main panel,
+            // keep that ancestor open (closing it would disable/hide the child panel).
+            var candidateRoot = GetRoot(id);
+            if (keepRoot != null && candidateRoot != null && keepRoot.transform.IsChildOf(candidateRoot.transform))
+                continue;
+
             SetActive(id, false);
         }
     }

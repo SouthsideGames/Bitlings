@@ -182,6 +182,8 @@ public class IntroManager : MonoBehaviour
             var cg = starterRoot.GetComponent<CanvasGroup>();
             if (!cg) cg = starterRoot.AddComponent<CanvasGroup>();
             cg.alpha = 0f;
+            cg.interactable = true;
+            cg.blocksRaycasts = true;
             LeanTween.alphaCanvas(cg, 1f, starterRevealTime).setDelay(starterRevealDelay);
 
             var rt = starterRoot.GetComponent<RectTransform>();

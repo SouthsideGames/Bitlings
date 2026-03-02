@@ -19,11 +19,16 @@ public class BattleLogPanelUI : MonoBehaviour
     [SerializeField] private bool clearOnEncounterStart = false;
 
     private readonly List<LogRowUI> _rows = new List<LogRowUI>(256);
+    private static int _openPanelCount;
+    private bool _countedOpen;
+
+    public static bool IsAnyOpen => _openPanelCount > 0;
 
     private bool AutoScroll => SettingsManager.I == null || SettingsManager.I.settingsState.autoScrollBattleLog;
 
     void OnEnable()
     {
+        MarkOpen(true);
         RebuildFromHistory();
 
         BattleLogger.OnLogAppended    += HandleAdded;
@@ -34,10 +39,31 @@ public class BattleLogPanelUI : MonoBehaviour
 
     void OnDisable()
     {
+        MarkOpen(false);
         BattleLogger.OnLogAppended    -= HandleAdded;
         BattleLogger.OnBattleBegan    -= HandleBattleBegin;
         BattleLogger.OnEncounterBegan -= HandleEncounterBegin;
         BattleLogger.OnLogCleared     -= HandleLogCleared;
+    }
+
+    void OnDestroy()
+    {
+        MarkOpen(false);
+    }
+
+    private void MarkOpen(bool open)
+    {
+        if (open)
+        {
+            if (_countedOpen) return;
+            _countedOpen = true;
+            _openPanelCount++;
+            return;
+        }
+
+        if (!_countedOpen) return;
+        _countedOpen = false;
+        _openPanelCount = Mathf.Max(0, _openPanelCount - 1);
     }
 
     void HandleBattleBegin(string label)

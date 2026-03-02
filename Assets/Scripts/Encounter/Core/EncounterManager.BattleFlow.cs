@@ -9,6 +9,9 @@ using System.Collections;
 
 public partial class EncounterManager
 {
+    private const string TutorialBattleKey = "tut_battle_v1";
+    private const string TutorialBattleAdvancedKey = "tut_battle_advanced_v1";
+
     // ============================ PUBLIC API (UI) ===============================
 
     public void RequestEncounterTap()
@@ -255,7 +258,23 @@ public partial class EncounterManager
         int battleSeed = BuildBattleSeed(wild, wildLevel, _currentEncounterIsBoss);
         string seedLabel = $"{SeedService.GetDisplaySeedPrefix()}{SeedService.GetDisplaySeedToken()}";
         battleManager.SetBattleSeed(battleSeed, seedLabel);
+        TryQueueBattleTutorial();
         battleManager.Begin(wild, wildLevel, OnBattleEnded);
+    }
+
+    private void TryQueueBattleTutorial()
+    {
+        var data = SaveManager.Data;
+        if (data == null) return;
+
+        if (!SaveManager.IsTutorialComplete(TutorialBattleKey))
+        {
+            TutorialOverlayPanel.RequestOpen(TutorialBattleKey);
+            return;
+        }
+
+        if (data.HasSynergyUnlocked && !SaveManager.IsTutorialComplete(TutorialBattleAdvancedKey))
+            TutorialOverlayPanel.RequestOpen(TutorialBattleAdvancedKey);
     }
 
     private int BuildBattleSeed(MonsterDataSO wild, int level, bool isBoss)

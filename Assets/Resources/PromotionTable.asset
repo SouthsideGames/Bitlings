@@ -16,7 +16,7 @@ MonoBehaviour:
   ranks:
   - rank: 1
     totalXpToReach: 0
-    displayName: Intern
+    displayName: BRN Intern
     rewardSummary: 
   - rank: 2
     totalXpToReach: 50

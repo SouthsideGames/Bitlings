@@ -259,17 +259,28 @@ public partial class BattleManager : MonoBehaviour
                         if (queuedChoice != PlayerAction.None)
                         {
                             float choiceStart = Time.unscaledTime;
+                            float pausedAccum = 0f;
+                            float pauseStartedAt = -1f;
 
                             while (inBattle && pendingAction == PlayerAction.None)
                         {
-                            if (enableAutoQueueAttack && autoQueueAttackAfterSeconds > 0f && !_narrationLock)
+                            bool pauseFailsafe = _narrationLock || ShouldPauseAutoQueueAttack();
+
+                            if (enableAutoQueueAttack && autoQueueAttackAfterSeconds > 0f && !pauseFailsafe)
                             {
+                                if (pauseStartedAt >= 0f)
+                                {
+                                    pausedAccum += Mathf.Max(0f, Time.unscaledTime - pauseStartedAt);
+                                    pauseStartedAt = -1f;
+                                }
+
+                                float elapsed = Mathf.Max(0f, (Time.unscaledTime - choiceStart) - pausedAccum);
                                 // Countdown UI: only becomes active for the last N seconds.
-                                float remaining = autoQueueAttackAfterSeconds - (Time.unscaledTime - choiceStart);
+                                float remaining = autoQueueAttackAfterSeconds - elapsed;
                                 bool showCountdown = (autoQueueCountdownShowAtSeconds > 0f) && (remaining <= autoQueueCountdownShowAtSeconds) && (remaining > 0f);
                                 EmitAutoQueueCountdown(remaining, showCountdown);
 
-                                if (Time.unscaledTime - choiceStart >= autoQueueAttackAfterSeconds)
+                                if (elapsed >= autoQueueAttackAfterSeconds)
                                 {
                                     // Make sure UI hits 0 then hides.
                                     EmitAutoQueueCountdown(0f, (autoQueueCountdownShowAtSeconds > 0f));
@@ -281,6 +292,9 @@ public partial class BattleManager : MonoBehaviour
                             }
                             else
                             {
+                                if (pauseFailsafe && pauseStartedAt < 0f)
+                                    pauseStartedAt = Time.unscaledTime;
+
                                 EmitAutoQueueCountdown(0f, false);
                             }
 
@@ -570,17 +584,28 @@ if (teamHP != null && activeIndex >= 0 && activeIndex < teamHP.Length && teamHP[
 
 
         float choiceStart = Time.unscaledTime;
+        float pausedAccum = 0f;
+        float pauseStartedAt = -1f;
 
         while (inBattle && pendingAction == PlayerAction.None)
         {
-            if (enableAutoQueueAttack && autoQueueAttackAfterSeconds > 0f && !_narrationLock)
+            bool pauseFailsafe = _narrationLock || ShouldPauseAutoQueueAttack();
+
+            if (enableAutoQueueAttack && autoQueueAttackAfterSeconds > 0f && !pauseFailsafe)
             {
+                if (pauseStartedAt >= 0f)
+                {
+                    pausedAccum += Mathf.Max(0f, Time.unscaledTime - pauseStartedAt);
+                    pauseStartedAt = -1f;
+                }
+
+                float elapsed = Mathf.Max(0f, (Time.unscaledTime - choiceStart) - pausedAccum);
                 // Countdown UI: only becomes active for the last N seconds.
-                float remaining = autoQueueAttackAfterSeconds - (Time.unscaledTime - choiceStart);
+                float remaining = autoQueueAttackAfterSeconds - elapsed;
                 bool showCountdown = (autoQueueCountdownShowAtSeconds > 0f) && (remaining <= autoQueueCountdownShowAtSeconds) && (remaining > 0f);
                 EmitAutoQueueCountdown(remaining, showCountdown);
 
-                if (Time.unscaledTime - choiceStart >= autoQueueAttackAfterSeconds)
+                if (elapsed >= autoQueueAttackAfterSeconds)
                 {
                     // Make sure UI hits 0 then hides.
                     EmitAutoQueueCountdown(0f, (autoQueueCountdownShowAtSeconds > 0f));
@@ -592,6 +617,9 @@ if (teamHP != null && activeIndex >= 0 && activeIndex < teamHP.Length && teamHP[
             }
             else
             {
+                if (pauseFailsafe && pauseStartedAt < 0f)
+                    pauseStartedAt = Time.unscaledTime;
+
                 EmitAutoQueueCountdown(0f, false);
             }
 

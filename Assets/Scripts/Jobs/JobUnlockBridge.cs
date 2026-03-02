@@ -2,6 +2,9 @@ using UnityEngine;
 
 public static class JobUnlockBridge
 {
+    private const float DefaultUnlockStarterHours = 0.10f;
+    private const int DefaultUnlockStarterMinAmount = 1;
+
     public static bool UnlockJob(JobType job, bool syncFeatureUnlock = true)
     {
         if (job == JobType.None)
@@ -35,6 +38,8 @@ public static class JobUnlockBridge
 
         if (changed)
         {
+            TryGrantUnlockResources(job);
+
             SaveManager.Save();
 
             if (JobManager.I != null)
@@ -44,6 +49,68 @@ public static class JobUnlockBridge
         }
 
         return changed;
+    }
+
+    private static void TryGrantUnlockResources(JobType job)
+    {
+        if (job == JobType.None)
+            return;
+
+        if (ResourceManager.I == null)
+            return;
+
+        if (!TryResolveUnlockGrant(job, out var resource, out var amount))
+            return;
+
+        if (resource == ResourceType.None || amount <= 0)
+            return;
+
+        ResourceManager.I.Add(resource, amount);
+    }
+
+    private static bool TryResolveUnlockGrant(JobType job, out ResourceType resource, out int amount)
+    {
+        resource = JobOutput.Output(job);
+        float basePerHour = 0f;
+
+        var jm = JobManager.I;
+        if (jm != null)
+        {
+            var sites = jm.GetSitesArray();
+            if (sites != null)
+            {
+                for (int i = 0; i < sites.Length; i++)
+                {
+                    var so = sites[i];
+                    if (!so || so.jobType != job)
+                        continue;
+
+                    if (so.produces != ResourceType.None)
+                        resource = so.produces;
+
+                    basePerHour = Mathf.Max(0f, so.baseRatePerHour);
+                    break;
+                }
+            }
+        }
+
+        if (resource == ResourceType.None)
+        {
+            amount = 0;
+            return false;
+        }
+
+        float starterHours = DefaultUnlockStarterHours;
+        int minAmount = DefaultUnlockStarterMinAmount;
+
+        if (GameBalance.TryGet(out var balance) && balance != null)
+        {
+            starterHours = Mathf.Max(0f, balance.jobUnlockStarterHours);
+            minAmount = Mathf.Max(1, balance.jobUnlockStarterMinAmount);
+        }
+
+        amount = Mathf.Max(minAmount, Mathf.CeilToInt(basePerHour * starterHours));
+        return true;
     }
 
     public static bool IsJobUnlocked(JobType job)

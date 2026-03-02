@@ -628,6 +628,8 @@ public partial class BattleManager : MonoBehaviour
     /// and text/pace can be accelerated in UI scripts that query this flag.
     /// </summary>
     public bool AutoResolveActive => _autoResolveActive;
+    public bool AutoQueueFailsafeEnabled => inBattle && manualTurns && enableAutoQueueAttack && autoQueueAttackAfterSeconds > 0f;
+    public bool IsAutoQueuePausedByReviewUI => ShouldPauseAutoQueueAttack();
 
     public void ConfigureForAuto(bool isAuto)
     {
@@ -670,6 +672,17 @@ public partial class BattleManager : MonoBehaviour
             _autoQueueCountdownLastInt = displayInt;
             OnAutoQueueCountdown?.Invoke(remainingSeconds, true);
         }
+    }
+
+    private bool ShouldPauseAutoQueueAttack()
+    {
+        bool tutorialOpen = TutorialOverlayPanel.IsAnyOverlayOpen;
+        bool loggerOpen = BattleLogPanelUI.IsAnyOpen;
+
+        if (!loggerOpen && UIManager.I != null)
+            loggerOpen = UIManager.I.IsOpen(PanelId.Log);
+
+        return tutorialOpen || loggerOpen;
     }
 
     /// <summary>

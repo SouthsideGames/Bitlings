@@ -13,6 +13,8 @@ public sealed class GameBalanceSO : ScriptableObject
 
     [Header("Jobs")]
     [Range(0.1f, 5f)] public float jobYieldMultiplier = 1f;
+    [Min(0f)] public float jobUnlockStarterHours = 0.10f;
+    [Min(1)] public int jobUnlockStarterMinAmount = 1;
 
     [Header("Battle Rewards")]
     [Range(0.1f, 5f)] public float xpGainMultiplier = 1f;      // applies to Growth Cores / XP-type rewards

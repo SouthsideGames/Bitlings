@@ -40,6 +40,10 @@ public sealed class TutorialOverlayPanel : MonoBehaviour
 
     private int _index;
     private bool _openedThisSession;
+    private bool _overlayVisible;
+    private static int _visibleOverlayCount;
+
+    public static bool IsAnyOverlayOpen => _visibleOverlayCount > 0;
 
     private static readonly HashSet<string> _pendingOpen =
         new HashSet<string>(StringComparer.Ordinal);
@@ -102,8 +106,13 @@ public sealed class TutorialOverlayPanel : MonoBehaviour
 
     private void OnDisable()
     {
-        if (overlayRoot) overlayRoot.SetActive(false);
+        ShowOverlay(false);
         _openedThisSession = false;
+    }
+
+    private void OnDestroy()
+    {
+        ShowOverlay(false);
     }
 
     public void TryOpen()
@@ -198,6 +207,13 @@ public sealed class TutorialOverlayPanel : MonoBehaviour
 
     private void ShowOverlay(bool show)
     {
+        if (_overlayVisible != show)
+        {
+            _overlayVisible = show;
+            if (show) _visibleOverlayCount++;
+            else _visibleOverlayCount = Mathf.Max(0, _visibleOverlayCount - 1);
+        }
+
         if (overlayRoot) overlayRoot.SetActive(show);
     }
 }

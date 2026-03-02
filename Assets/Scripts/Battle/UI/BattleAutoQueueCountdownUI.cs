@@ -29,7 +29,11 @@ public sealed class BattleAutoQueueCountdownUI : MonoBehaviour
     [Tooltip("If true, shows whole seconds as a plain number. If false, shows 'Auto in: X'.")]
     [SerializeField] private bool numberOnly = true;
 
+    [Tooltip("Label shown while auto-queue timer is paused by review UI (tutorial/log).")]
+    [SerializeField] private string pausedLabel = "Reviewing...";
+
     private bool _visible;
+    private bool _countdownActive;
 
     void Awake()
     {
@@ -69,15 +73,43 @@ public sealed class BattleAutoQueueCountdownUI : MonoBehaviour
     {
         if (!show)
         {
-            SetVisible(false);
+            _countdownActive = false;
+            if (!ShouldShowPaused())
+                SetVisible(false);
             return;
         }
+
+        _countdownActive = true;
 
         int display = Mathf.CeilToInt(Mathf.Max(0f, remainingSeconds));
         if (countdownText)
             countdownText.text = numberOnly ? display.ToString() : $"Auto in: {display}";
 
         SetVisible(true);
+    }
+
+    void Update()
+    {
+        if (!_countdownActive && ShouldShowPaused())
+        {
+            if (countdownText)
+                countdownText.text = string.IsNullOrWhiteSpace(pausedLabel) ? "Paused" : pausedLabel;
+
+            SetVisible(true);
+            return;
+        }
+
+        if (!_countdownActive)
+            SetVisible(false);
+    }
+
+    private bool ShouldShowPaused()
+    {
+        if (battle == null) return false;
+        if (!battle.AutoQueueFailsafeEnabled) return false;
+        if (!battle.IsPlayerTurn) return false;
+        if (battle.HasQueuedPlayerAction) return false;
+        return battle.IsAutoQueuePausedByReviewUI;
     }
 
     private void SetVisible(bool v)

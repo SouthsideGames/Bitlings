@@ -228,7 +228,7 @@ public class PlayerDossierManager : MonoBehaviour
         data.EnsureTransientSets();
 
         // Page 1 shows the title/name of the player's current Promotion Rank (e.g., "Intern").
-        snapshot.rankName = DeriveRankName(data);
+        snapshot.rankName = $"Rank: {DeriveRankName(data)}";
         snapshot.operationId = $"Operation ID: {FormatOperationId(data.playerId)}";
 
         // Promotions
