@@ -70,6 +70,7 @@ public class UIManager : MonoBehaviour
     [Tooltip("Panels treated as overlays/popups. They are allowed to stack and will NOT be auto-closed when opening a main panel.")]
     [SerializeField] private List<PanelId> overlayPanels = new()
     {
+        PanelId.JobAssign,
         PanelId.RewardPopup,
         PanelId.MonsterDetail,
         PanelId.Evolution,
