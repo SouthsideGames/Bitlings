@@ -179,6 +179,8 @@ public sealed class BattleFeedbackManager : MonoBehaviour
     [SerializeField, Range(0.75f, 0.99f)] private float impactSquashY = 0.90f;
     [SerializeField, Range(0f, 30f)] private float impactRecoilPixels = 10f;
 
+    private const float PlayerIconDefaultXYScale = 1.25f;
+
     private BattleManager _battleManager;
 
     private int _lastPlayerCur = int.MinValue;
@@ -260,7 +262,15 @@ public sealed class BattleFeedbackManager : MonoBehaviour
 
     private void CacheBaseScales()
     {
-        if (playerIcon && playerIcon.rectTransform) _playerIconBaseScale = playerIcon.rectTransform.localScale;
+        if (playerIcon && playerIcon.rectTransform)
+        {
+            var rt = playerIcon.rectTransform;
+            float z = rt.localScale.z;
+
+            _playerIconBaseScale = new Vector3(PlayerIconDefaultXYScale, PlayerIconDefaultXYScale, z);
+            rt.localScale = _playerIconBaseScale;
+        }
+
         if (wildIcon && wildIcon.rectTransform) _wildIconBaseScale = wildIcon.rectTransform.localScale;
     }
 
@@ -801,11 +811,14 @@ public void SetGuard(BattleFeedbackSide side, bool on)
 
         // Very small pre-squash to make actions read more tactile.
         LeanTween.cancel(rt.gameObject);
-        rt.localScale = Vector3.one;
+        var baseScale = GetBaseScale(rt, side);
+        rt.localScale = baseScale;
 
         float dir = (side == BattleFeedbackSide.Player) ? +1f : -1f;
         Vector2 basePos = rt.anchoredPosition;
         Vector2 nudge = basePos + new Vector2(dir * (impactRecoilPixels * 0.35f), 0f);
+
+        Vector3 squashScale = new Vector3(impactSquashX, impactSquashY, 1f);
 
         LeanTween.value(rt.gameObject, 0f, 1f, Mathf.Min(0.06f, impactSquashTime * 0.75f))
             .setIgnoreTimeScale(true)
@@ -813,13 +826,13 @@ public void SetGuard(BattleFeedbackSide side, bool on)
             {
                 if (!rt) return;
                 rt.anchoredPosition = Vector2.Lerp(basePos, nudge, t);
-                rt.localScale = Vector3.Lerp(Vector3.one, new Vector3(impactSquashX, impactSquashY, 1f), t);
+                rt.localScale = Vector3.Lerp(baseScale, Vector3.Scale(baseScale, squashScale), t);
             })
             .setOnComplete(() =>
             {
                 if (!rt) return;
                 rt.anchoredPosition = basePos;
-                rt.localScale = Vector3.one;
+                rt.localScale = baseScale;
             });
     }
 
@@ -839,6 +852,9 @@ public void SetGuard(BattleFeedbackSide side, bool on)
         Vector2 hitPos = basePos + new Vector2(dir * px, 0f);
 
         float t = Mathf.Max(0.04f, impactSquashTime);
+        Vector3 baseScale = GetBaseScale(rt, side);
+        Vector3 squashScale = new Vector3(impactSquashX, impactSquashY, 1f);
+        Vector3 hitScale = Vector3.Scale(baseScale, squashScale);
         LeanTween.cancel(rt.gameObject);
 
         // Hit phase
@@ -849,7 +865,7 @@ public void SetGuard(BattleFeedbackSide side, bool on)
             {
                 if (!rt) return;
                 rt.anchoredPosition = Vector2.Lerp(basePos, hitPos, a);
-                rt.localScale = Vector3.Lerp(Vector3.one, new Vector3(impactSquashX, impactSquashY, 1f), a);
+                rt.localScale = Vector3.Lerp(baseScale, hitScale, a);
             })
             .setOnComplete(() =>
             {
@@ -863,13 +879,13 @@ public void SetGuard(BattleFeedbackSide side, bool on)
                     {
                         if (!rt) return;
                         rt.anchoredPosition = Vector2.Lerp(hitPos, basePos, b);
-                        rt.localScale = Vector3.Lerp(new Vector3(impactSquashX, impactSquashY, 1f), Vector3.one, b);
+                        rt.localScale = Vector3.Lerp(hitScale, baseScale, b);
                     })
                     .setOnComplete(() =>
                     {
                         if (!rt) return;
                         rt.anchoredPosition = basePos;
-                        rt.localScale = Vector3.one;
+                        rt.localScale = baseScale;
                     });
             });
     }
@@ -1424,6 +1440,19 @@ public void SetGuard(BattleFeedbackSide side, bool on)
     private Graphic GetIcon(BattleFeedbackSide side)
     {
         return side == BattleFeedbackSide.Player ? playerIcon : wildIcon;
+    }
+
+    private Vector3 GetBaseScale(RectTransform rt, BattleFeedbackSide side)
+    {
+        if (!rt) return Vector3.one;
+
+        if (side == BattleFeedbackSide.Player && playerIcon && rt == playerIcon.rectTransform)
+            return _playerIconBaseScale;
+
+        if (side == BattleFeedbackSide.Wild && wildIcon && rt == wildIcon.rectTransform)
+            return _wildIconBaseScale;
+
+        return rt.localScale;
     }
 
     public void Punch(Graphic g)

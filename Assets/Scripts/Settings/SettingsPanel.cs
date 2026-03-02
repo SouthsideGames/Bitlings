@@ -48,7 +48,6 @@ public class SettingsPanel : MonoBehaviour
     [SerializeField] private Toggle muteSfxToggle;
 
     [Header("Gameplay")]
-    [SerializeField] private Toggle autoConvertDupesToggle;
     [SerializeField] private Toggle autoScrollLogToggle;
 
     [Header("Difficulty")]
@@ -439,9 +438,6 @@ public void ShowSection(SettingsSection section, bool instant = false)
             if (muteMusicToggle) muteMusicToggle.SetIsOnWithoutNotify(s.muteMusic);
             if (muteSfxToggle) muteSfxToggle.SetIsOnWithoutNotify(s.muteSfx);
 
-            if (autoConvertDupesToggle)
-                autoConvertDupesToggle.SetIsOnWithoutNotify(s.autoConvertDuplicates);
-
             if (autoScrollLogToggle)
                 autoScrollLogToggle.SetIsOnWithoutNotify(s.autoScrollBattleLog);
 
@@ -528,12 +524,6 @@ public void ShowSection(SettingsSection section, bool instant = false)
             muteSfxToggle.onValueChanged.AddListener(OnMuteSfx);
         }
 
-        if (autoConvertDupesToggle)
-        {
-            autoConvertDupesToggle.onValueChanged.RemoveListener(OnAutoConvertDupesToggled);
-            autoConvertDupesToggle.onValueChanged.AddListener(OnAutoConvertDupesToggled);
-        }
-
         if (autoScrollLogToggle)
         {
             autoScrollLogToggle.onValueChanged.RemoveListener(OnAutoScrollChanged);
@@ -597,9 +587,6 @@ public void ShowSection(SettingsSection section, bool instant = false)
         if (muteMusicToggle) muteMusicToggle.onValueChanged.RemoveListener(OnMuteMusic);
         if (muteSfxToggle) muteSfxToggle.onValueChanged.RemoveListener(OnMuteSfx);
 
-        if (autoConvertDupesToggle)
-            autoConvertDupesToggle.onValueChanged.RemoveListener(OnAutoConvertDupesToggled);
-
         if (autoScrollLogToggle)
             autoScrollLogToggle.onValueChanged.RemoveListener(OnAutoScrollChanged);
 
@@ -630,12 +617,6 @@ public void ShowSection(SettingsSection section, bool instant = false)
     void OnMuteAll(bool on) { if (AudioManager.I) AudioManager.I.OnMuteAllToggle(on); }
     void OnMuteMusic(bool on) { if (AudioManager.I) AudioManager.I.OnMuteMusicToggle(on); }
     void OnMuteSfx(bool on) { if (AudioManager.I) AudioManager.I.OnMuteSfxToggle(on); }
-
-    void OnAutoConvertDupesToggled(bool on)
-    {
-        var mgr = SettingsManager.I;
-        if (mgr != null) mgr.SetAutoConvertDuplicates(on);
-    }
 
     void OnAutoScrollChanged(bool on)
     {
