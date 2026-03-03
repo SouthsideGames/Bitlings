@@ -10,8 +10,11 @@ public partial class BattleManager : MonoBehaviour
 
     private IEnumerator Co_RevealPanelsThenStart(CanvasGroup wildCG, CanvasGroup playerCG, float duration)
     {
+        bool playerFirstBySpeed = GetPlayerActsFirstBySpeed();
+        MonsterDataSO playerDef = GetTeamDefSafe(activeIndex);
+
         if (feedback != null)
-            yield return feedback.Co_RevealPanels(wildCG, playerCG, duration);
+            yield return feedback.Co_RevealPanels(wildCG, playerCG, duration, playerFirstBySpeed, playerDef, wildDef);
         else
             yield return CoWaitUnscaled(Mathf.Max(0f, duration));
 
@@ -19,6 +22,23 @@ public partial class BattleManager : MonoBehaviour
         if (playerCG) playerCG.alpha = 1f;
 
         yield return Co_StartBattleNow();
+    }
+
+    private bool GetPlayerActsFirstBySpeed()
+    {
+        int pSpeed;
+        if (_stats != null)
+            pSpeed = Mathf.Max(1, _stats.GetEffectivePlayer(activeIndex).spd);
+        else
+            pSpeed = Mathf.Max(1, GetProgressionTotalSPDForIndex(activeIndex));
+
+        int wSpeed;
+        if (_stats != null)
+            wSpeed = Mathf.Max(1, _stats.GetEffectiveWild().spd);
+        else
+            wSpeed = Mathf.Max(1, BattleCalc.CalcSpeed(wildDef, wildLevel));
+
+        return pSpeed >= wSpeed;
     }
 
 

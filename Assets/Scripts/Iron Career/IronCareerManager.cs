@@ -66,6 +66,7 @@ public sealed class IronCareerManager : MonoBehaviour, IronBattleBridge.IIronBat
     private bool _finalizedRunStats;
     private readonly List<int> _tmpLivingIndices = new List<int>(4);
     private Coroutine _backgroundForfeitCo;
+    private Coroutine _beginNextBattleCo;
 
     private void ResolveBattleRefsIfNeeded()
     {
@@ -421,8 +422,7 @@ public sealed class IronCareerManager : MonoBehaviour, IronBattleBridge.IIronBat
             return;
         }
 
-        ironEncounterUI?.ShowBattleOnly(immediate: true);
-        BeginNextBattle();
+        QueueBeginNextBattleAfterTransition();
     }
 
     private void BuildStarterParty(List<MonsterDataSO> starterDefs)
@@ -612,8 +612,7 @@ public sealed class IronCareerManager : MonoBehaviour, IronBattleBridge.IIronBat
             return;
         }
 
-        ironEncounterUI?.ShowBattleOnly(immediate: true);
-        BeginNextBattle();
+        QueueBeginNextBattleAfterTransition();
     }
 
     private void ShowPost()
@@ -712,8 +711,7 @@ public sealed class IronCareerManager : MonoBehaviour, IronBattleBridge.IIronBat
     {
         if (!_state.runActive) return;
 
-        ironEncounterUI?.ShowBattleOnly(immediate: true);
-        BeginNextBattle();
+        QueueBeginNextBattleAfterTransition();
     }
 
     public void OnRestBuffAt(int targetIndex)
@@ -725,8 +723,7 @@ public sealed class IronCareerManager : MonoBehaviour, IronBattleBridge.IIronBat
         var m = _state.party[targetIndex];
         if (m == null || m.def == null || m.IsDead)
         {
-            ironEncounterUI?.ShowBattleOnly(immediate: true);
-            BeginNextBattle();
+            QueueBeginNextBattleAfterTransition();
             return;
         }
 
@@ -737,7 +734,25 @@ public sealed class IronCareerManager : MonoBehaviour, IronBattleBridge.IIronBat
         m.hp = Mathf.Clamp(m.maxHp * hp01, 0f, m.maxHp);
         _state.party[targetIndex] = m;
 
-        ironEncounterUI?.ShowBattleOnly(immediate: true);
+        QueueBeginNextBattleAfterTransition();
+    }
+
+    private void QueueBeginNextBattleAfterTransition()
+    {
+        if (_beginNextBattleCo != null)
+            StopCoroutine(_beginNextBattleCo);
+
+        _beginNextBattleCo = StartCoroutine(Co_BeginNextBattleAfterTransition());
+    }
+
+    private IEnumerator Co_BeginNextBattleAfterTransition()
+    {
+        if (ironEncounterUI)
+            yield return ironEncounterUI.Co_ShowBattleOnlyThenReady();
+        else
+            yield return null;
+
+        _beginNextBattleCo = null;
         BeginNextBattle();
     }
 

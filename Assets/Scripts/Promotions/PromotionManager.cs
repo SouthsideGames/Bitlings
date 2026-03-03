@@ -73,8 +73,23 @@ public sealed class PromotionManager : MonoBehaviour
 
         var pm = SaveManager.Data;
 
-        int oldRank = Mathf.Max(1, pm.promotionRank);
+        int maxRank = GetMaxRank();
+        int oldRank = Mathf.Clamp(pm.promotionRank, 1, maxRank);
         int oldXp = Mathf.Max(0, pm.promotionXP);
+
+        // Hard cap: once at max rank, ignore further promotion XP gains.
+        if (oldRank >= maxRank)
+        {
+            pm.promotionRank = maxRank;
+            int maxFloor = Mathf.Max(0, GetTotalXpToReach(maxRank));
+            pm.promotionXP = Mathf.Min(oldXp, maxFloor);
+            SaveManager.Save();
+
+            int xpThisRankMax = GetXpIntoCurrentRank(pm.promotionRank, pm.promotionXP);
+            GameEvents.PromotionProgressChanged?.Invoke(pm.promotionRank, pm.promotionXP, xpThisRankMax, 0);
+            _ = showToast;
+            return;
+        }
 
         pm.promotionRank = oldRank;
         pm.promotionXP = oldXp + amount;
@@ -145,7 +160,7 @@ public sealed class PromotionManager : MonoBehaviour
 
     public int GetTotalXpToReach(int rank)
     {
-        rank = Mathf.Max(1, rank);
+        rank = Mathf.Clamp(rank, 1, GetMaxRank());
 
         // Prefer table if it has an explicit number.
         if (promotionTable != null)

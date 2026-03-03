@@ -70,6 +70,12 @@ public class AudioManager : MonoBehaviour
     [Tooltip("Battle music pool. When a battle begins, one clip is selected randomly for that battle.")]
     [SerializeField] private List<AudioClip> battleMusicPool = new();
 
+    [Header("Iron Career Battle Music")]
+    [Tooltip("Optional legacy single Iron Career battle clip.")]
+    [SerializeField] private AudioClip ironCareerBattleMusic;
+    [Tooltip("Iron Career battle music pool. One clip is selected when the player presses Start Run.")]
+    [SerializeField] private List<AudioClip> ironCareerBattleMusicPool = new();
+
     [Header("Boss Music")]
     [Tooltip("Optional legacy single boss clip (kept so existing inspector setups don't break).")]
     [SerializeField] private AudioClip bossMusic;
@@ -85,14 +91,18 @@ public class AudioManager : MonoBehaviour
     private Coroutine _xfadeCo;
 
     private AudioClip _currentStartingMusic; // chosen at startup (NO fallback)
-    private AudioClip _currentBattleMusic;   // chosen when entering encounter view (or battle)
+    private AudioClip _currentBattleMusic;   // chosen when encounter button is pressed
+    private AudioClip _currentIronCareerBattleMusic; // chosen when Iron Career start is pressed
     private AudioClip _currentBossMusic;     // chosen when boss starts
+
+    // Session cache so panel switches / manager reinstantiation do not reroll startup music.
+    private static AudioClip _sessionStartingMusic;
+    private static bool _sessionStartingMusicChosen;
 
     // Boss state (set by your encounter/boss system)
     private bool _bossActive = false;
 
     // Transition tracking
-    private bool _prevEncounterViewOpen = false;
     private bool _prevBossActive = false;
 
     // Dedicated RNG for music (isolated from UnityEngine.Random seeding)
@@ -169,8 +179,14 @@ public class AudioManager : MonoBehaviour
         // Setup music
         _activeMusic = musicA;
 
-        // Choose and cache session starting/home music (NO fallback)
-        _currentStartingMusic = PickFromPoolNoFallback(startingMusicPool);
+        // Choose and cache session starting/home music (NO fallback) once per app session.
+        if (!_sessionStartingMusicChosen)
+        {
+            _sessionStartingMusic = PickFromPoolNoFallback(startingMusicPool);
+            _sessionStartingMusicChosen = true;
+        }
+
+        _currentStartingMusic = _sessionStartingMusic;
 
         // If pool is misconfigured, we intentionally play nothing.
         if (_currentStartingMusic != null)
@@ -255,7 +271,6 @@ public class AudioManager : MonoBehaviour
         _currentBattleMusic = null;
 
         _prevBossActive = false;
-        // Do NOT clear _prevEncounterViewOpen; that should track the UI view.
     }
 
     // ─────────────────────────────────────────────────────────────
@@ -314,6 +329,13 @@ public class AudioManager : MonoBehaviour
         return battleMusic;
     }
 
+    private AudioClip PickIronCareerBattleMusicForRun()
+    {
+        var fromPool = PickFromPoolNoFallback(ironCareerBattleMusicPool);
+        if (fromPool != null) return fromPool;
+        return ironCareerBattleMusic;
+    }
+
     private AudioClip PickBossMusicForThisBoss()
     {
         var fromPool = PickFromPoolNoFallback(bossMusicPool);
@@ -323,7 +345,10 @@ public class AudioManager : MonoBehaviour
 
     public void RerollStartingMusic(bool playImmediately = true)
     {
-        _currentStartingMusic = PickFromPoolNoFallback(startingMusicPool);
+        _sessionStartingMusic = PickFromPoolNoFallback(startingMusicPool);
+        _sessionStartingMusicChosen = true;
+        _currentStartingMusic = _sessionStartingMusic;
+
         if (playImmediately && _currentStartingMusic != null)
             PlayMusic(_currentStartingMusic, true, defaultCrossfade);
     }
@@ -333,6 +358,22 @@ public class AudioManager : MonoBehaviour
         _currentBattleMusic = PickBattleMusicForThisBattle();
         if (playImmediately && _currentBattleMusic != null)
             PlayMusic(_currentBattleMusic, true, defaultCrossfade);
+    }
+
+    public void PickEncounterBattleMusicOnButtonPress(bool playImmediately = true)
+    {
+        _currentBattleMusic = PickBattleMusicForThisBattle();
+
+        if (playImmediately && _currentBattleMusic != null)
+            PlayMusic(_currentBattleMusic, true, defaultCrossfade);
+    }
+
+    public void PickIronCareerBattleMusicOnStartPress(bool playImmediately = true)
+    {
+        _currentIronCareerBattleMusic = PickIronCareerBattleMusicForRun();
+
+        if (playImmediately && _currentIronCareerBattleMusic != null)
+            PlayMusic(_currentIronCareerBattleMusic, true, defaultCrossfade);
     }
 
     public void RerollBossMusic(bool playImmediately = false)
@@ -434,6 +475,20 @@ public class AudioManager : MonoBehaviour
             type = SfxType.Click;
 
         PlaySfx(type);
+    }
+
+    public void PlayClipOneShot(AudioClip clip, float volumeMult = 1f, float pitch = 1f)
+    {
+        if (clip == null) return;
+
+        float sfxScale = GetSfxScale();
+        if (sfxScale <= 0f) return;
+
+        var src = NextSfxSource();
+        src.pitch = Mathf.Clamp(pitch, 0.1f, 3f);
+
+        float volume = sfxScale * Mathf.Clamp(volumeMult, 0f, 2f);
+        src.PlayOneShot(clip, volume);
     }
 
     // ─────────────────────────────────────────────────────────────
@@ -672,19 +727,13 @@ public class AudioManager : MonoBehaviour
         // the Encounter panel temporarily closes (e.g., dedicated battle view, blinder overlays,
         // auto-battle UI swaps, etc.).
         bool isInBattle = (EncounterManager.I != null) && EncounterManager.I.IsInBattle;
+        bool isIronCareerBattle = IronCareerRuntime.IsActive && isInBattle;
 
         // "Encounter View" means the encounter panel is visible and we are NOT on the results screen.
         // Additionally:
         // - If Home is open, we consider Encounter "not the active view" unless a battle is running.
         // - If a battle is running, we treat that as Encounter/Battle view for music.
         bool encounterViewOpen = (encounterOpen && !summaryOpen && !homeOpen) || isInBattle;
-
-        // Track transitions into the encounter view to pick a battle track once per entry.
-        if (encounterViewOpen && !_prevEncounterViewOpen)
-        {
-            _currentBattleMusic = PickBattleMusicForThisBattle();
-        }
-        _prevEncounterViewOpen = encounterViewOpen;
 
         // Boss re-roll once when boss becomes active.
         if (_bossActive && !_prevBossActive)
@@ -712,6 +761,15 @@ public class AudioManager : MonoBehaviour
         // 2) Encounter view: boss music if active, else battle music
         if (encounterViewOpen)
         {
+            if (isIronCareerBattle)
+            {
+                if (_currentIronCareerBattleMusic != null)
+                {
+                    PlayMusic(_currentIronCareerBattleMusic, true, defaultCrossfade);
+                    return;
+                }
+            }
+
             if (_bossActive && _currentBossMusic != null)
             {
                 PlayMusic(_currentBossMusic, true, defaultCrossfade);

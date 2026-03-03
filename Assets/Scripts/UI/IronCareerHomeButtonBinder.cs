@@ -24,10 +24,6 @@ public sealed class IronCareerHomeButtonBinder : MonoBehaviour
     [Tooltip("If true, clicking the button will call IronCareerRuntime.Enter(). Generally keep FALSE; sealed runtime should begin when a run starts.")]
     [SerializeField] private bool enterIronOnClick = false;
 
-    // Used when this binder lives on the same GO it is trying to hide.
-    // Disabling the GO would disable this script and it could never re-enable itself.
-    private CanvasGroup _selfCanvasGroup;
-
     void OnEnable()
     {
         if (!ironCareerButtonRoot) ironCareerButtonRoot = gameObject;
@@ -35,14 +31,6 @@ public sealed class IronCareerHomeButtonBinder : MonoBehaviour
 
         if (!ironCareerManager)
             ironCareerManager = FindFirstObjectByType<IronCareerManager>(FindObjectsInactive.Include);
-
-        // If the binder is placed on the same object as the button root,
-        // never SetActive(false) on that object. Use CanvasGroup to hide/show.
-        if (ironCareerButtonRoot == gameObject)
-        {
-            _selfCanvasGroup = GetComponent<CanvasGroup>();
-            if (!_selfCanvasGroup) _selfCanvasGroup = gameObject.AddComponent<CanvasGroup>();
-        }
 
         RefreshVisibility();
         GameEvents.PromotionRankChanged += OnPromotionRankChanged;
@@ -65,21 +53,8 @@ public sealed class IronCareerHomeButtonBinder : MonoBehaviour
     {
         bool unlocked = IsUnlockedGate();
 
-        // IMPORTANT: If ironCareerButtonRoot is this same GO, do NOT disable it.
-        // Use CanvasGroup to hide/show while keeping the binder alive.
-        if (ironCareerButtonRoot != null && ironCareerButtonRoot != gameObject)
-        {
+        if (ironCareerButtonRoot != null)
             ironCareerButtonRoot.SetActive(unlocked);
-        }
-        else if (_selfCanvasGroup != null)
-        {
-            _selfCanvasGroup.alpha = unlocked ? 1f : 0f;
-            _selfCanvasGroup.interactable = unlocked;
-            _selfCanvasGroup.blocksRaycasts = unlocked;
-        }
-
-        if (ironCareerButton != null)
-            ironCareerButton.interactable = unlocked;
     }
 
     void OnClicked()

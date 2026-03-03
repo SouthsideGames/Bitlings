@@ -17,5 +17,5 @@ MonoBehaviour:
   title: Capture-Only Filter
   subtitle: Codex Filtering
   body: "Adds a \u201CCapture Only\u201D filter to the Codex.\r\n\r\nThis filter
-    shows only monsters you have successfully captured, helping you track collection
+    shows only Bitlings you have successfully captured, helping you track collection
     progress more efficiently."

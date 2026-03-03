@@ -18,6 +18,19 @@ public sealed class BattleFeedbackManager : MonoBehaviour
     [SerializeField] private Graphic playerIcon;
     [SerializeField] private Graphic wildIcon;
 
+    [Header("Battle Start Icon Intro")]
+    [Tooltip("If enabled, player/wild icons fade in sequentially at battle start.")]
+    [SerializeField] private bool enableSpeedOrderedIconIntro = true;
+    [SerializeField, Min(0.01f)] private float iconIntroFadeTime = 0.10f;
+    [Tooltip("Multiplier applied to the first icon fade (the faster monster) so it reads more clearly.")]
+    [SerializeField, Range(1f, 2f)] private float iconIntroFirstFadeMult = 1.35f;
+    [SerializeField, Min(0f)] private float iconIntroGap = 0.03f;
+    [Tooltip("How much of the first fade should overlap with the second fade (0 = no overlap).")]
+    [SerializeField, Range(0f, 1f)] private float iconIntroOverlap01 = 0.55f;
+    [SerializeField] private bool iconIntroPunch = true;
+    [SerializeField, Range(1.01f, 1.35f)] private float iconIntroPunchScale = 1.18f;
+    [SerializeField, Min(0.01f)] private float iconIntroPunchTime = 0.08f;
+
     [Header("HP Roots (shake on damage)")]
     [SerializeField] private RectTransform playerHPShakeRoot;
     [SerializeField] private RectTransform wildHPShakeRoot;
@@ -1092,15 +1105,108 @@ public void SetGuard(BattleFeedbackSide side, bool on)
         }
     }
 
-    public IEnumerator Co_RevealPanels(CanvasGroup wildCG, CanvasGroup playerCG, float duration)
+    public IEnumerator Co_RevealPanels(
+        CanvasGroup wildCG,
+        CanvasGroup playerCG,
+        float duration,
+        bool playerFirstBySpeed,
+        MonsterDataSO playerDef,
+        MonsterDataSO wildDef)
     {
         float dur = Mathf.Max(0f, duration);
 
-        if (wildCG) LeanTween.alphaCanvas(wildCG, 1f, dur).setIgnoreTimeScale(true);
-        if (playerCG) LeanTween.alphaCanvas(playerCG, 1f, dur).setIgnoreTimeScale(true);
+        if (!enableSpeedOrderedIconIntro)
+        {
+            if (wildCG) LeanTween.alphaCanvas(wildCG, 1f, dur).setIgnoreTimeScale(true);
+            if (playerCG) LeanTween.alphaCanvas(playerCG, 1f, dur).setIgnoreTimeScale(true);
 
-        if (dur > 0f)
-            yield return new WaitForSecondsRealtime(dur);
+            if (dur > 0f)
+                yield return new WaitForSecondsRealtime(dur);
+
+            yield break;
+        }
+
+        PrepareIconIntroFade();
+
+        float fadeTime = Mathf.Max(0.01f, iconIntroFadeTime);
+        float firstFadeTime = fadeTime * Mathf.Max(1f, iconIntroFirstFadeMult);
+
+        Graphic firstIcon = playerFirstBySpeed ? playerIcon : wildIcon;
+        Graphic secondIcon = playerFirstBySpeed ? wildIcon : playerIcon;
+
+        CanvasGroup firstPanel = playerFirstBySpeed ? playerCG : wildCG;
+        CanvasGroup secondPanel = playerFirstBySpeed ? wildCG : playerCG;
+
+        MonsterDataSO firstDef = playerFirstBySpeed ? playerDef : wildDef;
+        MonsterDataSO secondDef = playerFirstBySpeed ? wildDef : playerDef;
+
+        yield return RevealSingleMonster(firstPanel, firstIcon, firstDef, firstFadeTime);
+        yield return RevealSingleMonster(secondPanel, secondIcon, secondDef, fadeTime);
+
+        float minTotal = firstFadeTime + fadeTime;
+        if (dur > minTotal)
+            yield return new WaitForSecondsRealtime(dur - minTotal);
+    }
+
+    private IEnumerator RevealSingleMonster(CanvasGroup panel, Graphic icon, MonsterDataSO def, float revealDuration)
+    {
+        float revealTime = Mathf.Max(0f, revealDuration);
+
+        if (panel)
+            LeanTween.alphaCanvas(panel, 1f, revealTime).setIgnoreTimeScale(true);
+
+        if (icon)
+            PlayIconIntroFor(icon, revealTime);
+
+        if (revealTime > 0f)
+            yield return new WaitForSecondsRealtime(revealTime);
+
+        PlayMonsterSpawnSfx(def);
+
+        float postGap = Mathf.Max(0f, iconIntroGap);
+        if (postGap > 0f)
+            yield return new WaitForSecondsRealtime(postGap);
+    }
+
+    private void PrepareIconIntroFade()
+    {
+        SetGraphicAlpha(playerIcon, 0f);
+        SetGraphicAlpha(wildIcon, 0f);
+    }
+
+    private void PlayMonsterSpawnSfx(MonsterDataSO def)
+    {
+        if (def == null || def.spawnSfx == null) return;
+        if (AudioManager.I == null) return;
+        AudioManager.I.PlayClipOneShot(def.spawnSfx);
+    }
+
+    private void PlayIconIntroFor(Graphic icon, float fadeTime)
+    {
+        if (!icon) return;
+
+        FadeGraphic(icon, 1f, fadeTime);
+
+        if (!iconIntroPunch || !icon.rectTransform)
+            return;
+
+        RectTransform rt = icon.rectTransform;
+        Vector3 baseScale = rt == playerIcon?.rectTransform ? _playerIconBaseScale : _wildIconBaseScale;
+
+        rt.localScale = baseScale;
+        float punchTime = Mathf.Max(0.01f, iconIntroPunchTime);
+        float peakScale = Mathf.Max(1.01f, iconIntroPunchScale);
+
+        LeanTween.scale(rt, baseScale * peakScale, punchTime * 0.45f)
+            .setEaseOutBack()
+            .setIgnoreTimeScale(true)
+            .setOnComplete(() =>
+            {
+                if (!rt) return;
+                LeanTween.scale(rt, baseScale, punchTime * 0.55f)
+                    .setEaseOutQuad()
+                    .setIgnoreTimeScale(true);
+            });
     }
 
     public void SpawnBasicAttackVfx(bool isPlayerSide, MonsterDataSO playerDef, MonsterDataSO wildDef)
@@ -1557,6 +1663,14 @@ public void SetGuard(BattleFeedbackSide side, bool on)
         if (!g) return;
         var c = g.color;
         c.a = 1f;
+        g.color = c;
+    }
+
+    private void SetGraphicAlpha(Graphic g, float alpha)
+    {
+        if (!g) return;
+        var c = g.color;
+        c.a = Mathf.Clamp01(alpha);
         g.color = c;
     }
 
