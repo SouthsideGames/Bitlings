@@ -42,8 +42,10 @@ MonoBehaviour:
   jobSkill: 1
   titleTrack: {fileID: 11400000, guid: 991bea0ddbd8b4b178470e280b8ecb11, type: 2}
   defaultAlwaysOnTitles: []
+  ironTitles: []
   Personality: {fileID: 11400000, guid: 75a511658b2e544f4869d466b3f7ba5a, type: 2}
   basicAttackName: Decay Tap
   basicAttackPrefab: {fileID: 8046187082596486557, guid: 86fc56d41698d45bfbf27d043ca2944d, type: 3}
   basicAttackPrefabLifetime: 1
+  spawnSfx: {fileID: 8300000, guid: a2fcae6ed154b854abde9b3893531e13, type: 3}
   description: A corrupted entity that lashes out erratically
