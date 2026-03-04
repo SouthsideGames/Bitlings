@@ -36,21 +36,57 @@ public class JobAssignPanelUI : MonoBehaviour
 
     private JobSiteState _cachedState;
 
+    private void SyncStateFromManager()
+    {
+        var s = JobManager.I?.States.Find(x => x.config != null && x.config.jobType == _job);
+        _cachedState = s;
+        _currentWorker = null;
+
+        if (s != null && _slotIndex >= 0 && _slotIndex < s.workers.Count)
+            _currentWorker = s.workers[_slotIndex];
+    }
+
+    private void ResetPendingSelection()
+    {
+        _pendingDef = null;
+        _pendingId = null;
+        _pendingOwned = null;
+
+        UpdateConfirmInteractable();
+    }
+
+    private void RefreshUIAfterChange()
+    {
+        SyncStateFromManager();
+        ResetPendingSelection();
+
+        RefreshCurrentWorkerIcon();
+        BuildList();
+        UpdateOutputPreview(currentOnly: true);
+        UpdateRemoveButtonState();
+    }
+
+    private void UpdateConfirmInteractable()
+    {
+        if (confirmBtn) confirmBtn.interactable = _pendingDef != null;
+    }
+
+    private void UpdateRemoveButtonState()
+    {
+        if (removeBtn)
+        {
+            removeBtn.gameObject.SetActive(true);
+            removeBtn.interactable = _currentWorker != null;
+        }
+    }
+
     public void Open(JobType job, int slotIndex)
     {
         _job = job;
         _slotIndex = slotIndex;
 
-        var s = JobManager.I?.States.Find(x => x.config != null && x.config.jobType == _job);
-        _cachedState = s;
-        _currentWorker = null;
-
-        if (s != null && slotIndex >= 0 && slotIndex < s.workers.Count)
-            _currentWorker = s.workers[slotIndex];
-
-        _pendingDef = null;
-        _pendingId = null;
-        _pendingOwned = null;
+        SyncStateFromManager();
+        ResetPendingSelection();
 
         RefreshCurrentWorkerIcon(); // ✅ shiny-aware
 
@@ -61,16 +97,16 @@ public class JobAssignPanelUI : MonoBehaviour
         {
             confirmBtn.onClick.RemoveAllListeners();
             confirmBtn.onClick.AddListener(OnConfirm);
-            confirmBtn.interactable = true;
         }
 
         if (removeBtn)
         {
-            removeBtn.gameObject.SetActive(true);
             removeBtn.onClick.RemoveAllListeners();
             removeBtn.onClick.AddListener(OnRemove);
-            removeBtn.interactable = _currentWorker != null;
         }
+
+        UpdateConfirmInteractable();
+        UpdateRemoveButtonState();
 
         OpenSelf();
     }
@@ -208,6 +244,8 @@ public class JobAssignPanelUI : MonoBehaviour
 
                         RefreshPendingPreviewIcon(); // ✅ shiny-aware
 
+                        UpdateConfirmInteractable();
+
                         UpdateOutputPreview(currentOnly: false);
                         AudioManager.I?.PlayClick();
                     });
@@ -246,6 +284,8 @@ public class JobAssignPanelUI : MonoBehaviour
                 _pendingOwned = e.owned;
 
                 RefreshPendingPreviewIcon(); // ✅ shiny-aware
+
+                UpdateConfirmInteractable();
 
                 UpdateOutputPreview(currentOnly: false);
                 AudioManager.I?.PlayClick();
@@ -292,7 +332,7 @@ public class JobAssignPanelUI : MonoBehaviour
     void OnConfirm()
     {
         if (JobManager.I == null) { Close(); return; }
-        if (_pendingDef == null) { Close(); return; }
+        if (_pendingDef == null) { UpdateConfirmInteractable(); return; }
 
         // Centralized job eligibility (jobs are NOT HP-gated by design).
         if (!EligibilityRules.CanAssignWorkerToJobSlot(_job, _slotIndex, _pendingDef, _pendingId, out string reason))
@@ -308,7 +348,7 @@ public class JobAssignPanelUI : MonoBehaviour
         GameEvents.Tutorial_FirstJobAssigned?.Invoke();
         GameEvents.RaiseToast("WORKER ASSIGNED");
 
-        Close();
+        RefreshUIAfterChange();
     }
 
     void OnRemove()
@@ -324,9 +364,13 @@ public class JobAssignPanelUI : MonoBehaviour
                             ? _currentWorker.monsterId
                             : _currentWorker.def?.id);
             if (!string.IsNullOrEmpty(id))
-                JobManager.I.RemoveWorker(_job, id);
+            {
+                bool removed = JobManager.I.RemoveWorker(_job, id);
+                if (removed) GameEvents.RaiseToast("WORKER REMOVED");
+            }
         }
-        Close();
+
+        RefreshUIAfterChange();
     }
 
     void Close()
