@@ -576,6 +576,13 @@ public class CheatCodeManager : MonoBehaviour
             return false;
         }
 
+        // Prevent meta progression edits during an active Iron run; the guard will flag these events.
+        if (IronCareerRuntime.IsActive)
+        {
+            message = "Promotion rank cheats are disabled during Iron Career runs.";
+            return false;
+        }
+
         int maxRank = GetPromotionMaxRankForCheat();
         int oldRank = Mathf.Max(1, data.promotionRank);
         int targetRank = Mathf.Max(1, maxRank);

@@ -247,15 +247,20 @@ public sealed class IronCareerStarterPanelUI : MonoBehaviour
         }
     }
 
-    private static bool IsValidStarter(MonsterDataSO m)
+    private static bool IsValidCandidate(MonsterDataSO m)
     {
         if (!m) return false;
-        if (!m.canBeStarter) return false;
         if (m.uncatchable) return false;
         if (m.isBoss) return false;
         if (string.IsNullOrEmpty(m.id)) return false;
-        if (m.starterWeight <= 0) return false;
         return true;
+    }
+
+    private static int GetCandidateWeight(MonsterDataSO m)
+    {
+        if (!m) return 0;
+        int w = m.starterWeight;
+        return w <= 0 ? 1 : w;
     }
 
     private static string BuildIsoWeekKey(DateTime dt)
@@ -286,7 +291,7 @@ public sealed class IronCareerStarterPanelUI : MonoBehaviour
             if (string.IsNullOrEmpty(id)) return false;
 
             if (!_byId.TryGetValue(id, out var def)) return false;
-            if (!IsValidStarter(def)) return false;
+            if (!IsValidCandidate(def)) return false;
 
             _offer.Add(def);
         }
@@ -326,7 +331,7 @@ public sealed class IronCareerStarterPanelUI : MonoBehaviour
     // ─────────────────────────────────────────────────────────────
 
     /// <summary>
-    /// Spins through candidates for suspense, then locks in 3 unique weighted starters.
+    /// Spins through candidates for suspense, then locks in 3 unique weighted monsters.
     /// If consumesDaily=true, decrements the daily reroll count first (and aborts if 0).
     /// </summary>
     public void StartSpinReroll(bool consumesDaily)
@@ -412,7 +417,7 @@ public sealed class IronCareerStarterPanelUI : MonoBehaviour
 
     private void HandleEmptyPool()
     {
-        Debug.LogError("[IronCareerStarterPanelUI] No valid starters found in MonsterLibrary. Starter selection disabled.");
+        Debug.LogError("[IronCareerStarterPanelUI] No valid monsters found in MonsterLibrary. Starter selection disabled.");
 
         _offer.Clear();
         ClearSelection();
@@ -426,7 +431,7 @@ public sealed class IronCareerStarterPanelUI : MonoBehaviour
         if (slot3Button) slot3Button.interactable = false;
 
         // Keep back/rules enabled so the player can exit gracefully.
-        if (modeDescText) modeDescText.text = "No starters available. Please return to Home.";
+        if (modeDescText) modeDescText.text = "No monsters available. Please return to Home.";
     }
 
     private void SetButtonsInteractable(bool on)
@@ -454,7 +459,7 @@ public sealed class IronCareerStarterPanelUI : MonoBehaviour
 
         foreach (var m in monsterLibrary.monsters)
         {
-            if (!IsValidStarter(m)) continue;
+            if (!IsValidCandidate(m)) continue;
             _pool.Add(m);
         }
     }
@@ -468,7 +473,7 @@ public sealed class IronCareerStarterPanelUI : MonoBehaviour
             var m = pool[i];
             if (!m) continue;
             if (usedIds != null && usedIds.Contains(m.id)) continue;
-            total += Mathf.Max(0, m.starterWeight);
+            total += Mathf.Max(0, GetCandidateWeight(m));
         }
 
         if (total <= 0) return null;
@@ -480,7 +485,7 @@ public sealed class IronCareerStarterPanelUI : MonoBehaviour
             if (!m) continue;
             if (usedIds != null && usedIds.Contains(m.id)) continue;
 
-            int w = Mathf.Max(0, m.starterWeight);
+            int w = Mathf.Max(0, GetCandidateWeight(m));
             if (w <= 0) continue;
 
             roll -= w;
