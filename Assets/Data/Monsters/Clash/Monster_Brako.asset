@@ -42,9 +42,11 @@ MonoBehaviour:
   jobSkill: 0.95
   titleTrack: {fileID: 11400000, guid: b4ebc7f1d9c634860a5ec45627df0b75, type: 2}
   defaultAlwaysOnTitles: []
+  ironTitles: []
   Personality: {fileID: 11400000, guid: a31b270cc22594368bd4541ee042d278, type: 2}
   basicAttackName: Impact Slam
   basicAttackPrefab: {fileID: 5406408022945852380, guid: a106796f95643465ab9883d4b5161f50, type: 3}
   basicAttackPrefabLifetime: 1
+  spawnSfx: {fileID: 8300000, guid: 5e7ee1300af30e04cb8c83f658219c5b, type: 3}
   description: A compact clash fighter that charges headfirst and smashes foes with
     raw force.

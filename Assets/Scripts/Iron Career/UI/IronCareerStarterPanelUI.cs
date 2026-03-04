@@ -368,49 +368,63 @@ public sealed class IronCareerStarterPanelUI : MonoBehaviour
         _spinning = true;
         SetButtonsInteractable(false);
 
-        float t = 0f;
+        float spinDur = Mathf.Max(0f, spinDuration);
+        float interval = Mathf.Max(0.01f, spinInterval);
+        float delay = Mathf.Max(0f, lockStepDelay);
+        float timeout = spinDur + (delay * 3f) + 0.5f; // small cushion so timeScale=0 cannot stall forever
+        float startReal = Time.realtimeSinceStartup;
 
-        // Rapid cycling phase
-        while (t < spinDuration)
+        try
         {
-            slot1?.Bind(_pool[UnityEngine.Random.Range(0, _pool.Count)]);
-            slot2?.Bind(_pool[UnityEngine.Random.Range(0, _pool.Count)]);
-            slot3?.Bind(_pool[UnityEngine.Random.Range(0, _pool.Count)]);
+            float t = 0f;
 
-            yield return new WaitForSeconds(spinInterval);
-            t += spinInterval;
+            // Rapid cycling phase (unscaled so pause/timeScale=0 cannot freeze)
+            while (t < spinDur && (Time.realtimeSinceStartup - startReal) < timeout)
+            {
+                slot1?.Bind(_pool[UnityEngine.Random.Range(0, _pool.Count)]);
+                slot2?.Bind(_pool[UnityEngine.Random.Range(0, _pool.Count)]);
+                slot3?.Bind(_pool[UnityEngine.Random.Range(0, _pool.Count)]);
+
+                yield return new WaitForSecondsRealtime(interval);
+                t += interval;
+            }
+
+            if ((Time.realtimeSinceStartup - startReal) >= timeout)
+                Debug.LogWarning("[IronCareerStarterPanelUI] Spin reroll timed out (likely timeScale=0). Forcing lock-in.");
+
+            // Lock phase (unique, weighted)
+            _offer.Clear();
+            var used = new HashSet<string>();
+
+            var final1 = PickWeightedUnique(_pool, used);
+            if (final1) { _offer.Add(final1); used.Add(final1.id); }
+            slot1?.Bind(final1);
+            if (delay > 0f) yield return new WaitForSecondsRealtime(delay);
+
+            var final2 = PickWeightedUnique(_pool, used);
+            if (final2) { _offer.Add(final2); used.Add(final2.id); }
+            slot2?.Bind(final2);
+            if (delay > 0f) yield return new WaitForSecondsRealtime(delay);
+
+            var final3 = PickWeightedUnique(_pool, used);
+            if (final3) { _offer.Add(final3); used.Add(final3.id); }
+            slot3?.Bind(final3);
+
+            // Persist offer so open/close can't change it.
+            SaveOfferToMeta();
         }
+        finally
+        {
+            _spinning = false;
+            _spinCo = null;
 
-        // Lock phase (unique, weighted)
-        _offer.Clear();
-        var used = new HashSet<string>();
+            // Player must choose one after the spin.
+            ClearSelection();
+            RefreshStartButton();
 
-        var final1 = PickWeightedUnique(_pool, used);
-        if (final1) { _offer.Add(final1); used.Add(final1.id); }
-        slot1?.Bind(final1);
-        yield return new WaitForSeconds(lockStepDelay);
-
-        var final2 = PickWeightedUnique(_pool, used);
-        if (final2) { _offer.Add(final2); used.Add(final2.id); }
-        slot2?.Bind(final2);
-        yield return new WaitForSeconds(lockStepDelay);
-
-        var final3 = PickWeightedUnique(_pool, used);
-        if (final3) { _offer.Add(final3); used.Add(final3.id); }
-        slot3?.Bind(final3);
-
-        // Persist offer so open/close can't change it.
-        SaveOfferToMeta();
-
-        _spinning = false;
-        _spinCo = null;
-
-        // Player must choose one after the spin.
-        ClearSelection();
-        RefreshStartButton();
-
-        SetButtonsInteractable(true);
-        RefreshRerollUI();
+            SetButtonsInteractable(true);
+            RefreshRerollUI();
+        }
     }
 
     private void HandleEmptyPool()
