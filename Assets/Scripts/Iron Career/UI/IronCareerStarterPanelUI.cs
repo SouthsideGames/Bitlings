@@ -562,6 +562,8 @@ public sealed class IronCareerStarterPanelUI : MonoBehaviour
         MonsterDataSO starter = _offer[_selectedIndex];
         if (!starter) return;
 
+        AudioManager.I?.PickIronCareerBattleMusicOnStartPress(playImmediately: true);
+
         // Pass ONLY the selected starter.
         iron.StartNewRunFromUI(mode, new List<MonsterDataSO> { starter });
     }

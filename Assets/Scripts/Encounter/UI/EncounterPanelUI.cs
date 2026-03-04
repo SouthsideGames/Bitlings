@@ -79,8 +79,12 @@ public class EncounterPanelUI : MonoBehaviour
     [Header("Blinder")]
     [SerializeField] private CanvasGroup blinderGroup;
     [SerializeField] private TextMeshProUGUI blinderText;
+    [SerializeField] private TextMeshProUGUI blinderDifficultyInfoLabel;
+    [SerializeField] private Button blinderDifficultyInfoButton;
+    [SerializeField] private TooltipTrigger blinderDifficultyTooltip;
     [SerializeField, Range(0.05f, 1.5f)] private float preFadeDelay = 0.25f;
     [SerializeField, Range(0.1f, 2.0f)] private float fadeDuration = 0.6f;
+    [SerializeField, Range(0f, 0.5f)] private float postFadeEncounterDelay = 0.08f;
 
     [Header("Blinder Typewriter")]
     [SerializeField, Range(0.005f, 0.08f)] private float typewriterCharDelay = 0.03f;
@@ -254,6 +258,7 @@ public class EncounterPanelUI : MonoBehaviour
         EnsureTooltipTrigger(shinyButton, ref shinyTooltip);
         EnsureTooltipTrigger(captureButton, ref captureTooltip);
         EnsureTooltipTrigger(favorButton, ref favorTooltip);
+        EnsureTooltipTrigger(blinderDifficultyInfoButton, ref blinderDifficultyTooltip);
 
         if (EncounterManager.I != null)
         {
@@ -399,6 +404,8 @@ public class EncounterPanelUI : MonoBehaviour
     // ─────────────────────────────────────────────────────────────
     void RefreshEncounterDifficultyPreview()
     {
+        RefreshBlinderDifficultyInfo();
+
         if (!encounterPreviewLabel) return;
         if (!showEncounterPreview)
         {
@@ -462,6 +469,84 @@ public class EncounterPanelUI : MonoBehaviour
         string bossTag = boss ? " (Boss)" : "";
         encounterPreviewLabel.text = $"Wild Lv ~{est}{bossTag}  •  Titles: {titleText}";
         encounterPreviewLabel.gameObject.SetActive(true);
+    }
+
+    void RefreshBlinderDifficultyInfo()
+    {
+        bool show = false;
+        string difficultyName = string.Empty;
+        int mode = 0;
+
+        var data = SaveManager.Data;
+        if (data != null && data.HasDifficultyUnlocked && data.settings != null)
+        {
+            mode = Mathf.Clamp(data.settings.difficultyMode, 0, 2);
+            if (mode != 0)
+            {
+                show = true;
+                difficultyName = DifficultyModeToLabel(mode);
+            }
+        }
+
+        if (blinderDifficultyInfoLabel)
+        {
+            if (blinderDifficultyInfoLabel.gameObject.activeSelf != show)
+                blinderDifficultyInfoLabel.gameObject.SetActive(show);
+
+            if (show)
+                blinderDifficultyInfoLabel.text = $"Difficulty: {difficultyName}";
+        }
+
+        if (blinderDifficultyInfoButton)
+        {
+            if (blinderDifficultyInfoButton.gameObject.activeSelf != show)
+                blinderDifficultyInfoButton.gameObject.SetActive(show);
+        }
+
+        if (show)
+            UpdateBlinderDifficultyTooltip(mode, difficultyName);
+        else
+            ClearTooltip(blinderDifficultyTooltip);
+    }
+
+    void UpdateBlinderDifficultyTooltip(int mode, string difficultyName)
+    {
+        if (!blinderDifficultyTooltip) return;
+
+        string subtitle;
+        switch (mode)
+        {
+            case 1:
+                subtitle =
+                    "Compared to Normal:\n" +
+                    "• Wild monsters spawn about +2 levels higher\n" +
+                    "• Wild monsters gain Tier 1 synergy effects";
+                break;
+
+            case 2:
+                subtitle =
+                    "Compared to Normal:\n" +
+                    "• Wild monsters spawn about +5 levels higher\n" +
+                    "• Wild monsters gain Tier 2 synergy effects";
+                break;
+
+            default:
+                subtitle = "Normal difficulty has no extra wild level or wild synergy bonus.";
+                break;
+        }
+
+        blinderDifficultyTooltip.message = $"{difficultyName} Difficulty Active";
+        blinderDifficultyTooltip.subtitle = subtitle;
+    }
+
+    static string DifficultyModeToLabel(int mode)
+    {
+        switch (mode)
+        {
+            case 1: return "Hard";
+            case 2: return "Insane";
+            default: return "Normal";
+        }
     }
 
     // ─────────────────────────────────────────────────────────────
@@ -973,6 +1058,8 @@ if (blinderBackground)
             return;
         }
 
+        AudioManager.I?.PickEncounterBattleMusicOnButtonPress(playImmediately: true);
+
         _suppressAutoBlinderUntilBattle = true;
 
         if (blinderGroup && blinderGroup.alpha > 0.01f)
@@ -1021,6 +1108,9 @@ if (blinderBackground)
             blinderGroup.blocksRaycasts = false;
             blinderGroup.interactable = false;
         }
+
+        if (postFadeEncounterDelay > 0f)
+            yield return new WaitForSecondsRealtime(postFadeEncounterDelay);
 
         _isFading = false;
         RefreshButtonAndLabel();

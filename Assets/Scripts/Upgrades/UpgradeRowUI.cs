@@ -226,5 +226,7 @@ public class UpgradeRowUI : MonoBehaviour
             "Unlocks a new feature or system for your account.\nCosts credits.";
 
         InfoRouter.Open(id, _fallbackTitle, fallbackSubtitle, fallbackBody, _icon);
+
+        AudioManager.I.PlayClick();
     }
 }

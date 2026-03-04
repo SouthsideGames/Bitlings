@@ -84,6 +84,10 @@ public class MonsterDataSO : ScriptableObject
     [Tooltip("Lifetime in seconds for spawned attack prefab. 0 = do not auto-destroy.")]
     [Min(0f)] public float basicAttackPrefabLifetime = 1f;
 
+    [Header("Battle Audio")]
+    [Tooltip("Optional one-shot SFX played when this monster is revealed at battle start.")]
+    public AudioClip spawnSfx;
+
 
     [Header("Description")]
     [TextArea(3, 10)] public string description;

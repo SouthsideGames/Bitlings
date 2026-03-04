@@ -97,6 +97,73 @@ public sealed class IronCareerEncounterPanelUI : MonoBehaviour
         if (battleRoot) battleRoot.SetActive(true);
     }
 
+    public IEnumerator Co_ShowBattleOnlyThenReady()
+    {
+        if (_fadeCo != null)
+        {
+            StopCoroutine(_fadeCo);
+            _fadeCo = null;
+        }
+
+        if (battleRoot) battleRoot.SetActive(true);
+
+        CanvasGroup[] overlays = { starter, hire, replace, post, forcedEvolve, rest, gameOver, rules };
+
+        if (fadeTime <= 0f)
+        {
+            HideAllImmediate();
+            yield break;
+        }
+
+        bool hasVisible = false;
+        float[] from = new float[overlays.Length];
+
+        for (int i = 0; i < overlays.Length; i++)
+        {
+            var cg = overlays[i];
+            if (!cg) continue;
+
+            bool visible = cg.gameObject.activeSelf && cg.alpha > 0.01f;
+            if (!visible)
+            {
+                SetCG(cg, false, 0f);
+                continue;
+            }
+
+            hasVisible = true;
+            from[i] = Mathf.Clamp01(cg.alpha);
+            cg.interactable = false;
+            cg.blocksRaycasts = false;
+        }
+
+        if (!hasVisible)
+        {
+            HideAllImmediate();
+            yield break;
+        }
+
+        float t = 0f;
+        float dur = Mathf.Max(0.01f, fadeTime);
+        while (t < dur)
+        {
+            t += Time.unscaledDeltaTime;
+            float a = Mathf.Clamp01(t / dur);
+
+            for (int i = 0; i < overlays.Length; i++)
+            {
+                var cg = overlays[i];
+                if (!cg) continue;
+                if (!cg.gameObject.activeSelf) continue;
+
+                cg.alpha = Mathf.Lerp(from[i], 0f, a);
+            }
+
+            yield return null;
+        }
+
+        HideAllImmediate();
+    }
+
     public void HideAll(bool immediate = false)
     {
         if (immediate) HideAllImmediate();

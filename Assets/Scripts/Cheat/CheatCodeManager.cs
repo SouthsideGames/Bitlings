@@ -73,9 +73,6 @@ public class CheatCodeManager : MonoBehaviour
     [Tooltip("If false, cheats are only usable in UNITY_EDITOR or DEVELOPMENT_BUILD.")]
     [SerializeField] private bool allowCheatsInReleaseBuilds = false;
 
-    [Tooltip("If true, release-build cheats require diagnosticsUnlocked=true in save data.")]
-    [SerializeField] private bool requireDiagnosticsUnlockedInRelease = true;
-
     const long SECONDS_PER_HOUR = 3600;
     const long SECONDS_PER_DAY = 86400;
 
@@ -105,8 +102,10 @@ public class CheatCodeManager : MonoBehaviour
             : raw.Trim().ToUpperInvariant();
     }
 
-    bool CheatsAllowed()
+    bool CheatsAllowed(out string blockedMessage)
     {
+        blockedMessage = string.Empty;
+
         // NOTE:
         // We intentionally use runtime checks (Application.isEditor / Debug.isDebugBuild)
         // instead of #if UNITY_EDITOR / #if DEVELOPMENT_BUILD so the serialized security
@@ -121,9 +120,13 @@ public class CheatCodeManager : MonoBehaviour
             return true;
 
         // Release build logic
-        if (!allowCheatsInReleaseBuilds) return false;
-        if (!requireDiagnosticsUnlockedInRelease) return true;
-        return SaveManager.Data != null && SaveManager.Data.diagnosticsUnlocked;
+        if (!allowCheatsInReleaseBuilds)
+        {
+            blockedMessage = "Cheats are disabled in this build.";
+            return false;
+        }
+
+        return true;
     }
 
     // ─────────────────────────────────────────────────────────────
@@ -250,19 +253,16 @@ public class CheatCodeManager : MonoBehaviour
             return false;
         }
 
-        // Build gating: keep cheats from accidentally shipping live.
-        if (!CheatsAllowed())
-        {
-            message = "Cheats are disabled in this build.";
-            return false;
-        }
-
         string normalized = NormalizeCode(rawCode);
         if (string.IsNullOrEmpty(normalized))
         {
             message = "Enter a code first.";
             return false;
         }
+
+        // Build gating: keep cheats from accidentally shipping live.
+        if (!CheatsAllowed(out message))
+            return false;
 
         var cd = cheats.Find(c => c != null && c.code == normalized);
         if (cd == null)

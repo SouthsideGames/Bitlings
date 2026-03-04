@@ -1,0 +1,120 @@
+using UnityEngine;
+using UnityEngine.UI;
+
+public sealed class FeatureUnlockAlertRouter : MonoBehaviour
+{
+    [Header("Encounter Alert")]
+    [SerializeField] private GameObject encounterAlert;
+    [SerializeField] private Button encounterButton;
+
+    [Header("Settings Alert")]
+    [SerializeField] private GameObject settingsAlert;
+    [SerializeField] private Button settingsButton;
+
+    [Header("Codex Alert")]
+    [SerializeField] private GameObject codexAlert;
+    [SerializeField] private Button codexButton;
+
+    [Header("Gym Alert")]
+    [SerializeField] private GameObject gymAlert;
+    [SerializeField] private Button gymButton;
+
+    [Header("Startup")]
+    [SerializeField] private bool hideAllOnEnable = false;
+
+    private const int SynergyUnlockRank = 10;
+    private const int DifficultyUnlockRank = 15;
+
+    private void OnEnable()
+    {
+        if (hideAllOnEnable)
+            HideAllAlerts();
+
+        GameEvents.FeatureUnlocked += HandleFeatureUnlocked;
+        GameEvents.PromotionRankChanged += HandlePromotionRankChanged;
+
+        AddDismiss(encounterButton, DismissEncounter);
+        AddDismiss(settingsButton, DismissSettings);
+        AddDismiss(codexButton, DismissCodex);
+        AddDismiss(gymButton, DismissGym);
+    }
+
+    private void OnDisable()
+    {
+        GameEvents.FeatureUnlocked -= HandleFeatureUnlocked;
+        GameEvents.PromotionRankChanged -= HandlePromotionRankChanged;
+
+        RemoveDismiss(encounterButton, DismissEncounter);
+        RemoveDismiss(settingsButton, DismissSettings);
+        RemoveDismiss(codexButton, DismissCodex);
+        RemoveDismiss(gymButton, DismissGym);
+    }
+
+    private void HandleFeatureUnlocked(FeatureId feature)
+    {
+        switch (feature)
+        {
+            case FeatureId.IdleBattle_Basic:
+            case FeatureId.IdleBattle_SpeedControl:
+                SetAlert(encounterAlert, true);
+                break;
+
+            case FeatureId.Seeds_DailyBasic:
+            case FeatureId.Seeds_CustomInput:
+                SetAlert(settingsAlert, true);
+                break;
+
+            case FeatureId.Codex_Favorites:
+            case FeatureId.Codex_CaptureOnlyFilter:
+                SetAlert(codexAlert, true);
+                break;
+
+            case FeatureId.AutoGrowth_Basic:
+            case FeatureId.AutoGrowth_UsePresets:
+                SetAlert(gymAlert, true);
+                break;
+        }
+    }
+
+    private void HandlePromotionRankChanged(int oldRank, int newRank)
+    {
+        if (oldRank < SynergyUnlockRank && newRank >= SynergyUnlockRank)
+            SetAlert(encounterAlert, true);
+
+        if (oldRank < DifficultyUnlockRank && newRank >= DifficultyUnlockRank)
+            SetAlert(settingsAlert, true);
+    }
+
+    private void DismissEncounter() => SetAlert(encounterAlert, false);
+    private void DismissSettings() => SetAlert(settingsAlert, false);
+    private void DismissCodex() => SetAlert(codexAlert, false);
+    private void DismissGym() => SetAlert(gymAlert, false);
+
+    private void HideAllAlerts()
+    {
+        SetAlert(encounterAlert, false);
+        SetAlert(settingsAlert, false);
+        SetAlert(codexAlert, false);
+        SetAlert(gymAlert, false);
+    }
+
+    private static void SetAlert(GameObject target, bool visible)
+    {
+        if (!target) return;
+        if (target.activeSelf != visible)
+            target.SetActive(visible);
+    }
+
+    private static void AddDismiss(Button button, UnityEngine.Events.UnityAction action)
+    {
+        if (!button) return;
+        button.onClick.RemoveListener(action);
+        button.onClick.AddListener(action);
+    }
+
+    private static void RemoveDismiss(Button button, UnityEngine.Events.UnityAction action)
+    {
+        if (!button) return;
+        button.onClick.RemoveListener(action);
+    }
+}

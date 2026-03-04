@@ -42,9 +42,11 @@ MonoBehaviour:
   jobSkill: 0.95
   titleTrack: {fileID: 11400000, guid: 6a3bd4e4bbc85409786b7ccb0e6d397d, type: 2}
   defaultAlwaysOnTitles: []
+  ironTitles: []
   Personality: {fileID: 11400000, guid: e8e5c9163905a4840aca1effe845621c, type: 2}
   basicAttackName: Spark Jab
   basicAttackPrefab: {fileID: 4179996368917665753, guid: 77ce3f8bf17474b06ac473e26248a299, type: 3}
   basicAttackPrefabLifetime: 1
+  spawnSfx: {fileID: 0}
   description: A jittery electric critter that darts forward to shock foes before
     they can react.

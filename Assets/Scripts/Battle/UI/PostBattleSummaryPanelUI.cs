@@ -457,12 +457,17 @@ public class PostBattleSummaryPanelUI : MonoBehaviour
 
         if (SaveManager.Data != null)
         {
-            int rank = Mathf.Max(1, SaveManager.Data.promotionRank);
+            int maxRank = PromotionManager.I != null ? PromotionManager.I.GetMaxRank() : 20;
+            int rank = Mathf.Clamp(SaveManager.Data.promotionRank, 1, Mathf.Max(1, maxRank));
             int totalXp = Mathf.Max(0, SaveManager.Data.promotionXP);
             int delta = 0;
 
             if (PromotionManager.I != null)
                 delta = Mathf.Max(0, PromotionManager.I.ComputeXpGain(result));
+
+            bool atMaxRank = rank >= maxRank;
+            if (atMaxRank)
+                delta = 0;
 
             if (promotionRankLabel)
                 promotionRankLabel.text = $"Rank {rank}";
@@ -470,7 +475,7 @@ public class PostBattleSummaryPanelUI : MonoBehaviour
             if (PromotionManager.I != null)
             {
                 int curFloor = PromotionManager.I.GetTotalXpToReach(rank);
-                int nextFloor = PromotionManager.I.GetTotalXpToReach(rank + 1);
+                int nextFloor = atMaxRank ? curFloor : PromotionManager.I.GetTotalXpToReach(rank + 1);
 
                 int inRank = Mathf.Max(0, totalXp - curFloor);
                 int toNext = Mathf.Max(0, nextFloor - curFloor);
