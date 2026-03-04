@@ -42,9 +42,11 @@ MonoBehaviour:
   jobSkill: 1
   titleTrack: {fileID: 11400000, guid: 4895c73be63a3473b9047daee4b3c0f9, type: 2}
   defaultAlwaysOnTitles: []
+  ironTitles: []
   Personality: {fileID: 11400000, guid: 758625599ac8542bfa091e1bf5323fa2, type: 2}
   basicAttackName: Heaven Split
   basicAttackPrefab: {fileID: 5988486418563103347, guid: 310c8d56e543d4cd4ae9c55fa6047252, type: 3}
   basicAttackPrefabLifetime: 1
+  spawnSfx: {fileID: 8300000, guid: 38704b2867c628648a4784120b9eaaa4, type: 3}
   description: A supreme aerial predator that dominates the skies, striking from
     impossible angles with overwhelming speed and force.

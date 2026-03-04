@@ -42,9 +42,11 @@ MonoBehaviour:
   jobSkill: 1.08
   titleTrack: {fileID: 11400000, guid: 0d39fbabcf6c44cabb6dcb9706a4be58, type: 2}
   defaultAlwaysOnTitles: []
+  ironTitles: []
   Personality: {fileID: 11400000, guid: e6aae7880a6944b05bc4da7d55e8fffd, type: 2}
   basicAttackName: Arc Smash
   basicAttackPrefab: {fileID: 4179996368917665753, guid: 77ce3f8bf17474b06ac473e26248a299, type: 3}
   basicAttackPrefabLifetime: 1
+  spawnSfx: {fileID: 8300000, guid: fd55b9c026ab23f4b8d738c96d019c85, type: 3}
   description: A compact electric enforcer that channels stored charge into repeated,
     driving strikes without slowing down.

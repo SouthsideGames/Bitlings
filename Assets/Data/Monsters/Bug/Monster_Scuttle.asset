@@ -42,9 +42,11 @@ MonoBehaviour:
   jobSkill: 0.95
   titleTrack: {fileID: 11400000, guid: fe5afb8aa74a047968f007424e6a1b3a, type: 2}
   defaultAlwaysOnTitles: []
+  ironTitles: []
   Personality: {fileID: 11400000, guid: dc588633b46794883be5263b17376bf3, type: 2}
   basicAttackName: Skitter Jab
   basicAttackPrefab: {fileID: 6777048211968024641, guid: 36482d8bd89710b4983cb69ab5a8cceb, type: 3}
   basicAttackPrefabLifetime: 1
+  spawnSfx: {fileID: 8300000, guid: a76e5323680b6de4f94708f6ec9855df, type: 3}
   description: A fast-moving insect that zips across the field striking quickly before
     enemies can react.

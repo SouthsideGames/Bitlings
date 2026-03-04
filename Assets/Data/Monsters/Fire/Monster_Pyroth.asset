@@ -42,9 +42,11 @@ MonoBehaviour:
   jobSkill: 1
   titleTrack: {fileID: 11400000, guid: 4895c73be63a3473b9047daee4b3c0f9, type: 2}
   defaultAlwaysOnTitles: []
+  ironTitles: []
   Personality: {fileID: 11400000, guid: 1bd4805a0ba8f476b9f7b480b0cbb31d, type: 2}
   basicAttackName: Worldburn
   basicAttackPrefab: {fileID: 126357351932672970, guid: a7524146891194bc4b7eb73ba1e38b46, type: 3}
   basicAttackPrefabLifetime: 1
+  spawnSfx: {fileID: 8300000, guid: b821ae2223d65f548a6d76a9b780d831, type: 3}
   description: A raging inferno incarnate that floods the battlefield with relentless
     flames, growing more destructive the longer it survives.

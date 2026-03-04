@@ -42,9 +42,11 @@ MonoBehaviour:
   jobSkill: 1.15
   titleTrack: {fileID: 11400000, guid: 49f56f588f2fd410bb7c964a447c5bf0, type: 2}
   defaultAlwaysOnTitles: []
+  ironTitles: []
   Personality: {fileID: 11400000, guid: 161b42f296f3a430cbc353e1e7a3a111, type: 2}
   basicAttackName: Omen Strike
   basicAttackPrefab: {fileID: 7907104310462883121, guid: 37212b887c61ad84eacd87133a8a9e9d, type: 3}
   basicAttackPrefabLifetime: 1
+  spawnSfx: {fileID: 8300000, guid: 61a584b6f27127d4b9ad0153c8815d83, type: 3}
   description: An imposing oracle enforcer that reads the flow of battle in advance,
     striking with decisive force guided by grim foresight.

@@ -47,5 +47,6 @@ MonoBehaviour:
   basicAttackName: Flame Bite
   basicAttackPrefab: {fileID: 126357351932672970, guid: a7524146891194bc4b7eb73ba1e38b46, type: 3}
   basicAttackPrefabLifetime: 1
+  spawnSfx: {fileID: 8300000, guid: 8b9cee0c39033ad42b47e9e54b1001bd, type: 3}
   description: A volatile fire beast that lunges headfirst into battle, burning hot
     and fast with little regard for defense.

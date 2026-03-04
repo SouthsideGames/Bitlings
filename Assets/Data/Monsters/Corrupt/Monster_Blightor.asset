@@ -42,9 +42,11 @@ MonoBehaviour:
   jobSkill: 1.3
   titleTrack: {fileID: 11400000, guid: 603c6d6acff36435194ac6ed0d4fe3b4, type: 2}
   defaultAlwaysOnTitles: []
+  ironTitles: []
   Personality: {fileID: 11400000, guid: 225b50a30ca2b4463828b97ab1e08247, type: 2}
   basicAttackName: Ruin Burst
   basicAttackPrefab: {fileID: 8046187082596486557, guid: 86fc56d41698d45bfbf27d043ca2944d, type: 3}
   basicAttackPrefabLifetime: 1
+  spawnSfx: {fileID: 8300000, guid: 26470d9760340c84f8c39a16272c12cf, type: 3}
   description: A mythic avatar of corruption that radiates unstable power, overwhelming
     foes with catastrophic strikes fueled by rampant decay.

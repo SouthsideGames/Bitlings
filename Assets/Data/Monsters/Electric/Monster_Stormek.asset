@@ -42,9 +42,11 @@ MonoBehaviour:
   jobSkill: 1
   titleTrack: {fileID: 0}
   defaultAlwaysOnTitles: []
+  ironTitles: []
   Personality: {fileID: 11400000, guid: 38ced003b48194272ab4cfa8cd9c5d01, type: 2}
   basicAttackName: Catastorm
   basicAttackPrefab: {fileID: 4179996368917665753, guid: 77ce3f8bf17474b06ac473e26248a299, type: 3}
   basicAttackPrefabLifetime: 1
+  spawnSfx: {fileID: 8300000, guid: 1a56802208fc15a489f72c3ddcbd6daa, type: 3}
   description: A colossal electric tyrant that builds lethal charge before unleashing
     battlefield-clearing bursts of lightning.

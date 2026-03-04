@@ -32,7 +32,7 @@ public sealed class IronCareerStarterPanelUI : MonoBehaviour
     [SerializeField] private Button backButton;
     [SerializeField] private Button rulesButton;
 
-    [Header("Weekly Reroll UI")]
+    [Header("Daily Reroll UI")]
     [SerializeField] private TMP_Text rerollCountText;
     [SerializeField] private int dailyRerollsMax = 1;
 
@@ -176,14 +176,18 @@ public sealed class IronCareerStarterPanelUI : MonoBehaviour
     {
         _metaData = IronCareerMetaSave.Load();
 
-        string weekKey = BuildIsoWeekKey(DateTime.Now);
+        // Use local day boundary so rerolls refresh at the player's midnight.
+        string dayKey = BuildDayKey(DateTime.Now);
 
-        if (_metaData.lastRerollDate != weekKey)
+        if (_metaData.lastRerollDate != dayKey)
         {
-            _metaData.lastRerollDate = weekKey;
+            string prevDate = _metaData.lastRerollDate;
+            _metaData.lastRerollDate = dayKey;
             _metaData.rerollsRemaining = Mathf.Max(0, dailyRerollsMax);
             _metaData.starterOfferIds = null;
-
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            Debug.Log($"[IronCareerStarterPanelUI] Daily rerolls reset: prev='{prevDate}' new='{dayKey}' max={dailyRerollsMax}");
+#endif
             IronCareerMetaSave.Save(_metaData);
         }
 
@@ -263,15 +267,9 @@ public sealed class IronCareerStarterPanelUI : MonoBehaviour
         return w <= 0 ? 1 : w;
     }
 
-    private static string BuildIsoWeekKey(DateTime dt)
+    private static string BuildDayKey(DateTime dt)
     {
-        int isoDay = ((int)dt.DayOfWeek + 6) % 7 + 1; // Monday=1..Sunday=7
-        DateTime thursday = dt.Date.AddDays(4 - isoDay);
-        DateTime week1 = new DateTime(thursday.Year, 1, 4);
-        int week1IsoDay = ((int)week1.DayOfWeek + 6) % 7 + 1;
-        DateTime week1Thursday = week1.AddDays(4 - week1IsoDay);
-        int week = 1 + (int)((thursday - week1Thursday).TotalDays / 7d);
-        return $"{thursday.Year}-W{Mathf.Clamp(week, 1, 53):00}";
+        return dt.Date.ToString("yyyy-MM-dd");
     }
 
     private bool TryLoadOfferFromMeta()

@@ -42,9 +42,11 @@ MonoBehaviour:
   jobSkill: 1.15
   titleTrack: {fileID: 11400000, guid: 6b4667918ff0b427eabf9a166d47b82b, type: 2}
   defaultAlwaysOnTitles: []
+  ironTitles: []
   Personality: {fileID: 11400000, guid: 1bd4805a0ba8f476b9f7b480b0cbb31d, type: 2}
   basicAttackName: Sky Rend
   basicAttackPrefab: {fileID: 7446462880551948952, guid: 18696ea6ccccd974d902d9304c2b6b7e, type: 3}
   basicAttackPrefabLifetime: 1
+  spawnSfx: {fileID: 8300000, guid: e949bc7c5ae6bae4f944521df8c3dd6f, type: 3}
   description: A fearsome wyrm that tears through enemies with savage aerial assaults,
     favoring overwhelming offense over self-preservation.

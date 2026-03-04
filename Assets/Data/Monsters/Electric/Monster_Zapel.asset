@@ -47,6 +47,6 @@ MonoBehaviour:
   basicAttackName: Spark Jab
   basicAttackPrefab: {fileID: 4179996368917665753, guid: 77ce3f8bf17474b06ac473e26248a299, type: 3}
   basicAttackPrefabLifetime: 1
-  spawnSfx: {fileID: 0}
+  spawnSfx: {fileID: 8300000, guid: 14c3cc75bee10a046b7859e7e1f1cebc, type: 3}
   description: A jittery electric critter that darts forward to shock foes before
     they can react.

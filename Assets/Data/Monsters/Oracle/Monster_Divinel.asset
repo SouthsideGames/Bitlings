@@ -42,9 +42,11 @@ MonoBehaviour:
   jobSkill: 1.3
   titleTrack: {fileID: 11400000, guid: d95613f0067bb4b95a9ae43ab7b806ed, type: 2}
   defaultAlwaysOnTitles: []
+  ironTitles: []
   Personality: {fileID: 11400000, guid: 8fb41ae5d07a9422888bd80d80e2fbde, type: 2}
   basicAttackName: Judgment Ray
   basicAttackPrefab: {fileID: 7907104310462883121, guid: 37212b887c61ad84eacd87133a8a9e9d, type: 3}
   basicAttackPrefabLifetime: 1
+  spawnSfx: {fileID: 8300000, guid: 48e12f5f452687641807b6e11b5b56ef, type: 3}
   description: A mythic oracle being that peers far beyond the present moment, unleashing
     precise, inevitable strikes guided by absolute foresight.

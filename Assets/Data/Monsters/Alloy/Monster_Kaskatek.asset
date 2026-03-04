@@ -42,9 +42,11 @@ MonoBehaviour:
   jobSkill: 1.22
   titleTrack: {fileID: 11400000, guid: 1423325a3964c4ca78106d5fc6db6a43, type: 2}
   defaultAlwaysOnTitles: []
+  ironTitles: []
   Personality: {fileID: 11400000, guid: 2e75af56469454f81aab48433f975b34, type: 2}
   basicAttackName: Core Crush
   basicAttackPrefab: {fileID: 5172629195496952374, guid: ad774bbb8084f42c29f12cd62581f796, type: 3}
   basicAttackPrefabLifetime: 1
+  spawnSfx: {fileID: 8300000, guid: 0fc0f7b3ceb61f445abba51af2226af7, type: 3}
   description: A legendary alloy guardian whose living core drives relentless impacts
     that grind enemies down with unstoppable force.

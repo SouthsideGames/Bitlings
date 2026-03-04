@@ -42,9 +42,11 @@ MonoBehaviour:
   jobSkill: 1
   titleTrack: {fileID: 11400000, guid: 85441e8d4bfc6448ea192b15db83786c, type: 2}
   defaultAlwaysOnTitles: []
+  ironTitles: []
   Personality: {fileID: 11400000, guid: e8e5c9163905a4840aca1effe845621c, type: 2}
   basicAttackName: Air Jab
   basicAttackPrefab: {fileID: 5988486418563103347, guid: 310c8d56e543d4cd4ae9c55fa6047252, type: 3}
   basicAttackPrefabLifetime: 1
+  spawnSfx: {fileID: 8300000, guid: 84a4ee083d1e1da4f99288309ec7a467, type: 3}
   description: A sharp-eyed sky hunter that darts between air currents, striking
     swiftly before retreating upward.

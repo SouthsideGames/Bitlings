@@ -181,8 +181,6 @@ public sealed class IronCareerManager : MonoBehaviour, IronBattleBridge.IIronBat
         _state.runSummary.totalCredits += Mathf.Max(0, outcome.creditsGained);
         _state.runSummary.totalSecondsSurvived += Mathf.Max(0f, outcome.secondsSurvived);
 
-        GrantIronRunRewards(outcome);
-
         // Nuzlocke rule: any monster that hits 0 HP is removed from the roster.
         // IMPORTANT: keep shield values aligned to the surviving party order.
 
@@ -232,6 +230,9 @@ public sealed class IronCareerManager : MonoBehaviour, IronBattleBridge.IIronBat
             return;
         }
 
+        // Only grant rewards on victories to prevent loss farming.
+        GrantIronRunRewards(outcome);
+
         _state.wins++;
         ApplyPartyAutoLevelOnWin();
 
@@ -275,9 +276,14 @@ public sealed class IronCareerManager : MonoBehaviour, IronBattleBridge.IIronBat
     private void OnApplicationPause(bool pauseStatus)
     {
         if (!IronCareerRuntime.IsActive) return;
-        if (!pauseStatus) return;
-
-        HandleBackgroundLoss("Application paused");
+        if (pauseStatus)
+        {
+            HandleBackgroundLoss("Application paused");
+        }
+        else
+        {
+            CancelBackgroundForfeit("Application resumed (pause cleared)");
+        }
     }
 
     private void OnEnable()
@@ -299,7 +305,11 @@ public sealed class IronCareerManager : MonoBehaviour, IronBattleBridge.IIronBat
     private void OnAppFocusChanged(bool hasFocus)
     {
         if (!IronCareerRuntime.IsActive) return;
-        if (hasFocus) return;
+        if (hasFocus)
+        {
+            CancelBackgroundForfeit("Application regained focus");
+            return;
+        }
 
         HandleBackgroundLoss("Application lost focus");
     }
@@ -320,7 +330,17 @@ public sealed class IronCareerManager : MonoBehaviour, IronBattleBridge.IIronBat
         if (_backgroundForfeitCo != null)
             StopCoroutine(_backgroundForfeitCo);
 
+        Debug.Log($"[IronCareerManager] Arming background forfeit (grace {Mathf.Max(0f, backgroundForfeitGraceSeconds):0.00}s): {reason}");
         _backgroundForfeitCo = StartCoroutine(Co_ForfeitAfterBackground(reason));
+    }
+
+    private void CancelBackgroundForfeit(string reason)
+    {
+        if (_backgroundForfeitCo == null) return;
+
+        StopCoroutine(_backgroundForfeitCo);
+        _backgroundForfeitCo = null;
+        Debug.Log($"[IronCareerManager] Cleared pending background forfeit: {reason}");
     }
 
     private IEnumerator Co_ForfeitAfterBackground(string reason)
@@ -888,6 +908,9 @@ public sealed class IronCareerManager : MonoBehaviour, IronBattleBridge.IIronBat
 
     private void ShowGameOver(bool forfeit)
     {
+        // Ensure no pending background forfeit coroutine survives into game-over.
+        CancelBackgroundForfeit("Game over");
+
         FinalizeRunStats(forfeit);
 
         _state.runActive = false;

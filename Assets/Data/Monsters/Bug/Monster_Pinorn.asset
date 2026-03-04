@@ -42,9 +42,11 @@ MonoBehaviour:
   jobSkill: 1.08
   titleTrack: {fileID: 11400000, guid: e4dce6e0b5c324b6b99f6fdf000a9fb8, type: 2}
   defaultAlwaysOnTitles: []
+  ironTitles: []
   Personality: {fileID: 11400000, guid: dc588633b46794883be5263b17376bf3, type: 2}
   basicAttackName: Crush Pincer
   basicAttackPrefab: {fileID: 6777048211968024641, guid: 36482d8bd89710b4983cb69ab5a8cceb, type: 3}
   basicAttackPrefabLifetime: 1
+  spawnSfx: {fileID: 8300000, guid: 018cf9635bca1fa48ade4aca26fe8ca7, type: 3}
   description: A sharp-eyed insect hunter that lunges suddenly, crushing enemies
     with powerful, well-timed pincer strikes.

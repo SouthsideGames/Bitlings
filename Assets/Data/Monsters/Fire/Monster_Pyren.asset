@@ -42,9 +42,11 @@ MonoBehaviour:
   jobSkill: 1.08
   titleTrack: {fileID: 11400000, guid: 9c71f4eeefc7f4779afea7282ad820b4, type: 2}
   defaultAlwaysOnTitles: []
+  ironTitles: []
   Personality: {fileID: 11400000, guid: 3733616cf9f0f4dddb5bee9d6ba2952f, type: 2}
   basicAttackName: Inferno Rend
   basicAttackPrefab: {fileID: 126357351932672970, guid: a7524146891194bc4b7eb73ba1e38b46, type: 3}
   basicAttackPrefabLifetime: 1
+  spawnSfx: {fileID: 8300000, guid: 3595d1c12dc898041a7f799453a7cb3e, type: 3}
   description: A fully ignited fire beast that overwhelms foes with fast, searing
     assaults.

@@ -42,9 +42,11 @@ MonoBehaviour:
   jobSkill: 1.22
   titleTrack: {fileID: 11400000, guid: 151c9dfed2c484c81af1890a63aac1b4, type: 2}
   defaultAlwaysOnTitles: []
+  ironTitles: []
   Personality: {fileID: 11400000, guid: 48288e9e78c65453781f793c8df03e90, type: 2}
   basicAttackName: Umbral Pierce
   basicAttackPrefab: {fileID: 9101927626726485638, guid: 257dd9ab5e3cf0544a679d2e444f8d35, type: 3}
   basicAttackPrefabLifetime: 1
+  spawnSfx: {fileID: 8300000, guid: 2d6ed11cd82628c469f0b828f74820bc, type: 3}
   description: A legendary specter that weaves between reality and shadow, striking
     with silent precision before dissolving back into the veil.
