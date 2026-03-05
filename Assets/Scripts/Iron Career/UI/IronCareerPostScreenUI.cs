@@ -138,6 +138,8 @@ public sealed class IronCareerPostScreenUI : MonoBehaviour
                 if (m == null || m.def == null) continue;
 
                 var card = Instantiate(partyCardPrefab, partyListParent);
+                if (!card.gameObject.activeSelf)
+                    card.gameObject.SetActive(true);
                 card.Bind(m, isLocked: true, isSelectable: false);
                 card.SetLocked(true); // Post screen cards are informational.
                 card.SetSelected(false);

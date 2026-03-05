@@ -62,7 +62,9 @@ public sealed class IronCareerManager : MonoBehaviour, IronBattleBridge.IIronBat
     private IronRngStream _rng;
     private IronTitleRoller _titleRoller;
     private IronEncounterService _encounters;
+    private IronBattleOutcome _lastOutcome;
     private IronMonster _pendingHire;
+    private bool _hasLastOutcome;
     private bool _finalizedRunStats;
     private readonly List<int> _tmpLivingIndices = new List<int>(4);
     private Coroutine _backgroundForfeitCo;
@@ -172,6 +174,9 @@ public sealed class IronCareerManager : MonoBehaviour, IronBattleBridge.IIronBat
     public void OnIronBattleResolved(IronBattleOutcome outcome)
     {
         if (!_state.runActive) return;
+
+        _lastOutcome = outcome;
+        _hasLastOutcome = true;
 
         _state.runSummary.totalBattles += 1;
         _state.runSummary.totalDamageDealt += Mathf.Max(0, outcome.damageDealt);
@@ -385,6 +390,8 @@ public sealed class IronCareerManager : MonoBehaviour, IronBattleBridge.IIronBat
         _finalizedRunStats = false;
         _quitPromptActive = false;
         _suppressRulesThisRun = false;
+        _hasLastOutcome = false;
+        _lastOutcome = default;
 
         int runSeed = useFixedSeed && seed > 0
             ? seed
@@ -591,7 +598,7 @@ public sealed class IronCareerManager : MonoBehaviour, IronBattleBridge.IIronBat
         _pendingHire = null;
 
         ironEncounterUI?.HideAll(immediate: true);
-        ContinueAfterHireAndReplacement();
+        ShowPost();
     }
 
     private bool RollHireSuccess(IronMonster offer)
@@ -638,7 +645,10 @@ public sealed class IronCareerManager : MonoBehaviour, IronBattleBridge.IIronBat
     private void ShowPost()
     {
         ironEncounterUI?.ShowPost(immediate: true);
-        postPanel?.Bind(_roster.Party, _state.carryStatus, _state.wins);
+        if (_hasLastOutcome)
+            postPanel?.Bind(_roster.Party, _state.carryStatus, _state.wins, _lastOutcome);
+        else
+            postPanel?.Bind(_roster.Party, _state.carryStatus, _state.wins);
     }
 
     public void OnPostContinue()

@@ -29,6 +29,22 @@ public sealed class IronCareerEncounterPanelUI : MonoBehaviour
         if (I != null && I != this) { Destroy(gameObject); return; }
         I = this;
 
+        // Auto-bind common children by name if references are missing (safety for prefab wiring regressions).
+        if (!starter) starter = FindCg("Starter");
+        if (!hire) hire = FindCg("Hire");
+        if (!replace) replace = FindCg("Replace");
+        if (!post) post = FindCg("Post");
+        if (!forcedEvolve) forcedEvolve = FindCg("ForcedEvolve");
+        if (!rest) rest = FindCg("Rest");
+        if (!gameOver) gameOver = FindCg("GameOver");
+        if (!rules) rules = FindCg("Rules");
+
+        if (!battleRoot)
+        {
+            var tr = transform.Find("IronCareerBattle");
+            if (tr) battleRoot = tr.gameObject;
+        }
+
         // Default: battle HUD visible, overlays hidden.
         if (battleRoot) battleRoot.SetActive(true);
         HideAllImmediate();
@@ -41,42 +57,63 @@ public sealed class IronCareerEncounterPanelUI : MonoBehaviour
     {
         HideAll(immediate);
         ShowOnly(starter, immediate);
+
+        if (!starter)
+            Debug.LogError("[IronCareerEncounterPanelUI] Starter CanvasGroup missing. Panel will appear blank.");
     }
 
     public void ShowHire(bool immediate = false)
     {
         HideAll(immediate);
         ShowOnly(hire, immediate);
+
+        if (!hire)
+            Debug.LogError("[IronCareerEncounterPanelUI] Hire CanvasGroup missing. Panel will appear blank.");
     }
 
     public void ShowReplace(bool immediate = false)
     {
         HideAll(immediate);
         ShowOnly(replace, immediate);
+
+        if (!replace)
+            Debug.LogError("[IronCareerEncounterPanelUI] Replace CanvasGroup missing. Panel will appear blank.");
     }
 
     public void ShowPost(bool immediate = false)
     {
         HideAll(immediate);
         ShowOnly(post, immediate);
+
+        if (!post)
+            Debug.LogError("[IronCareerEncounterPanelUI] Post CanvasGroup missing. Panel will appear blank.");
     }
 
     public void ShowForcedEvolve(bool immediate = false)
     {
         HideAll(immediate);
         ShowOnly(forcedEvolve, immediate);
+
+        if (!forcedEvolve)
+            Debug.LogError("[IronCareerEncounterPanelUI] ForcedEvolve CanvasGroup missing. Panel will appear blank.");
     }
 
     public void ShowRest(bool immediate = false)
     {
         HideAll(immediate);
         ShowOnly(rest, immediate);
+
+        if (!rest)
+            Debug.LogError("[IronCareerEncounterPanelUI] Rest CanvasGroup missing. Panel will appear blank.");
     }
 
     public void ShowGameOver(bool immediate = false)
     {
         HideAll(immediate);
         ShowOnly(gameOver, immediate);
+
+        if (!gameOver)
+            Debug.LogError("[IronCareerEncounterPanelUI] GameOver CanvasGroup missing. Panel will appear blank.");
     }
 
     public void ShowRules(bool immediate = false)
