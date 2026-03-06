@@ -1199,6 +1199,7 @@ if (!playerLandedFirstHitThisBattle && dr.damage > 0)
                 if (fled)
                 {
                     yield return Say($"{name} fled! (Run chance {Mathf.RoundToInt(chance * 100f)}%)", BattleLineTag.Result);
+                    _wildEscapedThisBattle = true;
                     EndBattleRouted(false, escaped: true);
                     yield break;
                 }

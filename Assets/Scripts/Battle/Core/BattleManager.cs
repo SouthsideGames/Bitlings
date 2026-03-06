@@ -290,6 +290,7 @@ public partial class BattleManager : MonoBehaviour
     private float wildPendingGuardShield = 0f;
 
     private int runAttempts = 0;
+    private bool _wildEscapedThisBattle = false;
     private bool wildChargedNextAttack = false;
 
     private int _totalCritsThisBattle = 0;
@@ -1046,6 +1047,7 @@ public partial class BattleManager : MonoBehaviour
         playerNoDmgTurns = 0;
         playerNoCritTurns = 0;
         runAttempts = 0;
+        _wildEscapedThisBattle = false;
 
         _totalCritsThisBattle = 0;
         _totalDamageTakenThisBattle = 0;

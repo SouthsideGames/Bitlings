@@ -80,6 +80,7 @@ public struct IronBattleOutcome
 {
     public bool victory;
     public bool escaped;
+    public bool wildEscaped;
 
     public MonsterDataSO wildDef;
     public int wildLevel;

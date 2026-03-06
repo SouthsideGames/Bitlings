@@ -28364,7 +28364,7 @@ MonoBehaviour:
   notEffectiveSprite: {fileID: 4035966463137935750, guid: 78c59f3b4cfb743dc88aed4bab6ffba5, type: 3}
   typeSecondsPerChar: 0.02
   lineHoldSeconds: 0.35
-  forceTopCanvasSorting: 1
+  forceTopCanvasSorting: 0
   topCanvasSortingOrder: 5000
   debugTextTrace: 1
 --- !u!225 &298446136

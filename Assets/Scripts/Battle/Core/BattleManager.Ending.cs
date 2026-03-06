@@ -116,6 +116,7 @@ public partial class BattleManager : MonoBehaviour
         {
             victory = victory,
             escaped = escaped,
+            wildEscaped = _wildEscapedThisBattle,
             wildDef = wildDef,
             wildLevel = wildLevel,
             secondsSurvived = survived,

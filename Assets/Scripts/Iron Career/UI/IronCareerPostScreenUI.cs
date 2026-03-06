@@ -122,7 +122,15 @@ public sealed class IronCareerPostScreenUI : MonoBehaviour
             int wildLvl = Mathf.Max(1, outcome.wildLevel);
             int turns = Mathf.Max(0, outcome.turnsSurvived);
             int secs = Mathf.Max(0, Mathf.RoundToInt(outcome.secondsSurvived));
-            string result = outcome.victory ? "VICTORY" : (outcome.escaped ? "ESCAPED" : "DEFEAT");
+            string result;
+            if (outcome.victory)
+                result = "VICTORY";
+            else if (outcome.wildEscaped)
+                result = "WILD FLED";
+            else if (outcome.escaped)
+                result = "ESCAPED";
+            else
+                result = "DEFEAT";
             summaryTMP.text = $"<b>{result}</b>\nWild: {wildName} (Lv {wildLvl})\nTurns Survived: {turns}\nTime Survived: {secs}s";
         }
 

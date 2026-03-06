@@ -229,6 +229,18 @@ public sealed class IronCareerManager : MonoBehaviour, IronBattleBridge.IIronBat
             return;
         }
 
+        // If the wild fled, keep the run alive and route to post-battle (no rewards, no win increment).
+        if (outcome.wildEscaped)
+        {
+            Debug.LogWarning("[IronCareerManager] Wild fled. Showing post-battle without win/rewards.");
+            _pendingHire = null;
+            _encounters?.ClearWildCache();
+
+            ironEncounterUI?.HideAll(immediate: true);
+            ShowPost();
+            return;
+        }
+
         if (!outcome.victory)
         {
             ShowGameOver(forfeit: false);
