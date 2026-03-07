@@ -14,14 +14,35 @@ public partial class BattleManager : MonoBehaviour
         MonsterDataSO playerDef = GetTeamDefSafe(activeIndex);
 
         if (feedback != null)
-            yield return feedback.Co_RevealPanels(wildCG, playerCG, duration, playerFirstBySpeed, playerDef, wildDef);
+            yield return feedback.Co_RevealPanels(wildCG, playerCG, duration, playerFirstBySpeed, playerDef, wildDef, Co_AnnounceSpawnLine);
         else
+        {
+            if (playerFirstBySpeed)
+            {
+                yield return Co_AnnounceSpawnLine(playerDef);
+                yield return Co_AnnounceSpawnLine(wildDef);
+            }
+            else
+            {
+                yield return Co_AnnounceSpawnLine(wildDef);
+                yield return Co_AnnounceSpawnLine(playerDef);
+            }
+
             yield return CoWaitUnscaled(Mathf.Max(0f, duration));
+        }
 
         if (wildCG) wildCG.alpha = 1f;
         if (playerCG) playerCG.alpha = 1f;
 
         yield return Co_StartBattleNow();
+    }
+
+    private IEnumerator Co_AnnounceSpawnLine(MonsterDataSO def)
+    {
+        if (def == null) yield break;
+
+        string name = string.IsNullOrEmpty(def.displayName) ? "Bitling" : def.displayName;
+        yield return Say($"{name} clocking in!", BattleLineTag.Result);
     }
 
     private bool GetPlayerActsFirstBySpeed()
@@ -381,7 +402,7 @@ RefreshStatusIconsFromState();
                         if (teamHP[activeIndex] > 0.01f)
                         {
                             ResetDefendStreak();
-                            ResolveQueuedSwap();
+                            yield return ResolveQueuedSwap();
                             RefreshStatusIconsFromState();
                         }
 
@@ -472,7 +493,7 @@ break;
                                         }
 
                                         ResetDefendStreak();
-                                        ResolveQueuedSwap();
+                                        yield return ResolveQueuedSwap();
                                         RefreshStatusIconsFromState();
                                         break;
                                     }
@@ -504,6 +525,7 @@ break;
                                         if (escaped)
                                         {
                                             BattleLogger.Log($"{name} has fled! (Run chance {Mathf.RoundToInt(chance * 100f)}%)", LogScope.Battle);
+                                            if (feedback) feedback.PlayRunSfx();
                                             EndBattleRouted(false, true);
                                             yield break;
                                         }
@@ -715,7 +737,7 @@ if (teamHP != null && activeIndex >= 0 && activeIndex < teamHP.Length && teamHP[
             {
                 ResetDefendStreak();
                 ClearPlayerGuardStateForActive(); // ✅ guard must never carry to a swapped-in monster
-                ResolveQueuedSwap();
+                yield return ResolveQueuedSwap();
                 RefreshStatusIconsFromState();
                 break;
             }

@@ -99,7 +99,13 @@ public class BattleTextBoxUI : MonoBehaviour
     private void ApplyRegularBattleIdleVisibility()
     {
         if (canvasGroup == null) return;
-        if (IronCareerRuntime.IsActive) return;
+
+        // In Iron Career we always keep the battle text box visible and skip encounter-based visibility.
+        if (IronCareerRuntime.IsActive)
+        {
+            canvasGroup.alpha = 1f;
+            return;
+        }
 
         var em = EncounterManager.I;
         if (em == null) return;

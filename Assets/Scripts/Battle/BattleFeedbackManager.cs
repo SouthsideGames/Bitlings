@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using TMPro;
 using UnityEngine;
@@ -77,6 +78,11 @@ public sealed class BattleFeedbackManager : MonoBehaviour
     [Header("Wild Intent FX")]
     [SerializeField, Min(0.01f)] private float wildIntentPopTime = 0.10f;
     [SerializeField, Min(0f)] private float wildIntentStartScale = 0.85f;
+
+    [Header("Action SFX")]
+    [SerializeField] private AudioClip chargeSfx;
+    [SerializeField] private AudioClip defendSfx;
+    [SerializeField] private AudioClip runSfx;
     
     [Header("Action Buttons (press feedback)")]
     [SerializeField] private Button attackBtn;
@@ -214,6 +220,11 @@ public sealed class BattleFeedbackManager : MonoBehaviour
     private Coroutine _wildHPAnimCR;
     private Coroutine _playerGuardAutoHideCR;
     private Coroutine _wildGuardAutoHideCR;
+
+    private bool _chargePlayerOn;
+    private bool _chargeWildOn;
+    private bool _guardPlayerOn;
+    private bool _guardWildOn;
 
 
     private void Awake()
@@ -453,7 +464,17 @@ public sealed class BattleFeedbackManager : MonoBehaviour
     public void SetCharge(BattleFeedbackSide side, bool on)
     {
         var icon = (side == BattleFeedbackSide.Player) ? playerChargeIcon : wildChargeIcon;
+        bool wasOn = (side == BattleFeedbackSide.Player) ? _chargePlayerOn : _chargeWildOn;
+
         SetStatusIconVisible(icon, on);
+
+        if (on && !wasOn)
+            PlayChargeSfx();
+
+        if (side == BattleFeedbackSide.Player)
+            _chargePlayerOn = on;
+        else
+            _chargeWildOn = on;
     }
 
     public void SetChargePlayer(bool on) => SetCharge(BattleFeedbackSide.Player, on);
@@ -629,10 +650,20 @@ public void SetGuard(BattleFeedbackSide side, bool on)
     {
         var icon = (side == BattleFeedbackSide.Player) ? playerGuardIcon : wildGuardIcon;
 
+        bool wasOn = (side == BattleFeedbackSide.Player) ? _guardPlayerOn : _guardWildOn;
+
         if (!on)
             StopGuardAutoHideCR(side);
 
         SetStatusIconVisible(icon, on);
+
+        if (on && !wasOn)
+            PlayDefendSfx();
+
+        if (side == BattleFeedbackSide.Player)
+            _guardPlayerOn = on;
+        else
+            _guardWildOn = on;
     }
 
     private void SetStatusIconVisible(Image icon, bool on)
@@ -677,6 +708,46 @@ public void SetGuard(BattleFeedbackSide side, bool on)
                     .setEaseOutBack()
                     .setIgnoreTimeScale(true);
             });
+    }
+
+    public void SetSpawnAttackPrefabs(bool on)
+    {
+        spawnAttackPrefabs = on;
+    }
+
+    public void SetIconAlphaImmediate(BattleFeedbackSide side, float alpha)
+    {
+        SetGraphicAlpha(GetIcon(side), alpha);
+    }
+
+    public IEnumerator Co_FadeInIcon(
+        BattleFeedbackSide side,
+        MonsterDataSO def,
+        float fadeTimeOverride = -1f,
+        Func<MonsterDataSO, IEnumerator> onSpawnAnnounce = null)
+    {
+        var icon = GetIcon(side);
+        float fadeTime = (fadeTimeOverride > 0f)
+            ? fadeTimeOverride
+            : Mathf.Max(0.01f, iconIntroFadeTime);
+
+        if (icon)
+        {
+            SetGraphicAlpha(icon, 0f);
+            PlayIconIntroFor(icon, fadeTime);
+        }
+
+        if (fadeTime > 0f)
+            yield return new WaitForSecondsRealtime(fadeTime);
+
+        PlayMonsterSpawnSfx(def);
+
+        if (onSpawnAnnounce != null)
+            yield return onSpawnAnnounce(def);
+
+        float postGap = Mathf.Max(0f, iconIntroGap);
+        if (postGap > 0f)
+            yield return new WaitForSecondsRealtime(postGap);
     }
 
     public void PlayActionQueued(BattleFeedbackSide side, BattleFeedbackAction action)
@@ -1111,7 +1182,8 @@ public void SetGuard(BattleFeedbackSide side, bool on)
         float duration,
         bool playerFirstBySpeed,
         MonsterDataSO playerDef,
-        MonsterDataSO wildDef)
+        MonsterDataSO wildDef,
+        Func<MonsterDataSO, IEnumerator> onSpawnAnnounce = null)
     {
         float dur = Mathf.Max(0f, duration);
 
@@ -1140,15 +1212,15 @@ public void SetGuard(BattleFeedbackSide side, bool on)
         MonsterDataSO firstDef = playerFirstBySpeed ? playerDef : wildDef;
         MonsterDataSO secondDef = playerFirstBySpeed ? wildDef : playerDef;
 
-        yield return RevealSingleMonster(firstPanel, firstIcon, firstDef, firstFadeTime);
-        yield return RevealSingleMonster(secondPanel, secondIcon, secondDef, fadeTime);
+        yield return RevealSingleMonster(firstPanel, firstIcon, firstDef, firstFadeTime, onSpawnAnnounce);
+        yield return RevealSingleMonster(secondPanel, secondIcon, secondDef, fadeTime, onSpawnAnnounce);
 
         float minTotal = firstFadeTime + fadeTime;
         if (dur > minTotal)
             yield return new WaitForSecondsRealtime(dur - minTotal);
     }
 
-    private IEnumerator RevealSingleMonster(CanvasGroup panel, Graphic icon, MonsterDataSO def, float revealDuration)
+    private IEnumerator RevealSingleMonster(CanvasGroup panel, Graphic icon, MonsterDataSO def, float revealDuration, Func<MonsterDataSO, IEnumerator> onSpawnAnnounce)
     {
         float revealTime = Mathf.Max(0f, revealDuration);
 
@@ -1162,6 +1234,9 @@ public void SetGuard(BattleFeedbackSide side, bool on)
             yield return new WaitForSecondsRealtime(revealTime);
 
         PlayMonsterSpawnSfx(def);
+
+        if (onSpawnAnnounce != null)
+            yield return onSpawnAnnounce(def);
 
         float postGap = Mathf.Max(0f, iconIntroGap);
         if (postGap > 0f)
@@ -1179,6 +1254,27 @@ public void SetGuard(BattleFeedbackSide side, bool on)
         if (def == null || def.spawnSfx == null) return;
         if (AudioManager.I == null) return;
         AudioManager.I.PlayClipOneShot(def.spawnSfx);
+    }
+
+    public void PlayChargeSfx()
+    {
+        if (chargeSfx == null) return;
+        if (AudioManager.I == null) return;
+        AudioManager.I.PlayClipOneShot(chargeSfx);
+    }
+
+    public void PlayDefendSfx()
+    {
+        if (defendSfx == null) return;
+        if (AudioManager.I == null) return;
+        AudioManager.I.PlayClipOneShot(defendSfx);
+    }
+
+    public void PlayRunSfx()
+    {
+        if (runSfx == null) return;
+        if (AudioManager.I == null) return;
+        AudioManager.I.PlayClipOneShot(runSfx);
     }
 
     private void PlayIconIntroFor(Graphic icon, float fadeTime)

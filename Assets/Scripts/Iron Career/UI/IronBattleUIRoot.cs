@@ -111,6 +111,10 @@ public class IronBattleUIRoot : MonoBehaviour
             null
         );
 
+        // Ensure we spawn attack prefabs in Iron runs just like regular battles.
+        if (ironFeedback)
+            ironFeedback.SetSpawnAttackPrefabs(true);
+
         // Ensure text box is active before battle starts
         if (ironBattleTextBox && !ironBattleTextBox.gameObject.activeSelf)
         {

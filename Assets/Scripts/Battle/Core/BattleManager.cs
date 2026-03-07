@@ -1351,9 +1351,9 @@ public partial class BattleManager : MonoBehaviour
         ResetStatusIcons();
     }
 
-    private void ResolveQueuedSwap()
+    private IEnumerator ResolveQueuedSwap()
     {
-        if (pendingSwapBenchSlot < 0) return;
+        if (pendingSwapBenchSlot < 0) yield break;
 
         FillOtherIndices(_scratchOthers);
         List<int> others = _scratchOthers;
@@ -1361,10 +1361,13 @@ public partial class BattleManager : MonoBehaviour
         int benchSlot = pendingSwapBenchSlot;
         pendingSwapBenchSlot = -1;
 
-        if (benchSlot < 0 || benchSlot >= others.Count) return;
+        if (benchSlot < 0 || benchSlot >= others.Count) yield break;
 
         int targetIndex = others[benchSlot];
-        if (teamHP[targetIndex] <= 0f) return;
+        if (teamHP[targetIndex] <= 0f) yield break;
+
+        if (feedback)
+            feedback.SetIconAlphaImmediate(BattleFeedbackManager.BattleFeedbackSide.Player, 0f);
 
         activeIndex = targetIndex;
 
@@ -1401,6 +1404,14 @@ public partial class BattleManager : MonoBehaviour
 
         if (debugTitles && debugTitlesOnSwap)
             Debug_LogActiveTitlesSnapshot("Swap");
+
+        if (feedback)
+            yield return feedback.Co_FadeInIcon(
+                BattleFeedbackManager.BattleFeedbackSide.Player,
+                teamDefs[activeIndex],
+                onSpawnAnnounce: Co_AnnounceSpawnLine);
+        else
+            yield return Co_AnnounceSpawnLine(teamDefs[activeIndex]);
     }
 
     private bool AutoSwapToAlive()
