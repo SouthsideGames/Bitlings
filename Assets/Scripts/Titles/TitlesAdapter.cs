@@ -243,12 +243,12 @@ public static class TitlesAdapter
     // Multipliers (victory/capture/jobs)
     // ─────────────────────────────────────────────────────────────────────────────
 
-    public static float GetcreditMultOnVictory(string monsterId, MonsterDataSO wild, int wildLevel)
+    public static float GetCreditMultOnVictory(string monsterId, MonsterDataSO wild, int wildLevel)
     {
-        if (TryInvoke("GetcreditMultOnVictory", new object[] { monsterId, wild, wildLevel }, out var res) && res is float f)
+        if (TryInvoke("GetCreditMultOnVictory", new object[] { monsterId, wild, wildLevel }, out var res) && res is float f)
             return Mathf.Max(0f, f);
 
-        WarnDefault("GetcreditMultOnVictory", "Provide credit victory multiplier or return 1.");
+        WarnDefault("GetCreditMultOnVictory", "Provide credit victory multiplier or return 1.");
         return 1f;
     }
 

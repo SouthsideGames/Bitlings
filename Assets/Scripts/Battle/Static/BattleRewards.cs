@@ -4,7 +4,7 @@ using System.Collections.Generic;
 
 public static class BattleRewards
 {
-    public static int creditsFor(bool victory, int wildLevel, float secondsSurvived)
+    public static int CreditsFor(bool victory, int wildLevel, float secondsSurvived)
     {
         if (victory)
         {
@@ -18,7 +18,7 @@ public static class BattleRewards
         }
     }
 
-    public static int CalccreditsForWin(int wildLevel, Rarity rarity)
+    public static int CalcCreditsForWin(int wildLevel, Rarity rarity)
     {
         float rarityMul = 1f;
         switch (rarity)

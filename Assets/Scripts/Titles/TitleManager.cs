@@ -650,7 +650,7 @@ public sealed class TitleManager : MonoBehaviour
         }
     }
 
-    public float GetcreditMultOnVictory(string monsterId, MonsterDataSO wild, int wildLevel)
+    public float GetCreditMultOnVictory(string monsterId, MonsterDataSO wild, int wildLevel)
     {
         float mul = 1f;
 

@@ -311,7 +311,7 @@ public class BattleManager : MonoBehaviour
 
     public void Begin(MonsterDataSO wild, int level, Action<BattleResult> onEnded)
     {
-        var roster = SaveManager.Data.team;
+        var roster = SaveManager.Data?.team;
         if (roster == null || roster.Count == 0) { ForceEndBattleEarly(false); return; }
 
         playerNoDmgTurns = 0;
@@ -1442,12 +1442,12 @@ public class BattleManager : MonoBehaviour
 
         if (!escaped)
         {
-            basecredits = BattleRewards.creditsFor(victory, wildLevel, survived);
+            basecredits = BattleRewards.CreditsFor(victory, wildLevel, survived);
             finalcredits = basecredits;
 
             if (victory && teamIds != null && activeIndex >= 0 && activeIndex < teamIds.Length)
             {
-                float cm = TitlesAdapter.GetcreditMultOnVictory(teamIds[activeIndex], wildDef, wildLevel);
+                float cm = TitlesAdapter.GetCreditMultOnVictory(teamIds[activeIndex], wildDef, wildLevel);
                 if (cm > 0f)
                 {
                     finalcredits = Mathf.Max(0, Mathf.RoundToInt(basecredits * cm));

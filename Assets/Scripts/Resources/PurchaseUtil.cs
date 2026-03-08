@@ -3,8 +3,8 @@ using System;
 
 public static class PurchaseUtil
 {
-    [Obsolete("Use TrySpendcreditsOnly for upgrades; materials are now for job-site leveling UI only.")]
-    public static bool TrySpendMaterialsThencredits(int materialRequired)
+    [Obsolete("Use TrySpendCreditsOnly for upgrades; materials are now for job-site leveling UI only.")]
+    public static bool TrySpendMaterialsThenCredits(int materialRequired)
     {
         if (materialRequired <= 0) return true;
 
@@ -35,7 +35,7 @@ public static class PurchaseUtil
     }
 
     [Obsolete("Unused for upgrades; kept for legacy UI previews.")]
-    public static int creditsRemainderIfPayingWithMats(int materialRequired)
+    public static int CreditsRemainderIfPayingWithMats(int materialRequired)
     {
         const int creditsPerMaterial = 5;
         int haveMats  = ResourceBank.Get(ResourceType.Material);
@@ -43,7 +43,7 @@ public static class PurchaseUtil
         return remaining * creditsPerMaterial;
     }
 
-    public static bool TrySpendcreditsOnly(int creditCost)
+    public static bool TrySpendCreditsOnly(int creditCost)
     {
         if (creditCost <= 0) return true;
         if (!ResourceBank.TrySpend(ResourceType.Credits, creditCost)) return false;
