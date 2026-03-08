@@ -48,9 +48,6 @@ public sealed class IronRoster
         EnsureHpInitialized(newMember);
         _state.party[indexToReplace] = newMember;
 
-        if (_state.activeIndex == indexToReplace)
-            _state.activeIndex = indexToReplace;
-
         ClampActiveIndex();
     }
 

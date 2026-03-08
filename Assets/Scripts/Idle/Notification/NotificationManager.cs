@@ -12,7 +12,7 @@ public class NotificationManager : MonoBehaviour
 {
     public static NotificationManager I { get; private set; }
 
-    [SerializeField] private AndroidNofitication androidNotification;
+    [SerializeField] private AndroidNotification androidNotification;
     [SerializeField] private IOSNotification iosNotification;
 
     void Awake()
