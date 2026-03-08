@@ -85,6 +85,8 @@ public sealed class BattleAutoQueueCountdownUI : MonoBehaviour
         if (countdownText)
             countdownText.text = numberOnly ? display.ToString() : $"Auto in: {display}";
 
+        AudioManager.I?.PlaySfx(SfxType.CountdownBeep);
+
         SetVisible(true);
     }
 
