@@ -57,7 +57,7 @@ public class MonsterPersonalitySO : ScriptableObject
         int roll = rng.Next(0, total);
         if (roll < a) return BattleAction.Attack; roll -= a;
         if (roll < d) return BattleAction.Defend; roll -= d;
-        if (roll < f) return BattleAction.Focus;  roll -= f;
+        if (roll < f) return BattleAction.Focus;
         return BattleAction.Run;
     }
 }

@@ -228,6 +228,6 @@ public class UpgradeRowUI : MonoBehaviour
 
         InfoRouter.Open(id, _fallbackTitle, fallbackSubtitle, fallbackBody, _icon);
 
-        AudioManager.I.PlayClick();
+        AudioManager.I?.PlayClick();
     }
 }

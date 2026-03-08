@@ -54,7 +54,7 @@ public class ResourceRowUI : MonoBehaviour
 
         InfoRouter.Open(id, _displayName, fallbackSubtitle, fallbackBody);
 
-        AudioManager.I.PlayClick();
+        AudioManager.I?.PlayClick();
     }
 
     string Format(int n)

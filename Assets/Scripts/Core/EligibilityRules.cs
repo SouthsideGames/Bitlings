@@ -177,7 +177,7 @@ public static int CountBattleReady(int maxSlots = 3)
         if (EncounterManager.I != null && EncounterManager.I.NextEncounterIsFree)
         {
             needed = 0;
-            current = (EncounterManager.I != null) ? Mathf.Max(0, EncounterManager.I.GetEnergyPoints()) : Mathf.Max(0, ResourceBank.Get(ResourceType.Energy));
+            current = Mathf.Max(0, EncounterManager.I.GetEnergyPoints());
             return true;
         }
 

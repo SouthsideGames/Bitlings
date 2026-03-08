@@ -642,7 +642,7 @@ public partial class EncounterManager
 
         if (_currentEncounterIsBoss)
         {
-            AudioManager.I.PlaySfx(SfxType.BossEncounter);
+            AudioManager.I?.PlaySfx(SfxType.BossEncounter);
             return;
         }
 
@@ -654,7 +654,7 @@ public partial class EncounterManager
 
         if (IsUniqueMonster(wild))
         {
-            AudioManager.I?.PlaySfx(SfxType.UnqiueEncounter);
+            AudioManager.I?.PlaySfx(SfxType.UniqueEncounter);
             return;
         }
     }

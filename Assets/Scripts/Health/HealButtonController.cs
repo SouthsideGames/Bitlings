@@ -112,7 +112,7 @@ public class HealButtonController : MonoBehaviour
         int missing = HealingService.MissingHP(curHP, maxHP);
 
         int kitsNeeded = HealingService.MedkitsToHealFull(missing, hpPerMedkit);
-        int creditsNeeded = HealingService.creditsToHealFull(config, owned.level, missing);
+        int creditsNeeded = HealingService.CreditsToHealFull(config, owned.level, missing);
 
         int haveKits = ResourceBank.Get(ResourceType.Medkit);
         bool useKitsOnly = haveKits >= kitsNeeded && kitsNeeded > 0;
@@ -135,7 +135,6 @@ public class HealButtonController : MonoBehaviour
         }
         else if (needFallback)
         {
-            int kitsShort = kitsNeeded - haveKits; 
             int credits = ResourceManager.I != null
                 ? ResourceManager.I.Get(ResourceType.Credits)
                 : ResourceBank.Get(ResourceType.Credits);
@@ -195,7 +194,7 @@ public class HealButtonController : MonoBehaviour
             {
                 if (!ResourceBank.TrySpend(ResourceType.Medkit, haveKits)) { Refresh(); return; }
             }
-            int creditsNeeded = HealingService.creditsToHealFull(config, owned.level, missing);
+            int creditsNeeded = HealingService.CreditsToHealFull(config, owned.level, missing);
             bool spent = ResourceManager.I != null
                 ? ResourceManager.I.TrySpend(ResourceType.Credits, creditsNeeded)
                 : ResourceBank.TrySpend(ResourceType.Credits, creditsNeeded);

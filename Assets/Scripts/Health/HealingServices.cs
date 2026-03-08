@@ -88,7 +88,7 @@ public static class HealingService
             ? 0
             : Mathf.CeilToInt((float)missingHP / Mathf.Max(1, hpPerKit));
 
-    public static int creditsToHealFull(HealingConfigSO cfg, int level, int missingHP)
+    public static int CreditsToHealFull(HealingConfigSO cfg, int level, int missingHP)
     {
         if (missingHP <= 0) return 0;
 
