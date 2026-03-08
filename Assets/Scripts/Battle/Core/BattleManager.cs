@@ -149,6 +149,10 @@ public partial class BattleManager : MonoBehaviour
     [SerializeField, Min(0.05f)] private float hitPause = 0.25f;
     [SerializeField, Min(0.05f)] private float endRoundDelay = 0.60f;
 
+    [Header("Battle Start Pacing (unscaled)")]
+    [Tooltip("Delay between the first and second monster reveal/spawn call at battle start.")]
+    [SerializeField, Min(0f)] private float spawnDelayBetweenMonsters = 0.20f;
+
     [Header("Combat Tunables")]
     [Range(0f, 1f)][SerializeField] private float critChancePlayer = 0.10f;
     [Range(0f, 1f)][SerializeField] private float critChanceWild = 0.08f;
@@ -177,6 +181,9 @@ public partial class BattleManager : MonoBehaviour
     private BattleFeedbackManager _runtimeOverrideFeedback;
     private BattleTextBoxUI _runtimeOverrideTextBox;
     private BattleSwitchToggle _runtimeOverrideBottomToggle;
+    private readonly Dictionary<TMP_Text, float> _battleStartInfoTargetAlpha = new Dictionary<TMP_Text, float>(16);
+    private readonly Dictionary<Graphic, float> _battleStartHpBarTargetAlpha = new Dictionary<Graphic, float>(16);
+    private readonly Dictionary<Graphic, float> _battleStartCoreIconTargetAlpha = new Dictionary<Graphic, float>(4);
 
     [Header("Status + Synergy (Battle Start)")]
     [Tooltip("Icons + default durations/magnitudes for StatusType.")]
@@ -1344,6 +1351,12 @@ public partial class BattleManager : MonoBehaviour
             playerCG = playerPanel.GetComponent<CanvasGroup>();
             if (playerCG)
                 playerCG.alpha = 0f;
+        }
+
+        if (feedback != null)
+        {
+            feedback.SetIconAlphaImmediate(BattleFeedbackManager.BattleFeedbackSide.Player, 0f);
+            feedback.SetIconAlphaImmediate(BattleFeedbackManager.BattleFeedbackSide.Wild, 0f);
         }
 
         if (turnCR != null) StopCoroutine(turnCR);

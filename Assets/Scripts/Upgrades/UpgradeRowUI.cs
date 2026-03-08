@@ -151,14 +151,15 @@ public class UpgradeRowUI : MonoBehaviour
                 return;
             }
 
-            // If not owned, show the buy button (even if unaffordable),
-            // but only allow clicking when the player can actually buy.
-            buyButton.gameObject.SetActive(true);
-
             int credits = ResourceBank.Get(ResourceType.Credits);
             bool hasValidCost = _creditCost > 0;
+            bool canAfford = hasValidCost && credits >= _creditCost;
 
-            buyButton.interactable = hasValidCost && credits >= _creditCost;
+            // For locked rows, only show buy if the player can afford it.
+            buyButton.gameObject.SetActive(canAfford);
+
+            if (buyButton.gameObject.activeSelf)
+                buyButton.interactable = true;
         }
     }
 

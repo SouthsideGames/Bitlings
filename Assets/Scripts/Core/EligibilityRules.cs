@@ -275,6 +275,13 @@ public static int CountBattleReady(int maxSlots = 3)
             return false;
         }
 
+        string workerKey = !string.IsNullOrEmpty(ownedUid) ? ownedUid : def.id;
+        if (jm.TryGetWorkerCooldownRemainingSeconds(workerKey, out long workerRemaining) && workerRemaining > 0)
+        {
+            reason = $"Worker resting: {FormatHm(workerRemaining)}";
+            return false;
+        }
+
         if (!CanUseJobSlot(job, slotIndex, out string slotReason, out _))
         {
             reason = slotReason;

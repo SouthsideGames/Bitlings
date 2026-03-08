@@ -1183,14 +1183,24 @@ public void SetGuard(BattleFeedbackSide side, bool on)
         bool playerFirstBySpeed,
         MonsterDataSO playerDef,
         MonsterDataSO wildDef,
+        Action<BattleFeedbackSide, float> onRevealStart = null,
+        float betweenSpawnDelay = 0f,
         Func<MonsterDataSO, IEnumerator> onSpawnAnnounce = null)
     {
         float dur = Mathf.Max(0f, duration);
 
         if (!enableSpeedOrderedIconIntro)
         {
+            PrepareIconIntroFade();
+
+            onRevealStart?.Invoke(BattleFeedbackSide.Player, dur);
+            onRevealStart?.Invoke(BattleFeedbackSide.Wild, dur);
+
             if (wildCG) LeanTween.alphaCanvas(wildCG, 1f, dur).setIgnoreTimeScale(true);
             if (playerCG) LeanTween.alphaCanvas(playerCG, 1f, dur).setIgnoreTimeScale(true);
+
+            FadeGraphicAlpha(playerIcon, 1f, dur);
+            FadeGraphicAlpha(wildIcon, 1f, dur);
 
             if (dur > 0f)
                 yield return new WaitForSecondsRealtime(dur);
@@ -1211,11 +1221,18 @@ public void SetGuard(BattleFeedbackSide side, bool on)
 
         MonsterDataSO firstDef = playerFirstBySpeed ? playerDef : wildDef;
         MonsterDataSO secondDef = playerFirstBySpeed ? wildDef : playerDef;
+        float spawnGap = Mathf.Max(0f, betweenSpawnDelay);
 
+        onRevealStart?.Invoke(playerFirstBySpeed ? BattleFeedbackSide.Player : BattleFeedbackSide.Wild, firstFadeTime);
         yield return RevealSingleMonster(firstPanel, firstIcon, firstDef, firstFadeTime, onSpawnAnnounce);
+
+        if (spawnGap > 0f)
+            yield return new WaitForSecondsRealtime(spawnGap);
+
+        onRevealStart?.Invoke(playerFirstBySpeed ? BattleFeedbackSide.Wild : BattleFeedbackSide.Player, fadeTime);
         yield return RevealSingleMonster(secondPanel, secondIcon, secondDef, fadeTime, onSpawnAnnounce);
 
-        float minTotal = firstFadeTime + fadeTime;
+        float minTotal = firstFadeTime + fadeTime + spawnGap;
         if (dur > minTotal)
             yield return new WaitForSecondsRealtime(dur - minTotal);
     }
@@ -1247,6 +1264,29 @@ public void SetGuard(BattleFeedbackSide side, bool on)
     {
         SetGraphicAlpha(playerIcon, 0f);
         SetGraphicAlpha(wildIcon, 0f);
+    }
+
+    private void FadeGraphicAlpha(Graphic g, float targetAlpha, float duration)
+    {
+        if (!g) return;
+
+        float target = Mathf.Clamp01(targetAlpha);
+        float t = Mathf.Max(0f, duration);
+        if (t <= 0f)
+        {
+            SetGraphicAlpha(g, target);
+            return;
+        }
+
+        float start = Mathf.Clamp01(g.color.a);
+        LeanTween.value(g.gameObject, start, target, t)
+            .setIgnoreTimeScale(true)
+            .setEaseOutQuad()
+            .setOnUpdate((float a) =>
+            {
+                if (!g) return;
+                SetGraphicAlpha(g, a);
+            });
     }
 
     private void PlayMonsterSpawnSfx(MonsterDataSO def)
@@ -1390,7 +1430,7 @@ public void SetGuard(BattleFeedbackSide side, bool on)
 
         Vector2 originalPos = target.anchoredPosition;
 
-        LeanTween.moveX(target, originalPos.x + Random.Range(-hpShakeStrength, hpShakeStrength), hpShakeDuration)
+        LeanTween.moveX(target, originalPos.x + UnityEngine.Random.Range(-hpShakeStrength, hpShakeStrength), hpShakeDuration)
             .setEasePunch()
             .setIgnoreTimeScale(true)
             .setOnComplete(() =>
@@ -1743,6 +1783,7 @@ public void SetGuard(BattleFeedbackSide side, bool on)
                 var c = g.color;
                 c.a = a;
                 g.color = c;
+                g.canvasRenderer.SetAlpha(a);
             });
     }
 
@@ -1760,14 +1801,17 @@ public void SetGuard(BattleFeedbackSide side, bool on)
         var c = g.color;
         c.a = 1f;
         g.color = c;
+        g.canvasRenderer.SetAlpha(1f);
     }
 
     private void SetGraphicAlpha(Graphic g, float alpha)
     {
         if (!g) return;
+        float a = Mathf.Clamp01(alpha);
         var c = g.color;
-        c.a = Mathf.Clamp01(alpha);
+        c.a = a;
         g.color = c;
+        g.canvasRenderer.SetAlpha(a);
     }
 
     private void Shake(RectTransform rt, float pixels, float time)
@@ -1785,8 +1829,8 @@ public void SetGuard(BattleFeedbackSide side, bool on)
                 if (!rt) return;
 
                 float strength = Mathf.Lerp(pixels, 0f, t);
-                float x = Random.Range(-strength, strength);
-                float y = Random.Range(-strength, strength) * 0.35f;
+                float x = UnityEngine.Random.Range(-strength, strength);
+                float y = UnityEngine.Random.Range(-strength, strength) * 0.35f;
 
                 rt.localPosition = basePos + new Vector3(x, y, 0f);
             })

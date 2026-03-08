@@ -1220,9 +1220,12 @@ private Sprite GetVariantIcon(MonsterDataSO monster)
         {
             Debug.LogWarning("[MonsterDetailPanel] SaveManager.Data is null in AssignToSlot. Attempting LoadOrCreate.");
             SaveManager.LoadOrCreate();
-            if (SaveManager.Data == null) return;
-            Hide();
-            return;
+            data2 = SaveManager.Data;
+            if (data2 == null)
+            {
+                Hide();
+                return;
+            }
         }
 
         var team2 = data2.team ?? new List<OwnedMonsterData>();
@@ -1245,12 +1248,24 @@ private Sprite GetVariantIcon(MonsterDataSO monster)
     {
         if (_teamSlotIndex < 0) { Hide(); return; }
 
-        var team = SaveManager.Data.team ?? new List<OwnedMonsterData>();
+        var data = SaveManager.Data;
+        if (data == null)
+        {
+            SaveManager.LoadOrCreate();
+            data = SaveManager.Data;
+            if (data == null)
+            {
+                Hide();
+                return;
+            }
+        }
+
+        var team = data.team ?? new List<OwnedMonsterData>();
         while (team.Count < 3) team.Add(new OwnedMonsterData());
 
         team[_teamSlotIndex] = new OwnedMonsterData();
 
-        SaveManager.Data.team = team;
+        data.team = team;
         SaveManager.Save();
         GameEvents.OnTeamChanged?.Invoke();
 

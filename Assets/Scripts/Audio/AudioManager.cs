@@ -30,6 +30,7 @@ public enum SfxType
 
     // Progress
     LevelUp = 11,
+    AchievementUnlocked = 20,
 
     //Encounters
     ShinyEncounter = 14,

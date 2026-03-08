@@ -179,6 +179,9 @@ public sealed class AchievementToastUI : MonoBehaviour
         if (iconImage) iconImage.sprite = entry.icon;
         if (label) label.text = $"{prefixText} {entry.displayName}";
 
+        if (AudioManager.I != null)
+            AudioManager.I.PlaySfx(SfxType.AchievementUnlocked);
+
         if (canvasGroup)
         {
             LeanTween.cancel(canvasGroup.gameObject);

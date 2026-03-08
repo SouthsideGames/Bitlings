@@ -343,7 +343,15 @@ public class JobAssignPanelUI : MonoBehaviour
         }
 
         JobManager.I.RemoveFromAnyJob(_pendingId);
-        JobManager.I.TryAssignWorkerAt(_job, _slotIndex, _pendingDef, _pendingId);
+        bool assigned = JobManager.I.TryAssignWorkerAt(_job, _slotIndex, _pendingDef, _pendingId);
+        if (!assigned)
+        {
+            AudioManager.I?.PlayDenied();
+            GameEvents.RaiseToast("Could not assign worker.");
+            RefreshUIAfterChange();
+            return;
+        }
+
         GameEvents.OnJobsChanged?.Invoke();
         GameEvents.Tutorial_FirstJobAssigned?.Invoke();
         GameEvents.RaiseToast("WORKER ASSIGNED");

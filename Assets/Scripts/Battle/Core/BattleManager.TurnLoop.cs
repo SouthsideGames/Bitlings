@@ -12,19 +12,44 @@ public partial class BattleManager : MonoBehaviour
     {
         bool playerFirstBySpeed = GetPlayerActsFirstBySpeed();
         MonsterDataSO playerDef = GetTeamDefSafe(activeIndex);
+        float spawnDelay = Mathf.Max(0f, spawnDelayBetweenMonsters);
+        float fallbackFadeTime = Mathf.Max(0.01f, duration * 0.5f);
+
+        PrepareBattleStartInfoFade();
 
         if (feedback != null)
-            yield return feedback.Co_RevealPanels(wildCG, playerCG, duration, playerFirstBySpeed, playerDef, wildDef, Co_AnnounceSpawnLine);
+            yield return feedback.Co_RevealPanels(
+                wildCG,
+                playerCG,
+                duration,
+                playerFirstBySpeed,
+                playerDef,
+                wildDef,
+                onRevealStart: StartSideInfoFadeForIntro,
+                betweenSpawnDelay: spawnDelay,
+                onSpawnAnnounce: Co_AnnounceSpawnLine);
         else
         {
             if (playerFirstBySpeed)
             {
+                StartSideInfoFadeForIntro(BattleFeedbackManager.BattleFeedbackSide.Player, fallbackFadeTime);
                 yield return Co_AnnounceSpawnLine(playerDef);
+
+                if (spawnDelay > 0f)
+                    yield return CoWaitUnscaled(spawnDelay);
+
+                StartSideInfoFadeForIntro(BattleFeedbackManager.BattleFeedbackSide.Wild, fallbackFadeTime);
                 yield return Co_AnnounceSpawnLine(wildDef);
             }
             else
             {
+                StartSideInfoFadeForIntro(BattleFeedbackManager.BattleFeedbackSide.Wild, fallbackFadeTime);
                 yield return Co_AnnounceSpawnLine(wildDef);
+
+                if (spawnDelay > 0f)
+                    yield return CoWaitUnscaled(spawnDelay);
+
+                StartSideInfoFadeForIntro(BattleFeedbackManager.BattleFeedbackSide.Player, fallbackFadeTime);
                 yield return Co_AnnounceSpawnLine(playerDef);
             }
 
@@ -34,7 +59,234 @@ public partial class BattleManager : MonoBehaviour
         if (wildCG) wildCG.alpha = 1f;
         if (playerCG) playerCG.alpha = 1f;
 
+        FinalizeBattleStartIntroVisuals();
+
         yield return Co_StartBattleNow();
+    }
+
+    private void FinalizeBattleStartIntroVisuals()
+    {
+        FinalizeCoreIconIntroAlpha(playerIcon);
+        FinalizeCoreIconIntroAlpha(wildIcon);
+    }
+
+    private void FinalizeCoreIconIntroAlpha(Graphic icon)
+    {
+        if (!icon) return;
+
+        float targetAlpha;
+        if (!_battleStartCoreIconTargetAlpha.TryGetValue(icon, out targetAlpha))
+            targetAlpha = 1f;
+
+        SetGraphicAlphaForIntroFade(icon, targetAlpha);
+    }
+
+    private void PrepareBattleStartInfoFade()
+    {
+        _battleStartInfoTargetAlpha.Clear();
+        _battleStartHpBarTargetAlpha.Clear();
+        _battleStartCoreIconTargetAlpha.Clear();
+
+        PrepareInfoTextForIntroFade(playerNameText);
+        PrepareInfoTextForIntroFade(playerLevelText);
+        PrepareInfoTextForIntroFade(playerIdText);
+        PrepareInfoTextForIntroFade(playerTypeText);
+        PrepareInfoTextForIntroFade(playerRarityText);
+        PrepareInfoTextForIntroFade(playerHPText);
+        PrepareInfoTextForIntroFade(playerATKText);
+        PrepareInfoTextForIntroFade(playerDEFText);
+        PrepareInfoTextForIntroFade(playerSPDText);
+
+        PrepareInfoTextForIntroFade(wildNameText);
+        PrepareInfoTextForIntroFade(wildLevelText);
+        PrepareInfoTextForIntroFade(wildIdText);
+        PrepareInfoTextForIntroFade(wildTypeText);
+        PrepareInfoTextForIntroFade(wildRarityText);
+        PrepareInfoTextForIntroFade(wildHPText);
+        PrepareInfoTextForIntroFade(wildATKText);
+        PrepareInfoTextForIntroFade(wildDEFText);
+        PrepareInfoTextForIntroFade(wildSPDText);
+
+        PrepareHpBarForIntroFade(playerHPBar);
+        PrepareHpBarForIntroFade(wildHPBar);
+
+        PrepareCoreIconForIntroFade(playerIcon);
+        PrepareCoreIconForIntroFade(wildIcon);
+    }
+
+    private void PrepareCoreIconForIntroFade(Graphic icon)
+    {
+        if (!icon) return;
+
+        float targetAlpha = Mathf.Clamp01(icon.color.a);
+        if (targetAlpha <= 0.001f)
+            targetAlpha = 1f;
+
+        _battleStartCoreIconTargetAlpha[icon] = targetAlpha;
+        SetGraphicAlphaForIntroFade(icon, 0f);
+    }
+
+    private void PrepareHpBarForIntroFade(Slider slider)
+    {
+        if (!slider) return;
+
+        var graphics = slider.GetComponentsInChildren<Graphic>(includeInactive: true);
+        if (graphics == null || graphics.Length == 0) return;
+
+        for (int i = 0; i < graphics.Length; i++)
+        {
+            var graphic = graphics[i];
+            if (!graphic) continue;
+
+            float targetAlpha = Mathf.Clamp01(graphic.color.a);
+            _battleStartHpBarTargetAlpha[graphic] = targetAlpha;
+            SetGraphicAlphaForIntroFade(graphic, 0f);
+        }
+    }
+
+    private void PrepareInfoTextForIntroFade(TMP_Text text)
+    {
+        if (!text) return;
+
+        float targetAlpha = Mathf.Clamp01(text.color.a);
+        _battleStartInfoTargetAlpha[text] = targetAlpha;
+        SetInfoTextAlpha(text, 0f);
+    }
+
+    private void StartSideInfoFadeForIntro(BattleFeedbackManager.BattleFeedbackSide side, float fadeDuration)
+    {
+        float duration = Mathf.Max(0f, fadeDuration);
+
+        if (side == BattleFeedbackManager.BattleFeedbackSide.Player)
+        {
+            FadeInfoTextToTarget(playerNameText, duration);
+            FadeInfoTextToTarget(playerLevelText, duration);
+            FadeInfoTextToTarget(playerIdText, duration);
+            FadeInfoTextToTarget(playerTypeText, duration);
+            FadeInfoTextToTarget(playerRarityText, duration);
+            FadeInfoTextToTarget(playerHPText, duration);
+            FadeInfoTextToTarget(playerATKText, duration);
+            FadeInfoTextToTarget(playerDEFText, duration);
+            FadeInfoTextToTarget(playerSPDText, duration);
+            FadeHpBarToTarget(playerHPBar, duration);
+            FadeCoreIconToTarget(playerIcon, duration);
+            return;
+        }
+
+        FadeInfoTextToTarget(wildNameText, duration);
+        FadeInfoTextToTarget(wildLevelText, duration);
+        FadeInfoTextToTarget(wildIdText, duration);
+        FadeInfoTextToTarget(wildTypeText, duration);
+        FadeInfoTextToTarget(wildRarityText, duration);
+        FadeInfoTextToTarget(wildHPText, duration);
+        FadeInfoTextToTarget(wildATKText, duration);
+        FadeInfoTextToTarget(wildDEFText, duration);
+        FadeInfoTextToTarget(wildSPDText, duration);
+        FadeHpBarToTarget(wildHPBar, duration);
+        FadeCoreIconToTarget(wildIcon, duration);
+    }
+
+    private void FadeCoreIconToTarget(Graphic icon, float fadeDuration)
+    {
+        if (!icon) return;
+
+        float targetAlpha;
+        if (!_battleStartCoreIconTargetAlpha.TryGetValue(icon, out targetAlpha))
+            targetAlpha = 1f;
+
+        FadeGraphicToTarget(icon, targetAlpha, fadeDuration);
+    }
+
+    private void FadeHpBarToTarget(Slider slider, float fadeDuration)
+    {
+        if (!slider) return;
+
+        var graphics = slider.GetComponentsInChildren<Graphic>(includeInactive: true);
+        if (graphics == null || graphics.Length == 0) return;
+
+        for (int i = 0; i < graphics.Length; i++)
+        {
+            var graphic = graphics[i];
+            if (!graphic) continue;
+
+            float targetAlpha;
+            if (!_battleStartHpBarTargetAlpha.TryGetValue(graphic, out targetAlpha))
+                targetAlpha = 1f;
+
+            FadeGraphicToTarget(graphic, targetAlpha, fadeDuration);
+        }
+    }
+
+    private void FadeInfoTextToTarget(TMP_Text text, float fadeDuration)
+    {
+        if (!text) return;
+
+        float targetAlpha;
+        if (!_battleStartInfoTargetAlpha.TryGetValue(text, out targetAlpha))
+            targetAlpha = 1f;
+
+        LeanTween.cancel(text.gameObject);
+
+        if (fadeDuration <= 0f)
+        {
+            SetInfoTextAlpha(text, targetAlpha);
+            return;
+        }
+
+        float startAlpha = Mathf.Clamp01(text.color.a);
+        LeanTween.value(text.gameObject, startAlpha, targetAlpha, fadeDuration)
+            .setIgnoreTimeScale(true)
+            .setEaseOutQuad()
+            .setOnUpdate((float a) =>
+            {
+                if (!text) return;
+                SetInfoTextAlpha(text, a);
+            });
+    }
+
+    private static void FadeGraphicToTarget(Graphic graphic, float targetAlpha, float fadeDuration)
+    {
+        if (!graphic) return;
+
+        LeanTween.cancel(graphic.gameObject);
+
+        if (fadeDuration <= 0f)
+        {
+            SetGraphicAlphaForIntroFade(graphic, targetAlpha);
+            return;
+        }
+
+        float startAlpha = Mathf.Clamp01(graphic.color.a);
+        LeanTween.value(graphic.gameObject, startAlpha, Mathf.Clamp01(targetAlpha), fadeDuration)
+            .setIgnoreTimeScale(true)
+            .setEaseOutQuad()
+            .setOnUpdate((float a) =>
+            {
+                if (!graphic) return;
+                SetGraphicAlphaForIntroFade(graphic, a);
+            });
+    }
+
+    private static void SetGraphicAlphaForIntroFade(Graphic graphic, float alpha)
+    {
+        if (!graphic) return;
+
+        float a = Mathf.Clamp01(alpha);
+        var c = graphic.color;
+        c.a = a;
+        graphic.color = c;
+        graphic.canvasRenderer.SetAlpha(a);
+    }
+
+    private static void SetInfoTextAlpha(TMP_Text text, float alpha)
+    {
+        if (!text) return;
+
+        float a = Mathf.Clamp01(alpha);
+        var c = text.color;
+        c.a = a;
+        text.color = c;
+        text.canvasRenderer.SetAlpha(a);
     }
 
     private IEnumerator Co_AnnounceSpawnLine(MonsterDataSO def)

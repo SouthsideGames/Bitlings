@@ -154,6 +154,8 @@ public sealed class JobManager : MonoBehaviour
         if (I != null && I != this) { Destroy(gameObject); return; }
         I = this;
 
+        ValidateJobSiteSetup();
+
         PullSettings();
         if (SettingsManager.I) SettingsManager.I.OnSettingsChanged += PullSettings;
 
@@ -180,6 +182,58 @@ public sealed class JobManager : MonoBehaviour
         if (simulateOfflineOnLoad) ResolveOfflineIfAny();
 
         RefreshAllJobSiteViewsInScene();
+    }
+
+    private void ValidateJobSiteSetup()
+    {
+        if (jobSites == null || jobSites.Count == 0)
+        {
+            Debug.LogWarning("[JobManager] No JobSiteSO entries configured.");
+            return;
+        }
+
+        var seen = new HashSet<JobType>();
+
+        for (int i = 0; i < jobSites.Count; i++)
+        {
+            var cfg = jobSites[i];
+            if (cfg == null)
+            {
+                Debug.LogWarning($"[JobManager] Null JobSiteSO at index {i}.");
+                continue;
+            }
+
+            if (cfg.jobType == JobType.None)
+                Debug.LogWarning($"[JobManager] JobSiteSO '{cfg.name}' has JobType.None.");
+
+            if (!seen.Add(cfg.jobType))
+                Debug.LogWarning($"[JobManager] Duplicate JobSiteSO mapping for job '{cfg.jobType}' (asset '{cfg.name}').");
+
+            if (cfg.maxWorkers < 1 || cfg.maxWorkers > 3)
+                Debug.LogWarning($"[JobManager] JobSiteSO '{cfg.name}' has out-of-range maxWorkers={cfg.maxWorkers}. Expected 1..3.");
+
+            if (cfg.baseRatePerHour < 0f)
+                Debug.LogWarning($"[JobManager] JobSiteSO '{cfg.name}' has negative baseRatePerHour={cfg.baseRatePerHour}.");
+
+            if (cfg.storageCap < 0)
+                Debug.LogWarning($"[JobManager] JobSiteSO '{cfg.name}' has negative storageCap={cfg.storageCap}.");
+
+            if (cfg.eligibleTypes != null && cfg.eligibleTypes.Length > 0 && JobBalance.TryGetAllowedTypes(cfg.jobType, out var strict))
+            {
+                bool anyOverlap = false;
+                for (int t = 0; t < cfg.eligibleTypes.Length; t++)
+                {
+                    if (strict.Contains(cfg.eligibleTypes[t]))
+                    {
+                        anyOverlap = true;
+                        break;
+                    }
+                }
+
+                if (!anyOverlap)
+                    Debug.LogWarning($"[JobManager] JobSiteSO '{cfg.name}' eligibleTypes do not overlap strict mapping for '{cfg.jobType}'.");
+            }
+        }
     }
 
     private void OnEnable()
@@ -411,7 +465,7 @@ public sealed class JobManager : MonoBehaviour
             }
         }
 
-        if (autoReliefEnabled) ApplyClinicRelief(dtHours);
+        if (autoReliefEnabled && !IronCareerRuntime.IsActive) ApplyClinicRelief(dtHours);
 
         SaveRuntimeToSave();
     }
@@ -691,6 +745,12 @@ private static float AverageWorkingSlotFatigue(JobSiteState s)
         int cap = Mathf.Clamp(s.config.maxWorkers, 1, 3);
         if (slotIndex < 0 || slotIndex >= cap) return false;
 
+        if (!TryGetSlotCooldownRemainingSeconds(job, slotIndex, out long remainingSeconds, out bool exhausted))
+            return false;
+
+        if (remainingSeconds > 0 || exhausted)
+            return false;
+
         EnsureWorkerListSize(s, cap);
 
         // Populate both ownedUID and monsterId for robustness:
@@ -721,7 +781,21 @@ private static float AverageWorkingSlotFatigue(JobSiteState s)
         int cap = Mathf.Clamp(s.config.maxWorkers, 1, 3);
         EnsureWorkerListSize(s, cap);
 
-        int empty = s.workers.FindIndex(w => w == null);
+        int empty = -1;
+        for (int i = 0; i < s.workers.Count; i++)
+        {
+            if (s.workers[i] != null) continue;
+
+            if (!TryGetSlotCooldownRemainingSeconds(job, i, out long remainingSeconds, out bool exhausted))
+                continue;
+
+            if (remainingSeconds > 0 || exhausted)
+                continue;
+
+            empty = i;
+            break;
+        }
+
         if (empty == -1) return false;
 
         var wr = BuildWorkerRefFromKey(key, fallbackDef: monster);
@@ -876,6 +950,41 @@ private static float AverageWorkingSlotFatigue(JobSiteState s)
         if (st.slotFatigue01 != null && slotIndex < st.slotFatigue01.Length)
             exhausted = Mathf.Clamp01(st.slotFatigue01[slotIndex]) >= 1f;
 
+        return true;
+    }
+
+    /// <summary>
+    /// Returns remaining cooldown for a worker key (ownedUID preferred, species id fallback).
+    /// </summary>
+    public bool TryGetWorkerCooldownRemainingSeconds(string key, out long remainingSeconds)
+    {
+        remainingSeconds = 0;
+        if (string.IsNullOrEmpty(key)) return false;
+
+        long now = SaveManager.NowUnix();
+        long bestUntil = 0;
+
+        if (_cooldownUntil.TryGetValue(key, out long directUntil) && directUntil > now)
+            bestUntil = directUntil;
+
+        var owned = SaveManager.Data?.owned;
+        if (owned != null)
+        {
+            for (int i = 0; i < owned.Count; i++)
+            {
+                var om = owned[i];
+                if (om == null) continue;
+                if (om.monsterId != key) continue;
+                if (string.IsNullOrEmpty(om.ownedUID)) continue;
+
+                if (_cooldownUntil.TryGetValue(om.ownedUID, out long until) && until > bestUntil)
+                    bestUntil = until;
+            }
+        }
+
+        if (bestUntil <= now) return false;
+
+        remainingSeconds = bestUntil - now;
         return true;
     }
 

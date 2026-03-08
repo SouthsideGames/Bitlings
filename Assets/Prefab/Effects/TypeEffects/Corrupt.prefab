@@ -12,6 +12,7 @@ GameObject:
   - component: {fileID: 7486186666205266584}
   - component: {fileID: 1855151823372315340}
   - component: {fileID: 6421872377706504670}
+  - component: {fileID: -3598172769372249653}
   m_Layer: 5
   m_Name: Corrupt
   m_TagString: Untagged
@@ -98,3 +99,22 @@ Animator:
   m_AllowConstantClipSamplingOptimization: 1
   m_KeepAnimatorStateOnDisable: 0
   m_WriteDefaultValuesOnDisable: 0
+--- !u!114 &-3598172769372249653
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8046187082596486557}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fbfb77ed3355f4634a8c165181d69411, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PlaySfxOnSpawn
+  clip: {fileID: 8300000, guid: 4238e09c1df3c490aaf39125bb9e8fdb, type: 3}
+  volumeMult: 0.5
+  randomizePitch: 0
+  pitch: 1
+  pitchMin: 0.95
+  pitchMax: 1.05
+  playOnEnable: 1
