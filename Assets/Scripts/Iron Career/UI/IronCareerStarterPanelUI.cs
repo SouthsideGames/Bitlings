@@ -31,6 +31,7 @@ public sealed class IronCareerStarterPanelUI : MonoBehaviour
     [SerializeField] private Button startButton;
     [SerializeField] private Button backButton;
     [SerializeField] private Button rulesButton;
+    [SerializeField] private Button recordsButton;
 
     [Header("Daily Reroll UI")]
     [SerializeField] private TMP_Text rerollCountText;
@@ -73,6 +74,7 @@ public sealed class IronCareerStarterPanelUI : MonoBehaviour
         if (startButton) startButton.onClick.AddListener(StartRun);
         if (backButton) backButton.onClick.AddListener(BackToHome);
         if (rulesButton) rulesButton.onClick.AddListener(OpenRules);
+        if (recordsButton) recordsButton.onClick.AddListener(OpenRecords);
 
         if (standardToggle) standardToggle.onValueChanged.AddListener(OnStandardToggleChanged);
         if (hardcoreToggle) hardcoreToggle.onValueChanged.AddListener(OnHardcoreToggleChanged);
@@ -604,5 +606,19 @@ public sealed class IronCareerStarterPanelUI : MonoBehaviour
             _ironUI.ShowRules(immediate: true);
         else
             Debug.LogWarning("[IronCareerStarterPanelUI] OpenRules failed: missing IronCareerEncounterPanelUI.");
+    }
+
+    public void OpenRecords()
+    {
+        if (!_ironUI)
+        {
+            _ironUI = IronCareerEncounterPanelUI.I;
+            if (!_ironUI) _ironUI = FindFirstObjectByType<IronCareerEncounterPanelUI>(FindObjectsInactive.Include);
+        }
+
+        if (_ironUI)
+            _ironUI.ShowRecords(immediate: true);
+        else
+            Debug.LogWarning("[IronCareerStarterPanelUI] OpenRecords failed: missing IronCareerEncounterPanelUI.");
     }
 }

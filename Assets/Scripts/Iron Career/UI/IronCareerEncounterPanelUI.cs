@@ -18,6 +18,7 @@ public sealed class IronCareerEncounterPanelUI : MonoBehaviour
     [SerializeField] private CanvasGroup rest;
     [SerializeField] private CanvasGroup gameOver;
     [SerializeField] private CanvasGroup rules;
+    [SerializeField] private CanvasGroup records;
 
     [Header("Fade")]
     [SerializeField, Range(0f, 1f)] private float fadeTime = 0.20f;
@@ -38,6 +39,7 @@ public sealed class IronCareerEncounterPanelUI : MonoBehaviour
         if (!rest) rest = FindCg("Rest");
         if (!gameOver) gameOver = FindCg("GameOver");
         if (!rules) rules = FindCg("Rules");
+        if (!records) records = FindCg("Records");
 
         if (!battleRoot)
         {
@@ -127,6 +129,17 @@ public sealed class IronCareerEncounterPanelUI : MonoBehaviour
         HideOnly(rules, immediate);
     }
 
+    public void ShowRecords(bool immediate = false)
+    {
+        // Records is an overlay popup: don't hide others.
+        ShowOnly(records, immediate);
+    }
+
+    public void HideRecords(bool immediate = false)
+    {
+        HideOnly(records, immediate);
+    }
+
     /// <summary>Call when you want the player to be in battle view (no overlays).</summary>
     public void ShowBattleOnly(bool immediate = false)
     {
@@ -144,7 +157,7 @@ public sealed class IronCareerEncounterPanelUI : MonoBehaviour
 
         if (battleRoot) battleRoot.SetActive(true);
 
-        CanvasGroup[] overlays = { starter, hire, replace, post, forcedEvolve, rest, gameOver, rules };
+        CanvasGroup[] overlays = { starter, hire, replace, post, forcedEvolve, rest, gameOver, rules, records };
 
         if (fadeTime <= 0f)
         {
@@ -214,6 +227,7 @@ public sealed class IronCareerEncounterPanelUI : MonoBehaviour
             HideOnly(rest, false);
             HideOnly(gameOver, false);
             HideOnly(rules, false);
+            HideOnly(records, false);
         }
     }
 
@@ -252,6 +266,7 @@ public sealed class IronCareerEncounterPanelUI : MonoBehaviour
         SetCG(rest, false, 0f);
         SetCG(gameOver, false, 0f);
         SetCG(rules, false, 0f);
+        SetCG(records, false, 0f);
     }
 
     private void ShowOnly(CanvasGroup cg, bool immediate)

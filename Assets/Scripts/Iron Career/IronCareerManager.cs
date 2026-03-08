@@ -993,7 +993,7 @@ public sealed class IronCareerManager : MonoBehaviour, IronBattleBridge.IIronBat
         if (_finalizedRunStats) return;
         _finalizedRunStats = true;
 
-        IronCareerStats.RecordRunEnd(_state.mode, _state.wins, forfeited);
+        IronCareerStats.RecordRunEnd(_state.mode, _state.wins, forfeited, _state.runSummary);
     }
 
     public void ReturnToMenuFromGameOver()
