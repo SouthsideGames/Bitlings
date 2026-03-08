@@ -1043,7 +1043,7 @@ public partial class BattleManager : MonoBehaviour
         var injectedTeam = (rosterProvider != null) ? rosterProvider.GetPlayerTeam() : null;
         bool usingInjected = (injectedTeam != null && injectedTeam.Count > 0);
 
-        var roster = usingInjected ? null : SaveManager.Data.team;
+        var roster = usingInjected ? null : SaveManager.Data?.team;
 
         if (!usingInjected)
         {

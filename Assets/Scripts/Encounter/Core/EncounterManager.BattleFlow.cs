@@ -98,7 +98,10 @@ public partial class EncounterManager
 
         int sum = 0;
         for (int i = 0; i < data.team.Count; i++)
-            sum += data.team[i].level;
+        {
+            var m = data.team[i];
+            if (m != null) sum += m.level;
+        }
 
         return Mathf.Max(1, Mathf.RoundToInt((float)sum / data.team.Count));
     }
@@ -213,13 +216,13 @@ public partial class EncounterManager
 
         PlayEncounterSfx(wild);
 
-        var p = data.team[0];
+        var p = (data != null && data.team != null && data.team.Count > 0) ? data.team[0] : null;
         string titleSuffix = string.IsNullOrEmpty(WildTitleLabel) ? "" : $" — {WildTitleLabel}";
 
         if (_currentEncounterIsBoss)
-            EmitStatus($"⚠️ BOSS ENCOUNTER! {wild.displayName} (Lv {wildLevel}){titleSuffix} appears.{(p.flatAtkBonus > 0 ? $" (+ATK {p.flatAtkBonus})" : "")}");
+            EmitStatus($"⚠️ BOSS ENCOUNTER! {wild.displayName} (Lv {wildLevel}){titleSuffix} appears.{(p != null && p.flatAtkBonus > 0 ? $" (+ATK {p.flatAtkBonus})" : "")}");
         else
-            EmitStatus($"Encounter! A wild {wild.displayName} (Lv {wildLevel}){titleSuffix} appears.{(p.flatAtkBonus > 0 ? $" (+ATK {p.flatAtkBonus})" : "")}");
+            EmitStatus($"Encounter! A wild {wild.displayName} (Lv {wildLevel}){titleSuffix} appears.{(p != null && p.flatAtkBonus > 0 ? $" (+ATK {p.flatAtkBonus})" : "")}");
 
         BattleLogger.BeginEncounter(_currentEncounterIsBoss
             ? $"BOSS: {wild.displayName} Lv{wildLevel}{titleSuffix}"

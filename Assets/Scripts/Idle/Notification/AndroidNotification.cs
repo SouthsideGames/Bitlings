@@ -5,7 +5,7 @@ using Unity.Notifications.Android;
 using UnityEngine.Android;
 #endif
 
-public class AndroidNofitication : MonoBehaviour
+public class AndroidNotification : MonoBehaviour
 {
 #if UNITY_ANDROID
     public void RequestAuthorization()

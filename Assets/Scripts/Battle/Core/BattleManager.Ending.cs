@@ -47,7 +47,7 @@ public partial class BattleManager : MonoBehaviour
 
         if (!escaped)
         {
-            basecredits = BattleRewards.creditsFor(victory, wildLevel, survived);
+            basecredits = BattleRewards.CreditsFor(victory, wildLevel, survived);
             finalcredits = basecredits;
 
             if (victory && teamTitleIds != null && activeIndex >= 0 && activeIndex < teamTitleIds.Length)
@@ -280,7 +280,7 @@ public partial class BattleManager : MonoBehaviour
 
         if (!escaped)
         {
-            basecredits = BattleRewards.creditsFor(victory, wildLevel, survived);
+            basecredits = BattleRewards.CreditsFor(victory, wildLevel, survived);
             finalcredits = basecredits;
 
             if (victory && teamIds != null && activeIndex >= 0 && activeIndex < teamIds.Length)
