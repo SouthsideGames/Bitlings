@@ -170,6 +170,10 @@ public class BattleManager : MonoBehaviour
     [SerializeField] private BattleTextBoxUI battleTextBox;
     [SerializeField] private BattleSwitchToggle _bottomToggle;
 
+    [Header("Battle Countdown")]
+    [SerializeField] private TextMeshProUGUI countdownText;
+    [SerializeField, Min(0.1f)] private float countdownStepDuration = 0.7f;
+
 
     [Header("Debug")]
     [SerializeField] private bool debugIncomingMitigation = false;
@@ -2153,7 +2157,23 @@ public class BattleManager : MonoBehaviour
         if (wildCG) { wildCG.alpha = 1f; wildCG.blocksRaycasts = true; wildCG.interactable = true; }
         if (playerCG) { playerCG.alpha = 1f; playerCG.blocksRaycasts = true; playerCG.interactable = true; }
 
+        yield return Co_Countdown();
         yield return Co_StartBattleNow();
+    }
+
+    private IEnumerator Co_Countdown()
+    {
+        bool hasText = countdownText != null;
+        if (hasText) countdownText.gameObject.SetActive(true);
+
+        for (int i = 3; i >= 1; i--)
+        {
+            if (hasText) countdownText.text = i.ToString();
+            AudioManager.I?.PlaySfx(SfxType.CountdownBeep);
+            yield return new WaitForSecondsRealtime(countdownStepDuration);
+        }
+
+        if (hasText) countdownText.gameObject.SetActive(false);
     }
 
     private IEnumerator Co_StartBattleNow()

@@ -36,6 +36,9 @@ public enum SfxType
     BossEncounter = 15,
     UnqiueEncounter = 16,
 
+    // Battle Countdown
+    CountdownBeep = 20,
+
 }
 
 [Serializable]
