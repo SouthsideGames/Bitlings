@@ -42,6 +42,17 @@ public class BattleSwitchToggle : MonoBehaviour
             toggleButton.onClick.RemoveListener(Toggle);
     }
 
+    void OnEnable()
+    {
+        GameEvents.OnEncounterAutoModeChanged += HandleAutoModeChanged;
+        HandleAutoModeChanged();
+    }
+
+    void OnDisable()
+    {
+        GameEvents.OnEncounterAutoModeChanged -= HandleAutoModeChanged;
+    }
+
     public void Toggle()
     {
         if (battle != null && battle.NarrationLocked)

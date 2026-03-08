@@ -53,7 +53,7 @@ public sealed class PromotionManager : MonoBehaviour
         if (gain <= 0) return;
 
         // ✅ UX change: no toast popups.
-        AddPromotionXp(gain, showToast: false);
+        AddPromotionXp(gain);
     }
 
     public int ComputeXpGain(BattleResult result)
@@ -66,7 +66,7 @@ public sealed class PromotionManager : MonoBehaviour
         return gain;
     }
 
-    public void AddPromotionXp(int amount, bool showToast)
+    public void AddPromotionXp(int amount)
     {
         if (SaveManager.Data == null) return;
         if (amount <= 0) return;
@@ -87,7 +87,6 @@ public sealed class PromotionManager : MonoBehaviour
 
             int xpThisRankMax = GetXpIntoCurrentRank(pm.promotionRank, pm.promotionXP);
             GameEvents.PromotionProgressChanged?.Invoke(pm.promotionRank, pm.promotionXP, xpThisRankMax, 0);
-            _ = showToast;
             return;
         }
 
@@ -106,10 +105,6 @@ public sealed class PromotionManager : MonoBehaviour
 
         if (rankedUp)
             GameEvents.PromotionRankChanged?.Invoke(oldRank, newRank);
-
-        // ✅ Toasts disabled intentionally (do not emit even if showToast==true).
-        // If you later want a subtle non-toast indicator, do it via UI (badge/pulse on dossier button).
-        _ = showToast;
     }
 
     private bool TryProcessRankUps(out int newRank)

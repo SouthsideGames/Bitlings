@@ -35,7 +35,7 @@ public enum SfxType
     //Encounters
     ShinyEncounter = 14,
     BossEncounter = 15,
-    UnqiueEncounter = 16,
+    UniqueEncounter = 16,
 
     // Battle countdown
     CountdownBeep = 21,

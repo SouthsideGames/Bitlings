@@ -109,9 +109,6 @@ public class BattleTextBoxUI : MonoBehaviour
 
         var em = EncounterManager.I;
         if (em == null) return;
-
-        bool inRegularBattle = em.IsInBattle;
-        //canvasGroup.alpha = inRegularBattle ? 1f : 0f;
     }
 
     private IEnumerator CoWaitUnscaled(float seconds)

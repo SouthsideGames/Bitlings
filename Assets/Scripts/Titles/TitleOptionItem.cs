@@ -116,7 +116,7 @@ public sealed class TitleOptionItem : MonoBehaviour
 
         RefreshButtonVisuals();
 
-        AudioManager.I.PlayClick();
+        AudioManager.I?.PlayClick();
 
         TitleAssignPanelUI.OnTitlesChanged?.Invoke(_ownedId);
         _onChanged?.Invoke();
@@ -138,6 +138,6 @@ public sealed class TitleOptionItem : MonoBehaviour
 
         InfoRouter.Open(id, fallbackTitle, fallbackSubtitle, fallbackBody);
 
-        AudioManager.I.PlayClick();
+        AudioManager.I?.PlayClick();
     }
 }

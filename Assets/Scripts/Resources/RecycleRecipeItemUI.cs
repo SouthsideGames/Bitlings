@@ -64,7 +64,7 @@ public class RecycleRecipeItemUI : MonoBehaviour
 
     private void OnClick()
     {
-        AudioManager.I.PlayClick();
+        AudioManager.I?.PlayClick();
         _onClicked?.Invoke(this);
     }
 

@@ -7,7 +7,8 @@ public class AppLifecycle : MonoBehaviour
     {
         if (paused)
         {
-            SaveManager.Data.lastClosedUnix = SaveManager.NowUnix();
+            if (SaveManager.Data != null)
+                SaveManager.Data.lastClosedUnix = SaveManager.NowUnix();
             SaveManager.Save();
         }
         else
@@ -23,7 +24,8 @@ public class AppLifecycle : MonoBehaviour
 
     void OnApplicationQuit()
     {
-        SaveManager.Data.lastClosedUnix = SaveManager.NowUnix();
+        if (SaveManager.Data != null)
+            SaveManager.Data.lastClosedUnix = SaveManager.NowUnix();
         SaveManager.Save();
     }
 }

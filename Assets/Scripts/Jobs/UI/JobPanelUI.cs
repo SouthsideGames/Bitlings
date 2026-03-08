@@ -173,7 +173,7 @@ public class JobPanelUI : MonoBehaviour
                 t.collectBtn.onClick.AddListener(() =>
                 {
                     int got = JobManager.I.Collect(t.job);
-                    AudioManager.I.PlaySfx(SfxType.Collect);
+                    AudioManager.I?.PlaySfx(SfxType.Collect);
                     PlayCollectFX(t);
                     Refresh();
                 });

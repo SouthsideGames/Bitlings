@@ -110,6 +110,12 @@ public sealed class TitleButtonUI : MonoBehaviour
             return;
         }
 
+        if (TitleManager.I == null)
+        {
+            label.text = "UNEMPLOYED";
+            return;
+        }
+
         List<TitleSO> equipped = TitleManager.I.GetEquippedList(_ownedMonsterId, _monsterDef, _level);
 
         if (equipped != null)
