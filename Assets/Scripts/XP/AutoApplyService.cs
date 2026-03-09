@@ -196,6 +196,6 @@ public partial class AutoApplyService : MonoBehaviour
         int totalMaxHP = HealingService.CalcMaxHP(def, om.level, includeTraining: true, includeTitles: false);
 
         if (om.currentHP > totalMaxHP)
-            SaveManager.SetMonsterHP(om, om.currentHP, stampLastHpUnix: false, save: false, fireEvents: false);
+            SaveManager.SetMonsterHP(om, totalMaxHP, stampLastHpUnix: false, save: false, fireEvents: false);
     }
 }

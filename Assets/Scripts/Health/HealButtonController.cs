@@ -96,7 +96,7 @@ public class HealButtonController : MonoBehaviour
         if (team == null || teamIndex < 0 || teamIndex >= team.Count) return;
 
         var owned = team[teamIndex];
-        if (string.IsNullOrEmpty(owned.monsterId)) return;
+        if (owned == null || string.IsNullOrEmpty(owned.monsterId)) return;
 
         var def = (library != null) ? library.GetById(owned.monsterId) : null;
         if (def == null)
@@ -170,7 +170,7 @@ public class HealButtonController : MonoBehaviour
         if (team == null || teamIndex < 0 || teamIndex >= team.Count) return;
 
         var owned = team[teamIndex];
-        if (string.IsNullOrEmpty(owned.monsterId)) return;
+        if (owned == null || string.IsNullOrEmpty(owned.monsterId)) return;
 
         var def = (library != null) ? library.GetById(owned.monsterId) : null;
         if (def == null) { Refresh(); return; }

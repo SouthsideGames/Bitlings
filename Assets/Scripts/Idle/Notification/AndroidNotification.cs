@@ -33,7 +33,7 @@ public class AndroidNotification : MonoBehaviour
     {
         fireTimeInSeconds = Mathf.Max(60, fireTimeInSeconds);
 
-        var notification = new AndroidNotification
+        var notification = new Unity.Notifications.Android.AndroidNotification
         {
             Title = title,
             Text = text,

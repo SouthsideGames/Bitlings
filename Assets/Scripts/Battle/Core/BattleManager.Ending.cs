@@ -317,7 +317,7 @@ public partial class BattleManager : MonoBehaviour
             growthCoreBaseAfterShiny = Mathf.Max(0, baseAfterShiny);
 
             float titleCoreMul = 1f;
-            if (teamIds != null && activeIndex >= 0 && activeIndex < teamIds.Length)
+            if (teamTitleIds != null && activeIndex >= 0 && activeIndex < teamTitleIds.Length)
                 titleCoreMul = Mathf.Max(0f, TitlesAdapter.GetGrowthCoreMultOnVictory(teamTitleIds[activeIndex], wildDef, wildLevel));
 
             int growthCoreAfterTitles = Mathf.Max(0, Mathf.RoundToInt(baseAfterShiny * titleCoreMul));
