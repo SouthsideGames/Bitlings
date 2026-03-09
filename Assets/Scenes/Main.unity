@@ -21030,6 +21030,13 @@ MonoBehaviour:
     pitchMin: 0.85
     pitchMax: 1.05
     cooldown: 0
+  - type: 21
+    clips:
+    - {fileID: 8300000, guid: 067520022e6da934e877639bed3b898a, type: 3}
+    volume: 0.5
+    pitchMin: 0.85
+    pitchMax: 1.05
+    cooldown: 0
   autoSwapForEncounter: 1
 --- !u!1 &220253925
 GameObject:
