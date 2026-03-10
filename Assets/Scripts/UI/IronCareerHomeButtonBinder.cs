@@ -62,7 +62,10 @@ public sealed class IronCareerHomeButtonBinder : MonoBehaviour
         if (!IsUnlockedGate()) return;
 
         if (enterIronOnClick)
+        {
+            Debug.LogWarning("[IronCareerHomeButtonBinder] enterIronOnClick is enabled. This is a legacy debug path and can cause pre-run side effects. Recommended: keep it OFF.");
             IronCareerRuntime.Enter();
+        }
 
         if (UIManager.I)
         {

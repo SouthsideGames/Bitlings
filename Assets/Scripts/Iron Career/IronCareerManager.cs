@@ -77,6 +77,7 @@ public sealed class IronCareerManager : MonoBehaviour, IronBattleBridge.IIronBat
     }
 
     public int Wins => Mathf.Max(0, _state.wins);
+    public bool IsRunActive => _state.runActive;
 
     // Back-compat for UI panels that read mode directly.
     public bool IsHardcoreMode => _state.mode == IronCareerRunState.IronCareerMode.Hardcore;

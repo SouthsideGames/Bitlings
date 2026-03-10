@@ -23,6 +23,8 @@ public sealed class IronEventGuard : MonoBehaviour
     [SerializeField] private bool forbidJobs = true;
     [SerializeField] private bool forbidWorldEvents = true;
 
+    private IronCareerManager _ironManager;
+
     private void OnEnable()
     {
         // NOTE: We intentionally subscribe broadly; checks are gated by IronCareerRuntime.IsActive.
@@ -75,7 +77,7 @@ public sealed class IronEventGuard : MonoBehaviour
     private void Violation(string what)
     {
         if (!enabledGuard) return;
-        if (!IronCareerRuntime.IsActive) return;
+        if (!IsGuardActive()) return;
 
         string msg = $"[IronEventGuard] FORBIDDEN event fired during Iron: {what}";
         if (logStackTrace)
@@ -87,6 +89,16 @@ public sealed class IronEventGuard : MonoBehaviour
         if (pauseEditorOnViolation)
             Debug.Break();
 #endif
+    }
+
+    private bool IsGuardActive()
+    {
+        if (!IronCareerRuntime.IsActive) return false;
+
+        if (!_ironManager)
+            _ironManager = FindFirstObjectByType<IronCareerManager>(FindObjectsInactive.Include);
+
+        return _ironManager != null && _ironManager.IsRunActive;
     }
 
     private void OnBattleFinished(BattleResult r)

@@ -138,10 +138,8 @@ public class BattleTextBoxUI : MonoBehaviour
 
         if (canvasGroup)
         {
-            canvasGroup.alpha = 1f;
             canvasGroup.interactable = false;
             canvasGroup.blocksRaycasts = false;
-            if (!canvasGroup.gameObject.activeSelf) canvasGroup.gameObject.SetActive(true);
         }
 
         if (lineText == null) yield break;
@@ -254,13 +252,6 @@ public class BattleTextBoxUI : MonoBehaviour
         while (t != null)
         {
             if (!t.gameObject.activeSelf) t.gameObject.SetActive(true);
-
-            var cg = t.GetComponent<CanvasGroup>();
-            if (cg)
-            {
-                cg.alpha = 1f;
-            }
-
             t = t.parent;
         }
     }
