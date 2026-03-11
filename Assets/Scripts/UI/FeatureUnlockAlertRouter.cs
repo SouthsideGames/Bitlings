@@ -19,11 +19,20 @@ public sealed class FeatureUnlockAlertRouter : MonoBehaviour
     [SerializeField] private GameObject gymAlert;
     [SerializeField] private Button gymButton;
 
+    [Header("Resource Alert")]
+    [SerializeField] private GameObject resourceAlert;
+    [SerializeField] private Button resourceButton;
+
+    [Header("Iron Career Alert")]
+    [SerializeField] private GameObject ironCareerAlert;
+    [SerializeField] private Button ironCareerButton;
+
     [Header("Startup")]
     [SerializeField] private bool hideAllOnEnable = false;
 
     private const int SynergyUnlockRank = 10;
     private const int DifficultyUnlockRank = 15;
+    private const int IronCareerUnlockRank = 20;
 
     private void OnEnable()
     {
@@ -37,6 +46,8 @@ public sealed class FeatureUnlockAlertRouter : MonoBehaviour
         AddDismiss(settingsButton, DismissSettings);
         AddDismiss(codexButton, DismissCodex);
         AddDismiss(gymButton, DismissGym);
+        AddDismiss(resourceButton, DismissResource);
+        AddDismiss(ironCareerButton, DismissIronCareer);
     }
 
     private void OnDisable()
@@ -48,6 +59,8 @@ public sealed class FeatureUnlockAlertRouter : MonoBehaviour
         RemoveDismiss(settingsButton, DismissSettings);
         RemoveDismiss(codexButton, DismissCodex);
         RemoveDismiss(gymButton, DismissGym);
+        RemoveDismiss(resourceButton, DismissResource);
+        RemoveDismiss(ironCareerButton, DismissIronCareer);
     }
 
     private void HandleFeatureUnlocked(FeatureId feature)
@@ -73,6 +86,10 @@ public sealed class FeatureUnlockAlertRouter : MonoBehaviour
             case FeatureId.AutoGrowth_UsePresets:
                 SetAlert(gymAlert, true);
                 break;
+
+            case FeatureId.Recycle_Basic:
+                SetAlert(resourceAlert, true);
+                break;
         }
     }
 
@@ -83,12 +100,17 @@ public sealed class FeatureUnlockAlertRouter : MonoBehaviour
 
         if (oldRank < DifficultyUnlockRank && newRank >= DifficultyUnlockRank)
             SetAlert(settingsAlert, true);
+
+        if (oldRank < IronCareerUnlockRank && newRank >= IronCareerUnlockRank)
+            SetAlert(ironCareerAlert, true);
     }
 
     private void DismissEncounter() => SetAlert(encounterAlert, false);
     private void DismissSettings() => SetAlert(settingsAlert, false);
     private void DismissCodex() => SetAlert(codexAlert, false);
     private void DismissGym() => SetAlert(gymAlert, false);
+    private void DismissResource() => SetAlert(resourceAlert, false);
+    private void DismissIronCareer() => SetAlert(ironCareerAlert, false);
 
     private void HideAllAlerts()
     {
@@ -96,6 +118,8 @@ public sealed class FeatureUnlockAlertRouter : MonoBehaviour
         SetAlert(settingsAlert, false);
         SetAlert(codexAlert, false);
         SetAlert(gymAlert, false);
+        SetAlert(resourceAlert, false);
+        SetAlert(ironCareerAlert, false);
     }
 
     private static void SetAlert(GameObject target, bool visible)

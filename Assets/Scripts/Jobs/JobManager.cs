@@ -1109,7 +1109,8 @@ private static float AverageWorkingSlotFatigue(JobSiteState s)
                     job = s.config.jobType,
                     slotFatigue01 = (float[])(s.slotFatigue01?.Clone() ?? Array.Empty<float>()),
                     slotCooldownUntilUnix = (long[])(s.slotCooldownUntilUnix?.Clone() ?? Array.Empty<long>()),
-                    autoCollectEnabled = s.autoCollectEnabled
+                    autoCollectEnabled = s.autoCollectEnabled,
+                    allowClinicRelief = s.allowClinicRelief
                 });
             }
 
@@ -1159,6 +1160,7 @@ private static float AverageWorkingSlotFatigue(JobSiteState s)
 
                     // Safe default for older saves.
                     st.autoCollectEnabled = rs.autoCollectEnabled;
+                    st.allowClinicRelief = rs.allowClinicRelief;
                 }
             }
         }

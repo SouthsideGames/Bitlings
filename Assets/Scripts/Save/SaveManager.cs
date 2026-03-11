@@ -14,6 +14,7 @@ public class JobRuntimeSite
     public long[] slotCooldownUntilUnix;
 
     public bool autoCollectEnabled;
+    public bool allowClinicRelief = true;
 }
 
 [Serializable]

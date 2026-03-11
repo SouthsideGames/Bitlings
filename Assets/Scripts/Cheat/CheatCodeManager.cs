@@ -505,10 +505,10 @@ public class CheatCodeManager : MonoBehaviour
             {
                 if (t == ResourceType.None) continue;
 
-                // Use the same path you used before (ResourceManager if present),
-                // but per-type booster capping is enforced by ResourceBank regardless.
-                if (ResourceManager.I != null) ResourceManager.I.Add(t, AMOUNT);
-                else ResourceBank.Add(t, AMOUNT);
+                // Use ResourceBank.Set directly to bypass WorldEvent gain multipliers
+                // that can zero-out the delta for certain resource types (e.g. Coffee).
+                int cur = ResourceBank.Get(t);
+                ResourceBank.Set(t, cur + AMOUNT);
 
                 GameEvents.ResourceAdded?.Invoke(t, AMOUNT);
                 touched++;
@@ -545,10 +545,10 @@ public class CheatCodeManager : MonoBehaviour
             {
                 if (t == ResourceType.None) continue;
 
-                // Use the same path you used before (ResourceManager if present),
-                // but per-type booster capping is enforced by ResourceBank regardless.
-                if (ResourceManager.I != null) ResourceManager.I.Add(t, AMOUNT);
-                else ResourceBank.Add(t, AMOUNT);
+                // Use ResourceBank.Set directly to bypass WorldEvent gain multipliers
+                // that can zero-out the delta for certain resource types (e.g. Coffee).
+                int cur = ResourceBank.Get(t);
+                ResourceBank.Set(t, cur + AMOUNT);
 
                 GameEvents.ResourceAdded?.Invoke(t, AMOUNT);
                 touched++;
