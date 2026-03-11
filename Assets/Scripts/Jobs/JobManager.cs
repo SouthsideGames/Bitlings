@@ -410,12 +410,13 @@ public sealed class JobManager : MonoBehaviour
             }
             else
             {
-                float grossRateHr = ComputeRatePerHour(s) * Mathf.Max(0f, worldRateMul);
-
+                // Apply fatigue FIRST so fatigued workers are removed before rate calc.
+                // This prevents phantom production in the tick a worker fatigues out.
                 ApplyPerSlotFatigue(dtHours, s);
 
+                float grossRateHr = ComputeRatePerHour(s) * Mathf.Max(0f, worldRateMul);
                 float eff = AverageWorkingSlotEfficiency(s);
-            float finalRateHr = grossRateHr * eff;
+                float finalRateHr = grossRateHr * eff;
                 s.cachedRatePerHour = finalRateHr;
 
                 int cap = GetEffectiveStorageCap(s.config);
@@ -506,7 +507,7 @@ private static float AverageWorkingSlotEfficiency(JobSiteState s)
         count++;
     }
 
-    if (count <= 0) return 1f;
+    if (count <= 0) return 0f;
     return UnityEngine.Mathf.Clamp01(sum / count);
 }
 private static float AverageWorkingSlotFatigue(JobSiteState s)
