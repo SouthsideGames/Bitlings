@@ -34050,6 +34050,7 @@ MonoBehaviour:
   target: 0
   visualsRoot: {fileID: 1437681278}
   iconImage: {fileID: 948965671}
+  noTitleIcon: {fileID: -247443918134689151, guid: 515c28cab5097433ba7d28620d333145, type: 3}
   titleLabel: {fileID: 2138333378}
   infoButton: {fileID: 948965670}
   hideIfNoTitle: 1
@@ -34071,6 +34072,7 @@ MonoBehaviour:
   target: 1
   visualsRoot: {fileID: 897578114}
   iconImage: {fileID: 153717933}
+  noTitleIcon: {fileID: -247443918134689151, guid: 515c28cab5097433ba7d28620d333145, type: 3}
   titleLabel: {fileID: 779342043}
   infoButton: {fileID: 153717932}
   hideIfNoTitle: 1
@@ -159860,6 +159862,7 @@ MonoBehaviour:
   target: 1
   visualsRoot: {fileID: 1780149859}
   iconImage: {fileID: 1013156211}
+  noTitleIcon: {fileID: -247443918134689151, guid: 515c28cab5097433ba7d28620d333145, type: 3}
   titleLabel: {fileID: 1374400115}
   infoButton: {fileID: 1013156210}
   hideIfNoTitle: 1
@@ -159881,6 +159884,7 @@ MonoBehaviour:
   target: 0
   visualsRoot: {fileID: 789214072}
   iconImage: {fileID: 2004579565}
+  noTitleIcon: {fileID: -247443918134689151, guid: 515c28cab5097433ba7d28620d333145, type: 3}
   titleLabel: {fileID: 1782169549}
   infoButton: {fileID: 2004579564}
   hideIfNoTitle: 1

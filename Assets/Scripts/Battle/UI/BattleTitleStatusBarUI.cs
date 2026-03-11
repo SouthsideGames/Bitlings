@@ -17,6 +17,7 @@ public sealed class BattleTitleStatusBarUI : MonoBehaviour
     [Header("UI")]
     [SerializeField] private GameObject visualsRoot; // child container to hide/show
     [SerializeField] private Image iconImage;
+    [SerializeField] private Sprite noTitleIcon;
     [SerializeField] private TextMeshProUGUI titleLabel;
     [SerializeField] private Button infoButton;
 
@@ -139,7 +140,7 @@ public sealed class BattleTitleStatusBarUI : MonoBehaviour
         {
             // Wild bar should not disappear in battle, but if EM is missing, do something sensible.
             _currentTitle = null;
-            if (iconImage) iconImage.sprite = null;
+            ApplyNoTitleIcon();
             if (titleLabel) titleLabel.text = string.IsNullOrEmpty(noTitleLabel) ? "Unemployed" : noTitleLabel;
             SetVisible(true);
             SetInfoInteractable(false);
@@ -172,7 +173,7 @@ public sealed class BattleTitleStatusBarUI : MonoBehaviour
         }
 
         // Truly no title: show unemployed label text only
-        if (iconImage) iconImage.sprite = null;
+        ApplyNoTitleIcon();
         if (titleLabel) titleLabel.text = em.WildTitleLabel; // "Unemployed" (or your configured label)
         SetVisible(true);
         SetInfoInteractable(false);
@@ -219,7 +220,7 @@ public sealed class BattleTitleStatusBarUI : MonoBehaviour
     {
         _currentTitle = null;
 
-        if (iconImage) iconImage.sprite = null;
+        ApplyNoTitleIcon();
 
         // In-battle, both sides should show a consistent "no title" state (Unemployed).
         // Out of battle, respect legacy behavior (optional hide for player).
@@ -254,6 +255,11 @@ public sealed class BattleTitleStatusBarUI : MonoBehaviour
         // Optional: dim the icon button when disabled
         var cg = infoButton.GetComponent<CanvasGroup>();
         if (cg) cg.alpha = interactable ? 1f : 0.35f;
+    }
+
+    private void ApplyNoTitleIcon()
+    {
+        if (iconImage) iconImage.sprite = noTitleIcon;
     }
 
 
