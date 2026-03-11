@@ -212,6 +212,8 @@ public class HealButtonController : MonoBehaviour
         GameEvents.OnTeamHealthChanged?.Invoke();
         GameEvents.OnResourcesChanged?.Invoke();
 
+        AudioManager.I?.PlayClick();
+
         Refresh();
     }
 }
