@@ -31,7 +31,7 @@ public partial class BattleManager : MonoBehaviour
                     }
                     catch (Exception ex)
                     {
-                        Debug.Log($"[BattleManager] Failed to cache credit multiplier: {ex.Message}");
+                        DevLog.Log($"[BattleManager] Failed to cache credit multiplier: {ex.Message}");
                         _cachedCreditMult = 1f;
                     }
 
@@ -422,15 +422,15 @@ public partial class BattleManager : MonoBehaviour
 
         var titles = GetTitlesForOwnedIdSafe(ownedId);
 
-        Debug.Log($"[Titles][{reason}] Turn={_turnIndex} OwnedId={ownedId} Monster={def.displayName} Lv={lvl}");
+        DevLog.Log($"[Titles][{reason}] Turn={_turnIndex} OwnedId={ownedId} Monster={def.displayName} Lv={lvl}");
 
         if (titles == null)
         {
-            Debug.Log("[Titles] Title list unavailable (TitleManager.I.GetTitlesForMonster not reachable).");
+            DevLog.Log("[Titles] Title list unavailable (TitleManager.I.GetTitlesForMonster not reachable).");
         }
         else if (titles.Count == 0)
         {
-            Debug.Log("[Titles] (No titles found)");
+            DevLog.Log("[Titles] (No titles found)");
         }
         else
         {
@@ -446,7 +446,7 @@ public partial class BattleManager : MonoBehaviour
                 if (t is BattleStartFlatTitleSO bsf)
                     extra = $" stat={bsf.stat} flatAmount={bsf.flatAmount} durationTurns={bsf.durationTurns}";
 
-                Debug.Log($"  • [{i}] {id} {t.name} ({t.GetType().Name}){extra}");
+                DevLog.Log($"  • [{i}] {id} {t.name} ({t.GetType().Name}){extra}");
             }
         }
     }

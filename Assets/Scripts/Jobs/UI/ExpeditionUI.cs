@@ -148,7 +148,7 @@ public class ExpeditionUI : MonoBehaviour
 
     private IEnumerator SeasonCountdownLoop()
     {
-        var wait = new WaitForSeconds(1f);
+        var wait = new WaitForSecondsRealtime(1f);
 
         while (true)
         {

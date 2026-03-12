@@ -95,7 +95,7 @@ public sealed class GameEventAlertListener : MonoBehaviour, IPointerClickHandler
     private void TriggerAlert(string source)
     {
         if (logEventTriggers)
-            Debug.Log($"[GameEventAlertListener] Triggered by {source} on {name}", this);
+            DevLog.Log($"[GameEventAlertListener] Triggered by {source} on {name}", this);
 
         SetAlertVisible(true);
     }

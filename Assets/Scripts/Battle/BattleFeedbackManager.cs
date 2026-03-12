@@ -26,8 +26,6 @@ public sealed class BattleFeedbackManager : MonoBehaviour
     [Tooltip("Multiplier applied to the first icon fade (the faster monster) so it reads more clearly.")]
     [SerializeField, Range(1f, 2f)] private float iconIntroFirstFadeMult = 1.35f;
     [SerializeField, Min(0f)] private float iconIntroGap = 0.03f;
-    [Tooltip("How much of the first fade should overlap with the second fade (0 = no overlap).")]
-    [SerializeField, Range(0f, 1f)] private float iconIntroOverlap01 = 0.55f;
     [SerializeField] private bool iconIntroPunch = true;
     [SerializeField, Range(1.01f, 1.35f)] private float iconIntroPunchScale = 1.18f;
     [SerializeField, Min(0.01f)] private float iconIntroPunchTime = 0.08f;
@@ -225,6 +223,9 @@ public sealed class BattleFeedbackManager : MonoBehaviour
     private bool _chargeWildOn;
     private bool _guardPlayerOn;
     private bool _guardWildOn;
+    private bool _slowMoActive;
+    private float _slowMoPrevTimeScale = 1f;
+    private float _slowMoPrevFixedDeltaTime = 0.02f;
 
 
     private void Awake()
@@ -251,7 +252,42 @@ public sealed class BattleFeedbackManager : MonoBehaviour
     {
         Unsubscribe();
 
+        CancelActiveSlowMo(forceNormalTime: true);
+
         ResetMicroJuiceOptionals();
+    }
+
+    private void OnDestroy()
+    {
+        CancelActiveSlowMo(forceNormalTime: true);
+    }
+
+    private void CancelActiveSlowMo(bool forceNormalTime)
+    {
+        if (_timeScaleCR != null)
+        {
+            StopCoroutine(_timeScaleCR);
+            _timeScaleCR = null;
+        }
+
+        if (!_slowMoActive)
+            return;
+
+        if (forceNormalTime)
+        {
+            Time.timeScale = 1f;
+            if (_slowMoPrevFixedDeltaTime > 0f)
+                Time.fixedDeltaTime = _slowMoPrevFixedDeltaTime;
+        }
+        else
+        {
+            Time.timeScale = _slowMoPrevTimeScale;
+            Time.fixedDeltaTime = _slowMoPrevFixedDeltaTime;
+        }
+
+        _slowMoActive = false;
+        _slowMoPrevTimeScale = 1f;
+        _slowMoPrevFixedDeltaTime = Time.fixedDeltaTime;
     }
 
     private void ResetMicroJuiceOptionals()
@@ -1028,20 +1064,21 @@ public void SetGuard(BattleFeedbackSide side, bool on)
     {
         if (seconds <= 0f) return;
 
-        if (_timeScaleCR != null)
-            StopCoroutine(_timeScaleCR);
+        // If a prior slow-mo was interrupted/restarted, always restore first.
+        CancelActiveSlowMo(forceNormalTime: false);
 
         _timeScaleCR = StartCoroutine(Co_TimeScale(timeScale, seconds));
     }
 
     private IEnumerator Co_TimeScale(float timeScale, float seconds)
     {
-        float prev = Time.timeScale;
-        float prevFixed = Time.fixedDeltaTime;
+        _slowMoPrevTimeScale = Time.timeScale;
+        _slowMoPrevFixedDeltaTime = Time.fixedDeltaTime;
+        _slowMoActive = true;
 
         // Apply
         Time.timeScale = Mathf.Clamp(timeScale, 0.001f, 1f);
-        Time.fixedDeltaTime = prevFixed * Time.timeScale;
+        Time.fixedDeltaTime = _slowMoPrevFixedDeltaTime * Time.timeScale;
 
         float t = 0f;
         while (t < seconds)
@@ -1051,8 +1088,11 @@ public void SetGuard(BattleFeedbackSide side, bool on)
         }
 
         // Restore
-        Time.timeScale = prev;
-        Time.fixedDeltaTime = prevFixed;
+        Time.timeScale = _slowMoPrevTimeScale;
+        Time.fixedDeltaTime = _slowMoPrevFixedDeltaTime;
+        _slowMoActive = false;
+        _slowMoPrevTimeScale = 1f;
+        _slowMoPrevFixedDeltaTime = Time.fixedDeltaTime;
 
         _timeScaleCR = null;
     }

@@ -183,7 +183,7 @@ public sealed class TitleButtonUI : MonoBehaviour
             // Optional little pop
             var t = newTitleBtn.transform;
             t.localScale = Vector3.one * 0.85f;
-            LeanTween.scale(t.gameObject, Vector3.one, 0.12f).setEaseOutBack();
+            LeanTween.scale(t.gameObject, Vector3.one, 0.12f).setEaseOutBack().setIgnoreTimeScale(true);
         }
         else if (!visible && newTitleBtn.gameObject.activeSelf)
         {

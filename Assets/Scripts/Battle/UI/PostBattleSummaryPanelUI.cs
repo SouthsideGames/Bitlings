@@ -301,7 +301,7 @@ public class PostBattleSummaryPanelUI : MonoBehaviour
         int creditsTotal = Mathf.Max(0, creditsBase + creditsTitleBonus);
 
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
-        Debug.Log($"[PostBattleSummaryPanelUI] Credits: base={creditsBase}, bonus={creditsTitleBonus}, total={creditsTotal}");
+        DevLog.Log($"[PostBattleSummaryPanelUI] Credits: base={creditsBase}, bonus={creditsTitleBonus}, total={creditsTotal}");
 #endif
 
         if (creditsLabel)

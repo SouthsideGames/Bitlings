@@ -72,6 +72,7 @@ public class TitleScreenController : MonoBehaviour
         LeanTween
             .alphaCanvas(pressToContinueCanvas, 1f, flashDuration)
             .setEaseInOutSine()
+            .setIgnoreTimeScale(true)
             .setLoopPingPong();
     }
 
@@ -79,7 +80,7 @@ public class TitleScreenController : MonoBehaviour
     {
         if (!pressToContinueCanvas) return;
         LeanTween.cancel(pressToContinueCanvas.gameObject);
-        LeanTween.alphaCanvas(pressToContinueCanvas, 0f, continueFadeOutTime);
+        LeanTween.alphaCanvas(pressToContinueCanvas, 0f, continueFadeOutTime).setIgnoreTimeScale(true);
     }
 
     void HideContinue()
@@ -90,6 +91,7 @@ public class TitleScreenController : MonoBehaviour
         {
             LeanTween.cancel(pressToContinueCanvas.gameObject);
             LeanTween.alphaCanvas(pressToContinueCanvas, 0f, continueFadeOutTime)
+                .setIgnoreTimeScale(true)
                 .setOnComplete(() =>
                 {
                     if (pressToContinueButton) pressToContinueButton.gameObject.SetActive(false);
@@ -112,7 +114,7 @@ public class TitleScreenController : MonoBehaviour
         {
             pressToContinueCanvas.blocksRaycasts = false;
             pressToContinueCanvas.interactable   = false;
-            LeanTween.alphaCanvas(pressToContinueCanvas, 0f, continueFadeOutTime);
+            LeanTween.alphaCanvas(pressToContinueCanvas, 0f, continueFadeOutTime).setIgnoreTimeScale(true);
         }
 
         if (SaveManager.Data != null && SaveManager.Data.hasChosenStarter)
@@ -142,6 +144,7 @@ public class TitleScreenController : MonoBehaviour
 
         LeanTween.value(gameObject, 0f, 1f, slideTime)
             .setEaseOutCubic()
+            .setIgnoreTimeScale(true)
             .setOnUpdate((float t) =>
             {
                 titleRoot.anchoredPosition = Vector2.Lerp(startPos, endPos, t);
@@ -158,13 +161,13 @@ public class TitleScreenController : MonoBehaviour
                     var cg = sRoot.GetComponent<CanvasGroup>();
                     if (!cg) cg = sRoot.AddComponent<CanvasGroup>();
                     cg.alpha = 0f;
-                    LeanTween.alphaCanvas(cg, 1f, starterRevealTime).setDelay(starterRevealDelay);
+                    LeanTween.alphaCanvas(cg, 1f, starterRevealTime).setDelay(starterRevealDelay).setIgnoreTimeScale(true);
 
                     var rt = sRoot.GetComponent<RectTransform>();
                     if (rt)
                     {
                         rt.localScale = Vector3.one * 0.96f;
-                        LeanTween.scale(rt, Vector3.one, 0.22f).setEaseOutBack();
+                        LeanTween.scale(rt, Vector3.one, 0.22f).setEaseOutBack().setIgnoreTimeScale(true);
                     }
                 }
 

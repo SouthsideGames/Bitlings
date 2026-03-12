@@ -187,7 +187,7 @@ public sealed class AchievementToastUI : MonoBehaviour
             LeanTween.cancel(canvasGroup.gameObject);
             canvasGroup.alpha = 0f;
 
-            LeanTween.alphaCanvas(canvasGroup, 1f, 0.18f).setEaseOutCubic();
+            LeanTween.alphaCanvas(canvasGroup, 1f, 0.18f).setEaseOutCubic().setIgnoreTimeScale(true);
 
             LeanTween.delayedCall(gameObject, showSeconds, () =>
             {
@@ -198,12 +198,13 @@ public sealed class AchievementToastUI : MonoBehaviour
                 }
 
                 LeanTween.alphaCanvas(canvasGroup, 0f, 0.18f).setEaseInCubic()
+                    .setIgnoreTimeScale(true)
                     .setOnComplete(() => PlayNext());
-            });
+            }).setIgnoreTimeScale(true);
         }
         else
         {
-            LeanTween.delayedCall(gameObject, showSeconds, () => PlayNext());
+            LeanTween.delayedCall(gameObject, showSeconds, () => PlayNext()).setIgnoreTimeScale(true);
         }
     }
 }

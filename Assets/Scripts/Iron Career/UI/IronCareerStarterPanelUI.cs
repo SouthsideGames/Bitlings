@@ -188,7 +188,7 @@ public sealed class IronCareerStarterPanelUI : MonoBehaviour
             _metaData.rerollsRemaining = Mathf.Max(0, dailyRerollsMax);
             _metaData.starterOfferIds = null;
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
-            Debug.Log($"[IronCareerStarterPanelUI] Daily rerolls reset: prev='{prevDate}' new='{dayKey}' max={dailyRerollsMax}");
+            DevLog.Log($"[IronCareerStarterPanelUI] Daily rerolls reset: prev='{prevDate}' new='{dayKey}' max={dailyRerollsMax}");
 #endif
             IronCareerMetaSave.Save(_metaData);
         }
@@ -568,7 +568,7 @@ public sealed class IronCareerStarterPanelUI : MonoBehaviour
         string selectedName = (_offer != null && _selectedIndex >= 0 && _selectedIndex < _offer.Count && _offer[_selectedIndex] != null)
             ? _offer[_selectedIndex].name
             : "NULL";
-        Debug.Log($"[IronCareerStarterPanelUI] StartRun clicked: canStart={canStart} spinning={_spinning} selectedIndex={_selectedIndex} offerCount={(_offer != null ? _offer.Count : -1)} selected={selectedName} standardOn={(standardToggle && standardToggle.isOn)} hardcoreOn={(hardcoreToggle && hardcoreToggle.isOn)}");
+        DevLog.Log($"[IronCareerStarterPanelUI] StartRun clicked: canStart={canStart} spinning={_spinning} selectedIndex={_selectedIndex} offerCount={(_offer != null ? _offer.Count : -1)} selected={selectedName} standardOn={(standardToggle && standardToggle.isOn)} hardcoreOn={(hardcoreToggle && hardcoreToggle.isOn)}");
 
         if (!canStart) return;
 

@@ -407,7 +407,7 @@ public partial class BattleManager : MonoBehaviour
 
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
             if (debugTitles && debugTitlesEveryTurn)
-                Debug.Log($"[TurnLoop] ROUND {round} -> TurnIndex advanced to {_turnIndex} (one full round: player + wild act)", this);
+                DevLog.Log($"[TurnLoop] ROUND {round} -> TurnIndex advanced to {_turnIndex} (one full round: player + wild act)", this);
 #endif
 
             TitlesAdapter.OnTurnAdvanced(_turnIndex);

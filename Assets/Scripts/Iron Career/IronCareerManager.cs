@@ -341,14 +341,14 @@ public sealed class IronCareerManager : MonoBehaviour, IronBattleBridge.IIronBat
     {
         if (!ShouldForfeitOnBackground())
         {
-            Debug.Log($"[IronCareerManager] Ignoring background event: {reason}");
+            DevLog.Log($"[IronCareerManager] Ignoring background event: {reason}");
             return;
         }
 
         if (_backgroundForfeitCo != null)
             StopCoroutine(_backgroundForfeitCo);
 
-        Debug.Log($"[IronCareerManager] Arming background forfeit (grace {Mathf.Max(0f, backgroundForfeitGraceSeconds):0.00}s): {reason}");
+        DevLog.Log($"[IronCareerManager] Arming background forfeit (grace {Mathf.Max(0f, backgroundForfeitGraceSeconds):0.00}s): {reason}");
         _backgroundForfeitCo = StartCoroutine(Co_ForfeitAfterBackground(reason));
     }
 
@@ -358,7 +358,7 @@ public sealed class IronCareerManager : MonoBehaviour, IronBattleBridge.IIronBat
 
         StopCoroutine(_backgroundForfeitCo);
         _backgroundForfeitCo = null;
-        Debug.Log($"[IronCareerManager] Cleared pending background forfeit: {reason}");
+        DevLog.Log($"[IronCareerManager] Cleared pending background forfeit: {reason}");
     }
 
     private IEnumerator Co_ForfeitAfterBackground(string reason)
@@ -413,7 +413,7 @@ public sealed class IronCareerManager : MonoBehaviour, IronBattleBridge.IIronBat
         seed = runSeed;
 
     #if UNITY_EDITOR
-        Debug.Log($"[IronCareerManager] StartNewRun_Internal: mode={m} starterDefs={(starterDefs != null ? starterDefs.Count : -1)} seed={runSeed} fixedSeed={useFixedSeed}");
+        DevLog.Log($"[IronCareerManager] StartNewRun_Internal: mode={m} starterDefs={(starterDefs != null ? starterDefs.Count : -1)} seed={runSeed} fixedSeed={useFixedSeed}");
     #endif
 
         _state.Reset(m, runSeed);
@@ -438,19 +438,19 @@ public sealed class IronCareerManager : MonoBehaviour, IronBattleBridge.IIronBat
 #if UNITY_EDITOR
         try
         {
-            Debug.Log($"[IronCareerManager] Starter party built: count={_state.party?.Count ?? -1}");
+            DevLog.Log($"[IronCareerManager] Starter party built: count={_state.party?.Count ?? -1}");
             if (_state.party != null)
             {
                 for (int i = 0; i < _state.party.Count; i++)
                 {
                     var pm = _state.party[i];
-                    Debug.Log($"[IronCareerManager] Party[{i}] def={(pm != null && pm.def != null ? pm.def.name : "NULL")} lvl={(pm != null ? pm.level : -1)} hp={(pm != null ? pm.hp : -1f)} maxHp={(pm != null ? pm.maxHp : -1f)} dead={(pm != null && pm.IsDead)}");
+                    DevLog.Log($"[IronCareerManager] Party[{i}] def={(pm != null && pm.def != null ? pm.def.name : "NULL")} lvl={(pm != null ? pm.level : -1)} hp={(pm != null ? pm.hp : -1f)} maxHp={(pm != null ? pm.maxHp : -1f)} dead={(pm != null && pm.IsDead)}");
                 }
             }
         }
         catch (Exception ex)
         {
-            Debug.LogWarning($"[IronCareerManager] Starter party dump failed: {ex.Message}");
+            DevLog.Log($"[IronCareerManager] Starter party dump failed: {ex.Message}");
         }
 #endif
         if (_roster.IsPartyEmpty)
@@ -540,7 +540,7 @@ public sealed class IronCareerManager : MonoBehaviour, IronBattleBridge.IIronBat
         bool hireSucceeded = RollHireSuccess(_pendingHire);
         if (!hireSucceeded)
         {
-            Debug.Log("[IronCareerManager] Hire attempt failed. Recruit did not join the team.");
+            DevLog.Log("[IronCareerManager] Hire attempt failed. Recruit did not join the team.");
             FinishHireStepAndContinue();
             return false;
         }
@@ -841,7 +841,7 @@ public sealed class IronCareerManager : MonoBehaviour, IronBattleBridge.IIronBat
         ironEncounterUI?.ShowBattleOnly(immediate: true);
 
     #if UNITY_EDITOR
-        Debug.Log($"[IronTextTrace] BeginNextBattle: battle={(battle ? battle.name : "NULL")} bridge={(bridge ? bridge.name : "NULL")} ironBattleUI={(ironBattleUI ? ironBattleUI.name : "NULL")}");
+        DevLog.Log($"[IronTextTrace] BeginNextBattle: battle={(battle ? battle.name : "NULL")} bridge={(bridge ? bridge.name : "NULL")} ironBattleUI={(ironBattleUI ? ironBattleUI.name : "NULL")}");
     #endif
 
         ironBattleUI.ApplyTo(battle);
@@ -852,11 +852,11 @@ public sealed class IronCareerManager : MonoBehaviour, IronBattleBridge.IIronBat
         {
             var p = GetPartyForNextBattle();
             var cachedWild = _state.lastRolledWild;
-            Debug.Log($"[IronCareerManager] BeginNextBattle inject preview: party={p.Count} cachedWild={(cachedWild != null && cachedWild.def != null ? cachedWild.def.name : "NULL")}");
+            DevLog.Log($"[IronCareerManager] BeginNextBattle inject preview: party={p.Count} cachedWild={(cachedWild != null && cachedWild.def != null ? cachedWild.def.name : "NULL")}");
         }
         catch (Exception ex)
         {
-            Debug.LogWarning($"[IronCareerManager] Inject preview failed: {ex.Message}");
+            DevLog.Log($"[IronCareerManager] Inject preview failed: {ex.Message}");
         }
 #endif
 

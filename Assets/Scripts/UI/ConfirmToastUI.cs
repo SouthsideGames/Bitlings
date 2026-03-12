@@ -98,7 +98,8 @@ public sealed class ConfirmToastUI : MonoBehaviour
         // Fade in
         if (canvasGroup)
             LeanTween.alphaCanvas(canvasGroup, 1f, fadeInSeconds)
-                     .setEaseOutCubic();
+                     .setEaseOutCubic()
+                     .setIgnoreTimeScale(true);
 
         // Rise motion (optional polish)
         if (toastRoot && Mathf.Abs(riseY) > 0.01f)
@@ -106,7 +107,8 @@ public sealed class ConfirmToastUI : MonoBehaviour
                 toastRoot,
                 _baseAnchoredPos + new Vector2(0f, riseY),
                 showSeconds
-            ).setEaseOutCubic();
+            ).setEaseOutCubic()
+             .setIgnoreTimeScale(true);
 
         // Hold → Fade out → Stop
         LeanTween.delayedCall(gameObject, fadeInSeconds + showSeconds, () =>
@@ -119,6 +121,7 @@ public sealed class ConfirmToastUI : MonoBehaviour
 
             LeanTween.alphaCanvas(canvasGroup, 0f, fadeOutSeconds)
                      .setEaseInCubic()
+                     .setIgnoreTimeScale(true)
                      .setOnComplete(() =>
                      {
                          if (toastRoot)
@@ -126,6 +129,6 @@ public sealed class ConfirmToastUI : MonoBehaviour
 
                          _playing = false;
                      });
-        });
+        }).setIgnoreTimeScale(true);
     }
 }

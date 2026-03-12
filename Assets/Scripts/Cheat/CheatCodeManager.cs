@@ -1085,7 +1085,7 @@ public class CheatCodeManager : MonoBehaviour
         ResourceBank.Add(ResourceType.PackVoucher, amount);
 
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
-        Debug.Log($"[CHEAT] PackVoucher now = {ResourceBank.Get(ResourceType.PackVoucher)} (+{amount})");
+        DevLog.Log($"[CHEAT] PackVoucher now = {ResourceBank.Get(ResourceType.PackVoucher)} (+{amount})");
 #endif
 
         GameEvents.OnResourcesChanged?.Invoke();
@@ -1112,7 +1112,7 @@ public class CheatCodeManager : MonoBehaviour
         SaveManager.Save();
 
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
-        Debug.Log("[DIAG] diagnosticsUnlocked set TRUE and saved.");
+        DevLog.Log("[DIAG] diagnosticsUnlocked set TRUE and saved.");
 #endif
 
         var btnUI = DiagnosticsButtonUI.I != null
@@ -1123,13 +1123,13 @@ public class CheatCodeManager : MonoBehaviour
         {
             btnUI.ApplyFromSave("CheatUnlock");
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
-            Debug.Log("[DIAG] Forced DiagnosticsButtonUI.ApplyFromSave()");
+            DevLog.Log("[DIAG] Forced DiagnosticsButtonUI.ApplyFromSave()");
 #endif
         }
         else
         {
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
-            Debug.LogWarning("[DIAG] DiagnosticsButtonUI not found in scene.");
+            DevLog.Log("[DIAG] DiagnosticsButtonUI not found in scene.");
 #endif
         }
 

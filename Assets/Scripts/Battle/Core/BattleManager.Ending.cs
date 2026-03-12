@@ -287,12 +287,12 @@ public partial class BattleManager : MonoBehaviour
             {
                 string leadId = teamIds[activeIndex];
                 float cm = _cachedCreditMult;
-                Debug.Log($"[BattleManager] Title mult for lead '{leadId}': {cm} (basecredits={basecredits}) [cached]");
+                DevLog.Log($"[BattleManager] Title mult for lead '{leadId}': {cm} (basecredits={basecredits}) [cached]");
                 if (cm > 0f)
                 {
                     finalcredits = Mathf.Max(0, Mathf.RoundToInt(basecredits * cm));
                     creditTitleBonus = Mathf.Max(0, finalcredits - basecredits);
-                    Debug.Log($"[BattleManager] finalcredits={finalcredits}, creditTitleBonus={creditTitleBonus}");
+                    DevLog.Log($"[BattleManager] finalcredits={finalcredits}, creditTitleBonus={creditTitleBonus}");
                 }
             }
 
@@ -560,7 +560,7 @@ public partial class BattleManager : MonoBehaviour
             gotFirstHit = playerLandedFirstHitThisBattle
         };
 
-        Debug.Log($"[BattleManager] BattleResult: base={result.creditsBase}, bonus={result.creditsTitleBonus}, totalPreScale={result.creditsGained}, active={result.activeMonsterOwnedId}");
+        DevLog.Log($"[BattleManager] BattleResult: base={result.creditsBase}, bonus={result.creditsTitleBonus}, totalPreScale={result.creditsGained}, active={result.activeMonsterOwnedId}");
 
         if (!victory && !escaped && AutoResolveActive)
         {

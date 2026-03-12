@@ -273,7 +273,7 @@ public class FeatureUnlockManager : MonoBehaviour
         {
             cfg.allowCapturesOffline = true;
             #if UNITY_EDITOR || DEVELOPMENT_BUILD
-            Debug.Log("[FeatureUnlockManager] Enabled Offline Captures (IdleBattle_OfflineCapture)");
+            DevLog.Log("[FeatureUnlockManager] Enabled Offline Captures (IdleBattle_OfflineCapture)");
             #endif
         }
         else

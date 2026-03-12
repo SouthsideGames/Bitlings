@@ -142,7 +142,7 @@ public class UIManager : MonoBehaviour
         if (!_map.TryGetValue(id, out var p) || p.root == null)
         {
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
-            Debug.Log($"[UIManager] Hide ignored (panel not registered): {id}");
+            DevLog.Log($"[UIManager] Hide ignored (panel not registered): {id}");
 #endif
             return false;
         }
@@ -186,7 +186,7 @@ public class UIManager : MonoBehaviour
         if (!_map.TryGetValue(id, out var p) || p.root == null)
         {
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
-            Debug.Log($"[UIManager] SetImmediate ignored (panel not registered): {id}");
+            DevLog.Log($"[UIManager] SetImmediate ignored (panel not registered): {id}");
 #endif
             return;
         }
@@ -251,7 +251,7 @@ public class UIManager : MonoBehaviour
             if (_open.Contains(PanelId.Encounter))
             {
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
-                Debug.Log("[UIManager] Iron Career panel opening; force-hiding regular Encounter panel.");
+                DevLog.Log("[UIManager] Iron Career panel opening; force-hiding regular Encounter panel.");
 #endif
                 SetImmediate(PanelId.Encounter, false, fireEvent: false);
             }
@@ -331,7 +331,7 @@ public class UIManager : MonoBehaviour
         {
             var pos = rt.anchoredPosition;
             rt.anchoredPosition = new Vector2(pos.x, slideOffsetY);
-            LeanTween.moveY(rt, 0f, openFadeDuration).setEaseOutCubic();
+            LeanTween.moveY(rt, 0f, openFadeDuration).setEaseOutCubic().setIgnoreTimeScale(true);
         }
 
         if (p.useFade)
@@ -341,7 +341,7 @@ public class UIManager : MonoBehaviour
             cg.blocksRaycasts = true;
 
             cg.alpha = 0f;
-            LeanTween.alphaCanvas(cg, 1f, openFadeDuration).setEaseOutCubic();
+            LeanTween.alphaCanvas(cg, 1f, openFadeDuration).setEaseOutCubic().setIgnoreTimeScale(true);
         }
     }
 
@@ -363,17 +363,17 @@ public class UIManager : MonoBehaviour
             cg.interactable = false;
             cg.blocksRaycasts = false;
 
-            LeanTween.alphaCanvas(cg, 0f, dur).setEaseInCubic();
+            LeanTween.alphaCanvas(cg, 0f, dur).setEaseInCubic().setIgnoreTimeScale(true);
         }
 
         if (p.useSlide && rt)
         {
             anyTween = true;
-            LeanTween.moveY(rt, slideOffsetY, dur).setEaseInCubic();
+            LeanTween.moveY(rt, slideOffsetY, dur).setEaseInCubic().setIgnoreTimeScale(true);
         }
 
         if (anyTween)
-            LeanTween.delayedCall(root, dur, () => onComplete?.Invoke());
+            LeanTween.delayedCall(root, dur, () => onComplete?.Invoke()).setIgnoreTimeScale(true);
         else
             onComplete?.Invoke();
     }

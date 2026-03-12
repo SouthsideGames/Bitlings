@@ -3,6 +3,13 @@ using UnityEngine;
 // Manages the application lifecycle events
 public class AppLifecycle : MonoBehaviour
 {
+    private float _defaultFixedDeltaTime = 0.02f;
+
+    void Awake()
+    {
+        _defaultFixedDeltaTime = Time.fixedDeltaTime;
+    }
+
    void OnApplicationPause(bool paused)
     {
         if (paused)
@@ -13,13 +20,18 @@ public class AppLifecycle : MonoBehaviour
         }
         else
         {
+            RestoreGlobalTimeScale();
             SaveManager.OnResume();
         }
     }
 
     void OnApplicationFocus(bool hasFocus)
     {
-        if (hasFocus) SaveManager.OnResume();
+        if (hasFocus)
+        {
+            RestoreGlobalTimeScale();
+            SaveManager.OnResume();
+        }
     }
 
     void OnApplicationQuit()
@@ -27,5 +39,14 @@ public class AppLifecycle : MonoBehaviour
         if (SaveManager.Data != null)
             SaveManager.Data.lastClosedUnix = SaveManager.NowUnix();
         SaveManager.Save();
+    }
+
+    private void RestoreGlobalTimeScale()
+    {
+        if (Time.timeScale >= 0.999f) return;
+
+        Time.timeScale = 1f;
+        if (_defaultFixedDeltaTime > 0f)
+            Time.fixedDeltaTime = _defaultFixedDeltaTime;
     }
 }

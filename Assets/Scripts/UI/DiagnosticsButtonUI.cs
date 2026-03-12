@@ -15,9 +15,6 @@ public class DiagnosticsButtonUI : MonoBehaviour
     [Header("Behavior")]
     [SerializeField] private bool hideUntilUnlocked = true;
 
-    [Header("Debug")]
-    [SerializeField] private bool debugLogs = true;
-
     void Awake()
     {
         if (I != null && I != this)

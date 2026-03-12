@@ -280,11 +280,11 @@ private float GetWildPhantasmalSelfDmgPct()
                 if (SynergyResolver.ResolveWild(srcType, debugForcePlayerSynergyTier, synergyLibrary, statusLibrary, out var forced))
                     tmp.Add(forced);
                 else if (debugSynergyLogs)
-                    Debug.LogWarning($"[Battle][Synergy] debugForcePlayerSynergyTier enabled but no synergy mapping found for {srcType} {debugForcePlayerSynergyTier}.");
+                    DevLog.Log($"[Battle][Synergy] debugForcePlayerSynergyTier enabled but no synergy mapping found for {srcType} {debugForcePlayerSynergyTier}.");
             }
 
             if (debugSynergyLogs)
-                Debug.Log($"[Battle][Synergy] Player resolved {tmp.Count} command(s). Unlocked={playerUnlocked} Forced={debugForceSynergyApply} TeamTypesCount={teamTypesCount}.");
+                DevLog.Log($"[Battle][Synergy] Player resolved {tmp.Count} command(s). Unlocked={playerUnlocked} Forced={debugForceSynergyApply} TeamTypesCount={teamTypesCount}.");
 
             for (int i = 0; i < tmp.Count; i++)
             {
@@ -293,7 +293,7 @@ private float GetWildPhantasmalSelfDmgPct()
         }
         else if (debugSynergyLogs)
         {
-            Debug.Log($"[Battle][Synergy] Player synergies not applied. Unlocked={playerUnlocked} TeamTypesCount={teamTypesCount} PromotionRank={(SaveManager.Data != null ? SaveManager.Data.promotionRank : -1)}");
+            DevLog.Log($"[Battle][Synergy] Player synergies not applied. Unlocked={playerUnlocked} TeamTypesCount={teamTypesCount} PromotionRank={(SaveManager.Data != null ? SaveManager.Data.promotionRank : -1)}");
         }
 
         // Wild synergies (driven by difficulty)
@@ -304,11 +304,11 @@ private float GetWildPhantasmalSelfDmgPct()
             if (SynergyResolver.ResolveWild(wildDef.type, wildTier, synergyLibrary, statusLibrary, out var forcedWild))
             {
                 if (debugSynergyLogs)
-                    Debug.Log($"[Battle][Synergy] Wild forced synergy {wildDef.type} {wildTier}.");
+                    DevLog.Log($"[Battle][Synergy] Wild forced synergy {wildDef.type} {wildTier}.");
                 ApplySynergyCommand(sourceSide: BattleSide.Wild, forcedWild);
             }
             else if (debugSynergyLogs)
-                Debug.LogWarning($"[Battle][Synergy] debugForceWildSynergyTier enabled but no synergy mapping found for {wildDef.type} {wildTier}.");
+                DevLog.Log($"[Battle][Synergy] debugForceWildSynergyTier enabled but no synergy mapping found for {wildDef.type} {wildTier}.");
         }
         else if (TryGetWildSynergyTier(out wildTier))
         {
@@ -320,7 +320,7 @@ private float GetWildPhantasmalSelfDmgPct()
         else if (debugSynergyLogs)
         {
             int mode = (SaveManager.Data != null && SaveManager.Data.settings != null) ? SaveManager.Data.settings.difficultyMode : 0;
-            Debug.Log($"[Battle][Synergy] Wild synergies not applied. DifficultyMode={mode} HasDifficultyUnlocked={(SaveManager.Data != null && SaveManager.Data.HasDifficultyUnlocked)}");
+            DevLog.Log($"[Battle][Synergy] Wild synergies not applied. DifficultyMode={mode} HasDifficultyUnlocked={(SaveManager.Data != null && SaveManager.Data.HasDifficultyUnlocked)}");
         }
 
         // After applying, push the active player + wild status to the UI (Phase 2 UI).

@@ -20,10 +20,6 @@ public sealed class IronCareerHomeButtonBinder : MonoBehaviour
     [Tooltip("If assigned, this binder will use IronCareerManager.IsUnlocked() (supports DEV override). If null, it will try to find one.")]
     [SerializeField] private IronCareerManager ironCareerManager;
 
-    [Header("Config")]
-    [Tooltip("If true, clicking the button will call IronCareerRuntime.Enter(). Generally keep FALSE; sealed runtime should begin when a run starts.")]
-    [SerializeField] private bool enterIronOnClick = false;
-
     void OnEnable()
     {
         if (!ironCareerButtonRoot) ironCareerButtonRoot = gameObject;
@@ -61,23 +57,23 @@ public sealed class IronCareerHomeButtonBinder : MonoBehaviour
     {
         if (!IsUnlockedGate()) return;
 
-        if (enterIronOnClick)
+        var ui = UIManager.I;
+
+        if (ui)
         {
-            Debug.LogWarning("[IronCareerHomeButtonBinder] enterIronOnClick is enabled. This is a legacy debug path and can cause pre-run side effects. Recommended: keep it OFF.");
-            IronCareerRuntime.Enter();
+            ui.Hide(PanelId.Encounter);
+            ui.Hide(PanelId.PostBattleSummary);
+
+            ui.Show(PanelId.IronCareerEncounter);
+            ui.Hide(PanelId.Home);
         }
 
-        if (UIManager.I)
-        {
-            UIManager.I.Hide(PanelId.Encounter);
-            UIManager.I.Hide(PanelId.PostBattleSummary);
-
-            UIManager.I.Show(PanelId.IronCareerEncounter);
-            UIManager.I.Hide(PanelId.Home);
-        }
-
-        // IMPORTANT: do not call ShowStarter in the same frame we enabled the container.
-        StartCoroutine(Co_ShowStarterNextFrame());
+        // IMPORTANT: do not run this coroutine on the Home button object itself,
+        // because hiding Home can disable this component before next frame.
+        if (ui)
+            ui.StartCoroutine(Co_ShowStarterWhenPanelReady());
+        else
+            StartCoroutine(Co_ShowStarterWhenPanelReady());
     }
 
     private bool IsUnlockedGate()
@@ -90,17 +86,30 @@ public sealed class IronCareerHomeButtonBinder : MonoBehaviour
         return (SaveManager.Data != null) && SaveManager.Data.HasIronCareerUnlocked;
     }
 
-    private IEnumerator Co_ShowStarterNextFrame()
+    private IEnumerator Co_ShowStarterWhenPanelReady()
     {
-        yield return null; // wait 1 frame so the panel controller can Awake/OnEnable
+        const int maxFrames = 15;
 
-        var ironUI = IronCareerEncounterPanelUI.I;
-        if (!ironUI)
-            ironUI = FindFirstObjectByType<IronCareerEncounterPanelUI>(FindObjectsInactive.Include);
+        for (int frame = 0; frame < maxFrames; frame++)
+        {
+            yield return null; // wait so panel/container can finish enabling
 
-        if (ironUI)
+            var ironUI = IronCareerEncounterPanelUI.I;
+            if (!ironUI)
+                ironUI = FindFirstObjectByType<IronCareerEncounterPanelUI>(FindObjectsInactive.Include);
+
+            if (!ironUI)
+                continue;
+
+            var root = UIManager.I ? UIManager.I.GetRoot(PanelId.IronCareerEncounter) : null;
+            bool panelActive = root == null || root.activeInHierarchy;
+            if (!panelActive)
+                continue;
+
             ironUI.ShowStarter(immediate: true);
-        else
-            Debug.LogWarning("[IronCareerHomeButtonBinder] Missing IronCareerEncounterPanelUI in scene.");
+            yield break;
+        }
+
+        Debug.LogWarning("[IronCareerHomeButtonBinder] Timed out waiting to show Starter (IronCareerEncounterPanelUI not ready/active).");
     }
 }

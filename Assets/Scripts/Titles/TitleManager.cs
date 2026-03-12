@@ -1054,12 +1054,12 @@ if (_flatStartRemainingTurns.TryGetValue(monsterId, out int remTurns) && remTurn
             {
                 if (TryReadFloat(credit, out var credVal, "CreditMultiplier", "creditMultiplier", "creditsMultiplier", "rewardcreditMult"))
                 {
-                    Debug.Log($"[TitleManager] Credit title '{credit.titleId}' multiplier={credVal}");
+                    DevLog.Log($"[TitleManager] Credit title '{credit.titleId}' multiplier={credVal}");
                     mul *= Mathf.Max(0f, credVal);
                 }
                 else
                 {
-                    Debug.Log($"[TitleManager] Credit title '{credit.titleId}' has no readable multiplier field - dumping fields...");
+                    DevLog.Log($"[TitleManager] Credit title '{credit.titleId}' has no readable multiplier field - dumping fields...");
                     DumpTitleFields(credit);
                 }
                 continue;
@@ -1080,7 +1080,7 @@ if (_flatStartRemainingTurns.TryGetValue(monsterId, out int remTurns) && remTurn
     {
         if (t == null)
         {
-            Debug.Log("[TitleManager] DumpTitleFields: title is null");
+            DevLog.Log("[TitleManager] DumpTitleFields: title is null");
             return;
         }
 
@@ -1101,7 +1101,7 @@ if (_flatStartRemainingTurns.TryGetValue(monsterId, out int remTurns) && remTurn
             }
         }
 
-        Debug.Log(outStr);
+        DevLog.Log(outStr);
     }
 
     public float GetGrowthCoreMultOnVictory(string monsterId, MonsterDataSO wild, int wildLevel)
@@ -1635,7 +1635,7 @@ if (_flatStartRemainingTurns.TryGetValue(monsterId, out int remTurns) && remTurn
     private static void TryBattleLog(string msg)
     {
         try { BattleLogger.Log(msg, LogScope.Battle); } catch { }
-        Debug.Log(msg);
+        DevLog.Log(msg);
     }
 
     private static float ReadHp01(TitleContext ctx)
@@ -1805,7 +1805,7 @@ if (_flatStartRemainingTurns.TryGetValue(monsterId, out int remTurns) && remTurn
             {
                 bool ok = TitleUtility.CheckCondition(cb, ctx);
                 if (debugEffectiveness)
-                    Debug.Log($"TitleManager: Conditional check for {cb.titleId} on {monsterId} -> {ok} (hp01={ctx.selfHp01:F2}, allies={ctx.alliesAlive}, winStreak={ctx.winStreak})");
+                    DevLog.Log($"TitleManager: Conditional check for {cb.titleId} on {monsterId} -> {ok} (hp01={ctx.selfHp01:F2}, allies={ctx.alliesAlive}, winStreak={ctx.winStreak})");
                 if (ok) ApplyOne(cb.stat, cb.operation, cb.value);
             }
             else if (t is DuoStatBoosterTitleSO duo && duo.enabled)
@@ -1817,7 +1817,7 @@ if (_flatStartRemainingTurns.TryGetValue(monsterId, out int remTurns) && remTurn
             {
                 bool ok = TitleUtility.CheckCondition(dcb.condition, dcb.threshold01, dcb.countN, in ctx);
                 if (debugEffectiveness)
-                    Debug.Log($"TitleManager: DuoConditional check for {dcb.titleId} on {monsterId} -> {ok} (hp01={ctx.selfHp01:F2}, allies={ctx.alliesAlive}, winStreak={ctx.winStreak})");
+                    DevLog.Log($"TitleManager: DuoConditional check for {dcb.titleId} on {monsterId} -> {ok} (hp01={ctx.selfHp01:F2}, allies={ctx.alliesAlive}, winStreak={ctx.winStreak})");
                 if (ok)
                 {
                     ApplyOne(dcb.statA, dcb.opA, dcb.valueA);

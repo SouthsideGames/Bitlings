@@ -167,7 +167,7 @@ public class StarterSelector : MonoBehaviour
                         SetButtonsInteractable(false);
 
                         #if UNITY_EDITOR || DEVELOPMENT_BUILD
-                        Debug.Log($"[StarterSelector][BYPASS] Choosing starter: {capturedDef.id}");
+                        DevLog.Log($"[StarterSelector][BYPASS] Choosing starter: {capturedDef.id}");
                         #endif
                         Choose(capturedDef);
                     });
@@ -284,7 +284,7 @@ public class StarterSelector : MonoBehaviour
         try
         {
             #if UNITY_EDITOR || DEVELOPMENT_BUILD
-            Debug.Log($"[StarterSelector] GrantStarter -> {pick.id}");
+            DevLog.Log($"[StarterSelector] GrantStarter -> {pick.id}");
             #endif
 
             // This already saves, and may raise StarterChosen (via SaveManager.GrantStarter).

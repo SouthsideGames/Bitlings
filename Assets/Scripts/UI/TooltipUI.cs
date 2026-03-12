@@ -58,6 +58,7 @@ public class TooltipUI : MonoBehaviour
 
         _fadeTweenId = LeanTween.alphaCanvas(group, 1f, fadeInTime)
             .setEaseOutQuad()
+            .setIgnoreTimeScale(true)
             .id;
     }
 
@@ -72,6 +73,7 @@ public class TooltipUI : MonoBehaviour
 
         _fadeTweenId = LeanTween.alphaCanvas(group, 0f, fadeOutTime)
             .setEaseInQuad()
+            .setIgnoreTimeScale(true)
             .setOnComplete(() =>
             {
                 // Disable interaction while hidden so it doesn't block UI

@@ -90,7 +90,7 @@ public sealed class IronBattleBridge : MonoBehaviour, IBattleRosterProvider, IBa
         if (battle == null) return;
 
 #if UNITY_EDITOR
-        Debug.Log($"[IronBattleBridge] BeginIronBattle: ironActive={IronCareerRuntime.IsActive} host={(hostBehaviour ? hostBehaviour.name : "NULL")} useDebugFallback={useDebugFallbackIfNoHost}");
+        DevLog.Log($"[IronBattleBridge] BeginIronBattle: ironActive={IronCareerRuntime.IsActive} host={(hostBehaviour ? hostBehaviour.name : "NULL")} useDebugFallback={useDebugFallbackIfNoHost}");
 #endif
 
         if (!IronCareerRuntime.IsActive)
@@ -104,7 +104,7 @@ public sealed class IronBattleBridge : MonoBehaviour, IBattleRosterProvider, IBa
         var wild = GetWild();
 
 #if UNITY_EDITOR
-        Debug.Log($"[IronBattleBridge] Pre-Begin snapshot: partyCount={party.Count} wild={(wild != null && wild.def != null ? wild.def.name : "NULL")}");
+        DevLog.Log($"[IronBattleBridge] Pre-Begin snapshot: partyCount={party.Count} wild={(wild != null && wild.def != null ? wild.def.name : "NULL")}");
 #endif
         if (wild == null || wild.def == null)
         {
@@ -118,7 +118,7 @@ public sealed class IronBattleBridge : MonoBehaviour, IBattleRosterProvider, IBa
         battle.Begin(wild.def, Mathf.Max(1, wild.level), onEnded, this, this);
 
     #if UNITY_EDITOR
-        Debug.Log("[IronBattleBridge] battle.Begin(...) invoked with injected roster provider + context.");
+        DevLog.Log("[IronBattleBridge] battle.Begin(...) invoked with injected roster provider + context.");
     #endif
 
         // Apply carry after arrays are initialized.
@@ -127,7 +127,7 @@ public sealed class IronBattleBridge : MonoBehaviour, IBattleRosterProvider, IBa
         battle.ApplyIronCarryToPlayerField(carryStatus, carryShield);
 
 #if UNITY_EDITOR
-        Debug.Log($"[IronBattleBridge] carryStatus snapshot = {carryStatus}");    
+        DevLog.Log($"[IronBattleBridge] carryStatus snapshot = {carryStatus}");    
 #endif
     }
 
@@ -184,7 +184,7 @@ public sealed class IronBattleBridge : MonoBehaviour, IBattleRosterProvider, IBa
     public void OnBattleResolved(IronBattleOutcome outcome)
     {
 #if UNITY_EDITOR
-        Debug.Log($"[IronBattleBridge] OnBattleResolved: victory={outcome.victory} escaped={outcome.escaped} turns={outcome.turnsSurvived}");
+        DevLog.Log($"[IronBattleBridge] OnBattleResolved: victory={outcome.victory} escaped={outcome.escaped} turns={outcome.turnsSurvived}");
 #endif
         // Forward to run host (IronCareerManager) and allow it to update runtime state.
         var host = Host;
