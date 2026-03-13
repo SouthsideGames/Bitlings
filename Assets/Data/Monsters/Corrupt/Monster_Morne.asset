@@ -33,7 +33,7 @@ MonoBehaviour:
   fatigueCooldownHours: 8.8
   evolutionStage: 1
   evolutionLevel: 22
-  evolutionForm: {fileID: 11400000, guid: 1616f5bdd45f544db9b3f0b155bce276, type: 2}
+  evolutionForm: {fileID: 11400000, guid: b610712d29e454997b0b81e1b8910d30, type: 2}
   uncatchable: 0
   isBoss: 0
   bossJobDebuffs: []
@@ -42,8 +42,10 @@ MonoBehaviour:
   jobSkill: 1
   titleTrack: {fileID: 11400000, guid: 161f772b571e34cfeb55cc216c42d370, type: 2}
   defaultAlwaysOnTitles: []
+  ironTitles: []
   Personality: {fileID: 11400000, guid: 75a511658b2e544f4869d466b3f7ba5a, type: 2}
   basicAttackName: Corrupt Lash
   basicAttackPrefab: {fileID: 8046187082596486557, guid: 86fc56d41698d45bfbf27d043ca2944d, type: 3}
   basicAttackPrefabLifetime: 1
+  spawnSfx: {fileID: 8300000, guid: c8a1c964fa2e5fd41a84f55209658795, type: 3}
   description: A twisted creature that snaps with unstable corrupted energy.

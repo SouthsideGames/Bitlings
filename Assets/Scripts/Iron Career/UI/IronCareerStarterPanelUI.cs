@@ -16,6 +16,9 @@ public sealed class IronCareerStarterPanelUI : MonoBehaviour
     [SerializeField] private IronCareerStarterSlotUI slot2;
     [SerializeField] private IronCareerStarterSlotUI slot3;
 
+    [Header("Selection Scale")]
+    [SerializeField] private float selectedScale = 1.15f;
+
     [Tooltip("Buttons over each slot so the player can pick ONE starter.")]
     [SerializeField] private Button slot1Button;
     [SerializeField] private Button slot2Button;
@@ -539,13 +542,25 @@ public sealed class IronCareerStarterPanelUI : MonoBehaviour
         if (index < 0 || index > 2) return;
 
         _selectedIndex = index;
+        ApplySlotScales();
         RefreshStartButton();
     }
 
     private void ClearSelection()
     {
         _selectedIndex = -1;
+        ApplySlotScales();
+    }
 
+    private void ApplySlotScales()
+    {
+        var slots = new[] { slot1, slot2, slot3 };
+        for (int i = 0; i < slots.Length; i++)
+        {
+            if (slots[i] == null) continue;
+            float s = (i == _selectedIndex) ? selectedScale : 1f;
+            slots[i].transform.localScale = new Vector3(s, s, s);
+        }
     }
 
     private bool CanStart()

@@ -518,6 +518,14 @@ public sealed class IronCareerManager : MonoBehaviour, IronBattleBridge.IIronBat
             return;
         }
 
+        // Guard: uncatchable monsters can never be hired — skip the hire panel entirely.
+        if (_pendingHire.def.uncatchable)
+        {
+            _pendingHire = null;
+            ContinueAfterHireAndReplacement();
+            return;
+        }
+
         ShowHire();
     }
 

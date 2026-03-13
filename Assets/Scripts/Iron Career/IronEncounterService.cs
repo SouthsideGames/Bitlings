@@ -77,6 +77,7 @@ public sealed class IronEncounterService
         {
             var def = all[i];
             if (def == null) continue;
+            if (def.uncatchable) continue;
             if (partyDefs.Contains(def)) continue;
             candidates.Add(def);
         }

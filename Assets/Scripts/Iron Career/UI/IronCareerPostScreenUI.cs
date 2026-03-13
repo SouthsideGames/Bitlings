@@ -135,7 +135,7 @@ public sealed class IronCareerPostScreenUI : MonoBehaviour
         }
 
         // Party list (mobile vertical). If assigned, prefer spawned cards. Otherwise legacy 3-slot stays visible.
-        bool canSpawnList = (partyListParent != null && partyCardPrefab != null);
+        bool canSpawnList = partyListParent != null && partyCardPrefab != null;
         if (canSpawnList)
         {
             ClearSpawnedCards();
@@ -146,14 +146,20 @@ public sealed class IronCareerPostScreenUI : MonoBehaviour
                 if (m == null || m.def == null) continue;
 
                 var card = Instantiate(partyCardPrefab, partyListParent);
-                if (!card.gameObject.activeSelf)
-                    card.gameObject.SetActive(true);
-                card.Bind(m, isLocked: true, isSelectable: false);
+                card.Bind(m, isLocked: true, isSelectable: true);
                 card.SetLocked(true); // Post screen cards are informational.
                 card.SetSelected(false);
                 card.SetOnClick(null);
+                card.gameObject.SetActive(true); // Must be last — Bind/SetSelected may deactivate root.
                 _spawnedPartyCards.Add(card);
+#if UNITY_EDITOR
+                Debug.Log($"[PostScreen] Card[{i}] spawned: activeSelf={card.gameObject.activeSelf}, activeInHierarchy={card.gameObject.activeInHierarchy}, parent={partyListParent.name}, parentActive={partyListParent.gameObject.activeInHierarchy}");
+#endif
             }
+
+            // Force layout rebuild so the VerticalLayoutGroup sizes/positions the new cards.
+            Canvas.ForceUpdateCanvases();
+            LayoutRebuilder.ForceRebuildLayoutImmediate(partyListParent as RectTransform);
 
             if (partyHeaderTMP)
             {
@@ -164,7 +170,14 @@ public sealed class IronCareerPostScreenUI : MonoBehaviour
                 partyHeaderTMP.color = _partyHeaderBaseColor;
             }
         }
-        else if (partyHeaderTMP && string.IsNullOrEmpty(partyHeaderTMP.text))
+#if UNITY_EDITOR
+        else
+        {
+            if (!partyListParent) Debug.LogWarning("[IronCareerPostScreenUI] partyListParent is not assigned. Party cards will not spawn.");
+            if (!partyCardPrefab) Debug.LogWarning("[IronCareerPostScreenUI] partyCardPrefab is not assigned. Party cards will not spawn.");
+        }
+#endif
+        if (!canSpawnList && partyHeaderTMP && string.IsNullOrEmpty(partyHeaderTMP.text))
         {
             partyHeaderTMP.text = "YOUR PARTY (HP CARRIES FORWARD)";
             partyHeaderTMP.color = _partyHeaderBaseColor;

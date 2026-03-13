@@ -91,19 +91,19 @@ public sealed class IronCareerRulesPopupUI : MonoBehaviour
             : "Standard: Hire is optional";
 
         return
-            "<b>CORE RULES</b>\n" +
+            "<b><u>CORE RULES</u></b>\n" +
             "• Permadeath: HP 0 = removed\n" +
             "• No healing between battles\n" +
             "• HP carries forward each fight\n" +
             "• Party size cap: 3\n\n" +
-            "<b>RUN FLOW</b>\n" +
+            "<b><u>RUN FLOW</u></b>\n" +
             "• Win -> Hire/Replace -> Post\n" +
             "• Forced Evolution blocks progress\n" +
             "• Rest nodes every 3 wins\n\n" +
-            "<b>QUIT = FORFEIT</b>\n" +
+            "<b><u>QUIT = FORFEIT</u></b>\n" +
             "• Quitting ends the run as a loss\n" +
             "• No rewards are granted\n\n" +
-            "<b>MODE</b>\n" +
+            "<b><u>MODE</u></b>\n" +
             modeLine;
     }
 

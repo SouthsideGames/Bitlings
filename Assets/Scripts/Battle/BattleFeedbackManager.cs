@@ -1391,8 +1391,23 @@ public void SetGuard(BattleFeedbackSide side, bool on)
         var inst = Instantiate(def.basicAttackPrefab, pos, rot);
         if (spawnRoot) inst.transform.SetParent(spawnRoot, worldPositionStays: true);
 
+        // Scale prefab animations to match battleSpeed so VFX don't lag behind the turn pace.
+        float speed = (_battleManager != null) ? Mathf.Max(1f, _battleManager.BattleSpeed) : 1f;
+        if (speed > 1f)
+        {
+            foreach (var ps in inst.GetComponentsInChildren<ParticleSystem>(true))
+            {
+                var main = ps.main;
+                main.simulationSpeed *= speed;
+            }
+            foreach (var anim in inst.GetComponentsInChildren<Animator>(true))
+            {
+                anim.speed *= speed;
+            }
+        }
+
         float life = Mathf.Max(0f, def.basicAttackPrefabLifetime);
-        if (life > 0f) Destroy(inst, life);
+        if (life > 0f) Destroy(inst, life / speed);
     }
 
 

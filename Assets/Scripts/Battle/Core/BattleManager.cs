@@ -1109,6 +1109,11 @@ public partial class BattleManager : MonoBehaviour
         wildHP = wildMaxHP;
         wildAttackPerTurn = wildBaseAttackPerTurn;
 
+        // Clear stale effective-HP caches so SyncEffectiveMaxHPFromStats
+        // doesn't compute hp% against the previous battle's wild.
+        _wildEffMaxHpCache = 0f;
+        _effMaxHpCache = null;
+
         if (feedback != null) feedback.ResetIconVisuals();
         HardResetIconVisual(playerIcon);
         HardResetIconVisual(wildIcon);
@@ -1789,7 +1794,27 @@ public partial class BattleManager : MonoBehaviour
         benchHPText1 = _hudRigActive.benchHPText1;
         benchHPText2 = _hudRigActive.benchHPText2;
 
-        SetUIOverride(_hudRigActive.feedback, _hudRigActive.battleTextBox, _hudRigActive.bottomToggle);
+        // Apply hud-rig values as defaults directly — do NOT route through
+        // SetUIOverride, which would clobber _runtimeOverrideTextBox and
+        // destroy any Iron Career override that was already registered.
+        if (_hudRigActive.feedback)
+        {
+            feedback = _hudRigActive.feedback;
+            feedback.BindToBattleManager(this);
+        }
+        if (_hudRigActive.battleTextBox)
+            battleTextBox = _hudRigActive.battleTextBox;
+        if (_hudRigActive.bottomToggle)
+            _bottomToggle = _hudRigActive.bottomToggle;
+
+        if (!_uiDefaultsCaptured)
+        {
+            _uiDefaultsCaptured = true;
+            _defaultFeedback = feedback;
+            _defaultBattleTextBox = battleTextBox;
+            _defaultBottomToggle = _bottomToggle;
+        }
+
         ReapplyRuntimeUIBindingsOverrideIfAny();
         ReapplyRuntimeUIOverrideIfAny();
     }

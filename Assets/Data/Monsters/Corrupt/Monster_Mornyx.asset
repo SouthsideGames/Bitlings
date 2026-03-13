@@ -33,7 +33,7 @@ MonoBehaviour:
   fatigueCooldownHours: 8.8
   evolutionStage: 2
   evolutionLevel: 28
-  evolutionForm: {fileID: 11400000, guid: 7f9c5060a53d64992ba5c8482a69b077, type: 2}
+  evolutionForm: {fileID: 11400000, guid: e77e8fb35a8084cfbbac356b1a386231, type: 2}
   uncatchable: 0
   isBoss: 0
   bossJobDebuffs: []
