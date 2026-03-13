@@ -158,7 +158,7 @@ public class NotificationManager : MonoBehaviour
         ScheduleSeconds("dbg_3", "Debug: Ping 3", "Third test notification.", "Debug", 240);
 
 #if UNITY_EDITOR
-        Debug.Log("[NotificationManager] Debug scheduled: 90s, 150s, 240s.");
+        DevLog.Log("[NotificationManager] Debug scheduled: 90s, 150s, 240s.");
 #endif
     }
 
@@ -166,7 +166,7 @@ public class NotificationManager : MonoBehaviour
     {
         CancelAllScheduled();
 #if UNITY_EDITOR
-        Debug.Log("[NotificationManager] Cleared scheduled notifications.");
+        DevLog.Log("[NotificationManager] Cleared scheduled notifications.");
 #endif
     }
 

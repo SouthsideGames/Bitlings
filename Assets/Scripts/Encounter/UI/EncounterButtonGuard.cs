@@ -123,7 +123,7 @@ public sealed class EncounterButtonGuard : MonoBehaviour
 
         // Helpful diagnostics when something unexpected disables the button.
         if (!ok && !string.IsNullOrEmpty(reason))
-            Debug.Log($"[EncounterButtonGuard] Encounter disabled: {reason}", this);
+            DevLog.Log($"[EncounterButtonGuard] Encounter disabled: {reason}", this);
     }
 
     private IEnumerator Co_DeferredApply()

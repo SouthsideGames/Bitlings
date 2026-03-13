@@ -1482,7 +1482,7 @@ if (shinyVariantRoot) shinyVariantRoot.SetActive(false);
     private void LogStep(string msg)
     {
         if (!buildVerboseLogging) return;
-        Debug.Log($"[MonsterDetailPanelUI] {msg} (monster={(current ? current.id : "null")})");
+        DevLog.Log($"[MonsterDetailPanelUI] {msg} (monster={(current ? current.id : "null")})");
     }
 
     private int GetDisplayLevel()

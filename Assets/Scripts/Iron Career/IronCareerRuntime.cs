@@ -10,12 +10,12 @@ public static class IronCareerRuntime
     {
         IsActive = true;
         RunGuid = Guid.NewGuid().ToString("N");
-        Debug.Log($"[IronCareerRuntime] ENTER run={RunGuid}");
+        DevLog.Log($"[IronCareerRuntime] ENTER run={RunGuid}");
     }
 
     public static void Exit()
     {
-        Debug.Log($"[IronCareerRuntime] EXIT run={RunGuid}");
+        DevLog.Log($"[IronCareerRuntime] EXIT run={RunGuid}");
         IsActive = false;
         RunGuid = null;
     }

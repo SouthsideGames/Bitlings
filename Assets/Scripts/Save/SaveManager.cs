@@ -423,7 +423,7 @@ private static PlayerSaveRoot MigrateRootIfNeeded(PlayerSaveRoot root)
             JobManager.I.RefreshAllJobSiteViewsInScene();
         }
 
-        Debug.Log($"[CLEAR ALL] New account created. Energy={ResourceBank.Get(ResourceType.Energy)}/{Data.encounterMax}");
+        DevLog.Log($"[CLEAR ALL] New account created. Energy={ResourceBank.Get(ResourceType.Energy)}/{Data.encounterMax}");
     }
 
     // ─────────────────────────────────────────────

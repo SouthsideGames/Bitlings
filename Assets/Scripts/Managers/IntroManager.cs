@@ -76,6 +76,7 @@ public class IntroManager : MonoBehaviour
         pressToContinueCanvas.alpha = 0f;
         LeanTween.alphaCanvas(pressToContinueCanvas, 1f, flashDuration)
             .setEaseInOutSine()
+            .setIgnoreTimeScale(true)
             .setLoopPingPong();
     }
 
@@ -84,7 +85,7 @@ public class IntroManager : MonoBehaviour
         if (!pressToContinueCanvas) return;
 
         LeanTween.cancel(pressToContinueCanvas.gameObject);
-        LeanTween.alphaCanvas(pressToContinueCanvas, 0f, continueFadeOutTime);
+        LeanTween.alphaCanvas(pressToContinueCanvas, 0f, continueFadeOutTime).setIgnoreTimeScale(true);
     }
 
     // ─────────────────────────────────────────────────────────────
@@ -120,7 +121,7 @@ public class IntroManager : MonoBehaviour
         {
             pressToContinueCanvas.blocksRaycasts = false;
             pressToContinueCanvas.interactable = false;
-            LeanTween.alphaCanvas(pressToContinueCanvas, 0f, continueFadeOutTime);
+            LeanTween.alphaCanvas(pressToContinueCanvas, 0f, continueFadeOutTime).setIgnoreTimeScale(true);
         }
 
         if (hasStarter)
@@ -161,6 +162,7 @@ public class IntroManager : MonoBehaviour
 
         LeanTween.value(gameObject, 0f, 1f, slideTime)
             .setEaseOutCubic()
+            .setIgnoreTimeScale(true)
             .setOnUpdate((float t) =>
             {
                 titleRoot.anchoredPosition = Vector2.Lerp(startPos, endPos, t);
@@ -184,13 +186,13 @@ public class IntroManager : MonoBehaviour
             cg.alpha = 0f;
             cg.interactable = true;
             cg.blocksRaycasts = true;
-            LeanTween.alphaCanvas(cg, 1f, starterRevealTime).setDelay(starterRevealDelay);
+            LeanTween.alphaCanvas(cg, 1f, starterRevealTime).setDelay(starterRevealDelay).setIgnoreTimeScale(true);
 
             var rt = starterRoot.GetComponent<RectTransform>();
             if (rt)
             {
                 rt.localScale = Vector3.one * 0.96f;
-                LeanTween.scale(rt, Vector3.one, 0.22f).setEaseOutBack();
+                LeanTween.scale(rt, Vector3.one, 0.22f).setEaseOutBack().setIgnoreTimeScale(true);
             }
         }
 

@@ -390,7 +390,7 @@ public class DiagnosticsOverlayUI : MonoBehaviour
         var json = JsonUtility.ToJson(output, true);
         File.WriteAllText(path, json);
 
-        Debug.Log($"[DIAG] BalanceSim wrote {path}");
+        DevLog.Log($"[DIAG] BalanceSim wrote {path}");
     }
 
     PairResult SimulatePair(MonsterDataSO a, int levelA, MonsterDataSO b, int levelB, int iterations, int seed, TitleSO titleA, TitleSO titleB)

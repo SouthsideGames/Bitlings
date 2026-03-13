@@ -360,7 +360,7 @@ public sealed class AchievementManager : MonoBehaviour
         p.seen = false;
 
         if (debugLogs)
-            Debug.Log($"[Achievement] Unlocked {e.id} - {e.displayName}");
+            DevLog.Log($"[Achievement] Unlocked {e.id} - {e.displayName}");
 
         OnUnlocked?.Invoke(e);
 

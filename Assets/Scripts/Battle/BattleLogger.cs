@@ -726,6 +726,6 @@ public static void LogTitleConditionChanged(string ownerName, string titleName, 
                 sb.AppendLine($"  {lastLines[i]}");
         }
 
-        Debug.Log(sb.ToString());
+        DevLog.Log(sb.ToString());
     }
 }

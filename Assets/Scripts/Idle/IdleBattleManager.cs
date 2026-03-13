@@ -199,7 +199,7 @@ public class IdleBattleManager : MonoBehaviour
     {
         if (!IsIdleBattleUnlocked())
         {
-            Debug.Log("IdleBattleManager: Idle battles are locked by feature unlocks; ignoring EnableAuto().");
+            DevLog.Log("IdleBattleManager: Idle battles are locked by feature unlocks; ignoring EnableAuto().");
             return;
         }
 

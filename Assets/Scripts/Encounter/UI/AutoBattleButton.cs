@@ -27,7 +27,7 @@ public class AutoBattleButton : MonoBehaviour,
 
             if (!IsIdleBattleUnlocked())
             {
-                Debug.Log("[EncounterButtonHold] Auto mode is locked — unlock Idle Battles to enable this.");
+                DevLog.Log("[EncounterButtonHold] Auto mode is locked — unlock Idle Battles to enable this.");
                 return;
             }
 

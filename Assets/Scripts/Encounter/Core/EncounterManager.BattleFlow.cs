@@ -18,7 +18,7 @@ public partial class EncounterManager
     {
         if (IronCareerRuntime.IsActive)
         {
-            Debug.Log("[EncounterManager] Ignoring encounter tap while Iron is active.");
+            DevLog.Log("[EncounterManager] Ignoring encounter tap while Iron is active.");
             return;
         }
 
@@ -310,7 +310,7 @@ public partial class EncounterManager
     {
         _lastBattleResult = result;
 
-        Debug.Log($"[EncounterManager] OnBattleEnded incoming result: base={result.creditsBase}, bonus={result.creditsTitleBonus}, totalPreScale={result.creditsGained}, active={result.activeMonsterOwnedId}");
+        DevLog.Log($"[EncounterManager] OnBattleEnded incoming result: base={result.creditsBase}, bonus={result.creditsTitleBonus}, totalPreScale={result.creditsGained}, active={result.activeMonsterOwnedId}");
 
         // Reset encounter-spawn presentation state.
         _lastWildWasShiny = _currentWildIsShiny;
@@ -344,13 +344,13 @@ public partial class EncounterManager
                 if (!string.IsNullOrEmpty(leadId))
                 {
                     float cm = TitlesAdapter.GetCreditMultOnVictory(leadId, result.wildDef, result.wildLevel);
-                    Debug.Log($"[EncounterManager] Title credit mult for {leadId}: {cm}");
+                    DevLog.Log($"[EncounterManager] Title credit mult for {leadId}: {cm}");
                     if (cm > 0f && cm != 1f)
                     {
                         int withTitles = Mathf.Max(0, Mathf.RoundToInt(finalcredits * cm));
                         creditTitleBonus = Mathf.Max(0, withTitles - finalcredits);
                         finalcredits = withTitles;
-                        Debug.Log($"[EncounterManager] Applied title bonus: base={finalcredits - creditTitleBonus}, bonus={creditTitleBonus}, total={finalcredits}");
+                        DevLog.Log($"[EncounterManager] Applied title bonus: base={finalcredits - creditTitleBonus}, bonus={creditTitleBonus}, total={finalcredits}");
                     }
                 }
             }
@@ -456,7 +456,7 @@ public partial class EncounterManager
             PostBattleSummaryManager.I?.SetAutoBattling(_autoResolveSnapshot);
 
         int displayCreditsBase = Mathf.Max(0, finalcredits - creditTitleBonus);
-        Debug.Log($"[PostBattleSummary] Passing credits: base={displayCreditsBase}, bonus={creditTitleBonus}");
+        DevLog.Log($"[PostBattleSummary] Passing credits: base={displayCreditsBase}, bonus={creditTitleBonus}");
         PostBattleSummaryManager.I?.NotifyBattleEnd(
             finished,
             isAuto: _autoResolveSnapshot,

@@ -156,7 +156,7 @@ public class BattleTextBoxUI : MonoBehaviour
         {
             string raw = line.text ?? string.Empty;
             string preview = raw.Length > 80 ? raw.Substring(0, 80) + "..." : raw;
-            Debug.Log($"[IronTextTrace] TextBoxUI.ShowLine: obj={name} active={gameObject.activeInHierarchy} lineLen={raw.Length} preview='{preview}'");
+            DevLog.Log($"[IronTextTrace] TextBoxUI.ShowLine: obj={name} active={gameObject.activeInHierarchy} lineLen={raw.Length} preview='{preview}'");
         }
 #endif
 

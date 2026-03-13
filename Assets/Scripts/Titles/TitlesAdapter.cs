@@ -247,7 +247,7 @@ public static class TitlesAdapter
         var titles = GetTitles(monsterId);
         if (titles == null || titles.Count == 0)
         {
-            Debug.Log($"[TitlesAdapter] Equipped for {monsterId}: none");
+            DevLog.Log($"[TitlesAdapter] Equipped for {monsterId}: none");
         }
         else
         {
@@ -264,7 +264,7 @@ public static class TitlesAdapter
                     list += $"{tid}({typ})";
                 }
             }
-            Debug.Log($"[TitlesAdapter] Equipped for {monsterId}: {list}");
+            DevLog.Log($"[TitlesAdapter] Equipped for {monsterId}: {list}");
         }
 
         float mult = rt.GetcreditMultOnVictory(monsterId, wild, wildLevel);
@@ -282,20 +282,20 @@ public static class TitlesAdapter
                     if (f != null)
                     {
                         var val = Convert.ToSingle(f.GetValue(t));
-                        Debug.Log($"[TitlesAdapter] Direct read CreditMultiplier for {monsterId} => {val}");
+                        DevLog.Log($"[TitlesAdapter] Direct read CreditMultiplier for {monsterId} => {val}");
                         return Mathf.Max(0f, val);
                     }
                     var p = ty.GetProperty("CreditMultiplier");
                     if (p != null)
                     {
                         var val = Convert.ToSingle(p.GetValue(t, null));
-                        Debug.Log($"[TitlesAdapter] Direct read CreditMultiplier(prop) for {monsterId} => {val}");
+                        DevLog.Log($"[TitlesAdapter] Direct read CreditMultiplier(prop) for {monsterId} => {val}");
                         return Mathf.Max(0f, val);
                     }
                 }
                 catch (Exception ex)
                 {
-                    Debug.Log($"[TitlesAdapter] Failed direct read of CreditMultiplier: {ex.Message}");
+                    DevLog.Log($"[TitlesAdapter] Failed direct read of CreditMultiplier: {ex.Message}");
                 }
             }
         }

@@ -853,7 +853,7 @@ public partial class BattleManager : MonoBehaviour
 
 #if UNITY_EDITOR
         if (battleTextBox == null)
-            Debug.LogWarning("[IronTextTrace] SayInstant: battleTextBox is NULL after EnsureBattleTextBoxBound().");
+            DevLog.Log("[IronTextTrace] SayInstant: battleTextBox is NULL after EnsureBattleTextBoxBound().");
 #endif
 
         if (battleTextBox != null)
@@ -1556,7 +1556,7 @@ public partial class BattleManager : MonoBehaviour
         if (condensed && (tags & BattleLineTag.Result) == 0)
         {
     #if UNITY_EDITOR
-            Debug.Log($"[IronTextTrace] Say suppressed by condensed text. tags={tags} line='{line}'");
+            DevLog.Log($"[IronTextTrace] Say suppressed by condensed text. tags={tags} line='{line}'");
     #endif
             yield break;
         }
@@ -1564,7 +1564,7 @@ public partial class BattleManager : MonoBehaviour
         if (isAuto && autoCompress && (tags & BattleLineTag.Flavor) != 0)
         {
     #if UNITY_EDITOR
-            Debug.Log($"[IronTextTrace] Say suppressed by auto-compress flavor filter. tags={tags} line='{line}'");
+            DevLog.Log($"[IronTextTrace] Say suppressed by auto-compress flavor filter. tags={tags} line='{line}'");
     #endif
             yield break;
         }
@@ -1578,9 +1578,9 @@ public partial class BattleManager : MonoBehaviour
 
 #if UNITY_EDITOR
         if (battleTextBox == null)
-            Debug.LogWarning("[IronTextTrace] Say: battleTextBox is NULL after EnsureBattleTextBoxBound().");
+            DevLog.Log("[IronTextTrace] Say: battleTextBox is NULL after EnsureBattleTextBoxBound().");
         else
-            Debug.Log($"[IronTextTrace] Say rendering on textbox='{battleTextBox.name}' tags={tags} auto={isAuto} condensed={condensed} autoCompress={autoCompress}");
+            DevLog.Log($"[IronTextTrace] Say rendering on textbox='{battleTextBox.name}' tags={tags} auto={isAuto} condensed={condensed} autoCompress={autoCompress}");
 #endif
 
         if (battleTextBox != null)

@@ -34,16 +34,16 @@ public class IronBattleUIRoot : MonoBehaviour
         if (!ironBattleTextBox)
         {
             var allTextBoxes = GetComponentsInChildren<BattleTextBoxUI>(true);
-            Debug.Log($"[IronBattleUIRoot] Found {allTextBoxes.Length} BattleTextBoxUI components");
+            DevLog.Log($"[IronBattleUIRoot] Found {allTextBoxes.Length} BattleTextBoxUI components");
             for (int i = 0; i < allTextBoxes.Length; i++)
             {
                 var tb = allTextBoxes[i];
                 if (!tb) continue;
-                Debug.Log($"[IronBattleUIRoot]   [{i}] {tb.name} hasRenderable={tb.HasRenderableTarget} active={tb.gameObject.activeSelf}");
+                DevLog.Log($"[IronBattleUIRoot]   [{i}] {tb.name} hasRenderable={tb.HasRenderableTarget} active={tb.gameObject.activeSelf}");
                 if (tb.HasRenderableTarget)
                 {
                     ironBattleTextBox = tb;
-                    Debug.Log($"[IronBattleUIRoot] Assigned textbox (by HasRenderableTarget): {tb.name}");
+                    DevLog.Log($"[IronBattleUIRoot] Assigned textbox (by HasRenderableTarget): {tb.name}");
                     break;
                 }
             }
@@ -51,7 +51,7 @@ public class IronBattleUIRoot : MonoBehaviour
             if (!ironBattleTextBox && allTextBoxes.Length > 0)
             {
                 ironBattleTextBox = allTextBoxes[0];
-                Debug.Log($"[IronBattleUIRoot] Assigned textbox (fallback first): {allTextBoxes[0].name}");
+                DevLog.Log($"[IronBattleUIRoot] Assigned textbox (fallback first): {allTextBoxes[0].name}");
             }
         }
 
@@ -100,7 +100,7 @@ public class IronBattleUIRoot : MonoBehaviour
 
         ResolveOptionalRefs();
 
-        Debug.Log($"[IronBattleUIRoot] ApplyTo called: textbox={(ironBattleTextBox ? ironBattleTextBox.name : "NULL")} active={(ironBattleTextBox ? ironBattleTextBox.gameObject.activeSelf : false)}");
+        DevLog.Log($"[IronBattleUIRoot] ApplyTo called: textbox={(ironBattleTextBox ? ironBattleTextBox.name : "NULL")} active={(ironBattleTextBox ? ironBattleTextBox.gameObject.activeSelf : false)}");
 
         battle.SetUIBindingsOverride(ironBindings);
 
@@ -119,11 +119,11 @@ public class IronBattleUIRoot : MonoBehaviour
         if (ironBattleTextBox && !ironBattleTextBox.gameObject.activeSelf)
         {
             ironBattleTextBox.gameObject.SetActive(true);
-            Debug.Log($"[IronBattleUIRoot] Activated textbox: {ironBattleTextBox.name}");
+            DevLog.Log($"[IronBattleUIRoot] Activated textbox: {ironBattleTextBox.name}");
         }
 
 #if UNITY_EDITOR
-        Debug.Log($"[IronTextTrace] ApplyTo: battle={battle.name} textbox={(ironBattleTextBox ? ironBattleTextBox.name : "NULL")} hasTarget={(ironBattleTextBox ? ironBattleTextBox.HasRenderableTarget : false)} active={(ironBattleTextBox ? ironBattleTextBox.gameObject.activeInHierarchy : false)}");
+        DevLog.Log($"[IronTextTrace] ApplyTo: battle={battle.name} textbox={(ironBattleTextBox ? ironBattleTextBox.name : "NULL")} hasTarget={(ironBattleTextBox ? ironBattleTextBox.HasRenderableTarget : false)} active={(ironBattleTextBox ? ironBattleTextBox.gameObject.activeInHierarchy : false)}");
 #endif
 
         if (!ironBattleTextBox)

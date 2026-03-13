@@ -339,7 +339,7 @@ private void UpdateWildInfoUI()
 
                         if (atkFlatFromMods != 0 || Mathf.RoundToInt(atkFromStatValue) != baseAtk)
                         {
-                            Debug.Log($"[Titles DEBUG] owned={ownedId} mods.atkFlat={atkFlatFromMods} TitlesAdapter.AttackValue={Mathf.RoundToInt(atkFromStatValue)} base={baseAtk} eff={effAtk}");
+                            DevLog.Log($"[Titles DEBUG] owned={ownedId} mods.atkFlat={atkFlatFromMods} TitlesAdapter.AttackValue={Mathf.RoundToInt(atkFromStatValue)} base={baseAtk} eff={effAtk}");
                         }
                     }
                 }
