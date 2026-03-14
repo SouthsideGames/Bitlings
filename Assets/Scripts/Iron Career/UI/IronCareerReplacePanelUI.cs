@@ -16,17 +16,11 @@ public sealed class IronCareerReplacePanelUI : MonoBehaviour
     [Tooltip("Optional CanvasGroup for fade + input gating.")]
     [SerializeField] private CanvasGroup panelGroup;
 
-    [Tooltip("Optional parent where the incoming recruit card prefab is spawned.")]
-    [SerializeField] private Transform incomingCardParent;
+    [Tooltip("Component on the parent where the incoming recruit card is spawned.")]
+    [SerializeField] private IronCareerIncomingCardUI incomingCard;
 
-    [Tooltip("Prefab used for the locked incoming recruit card.")]
-    [SerializeField] private IronCareerMonsterCardUI incomingCardPrefab;
-
-    [Tooltip("Parent under ScrollRect Content (VerticalLayoutGroup) where party cards are spawned.")]
-    [SerializeField] private Transform partyListParent;
-
-    [Tooltip("Card prefab used for each party member.")]
-    [SerializeField] private IronCareerMonsterCardUI partyCardPrefab;
+    [Tooltip("Component on the parent where party cards are spawned.")]
+    [SerializeField] private IronCareerPartyCardListUI partyCardList;
 
     [Header("(New) Buttons")]
     [SerializeField] private Button confirmReplaceButton;
@@ -35,18 +29,15 @@ public sealed class IronCareerReplacePanelUI : MonoBehaviour
     [Header("(New) Text")]
     [SerializeField] private TextMeshProUGUI warningLabel;
 
-    private readonly List<IronCareerMonsterCardUI> _spawnedPartyCards = new List<IronCareerMonsterCardUI>(3);
-    private IronCareerMonsterCardUI _spawnedIncomingCard;
-    private int _selectedIndex = -1;
     private bool _hardcore;
 
     private void Awake()
     {
         if (!manager) manager = FindFirstObjectByType<IronCareerManager>();
 
-        // New layout wiring
         if (confirmReplaceButton) confirmReplaceButton.onClick.AddListener(OnConfirmPressed);
         if (cancelButton) cancelButton.onClick.AddListener(OnCancelPressed);
+        if (partyCardList) partyCardList.OnSelectionChanged += OnPartySelectionChanged;
         SetConfirmInteractable(false);
     }
 
@@ -54,16 +45,11 @@ public sealed class IronCareerReplacePanelUI : MonoBehaviour
     {
         if (confirmReplaceButton) confirmReplaceButton.onClick.RemoveAllListeners();
         if (cancelButton) cancelButton.onClick.RemoveAllListeners();
-
-        if (_spawnedIncomingCard) Destroy(_spawnedIncomingCard.gameObject);
-        for (int i = 0; i < _spawnedPartyCards.Count; i++)
-            if (_spawnedPartyCards[i]) Destroy(_spawnedPartyCards[i].gameObject);
-        _spawnedPartyCards.Clear();
+        if (partyCardList) partyCardList.OnSelectionChanged -= OnPartySelectionChanged;
     }
 
     public void Bind(IReadOnlyList<IronMonster> party)
     {
-        // Backwards compatible entry point: no incoming recruit shown.
         Bind(party, offer: null, hardcoreMode: false);
     }
 
@@ -73,14 +59,13 @@ public sealed class IronCareerReplacePanelUI : MonoBehaviour
     public void Bind(IReadOnlyList<IronMonster> party, IronMonster offer, bool hardcoreMode)
     {
         _hardcore = hardcoreMode;
-        _selectedIndex = -1;
         SetConfirmInteractable(false);
 
         if (warningLabel)
             warningLabel.text = "\u26A0 Selected monster will be permanently dismissed. This cannot be undone.";
 
-        RebuildIncomingCard(offer);
-        RebuildPartyList(party);
+        if (incomingCard) incomingCard.Bind(offer);
+        if (partyCardList) partyCardList.Bind(party);
 
         if (cancelButton)
         {
@@ -89,70 +74,15 @@ public sealed class IronCareerReplacePanelUI : MonoBehaviour
         }
     }
 
-    private void RebuildIncomingCard(IronMonster offer)
+    private void OnPartySelectionChanged(int index)
     {
-        if (_spawnedIncomingCard)
-        {
-            Destroy(_spawnedIncomingCard.gameObject);
-            _spawnedIncomingCard = null;
-        }
-
-        if (incomingCardPrefab != null && incomingCardParent != null)
-        {
-            _spawnedIncomingCard = Instantiate(incomingCardPrefab, incomingCardParent);
-            _spawnedIncomingCard.Bind(offer, isLocked: true, isSelectable: false);
-            return;
-        }
-
-        Debug.LogWarning("[IronCareerReplacePanelUI] Missing incomingCardPrefab or incomingCardParent; incoming recruit card cannot be shown.");
-    }
-
-    private void RebuildPartyList(IReadOnlyList<IronMonster> party)
-    {
-        if (partyCardPrefab == null || partyListParent == null)
-        {
-            Debug.LogWarning("[IronCareerReplacePanelUI] Missing partyCardPrefab or partyListParent; cannot build replace list.");
-            return;
-        }
-
-        // Clear
-        for (int i = 0; i < _spawnedPartyCards.Count; i++)
-        {
-            if (_spawnedPartyCards[i]) Destroy(_spawnedPartyCards[i].gameObject);
-        }
-        _spawnedPartyCards.Clear();
-
-        int count = Mathf.Min(3, party != null ? party.Count : 0);
-        for (int i = 0; i < count; i++)
-        {
-            var m = party[i];
-            if (m == null || m.def == null) continue;
-
-            var card = Instantiate(partyCardPrefab, partyListParent);
-            card.Bind(m, isLocked: false, isSelectable: true);
-            card.SetSelected(false);
-
-            int idx = i;
-            card.SetOnClick(() => OnPartyCardPressed(idx));
-
-            _spawnedPartyCards.Add(card);
-        }
-    }
-
-    private void OnPartyCardPressed(int index)
-    {
-        _selectedIndex = index;
-        for (int i = 0; i < _spawnedPartyCards.Count; i++)
-        {
-            if (_spawnedPartyCards[i]) _spawnedPartyCards[i].SetSelected(i == _selectedIndex);
-        }
-        SetConfirmInteractable(_selectedIndex >= 0);
+        SetConfirmInteractable(index >= 0);
     }
 
     private void OnConfirmPressed()
     {
-        if (_selectedIndex < 0) return;
-        manager?.OnReplaceChosen(_selectedIndex);
+        if (partyCardList == null || partyCardList.SelectedIndex < 0) return;
+        manager?.OnReplaceChosen(partyCardList.SelectedIndex);
     }
 
     private void OnCancelPressed()

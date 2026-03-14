@@ -32,7 +32,7 @@ public sealed class IronCareerPostScreenUI : MonoBehaviour
     [Header("Party")]
     [SerializeField] private TextMeshProUGUI partyHeaderTMP;
     [SerializeField] private Transform partyListParent; // VerticalLayoutGroup under ScrollRect Content
-    [SerializeField] private IronCareerMonsterCardUI partyCardPrefab;
+    [SerializeField] private IronCareerPostCardUI partyCardPrefab;
 
     [Header("Carry (single status)")]
     [SerializeField] private Image statusIcon;
@@ -50,7 +50,7 @@ public sealed class IronCareerPostScreenUI : MonoBehaviour
     [SerializeField] private Button continueButton;
     [SerializeField] private Button quitButton;
 
-    private readonly List<IronCareerMonsterCardUI> _spawnedPartyCards = new List<IronCareerMonsterCardUI>(3);
+    private readonly List<IronCareerPostCardUI> _spawnedPartyCards = new List<IronCareerPostCardUI>(3);
     private bool _continueQueued;
     private Color _statusNameBaseColor = Color.white;
     private Color _partyHeaderBaseColor = Color.white;
@@ -146,15 +146,10 @@ public sealed class IronCareerPostScreenUI : MonoBehaviour
                 if (m == null || m.def == null) continue;
 
                 var card = Instantiate(partyCardPrefab, partyListParent);
-                card.Bind(m, isLocked: true, isSelectable: true);
-                card.SetLocked(true); // Post screen cards are informational.
-                card.SetSelected(false);
-                card.SetOnClick(null);
-                card.gameObject.SetActive(true); // Must be last — Bind/SetSelected may deactivate root.
+                card.Bind(m);
+                card.gameObject.SetActive(true);
                 _spawnedPartyCards.Add(card);
-#if UNITY_EDITOR
-                Debug.Log($"[PostScreen] Card[{i}] spawned: activeSelf={card.gameObject.activeSelf}, activeInHierarchy={card.gameObject.activeInHierarchy}, parent={partyListParent.name}, parentActive={partyListParent.gameObject.activeInHierarchy}");
-#endif
+
             }
 
             // Force layout rebuild so the VerticalLayoutGroup sizes/positions the new cards.
