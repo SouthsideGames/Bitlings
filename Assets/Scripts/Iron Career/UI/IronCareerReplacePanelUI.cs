@@ -19,8 +19,11 @@ public sealed class IronCareerReplacePanelUI : MonoBehaviour
     [Tooltip("Component on the parent where the incoming recruit card is spawned.")]
     [SerializeField] private IronCareerIncomingCardUI incomingCard;
 
-    [Tooltip("Component on the parent where party cards are spawned.")]
-    [SerializeField] private IronCareerPartyCardListUI partyCardList;
+    [Tooltip("Parent where party cards are spawned.")]
+    [SerializeField] private Transform partyCardParent;
+
+    [Tooltip("Prefab for each party member card.")]
+    [SerializeField] private IronCareerPartyCardUI partyCardPrefab;
 
     [Header("(New) Buttons")]
     [SerializeField] private Button confirmReplaceButton;
@@ -29,6 +32,8 @@ public sealed class IronCareerReplacePanelUI : MonoBehaviour
     [Header("(New) Text")]
     [SerializeField] private TextMeshProUGUI warningLabel;
 
+    private readonly List<IronCareerPartyCardUI> _spawnedPartyCards = new List<IronCareerPartyCardUI>(3);
+    private int _selectedIndex = -1;
     private bool _hardcore;
 
     private void Awake()
@@ -37,7 +42,6 @@ public sealed class IronCareerReplacePanelUI : MonoBehaviour
 
         if (confirmReplaceButton) confirmReplaceButton.onClick.AddListener(OnConfirmPressed);
         if (cancelButton) cancelButton.onClick.AddListener(OnCancelPressed);
-        if (partyCardList) partyCardList.OnSelectionChanged += OnPartySelectionChanged;
         SetConfirmInteractable(false);
     }
 
@@ -45,7 +49,10 @@ public sealed class IronCareerReplacePanelUI : MonoBehaviour
     {
         if (confirmReplaceButton) confirmReplaceButton.onClick.RemoveAllListeners();
         if (cancelButton) cancelButton.onClick.RemoveAllListeners();
-        if (partyCardList) partyCardList.OnSelectionChanged -= OnPartySelectionChanged;
+
+        for (int i = 0; i < _spawnedPartyCards.Count; i++)
+            if (_spawnedPartyCards[i]) Destroy(_spawnedPartyCards[i].gameObject);
+        _spawnedPartyCards.Clear();
     }
 
     public void Bind(IReadOnlyList<IronMonster> party)
@@ -59,13 +66,14 @@ public sealed class IronCareerReplacePanelUI : MonoBehaviour
     public void Bind(IReadOnlyList<IronMonster> party, IronMonster offer, bool hardcoreMode)
     {
         _hardcore = hardcoreMode;
+        _selectedIndex = -1;
         SetConfirmInteractable(false);
 
         if (warningLabel)
             warningLabel.text = "\u26A0 Selected monster will be permanently dismissed. This cannot be undone.";
 
         if (incomingCard) incomingCard.Bind(offer);
-        if (partyCardList) partyCardList.Bind(party);
+        RebuildPartyCards(party);
 
         if (cancelButton)
         {
@@ -74,15 +82,49 @@ public sealed class IronCareerReplacePanelUI : MonoBehaviour
         }
     }
 
-    private void OnPartySelectionChanged(int index)
+    private void RebuildPartyCards(IReadOnlyList<IronMonster> party)
     {
-        SetConfirmInteractable(index >= 0);
+        for (int i = 0; i < _spawnedPartyCards.Count; i++)
+            if (_spawnedPartyCards[i]) Destroy(_spawnedPartyCards[i].gameObject);
+        _spawnedPartyCards.Clear();
+
+        if (partyCardPrefab == null || partyCardParent == null)
+        {
+            Debug.LogWarning("[IronCareerReplacePanelUI] Missing partyCardPrefab or partyCardParent.");
+            return;
+        }
+
+        int count = Mathf.Min(3, party != null ? party.Count : 0);
+        for (int i = 0; i < count; i++)
+        {
+            var m = party[i];
+            if (m == null || m.def == null) continue;
+
+            var card = Instantiate(partyCardPrefab, partyCardParent);
+            card.Bind(m);
+            card.SetSelected(false);
+
+            int idx = i;
+            card.SetOnClick(() => OnPartyCardPressed(idx));
+
+            _spawnedPartyCards.Add(card);
+        }
+    }
+
+    private void OnPartyCardPressed(int index)
+    {
+        _selectedIndex = index;
+        for (int i = 0; i < _spawnedPartyCards.Count; i++)
+        {
+            if (_spawnedPartyCards[i]) _spawnedPartyCards[i].SetSelected(i == _selectedIndex);
+        }
+        SetConfirmInteractable(_selectedIndex >= 0);
     }
 
     private void OnConfirmPressed()
     {
-        if (partyCardList == null || partyCardList.SelectedIndex < 0) return;
-        manager?.OnReplaceChosen(partyCardList.SelectedIndex);
+        if (_selectedIndex < 0) return;
+        manager?.OnReplaceChosen(_selectedIndex);
     }
 
     private void OnCancelPressed()
