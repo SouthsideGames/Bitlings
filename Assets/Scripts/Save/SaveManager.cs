@@ -726,6 +726,7 @@ private static PlayerSaveRoot MigrateRootIfNeeded(PlayerSaveRoot root)
         Data.jobStorageUpgrades ??= new List<JobStorageUpgrade>();
         Data.unlockedPacks ??= new List<string>();
         Data.resourceCounts ??= new List<int>();
+            Data.lifetimeResourceCollected ??= new List<int>();
         Data.preferredVariants ??= new List<PreferredVariantKV>();
         Data.activeJobMods ??= new List<JobGlobalMod>();
         Data.activeShinyBoosts ??= new List<ShinyBoostData>();
@@ -779,6 +780,7 @@ private static PlayerSaveRoot MigrateRootIfNeeded(PlayerSaveRoot root)
         }
 
         EnsureResourceCountsSized();
+        EnsureLifetimeResourceCountsSized();
 
         // Sets
         Data.ownedIds ??= new HashSet<string>();
@@ -1012,6 +1014,27 @@ private static PlayerSaveRoot MigrateRootIfNeeded(PlayerSaveRoot root)
 
         while (Data.resourceCounts.Count < need)
             Data.resourceCounts.Add(0);
+    }
+
+    private static void EnsureLifetimeResourceCountsSized()
+    {
+        if (Data == null) return;
+
+        Data.lifetimeResourceCollected ??= new List<int>();
+
+        int need = 0;
+        foreach (ResourceType t in Enum.GetValues(typeof(ResourceType)))
+            need = Mathf.Max(need, (int)t + 1);
+
+        while (Data.lifetimeResourceCollected.Count < need)
+            Data.lifetimeResourceCollected.Add(0);
+
+        int max = Mathf.Min(Data.lifetimeResourceCollected.Count, Data.resourceCounts?.Count ?? 0);
+        for (int i = 0; i < max; i++)
+        {
+            if (Data.lifetimeResourceCollected[i] < Data.resourceCounts[i])
+                Data.lifetimeResourceCollected[i] = Mathf.Max(0, Data.resourceCounts[i]);
+        }
     }
 
     private static void NormalizeOwnedEntries(List<OwnedMonsterData> list)

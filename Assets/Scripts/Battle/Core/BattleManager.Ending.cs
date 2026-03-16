@@ -32,6 +32,8 @@ public partial class BattleManager : MonoBehaviour
         pendingAction = PlayerAction.None;
         defendActiveThisRound = false;
         wildDefendActiveThisRound = false;
+        wildFocusConsecutiveUses = 0;
+        wildFocusCurrentSuccess = focusFirstUseSuccess;
         wildChargedNextAttack = false;
         ResetStatusIcons();
 
@@ -264,6 +266,8 @@ public partial class BattleManager : MonoBehaviour
         pendingAction = PlayerAction.None;
         defendActiveThisRound = false;
         wildDefendActiveThisRound = false;
+        wildFocusConsecutiveUses = 0;
+        wildFocusCurrentSuccess = focusFirstUseSuccess;
         wildChargedNextAttack = false;
         ResetStatusIcons();
 

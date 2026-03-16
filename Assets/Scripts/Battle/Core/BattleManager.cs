@@ -99,6 +99,11 @@ public partial class BattleManager : MonoBehaviour
     [SerializeField, Range(0f, 1f)] private float defendRepeatMultiplier = 0.5f;
     [SerializeField, Range(0f, 1f)] private float defendMinSuccess = 0.1f;
 
+    [Header("Focus Reliability")]
+    [SerializeField, Range(0f, 1f)] private float focusFirstUseSuccess = 1.0f;
+    [SerializeField, Range(0f, 1f)] private float focusRepeatMultiplier = 0.6f;
+    [SerializeField, Range(0f, 1f)] private float focusMinSuccess = 0.15f;
+
     private bool _isPlayerTurn;
     public bool IsPlayerTurn => _isPlayerTurn;
     public event Action<bool> OnPlayerTurnChanged;
@@ -184,6 +189,8 @@ public partial class BattleManager : MonoBehaviour
     private readonly Dictionary<TMP_Text, float> _battleStartInfoTargetAlpha = new Dictionary<TMP_Text, float>(16);
     private readonly Dictionary<Graphic, float> _battleStartHpBarTargetAlpha = new Dictionary<Graphic, float>(16);
     private readonly Dictionary<Graphic, float> _battleStartCoreIconTargetAlpha = new Dictionary<Graphic, float>(4);
+    private readonly List<string> _combatantNameScratch = new List<string>(4);
+    private readonly List<string> _enemyNameScratch = new List<string>(2);
 
     [Header("Status + Synergy (Battle Start)")]
     [Tooltip("Icons + default durations/magnitudes for StatusType.")]
@@ -291,6 +298,8 @@ public partial class BattleManager : MonoBehaviour
     private float currentDefendSuccess = 1f;
     private int wildDefendConsecutiveUses = 0;
     private float wildDefendCurrentSuccess = 1f;
+    private int wildFocusConsecutiveUses = 0;
+    private float wildFocusCurrentSuccess = 1f;
 
     private bool wildDefendActiveThisRound = false;
     private float wildShieldHP = 0f;
@@ -1065,6 +1074,8 @@ public partial class BattleManager : MonoBehaviour
 
         wildDefendConsecutiveUses = 0;
         wildDefendCurrentSuccess = defendFirstUseSuccess;
+        wildFocusConsecutiveUses = 0;
+        wildFocusCurrentSuccess = focusFirstUseSuccess;
         wildDefendActiveThisRound = false;
         wildShieldHP = 0f;
         wildPendingGuardShield = 0f;

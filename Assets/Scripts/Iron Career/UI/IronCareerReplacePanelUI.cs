@@ -16,7 +16,7 @@ public sealed class IronCareerReplacePanelUI : MonoBehaviour
     [Tooltip("Optional CanvasGroup for fade + input gating.")]
     [SerializeField] private CanvasGroup panelGroup;
 
-    [Tooltip("Component on the parent where the incoming recruit card is spawned.")]
+    [Tooltip("Component for the incoming recruit card UI.")]
     [SerializeField] private IronCareerIncomingCardUI incomingCard;
 
     [Tooltip("Parent where party cards are spawned.")]

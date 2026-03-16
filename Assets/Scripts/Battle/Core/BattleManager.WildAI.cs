@@ -87,11 +87,17 @@ public partial class BattleManager : MonoBehaviour
 
         if (wildDef.Personality != null)
         {
+            var playerTypeDef = (teamDefs != null && activeIndex >= 0 && activeIndex < teamDefs.Length)
+                ? teamDefs[activeIndex] : null;
+            float typeMatchupMult = (playerTypeDef != null)
+                ? BattleTypeChart.GetMultiplier(wildDef.type, playerTypeDef.type)
+                : 1f;
+
             var ctx = new PersonalityContext
             {
                 selfHpRatio = hpRatio,
-                hasSuperEffectiveMove = false,
-                isBadlyMatched = false,
+                hasSuperEffectiveMove = typeMatchupMult > 1f,
+                isBadlyMatched = typeMatchupMult < 1f,
                 turnNumber = Mathf.Max(1, _turnIndex + 1)
             };
 
@@ -129,6 +135,11 @@ public partial class BattleManager : MonoBehaviour
             if (action == BattleAction.Focus)
                 action = BattleAction.Attack;
         }
+
+        // If the wild already has a charge loaded, always cash it in.
+        // Prevents Focus-when-charged bug and ensures the damage bonus is never wasted.
+        if (wildChargedNextAttack)
+            action = BattleAction.Attack;
 
         switch (action)
         {
@@ -213,8 +224,36 @@ public partial class BattleManager : MonoBehaviour
         wildDefendCurrentSuccess = defendFirstUseSuccess;
     }
 
+    private bool RollEnemyFocusSuccess()
+    {
+        float chance = Mathf.Clamp01(wildFocusCurrentSuccess);
+        bool ok = Rng01() <= chance;
+
+        if (ok)
+        {
+            wildFocusConsecutiveUses++;
+            float next = focusFirstUseSuccess * Mathf.Pow(focusRepeatMultiplier, wildFocusConsecutiveUses);
+            wildFocusCurrentSuccess = Mathf.Max(focusMinSuccess, next);
+        }
+        else
+        {
+            wildFocusConsecutiveUses = 0;
+            wildFocusCurrentSuccess = focusFirstUseSuccess;
+        }
+
+        return ok;
+    }
+
+    private void ResetEnemyFocusStreak()
+    {
+        wildFocusConsecutiveUses = 0;
+        wildFocusCurrentSuccess = focusFirstUseSuccess;
+    }
+
     private void ApplyWildDefendStance()
     {
+        ResetEnemyFocusStreak();
+
         string name = wildDef ? wildDef.displayName : "Foe";
         bool success = RollEnemyDefendSuccess();
 

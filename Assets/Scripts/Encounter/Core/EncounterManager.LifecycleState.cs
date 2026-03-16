@@ -63,8 +63,6 @@ public partial class EncounterManager
 
     void Start()
     {
-        EmitStatus("Tap ENCOUNTER to begin. Hold to toggle AUTO.", LogScope.System);
-        OnStateChanged?.Invoke();
     }
 
     void Update()

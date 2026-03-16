@@ -404,7 +404,10 @@ public class PlayerDossierManager : MonoBehaviour
                 displayName = JobStrings.SiteName(job)
             };
 
-            row.unlocked = data.unlockedJobSites != null && data.unlockedJobSites.Contains(job);
+            row.unlocked = JobUnlockBridge.IsJobUnlocked(job);
+
+            if (!row.unlocked)
+                continue;
 
             row.assignedWorkers = CountWorkersAssigned(data, job);
 
@@ -622,24 +625,37 @@ public class PlayerDossierManager : MonoBehaviour
             return;
         }
 
-        s.creditCount = bank.Get(ResourceType.Credits);
-        s.energyCount = bank.Get(ResourceType.Energy);
-        s.medkitCount = bank.Get(ResourceType.Medkit);
-        s.materialCount = bank.Get(ResourceType.Material);
-        s.typeResBoosterCount = bank.Get(ResourceType.PPEPermit);
-        s.lureCount = bank.Get(ResourceType.Flyer);
-        s.captureBandCount = bank.Get(ResourceType.WorkOrder);
-        s.luckCount = bank.Get(ResourceType.Favor);
-        s.atkBoosterCount = bank.Get(ResourceType.TrainingVoucher);
-        s.hpBoosterCount = bank.Get(ResourceType.WellnessVoucher);
-        s.speedBoosterCount = bank.Get(ResourceType.EfficiencyVoucher);
-        s.shinyOrbCount = bank.Get(ResourceType.ShinyOrb);
-        s.blessingScaleCount = bank.Get(ResourceType.BlessingScale);
-        s.restChargeCount = bank.Get(ResourceType.Coffee);
-        s.growthCoreCount = bank.Get(ResourceType.GrowthCore);
-        s.packVoucherCount = bank.Get(ResourceType.PackVoucher);
+        s.creditCount = GetLifetimeCollected(data, ResourceType.Credits, bank.Get(ResourceType.Credits));
+        s.energyCount = GetLifetimeCollected(data, ResourceType.Energy, bank.Get(ResourceType.Energy));
+        s.medkitCount = GetLifetimeCollected(data, ResourceType.Medkit, bank.Get(ResourceType.Medkit));
+        s.materialCount = GetLifetimeCollected(data, ResourceType.Material, bank.Get(ResourceType.Material));
+        s.typeResBoosterCount = GetLifetimeCollected(data, ResourceType.PPEPermit, bank.Get(ResourceType.PPEPermit));
+        s.lureCount = GetLifetimeCollected(data, ResourceType.Flyer, bank.Get(ResourceType.Flyer));
+        s.captureBandCount = GetLifetimeCollected(data, ResourceType.WorkOrder, bank.Get(ResourceType.WorkOrder));
+        s.luckCount = GetLifetimeCollected(data, ResourceType.Favor, bank.Get(ResourceType.Favor));
+        s.atkBoosterCount = GetLifetimeCollected(data, ResourceType.TrainingVoucher, bank.Get(ResourceType.TrainingVoucher));
+        s.hpBoosterCount = GetLifetimeCollected(data, ResourceType.WellnessVoucher, bank.Get(ResourceType.WellnessVoucher));
+        s.speedBoosterCount = GetLifetimeCollected(data, ResourceType.EfficiencyVoucher, bank.Get(ResourceType.EfficiencyVoucher));
+        s.shinyOrbCount = GetLifetimeCollected(data, ResourceType.ShinyOrb, bank.Get(ResourceType.ShinyOrb));
+        s.blessingScaleCount = GetLifetimeCollected(data, ResourceType.BlessingScale, bank.Get(ResourceType.BlessingScale));
+        s.restChargeCount = GetLifetimeCollected(data, ResourceType.Coffee, bank.Get(ResourceType.Coffee));
+        s.growthCoreCount = GetLifetimeCollected(data, ResourceType.GrowthCore, bank.Get(ResourceType.GrowthCore));
+        s.packVoucherCount = GetLifetimeCollected(data, ResourceType.PackVoucher, bank.Get(ResourceType.PackVoucher));
 
         s.conversionEfficiencyPercent = ComputeHandlerEfficiency(data, s);
+    }
+
+    private int GetLifetimeCollected(PlayerManager data, ResourceType type, int fallbackCurrent)
+    {
+        if (data == null || data.lifetimeResourceCollected == null)
+            return Mathf.Max(0, fallbackCurrent);
+
+        int idx = (int)type;
+        if (idx < 0 || idx >= data.lifetimeResourceCollected.Count)
+            return Mathf.Max(0, fallbackCurrent);
+
+        int lifetime = Mathf.Max(0, data.lifetimeResourceCollected[idx]);
+        return Mathf.Max(lifetime, Mathf.Max(0, fallbackCurrent));
     }
 
     private int ComputeHandlerEfficiency(PlayerManager data, PlayerDossierSnapshot snap)
@@ -926,11 +942,9 @@ public class PlayerDossierManager : MonoBehaviour
             });
         }
 
-        var rng = new System.Random(GetStableShuffleSeed(data));
-
         rows.Sort((a, b) =>
         {
-            int unlockedCompare = a.unlocked.CompareTo(b.unlocked);
+            int unlockedCompare = b.unlocked.CompareTo(a.unlocked);
             if (unlockedCompare != 0) return unlockedCompare;
 
             if (!a.unlocked && !b.unlocked)
@@ -940,28 +954,14 @@ public class PlayerDossierManager : MonoBehaviour
 
                 int progCompare = pb.CompareTo(pa);
                 if (progCompare != 0) return progCompare;
-
-                return rng.Next(-1, 2);
             }
 
-            return rng.Next(-1, 2);
+            return string.CompareOrdinal(a.id, b.id);
         });
 
         snap.achievementsTotal = total;
         snap.achievementsUnlocked = unlockedCount;
         snap.achievements = rows.ToArray();
-    }
-
-    private int GetStableShuffleSeed(PlayerManager data)
-    {
-        unchecked
-        {
-            int seed = 1337;
-            if (data != null && !string.IsNullOrEmpty(data.playerId))
-                seed = (seed * 31) ^ data.playerId.GetHashCode();
-            seed = (seed * 31) ^ DateTime.UtcNow.Date.GetHashCode();
-            return seed;
-        }
     }
 
     // ─────────────────────────────────────────────────────────────

@@ -9,22 +9,16 @@ public class JobMonsterEntryUI : MonoBehaviour
     public Image icon;
     public TextMeshProUGUI nameText;
     public TextMeshProUGUI scoreText;
+    [SerializeField] private TextMeshProUGUI fatigueInfoText;
     public Image typeIcon;
 
     [Header("Assignment UI (Optional)")]
+    [SerializeField] private GameObject assignedRoot;
     public TextMeshProUGUI assignedText;
 
-    [Header("Fatigue UI (Optional)")]
-    [SerializeField] private GameObject fatiguedRoot;
-    [SerializeField] private TextMeshProUGUI fatiguedLabel;
-    [SerializeField] private CanvasGroup dimGroup;
-    [SerializeField, Range(0.15f, 1f)] private float fatiguedAlpha = 0.55f;
-
     [Header("Rest / Cooldown UI (Optional)")]
-    [Tooltip("Optional fill image (radial or horizontal) showing recovery progress 0..1.")]
-    [SerializeField] private Image restFill;
-    [Tooltip("Optional lock root shown while resting/cooling down.")]
-    [SerializeField] private GameObject restLockRoot;
+    [Tooltip("Optional root shown while resting/cooling down.")]
+    [SerializeField] private GameObject restRoot;
     [Tooltip("Optional small text shown while resting/cooling down (e.g., '3h 46m').")]
     [SerializeField] private TextMeshProUGUI restTimeText;
 
@@ -38,60 +32,22 @@ public class JobMonsterEntryUI : MonoBehaviour
         ClearAssignmentUI();
     }
 
-    void OnDisable()
-    {
-        // Optional: if you reuse entries via pooling, reset on disable.
-        ClearAssignmentUI();
-    }
-
     public void SetFatigued(bool isFatigued, string etaText = null)
     {
-        if (fatiguedRoot) fatiguedRoot.SetActive(isFatigued);
-
-        if (fatiguedLabel)
-        {
-            if (!isFatigued) fatiguedLabel.text = "";
-            else fatiguedLabel.text = string.IsNullOrEmpty(etaText) ? "FATIGUED" : $"FATIGUED • {etaText}";
-        }
-
         if (button) button.interactable = !isFatigued;
 
-        if (dimGroup) dimGroup.alpha = isFatigued ? fatiguedAlpha : 1f;
-        else if (icon)
-        {
-            var c = icon.color;
-            c.a = isFatigued ? fatiguedAlpha : 1f;
-            icon.color = c;
-        }
-
         // Also drive the optional rest UI (some screens treat "fatigued" as "resting").
-        SetRestingUI(isFatigued, etaText, progress01: null);
+        SetRestingUI(isFatigued, etaText);
     }
 
     /// <summary>
-    /// Preferred API for the JobAssign panel: show lock + timer + optional progress fill.
+    /// Preferred API for the JobAssign panel: show resting root + timer.
     /// </summary>
     public void SetResting(bool isResting, string etaText, float progress01)
     {
         if (button) button.interactable = !isResting;
 
-        if (dimGroup) dimGroup.alpha = isResting ? fatiguedAlpha : 1f;
-        else if (icon)
-        {
-            var c = icon.color;
-            c.a = isResting ? fatiguedAlpha : 1f;
-            icon.color = c;
-        }
-
-        // Keep existing overlay aligned if present.
-        if (fatiguedRoot) fatiguedRoot.SetActive(isResting);
-        if (fatiguedLabel)
-        {
-            if (!isResting) fatiguedLabel.text = "";
-            else fatiguedLabel.text = string.IsNullOrEmpty(etaText) ? "RESTING" : $"RESTING • {etaText}";
-        }
-
-        SetRestingUI(isResting, etaText, progress01);
+        SetRestingUI(isResting, etaText);
     }
 
     public void SetTooltip(string title, string subtitle)
@@ -101,33 +57,45 @@ public class JobMonsterEntryUI : MonoBehaviour
         tooltip.subtitle = subtitle;
     }
 
-    private void SetRestingUI(bool isResting, string etaText, float? progress01)
+    public void SetFatigueInfo(float cooldownHours)
     {
-        if (restLockRoot) restLockRoot.SetActive(isResting);
+        if (!fatigueInfoText) return;
+
+        if (cooldownHours <= 0f)
+        {
+            fatigueInfoText.text = "";
+            fatigueInfoText.gameObject.SetActive(false);
+            return;
+        }
+
+        fatigueInfoText.gameObject.SetActive(true);
+        fatigueInfoText.text = $"Fatigue: rests for {FormatHoursAndMinutes(cooldownHours)}";
+    }
+
+    private void SetRestingUI(bool isResting, string etaText)
+    {
+        if (restRoot) restRoot.SetActive(isResting);
 
         if (restTimeText)
         {
             restTimeText.gameObject.SetActive(isResting);
-            restTimeText.text = isResting ? (string.IsNullOrEmpty(etaText) ? "" : etaText) : "";
-        }
-
-        if (restFill)
-        {
-            restFill.gameObject.SetActive(isResting);
-            float v = progress01.HasValue ? Mathf.Clamp01(progress01.Value) : 0f;
-            restFill.fillAmount = v;
+            restTimeText.text = isResting
+                ? (string.IsNullOrEmpty(etaText) ? "Resting.." : $"Resting.. {etaText}")
+                : "";
         }
     }
 
     public void SetAssignment(JobType job, int slotIndex, bool hide)
     {
-        if (!assignedText) return;
-
         if (hide || job == JobType.None)
         {
             ClearAssignmentUI();
             return;
         }
+
+        if (assignedRoot) assignedRoot.SetActive(true);
+
+        if (!assignedText) return;
 
         assignedText.gameObject.SetActive(true);
         assignedText.text = $"Assigned: {job} (Slot {slotIndex + 1})";
@@ -141,8 +109,21 @@ public class JobMonsterEntryUI : MonoBehaviour
 
     private void ClearAssignmentUI()
     {
+        if (assignedRoot) assignedRoot.SetActive(false);
+
         if (!assignedText) return;
         assignedText.text = "";
         assignedText.gameObject.SetActive(false);
+    }
+
+    private string FormatHoursAndMinutes(float hours)
+    {
+        int totalMinutes = Mathf.Max(1, Mathf.RoundToInt(hours * 60f));
+        int wholeHours = totalMinutes / 60;
+        int minutes = totalMinutes % 60;
+
+        if (wholeHours <= 0) return $"{minutes}m";
+        if (minutes <= 0) return wholeHours == 1 ? "1h" : $"{wholeHours}h";
+        return $"{wholeHours}h {minutes}m";
     }
 }

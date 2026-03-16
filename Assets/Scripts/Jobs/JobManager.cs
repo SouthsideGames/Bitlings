@@ -107,6 +107,9 @@ public sealed class JobManager : MonoBehaviour
     [SerializeField, Min(0f)] private float offlineSimMultiplier = 1f;
     [SerializeField, Min(60f)] private float offlineChunkSeconds = 1200f;
 
+    [Header("Collection")]
+    [SerializeField] private bool enableAutoCollect = false;
+
     [Header("Shiny Team Bonus (pre-fatigue)")]
     [SerializeField] private float shiny1Bonus = 0.03f;
     [SerializeField] private float shiny2Bonus = 0.07f;
@@ -457,9 +460,9 @@ public sealed class JobManager : MonoBehaviour
                 // Keep legacy mirror (avoid stale values in any older code paths).
                 s.storedAmount = s.storedUnits + s.storedRemainder;
 
-                // Auto-collect ONLY when enabled AND storage is full.
-                // Do not auto-collect on partial storage.
-                if (cap > 0 && s.autoCollectEnabled && s.storedUnits >= cap)
+                // Auto-collect is opt-in globally; default is disabled for manual-collect UX.
+                // Even when enabled, it only triggers on full storage.
+                if (enableAutoCollect && cap > 0 && s.autoCollectEnabled && s.storedUnits >= cap)
                 {
                     Collect(s.config.jobType);
                 }
@@ -590,7 +593,10 @@ private static float AverageWorkingSlotFatigue(JobSiteState s)
     {
         var s = FindState(job);
         if (s == null) return;
-        s.autoCollectEnabled = enabled;
+
+        // Keep behavior deterministic: if global auto-collect is disabled,
+        // force per-site state off even if older saves had it on.
+        s.autoCollectEnabled = enableAutoCollect && enabled;
         SaveRuntimeToSave();
         FireJobsChanged();
     }
@@ -940,27 +946,42 @@ private static float AverageWorkingSlotFatigue(JobSiteState s)
         if (slotIndex < 0 || slotIndex >= cap) return false;
 
         long now = SaveManager.NowUnix();
+        bool hasWorker = st.workers != null && slotIndex < st.workers.Count && st.workers[slotIndex] != null;
 
         if (st.slotCooldownUntilUnix != null && slotIndex < st.slotCooldownUntilUnix.Length)
         {
             long until = st.slotCooldownUntilUnix[slotIndex];
             if (until > now)
                 remainingSeconds = until - now;
+            else if (until > 0)
+                st.slotCooldownUntilUnix[slotIndex] = 0;
         }
 
         if (st.slotFatigue01 != null && slotIndex < st.slotFatigue01.Length)
-            exhausted = Mathf.Clamp01(st.slotFatigue01[slotIndex]) >= 1f;
+        {
+            float f = Mathf.Clamp01(st.slotFatigue01[slotIndex]);
+
+            // Empty slots should not remain hard-locked by stale "exhausted" state.
+            // While resting, cooldown time is the only lock reason for empty slots.
+            if (!hasWorker && remainingSeconds <= 0 && f >= 1f - 0.0001f)
+            {
+                st.slotFatigue01[slotIndex] = 0.999f;
+                f = st.slotFatigue01[slotIndex];
+            }
+
+            exhausted = hasWorker && f >= 1f - 0.0001f;
+        }
 
         return true;
     }
 
     /// <summary>
-    /// Returns remaining cooldown for a worker key (ownedUID preferred, species id fallback).
+    /// Returns the raw unix timestamp when this worker/species finishes fatigue cooldown.
+    /// Returns 0 when not cooling down.
     /// </summary>
-    public bool TryGetWorkerCooldownRemainingSeconds(string key, out long remainingSeconds)
+    public long GetMonsterFatigueUntil(string key)
     {
-        remainingSeconds = 0;
-        if (string.IsNullOrEmpty(key)) return false;
+        if (string.IsNullOrEmpty(key)) return 0;
 
         long now = SaveManager.NowUnix();
         long bestUntil = 0;
@@ -975,6 +996,7 @@ private static float AverageWorkingSlotFatigue(JobSiteState s)
             {
                 var om = owned[i];
                 if (om == null) continue;
+
                 if (om.monsterId != key) continue;
                 if (string.IsNullOrEmpty(om.ownedUID)) continue;
 
@@ -983,10 +1005,60 @@ private static float AverageWorkingSlotFatigue(JobSiteState s)
             }
         }
 
+        return (bestUntil > now) ? bestUntil : 0;
+    }
+
+    public bool IsMonsterFatigued(string key)
+    {
+        long until = GetMonsterFatigueUntil(key);
+        return until > SaveManager.NowUnix();
+    }
+
+    /// <summary>
+    /// Returns remaining cooldown for a worker key (ownedUID preferred, species id fallback).
+    /// </summary>
+    public bool TryGetWorkerCooldownRemainingSeconds(string key, out long remainingSeconds)
+    {
+        remainingSeconds = 0;
+        if (string.IsNullOrEmpty(key)) return false;
+
+        long now = SaveManager.NowUnix();
+        long bestUntil = GetMonsterFatigueUntil(key);
         if (bestUntil <= now) return false;
 
         remainingSeconds = bestUntil - now;
         return true;
+    }
+
+    public bool TryGetWorkerAssignment(string key, out JobType job, out int slotIndex, out float hoursAssigned)
+    {
+        job = JobType.None;
+        slotIndex = -1;
+        hoursAssigned = 0f;
+
+        if (string.IsNullOrEmpty(key)) return false;
+
+        for (int si = 0; si < States.Count; si++)
+        {
+            var st = States[si];
+            if (st?.workers == null) continue;
+
+            for (int wi = 0; wi < st.workers.Count; wi++)
+            {
+                var w = st.workers[wi];
+                if (!IsWorkerMatchKey(w, key)) continue;
+
+                string wk = GetWorkerKey(w);
+                if (!_assignedUnix.TryGetValue(wk, out long start)) start = SaveManager.NowUnix();
+
+                job = st.config != null ? st.config.jobType : JobType.None;
+                slotIndex = wi;
+                hoursAssigned = Mathf.Max(0f, (SaveManager.NowUnix() - start) / 3600f);
+                return true;
+            }
+        }
+
+        return false;
     }
 
     // ---------------------------- Save / Load (assignments/progress) ----------------------------
@@ -1159,8 +1231,8 @@ private static float AverageWorkingSlotFatigue(JobSiteState s)
                     if (rs.slotCooldownUntilUnix != null && rs.slotCooldownUntilUnix.Length == cap)
                         Array.Copy(rs.slotCooldownUntilUnix, st.slotCooldownUntilUnix, cap);
 
-                    // Safe default for older saves.
-                    st.autoCollectEnabled = rs.autoCollectEnabled;
+                    // Keep runtime aligned with current game UX policy.
+                    st.autoCollectEnabled = enableAutoCollect && rs.autoCollectEnabled;
                     st.allowClinicRelief = rs.allowClinicRelief;
                 }
             }

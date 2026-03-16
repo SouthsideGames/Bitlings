@@ -133,6 +133,7 @@ public class PlayerDossierPanelUI : MonoBehaviour
         var manager = PlayerDossierManager.I;
         if (manager != null)
         {
+            manager.RefreshSnapshot();
             var snapshot = manager.CurrentSnapshot;
 
             
@@ -346,7 +347,7 @@ public class PlayerDossierPanelUI : MonoBehaviour
         {
             if (encountersInitiatedText != null) encountersInitiatedText.text = "Encounters Initiated:   0";
             if (captureSuccessRateText != null) captureSuccessRateText.text = "Capture Success Rate:   0%";
-            if (riftStabilizationsText != null) riftStabilizationsText.text = "Rift Stabilizations:    0";
+            if (riftStabilizationsText != null) riftStabilizationsText.text = "Boss Rifts Cleared:     0";
             if (rareBitlingsFoundText != null) rareBitlingsFoundText.text = "Rare Bitlings Found:    0";
             if (shinyDiscoveriesText != null) shinyDiscoveriesText.text = "Shiny Discoveries:      0";
             if (longestCaptureStreakText != null) longestCaptureStreakText.text = "Longest Capture Streak: 0";
@@ -356,7 +357,7 @@ public class PlayerDossierPanelUI : MonoBehaviour
 
         if (encountersInitiatedText != null) encountersInitiatedText.text = $"Encounters Initiated:   {stats.encountersInitiated}";
         if (captureSuccessRateText != null) captureSuccessRateText.text = $"Capture Success Rate:   {stats.captureSuccessRate}%";
-        if (riftStabilizationsText != null) riftStabilizationsText.text = $"Rift Stabilizations:    {stats.riftStabilizations}";
+        if (riftStabilizationsText != null) riftStabilizationsText.text = $"Boss Rifts Cleared:     {stats.riftStabilizations}";
         if (rareBitlingsFoundText != null) rareBitlingsFoundText.text = $"Rare Bitlings Found:    {stats.rareBitlingsFound}";
         if (shinyDiscoveriesText != null) shinyDiscoveriesText.text = $"Shiny Discoveries:      {stats.shinyDiscoveries}";
         if (longestCaptureStreakText != null) longestCaptureStreakText.text = $"Longest Capture Streak: {stats.longestCaptureStreak}";

@@ -18,6 +18,7 @@ public class UpgradesPanelUI : MonoBehaviour
     [Header("List")]
     [SerializeField] private Transform listRoot;
     [SerializeField] private GameObject rowPrefab;
+    [SerializeField] private ScrollContentAutoSizer scrollContentAutoSizer;
 
     [Header("Catalog (Master)")]
     [SerializeField] private List<UpgradeCatalogEntry> catalog = new();
@@ -58,6 +59,7 @@ public class UpgradesPanelUI : MonoBehaviour
     {
         _isShuttingDown = false;
         AddButtonHooks();
+        ResolveAutoSizer();
 
         ShowSection(_currentSection);
     }
@@ -131,7 +133,50 @@ public class UpgradesPanelUI : MonoBehaviour
 
         var (entries, prefab) = GetSectionData(section);
         BuildRows(entries, prefab);
+        RequestAutoSizerRefresh();
 
+    }
+
+    private void ResolveAutoSizer()
+    {
+        if (scrollContentAutoSizer != null)
+            return;
+
+        if (listRoot != null)
+        {
+            scrollContentAutoSizer = listRoot.GetComponentInParent<ScrollContentAutoSizer>();
+            if (scrollContentAutoSizer != null)
+                return;
+        }
+
+        scrollContentAutoSizer = GetComponentInParent<ScrollContentAutoSizer>();
+    }
+
+    private void RequestAutoSizerRefresh()
+    {
+        if (_isShuttingDown)
+            return;
+
+        ResolveAutoSizer();
+        if (scrollContentAutoSizer == null)
+            return;
+
+        scrollContentAutoSizer.Refresh(force: true);
+
+        if (_refreshCo != null)
+            StopCoroutine(_refreshCo);
+
+        _refreshCo = StartCoroutine(RefreshAutoSizerNextFrame());
+    }
+
+    private IEnumerator RefreshAutoSizerNextFrame()
+    {
+        yield return null;
+
+        if (!_isShuttingDown && this && isActiveAndEnabled && scrollContentAutoSizer != null)
+            scrollContentAutoSizer.Refresh(force: true);
+
+        _refreshCo = null;
     }
 
     private (List<UpgradeCatalogEntry> entries, GameObject prefab) GetSectionData(UpgradeSection section)

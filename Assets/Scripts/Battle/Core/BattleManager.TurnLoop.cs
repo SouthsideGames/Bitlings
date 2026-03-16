@@ -329,6 +329,19 @@ public partial class BattleManager : MonoBehaviour
 
         var vsName = wildDef ? $"{wildDef.displayName} (Lv {wildLevel})" : "Unknown";
         BattleLogger.BeginBattle(vsName, BattleSeed, BattleSeedLabel);
+
+        _combatantNameScratch.Clear();
+        for (int i = 0; i < 3; i++)
+        {
+            string teamName = GetName(i);
+            if (!string.IsNullOrWhiteSpace(teamName))
+                _combatantNameScratch.Add(teamName);
+        }
+
+        _enemyNameScratch.Clear();
+        _enemyNameScratch.Add(wildDef ? wildDef.displayName : "Foe");
+        BattleLogger.SetCombatants(_combatantNameScratch, _enemyNameScratch);
+
         // Reset key moment snapshot for this battle.
         BattleLogger.SetKeyMomentsCap(20);
         BattleLogger.ClearKeyMoments();
@@ -452,7 +465,7 @@ public partial class BattleManager : MonoBehaviour
                 pSpeed = Mathf.Max(1, GetProgressionTotalSPDForIndex(activeIndex));
 
             // Speed boosters that are "spent" on initiative should apply here.
-            if (BattleBoosterController.I != null)
+            if (_rules.allowBoosters && BattleBoosterController.I != null)
                 pSpeed = Mathf.Max(1, pSpeed + Mathf.Max(0, BattleBoosterController.I.ConsumeSpeedBonusForInitiative()));
 
             // Status: Soaked reduces speed (initiative).
@@ -711,8 +724,6 @@ RefreshStatusIconsFromState();
                                         if (teamHP[activeIndex] <= 0.01f)
                                         {
                                             RefreshStatusIconsFromState();
-                                            
-                                        NotifyPlayerActionResolved_ForForesight(activeIndex, PlayerAction.Focus);
 break;
                                         }
 
@@ -731,6 +742,7 @@ break;
                                             BattleFeedbackManager.BattleFeedbackSide.Player,
                                             BattleFeedbackManager.BattleFeedbackAction.Focus
                                         );
+                                        NotifyPlayerActionResolved_ForForesight(activeIndex, PlayerAction.Focus);
                                         RefreshStatusIconsFromState();
                                         break;
                                     }
@@ -746,6 +758,7 @@ break;
 
                                         ResetDefendStreak();
                                         yield return ResolveQueuedSwap();
+                                        NotifyPlayerActionResolved_ForForesight(activeIndex, PlayerAction.Swap);
                                         RefreshStatusIconsFromState();
                                         break;
                                     }
@@ -756,8 +769,6 @@ break;
                                         if (teamHP[activeIndex] <= 0.01f)
                                         {
                                             RefreshStatusIconsFromState();
-                                            
-                                        NotifyPlayerActionResolved_ForForesight(activeIndex, PlayerAction.Run);
 break;
                                         }
 
@@ -771,6 +782,7 @@ break;
                                             BattleFeedbackManager.BattleFeedbackSide.Player,
                                             BattleFeedbackManager.BattleFeedbackAction.Run
                                         );
+                                        NotifyPlayerActionResolved_ForForesight(activeIndex, PlayerAction.Run);
                                         // Run does not affect guard/charge, but keep icons correct anyway
                                         RefreshStatusIconsFromState();
 
@@ -823,7 +835,7 @@ break;
             }
 
             // Booster system: tick durations/cooldowns once per completed round.
-            if (BattleBoosterController.I != null)
+            if (_rules.allowBoosters && BattleBoosterController.I != null)
                 BattleBoosterController.I.OnTurnEnd();
 
             defendActiveThisRound = false;
@@ -964,6 +976,8 @@ if (teamHP != null && activeIndex >= 0 && activeIndex < teamHP.Length && teamHP[
                     BattleLogger.Log($"{name} tried to defend, but it failed!", LogScope.Battle);
                 }
 
+                NotifyPlayerActionResolved_ForForesight(activeIndex, PlayerAction.Defend);
+
                 break;
             }
 
@@ -981,6 +995,7 @@ if (teamHP != null && activeIndex >= 0 && activeIndex < teamHP.Length && teamHP[
                                             BattleFeedbackManager.BattleFeedbackSide.Player,
                                             BattleFeedbackManager.BattleFeedbackAction.Focus
                                         );
+                NotifyPlayerActionResolved_ForForesight(activeIndex, PlayerAction.Focus);
                 RefreshStatusIconsFromState();
                 break;
             }
@@ -990,6 +1005,7 @@ if (teamHP != null && activeIndex >= 0 && activeIndex < teamHP.Length && teamHP[
                 ResetDefendStreak();
                 ClearPlayerGuardStateForActive(); // ✅ guard must never carry to a swapped-in monster
                 yield return ResolveQueuedSwap();
+                NotifyPlayerActionResolved_ForForesight(activeIndex, PlayerAction.Swap);
                 RefreshStatusIconsFromState();
                 break;
             }
@@ -1007,6 +1023,7 @@ if (teamHP != null && activeIndex >= 0 && activeIndex < teamHP.Length && teamHP[
                                             BattleFeedbackManager.BattleFeedbackSide.Player,
                                             BattleFeedbackManager.BattleFeedbackAction.Run
                                         );
+                NotifyPlayerActionResolved_ForForesight(activeIndex, PlayerAction.Run);
                 RefreshStatusIconsFromState();
 
                 if (escaped)
@@ -1419,6 +1436,9 @@ if (!playerLandedFirstHitThisBattle && dr.damage > 0)
             if (choice != EnemyAction.Defend)
                 ResetEnemyDefendStreak();
 
+            if (choice != EnemyAction.Focus)
+                ResetEnemyFocusStreak();
+
             if (choice == EnemyAction.Defend)
             {
                 string name = wildDef ? wildDef.displayName : "Foe";
@@ -1442,14 +1462,27 @@ if (!playerLandedFirstHitThisBattle && dr.damage > 0)
                     yield return Say($"{name} tried to defend, but it failed!", BattleLineTag.Result);
                 }
 
+                NotifyWildActionResolved_ForForesight(EnemyAction.Defend);
+
                 yield break;
             }
 
             if (choice == EnemyAction.Focus)
             {
+                string name = wildDef ? wildDef.displayName : "Foe";
+                bool success = RollEnemyFocusSuccess();
+
+                if (!success)
+                {
+                    if (!ShouldSkipNarration(BattleLineTag.Flavor))
+                        yield return Say($"{name} tried to charge, but lost momentum!", BattleLineTag.Flavor);
+
+                    NotifyWildActionResolved_ForForesight(EnemyAction.Focus);
+                    yield break;
+                }
+
                 wildChargedNextAttack = true;
 
-                string name = wildDef ? wildDef.displayName : "Foe";
                 if (!ShouldSkipNarration(BattleLineTag.Flavor))
                     yield return Say($"{name} is charging up.", BattleLineTag.Flavor);
                 if (!ShouldSkipNarration(BattleLineTag.Flavor))
@@ -1460,6 +1493,8 @@ if (!playerLandedFirstHitThisBattle && dr.damage > 0)
                     BattleFeedbackManager.BattleFeedbackSide.Wild,
                     BattleFeedbackManager.BattleFeedbackAction.Focus
                 );
+
+                NotifyWildActionResolved_ForForesight(EnemyAction.Focus);
 
                 yield break;
             }
@@ -1473,6 +1508,7 @@ if (!playerLandedFirstHitThisBattle && dr.damage > 0)
                 if (fled)
                 {
                     yield return Say($"{name} fled! (Run chance {Mathf.RoundToInt(chance * 100f)}%)", BattleLineTag.Result);
+                    NotifyWildActionResolved_ForForesight(EnemyAction.Run);
                     _wildEscapedThisBattle = true;
                     EndBattleRouted(false, escaped: true);
                     yield break;
@@ -1480,6 +1516,7 @@ if (!playerLandedFirstHitThisBattle && dr.damage > 0)
                 else
                 {
                     yield return Say($"{name} tried to flee, but couldn't! (Run chance {Mathf.RoundToInt(chance * 100f)}%)", BattleLineTag.Result);
+                    NotifyWildActionResolved_ForForesight(EnemyAction.Run);
                     yield break;
                 }
             }
@@ -1842,10 +1879,6 @@ if (dr.crit && !df.cannotBeCrit)
             }
         }
 
-            // Status: Foresight — record the wild action for repeat detection (Attack already recorded at hit-time).
-            if (choice != EnemyAction.Attack)
-                NotifyWildActionResolved_ForForesight(choice);
-
         }
 
         finally
@@ -1891,10 +1924,25 @@ EndBattleRouted(false);
 
     public void ForceEndBattleEarly(bool victory, bool escaped = false)
     {
+        inBattle = false;
         BattleCalc.ResetRng();
+        _rng.ClearAll();
+        ConfigureForAuto(false);
         SetIsPlayerTurn(false);
+        GameEvents.OnBattleStateChanged?.Invoke();
         pendingAction = PlayerAction.None;
+        defendActiveThisRound = false;
+        wildDefendActiveThisRound = false;
+        wildFocusConsecutiveUses = 0;
+        wildFocusCurrentSuccess = focusFirstUseSuccess;
+        wildChargedNextAttack = false;
         ResetStatusIcons();
+
+        if (turnCR != null)
+        {
+            StopCoroutine(turnCR);
+            turnCR = null;
+        }
 
         if (benchBtn1) benchBtn1.interactable = false;
         if (benchBtn2) benchBtn2.interactable = false;

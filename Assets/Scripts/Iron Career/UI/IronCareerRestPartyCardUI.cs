@@ -3,10 +3,10 @@ using UnityEngine;
 using UnityEngine.UI;
 
 /// <summary>
-/// Individual incoming recruit card for the Iron Career Replace panel.
-/// Uses its own prefab/layout and binds offer data directly.
+/// Party card view used by the Iron Career Rest panel.
+/// Displays only image, level, type, name, title, and health.
 /// </summary>
-public sealed class IronCareerIncomingCardUI : MonoBehaviour
+public sealed class IronCareerRestPartyCardUI : MonoBehaviour
 {
     [Header("Core")]
     [SerializeField] private Image icon;
@@ -22,28 +22,32 @@ public sealed class IronCareerIncomingCardUI : MonoBehaviour
     [SerializeField] private Image typeIcon;
     [SerializeField] private TypeIconLibrary typeIconLibrary;
 
-    public void Bind(IronMonster offer)
+    public void Bind(IronMonster monster)
     {
-        if (offer == null || offer.def == null)
+        if (monster == null || monster.def == null)
         {
             Clear();
             return;
         }
 
-        if (icon) icon.sprite = offer.def.icon;
-        if (nameLabel) nameLabel.text = offer.def.displayName;
-        if (levelLabel) levelLabel.text = $"Lv {Mathf.Max(1, offer.level)}";
-        if (titleLabel) titleLabel.text = (offer.lockedTitle != null) ? offer.lockedTitle.displayName : string.Empty;
+        if (icon) icon.sprite = monster.def.icon;
+        if (nameLabel) nameLabel.text = monster.def.displayName;
+        if (levelLabel) levelLabel.text = $"LV: {Mathf.Max(1, monster.level)}";
+
+        string titleText = (monster.lockedTitle != null && !string.IsNullOrWhiteSpace(monster.lockedTitle.displayName))
+            ? monster.lockedTitle.displayName
+            : "Untitled";
+        if (titleLabel) titleLabel.text = $"Title: {titleText}";
 
         if (typeIcon != null && typeIconLibrary != null)
         {
-            var sprite = typeIconLibrary.GetIcon(offer.def.type);
+            var sprite = typeIconLibrary.GetIcon(monster.def.type);
             typeIcon.sprite = sprite;
             typeIcon.gameObject.SetActive(sprite != null);
         }
 
-        float max = Mathf.Max(1f, offer.maxHp);
-        float cur = Mathf.Clamp(offer.hp, 0f, max);
+        float max = Mathf.Max(1f, monster.maxHp);
+        float cur = Mathf.Clamp(monster.hp, 0f, max);
 
         if (hpSlider) hpSlider.value = cur / max;
         if (hpLabel) hpLabel.text = $"{Mathf.CeilToInt(cur)}/{Mathf.CeilToInt(max)}";
@@ -54,7 +58,7 @@ public sealed class IronCareerIncomingCardUI : MonoBehaviour
         if (icon) icon.sprite = null;
         if (nameLabel) nameLabel.text = "-";
         if (levelLabel) levelLabel.text = string.Empty;
-        if (titleLabel) titleLabel.text = string.Empty;
+        if (titleLabel) titleLabel.text = "Title: Untitled";
         if (hpLabel) hpLabel.text = string.Empty;
         if (hpSlider) hpSlider.value = 0f;
 

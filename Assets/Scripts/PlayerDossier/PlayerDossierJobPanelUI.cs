@@ -16,7 +16,7 @@ public class PlayerDossierJobPanelUI : MonoBehaviour
     [SerializeField] private TextMeshProUGUI hoursText;        // e.g. "Hours Supervised: 16"
     [SerializeField] private TextMeshProUGUI materialsText;    // e.g. "Materials Smelted: 4,320"
     [SerializeField] private TextMeshProUGUI outputText;       // e.g. "Output / hr: 270"
-    [SerializeField] private TextMeshProUGUI assignedText;     // e.g. "Assigned Fire Bitlings: 3"
+    [SerializeField] private TextMeshProUGUI assignedText;     // e.g. "Assigned Bitlings: 3"
     [SerializeField] private TextMeshProUGUI topPerformerText; // e.g. "Top Performer: FLAREBYTE (Lv. 14)"
 
     [Header("Job Icons")]
@@ -60,7 +60,6 @@ public class PlayerDossierJobPanelUI : MonoBehaviour
         // Flavor labels
         string materialsLabel = GetMaterialsLabel(row.job);
         string outputLabel    = GetOutputLabel(row.job);
-        string typeLabel      = GetPrimaryTypeLabel(row.job);
 
         // Lines
         if (hoursText != null)
@@ -73,7 +72,7 @@ public class PlayerDossierJobPanelUI : MonoBehaviour
             outputText.text = $"{outputLabel}: {row.outputPerHour}";
 
         if (assignedText != null)
-            assignedText.text = $"Assigned {typeLabel} Bitlings: {row.assignedWorkers}";
+            assignedText.text = $"Assigned Bitlings: {row.assignedWorkers}";
 
         if (topPerformerText != null)
         {
@@ -131,30 +130,6 @@ public class PlayerDossierJobPanelUI : MonoBehaviour
             case JobType.Sanctum:      return "Auras / hr";
             case JobType.Clinic:       return "Patients / hr";
             default:                   return "Output / hr";
-        }
-    }
-
-    private string GetPrimaryTypeLabel(JobType job)
-    {
-        // This just controls the text in "Assigned X Bitlings"
-        switch (job)
-        {
-            case JobType.Forge:       return "Fire";
-            case JobType.Harbor:      return "Water";
-            case JobType.Cryo_Lab:     return "Ice";
-            case JobType.Grove:       return "Grass";
-            case JobType.Power_Plant:  return "Electric";
-            case JobType.Quarry:
-            case JobType.Mine:        return "Rock";
-            case JobType.Wyrm_Den:     return "Wyrm";
-            case JobType.Shadow_Market:return "Umbral";
-            case JobType.Workshop:    return "Alloy";
-            case JobType.Sanctum:     return "Oracle";
-            case JobType.Clinic:      return "Support";
-            case JobType.Containment: return "Corrupt";
-            case JobType.Observatory: return "Sky";
-            case JobType.Gym:         return "Clash";
-            default:                  return "Bitling";
         }
     }
 

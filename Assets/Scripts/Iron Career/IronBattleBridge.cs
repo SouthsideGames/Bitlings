@@ -87,7 +87,11 @@ public sealed class IronBattleBridge : MonoBehaviour, IBattleRosterProvider, IBa
     /// </summary>
     public void BeginIronBattle(BattleManager battle, Action<BattleResult> onEnded)
     {
-        if (battle == null) return;
+        if (battle == null)
+        {
+            NotifyStartFailure(onEnded, "Missing BattleManager.");
+            return;
+        }
 
 #if UNITY_EDITOR
         DevLog.Log($"[IronBattleBridge] BeginIronBattle: ironActive={IronCareerRuntime.IsActive} host={(hostBehaviour ? hostBehaviour.name : "NULL")} useDebugFallback={useDebugFallbackIfNoHost}");
@@ -96,11 +100,19 @@ public sealed class IronBattleBridge : MonoBehaviour, IBattleRosterProvider, IBa
         if (!IronCareerRuntime.IsActive)
         {
             Debug.LogError("[IronBattleBridge] BeginIronBattle called but IronCareerRuntime is not active. Aborting battle start.");
+            NotifyStartFailure(onEnded, "Iron runtime inactive before battle start.");
             return;
         }
 
         // Build and cache ids + title injection BEFORE Begin.
         var party = GetPlayerTeam();
+        if (party == null || party.Count <= 0)
+        {
+            Debug.LogError("[IronBattleBridge] Party is empty/invalid at battle start. Aborting battle start.");
+            NotifyStartFailure(onEnded, "Injected party is empty.");
+            return;
+        }
+
         var wild = GetWild();
 
 #if UNITY_EDITOR
@@ -109,6 +121,7 @@ public sealed class IronBattleBridge : MonoBehaviour, IBattleRosterProvider, IBa
         if (wild == null || wild.def == null)
         {
             Debug.LogError("[IronBattleBridge] Wild combatant is null/invalid. Aborting battle start.");
+            NotifyStartFailure(onEnded, "Wild combatant is null/invalid.", null, wild != null ? wild.level : 1);
             return;
         }
 
@@ -129,6 +142,66 @@ public sealed class IronBattleBridge : MonoBehaviour, IBattleRosterProvider, IBa
 #if UNITY_EDITOR
         DevLog.Log($"[IronBattleBridge] carryStatus snapshot = {carryStatus}");    
 #endif
+    }
+
+    private void NotifyStartFailure(Action<BattleResult> onEnded, string reason, MonsterDataSO wildDef = null, int wildLevel = 1)
+    {
+        Debug.LogError($"[IronBattleBridge] Battle start failed: {reason}");
+
+        var outcome = new IronBattleOutcome
+        {
+            victory = false,
+            escaped = false,
+            wildEscaped = false,
+            wildDef = wildDef,
+            wildLevel = Mathf.Max(1, wildLevel),
+            secondsSurvived = 0f,
+            turnsSurvived = 0,
+            critCount = 0,
+            damageTaken = 0,
+            damageDealt = 0,
+            creditsGained = 0,
+            creditsBase = 0,
+            creditsTitleBonus = 0,
+            growthCoresGained = 0,
+            growthCoresBase = 0,
+            growthCoresTitleBonus = 0,
+            teamHP = null,
+            teamMaxHP = null,
+            shieldHP = null,
+            playerFieldStatus = IronFieldStatusSnapshot.None,
+        };
+
+        try
+        {
+            Host?.OnIronBattleResolved(outcome);
+        }
+        catch (Exception ex)
+        {
+            Debug.LogError($"[IronBattleBridge] Start failure callback exception: {ex.Message}");
+        }
+
+        onEnded?.Invoke(new BattleResult
+        {
+            victory = false,
+            escaped = false,
+            creditsGained = 0,
+            creditsBase = 0,
+            creditsTitleBonus = 0,
+            creditsMultiplier = 1f,
+            growthCoresGained = 0,
+            growthCoresBase = 0,
+            growthCoresTitleBonus = 0,
+            activeMonsterOwnedId = null,
+            wildDef = wildDef,
+            wildLevel = Mathf.Max(1, wildLevel),
+            secondsSurvived = 0f,
+            critCount = 0,
+            turnsSurvived = 0,
+            damageTaken = 0,
+            damageDealt = 0,
+            gotFirstHit = false
+        });
     }
 
     // ─────────────────────────────────────────────────────────────

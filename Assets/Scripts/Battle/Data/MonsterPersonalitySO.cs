@@ -34,6 +34,15 @@ public class MonsterPersonalitySO : ScriptableObject
     [Tooltip("Optional pressure that increases aggression as turns pass.")]
     [Min(0)] public int eachTurnAttackBonus = 0;
 
+    [Tooltip("Reduces Focus weight each turn. Discourages late-game charge spam.")]
+    [Min(0)] public int eachTurnFocusPenalty = 0;
+
+    [Tooltip("Reduces Focus weight when HP is critically low. Prevents wasted setups near KO.")]
+    [Min(0)] public int lowHpFocusPenalty = 2;
+
+    [Tooltip("Chaotic group only: chance per turn to ignore weights and pick a fully random action.")]
+    [Range(0f, 1f)] public float chaoticOverrideChance = 0.25f;
+
     [TextArea(2,4)] 
     public string description = "Default personality description.";
 
@@ -45,11 +54,22 @@ public class MonsterPersonalitySO : ScriptableObject
         int f = focusWeight;
         int r = runWeight;
 
-        if (ctx.selfHpRatio <= lowHpThreshold) { d += lowHpDefendBonus; r += lowHpRunBonus; }
+        if (ctx.selfHpRatio <= lowHpThreshold) { d += lowHpDefendBonus; r += lowHpRunBonus; f = Mathf.Max(0, f - lowHpFocusPenalty); }
         if (ctx.hasSuperEffectiveMove) a += superEffectiveAttackBonus;
         if (ctx.isBadlyMatched) { d += badMatchDefendBonus; r += badMatchRunBonus; }
 
         a += eachTurnAttackBonus * Mathf.Max(0, ctx.turnNumber - 1);
+        f = Mathf.Max(0, f - eachTurnFocusPenalty * Mathf.Max(0, ctx.turnNumber - 1));
+
+        // Chaotic personalities occasionally throw out the weights entirely.
+        if (group == PersonalityGroup.Chaotic && chaoticOverrideChance > 0f && rng.NextDouble() < chaoticOverrideChance)
+        {
+            int pick = rng.Next(0, 4);
+            if (pick == 0) return BattleAction.Attack;
+            if (pick == 1) return BattleAction.Defend;
+            if (pick == 2) return BattleAction.Focus;
+            return BattleAction.Run;
+        }
 
         int total = Mathf.Max(0, a) + Mathf.Max(0, d) + Mathf.Max(0, f) + Mathf.Max(0, r);
         if (total <= 0) return BattleAction.Attack;

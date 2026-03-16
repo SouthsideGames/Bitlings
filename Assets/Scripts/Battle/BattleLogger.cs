@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
+using System.Text.RegularExpressions;
 using UnityEngine;
 
 [Serializable]
@@ -45,6 +46,8 @@ public static class BattleLogColors
     public const string Name   = "#D7B6FF"; // name tint
     public const string Title  = "#FFB347"; // title tint
     public const string Dim    = "#A9A9A9"; // grey
+    public const string Player = Base;      // player-side actor tint
+    public const string Enemy  = "#E19C54"; // enemy-side actor tint
 }
 
 public enum ModKind { Buff, Debuff, Info }
@@ -192,6 +195,8 @@ public static class BattleLogger
     static readonly List<LogEntry> _entries = new List<LogEntry>(512);
     static string _currentBattleLabel;
     static string _currentEncounterLabel;
+    static readonly List<string> _playerCombatantNames = new List<string>(8);
+    static readonly List<string> _enemyCombatantNames = new List<string>(8);
 
     // ─────────────────────────────────────────────────────────
     // Combat snapshot (last N key moments)
@@ -316,6 +321,7 @@ public static class BattleLogger
     {
         OnBattleEnded?.Invoke(victory);
         _currentBattleLabel = null;
+        ClearCombatants();
         // Keep seed values for diagnostics even after battle ends.
     }
 
@@ -331,6 +337,21 @@ public static class BattleLogger
         _currentEncounterLabel = null;
     }
 
+    public static void SetCombatants(IReadOnlyList<string> playerNames, IReadOnlyList<string> enemyNames)
+    {
+        _playerCombatantNames.Clear();
+        _enemyCombatantNames.Clear();
+
+        AddNames(_playerCombatantNames, playerNames);
+        AddNames(_enemyCombatantNames, enemyNames);
+    }
+
+    public static void ClearCombatants()
+    {
+        _playerCombatantNames.Clear();
+        _enemyCombatantNames.Clear();
+    }
+
     // ─────────────────────────────────────────────────────────
     // Plain text log
     // ─────────────────────────────────────────────────────────
@@ -343,11 +364,13 @@ public static class BattleLogger
         if (ShouldSuppressAutoHint(message))
             return;
 
+        string rendered = ApplyCombatantTint(message, scope);
+
         var e = new LogEntry
         {
             unix        = NowUnix(),
             scope       = scope,
-            text        = message,
+            text        = rendered,
             battleLabel = _currentBattleLabel ?? _currentEncounterLabel
         };
 
@@ -355,7 +378,67 @@ public static class BattleLogger
         TrimToMax();
 
         OnLogAppended?.Invoke(e);
-        OnLineLogged?.Invoke(message);
+        OnLineLogged?.Invoke(rendered);
+    }
+
+    static void AddNames(List<string> target, IReadOnlyList<string> source)
+    {
+        if (target == null || source == null) return;
+
+        for (int i = 0; i < source.Count; i++)
+        {
+            string name = source[i];
+            if (string.IsNullOrWhiteSpace(name)) continue;
+
+            bool exists = false;
+            for (int j = 0; j < target.Count; j++)
+            {
+                if (string.Equals(target[j], name, StringComparison.OrdinalIgnoreCase))
+                {
+                    exists = true;
+                    break;
+                }
+            }
+
+            if (!exists)
+                target.Add(name);
+        }
+
+        target.Sort((a, b) => b.Length.CompareTo(a.Length));
+    }
+
+    static string ApplyCombatantTint(string message, LogScope scope)
+    {
+        if (scope != LogScope.Battle) return message;
+        if (string.IsNullOrEmpty(message)) return message;
+        if (message.IndexOf("<color=", StringComparison.OrdinalIgnoreCase) >= 0) return message;
+
+        string tinted = TintNames(message, _playerCombatantNames, BattleLogColors.Player);
+        tinted = TintNames(tinted, _enemyCombatantNames, BattleLogColors.Enemy);
+        return tinted;
+    }
+
+    static string TintNames(string input, List<string> names, string colorHex)
+    {
+        if (string.IsNullOrEmpty(input) || names == null || names.Count == 0)
+            return input;
+
+        string output = input;
+        for (int i = 0; i < names.Count; i++)
+        {
+            string name = names[i];
+            if (string.IsNullOrEmpty(name)) continue;
+
+            string pattern = $@"(?<![A-Za-z0-9]){Regex.Escape(name)}(?![A-Za-z0-9])";
+            output = Regex.Replace(
+                output,
+                pattern,
+                $"<color={colorHex}>{name}</color>",
+                RegexOptions.CultureInvariant
+            );
+        }
+
+        return output;
     }
 
     static bool ShouldSuppressAutoHint(string message)

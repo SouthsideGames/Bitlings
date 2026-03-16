@@ -61,8 +61,13 @@ public class ResourceManager : MonoBehaviour
     public void Add(ResourceType type, int amount)
     {
         if (amount == 0) return;
-
+        int before = ResourceBank.Get(type);
         ResourceBank.Add(type, amount);
+        int after = ResourceBank.Get(type);
+
+        int gained = Mathf.Max(0, after - before);
+        if (gained > 0)
+            TrackLifetimeGain(type, gained);
 
         GameEvents.OnResourcesChanged?.Invoke();
         GameEvents.ResourceAdded?.Invoke(type, amount);
@@ -93,12 +98,31 @@ public class ResourceManager : MonoBehaviour
     public void AddMany(IEnumerable<ResourceAmount> amounts)
     {
         bool any = false;
+        var gainedByType = new Dictionary<ResourceType, int>();
+
         foreach (var ra in amounts)
         {
             if (ra.amount == 0) continue;
+
+            int before = ResourceBank.Get(ra.type);
             ResourceBank.Add(ra.type, ra.amount);
+            int after = ResourceBank.Get(ra.type);
+
+            int gained = Mathf.Max(0, after - before);
+            if (gained > 0)
+            {
+                if (gainedByType.TryGetValue(ra.type, out int cur))
+                    gainedByType[ra.type] = cur + gained;
+                else
+                    gainedByType.Add(ra.type, gained);
+            }
+
             any = true;
         }
+
+        foreach (var kv in gainedByType)
+            TrackLifetimeGain(kv.Key, kv.Value);
+
         if (any)
         {
             GameEvents.OnResourcesChanged?.Invoke();
@@ -256,6 +280,44 @@ public class ResourceManager : MonoBehaviour
     }
 
     private static long NowUnix() => DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+
+    private static void EnsureLifetimeLedgerSized()
+    {
+        SaveManager.LoadOrCreate();
+
+        if (SaveManager.Data == null)
+            return;
+
+        SaveManager.Data.lifetimeResourceCollected ??= new List<int>();
+
+        int need = 0;
+        foreach (ResourceType t in Enum.GetValues(typeof(ResourceType)))
+            need = Mathf.Max(need, (int)t + 1);
+
+        while (SaveManager.Data.lifetimeResourceCollected.Count < need)
+            SaveManager.Data.lifetimeResourceCollected.Add(0);
+    }
+
+    private static void TrackLifetimeGain(ResourceType type, int amount)
+    {
+        if (amount <= 0) return;
+
+        EnsureLifetimeLedgerSized();
+
+        var data = SaveManager.Data;
+        if (data == null || data.lifetimeResourceCollected == null)
+            return;
+
+        int idx = (int)type;
+        if (idx < 0 || idx >= data.lifetimeResourceCollected.Count)
+            return;
+
+        long next = (long)data.lifetimeResourceCollected[idx] + amount;
+        if (next > int.MaxValue) next = int.MaxValue;
+        if (next < 0) next = 0;
+
+        data.lifetimeResourceCollected[idx] = (int)next;
+    }
 
     public void InitializeNewAccountResources()
     {

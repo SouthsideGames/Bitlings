@@ -27,7 +27,7 @@ public sealed class IronCareerRestPanelUI : MonoBehaviour
     [Header("Party List")]
     [SerializeField] private TextMeshProUGUI partyHeaderTMP;
     [SerializeField] private Transform partyListParent;
-    [SerializeField] private IronCareerMonsterCardUI partyCardPrefab;
+    [SerializeField] private IronCareerRestPartyCardUI partyCardPrefab;
 
     [Header("Options")]
     [SerializeField] private TextMeshProUGUI optionsHeaderTMP;
@@ -43,7 +43,7 @@ public sealed class IronCareerRestPanelUI : MonoBehaviour
     [Header("Optional Feedback")]
     [SerializeField] private TextMeshProUGUI resultTMP;
 
-    private readonly List<IronCareerMonsterCardUI> _partyCards = new List<IronCareerMonsterCardUI>(4);
+    private readonly List<IronCareerRestPartyCardUI> _partyCards = new List<IronCareerRestPartyCardUI>(4);
     private readonly List<IronCareerRestOptionItemUI> _optionItems = new List<IronCareerRestOptionItemUI>(4);
 
     private RestOption _selected = RestOption.None;
@@ -114,7 +114,7 @@ public sealed class IronCareerRestPanelUI : MonoBehaviour
             if (m == null || m.def == null) continue;
 
             var card = Instantiate(partyCardPrefab, partyListParent);
-            card.Bind(m, isLocked: false, isSelectable: false);
+            card.Bind(m);
             _partyCards.Add(card);
         }
     }

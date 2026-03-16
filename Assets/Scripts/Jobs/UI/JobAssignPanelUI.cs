@@ -7,6 +7,18 @@ using System.Reflection;
 
 public class JobAssignPanelUI : MonoBehaviour
 {
+    private sealed class EntryBinding
+    {
+        public JobMonsterEntryUI ui;
+        public OwnedMonsterData owned;
+        public string ownedUid;
+        public MonsterDataSO def;
+        public bool hasAssignment;
+        public JobType assignedJob;
+        public int assignedSlot;
+        public float assignedHours;
+    }
+
     [Header("Panel")]
     [SerializeField] private PanelId panelId = PanelId.JobAssign;
 
@@ -35,6 +47,61 @@ public class JobAssignPanelUI : MonoBehaviour
     private OwnedMonsterData _pendingOwned;
 
     private JobSiteState _cachedState;
+    private readonly List<EntryBinding> _entryBindings = new List<EntryBinding>(64);
+    private const float LiveRefreshSeconds = 1f;
+
+    private void OnEnable()
+    {
+        // Some navigation paths re-show this panel without calling Open(...) again.
+        // Rebuild from manager state so assignment/fatigue badges are always accurate.
+        if (_job == JobType.None) return;
+        RefreshUIAfterChange();
+        StartLiveRefresh();
+    }
+
+    private void OnDisable()
+    {
+        StopLiveRefresh();
+    }
+
+    private void StartLiveRefresh()
+    {
+        CancelInvoke(nameof(RefreshLiveEntryStates));
+        InvokeRepeating(nameof(RefreshLiveEntryStates), LiveRefreshSeconds, LiveRefreshSeconds);
+    }
+
+    private void StopLiveRefresh()
+    {
+        CancelInvoke(nameof(RefreshLiveEntryStates));
+    }
+
+    private void RefreshLiveEntryStates()
+    {
+        if (!isActiveAndEnabled) return;
+        if (_entryBindings == null || _entryBindings.Count == 0) return;
+
+        for (int i = 0; i < _entryBindings.Count; i++)
+        {
+            var b = _entryBindings[i];
+            if (b == null || b.ui == null) continue;
+
+            bool isFatigued = TryGetFatigueState(b.owned, b.ownedUid, out string etaText, out long remainingSeconds);
+            float restProgress01 = ComputeRestProgress01(b.def, remainingSeconds);
+
+            b.ui.SetResting(isFatigued, etaText, restProgress01);
+            b.ui.SetAssignment(b.assignedJob, b.assignedSlot, hide: !b.hasAssignment);
+
+            if (b.hasAssignment)
+            {
+                string hoursText = FormatAssignedHours(b.assignedHours);
+                b.ui.SetTooltip("Assigned", $"{b.assignedJob} • Slot {b.assignedSlot + 1} • {hoursText}");
+            }
+            else if (isFatigued)
+            {
+                b.ui.SetTooltip("Resting", string.IsNullOrEmpty(etaText) ? "Recovering" : etaText);
+            }
+        }
+    }
 
     private void SyncStateFromManager()
     {
@@ -109,6 +176,7 @@ public class JobAssignPanelUI : MonoBehaviour
         UpdateRemoveButtonState();
 
         OpenSelf();
+        StartLiveRefresh();
     }
 
     private void RefreshCurrentWorkerIcon()
@@ -144,6 +212,8 @@ public class JobAssignPanelUI : MonoBehaviour
     void BuildList()
     {
         if (!listContent) return;
+
+        _entryBindings.Clear();
 
         for (int i = listContent.childCount - 1; i >= 0; i--)
             Destroy(listContent.GetChild(i).gameObject);
@@ -203,10 +273,24 @@ public class JobAssignPanelUI : MonoBehaviour
 
         SetNoWorkersState(false);
 
+        float currentRatePerHour = JobManager.I ? JobManager.I.EstimateSiteOutputPerHour(_job) : 0f;
+
         foreach (var e in entries)
         {
-            bool isFatigued = TryGetFatigueState(e.owned, e.ownedUid, out string etaText);
+            bool isFatigued = TryGetFatigueState(e.owned, e.ownedUid, out string etaText, out long remainingSeconds);
             bool isShiny = (e.owned != null) && (e.owned.isShiny || e.owned.shinyTier > 0);
+            float restProgress01 = ComputeRestProgress01(e.def, remainingSeconds);
+
+            float candidateResultPerHour = 0f;
+            float candidateDeltaPerHour = 0f;
+            bool hasRatePreview = JobManager.I != null;
+            if (hasRatePreview)
+            {
+                candidateResultPerHour = JobManager.I.EstimateSiteOutputPerHour(_job, e.def, e.ownedUid, _slotIndex);
+                candidateDeltaPerHour = candidateResultPerHour - currentRatePerHour;
+            }
+
+            bool hasAssignment = TryGetAssignmentState(e.ownedUid, e.def ? e.def.id : null, out JobType assignedJob, out int assignedSlot, out float assignedHours);
 
             var go = Instantiate(monsterButtonPrefab, listContent);
             var ui = go.GetComponent<JobMonsterEntryUI>();
@@ -222,7 +306,7 @@ public class JobAssignPanelUI : MonoBehaviour
                 {
                     string name = MonsterNameFormatter.Format(e.def, isShiny);
                     label.text = isFatigued
-                        ? $"{name} (Fatigued{(string.IsNullOrEmpty(etaText) ? "" : $" • {etaText}")})"
+                        ? $"{name} (Resting{(string.IsNullOrEmpty(etaText) ? "" : $" • {etaText}")})"
                         : name;
                 }
 
@@ -235,6 +319,7 @@ public class JobAssignPanelUI : MonoBehaviour
                         if (isFatigued)
                         {
                             AudioManager.I?.PlayDenied();
+                            GameEvents.RaiseToast(string.IsNullOrEmpty(etaText) ? "Worker resting." : $"Worker resting: {etaText}");
                             return;
                         }
 
@@ -264,11 +349,30 @@ public class JobAssignPanelUI : MonoBehaviour
             }
 
             if (ui.nameText) ui.nameText.text = MonsterNameFormatter.Format(e.def, isShiny);
-            if (ui.scoreText) ui.scoreText.text = $"x{e.score:0.##}";
+            if (ui.scoreText)
+            {
+                if (hasRatePreview)
+                    ui.scoreText.text = $"Δ {candidateDeltaPerHour:+0.##;-0.##;0}/hr";
+                else
+                    ui.scoreText.text = "Δ ?/hr";
+            }
+            ui.SetFatigueInfo(e.def ? e.def.fatigueCooldownHours : 0f);
             if (ui.typeIcon) ui.typeIcon.sprite = e.def.typeIcon;
 
-            // fatigue presentation + interaction
-            ui.SetFatigued(isFatigued, etaText);
+            // assignment + fatigue/rest presentation
+            ui.SetAssignment(assignedJob, assignedSlot, hide: !hasAssignment);
+            ui.SetResting(isFatigued, etaText, restProgress01);
+
+            if (hasAssignment)
+            {
+                string hoursText = FormatAssignedHours(assignedHours);
+                string subtitle = $"{assignedJob} • Slot {assignedSlot + 1} • {hoursText}";
+                ui.SetTooltip("Assigned", subtitle);
+            }
+            else if (isFatigued)
+            {
+                ui.SetTooltip("Resting", string.IsNullOrEmpty(etaText) ? "Recovering" : etaText);
+            }
 
             ui.button.onClick.RemoveAllListeners();
             ui.button.onClick.AddListener(() =>
@@ -276,6 +380,7 @@ public class JobAssignPanelUI : MonoBehaviour
                 if (isFatigued)
                 {
                     AudioManager.I?.PlayDenied();
+                    GameEvents.RaiseToast(string.IsNullOrEmpty(etaText) ? "Worker resting." : $"Worker resting: {etaText}");
                     return;
                 }
 
@@ -289,6 +394,18 @@ public class JobAssignPanelUI : MonoBehaviour
 
                 UpdateOutputPreview(currentOnly: false);
                 AudioManager.I?.PlayClick();
+            });
+
+            _entryBindings.Add(new EntryBinding
+            {
+                ui = ui,
+                owned = e.owned,
+                ownedUid = e.ownedUid,
+                def = e.def,
+                hasAssignment = hasAssignment,
+                assignedJob = assignedJob,
+                assignedSlot = assignedSlot,
+                assignedHours = assignedHours
             });
         }
     }
@@ -613,132 +730,279 @@ public class JobAssignPanelUI : MonoBehaviour
     // ---------------------------
     // Fatigue detection (defensive, reflection-based)
     // ---------------------------
-    private bool TryGetFatigueState(OwnedMonsterData owned, string ownedUid, out string etaText)
+    private bool TryGetFatigueState(OwnedMonsterData owned, string ownedUid, out string etaText, out long remainingSeconds)
     {
         etaText = null;
-        if (owned == null && string.IsNullOrEmpty(ownedUid)) return false;
+        remainingSeconds = 0;
 
-        long now = SaveManager.NowUnix();
+        var jm = JobManager.I;
+        if (jm == null) return false;
 
-        // 1) Prefer a direct JobManager method if you have one (search by name to avoid compile breaks).
-        try
+        // Prefer exact owned instance, then species fallback for legacy references.
+        if (!string.IsNullOrEmpty(ownedUid) && jm.TryGetWorkerCooldownRemainingSeconds(ownedUid, out long remByUid) && remByUid > 0)
         {
-            var jm = JobManager.I;
-            if (jm != null)
+            remainingSeconds = remByUid;
+            etaText = FormatEta(remByUid);
+            return true;
+        }
+
+        string speciesId = owned != null ? owned.monsterId : null;
+        if (!string.IsNullOrEmpty(speciesId) && jm.TryGetWorkerCooldownRemainingSeconds(speciesId, out long remBySpecies) && remBySpecies > 0)
+        {
+            remainingSeconds = remBySpecies;
+            etaText = FormatEta(remBySpecies);
+            return true;
+        }
+
+        return false;
+    }
+
+    private bool TryGetAssignmentState(string ownedUid, string speciesId, out JobType job, out int slotIndex, out float hours)
+    {
+        job = JobType.None;
+        slotIndex = -1;
+        hours = 0f;
+
+        var jm = JobManager.I;
+        if (jm == null) return false;
+
+        var candidateKeys = BuildAssignmentCandidateKeys(ownedUid, speciesId);
+        for (int i = 0; i < candidateKeys.Count; i++)
+        {
+            var key = candidateKeys[i];
+            if (string.IsNullOrEmpty(key)) continue;
+            if (jm.TryGetWorkerAssignment(key, out job, out slotIndex, out hours))
+                return true;
+        }
+
+        // Fallback: direct state scan (defensive against key-shape drift between save/runtime).
+        if (TryFindAssignmentByStateScan(jm, ownedUid, speciesId, candidateKeys, out job, out slotIndex, out string matchedKey))
+        {
+            var bestKey = !string.IsNullOrEmpty(matchedKey)
+                ? matchedKey
+                : (!string.IsNullOrEmpty(ownedUid) ? ownedUid : speciesId);
+            var hrs = jm.GetCurrentJobAndHours(bestKey);
+            if (hrs.job != JobType.None) hours = Mathf.Max(0f, hrs.hours);
+            return true;
+        }
+
+        return false;
+    }
+
+    private bool TryFindAssignmentByStateScan(JobManager jm, string ownedUid, string speciesId, List<string> candidateKeys, out JobType job, out int slotIndex, out string matchedKey)
+    {
+        job = JobType.None;
+        slotIndex = -1;
+        matchedKey = null;
+
+        if (jm == null || jm.States == null) return false;
+
+        for (int si = 0; si < jm.States.Count; si++)
+        {
+            var st = jm.States[si];
+            if (st == null || st.config == null || st.workers == null) continue;
+
+            for (int wi = 0; wi < st.workers.Count; wi++)
             {
-                var t = jm.GetType();
+                var w = st.workers[wi];
+                if (!IsWorkerMatch(w, ownedUid, speciesId, candidateKeys)) continue;
 
-                // bool IsMonsterFatigued(string uid)
-                var mIs = t.GetMethod("IsMonsterFatigued", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
-                if (mIs != null && mIs.ReturnType == typeof(bool))
-                {
-                    var ps = mIs.GetParameters();
-                    if (ps.Length == 1 && ps[0].ParameterType == typeof(string))
-                    {
-                        bool r = (bool)mIs.Invoke(jm, new object[] { ownedUid });
-                        if (r) return true;
-                    }
-                }
-
-                // long GetMonsterFatigueUntil(string uid)
-                var mUntil = t.GetMethod("GetMonsterFatigueUntil", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
-                if (mUntil != null && (mUntil.ReturnType == typeof(long) || mUntil.ReturnType == typeof(int)))
-                {
-                    var ps = mUntil.GetParameters();
-                    if (ps.Length == 1 && ps[0].ParameterType == typeof(string))
-                    {
-                        long until = Convert.ToInt64(mUntil.Invoke(jm, new object[] { ownedUid }));
-                        if (until > now)
-                        {
-                            etaText = FormatEta(until - now);
-                            return true;
-                        }
-                    }
-                }
+                job = st.config.jobType;
+                slotIndex = wi;
+                matchedKey = GetBestWorkerLookupKey(w);
+                return true;
             }
         }
-        catch { }
 
-        // 2) Fall back to OwnedMonsterData fields/properties (common naming patterns).
-        if (owned != null)
+        return false;
+    }
+
+    private bool IsWorkerMatch(WorkerRef w, string ownedUid, string speciesId, List<string> candidateKeys)
+    {
+        if (w == null) return false;
+
+        string workerOwnedUid = !string.IsNullOrEmpty(w.ownedUID) ? w.ownedUID : null;
+        string workerKey = GetBestWorkerLookupKey(w);
+        string workerSpeciesId = GetWorkerSpeciesId(w);
+
+        if (candidateKeys != null && candidateKeys.Count > 0)
         {
-            if (TryReadUntilUnix(owned, out long untilUnix))
+            for (int i = 0; i < candidateKeys.Count; i++)
             {
-                if (untilUnix > now)
-                {
-                    etaText = FormatEta(untilUnix - now);
-                    return true;
-                }
-            }
+                var k = candidateKeys[i];
+                if (string.IsNullOrEmpty(k)) continue;
 
-            if (TryReadBool(owned, new[] { "isFatigued", "fatigued", "IsFatigued" }, out bool isFatigued) && isFatigued)
+                if (!string.IsNullOrEmpty(workerOwnedUid) && string.Equals(workerOwnedUid, k, StringComparison.Ordinal))
+                    return true;
+
+                if (!string.IsNullOrEmpty(workerKey) && string.Equals(workerKey, k, StringComparison.Ordinal))
+                    return true;
+
+                if (!string.IsNullOrEmpty(w.monsterId) && string.Equals(w.monsterId, k, StringComparison.Ordinal))
+                    return true;
+            }
+        }
+
+        if (!string.IsNullOrEmpty(ownedUid))
+        {
+            // Legacy saves can drift identity shape between ownedUID and monsterId fields.
+            if (!string.IsNullOrEmpty(workerOwnedUid) && string.Equals(workerOwnedUid, ownedUid, StringComparison.Ordinal))
+                return true;
+
+            if (!string.IsNullOrEmpty(workerKey) && string.Equals(workerKey, ownedUid, StringComparison.Ordinal))
+                return true;
+
+            if (!string.IsNullOrEmpty(w.monsterId) && string.Equals(w.monsterId, ownedUid, StringComparison.Ordinal))
+                return true;
+        }
+
+        if (!string.IsNullOrEmpty(speciesId))
+        {
+            if (!string.IsNullOrEmpty(workerSpeciesId) && string.Equals(workerSpeciesId, speciesId, StringComparison.Ordinal))
+                return true;
+
+            if (w.def != null && !string.IsNullOrEmpty(w.def.id) && string.Equals(w.def.id, speciesId, StringComparison.Ordinal))
+                return true;
+
+            if (!string.IsNullOrEmpty(w.monsterId) && string.Equals(w.monsterId, speciesId, StringComparison.Ordinal))
                 return true;
         }
 
         return false;
     }
 
-    private bool TryReadUntilUnix(object obj, out long untilUnix)
+    private List<string> BuildAssignmentCandidateKeys(string ownedUid, string speciesId)
     {
-        untilUnix = 0;
-        if (obj == null) return false;
+        var keys = new List<string>(8);
 
-        string[] names =
+        if (!string.IsNullOrEmpty(ownedUid)) keys.Add(ownedUid);
+        if (!string.IsNullOrEmpty(speciesId)) keys.Add(speciesId);
+
+        var data = SaveManager.Data;
+        if (data?.owned != null && !string.IsNullOrEmpty(speciesId))
         {
-            "fatigueUntilUnix",
-            "fatiguedUntilUnix",
-            "jobFatigueUntilUnix",
-            "fatigueEndsUnix",
-            "fatigueEndUnix",
-            "cooldownUntilUnix",
-            "restUntilUnix"
-        };
-
-        var t = obj.GetType();
-
-        for (int i = 0; i < names.Length; i++)
-        {
-            var f = t.GetField(names[i], BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
-            if (f != null)
+            for (int i = 0; i < data.owned.Count; i++)
             {
-                try { untilUnix = Convert.ToInt64(f.GetValue(obj)); return true; }
-                catch { }
-            }
+                var om = data.owned[i];
+                if (om == null) continue;
+                if (!string.Equals(om.monsterId, speciesId, StringComparison.Ordinal)) continue;
+                if (string.IsNullOrEmpty(om.ownedUID)) continue;
 
-            var p = t.GetProperty(names[i], BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
-            if (p != null && p.CanRead)
-            {
-                try { untilUnix = Convert.ToInt64(p.GetValue(obj, null)); return true; }
-                catch { }
+                bool exists = false;
+                for (int k = 0; k < keys.Count; k++)
+                {
+                    if (string.Equals(keys[k], om.ownedUID, StringComparison.Ordinal))
+                    {
+                        exists = true;
+                        break;
+                    }
+                }
+
+                if (!exists) keys.Add(om.ownedUID);
             }
         }
 
-        return false;
+        return keys;
     }
 
-    private bool TryReadBool(object obj, string[] names, out bool value)
+    private string GetBestWorkerLookupKey(WorkerRef w)
     {
-        value = false;
-        if (obj == null) return false;
+        if (w == null) return null;
+        if (!string.IsNullOrEmpty(w.ownedUID)) return w.ownedUID;
+        if (!string.IsNullOrEmpty(w.monsterId)) return w.monsterId;
+        return w.def != null ? w.def.id : null;
+    }
 
-        var t = obj.GetType();
+    private string GetWorkerSpeciesId(WorkerRef w)
+    {
+        if (w == null) return null;
 
-        for (int i = 0; i < names.Length; i++)
+        if (w.def != null && !string.IsNullOrEmpty(w.def.id))
+            return w.def.id;
+
+        // Standard shape: ownedUID set, monsterId is species.
+        if (!string.IsNullOrEmpty(w.monsterId) && string.IsNullOrEmpty(w.ownedUID))
         {
-            var f = t.GetField(names[i], BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
-            if (f != null && f.FieldType == typeof(bool))
-            {
-                try { value = (bool)f.GetValue(obj); return true; } catch { }
-            }
-
-            var p = t.GetProperty(names[i], BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
-            if (p != null && p.CanRead && p.PropertyType == typeof(bool))
-            {
-                try { value = (bool)p.GetValue(obj, null); return true; } catch { }
-            }
+            // Could be either species id or legacy key; keep as candidate.
+            return ResolveSpeciesIdFromAnyKey(w.monsterId) ?? w.monsterId;
         }
 
-        return false;
+        if (!string.IsNullOrEmpty(w.ownedUID))
+        {
+            var byOwned = ResolveSpeciesIdFromOwnedUid(w.ownedUID);
+            if (!string.IsNullOrEmpty(byOwned)) return byOwned;
+        }
+
+        if (!string.IsNullOrEmpty(w.monsterId))
+        {
+            var byAny = ResolveSpeciesIdFromAnyKey(w.monsterId);
+            if (!string.IsNullOrEmpty(byAny)) return byAny;
+            return w.monsterId;
+        }
+
+        return null;
+    }
+
+    private string ResolveSpeciesIdFromOwnedUid(string ownedUid)
+    {
+        if (string.IsNullOrEmpty(ownedUid)) return null;
+
+        var data = SaveManager.Data;
+        if (data?.owned == null) return null;
+
+        for (int i = 0; i < data.owned.Count; i++)
+        {
+            var om = data.owned[i];
+            if (om == null) continue;
+            if (string.IsNullOrEmpty(om.ownedUID)) continue;
+            if (!string.Equals(om.ownedUID, ownedUid, StringComparison.Ordinal)) continue;
+
+            return string.IsNullOrEmpty(om.monsterId) ? null : om.monsterId;
+        }
+
+        return null;
+    }
+
+    private string ResolveSpeciesIdFromAnyKey(string key)
+    {
+        if (string.IsNullOrEmpty(key)) return null;
+
+        // First, treat key as ownedUID.
+        var fromOwnedUid = ResolveSpeciesIdFromOwnedUid(key);
+        if (!string.IsNullOrEmpty(fromOwnedUid)) return fromOwnedUid;
+
+        // Then, treat key as species id if it resolves in library.
+        var def = MonsterLibraryLocator.GetById(key);
+        if (def != null && !string.IsNullOrEmpty(def.id)) return def.id;
+
+        return null;
+    }
+
+    private float ComputeRestProgress01(MonsterDataSO def, long remainingSeconds)
+    {
+        if (def == null) return 0f;
+        if (remainingSeconds <= 0) return 0f;
+
+        long total = Mathf.RoundToInt(Mathf.Max(0f, def.fatigueCooldownHours) * 3600f);
+        if (total <= 0) return 0f;
+
+        return Mathf.Clamp01(1f - ((float)remainingSeconds / total));
+    }
+
+    private string FormatAssignedHours(float hours)
+    {
+        if (hours <= 0.01f) return "just assigned";
+
+        if (hours < 1f)
+        {
+            int minutes = Mathf.Max(1, Mathf.RoundToInt(hours * 60f));
+            return $"{minutes}m";
+        }
+
+        int wholeHours = Mathf.FloorToInt(hours);
+        int mins = Mathf.RoundToInt((hours - wholeHours) * 60f);
+        if (mins <= 0) return $"{wholeHours}h";
+        return $"{wholeHours}h {mins}m";
     }
 
     private string FormatEta(long seconds)

@@ -142,6 +142,7 @@ public class PlayerManager
 
     public int credits = 0;
     public List<int> resourceCounts = new List<int>();
+    public List<int> lifetimeResourceCollected = new List<int>();
     public List<string> unlockedPacks = new List<string>();
 
     public int tapLevel = 0;
@@ -258,6 +259,8 @@ public class PlayerManager
         jobAssignments ??= new List<JobAssignment>();
         jobProgress ??= new List<JobProgress>();
         activeJobMods ??= new List<JobGlobalMod>();
+
+        lifetimeResourceCollected ??= new List<int>();
 
         fieldOps ??= new FieldOpsStats();
 

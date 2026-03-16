@@ -241,7 +241,7 @@ public static int CountBattleReady(int maxSlots = 3)
 
         if (exhausted)
         {
-            reason = "Slot is exhausted.";
+            reason = "Resting: worker recovering.";
             return false;
         }
 
