@@ -1246,7 +1246,13 @@ if (target > 0.01f)
             hireMonsterIcon.sprite = MonsterNameFormatter.GetIcon(def, _pendingHireIsShiny, backIcon: false);
 
         if (hirePromptText)
+        {
             hirePromptText.text = BuildHireDecisionSummary(def, _pendingHireIsShiny);
+
+            var flash = hirePromptText.GetComponent<FlashingTMP>();
+            if (flash) flash.enabled = false;
+            hirePromptText.color = new Color(hirePromptText.color.r, hirePromptText.color.g, hirePromptText.color.b, 1f);
+        }
 
         ClearHireResultVisuals();
 

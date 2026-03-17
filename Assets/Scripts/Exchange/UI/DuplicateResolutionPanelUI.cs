@@ -35,6 +35,7 @@ public class DuplicateResolutionPanelUI : MonoBehaviour
     [SerializeField] private GameObject requestEntryPrefab;
 
     private const int DUPLICATE_LEVELUP_STAT_POINTS = 3;
+    private const string TutDuplicate = "tut_exchange_duplicate_v1";
     private List<ActiveRequest> _matchingRequests = new List<ActiveRequest>();
     private ActiveRequest _selectedRequest;
 
@@ -46,6 +47,7 @@ public class DuplicateResolutionPanelUI : MonoBehaviour
     void OnEnable()
     {
         Populate();
+        TutorialOverlayPanel.RequestOpen(TutDuplicate);
     }
 
     void OnDisable()

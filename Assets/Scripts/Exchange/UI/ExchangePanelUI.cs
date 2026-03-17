@@ -27,9 +27,9 @@ public class ExchangePanelUI : MonoBehaviour
     [SerializeField] private GameObject requestsContent;
     [SerializeField] private GameObject trendsContent;
 
-    [Header("Market Tab")]
-    [SerializeField] private Transform marketListParent;
-    [SerializeField] private GameObject marketRowPrefab;
+    [Header("Market Tab — Grid")]
+    [SerializeField] private Transform marketGridParent;
+    [SerializeField] private GameObject marketCellPrefab;
     [SerializeField] private Button sortByValueButton;
     [SerializeField] private Button sortByTrendButton;
     [SerializeField] private Button sortByRarityButton;
@@ -49,6 +49,7 @@ public class ExchangePanelUI : MonoBehaviour
     [SerializeField] private Transform trendsListParent;
     [SerializeField] private GameObject trendRowPrefab;
     [SerializeField] private TextMeshProUGUI worldEventTickerLabel;
+    [SerializeField] private float tickerScrollSpeed = 80f;
 
     [Header("Close")]
     [SerializeField] private Button closeButton;
@@ -58,9 +59,43 @@ public class ExchangePanelUI : MonoBehaviour
     private enum SortMode { Value, Trend, Rarity }
     private SortMode _sortMode = SortMode.Value;
 
+    // Ticker scrolling state
+    private RectTransform _tickerRect;
+    private RectTransform _tickerParentRect;
+    private float _tickerTextWidth;
+    private float _tickerParentWidth;
+
+    // Tutorial keys — must match TutorialOverlayPanel.tutorialKey on prefab
+    private const string TutMarket    = "tut_exchange_market_v1";
+    private const string TutPortfolio = "tut_exchange_portfolio_v1";
+    private const string TutRequests  = "tut_exchange_requests_v1";
+    private const string TutTrends    = "tut_exchange_trends_v1";
+
     void Awake()
     {
         I = this;
+
+        // Cache ticker RectTransforms for scrolling
+        if (worldEventTickerLabel != null)
+        {
+            _tickerRect = worldEventTickerLabel.GetComponent<RectTransform>();
+            _tickerParentRect = worldEventTickerLabel.transform.parent as RectTransform;
+        }
+    }
+
+    void Update()
+    {
+        if (_tickerRect == null || _tickerParentRect == null) return;
+        if (!worldEventTickerLabel.gameObject.activeInHierarchy) return;
+
+        var pos = _tickerRect.anchoredPosition;
+        pos.x -= tickerScrollSpeed * Time.deltaTime;
+
+        // Once the text has scrolled fully off the left, reset to the right edge
+        if (pos.x < -_tickerTextWidth)
+            pos.x = _tickerParentWidth;
+
+        _tickerRect.anchoredPosition = pos;
     }
 
     void OnEnable()
@@ -138,19 +173,27 @@ public class ExchangePanelUI : MonoBehaviour
             case ExchangeSection.Requests:  RefreshRequests();  break;
             case ExchangeSection.Trends:    RefreshTrends();    break;
         }
+
+        RefreshTicker();
+
+        // First-open tutorials per tab
+        switch (section)
+        {
+            case ExchangeSection.Market:    TutorialOverlayPanel.RequestOpen(TutMarket);    break;
+            case ExchangeSection.Portfolio: TutorialOverlayPanel.RequestOpen(TutPortfolio); break;
+            case ExchangeSection.Requests:  TutorialOverlayPanel.RequestOpen(TutRequests);  break;
+            case ExchangeSection.Trends:    TutorialOverlayPanel.RequestOpen(TutTrends);    break;
+        }
     }
 
-    // ─────────── Market Tab ───────────
+    // ─────────── Market Tab (Grid) ───────────
 
     private void RefreshMarket()
     {
-        if (marketListParent == null || marketRowPrefab == null) return;
-        ClearChildren(marketListParent);
+        if (marketGridParent == null || marketCellPrefab == null) return;
+        ClearChildren(marketGridParent);
 
-        var data = SaveManager.Data;
-        if (data == null) return;
-
-        // Build list of discovered species with market data
+        // Show ALL species in the catalog (base library + unlocked packs)
         var allMonsters = MonsterCatalog.All;
         if (allMonsters == null) return;
 
@@ -159,9 +202,6 @@ public class ExchangePanelUI : MonoBehaviour
         {
             var def = allMonsters[i];
             if (def == null || def.rarity == Rarity.Boss || def.baseMarketValue <= 0) continue;
-
-            // Only show discovered species
-            if (data.discoveredMonsterIds == null || !data.discoveredMonsterIds.Contains(def.id)) continue;
 
             var state = ExchangeManager.I?.GetState(def.id);
             entries.Add((def, state));
@@ -191,20 +231,16 @@ public class ExchangePanelUI : MonoBehaviour
                 break;
         }
 
-        // Build rows
-        int ownedCount;
+        // Build grid cells
         for (int i = 0; i < entries.Count; i++)
         {
             var (def, state) = entries[i];
-            var go = Instantiate(marketRowPrefab, marketListParent);
+            var go = Instantiate(marketCellPrefab, marketGridParent);
             go.SetActive(true);
 
-            var row = go.GetComponent<ExchangeMarketRowUI>();
-            if (row != null)
-            {
-                ownedCount = CountOwned(def.id);
-                row.Populate(def, state, ownedCount);
-            }
+            var cell = go.GetComponent<ExchangeMarketCellUI>();
+            if (cell != null)
+                cell.Populate(def, state);
         }
     }
 
@@ -353,32 +389,58 @@ public class ExchangePanelUI : MonoBehaviour
         for (int i = 0; i < Mathf.Min(showCount, fallers.Count); i++)
             SpawnTrendRow(fallers[i], false);
 
-        // World event ticker
-        if (worldEventTickerLabel != null)
+    }
+
+    // ─────────── Ticker (always visible) ───────────
+
+    private void RefreshTicker()
+    {
+        if (worldEventTickerLabel == null) return;
+
+        var allStates = ExchangeManager.I?.AllStates;
+        if (allStates != null && allStates.Count > 0)
         {
-            if (WorldEventSystem.I != null && WorldEventSystem.I.ActiveEvents.Count > 0)
+            var sb = new System.Text.StringBuilder();
+            foreach (var kv in allStates)
             {
-                var sb = new System.Text.StringBuilder();
-                for (int i = 0; i < WorldEventSystem.I.ActiveEvents.Count; i++)
-                {
-                    var evt = WorldEventSystem.I.ActiveEvents[i];
-                    if (evt == null) continue;
-                    if (sb.Length > 0) sb.Append(" | ");
-                    sb.Append(evt.displayName);
-                    if (!string.IsNullOrEmpty(evt.tickerMessage))
-                    {
-                        sb.Append(": ");
-                        sb.Append(evt.tickerMessage);
-                    }
-                }
-                worldEventTickerLabel.text = sb.ToString();
-                worldEventTickerLabel.gameObject.SetActive(true);
+                var s = kv.Value;
+                if (s == null) continue;
+                var def = MonsterCatalog.GetById(s.speciesId);
+                if (def == null) continue;
+
+                int delta = s.currentValue - s.previousValue;
+                if (delta == 0) continue;
+
+                if (sb.Length > 0) sb.Append("    ");
+
+                string color = delta > 0 ? "#00CC00" : "#FF3333";
+                string arrow = delta > 0 ? "▲" : "▼";
+                sb.Append($"{def.displayName} <color={color}>{arrow} {Mathf.Abs(delta)}</color>");
             }
-            else
-            {
-                worldEventTickerLabel.text = "No active world events affecting the exchange.";
-                worldEventTickerLabel.gameObject.SetActive(true);
-            }
+
+            worldEventTickerLabel.text = sb.Length > 0 ? sb.ToString() : "Markets are steady — no movement.";
+        }
+        else
+        {
+            worldEventTickerLabel.text = "Markets are steady — no movement.";
+        }
+
+        worldEventTickerLabel.gameObject.SetActive(true);
+
+        // Ensure text doesn't wrap so we get the true full-line width
+        worldEventTickerLabel.textWrappingMode = TextWrappingModes.NoWrap;
+        worldEventTickerLabel.overflowMode = TextOverflowModes.Overflow;
+
+        // Recalculate widths and reset scroll position for the new text
+        if (_tickerRect != null)
+        {
+            worldEventTickerLabel.ForceMeshUpdate();
+            _tickerTextWidth = worldEventTickerLabel.preferredWidth;
+            // Size the rect to the full text so nothing gets clipped early
+            _tickerRect.SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal, _tickerTextWidth);
+            if (_tickerParentRect != null)
+                _tickerParentWidth = _tickerParentRect.rect.width;
+            _tickerRect.anchoredPosition = new Vector2(_tickerParentWidth, _tickerRect.anchoredPosition.y);
         }
     }
 
