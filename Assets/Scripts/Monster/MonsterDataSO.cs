@@ -89,6 +89,10 @@ public class MonsterDataSO : ScriptableObject
     public AudioClip spawnSfx;
 
 
+    [Header("Exchange")]
+    [Tooltip("Base market value in Credits on the Bitling Exchange. Scaled by rarity, demand, and world events at runtime.")]
+    [Min(0)] public int baseMarketValue = 10;
+
     [Header("Description")]
     [TextArea(3, 10)] public string description;
 

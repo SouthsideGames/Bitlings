@@ -13,15 +13,18 @@ MonoBehaviour:
   m_Name: Defensive
   m_EditorClassIdentifier: 
   group: 2
-  attackWeight: 3
-  defendWeight: 7
-  focusWeight: 2
+  attackWeight: 2
+  defendWeight: 6
+  focusWeight: 1
   runWeight: 0
   lowHpThreshold: 0.3
   lowHpDefendBonus: 3
   lowHpRunBonus: 1
-  superEffectiveAttackBonus: 2
-  badMatchDefendBonus: 3
+  superEffectiveAttackBonus: 1
+  badMatchDefendBonus: 2
   badMatchRunBonus: 1
   eachTurnAttackBonus: 0
-  description: Plays safe, values survival and counters.
+  eachTurnFocusPenalty: 0
+  lowHpFocusPenalty: 2
+  chaoticOverrideChance: 0
+  description: Favors safe lines and stabilizes before committing.

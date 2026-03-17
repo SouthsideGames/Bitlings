@@ -13,15 +13,18 @@ MonoBehaviour:
   m_Name: Counter
   m_EditorClassIdentifier: 
   group: 2
-  attackWeight: 3
-  defendWeight: 7
-  focusWeight: 2
+  attackWeight: 5
+  defendWeight: 4
+  focusWeight: 1
   runWeight: 0
   lowHpThreshold: 0.3
-  lowHpDefendBonus: 2
-  lowHpRunBonus: 1
+  lowHpDefendBonus: 3
+  lowHpRunBonus: 0
   superEffectiveAttackBonus: 2
-  badMatchDefendBonus: 4
-  badMatchRunBonus: 1
-  eachTurnAttackBonus: 0
-  description: "Endures, then retaliates when it\u2019s safe."
+  badMatchDefendBonus: 2
+  badMatchRunBonus: 0
+  eachTurnAttackBonus: 1
+  eachTurnFocusPenalty: 0
+  lowHpFocusPenalty: 2
+  chaoticOverrideChance: 0
+  description: Absorbs pressure then answers back when the moment is right.

@@ -13,15 +13,18 @@ MonoBehaviour:
   m_Name: Bruiser
   m_EditorClassIdentifier: 
   group: 1
-  attackWeight: 6
-  defendWeight: 4
+  attackWeight: 7
+  defendWeight: 2
   focusWeight: 1
   runWeight: 0
   lowHpThreshold: 0.3
-  lowHpDefendBonus: 3
-  lowHpRunBonus: 1
+  lowHpDefendBonus: 2
+  lowHpRunBonus: 0
   superEffectiveAttackBonus: 2
   badMatchDefendBonus: 1
-  badMatchRunBonus: 1
+  badMatchRunBonus: 0
   eachTurnAttackBonus: 1
-  description: Trades hits, grows bolder as the fight goes on.
+  eachTurnFocusPenalty: 0
+  lowHpFocusPenalty: 2
+  chaoticOverrideChance: 0
+  description: Trades blows comfortably and stays in the pocket.

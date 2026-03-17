@@ -18,4 +18,8 @@ public enum WorldEventEffectKind
     // Meta / Economy
     ShopPriceMultiplier = 30,
     ResourceGainMultiplier = 31,
+
+    // Exchange
+    ExchangeDemandMultiplier = 40,
+    ExchangeValueMultiplier = 41,
 }

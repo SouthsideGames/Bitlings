@@ -566,7 +566,10 @@ public class EncounterPanelUI : MonoBehaviour
             var cur = EncounterManager.I != null ? EncounterManager.I.CurrentFlyer : null;
 
             if (flyerTypeLabel)
+            {
                 flyerTypeLabel.text = (cur != null) ? cur.type.ToString() : "Unknown";
+                if (cur != null) flyerTypeLabel.color = TypeColorLibrary.Get(cur.type);
+            }
 
             UpdateFlyerTooltip(cur, flyerRem);
         }

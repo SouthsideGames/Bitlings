@@ -18,10 +18,13 @@ MonoBehaviour:
   focusWeight: 3
   runWeight: 0
   lowHpThreshold: 0.3
-  lowHpDefendBonus: 2
+  lowHpDefendBonus: 3
   lowHpRunBonus: 1
   superEffectiveAttackBonus: 2
-  badMatchDefendBonus: 1
+  badMatchDefendBonus: 2
   badMatchRunBonus: 1
   eachTurnAttackBonus: 1
-  description: Stabilizes fights; never overcommits early.
+  eachTurnFocusPenalty: 0
+  lowHpFocusPenalty: 2
+  chaoticOverrideChance: 0
+  description: Tries to reset bad situations and level the fight.

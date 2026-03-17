@@ -15,13 +15,16 @@ MonoBehaviour:
   group: 4
   attackWeight: 4
   defendWeight: 4
-  focusWeight: 3
-  runWeight: 1
-  lowHpThreshold: 0.35
-  lowHpDefendBonus: 2
-  lowHpRunBonus: 1
+  focusWeight: 2
+  runWeight: 0
+  lowHpThreshold: 0.3
+  lowHpDefendBonus: 3
+  lowHpRunBonus: 0
   superEffectiveAttackBonus: 2
   badMatchDefendBonus: 3
-  badMatchRunBonus: 1
+  badMatchRunBonus: 0
   eachTurnAttackBonus: 0
-  description: Shifts to defense in bad matchups, otherwise even-keeled.
+  eachTurnFocusPenalty: 0
+  lowHpFocusPenalty: 2
+  chaoticOverrideChance: 0
+  description: Shifts its plan based on matchup and battle state.

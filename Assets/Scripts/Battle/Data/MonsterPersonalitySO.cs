@@ -27,9 +27,9 @@ public class MonsterPersonalitySO : ScriptableObject
     [Min(0)] public int lowHpDefendBonus = 2;
     [Min(0)] public int lowHpRunBonus    = 1;
 
-    [Min(0)] public int superEffectiveAttackBonus = 2; // if we have a good matchup, bias attack
-    [Min(0)] public int badMatchDefendBonus = 1;       // if we have a bad matchup, bias defend
-    [Min(0)] public int badMatchRunBonus    = 1;       // optionally nudge run
+    [Min(0)] public int superEffectiveAttackBonus = 2; 
+    [Min(0)] public int badMatchDefendBonus = 1;       
+    [Min(0)] public int badMatchRunBonus    = 1;       
 
     [Tooltip("Optional pressure that increases aggression as turns pass.")]
     [Min(0)] public int eachTurnAttackBonus = 0;

@@ -76,6 +76,13 @@ public static class GameEvents
     // ─────────────────────────────────────────────────────────
     public static Action WorldEventsChanged;
 
+    // ─────────────────────────────────────────────────────────
+    // Exchange
+    // ─────────────────────────────────────────────────────────
+    public static Action<string, int> MonsterBrokered;       // (speciesId, creditPayout)
+    public static Action<string, string> RequestFulfilled;   // (requestId, speciesId)
+    public static Action ExchangeValuesChanged;
+
     public static event Action AutoApplyRequested;
     
 

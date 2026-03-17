@@ -392,45 +392,62 @@ public partial class EncounterManager
                 // Consume sticky flag after use so it cannot leak.
                 _lastWildWasShiny = false;
 
-                if (existing.level < maxLevel)
+                bool isMax = existing.level >= maxLevel;
+
+                // In auto-mode, preserve original behavior (auto-train) to avoid
+                // interrupting idle play. Manual mode opens the resolution panel.
+                if (autoMode)
                 {
-                    int before = existing.level;
-                    ApplyDuplicateCaptureLevelUp(existing, def, DUPLICATE_LEVELUP_STAT_POINTS);
-                    SyncOwnedToTeam(existing);
+                    // Auto-mode: apply level-up or convert to cores immediately
+                    if (!isMax)
+                    {
+                        int before = existing.level;
+                        ApplyDuplicateCaptureLevelUp(existing, def, DUPLICATE_LEVELUP_STAT_POINTS);
+                        SyncOwnedToTeam(existing);
 
-                    SaveManager.Save();
-                    GameEvents.OnResourcesChanged?.Invoke();
+                        SaveManager.Save();
+                        GameEvents.OnResourcesChanged?.Invoke();
+                        GameEvents.MonsterCaptured?.Invoke(def.id, def.type);
 
-                    // Also fire the capture event (used by Codex/etc.)
-                    GameEvents.MonsterCaptured?.Invoke(def.id, def.type);
+                        string key = !string.IsNullOrEmpty(existing.ownedUID) ? existing.ownedUID : existing.monsterId;
+                        GameEvents.MonsterLeveled?.Invoke(key, existing.level);
 
-                    // Optional: treat as "leveled" for UI listeners
-                    string key = !string.IsNullOrEmpty(existing.ownedUID) ? existing.ownedUID : existing.monsterId;
-                    GameEvents.MonsterLeveled?.Invoke(key, existing.level);
+                        BattleLogger.Log(
+                            $"🎉 Duplicate captured! {def.displayName} leveled up {before} → {existing.level}. [p={Mathf.RoundToInt(finalChance * 100f)}%]",
+                            LogScope.Encounter
+                        );
+                        EmitStatus($"Duplicate captured! {def.displayName} leveled up to Lv {existing.level}.", LogScope.Encounter);
+                    }
+                    else
+                    {
+                        int cores = CalcDuplicateConversionCores(def, level);
+                        if (cores > 0)
+                            ResourceManager.I?.Add(ResourceType.GrowthCore, cores);
 
-                    BattleLogger.Log(
-                        $"🎉 Duplicate captured! {def.displayName} leveled up {before} → {existing.level}. [p={Mathf.RoundToInt(finalChance * 100f)}%]",
-                        LogScope.Encounter
-                    );
-                    EmitStatus($"Duplicate captured! {def.displayName} leveled up to Lv {existing.level}.", LogScope.Encounter);
+                        SaveManager.Save();
+                        GameEvents.OnResourcesChanged?.Invoke();
+                        GameEvents.MonsterCaptured?.Invoke(def.id, def.type);
+
+                        BattleLogger.Log(
+                            $"🎉 Duplicate captured, but {def.displayName} is already max level (Lv {maxLevel}). Converted to +{cores} Growth Cores. [p={Mathf.RoundToInt(finalChance * 100f)}%]",
+                            LogScope.Encounter
+                        );
+                        EmitStatus($"Duplicate converted: +{cores} Growth Cores (already Lv {maxLevel}).", LogScope.Encounter);
+                    }
                 }
                 else
                 {
-                    int cores = CalcDuplicateConversionCores(def, level);
-                    if (cores > 0)
-                        ResourceManager.I?.Add(ResourceType.GrowthCore, cores);
+                    // Manual mode: open the Duplicate Resolution panel
+                    PendingDuplicateCapture.Set(existing, def, level, isShiny, isMax);
 
-                    SaveManager.Save();
-                    GameEvents.OnResourcesChanged?.Invoke();
-
-                    // Fire capture (still counts as a successful capture attempt)
-                    GameEvents.MonsterCaptured?.Invoke(def.id, def.type);
+                    if (UIManager.I != null)
+                        UIManager.I.Show(PanelId.DuplicateResolution);
 
                     BattleLogger.Log(
-                        $"🎉 Duplicate captured, but {def.displayName} is already max level (Lv {maxLevel}). Converted to +{cores} Growth Cores. [p={Mathf.RoundToInt(finalChance * 100f)}%]",
+                        $"🎉 Duplicate {def.displayName} captured! Awaiting placement decision. [p={Mathf.RoundToInt(finalChance * 100f)}%]",
                         LogScope.Encounter
                     );
-                    EmitStatus($"Duplicate converted: +{cores} Growth Cores (already Lv {maxLevel}).", LogScope.Encounter);
+                    EmitStatus($"Duplicate captured! Choose how to place {def.displayName}.", LogScope.Encounter);
                 }
 
                 // Ensure collection tracking is up to date

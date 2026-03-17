@@ -95,6 +95,7 @@ public static class SaveManager
                 root.jobRuntime ??= new JobRuntimeSave();
                 root.titles ??= new TitleSaveData();
                 root.worldEvents ??= new WorldEventSaveData();
+                root.exchange ??= new ExchangeSaveData();
 
                 // Ensure lists exist (JsonUtility can leave them null for empty lists).
                 root.tutorialCompleted ??= new List<string>();
@@ -150,6 +151,7 @@ public static class SaveManager
         public JobRuntimeSave jobRuntime;
         public TitleSaveData titles;
         public WorldEventSaveData worldEvents;
+        public ExchangeSaveData exchange;
     }
 
     private static bool _loaded;
@@ -159,6 +161,7 @@ public static class SaveManager
     private static JobRuntimeSave _jobRuntimeCache;
     private static TitleSaveData _titlesCache;
     private static WorldEventSaveData _worldEventsCache;
+    private static ExchangeSaveData _exchangeCache;
 
     // ─────────────────────────────────────────────
     // Hard reset guard (prevents sidecar/runtime re-saves during scene reload)
@@ -250,6 +253,7 @@ public static class SaveManager
         _jobRuntimeCache = root?.jobRuntime;
         _titlesCache = root?.titles;
         _worldEventsCache = root?.worldEvents;
+        _exchangeCache = root?.exchange;
 
         NormalizeAfterLoad();
 
@@ -384,6 +388,7 @@ private static PlayerSaveRoot MigrateRootIfNeeded(PlayerSaveRoot root)
             _jobRuntimeCache = null;
             _titlesCache = null;
             _worldEventsCache = null;
+            _exchangeCache = null;
             Data = NewFreshPlayer();
             EnsureDefaults();
 
@@ -467,6 +472,7 @@ private static PlayerSaveRoot MigrateRootIfNeeded(PlayerSaveRoot root)
             _jobRuntimeCache = null;
             _titlesCache = null;
             _worldEventsCache = null;
+            _exchangeCache = null;
             // 4) Rebuild a truly fresh PlayerManager in memory.
             Data = NewFreshPlayer();
             JobUnlockBridge.ResetAllJobUnlocks(alsoResetPurchasedFlags: true);
@@ -587,6 +593,7 @@ private static PlayerSaveRoot MigrateRootIfNeeded(PlayerSaveRoot root)
         root.jobRuntime = _jobRuntimeCache;
         root.titles = _titlesCache;
         root.worldEvents = _worldEventsCache;
+        root.exchange = _exchangeCache;
         return root;
     }
 
@@ -2069,6 +2076,19 @@ if (save) Save();
     {
         if (IsHardWiping) return;
         _worldEventsCache = data;
+        Save();
+    }
+
+    // ─────────────────────────────────────────────
+    // Exchange blob
+    // ─────────────────────────────────────────────
+
+    public static ExchangeSaveData GetExchangeBlob() => _exchangeCache;
+
+    public static void SetExchangeBlob(ExchangeSaveData data)
+    {
+        if (IsHardWiping) return;
+        _exchangeCache = data;
         Save();
     }
 

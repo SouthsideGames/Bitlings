@@ -13,15 +13,18 @@ MonoBehaviour:
   m_Name: Commander
   m_EditorClassIdentifier: 
   group: 3
-  attackWeight: 5
-  defendWeight: 3
-  focusWeight: 6
+  attackWeight: 4
+  defendWeight: 4
+  focusWeight: 2
   runWeight: 0
   lowHpThreshold: 0.3
   lowHpDefendBonus: 2
-  lowHpRunBonus: 1
+  lowHpRunBonus: 0
   superEffectiveAttackBonus: 2
-  badMatchDefendBonus: 1
-  badMatchRunBonus: 1
-  eachTurnAttackBonus: 0
-  description: Disciplined control; wins on planning.
+  badMatchDefendBonus: 2
+  badMatchRunBonus: 0
+  eachTurnAttackBonus: 1
+  eachTurnFocusPenalty: 0
+  lowHpFocusPenalty: 2
+  chaoticOverrideChance: 0
+  description: Values discipline structure and stable tempo.

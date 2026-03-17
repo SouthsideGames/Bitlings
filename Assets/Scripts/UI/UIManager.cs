@@ -41,6 +41,10 @@ public enum PanelId
 
     // Iron Career: ONLY the main container should be managed by UIManager
     IronCareerEncounter = 34,
+
+    // Exchange
+    DuplicateResolution = 35,
+    Exchange = 36,
 }
 
 [Serializable]
@@ -83,6 +87,7 @@ public class UIManager : MonoBehaviour
         PanelId.PackDetails,
         PanelId.ImagePreview,
         PanelId.IdleBattleRewards,
+        PanelId.DuplicateResolution,
 
         // NOTE:
         // Iron overlays are intentionally NOT included here.

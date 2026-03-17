@@ -111,6 +111,9 @@ public sealed class MonsterBuilder : EditorWindow
     [Header("Always-On Titles (MonsterDataSO.defaultAlwaysOnTitles) (Skipped for Boss rarity)")]
     [SerializeField] private bool syncAlwaysOnTitlesFromCsv = true;
 
+    [Header("Iron Titles (MonsterDataSO.ironTitles) (Skipped for Boss rarity)")]
+    [SerializeField] private bool syncIronTitlesFromCsv = true;
+
     [Header("Personality")]
     [Tooltip("If enabled, resolves MonsterPersonalitySO by asset name in Assets/Resources/MonsterPersonalities")]
     [SerializeField] private bool resolvePersonality = true;
@@ -212,6 +215,31 @@ public sealed class MonsterBuilder : EditorWindow
 
         // Always-on titles (optional)
         {"Always On Titles","Always On Titles"},
+
+        // Iron titles (optional, pipe-separated)
+        {"Iron Titles","Iron Titles"},
+
+        // Starter
+        {"Can Be Starter","Can Be Starter"},
+        {"canBeStarter","Can Be Starter"},
+        {"Starter Weight","Starter Weight"},
+        {"starterWeight","Starter Weight"},
+
+        // Max Level (optional override)
+        {"Max Level","Max Level"},
+        {"maxLevel","Max Level"},
+
+        // Boss Weight
+        {"Boss Weight","Boss Weight"},
+        {"bossWeight","Boss Weight"},
+
+        // Attack prefab lifetime
+        {"Basic Attack Prefab Lifetime","Basic Attack Prefab Lifetime"},
+        {"basicAttackPrefabLifetime","Basic Attack Prefab Lifetime"},
+
+        // Exchange
+        {"Base Market Value","Base Market Value"},
+        {"baseMarketValue","Base Market Value"},
     };
 
     [MenuItem("Bitlings/Builder/Monsters From CSV")]
@@ -355,6 +383,10 @@ public sealed class MonsterBuilder : EditorWindow
         syncAlwaysOnTitlesFromCsv = EditorGUILayout.Toggle("Sync defaultAlwaysOnTitles From CSV", syncAlwaysOnTitlesFromCsv);
 
         EditorGUILayout.Space();
+        EditorGUILayout.LabelField("Iron Titles (skipped for Boss rarity)", EditorStyles.boldLabel);
+        syncIronTitlesFromCsv = EditorGUILayout.Toggle("Sync ironTitles From CSV", syncIronTitlesFromCsv);
+
+        EditorGUILayout.Space();
         EditorGUILayout.LabelField("Evolution", EditorStyles.boldLabel);
         resolveEvolutionForm = EditorGUILayout.Toggle("Resolve Evolution Form (2nd pass)", resolveEvolutionForm);
 
@@ -387,7 +419,7 @@ public sealed class MonsterBuilder : EditorWindow
         if (!AssetDatabase.IsValidFolder(AssetDatabase.GetAssetPath(outputMonsterRootFolder))) return false;
         if (csvAsset == null && string.IsNullOrWhiteSpace(csvPathOverride)) return false;
 
-        if ((reviewUpdateTitleTrack || syncAlwaysOnTitlesFromCsv))
+        if ((reviewUpdateTitleTrack || syncAlwaysOnTitlesFromCsv || syncIronTitlesFromCsv))
         {
             if (titlesRootFolder == null) return false;
             if (!AssetDatabase.IsValidFolder(AssetDatabase.GetAssetPath(titlesRootFolder))) return false;
@@ -491,7 +523,7 @@ public sealed class MonsterBuilder : EditorWindow
         var existingById = IndexExistingMonsters(monsterRootPath);
 
         Dictionary<string, TitleSO> titleByTitleId = null;
-        if (reviewUpdateTitleTrack || syncAlwaysOnTitlesFromCsv)
+        if (reviewUpdateTitleTrack || syncAlwaysOnTitlesFromCsv || syncIronTitlesFromCsv)
             titleByTitleId = IndexTitlesByTitleIdInFolder(titlesRootPath);
 
         Dictionary<MonsterType, Sprite> typeIconCache = null;
@@ -516,6 +548,7 @@ public sealed class MonsterBuilder : EditorWindow
         int movedMonsters = 0, renamedMonsters = 0;
         int movedTracks = 0, renamedTracks = 0, updatedTracks = 0, createdTracks = 0;
         int updatedAlwaysOnTitles = 0;
+        int updatedIronTitles = 0;
         int setAttackPrefabs = 0;
         int setSpriteRefs = 0;
         int setMonsterSpritesByConvention = 0;
@@ -596,13 +629,25 @@ public sealed class MonsterBuilder : EditorWindow
                     if (TryParseEnum(Get(row, headerMap, "Rarity"), out Rarity rr))
                         monster.rarity = rr;
 
-                    // MaxLevel forced
-                    monster.maxLevel = 50;
+                    // MaxLevel (CSV override or default 50)
+                    if (TryInt(Get(row, headerMap, "Max Level"), out int ml))
+                        monster.maxLevel = Mathf.Max(1, ml);
+                    else
+                        monster.maxLevel = 50;
 
                     // Boss rule enforced only by rarity
                     bool boss = monster.rarity == Rarity.Boss;
                     monster.isBoss = boss;
                     monster.uncatchable = boss;
+
+                    // Starter
+                    string starterStr = Get(row, headerMap, "Can Be Starter").Trim();
+                    if (!string.IsNullOrWhiteSpace(starterStr))
+                        monster.canBeStarter = starterStr.Equals("true", StringComparison.OrdinalIgnoreCase) || starterStr == "1";
+                    if (boss) monster.canBeStarter = false;
+
+                    if (TryInt(Get(row, headerMap, "Starter Weight"), out int stw))
+                        monster.starterWeight = Mathf.Max(0, stw);
 
                     if (boss)
                     {
@@ -654,6 +699,10 @@ public sealed class MonsterBuilder : EditorWindow
                     // Encounter
                     if (TryFloat(Get(row, headerMap, "Spawn Weight"), out float sw))
                         monster.spawnWeight = Mathf.Max(0f, sw);
+
+                    // Boss Weight
+                    if (TryInt(Get(row, headerMap, "Boss Weight"), out int bw))
+                        monster.bossWeight = Mathf.Max(1, bw);
 
                     // Stats
                     if (TryInt(Get(row, headerMap, "Base HP"), out int hp)) monster.baseHP = Mathf.Max(1, hp);
@@ -721,9 +770,17 @@ if (resolveEvolutionForm)
                         }
                     }
 
+                    // Basic Attack Prefab Lifetime
+                    if (TryFloat(Get(row, headerMap, "Basic Attack Prefab Lifetime"), out float atkLife))
+                        monster.basicAttackPrefabLifetime = Mathf.Max(0f, atkLife);
+
                     // Description
                     string desc = Get(row, headerMap, "Description");
                     if (!string.IsNullOrWhiteSpace(desc)) monster.description = desc.Trim();
+
+                    // Base Market Value
+                    if (TryInt(Get(row, headerMap, "Base Market Value"), out int bmv))
+                        monster.baseMarketValue = Mathf.Max(0, bmv);
 
                     // Always-On Titles (skipped for Boss)
                     if (!boss && syncAlwaysOnTitlesFromCsv && titleByTitleId != null)
@@ -736,6 +793,21 @@ if (resolveEvolutionForm)
                             {
                                 monster.defaultAlwaysOnTitles = titles;
                                 updatedAlwaysOnTitles++;
+                            }
+                        }
+                    }
+
+                    // Iron Titles (skipped for Boss)
+                    if (!boss && syncIronTitlesFromCsv && titleByTitleId != null)
+                    {
+                        string ironStr = Get(row, headerMap, "Iron Titles").Trim();
+                        if (!string.IsNullOrWhiteSpace(ironStr))
+                        {
+                            var ironTitles = ResolveTitleIdList(ironStr, titleByTitleId);
+                            if (!TitleArrayEquals(monster.ironTitles, ironTitles))
+                            {
+                                monster.ironTitles = ironTitles;
+                                updatedIronTitles++;
                             }
                         }
                     }
@@ -947,7 +1019,7 @@ if (resolveEvolutionForm)
             $"Created={created}, Updated={updated}, Skipped={skipped}, Errors={errors}. " +
             $"MonsterMoved={movedMonsters}, MonsterRenamed={renamedMonsters}. " +
             $"TracksCreated={createdTracks}, TracksMoved={movedTracks}, TracksRenamed={renamedTracks}, TracksUpdated={updatedTracks}. " +
-            $"AlwaysOnTitlesUpdated={updatedAlwaysOnTitles}, TypeAttackPrefabsSet={setAttackPrefabs}, " +
+            $"AlwaysOnTitlesUpdated={updatedAlwaysOnTitles}, IronTitlesUpdated={updatedIronTitles}, TypeAttackPrefabsSet={setAttackPrefabs}, " +
             $"LegacySpriteRefsSet={setSpriteRefs}, ConventionSpritesSet={setMonsterSpritesByConvention}."
         );
     }
