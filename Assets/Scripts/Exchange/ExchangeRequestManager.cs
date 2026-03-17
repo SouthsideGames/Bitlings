@@ -11,6 +11,8 @@ public sealed class ExchangeRequestManager : MonoBehaviour
 {
     public static ExchangeRequestManager I { get; private set; }
 
+    private const float ROTATION_CHECK_INTERVAL = 30f;
+
     [Header("Config")]
     [SerializeField] private ExchangeRequestLibrarySO requestLibrary;
 
@@ -21,6 +23,7 @@ public sealed class ExchangeRequestManager : MonoBehaviour
     [SerializeField] private int maxActiveRequests = 5;
 
     private ExchangeSaveData _save;
+    private float _rotationTimer;
 
     // ─────────── Lifecycle ───────────
 
@@ -36,6 +39,8 @@ public sealed class ExchangeRequestManager : MonoBehaviour
             ? ExchangeManager.I.SaveData
             : (SaveManager.GetExchangeBlob() ?? new ExchangeSaveData());
 
+        _save.activeRequests ??= new List<ActiveRequest>();
+
         PruneExpired();
         TryRotateDaily();
     }
@@ -48,6 +53,16 @@ public sealed class ExchangeRequestManager : MonoBehaviour
     void OnDisable()
     {
         GameEvents.WorldEventsChanged -= OnWorldEventsChanged;
+    }
+
+    void Update()
+    {
+        _rotationTimer += Time.unscaledDeltaTime;
+        if (_rotationTimer < ROTATION_CHECK_INTERVAL) return;
+
+        _rotationTimer = 0f;
+        PruneExpired();
+        TryRotateDaily();
     }
 
     // ─────────── Public API ───────────
@@ -134,7 +149,7 @@ public sealed class ExchangeRequestManager : MonoBehaviour
             return;
 
         int today = (int)(DateTimeOffset.UtcNow.ToUnixTimeSeconds() / 86400);
-        if (today <= _save.lastDayIndex) return; // already rotated today
+        if (today <= _save.lastRequestRotationDayIndex) return; // already rotated today
 
         // Roll new requests
         int slotsAvailable = maxActiveRequests - CountUnfulfilled();
@@ -162,6 +177,7 @@ public sealed class ExchangeRequestManager : MonoBehaviour
             _save.activeRequests.Add(active);
         }
 
+        _save.lastRequestRotationDayIndex = today;
         SaveManager.SetExchangeBlob(_save);
     }
 

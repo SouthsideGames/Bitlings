@@ -1246,7 +1246,7 @@ if (target > 0.01f)
             hireMonsterIcon.sprite = MonsterNameFormatter.GetIcon(def, _pendingHireIsShiny, backIcon: false);
 
         if (hirePromptText)
-            hirePromptText.text = $"Do you want to hire {MonsterNameFormatter.Format(def, _pendingHireIsShiny)}?";
+            hirePromptText.text = BuildHireDecisionSummary(def, _pendingHireIsShiny);
 
         ClearHireResultVisuals();
 
@@ -1257,6 +1257,27 @@ if (target > 0.01f)
         hireDecisionRoot.SetActive(true);
         RefreshEncounterButtonInteractivity();
         RefreshEncounterDifficultyPreview();
+    }
+
+    string BuildHireDecisionSummary(MonsterDataSO def, bool isShiny)
+    {
+        if (def == null)
+            return "Do you want to hire this Bitling?";
+
+        string name = MonsterNameFormatter.Format(def, isShiny);
+        int exchangeValue = ExchangeManager.I != null
+            ? ExchangeManager.I.GetCurrentValue(def.id)
+            : Mathf.Max(0, def.baseMarketValue);
+
+        return
+            $"Name: {name}\n" +
+            $"Type: {def.type}\n" +
+            $"HP: {def.baseHP}\n" +
+            $"ATK: {def.baseAttack}\n" +
+            $"DEF: {def.baseDefense}\n" +
+            $"SPD: {def.baseSpeed}\n\n" +
+            $"Exchange Value: {exchangeValue} Credits\n\n" +
+            "Hire this Bitling?";
     }
 
     void OnClickHireYes()

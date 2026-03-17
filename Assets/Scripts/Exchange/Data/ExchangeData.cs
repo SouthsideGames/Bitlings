@@ -44,6 +44,7 @@ public class ExchangeSaveData
     public int totalRequestsFulfilled;
     public int dailySeed;
     public int lastDayIndex = -1;
+    public int lastRequestRotationDayIndex = -1;
 }
 
 // ─────────────────────────────────────────────────────────────

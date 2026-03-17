@@ -26,7 +26,11 @@ public class ExchangeMarketRowUI : MonoBehaviour
         if (nameLabel != null) nameLabel.text = def.displayName;
 
         int val = state?.currentValue ?? def.baseMarketValue;
-        if (valueLabel != null) valueLabel.text = $"{val}";
+        if (valueLabel != null)
+        {
+            bool isPortfolioRow = level >= 0 || brokerPayout >= 0;
+            valueLabel.text = isPortfolioRow ? $"Value: {val}" : $"{val}";
+        }
 
         // Trend arrow
         if (trendLabel != null)
@@ -67,7 +71,7 @@ public class ExchangeMarketRowUI : MonoBehaviour
             }
         }
 
-        if (ownedLabel != null) ownedLabel.text = ownedCount > 0 ? $"Owned: {ownedCount}" : "—";
+        if (ownedLabel != null) ownedLabel.text = ownedCount > 0 ? "Owned" : "Not Owned";
 
         // Portfolio-specific fields
         if (levelLabel != null)

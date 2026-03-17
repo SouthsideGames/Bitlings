@@ -12,4 +12,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 7e869670ae8c2c14fb559303c3764d7f, type: 3}
   m_Name: ExchangeRequestLibrary
   m_EditorClassIdentifier: Assembly-CSharp::ExchangeRequestLibrarySO
-  requests: []
+  requests:
+  - {fileID: 11400000, guid: 90dc223a2d245447991f67a8c1742d05, type: 2}
+  - {fileID: 11400000, guid: 50c2fbee614c74195bd7cf8cae70b18d, type: 2}

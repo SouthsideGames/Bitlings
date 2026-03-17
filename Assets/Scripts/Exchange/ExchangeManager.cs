@@ -143,14 +143,15 @@ public sealed class ExchangeManager : MonoBehaviour
         if (_save == null || _stateMap == null) return;
 
         int today = DayIndex();
-        bool newDay = today != _save.lastDayIndex;
+        int previousDay = _save.lastDayIndex;
+        bool newDay = today != previousDay;
         if (newDay)
         {
             _save.dailySeed = HashDay(today);
             _save.lastDayIndex = today;
         }
 
-        bool isMarketReset = newDay && _save.lastDayIndex != 0;
+        bool isMarketReset = newDay && previousDay >= 0;
 
         var allMonsters = MonsterCatalog.All;
         if (allMonsters == null) return;

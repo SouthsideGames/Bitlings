@@ -106,16 +106,20 @@ public class ExchangeRequestRowUI : MonoBehaviour
         if (_request == null || ExchangeRequestManager.I == null) return;
 
         // Find a matching species the player owns
-        string speciesId = FindOwnedMatchingSpecies(_request);
-        if (string.IsNullOrEmpty(speciesId))
+        OwnedMonsterData ownedMatch = FindOwnedMatchingOwned(_request);
+        if (ownedMatch == null)
         {
             GameEvents.RaiseToast("No matching Bitling available.");
             return;
         }
 
+        string speciesId = ownedMatch.monsterId;
+
         int reward = ExchangeRequestManager.I.TryFulfillRequest(_request.requestId, speciesId);
         if (reward > 0)
         {
+            ConsumeOwnedMonster(ownedMatch);
+
             var def = MonsterCatalog.GetById(speciesId);
             string name = def != null ? def.displayName : speciesId;
             GameEvents.RaiseToast($"{name} placed! +{reward} Credits");
@@ -128,13 +132,13 @@ public class ExchangeRequestRowUI : MonoBehaviour
 
     private bool CanPlayerFulfill(ActiveRequest request)
     {
-        return !string.IsNullOrEmpty(FindOwnedMatchingSpecies(request));
+        return FindOwnedMatchingOwned(request) != null;
     }
 
-    private string FindOwnedMatchingSpecies(ActiveRequest request)
+    private OwnedMonsterData FindOwnedMatchingOwned(ActiveRequest request)
     {
         var data = SaveManager.Data;
-        if (data?.owned == null) return null;
+        if (data?.owned == null || request == null) return null;
 
         for (int i = 0; i < data.owned.Count; i++)
         {
@@ -144,7 +148,7 @@ public class ExchangeRequestRowUI : MonoBehaviour
             if (!string.IsNullOrEmpty(request.requiredSpeciesId))
             {
                 if (string.Equals(o.monsterId, request.requiredSpeciesId, StringComparison.Ordinal))
-                    return o.monsterId;
+                    return o;
             }
             else
             {
@@ -152,9 +156,76 @@ public class ExchangeRequestRowUI : MonoBehaviour
                 if (def == null) continue;
                 bool typeOk = request.requiredType == MonsterType.None || request.requiredType == def.type;
                 bool rarityOk = (int)def.rarity >= (int)request.requiredMinRarity;
-                if (typeOk && rarityOk) return o.monsterId;
+                if (typeOk && rarityOk) return o;
             }
         }
         return null;
+    }
+
+    private void ConsumeOwnedMonster(OwnedMonsterData owned)
+    {
+        var data = SaveManager.Data;
+        if (data == null || owned == null) return;
+
+        data.owned ??= new System.Collections.Generic.List<OwnedMonsterData>();
+        data.team ??= new System.Collections.Generic.List<OwnedMonsterData>();
+
+        string ownedUid = owned.ownedUID;
+        string speciesId = owned.monsterId;
+        bool removed = false;
+
+        for (int i = data.owned.Count - 1; i >= 0; i--)
+        {
+            var o = data.owned[i];
+            if (o == null) continue;
+
+            bool same = false;
+            if (!string.IsNullOrEmpty(ownedUid) && !string.IsNullOrEmpty(o.ownedUID))
+                same = string.Equals(o.ownedUID, ownedUid, StringComparison.Ordinal);
+            else
+                same = ReferenceEquals(o, owned);
+
+            if (!same) continue;
+            data.owned.RemoveAt(i);
+            removed = true;
+            break;
+        }
+
+        if (!removed && !string.IsNullOrEmpty(speciesId))
+        {
+            for (int i = data.owned.Count - 1; i >= 0; i--)
+            {
+                var o = data.owned[i];
+                if (o == null || string.IsNullOrEmpty(o.monsterId)) continue;
+                if (!string.Equals(o.monsterId, speciesId, StringComparison.Ordinal)) continue;
+                data.owned.RemoveAt(i);
+                removed = true;
+                break;
+            }
+        }
+
+        if (!removed) return;
+
+        for (int i = 0; i < data.team.Count; i++)
+        {
+            var t = data.team[i];
+            if (t == null) continue;
+
+            bool same = false;
+            if (!string.IsNullOrEmpty(ownedUid) && !string.IsNullOrEmpty(t.ownedUID))
+                same = string.Equals(t.ownedUID, ownedUid, StringComparison.Ordinal);
+            else if (ReferenceEquals(t, owned))
+                same = true;
+
+            if (same)
+                data.team[i] = new OwnedMonsterData();
+        }
+
+        if (JobManager.I != null)
+            JobManager.I.RemoveFromAnyJob(!string.IsNullOrEmpty(ownedUid) ? ownedUid : speciesId);
+
+        SaveManager.Save();
+        GameEvents.OnOwnedMonstersChanged?.Invoke();
+        GameEvents.OnTeamChanged?.Invoke();
     }
 }

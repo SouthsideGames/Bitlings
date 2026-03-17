@@ -107,10 +107,29 @@ public class ExchangePanelUI : MonoBehaviour
     {
         _currentSection = section;
 
-        if (marketContent)    marketContent.SetActive(section == ExchangeSection.Market);
-        if (portfolioContent) portfolioContent.SetActive(section == ExchangeSection.Portfolio);
-        if (requestsContent)  requestsContent.SetActive(section == ExchangeSection.Requests);
-        if (trendsContent)    trendsContent.SetActive(section == ExchangeSection.Trends);
+        // Always force-hide all sections first, then enable only the selected one.
+        // This prevents stale content from staying visible if switching quickly or if
+        // a tab has previously been activated.
+        if (marketContent) marketContent.SetActive(false);
+        if (portfolioContent) portfolioContent.SetActive(false);
+        if (requestsContent) requestsContent.SetActive(false);
+        if (trendsContent) trendsContent.SetActive(false);
+
+        switch (section)
+        {
+            case ExchangeSection.Market:
+                if (marketContent) marketContent.SetActive(true);
+                break;
+            case ExchangeSection.Portfolio:
+                if (portfolioContent) portfolioContent.SetActive(true);
+                break;
+            case ExchangeSection.Requests:
+                if (requestsContent) requestsContent.SetActive(true);
+                break;
+            case ExchangeSection.Trends:
+                if (trendsContent) trendsContent.SetActive(true);
+                break;
+        }
 
         switch (section)
         {
@@ -255,16 +274,20 @@ public class ExchangePanelUI : MonoBehaviour
             if (noRequestsLabel != null)
             {
                 noRequestsLabel.SetActive(true);
-                noRequestsLabel.GetComponent<TextMeshProUGUI>().text = "No active requests. Check back tomorrow!";
+                var noRequestsText = noRequestsLabel.GetComponent<TextMeshProUGUI>()
+                    ?? noRequestsLabel.GetComponentInChildren<TextMeshProUGUI>(true);
+                if (noRequestsText != null)
+                    noRequestsText.text = "No active requests. Check back tomorrow!";
             }
             return;
         }
 
-        if (noRequestsLabel != null) noRequestsLabel.SetActive(false);
+        int shownRequests = 0;
 
         for (int i = 0; i < active.Count; i++)
         {
             var req = active[i];
+            if (req == null) continue;
             if (req.fulfilled) continue;
 
             if (requestRowPrefab != null)
@@ -274,6 +297,21 @@ public class ExchangePanelUI : MonoBehaviour
 
                 var row = go.GetComponent<ExchangeRequestRowUI>();
                 if (row != null) row.Populate(req);
+                shownRequests++;
+            }
+        }
+
+        if (noRequestsLabel != null)
+        {
+            bool hasVisibleRequests = shownRequests > 0;
+            noRequestsLabel.SetActive(!hasVisibleRequests);
+
+            if (!hasVisibleRequests)
+            {
+                var noRequestsText = noRequestsLabel.GetComponent<TextMeshProUGUI>()
+                    ?? noRequestsLabel.GetComponentInChildren<TextMeshProUGUI>(true);
+                if (noRequestsText != null)
+                    noRequestsText.text = "No active requests. Check back tomorrow!";
             }
         }
     }
