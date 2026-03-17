@@ -120544,7 +120544,7 @@ PrefabInstance:
     - target: {fileID: 7707719899675729639, guid: 711a100c0e4614f22a77a53e09b19e83, type: 3}
       propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[1].m_Target
       value: 
-      objectReference: {fileID: 1147397854}
+      objectReference: {fileID: 1147397847}
     - target: {fileID: 7707719899675729639, guid: 711a100c0e4614f22a77a53e09b19e83, type: 3}
       propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[0].m_CallState
       value: 2
@@ -120559,7 +120559,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 7707719899675729639, guid: 711a100c0e4614f22a77a53e09b19e83, type: 3}
       propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[1].m_MethodName
-      value: Execute
+      value: OpenManual
       objectReference: {fileID: 0}
     - target: {fileID: 7707719899675729639, guid: 711a100c0e4614f22a77a53e09b19e83, type: 3}
       propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[0].m_TargetAssemblyTypeName
@@ -120567,7 +120567,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 7707719899675729639, guid: 711a100c0e4614f22a77a53e09b19e83, type: 3}
       propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[1].m_TargetAssemblyTypeName
-      value: PanelButtonUI, Assembly-CSharp
+      value: OpenManualButton, Assembly-CSharp
       objectReference: {fileID: 0}
     - target: {fileID: 7707719899675729639, guid: 711a100c0e4614f22a77a53e09b19e83, type: 3}
       propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[0].m_Arguments.m_ObjectArgumentAssemblyTypeName
@@ -120638,13 +120638,13 @@ PrefabInstance:
     m_AddedComponents:
     - targetCorrespondingSourceObject: {fileID: 7707719899675729637, guid: 711a100c0e4614f22a77a53e09b19e83, type: 3}
       insertIndex: -1
+      addedObject: {fileID: 1147397847}
+    - targetCorrespondingSourceObject: {fileID: 7707719899675729637, guid: 711a100c0e4614f22a77a53e09b19e83, type: 3}
+      insertIndex: -1
       addedObject: {fileID: 1147397846}
     - targetCorrespondingSourceObject: {fileID: 7707719899675729637, guid: 711a100c0e4614f22a77a53e09b19e83, type: 3}
       insertIndex: -1
       addedObject: {fileID: 1147397851}
-    - targetCorrespondingSourceObject: {fileID: 7707719899675729637, guid: 711a100c0e4614f22a77a53e09b19e83, type: 3}
-      insertIndex: -1
-      addedObject: {fileID: 1147397854}
   m_SourcePrefab: {fileID: 100100000, guid: 711a100c0e4614f22a77a53e09b19e83, type: 3}
 --- !u!224 &1147397844 stripped
 RectTransform:
@@ -120671,6 +120671,18 @@ MonoBehaviour:
   m_EffectColor: {r: 0, g: 0, b: 0, a: 0.5}
   m_EffectDistance: {x: 1, y: -6}
   m_UseGraphicAlpha: 1
+--- !u!114 &1147397847
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1147397845}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 829b79e7cce1a44909b2280598e5c9e9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!114 &1147397848 stripped
 MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 7707719899675729639, guid: 711a100c0e4614f22a77a53e09b19e83, type: 3}
@@ -120700,23 +120712,6 @@ MonoBehaviour:
   dismissOnPointerClick: 1
   dismissButton: {fileID: 1147397848}
   logEventTriggers: 0
---- !u!114 &1147397854
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1147397845}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 85b9972ef77031a4facff07ecd4f2555, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::PanelButtonUI
-  target: 36
-  action: 0
-  closeOthersFirst: 0
-  openHomeAfterClose: 0
-  homePanelId: 4
 --- !u!1 &1147410224
 GameObject:
   m_ObjectHideFlags: 0
@@ -215972,7 +215967,6 @@ GameObject:
   - component: {fileID: 2037100626}
   - component: {fileID: 2037100625}
   - component: {fileID: 2037100624}
-  - component: {fileID: 2037100627}
   m_Layer: 5
   m_Name: Close Button
   m_TagString: Untagged
@@ -216056,18 +216050,6 @@ MonoBehaviour:
           m_StringArgument: 
           m_BoolArgument: 0
         m_CallState: 2
-      - m_Target: {fileID: 2037100627}
-        m_TargetAssemblyTypeName: PanelButtonUI, Assembly-CSharp
-        m_MethodName: Execute
-        m_Mode: 1
-        m_Arguments:
-          m_ObjectArgument: {fileID: 0}
-          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
-          m_IntArgument: 0
-          m_FloatArgument: 0
-          m_StringArgument: 
-          m_BoolArgument: 0
-        m_CallState: 2
 --- !u!114 &2037100625
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -216106,23 +216088,6 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2037100622}
   m_CullTransparentMesh: 1
---- !u!114 &2037100627
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2037100622}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 85b9972ef77031a4facff07ecd4f2555, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::PanelButtonUI
-  target: 36
-  action: 1
-  closeOthersFirst: 0
-  openHomeAfterClose: 1
-  homePanelId: 4
 --- !u!1 &2037801086
 GameObject:
   m_ObjectHideFlags: 0
