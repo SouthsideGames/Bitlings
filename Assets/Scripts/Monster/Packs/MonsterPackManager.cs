@@ -119,6 +119,7 @@ public class MonsterPackManager : MonoBehaviour
         if (!force && idx == _cachedSeasonIndex)
             return;
 
+        bool seasonChanged = _cachedSeasonIndex != int.MinValue && idx != _cachedSeasonIndex;
         _cachedSeasonIndex = idx;
 
         _activeSeasonPackIds.Clear();
@@ -132,6 +133,9 @@ public class MonsterPackManager : MonoBehaviour
             if (!string.IsNullOrEmpty(id))
                 _activeSeasonPackIds.Add(id);
         }
+
+        if (seasonChanged)
+            GameEvents.PackSeasonChanged?.Invoke();
     }
 
     public int GetCurrentSeasonNumber1Based()

@@ -82,6 +82,12 @@ public static class GameEvents
     public static Action<string, int> MonsterBrokered;       // (speciesId, creditPayout)
     public static Action<string, string> RequestFulfilled;   // (requestId, speciesId)
     public static Action ExchangeValuesChanged;
+    public static Action ExchangeMarketReset;
+
+    // ─────────────────────────────────────────────────────────
+    // Packs / Seasons
+    // ─────────────────────────────────────────────────────────
+    public static Action PackSeasonChanged;
 
     public static event Action AutoApplyRequested;
     

@@ -150,6 +150,8 @@ public sealed class ExchangeManager : MonoBehaviour
             _save.lastDayIndex = today;
         }
 
+        bool isMarketReset = newDay && _save.lastDayIndex != 0;
+
         var allMonsters = MonsterCatalog.All;
         if (allMonsters == null) return;
 
@@ -210,6 +212,9 @@ public sealed class ExchangeManager : MonoBehaviour
 
         Persist();
         GameEvents.ExchangeValuesChanged?.Invoke();
+
+        if (isMarketReset)
+            GameEvents.ExchangeMarketReset?.Invoke();
     }
 
     // ─────────── Demand ───────────

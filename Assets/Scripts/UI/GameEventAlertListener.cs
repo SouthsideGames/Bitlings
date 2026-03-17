@@ -32,6 +32,8 @@ public sealed class GameEventAlertListener : MonoBehaviour, IPointerClickHandler
         BoostersChanged = 1 << 16,
         AutoApplyRequested = 1 << 17,
         ToastRequested = 1 << 18,
+        PackSeasonChanged = 1 << 19,
+        ExchangeMarketReset = 1 << 20,
     }
 
     [Header("Alert")]
@@ -132,6 +134,8 @@ public sealed class GameEventAlertListener : MonoBehaviour, IPointerClickHandler
         Toggle(AlertGameEvent.BoostersChanged, subscribe, AddBoostersChanged, RemoveBoostersChanged);
         Toggle(AlertGameEvent.AutoApplyRequested, subscribe, AddAutoApplyRequested, RemoveAutoApplyRequested);
         Toggle(AlertGameEvent.ToastRequested, subscribe, AddToastRequested, RemoveToastRequested);
+        Toggle(AlertGameEvent.PackSeasonChanged, subscribe, AddPackSeasonChanged, RemovePackSeasonChanged);
+        Toggle(AlertGameEvent.ExchangeMarketReset, subscribe, AddExchangeMarketReset, RemoveExchangeMarketReset);
     }
 
     private void Toggle(AlertGameEvent flag, bool subscribe, Action add, Action remove)
@@ -216,4 +220,12 @@ public sealed class GameEventAlertListener : MonoBehaviour, IPointerClickHandler
     private void AddToastRequested() => GameEvents.ToastRequested += HandleToastRequested;
     private void RemoveToastRequested() => GameEvents.ToastRequested -= HandleToastRequested;
     private void HandleToastRequested(string message) => TriggerAlert(nameof(GameEvents.ToastRequested));
+
+    private void AddPackSeasonChanged() => GameEvents.PackSeasonChanged += HandlePackSeasonChanged;
+    private void RemovePackSeasonChanged() => GameEvents.PackSeasonChanged -= HandlePackSeasonChanged;
+    private void HandlePackSeasonChanged() => TriggerAlert(nameof(GameEvents.PackSeasonChanged));
+
+    private void AddExchangeMarketReset() => GameEvents.ExchangeMarketReset += HandleExchangeMarketReset;
+    private void RemoveExchangeMarketReset() => GameEvents.ExchangeMarketReset -= HandleExchangeMarketReset;
+    private void HandleExchangeMarketReset() => TriggerAlert(nameof(GameEvents.ExchangeMarketReset));
 }
