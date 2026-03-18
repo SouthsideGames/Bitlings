@@ -10,7 +10,6 @@ using TMPro;
 
 public class ExchangeRequestRowUI : MonoBehaviour
 {
-    [SerializeField] private Image speciesIcon;
     [SerializeField] private TextMeshProUGUI requirementLabel;
     [SerializeField] private TextMeshProUGUI rewardLabel;
     [SerializeField] private TextMeshProUGUI timeRemainingLabel;
@@ -31,7 +30,6 @@ public class ExchangeRequestRowUI : MonoBehaviour
             var def = MonsterCatalog.GetById(request.requiredSpeciesId);
             if (def != null)
             {
-                if (speciesIcon != null) speciesIcon.sprite = def.icon;
                 if (requirementLabel != null) requirementLabel.text = $"Wanted: {def.displayName}";
             }
             else
@@ -45,7 +43,6 @@ public class ExchangeRequestRowUI : MonoBehaviour
             string typeStr = request.requiredType != MonsterType.None ? request.requiredType.ToString() : "Any";
             string rarityStr = request.requiredMinRarity != Rarity.Common ? $"{request.requiredMinRarity}+" : "";
             if (requirementLabel != null) requirementLabel.text = $"Wanted: {rarityStr} {typeStr} Bitling";
-            if (speciesIcon != null) speciesIcon.enabled = false;
         }
 
         // Reward

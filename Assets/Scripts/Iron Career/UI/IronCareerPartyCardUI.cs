@@ -49,6 +49,7 @@ public sealed class IronCareerPartyCardUI : MonoBehaviour
 
     public void Bind(IronMonster monster)
     {
+
         if (monster == null || monster.def == null)
         {
             if (icon) icon.sprite = null;
@@ -57,6 +58,7 @@ public sealed class IronCareerPartyCardUI : MonoBehaviour
             if (titleLabel) titleLabel.text = string.Empty;
             if (hpLabel) hpLabel.text = string.Empty;
             if (hpSlider) hpSlider.value = 0f;
+            if (button) button.interactable = false;
             SetSelected(false);
             return;
         }
@@ -65,6 +67,7 @@ public sealed class IronCareerPartyCardUI : MonoBehaviour
         if (nameLabel) nameLabel.text = monster.def.displayName;
         if (levelLabel) levelLabel.text = $"Lv {Mathf.Max(1, monster.level)}";
         if (titleLabel) titleLabel.text = (monster.lockedTitle != null) ? monster.lockedTitle.displayName : string.Empty;
+        if (button) button.interactable = true;
 
         if (typeIcon != null && typeIconLibrary != null)
         {

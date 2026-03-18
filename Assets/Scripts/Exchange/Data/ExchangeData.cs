@@ -57,6 +57,7 @@ public class ExchangeSaveData
     public int lastDayIndex = -1;
     public int lastRequestRotationDayIndex = -1;
     public int battleSentimentMonthKey = -1;
+    public long lastRecalcUnix;
 }
 
 // ─────────────────────────────────────────────────────────────

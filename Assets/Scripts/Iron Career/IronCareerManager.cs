@@ -868,6 +868,13 @@ public sealed class IronCareerManager : MonoBehaviour, IronBattleBridge.IIronBat
         }
 #endif
 
+        // Ensure Iron Career battles use the user's preferred battle speed
+        if (battle != null && SaveManager.Data != null && SaveManager.Data.settings != null)
+        {
+            float preferredSpeed = Mathf.Clamp(SaveManager.Data.settings.battleSpeed, 0.25f, 5f);
+            battle.SetBattleSpeed(preferredSpeed);
+        }
+
         bridge.SetWins(_state.wins);
         bridge.BeginIronBattle(battle, null);
     }

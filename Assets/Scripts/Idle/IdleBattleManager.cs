@@ -354,6 +354,7 @@ if (elapsed <= 0.1f) return;
         {
             DisableAuto();
             MarkSummaryPendingIfLogExists();
+            TryOpenSummaryIfNeeded();
             return;
         }
 
@@ -380,8 +381,8 @@ int canRun = Mathf.FloorToInt(dt / config.secondsPerEncounter);
         if (GetEnergySafe() < baseCost)
         {
             DisableAuto();
-
             MarkSummaryPendingIfLogExists();
+            TryOpenSummaryIfNeeded();
         }
     }
 

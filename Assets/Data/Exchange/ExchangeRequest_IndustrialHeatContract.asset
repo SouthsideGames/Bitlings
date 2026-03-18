@@ -10,16 +10,17 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 3b3551d34f5488948a8cd10af9b64480, type: 3}
-  m_Name: ExchangeRequest_QuarryReinforcement
+  m_Name: ExchangeRequest_IndustrialHeatContract
   m_EditorClassIdentifier: Assembly-CSharp::ExchangeRequestSO
-  requestId: req_quarry_reinforcement
-  displayName: Quarry Reinforcement
-  flavorText: Local quarry crews need additional muscle to keep stone output on schedule.
+  requestId: req_industrial_heat_contract
+  displayName: Industrial Heat Contract
+  flavorText: Industrial heating crews are looking for any Fire Bitling to maintain
+    output.
   requiredSpecies: {fileID: 0}
-  requiredType: 12
+  requiredType: 1
   requiredMinRarity: 0
-  creditReward: 140
+  creditReward: 115
   bonusResourceType: 0
   bonusResourceAmount: 0
-  weight: 3
+  weight: 4
   durationHours: 24

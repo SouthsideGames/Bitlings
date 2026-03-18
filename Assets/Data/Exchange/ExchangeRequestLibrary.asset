@@ -13,5 +13,15 @@ MonoBehaviour:
   m_Name: ExchangeRequestLibrary
   m_EditorClassIdentifier: Assembly-CSharp::ExchangeRequestLibrarySO
   requests:
-  - {fileID: 11400000, guid: 90dc223a2d245447991f67a8c1742d05, type: 2}
+  - {fileID: 11400000, guid: 575126b29bf2a5a4db69f18993ec21a0, type: 2}
+  - {fileID: 11400000, guid: e9da59116ea775e4cb852285a527de00, type: 2}
+  - {fileID: 11400000, guid: 62b38510401ff414b9d71da728e6b81d, type: 2}
+  - {fileID: 11400000, guid: 64031163b25ebb242ba23fbd7f814b9d, type: 2}
+  - {fileID: 11400000, guid: 3b602dfda0434fa44aa167cc34031f3f, type: 2}
+  - {fileID: 11400000, guid: 071ded5cb68389c44b3d9877bb131a28, type: 2}
   - {fileID: 11400000, guid: 50c2fbee614c74195bd7cf8cae70b18d, type: 2}
+  - {fileID: 11400000, guid: 7faa853a946424104b5f72d5bf0de0f7, type: 2}
+  - {fileID: 11400000, guid: d7d4ab93d4d715e4cbc63779ea99cc59, type: 2}
+  - {fileID: 11400000, guid: 90dc223a2d245447991f67a8c1742d05, type: 2}
+  - {fileID: 11400000, guid: 69d3801a58344c4499bd0d17da956d67, type: 2}
+  - {fileID: 11400000, guid: 80807f3b3bcb37c48837f84c63cf37aa, type: 2}

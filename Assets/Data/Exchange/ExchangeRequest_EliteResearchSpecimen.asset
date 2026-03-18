@@ -10,16 +10,17 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 3b3551d34f5488948a8cd10af9b64480, type: 3}
-  m_Name: ExchangeRequest_QuarryReinforcement
+  m_Name: ExchangeRequest_EliteResearchSpecimen
   m_EditorClassIdentifier: Assembly-CSharp::ExchangeRequestSO
-  requestId: req_quarry_reinforcement
-  displayName: Quarry Reinforcement
-  flavorText: Local quarry crews need additional muscle to keep stone output on schedule.
+  requestId: req_elite_research_specimen
+  displayName: Elite Research Specimen
+  flavorText: A research consortium is seeking a rare specialist specimen for high-priority
+    study.
   requiredSpecies: {fileID: 0}
-  requiredType: 12
-  requiredMinRarity: 0
-  creditReward: 140
-  bonusResourceType: 0
+  requiredType: 10
+  requiredMinRarity: 2
+  creditReward: 250
+  bonusResourceType: 10
   bonusResourceAmount: 0
-  weight: 3
+  weight: 1
   durationHours: 24

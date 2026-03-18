@@ -10,15 +10,15 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 3b3551d34f5488948a8cd10af9b64480, type: 3}
-  m_Name: ExchangeRequest_QuarryReinforcement
+  m_Name: ExchangeRequest_TunnelCrewDeployment
   m_EditorClassIdentifier: Assembly-CSharp::ExchangeRequestSO
-  requestId: req_quarry_reinforcement
-  displayName: Quarry Reinforcement
-  flavorText: Local quarry crews need additional muscle to keep stone output on schedule.
+  requestId: req_tunnel_crew_deployment
+  displayName: Tunnel Crew Deployment
+  flavorText: Excavation teams are requesting sturdy labor for a new tunnel route.
   requiredSpecies: {fileID: 0}
   requiredType: 12
   requiredMinRarity: 0
-  creditReward: 140
+  creditReward: 120
   bonusResourceType: 0
   bonusResourceAmount: 0
   weight: 3

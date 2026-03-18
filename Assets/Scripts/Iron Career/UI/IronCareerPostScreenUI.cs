@@ -19,11 +19,8 @@ public sealed class IronCareerPostScreenUI : MonoBehaviour
     [SerializeField] private CanvasGroup canvasGroup;
 
     [Header("Header")]
-    [SerializeField] private TextMeshProUGUI titleTMP; // "POST-BATTLE STATUS"
-    [SerializeField] private TextMeshProUGUI metaTMP;  // Floor / Streak / Mode
-
-    [Header("Body")]
-    [SerializeField] private ScrollRect bodyScrollRect;
+    [SerializeField] private TextMeshProUGUI titleTMP;
+    [SerializeField] private TextMeshProUGUI metaTMP; 
 
     [Header("SummarySection")]
     [SerializeField] private GameObject summarySection;
@@ -36,6 +33,7 @@ public sealed class IronCareerPostScreenUI : MonoBehaviour
 
     [Header("Carry (single status)")]
     [SerializeField] private Image statusIcon;
+    [SerializeField] private Sprite noStatusIcon;
     [SerializeField] private TextMeshProUGUI statusName;
 
     [Header("ChecksSection")]
@@ -106,8 +104,6 @@ public sealed class IronCareerPostScreenUI : MonoBehaviour
 
     private void BindInternal(IReadOnlyList<IronMonster> party, IronFieldStatusSnapshot carry, int wins, bool hasOutcome, IronBattleOutcome outcome)
     {
-        if (bodyScrollRect) bodyScrollRect.normalizedPosition = new Vector2(0f, 1f);
-
         // Header/meta
         int safeWins = Mathf.Max(0, wins);
         int floor = safeWins + 1;
@@ -181,7 +177,7 @@ public sealed class IronCareerPostScreenUI : MonoBehaviour
         var type = carry.type;
         if (statusIcon)
         {
-            var icon = (type != StatusType.None && statusLibrary) ? statusLibrary.GetIcon(type) : null;
+            var icon = (type != StatusType.None && statusLibrary) ? statusLibrary.GetIcon(type) : noStatusIcon;
             statusIcon.sprite = icon;
             statusIcon.gameObject.SetActive(icon != null);
         }

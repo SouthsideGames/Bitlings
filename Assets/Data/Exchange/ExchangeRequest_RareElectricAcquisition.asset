@@ -10,16 +10,16 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 3b3551d34f5488948a8cd10af9b64480, type: 3}
-  m_Name: ExchangeRequest_QuarryReinforcement
+  m_Name: ExchangeRequest_RareElectricAcquisition
   m_EditorClassIdentifier: Assembly-CSharp::ExchangeRequestSO
-  requestId: req_quarry_reinforcement
-  displayName: Quarry Reinforcement
-  flavorText: Local quarry crews need additional muscle to keep stone output on schedule.
+  requestId: req_rare_electric_acquisition
+  displayName: req_rare_electric_acquisition
+  flavorText: A premium contractor is offering extra pay for a rare Electric Bitling.
   requiredSpecies: {fileID: 0}
-  requiredType: 12
-  requiredMinRarity: 0
-  creditReward: 140
-  bonusResourceType: 0
-  bonusResourceAmount: 0
-  weight: 3
+  requiredType: 4
+  requiredMinRarity: 2
+  creditReward: 220
+  bonusResourceType: 2
+  bonusResourceAmount: 2
+  weight: 1
   durationHours: 24

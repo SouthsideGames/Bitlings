@@ -12,12 +12,14 @@ public sealed class IronCareerReplacePanelUI : MonoBehaviour
     [Header("Refs")]
     [SerializeField] private IronCareerManager manager;
 
-    [Header("(New) Vertical Mobile Layout")]
     [Tooltip("Optional CanvasGroup for fade + input gating.")]
     [SerializeField] private CanvasGroup panelGroup;
 
-    [Tooltip("Component for the incoming recruit card UI.")]
-    [SerializeField] private IronCareerIncomingCardUI incomingCard;
+    [Tooltip("Prefab for the incoming recruit card UI.")]
+    [SerializeField] private IronCareerIncomingCardUI incomingCardPrefab;
+
+    [Tooltip("Parent where the incoming card is spawned.")]
+    [SerializeField] private Transform incomingCardParent;
 
     [Tooltip("Parent where party cards are spawned.")]
     [SerializeField] private Transform partyCardParent;
@@ -33,6 +35,7 @@ public sealed class IronCareerReplacePanelUI : MonoBehaviour
     [SerializeField] private TextMeshProUGUI warningLabel;
 
     private readonly List<IronCareerPartyCardUI> _spawnedPartyCards = new List<IronCareerPartyCardUI>(3);
+    private IronCareerIncomingCardUI _spawnedIncomingCard;
     private int _selectedIndex = -1;
     private bool _hardcore;
 
@@ -53,6 +56,12 @@ public sealed class IronCareerReplacePanelUI : MonoBehaviour
         for (int i = 0; i < _spawnedPartyCards.Count; i++)
             if (_spawnedPartyCards[i]) Destroy(_spawnedPartyCards[i].gameObject);
         _spawnedPartyCards.Clear();
+
+        if (_spawnedIncomingCard)
+        {
+            Destroy(_spawnedIncomingCard.gameObject);
+            _spawnedIncomingCard = null;
+        }
     }
 
     public void Bind(IReadOnlyList<IronMonster> party)
@@ -72,7 +81,24 @@ public sealed class IronCareerReplacePanelUI : MonoBehaviour
         if (warningLabel)
             warningLabel.text = "\u26A0 Selected monster will be permanently dismissed. This cannot be undone.";
 
-        if (incomingCard) incomingCard.Bind(offer);
+        // Destroy previous incoming card if any
+        if (_spawnedIncomingCard)
+        {
+            Destroy(_spawnedIncomingCard.gameObject);
+            _spawnedIncomingCard = null;
+        }
+
+        // Spawn new incoming card
+        if (incomingCardPrefab != null && incomingCardParent != null)
+        {
+            _spawnedIncomingCard = Instantiate(incomingCardPrefab, incomingCardParent);
+            _spawnedIncomingCard.Bind(offer);
+        }
+        else
+        {
+            Debug.LogWarning("[IronCareerReplacePanelUI] Missing incomingCardPrefab or incomingCardParent.");
+        }
+
         RebuildPartyCards(party);
 
         if (cancelButton)

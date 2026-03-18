@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
@@ -49,7 +50,8 @@ public class ExchangePanelUI : MonoBehaviour
     [SerializeField] private Transform trendsListParent;
     [SerializeField] private GameObject trendRowPrefab;
     [SerializeField] private TextMeshProUGUI worldEventTickerLabel;
-    [SerializeField] private float tickerScrollSpeed = 80f;
+    [SerializeField] private float tickerFadeDuration = 0.5f;
+    [SerializeField] private float tickerDisplayDuration = 3f;
 
     [Header("Close")]
     [SerializeField] private Button closeButton;
@@ -59,11 +61,10 @@ public class ExchangePanelUI : MonoBehaviour
     private enum SortMode { Value, Trend, Rarity }
     private SortMode _sortMode = SortMode.Value;
 
-    // Ticker scrolling state
-    private RectTransform _tickerRect;
-    private RectTransform _tickerParentRect;
-    private float _tickerTextWidth;
-    private float _tickerParentWidth;
+    // Ticker fade-cycle state
+    private List<string> _tickerLines = new List<string>();
+    private int _tickerIndex;
+    private Coroutine _tickerCoroutine;
 
     // Tutorial keys — must match TutorialOverlayPanel.tutorialKey on prefab
     private const string TutMarket    = "tut_exchange_market_v1";
@@ -74,28 +75,6 @@ public class ExchangePanelUI : MonoBehaviour
     void Awake()
     {
         I = this;
-
-        // Cache ticker RectTransforms for scrolling
-        if (worldEventTickerLabel != null)
-        {
-            _tickerRect = worldEventTickerLabel.GetComponent<RectTransform>();
-            _tickerParentRect = worldEventTickerLabel.transform.parent as RectTransform;
-        }
-    }
-
-    void Update()
-    {
-        if (_tickerRect == null || _tickerParentRect == null) return;
-        if (!worldEventTickerLabel.gameObject.activeInHierarchy) return;
-
-        var pos = _tickerRect.anchoredPosition;
-        pos.x -= tickerScrollSpeed * Time.deltaTime;
-
-        // Once the text has scrolled fully off the left, reset to the right edge
-        if (pos.x < -_tickerTextWidth)
-            pos.x = _tickerParentWidth;
-
-        _tickerRect.anchoredPosition = pos;
     }
 
     void OnEnable()
@@ -113,12 +92,15 @@ public class ExchangePanelUI : MonoBehaviour
         if (closeButton) closeButton.onClick.AddListener(Close);
 
         GameEvents.ExchangeValuesChanged += OnValuesChanged;
+        GameEvents.ExchangeMarketReset += OnValuesChanged;
 
         ShowSection(_currentSection);
     }
 
     void OnDisable()
     {
+        StopTickerCycle();
+
         if (marketTabButton)    marketTabButton.onClick.RemoveAllListeners();
         if (portfolioTabButton) portfolioTabButton.onClick.RemoveAllListeners();
         if (requestsTabButton)  requestsTabButton.onClick.RemoveAllListeners();
@@ -129,6 +111,7 @@ public class ExchangePanelUI : MonoBehaviour
         if (closeButton) closeButton.onClick.RemoveAllListeners();
 
         GameEvents.ExchangeValuesChanged -= OnValuesChanged;
+        GameEvents.ExchangeMarketReset -= OnValuesChanged;
     }
 
     // ─────────── Public Section Switching ───────────
@@ -391,16 +374,17 @@ public class ExchangePanelUI : MonoBehaviour
 
     }
 
-    // ─────────── Ticker (always visible) ───────────
+    // ─────────── Ticker (fade cycle) ───────────
 
     private void RefreshTicker()
     {
         if (worldEventTickerLabel == null) return;
 
+        _tickerLines.Clear();
+
         var allStates = ExchangeManager.I?.AllStates;
         if (allStates != null && allStates.Count > 0)
         {
-            var sb = new System.Text.StringBuilder();
             foreach (var kv in allStates)
             {
                 var s = kv.Value;
@@ -411,36 +395,63 @@ public class ExchangePanelUI : MonoBehaviour
                 int delta = s.currentValue - s.previousValue;
                 if (delta == 0) continue;
 
-                if (sb.Length > 0) sb.Append("    ");
-
                 string color = delta > 0 ? "#00CC00" : "#FF3333";
                 string arrow = delta > 0 ? "▲" : "▼";
-                sb.Append($"{def.displayName} <color={color}>{arrow} {Mathf.Abs(delta)}</color>");
+                _tickerLines.Add($"{def.displayName} <color={color}>{arrow} {Mathf.Abs(delta)}</color>    {s.currentValue} Credits");
             }
-
-            worldEventTickerLabel.text = sb.Length > 0 ? sb.ToString() : "Markets are steady — no movement.";
-        }
-        else
-        {
-            worldEventTickerLabel.text = "Markets are steady — no movement.";
         }
 
+        if (_tickerLines.Count == 0)
+            _tickerLines.Add("Markets are steady \u2014 no movement.");
+
+        _tickerIndex = 0;
         worldEventTickerLabel.gameObject.SetActive(true);
 
-        // Ensure text doesn't wrap so we get the true full-line width
-        worldEventTickerLabel.textWrappingMode = TextWrappingModes.NoWrap;
-        worldEventTickerLabel.overflowMode = TextOverflowModes.Overflow;
+        StopTickerCycle();
+        _tickerCoroutine = StartCoroutine(TickerFadeCycle());
+    }
 
-        // Recalculate widths and reset scroll position for the new text
-        if (_tickerRect != null)
+    private IEnumerator TickerFadeCycle()
+    {
+        while (true)
         {
-            worldEventTickerLabel.ForceMeshUpdate();
-            _tickerTextWidth = worldEventTickerLabel.preferredWidth;
-            // Size the rect to the full text so nothing gets clipped early
-            _tickerRect.SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal, _tickerTextWidth);
-            if (_tickerParentRect != null)
-                _tickerParentWidth = _tickerParentRect.rect.width;
-            _tickerRect.anchoredPosition = new Vector2(_tickerParentWidth, _tickerRect.anchoredPosition.y);
+            // Set text and fade in
+            worldEventTickerLabel.text = _tickerLines[_tickerIndex];
+            yield return FadeTicker(0f, 1f, tickerFadeDuration);
+
+            // Hold visible
+            yield return new WaitForSeconds(tickerDisplayDuration);
+
+            // Fade out
+            yield return FadeTicker(1f, 0f, tickerFadeDuration);
+
+            // Advance to next line (loop)
+            _tickerIndex = (_tickerIndex + 1) % _tickerLines.Count;
+        }
+    }
+
+    private IEnumerator FadeTicker(float from, float to, float duration)
+    {
+        float elapsed = 0f;
+        Color c = worldEventTickerLabel.color;
+        while (elapsed < duration)
+        {
+            elapsed += Time.deltaTime;
+            float t = Mathf.Clamp01(elapsed / duration);
+            c.a = Mathf.Lerp(from, to, t);
+            worldEventTickerLabel.color = c;
+            yield return null;
+        }
+        c.a = to;
+        worldEventTickerLabel.color = c;
+    }
+
+    private void StopTickerCycle()
+    {
+        if (_tickerCoroutine != null)
+        {
+            StopCoroutine(_tickerCoroutine);
+            _tickerCoroutine = null;
         }
     }
 

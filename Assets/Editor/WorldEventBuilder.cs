@@ -6,43 +6,7 @@ using System.IO;
 using UnityEditor;
 using UnityEngine;
 
-/// <summary>
-/// Builds/updates WorldEventSO assets and the WorldEventLibrarySO from a CSV.
-///
-/// CSV required columns (case-insensitive):
-/// - id
-/// - displayName
-/// - tickerMessage
-/// Optional columns:
-/// - category (Job/Encounter/Meta/Flavor)
-/// - weight (int)
-/// - canRotate (true/false)
-/// - scheduledOnly (true/false)
-/// - startUnix (long)
-/// - endUnix (long)
-/// - minDaysBetween (float)
-/// - isHoliday (true/false)
-/// - effects (semicolon-separated)
-///
-/// Effects format (semicolon-separated):
-///   Kind[:Target][:Value]
-/// Examples:
-///   DisableJobSite:Harbor
-///   JobRateMultiplier:Harbor:0.70
-///   JobStorageCapMultiplier:Harbor:0.75
-///   JobCollectDisabled:Harbor:true
-///   JobFatigueRateMultiplier:Harbor:1.25
-///   DisableEncounters
-///   EncounterEnergyCostMultiplier::0.85
-///   BossCadenceMultiplier::0.70
-///   ShopPriceMultiplier::1.15
-///   ResourceGainMultiplier:TrainingVoucher:1.50
-///
-/// Assets:
-/// - Events created/updated at: Assets/Resources/WorldEvents/Events/
-/// - Library created/updated at: Assets/Resources/WorldEvents/WorldEventLibrary.asset
-/// </summary>
-public static class WorldEventCsvBuilder
+public static class WorldEventBuilder
 {
     private const string EventsFolder = "Assets/Resources/WorldEvents/Events";
     private const string LibraryPath = "Assets/Resources/WorldEvents/WorldEventLibrary.asset";
@@ -59,7 +23,7 @@ public static class WorldEventCsvBuilder
         }
         catch (Exception ex)
         {
-            Debug.LogError($"[WorldEventCsvBuilder] Failed: {ex.Message}\n{ex.StackTrace}");
+            Debug.LogError($"[WorldEventBuilder] Failed: {ex.Message}\n{ex.StackTrace}");
         }
     }
 
@@ -67,7 +31,7 @@ public static class WorldEventCsvBuilder
     {
         if (!File.Exists(csvPath))
         {
-            Debug.LogError($"[WorldEventCsvBuilder] CSV not found: {csvPath}");
+            Debug.LogError($"[WorldEventBuilder] CSV not found: {csvPath}");
             return;
         }
 
@@ -76,7 +40,7 @@ public static class WorldEventCsvBuilder
         string[] lines = File.ReadAllLines(csvPath);
         if (lines == null || lines.Length < 2)
         {
-            Debug.LogWarning("[WorldEventCsvBuilder] CSV has no data rows.");
+            Debug.LogWarning("[WorldEventBuilder] CSV has no data rows.");
             return;
         }
 
@@ -115,7 +79,7 @@ public static class WorldEventCsvBuilder
             createdOrUpdated.Add(evt);
 
             if (isNew)
-                Debug.Log($"[WorldEventCsvBuilder] Created {assetPath}");
+                Debug.Log($"[WorldEventBuilder] Created {assetPath}");
         }
 
         // Library

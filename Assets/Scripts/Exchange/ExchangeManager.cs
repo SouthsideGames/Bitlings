@@ -72,6 +72,7 @@ public sealed class ExchangeManager : MonoBehaviour
     void Start()
     {
         LoadFromSave();
+        CatchUpOffline();
         RecalculateAll();
     }
 
@@ -142,7 +143,99 @@ public sealed class ExchangeManager : MonoBehaviour
         foreach (var kv in _sentimentMap)
             _save.monthlyBattleSentiments.Add(kv.Value);
 
+        _save.lastRecalcUnix = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
         SaveManager.SetExchangeBlob(_save);
+    }
+
+    // ─────────── Offline Catch-Up ───────────
+
+    private void CatchUpOffline()
+    {
+        if (_save == null || _stateMap == null) return;
+
+        long now = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+        long lastRecalc = _save.lastRecalcUnix;
+        if (lastRecalc <= 0) return; // first launch, nothing to catch up
+
+        long elapsed = now - lastRecalc;
+        if (elapsed < RECALC_INTERVAL) return; // was away less than one interval
+
+        // How many recalc intervals were missed
+        int missedIntervals = Mathf.Min((int)(elapsed / (long)RECALC_INTERVAL), 144); // cap ~24h worth
+
+        // How many new days passed while offline
+        int dayThen = (int)(lastRecalc / SECONDS_PER_DAY);
+        int dayNow  = DayIndex();
+        int missedDays = dayNow - dayThen;
+
+        if (missedDays <= 0 && missedIntervals <= 1) return;
+
+        var allMonsters = MonsterCatalog.All;
+        if (allMonsters == null) return;
+
+        var ownedCounts = BuildOwnedCounts();
+
+        // Simulate one recalc per missed day (with that day's seed),
+        // then additional intra-day recalcs for the current day.
+        // Cap total simulated days to 30 to prevent lag on very long absence.
+        int daysToSim = Mathf.Clamp(missedDays, 0, 30);
+
+        for (int d = 1; d <= daysToSim; d++)
+        {
+            int simDay = dayThen + d;
+            int simSeed = HashDay(simDay);
+
+            for (int i = 0; i < allMonsters.Count; i++)
+            {
+                var def = allMonsters[i];
+                if (def == null || string.IsNullOrEmpty(def.id)) continue;
+                if (def.rarity == Rarity.Boss || def.baseMarketValue <= 0) continue;
+
+                if (!_stateMap.TryGetValue(def.id, out var state))
+                {
+                    state = new MarketSpeciesState
+                    {
+                        speciesId = def.id,
+                        currentValue = def.baseMarketValue,
+                        previousValue = def.baseMarketValue,
+                        demandLevel = DemandLevel.Medium,
+                        trend = TrendDirection.Stable
+                    };
+                    _stateMap[def.id] = state;
+                }
+
+                // Simulate demand update for this day
+                _save.dailySeed = simSeed;
+                UpdateDemand(state, def);
+
+                state.previousValue = state.currentValue;
+
+                float baseVal = def.baseMarketValue;
+                float demandMul = DemandMul(state.demandLevel);
+                float rarityMul = RarityMul(def.rarity);
+
+                int owned = 0;
+                ownedCounts.TryGetValue(def.id, out owned);
+                float supplyMod = Mathf.Clamp(1.15f - 0.03f * owned, 0.85f, 1.15f);
+
+                float flux = DailyFlux(def.id, simSeed);
+
+                // Use neutral world-event & sentiment multipliers for offline days
+                // (we can't know what events were active in the past)
+                float final_ = baseVal * demandMul * rarityMul * supplyMod * flux;
+                state.currentValue = Mathf.Max(1, Mathf.RoundToInt(final_));
+
+                state.trend = state.currentValue > state.previousValue ? TrendDirection.Rising
+                            : state.currentValue < state.previousValue ? TrendDirection.Falling
+                            : TrendDirection.Stable;
+            }
+        }
+
+        // Update save state to reflect we've caught up through today
+        _save.dailySeed = HashDay(dayNow);
+        _save.lastDayIndex = dayNow;
+
+        Persist();
     }
 
     // ─────────── Public API ───────────
