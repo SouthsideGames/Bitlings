@@ -219,6 +219,14 @@ public sealed class BattleFeedbackManager : MonoBehaviour
     private Coroutine _playerGuardAutoHideCR;
     private Coroutine _wildGuardAutoHideCR;
 
+    private float CurrentBattleSpeed
+        => Mathf.Max(0.25f, _battleManager != null ? _battleManager.BattleSpeed : 1f);
+
+    private float ScaleFeedbackDuration(float seconds, float minSeconds = 0.01f)
+    {
+        return Mathf.Max(minSeconds, seconds / CurrentBattleSpeed);
+    }
+
     private bool _chargePlayerOn;
     private bool _chargeWildOn;
     private bool _guardPlayerOn;
@@ -939,8 +947,9 @@ public void SetGuard(BattleFeedbackSide side, bool on)
         Vector2 nudge = basePos + new Vector2(dir * (impactRecoilPixels * 0.35f), 0f);
 
         Vector3 squashScale = new Vector3(impactSquashX, impactSquashY, 1f);
+        float duration = ScaleFeedbackDuration(Mathf.Min(0.06f, impactSquashTime * 0.75f));
 
-        LeanTween.value(rt.gameObject, 0f, 1f, Mathf.Min(0.06f, impactSquashTime * 0.75f))
+        LeanTween.value(rt.gameObject, 0f, 1f, duration)
             .setIgnoreTimeScale(true)
             .setOnUpdate((float t) =>
             {
@@ -971,7 +980,7 @@ public void SetGuard(BattleFeedbackSide side, bool on)
         Vector2 basePos = rt.anchoredPosition;
         Vector2 hitPos = basePos + new Vector2(dir * px, 0f);
 
-        float t = Mathf.Max(0.04f, impactSquashTime);
+        float t = ScaleFeedbackDuration(Mathf.Max(0.04f, impactSquashTime), 0.04f);
         Vector3 baseScale = GetBaseScale(rt, side);
         Vector3 squashScale = new Vector3(impactSquashX, impactSquashY, 1f);
         Vector3 hitScale = Vector3.Scale(baseScale, squashScale);
@@ -1773,13 +1782,14 @@ public void SetGuard(BattleFeedbackSide side, bool on)
         LeanTween.cancel(g.gameObject);
 
         var baseScale = rt.localScale;
-        LeanTween.scale(rt, baseScale * scaleMult, Mathf.Max(0.01f, time))
+        float scaledTime = ScaleFeedbackDuration(time);
+        LeanTween.scale(rt, baseScale * scaleMult, scaledTime)
             .setEaseOutBack()
             .setIgnoreTimeScale(true)
             .setOnComplete(() =>
             {
                 if (!rt) return;
-                LeanTween.scale(rt, baseScale, Mathf.Max(0.01f, time * 0.9f))
+                LeanTween.scale(rt, baseScale, ScaleFeedbackDuration(time * 0.9f))
                     .setEaseOutQuad()
                     .setIgnoreTimeScale(true);
             });
@@ -1790,13 +1800,14 @@ public void SetGuard(BattleFeedbackSide side, bool on)
         if (!rt) return;
 
         Vector2 basePos = rt.anchoredPosition;
-        LeanTween.moveX(rt, basePos.x + pixelsX, Mathf.Max(0.01f, time))
+        float scaledTime = ScaleFeedbackDuration(time);
+        LeanTween.moveX(rt, basePos.x + pixelsX, scaledTime)
             .setEaseOutQuad()
             .setIgnoreTimeScale(true)
             .setOnComplete(() =>
             {
                 if (!rt) return;
-                LeanTween.moveX(rt, basePos.x, Mathf.Max(0.01f, time * 0.9f))
+                LeanTween.moveX(rt, basePos.x, ScaleFeedbackDuration(time * 0.9f))
                     .setEaseOutQuad()
                     .setIgnoreTimeScale(true);
             });
@@ -1807,7 +1818,7 @@ public void SetGuard(BattleFeedbackSide side, bool on)
         if (!g) return;
 
         Color baseColor = g.color;
-        LeanTween.value(g.gameObject, 0f, 1f, Mathf.Max(0.01f, time))
+        LeanTween.value(g.gameObject, 0f, 1f, ScaleFeedbackDuration(time))
             .setIgnoreTimeScale(true)
             .setOnUpdate(t =>
             {

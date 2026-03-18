@@ -13,8 +13,8 @@ MonoBehaviour:
   m_Name: RecycleRecipe_R020
   m_EditorClassIdentifier: 
   recipeId: R-020
-  displayName: Lucky Wash
-  fromType: 8
-  fromAmount: 20
-  toType: 1
-  toAmount: 150
+  displayName: Scale Purge
+  fromType: 13
+  fromAmount: 1
+  toType: 4
+  toAmount: 15

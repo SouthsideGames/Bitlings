@@ -12,7 +12,8 @@ public class UpgradesPanelUI : MonoBehaviour
         AutoGrowth,
         DailySeeds,
         Codex,
-        Jobs
+        Jobs,
+        Exchange
     }
 
     [Header("List")]
@@ -29,6 +30,7 @@ public class UpgradesPanelUI : MonoBehaviour
     [SerializeField] private Button dailySeedsButton;
     [SerializeField] private Button codexButton;
     [SerializeField] private Button jobsButton;
+    [SerializeField] private Button exchangeButton;
 
     [Header("Section Overrides")]
     [Tooltip("If provided, these entries will be used for that section instead of filtering from the Master Catalog.")]
@@ -37,6 +39,7 @@ public class UpgradesPanelUI : MonoBehaviour
     [SerializeField] private SectionOverride dailySeedsOverride;
     [SerializeField] private SectionOverride codexOverride;
     [SerializeField] private SectionOverride jobsOverride;
+    [SerializeField] private SectionOverride exchangeOverride;
 
     [System.Serializable]
     public class SectionOverride
@@ -96,6 +99,7 @@ public class UpgradesPanelUI : MonoBehaviour
         if (dailySeedsButton) dailySeedsButton.onClick.AddListener(ShowDailySeeds);
         if (codexButton) codexButton.onClick.AddListener(ShowCodex);
         if (jobsButton) jobsButton.onClick.AddListener(ShowJobs);
+        if (exchangeButton) exchangeButton.onClick.AddListener(ShowExchange);
 
         _hooksAdded = true;
     }
@@ -109,6 +113,7 @@ public class UpgradesPanelUI : MonoBehaviour
         if (dailySeedsButton) dailySeedsButton.onClick.RemoveListener(ShowDailySeeds);
         if (codexButton) codexButton.onClick.RemoveListener(ShowCodex);
         if (jobsButton) jobsButton.onClick.RemoveListener(ShowJobs);
+        if (exchangeButton) exchangeButton.onClick.RemoveListener(ShowExchange);
 
         _hooksAdded = false;
     }
@@ -119,6 +124,7 @@ public class UpgradesPanelUI : MonoBehaviour
     public void ShowDailySeeds() => ShowSection(UpgradeSection.DailySeeds);
     public void ShowCodex() => ShowSection(UpgradeSection.Codex);
     public void ShowJobs() => ShowSection(UpgradeSection.Jobs);
+    public void ShowExchange() => ShowSection(UpgradeSection.Exchange);
 
     // ─────────────────────────────────────────────────────────────
     // Section Switching
@@ -188,6 +194,7 @@ public class UpgradesPanelUI : MonoBehaviour
             UpgradeSection.DailySeeds => dailySeedsOverride,
             UpgradeSection.Codex => codexOverride,
             UpgradeSection.Jobs => jobsOverride,
+            UpgradeSection.Exchange => exchangeOverride,
             _ => null
         };
 
@@ -243,6 +250,7 @@ public class UpgradesPanelUI : MonoBehaviour
         if (infoId.StartsWith("upg.jobs"))   return UpgradeSection.Jobs;
         if (infoId.StartsWith("upg.seeds"))  return UpgradeSection.DailySeeds;
         if (infoId.StartsWith("upg.codex"))  return UpgradeSection.Codex;
+        if (infoId.StartsWith("upg.exchange")) return UpgradeSection.Exchange;
 
         return null;
     }
@@ -254,6 +262,16 @@ public class UpgradesPanelUI : MonoBehaviour
 
         switch (featureId)
         {
+            case FeatureId.Exchange_SurgeAlert:
+            case FeatureId.Exchange_BearBullTokens:
+            case FeatureId.Exchange_MonopolyBonus:
+            case FeatureId.Exchange_DividendYield:
+            case FeatureId.Exchange_MarketForecast:
+            case FeatureId.Exchange_LicensedBroker_T1:
+            case FeatureId.Exchange_LicensedBroker_T2:
+            case FeatureId.Exchange_ShinyAppraiser:
+                return UpgradeSection.Exchange;
+
             case FeatureId.IdleBattle_Basic:
             case FeatureId.IdleBattle_RewardBoost:
             case FeatureId.IdleBattle_OfflineCapture:

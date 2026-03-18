@@ -13,8 +13,8 @@ MonoBehaviour:
   m_Name: RecycleRecipe_R005
   m_EditorClassIdentifier: 
   recipeId: R-005
-  displayName: Lure Compost
+  displayName: Flyer Pulp
   fromType: 6
-  fromAmount: 2
+  fromAmount: 5
   toType: 4
-  toAmount: 8
+  toAmount: 6

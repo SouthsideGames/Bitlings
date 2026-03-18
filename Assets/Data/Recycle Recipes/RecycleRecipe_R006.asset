@@ -13,8 +13,8 @@ MonoBehaviour:
   m_Name: RecycleRecipe_R006
   m_EditorClassIdentifier: 
   recipeId: R-006
-  displayName: Band Smelt
+  displayName: Work Order Salvage
   fromType: 7
   fromAmount: 2
   toType: 4
-  toAmount: 6
+  toAmount: 10

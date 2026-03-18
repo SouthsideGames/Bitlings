@@ -56,6 +56,7 @@ public struct IronCareerRunSummary
     public int totalGrowthCores;
     public int totalCredits;
     public float totalSecondsSurvived;
+    public int totalDeaths;
 
     public static IronCareerRunSummary Empty => new IronCareerRunSummary
     {

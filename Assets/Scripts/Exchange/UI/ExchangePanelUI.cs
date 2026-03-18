@@ -56,6 +56,11 @@ public class ExchangePanelUI : MonoBehaviour
     [Header("Close")]
     [SerializeField] private Button closeButton;
 
+    [Header("Token Display")]
+    [SerializeField] private GameObject tokenDisplayRoot;
+    [SerializeField] private TextMeshProUGUI bullTokenLabel;
+    [SerializeField] private TextMeshProUGUI bearTokenLabel;
+
     private ExchangeSection _currentSection = ExchangeSection.Market;
 
     private enum SortMode { Value, Trend, Rarity }
@@ -93,7 +98,12 @@ public class ExchangePanelUI : MonoBehaviour
 
         GameEvents.ExchangeValuesChanged += OnValuesChanged;
         GameEvents.ExchangeMarketReset += OnValuesChanged;
+        GameEvents.OnResourcesChanged += RefreshTokenDisplay;
 
+        if (FeatureUnlockManager.I != null)
+            FeatureUnlockManager.I.OnFeatureUnlocked += HandleFeatureUnlocked;
+
+        RefreshTokenDisplay();
         ShowSection(_currentSection);
     }
 
@@ -112,6 +122,10 @@ public class ExchangePanelUI : MonoBehaviour
 
         GameEvents.ExchangeValuesChanged -= OnValuesChanged;
         GameEvents.ExchangeMarketReset -= OnValuesChanged;
+        GameEvents.OnResourcesChanged -= RefreshTokenDisplay;
+
+        if (FeatureUnlockManager.I != null)
+            FeatureUnlockManager.I.OnFeatureUnlocked -= HandleFeatureUnlocked;
     }
 
     // ─────────── Public Section Switching ───────────
@@ -224,7 +238,23 @@ public class ExchangePanelUI : MonoBehaviour
             var cell = go.GetComponent<ExchangeMarketCellUI>();
             if (cell != null)
                 cell.Populate(def, state);
+
+            // Wire long-press to open species detail
+            var hold = go.GetComponent<HoldTapDetector>();
+            if (hold == null) hold = go.AddComponent<HoldTapDetector>();
+            hold.holdThreshold = 0.4f;
+            hold.triggerHoldOnThreshold = true;
+            var capturedDef = def;
+            hold.SetCallbacks(null, () => OpenSpeciesDetail(capturedDef));
         }
+    }
+
+    private void OpenSpeciesDetail(MonsterDataSO def)
+    {
+        if (def == null) return;
+        ExchangeSpeciesDetailPanelUI.PendingSpecies = def;
+        if (UIManager.I != null)
+            UIManager.I.Show(PanelId.ExchangeSpeciesDetail);
     }
 
     // ─────────── Portfolio Tab ───────────
@@ -259,7 +289,7 @@ public class ExchangePanelUI : MonoBehaviour
                 var go = Instantiate(portfolioRowPrefab, portfolioListParent);
                 go.SetActive(true);
 
-                var row = go.GetComponent<ExchangeMarketRowUI>();
+                var row = go.GetComponent<ExchangeTrendRowUI>();
                 if (row != null)
                 {
                     var state = ExchangeManager.I?.GetState(def.id);
@@ -466,7 +496,7 @@ public class ExchangePanelUI : MonoBehaviour
         go.SetActive(true);
 
         // Populate via row component or inline
-        var row = go.GetComponent<ExchangeMarketRowUI>();
+        var row = go.GetComponent<ExchangeTrendRowUI>();
         if (row != null)
         {
             row.Populate(def, state, CountOwned(def.id));
@@ -512,5 +542,29 @@ public class ExchangePanelUI : MonoBehaviour
     private void OnValuesChanged()
     {
         ShowSection(_currentSection);
+    }
+
+    // ─────────── Token Display ───────────
+
+    private void RefreshTokenDisplay()
+    {
+        if (tokenDisplayRoot == null) return;
+
+        bool unlocked = FeatureUnlockManager.I != null &&
+                        FeatureUnlockManager.I.IsUnlocked(FeatureId.Exchange_BearBullTokens);
+        tokenDisplayRoot.SetActive(unlocked);
+
+        if (!unlocked) return;
+
+        if (bullTokenLabel != null)
+            bullTokenLabel.text = ResourceBank.Get(ResourceType.BullToken).ToString();
+        if (bearTokenLabel != null)
+            bearTokenLabel.text = ResourceBank.Get(ResourceType.BearToken).ToString();
+    }
+
+    private void HandleFeatureUnlocked(FeatureId id)
+    {
+        if (id == FeatureId.Exchange_BearBullTokens)
+            RefreshTokenDisplay();
     }
 }

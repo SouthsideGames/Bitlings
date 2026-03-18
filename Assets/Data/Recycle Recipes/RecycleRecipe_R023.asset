@@ -13,8 +13,8 @@ MonoBehaviour:
   m_Name: RecycleRecipe_R023
   m_EditorClassIdentifier: 
   recipeId: R-023
-  displayName: Vital Shred
-  fromType: 10
-  fromAmount: 3
-  toType: 6
+  displayName: Flyer Trade
+  fromType: 6
+  fromAmount: 4
+  toType: 8
   toAmount: 1

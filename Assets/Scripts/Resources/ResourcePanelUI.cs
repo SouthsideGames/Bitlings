@@ -53,6 +53,9 @@ public class ResourcePanelUI : MonoBehaviour
         if (listRoot.childCount > 0) return;
         _rows.Clear();
 
+        bool tokensUnlocked = FeatureUnlockManager.I != null &&
+                              FeatureUnlockManager.I.IsUnlocked(FeatureId.Exchange_BearBullTokens);
+
         foreach (var e in catalog)
         {
             var go = Instantiate(rowPrefab, listRoot);
@@ -61,6 +64,9 @@ public class ResourcePanelUI : MonoBehaviour
 
             row.BindStatic(e.displayName, e.icon, e.type, e.infoId);
             _rows.Add(row);
+
+            if (e.type == ResourceType.BullToken || e.type == ResourceType.BearToken)
+                go.SetActive(tokensUnlocked);
         }
     }
 
@@ -99,6 +105,22 @@ public class ResourcePanelUI : MonoBehaviour
     {
         if (id == FeatureId.Recycle_Basic)
             UpdateRecycleButtonVisibility();
+
+        if (id == FeatureId.Exchange_BearBullTokens)
+            UpdateTokenRowVisibility();
+    }
+
+    private void UpdateTokenRowVisibility()
+    {
+        bool unlocked = FeatureUnlockManager.I != null &&
+                        FeatureUnlockManager.I.IsUnlocked(FeatureId.Exchange_BearBullTokens);
+
+        for (int i = 0; i < catalog.Count && i < _rows.Count; i++)
+        {
+            var e = catalog[i];
+            if (e.type == ResourceType.BullToken || e.type == ResourceType.BearToken)
+                _rows[i].gameObject.SetActive(unlocked);
+        }
     }
 
     private void OnClickRecycle()

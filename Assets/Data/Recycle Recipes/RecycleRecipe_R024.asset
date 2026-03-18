@@ -13,8 +13,8 @@ MonoBehaviour:
   m_Name: RecycleRecipe_R024
   m_EditorClassIdentifier: 
   recipeId: R-024
-  displayName: Velocity Grind
-  fromType: 11
+  displayName: Order Filing
+  fromType: 7
   fromAmount: 3
-  toType: 8
-  toAmount: 4
+  toType: 1
+  toAmount: 180

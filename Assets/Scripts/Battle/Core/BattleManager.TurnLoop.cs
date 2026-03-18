@@ -1962,7 +1962,12 @@ EndBattleRouted(false);
             turnsSurvived = 0,
             damageTaken = 0,
             damageDealt = 0,
-            gotFirstHit = false
+            gotFirstHit = false,
+            statusesAppliedToWild = 0,
+            hadTypeAdvantage = false,
+            hadTypeDisadvantage = false,
+            isSoloBattle = false,
+            wasManualBattle = false
         };
 
         onEnd?.Invoke(result);

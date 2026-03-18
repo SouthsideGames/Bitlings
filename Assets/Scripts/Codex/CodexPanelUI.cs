@@ -65,6 +65,8 @@ public class CodexPanelUI : MonoBehaviour
         GameEvents.MonsterCaptured += HandleMonsterCaptured;
         GameEvents.FavoritesChanged += HandleFavoritesChanged;
 
+        GameEvents.CodexOpened?.Invoke();
+
         // ---------------------
         // SORT DROPDOWN
         // ---------------------

@@ -13,8 +13,8 @@ MonoBehaviour:
   m_Name: RecycleRecipe_R013
   m_EditorClassIdentifier: 
   recipeId: R-013
-  displayName: Fatigue Recycle
+  displayName: Coffee Burn
   fromType: 14
   fromAmount: 3
   toType: 2
-  toAmount: 10
+  toAmount: 8

@@ -13,8 +13,8 @@ MonoBehaviour:
   m_Name: RecycleRecipe_R017
   m_EditorClassIdentifier: 
   recipeId: R-017
-  displayName: Material Press
+  displayName: Material Burn
   fromType: 4
-  fromAmount: 50
-  toType: 1
-  toAmount: 250
+  fromAmount: 30
+  toType: 2
+  toAmount: 5

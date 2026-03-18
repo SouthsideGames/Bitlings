@@ -74,6 +74,7 @@ public static class AchievementBuilder
         bool hasResFilter   = col.ContainsKey("resourcefilter");
         bool hasSecret      = col.ContainsKey("secretuntilunlocked");
         bool hasIconPath    = col.ContainsKey("iconassetpath");
+        bool hasCategory    = col.ContainsKey("category");
 
         var createdOrUpdated = new List<AchievementEntrySO>();
         var seenIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -187,6 +188,9 @@ public static class AchievementBuilder
             if (useResourceFilter) entry.resourceFilter = resourceFilter;
 
             entry.secretUntilUnlocked = secret;
+
+            string categoryVal = hasCategory ? (Get(fields, col, "category") ?? "") : "";
+            entry.category = categoryVal.Trim();
 
             // Icon: only overwrite if CSV provides a non-empty valid path
             if (!string.IsNullOrEmpty(iconAssetPath))

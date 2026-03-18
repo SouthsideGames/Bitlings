@@ -25,4 +25,10 @@ public struct BattleResult
     public int damageTaken;
     public int damageDealt;
     public bool gotFirstHit;
+
+    public int statusesAppliedToWild;
+    public bool hadTypeAdvantage;
+    public bool hadTypeDisadvantage;
+    public bool isSoloBattle;
+    public bool wasManualBattle;
 }

@@ -120,6 +120,14 @@ public sealed class AchievementManager : MonoBehaviour
         GameEvents.WinStreakChanged += OnWinStreakChanged;
         GameEvents.FavoritesChanged += OnFavoritesChanged;
         GameEvents.OnTeamChanged += OnTeamChanged;
+        GameEvents.JobAssigned += OnJobAssigned;
+        GameEvents.TitleEquipped += OnTitleEquipped;
+        GameEvents.CodexOpened += OnCodexOpened;
+        GameEvents.StatusAppliedToWild += OnStatusAppliedToWild;
+        GameEvents.PromotionRankChanged += OnPromotionRankChanged;
+        GameEvents.IronRunStarted += OnIronRunStarted;
+        GameEvents.IronBattleWon += OnIronBattleWon;
+        GameEvents.IronRunCompleted += OnIronRunCompleted;
     }
 
     private void UnhookEvents()
@@ -133,6 +141,14 @@ public sealed class AchievementManager : MonoBehaviour
         GameEvents.WinStreakChanged -= OnWinStreakChanged;
         GameEvents.FavoritesChanged -= OnFavoritesChanged;
         GameEvents.OnTeamChanged -= OnTeamChanged;
+        GameEvents.JobAssigned -= OnJobAssigned;
+        GameEvents.TitleEquipped -= OnTitleEquipped;
+        GameEvents.CodexOpened -= OnCodexOpened;
+        GameEvents.StatusAppliedToWild -= OnStatusAppliedToWild;
+        GameEvents.PromotionRankChanged -= OnPromotionRankChanged;
+        GameEvents.IronRunStarted -= OnIronRunStarted;
+        GameEvents.IronBattleWon -= OnIronBattleWon;
+        GameEvents.IronRunCompleted -= OnIronRunCompleted;
     }
 
     // ─────────────────────────────────────────────────────────────
@@ -201,18 +217,41 @@ public sealed class AchievementManager : MonoBehaviour
         ProgressAll(AchievementTrigger.TotalBattles, 1);
 
         if (r.victory && !r.escaped)
+        {
             ProgressAll(AchievementTrigger.BattleWins, 1);
+
+            if (r.hadTypeAdvantage)
+                ProgressAll(AchievementTrigger.BattleWinsWithTypeAdvantage, 1);
+
+            if (r.hadTypeDisadvantage)
+                ProgressAll(AchievementTrigger.BattleWinsWithTypeDisadvantage, 1);
+
+            if (r.isSoloBattle)
+                ProgressAll(AchievementTrigger.SoloBattleWins, 1);
+        }
 
         if (r.victory && !r.escaped && r.damageTaken == 0)
             ProgressAll(AchievementTrigger.PerfectBattles, 1);
+
+        if (r.critCount > 0)
+            ProgressAll(AchievementTrigger.CriticalHits, r.critCount);
+
+        if (r.wasManualBattle && r.victory && !r.escaped)
+            ProgressAll(AchievementTrigger.BattlesWatched, 1);
     }
 
     private void OnResourceAdded(ResourceType t, int amount)
     {
+        int safe = Mathf.Max(0, amount);
         ProgressWhere(
             AchievementTrigger.CreditsEarned,
             e => !e.useResourceFilter || e.resourceFilter.Equals(t),
-            Mathf.Max(0, amount)
+            safe
+        );
+        ProgressWhere(
+            AchievementTrigger.ResourcesEarned,
+            e => !e.useResourceFilter || e.resourceFilter.Equals(t),
+            safe
         );
     }
 
@@ -237,6 +276,67 @@ public sealed class AchievementManager : MonoBehaviour
         EvaluateSnapshotAchievements(saveIfChanged: saveOnEveryProgress);
     }
 
+    private void OnJobAssigned()
+    {
+        ProgressAll(AchievementTrigger.JobsAssigned, 1);
+    }
+
+    private void OnTitleEquipped()
+    {
+        ProgressAll(AchievementTrigger.TitlesEquipped, 1);
+        EvaluateSnapshotAchievements(saveIfChanged: saveOnEveryProgress);
+    }
+
+    private void OnCodexOpened()
+    {
+        ProgressAll(AchievementTrigger.CodexOpened, 1);
+    }
+
+    private void OnStatusAppliedToWild(StatusType type)
+    {
+        ProgressAll(AchievementTrigger.StatusesApplied, 1);
+
+        // Map StatusType to MonsterType for type-filtered achievements
+        MonsterType mapped = default;
+        bool hasMapping = true;
+        switch (type)
+        {
+            case StatusType.Burn:   mapped = MonsterType.Fire;     break;
+            case StatusType.Freeze: mapped = MonsterType.Ice;      break;
+            case StatusType.Shock:  mapped = MonsterType.Electric;  break;
+            default: hasMapping = false; break;
+        }
+
+        if (hasMapping)
+            ProgressWhere(AchievementTrigger.StatusesAppliedByType, e => e.useTypeFilter && e.typeFilter == mapped, 1);
+    }
+
+    private void OnPromotionRankChanged(int oldRank, int newRank)
+    {
+        SetMaxProgress(AchievementTrigger.PlayerRank, newRank);
+    }
+
+    private void OnIronRunStarted()
+    {
+        ProgressAll(AchievementTrigger.IronRunsStarted, 1);
+    }
+
+    private void OnIronBattleWon()
+    {
+        ProgressAll(AchievementTrigger.IronBattleWins, 1);
+    }
+
+    private void OnIronRunCompleted(int wins, bool forfeited, int totalDeaths)
+    {
+        if (!forfeited)
+        {
+            ProgressAll(AchievementTrigger.IronRunsCompleted, 1);
+
+            if (totalDeaths == 0)
+                ProgressAll(AchievementTrigger.IronPerfectRuns, 1);
+        }
+    }
+
     // ─────────────────────────────────────────────────────────────
     // Core progress logic
     // ─────────────────────────────────────────────────────────────
@@ -256,8 +356,92 @@ public sealed class AchievementManager : MonoBehaviour
         changed |= SetMaxProgress(AchievementTrigger.OwnMonstersCount, ownedCount, allowSave: false);
         changed |= SetMaxProgress(AchievementTrigger.DiscoverTypesCount, typeCount, allowSave: false);
 
+        // Player rank
+        int rank = data.promotionRank;
+        changed |= SetMaxProgress(AchievementTrigger.PlayerRank, rank, allowSave: false);
+
+        // Titles equipped simultaneously
+        int titlesEquippedNow = CountTitlesEquippedAcrossMonsters();
+        changed |= SetMaxProgress(AchievementTrigger.TitlesEquippedSimultaneous, titlesEquippedNow, allowSave: false);
+
+        // Total unique titles unlocked (registered)
+        int titlesUnlocked = CountTotalTitlesUnlocked();
+        changed |= SetMaxProgress(AchievementTrigger.TitlesUnlocked, titlesUnlocked, allowSave: false);
+
+        // Meta-achievements: count how many achievements are unlocked
+        changed |= EvaluateMetaAchievements(allowSave: false);
+
         if (changed && saveIfChanged)
             SaveManager.Save();
+    }
+
+    private bool EvaluateMetaAchievements(bool allowSave)
+    {
+        var data = SaveManager.Data;
+        if (data == null || data.achievements == null) return false;
+
+        int totalUnlocked = 0;
+        int secretUnlocked = 0;
+
+        for (int i = 0; i < data.achievements.Count; i++)
+        {
+            var a = data.achievements[i];
+            if (a == null || !a.unlocked) continue;
+            totalUnlocked++;
+
+            if (_idToEntry.TryGetValue(a.id, out var entry) && entry != null && entry.secretUntilUnlocked)
+                secretUnlocked++;
+        }
+
+        bool changed = false;
+        changed |= SetMaxProgress(AchievementTrigger.AchievementsUnlocked, totalUnlocked, allowSave: allowSave);
+        changed |= SetMaxProgress(AchievementTrigger.SecretAchievementsUnlocked, secretUnlocked, allowSave: allowSave);
+        return changed;
+    }
+
+    private int CountTitlesEquippedAcrossMonsters()
+    {
+        var titleData = TitleSaveStore.Load();
+        if (titleData == null || titleData.equips == null) return 0;
+
+        int monstersWithTitles = 0;
+        for (int i = 0; i < titleData.equips.Count; i++)
+        {
+            var eq = titleData.equips[i];
+            if (eq == null || eq.tierSelections == null) continue;
+
+            bool hasAny = false;
+            for (int t = 0; t < eq.tierSelections.Count; t++)
+            {
+                if (!string.IsNullOrEmpty(eq.tierSelections[t]))
+                {
+                    hasAny = true;
+                    break;
+                }
+            }
+            if (hasAny) monstersWithTitles++;
+        }
+        return monstersWithTitles;
+    }
+
+    private int CountTotalTitlesUnlocked()
+    {
+        var titleData = TitleSaveStore.Load();
+        if (titleData == null || titleData.equips == null) return 0;
+
+        int count = 0;
+        for (int i = 0; i < titleData.equips.Count; i++)
+        {
+            var eq = titleData.equips[i];
+            if (eq == null || eq.tierSelections == null) continue;
+
+            for (int t = 0; t < eq.tierSelections.Count; t++)
+            {
+                if (!string.IsNullOrEmpty(eq.tierSelections[t]))
+                    count++;
+            }
+        }
+        return count;
     }
 
     private void ProgressAll(AchievementTrigger trig, int delta)
@@ -368,6 +552,9 @@ public sealed class AchievementManager : MonoBehaviour
         AchievementToastUI.EnqueueGuaranteed(e);
 
         SaveManager.Save();
+
+        // Re-evaluate meta-achievements (SecretAchievementsUnlocked, AchievementsUnlocked)
+        EvaluateMetaAchievements(allowSave: true);
     }
 
     private void FireProgress(AchievementEntrySO e, AchievementProgressData p) => OnProgressed?.Invoke(e, p.value, e.goal);

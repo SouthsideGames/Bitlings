@@ -54,6 +54,17 @@ public static class GameEvents
     public static Action OnBoostersChanged;
 
     // ─────────────────────────────────────────────────────────
+    // Achievement-relevant
+    // ─────────────────────────────────────────────────────────
+    public static Action JobAssigned;
+    public static Action TitleEquipped;
+    public static Action CodexOpened;
+    public static Action<StatusType> StatusAppliedToWild;
+    public static Action IronRunStarted;
+    public static Action IronBattleWon;
+    public static Action<int, bool, int> IronRunCompleted; // (wins, forfeited, totalDeaths)
+
+    // ─────────────────────────────────────────────────────────
     // Promotions (Ranks)
     // ─────────────────────────────────────────────────────────
     // (rank, xp, xpThisRank, xpToNext)

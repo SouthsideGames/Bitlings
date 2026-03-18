@@ -13,8 +13,8 @@ MonoBehaviour:
   m_Name: RecycleRecipe_R021
   m_EditorClassIdentifier: 
   recipeId: R-021
-  displayName: Sigil Purge
-  fromType: 5
-  fromAmount: 1
-  toType: 4
-  toAmount: 15
+  displayName: Medkit Exchange
+  fromType: 3
+  fromAmount: 3
+  toType: 14
+  toAmount: 2

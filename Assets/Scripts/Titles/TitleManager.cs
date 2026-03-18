@@ -382,6 +382,7 @@ public sealed class TitleManager : MonoBehaviour
 
         TitleSaveStore.Save();
         if (changed) RaiseTitleChange();
+        if (changed) GameEvents.TitleEquipped?.Invoke();
         return true;
     }
 

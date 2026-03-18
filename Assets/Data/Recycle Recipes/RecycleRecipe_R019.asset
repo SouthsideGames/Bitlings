@@ -13,8 +13,8 @@ MonoBehaviour:
   m_Name: RecycleRecipe_R019
   m_EditorClassIdentifier: 
   recipeId: R-019
-  displayName: Core Pulse
-  fromType: 16
-  fromAmount: 10
-  toType: 5
+  displayName: Credit Wash
+  fromType: 1
+  fromAmount: 200
+  toType: 14
   toAmount: 2

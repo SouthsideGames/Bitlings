@@ -219,6 +219,13 @@ public sealed class IronCareerManager : MonoBehaviour, IronBattleBridge.IIronBat
         }
 
         // 3) Remove dead from roster (permadeath).
+        int deadCount = 0;
+        for (int i = 0; i < _state.party.Count; i++)
+        {
+            var m = _state.party[i];
+            if (m != null && m.IsDead) deadCount++;
+        }
+        _state.runSummary.totalDeaths += deadCount;
         _roster?.RemoveDead();
 
         _state.carryStatus = outcome.playerFieldStatus;
@@ -253,6 +260,8 @@ public sealed class IronCareerManager : MonoBehaviour, IronBattleBridge.IIronBat
 
         _state.wins++;
         ApplyPartyAutoLevelOnWin();
+
+        GameEvents.IronBattleWon?.Invoke();
 
         // Rotate the active slot immediately after a win, before any hire/replace flow.
         // This keeps newly hired monsters from becoming the default starter next battle.
@@ -463,6 +472,8 @@ public sealed class IronCareerManager : MonoBehaviour, IronBattleBridge.IIronBat
         }
 
         QueueBeginNextBattleAfterTransition();
+
+        GameEvents.IronRunStarted?.Invoke();
     }
 
     private void BuildStarterParty(List<MonsterDataSO> starterDefs)
@@ -952,6 +963,8 @@ public sealed class IronCareerManager : MonoBehaviour, IronBattleBridge.IIronBat
         FinalizeRunStats(forfeit);
 
         _state.runActive = false;
+
+        GameEvents.IronRunCompleted?.Invoke(_state.wins, forfeit, _state.runSummary.totalDeaths);
 
         UIManager.I?.Show(PanelId.IronCareerEncounter);
 

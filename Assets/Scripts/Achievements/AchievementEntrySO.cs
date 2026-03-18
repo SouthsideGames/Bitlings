@@ -14,7 +14,27 @@ public enum AchievementTrigger
     WinStreakMax,       
     FavoritesCount,     
     OwnMonstersCount,    
-    DiscoverTypesCount    
+    DiscoverTypesCount,
+    ResourcesEarned,
+    JobsAssigned,
+    BattleWinsWithTypeAdvantage,
+    BattleWinsWithTypeDisadvantage,
+    CriticalHits,
+    StatusesApplied,
+    StatusesAppliedByType,
+    SoloBattleWins,
+    TitlesEquipped,
+    TitlesEquippedSimultaneous,
+    TitlesUnlocked,
+    PlayerRank,
+    IronRunsStarted,
+    IronBattleWins,
+    IronRunsCompleted,
+    IronPerfectRuns,
+    BattlesWatched,
+    CodexOpened,
+    SecretAchievementsUnlocked,
+    AchievementsUnlocked
 }
 
 [CreateAssetMenu(menuName = "Data/Achievements/Achievement Entry", fileName = "Achievement_")]
@@ -43,4 +63,7 @@ public sealed class AchievementEntrySO : ScriptableObject
 
     [Header("Behavior")]
     public bool secretUntilUnlocked = false;
+
+    [Header("Metadata")]
+    public string category;
 }

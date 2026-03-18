@@ -11,11 +11,11 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: edf2250ace8f26e44bd6c4683ace83be, type: 3}
   m_Name: Achievement_A-009
-  m_EditorClassIdentifier: 
+  m_EditorClassIdentifier: Assembly-CSharp::AchievementEntrySO
   id: A-009
   displayName: Water Registrar
   description: Capture 25 Water-type Bitlings.
-  icon: {fileID: -4192873577498990268, guid: 3488ad4b336d946b7abcb675644295f3, type: 3}
+  icon: {fileID: 0}
   trigger: 1
   goal: 25
   useTypeFilter: 1
@@ -23,3 +23,4 @@ MonoBehaviour:
   useResourceFilter: 0
   resourceFilter: 0
   secretUntilUnlocked: 0
+  category: Collection

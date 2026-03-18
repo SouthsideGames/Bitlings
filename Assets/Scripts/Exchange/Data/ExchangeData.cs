@@ -45,11 +45,20 @@ public class SpeciesBattleSentimentData
 }
 
 [Serializable]
+public class DemandOverride
+{
+    public string speciesId;
+    public DemandLevel forcedDemand;
+    public int expiresDay; // DayIndex when this override expires
+}
+
+[Serializable]
 public class ExchangeSaveData
 {
     public List<MarketSpeciesState> speciesStates = new List<MarketSpeciesState>();
     public List<SpeciesBattleSentimentData> monthlyBattleSentiments = new List<SpeciesBattleSentimentData>();
     public List<ActiveRequest> activeRequests = new List<ActiveRequest>();
+    public List<DemandOverride> demandOverrides = new List<DemandOverride>();
     public int totalBrokered;
     public int totalCreditsBrokered;
     public int totalRequestsFulfilled;
@@ -57,6 +66,7 @@ public class ExchangeSaveData
     public int lastDayIndex = -1;
     public int lastRequestRotationDayIndex = -1;
     public int battleSentimentMonthKey = -1;
+    public int lastDividendDayIndex = -1;
     public long lastRecalcUnix;
 }
 

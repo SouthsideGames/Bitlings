@@ -17,4 +17,4 @@ MonoBehaviour:
   fromType: 3
   fromAmount: 5
   toType: 4
-  toAmount: 1
+  toAmount: 10

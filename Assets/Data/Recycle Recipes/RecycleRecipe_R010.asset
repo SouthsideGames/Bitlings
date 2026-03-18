@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: RecycleRecipe_R010
   m_EditorClassIdentifier: 
   recipeId: R-010
-  displayName: Speed Dust Sieving
+  displayName: Efficiency Strip
   fromType: 11
   fromAmount: 1
   toType: 4

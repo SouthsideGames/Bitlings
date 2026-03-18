@@ -312,6 +312,7 @@ public partial class BattleManager : MonoBehaviour
     private int _totalCritsThisBattle = 0;
     private int _totalDamageTakenThisBattle = 0;
     private int _totalDamageDealtThisBattle = 0;
+    private int _totalStatusesAppliedToWildThisBattle = 0;
 
     private static readonly Color StatNeutral = Color.white;
     private static readonly Color StatBuff = new Color(0.35f, 1f, 0.35f);
@@ -1068,6 +1069,7 @@ public partial class BattleManager : MonoBehaviour
         _totalCritsThisBattle = 0;
         _totalDamageTakenThisBattle = 0;
         _totalDamageDealtThisBattle = 0;
+        _totalStatusesAppliedToWildThisBattle = 0;
 
         defendConsecutiveUses = 0;
         currentDefendSuccess = defendFirstUseSuccess;

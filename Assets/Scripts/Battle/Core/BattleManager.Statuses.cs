@@ -512,6 +512,9 @@ private float GetWildPhantasmalSelfDmgPct()
         wildStatusMagnitude = magnitude;
         wildStatusPersistent = persistent;
 
+        _totalStatusesAppliedToWildThisBattle++;
+        GameEvents.StatusAppliedToWild?.Invoke(type);
+
         // Apply-once statuses
         if (type == StatusType.Shielded)
         {

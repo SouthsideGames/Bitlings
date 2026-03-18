@@ -29,6 +29,16 @@ public enum FeatureId
     Codex_Favorites = 12,          // Favorite / pin sorting
     Codex_CaptureOnlyFilter = 13,  // "Capture only" filter
 
+    // ───── Exchange Upgrades ─────
+    Exchange_SurgeAlert = 20,      // Toast notification when any species hits Surge demand
+    Exchange_BearBullTokens = 21,  // Unlocks Bear/Bull token consumables
+    Exchange_MonopolyBonus = 22,   // Flat value multiplier when you own every species of a type
+    Exchange_DividendYield = 23,   // Daily passive credit income based on portfolio value
+    Exchange_MarketForecast = 24,  // Show tomorrow's demand prediction per species
+    Exchange_LicensedBroker_T1 = 25, // Reduce broker cut from 15% to 10%
+    Exchange_LicensedBroker_T2 = 26, // Reduce broker cut from 10% to 5%
+    Exchange_ShinyAppraiser = 27,    // Increase shiny multiplier payout
+
 
     // ─────────────────────────────────────────────────────────────
     // Jobs (Purchasable Unlocks)

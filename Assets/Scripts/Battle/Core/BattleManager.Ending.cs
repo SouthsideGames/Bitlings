@@ -159,7 +159,12 @@ public partial class BattleManager : MonoBehaviour
             turnsSurvived = _turnIndex,
             damageTaken = _totalDamageTakenThisBattle,
             damageDealt = _totalDamageDealtThisBattle,
-            gotFirstHit = playerLandedFirstHitThisBattle
+            gotFirstHit = playerLandedFirstHitThisBattle,
+            statusesAppliedToWild = _totalStatusesAppliedToWildThisBattle,
+            hadTypeAdvantage = ComputeHadTypeAdvantage(),
+            hadTypeDisadvantage = ComputeHadTypeDisadvantage(),
+            isSoloBattle = ComputeIsSoloBattle(),
+            wasManualBattle = !AutoResolveActive
         };
 
         onEnd?.Invoke(result);
@@ -561,7 +566,12 @@ public partial class BattleManager : MonoBehaviour
             turnsSurvived = _turnIndex,
             damageTaken = _totalDamageTakenThisBattle,
             damageDealt = _totalDamageDealtThisBattle,
-            gotFirstHit = playerLandedFirstHitThisBattle
+            gotFirstHit = playerLandedFirstHitThisBattle,
+            statusesAppliedToWild = _totalStatusesAppliedToWildThisBattle,
+            hadTypeAdvantage = ComputeHadTypeAdvantage(),
+            hadTypeDisadvantage = ComputeHadTypeDisadvantage(),
+            isSoloBattle = ComputeIsSoloBattle(),
+            wasManualBattle = !AutoResolveActive
         };
 
         DevLog.Log($"[BattleManager] BattleResult: base={result.creditsBase}, bonus={result.creditsTitleBonus}, totalPreScale={result.creditsGained}, active={result.activeMonsterOwnedId}");
@@ -596,5 +606,60 @@ public partial class BattleManager : MonoBehaviour
 
         onEnd?.Invoke(result);
         GameEvents.BattleFinished?.Invoke(result);
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // Achievement helpers
+    // ─────────────────────────────────────────────────────────────
+
+    private bool ComputeHadTypeAdvantage()
+    {
+        if (wildDef == null) return false;
+        MonsterType wildType = wildDef.type;
+
+        // Check if any team member had type advantage (effectiveness > 1)
+        if (teamDefs != null)
+        {
+            for (int i = 0; i < teamCount; i++)
+            {
+                if (teamDefs[i] == null) continue;
+                float eff = BattleTypeChart.GetMultiplier(teamDefs[i].type, wildType);
+                if (eff > 1f) return true;
+            }
+        }
+        return false;
+    }
+
+    private bool ComputeHadTypeDisadvantage()
+    {
+        if (wildDef == null) return false;
+        MonsterType wildType = wildDef.type;
+
+        if (teamDefs != null)
+        {
+            int activeTeamMembers = 0;
+            int disadvantaged = 0;
+            for (int i = 0; i < teamCount; i++)
+            {
+                if (teamDefs[i] == null) continue;
+                activeTeamMembers++;
+                float eff = BattleTypeChart.GetMultiplier(teamDefs[i].type, wildType);
+                if (eff < 1f) disadvantaged++;
+            }
+            // At disadvantage if all team members are disadvantaged
+            return activeTeamMembers > 0 && disadvantaged == activeTeamMembers;
+        }
+        return false;
+    }
+
+    private bool ComputeIsSoloBattle()
+    {
+        if (teamDefs == null) return false;
+        int livingCount = 0;
+        for (int i = 0; i < teamCount; i++)
+        {
+            if (teamDefs[i] != null) livingCount++;
+        }
+        return livingCount == 1;
     }
 }

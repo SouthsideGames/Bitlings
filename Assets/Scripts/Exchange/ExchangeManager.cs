@@ -13,8 +13,13 @@ public sealed class ExchangeManager : MonoBehaviour
 {
     public static ExchangeManager I { get; private set; }
 
-    private const float BROKER_CUT = 0.85f;          // broker keeps 15%
-    private const float SHINY_DIVISOR = 0.75f;
+    private const float BROKER_CUT_DEFAULT = 0.85f;  // base: broker keeps 15%
+    private const float BROKER_CUT_T1 = 0.90f;        // tier 1: broker keeps 10%
+    private const float BROKER_CUT_T2 = 0.95f;        // tier 2: broker keeps 5%
+    private const float SHINY_DIVISOR_DEFAULT = 0.75f;
+    private const float SHINY_DIVISOR_APPRAISED = 0.50f;
+    private const float MONOPOLY_BONUS = 1.25f;
+    private const float DIVIDEND_RATE = 0.01f; // 1% daily
     private const int SENTIMENT_CAP = 12;
     private const int SENTIMENT_STEP_WIN = 1;
     private const int SENTIMENT_STEP_LOSS = 3;
@@ -31,6 +36,7 @@ public sealed class ExchangeManager : MonoBehaviour
     private Dictionary<string, MarketSpeciesState> _stateMap;
     private Dictionary<string, SpeciesBattleSentimentData> _sentimentMap;
     private readonly Dictionary<string, float> _workerHoursSampled = new Dictionary<string, float>(StringComparer.Ordinal);
+    private Dictionary<string, DemandOverride> _overrideMap;
     private float _recalcTimer;
     private float _laborSampleTimer;
 
@@ -131,6 +137,19 @@ public sealed class ExchangeManager : MonoBehaviour
         }
 
         EnsureMonthlyBattleSentimentWindow();
+
+        // Load demand overrides (Bear/Bull tokens)
+        _save.demandOverrides ??= new List<DemandOverride>();
+        _overrideMap = new Dictionary<string, DemandOverride>(StringComparer.Ordinal);
+        int today = DayIndex();
+        for (int i = _save.demandOverrides.Count - 1; i >= 0; i--)
+        {
+            var ov = _save.demandOverrides[i];
+            if (ov == null || ov.expiresDay <= today)
+                _save.demandOverrides.RemoveAt(i);
+            else if (!string.IsNullOrEmpty(ov.speciesId))
+                _overrideMap[ov.speciesId] = ov;
+        }
     }
 
     private void Persist()
@@ -142,6 +161,13 @@ public sealed class ExchangeManager : MonoBehaviour
         _save.monthlyBattleSentiments.Clear();
         foreach (var kv in _sentimentMap)
             _save.monthlyBattleSentiments.Add(kv.Value);
+
+        _save.demandOverrides.Clear();
+        if (_overrideMap != null)
+        {
+            foreach (var kv in _overrideMap)
+                _save.demandOverrides.Add(kv.Value);
+        }
 
         _save.lastRecalcUnix = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
         SaveManager.SetExchangeBlob(_save);
@@ -251,9 +277,25 @@ public sealed class ExchangeManager : MonoBehaviour
     public int GetBrokerPayout(string speciesId, bool isShiny = false)
     {
         int value = GetCurrentValue(speciesId);
+
+        // Licensed Broker tiers reduce the cut
+        float brokerCut = BROKER_CUT_DEFAULT;
+        if (FeatureUnlockManager.I != null)
+        {
+            if (FeatureUnlockManager.I.IsUnlocked(FeatureId.Exchange_LicensedBroker_T2))
+                brokerCut = BROKER_CUT_T2;
+            else if (FeatureUnlockManager.I.IsUnlocked(FeatureId.Exchange_LicensedBroker_T1))
+                brokerCut = BROKER_CUT_T1;
+        }
+
+        // Shiny Appraiser improves shiny payout
+        float shinyDiv = SHINY_DIVISOR_DEFAULT;
+        if (isShiny && FeatureUnlockManager.I != null && FeatureUnlockManager.I.IsUnlocked(FeatureId.Exchange_ShinyAppraiser))
+            shinyDiv = SHINY_DIVISOR_APPRAISED;
+
         float payout = isShiny
-            ? value / Mathf.Max(0.01f, SHINY_DIVISOR)
-            : value * BROKER_CUT;
+            ? value / Mathf.Max(0.01f, shinyDiv)
+            : value * brokerCut;
         return Mathf.Max(1, Mathf.RoundToInt(payout));
     }
 
@@ -377,7 +419,15 @@ public sealed class ExchangeManager : MonoBehaviour
             float sentimentMul = GetBattleSentimentMultiplier(def.id);
             float laborMul = GetLaborHoursMultiplier(def.id);
 
-            float final_ = baseVal * demandMul * rarityMul * supplyMod * flux * eventMul * sentimentMul * laborMul;
+            // Monopoly Bonus: if player owns every species of this type, boost value
+            float monopolyMul = 1f;
+            if (FeatureUnlockManager.I != null && FeatureUnlockManager.I.IsUnlocked(FeatureId.Exchange_MonopolyBonus))
+            {
+                if (HasMonopolyOnType(def.type, ownedCounts))
+                    monopolyMul = MONOPOLY_BONUS;
+            }
+
+            float final_ = baseVal * demandMul * rarityMul * supplyMod * flux * eventMul * sentimentMul * laborMul * monopolyMul;
             state.currentValue = Mathf.Max(1, Mathf.RoundToInt(final_));
 
             // trend
@@ -389,6 +439,31 @@ public sealed class ExchangeManager : MonoBehaviour
                 state.trend = TrendDirection.Stable;
 
             state.lastUpdateUnix = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+
+            // Surge alert (requires unlock)
+            if (state.demandLevel == DemandLevel.Surge && newDay)
+            {
+                if (FeatureUnlockManager.I != null && FeatureUnlockManager.I.IsUnlocked(FeatureId.Exchange_SurgeAlert))
+                {
+                    ExchangeToastUI.EnqueueGuaranteed($"SURGE: {def.displayName} demand is surging!", def.icon);
+                }
+            }
+        }
+
+        // Dividend Yield: on new day, pay 1% of total portfolio value
+        if (newDay && _save.lastDividendDayIndex != today)
+        {
+            if (FeatureUnlockManager.I != null && FeatureUnlockManager.I.IsUnlocked(FeatureId.Exchange_DividendYield))
+            {
+                int portfolioValue = GetTotalPortfolioValue();
+                int dividend = Mathf.Max(0, Mathf.RoundToInt(portfolioValue * DIVIDEND_RATE));
+                if (dividend > 0)
+                {
+                    ResourceBank.Add(ResourceType.Credits, dividend);
+                    ExchangeToastUI.EnqueueGuaranteed($"Dividend: +{dividend} credits from portfolio yield!");
+                }
+            }
+            _save.lastDividendDayIndex = today;
         }
 
         Persist();
@@ -465,6 +540,15 @@ public sealed class ExchangeManager : MonoBehaviour
         }
 
         state.demandLevel = target;
+
+        // Token override — Bull/Bear tokens force demand for a day
+        if (_overrideMap != null && _overrideMap.TryGetValue(state.speciesId, out var ov))
+        {
+            if (ov.expiresDay > DayIndex())
+                state.demandLevel = ov.forcedDemand;
+            else
+                _overrideMap.Remove(state.speciesId);
+        }
     }
 
     // ─────────── Helpers ───────────
@@ -671,6 +755,123 @@ public sealed class ExchangeManager : MonoBehaviour
             }
             return hash & 0x7FFFFFFF;
         }
+    }
+
+    // ─────────── Bear / Bull Tokens ───────────
+
+    public bool UseBullToken(string speciesId)
+    {
+        if (string.IsNullOrEmpty(speciesId)) return false;
+        if (FeatureUnlockManager.I == null || !FeatureUnlockManager.I.IsUnlocked(FeatureId.Exchange_BearBullTokens))
+            return false;
+        if (!ResourceBank.TrySpend(ResourceType.BullToken, 1)) return false;
+
+        ApplyDemandOverride(speciesId, DemandLevel.Surge);
+        ExchangeToastUI.EnqueueGuaranteed("Bull Token used! Demand set to SURGE for today.");
+        RecalculateAll();
+        return true;
+    }
+
+    public bool UseBearToken(string speciesId)
+    {
+        if (string.IsNullOrEmpty(speciesId)) return false;
+        if (FeatureUnlockManager.I == null || !FeatureUnlockManager.I.IsUnlocked(FeatureId.Exchange_BearBullTokens))
+            return false;
+        if (!ResourceBank.TrySpend(ResourceType.BearToken, 1)) return false;
+
+        ApplyDemandOverride(speciesId, DemandLevel.Low);
+        ExchangeToastUI.EnqueueGuaranteed("Bear Token used! Demand set to LOW for today.");
+        RecalculateAll();
+        return true;
+    }
+
+    private void ApplyDemandOverride(string speciesId, DemandLevel level)
+    {
+        _overrideMap ??= new Dictionary<string, DemandOverride>(StringComparer.Ordinal);
+
+        var ov = new DemandOverride
+        {
+            speciesId = speciesId,
+            forcedDemand = level,
+            expiresDay = DayIndex() + 1
+        };
+        _overrideMap[speciesId] = ov;
+
+        if (_stateMap != null && _stateMap.TryGetValue(speciesId, out var state))
+            state.demandLevel = level;
+
+        Persist();
+    }
+
+    // ─────────── Monopoly Check ───────────
+
+    public bool HasMonopoly(MonsterType type)
+    {
+        if (type == MonsterType.None) return false;
+        return HasMonopolyOnType(type, BuildOwnedCounts());
+    }
+
+    private bool HasMonopolyOnType(MonsterType type, Dictionary<string, int> ownedCounts)
+    {
+        if (type == MonsterType.None) return false;
+        var allMonsters = MonsterCatalog.All;
+        if (allMonsters == null) return false;
+
+        for (int i = 0; i < allMonsters.Count; i++)
+        {
+            var def = allMonsters[i];
+            if (def == null || def.type != type) continue;
+            if (def.rarity == Rarity.Boss || def.baseMarketValue <= 0) continue;
+            if (!ownedCounts.ContainsKey(def.id)) return false;
+        }
+        return true;
+    }
+
+    // ─────────── Portfolio Value ───────────
+
+    public int GetTotalPortfolioValue()
+    {
+        var data = SaveManager.Data;
+        if (data?.owned == null || _stateMap == null) return 0;
+
+        var seen = new HashSet<string>(StringComparer.Ordinal);
+        int total = 0;
+        for (int i = 0; i < data.owned.Count; i++)
+        {
+            var o = data.owned[i];
+            if (o == null || string.IsNullOrEmpty(o.monsterId)) continue;
+            if (!seen.Add(o.monsterId)) continue;
+
+            total += GetCurrentValue(o.monsterId);
+        }
+        return total;
+    }
+
+    // ─────────── Market Forecast ───────────
+
+    /// <summary>
+    /// Returns tomorrow's predicted demand for a species.
+    /// Only meaningful if Exchange_MarketForecast is unlocked.
+    /// </summary>
+    public DemandLevel GetForecastDemand(string speciesId)
+    {
+        if (string.IsNullOrEmpty(speciesId)) return DemandLevel.Medium;
+
+        int tomorrowSeed = HashDay(DayIndex() + 1);
+
+        bool hasRequest = ExchangeRequestManager.I != null &&
+                          ExchangeRequestManager.I.GetMatchingRequests(speciesId).Count > 0;
+
+        int hash = StableHash(speciesId + tomorrowSeed);
+        float roll = (hash & 0xFFFF) / 65535f;
+
+        if (hasRequest)
+            return roll < 0.3f ? DemandLevel.Surge : DemandLevel.High;
+
+        if (roll < 0.15f) return DemandLevel.Low;
+        if (roll < 0.70f) return DemandLevel.Medium;
+        if (roll < 0.90f) return DemandLevel.High;
+        return DemandLevel.Surge;
     }
 
     // ─────────── Event Handlers ───────────

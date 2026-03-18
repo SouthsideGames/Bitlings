@@ -770,6 +770,7 @@ private static float AverageWorkingSlotFatigue(JobSiteState s)
         SaveAssignmentsToSave();
         SaveRuntimeToSave();
         FireJobsChanged();
+        GameEvents.JobAssigned?.Invoke();
         return true;
     }
 
@@ -812,6 +813,7 @@ private static float AverageWorkingSlotFatigue(JobSiteState s)
         SaveAssignmentsToSave();
         SaveRuntimeToSave();
         FireJobsChanged();
+        GameEvents.JobAssigned?.Invoke();
         return true;
     }
 
