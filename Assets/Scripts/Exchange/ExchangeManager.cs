@@ -17,9 +17,9 @@ public sealed class ExchangeManager : MonoBehaviour
     private const float SHINY_DIVISOR = 0.75f;
     private const int SENTIMENT_CAP = 12;
     private const int SENTIMENT_STEP_WIN = 1;
-    private const int SENTIMENT_STEP_LOSS = 1;
-    private const float SENTIMENT_MIN_MUL = 0.85f;
-    private const float SENTIMENT_MAX_MUL = 1.15f;
+    private const int SENTIMENT_STEP_LOSS = 3;
+    private const float SENTIMENT_MIN_MUL = 0.80f;
+    private const float SENTIMENT_MAX_MUL = 1.20f;
     private const float LABOR_SAMPLE_INTERVAL = 30f;
     private const float LABOR_HOURS_CAP = 40f;
     private const float LABOR_MIN_MUL = 0.95f;
@@ -215,8 +215,15 @@ public sealed class ExchangeManager : MonoBehaviour
     {
         if (_save == null || _stateMap == null) return;
 
-        EnsureMonthlyBattleSentimentWindow();
+        bool monthReset = EnsureMonthlyBattleSentimentWindow();
         AccumulateLaborHoursDeltas();
+
+        // New calendar month → reset every species to its base market value
+        if (monthReset)
+        {
+            ResetAllValuesToBase();
+            return;
+        }
 
         int today = DayIndex();
         int previousDay = _save.lastDayIndex;
@@ -298,6 +305,47 @@ public sealed class ExchangeManager : MonoBehaviour
             GameEvents.ExchangeMarketReset?.Invoke();
     }
 
+    // ─────────── Monthly Reset ───────────
+
+    private void ResetAllValuesToBase()
+    {
+        var allMonsters = MonsterCatalog.All;
+        if (allMonsters == null) return;
+
+        for (int i = 0; i < allMonsters.Count; i++)
+        {
+            var def = allMonsters[i];
+            if (def == null || string.IsNullOrEmpty(def.id)) continue;
+            if (def.rarity == Rarity.Boss || def.baseMarketValue <= 0) continue;
+
+            if (!_stateMap.TryGetValue(def.id, out var state))
+            {
+                state = new MarketSpeciesState { speciesId = def.id };
+                _stateMap[def.id] = state;
+            }
+
+            state.previousValue = state.currentValue;
+            state.currentValue = def.baseMarketValue;
+            state.demandLevel = DemandLevel.Medium;
+
+            if (state.currentValue != state.previousValue)
+                state.trend = state.currentValue > state.previousValue
+                    ? TrendDirection.Rising : TrendDirection.Falling;
+            else
+                state.trend = TrendDirection.Stable;
+
+            state.lastUpdateUnix = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+        }
+
+        // Reset daily seed so flux doesn't carry over
+        _save.dailySeed = HashDay(DayIndex());
+        _save.lastDayIndex = DayIndex();
+
+        Persist();
+        GameEvents.ExchangeValuesChanged?.Invoke();
+        GameEvents.ExchangeMarketReset?.Invoke();
+    }
+
     // ─────────── Demand ───────────
 
     private void UpdateDemand(MarketSpeciesState state, MonsterDataSO def)
@@ -377,10 +425,13 @@ public sealed class ExchangeManager : MonoBehaviour
         return (int)(DateTimeOffset.UtcNow.ToUnixTimeSeconds() / SECONDS_PER_DAY);
     }
 
-    private void EnsureMonthlyBattleSentimentWindow()
+    /// <summary>
+    /// Returns true if a new calendar month was detected and sentiment data was reset.
+    /// </summary>
+    private bool EnsureMonthlyBattleSentimentWindow()
     {
         int monthKey = MonthKeyUtc();
-        if (_save.battleSentimentMonthKey == monthKey) return;
+        if (_save.battleSentimentMonthKey == monthKey) return false;
 
         _save.battleSentimentMonthKey = monthKey;
         _save.monthlyBattleSentiments ??= new List<SpeciesBattleSentimentData>();
@@ -388,6 +439,7 @@ public sealed class ExchangeManager : MonoBehaviour
         _sentimentMap ??= new Dictionary<string, SpeciesBattleSentimentData>(StringComparer.Ordinal);
         _sentimentMap.Clear();
         _workerHoursSampled.Clear();
+        return true;
     }
 
     private float GetBattleSentimentMultiplier(string speciesId)

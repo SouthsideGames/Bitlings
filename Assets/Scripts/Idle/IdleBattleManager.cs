@@ -867,9 +867,35 @@ int canRun = Mathf.FloorToInt(dt / config.secondsPerEncounter);
             return true;
         }
 
-        // Duplicate: level up by +1 if not max.
+        // Duplicate: level up by +1 if not max, else convert to Growth Cores.
         int before = existing.level;
+
+        if (before >= maxLv)
+        {
+            // Already max level → convert to Growth Cores (matches foreground behavior).
+            int baseCores = Mathf.Max(1, 2 + Mathf.Max(1, level));
+            float rarityMul = 1f;
+            switch (def.rarity)
+            {
+                case Rarity.Common:    rarityMul = 1.00f; break;
+                case Rarity.Uncommon:  rarityMul = 1.10f; break;
+                case Rarity.Rare:      rarityMul = 1.25f; break;
+                case Rarity.Epic:      rarityMul = 1.40f; break;
+                case Rarity.Legendary: rarityMul = 1.60f; break;
+                case Rarity.Mythic:    rarityMul = 1.80f; break;
+                default:               rarityMul = 1.00f; break;
+            }
+            int cores = Mathf.Clamp(Mathf.RoundToInt(baseCores * rarityMul), 1, 250);
+            ResourceBank.Add(ResourceType.GrowthCore, cores);
+
+            try { GameEvents.OnOwnedMonstersChanged?.Invoke(); } catch { }
+            try { GameEvents.MonsterCaptured?.Invoke(def.id, def.type); } catch { }
+            SaveManager.Save();
+            return true;
+        }
+
         existing.level = Mathf.Clamp(existing.level + 1, 1, maxLv);
+        existing.unspentStatPoints += 3;
 
         // List reference is the same object; still fire events.
         try { GameEvents.OnOwnedMonstersChanged?.Invoke(); } catch { }
