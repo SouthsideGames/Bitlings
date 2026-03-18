@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 
 // ─────────────────────────────────────────────────────────────
@@ -13,13 +14,25 @@ public sealed class ExchangeManager : MonoBehaviour
     public static ExchangeManager I { get; private set; }
 
     private const float BROKER_CUT = 0.85f;          // broker keeps 15%
-    private const float SHINY_MULTIPLIER = 2.5f;
+    private const float SHINY_DIVISOR = 0.75f;
+    private const int SENTIMENT_CAP = 12;
+    private const int SENTIMENT_STEP_WIN = 1;
+    private const int SENTIMENT_STEP_LOSS = 1;
+    private const float SENTIMENT_MIN_MUL = 0.85f;
+    private const float SENTIMENT_MAX_MUL = 1.15f;
+    private const float LABOR_SAMPLE_INTERVAL = 30f;
+    private const float LABOR_HOURS_CAP = 40f;
+    private const float LABOR_MIN_MUL = 0.95f;
+    private const float LABOR_MAX_MUL = 1.05f;
     private const float RECALC_INTERVAL = 600f;       // 10 minutes
     private const int   SECONDS_PER_DAY = 86400;
 
     private ExchangeSaveData _save;
     private Dictionary<string, MarketSpeciesState> _stateMap;
+    private Dictionary<string, SpeciesBattleSentimentData> _sentimentMap;
+    private readonly Dictionary<string, float> _workerHoursSampled = new Dictionary<string, float>(StringComparer.Ordinal);
     private float _recalcTimer;
+    private float _laborSampleTimer;
 
     // ─────────── Demand multipliers ───────────
     private static float DemandMul(DemandLevel d)
@@ -76,6 +89,13 @@ public sealed class ExchangeManager : MonoBehaviour
 
     void Update()
     {
+        _laborSampleTimer += Time.unscaledDeltaTime;
+        if (_laborSampleTimer >= LABOR_SAMPLE_INTERVAL)
+        {
+            _laborSampleTimer = 0f;
+            AccumulateLaborHoursDeltas();
+        }
+
         _recalcTimer += Time.unscaledDeltaTime;
         if (_recalcTimer >= RECALC_INTERVAL)
         {
@@ -90,6 +110,10 @@ public sealed class ExchangeManager : MonoBehaviour
     {
         _save = SaveManager.GetExchangeBlob() ?? new ExchangeSaveData();
         _stateMap = new Dictionary<string, MarketSpeciesState>(StringComparer.Ordinal);
+        _sentimentMap = new Dictionary<string, SpeciesBattleSentimentData>(StringComparer.Ordinal);
+
+        _save.speciesStates ??= new List<MarketSpeciesState>();
+        _save.monthlyBattleSentiments ??= new List<SpeciesBattleSentimentData>();
 
         for (int i = 0; i < _save.speciesStates.Count; i++)
         {
@@ -97,6 +121,15 @@ public sealed class ExchangeManager : MonoBehaviour
             if (!string.IsNullOrEmpty(s.speciesId))
                 _stateMap[s.speciesId] = s;
         }
+
+        for (int i = 0; i < _save.monthlyBattleSentiments.Count; i++)
+        {
+            var entry = _save.monthlyBattleSentiments[i];
+            if (entry == null || string.IsNullOrEmpty(entry.speciesId)) continue;
+            _sentimentMap[entry.speciesId] = entry;
+        }
+
+        EnsureMonthlyBattleSentimentWindow();
     }
 
     private void Persist()
@@ -104,6 +137,10 @@ public sealed class ExchangeManager : MonoBehaviour
         _save.speciesStates.Clear();
         foreach (var kv in _stateMap)
             _save.speciesStates.Add(kv.Value);
+
+        _save.monthlyBattleSentiments.Clear();
+        foreach (var kv in _sentimentMap)
+            _save.monthlyBattleSentiments.Add(kv.Value);
 
         SaveManager.SetExchangeBlob(_save);
     }
@@ -121,9 +158,45 @@ public sealed class ExchangeManager : MonoBehaviour
     public int GetBrokerPayout(string speciesId, bool isShiny = false)
     {
         int value = GetCurrentValue(speciesId);
-        float payout = value * BROKER_CUT;
-        if (isShiny) payout *= SHINY_MULTIPLIER;
+        float payout = isShiny
+            ? value / Mathf.Max(0.01f, SHINY_DIVISOR)
+            : value * BROKER_CUT;
         return Mathf.Max(1, Mathf.RoundToInt(payout));
+    }
+
+    public void RecordBattleOutcome(string speciesId, bool victory, bool defeat, bool escaped)
+    {
+        if (_save == null || _sentimentMap == null) return;
+        if (string.IsNullOrEmpty(speciesId)) return;
+        if (escaped) return;
+        if (!victory && !defeat) return;
+
+        EnsureMonthlyBattleSentimentWindow();
+
+        if (!_sentimentMap.TryGetValue(speciesId, out var entry))
+        {
+            entry = new SpeciesBattleSentimentData
+            {
+                speciesId = speciesId,
+                monthlyWinsAgainst = 0,
+                monthlyLossesAgainst = 0,
+                sentimentScore = 0
+            };
+            _sentimentMap[speciesId] = entry;
+        }
+
+        if (victory)
+        {
+            entry.monthlyWinsAgainst++;
+            entry.sentimentScore = Mathf.Max(-SENTIMENT_CAP, entry.sentimentScore - SENTIMENT_STEP_WIN);
+        }
+        else if (defeat)
+        {
+            entry.monthlyLossesAgainst++;
+            entry.sentimentScore = Mathf.Min(SENTIMENT_CAP, entry.sentimentScore + SENTIMENT_STEP_LOSS);
+        }
+
+        RecalculateAll();
     }
 
     public MarketSpeciesState GetState(string speciesId)
@@ -141,6 +214,9 @@ public sealed class ExchangeManager : MonoBehaviour
     public void RecalculateAll()
     {
         if (_save == null || _stateMap == null) return;
+
+        EnsureMonthlyBattleSentimentWindow();
+        AccumulateLaborHoursDeltas();
 
         int today = DayIndex();
         int previousDay = _save.lastDayIndex;
@@ -197,7 +273,11 @@ public sealed class ExchangeManager : MonoBehaviour
             // world event multiplier
             float eventMul = GetWorldEventMultiplier();
 
-            float final_ = baseVal * demandMul * rarityMul * supplyMod * flux * eventMul;
+            // monthly battle sentiment: losses against species push value up, wins push down
+            float sentimentMul = GetBattleSentimentMultiplier(def.id);
+            float laborMul = GetLaborHoursMultiplier(def.id);
+
+            float final_ = baseVal * demandMul * rarityMul * supplyMod * flux * eventMul * sentimentMul * laborMul;
             state.currentValue = Mathf.Max(1, Mathf.RoundToInt(final_));
 
             // trend
@@ -295,6 +375,136 @@ public sealed class ExchangeManager : MonoBehaviour
     private static int DayIndex()
     {
         return (int)(DateTimeOffset.UtcNow.ToUnixTimeSeconds() / SECONDS_PER_DAY);
+    }
+
+    private void EnsureMonthlyBattleSentimentWindow()
+    {
+        int monthKey = MonthKeyUtc();
+        if (_save.battleSentimentMonthKey == monthKey) return;
+
+        _save.battleSentimentMonthKey = monthKey;
+        _save.monthlyBattleSentiments ??= new List<SpeciesBattleSentimentData>();
+        _save.monthlyBattleSentiments.Clear();
+        _sentimentMap ??= new Dictionary<string, SpeciesBattleSentimentData>(StringComparer.Ordinal);
+        _sentimentMap.Clear();
+        _workerHoursSampled.Clear();
+    }
+
+    private float GetBattleSentimentMultiplier(string speciesId)
+    {
+        if (_sentimentMap == null || string.IsNullOrEmpty(speciesId)) return 1f;
+        if (!_sentimentMap.TryGetValue(speciesId, out var entry)) return 1f;
+
+        float t = Mathf.Clamp(entry.sentimentScore / (float)Mathf.Max(1, SENTIMENT_CAP), -1f, 1f);
+        float normalized = (t + 1f) * 0.5f;
+        return Mathf.Lerp(SENTIMENT_MIN_MUL, SENTIMENT_MAX_MUL, normalized);
+    }
+
+    private float GetLaborHoursMultiplier(string speciesId)
+    {
+        if (_sentimentMap == null || string.IsNullOrEmpty(speciesId)) return 1f;
+        if (!_sentimentMap.TryGetValue(speciesId, out var entry)) return LABOR_MAX_MUL;
+
+        float h = Mathf.Clamp01(entry.monthlyHoursWorked / Mathf.Max(1f, LABOR_HOURS_CAP));
+        return Mathf.Lerp(LABOR_MAX_MUL, LABOR_MIN_MUL, h);
+    }
+
+    private void AccumulateLaborHoursDeltas()
+    {
+        if (_save == null || _sentimentMap == null) return;
+        var jm = JobManager.I;
+        var data = SaveManager.Data;
+        if (jm == null || data?.jobAssignments == null) return;
+
+        EnsureMonthlyBattleSentimentWindow();
+
+        var activeKeys = new HashSet<string>(StringComparer.Ordinal);
+        bool addedHours = false;
+
+        for (int i = 0; i < data.jobAssignments.Count; i++)
+        {
+            var assignment = data.jobAssignments[i];
+            if (assignment?.workerIds == null) continue;
+
+            for (int j = 0; j < assignment.workerIds.Count; j++)
+            {
+                string key = assignment.workerIds[j];
+                if (string.IsNullOrWhiteSpace(key)) continue;
+                activeKeys.Add(key);
+
+                if (!jm.TryGetWorkerAssignment(key, out _, out _, out float hoursAssigned)) continue;
+                hoursAssigned = Mathf.Max(0f, hoursAssigned);
+
+                if (!_workerHoursSampled.TryGetValue(key, out float previousHours))
+                {
+                    _workerHoursSampled[key] = hoursAssigned;
+                    continue;
+                }
+
+                float delta = Mathf.Max(0f, hoursAssigned - previousHours);
+                _workerHoursSampled[key] = hoursAssigned;
+                if (delta <= 0f) continue;
+
+                string speciesId = ResolveSpeciesIdForWorkerKey(key);
+                if (string.IsNullOrEmpty(speciesId)) continue;
+
+                var entry = GetOrCreateSentimentEntry(speciesId);
+                entry.monthlyHoursWorked += delta;
+                addedHours = true;
+            }
+        }
+
+        if (_workerHoursSampled.Count > 0)
+        {
+            var stale = _workerHoursSampled.Keys.Where(k => !activeKeys.Contains(k)).ToList();
+            for (int i = 0; i < stale.Count; i++)
+                _workerHoursSampled.Remove(stale[i]);
+        }
+
+        if (addedHours)
+            _recalcTimer = RECALC_INTERVAL;
+    }
+
+    private SpeciesBattleSentimentData GetOrCreateSentimentEntry(string speciesId)
+    {
+        if (_sentimentMap.TryGetValue(speciesId, out var entry)) return entry;
+
+        entry = new SpeciesBattleSentimentData
+        {
+            speciesId = speciesId,
+            monthlyWinsAgainst = 0,
+            monthlyLossesAgainst = 0,
+            sentimentScore = 0,
+            monthlyHoursWorked = 0f
+        };
+        _sentimentMap[speciesId] = entry;
+        return entry;
+    }
+
+    private static string ResolveSpeciesIdForWorkerKey(string key)
+    {
+        if (string.IsNullOrEmpty(key)) return null;
+
+        var data = SaveManager.Data;
+        if (data?.owned != null)
+        {
+            for (int i = 0; i < data.owned.Count; i++)
+            {
+                var o = data.owned[i];
+                if (o == null || string.IsNullOrEmpty(o.ownedUID)) continue;
+                if (!string.Equals(o.ownedUID, key, StringComparison.Ordinal)) continue;
+                return o.monsterId;
+            }
+        }
+
+        var def = MonsterCatalog.GetById(key);
+        return def != null ? def.id : null;
+    }
+
+    private static int MonthKeyUtc()
+    {
+        var now = DateTimeOffset.UtcNow;
+        return now.Year * 100 + now.Month;
     }
 
     private static int HashDay(int day)

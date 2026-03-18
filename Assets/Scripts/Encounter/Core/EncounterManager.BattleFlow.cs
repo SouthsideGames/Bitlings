@@ -378,6 +378,9 @@ public partial class EncounterManager
         else if (defeat) EmitStatus("Defeat.");
         else if (escaped) EmitStatus("The wild Bitling fled.");
 
+        if (ExchangeManager.I != null && result.wildDef != null && !string.IsNullOrEmpty(result.wildDef.id))
+            ExchangeManager.I.RecordBattleOutcome(result.wildDef.id, victory, defeat, escaped);
+
         if (victory && _currentEncounterIsBoss && _currentBossUsed != null)
         {
             GameEvents.BossDefeated?.Invoke(_currentBossUsed.id);

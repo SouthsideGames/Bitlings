@@ -35,9 +35,20 @@ public class ActiveRequest
 }
 
 [Serializable]
+public class SpeciesBattleSentimentData
+{
+    public string speciesId;
+    public int monthlyWinsAgainst;
+    public int monthlyLossesAgainst;
+    public int sentimentScore;
+    public float monthlyHoursWorked;
+}
+
+[Serializable]
 public class ExchangeSaveData
 {
     public List<MarketSpeciesState> speciesStates = new List<MarketSpeciesState>();
+    public List<SpeciesBattleSentimentData> monthlyBattleSentiments = new List<SpeciesBattleSentimentData>();
     public List<ActiveRequest> activeRequests = new List<ActiveRequest>();
     public int totalBrokered;
     public int totalCreditsBrokered;
@@ -45,6 +56,7 @@ public class ExchangeSaveData
     public int dailySeed;
     public int lastDayIndex = -1;
     public int lastRequestRotationDayIndex = -1;
+    public int battleSentimentMonthKey = -1;
 }
 
 // ─────────────────────────────────────────────────────────────
