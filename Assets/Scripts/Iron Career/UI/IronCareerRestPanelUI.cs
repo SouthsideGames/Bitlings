@@ -131,6 +131,7 @@ public sealed class IronCareerRestPanelUI : MonoBehaviour
 
         // Option A: Heal 25%
         var heal = Instantiate(restOptionPrefab, optionListParent);
+        heal.gameObject.SetActive(true);
         heal.Bind(
             option: RestOption.Heal25,
             title: "🩹 HEAL PARTY (25%)",
@@ -143,6 +144,7 @@ public sealed class IronCareerRestPanelUI : MonoBehaviour
 
         // Option B: Training (random)
         var train = Instantiate(restOptionPrefab, optionListParent);
+        train.gameObject.SetActive(true);
         train.Bind(
             option: RestOption.RandomLevelUp,
             title: "⭐ TRAINING (+1 Level)",
@@ -190,7 +192,7 @@ public sealed class IronCareerRestPanelUI : MonoBehaviour
     {
         for (int i = 0; i < _optionItems.Count; i++)
         {
-            if (_optionItems[i]) _optionItems[i].gameObject.SetActive(interactable);
+            if (_optionItems[i]) _optionItems[i].SetInteractable(interactable);
         }
     }
 
