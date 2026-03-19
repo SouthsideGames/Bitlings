@@ -707,6 +707,8 @@ public partial class BattleManager : MonoBehaviour
     /// Overrides the BattleManager's UI targets at runtime (used by Iron Career).
     /// Additive only: does not remove any existing features.
     /// </summary>
+    public BattleFeedbackManager DefaultFeedback => _defaultFeedback;
+
     public void SetUIOverride(BattleFeedbackManager overrideFeedback, BattleTextBoxUI overrideTextBox, BattleSwitchToggle overrideBottomToggle)
     {
         if (!_uiDefaultsCaptured)

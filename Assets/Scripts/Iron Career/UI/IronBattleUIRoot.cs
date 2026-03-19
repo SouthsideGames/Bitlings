@@ -115,6 +115,10 @@ public class IronBattleUIRoot : MonoBehaviour
         if (ironFeedback)
             ironFeedback.SetSpawnAttackPrefabs(true);
 
+            // Copy timing from the regular feedback so Iron Career animations feel the same speed.
+            if (ironFeedback && battle.DefaultFeedback && battle.DefaultFeedback != ironFeedback)
+                ironFeedback.CopyAnimationTimingsFrom(battle.DefaultFeedback);
+
         // Ensure text box is active before battle starts
         if (ironBattleTextBox && !ironBattleTextBox.gameObject.activeSelf)
         {
