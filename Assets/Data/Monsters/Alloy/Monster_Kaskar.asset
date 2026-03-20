@@ -42,10 +42,15 @@ MonoBehaviour:
   jobSkill: 1.15
   titleTrack: {fileID: 11400000, guid: 1267eb925a9794d6992731b1010dad60, type: 2}
   defaultAlwaysOnTitles: []
-  ironTitles: []
+  ironTitles:
+  - {fileID: 11400000, guid: aa3a9062b65c14c769d9953d3303d0d2, type: 2}
+  - {fileID: 11400000, guid: bca8e639605063d4a8af26df057b4f4f, type: 2}
+  - {fileID: 11400000, guid: 6ad4157aacf2cb547878360fd54c3d1e, type: 2}
+  - {fileID: 11400000, guid: d1da25199bf00124cbc8e3984113060a, type: 2}
   Personality: {fileID: 11400000, guid: 2e75af56469454f81aab48433f975b34, type: 2}
   basicAttackName: Anvil Bash
   basicAttackPrefab: {fileID: 5172629195496952374, guid: ad774bbb8084f42c29f12cd62581f796, type: 3}
   basicAttackPrefabLifetime: 1
   spawnSfx: {fileID: 8300000, guid: 538d2e9b6c1c85644834f0ccf05bc3c0, type: 3}
+  baseMarketValue: 10
   description: Reinforced plating forms a fortress frame

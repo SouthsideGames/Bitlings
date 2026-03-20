@@ -42,8 +42,15 @@ MonoBehaviour:
   jobSkill: 0.95
   titleTrack: {fileID: 11400000, guid: 4b55742e247d24473944f94999dca877, type: 2}
   defaultAlwaysOnTitles: []
+  ironTitles:
+  - {fileID: 11400000, guid: e1aa94e2540df9a4b9e2e90c84ec8c3f, type: 2}
+  - {fileID: 11400000, guid: a54fbab895dd9804c9cacbb8e8ce854c, type: 2}
+  - {fileID: 11400000, guid: 09255326cbe449342be8cb661424d7a3, type: 2}
+  - {fileID: 11400000, guid: 151d5269051bffb44a5357d26231c263, type: 2}
   Personality: {fileID: 11400000, guid: 3733616cf9f0f4dddb5bee9d6ba2952f, type: 2}
   basicAttackName: Flame Peck
   basicAttackPrefab: {fileID: 126357351932672970, guid: a7524146891194bc4b7eb73ba1e38b46, type: 3}
   basicAttackPrefabLifetime: 1
+  spawnSfx: {fileID: 0}
+  baseMarketValue: 10
   description: A small fire creature that darts forward with quick

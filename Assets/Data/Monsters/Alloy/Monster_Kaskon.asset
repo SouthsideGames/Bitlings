@@ -42,11 +42,16 @@ MonoBehaviour:
   jobSkill: 1.08
   titleTrack: {fileID: 11400000, guid: e9bbdcd2d9d9f46ecba858905f1f28eb, type: 2}
   defaultAlwaysOnTitles: []
-  ironTitles: []
+  ironTitles:
+  - {fileID: 11400000, guid: 2897bcb545bf47f4c93cf253bec91032, type: 2}
+  - {fileID: 11400000, guid: 8ea99f345957e9a43bda0b0ff311cd59, type: 2}
+  - {fileID: 11400000, guid: c37c6fee2cd0cf6408476d58003a2be4, type: 2}
+  - {fileID: 11400000, guid: 90199fd5133383b42979b35902189fed, type: 2}
   Personality: {fileID: 11400000, guid: 51b0055ca9f5a4ccbb97fd51ef39fae1, type: 2}
   basicAttackName: Gear Jab
   basicAttackPrefab: {fileID: 5172629195496952374, guid: ad774bbb8084f42c29f12cd62581f796, type: 3}
   basicAttackPrefabLifetime: 1
   spawnSfx: {fileID: 8300000, guid: dddd84165919be744811f516e5794f95, type: 3}
+  baseMarketValue: 10
   description: A disciplined alloy striker that locks its joints and counters with
     precise mechanical jabs.

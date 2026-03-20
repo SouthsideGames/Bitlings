@@ -374,12 +374,18 @@ public sealed class BattleFeedbackManager : MonoBehaviour
 
         if (_battleManager == manager)
         {
+#if UNITY_EDITOR
+            DevLog.Log($"[BattleFeedbackManager] BindToBattleManager no-op (already bound): feedback={name} battle={manager.name}");
+#endif
             Subscribe();
             return;
         }
 
         if (_battleManager != null)
         {
+#if UNITY_EDITOR
+            DevLog.Log($"[BattleFeedbackManager] Rebinding feedback={name} from battle={_battleManager.name} to battle={manager.name}");
+#endif
             _battleManager.OnBattleEvent -= HandleBattleEvent;
             _battleManager.UnregisterBattleEventConsumer();
         }
@@ -387,7 +393,18 @@ public sealed class BattleFeedbackManager : MonoBehaviour
         battleManager = manager;
         _battleManager = manager;
         _battleManager.RegisterBattleEventConsumer();
+#if UNITY_EDITOR
+        DevLog.Log($"[BattleFeedbackManager] Bound feedback={name} to battle={manager.name}");
+#endif
         Subscribe();
+    }
+
+    public void UnbindFromBattleManager()
+    {
+#if UNITY_EDITOR
+        DevLog.Log($"[BattleFeedbackManager] Unbind requested: feedback={name} battle={(_battleManager != null ? _battleManager.name : "NULL")}");
+#endif
+        Unsubscribe();
     }
 
     private void Subscribe()

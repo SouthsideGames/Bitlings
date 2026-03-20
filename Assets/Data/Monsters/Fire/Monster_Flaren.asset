@@ -42,11 +42,16 @@ MonoBehaviour:
   jobSkill: 1.15
   titleTrack: {fileID: 11400000, guid: b36afc3751235433bbb3736d9b622303, type: 2}
   defaultAlwaysOnTitles: []
-  ironTitles: []
+  ironTitles:
+  - {fileID: 11400000, guid: c992a934142d5de42acf1b136aff2569, type: 2}
+  - {fileID: 11400000, guid: 9038e944f4e35a84cbe0efdbf0042c39, type: 2}
+  - {fileID: 11400000, guid: 50e95df186132dd4d92e3c472f26e50e, type: 2}
+  - {fileID: 11400000, guid: fc6807acc3c259743a6511849d396c40, type: 2}
   Personality: {fileID: 11400000, guid: 1bd4805a0ba8f476b9f7b480b0cbb31d, type: 2}
   basicAttackName: Blaze Crush
   basicAttackPrefab: {fileID: 126357351932672970, guid: a7524146891194bc4b7eb73ba1e38b46, type: 3}
   basicAttackPrefabLifetime: 1
   spawnSfx: {fileID: 8300000, guid: b98a16ba150149f4cbd5560bac93baf9, type: 3}
+  baseMarketValue: 10
   description: A heavily armored fire brute that smashes through enemies with explosive
     force and relentless heat.

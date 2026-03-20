@@ -729,6 +729,9 @@ public partial class BattleManager : MonoBehaviour
 
         if (overrideFeedback)
         {
+            if (feedback != null && feedback != overrideFeedback)
+                feedback.UnbindFromBattleManager();
+
             feedback = overrideFeedback;
             feedback.BindToBattleManager(this);
         }
@@ -742,7 +745,14 @@ public partial class BattleManager : MonoBehaviour
     public void ClearUIOverride()
     {
         if (!_uiDefaultsCaptured) return;
+
+        if (feedback != null && feedback != _defaultFeedback)
+            feedback.UnbindFromBattleManager();
+
         feedback = _defaultFeedback;
+        if (feedback != null)
+            feedback.BindToBattleManager(this);
+
         battleTextBox = _defaultBattleTextBox;
         _bottomToggle = _defaultBottomToggle;
         _runtimeUIOverrideActive = false;

@@ -42,11 +42,16 @@ MonoBehaviour:
   jobSkill: 0.95
   titleTrack: {fileID: 11400000, guid: 66c91d5f9a59742f5b5b335bd10da4c6, type: 2}
   defaultAlwaysOnTitles: []
-  ironTitles: []
+  ironTitles:
+  - {fileID: 11400000, guid: 76e4e9eb5eb3d374fafdce90c072396e, type: 2}
+  - {fileID: 11400000, guid: 8ea99f345957e9a43bda0b0ff311cd59, type: 2}
+  - {fileID: 11400000, guid: c37c6fee2cd0cf6408476d58003a2be4, type: 2}
+  - {fileID: 11400000, guid: 90199fd5133383b42979b35902189fed, type: 2}
   Personality: {fileID: 11400000, guid: 71fa3f6cb68214bca94496affd470944, type: 2}
   basicAttackName: Metal Jab
   basicAttackPrefab: {fileID: 5172629195496952374, guid: ad774bbb8084f42c29f12cd62581f796, type: 3}
   basicAttackPrefabLifetime: 1
   spawnSfx: {fileID: 8300000, guid: 5d0135f17138fb545b73468da0e72d0b, type: 3}
+  baseMarketValue: 10
   description: A small alloy construct that moves with careful precision, striking
     steadily while its reinforced body absorbs incoming blows.

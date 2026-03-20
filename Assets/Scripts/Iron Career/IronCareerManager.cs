@@ -233,7 +233,7 @@ public sealed class IronCareerManager : MonoBehaviour, IronBattleBridge.IIronBat
 
         if (_roster == null || _roster.IsPartyEmpty)
         {
-            ShowGameOver(forfeit: false);
+            ShowGameOver(forfeit: false, defeatCauseOverride: outcome.wildEscaped ? "Enemy Fled" : null);
             return;
         }
 
@@ -955,7 +955,7 @@ public sealed class IronCareerManager : MonoBehaviour, IronBattleBridge.IIronBat
         ShowGameOver(forfeit: true);
     }
 
-    private void ShowGameOver(bool forfeit)
+    private void ShowGameOver(bool forfeit, string defeatCauseOverride = null)
     {
         // Ensure no pending background forfeit coroutine survives into game-over.
         CancelBackgroundForfeit("Game over");
@@ -969,7 +969,7 @@ public sealed class IronCareerManager : MonoBehaviour, IronBattleBridge.IIronBat
         UIManager.I?.Show(PanelId.IronCareerEncounter);
 
         ironEncounterUI?.ShowGameOver(immediate: true);
-        gameOverPanel?.Bind(_state.mode, _state.wins, _state.runSummary, forfeited: forfeit);
+        gameOverPanel?.Bind(_state.mode, _state.wins, _state.runSummary, forfeited: forfeit, defeatCauseOverride: defeatCauseOverride);
 
         // IRON GUARD: Explicitly disable regular Encounter panel BEFORE exiting Iron runtime.
         // This prevents race condition where EncounterPanelUI.OnEnable() check fails after Exit() is called.

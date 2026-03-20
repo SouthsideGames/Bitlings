@@ -42,9 +42,16 @@ MonoBehaviour:
   jobSkill: 1
   titleTrack: {fileID: 11400000, guid: 96feca965c49345a2a8e6a499487b997, type: 2}
   defaultAlwaysOnTitles: []
+  ironTitles:
+  - {fileID: 11400000, guid: c19086f28684923428939e0227415d4d, type: 2}
+  - {fileID: 11400000, guid: 06d71b7f47579574088aa3edba194444, type: 2}
+  - {fileID: 11400000, guid: e1aa94e2540df9a4b9e2e90c84ec8c3f, type: 2}
+  - {fileID: 11400000, guid: 0ba7a28fe41c45a4e92fe65a296eaba9, type: 2}
   Personality: {fileID: 11400000, guid: 3733616cf9f0f4dddb5bee9d6ba2952f, type: 2}
   basicAttackName: Flare Claw
   basicAttackPrefab: {fileID: 126357351932672970, guid: a7524146891194bc4b7eb73ba1e38b46, type: 3}
   basicAttackPrefabLifetime: 1
+  spawnSfx: {fileID: 0}
+  baseMarketValue: 10
   description: Its flames grow steadier and stronger, trading some speed for sharper,
     burning strikes.

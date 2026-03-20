@@ -42,8 +42,14 @@ MonoBehaviour:
   jobSkill: 1
   titleTrack: {fileID: 11400000, guid: 2a28b9245dd1f4effa5c97acc283ca9c, type: 2}
   defaultAlwaysOnTitles: []
+  ironTitles:
+  - {fileID: 11400000, guid: 71652094aed89c948ae2a0cb846cf011, type: 2}
+  - {fileID: 11400000, guid: a54fbab895dd9804c9cacbb8e8ce854c, type: 2}
+  - {fileID: 11400000, guid: e1aa94e2540df9a4b9e2e90c84ec8c3f, type: 2}
   Personality: {fileID: 11400000, guid: 3733616cf9f0f4dddb5bee9d6ba2952f, type: 2}
   basicAttackName: Heat Rush
   basicAttackPrefab: {fileID: 126357351932672970, guid: a7524146891194bc4b7eb73ba1e38b46, type: 3}
   basicAttackPrefabLifetime: 1
+  spawnSfx: {fileID: 0}
+  baseMarketValue: 10
   description: Its flames burn hotter and steadier

@@ -26,6 +26,7 @@ public sealed class IronCareerRestOptionItemUI : MonoBehaviour
 
     private void Awake()
     {
+        if (!button) button = GetComponentInChildren<Button>(true);
         if (button) button.onClick.AddListener(HandleClick);
     }
 
@@ -36,6 +37,8 @@ public sealed class IronCareerRestOptionItemUI : MonoBehaviour
 
     public void Bind(IronCareerRestPanelUI.RestOption option, string title, string desc, string preview)
     {
+        EnsureButtonHierarchyActive();
+
         Option = option;
 
         if (titleTMP) titleTMP.text = title ?? string.Empty;
@@ -45,6 +48,8 @@ public sealed class IronCareerRestOptionItemUI : MonoBehaviour
 
     public void SetOnClick(Action onClick)
     {
+        EnsureButtonHierarchyActive();
+
         _onClick = onClick;
         if (button) button.interactable = onClick != null;
     }
@@ -57,7 +62,21 @@ public sealed class IronCareerRestOptionItemUI : MonoBehaviour
 
     public void SetInteractable(bool interactable)
     {
+        EnsureButtonHierarchyActive();
         if (button) button.interactable = interactable;
+    }
+
+    private void EnsureButtonHierarchyActive()
+    {
+        if (!button) return;
+
+        var current = button.transform;
+        while (current)
+        {
+            if (!current.gameObject.activeSelf) current.gameObject.SetActive(true);
+            if (current == transform) break;
+            current = current.parent;
+        }
     }
 
     private void HandleClick()

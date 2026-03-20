@@ -42,10 +42,15 @@ MonoBehaviour:
   jobSkill: 1.08
   titleTrack: {fileID: 11400000, guid: 559dd325dbad6428aaaf10cc712c3784, type: 2}
   defaultAlwaysOnTitles: []
-  ironTitles: []
+  ironTitles:
+  - {fileID: 11400000, guid: a54fbab895dd9804c9cacbb8e8ce854c, type: 2}
+  - {fileID: 11400000, guid: 0c4ec08db0e878f48a327f570d1e549f, type: 2}
+  - {fileID: 11400000, guid: 90199fd5133383b42979b35902189fed, type: 2}
+  - {fileID: 11400000, guid: 8ea99f345957e9a43bda0b0ff311cd59, type: 2}
   Personality: {fileID: 11400000, guid: 2e75af56469454f81aab48433f975b34, type: 2}
   basicAttackName: Torque Crush
   basicAttackPrefab: {fileID: 5172629195496952374, guid: ad774bbb8084f42c29f12cd62581f796, type: 3}
   basicAttackPrefabLifetime: 1
   spawnSfx: {fileID: 8300000, guid: 483220f85d5873243a856ad473c4fe8e, type: 3}
+  baseMarketValue: 10
   description: A fully stabilized alloy guardian that grinds forward relentlessly

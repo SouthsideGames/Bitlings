@@ -42,9 +42,16 @@ MonoBehaviour:
   jobSkill: 0.95
   titleTrack: {fileID: 11400000, guid: e447507c40c2d4131a2a5d7a6a31f284, type: 2}
   defaultAlwaysOnTitles: []
+  ironTitles:
+  - {fileID: 11400000, guid: 66e978fde24853349a72c695292d630b, type: 2}
+  - {fileID: 11400000, guid: e1aa94e2540df9a4b9e2e90c84ec8c3f, type: 2}
+  - {fileID: 11400000, guid: 151d5269051bffb44a5357d26231c263, type: 2}
+  - {fileID: 11400000, guid: a54fbab895dd9804c9cacbb8e8ce854c, type: 2}
   Personality: {fileID: 11400000, guid: 3733616cf9f0f4dddb5bee9d6ba2952f, type: 2}
   basicAttackName: Ember Jab
   basicAttackPrefab: {fileID: 126357351932672970, guid: a7524146891194bc4b7eb73ba1e38b46, type: 3}
   basicAttackPrefabLifetime: 1
+  spawnSfx: {fileID: 0}
+  baseMarketValue: 10
   description: A fiery cub-like monster that charges eagerly striking with small
     but persistent bursts of flame.

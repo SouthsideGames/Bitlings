@@ -62,7 +62,7 @@ public sealed class IronCareerGameOverPanelUI : MonoBehaviour
         Bind(mode, wins, IronCareerRunSummary.Empty, forfeited);
     }
 
-    public void Bind(IronCareerRunState.IronCareerMode mode, int wins, IronCareerRunSummary summary, bool forfeited)
+    public void Bind(IronCareerRunState.IronCareerMode mode, int wins, IronCareerRunSummary summary, bool forfeited, string defeatCauseOverride = null)
     {
         wins = Mathf.Max(0, wins);
 
@@ -85,7 +85,9 @@ public sealed class IronCareerGameOverPanelUI : MonoBehaviour
         if (runResultTMP)
         {
             string outcome = forfeited ? "FORFEIT" : "DEFEAT";
-            string cause = forfeited ? "Quit Run" : "Party Defeated";
+            string cause = forfeited
+                ? "Quit Run"
+                : (!string.IsNullOrWhiteSpace(defeatCauseOverride) ? defeatCauseOverride : "Party Defeated");
             string modeLabel = (mode == IronCareerRunState.IronCareerMode.Hardcore) ? "Hardcore" : "Standard";
             int floorReached = wins + 1;
 

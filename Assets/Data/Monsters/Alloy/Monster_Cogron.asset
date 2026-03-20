@@ -42,11 +42,16 @@ MonoBehaviour:
   jobSkill: 1.08
   titleTrack: {fileID: 11400000, guid: d4cf849debbe1446c98bf3e7adac47a4, type: 2}
   defaultAlwaysOnTitles: []
-  ironTitles: []
+  ironTitles:
+  - {fileID: 11400000, guid: 2897bcb545bf47f4c93cf253bec91032, type: 2}
+  - {fileID: 11400000, guid: 8ea99f345957e9a43bda0b0ff311cd59, type: 2}
+  - {fileID: 11400000, guid: c37c6fee2cd0cf6408476d58003a2be4, type: 2}
+  - {fileID: 11400000, guid: 90199fd5133383b42979b35902189fed, type: 2}
   Personality: {fileID: 11400000, guid: 2e75af56469454f81aab48433f975b34, type: 2}
   basicAttackName: Gear Crush
   basicAttackPrefab: {fileID: 5172629195496952374, guid: ad774bbb8084f42c29f12cd62581f796, type: 3}
   basicAttackPrefabLifetime: 1
   spawnSfx: {fileID: 8300000, guid: b6f3c3b6fc74cfe4caf72d0aab3a9ccb, type: 3}
+  baseMarketValue: 10
   description: Its internal gears interlock into reinforced rings allowing crushing
     blows backed by heavy alloy plating.
