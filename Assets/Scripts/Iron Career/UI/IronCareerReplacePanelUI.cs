@@ -74,6 +74,20 @@ public sealed class IronCareerReplacePanelUI : MonoBehaviour
     /// </summary>
     public void Bind(IReadOnlyList<IronMonster> party, IronMonster offer, bool hardcoreMode)
     {
+        if (!manager) manager = FindFirstObjectByType<IronCareerManager>();
+
+        // Ensure button listeners are bound even if Awake hasn't fired yet (panel may be inactive).
+        if (confirmReplaceButton)
+        {
+            confirmReplaceButton.onClick.RemoveListener(OnConfirmPressed);
+            confirmReplaceButton.onClick.AddListener(OnConfirmPressed);
+        }
+        if (cancelButton)
+        {
+            cancelButton.onClick.RemoveListener(OnCancelPressed);
+            cancelButton.onClick.AddListener(OnCancelPressed);
+        }
+
         _hardcore = hardcoreMode;
         _selectedIndex = -1;
         SetConfirmInteractable(false);
@@ -149,12 +163,14 @@ public sealed class IronCareerReplacePanelUI : MonoBehaviour
 
     private void OnConfirmPressed()
     {
+        AudioManager.I?.PlayClick();
         if (_selectedIndex < 0) return;
         manager?.OnReplaceChosen(_selectedIndex);
     }
 
     private void OnCancelPressed()
     {
+        AudioManager.I?.PlayClick();
         if (_hardcore) return;
         manager?.OnReplaceCancelled();
     }

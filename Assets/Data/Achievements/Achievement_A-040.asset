@@ -15,7 +15,7 @@ MonoBehaviour:
   id: A-040
   displayName: No Notes
   description: Win 20 battles without taking damage.
-  icon: {fileID: 0}
+  icon: {fileID: -4192873577498990268, guid: 3488ad4b336d946b7abcb675644295f3, type: 3}
   trigger: 6
   goal: 20
   useTypeFilter: 0

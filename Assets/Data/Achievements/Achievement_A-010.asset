@@ -15,7 +15,7 @@ MonoBehaviour:
   id: A-010
   displayName: Grass Registrar
   description: Capture 25 Grass-type Bitlings.
-  icon: {fileID: 0}
+  icon: {fileID: -4192873577498990268, guid: 3488ad4b336d946b7abcb675644295f3, type: 3}
   trigger: 1
   goal: 25
   useTypeFilter: 1

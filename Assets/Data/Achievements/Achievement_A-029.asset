@@ -15,7 +15,7 @@ MonoBehaviour:
   id: A-029
   displayName: Master Breeder
   description: Evolve 30 Bitlings.
-  icon: {fileID: 0}
+  icon: {fileID: -4192873577498990268, guid: 3488ad4b336d946b7abcb675644295f3, type: 3}
   trigger: 2
   goal: 30
   useTypeFilter: 0

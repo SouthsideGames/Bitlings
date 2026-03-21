@@ -15,7 +15,7 @@ MonoBehaviour:
   id: A-030
   displayName: Rift Contained
   description: Stabilize your first Rift (defeat 1 boss).
-  icon: {fileID: 0}
+  icon: {fileID: -4192873577498990268, guid: 3488ad4b336d946b7abcb675644295f3, type: 3}
   trigger: 3
   goal: 1
   useTypeFilter: 0

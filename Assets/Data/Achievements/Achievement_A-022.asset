@@ -15,7 +15,7 @@ MonoBehaviour:
   id: A-022
   displayName: Type Catalogued
   description: Discover all 16 Bitling types.
-  icon: {fileID: 0}
+  icon: {fileID: -4192873577498990268, guid: 3488ad4b336d946b7abcb675644295f3, type: 3}
   trigger: 12
   goal: 16
   useTypeFilter: 0

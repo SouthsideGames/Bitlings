@@ -236,7 +236,7 @@ MonoBehaviour:
   selectedFrame: {fileID: 2012399848560453135}
   background: {fileID: 4017502643181763283}
   selectedTint: {r: 0.87058824, g: 0.6, b: 0.3254902, a: 1}
-  unselectedTint: {r: 0.5882353, g: 0.63529414, b: 0.6862745, a: 1}
+  unselectedTint: {r: 0.10980392, g: 0.14901961, b: 0.18039216, a: 1}
 --- !u!1 &2427916126076127882
 GameObject:
   m_ObjectHideFlags: 0

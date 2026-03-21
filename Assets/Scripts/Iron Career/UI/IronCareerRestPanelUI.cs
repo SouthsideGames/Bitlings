@@ -46,6 +46,7 @@ public sealed class IronCareerRestPanelUI : MonoBehaviour
     private readonly List<IronCareerRestPartyCardUI> _partyCards = new List<IronCareerRestPartyCardUI>(4);
     private readonly List<IronCareerRestOptionItemUI> _optionItems = new List<IronCareerRestOptionItemUI>(4);
 
+    private IReadOnlyList<IronMonster> _party;
     private RestOption _selected = RestOption.None;
     private bool _applied;
 
@@ -68,6 +69,13 @@ public sealed class IronCareerRestPanelUI : MonoBehaviour
 
     public void Bind(IReadOnlyList<IronMonster> party, int wins, bool hardcoreMode)
     {
+        _party = party;
+        if (!manager) manager = FindFirstObjectByType<IronCareerManager>();
+
+        Debug.Log($"[RestPanel] Bind called. gameObject.active={gameObject.activeSelf} confirmBtn={(confirmButton ? confirmButton.name : "NULL")} continueBtn={(continueButton ? continueButton.name : "NULL")} canvasGroup={(canvasGroup ? $"alpha={canvasGroup.alpha} inter={canvasGroup.interactable} blocks={canvasGroup.blocksRaycasts}" : "NULL")}");
+
+        // Ensure button listeners are bound even if Awake hasn't fired yet (panel may still be inactive).
+        EnsureButtonListeners();
         if (titleTMP) titleTMP.text = "REST NODE";
         if (subtitleTMP) subtitleTMP.text = "Choose one benefit. No revives allowed.";
         if (metaTMP) metaTMP.text = $"Win Streak: {wins}   Mode: {(hardcoreMode ? "Hardcore" : "Standard")}";
@@ -134,7 +142,7 @@ public sealed class IronCareerRestPanelUI : MonoBehaviour
         heal.gameObject.SetActive(true);
         heal.Bind(
             option: RestOption.Heal25,
-            title: "🩹 HEAL PARTY (25%)",
+            title: "HEAL PARTY (25%)",
             desc: "Heal all living monsters by 25% of their max HP. No revives.",
             preview: "Reliable attrition relief."
         );
@@ -147,7 +155,7 @@ public sealed class IronCareerRestPanelUI : MonoBehaviour
         train.gameObject.SetActive(true);
         train.Bind(
             option: RestOption.RandomLevelUp,
-            title: "⭐ TRAINING (+1 Level)",
+            title: "TRAINING (+1 Level)",
             desc: "Random living monster gains +1 level. HP% is preserved.",
             preview: "High variance. Long-term scaling."
         );
@@ -158,6 +166,7 @@ public sealed class IronCareerRestPanelUI : MonoBehaviour
 
     private void OnOptionClicked(RestOption option)
     {
+        Debug.Log($"[RestPanel] OnOptionClicked({option}) _applied={_applied}");
         if (_applied) return;
         SetSelected(option);
     }
@@ -165,18 +174,24 @@ public sealed class IronCareerRestPanelUI : MonoBehaviour
     private void SetSelected(RestOption option)
     {
         _selected = option;
+        Debug.Log($"[RestPanel] SetSelected({option}) confirmBtn={(confirmButton ? $"active={confirmButton.gameObject.activeSelf} inter={confirmButton.interactable}" : "NULL")}");
 
         for (int i = 0; i < _optionItems.Count; i++)
         {
             if (_optionItems[i]) _optionItems[i].SetSelected(_optionItems[i].Option == option);
         }
 
+        EnsureButtonActive(confirmButton);
         if (confirmButton) confirmButton.interactable = option != RestOption.None;
+        Debug.Log($"[RestPanel] SetSelected done. confirmBtn interactable={(confirmButton ? confirmButton.interactable : false)}");
     }
 
     private void SetApplied(bool applied)
     {
         _applied = applied;
+
+        EnsureButtonActive(confirmButton);
+        EnsureButtonActive(continueButton);
 
         if (confirmButton) confirmButton.gameObject.SetActive(!applied);
         if (continueButton) continueButton.gameObject.SetActive(applied);
@@ -198,6 +213,8 @@ public sealed class IronCareerRestPanelUI : MonoBehaviour
 
     private void OnConfirm()
     {
+        Debug.Log($"[RestPanel] OnConfirm! _applied={_applied} _selected={_selected}");
+        AudioManager.I?.PlayClick();
         if (_applied) return;
         if (_selected == RestOption.None) return;
 
@@ -223,12 +240,62 @@ public sealed class IronCareerRestPanelUI : MonoBehaviour
         // Manager will not advance battle immediately anymore; this panel controls Continue.
         // So we call the manager's "rest applied" hook, then we show Continue.
         manager.OnRestAppliedOnly();
+
+        // Refresh party cards so the player sees updated HP / level.
+        RefreshPartyCards();
+
         SetApplied(true);
     }
 
     private void OnContinue()
     {
+        AudioManager.I?.PlayClick();
         if (!manager) return;
         manager.OnRestContinue();
+    }
+
+    private void RefreshPartyCards()
+    {
+        // Re-read party from manager if possible (data was mutated in-place).
+        var freshParty = (manager != null) ? manager.GetIronPartyUnsafe() : _party;
+        if (freshParty == null) return;
+
+        int cardIdx = 0;
+        for (int i = 0; i < freshParty.Count; i++)
+        {
+            var m = freshParty[i];
+            if (m == null || m.def == null) continue;
+            if (cardIdx < _partyCards.Count && _partyCards[cardIdx])
+                _partyCards[cardIdx].Bind(m);
+            cardIdx++;
+        }
+    }
+
+    private void EnsureButtonActive(Button btn)
+    {
+        if (!btn) return;
+
+        var current = btn.transform;
+        while (current)
+        {
+            if (!current.gameObject.activeSelf) current.gameObject.SetActive(true);
+            if (current == transform) break;
+            current = current.parent;
+        }
+    }
+
+    private void EnsureButtonListeners()
+    {
+        if (confirmButton)
+        {
+            confirmButton.onClick.RemoveListener(OnConfirm);
+            confirmButton.onClick.AddListener(OnConfirm);
+        }
+
+        if (continueButton)
+        {
+            continueButton.onClick.RemoveListener(OnContinue);
+            continueButton.onClick.AddListener(OnContinue);
+        }
     }
 }

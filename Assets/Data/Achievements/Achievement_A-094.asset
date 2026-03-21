@@ -15,7 +15,7 @@ MonoBehaviour:
   id: A-094
   displayName: Perfect Containment
   description: Complete an Iron run with no deaths.
-  icon: {fileID: 0}
+  icon: {fileID: -4192873577498990268, guid: 3488ad4b336d946b7abcb675644295f3, type: 3}
   trigger: 28
   goal: 1
   useTypeFilter: 0
