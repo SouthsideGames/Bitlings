@@ -42,11 +42,16 @@ MonoBehaviour:
   jobSkill: 1.15
   titleTrack: {fileID: 11400000, guid: 5184277cf171048f990ffc7bd8d80206, type: 2}
   defaultAlwaysOnTitles: []
-  ironTitles: []
+  ironTitles:
+  - {fileID: 11400000, guid: fc910dfd00d3c5c47a8d10d07a8d95df, type: 2}
+  - {fileID: 11400000, guid: fecfd05376ee27f4db78e2a54c23ec8a, type: 2}
+  - {fileID: 11400000, guid: 02f1cb16b24f61749987f494f598ee98, type: 2}
+  - {fileID: 11400000, guid: 7edcb86e33cc5da4ab149a6be5178a4e, type: 2}
   Personality: {fileID: 11400000, guid: db9c4a912e52a4c5298eec48842ba111, type: 2}
   basicAttackName: Crush Tide
   basicAttackPrefab: {fileID: 7604281169824035565, guid: 4065dc449fe6fd94eb31f0e575b94514, type: 3}
   basicAttackPrefabLifetime: 1
   spawnSfx: {fileID: 8300000, guid: 8d87f1b69f4e7f543905e2906fb67a59, type: 3}
+  baseMarketValue: 10
   description: A massive aquatic guardian that absorbs punishment and retaliates
     with crushing waves of condensed water.

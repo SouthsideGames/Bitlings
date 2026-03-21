@@ -42,10 +42,15 @@ MonoBehaviour:
   jobSkill: 1.15
   titleTrack: {fileID: 11400000, guid: 68991883162c84a4aa15246dc62eb3c2, type: 2}
   defaultAlwaysOnTitles: []
-  ironTitles: []
+  ironTitles:
+  - {fileID: 11400000, guid: 6e10fbd152aafe44e8941962d607bd23, type: 2}
+  - {fileID: 11400000, guid: 8727d226a78964eb0bd7541828073c17, type: 2}
+  - {fileID: 11400000, guid: 7de30775125ec154fa78453e4c64d03b, type: 2}
+  - {fileID: 11400000, guid: a1f2ec75ecd5b447bb439bb8619bfa03, type: 2}
   Personality: {fileID: 11400000, guid: 2e75af56469454f81aab48433f975b34, type: 2}
   basicAttackName: Seismic Break
   basicAttackPrefab: {fileID: 2351537007807138146, guid: 02418565875047149b7ee7a075c39850, type: 3}
   basicAttackPrefabLifetime: 1
   spawnSfx: {fileID: 8300000, guid: 5fbbc4caefa6ade4eb1085d899072a0c, type: 3}
+  baseMarketValue: 10
   description: A towering rock mass that anchors itself to the earth

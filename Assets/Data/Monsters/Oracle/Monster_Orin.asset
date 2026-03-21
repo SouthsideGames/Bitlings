@@ -42,8 +42,14 @@ MonoBehaviour:
   jobSkill: 0.95
   titleTrack: {fileID: 11400000, guid: 97c531e9b4e544425b577d497709519b, type: 2}
   defaultAlwaysOnTitles: []
+  ironTitles:
+  - {fileID: 11400000, guid: 68bbd476dbc9dea4485f609fc74327e0, type: 2}
+  - {fileID: 11400000, guid: 466493f7d714bee4884dcb9624f86659, type: 2}
+  - {fileID: 11400000, guid: 0b6a2e89cd8f4a844b7172a2d678be74, type: 2}
   Personality: {fileID: 11400000, guid: 8fb41ae5d07a9422888bd80d80e2fbde, type: 2}
   basicAttackName: Foretell Strike
   basicAttackPrefab: {fileID: 7907104310462883121, guid: 37212b887c61ad84eacd87133a8a9e9d, type: 3}
   basicAttackPrefabLifetime: 1
+  spawnSfx: {fileID: 0}
+  baseMarketValue: 10
   description: A watchful oracle creature that strikes only after reading its foe.

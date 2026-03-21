@@ -42,11 +42,16 @@ MonoBehaviour:
   jobSkill: 1.15
   titleTrack: {fileID: 11400000, guid: 6f492a68ae372432e966736406c18f94, type: 2}
   defaultAlwaysOnTitles: []
-  ironTitles: []
+  ironTitles:
+  - {fileID: 11400000, guid: e1581ad50d8c6e94bbaa7b5767a764bd, type: 2}
+  - {fileID: 11400000, guid: 409cb41b9ceccf74ab219bde4f857bc6, type: 2}
+  - {fileID: 11400000, guid: 2727de2f364954648914f955e595df4e, type: 2}
+  - {fileID: 11400000, guid: a458939c56f4875499267a413c04d437, type: 2}
   Personality: {fileID: 11400000, guid: d2d9ec6158abb40d2a7618ee71a9de06, type: 2}
   basicAttackName: Molten Crush
   basicAttackPrefab: {fileID: 2351537007807138146, guid: 02418565875047149b7ee7a075c39850, type: 3}
   basicAttackPrefabLifetime: 1
   spawnSfx: {fileID: 8300000, guid: 156b45cf732afb149bed28b12062ce6e, type: 3}
+  baseMarketValue: 10
   description: A massive rock brute infused with lingering heat, advancing steadily
     while smashing foes with crushing, lava-hot stone.

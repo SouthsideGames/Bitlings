@@ -42,8 +42,15 @@ MonoBehaviour:
   jobSkill: 1.08
   titleTrack: {fileID: 11400000, guid: 5248ea937d2054b27b69ff01be9bce0d, type: 2}
   defaultAlwaysOnTitles: []
+  ironTitles:
+  - {fileID: 11400000, guid: 69d74352fe8a2fe478d59933c4926241, type: 2}
+  - {fileID: 11400000, guid: 0c4ec08db0e878f48a327f570d1e549f, type: 2}
+  - {fileID: 11400000, guid: e80217aa5b172e648949cf787505f387, type: 2}
+  - {fileID: 11400000, guid: 65e1df2c5d2acf749a429d77e1ea2c85, type: 2}
   Personality: {fileID: 11400000, guid: 8fb41ae5d07a9422888bd80d80e2fbde, type: 2}
   basicAttackName: Tide Rend
   basicAttackPrefab: {fileID: 7604281169824035565, guid: 4065dc449fe6fd94eb31f0e575b94514, type: 3}
   basicAttackPrefabLifetime: 1
+  spawnSfx: {fileID: 0}
+  baseMarketValue: 10
   description: A refined water predator that shapes flowing currents into powerful

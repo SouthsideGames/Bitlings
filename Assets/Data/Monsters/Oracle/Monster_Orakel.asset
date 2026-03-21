@@ -42,8 +42,14 @@ MonoBehaviour:
   jobSkill: 1.08
   titleTrack: {fileID: 11400000, guid: 8a555e5fb94674dc9be27b39ed48f481, type: 2}
   defaultAlwaysOnTitles: []
+  ironTitles:
+  - {fileID: 11400000, guid: c4ad4c8d61acdc54dac3f9f88f1891bf, type: 2}
+  - {fileID: 11400000, guid: 0b6a2e89cd8f4a844b7172a2d678be74, type: 2}
+  - {fileID: 11400000, guid: 68bbd476dbc9dea4485f609fc74327e0, type: 2}
   Personality: {fileID: 11400000, guid: 8a3e57b479f5246d38cd9b71c25a27a1, type: 2}
   basicAttackName: Foreseen Blow
   basicAttackPrefab: {fileID: 7907104310462883121, guid: 37212b887c61ad84eacd87133a8a9e9d, type: 3}
   basicAttackPrefabLifetime: 1
+  spawnSfx: {fileID: 0}
+  baseMarketValue: 10
   description: striking only when outcomes are certain.

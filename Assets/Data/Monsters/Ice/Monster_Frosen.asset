@@ -42,9 +42,16 @@ MonoBehaviour:
   jobSkill: 1.08
   titleTrack: {fileID: 11400000, guid: 13ffbc0ec7e6d4bad9c2d9d95e28ca93, type: 2}
   defaultAlwaysOnTitles: []
+  ironTitles:
+  - {fileID: 11400000, guid: dcb394ed45fa957489a42d3265004055, type: 2}
+  - {fileID: 11400000, guid: 68208736d55b7cb4d99eaa73528fa116, type: 2}
+  - {fileID: 11400000, guid: e1b2ea88c1633614a8a17b2abf5f5e7d, type: 2}
+  - {fileID: 11400000, guid: f0e53950f2ecd1346ada80856c0f01df, type: 2}
   Personality: {fileID: 11400000, guid: 51b0055ca9f5a4ccbb97fd51ef39fae1, type: 2}
   basicAttackName: Glacier Slam
   basicAttackPrefab: {fileID: 2650955928365913985, guid: f4836eb6d259942b9abe6e0a520af59f, type: 3}
   basicAttackPrefabLifetime: 1
+  spawnSfx: {fileID: 0}
+  baseMarketValue: 10
   description: A hardened frost guardian that stands firm and retaliates with crushing,
     cold-laden blows.

@@ -42,8 +42,15 @@ MonoBehaviour:
   jobSkill: 1.08
   titleTrack: {fileID: 11400000, guid: dcf4e04b37ffb45909e66d65be345400, type: 2}
   defaultAlwaysOnTitles: []
+  ironTitles:
+  - {fileID: 11400000, guid: a26029cf3b2e3496aaf1a285714c5dc1, type: 2}
+  - {fileID: 11400000, guid: 3eeae979ed207374383a76bdee55d3a9, type: 2}
+  - {fileID: 11400000, guid: c4ad4c8d61acdc54dac3f9f88f1891bf, type: 2}
+  - {fileID: 11400000, guid: f0a22c228659c304fb9369327478aab9, type: 2}
   Personality: {fileID: 11400000, guid: f6f72aa846632454b97832d01d1b5c0c, type: 2}
   basicAttackName: Wave Nip
   basicAttackPrefab: {fileID: 7604281169824035565, guid: 4065dc449fe6fd94eb31f0e575b94514, type: 3}
   basicAttackPrefabLifetime: 1
+  spawnSfx: {fileID: 0}
+  baseMarketValue: 10
   description: Its shell thickens as it endures and restores through steady flow.

@@ -42,9 +42,16 @@ MonoBehaviour:
   jobSkill: 1
   titleTrack: {fileID: 11400000, guid: 4d1ba4f728cde43d19992149600440d0, type: 2}
   defaultAlwaysOnTitles: []
+  ironTitles:
+  - {fileID: 11400000, guid: 8ea99f345957e9a43bda0b0ff311cd59, type: 2}
+  - {fileID: 11400000, guid: 3440dff927958f142ab795273ab27580, type: 2}
+  - {fileID: 11400000, guid: 13e0b9e8b7fc08847a05f89d3f7b6a17, type: 2}
+  - {fileID: 11400000, guid: e80217aa5b172e648949cf787505f387, type: 2}
   Personality: {fileID: 11400000, guid: a31b270cc22594368bd4541ee042d278, type: 2}
   basicAttackName: Current Bash
   basicAttackPrefab: {fileID: 7604281169824035565, guid: 4065dc449fe6fd94eb31f0e575b94514, type: 3}
   basicAttackPrefabLifetime: 1
+  spawnSfx: {fileID: 0}
+  baseMarketValue: 10
   description: Its body hardens with flowing armor, striking back harder as battles
     drag on.

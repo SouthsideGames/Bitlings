@@ -42,9 +42,16 @@ MonoBehaviour:
   jobSkill: 1
   titleTrack: {fileID: 11400000, guid: fd759ceaa7ff54ae5bd100d71e7e69d6, type: 2}
   defaultAlwaysOnTitles: []
+  ironTitles:
+  - {fileID: 11400000, guid: e9beb77410c9b994793415fa9862de92, type: 2}
+  - {fileID: 11400000, guid: 40e02f1f6665b4983ab1d2f94f1d4a3f, type: 2}
+  - {fileID: 11400000, guid: a289ace2a61ca0e47b454f4b80ebec49, type: 2}
+  - {fileID: 11400000, guid: b4b91e64958e2c74e9518a6666d41da1, type: 2}
   Personality: {fileID: 11400000, guid: e8e5c9163905a4840aca1effe845621c, type: 2}
   basicAttackName: Volt Slice
   basicAttackPrefab: {fileID: 4179996368917665753, guid: 77ce3f8bf17474b06ac473e26248a299, type: 3}
   basicAttackPrefabLifetime: 1
+  spawnSfx: {fileID: 0}
+  baseMarketValue: 10
   description: Its body crackles with stable current, moving faster and striking
     harder with precise electric cuts.

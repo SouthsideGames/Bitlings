@@ -42,11 +42,16 @@ MonoBehaviour:
   jobSkill: 1.15
   titleTrack: {fileID: 11400000, guid: db326120f6d6a412ba4e0f7df6990345, type: 2}
   defaultAlwaysOnTitles: []
-  ironTitles: []
+  ironTitles:
+  - {fileID: 11400000, guid: b4997c2fe7d4a1b43bc869bfcb9d1064, type: 2}
+  - {fileID: 11400000, guid: 65e1df2c5d2acf749a429d77e1ea2c85, type: 2}
+  - {fileID: 11400000, guid: 598f34ddd21e57a408674366cdfac40f, type: 2}
+  - {fileID: 11400000, guid: 744ad397976e51c49a7cfccf88b2d095, type: 2}
   Personality: {fileID: 11400000, guid: d2d9ec6158abb40d2a7618ee71a9de06, type: 2}
   basicAttackName: Thorn Break
   basicAttackPrefab: {fileID: 7147688047696861109, guid: 5287b95db783b4379b733d77af2cc458, type: 3}
   basicAttackPrefabLifetime: 1
   spawnSfx: {fileID: 8300000, guid: 750b05955ad221a4e8aa682caf06e6f1, type: 3}
+  baseMarketValue: 10
   description: A hardened forest sentinel that advances slowly, striking with crushing
     vines and enduring immense punishment.

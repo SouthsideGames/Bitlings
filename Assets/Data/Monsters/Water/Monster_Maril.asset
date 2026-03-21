@@ -42,9 +42,16 @@ MonoBehaviour:
   jobSkill: 1.08
   titleTrack: {fileID: 11400000, guid: 2a54a9fcf3f104e68970f3bcab5faa34, type: 2}
   defaultAlwaysOnTitles: []
+  ironTitles:
+  - {fileID: 11400000, guid: d47a8c52f9b5f524d8f7b31a2ee661d1, type: 2}
+  - {fileID: 11400000, guid: 627b69d8dc728174bb21492afc8df8b6, type: 2}
+  - {fileID: 11400000, guid: e80217aa5b172e648949cf787505f387, type: 2}
+  - {fileID: 11400000, guid: 8fa04376fe1382c4eadf890ac18df7ce, type: 2}
   Personality: {fileID: 11400000, guid: a31b270cc22594368bd4541ee042d278, type: 2}
   basicAttackName: Aqua Bind
   basicAttackPrefab: {fileID: 7604281169824035565, guid: 4065dc449fe6fd94eb31f0e575b94514, type: 3}
   basicAttackPrefabLifetime: 1
+  spawnSfx: {fileID: 0}
+  baseMarketValue: 10
   description: A calm but calculating water dweller that restrains foes with coiling
     currents before striking decisively.

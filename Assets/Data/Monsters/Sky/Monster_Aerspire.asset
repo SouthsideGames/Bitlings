@@ -42,9 +42,16 @@ MonoBehaviour:
   jobSkill: 1.08
   titleTrack: {fileID: 11400000, guid: 6accf1b23c32f49b3a52c39694734d34, type: 2}
   defaultAlwaysOnTitles: []
+  ironTitles:
+  - {fileID: 11400000, guid: 9fdb8ede4e4c461459e738834978e6ed, type: 2}
+  - {fileID: 11400000, guid: a9d1c8c346b292e4f9745fb659bd956a, type: 2}
+  - {fileID: 11400000, guid: a1f2ec75ecd5b447bb439bb8619bfa03, type: 2}
+  - {fileID: 11400000, guid: a289ace2a61ca0e47b454f4b80ebec49, type: 2}
   Personality: {fileID: 11400000, guid: dc588633b46794883be5263b17376bf3, type: 2}
   basicAttackName: Sky Rend
   basicAttackPrefab: {fileID: 5988486418563103347, guid: 310c8d56e543d4cd4ae9c55fa6047252, type: 3}
   basicAttackPrefabLifetime: 1
+  spawnSfx: {fileID: 0}
+  baseMarketValue: 10
   description: A fully evolved sky hunter that climbs high currents before diving
     with lethal speed and precision.

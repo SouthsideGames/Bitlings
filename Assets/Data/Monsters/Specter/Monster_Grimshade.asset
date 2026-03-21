@@ -42,8 +42,15 @@ MonoBehaviour:
   jobSkill: 1.08
   titleTrack: {fileID: 11400000, guid: d122edd6ea9a84b68982ebdeb8cf95c8, type: 2}
   defaultAlwaysOnTitles: []
+  ironTitles:
+  - {fileID: 11400000, guid: 13e0b9e8b7fc08847a05f89d3f7b6a17, type: 2}
+  - {fileID: 11400000, guid: e80217aa5b172e648949cf787505f387, type: 2}
+  - {fileID: 11400000, guid: ff3c014394236a244857210449b85291, type: 2}
+  - {fileID: 11400000, guid: 856ade98156889f4fbf9ab09303d21e3, type: 2}
   Personality: {fileID: 11400000, guid: 48288e9e78c65453781f793c8df03e90, type: 2}
   basicAttackName: Shadow Claw
   basicAttackPrefab: {fileID: 9101927626726485638, guid: 257dd9ab5e3cf0544a679d2e444f8d35, type: 3}
   basicAttackPrefabLifetime: 1
+  spawnSfx: {fileID: 0}
+  baseMarketValue: 10
   description: Its form darkens and it strikes with sharp precision from deep shade.

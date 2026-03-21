@@ -42,11 +42,16 @@ MonoBehaviour:
   jobSkill: 0.95
   titleTrack: {fileID: 11400000, guid: df92f4406611d463bb8fe051578c659e, type: 2}
   defaultAlwaysOnTitles: []
-  ironTitles: []
+  ironTitles:
+  - {fileID: 11400000, guid: a371bc492e827c94797e3461c1213414, type: 2}
+  - {fileID: 11400000, guid: 014cd17980e502c418a7ed232b26e215, type: 2}
+  - {fileID: 11400000, guid: 0b6a2e89cd8f4a844b7172a2d678be74, type: 2}
+  - {fileID: 11400000, guid: f0a22c228659c304fb9369327478aab9, type: 2}
   Personality: {fileID: 11400000, guid: db9c4a912e52a4c5298eec48842ba111, type: 2}
   basicAttackName: Stone Nudge
   basicAttackPrefab: {fileID: 8624645253036040332, guid: f03e702d7c9714bc2af48b5b17c93c88, type: 3}
   basicAttackPrefabLifetime: 1
   spawnSfx: {fileID: 8300000, guid: c476f92f1b6acdd40a4e8b102a91e5ee, type: 3}
+  baseMarketValue: 10
   description: A squat ground dweller that braces itself in the soil, resisting blows
     while slowly wearing enemies down with heavy, earthen strikes.

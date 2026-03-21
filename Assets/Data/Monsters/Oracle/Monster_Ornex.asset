@@ -42,9 +42,15 @@ MonoBehaviour:
   jobSkill: 1.08
   titleTrack: {fileID: 11400000, guid: 240baf8c14c054269a301dcc5493259b, type: 2}
   defaultAlwaysOnTitles: []
+  ironTitles:
+  - {fileID: 11400000, guid: c4ad4c8d61acdc54dac3f9f88f1891bf, type: 2}
+  - {fileID: 11400000, guid: 0b6a2e89cd8f4a844b7172a2d678be74, type: 2}
+  - {fileID: 11400000, guid: 68bbd476dbc9dea4485f609fc74327e0, type: 2}
   Personality: {fileID: 11400000, guid: 8a3e57b479f5246d38cd9b71c25a27a1, type: 2}
   basicAttackName: Foreseen Rend
   basicAttackPrefab: {fileID: 7907104310462883121, guid: 37212b887c61ad84eacd87133a8a9e9d, type: 3}
   basicAttackPrefabLifetime: 1
+  spawnSfx: {fileID: 0}
+  baseMarketValue: 10
   description: A calculating oracle beast that waits for certainty before striking,
     unleashing precise blows guided by unwavering foresight.

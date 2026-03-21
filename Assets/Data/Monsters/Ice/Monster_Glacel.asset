@@ -42,8 +42,15 @@ MonoBehaviour:
   jobSkill: 1.08
   titleTrack: {fileID: 11400000, guid: 4f3f8c111129c44738fb874b7bf20312, type: 2}
   defaultAlwaysOnTitles: []
+  ironTitles:
+  - {fileID: 11400000, guid: a54fbab895dd9804c9cacbb8e8ce854c, type: 2}
+  - {fileID: 11400000, guid: 0c4ec08db0e878f48a327f570d1e549f, type: 2}
+  - {fileID: 11400000, guid: e1b2ea88c1633614a8a17b2abf5f5e7d, type: 2}
+  - {fileID: 11400000, guid: f0e53950f2ecd1346ada80856c0f01df, type: 2}
   Personality: {fileID: 11400000, guid: 71fa3f6cb68214bca94496affd470944, type: 2}
   basicAttackName: Frost Jab
   basicAttackPrefab: {fileID: 2650955928365913985, guid: f4836eb6d259942b9abe6e0a520af59f, type: 3}
   basicAttackPrefabLifetime: 1
+  spawnSfx: {fileID: 0}
+  baseMarketValue: 10
   description: A sharp-edged ice creature that locks into place striking with deliberate

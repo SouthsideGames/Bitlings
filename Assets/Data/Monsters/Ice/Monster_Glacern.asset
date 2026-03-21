@@ -42,11 +42,16 @@ MonoBehaviour:
   jobSkill: 1.15
   titleTrack: {fileID: 11400000, guid: a37fda67adf3847fe8f770b720baa9e1, type: 2}
   defaultAlwaysOnTitles: []
-  ironTitles: []
+  ironTitles:
+  - {fileID: 11400000, guid: 6e10fbd152aafe44e8941962d607bd23, type: 2}
+  - {fileID: 11400000, guid: 8727d226a78964eb0bd7541828073c17, type: 2}
+  - {fileID: 11400000, guid: 7de30775125ec154fa78453e4c64d03b, type: 2}
+  - {fileID: 11400000, guid: a1f2ec75ecd5b447bb439bb8619bfa03, type: 2}
   Personality: {fileID: 11400000, guid: 71fa3f6cb68214bca94496affd470944, type: 2}
   basicAttackName: Glacier Crush
   basicAttackPrefab: {fileID: 2650955928365913985, guid: f4836eb6d259942b9abe6e0a520af59f, type: 3}
   basicAttackPrefabLifetime: 1
   spawnSfx: {fileID: 8300000, guid: 31342c7479c81cd41831a5d26fc43ce8, type: 3}
+  baseMarketValue: 10
   description: Its body fully crystallizes into dense ice armor advancing steadily
     while shattering enemies with overwhelming frozen force.

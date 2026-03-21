@@ -42,11 +42,16 @@ MonoBehaviour:
   jobSkill: 1.15
   titleTrack: {fileID: 11400000, guid: 7ddc2f5a29771469b8b7b9992f8536f0, type: 2}
   defaultAlwaysOnTitles: []
-  ironTitles: []
+  ironTitles:
+  - {fileID: 11400000, guid: 71652094aed89c948ae2a0cb846cf011, type: 2}
+  - {fileID: 11400000, guid: 3da4dd895f4bd4ff9b4690ab28dbdc42, type: 2}
+  - {fileID: 11400000, guid: 77fbf796892a13a479a8c1077e4829a0, type: 2}
+  - {fileID: 11400000, guid: 2897bcb545bf47f4c93cf253bec91032, type: 2}
   Personality: {fileID: 11400000, guid: 75a511658b2e544f4869d466b3f7ba5a, type: 2}
   basicAttackName: Corrupt Lash
   basicAttackPrefab: {fileID: 8046187082596486557, guid: 86fc56d41698d45bfbf27d043ca2944d, type: 3}
   basicAttackPrefabLifetime: 1
   spawnSfx: {fileID: 8300000, guid: be62ec1ca2e25b74eba7ef62dfb3efeb, type: 3}
+  baseMarketValue: 10
   description: A fully corrupted brute that radiates chaotic power and overwhelms
     foes through sheer instability.

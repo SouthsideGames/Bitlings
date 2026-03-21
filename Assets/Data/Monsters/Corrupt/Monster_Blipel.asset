@@ -42,11 +42,16 @@ MonoBehaviour:
   jobSkill: 0.95
   titleTrack: {fileID: 11400000, guid: 2d3eadafc145d4df1ba519250bad74bb, type: 2}
   defaultAlwaysOnTitles: []
-  ironTitles: []
+  ironTitles:
+  - {fileID: 11400000, guid: fc062370ec30fc948960aa9f57e28ca0, type: 2}
+  - {fileID: 11400000, guid: b4b91e64958e2c74e9518a6666d41da1, type: 2}
+  - {fileID: 11400000, guid: 98fe2dc7a9bfb82499dadbeeb4358491, type: 2}
+  - {fileID: 11400000, guid: 50f86e8bcde244fe3be7152a29fd6ffb, type: 2}
   Personality: {fileID: 11400000, guid: 75a511658b2e544f4869d466b3f7ba5a, type: 2}
   basicAttackName: Rot Jab
   basicAttackPrefab: {fileID: 8046187082596486557, guid: 86fc56d41698d45bfbf27d043ca2944d, type: 3}
   basicAttackPrefabLifetime: 1
   spawnSfx: {fileID: 8300000, guid: 30fbae210a737024ca3e6b69415b6715, type: 3}
+  baseMarketValue: 10
   description: A jittery corrupted hatchling that darts about erratically spreading
     decay through sharp

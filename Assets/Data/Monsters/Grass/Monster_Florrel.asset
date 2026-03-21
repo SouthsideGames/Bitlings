@@ -42,9 +42,16 @@ MonoBehaviour:
   jobSkill: 1
   titleTrack: {fileID: 11400000, guid: e79e3db84f26e4e94ad122be0ca238ab, type: 2}
   defaultAlwaysOnTitles: []
+  ironTitles:
+  - {fileID: 11400000, guid: 38989b60e59f0bb46a73ab52869b10ae, type: 2}
+  - {fileID: 11400000, guid: 85f453e42f65049eb9a10b26e0d57f52, type: 2}
+  - {fileID: 11400000, guid: f0e53950f2ecd1346ada80856c0f01df, type: 2}
+  - {fileID: 11400000, guid: 73cfafbf19fa66747833abdb2be1c2cd, type: 2}
   Personality: {fileID: 11400000, guid: d2d9ec6158abb40d2a7618ee71a9de06, type: 2}
   basicAttackName: Bloom Lash
   basicAttackPrefab: {fileID: 7147688047696861109, guid: 5287b95db783b4379b733d77af2cc458, type: 3}
   basicAttackPrefabLifetime: 1
+  spawnSfx: {fileID: 0}
+  baseMarketValue: 10
   description: Its petals harden into layered fronds allowing it to guard allies
     while lashing foes with controlled strikes.

@@ -42,9 +42,16 @@ MonoBehaviour:
   jobSkill: 0.95
   titleTrack: {fileID: 11400000, guid: 8f0c499bc6b704b438a735e7cbc45830, type: 2}
   defaultAlwaysOnTitles: []
+  ironTitles:
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
   Personality: {fileID: 11400000, guid: ab061081920b544089b918a9f1f3759b, type: 2}
   basicAttackName: Spark Jab
   basicAttackPrefab: {fileID: 4179996368917665753, guid: 77ce3f8bf17474b06ac473e26248a299, type: 3}
   basicAttackPrefabLifetime: 1
+  spawnSfx: {fileID: 0}
+  baseMarketValue: 10
   description: A jittery electric sprout that crackles with unstable energy darting
     in to shock foes before retreating.

@@ -42,11 +42,16 @@ MonoBehaviour:
   jobSkill: 1.15
   titleTrack: {fileID: 11400000, guid: 1a672e7bba74848cfb813699329c984f, type: 2}
   defaultAlwaysOnTitles: []
-  ironTitles: []
+  ironTitles:
+  - {fileID: 11400000, guid: a54fbab895dd9804c9cacbb8e8ce854c, type: 2}
+  - {fileID: 11400000, guid: 07319cbcf5d782c4c98300e9d2730a88, type: 2}
+  - {fileID: 11400000, guid: 40e02f1f6665b4983ab1d2f94f1d4a3f, type: 2}
+  - {fileID: 11400000, guid: 7316d61525a8543b9bd3f6f84fe72d11, type: 2}
   Personality: {fileID: 11400000, guid: 75a511658b2e544f4869d466b3f7ba5a, type: 2}
   basicAttackName: Ruin Bite
   basicAttackPrefab: {fileID: 8046187082596486557, guid: 86fc56d41698d45bfbf27d043ca2944d, type: 3}
   basicAttackPrefabLifetime: 1
   spawnSfx: {fileID: 8300000, guid: 91a592501fe19504b93530a375dff7a6, type: 3}
+  baseMarketValue: 10
   description: A savage corruption beast that gnaws through defenses its attacks
     growing more vicious as decay spreads across the battlefield.

@@ -42,11 +42,16 @@ MonoBehaviour:
   jobSkill: 1
   titleTrack: {fileID: 0}
   defaultAlwaysOnTitles: []
-  ironTitles: []
+  ironTitles:
+  - {fileID: 11400000, guid: a371bc492e827c94797e3461c1213414, type: 2}
+  - {fileID: 11400000, guid: c169f8806953a684a85f917d9746c60f, type: 2}
+  - {fileID: 11400000, guid: 23f98880f1341f545bc5b78a2c5424c3, type: 2}
+  - {fileID: 11400000, guid: 538374b3463384d4e9deeaec06551318, type: 2}
   Personality: {fileID: 11400000, guid: 225b50a30ca2b4463828b97ab1e08247, type: 2}
   basicAttackName: Endless Brood
   basicAttackPrefab: {fileID: 6777048211968024641, guid: 36482d8bd89710b4983cb69ab5a8cceb, type: 3}
   basicAttackPrefabLifetime: 1
   spawnSfx: {fileID: 8300000, guid: 07b2f9052c7ee1b47abdae49a574ba69, type: 3}
+  baseMarketValue: 10
   description: A nightmare hive mind that overwhelms foes through sheer numbers and
     relentless coordinated assault.

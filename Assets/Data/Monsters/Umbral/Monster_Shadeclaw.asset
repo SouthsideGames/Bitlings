@@ -42,9 +42,16 @@ MonoBehaviour:
   jobSkill: 1
   titleTrack: {fileID: 11400000, guid: 1b27e8147f1594a63aa41e6e3bb5ff56, type: 2}
   defaultAlwaysOnTitles: []
+  ironTitles:
+  - {fileID: 11400000, guid: df9109033861016428656f21d2cad8ea, type: 2}
+  - {fileID: 11400000, guid: 01abdc10d1a4b41e2b6ebdce1f312988, type: 2}
+  - {fileID: 11400000, guid: 686cc9ea05cccd847bbcccd5ddd3472c, type: 2}
+  - {fileID: 11400000, guid: a371bc492e827c94797e3461c1213414, type: 2}
   Personality: {fileID: 11400000, guid: 48288e9e78c65453781f793c8df03e90, type: 2}
   basicAttackName: Shadow Rend
   basicAttackPrefab: {fileID: 1424259663161806981, guid: bd2d781a7e4f84cb58aedda30af5d65d, type: 3}
   basicAttackPrefabLifetime: 1
+  spawnSfx: {fileID: 0}
+  baseMarketValue: 10
   description: A stalking umbral beast that crouches low and strikes with sweeping
     claws

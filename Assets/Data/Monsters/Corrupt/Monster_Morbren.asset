@@ -42,11 +42,16 @@ MonoBehaviour:
   jobSkill: 1
   titleTrack: {fileID: 11400000, guid: 19f416f9304a14196aa11eab4623edee, type: 2}
   defaultAlwaysOnTitles: []
-  ironTitles: []
+  ironTitles:
+  - {fileID: 11400000, guid: fc1a183c27a17b84b9c433e01048b0bb, type: 2}
+  - {fileID: 11400000, guid: 98fe2dc7a9bfb82499dadbeeb4358491, type: 2}
+  - {fileID: 11400000, guid: 148ef35dc09e0df47bd36ee844bac36e, type: 2}
+  - {fileID: 11400000, guid: e1aa94e2540df9a4b9e2e90c84ec8c3f, type: 2}
   Personality: {fileID: 11400000, guid: 225b50a30ca2b4463828b97ab1e08247, type: 2}
   basicAttackName: Blight Smash
   basicAttackPrefab: {fileID: 8046187082596486557, guid: 86fc56d41698d45bfbf27d043ca2944d, type: 3}
   basicAttackPrefabLifetime: 1
   spawnSfx: {fileID: 8300000, guid: 82c83a95f7cf69d4587537bbd580278a, type: 3}
+  baseMarketValue: 10
   description: A fully corrupted brute that thrives on chaos, smashing enemies with
     volatile force that grows more dangerous the longer it fights.

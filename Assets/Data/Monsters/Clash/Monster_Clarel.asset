@@ -42,11 +42,16 @@ MonoBehaviour:
   jobSkill: 0.95
   titleTrack: {fileID: 11400000, guid: 95bb973a227674b1184c491284efe31a, type: 2}
   defaultAlwaysOnTitles: []
-  ironTitles: []
+  ironTitles:
+  - {fileID: 11400000, guid: a54fbab895dd9804c9cacbb8e8ce854c, type: 2}
+  - {fileID: 11400000, guid: 148ef35dc09e0df47bd36ee844bac36e, type: 2}
+  - {fileID: 11400000, guid: 09255326cbe449342be8cb661424d7a3, type: 2}
+  - {fileID: 11400000, guid: 686cc9ea05cccd847bbcccd5ddd3472c, type: 2}
   Personality: {fileID: 11400000, guid: 3733616cf9f0f4dddb5bee9d6ba2952f, type: 2}
   basicAttackName: Impact Jab
   basicAttackPrefab: {fileID: 5406408022945852380, guid: a106796f95643465ab9883d4b5161f50, type: 3}
   basicAttackPrefabLifetime: 1
   spawnSfx: {fileID: 8300000, guid: a7da22239ab0aab4ba6a0cbcde45e3e0, type: 3}
+  baseMarketValue: 10
   description: A feisty clash brawler that charges straight in, favoring constant
     pressure over caution.

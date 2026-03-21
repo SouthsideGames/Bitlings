@@ -42,10 +42,15 @@ MonoBehaviour:
   jobSkill: 1
   titleTrack: {fileID: 11400000, guid: 12ad1b4e4180944e5a6ec2ed5a24cbc5, type: 2}
   defaultAlwaysOnTitles: []
-  ironTitles: []
+  ironTitles:
+  - {fileID: 11400000, guid: ff12e8c740a4a9347a02749d699d5ca9, type: 2}
+  - {fileID: 11400000, guid: 3440dff927958f142ab795273ab27580, type: 2}
+  - {fileID: 11400000, guid: b4b91e64958e2c74e9518a6666d41da1, type: 2}
+  - {fileID: 11400000, guid: e9beb77410c9b994793415fa9862de92, type: 2}
   Personality: {fileID: 11400000, guid: 75a511658b2e544f4869d466b3f7ba5a, type: 2}
   basicAttackName: Decay Crush
   basicAttackPrefab: {fileID: 8046187082596486557, guid: 86fc56d41698d45bfbf27d043ca2944d, type: 3}
   basicAttackPrefabLifetime: 1
   spawnSfx: {fileID: 8300000, guid: 46ce87fa8f8e25044972b74bc484d5b5, type: 3}
+  baseMarketValue: 10
   description: Its corruption fully blooms empowering heavy

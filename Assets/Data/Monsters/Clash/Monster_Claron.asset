@@ -42,11 +42,16 @@ MonoBehaviour:
   jobSkill: 1
   titleTrack: {fileID: 11400000, guid: facad7f1d6ab14a568bb7b14dd172969, type: 2}
   defaultAlwaysOnTitles: []
-  ironTitles: []
+  ironTitles:
+  - {fileID: 11400000, guid: a54fbab895dd9804c9cacbb8e8ce854c, type: 2}
+  - {fileID: 11400000, guid: 09255326cbe449342be8cb661424d7a3, type: 2}
+  - {fileID: 11400000, guid: 148ef35dc09e0df47bd36ee844bac36e, type: 2}
+  - {fileID: 11400000, guid: 2dcf835540e0e864d8e467fa7fd47610, type: 2}
   Personality: {fileID: 11400000, guid: e6aae7880a6944b05bc4da7d55e8fffd, type: 2}
   basicAttackName: Break Rush
   basicAttackPrefab: {fileID: 5406408022945852380, guid: a106796f95643465ab9883d4b5161f50, type: 3}
   basicAttackPrefabLifetime: 1
   spawnSfx: {fileID: 8300000, guid: 30814193ccc7faf4eba9e21eb77eca8f, type: 3}
+  baseMarketValue: 10
   description: A hardened clash fighter that builds momentum with every hit, driving
     foes back through sheer force.

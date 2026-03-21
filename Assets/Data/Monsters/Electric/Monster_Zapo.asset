@@ -42,9 +42,16 @@ MonoBehaviour:
   jobSkill: 1
   titleTrack: {fileID: 11400000, guid: 5c3e71afa7a4d43b5a49d241614d7666, type: 2}
   defaultAlwaysOnTitles: []
+  ironTitles:
+  - {fileID: 11400000, guid: 3da4dd895f4bd4ff9b4690ab28dbdc42, type: 2}
+  - {fileID: 11400000, guid: 2897bcb545bf47f4c93cf253bec91032, type: 2}
+  - {fileID: 11400000, guid: a289ace2a61ca0e47b454f4b80ebec49, type: 2}
+  - {fileID: 11400000, guid: 71652094aed89c948ae2a0cb846cf011, type: 2}
   Personality: {fileID: 11400000, guid: dc588633b46794883be5263b17376bf3, type: 2}
   basicAttackName: Volt Peck
   basicAttackPrefab: {fileID: 4179996368917665753, guid: 77ce3f8bf17474b06ac473e26248a299, type: 3}
   basicAttackPrefabLifetime: 1
+  spawnSfx: {fileID: 0}
+  baseMarketValue: 10
   description: A jittery electric creature that darts forward and delivers crackling
     strikes.

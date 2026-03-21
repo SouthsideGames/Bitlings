@@ -42,9 +42,16 @@ MonoBehaviour:
   jobSkill: 1
   titleTrack: {fileID: 11400000, guid: 7b8b59b8583a14872916db1ea9a4f457, type: 2}
   defaultAlwaysOnTitles: []
+  ironTitles:
+  - {fileID: 11400000, guid: 315a9ae2067a43a4b8f56d6f8627ddf6, type: 2}
+  - {fileID: 11400000, guid: 41cefaec9192a7443a1064fd5bc749be, type: 2}
+  - {fileID: 11400000, guid: 686cc9ea05cccd847bbcccd5ddd3472c, type: 2}
+  - {fileID: 11400000, guid: 7de4ba7a301fe405b9de30bfabc19762, type: 2}
   Personality: {fileID: 11400000, guid: 225b50a30ca2b4463828b97ab1e08247, type: 2}
   basicAttackName: Inferno Dive
   basicAttackPrefab: {fileID: 7446462880551948952, guid: 18696ea6ccccd974d902d9304c2b6b7e, type: 3}
   basicAttackPrefabLifetime: 1
+  spawnSfx: {fileID: 0}
+  baseMarketValue: 10
   description: A more developed wyrm that crashes into enemies from above, trading
     its own safety for explosive damage.

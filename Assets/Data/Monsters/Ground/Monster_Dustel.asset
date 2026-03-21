@@ -42,8 +42,15 @@ MonoBehaviour:
   jobSkill: 0.95
   titleTrack: {fileID: 11400000, guid: e7402bbf1f4cf4032b31a78b40b07b46, type: 2}
   defaultAlwaysOnTitles: []
+  ironTitles:
+  - {fileID: 11400000, guid: f0e53950f2ecd1346ada80856c0f01df, type: 2}
+  - {fileID: 11400000, guid: 86f49b74b91be4fbe8ab5df7421a5405, type: 2}
+  - {fileID: 11400000, guid: f0a22c228659c304fb9369327478aab9, type: 2}
+  - {fileID: 11400000, guid: 014cd17980e502c418a7ed232b26e215, type: 2}
   Personality: {fileID: 11400000, guid: 71fa3f6cb68214bca94496affd470944, type: 2}
   basicAttackName: Grain Bash
   basicAttackPrefab: {fileID: 8624645253036040332, guid: f03e702d7c9714bc2af48b5b17c93c88, type: 3}
   basicAttackPrefabLifetime: 1
+  spawnSfx: {fileID: 0}
+  baseMarketValue: 10
   description: A compact ground dweller that hardens loose soil into blunt

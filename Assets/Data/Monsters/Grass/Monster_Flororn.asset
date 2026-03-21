@@ -42,11 +42,16 @@ MonoBehaviour:
   jobSkill: 1.08
   titleTrack: {fileID: 11400000, guid: e618188c86c1347fc90ed4aca3873d9d, type: 2}
   defaultAlwaysOnTitles: []
-  ironTitles: []
+  ironTitles:
+  - {fileID: 11400000, guid: 7bca5a0fde2cd8047b5ae0787d2f1967, type: 2}
+  - {fileID: 11400000, guid: 73366473457d0834382b0bd06db81989, type: 2}
+  - {fileID: 11400000, guid: f0e53950f2ecd1346ada80856c0f01df, type: 2}
+  - {fileID: 11400000, guid: 638994d928ef74b0ca55ad0f631ad3eb, type: 2}
   Personality: {fileID: 11400000, guid: d2d9ec6158abb40d2a7618ee71a9de06, type: 2}
   basicAttackName: Bloom Guard
   basicAttackPrefab: {fileID: 7147688047696861109, guid: 5287b95db783b4379b733d77af2cc458, type: 3}
   basicAttackPrefabLifetime: 1
   spawnSfx: {fileID: 8300000, guid: 7b72b9bee4701314a9608efe9c3110d9, type: 3}
+  baseMarketValue: 10
   description: A mature forest guardian that shields allies and strikes back with
     controlled, verdant force.

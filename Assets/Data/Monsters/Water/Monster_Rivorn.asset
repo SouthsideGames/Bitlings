@@ -42,8 +42,14 @@ MonoBehaviour:
   jobSkill: 1
   titleTrack: {fileID: 11400000, guid: fe2e43b0b4afe4494a0378052bd4dba8, type: 2}
   defaultAlwaysOnTitles: []
+  ironTitles:
+  - {fileID: 11400000, guid: 6ad4157aacf2cb547878360fd54c3d1e, type: 2}
+  - {fileID: 11400000, guid: 13e0b9e8b7fc08847a05f89d3f7b6a17, type: 2}
+  - {fileID: 11400000, guid: e80217aa5b172e648949cf787505f387, type: 2}
   Personality: {fileID: 11400000, guid: f6f72aa846632454b97832d01d1b5c0c, type: 2}
   basicAttackName: Flow Slash
   basicAttackPrefab: {fileID: 7604281169824035565, guid: 4065dc449fe6fd94eb31f0e575b94514, type: 3}
   basicAttackPrefabLifetime: 1
+  spawnSfx: {fileID: 0}
+  baseMarketValue: 10
   description: Its movements grow smoother and more deliberate

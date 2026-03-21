@@ -42,11 +42,16 @@ MonoBehaviour:
   jobSkill: 0.95
   titleTrack: {fileID: 11400000, guid: 4408630b0d8e04857b73aeea71b2741f, type: 2}
   defaultAlwaysOnTitles: []
-  ironTitles: []
+  ironTitles:
+  - {fileID: 11400000, guid: 8235fcc5709c745c98bc11cba3cf6028, type: 2}
+  - {fileID: 11400000, guid: bb4a15e0396bd084dbbadece9d880b00, type: 2}
+  - {fileID: 11400000, guid: f0a22c228659c304fb9369327478aab9, type: 2}
+  - {fileID: 11400000, guid: 014cd17980e502c418a7ed232b26e215, type: 2}
   Personality: {fileID: 11400000, guid: 71fa3f6cb68214bca94496affd470944, type: 2}
   basicAttackName: Dust Peck
   basicAttackPrefab: {fileID: 8624645253036040332, guid: f03e702d7c9714bc2af48b5b17c93c88, type: 3}
   basicAttackPrefabLifetime: 1
   spawnSfx: {fileID: 8300000, guid: 4c11edd9ebc6aaf4292b0c1e68510816, type: 3}
+  baseMarketValue: 10
   description: A small burrowing critter that pops from the soil to strike before
     retreating underground.

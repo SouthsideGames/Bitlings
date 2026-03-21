@@ -42,11 +42,16 @@ MonoBehaviour:
   jobSkill: 1.15
   titleTrack: {fileID: 11400000, guid: b6dc1fd759a14407cbe096f1abdad92a, type: 2}
   defaultAlwaysOnTitles: []
-  ironTitles: []
+  ironTitles:
+  - {fileID: 11400000, guid: 0dd271ff6632da5489fb159cb0ef5948, type: 2}
+  - {fileID: 11400000, guid: c8bc65cc6d744a24dba1fa8b6205c3dc, type: 2}
+  - {fileID: 11400000, guid: 151d5269051bffb44a5357d26231c263, type: 2}
+  - {fileID: 11400000, guid: 66fed847ffa367443bbebde06158f9d1, type: 2}
   Personality: {fileID: 11400000, guid: 758625599ac8542bfa091e1bf5323fa2, type: 2}
   basicAttackName: Night Rend
   basicAttackPrefab: {fileID: 1424259663161806981, guid: bd2d781a7e4f84cb58aedda30af5d65d, type: 3}
   basicAttackPrefabLifetime: 1
   spawnSfx: {fileID: 8300000, guid: 03f36129c7a523d47876dab4686f9d34, type: 3}
+  baseMarketValue: 10
   description: An umbral hunter that exploits openings from the dark, striking hard
     before melting back into shadow.

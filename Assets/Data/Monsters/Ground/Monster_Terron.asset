@@ -42,9 +42,15 @@ MonoBehaviour:
   jobSkill: 1
   titleTrack: {fileID: 11400000, guid: 24307fc265fd646dc81568b55db1a518, type: 2}
   defaultAlwaysOnTitles: []
+  ironTitles:
+  - {fileID: 11400000, guid: 6ad4157aacf2cb547878360fd54c3d1e, type: 2}
+  - {fileID: 11400000, guid: f0a22c228659c304fb9369327478aab9, type: 2}
+  - {fileID: 11400000, guid: 014cd17980e502c418a7ed232b26e215, type: 2}
   Personality: {fileID: 11400000, guid: d2d9ec6158abb40d2a7618ee71a9de06, type: 2}
   basicAttackName: Earth Shove
   basicAttackPrefab: {fileID: 8624645253036040332, guid: f03e702d7c9714bc2af48b5b17c93c88, type: 3}
   basicAttackPrefabLifetime: 1
+  spawnSfx: {fileID: 0}
+  baseMarketValue: 10
   description: Its body compacts into heavier soil layers allowing stronger defensive
     pushes and crushing blows.

@@ -42,11 +42,16 @@ MonoBehaviour:
   jobSkill: 1.08
   titleTrack: {fileID: 11400000, guid: 2dd709c267f6a4be793947811793e601, type: 2}
   defaultAlwaysOnTitles: []
-  ironTitles: []
+  ironTitles:
+  - {fileID: 11400000, guid: 9fdb8ede4e4c461459e738834978e6ed, type: 2}
+  - {fileID: 11400000, guid: a9d1c8c346b292e4f9745fb659bd956a, type: 2}
+  - {fileID: 11400000, guid: 8376b3915071cc448b1f948ff06b49c6, type: 2}
+  - {fileID: 11400000, guid: f0e53950f2ecd1346ada80856c0f01df, type: 2}
   Personality: {fileID: 11400000, guid: 2e75af56469454f81aab48433f975b34, type: 2}
   basicAttackName: Canopy Crush
   basicAttackPrefab: {fileID: 7147688047696861109, guid: 5287b95db783b4379b733d77af2cc458, type: 3}
   basicAttackPrefabLifetime: 1
   spawnSfx: {fileID: 8300000, guid: 213dd4c22a6301744b3be3aaf2789e26, type: 3}
+  baseMarketValue: 10
   description: Its foliage hardens into layered growth overwhelming enemies with
     sustained

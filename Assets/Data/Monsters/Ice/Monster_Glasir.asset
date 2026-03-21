@@ -42,11 +42,16 @@ MonoBehaviour:
   jobSkill: 0.95
   titleTrack: {fileID: 11400000, guid: 2d2f1dee1dd014435a512368311ce70e, type: 2}
   defaultAlwaysOnTitles: []
-  ironTitles: []
+  ironTitles:
+  - {fileID: 11400000, guid: 60222f44ab8094c67a3f23fbe9122bb3, type: 2}
+  - {fileID: 11400000, guid: f0e53950f2ecd1346ada80856c0f01df, type: 2}
+  - {fileID: 11400000, guid: 9fe46c88564cbbf42982a61140647f9b, type: 2}
+  - {fileID: 11400000, guid: e1b2ea88c1633614a8a17b2abf5f5e7d, type: 2}
   Personality: {fileID: 11400000, guid: 98718ef51e5304ffaa8fe4497a8c22d4, type: 2}
   basicAttackName: Frost Peck
   basicAttackPrefab: {fileID: 2650955928365913985, guid: f4836eb6d259942b9abe6e0a520af59f, type: 3}
   basicAttackPrefabLifetime: 1
   spawnSfx: {fileID: 8300000, guid: b0fc28186ece50443a621015fb7d5ced, type: 3}
+  baseMarketValue: 10
   description: A cautious ice dweller that hardens its body against attacks while
     chipping away at foes with chilling strikes.

@@ -42,11 +42,16 @@ MonoBehaviour:
   jobSkill: 1.15
   titleTrack: {fileID: 11400000, guid: 2feb93ba426374a1299cb10d7685b940, type: 2}
   defaultAlwaysOnTitles: []
-  ironTitles: []
+  ironTitles:
+  - {fileID: 11400000, guid: c9ab255abda8bf34ba15c77e72411432, type: 2}
+  - {fileID: 11400000, guid: ff3c014394236a244857210449b85291, type: 2}
+  - {fileID: 11400000, guid: e80217aa5b172e648949cf787505f387, type: 2}
+  - {fileID: 11400000, guid: f4a0fda05a582ea44b10c63ce91157ef, type: 2}
   Personality: {fileID: 11400000, guid: f6f72aa846632454b97832d01d1b5c0c, type: 2}
   basicAttackName: Wave Nip
   basicAttackPrefab: {fileID: 7604281169824035565, guid: 4065dc449fe6fd94eb31f0e575b94514, type: 3}
   basicAttackPrefabLifetime: 1
   spawnSfx: {fileID: 8300000, guid: 9e62a60cd3f24e84a99e850684312f4b, type: 3}
+  baseMarketValue: 10
   description: A mature tide guardian that holds the line and mends allies through
     endless currents.

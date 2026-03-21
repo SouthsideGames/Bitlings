@@ -42,9 +42,16 @@ MonoBehaviour:
   jobSkill: 0.95
   titleTrack: {fileID: 11400000, guid: 4590f42e0b1864a98b29f9a2c9aa8f43, type: 2}
   defaultAlwaysOnTitles: []
+  ironTitles:
+  - {fileID: 11400000, guid: a289ace2a61ca0e47b454f4b80ebec49, type: 2}
+  - {fileID: 11400000, guid: a1f2ec75ecd5b447bb439bb8619bfa03, type: 2}
+  - {fileID: 11400000, guid: 665e3ce08b7d386478b3de0bebb8e3ec, type: 2}
+  - {fileID: 11400000, guid: fe67a4187cf7add4289106de72912f92, type: 2}
   Personality: {fileID: 11400000, guid: ab061081920b544089b918a9f1f3759b, type: 2}
   basicAttackName: Spark Tap
   basicAttackPrefab: {fileID: 4179996368917665753, guid: 77ce3f8bf17474b06ac473e26248a299, type: 3}
   basicAttackPrefabLifetime: 1
+  spawnSfx: {fileID: 0}
+  baseMarketValue: 10
   description: A floating electric creature that crackles softly jabbing foes with
     quick bursts of static energy.

@@ -42,9 +42,16 @@ MonoBehaviour:
   jobSkill: 0.95
   titleTrack: {fileID: 11400000, guid: 567ea9e182f7d42dd841db6ea688ff41, type: 2}
   defaultAlwaysOnTitles: []
+  ironTitles:
+  - {fileID: 11400000, guid: a371bc492e827c94797e3461c1213414, type: 2}
+  - {fileID: 11400000, guid: 8235fcc5709c745c98bc11cba3cf6028, type: 2}
+  - {fileID: 11400000, guid: a1f2ec75ecd5b447bb439bb8619bfa03, type: 2}
+  - {fileID: 11400000, guid: a289ace2a61ca0e47b454f4b80ebec49, type: 2}
   Personality: {fileID: 11400000, guid: ab061081920b544089b918a9f1f3759b, type: 2}
   basicAttackName: Breeze Peck
   basicAttackPrefab: {fileID: 5988486418563103347, guid: 310c8d56e543d4cd4ae9c55fa6047252, type: 3}
   basicAttackPrefabLifetime: 1
+  spawnSfx: {fileID: 0}
+  baseMarketValue: 10
   description: A light-bodied sky creature that glides effortlessly striking with
     quick pecks before riding the wind away.

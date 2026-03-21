@@ -42,9 +42,16 @@ MonoBehaviour:
   jobSkill: 1.08
   titleTrack: {fileID: 11400000, guid: a73827d5cbcbd490cacc06d7f298d4a6, type: 2}
   defaultAlwaysOnTitles: []
+  ironTitles:
+  - {fileID: 11400000, guid: 9fdb8ede4e4c461459e738834978e6ed, type: 2}
+  - {fileID: 11400000, guid: a9d1c8c346b292e4f9745fb659bd956a, type: 2}
+  - {fileID: 11400000, guid: 6b544265ac67740279a102bb686f56c3, type: 2}
+  - {fileID: 11400000, guid: 76e4e9eb5eb3d374fafdce90c072396e, type: 2}
   Personality: {fileID: 11400000, guid: a31b270cc22594368bd4541ee042d278, type: 2}
   basicAttackName: Seismic Ram
   basicAttackPrefab: {fileID: 8624645253036040332, guid: f03e702d7c9714bc2af48b5b17c93c88, type: 3}
   basicAttackPrefabLifetime: 1
+  spawnSfx: {fileID: 0}
+  baseMarketValue: 10
   description: A fully hardened ground beast that charges forward shaking the earth
     with devastating impacts.

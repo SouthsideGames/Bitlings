@@ -42,11 +42,16 @@ MonoBehaviour:
   jobSkill: 1
   titleTrack: {fileID: 11400000, guid: 9989387de2c674c7dab975fd3777c0d6, type: 2}
   defaultAlwaysOnTitles: []
-  ironTitles: []
+  ironTitles:
+  - {fileID: 11400000, guid: a54fbab895dd9804c9cacbb8e8ce854c, type: 2}
+  - {fileID: 11400000, guid: 07319cbcf5d782c4c98300e9d2730a88, type: 2}
+  - {fileID: 11400000, guid: 40e02f1f6665b4983ab1d2f94f1d4a3f, type: 2}
+  - {fileID: 11400000, guid: 7316d61525a8543b9bd3f6f84fe72d11, type: 2}
   Personality: {fileID: 11400000, guid: 1bd4805a0ba8f476b9f7b480b0cbb31d, type: 2}
   basicAttackName: Blight Snap
   basicAttackPrefab: {fileID: 8046187082596486557, guid: 86fc56d41698d45bfbf27d043ca2944d, type: 3}
   basicAttackPrefabLifetime: 1
   spawnSfx: {fileID: 8300000, guid: 30d072d9a0764ea43a0c8a56c4c0299f, type: 3}
+  baseMarketValue: 10
   description: Its corruption deepens empowering vicious snapping attacks that grow
     more dangerous as rot spreads.

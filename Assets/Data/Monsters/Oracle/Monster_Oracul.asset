@@ -42,8 +42,15 @@ MonoBehaviour:
   jobSkill: 1
   titleTrack: {fileID: 11400000, guid: 83dae8c1a7b884df0a100b435db13cd7, type: 2}
   defaultAlwaysOnTitles: []
+  ironTitles:
+  - {fileID: 11400000, guid: 85f453e42f65049eb9a10b26e0d57f52, type: 2}
+  - {fileID: 11400000, guid: f81db28d7007ef941ac6cadc20602f1f, type: 2}
+  - {fileID: 11400000, guid: 68bbd476dbc9dea4485f609fc74327e0, type: 2}
+  - {fileID: 11400000, guid: bcd8786d1ce34b140bfe92358a0b2277, type: 2}
   Personality: {fileID: 11400000, guid: 8fb41ae5d07a9422888bd80d80e2fbde, type: 2}
   basicAttackName: Foresight Jab
   basicAttackPrefab: {fileID: 7907104310462883121, guid: 37212b887c61ad84eacd87133a8a9e9d, type: 3}
   basicAttackPrefabLifetime: 1
+  spawnSfx: {fileID: 0}
+  baseMarketValue: 10
   description: A focused oracle watcher that reads subtle shifts

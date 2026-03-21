@@ -42,11 +42,16 @@ MonoBehaviour:
   jobSkill: 1.15
   titleTrack: {fileID: 11400000, guid: e853a6ee1ac434ab1a195cfc66d74a23, type: 2}
   defaultAlwaysOnTitles: []
-  ironTitles: []
+  ironTitles:
+  - {fileID: 11400000, guid: 6e10fbd152aafe44e8941962d607bd23, type: 2}
+  - {fileID: 11400000, guid: 8727d226a78964eb0bd7541828073c17, type: 2}
+  - {fileID: 11400000, guid: 7de30775125ec154fa78453e4c64d03b, type: 2}
+  - {fileID: 11400000, guid: a1f2ec75ecd5b447bb439bb8619bfa03, type: 2}
   Personality: {fileID: 11400000, guid: 8a3e57b479f5246d38cd9b71c25a27a1, type: 2}
   basicAttackName: Fate Rend
   basicAttackPrefab: {fileID: 7907104310462883121, guid: 37212b887c61ad84eacd87133a8a9e9d, type: 3}
   basicAttackPrefabLifetime: 1
   spawnSfx: {fileID: 8300000, guid: 05f1e3fa6b9d7e8438bdfac8566a8661, type: 3}
+  baseMarketValue: 10
   description: A powerful oracle seer that bends battle flow through near-perfect
     prediction and decisive inevitable strikes.

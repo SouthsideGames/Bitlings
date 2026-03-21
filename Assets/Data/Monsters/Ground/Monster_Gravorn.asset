@@ -42,9 +42,16 @@ MonoBehaviour:
   jobSkill: 1.08
   titleTrack: {fileID: 11400000, guid: f8ca68ce5b1a3416eb3c79f7b571cc6b, type: 2}
   defaultAlwaysOnTitles: []
+  ironTitles:
+  - {fileID: 11400000, guid: 50f86e8bcde244fe3be7152a29fd6ffb, type: 2}
+  - {fileID: 11400000, guid: 5001a300d719b8547a739406258897f8, type: 2}
+  - {fileID: 11400000, guid: 0294c4c120ab8449fa0d1c0c7a9905fe, type: 2}
+  - {fileID: 11400000, guid: c03f3edb77d024daa813632889e0a044, type: 2}
   Personality: {fileID: 11400000, guid: 51b0055ca9f5a4ccbb97fd51ef39fae1, type: 2}
   basicAttackName: Crush Tecton
   basicAttackPrefab: {fileID: 8624645253036040332, guid: f03e702d7c9714bc2af48b5b17c93c88, type: 3}
   basicAttackPrefabLifetime: 1
+  spawnSfx: {fileID: 0}
+  baseMarketValue: 10
   description: A dominant ground beast that anchors itself firmly, striking back
     with crushing, tectonic force.

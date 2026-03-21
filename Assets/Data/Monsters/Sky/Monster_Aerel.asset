@@ -42,8 +42,15 @@ MonoBehaviour:
   jobSkill: 1
   titleTrack: {fileID: 11400000, guid: d81e5cbc7c2834ec9ae901912aefe66e, type: 2}
   defaultAlwaysOnTitles: []
+  ironTitles:
+  - {fileID: 11400000, guid: 85f453e42f65049eb9a10b26e0d57f52, type: 2}
+  - {fileID: 11400000, guid: f81db28d7007ef941ac6cadc20602f1f, type: 2}
+  - {fileID: 11400000, guid: a289ace2a61ca0e47b454f4b80ebec49, type: 2}
+  - {fileID: 11400000, guid: bcd8786d1ce34b140bfe92358a0b2277, type: 2}
   Personality: {fileID: 11400000, guid: dc588633b46794883be5263b17376bf3, type: 2}
   basicAttackName: Gale Peck
   basicAttackPrefab: {fileID: 5988486418563103347, guid: 310c8d56e543d4cd4ae9c55fa6047252, type: 3}
   basicAttackPrefabLifetime: 1
+  spawnSfx: {fileID: 0}
+  baseMarketValue: 10
   description: A nimble sky flier that swoops rapidly

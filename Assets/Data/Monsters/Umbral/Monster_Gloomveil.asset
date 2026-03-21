@@ -42,9 +42,16 @@ MonoBehaviour:
   jobSkill: 1.08
   titleTrack: {fileID: 11400000, guid: a473ed3f9d2f94464a8844329c188b11, type: 2}
   defaultAlwaysOnTitles: []
+  ironTitles:
+  - {fileID: 11400000, guid: 85f453e42f65049eb9a10b26e0d57f52, type: 2}
+  - {fileID: 11400000, guid: b4997c2fe7d4a1b43bc869bfcb9d1064, type: 2}
+  - {fileID: 11400000, guid: fe67a4187cf7add4289106de72912f92, type: 2}
+  - {fileID: 11400000, guid: f0a22c228659c304fb9369327478aab9, type: 2}
   Personality: {fileID: 11400000, guid: 48288e9e78c65453781f793c8df03e90, type: 2}
   basicAttackName: Veil Strike
   basicAttackPrefab: {fileID: 1424259663161806981, guid: bd2d781a7e4f84cb58aedda30af5d65d, type: 3}
   basicAttackPrefabLifetime: 1
+  spawnSfx: {fileID: 0}
+  baseMarketValue: 10
   description: A refined umbral predator that slips between shadows exploiting openings
     with precise

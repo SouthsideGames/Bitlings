@@ -42,9 +42,16 @@ MonoBehaviour:
   jobSkill: 1
   titleTrack: {fileID: 11400000, guid: e63249542137b49a4ada2ddcdc6764eb, type: 2}
   defaultAlwaysOnTitles: []
+  ironTitles:
+  - {fileID: 11400000, guid: f0e53950f2ecd1346ada80856c0f01df, type: 2}
+  - {fileID: 11400000, guid: 25b585674c120a4478246cf717f24c8f, type: 2}
+  - {fileID: 11400000, guid: 8376b3915071cc448b1f948ff06b49c6, type: 2}
+  - {fileID: 11400000, guid: ff12e8c740a4a9347a02749d699d5ca9, type: 2}
   Personality: {fileID: 11400000, guid: f6f72aa846632454b97832d01d1b5c0c, type: 2}
   basicAttackName: Vine Lash
   basicAttackPrefab: {fileID: 7147688047696861109, guid: 5287b95db783b4379b733d77af2cc458, type: 3}
   basicAttackPrefabLifetime: 1
+  spawnSfx: {fileID: 0}
+  baseMarketValue: 10
   description: Its body thickens with vines, offering stronger protection and steadier
     healing presence.

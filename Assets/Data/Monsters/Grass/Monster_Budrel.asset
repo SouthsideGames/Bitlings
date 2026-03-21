@@ -42,11 +42,16 @@ MonoBehaviour:
   jobSkill: 0.95
   titleTrack: {fileID: 11400000, guid: ef117207033454887a7ed73339a94864, type: 2}
   defaultAlwaysOnTitles: []
-  ironTitles: []
+  ironTitles:
+  - {fileID: 11400000, guid: 649d68a9f3cc259498a168b3628e9a2c, type: 2}
+  - {fileID: 11400000, guid: 09c74caed514bcd48a90735e9bb192d4, type: 2}
+  - {fileID: 11400000, guid: 8376b3915071cc448b1f948ff06b49c6, type: 2}
+  - {fileID: 11400000, guid: f0e53950f2ecd1346ada80856c0f01df, type: 2}
   Personality: {fileID: 11400000, guid: f6f72aa846632454b97832d01d1b5c0c, type: 2}
   basicAttackName: Leaf Peck
   basicAttackPrefab: {fileID: 7147688047696861109, guid: 5287b95db783b4379b733d77af2cc458, type: 3}
   basicAttackPrefabLifetime: 1
   spawnSfx: {fileID: 8300000, guid: 15b95e78d2608684dae1a5ff2e954064, type: 3}
+  baseMarketValue: 10
   description: A gentle sprout creature that supports allies while pecking foes with
     hardened leaves.

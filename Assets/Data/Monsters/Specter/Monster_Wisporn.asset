@@ -42,9 +42,16 @@ MonoBehaviour:
   jobSkill: 1
   titleTrack: {fileID: 11400000, guid: 12881520f9d744ee78e7f6034d6f1b70, type: 2}
   defaultAlwaysOnTitles: []
+  ironTitles:
+  - {fileID: 11400000, guid: 71652094aed89c948ae2a0cb846cf011, type: 2}
+  - {fileID: 11400000, guid: fe67a4187cf7add4289106de72912f92, type: 2}
+  - {fileID: 11400000, guid: c2f0fdd5e9fcb25498ae79caf77583c0, type: 2}
+  - {fileID: 11400000, guid: a371bc492e827c94797e3461c1213414, type: 2}
   Personality: {fileID: 11400000, guid: 48288e9e78c65453781f793c8df03e90, type: 2}
   basicAttackName: Veil Tap
   basicAttackPrefab: {fileID: 9101927626726485638, guid: 257dd9ab5e3cf0544a679d2e444f8d35, type: 3}
   basicAttackPrefabLifetime: 1
+  spawnSfx: {fileID: 0}
+  baseMarketValue: 10
   description: A drifting specter that flickers unpredictably draining foes with
     soft but persistent ghostly strikes.

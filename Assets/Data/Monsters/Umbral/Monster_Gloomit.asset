@@ -42,9 +42,16 @@ MonoBehaviour:
   jobSkill: 1
   titleTrack: {fileID: 11400000, guid: 292bf471637fc4483955d041aa38d328, type: 2}
   defaultAlwaysOnTitles: []
+  ironTitles:
+  - {fileID: 11400000, guid: a371bc492e827c94797e3461c1213414, type: 2}
+  - {fileID: 11400000, guid: 41cefaec9192a7443a1064fd5bc749be, type: 2}
+  - {fileID: 11400000, guid: fe67a4187cf7add4289106de72912f92, type: 2}
+  - {fileID: 11400000, guid: 7bca5a0fde2cd8047b5ae0787d2f1967, type: 2}
   Personality: {fileID: 11400000, guid: 48288e9e78c65453781f793c8df03e90, type: 2}
   basicAttackName: Night Jab
   basicAttackPrefab: {fileID: 1424259663161806981, guid: bd2d781a7e4f84cb58aedda30af5d65d, type: 3}
   basicAttackPrefabLifetime: 1
+  spawnSfx: {fileID: 0}
+  baseMarketValue: 10
   description: A young umbral stalker that tests its prey lashing out cautiously
     from pools of darkness.

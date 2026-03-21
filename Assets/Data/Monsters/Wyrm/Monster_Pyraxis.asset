@@ -42,11 +42,16 @@ MonoBehaviour:
   jobSkill: 1.22
   titleTrack: {fileID: 11400000, guid: e004035262d134338932f384378921de, type: 2}
   defaultAlwaysOnTitles: []
-  ironTitles: []
+  ironTitles:
+  - {fileID: 11400000, guid: 5c56ea95bc0f6d84387cd5d1545e59e7, type: 2}
+  - {fileID: 11400000, guid: 9fe46c88564cbbf42982a61140647f9b, type: 2}
+  - {fileID: 11400000, guid: db8245ee0d70343259acea6e4eb79949, type: 2}
+  - {fileID: 11400000, guid: 19a10ce49a5973d4a82d9e772ce9db80, type: 2}
   Personality: {fileID: 11400000, guid: 38ced003b48194272ab4cfa8cd9c5d01, type: 2}
   basicAttackName: Cataclysm Bite
   basicAttackPrefab: {fileID: 7446462880551948952, guid: 18696ea6ccccd974d902d9304c2b6b7e, type: 3}
   basicAttackPrefabLifetime: 1
   spawnSfx: {fileID: 8300000, guid: fe5e0e0f633e05f44840a89ac634cac9, type: 3}
+  baseMarketValue: 10
   description: A legendary wyrm whose focused, devastating strikes leave scorched
     ruin in their wake, ending battles in brutal, decisive blows.

@@ -42,9 +42,16 @@ MonoBehaviour:
   jobSkill: 1
   titleTrack: {fileID: 11400000, guid: 042d442e0244641abbe70b29050e321d, type: 2}
   defaultAlwaysOnTitles: []
+  ironTitles:
+  - {fileID: 11400000, guid: db8245ee0d70343259acea6e4eb79949, type: 2}
+  - {fileID: 11400000, guid: 686cc9ea05cccd847bbcccd5ddd3472c, type: 2}
+  - {fileID: 11400000, guid: 41cefaec9192a7443a1064fd5bc749be, type: 2}
+  - {fileID: 11400000, guid: fbfad8754c66b3b4b9d57fb2e132f975, type: 2}
   Personality: {fileID: 11400000, guid: 3733616cf9f0f4dddb5bee9d6ba2952f, type: 2}
   basicAttackName: Flame Snap
   basicAttackPrefab: {fileID: 7446462880551948952, guid: 18696ea6ccccd974d902d9304c2b6b7e, type: 3}
   basicAttackPrefabLifetime: 1
+  spawnSfx: {fileID: 0}
+  baseMarketValue: 10
   description: A restless young wyrm that lunges aggressively scorching enemies with
     reckless
