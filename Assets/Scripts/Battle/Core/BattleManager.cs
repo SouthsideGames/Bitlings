@@ -580,6 +580,7 @@ public partial class BattleManager : MonoBehaviour
     void OnDestroy()
     {
         UnbindBenchButtons();
+        UnsubscribeTitleEffects();
     }
 
     private void RebindBenchButtons()
@@ -1513,8 +1514,26 @@ public partial class BattleManager : MonoBehaviour
     public void TryAddHPToActive(float amount)
     {
         float curMax = GetFinalMaxHPForIndex(activeIndex);
-        teamHP[activeIndex] = Mathf.Clamp(teamHP[activeIndex] + amount, 0f, curMax);
+        float before = teamHP[activeIndex];
+        teamHP[activeIndex] = Mathf.Clamp(before + amount, 0f, curMax);
+        float overheal = Mathf.Max(0f, amount - (teamHP[activeIndex] - before));
         ClampAndPushActiveHP();
+
+        // Overheal → shield conversion via ShieldInteractionTitleSO
+        if (overheal > 0f)
+        {
+            try
+            {
+                string ownerId = GetTeamTitleIdSafe(activeIndex);
+                float shieldGain = TitlesAdapter.GetOverhealToShieldAmount(ownerId, overheal);
+                if (shieldGain > 0f && shieldHP != null && activeIndex >= 0 && activeIndex < shieldHP.Length)
+                {
+                    shieldHP[activeIndex] += shieldGain;
+                    ClampAndPushActiveHP();
+                }
+            }
+            catch (System.Exception ex) { Debug.LogException(ex); }
+        }
     }
 
 

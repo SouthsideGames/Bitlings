@@ -505,4 +505,110 @@ public static class TitlesAdapter
         return 1f;
     }
 
+    // ─────────────────────────────────────────────────────────────────────────────
+    // OnEventTriggerTitleSO effect bridge
+    // ─────────────────────────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// BattleManager subscribes to this to apply title-driven effects
+    /// (shield, heal, temp buff) during battle.
+    /// </summary>
+    public static event Action<TitleEffectRequest> OnTitleEffectRequested;
+
+    /// <summary>
+    /// Called by TitleManager when an OnEventTriggerTitleSO passes its
+    /// trigger check, chance roll, and limit gate.
+    /// </summary>
+    internal static void RequestTitleEffect(TitleEffectRequest req)
+    {
+        try { OnTitleEffectRequested?.Invoke(req); }
+        catch (Exception ex) { UnityEngine.Debug.LogException(ex); }
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────────
+    // Additional lifecycle hooks for OnEventTriggerTitleSO
+    // ─────────────────────────────────────────────────────────────────────────────
+
+    public static void OnKill(string killerId)
+    {
+        var rt = Runtime;
+        if (rt == null || string.IsNullOrEmpty(killerId)) return;
+        rt.OnKill(killerId);
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────────
+    // StatusApplyTitleSO effect bridge
+    // ─────────────────────────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// BattleManager subscribes to this to apply title-driven status effects.
+    /// </summary>
+    public static event Action<TitleStatusRequest> OnTitleStatusRequested;
+
+    /// <summary>
+    /// Called by TitleManager when a StatusApplyTitleSO passes its
+    /// trigger check, chance roll, and limit gate.
+    /// </summary>
+    internal static void RequestTitleStatus(TitleStatusRequest req)
+    {
+        try { OnTitleStatusRequested?.Invoke(req); }
+        catch (Exception ex) { UnityEngine.Debug.LogException(ex); }
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────────
+    // SynergyAmplifierTitleSO helper
+    // ─────────────────────────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Mutates a resolved synergy ApplyCommand in-place based on all equipped
+    /// SynergyAmplifierTitleSO titles on the given combatant.
+    /// Safe to call when TitleManager is null (no-op).
+    /// </summary>
+    public static void AmplifySynergyCommand(string combatantId, SynergyResolver.ApplyCommand cmd)
+    {
+        var rt = Runtime;
+        if (rt == null) return;
+        rt.AmplifySynergyCommand(combatantId, cmd);
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────────
+    // TeamAuraBattleTitleSO helpers
+    // ─────────────────────────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Returns the combined incoming damage reduction % from team auras (0..1).
+    /// </summary>
+    public static float GetTeamAuraDamageReduction(string targetId, in TitleContext ctx)
+    {
+        var rt = Runtime;
+        if (rt == null) return 0f;
+        return rt.GetTeamAuraDamageReduction(targetId, in ctx);
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────────
+    // ShieldInteractionTitleSO helpers
+    // ─────────────────────────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Returns how much shield to gain from the given overheal amount.
+    /// Safe to call when TitleManager is null (returns 0).
+    /// </summary>
+    public static float GetOverhealToShieldAmount(string combatantId, float overhealAmount)
+    {
+        var rt = Runtime;
+        if (rt == null || overhealAmount <= 0f) return 0f;
+        return rt.GetOverhealToShieldAmount(combatantId, overhealAmount);
+    }
+
+    /// <summary>
+    /// Called when a combatant's total shield drops from >0 to 0.
+    /// Routes to TitleManager to process ShieldInteractionTitleSO (EffectOnShieldBreak).
+    /// </summary>
+    public static void OnPlayerShieldBroke(string combatantId)
+    {
+        var rt = Runtime;
+        if (rt == null || string.IsNullOrEmpty(combatantId)) return;
+        rt.ProcessShieldBreak(combatantId);
+    }
+
 }

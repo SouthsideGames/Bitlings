@@ -2046,11 +2046,11 @@ public void SetGuard(BattleFeedbackSide side, bool on)
         float wCur = _battleManager.GetWildCurHP();
         float wMax = _battleManager.GetWildMaxHP();
 
-        // IMPORTANT: Always include shield pools here.
+        // IMPORTANT: Always include ALL shield pools here (regular + title shields).
         // A common UI pattern in this project is to emit a UIRefreshHP event after micro-juice.
         // If this refresh omits shield data, the (+Shield) suffix will appear briefly then get wiped.
-        int pShield = _battleManager.GetActivePlayerTitleShieldTotal();
-        int wShield = _battleManager.GetWildTitleShieldTotal();
+        int pShield = _battleManager.GetActivePlayerShieldTotal();
+        int wShield = _battleManager.GetWildShieldTotal();
 
         SetHPBars(pCur, pMax, wCur, wMax);
         SetHPTexts(pCur, pMax, wCur, wMax, pShield, wShield);

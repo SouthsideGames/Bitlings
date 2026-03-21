@@ -14,6 +14,9 @@ public partial class BattleManager : MonoBehaviour
     // ─────────────────────────────────────────────────────────────
     private void ApplyBattleStartTitles()
     {
+        // Subscribe to title effect requests (idempotent — won't double-subscribe)
+        SubscribeTitleEffects();
+
         // Player (active slot)
         try
         {
@@ -448,6 +451,113 @@ public partial class BattleManager : MonoBehaviour
 
                 DevLog.Log($"  • [{i}] {id} {t.name} ({t.GetType().Name}){extra}");
             }
+        }
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // OnEventTriggerTitleSO — effect handling
+    // ─────────────────────────────────────────────────────────────
+
+    private bool _titleEffectSubscribed;
+
+    private void SubscribeTitleEffects()
+    {
+        if (_titleEffectSubscribed) return;
+        TitlesAdapter.OnTitleEffectRequested += HandleTitleEffect;
+        TitlesAdapter.OnTitleStatusRequested += HandleTitleStatus;
+        _titleEffectSubscribed = true;
+    }
+
+    private void UnsubscribeTitleEffects()
+    {
+        if (!_titleEffectSubscribed) return;
+        TitlesAdapter.OnTitleEffectRequested -= HandleTitleEffect;
+        TitlesAdapter.OnTitleStatusRequested -= HandleTitleStatus;
+        _titleEffectSubscribed = false;
+    }
+
+    private void HandleTitleEffect(TitleEffectRequest req)
+    {
+        try
+        {
+            switch (req.effect)
+            {
+                case TitleEffectKind.GainFlatShield:
+                {
+                    if (shieldHP == null || activeIndex < 0 || activeIndex >= shieldHP.Length) break;
+                    float add = Mathf.Max(0f, req.value);
+                    shieldHP[activeIndex] += add;
+                    BattleLogger.LogTitleActivation(req.ownerDisplayName, req.titleDisplayName, $"+{Mathf.RoundToInt(add)} shield");
+                    Debug.Log($"[OnEventTrigger] EFFECT: {req.ownerDisplayName} gained {Mathf.RoundToInt(add)} flat shield (total {Mathf.RoundToInt(shieldHP[activeIndex])})");
+                    ClampAndPushActiveHP();
+                    break;
+                }
+                case TitleEffectKind.HealFlat:
+                {
+                    float heal = Mathf.Max(0f, req.value);
+                    TryAddHPToActive(heal);
+                    BattleLogger.LogTitleActivation(req.ownerDisplayName, req.titleDisplayName, $"+{Mathf.RoundToInt(heal)} HP");
+                    Debug.Log($"[OnEventTrigger] EFFECT: {req.ownerDisplayName} healed {Mathf.RoundToInt(heal)} flat HP");
+                    break;
+                }
+                case TitleEffectKind.HealPercentMaxHp:
+                {
+                    float maxHp = GetFinalMaxHPForIndex(activeIndex);
+                    float heal = Mathf.Max(0f, maxHp * (req.value / 100f));
+                    TryAddHPToActive(heal);
+                    BattleLogger.LogTitleActivation(req.ownerDisplayName, req.titleDisplayName, $"+{Mathf.RoundToInt(heal)} HP ({req.value:F0}% maxHP)");
+                    Debug.Log($"[OnEventTrigger] EFFECT: {req.ownerDisplayName} healed {Mathf.RoundToInt(heal)} HP ({req.value:F0}% of {Mathf.RoundToInt(maxHp)} maxHP)");
+                    break;
+                }
+                case TitleEffectKind.GainTempStatBuff:
+                {
+                    if (BattleTempBuffs.I == null) break;
+                    int bonus = Mathf.Max(0, Mathf.RoundToInt(req.value));
+                    float dur = Mathf.Max(0.1f, req.buffDurationSeconds);
+                    switch (req.stat)
+                    {
+                        case BattleStatKind.ATK: BattleTempBuffs.I.ActivatePlayerAtkBonus(bonus, dur); break;
+                        case BattleStatKind.DEF: BattleTempBuffs.I.ActivatePlayerDefenseBonus(bonus, dur); break;
+                        case BattleStatKind.SPD: BattleTempBuffs.I.ActivatePlayerSpeedBonus(bonus, dur); break;
+                        case BattleStatKind.HP:  BattleTempBuffs.I.ActivatePlayerHPBonus(bonus, dur); break;
+                    }
+                    BattleLogger.LogTitleActivation(req.ownerDisplayName, req.titleDisplayName, $"+{bonus} {req.stat} for {dur:F1}s");
+                    Debug.Log($"[OnEventTrigger] EFFECT: {req.ownerDisplayName} gained +{bonus} {req.stat} temp buff for {dur:F1}s");
+                    break;
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Debug.LogException(ex);
+        }
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // StatusApplyTitleSO — status infliction handling
+    // ─────────────────────────────────────────────────────────────
+
+    private void HandleTitleStatus(TitleStatusRequest req)
+    {
+        try
+        {
+            switch (req.target)
+            {
+                case TitleStatusTarget.Self:
+                    ApplyTitleStatusToActivePlayer(req.status, req.turns, req.persistent, req.magnitude);
+                    break;
+                case TitleStatusTarget.Opponent:
+                    ApplyTitleStatusToWild(req.status, req.turns, req.persistent, req.magnitude);
+                    break;
+            }
+
+            BattleLogger.LogTitleActivation(req.ownerDisplayName, req.titleDisplayName,
+                $"inflicted {req.status} on {req.target}");
+            Debug.Log($"[StatusApplyTitle] EFFECT: {req.ownerDisplayName}'s title applied {req.status} to {req.target}");
+        }
+        catch (Exception ex)
+        {
+            Debug.LogException(ex);
         }
     }
 }

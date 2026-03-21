@@ -288,6 +288,8 @@ private float GetWildPhantasmalSelfDmgPct()
 
             for (int i = 0; i < tmp.Count; i++)
             {
+                string ownedId = GetTeamTitleIdSafe(activeIndex);
+                TitlesAdapter.AmplifySynergyCommand(ownedId, tmp[i]);
                 ApplySynergyCommand(sourceSide: BattleSide.Player, tmp[i]);
             }
         }
@@ -531,6 +533,42 @@ private float GetWildPhantasmalSelfDmgPct()
 
         RefreshPrimaryStatusUI();
         GameEvents.OnBattleStateChanged?.Invoke();
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // Public wrappers for title-driven status application
+    // ─────────────────────────────────────────────────────────────
+
+    /// <summary>Apply a status to the active player unit (title-driven, no synergy).</summary>
+    public void ApplyTitleStatusToActivePlayer(StatusType type, int turns, bool persistent, float magnitude)
+    {
+        var cmd = new SynergyResolver.ApplyCommand
+        {
+            sourceType = MonsterType.None,
+            tier = SynergyTier.Tier1,
+            status = type,
+            scope = SynergyTargetScope.Self,
+            turns = turns,
+            persistent = persistent,
+            magnitude = magnitude,
+        };
+        TryApplyStatusToActivePlayer(type, turns, persistent, magnitude, BattleSide.Player, cmd);
+    }
+
+    /// <summary>Apply a status to the wild monster (title-driven, no synergy).</summary>
+    public void ApplyTitleStatusToWild(StatusType type, int turns, bool persistent, float magnitude)
+    {
+        var cmd = new SynergyResolver.ApplyCommand
+        {
+            sourceType = MonsterType.None,
+            tier = SynergyTier.Tier1,
+            status = type,
+            scope = SynergyTargetScope.EnemySingle,
+            turns = turns,
+            persistent = persistent,
+            magnitude = magnitude,
+        };
+        TryApplyStatusToWild(type, turns, persistent, magnitude, BattleSide.Player, cmd);
     }
 
     private void RefreshPrimaryStatusUI()

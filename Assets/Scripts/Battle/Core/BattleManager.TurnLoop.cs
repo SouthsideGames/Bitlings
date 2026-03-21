@@ -1273,6 +1273,17 @@ float preventedByWildGuard = 0f;
                     yield return Say($"{foeName}'s shield absorbed {Mathf.RoundToInt(absorb)}!", BattleLineTag.Shield | BattleLineTag.Flavor);
         }
 
+        // ── Wild shield-break detection: if total shield went from >0 to 0, fire title hook ──
+        if ((absorbedByWildTitleShield + absorbedByWildShield) > 0f)
+        {
+            float wildTotalShieldAfter = wildTitleShieldHP + wildShieldHP;
+            if (wildTotalShieldAfter <= 0f && !string.IsNullOrEmpty(_wildCombatIdForTitles))
+            {
+                try { TitlesAdapter.OnPlayerShieldBroke(_wildCombatIdForTitles); }
+                catch (System.Exception ex) { Debug.LogException(ex); }
+            }
+        }
+
         if (preventedByWildGuard > 0f && guardConvertPct > 0f)
         {
             float gain = preventedByWildGuard * guardConvertPct;
@@ -1688,6 +1699,18 @@ if (wildTailwindBonusPct > 0f)
 
         incomingScalar = title_scalarAfterPct;
 
+        // Team aura damage reduction
+        float title_auraDmgReduce = 0f;
+        try
+        {
+            var auraCtx = BuildTitleContextForIndexSafe(activeIndex);
+            title_auraDmgReduce = TitlesAdapter.GetTeamAuraDamageReduction(
+                GetTeamTitleIdSafe(activeIndex), in auraCtx);
+            if (title_auraDmgReduce > 0f)
+                incomingScalar *= 1f - Mathf.Clamp01(title_auraDmgReduce);
+        }
+        catch { title_auraDmgReduce = 0f; }
+
 int dmg_afterScalar = Mathf.Max(1, Mathf.RoundToInt(dr.damage * incomingScalar));
 
         if (title_dmgFilterFlat > 0)
@@ -1751,6 +1774,18 @@ int dmg_afterScalar = Mathf.Max(1, Mathf.RoundToInt(dr.damage * incomingScalar))
             if (shieldAbsorbF > 0f)
                 if (!ShouldSkipNarration(BattleLineTag.Shield | BattleLineTag.Flavor))
                     yield return Say($"{GetName(activeIndex)}'s shield absorbed {Mathf.RoundToInt(shieldAbsorbF)}!", BattleLineTag.Shield | BattleLineTag.Flavor);
+        }
+
+        // ── Shield-break detection: if total shield went from >0 to 0, fire title hook ──
+        if ((titleShieldBefore + shieldBefore) > 0f)
+        {
+            float totalShieldAfter = ((titleShieldHP != null && activeIndex >= 0 && activeIndex < titleShieldHP.Length) ? titleShieldHP[activeIndex] : 0f)
+                                   + ((shieldHP != null && activeIndex >= 0 && activeIndex < shieldHP.Length) ? shieldHP[activeIndex] : 0f);
+            if (totalShieldAfter <= 0f)
+            {
+                try { TitlesAdapter.OnPlayerShieldBroke(GetTeamTitleIdSafe(activeIndex)); }
+                catch (System.Exception ex) { Debug.LogException(ex); }
+            }
         }
 
         string victimName = GetName(activeIndex);
@@ -1906,6 +1941,16 @@ if (dr.crit && !df.cannotBeCrit)
             AudioManager.I?.PlaySfx(SfxType.KO);
             Emit(BattleEvent.KO(BattleSide.Wild));
             if (!HasBattleEventConsumers && feedback) feedback.PlayKO(BattleFeedbackManager.BattleFeedbackSide.Wild);
+
+            // OnEventTriggerTitleSO: notify titles the player scored a kill
+            try
+            {
+                string killerId = GetTeamTitleIdSafe(activeIndex);
+                if (!string.IsNullOrEmpty(killerId))
+                    TitlesAdapter.OnKill(killerId);
+            }
+            catch (System.Exception ex) { UnityEngine.Debug.LogException(ex); }
+
 EndBattleRouted(true);
             return true;
         }

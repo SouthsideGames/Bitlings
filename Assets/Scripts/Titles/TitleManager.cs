@@ -63,6 +63,13 @@ public sealed class TitleManager : MonoBehaviour
     private int _turnIndex;
 
     // ─────────────────────────────────────────────────────────────────────
+    // Per-battle state (OnEventTriggerTitleSO)
+    // ─────────────────────────────────────────────────────────────────────
+    // Keys are "combatantId::titleId" to allow multiple titles per monster.
+    private readonly HashSet<string> _onEventFiredBattle = new(StringComparer.Ordinal);
+    private readonly HashSet<string> _onEventFiredTurn   = new(StringComparer.Ordinal);
+
+    // ─────────────────────────────────────────────────────────────────────
     // Active Title UI state (Status Bar / Info Button)
     // ─────────────────────────────────────────────────────────────────────
     public struct ActiveTitleUIState
@@ -631,6 +638,13 @@ if (_flatStartRemainingTurns.TryGetValue(monsterId, out int remTurns) && remTurn
             if (stat == StatKind.Speed && clutch.spdPct > 0f) current *= (1f + (clutch.spdPct / 100f));
         }
 
+        // ── TeamAuraBattleTitleSO (passive auras from battle participants)
+        if (_battleSessionActive && ctx.isBattle)
+        {
+            GetTeamAuraStatBonus(monsterId, stat, in ctx, out float auraFlat, out float auraPct);
+            current = (current + auraFlat) * (1f + auraPct);
+        }
+
         return current;
     }
 
@@ -1057,6 +1071,10 @@ if (_flatStartRemainingTurns.TryGetValue(monsterId, out int remTurns) && remTurn
                 {
                     DevLog.Log($"[TitleManager] Credit title '{credit.titleId}' multiplier={credVal}");
                     mul *= Mathf.Max(0f, credVal);
+                    BattleLogger.LogTitleActivation(
+                        def != null ? def.displayName : monsterId,
+                        credit.DisplayOrId,
+                        $"Credit bonus ×{credVal:F2}");
                 }
                 else
                 {
@@ -1121,6 +1139,10 @@ if (_flatStartRemainingTurns.TryGetValue(monsterId, out int remTurns) && remTurn
             if (t is GrowthCoreBonusOnVictoryTitleSO gc)
             {
                 mul *= Mathf.Max(0f, gc.growthCoreMultiplier);
+                BattleLogger.LogTitleActivation(
+                    def != null ? def.displayName : monsterId,
+                    gc.DisplayOrId,
+                    $"Growth Core bonus ×{gc.growthCoreMultiplier:F2}");
                 continue;
             }
 
@@ -1158,6 +1180,8 @@ if (_flatStartRemainingTurns.TryGetValue(monsterId, out int remTurns) && remTurn
             _flatStartAmountHp.Clear();
             _flatStartRemainingTurns.Clear();
             _shieldRemaining.Clear();
+            _onEventFiredBattle.Clear();
+            _onEventFiredTurn.Clear();
 
             // Clear per-battle context (but DO NOT clear _battleOverrideTitles here:
             // EncounterManager injects rolled wild titles prior to battle start.)
@@ -1212,6 +1236,8 @@ if (_flatStartRemainingTurns.TryGetValue(monsterId, out int remTurns) && remTurn
         _flatStartAmountHp.Clear();
         _flatStartRemainingTurns.Clear();
         _shieldRemaining.Clear();
+        _onEventFiredBattle.Clear();
+        _onEventFiredTurn.Clear();
 
         _battleParticipants.Clear();
         _scratchParticipants.Clear();
@@ -1228,6 +1254,9 @@ if (_flatStartRemainingTurns.TryGetValue(monsterId, out int remTurns) && remTurn
     public void OnTurnAdvanced(int turnIndex)
     {
         _turnIndex = Mathf.Max(0, turnIndex);
+
+        // OnEventTriggerTitleSO: reset per-turn limit tracking
+        _onEventFiredTurn.Clear();
 
         // decay event stacks (1-turn grace: stacks gained this turn do not decay on the very next turn advance)
         _scratchEventKeys.Clear();
@@ -1328,6 +1357,17 @@ if (_flatStartRemainingTurns.TryGetValue(monsterId, out int remTurns) && remTurn
                 summary: $"+1 stack ({next}/{max})"
             );
         }
+
+        // OnEventTriggerTitleSO: fire OnTurnStart for all participants
+        for (int i = 0; i < _scratchParticipants.Count; i++)
+        {
+            var id2 = _scratchParticipants[i];
+            if (!string.IsNullOrEmpty(id2))
+            {
+                ProcessOnEventTriggers(id2, OnEventTriggerKind.OnTurnStart);
+                ProcessStatusApplyTriggers(id2, OnEventTriggerKind.OnTurnStart);
+            }
+        }
     }
 
     // ─────────────────────────────────────────────────────────────────────
@@ -1372,6 +1412,462 @@ if (_flatStartRemainingTurns.TryGetValue(monsterId, out int remTurns) && remTurn
                 _flatStartRemainingTurns[combatantId] = rem;
             }
         }
+
+        // OnEventTriggerTitleSO: OnTurnEnd fires per-combatant
+        ProcessOnEventTriggers(combatantId, OnEventTriggerKind.OnTurnEnd);
+
+        // StatusApplyTitleSO: OnTurnEnd fires per-combatant
+        ProcessStatusApplyTriggers(combatantId, OnEventTriggerKind.OnTurnEnd);
+    }
+
+    /// <summary>Called when the player kills the wild monster.</summary>
+    public void OnKill(string killerId)
+    {
+        if (string.IsNullOrEmpty(killerId)) return;
+        ProcessOnEventTriggers(killerId, OnEventTriggerKind.OnKill);
+        ProcessStatusApplyTriggers(killerId, OnEventTriggerKind.OnKill);
+    }
+
+    // ─────────────────────────────────────────────────────────────────────
+    // OnEventTriggerTitleSO — generic event-driven title evaluation
+    // ─────────────────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Evaluate all OnEventTriggerTitleSO titles on a combatant for a given trigger.
+    /// Checks trigger match → limit gate → chance roll → fires effect request.
+    /// </summary>
+    private void ProcessOnEventTriggers(string combatantId, OnEventTriggerKind triggerKind)
+    {
+        if (string.IsNullOrEmpty(combatantId)) return;
+
+        var def = MonsterLibraryLocator.GetById(combatantId);
+        int lvl = GetLevelOr1(combatantId);
+        var titles = GetEquippedList(combatantId, def, lvl);
+        if (titles == null || titles.Count == 0) return;
+
+        string ownerName = (def != null) ? def.displayName : combatantId;
+
+        for (int i = 0; i < titles.Count; i++)
+        {
+            if (titles[i] is not OnEventTriggerTitleSO oet) continue;
+            if (oet.trigger != triggerKind) continue;
+
+            string titleName = oet.DisplayOrId;
+            string limitKey = $"{combatantId}::{oet.titleId}";
+
+            // ── Limit gate ──
+            if (oet.triggerLimit == TriggerLimitKind.OncePerBattle && _onEventFiredBattle.Contains(limitKey))
+            {
+                UnityEngine.Debug.Log($"[OnEventTrigger] {ownerName} — {titleName}: BLOCKED (once-per-battle already fired)");
+                continue;
+            }
+            if (oet.triggerLimit == TriggerLimitKind.OncePerTurn && _onEventFiredTurn.Contains(limitKey))
+            {
+                UnityEngine.Debug.Log($"[OnEventTrigger] {ownerName} — {titleName}: BLOCKED (once-per-turn already fired)");
+                continue;
+            }
+
+            // ── Chance roll ──
+            float roll = UnityEngine.Random.value * 100f;
+            float chance = Mathf.Clamp(oet.chancePercent, 0f, 100f);
+            if (roll >= chance)
+            {
+                UnityEngine.Debug.Log($"[OnEventTrigger] {ownerName} — {titleName}: trigger={triggerKind} chance FAILED (rolled {roll:F1} >= {chance:F0}%)");
+                continue;
+            }
+
+            UnityEngine.Debug.Log($"[OnEventTrigger] {ownerName} — {titleName}: trigger={triggerKind} chance PASSED (rolled {roll:F1} < {chance:F0}%)");
+
+            // ── Mark as fired for limit tracking ──
+            if (oet.triggerLimit == TriggerLimitKind.OncePerBattle)
+                _onEventFiredBattle.Add(limitKey);
+            if (oet.triggerLimit == TriggerLimitKind.OncePerTurn)
+                _onEventFiredTurn.Add(limitKey);
+
+            // ── Build and dispatch effect request ──
+            var req = new TitleEffectRequest
+            {
+                ownerId            = combatantId,
+                effect             = oet.effect,
+                value              = Mathf.Max(0f, oet.effectValue),
+                stat               = oet.buffStat,
+                buffDurationSeconds = Mathf.Max(0f, oet.buffDurationSeconds),
+                titleDisplayName   = titleName,
+                ownerDisplayName   = ownerName,
+            };
+
+            TitlesAdapter.RequestTitleEffect(req);
+        }
+    }
+
+    // ─────────────────────────────────────────────────────────────────────
+    // SynergyAmplifierTitleSO — modify resolved synergy commands
+    // ─────────────────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Mutates a resolved synergy ApplyCommand in-place based on all equipped
+    /// SynergyAmplifierTitleSO titles on the given combatant.
+    /// Call this AFTER SynergyResolver produces commands but BEFORE they are applied.
+    /// </summary>
+    public void AmplifySynergyCommand(string combatantId, SynergyResolver.ApplyCommand cmd)
+    {
+        if (string.IsNullOrEmpty(combatantId) || cmd == null) return;
+
+        var def = MonsterLibraryLocator.GetById(combatantId);
+        int lvl = GetLevelOr1(combatantId);
+        var titles = GetEquippedList(combatantId, def, lvl);
+        if (titles == null || titles.Count == 0) return;
+
+        string ownerName = (def != null) ? def.displayName : combatantId;
+
+        for (int i = 0; i < titles.Count; i++)
+        {
+            if (titles[i] is not SynergyAmplifierTitleSO amp) continue;
+
+            // ── Filter: MonsterType ──
+            if (amp.filter == SynergyAmpFilter.SpecificType && amp.filterType != cmd.sourceType)
+                continue;
+
+            // ── Filter: Tier ──
+            if (amp.tierFilter == SynergyAmpTierFilter.Tier1Only && cmd.tier != SynergyTier.Tier1)
+                continue;
+            if (amp.tierFilter == SynergyAmpTierFilter.Tier2Only && cmd.tier != SynergyTier.Tier2)
+                continue;
+
+            string titleName = amp.DisplayOrId;
+
+            switch (amp.ampType)
+            {
+                case SynergyAmpType.PowerMultiplier:
+                {
+                    float baseMag = cmd.magnitude;
+                    float mult = 1f + Mathf.Max(0f, amp.value) / 100f;
+                    cmd.magnitude *= mult;
+                    BattleLogger.LogTitleActivation(ownerName, titleName,
+                        $"{cmd.sourceType} {cmd.tier} synergy power +{amp.value:F0}%");
+                    UnityEngine.Debug.Log($"[SynergyAmp] {titleName}: {cmd.sourceType} {cmd.tier} magnitude {baseMag:F3} → {cmd.magnitude:F3} (×{mult:F2}, +{amp.value:F0}%)");
+                    break;
+                }
+                case SynergyAmpType.BonusTurns:
+                {
+                    if (cmd.persistent) break; // persistent statuses ignore turns
+                    int baseTurns = cmd.turns;
+                    int bonus = Mathf.Max(0, Mathf.RoundToInt(amp.value));
+                    cmd.turns += bonus;
+                    BattleLogger.LogTitleActivation(ownerName, titleName,
+                        $"{cmd.sourceType} {cmd.tier} synergy +{bonus} turn(s)");
+                    UnityEngine.Debug.Log($"[SynergyAmp] {titleName}: {cmd.sourceType} {cmd.tier} turns {baseTurns} → {cmd.turns} (+{bonus})");
+                    break;
+                }
+                case SynergyAmpType.BonusMagnitude:
+                {
+                    float baseMag = cmd.magnitude;
+                    cmd.magnitude += Mathf.Max(0f, amp.value);
+                    BattleLogger.LogTitleActivation(ownerName, titleName,
+                        $"{cmd.sourceType} {cmd.tier} synergy +{amp.value:F1} magnitude");
+                    UnityEngine.Debug.Log($"[SynergyAmp] {titleName}: {cmd.sourceType} {cmd.tier} magnitude {baseMag:F3} → {cmd.magnitude:F3} (+{amp.value:F3} flat)");
+                    break;
+                }
+            }
+        }
+    }
+
+    // ─────────────────────────────────────────────────────────────────────
+    // TeamAuraBattleTitleSO — passive team auras
+    // ─────────────────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Aggregate flat and percent aura bonuses for a target combatant and stat.
+    /// Scans ALL battle participants' titles for TeamAuraBattleTitleSO.
+    /// Returns (flatSum, pctSum) where pctSum is additive (e.g. 0.10 = +10%).
+    /// </summary>
+    public void GetTeamAuraStatBonus(string targetId, StatKind stat, in TitleContext targetCtx,
+        out float flatSum, out float pctSum)
+    {
+        flatSum = 0f;
+        pctSum = 0f;
+
+        if (!_battleSessionActive || _battleParticipants.Count == 0) return;
+
+        foreach (var sourceId in _battleParticipants)
+        {
+            if (string.IsNullOrEmpty(sourceId)) continue;
+
+            var srcDef = MonsterLibraryLocator.GetById(sourceId);
+            int srcLvl = GetLevelOr1(sourceId);
+            var titles = GetEquippedList(sourceId, srcDef, srcLvl);
+            if (titles == null) continue;
+
+            for (int i = 0; i < titles.Count; i++)
+            {
+                if (titles[i] is not TeamAuraBattleTitleSO aura) continue;
+
+                // Stat-based effects only (skip IncomingDamageReduction here)
+                if (aura.effect == AuraEffectKind.IncomingDamageReduction) continue;
+                if (aura.stat != stat) continue;
+
+                // Scope check
+                bool isSelf = string.Equals(sourceId, targetId, System.StringComparison.Ordinal);
+                if (aura.scope == AuraTargetScope.AlliesExceptSelf && isSelf) continue;
+                if (aura.scope == AuraTargetScope.SelfOnly && !isSelf) continue;
+
+                // Condition check
+                if (!CheckAuraCondition(aura, targetCtx)) continue;
+
+                string titleName = aura.DisplayOrId;
+                string srcName = srcDef != null ? srcDef.displayName : sourceId;
+
+                switch (aura.effect)
+                {
+                    case AuraEffectKind.FlatBoost:
+                        flatSum += aura.value;
+                        UnityEngine.Debug.Log($"[TeamAura] {srcName}'s \"{titleName}\" → +{aura.value:F0} flat {stat} to {(isSelf ? "self" : targetId)}");
+                        break;
+                    case AuraEffectKind.PercentBoost:
+                        pctSum += aura.value / 100f;
+                        UnityEngine.Debug.Log($"[TeamAura] {srcName}'s \"{titleName}\" → +{aura.value:F0}% {stat} to {(isSelf ? "self" : targetId)}");
+                        break;
+                }
+            }
+        }
+    }
+
+    /// <summary>
+    /// Aggregate incoming damage reduction % from team auras for a target combatant.
+    /// Returns value in 0..1 range (e.g. 0.15 = 15% reduction).
+    /// </summary>
+    public float GetTeamAuraDamageReduction(string targetId, in TitleContext targetCtx)
+    {
+        float total = 0f;
+
+        if (!_battleSessionActive || _battleParticipants.Count == 0) return 0f;
+
+        foreach (var sourceId in _battleParticipants)
+        {
+            if (string.IsNullOrEmpty(sourceId)) continue;
+
+            var srcDef = MonsterLibraryLocator.GetById(sourceId);
+            int srcLvl = GetLevelOr1(sourceId);
+            var titles = GetEquippedList(sourceId, srcDef, srcLvl);
+            if (titles == null) continue;
+
+            for (int i = 0; i < titles.Count; i++)
+            {
+                if (titles[i] is not TeamAuraBattleTitleSO aura) continue;
+                if (aura.effect != AuraEffectKind.IncomingDamageReduction) continue;
+
+                bool isSelf = string.Equals(sourceId, targetId, System.StringComparison.Ordinal);
+                if (aura.scope == AuraTargetScope.AlliesExceptSelf && isSelf) continue;
+                if (aura.scope == AuraTargetScope.SelfOnly && !isSelf) continue;
+
+                if (!CheckAuraCondition(aura, targetCtx)) continue;
+
+                float pct = Mathf.Clamp(aura.value, 0f, 100f) / 100f;
+                total += pct;
+
+                string titleName = aura.DisplayOrId;
+                string srcName = srcDef != null ? srcDef.displayName : sourceId;
+                UnityEngine.Debug.Log($"[TeamAura] {srcName}'s \"{titleName}\" → −{aura.value:F0}% incoming damage to {(isSelf ? "self" : targetId)}");
+            }
+        }
+
+        return Mathf.Clamp01(total);
+    }
+
+    private bool CheckAuraCondition(TeamAuraBattleTitleSO aura, in TitleContext ctx)
+    {
+        switch (aura.condition)
+        {
+            case AuraConditionKind.None:
+                return true;
+            case AuraConditionKind.TargetHPAbove:
+                return ctx.selfHp01 >= Mathf.Clamp01(aura.conditionThreshold);
+            case AuraConditionKind.TargetHPBelow:
+                return ctx.selfHp01 <= Mathf.Clamp01(aura.conditionThreshold);
+            case AuraConditionKind.FirstNTurns:
+                return _turnIndex < Mathf.Max(1, aura.conditionTurns);
+            default:
+                return false;
+        }
+    }
+
+    // ─────────────────────────────────────────────────────────────────────
+    // ShieldInteractionTitleSO — overheal→shield & shield-break effects
+    // ─────────────────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Returns how much shield should be gained from the given overheal amount,
+    /// based on any equipped ShieldInteractionTitleSO (ConvertOverhealToShield).
+    /// Called by BattleManager when TryAddHPToActive detects excess healing.
+    /// Also logs the title activation via BattleLogger.
+    /// </summary>
+    public float GetOverhealToShieldAmount(string combatantId, float overhealAmount)
+    {
+        if (string.IsNullOrEmpty(combatantId) || overhealAmount <= 0f) return 0f;
+
+        var def = MonsterLibraryLocator.GetById(combatantId);
+        int lvl = GetLevelOr1(combatantId);
+        var titles = GetEquippedList(combatantId, def, lvl);
+        if (titles == null || titles.Count == 0) return 0f;
+
+        string ownerName = (def != null) ? def.displayName : combatantId;
+        float totalShield = 0f;
+
+        for (int i = 0; i < titles.Count; i++)
+        {
+            if (titles[i] is not ShieldInteractionTitleSO sit) continue;
+            if (sit.kind != ShieldInteractionKind.ConvertOverhealToShield) continue;
+
+            float pct = Mathf.Clamp(sit.conversionPercent, 0f, 100f) / 100f;
+            float gain = overhealAmount * pct;
+            if (sit.maxShieldPerHeal > 0f) gain = Mathf.Min(gain, sit.maxShieldPerHeal);
+            if (gain <= 0f) continue;
+
+            totalShield += gain;
+
+            string titleName = sit.DisplayOrId;
+            BattleLogger.LogTitleActivation(ownerName, titleName,
+                $"+{Mathf.RoundToInt(gain)} shield from overheal ({Mathf.RoundToInt(overhealAmount)} excess × {sit.conversionPercent:F0}%)");
+            UnityEngine.Debug.Log($"[ShieldInteraction] {ownerName} — {titleName}: overheal {Mathf.RoundToInt(overhealAmount)} → +{Mathf.RoundToInt(gain)} shield");
+        }
+
+        return totalShield;
+    }
+
+    /// <summary>
+    /// Called when a combatant's total shield drops to 0 (was >0 before damage).
+    /// Scans for ShieldInteractionTitleSO (EffectOnShieldBreak) and dispatches effects.
+    /// </summary>
+    public void ProcessShieldBreak(string combatantId)
+    {
+        if (string.IsNullOrEmpty(combatantId)) return;
+
+        var def = MonsterLibraryLocator.GetById(combatantId);
+        int lvl = GetLevelOr1(combatantId);
+        var titles = GetEquippedList(combatantId, def, lvl);
+        if (titles == null || titles.Count == 0) return;
+
+        string ownerName = (def != null) ? def.displayName : combatantId;
+
+        for (int i = 0; i < titles.Count; i++)
+        {
+            if (titles[i] is not ShieldInteractionTitleSO sit) continue;
+            if (sit.kind != ShieldInteractionKind.EffectOnShieldBreak) continue;
+
+            string titleName = sit.DisplayOrId;
+            string limitKey = $"{combatantId}::sb::{sit.titleId}";
+
+            // ── Limit gate ──
+            if (sit.triggerLimit == TriggerLimitKind.OncePerBattle && _onEventFiredBattle.Contains(limitKey))
+                continue;
+            if (sit.triggerLimit == TriggerLimitKind.OncePerTurn && _onEventFiredTurn.Contains(limitKey))
+                continue;
+
+            // ── Mark as fired ──
+            if (sit.triggerLimit == TriggerLimitKind.OncePerBattle)
+                _onEventFiredBattle.Add(limitKey);
+            if (sit.triggerLimit == TriggerLimitKind.OncePerTurn)
+                _onEventFiredTurn.Add(limitKey);
+
+            // ── Map ShieldBreakEffectKind → TitleEffectKind ──
+            TitleEffectKind mappedEffect;
+            switch (sit.breakEffect)
+            {
+                case ShieldBreakEffectKind.GainFlatShield:  mappedEffect = TitleEffectKind.GainFlatShield;  break;
+                case ShieldBreakEffectKind.HealFlat:        mappedEffect = TitleEffectKind.HealFlat;        break;
+                case ShieldBreakEffectKind.GainTempStatBuff: mappedEffect = TitleEffectKind.GainTempStatBuff; break;
+                default: continue;
+            }
+
+            var req = new TitleEffectRequest
+            {
+                ownerId              = combatantId,
+                effect               = mappedEffect,
+                value                = Mathf.Max(0f, sit.breakEffectValue),
+                stat                 = sit.breakBuffStat,
+                buffDurationSeconds  = Mathf.Max(0.1f, sit.breakBuffDurationSeconds),
+                titleDisplayName     = titleName,
+                ownerDisplayName     = ownerName,
+            };
+
+            BattleLogger.LogTitleActivation(ownerName, titleName,
+                $"shield broke! Activated {sit.breakEffect}");
+            UnityEngine.Debug.Log($"[ShieldInteraction] {ownerName} — {titleName}: shield break → {sit.breakEffect} (value={sit.breakEffectValue:F1})");
+
+            TitlesAdapter.RequestTitleEffect(req);
+        }
+    }
+
+    // ─────────────────────────────────────────────────────────────────────
+    // StatusApplyTitleSO — event-driven status infliction
+    // ─────────────────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Evaluate all StatusApplyTitleSO titles on a combatant for a given trigger.
+    /// Checks trigger match → limit gate → chance roll → fires status request.
+    /// </summary>
+    private void ProcessStatusApplyTriggers(string combatantId, OnEventTriggerKind triggerKind)
+    {
+        if (string.IsNullOrEmpty(combatantId)) return;
+
+        var def = MonsterLibraryLocator.GetById(combatantId);
+        int lvl = GetLevelOr1(combatantId);
+        var titles = GetEquippedList(combatantId, def, lvl);
+        if (titles == null || titles.Count == 0) return;
+
+        string ownerName = (def != null) ? def.displayName : combatantId;
+
+        for (int i = 0; i < titles.Count; i++)
+        {
+            if (titles[i] is not StatusApplyTitleSO sat) continue;
+            if (sat.trigger != triggerKind) continue;
+
+            string titleName = sat.DisplayOrId;
+            string limitKey = $"{combatantId}::sa::{sat.titleId}";
+
+            // ── Limit gate ──
+            if (sat.triggerLimit == TriggerLimitKind.OncePerBattle && _onEventFiredBattle.Contains(limitKey))
+            {
+                UnityEngine.Debug.Log($"[StatusApplyTitle] {ownerName} — {titleName}: BLOCKED (once-per-battle already fired)");
+                continue;
+            }
+            if (sat.triggerLimit == TriggerLimitKind.OncePerTurn && _onEventFiredTurn.Contains(limitKey))
+            {
+                UnityEngine.Debug.Log($"[StatusApplyTitle] {ownerName} — {titleName}: BLOCKED (once-per-turn already fired)");
+                continue;
+            }
+
+            // ── Chance roll ──
+            float roll = UnityEngine.Random.value * 100f;
+            float chance = Mathf.Clamp(sat.chancePercent, 0f, 100f);
+            if (roll >= chance)
+            {
+                UnityEngine.Debug.Log($"[StatusApplyTitle] {ownerName} — {titleName}: trigger={triggerKind} chance FAILED (rolled {roll:F1} >= {chance:F0}%)");
+                continue;
+            }
+
+            UnityEngine.Debug.Log($"[StatusApplyTitle] {ownerName} — {titleName}: trigger={triggerKind} chance PASSED → applying {sat.status} to {sat.target}");
+
+            // ── Mark as fired for limit tracking ──
+            if (sat.triggerLimit == TriggerLimitKind.OncePerBattle)
+                _onEventFiredBattle.Add(limitKey);
+            if (sat.triggerLimit == TriggerLimitKind.OncePerTurn)
+                _onEventFiredTurn.Add(limitKey);
+
+            // ── Build and dispatch status request ──
+            var req = new TitleStatusRequest
+            {
+                status           = sat.status,
+                target           = sat.target,
+                turns            = Mathf.Max(0, sat.turns),
+                persistent       = sat.persistent,
+                magnitude        = sat.magnitude,
+                titleDisplayName = titleName,
+                ownerDisplayName = ownerName,
+            };
+
+            TitlesAdapter.RequestTitleStatus(req);
+        }
     }
 
     /// <summary> Remaining BattleStartShield HP for UI (0 if none). </summary>
@@ -1390,12 +1886,22 @@ if (_flatStartRemainingTurns.TryGetValue(monsterId, out int remTurns) && remTurn
         var def = MonsterLibraryLocator.GetById(attackerId);
         int lvl = GetLevelOr1(attackerId);
         var es = GetFirstTitle<EventStacksTitleSO>(attackerId, def, lvl);
-        if (es == null) return;
+        if (es != null)
+        {
+            bool trigger = (es.trigger == EventTriggerKind.OnAttack) || (wasCrit && es.trigger == EventTriggerKind.OnCrit);
+            if (trigger)
+                BumpEventStacks(attackerId, Mathf.Max(1, es.maxStacks), Mathf.Max(0, es.decayPerTurn));
+        }
 
-        bool trigger = (es.trigger == EventTriggerKind.OnAttack) || (wasCrit && es.trigger == EventTriggerKind.OnCrit);
-        if (!trigger) return;
+        // OnEventTriggerTitleSO processing
+        ProcessOnEventTriggers(attackerId, OnEventTriggerKind.OnAttackLanded);
+        if (wasCrit)
+            ProcessOnEventTriggers(attackerId, OnEventTriggerKind.OnCritLanded);
 
-        BumpEventStacks(attackerId, Mathf.Max(1, es.maxStacks), Mathf.Max(0, es.decayPerTurn));
+        // StatusApplyTitleSO processing
+        ProcessStatusApplyTriggers(attackerId, OnEventTriggerKind.OnAttackLanded);
+        if (wasCrit)
+            ProcessStatusApplyTriggers(attackerId, OnEventTriggerKind.OnCritLanded);
     }
 
     public void OnHitTaken(string defenderId, int damage, bool wasCrit)
@@ -1425,12 +1931,18 @@ if (_flatStartRemainingTurns.TryGetValue(monsterId, out int remTurns) && remTurn
         var def2 = MonsterLibraryLocator.GetById(defenderId);
         int lvl2 = GetLevelOr1(defenderId);
         var es = GetFirstTitle<EventStacksTitleSO>(defenderId, def2, lvl2);
-        if (es == null) return;
+        if (es != null)
+        {
+            bool trigger = (es.trigger == EventTriggerKind.OnHitTaken) || (wasCrit && es.trigger == EventTriggerKind.OnCrit);
+            if (trigger)
+                BumpEventStacks(defenderId, Mathf.Max(1, es.maxStacks), Mathf.Max(0, es.decayPerTurn));
+        }
 
-        bool trigger = (es.trigger == EventTriggerKind.OnHitTaken) || (wasCrit && es.trigger == EventTriggerKind.OnCrit);
-        if (!trigger) return;
+        // OnEventTriggerTitleSO processing
+        ProcessOnEventTriggers(defenderId, OnEventTriggerKind.OnDamageTaken);
 
-        BumpEventStacks(defenderId, Mathf.Max(1, es.maxStacks), Mathf.Max(0, es.decayPerTurn));
+        // StatusApplyTitleSO processing
+        ProcessStatusApplyTriggers(defenderId, OnEventTriggerKind.OnDamageTaken);
     }
 
     // ─────────────────────────────────────────────────────────────────────
@@ -1515,6 +2027,24 @@ if (_flatStartRemainingTurns.TryGetValue(monsterId, out int remTurns) && remTurn
                 titleName: string.IsNullOrEmpty(shield.displayName) ? shield.titleId : shield.displayName,
                 summary: $"+Shield {Mathf.RoundToInt(shieldHP)}"
             );
+        }
+
+        // Log active team auras once at battle start
+        var allTitles = GetEquippedList(id, def, lvl);
+        if (allTitles != null)
+        {
+            string auraOwnerName = def != null ? def.displayName : id;
+            for (int t = 0; t < allTitles.Count; t++)
+            {
+                if (allTitles[t] is not TeamAuraBattleTitleSO aura) continue;
+                string auraName = aura.DisplayOrId;
+                string desc;
+                if (aura.effect == AuraEffectKind.IncomingDamageReduction)
+                    desc = $"\u2212{aura.value:F0}% incoming damage ({aura.scope})";
+                else
+                    desc = $"+{aura.value:F0}{(aura.effect == AuraEffectKind.PercentBoost ? "%" : "")} {aura.stat} ({aura.scope})";
+                BattleLogger.LogTitleActivation(auraOwnerName, auraName, $"Aura active: {desc}");
+            }
         }
     }
 
