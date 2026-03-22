@@ -68,6 +68,17 @@ public class ExchangeSaveData
     public int battleSentimentMonthKey = -1;
     public int lastDividendDayIndex = -1;
     public long lastRecalcUnix;
+    public PendingDuplicateCaptureSave pendingDuplicate;
+}
+
+[Serializable]
+public class PendingDuplicateCaptureSave
+{
+    public string ownedUID;
+    public string speciesId;
+    public int encounterLevel;
+    public bool isShiny;
+    public bool isMaxLevel;
 }
 
 // ─────────────────────────────────────────────────────────────

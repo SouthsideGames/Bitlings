@@ -42,6 +42,7 @@ public sealed class BattleTitlePipsUI : MonoBehaviour
     private string _lastKey;
     private int _lastHash;
     private BattleManager _battle;
+    private bool _warnedMissingRefs;
 
     private sealed class Pip
     {
@@ -60,14 +61,20 @@ public sealed class BattleTitlePipsUI : MonoBehaviour
     {
         if (!pipsRoot) pipsRoot = transform;
         if (!visualsRoot) visualsRoot = gameObject;
+        BootstrapExistingPips();
     }
 
     private void OnEnable()
     {
         if (_battle == null)
-            _battle = battle != null ? battle : (GetComponentInParent<BattleManager>() ?? FindFirstObjectByType<BattleManager>());
+            _battle = battle != null
+                ? battle
+                : (GetComponentInParent<BattleManager>() ?? FindFirstObjectByType<BattleManager>(FindObjectsInactive.Include));
 
+        // Defensive removal ensures no duplicate handlers on repeated OnEnable calls
+        GameEvents.OnBattleStateChanged -= Refresh;
         GameEvents.OnBattleStateChanged += Refresh;
+        GameEvents.OnTeamChanged -= Refresh;
         GameEvents.OnTeamChanged += Refresh;
 
         if (_battle != null)
@@ -95,12 +102,14 @@ public sealed class BattleTitlePipsUI : MonoBehaviour
         {
             case BattleEvent.Kind.Swap:
             case BattleEvent.Kind.Damage:
+            case BattleEvent.Kind.StatusApplied:
             case BattleEvent.Kind.KO:
             case BattleEvent.Kind.UIRefreshHP:
             case BattleEvent.Kind.GuardChanged:
             case BattleEvent.Kind.ChargeChanged:
             case BattleEvent.Kind.DefendResult:
             case BattleEvent.Kind.ActionWindup:
+            case BattleEvent.Kind.ActionQueued:
                 Refresh();
                 break;
         }
@@ -145,9 +154,16 @@ public sealed class BattleTitlePipsUI : MonoBehaviour
         _lastHash = h;
 
         EnsurePipCount(count);
+        int renderCount = Mathf.Min(count, _pips.Count);
+        if (renderCount <= 0)
+        {
+            ApplyNone();
+            return;
+        }
+
         if (visualsRoot) visualsRoot.SetActive(true);
 
-        for (int i = 0; i < count; i++)
+        for (int i = 0; i < renderCount; i++)
         {
             var s = states[i];
             var p = _pips[i];
@@ -197,7 +213,7 @@ public sealed class BattleTitlePipsUI : MonoBehaviour
                 Punch(p.go);
         }
 
-        for (int i = count; i < _pips.Count; i++)
+        for (int i = renderCount; i < _pips.Count; i++)
             _pips[i].go.SetActive(false);
     }
 
@@ -216,12 +232,39 @@ public sealed class BattleTitlePipsUI : MonoBehaviour
     private string GetCombatantId()
     {
         if (_battle == null) return "";
-        return target == TargetKind.Wild ? _battle.WildCombatIdForTitles : _battle.ActivePlayerMonsterId;
+        if (target == TargetKind.Wild)
+            return _battle.WildCombatIdForTitles;
+
+        string ownedId = _battle.ActivePlayerTitleOwnerId;
+        if (!string.IsNullOrEmpty(ownedId))
+            return ownedId;
+
+        return _battle.ActivePlayerMonsterId;
     }
 
     private void EnsurePipCount(int needed)
     {
-        if (pipPrefab == null || pipsRoot == null) return;
+        BootstrapExistingPips();
+
+        if (pipsRoot == null)
+        {
+            if (!_warnedMissingRefs && needed > 0)
+            {
+                _warnedMissingRefs = true;
+                Debug.LogWarning($"[{nameof(BattleTitlePipsUI)}] Missing pipsRoot on '{name}'.", this);
+            }
+            return;
+        }
+
+        if (pipPrefab == null)
+        {
+            if (!_warnedMissingRefs && needed > 0)
+            {
+                _warnedMissingRefs = true;
+                Debug.LogWarning($"[{nameof(BattleTitlePipsUI)}] Missing pipPrefab on '{name}'. Assign pipPrefab or add pre-placed pip children under pipsRoot.", this);
+            }
+            return;
+        }
 
         while (_pips.Count < needed)
         {
@@ -254,6 +297,51 @@ public sealed class BattleTitlePipsUI : MonoBehaviour
 
             _pips.Add(p);
         }
+    }
+
+    private void BootstrapExistingPips()
+    {
+        if (_pips.Count > 0 || pipsRoot == null) return;
+
+        for (int i = 0; i < pipsRoot.childCount; i++)
+        {
+            var child = pipsRoot.GetChild(i);
+            if (!child) continue;
+
+            var p = BuildPip(child.gameObject);
+            if (p != null)
+                _pips.Add(p);
+        }
+    }
+
+    private static Pip BuildPip(GameObject go)
+    {
+        if (!go) return null;
+
+        var p = new Pip
+        {
+            go = go,
+            icon = go.GetComponentInChildren<Image>(true),
+            cg = go.GetComponentInChildren<CanvasGroup>(true),
+            btn = go.GetComponentInChildren<Button>(true),
+            titleId = null,
+            active = false,
+            stackCount = 0
+        };
+
+        var labels = go.GetComponentsInChildren<TMP_Text>(true);
+        for (int i = 0; i < labels.Length; i++)
+        {
+            if (labels[i] != null && string.Equals(labels[i].gameObject.name, "Stacks", StringComparison.OrdinalIgnoreCase))
+            {
+                p.stacks = labels[i];
+                break;
+            }
+        }
+        if (p.stacks == null && labels != null && labels.Length == 1)
+            p.stacks = labels[0];
+
+        return p;
     }
 
     private void OpenTitleInfo(string titleId)

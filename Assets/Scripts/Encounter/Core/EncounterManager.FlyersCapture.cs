@@ -439,6 +439,7 @@ public partial class EncounterManager
                 {
                     // Manual mode: open the Duplicate Resolution panel
                     PendingDuplicateCapture.Set(existing, def, level, isShiny, isMax);
+                    PersistPendingDuplicateDecision(existing, def, level, isShiny, isMax);
 
                     if (UIManager.I != null)
                         UIManager.I.Show(PanelId.DuplicateResolution);
@@ -510,6 +511,24 @@ public partial class EncounterManager
         }
 
         return success;
+    }
+
+    private static void PersistPendingDuplicateDecision(OwnedMonsterData existing, MonsterDataSO def, int level, bool isShiny, bool isMax)
+    {
+        try
+        {
+            var save = SaveManager.GetExchangeBlob() ?? new ExchangeSaveData();
+            save.pendingDuplicate = new PendingDuplicateCaptureSave
+            {
+                ownedUID = existing != null ? existing.ownedUID : null,
+                speciesId = def != null ? def.id : null,
+                encounterLevel = Mathf.Max(1, level),
+                isShiny = isShiny,
+                isMaxLevel = isMax
+            };
+            SaveManager.SetExchangeBlob(save);
+        }
+        catch { }
     }
 
     // ── Duplicate capture helpers (Policy C) ───────────────────────────────────

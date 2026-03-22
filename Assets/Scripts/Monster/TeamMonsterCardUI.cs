@@ -141,13 +141,21 @@ public class TeamMonsterCardUI : MonoBehaviour
     {
         if (!_bound)
         {
+            // Defensive removal ensures no duplicate handlers on repeated OnEnable calls
+            GameEvents.OnTeamChanged -= Refresh;
             GameEvents.OnTeamChanged += Refresh;
+            
+            GameEvents.OnResourcesChanged -= HandleResourcesChanged;
+            GameEvents.OnResourcesChanged += HandleResourcesChanged;
+            
+            GameEvents.OnTeamChanged -= HandleResourcesChanged;
+            GameEvents.OnTeamChanged += HandleResourcesChanged;
+            
+            GameEvents.FavoritesChanged -= RefreshFavoriteIcon;
+            GameEvents.FavoritesChanged += RefreshFavoriteIcon;
+            
             _bound = true;
         }
-
-        GameEvents.OnResourcesChanged += HandleResourcesChanged;
-        GameEvents.OnTeamChanged += HandleResourcesChanged;
-        GameEvents.FavoritesChanged += RefreshFavoriteIcon;
 
         Refresh();
     }

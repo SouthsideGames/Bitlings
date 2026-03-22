@@ -283,6 +283,9 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 5038085301719610449}
+  - component: {fileID: 2700810061222397685}
+  - component: {fileID: 7481726366556269683}
+  - component: {fileID: 2055058308901098756}
   - component: {fileID: 528581585827079721}
   m_Layer: 5
   m_Name: IronCareerMonsterPrefab
@@ -303,7 +306,6 @@ RectTransform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
-  - {fileID: 3800999968882087983}
   - {fileID: 1475940643997450896}
   - {fileID: 115611888892281885}
   - {fileID: 8582683445150008044}
@@ -318,82 +320,21 @@ RectTransform:
   m_AnchoredPosition: {x: 3.633789, y: -10.982056}
   m_SizeDelta: {x: -167.1575, y: -283.2804}
   m_Pivot: {x: 0.5, y: 0.5}
---- !u!114 &528581585827079721
+--- !u!222 &2700810061222397685
+CanvasRenderer:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 703060839504019227}
+  m_CullTransparentMesh: 1
+--- !u!114 &7481726366556269683
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 703060839504019227}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: c7001d62c62914eda9d766916b6be43a, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::IronCareerMonsterCardUI
-  button: {fileID: 3100564059642176382}
-  icon: {fileID: 4204313177096498774}
-  nameLabel: {fileID: 1149330409076186213}
-  levelLabel: {fileID: 993070557430576798}
-  titleLabel: {fileID: 8791918794775845167}
-  hpSlider: {fileID: 5474110076198584061}
-  hpLabel: {fileID: 7091962732314744894}
-  selectedFrame: {fileID: 703060839504019227}
-  lockedTag: {fileID: 4486282425401202273}
-  typeIcon: {fileID: 4089253822114829003}
-  typeIconLibrary: {fileID: 11400000, guid: c8813a13ce49f9845bc1059e1f0fb3a2, type: 2}
---- !u!1 &1363405377709349782
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 3800999968882087983}
-  - component: {fileID: 293864990650030617}
-  - component: {fileID: 2378295648153927397}
-  - component: {fileID: 3100564059642176382}
-  m_Layer: 5
-  m_Name: RootBtn
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!224 &3800999968882087983
-RectTransform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1363405377709349782}
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 5038085301719610449}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 0, y: 0}
-  m_Pivot: {x: 0.5, y: 0.5}
---- !u!222 &293864990650030617
-CanvasRenderer:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1363405377709349782}
-  m_CullTransparentMesh: 1
---- !u!114 &2378295648153927397
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1363405377709349782}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
@@ -417,13 +358,13 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 0.2
---- !u!114 &3100564059642176382
+--- !u!114 &2055058308901098756
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1363405377709349782}
+  m_GameObject: {fileID: 703060839504019227}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 4e29b1a8efbd4b44bb3f3716e73f07ff, type: 3}
@@ -457,7 +398,7 @@ MonoBehaviour:
     m_SelectedTrigger: Selected
     m_DisabledTrigger: Disabled
   m_Interactable: 1
-  m_TargetGraphic: {fileID: 2378295648153927397}
+  m_TargetGraphic: {fileID: 0}
   m_OnClick:
     m_PersistentCalls:
       m_Calls:
@@ -473,6 +414,29 @@ MonoBehaviour:
           m_StringArgument: 
           m_BoolArgument: 0
         m_CallState: 2
+--- !u!114 &528581585827079721
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 703060839504019227}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c7001d62c62914eda9d766916b6be43a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::IronCareerMonsterCardUI
+  button: {fileID: 2055058308901098756}
+  icon: {fileID: 4204313177096498774}
+  nameLabel: {fileID: 1149330409076186213}
+  levelLabel: {fileID: 993070557430576798}
+  titleLabel: {fileID: 8791918794775845167}
+  hpSlider: {fileID: 5474110076198584061}
+  hpLabel: {fileID: 7091962732314744894}
+  selectedFrame: {fileID: 703060839504019227}
+  lockedTag: {fileID: 4486282425401202273}
+  typeIcon: {fileID: 4089253822114829003}
+  typeIconLibrary: {fileID: 11400000, guid: c8813a13ce49f9845bc1059e1f0fb3a2, type: 2}
 --- !u!1 &1747881855806872050
 GameObject:
   m_ObjectHideFlags: 0

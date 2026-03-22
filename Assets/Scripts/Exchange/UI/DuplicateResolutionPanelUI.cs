@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
@@ -60,6 +61,9 @@ public class DuplicateResolutionPanelUI : MonoBehaviour
 
     private void Populate()
     {
+        if (!PendingDuplicateCapture.HasPending)
+            TryRestorePendingDuplicateFromSave();
+
         if (!PendingDuplicateCapture.HasPending) return;
 
         var def = PendingDuplicateCapture.Def;
@@ -303,7 +307,67 @@ public class DuplicateResolutionPanelUI : MonoBehaviour
     private void Close()
     {
         PendingDuplicateCapture.Clear();
+        ClearPersistedPendingDuplicate();
         if (UIManager.I != null) UIManager.I.Hide(PanelId.DuplicateResolution);
+    }
+
+    private static void TryRestorePendingDuplicateFromSave()
+    {
+        try
+        {
+            var save = SaveManager.GetExchangeBlob();
+            var p = save?.pendingDuplicate;
+            if (p == null || string.IsNullOrEmpty(p.speciesId)) return;
+
+            var def = MonsterCatalog.GetById(p.speciesId);
+            if (def == null)
+            {
+                ClearPersistedPendingDuplicate();
+                return;
+            }
+
+            OwnedMonsterData existing = null;
+            var owned = SaveManager.Data?.owned;
+            if (owned != null)
+            {
+                for (int i = 0; i < owned.Count; i++)
+                {
+                    var entry = owned[i];
+                    if (entry == null) continue;
+
+                    if (!string.IsNullOrEmpty(p.ownedUID) && !string.IsNullOrEmpty(entry.ownedUID) &&
+                        string.Equals(entry.ownedUID, p.ownedUID, StringComparison.Ordinal))
+                    {
+                        existing = entry;
+                        break;
+                    }
+
+                    if (existing == null && string.Equals(entry.monsterId, p.speciesId, StringComparison.Ordinal))
+                        existing = entry;
+                }
+            }
+
+            if (existing == null)
+            {
+                ClearPersistedPendingDuplicate();
+                return;
+            }
+
+            PendingDuplicateCapture.Set(existing, def, Mathf.Max(1, p.encounterLevel), p.isShiny, p.isMaxLevel);
+        }
+        catch { }
+    }
+
+    private static void ClearPersistedPendingDuplicate()
+    {
+        try
+        {
+            var save = SaveManager.GetExchangeBlob();
+            if (save == null || save.pendingDuplicate == null) return;
+            save.pendingDuplicate = null;
+            SaveManager.SetExchangeBlob(save);
+        }
+        catch { }
     }
 
     // ─────────── Duplicate level-up (mirrors EncounterManager logic) ───────────

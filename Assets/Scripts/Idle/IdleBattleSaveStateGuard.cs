@@ -17,6 +17,7 @@ using UnityEngine;
 public static class IdleBattleSaveStateGuard
 {
     private const string FileName = "idle_battle_guard.json";
+    private const string BackupFileName = "idle_battle_guard.bak";
 
     [Serializable]
     private class GuardState
@@ -30,6 +31,7 @@ public static class IdleBattleSaveStateGuard
     }
 
     private static string PathOnDisk => System.IO.Path.Combine(Application.persistentDataPath, FileName);
+    private static string BackupPathOnDisk => System.IO.Path.Combine(Application.persistentDataPath, BackupFileName);
 
     public static bool HasPending()
     {
@@ -96,10 +98,9 @@ public static class IdleBattleSaveStateGuard
     {
         try
         {
-            if (!File.Exists(PathOnDisk)) return null;
-            var json = File.ReadAllText(PathOnDisk);
-            if (string.IsNullOrEmpty(json)) return null;
-            return JsonUtility.FromJson<GuardState>(json);
+            if (TryRead(PathOnDisk, out var state) || TryRead(BackupPathOnDisk, out state))
+                return state;
+            return null;
         }
         catch
         {
@@ -111,7 +112,9 @@ public static class IdleBattleSaveStateGuard
     {
         try
         {
-            File.WriteAllText(PathOnDisk, JsonUtility.ToJson(s, false));
+            string json = JsonUtility.ToJson(s, false);
+            AtomicWrite(PathOnDisk, json);
+            TryCopy(PathOnDisk, BackupPathOnDisk);
         }
         catch
         {
@@ -123,11 +126,56 @@ public static class IdleBattleSaveStateGuard
     {
         if (File.Exists(PathOnDisk))
             File.Delete(PathOnDisk);
+        if (File.Exists(BackupPathOnDisk))
+            File.Delete(BackupPathOnDisk);
     }
 
     private static long NowUnix()
     {
         var now = DateTimeOffset.UtcNow;
         return now.ToUnixTimeSeconds();
+    }
+
+    private static bool TryRead(string path, out GuardState state)
+    {
+        state = null;
+        try
+        {
+            if (!File.Exists(path)) return false;
+            var json = File.ReadAllText(path);
+            if (string.IsNullOrWhiteSpace(json)) return false;
+            state = JsonUtility.FromJson<GuardState>(json);
+            return state != null;
+        }
+        catch
+        {
+            state = null;
+            return false;
+        }
+    }
+
+    private static void AtomicWrite(string path, string contents)
+    {
+        string tmp = path + ".tmp";
+        File.WriteAllText(tmp, contents ?? string.Empty);
+        try
+        {
+            if (File.Exists(path)) File.Delete(path);
+            File.Move(tmp, path);
+        }
+        catch
+        {
+            try { if (!File.Exists(path)) File.Copy(tmp, path); } catch { }
+            try { File.Delete(tmp); } catch { }
+        }
+    }
+
+    private static void TryCopy(string src, string dst)
+    {
+        try
+        {
+            if (File.Exists(src)) File.Copy(src, dst, overwrite: true);
+        }
+        catch { }
     }
 }

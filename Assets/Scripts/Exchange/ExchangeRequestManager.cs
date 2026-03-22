@@ -141,6 +141,132 @@ public sealed class ExchangeRequestManager : MonoBehaviour
         return credits;
     }
 
+    /// <summary>
+    /// Atomic-ish fulfillment path for inventory requests:
+    /// - validates request and owned candidate
+    /// - consumes the owned monster from roster/team/jobs
+    /// - grants rewards and marks request fulfilled
+    /// - persists exchange blob + player save in the same flow
+    ///
+    /// Returns awarded credits (0 = no fulfillment).
+    /// </summary>
+    public int TryFulfillRequestByConsumingOwned(string requestId, OwnedMonsterData ownedCandidate)
+    {
+        if (_save?.activeRequests == null) return 0;
+        if (ownedCandidate == null || string.IsNullOrEmpty(ownedCandidate.monsterId)) return 0;
+
+        ActiveRequest match = null;
+        for (int i = 0; i < _save.activeRequests.Count; i++)
+        {
+            var r = _save.activeRequests[i];
+            if (r != null && r.requestId == requestId && !r.fulfilled)
+            {
+                match = r;
+                break;
+            }
+        }
+        if (match == null) return 0;
+
+        var def = MonsterCatalog.GetById(ownedCandidate.monsterId);
+        if (def == null || !MatchesRequest(match, def)) return 0;
+
+        if (!ConsumeOwnedMonsterFromSave(ownedCandidate))
+            return 0;
+
+        int credits = Mathf.Max(0, match.creditReward);
+        int bonusAmount = Mathf.Max(0, match.bonusResourceAmount);
+
+        ResourceBank.BeginBatch();
+        try
+        {
+            match.fulfilled = true;
+            _save.totalRequestsFulfilled = Mathf.Max(0, _save.totalRequestsFulfilled + 1);
+
+            if (credits > 0)
+                ResourceBank.Add(ResourceType.Credits, credits);
+
+            if (bonusAmount > 0)
+                ResourceBank.Add(match.bonusResourceType, bonusAmount);
+
+            SaveManager.SetExchangeBlob(_save);
+        }
+        finally
+        {
+            ResourceBank.EndBatch();
+        }
+
+        GameEvents.OnOwnedMonstersChanged?.Invoke();
+        GameEvents.OnTeamChanged?.Invoke();
+        GameEvents.RequestFulfilled?.Invoke(requestId, ownedCandidate.monsterId);
+
+        return credits;
+    }
+
+    private static bool ConsumeOwnedMonsterFromSave(OwnedMonsterData owned)
+    {
+        var data = SaveManager.Data;
+        if (data == null || owned == null) return false;
+
+        data.owned ??= new List<OwnedMonsterData>();
+        data.team ??= new List<OwnedMonsterData>();
+
+        string ownedUid = owned.ownedUID;
+        string speciesId = owned.monsterId;
+        bool removed = false;
+
+        for (int i = data.owned.Count - 1; i >= 0; i--)
+        {
+            var entry = data.owned[i];
+            if (entry == null) continue;
+
+            bool same = false;
+            if (!string.IsNullOrEmpty(ownedUid) && !string.IsNullOrEmpty(entry.ownedUID))
+                same = string.Equals(entry.ownedUID, ownedUid, StringComparison.Ordinal);
+            else
+                same = ReferenceEquals(entry, owned);
+
+            if (!same) continue;
+            data.owned.RemoveAt(i);
+            removed = true;
+            break;
+        }
+
+        if (!removed && !string.IsNullOrEmpty(speciesId))
+        {
+            for (int i = data.owned.Count - 1; i >= 0; i--)
+            {
+                var entry = data.owned[i];
+                if (entry == null || string.IsNullOrEmpty(entry.monsterId)) continue;
+                if (!string.Equals(entry.monsterId, speciesId, StringComparison.Ordinal)) continue;
+                data.owned.RemoveAt(i);
+                removed = true;
+                break;
+            }
+        }
+
+        if (!removed) return false;
+
+        for (int i = 0; i < data.team.Count; i++)
+        {
+            var t = data.team[i];
+            if (t == null) continue;
+
+            bool same = false;
+            if (!string.IsNullOrEmpty(ownedUid) && !string.IsNullOrEmpty(t.ownedUID))
+                same = string.Equals(t.ownedUID, ownedUid, StringComparison.Ordinal);
+            else if (ReferenceEquals(t, owned))
+                same = true;
+
+            if (same)
+                data.team[i] = new OwnedMonsterData();
+        }
+
+        if (JobManager.I != null)
+            JobManager.I.RemoveFromAnyJob(!string.IsNullOrEmpty(ownedUid) ? ownedUid : speciesId);
+
+        return true;
+    }
+
     // ─────────── Rotation ───────────
 
     private void TryRotateDaily()

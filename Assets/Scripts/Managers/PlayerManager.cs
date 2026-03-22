@@ -141,9 +141,11 @@ public class PlayerManager
     public List<AutoBattleLogEntry> autoBattleLogArchive = new List<AutoBattleLogEntry>();
 
     public int credits = 0;
+    public bool creditsMigratedToResourceBank = false;
     public List<int> resourceCounts = new List<int>();
     public List<int> lifetimeResourceCollected = new List<int>();
     public List<string> unlockedPacks = new List<string>();
+    public List<string> unlockedFeatureIds = new List<string>();
 
     public int tapLevel = 0;
     public int idleLevel = 0;
@@ -261,6 +263,7 @@ public class PlayerManager
         activeJobMods ??= new List<JobGlobalMod>();
 
         lifetimeResourceCollected ??= new List<int>();
+        unlockedFeatureIds ??= new List<string>();
 
         fieldOps ??= new FieldOpsStats();
 

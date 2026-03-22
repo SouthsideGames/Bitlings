@@ -35,11 +35,15 @@ public static class ResourceBank
     public static void EndBatch()
     {
         _batchDepth = Mathf.Max(0, _batchDepth - 1);
-        if (_batchDepth == 0 && _dirty)
+        if (_batchDepth <= 0)
         {
-            _dirty = false;
-            SaveManager.Save();
-            GameEvents.OnResourcesChanged?.Invoke();
+            if (_dirty)
+            {
+                _dirty = false;
+                SaveManager.Save();
+                GameEvents.OnResourcesChanged?.Invoke();
+            }
+            _batchDepth = 0;  // Defensive clamp prevents anomalies
         }
     }
 

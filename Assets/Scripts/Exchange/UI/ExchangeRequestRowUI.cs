@@ -112,10 +112,10 @@ public class ExchangeRequestRowUI : MonoBehaviour
 
         string speciesId = ownedMatch.monsterId;
 
-        int reward = ExchangeRequestManager.I.TryFulfillRequest(_request.requestId, speciesId);
+        int reward = ExchangeRequestManager.I.TryFulfillRequestByConsumingOwned(_request.requestId, ownedMatch);
         if (reward > 0)
         {
-            ConsumeOwnedMonster(ownedMatch);
+            PendingDuplicateCapture.Clear();  // Clear stale state after consumption
 
             var def = MonsterCatalog.GetById(speciesId);
             string name = def != null ? def.displayName : speciesId;
@@ -159,70 +159,4 @@ public class ExchangeRequestRowUI : MonoBehaviour
         return null;
     }
 
-    private void ConsumeOwnedMonster(OwnedMonsterData owned)
-    {
-        var data = SaveManager.Data;
-        if (data == null || owned == null) return;
-
-        data.owned ??= new System.Collections.Generic.List<OwnedMonsterData>();
-        data.team ??= new System.Collections.Generic.List<OwnedMonsterData>();
-
-        string ownedUid = owned.ownedUID;
-        string speciesId = owned.monsterId;
-        bool removed = false;
-
-        for (int i = data.owned.Count - 1; i >= 0; i--)
-        {
-            var o = data.owned[i];
-            if (o == null) continue;
-
-            bool same = false;
-            if (!string.IsNullOrEmpty(ownedUid) && !string.IsNullOrEmpty(o.ownedUID))
-                same = string.Equals(o.ownedUID, ownedUid, StringComparison.Ordinal);
-            else
-                same = ReferenceEquals(o, owned);
-
-            if (!same) continue;
-            data.owned.RemoveAt(i);
-            removed = true;
-            break;
-        }
-
-        if (!removed && !string.IsNullOrEmpty(speciesId))
-        {
-            for (int i = data.owned.Count - 1; i >= 0; i--)
-            {
-                var o = data.owned[i];
-                if (o == null || string.IsNullOrEmpty(o.monsterId)) continue;
-                if (!string.Equals(o.monsterId, speciesId, StringComparison.Ordinal)) continue;
-                data.owned.RemoveAt(i);
-                removed = true;
-                break;
-            }
-        }
-
-        if (!removed) return;
-
-        for (int i = 0; i < data.team.Count; i++)
-        {
-            var t = data.team[i];
-            if (t == null) continue;
-
-            bool same = false;
-            if (!string.IsNullOrEmpty(ownedUid) && !string.IsNullOrEmpty(t.ownedUID))
-                same = string.Equals(t.ownedUID, ownedUid, StringComparison.Ordinal);
-            else if (ReferenceEquals(t, owned))
-                same = true;
-
-            if (same)
-                data.team[i] = new OwnedMonsterData();
-        }
-
-        if (JobManager.I != null)
-            JobManager.I.RemoveFromAnyJob(!string.IsNullOrEmpty(ownedUid) ? ownedUid : speciesId);
-
-        SaveManager.Save();
-        GameEvents.OnOwnedMonstersChanged?.Invoke();
-        GameEvents.OnTeamChanged?.Invoke();
-    }
 }

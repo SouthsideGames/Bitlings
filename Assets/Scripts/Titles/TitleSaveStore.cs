@@ -86,4 +86,9 @@ public static class TitleSaveStore
         }
         catch { /* swallow */ }
     }
+
+    public static void InvalidateCache()
+    {
+        _cache = null;
+    }
 }

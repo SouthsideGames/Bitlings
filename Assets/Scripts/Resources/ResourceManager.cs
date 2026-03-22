@@ -195,12 +195,32 @@ public class ResourceManager : MonoBehaviour
     private void TryMigrateLegacyCreditsOnce_WithJson()
     {
         var flags = LoadMigrationFlags();
+        var data = SaveManager.Data;
+
+        bool saveAlreadyMigrated = data != null && data.creditsMigratedToResourceBank;
+
+        if (saveAlreadyMigrated)
+        {
+            if (!flags.creditMigratedV2)
+            {
+                flags.creditMigratedV2 = true;
+                flags.savedAtUnix = NowUnix();
+                SaveMigrationFlags(flags);
+            }
+            return;
+        }
 
         if (flags.creditMigratedV2)
+        {
+            if (data != null && !data.creditsMigratedToResourceBank)
+            {
+                data.creditsMigratedToResourceBank = true;
+                SaveManager.Save();
+            }
             return;
+        }
 
         // Authoritative source for migration is the legacy field.
-        var data = SaveManager.Data;
         int legacyCredits = (data != null) ? Mathf.Max(0, data.credits) : 0;
         int bankCredits   = ResourceBank.Get(ResourceType.Credits);
 
@@ -217,6 +237,8 @@ public class ResourceManager : MonoBehaviour
             int finalCredits = ResourceBank.Get(ResourceType.Credits);
             if (data.credits != finalCredits)
                 data.credits = finalCredits;
+
+            data.creditsMigratedToResourceBank = true;
 
             SaveManager.Save();
         }

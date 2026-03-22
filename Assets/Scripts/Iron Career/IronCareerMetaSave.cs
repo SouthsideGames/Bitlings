@@ -28,20 +28,17 @@ public static class IronCareerMetaSave
 
     private static string FilePath =>
         Path.Combine(Application.persistentDataPath, FileName);
+    private static string BackupPath =>
+        Path.Combine(Application.persistentDataPath, "IronCareerMetaSave.bak");
 
     public static IronCareerMetaData Load()
     {
         try
         {
-            if (!File.Exists(FilePath))
-                return CreateDefault();
+            if (TryRead(FilePath, out var parsed) || TryRead(BackupPath, out parsed))
+                return parsed ?? CreateDefault();
 
-            string json = File.ReadAllText(FilePath);
-            if (string.IsNullOrEmpty(json))
-                return CreateDefault();
-
-            var parsed = JsonUtility.FromJson<IronCareerMetaData>(json);
-            return parsed ?? CreateDefault();
+            return CreateDefault();
         }
         catch (Exception ex)
         {
@@ -55,11 +52,55 @@ public static class IronCareerMetaSave
         try
         {
             string json = JsonUtility.ToJson(data, true);
-            File.WriteAllText(FilePath, json);
+            AtomicWrite(FilePath, json);
+            TryCopy(FilePath, BackupPath);
         }
         catch (Exception ex)
         {
             Debug.LogWarning($"[IronCareerMetaSave] Failed to save meta. Error: {ex.Message}");
         }
+    }
+
+    private static bool TryRead(string path, out IronCareerMetaData data)
+    {
+        data = null;
+        try
+        {
+            if (!File.Exists(path)) return false;
+            string json = File.ReadAllText(path);
+            if (string.IsNullOrWhiteSpace(json)) return false;
+            data = JsonUtility.FromJson<IronCareerMetaData>(json);
+            return data != null;
+        }
+        catch
+        {
+            data = null;
+            return false;
+        }
+    }
+
+    private static void AtomicWrite(string path, string contents)
+    {
+        string tmp = path + ".tmp";
+        File.WriteAllText(tmp, contents ?? string.Empty);
+        try
+        {
+            if (File.Exists(path)) File.Delete(path);
+            File.Move(tmp, path);
+        }
+        catch
+        {
+            try { if (!File.Exists(path)) File.Copy(tmp, path); } catch { }
+            try { File.Delete(tmp); } catch { }
+        }
+    }
+
+    private static void TryCopy(string src, string dst)
+    {
+        try
+        {
+            if (File.Exists(src)) File.Copy(src, dst, overwrite: true);
+        }
+        catch { }
     }
 }

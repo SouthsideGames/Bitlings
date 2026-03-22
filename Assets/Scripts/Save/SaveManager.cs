@@ -156,6 +156,7 @@ public static class SaveManager
 
     private static bool _loaded;
     private static bool _isSaving;
+    private static long _lastOnResumeUnixMs;
 
     // Cached sidecar blobs now stored inside PlayerSave.json
     private static JobRuntimeSave _jobRuntimeCache;
@@ -188,6 +189,13 @@ public static class SaveManager
     private static string LegacyBackupPath => Path.Combine(Application.persistentDataPath, "idle_mon_save.bak");
     private static string LegacyTutorialFlagsPath => Path.Combine(Application.persistentDataPath, "tutorial_flags.json");
     private static string LegacyJobRuntimePath => Path.Combine(Application.persistentDataPath, "idle_job_runtime.json");
+    private static string IdleBattlePath => Path.Combine(Application.persistentDataPath, "idle_battle.json");
+    private static string IdleBattleBackupPath => Path.Combine(Application.persistentDataPath, "idle_battle.bak");
+    private static string IdleBattleGuardPath => Path.Combine(Application.persistentDataPath, "idle_battle_guard.json");
+    private static string IdleBattleGuardBackupPath => Path.Combine(Application.persistentDataPath, "idle_battle_guard.bak");
+    private static string IronCareerMetaPath => Path.Combine(Application.persistentDataPath, "IronCareerMetaSave.json");
+    private static string IronCareerStatsPath => Path.Combine(Application.persistentDataPath, "IronCareerStats.json");
+    private static string MigrationsPath => Path.Combine(Application.persistentDataPath, "idle_migrations.json");
 
     // ─────────────────────────────────────────────
     // Auto-generated handler names
@@ -345,6 +353,11 @@ private static PlayerSaveRoot MigrateRootIfNeeded(PlayerSaveRoot root)
     {
         if (IsHardWiping) return;
 
+        long nowMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+        if (_lastOnResumeUnixMs > 0 && (nowMs - _lastOnResumeUnixMs) < 500L)
+            return;
+        _lastOnResumeUnixMs = nowMs;
+
         PruneExpiredCaptureBands(saveIfChanged: true);
         PruneExpiredLures(saveIfChanged: true);
         PruneExpiredLuckBoosts(saveIfChanged: true);
@@ -374,6 +387,11 @@ private static PlayerSaveRoot MigrateRootIfNeeded(PlayerSaveRoot root)
 
         try
         {
+            TitleSaveStore.InvalidateCache();
+            IdleBattleStore.ClearCache();
+            IronCareerStats.ClearCache();
+            PendingDuplicateCapture.Clear();
+
             SaveFiles.TryDelete(SavePath);
             SaveFiles.TryDelete(BackupPath);
             // Legacy files (kept for safety during transition)
@@ -382,6 +400,13 @@ private static PlayerSaveRoot MigrateRootIfNeeded(PlayerSaveRoot root)
             SaveFiles.TryDelete(LegacyJobRuntimePath);
             SaveFiles.TryDelete(LegacyTutorialFlagsPath);
             SaveFiles.TryDelete(TitleSaveStore.SavePath);
+            SaveFiles.TryDelete(IdleBattlePath);
+            SaveFiles.TryDelete(IdleBattleBackupPath);
+            SaveFiles.TryDelete(IdleBattleGuardPath);
+            SaveFiles.TryDelete(IdleBattleGuardBackupPath);
+            SaveFiles.TryDelete(IronCareerMetaPath);
+            SaveFiles.TryDelete(IronCareerStatsPath);
+            SaveFiles.TryDelete(MigrationsPath);
 
             ClearTutorialFlags();
 
@@ -443,6 +468,11 @@ private static PlayerSaveRoot MigrateRootIfNeeded(PlayerSaveRoot root)
 
         try
         {
+            TitleSaveStore.InvalidateCache();
+            IdleBattleStore.ClearCache();
+            IronCareerStats.ClearCache();
+            PendingDuplicateCapture.Clear();
+
             // 1) Stop the "already loaded" guard so LoadOrCreate can run again this session.
             _loaded = false;
 
@@ -460,6 +490,13 @@ private static PlayerSaveRoot MigrateRootIfNeeded(PlayerSaveRoot root)
             SaveFiles.TryDelete(LegacyJobRuntimePath);
             SaveFiles.TryDelete(LegacyTutorialFlagsPath);
             SaveFiles.TryDelete(TitleSaveStore.SavePath);
+            SaveFiles.TryDelete(IdleBattlePath);
+            SaveFiles.TryDelete(IdleBattleBackupPath);
+            SaveFiles.TryDelete(IdleBattleGuardPath);
+            SaveFiles.TryDelete(IdleBattleGuardBackupPath);
+            SaveFiles.TryDelete(IronCareerMetaPath);
+            SaveFiles.TryDelete(IronCareerStatsPath);
+            SaveFiles.TryDelete(MigrationsPath);
 
             SaveFiles.TryDelete(SavePath + ".tmp");
             SaveFiles.TryDelete(BackupPath + ".tmp");
@@ -468,6 +505,17 @@ private static PlayerSaveRoot MigrateRootIfNeeded(PlayerSaveRoot root)
             SaveFiles.TryDelete(LegacyJobRuntimePath + ".tmp");
             SaveFiles.TryDelete(LegacyTutorialFlagsPath + ".tmp");
             SaveFiles.TryDelete(TitleSaveStore.SavePath + ".tmp");
+            SaveFiles.TryDelete(IdleBattlePath + ".tmp");
+            SaveFiles.TryDelete(IdleBattleBackupPath + ".tmp");
+            SaveFiles.TryDelete(IdleBattleGuardPath + ".tmp");
+            SaveFiles.TryDelete(IdleBattleGuardBackupPath + ".tmp");
+            SaveFiles.TryDelete(IronCareerMetaPath + ".tmp");
+            SaveFiles.TryDelete(IronCareerStatsPath + ".tmp");
+            SaveFiles.TryDelete(MigrationsPath + ".tmp");
+            SaveFiles.TryDelete(IronCareerMetaPath + ".bak");
+            SaveFiles.TryDelete(IronCareerStatsPath + ".bak");
+            SaveFiles.TryDelete(MigrationsPath + ".bak");
+            SaveFiles.TryDelete(IdleBattleGuardPath + ".bak");
 
             _jobRuntimeCache = null;
             _titlesCache = null;
@@ -732,6 +780,7 @@ private static PlayerSaveRoot MigrateRootIfNeeded(PlayerSaveRoot root)
         Data.jobProgress ??= new List<JobProgress>();
         Data.jobStorageUpgrades ??= new List<JobStorageUpgrade>();
         Data.unlockedPacks ??= new List<string>();
+        Data.unlockedFeatureIds ??= new List<string>();
         Data.resourceCounts ??= new List<int>();
             Data.lifetimeResourceCollected ??= new List<int>();
         Data.preferredVariants ??= new List<PreferredVariantKV>();

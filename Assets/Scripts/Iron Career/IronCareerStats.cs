@@ -43,6 +43,8 @@ public static class IronCareerStats
 
     private static string FilePath =>
         Path.Combine(Application.persistentDataPath, FileName);
+    private static string BackupPath =>
+        Path.Combine(Application.persistentDataPath, "IronCareerStats.bak");
 
     private static string CurrentMonthKey => DateTime.Now.ToString("yyyy-MM");
 
@@ -68,16 +70,9 @@ public static class IronCareerStats
 
         try
         {
-            if (File.Exists(FilePath))
+            if (TryRead(FilePath, out var data) || TryRead(BackupPath, out data))
             {
-                string json = File.ReadAllText(FilePath);
-                if (string.IsNullOrEmpty(json))
-                {
-                    _cached = Sanitize(default(IronCareerStatsData));
-                    return _cached.Value;
-                }
-
-                _cached = Sanitize(JsonUtility.FromJson<IronCareerStatsData>(json));
+                _cached = Sanitize(data);
                 return _cached.Value;
             }
 
@@ -101,7 +96,8 @@ public static class IronCareerStats
         try
         {
             string json = JsonUtility.ToJson(data, true);
-            File.WriteAllText(FilePath, json);
+            AtomicWrite(FilePath, json);
+            TryCopy(FilePath, BackupPath);
         }
         catch (Exception ex)
         {
@@ -210,5 +206,54 @@ public static class IronCareerStats
 
         if (data.monthlyRecords.Count > MaxMonthsKept)
             data.monthlyRecords.RemoveRange(MaxMonthsKept, data.monthlyRecords.Count - MaxMonthsKept);
+    }
+
+    public static void ClearCache()
+    {
+        _cached = null;
+    }
+
+    private static bool TryRead(string path, out IronCareerStatsData data)
+    {
+        data = default;
+        try
+        {
+            if (!File.Exists(path)) return false;
+            string json = File.ReadAllText(path);
+            if (string.IsNullOrWhiteSpace(json)) return false;
+            data = JsonUtility.FromJson<IronCareerStatsData>(json);
+            return true;
+        }
+        catch
+        {
+            data = default;
+            return false;
+        }
+    }
+
+    private static void AtomicWrite(string path, string contents)
+    {
+        string tmp = path + ".tmp";
+        File.WriteAllText(tmp, contents ?? string.Empty);
+
+        try
+        {
+            if (File.Exists(path)) File.Delete(path);
+            File.Move(tmp, path);
+        }
+        catch
+        {
+            try { if (!File.Exists(path)) File.Copy(tmp, path); } catch { }
+            try { File.Delete(tmp); } catch { }
+        }
+    }
+
+    private static void TryCopy(string src, string dst)
+    {
+        try
+        {
+            if (File.Exists(src)) File.Copy(src, dst, overwrite: true);
+        }
+        catch { }
     }
 }
