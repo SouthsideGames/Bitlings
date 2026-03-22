@@ -56,6 +56,12 @@ public class ExchangePanelUI : MonoBehaviour
     [Header("Close")]
     [SerializeField] private Button closeButton;
 
+    [Header("Fulfillment Confirmation")]
+    [SerializeField] private GameObject confirmOverlayRoot;
+    [SerializeField] private TextMeshProUGUI confirmMessageLabel;
+    [SerializeField] private Button confirmYesButton;
+    [SerializeField] private Button confirmNoButton;
+
     [Header("Token Display")]
     [SerializeField] private GameObject tokenDisplayRoot;
     [SerializeField] private TextMeshProUGUI bullTokenLabel;
@@ -71,6 +77,11 @@ public class ExchangePanelUI : MonoBehaviour
     private int _tickerIndex;
     private Coroutine _tickerCoroutine;
 
+    // Confirmation state
+    private ActiveRequest _pendingRequest;
+    private OwnedMonsterData _pendingOwned;
+    private CanvasGroup _mainContentCg;
+
     // Tutorial keys — must match TutorialOverlayPanel.tutorialKey on prefab
     private const string TutMarket    = "tut_exchange_market_v1";
     private const string TutPortfolio = "tut_exchange_portfolio_v1";
@@ -80,6 +91,7 @@ public class ExchangePanelUI : MonoBehaviour
     void Awake()
     {
         I = this;
+        SetConfirmVisible(false);
     }
 
     void OnEnable()
@@ -95,6 +107,10 @@ public class ExchangePanelUI : MonoBehaviour
         if (sortByRarityButton) sortByRarityButton.onClick.AddListener(() => { _sortMode = SortMode.Rarity; RefreshMarket(); });
 
         if (closeButton) closeButton.onClick.AddListener(Close);
+
+        if (confirmYesButton) { confirmYesButton.onClick.RemoveAllListeners(); confirmYesButton.onClick.AddListener(OnConfirmYes); }
+        if (confirmNoButton)  { confirmNoButton.onClick.RemoveAllListeners();  confirmNoButton.onClick.AddListener(OnConfirmNo);  }
+        SetConfirmVisible(false);
 
         GameEvents.ExchangeValuesChanged += OnValuesChanged;
         GameEvents.ExchangeMarketReset += OnValuesChanged;
@@ -119,6 +135,8 @@ public class ExchangePanelUI : MonoBehaviour
         if (sortByTrendButton)  sortByTrendButton.onClick.RemoveAllListeners();
         if (sortByRarityButton) sortByRarityButton.onClick.RemoveAllListeners();
         if (closeButton) closeButton.onClick.RemoveAllListeners();
+        if (confirmYesButton) confirmYesButton.onClick.RemoveAllListeners();
+        if (confirmNoButton)  confirmNoButton.onClick.RemoveAllListeners();
 
         GameEvents.ExchangeValuesChanged -= OnValuesChanged;
         GameEvents.ExchangeMarketReset -= OnValuesChanged;
@@ -536,7 +554,105 @@ public class ExchangePanelUI : MonoBehaviour
 
     private void Close()
     {
+        SetConfirmVisible(false);
         if (UIManager.I != null) UIManager.I.Hide(PanelId.Exchange);
+    }
+
+    // ─────────── Fulfillment Confirmation ───────────
+
+    /// <summary>
+    /// Called by ExchangeRequestRowUI to show the confirmation overlay
+    /// before permanently consuming the monster.
+    /// </summary>
+    public void ShowFulfillConfirmation(ActiveRequest request, OwnedMonsterData owned)
+    {
+        if (request == null || owned == null) return;
+
+        _pendingRequest = request;
+        _pendingOwned = owned;
+
+        // Build warning message
+        var def = MonsterCatalog.GetById(owned.monsterId);
+        string monsterName = def != null ? def.displayName : owned.monsterId;
+        string bonus = request.bonusResourceAmount > 0
+            ? $" + {request.bonusResourceAmount} {request.bonusResourceType}"
+            : "";
+
+        if (confirmMessageLabel != null)
+            confirmMessageLabel.text =
+                $"Are you sure you want to give away <b>{monsterName}</b>?\n\n" +
+                $"This Bitling will be permanently removed from your roster, team, and any active jobs.\n\n" +
+                $"Reward: <b>+{request.creditReward} Credits{bonus}</b>";
+
+        SetConfirmVisible(true);
+    }
+
+    private void OnConfirmYes()
+    {
+        if (_pendingRequest == null || _pendingOwned == null || ExchangeRequestManager.I == null)
+        {
+            SetConfirmVisible(false);
+            return;
+        }
+
+        string speciesId = _pendingOwned.monsterId;
+        int reward = ExchangeRequestManager.I.TryFulfillRequestByConsumingOwned(
+            _pendingRequest.requestId, _pendingOwned);
+
+        SetConfirmVisible(false);
+
+        if (reward > 0)
+        {
+            PendingDuplicateCapture.Clear();
+            var def = MonsterCatalog.GetById(speciesId);
+            string name = def != null ? def.displayName : speciesId;
+            GameEvents.RaiseToast($"{name} placed! +{reward} Credits");
+            ShowRequests();
+        }
+    }
+
+    private void OnConfirmNo()
+    {
+        _pendingRequest = null;
+        _pendingOwned = null;
+        SetConfirmVisible(false);
+    }
+
+    private void SetConfirmVisible(bool on)
+    {
+        if (confirmOverlayRoot != null)
+            confirmOverlayRoot.SetActive(on);
+
+        // Block interaction with the rest of the panel (tabs, close, etc.)
+        // while the confirmation is visible, so the player can't navigate away.
+        if (_mainContentCg == null)
+        {
+            // Cache a CanvasGroup on the first content-bearing child or self.
+            // We use the panel's own root but exclude the overlay itself.
+            var panelRoot = gameObject;
+            _mainContentCg = panelRoot.GetComponent<CanvasGroup>();
+            if (_mainContentCg == null)
+                _mainContentCg = panelRoot.AddComponent<CanvasGroup>();
+        }
+
+        // When overlay is on, disable interaction on the whole Exchange panel;
+        // the overlay sits on top and has its own interactable state.
+        _mainContentCg.interactable = !on;
+
+        // Re-enable the overlay's own interactability so its buttons work.
+        if (on && confirmOverlayRoot != null)
+        {
+            var overlayCg = confirmOverlayRoot.GetComponent<CanvasGroup>();
+            if (overlayCg == null) overlayCg = confirmOverlayRoot.AddComponent<CanvasGroup>();
+            overlayCg.interactable = true;
+            overlayCg.blocksRaycasts = true;
+        }
+
+        if (!on)
+        {
+            _pendingRequest = null;
+            _pendingOwned = null;
+        }
     }
 
     private void OnValuesChanged()

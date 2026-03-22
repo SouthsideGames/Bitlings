@@ -110,21 +110,9 @@ public class ExchangeRequestRowUI : MonoBehaviour
             return;
         }
 
-        string speciesId = ownedMatch.monsterId;
-
-        int reward = ExchangeRequestManager.I.TryFulfillRequestByConsumingOwned(_request.requestId, ownedMatch);
-        if (reward > 0)
-        {
-            PendingDuplicateCapture.Clear();  // Clear stale state after consumption
-
-            var def = MonsterCatalog.GetById(speciesId);
-            string name = def != null ? def.displayName : speciesId;
-            GameEvents.RaiseToast($"{name} placed! +{reward} Credits");
-
-            // Refresh the requests tab
-            if (ExchangePanelUI.I != null)
-                ExchangePanelUI.I.ShowRequests();
-        }
+        // Show confirmation — the monster is permanently removed on accept
+        if (ExchangePanelUI.I != null)
+            ExchangePanelUI.I.ShowFulfillConfirmation(_request, ownedMatch);
     }
 
     private bool CanPlayerFulfill(ActiveRequest request)
