@@ -101,18 +101,22 @@ public class JobPanelUI : MonoBehaviour
             // Stored is whole-units only (no fractional resources).
             int storedWhole = s.storedUnits;
             string storedShown = storedWhole.ToString();
+            int nextProgressPct = Mathf.Clamp(Mathf.FloorToInt(Mathf.Clamp01(s.storedRemainder) * 100f), 0, 99);
+            string progressSuffix = (storedWhole <= 0 && nextProgressPct > 0)
+                ? $" ({nextProgressPct}% to next)"
+                : string.Empty;
             if (t.stored)
             {
                 if (deltaCap == 0)
                 {
-                    t.stored.text = $"Stored: {storedShown}/{capWithTitles}";
+                    t.stored.text = $"Stored: {storedShown}/{capWithTitles}{progressSuffix}";
                 }
                 else
                 {
                     var c = deltaCap > 0 ? capUpColor : capDownColor;
                     string hex = ColorUtility.ToHtmlStringRGB(c);
                     string sign = deltaCap > 0 ? "+" : ""; // negatives already have '-'
-                    t.stored.text = $"Stored: {storedShown}/{capWithTitles} <color=#{hex}>({sign}{deltaCap})</color>";
+                    t.stored.text = $"Stored: {storedShown}/{capWithTitles} <color=#{hex}>({sign}{deltaCap})</color>{progressSuffix}";
                 }
             }
 

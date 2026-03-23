@@ -58,7 +58,7 @@ public static class GameEvents
     // ─────────────────────────────────────────────────────────
     public static Action JobAssigned;
     public static Action TitleEquipped;
-    public static Action CodexOpened;
+    public static Action DirectoryOpened;
     public static Action<StatusType> StatusAppliedToWild;
     public static Action IronRunStarted;
     public static Action IronBattleWon;

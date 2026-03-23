@@ -12,7 +12,7 @@ public enum PanelId
     Home = 4,
     Resources = 5,
     Upgrades = 6,
-    Codex = 7,
+    Directory = 7,
     JobAssign = 8,
     Harbor = 9,
     CryoLab = 10,
@@ -69,7 +69,7 @@ public class UIManager : MonoBehaviour
     [SerializeField] private List<PanelEntry> panels = new();
 
     [Header("Navigation")]
-    [Tooltip("If enabled, opening a MAIN panel will automatically close any other MAIN panels (ex: Home won't stay open under Codex). Overlays/popups are not affected.")]
+    [Tooltip("If enabled, opening a MAIN panel will automatically close any other MAIN panels (ex: Home won't stay open under Dictionary). Overlays/popups are not affected.")]
     [SerializeField] private bool singleMainPanelMode = true;
 
     [Tooltip("Panels treated as overlays/popups. They are allowed to stack and will NOT be auto-closed when opening a main panel.")]

@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 
 /// <summary>
-/// Lightweight runtime helper for mapping MonsterId -> PackId for UI (Codex badges, sorting, etc.).
+/// Lightweight runtime helper for mapping MonsterId -> PackId for UI (Directory badges, sorting, etc.).
 /// Safe to call even if no pack library exists.
 /// </summary>
 public static class MonsterPackTagCache

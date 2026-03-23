@@ -11,7 +11,7 @@ public enum MonsterDetailMode
 {
     StarterSelect,
     AssignToTeam,
-    CodexView
+    DirectoryView
 }
 
 public class MonsterDetailPanelUI : MonoBehaviour
@@ -78,15 +78,15 @@ public class MonsterDetailPanelUI : MonoBehaviour
     [SerializeField] private EvolutionPanelUI evolutionPanel;
 
     [Header("Favorites")]
-    [Tooltip("Shown when Codex_Favorites is unlocked. Toggles this monster as a favorite.")]
+    [Tooltip("Shown when Directory_Favorites is unlocked. Toggles this monster as a favorite.")]
     [SerializeField] private Button favoriteButton;
     [SerializeField] private GameObject favoriteOnIcon;
 
-    [Header("Shiny Variant Toggle (Codex)")]
-    [Tooltip("Optional. If wired, shows a toggle in Codex detail view when you own BOTH the normal and shiny variant.")]
+    [Header("Shiny Variant Toggle (Directory)")]
+    [Tooltip("Optional. If wired, shows a toggle in Directory detail view when you own BOTH the normal and shiny variant.")]
     [SerializeField] private GameObject shinyVariantRoot;
 
-    [Tooltip("Optional. Clicking toggles between Normal and Shiny view (Codex only).")]
+    [Tooltip("Optional. Clicking toggles between Normal and Shiny view (Directory only).")]
     [SerializeField] private Button shinyVariantToggleButton;
 
     [Tooltip("Optional. Label for the toggle button (e.g., 'View Shiny' / 'View Normal').")]
@@ -110,8 +110,8 @@ public class MonsterDetailPanelUI : MonoBehaviour
     [SerializeField] private bool safeSkipMonsterIcon = true;
     [SerializeField] private bool buildVerboseLogging;
 
-    [Header("Swipe Browse (Codex / Starter)")]
-    [Tooltip("Enable swipe-to-browse in Codex and Starter detail views.")]
+    [Header("Swipe Browse (Directory / Starter)")]
+    [Tooltip("Enable swipe-to-browse in Directory and Starter detail views.")]
     [SerializeField] private bool enableSwipeBrowse = true;
 
     [Tooltip("Swipe distance in pixels before a browse triggers.")]
@@ -147,12 +147,12 @@ public class MonsterDetailPanelUI : MonoBehaviour
 
     // Cosmetic view flag (drives icon/name only)
     private bool _viewShinyCosmetic;
-// Codex shiny/normal view state (variant toggle)
-    private bool _codexHasNormal;
-    private bool _codexHasShiny;
-    private bool _codexViewingShiny;
+// Directory shiny/normal view state (variant toggle)
+    private bool _directoryHasNormal;
+    private bool _directoryHasShiny;
+    private bool _directoryViewingShiny;
 
-    // Browse session (Codex/Starter swipe)
+    // Browse session (Directory/Starter swipe)
     private IReadOnlyList<MonsterDataSO> _browseDefs;
     private int _browseIndex = -1;
     private bool _browseWrap = true;
@@ -215,7 +215,7 @@ public class MonsterDetailPanelUI : MonoBehaviour
         if (shinyVariantToggleButton)
         {
             shinyVariantToggleButton.onClick.RemoveAllListeners();
-            shinyVariantToggleButton.onClick.AddListener(ToggleCodexShinyVariant);
+            shinyVariantToggleButton.onClick.AddListener(ToggleDirectoryShinyVariant);
         }
 
         RefreshStatsViewToggleLabel();
@@ -245,7 +245,7 @@ public class MonsterDetailPanelUI : MonoBehaviour
         if (!enableSwipeBrowse) return;
 
         bool canSwipe =
-            (_mode == MonsterDetailMode.CodexView) ||
+            (_mode == MonsterDetailMode.DirectoryView) ||
             (_mode == MonsterDetailMode.StarterSelect && _browseDefs != null && _browseDefs.Count > 1);
 
         if (!canSwipe) return;
@@ -557,11 +557,11 @@ current = MonsterLibraryLocator.GetById(_currentOwned.monsterId);
         SafeOpen(current);
     }
 
-    public void ShowCodex(MonsterDataSO monster)
+    public void ShowDirectory(MonsterDataSO monster)
     {
         ClearVariantState();
 
-        _mode = MonsterDetailMode.CodexView;
+        _mode = MonsterDetailMode.DirectoryView;
         _currentOwned = null;
         _teamSlotIndex = -1;
         _onRemoved = null;
@@ -575,20 +575,20 @@ current = MonsterLibraryLocator.GetById(_currentOwned.monsterId);
 
         ResolveVariantState(monster ? monster.id : null);
         _statsOwned = _preferredOwned;
-        _viewShinyCosmetic = _codexViewingShiny;
+        _viewShinyCosmetic = _directoryViewingShiny;
         SetupShinyVariantUI();
         UpdateShinyVariantToggleLabel(); 
         SafeOpen(monster);
     }
 
-    public void ShowCodexOwned(MonsterDataSO monster, OwnedMonsterData owned)
+    public void ShowDirectoryOwned(MonsterDataSO monster, OwnedMonsterData owned)
     {
         if (monster == null)
             return;
 
         ClearVariantState();
 
-        _mode = MonsterDetailMode.CodexView;
+        _mode = MonsterDetailMode.DirectoryView;
         _teamSlotIndex = -1;
         _onRemoved = null;
 
@@ -608,9 +608,9 @@ current = MonsterLibraryLocator.GetById(_currentOwned.monsterId);
         // Ensure the cosmetic view matches the instance we opened from.
         // Without this, if the panel was previously opened from a shiny team member,
         // clicking a non-shiny owned row could keep the "Shiny" tab selected.
-        _viewShinyCosmetic = _codexViewingShiny;
+        _viewShinyCosmetic = _directoryViewingShiny;
 
-        // In Codex mode, stats are driven by the focused owned instance, but shiny is cosmetic-only.
+        // In Directory mode, stats are driven by the focused owned instance, but shiny is cosmetic-only.
         // Apply cosmetic immediately so icon + name are correct even if the panel was already open.
         ApplyVariantCosmeticImmediate();
         SetupShinyVariantUI();
@@ -659,7 +659,7 @@ current = MonsterLibraryLocator.GetById(_currentOwned.monsterId);
             return;
 
         bool featureOn = FeatureUnlockManager.I &&
-                         FeatureUnlockManager.I.IsUnlocked(FeatureId.Codex_Favorites) &&
+                         FeatureUnlockManager.I.IsUnlocked(FeatureId.Directory_Favorites) &&
                          current != null;
 
         favoriteButton.gameObject.SetActive(featureOn);
@@ -699,7 +699,7 @@ current = MonsterLibraryLocator.GetById(_currentOwned.monsterId);
     private bool IsViewingShinyNow()
     {
         // Shiny is cosmetic-only. The active cosmetic flag drives icon/name.
-        if (_mode == MonsterDetailMode.AssignToTeam || _mode == MonsterDetailMode.CodexView)
+        if (_mode == MonsterDetailMode.AssignToTeam || _mode == MonsterDetailMode.DirectoryView)
             return _viewShinyCosmetic;
 
         return false;
@@ -719,16 +719,16 @@ current = MonsterLibraryLocator.GetById(_currentOwned.monsterId);
         if (!shinyVariantRoot)
             return;
 
-        // Show in Codex + Assign/Team. Never in StarterSelect.
-        if (_mode != MonsterDetailMode.CodexView && _mode != MonsterDetailMode.AssignToTeam)
+        // Show in Directory + Assign/Team. Never in StarterSelect.
+        if (_mode != MonsterDetailMode.DirectoryView && _mode != MonsterDetailMode.AssignToTeam)
         {
             shinyVariantRoot.SetActive(false);
             return;
         }
 
         bool show = current != null
-                    && _codexHasNormal
-                    && _codexHasShiny
+                    && _directoryHasNormal
+                    && _directoryHasShiny
                     && _preferredOwned != null
                     && _otherVariantOwned != null;
 
@@ -740,7 +740,7 @@ current = MonsterLibraryLocator.GetById(_currentOwned.monsterId);
         UpdateShinyVariantToggleLabel(); 
     }
 
-    private void ToggleCodexShinyVariant()
+    private void ToggleDirectoryShinyVariant()
     {
         if (current == null || string.IsNullOrEmpty(current.id))
             return;
@@ -759,9 +759,9 @@ current = MonsterLibraryLocator.GetById(_currentOwned.monsterId);
         _preferredOwned = next;
         _otherVariantOwned = other;
 
-        _codexHasShiny = shiny != null;
-        _codexHasNormal = non != null;
-        _codexViewingShiny = next != null && (next.isShiny || next.shinyTier > 0);
+        _directoryHasShiny = shiny != null;
+        _directoryHasNormal = non != null;
+        _directoryViewingShiny = next != null && (next.isShiny || next.shinyTier > 0);
 
         _viewShinyCosmetic = (next != null && (next.isShiny || next.shinyTier > 0));
 
@@ -808,7 +808,7 @@ private Sprite GetVariantIcon(MonsterDataSO monster)
     {
         if (monster == null) return null;
 
-        bool shiny = (_mode == MonsterDetailMode.AssignToTeam || _mode == MonsterDetailMode.CodexView) ? _viewShinyCosmetic : false;
+        bool shiny = (_mode == MonsterDetailMode.AssignToTeam || _mode == MonsterDetailMode.DirectoryView) ? _viewShinyCosmetic : false;
 
         if (shiny && monster.shinyIcon != null)
             return monster.shinyIcon;
@@ -822,7 +822,7 @@ private Sprite GetVariantIcon(MonsterDataSO monster)
 
         string baseName = string.IsNullOrEmpty(monster.displayName) ? monster.name : monster.displayName;
 
-        bool shiny = (_mode == MonsterDetailMode.AssignToTeam || _mode == MonsterDetailMode.CodexView) ? _viewShinyCosmetic : false;
+        bool shiny = (_mode == MonsterDetailMode.AssignToTeam || _mode == MonsterDetailMode.DirectoryView) ? _viewShinyCosmetic : false;
 
         if (!shiny)
             return baseName;
@@ -891,11 +891,11 @@ private Sprite GetVariantIcon(MonsterDataSO monster)
                 }
 
                 bool isStarter = _mode == MonsterDetailMode.StarterSelect;
-                bool isCodex = _mode == MonsterDetailMode.CodexView;
+                bool isDirectory = _mode == MonsterDetailMode.DirectoryView;
                 bool isAssign = _mode == MonsterDetailMode.AssignToTeam;
 
                 if (starterButtonsHolder) starterButtonsHolder.SetActive(isStarter);
-                if (slotButtonsHolder) slotButtonsHolder.SetActive(isCodex);
+                if (slotButtonsHolder) slotButtonsHolder.SetActive(isDirectory);
                 if (teamHolder) teamHolder.SetActive(isAssign && _teamSlotIndex >= 0);
 
                 if (closeButton) closeButton.gameObject.SetActive(!isStarter);
@@ -908,7 +908,7 @@ private Sprite GetVariantIcon(MonsterDataSO monster)
 
                 // ✅ CRITICAL FIX:
                 // Preserve focused owned instance during staged refresh so Team/Assign doesn’t
-                // accidentally revert to global codex preference mid-render.
+                // accidentally revert to global directory preference mid-render.
                 ResolveVariantState(monster ? monster.id : null);
                 SetupShinyVariantUI();
                 UpdateShinyVariantToggleLabel();
@@ -1148,14 +1148,14 @@ private Sprite GetVariantIcon(MonsterDataSO monster)
     {
         slotIndex = Mathf.Clamp(slotIndex, 0, 2);
 
-        if (_mode == MonsterDetailMode.CodexView)
+        if (_mode == MonsterDetailMode.DirectoryView)
         {
             if (current == null || string.IsNullOrEmpty(current.id)) { Hide(); return; }
 
             var data = SaveManager.Data;
             if (data == null)
             {
-                Debug.LogWarning("[MonsterDetailPanel] SaveManager.Data is null in AssignToSlot (CodexView). Attempting LoadOrCreate.");
+                Debug.LogWarning("[MonsterDetailPanel] SaveManager.Data is null in AssignToSlot (DirectoryView). Attempting LoadOrCreate.");
                 SaveManager.LoadOrCreate();
                 data = SaveManager.Data;
                 if (data == null) { Hide(); return; }
@@ -1167,7 +1167,7 @@ private Sprite GetVariantIcon(MonsterDataSO monster)
             var preferred = MonsterVariantPreference.GetPreferredOwned(current.id);
             if (preferred == null)
             {
-                Debug.LogWarning("[MonsterDetailPanel] No owned instance found for this monster; cannot assign from Codex.");
+                Debug.LogWarning("[MonsterDetailPanel] No owned instance found for this monster; cannot assign from Directory.");
                 Hide();
                 return;
             }
@@ -1292,9 +1292,9 @@ private Sprite GetVariantIcon(MonsterDataSO monster)
 
     private void ClearVariantState()
     {
-        _codexHasNormal = false;
-        _codexHasShiny = false;
-        _codexViewingShiny = false;
+        _directoryHasNormal = false;
+        _directoryHasShiny = false;
+        _directoryViewingShiny = false;
 
         _preferredOwned = null;
         _otherVariantOwned = null;
@@ -1646,9 +1646,9 @@ if (shinyVariantRoot) shinyVariantRoot.SetActive(false);
     // we want the detail panel to start from THAT instance (not a saved global preference).
     void ResolveVariantState(string monsterId, OwnedMonsterData focusOwned)
     {
-        _codexHasNormal = false;
-        _codexHasShiny = false;
-        _codexViewingShiny = false;
+        _directoryHasNormal = false;
+        _directoryHasShiny = false;
+        _directoryViewingShiny = false;
 
         _preferredOwned = null;
         _otherVariantOwned = null;
@@ -1658,8 +1658,8 @@ if (shinyVariantRoot) shinyVariantRoot.SetActive(false);
 
         if (MonsterVariantPreference.PlayerHasBothVariants(monsterId, out var shiny, out var non))
         {
-            _codexHasShiny = shiny != null;
-            _codexHasNormal = non != null;
+            _directoryHasShiny = shiny != null;
+            _directoryHasNormal = non != null;
 
             if (focusOwned != null && focusOwned.monsterId == monsterId)
                 _preferredOwned = focusOwned;
@@ -1671,7 +1671,7 @@ if (shinyVariantRoot) shinyVariantRoot.SetActive(false);
 
             _otherVariantOwned = MonsterVariantPreference.GetOtherVariant(monsterId, _preferredOwned);
 
-            _codexViewingShiny = _preferredOwned != null && (_preferredOwned.isShiny || _preferredOwned.shinyTier > 0);
+            _directoryViewingShiny = _preferredOwned != null && (_preferredOwned.isShiny || _preferredOwned.shinyTier > 0);
             return;
         }
 
@@ -1682,10 +1682,10 @@ if (shinyVariantRoot) shinyVariantRoot.SetActive(false);
         if (pref != null)
         {
             bool s = pref.isShiny || pref.shinyTier > 0;
-            _codexHasShiny = s;
-            _codexHasNormal = !s;
+            _directoryHasShiny = s;
+            _directoryHasNormal = !s;
             _preferredOwned = pref;
-            _codexViewingShiny = s;
+            _directoryViewingShiny = s;
         }
     }
 }

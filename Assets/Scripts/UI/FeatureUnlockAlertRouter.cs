@@ -11,9 +11,9 @@ public sealed class FeatureUnlockAlertRouter : MonoBehaviour
     [SerializeField] private GameObject settingsAlert;
     [SerializeField] private Button settingsButton;
 
-    [Header("Codex Alert")]
-    [SerializeField] private GameObject codexAlert;
-    [SerializeField] private Button codexButton;
+    [Header("Directory Alert")]
+    [SerializeField] private GameObject directoryAlert;
+    [SerializeField] private Button directoryButton;
 
     [Header("Gym Alert")]
     [SerializeField] private GameObject gymAlert;
@@ -44,7 +44,7 @@ public sealed class FeatureUnlockAlertRouter : MonoBehaviour
 
         AddDismiss(encounterButton, DismissEncounter);
         AddDismiss(settingsButton, DismissSettings);
-        AddDismiss(codexButton, DismissCodex);
+        AddDismiss(directoryButton, DismissDirectory);
         AddDismiss(gymButton, DismissGym);
         AddDismiss(resourceButton, DismissResource);
         AddDismiss(ironCareerButton, DismissIronCareer);
@@ -57,7 +57,7 @@ public sealed class FeatureUnlockAlertRouter : MonoBehaviour
 
         RemoveDismiss(encounterButton, DismissEncounter);
         RemoveDismiss(settingsButton, DismissSettings);
-        RemoveDismiss(codexButton, DismissCodex);
+        RemoveDismiss(directoryButton, DismissDirectory);
         RemoveDismiss(gymButton, DismissGym);
         RemoveDismiss(resourceButton, DismissResource);
         RemoveDismiss(ironCareerButton, DismissIronCareer);
@@ -77,9 +77,9 @@ public sealed class FeatureUnlockAlertRouter : MonoBehaviour
                 SetAlert(settingsAlert, true);
                 break;
 
-            case FeatureId.Codex_Favorites:
-            case FeatureId.Codex_CaptureOnlyFilter:
-                SetAlert(codexAlert, true);
+            case FeatureId.Directory_Favorites:
+            case FeatureId.Directory_CaptureOnlyFilter:
+                SetAlert(directoryAlert, true);
                 break;
 
             case FeatureId.AutoGrowth_Basic:
@@ -107,7 +107,7 @@ public sealed class FeatureUnlockAlertRouter : MonoBehaviour
 
     private void DismissEncounter() => SetAlert(encounterAlert, false);
     private void DismissSettings() => SetAlert(settingsAlert, false);
-    private void DismissCodex() => SetAlert(codexAlert, false);
+    private void DismissDirectory() => SetAlert(directoryAlert, false);
     private void DismissGym() => SetAlert(gymAlert, false);
     private void DismissResource() => SetAlert(resourceAlert, false);
     private void DismissIronCareer() => SetAlert(ironCareerAlert, false);
@@ -116,7 +116,7 @@ public sealed class FeatureUnlockAlertRouter : MonoBehaviour
     {
         SetAlert(encounterAlert, false);
         SetAlert(settingsAlert, false);
-        SetAlert(codexAlert, false);
+        SetAlert(directoryAlert, false);
         SetAlert(gymAlert, false);
         SetAlert(resourceAlert, false);
         SetAlert(ironCareerAlert, false);

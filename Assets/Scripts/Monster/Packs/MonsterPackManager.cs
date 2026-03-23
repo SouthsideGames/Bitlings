@@ -455,7 +455,7 @@ public class MonsterPackManager : MonoBehaviour
             data.unlockedPacks.Add(p.id);
             added++;
 
-            // Make contained monsters visible in Codex/draft pools
+            // Make contained monsters visible in Directory/draft pools
             RegisterUnlockedMonsters(p.id);
 
             try { OnPackUnlocked?.Invoke(p.id); } catch { /* ignore */ }

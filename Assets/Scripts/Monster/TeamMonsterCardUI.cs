@@ -257,7 +257,7 @@ public class TeamMonsterCardUI : MonoBehaviour
             return;
 
         bool hasFeature = FeatureUnlockManager.I &&
-                          FeatureUnlockManager.I.IsUnlocked(FeatureId.Codex_Favorites);
+                          FeatureUnlockManager.I.IsUnlocked(FeatureId.Directory_Favorites);
 
         bool valid = _data != null && !string.IsNullOrEmpty(_data.monsterId);
 

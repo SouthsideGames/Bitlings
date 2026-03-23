@@ -12,11 +12,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 8909f92dca58941be8a4545ccb059a11, type: 3}
   m_Name: Info_CodexFavorites
   m_EditorClassIdentifier: 
-  id: upg.codex.favorites
+  id: upg.directory.favorites
   category: 5
-  title: Codex Favorites
+  title: Directory Favorites
   subtitle: Quick Access Sorting
-  body: 'Unlocks the ability to favorite monsters in the Codex.
+  body: 'Unlocks the ability to favorite monsters in the Directory.
 
 
 

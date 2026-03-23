@@ -25,9 +25,9 @@ public enum FeatureId
     Seeds_CustomInput = 9,         // Custom seed input
     Seeds_RerollDailyOnce = 10,    // Reroll daily seed once per day
 
-    // ───── Codex Upgrades ─────
-    Codex_Favorites = 12,          // Favorite / pin sorting
-    Codex_CaptureOnlyFilter = 13,  // "Capture only" filter
+    // ───── Directory Upgrades ─────
+    Directory_Favorites = 12,          // Favorite / pin sorting
+    Directory_CaptureOnlyFilter = 13,  // "Capture only" filter
 
     // ───── Exchange Upgrades ─────
     Exchange_SurgeAlert = 20,      // Toast notification when any species hits Surge demand

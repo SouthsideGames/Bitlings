@@ -32,7 +32,7 @@ public enum AchievementTrigger
     IronRunsCompleted,
     IronPerfectRuns,
     BattlesWatched,
-    CodexOpened,
+    DirectoryOpened,
     SecretAchievementsUnlocked,
     AchievementsUnlocked
 }

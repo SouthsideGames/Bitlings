@@ -13,6 +13,10 @@ public class JobRuntimeSite
     public float[] slotFatigue01;
     public long[] slotCooldownUntilUnix;
 
+    // Site-level carry-over progress (whole + fractional) for job production.
+    public int storedUnits;
+    public float storedRemainder;
+
     public bool autoCollectEnabled;
     public bool allowClinicRelief = true;
 }
@@ -69,7 +73,7 @@ public static class SaveManager
 
     // Save schema versioning
     // Increment CURRENT_SAVE_VERSION whenever the on-disk JSON layout/semantics change.
-    private const int CURRENT_SAVE_VERSION = 3;
+    private const int CURRENT_SAVE_VERSION = 4;
 
     // Optional: last integrity/migration diagnostics. Useful for QA screenshots or a debug panel.
     private static string _lastValidationReport;
@@ -125,6 +129,26 @@ public static class SaveManager
                     // non-Normal value before unlock (older dev saves / manual edits), force Normal.
                     if (root.player.promotionRank < 15)
                         root.player.settings.difficultyMode = 0;
+                }
+            }
+        },
+        new MigrationStep
+        {
+            from = 3,
+            to = 4,
+            apply = (root) =>
+            {
+                root.jobRuntime ??= new JobRuntimeSave();
+                root.jobRuntime.sites ??= new List<JobRuntimeSite>();
+                root.jobRuntime.cooldowns ??= new List<MonsterCooldownKV>();
+
+                // Ensure carry-over fields are valid for older saves that lacked these fields.
+                for (int i = 0; i < root.jobRuntime.sites.Count; i++)
+                {
+                    var site = root.jobRuntime.sites[i];
+                    if (site == null) continue;
+                    site.storedUnits = Mathf.Max(0, site.storedUnits);
+                    site.storedRemainder = Mathf.Max(0f, site.storedRemainder);
                 }
             }
         }

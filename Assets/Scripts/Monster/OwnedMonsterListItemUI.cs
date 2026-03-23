@@ -22,7 +22,7 @@ public class OwnedMonsterListItemUI : MonoBehaviour
     [SerializeField] private GameObject evolveAlert;
     [SerializeField] private GameObject favoriteAlert;
 
-    [Header("Detail Panel (Assign Mode / Codex)")]
+    [Header("Detail Panel (Assign Mode / Directory)")]
     [SerializeField] private MonsterDetailPanelUI detailPanel;
 
     // data
@@ -34,9 +34,9 @@ public class OwnedMonsterListItemUI : MonoBehaviour
     private bool _allowDetail = true;
     private MonsterDetailPanelUI _detailPanelOverride;
 
-    // Codex browse context
-    private bool _isCodexRow;
-    private IReadOnlyList<MonsterDataSO> _codexBrowseDefs;
+    // Directory browse context
+    private bool _isDirectoryRow;
+    private IReadOnlyList<MonsterDataSO> _directoryBrowseDefs;
 
     void Awake()
     {
@@ -99,8 +99,8 @@ public class OwnedMonsterListItemUI : MonoBehaviour
 
     public void Setup(OwnedMonsterData data, MonsterDataSO def)
     {
-        _isCodexRow = false;
-        _codexBrowseDefs = null;
+        _isDirectoryRow = false;
+        _directoryBrowseDefs = null;
 
         _allowDetail = true;
         _detailPanelOverride = null;
@@ -149,7 +149,7 @@ public class OwnedMonsterListItemUI : MonoBehaviour
 
         RefreshPackBadge(def);
 
-        // Favorites are only shown for Codex entries; hide here.
+        // Favorites are only shown for Directory entries; hide here.
         if (favoriteAlert)
             favoriteAlert.SetActive(false);
 
@@ -162,14 +162,14 @@ public class OwnedMonsterListItemUI : MonoBehaviour
     }
 
     // ---------------------------------------------------------------------
-    // Codex-specific setup
+    // Directory-specific setup
     // ---------------------------------------------------------------------
 
     /// <summary>
-    /// Codex row setup. "captured" here means "revealed/known" in the Codex context.
+    /// Directory row setup. "captured" here means "revealed/known" in the Directory context.
     /// If not captured/revealed, row shows ??? and is not interactable.
     /// </summary>
-    public void SetupForCodex(
+    public void SetupForDirectory(
         MonsterDataSO def,
         OwnedMonsterData ownedData,
         bool captured,
@@ -177,8 +177,8 @@ public class OwnedMonsterListItemUI : MonoBehaviour
         bool allowDetail,
         MonsterDetailPanelUI detailPanelOverride)
     {
-        _isCodexRow = true;
-        _codexBrowseDefs = null; // set later by CodexPanelUI after it knows the final visible list
+        _isDirectoryRow = true;
+        _directoryBrowseDefs = null; // set later by DirectoryPanelUI after it knows the final visible list
 
         _detailPanelOverride = detailPanelOverride;
         _allowDetail = allowDetail && captured; // cannot open detail for unrevealed
@@ -253,15 +253,15 @@ public class OwnedMonsterListItemUI : MonoBehaviour
         if (favoriteAlert)
         {
             bool hasFeature = FeatureUnlockManager.I &&
-                              FeatureUnlockManager.I.IsUnlocked(FeatureId.Codex_Favorites);
+                              FeatureUnlockManager.I.IsUnlocked(FeatureId.Directory_Favorites);
             favoriteAlert.SetActive(hasFeature && captured && isFavorite);
         }
 
-        // KO / cooldown text only makes sense for owned monsters, not codex silhouettes.
+        // KO / cooldown text only makes sense for owned monsters, not directory silhouettes.
         if (cooldownText)
             cooldownText.gameObject.SetActive(false);
 
-        // Evolve alert makes no sense for codex grid rows.
+        // Evolve alert makes no sense for directory grid rows.
         if (evolveAlert)
             evolveAlert.SetActive(false);
 
@@ -306,12 +306,12 @@ public class OwnedMonsterListItemUI : MonoBehaviour
     }
 
     /// <summary>
-    /// Called by CodexPanelUI after it knows the final visible list of defs.
+    /// Called by DirectoryPanelUI after it knows the final visible list of defs.
     /// Enables swipe-browse context in MonsterDetailPanelUI.
     /// </summary>
-    public void SetCodexBrowseContext(IReadOnlyList<MonsterDataSO> visibleDefs)
+    public void SetDirectoryBrowseContext(IReadOnlyList<MonsterDataSO> visibleDefs)
     {
-        _codexBrowseDefs = visibleDefs;
+        _directoryBrowseDefs = visibleDefs;
     }
 
     // ---------------------------------------------------------------------
@@ -322,7 +322,7 @@ public class OwnedMonsterListItemUI : MonoBehaviour
     {
         if (rootButton)
         {
-            if (_isCodexRow)
+            if (_isDirectoryRow)
                 rootButton.interactable = on && _allowDetail && _def != null;
             else
                 // Allow interacting with KO'd monsters so players can assign them to the team for healing.
@@ -348,18 +348,18 @@ public class OwnedMonsterListItemUI : MonoBehaviour
 
         AudioManager.I?.PlayClick();
 
-        // Codex behavior: open by def (not OwnedMonsterData) and set browse list for swipe
-        if (_isCodexRow)
+        // Directory behavior: open by def (not OwnedMonsterData) and set browse list for swipe
+        if (_isDirectoryRow)
         {
             if (_def == null) return;
 
             // Use the APIs that exist in MonsterDetailPanelUI
-            if (_codexBrowseDefs != null && _codexBrowseDefs.Count > 1)
+            if (_directoryBrowseDefs != null && _directoryBrowseDefs.Count > 1)
             {
                 int startIndex = 0;
-                for (int i = 0; i < _codexBrowseDefs.Count; i++)
+                for (int i = 0; i < _directoryBrowseDefs.Count; i++)
                 {
-                    var d = _codexBrowseDefs[i];
+                    var d = _directoryBrowseDefs[i];
                     if (d && (_def == d || (!string.IsNullOrEmpty(d.id) && d.id == _def.id)))
                     {
                         startIndex = i;
@@ -367,7 +367,7 @@ public class OwnedMonsterListItemUI : MonoBehaviour
                     }
                 }
 
-                panel.SetStarterBrowseContext(_codexBrowseDefs, startIndex);
+                panel.SetStarterBrowseContext(_directoryBrowseDefs, startIndex);
             }
             else
             {
@@ -375,9 +375,9 @@ public class OwnedMonsterListItemUI : MonoBehaviour
             }
 
             if (HasValidMonster(_data))
-                panel.ShowCodexOwned(_def, _data);
+                panel.ShowDirectoryOwned(_def, _data);
             else
-                panel.ShowCodex(_def);
+                panel.ShowDirectory(_def);
             return;
         }
 
@@ -391,7 +391,7 @@ public class OwnedMonsterListItemUI : MonoBehaviour
     {
         if (rootButton)
         {
-            if (_isCodexRow)
+            if (_isDirectoryRow)
                 rootButton.interactable = (_def != null) && _allowDetail;
             else
                 // Allow interacting with KO'd monsters so players can assign them to the team for healing.

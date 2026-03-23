@@ -11,7 +11,7 @@ public class UpgradesPanelUI : MonoBehaviour
         IdleBattle,
         AutoGrowth,
         DailySeeds,
-        Codex,
+        Directory,
         Jobs,
         Exchange
     }
@@ -28,7 +28,7 @@ public class UpgradesPanelUI : MonoBehaviour
     [SerializeField] private Button idleBattleButton;
     [SerializeField] private Button autoGrowthButton;
     [SerializeField] private Button dailySeedsButton;
-    [SerializeField] private Button codexButton;
+    [SerializeField] private Button directoryButton;
     [SerializeField] private Button jobsButton;
     [SerializeField] private Button exchangeButton;
 
@@ -37,7 +37,7 @@ public class UpgradesPanelUI : MonoBehaviour
     [SerializeField] private SectionOverride idleBattleOverride;
     [SerializeField] private SectionOverride autoGrowthOverride;
     [SerializeField] private SectionOverride dailySeedsOverride;
-    [SerializeField] private SectionOverride codexOverride;
+    [SerializeField] private SectionOverride directoryOverride;
     [SerializeField] private SectionOverride jobsOverride;
     [SerializeField] private SectionOverride exchangeOverride;
 
@@ -97,7 +97,7 @@ public class UpgradesPanelUI : MonoBehaviour
         if (idleBattleButton) idleBattleButton.onClick.AddListener(ShowIdleBattle);
         if (autoGrowthButton) autoGrowthButton.onClick.AddListener(ShowAutoGrowth);
         if (dailySeedsButton) dailySeedsButton.onClick.AddListener(ShowDailySeeds);
-        if (codexButton) codexButton.onClick.AddListener(ShowCodex);
+        if (directoryButton) directoryButton.onClick.AddListener(ShowDirectory);
         if (jobsButton) jobsButton.onClick.AddListener(ShowJobs);
         if (exchangeButton) exchangeButton.onClick.AddListener(ShowExchange);
 
@@ -111,7 +111,7 @@ public class UpgradesPanelUI : MonoBehaviour
         if (idleBattleButton) idleBattleButton.onClick.RemoveListener(ShowIdleBattle);
         if (autoGrowthButton) autoGrowthButton.onClick.RemoveListener(ShowAutoGrowth);
         if (dailySeedsButton) dailySeedsButton.onClick.RemoveListener(ShowDailySeeds);
-        if (codexButton) codexButton.onClick.RemoveListener(ShowCodex);
+        if (directoryButton) directoryButton.onClick.RemoveListener(ShowDirectory);
         if (jobsButton) jobsButton.onClick.RemoveListener(ShowJobs);
         if (exchangeButton) exchangeButton.onClick.RemoveListener(ShowExchange);
 
@@ -122,7 +122,7 @@ public class UpgradesPanelUI : MonoBehaviour
     public void ShowIdleBattle() => ShowSection(UpgradeSection.IdleBattle);
     public void ShowAutoGrowth() => ShowSection(UpgradeSection.AutoGrowth);
     public void ShowDailySeeds() => ShowSection(UpgradeSection.DailySeeds);
-    public void ShowCodex() => ShowSection(UpgradeSection.Codex);
+    public void ShowDirectory() => ShowSection(UpgradeSection.Directory);
     public void ShowJobs() => ShowSection(UpgradeSection.Jobs);
     public void ShowExchange() => ShowSection(UpgradeSection.Exchange);
 
@@ -192,7 +192,7 @@ public class UpgradesPanelUI : MonoBehaviour
             UpgradeSection.IdleBattle => idleBattleOverride,
             UpgradeSection.AutoGrowth => autoGrowthOverride,
             UpgradeSection.DailySeeds => dailySeedsOverride,
-            UpgradeSection.Codex => codexOverride,
+            UpgradeSection.Directory => directoryOverride,
             UpgradeSection.Jobs => jobsOverride,
             UpgradeSection.Exchange => exchangeOverride,
             _ => null
@@ -226,7 +226,7 @@ public class UpgradesPanelUI : MonoBehaviour
 
     // ─────────────────────────────────────────────────────────────
     // Section Classification (NO catalog edits required)
-    // Primary: infoId prefix: upg.idle / upg.growth / upg.jobs / upg.seeds / upg.codex
+    // Primary: infoId prefix: upg.idle / upg.growth / upg.jobs / upg.seeds / upg.Directory
     // Fallback: FeatureId mapping
     // ─────────────────────────────────────────────────────────────
 
@@ -249,7 +249,7 @@ public class UpgradesPanelUI : MonoBehaviour
         if (infoId.StartsWith("upg.growth")) return UpgradeSection.AutoGrowth;
         if (infoId.StartsWith("upg.jobs"))   return UpgradeSection.Jobs;
         if (infoId.StartsWith("upg.seeds"))  return UpgradeSection.DailySeeds;
-        if (infoId.StartsWith("upg.codex"))  return UpgradeSection.Codex;
+        if (infoId.StartsWith("upg.directory"))  return UpgradeSection.Directory;
         if (infoId.StartsWith("upg.exchange")) return UpgradeSection.Exchange;
 
         return null;
@@ -286,9 +286,9 @@ public class UpgradesPanelUI : MonoBehaviour
             case FeatureId.Seeds_RerollDailyOnce:
                 return UpgradeSection.DailySeeds;
 
-            case FeatureId.Codex_Favorites:
-            case FeatureId.Codex_CaptureOnlyFilter:
-                return UpgradeSection.Codex;
+            case FeatureId.Directory_Favorites:
+            case FeatureId.Directory_CaptureOnlyFilter:
+                return UpgradeSection.Directory;
 
             case FeatureId.Recycle_Basic:
             default:

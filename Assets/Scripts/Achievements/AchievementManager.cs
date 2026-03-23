@@ -122,7 +122,7 @@ public sealed class AchievementManager : MonoBehaviour
         GameEvents.OnTeamChanged += OnTeamChanged;
         GameEvents.JobAssigned += OnJobAssigned;
         GameEvents.TitleEquipped += OnTitleEquipped;
-        GameEvents.CodexOpened += OnCodexOpened;
+        GameEvents.DirectoryOpened += OnDirectoryOpened;
         GameEvents.StatusAppliedToWild += OnStatusAppliedToWild;
         GameEvents.PromotionRankChanged += OnPromotionRankChanged;
         GameEvents.IronRunStarted += OnIronRunStarted;
@@ -143,7 +143,7 @@ public sealed class AchievementManager : MonoBehaviour
         GameEvents.OnTeamChanged -= OnTeamChanged;
         GameEvents.JobAssigned -= OnJobAssigned;
         GameEvents.TitleEquipped -= OnTitleEquipped;
-        GameEvents.CodexOpened -= OnCodexOpened;
+        GameEvents.DirectoryOpened -= OnDirectoryOpened;
         GameEvents.StatusAppliedToWild -= OnStatusAppliedToWild;
         GameEvents.PromotionRankChanged -= OnPromotionRankChanged;
         GameEvents.IronRunStarted -= OnIronRunStarted;
@@ -287,9 +287,9 @@ public sealed class AchievementManager : MonoBehaviour
         EvaluateSnapshotAchievements(saveIfChanged: saveOnEveryProgress);
     }
 
-    private void OnCodexOpened()
+    private void OnDirectoryOpened()
     {
-        ProgressAll(AchievementTrigger.CodexOpened, 1);
+        ProgressAll(AchievementTrigger.DirectoryOpened, 1);
     }
 
     private void OnStatusAppliedToWild(StatusType type)

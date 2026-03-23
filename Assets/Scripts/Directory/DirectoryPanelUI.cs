@@ -17,14 +17,14 @@ public enum OwnedSortMode
     BitlingPack
 }
 
-public enum CodexViewMode
+public enum DirectoryViewMode
 {
     All = 0,
     Discovered = 1,
     Captured = 2
 }
 
-public class CodexPanelUI : MonoBehaviour
+public class DirectoryPanelUI : MonoBehaviour
 {
     [Header("Team")]
     [SerializeField] private RectTransform teamContent;
@@ -53,10 +53,10 @@ public class CodexPanelUI : MonoBehaviour
     private bool _capturedOnlyFilter = false;
     private bool _favoritesOnlyFilter = false;
 
-    private CodexViewMode _viewMode = CodexViewMode.All;
+    private DirectoryViewMode _viewMode = DirectoryViewMode.All;
 
-    // cache last visible codex defs (post-filter) for swipe browsing
-    private List<MonsterDataSO> _lastVisibleCodexDefs = new List<MonsterDataSO>();
+    // cache last visible directory defs (post-filter) for swipe browsing
+    private List<MonsterDataSO> _lastVisibleDirectoryDefs = new List<MonsterDataSO>();
 
     void OnEnable()
     {
@@ -65,7 +65,7 @@ public class CodexPanelUI : MonoBehaviour
         GameEvents.MonsterCaptured += HandleMonsterCaptured;
         GameEvents.FavoritesChanged += HandleFavoritesChanged;
 
-        GameEvents.CodexOpened?.Invoke();
+        GameEvents.DirectoryOpened?.Invoke();
 
         // ---------------------
         // SORT DROPDOWN
@@ -89,7 +89,7 @@ public class CodexPanelUI : MonoBehaviour
         // ---------------------
         bool captureFilterUnlocked =
             FeatureUnlockManager.I != null &&
-            FeatureUnlockManager.I.IsUnlocked(FeatureId.Codex_CaptureOnlyFilter);
+            FeatureUnlockManager.I.IsUnlocked(FeatureId.Directory_CaptureOnlyFilter);
 
         if (capturedOnlyButton)
         {
@@ -105,7 +105,7 @@ public class CodexPanelUI : MonoBehaviour
         // ---------------------
         bool favoritesUnlocked =
             FeatureUnlockManager.I != null &&
-            FeatureUnlockManager.I.IsUnlocked(FeatureId.Codex_Favorites);
+            FeatureUnlockManager.I.IsUnlocked(FeatureId.Directory_Favorites);
 
         if (favoritesOnlyButton)
         {
@@ -203,7 +203,7 @@ public class CodexPanelUI : MonoBehaviour
 
     void OnViewChanged(int value)
     {
-        _viewMode = (CodexViewMode)Mathf.Clamp(value, 0, (int)CodexViewMode.Captured);
+        _viewMode = (DirectoryViewMode)Mathf.Clamp(value, 0, (int)DirectoryViewMode.Captured);
         RebuildOwnedOnly();
     }
 
@@ -214,7 +214,7 @@ public class CodexPanelUI : MonoBehaviour
         {
             ClearAllChildren(teamContent);
             ClearOwnedListItemsOnly(ownedContent);
-            _lastVisibleCodexDefs = new List<MonsterDataSO>();
+            _lastVisibleDirectoryDefs = new List<MonsterDataSO>();
             return;
         }
 
@@ -237,7 +237,7 @@ public class CodexPanelUI : MonoBehaviour
         if (data == null)
         {
             ClearOwnedListItemsOnly(ownedContent);
-            _lastVisibleCodexDefs = new List<MonsterDataSO>();
+            _lastVisibleDirectoryDefs = new List<MonsterDataSO>();
             return;
         }
 
@@ -368,14 +368,14 @@ public class CodexPanelUI : MonoBehaviour
     }
 
     // ─────────────────────────────────────────────
-    // Codex grid
+    // Directory grid
     // ─────────────────────────────────────────────
 
     void BuildOwned(List<OwnedMonsterData> owned, List<OwnedMonsterData> team, OwnedSortMode sortMode)
     {
         ClearOwnedListItemsOnly(ownedContent);
 
-        _lastVisibleCodexDefs = new List<MonsterDataSO>();
+        _lastVisibleDirectoryDefs = new List<MonsterDataSO>();
 
         if (!ownedContent || ownedListItemPrefab == null)
             return;
@@ -390,7 +390,7 @@ public class CodexPanelUI : MonoBehaviour
         var shinyById = new Dictionary<string, OwnedMonsterData>(StringComparer.Ordinal);
 
 
-        // Team-aware variant preference: if a monster is on the active team, we want the Codex row
+        // Team-aware variant preference: if a monster is on the active team, we want the Directory row
         // to reflect that exact instance (especially Shiny) so the UI is consistent.
         var teamNormalById = new Dictionary<string, OwnedMonsterData>(StringComparer.Ordinal);
         var teamShinyById  = new Dictionary<string, OwnedMonsterData>(StringComparer.Ordinal);
@@ -445,7 +445,7 @@ public class CodexPanelUI : MonoBehaviour
 
         var discoveredByPack = BuildDiscoveredMonsterIdSetFromUnlockedPacks(data);
 
-        var defs = BuildAllCodexDefsFromLibraryAndUnlockedPacks(data);
+        var defs = BuildAllDirectoryDefsFromLibraryAndUnlockedPacks(data);
         if (defs == null || defs.Count == 0)
             return;
 
@@ -479,7 +479,7 @@ public class CodexPanelUI : MonoBehaviour
 
             OwnedMonsterData displayOwned = ownedData;
 
-            // If this monster is currently on the team, force the Codex row to reflect that team instance.
+            // If this monster is currently on the team, force the Directory row to reflect that team instance.
             // This keeps icon + name consistent between the Team strip and the Owned list (especially for Shiny).
             if (teamShinyById.TryGetValue(def.id, out var teamShiny) && teamShiny != null)
             {
@@ -498,8 +498,9 @@ public class CodexPanelUI : MonoBehaviour
                 else if (shinyData != null && normalData != null)
                 {
                     bool preferShiny = (data.settings != null &&
-                                       data.settings.codexPreferShinyIds != null &&
-                                       data.settings.codexPreferShinyIds.Contains(def.id));
+                                       data.settings.directoryPreferShinyIds != null &&
+                                       data.settings.directoryPreferShinyIds != null &&
+                                       data.settings.directoryPreferShinyIds.Contains(def.id));
                     displayOwned = preferShiny ? shinyData : normalData;
                 }
                 else if (normalData != null)
@@ -508,16 +509,16 @@ public class CodexPanelUI : MonoBehaviour
                 }
             }
 
-            // discovered = reveal in codex even if not owned yet
+            // discovered = reveal in directory even if not owned yet
             bool discovered =
                 capturedReal ||
                 (discoveredByPack != null && discoveredByPack.Contains(def.id)) ||
                 SaveManager.IsDiscovered(def.id);
 
-            if (_viewMode == CodexViewMode.Captured && !capturedReal)
+            if (_viewMode == DirectoryViewMode.Captured && !capturedReal)
                 continue;
 
-            if (_viewMode == CodexViewMode.Discovered && !discovered)
+            if (_viewMode == DirectoryViewMode.Discovered && !discovered)
                 continue;
 
             bool isFavorite = FavoriteService.IsFavorite(def.id);
@@ -528,12 +529,12 @@ public class CodexPanelUI : MonoBehaviour
             if (_favoritesOnlyFilter)
             {
                 bool favoritesFeatureUnlocked = FeatureUnlockManager.I &&
-                                                FeatureUnlockManager.I.IsUnlocked(FeatureId.Codex_Favorites);
+                                                FeatureUnlockManager.I.IsUnlocked(FeatureId.Directory_Favorites);
                 if (!favoritesFeatureUnlocked) continue;
                 if (!isFavorite) continue;
             }
 
-            _lastVisibleCodexDefs.Add(def);
+            _lastVisibleDirectoryDefs.Add(def);
 
             var go = Instantiate(ownedListItemPrefab, ownedContent);
             var item = go.GetComponent<OwnedMonsterListItemUI>();
@@ -541,7 +542,7 @@ public class CodexPanelUI : MonoBehaviour
             {
                 spawnedItems.Add(item);
 
-                item.SetupForCodex(
+                item.SetupForDirectory(
                     def,
                     displayOwned,
                     captured: discovered,
@@ -555,11 +556,11 @@ public class CodexPanelUI : MonoBehaviour
         for (int i = 0; i < spawnedItems.Count; i++)
         {
             if (spawnedItems[i] != null)
-                spawnedItems[i].SetCodexBrowseContext(_lastVisibleCodexDefs);
+                spawnedItems[i].SetDirectoryBrowseContext(_lastVisibleDirectoryDefs);
         }
     }
 
-    private List<MonsterDataSO> BuildAllCodexDefsFromLibraryAndUnlockedPacks(PlayerManager data)
+    private List<MonsterDataSO> BuildAllDirectoryDefsFromLibraryAndUnlockedPacks(PlayerManager data)
     {
         var result = new List<MonsterDataSO>();
         var seen = new HashSet<string>(StringComparer.Ordinal);

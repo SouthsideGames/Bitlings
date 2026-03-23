@@ -1184,6 +1184,8 @@ private static float AverageWorkingSlotFatigue(JobSiteState s)
                     job = s.config.jobType,
                     slotFatigue01 = (float[])(s.slotFatigue01?.Clone() ?? Array.Empty<float>()),
                     slotCooldownUntilUnix = (long[])(s.slotCooldownUntilUnix?.Clone() ?? Array.Empty<long>()),
+                    storedUnits = Mathf.Max(0, s.storedUnits),
+                    storedRemainder = Mathf.Max(0f, s.storedRemainder),
                     autoCollectEnabled = s.autoCollectEnabled,
                     allowClinicRelief = s.allowClinicRelief
                 });
@@ -1232,6 +1234,10 @@ private static float AverageWorkingSlotFatigue(JobSiteState s)
 
                     if (rs.slotCooldownUntilUnix != null && rs.slotCooldownUntilUnix.Length == cap)
                         Array.Copy(rs.slotCooldownUntilUnix, st.slotCooldownUntilUnix, cap);
+
+                    st.storedUnits = Mathf.Max(0, rs.storedUnits);
+                    st.storedRemainder = Mathf.Max(0f, rs.storedRemainder);
+                    st.storedAmount = st.storedUnits + st.storedRemainder;
 
                     // Keep runtime aligned with current game UX policy.
                     st.autoCollectEnabled = enableAutoCollect && rs.autoCollectEnabled;
