@@ -12,9 +12,11 @@ public sealed class PlayerDossierAchievementRowUI : MonoBehaviour
     [SerializeField] private Slider progressSlider;
     [SerializeField] private TextMeshProUGUI progressText;
 
-    [Header("State Badges")]
-    [SerializeField] private GameObject lockedGroup;    // optional: dim overlay
-    [SerializeField] private GameObject unlockedGroup;  // optional: checkmark
+    [Header("State Colors")]
+    [SerializeField] private Color unlockedColor = new Color(0.21f, 0.83f, 0.17f, 1f);
+    [SerializeField] private Color lockedColor   = new Color(0.45f, 0.45f, 0.45f, 1f);
+
+    [Header("Badges")]
     [SerializeField] private GameObject newBadge;       // optional: "NEW"
 
     public void Bind(AchievementRowSnapshot row)
@@ -44,8 +46,7 @@ public sealed class PlayerDossierAchievementRowUI : MonoBehaviour
         if (progressText)
             progressText.text = row.unlocked ? $"{goal}/{goal}" : $"{value}/{goal}";
 
-        if (lockedGroup)   lockedGroup.SetActive(!row.unlocked);
-        if (unlockedGroup) unlockedGroup.SetActive(row.unlocked);
-        if (newBadge)      newBadge.SetActive(row.unlocked && row.isNew);
+        if (iconImage) iconImage.color = row.unlocked ? unlockedColor : lockedColor;
+        if (newBadge)  newBadge.SetActive(row.unlocked && row.isNew);
     }
 }

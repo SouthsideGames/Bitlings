@@ -40,6 +40,10 @@ public sealed class BattleHudRig : MonoBehaviour
     public TextMeshProUGUI benchHPText1;
     public TextMeshProUGUI benchHPText2;
 
+    [Header("Owned Indicator")]
+    [Tooltip("Small 'already caught' icon shown when this species is in your collection.")]
+    public GameObject ownedCapturedIcon;
+
     [Header("Battle UX")]
     public BattleFeedbackManager feedback;
     public BattleTextBoxUI battleTextBox;

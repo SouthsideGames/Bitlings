@@ -82,9 +82,23 @@ public sealed class IronCareerStarterPanelUI : MonoBehaviour
         if (standardToggle) standardToggle.onValueChanged.AddListener(OnStandardToggleChanged);
         if (hardcoreToggle) hardcoreToggle.onValueChanged.AddListener(OnHardcoreToggleChanged);
 
+        // Auto-resolve slot buttons from slot GameObjects when not explicitly assigned.
+        if (!slot1Button && slot1) slot1Button = ResolveOrAddButton(slot1.gameObject);
+        if (!slot2Button && slot2) slot2Button = ResolveOrAddButton(slot2.gameObject);
+        if (!slot3Button && slot3) slot3Button = ResolveOrAddButton(slot3.gameObject);
+
         if (slot1Button) slot1Button.onClick.AddListener(() => SelectIndex(0));
         if (slot2Button) slot2Button.onClick.AddListener(() => SelectIndex(1));
         if (slot3Button) slot3Button.onClick.AddListener(() => SelectIndex(2));
+    }
+
+    private static Button ResolveOrAddButton(GameObject go)
+    {
+        if (!go) return null;
+        var btn = go.GetComponent<Button>();
+        if (!btn) btn = go.AddComponent<Button>();
+        btn.transition = Selectable.Transition.ColorTint;
+        return btn;
     }
 
     private void OnEnable()

@@ -112,6 +112,7 @@ public class PlayerDossierPanelUI : MonoBehaviour
     private readonly List<PromotionRankRowUI> _rankRows = new List<PromotionRankRowUI>();
 
     private int _currentPageIndex = 0;
+    private static int _pendingPageIndex = -1;
 
     private void Awake()
     {
@@ -120,9 +121,34 @@ public class PlayerDossierPanelUI : MonoBehaviour
         if (closeButton != null) closeButton.onClick.AddListener(OnCloseClicked);
     }
 
+    /// <summary>
+    /// Navigate to a 1-based page number (1-7).
+    /// Safe to call before the panel is shown — the page will be applied in OnEnable.
+    /// </summary>
+    public static void SetPendingPage(int oneBasedPage)
+    {
+        _pendingPageIndex = Mathf.Max(0, oneBasedPage - 1);
+    }
+
+    public void GoToPage(int oneBasedPage)
+    {
+        if (pages == null || pages.Length == 0) return;
+        _currentPageIndex = Mathf.Clamp(oneBasedPage - 1, 0, pages.Length - 1);
+        RefreshPageVisibility();
+        RefreshNavigationUI();
+    }
+
     private void OnEnable()
     {
-        _currentPageIndex = 0;
+        if (_pendingPageIndex >= 0)
+        {
+            _currentPageIndex = (pages != null) ? Mathf.Clamp(_pendingPageIndex, 0, pages.Length - 1) : 0;
+            _pendingPageIndex = -1;
+        }
+        else
+        {
+            _currentPageIndex = 0;
+        }
         RefreshPageVisibility();
         RefreshNavigationUI();
 

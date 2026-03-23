@@ -439,7 +439,7 @@ MonoBehaviour:
     m_SelectedTrigger: Selected
     m_DisabledTrigger: Disabled
   m_Interactable: 1
-  m_TargetGraphic: {fileID: 0}
+  m_TargetGraphic: {fileID: 3864740979713650912}
   m_OnClick:
     m_PersistentCalls:
       m_Calls:
@@ -476,7 +476,7 @@ MonoBehaviour:
   hpLabel: {fileID: 2590577767331134716}
   typeIcon: {fileID: 9110274042502739036}
   typeIconLibrary: {fileID: 11400000, guid: c8813a13ce49f9845bc1059e1f0fb3a2, type: 2}
-  selectedFrame: {fileID: 0}
+  selectedFrame: {fileID: 3645453448692311565}
 --- !u!1 &3693217646829293496
 GameObject:
   m_ObjectHideFlags: 0

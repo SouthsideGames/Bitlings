@@ -149,6 +149,9 @@ public partial class BattleManager : MonoBehaviour
     private TextMeshProUGUI benchHPText1;
     private TextMeshProUGUI benchHPText2;
 
+    // Owned indicator (populated from HudRig at battle start)
+    private GameObject ownedCapturedIcon;
+
     [Header("Turn Pacing (unscaled)")]
     [SerializeField, Min(0.05f)] private float beginRoundDelay = 0.15f;
     [SerializeField, Min(0.05f)] private float hitPause = 0.25f;
@@ -1173,6 +1176,15 @@ public partial class BattleManager : MonoBehaviour
         if (wildLevelText) wildLevelText.text = $"Lv {wildLevel}";
         if (wildHPBar) { wildHPBar.maxValue = wildMaxHP; wildHPBar.value = wildHP; }
 
+        if (ownedCapturedIcon)
+        {
+            bool alreadyOwned = wildDef != null
+                && SaveManager.Data != null
+                && SaveManager.Data.ownedIds != null
+                && SaveManager.Data.ownedIds.Contains(wildDef.id);
+            ownedCapturedIcon.SetActive(alreadyOwned);
+        }
+
         UpdateWildInfoUI();
 
         teamCount = Mathf.Min(3, (injectedTeam != null) ? injectedTeam.Count : roster.Count);
@@ -1838,6 +1850,8 @@ public partial class BattleManager : MonoBehaviour
         benchHPText1 = _hudRigActive.benchHPText1;
         benchHPText2 = _hudRigActive.benchHPText2;
 
+        ownedCapturedIcon = _hudRigActive.ownedCapturedIcon;
+
         // Apply hud-rig values as defaults directly — do NOT route through
         // SetUIOverride, which would clobber _runtimeOverrideTextBox and
         // destroy any Iron Career override that was already registered.
@@ -1858,6 +1872,8 @@ public partial class BattleManager : MonoBehaviour
             _defaultBattleTextBox = battleTextBox;
             _defaultBottomToggle = _bottomToggle;
         }
+
+        RebindBenchButtons();
 
         ReapplyRuntimeUIBindingsOverrideIfAny();
         ReapplyRuntimeUIOverrideIfAny();

@@ -103,6 +103,7 @@ MonoBehaviour:
   m_VerticalAlignment: 256
   m_textAlignment: 65535
   m_characterSpacing: 0
+  m_characterHorizontalScale: 1
   m_wordSpacing: 0
   m_lineSpacing: 0
   m_lineSpacingMax: 0
@@ -556,6 +557,7 @@ MonoBehaviour:
   m_VerticalAlignment: 256
   m_textAlignment: 65535
   m_characterSpacing: 0
+  m_characterHorizontalScale: 1
   m_wordSpacing: 0
   m_lineSpacing: 0
   m_lineSpacingMax: 0
@@ -840,8 +842,8 @@ MonoBehaviour:
   descText: {fileID: 5383915894630695331}
   progressSlider: {fileID: 5839231094584229183}
   progressText: {fileID: 2610027956699782139}
-  lockedGroup: {fileID: 4159832866319998614}
-  unlockedGroup: {fileID: 631768545692229919}
+  unlockedColor: {r: 0.87058824, g: 0.6, b: 0.3254902, a: 1}
+  lockedColor: {r: 0.10980393, g: 0.14509805, b: 0.1764706, a: 1}
   newBadge: {fileID: 1182191554416137634}
 --- !u!1 &4159832866319998614
 GameObject:
@@ -1067,6 +1069,7 @@ MonoBehaviour:
   m_VerticalAlignment: 256
   m_textAlignment: 65535
   m_characterSpacing: 0
+  m_characterHorizontalScale: 1
   m_wordSpacing: 0
   m_lineSpacing: 0
   m_lineSpacingMax: 0

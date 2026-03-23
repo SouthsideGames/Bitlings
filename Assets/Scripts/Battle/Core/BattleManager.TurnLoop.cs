@@ -68,6 +68,7 @@ public partial class BattleManager : MonoBehaviour
     {
         FinalizeCoreIconIntroAlpha(playerIcon);
         FinalizeCoreIconIntroAlpha(wildIcon);
+        FinalizeOwnedIconIntroAlpha();
     }
 
     private void FinalizeCoreIconIntroAlpha(Graphic icon)
@@ -79,6 +80,23 @@ public partial class BattleManager : MonoBehaviour
             targetAlpha = 1f;
 
         SetGraphicAlphaForIntroFade(icon, targetAlpha);
+    }
+
+    private void FinalizeOwnedIconIntroAlpha()
+    {
+        if (!ownedCapturedIcon || !ownedCapturedIcon.activeSelf) return;
+
+        var graphics = ownedCapturedIcon.GetComponentsInChildren<Graphic>(true);
+        for (int i = 0; i < graphics.Length; i++)
+        {
+            if (!graphics[i]) continue;
+
+            float targetAlpha;
+            if (!_battleStartHpBarTargetAlpha.TryGetValue(graphics[i], out targetAlpha))
+                targetAlpha = 1f;
+
+            SetGraphicAlphaForIntroFade(graphics[i], targetAlpha);
+        }
     }
 
     private void PrepareBattleStartInfoFade()
@@ -112,6 +130,8 @@ public partial class BattleManager : MonoBehaviour
 
         PrepareCoreIconForIntroFade(playerIcon);
         PrepareCoreIconForIntroFade(wildIcon);
+
+        PrepareOwnedIconForIntroFade();
     }
 
     private void PrepareCoreIconForIntroFade(Graphic icon)
@@ -184,6 +204,37 @@ public partial class BattleManager : MonoBehaviour
         FadeInfoTextToTarget(wildSPDText, duration);
         FadeHpBarToTarget(wildHPBar, duration);
         FadeCoreIconToTarget(wildIcon, duration);
+        FadeOwnedIconToTarget(duration);
+    }
+
+    private void PrepareOwnedIconForIntroFade()
+    {
+        if (!ownedCapturedIcon || !ownedCapturedIcon.activeSelf) return;
+
+        var graphics = ownedCapturedIcon.GetComponentsInChildren<Graphic>(true);
+        for (int i = 0; i < graphics.Length; i++)
+        {
+            if (!graphics[i]) continue;
+            _battleStartHpBarTargetAlpha[graphics[i]] = Mathf.Clamp01(graphics[i].color.a);
+            SetGraphicAlphaForIntroFade(graphics[i], 0f);
+        }
+    }
+
+    private void FadeOwnedIconToTarget(float fadeDuration)
+    {
+        if (!ownedCapturedIcon || !ownedCapturedIcon.activeSelf) return;
+
+        var graphics = ownedCapturedIcon.GetComponentsInChildren<Graphic>(true);
+        for (int i = 0; i < graphics.Length; i++)
+        {
+            if (!graphics[i]) continue;
+
+            float targetAlpha;
+            if (!_battleStartHpBarTargetAlpha.TryGetValue(graphics[i], out targetAlpha))
+                targetAlpha = 1f;
+
+            FadeGraphicToTarget(graphics[i], targetAlpha, fadeDuration);
+        }
     }
 
     private void FadeCoreIconToTarget(Graphic icon, float fadeDuration)

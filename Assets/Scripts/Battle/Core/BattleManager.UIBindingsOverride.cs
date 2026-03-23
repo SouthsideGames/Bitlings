@@ -48,6 +48,10 @@ public partial class BattleManager : MonoBehaviour
         public Image benchImg2;
         public TextMeshProUGUI benchHPText1;
         public TextMeshProUGUI benchHPText2;
+
+        [Header("Owned Indicator")]
+        [Tooltip("Small 'already caught' icon shown when this species is in your collection.")]
+        public GameObject ownedCapturedIcon;
     }
 
     private bool _uiBindingsDefaultsCaptured;
@@ -101,6 +105,8 @@ public partial class BattleManager : MonoBehaviour
             benchImg2 = benchImg2,
             benchHPText1 = benchHPText1,
             benchHPText2 = benchHPText2,
+
+            ownedCapturedIcon = ownedCapturedIcon,
         };
 
         _uiBindingsCurrent = _uiBindingsDefaults;
@@ -152,6 +158,8 @@ public partial class BattleManager : MonoBehaviour
         if (o.benchHPText1) benchHPText1 = o.benchHPText1;
         if (o.benchHPText2) benchHPText2 = o.benchHPText2;
 
+        if (o.ownedCapturedIcon) ownedCapturedIcon = o.ownedCapturedIcon;
+
         _uiBindingsCurrent = o;
         _uiBindingsHasCurrent = true;
         ActivatePanelRoots(_uiBindingsCurrent);
@@ -198,6 +206,8 @@ public partial class BattleManager : MonoBehaviour
         benchImg2 = _uiBindingsDefaults.benchImg2;
         benchHPText1 = _uiBindingsDefaults.benchHPText1;
         benchHPText2 = _uiBindingsDefaults.benchHPText2;
+
+        ownedCapturedIcon = _uiBindingsDefaults.ownedCapturedIcon;
 
         _uiBindingsCurrent = _uiBindingsDefaults;
         _uiBindingsHasCurrent = true;

@@ -1868,7 +1868,24 @@ if (target > 0.01f)
         }
 
         bool alreadyOwned = SaveManager.Data.ownedIds.Contains(def.id);
-        ownedCapturedIcon.SetActive(alreadyOwned);
+        if (alreadyOwned)
+        {
+            ownedCapturedIcon.SetActive(true);
+            FadeInOwnedIcon();
+        }
+        else
+        {
+            ownedCapturedIcon.SetActive(false);
+        }
+    }
+
+    private void FadeInOwnedIcon()
+    {
+        var cg = ownedCapturedIcon.GetComponent<CanvasGroup>();
+        if (!cg) cg = ownedCapturedIcon.AddComponent<CanvasGroup>();
+        cg.alpha = 0f;
+        LeanTween.cancel(ownedCapturedIcon);
+        LeanTween.alphaCanvas(cg, 1f, 0.15f).setIgnoreTimeScale(true).setEaseOutQuad();
     }
 
     private void HandleBattleStateChanged()

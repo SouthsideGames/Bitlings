@@ -11,9 +11,11 @@ public sealed class AchievementItemUI : MonoBehaviour
     [SerializeField] private Slider progressSlider;
     [SerializeField] private TextMeshProUGUI progressLabel;
 
+    [Header("State Colors")]
+    [SerializeField] private Color unlockedColor = new Color(0.21f, 0.83f, 0.17f, 1f);
+    [SerializeField] private Color lockedColor   = new Color(0.45f, 0.45f, 0.45f, 1f);
+
     [Header("Badges")]
-    [SerializeField] private GameObject lockedBadge;
-    [SerializeField] private GameObject unlockedBadge;
     [SerializeField] private GameObject newBadge;
 
     public void Bind(AchievementEntrySO entry, AchievementProgressData prog)
@@ -44,8 +46,7 @@ public sealed class AchievementItemUI : MonoBehaviour
             else progressLabel.text = $"{Mathf.Clamp(value, 0, goal)}/{goal}";
         }
 
-        if (lockedBadge) lockedBadge.SetActive(!unlocked);
-        if (unlockedBadge) unlockedBadge.SetActive(unlocked);
+        if (iconImage) iconImage.color = unlocked ? unlockedColor : lockedColor;
 
         if (newBadge)
             newBadge.SetActive(unlocked && prog != null && !prog.seen);

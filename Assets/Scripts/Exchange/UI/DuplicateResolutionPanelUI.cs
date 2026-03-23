@@ -308,7 +308,14 @@ public class DuplicateResolutionPanelUI : MonoBehaviour
     {
         PendingDuplicateCapture.Clear();
         ClearPersistedPendingDuplicate();
-        if (UIManager.I != null) UIManager.I.Hide(PanelId.DuplicateResolution);
+        if (UIManager.I != null)
+        {
+            UIManager.I.Hide(PanelId.DuplicateResolution);
+
+            // Reopen the Encounter panel so the player isn't left on a black screen.
+            if (!UIManager.I.IsOpen(PanelId.Encounter))
+                UIManager.I.Show(PanelId.Encounter);
+        }
     }
 
     private static void TryRestorePendingDuplicateFromSave()

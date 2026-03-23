@@ -216,6 +216,7 @@ public sealed class IronCareerEncounterPanelUI : MonoBehaviour
 
     public void HideAll(bool immediate = false)
     {
+        if (battleRoot) battleRoot.SetActive(false);
         if (immediate) HideAllImmediate();
         else
         {
@@ -258,6 +259,7 @@ public sealed class IronCareerEncounterPanelUI : MonoBehaviour
 
     private void HideAllImmediate()
     {
+        if (battleRoot) battleRoot.SetActive(false);
         SetCG(starter, false, 0f);
         SetCG(hire, false, 0f);
         SetCG(replace, false, 0f);
