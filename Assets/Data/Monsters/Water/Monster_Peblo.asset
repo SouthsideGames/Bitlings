@@ -51,7 +51,7 @@ MonoBehaviour:
   basicAttackName: Shell Snap
   basicAttackPrefab: {fileID: 7604281169824035565, guid: 4065dc449fe6fd94eb31f0e575b94514, type: 3}
   basicAttackPrefabLifetime: 1
-  spawnSfx: {fileID: 0}
+  spawnSfx: {fileID: 8300000, guid: 3e136162748e0c0469e0903de353478e, type: 3}
   baseMarketValue: 10
   description: A small water dweller that reacts quickly snapping at threats with
     hardened claws and splashes.

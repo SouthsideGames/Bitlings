@@ -49,7 +49,7 @@ MonoBehaviour:
   - {fileID: 11400000, guid: b5fd4f826ff32410ea68f2df6b48c2b3, type: 2}
   Personality: {fileID: 11400000, guid: 3733616cf9f0f4dddb5bee9d6ba2952f, type: 2}
   basicAttackName: Inferno Rend
-  basicAttackPrefab: {fileID: 126357351932672970, guid: a7524146891194bc4b7eb73ba1e38b46, type: 3}
+  basicAttackPrefab: {fileID: 126357351932672970, guid: 9581774b44a93f24299791825657e6c2, type: 3}
   basicAttackPrefabLifetime: 1
   spawnSfx: {fileID: 8300000, guid: 3595d1c12dc898041a7f799453a7cb3e, type: 3}
   baseMarketValue: 10

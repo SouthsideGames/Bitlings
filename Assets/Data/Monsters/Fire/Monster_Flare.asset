@@ -49,7 +49,7 @@ MonoBehaviour:
   - {fileID: 11400000, guid: c4ad4c8d61acdc54dac3f9f88f1891bf, type: 2}
   Personality: {fileID: 11400000, guid: 3733616cf9f0f4dddb5bee9d6ba2952f, type: 2}
   basicAttackName: Flare Slice
-  basicAttackPrefab: {fileID: 126357351932672970, guid: a7524146891194bc4b7eb73ba1e38b46, type: 3}
+  basicAttackPrefab: {fileID: 126357351932672970, guid: 9581774b44a93f24299791825657e6c2, type: 3}
   basicAttackPrefabLifetime: 1
   spawnSfx: {fileID: 8300000, guid: e2403e89466f44d46b9270523bf3ba5d, type: 3}
   baseMarketValue: 10

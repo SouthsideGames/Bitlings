@@ -49,7 +49,7 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 66fed847ffa367443bbebde06158f9d1, type: 2}
   Personality: {fileID: 11400000, guid: 758625599ac8542bfa091e1bf5323fa2, type: 2}
   basicAttackName: Night Rend
-  basicAttackPrefab: {fileID: 1424259663161806981, guid: bd2d781a7e4f84cb58aedda30af5d65d, type: 3}
+  basicAttackPrefab: {fileID: 1424259663161806981, guid: 9bdd9c0ed3e7e754bb1e9e7763564ce3, type: 3}
   basicAttackPrefabLifetime: 1
   spawnSfx: {fileID: 8300000, guid: 03f36129c7a523d47876dab4686f9d34, type: 3}
   baseMarketValue: 10

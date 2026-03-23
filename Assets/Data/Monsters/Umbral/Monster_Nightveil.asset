@@ -49,7 +49,7 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 686cc9ea05cccd847bbcccd5ddd3472c, type: 2}
   Personality: {fileID: 11400000, guid: 48288e9e78c65453781f793c8df03e90, type: 2}
   basicAttackName: Veil Annihilation
-  basicAttackPrefab: {fileID: 1424259663161806981, guid: bd2d781a7e4f84cb58aedda30af5d65d, type: 3}
+  basicAttackPrefab: {fileID: 1424259663161806981, guid: 649dec1e4858f634eac689cf6599ea92, type: 3}
   basicAttackPrefabLifetime: 1
   spawnSfx: {fileID: 8300000, guid: 15e1eb31022059341aa28d6c22459437, type: 3}
   baseMarketValue: 10

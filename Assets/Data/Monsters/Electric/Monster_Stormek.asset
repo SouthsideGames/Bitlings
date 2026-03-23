@@ -49,7 +49,7 @@ MonoBehaviour:
   - {fileID: 0}
   Personality: {fileID: 11400000, guid: 38ced003b48194272ab4cfa8cd9c5d01, type: 2}
   basicAttackName: Catastorm
-  basicAttackPrefab: {fileID: 4179996368917665753, guid: 77ce3f8bf17474b06ac473e26248a299, type: 3}
+  basicAttackPrefab: {fileID: 4179996368917665753, guid: f843598cd71708247a21c64cef2aa927, type: 3}
   basicAttackPrefabLifetime: 1
   spawnSfx: {fileID: 8300000, guid: 1a56802208fc15a489f72c3ddcbd6daa, type: 3}
   baseMarketValue: 10

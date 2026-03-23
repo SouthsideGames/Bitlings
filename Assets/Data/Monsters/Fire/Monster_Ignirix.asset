@@ -49,7 +49,7 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 71652094aed89c948ae2a0cb846cf011, type: 2}
   Personality: {fileID: 11400000, guid: 3733616cf9f0f4dddb5bee9d6ba2952f, type: 2}
   basicAttackName: Flame Bite
-  basicAttackPrefab: {fileID: 126357351932672970, guid: a7524146891194bc4b7eb73ba1e38b46, type: 3}
+  basicAttackPrefab: {fileID: 126357351932672970, guid: 9581774b44a93f24299791825657e6c2, type: 3}
   basicAttackPrefabLifetime: 1
   spawnSfx: {fileID: 8300000, guid: 8b9cee0c39033ad42b47e9e54b1001bd, type: 3}
   baseMarketValue: 10

@@ -49,7 +49,7 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 71652094aed89c948ae2a0cb846cf011, type: 2}
   Personality: {fileID: 11400000, guid: 1bd4805a0ba8f476b9f7b480b0cbb31d, type: 2}
   basicAttackName: Inferno Rush
-  basicAttackPrefab: {fileID: 126357351932672970, guid: a7524146891194bc4b7eb73ba1e38b46, type: 3}
+  basicAttackPrefab: {fileID: 126357351932672970, guid: 9581774b44a93f24299791825657e6c2, type: 3}
   basicAttackPrefabLifetime: 1
   spawnSfx: {fileID: 8300000, guid: 4ba1df57becbffd4ab2126823efd18ca, type: 3}
   baseMarketValue: 10

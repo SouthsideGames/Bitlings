@@ -51,7 +51,7 @@ MonoBehaviour:
   basicAttackName: Current Bash
   basicAttackPrefab: {fileID: 7604281169824035565, guid: 4065dc449fe6fd94eb31f0e575b94514, type: 3}
   basicAttackPrefabLifetime: 1
-  spawnSfx: {fileID: 0}
+  spawnSfx: {fileID: 8300000, guid: 41d43b49d8cd9d8419d88cab506e97d4, type: 3}
   baseMarketValue: 10
   description: Its body hardens with flowing armor, striking back harder as battles
     drag on.
