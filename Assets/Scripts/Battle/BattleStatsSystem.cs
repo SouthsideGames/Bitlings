@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 
 public struct BattleStatBlock
@@ -536,5 +537,56 @@ public sealed class BattleStatsSystem
             spd = Mathf.Max(1, Mathf.RoundToInt(spdF)),
         };
         return stages;
+    }
+
+    // ─────────────────────────────────────────────────────────
+    // Stat breakdown lines (for stat breakdown panel)
+    // ─────────────────────────────────────────────────────────
+
+    public struct StatBreakdownLine
+    {
+        public string source;
+        public BattleStatKind stat;
+        public int delta;
+    }
+
+    public List<StatBreakdownLine> GetPlayerStatLines(int idx)
+    {
+        var s = GetPlayerBreakdownStages(idx);
+        var lines = new List<StatBreakdownLine>(16);
+        AddDeltas(lines, s.adjusted, s.afterJob, "Job");
+        AddDeltas(lines, s.afterJob, s.afterTitles, "Titles");
+        AddDeltas(lines, s.afterTitles, s.afterConditionals, "Conditional");
+        AddDeltas(lines, s.afterConditionals, s.afterTemp, "Temp Buff");
+        AddDeltas(lines, s.afterTemp, s.afterBoosters, "Booster");
+        AddDeltas(lines, s.afterBoosters, s.final, "Status Effect");
+        return lines;
+    }
+
+    public List<StatBreakdownLine> GetWildStatLines()
+    {
+        var s = GetWildBreakdownStages();
+        var lines = new List<StatBreakdownLine>(16);
+        AddDeltas(lines, s.adjusted, s.afterJob, "Job");
+        AddDeltas(lines, s.afterJob, s.afterTitles, "Titles");
+        AddDeltas(lines, s.afterTitles, s.afterConditionals, "Conditional");
+        AddDeltas(lines, s.afterConditionals, s.afterTemp, "Temp Buff");
+        AddDeltas(lines, s.afterTemp, s.afterBoosters, "Booster");
+        AddDeltas(lines, s.afterBoosters, s.final, "Status Effect");
+        return lines;
+    }
+
+    private static void AddDeltas(List<StatBreakdownLine> list, BattleStatBlock from, BattleStatBlock to, string source)
+    {
+        TryAdd(list, source, BattleStatKind.HP,  to.maxHP - from.maxHP);
+        TryAdd(list, source, BattleStatKind.ATK, to.atk   - from.atk);
+        TryAdd(list, source, BattleStatKind.DEF, to.def   - from.def);
+        TryAdd(list, source, BattleStatKind.SPD, to.spd   - from.spd);
+    }
+
+    private static void TryAdd(List<StatBreakdownLine> list, string source, BattleStatKind stat, int delta)
+    {
+        if (delta == 0) return;
+        list.Add(new StatBreakdownLine { source = source, stat = stat, delta = delta });
     }
 }

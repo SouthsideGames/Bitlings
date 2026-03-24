@@ -51,7 +51,7 @@ MonoBehaviour:
   basicAttackName: Flare Claw
   basicAttackPrefab: {fileID: 126357351932672970, guid: 1a57510ee148f7c45b15333bcfd2596c, type: 3}
   basicAttackPrefabLifetime: 1
-  spawnSfx: {fileID: 0}
+  spawnSfx: {fileID: 8300000, guid: 9b6fc6cc2a27d3848a4f9251ca081598, type: 3}
   baseMarketValue: 10
   description: Its flames burn brighter as it grows bolder chaining aggressive attacks
     without letting up.

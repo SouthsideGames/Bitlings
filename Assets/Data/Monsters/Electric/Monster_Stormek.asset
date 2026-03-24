@@ -43,10 +43,10 @@ MonoBehaviour:
   titleTrack: {fileID: 0}
   defaultAlwaysOnTitles: []
   ironTitles:
-  - {fileID: 0}
-  - {fileID: 0}
-  - {fileID: 0}
-  - {fileID: 0}
+  - {fileID: 11400000, guid: a371bc492e827c94797e3461c1213414, type: 2}
+  - {fileID: 11400000, guid: c169f8806953a684a85f917d9746c60f, type: 2}
+  - {fileID: 11400000, guid: 23f98880f1341f545bc5b78a2c5424c3, type: 2}
+  - {fileID: 11400000, guid: 538374b3463384d4e9deeaec06551318, type: 2}
   Personality: {fileID: 11400000, guid: 38ced003b48194272ab4cfa8cd9c5d01, type: 2}
   basicAttackName: Catastorm
   basicAttackPrefab: {fileID: 4179996368917665753, guid: f843598cd71708247a21c64cef2aa927, type: 3}

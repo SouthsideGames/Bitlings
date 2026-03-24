@@ -51,6 +51,6 @@ MonoBehaviour:
   basicAttackName: Flame Jab
   basicAttackPrefab: {fileID: 126357351932672970, guid: a7524146891194bc4b7eb73ba1e38b46, type: 3}
   basicAttackPrefabLifetime: 1
-  spawnSfx: {fileID: 0}
+  spawnSfx: {fileID: 8300000, guid: fcb32136c18eb4946badce4a29a5ba09, type: 3}
   baseMarketValue: 10
   description: A small fiery creature that lunges forward with quick burning strikes.

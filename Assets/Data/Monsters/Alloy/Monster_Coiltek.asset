@@ -51,7 +51,7 @@ MonoBehaviour:
   basicAttackName: Clamp Jab
   basicAttackPrefab: {fileID: 5172629195496952374, guid: ad774bbb8084f42c29f12cd62581f796, type: 3}
   basicAttackPrefabLifetime: 1
-  spawnSfx: {fileID: 8300000, guid: bad2d8cc7a35a8440a893c0861f3c9c1, type: 3}
+  spawnSfx: {fileID: 8300000, guid: 4a301b3394572674a8951950f1fd79f5, type: 3}
   baseMarketValue: 10
   description: A compact alloy coil that snaps forward with mechanical precision
     while absorbing incoming force.

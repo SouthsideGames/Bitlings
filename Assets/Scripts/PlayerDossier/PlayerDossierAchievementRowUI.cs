@@ -5,6 +5,7 @@ using TMPro;
 public sealed class PlayerDossierAchievementRowUI : MonoBehaviour
 {
     [Header("UI")]
+    [SerializeField] private Image bgImage;
     [SerializeField] private Image iconImage;
     [SerializeField] private TextMeshProUGUI nameText;
     [SerializeField] private TextMeshProUGUI descText;
@@ -46,7 +47,7 @@ public sealed class PlayerDossierAchievementRowUI : MonoBehaviour
         if (progressText)
             progressText.text = row.unlocked ? $"{goal}/{goal}" : $"{value}/{goal}";
 
-        if (iconImage) iconImage.color = row.unlocked ? unlockedColor : lockedColor;
+        if (bgImage)   bgImage.color = row.unlocked ? unlockedColor : lockedColor;
         if (newBadge)  newBadge.SetActive(row.unlocked && row.isNew);
     }
 }

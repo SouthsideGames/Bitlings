@@ -51,7 +51,7 @@ MonoBehaviour:
   basicAttackName: Spark Tap
   basicAttackPrefab: {fileID: 4179996368917665753, guid: 77ce3f8bf17474b06ac473e26248a299, type: 3}
   basicAttackPrefabLifetime: 1
-  spawnSfx: {fileID: 0}
+  spawnSfx: {fileID: 8300000, guid: b0cc65d8e0e46854986afbe0580be832, type: 3}
   baseMarketValue: 10
   description: A floating electric creature that crackles softly jabbing foes with
     quick bursts of static energy.

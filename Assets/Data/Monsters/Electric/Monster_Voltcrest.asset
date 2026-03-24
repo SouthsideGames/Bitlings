@@ -43,15 +43,14 @@ MonoBehaviour:
   titleTrack: {fileID: 11400000, guid: 0675e76e1824a4edd96a7a184318855a, type: 2}
   defaultAlwaysOnTitles: []
   ironTitles:
-  - {fileID: 0}
-  - {fileID: 0}
-  - {fileID: 0}
-  - {fileID: 0}
+  - {fileID: 11400000, guid: 6ad4157aacf2cb547878360fd54c3d1e, type: 2}
+  - {fileID: 11400000, guid: a1f2ec75ecd5b447bb439bb8619bfa03, type: 2}
+  - {fileID: 11400000, guid: a289ace2a61ca0e47b454f4b80ebec49, type: 2}
   Personality: {fileID: 11400000, guid: dc588633b46794883be5263b17376bf3, type: 2}
   basicAttackName: Arc Surge
   basicAttackPrefab: {fileID: 4179996368917665753, guid: 77ce3f8bf17474b06ac473e26248a299, type: 3}
   basicAttackPrefabLifetime: 1
-  spawnSfx: {fileID: 0}
+  spawnSfx: {fileID: 8300000, guid: a838b13c05b01f24a96318dd2e802980, type: 3}
   baseMarketValue: 10
   description: Its body stabilizes into a stronger charge core releasing sustained
     electric surges through rapid movement.

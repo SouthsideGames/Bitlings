@@ -441,6 +441,7 @@ public partial class BattleManager : MonoBehaviour
 
     // Exposed read-only hooks for BattleStatsSystem (keep BattleManager internals private)
     public int TeamCountSafe => teamCount;
+    public int ActiveIndex => activeIndex;
     public float WildBaseMaxHP => wildBaseMaxHP;
     public float WildBaseAttackPerTurn => wildBaseAttackPerTurn;
     public string WildCombatIdForTitles => _wildCombatIdForTitles;
@@ -704,7 +705,10 @@ public partial class BattleManager : MonoBehaviour
         if (!loggerOpen && UIManager.I != null)
             loggerOpen = UIManager.I.IsOpen(PanelId.Log);
 
-        return tutorialOpen || loggerOpen;
+        bool statBreakdownOpen = StatBreakdownPanelUI.I != null
+                                 && StatBreakdownPanelUI.I.gameObject.activeInHierarchy;
+
+        return tutorialOpen || loggerOpen || statBreakdownOpen;
     }
 
     /// <summary>

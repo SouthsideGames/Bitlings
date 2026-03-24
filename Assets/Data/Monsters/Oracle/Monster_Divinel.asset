@@ -51,7 +51,7 @@ MonoBehaviour:
   basicAttackName: Judgment Ray
   basicAttackPrefab: {fileID: 7907104310462883121, guid: 37212b887c61ad84eacd87133a8a9e9d, type: 3}
   basicAttackPrefabLifetime: 1
-  spawnSfx: {fileID: 8300000, guid: 48e12f5f452687641807b6e11b5b56ef, type: 3}
+  spawnSfx: {fileID: 8300000, guid: 5a28f559be66b0d40a66035b8081b61e, type: 3}
   baseMarketValue: 10
   description: A mythic oracle being that peers far beyond the present moment, unleashing
     precise, inevitable strikes guided by absolute foresight.

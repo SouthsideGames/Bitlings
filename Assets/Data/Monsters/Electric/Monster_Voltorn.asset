@@ -51,7 +51,7 @@ MonoBehaviour:
   basicAttackName: Arc Bash
   basicAttackPrefab: {fileID: 4179996368917665753, guid: 77ce3f8bf17474b06ac473e26248a299, type: 3}
   basicAttackPrefabLifetime: 1
-  spawnSfx: {fileID: 0}
+  spawnSfx: {fileID: 8300000, guid: def9f3e09772a434186f45f34fc8a319, type: 3}
   baseMarketValue: 10
   description: Its crystalline spikes conduct steady current allowing faster movement
     and harder-hitting electric strikes.
