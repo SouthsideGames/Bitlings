@@ -51,7 +51,7 @@ MonoBehaviour:
   basicAttackName: Veil Jab
   basicAttackPrefab: {fileID: 9101927626726485638, guid: 257dd9ab5e3cf0544a679d2e444f8d35, type: 3}
   basicAttackPrefabLifetime: 1
-  spawnSfx: {fileID: 0}
+  spawnSfx: {fileID: 8300000, guid: 4c0f3cf6787d6ce4ab9477201b749222, type: 3}
   baseMarketValue: 10
   description: Its shadow deepens and movements sharpen, allowing it to cut through
     foes from unseen angles before vanishing again.

@@ -51,7 +51,7 @@ MonoBehaviour:
   basicAttackName: Crush Tecton
   basicAttackPrefab: {fileID: 8624645253036040332, guid: f03e702d7c9714bc2af48b5b17c93c88, type: 3}
   basicAttackPrefabLifetime: 1
-  spawnSfx: {fileID: 0}
+  spawnSfx: {fileID: 8300000, guid: 52b3b6bc7d70f4e40b997894e57f8bc1, type: 3}
   baseMarketValue: 10
   description: A dominant ground beast that anchors itself firmly, striking back
     with crushing, tectonic force.

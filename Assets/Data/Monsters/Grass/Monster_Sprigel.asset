@@ -40,7 +40,7 @@ MonoBehaviour:
   bossWeight: 1
   spawnWeight: 8
   jobSkill: 0.95
-  titleTrack: {fileID: 11400000, guid: 7ce6a11d8e7b14c698f9a03a26076828, type: 2}
+  titleTrack: {fileID: 11400000, guid: 3196bcd4b18e54f2fb8f08fe7430031f, type: 2}
   defaultAlwaysOnTitles: []
   ironTitles:
   - {fileID: 11400000, guid: f0e53950f2ecd1346ada80856c0f01df, type: 2}
@@ -51,6 +51,6 @@ MonoBehaviour:
   basicAttackName: Vine Tap
   basicAttackPrefab: {fileID: 7147688047696861109, guid: 5287b95db783b4379b733d77af2cc458, type: 3}
   basicAttackPrefabLifetime: 1
-  spawnSfx: {fileID: 0}
+  spawnSfx: {fileID: 8300000, guid: 2a068357e29af15488225af034cc0895, type: 3}
   baseMarketValue: 10
   description: A small plant creature that shuffles forward

@@ -51,7 +51,7 @@ MonoBehaviour:
   basicAttackName: Inferno Dive
   basicAttackPrefab: {fileID: 7446462880551948952, guid: 18696ea6ccccd974d902d9304c2b6b7e, type: 3}
   basicAttackPrefabLifetime: 1
-  spawnSfx: {fileID: 0}
+  spawnSfx: {fileID: 8300000, guid: f751c1f571c4b2444abfa28ff821caa5, type: 3}
   baseMarketValue: 10
   description: A more developed wyrm that crashes into enemies from above, trading
     its own safety for explosive damage.

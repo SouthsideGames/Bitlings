@@ -51,7 +51,7 @@ MonoBehaviour:
   basicAttackName: Night Jab
   basicAttackPrefab: {fileID: 1424259663161806981, guid: bd2d781a7e4f84cb58aedda30af5d65d, type: 3}
   basicAttackPrefabLifetime: 1
-  spawnSfx: {fileID: 0}
+  spawnSfx: {fileID: 8300000, guid: 19d5662d5e568324dbced2bb54fde0e9, type: 3}
   baseMarketValue: 10
   description: A young umbral stalker that tests its prey lashing out cautiously
     from pools of darkness.

@@ -51,7 +51,7 @@ MonoBehaviour:
   basicAttackName: Veil Strike
   basicAttackPrefab: {fileID: 1424259663161806981, guid: 1934e74e1a0a0404bb47f4c6fb1197a0, type: 3}
   basicAttackPrefabLifetime: 1
-  spawnSfx: {fileID: 0}
+  spawnSfx: {fileID: 8300000, guid: 5b17ba507748f41418baf570225f6f03, type: 3}
   baseMarketValue: 10
   description: A refined umbral predator that slips between shadows exploiting openings
     with precise

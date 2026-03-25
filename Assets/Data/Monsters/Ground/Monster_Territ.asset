@@ -32,8 +32,8 @@ MonoBehaviour:
   fatigueRatePerHour: 0.2
   fatigueCooldownHours: 9.9
   evolutionStage: 1
-  evolutionLevel: 8
-  evolutionForm: {fileID: 0}
+  evolutionLevel: 18
+  evolutionForm: {fileID: 11400000, guid: 370d3946ae41f45ed9ba0daf471ecf41, type: 2}
   uncatchable: 0
   isBoss: 0
   bossJobDebuffs: []
@@ -51,7 +51,7 @@ MonoBehaviour:
   basicAttackName: Mud Bash
   basicAttackPrefab: {fileID: 8624645253036040332, guid: f03e702d7c9714bc2af48b5b17c93c88, type: 3}
   basicAttackPrefabLifetime: 1
-  spawnSfx: {fileID: 0}
+  spawnSfx: {fileID: 8300000, guid: fd018e3576a1dd04c905d17fcdbc92da, type: 3}
   baseMarketValue: 10
   description: A squat ground creature that braces itself and slams foes with packed
     earth.

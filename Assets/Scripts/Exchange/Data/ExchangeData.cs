@@ -67,8 +67,19 @@ public class ExchangeSaveData
     public int lastRequestRotationDayIndex = -1;
     public int battleSentimentMonthKey = -1;
     public int lastDividendDayIndex = -1;
+    public int lastWeekIndex = -1;
     public long lastRecalcUnix;
     public PendingDuplicateCaptureSave pendingDuplicate;
+
+    // Freshly-caught hype: speciesId → UTC unix timestamp of most recent capture
+    public List<CatchHypeEntry> catchHype = new List<CatchHypeEntry>();
+
+    // Scarcity from brokering: speciesId → number of times brokered this week
+    public List<BrokerScarcityEntry> brokerScarcity = new List<BrokerScarcityEntry>();
+
+    // Type Trends: which MonsterType is "hot" this week
+    public int hotTypeWeekIndex = -1;
+    public MonsterType hotType = MonsterType.None;
 }
 
 [Serializable]
@@ -79,6 +90,20 @@ public class PendingDuplicateCaptureSave
     public int encounterLevel;
     public bool isShiny;
     public bool isMaxLevel;
+}
+
+[Serializable]
+public class CatchHypeEntry
+{
+    public string speciesId;
+    public long capturedUnix;
+}
+
+[Serializable]
+public class BrokerScarcityEntry
+{
+    public string speciesId;
+    public int timesBrokered;
 }
 
 // ─────────────────────────────────────────────────────────────

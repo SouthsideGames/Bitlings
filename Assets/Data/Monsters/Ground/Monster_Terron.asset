@@ -31,9 +31,9 @@ MonoBehaviour:
   hpRegenPerHour: 6.7
   fatigueRatePerHour: 0.2
   fatigueCooldownHours: 9.9
-  evolutionStage: 1
-  evolutionLevel: 10
-  evolutionForm: {fileID: 0}
+  evolutionStage: 2
+  evolutionLevel: 22
+  evolutionForm: {fileID: 11400000, guid: f19a29996c66f4f198ac9e96032e8b3a, type: 2}
   uncatchable: 0
   isBoss: 0
   bossJobDebuffs: []
@@ -50,7 +50,7 @@ MonoBehaviour:
   basicAttackName: Earth Shove
   basicAttackPrefab: {fileID: 8624645253036040332, guid: f03e702d7c9714bc2af48b5b17c93c88, type: 3}
   basicAttackPrefabLifetime: 1
-  spawnSfx: {fileID: 0}
+  spawnSfx: {fileID: 8300000, guid: 83ad74c31d5c238459d671c493e60240, type: 3}
   baseMarketValue: 10
   description: Its body compacts into heavier soil layers allowing stronger defensive
     pushes and crushing blows.

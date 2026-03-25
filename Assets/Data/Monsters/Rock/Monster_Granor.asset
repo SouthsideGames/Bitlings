@@ -51,7 +51,7 @@ MonoBehaviour:
   basicAttackName: Ruin Slam
   basicAttackPrefab: {fileID: 2351537007807138146, guid: 02418565875047149b7ee7a075c39850, type: 3}
   basicAttackPrefabLifetime: 1
-  spawnSfx: {fileID: 0}
+  spawnSfx: {fileID: 8300000, guid: 7076bdf3ac1c92542b9c6d028db0706a, type: 3}
   baseMarketValue: 10
   description: A hulking stone guardian that stands immovable, crushing enemies beneath
     overwhelming rocky force.

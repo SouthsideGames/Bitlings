@@ -51,7 +51,7 @@ MonoBehaviour:
   basicAttackName: Veil Jab
   basicAttackPrefab: {fileID: 9101927626726485638, guid: 257dd9ab5e3cf0544a679d2e444f8d35, type: 3}
   basicAttackPrefabLifetime: 1
-  spawnSfx: {fileID: 0}
+  spawnSfx: {fileID: 8300000, guid: 162a1494345049a4a9f67ad16abcb70d, type: 3}
   baseMarketValue: 10
   description: A drifting specter that flickers at the edge of vision, striking softly
     before fading back into the veil.

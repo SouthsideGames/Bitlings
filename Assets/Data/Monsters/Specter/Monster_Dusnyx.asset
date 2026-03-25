@@ -51,7 +51,7 @@ MonoBehaviour:
   basicAttackName: Shadow Claw
   basicAttackPrefab: {fileID: 9101927626726485638, guid: 257dd9ab5e3cf0544a679d2e444f8d35, type: 3}
   basicAttackPrefabLifetime: 1
-  spawnSfx: {fileID: 0}
+  spawnSfx: {fileID: 8300000, guid: 2d77ef4753fe9c44e954acd7180c1c0e, type: 3}
   baseMarketValue: 10
   description: A flickering specter that slashes from blind angles before fading
     out.

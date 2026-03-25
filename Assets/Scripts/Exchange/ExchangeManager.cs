@@ -32,11 +32,23 @@ public sealed class ExchangeManager : MonoBehaviour
     private const float RECALC_INTERVAL = 600f;       // 10 minutes
     private const int   SECONDS_PER_DAY = 86400;
 
+    // ── New market multiplier constants ──
+    private const float LEVEL_BOOST_PER_LEVEL = 0.02f; // +2% per level above 1
+    private const float LEVEL_BOOST_MAX = 0.50f;       // cap at +50%
+    private const float CATCH_HYPE_BONUS = 1.20f;      // +20% freshly caught
+    private const long  CATCH_HYPE_DURATION = 86400;    // 24 hours in seconds
+    private const float HOT_TYPE_BONUS = 1.15f;         // +15% for trending type
+    private const float SCARCITY_PER_BROKER = 0.05f;    // +5% per broker this week
+    private const float SCARCITY_MAX = 0.30f;            // cap at +30%
+    private const int   HOT_TYPE_COUNT = 16;             // MonsterType values 1..16
+
     private ExchangeSaveData _save;
     private Dictionary<string, MarketSpeciesState> _stateMap;
     private Dictionary<string, SpeciesBattleSentimentData> _sentimentMap;
     private readonly Dictionary<string, float> _workerHoursSampled = new Dictionary<string, float>(StringComparer.Ordinal);
     private Dictionary<string, DemandOverride> _overrideMap;
+    private Dictionary<string, long> _catchHypeMap;
+    private Dictionary<string, int> _brokerScarcityMap;
     private float _recalcTimer;
     private float _laborSampleTimer;
 
@@ -86,12 +98,18 @@ public sealed class ExchangeManager : MonoBehaviour
     {
         GameEvents.WorldEventsChanged += OnWorldEventsChanged;
         GameEvents.OnOwnedMonstersChanged += OnOwnedChanged;
+        GameEvents.MonsterCaptured += OnMonsterCaptured;
+        GameEvents.MonsterBrokered += OnMonsterBrokered;
+        GameEvents.RequestFulfilled += OnRequestFulfilled;
     }
 
     void OnDisable()
     {
         GameEvents.WorldEventsChanged -= OnWorldEventsChanged;
         GameEvents.OnOwnedMonstersChanged -= OnOwnedChanged;
+        GameEvents.MonsterCaptured -= OnMonsterCaptured;
+        GameEvents.MonsterBrokered -= OnMonsterBrokered;
+        GameEvents.RequestFulfilled -= OnRequestFulfilled;
     }
 
     void Update()
@@ -150,6 +168,38 @@ public sealed class ExchangeManager : MonoBehaviour
             else if (!string.IsNullOrEmpty(ov.speciesId))
                 _overrideMap[ov.speciesId] = ov;
         }
+
+        // Load catch-hype timestamps (prune expired entries)
+        _save.catchHype ??= new List<CatchHypeEntry>();
+        _catchHypeMap = new Dictionary<string, long>(StringComparer.Ordinal);
+        long nowUnix = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+        for (int i = _save.catchHype.Count - 1; i >= 0; i--)
+        {
+            var ch = _save.catchHype[i];
+            if (ch == null || string.IsNullOrEmpty(ch.speciesId) || nowUnix - ch.capturedUnix > CATCH_HYPE_DURATION)
+                _save.catchHype.RemoveAt(i);
+            else
+                _catchHypeMap[ch.speciesId] = ch.capturedUnix;
+        }
+
+        // Load broker-scarcity counts (reset on new week)
+        _save.brokerScarcity ??= new List<BrokerScarcityEntry>();
+        _brokerScarcityMap = new Dictionary<string, int>(StringComparer.Ordinal);
+        int thisWeek = WeekIndex();
+        // Scarcity counts reset each week alongside the base-value reset
+        if (_save.lastWeekIndex >= 0 && _save.lastWeekIndex != thisWeek)
+        {
+            _save.brokerScarcity.Clear();
+        }
+        for (int i = 0; i < _save.brokerScarcity.Count; i++)
+        {
+            var bs = _save.brokerScarcity[i];
+            if (bs != null && !string.IsNullOrEmpty(bs.speciesId))
+                _brokerScarcityMap[bs.speciesId] = bs.timesBrokered;
+        }
+
+        // Ensure hot type is set for this week
+        EnsureHotType();
     }
 
     private void Persist()
@@ -167,6 +217,26 @@ public sealed class ExchangeManager : MonoBehaviour
         {
             foreach (var kv in _overrideMap)
                 _save.demandOverrides.Add(kv.Value);
+        }
+
+        // Persist catch-hype (prune expired)
+        _save.catchHype.Clear();
+        if (_catchHypeMap != null)
+        {
+            long now = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+            foreach (var kv in _catchHypeMap)
+            {
+                if (now - kv.Value <= CATCH_HYPE_DURATION)
+                    _save.catchHype.Add(new CatchHypeEntry { speciesId = kv.Key, capturedUnix = kv.Value });
+            }
+        }
+
+        // Persist broker-scarcity
+        _save.brokerScarcity.Clear();
+        if (_brokerScarcityMap != null)
+        {
+            foreach (var kv in _brokerScarcityMap)
+                _save.brokerScarcity.Add(new BrokerScarcityEntry { speciesId = kv.Key, timesBrokered = kv.Value });
         }
 
         _save.lastRecalcUnix = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
@@ -350,15 +420,22 @@ public sealed class ExchangeManager : MonoBehaviour
     {
         if (_save == null || _stateMap == null) return;
 
-        bool monthReset = EnsureMonthlyBattleSentimentWindow();
+        EnsureMonthlyBattleSentimentWindow();
         AccumulateLaborHoursDeltas();
 
-        // New calendar month → reset every species to its base market value
-        if (monthReset)
+        // New week → reset every species to its base market value
+        int thisWeek = WeekIndex();
+        if (_save.lastWeekIndex >= 0 && thisWeek != _save.lastWeekIndex)
         {
+            _save.lastWeekIndex = thisWeek;
+            _brokerScarcityMap?.Clear();
+            _save.brokerScarcity.Clear();
+            EnsureHotType();
             ResetAllValuesToBase();
             return;
         }
+        _save.lastWeekIndex = thisWeek;
+        EnsureHotType();
 
         int today = DayIndex();
         int previousDay = _save.lastDayIndex;
@@ -397,7 +474,12 @@ public sealed class ExchangeManager : MonoBehaviour
 
             if (newDay) UpdateDemand(state, def);
 
-            state.previousValue = state.currentValue;
+            // Only snapshot previousValue on day transitions so the
+            // Trends tab can show yesterday-vs-today deltas all day long.
+            // Without this guard, intra-day recalcs (every 10 min) immediately
+            // set previousValue = currentValue, making every trend "Stable".
+            if (newDay)
+                state.previousValue = state.currentValue;
 
             // ── value formula ──
             float baseVal = def.baseMarketValue;
@@ -419,6 +501,18 @@ public sealed class ExchangeManager : MonoBehaviour
             float sentimentMul = GetBattleSentimentMultiplier(def.id);
             float laborMul = GetLaborHoursMultiplier(def.id);
 
+            // Level Boost: higher-level owned specimens increase species value
+            float levelMul = GetLevelBoostMultiplier(def.id);
+
+            // Freshly Caught: 24-hour hype window after capture
+            float catchHypeMul = GetCatchHypeMultiplier(def.id);
+
+            // Type Trends: one type is "hot" each week
+            float typeTrendMul = GetTypeTrendMultiplier(def.type);
+
+            // Scarcity from brokering: selling raises value
+            float scarcityMul = GetBrokerScarcityMultiplier(def.id);
+
             // Monopoly Bonus: if player owns every species of this type, boost value
             float monopolyMul = 1f;
             if (FeatureUnlockManager.I != null && FeatureUnlockManager.I.IsUnlocked(FeatureId.Exchange_MonopolyBonus))
@@ -427,7 +521,9 @@ public sealed class ExchangeManager : MonoBehaviour
                     monopolyMul = MONOPOLY_BONUS;
             }
 
-            float final_ = baseVal * demandMul * rarityMul * supplyMod * flux * eventMul * sentimentMul * laborMul * monopolyMul;
+            float final_ = baseVal * demandMul * rarityMul * supplyMod * flux * eventMul
+                         * sentimentMul * laborMul * levelMul * catchHypeMul
+                         * typeTrendMul * scarcityMul * monopolyMul;
             state.currentValue = Mathf.Max(1, Mathf.RoundToInt(final_));
 
             // trend
@@ -601,6 +697,122 @@ public sealed class ExchangeManager : MonoBehaviour
     {
         return (int)(DateTimeOffset.UtcNow.ToUnixTimeSeconds() / SECONDS_PER_DAY);
     }
+
+    private static int WeekIndex()
+    {
+        return DayIndex() / 7;
+    }
+
+    // ─────────── New Market Multipliers ───────────
+
+    /// <summary>
+    /// Level Boost: highest owned level of this species → up to +50% value.
+    /// </summary>
+    private float GetLevelBoostMultiplier(string speciesId)
+    {
+        var data = SaveManager.Data;
+        if (data?.owned == null) return 1f;
+
+        int maxLevel = 0;
+        for (int i = 0; i < data.owned.Count; i++)
+        {
+            var o = data.owned[i];
+            if (o != null && o.monsterId == speciesId && o.level > maxLevel)
+                maxLevel = o.level;
+        }
+        if (maxLevel <= 1) return 1f;
+
+        float bonus = Mathf.Min((maxLevel - 1) * LEVEL_BOOST_PER_LEVEL, LEVEL_BOOST_MAX);
+        return 1f + bonus;
+    }
+
+    /// <summary>
+    /// Freshly Caught: +20% for 24 hours after most recent capture of this species.
+    /// </summary>
+    private float GetCatchHypeMultiplier(string speciesId)
+    {
+        if (_catchHypeMap == null || !_catchHypeMap.TryGetValue(speciesId, out long capturedUnix))
+            return 1f;
+
+        long elapsed = DateTimeOffset.UtcNow.ToUnixTimeSeconds() - capturedUnix;
+        if (elapsed > CATCH_HYPE_DURATION)
+        {
+            _catchHypeMap.Remove(speciesId);
+            return 1f;
+        }
+        return CATCH_HYPE_BONUS;
+    }
+
+    /// <summary>
+    /// Type Trends: one randomly chosen type is "hot" each week → +15%.
+    /// </summary>
+    private float GetTypeTrendMultiplier(MonsterType type)
+    {
+        if (_save == null || type == MonsterType.None) return 1f;
+        return type == _save.hotType ? HOT_TYPE_BONUS : 1f;
+    }
+
+    /// <summary>
+    /// Picks a new hot type at the start of each week (deterministic from seed).
+    /// </summary>
+    private void EnsureHotType()
+    {
+        int week = WeekIndex();
+        if (_save.hotTypeWeekIndex == week) return;
+
+        _save.hotTypeWeekIndex = week;
+        int hash = StableHash("HotType" + week);
+        // MonsterType values are 1..16, skip None(0)
+        _save.hotType = (MonsterType)(1 + (hash % HOT_TYPE_COUNT));
+    }
+
+    /// <summary>
+    /// Scarcity from brokering: +5% per broker this week, capped at +30%.
+    /// </summary>
+    private float GetBrokerScarcityMultiplier(string speciesId)
+    {
+        if (_brokerScarcityMap == null || !_brokerScarcityMap.TryGetValue(speciesId, out int count))
+            return 1f;
+        float bonus = Mathf.Min(count * SCARCITY_PER_BROKER, SCARCITY_MAX);
+        return 1f + bonus;
+    }
+
+    /// <summary>
+    /// Called when a monster is captured — stamps catch-hype timestamp.
+    /// </summary>
+    private void OnMonsterCaptured(string speciesId, MonsterType type)
+    {
+        if (string.IsNullOrEmpty(speciesId)) return;
+        _catchHypeMap ??= new Dictionary<string, long>(StringComparer.Ordinal);
+        _catchHypeMap[speciesId] = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+        RecalculateAll();
+    }
+
+    /// <summary>
+    /// Called when a monster is brokered/request fulfilled — increments scarcity.
+    /// </summary>
+    private void OnMonsterBrokered(string speciesId, int credits)
+    {
+        if (string.IsNullOrEmpty(speciesId)) return;
+        _brokerScarcityMap ??= new Dictionary<string, int>(StringComparer.Ordinal);
+        _brokerScarcityMap.TryGetValue(speciesId, out int count);
+        _brokerScarcityMap[speciesId] = count + 1;
+        RecalculateAll();
+    }
+
+    /// <summary>
+    /// Called when a request is fulfilled — also increments scarcity.
+    /// </summary>
+    private void OnRequestFulfilled(string requestId, string speciesId)
+    {
+        if (string.IsNullOrEmpty(speciesId)) return;
+        _brokerScarcityMap ??= new Dictionary<string, int>(StringComparer.Ordinal);
+        _brokerScarcityMap.TryGetValue(speciesId, out int count);
+        _brokerScarcityMap[speciesId] = count + 1;
+        RecalculateAll();
+    }
+
+    public MonsterType GetHotType() => _save?.hotType ?? MonsterType.None;
 
     /// <summary>
     /// Returns true if a new calendar month was detected and sentiment data was reset.
