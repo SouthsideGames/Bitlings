@@ -52,6 +52,6 @@ MonoBehaviour:
   basicAttackPrefab: {fileID: 7446462880551948952, guid: 18696ea6ccccd974d902d9304c2b6b7e, type: 3}
   basicAttackPrefabLifetime: 1
   spawnSfx: {fileID: 8300000, guid: 525c6f0d0ce75bb4582a88c6790eaf9a, type: 3}
-  baseMarketValue: 10
+  baseMarketValue: 77
   description: A young wyrm that lunges wildly, scorching everything around it as
     it struggles to control its power.

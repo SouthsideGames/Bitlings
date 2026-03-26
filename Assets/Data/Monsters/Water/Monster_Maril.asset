@@ -52,6 +52,6 @@ MonoBehaviour:
   basicAttackPrefab: {fileID: 7604281169824035565, guid: 4065dc449fe6fd94eb31f0e575b94514, type: 3}
   basicAttackPrefabLifetime: 1
   spawnSfx: {fileID: 8300000, guid: b586fb4bfb7b36e43a7ef8c01589ccb4, type: 3}
-  baseMarketValue: 10
+  baseMarketValue: 165
   description: A calm but calculating water dweller that restrains foes with coiling
     currents before striking decisively.

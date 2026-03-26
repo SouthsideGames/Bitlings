@@ -52,6 +52,6 @@ MonoBehaviour:
   basicAttackPrefab: {fileID: 9101927626726485638, guid: 257dd9ab5e3cf0544a679d2e444f8d35, type: 3}
   basicAttackPrefabLifetime: 1
   spawnSfx: {fileID: 8300000, guid: 848827c67c4513143b43df64ff9a9606, type: 3}
-  baseMarketValue: 10
+  baseMarketValue: 77
   description: A faint specter that flickers in and out of view, slipping through
     attacks while draining foes with chilling, ghostly strikes.

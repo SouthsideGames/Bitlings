@@ -52,6 +52,6 @@ MonoBehaviour:
   basicAttackPrefab: {fileID: 7446462880551948952, guid: 18696ea6ccccd974d902d9304c2b6b7e, type: 3}
   basicAttackPrefabLifetime: 1
   spawnSfx: {fileID: 8300000, guid: fe5e0e0f633e05f44840a89ac634cac9, type: 3}
-  baseMarketValue: 10
+  baseMarketValue: 911
   description: A legendary wyrm whose focused, devastating strikes leave scorched
     ruin in their wake, ending battles in brutal, decisive blows.

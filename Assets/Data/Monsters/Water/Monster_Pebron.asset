@@ -31,7 +31,7 @@ MonoBehaviour:
   hpRegenPerHour: 7.4
   fatigueRatePerHour: 0.2
   fatigueCooldownHours: 8.2
-  evolutionStage: 1
+  evolutionStage: 2
   evolutionLevel: 22
   evolutionForm: {fileID: 11400000, guid: 3f8c026b7294e4a8a83ac3db54221f69, type: 2}
   uncatchable: 0
@@ -52,6 +52,6 @@ MonoBehaviour:
   basicAttackPrefab: {fileID: 7604281169824035565, guid: 4065dc449fe6fd94eb31f0e575b94514, type: 3}
   basicAttackPrefabLifetime: 1
   spawnSfx: {fileID: 8300000, guid: 5b3b2e45b27a2dd41951886ba65b7729, type: 3}
-  baseMarketValue: 10
+  baseMarketValue: 107
   description: Its shell thickens as it adapts striking back harder the longer it
     remains engaged.

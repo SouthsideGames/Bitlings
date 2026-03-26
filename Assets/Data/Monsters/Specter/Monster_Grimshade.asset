@@ -52,5 +52,5 @@ MonoBehaviour:
   basicAttackPrefab: {fileID: 9101927626726485638, guid: 257dd9ab5e3cf0544a679d2e444f8d35, type: 3}
   basicAttackPrefabLifetime: 1
   spawnSfx: {fileID: 8300000, guid: ba3737c73322b7440be608d6627882d2, type: 3}
-  baseMarketValue: 10
+  baseMarketValue: 165
   description: Its form darkens and it strikes with sharp precision from deep shade.

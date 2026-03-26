@@ -52,6 +52,6 @@ MonoBehaviour:
   basicAttackPrefab: {fileID: 9101927626726485638, guid: 257dd9ab5e3cf0544a679d2e444f8d35, type: 3}
   basicAttackPrefabLifetime: 1
   spawnSfx: {fileID: 8300000, guid: 4b8fcfe18b1c081469b78b8e53218e53, type: 3}
-  baseMarketValue: 10
+  baseMarketValue: 102
   description: A drifting specter that flickers unpredictably draining foes with
     soft but persistent ghostly strikes.

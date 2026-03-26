@@ -52,6 +52,6 @@ MonoBehaviour:
   basicAttackPrefab: {fileID: 7604281169824035565, guid: 4065dc449fe6fd94eb31f0e575b94514, type: 3}
   basicAttackPrefabLifetime: 1
   spawnSfx: {fileID: 8300000, guid: 5a52c40bfdfefb64eaf52bafbe7add12, type: 3}
-  baseMarketValue: 10
+  baseMarketValue: 77
   description: A small aquatic crawler that snaps with watery bites and reacts quickly
     to threats.

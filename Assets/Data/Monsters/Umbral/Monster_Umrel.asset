@@ -52,6 +52,6 @@ MonoBehaviour:
   basicAttackPrefab: {fileID: 1424259663161806981, guid: bd2d781a7e4f84cb58aedda30af5d65d, type: 3}
   basicAttackPrefabLifetime: 1
   spawnSfx: {fileID: 8300000, guid: 3746ef4fc31aae74f8c62d9c02d1702d, type: 3}
-  baseMarketValue: 10
+  baseMarketValue: 77
   description: A small umbral creature that lashes out from darkened corners, retreating
     quickly as shadows close around it.

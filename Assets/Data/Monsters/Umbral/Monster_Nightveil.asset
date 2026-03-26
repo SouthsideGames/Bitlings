@@ -52,6 +52,6 @@ MonoBehaviour:
   basicAttackPrefab: {fileID: 1424259663161806981, guid: 649dec1e4858f634eac689cf6599ea92, type: 3}
   basicAttackPrefabLifetime: 1
   spawnSfx: {fileID: 8300000, guid: 15e1eb31022059341aa28d6c22459437, type: 3}
-  baseMarketValue: 10
+  baseMarketValue: 826
   description: A boss-class umbral entity that tears through reality itself, phasing
     between shadows as it delivers devastating, unavoidable strikes.

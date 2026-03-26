@@ -52,6 +52,6 @@ MonoBehaviour:
   basicAttackPrefab: {fileID: 7604281169824035565, guid: 4065dc449fe6fd94eb31f0e575b94514, type: 3}
   basicAttackPrefabLifetime: 1
   spawnSfx: {fileID: 8300000, guid: 8d87f1b69f4e7f543905e2906fb67a59, type: 3}
-  baseMarketValue: 10
+  baseMarketValue: 329
   description: A massive aquatic guardian that absorbs punishment and retaliates
     with crushing waves of condensed water.

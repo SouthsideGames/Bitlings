@@ -52,6 +52,6 @@ MonoBehaviour:
   basicAttackPrefab: {fileID: 9101927626726485638, guid: 257dd9ab5e3cf0544a679d2e444f8d35, type: 3}
   basicAttackPrefabLifetime: 1
   spawnSfx: {fileID: 8300000, guid: 2d6ed11cd82628c469f0b828f74820bc, type: 3}
-  baseMarketValue: 10
+  baseMarketValue: 836
   description: A legendary specter that weaves between reality and shadow, striking
     with silent precision before dissolving back into the veil.

@@ -31,7 +31,7 @@ MonoBehaviour:
   hpRegenPerHour: 8.3
   fatigueRatePerHour: 0.2
   fatigueCooldownHours: 8.2
-  evolutionStage: 1
+  evolutionStage: 3
   evolutionLevel: 12
   evolutionForm: {fileID: 0}
   uncatchable: 0
@@ -52,6 +52,6 @@ MonoBehaviour:
   basicAttackPrefab: {fileID: 7604281169824035565, guid: 4065dc449fe6fd94eb31f0e575b94514, type: 3}
   basicAttackPrefabLifetime: 1
   spawnSfx: {fileID: 8300000, guid: ff14928421d8b024ca4a84f30ae6d052, type: 3}
-  baseMarketValue: 10
+  baseMarketValue: 162
   description: A fully matured water brute that balances offense and defense crashing
     into enemies with steady tidal force.

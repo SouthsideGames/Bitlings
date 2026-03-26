@@ -52,5 +52,5 @@ MonoBehaviour:
   basicAttackPrefab: {fileID: 7604281169824035565, guid: 4065dc449fe6fd94eb31f0e575b94514, type: 3}
   basicAttackPrefabLifetime: 1
   spawnSfx: {fileID: 0}
-  baseMarketValue: 10
+  baseMarketValue: 165
   description: Its shell thickens as it endures and restores through steady flow.

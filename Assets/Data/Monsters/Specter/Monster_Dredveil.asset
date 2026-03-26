@@ -31,7 +31,7 @@ MonoBehaviour:
   hpRegenPerHour: 5.8
   fatigueRatePerHour: 0.2
   fatigueCooldownHours: 8.8
-  evolutionStage: 1
+  evolutionStage: 3
   evolutionLevel: 15
   evolutionForm: {fileID: 0}
   uncatchable: 0
@@ -52,6 +52,6 @@ MonoBehaviour:
   basicAttackPrefab: {fileID: 9101927626726485638, guid: 257dd9ab5e3cf0544a679d2e444f8d35, type: 3}
   basicAttackPrefabLifetime: 1
   spawnSfx: {fileID: 8300000, guid: 2044571dee8ced947b937ba041e2359b, type: 3}
-  baseMarketValue: 10
+  baseMarketValue: 303
   description: A towering specter that slips between moments and tears foes from
     within the veil.

@@ -31,7 +31,7 @@ MonoBehaviour:
   hpRegenPerHour: 5.5
   fatigueRatePerHour: 0.2
   fatigueCooldownHours: 8.4
-  evolutionStage: 1
+  evolutionStage: 3
   evolutionLevel: 15
   evolutionForm: {fileID: 0}
   uncatchable: 0
@@ -52,6 +52,6 @@ MonoBehaviour:
   basicAttackPrefab: {fileID: 7604281169824035565, guid: 4065dc449fe6fd94eb31f0e575b94514, type: 3}
   basicAttackPrefabLifetime: 1
   spawnSfx: {fileID: 8300000, guid: 9e62a60cd3f24e84a99e850684312f4b, type: 3}
-  baseMarketValue: 10
+  baseMarketValue: 303
   description: A mature tide guardian that holds the line and mends allies through
     endless currents.

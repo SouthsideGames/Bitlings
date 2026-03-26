@@ -52,6 +52,6 @@ MonoBehaviour:
   basicAttackPrefab: {fileID: 1424259663161806981, guid: 9bdd9c0ed3e7e754bb1e9e7763564ce3, type: 3}
   basicAttackPrefabLifetime: 1
   spawnSfx: {fileID: 8300000, guid: 03f36129c7a523d47876dab4686f9d34, type: 3}
-  baseMarketValue: 10
+  baseMarketValue: 303
   description: An umbral hunter that exploits openings from the dark, striking hard
     before melting back into shadow.
