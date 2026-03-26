@@ -29,7 +29,7 @@ MonoBehaviour:
   baseDefense: 58
   baseSpeed: 24
   hpRegenPerHour: 10.4
-  fatigueRatePerHour: 0.2
+  fatigueRatePerHour: 0.09
   fatigueCooldownHours: 10.6
   evolutionStage: 3
   evolutionLevel: 15

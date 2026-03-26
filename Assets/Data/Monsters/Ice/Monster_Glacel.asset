@@ -29,7 +29,7 @@ MonoBehaviour:
   baseDefense: 58
   baseSpeed: 22
   hpRegenPerHour: 7.8
-  fatigueRatePerHour: 0.03
+  fatigueRatePerHour: 0.09
   fatigueCooldownHours: 10.4
   evolutionStage: 1
   evolutionLevel: 28
@@ -51,6 +51,6 @@ MonoBehaviour:
   basicAttackName: Frost Jab
   basicAttackPrefab: {fileID: 2650955928365913985, guid: f4836eb6d259942b9abe6e0a520af59f, type: 3}
   basicAttackPrefabLifetime: 1
-  spawnSfx: {fileID: 0}
+  spawnSfx: {fileID: 8300000, guid: 4cb165575c3da4e43822de1ad41910c3, type: 3}
   baseMarketValue: 164
   description: A sharp-edged ice creature that locks into place striking with deliberate

@@ -29,11 +29,11 @@ MonoBehaviour:
   baseDefense: 36
   baseSpeed: 22
   hpRegenPerHour: 7
-  fatigueRatePerHour: 0.2
+  fatigueRatePerHour: 0.077
   fatigueCooldownHours: 8.2
   evolutionStage: 2
   evolutionLevel: 22
-  evolutionForm: {fileID: 11400000, guid: b9ea8cecb1c19473092c14d7705139f5, type: 2}
+  evolutionForm: {fileID: 11400000, guid: 35cbbe44d809f8041b67c3feb3a0e32a, type: 2}
   uncatchable: 0
   isBoss: 0
   bossJobDebuffs: []

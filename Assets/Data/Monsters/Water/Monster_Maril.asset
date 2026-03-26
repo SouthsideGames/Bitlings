@@ -16,10 +16,10 @@ MonoBehaviour:
   displayName: Maril
   type: 2
   typeIcon: {fileID: 21300000, guid: dd2adea89cda84ec4a589a6d1d5da1ae, type: 3}
-  icon: {fileID: 21300000, guid: c155da2b278a05346879846223cb376a, type: 3}
-  backIcon: {fileID: 21300000, guid: 9a7e14f5b3cdedd499d92093eb111504, type: 3}
-  shinyIcon: {fileID: 21300000, guid: 525b1043849ac4834aeb2ae4d61d6975, type: 3}
-  shinyBackIcon: {fileID: 21300000, guid: 0286f9539fab34a3e930f2e741812e13, type: 3}
+  icon: {fileID: 21300000, guid: ce6a6a24c05c9b348a415d0e07bb4915, type: 3}
+  backIcon: {fileID: 21300000, guid: 9f383482ab145f0448b7a51de401a9f5, type: 3}
+  shinyIcon: {fileID: 21300000, guid: aa9ff78f10166bd458bf878e94ed5e37, type: 3}
+  shinyBackIcon: {fileID: 21300000, guid: 70fd064699b896d43a0d2d2a41d1ad16, type: 3}
   rarity: 2
   canBeStarter: 0
   starterWeight: 1
@@ -29,7 +29,7 @@ MonoBehaviour:
   baseDefense: 46
   baseSpeed: 30
   hpRegenPerHour: 8.5
-  fatigueRatePerHour: 0.2
+  fatigueRatePerHour: 0.077
   fatigueCooldownHours: 8.2
   evolutionStage: 1
   evolutionLevel: 12
