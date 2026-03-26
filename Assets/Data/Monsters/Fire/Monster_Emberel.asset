@@ -52,5 +52,5 @@ MonoBehaviour:
   basicAttackPrefab: {fileID: 126357351932672970, guid: a7524146891194bc4b7eb73ba1e38b46, type: 3}
   basicAttackPrefabLifetime: 1
   spawnSfx: {fileID: 8300000, guid: 168a124b2d044524a8931e9839b74193, type: 3}
-  baseMarketValue: 10
+  baseMarketValue: 77
   description: A small fire creature that darts forward with quick

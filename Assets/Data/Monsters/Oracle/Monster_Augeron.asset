@@ -31,7 +31,7 @@ MonoBehaviour:
   hpRegenPerHour: 9
   fatigueRatePerHour: 0.2
   fatigueCooldownHours: 9.9
-  evolutionStage: 1
+  evolutionStage: 2
   evolutionLevel: 28
   evolutionForm: {fileID: 11400000, guid: ed9c43f5bb1e14b0b8980ddea105116b, type: 2}
   uncatchable: 0
@@ -51,7 +51,7 @@ MonoBehaviour:
   basicAttackName: Vision Strike
   basicAttackPrefab: {fileID: 7907104310462883121, guid: 37212b887c61ad84eacd87133a8a9e9d, type: 3}
   basicAttackPrefabLifetime: 1
-  spawnSfx: {fileID: 0}
-  baseMarketValue: 10
+  spawnSfx: {fileID: 8300000, guid: 2addcf4b482253046b6f5afbb389344c, type: 3}
+  baseMarketValue: 154
   description: Its predictive senses sharpen allowing it to anticipate movements
     and counter with precise blows.

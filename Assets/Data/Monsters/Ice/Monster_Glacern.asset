@@ -31,7 +31,7 @@ MonoBehaviour:
   hpRegenPerHour: 9.4
   fatigueRatePerHour: 0.2
   fatigueCooldownHours: 11.2
-  evolutionStage: 1
+  evolutionStage: 2
   evolutionLevel: 15
   evolutionForm: {fileID: 0}
   uncatchable: 0
@@ -52,6 +52,6 @@ MonoBehaviour:
   basicAttackPrefab: {fileID: 2650955928365913985, guid: f4836eb6d259942b9abe6e0a520af59f, type: 3}
   basicAttackPrefabLifetime: 1
   spawnSfx: {fileID: 8300000, guid: 31342c7479c81cd41831a5d26fc43ce8, type: 3}
-  baseMarketValue: 10
+  baseMarketValue: 310
   description: Its body fully crystallizes into dense ice armor advancing steadily
     while shattering enemies with overwhelming frozen force.

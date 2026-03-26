@@ -52,6 +52,6 @@ MonoBehaviour:
   basicAttackPrefab: {fileID: 5988486418563103347, guid: 310c8d56e543d4cd4ae9c55fa6047252, type: 3}
   basicAttackPrefabLifetime: 1
   spawnSfx: {fileID: 0}
-  baseMarketValue: 10
+  baseMarketValue: 77
   description: A light sky creature that darts in and strikes with swift pecking
     blows.

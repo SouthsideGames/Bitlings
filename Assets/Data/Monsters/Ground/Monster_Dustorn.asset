@@ -31,9 +31,9 @@ MonoBehaviour:
   hpRegenPerHour: 6.6
   fatigueRatePerHour: 0.2
   fatigueCooldownHours: 9.9
-  evolutionStage: 1
+  evolutionStage: 2
   evolutionLevel: 22
-  evolutionForm: {fileID: 11400000, guid: 765316e888bba43d6b001288b98f4d35, type: 2}
+  evolutionForm: {fileID: 0}
   uncatchable: 0
   isBoss: 0
   bossJobDebuffs: []
@@ -52,5 +52,5 @@ MonoBehaviour:
   basicAttackPrefab: {fileID: 8624645253036040332, guid: f03e702d7c9714bc2af48b5b17c93c88, type: 3}
   basicAttackPrefabLifetime: 1
   spawnSfx: {fileID: 8300000, guid: 44016960b73c7e64ca0a214ce0bbd2d9, type: 3}
-  baseMarketValue: 10
+  baseMarketValue: 109
   description: Its body compacts into denser layers

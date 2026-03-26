@@ -31,7 +31,7 @@ MonoBehaviour:
   hpRegenPerHour: 6.7
   fatigueRatePerHour: 0.2
   fatigueCooldownHours: 11.4
-  evolutionStage: 1
+  evolutionStage: 3
   evolutionLevel: 12
   evolutionForm: {fileID: 0}
   uncatchable: 0
@@ -52,5 +52,5 @@ MonoBehaviour:
   basicAttackPrefab: {fileID: 5172629195496952374, guid: ad774bbb8084f42c29f12cd62581f796, type: 3}
   basicAttackPrefabLifetime: 1
   spawnSfx: {fileID: 8300000, guid: 483220f85d5873243a856ad473c4fe8e, type: 3}
-  baseMarketValue: 10
+  baseMarketValue: 170
   description: A fully stabilized alloy guardian that grinds forward relentlessly

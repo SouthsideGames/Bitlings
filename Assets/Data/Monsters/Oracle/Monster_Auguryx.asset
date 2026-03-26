@@ -31,7 +31,7 @@ MonoBehaviour:
   hpRegenPerHour: 10.4
   fatigueRatePerHour: 0.2
   fatigueCooldownHours: 10.6
-  evolutionStage: 1
+  evolutionStage: 3
   evolutionLevel: 15
   evolutionForm: {fileID: 0}
   uncatchable: 0
@@ -52,6 +52,6 @@ MonoBehaviour:
   basicAttackPrefab: {fileID: 7907104310462883121, guid: 37212b887c61ad84eacd87133a8a9e9d, type: 3}
   basicAttackPrefabLifetime: 1
   spawnSfx: {fileID: 8300000, guid: 05f1e3fa6b9d7e8438bdfac8566a8661, type: 3}
-  baseMarketValue: 10
+  baseMarketValue: 281
   description: A powerful oracle seer that bends battle flow through near-perfect
     prediction and decisive inevitable strikes.

@@ -31,7 +31,7 @@ MonoBehaviour:
   hpRegenPerHour: 5.7
   fatigueRatePerHour: 0.2
   fatigueCooldownHours: 7.2
-  evolutionStage: 1
+  evolutionStage: 3
   evolutionLevel: 12
   evolutionForm: {fileID: 0}
   uncatchable: 0
@@ -52,6 +52,6 @@ MonoBehaviour:
   basicAttackPrefab: {fileID: 126357351932672970, guid: 9581774b44a93f24299791825657e6c2, type: 3}
   basicAttackPrefabLifetime: 1
   spawnSfx: {fileID: 8300000, guid: 3595d1c12dc898041a7f799453a7cb3e, type: 3}
-  baseMarketValue: 10
+  baseMarketValue: 165
   description: A fully ignited fire beast that overwhelms foes with fast, searing
     assaults.

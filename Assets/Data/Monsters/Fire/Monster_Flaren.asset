@@ -52,6 +52,6 @@ MonoBehaviour:
   basicAttackPrefab: {fileID: 126357351932672970, guid: a7524146891194bc4b7eb73ba1e38b46, type: 3}
   basicAttackPrefabLifetime: 1
   spawnSfx: {fileID: 8300000, guid: b98a16ba150149f4cbd5560bac93baf9, type: 3}
-  baseMarketValue: 10
+  baseMarketValue: 303
   description: A heavily armored fire brute that smashes through enemies with explosive
     force and relentless heat.

@@ -52,6 +52,6 @@ MonoBehaviour:
   basicAttackPrefab: {fileID: 126357351932672970, guid: a7524146891194bc4b7eb73ba1e38b46, type: 3}
   basicAttackPrefabLifetime: 1
   spawnSfx: {fileID: 8300000, guid: 4ae9a0d9538d8f64ab42faf3fb3b27ef, type: 3}
-  baseMarketValue: 10
+  baseMarketValue: 105
   description: Its flames grow steadier and stronger, trading some speed for sharper,
     burning strikes.

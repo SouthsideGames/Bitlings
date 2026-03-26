@@ -31,7 +31,7 @@ MonoBehaviour:
   hpRegenPerHour: 6.9
   fatigueRatePerHour: 0.2
   fatigueCooldownHours: 9.2
-  evolutionStage: 1
+  evolutionStage: 2
   evolutionLevel: 10
   evolutionForm: {fileID: 0}
   uncatchable: 0
@@ -52,5 +52,5 @@ MonoBehaviour:
   basicAttackPrefab: {fileID: 8046187082596486557, guid: 86fc56d41698d45bfbf27d043ca2944d, type: 3}
   basicAttackPrefabLifetime: 1
   spawnSfx: {fileID: 8300000, guid: 46ce87fa8f8e25044972b74bc484d5b5, type: 3}
-  baseMarketValue: 10
+  baseMarketValue: 105
   description: Its corruption fully blooms empowering heavy

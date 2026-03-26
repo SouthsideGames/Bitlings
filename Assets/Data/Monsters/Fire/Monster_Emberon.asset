@@ -31,9 +31,9 @@ MonoBehaviour:
   hpRegenPerHour: 5.6
   fatigueRatePerHour: 0.2
   fatigueCooldownHours: 8.6
-  evolutionStage: 1
+  evolutionStage: 2
   evolutionLevel: 22
-  evolutionForm: {fileID: 11400000, guid: 881ae4bd6d1ec43fe955e0944c3e5501, type: 2}
+  evolutionForm: {fileID: 0}
   uncatchable: 0
   isBoss: 0
   bossJobDebuffs: []
@@ -51,5 +51,5 @@ MonoBehaviour:
   basicAttackPrefab: {fileID: 126357351932672970, guid: a7524146891194bc4b7eb73ba1e38b46, type: 3}
   basicAttackPrefabLifetime: 1
   spawnSfx: {fileID: 8300000, guid: 512cf4c8997608d469a4f2c01971eade, type: 3}
-  baseMarketValue: 10
+  baseMarketValue: 108
   description: Its flames burn hotter and steadier

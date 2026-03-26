@@ -32,8 +32,8 @@ MonoBehaviour:
   fatigueRatePerHour: 0.2
   fatigueCooldownHours: 7.6
   evolutionStage: 1
-  evolutionLevel: 8
-  evolutionForm: {fileID: 0}
+  evolutionLevel: 22
+  evolutionForm: {fileID: 11400000, guid: 3d92335b954894336bb77aa822df0860, type: 2}
   uncatchable: 0
   isBoss: 0
   bossJobDebuffs: []
@@ -52,6 +52,6 @@ MonoBehaviour:
   basicAttackPrefab: {fileID: 4179996368917665753, guid: 77ce3f8bf17474b06ac473e26248a299, type: 3}
   basicAttackPrefabLifetime: 1
   spawnSfx: {fileID: 8300000, guid: b0cc65d8e0e46854986afbe0580be832, type: 3}
-  baseMarketValue: 10
+  baseMarketValue: 75
   description: A floating electric creature that crackles softly jabbing foes with
     quick bursts of static energy.

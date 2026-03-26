@@ -52,6 +52,6 @@ MonoBehaviour:
   basicAttackPrefab: {fileID: 7907104310462883121, guid: 37212b887c61ad84eacd87133a8a9e9d, type: 3}
   basicAttackPrefabLifetime: 1
   spawnSfx: {fileID: 0}
-  baseMarketValue: 10
+  baseMarketValue: 76
   description: A young oracle watcher that studies the battlefield striking only
     after reading its opponent.

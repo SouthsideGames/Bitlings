@@ -50,6 +50,6 @@ MonoBehaviour:
   basicAttackName: Foretell Strike
   basicAttackPrefab: {fileID: 7907104310462883121, guid: 37212b887c61ad84eacd87133a8a9e9d, type: 3}
   basicAttackPrefabLifetime: 1
-  spawnSfx: {fileID: 0}
-  baseMarketValue: 10
+  spawnSfx: {fileID: 8300000, guid: f3858906ad0015e45ae78ccdbcdd1965, type: 3}
+  baseMarketValue: 77
   description: A watchful oracle creature that strikes only after reading its foe.

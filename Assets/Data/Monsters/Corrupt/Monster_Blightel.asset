@@ -52,5 +52,5 @@ MonoBehaviour:
   basicAttackPrefab: {fileID: 8046187082596486557, guid: 86fc56d41698d45bfbf27d043ca2944d, type: 3}
   basicAttackPrefabLifetime: 1
   spawnSfx: {fileID: 8300000, guid: a2fcae6ed154b854abde9b3893531e13, type: 3}
-  baseMarketValue: 10
+  baseMarketValue: 105
   description: A corrupted entity that lashes out erratically

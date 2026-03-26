@@ -52,6 +52,6 @@ MonoBehaviour:
   basicAttackPrefab: {fileID: 5988486418563103347, guid: 310c8d56e543d4cd4ae9c55fa6047252, type: 3}
   basicAttackPrefabLifetime: 1
   spawnSfx: {fileID: 8300000, guid: 38704b2867c628648a4784120b9eaaa4, type: 3}
-  baseMarketValue: 10
+  baseMarketValue: 826
   description: A supreme aerial predator that dominates the skies, striking from
     impossible angles with overwhelming speed and force.

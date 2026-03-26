@@ -51,6 +51,6 @@ MonoBehaviour:
   basicAttackPrefab: {fileID: 7907104310462883121, guid: 37212b887c61ad84eacd87133a8a9e9d, type: 3}
   basicAttackPrefabLifetime: 1
   spawnSfx: {fileID: 8300000, guid: 15c35c9630f32fc47891b60de6d24f94, type: 3}
-  baseMarketValue: 10
+  baseMarketValue: 77
   description: A quiet oracle wisp that studies its foe before acting, favoring foresight
     and careful, measured strikes.

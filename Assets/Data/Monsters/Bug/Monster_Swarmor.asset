@@ -52,6 +52,6 @@ MonoBehaviour:
   basicAttackPrefab: {fileID: 6777048211968024641, guid: 36482d8bd89710b4983cb69ab5a8cceb, type: 3}
   basicAttackPrefabLifetime: 1
   spawnSfx: {fileID: 8300000, guid: 07b2f9052c7ee1b47abdae49a574ba69, type: 3}
-  baseMarketValue: 10
+  baseMarketValue: 826
   description: A nightmare hive mind that overwhelms foes through sheer numbers and
     relentless coordinated assault.

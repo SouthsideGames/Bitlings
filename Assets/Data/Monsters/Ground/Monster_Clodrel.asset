@@ -52,6 +52,6 @@ MonoBehaviour:
   basicAttackPrefab: {fileID: 8624645253036040332, guid: f03e702d7c9714bc2af48b5b17c93c88, type: 3}
   basicAttackPrefabLifetime: 1
   spawnSfx: {fileID: 8300000, guid: b3e379f420ba8d640af56f1ff39834d4, type: 3}
-  baseMarketValue: 10
+  baseMarketValue: 107
   description: A dense ground dweller that anchors itself firmly absorbing punishment
     while slowly crushing foes with earthen force.

@@ -52,6 +52,6 @@ MonoBehaviour:
   basicAttackPrefab: {fileID: 5988486418563103347, guid: 310c8d56e543d4cd4ae9c55fa6047252, type: 3}
   basicAttackPrefabLifetime: 1
   spawnSfx: {fileID: 8300000, guid: 84a4ee083d1e1da4f99288309ec7a467, type: 3}
-  baseMarketValue: 10
+  baseMarketValue: 102
   description: A sharp-eyed sky hunter that darts between air currents, striking
     swiftly before retreating upward.

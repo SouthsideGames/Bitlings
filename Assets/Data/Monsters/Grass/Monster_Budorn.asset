@@ -31,7 +31,7 @@ MonoBehaviour:
   hpRegenPerHour: 5.8
   fatigueRatePerHour: 0.2
   fatigueCooldownHours: 7.6
-  evolutionStage: 1
+  evolutionStage: 2
   evolutionLevel: 12
   evolutionForm: {fileID: 0}
   uncatchable: 0
@@ -52,5 +52,5 @@ MonoBehaviour:
   basicAttackPrefab: {fileID: 7147688047696861109, guid: 5287b95db783b4379b733d77af2cc458, type: 3}
   basicAttackPrefabLifetime: 1
   spawnSfx: {fileID: 8300000, guid: dce3aa29d414abe40a98e854f87965f8, type: 3}
-  baseMarketValue: 10
+  baseMarketValue: 165
   description: Its growth thickens into sturdy vines

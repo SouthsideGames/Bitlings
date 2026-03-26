@@ -31,7 +31,7 @@ MonoBehaviour:
   hpRegenPerHour: 4.6
   fatigueRatePerHour: 0.2
   fatigueCooldownHours: 9.6
-  evolutionStage: 1
+  evolutionStage: 2
   evolutionLevel: 15
   evolutionForm: {fileID: 0}
   uncatchable: 0
@@ -52,5 +52,5 @@ MonoBehaviour:
   basicAttackPrefab: {fileID: 5172629195496952374, guid: ad774bbb8084f42c29f12cd62581f796, type: 3}
   basicAttackPrefabLifetime: 1
   spawnSfx: {fileID: 8300000, guid: d91a8c72eb51d734c9598bc0c8ffb666, type: 3}
-  baseMarketValue: 10
+  baseMarketValue: 303
   description: Its reinforced frame locks into place

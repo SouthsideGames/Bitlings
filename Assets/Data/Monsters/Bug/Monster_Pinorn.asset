@@ -31,7 +31,7 @@ MonoBehaviour:
   hpRegenPerHour: 5.6
   fatigueRatePerHour: 0.2
   fatigueCooldownHours: 7.9
-  evolutionStage: 1
+  evolutionStage: 2
   evolutionLevel: 12
   evolutionForm: {fileID: 0}
   uncatchable: 0
@@ -52,6 +52,6 @@ MonoBehaviour:
   basicAttackPrefab: {fileID: 6777048211968024641, guid: 36482d8bd89710b4983cb69ab5a8cceb, type: 3}
   basicAttackPrefabLifetime: 1
   spawnSfx: {fileID: 8300000, guid: 018cf9635bca1fa48ade4aca26fe8ca7, type: 3}
-  baseMarketValue: 10
+  baseMarketValue: 154
   description: A sharp-eyed insect hunter that lunges suddenly, crushing enemies
     with powerful, well-timed pincer strikes.

@@ -52,6 +52,6 @@ MonoBehaviour:
   basicAttackPrefab: {fileID: 5172629195496952374, guid: ad774bbb8084f42c29f12cd62581f796, type: 3}
   basicAttackPrefabLifetime: 1
   spawnSfx: {fileID: 8300000, guid: 3edb3264632709b408cf6cf44779ec29, type: 3}
-  baseMarketValue: 10
+  baseMarketValue: 329
   description: A rotating alloy sentinel that locks into position, grinding enemies
     down with precise mechanical force and reinforced plating.

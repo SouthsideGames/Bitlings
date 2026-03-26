@@ -31,7 +31,7 @@ MonoBehaviour:
   hpRegenPerHour: 5.4
   fatigueRatePerHour: 0.2
   fatigueCooldownHours: 7.2
-  evolutionStage: 1
+  evolutionStage: 2
   evolutionLevel: 22
   evolutionForm: {fileID: 11400000, guid: e78c2a83bb75d4091bedb385110ec935, type: 2}
   uncatchable: 0
@@ -52,6 +52,6 @@ MonoBehaviour:
   basicAttackPrefab: {fileID: 126357351932672970, guid: 1a57510ee148f7c45b15333bcfd2596c, type: 3}
   basicAttackPrefabLifetime: 1
   spawnSfx: {fileID: 8300000, guid: 9b6fc6cc2a27d3848a4f9251ca081598, type: 3}
-  baseMarketValue: 10
+  baseMarketValue: 108
   description: Its flames burn brighter as it grows bolder chaining aggressive attacks
     without letting up.

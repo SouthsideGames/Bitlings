@@ -52,5 +52,5 @@ MonoBehaviour:
   basicAttackPrefab: {fileID: 2650955928365913985, guid: f4836eb6d259942b9abe6e0a520af59f, type: 3}
   basicAttackPrefabLifetime: 1
   spawnSfx: {fileID: 8300000, guid: 5153f53b6e437d949a634c16082a6d6e, type: 3}
-  baseMarketValue: 10
+  baseMarketValue: 303
   description: A towering frost mass that radiates numbing cold and crushing weight.

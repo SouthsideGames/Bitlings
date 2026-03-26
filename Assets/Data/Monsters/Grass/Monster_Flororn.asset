@@ -31,7 +31,7 @@ MonoBehaviour:
   hpRegenPerHour: 8.2
   fatigueRatePerHour: 0.2
   fatigueCooldownHours: 7.9
-  evolutionStage: 1
+  evolutionStage: 3
   evolutionLevel: 12
   evolutionForm: {fileID: 0}
   uncatchable: 0
@@ -52,6 +52,6 @@ MonoBehaviour:
   basicAttackPrefab: {fileID: 7147688047696861109, guid: 5287b95db783b4379b733d77af2cc458, type: 3}
   basicAttackPrefabLifetime: 1
   spawnSfx: {fileID: 8300000, guid: 7b72b9bee4701314a9608efe9c3110d9, type: 3}
-  baseMarketValue: 10
+  baseMarketValue: 165
   description: A mature forest guardian that shields allies and strikes back with
     controlled, verdant force.

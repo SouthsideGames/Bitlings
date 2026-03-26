@@ -31,7 +31,7 @@ MonoBehaviour:
   hpRegenPerHour: 6.4
   fatigueRatePerHour: 0.2
   fatigueCooldownHours: 11.4
-  evolutionStage: 1
+  evolutionStage: 2
   evolutionLevel: 12
   evolutionForm: {fileID: 0}
   uncatchable: 0
@@ -52,6 +52,6 @@ MonoBehaviour:
   basicAttackPrefab: {fileID: 5172629195496952374, guid: ad774bbb8084f42c29f12cd62581f796, type: 3}
   basicAttackPrefabLifetime: 1
   spawnSfx: {fileID: 8300000, guid: b6f3c3b6fc74cfe4caf72d0aab3a9ccb, type: 3}
-  baseMarketValue: 10
+  baseMarketValue: 165
   description: Its internal gears interlock into reinforced rings allowing crushing
     blows backed by heavy alloy plating.

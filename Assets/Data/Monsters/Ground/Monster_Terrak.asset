@@ -31,7 +31,7 @@ MonoBehaviour:
   hpRegenPerHour: 7.8
   fatigueRatePerHour: 0.2
   fatigueCooldownHours: 9.9
-  evolutionStage: 1
+  evolutionStage: 3
   evolutionLevel: 12
   evolutionForm: {fileID: 0}
   uncatchable: 0
@@ -52,6 +52,6 @@ MonoBehaviour:
   basicAttackPrefab: {fileID: 8624645253036040332, guid: f03e702d7c9714bc2af48b5b17c93c88, type: 3}
   basicAttackPrefabLifetime: 1
   spawnSfx: {fileID: 8300000, guid: ad13e97a1803f584ebdc0d2cad61612c, type: 3}
-  baseMarketValue: 10
+  baseMarketValue: 173
   description: A fully hardened ground beast that charges forward shaking the earth
     with devastating impacts.

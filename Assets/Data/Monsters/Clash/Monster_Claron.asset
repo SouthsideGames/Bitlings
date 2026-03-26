@@ -31,7 +31,7 @@ MonoBehaviour:
   hpRegenPerHour: 5.4
   fatigueRatePerHour: 0.2
   fatigueCooldownHours: 7.2
-  evolutionStage: 1
+  evolutionStage: 2
   evolutionLevel: 10
   evolutionForm: {fileID: 0}
   uncatchable: 0
@@ -52,6 +52,6 @@ MonoBehaviour:
   basicAttackPrefab: {fileID: 5406408022945852380, guid: a106796f95643465ab9883d4b5161f50, type: 3}
   basicAttackPrefabLifetime: 1
   spawnSfx: {fileID: 8300000, guid: 30814193ccc7faf4eba9e21eb77eca8f, type: 3}
-  baseMarketValue: 10
+  baseMarketValue: 108
   description: A hardened clash fighter that builds momentum with every hit, driving
     foes back through sheer force.

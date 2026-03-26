@@ -33,7 +33,7 @@ MonoBehaviour:
   fatigueCooldownHours: 8.6
   evolutionStage: 1
   evolutionLevel: 18
-  evolutionForm: {fileID: 11400000, guid: bc685279eaa7f45d8ad1a518c313135d, type: 2}
+  evolutionForm: {fileID: 11400000, guid: b1aa95c8c88af4890aa676f26697d4d2, type: 2}
   uncatchable: 0
   isBoss: 0
   bossJobDebuffs: []
@@ -52,5 +52,5 @@ MonoBehaviour:
   basicAttackPrefab: {fileID: 8046187082596486557, guid: 86fc56d41698d45bfbf27d043ca2944d, type: 3}
   basicAttackPrefabLifetime: 1
   spawnSfx: {fileID: 8300000, guid: 223210637c2093e41a657485a4b0ee6e, type: 3}
-  baseMarketValue: 10
+  baseMarketValue: 76
   description: A twitching corrupted growth that hops erratically

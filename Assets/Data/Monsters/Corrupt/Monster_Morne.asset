@@ -52,5 +52,5 @@ MonoBehaviour:
   basicAttackPrefab: {fileID: 8046187082596486557, guid: 86fc56d41698d45bfbf27d043ca2944d, type: 3}
   basicAttackPrefabLifetime: 1
   spawnSfx: {fileID: 8300000, guid: c8a1c964fa2e5fd41a84f55209658795, type: 3}
-  baseMarketValue: 10
+  baseMarketValue: 105
   description: A twisted creature that snaps with unstable corrupted energy.

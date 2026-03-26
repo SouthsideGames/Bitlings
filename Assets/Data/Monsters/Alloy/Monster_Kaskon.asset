@@ -52,6 +52,6 @@ MonoBehaviour:
   basicAttackPrefab: {fileID: 5172629195496952374, guid: ad774bbb8084f42c29f12cd62581f796, type: 3}
   basicAttackPrefabLifetime: 1
   spawnSfx: {fileID: 8300000, guid: dddd84165919be744811f516e5794f95, type: 3}
-  baseMarketValue: 10
+  baseMarketValue: 165
   description: A disciplined alloy striker that locks its joints and counters with
     precise mechanical jabs.

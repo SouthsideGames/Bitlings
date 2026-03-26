@@ -31,7 +31,7 @@ MonoBehaviour:
   hpRegenPerHour: 7.8
   fatigueRatePerHour: 0.2
   fatigueCooldownHours: 8.6
-  evolutionStage: 1
+  evolutionStage: 2
   evolutionLevel: 22
   evolutionForm: {fileID: 11400000, guid: aacc45b5b41964a1e9a887a1faa72c18, type: 2}
   uncatchable: 0
@@ -51,5 +51,5 @@ MonoBehaviour:
   basicAttackPrefab: {fileID: 7147688047696861109, guid: 5287b95db783b4379b733d77af2cc458, type: 3}
   basicAttackPrefabLifetime: 1
   spawnSfx: {fileID: 8300000, guid: b380861e02729354bbe3903fb6941af1, type: 3}
-  baseMarketValue: 10
+  baseMarketValue: 108
   description: Its body thickens with growth

@@ -52,6 +52,6 @@ MonoBehaviour:
   basicAttackPrefab: {fileID: 5406408022945852380, guid: a106796f95643465ab9883d4b5161f50, type: 3}
   basicAttackPrefabLifetime: 1
   spawnSfx: {fileID: 8300000, guid: a7da22239ab0aab4ba6a0cbcde45e3e0, type: 3}
-  baseMarketValue: 10
+  baseMarketValue: 77
   description: A feisty clash brawler that charges straight in, favoring constant
     pressure over caution.

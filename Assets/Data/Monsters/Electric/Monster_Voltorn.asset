@@ -31,7 +31,7 @@ MonoBehaviour:
   hpRegenPerHour: 5.2
   fatigueRatePerHour: 0.2
   fatigueCooldownHours: 7.6
-  evolutionStage: 1
+  evolutionStage: 2
   evolutionLevel: 22
   evolutionForm: {fileID: 11400000, guid: 29348213969674897a93fe16550545a7, type: 2}
   uncatchable: 0
@@ -52,6 +52,6 @@ MonoBehaviour:
   basicAttackPrefab: {fileID: 4179996368917665753, guid: 77ce3f8bf17474b06ac473e26248a299, type: 3}
   basicAttackPrefabLifetime: 1
   spawnSfx: {fileID: 8300000, guid: def9f3e09772a434186f45f34fc8a319, type: 3}
-  baseMarketValue: 10
+  baseMarketValue: 109
   description: Its crystalline spikes conduct steady current allowing faster movement
     and harder-hitting electric strikes.

@@ -52,6 +52,6 @@ MonoBehaviour:
   basicAttackPrefab: {fileID: 7907104310462883121, guid: 37212b887c61ad84eacd87133a8a9e9d, type: 3}
   basicAttackPrefabLifetime: 1
   spawnSfx: {fileID: 8300000, guid: 61a584b6f27127d4b9ad0153c8815d83, type: 3}
-  baseMarketValue: 10
+  baseMarketValue: 303
   description: An imposing oracle enforcer that reads the flow of battle in advance,
     striking with decisive force guided by grim foresight.

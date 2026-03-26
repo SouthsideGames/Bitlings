@@ -52,6 +52,6 @@ MonoBehaviour:
   basicAttackPrefab: {fileID: 4179996368917665753, guid: 25354ab090a707a4c84fa0fdaa8bc718, type: 3}
   basicAttackPrefabLifetime: 1
   spawnSfx: {fileID: 8300000, guid: 7b0331c0ca565f84fbdf293257d689f6, type: 3}
-  baseMarketValue: 10
+  baseMarketValue: 319
   description: An elite electric predator that waits for the perfect moment before
     unleashing devastating, high-voltage strikes.

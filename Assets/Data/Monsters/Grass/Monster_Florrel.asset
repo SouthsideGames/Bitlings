@@ -31,7 +31,7 @@ MonoBehaviour:
   hpRegenPerHour: 7.1
   fatigueRatePerHour: 0.2
   fatigueCooldownHours: 7.9
-  evolutionStage: 1
+  evolutionStage: 2
   evolutionLevel: 10
   evolutionForm: {fileID: 0}
   uncatchable: 0
@@ -52,6 +52,6 @@ MonoBehaviour:
   basicAttackPrefab: {fileID: 7147688047696861109, guid: 5287b95db783b4379b733d77af2cc458, type: 3}
   basicAttackPrefabLifetime: 1
   spawnSfx: {fileID: 8300000, guid: b614b1eaa40c4314394fa93268094af3, type: 3}
-  baseMarketValue: 10
+  baseMarketValue: 104
   description: Its petals harden into layered fronds allowing it to guard allies
     while lashing foes with controlled strikes.

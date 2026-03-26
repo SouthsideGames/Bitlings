@@ -31,7 +31,7 @@ MonoBehaviour:
   hpRegenPerHour: 5
   fatigueRatePerHour: 0.2
   fatigueCooldownHours: 7.8
-  evolutionStage: 1
+  evolutionStage: 3
   evolutionLevel: 15
   evolutionForm: {fileID: 0}
   uncatchable: 0
@@ -52,5 +52,5 @@ MonoBehaviour:
   basicAttackPrefab: {fileID: 4179996368917665753, guid: 77ce3f8bf17474b06ac473e26248a299, type: 3}
   basicAttackPrefabLifetime: 1
   spawnSfx: {fileID: 8300000, guid: 313c1890f6b8d0a4c8a8abc32a3e1131, type: 3}
-  baseMarketValue: 10
+  baseMarketValue: 302
   description: A fully charged striker that overwhelms foes with rapid

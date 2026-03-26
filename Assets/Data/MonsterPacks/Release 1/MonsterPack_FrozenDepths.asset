@@ -23,6 +23,6 @@ MonoBehaviour:
   saleOff01: 0
   unlockByDefault: 0
   monsters:
-  - {fileID: 11400000, guid: 011a118f35c49438882322e400f846a3, type: 2}
+  - {fileID: 11400000, guid: 6faad4cb114c52f4e9d3d2d9896de48d, type: 2}
   - {fileID: 11400000, guid: fb8c56d1c75a3400ea49a2499cb0705b, type: 2}
   - {fileID: 11400000, guid: dad671322a59b465a8964d09039e4914, type: 2}

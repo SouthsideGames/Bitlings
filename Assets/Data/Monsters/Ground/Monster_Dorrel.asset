@@ -52,6 +52,6 @@ MonoBehaviour:
   basicAttackPrefab: {fileID: 8624645253036040332, guid: f03e702d7c9714bc2af48b5b17c93c88, type: 3}
   basicAttackPrefabLifetime: 1
   spawnSfx: {fileID: 8300000, guid: 3c2bf7b765858c8499533f0f3ff92e5c, type: 3}
-  baseMarketValue: 10
+  baseMarketValue: 105
   description: Its hardened claws and thicker hide allow it to punish attackers that
     get too close.

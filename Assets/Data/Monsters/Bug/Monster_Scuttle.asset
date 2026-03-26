@@ -52,6 +52,6 @@ MonoBehaviour:
   basicAttackPrefab: {fileID: 6777048211968024641, guid: 36482d8bd89710b4983cb69ab5a8cceb, type: 3}
   basicAttackPrefabLifetime: 1
   spawnSfx: {fileID: 8300000, guid: a76e5323680b6de4f94708f6ec9855df, type: 3}
-  baseMarketValue: 10
+  baseMarketValue: 76
   description: A fast-moving insect that zips across the field striking quickly before
     enemies can react.

@@ -51,6 +51,6 @@ MonoBehaviour:
   basicAttackPrefab: {fileID: 5988486418563103347, guid: 310c8d56e543d4cd4ae9c55fa6047252, type: 3}
   basicAttackPrefabLifetime: 1
   spawnSfx: {fileID: 8300000, guid: c4688d5db921ac343a4d4e525571a278, type: 3}
-  baseMarketValue: 10
+  baseMarketValue: 107
   description: Its wings strengthen and sharpen allowing rapid aerial dives that
     punish exposed enemies.

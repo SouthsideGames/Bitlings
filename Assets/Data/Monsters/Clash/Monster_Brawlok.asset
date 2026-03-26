@@ -52,6 +52,6 @@ MonoBehaviour:
   basicAttackPrefab: {fileID: 5406408022945852380, guid: a106796f95643465ab9883d4b5161f50, type: 3}
   basicAttackPrefabLifetime: 1
   spawnSfx: {fileID: 8300000, guid: 095dc00ed5c85ec4b9a2c842d22dd66e, type: 3}
-  baseMarketValue: 10
+  baseMarketValue: 180
   description: A seasoned clash enforcer that trades blows head-on, growing stronger
     the longer it stays locked in brutal close combat.

@@ -31,7 +31,7 @@ MonoBehaviour:
   hpRegenPerHour: 7
   fatigueRatePerHour: 0.2
   fatigueCooldownHours: 8.6
-  evolutionStage: 1
+  evolutionStage: 3
   evolutionLevel: 12
   evolutionForm: {fileID: 0}
   uncatchable: 0
@@ -52,5 +52,5 @@ MonoBehaviour:
   basicAttackPrefab: {fileID: 6777048211968024641, guid: 36482d8bd89710b4983cb69ab5a8cceb, type: 3}
   basicAttackPrefabLifetime: 1
   spawnSfx: {fileID: 8300000, guid: 34d5de37020810840bac1e05160f72f0, type: 3}
-  baseMarketValue: 10
+  baseMarketValue: 157
   description: A hardened insect predator that lunges explosively

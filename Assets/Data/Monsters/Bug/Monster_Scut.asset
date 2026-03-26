@@ -52,5 +52,5 @@ MonoBehaviour:
   basicAttackPrefab: {fileID: 6777048211968024641, guid: 36482d8bd89710b4983cb69ab5a8cceb, type: 3}
   basicAttackPrefabLifetime: 1
   spawnSfx: {fileID: 8300000, guid: 321ebe7466f560c4a909254a1300671b, type: 3}
-  baseMarketValue: 10
+  baseMarketValue: 75
   description: A quick-moving bug that skitters unpredictably

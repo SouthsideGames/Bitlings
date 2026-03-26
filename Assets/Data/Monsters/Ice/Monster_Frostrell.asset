@@ -52,5 +52,5 @@ MonoBehaviour:
   basicAttackPrefab: {fileID: 2650955928365913985, guid: f4836eb6d259942b9abe6e0a520af59f, type: 3}
   basicAttackPrefabLifetime: 1
   spawnSfx: {fileID: 8300000, guid: 6d555d13cccde1149b533d99de3e534f, type: 3}
-  baseMarketValue: 10
+  baseMarketValue: 108
   description: A compact ice being that radiates cold

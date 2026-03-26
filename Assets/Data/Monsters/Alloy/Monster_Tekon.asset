@@ -52,6 +52,6 @@ MonoBehaviour:
   basicAttackPrefab: {fileID: 5172629195496952374, guid: ad774bbb8084f42c29f12cd62581f796, type: 3}
   basicAttackPrefabLifetime: 1
   spawnSfx: {fileID: 8300000, guid: 5d0135f17138fb545b73468da0e72d0b, type: 3}
-  baseMarketValue: 10
+  baseMarketValue: 77
   description: A small alloy construct that moves with careful precision, striking
     steadily while its reinforced body absorbs incoming blows.

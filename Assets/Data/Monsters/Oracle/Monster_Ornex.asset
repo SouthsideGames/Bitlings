@@ -31,7 +31,7 @@ MonoBehaviour:
   hpRegenPerHour: 6.8
   fatigueRatePerHour: 0.2
   fatigueCooldownHours: 8.8
-  evolutionStage: 1
+  evolutionStage: 2
   evolutionLevel: 12
   evolutionForm: {fileID: 0}
   uncatchable: 0
@@ -51,6 +51,6 @@ MonoBehaviour:
   basicAttackPrefab: {fileID: 7907104310462883121, guid: 37212b887c61ad84eacd87133a8a9e9d, type: 3}
   basicAttackPrefabLifetime: 1
   spawnSfx: {fileID: 8300000, guid: 4751477a22577eb458badaf5584bc9e8, type: 3}
-  baseMarketValue: 10
+  baseMarketValue: 165
   description: A calculating oracle beast that waits for certainty before striking,
     unleashing precise blows guided by unwavering foresight.

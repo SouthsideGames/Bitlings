@@ -52,6 +52,6 @@ MonoBehaviour:
   basicAttackPrefab: {fileID: 6777048211968024641, guid: 36482d8bd89710b4983cb69ab5a8cceb, type: 3}
   basicAttackPrefabLifetime: 1
   spawnSfx: {fileID: 8300000, guid: b006bc63ebf884e4c856dc1db240b07f, type: 3}
-  baseMarketValue: 10
+  baseMarketValue: 77
   description: A quick-winged bug that darts erratically through the air, striking
     fast before slipping out of reach.

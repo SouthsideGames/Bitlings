@@ -31,7 +31,7 @@ MonoBehaviour:
   hpRegenPerHour: 5.9
   fatigueRatePerHour: 0.2
   fatigueCooldownHours: 9.5
-  evolutionStage: 1
+  evolutionStage: 2
   evolutionLevel: 10
   evolutionForm: {fileID: 0}
   uncatchable: 0
@@ -51,5 +51,5 @@ MonoBehaviour:
   basicAttackPrefab: {fileID: 2351537007807138146, guid: 02418565875047149b7ee7a075c39850, type: 3}
   basicAttackPrefabLifetime: 1
   spawnSfx: {fileID: 0}
-  baseMarketValue: 10
+  baseMarketValue: 110
   description: Its body crystallizes into layered stone plates striking with heavier

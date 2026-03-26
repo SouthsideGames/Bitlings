@@ -31,7 +31,7 @@ MonoBehaviour:
   hpRegenPerHour: 4.8
   fatigueRatePerHour: 0.2
   fatigueCooldownHours: 7.2
-  evolutionStage: 1
+  evolutionStage: 2
   evolutionLevel: 10
   evolutionForm: {fileID: 0}
   uncatchable: 0
@@ -52,5 +52,5 @@ MonoBehaviour:
   basicAttackPrefab: {fileID: 126357351932672970, guid: a7524146891194bc4b7eb73ba1e38b46, type: 3}
   basicAttackPrefabLifetime: 1
   spawnSfx: {fileID: 8300000, guid: b0b58daa8f378704f9ee26553e2121a8, type: 3}
-  baseMarketValue: 10
+  baseMarketValue: 105
   description: Its flames burn hotter and it barrels into foes with relentless heat.

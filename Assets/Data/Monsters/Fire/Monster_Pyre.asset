@@ -52,5 +52,5 @@ MonoBehaviour:
   basicAttackPrefab: {fileID: 126357351932672970, guid: 9581774b44a93f24299791825657e6c2, type: 3}
   basicAttackPrefabLifetime: 1
   spawnSfx: {fileID: 8300000, guid: a806d14f99e2e694a9e4fee87ecf66a1, type: 3}
-  baseMarketValue: 10
+  baseMarketValue: 182
   description: tearing through enemies with savage bursts of flame.

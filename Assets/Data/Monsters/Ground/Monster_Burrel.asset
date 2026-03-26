@@ -52,6 +52,6 @@ MonoBehaviour:
   basicAttackPrefab: {fileID: 8624645253036040332, guid: f03e702d7c9714bc2af48b5b17c93c88, type: 3}
   basicAttackPrefabLifetime: 1
   spawnSfx: {fileID: 8300000, guid: c476f92f1b6acdd40a4e8b102a91e5ee, type: 3}
-  baseMarketValue: 10
+  baseMarketValue: 77
   description: A squat ground dweller that braces itself in the soil, resisting blows
     while slowly wearing enemies down with heavy, earthen strikes.

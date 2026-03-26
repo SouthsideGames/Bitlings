@@ -52,6 +52,6 @@ MonoBehaviour:
   basicAttackPrefab: {fileID: 126357351932672970, guid: a4baedce08c467c47b8dcaa64debf041, type: 3}
   basicAttackPrefabLifetime: 1
   spawnSfx: {fileID: 8300000, guid: b821ae2223d65f548a6d76a9b780d831, type: 3}
-  baseMarketValue: 10
+  baseMarketValue: 826
   description: A raging inferno incarnate that floods the battlefield with relentless
     flames, growing more destructive the longer it survives.

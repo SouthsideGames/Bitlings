@@ -31,7 +31,7 @@ MonoBehaviour:
   hpRegenPerHour: 5.8
   fatigueRatePerHour: 0.2
   fatigueCooldownHours: 11.4
-  evolutionStage: 1
+  evolutionStage: 2
   evolutionLevel: 22
   evolutionForm: {fileID: 11400000, guid: 13c5357e6e6b4443b8e027ee30bf462e, type: 2}
   uncatchable: 0
@@ -52,5 +52,5 @@ MonoBehaviour:
   basicAttackPrefab: {fileID: 5172629195496952374, guid: ad774bbb8084f42c29f12cd62581f796, type: 3}
   basicAttackPrefabLifetime: 1
   spawnSfx: {fileID: 8300000, guid: a3bbcd2437d1f43458efe9b56472ce40, type: 3}
-  baseMarketValue: 10
+  baseMarketValue: 108
   description: Its joints lock into reinforced patterns

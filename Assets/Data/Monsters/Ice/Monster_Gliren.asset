@@ -52,5 +52,5 @@ MonoBehaviour:
   basicAttackPrefab: {fileID: 2650955928365913985, guid: f4836eb6d259942b9abe6e0a520af59f, type: 3}
   basicAttackPrefabLifetime: 1
   spawnSfx: {fileID: 8300000, guid: 02ea8d8f085a30c438534272925c4ea7, type: 3}
-  baseMarketValue: 10
+  baseMarketValue: 165
   description: Its icy shell thickens as it releases colder

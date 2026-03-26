@@ -52,6 +52,6 @@ MonoBehaviour:
   basicAttackPrefab: {fileID: 7147688047696861109, guid: 5287b95db783b4379b733d77af2cc458, type: 3}
   basicAttackPrefabLifetime: 1
   spawnSfx: {fileID: 8300000, guid: 184439bba93fd9943b2d4d38c26aa17a, type: 3}
-  baseMarketValue: 10
+  baseMarketValue: 105
   description: A lively grass creature that darts about and strikes with quick leafy
     blows.

@@ -52,6 +52,6 @@ MonoBehaviour:
   basicAttackPrefab: {fileID: 4179996368917665753, guid: 77ce3f8bf17474b06ac473e26248a299, type: 3}
   basicAttackPrefabLifetime: 1
   spawnSfx: {fileID: 8300000, guid: fd55b9c026ab23f4b8d738c96d019c85, type: 3}
-  baseMarketValue: 10
+  baseMarketValue: 165
   description: A compact electric enforcer that channels stored charge into repeated,
     driving strikes without slowing down.

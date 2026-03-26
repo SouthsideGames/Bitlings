@@ -32,8 +32,8 @@ MonoBehaviour:
   fatigueRatePerHour: 0.2
   fatigueCooldownHours: 8.6
   evolutionStage: 1
-  evolutionLevel: 8
-  evolutionForm: {fileID: 0}
+  evolutionLevel: 18
+  evolutionForm: {fileID: 11400000, guid: ac14a153ca8164a35a30d1530b2299a6, type: 2}
   uncatchable: 0
   isBoss: 0
   bossJobDebuffs: []
@@ -52,6 +52,6 @@ MonoBehaviour:
   basicAttackPrefab: {fileID: 8046187082596486557, guid: 86fc56d41698d45bfbf27d043ca2944d, type: 3}
   basicAttackPrefabLifetime: 1
   spawnSfx: {fileID: 8300000, guid: 30fbae210a737024ca3e6b69415b6715, type: 3}
-  baseMarketValue: 10
+  baseMarketValue: 76
   description: A jittery corrupted hatchling that darts about erratically spreading
     decay through sharp

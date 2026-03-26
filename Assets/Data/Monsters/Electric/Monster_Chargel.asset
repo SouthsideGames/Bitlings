@@ -52,6 +52,6 @@ MonoBehaviour:
   basicAttackPrefab: {fileID: 4179996368917665753, guid: 77ce3f8bf17474b06ac473e26248a299, type: 3}
   basicAttackPrefabLifetime: 1
   spawnSfx: {fileID: 8300000, guid: 83d696a720a99354e9545c310a4d9df2, type: 3}
-  baseMarketValue: 10
+  baseMarketValue: 105
   description: A floating electric node that jitters erratically zapping enemies
     with quick

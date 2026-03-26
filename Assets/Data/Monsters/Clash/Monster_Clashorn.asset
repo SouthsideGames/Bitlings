@@ -52,6 +52,6 @@ MonoBehaviour:
   basicAttackPrefab: {fileID: 5406408022945852380, guid: a106796f95643465ab9883d4b5161f50, type: 3}
   basicAttackPrefabLifetime: 1
   spawnSfx: {fileID: 8300000, guid: 866c11b6dd6e00c4e968af54401dff94, type: 3}
-  baseMarketValue: 10
+  baseMarketValue: 329
   description: A brutal clash juggernaut that thrives in prolonged combat, tearing
     into enemies with escalating, bone-crushing force.

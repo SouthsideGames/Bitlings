@@ -31,7 +31,7 @@ MonoBehaviour:
   hpRegenPerHour: 8.2
   fatigueRatePerHour: 0.2
   fatigueCooldownHours: 8.6
-  evolutionStage: 1
+  evolutionStage: 3
   evolutionLevel: 12
   evolutionForm: {fileID: 0}
   uncatchable: 0
@@ -52,5 +52,5 @@ MonoBehaviour:
   basicAttackPrefab: {fileID: 8046187082596486557, guid: 86fc56d41698d45bfbf27d043ca2944d, type: 3}
   basicAttackPrefabLifetime: 1
   spawnSfx: {fileID: 8300000, guid: 8cbcfc8eec7fdf34d847b528ca114831, type: 3}
-  baseMarketValue: 10
+  baseMarketValue: 165
   description: A fully warped corruption beast that lunges with grasping growths

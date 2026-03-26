@@ -10,10 +10,10 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 32ffc26ed7d444b02a9332ce4279b117, type: 3}
-  m_Name: Monster_Oren
+  m_Name: Monster_Orenic
   m_EditorClassIdentifier: 
   id: M-163
-  displayName: Oren
+  displayName: Orenic
   type: 10
   typeIcon: {fileID: 21300000, guid: fb4479ed54fe64621a9e7a735eeffad8, type: 3}
   icon: {fileID: 21300000, guid: da0a6b880b50544e3bee33e693599a0b, type: 3}
@@ -31,7 +31,7 @@ MonoBehaviour:
   hpRegenPerHour: 6
   fatigueRatePerHour: 0.2
   fatigueCooldownHours: 8.8
-  evolutionStage: 1
+  evolutionStage: 2
   evolutionLevel: 10
   evolutionForm: {fileID: 0}
   uncatchable: 0
@@ -50,7 +50,7 @@ MonoBehaviour:
   basicAttackName: Foretell Strike
   basicAttackPrefab: {fileID: 7907104310462883121, guid: 37212b887c61ad84eacd87133a8a9e9d, type: 3}
   basicAttackPrefabLifetime: 1
-  spawnSfx: {fileID: 0}
-  baseMarketValue: 10
+  spawnSfx: {fileID: 8300000, guid: 13c694ab0dfd60b4998bc734b555f901, type: 3}
+  baseMarketValue: 105
   description: Its insight deepens as it predicts movements and counters with measured
     force.

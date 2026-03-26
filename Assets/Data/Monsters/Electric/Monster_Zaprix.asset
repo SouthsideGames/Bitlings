@@ -31,7 +31,7 @@ MonoBehaviour:
   hpRegenPerHour: 5.2
   fatigueRatePerHour: 0.2
   fatigueCooldownHours: 7.6
-  evolutionStage: 1
+  evolutionStage: 2
   evolutionLevel: 10
   evolutionForm: {fileID: 0}
   uncatchable: 0
@@ -52,6 +52,6 @@ MonoBehaviour:
   basicAttackPrefab: {fileID: 4179996368917665753, guid: 77ce3f8bf17474b06ac473e26248a299, type: 3}
   basicAttackPrefabLifetime: 1
   spawnSfx: {fileID: 8300000, guid: e3bb588f86ed914489ff958342f8ad12, type: 3}
-  baseMarketValue: 10
+  baseMarketValue: 105
   description: Its body crackles with stable current, moving faster and striking
     harder with precise electric cuts.

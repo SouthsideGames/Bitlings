@@ -52,6 +52,6 @@ MonoBehaviour:
   basicAttackPrefab: {fileID: 4179996368917665753, guid: f843598cd71708247a21c64cef2aa927, type: 3}
   basicAttackPrefabLifetime: 1
   spawnSfx: {fileID: 8300000, guid: 1a56802208fc15a489f72c3ddcbd6daa, type: 3}
-  baseMarketValue: 10
+  baseMarketValue: 826
   description: A colossal electric tyrant that builds lethal charge before unleashing
     battlefield-clearing bursts of lightning.

@@ -52,5 +52,5 @@ MonoBehaviour:
   basicAttackPrefab: {fileID: 5172629195496952374, guid: ad774bbb8084f42c29f12cd62581f796, type: 3}
   basicAttackPrefabLifetime: 1
   spawnSfx: {fileID: 8300000, guid: 538d2e9b6c1c85644834f0ccf05bc3c0, type: 3}
-  baseMarketValue: 10
+  baseMarketValue: 303
   description: Reinforced plating forms a fortress frame

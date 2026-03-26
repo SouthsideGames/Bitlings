@@ -52,6 +52,6 @@ MonoBehaviour:
   basicAttackPrefab: {fileID: 6777048211968024641, guid: 36482d8bd89710b4983cb69ab5a8cceb, type: 3}
   basicAttackPrefabLifetime: 1
   spawnSfx: {fileID: 8300000, guid: 2d86037cf41245846bc2dd69dc29035f, type: 3}
-  baseMarketValue: 10
+  baseMarketValue: 99
   description: A jittery bug that bounces unpredictably, snapping at foes with quick
     pincers before they can react.

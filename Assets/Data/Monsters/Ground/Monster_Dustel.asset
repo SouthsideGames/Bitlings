@@ -33,7 +33,7 @@ MonoBehaviour:
   fatigueCooldownHours: 9.9
   evolutionStage: 1
   evolutionLevel: 18
-  evolutionForm: {fileID: 11400000, guid: 270fa90c5df7542839763be3955bf005, type: 2}
+  evolutionForm: {fileID: 11400000, guid: cc532ce1116ca46bea75d2be04b47b5a, type: 2}
   uncatchable: 0
   isBoss: 0
   bossJobDebuffs: []
@@ -52,5 +52,5 @@ MonoBehaviour:
   basicAttackPrefab: {fileID: 8624645253036040332, guid: f03e702d7c9714bc2af48b5b17c93c88, type: 3}
   basicAttackPrefabLifetime: 1
   spawnSfx: {fileID: 8300000, guid: a130f952fc10cd44ab0cbb46273c0674, type: 3}
-  baseMarketValue: 10
+  baseMarketValue: 77
   description: A compact ground dweller that hardens loose soil into blunt
