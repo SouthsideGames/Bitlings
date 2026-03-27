@@ -42,8 +42,8 @@ public sealed class IronCareerHirePanelUI : MonoBehaviour
     {
         ClearHireResultVisuals();
 
-        if (portrait) portrait.sprite = offer != null && offer.def ? offer.def.icon : null;
-        if (nameLabel) nameLabel.text = offer != null && offer.def ? offer.def.displayName : "-";
+        if (portrait) portrait.sprite = offer != null && offer.def ? MonsterNameFormatter.GetIcon(offer.def, offer.isShiny, false) : null;
+        if (nameLabel) nameLabel.text = offer != null && offer.def ? MonsterNameFormatter.Format(offer.def, offer.isShiny) : "-";
         if (levelLabel) levelLabel.text = offer != null ? $"Lv {Mathf.Max(1, offer.level)}" : string.Empty;
         if (titleLabel) titleLabel.text = (offer != null && offer.lockedTitle) ? offer.lockedTitle.displayName : "";
 

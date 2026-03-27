@@ -413,6 +413,7 @@ public partial class EncounterManager : MonoBehaviour
         ResolveWildTitles(wild, wildLevel);
 
         _currentWildIsShiny = RollWildShiny(wild);
+        string wildName = MonsterNameFormatter.Format(wild, _currentWildIsShiny);
 
 
         EncounterPanelUI.I?.OnWildSpawned(wild);
@@ -421,9 +422,9 @@ public partial class EncounterManager : MonoBehaviour
 
         var p = data.team[0];
         string titleSuffix = string.IsNullOrEmpty(WildTitleLabel) ? "" : $" — {WildTitleLabel}";
-        EmitStatus($"Encounter! A wild {wild.displayName} (Lv {wildLevel}){titleSuffix} appears.{(p.flatAtkBonus > 0 ? $" (+ATK {p.flatAtkBonus})" : "")}");
+        EmitStatus($"Encounter! A wild {wildName} (Lv {wildLevel}){titleSuffix} appears.{(p.flatAtkBonus > 0 ? $" (+ATK {p.flatAtkBonus})" : "")}");
 
-        BattleLogger.BeginEncounter($"{wild.displayName} Lv{wildLevel}{titleSuffix}");
+        BattleLogger.BeginEncounter($"{wildName} Lv{wildLevel}{titleSuffix}");
 
         inBattle = true;
         OnStateChanged?.Invoke();

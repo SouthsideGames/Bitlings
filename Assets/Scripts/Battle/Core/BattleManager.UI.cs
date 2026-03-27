@@ -494,8 +494,7 @@ private void UpdateWildInfoUI()
         if (playerSPDText)
             SetStatRowColorAndText(playerSPDText, "SPD", spdBaselineForColor, spdCombinedFinal, minFinal: 1);
 
-        bool resistOn = _rules.allowBoosters && BattleTempBuffs.I && BattleTempBuffs.I.IsTypeResistActive();
-        if (resistOn && playerRarityText) playerRarityText.text += " [Resist]";
+        if (playerRarityText) playerRarityText.text = $"RARITY: {def.rarity}";
     }
 
 

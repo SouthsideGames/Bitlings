@@ -305,6 +305,7 @@ public static class BattleLogger
     // ─────────────────────────────────────────────────────────
     public static void BeginBattle(string label)
     {
+        ClearAll(emitSystemLine: false);
         _currentBattleLabel = string.IsNullOrEmpty(label) ? "Battle" : label;
         OnBattleBegan?.Invoke(_currentBattleLabel);
     }

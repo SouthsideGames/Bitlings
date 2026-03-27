@@ -211,6 +211,7 @@ public partial class EncounterManager
         ResolveWildTitles(wild, wildLevel);
 
         _currentWildIsShiny = RollWildShiny(wild);
+        string wildName = MonsterNameFormatter.Format(wild, _currentWildIsShiny);
 
         EncounterPanelUI.I?.OnWildSpawned(wild);
 
@@ -220,13 +221,13 @@ public partial class EncounterManager
         string titleSuffix = string.IsNullOrEmpty(WildTitleLabel) ? "" : $" — {WildTitleLabel}";
 
         if (_currentEncounterIsBoss)
-            EmitStatus($"⚠️ BOSS ENCOUNTER! {wild.displayName} (Lv {wildLevel}){titleSuffix} appears.{(p != null && p.flatAtkBonus > 0 ? $" (+ATK {p.flatAtkBonus})" : "")}");
+            EmitStatus($"⚠️ BOSS ENCOUNTER! {wildName} (Lv {wildLevel}){titleSuffix} appears.{(p != null && p.flatAtkBonus > 0 ? $" (+ATK {p.flatAtkBonus})" : "")}");
         else
-            EmitStatus($"Encounter! A wild {wild.displayName} (Lv {wildLevel}){titleSuffix} appears.{(p != null && p.flatAtkBonus > 0 ? $" (+ATK {p.flatAtkBonus})" : "")}");
+            EmitStatus($"Encounter! A wild {wildName} (Lv {wildLevel}){titleSuffix} appears.{(p != null && p.flatAtkBonus > 0 ? $" (+ATK {p.flatAtkBonus})" : "")}");
 
         BattleLogger.BeginEncounter(_currentEncounterIsBoss
-            ? $"BOSS: {wild.displayName} Lv{wildLevel}{titleSuffix}"
-            : $"{wild.displayName} Lv{wildLevel}{titleSuffix}");
+            ? $"BOSS: {wildName} Lv{wildLevel}{titleSuffix}"
+            : $"{wildName} Lv{wildLevel}{titleSuffix}");
 
         if (_currentEncounterIsBoss && _currentBossUsed != null)
             GameEvents.BossSpawned?.Invoke(_currentBossUsed.id, _currentBossUsed);

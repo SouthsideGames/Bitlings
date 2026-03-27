@@ -14,15 +14,18 @@ public sealed class IronMonster
     [Tooltip("Locked title for this instance. Immutable in Iron.")]
     public TitleSO lockedTitle;
 
+    public bool isShiny;
+
     public IronMonster() { }
 
-    public IronMonster(MonsterDataSO d, int lvl, float curHp, TitleSO locked)
+    public IronMonster(MonsterDataSO d, int lvl, float curHp, TitleSO locked, bool shiny = false)
     {
         def = d;
         level = Mathf.Max(1, lvl);
         maxHp = Mathf.Max(1f, (def != null) ? BattleCalc.CalcHP(def, level) : 1f);
         hp = Mathf.Clamp(curHp, 0f, maxHp);
         lockedTitle = locked;
+        isShiny = shiny && def != null && def.shinyIcon != null;
     }
 
     public bool IsValid => def != null;

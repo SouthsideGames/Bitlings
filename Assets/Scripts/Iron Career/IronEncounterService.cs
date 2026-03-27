@@ -29,30 +29,36 @@ public sealed class IronEncounterService
         if (_state.lastRolledWild != null && _state.lastRolledWild.def != null)
             return _state.lastRolledWild;
 
-        // Grab the MonsterLibrarySO that exists in memory (ScriptableObject)
-        var libs = Resources.FindObjectsOfTypeAll<MonsterLibrarySO>();
-        MonsterLibrarySO library = (libs != null && libs.Length > 0) ? libs[0] : null;
+        var library = MonsterLibraryLocator.Lib;
+        var catalog = MonsterCatalog.All;
 
         List<MonsterDataSO> all = new List<MonsterDataSO>();
 
         try
         {
-            // AllAvailable is a PROPERTY IEnumerable<MonsterDataSO> (NOT a method)
-            if (library != null && library.AllAvailable != null)
-                all = library.AllAvailable.Where(m => m != null).ToList();
+            if (catalog != null)
+            {
+                for (int i = 0; i < catalog.Count; i++)
+                {
+                    var def = catalog[i];
+                    if (def == null) continue;
+                    if (library != null && !library.IsAvailable(def)) continue;
+                    all.Add(def);
+                }
+            }
         }
         catch (Exception ex)
         {
-            Debug.LogWarning($"[IronEncounterService] Failed to read MonsterLibrary.AllAvailable. Error: {ex.Message}");
+            Debug.LogWarning($"[IronEncounterService] Failed to build wild pool from MonsterCatalog. Error: {ex.Message}");
         }
 
-        // Fallback to the raw monsters list if AllAvailable is empty/missing.
+        // Fallback to the raw monsters list if catalog-backed pool is empty/missing.
         if ((all == null || all.Count == 0) && library != null && library.monsters != null)
         {
             all = new List<MonsterDataSO>(library.monsters.Length);
             foreach (var m in library.monsters)
             {
-                if (m != null)
+                if (m != null && library.IsAvailable(m))
                     all.Add(m);
             }
         }
@@ -109,7 +115,17 @@ public sealed class IronEncounterService
         // Wild enemies intentionally use normal track-based title rolls.
         // Curated ironTitles are reserved for player-side starter/hire generation.
         var title = _titleRoller.RollLockedTitle(chosen, level, _rng, isWild: true);
-        var wild = new IronMonster(chosen, level, curHp: -1f, locked: title);
+
+        // Roll shiny: same base chance as normal encounters. Iron species must have shiny art.
+        bool shiny = false;
+        if (chosen.shinyIcon != null)
+        {
+            float mul = (WorldEventSystem.I != null) ? WorldEventSystem.I.GetWildShinyChanceMultiplier() : 1f;
+            float chance = Mathf.Clamp01(0.01f * Mathf.Max(0f, mul));
+            shiny = _rng != null && _rng.Chance(chance);
+        }
+
+        var wild = new IronMonster(chosen, level, curHp: -1f, locked: title, shiny: shiny);
 
         // ensure full hp snapshot
         wild.maxHp = Mathf.Max(1f, BattleCalc.CalcHP(chosen, level));

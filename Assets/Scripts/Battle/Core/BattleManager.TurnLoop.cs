@@ -378,7 +378,7 @@ public partial class BattleManager : MonoBehaviour
         inBattle = true;
         startTime = Time.unscaledTime;
 
-        var vsName = wildDef ? $"{wildDef.displayName} (Lv {wildLevel})" : "Unknown";
+        var vsName = wildDef ? $"{GetWildDisplayName("Unknown")} (Lv {wildLevel})" : "Unknown";
         BattleLogger.BeginBattle(vsName, BattleSeed, BattleSeedLabel);
 
         _combatantNameScratch.Clear();
@@ -390,7 +390,7 @@ public partial class BattleManager : MonoBehaviour
         }
 
         _enemyNameScratch.Clear();
-        _enemyNameScratch.Add(wildDef ? wildDef.displayName : "Foe");
+        _enemyNameScratch.Add(GetWildDisplayName("Foe"));
         BattleLogger.SetCombatants(_combatantNameScratch, _enemyNameScratch);
 
         // Reset key moment snapshot for this battle.
@@ -398,7 +398,7 @@ public partial class BattleManager : MonoBehaviour
         BattleLogger.ClearKeyMoments();
 
         if (wildDef)
-            BattleLogger.Log($"A wild {wildDef.displayName} (Lv {wildLevel}) appeared!", LogScope.Battle);
+            BattleLogger.Log($"A wild {GetWildDisplayName("Foe")} (Lv {wildLevel}) appeared!", LogScope.Battle);
         else
             BattleLogger.Log("A wild foe appeared!", LogScope.Battle);
 
@@ -414,12 +414,6 @@ public partial class BattleManager : MonoBehaviour
         PostBattleSummaryManager.I?.NotifyBattleStart();
         // BattleStart titles are applied once in Begin() via ApplyBattleStartTitles().
         Debug_LogActiveTitlesSnapshot("BattleStart");
-
-        // Ensure max HP is synced with titles before first UI paint.
-        if (_stats != null) _stats.MarkDirtyAll();
-        SyncEffectiveMaxHPFromStats(force: true);
-        PushHPBars();
-        UpdateHPTextUI();
 
         ResetStatusIcons();
         RefreshStatusIconsFromState();
@@ -642,8 +636,8 @@ public partial class BattleManager : MonoBehaviour
                                     // Make sure UI hits 0 then hides.
                                     EmitAutoQueueCountdown(0f, (autoQueueCountdownShowAtSeconds > 0f));
                                     EmitAutoQueueCountdown(0f, false);
-                                    pendingAction = PlayerAction.Attack;
-                                    BattleLogger.Log($"[Battle] Failsafe: auto-queued Attack after {autoQueueAttackAfterSeconds:0}s idle.", LogScope.Battle);
+                                    pendingAction = ChoosePlayerFailsafeAction();
+                                    BattleLogger.Log($"[Battle] Failsafe: auto-queued {pendingAction} (personality) after {autoQueueAttackAfterSeconds:0}s idle.", LogScope.Battle);
                                     break;
                                 }
                             }
@@ -693,6 +687,7 @@ RefreshStatusIconsFromState();
                             else
                             {
                                 BattleLogger.Log($"{name} tried to defend, but it failed!", LogScope.Battle);
+                                GrantFailedDefendCritBonus(BattleSide.Player);
                             }
                         }
                         else
@@ -967,8 +962,8 @@ if (teamHP != null && activeIndex >= 0 && activeIndex < teamHP.Length && teamHP[
                     // Make sure UI hits 0 then hides.
                     EmitAutoQueueCountdown(0f, (autoQueueCountdownShowAtSeconds > 0f));
                     EmitAutoQueueCountdown(0f, false);
-                    pendingAction = PlayerAction.Attack;
-                    BattleLogger.Log($"[Battle] Failsafe: auto-queued Attack after {autoQueueAttackAfterSeconds:0}s idle.", LogScope.Battle);
+                    pendingAction = ChoosePlayerFailsafeAction();
+                    BattleLogger.Log($"[Battle] Failsafe: auto-queued {pendingAction} (personality) after {autoQueueAttackAfterSeconds:0}s idle.", LogScope.Battle);
                     break;
                 }
             }
@@ -1025,6 +1020,7 @@ if (teamHP != null && activeIndex >= 0 && activeIndex < teamHP.Length && teamHP[
                 else
                 {
                     BattleLogger.Log($"{name} tried to defend, but it failed!", LogScope.Battle);
+                    GrantFailedDefendCritBonus(BattleSide.Player);
                 }
 
                 NotifyPlayerActionResolved_ForForesight(activeIndex, PlayerAction.Defend);
@@ -1145,7 +1141,7 @@ if (teamHP != null && activeIndex >= 0 && activeIndex < teamHP.Length && teamHP[
         var playerDef = teamDefs[activeIndex];
         string attacker = GetName(activeIndex);
         string move = GetBasicMoveName(playerDef);
-        string foeName = wildDef ? wildDef.displayName : "Foe";
+        string foeName = GetWildDisplayName("Foe");
 
         if (!ShouldSkipNarration(BattleLineTag.Flavor))
             yield return Say($"{attacker} used {move}!", BattleLineTag.Flavor);
@@ -1172,6 +1168,9 @@ if (feedback)
             if (jctx.critBuffTurns > 0)
                 playerCrit += jctx.critChanceBonusFirstTurns;
         }
+        float playerFailDefendCritBonus = GetFailedDefendCritBonusForAttacker(BattleSide.Player);
+        bool playerHadFailDefendCritBonus = playerFailDefendCritBonus > 0f;
+        playerCrit += playerFailDefendCritBonus;
         playerCrit = Mathf.Clamp01(playerCrit);
 
         // IMPORTANT: pass the wild combatant id so wild Titles participate in damage filters,
@@ -1191,6 +1190,11 @@ if (feedback)
             defenderFlatDefenseBonus: 0,
             defenderEffectiveDefenseStat: wildDefForResolve
         );
+
+        ConsumeFailedDefendCritBonusForAttacker(BattleSide.Player);
+
+        if (playerHadFailDefendCritBonus && dr.crit)
+            BattleLogger.Log("Critical hit empowered by failed wild defend!", LogScope.Battle);
 
         TitlesAdapter.OnAttackLanded(teamTitleIds[activeIndex], dr.crit);
         if (dr.crit) _totalCritsThisBattle++;
@@ -1470,7 +1474,7 @@ if (!playerLandedFirstHitThisBattle && dr.damage > 0)
     // If an action-skip status triggers (Freeze/Shock), skip action entirely this turn.
     if (TryProcessTurnStartStatus_Wild_OncePerRound(out var skipBy))
     {
-        string who = !string.IsNullOrEmpty(wildNameText?.text) ? wildNameText.text : (wildDef ? wildDef.displayName : "Wild");
+        string who = !string.IsNullOrEmpty(wildNameText?.text) ? wildNameText.text : GetWildDisplayName("Wild");
         if (skipBy == StatusType.Shock)
             yield return Say($"{who} is Shocked! Action failed!", BattleLineTag.Result);
         else
@@ -1503,7 +1507,7 @@ if (!playerLandedFirstHitThisBattle && dr.damage > 0)
 
             if (choice == EnemyAction.Defend)
             {
-                string name = wildDef ? wildDef.displayName : "Foe";
+                string name = GetWildDisplayName("Foe");
                 bool success = RollEnemyDefendSuccess();
 
                 wildDefendActiveThisRound = success;
@@ -1522,6 +1526,7 @@ if (!playerLandedFirstHitThisBattle && dr.damage > 0)
                 else
                 {
                     yield return Say($"{name} tried to defend, but it failed!", BattleLineTag.Result);
+                    GrantFailedDefendCritBonus(BattleSide.Wild);
                 }
 
                 NotifyWildActionResolved_ForForesight(EnemyAction.Defend);
@@ -1531,7 +1536,7 @@ if (!playerLandedFirstHitThisBattle && dr.damage > 0)
 
             if (choice == EnemyAction.Focus)
             {
-                string name = wildDef ? wildDef.displayName : "Foe";
+                string name = GetWildDisplayName("Foe");
                 bool success = RollEnemyFocusSuccess();
 
                 if (!success)
@@ -1563,7 +1568,7 @@ if (!playerLandedFirstHitThisBattle && dr.damage > 0)
 
             if (choice == EnemyAction.Run)
             {
-                string name = wildDef ? wildDef.displayName : "Foe";
+                string name = GetWildDisplayName("Foe");
                 float chance = ComputeEnemyRunChance();
                 bool fled = Rng01() < chance;
 
@@ -1586,7 +1591,7 @@ if (!playerLandedFirstHitThisBattle && dr.damage > 0)
             if (teamHP[activeIndex] <= 0.01f && !AutoSwapToAlive())
                 yield break;
 
-            string attackerName = wildDef ? wildDef.displayName : "Foe";
+            string attackerName = GetWildDisplayName("Foe");
             string move = GetBasicMoveName(wildDef);
 
             if (!ShouldSkipNarration(BattleLineTag.Flavor))
@@ -1620,6 +1625,10 @@ if (!playerLandedFirstHitThisBattle && dr.damage > 0)
             }
 
             float wildCritChance = df.cannotBeCrit ? 0f : Mathf.Clamp01(critChanceWild - playerCritResist);
+            float wildFailDefendCritBonus = GetFailedDefendCritBonusForAttacker(BattleSide.Wild);
+            bool wildHadFailDefendCritBonus = wildFailDefendCritBonus > 0f;
+            wildCritChance += wildFailDefendCritBonus;
+            wildCritChance = Mathf.Clamp01(wildCritChance);
 
             // Centralized DEF stat for the defender (Adjusted + job + titles + boosters + temp).
             int defenderEffectiveDefenseStat = 0;
@@ -1635,6 +1644,11 @@ if (!playerLandedFirstHitThisBattle && dr.damage > 0)
                 defenderFlatDefenseBonus: 0,
                 defenderEffectiveDefenseStat: defenderEffectiveDefenseStat
             );
+
+            ConsumeFailedDefendCritBonusForAttacker(BattleSide.Wild);
+
+            if (wildHadFailDefendCritBonus && dr.crit)
+                BattleLogger.Log("Critical hit empowered by failed player defend!", LogScope.Battle);
 
             // Titles: attacker hit hooks for wild
             if (!string.IsNullOrEmpty(_wildCombatIdForTitles))
@@ -1750,6 +1764,27 @@ if (wildTailwindBonusPct > 0f)
 
         incomingScalar = title_scalarAfterPct;
 
+        // Booster: Type Resist (turn-based) reduces incoming super-effective damage.
+        // Log only when it actually mitigates damage.
+        if (_rules.allowBoosters && BattleBoosterController.I != null)
+        {
+            var boosterCtrl = BattleBoosterController.I;
+            if (boosterCtrl.IsBoosterActive(BoosterType.TypeResist) && dr.effectiveness > 1f)
+            {
+                int beforeBoosterResist = Mathf.Max(1, Mathf.RoundToInt(dr.damage * incomingScalar));
+
+                float resistMul = Mathf.Clamp01(boosterCtrl.GetResistMul());
+                incomingScalar *= resistMul;
+
+                int afterBoosterResist = Mathf.Max(1, Mathf.RoundToInt(dr.damage * incomingScalar));
+                if (afterBoosterResist < beforeBoosterResist)
+                {
+                    int reducedBy = beforeBoosterResist - afterBoosterResist;
+                    BattleLogger.Log($"Type Resist triggered: incoming super-effective damage reduced by {reducedBy} ({beforeBoosterResist}→{afterBoosterResist}).", LogScope.Battle);
+                }
+            }
+        }
+
         // Team aura damage reduction
         float title_auraDmgReduce = 0f;
         try
@@ -1773,7 +1808,8 @@ int dmg_afterScalar = Mathf.Max(1, Mathf.RoundToInt(dr.damage * incomingScalar))
 
         if (BattleLogger.Enabled && (title_reducedByTypeResist > 0 || title_reducedByDmgFilterPct > 0 || title_reducedByDmgFilterFlat > 0))
         {
-            BattleLogger.Log($"[Titles][DefensiveReductions] typeResistMul={title_typeResistMul:0.###} (-{title_reducedByTypeResist}) dmgFilterPct={title_dmgFilterPct:0.###} (-{title_reducedByDmgFilterPct}) dmgFilterFlat={title_dmgFilterFlat} (-{title_reducedByDmgFilterFlat})");
+            int titleTotalReduced = title_reducedByTypeResist + title_reducedByDmgFilterPct + title_reducedByDmgFilterFlat;
+            BattleLogger.Log($"Title defenses triggered: incoming damage reduced by {titleTotalReduced} ({title_dmg_pre}→{dmg_afterScalar}). [eff x{title_typeResistMul:0.##}:-{title_reducedByTypeResist}, pct:-{title_reducedByDmgFilterPct}, flat:-{title_reducedByDmgFilterFlat}]", LogScope.Battle);
         }
 
 

@@ -254,6 +254,16 @@ public sealed class IronBattleBridge : MonoBehaviour, IBattleRosterProvider, IBa
     // IBattleContext
     // ─────────────────────────────────────────────────────────────
 
+    public bool IronWildIsShiny
+    {
+        get
+        {
+            var host = Host;
+            if (host is IronCareerManager mgr) return mgr.IronWildIsShiny;
+            return false;
+        }
+    }
+
     public void OnBattleResolved(IronBattleOutcome outcome)
     {
 #if UNITY_EDITOR

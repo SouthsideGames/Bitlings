@@ -39,6 +39,7 @@ public class IdleBattleRewardPanelUI : MonoBehaviour
         public int count;
         public int credits;
         public bool anyNew;
+        public bool anyShiny;
     }
 
     void Awake()
@@ -126,6 +127,7 @@ public class IdleBattleRewardPanelUI : MonoBehaviour
             var g = groups.TryGetValue(e.monsterId, out var existing) ? existing : default;
             g.count += e.count;
             g.credits += Mathf.Max(0, e.credits);
+            g.anyShiny = g.anyShiny || e.shinySeen;
             groups[e.monsterId] = g;
         }
 
@@ -135,8 +137,8 @@ public class IdleBattleRewardPanelUI : MonoBehaviour
             var g = kvp.Value;
 
             var def = FindMonster(monsterId);
-            var icon = def ? def.icon : null;
-            var name = def ? def.displayName : monsterId;
+            var icon = def ? MonsterNameFormatter.GetIcon(def, g.anyShiny, backIcon: false) : null;
+            var name = def ? MonsterNameFormatter.Format(def, g.anyShiny) : monsterId;
 
             var item = Instantiate(encounteredItemPrefab, encounteredListContent);
             item.Set(icon, name, g.count, g.credits);
@@ -163,6 +165,7 @@ public class IdleBattleRewardPanelUI : MonoBehaviour
             g.count += e.count;
             g.credits += Mathf.Max(0, e.credits);
             g.anyNew = g.anyNew || isNew;
+            g.anyShiny = g.anyShiny || e.shinySeen;
             groups[e.monsterId] = g;
         }
 
@@ -172,8 +175,8 @@ public class IdleBattleRewardPanelUI : MonoBehaviour
             var g = kvp.Value;
 
             var def = FindMonster(monsterId);
-            var icon = def ? def.icon : null;
-            var name = def ? def.displayName : monsterId;
+            var icon = def ? MonsterNameFormatter.GetIcon(def, g.anyShiny, backIcon: false) : null;
+            var name = def ? MonsterNameFormatter.Format(def, g.anyShiny) : monsterId;
 
             var item = Instantiate(capturedItemPrefab, capturedListContent);
             item.Set(icon, name, g.count, g.anyNew, g.credits);

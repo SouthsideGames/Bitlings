@@ -46,7 +46,7 @@ public sealed class IronCareerEligibleEvolutionItemUI : MonoBehaviour
             typeIcon.gameObject.SetActive(typeIcon.sprite != null);
         }
 
-        if (nameTMP) nameTMP.text = monster != null && monster.def ? monster.def.displayName : "?";
+        if (nameTMP) nameTMP.text = monster != null && monster.def ? MonsterNameFormatter.Format(monster.def, monster.isShiny) : "?";
         if (levelTMP) levelTMP.text = monster != null ? $"Lv {Mathf.Max(1, monster.level)}" : "Lv ?";
         if (titleTMP) titleTMP.text = monster != null && monster.lockedTitle ? $"Title: {monster.lockedTitle.displayName}" : "Title: —";
 
@@ -62,7 +62,7 @@ public sealed class IronCareerEligibleEvolutionItemUI : MonoBehaviour
 
         if (evolvesToTMP)
         {
-            evolvesToTMP.text = evolveTo ? $"Evolves → {evolveTo.displayName}" : "Evolves → —";
+            evolvesToTMP.text = evolveTo ? $"Evolves → {MonsterNameFormatter.Format(evolveTo, monster?.isShiny ?? false)}" : "Evolves → —";
         }
 
         if (requirementTMP)

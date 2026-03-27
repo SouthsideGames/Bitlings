@@ -28,6 +28,13 @@ public partial class BattleManager : MonoBehaviour
         return wildIntentIconDurationManual;
     }
 
+    private string GetWildDisplayName(string fallback = "Foe")
+    {
+        if (!wildDef) return fallback;
+        bool shinyWild = EncounterManager.I != null && EncounterManager.I.CurrentWildIsShiny;
+        return MonsterNameFormatter.Format(wildDef, shinyWild);
+    }
+
     private string GetWildTelegraphLine(EnemyAction action)
     {
         switch (action)
@@ -151,6 +158,45 @@ public partial class BattleManager : MonoBehaviour
         }
     }
 
+    private PlayerAction ChoosePlayerFailsafeAction()
+    {
+        MonsterDataSO activeDef = GetTeamDefSafe(activeIndex);
+        if (activeDef?.Personality == null)
+            return PlayerAction.Attack;
+
+        float maxHp = GetFinalMaxHPForIndex(activeIndex);
+        float hpRatio = (maxHp > 0.01f && teamHP != null && activeIndex >= 0 && activeIndex < teamHP.Length)
+            ? Mathf.Clamp01(teamHP[activeIndex] / maxHp)
+            : 1f;
+
+        float typeMatchupMult = wildDef != null
+            ? BattleTypeChart.GetMultiplier(activeDef.type, wildDef.type)
+            : 1f;
+
+        var ctx = new PersonalityContext
+        {
+            selfHpRatio           = hpRatio,
+            hasSuperEffectiveMove = typeMatchupMult > 1f,
+            isBadlyMatched        = typeMatchupMult < 1f,
+            turnNumber            = Mathf.Max(1, _turnIndex + 1)
+        };
+
+        BattleAction action = activeDef.Personality.ChooseAction(in ctx, _rng.EnemyRng);
+
+        // If the player already has a charge loaded, attack to cash it in.
+        if (chargedNextAttack != null && activeIndex >= 0 && activeIndex < chargedNextAttack.Length && chargedNextAttack[activeIndex])
+            action = BattleAction.Attack;
+
+        switch (action)
+        {
+            case BattleAction.Attack: return PlayerAction.Attack;
+            case BattleAction.Defend: return PlayerAction.Defend;
+            case BattleAction.Focus:  return PlayerAction.Focus;
+            case BattleAction.Run:    return PlayerAction.Run;
+            default:                  return PlayerAction.Attack;
+        }
+    }
+
     private float ComputeEnemyRunChance()
     {
         if (!wildDef || wildMaxHP <= 0.01f)
@@ -178,7 +224,7 @@ public partial class BattleManager : MonoBehaviour
     {
         if (wildPendingGuardShield <= 0.01f) return;
 
-        string name = wildDef ? wildDef.displayName : "Foe";
+        string name = GetWildDisplayName("Foe");
         float gain = wildPendingGuardShield;
         wildShieldHP += gain;
         wildPendingGuardShield = 0f;
@@ -254,7 +300,7 @@ public partial class BattleManager : MonoBehaviour
     {
         ResetEnemyFocusStreak();
 
-        string name = wildDef ? wildDef.displayName : "Foe";
+        string name = GetWildDisplayName("Foe");
         bool success = RollEnemyDefendSuccess();
 
         wildDefendActiveThisRound = success;
@@ -273,6 +319,7 @@ public partial class BattleManager : MonoBehaviour
         else
         {
             BattleLogger.Log($"{name} tried to defend, but it failed!", LogScope.Battle);
+            GrantFailedDefendCritBonus(BattleSide.Wild);
         }
     }
 

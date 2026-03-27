@@ -99,6 +99,9 @@ public sealed class BattleBoosterController : MonoBehaviour
             GameEvents.OnBoostersChanged?.Invoke();   // booster panel (cooldowns/durations)
             GameEvents.RaiseBattleStatsChanged();     // stat panel (numbers/colors)
         }
+
+        if (r0 > 0 && resistDur == 0)
+            BattleLogger.Log("Type Resist has worn off.", LogScope.Battle);
     }
 
     public bool IsBoosterActive(BoosterType t) =>
@@ -186,7 +189,7 @@ public sealed class BattleBoosterController : MonoBehaviour
             case BoosterType.TypeResist:
                 resistDur = resistBoostTurns;
                 cdRes = boosterCooldownTurns;
-                msg = $"Type Resist: Incoming damage reduced for {resistDur} turn(s).";
+                msg = $"Type Resist activated: super-effective hits are reduced to neutral for {resistDur} turn(s).";
                 break;
 
             default:
@@ -203,6 +206,32 @@ public sealed class BattleBoosterController : MonoBehaviour
     }
 
     public (int atk, int hp, int spd, int res) Cooldowns() => (cdAtk, cdHp, cdSpd, cdRes);
+
+    public void ResetBetweenBattles()
+    {
+        bool hadState =
+            attackDur > 0 || speedDur > 0 || resistDur > 0 ||
+            cdAtk > 0 || cdHp > 0 || cdSpd > 0 || cdRes > 0 ||
+            usedABoosterThisTurn || playersTurn;
+
+        attackDur = 0;
+        speedDur = 0;
+        resistDur = 0;
+
+        cdAtk = 0;
+        cdHp = 0;
+        cdSpd = 0;
+        cdRes = 0;
+
+        usedABoosterThisTurn = false;
+        playersTurn = false;
+
+        if (hadState)
+        {
+            GameEvents.OnBoostersChanged?.Invoke();
+            GameEvents.RaiseBattleStatsChanged();
+        }
+    }
 
     public int ConsumeSpeedBonusForInitiative()
     {

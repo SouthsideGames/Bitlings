@@ -114,7 +114,7 @@ public sealed class IronCareerPostScreenUI : MonoBehaviour
         if (summarySection) summarySection.SetActive(hasOutcome);
         if (hasOutcome && summaryTMP)
         {
-            string wildName = (outcome.wildDef != null) ? outcome.wildDef.displayName : "Unknown";
+            string wildName = (outcome.wildDef != null) ? MonsterNameFormatter.Format(outcome.wildDef, outcome.wildWasShiny) : "Unknown";
             int wildLvl = Mathf.Max(1, outcome.wildLevel);
             int turns = Mathf.Max(0, outcome.turnsSurvived);
             int secs = Mathf.Max(0, Mathf.RoundToInt(outcome.secondsSurvived));

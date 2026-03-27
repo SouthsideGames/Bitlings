@@ -185,6 +185,7 @@ public sealed class BattleStatsSystem
         if (booster != null)
         {
             atk += Mathf.Max(0, booster.GetAttackBonus());
+            spd += Mathf.Max(0, booster.GetSpeedBonus());
         }
 
         // First-turn job speed bonuses (existing design).
@@ -339,7 +340,10 @@ public sealed class BattleStatsSystem
         // 6) Booster controller (currently only ATK flat, per existing design)
         var booster = allowBoosters ? BattleBoosterController.I : null;
         if (booster != null)
+        {
             atk += Mathf.Max(0, booster.GetAttackBonus());
+            spd += Mathf.Max(0, booster.GetSpeedBonus());
+        }
 
         stages.afterBoosters = new BattleStatBlock
         {

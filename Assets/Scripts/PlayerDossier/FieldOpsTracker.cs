@@ -62,11 +62,11 @@ public static class FieldOpsTracker
             if (isShiny)
             {
                 stats.shinyDiscoveries = Mathf.Max(0, stats.shinyDiscoveries + 1);
-                AddHighlight($"Shiny {def.displayName} captured!");
+                AddHighlight($"Captured {MonsterNameFormatter.Format(def, true)}!");
             }
             else
             {
-                AddHighlight($"Captured {def.displayName}.");
+                AddHighlight($"Captured {MonsterNameFormatter.Format(def, false)}.");
             }
         }
         else

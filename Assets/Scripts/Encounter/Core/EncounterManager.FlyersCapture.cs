@@ -55,17 +55,17 @@ public partial class EncounterManager
 
     public MonsterDataSO PickWildConsideringFlyers()
     {
-        var lib = MonsterLibraryLocator.Lib;
-        if (lib == null || lib.monsters == null || lib.monsters.Length == 0)
+        var catalog = MonsterCatalog.All;
+        if (catalog == null || catalog.Count == 0)
             return null;
 
-        var pool = new List<MonsterDataSO>(lib.monsters.Length + 16);
+        var pool = new List<MonsterDataSO>(catalog.Count);
         var added = new HashSet<string>();
 
-        // 1) Base: anything in the library with spawnWeight > 0 is always eligible
-        for (int i = 0; i < lib.monsters.Length; i++)
+        // 1) Base: anything in the catalog with spawnWeight > 0 is eligible
+        for (int i = 0; i < catalog.Count; i++)
         {
-            var m = lib.monsters[i];
+            var m = catalog[i];
             if (m == null || string.IsNullOrEmpty(m.id)) continue;
             if (m.spawnWeight <= 0f) continue;
 
@@ -73,33 +73,14 @@ public partial class EncounterManager
                 pool.Add(m);
         }
 
-        // 2) Add discovered monsters (packs) to expand the pool (if they’re not already in it)
-        var data = SaveManager.Data;
-        if (data != null)
-        {
-            data.discoveredMonsterIds ??= new HashSet<string>();
-
-            foreach (var id in data.discoveredMonsterIds)
-            {
-                if (string.IsNullOrEmpty(id)) continue;
-                if (added.Contains(id)) continue;
-
-                var def = MonsterLibraryLocator.GetById(id);
-                if (def == null || string.IsNullOrEmpty(def.id)) continue;
-                if (def.spawnWeight <= 0f) continue;
-
-                if (added.Add(def.id))
-                    pool.Add(def);
-            }
-        }
-
         if (pool.Count == 0)
         {
-            for (int i = 0; i < lib.monsters.Length; i++)
+            for (int i = 0; i < catalog.Count; i++)
             {
-                var m = lib.monsters[i];
+                var m = catalog[i];
                 if (m == null || string.IsNullOrEmpty(m.id)) continue;
-                pool.Add(m);
+                if (added.Add(m.id))
+                    pool.Add(m);
             }
             if (pool.Count == 0) return null;
             return pool[Random.Range(0, pool.Count)];
@@ -367,6 +348,8 @@ public partial class EncounterManager
                 isShiny = false;
         }
 
+        string captureName = MonsterNameFormatter.Format(def, isShiny);
+
         FieldOpsTracker.RecordCaptureAttempt(def, success, isShiny);
 
         if (success)
@@ -413,10 +396,10 @@ public partial class EncounterManager
                         GameEvents.MonsterLeveled?.Invoke(key, existing.level);
 
                         BattleLogger.Log(
-                            $"🎉 Duplicate captured! {def.displayName} leveled up {before} → {existing.level}. [p={Mathf.RoundToInt(finalChance * 100f)}%]",
+                            $"🎉 Duplicate captured! {captureName} leveled up {before} → {existing.level}. [p={Mathf.RoundToInt(finalChance * 100f)}%]",
                             LogScope.Encounter
                         );
-                        EmitStatus($"Duplicate captured! {def.displayName} leveled up to Lv {existing.level}.", LogScope.Encounter);
+                        EmitStatus($"Duplicate captured! {captureName} leveled up to Lv {existing.level}.", LogScope.Encounter);
                     }
                     else
                     {
@@ -429,7 +412,7 @@ public partial class EncounterManager
                         GameEvents.MonsterCaptured?.Invoke(def.id, def.type);
 
                         BattleLogger.Log(
-                            $"🎉 Duplicate captured, but {def.displayName} is already max level (Lv {maxLevel}). Converted to +{cores} Growth Cores. [p={Mathf.RoundToInt(finalChance * 100f)}%]",
+                            $"🎉 Duplicate captured, but {captureName} is already max level (Lv {maxLevel}). Converted to +{cores} Growth Cores. [p={Mathf.RoundToInt(finalChance * 100f)}%]",
                             LogScope.Encounter
                         );
                         EmitStatus($"Duplicate converted: +{cores} Growth Cores (already Lv {maxLevel}).", LogScope.Encounter);
@@ -445,10 +428,10 @@ public partial class EncounterManager
                         UIManager.I.Show(PanelId.DuplicateResolution);
 
                     BattleLogger.Log(
-                        $"🎉 Duplicate {def.displayName} captured! Awaiting placement decision. [p={Mathf.RoundToInt(finalChance * 100f)}%]",
+                        $"🎉 Duplicate {captureName} captured! Awaiting placement decision. [p={Mathf.RoundToInt(finalChance * 100f)}%]",
                         LogScope.Encounter
                     );
-                    EmitStatus($"Duplicate captured! Choose how to place {def.displayName}.", LogScope.Encounter);
+                    EmitStatus($"Duplicate captured! Choose how to place {captureName}.", LogScope.Encounter);
                 }
 
                 // Ensure collection tracking is up to date
@@ -496,18 +479,18 @@ public partial class EncounterManager
             GameEvents.MonsterCaptured?.Invoke(def.id, def.type);
 
             BattleLogger.Log(
-                $"🎉 Capture success! {def.displayName} (Lv {level}) joined your roster. [p={Mathf.RoundToInt(finalChance * 100f)}%]",
+                $"🎉 Capture success! {captureName} (Lv {level}) joined your roster. [p={Mathf.RoundToInt(finalChance * 100f)}%]",
                 LogScope.Encounter
             );
-            EmitStatus($"Captured {def.displayName}! (Lv {level})", LogScope.Encounter);
+            EmitStatus($"Captured {captureName}! (Lv {level})", LogScope.Encounter);
         }
         else
         {
             BattleLogger.Log(
-                $"Capture failed on {def.displayName} (Lv {level}). [p={Mathf.RoundToInt(finalChance * 100f)}%, roll={Mathf.RoundToInt(roll * 100f)}%]",
+                $"Capture failed on {captureName} (Lv {level}). [p={Mathf.RoundToInt(finalChance * 100f)}%, roll={Mathf.RoundToInt(roll * 100f)}%]",
                 LogScope.Encounter
             );
-            EmitStatus($"Capture failed. {def.displayName} escaped.", LogScope.Encounter);
+            EmitStatus($"Capture failed. {captureName} escaped.", LogScope.Encounter);
         }
 
         return success;

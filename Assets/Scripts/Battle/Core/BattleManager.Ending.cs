@@ -39,6 +39,9 @@ public partial class BattleManager : MonoBehaviour
 
         if (turnCR != null) { StopCoroutine(turnCR); turnCR = null; }
 
+        if (_rules.allowBoosters && BattleBoosterController.I != null)
+            BattleBoosterController.I.ResetBetweenBattles();
+
         BattleCalc.ResetRng();
         _rng.ClearAll();
         float survived = Mathf.Max(0f, Time.unscaledTime - startTime);
@@ -132,6 +135,7 @@ public partial class BattleManager : MonoBehaviour
             growthCoresGained = growthCoreTotal,
             growthCoresBase = growthCoreBaseAfterShiny,
             growthCoresTitleBonus = growthCoreTitleBonus,
+            wildWasShiny = _battleContext?.IronWildIsShiny ?? false,
             teamHP = (teamHP != null) ? (float[])teamHP.Clone() : null,
             teamMaxHP = (teamMaxHP != null) ? (float[])teamMaxHP.Clone() : null,
             shieldHP = carryShield,
@@ -277,6 +281,9 @@ public partial class BattleManager : MonoBehaviour
         ResetStatusIcons();
 
         if (turnCR != null) { StopCoroutine(turnCR); turnCR = null; }
+
+        if (_rules.allowBoosters && BattleBoosterController.I != null)
+            BattleBoosterController.I.ResetBetweenBattles();
 
         // Restore BattleCalc RNG to default (UnityEngine.Random)
         BattleCalc.ResetRng();

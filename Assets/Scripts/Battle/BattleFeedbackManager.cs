@@ -235,6 +235,10 @@ public sealed class BattleFeedbackManager : MonoBehaviour
     private float _slowMoPrevTimeScale = 1f;
     private float _slowMoPrevFixedDeltaTime = 0.02f;
 
+    private static readonly Color ResistHpTint = new Color32(0x41, 0xB4, 0x6A, 0xFF);
+    private Color _playerHpValueDefaultColor = Color.white;
+    private bool _playerHpValueDefaultColorCached;
+
 
     private void Awake()
     {
@@ -1068,6 +1072,18 @@ public void SetGuard(BattleFeedbackSide side, bool on)
         var icon = GetIcon(side);
         if (!icon) return;
 
+        // Keep guard icon state in sync with defend result immediately.
+        // This prevents cases where narration says "defending" but the shield icon doesn't appear.
+        if (!success)
+            StopGuardAutoHideCR(side);
+
+        var guardIcon = (side == BattleFeedbackSide.Player) ? playerGuardIcon : wildGuardIcon;
+        SetStatusIconVisible(guardIcon, success);
+        if (side == BattleFeedbackSide.Player)
+            _guardPlayerOn = success;
+        else
+            _guardWildOn = success;
+
         Flash(icon, success ? flashDefend : flashFail, defendPulseTime);
         PunchScale(icon, success ? 1.06f : 1.03f, defendPulseTime * 0.8f);
 
@@ -1603,6 +1619,12 @@ public void SetGuard(BattleFeedbackSide side, bool on)
     /// </summary>
     public void SetHPTexts(float playerCur, float playerMax, float wildCur, float wildMax, int playerShield, int wildShield)
     {
+        if (playerHPValueText != null && !_playerHpValueDefaultColorCached)
+        {
+            _playerHpValueDefaultColor = playerHPValueText.color;
+            _playerHpValueDefaultColorCached = true;
+        }
+
         int pCur = Mathf.CeilToInt(Mathf.Max(0f, playerCur));
         int pMax = Mathf.CeilToInt(Mathf.Max(1f, playerMax));
         int wCur = Mathf.CeilToInt(Mathf.Max(0f, wildCur));
@@ -1620,6 +1642,15 @@ public void SetGuard(BattleFeedbackSide side, bool on)
         if (playerHPValueText)
         {
             playerHPValueText.text = (pSh > 0) ? $"{pCur}/{pMax} (+{pSh})" : $"{pCur}/{pMax}";
+
+            bool resistOn = false;
+            if (BattleBoosterController.I != null && BattleBoosterController.I.IsBoosterActive(BoosterType.TypeResist))
+                resistOn = true;
+            else if (BattleTempBuffs.I != null && BattleTempBuffs.I.IsTypeResistActive())
+                resistOn = true;
+
+            playerHPValueText.color = resistOn ? ResistHpTint : _playerHpValueDefaultColor;
+
             if (hpTextPunchOnChange && pChanged) PunchTMP(playerHPValueText);
         }
 

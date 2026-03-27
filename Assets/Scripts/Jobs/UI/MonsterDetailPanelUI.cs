@@ -11,7 +11,8 @@ public enum MonsterDetailMode
 {
     StarterSelect,
     AssignToTeam,
-    DirectoryView
+    DirectoryView,
+    PackPreview
 }
 
 public class MonsterDetailPanelUI : MonoBehaviour
@@ -62,6 +63,9 @@ public class MonsterDetailPanelUI : MonoBehaviour
     [SerializeField] private GameObject starterButtonsHolder;
     [SerializeField] private GameObject slotButtonsHolder;
     [SerializeField] private GameObject teamHolder;
+
+    [Tooltip("Shown in PackPreview mode when the monster has not been hired yet.")]
+    [SerializeField] private GameObject notHiredRow;
 
     [Header("Slot Buttons")]
     [SerializeField] private Button closeButton;
@@ -617,6 +621,29 @@ current = MonsterLibraryLocator.GetById(_currentOwned.monsterId);
         UpdateShinyVariantToggleLabel();
         SafeOpen(monster);
     }
+    public void ShowPackPreview(MonsterDataSO monster)
+    {
+        ClearVariantState();
+
+        _mode = MonsterDetailMode.PackPreview;
+        _currentOwned = null;
+        _statsOwned = null;
+        _teamSlotIndex = -1;
+        _onRemoved = null;
+
+        current = monster;
+        onConfirm = null;
+        onCancel = null;
+
+        RefreshEvolveButton();
+        SetupFavoriteButton();
+
+        ResolveVariantState(monster ? monster.id : null);
+        _viewShinyCosmetic = false;
+        SetupShinyVariantUI();
+        UpdateShinyVariantToggleLabel();
+        SafeOpen(monster);
+    }
 
     public void Hide()
     {
@@ -890,6 +917,7 @@ private Sprite GetVariantIcon(MonsterDataSO monster)
                     }
                 }
 
+                bool isPackPreview = _mode == MonsterDetailMode.PackPreview;
                 bool isStarter = _mode == MonsterDetailMode.StarterSelect;
                 bool isDirectory = _mode == MonsterDetailMode.DirectoryView;
                 bool isAssign = _mode == MonsterDetailMode.AssignToTeam;
@@ -897,6 +925,7 @@ private Sprite GetVariantIcon(MonsterDataSO monster)
                 if (starterButtonsHolder) starterButtonsHolder.SetActive(isStarter);
                 if (slotButtonsHolder) slotButtonsHolder.SetActive(isDirectory);
                 if (teamHolder) teamHolder.SetActive(isAssign && _teamSlotIndex >= 0);
+                if (notHiredRow) notHiredRow.SetActive(isPackPreview);
 
                 if (closeButton) closeButton.gameObject.SetActive(!isStarter);
 

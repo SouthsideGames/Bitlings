@@ -30,8 +30,8 @@ public sealed class IronCareerRestPartyCardUI : MonoBehaviour
             return;
         }
 
-        if (icon) icon.sprite = monster.def.icon;
-        if (nameLabel) nameLabel.text = monster.def.displayName;
+        if (icon) icon.sprite = MonsterNameFormatter.GetIcon(monster.def, monster.isShiny, false);
+        if (nameLabel) nameLabel.text = MonsterNameFormatter.Format(monster.def, monster.isShiny);
         if (levelLabel) levelLabel.text = $"LV: {Mathf.Max(1, monster.level)}";
 
         string titleText = (monster.lockedTitle != null && !string.IsNullOrWhiteSpace(monster.lockedTitle.displayName))

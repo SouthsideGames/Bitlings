@@ -115,6 +115,46 @@ public partial class BattleManager : MonoBehaviour
         currentDefendSuccess = defendFirstUseSuccess;
     }
 
+    private void GrantFailedDefendCritBonus(BattleSide failedDefender)
+    {
+        if (defendFailCritBonus <= 0f)
+            return;
+
+        if (failedDefender == BattleSide.Player)
+        {
+            _wildPendingFailDefendCritCharges = Mathf.Max(1, _wildPendingFailDefendCritCharges + 1);
+            BattleLogger.Log("Wild gains bonus crit chance on its next attack (failed player defend).", LogScope.Battle);
+            return;
+        }
+
+        _playerPendingFailDefendCritCharges = Mathf.Max(1, _playerPendingFailDefendCritCharges + 1);
+        BattleLogger.Log("Player gains bonus crit chance on the next attack (failed wild defend).", LogScope.Battle);
+    }
+
+    private float GetFailedDefendCritBonusForAttacker(BattleSide attacker)
+    {
+        if (defendFailCritBonus <= 0f)
+            return 0f;
+
+        if (attacker == BattleSide.Player)
+            return _playerPendingFailDefendCritCharges > 0 ? defendFailCritBonus : 0f;
+
+        return _wildPendingFailDefendCritCharges > 0 ? defendFailCritBonus : 0f;
+    }
+
+    private void ConsumeFailedDefendCritBonusForAttacker(BattleSide attacker)
+    {
+        if (attacker == BattleSide.Player)
+        {
+            if (_playerPendingFailDefendCritCharges > 0)
+                _playerPendingFailDefendCritCharges--;
+            return;
+        }
+
+        if (_wildPendingFailDefendCritCharges > 0)
+            _wildPendingFailDefendCritCharges--;
+    }
+
 
     private void FirePlayerEndTurnTicks(bool dealtDamageThisTurn, bool critThisTurn)
     {

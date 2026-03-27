@@ -99,6 +99,10 @@ public partial class BattleManager : MonoBehaviour
     [SerializeField, Range(0f, 1f)] private float defendRepeatMultiplier = 0.5f;
     [SerializeField, Range(0f, 1f)] private float defendMinSuccess = 0.1f;
 
+    [Header("Defend Fail Punish")]
+    [Tooltip("When a defend attempt fails, the opponent gains this bonus crit chance for their next attack.")]
+    [SerializeField, Range(0f, 1f)] private float defendFailCritBonus = 0.15f;
+
     [Header("Focus Reliability")]
     [SerializeField, Range(0f, 1f)] private float focusFirstUseSuccess = 1.0f;
     [SerializeField, Range(0f, 1f)] private float focusRepeatMultiplier = 0.6f;
@@ -316,6 +320,10 @@ public partial class BattleManager : MonoBehaviour
     private int _totalDamageTakenThisBattle = 0;
     private int _totalDamageDealtThisBattle = 0;
     private int _totalStatusesAppliedToWildThisBattle = 0;
+
+    // One-charge crit bonuses granted when the opposing side fails a defend.
+    private int _playerPendingFailDefendCritCharges = 0;
+    private int _wildPendingFailDefendCritCharges = 0;
 
     private static readonly Color StatNeutral = Color.white;
     private static readonly Color StatBuff = new Color(0.35f, 1f, 0.35f);
@@ -1081,6 +1089,9 @@ public partial class BattleManager : MonoBehaviour
         }
 
         _rng.ResetForBegin();
+        if (_rules.allowBoosters && BattleBoosterController.I != null)
+            BattleBoosterController.I.ResetBetweenBattles();
+
         playerNoDmgTurns = 0;
         playerNoCritTurns = 0;
         runAttempts = 0;
@@ -1090,6 +1101,8 @@ public partial class BattleManager : MonoBehaviour
         _totalDamageTakenThisBattle = 0;
         _totalDamageDealtThisBattle = 0;
         _totalStatusesAppliedToWildThisBattle = 0;
+        _playerPendingFailDefendCritCharges = 0;
+        _wildPendingFailDefendCritCharges = 0;
 
         defendConsecutiveUses = 0;
         currentDefendSuccess = defendFirstUseSuccess;
@@ -1308,12 +1321,21 @@ public partial class BattleManager : MonoBehaviour
                 continue;
             }
 
-            string ownedMonsterId = (owned != null) ? owned.monsterId : null;
+            string ownedKey = (teamOwnedUidEffective != null && i >= 0 && i < teamOwnedUidEffective.Length)
+                ? teamOwnedUidEffective[i]
+                : null;
+
+            if (string.IsNullOrEmpty(ownedKey) && owned != null)
+            {
+                // Fallback for legacy saves/team entries that do not have ownedUID.
+                ownedKey = owned.monsterId;
+            }
+
             JobType job = JobType.None;
             float hours = 0f;
-            if (JobManager.I != null && !string.IsNullOrEmpty(ownedMonsterId))
+            if (JobManager.I != null && !string.IsNullOrEmpty(ownedKey))
             {
-                var jh = JobManager.I.GetCurrentJobAndHours(ownedMonsterId);
+                var jh = JobManager.I.GetCurrentJobAndHours(ownedKey);
                 job = jh.Item1;
                 hours = jh.Item2;
             }
@@ -1361,6 +1383,7 @@ public partial class BattleManager : MonoBehaviour
 
         ApplyActiveToUI();
         ClampAndPushActiveHP();
+        UpdateWildInfoUI();
         RefreshBenchUI();
 
         if (_rules.allowBoosters && BattleBoosterController.I != null)

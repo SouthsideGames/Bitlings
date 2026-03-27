@@ -437,6 +437,7 @@ public class AudioManager : MonoBehaviour
     public void PlaySfx(SfxType type)
     {
         if (type == SfxType.None) return;
+        if (GetSfxScale() <= 0f) return;
 
         if (!_map.TryGetValue(type, out var entry)) return;
         if (!PassCooldown(type, entry)) return;
@@ -447,7 +448,7 @@ public class AudioManager : MonoBehaviour
 
         src.pitch = UnityEngine.Random.Range(entry.pitchMin, entry.pitchMax);
 
-        float volume = entry.volume * GetSfxScale();
+        float volume = entry.volume;
         src.PlayOneShot(clip, volume);
     }
 
@@ -458,6 +459,7 @@ public class AudioManager : MonoBehaviour
     public void PlaySfx(SfxType type, float pitchMult, float volumeMult = 1f)
     {
         if (type == SfxType.None) return;
+        if (GetSfxScale() <= 0f) return;
 
         if (!_map.TryGetValue(type, out var entry)) return;
         if (!PassCooldown(type, entry)) return;
@@ -469,7 +471,7 @@ public class AudioManager : MonoBehaviour
         float basePitch = UnityEngine.Random.Range(entry.pitchMin, entry.pitchMax);
         src.pitch = Mathf.Clamp(basePitch * Mathf.Max(0.01f, pitchMult), 0.1f, 3f);
 
-        float volume = entry.volume * GetSfxScale() * Mathf.Clamp(volumeMult, 0f, 2f);
+        float volume = entry.volume * Mathf.Clamp(volumeMult, 0f, 2f);
         src.PlayOneShot(clip, volume);
     }
 
@@ -485,13 +487,12 @@ public class AudioManager : MonoBehaviour
     {
         if (clip == null) return;
 
-        float sfxScale = GetSfxScale();
-        if (sfxScale <= 0f) return;
+        if (GetSfxScale() <= 0f) return;
 
         var src = NextSfxSource();
         src.pitch = Mathf.Clamp(pitch, 0.1f, 3f);
 
-        float volume = sfxScale * Mathf.Clamp(volumeMult, 0f, 2f);
+        float volume = Mathf.Clamp(volumeMult, 0f, 2f);
         src.PlayOneShot(clip, volume);
     }
 
@@ -562,6 +563,7 @@ public class AudioManager : MonoBehaviour
     private void ApplyVolumes()
     {
         float musicScale = GetMusicScale();
+        float sfxScale = GetSfxScale();
 
         if (_activeMusic == musicA)
         {
@@ -573,6 +575,17 @@ public class AudioManager : MonoBehaviour
             if (musicB != null) musicB.volume = musicScale;
             if (musicA != null) musicA.volume = 0f;
         }
+
+        // Keep SFX pool source volumes in sync with settings so every one-shot obeys sliders.
+        if (sfxPool != null)
+        {
+            for (int i = 0; i < sfxPool.Count; i++)
+            {
+                var src = sfxPool[i];
+                if (src == null) continue;
+                src.volume = sfxScale;
+            }
+        }
     }
 
     // ─────────────────────────────────────────────────────────────
@@ -582,15 +595,26 @@ public class AudioManager : MonoBehaviour
     {
         sfxPool.RemoveAll(x => x == null);
 
+        for (int i = 0; i < sfxPool.Count; i++)
+            ConfigureSfxSource(sfxPool[i]);
+
         while (sfxPool.Count < sfxPoolSize)
         {
             var go = new GameObject($"SFX_{sfxPool.Count}");
             go.transform.SetParent(transform);
             var src = go.AddComponent<AudioSource>();
-            src.playOnAwake = false;
-            src.loop = false;
+            ConfigureSfxSource(src);
             sfxPool.Add(src);
         }
+    }
+
+    private void ConfigureSfxSource(AudioSource src)
+    {
+        if (src == null) return;
+
+        src.playOnAwake = false;
+        src.loop = false;
+        src.spatialBlend = 0f;
     }
 
     private AudioSource NextSfxSource()
@@ -621,9 +645,9 @@ public class AudioManager : MonoBehaviour
         var s = SaveManager.Data?.settings;
         if (s == null) return;
 
-        _master01 = s.masterVolume;
-        _music01 = s.musicVolume;
-        _sfx01 = s.sfxVolume;
+        _master01 = Mathf.Clamp01(s.masterVolume);
+        _music01 = Mathf.Clamp01(s.musicVolume);
+        _sfx01 = Mathf.Clamp01(s.sfxVolume);
 
         _muteAll = s.muteAll;
         _muteMusic = s.muteMusic;
@@ -767,6 +791,9 @@ public class AudioManager : MonoBehaviour
         {
             if (isIronCareerBattle)
             {
+                if (_currentIronCareerBattleMusic == null)
+                    _currentIronCareerBattleMusic = PickIronCareerBattleMusicForRun();
+
                 if (_currentIronCareerBattleMusic != null)
                 {
                     PlayMusic(_currentIronCareerBattleMusic, true, defaultCrossfade);
@@ -780,6 +807,13 @@ public class AudioManager : MonoBehaviour
                 return;
             }
 
+            if (_currentBattleMusic != null)
+            {
+                PlayMusic(_currentBattleMusic, true, defaultCrossfade);
+                return;
+            }
+
+            _currentBattleMusic = PickBattleMusicForThisBattle();
             if (_currentBattleMusic != null)
             {
                 PlayMusic(_currentBattleMusic, true, defaultCrossfade);

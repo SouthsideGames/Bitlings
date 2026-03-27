@@ -72,9 +72,12 @@ public class GrowthListItemUI : MonoBehaviour
         if (FeatureUnlockManager.I != null)
             FeatureUnlockManager.I.OnFeatureUnlocked += HandleFeatureUnlocked;
 
-        RefreshAutoToggleFeatureGate();
-        RefreshOpenInteractable();
-        RefreshAutoStateText();
+        if (_model != null)
+        {
+            RefreshAutoToggleFeatureGate();
+            RefreshOpenInteractable();
+            RefreshAutoStateText();
+        }
     }
 
     private void OnDisable()

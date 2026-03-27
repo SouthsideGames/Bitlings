@@ -389,7 +389,17 @@ public class PostBattleSummaryPanelUI : MonoBehaviour
         }
 
         if (enemyNameLabel)
-            enemyNameLabel.text = wildDef ? wildDef.displayName : "Unknown Foe";
+        {
+            if (wildDef)
+            {
+                string baseName = MonsterNameFormatter.GetDisplayName(wildDef);
+                enemyNameLabel.text = MonsterNameFormatter.Format(baseName, effectiveShiny);
+            }
+            else
+            {
+                enemyNameLabel.text = "Unknown Foe";
+            }
+        }
 
         if (wildLevelLabel)
             wildLevelLabel.text = $"Lv {Mathf.Max(1, result.wildLevel)}";

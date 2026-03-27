@@ -235,8 +235,8 @@ public sealed class IronCareerForcedEvolutionUI : MonoBehaviour
         float hp01 = beforeMaxHp > 0.01f ? Mathf.Clamp01(m.hp / beforeMaxHp) : 0f;
         float afterMaxHp = Mathf.Max(1f, BattleCalc.CalcHP(afterDef, Mathf.Max(1, m.level)));
 
-        if (beforeCard) beforeCard.Bind(beforeDef, m.level, m.lockedTitle);
-        if (afterCard) afterCard.Bind(afterDef, m.level, m.lockedTitle);
+        if (beforeCard) beforeCard.Bind(beforeDef, m.level, m.lockedTitle, m.isShiny);
+        if (afterCard) afterCard.Bind(afterDef, m.level, m.lockedTitle, m.isShiny);
         AnimatePreviewSwap();
 
         if (statDeltaTMP)
