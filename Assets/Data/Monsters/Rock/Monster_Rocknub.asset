@@ -51,6 +51,6 @@ MonoBehaviour:
   basicAttackName: Pebble Slam
   basicAttackPrefab: {fileID: 2351537007807138146, guid: 02418565875047149b7ee7a075c39850, type: 3}
   basicAttackPrefabLifetime: 1
-  spawnSfx: {fileID: 0}
+  spawnSfx: {fileID: 8300000, guid: 8510aeca9a63e994782b0a800bff191b, type: 3}
   baseMarketValue: 80
   description: A squat rock creature that shuffles along the ground

@@ -51,6 +51,6 @@ MonoBehaviour:
   basicAttackName: Wave Nip
   basicAttackPrefab: {fileID: 7604281169824035565, guid: 4065dc449fe6fd94eb31f0e575b94514, type: 3}
   basicAttackPrefabLifetime: 1
-  spawnSfx: {fileID: 0}
+  spawnSfx: {fileID: 8300000, guid: 4d4e4dbb61790e14a9fe899c16123518, type: 3}
   baseMarketValue: 165
   description: Its shell thickens as it endures and restores through steady flow.

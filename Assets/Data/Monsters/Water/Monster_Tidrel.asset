@@ -51,7 +51,7 @@ MonoBehaviour:
   basicAttackName: Aqua Pierce
   basicAttackPrefab: {fileID: 7604281169824035565, guid: 4065dc449fe6fd94eb31f0e575b94514, type: 3}
   basicAttackPrefabLifetime: 1
-  spawnSfx: {fileID: 0}
+  spawnSfx: {fileID: 8300000, guid: 12504a1ddae25e44ba12d902a474c4e4, type: 3}
   baseMarketValue: 10
   description: A focused water hunter that shapes pressurized streams into precise
     strikes balancing fluid movement with controlled power.

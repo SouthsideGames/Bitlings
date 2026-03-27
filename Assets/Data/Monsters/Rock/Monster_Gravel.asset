@@ -33,7 +33,7 @@ MonoBehaviour:
   fatigueCooldownHours: 10.8
   evolutionStage: 1
   evolutionLevel: 22
-  evolutionForm: {fileID: 11400000, guid: 66339d3191ef4471b8364d0b030afe0d, type: 2}
+  evolutionForm: {fileID: 11400000, guid: 5ef7471a680a64db197e081f57a7be82, type: 2}
   uncatchable: 0
   isBoss: 0
   bossJobDebuffs: []
@@ -51,6 +51,6 @@ MonoBehaviour:
   basicAttackName: Stone Knuckle
   basicAttackPrefab: {fileID: 2351537007807138146, guid: 02418565875047149b7ee7a075c39850, type: 3}
   basicAttackPrefabLifetime: 1
-  spawnSfx: {fileID: 0}
+  spawnSfx: {fileID: 8300000, guid: b2240fbfe5e4a054299d28fd41c570cf, type: 3}
   baseMarketValue: 109
   description: A dense rock creature that advances slowly

@@ -51,7 +51,7 @@ MonoBehaviour:
   basicAttackName: Wave Nip
   basicAttackPrefab: {fileID: 7604281169824035565, guid: 4065dc449fe6fd94eb31f0e575b94514, type: 3}
   basicAttackPrefabLifetime: 1
-  spawnSfx: {fileID: 0}
+  spawnSfx: {fileID: 8300000, guid: ce786542e8a0561419a6ff18811aa677, type: 3}
   baseMarketValue: 10
   description: A powerful water beast that balances offense and defense, crashing
     into foes with tidal force.

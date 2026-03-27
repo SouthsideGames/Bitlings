@@ -33,7 +33,7 @@ MonoBehaviour:
   fatigueCooldownHours: 10.8
   evolutionStage: 2
   evolutionLevel: 28
-  evolutionForm: {fileID: 11400000, guid: bfc24a2a22d7947658423857be3ee4c4, type: 2}
+  evolutionForm: {fileID: 11400000, guid: 5cdc60ff02c6d45a480a5912e3e2c277, type: 2}
   uncatchable: 0
   isBoss: 0
   bossJobDebuffs: []
@@ -51,6 +51,6 @@ MonoBehaviour:
   basicAttackName: Crush Slam
   basicAttackPrefab: {fileID: 2351537007807138146, guid: 02418565875047149b7ee7a075c39850, type: 3}
   basicAttackPrefabLifetime: 1
-  spawnSfx: {fileID: 0}
+  spawnSfx: {fileID: 8300000, guid: b5da2ab2775dd89418c212a557f96be6, type: 3}
   baseMarketValue: 170
   description: Its body compacts into thicker stone layers

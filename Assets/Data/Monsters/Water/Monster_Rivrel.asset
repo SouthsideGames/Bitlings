@@ -33,7 +33,7 @@ MonoBehaviour:
   fatigueCooldownHours: 8.6
   evolutionStage: 1
   evolutionLevel: 18
-  evolutionForm: {fileID: 11400000, guid: 6a273900809ff46b8bc013387dfdf871, type: 2}
+  evolutionForm: {fileID: 11400000, guid: 765316e888bba43d6b001288b98f4d35, type: 2}
   uncatchable: 0
   isBoss: 0
   bossJobDebuffs: []
@@ -51,6 +51,6 @@ MonoBehaviour:
   basicAttackName: Stream Jab
   basicAttackPrefab: {fileID: 7604281169824035565, guid: 4065dc449fe6fd94eb31f0e575b94514, type: 3}
   basicAttackPrefabLifetime: 1
-  spawnSfx: {fileID: 0}
+  spawnSfx: {fileID: 8300000, guid: 3b8ee2ed42497f14795fe1a077a8b155, type: 3}
   baseMarketValue: 77
   description: A small water creature that darts through shallow currents
