@@ -24,6 +24,8 @@ public enum CheatEffectKind
     Add5000ToAllResources,
     ToggleDiagnosticsPanel,
     MaxPromotionRank,
+    RankUpBy1,
+    RankUpBy5,
 }
 
 [Serializable]
@@ -354,6 +356,12 @@ public class CheatCodeManager : MonoBehaviour
             case CheatEffectKind.MaxPromotionRank:
                 return ExecuteMaxPromotionRank(out message);
 
+            case CheatEffectKind.RankUpBy1:
+                return ExecuteRankUp(1, out message);
+
+            case CheatEffectKind.RankUpBy5:
+                return ExecuteRankUp(5, out message);
+
             default:
                 message = "Cheat not configured.";
                 return false;
@@ -658,6 +666,50 @@ public class CheatCodeManager : MonoBehaviour
     // ─────────────────────────────────────────────────────────────
     // Everything below here is your original code (unchanged)
     // ─────────────────────────────────────────────────────────────
+
+    bool ExecuteRankUp(int ranks, out string message)
+    {
+        message = string.Empty;
+
+        var data = SaveManager.Data;
+        if (data == null)
+        {
+            message = "Save data not loaded.";
+            return false;
+        }
+
+        if (IronCareerRuntime.IsActive)
+        {
+            message = "Promotion rank cheats are disabled during Iron Career runs.";
+            return false;
+        }
+
+        int maxRank = GetPromotionMaxRankForCheat();
+        int oldRank = Mathf.Max(1, data.promotionRank);
+        int targetRank = Mathf.Min(oldRank + ranks, maxRank);
+
+        if (oldRank >= maxRank)
+        {
+            message = $"Already at max rank ({maxRank}).";
+            return false;
+        }
+
+        int targetXp = GetPromotionTotalXpToReachForCheat(targetRank);
+        if (targetXp < 0) targetXp = data.promotionXP;
+
+        data.promotionRank = targetRank;
+        data.promotionXP = Mathf.Max(targetXp, data.promotionXP);
+
+        SaveManager.Save();
+
+        ComputePromotionProgressForCheat(out int xpThisRank, out int xpToNext);
+
+        GameEvents.PromotionProgressChanged?.Invoke(data.promotionRank, data.promotionXP, xpThisRank, xpToNext);
+        GameEvents.PromotionRankChanged?.Invoke(oldRank, data.promotionRank);
+
+        message = $"Promotion rank increased from {oldRank} to {data.promotionRank}.";
+        return true;
+    }
 
     bool ExecuteRefillEnergy(out string message)
     {

@@ -67,6 +67,12 @@ public sealed class ScrollContentAutoSizer : MonoBehaviour
     private float _lastHeight = -1f;
     private float _lastWidth = -1f;
 
+    /// <summary>
+    /// Frames remaining to keep re-checking after enable or child-count change.
+    /// Handles staged/deferred content population (e.g., coroutines that add children over multiple frames).
+    /// </summary>
+    private int _settleFrames;
+
     private void Awake()
     {
         if (!scrollRect) scrollRect = GetComponent<ScrollRect>();
@@ -77,20 +83,51 @@ public sealed class ScrollContentAutoSizer : MonoBehaviour
             _vlg = content.GetComponent<VerticalLayoutGroup>();
             _hlg = content.GetComponent<HorizontalLayoutGroup>();
             _glg = content.GetComponent<GridLayoutGroup>();
+
+            // Disable any ContentSizeFitter on the content so it doesn't
+            // override the height/width we compute. Log so designers know.
+            var fitter = content.GetComponent<ContentSizeFitter>();
+            if (fitter != null && fitter.enabled)
+            {
+                Debug.Log($"[ScrollContentAutoSizer] Disabled ContentSizeFitter on \"{content.name}\" — auto-sizer will manage sizing.", content);
+                fitter.enabled = false;
+            }
         }
     }
 
     private void OnEnable()
     {
+        _settleFrames = 10;
         Refresh(force: true);
     }
 
     private void LateUpdate()
     {
-        if (!refreshEveryFrame)
+        if (refreshEveryFrame)
+        {
+            Refresh(force: false);
             return;
+        }
 
-        Refresh(force: false);
+        // Lightweight child-count monitoring: detect additions/removals even when refreshEveryFrame is off.
+        if (content)
+        {
+            int count = CountChildren(content, ignoreInactiveChildren);
+            if (count != _lastCount)
+            {
+                _settleFrames = 6;
+                Refresh(force: true);
+                return;
+            }
+        }
+
+        // Settle period: keep re-checking for a few frames after enable or count change
+        // so staged/deferred content (coroutines, layout rebuilds) is captured.
+        if (_settleFrames > 0)
+        {
+            _settleFrames--;
+            Refresh(force: true);
+        }
     }
 
     /// <summary>

@@ -921,11 +921,12 @@ private Sprite GetVariantIcon(MonsterDataSO monster)
                 bool isStarter = _mode == MonsterDetailMode.StarterSelect;
                 bool isDirectory = _mode == MonsterDetailMode.DirectoryView;
                 bool isAssign = _mode == MonsterDetailMode.AssignToTeam;
+                bool isOwned = _currentOwned != null || _statsOwned != null;
 
                 if (starterButtonsHolder) starterButtonsHolder.SetActive(isStarter);
-                if (slotButtonsHolder) slotButtonsHolder.SetActive(isDirectory);
+                if (slotButtonsHolder) slotButtonsHolder.SetActive(isDirectory && isOwned);
                 if (teamHolder) teamHolder.SetActive(isAssign && _teamSlotIndex >= 0);
-                if (notHiredRow) notHiredRow.SetActive(isPackPreview);
+                if (notHiredRow) notHiredRow.SetActive(isPackPreview || (isDirectory && !isOwned));
 
                 if (closeButton) closeButton.gameObject.SetActive(!isStarter);
 
