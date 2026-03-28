@@ -66,6 +66,8 @@ public class UIManager : MonoBehaviour
 {
     public static UIManager I { get; private set; }
 
+    private const string TutorialIronCareerUnlockedKey = "tut_ironcareerunlocked_v1";
+
     [Header("Panels")]
     [SerializeField] private List<PanelEntry> panels = new();
 
@@ -184,6 +186,25 @@ public class UIManager : MonoBehaviour
         _idleRewardCo = StartCoroutine(Co_TryOpenIdleBattleRewardsNextFrame());
     }
 
+    void TryOpenIronCareerUnlockedTutorial()
+    {
+        var data = SaveManager.Data;
+        if (data == null) return;
+        if (!data.HasIronCareerUnlocked) return;
+
+        int maxRank = PromotionManager.I != null ? PromotionManager.I.GetMaxRank() : 20;
+        int rank = Mathf.Max(1, data.promotionRank);
+        if (rank < maxRank) return;
+
+        if (SaveManager.IsTutorialComplete(TutorialIronCareerUnlockedKey)) return;
+
+        // Avoid opening over the idle rewards popup; it will be requested again
+        // the next time Home is opened if still incomplete.
+        if (IsOpen(PanelId.IdleBattleRewards)) return;
+
+        TutorialOverlayPanel.RequestOpen(TutorialIronCareerUnlockedKey);
+    }
+
     IEnumerator Co_TryOpenIdleBattleRewardsNextFrame()
     {
         yield return null;
@@ -287,7 +308,10 @@ public class UIManager : MonoBehaviour
                 if (fireEvent) OnPanelChanged?.Invoke(id, true);
 
                 if (id == PanelId.Home)
+                {
                     TryOpenIdleBattleRewardsNextFrame();
+                    TryOpenIronCareerUnlockedTutorial();
+                }
             }
         }
         else

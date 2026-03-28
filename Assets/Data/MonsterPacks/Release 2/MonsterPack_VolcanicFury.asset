@@ -14,9 +14,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   id: MP-011
   displayName: Volcanic Fury
-  description: Born from magma vents and fractured tectonic plates, these predators
-    thrive in chaos. Fire and Ground monsters emphasize brute force, territorial
-    dominance, and relentless advance.
+  description: Fire and Ground Bitlings operate with aggressive force, maintaining
+    control through direct power and steady advancement.
   icon: {fileID: 21300000, guid: 30ac313c029c068438fd756c641c789e, type: 3}
   rarityLabel: Common
   baseCost: 12

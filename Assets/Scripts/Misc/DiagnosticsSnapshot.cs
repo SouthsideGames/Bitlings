@@ -99,7 +99,7 @@ public static class DiagnosticsSnapshot
                 return $"bonus:{item.bonus:0.###}  exp:{item.expireUnix} ({Remain(item.expireUnix, now)})";
             });
 
-        AppendTimedList(sb, "Shiny Boosts (activeShinyBoosts)", data.activeShinyBoosts, now,
+        AppendTimedList(sb, "Premium Boosts (activePremiumBoosts)", data.activePremiumBoosts, now,
             item =>
             {
                 if (item == null) return "null";
@@ -126,7 +126,7 @@ public static class DiagnosticsSnapshot
             sb.AppendLine($"Capture Attempts: {data.fieldOps.captureAttempts}");
             sb.AppendLine($"Captures Successful: {data.fieldOps.capturesSuccessful}");
             sb.AppendLine($"Rare Found: {data.fieldOps.rareBitlingsFound}");
-            sb.AppendLine($"Shiny Discoveries: {data.fieldOps.shinyDiscoveries}");
+            sb.AppendLine($"Premium Discoveries: {data.fieldOps.premiumDiscoveries}");
             sb.AppendLine($"Longest Streak: {data.fieldOps.longestCaptureStreak}");
             sb.AppendLine($"Current Streak: {data.fieldOps.currentCaptureStreak}");
         }

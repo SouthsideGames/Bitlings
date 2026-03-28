@@ -12,27 +12,27 @@ using Random = UnityEngine.Random;
 public partial class EncounterManager : MonoBehaviour
 {
     // ─────────────────────────────────────────────────────────────
-    // Shiny Encounter State
+    // Premium Encounter State
     // ─────────────────────────────────────────────────────────────
 
-    [Header("Shiny Encounters")]
-    [Tooltip("Baseline chance for a wild encounter to spawn shiny when no Shiny Orb boost is active.")]
-    [SerializeField, Range(0f, 1f)] private float baseWildShinyChance = 0.01f;
+    [Header("Premium Encounters")]
+    [Tooltip("Baseline chance for a wild encounter to spawn premium when no Premium Orb boost is active.")]
+    [SerializeField, Range(0f, 1f)] private float baseWildPremiumChance = 0.01f;
 
-    private bool _currentWildIsShiny = false;
-    public bool CurrentWildIsShiny => _currentWildIsShiny;
+    private bool _currentWildIsPremium = false;
+    public bool CurrentWildIsPremium => _currentWildIsPremium;
 
-    private bool RollWildShiny(MonsterDataSO wildDef)
+    private bool RollWildPremium(MonsterDataSO wildDef)
     {
         if (!wildDef) return false;
 
-        if (wildDef.shinyIcon == null) return false;
+        if (wildDef.premiumIcon == null) return false;
 
-        if (CurrentShinyBoost != null)
+        if (CurrentPremiumBoost != null)
             return true;
 
-        float mul = (WorldEventSystem.I != null) ? WorldEventSystem.I.GetWildShinyChanceMultiplier() : 1f;
-        float chance = Mathf.Clamp01(baseWildShinyChance * Mathf.Max(0f, mul));
+        float mul = (WorldEventSystem.I != null) ? WorldEventSystem.I.GetWildPremiumChanceMultiplier() : 1f;
+        float chance = Mathf.Clamp01(baseWildPremiumChance * Mathf.Max(0f, mul));
         return Random.value <= chance;
     }
     public static EncounterManager I { get; private set; }
@@ -107,7 +107,7 @@ public partial class EncounterManager : MonoBehaviour
     private TitleSO _wildRolledTitle = null;
     private readonly List<TitleSO> _wildActiveTitles = new List<TitleSO>(8);
     private string _wildTitleLabel = null;
-    private bool _lastWildWasShiny = false;
+    private bool _lastWildWasPremium = false;
 
     public string WildCombatId => _wildCombatId;
     public TitleSO WildRolledTitle => _wildRolledTitle;
@@ -412,8 +412,8 @@ public partial class EncounterManager : MonoBehaviour
 
         ResolveWildTitles(wild, wildLevel);
 
-        _currentWildIsShiny = RollWildShiny(wild);
-        string wildName = MonsterNameFormatter.Format(wild, _currentWildIsShiny);
+        _currentWildIsPremium = RollWildPremium(wild);
+        string wildName = MonsterNameFormatter.Format(wild, _currentWildIsPremium);
 
 
         EncounterPanelUI.I?.OnWildSpawned(wild);

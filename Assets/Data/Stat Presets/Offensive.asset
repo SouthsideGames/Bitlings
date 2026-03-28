@@ -13,8 +13,8 @@ MonoBehaviour:
   m_Name: Offensive
   m_EditorClassIdentifier: 
   bucketId: Offense
-  description: Prioritizes raw damage output. Strong focus on ATK gains with minimal
-    emphasis on HP, DEF, or SPD.
+  description: Prioritizes offensive output, favoring attack growth with minimal
+    investment in other attributes.
   picksPerLevel: 3
   allowDuplicatePicks: 1
   hpWeight: 1

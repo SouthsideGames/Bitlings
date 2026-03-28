@@ -10,16 +10,17 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 3b3551d34f5488948a8cd10af9b64480, type: 3}
-  m_Name: ExchangeRequest_EmergencyElectricStaffing
+  m_Name: EX-004
   m_EditorClassIdentifier: Assembly-CSharp::ExchangeRequestSO
-  requestId: req_emergency_electric_staffing
-  displayName: Emergency Electric Staffing
-  flavorText: Contractors are accepting any Electric Bitling to reinforce active
-    generator sites.
+  requestId: EX-004
+  displayName: Reservior Assignment
+  flavorText: Reservoir crews are requesting a Water Bitling to maintain pressure
+    and flow stability.
   requiredSpecies: {fileID: 0}
-  requiredType: 4
+  requiredRandomSpeciesType: 0
+  requiredType: 2
   requiredMinRarity: 0
-  creditReward: 110
+  creditReward: 105
   bonusResourceType: 0
   bonusResourceAmount: 0
   weight: 4

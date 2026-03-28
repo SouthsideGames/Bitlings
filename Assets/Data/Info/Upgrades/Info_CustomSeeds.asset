@@ -16,8 +16,5 @@ MonoBehaviour:
   category: 5
   title: Custom Seeds
   subtitle: Controlled Runs
-  body: 'Allows manual input of custom seeds.
-
-
-    Custom Seeds let you replay specific
-    run conditions or share unique challenges with others.'
+  body: Unlocks manual entry of custom seeds, allowing specific run conditions to
+    be recreated and shared.

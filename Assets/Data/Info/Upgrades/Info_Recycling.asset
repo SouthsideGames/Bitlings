@@ -16,10 +16,5 @@ MonoBehaviour:
   category: 5
   title: Resource Recycling
   subtitle: Convert Unused Resources
-  body: 'Unlocks the Resource Recycling system.
-
-
-
-    Unused or excess resources
-    can now be recycled into more useful materials. This allows you to recover value
-    from surplus items and keep your resource economy efficient.'
+  body: Unlocks the Resource Recycling system, allowing excess resources to be converted
+    into more useful materials for improved efficiency.

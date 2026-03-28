@@ -64,7 +64,7 @@ public class IdleBattleManager : MonoBehaviour
         if (s == null) return;
 
         s.capturedLog ??= new List<IdleEncounterLogEntry>();
-        AddToLogMerged(s.capturedLog, monsterId, credits: 0, shiny: false);
+        AddToLogMerged(s.capturedLog, monsterId, credits: 0, premium: false);
         TrimLog(s.capturedLog, config != null ? config.encounterLogMaxEntries : 50);
 
         TrySetBoolFieldIfPresent(s, "hasPendingSummary", true);
@@ -84,7 +84,7 @@ public class IdleBattleManager : MonoBehaviour
 
         if (r.wildDef == null || string.IsNullOrEmpty(r.wildDef.id)) return;
 
-        AddToLogMerged(s.log, r.wildDef.id, r.creditsGained, shiny: false);
+        AddToLogMerged(s.log, r.wildDef.id, r.creditsGained, premium: false);
         TrimLog(s.log, config != null ? config.encounterLogMaxEntries : 50);
 
         try
@@ -455,7 +455,7 @@ int canRun = Mathf.FloorToInt(dt / config.secondsPerEncounter);
             if (wild == null) continue;
 
             int wildLevel = RollWildLevel();
-            bool shiny = RollShiny(wild, rng);
+            bool premium = RollPremium(wild, rng);
             int avgLv = GetAverageTeamLevel();
 
             string leadId = (teamIds.Count > 0) ? teamIds[0] : null;
@@ -525,7 +525,7 @@ int canRun = Mathf.FloorToInt(dt / config.secondsPerEncounter);
             {
                 wildDef = wild,
                 wildLevel = wildLevel,
-                shiny = shiny,
+                premium = premium,
                 victory = hb.victory,
                 creditsBase = creditsBase,
                 capture = captured
@@ -568,18 +568,18 @@ int canRun = Mathf.FloorToInt(dt / config.secondsPerEncounter);
                 catch { awarded = 0; }
             }
 
-            AddToLogMerged(s.log, p.wildDef.id, awarded, p.shiny);
+            AddToLogMerged(s.log, p.wildDef.id, awarded, p.premium);
 
             if (p.victory && p.capture && IsOfflineCaptureUnlocked() && p.wildDef != null && !p.wildDef.uncatchable)
             {
                 bool applied = false;
-                try { applied = ApplyIdleCaptureToSave(p.wildDef, p.wildLevel, isShiny: p.shiny); }
+                try { applied = ApplyIdleCaptureToSave(p.wildDef, p.wildLevel, isPremium: p.premium); }
                 catch { applied = false; }
 
                 if (applied)
                 {
                     s.capturedLog ??= new List<IdleEncounterLogEntry>();
-                    AddToLogMerged(s.capturedLog, p.wildDef.id, credits: 0, shiny: p.shiny);
+                    AddToLogMerged(s.capturedLog, p.wildDef.id, credits: 0, premium: p.premium);
                     TrimLog(s.capturedLog, config != null ? config.encounterLogMaxEntries : 50);
                 }
             }
@@ -623,7 +623,7 @@ int canRun = Mathf.FloorToInt(dt / config.secondsPerEncounter);
     {
         public MonsterDataSO wildDef;
         public int wildLevel;
-        public bool shiny;
+        public bool premium;
         public bool victory;
         public int creditsBase;
         public bool capture;
@@ -752,13 +752,13 @@ int canRun = Mathf.FloorToInt(dt / config.secondsPerEncounter);
         return Mathf.Clamp(avg + UnityEngine.Random.Range(-1, 2), 1, 99);
     }
 
-    private static bool RollShiny(MonsterDataSO wild, System.Random rng)
+    private static bool RollPremium(MonsterDataSO wild, System.Random rng)
     {
         const int baseOdds = 512;   
         const float maxMult = 8f;  
         float mult = 1f;
 
-        var list = SaveManager.Data?.activeShinyBoosts;
+        var list = SaveManager.Data?.activePremiumBoosts;
         if (list != null && list.Count > 0)
         {
             var cur = list[0];
@@ -819,7 +819,7 @@ int canRun = Mathf.FloorToInt(dt / config.secondsPerEncounter);
         return Mathf.Clamp01(Mathf.Lerp(0.15f, 0.65f, t));
     }
 
-    private static bool ApplyIdleCaptureToSave(MonsterDataSO def, int level, bool isShiny)
+    private static bool ApplyIdleCaptureToSave(MonsterDataSO def, int level, bool isPremium)
     {
         if (def == null) return false;
         if (SaveManager.Data == null) return false;
@@ -830,14 +830,14 @@ int canRun = Mathf.FloorToInt(dt / config.secondsPerEncounter);
         var data = SaveManager.Data;
         data.owned ??= new List<OwnedMonsterData>();
 
-        // Match variants: same monsterId + shiny flag.
+        // Match variants: same monsterId + premium flag.
         OwnedMonsterData existing = null;
         for (int i = 0; i < data.owned.Count; i++)
         {
             var om = data.owned[i];
             if (om == null) continue;
             if (!string.Equals(om.monsterId, def.id, StringComparison.OrdinalIgnoreCase)) continue;
-            if (om.isShiny != isShiny) continue;
+            if (om.isPremium != isPremium) continue;
             existing = om;
             break;
         }
@@ -857,8 +857,8 @@ int canRun = Mathf.FloorToInt(dt / config.secondsPerEncounter);
                 currentHP = Mathf.Max(0, startHP),
                 lastHPUnix = 0,
                 ownedUID = System.Guid.NewGuid().ToString("N"),
-                isShiny = isShiny,
-                shinyTier = isShiny ? 1 : 0
+                isPremium = isPremium,
+                premiumTier = isPremium ? 1 : 0
             };
 
             data.owned.Add(om);
@@ -908,7 +908,7 @@ int canRun = Mathf.FloorToInt(dt / config.secondsPerEncounter);
         return true;
     }
 
-    private static void AddToLogMerged(List<IdleEncounterLogEntry> log, string monsterId, int credits, bool shiny)
+    private static void AddToLogMerged(List<IdleEncounterLogEntry> log, string monsterId, int credits, bool premium)
     {
         if (log == null) return;
 
@@ -920,14 +920,14 @@ int canRun = Mathf.FloorToInt(dt / config.secondsPerEncounter);
                 monsterId = monsterId,
                 count = 0,
                 credits = 0,
-                shinySeen = false
+                premiumSeen = false
             };
             log.Add(e);
         }
 
         e.count += 1;
         e.credits += Mathf.Max(0, credits);
-        e.shinySeen |= shiny;
+        e.premiumSeen |= premium;
     }
 
     private static void TrimLog(List<IdleEncounterLogEntry> log, int max)
@@ -990,7 +990,7 @@ int canRun = Mathf.FloorToInt(dt / config.secondsPerEncounter);
                     monsterId = e.monsterId,
                     count = e.count,
                     credits = e.credits,
-                    shinySeen = e.shinySeen
+                    premiumSeen = e.premiumSeen
                 });
             }
         }
@@ -1004,7 +1004,7 @@ int canRun = Mathf.FloorToInt(dt / config.secondsPerEncounter);
                     monsterId = e.monsterId,
                     count = e.count,
                     credits = e.credits,
-                    shinySeen = e.shinySeen
+                    premiumSeen = e.premiumSeen
                 });
             }
         }

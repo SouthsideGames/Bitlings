@@ -37,7 +37,7 @@ public enum FeatureId
     Exchange_MarketForecast = 24,  // Show tomorrow's demand prediction per species
     Exchange_LicensedBroker_T1 = 25, // Reduce broker cut from 15% to 10%
     Exchange_LicensedBroker_T2 = 26, // Reduce broker cut from 10% to 5%
-    Exchange_ShinyAppraiser = 27,    // Increase shiny multiplier payout
+    Exchange_PremiumAppraiser = 27,    // Increase premium multiplier payout
 
 
     // ─────────────────────────────────────────────────────────────

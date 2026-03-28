@@ -16,7 +16,5 @@ MonoBehaviour:
   category: 5
   title: World Events
   subtitle: Weekly Global Modifiers
-  body: "Unlocks weekly World Events.\r\n\r\nEvery Monday, a new global event is
-    selected. \r\nEvents can modify Job Sites, Encounters, or shop prices \u2014
-    or simply display world news.\r\n\r\nOnly one event is active at a time.\r\nThe
-    first week after unlocking is neutral."
+  body: Unlocks weekly World Events, introducing rotating global conditions that
+    influence job sites, encounters, and market activity.

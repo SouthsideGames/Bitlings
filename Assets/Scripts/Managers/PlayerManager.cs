@@ -28,8 +28,8 @@ public class OwnedMonsterData
     public int pendingLevels = 0;
     public int lastLevelClaimDay = -1;
     public string ownedUID;
-    public bool isShiny = false;
-    public int shinyTier = 0;
+    public bool isPremium = false;
+    public int premiumTier = 0;
     public TrainingBonus trainingBonus = new TrainingBonus();
     public bool autoApply = false;
     public int autoApplyTargetLevel = 0;
@@ -77,7 +77,7 @@ public class JobStorageUpgrade
 }
 
 [Serializable]
-public class ShinyBoostData
+public class PremiumBoostData
 {
     public float bonus;
     public long expireUnix;
@@ -90,7 +90,7 @@ public class FieldOpsStats
     public int captureAttempts;       
     public int capturesSuccessful;       
     public int rareBitlingsFound;      
-    public int shinyDiscoveries;       
+    public int premiumDiscoveries;       
     public int riftStabilizations;    
     public int longestCaptureStreak;    
     public int currentCaptureStreak;     
@@ -120,7 +120,7 @@ public class PlayerManager
     public List<JobGlobalMod> activeJobMods = new List<JobGlobalMod>();
     public List<LuckBoostData> activeFavorBoosts = new List<LuckBoostData>();
     public List<JobStorageUpgrade> jobStorageUpgrades = new List<JobStorageUpgrade>();
-    public List<ShinyBoostData> activeShinyBoosts = new List<ShinyBoostData>();
+    public List<PremiumBoostData> activePremiumBoosts = new List<PremiumBoostData>();
     public List<PreferredVariantKV> preferredVariants = new();
     public FieldOpsStats fieldOps = new FieldOpsStats();
 
@@ -163,7 +163,7 @@ public class PlayerManager
     public int lastDailyClaimDayIndex = -1;
     public int cheatInvalidAttempts;
     public long cheatLockedUntilUnix;
-    public int forceShinyCapturesRemaining = 0;
+    public int forcePremiumCapturesRemaining = 0;
     public string trainingMonsterId = null;
     public int trainingMonsterLevel = 0;
     public int pendingIdleXP = 0;
@@ -254,7 +254,7 @@ public class PlayerManager
         activeFlyers ??= new List<FlyerBiasData>();
         activeWorkOrders ??= new List<WorkOrderData>();
         activeFavorBoosts ??= new List<LuckBoostData>();
-        activeShinyBoosts ??= new List<ShinyBoostData>();
+        activePremiumBoosts ??= new List<PremiumBoostData>();
         jobStorageUpgrades ??= new List<JobStorageUpgrade>();
         team ??= new List<OwnedMonsterData>();
         owned ??= new List<OwnedMonsterData>();
@@ -284,11 +284,11 @@ public class PlayerManager
                     team[i].ownedUID = Guid.NewGuid().ToString("N");
         }
 
-        // Expired shiny boosts cleanup (keeps existing behavior)
-        if (activeShinyBoosts.Count > 0 && activeShinyBoosts[0] != null &&
-            activeShinyBoosts[0].expireUnix <= SaveManager.NowUnix())
+        // Expired premium boosts cleanup (keeps existing behavior)
+        if (activePremiumBoosts.Count > 0 && activePremiumBoosts[0] != null &&
+            activePremiumBoosts[0].expireUnix <= SaveManager.NowUnix())
         {
-            activeShinyBoosts.Clear();
+            activePremiumBoosts.Clear();
         }
     }
 

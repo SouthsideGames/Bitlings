@@ -110,10 +110,10 @@ public sealed class JobManager : MonoBehaviour
     [Header("Collection")]
     [SerializeField] private bool enableAutoCollect = false;
 
-    [Header("Shiny Team Bonus (pre-fatigue)")]
-    [SerializeField] private float shiny1Bonus = 0.03f;
-    [SerializeField] private float shiny2Bonus = 0.07f;
-    [SerializeField] private float shiny3Bonus = 0.12f;
+    [Header("Premium Team Bonus (pre-fatigue)")]
+    [SerializeField] private float premium1Bonus = 0.03f;
+    [SerializeField] private float premium2Bonus = 0.07f;
+    [SerializeField] private float premium3Bonus = 0.12f;
 
     [Header("Starter Fallback Unlocks")]
     [SerializeField] private bool enableStarterDefaultSitesFallback = true;
@@ -658,11 +658,11 @@ private static float AverageWorkingSlotFatigue(JobSiteState s)
         if (auraDict != null) auraDict.TryGetValue(s.config.jobType, out auraPct);
         if (auraPct > 0f) perHour *= (1f + auraPct);
 
-        float shinyAura = ShinySystems.SiteShinyAuraMult(s.workers);
-        int shinyCount = CountShinies(s.workers);
-        float shinySet = 1f + (shinyCount >= 3 ? shiny3Bonus : (shinyCount == 2 ? shiny2Bonus : (shinyCount == 1 ? shiny1Bonus : 0f)));
+        float premiumAura = PremiumSystems.SitePremiumAuraMult(s.workers);
+        int premiumCount = CountPremiums(s.workers);
+        float premiumSet = 1f + (premiumCount >= 3 ? premium3Bonus : (premiumCount == 2 ? premium2Bonus : (premiumCount == 1 ? premium1Bonus : 0f)));
 
-        float finalPerHour = perHour * shinyAura * shinySet;
+        float finalPerHour = perHour * premiumAura * premiumSet;
 
         // Global tuning knob (economy lever). Safe no-op if GameBalance asset is missing.
         if (GameBalance.TryGet(out var bal))
@@ -1789,15 +1789,15 @@ private static float AverageWorkingSlotFatigue(JobSiteState s)
         return 1;
     }
 
-    private static int CountShinies(List<WorkerRef> workers)
+    private static int CountPremiums(List<WorkerRef> workers)
     {
         if (workers == null || workers.Count == 0) return 0;
         int c = 0;
-        for (int i = 0; i < workers.Count; i++) if (IsWorkerShiny(workers[i])) c++;
+        for (int i = 0; i < workers.Count; i++) if (IsWorkerPremium(workers[i])) c++;
         return c;
     }
 
-    private static bool IsWorkerShiny(WorkerRef w)
+    private static bool IsWorkerPremium(WorkerRef w)
     {
         if (w == null) return false;
 
@@ -1814,8 +1814,8 @@ private static float AverageWorkingSlotFatigue(JobSiteState s)
                 var om = ownedList[i];
                 if (om == null) continue;
 
-                if (!string.IsNullOrEmpty(uid) && om.ownedUID == uid) return om.isShiny;
-                if (!string.IsNullOrEmpty(mid) && om.monsterId == mid) return om.isShiny;
+                if (!string.IsNullOrEmpty(uid) && om.ownedUID == uid) return om.isPremium;
+                if (!string.IsNullOrEmpty(mid) && om.monsterId == mid) return om.isPremium;
             }
         }
 
@@ -1827,8 +1827,8 @@ private static float AverageWorkingSlotFatigue(JobSiteState s)
                 var tm = team[i];
                 if (tm == null) continue;
 
-                if (!string.IsNullOrEmpty(uid) && tm.ownedUID == uid) return tm.isShiny;
-                if (!string.IsNullOrEmpty(mid) && tm.monsterId == mid) return tm.isShiny;
+                if (!string.IsNullOrEmpty(uid) && tm.ownedUID == uid) return tm.isPremium;
+                if (!string.IsNullOrEmpty(mid) && tm.monsterId == mid) return tm.isPremium;
             }
         }
 
@@ -1837,10 +1837,10 @@ private static float AverageWorkingSlotFatigue(JobSiteState s)
         if (!def) return false;
         try
         {
-            var f = def.GetType().GetField("isShiny");
+            var f = def.GetType().GetField("isPremium");
             if (f != null && f.FieldType == typeof(bool)) return (bool)f.GetValue(def);
 
-            var p = def.GetType().GetProperty("IsShiny");
+            var p = def.GetType().GetProperty("IsPremium");
             if (p != null && p.PropertyType == typeof(bool)) return (bool)p.GetValue(def, null);
         }
         catch { }

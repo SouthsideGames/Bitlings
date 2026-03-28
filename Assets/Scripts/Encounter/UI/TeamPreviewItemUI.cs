@@ -111,13 +111,13 @@ public class TeamPreviewItemUI : MonoBehaviour
                 {
                     if (def != null)
                     {
-                        bool preferShiny = false;
+                        bool preferPremium = false;
                         if (def != null && !string.IsNullOrEmpty(def.id))
-                            preferShiny = MonsterVariantPreference.IsPreferredShiny(def.id);
+                            preferPremium = MonsterVariantPreference.IsPreferredPremium(def.id);
                         else
-                            preferShiny = om != null && (om.isShiny || om.shinyTier > 0);
+                            preferPremium = om != null && (om.isPremium || om.premiumTier > 0);
 
-                        var s = MonsterNameFormatter.GetIcon(def, preferShiny, backIcon: false);
+                        var s = MonsterNameFormatter.GetIcon(def, preferPremium, backIcon: false);
                         icon.enabled = s != null;
                         icon.sprite = s;
                         icon.color = Color.white;
@@ -129,11 +129,11 @@ public class TeamPreviewItemUI : MonoBehaviour
                     }
                 }
 
-                // Name (shiny-aware formatting)
+                // Name (premium-aware formatting)
                 if (nameText)
                 {
                     if (def != null)
-                        nameText.text = MonsterNameFormatter.Format(def, om.isShiny);
+                        nameText.text = MonsterNameFormatter.Format(def, om.isPremium);
                     else
                         nameText.text = om.monsterId;
                 }

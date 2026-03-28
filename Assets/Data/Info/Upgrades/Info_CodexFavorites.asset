@@ -16,9 +16,5 @@ MonoBehaviour:
   category: 5
   title: Directory Favorites
   subtitle: Quick Access Sorting
-  body: 'Unlocks the ability to favorite monsters in the Directory.
-
-
-
-    Favorited
-    Bitlings can be pinned and sorted for faster access and easier roster management.'
+  body: Unlocks the ability to mark Bitlings as favorites in the Directory, allowing
+    them to be pinned and organized for easier access.

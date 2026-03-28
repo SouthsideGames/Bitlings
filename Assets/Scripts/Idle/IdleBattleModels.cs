@@ -7,7 +7,7 @@ public class IdleEncounterLogEntry
     public string monsterId;
     public int count;
     public int credits;
-    public bool shinySeen;
+    public bool premiumSeen;
 }
 
 [Serializable]

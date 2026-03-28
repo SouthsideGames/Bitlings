@@ -16,10 +16,5 @@ MonoBehaviour:
   category: 5
   title: Growth Presets
   subtitle: Smart Auto Allocation
-  body: 'Allows Auto Growth to use saved stat presets.
-
-
-
-    Growth Cores will be
-    distributed according to your preferred stat buckets, maintaining optimized builds
-    automatically.'
+  body: Allows Auto Growth to follow saved stat presets, distributing Growth Cores
+    according to preferred stat priorities.

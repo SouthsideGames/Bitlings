@@ -16,10 +16,5 @@ MonoBehaviour:
   category: 5
   title: Offline Captures
   subtitle: Passive Monster Acquisition
-  body: 'Unlocks the ability to capture monsters during Idle Battles.
-
-
-
-    Bitlings
-    encountered while idle now have a chance to be captured automatically, expanding
-    your roster without active play.'
+  body: Unlocks automatic capture during Idle Battles, allowing encountered Bitlings
+    to be added to the roster over time.

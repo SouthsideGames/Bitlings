@@ -41,8 +41,8 @@ public interface IBattleContext
     BattleRules Rules { get; }
     void OnBattleResolved(IronBattleOutcome outcome);
 
-    /// <summary>True if the wild combatant for this Iron battle was shiny-rolled.</summary>
-    bool IronWildIsShiny { get; }
+    /// <summary>True if the wild combatant for this Iron battle was premium-rolled.</summary>
+    bool IronWildIsPremium { get; }
 }
 
 public interface IBattleRosterProvider
@@ -102,7 +102,7 @@ public struct IronBattleOutcome
     public int growthCoresBase;
     public int growthCoresTitleBonus;
 
-    public bool wildWasShiny;
+    public bool wildWasPremium;
 
     public float[] teamHP;
     public float[] teamMaxHP;

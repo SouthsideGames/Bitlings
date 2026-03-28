@@ -13,7 +13,7 @@ public enum OwnedSortMode
     ByType,
     ByLevelLowToHigh,
     ByLevelHighToLow,
-    ShinyMonsters,
+    PremiumMonsters,
     BitlingPack
 }
 
@@ -185,7 +185,7 @@ public class DirectoryPanelUI : MonoBehaviour
             case OwnedSortMode.ByType: return "Type";
             case OwnedSortMode.ByLevelLowToHigh: return "Level ↑";
             case OwnedSortMode.ByLevelHighToLow: return "Level ↓";
-            case OwnedSortMode.ShinyMonsters: return "Shiny First";
+            case OwnedSortMode.PremiumMonsters: return "Premium First";
             case OwnedSortMode.BitlingPack: return "Bitling Pack";
             default: return mode.ToString();
         }
@@ -384,29 +384,29 @@ public class DirectoryPanelUI : MonoBehaviour
         if (data == null)
             return;
 
-        // Build "best owned per monsterId" dictionaries (normal + shiny).
+        // Build "best owned per monsterId" dictionaries (normal + premium).
         var ownedById = new Dictionary<string, OwnedMonsterData>(StringComparer.Ordinal);
         var normalById = new Dictionary<string, OwnedMonsterData>(StringComparer.Ordinal);
-        var shinyById = new Dictionary<string, OwnedMonsterData>(StringComparer.Ordinal);
+        var premiumById = new Dictionary<string, OwnedMonsterData>(StringComparer.Ordinal);
 
 
         // Team-aware variant preference: if a monster is on the active team, we want the Directory row
-        // to reflect that exact instance (especially Shiny) so the UI is consistent.
+        // to reflect that exact instance (especially Premium) so the UI is consistent.
         var teamNormalById = new Dictionary<string, OwnedMonsterData>(StringComparer.Ordinal);
-        var teamShinyById  = new Dictionary<string, OwnedMonsterData>(StringComparer.Ordinal);
+        var teamPremiumById  = new Dictionary<string, OwnedMonsterData>(StringComparer.Ordinal);
 
         void Consider(OwnedMonsterData om)
         {
             if (om == null || string.IsNullOrEmpty(om.monsterId)) return;
-            bool shiny = om.isShiny || om.shinyTier > 0;
+            bool premium = om.isPremium || om.premiumTier > 0;
 
             if (!ownedById.TryGetValue(om.monsterId, out var existingAny) || (existingAny != null && om.level > existingAny.level))
                 ownedById[om.monsterId] = om;
 
-            if (shiny)
+            if (premium)
             {
-                if (!shinyById.TryGetValue(om.monsterId, out var existingShiny) || (existingShiny != null && om.level > existingShiny.level))
-                    shinyById[om.monsterId] = om;
+                if (!premiumById.TryGetValue(om.monsterId, out var existingPremium) || (existingPremium != null && om.level > existingPremium.level))
+                    premiumById[om.monsterId] = om;
             }
             else
             {
@@ -429,11 +429,11 @@ public class DirectoryPanelUI : MonoBehaviour
 
                 Consider(t);
 
-                bool shiny = t.isShiny || t.shinyTier > 0;
-                if (shiny)
+                bool premium = t.isPremium || t.premiumTier > 0;
+                if (premium)
                 {
-                    if (!teamShinyById.TryGetValue(t.monsterId, out var existing) || (existing != null && t.level > existing.level))
-                        teamShinyById[t.monsterId] = t;
+                    if (!teamPremiumById.TryGetValue(t.monsterId, out var existing) || (existing != null && t.level > existing.level))
+                        teamPremiumById[t.monsterId] = t;
                 }
                 else
                 {
@@ -461,7 +461,7 @@ public class DirectoryPanelUI : MonoBehaviour
                 return;
         }
 
-        var sortedDefs = SortDefs(defs, sortMode, ownedById, shinyById);
+        var sortedDefs = SortDefs(defs, sortMode, ownedById, premiumById);
 
         var spawnedItems = new List<OwnedMonsterListItemUI>();
 
@@ -471,19 +471,19 @@ public class DirectoryPanelUI : MonoBehaviour
 
             OwnedMonsterData ownedData = null;
             OwnedMonsterData normalData = null;
-            OwnedMonsterData shinyData = null;
+            OwnedMonsterData premiumData = null;
 
             bool capturedReal = ownedById.TryGetValue(def.id, out ownedData);
             normalById.TryGetValue(def.id, out normalData);
-            shinyById.TryGetValue(def.id, out shinyData);
+            premiumById.TryGetValue(def.id, out premiumData);
 
             OwnedMonsterData displayOwned = ownedData;
 
             // If this monster is currently on the team, force the Directory row to reflect that team instance.
-            // This keeps icon + name consistent between the Team strip and the Owned list (especially for Shiny).
-            if (teamShinyById.TryGetValue(def.id, out var teamShiny) && teamShiny != null)
+            // This keeps icon + name consistent between the Team strip and the Owned list (especially for Premium).
+            if (teamPremiumById.TryGetValue(def.id, out var teamPremium) && teamPremium != null)
             {
-                displayOwned = teamShiny;
+                displayOwned = teamPremium;
             }
             else if (teamNormalById.TryGetValue(def.id, out var teamNormal) && teamNormal != null)
             {
@@ -491,17 +491,17 @@ public class DirectoryPanelUI : MonoBehaviour
             }
             else
             {
-                if (shinyData != null && normalData == null)
+                if (premiumData != null && normalData == null)
                 {
-                    displayOwned = shinyData;
+                    displayOwned = premiumData;
                 }
-                else if (shinyData != null && normalData != null)
+                else if (premiumData != null && normalData != null)
                 {
-                    bool preferShiny = (data.settings != null &&
-                                       data.settings.directoryPreferShinyIds != null &&
-                                       data.settings.directoryPreferShinyIds != null &&
-                                       data.settings.directoryPreferShinyIds.Contains(def.id));
-                    displayOwned = preferShiny ? shinyData : normalData;
+                    bool preferPremium = (data.settings != null &&
+                                       data.settings.directoryPreferPremiumIds != null &&
+                                       data.settings.directoryPreferPremiumIds != null &&
+                                       data.settings.directoryPreferPremiumIds.Contains(def.id));
+                    displayOwned = preferPremium ? premiumData : normalData;
                 }
                 else if (normalData != null)
                 {
@@ -647,7 +647,7 @@ public class DirectoryPanelUI : MonoBehaviour
         List<MonsterDataSO> defs,
         OwnedSortMode mode,
         Dictionary<string, OwnedMonsterData> ownedById,
-        Dictionary<string, OwnedMonsterData> shinyById)
+        Dictionary<string, OwnedMonsterData> premiumById)
     {
         IEnumerable<MonsterDataSO> query = defs;
 
@@ -691,9 +691,9 @@ public class DirectoryPanelUI : MonoBehaviour
                     .ThenBy(d => SafeName(d));
                 break;
 
-            case OwnedSortMode.ShinyMonsters:
+            case OwnedSortMode.PremiumMonsters:
                 query = defs
-                    .OrderByDescending(d => d && shinyById != null && shinyById.ContainsKey(d.id))
+                    .OrderByDescending(d => d && premiumById != null && premiumById.ContainsKey(d.id))
                     .ThenByDescending(d => GetOwnedLevel(d, ownedById))
                     .ThenBy(d => SafeName(d))
                     .ThenBy(d => d ? d.id : string.Empty);

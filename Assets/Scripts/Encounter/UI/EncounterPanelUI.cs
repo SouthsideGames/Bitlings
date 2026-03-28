@@ -40,12 +40,12 @@ public class EncounterPanelUI : MonoBehaviour
     [SerializeField] private Image flyerIcon;
     [SerializeField] private TextMeshProUGUI flyerTypeLabel; // shows type name only
 
-    [Header("Shiny Boost (shows timer under icon)")]
-    [SerializeField] private GameObject shinyRoot;
-    [SerializeField] private Button shinyButton;
-    [SerializeField] private TooltipTrigger shinyTooltip;
-    [SerializeField] private Image shinyIcon;
-    [SerializeField] private TextMeshProUGUI shinyTimerLabel;
+    [Header("Premium Boost (shows timer under icon)")]
+    [SerializeField] private GameObject premiumRoot;
+    [SerializeField] private Button premiumButton;
+    [SerializeField] private TooltipTrigger premiumTooltip;
+    [SerializeField] private Image premiumIcon;
+    [SerializeField] private TextMeshProUGUI premiumTimerLabel;
 
     [Header("Capture Boost (shows timer under icon)")]
     [SerializeField] private GameObject captureRoot;
@@ -69,7 +69,7 @@ public class EncounterPanelUI : MonoBehaviour
     [SerializeField, Min(1.01f)] private float pulseScale = 1.08f;
     [SerializeField, Min(0.05f)] private float pulseTime = 0.25f;
 
-    private int _shinyPulseTweenId = -1;
+    private int _premiumPulseTweenId = -1;
     private int _capturePulseTweenId = -1;
     private int _favorPulseTweenId = -1;
 
@@ -164,7 +164,7 @@ public class EncounterPanelUI : MonoBehaviour
 
     private MonsterDataSO _pendingHireDef;
     private int _pendingHireLevel;
-    private bool _pendingHireIsShiny;
+    private bool _pendingHireIsPremium;
 
     private bool _hireChoseYes;
     private bool _hireCaptureSucceeded;
@@ -228,7 +228,7 @@ public class EncounterPanelUI : MonoBehaviour
             hireButtonsRoot.SetActive(true);
 
         SetBoostRootActive(flyerRoot, false);
-        SetBoostRootActive(shinyRoot, false);
+        SetBoostRootActive(premiumRoot, false);
         SetBoostRootActive(captureRoot, false);
         SetBoostRootActive(favorRoot, false);
 
@@ -255,7 +255,7 @@ public class EncounterPanelUI : MonoBehaviour
 
         EnsureTooltipTrigger(energyInfoButton, ref energyTooltip);
         EnsureTooltipTrigger(flyerButton, ref flyerTooltip);
-        EnsureTooltipTrigger(shinyButton, ref shinyTooltip);
+        EnsureTooltipTrigger(premiumButton, ref premiumTooltip);
         EnsureTooltipTrigger(captureButton, ref captureTooltip);
         EnsureTooltipTrigger(favorButton, ref favorTooltip);
         EnsureTooltipTrigger(blinderDifficultyInfoButton, ref blinderDifficultyTooltip);
@@ -347,7 +347,7 @@ public class EncounterPanelUI : MonoBehaviour
         if (_typewriterCo != null) StopCoroutine(_typewriterCo);
         _isFading = false;
 
-        StopPulse(ref _shinyPulseTweenId, shinyTimerLabel);
+        StopPulse(ref _premiumPulseTweenId, premiumTimerLabel);
         StopPulse(ref _capturePulseTweenId, captureTimerLabel);
         StopPulse(ref _favorPulseTweenId, favorTimerLabel);
     }
@@ -578,28 +578,28 @@ public class EncounterPanelUI : MonoBehaviour
             ClearTooltip(flyerTooltip);
         }
 
-        long shinyRem = GetShinySecondsRemaining();
-        bool shinyActive = shinyRem > 0;
+        long premiumRem = GetPremiumSecondsRemaining();
+        bool premiumActive = premiumRem > 0;
 
-        SetBoostRootActive(shinyRoot, shinyActive);
+        SetBoostRootActive(premiumRoot, premiumActive);
 
-        if (shinyActive)
+        if (premiumActive)
         {
-            if (shinyTimerLabel)
-                shinyTimerLabel.text = FormatHMS(shinyRem);
+            if (premiumTimerLabel)
+                premiumTimerLabel.text = FormatHMS(premiumRem);
 
-            ApplyTimerWarningFX(shinyRem, shinyTimerLabel, ref _shinyPulseTweenId);
+            ApplyTimerWarningFX(premiumRem, premiumTimerLabel, ref _premiumPulseTweenId);
 
             UpdateSimpleTimerTooltip(
-                shinyTooltip,
-                "Shiny Charm Active",
-                $"Time Remaining: {FormatHMS(shinyRem)}"
+                premiumTooltip,
+                "Premium Charm Active",
+                $"Time Remaining: {FormatHMS(premiumRem)}"
             );
         }
         else
         {
-            StopPulse(ref _shinyPulseTweenId, shinyTimerLabel);
-            ClearTooltip(shinyTooltip);
+            StopPulse(ref _premiumPulseTweenId, premiumTimerLabel);
+            ClearTooltip(premiumTooltip);
         }
 
         long captureRem = GetCaptureSecondsRemaining();
@@ -769,9 +769,9 @@ public class EncounterPanelUI : MonoBehaviour
             label.color = timerNormalColor;
     }
 
-    long GetShinySecondsRemaining()
+    long GetPremiumSecondsRemaining()
     {
-        var list = SaveManager.Data?.activeShinyBoosts;
+        var list = SaveManager.Data?.activePremiumBoosts;
         if (list == null || list.Count == 0) return -1;
 
         var cur = list[0];
@@ -1222,11 +1222,11 @@ if (target > 0.01f)
     // ─────────────────────────────────────────────────────────────
     public void ShowHireDecision(MonsterDataSO def, int level)
     {
-        bool shiny = EncounterManager.I != null && EncounterManager.I.CurrentWildIsShiny;
-        ShowHireDecision(def, level, shiny);
+        bool premium = EncounterManager.I != null && EncounterManager.I.CurrentWildIsPremium;
+        ShowHireDecision(def, level, premium);
     }
 
-    public void ShowHireDecision(MonsterDataSO def, int level, bool isShiny)
+    public void ShowHireDecision(MonsterDataSO def, int level, bool isPremium)
     {
         if (!hireDecisionRoot || def == null)
         {
@@ -1236,18 +1236,18 @@ if (target > 0.01f)
 
         _pendingHireDef = def;
         _pendingHireLevel = Mathf.Max(1, level);
-        _pendingHireIsShiny = isShiny;
+        _pendingHireIsPremium = isPremium;
 
         _hireChoseYes = false;
         _hireCaptureSucceeded = false;
         _hireDecisionLocked = false;
 
         if (hireMonsterIcon)
-            hireMonsterIcon.sprite = MonsterNameFormatter.GetIcon(def, _pendingHireIsShiny, backIcon: false);
+            hireMonsterIcon.sprite = MonsterNameFormatter.GetIcon(def, _pendingHireIsPremium, backIcon: false);
 
         if (hirePromptText)
         {
-            hirePromptText.text = BuildHireDecisionSummary(def, _pendingHireIsShiny);
+            hirePromptText.text = BuildHireDecisionSummary(def, _pendingHireIsPremium);
 
             var flash = hirePromptText.GetComponent<FlashingTMP>();
             if (flash) flash.enabled = false;
@@ -1265,12 +1265,12 @@ if (target > 0.01f)
         RefreshEncounterDifficultyPreview();
     }
 
-    string BuildHireDecisionSummary(MonsterDataSO def, bool isShiny)
+    string BuildHireDecisionSummary(MonsterDataSO def, bool isPremium)
     {
         if (def == null)
             return "Do you want to hire this Bitling?";
 
-        string name = MonsterNameFormatter.Format(def, isShiny);
+        string name = MonsterNameFormatter.Format(def, isPremium);
         int exchangeValue = ExchangeManager.I != null
             ? ExchangeManager.I.GetCurrentValue(def.id)
             : Mathf.Max(0, def.baseMarketValue);
@@ -1337,7 +1337,7 @@ if (target > 0.01f)
 
         _pendingHireDef = null;
         _pendingHireLevel = 0;
-        _pendingHireIsShiny = false;
+        _pendingHireIsPremium = false;
         _hireDecisionLocked = false;
 
         if (hireContinueButton) hireContinueButton.gameObject.SetActive(false);
@@ -1429,7 +1429,7 @@ if (target > 0.01f)
         if (!hirePromptText) return;
 
         string name = (_pendingHireDef != null)
-            ? MonsterNameFormatter.Format(_pendingHireDef, _pendingHireIsShiny)
+            ? MonsterNameFormatter.Format(_pendingHireDef, _pendingHireIsPremium)
             : "this monster";
 
         if (!choseYes)

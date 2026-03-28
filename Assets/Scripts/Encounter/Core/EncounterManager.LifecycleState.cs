@@ -32,7 +32,7 @@ public partial class EncounterManager
 
         SaveManager.LoadOrCreate();
         SaveManager.Data.EnsureTransientSets();
-        GlobalEffects.RecalcShinySynergy();
+        GlobalEffects.RecalcPremiumSynergy();
 
         ResetEncounterRuntimeFlags();
 

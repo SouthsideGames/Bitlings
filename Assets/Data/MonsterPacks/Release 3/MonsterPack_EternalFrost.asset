@@ -14,8 +14,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   id: MP-024
   displayName: Eternal Frost
-  description: Bound to ancient cold, these Ice and Oracle beings embody timeless
-    stillness. Their presence slows battles to a deliberate, unforgiving pace.
+  description: Ice and Oracle Bitlings maintain a calm and steady presence, slowing
+    engagements and reinforcing controlled, methodical play.
   icon: {fileID: 21300000, guid: ffc614e2329adc345853aa20e73bba1b, type: 3}
   rarityLabel: Epic
   baseCost: 35

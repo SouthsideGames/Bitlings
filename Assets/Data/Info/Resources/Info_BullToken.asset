@@ -16,6 +16,5 @@ MonoBehaviour:
   category: 1
   title: Bull Token
   subtitle: Drive the market up
-  body: Applies a temporary Bull effect to a selected species, increasing its value
-    growth and pushing its trend toward Rising. Best used before selling during upward
-    momentum.
+  body: Triggers a short-term surge for a selected Bitling, increasing its value
+    growth and pushing its market trend upward.

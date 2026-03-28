@@ -68,7 +68,7 @@ public partial class BattleManager : MonoBehaviour
             if (finalcredits < 0) finalcredits = 0;
         }
 
-        int growthCoreBaseAfterShiny = 0;
+        int growthCoreBaseAfterPremium = 0;
         int growthCoreTitleBonus = 0;
         int growthCoreTotal = 0;
 
@@ -80,22 +80,22 @@ public partial class BattleManager : MonoBehaviour
                 ? teamOwnedEffective[activeIndex]
                 : default;
 
-            float shinyMul = ShinySystems.TrainingXpMult(m);
-            int baseAfterShiny = Mathf.RoundToInt(baseCores * shinyMul);
-            growthCoreBaseAfterShiny = Mathf.Max(0, baseAfterShiny);
+            float premiumMul = PremiumSystems.TrainingXpMult(m);
+            int baseAfterPremium = Mathf.RoundToInt(baseCores * premiumMul);
+            growthCoreBaseAfterPremium = Mathf.Max(0, baseAfterPremium);
 
             float titleCoreMul = 1f;
             if (teamTitleIds != null && activeIndex >= 0 && activeIndex < teamTitleIds.Length)
                 titleCoreMul = Mathf.Max(0f, TitlesAdapter.GetGrowthCoreMultOnVictory(teamTitleIds[activeIndex], wildDef, wildLevel));
 
-            int growthCoreAfterTitles = Mathf.Max(0, Mathf.RoundToInt(baseAfterShiny * titleCoreMul));
+            int growthCoreAfterTitles = Mathf.Max(0, Mathf.RoundToInt(baseAfterPremium * titleCoreMul));
 
             float globalMul = 1f;
             if (GameBalance.TryGet(out var bal))
                 globalMul = Mathf.Max(0f, bal.xpGainMultiplier);
 
             growthCoreTotal = Mathf.Max(0, Mathf.RoundToInt(growthCoreAfterTitles * globalMul));
-            growthCoreTitleBonus = Mathf.Max(0, growthCoreAfterTitles - growthCoreBaseAfterShiny);
+            growthCoreTitleBonus = Mathf.Max(0, growthCoreAfterTitles - growthCoreBaseAfterPremium);
         }
 
         try
@@ -133,9 +133,9 @@ public partial class BattleManager : MonoBehaviour
             creditsBase = basecredits,
             creditsTitleBonus = creditTitleBonus,
             growthCoresGained = growthCoreTotal,
-            growthCoresBase = growthCoreBaseAfterShiny,
+            growthCoresBase = growthCoreBaseAfterPremium,
             growthCoresTitleBonus = growthCoreTitleBonus,
-            wildWasShiny = _battleContext?.IronWildIsShiny ?? false,
+            wildWasPremium = _battleContext?.IronWildIsPremium ?? false,
             teamHP = (teamHP != null) ? (float[])teamHP.Clone() : null,
             teamMaxHP = (teamMaxHP != null) ? (float[])teamMaxHP.Clone() : null,
             shieldHP = carryShield,
@@ -153,7 +153,7 @@ public partial class BattleManager : MonoBehaviour
             creditsTitleBonus = creditTitleBonus,
             creditsMultiplier = 1f,
             growthCoresGained = growthCoreTotal,
-            growthCoresBase = growthCoreBaseAfterShiny,
+            growthCoresBase = growthCoreBaseAfterPremium,
             growthCoresTitleBonus = growthCoreTitleBonus,
             activeMonsterOwnedId = null,
             wildDef = wildDef,
@@ -316,7 +316,7 @@ public partial class BattleManager : MonoBehaviour
         }
 
         int baseCores = Mathf.Max(1, 2 + wildLevel);
-        int growthCoreBaseAfterShiny = 0;
+        int growthCoreBaseAfterPremium = 0;
         int growthCoreTitleBonus = 0;
         int growthCoreTotal = 0;
 
@@ -328,15 +328,15 @@ public partial class BattleManager : MonoBehaviour
                 ? teamOwnedEffective[activeIndex]
                 : ((data != null && data.team != null && activeIndex >= 0 && activeIndex < data.team.Count) ? data.team[activeIndex] : default);
 
-            float shinyMul = ShinySystems.TrainingXpMult(m);
-            int baseAfterShiny = Mathf.RoundToInt(baseCores * shinyMul);
-            growthCoreBaseAfterShiny = Mathf.Max(0, baseAfterShiny);
+            float premiumMul = PremiumSystems.TrainingXpMult(m);
+            int baseAfterPremium = Mathf.RoundToInt(baseCores * premiumMul);
+            growthCoreBaseAfterPremium = Mathf.Max(0, baseAfterPremium);
 
             float titleCoreMul = 1f;
             if (teamTitleIds != null && activeIndex >= 0 && activeIndex < teamTitleIds.Length)
                 titleCoreMul = Mathf.Max(0f, TitlesAdapter.GetGrowthCoreMultOnVictory(teamTitleIds[activeIndex], wildDef, wildLevel));
 
-            int growthCoreAfterTitles = Mathf.Max(0, Mathf.RoundToInt(baseAfterShiny * titleCoreMul));
+            int growthCoreAfterTitles = Mathf.Max(0, Mathf.RoundToInt(baseAfterPremium * titleCoreMul));
 
             float globalMul = 1f;
             if (GameBalance.TryGet(out var bal))
@@ -344,7 +344,7 @@ public partial class BattleManager : MonoBehaviour
 
             growthCoreTotal = Mathf.Max(0, Mathf.RoundToInt(growthCoreAfterTitles * globalMul));
 
-            growthCoreTitleBonus = Mathf.Max(0, growthCoreAfterTitles - growthCoreBaseAfterShiny);
+            growthCoreTitleBonus = Mathf.Max(0, growthCoreAfterTitles - growthCoreBaseAfterPremium);
 
             if (growthCoreTotal > 0)
                 ResourceManager.I?.Add(ResourceType.GrowthCore, growthCoreTotal);
@@ -356,7 +356,7 @@ public partial class BattleManager : MonoBehaviour
         var ownedList = data != null && data.owned != null ? data.owned : new List<OwnedMonsterData>();
         long nowUnix = SaveManager.NowUnix();
 
-        // If the player has a preferred variant (shiny/non-shiny) for a given monsterId,
+        // If the player has a preferred variant (premium/non-premium) for a given monsterId,
         // battles may have been simulated using that preferred OwnedMonsterData (ownedUID).
         // Ensure the team list points at the same owned copy so HP/progression writes back to the correct variant.
         if (teamOwnedUidEffective != null && ownedList != null && teamList != null)
@@ -464,7 +464,7 @@ public partial class BattleManager : MonoBehaviour
         }
 
         // Sync HP back to owned list.
-        // Prefer ownedUID matching so shiny/normal variants (same monsterId) don't cross-contaminate.
+        // Prefer ownedUID matching so premium/normal variants (same monsterId) don't cross-contaminate.
         for (int i = 0; i < teamList.Count; i++)
         {
             var t = teamList[i];
@@ -562,7 +562,7 @@ public partial class BattleManager : MonoBehaviour
             creditsMultiplier = _cachedCreditMult,
 
             growthCoresGained = growthCoreTotal,
-            growthCoresBase = growthCoreBaseAfterShiny,
+            growthCoresBase = growthCoreBaseAfterPremium,
             growthCoresTitleBonus = growthCoreTitleBonus,
 
             activeMonsterOwnedId = (teamIds != null && activeIndex >= 0 && activeIndex < teamIds.Length) ? teamIds[activeIndex] : null,

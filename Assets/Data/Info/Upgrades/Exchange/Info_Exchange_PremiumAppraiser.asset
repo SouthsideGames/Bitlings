@@ -10,13 +10,11 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 8909f92dca58941be8a4545ccb059a11, type: 3}
-  m_Name: Info_Shiny
-  m_EditorClassIdentifier: 
-  id: res.Shiny
-  category: 1
-  title: Shiny Orb
-  subtitle: Resource
-  body: 'Comes from: Shadow Market
-
-    Increase shiny odds in encounters during
-    the duration of the timer'
+  m_Name: Info_Exchange_PremiumAppraiser
+  m_EditorClassIdentifier: Assembly-CSharp::InfoContentSO
+  id: upg.premiumappraiser
+  category: 5
+  title: Premium Appraiser
+  subtitle: Rare value detection
+  body: Premium Bitlings are automatically identified and assigned higher valuations,
+    granting additional credits when sold.

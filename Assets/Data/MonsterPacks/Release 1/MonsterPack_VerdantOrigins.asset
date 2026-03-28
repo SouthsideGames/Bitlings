@@ -14,9 +14,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   id: MP-001
   displayName: Verdant Origins
-  description: A foundational collection of monsters born from forests, burrows,
-    and fertile soil. These early-game nature dwellers emphasize steady growth, simple
-    synergies, and reliable evolution paths ideal for new handlers.
+  description: This foundational group of Bitlings originates from natural environments
+    and supports steady growth. They provide reliable performance and simple progression
+    paths for new handlers.
   icon: {fileID: 21300000, guid: e01effe31a0f2124b91c2adb7a3085c7, type: 3}
   rarityLabel: Common
   baseCost: 8

@@ -16,10 +16,5 @@ MonoBehaviour:
   category: 5
   title: Idle Battles
   subtitle: Passive Progression
-  body: 'Unlocks the Idle Battle system.
-
-
-
-    Your Bitlings will continue battling
-    while you are away, earning resources and progress over time. Idle Battles allow
-    you to make steady progress without active play.'
+  body: Unlocks the Idle Battle system, allowing Bitlings to continue battling and
+    generating resources over time while away.

@@ -29,7 +29,7 @@ public class PlayerDossierPanelUI : MonoBehaviour
     [SerializeField] private TextMeshProUGUI totalBitlingsText;
     [SerializeField] private TextMeshProUGUI discoveredSpeciesText;
     [SerializeField] private TextMeshProUGUI avgLevelText;
-    [SerializeField] private TextMeshProUGUI shinyCountText;
+    [SerializeField] private TextMeshProUGUI premiumCountText;
 
     [SerializeField] private Image careScoreFillImage;
     [SerializeField] private TextMeshProUGUI careScoreValueText;
@@ -52,7 +52,7 @@ public class PlayerDossierPanelUI : MonoBehaviour
     [SerializeField] private TextMeshProUGUI captureSuccessRateText;
     [SerializeField] private TextMeshProUGUI riftStabilizationsText;
     [SerializeField] private TextMeshProUGUI rareBitlingsFoundText;
-    [SerializeField] private TextMeshProUGUI shinyDiscoveriesText;
+    [SerializeField] private TextMeshProUGUI premiumDiscoveriesText;
     [SerializeField] private TextMeshProUGUI longestCaptureStreakText;
     [SerializeField] private TextMeshProUGUI fieldOpsHighlightsText;
 
@@ -71,7 +71,7 @@ public class PlayerDossierPanelUI : MonoBehaviour
     [SerializeField] private TextMeshProUGUI trainingVoucherText;
     [SerializeField] private TextMeshProUGUI wellnessVoucherText;
     [SerializeField] private TextMeshProUGUI efficiencyVoucherText;
-    [SerializeField] private TextMeshProUGUI shinyOrbText;
+    [SerializeField] private TextMeshProUGUI premiumOrbText;
     [SerializeField] private TextMeshProUGUI blessingScaleText;
     [SerializeField] private TextMeshProUGUI coffeeText;
     [SerializeField] private TextMeshProUGUI growthCoreText;
@@ -298,7 +298,7 @@ public class PlayerDossierPanelUI : MonoBehaviour
             if (totalBitlingsText != null) totalBitlingsText.text = "Total Bitlings Managed:   0";
             if (discoveredSpeciesText != null) discoveredSpeciesText.text = "Discovered Species:       0";
             if (avgLevelText != null) avgLevelText.text = "Average Bitling Level:     0";
-            if (shinyCountText != null) shinyCountText.text = "Shiny Bitlings:            0";
+            if (premiumCountText != null) premiumCountText.text = "Premium Bitlings:            0";
 
             if (careScoreFillImage != null)
             {
@@ -319,7 +319,7 @@ public class PlayerDossierPanelUI : MonoBehaviour
         if (totalBitlingsText != null) totalBitlingsText.text = $"Total Bitlings Managed:   {stats.totalOwnedBitlings}";
         if (discoveredSpeciesText != null) discoveredSpeciesText.text = $"Discovered Species:       {stats.discoveredSpecies}";
         if (avgLevelText != null) avgLevelText.text = $"Average Bitling Level:     {stats.averageLevel:0}";
-        if (shinyCountText != null) shinyCountText.text = $"Shiny Bitlings:            {stats.shinyOwned}";
+        if (premiumCountText != null) premiumCountText.text = $"Premium Bitlings:            {stats.premiumOwned}";
 
         float normalized = Mathf.Clamp01(stats.careScorePercent / 100f);
 
@@ -375,7 +375,7 @@ public class PlayerDossierPanelUI : MonoBehaviour
             if (captureSuccessRateText != null) captureSuccessRateText.text = "Capture Success Rate:   0%";
             if (riftStabilizationsText != null) riftStabilizationsText.text = "Boss Rifts Cleared:     0";
             if (rareBitlingsFoundText != null) rareBitlingsFoundText.text = "Rare Bitlings Found:    0";
-            if (shinyDiscoveriesText != null) shinyDiscoveriesText.text = "Shiny Discoveries:      0";
+            if (premiumDiscoveriesText != null) premiumDiscoveriesText.text = "Premium Discoveries:      0";
             if (longestCaptureStreakText != null) longestCaptureStreakText.text = "Longest Capture Streak: 0";
             if (fieldOpsHighlightsText != null) fieldOpsHighlightsText.text = "Recent Highlights:\n—";
             return;
@@ -385,7 +385,7 @@ public class PlayerDossierPanelUI : MonoBehaviour
         if (captureSuccessRateText != null) captureSuccessRateText.text = $"Capture Success Rate:   {stats.captureSuccessRate}%";
         if (riftStabilizationsText != null) riftStabilizationsText.text = $"Boss Rifts Cleared:     {stats.riftStabilizations}";
         if (rareBitlingsFoundText != null) rareBitlingsFoundText.text = $"Rare Bitlings Found:    {stats.rareBitlingsFound}";
-        if (shinyDiscoveriesText != null) shinyDiscoveriesText.text = $"Shiny Discoveries:      {stats.shinyDiscoveries}";
+        if (premiumDiscoveriesText != null) premiumDiscoveriesText.text = $"Premium Discoveries:      {stats.premiumDiscoveries}";
         if (longestCaptureStreakText != null) longestCaptureStreakText.text = $"Longest Capture Streak: {stats.longestCaptureStreak}";
 
         if (fieldOpsHighlightsText != null)
@@ -407,7 +407,7 @@ public class PlayerDossierPanelUI : MonoBehaviour
         if (workOrderText) workOrderText.text = $"Capture Bands: {s.captureBandCount}";
         if (blessingScaleText) blessingScaleText.text = $"Blessing Tokens: {s.blessingScaleCount}";
         if (favorText) favorText.text = $"Luck Orbs: {s.luckCount}";
-        if (flyerText) flyerText.text = $"Shiny Lures: {s.lureCount}";
+        if (flyerText) flyerText.text = $"Premium Lures: {s.lureCount}";
         if (growthCoreText) growthCoreText.text = $"Growth Cores: {s.growthCoreCount}";
         if (packVoucherText) packVoucherText.text = $"Shards: {s.packVoucherCount}";
         if (creditsText) creditsText.text = $"Credits: {s.creditCount:N0}";
@@ -416,7 +416,7 @@ public class PlayerDossierPanelUI : MonoBehaviour
         if (trainingVoucherText) trainingVoucherText.text = $"Attack Boosters: {s.atkBoosterCount}";
         if (wellnessVoucherText) wellnessVoucherText.text = $"HP Boosters: {s.hpBoosterCount}";
         if (efficiencyVoucherText) efficiencyVoucherText.text = $"Speed Boosters: {s.speedBoosterCount}";
-        if (shinyOrbText) shinyOrbText.text = $"Shiny Orbs: {s.shinyOrbCount}";
+        if (premiumOrbText) premiumOrbText.text = $"Premium Orbs: {s.premiumOrbCount}";
         if (coffeeText) coffeeText.text = $"Rest Charges: {s.restChargeCount}";
 
         float normalized = Mathf.Clamp01(s.conversionEfficiencyPercent / 100f);

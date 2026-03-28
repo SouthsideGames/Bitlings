@@ -14,9 +14,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   id: MP-017
   displayName: Plague Nexus
-  description: Corrupt and Umbral horrors spread decay across prolonged battles.
-    Built for attrition, this pack rewards sustained pressure and battlefield denial
-    over quick victories.
+  description: Corrupt and Umbral Bitlings apply sustained pressure through gradual
+    decay, favoring long-term control over quick outcomes.
   icon: {fileID: 21300000, guid: 003984d255381404791fa19428bbfcaa, type: 3}
   rarityLabel: Uncommon
   baseCost: 20

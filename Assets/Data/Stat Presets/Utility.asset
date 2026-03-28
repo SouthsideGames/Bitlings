@@ -13,8 +13,8 @@ MonoBehaviour:
   m_Name: Utility
   m_EditorClassIdentifier: 
   bucketId: Utility
-  description: "Focuses on survivability and consistency. Prefers HP and SPD increases
-    with modest DEF and minimal ATK growth \u2014 ideal for support-oriented monsters"
+  description: Supports survivability and consistency, favoring health and speed
+    with steady defensive support.
   picksPerLevel: 2
   allowDuplicatePicks: 0
   hpWeight: 4

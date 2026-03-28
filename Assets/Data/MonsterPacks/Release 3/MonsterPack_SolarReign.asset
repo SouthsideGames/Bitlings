@@ -14,8 +14,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   id: MP-021
   displayName: Solar Reign
-  description: Radiant Fire and Sky monsters channel the authority of the sun. This
-    pack favors aggressive openings and momentum-driven dominance.
+  description: Fire and Sky Bitlings open encounters with strong momentum, maintaining
+    pressure through fast and decisive actions.
   icon: {fileID: 21300000, guid: 1531c5964d73c4945bea7b19523bdf13, type: 3}
   rarityLabel: Common
   baseCost: 12
@@ -26,4 +26,4 @@ MonoBehaviour:
   - {fileID: 11400000, guid: f2ca07f8a2f6d41b88e449209a6ce8dc, type: 2}
   - {fileID: 11400000, guid: b4105969a9e6f4e1bbc5bd6dcd5eb844, type: 2}
   - {fileID: 11400000, guid: 97e3306eea4b245f59529cc9e9b9f414, type: 2}
-  - {fileID: 11400000, guid: 2953636cca35c433b9d6041744d4e9f7, type: 2}
+  - {fileID: 11400000, guid: d730be198d954ef47afb4d85fbe9a19f, type: 2}

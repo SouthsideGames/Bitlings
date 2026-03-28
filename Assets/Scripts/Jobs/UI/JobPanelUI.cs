@@ -210,12 +210,12 @@ public class JobPanelUI : MonoBehaviour
                 WorkerRef worker = (i < s.workers.Count) ? s.workers[i] : null;
                 if (worker != null && worker.def != null)
                 {
-                    // ✅ FIX: use shiny-aware resolver + ensure the SLOT uses MonsterDataSO.shinyIcon (front)
-                    bool shiny = ResolveWorkerShiny(worker);
+                    // ✅ FIX: use premium-aware resolver + ensure the SLOT uses MonsterDataSO.premiumIcon (front)
+                    bool premium = ResolveWorkerPremium(worker);
 
                     // IMPORTANT: Don't pass raw Sprite here (it can be stomped by other callers / refresh paths).
-                    // Let JobSlotUI resolve from def + shiny so it always uses def.icon / def.shinyIcon (front).
-                    ui.SetWorker(worker.def, shiny, filledSlotColor);
+                    // Let JobSlotUI resolve from def + premium so it always uses def.icon / def.premiumIcon (front).
+                    ui.SetWorker(worker.def, premium, filledSlotColor);
                 }
                 else
                 {
@@ -255,13 +255,13 @@ public class JobPanelUI : MonoBehaviour
 
         perHour *= BossDebuffSystem.GetMultiplier(s.config.jobType, SaveManager.NowUnix());
 
-        float shinyAura = ShinySystems.SiteShinyAuraMult(s.workers);
-        int shinyCount  = CountShinies(s.workers);
-        float shinySet  = 1f + (shinyCount >= 3 ? 0.12f : (shinyCount == 2 ? 0.07f : (shinyCount == 1 ? 0.03f : 0f)));
+        float premiumAura = PremiumSystems.SitePremiumAuraMult(s.workers);
+        int premiumCount  = CountPremiums(s.workers);
+        float premiumSet  = 1f + (premiumCount >= 3 ? 0.12f : (premiumCount == 2 ? 0.07f : (premiumCount == 1 ? 0.03f : 0f)));
 
         float avgFatigue = AverageWorkingSlotFatigue(s);
 
-        return perHour * shinyAura * shinySet * (1f - Mathf.Clamp01(avgFatigue));
+        return perHour * premiumAura * premiumSet * (1f - Mathf.Clamp01(avgFatigue));
     }
 
     private float ComputeRatePerHour_WithTitles(JobSiteState s)
@@ -302,13 +302,13 @@ public class JobPanelUI : MonoBehaviour
         }
         catch { }
 
-        float shinyAura2 = ShinySystems.SiteShinyAuraMult(s.workers);
-        int shinyCount2  = CountShinies(s.workers);
-        float shinySet2  = 1f + (shinyCount2 >= 3 ? 0.12f : (shinyCount2 == 2 ? 0.07f : (shinyCount2 == 1 ? 0.03f : 0f)));
+        float premiumAura2 = PremiumSystems.SitePremiumAuraMult(s.workers);
+        int premiumCount2  = CountPremiums(s.workers);
+        float premiumSet2  = 1f + (premiumCount2 >= 3 ? 0.12f : (premiumCount2 == 2 ? 0.07f : (premiumCount2 == 1 ? 0.03f : 0f)));
 
         float avgFatigue2 = AverageWorkingSlotFatigue(s);
 
-        return perHour * shinyAura2 * shinySet2 * (1f - Mathf.Clamp01(avgFatigue2));
+        return perHour * premiumAura2 * premiumSet2 * (1f - Mathf.Clamp01(avgFatigue2));
     }
 
     private static float AverageWorkingSlotFatigue(JobSiteState s)
@@ -354,31 +354,31 @@ public class JobPanelUI : MonoBehaviour
         return w.def ? w.def.id : null;
     }
 
-    private static int CountShinies(List<WorkerRef> workers)
+    private static int CountPremiums(List<WorkerRef> workers)
     {
         if (workers == null || workers.Count == 0) return 0;
         int c = 0;
-        for (int i = 0; i < workers.Count; i++) if (IsWorkerShiny(workers[i])) c++;
+        for (int i = 0; i < workers.Count; i++) if (IsWorkerPremium(workers[i])) c++;
         return c;
     }
 
-    private static bool IsWorkerShiny(WorkerRef w)
+    private static bool IsWorkerPremium(WorkerRef w)
     {
         if (w == null) return false;
 
         // Prefer ownedUID (exact owned instance) and support legacy monsterId-as-uid.
-        var owned = ShinySystems.ResolveOwned(w);
+        var owned = PremiumSystems.ResolveOwned(w);
         if (owned != null)
-            return (owned.isShiny || owned.shinyTier > 0);
+            return (owned.isPremium || owned.premiumTier > 0);
 
         var def = w.def;
         if (!def) return false;
         try
         {
-            var f = def.GetType().GetField("isShiny");
+            var f = def.GetType().GetField("isPremium");
             if (f != null && f.FieldType == typeof(bool)) return (bool)f.GetValue(def);
 
-            var p = def.GetType().GetProperty("IsShiny");
+            var p = def.GetType().GetProperty("IsPremium");
             if (p != null && p.PropertyType == typeof(bool)) return (bool)p.GetValue(def, null);
         }
         catch { }
@@ -386,13 +386,13 @@ public class JobPanelUI : MonoBehaviour
         return false;
     }
 
-    // ✅ NEW: icon-facing shiny resolver (WorkerRef -> ownedUID -> monsterId fallback)
-    private static bool ResolveWorkerShiny(WorkerRef w)
+    // ✅ NEW: icon-facing premium resolver (WorkerRef -> ownedUID -> monsterId fallback)
+    private static bool ResolveWorkerPremium(WorkerRef w)
     {
         if (w == null) return false;
 
-        // 1) Check using the IsWorkerShiny helper method.
-        if (IsWorkerShiny(w))
+        // 1) Check using the IsWorkerPremium helper method.
+        if (IsWorkerPremium(w))
             return true;
 
         // 2) If we have a stable ownedUID, resolve the actual owned instance.
@@ -401,15 +401,15 @@ public class JobPanelUI : MonoBehaviour
         {
             var om = FindOwnedByUid(uid);
             if (om != null)
-                return om.isShiny || om.shinyTier > 0;
+                return om.isPremium || om.premiumTier > 0;
         }
 
         // 3) Fallback by species id.
-        // IMPORTANT: If multiple copies exist (shiny + non-shiny), we must respect the user's saved preference,
-        // not "any shiny exists".
+        // IMPORTANT: If multiple copies exist (premium + non-premium), we must respect the user's saved preference,
+        // not "any premium exists".
         string id = w.monsterId;
         if (!string.IsNullOrEmpty(id))
-            return MonsterVariantPreference.IsPreferredShiny(id);
+            return MonsterVariantPreference.IsPreferredPremium(id);
 
         return false;
     }

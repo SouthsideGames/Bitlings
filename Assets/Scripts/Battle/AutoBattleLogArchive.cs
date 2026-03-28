@@ -41,9 +41,9 @@ public class AutoBattleLogEntry
             data.EnsureTransientSets();
             data.autoBattleLogArchive ??= new List<AutoBattleLogEntry>();
 
-            bool wildWasShiny = EncounterManager.I != null && EncounterManager.I.CurrentWildIsShiny;
+            bool wildWasPremium = EncounterManager.I != null && EncounterManager.I.CurrentWildIsPremium;
             string opponentName = result.wildDef
-                ? MonsterNameFormatter.Format(result.wildDef, wildWasShiny)
+                ? MonsterNameFormatter.Format(result.wildDef, wildWasPremium)
                 : "Unknown";
 
             var entry = new AutoBattleLogEntry

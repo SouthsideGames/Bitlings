@@ -64,7 +64,7 @@ public sealed class IronCareerManager : MonoBehaviour, IronBattleBridge.IIronBat
     private IronEncounterService _encounters;
     private IronBattleOutcome _lastOutcome;
     private IronMonster _pendingHire;
-    private bool _ironWildIsShiny;
+    private bool _ironWildIsPremium;
     private bool _hasLastOutcome;
     private bool _finalizedRunStats;
     private readonly List<int> _tmpLivingIndices = new List<int>(4);
@@ -83,7 +83,7 @@ public sealed class IronCareerManager : MonoBehaviour, IronBattleBridge.IIronBat
     // Back-compat for UI panels that read mode directly.
     public bool IsHardcoreMode => _state.mode == IronCareerRunState.IronCareerMode.Hardcore;
 
-    public bool IronWildIsShiny => _ironWildIsShiny;
+    public bool IronWildIsPremium => _ironWildIsPremium;
 
     // Back-compat for post/check panels that preview forced evolution availability.
     public bool HasForcedEvolutionAvailable()
@@ -162,7 +162,7 @@ public sealed class IronCareerManager : MonoBehaviour, IronBattleBridge.IIronBat
 
         _state.lastRolledWild = wild;
 
-        _ironWildIsShiny = wild.isShiny;
+        _ironWildIsPremium = wild.isPremium;
 
         return new BattleCombatant
         {
@@ -279,7 +279,7 @@ public sealed class IronCareerManager : MonoBehaviour, IronBattleBridge.IIronBat
                 ? _titleRoller.RollIronTitle(wildSnapshot.def, wildSnapshot.level, _rng, isWild: false)
                 : wildSnapshot.lockedTitle;
 
-            _pendingHire = new IronMonster(wildSnapshot.def, wildSnapshot.level, curHp: -1f, locked: hireTitle, shiny: wildSnapshot.isShiny);
+            _pendingHire = new IronMonster(wildSnapshot.def, wildSnapshot.level, curHp: -1f, locked: hireTitle, premium: wildSnapshot.isPremium);
             _pendingHire.hp = _pendingHire.maxHp;
         }
         else

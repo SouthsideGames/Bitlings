@@ -62,31 +62,33 @@ MonoBehaviour:
   autoOpenOnEnable: 0
   pages:
   - icon: {fileID: 21300000, guid: 5b05ebb3f339e4f03b3026941ea99ecc, type: 3}
-    text: 'Welcome to Bitlings.
+    text: 'Welcome to BRN operations.
 
-      Build a team, unlock new features, and put
-      your Bitlings to work to earn resources over time.'
+      Build your team, unlock new functions,
+      and assign Bitlings to job sites to generate resources over time.'
   - icon: {fileID: 4349945301068942552, guid: 7c93b805f2a3e4aca8ce46843848798b, type: 3}
-    text: 'Upgrades unlock permanent features and long-term boosts.
+    text: 'Upgrades expand BRN capabilities through permanent enhancements.
 
-      Purchase
-      upgrades here to expand what you can do in Bitlings.'
+      Apply
+      upgrades here to unlock new systems and improve long-term performance.'
   - icon: {fileID: -4558392863033225600, guid: fe427cde687b7429597c8cf965901e87, type: 3}
-    text: 'The Codex tracks every Bitling you discover.
+    text: 'The Directory tracks all discovered Bitlings.
 
-      You can view their
-      details and assign Bitlings to your active team.'
+      Review their details
+      and assign them to your active team.'
   - icon: {fileID: 1006166679981420889, guid: 10c4c40dbdebe477bb559690eb655118, type: 3}
-    text: 'Encounters let your team battle wild Bitlings.
+    text: 'Encounters deploy your team to engage unassigned Bitlings.
 
-      Encounters cost
-      Energy and require an active team.'
+      Each
+      encounter requires Energy and an active team.'
   - icon: {fileID: -6288249182244823202, guid: bde71cd552fb546aaa1d2775dd746969, type: 3}
-    text: Settings lets you adjust game options and preferences.
+    text: Settings allow you to adjust system preferences and configurations.
   - icon: {fileID: 21300000, guid: 7e84e22fc3f7fac439d147617be35a23, type: 3}
-    text: "The center of the Home screen is your Job Site area.\nJob Sites unlock
-      when you own a Bitling of that type.\nSome Job Sites open additional panels
-      \u2014 tap the job icon to manage them.\nVisit Info for full details."
+    text: 'The center of the Home screen displays your Job Sites.
+
+      Job Sites
+      unlock when a compatible Bitling is assigned, and can be managed directly from
+      their icons.'
   - icon: {fileID: 21300000, guid: 5b05ebb3f339e4f03b3026941ea99ecc, type: 3}
     text: Tap any colored job site icon to view details and manage that job site.
   - icon: {fileID: 1489862017677310444, guid: 033c0ad5a6b064626a952f911823f8cf, type: 3}
@@ -293,6 +295,7 @@ MonoBehaviour:
   m_VerticalAlignment: 512
   m_textAlignment: 65535
   m_characterSpacing: 0
+  m_characterHorizontalScale: 1
   m_wordSpacing: 0
   m_lineSpacing: 0
   m_lineSpacingMax: 0
@@ -429,6 +432,7 @@ MonoBehaviour:
   m_VerticalAlignment: 512
   m_textAlignment: 65535
   m_characterSpacing: 0
+  m_characterHorizontalScale: 1
   m_wordSpacing: 0
   m_lineSpacing: 0
   m_lineSpacingMax: 0
@@ -640,6 +644,7 @@ MonoBehaviour:
   m_VerticalAlignment: 512
   m_textAlignment: 65535
   m_characterSpacing: 0
+  m_characterHorizontalScale: 1
   m_wordSpacing: 0
   m_lineSpacing: 0
   m_lineSpacingMax: 0
@@ -1078,6 +1083,7 @@ MonoBehaviour:
   m_VerticalAlignment: 512
   m_textAlignment: 65535
   m_characterSpacing: 0
+  m_characterHorizontalScale: 1
   m_wordSpacing: 0
   m_lineSpacing: 0
   m_lineSpacingMax: 0
@@ -1516,6 +1522,7 @@ MonoBehaviour:
   m_VerticalAlignment: 512
   m_textAlignment: 65535
   m_characterSpacing: 0
+  m_characterHorizontalScale: 1
   m_wordSpacing: 0
   m_lineSpacing: 0
   m_lineSpacingMax: 0

@@ -48,8 +48,8 @@ public class PostBattleSummaryManager : MonoBehaviour
         public bool captured;
         public string capturedId;
         public int capturedLvl;
-        public bool capturedShiny;
-        public bool wildWasShiny;
+        public bool capturedPremium;
+        public bool wildWasPremium;
         public List<string> levelUpLines;
 
         public int creditsBase;
@@ -70,8 +70,8 @@ public class PostBattleSummaryManager : MonoBehaviour
         bool captured = false,
         string capturedMonsterId = null,
         int capturedLevel = 0,
-        bool capturedShiny = false,
-        bool wildWasShiny = false,
+        bool capturedPremium = false,
+        bool wildWasPremium = false,
         List<string> levelUpSummaries = null,
         int creditsBase = 0,
         int creditsTitleBonus = 0,
@@ -101,8 +101,8 @@ public class PostBattleSummaryManager : MonoBehaviour
             captured = captured,
             capturedId = capturedMonsterId,
             capturedLvl = captured ? Mathf.Max(1, capturedLevel) : 0,
-            capturedShiny = capturedShiny,
-            wildWasShiny = wildWasShiny,
+            capturedPremium = capturedPremium,
+            wildWasPremium = wildWasPremium,
             levelUpLines = levelUpSummaries,
 
             creditsBase = creditsBase,
@@ -141,8 +141,8 @@ public class PostBattleSummaryManager : MonoBehaviour
             captured,
             capturedMonsterId,
             capturedLevel,
-            capturedShiny: false,
-            wildWasShiny: false,
+            capturedPremium: false,
+            wildWasPremium: false,
             levelUpSummaries: levelUpSummaries,
             creditsBase: creditsBase,
             creditsTitleBonus: creditsTitleBonus,
@@ -154,10 +154,10 @@ public class PostBattleSummaryManager : MonoBehaviour
 
     public bool TryUpdateLatestQueuedCapture(bool captured, string capturedMonsterId, int capturedLevel)
     {
-        return TryUpdateLatestQueuedCapture(captured, capturedMonsterId, capturedLevel, capturedShiny: false);
+        return TryUpdateLatestQueuedCapture(captured, capturedMonsterId, capturedLevel, capturedPremium: false);
     }
 
-    public bool TryUpdateLatestQueuedCapture(bool captured, string capturedMonsterId, int capturedLevel, bool capturedShiny)
+    public bool TryUpdateLatestQueuedCapture(bool captured, string capturedMonsterId, int capturedLevel, bool capturedPremium)
     {
         if (_panelOpen) return false;
         if (_pending.Count == 0) return false;
@@ -171,7 +171,7 @@ public class PostBattleSummaryManager : MonoBehaviour
         last.captured = captured;
         last.capturedId = capturedMonsterId;
         last.capturedLvl = captured ? Mathf.Max(1, capturedLevel) : 0;
-        last.capturedShiny = captured && capturedShiny;
+        last.capturedPremium = captured && capturedPremium;
         list[list.Count - 1] = last;
 
         for (int i = 0; i < list.Count; i++)
@@ -235,14 +235,14 @@ if (!postBattleSummaryPanelUI)
             q.captured,
             q.capturedId,
             q.capturedLvl,
-            q.capturedShiny,
+            q.capturedPremium,
             q.levelUpLines,
             q.creditsBase,
             q.creditsTitleBonus,
             q.growthCoresBase,
             q.growthCoresTitleBonus,
             q.growthCoresDetailLines,
-            q.wildWasShiny
+            q.wildWasPremium
         );
 
         postBattleSummaryPanelUI.Show();

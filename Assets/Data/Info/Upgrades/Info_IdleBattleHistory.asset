@@ -16,8 +16,5 @@ MonoBehaviour:
   category: 5
   title: Idle Battle History
   subtitle: Review battles fought while away
-  body: "Unlocks a battle history archive for Auto Battles.\n\nWhen Auto Battle is
-    active, each completed battle is recorded and saved. You can review these logs
-    later to see what happened while you weren\u2019t actively watching. Only battles
-    resolved through Auto Battle are archived. Manual battles are not included. The
-    archive stores a limited number of recent battles to keep saves fast and efficient."
+  body: Unlocks a battle history archive for Auto Battles, recording recent outcomes
+    for later review while maintaining efficient storage.

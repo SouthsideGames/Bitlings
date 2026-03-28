@@ -14,8 +14,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   id: MP-022
   displayName: Nocturne Mirage
-  description: Specter dream-walkers blur reality and perception itself. These monsters
-    disrupt enemy plans through illusion, evasion, and psychological pressure.
+  description: Specter Bitlings disrupt opposing actions through evasion and misdirection,
+    maintaining control through unpredictability.
   icon: {fileID: 21300000, guid: 601fbbefce456f24cb86ac818be859fb, type: 3}
   rarityLabel: Rare
   baseCost: 27

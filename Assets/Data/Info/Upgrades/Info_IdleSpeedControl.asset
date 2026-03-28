@@ -16,8 +16,5 @@ MonoBehaviour:
   category: 5
   title: Speed Control
   subtitle: Accelerate Auto Battles
-  body: Unlocks a speed control button during Auto Battles. While Auto Battle is
-    active, you can increase battle speed to resolve fights faster. This is useful
-    when farming encounters or progressing quickly. Battle speed only affects Auto
-    Battles and does not change manual battle pacing. Speed settings are remembered
-    between sessions.
+  body: Unlocks speed control during Auto Battles, allowing encounters to resolve
+    more quickly while preserving standard pacing for manual battles.

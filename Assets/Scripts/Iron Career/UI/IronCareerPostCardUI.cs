@@ -44,10 +44,10 @@ public sealed class IronCareerPostCardUI : MonoBehaviour
         }
 
         // Icon
-        if (icon) icon.sprite = MonsterNameFormatter.GetIcon(monster.def, monster.isShiny, false);
+        if (icon) icon.sprite = MonsterNameFormatter.GetIcon(monster.def, monster.isPremium, false);
 
         // Name / Level / Title
-        if (nameLabel) nameLabel.text = MonsterNameFormatter.Format(monster.def, monster.isShiny);
+        if (nameLabel) nameLabel.text = MonsterNameFormatter.Format(monster.def, monster.isPremium);
         if (levelLabel) levelLabel.text = $"LV: {Mathf.Max(1, monster.level)}";
         if (titleLabel)
         {

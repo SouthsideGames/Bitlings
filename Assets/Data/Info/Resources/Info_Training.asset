@@ -16,8 +16,5 @@ MonoBehaviour:
   category: 1
   title: Training Voucher
   subtitle: Resource
-  body: 'Comes from: Mine
-
-    Temporary ATK increase during encounters
-
-'
+  body: "Provided by the Mine to temporarily increase a Bitling\u2019s attack during
+    encounters."

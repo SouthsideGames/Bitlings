@@ -142,8 +142,8 @@ public partial class AutoApplyService : MonoBehaviour
                 m.level = Mathf.Max(1, m.level + 1);
                 m.unspentStatPoints += Mathf.Max(0, pointsPerLevel);
 
-                // Defensive: keep shiny fields consistent (mirrors XPManager behavior)
-                NormalizeShinyFields(m);
+                // Defensive: keep premium fields consistent (mirrors XPManager behavior)
+                NormalizePremiumFields(m);
 
                 // Clamp HP to new max (mirrors XPManager.TryManualLevelUp)
                 ClampHpToNewMax(m);
@@ -173,12 +173,12 @@ public partial class AutoApplyService : MonoBehaviour
     // Helpers (mirrors XPManager behavior)
     // ─────────────────────────────────────────────────────────────
 
-    private void NormalizeShinyFields(OwnedMonsterData om)
+    private void NormalizePremiumFields(OwnedMonsterData om)
     {
         if (om == null) return;
-        if (om.shinyTier > 0 && !om.isShiny) om.isShiny = true;
-        if (om.isShiny && om.shinyTier <= 0) om.shinyTier = 1;
-        if (!om.isShiny && om.shinyTier < 0) om.shinyTier = 0;
+        if (om.premiumTier > 0 && !om.isPremium) om.isPremium = true;
+        if (om.isPremium && om.premiumTier <= 0) om.premiumTier = 1;
+        if (!om.isPremium && om.premiumTier < 0) om.premiumTier = 0;
     }
 
     private void ClampHpToNewMax(OwnedMonsterData om)

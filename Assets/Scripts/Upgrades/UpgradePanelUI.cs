@@ -269,7 +269,7 @@ public class UpgradesPanelUI : MonoBehaviour
             case FeatureId.Exchange_MarketForecast:
             case FeatureId.Exchange_LicensedBroker_T1:
             case FeatureId.Exchange_LicensedBroker_T2:
-            case FeatureId.Exchange_ShinyAppraiser:
+            case FeatureId.Exchange_PremiumAppraiser:
                 return UpgradeSection.Exchange;
 
             case FeatureId.IdleBattle_Basic:

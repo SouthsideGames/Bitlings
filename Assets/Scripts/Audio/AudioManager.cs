@@ -33,7 +33,7 @@ public enum SfxType
     AchievementUnlocked = 20,
 
     //Encounters
-    ShinyEncounter = 14,
+    PremiumEncounter = 14,
     BossEncounter = 15,
     UniqueEncounter = 16,
 

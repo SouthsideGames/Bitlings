@@ -506,17 +506,17 @@ private void UpdateWildInfoUI()
         var def = teamDefs[activeIndex];
         var lvl = teamLevels[activeIndex];
 
-        // Shiny-aware display
-        // IMPORTANT: the player can set a preferred variant (shiny/non-shiny) without changing the team list.
+        // Premium-aware display
+        // IMPORTANT: the player can set a preferred variant (premium/non-premium) without changing the team list.
         // Battle UI should reflect that preference.
-        bool isShiny = false;
+        bool isPremium = false;
 
         if (_rules.allowPreferredVariants && def != null && !string.IsNullOrEmpty(def.id))
         {
             var pref = MonsterVariantPreference.GetPreferredOwned(def.id);
             if (pref != null)
             {
-                isShiny = pref.isShiny || pref.shinyTier > 0;
+                isPremium = pref.isPremium || pref.premiumTier > 0;
             }
             else
             {
@@ -524,7 +524,7 @@ private void UpdateWildInfoUI()
                 if (data != null && data.team != null && activeIndex >= 0 && activeIndex < data.team.Count)
                 {
                     var om = data.team[activeIndex];
-                    isShiny = om != null && (om.isShiny || om.shinyTier > 0);
+                    isPremium = om != null && (om.isPremium || om.premiumTier > 0);
                 }
             }
         }
@@ -533,7 +533,7 @@ private void UpdateWildInfoUI()
         {
             if (def)
             {
-                var s = MonsterNameFormatter.GetIcon(def, isShiny, backIcon: true);
+                var s = MonsterNameFormatter.GetIcon(def, isPremium, backIcon: true);
                 playerIcon.sprite = s ? s : (def.backIcon ? def.backIcon : def.icon);
             }
             else
@@ -542,7 +542,7 @@ private void UpdateWildInfoUI()
             }
         }
 
-        if (playerNameText) playerNameText.text = def ? MonsterNameFormatter.Format(def, isShiny) : "";
+        if (playerNameText) playerNameText.text = def ? MonsterNameFormatter.Format(def, isPremium) : "";
         if (playerLevelText) playerLevelText.text = $"Lv {lvl}";
         UpdatePlayerInfoUI();
         UpdateHPTextUI();

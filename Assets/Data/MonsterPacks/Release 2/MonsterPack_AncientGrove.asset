@@ -14,8 +14,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   id: MP-015
   displayName: Ancient Grove
-  description: Guardians bound to sacred forests stand watch over forgotten sanctuaries.
-    Grass and Oracle monsters here emphasize protection, balance, and spiritual resilience.
+  description: Grass and Oracle Bitlings protect sacred environments with balanced
+    and steady performance. Their strength lies in stability, support, and long-term
+    resilience.
   icon: {fileID: 21300000, guid: 75c3356f93bbb504d9c6cf3636288f4b, type: 3}
   rarityLabel: Common
   baseCost: 12

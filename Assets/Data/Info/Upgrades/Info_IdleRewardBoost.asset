@@ -16,9 +16,5 @@ MonoBehaviour:
   category: 5
   title: Idle Reward Boost
   subtitle: Improved Idle Gains
-  body: 'Increases rewards earned from Idle Battles.
-
-    
-
-    Earn more resources
-    and progress from each idle session, making offline time significantly more valuable.'
+  body: Increases rewards generated from Idle Battles, improving resource gains and
+    overall progress during offline activity.

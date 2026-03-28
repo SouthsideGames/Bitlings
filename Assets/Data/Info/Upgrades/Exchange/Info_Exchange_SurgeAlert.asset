@@ -16,5 +16,5 @@ MonoBehaviour:
   category: 5
   title: Surge Alert
   subtitle: Catch the spikes
-  body: Notifies you when a species enters a Surge state. These temporary spikes
-    dramatically increase sell value for a limited time.
+  body: Provides notification when a Bitling enters a Surge state, temporarily increasing
+    its valuation for a limited time.

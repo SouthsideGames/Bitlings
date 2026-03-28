@@ -16,8 +16,8 @@ public sealed class ExchangeManager : MonoBehaviour
     private const float BROKER_CUT_DEFAULT = 0.85f;  // base: broker keeps 15%
     private const float BROKER_CUT_T1 = 0.90f;        // tier 1: broker keeps 10%
     private const float BROKER_CUT_T2 = 0.95f;        // tier 2: broker keeps 5%
-    private const float SHINY_DIVISOR_DEFAULT = 0.75f;
-    private const float SHINY_DIVISOR_APPRAISED = 0.50f;
+    private const float PREMIUM_DIVISOR_DEFAULT = 0.75f;
+    private const float PREMIUM_DIVISOR_APPRAISED = 0.50f;
     private const float MONOPOLY_BONUS = 1.25f;
     private const float DIVIDEND_RATE = 0.01f; // 1% daily
     private const int SENTIMENT_CAP = 12;
@@ -344,7 +344,7 @@ public sealed class ExchangeManager : MonoBehaviour
         return def != null ? def.baseMarketValue : 0;
     }
 
-    public int GetBrokerPayout(string speciesId, bool isShiny = false)
+    public int GetBrokerPayout(string speciesId, bool isPremium = false)
     {
         int value = GetCurrentValue(speciesId);
 
@@ -358,13 +358,13 @@ public sealed class ExchangeManager : MonoBehaviour
                 brokerCut = BROKER_CUT_T1;
         }
 
-        // Shiny Appraiser improves shiny payout
-        float shinyDiv = SHINY_DIVISOR_DEFAULT;
-        if (isShiny && FeatureUnlockManager.I != null && FeatureUnlockManager.I.IsUnlocked(FeatureId.Exchange_ShinyAppraiser))
-            shinyDiv = SHINY_DIVISOR_APPRAISED;
+        // Premium Appraiser improves premium payout
+        float premiumDiv = PREMIUM_DIVISOR_DEFAULT;
+        if (isPremium && FeatureUnlockManager.I != null && FeatureUnlockManager.I.IsUnlocked(FeatureId.Exchange_PremiumAppraiser))
+            premiumDiv = PREMIUM_DIVISOR_APPRAISED;
 
-        float payout = isShiny
-            ? value / Mathf.Max(0.01f, shinyDiv)
+        float payout = isPremium
+            ? value / Mathf.Max(0.01f, premiumDiv)
             : value * brokerCut;
         return Mathf.Max(1, Mathf.RoundToInt(payout));
     }

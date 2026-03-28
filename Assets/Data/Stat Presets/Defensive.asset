@@ -13,8 +13,8 @@ MonoBehaviour:
   m_Name: Defensive
   m_EditorClassIdentifier: 
   bucketId: Defense
-  description: Built for durability. Greatly increases DEF with strong HP support,
-    creating slow but tanky monsters
+  description: Focuses on durability, increasing defense with strong health support
+    for steady and resilient performance.
   picksPerLevel: 2
   allowDuplicatePicks: 0
   hpWeight: 3

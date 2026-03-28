@@ -16,6 +16,4 @@ MonoBehaviour:
   category: 1
   title: Medkit
   subtitle: Resource
-  body: 'Comes from: Grove
-
-    Needed to heal Bitlings'
+  body: Provided by the Grove to restore the health of Bitlings.

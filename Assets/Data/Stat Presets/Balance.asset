@@ -13,8 +13,8 @@ MonoBehaviour:
   m_Name: Balance
   m_EditorClassIdentifier: 
   bucketId: Balance
-  description: "A perfectly even spread of stat growth. No strengths, no weaknesses
-    \u2014 each level grants uniform chances for HP, ATK, DEF, and SPD increases."
+  description: Provides balanced stat growth, maintaining even development across
+    health, attack, defense, and speed.
   picksPerLevel: 2
   allowDuplicatePicks: 1
   hpWeight: 3

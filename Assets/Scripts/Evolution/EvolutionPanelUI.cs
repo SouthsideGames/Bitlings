@@ -63,16 +63,16 @@ public class EvolutionPanelUI : MonoBehaviour
             return;
         }
 
-        bool isShiny = _source != null && _source.isShiny;
+        bool isPremium = _source != null && _source.isPremium;
 
         if (currentName)
-            currentName.text = MonsterNameFormatter.Format(_currentDef, isShiny);
+            currentName.text = MonsterNameFormatter.Format(_currentDef, isPremium);
         if (currentLevel) currentLevel.text = $"Lv {Mathf.Max(1, _source.level)}";
         if (evolutionName)
-            evolutionName.text = MonsterNameFormatter.Format(_nextDef, isShiny);
+            evolutionName.text = MonsterNameFormatter.Format(_nextDef, isPremium);
 
-        if (currentIcon) currentIcon.sprite = MonsterNameFormatter.GetIcon(_currentDef, isShiny, backIcon: false);
-        if (evolutionIcon) evolutionIcon.sprite = MonsterNameFormatter.GetIcon(_nextDef, isShiny, backIcon: false);
+        if (currentIcon) currentIcon.sprite = MonsterNameFormatter.GetIcon(_currentDef, isPremium, backIcon: false);
+        if (evolutionIcon) evolutionIcon.sprite = MonsterNameFormatter.GetIcon(_nextDef, isPremium, backIcon: false);
 
         RefreshStatPreview();
         PlayStatFlashAnimation();

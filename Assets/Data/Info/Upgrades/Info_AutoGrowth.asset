@@ -16,10 +16,5 @@ MonoBehaviour:
   category: 5
   title: Auto Growth
   subtitle: Automatic Core Spending
-  body: 'Automatically spends Growth Cores once your stored amount exceeds a safe
-    threshold.
-
-
-
-    This ensures your Bitlings continue improving without requiring
-    constant manual upgrades.'
+  body: Automatically allocates Growth Cores once stored amounts exceed a defined
+    threshold, ensuring Bitlings continue improving over time.

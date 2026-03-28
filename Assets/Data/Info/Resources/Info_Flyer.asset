@@ -16,7 +16,5 @@ MonoBehaviour:
   category: 1
   title: Flyer
   subtitle: Resource
-  body: 'Comes from: Harbor
-
-    Increases the encounter odds of a certain Bitlings
-    types'
+  body: Provided by the Harbor to increase the chance of encountering specific types
+    of Bitlings.

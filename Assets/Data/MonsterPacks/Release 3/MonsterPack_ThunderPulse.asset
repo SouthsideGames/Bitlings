@@ -14,8 +14,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   id: MP-026
   displayName: Thunder Pulse
-  description: Rapid-strike combatants unleash relentless electrical assaults. Electric
-    and Clash monsters thrive on chaining actions and escalating offensive pressure.
+  description: Electric and Clash Bitlings deliver rapid, continuous attacks, building
+    pressure through chained and escalating actions.
   icon: {fileID: 21300000, guid: ab82c68bcc28dbb4687c4c27c7dfebeb, type: 3}
   rarityLabel: Epic
   baseCost: 35

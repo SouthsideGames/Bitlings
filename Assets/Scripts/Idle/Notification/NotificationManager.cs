@@ -274,10 +274,10 @@ public class NotificationManager : MonoBehaviour
                     if (b.expireUnix > now) best = System.Math.Min(best, b.expireUnix);
                 }
 
-            if (data.activeShinyBoosts != null)
-                for (int i = 0; i < data.activeShinyBoosts.Count; i++)
+            if (data.activePremiumBoosts != null)
+                for (int i = 0; i < data.activePremiumBoosts.Count; i++)
                 {
-                    var b = data.activeShinyBoosts[i];
+                    var b = data.activePremiumBoosts[i];
                     if (b.expireUnix > now) best = System.Math.Min(best, b.expireUnix);
                 }
 

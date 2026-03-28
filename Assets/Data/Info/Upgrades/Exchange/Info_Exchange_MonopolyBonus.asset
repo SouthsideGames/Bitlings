@@ -16,5 +16,5 @@ MonoBehaviour:
   category: 5
   title: Monopoly Bonus
   subtitle: Control the market
-  body: Owning multiple Bitlings of the same species increases their total sell value.
-    The more you hold, the greater the bonus.
+  body: Owning multiple copies of the same Bitling increases their total sell value,
+    with greater holdings yielding higher returns.

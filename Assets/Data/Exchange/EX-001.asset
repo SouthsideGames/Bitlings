@@ -10,17 +10,18 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 3b3551d34f5488948a8cd10af9b64480, type: 3}
-  m_Name: ExchangeRequest_FarmSupportPlacement
+  m_Name: EX-001
   m_EditorClassIdentifier: Assembly-CSharp::ExchangeRequestSO
-  requestId: req_farm_support_placement
-  displayName: Farm Support Placement
-  flavorText: Crop teams are requesting any Grass Bitling to support rapid seasonal
-    growth.
+  requestId: EX-001
+  displayName: Elite Research Specimen
+  flavorText: A research consortium is requesting a rare specialist Bitling for high-priority
+    study.
   requiredSpecies: {fileID: 0}
-  requiredType: 3
-  requiredMinRarity: 0
-  creditReward: 100
-  bonusResourceType: 16
-  bonusResourceAmount: 1
-  weight: 4
+  requiredRandomSpeciesType: 0
+  requiredType: 10
+  requiredMinRarity: 2
+  creditReward: 250
+  bonusResourceType: 10
+  bonusResourceAmount: 0
+  weight: 1
   durationHours: 24

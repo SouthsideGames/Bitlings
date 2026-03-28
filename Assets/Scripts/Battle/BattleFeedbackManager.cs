@@ -95,14 +95,14 @@ public sealed class BattleFeedbackManager : MonoBehaviour
     [SerializeField, Min(0.01f)] private float hitShakeTime = 0.12f;
     [SerializeField, Min(0.01f)] private float defendPulseTime = 0.16f;
 
-    [Header("Shiny Name Sparkle (Optional)")]
-    [Tooltip("If enabled, shiny monster names will punch-scale and 'sparkle' when they appear or are swapped in.")]
-    [SerializeField] private bool enableShinyNameSparkle = true;
-    [SerializeField, Min(0.01f)] private float shinyNamePunchTime = 0.12f;
-    [SerializeField, Range(1.01f, 1.40f)] private float shinyNamePunchScale = 1.18f;
-    [SerializeField, Min(0.01f)] private float shinyNameSparkleTime = 0.22f;
-    [SerializeField, Range(0f, 25f)] private float shinyNameWiggleDegrees = 8f;
-    [SerializeField, Range(0f, 15f)] private float shinyNameWiggleDuration = 0.25f;
+    [Header("Premium Name Sparkle (Optional)")]
+    [Tooltip("If enabled, premium monster names will punch-scale and 'sparkle' when they appear or are swapped in.")]
+    [SerializeField] private bool enablePremiumNameSparkle = true;
+    [SerializeField, Min(0.01f)] private float premiumNamePunchTime = 0.12f;
+    [SerializeField, Range(1.01f, 1.40f)] private float premiumNamePunchScale = 1.18f;
+    [SerializeField, Min(0.01f)] private float premiumNameSparkleTime = 0.22f;
+    [SerializeField, Range(0f, 25f)] private float premiumNameWiggleDegrees = 8f;
+    [SerializeField, Range(0f, 15f)] private float premiumNameWiggleDuration = 0.25f;
 
     [Header("FX - Strength")]
     [SerializeField, Range(1.01f, 1.30f)] private float pressPunchScale = 1.08f;
@@ -1982,12 +1982,12 @@ public void SetGuard(BattleFeedbackSide side, bool on)
     }
 
     // ─────────────────────────────────────────────────────────────
-    // Shiny Name Sparkle (Optional)
+    // Premium Name Sparkle (Optional)
     // ─────────────────────────────────────────────────────────────
 
-    public void PlayShinyNameSparkle(TextMeshProUGUI label)
+    public void PlayPremiumNameSparkle(TextMeshProUGUI label)
     {
-        if (!enableShinyNameSparkle) return;
+        if (!enablePremiumNameSparkle) return;
         if (!label) return;
 
         RectTransform rt = label.rectTransform;
@@ -2003,11 +2003,11 @@ public void SetGuard(BattleFeedbackSide side, bool on)
         // Ensure we can safely manipulate alpha without permanently changing your style
         Color baseColor = label.color;
 
-        // 1) Punch scale: up then back down, driven by shinyNamePunchTime & shinyNamePunchScale
-        float punchIn = Mathf.Max(0.01f, shinyNamePunchTime);
-        float punchOut = Mathf.Max(0.01f, shinyNamePunchTime);
+        // 1) Punch scale: up then back down, driven by premiumNamePunchTime & premiumNamePunchScale
+        float punchIn = Mathf.Max(0.01f, premiumNamePunchTime);
+        float punchOut = Mathf.Max(0.01f, premiumNamePunchTime);
 
-        LeanTween.scale(rt, Vector3.one * Mathf.Max(1.01f, shinyNamePunchScale), punchIn)
+        LeanTween.scale(rt, Vector3.one * Mathf.Max(1.01f, premiumNamePunchScale), punchIn)
             .setEaseOutBack()
             .setIgnoreTimeScale(true)
             .setOnComplete(() =>
@@ -2018,9 +2018,9 @@ public void SetGuard(BattleFeedbackSide side, bool on)
                     .setIgnoreTimeScale(true);
             });
 
-        // 2) Sparkle pulse: alpha ping-pong, driven by shinyNameSparkleTime
+        // 2) Sparkle pulse: alpha ping-pong, driven by premiumNameSparkleTime
         // We do a quick fade down slightly then back up to baseline.
-        float sparkleT = Mathf.Max(0.01f, shinyNameSparkleTime);
+        float sparkleT = Mathf.Max(0.01f, premiumNameSparkleTime);
         float halfSparkle = sparkleT * 0.5f;
 
         // Fade to 70% alpha then back to original alpha
@@ -2048,9 +2048,9 @@ public void SetGuard(BattleFeedbackSide side, bool on)
                     });
             });
 
-        // 3) Wiggle: rotateZ ping-pong, driven by shinyNameWiggleDegrees & shinyNameWiggleDuration
-        float wiggleDeg = Mathf.Max(0f, shinyNameWiggleDegrees);
-        float wiggleDur = Mathf.Max(0.01f, shinyNameWiggleDuration);
+        // 3) Wiggle: rotateZ ping-pong, driven by premiumNameWiggleDegrees & premiumNameWiggleDuration
+        float wiggleDeg = Mathf.Max(0f, premiumNameWiggleDegrees);
+        float wiggleDur = Mathf.Max(0.01f, premiumNameWiggleDuration);
 
         if (wiggleDeg > 0.01f)
         {

@@ -31,8 +31,8 @@ public partial class BattleManager : MonoBehaviour
     private string GetWildDisplayName(string fallback = "Foe")
     {
         if (!wildDef) return fallback;
-        bool shinyWild = EncounterManager.I != null && EncounterManager.I.CurrentWildIsShiny;
-        return MonsterNameFormatter.Format(wildDef, shinyWild);
+        bool premiumWild = EncounterManager.I != null && EncounterManager.I.CurrentWildIsPremium;
+        return MonsterNameFormatter.Format(wildDef, premiumWild);
     }
 
     private string GetWildTelegraphLine(EnemyAction action)

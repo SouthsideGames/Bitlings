@@ -14,9 +14,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   id: MP-007
   displayName: Mecha Menagerie
-  description: Unstable fusions of metal, energy, and corruption roam unchecked.
-    This pack blends Alloy precision, Electric volatility, and Corrupt unpredictability
-    into dangerous experimental lifeforms.
+  description: Experimental Bitlings combining Alloy, Electric, and Corrupt traits
+    operate with volatile efficiency. Their behavior reflects unstable but powerful
+    integrations.
   icon: {fileID: 21300000, guid: 1c42127e4406e0f4c8d075d7b9aef1f9, type: 3}
   rarityLabel: Uncommon
   baseCost: 14

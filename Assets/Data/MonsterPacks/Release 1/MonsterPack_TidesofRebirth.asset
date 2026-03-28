@@ -14,9 +14,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   id: MP-003
   displayName: Tides of Rebirth
-  description: Creatures drawn from the deep seas and guided by ancient prophecy.
-    Water and Oracle monsters in this pack favor patience, foresight, and sustained
-    power beneath the surface.
+  description: Guided by deep currents and foresight, these Water and Oracle Bitlings
+    emphasize patience and sustained strength over time.
   icon: {fileID: 21300000, guid: 454580818ac0d164abf8e44922bc120d, type: 3}
   rarityLabel: Common
   baseCost: 6

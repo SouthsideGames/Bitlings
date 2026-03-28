@@ -14,8 +14,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   id: MP-018
   displayName: Tempest Clutch
-  description: Stormcallers synchronize wind and lightning into coordinated devastation.
-    Sky and Electric monsters here favor tempo control and explosive mid-fight momentum.
+  description: Sky and Electric Bitlings synchronize speed and impact, delivering
+    fast, high-energy actions with strong momentum.
   icon: {fileID: 21300000, guid: c96951815606c8245ba94420962a0087, type: 3}
   rarityLabel: Common
   baseCost: 12

@@ -286,19 +286,7 @@ public sealed class ExchangeRequestManager : MonoBehaviour
             var template = PickWeightedRequest(today * 100 + i);
             if (template == null) continue;
 
-            var active = new ActiveRequest
-            {
-                requestId = template.requestId + "_" + today + "_" + i,
-                requiredSpeciesId = template.requiredSpecies != null ? template.requiredSpecies.id : null,
-                requiredType = template.requiredType,
-                requiredMinRarity = template.requiredMinRarity,
-                creditReward = template.creditReward,
-                bonusResourceType = template.bonusResourceType,
-                bonusResourceAmount = template.bonusResourceAmount,
-                flavorText = template.flavorText,
-                expiresUnix = DateTimeOffset.UtcNow.ToUnixTimeSeconds() + template.durationHours * 3600,
-                fulfilled = false
-            };
+            var active = BuildActiveRequest(template, template.requestId + "_" + today + "_" + i, today * 100 + i, template.creditReward, DateTimeOffset.UtcNow.ToUnixTimeSeconds());
 
             _save.activeRequests.Add(active);
         }
@@ -336,19 +324,12 @@ public sealed class ExchangeRequestManager : MonoBehaviour
             var template = PickWeightedRequest((int)(now + i * 37));
             if (template == null) continue;
 
-            var ar = new ActiveRequest
-            {
-                requestId = template.requestId + "_evt_" + now + "_" + i,
-                requiredSpeciesId = template.requiredSpecies != null ? template.requiredSpecies.id : null,
-                requiredType = template.requiredType,
-                requiredMinRarity = template.requiredMinRarity,
-                creditReward = Mathf.RoundToInt(template.creditReward * 1.25f), // bonus premium
-                bonusResourceType = template.bonusResourceType,
-                bonusResourceAmount = template.bonusResourceAmount,
-                flavorText = template.flavorText,
-                expiresUnix = now + template.durationHours * 3600,
-                fulfilled = false
-            };
+            var ar = BuildActiveRequest(
+                template,
+                template.requestId + "_evt_" + now + "_" + i,
+                (int)(now + i * 37),
+                Mathf.RoundToInt(template.creditReward * 1.25f),
+                now);
 
             _save.activeRequests.Add(ar);
         }
@@ -358,6 +339,67 @@ public sealed class ExchangeRequestManager : MonoBehaviour
     }
 
     // ─────────── Helpers ───────────
+
+    private ActiveRequest BuildActiveRequest(ExchangeRequestSO template, string runtimeRequestId, int speciesSeed, int creditReward, long createdUnix)
+    {
+        string requiredSpeciesId = ResolveRequiredSpeciesId(template, speciesSeed);
+        bool hasSpecificSpecies = !string.IsNullOrEmpty(requiredSpeciesId);
+
+        return new ActiveRequest
+        {
+            requestId = runtimeRequestId,
+            requiredSpeciesId = requiredSpeciesId,
+            requiredType = hasSpecificSpecies ? MonsterType.None : template.requiredType,
+            requiredMinRarity = hasSpecificSpecies ? Rarity.Common : template.requiredMinRarity,
+            creditReward = creditReward,
+            bonusResourceType = template.bonusResourceType,
+            bonusResourceAmount = template.bonusResourceAmount,
+            flavorText = template.flavorText,
+            expiresUnix = createdUnix + template.durationHours * 3600,
+            fulfilled = false
+        };
+    }
+
+    private string ResolveRequiredSpeciesId(ExchangeRequestSO template, int speciesSeed)
+    {
+        if (template == null) return null;
+
+        if (template.requiredSpecies != null && !string.IsNullOrEmpty(template.requiredSpecies.id))
+            return template.requiredSpecies.id;
+
+        if (template.requiredRandomSpeciesType == MonsterType.None)
+            return null;
+
+        var allMonsters = MonsterCatalog.All;
+        if (allMonsters == null || allMonsters.Count == 0)
+            return null;
+
+        var candidates = new List<MonsterDataSO>();
+        for (int i = 0; i < allMonsters.Count; i++)
+        {
+            var def = allMonsters[i];
+            if (!IsValidRandomRequestSpecies(def)) continue;
+            if (def.type != template.requiredRandomSpeciesType) continue;
+            if ((int)def.rarity < (int)template.requiredMinRarity) continue;
+
+            candidates.Add(def);
+        }
+
+        if (candidates.Count == 0)
+            return null;
+
+        int index = StableHash(speciesSeed) % candidates.Count;
+        return candidates[index].id;
+    }
+
+    private static bool IsValidRandomRequestSpecies(MonsterDataSO def)
+    {
+        if (def == null || string.IsNullOrEmpty(def.id)) return false;
+        if (def.uncatchable) return false;
+        if (def.rarity == Rarity.Boss) return false;
+        if (def.baseMarketValue <= 0) return false;
+        return true;
+    }
 
     private bool MatchesRequest(ActiveRequest r, MonsterDataSO def)
     {

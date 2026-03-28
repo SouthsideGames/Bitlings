@@ -14,9 +14,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   id: MP-002
   displayName: Infernal Awakening
-  description: Flame-scarred creatures rise from molten depths and corrupted embers.
-    This pack introduces aggressive Fire and Corrupt monsters shaped by chaos, sacrifice,
-    and raw destructive force.
+  description: Shaped by intense heat and unstable forces, these Fire and Corrupt
+    Bitlings favor aggressive output and unpredictable power.
   icon: {fileID: 21300000, guid: 6ac791544b8894b49b65dd67082ea272, type: 3}
   rarityLabel: Common
   baseCost: 9

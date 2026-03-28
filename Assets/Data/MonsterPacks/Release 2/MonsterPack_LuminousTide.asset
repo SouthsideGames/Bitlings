@@ -14,9 +14,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   id: MP-012
   displayName: Luminous Tide
-  description: Bioluminescent creatures illuminate the darkest waters and skies.
-    Water and Sky monsters in this pack combine elegance with evasive, flowing combat
-    styles.
+  description: Water and Sky Bitlings move with fluid and evasive patterns, combining
+    agility with controlled, flowing actions.
   icon: {fileID: 21300000, guid: 2dd079251db29524caa4c81b47869295, type: 3}
   rarityLabel: Common
   baseCost: 11

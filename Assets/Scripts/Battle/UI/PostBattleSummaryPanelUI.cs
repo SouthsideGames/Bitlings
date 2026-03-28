@@ -249,7 +249,7 @@ public class PostBattleSummaryPanelUI : MonoBehaviour
     }
 
     // ─────────────────────────────────────────────
-    // UPDATED: capturedShiny added as 7th argument
+    // UPDATED: capturedPremium added as 7th argument
     // ─────────────────────────────────────────────
     public void Set(
         BattleResult result,
@@ -258,19 +258,19 @@ public class PostBattleSummaryPanelUI : MonoBehaviour
         bool captured = false,
         string capturedMonsterId = null,
         int capturedLevel = 0,
-        bool capturedShiny = false,                  // NEW
+        bool capturedPremium = false,                  // NEW
         List<string> levelUpSummaries = null,
         int creditsBase = 0,
         int creditsTitleBonus = 0,
         int growthCoresBase = 0,
         int growthCoresTitleBonus = 0,
         List<string> growthCoresDetailLines = null,
-        bool wildWasShiny = false
+        bool wildWasPremium = false
     )
     {
         _lastResult = result;
 
-        bool effectiveShiny = capturedShiny || wildWasShiny;
+        bool effectivePremium = capturedPremium || wildWasPremium;
 
         if (titleLabel)
             titleLabel.text = result.victory ? "Victory!" : "Defeat";
@@ -344,7 +344,7 @@ public class PostBattleSummaryPanelUI : MonoBehaviour
             }
         }
 
-        // Capture line (UPDATED: wraps shiny name in *)
+        // Capture line (UPDATED: wraps premium name in *)
         if (captureLabel)
         {
             if (!captured)
@@ -361,7 +361,7 @@ public class PostBattleSummaryPanelUI : MonoBehaviour
                     ? MonsterNameFormatter.GetDisplayName(result.wildDef)
                     : (!string.IsNullOrEmpty(capturedMonsterId) ? capturedMonsterId : "Unknown");
 
-                string name = MonsterNameFormatter.Format(baseName, effectiveShiny);
+                string name = MonsterNameFormatter.Format(baseName, effectivePremium);
 
                 int lvl = capturedLevel > 0 ? capturedLevel : Mathf.Max(1, result.wildLevel);
                 captureLabel.text = $"Captured: {name} (Lv {lvl})";
@@ -375,7 +375,7 @@ public class PostBattleSummaryPanelUI : MonoBehaviour
 
         if (enemyPortraitImage)
         {
-            Sprite portrait = GetBestPortraitSprite(wildDef, effectiveShiny);
+            Sprite portrait = GetBestPortraitSprite(wildDef, effectivePremium);
             if (portrait != null)
             {
                 enemyPortraitImage.enabled = true;
@@ -393,7 +393,7 @@ public class PostBattleSummaryPanelUI : MonoBehaviour
             if (wildDef)
             {
                 string baseName = MonsterNameFormatter.GetDisplayName(wildDef);
-                enemyNameLabel.text = MonsterNameFormatter.Format(baseName, effectiveShiny);
+                enemyNameLabel.text = MonsterNameFormatter.Format(baseName, effectivePremium);
             }
             else
             {
@@ -519,12 +519,12 @@ public class PostBattleSummaryPanelUI : MonoBehaviour
        
     }
 
-    private Sprite GetBestPortraitSprite(MonsterDataSO def, bool shiny)
+    private Sprite GetBestPortraitSprite(MonsterDataSO def, bool premium)
     {
         if (!def) return null;
 
-        if (shiny && def.shinyIcon != null)
-            return def.shinyIcon;
+        if (premium && def.premiumIcon != null)
+            return def.premiumIcon;
 
         return def.icon;
     }

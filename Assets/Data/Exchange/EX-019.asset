@@ -10,16 +10,18 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 3b3551d34f5488948a8cd10af9b64480, type: 3}
-  m_Name: ExchangeRequest_PowerGridEmergency
+  m_Name: EX-019
   m_EditorClassIdentifier: Assembly-CSharp::ExchangeRequestSO
-  requestId: req_power_grid_emergency
-  displayName: Power Grid Emergency
-  flavorText: Immediate placement needed to stabilize the local power grid.
+  requestId: EX-019
+  displayName: Rare Sky Courier Assignment
+  flavorText: A long-range relay network is requesting a Sky Bitling for priority
+    courier support.
   requiredSpecies: {fileID: 0}
-  requiredType: 4
-  requiredMinRarity: 0
-  creditReward: 150
-  bonusResourceType: 2
-  bonusResourceAmount: 1
-  weight: 3
+  requiredRandomSpeciesType: 9
+  requiredType: 0
+  requiredMinRarity: 2
+  creditReward: 225
+  bonusResourceType: 0
+  bonusResourceAmount: 0
+  weight: 1
   durationHours: 24

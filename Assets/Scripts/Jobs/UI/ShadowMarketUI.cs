@@ -23,7 +23,7 @@ public class ShadowMarketUI : MonoBehaviour
         Wire();
         RefreshCounts();
         RefreshButtonLabel();
-        RefreshShinyVisual();
+        RefreshPremiumVisual();
         RefreshUseButtonVisibility();
 
         StartTicker();
@@ -52,15 +52,15 @@ public class ShadowMarketUI : MonoBehaviour
     {
         RefreshCounts();
         RefreshButtonLabel();
-        RefreshShinyVisual();
+        RefreshPremiumVisual();
         RefreshUseButtonVisibility();
     }
 
     void RefreshCounts()
     {
-        int have = ResourceBank.Get(ResourceType.ShinyOrb);
+        int have = ResourceBank.Get(ResourceType.PremiumOrb);
 
-        if (orbsLabel) orbsLabel.text = $"Shiny Orbs: {have}";
+        if (orbsLabel) orbsLabel.text = $"Premium Orbs: {have}";
 
         bool active = GetSecondsRemaining() > 0;
         if (useOrbBtn)
@@ -70,7 +70,7 @@ public class ShadowMarketUI : MonoBehaviour
     }
 
     /// <summary>
-    /// If we do not have any Shiny Orbs, hide the entire Use button GameObject.
+    /// If we do not have any Premium Orbs, hide the entire Use button GameObject.
     /// </summary>
     void RefreshUseButtonVisibility()
     {
@@ -83,7 +83,7 @@ public class ShadowMarketUI : MonoBehaviour
             return;
         }
 
-        int have = ResourceBank.Get(ResourceType.ShinyOrb);
+        int have = ResourceBank.Get(ResourceType.PremiumOrb);
         bool shouldShow = have > 0;
 
         if (useOrbBtn.gameObject.activeSelf != shouldShow)
@@ -98,7 +98,7 @@ public class ShadowMarketUI : MonoBehaviour
         useOrbBtnLabel.text = active ? "Replace" : "Use";
     }
 
-    void RefreshShinyVisual()
+    void RefreshPremiumVisual()
     {
         if (!orbsActiveImage) return;
 
@@ -108,7 +108,7 @@ public class ShadowMarketUI : MonoBehaviour
 
     void OnClickUseOrb()
     {
-        // Only toast if we successfully activate the shiny boost:
+        // Only toast if we successfully activate the premium boost:
         // - Save exists
         // - Spend succeeds
         // - We actually write a new boost + save
@@ -116,16 +116,16 @@ public class ShadowMarketUI : MonoBehaviour
         {
             RefreshCounts();
             RefreshButtonLabel();
-            RefreshShinyVisual();
+            RefreshPremiumVisual();
             RefreshUseButtonVisibility();
             return;
         }
 
-        if (!ResourceBank.TrySpend(ResourceType.ShinyOrb, 1))
+        if (!ResourceBank.TrySpend(ResourceType.PremiumOrb, 1))
         {
             RefreshCounts();
             RefreshButtonLabel();
-            RefreshShinyVisual();
+            RefreshPremiumVisual();
             RefreshUseButtonVisibility();
             return;
         }
@@ -133,15 +133,15 @@ public class ShadowMarketUI : MonoBehaviour
         long now = SaveManager.NowUnix();
         long expiry = now + Mathf.Max(1, durationMinutes) * 60L;
 
-        var list = SaveManager.Data.activeShinyBoosts;
+        var list = SaveManager.Data.activePremiumBoosts;
         if (list == null)
         {
-            SaveManager.Data.activeShinyBoosts = new System.Collections.Generic.List<ShinyBoostData>();
-            list = SaveManager.Data.activeShinyBoosts;
+            SaveManager.Data.activePremiumBoosts = new System.Collections.Generic.List<PremiumBoostData>();
+            list = SaveManager.Data.activePremiumBoosts;
         }
 
         list.Clear();
-        list.Add(new ShinyBoostData
+        list.Add(new PremiumBoostData
         {
             bonus = Mathf.Max(1f, bonusMultiplier),
             expireUnix = expiry
@@ -150,11 +150,11 @@ public class ShadowMarketUI : MonoBehaviour
         SaveManager.Save();
         GameEvents.OnResourcesChanged?.Invoke();
 
-        GameEvents.RaiseToast("SHINY ORB ACTIVATED");
+        GameEvents.RaiseToast("PREMIUM ORB ACTIVATED");
 
         RefreshCounts();
         RefreshButtonLabel();
-        RefreshShinyVisual();
+        RefreshPremiumVisual();
         RefreshUseButtonVisibility();
     }
 
@@ -181,10 +181,10 @@ public class ShadowMarketUI : MonoBehaviour
             long rem = GetSecondsRemaining();
 
             if (orbsTimerText)
-                orbsTimerText.text = rem > 0 ? FormatHMS(rem) : "No shiny boost";
+                orbsTimerText.text = rem > 0 ? FormatHMS(rem) : "No premium boost";
 
             RefreshButtonLabel();
-            RefreshShinyVisual();
+            RefreshPremiumVisual();
             RefreshUseButtonVisibility();
 
             yield return wait;
@@ -193,7 +193,7 @@ public class ShadowMarketUI : MonoBehaviour
 
     long GetSecondsRemaining()
     {
-        var list = SaveManager.Data?.activeShinyBoosts;
+        var list = SaveManager.Data?.activePremiumBoosts;
         if (list == null || list.Count == 0) return -1;
 
         var cur = list[0];

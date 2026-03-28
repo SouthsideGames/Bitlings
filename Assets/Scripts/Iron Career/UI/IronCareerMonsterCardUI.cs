@@ -70,8 +70,8 @@ public sealed class IronCareerMonsterCardUI : MonoBehaviour
             return;
         }
 
-        if (icon) icon.sprite = MonsterNameFormatter.GetIcon(monster.def, monster.isShiny, false);
-        if (nameLabel) nameLabel.text = MonsterNameFormatter.Format(monster.def, monster.isShiny);
+        if (icon) icon.sprite = MonsterNameFormatter.GetIcon(monster.def, monster.isPremium, false);
+        if (nameLabel) nameLabel.text = MonsterNameFormatter.Format(monster.def, monster.isPremium);
         if (levelLabel) levelLabel.text = $"Lv {Mathf.Max(1, monster.level)}";
         if (titleLabel) titleLabel.text = (monster.lockedTitle != null) ? monster.lockedTitle.displayName : string.Empty;
 

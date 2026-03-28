@@ -43,7 +43,7 @@ public class JobAssignPanelUI : MonoBehaviour
     private MonsterDataSO _pendingDef;
     private string _pendingId;
 
-    // keep the pending owned data so we can validate fatigue + shiny at confirm time
+    // keep the pending owned data so we can validate fatigue + premium at confirm time
     private OwnedMonsterData _pendingOwned;
 
     private JobSiteState _cachedState;
@@ -155,7 +155,7 @@ public class JobAssignPanelUI : MonoBehaviour
         SyncStateFromManager();
         ResetPendingSelection();
 
-        RefreshCurrentWorkerIcon(); // ✅ shiny-aware
+        RefreshCurrentWorkerIcon(); // ✅ premium-aware
 
         BuildList();
         UpdateOutputPreview(currentOnly: true);
@@ -187,14 +187,14 @@ public class JobAssignPanelUI : MonoBehaviour
         {
             // IMPORTANT:
             // WorkerRef.monsterId = species id
-            // WorkerRef.ownedUID  = owned instance id (shiny lives here)
-            bool isShiny = IsWorkerShiny(_currentWorker);
+            // WorkerRef.ownedUID  = owned instance id (premium lives here)
+            bool isPremium = IsWorkerPremium(_currentWorker);
             // If this slot is in legacy "species-only" mode (no ownedUID), ResolveOwned can return null when the
             // player owns multiple copies. In that case, fall back to the saved preferred variant.
-            if (!isShiny && _currentWorker.def != null && !string.IsNullOrEmpty(_currentWorker.def.id))
-                isShiny = MonsterVariantPreference.IsPreferredShiny(_currentWorker.def.id);
-            // Jobs should use the FRONT icon (MonsterDataSO.icon / MonsterDataSO.shinyIcon).
-            var spr = MonsterNameFormatter.GetIcon(_currentWorker.def, isShiny, backIcon: false);
+            if (!isPremium && _currentWorker.def != null && !string.IsNullOrEmpty(_currentWorker.def.id))
+                isPremium = MonsterVariantPreference.IsPreferredPremium(_currentWorker.def.id);
+            // Jobs should use the FRONT icon (MonsterDataSO.icon / MonsterDataSO.premiumIcon).
+            var spr = MonsterNameFormatter.GetIcon(_currentWorker.def, isPremium, backIcon: false);
             if (spr == null) spr = _currentWorker.def.icon;
 
             if (spr != null)
@@ -233,8 +233,8 @@ public class JobAssignPanelUI : MonoBehaviour
             return;
         }
 
-        // Build one entry per species, but ALWAYS respect the player's saved shiny/non-shiny preference.
-        // This mirrors battle behavior and prevents "selected shiny" from silently assigning the base variant.
+        // Build one entry per species, but ALWAYS respect the player's saved premium/non-premium preference.
+        // This mirrors battle behavior and prevents "selected premium" from silently assigning the base variant.
         //
         // NOTE: We still only show one entry per monsterId to keep the picker clean.
         var seenMonsterIds = new HashSet<string>(64);
@@ -278,7 +278,7 @@ public class JobAssignPanelUI : MonoBehaviour
         foreach (var e in entries)
         {
             bool isFatigued = TryGetFatigueState(e.owned, e.ownedUid, out string etaText, out long remainingSeconds);
-            bool isShiny = (e.owned != null) && (e.owned.isShiny || e.owned.shinyTier > 0);
+            bool isPremium = (e.owned != null) && (e.owned.isPremium || e.owned.premiumTier > 0);
             float restProgress01 = ComputeRestProgress01(e.def, remainingSeconds);
 
             float candidateResultPerHour = 0f;
@@ -296,7 +296,7 @@ public class JobAssignPanelUI : MonoBehaviour
             var ui = go.GetComponent<JobMonsterEntryUI>();
 
             // If the prefab doesn't have JobMonsterEntryUI, fall back to generic Button + label,
-            // but STILL set a shiny-aware currentImage preview on click.
+            // but STILL set a premium-aware currentImage preview on click.
             if (!ui)
             {
                 var btn = go.GetComponent<Button>();
@@ -304,7 +304,7 @@ public class JobAssignPanelUI : MonoBehaviour
 
                 if (label)
                 {
-                    string name = MonsterNameFormatter.Format(e.def, isShiny);
+                    string name = MonsterNameFormatter.Format(e.def, isPremium);
                     label.text = isFatigued
                         ? $"{name} (Resting{(string.IsNullOrEmpty(etaText) ? "" : $" • {etaText}")})"
                         : name;
@@ -327,7 +327,7 @@ public class JobAssignPanelUI : MonoBehaviour
                         _pendingId = e.ownedUid;
                         _pendingOwned = e.owned;
 
-                        RefreshPendingPreviewIcon(); // ✅ shiny-aware
+                        RefreshPendingPreviewIcon(); // ✅ premium-aware
 
                         UpdateConfirmInteractable();
 
@@ -338,17 +338,17 @@ public class JobAssignPanelUI : MonoBehaviour
                 continue;
             }
 
-            // ✅ Shiny icon + shiny name
+            // ✅ Premium icon + premium name
             if (ui.icon)
             {
-                var spr = MonsterNameFormatter.GetIcon(e.def, isShiny, backIcon: false);
+                var spr = MonsterNameFormatter.GetIcon(e.def, isPremium, backIcon: false);
                 if (spr == null) spr = e.def.icon;
 
                 ui.icon.sprite = spr;
                 ui.icon.enabled = (spr != null);
             }
 
-            if (ui.nameText) ui.nameText.text = MonsterNameFormatter.Format(e.def, isShiny);
+            if (ui.nameText) ui.nameText.text = MonsterNameFormatter.Format(e.def, isPremium);
             if (ui.scoreText)
             {
                 if (hasRatePreview)
@@ -388,7 +388,7 @@ public class JobAssignPanelUI : MonoBehaviour
                 _pendingId = e.ownedUid;
                 _pendingOwned = e.owned;
 
-                RefreshPendingPreviewIcon(); // ✅ shiny-aware
+                RefreshPendingPreviewIcon(); // ✅ premium-aware
 
                 UpdateConfirmInteractable();
 
@@ -416,8 +416,8 @@ public class JobAssignPanelUI : MonoBehaviour
 
         if (_pendingDef != null)
         {
-            bool isShiny = (_pendingOwned != null) && (_pendingOwned.isShiny || _pendingOwned.shinyTier > 0);
-            var spr = MonsterNameFormatter.GetIcon(_pendingDef, isShiny, backIcon: false);
+            bool isPremium = (_pendingOwned != null) && (_pendingOwned.isPremium || _pendingOwned.premiumTier > 0);
+            var spr = MonsterNameFormatter.GetIcon(_pendingDef, isPremium, backIcon: false);
             if (spr == null) spr = _pendingDef.icon;
 
             if (spr != null)
@@ -481,7 +481,7 @@ public class JobAssignPanelUI : MonoBehaviour
         if (JobManager.I == null) { Close(); return; }
         if (_currentWorker != null)
         {
-            // Prefer ownedUID (exact instance, preserves shiny + avoids ambiguity).
+            // Prefer ownedUID (exact instance, preserves premium + avoids ambiguity).
             // Fallback to species id for legacy saves.
             string id = !string.IsNullOrEmpty(_currentWorker.ownedUID)
                         ? _currentWorker.ownedUID
@@ -605,15 +605,15 @@ public class JobAssignPanelUI : MonoBehaviour
 
         perHour *= BossDebuffSystem.GetMultiplier(s.config.jobType, SaveManager.NowUnix());
 
-        float shinyAura = ShinySystems.SiteShinyAuraMult(s.workers);
-        int shinyCount = CountShinies(s.workers);
-        float shinySet = 1f + (shinyCount >= 3 ? 0.12f :
-                               (shinyCount == 2 ? 0.07f :
-                               (shinyCount == 1 ? 0.03f : 0f)));
+        float premiumAura = PremiumSystems.SitePremiumAuraMult(s.workers);
+        int premiumCount = CountPremiums(s.workers);
+        float premiumSet = 1f + (premiumCount >= 3 ? 0.12f :
+                               (premiumCount == 2 ? 0.07f :
+                               (premiumCount == 1 ? 0.03f : 0f)));
 
         float avgFatigue = AverageWorkingSlotFatigue(s);
 
-        return perHour * shinyAura * shinySet * (1f - Mathf.Clamp01(avgFatigue));
+        return perHour * premiumAura * premiumSet * (1f - Mathf.Clamp01(avgFatigue));
     }
 
     float ComputeRatePerHour_WithTitles(JobSiteState s)
@@ -687,25 +687,25 @@ public class JobAssignPanelUI : MonoBehaviour
         return w.def ? w.def.id : null;
     }
 
-    int CountShinies(List<WorkerRef> workers)
+    int CountPremiums(List<WorkerRef> workers)
     {
         if (workers == null || workers.Count == 0) return 0;
         int c = 0;
         for (int i = 0; i < workers.Count; i++)
         {
-            if (IsWorkerShiny(workers[i])) c++;
+            if (IsWorkerPremium(workers[i])) c++;
         }
         return c;
     }
 
-    bool IsWorkerShiny(WorkerRef w)
+    bool IsWorkerPremium(WorkerRef w)
     {
         if (w == null) return false;
 
         // Prefer the stable ownedUID identity (new format). Fall back to legacy monsterId-as-uid.
-        var owned = ShinySystems.ResolveOwned(w);
+        var owned = PremiumSystems.ResolveOwned(w);
         if (owned != null)
-            return (owned.isShiny || owned.shinyTier > 0);
+            return (owned.isPremium || owned.premiumTier > 0);
 
         var def = w.def;
         if (!def) return false;
@@ -713,13 +713,13 @@ public class JobAssignPanelUI : MonoBehaviour
         // Fallback: reflection on def flags (legacy)
         try
         {
-            var f = def.GetType().GetField("isShiny", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+            var f = def.GetType().GetField("isPremium", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
             if (f != null && f.FieldType == typeof(bool)) return (bool)f.GetValue(def);
 
-            var p = def.GetType().GetProperty("isShiny", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+            var p = def.GetType().GetProperty("isPremium", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
             if (p != null && p.PropertyType == typeof(bool)) return (bool)p.GetValue(def, null);
 
-            var p2 = def.GetType().GetProperty("IsShiny", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+            var p2 = def.GetType().GetProperty("IsPremium", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
             if (p2 != null && p2.PropertyType == typeof(bool)) return (bool)p2.GetValue(def, null);
         }
         catch { }

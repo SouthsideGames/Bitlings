@@ -13,7 +13,7 @@ public class JobSlotUI : MonoBehaviour
 
     // Optional: cached state (useful if you ever want to refresh visuals)
     private MonsterDataSO _cachedDef;
-    private bool _cachedIsShiny;
+    private bool _cachedIsPremium;
     private bool _hasCachedWorker;
 
     public void SetEmpty(Sprite emptySprite, Color emptyColor)
@@ -22,7 +22,7 @@ public class JobSlotUI : MonoBehaviour
 
         _hasCachedWorker = false;
         _cachedDef = null;
-        _cachedIsShiny = false;
+        _cachedIsPremium = false;
 
         icon.sprite = emptySprite;
         icon.color = emptyColor;
@@ -39,7 +39,7 @@ public class JobSlotUI : MonoBehaviour
         // Kept as-is for backwards compatibility.
         _hasCachedWorker = false;
         _cachedDef = null;
-        _cachedIsShiny = false;
+        _cachedIsPremium = false;
 
         icon.sprite = workerSprite;
         icon.color = filledColor;
@@ -49,18 +49,18 @@ public class JobSlotUI : MonoBehaviour
     /// <summary>
     /// Preferred path for jobs:
     /// Always uses MonsterDataSO FRONT icons:
-    /// - shiny => def.shinyIcon
+    /// - premium => def.premiumIcon
     /// - normal => def.icon
     /// </summary>
-    public void SetWorker(MonsterDataSO def, bool isShiny, Color filledColor)
+    public void SetWorker(MonsterDataSO def, bool isPremium, Color filledColor)
     {
         if (!icon) return;
 
         _hasCachedWorker = true;
         _cachedDef = def;
-        _cachedIsShiny = isShiny;
+        _cachedIsPremium = isPremium;
 
-        icon.sprite = ResolveFrontIcon(def, isShiny);
+        icon.sprite = ResolveFrontIcon(def, isPremium);
         icon.color = filledColor;
         icon.preserveAspect = true;
     }
@@ -74,7 +74,7 @@ public class JobSlotUI : MonoBehaviour
         if (!icon) return;
         if (!_hasCachedWorker || _cachedDef == null) return;
 
-        icon.sprite = ResolveFrontIcon(_cachedDef, _cachedIsShiny);
+        icon.sprite = ResolveFrontIcon(_cachedDef, _cachedIsPremium);
         icon.preserveAspect = true;
     }
 
@@ -85,19 +85,19 @@ public class JobSlotUI : MonoBehaviour
     {
         _hasCachedWorker = false;
         _cachedDef = null;
-        _cachedIsShiny = false;
+        _cachedIsPremium = false;
     }
 
-    private static Sprite ResolveFrontIcon(MonsterDataSO def, bool isShiny)
+    private static Sprite ResolveFrontIcon(MonsterDataSO def, bool isPremium)
     {
         if (def == null) return null;
 
-        // Force FRONT icons per requirement (MonsterDataSO.shinyIcon / MonsterDataSO.icon)
-        if (isShiny)
+        // Force FRONT icons per requirement (MonsterDataSO.premiumIcon / MonsterDataSO.icon)
+        if (isPremium)
         {
-            if (def.shinyIcon != null) return def.shinyIcon;
+            if (def.premiumIcon != null) return def.premiumIcon;
 
-            // If shiny is requested but missing, fall back to normal icon
+            // If premium is requested but missing, fall back to normal icon
             if (def.icon != null) return def.icon;
 
             return null;
@@ -105,8 +105,8 @@ public class JobSlotUI : MonoBehaviour
 
         if (def.icon != null) return def.icon;
 
-        // Last-resort fallback (helps if a def is missing normal icon but has shiny icon)
-        return def.shinyIcon;
+        // Last-resort fallback (helps if a def is missing normal icon but has premium icon)
+        return def.premiumIcon;
     }
 
     public void WireToPicker()

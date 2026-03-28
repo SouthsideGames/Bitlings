@@ -69,12 +69,12 @@ public class DuplicateResolutionPanelUI : MonoBehaviour
         var def = PendingDuplicateCapture.Def;
         var existing = PendingDuplicateCapture.Existing;
         bool isMax = PendingDuplicateCapture.IsMaxLevel;
-        bool isShiny = PendingDuplicateCapture.IsShiny;
+        bool isPremium = PendingDuplicateCapture.IsPremium;
 
         // Species display
         if (speciesIcon != null)
         {
-            Sprite icon = (isShiny && def.shinyIcon != null) ? def.shinyIcon : def.icon;
+            Sprite icon = (isPremium && def.premiumIcon != null) ? def.premiumIcon : def.icon;
             speciesIcon.sprite = icon;
         }
         if (speciesNameLabel != null) speciesNameLabel.text = def.displayName;
@@ -144,7 +144,7 @@ public class DuplicateResolutionPanelUI : MonoBehaviour
 
         // Broker button
         int payout = ExchangeManager.I != null
-            ? ExchangeManager.I.GetBrokerPayout(def.id, isShiny)
+            ? ExchangeManager.I.GetBrokerPayout(def.id, isPremium)
             : Mathf.Max(1, Mathf.RoundToInt(currentValue * 0.85f));
 
         if (brokerButton != null)
@@ -360,7 +360,7 @@ public class DuplicateResolutionPanelUI : MonoBehaviour
                 return;
             }
 
-            PendingDuplicateCapture.Set(existing, def, Mathf.Max(1, p.encounterLevel), p.isShiny, p.isMaxLevel);
+            PendingDuplicateCapture.Set(existing, def, Mathf.Max(1, p.encounterLevel), p.isPremium, p.isMaxLevel);
         }
         catch { }
     }
@@ -386,10 +386,10 @@ public class DuplicateResolutionPanelUI : MonoBehaviour
         target.level = Mathf.Max(1, target.level + 1);
         target.unspentStatPoints += Mathf.Max(0, pointsPerLevel);
 
-        if (target.isShiny)
-            target.shinyTier = Mathf.Max(1, target.shinyTier);
+        if (target.isPremium)
+            target.premiumTier = Mathf.Max(1, target.premiumTier);
         else
-            target.shinyTier = 0;
+            target.premiumTier = 0;
 
         if (def != null)
         {
@@ -414,7 +414,7 @@ public class DuplicateResolutionPanelUI : MonoBehaviour
                 match = string.Equals(t.ownedUID, owned.ownedUID, System.StringComparison.Ordinal);
             else if (!string.IsNullOrEmpty(owned.monsterId))
                 match = string.Equals(t.monsterId, owned.monsterId, System.StringComparison.Ordinal)
-                        && t.isShiny == owned.isShiny;
+                        && t.isPremium == owned.isPremium;
 
             if (!match) continue;
 
@@ -426,8 +426,8 @@ public class DuplicateResolutionPanelUI : MonoBehaviour
             t.trainingLastUnix = owned.trainingLastUnix;
             t.pendingLevels = owned.pendingLevels;
             t.lastLevelClaimDay = owned.lastLevelClaimDay;
-            t.isShiny = owned.isShiny;
-            t.shinyTier = owned.shinyTier;
+            t.isPremium = owned.isPremium;
+            t.premiumTier = owned.premiumTier;
             t.trainingBonus = owned.trainingBonus;
             t.autoApply = owned.autoApply;
             t.autoApplyTargetLevel = owned.autoApplyTargetLevel;

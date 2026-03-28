@@ -16,5 +16,5 @@ MonoBehaviour:
   category: 5
   title: Dividend Day Index
   subtitle: Scheduled payouts
-  body: At set intervals, owned species generate bonus credits based on their current
-    value. Higher-value species yield larger payouts during Dividend Days.
+  body: At set intervals, owned Bitlings generate bonus credits based on their current
+    valuation, with higher-value Bitlings yielding larger payouts.

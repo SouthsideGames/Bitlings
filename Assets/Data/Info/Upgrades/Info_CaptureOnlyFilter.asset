@@ -16,6 +16,5 @@ MonoBehaviour:
   category: 5
   title: Capture-Only Filter
   subtitle: Directory Filtering
-  body: "Adds a \u201CCapture Only\u201D filter to the Directory.\r\n\r\nThis filter
-    shows only Bitlings you have successfully captured, helping you track collection
-    progress more efficiently."
+  body: "Adds a \u201CCapture Only\u201D filter to the Directory, displaying only
+    Bitlings that have been successfully captured to support collection tracking."

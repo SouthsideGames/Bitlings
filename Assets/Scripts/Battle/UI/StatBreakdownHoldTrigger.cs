@@ -63,22 +63,22 @@ public sealed class StatBreakdownHoldTrigger : MonoBehaviour, IPointerDownHandle
     {
         int idx = bm.ActiveIndex;
         var def = bm.GetTeamDefSafe(idx);
-        bool isShiny = false;
+        bool isPremium = false;
         var data = SaveManager.Data;
         if (data != null && data.team != null && idx >= 0 && idx < data.team.Count)
         {
             var om = data.team[idx];
-            isShiny = om != null && (om.isShiny || om.shinyTier > 0);
+            isPremium = om != null && (om.isPremium || om.premiumTier > 0);
         }
 
-        if (!isShiny && def != null && !string.IsNullOrEmpty(def.id))
+        if (!isPremium && def != null && !string.IsNullOrEmpty(def.id))
         {
             var pref = MonsterVariantPreference.GetPreferredOwned(def.id);
             if (pref != null)
-                isShiny = pref.isShiny || pref.shinyTier > 0;
+                isPremium = pref.isPremium || pref.premiumTier > 0;
         }
 
-        string name = def != null ? MonsterNameFormatter.Format(def, isShiny) : "Ally";
+        string name = def != null ? MonsterNameFormatter.Format(def, isPremium) : "Ally";
 
         var baseStats = bm.Stats.GetAdjustedPlayer(idx);
         var finalStats = bm.Stats.GetEffectivePlayer(idx);
@@ -96,8 +96,8 @@ public sealed class StatBreakdownHoldTrigger : MonoBehaviour, IPointerDownHandle
     private void ShowWildBreakdown(BattleManager bm, StatBreakdownPanelUI panel)
     {
         var wildDef = bm.WildDef;
-        bool wildShiny = EncounterManager.I != null && EncounterManager.I.CurrentWildIsShiny;
-        string name = wildDef != null ? MonsterNameFormatter.Format(wildDef, wildShiny) : "Wild";
+        bool wildPremium = EncounterManager.I != null && EncounterManager.I.CurrentWildIsPremium;
+        string name = wildDef != null ? MonsterNameFormatter.Format(wildDef, wildPremium) : "Wild";
 
         var baseStats = bm.Stats.GetAdjustedWild();
         var finalStats = bm.Stats.GetEffectiveWild();

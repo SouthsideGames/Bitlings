@@ -9,18 +9,18 @@ public static class MonsterNameFormatter
         return def.name ?? string.Empty;
     }
 
-    public static string Format(string baseName, bool isShiny)
+    public static string Format(string baseName, bool isPremium)
     {
         if (string.IsNullOrEmpty(baseName)) return string.Empty;
-        return isShiny ? $"*<i>{baseName}</i>*" : baseName;
+        return isPremium ? $"*<i>{baseName}</i>*" : baseName;
     }
 
-    public static string Format(MonsterDataSO def, bool isShiny)
+    public static string Format(MonsterDataSO def, bool isPremium)
     {
-        return Format(GetDisplayName(def), isShiny);
+        return Format(GetDisplayName(def), isPremium);
     }
 
-    public static bool IsShiny(MonsterDataSO def)
+    public static bool IsPremium(MonsterDataSO def)
     {
         if (!def) return false;
 
@@ -28,14 +28,14 @@ public static class MonsterNameFormatter
         {
             var t = def.GetType();
 
-            var f = t.GetField("isShiny", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+            var f = t.GetField("isPremium", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
             if (f != null)
             {
                 var v = f.GetValue(def);
                 if (v is bool b) return b;
             }
 
-            var p2 = t.GetProperty("isShiny", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+            var p2 = t.GetProperty("isPremium", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
             if (p2 != null && p2.CanRead)
             {
                 var v = p2.GetValue(def, null);
@@ -47,21 +47,21 @@ public static class MonsterNameFormatter
         return false;
     }
 
-    public static Sprite GetIcon(MonsterDataSO def, bool isShiny, bool backIcon)
+    public static Sprite GetIcon(MonsterDataSO def, bool isPremium, bool backIcon)
     {
         if (!def) return null;
 
-        if (isShiny)
+        if (isPremium)
         {
             if (backIcon)
             {
-                if (def.shinyBackIcon) return def.shinyBackIcon;
+                if (def.premiumBackIcon) return def.premiumBackIcon;
                 if (def.backIcon) return def.backIcon;
-                if (def.shinyIcon) return def.shinyIcon;
+                if (def.premiumIcon) return def.premiumIcon;
                 return def.icon;
             }
 
-            if (def.shinyIcon) return def.shinyIcon;
+            if (def.premiumIcon) return def.premiumIcon;
             return def.icon;
         }
 

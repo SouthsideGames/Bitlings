@@ -15,8 +15,8 @@ public class MonsterDataSO : ScriptableObject
     public Sprite typeIcon;
     public Sprite icon;
     public Sprite backIcon;
-    public Sprite shinyIcon;
-    public Sprite shinyBackIcon;
+    public Sprite premiumIcon;
+    public Sprite premiumBackIcon;
     public Rarity rarity = Rarity.Common;
     public bool canBeStarter = false;
     [Min(0)] public int starterWeight = 1;

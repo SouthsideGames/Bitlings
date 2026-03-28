@@ -14,9 +14,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   id: MP-020
   displayName: "Sandstorm\u2019s Wrath"
-  description: Forged by relentless desert winds, these Ground and Rock creatures
-    endure harsh extremes. Their strength lies in persistence, armor, and battlefield
-    control.
+  description: Ground and Rock Bitlings endure harsh conditions with strong defense
+    and stability, maintaining control through persistence.
   icon: {fileID: 21300000, guid: 7becb3c73d54c0143824c35d1760e1fc, type: 3}
   rarityLabel: Uncommon
   baseCost: 20

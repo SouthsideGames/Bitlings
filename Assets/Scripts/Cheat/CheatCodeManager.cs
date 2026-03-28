@@ -16,7 +16,7 @@ public enum CheatEffectKind
     ClearAllJobFatigue,
     DiscoverAllMonsters,
     StartEncounterWithMonsterId,
-    ForceShinyNextCapture,
+    ForcePremiumNextCapture,
     ReviveTeam,
     HealTeamFull,
     UnlockAllPacks,
@@ -332,8 +332,8 @@ public class CheatCodeManager : MonoBehaviour
             case CheatEffectKind.StartEncounterWithMonsterId:
                 return ExecuteStartEncounterWithMonsterId(cd.monsterId, cd.spendEnergy, out message);
 
-            case CheatEffectKind.ForceShinyNextCapture:
-                return ExecuteForceShinyNextCapture(out message);
+            case CheatEffectKind.ForcePremiumNextCapture:
+                return ExecuteForcePremiumNextCapture(out message);
 
             case CheatEffectKind.ReviveTeam:
                 return ExecuteReviveTeam(out message);
@@ -989,7 +989,7 @@ public class CheatCodeManager : MonoBehaviour
         return true;
     }
 
-    bool ExecuteForceShinyNextCapture(out string message)
+    bool ExecuteForcePremiumNextCapture(out string message)
     {
         message = string.Empty;
 
@@ -999,10 +999,10 @@ public class CheatCodeManager : MonoBehaviour
             return false;
         }
 
-        SaveManager.Data.forceShinyCapturesRemaining = Mathf.Max(1, SaveManager.Data.forceShinyCapturesRemaining + 1);
+        SaveManager.Data.forcePremiumCapturesRemaining = Mathf.Max(1, SaveManager.Data.forcePremiumCapturesRemaining + 1);
         SaveManager.Save();
 
-        message = "Next capture will be SHINY.";
+        message = "Next capture will be PREMIUM.";
         return true;
     }
 

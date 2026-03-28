@@ -10,17 +10,18 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 3b3551d34f5488948a8cd10af9b64480, type: 3}
-  m_Name: ExchangeRequest_FurnaceSurgeContract
+  m_Name: EX-014
   m_EditorClassIdentifier: Assembly-CSharp::ExchangeRequestSO
-  requestId: req_furnace_surge_contract
-  displayName: Furnace Surge Contract
-  flavorText: Smelters are overheating under demand and need an immediate fire-capable
-    placement.
+  requestId: EX-014
+  displayName: Alloy Maintenance Call
+  flavorText: An industrial maintenance team is requesting an Alloy Bitling for high-durability
+    operations.
   requiredSpecies: {fileID: 0}
-  requiredType: 1
+  requiredRandomSpeciesType: 0
+  requiredType: 16
   requiredMinRarity: 0
-  creditReward: 160
-  bonusResourceType: 4
+  creditReward: 130
+  bonusResourceType: 0
   bonusResourceAmount: 0
-  weight: 1
+  weight: 3
   durationHours: 24

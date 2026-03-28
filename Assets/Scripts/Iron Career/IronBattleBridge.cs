@@ -254,12 +254,12 @@ public sealed class IronBattleBridge : MonoBehaviour, IBattleRosterProvider, IBa
     // IBattleContext
     // ─────────────────────────────────────────────────────────────
 
-    public bool IronWildIsShiny
+    public bool IronWildIsPremium
     {
         get
         {
             var host = Host;
-            if (host is IronCareerManager mgr) return mgr.IronWildIsShiny;
+            if (host is IronCareerManager mgr) return mgr.IronWildIsPremium;
             return false;
         }
     }

@@ -14,9 +14,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   id: MP-005
   displayName: Echoes of Stone
-  description: Forged over countless ages, these Rock and Alloy hybrids embody endurance
-    and refinement. Their power reflects pressure, time, and the unyielding strength
-    of the earth itself.
+  description: Forged over time, these Rock and Alloy Bitlings embody endurance and
+    strength. Their performance reflects resilience built through pressure and refinement.
   icon: {fileID: 21300000, guid: ad273b5ba0914db4c91d22043640a51e, type: 3}
   rarityLabel: Common
   baseCost: 18

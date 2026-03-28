@@ -189,27 +189,27 @@ public class TeamMonsterCardUI : MonoBehaviour
     // ----------------------------------------------------------
     public void RefreshVisuals()
     {
-        bool isShiny = false;
+        bool isPremium = false;
 
         // Cosmetic-only: prefer the saved variant preference for this monsterId when available.
         if (_def != null && !string.IsNullOrEmpty(_def.id))
         {
             var pref = MonsterVariantPreference.GetPreferredOwned(_def.id);
             if (pref != null)
-                isShiny = pref.isShiny || pref.shinyTier > 0;
+                isPremium = pref.isPremium || pref.premiumTier > 0;
             else if (_data != null)
-                isShiny = _data.isShiny || _data.shinyTier > 0;
+                isPremium = _data.isPremium || _data.premiumTier > 0;
         }
         else if (_data != null)
         {
-            isShiny = _data.isShiny || _data.shinyTier > 0;
+            isPremium = _data.isPremium || _data.premiumTier > 0;
         }
 
         if (img)
         {
             if (_def)
             {
-                var spr = MonsterNameFormatter.GetIcon(_def, isShiny, backIcon: false);
+                var spr = MonsterNameFormatter.GetIcon(_def, isPremium, backIcon: false);
                 if (spr == null) spr = _def.icon;
 
                 img.sprite = spr;

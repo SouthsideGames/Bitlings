@@ -14,8 +14,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   id: MP-025
   displayName: Magma Core
-  description: Superheated constructs operate on the brink of structural collapse.
-    Fire and Alloy monsters deliver overwhelming power tempered by calculated risk.
+  description: Fire and Alloy Bitlings deliver powerful output under strain, balancing
+    high performance with calculated stability.
   icon: {fileID: 21300000, guid: d705821adecc50d44beeba4d31ce29c3, type: 3}
   rarityLabel: Epic
   baseCost: 34

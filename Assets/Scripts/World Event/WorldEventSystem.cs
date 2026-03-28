@@ -58,7 +58,7 @@ public sealed class WorldEventSystem : MonoBehaviour
 
     private bool _encountersDisabled;
     private float _encounterEnergyCostMul = 1f;
-    private float _wildShinyMul = 1f;
+    private float _wildPremiumMul = 1f;
     private float _bossCadenceMul = 1f;
 
     private float _shopPriceMul = 1f;
@@ -211,8 +211,8 @@ public sealed class WorldEventSystem : MonoBehaviour
     public float GetEncounterEnergyCostMultiplier()
         => IsFeatureActive() ? Mathf.Max(0f, _encounterEnergyCostMul) : 1f;
 
-    public float GetWildShinyChanceMultiplier()
-        => IsFeatureActive() ? Mathf.Max(0f, _wildShinyMul) : 1f;
+    public float GetWildPremiumChanceMultiplier()
+        => IsFeatureActive() ? Mathf.Max(0f, _wildPremiumMul) : 1f;
 
     public float GetBossCadenceMultiplier()
         => IsFeatureActive() ? Mathf.Max(0.05f, _bossCadenceMul) : 1f;
@@ -424,7 +424,7 @@ public sealed class WorldEventSystem : MonoBehaviour
 
         _encountersDisabled = false;
         _encounterEnergyCostMul = 1f;
-        _wildShinyMul = 1f;
+        _wildPremiumMul = 1f;
         _bossCadenceMul = 1f;
 
         _shopPriceMul = 1f;
@@ -479,8 +479,8 @@ public sealed class WorldEventSystem : MonoBehaviour
                         _encounterEnergyCostMul *= v;
                         break;
 
-                    case WorldEventEffectKind.WildShinyChanceMultiplier:
-                        _wildShinyMul *= v;
+                    case WorldEventEffectKind.WildPremiumChanceMultiplier:
+                        _wildPremiumMul *= v;
                         break;
 
                     case WorldEventEffectKind.BossCadenceMultiplier:

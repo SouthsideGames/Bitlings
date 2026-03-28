@@ -8,14 +8,17 @@ public class ExchangeRequestSO : ScriptableObject
     public string displayName;
     [TextArea(2, 4)] public string flavorText;
 
-    [Header("Requirement (set species OR type/rarity for generic)")]
-    [Tooltip("If set, requires this exact species. Leave empty for generic requests.")]
+    [Header("Requirement (exact species OR random species type OR generic type/rarity)")]
+    [Tooltip("If set, requires this exact species. This takes priority over the other requirement fields.")]
     public MonsterDataSO requiredSpecies;
 
-    [Tooltip("For generic requests: any species of this type qualifies. Ignored if requiredSpecies is set.")]
+    [Tooltip("If exact species is empty, picks one random species of this type when the request is generated. The chosen species becomes the exact request.")]
+    public MonsterType requiredRandomSpeciesType = MonsterType.None;
+
+    [Tooltip("For generic requests: any species of this type qualifies. Ignored if exact species or random species type is set.")]
     public MonsterType requiredType = MonsterType.None;
 
-    [Tooltip("For generic requests: minimum rarity required. Ignored if requiredSpecies is set.")]
+    [Tooltip("Minimum rarity for generic requests, and also used to filter random species type picks.")]
     public Rarity requiredMinRarity = Rarity.Common;
 
     [Header("Reward")]

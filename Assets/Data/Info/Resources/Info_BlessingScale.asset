@@ -16,6 +16,4 @@ MonoBehaviour:
   category: 1
   title: Blessing Scale
   subtitle: Resource
-  body: 'Comes from: Sanctum
-
-    Used to temporarily increase job site capacity'
+  body: Provided by the Sanctum to temporarily increase job site storage.

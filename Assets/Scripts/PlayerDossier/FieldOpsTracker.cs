@@ -32,7 +32,7 @@ public static class FieldOpsTracker
     /// <summary>
     /// Called whenever a capture is attempted (success or fail).
     /// </summary>
-    public static void RecordCaptureAttempt(MonsterDataSO def, bool success, bool isShiny)
+    public static void RecordCaptureAttempt(MonsterDataSO def, bool success, bool isPremium)
     {
         if (!def) return;
         var stats = Stats;
@@ -58,10 +58,10 @@ public static class FieldOpsTracker
                 stats.rareBitlingsFound = Mathf.Max(0, stats.rareBitlingsFound + 1);
             }
 
-            // Shiny captured?
-            if (isShiny)
+            // Premium captured?
+            if (isPremium)
             {
-                stats.shinyDiscoveries = Mathf.Max(0, stats.shinyDiscoveries + 1);
+                stats.premiumDiscoveries = Mathf.Max(0, stats.premiumDiscoveries + 1);
                 AddHighlight($"Captured {MonsterNameFormatter.Format(def, true)}!");
             }
             else

@@ -14,9 +14,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   id: MP-027
   displayName: Verdant Bloom
-  description: Living symbols of renewal, these Grass and Bug monsters sustain allies
-    through regeneration. The pack rewards synergy, recovery, and long-form endurance
-    strategies.
+  description: Grass and Bug Bitlings support sustained performance through regeneration,
+    reinforcing long-term stability and synergy.
   icon: {fileID: 21300000, guid: 22fc84a2f4f29934fab8fae92fd5a38d, type: 3}
   rarityLabel: Rare
   baseCost: 26

@@ -20,7 +20,7 @@ public static class IdleBattleForegroundLogger
         s.log ??= new List<IdleEncounterLogEntry>();
 
         // Merge by monsterId.
-        AddToLogMerged(s.log, result.wildDef.id, Mathf.Max(0, result.creditsGained), shiny: false);
+        AddToLogMerged(s.log, result.wildDef.id, Mathf.Max(0, result.creditsGained), premium: false);
 
         if (energySpentGuess > 0)
             s.totalEnergySpent += Mathf.Max(0, energySpentGuess);
@@ -43,7 +43,7 @@ public static class IdleBattleForegroundLogger
         IdleBattleStore.Save(s);
     }
 
-    private static void AddToLogMerged(List<IdleEncounterLogEntry> log, string monsterId, int credits, bool shiny)
+    private static void AddToLogMerged(List<IdleEncounterLogEntry> log, string monsterId, int credits, bool premium)
     {
         if (log == null || string.IsNullOrEmpty(monsterId)) return;
 
@@ -55,14 +55,14 @@ public static class IdleBattleForegroundLogger
                 monsterId = monsterId,
                 count = 0,
                 credits = 0,
-                shinySeen = false
+                premiumSeen = false
             };
             log.Add(e);
         }
 
         e.count += 1;
         e.credits += Mathf.Max(0, credits);
-        e.shinySeen |= shiny;
+        e.premiumSeen |= premium;
     }
 
     private static void TrySetBoolFieldIfPresent(object obj, string fieldName, bool value)

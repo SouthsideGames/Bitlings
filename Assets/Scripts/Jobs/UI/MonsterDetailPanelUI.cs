@@ -86,15 +86,15 @@ public class MonsterDetailPanelUI : MonoBehaviour
     [SerializeField] private Button favoriteButton;
     [SerializeField] private GameObject favoriteOnIcon;
 
-    [Header("Shiny Variant Toggle (Directory)")]
-    [Tooltip("Optional. If wired, shows a toggle in Directory detail view when you own BOTH the normal and shiny variant.")]
-    [SerializeField] private GameObject shinyVariantRoot;
+    [Header("Premium Variant Toggle (Directory)")]
+    [Tooltip("Optional. If wired, shows a toggle in Directory detail view when you own BOTH the normal and premium variant.")]
+    [SerializeField] private GameObject premiumVariantRoot;
 
-    [Tooltip("Optional. Clicking toggles between Normal and Shiny view (Directory only).")]
-    [SerializeField] private Button shinyVariantToggleButton;
+    [Tooltip("Optional. Clicking toggles between Normal and Premium view (Directory only).")]
+    [SerializeField] private Button premiumVariantToggleButton;
 
-    [Tooltip("Optional. Label for the toggle button (e.g., 'View Shiny' / 'View Normal').")]
-    [SerializeField] private TextMeshProUGUI shinyVariantToggleLabel;
+    [Tooltip("Optional. Label for the toggle button (e.g., 'View Premium' / 'View Normal').")]
+    [SerializeField] private TextMeshProUGUI premiumVariantToggleLabel;
 
     [Header("Stats View Toggle")]
     [Tooltip("Optional: button that toggles Base Stats vs Adjusted Stats.")]
@@ -146,15 +146,15 @@ public class MonsterDetailPanelUI : MonoBehaviour
 
     
 
-    // Stats source should remain stable; shiny is cosmetic-only.
+    // Stats source should remain stable; premium is cosmetic-only.
     private OwnedMonsterData _statsOwned;
 
     // Cosmetic view flag (drives icon/name only)
-    private bool _viewShinyCosmetic;
-// Directory shiny/normal view state (variant toggle)
+    private bool _viewPremiumCosmetic;
+// Directory premium/normal view state (variant toggle)
     private bool _directoryHasNormal;
-    private bool _directoryHasShiny;
-    private bool _directoryViewingShiny;
+    private bool _directoryHasPremium;
+    private bool _directoryViewingPremium;
 
     // Browse session (Directory/Starter swipe)
     private IReadOnlyList<MonsterDataSO> _browseDefs;
@@ -216,10 +216,10 @@ public class MonsterDetailPanelUI : MonoBehaviour
             statsViewToggleButton.onClick.AddListener(ToggleStatsView);
         }
 
-        if (shinyVariantToggleButton)
+        if (premiumVariantToggleButton)
         {
-            shinyVariantToggleButton.onClick.RemoveAllListeners();
-            shinyVariantToggleButton.onClick.AddListener(ToggleDirectoryShinyVariant);
+            premiumVariantToggleButton.onClick.RemoveAllListeners();
+            premiumVariantToggleButton.onClick.AddListener(ToggleDirectoryPremiumVariant);
         }
 
         RefreshStatsViewToggleLabel();
@@ -471,11 +471,11 @@ public class MonsterDetailPanelUI : MonoBehaviour
         SetupFavoriteButton();
 
         ResolveVariantState(monster ? monster.id : null);
-        _viewShinyCosmetic = (_preferredOwned != null)
-            ? (_preferredOwned.isShiny || _preferredOwned.shinyTier > 0)
-            : (_statsOwned != null && (_statsOwned.isShiny || _statsOwned.shinyTier > 0));
-        SetupShinyVariantUI();
-        UpdateShinyVariantToggleLabel(); // ✅ ensure label correct at open
+        _viewPremiumCosmetic = (_preferredOwned != null)
+            ? (_preferredOwned.isPremium || _preferredOwned.premiumTier > 0)
+            : (_statsOwned != null && (_statsOwned.isPremium || _statsOwned.premiumTier > 0));
+        SetupPremiumVariantUI();
+        UpdatePremiumVariantToggleLabel(); // ✅ ensure label correct at open
         SafeOpen(monster);
     }
 
@@ -501,9 +501,9 @@ public class MonsterDetailPanelUI : MonoBehaviour
 
         // Cosmetic-only: use global preferred variant if set, otherwise fall back to this instance.
         var prefCos = MonsterVariantPreference.GetPreferredOwned(_currentOwned.monsterId);
-        _viewShinyCosmetic = (prefCos != null)
-            ? (prefCos.isShiny || prefCos.shinyTier > 0)
-            : (_currentOwned.isShiny || _currentOwned.shinyTier > 0);
+        _viewPremiumCosmetic = (prefCos != null)
+            ? (prefCos.isPremium || prefCos.premiumTier > 0)
+            : (_currentOwned.isPremium || _currentOwned.premiumTier > 0);
 current = MonsterLibraryLocator.GetById(_currentOwned.monsterId);
         onConfirm = null;
         onCancel = null;
@@ -515,10 +515,10 @@ current = MonsterLibraryLocator.GetById(_currentOwned.monsterId);
         ResolveVariantState(current ? current.id : null, _currentOwned);
         // Sync cosmetic view to preferred after resolving.
         if (_preferredOwned != null)
-            _viewShinyCosmetic = (_preferredOwned.isShiny || _preferredOwned.shinyTier > 0);
+            _viewPremiumCosmetic = (_preferredOwned.isPremium || _preferredOwned.premiumTier > 0);
 
-        SetupShinyVariantUI();
-        UpdateShinyVariantToggleLabel(); // ✅
+        SetupPremiumVariantUI();
+        UpdatePremiumVariantToggleLabel(); // ✅
         ApplyVariantCosmeticImmediate();
         SafeOpen(current);
     }
@@ -539,9 +539,9 @@ current = MonsterLibraryLocator.GetById(_currentOwned.monsterId);
 
         // Cosmetic-only: use global preferred variant if set, otherwise fall back to this instance.
         var prefCos = MonsterVariantPreference.GetPreferredOwned(_currentOwned.monsterId);
-        _viewShinyCosmetic = (prefCos != null)
-            ? (prefCos.isShiny || prefCos.shinyTier > 0)
-            : (_currentOwned.isShiny || _currentOwned.shinyTier > 0);
+        _viewPremiumCosmetic = (prefCos != null)
+            ? (prefCos.isPremium || prefCos.premiumTier > 0)
+            : (_currentOwned.isPremium || _currentOwned.premiumTier > 0);
 current = MonsterLibraryLocator.GetById(_currentOwned.monsterId);
         onConfirm = null;
         onCancel = null;
@@ -553,10 +553,10 @@ current = MonsterLibraryLocator.GetById(_currentOwned.monsterId);
         ResolveVariantState(current ? current.id : null, _currentOwned);
         // Sync cosmetic view to preferred after resolving.
         if (_preferredOwned != null)
-            _viewShinyCosmetic = (_preferredOwned.isShiny || _preferredOwned.shinyTier > 0);
+            _viewPremiumCosmetic = (_preferredOwned.isPremium || _preferredOwned.premiumTier > 0);
 
-        SetupShinyVariantUI();
-        UpdateShinyVariantToggleLabel();
+        SetupPremiumVariantUI();
+        UpdatePremiumVariantToggleLabel();
         ApplyVariantCosmeticImmediate();
         SafeOpen(current);
     }
@@ -579,9 +579,9 @@ current = MonsterLibraryLocator.GetById(_currentOwned.monsterId);
 
         ResolveVariantState(monster ? monster.id : null);
         _statsOwned = _preferredOwned;
-        _viewShinyCosmetic = _directoryViewingShiny;
-        SetupShinyVariantUI();
-        UpdateShinyVariantToggleLabel(); 
+        _viewPremiumCosmetic = _directoryViewingPremium;
+        SetupPremiumVariantUI();
+        UpdatePremiumVariantToggleLabel(); 
         SafeOpen(monster);
     }
 
@@ -610,15 +610,15 @@ current = MonsterLibraryLocator.GetById(_currentOwned.monsterId);
         ResolveVariantState(monster ? monster.id : null, owned);
 
         // Ensure the cosmetic view matches the instance we opened from.
-        // Without this, if the panel was previously opened from a shiny team member,
-        // clicking a non-shiny owned row could keep the "Shiny" tab selected.
-        _viewShinyCosmetic = _directoryViewingShiny;
+        // Without this, if the panel was previously opened from a premium team member,
+        // clicking a non-premium owned row could keep the "Premium" tab selected.
+        _viewPremiumCosmetic = _directoryViewingPremium;
 
-        // In Directory mode, stats are driven by the focused owned instance, but shiny is cosmetic-only.
+        // In Directory mode, stats are driven by the focused owned instance, but premium is cosmetic-only.
         // Apply cosmetic immediately so icon + name are correct even if the panel was already open.
         ApplyVariantCosmeticImmediate();
-        SetupShinyVariantUI();
-        UpdateShinyVariantToggleLabel();
+        SetupPremiumVariantUI();
+        UpdatePremiumVariantToggleLabel();
         SafeOpen(monster);
     }
     public void ShowPackPreview(MonsterDataSO monster)
@@ -639,9 +639,9 @@ current = MonsterLibraryLocator.GetById(_currentOwned.monsterId);
         SetupFavoriteButton();
 
         ResolveVariantState(monster ? monster.id : null);
-        _viewShinyCosmetic = false;
-        SetupShinyVariantUI();
-        UpdateShinyVariantToggleLabel();
+        _viewPremiumCosmetic = false;
+        SetupPremiumVariantUI();
+        UpdatePremiumVariantToggleLabel();
         SafeOpen(monster);
     }
 
@@ -720,83 +720,83 @@ current = MonsterLibraryLocator.GetById(_currentOwned.monsterId);
     }
 
     // ─────────────────────────────────────────────────────────────
-    // Shiny variant toggle UI + label
+    // Premium variant toggle UI + label
     // ─────────────────────────────────────────────────────────────
 
-    private bool IsViewingShinyNow()
+    private bool IsViewingPremiumNow()
     {
-        // Shiny is cosmetic-only. The active cosmetic flag drives icon/name.
+        // Premium is cosmetic-only. The active cosmetic flag drives icon/name.
         if (_mode == MonsterDetailMode.AssignToTeam || _mode == MonsterDetailMode.DirectoryView)
-            return _viewShinyCosmetic;
+            return _viewPremiumCosmetic;
 
         return false;
     }
 
-    private void UpdateShinyVariantToggleLabel()
+    private void UpdatePremiumVariantToggleLabel()
     {
-        if (!shinyVariantToggleLabel) return;
-        if (!shinyVariantRoot || !shinyVariantRoot.activeSelf) return;
+        if (!premiumVariantToggleLabel) return;
+        if (!premiumVariantRoot || !premiumVariantRoot.activeSelf) return;
 
-        bool viewingShiny = IsViewingShinyNow();
-        shinyVariantToggleLabel.text = viewingShiny ? "Normal" : "Shiny";
+        bool viewingPremium = IsViewingPremiumNow();
+        premiumVariantToggleLabel.text = viewingPremium ? "Normal" : "Premium";
     }
 
-    private void SetupShinyVariantUI()
+    private void SetupPremiumVariantUI()
     {
-        if (!shinyVariantRoot)
+        if (!premiumVariantRoot)
             return;
 
         // Show in Directory + Assign/Team. Never in StarterSelect.
         if (_mode != MonsterDetailMode.DirectoryView && _mode != MonsterDetailMode.AssignToTeam)
         {
-            shinyVariantRoot.SetActive(false);
+            premiumVariantRoot.SetActive(false);
             return;
         }
 
         bool show = current != null
                     && _directoryHasNormal
-                    && _directoryHasShiny
+                    && _directoryHasPremium
                     && _preferredOwned != null
                     && _otherVariantOwned != null;
 
-        shinyVariantRoot.SetActive(show);
+        premiumVariantRoot.SetActive(show);
 
         if (!show)
             return;
 
-        UpdateShinyVariantToggleLabel(); 
+        UpdatePremiumVariantToggleLabel(); 
     }
 
-    private void ToggleDirectoryShinyVariant()
+    private void ToggleDirectoryPremiumVariant()
     {
         if (current == null || string.IsNullOrEmpty(current.id))
             return;
 
-        if (!MonsterVariantPreference.PlayerHasBothVariants(current.id, out var shiny, out var non))
+        if (!MonsterVariantPreference.PlayerHasBothVariants(current.id, out var premium, out var non))
             return;
 
-        if (shiny == null || non == null)
+        if (premium == null || non == null)
             return;
 
-        bool viewingShiny = IsViewingShinyNow();
+        bool viewingPremium = IsViewingPremiumNow();
 
-        var next = viewingShiny ? non : shiny;
-        var other = viewingShiny ? shiny : non;
+        var next = viewingPremium ? non : premium;
+        var other = viewingPremium ? premium : non;
 
         _preferredOwned = next;
         _otherVariantOwned = other;
 
-        _directoryHasShiny = shiny != null;
+        _directoryHasPremium = premium != null;
         _directoryHasNormal = non != null;
-        _directoryViewingShiny = next != null && (next.isShiny || next.shinyTier > 0);
+        _directoryViewingPremium = next != null && (next.isPremium || next.premiumTier > 0);
 
-        _viewShinyCosmetic = (next != null && (next.isShiny || next.shinyTier > 0));
+        _viewPremiumCosmetic = (next != null && (next.isPremium || next.premiumTier > 0));
 
         if (next != null && !string.IsNullOrEmpty(next.ownedUID))
             MonsterVariantPreference.SetPreferred(current.id, next.ownedUID);
 
-        SetupShinyVariantUI();
-        UpdateShinyVariantToggleLabel();
+        SetupPremiumVariantUI();
+        UpdatePremiumVariantToggleLabel();
         ApplyVariantCosmeticImmediate();
         SafeOpen(current);
 
@@ -835,10 +835,10 @@ private Sprite GetVariantIcon(MonsterDataSO monster)
     {
         if (monster == null) return null;
 
-        bool shiny = (_mode == MonsterDetailMode.AssignToTeam || _mode == MonsterDetailMode.DirectoryView) ? _viewShinyCosmetic : false;
+        bool premium = (_mode == MonsterDetailMode.AssignToTeam || _mode == MonsterDetailMode.DirectoryView) ? _viewPremiumCosmetic : false;
 
-        if (shiny && monster.shinyIcon != null)
-            return monster.shinyIcon;
+        if (premium && monster.premiumIcon != null)
+            return monster.premiumIcon;
 
         return monster.icon;
     }
@@ -849,12 +849,12 @@ private Sprite GetVariantIcon(MonsterDataSO monster)
 
         string baseName = string.IsNullOrEmpty(monster.displayName) ? monster.name : monster.displayName;
 
-        bool shiny = (_mode == MonsterDetailMode.AssignToTeam || _mode == MonsterDetailMode.DirectoryView) ? _viewShinyCosmetic : false;
+        bool premium = (_mode == MonsterDetailMode.AssignToTeam || _mode == MonsterDetailMode.DirectoryView) ? _viewPremiumCosmetic : false;
 
-        if (!shiny)
+        if (!premium)
             return baseName;
 
-        return $"{baseName} <color=#FFD54F>(Shiny)</color>";
+        return $"{baseName} <color=#FFD54F>(Premium)</color>";
     }
 
     // ─────────────────────────────────────────────────────────────
@@ -940,8 +940,8 @@ private Sprite GetVariantIcon(MonsterDataSO monster)
                 // Preserve focused owned instance during staged refresh so Team/Assign doesn’t
                 // accidentally revert to global directory preference mid-render.
                 ResolveVariantState(monster ? monster.id : null);
-                SetupShinyVariantUI();
-                UpdateShinyVariantToggleLabel();
+                SetupPremiumVariantUI();
+                UpdatePremiumVariantToggleLabel();
 
                 RenderStatsSection();
 
@@ -1323,17 +1323,17 @@ private Sprite GetVariantIcon(MonsterDataSO monster)
     private void ClearVariantState()
     {
         _directoryHasNormal = false;
-        _directoryHasShiny = false;
-        _directoryViewingShiny = false;
+        _directoryHasPremium = false;
+        _directoryViewingPremium = false;
 
         _preferredOwned = null;
         _otherVariantOwned = null;
 
         
         _statsOwned = null;
-        _viewShinyCosmetic = false;
-if (shinyVariantRoot) shinyVariantRoot.SetActive(false);
-        if (shinyVariantToggleLabel) shinyVariantToggleLabel.text = string.Empty;
+        _viewPremiumCosmetic = false;
+if (premiumVariantRoot) premiumVariantRoot.SetActive(false);
+        if (premiumVariantToggleLabel) premiumVariantToggleLabel.text = string.Empty;
     }
 
     private void ResetVisualsImmediate()
@@ -1499,7 +1499,7 @@ if (shinyVariantRoot) shinyVariantRoot.SetActive(false);
 
     private int GetDisplayLevel()
     {
-        // Stats source is stable; shiny is cosmetic-only.
+        // Stats source is stable; premium is cosmetic-only.
         var src = _statsOwned ?? _currentOwned;
         if (src != null && src.level > 0)
             return src.level;
@@ -1677,8 +1677,8 @@ if (shinyVariantRoot) shinyVariantRoot.SetActive(false);
     void ResolveVariantState(string monsterId, OwnedMonsterData focusOwned)
     {
         _directoryHasNormal = false;
-        _directoryHasShiny = false;
-        _directoryViewingShiny = false;
+        _directoryHasPremium = false;
+        _directoryViewingPremium = false;
 
         _preferredOwned = null;
         _otherVariantOwned = null;
@@ -1686,9 +1686,9 @@ if (shinyVariantRoot) shinyVariantRoot.SetActive(false);
         if (string.IsNullOrEmpty(monsterId) || SaveManager.Data == null)
             return;
 
-        if (MonsterVariantPreference.PlayerHasBothVariants(monsterId, out var shiny, out var non))
+        if (MonsterVariantPreference.PlayerHasBothVariants(monsterId, out var premium, out var non))
         {
-            _directoryHasShiny = shiny != null;
+            _directoryHasPremium = premium != null;
             _directoryHasNormal = non != null;
 
             if (focusOwned != null && focusOwned.monsterId == monsterId)
@@ -1697,11 +1697,11 @@ if (shinyVariantRoot) shinyVariantRoot.SetActive(false);
                 _preferredOwned = MonsterVariantPreference.GetPreferredOwned(monsterId);
 
             if (_preferredOwned == null)
-                _preferredOwned = non ?? shiny;
+                _preferredOwned = non ?? premium;
 
             _otherVariantOwned = MonsterVariantPreference.GetOtherVariant(monsterId, _preferredOwned);
 
-            _directoryViewingShiny = _preferredOwned != null && (_preferredOwned.isShiny || _preferredOwned.shinyTier > 0);
+            _directoryViewingPremium = _preferredOwned != null && (_preferredOwned.isPremium || _preferredOwned.premiumTier > 0);
             return;
         }
 
@@ -1711,11 +1711,11 @@ if (shinyVariantRoot) shinyVariantRoot.SetActive(false);
 
         if (pref != null)
         {
-            bool s = pref.isShiny || pref.shinyTier > 0;
-            _directoryHasShiny = s;
+            bool s = pref.isPremium || pref.premiumTier > 0;
+            _directoryHasPremium = s;
             _directoryHasNormal = !s;
             _preferredOwned = pref;
-            _directoryViewingShiny = s;
+            _directoryViewingPremium = s;
         }
     }
 }

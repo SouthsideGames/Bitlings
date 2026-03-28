@@ -173,11 +173,11 @@ public static class TitlesAdapter
         rt.OnMonsterLeveled(monsterId, newLevel);
     }
 
-    public static void OnMonsterCaptured(string monsterId, MonsterType type, int level, bool isShiny)
+    public static void OnMonsterCaptured(string monsterId, MonsterType type, int level, bool isPremium)
     {
         var rt = Runtime;
         if (rt == null) return;
-        rt.OnMonsterCaptured(monsterId, type, level, isShiny);
+        rt.OnMonsterCaptured(monsterId, type, level, isPremium);
     }
 
     public static void OnMonsterEvolved(string newMonsterId)

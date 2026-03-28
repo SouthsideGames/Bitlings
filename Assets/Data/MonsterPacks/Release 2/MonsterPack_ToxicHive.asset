@@ -14,9 +14,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   id: MP-014
   displayName: Toxic Hive
-  description: Venomous Bug and Corrupt hybrids pulse with malignant energy. This
-    pack excels at damage-over-time effects, attrition, and overwhelming biological
-    aggression.
+  description: Bug and Corrupt Bitlings apply continuous pressure through persistent
+    damage, overwhelming opponents over time.
   icon: {fileID: 21300000, guid: 0b3533a2d3be4844db1ae4b31ba64d30, type: 3}
   rarityLabel: Rare
   baseCost: 25

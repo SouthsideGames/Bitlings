@@ -5,13 +5,13 @@ using Random = UnityEngine.Random;
 
 // ─────────────────────────────────────────────────────────────
 // EncounterManager.FlyersCapture
-// Flyer/luck/shiny modifiers, weighted wild selection, and capture flow.
+// Flyer/luck/premium modifiers, weighted wild selection, and capture flow.
 // ─────────────────────────────────────────────────────────────
 
 public partial class EncounterManager
 {
-    // ================= LURES / LUCK / SHINY / CAPTURE BAND =====================
-    private const float MAX_SHINY_BOOST_MULT = 8f;
+    // ================= LURES / LUCK / PREMIUM / CAPTURE BAND =====================
+    private const float MAX_PREMIUM_BOOST_MULT = 8f;
 
     private const int DUPLICATE_LEVELUP_STAT_POINTS = 3;
 
@@ -121,10 +121,10 @@ public partial class EncounterManager
                 mult *= luckMult;
             }
 
-            // Shiny Orb: boost any shiny variants
-            float shinyMult = GetActiveShinyBoostMult();
-            if (shinyMult > 1f && IsShinyMonster(m))
-                mult *= shinyMult;
+            // Premium Orb: boost any premium variants
+            float premiumMult = GetActivePremiumBoostMult();
+            if (premiumMult > 1f && IsPremiumMonster(m))
+                mult *= premiumMult;
 
             float finalW = baseW * mult;
             if (float.IsNaN(finalW) || float.IsInfinity(finalW)) return 0f;
@@ -170,11 +170,11 @@ public partial class EncounterManager
         }
     }
 
-    private ShinyBoostData CurrentShinyBoost
+    private PremiumBoostData CurrentPremiumBoost
     {
         get
         {
-            var list = SaveManager.Data?.activeShinyBoosts;
+            var list = SaveManager.Data?.activePremiumBoosts;
             if (list == null || list.Count == 0) return null;
             var cur = list[0];
             if (cur != null && cur.expireUnix <= SaveManager.NowUnix())
@@ -213,16 +213,16 @@ public partial class EncounterManager
         return Mathf.Clamp01(cur.bonus);
     }
 
-    public bool HasActiveShinyBoost()
+    public bool HasActivePremiumBoost()
     {
-        return CurrentShinyBoost != null;
+        return CurrentPremiumBoost != null;
     }
 
-    private float GetActiveShinyBoostMult()
+    private float GetActivePremiumBoostMult()
     {
-        var cur = CurrentShinyBoost;
+        var cur = CurrentPremiumBoost;
         if (cur == null) return 1f;
-        return Mathf.Clamp(cur.bonus, 1f, MAX_SHINY_BOOST_MULT);
+        return Mathf.Clamp(cur.bonus, 1f, MAX_PREMIUM_BOOST_MULT);
     }
 
     private float GetActiveCaptureBonus01()
@@ -323,34 +323,34 @@ public partial class EncounterManager
         bool success = roll <= finalChance;
 
         // ---------------------------------------------------------------------
-        // SHINY DETERMINATION (FIXED):
-        // If the encounter was presented as shiny, the OwnedMonsterData must store isShiny=true,
-        // even if the species is not "shiny-flagged" by definition.
+        // PREMIUM DETERMINATION (FIXED):
+        // If the encounter was presented as premium, the OwnedMonsterData must store isPremium=true,
+        // even if the species is not "premium-flagged" by definition.
         // ---------------------------------------------------------------------
 
-        // Encounter-scoped shiny presentation (either still active, or captured from battle end)
-        bool encounterWasShiny = _currentWildIsShiny || _lastWildWasShiny;
+        // Encounter-scoped premium presentation (either still active, or captured from battle end)
+        bool encounterWasPremium = _currentWildIsPremium || _lastWildWasPremium;
 
-        // Legacy/species shiny flag OR encounter presented shiny
-        bool isShiny = IsShinyMonster(def) || encounterWasShiny;
+        // Legacy/species premium flag OR encounter presented premium
+        bool isPremium = IsPremiumMonster(def) || encounterWasPremium;
 
-        // If no shiny art exists, do not mark shiny (prevents "shiny" with normal visuals).
-        if (isShiny && def.shinyIcon == null)
-            isShiny = false;
+        // If no premium art exists, do not mark premium (prevents "premium" with normal visuals).
+        if (isPremium && def.premiumIcon == null)
+            isPremium = false;
 
-        // Shiny cheat
-        if (SaveManager.Data != null && SaveManager.Data.forceShinyCapturesRemaining > 0)
+        // Premium cheat
+        if (SaveManager.Data != null && SaveManager.Data.forcePremiumCapturesRemaining > 0)
         {
-            isShiny = true;
+            isPremium = true;
 
             // still respect art availability
-            if (def.shinyIcon == null)
-                isShiny = false;
+            if (def.premiumIcon == null)
+                isPremium = false;
         }
 
-        string captureName = MonsterNameFormatter.Format(def, isShiny);
+        string captureName = MonsterNameFormatter.Format(def, isPremium);
 
-        FieldOpsTracker.RecordCaptureAttempt(def, success, isShiny);
+        FieldOpsTracker.RecordCaptureAttempt(def, success, isPremium);
 
         if (success)
         {
@@ -358,22 +358,22 @@ public partial class EncounterManager
 
             data.owned ??= new List<OwnedMonsterData>();
 
-            // Policy C: per-variant (shiny vs non-shiny) we keep ONE owned instance.
+            // Policy C: per-variant (premium vs non-premium) we keep ONE owned instance.
             // If the variant already exists, level it up (unless max -> convert into Growth Cores).
-            OwnedMonsterData existing = FindBestOwnedVariant(data.owned, def.id, isShiny);
+            OwnedMonsterData existing = FindBestOwnedVariant(data.owned, def.id, isPremium);
             int maxLevel = GetMaxLevelFor(def);
 
             if (existing != null)
             {
-                // Consume shiny cheat only on successful capture (existing behavior)
-                if (isShiny && SaveManager.Data != null && SaveManager.Data.forceShinyCapturesRemaining > 0)
+                // Consume premium cheat only on successful capture (existing behavior)
+                if (isPremium && SaveManager.Data != null && SaveManager.Data.forcePremiumCapturesRemaining > 0)
                 {
-                    SaveManager.Data.forceShinyCapturesRemaining =
-                        Mathf.Max(0, SaveManager.Data.forceShinyCapturesRemaining - 1);
+                    SaveManager.Data.forcePremiumCapturesRemaining =
+                        Mathf.Max(0, SaveManager.Data.forcePremiumCapturesRemaining - 1);
                 }
 
                 // Consume sticky flag after use so it cannot leak.
-                _lastWildWasShiny = false;
+                _lastWildWasPremium = false;
 
                 bool isMax = existing.level >= maxLevel;
 
@@ -421,8 +421,8 @@ public partial class EncounterManager
                 else
                 {
                     // Manual mode: open the Duplicate Resolution panel
-                    PendingDuplicateCapture.Set(existing, def, level, isShiny, isMax);
-                    PersistPendingDuplicateDecision(existing, def, level, isShiny, isMax);
+                    PendingDuplicateCapture.Set(existing, def, level, isPremium, isMax);
+                    PersistPendingDuplicateDecision(existing, def, level, isPremium, isMax);
 
                     if (UIManager.I != null)
                         UIManager.I.Show(PanelId.DuplicateResolution);
@@ -453,20 +453,20 @@ public partial class EncounterManager
                 currentXP = 0,
                 ownedUID = Guid.NewGuid().ToString("N"),
 
-                isShiny = isShiny,
-                shinyTier = isShiny ? 1 : 0
+                isPremium = isPremium,
+                premiumTier = isPremium ? 1 : 0
             };
 
-            // Consume shiny cheat only on successful capture (your existing behavior)
-            if (isShiny && SaveManager.Data != null && SaveManager.Data.forceShinyCapturesRemaining > 0)
+            // Consume premium cheat only on successful capture (your existing behavior)
+            if (isPremium && SaveManager.Data != null && SaveManager.Data.forcePremiumCapturesRemaining > 0)
             {
-                SaveManager.Data.forceShinyCapturesRemaining =
-                    Mathf.Max(0, SaveManager.Data.forceShinyCapturesRemaining - 1);
+                SaveManager.Data.forcePremiumCapturesRemaining =
+                    Mathf.Max(0, SaveManager.Data.forcePremiumCapturesRemaining - 1);
             }
 
-            // IMPORTANT: consume the "last wild was shiny" sticky flag after it is used for capture,
+            // IMPORTANT: consume the "last wild was premium" sticky flag after it is used for capture,
             // so it cannot leak into later capture attempts.
-            _lastWildWasShiny = false;
+            _lastWildWasPremium = false;
 
             data.owned.Add(om);
 
@@ -496,7 +496,7 @@ public partial class EncounterManager
         return success;
     }
 
-    private static void PersistPendingDuplicateDecision(OwnedMonsterData existing, MonsterDataSO def, int level, bool isShiny, bool isMax)
+    private static void PersistPendingDuplicateDecision(OwnedMonsterData existing, MonsterDataSO def, int level, bool isPremium, bool isMax)
     {
         try
         {
@@ -506,7 +506,7 @@ public partial class EncounterManager
                 ownedUID = existing != null ? existing.ownedUID : null,
                 speciesId = def != null ? def.id : null,
                 encounterLevel = Mathf.Max(1, level),
-                isShiny = isShiny,
+                isPremium = isPremium,
                 isMaxLevel = isMax
             };
             SaveManager.SetExchangeBlob(save);
@@ -516,7 +516,7 @@ public partial class EncounterManager
 
     // ── Duplicate capture helpers (Policy C) ───────────────────────────────────
 
-    private static OwnedMonsterData FindBestOwnedVariant(List<OwnedMonsterData> owned, string monsterId, bool wantShiny)
+    private static OwnedMonsterData FindBestOwnedVariant(List<OwnedMonsterData> owned, string monsterId, bool wantPremium)
     {
         if (owned == null || owned.Count == 0 || string.IsNullOrEmpty(monsterId)) return null;
 
@@ -526,7 +526,7 @@ public partial class EncounterManager
             var o = owned[i];
             if (o == null) continue;
             if (!string.Equals(o.monsterId, monsterId, StringComparison.Ordinal)) continue;
-            if (o.isShiny != wantShiny) continue;
+            if (o.isPremium != wantPremium) continue;
 
             if (best == null)
             {
@@ -534,12 +534,12 @@ public partial class EncounterManager
                 continue;
             }
 
-            // Prefer higher level; tie-break by shiny tier then by stable UID.
+            // Prefer higher level; tie-break by premium tier then by stable UID.
             if (o.level > best.level) best = o;
             else if (o.level == best.level)
             {
-                if (o.shinyTier > best.shinyTier) best = o;
-                else if (o.shinyTier == best.shinyTier)
+                if (o.premiumTier > best.premiumTier) best = o;
+                else if (o.premiumTier == best.premiumTier)
                 {
                     // Deterministic ordering (prevents flicker across sessions)
                     string a = o.ownedUID ?? "";
@@ -565,11 +565,11 @@ public partial class EncounterManager
         target.level = Mathf.Max(1, target.level + 1);
         target.unspentStatPoints += Mathf.Max(0, pointsPerLevel);
 
-        // Defensive: keep shiny identity consistent
-        if (target.isShiny)
-            target.shinyTier = Mathf.Max(1, target.shinyTier);
+        // Defensive: keep premium identity consistent
+        if (target.isPremium)
+            target.premiumTier = Mathf.Max(1, target.premiumTier);
         else
-            target.shinyTier = 0;
+            target.premiumTier = 0;
 
         // Clamp HP to new max (baseline HP grows with level).
         if (def != null)
@@ -597,7 +597,7 @@ public partial class EncounterManager
             if (!string.IsNullOrEmpty(owned.ownedUID) && !string.IsNullOrEmpty(t.ownedUID))
                 match = string.Equals(t.ownedUID, owned.ownedUID, StringComparison.Ordinal);
             else if (!string.IsNullOrEmpty(owned.monsterId))
-                match = string.Equals(t.monsterId, owned.monsterId, StringComparison.Ordinal) && t.isShiny == owned.isShiny;
+                match = string.Equals(t.monsterId, owned.monsterId, StringComparison.Ordinal) && t.isPremium == owned.isPremium;
 
             if (!match) continue;
 
@@ -611,8 +611,8 @@ public partial class EncounterManager
             t.trainingLastUnix = owned.trainingLastUnix;
             t.pendingLevels = owned.pendingLevels;
             t.lastLevelClaimDay = owned.lastLevelClaimDay;
-            t.isShiny = owned.isShiny;
-            t.shinyTier = owned.shinyTier;
+            t.isPremium = owned.isPremium;
+            t.premiumTier = owned.premiumTier;
             t.trainingBonus = owned.trainingBonus;
             t.autoApply = owned.autoApply;
             t.autoApplyTargetLevel = owned.autoApplyTargetLevel;
@@ -644,9 +644,9 @@ public partial class EncounterManager
         return Mathf.Clamp(cores, 1, 250);
     }
 
-    // ── Shiny / Unique helpers ─────────────────────────────────────────────────
+    // ── Premium / Unique helpers ─────────────────────────────────────────────────
 
-    private bool IsShinyMonster(MonsterDataSO m)
+    private bool IsPremiumMonster(MonsterDataSO m)
     {
         if (!m) return false;
 
@@ -654,7 +654,7 @@ public partial class EncounterManager
         {
             var t = m.GetType();
 
-            var f = t.GetField("isShiny",
+            var f = t.GetField("isPremium",
                 System.Reflection.BindingFlags.Public |
                 System.Reflection.BindingFlags.NonPublic |
                 System.Reflection.BindingFlags.Instance);
@@ -664,7 +664,7 @@ public partial class EncounterManager
                 if (val is bool b) return b;
             }
 
-            var p = t.GetProperty("isShiny",
+            var p = t.GetProperty("isPremium",
                 System.Reflection.BindingFlags.Public |
                 System.Reflection.BindingFlags.NonPublic |
                 System.Reflection.BindingFlags.Instance);

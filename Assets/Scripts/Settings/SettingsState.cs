@@ -58,8 +58,8 @@ public bool condensedBattleText = false;        // GetCondensedBattleText()
     public bool notifyFallback24h    = true;
 
     // ───────── Directory / Monster Variants ─────────
-    // Stores monster IDs the player last viewed as SHINY in Directory detail.
-    // If a monster has both normal + shiny owned, the Directory list will prefer
+    // Stores monster IDs the player last viewed as PREMIUM in Directory detail.
+    // If a monster has both normal + premium owned, the Directory list will prefer
     // whichever variant was last viewed.
-    public System.Collections.Generic.List<string> directoryPreferShinyIds = new System.Collections.Generic.List<string>();
+    public System.Collections.Generic.List<string> directoryPreferPremiumIds = new System.Collections.Generic.List<string>();
 }

@@ -210,8 +210,8 @@ public partial class EncounterManager
 
         ResolveWildTitles(wild, wildLevel);
 
-        _currentWildIsShiny = RollWildShiny(wild);
-        string wildName = MonsterNameFormatter.Format(wild, _currentWildIsShiny);
+        _currentWildIsPremium = RollWildPremium(wild);
+        string wildName = MonsterNameFormatter.Format(wild, _currentWildIsPremium);
 
         EncounterPanelUI.I?.OnWildSpawned(wild);
 
@@ -314,8 +314,8 @@ public partial class EncounterManager
         DevLog.Log($"[EncounterManager] OnBattleEnded incoming result: base={result.creditsBase}, bonus={result.creditsTitleBonus}, totalPreScale={result.creditsGained}, active={result.activeMonsterOwnedId}");
 
         // Reset encounter-spawn presentation state.
-        _lastWildWasShiny = _currentWildIsShiny;
-        _currentWildIsShiny = false;
+        _lastWildWasPremium = _currentWildIsPremium;
+        _currentWildIsPremium = false;
 
         ClearWildTitleInjection();
 
@@ -469,8 +469,8 @@ public partial class EncounterManager
             captured: false,
             capturedMonsterId: null,
             capturedLevel: 0,
-            capturedShiny: false,
-            wildWasShiny: _lastWildWasShiny,
+            capturedPremium: false,
+            wildWasPremium: _lastWildWasPremium,
             levelUpSummaries: null,
             creditsBase: displayCreditsBase,
             creditsTitleBonus: creditTitleBonus,
@@ -569,7 +569,7 @@ public partial class EncounterManager
 
             PostBattleSummaryManager.I?.SetAutoBattling(true);
 
-            EncounterPanelUI.I?.ShowHireDecision(_lastBattleResult.wildDef, _lastBattleResult.wildLevel, isShiny: _lastWildWasShiny);
+            EncounterPanelUI.I?.ShowHireDecision(_lastBattleResult.wildDef, _lastBattleResult.wildLevel, isPremium: _lastWildWasPremium);
             yield break;
         }
 
@@ -595,7 +595,7 @@ public partial class EncounterManager
                 true,
                 _lastBattleResult.wildDef.id,
                 _lastBattleResult.wildLevel,
-                capturedShiny: _lastWildWasShiny
+                capturedPremium: _lastWildWasPremium
             );
         }
         else
@@ -650,9 +650,9 @@ public partial class EncounterManager
             return;
         }
 
-        if (_currentWildIsShiny || IsShinyMonster(wild))
+        if (_currentWildIsPremium || IsPremiumMonster(wild))
         {
-            AudioManager.I?.PlaySfx(SfxType.ShinyEncounter);
+            AudioManager.I?.PlaySfx(SfxType.PremiumEncounter);
             return;
         }
 

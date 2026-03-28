@@ -14,9 +14,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   id: MP-013
   displayName: Crystal Dominion
-  description: Crystalline Rock and Ice monsters shaped by frost and mineral growth.
-    Their beauty hides durability and precision forged through extreme environmental
-    pressure.
+  description: Formed through frost and mineral growth, these Rock and Ice Bitlings
+    combine durability with precise, controlled strength.
   icon: {fileID: 21300000, guid: b7f66bf1715b1554c87148b333bcb31f, type: 3}
   rarityLabel: Uncommon
   baseCost: 19

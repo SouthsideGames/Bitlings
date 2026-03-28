@@ -14,9 +14,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   id: MP-008
   displayName: Celestial Ascension
-  description: Chosen by the stars, Oracle seers and Wyrm guardians channel celestial
-    authority. These monsters reward long-term planning and command the battlefield
-    with divine presence.
+  description: Chosen by celestial alignment, Oracle seers and Wyrm guardians channel
+    controlled authority. These Bitlings reward careful planning and maintain strong
+    battlefield presence.
   icon: {fileID: 21300000, guid: 4e4d9ea076ecf7a49837d307a4bc2914, type: 3}
   rarityLabel: Uncommon
   baseCost: 17

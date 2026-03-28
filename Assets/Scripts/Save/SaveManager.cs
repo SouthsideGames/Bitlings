@@ -809,7 +809,7 @@ private static PlayerSaveRoot MigrateRootIfNeeded(PlayerSaveRoot root)
             Data.lifetimeResourceCollected ??= new List<int>();
         Data.preferredVariants ??= new List<PreferredVariantKV>();
         Data.activeJobMods ??= new List<JobGlobalMod>();
-        Data.activeShinyBoosts ??= new List<ShinyBoostData>();
+        Data.activePremiumBoosts ??= new List<PremiumBoostData>();
         Data.favoriteMonsterIdsList ??= new List<string>();
         Data.discoveredMonsterIdsList ??= new List<string>();
 
@@ -881,7 +881,7 @@ private static PlayerSaveRoot MigrateRootIfNeeded(PlayerSaveRoot root)
         // Authoritative for persistence: LISTS.
         RebuildTransientSetsFromLists();
 
-        // Normalize owned/team entries (uids, clamps, shiny normalization)
+        // Normalize owned/team entries (uids, clamps, premium normalization)
         NormalizeOwnedEntries(Data.owned);
         NormalizeOwnedEntries(Data.team);
 
@@ -1146,11 +1146,11 @@ private static PlayerSaveRoot MigrateRootIfNeeded(PlayerSaveRoot root)
             if (string.IsNullOrEmpty(om.ownedUID))
                 om.ownedUID = Guid.NewGuid().ToString("N");
 
-            // ✅ Shiny normalization (supports legacy / partial saves)
-            // - shinyTier > 0 implies isShiny
-            // - isShiny implies at least shinyTier 1
-            if (om.shinyTier > 0 && !om.isShiny) om.isShiny = true;
-            if (om.isShiny && om.shinyTier <= 0) om.shinyTier = 1;
+            // ✅ Premium normalization (supports legacy / partial saves)
+            // - premiumTier > 0 implies isPremium
+            // - isPremium implies at least premiumTier 1
+            if (om.premiumTier > 0 && !om.isPremium) om.isPremium = true;
+            if (om.isPremium && om.premiumTier <= 0) om.premiumTier = 1;
 
             if (ReferenceEquals(list, Data.owned) && !string.IsNullOrEmpty(om.monsterId))
                 Data.ownedIds.Add(om.monsterId);
@@ -1241,9 +1241,9 @@ private static PlayerSaveRoot MigrateRootIfNeeded(PlayerSaveRoot root)
             if (om.lastLevelClaimDay == 0) om.lastLevelClaimDay = -1;
             if (om.pendingLevels < 0) om.pendingLevels = 0;
 
-            // ✅ Shiny normalization here too (defensive)
-            if (om.shinyTier > 0 && !om.isShiny) om.isShiny = true;
-            if (om.isShiny && om.shinyTier <= 0) om.shinyTier = 1;
+            // ✅ Premium normalization here too (defensive)
+            if (om.premiumTier > 0 && !om.isPremium) om.isPremium = true;
+            if (om.isPremium && om.premiumTier <= 0) om.premiumTier = 1;
         }
     }
 
@@ -2060,9 +2060,9 @@ if (save) Save();
                 currentXP = 0,
                 ownedUID = Guid.NewGuid().ToString("N"),
 
-                // ensure non-shiny starter by default
-                isShiny = false,
-                shinyTier = 0
+                // ensure non-premium starter by default
+                isPremium = false,
+                premiumTier = 0
             };
             Data.owned.Add(ownedMonster);
         }
@@ -2082,9 +2082,9 @@ if (save) Save();
             if (string.IsNullOrEmpty(ownedMonster.ownedUID))
                 ownedMonster.ownedUID = Guid.NewGuid().ToString("N");
 
-            // normalize shiny fields in case older data is partially filled
-            if (ownedMonster.shinyTier > 0 && !ownedMonster.isShiny) ownedMonster.isShiny = true;
-            if (ownedMonster.isShiny && ownedMonster.shinyTier <= 0) ownedMonster.shinyTier = 1;
+            // normalize premium fields in case older data is partially filled
+            if (ownedMonster.premiumTier > 0 && !ownedMonster.isPremium) ownedMonster.isPremium = true;
+            if (ownedMonster.isPremium && ownedMonster.premiumTier <= 0) ownedMonster.premiumTier = 1;
         }
 
         bool onTeam = Data.team.Exists(t => t != null && t.ownedUID == ownedMonster.ownedUID);

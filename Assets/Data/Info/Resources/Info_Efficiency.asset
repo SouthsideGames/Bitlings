@@ -16,6 +16,5 @@ MonoBehaviour:
   category: 1
   title: Efficiency Voucher
   subtitle: Resource
-  body: 'Comes from: Containment
-
-    Temporary SPD increase during encounters'
+  body: "Provided by Containment to temporarily increase a Bitling\u2019s speed during
+    encounters."

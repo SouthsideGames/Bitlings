@@ -16,5 +16,5 @@ MonoBehaviour:
   category: 5
   title: Market Forecast
   subtitle: Predict the trends
-  body: Reveals upcoming market trends for species values. Displays whether prices
-    are likely to rise, fall, or remain stable in the near future.
+  body: Reveals upcoming market trends for Bitling valuations, indicating whether
+    values are expected to rise, fall, or remain stable.

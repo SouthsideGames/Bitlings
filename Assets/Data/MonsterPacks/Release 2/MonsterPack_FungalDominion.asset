@@ -14,9 +14,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   id: MP-019
   displayName: Fungal Dominion
-  description: Spores grow unchecked into twisted armies of nature and decay. Grass
-    and Corrupt monsters combine regeneration with creeping corruption to overwhelm
-    opponents over time.
+  description: Grass and Corrupt Bitlings spread steadily through regeneration and
+    corruption, applying consistent pressure over time.
   icon: {fileID: 21300000, guid: 896719af956323147a689be43319f06a, type: 3}
   rarityLabel: Uncommon
   baseCost: 20

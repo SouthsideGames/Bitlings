@@ -14,9 +14,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   id: MP-016
   displayName: Iron Frontier
-  description: "At civilization\u2019s edge, Alloy and Rock monsters build, reinforce,
-    and endure. These practical designs reward stability, defense, and methodical
-    progression."
+  description: Alloy and Rock Bitlings are built for structure and endurance, rewarding
+    defensive strategies and steady progression.
   icon: {fileID: 21300000, guid: 8a02cd22c38d1c14cb97873686b9d188, type: 3}
   rarityLabel: Common
   baseCost: 13

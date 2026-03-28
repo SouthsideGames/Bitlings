@@ -14,9 +14,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   id: MP-028
   displayName: Ashen Legion
-  description: Reborn from flame and corruption, these warriors refuse extinction.
-    Fire and Corrupt monsters in this pack specialize in sacrifice, resurgence, and
-    relentless offense.
+  description: Fire and Corrupt Bitlings operate with relentless offense, sustaining
+    pressure through continuous resurgence and aggressive output.
   icon: {fileID: 21300000, guid: 1baa2ccabd9db46288cc9dd6d0760318, type: 3}
   rarityLabel: Epic
   baseCost: 33

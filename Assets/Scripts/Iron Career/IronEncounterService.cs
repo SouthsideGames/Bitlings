@@ -116,16 +116,16 @@ public sealed class IronEncounterService
         // Curated ironTitles are reserved for player-side starter/hire generation.
         var title = _titleRoller.RollLockedTitle(chosen, level, _rng, isWild: true);
 
-        // Roll shiny: same base chance as normal encounters. Iron species must have shiny art.
-        bool shiny = false;
-        if (chosen.shinyIcon != null)
+        // Roll premium: same base chance as normal encounters. Iron species must have premium art.
+        bool premium = false;
+        if (chosen.premiumIcon != null)
         {
-            float mul = (WorldEventSystem.I != null) ? WorldEventSystem.I.GetWildShinyChanceMultiplier() : 1f;
+            float mul = (WorldEventSystem.I != null) ? WorldEventSystem.I.GetWildPremiumChanceMultiplier() : 1f;
             float chance = Mathf.Clamp01(0.01f * Mathf.Max(0f, mul));
-            shiny = _rng != null && _rng.Chance(chance);
+            premium = _rng != null && _rng.Chance(chance);
         }
 
-        var wild = new IronMonster(chosen, level, curHp: -1f, locked: title, shiny: shiny);
+        var wild = new IronMonster(chosen, level, curHp: -1f, locked: title, premium: premium);
 
         // ensure full hp snapshot
         wild.maxHp = Mathf.Max(1f, BattleCalc.CalcHP(chosen, level));

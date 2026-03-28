@@ -25,8 +25,8 @@ public static class BuiltInFallbackEvents
 
             Make("WE-005", "Containment Drill", "🧪 Containment drill underway — stay alert.", default),
 
-            Make("WE-006", "Shiny Surge", "✨ Shiny surge reported — odd sparkles in the wild.",
-                new WorldEventEffect { kind = WorldEventEffectKind.WildShinyChanceMultiplier, value = 2.0f }),
+            Make("WE-006", "Premium Surge", "✨ Premium surge reported — odd sparkles in the wild.",
+                new WorldEventEffect { kind = WorldEventEffectKind.WildPremiumChanceMultiplier, value = 2.0f }),
 
             Make("WE-007", "Citywide Curfew", "🚧 Citywide curfew — encounters temporarily suspended.",
                 new WorldEventEffect { kind = WorldEventEffectKind.DisableEncounters, value = 1f }),

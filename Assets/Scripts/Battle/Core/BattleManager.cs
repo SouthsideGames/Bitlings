@@ -1164,7 +1164,7 @@ public partial class BattleManager : MonoBehaviour
         HardResetIconVisual(playerIcon);
         HardResetIconVisual(wildIcon);
 
-        bool shinyWild = (EncounterManager.I != null) && EncounterManager.I.CurrentWildIsShiny;
+        bool premiumWild = (EncounterManager.I != null) && EncounterManager.I.CurrentWildIsPremium;
 
         bool isAuto = _rules.allowAutoBattle && (EncounterManager.I != null) && EncounterManager.I.IsAutoMode;
 
@@ -1172,7 +1172,7 @@ public partial class BattleManager : MonoBehaviour
 
         if (wildIcon)
         {
-            if (shinyWild && wildDef != null && wildDef.shinyIcon != null) wildIcon.sprite = wildDef.shinyIcon;
+            if (premiumWild && wildDef != null && wildDef.premiumIcon != null) wildIcon.sprite = wildDef.premiumIcon;
             else wildIcon.sprite = (wildDef != null) ? wildDef.icon : null;
             HardResetIconVisual(wildIcon);
         }
@@ -1180,14 +1180,14 @@ public partial class BattleManager : MonoBehaviour
         if (wildNameText)
         {
             if (wildDef != null)
-                wildNameText.text = MonsterNameFormatter.Format(wildDef, shinyWild);
+                wildNameText.text = MonsterNameFormatter.Format(wildDef, premiumWild);
             else
                 wildNameText.text = "Wild";
         }
 
-        if (shinyWild && feedback != null)
+        if (premiumWild && feedback != null)
         {
-            feedback.PlayShinyNameSparkle(wildNameText);
+            feedback.PlayPremiumNameSparkle(wildNameText);
         }
 
         if (wildLevelText) wildLevelText.text = $"Lv {wildLevel}";

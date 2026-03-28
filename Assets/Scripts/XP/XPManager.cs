@@ -84,8 +84,8 @@ public static class XPManager
         target.level = Mathf.Max(1, target.level + 1);
         target.unspentStatPoints += Mathf.Max(0, pointsPerLevel);
 
-        // Normalize shiny identity (defensive)
-        NormalizeShinyFields(target);
+        // Normalize premium identity (defensive)
+        NormalizePremiumFields(target);
 
         // Clamp HP to new max
         MonsterDataSO def = null;
@@ -126,7 +126,7 @@ public static class XPManager
             }
             else if (!ReferenceEquals(ownedMatch, target))
             {
-                // Merge target → ownedMatch (never strip shiny identity)
+                // Merge target → ownedMatch (never strip premium identity)
                 CopyAllGameplayFields(from: target, to: ownedMatch);
             }
         }
@@ -157,8 +157,8 @@ public static class XPManager
         // Apply to canonical
         MonsterStatApplier.Apply(target, delta);
 
-        // Normalize shiny identity (defensive)
-        NormalizeShinyFields(target);
+        // Normalize premium identity (defensive)
+        NormalizePremiumFields(target);
 
         // Ensure owned entry exists / merged
         var data = SaveManager.Data;
@@ -198,14 +198,14 @@ public static class XPManager
     // Internal helpers
     // ---------------------------------------------------------------------
 
-    private static void NormalizeShinyFields(OwnedMonsterData om)
+    private static void NormalizePremiumFields(OwnedMonsterData om)
     {
         if (om == null) return;
 
         // Keep both fields consistent for legacy + new saves
-        if (om.shinyTier > 0 && !om.isShiny) om.isShiny = true;
-        if (om.isShiny && om.shinyTier <= 0) om.shinyTier = 1;
-        if (!om.isShiny && om.shinyTier < 0) om.shinyTier = 0;
+        if (om.premiumTier > 0 && !om.isPremium) om.isPremium = true;
+        if (om.isPremium && om.premiumTier <= 0) om.premiumTier = 1;
+        if (!om.isPremium && om.premiumTier < 0) om.premiumTier = 0;
     }
 
     private static void CopyAllGameplayFields(OwnedMonsterData from, OwnedMonsterData to)
@@ -241,10 +241,10 @@ public static class XPManager
         // Misc combat/training modifiers
         to.flatAtkBonus = from.flatAtkBonus;
 
-        // ✅ Shiny identity (MUST persist + mirror)
-        to.isShiny   = from.isShiny || from.shinyTier > 0 || to.isShiny;
-        to.shinyTier = Mathf.Max(to.shinyTier, from.shinyTier);
-        NormalizeShinyFields(to);
+        // ✅ Premium identity (MUST persist + mirror)
+        to.isPremium   = from.isPremium || from.premiumTier > 0 || to.isPremium;
+        to.premiumTier = Mathf.Max(to.premiumTier, from.premiumTier);
+        NormalizePremiumFields(to);
 
     }
 }

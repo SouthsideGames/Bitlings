@@ -14,9 +14,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   id: MP-009
   displayName: Mutagenic Core
-  description: A tightly focused evolutionary line warped by uncontrolled mutation.
-    Corrupt monsters in this pack grow stronger through instability, trading purity
-    for raw, escalating power.
+  description: These Corrupt Bitlings evolve through instability, gaining strength
+    as their condition shifts. Their growth favors escalating power over stability.
   icon: {fileID: 21300000, guid: 7294b69978d8ba44cadf0857965bc065, type: 3}
   rarityLabel: Rare
   baseCost: 24

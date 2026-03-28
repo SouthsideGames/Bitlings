@@ -16,6 +16,4 @@ MonoBehaviour:
   category: 1
   title: Growth Core
   subtitle: Resource
-  body: 'Comes from: Gym
-
-    Needed to increase owned Bitlings level'
+  body: Provided by the Gym to support the leveling and growth of hired Bitlings.

@@ -108,14 +108,14 @@ public class OwnedMonsterListItemUI : MonoBehaviour
         _data = data;
         _def = def;
 
-        bool isShiny = data != null && (data.isShiny || data.shinyTier > 0);
+        bool isPremium = data != null && (data.isPremium || data.premiumTier > 0);
 
         // Icon
         if (icon)
         {
             if (def)
             {
-                var s = MonsterNameFormatter.GetIcon(def, isShiny, backIcon: false);
+                var s = MonsterNameFormatter.GetIcon(def, isPremium, backIcon: false);
                 if (s)
                 {
                     icon.enabled = true;
@@ -139,7 +139,7 @@ public class OwnedMonsterListItemUI : MonoBehaviour
         if (nameText)
         {
             if (def)
-                nameText.text = MonsterNameFormatter.Format(def, isShiny);
+                nameText.text = MonsterNameFormatter.Format(def, isPremium);
             else
                 nameText.text = "Unknown";
         }
@@ -186,7 +186,7 @@ public class OwnedMonsterListItemUI : MonoBehaviour
         _def = def;
         _data = captured ? ownedData : null; // unrevealed entries have no OwnedMonsterData
 
-        bool isShiny = captured && ownedData != null && (ownedData.isShiny || ownedData.shinyTier > 0);
+        bool isPremium = captured && ownedData != null && (ownedData.isPremium || ownedData.premiumTier > 0);
         bool isOwned = captured && ownedData != null;
 
         // Icon
@@ -194,7 +194,7 @@ public class OwnedMonsterListItemUI : MonoBehaviour
         {
             if (def)
             {
-                var s = MonsterNameFormatter.GetIcon(def, isShiny, backIcon: false);
+                var s = MonsterNameFormatter.GetIcon(def, isPremium, backIcon: false);
                 if (s)
                 {
                     icon.enabled = true;
@@ -230,7 +230,7 @@ public class OwnedMonsterListItemUI : MonoBehaviour
         if (nameText)
         {
             if (captured && def)
-                nameText.text = MonsterNameFormatter.Format(def, isShiny);
+                nameText.text = MonsterNameFormatter.Format(def, isPremium);
             else
                 nameText.text = "???";
         }

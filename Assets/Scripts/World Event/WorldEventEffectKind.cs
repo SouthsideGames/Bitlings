@@ -12,7 +12,7 @@ public enum WorldEventEffectKind
     // Encounters
     DisableEncounters = 20,
     EncounterEnergyCostMultiplier = 21,
-    WildShinyChanceMultiplier = 22,
+    WildPremiumChanceMultiplier = 22,
     BossCadenceMultiplier = 23,
 
     // Meta / Economy

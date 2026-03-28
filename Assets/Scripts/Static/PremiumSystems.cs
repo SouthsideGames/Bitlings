@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 
-public static class ShinySystems
+public static class PremiumSystems
 {
     // ---------- Tuning ----------
     public const float JobAuraSlot1Min = 0.03f;   
@@ -11,7 +11,7 @@ public static class ShinySystems
 
     public const float TrainingSpark   = 0.05f;  
 
-    public const float SanctumPerShiny = 0.03f;   
+    public const float SanctumPerPremium = 0.03f;   
     public const float SanctumCap      = 0.10f;  
 
     public const int   SynergyEveryN   = 5;     
@@ -64,20 +64,20 @@ public static class ShinySystems
         return null;
     }
 
-    public static bool IsWorkerShiny(WorkerRef w)
+    public static bool IsWorkerPremium(WorkerRef w)
     {
         var owned = ResolveOwned(w);
-        return owned != null && owned.isShiny;
+        return owned != null && owned.isPremium;
     }
 
     // ---------- (1) Job Aura ----------
-    public static float SiteShinyAuraMult(IReadOnlyList<WorkerRef> workers)
+    public static float SitePremiumAuraMult(IReadOnlyList<WorkerRef> workers)
     {
         if (workers == null || workers.Count == 0) return 1f;
 
         float bonus = 0f;
         var slot0 = workers[0];
-        if (IsWorkerShiny(slot0))
+        if (IsWorkerPremium(slot0))
         {
             float roll = UnityEngine.Random.Range(JobAuraSlot1Min, JobAuraSlot1Max);
             bonus += roll;
@@ -88,33 +88,33 @@ public static class ShinySystems
 
     // ---------- (2) Training Spark ----------
     public static float TrainingXpMult(OwnedMonsterData owned)
-        => (owned != null && owned.isShiny) ? (1f + TrainingSpark) : 1f;
+        => (owned != null && owned.isPremium) ? (1f + TrainingSpark) : 1f;
 
     // ---------- (3) Sanctum Favor ----------
     public static float SanctumDurationMult(IEnumerable<OwnedMonsterData> present)
     {
-        int n = CountShinies(present);
-        float reduction = Mathf.Min(n * SanctumPerShiny, SanctumCap);
+        int n = CountPremiums(present);
+        float reduction = Mathf.Min(n * SanctumPerPremium, SanctumCap);
         return 1f - reduction;
     }
 
     // ---------- (4) Global Collection Synergy ----------
     public static float GlobalPickupRangeBonus(IEnumerable<OwnedMonsterData> allOwned)
     {
-        int shinies = CountShinies(allOwned);
+        int shinies = CountPremiums(allOwned);
         int steps = shinies / SynergyEveryN;
         return Mathf.Min(steps * SynergyStep, SynergyCap);
     }
 
     // ---------- (5) Charm of Fortune ----------
     public static float LeadCaptureMult(OwnedMonsterData lead)
-        => (lead != null && lead.isShiny) ? (1f + LeadCaptureBonus) : 1f;
+        => (lead != null && lead.isPremium) ? (1f + LeadCaptureBonus) : 1f;
 
-    public static int CountShinies(IEnumerable<OwnedMonsterData> list)
+    public static int CountPremiums(IEnumerable<OwnedMonsterData> list)
     {
         if (list == null) return 0;
         int n = 0;
-        foreach (var m in list) if (m != null && m.isShiny) n++;
+        foreach (var m in list) if (m != null && m.isPremium) n++;
         return n;
     }
 }

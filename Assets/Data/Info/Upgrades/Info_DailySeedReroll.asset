@@ -16,9 +16,5 @@ MonoBehaviour:
   category: 5
   title: Daily Seed Reroll
   subtitle: One Extra Attempt
-  body: 'Allows one reroll of the Daily Seed per day.
-
-    
-
-    If a Daily Seed
-    run does not suit your strategy, you can refresh it once for a new challenge.'
+  body: Allows one Daily Seed reroll per day, refreshing the shared conditions for
+    a new challenge.

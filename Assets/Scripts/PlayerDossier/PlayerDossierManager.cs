@@ -23,7 +23,7 @@ public class PlayerDossierSnapshot
     public int totalOwnedBitlings;
     public int discoveredSpecies;
     public float averageLevel;
-    public int shinyOwned;
+    public int premiumOwned;
 
     [Header("Care Score")]
     [Range(0f, 100f)] public float careScorePercent;
@@ -49,7 +49,7 @@ public class PlayerDossierSnapshot
     public int captureSuccessRate; // 0–100
     public int riftStabilizations;
     public int rareBitlingsFound;
-    public int shinyDiscoveries;
+    public int premiumDiscoveries;
     public int longestCaptureStreak;
     public string[] fieldOpsHighlights;
 
@@ -68,7 +68,7 @@ public class PlayerDossierSnapshot
     public int atkBoosterCount;
     public int hpBoosterCount;
     public int speedBoosterCount;
-    public int shinyOrbCount;
+    public int premiumOrbCount;
     public int blessingScaleCount;
     public int restChargeCount;
     public int growthCoreCount;
@@ -198,7 +198,7 @@ public class PlayerDossierManager : MonoBehaviour
             snapshot.totalOwnedBitlings = 0;
             snapshot.discoveredSpecies = 0;
             snapshot.averageLevel = 0f;
-            snapshot.shinyOwned = 0;
+            snapshot.premiumOwned = 0;
 
             snapshot.careScorePercent = 0f;
             snapshot.careScoreNote = "BRN notes: No data available.";
@@ -214,7 +214,7 @@ public class PlayerDossierManager : MonoBehaviour
             snapshot.captureSuccessRate = 0;
             snapshot.riftStabilizations = 0;
             snapshot.rareBitlingsFound = 0;
-            snapshot.shinyDiscoveries = 0;
+            snapshot.premiumDiscoveries = 0;
             snapshot.longestCaptureStreak = 0;
             snapshot.fieldOpsHighlights = Array.Empty<string>();
 
@@ -251,7 +251,7 @@ public class PlayerDossierManager : MonoBehaviour
         // Owned monsters
         int totalOwned = 0;
         int levelSum = 0;
-        int shinyCount = 0;
+        int premiumCount = 0;
 
         if (data.owned != null)
         {
@@ -263,13 +263,13 @@ public class PlayerDossierManager : MonoBehaviour
                 totalOwned++;
                 levelSum += Mathf.Max(1, owned.level);
 
-                if (owned.isShiny)
-                    shinyCount++;
+                if (owned.isPremium)
+                    premiumCount++;
             }
         }
 
         snapshot.totalOwnedBitlings = totalOwned;
-        snapshot.shinyOwned = shinyCount;
+        snapshot.premiumOwned = premiumCount;
         snapshot.averageLevel = totalOwned > 0 ? (float)levelSum / totalOwned : 0f;
 
         // Discovered species
@@ -590,7 +590,7 @@ public class PlayerDossierManager : MonoBehaviour
         snapshot.encountersInitiated = Mathf.Max(0, f.encountersInitiated);
         snapshot.riftStabilizations = Mathf.Max(0, f.riftStabilizations);
         snapshot.rareBitlingsFound = Mathf.Max(0, f.rareBitlingsFound);
-        snapshot.shinyDiscoveries = Mathf.Max(0, f.shinyDiscoveries);
+        snapshot.premiumDiscoveries = Mathf.Max(0, f.premiumDiscoveries);
         snapshot.longestCaptureStreak = Mathf.Max(0, f.longestCaptureStreak);
 
         int attempts = Mathf.Max(0, f.captureAttempts);
@@ -636,7 +636,7 @@ public class PlayerDossierManager : MonoBehaviour
         s.atkBoosterCount = GetLifetimeCollected(data, ResourceType.TrainingVoucher, bank.Get(ResourceType.TrainingVoucher));
         s.hpBoosterCount = GetLifetimeCollected(data, ResourceType.WellnessVoucher, bank.Get(ResourceType.WellnessVoucher));
         s.speedBoosterCount = GetLifetimeCollected(data, ResourceType.EfficiencyVoucher, bank.Get(ResourceType.EfficiencyVoucher));
-        s.shinyOrbCount = GetLifetimeCollected(data, ResourceType.ShinyOrb, bank.Get(ResourceType.ShinyOrb));
+        s.premiumOrbCount = GetLifetimeCollected(data, ResourceType.PremiumOrb, bank.Get(ResourceType.PremiumOrb));
         s.blessingScaleCount = GetLifetimeCollected(data, ResourceType.BlessingScale, bank.Get(ResourceType.BlessingScale));
         s.restChargeCount = GetLifetimeCollected(data, ResourceType.Coffee, bank.Get(ResourceType.Coffee));
         s.growthCoreCount = GetLifetimeCollected(data, ResourceType.GrowthCore, bank.Get(ResourceType.GrowthCore));
@@ -701,7 +701,7 @@ public class PlayerDossierManager : MonoBehaviour
             snap.growthCoreCount +
             snap.blessingScaleCount +
             snap.packVoucherCount +
-            snap.shinyOrbCount +
+            snap.premiumOrbCount +
             snap.atkBoosterCount +
             snap.hpBoosterCount +
             snap.speedBoosterCount +
@@ -747,12 +747,12 @@ public class PlayerDossierManager : MonoBehaviour
                 lines.Add($"{name} reached level {Mathf.Max(1, highest.level)}, becoming a core team member.");
         }
 
-        var shiny = GetNotableShiny(data);
-        if (shiny != null)
+        var premium = GetNotablePremium(data);
+        if (premium != null)
         {
-            string name = GetMonsterDisplayName(shiny.monsterId);
+            string name = GetMonsterDisplayName(premium.monsterId);
             if (!string.IsNullOrEmpty(name))
-                lines.Add($"Shiny Bitling detected in field operations: {name}.");
+                lines.Add($"Premium Bitling detected in field operations: {name}.");
         }
 
         if (snap.jobSites != null && snap.jobSites.Length > 0)
@@ -849,7 +849,7 @@ public class PlayerDossierManager : MonoBehaviour
         return best;
     }
 
-    private OwnedMonsterData GetNotableShiny(PlayerManager data)
+    private OwnedMonsterData GetNotablePremium(PlayerManager data)
     {
         if (data?.owned == null || data.owned.Count == 0)
             return null;
@@ -858,7 +858,7 @@ public class PlayerDossierManager : MonoBehaviour
         for (int i = 0; i < data.owned.Count; i++)
         {
             var om = data.owned[i];
-            if (om == null || !om.isShiny || string.IsNullOrEmpty(om.monsterId)) continue;
+            if (om == null || !om.isPremium || string.IsNullOrEmpty(om.monsterId)) continue;
 
             if (best == null || om.level > best.level)
                 best = om;

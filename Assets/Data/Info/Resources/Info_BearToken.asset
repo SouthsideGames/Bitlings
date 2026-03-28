@@ -16,6 +16,5 @@ MonoBehaviour:
   category: 1
   title: Bear Token
   subtitle: Force a market dip
-  body: Applies a temporary Bear effect to a selected species, decreasing its value
-    and pushing its trend toward Falling. Can be used strategically to manipulate
-    future rebounds or complete low-value requests.
+  body: Initiates a short-term bearish shift in a selected Bitling, reducing its
+    valuation and driving its market trend downward.

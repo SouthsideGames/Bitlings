@@ -13,8 +13,8 @@ MonoBehaviour:
   m_Name: Speedster
   m_EditorClassIdentifier: 
   bucketId: Speed
-  description: Specializes in turn order and evasion. Heavy focus on SPD, enabling
-    quick actions and tactical advantages.
+  description: Emphasizes speed and timing, enabling faster actions and improved
+    positioning advantages.
   picksPerLevel: 3
   allowDuplicatePicks: 1
   hpWeight: 1

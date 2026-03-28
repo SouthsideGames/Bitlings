@@ -2693,7 +2693,7 @@ if (_flatStartRemainingTurns.TryGetValue(monsterId, out int remTurns) && remTurn
     }
 
     public void OnMonsterLeveled(string monsterId, int newLevel) { }
-    public void OnMonsterCaptured(string monsterId, MonsterType type, int level, bool isShiny) { }
+    public void OnMonsterCaptured(string monsterId, MonsterType type, int level, bool isPremium) { }
     public void OnMonsterEvolved(string newMonsterId) { }
 
 

@@ -14,8 +14,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   id: MP-023
   displayName: Oceanic Depths
-  description: Abyssal guardians dwell far below the reach of light. Water and Oracle
-    monsters here excel at patience, foresight, and crushing late-stage power.
+  description: Water and Oracle Bitlings emphasize patience and long-term strength,
+    building toward powerful late-stage performance.
   icon: {fileID: 21300000, guid: 79837dc9450ed8746a1ee38051a053f4, type: 3}
   rarityLabel: Rare
   baseCost: 26

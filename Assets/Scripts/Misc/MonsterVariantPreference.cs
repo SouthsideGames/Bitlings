@@ -3,10 +3,10 @@ using System.Collections.Generic;
 
 public static class MonsterVariantPreference
 {
-    public static bool PlayerHasBothVariants(string monsterId, out OwnedMonsterData shiny, out OwnedMonsterData nonShiny)
+    public static bool PlayerHasBothVariants(string monsterId, out OwnedMonsterData premium, out OwnedMonsterData nonPremium)
     {
-        shiny = null;
-        nonShiny = null;
+        premium = null;
+        nonPremium = null;
 
         var owned = SaveManager.Data?.owned;
         if (owned == null || string.IsNullOrEmpty(monsterId)) return false;
@@ -16,18 +16,18 @@ public static class MonsterVariantPreference
             var om = owned[i];
             if (om == null || om.monsterId != monsterId) continue;
 
-            bool s = om.isShiny || om.shinyTier > 0;
+            bool s = om.isPremium || om.premiumTier > 0;
             if (s)
             {
-                if (shiny == null || Better(om, shiny)) shiny = om;
+                if (premium == null || Better(om, premium)) premium = om;
             }
             else
             {
-                if (nonShiny == null || Better(om, nonShiny)) nonShiny = om;
+                if (nonPremium == null || Better(om, nonPremium)) nonPremium = om;
             }
         }
 
-        return shiny != null && nonShiny != null;
+        return premium != null && nonPremium != null;
     }
 
     public static OwnedMonsterData GetPreferredOwned(string monsterId)
@@ -38,11 +38,11 @@ public static class MonsterVariantPreference
         var owned = data?.owned;
         if (owned == null) return null;
 
-        PlayerHasBothVariants(monsterId, out var shiny, out var nonShiny);
+        PlayerHasBothVariants(monsterId, out var premium, out var nonPremium);
 
         // If only one variant exists, return it.
-        if (shiny != null && nonShiny == null) return shiny;
-        if (nonShiny != null && shiny == null) return nonShiny;
+        if (premium != null && nonPremium == null) return premium;
+        if (nonPremium != null && premium == null) return nonPremium;
 
         // If both exist, use saved preference.
         string prefUid = GetPreferredUid(monsterId);
@@ -53,25 +53,25 @@ public static class MonsterVariantPreference
         }
 
         // Default fallback when both exist:
-        // prefer non-shiny unless you want shiny-first.
-        return nonShiny ?? shiny;
+        // prefer non-premium unless you want premium-first.
+        return nonPremium ?? premium;
     }
 
     public static OwnedMonsterData GetOtherVariant(string monsterId, OwnedMonsterData currentPreferred)
     {
         if (string.IsNullOrEmpty(monsterId)) return null;
 
-        PlayerHasBothVariants(monsterId, out var shiny, out var nonShiny);
-        if (shiny == null || nonShiny == null) return null;
+        PlayerHasBothVariants(monsterId, out var premium, out var nonPremium);
+        if (premium == null || nonPremium == null) return null;
 
-        bool curIsShiny = currentPreferred != null && (currentPreferred.isShiny || currentPreferred.shinyTier > 0);
-        return curIsShiny ? nonShiny : shiny;
+        bool curIsPremium = currentPreferred != null && (currentPreferred.isPremium || currentPreferred.premiumTier > 0);
+        return curIsPremium ? nonPremium : premium;
     }
 
-    public static bool IsPreferredShiny(string monsterId)
+    public static bool IsPreferredPremium(string monsterId)
     {
         var pref = GetPreferredOwned(monsterId);
-        return pref != null && (pref.isShiny || pref.shinyTier > 0);
+        return pref != null && (pref.isPremium || pref.premiumTier > 0);
     }
 
     public static void SetPreferred(string monsterId, string preferredOwnedUid)
@@ -117,7 +117,7 @@ public static class MonsterVariantPreference
         if (b == null) return true;
 
         // choose "best copy" within a variant bucket
-        if (a.shinyTier != b.shinyTier) return a.shinyTier > b.shinyTier;
+        if (a.premiumTier != b.premiumTier) return a.premiumTier > b.premiumTier;
         if (a.level != b.level) return a.level > b.level;
         return a.currentXP > b.currentXP;
     }

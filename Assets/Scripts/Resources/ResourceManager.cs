@@ -8,7 +8,7 @@ public enum ResourceType
 {
     None = 0, Credits = 1, Energy = 2, Medkit = 3, Material = 4,
     PPEPermit = 5, Flyer = 6, WorkOrder = 7, Favor = 8,
-    TrainingVoucher = 9, WellnessVoucher = 10, EfficiencyVoucher = 11, ShinyOrb = 12, BlessingScale = 13, Coffee = 14, GrowthCore = 16, PackVoucher = 17,
+    TrainingVoucher = 9, WellnessVoucher = 10, EfficiencyVoucher = 11, PremiumOrb = 12, BlessingScale = 13, Coffee = 14, GrowthCore = 16, PackVoucher = 17,
     BullToken = 18, BearToken = 19
 }
 
@@ -364,7 +364,7 @@ public class ResourceManager : MonoBehaviour
         ResourceBank.Set(ResourceType.WorkOrder, 0);
         ResourceBank.Set(ResourceType.Favor, 0);
         ResourceBank.Set(ResourceType.Material, 0);
-        ResourceBank.Set(ResourceType.ShinyOrb, 0);
+        ResourceBank.Set(ResourceType.PremiumOrb, 0);
         ResourceBank.Set(ResourceType.BlessingScale, 0);
         ResourceBank.Set(ResourceType.Coffee, 0);
         ResourceBank.Set(ResourceType.GrowthCore, 0);

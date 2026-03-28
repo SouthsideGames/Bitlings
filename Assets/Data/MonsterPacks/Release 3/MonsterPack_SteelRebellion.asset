@@ -14,8 +14,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   id: MP-029
   displayName: Steel Rebellion
-  description: Alloy revolutionaries reject decay and inefficiency. This pack represents
-    peak mechanical evolution, optimized for precision, control, and raw output.
+  description: Alloy Bitlings operate with refined precision and efficiency, maximizing
+    output through controlled and optimized performance.
   icon: {fileID: 21300000, guid: da549752637c243c88b03eacbfd81a0d, type: 3}
   rarityLabel: Epic
   baseCost: 46

@@ -14,8 +14,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   id: MP-030
   displayName: Dreaming Abyss
-  description: Sleepers suspended between worlds drift through forgotten realms.
-    Specter and Oracle monsters manipulate fate, timing, and inevitability itself.
+  description: Specter and Oracle Bitlings move between states with precise timing,
+    shaping outcomes through controlled and deliberate actions.
   icon: {fileID: 21300000, guid: f55b405b911a142c7a72d95e66ea5bb6, type: 3}
   rarityLabel: Rare
   baseCost: 25

@@ -19,12 +19,12 @@ public static class DiagnosticsTrace
         public string monsterId;
         public int level;
         public bool isBoss;
-        public bool isShiny;
+        public bool isPremium;
         public string seedString;
         public long unix;
     }
 
-    public struct ShinyRoll
+    public struct PremiumRoll
     {
         public string monsterId;
         public float chance;
@@ -43,11 +43,11 @@ public static class DiagnosticsTrace
     }
 
     static EncounterStart _lastEncounter;
-    static ShinyRoll _lastShinyRoll;
+    static PremiumRoll _lastPremiumRoll;
     static HireDecision _lastHire;
 
     public static EncounterStart LastEncounter => _lastEncounter;
-    public static ShinyRoll LastShinyRoll => _lastShinyRoll;
+    public static PremiumRoll LastPremiumRoll => _lastPremiumRoll;
     public static HireDecision LastHire => _lastHire;
 
     static bool IsEnabled()
@@ -96,7 +96,7 @@ public static class DiagnosticsTrace
         return sb.ToString();
     }
 
-    public static void RecordEncounterStart(string monsterId, int level, bool isBoss, bool isShiny, string seedString)
+    public static void RecordEncounterStart(string monsterId, int level, bool isBoss, bool isPremium, string seedString)
     {
         if (!IsEnabled()) return;
 
@@ -108,22 +108,22 @@ public static class DiagnosticsTrace
             monsterId = monsterId,
             level = level,
             isBoss = isBoss,
-            isShiny = isShiny,
+            isPremium = isPremium,
             seedString = seedString ?? "",
             unix = now
         };
 
-        Add("Encounter Start", $"{monsterId} L{level} | boss={isBoss} shiny={isShiny} | seed={seedString}");
+        Add("Encounter Start", $"{monsterId} L{level} | boss={isBoss} premium={isPremium} | seed={seedString}");
     }
 
-    public static void RecordShinyRoll(string monsterId, float chance, float roll, bool success)
+    public static void RecordPremiumRoll(string monsterId, float chance, float roll, bool success)
     {
         if (!IsEnabled()) return;
 
         long now = SaveManager.NowUnix();
         monsterId = string.IsNullOrWhiteSpace(monsterId) ? "?" : monsterId;
 
-        _lastShinyRoll = new ShinyRoll
+        _lastPremiumRoll = new PremiumRoll
         {
             monsterId = monsterId,
             chance = chance,
@@ -132,7 +132,7 @@ public static class DiagnosticsTrace
             unix = now
         };
 
-        Add("Shiny Roll", $"{monsterId} | chance={chance:0.0000} roll={roll:0.0000} => {(success ? "SHINY" : "normal")}");
+        Add("Premium Roll", $"{monsterId} | chance={chance:0.0000} roll={roll:0.0000} => {(success ? "PREMIUM" : "normal")}");
     }
 
     public static void RecordHireDecision(string monsterId, bool accepted, bool success, string notes = "")
