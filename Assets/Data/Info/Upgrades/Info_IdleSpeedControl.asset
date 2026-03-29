@@ -16,5 +16,5 @@ MonoBehaviour:
   category: 5
   title: Speed Control
   subtitle: Accelerate Auto Battles
-  body: Unlocks speed control during Auto Battles, allowing encounters to resolve
-    more quickly while preserving standard pacing for manual battles.
+  body: Unlocks speed control during Auto Battles, allowing rifts to resolve more
+    quickly while preserving standard pacing for manual battles.

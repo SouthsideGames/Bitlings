@@ -47,6 +47,7 @@ public enum PanelId
     Exchange = 36,
     ExchangeSpeciesDetail = 37,
     StatBreakdown = 38,
+    AutoBattleHistory = 39,
 }
 
 [Serializable]
@@ -94,6 +95,7 @@ public class UIManager : MonoBehaviour
         PanelId.DuplicateResolution,
         PanelId.ExchangeSpeciesDetail,
         PanelId.StatBreakdown,
+        PanelId.AutoBattleHistory,
 
         // NOTE:
         // Iron overlays are intentionally NOT included here.

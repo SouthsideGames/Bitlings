@@ -860,7 +860,7 @@ MonoBehaviour:
       enemies usually offer better rewards \u2014 but higher risk."
   - icon: {fileID: 21300000, guid: 5b05ebb3f339e4f03b3026941ea99ecc, type: 3}
     text: Your active team is previewed here so you always know who is going into
-      the next encounter.
+      the next Rift Operation.
   - icon: {fileID: 3239880121721825974, guid: bfb12dc30a4e1445298547f6c0d3d850, type: 3}
     text: "Sometimes the Encounter button is blocked (for example: not enough Energy,
       or the game state is not ready). When blocked, the button won\u2019t run even
@@ -45775,6 +45775,10 @@ MonoBehaviour:
     root: {fileID: 372922090}
     useFade: 1
     useSlide: 1
+  - id: 39
+    root: {fileID: 1515719923}
+    useFade: 1
+    useSlide: 1
   singleMainPanelMode: 1
   overlayPanels: 0f000000100000001100000012000000160000001700000018000000190000001a0000001c0000002000000021000000
   openFadeDuration: 0.15
@@ -70806,7 +70810,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &622564764
 RectTransform:
   m_ObjectHideFlags: 0
@@ -70844,6 +70848,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   panel: {fileID: 622564767}
   collectButton: {fileID: 1411498606}
+  historyButton: {fileID: 817663853}
   titleText: {fileID: 644509598010126395}
   totalBattlesText: {fileID: 88631035}
   encounteredScrollRect: {fileID: 1581123300}
@@ -70854,6 +70859,8 @@ MonoBehaviour:
   capturedItemPrefab: {fileID: 4195858648543625969, guid: 8ba39436808ef9a4a94fac4786cfb8ec, type: 3}
   capturedSectionRoot: {fileID: 1433096293}
   captureFeatureId: 3
+  historyFeatureId: 14
+  historyPanelId: 39
   totalCreditsText: {fileID: 1211406301}
 --- !u!222 &622564766
 CanvasRenderer:
@@ -91212,9 +91219,9 @@ RectTransform:
   - {fileID: 294813924}
   m_Father: {fileID: 683381864}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 0, y: 0}
-  m_AnchoredPosition: {x: 0, y: 0}
+  m_AnchorMin: {x: 0, y: 1}
+  m_AnchorMax: {x: 0, y: 1}
+  m_AnchoredPosition: {x: 225, y: -176.9713}
   m_SizeDelta: {x: 320, y: 150}
   m_Pivot: {x: 0.5, y: 0}
 --- !u!114 &817663853
@@ -94280,7 +94287,7 @@ PrefabInstance:
       objectReference: {fileID: 21300000, guid: 5b05ebb3f339e4f03b3026941ea99ecc, type: 3}
     - target: {fileID: 7178327539474743040, guid: e2a738edca0ab1341b3614d8ebf7e6b6, type: 3}
       propertyPath: pages.Array.data[4].text
-      value: Advance through as many encounters as possible before the run concludes,
+      value: Advance through as many Rift Operations as possible before the run concludes,
         with performance reflected in your final record.
       objectReference: {fileID: 0}
     - target: {fileID: 7178327539474743040, guid: e2a738edca0ab1341b3614d8ebf7e6b6, type: 3}
@@ -124875,7 +124882,7 @@ GameObject:
   - component: {fileID: 1086514571}
   - component: {fileID: 1086514573}
   m_Layer: 5
-  m_Name: Panel_Encounter
+  m_Name: Panel_Rifts
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -164408,9 +164415,9 @@ RectTransform:
   - {fileID: 613200018}
   m_Father: {fileID: 683381864}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 0, y: 0}
-  m_AnchoredPosition: {x: 0, y: 0}
+  m_AnchorMin: {x: 0, y: 1}
+  m_AnchorMax: {x: 0, y: 1}
+  m_AnchoredPosition: {x: 675, y: -176.9713}
   m_SizeDelta: {x: 320, y: 150}
   m_Pivot: {x: 0.5, y: 0}
 --- !u!114 &1411498606
@@ -174972,9 +174979,9 @@ GameObject:
   - component: {fileID: 1515719924}
   - component: {fileID: 1515719927}
   - component: {fileID: 1515719926}
-  - component: {fileID: 1515719925}
+  - component: {fileID: 1515719928}
   m_Layer: 5
-  m_Name: Panel_IdleResume
+  m_Name: Panel_AutoBattleHistory
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -175004,23 +175011,6 @@ RectTransform:
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
---- !u!114 &1515719925
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1515719923}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 39c97e01af5a54ac58dd53b9cc3439e2, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  scrollRect: {fileID: 1107661285}
-  content: {fileID: 121734733}
-  rowPrefab: {fileID: 387813381229620221, guid: b1462f58305c8324caae24405dbe8627, type: 3}
-  clearOnBattleStart: 0
-  clearOnEncounterStart: 0
 --- !u!225 &1515719926
 CanvasGroup:
   m_ObjectHideFlags: 0
@@ -175041,6 +175031,31 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1515719923}
   m_CullTransparentMesh: 1
+--- !u!114 &1515719928
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1515719923}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 94fe056371f91483e96ebf0eede7a37e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::AutoBattleHistoryPaneUI
+  root: {fileID: 0}
+  listRoot: {fileID: 0}
+  rowPrefab: {fileID: 0}
+  contentLabel: {fileID: 0}
+  emptyLabel: {fileID: 0}
+  closeButton: {fileID: 0}
+  refreshButton: {fileID: 0}
+  scrollRect: {fileID: 0}
+  autoSizer: {fileID: 0}
+  requiredFeature: 14
+  maxEntriesToShow: 25
+  maxLinesPerEntry: 8
+  expandedRowsCount: 1
 --- !u!1 &1516244085
 GameObject:
   m_ObjectHideFlags: 0
@@ -256805,6 +256820,13 @@ PrefabInstance:
         details and assign them to your active team.'
       objectReference: {fileID: 0}
     - target: {fileID: 7178327539474743040, guid: e2a738edca0ab1341b3614d8ebf7e6b6, type: 3}
+      propertyPath: pages.Array.data[3].text
+      value: 'Rift Operations deploy your team to stabilize unassigned Bitlings.
+
+        Each
+        operation requires Energy and an active team.'
+      objectReference: {fileID: 0}
+    - target: {fileID: 7178327539474743040, guid: e2a738edca0ab1341b3614d8ebf7e6b6, type: 3}
       propertyPath: pages.Array.data[5].icon
       value: 
       objectReference: {fileID: 21300000, guid: 5b05ebb3f339e4f03b3026941ea99ecc, type: 3}
@@ -256855,8 +256877,8 @@ PrefabInstance:
       propertyPath: pages.Array.data[11].text
       value: 'Energy is displayed at the top of the screen.
 
-        Encounters require
-        Energy, which regenerates over time.'
+        Rift Operations
+        require Energy, which regenerates over time.'
       objectReference: {fileID: 0}
     - target: {fileID: 7178327539474743040, guid: e2a738edca0ab1341b3614d8ebf7e6b6, type: 3}
       propertyPath: pages.Array.data[12].icon

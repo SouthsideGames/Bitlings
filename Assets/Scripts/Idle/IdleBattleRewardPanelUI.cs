@@ -9,6 +9,7 @@ public class IdleBattleRewardPanelUI : MonoBehaviour
     [Header("Panel")]
     [SerializeField] private CanvasGroup panel;
     [SerializeField] private Button collectButton;
+    [SerializeField] private Button historyButton;
 
     [Header("Header Text")]
     [SerializeField] private TMP_Text titleText;
@@ -27,6 +28,10 @@ public class IdleBattleRewardPanelUI : MonoBehaviour
 
     [Header("Captured Feature Gate")]
     [SerializeField] private FeatureId captureFeatureId = FeatureId.IdleBattle_OfflineCapture;
+
+    [Header("History Feature Gate")]
+    [SerializeField] private FeatureId historyFeatureId = FeatureId.IdleBattle_LogArchive;
+    [SerializeField] private PanelId historyPanelId = PanelId.AutoBattleHistory;
 
     [Header("Totals")]
     [SerializeField] private TMP_Text totalCreditsText;
@@ -54,9 +59,26 @@ public class IdleBattleRewardPanelUI : MonoBehaviour
         if (collectButton)
             collectButton.onClick.AddListener(OnCollect);
 
+        if (historyButton)
+            historyButton.onClick.AddListener(OnHistoryClicked);
+
         gameObject.SetActive(false);
 
         monsterLibrary = MonsterLibraryLocator.Lib;
+    }
+
+    void OnEnable()
+    {
+        if (FeatureUnlockManager.I != null)
+            FeatureUnlockManager.I.OnFeatureUnlocked += HandleFeatureUnlocked;
+
+        UpdateHistoryButtonVisibility();
+    }
+
+    void OnDisable()
+    {
+        if (FeatureUnlockManager.I != null)
+            FeatureUnlockManager.I.OnFeatureUnlocked -= HandleFeatureUnlocked;
     }
 
     public void Open(IdleBattleSummary summary, Action onCollected, string titleOverride = null)
@@ -82,6 +104,7 @@ public class IdleBattleRewardPanelUI : MonoBehaviour
             PopulateCapturedList(summary != null ? summary.capturedLog : null);
 
         ApplyCapturedSectionVisibility(summary, captureUnlocked);
+        UpdateHistoryButtonVisibility();
 
         if (panel)
         {
@@ -91,6 +114,47 @@ public class IdleBattleRewardPanelUI : MonoBehaviour
         }
 
         gameObject.SetActive(true);
+    }
+
+    private bool IsHistoryFeatureUnlocked()
+    {
+        if (historyFeatureId == FeatureId.None) return true;
+
+        var fum = FeatureUnlockManager.I;
+        if (fum == null) return false;
+
+        return fum.IsUnlocked(historyFeatureId);
+    }
+
+    private void UpdateHistoryButtonVisibility()
+    {
+        if (!historyButton)
+            return;
+
+        bool unlocked = IsHistoryFeatureUnlocked();
+        historyButton.gameObject.SetActive(unlocked);
+        historyButton.interactable = unlocked;
+    }
+
+    private void HandleFeatureUnlocked(FeatureId feature)
+    {
+        if (feature == historyFeatureId)
+            UpdateHistoryButtonVisibility();
+    }
+
+    private void OnHistoryClicked()
+    {
+        if (!IsHistoryFeatureUnlocked())
+            return;
+
+        if (UIManager.I != null)
+        {
+            UIManager.I.Show(historyPanelId);
+            AudioManager.I?.PlayClick();
+            return;
+        }
+
+        Debug.LogWarning("UIManager not found - cannot open auto battle history panel.");
     }
 
     private bool IsCaptureFeatureUnlocked()
