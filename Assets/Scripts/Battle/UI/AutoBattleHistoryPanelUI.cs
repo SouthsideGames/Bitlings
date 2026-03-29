@@ -1,24 +1,20 @@
 using System;
 using System.Collections.Generic;
-using System.Text;
-using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
-public class AutoBattleHistoryPaneUI : MonoBehaviour
+public class AutoBattleHistoryPanelUI : MonoBehaviour
 {
     [Header("UI")]
-    [SerializeField] private GameObject root;
     [SerializeField] private Transform listRoot;
     [SerializeField] private AutoBattleHistoryRowUI rowPrefab;
-    [SerializeField] private TextMeshProUGUI contentLabel;
-    [SerializeField] private TextMeshProUGUI emptyLabel;
     [SerializeField] private Button closeButton;
     [SerializeField] private Button refreshButton;
     [SerializeField] private ScrollRect scrollRect;
     [SerializeField] private ScrollContentAutoSizer autoSizer;
 
     [Header("Behavior")]
+    [SerializeField] private PanelId panelId = PanelId.AutoBattleHistory;
     [SerializeField] private FeatureId requiredFeature = FeatureId.IdleBattle_LogArchive;
     [SerializeField] private int maxEntriesToShow = 25;
     [SerializeField] private int maxLinesPerEntry = 8;
@@ -31,7 +27,12 @@ public class AutoBattleHistoryPaneUI : MonoBehaviour
         if (closeButton) closeButton.onClick.AddListener(Close);
         if (refreshButton) refreshButton.onClick.AddListener(Rebuild);
 
-        if (root) root.SetActive(false);
+        gameObject.SetActive(false);
+    }
+
+    void OnEnable()
+    {
+        Rebuild();
     }
 
     public void Open()
@@ -39,22 +40,26 @@ public class AutoBattleHistoryPaneUI : MonoBehaviour
         if (!IsUnlocked())
             return;
 
-        if (!root) return;
-        root.SetActive(true);
-        Rebuild();
+        if (UIManager.I != null)
+            UIManager.I.Show(panelId);
+        else
+            gameObject.SetActive(true);
     }
 
     public void Close()
     {
-        if (!root) return;
-        root.SetActive(false);
+        if (UIManager.I != null)
+            UIManager.I.Hide(panelId);
+        else
+            gameObject.SetActive(false);
     }
 
     public void Toggle()
     {
-        if (!root) return;
-        if (root.activeSelf) Close();
-        else Open();
+        if (UIManager.I != null && UIManager.I.IsOpen(panelId))
+            Close();
+        else
+            Open();
     }
 
     public void Rebuild()
@@ -62,18 +67,13 @@ public class AutoBattleHistoryPaneUI : MonoBehaviour
         var data = SaveManager.Data;
         if (data == null || data.autoBattleLogArchive == null || data.autoBattleLogArchive.Count == 0)
         {
-            ShowEmpty("No auto-battle history yet.");
             ClearRows();
             return;
         }
 
-        bool canRenderRows = listRoot != null && rowPrefab != null;
-        if (canRenderRows)
+        if (listRoot != null && rowPrefab != null)
             RebuildRows(data.autoBattleLogArchive);
-        else
-            RebuildTextFallback(data.autoBattleLogArchive);
 
-        SetEmptyVisible(false);
         ScrollToTop();
     }
 
@@ -94,50 +94,6 @@ public class AutoBattleHistoryPaneUI : MonoBehaviour
         }
 
         RefreshLayout();
-    }
-
-    private void RebuildTextFallback(List<AutoBattleLogEntry> list)
-    {
-        if (contentLabel == null)
-            return;
-
-        int shown = 0;
-        int start = Mathf.Max(0, list.Count - Mathf.Max(1, maxEntriesToShow));
-
-        var sb = new StringBuilder(4096);
-
-        for (int i = list.Count - 1; i >= start; i--)
-        {
-            var e = list[i];
-            AppendEntry(sb, e);
-            shown++;
-
-            if (shown < maxEntriesToShow && i > start)
-                sb.AppendLine();
-        }
-
-        contentLabel.text = sb.ToString();
-
-        if (emptyLabel != null)
-            emptyLabel.gameObject.SetActive(false);
-    }
-
-    private void ShowEmpty(string message)
-    {
-        if (emptyLabel != null)
-        {
-            emptyLabel.text = message;
-            emptyLabel.gameObject.SetActive(true);
-        }
-
-        if (contentLabel != null)
-            contentLabel.text = message;
-    }
-
-    private void SetEmptyVisible(bool visible)
-    {
-        if (emptyLabel != null)
-            emptyLabel.gameObject.SetActive(visible);
     }
 
     private void ClearRows()
@@ -165,52 +121,6 @@ public class AutoBattleHistoryPaneUI : MonoBehaviour
         Canvas.ForceUpdateCanvases();
         scrollRect.verticalNormalizedPosition = 1f;
         Canvas.ForceUpdateCanvases();
-    }
-
-    private void AppendEntry(StringBuilder sb, AutoBattleLogEntry e)
-    {
-        string time = FormatUnix(e.unix);
-        string outcome = e.victory ? "Victory" : (e.escaped ? "Escaped" : "Defeat");
-        string name = string.IsNullOrEmpty(e.opponentName) ? "Unknown" : e.opponentName;
-
-        sb.Append("[").Append(time).Append("] ")
-          .Append(outcome)
-          .Append(" vs ")
-          .Append(name)
-          .Append(" (Lv ")
-          .Append(Mathf.Max(1, e.opponentLevel))
-          .AppendLine(")");
-
-        if (e.lines == null || e.lines.Count == 0)
-            return;
-
-        int lineCount = Mathf.Min(Mathf.Max(1, maxLinesPerEntry), e.lines.Count);
-        for (int i = 0; i < lineCount; i++)
-        {
-            var line = e.lines[i];
-            if (string.IsNullOrWhiteSpace(line))
-                continue;
-
-            sb.Append("  - ").AppendLine(line);
-        }
-
-        if (lineCount < e.lines.Count)
-            sb.AppendLine("  - ...");
-    }
-
-    private static string FormatUnix(long unix)
-    {
-        if (unix <= 0)
-            return "Unknown time";
-
-        try
-        {
-            return DateTimeOffset.FromUnixTimeSeconds(unix).ToLocalTime().ToString("yyyy-MM-dd HH:mm");
-        }
-        catch
-        {
-            return "Unknown time";
-        }
     }
 
     private bool IsUnlocked()

@@ -131,7 +131,7 @@ public class UIAdaptiveRootSizer : MonoBehaviour
         if (rectTransform == null)
             rectTransform = GetComponent<RectTransform>();
 
-        Apply();
+        UnityEditor.EditorApplication.delayCall += Apply;
     }
 #endif
 

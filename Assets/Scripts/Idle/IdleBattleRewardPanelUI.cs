@@ -8,7 +8,6 @@ public class IdleBattleRewardPanelUI : MonoBehaviour
 {
     [Header("Panel")]
     [SerializeField] private CanvasGroup panel;
-    [SerializeField] private Button collectButton;
     [SerializeField] private Button historyButton;
 
     [Header("Header Text")]
@@ -55,9 +54,6 @@ public class IdleBattleRewardPanelUI : MonoBehaviour
             panel.interactable = false;
             panel.blocksRaycasts = false;
         }
-
-        if (collectButton)
-            collectButton.onClick.AddListener(OnCollect);
 
         if (historyButton)
             historyButton.onClick.AddListener(OnHistoryClicked);

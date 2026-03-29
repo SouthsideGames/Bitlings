@@ -11,6 +11,7 @@ public class AutoBattleHistoryRowUI : MonoBehaviour
     [SerializeField] private TextMeshProUGUI summaryLabel;
     [SerializeField] private TextMeshProUGUI detailsLabel;
     [SerializeField] private GameObject detailsRoot;
+    [SerializeField] private ScrollRect detailsScrollRect;
     [SerializeField] private Button toggleButton;
     [SerializeField] private TextMeshProUGUI toggleLabel;
 
@@ -53,12 +54,20 @@ public class AutoBattleHistoryRowUI : MonoBehaviour
         var parent = transform.parent as RectTransform;
         if (parent != null)
             LayoutRebuilder.ForceRebuildLayoutImmediate(parent);
+
+        AudioManager.I.PlayClick();
     }
 
     private void ApplyExpandedState()
     {
         if (detailsRoot != null)
             detailsRoot.SetActive(_expanded);
+
+        if (detailsScrollRect != null)
+        {
+            detailsScrollRect.vertical = _expanded;
+            detailsScrollRect.verticalNormalizedPosition = 1f;
+        }
 
         if (toggleLabel != null)
             toggleLabel.text = _expanded ? "Show Less" : "Show More";
