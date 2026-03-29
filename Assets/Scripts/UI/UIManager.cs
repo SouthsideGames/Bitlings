@@ -68,6 +68,7 @@ public class UIManager : MonoBehaviour
     public static UIManager I { get; private set; }
 
     private const string TutorialIronCareerUnlockedKey = "tut_ironcareerunlocked_v1";
+    private const string TutorialAutoEncounterKey = "tut_autoencounter_v1";
 
     [Header("Panels")]
     [SerializeField] private List<PanelEntry> panels = new();
@@ -207,6 +208,18 @@ public class UIManager : MonoBehaviour
         TutorialOverlayPanel.RequestOpen(TutorialIronCareerUnlockedKey);
     }
 
+    void TryOpenAutoEncounterTutorial()
+    {
+        if (SaveManager.IsTutorialComplete(TutorialAutoEncounterKey)) return;
+
+        // Only show once idle battles have been unlocked
+        if (FeatureUnlockManager.I != null &&
+            !FeatureUnlockManager.I.IsUnlocked(FeatureId.IdleBattle_Basic))
+            return;
+
+        TutorialOverlayPanel.RequestOpen(TutorialAutoEncounterKey);
+    }
+
     IEnumerator Co_TryOpenIdleBattleRewardsNextFrame()
     {
         yield return null;
@@ -313,6 +326,11 @@ public class UIManager : MonoBehaviour
                 {
                     TryOpenIdleBattleRewardsNextFrame();
                     TryOpenIronCareerUnlockedTutorial();
+                }
+
+                if (id == PanelId.Encounter)
+                {
+                    TryOpenAutoEncounterTutorial();
                 }
             }
         }
