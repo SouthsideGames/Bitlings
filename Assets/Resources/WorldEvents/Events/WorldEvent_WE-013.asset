@@ -16,7 +16,7 @@ MonoBehaviour:
   displayName: Grove Maintenance Week
   category: 0
   isHoliday: 0
-  tickerMessage: Grove access restricted for habitat restoration.
+  tickerMessage: Grove access limited during habitat restoration.
   scheduledOnly: 0
   startUnix: 0
   endUnix: 0

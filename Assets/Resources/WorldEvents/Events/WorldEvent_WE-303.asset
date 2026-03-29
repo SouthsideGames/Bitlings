@@ -16,7 +16,7 @@ MonoBehaviour:
   displayName: Transit Delay
   category: 3
   isHoliday: 0
-  tickerMessage: 'Transit delay: shipments delayed on the outer routes.'
+  tickerMessage: 'Transit bulletin: outer-route shipments are delayed.'
   scheduledOnly: 0
   startUnix: 0
   endUnix: 0

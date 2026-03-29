@@ -16,7 +16,7 @@ MonoBehaviour:
   displayName: Shipping Boom
   category: 0
   isHoliday: 0
-  tickerMessage: International trade surges through the Harbor!
+  tickerMessage: Trade volume increases Harbor activity.
   scheduledOnly: 0
   startUnix: 0
   endUnix: 0

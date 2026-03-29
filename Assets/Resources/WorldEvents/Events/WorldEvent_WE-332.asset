@@ -16,7 +16,7 @@ MonoBehaviour:
   displayName: New Sculpture
   category: 3
   isHoliday: 0
-  tickerMessage: New sculpture installed near the Grove entrance.
+  tickerMessage: A new sculpture has been installed near the Grove entrance.
   scheduledOnly: 0
   startUnix: 0
   endUnix: 0

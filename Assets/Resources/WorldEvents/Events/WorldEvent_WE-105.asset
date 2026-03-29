@@ -16,7 +16,7 @@ MonoBehaviour:
   displayName: Security Sweep
   category: 1
   isHoliday: 0
-  tickerMessage: Security sweep disrupts encounter availability.
+  tickerMessage: A security sweep disrupts Rift Operation availability.
   scheduledOnly: 0
   startUnix: 0
   endUnix: 0

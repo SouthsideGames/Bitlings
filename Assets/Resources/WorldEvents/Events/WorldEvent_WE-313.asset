@@ -16,7 +16,7 @@ MonoBehaviour:
   displayName: Science Fair
   category: 3
   isHoliday: 0
-  tickerMessage: Science fair draws crowds near the Cryo Lab district.
+  tickerMessage: Science fair activity increases near the Cryo Lab district.
   scheduledOnly: 0
   startUnix: 0
   endUnix: 0

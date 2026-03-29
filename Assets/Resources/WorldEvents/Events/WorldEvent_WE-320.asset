@@ -16,7 +16,7 @@ MonoBehaviour:
   displayName: Lost Cat
   category: 3
   isHoliday: 0
-  tickerMessage: Workshop cat still missing. Reward offered.
+  tickerMessage: 'Workshop notice: the resident cat remains missing. Reward offered.'
   scheduledOnly: 0
   startUnix: 0
   endUnix: 0

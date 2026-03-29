@@ -16,7 +16,7 @@ MonoBehaviour:
   displayName: Photo Contest
   category: 3
   isHoliday: 0
-  tickerMessage: 'Photo contest: best Bitling snapshot wins a prize.'
+  tickerMessage: 'Photo contest: best Bitling snapshot receives a prize.'
   scheduledOnly: 0
   startUnix: 0
   endUnix: 0

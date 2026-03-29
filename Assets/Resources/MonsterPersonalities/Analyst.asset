@@ -27,4 +27,4 @@ MonoBehaviour:
   eachTurnFocusPenalty: 1
   lowHpFocusPenalty: 3
   chaoticOverrideChance: 0
-  description: Studies the flow of battle before committing.
+  description: Observes battlefield flow before committing to action.

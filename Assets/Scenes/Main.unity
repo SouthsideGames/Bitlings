@@ -7242,9 +7242,9 @@ RectTransform:
   - {fileID: 962651720}
   m_Father: {fileID: 419770653}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 0, y: 0}
-  m_AnchoredPosition: {x: 0, y: 0}
+  m_AnchorMin: {x: 0, y: 1}
+  m_AnchorMax: {x: 0, y: 1}
+  m_AnchoredPosition: {x: 244.71667, y: -140}
   m_SizeDelta: {x: 320, y: 150}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &57348287
@@ -8069,9 +8069,9 @@ RectTransform:
   - {fileID: 759940724}
   m_Father: {fileID: 1600082524}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 0, y: 0}
-  m_AnchoredPosition: {x: 0, y: 0}
+  m_AnchorMin: {x: 0, y: 1}
+  m_AnchorMax: {x: 0, y: 1}
+  m_AnchoredPosition: {x: 644.05743, y: -41.6865}
   m_SizeDelta: {x: 571.3293, y: 83.373}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &65518020
@@ -12869,10 +12869,10 @@ RectTransform:
   - {fileID: 1796889925}
   m_Father: {fileID: 1154317174}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 0, y: 0}
-  m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 0, y: 0}
+  m_AnchorMin: {x: 0, y: 1}
+  m_AnchorMax: {x: 0, y: 1}
+  m_AnchoredPosition: {x: 413.91, y: -152.25}
+  m_SizeDelta: {x: 200, y: 80.5}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!1 &110805773
 GameObject:
@@ -14058,7 +14058,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 0.00005340576, y: -294}
+  m_AnchoredPosition: {x: 0.000053406, y: -294}
   m_SizeDelta: {x: 345, y: 345}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &127929398
@@ -14771,10 +14771,10 @@ RectTransform:
   m_Children: []
   m_Father: {fileID: 444293593}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 0, y: 0}
-  m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 0, y: 0}
+  m_AnchorMin: {x: 0, y: 1}
+  m_AnchorMax: {x: 0, y: 1}
+  m_AnchoredPosition: {x: 349.99, y: -25}
+  m_SizeDelta: {x: 230, y: 50}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &134701739
 MonoBehaviour:
@@ -18888,9 +18888,9 @@ RectTransform:
   - {fileID: 71248485}
   m_Father: {fileID: 787850016}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 0, y: 0}
-  m_AnchoredPosition: {x: 0, y: 0}
+  m_AnchorMin: {x: 0, y: 1}
+  m_AnchorMax: {x: 0, y: 1}
+  m_AnchoredPosition: {x: 62.5, y: -77.7245}
   m_SizeDelta: {x: 125, y: 125}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &186559180
@@ -19074,7 +19074,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 166169183312667912, guid: 5c8a35a99700e114599584b8db5573ad, type: 3}
       propertyPath: m_AnchorMax.y
-      value: 0
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 166169183312667912, guid: 5c8a35a99700e114599584b8db5573ad, type: 3}
       propertyPath: m_AnchorMin.x
@@ -19082,7 +19082,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 166169183312667912, guid: 5c8a35a99700e114599584b8db5573ad, type: 3}
       propertyPath: m_AnchorMin.y
-      value: 0
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 166169183312667912, guid: 5c8a35a99700e114599584b8db5573ad, type: 3}
       propertyPath: m_SizeDelta.x
@@ -19122,11 +19122,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 166169183312667912, guid: 5c8a35a99700e114599584b8db5573ad, type: 3}
       propertyPath: m_AnchoredPosition.x
-      value: 0
+      value: 136.62686
       objectReference: {fileID: 0}
     - target: {fileID: 166169183312667912, guid: 5c8a35a99700e114599584b8db5573ad, type: 3}
       propertyPath: m_AnchoredPosition.y
-      value: 0
+      value: -303.53796
       objectReference: {fileID: 0}
     - target: {fileID: 166169183312667912, guid: 5c8a35a99700e114599584b8db5573ad, type: 3}
       propertyPath: m_LocalEulerAnglesHint.x
@@ -21578,7 +21578,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &202605869
 RectTransform:
   m_ObjectHideFlags: 0
@@ -22129,10 +22129,10 @@ RectTransform:
   m_Children: []
   m_Father: {fileID: 444293593}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 0, y: 0}
-  m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 0, y: 0}
+  m_AnchorMin: {x: 0, y: 1}
+  m_AnchorMax: {x: 0, y: 1}
+  m_AnchoredPosition: {x: 119.990005, y: -75}
+  m_SizeDelta: {x: 230, y: 50}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &208076233
 MonoBehaviour:
@@ -28288,7 +28288,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!114 &262692211
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -29931,9 +29931,9 @@ RectTransform:
   - {fileID: 1898900374}
   m_Father: {fileID: 1459067176}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 0, y: 0}
-  m_AnchoredPosition: {x: 0, y: 0}
+  m_AnchorMin: {x: 0, y: 1}
+  m_AnchorMax: {x: 0, y: 1}
+  m_AnchoredPosition: {x: 666.24994, y: -62.675}
   m_SizeDelta: {x: 100, y: 100}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!1 &280906083
@@ -31946,47 +31946,27 @@ MonoBehaviour:
   autoOpenOnEnable: 1
   pages:
   - icon: {fileID: 21300000, guid: 7a1f366d7e37345d497f3ea3f32e724f, type: 3}
-    text: 'The Gym lets you spend Growth Cores to level up your Bitlings.
-
-      Pick
-      a Bitling from the list to open the leveling panel.'
-  - icon: {fileID: 2291750746404757969, guid: ce3a6dc26e8c44aada3227991627a8e0, type: 3}
-    text: This number shows how many Growth Cores you currently have available to
-      spend.
+    text: The Gym allocates Growth Cores to increase Bitling levels.
   - icon: {fileID: 21300000, guid: 81a757657c21f19439ffc846371b559c, type: 3}
-    text: 'This list includes every Bitling you own, including team + bench.
-
-      Tap
-      a row to manage leveling for that Bitling.'
-  - icon: {fileID: -5907155427544933479, guid: 903d9310dcd9a49b2b5f87002b4f28d4, type: 3}
-    text: 'Tap a Bitling row to open its leveling panel.
-
-      That panel is where
-      Growth Cores are spent and upgrades are applied.'
-  - icon: {fileID: -923432448004486077, guid: 7f1ca29997ecc4af18e4b9811ea64c05, type: 3}
-    text: "If you have 0 Growth Cores, the row\u2019s Open button will be disabled.\nEarn
-      more Growth Cores, then come back to level up."
-  - icon: {fileID: -6288249182244823202, guid: bde71cd552fb546aaa1d2775dd746969, type: 3}
-    text: 'Auto Apply lets a Bitling automatically spend Growth Cores when eligible.
-
-      This
-      toggle only appears after you unlock Auto Growth.'
+    text: Select a Bitling to open its leveling panel and apply upgrades.
+  - icon: {fileID: 3793622260316442973, guid: cd08b47c2e9ee49569739413bba69e51, type: 3}
+    text: Available Growth Cores are displayed at the top of the panel.
   - icon: {fileID: 21300000, guid: 5b05ebb3f339e4f03b3026941ea99ecc, type: 3}
-    text: 'Only a limited number of Bitlings can have Auto Apply enabled at once.
-
-      If
-      you hit the limit, turning on another Auto Apply toggle will be blocked.'
+    text: All owned Bitlings are listed, including active team members and reserves.
   - icon: {fileID: 21300000, guid: 5b05ebb3f339e4f03b3026941ea99ecc, type: 3}
-    text: When Auto Apply is enabled on at least one Bitling, this banner appears
-      to remind you Auto Apply is active.
+    text: Selecting a Bitling opens its leveling panel, where Growth Cores are applied.
   - icon: {fileID: 21300000, guid: 5b05ebb3f339e4f03b3026941ea99ecc, type: 3}
-    text: When you enable Auto Apply, the Bitling sets a target level at least one
-      level higher than its current level.
+    text: Leveling becomes available only when sufficient Growth Cores are present.
+  - icon: {fileID: 21300000, guid: 5b05ebb3f339e4f03b3026941ea99ecc, type: 3}
+    text: Auto Growth allows Bitlings to automatically allocate Growth Cores when
+      eligible.
+  - icon: {fileID: 21300000, guid: 5b05ebb3f339e4f03b3026941ea99ecc, type: 3}
+    text: This feature becomes available once unlocked and is limited to a set number
+      of Bitlings.
+  - icon: {fileID: 21300000, guid: 5b05ebb3f339e4f03b3026941ea99ecc, type: 3}
+    text: Active Auto Growth settings are indicated and saved automatically.
   - icon: {fileID: 5798008345902572713, guid: 398cbd3dce9364b259ad047d0b457946, type: 3}
-    text: 'Your Auto Apply settings are saved automatically.
-
-      If you toggle
-      Auto Apply on or off, it is immediately stored.'
+    text: Each enabled Bitling maintains a target level for continued progression.
   overlayRoot: {fileID: 1851425252}
   dimmerImage: {fileID: 1917758492}
   iconImage: {fileID: 2129673442}
@@ -36044,9 +36024,9 @@ RectTransform:
   - {fileID: 1259387618}
   m_Father: {fileID: 1600082524}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 0, y: 0}
-  m_AnchoredPosition: {x: 0, y: 0}
+  m_AnchorMin: {x: 0, y: 1}
+  m_AnchorMax: {x: 0, y: 1}
+  m_AnchoredPosition: {x: 0, y: -41.6865}
   m_SizeDelta: {x: 333.3928, y: 83.373}
   m_Pivot: {x: 0, y: 0.5}
 --- !u!114 &324366612 stripped
@@ -36514,7 +36494,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 166169183312667912, guid: 5c8a35a99700e114599584b8db5573ad, type: 3}
       propertyPath: m_AnchorMax.y
-      value: 0
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 166169183312667912, guid: 5c8a35a99700e114599584b8db5573ad, type: 3}
       propertyPath: m_AnchorMin.x
@@ -36522,7 +36502,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 166169183312667912, guid: 5c8a35a99700e114599584b8db5573ad, type: 3}
       propertyPath: m_AnchorMin.y
-      value: 0
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 166169183312667912, guid: 5c8a35a99700e114599584b8db5573ad, type: 3}
       propertyPath: m_SizeDelta.x
@@ -36562,11 +36542,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 166169183312667912, guid: 5c8a35a99700e114599584b8db5573ad, type: 3}
       propertyPath: m_AnchoredPosition.x
-      value: 0
+      value: 756.62683
       objectReference: {fileID: 0}
     - target: {fileID: 166169183312667912, guid: 5c8a35a99700e114599584b8db5573ad, type: 3}
       propertyPath: m_AnchoredPosition.y
-      value: 0
+      value: -303.53796
       objectReference: {fileID: 0}
     - target: {fileID: 166169183312667912, guid: 5c8a35a99700e114599584b8db5573ad, type: 3}
       propertyPath: m_LocalEulerAnglesHint.x
@@ -37366,9 +37346,9 @@ RectTransform:
   m_Children: []
   m_Father: {fileID: 1050788296}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 0, y: 0}
-  m_AnchoredPosition: {x: 0, y: 0}
+  m_AnchorMin: {x: 0, y: 1}
+  m_AnchorMax: {x: 0, y: 1}
+  m_AnchoredPosition: {x: 383.95, y: -455}
   m_SizeDelta: {x: 775, y: 150}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &344232352
@@ -42905,9 +42885,9 @@ RectTransform:
   - {fileID: 273461348}
   m_Father: {fileID: 1459067176}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 0, y: 0}
-  m_AnchoredPosition: {x: 0, y: 0}
+  m_AnchorMin: {x: 0, y: 1}
+  m_AnchorMax: {x: 0, y: 1}
+  m_AnchoredPosition: {x: 377.91663, y: -62.675}
   m_SizeDelta: {x: 100, y: 100}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &389776793
@@ -43239,7 +43219,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!114 &392151933
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -46182,7 +46162,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 5958198991077870269, guid: 54f8423961846bc489c69db9b16a22a6, type: 3}
       propertyPath: m_AnchorMax.y
-      value: 0
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 5958198991077870269, guid: 54f8423961846bc489c69db9b16a22a6, type: 3}
       propertyPath: m_AnchorMin.x
@@ -46190,7 +46170,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 5958198991077870269, guid: 54f8423961846bc489c69db9b16a22a6, type: 3}
       propertyPath: m_AnchorMin.y
-      value: 0
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 5958198991077870269, guid: 54f8423961846bc489c69db9b16a22a6, type: 3}
       propertyPath: m_SizeDelta.x
@@ -46230,11 +46210,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 5958198991077870269, guid: 54f8423961846bc489c69db9b16a22a6, type: 3}
       propertyPath: m_AnchoredPosition.x
-      value: 0
+      value: 750
       objectReference: {fileID: 0}
     - target: {fileID: 5958198991077870269, guid: 54f8423961846bc489c69db9b16a22a6, type: 3}
       propertyPath: m_AnchoredPosition.y
-      value: 0
+      value: -265.4
       objectReference: {fileID: 0}
     - target: {fileID: 5958198991077870269, guid: 54f8423961846bc489c69db9b16a22a6, type: 3}
       propertyPath: m_LocalEulerAnglesHint.x
@@ -47621,7 +47601,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!222 &428937634
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -51407,7 +51387,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &459782195
 RectTransform:
   m_ObjectHideFlags: 0
@@ -52615,9 +52595,9 @@ RectTransform:
   m_Children: []
   m_Father: {fileID: 2137201109}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 0, y: 0}
-  m_AnchoredPosition: {x: 0, y: 0}
+  m_AnchorMin: {x: 0, y: 1}
+  m_AnchorMax: {x: 0, y: 1}
+  m_AnchoredPosition: {x: 446.43054, y: -35.2213}
   m_SizeDelta: {x: 892.8611, y: 70.4426}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &468748968
@@ -54045,9 +54025,9 @@ RectTransform:
   - {fileID: 970680185}
   m_Father: {fileID: 1214486337}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 0, y: 0}
-  m_AnchoredPosition: {x: 0, y: 0}
+  m_AnchorMin: {x: 0, y: 1}
+  m_AnchorMax: {x: 0, y: 1}
+  m_AnchoredPosition: {x: 613.5969, y: -62.0243}
   m_SizeDelta: {x: 100, y: 100}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &481503124
@@ -58569,9 +58549,9 @@ RectTransform:
   - {fileID: 984577719}
   m_Father: {fileID: 1214486337}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 0, y: 0}
-  m_AnchoredPosition: {x: 0, y: 0}
+  m_AnchorMin: {x: 0, y: 1}
+  m_AnchorMax: {x: 0, y: 1}
+  m_AnchoredPosition: {x: 459.71207, y: -62.0243}
   m_SizeDelta: {x: 100, y: 100}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &518146159
@@ -64207,10 +64187,10 @@ RectTransform:
   m_Children: []
   m_Father: {fileID: 444293593}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 0, y: 0}
-  m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 0, y: 0}
+  m_AnchorMin: {x: 0, y: 1}
+  m_AnchorMax: {x: 0, y: 1}
+  m_AnchoredPosition: {x: 349.99, y: -75}
+  m_SizeDelta: {x: 230, y: 50}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &576548216
 MonoBehaviour:
@@ -67668,27 +67648,45 @@ MonoBehaviour:
   autoOpenOnEnable: 1
   pages:
   - icon: {fileID: 21300000, guid: 7f317b7b8dc50b341a110515859f3747, type: 3}
-    text: Expedition is where you browse Monster Packs and unlock new packs using
-      Pack Vouchers.
-  - icon: {fileID: -109353936457988245, guid: df23d2ef5229744a0a8cc432cfb15ddd, type: 3}
-    text: The header shows how many Pack Vouchers you currently have available.
+    text: 'Expedition is where Pack Vouchers are used to unlock new Bitling Packs.
+
+      These
+      packs expand your collection and provide access to new Bitlings.'
   - icon: {fileID: 4224842080577397726, guid: 67fb90c04d1f64b52b10ac50b26e288b, type: 3}
-    text: 'This list shows every pack from the Monster Pack Library.
+    text: 'The header displays your available Pack Vouchers.
+
+      Vouchers are
+      required to unlock new Bitling Packs.'
+  - icon: {fileID: 21300000, guid: 5b05ebb3f339e4f03b3026941ea99ecc, type: 3}
+    text: 'All packs from the current rotation are listed here.
+
+      Locked packs
+      appear first, making it easier to identify new unlock opportunities.'
+  - icon: {fileID: 21300000, guid: 5b05ebb3f339e4f03b3026941ea99ecc, type: 3}
+    text: 'Select a pack to review its contents and unlock requirements.
 
       Each
-      row represents one pack you can inspect.'
-  - icon: {fileID: 3232479309162599763, guid: d7d6f0e393bda46a08daff1018c2e9a3, type: 3}
-    text: "Locked packs appear before unlocked packs, so you can quickly see what\u2019s
-      available to unlock next."
-  - icon: {fileID: 1188854595336862080, guid: 48ea91dc67a5741889448f45712b1249, type: 3}
-    text: "Tap a pack row to open the Pack Detail Panel and view the pack\u2019s
-      contents and unlock options."
-  - icon: {fileID: 21300000, guid: 5b05ebb3f339e4f03b3026941ea99ecc, type: 3}
-    text: When you unlock a pack, Expedition refreshes the voucher count and rebuilds
-      the pack list automatically.
+      pack contains a curated set of Bitlings.'
   - icon: {fileID: -109353936457988245, guid: df23d2ef5229744a0a8cc432cfb15ddd, type: 3}
-    text: If your Pack Voucher count changes while Expedition is open, the header
-      updates automatically.
+    text: 'Unlocking a pack consumes Pack Vouchers and adds it to your available
+      pool.
+
+      Once unlocked, the pack becomes accessible for future use.'
+  - icon: {fileID: 21300000, guid: 5b05ebb3f339e4f03b3026941ea99ecc, type: 3}
+    text: 'Expedition packs rotate over time.
+
+      New packs become available as
+      the current rotation updates.'
+  - icon: {fileID: -184233537094302185, guid: 6b23ba550c98a4db89080b5bf92724f0, type: 3}
+    text: 'The timer displays how long the current pack rotation remains active.
+
+      When
+      the timer ends, a new set of packs becomes available.'
+  - icon: {fileID: 21300000, guid: 5b05ebb3f339e4f03b3026941ea99ecc, type: 3}
+    text: 'Unlocking packs increases access to new Bitlings and strengthens your
+      roster.
+
+      Continue using Pack Vouchers to expand BRN collection capabilities.'
   overlayRoot: {fileID: 501324132}
   dimmerImage: {fileID: 942229809}
   iconImage: {fileID: 759330043}
@@ -71306,7 +71304,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!114 &627020689
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -74921,44 +74919,32 @@ MonoBehaviour:
   autoOpenOnEnable: 1
   pages:
   - icon: {fileID: 2291750746404757969, guid: ce3a6dc26e8c44aada3227991627a8e0, type: 3}
-    text: 'This panel is where you:
-
-      Spend Growth Cores to Level Up
-
-      Spend
-      Unspent Stat Points to permanently boost stats'
+    text: This panel manages Bitling progression through Growth Cores and stat allocation.
   - icon: {fileID: 1188854595336862080, guid: 48ea91dc67a5741889448f45712b1249, type: 3}
-    text: "At the top you\u2019ll see:\nMonster name + level\nPoints used vs Unspent\nNext
-      Level cost in Growth Cores (GC)"
+    text: "The header displays the Bitling\u2019s name, level, available stat points,
+      and Growth Core requirement for the next level."
   - icon: {fileID: 4777373978525877068, guid: 7e9b6a9c3f0754d0fb8d6525fca31f2a, type: 3}
-    text: "Tap Level Up to spend Growth Cores and gain stat points.\nThe button is
-      disabled if:\nYou don\u2019t have enough GC\nThe monster is at max level"
+    text: 'Level Up allocates Growth Cores to increase level and generate stat points.
+
+      Leveling
+      is unavailable if Growth Cores are insufficient or the Bitling has reached
+      its limit.'
   - icon: {fileID: 21300000, guid: 5b05ebb3f339e4f03b3026941ea99ecc, type: 3}
-    text: "Use + and \u2212 to allocate your Unspent Stat Points into:\nHP, ATK,
-      DEF, SPD.\nYou can\u2019t add points if you have none remaining, and you can\u2019t
-      subtract below zero."
+    text: 'Unspent stat points can be assigned to health, attack, defense, or speed.
+
+      Stat
+      values update immediately, with pending increases clearly indicated.'
   - icon: {fileID: -1527303591572561236, guid: 3ba2637029c5c4ec0a519bf5a5b47d93, type: 3}
-    text: 'As you allocate points, the stat values update immediately.
-
-      Green
-      numbers show the bonus you are about to apply.'
+    text: Confirm applies allocated stat points once at least one point has been
+      assigned.
   - icon: {fileID: 7919402128709028535, guid: f45c9a2b15b7e4f4f9a1f085243b0654, type: 3}
-    text: "When you\u2019re happy with your stat allocation, press Confirm to apply
-      it.\nConfirm is only enabled when you\u2019ve allocated at least 1 point."
-  - icon: {fileID: 7919402128709028535, guid: f45c9a2b15b7e4f4f9a1f085243b0654, type: 3}
-    text: 'Presets quickly spend up to 5 points using a recommended pattern:
-
-      Offense,
-      Defense, Utility, Balance, Speed.
-
-      Presets only appear after you unlock
-      the Preset feature.'
+    text: Preset allocations become available after unlocking and apply a predefined
+      distribution pattern.
   - icon: {fileID: 5798008345902572713, guid: 398cbd3dce9364b259ad047d0b457946, type: 3}
-    text: When you select a preset, the game remembers it for that monster so the
-      same style can be used next time.
+    text: Selected presets are retained for future progression.
   - icon: {fileID: -6803709588388684265, guid: 97c560992d5224132848820de6c01194, type: 3}
-    text: Closing the panel does not spend anything unless you press Confirm (stat
-      points) or Level Up (Growth Cores).
+    text: Closing the panel does not apply changes unless progression or confirmation
+      has been completed.
   overlayRoot: {fileID: 1360894576}
   dimmerImage: {fileID: 1101736294}
   iconImage: {fileID: 1149655788}
@@ -76288,9 +76274,9 @@ RectTransform:
   - {fileID: 1534373060}
   m_Father: {fileID: 1024767125}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 0, y: 0}
-  m_AnchoredPosition: {x: 0, y: 0}
+  m_AnchorMin: {x: 0, y: 1}
+  m_AnchorMax: {x: 0, y: 1}
+  m_AnchoredPosition: {x: 300.1892, y: -120}
   m_SizeDelta: {x: 150, y: 150}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &681413385
@@ -77417,9 +77403,9 @@ RectTransform:
   - {fileID: 410280636}
   m_Father: {fileID: 1779853485}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 0, y: 0}
-  m_AnchoredPosition: {x: 0, y: 0}
+  m_AnchorMin: {x: 0, y: 1}
+  m_AnchorMax: {x: 0, y: 1}
+  m_AnchoredPosition: {x: 489, y: -273.19}
   m_SizeDelta: {x: 800, y: 150}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &691113863
@@ -84324,9 +84310,9 @@ RectTransform:
   - {fileID: 33420480}
   m_Father: {fileID: 65518019}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 0, y: 0}
-  m_AnchoredPosition: {x: 0, y: 0}
+  m_AnchorMin: {x: 0, y: 1}
+  m_AnchorMax: {x: 0, y: 1}
+  m_AnchoredPosition: {x: 480, y: -41.6865}
   m_SizeDelta: {x: 160, y: 75}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &759940725
@@ -94572,10 +94558,10 @@ RectTransform:
   m_Children: []
   m_Father: {fileID: 211196240}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 0, y: 0}
-  m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 0, y: 0}
+  m_AnchorMin: {x: 0, y: 1}
+  m_AnchorMax: {x: 0, y: 1}
+  m_AnchoredPosition: {x: 119.990005, y: -75}
+  m_SizeDelta: {x: 230, y: 50}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &841305932
 MonoBehaviour:
@@ -96782,9 +96768,9 @@ RectTransform:
   - {fileID: 67372969}
   m_Father: {fileID: 1459067176}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 0, y: 0}
-  m_AnchoredPosition: {x: 0, y: 0}
+  m_AnchorMin: {x: 0, y: 1}
+  m_AnchorMax: {x: 0, y: 1}
+  m_AnchoredPosition: {x: 810.41656, y: -62.675}
   m_SizeDelta: {x: 100, y: 100}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!1 &856467920
@@ -98337,7 +98323,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &866903113
 RectTransform:
   m_ObjectHideFlags: 0
@@ -99148,9 +99134,9 @@ RectTransform:
   - {fileID: 951183499}
   m_Father: {fileID: 1214486337}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 0, y: 0}
-  m_AnchoredPosition: {x: 0, y: 0}
+  m_AnchorMin: {x: 0, y: 1}
+  m_AnchorMax: {x: 0, y: 1}
+  m_AnchoredPosition: {x: 151.94241, y: -62.0243}
   m_SizeDelta: {x: 100, y: 100}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &874278611
@@ -100310,9 +100296,9 @@ RectTransform:
   - {fileID: 1586508283}
   m_Father: {fileID: 1868107669}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 0, y: 0}
-  m_AnchoredPosition: {x: 0, y: 0}
+  m_AnchorMin: {x: 0, y: 1}
+  m_AnchorMax: {x: 0, y: 1}
+  m_AnchoredPosition: {x: 167.22, y: -55}
   m_SizeDelta: {x: 90, y: 90}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &885606290
@@ -101479,9 +101465,9 @@ RectTransform:
   - {fileID: 1054366201}
   m_Father: {fileID: 2005505851}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 0, y: 0}
-  m_AnchoredPosition: {x: 0, y: 0}
+  m_AnchorMin: {x: 0, y: 1}
+  m_AnchorMax: {x: 0, y: 1}
+  m_AnchoredPosition: {x: 734.15, y: -140}
   m_SizeDelta: {x: 320, y: 150}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &893420187
@@ -101749,9 +101735,9 @@ RectTransform:
   - {fileID: 296909332}
   m_Father: {fileID: 2130348721}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 0, y: 0}
-  m_AnchoredPosition: {x: 0, y: 0}
+  m_AnchorMin: {x: 0, y: 1}
+  m_AnchorMax: {x: 0, y: 1}
+  m_AnchoredPosition: {x: 734.15, y: -160.82}
   m_SizeDelta: {x: 320, y: 150}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &895815238
@@ -105694,10 +105680,10 @@ RectTransform:
   m_Children: []
   m_Father: {fileID: 211196240}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 0, y: 0}
-  m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 0, y: 0}
+  m_AnchorMin: {x: 0, y: 1}
+  m_AnchorMax: {x: 0, y: 1}
+  m_AnchoredPosition: {x: 349.99, y: -75}
+  m_SizeDelta: {x: 230, y: 50}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &929929904
 MonoBehaviour:
@@ -109110,7 +109096,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &961362968
 RectTransform:
   m_ObjectHideFlags: 0
@@ -110330,9 +110316,9 @@ RectTransform:
   m_Children: []
   m_Father: {fileID: 13309084}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 0, y: 0}
-  m_AnchoredPosition: {x: 0, y: 0}
+  m_AnchorMin: {x: 0, y: 1}
+  m_AnchorMax: {x: 0, y: 1}
+  m_AnchoredPosition: {x: 489.70816, y: -109.60595}
   m_SizeDelta: {x: 879.4163, y: 119.2119}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &975214943
@@ -111698,9 +111684,9 @@ RectTransform:
   - {fileID: 523148677}
   m_Father: {fileID: 304671420}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 0, y: 0}
-  m_AnchoredPosition: {x: 0, y: 0}
+  m_AnchorMin: {x: 0, y: 1}
+  m_AnchorMax: {x: 0, y: 1}
+  m_AnchoredPosition: {x: 244.71667, y: -140}
   m_SizeDelta: {x: 320, y: 150}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &981796991
@@ -121724,7 +121710,7 @@ RectTransform:
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
   m_AnchoredPosition: {x: 0.0016911, y: 531.0659}
-  m_SizeDelta: {x: 935.3916, y: 379.37955}
+  m_SizeDelta: {x: 935.3916, y: 379.37952}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1063944610
 MonoBehaviour:
@@ -127279,7 +127265,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &1104776531
 RectTransform:
   m_ObjectHideFlags: 0
@@ -128689,11 +128675,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4834721942541052728, guid: 469053bd898da4c1fa119b38ab18c0d1, type: 3}
       propertyPath: m_AnchorMax.x
-      value: 0
+      value: 0.747
       objectReference: {fileID: 0}
     - target: {fileID: 4834721942541052728, guid: 469053bd898da4c1fa119b38ab18c0d1, type: 3}
       propertyPath: m_AnchorMax.y
-      value: 0
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 4834721942541052728, guid: 469053bd898da4c1fa119b38ab18c0d1, type: 3}
       propertyPath: m_SizeDelta.x
@@ -129400,9 +129386,9 @@ RectTransform:
   m_Children: []
   m_Father: {fileID: 13309084}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 0, y: 0}
-  m_AnchoredPosition: {x: 0, y: 0}
+  m_AnchorMin: {x: 0, y: 1}
+  m_AnchorMax: {x: 0, y: 1}
+  m_AnchoredPosition: {x: 489.70816, y: -557.24164}
   m_SizeDelta: {x: 879.4163, y: 119.2119}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1120863179
@@ -130985,9 +130971,9 @@ RectTransform:
   m_Children: []
   m_Father: {fileID: 2137201109}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 0, y: 0}
-  m_AnchoredPosition: {x: 0, y: 0}
+  m_AnchorMin: {x: 0, y: 1}
+  m_AnchorMax: {x: 0, y: 1}
+  m_AnchoredPosition: {x: 446.43054, y: -118.245575}
   m_SizeDelta: {x: 892.8611, y: 70.4426}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &1135302040
@@ -134164,9 +134150,9 @@ RectTransform:
   m_Children: []
   m_Father: {fileID: 2137201109}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 0, y: 0}
-  m_AnchoredPosition: {x: 0, y: 0}
+  m_AnchorMin: {x: 0, y: 1}
+  m_AnchorMax: {x: 0, y: 1}
+  m_AnchoredPosition: {x: 446.43054, y: -201.26985}
   m_SizeDelta: {x: 892.8611, y: 70.4426}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &1161989351
@@ -134453,11 +134439,11 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: 29346015770098909, guid: 4f02b6e819c1f49569a50302ee0c34f8, type: 3}
       propertyPath: m_AnchorMax.x
-      value: 0
+      value: 0.747
       objectReference: {fileID: 0}
     - target: {fileID: 29346015770098909, guid: 4f02b6e819c1f49569a50302ee0c34f8, type: 3}
       propertyPath: m_AnchorMax.y
-      value: 0
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 29346015770098909, guid: 4f02b6e819c1f49569a50302ee0c34f8, type: 3}
       propertyPath: m_SizeDelta.x
@@ -136860,7 +136846,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!114 &1186918569
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -138319,9 +138305,9 @@ RectTransform:
   - {fileID: 1604675421}
   m_Father: {fileID: 355937722}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 0, y: 0}
-  m_AnchoredPosition: {x: 0, y: 0}
+  m_AnchorMin: {x: 0, y: 1}
+  m_AnchorMax: {x: 0, y: 1}
+  m_AnchoredPosition: {x: 489.43335, y: -79}
   m_SizeDelta: {x: 320, y: 150}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1193089938
@@ -139974,9 +139960,9 @@ RectTransform:
   m_Children: []
   m_Father: {fileID: 238525780}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 0, y: 0}
-  m_AnchoredPosition: {x: 0, y: 0}
+  m_AnchorMin: {x: 0, y: 1}
+  m_AnchorMax: {x: 0, y: 1}
+  m_AnchoredPosition: {x: 434.52557, y: -50}
   m_SizeDelta: {x: 217.43, y: 75}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1205135110
@@ -143209,9 +143195,9 @@ RectTransform:
   - {fileID: 180713218}
   m_Father: {fileID: 1459067176}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 0, y: 0}
-  m_AnchoredPosition: {x: 0, y: 0}
+  m_AnchorMin: {x: 0, y: 1}
+  m_AnchorMax: {x: 0, y: 1}
+  m_AnchoredPosition: {x: 233.74998, y: -62.675}
   m_SizeDelta: {x: 100, y: 100}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1229833852
@@ -145625,25 +145611,19 @@ MonoBehaviour:
   autoOpenOnEnable: 1
   pages:
   - icon: {fileID: 21300000, guid: c612726649425764dbead46095c7ead4, type: 3}
-    text: "Sanctum lets you spend Blessing Scales to temporarily increase a Job Site\u2019s
-      storage cap."
+    text: "The Sanctum uses Blessing Scales to temporarily increase a job site\u2019s
+      storage capacity."
   - icon: {fileID: 21300000, guid: 5b05ebb3f339e4f03b3026941ea99ecc, type: 3}
-    text: 'Use the dropdown to select which Job Site you want to boost.
-
-      The
-      site icon updates to match your selection.'
+    text: Select a job site to review its current capacity and projected increase.
   - icon: {fileID: -4330508236222623831, guid: a5945cdf547864b8787a2d4106457745, type: 3}
-    text: "Each blessing costs 1 Blessing Scale.\nIf you don\u2019t have any, the
-      Use button will be disabled."
+    text: Each blessing consumes one Blessing Scale and applies a temporary boost.
   - icon: {fileID: 389435072415682059, guid: 26dce2d605b9241b8853e8603d45376e, type: 3}
-    text: "The preview shows your current cap and what it becomes after using a scale:\nCap:
-      current \u2192 after"
+    text: Availability depends on current resource count.
   - icon: {fileID: -184233537094302185, guid: 6b23ba550c98a4db89080b5bf92724f0, type: 3}
-    text: "Blessings last for a limited time.\nIf one is active, you\u2019ll see
-      the countdown here."
+    text: Active blessings display a countdown timer.
   - icon: {fileID: -923432448004486077, guid: 7f1ca29997ecc4af18e4b9811ea64c05, type: 3}
-    text: "Each Job Site can only hold a limited number of blessing boosts at a time.\nIf
-      the site is at its limit, you won\u2019t be able to apply more right now."
+    text: Each job site has a limit on active blessings, preventing additional boosts
+      once capacity is reached.
   overlayRoot: {fileID: 1884359955}
   dimmerImage: {fileID: 141171316}
   iconImage: {fileID: 1680589167}
@@ -151499,9 +151479,9 @@ RectTransform:
   - {fileID: 355856535}
   m_Father: {fileID: 304671420}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 0, y: 0}
-  m_AnchoredPosition: {x: 0, y: 0}
+  m_AnchorMin: {x: 0, y: 1}
+  m_AnchorMax: {x: 0, y: 1}
+  m_AnchoredPosition: {x: 734.15, y: -140}
   m_SizeDelta: {x: 320, y: 150}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!1 &1303486741
@@ -153592,9 +153572,9 @@ RectTransform:
   m_Children: []
   m_Father: {fileID: 1050788296}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 0, y: 0}
-  m_AnchoredPosition: {x: 0, y: 0}
+  m_AnchorMin: {x: 0, y: 1}
+  m_AnchorMax: {x: 0, y: 1}
+  m_AnchoredPosition: {x: 383.95, y: -75}
   m_SizeDelta: {x: 775, y: 150}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1320186724
@@ -156712,7 +156692,7 @@ RectTransform:
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 1, y: 1}
   m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 0, y: 0}
+  m_SizeDelta: {x: 0, y: 48}
   m_Pivot: {x: 0, y: 1}
 --- !u!114 &1347531877
 MonoBehaviour:
@@ -159335,9 +159315,9 @@ RectTransform:
   - {fileID: 979251536}
   m_Father: {fileID: 1779853485}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 0, y: 0}
-  m_AnchoredPosition: {x: 0, y: 0}
+  m_AnchorMin: {x: 0, y: 1}
+  m_AnchorMax: {x: 0, y: 1}
+  m_AnchoredPosition: {x: 489, y: -448.19}
   m_SizeDelta: {x: 800, y: 150}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1372372721
@@ -160428,7 +160408,7 @@ RectTransform:
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 1, y: 1}
   m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 0, y: 0}
+  m_SizeDelta: {x: 0, y: 25}
   m_Pivot: {x: 0, y: 1}
 --- !u!114 &1380512264
 MonoBehaviour:
@@ -162010,10 +161990,10 @@ RectTransform:
   m_Children: []
   m_Father: {fileID: 211196240}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 0, y: 0}
-  m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 0, y: 0}
+  m_AnchorMin: {x: 0, y: 1}
+  m_AnchorMax: {x: 0, y: 1}
+  m_AnchoredPosition: {x: 349.99, y: -25}
+  m_SizeDelta: {x: 230, y: 50}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1398255990
 MonoBehaviour:
@@ -162447,10 +162427,10 @@ RectTransform:
   m_Children: []
   m_Father: {fileID: 444293593}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 0, y: 0}
-  m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 0, y: 0}
+  m_AnchorMin: {x: 0, y: 1}
+  m_AnchorMax: {x: 0, y: 1}
+  m_AnchoredPosition: {x: 119.990005, y: -25}
+  m_SizeDelta: {x: 230, y: 50}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1401196549
 MonoBehaviour:
@@ -165080,10 +165060,10 @@ RectTransform:
   - {fileID: 426608111}
   m_Father: {fileID: 1154317174}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 0, y: 0}
-  m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 0, y: 0}
+  m_AnchorMin: {x: 0, y: 1}
+  m_AnchorMax: {x: 0, y: 1}
+  m_AnchoredPosition: {x: 163.91, y: -52.75}
+  m_SizeDelta: {x: 200, y: 80.5}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1422091602
 MonoBehaviour:
@@ -168332,10 +168312,10 @@ RectTransform:
   - {fileID: 1762603576}
   m_Father: {fileID: 1154317174}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 0, y: 0}
-  m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 0, y: 0}
+  m_AnchorMin: {x: 0, y: 1}
+  m_AnchorMax: {x: 0, y: 1}
+  m_AnchoredPosition: {x: 413.91, y: -52.75}
+  m_SizeDelta: {x: 200, y: 80.5}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1456420592
 MonoBehaviour:
@@ -168622,26 +168602,18 @@ MonoBehaviour:
   autoOpenOnEnable: 1
   pages:
   - icon: {fileID: 21300000, guid: c0d35dc1fadd0b14f90e3ce1ffb77280, type: 3}
-    text: Cryo Lab lets you use Work Orders to activate a temporary bonus that improves
-      your capture operations for a limited time.
+    text: The Cryo Lab uses Work Orders to activate a temporary bonus that improves
+      capture performance for a limited time.
   - icon: {fileID: -184922529597343108, guid: 242083f04895f496db58523ff283ee47, type: 3}
-    text: "Activating a Work Order consumes 1 Work Order (if consumption is enabled).\nIf
-      you don\u2019t have any, the button will be disabled."
+    text: Activating a Work Order consumes one Work Order and applies the boost immediately.
   - icon: {fileID: 21300000, guid: 5b05ebb3f339e4f03b3026941ea99ecc, type: 3}
-    text: 'Tap Use to activate the Work Order.
-
-      The boost begins immediately
-      and lasts for a set duration.'
+    text: Availability depends on current Work Order supply.
   - icon: {fileID: -184233537094302185, guid: 6b23ba550c98a4db89080b5bf92724f0, type: 3}
-    text: 'The timer shows how much time is left on your active Work Order.
-
-      When
-      it reaches zero, the Work Order expires.'
+    text: An active Work Order displays a countdown timer and expires automatically
+      when time runs out.
   - icon: {fileID: -923432448004486077, guid: 7f1ca29997ecc4af18e4b9811ea64c05, type: 3}
-    text: 'Only one Work Order can be active at a time.
-
-      Using another one
-      will replace the current active Work Order.'
+    text: Only one Work Order can be active at a time, and applying a new one replaces
+      the current effect.
   overlayRoot: {fileID: 1910602145}
   dimmerImage: {fileID: 416715050}
   iconImage: {fileID: 386274126}
@@ -169511,9 +169483,9 @@ RectTransform:
   - {fileID: 1125366626}
   m_Father: {fileID: 2005505851}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 0, y: 0}
-  m_AnchoredPosition: {x: 0, y: 0}
+  m_AnchorMin: {x: 0, y: 1}
+  m_AnchorMax: {x: 0, y: 1}
+  m_AnchoredPosition: {x: 244.71667, y: -140}
   m_SizeDelta: {x: 320, y: 150}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1466077657
@@ -169808,10 +169780,10 @@ RectTransform:
   m_Children: []
   m_Father: {fileID: 211196240}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 0, y: 0}
-  m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 0, y: 0}
+  m_AnchorMin: {x: 0, y: 1}
+  m_AnchorMax: {x: 0, y: 1}
+  m_AnchoredPosition: {x: 119.990005, y: -25}
+  m_SizeDelta: {x: 230, y: 50}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1467335143
 MonoBehaviour:
@@ -171709,9 +171681,9 @@ RectTransform:
   - {fileID: 820380647}
   m_Father: {fileID: 27870232}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 0, y: 0}
-  m_AnchoredPosition: {x: 0, y: 0}
+  m_AnchorMin: {x: 0, y: 1}
+  m_AnchorMax: {x: 0, y: 1}
+  m_AnchoredPosition: {x: 489.43335, y: -114.294846}
   m_SizeDelta: {x: 320, y: 150}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!1 &1490510193
@@ -184169,9 +184141,9 @@ RectTransform:
   - {fileID: 1384175300}
   m_Father: {fileID: 419770653}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 0, y: 0}
-  m_AnchoredPosition: {x: 0, y: 0}
+  m_AnchorMin: {x: 0, y: 1}
+  m_AnchorMax: {x: 0, y: 1}
+  m_AnchoredPosition: {x: 734.15, y: -140}
   m_SizeDelta: {x: 320, y: 150}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!1 &1591320592
@@ -184284,9 +184256,9 @@ RectTransform:
   m_Children: []
   m_Father: {fileID: 238525780}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 0, y: 0}
-  m_AnchoredPosition: {x: 0, y: 0}
+  m_AnchorMin: {x: 0, y: 1}
+  m_AnchorMax: {x: 0, y: 1}
+  m_AnchoredPosition: {x: 120.11058, y: -50}
   m_SizeDelta: {x: 211.4, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1594772414
@@ -184782,7 +184754,7 @@ RectTransform:
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
   m_AnchoredPosition: {x: 2.5221, y: 602.3695}
-  m_SizeDelta: {x: 0, y: 83.3729}
+  m_SizeDelta: {x: 929.72205, y: 83.3729}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1600082525
 MonoBehaviour:
@@ -186583,9 +186555,9 @@ RectTransform:
   - {fileID: 1769784700}
   m_Father: {fileID: 787850016}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 0, y: 0}
-  m_AnchoredPosition: {x: 0, y: 0}
+  m_AnchorMin: {x: 0, y: 1}
+  m_AnchorMax: {x: 0, y: 1}
+  m_AnchoredPosition: {x: 508.93, y: -77.7245}
   m_SizeDelta: {x: 125, y: 125}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1611681191
@@ -190219,7 +190191,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 5958198991077870269, guid: 54f8423961846bc489c69db9b16a22a6, type: 3}
       propertyPath: m_AnchorMax.y
-      value: 0
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 5958198991077870269, guid: 54f8423961846bc489c69db9b16a22a6, type: 3}
       propertyPath: m_AnchorMin.x
@@ -190227,7 +190199,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 5958198991077870269, guid: 54f8423961846bc489c69db9b16a22a6, type: 3}
       propertyPath: m_AnchorMin.y
-      value: 0
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 5958198991077870269, guid: 54f8423961846bc489c69db9b16a22a6, type: 3}
       propertyPath: m_SizeDelta.x
@@ -190267,11 +190239,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 5958198991077870269, guid: 54f8423961846bc489c69db9b16a22a6, type: 3}
       propertyPath: m_AnchoredPosition.x
-      value: 0
+      value: 150
       objectReference: {fileID: 0}
     - target: {fileID: 5958198991077870269, guid: 54f8423961846bc489c69db9b16a22a6, type: 3}
       propertyPath: m_AnchoredPosition.y
-      value: 0
+      value: -265.4
       objectReference: {fileID: 0}
     - target: {fileID: 5958198991077870269, guid: 54f8423961846bc489c69db9b16a22a6, type: 3}
       propertyPath: m_LocalEulerAnglesHint.x
@@ -197810,9 +197782,9 @@ RectTransform:
   m_Children: []
   m_Father: {fileID: 2137201109}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 0, y: 0}
-  m_AnchoredPosition: {x: 0, y: 0}
+  m_AnchorMin: {x: 0, y: 1}
+  m_AnchorMax: {x: 0, y: 1}
+  m_AnchoredPosition: {x: 446.43054, y: -284.29413}
   m_SizeDelta: {x: 892.8611, y: 70.4426}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!1 &1717513435
@@ -199154,9 +199126,9 @@ RectTransform:
   - {fileID: 311348693}
   m_Father: {fileID: 1246286137}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 0, y: 0}
-  m_AnchoredPosition: {x: 0, y: 0}
+  m_AnchorMin: {x: 0, y: 1}
+  m_AnchorMax: {x: 0, y: 1}
+  m_AnchoredPosition: {x: 489.43335, y: -140}
   m_SizeDelta: {x: 320, y: 150}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1730023730
@@ -203607,9 +203579,9 @@ RectTransform:
   m_Children: []
   m_Father: {fileID: 13309084}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 0, y: 0}
-  m_AnchoredPosition: {x: 0, y: 0}
+  m_AnchorMin: {x: 0, y: 1}
+  m_AnchorMax: {x: 0, y: 1}
+  m_AnchoredPosition: {x: 489.70816, y: -408.02975}
   m_SizeDelta: {x: 879.4163, y: 119.2119}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1763268379
@@ -203879,7 +203851,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 5958198991077870269, guid: 54f8423961846bc489c69db9b16a22a6, type: 3}
       propertyPath: m_AnchorMax.y
-      value: 0
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 5958198991077870269, guid: 54f8423961846bc489c69db9b16a22a6, type: 3}
       propertyPath: m_AnchorMin.x
@@ -203887,7 +203859,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 5958198991077870269, guid: 54f8423961846bc489c69db9b16a22a6, type: 3}
       propertyPath: m_AnchorMin.y
-      value: 0
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 5958198991077870269, guid: 54f8423961846bc489c69db9b16a22a6, type: 3}
       propertyPath: m_SizeDelta.x
@@ -203927,11 +203899,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 5958198991077870269, guid: 54f8423961846bc489c69db9b16a22a6, type: 3}
       propertyPath: m_AnchoredPosition.x
-      value: 0
+      value: 450
       objectReference: {fileID: 0}
     - target: {fileID: 5958198991077870269, guid: 54f8423961846bc489c69db9b16a22a6, type: 3}
       propertyPath: m_AnchoredPosition.y
-      value: 0
+      value: -265.4
       objectReference: {fileID: 0}
     - target: {fileID: 5958198991077870269, guid: 54f8423961846bc489c69db9b16a22a6, type: 3}
       propertyPath: m_LocalEulerAnglesHint.x
@@ -206005,9 +205977,9 @@ RectTransform:
   - {fileID: 2113672179}
   m_Father: {fileID: 1459067176}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 0, y: 0}
-  m_AnchoredPosition: {x: 0, y: 0}
+  m_AnchorMin: {x: 0, y: 1}
+  m_AnchorMax: {x: 0, y: 1}
+  m_AnchoredPosition: {x: 522.0833, y: -62.675}
   m_SizeDelta: {x: 100, y: 100}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1788165082
@@ -207136,9 +207108,9 @@ RectTransform:
   - {fileID: 426078130}
   m_Father: {fileID: 65518019}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 0, y: 0}
-  m_AnchoredPosition: {x: 0, y: 0}
+  m_AnchorMin: {x: 0, y: 1}
+  m_AnchorMax: {x: 0, y: 1}
+  m_AnchoredPosition: {x: 80, y: -41.6865}
   m_SizeDelta: {x: 160, y: 75}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1794001586
@@ -211598,7 +211570,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &1829444260
 RectTransform:
   m_ObjectHideFlags: 0
@@ -213876,27 +213848,17 @@ MonoBehaviour:
   autoOpenOnEnable: 1
   pages:
   - icon: {fileID: 21300000, guid: 710e1cb759d0f7c43bc3e98d58b8c293, type: 3}
-    text: Shadow Market lets you spend Shiny Orbs to activate a temporary Shiny Boost.
+    text: The Shadow Market uses Shiny Orbs to activate a temporary Premium Bitling
+      boost.
   - icon: {fileID: 3084012362977371794, guid: e2d3b8730a443435bb167b9bcdacd4eb, type: 3}
-    text: 'Activating the boost costs 1 Shiny Orb.
-
-      If you have none, the button
-      will be disabled.'
+    text: Activating the boost consumes one Shiny Orb and applies a limited-time
+      increase to Premium encounter rates.
   - icon: {fileID: 21300000, guid: 5b05ebb3f339e4f03b3026941ea99ecc, type: 3}
-    text: 'Tap Use Orb to start the boost.
-
-      The boost increases shiny results
-      for a limited time.'
-  - icon: {fileID: -184233537094302185, guid: 6b23ba550c98a4db89080b5bf92724f0, type: 3}
-    text: 'The timer shows how long your Shiny Boost remains active.
-
-      When
-      time runs out, the boost ends automatically.'
+    text: The active boost displays a countdown timer and ends automatically when
+      time expires.
   - icon: {fileID: -923432448004486077, guid: 7f1ca29997ecc4af18e4b9811ea64c05, type: 3}
-    text: 'Only one Shiny Boost can be active at a time.
-
-      Using another orb
-      will replace the current boost.'
+    text: Only one boost can be active at a time, and applying a new one replaces
+      the current effect.
   overlayRoot: {fileID: 292580630}
   dimmerImage: {fileID: 132180273}
   iconImage: {fileID: 1310074195}
@@ -219108,10 +219070,10 @@ RectTransform:
   - {fileID: 638397470}
   m_Father: {fileID: 1154317174}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 0, y: 0}
-  m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 0, y: 0}
+  m_AnchorMin: {x: 0, y: 1}
+  m_AnchorMax: {x: 0, y: 1}
+  m_AnchoredPosition: {x: 163.91, y: -152.25}
+  m_SizeDelta: {x: 200, y: 80.5}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1898420373
 MonoBehaviour:
@@ -221528,7 +221490,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &1918802495
 RectTransform:
   m_ObjectHideFlags: 0
@@ -221825,24 +221787,16 @@ MonoBehaviour:
   autoOpenOnEnable: 1
   pages:
   - icon: {fileID: 21300000, guid: be6f0ae4213c16843b4aa2109fa8306d, type: 3}
-    text: Wyrm Den lets you spend Favor to activate a temporary boost that increases
-      encounter odds for a limited time.
+    text: The Wyrm Den uses Favor to activate a temporary boost that increases encounter
+      rates for a limited time.
   - icon: {fileID: 5787554331827840099, guid: 70dc8220ffe4d425cbbe0cbe67177f0d, type: 3}
-    text: "Activating the boost costs 1 Favor (if consumption is enabled).\nIf you
-      don\u2019t have Favor, you can\u2019t activate the boost."
-  - icon: {fileID: 21300000, guid: 5b05ebb3f339e4f03b3026941ea99ecc, type: 3}
-    text: "You can only have one active Favor boost at a time.\nWhile it\u2019s active,
-      the Use button is disabled."
+    text: Activating the boost consumes one Favor and applies the effect immediately,
+      based on available supply.
   - icon: {fileID: -184233537094302185, guid: 6b23ba550c98a4db89080b5bf92724f0, type: 3}
-    text: 'The timer shows how long your Favor boost remains active.
-
-      When
-      time runs out, the boost ends automatically.'
+    text: An active boost displays a countdown timer and ends automatically when
+      time expires.
   - icon: {fileID: 21300000, guid: 5b05ebb3f339e4f03b3026941ea99ecc, type: 3}
-    text: 'Tap Use to start the boost immediately.
-
-      Your Favor boost lasts
-      for a set number of hours.'
+    text: Only one Favor boost can be active at a time.
   overlayRoot: {fileID: 264673900}
   dimmerImage: {fileID: 1305980192}
   iconImage: {fileID: 275625556}
@@ -222458,9 +222412,9 @@ RectTransform:
   - {fileID: 1803764799}
   m_Father: {fileID: 1050414466}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 0, y: 0}
-  m_AnchoredPosition: {x: 0, y: 0}
+  m_AnchorMin: {x: 0, y: 1}
+  m_AnchorMax: {x: 0, y: 1}
+  m_AnchoredPosition: {x: 489.43335, y: -113.165}
   m_SizeDelta: {x: 320, y: 150}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1924271203
@@ -223534,7 +223488,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!114 &1942174912
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -226082,9 +226036,9 @@ RectTransform:
   m_Children: []
   m_Father: {fileID: 1050788296}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 0, y: 0}
-  m_AnchoredPosition: {x: 0, y: 0}
+  m_AnchorMin: {x: 0, y: 1}
+  m_AnchorMax: {x: 0, y: 1}
+  m_AnchoredPosition: {x: 383.95, y: -645}
   m_SizeDelta: {x: 775, y: 150}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1961919035
@@ -226630,9 +226584,9 @@ RectTransform:
   m_Children: []
   m_Father: {fileID: 1050788296}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 0, y: 0}
-  m_AnchoredPosition: {x: 0, y: 0}
+  m_AnchorMin: {x: 0, y: 1}
+  m_AnchorMax: {x: 0, y: 1}
+  m_AnchoredPosition: {x: 383.95, y: -265}
   m_SizeDelta: {x: 775, y: 150}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1966803642
@@ -227975,7 +227929,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 166169183312667912, guid: 5c8a35a99700e114599584b8db5573ad, type: 3}
       propertyPath: m_AnchorMax.y
-      value: 0
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 166169183312667912, guid: 5c8a35a99700e114599584b8db5573ad, type: 3}
       propertyPath: m_AnchorMin.x
@@ -227983,7 +227937,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 166169183312667912, guid: 5c8a35a99700e114599584b8db5573ad, type: 3}
       propertyPath: m_AnchorMin.y
-      value: 0
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 166169183312667912, guid: 5c8a35a99700e114599584b8db5573ad, type: 3}
       propertyPath: m_SizeDelta.x
@@ -228023,11 +227977,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 166169183312667912, guid: 5c8a35a99700e114599584b8db5573ad, type: 3}
       propertyPath: m_AnchoredPosition.x
-      value: 0
+      value: 446.62686
       objectReference: {fileID: 0}
     - target: {fileID: 166169183312667912, guid: 5c8a35a99700e114599584b8db5573ad, type: 3}
       propertyPath: m_AnchoredPosition.y
-      value: 0
+      value: -303.53796
       objectReference: {fileID: 0}
     - target: {fileID: 166169183312667912, guid: 5c8a35a99700e114599584b8db5573ad, type: 3}
       propertyPath: m_LocalEulerAnglesHint.x
@@ -230124,9 +230078,9 @@ RectTransform:
   - {fileID: 733300546}
   m_Father: {fileID: 1868107669}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 0, y: 0}
-  m_AnchoredPosition: {x: 0, y: 0}
+  m_AnchorMin: {x: 0, y: 1}
+  m_AnchorMax: {x: 0, y: 1}
+  m_AnchoredPosition: {x: 45, y: -55}
   m_SizeDelta: {x: 90, y: 90}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!1 &1997328375
@@ -231205,9 +231159,9 @@ RectTransform:
   - {fileID: 1022867609}
   m_Father: {fileID: 1459067176}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 0, y: 0}
-  m_AnchoredPosition: {x: 0, y: 0}
+  m_AnchorMin: {x: 0, y: 1}
+  m_AnchorMax: {x: 0, y: 1}
+  m_AnchoredPosition: {x: 89.58333, y: -62.675}
   m_SizeDelta: {x: 100, y: 100}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &2007729582
@@ -231440,9 +231394,9 @@ RectTransform:
   - {fileID: 1641088546}
   m_Father: {fileID: 65518019}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 0, y: 0}
-  m_AnchoredPosition: {x: 0, y: 0}
+  m_AnchorMin: {x: 0, y: 1}
+  m_AnchorMax: {x: 0, y: 1}
+  m_AnchoredPosition: {x: 280, y: -41.6865}
   m_SizeDelta: {x: 160, y: 75}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &2010326522
@@ -232481,25 +232435,17 @@ MonoBehaviour:
   autoOpenOnEnable: 1
   pages:
   - icon: {fileID: 21300000, guid: 09b596ef54e6648b5a83907abb5c3e89, type: 3}
-    text: Harbor lets you use Flyers to increase the chance of encountering a specific
-      type of Bitling for a limited time.
+    text: The Harbor allows Flyers to increase the chance of encountering a selected
+      Bitling type for a limited time.
   - icon: {fileID: 21300000, guid: fb4479ed54fe64621a9e7a735eeffad8, type: 3}
-    text: Use the dropdown to select the Monster Type you want to find more often.
+    text: Select a Bitling type to view current encounter probability and projected
+      increase.
   - icon: {fileID: 3321169378428917069, guid: d2a224ffc5dd14cd9bea2e051ae55a5d, type: 3}
-    text: 'Press Use Flyer to activate a boost.
-
-      If Flyers are consumed, you
-      must have at least 1 Flyer available.'
-  - icon: {fileID: 5459842371491020445, guid: 5efcd2481dca747a4b1c5a9dbe3f138d, type: 3}
-    text: 'This panel shows your estimated current chance to encounter that type,
-
-      and
-      the estimated chance after using a flyer.'
+    text: Activating a Flyer applies a temporary boost, with availability based on
+      current Flyer count.
   - icon: {fileID: 21300000, guid: 5b05ebb3f339e4f03b3026941ea99ecc, type: 3}
-    text: 'When a Flyer is active, the type icon appears here and the timer counts
-      down.
-
-      Using a new flyer replaces the current one.'
+    text: Active Flyers are displayed with a timer, and applying a new Flyer replaces
+      the existing effect.
   overlayRoot: {fileID: 687686735}
   dimmerImage: {fileID: 244898842}
   iconImage: {fileID: 2082838497}
@@ -235289,9 +235235,9 @@ RectTransform:
   - {fileID: 2095058031}
   m_Father: {fileID: 1214486337}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 0, y: 0}
-  m_AnchoredPosition: {x: 0, y: 0}
+  m_AnchorMin: {x: 0, y: 1}
+  m_AnchorMax: {x: 0, y: 1}
+  m_AnchoredPosition: {x: 305.82724, y: -62.0243}
   m_SizeDelta: {x: 100, y: 100}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &2037001177
@@ -235423,9 +235369,9 @@ RectTransform:
   - {fileID: 1199319243}
   m_Father: {fileID: 1214486337}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 0, y: 0}
-  m_AnchoredPosition: {x: 0, y: 0}
+  m_AnchorMin: {x: 0, y: 1}
+  m_AnchorMax: {x: 0, y: 1}
+  m_AnchoredPosition: {x: 767.4817, y: -62.0243}
   m_SizeDelta: {x: 100, y: 100}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &2037100624
@@ -236026,9 +235972,9 @@ RectTransform:
   - {fileID: 1560601773}
   m_Father: {fileID: 1024767125}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 0, y: 0}
-  m_AnchoredPosition: {x: 0, y: 0}
+  m_AnchorMin: {x: 0, y: 1}
+  m_AnchorMax: {x: 0, y: 1}
+  m_AnchoredPosition: {x: 100.06307, y: -120}
   m_SizeDelta: {x: 150, y: 150}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &2039860500
@@ -239412,9 +239358,9 @@ RectTransform:
   - {fileID: 1119113842}
   m_Father: {fileID: 2130348721}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 0, y: 0}
-  m_AnchoredPosition: {x: 0, y: 0}
+  m_AnchorMin: {x: 0, y: 1}
+  m_AnchorMax: {x: 0, y: 1}
+  m_AnchoredPosition: {x: 244.71667, y: -160.82}
   m_SizeDelta: {x: 320, y: 150}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &2082084292
@@ -241233,9 +241179,9 @@ RectTransform:
   m_Children: []
   m_Father: {fileID: 13309084}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 0, y: 0}
-  m_AnchoredPosition: {x: 0, y: 0}
+  m_AnchorMin: {x: 0, y: 1}
+  m_AnchorMax: {x: 0, y: 1}
+  m_AnchoredPosition: {x: 489.70816, y: -258.81784}
   m_SizeDelta: {x: 879.4163, y: 119.2119}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &2091098119
@@ -250053,9 +249999,9 @@ RectTransform:
   - {fileID: 1805107544}
   m_Father: {fileID: 1192225016}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 0, y: 0}
-  m_AnchoredPosition: {x: 0, y: 0}
+  m_AnchorMin: {x: 0, y: 1}
+  m_AnchorMax: {x: 0, y: 1}
+  m_AnchoredPosition: {x: 734.15, y: -140}
   m_SizeDelta: {x: 320, y: 150}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!1 &1335136170181231903
@@ -250393,9 +250339,9 @@ RectTransform:
   - {fileID: 1690846470}
   m_Father: {fileID: 1192225016}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 0, y: 0}
-  m_AnchoredPosition: {x: 0, y: 0}
+  m_AnchorMin: {x: 0, y: 1}
+  m_AnchorMax: {x: 0, y: 1}
+  m_AnchoredPosition: {x: 244.71667, y: -140}
   m_SizeDelta: {x: 320, y: 150}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!1 &1688675598526450253
@@ -250798,9 +250744,9 @@ RectTransform:
   - {fileID: 554299802}
   m_Father: {fileID: 1779853485}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 0, y: 0}
-  m_AnchoredPosition: {x: 0, y: 0}
+  m_AnchorMin: {x: 0, y: 1}
+  m_AnchorMax: {x: 0, y: 1}
+  m_AnchoredPosition: {x: 489, y: -98.19}
   m_SizeDelta: {x: 800, y: 150}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &2584903895166553691

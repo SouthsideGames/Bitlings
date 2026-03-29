@@ -16,7 +16,7 @@ MonoBehaviour:
   displayName: Radio Chatter
   category: 3
   isHoliday: 0
-  tickerMessage: 'Radio chatter: strange signals reported near the Observatory.'
+  tickerMessage: 'Radio bulletin: unusual signals reported near the Observatory.'
   scheduledOnly: 0
   startUnix: 0
   endUnix: 0

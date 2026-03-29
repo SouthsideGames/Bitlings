@@ -16,7 +16,7 @@ MonoBehaviour:
   displayName: Clinic Maintenance Week
   category: 0
   isHoliday: 0
-  tickerMessage: Clinic systems offline for sterilization overhaul.
+  tickerMessage: Clinic systems offline for sterilization maintenance.
   scheduledOnly: 0
   startUnix: 0
   endUnix: 0

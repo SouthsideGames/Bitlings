@@ -16,7 +16,7 @@ MonoBehaviour:
   displayName: Shadow Market Crackdown
   category: 0
   isHoliday: 0
-  tickerMessage: Crackdown reduces Shadow Market throughput and storage.
+  tickerMessage: Enforcement pressure reduces Shadow Market output and storage.
   scheduledOnly: 0
   startUnix: 0
   endUnix: 0

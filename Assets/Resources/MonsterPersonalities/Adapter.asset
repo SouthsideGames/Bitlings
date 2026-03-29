@@ -27,4 +27,7 @@ MonoBehaviour:
   eachTurnFocusPenalty: 0
   lowHpFocusPenalty: 2
   chaoticOverrideChance: 0
-  description: Shifts its plan based on matchup and battle state.
+  description: 'Adjusts its approach based on battlefield conditions and opposing
+    Bitling alignment.
+
+'

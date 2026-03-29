@@ -16,7 +16,7 @@ MonoBehaviour:
   displayName: High Alert
   category: 1
   isHoliday: 0
-  tickerMessage: 'High Alert: hostile activity increasing.'
+  tickerMessage: High Alert issued. Field risk is increasing.
   scheduledOnly: 0
   startUnix: 0
   endUnix: 0

@@ -16,7 +16,7 @@ MonoBehaviour:
   displayName: Workshop Safety Drill
   category: 0
   isHoliday: 0
-  tickerMessage: Mandatory safety drills reduce output and increase fatigue.
+  tickerMessage: Safety drills reduce output and raise fatigue.
   scheduledOnly: 0
   startUnix: 0
   endUnix: 0

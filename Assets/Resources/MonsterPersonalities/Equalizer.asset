@@ -27,4 +27,6 @@ MonoBehaviour:
   eachTurnFocusPenalty: 0
   lowHpFocusPenalty: 2
   chaoticOverrideChance: 0
-  description: Tries to reset bad situations and level the fight.
+  description: 'Stabilizes unfavorable conditions and restores balance in the engagement.
+
+'

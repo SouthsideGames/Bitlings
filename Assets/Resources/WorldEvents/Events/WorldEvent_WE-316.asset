@@ -16,7 +16,7 @@ MonoBehaviour:
   displayName: Harbor Lights
   category: 3
   isHoliday: 0
-  tickerMessage: Harbor lights seen flickering late at night.
+  tickerMessage: Harbor lights were seen flickering late last night.
   scheduledOnly: 0
   startUnix: 0
   endUnix: 0

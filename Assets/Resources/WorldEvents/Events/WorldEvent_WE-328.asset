@@ -16,7 +16,7 @@ MonoBehaviour:
   displayName: Maintenance Notice
   category: 3
   isHoliday: 0
-  tickerMessage: 'Maintenance notice: minor repairs ongoing across the city.'
+  tickerMessage: 'Maintenance notice: minor repairs continue across the city.'
   scheduledOnly: 0
   startUnix: 0
   endUnix: 0

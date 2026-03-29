@@ -16,7 +16,7 @@ MonoBehaviour:
   displayName: Wyrm Den Unrest
   category: 0
   isHoliday: 0
-  tickerMessage: Wyrm Den unrest reduces throughput and storage capacity.
+  tickerMessage: Wyrm Den unrest reduces output and storage capacity.
   scheduledOnly: 0
   startUnix: 0
   endUnix: 0

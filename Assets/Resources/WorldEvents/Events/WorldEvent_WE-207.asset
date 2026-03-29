@@ -16,7 +16,7 @@ MonoBehaviour:
   displayName: Collector Craze
   category: 2
   isHoliday: 0
-  tickerMessage: Collector craze boosts voucher-style drops.
+  tickerMessage: Collector demand improves voucher-style drop rates.
   scheduledOnly: 0
   startUnix: 0
   endUnix: 0

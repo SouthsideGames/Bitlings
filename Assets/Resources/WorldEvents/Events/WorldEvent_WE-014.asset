@@ -16,7 +16,7 @@ MonoBehaviour:
   displayName: Grove Preservation Protest
   category: 0
   isHoliday: 0
-  tickerMessage: Preservation protest reduces harvesting throughput.
+  tickerMessage: Preservation activity reduces Grove harvesting output.
   scheduledOnly: 0
   startUnix: 0
   endUnix: 0

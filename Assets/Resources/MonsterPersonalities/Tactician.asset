@@ -24,4 +24,7 @@ MonoBehaviour:
   badMatchDefendBonus: 1
   badMatchRunBonus: 1
   eachTurnAttackBonus: 0
-  description: Balances tools, values tempo and read advantage.
+  eachTurnFocusPenalty: 0
+  lowHpFocusPenalty: 2
+  chaoticOverrideChance: 0.25
+  description: Balances available tools while maintaining controlled pacing and awareness.

@@ -27,4 +27,4 @@ MonoBehaviour:
   eachTurnFocusPenalty: 1
   lowHpFocusPenalty: 2
   chaoticOverrideChance: 0
-  description: Strikes with intent and avoids wasted actions.
+  description: Executes actions with precision, minimizing inefficiency.

@@ -16,7 +16,7 @@ MonoBehaviour:
   displayName: Cryo Lab Inspection
   category: 0
   isHoliday: 0
-  tickerMessage: "Cryo safety inspectors on site\u2014output slows and fatigue rises."
+  tickerMessage: Cryo inspection slows output and raises fatigue.
   scheduledOnly: 0
   startUnix: 0
   endUnix: 0

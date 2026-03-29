@@ -24,4 +24,8 @@ MonoBehaviour:
   badMatchDefendBonus: 2
   badMatchRunBonus: 2
   eachTurnAttackBonus: 1
-  description: Erratic choices; hard to read by design.
+  eachTurnFocusPenalty: 0
+  lowHpFocusPenalty: 2
+  chaoticOverrideChance: 0.25
+  description: Operates with unpredictable patterns, making behavior difficult to
+    anticipate.

@@ -16,7 +16,7 @@ MonoBehaviour:
   displayName: Metal Surplus
   category: 0
   isHoliday: 0
-  tickerMessage: Metal surplus boosts Forge production!
+  tickerMessage: A material surplus improves Forge output.
   scheduledOnly: 0
   startUnix: 0
   endUnix: 0

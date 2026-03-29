@@ -16,7 +16,7 @@ MonoBehaviour:
   displayName: Observatory Protest
   category: 0
   isHoliday: 0
-  tickerMessage: Debate over funding slows Observatory operations.
+  tickerMessage: A funding review slows Observatory operations.
   scheduledOnly: 0
   startUnix: 0
   endUnix: 0

@@ -16,7 +16,7 @@ MonoBehaviour:
   displayName: Quiet Streets
   category: 1
   isHoliday: 0
-  tickerMessage: Quiet streets reduce hostile activity.
+  tickerMessage: Quiet conditions reduce hostile activity.
   scheduledOnly: 0
   startUnix: 0
   endUnix: 0

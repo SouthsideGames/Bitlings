@@ -24,4 +24,7 @@ MonoBehaviour:
   badMatchDefendBonus: 4
   badMatchRunBonus: 1
   eachTurnAttackBonus: 0
-  description: Absorbs pressure, answers back when hurt or outmatched.
+  eachTurnFocusPenalty: 0
+  lowHpFocusPenalty: 2
+  chaoticOverrideChance: 0.25
+  description: Absorbs incoming pressure and responds when conditions become unfavorable.

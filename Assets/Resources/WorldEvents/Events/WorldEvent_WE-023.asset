@@ -16,7 +16,7 @@ MonoBehaviour:
   displayName: Dockworkers Strike
   category: 0
   isHoliday: 0
-  tickerMessage: Dockworkers strike slows shipments.
+  tickerMessage: Dock disruptions slow Harbor shipments.
   scheduledOnly: 0
   startUnix: 0
   endUnix: 0

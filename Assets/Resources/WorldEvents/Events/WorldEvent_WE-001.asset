@@ -16,7 +16,7 @@ MonoBehaviour:
   displayName: Gym Maintenance Week
   category: 0
   isHoliday: 0
-  tickerMessage: Gym closed for equipment recalibration.
+  tickerMessage: Gym access limited during equipment recalibration.
   scheduledOnly: 0
   startUnix: 0
   endUnix: 0

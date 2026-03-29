@@ -16,7 +16,7 @@ MonoBehaviour:
   displayName: Public Debate
   category: 3
   isHoliday: 0
-  tickerMessage: 'Public debate: should the Shadow Market be regulated?'
+  tickerMessage: Public debate continues over Shadow Market regulation.
   scheduledOnly: 0
   startUnix: 0
   endUnix: 0

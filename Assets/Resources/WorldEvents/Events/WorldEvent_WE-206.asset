@@ -16,7 +16,7 @@ MonoBehaviour:
   displayName: Rationing Week
   category: 2
   isHoliday: 0
-  tickerMessage: Rationing reduces resource yields slightly.
+  tickerMessage: Rationing slightly reduces resource yields.
   scheduledOnly: 0
   startUnix: 0
   endUnix: 0

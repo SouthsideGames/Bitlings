@@ -16,7 +16,7 @@ MonoBehaviour:
   displayName: Sanctum Blessing
   category: 0
   isHoliday: 0
-  tickerMessage: A rare blessing boosts Sanctum output!
+  tickerMessage: A rare blessing improves Sanctum output.
   scheduledOnly: 0
   startUnix: 0
   endUnix: 0

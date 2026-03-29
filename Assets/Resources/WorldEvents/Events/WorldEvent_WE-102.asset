@@ -16,7 +16,7 @@ MonoBehaviour:
   displayName: Tourist Season
   category: 1
   isHoliday: 0
-  tickerMessage: Tourist season lowers encounter costs.
+  tickerMessage: Tourist traffic reduces Rift Operation Energy costs.
   scheduledOnly: 0
   startUnix: 0
   endUnix: 0

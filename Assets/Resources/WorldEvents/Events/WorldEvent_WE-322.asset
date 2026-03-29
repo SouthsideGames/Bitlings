@@ -16,7 +16,7 @@ MonoBehaviour:
   displayName: Containment Drill
   category: 3
   isHoliday: 0
-  tickerMessage: Containment conducts a routine drill. No danger reported.
+  tickerMessage: Containment conducts a routine drill. No risk reported.
   scheduledOnly: 0
   startUnix: 0
   endUnix: 0

@@ -16,7 +16,7 @@ MonoBehaviour:
   displayName: Local Sports
   category: 3
   isHoliday: 0
-  tickerMessage: 'Local sports: Gym hosts a citywide tournament.'
+  tickerMessage: Gym hosts a citywide tournament this week.
   scheduledOnly: 0
   startUnix: 0
   endUnix: 0

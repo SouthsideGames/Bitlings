@@ -16,7 +16,7 @@ MonoBehaviour:
   displayName: Stargazing Week
   category: 3
   isHoliday: 0
-  tickerMessage: Stargazing week declared by the Observatory.
+  tickerMessage: Observatory declares a regional Stargazing Week.
   scheduledOnly: 0
   startUnix: 0
   endUnix: 0

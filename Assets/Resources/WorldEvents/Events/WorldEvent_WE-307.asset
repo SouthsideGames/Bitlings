@@ -16,7 +16,7 @@ MonoBehaviour:
   displayName: Lost And Found
   category: 3
   isHoliday: 0
-  tickerMessage: 'Lost and found: a shiny trinket returned to its owner.'
+  tickerMessage: 'Lost and found: a polished trinket has been returned to its owner.'
   scheduledOnly: 0
   startUnix: 0
   endUnix: 0

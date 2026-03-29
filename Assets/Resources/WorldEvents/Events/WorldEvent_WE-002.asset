@@ -16,7 +16,7 @@ MonoBehaviour:
   displayName: Gym Staff Walkout
   category: 0
   isHoliday: 0
-  tickerMessage: Gym staff walkout reduces training throughput.
+  tickerMessage: Gym staffing disruption reduces training capacity.
   scheduledOnly: 0
   startUnix: 0
   endUnix: 0

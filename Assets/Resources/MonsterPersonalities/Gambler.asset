@@ -24,4 +24,8 @@ MonoBehaviour:
   badMatchDefendBonus: 1
   badMatchRunBonus: 1
   eachTurnAttackBonus: 2
-  description: Risk-on; spikes between focus and reckless attack.
+  eachTurnFocusPenalty: 0
+  lowHpFocusPenalty: 2
+  chaoticOverrideChance: 0.25
+  description: Operates with fluctuating intensity, alternating between preparation
+    and aggressive output.

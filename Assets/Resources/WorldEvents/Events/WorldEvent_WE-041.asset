@@ -16,7 +16,7 @@ MonoBehaviour:
   displayName: Sanctum Protest
   category: 0
   isHoliday: 0
-  tickerMessage: Internal dispute reduces Sanctum output and storage.
+  tickerMessage: Internal disruption reduces Sanctum output and storage.
   scheduledOnly: 0
   startUnix: 0
   endUnix: 0

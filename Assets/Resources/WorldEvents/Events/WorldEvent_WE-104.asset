@@ -16,7 +16,8 @@ MonoBehaviour:
   displayName: Festival Crowds
   category: 1
   isHoliday: 0
-  tickerMessage: Festival crowds make encounters cheaper but rarer.
+  tickerMessage: Festival traffic lowers operation costs, but Rift sightings are
+    less frequent.
   scheduledOnly: 0
   startUnix: 0
   endUnix: 0

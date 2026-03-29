@@ -16,7 +16,7 @@ MonoBehaviour:
   displayName: Power Plant Maintenance Week
   category: 0
   isHoliday: 0
-  tickerMessage: Power grid offline for scheduled maintenance.
+  tickerMessage: Power Plant operations paused for scheduled maintenance.
   scheduledOnly: 0
   startUnix: 0
   endUnix: 0

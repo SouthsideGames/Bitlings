@@ -16,7 +16,7 @@ MonoBehaviour:
   displayName: Supply Chain Relief
   category: 2
   isHoliday: 0
-  tickerMessage: Supply chain relief reduces shop costs.
+  tickerMessage: Supply chain relief lowers shop pricing.
   scheduledOnly: 0
   startUnix: 0
   endUnix: 0

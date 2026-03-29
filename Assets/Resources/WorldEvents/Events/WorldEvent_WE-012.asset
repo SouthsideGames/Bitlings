@@ -16,7 +16,7 @@ MonoBehaviour:
   displayName: Energy Demand Spike
   category: 0
   isHoliday: 0
-  tickerMessage: "Energy demand spikes\u2014Power Plant output increases!"
+  tickerMessage: Increased demand raises Power Plant output.
   scheduledOnly: 0
   startUnix: 0
   endUnix: 0

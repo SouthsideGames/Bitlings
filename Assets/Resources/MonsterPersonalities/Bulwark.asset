@@ -27,4 +27,4 @@ MonoBehaviour:
   eachTurnFocusPenalty: 0
   lowHpFocusPenalty: 2
   chaoticOverrideChance: 0
-  description: Protects itself through heavy defensive commitment.
+  description: Prioritizes defense to sustain stability under pressure.

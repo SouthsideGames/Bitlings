@@ -16,7 +16,7 @@ MonoBehaviour:
   displayName: Safety Reminder
   category: 3
   isHoliday: 0
-  tickerMessage: Safety reminder issued for all job sites.
+  tickerMessage: Safety reminder issued for all BRN job sites.
   scheduledOnly: 0
   startUnix: 0
   endUnix: 0

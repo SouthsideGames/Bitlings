@@ -24,4 +24,7 @@ MonoBehaviour:
   badMatchDefendBonus: 1
   badMatchRunBonus: 1
   eachTurnAttackBonus: 0
-  description: Observes early, sets up with focus, strikes later.
+  eachTurnFocusPenalty: 0
+  lowHpFocusPenalty: 2
+  chaoticOverrideChance: 0.25
+  description: Observes early conditions, builds preparation, then commits to action.

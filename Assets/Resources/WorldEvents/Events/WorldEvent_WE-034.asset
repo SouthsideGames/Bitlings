@@ -16,7 +16,7 @@ MonoBehaviour:
   displayName: Wyrm Den Maintenance Week
   category: 0
   isHoliday: 0
-  tickerMessage: Wyrm Den access restricted for reinforcement work.
+  tickerMessage: Wyrm Den access limited during reinforcement work.
   scheduledOnly: 0
   startUnix: 0
   endUnix: 0

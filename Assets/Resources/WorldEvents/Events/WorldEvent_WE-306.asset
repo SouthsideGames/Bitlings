@@ -16,7 +16,7 @@ MonoBehaviour:
   displayName: City Council
   category: 3
   isHoliday: 0
-  tickerMessage: City council debates new infrastructure policies.
+  tickerMessage: Council review underway on new infrastructure policies.
   scheduledOnly: 0
   startUnix: 0
   endUnix: 0

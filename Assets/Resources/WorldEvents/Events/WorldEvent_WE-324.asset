@@ -16,7 +16,7 @@ MonoBehaviour:
   displayName: New Route
   category: 3
   isHoliday: 0
-  tickerMessage: New Expedition route opens for civilian travel.
+  tickerMessage: A new Expedition route opens for civilian travel.
   scheduledOnly: 0
   startUnix: 0
   endUnix: 0

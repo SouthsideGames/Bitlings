@@ -16,7 +16,7 @@ MonoBehaviour:
   displayName: Quarry Protest
   category: 0
   isHoliday: 0
-  tickerMessage: Quarry protest slows extraction and deliveries.
+  tickerMessage: Quarry disruptions slow extraction and deliveries.
   scheduledOnly: 0
   startUnix: 0
   endUnix: 0

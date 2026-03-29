@@ -16,7 +16,7 @@ MonoBehaviour:
   displayName: Bountiful Season
   category: 0
   isHoliday: 0
-  tickerMessage: "Bountiful season\u2014Grove yields increase significantly!"
+  tickerMessage: Seasonal growth increases Grove yields.
   scheduledOnly: 0
   startUnix: 0
   endUnix: 0

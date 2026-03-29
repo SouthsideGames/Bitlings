@@ -16,7 +16,7 @@ MonoBehaviour:
   displayName: Cryo Lab Maintenance Week
   category: 0
   isHoliday: 0
-  tickerMessage: Cryo containment systems undergoing maintenance.
+  tickerMessage: Cryo Lab systems undergoing containment maintenance.
   scheduledOnly: 0
   startUnix: 0
   endUnix: 0

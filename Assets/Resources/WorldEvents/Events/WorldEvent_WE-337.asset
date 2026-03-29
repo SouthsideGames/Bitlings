@@ -16,7 +16,7 @@ MonoBehaviour:
   displayName: Harbor Parade
   category: 3
   isHoliday: 0
-  tickerMessage: Harbor hosts a small ceremonial procession.
+  tickerMessage: Harbor hosts a ceremonial procession.
   scheduledOnly: 0
   startUnix: 0
   endUnix: 0

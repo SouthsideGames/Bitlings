@@ -16,7 +16,7 @@ MonoBehaviour:
   displayName: Forge Labor Dispute
   category: 0
   isHoliday: 0
-  tickerMessage: Forge labor dispute reduces output.
+  tickerMessage: A Forge staffing dispute reduces output and collection speed.
   scheduledOnly: 0
   startUnix: 0
   endUnix: 0

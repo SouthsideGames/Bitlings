@@ -27,4 +27,4 @@ MonoBehaviour:
   eachTurnFocusPenalty: 0
   lowHpFocusPenalty: 2
   chaoticOverrideChance: 0
-  description: Presses offense constantly and rarely gives ground.
+  description: Maintains constant offensive pressure with minimal defensive repositioning.

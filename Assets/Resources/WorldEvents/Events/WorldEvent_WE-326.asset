@@ -16,7 +16,7 @@ MonoBehaviour:
   displayName: Donation Drive
   category: 3
   isHoliday: 0
-  tickerMessage: 'Donation drive: supplies collected for the Clinic.'
+  tickerMessage: Donation drive underway for Clinic supplies.
   scheduledOnly: 0
   startUnix: 0
   endUnix: 0

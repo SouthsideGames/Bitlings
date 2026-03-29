@@ -16,7 +16,7 @@ MonoBehaviour:
   displayName: Cryo Breakthrough
   category: 0
   isHoliday: 0
-  tickerMessage: Cryo Lab breakthrough boosts production!
+  tickerMessage: A Cryo Lab breakthrough improves production.
   scheduledOnly: 0
   startUnix: 0
   endUnix: 0

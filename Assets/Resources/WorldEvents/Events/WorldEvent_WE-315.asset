@@ -16,7 +16,7 @@ MonoBehaviour:
   displayName: Workshop Rumor
   category: 3
   isHoliday: 0
-  tickerMessage: 'Workshop rumor: a prototype device went missing.'
+  tickerMessage: 'Workshop report: a prototype device is unaccounted for.'
   scheduledOnly: 0
   startUnix: 0
   endUnix: 0

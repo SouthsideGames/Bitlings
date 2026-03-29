@@ -16,7 +16,7 @@ MonoBehaviour:
   displayName: Containment Maintenance Week
   category: 0
   isHoliday: 0
-  tickerMessage: Containment locked down for system tests.
+  tickerMessage: Containment sealed for systems testing.
   scheduledOnly: 0
   startUnix: 0
   endUnix: 0

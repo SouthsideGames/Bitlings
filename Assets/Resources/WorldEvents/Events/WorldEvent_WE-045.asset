@@ -16,7 +16,7 @@ MonoBehaviour:
   displayName: Public Health Initiative
   category: 0
   isHoliday: 0
-  tickerMessage: Public initiative boosts Clinic productivity!
+  tickerMessage: Public health demand improves Clinic productivity.
   scheduledOnly: 0
   startUnix: 0
   endUnix: 0

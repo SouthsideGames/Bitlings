@@ -16,7 +16,7 @@ MonoBehaviour:
   displayName: Workshop Overdrive
   category: 0
   isHoliday: 0
-  tickerMessage: Workshop enters production overdrive!
+  tickerMessage: Workshop production enters an accelerated cycle.
   scheduledOnly: 0
   startUnix: 0
   endUnix: 0

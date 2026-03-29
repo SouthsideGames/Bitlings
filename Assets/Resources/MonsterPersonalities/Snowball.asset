@@ -24,4 +24,7 @@ MonoBehaviour:
   badMatchDefendBonus: 1
   badMatchRunBonus: 1
   eachTurnAttackBonus: 3
-  description: Cautious opener that rapidly escalates.
+  eachTurnFocusPenalty: 0
+  lowHpFocusPenalty: 2
+  chaoticOverrideChance: 0.25
+  description: Begins cautiously, then increases pressure as the engagement develops.

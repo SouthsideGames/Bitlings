@@ -16,7 +16,7 @@ MonoBehaviour:
   displayName: Market Panic
   category: 2
   isHoliday: 0
-  tickerMessage: Market panic increases shop costs.
+  tickerMessage: Market instability raises shop pricing.
   scheduledOnly: 0
   startUnix: 0
   endUnix: 0

@@ -16,7 +16,7 @@ MonoBehaviour:
   displayName: Free Pass Week
   category: 1
   isHoliday: 0
-  tickerMessage: Free pass promotions lower encounter energy costs.
+  tickerMessage: Transit promotions reduce Rift Operation Energy costs.
   scheduledOnly: 0
   startUnix: 0
   endUnix: 0

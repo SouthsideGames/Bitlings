@@ -16,7 +16,7 @@ MonoBehaviour:
   displayName: Containment Efficiency
   category: 0
   isHoliday: 0
-  tickerMessage: "Containment efficiencies discovered\u2014output boosted!"
+  tickerMessage: Containment process improvements increase output.
   scheduledOnly: 0
   startUnix: 0
   endUnix: 0

@@ -16,7 +16,7 @@ MonoBehaviour:
   displayName: Storm Front
   category: 1
   isHoliday: 0
-  tickerMessage: "Storm front increases danger\u2014bosses come sooner."
+  tickerMessage: A storm front increases field danger. Boss sightings occur sooner.
   scheduledOnly: 0
   startUnix: 0
   endUnix: 0

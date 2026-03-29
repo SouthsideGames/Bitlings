@@ -16,7 +16,7 @@ MonoBehaviour:
   displayName: Gym Training Boom
   category: 0
   isHoliday: 0
-  tickerMessage: "Gym attendance surges\u2014training output spikes!"
+  tickerMessage: Increased Gym activity improves training output.
   scheduledOnly: 0
   startUnix: 0
   endUnix: 0

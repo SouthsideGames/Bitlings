@@ -16,7 +16,7 @@ MonoBehaviour:
   displayName: Rich Vein Discovered
   category: 0
   isHoliday: 0
-  tickerMessage: "A rich vein is discovered\u2014mine production surges!"
+  tickerMessage: A newly opened vein increases mine output.
   scheduledOnly: 0
   startUnix: 0
   endUnix: 0

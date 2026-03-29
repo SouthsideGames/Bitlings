@@ -27,4 +27,4 @@ MonoBehaviour:
   eachTurnFocusPenalty: 1
   lowHpFocusPenalty: 3
   chaoticOverrideChance: 0
-  description: Builds power through focus then cashes in aggressively.
+  description: Builds strength through preparation, then commits to decisive action.

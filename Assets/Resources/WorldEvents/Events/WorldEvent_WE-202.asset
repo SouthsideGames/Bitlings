@@ -16,7 +16,7 @@ MonoBehaviour:
   displayName: Voucher Drive
   category: 2
   isHoliday: 0
-  tickerMessage: Voucher drive increases special rewards.
+  tickerMessage: A voucher initiative increases special reward availability.
   scheduledOnly: 0
   startUnix: 0
   endUnix: 0

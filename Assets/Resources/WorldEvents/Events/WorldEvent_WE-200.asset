@@ -16,7 +16,7 @@ MonoBehaviour:
   displayName: Inflation
   category: 2
   isHoliday: 0
-  tickerMessage: Inflation drives up market prices.
+  tickerMessage: Inflation raises market valuations.
   scheduledOnly: 0
   startUnix: 0
   endUnix: 0

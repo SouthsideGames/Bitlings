@@ -27,4 +27,4 @@ MonoBehaviour:
   eachTurnFocusPenalty: 0
   lowHpFocusPenalty: 2
   chaoticOverrideChance: 0
-  description: Favors safe lines and stabilizes before committing.
+  description: Favors stable positioning before advancing.

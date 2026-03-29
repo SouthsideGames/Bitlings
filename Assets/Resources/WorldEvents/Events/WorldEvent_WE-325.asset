@@ -16,7 +16,7 @@ MonoBehaviour:
   displayName: Local Celebrity
   category: 3
   isHoliday: 0
-  tickerMessage: Local celebrity Bitling spotted downtown.
+  tickerMessage: A well-known Bitling was spotted downtown.
   scheduledOnly: 0
   startUnix: 0
   endUnix: 0

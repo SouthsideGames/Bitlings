@@ -16,7 +16,7 @@ MonoBehaviour:
   displayName: Local News
   category: 3
   isHoliday: 0
-  tickerMessage: 'Local headlines: a Bitling parade draws crowds downtown.'
+  tickerMessage: 'City bulletin: a Bitling parade draws crowds downtown.'
   scheduledOnly: 0
   startUnix: 0
   endUnix: 0

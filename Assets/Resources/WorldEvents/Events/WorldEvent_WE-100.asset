@@ -16,7 +16,7 @@ MonoBehaviour:
   displayName: Citywide Curfew
   category: 1
   isHoliday: 0
-  tickerMessage: Citywide curfew in effect. Encounters suspended.
+  tickerMessage: Citywide curfew in effect. Rift Operations suspended.
   scheduledOnly: 0
   startUnix: 0
   endUnix: 0

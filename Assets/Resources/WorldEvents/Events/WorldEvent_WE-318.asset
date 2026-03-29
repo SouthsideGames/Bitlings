@@ -16,7 +16,7 @@ MonoBehaviour:
   displayName: Power Fluctuation
   category: 3
   isHoliday: 0
-  tickerMessage: 'Power fluctuation: brief outage reported and resolved.'
+  tickerMessage: 'Power update: brief outage reported and resolved.'
   scheduledOnly: 0
   startUnix: 0
   endUnix: 0

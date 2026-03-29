@@ -16,7 +16,7 @@ MonoBehaviour:
   displayName: Shadow Market Maintenance Week
   category: 0
   isHoliday: 0
-  tickerMessage: Shadow Market shutters temporarily for 'reorganization'.
+  tickerMessage: Shadow Market operations temporarily suspended for reorganization.
   scheduledOnly: 0
   startUnix: 0
   endUnix: 0

@@ -16,7 +16,7 @@ MonoBehaviour:
   displayName: Power Plant Audit
   category: 0
   isHoliday: 0
-  tickerMessage: Regulatory audit slows output across the plant.
+  tickerMessage: A regulatory audit slows output across the Power Plant.
   scheduledOnly: 0
   startUnix: 0
   endUnix: 0

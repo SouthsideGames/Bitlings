@@ -16,7 +16,7 @@ MonoBehaviour:
   displayName: Observatory Buzz
   category: 3
   isHoliday: 0
-  tickerMessage: 'Observatory buzz: rare alignment expected tonight.'
+  tickerMessage: 'Observatory bulletin: a rare alignment is expected tonight.'
   scheduledOnly: 0
   startUnix: 0
   endUnix: 0

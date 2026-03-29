@@ -16,7 +16,7 @@ MonoBehaviour:
   displayName: Black Friday Surge
   category: 0
   isHoliday: 0
-  tickerMessage: "Shadow Market demand surges\u2014output increases!"
+  tickerMessage: Shadow Market demand increases output.
   scheduledOnly: 0
   startUnix: 0
   endUnix: 0

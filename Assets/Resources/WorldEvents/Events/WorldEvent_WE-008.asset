@@ -16,7 +16,7 @@ MonoBehaviour:
   displayName: Mine Safety Inspection
   category: 0
   isHoliday: 0
-  tickerMessage: Mine safety inspection reduces output and increases fatigue.
+  tickerMessage: Mine inspection slows output and raises fatigue.
   scheduledOnly: 0
   startUnix: 0
   endUnix: 0
