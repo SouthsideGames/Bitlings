@@ -14,6 +14,7 @@ public class NotificationManager : MonoBehaviour
 
     [SerializeField] private AndroidNotification androidNotification;
     [SerializeField] private IOSNotification iosNotification;
+    private bool _isBackground;
 
     void Awake()
     {
@@ -45,8 +46,25 @@ public class NotificationManager : MonoBehaviour
 
     void OnApplicationFocus(bool focus)
     {
+        HandleLifecycleBackgroundState(isBackground: !focus);
+    }
+
+    void OnApplicationPause(bool paused)
+    {
+        HandleLifecycleBackgroundState(isBackground: paused);
+    }
+
+    private void HandleLifecycleBackgroundState(bool isBackground)
+    {
+        // Focus and pause can both fire for the same transition.
+        // Skip duplicate work when the effective background state did not change.
+        if (_isBackground == isBackground)
+            return;
+
+        _isBackground = isBackground;
+
         // Foreground: clear stale schedules.
-        if (focus)
+        if (!isBackground)
         {
             CancelAllScheduled();
             return;

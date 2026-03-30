@@ -138,8 +138,17 @@ public class UIAdaptiveRootSizer : MonoBehaviour
 
     private void OnValidate()
     {
+        if (Application.isPlaying)
+            return;
+
+        if (!isActiveAndEnabled)
+            return;
+
         if (rectTransform == null)
             rectTransform = GetComponent<RectTransform>();
+
+        if (rectTransform == null)
+            return;
 
         UnityEditor.EditorApplication.delayCall -= ApplyEditorSafe;
         UnityEditor.EditorApplication.delayCall += ApplyEditorSafe;
@@ -148,6 +157,18 @@ public class UIAdaptiveRootSizer : MonoBehaviour
     private void ApplyEditorSafe()
     {
         if (this == null)
+            return;
+
+        if (!isActiveAndEnabled)
+            return;
+
+        if (UnityEditor.EditorApplication.isCompiling || UnityEditor.EditorApplication.isUpdating)
+            return;
+
+        if (rectTransform == null)
+            rectTransform = GetComponent<RectTransform>();
+
+        if (rectTransform == null)
             return;
 
         Apply();
