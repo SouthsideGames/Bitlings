@@ -29,14 +29,14 @@ public class IdleBattleRewardPanelUI : MonoBehaviour
     [SerializeField] private FeatureId captureFeatureId = FeatureId.IdleBattle_OfflineCapture;
 
     [Header("History Feature Gate")]
-    [SerializeField] private FeatureId historyFeatureId = FeatureId.IdleBattle_LogArchive;
-    [SerializeField] private PanelId historyPanelId = PanelId.AutoBattleHistory;
+    [SerializeField] private FeatureId historyFeatureId =  FeatureId.IdleBattle_LogArchive;
 
     [Header("Totals")]
     [SerializeField] private TMP_Text totalCreditsText;
 
     private MonsterLibrarySO monsterLibrary;
     private Action _onCollected;
+    private bool _pendingCollection;
 
     private struct CreditGroup
     {
@@ -58,6 +58,7 @@ public class IdleBattleRewardPanelUI : MonoBehaviour
         if (historyButton)
             historyButton.onClick.AddListener(OnHistoryClicked);
 
+
         gameObject.SetActive(false);
 
         monsterLibrary = MonsterLibraryLocator.Lib;
@@ -73,13 +74,24 @@ public class IdleBattleRewardPanelUI : MonoBehaviour
 
     void OnDisable()
     {
+        ConsumePendingCollection();
+
         if (FeatureUnlockManager.I != null)
             FeatureUnlockManager.I.OnFeatureUnlocked -= HandleFeatureUnlocked;
+    }
+
+    void OnDestroy()
+    {
+        ConsumePendingCollection();
+
+        if (historyButton)
+            historyButton.onClick.RemoveListener(OnHistoryClicked);
     }
 
     public void Open(IdleBattleSummary summary, Action onCollected, string titleOverride = null)
     {
         _onCollected = onCollected;
+        _pendingCollection = onCollected != null;
 
         if (titleText)
             titleText.text = string.IsNullOrEmpty(titleOverride) ? "While You Were Away…" : titleOverride;
@@ -140,18 +152,19 @@ public class IdleBattleRewardPanelUI : MonoBehaviour
 
     private void OnHistoryClicked()
     {
-        if (!IsHistoryFeatureUnlocked())
-            return;
-
-        if (UIManager.I != null)
+        var ui = UIManager.I;
+        if (ui == null)
         {
-            UIManager.I.Show(historyPanelId);
-            AudioManager.I?.PlayClick();
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            DevLog.Log("[IdleBattleRewardPanelUI] History click ignored: UIManager.I is null.");
+#endif
             return;
         }
 
-        Debug.LogWarning("UIManager not found - cannot open auto battle history panel.");
+        ui.Show(PanelId.AutoBattleHistory);
+        ui.Hide(PanelId.IdleBattleRewards);
     }
+
 
     private bool IsCaptureFeatureUnlocked()
     {
@@ -298,8 +311,20 @@ public class IdleBattleRewardPanelUI : MonoBehaviour
 
     private void OnCollect()
     {
-        _onCollected?.Invoke();
+        ConsumePendingCollection();
         Close();
+    }
+
+    private void ConsumePendingCollection()
+    {
+        if (!_pendingCollection)
+            return;
+
+        _pendingCollection = false;
+
+        var onCollected = _onCollected;
+        _onCollected = null;
+        onCollected?.Invoke();
     }
 
     private void Close()

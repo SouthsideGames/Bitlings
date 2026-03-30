@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
@@ -68,6 +69,7 @@ public class SettingsPanel : MonoBehaviour
     [Header("Daily Seed UI")]
     [SerializeField] private TextMeshProUGUI dailySeedLabel;
     [SerializeField] private Button rerollDailySeedButton;
+    [SerializeField] private TMP_Text rerollDailySeedButtonLabel;
 
     [Header("Buttons")]
     [SerializeField] private Button mainMenuButton;
@@ -80,6 +82,7 @@ public class SettingsPanel : MonoBehaviour
     [SerializeField] private Button resetConfirmAgreeButton;
 
     private bool _wired;
+    private string _rerollDefaultLabelText;
 
     void Awake()
     {
@@ -94,6 +97,12 @@ public class SettingsPanel : MonoBehaviour
 
         if (resetConfirmCloseButton) resetConfirmCloseButton.onClick.RemoveAllListeners();
         if (resetConfirmAgreeButton) resetConfirmAgreeButton.onClick.RemoveAllListeners();
+
+        if (rerollDailySeedButtonLabel == null && rerollDailySeedButton)
+            rerollDailySeedButtonLabel = rerollDailySeedButton.GetComponentInChildren<TMP_Text>(true);
+
+        if (rerollDailySeedButtonLabel)
+            _rerollDefaultLabelText = rerollDailySeedButtonLabel.text;
 
         CacheSectionCanvasGroups();
         SetResetConfirmVisible(false);
@@ -692,16 +701,17 @@ public void ShowSection(SettingsSection section, bool instant = false)
             return;
 
         string raw = (seedInputField != null) ? seedInputField.text : mgr.GetCustomSeed();
-        string token = SeedService.NormalizeSeedToken(raw);
-
-        if (string.IsNullOrWhiteSpace(token))
+        if (!SeedService.TryNormalizeAndValidateCustomSeed(raw, out string token, out string error))
         {
-            GameEvents.RaiseToast("Enter a seed first.");
+            GameEvents.RaiseToast(error);
             return;
         }
 
         mgr.SetCustomSeed(token);
         mgr.SetUseCustomSeed(true);
+
+        if (seedInputField)
+            seedInputField.SetTextWithoutNotify(token);
 
         SeedService.ClearSessionSeed();
         SeedService.ApplyGlobalSeedForSession();
@@ -711,17 +721,24 @@ public void ShowSection(SettingsSection section, bool instant = false)
 
     void OnClickRerollDailySeed()
     {
+        if (!SeedService.CanRerollDailySeedNow(out string reason))
+        {
+            GameEvents.RaiseToast(string.IsNullOrWhiteSpace(reason) ? "Reroll unavailable." : reason);
+            RefreshDailySeedUi();
+            return;
+        }
+
         if (SeedService.TryRerollDailySeed(out var _))
         {
             SeedService.ClearSessionSeed();
             SeedService.ApplyGlobalSeedForSession();
             RefreshDailySeedUi();
-
-            ReturnToMainMenu();
+            GameEvents.RaiseToast("Daily seed rerolled.");
         }
         else
         {
             GameEvents.RaiseToast("Reroll unavailable.");
+            RefreshDailySeedUi();
         }
     }
 
@@ -768,19 +785,45 @@ public void ShowSection(SettingsSection section, bool instant = false)
 
             if (dailyUnlocked)
             {
-                SeedService.ApplyGlobalSeedForSession();
-
-                string token = SeedService.GetDisplaySeedToken();
-                string pfx = SeedService.GetDisplaySeedPrefix();
+                string token = SeedService.GetDailySeedTokenForToday();
 
                 dailySeedLabel.text = string.IsNullOrWhiteSpace(token)
                     ? "----"
-                    : $"{pfx} {token}";
+                    : $"DAILY SEED: {token}";
             }
         }
 
         if (rerollDailySeedButton)
-            rerollDailySeedButton.gameObject.SetActive(dailyUnlocked && rerollUnlocked);
+        {
+            bool visible = dailyUnlocked && rerollUnlocked;
+            rerollDailySeedButton.gameObject.SetActive(visible);
+
+            if (visible)
+            {
+                bool canReroll = SeedService.CanRerollDailySeedNow(out string reason);
+                rerollDailySeedButton.interactable = canReroll;
+                UpdateRerollButtonLabel(canReroll, reason);
+            }
+            else
+            {
+                UpdateRerollButtonLabel(true, string.Empty);
+            }
+        }
+    }
+
+    void UpdateRerollButtonLabel(bool canReroll, string reason)
+    {
+        if (!rerollDailySeedButtonLabel) return;
+
+        string defaultText = string.IsNullOrWhiteSpace(_rerollDefaultLabelText)
+            ? "Reroll Daily Seed"
+            : _rerollDefaultLabelText;
+
+        bool alreadyUsed = !canReroll &&
+                           !string.IsNullOrWhiteSpace(reason) &&
+                           reason.IndexOf("already used", StringComparison.OrdinalIgnoreCase) >= 0;
+
+        rerollDailySeedButtonLabel.text = alreadyUsed ? "Already Used" : defaultText;
     }
 
     void ReturnToMainMenu()

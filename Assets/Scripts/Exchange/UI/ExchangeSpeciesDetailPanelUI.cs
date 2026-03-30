@@ -27,6 +27,8 @@ public class ExchangeSpeciesDetailPanelUI : MonoBehaviour
     [Header("Forecast (requires unlock)")]
     [SerializeField] private GameObject forecastSection;
     [SerializeField] private TextMeshProUGUI forecastLabel;
+    [SerializeField] private Button setAlertButton;
+    [SerializeField] private TextMeshProUGUI setAlertButtonLabel;
 
     [Header("Monopoly Bonus")]
     [SerializeField] private GameObject monopolySection;
@@ -49,6 +51,7 @@ public class ExchangeSpeciesDetailPanelUI : MonoBehaviour
     void OnEnable()
     {
         if (closeButton) closeButton.onClick.AddListener(Close);
+        if (setAlertButton) setAlertButton.onClick.AddListener(OnToggleSurgeAlert);
         GameEvents.OnResourcesChanged += RefreshTokenCounts;
         GameEvents.ExchangeValuesChanged += RefreshMarketData;
 
@@ -58,6 +61,7 @@ public class ExchangeSpeciesDetailPanelUI : MonoBehaviour
     void OnDisable()
     {
         if (closeButton) closeButton.onClick.RemoveListener(Close);
+        if (setAlertButton) setAlertButton.onClick.RemoveListener(OnToggleSurgeAlert);
         if (bullTokenButton) bullTokenButton.onClick.RemoveAllListeners();
         if (bearTokenButton) bearTokenButton.onClick.RemoveAllListeners();
 
@@ -80,6 +84,7 @@ public class ExchangeSpeciesDetailPanelUI : MonoBehaviour
 
         RefreshMarketData();
         RefreshForecast();
+        RefreshAlertButton();
         RefreshMonopoly();
         RefreshTokenSection();
     }
@@ -149,6 +154,23 @@ public class ExchangeSpeciesDetailPanelUI : MonoBehaviour
         forecastLabel.text = $"Tomorrow's Forecast: {forecast}";
     }
 
+    private void RefreshAlertButton()
+    {
+        if (setAlertButton == null) return;
+
+        bool unlocked = FeatureUnlockManager.I != null &&
+                        FeatureUnlockManager.I.IsUnlocked(FeatureId.Exchange_SurgeAlert) &&
+                        _def != null &&
+                        ExchangeManager.I != null;
+
+        setAlertButton.gameObject.SetActive(unlocked);
+        if (!unlocked) return;
+
+        bool enabled = ExchangeManager.I.IsSurgeAlertEnabledForSpecies(_def.id);
+        if (setAlertButtonLabel != null)
+            setAlertButtonLabel.text = enabled ? "Alert: ON" : "Set Alert";
+    }
+
     // ─────────── Monopoly ───────────
 
     private void RefreshMonopoly()
@@ -195,16 +217,21 @@ public class ExchangeSpeciesDetailPanelUI : MonoBehaviour
 
     private void RefreshTokenCounts()
     {
-        if (bullTokenCountLabel)
-            bullTokenCountLabel.text = ResourceBank.Get(ResourceType.BullToken).ToString();
-        if (bearTokenCountLabel)
-            bearTokenCountLabel.text = ResourceBank.Get(ResourceType.BearToken).ToString();
+        int bullCount = ResourceBank.Get(ResourceType.BullToken);
+        int bearCount = ResourceBank.Get(ResourceType.BearToken);
+        bool canUseBullToday = ExchangeManager.I != null && _def != null && ExchangeManager.I.CanUseBullTokenOnSpecies(_def.id);
+        bool canUseBearToday = ExchangeManager.I != null && _def != null && ExchangeManager.I.CanUseBearTokenOnSpecies(_def.id);
 
-        // Disable buttons if no tokens available
+        if (bullTokenCountLabel)
+            bullTokenCountLabel.text = bullCount.ToString();
+        if (bearTokenCountLabel)
+            bearTokenCountLabel.text = bearCount.ToString();
+
+        // Disable buttons if no tokens are available or today's token has already been used.
         if (bullTokenButton)
-            bullTokenButton.interactable = ResourceBank.Get(ResourceType.BullToken) > 0;
+            bullTokenButton.interactable = bullCount > 0 && canUseBullToday;
         if (bearTokenButton)
-            bearTokenButton.interactable = ResourceBank.Get(ResourceType.BearToken) > 0;
+            bearTokenButton.interactable = bearCount > 0 && canUseBearToday;
     }
 
     // ─────────── Actions ───────────
@@ -213,6 +240,7 @@ public class ExchangeSpeciesDetailPanelUI : MonoBehaviour
     {
         if (_def == null || ExchangeManager.I == null) return;
         ExchangeManager.I.UseBullToken(_def.id);
+        RefreshTokenCounts();
         AudioManager.I?.PlayClick();
     }
 
@@ -220,6 +248,17 @@ public class ExchangeSpeciesDetailPanelUI : MonoBehaviour
     {
         if (_def == null || ExchangeManager.I == null) return;
         ExchangeManager.I.UseBearToken(_def.id);
+        RefreshTokenCounts();
+        AudioManager.I?.PlayClick();
+    }
+
+    private void OnToggleSurgeAlert()
+    {
+        if (_def == null || ExchangeManager.I == null) return;
+
+        bool enabled = ExchangeManager.I.IsSurgeAlertEnabledForSpecies(_def.id);
+        ExchangeManager.I.SetSurgeAlertForSpecies(_def.id, !enabled);
+        RefreshAlertButton();
         AudioManager.I?.PlayClick();
     }
 

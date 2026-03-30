@@ -9,6 +9,9 @@ public partial class AutoApplyService : MonoBehaviour
     [Tooltip("Optional. If left empty, will use MonsterLibraryLocator.GetById.")]
     [SerializeField] private MonsterLibrarySO monsterLibrary;
 
+    [Tooltip("Optional. If left empty, will be auto-loaded from Resources.")]
+    [SerializeField] private TokenEconomySO tokenEconomy;
+
     [Tooltip("How many unspent stat points are gained per level (matches StatBucketPanelUI default).")]
     [SerializeField, Min(1)] private int pointsPerLevel = 3;
 
@@ -142,6 +145,14 @@ public partial class AutoApplyService : MonoBehaviour
                 m.level = Mathf.Max(1, m.level + 1);
                 m.unspentStatPoints += Mathf.Max(0, pointsPerLevel);
 
+                // Auto-distribute new stat points based on personality
+                var statDelta = BuildPersonalityStatDelta(m, pointsPerLevel);
+                if (statDelta.hp != 0 || statDelta.atk != 0 || statDelta.def != 0 || statDelta.spd != 0)
+                {
+                    MonsterStatApplier.Apply(m, statDelta);
+                    m.unspentStatPoints = Mathf.Max(0, m.unspentStatPoints - pointsPerLevel);
+                }
+
                 // Defensive: keep premium fields consistent (mirrors XPManager behavior)
                 NormalizePremiumFields(m);
 
@@ -179,6 +190,77 @@ public partial class AutoApplyService : MonoBehaviour
         if (om.premiumTier > 0 && !om.isPremium) om.isPremium = true;
         if (om.isPremium && om.premiumTier <= 0) om.premiumTier = 1;
         if (!om.isPremium && om.premiumTier < 0) om.premiumTier = 0;
+    }
+
+    private TrainingBonus BuildPersonalityStatDelta(OwnedMonsterData m, int points)
+    {
+        var econ = GetTokenEconomy();
+        if (econ == null) return new TrainingBonus();
+
+        var def = monsterLibrary != null
+            ? monsterLibrary.GetById(m.monsterId)
+            : MonsterLibraryLocator.GetById(m.monsterId);
+
+        var group = (def?.Personality != null)
+            ? def.Personality.group
+            : MonsterPersonalitySO.PersonalityGroup.None;
+
+        int allocHp = 0, allocAtk = 0, allocDef = 0, allocSpd = 0;
+
+        for (int i = 0; i < points; i++)
+        {
+            switch (group)
+            {
+                case MonsterPersonalitySO.PersonalityGroup.Offensive:
+                    // Pure attack focus
+                    allocAtk++;
+                    break;
+                case MonsterPersonalitySO.PersonalityGroup.Defensive:
+                    // Pure defense focus
+                    allocDef++;
+                    break;
+                case MonsterPersonalitySO.PersonalityGroup.Evasive:
+                    // Pure speed focus
+                    allocSpd++;
+                    break;
+                case MonsterPersonalitySO.PersonalityGroup.Support:
+                    // HP and defense
+                    if (i % 2 == 0) allocHp++; else allocDef++;
+                    break;
+                case MonsterPersonalitySO.PersonalityGroup.Tactical:
+                    // Even spread across atk, def, spd
+                    if (i % 3 == 0) allocAtk++;
+                    else if (i % 3 == 1) allocDef++;
+                    else allocSpd++;
+                    break;
+                case MonsterPersonalitySO.PersonalityGroup.Reactive:
+                    // Speed and attack
+                    if (i % 2 == 0) allocSpd++; else allocAtk++;
+                    break;
+                default:
+                    // None / Chaotic: balanced HP, ATK, DEF
+                    if (i % 3 == 0) allocHp++;
+                    else if (i % 3 == 1) allocAtk++;
+                    else allocDef++;
+                    break;
+            }
+        }
+
+        return new TrainingBonus
+        {
+            hp  = allocHp  * econ.hpPerCore,
+            atk = allocAtk * econ.atkPerCore,
+            def = allocDef * econ.defPerCore,
+            spd = allocSpd * econ.spdPerCore
+        };
+    }
+
+    private TokenEconomySO GetTokenEconomy()
+    {
+        if (tokenEconomy) return tokenEconomy;
+        var all = Resources.LoadAll<TokenEconomySO>("");
+        if (all != null && all.Length > 0) { tokenEconomy = all[0]; return tokenEconomy; }
+        return null;
     }
 
     private void ClampHpToNewMax(OwnedMonsterData om)

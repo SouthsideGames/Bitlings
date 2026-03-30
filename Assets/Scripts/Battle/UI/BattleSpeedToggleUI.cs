@@ -69,13 +69,18 @@ public class BattleSpeedToggleUI : MonoBehaviour
     // NEW: Self-gating method
     private void RefreshVisibility()
     {
-        bool isAuto = (EncounterManager.I != null) && EncounterManager.I.IsAutoMode;
+        // Use the idle-battle store as the authoritative "are we actually idle battling" check.
+        // EncounterManager.IsAutoMode can be stale (e.g. still true when the encounter panel
+        // opens after idle battles ended), causing the button to flash before any battle starts.
+        // IdleBattleStore.autoBattling is updated by IdleBattleManager before
+        // OnEncounterAutoModeChanged fires, so this read is always current.
+        bool isIdleBattleRunning = IdleBattleStore.Load()?.autoBattling == true;
 
         bool unlocked =
             FeatureUnlockManager.I != null &&
             FeatureUnlockManager.I.IsUnlocked(speedControlFeatureId);
 
-        bool shouldShow = unlocked && isAuto;
+        bool shouldShow = unlocked && isIdleBattleRunning;
 
         if (gameObject.activeSelf != shouldShow)
             gameObject.SetActive(shouldShow);

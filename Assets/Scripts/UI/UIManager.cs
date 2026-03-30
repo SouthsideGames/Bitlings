@@ -326,6 +326,7 @@ public class UIManager : MonoBehaviour
                 {
                     TryOpenIdleBattleRewardsNextFrame();
                     TryOpenIronCareerUnlockedTutorial();
+                    ExchangeManager.I?.TryShowPendingDividendHomeToast();
                 }
 
                 if (id == PanelId.Encounter)

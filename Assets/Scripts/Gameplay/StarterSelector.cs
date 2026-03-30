@@ -243,6 +243,7 @@ public class StarterSelector : MonoBehaviour
         }
         catch (Exception ex)
         {
+            _ = ex;
             #if UNITY_EDITOR || DEVELOPMENT_BUILD
             Debug.LogError($"[StarterSelector] Exception opening detail panel for {defLocal?.id}: {ex}");
             #endif

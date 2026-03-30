@@ -17,6 +17,7 @@ public class AutoBattleLogEntry
 
     public bool victory;
     public bool escaped;
+    public string defeatReason;
 
     // Flat text lines from BattleLogger (already formatted)
     public List<string> lines = new List<string>();
@@ -54,6 +55,7 @@ public class AutoBattleLogEntry
                 opponentLevel = Mathf.Max(1, result.wildLevel),
                 victory = result.victory,
                 escaped = result.escaped,
+                defeatReason = BuildDefeatReason(result.victory, result.escaped),
                 lines = new List<string>(BattleLogger.GetLinesSnapshot())
             };
 
@@ -103,6 +105,7 @@ public class AutoBattleLogEntry
             opponentLevel = Mathf.Max(1, opponentLevel),
             victory = victory,
             escaped = escaped,
+            defeatReason = BuildDefeatReason(victory, escaped),
             lines = copy
         };
 
@@ -113,5 +116,12 @@ public class AutoBattleLogEntry
             data.autoBattleLogArchive.RemoveRange(0, over);
 
         SaveManager.Save();
+    }
+
+    private static string BuildDefeatReason(bool victory, bool escaped)
+    {
+        if (victory) return string.Empty;
+        if (escaped) return "On this turn wild monster fled.";
+        return string.Empty;
     }
 }

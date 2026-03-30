@@ -15,6 +15,7 @@ public sealed class WorldEventManager : MonoBehaviour
         public string id;
         public string message;
         public long expiresUnix;
+        public bool hasEffect;
     }
 
     private readonly List<Item> _items = new();
@@ -52,7 +53,7 @@ public sealed class WorldEventManager : MonoBehaviour
         if (changed) Changed?.Invoke();
     }
 
-    public string Add(string message, float ttlSeconds = 0f)
+    public string Add(string message, float ttlSeconds = 0f, bool hasEffect = false)
     {
         if (string.IsNullOrWhiteSpace(message)) return null;
 
@@ -62,7 +63,7 @@ public sealed class WorldEventManager : MonoBehaviour
         if (ttlSeconds > 0f)
             expires = SaveManager.NowUnix() + Mathf.Max(1, Mathf.RoundToInt(ttlSeconds));
 
-        _items.Add(new Item { id = id, message = message.Trim(), expiresUnix = expires });
+        _items.Add(new Item { id = id, message = message.Trim(), expiresUnix = expires, hasEffect = hasEffect });
         Changed?.Invoke();
         return id;
     }

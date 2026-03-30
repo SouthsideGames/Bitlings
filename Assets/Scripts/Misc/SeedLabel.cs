@@ -129,6 +129,6 @@ public class SeedLabel : MonoBehaviour, IPointerClickHandler
             DevLog.Log($"[SeedLabel] {copiedMessage} ({toCopy})");
             #endif
 
-        GameEvents.RaiseToast("Copied seed!");
+        GameEvents.RaiseToast(copiedMessage);
     }
 }

@@ -1,9 +1,11 @@
 using UnityEngine;
 using UnityEngine.UI;
 using System.Collections;
+using UnityEngine.EventSystems;
 
 [RequireComponent(typeof(Button))]
 public sealed class EncounterButtonGuard : MonoBehaviour
+    , IPointerDownHandler, IPointerUpHandler, IPointerExitHandler
 {
     [Header("Requirements")]
     [SerializeField, Min(1)] private int minRequiredTeamMembers = 1;
@@ -13,9 +15,16 @@ public sealed class EncounterButtonGuard : MonoBehaviour
     [SerializeField, Range(0.05f, 0.5f)] private float shakeDuration = 0.2f;
     [SerializeField, Range(1f, 30f)] private float shakeMagnitude = 10f;
 
+    [Header("Hold Action")]
+    [SerializeField, Min(0.1f)] private float holdToStopIdleSeconds = 0.5f;
+
     private Button _button;
     private Coroutine _shakeRoutine;
     private Coroutine _deferredApply;
+    private bool _pressed;
+    private bool _holdTriggered;
+    private bool _suppressNextClick;
+    private float _pressedAt;
 
     // EncounterManager can be created/destroyed across scenes.
     // Hook its OnStateChanged so the button refreshes when battles start/end.
@@ -47,6 +56,7 @@ public sealed class EncounterButtonGuard : MonoBehaviour
         GameEvents.EnergyChanged += HandleEnergy;
         GameEvents.OnTeamChanged += HandleTeamChanged;
         GameEvents.OnTeamHealthChanged += HandleTeamChanged;
+        GameEvents.AutoBattleModeChanged += HandleAutoModeChanged;
 
         _button.onClick.AddListener(OnButtonClicked);
 
@@ -64,6 +74,7 @@ public sealed class EncounterButtonGuard : MonoBehaviour
         GameEvents.EnergyChanged -= HandleEnergy;
         GameEvents.OnTeamChanged -= HandleTeamChanged;
         GameEvents.OnTeamHealthChanged -= HandleTeamChanged;
+        GameEvents.AutoBattleModeChanged -= HandleAutoModeChanged;
 
         UnhookEncounterEvents();
 
@@ -74,6 +85,7 @@ public sealed class EncounterButtonGuard : MonoBehaviour
         }
 
         _button.onClick.RemoveListener(OnButtonClicked);
+        ResetPressState();
     }
 
     private void Update()
@@ -83,6 +95,20 @@ public sealed class EncounterButtonGuard : MonoBehaviour
         // energy/team events fire.
         if (_hookedEncounter != EncounterManager.I)
             TryHookEncounterEvents();
+
+        if (!_pressed || _holdTriggered) return;
+
+        if (Time.unscaledTime - _pressedAt >= holdToStopIdleSeconds)
+        {
+            _holdTriggered = true;
+            _pressed = false;
+
+            if (TryStopIdleAutoAndShowRewards())
+            {
+                _suppressNextClick = true;
+                Apply();
+            }
+        }
     }
 
     private void TryHookEncounterEvents()
@@ -113,12 +139,26 @@ public sealed class EncounterButtonGuard : MonoBehaviour
     private void HandleEnergy(int a, int b) => Apply();
     private void HandleEnergy() => Apply();
     private void HandleTeamChanged() => Apply();
+    private void HandleAutoModeChanged(bool _) => Apply();
 
     private void Apply()
     {
         if (_button == null) return;
 
-        bool ok = EligibilityRules.CanStartEncounter(minRequiredTeamMembers, out string reason);
+        bool idleAutoRunning = IsIdleAutoRunning();
+        string reason = null;
+        bool ok;
+
+        if (idleAutoRunning)
+        {
+            ok = false;
+            reason = "Idle auto-battle running.";
+        }
+        else
+        {
+            ok = EligibilityRules.CanStartEncounter(minRequiredTeamMembers, out reason);
+        }
+
         _button.interactable = ok;
 
         // Helpful diagnostics when something unexpected disables the button.
@@ -135,12 +175,93 @@ public sealed class EncounterButtonGuard : MonoBehaviour
 
     private void OnButtonClicked()
     {
+        if (_suppressNextClick)
+        {
+            _suppressNextClick = false;
+            return;
+        }
+
         // If the button was force-enabled by some other script, still guard click feedback.
-        if (!EligibilityRules.CanStartEncounter(minRequiredTeamMembers, out _))
+        if (IsIdleAutoRunning() || !EligibilityRules.CanStartEncounter(minRequiredTeamMembers, out _))
         {
             StartShake();
             return;
         }
+    }
+
+    public void OnPointerDown(PointerEventData eventData)
+    {
+        _pressed = true;
+        _holdTriggered = false;
+        _pressedAt = Time.unscaledTime;
+    }
+
+    public void OnPointerUp(PointerEventData eventData)
+    {
+        ResetPressState();
+    }
+
+    public void OnPointerExit(PointerEventData eventData)
+    {
+        ResetPressState();
+    }
+
+    private void ResetPressState()
+    {
+        _pressed = false;
+        _holdTriggered = false;
+        _pressedAt = 0f;
+    }
+
+    private static bool IsIdleAutoRunning()
+    {
+        try
+        {
+            var s = IdleBattleStore.Load();
+            return s != null && s.autoBattling;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    private bool TryStopIdleAutoAndShowRewards()
+    {
+        bool stoppedAnyAuto = false;
+
+        // Stop foreground encounter AUTO loop first.
+        var em = EncounterManager.I;
+        if (em != null && em.IsAutoMode)
+        {
+            em.ToggleAutoMode();
+            stoppedAnyAuto = true;
+        }
+
+        // Stop persisted idle-auto session flag.
+        if (IsIdleAutoRunning())
+        {
+            IdleBattleManager.I?.DisableAuto();
+            stoppedAnyAuto = true;
+
+            // Safety net in case IdleBattleManager singleton is not available in this scene.
+            try
+            {
+                var s = IdleBattleStore.Load();
+                if (s != null && s.autoBattling)
+                {
+                    s.autoBattling = false;
+                    IdleBattleStore.Save(s);
+                }
+            }
+            catch { }
+        }
+
+        if (!stoppedAnyAuto)
+            return false;
+
+        IdleBattleManager.I?.TryOpenSummaryIfNeeded();
+        return true;
     }
 
     private void StartShake()

@@ -218,6 +218,12 @@ public class IdleBattleManager : MonoBehaviour
 
             _summaryOpenedThisSession = false;
 
+            // Clear old battles from previous sessions to start fresh.
+            // This ensures idle battle reward counters only show the current session.
+            s.log?.Clear();
+            s.capturedLog?.Clear();
+            s.hasPendingSummary = false;
+
             IdleBattleStore.Save(s);
         }
     }
@@ -346,11 +352,24 @@ if (elapsed <= 0.1f) return;
         var s = IdleBattleStore.Load();
         if (!s.autoBattling) return;
 
+        int baseCost = GetEncounterCostSafe();
+
         // Stop conditions (must match design):
         // - Player turned AUTO off (handled via AutoBattleModeChanged)
         // - No team / all team members down
         // - No energy (handled later)
         if (!HasAnyAliveTeamMember())
+        {
+            DisableAuto();
+            MarkSummaryPendingIfLogExists();
+            TryOpenSummaryIfNeeded();
+            return;
+        }
+
+        // If energy is already insufficient, end auto now.
+        // This prevents idle auto from resuming later after passive refills
+        // unless the player explicitly turns AUTO back on.
+        if (GetEnergySafe() < baseCost)
         {
             DisableAuto();
             MarkSummaryPendingIfLogExists();
@@ -365,12 +384,20 @@ if (elapsed <= 0.1f) return;
 int canRun = Mathf.FloorToInt(dt / config.secondsPerEncounter);
         if (canRun <= 0) return;
 
-        int baseCost = GetEncounterCostSafe();
         int curEnergy = GetEnergySafe();
         int byEnergy = (baseCost <= 0) ? canRun : (curEnergy / baseCost);
 
         int toRun = Mathf.Min(canRun, byEnergy);
-        if (toRun <= 0) return;
+        if (toRun <= 0)
+        {
+            if (byEnergy <= 0)
+            {
+                DisableAuto();
+                MarkSummaryPendingIfLogExists();
+                TryOpenSummaryIfNeeded();
+            }
+            return;
+        }
 
         RunBatchEncounters(toRun);
 
@@ -528,7 +555,8 @@ int canRun = Mathf.FloorToInt(dt / config.secondsPerEncounter);
                 premium = premium,
                 victory = hb.victory,
                 creditsBase = creditsBase,
-                capture = captured
+                capture = captured,
+                turns = Mathf.Max(1, hb.turnsSimulated)
             });
         }
 
@@ -584,6 +612,19 @@ int canRun = Mathf.FloorToInt(dt / config.secondsPerEncounter);
                 }
             }
 
+            if (SaveManager.Data != null
+                && FeatureUnlockManager.I != null
+                && FeatureUnlockManager.I.IsUnlocked(FeatureId.IdleBattle_LogArchive))
+            {
+                AutoBattleLogArchive.AddEntry(
+                    SaveManager.Data,
+                    p.wildDef.id,
+                    p.wildLevel,
+                    p.victory,
+                    escaped: false,
+                    BuildHeadlessArchiveLines(p, awarded));
+            }
+
             // Notify (for UI/battle loggers). Guarded by _headlessBatchRunning in HandleBattleFinished.
             try
             {
@@ -627,6 +668,50 @@ int canRun = Mathf.FloorToInt(dt / config.secondsPerEncounter);
         public bool victory;
         public int creditsBase;
         public bool capture;
+        public int turns;
+    }
+
+    private static IReadOnlyList<string> BuildHeadlessArchiveLines(PendingIdleEncounter p, int awardedCredits)
+    {
+        int turns = Mathf.Clamp(p != null ? p.turns : 0, 1, 8);
+        bool victory = p != null && p.victory;
+
+        var lines = new List<string>(turns + 4)
+        {
+            "Auto battle (idle simulation)."
+        };
+
+        for (int turn = 1; turn <= turns; turn++)
+        {
+            bool finalTurn = turn == turns;
+            if (finalTurn)
+            {
+                lines.Add(victory
+                    ? $"Turn {turn}: Finishing blow landed."
+                    : $"Turn {turn}: Team was overwhelmed.");
+                continue;
+            }
+
+            if (turn == 1)
+            {
+                lines.Add($"Turn {turn}: Opening clash.");
+                continue;
+            }
+
+            lines.Add(victory
+                ? $"Turn {turn}: Team maintained pressure."
+                : $"Turn {turn}: Wild side kept momentum.");
+        }
+
+        lines.Add(victory ? "Result: Victory" : "Result: Defeat");
+
+        if (awardedCredits > 0)
+            lines.Add($"Credits gained: +{awardedCredits:N0}");
+
+        if (p != null && p.capture)
+            lines.Add("Capture succeeded.");
+
+        return lines;
     }
 
     private void MarkSummaryPendingIfLogExists()

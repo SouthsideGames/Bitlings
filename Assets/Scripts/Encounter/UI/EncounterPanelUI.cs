@@ -285,8 +285,9 @@ public class EncounterPanelUI : MonoBehaviour
         {
             ShowBlinder(false, instant: true);
             EnsureTeamPreviewForCurrentState(forceRebuild: false);
-            ApplyCloseLock();
         }
+
+        ApplyCloseLock();
 
         ApplyEncounterButtonBattleVisibility(IsInBattle());
 
@@ -350,6 +351,13 @@ public class EncounterPanelUI : MonoBehaviour
         StopPulse(ref _premiumPulseTweenId, premiumTimerLabel);
         StopPulse(ref _capturePulseTweenId, captureTimerLabel);
         StopPulse(ref _favorPulseTweenId, favorTimerLabel);
+
+        // Stop encounter/battle music when panel closes during auto-battles.
+        // This prevents battle music from persisting after leaving the encounter panel.
+        if (AudioManager.I != null && !IsInBattle())
+        {
+            AudioManager.I.StopMusic(fadeOut: 0.25f);
+        }
     }
 
     void Update()
@@ -1924,6 +1932,12 @@ if (target > 0.01f)
     {
         if (!closeButtonRoot) return;
 
+        if (IsIdleAutoRunning())
+        {
+            closeButtonRoot.SetActive(false);
+            return;
+        }
+
         if (hideCloseDuringRecovery && IsRecoveryDecisionOpen)
         {
             closeButtonRoot.SetActive(false);
@@ -1945,6 +1959,19 @@ if (target > 0.01f)
 
         bool inBattle = IsInBattle();
         closeButtonRoot.SetActive(!inBattle);
+    }
+
+    private static bool IsIdleAutoRunning()
+    {
+        try
+        {
+            var s = IdleBattleStore.Load();
+            return s != null && s.autoBattling;
+        }
+        catch
+        {
+            return false;
+        }
     }
 
     private void ApplyEncounterButtonBattleVisibility(bool inBattle)

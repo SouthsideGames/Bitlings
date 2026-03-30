@@ -19,7 +19,7 @@ public sealed class ExchangeManager : MonoBehaviour
     private const float PREMIUM_DIVISOR_DEFAULT = 0.75f;
     private const float PREMIUM_DIVISOR_APPRAISED = 0.50f;
     private const float MONOPOLY_BONUS = 1.25f;
-    private const float DIVIDEND_RATE = 0.01f; // 1% daily
+    private const float DIVIDEND_RATE = 0.01f; // 1% collected weekly on Monday
     private const int SENTIMENT_CAP = 12;
     private const int SENTIMENT_STEP_WIN = 1;
     private const int SENTIMENT_STEP_LOSS = 3;
@@ -47,8 +47,11 @@ public sealed class ExchangeManager : MonoBehaviour
     private Dictionary<string, SpeciesBattleSentimentData> _sentimentMap;
     private readonly Dictionary<string, float> _workerHoursSampled = new Dictionary<string, float>(StringComparer.Ordinal);
     private Dictionary<string, DemandOverride> _overrideMap;
+    private Dictionary<string, int> _bullTokenUseMap;
+    private Dictionary<string, int> _bearTokenUseMap;
     private Dictionary<string, long> _catchHypeMap;
     private Dictionary<string, int> _brokerScarcityMap;
+    private HashSet<string> _surgeAlertWatchlist;
     private float _recalcTimer;
     private float _laborSampleTimer;
 
@@ -169,6 +172,29 @@ public sealed class ExchangeManager : MonoBehaviour
                 _overrideMap[ov.speciesId] = ov;
         }
 
+        _save.bullTokenUsages ??= new List<SpeciesTokenUsage>();
+        _save.bearTokenUsages ??= new List<SpeciesTokenUsage>();
+        _bullTokenUseMap = new Dictionary<string, int>(StringComparer.Ordinal);
+        _bearTokenUseMap = new Dictionary<string, int>(StringComparer.Ordinal);
+
+        for (int i = _save.bullTokenUsages.Count - 1; i >= 0; i--)
+        {
+            var usage = _save.bullTokenUsages[i];
+            if (usage == null || string.IsNullOrEmpty(usage.speciesId) || usage.expiresDay <= today)
+                _save.bullTokenUsages.RemoveAt(i);
+            else
+                _bullTokenUseMap[usage.speciesId] = usage.expiresDay;
+        }
+
+        for (int i = _save.bearTokenUsages.Count - 1; i >= 0; i--)
+        {
+            var usage = _save.bearTokenUsages[i];
+            if (usage == null || string.IsNullOrEmpty(usage.speciesId) || usage.expiresDay <= today)
+                _save.bearTokenUsages.RemoveAt(i);
+            else
+                _bearTokenUseMap[usage.speciesId] = usage.expiresDay;
+        }
+
         // Load catch-hype timestamps (prune expired entries)
         _save.catchHype ??= new List<CatchHypeEntry>();
         _catchHypeMap = new Dictionary<string, long>(StringComparer.Ordinal);
@@ -200,6 +226,9 @@ public sealed class ExchangeManager : MonoBehaviour
 
         // Ensure hot type is set for this week
         EnsureHotType();
+
+        _save.surgeAlertSpeciesIds ??= new List<string>();
+        _surgeAlertWatchlist = new HashSet<string>(_save.surgeAlertSpeciesIds, StringComparer.Ordinal);
     }
 
     private void Persist()
@@ -217,6 +246,28 @@ public sealed class ExchangeManager : MonoBehaviour
         {
             foreach (var kv in _overrideMap)
                 _save.demandOverrides.Add(kv.Value);
+        }
+
+        _save.bullTokenUsages.Clear();
+        if (_bullTokenUseMap != null)
+        {
+            int today = DayIndex();
+            foreach (var kv in _bullTokenUseMap)
+            {
+                if (string.IsNullOrEmpty(kv.Key) || kv.Value <= today) continue;
+                _save.bullTokenUsages.Add(new SpeciesTokenUsage { speciesId = kv.Key, expiresDay = kv.Value });
+            }
+        }
+
+        _save.bearTokenUsages.Clear();
+        if (_bearTokenUseMap != null)
+        {
+            int today = DayIndex();
+            foreach (var kv in _bearTokenUseMap)
+            {
+                if (string.IsNullOrEmpty(kv.Key) || kv.Value <= today) continue;
+                _save.bearTokenUsages.Add(new SpeciesTokenUsage { speciesId = kv.Key, expiresDay = kv.Value });
+            }
         }
 
         // Persist catch-hype (prune expired)
@@ -240,6 +291,17 @@ public sealed class ExchangeManager : MonoBehaviour
         }
 
         _save.lastRecalcUnix = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+
+        _save.surgeAlertSpeciesIds.Clear();
+        if (_surgeAlertWatchlist != null)
+        {
+            foreach (var speciesId in _surgeAlertWatchlist)
+            {
+                if (!string.IsNullOrEmpty(speciesId))
+                    _save.surgeAlertSpeciesIds.Add(speciesId);
+            }
+        }
+
         SaveManager.SetExchangeBlob(_save);
     }
 
@@ -541,25 +603,33 @@ public sealed class ExchangeManager : MonoBehaviour
             {
                 if (FeatureUnlockManager.I != null && FeatureUnlockManager.I.IsUnlocked(FeatureId.Exchange_SurgeAlert))
                 {
-                    ExchangeToastUI.EnqueueGuaranteed($"SURGE: {def.displayName} demand is surging!", def.icon);
+                    bool canAlertThisSpecies = IsSurgeAlertEnabledForSpecies(def.id);
+                    bool inBattle = IsAnyBattleActive();
+                    if (canAlertThisSpecies && !inBattle)
+                        ExchangeToastUI.EnqueueGuaranteed($"SURGE: {def.displayName} demand is surging!", def.icon);
                 }
             }
         }
 
-        // Dividend Yield: on new day, pay 1% of total portfolio value
-        if (newDay && _save.lastDividendDayIndex != today)
+        // Dividend Yield: process once per local day, collect on Monday.
+        int localToday = LocalDayIndex();
+        if (_save.lastDividendDayIndex != localToday)
         {
-            if (FeatureUnlockManager.I != null && FeatureUnlockManager.I.IsUnlocked(FeatureId.Exchange_DividendYield))
+            _save.lastDividendDayIndex = localToday;
+
+            if (DateTimeOffset.Now.DayOfWeek == DayOfWeek.Monday &&
+                FeatureUnlockManager.I != null &&
+                FeatureUnlockManager.I.IsUnlocked(FeatureId.Exchange_DividendYield))
             {
                 int portfolioValue = GetTotalPortfolioValue();
                 int dividend = Mathf.Max(0, Mathf.RoundToInt(portfolioValue * DIVIDEND_RATE));
                 if (dividend > 0)
                 {
                     ResourceBank.Add(ResourceType.Credits, dividend);
-                    ExchangeToastUI.EnqueueGuaranteed($"Dividend: +{dividend} credits from portfolio yield!");
+                    _save.pendingDividendToastAmount = dividend;
+                    _save.pendingDividendToastDayIndex = localToday;
                 }
             }
-            _save.lastDividendDayIndex = today;
         }
 
         Persist();
@@ -701,6 +771,12 @@ public sealed class ExchangeManager : MonoBehaviour
     private static int WeekIndex()
     {
         return DayIndex() / 7;
+    }
+
+    private static int LocalDayIndex()
+    {
+        var localDate = DateTime.Now.Date;
+        return (localDate.Year * 10000) + (localDate.Month * 100) + localDate.Day;
     }
 
     // ─────────── New Market Multipliers ───────────
@@ -971,12 +1047,32 @@ public sealed class ExchangeManager : MonoBehaviour
 
     // ─────────── Bear / Bull Tokens ───────────
 
+    public bool CanUseBullTokenOnSpecies(string speciesId)
+    {
+        if (string.IsNullOrEmpty(speciesId) || _bullTokenUseMap == null) return false;
+        return !_bullTokenUseMap.TryGetValue(speciesId, out var expiresDay) || expiresDay <= DayIndex();
+    }
+
+    public bool CanUseBearTokenOnSpecies(string speciesId)
+    {
+        if (string.IsNullOrEmpty(speciesId) || _bearTokenUseMap == null) return false;
+        return !_bearTokenUseMap.TryGetValue(speciesId, out var expiresDay) || expiresDay <= DayIndex();
+    }
+
     public bool UseBullToken(string speciesId)
     {
         if (string.IsNullOrEmpty(speciesId)) return false;
         if (FeatureUnlockManager.I == null || !FeatureUnlockManager.I.IsUnlocked(FeatureId.Exchange_BearBullTokens))
             return false;
+        if (!CanUseBullTokenOnSpecies(speciesId))
+        {
+            ExchangeToastUI.EnqueueGuaranteed("Bull Token already used on this species today.");
+            return false;
+        }
         if (!ResourceBank.TrySpend(ResourceType.BullToken, 1)) return false;
+
+        _bullTokenUseMap ??= new Dictionary<string, int>(StringComparer.Ordinal);
+        _bullTokenUseMap[speciesId] = DayIndex() + 1;
 
         ApplyDemandOverride(speciesId, DemandLevel.Surge);
         ExchangeToastUI.EnqueueGuaranteed("Bull Token used! Demand set to SURGE for today.");
@@ -989,7 +1085,15 @@ public sealed class ExchangeManager : MonoBehaviour
         if (string.IsNullOrEmpty(speciesId)) return false;
         if (FeatureUnlockManager.I == null || !FeatureUnlockManager.I.IsUnlocked(FeatureId.Exchange_BearBullTokens))
             return false;
+        if (!CanUseBearTokenOnSpecies(speciesId))
+        {
+            ExchangeToastUI.EnqueueGuaranteed("Bear Token already used on this species today.");
+            return false;
+        }
         if (!ResourceBank.TrySpend(ResourceType.BearToken, 1)) return false;
+
+        _bearTokenUseMap ??= new Dictionary<string, int>(StringComparer.Ordinal);
+        _bearTokenUseMap[speciesId] = DayIndex() + 1;
 
         ApplyDemandOverride(speciesId, DemandLevel.Low);
         ExchangeToastUI.EnqueueGuaranteed("Bear Token used! Demand set to LOW for today.");
@@ -1059,6 +1163,37 @@ public sealed class ExchangeManager : MonoBehaviour
         return total;
     }
 
+    public int GetCurrentDividendAmount()
+    {
+        int portfolioValue = GetTotalPortfolioValue();
+        return Mathf.Max(0, Mathf.RoundToInt(portfolioValue * DIVIDEND_RATE));
+    }
+
+    public void TryShowPendingDividendHomeToast()
+    {
+        if (_save == null) return;
+
+        int amount = _save.pendingDividendToastAmount;
+        int pendingDay = _save.pendingDividendToastDayIndex;
+        if (amount <= 0 || pendingDay < 0) return;
+
+        int localToday = LocalDayIndex();
+        if (pendingDay != localToday)
+        {
+            // Only show on the same day the dividend was collected.
+            _save.pendingDividendToastAmount = 0;
+            _save.pendingDividendToastDayIndex = -1;
+            Persist();
+            return;
+        }
+
+        _save.pendingDividendToastAmount = 0;
+        _save.pendingDividendToastDayIndex = -1;
+        Persist();
+
+        GameEvents.RaiseToast($"Dividend collected: +{amount} Credits");
+    }
+
     // ─────────── Market Forecast ───────────
 
     /// <summary>
@@ -1094,5 +1229,37 @@ public sealed class ExchangeManager : MonoBehaviour
     {
         // Supply changed — recalculate
         _recalcTimer = RECALC_INTERVAL; // force recalc on next Update
+    }
+
+    public bool IsSurgeAlertEnabledForSpecies(string speciesId)
+    {
+        if (string.IsNullOrEmpty(speciesId)) return false;
+        _surgeAlertWatchlist ??= new HashSet<string>(StringComparer.Ordinal);
+        return _surgeAlertWatchlist.Contains(speciesId);
+    }
+
+    public bool SetSurgeAlertForSpecies(string speciesId, bool enabled)
+    {
+        if (string.IsNullOrEmpty(speciesId)) return false;
+        _surgeAlertWatchlist ??= new HashSet<string>(StringComparer.Ordinal);
+
+        bool changed = enabled
+            ? _surgeAlertWatchlist.Add(speciesId)
+            : _surgeAlertWatchlist.Remove(speciesId);
+
+        if (!changed) return false;
+
+        Persist();
+        GameEvents.ExchangeValuesChanged?.Invoke();
+        return true;
+    }
+
+    private static bool IsAnyBattleActive()
+    {
+        if (EncounterManager.I != null && EncounterManager.I.IsInBattle)
+            return true;
+
+        var battle = UnityEngine.Object.FindFirstObjectByType<BattleManager>(FindObjectsInactive.Include);
+        return battle != null && battle.InBattle;
     }
 }

@@ -21,7 +21,6 @@ public class AutoBattleHistoryRowUI : MonoBehaviour
     [Header("Summary Colors")]
     [SerializeField] private string victoryHex = "#4FD27A";
     [SerializeField] private string defeatHex = "#FF7A7A";
-    [SerializeField] private string escapedHex = "#F2C75C";
 
     private AutoBattleLogEntry _entry;
     private bool _expanded;
@@ -84,21 +83,31 @@ public class AutoBattleHistoryRowUI : MonoBehaviour
     private string BuildSummary(AutoBattleLogEntry e)
     {
         string time = FormatUnix(e.unix);
-        string outcome = e.victory ? "Victory" : (e.escaped ? "Escaped" : "Defeat");
+        string outcome = e.victory ? "Victory" : "Defeat";
+        string reason = GetDefeatReason(e);
         string name = string.IsNullOrEmpty(e.opponentName) ? "Unknown" : e.opponentName;
         int level = Mathf.Max(1, e.opponentLevel);
-        string outcomeColor = e.victory ? victoryHex : (e.escaped ? escapedHex : defeatHex);
+        string outcomeColor = e.victory ? victoryHex : defeatHex;
         string styledOutcome = $"<b><color={outcomeColor}>{outcome}</color></b>";
 
-        return $"[{time}] {styledOutcome} vs {name} (Lv {level})";
+        string reasonSuffix = string.IsNullOrWhiteSpace(reason) ? string.Empty : $" - {reason}";
+
+        return $"[{time}] {styledOutcome} vs {name} (Lv {level}){reasonSuffix}";
     }
 
     private static string BuildDetails(AutoBattleLogEntry e, int maxLines)
     {
+        string reason = GetDefeatReason(e);
+        bool hasReason = !string.IsNullOrWhiteSpace(reason);
+
         if (e.lines == null || e.lines.Count == 0)
-            return "No battle lines recorded.";
+            return hasReason ? $"- Reason: {reason}" : "No battle lines recorded.";
 
         var sb = new StringBuilder(512);
+
+        if (hasReason)
+            sb.Append("- Reason: ").AppendLine(reason);
+
         int limit = Mathf.Min(Mathf.Max(1, maxLines), e.lines.Count);
 
         for (int i = 0; i < limit; i++)
@@ -114,6 +123,20 @@ public class AutoBattleHistoryRowUI : MonoBehaviour
             sb.AppendLine("- ...");
 
         return sb.Length > 0 ? sb.ToString() : "No battle lines recorded.";
+    }
+
+    private static string GetDefeatReason(AutoBattleLogEntry e)
+    {
+        if (e == null || e.victory)
+            return string.Empty;
+
+        if (!string.IsNullOrWhiteSpace(e.defeatReason))
+            return e.defeatReason;
+
+        if (e.escaped)
+            return "On this turn wild monster fled.";
+
+        return string.Empty;
     }
 
     private static string FormatUnix(long unix)

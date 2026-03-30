@@ -44,11 +44,9 @@ public class StatBucketPanelUI : MonoBehaviour
     [SerializeField, Min(1)] private int pointsPerLevel = 3;
 
     private TokenEconomySO tokenEconomy;
-    private BucketLibrarySO bucketLibrary;
     private LevelCostCurveSO levelCostCurve;
     private bool _isConfirming;
     private OwnedMonsterData _m;
-    private LevelUpBucketSO _bucket;
 
     // Display breakdown
     private int _monHP, _monATK, _monDEF, _monSPD;
@@ -100,11 +98,6 @@ public class StatBucketPanelUI : MonoBehaviour
                 var all = Resources.LoadAll<TokenEconomySO>("");
                 if (all != null && all.Length > 0) tokenEconomy = all[0];
             }
-        }
-        if (!bucketLibrary)
-        {
-            var all = Resources.LoadAll<BucketLibrarySO>("");
-            if (all != null && all.Length > 0) bucketLibrary = all[0];
         }
         if (!levelCostCurve)
         {
@@ -163,12 +156,6 @@ public class StatBucketPanelUI : MonoBehaviour
 
         ComputeCurrentStats();
         ClearAlloc();
-
-        if (bucketLibrary)
-        {
-            _bucket = bucketLibrary.GetById(_m.lastBucketId, bucketLibrary.DefaultBucket());
-            if (!_bucket) _bucket = bucketLibrary.DefaultBucket();
-        }
 
         var def = MonsterLibraryLocator.GetById(_m.monsterId);
         if (nameText)
@@ -296,19 +283,9 @@ public class StatBucketPanelUI : MonoBehaviour
 
     private void OnPresetClicked(string bucketId)
     {
-        SetBucket(bucketId);
-        ApplyPreset(bucketId);
-    }
-
-    private void SetBucket(string bucketId)
-    {
-        if (!bucketLibrary) return;
-
-        var fallback = bucketLibrary.DefaultBucket();
-        _bucket = bucketLibrary.GetById(bucketId, fallback);
-
         if (_m != null)
-            _m.lastBucketId = _bucket ? _bucket.bucketId : null;
+            _m.lastBucketId = bucketId;
+        ApplyPreset(bucketId);
     }
 
     private void ApplyPreset(string bucketId)
@@ -321,33 +298,265 @@ public class StatBucketPanelUI : MonoBehaviour
 
         int toSpend = Mathf.Min(5, remaining);
 
+        // Get the monster's personality to influence preset distribution
+        var personality = GetMonsterPersonality();
+        
         switch (bucketId)
         {
             case "Offense":
-                for (int i = 0; i < toSpend; i++) AddAlloc(ref _allocAtk, +1);
+                ApplyOffensePresetWithPersonality(toSpend, personality);
                 break;
             case "Defense":
-                for (int i = 0; i < toSpend; i++) AddAlloc(ref _allocDef, +1);
+                ApplyDefensePresetWithPersonality(toSpend, personality);
                 break;
             case "Speed":
-                for (int i = 0; i < toSpend; i++) AddAlloc(ref _allocSpd, +1);
+                ApplySpeedPresetWithPersonality(toSpend, personality);
                 break;
             case "Balance":
-                for (int i = 0; i < toSpend; i++)
-                {
-                    int step = i % 3;
-                    if (step == 0) AddAlloc(ref _allocHp, +1);
-                    else if (step == 1) AddAlloc(ref _allocAtk, +1);
-                    else AddAlloc(ref _allocDef, +1);
-                }
+                ApplyBalancePresetWithPersonality(toSpend, personality);
                 break;
             case "Utility":
-                for (int i = 0; i < toSpend; i++)
-                {
-                    if (i % 2 == 0) AddAlloc(ref _allocHp, +1);
-                    else AddAlloc(ref _allocSpd, +1);
-                }
+                ApplyUtilityPresetWithPersonality(toSpend, personality);
                 break;
+        }
+    }
+
+    private MonsterPersonalitySO GetMonsterPersonality()
+    {
+        if (_m == null || string.IsNullOrEmpty(_m.monsterId)) return null;
+        var def = MonsterLibraryLocator.GetById(_m.monsterId);
+        return def != null ? def.Personality : null;
+    }
+
+    private void ApplyOffensePresetWithPersonality(int toSpend, MonsterPersonalitySO personality)
+    {
+        // Offense preset: prioritizes ATK
+        // Personality modifiers:
+        // - Offensive: pure ATK (personality aligned)
+        // - Defensive: split to DEF slightly (opposite personality)
+        // - Evasive: add SPD boost (tactical adjustment)
+        // - Support: add HP slightly (tactical adjustment)
+        
+        if (personality != null && personality.group == MonsterPersonalitySO.PersonalityGroup.Defensive)
+        {
+            // Defensive monsters still attack, but they're more balanced
+            for (int i = 0; i < toSpend; i++)
+            {
+                if (i % 3 == 0) 
+                    AddAlloc(ref _allocDef, +1);  // 1/3 to defense
+                else 
+                    AddAlloc(ref _allocAtk, +1);  // 2/3 to attack
+            }
+        }
+        else if (personality != null && personality.group == MonsterPersonalitySO.PersonalityGroup.Evasive)
+        {
+            // Evasive monsters learn to be faster offenders
+            for (int i = 0; i < toSpend; i++)
+            {
+                if (i % 3 == 0)
+                    AddAlloc(ref _allocSpd, +1);  // 1/3 to speed
+                else
+                    AddAlloc(ref _allocAtk, +1);  // 2/3 to attack
+            }
+        }
+        else if (personality != null && personality.group == MonsterPersonalitySO.PersonalityGroup.Support)
+        {
+            // Support monsters gain balanced offense
+            for (int i = 0; i < toSpend; i++)
+            {
+                if (i % 3 == 0)
+                    AddAlloc(ref _allocHp, +1);   // 1/3 to HP
+                else
+                    AddAlloc(ref _allocAtk, +1);  // 2/3 to attack
+            }
+        }
+        else
+        {
+            // Offensive, Tactical, Reactive, Chaotic: pure offensive buildup
+            for (int i = 0; i < toSpend; i++) 
+                AddAlloc(ref _allocAtk, +1);
+        }
+    }
+
+    private void ApplyDefensePresetWithPersonality(int toSpend, MonsterPersonalitySO personality)
+    {
+        // Defense preset: prioritizes DEF
+        // Personality modifiers:
+        // - Defensive: pure DEF (personality aligned)
+        // - Offensive: add ATK boost (opposite personality)
+        // - Evasive: add SPD instead of pure DEF (tactical adjustment)
+        // - Support: pure DEF (personality aligned)
+        
+        if (personality != null && personality.group == MonsterPersonalitySO.PersonalityGroup.Offensive)
+        {
+            // Offensive monsters can't stay purely defensive
+            for (int i = 0; i < toSpend; i++)
+            {
+                if (i % 3 == 0)
+                    AddAlloc(ref _allocAtk, +1);  // 1/3 to attack
+                else
+                    AddAlloc(ref _allocDef, +1);  // 2/3 to defense
+            }
+        }
+        else if (personality != null && personality.group == MonsterPersonalitySO.PersonalityGroup.Evasive)
+        {
+            // Evasive monsters dodge instead of tank
+            for (int i = 0; i < toSpend; i++)
+            {
+                if (i % 2 == 0)
+                    AddAlloc(ref _allocSpd, +1);  // 1/2 to speed
+                else
+                    AddAlloc(ref _allocDef, +1);  // 1/2 to defense
+            }
+        }
+        else
+        {
+            // Defensive, Support, Tactical, Reactive, Chaotic: pure defensive buildup
+            for (int i = 0; i < toSpend; i++) 
+                AddAlloc(ref _allocDef, +1);
+        }
+    }
+
+    private void ApplySpeedPresetWithPersonality(int toSpend, MonsterPersonalitySO personality)
+    {
+        // Speed preset: prioritizes SPD
+        // Personality modifiers:
+        // - Evasive: pure SPD (personality aligned)
+        // - Offensive: add ATK (tactical adjustment, speed for quick strikes)
+        // - Defensive: add DEF (tactical adjustment for evasive defense)
+        // - Tactical/Reactive: benefit from speed
+        
+        if (personality != null && personality.group == MonsterPersonalitySO.PersonalityGroup.Offensive)
+        {
+            // Offensive monsters use speed for quick strikes
+            for (int i = 0; i < toSpend; i++)
+            {
+                if (i % 3 == 0)
+                    AddAlloc(ref _allocAtk, +1);  // 1/3 to attack
+                else
+                    AddAlloc(ref _allocSpd, +1);  // 2/3 to speed
+            }
+        }
+        else if (personality != null && personality.group == MonsterPersonalitySO.PersonalityGroup.Defensive)
+        {
+            // Defensive monsters use speed defensively
+            for (int i = 0; i < toSpend; i++)
+            {
+                if (i % 3 == 0)
+                    AddAlloc(ref _allocDef, +1);  // 1/3 to defense
+                else
+                    AddAlloc(ref _allocSpd, +1);  // 2/3 to speed
+            }
+        }
+        else
+        {
+            // Evasive, Tactical, Reactive, Support, Chaotic: pure speed buildup
+            for (int i = 0; i < toSpend; i++) 
+                AddAlloc(ref _allocSpd, +1);
+        }
+    }
+
+    private void ApplyBalancePresetWithPersonality(int toSpend, MonsterPersonalitySO personality)
+    {
+        // Balance preset: HP, ATK, DEF in equal parts
+        // Personality modifiers:
+        for (int i = 0; i < toSpend; i++)
+        {
+            int step = i % 3;
+            
+            if (personality != null && personality.group == MonsterPersonalitySO.PersonalityGroup.Offensive)
+            {
+                // Offensive: lean more toward attack (ATK x2, HP, DEF in rotation)
+                if (step == 0) 
+                    AddAlloc(ref _allocAtk, +1);
+                else if (step == 1) 
+                    AddAlloc(ref _allocAtk, +1);
+                else 
+                    AddAlloc(ref _allocHp, +1);
+            }
+            else if (personality != null && personality.group == MonsterPersonalitySO.PersonalityGroup.Defensive)
+            {
+                // Defensive: lean more toward defense (DEF x2, HP, ATK in rotation)
+                if (step == 0) 
+                    AddAlloc(ref _allocHp, +1);
+                else if (step == 1) 
+                    AddAlloc(ref _allocDef, +1);
+                else 
+                    AddAlloc(ref _allocDef, +1);
+            }
+            else if (personality != null && personality.group == MonsterPersonalitySO.PersonalityGroup.Evasive)
+            {
+                // Evasive: replace defense with speed in balance (HP, ATK, SPD)
+                if (step == 0) 
+                    AddAlloc(ref _allocHp, +1);
+                else if (step == 1) 
+                    AddAlloc(ref _allocAtk, +1);
+                else 
+                    AddAlloc(ref _allocSpd, +1);
+            }
+            else if (personality != null && personality.group == MonsterPersonalitySO.PersonalityGroup.Support)
+            {
+                // Support: HP emphasis (HP x2, ATK, DEF in rotation)
+                if (step == 0) 
+                    AddAlloc(ref _allocHp, +1);
+                else if (step == 1) 
+                    AddAlloc(ref _allocHp, +1);
+                else 
+                    AddAlloc(ref _allocDef, +1);
+            }
+            else
+            {
+                // Tactical, Reactive, Chaotic: standard balance (HP, ATK, DEF)
+                if (step == 0) 
+                    AddAlloc(ref _allocHp, +1);
+                else if (step == 1) 
+                    AddAlloc(ref _allocAtk, +1);
+                else 
+                    AddAlloc(ref _allocDef, +1);
+            }
+        }
+    }
+
+    private void ApplyUtilityPresetWithPersonality(int toSpend, MonsterPersonalitySO personality)
+    {
+        // Utility preset: HP and SPD alternating
+        // Personality modifiers:
+        for (int i = 0; i < toSpend; i++)
+        {
+            if (personality != null && personality.group == MonsterPersonalitySO.PersonalityGroup.Evasive)
+            {
+                // Evasive: pure speed utility (SPD x2, HP)
+                if (i % 3 == 2)
+                    AddAlloc(ref _allocHp, +1);
+                else
+                    AddAlloc(ref _allocSpd, +1);
+            }
+            else if (personality != null && personality.group == MonsterPersonalitySO.PersonalityGroup.Support)
+            {
+                // Support: pure HP utility (HP x2, SPD)
+                if (i % 3 == 2)
+                    AddAlloc(ref _allocSpd, +1);
+                else
+                    AddAlloc(ref _allocHp, +1);
+            }
+            else if (personality != null && personality.group == MonsterPersonalitySO.PersonalityGroup.Offensive)
+            {
+                // Offensive: speed utility over raw HP (SPD, ATK, HP in rotation)
+                if (i % 3 == 0) 
+                    AddAlloc(ref _allocSpd, +1);
+                else if (i % 3 == 1) 
+                    AddAlloc(ref _allocAtk, +1);
+                else 
+                    AddAlloc(ref _allocHp, +1);
+            }
+            else
+            {
+                // Standard utility: HP and SPD
+                if (i % 2 == 0) 
+                    AddAlloc(ref _allocHp, +1);
+                else 
+                    AddAlloc(ref _allocSpd, +1);
+            }
         }
     }
 

@@ -518,7 +518,9 @@ public sealed class WorldEventSystem : MonoBehaviour
 
             if (string.IsNullOrWhiteSpace(msg)) continue;
 
-            WorldEventManager.I.Add(msg);
+            bool hasEffect = e.effects != null && e.effects.Count > 0 &&
+                             e.effects.Exists(fx => fx.kind != WorldEventEffectKind.None);
+            WorldEventManager.I.Add(msg, hasEffect: hasEffect);
         }
     }
 

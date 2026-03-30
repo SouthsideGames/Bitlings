@@ -3,6 +3,9 @@ using UnityEngine;
 
 public static class SeedService
 {
+    private const int MinCustomSeedLength = 3;
+    private const int MaxCustomSeedLength = 32;
+
     public static int ActiveSeed { get; private set; }
 
     public enum SeedMode { None, Session, Daily, Custom }
@@ -118,6 +121,57 @@ public static class SeedService
         return sm.settingsState.customSeed ?? string.Empty;
     }
 
+    public static bool TryNormalizeAndValidateCustomSeed(string raw, out string normalizedToken, out string errorMessage)
+    {
+        normalizedToken = NormalizeSeedToken(raw);
+
+        if (string.IsNullOrWhiteSpace(normalizedToken))
+        {
+            errorMessage = "Enter a seed first.";
+            return false;
+        }
+
+        if (normalizedToken.Length < MinCustomSeedLength)
+        {
+            errorMessage = $"Seed must be at least {MinCustomSeedLength} characters.";
+            return false;
+        }
+
+        if (normalizedToken.Length > MaxCustomSeedLength)
+        {
+            errorMessage = $"Seed must be {MaxCustomSeedLength} characters or fewer.";
+            return false;
+        }
+
+        for (int i = 0; i < normalizedToken.Length; i++)
+        {
+            char c = normalizedToken[i];
+            bool allowed = char.IsLetterOrDigit(c) || c == '-' || c == '_';
+            if (!allowed)
+            {
+                errorMessage = "Seed can only use letters, numbers, '-' or '_'.";
+                return false;
+            }
+        }
+
+        errorMessage = string.Empty;
+        return true;
+    }
+
+    public static string GetDailySeedTokenForToday()
+    {
+        try { SaveManager.LoadOrCreate(); } catch { /* ignore */ }
+        if (SaveManager.Data == null) return string.Empty;
+
+        EnsureDailySeedForToday();
+
+        var ss = SaveManager.Data.seedState;
+        if (ss == null)
+            return string.Empty;
+
+        return NormalizeSeedToken(ss.dailySeed);
+    }
+
     public static string GetDisplaySeedToken()
     {
         ApplyGlobalSeedForSession();
@@ -152,11 +206,8 @@ public static class SeedService
         if (fu == null)
             return false;
 
-        if (!fu.IsUnlocked(FeatureId.Seeds_DailyBasic) ||
-            !fu.IsUnlocked(FeatureId.Seeds_RerollDailyOnce))
-        {
+        if (!CanRerollDailySeedNow())
             return false;
-        }
 
         var settings = (sm != null) ? sm.settingsState : null;
         bool customActive = fu.IsUnlocked(FeatureId.Seeds_CustomInput) &&
@@ -171,7 +222,16 @@ public static class SeedService
             return false;
 
         ss.dayIndex = today;
-        ss.dailySeed = GenerateNewSeedString();
+        string previousToken = NormalizeSeedToken(ss.dailySeed);
+        string nextDailySeed = GenerateNewSeedString();
+        for (int i = 0; i < 5 &&
+             string.Equals(NormalizeSeedToken(nextDailySeed), previousToken, StringComparison.OrdinalIgnoreCase);
+             i++)
+        {
+            nextDailySeed = GenerateNewSeedString();
+        }
+
+        ss.dailySeed = nextDailySeed;
         ss.lastRerollDayIndex = today;
 
         if (!SaveManager.IsHardWiping)
@@ -188,6 +248,53 @@ public static class SeedService
             ActiveMode = SeedMode.Daily;
 
             UnityEngine.Random.InitState(seed);
+        }
+
+        return true;
+    }
+
+    public static bool CanRerollDailySeedNow()
+    {
+        return CanRerollDailySeedNow(out _);
+    }
+
+    public static bool CanRerollDailySeedNow(out string reason)
+    {
+        reason = string.Empty;
+
+        try { SaveManager.LoadOrCreate(); } catch { /* ignore */ }
+        if (SaveManager.Data == null)
+        {
+            reason = "Save is not ready.";
+            return false;
+        }
+
+        var fu = FeatureUnlockManager.I;
+        if (fu == null)
+        {
+            reason = "Seed features are unavailable.";
+            return false;
+        }
+
+        if (!fu.IsUnlocked(FeatureId.Seeds_DailyBasic))
+        {
+            reason = "Daily Seeds are locked.";
+            return false;
+        }
+
+        if (!fu.IsUnlocked(FeatureId.Seeds_RerollDailyOnce))
+        {
+            reason = "Daily reroll is locked.";
+            return false;
+        }
+
+        var ss = SaveManager.Data.seedState ?? (SaveManager.Data.seedState = new SeedState());
+        int today = SaveManager.TodayDayIndexUTC();
+
+        if (ss.lastRerollDayIndex == today)
+        {
+            reason = "Daily seed reroll already used today.";
+            return false;
         }
 
         return true;

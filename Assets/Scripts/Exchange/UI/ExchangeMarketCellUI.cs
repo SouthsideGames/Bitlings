@@ -13,6 +13,7 @@ public class ExchangeMarketCellUI : MonoBehaviour
     [SerializeField] private Image speciesIcon;
     [SerializeField] private TextMeshProUGUI nameValueLabel;
     [SerializeField] private TextMeshProUGUI forecastLabel;
+    [SerializeField] private GameObject alertIcon;
     [SerializeField] private GameObject monopolyBonusIcon;
 
     private static readonly Color ColorUp   = new Color(0.2f, 0.85f, 0.3f);  // green
@@ -91,6 +92,13 @@ public class ExchangeMarketCellUI : MonoBehaviour
             {
                 forecastLabel.gameObject.SetActive(false);
             }
+        }
+
+        if (alertIcon != null)
+        {
+            bool showAlert = ExchangeManager.I != null &&
+                             ExchangeManager.I.IsSurgeAlertEnabledForSpecies(def.id);
+            alertIcon.SetActive(showAlert);
         }
 
         // Monopoly Bonus icon: active when upgrade is unlocked and player owns all species of this type

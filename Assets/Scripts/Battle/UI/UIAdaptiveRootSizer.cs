@@ -126,12 +126,31 @@ public class UIAdaptiveRootSizer : MonoBehaviour
     }
 
 #if UNITY_EDITOR
+    private void OnDisable()
+    {
+        UnityEditor.EditorApplication.delayCall -= ApplyEditorSafe;
+    }
+
+    private void OnDestroy()
+    {
+        UnityEditor.EditorApplication.delayCall -= ApplyEditorSafe;
+    }
+
     private void OnValidate()
     {
         if (rectTransform == null)
             rectTransform = GetComponent<RectTransform>();
 
-        UnityEditor.EditorApplication.delayCall += Apply;
+        UnityEditor.EditorApplication.delayCall -= ApplyEditorSafe;
+        UnityEditor.EditorApplication.delayCall += ApplyEditorSafe;
+    }
+
+    private void ApplyEditorSafe()
+    {
+        if (this == null)
+            return;
+
+        Apply();
     }
 #endif
 
@@ -140,6 +159,9 @@ public class UIAdaptiveRootSizer : MonoBehaviour
     {
         if (rectTransform == null)
             rectTransform = GetComponent<RectTransform>();
+
+        if (rectTransform == null)
+            return;
 
         LayoutProfile profile = GetProfile();
 

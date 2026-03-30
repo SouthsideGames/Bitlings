@@ -34,6 +34,12 @@ public sealed class WorldEventTickerUI : MonoBehaviour
     [Tooltip("Wait after fade-out before repeating.")]
     [SerializeField, Min(0f)] private float waitSeconds = 10.0f;
 
+    [Header("Colors")]
+    [Tooltip("Color used for ticker messages that have a real gameplay effect.")]
+    [SerializeField] private Color effectColor = new Color(0xDE / 255f, 0x99 / 255f, 0x53 / 255f, 1f);
+    [Tooltip("Color used for flavor/no-effect ticker messages.")]
+    [SerializeField] private Color defaultColor = Color.white;
+
     private CanvasGroup _barCanvasGroup;
     private Coroutine _loop;
     private int _messageIndex;
@@ -126,8 +132,8 @@ public sealed class WorldEventTickerUI : MonoBehaviour
             }
 
             // Pull next message (or keep hidden if none).
-            string msg = GetNextMessageSafe();
-            if (string.IsNullOrWhiteSpace(msg))
+            var item = GetNextItemSafe();
+            if (item == null || string.IsNullOrWhiteSpace(item.message))
             {
                 SetAlphaInstant(0f);
                 yield return null;
@@ -136,7 +142,8 @@ public sealed class WorldEventTickerUI : MonoBehaviour
 
             if (messageText)
             {
-                messageText.text = msg;
+                messageText.text = item.message;
+                messageText.color = item.hasEffect ? effectColor : defaultColor;
                 Canvas.ForceUpdateCanvases();
             }
 
@@ -158,7 +165,7 @@ public sealed class WorldEventTickerUI : MonoBehaviour
     // Message selection
     // ─────────────────────────────────────────────────────────────
 
-    private string GetNextMessageSafe()
+    private WorldEventManager.Item GetNextItemSafe()
     {
         var mgr = WorldEventManager.I;
         if (mgr == null || mgr.Items == null || mgr.Items.Count == 0)
@@ -173,9 +180,8 @@ public sealed class WorldEventTickerUI : MonoBehaviour
             var it = mgr.Items[_messageIndex];
             _messageIndex++;
 
-            string msg = it != null ? it.message : null;
-            if (!string.IsNullOrWhiteSpace(msg))
-                return msg;
+            if (it != null && !string.IsNullOrWhiteSpace(it.message))
+                return it;
 
             tries++;
         }

@@ -53,6 +53,13 @@ public class DemandOverride
 }
 
 [Serializable]
+public class SpeciesTokenUsage
+{
+    public string speciesId;
+    public int expiresDay; // DayIndex when this token usage expires for this species
+}
+
+[Serializable]
 public class ExchangeSaveData
 {
     public List<MarketSpeciesState> speciesStates = new List<MarketSpeciesState>();
@@ -67,9 +74,13 @@ public class ExchangeSaveData
     public int lastRequestRotationDayIndex = -1;
     public int battleSentimentMonthKey = -1;
     public int lastDividendDayIndex = -1;
+    public int pendingDividendToastAmount;
+    public int pendingDividendToastDayIndex = -1;
     public int lastWeekIndex = -1;
     public long lastRecalcUnix;
     public PendingDuplicateCaptureSave pendingDuplicate;
+    public List<SpeciesTokenUsage> bullTokenUsages = new List<SpeciesTokenUsage>();
+    public List<SpeciesTokenUsage> bearTokenUsages = new List<SpeciesTokenUsage>();
 
     // Freshly-caught hype: speciesId → UTC unix timestamp of most recent capture
     public List<CatchHypeEntry> catchHype = new List<CatchHypeEntry>();
@@ -80,6 +91,9 @@ public class ExchangeSaveData
     // Type Trends: which MonsterType is "hot" this week
     public int hotTypeWeekIndex = -1;
     public MonsterType hotType = MonsterType.None;
+
+    // Surge alert watchlist: only these species can produce surge toasts.
+    public List<string> surgeAlertSpeciesIds = new List<string>();
 }
 
 [Serializable]

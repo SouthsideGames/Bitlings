@@ -40,6 +40,8 @@ public class ExchangePanelUI : MonoBehaviour
     [SerializeField] private GameObject portfolioRowPrefab;
     [SerializeField] private TextMeshProUGUI totalRosterValueLabel;
     [SerializeField] private TextMeshProUGUI lifetimeBrokeredLabel;
+    [SerializeField] private GameObject dividendYieldRoot;
+    [SerializeField] private TextMeshProUGUI dividendYieldLabel;
 
     [Header("Requests Tab")]
     [SerializeField] private Transform requestsListParent;
@@ -120,6 +122,7 @@ public class ExchangePanelUI : MonoBehaviour
             FeatureUnlockManager.I.OnFeatureUnlocked += HandleFeatureUnlocked;
 
         RefreshTokenDisplay();
+        RefreshDividendDisplay();
         ShowSection(_currentSection);
     }
 
@@ -283,35 +286,37 @@ public class ExchangePanelUI : MonoBehaviour
         ClearChildren(portfolioListParent);
 
         var data = SaveManager.Data;
-        if (data?.owned == null) return;
 
         // Build unique species list from owned
         var seen = new HashSet<string>(StringComparer.Ordinal);
         int totalValue = 0;
 
-        for (int i = 0; i < data.owned.Count; i++)
+        if (data?.owned != null)
         {
-            var o = data.owned[i];
-            if (o == null || string.IsNullOrEmpty(o.monsterId)) continue;
-            if (!seen.Add(o.monsterId)) continue;
-
-            var def = MonsterCatalog.GetById(o.monsterId);
-            if (def == null || def.baseMarketValue <= 0) continue;
-
-            int value = ExchangeManager.I != null ? ExchangeManager.I.GetCurrentValue(def.id) : def.baseMarketValue;
-            int payout = ExchangeManager.I != null ? ExchangeManager.I.GetBrokerPayout(def.id) : Mathf.RoundToInt(value * 0.85f);
-            totalValue += value;
-
-            if (portfolioRowPrefab != null)
+            for (int i = 0; i < data.owned.Count; i++)
             {
-                var go = Instantiate(portfolioRowPrefab, portfolioListParent);
-                go.SetActive(true);
+                var o = data.owned[i];
+                if (o == null || string.IsNullOrEmpty(o.monsterId)) continue;
+                if (!seen.Add(o.monsterId)) continue;
 
-                var row = go.GetComponent<ExchangeTrendRowUI>();
-                if (row != null)
+                var def = MonsterCatalog.GetById(o.monsterId);
+                if (def == null || def.baseMarketValue <= 0) continue;
+
+                int value = ExchangeManager.I != null ? ExchangeManager.I.GetCurrentValue(def.id) : def.baseMarketValue;
+                int payout = ExchangeManager.I != null ? ExchangeManager.I.GetBrokerPayout(def.id) : Mathf.RoundToInt(value * 0.85f);
+                totalValue += value;
+
+                if (portfolioRowPrefab != null)
                 {
-                    var state = ExchangeManager.I?.GetState(def.id);
-                    row.Populate(def, state, CountOwned(def.id), o.level, payout);
+                    var go = Instantiate(portfolioRowPrefab, portfolioListParent);
+                    go.SetActive(true);
+
+                    var row = go.GetComponent<ExchangeTrendRowUI>();
+                    if (row != null)
+                    {
+                        var state = ExchangeManager.I?.GetState(def.id);
+                        row.Populate(def, state, CountOwned(def.id), o.level, payout);
+                    }
                 }
             }
         }
@@ -320,6 +325,8 @@ public class ExchangePanelUI : MonoBehaviour
 
         int lifetimeBrokered = ExchangeManager.I?.SaveData?.totalCreditsBrokered ?? 0;
         if (lifetimeBrokeredLabel != null) lifetimeBrokeredLabel.text = $"Lifetime Brokered: {lifetimeBrokered} Credits";
+
+        RefreshDividendDisplay();
     }
 
     // ─────────── Requests Tab ───────────
@@ -682,5 +689,25 @@ public class ExchangePanelUI : MonoBehaviour
     {
         if (id == FeatureId.Exchange_BearBullTokens)
             RefreshTokenDisplay();
+
+        if (id == FeatureId.Exchange_DividendYield)
+            RefreshDividendDisplay();
+    }
+
+    private void RefreshDividendDisplay()
+    {
+        if (dividendYieldRoot == null && dividendYieldLabel == null) return;
+
+        bool unlocked = FeatureUnlockManager.I != null &&
+                        FeatureUnlockManager.I.IsUnlocked(FeatureId.Exchange_DividendYield);
+
+        if (dividendYieldRoot != null)
+            dividendYieldRoot.SetActive(unlocked);
+
+        if (!unlocked || dividendYieldLabel == null)
+            return;
+
+        int dividend = ExchangeManager.I != null ? ExchangeManager.I.GetCurrentDividendAmount() : 0;
+        dividendYieldLabel.text = $"Dividend Yield (Collected Monday): +{dividend} Credits";
     }
 }
