@@ -2,7 +2,7 @@ using UnityEngine;
 using TMPro;
 using System;
 
-public class LogRowUI : MonoBehaviour
+public class NoteLogRowUI : MonoBehaviour
 {
     [SerializeField] private TextMeshProUGUI label;
     [SerializeField] private Color systemColor = new Color(0.8f, 0.9f, 1f);

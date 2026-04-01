@@ -16,5 +16,5 @@ MonoBehaviour:
   category: 5
   title: Idle Battle History
   subtitle: Review battles fought while away
-  body: Unlocks a battle history archive for Auto Battles, recording recent outcomes
-    for later review while maintaining efficient storage.
+  body: Unlocks a battle history archive, "Debrief," for Idle Battles, recording
+    recent outcomes for later review while maintaining efficient storage.

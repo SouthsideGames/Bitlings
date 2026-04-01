@@ -708,7 +708,7 @@ public partial class BattleManager : MonoBehaviour
     private bool ShouldPauseAutoQueueAttack()
     {
         bool tutorialOpen = TutorialOverlayPanel.IsAnyOverlayOpen;
-        bool loggerOpen = BattleLogPanelUI.IsAnyOpen;
+        bool loggerOpen = NoteLogPanelUI.IsAnyOpen;
 
         if (!loggerOpen && UIManager.I != null)
             loggerOpen = UIManager.I.IsOpen(PanelId.Log);

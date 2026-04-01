@@ -677,7 +677,7 @@ GameObject:
   - component: {fileID: 4590963748655132946}
   - component: {fileID: 4402704973628999379}
   m_Layer: 5
-  m_Name: AutoBattleHistoryRowPrefab
+  m_Name: IdleBattleHistoryRowPrefab
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0

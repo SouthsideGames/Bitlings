@@ -4,12 +4,12 @@ using TMPro;
 using System.Collections.Generic;
 using System.Collections;
 
-public class BattleLogPanelUI : MonoBehaviour
+public class NoteLogPanelUI : MonoBehaviour
 {
     [Header("UI")]
     [SerializeField] private ScrollRect scrollRect;
     [SerializeField] private RectTransform content;
-    [SerializeField] private LogRowUI rowPrefab;
+    [SerializeField] private NoteLogRowUI rowPrefab;
 
     [Header("Behavior")]
     [Tooltip("If true, clears the panel whenever a new battle begins.")]
@@ -18,7 +18,7 @@ public class BattleLogPanelUI : MonoBehaviour
     [Tooltip("If true, clears the panel whenever a new encounter begins.")]
     [SerializeField] private bool clearOnEncounterStart = false;
 
-    private readonly List<LogRowUI> _rows = new List<LogRowUI>(256);
+    private readonly List<NoteLogRowUI> _rows = new List<NoteLogRowUI>(256);
     private static int _openPanelCount;
     private bool _countedOpen;
 

@@ -13,7 +13,7 @@ GameObject:
   - component: {fileID: 7007132149050299374}
   - component: {fileID: 387813381229620221}
   m_Layer: 5
-  m_Name: BattleLogPrefab
+  m_Name: NotePrefab
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0

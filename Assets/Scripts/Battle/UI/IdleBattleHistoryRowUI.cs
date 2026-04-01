@@ -5,7 +5,7 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
-public class AutoBattleHistoryRowUI : MonoBehaviour
+public class IdleBattleHistoryRowUI : MonoBehaviour
 {
     [Header("UI")]
     [SerializeField] private TextMeshProUGUI summaryLabel;

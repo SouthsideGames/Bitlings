@@ -2,11 +2,11 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 
-public class AutoBattleHistoryPanelUI : MonoBehaviour
+public class IdleBattleHistoryPanelUI : MonoBehaviour
 {
     [Header("UI")]
     [SerializeField] private Transform listRoot;
-    [SerializeField] private AutoBattleHistoryRowUI rowPrefab;
+    [SerializeField] private IdleBattleHistoryRowUI rowPrefab;
     [SerializeField] private Button refreshButton;
     [SerializeField] private ScrollRect scrollRect;
     [SerializeField] private ScrollContentAutoSizer autoSizer;
@@ -17,7 +17,7 @@ public class AutoBattleHistoryPanelUI : MonoBehaviour
     [SerializeField] private int maxLinesPerEntry = 8;
     [SerializeField] private int expandedRowsCount = 1;
 
-    private readonly List<AutoBattleHistoryRowUI> _rows = new();
+    private readonly List<IdleBattleHistoryRowUI> _rows = new();
 
     void Awake()
     {
