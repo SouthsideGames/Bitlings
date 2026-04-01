@@ -32,7 +32,7 @@ public class PostBattleSummaryPanelUI : MonoBehaviour
     [SerializeField] private TextMeshProUGUI firstHitLabel;
     [SerializeField] private TextMeshProUGUI timeLabel;
 
-    [Header("Promotion Rank XP (Phase 5)")]
+    [Header("Promotion Rank XP")]
     [Tooltip("Optional: root container for the rank XP section. If null, labels/sliders are still updated if assigned.")]
     [SerializeField] private GameObject promotionSectionRoot;
 
