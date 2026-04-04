@@ -21,6 +21,7 @@ public class NoteLogPanelUI : MonoBehaviour
     private readonly List<NoteLogRowUI> _rows = new List<NoteLogRowUI>(256);
     private static int _openPanelCount;
     private bool _countedOpen;
+    private Coroutine _scrollCo;
 
     public static bool IsAnyOpen => _openPanelCount > 0;
 
@@ -81,7 +82,7 @@ public class NoteLogPanelUI : MonoBehaviour
     void HandleAdded(LogEntry e)
     {
         AddRow(e);
-        if (AutoScroll) ScrollToBottom();
+        if (AutoScroll) ScheduleScrollToBottom();
     }
 
     void HandleLogCleared()
@@ -112,21 +113,6 @@ public class NoteLogPanelUI : MonoBehaviour
         var row = Instantiate(rowPrefab, content);
         row.Set(e);
         _rows.Add(row);
-
-        // Force immediate layout so Content height updates now
-        LayoutRebuilder.ForceRebuildLayoutImmediate(content);
-
-        if (AutoScroll && isActiveAndEnabled)
-            StartCoroutine(CoScrollBottomNextFrame());
-    }
-
-    IEnumerator CoScrollBottomNextFrame()
-    {
-        yield return null;
-        Canvas.ForceUpdateCanvases();
-        if (scrollRect != null)
-            scrollRect.verticalNormalizedPosition = 0f;
-        Canvas.ForceUpdateCanvases();
     }
 
     void ClearRows()
@@ -139,13 +125,26 @@ public class NoteLogPanelUI : MonoBehaviour
         _rows.Clear();
     }
 
+    void ScheduleScrollToBottom()
+    {
+        if (_scrollCo != null || !isActiveAndEnabled) return;
+        _scrollCo = StartCoroutine(CoScrollToBottomDeferred());
+    }
+
+    IEnumerator CoScrollToBottomDeferred()
+    {
+        yield return null;
+        if (scrollRect != null && content != null)
+        {
+            Canvas.ForceUpdateCanvases();
+            scrollRect.verticalNormalizedPosition = 0f;
+        }
+        _scrollCo = null;
+    }
+
     void ScrollToBottom()
     {
-        if (!scrollRect) return;
-        Canvas.ForceUpdateCanvases();
-        scrollRect.verticalNormalizedPosition = 0f;
-        LayoutRebuilder.ForceRebuildLayoutImmediate(content);
-        Canvas.ForceUpdateCanvases();
+        ScheduleScrollToBottom();
     }
 
     // ─────────────────────────────────────────────────────────

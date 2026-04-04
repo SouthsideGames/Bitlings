@@ -42,7 +42,7 @@ public class AutoBattleButton : MonoBehaviour,
     // ─────────────────────────────────────────────────────────────
     private bool IsIdleBattleUnlocked()
     {
-        if (FeatureUnlockManager.I == null) return true; 
+        if (FeatureUnlockManager.I == null) return false; 
         return FeatureUnlockManager.I.IsUnlocked(FeatureId.IdleBattle_Basic);
     }
 

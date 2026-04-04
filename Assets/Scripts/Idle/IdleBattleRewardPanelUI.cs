@@ -260,53 +260,16 @@ public class IdleBattleRewardPanelUI : MonoBehaviour
 
     private bool IsMonsterAlreadyOwnedOrUnlocked(string monsterId)
     {
-        try
+        if (string.IsNullOrEmpty(monsterId)) return true;
+        var data = SaveManager.Data;
+        if (data == null) return true;
+        if (data.ownedIds != null) return data.ownedIds.Contains(monsterId);
+        if (data.owned != null)
         {
-            var saveMgrType = Type.GetType("SaveManager");
-            object saveMgr = null;
-
-            if (saveMgrType != null)
-            {
-                var instProp = saveMgrType.GetProperty("I", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
-                if (instProp != null) saveMgr = instProp.GetValue(null, null);
-            }
-
-            if (saveMgr != null)
-            {
-                if (TryInvokeBool(saveMgr, "IsMonsterUnlocked", monsterId, out bool b1)) return b1;
-                if (TryInvokeBool(saveMgr, "IsUnlocked", monsterId, out bool b2)) return b2;
-                if (TryInvokeBool(saveMgr, "HasMonsterUnlocked", monsterId, out bool b3)) return b3;
-                if (TryInvokeBool(saveMgr, "HasUnlockedMonster", monsterId, out bool b4)) return b4;
-
-                if (TryInvokeBool(saveMgr, "HasOwnedMonster", monsterId, out bool b5)) return b5;
-                if (TryInvokeBool(saveMgr, "HasMonster", monsterId, out bool b6)) return b6;
-                if (TryInvokeBool(saveMgr, "OwnsMonster", monsterId, out bool b7)) return b7;
-            }
+            for (int i = 0; i < data.owned.Count; i++)
+                if (data.owned[i] != null && data.owned[i].monsterId == monsterId) return true;
         }
-        catch
-        {
-            // ignore
-        }
-
-        return true; // Conservative fallback: don't show NEW if unsure
-    }
-
-    private bool TryInvokeBool(object target, string methodName, string arg, out bool result)
-    {
-        result = false;
-        if (target == null) return false;
-
-        var t = target.GetType();
-        var mi = t.GetMethod(methodName, System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic);
-        if (mi == null) return false;
-
-        var ps = mi.GetParameters();
-        if (ps == null || ps.Length != 1) return false;
-        if (ps[0].ParameterType != typeof(string)) return false;
-        if (mi.ReturnType != typeof(bool)) return false;
-
-        result = (bool)mi.Invoke(target, new object[] { arg });
-        return true;
+        return false;
     }
 
     private void OnCollect()

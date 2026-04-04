@@ -20,10 +20,10 @@ public class TokenEconomySO : ScriptableObject
     }
 
     // Inverse conversions (for refund/reset features)
-    public int CoresForHp(int hp)   => Mathf.CeilToInt(hp / (float)hpPerCore);
-    public int CoresForAtk(int atk) => Mathf.CeilToInt(atk / (float)atkPerCore);
-    public int CoresForDef(int def) => Mathf.CeilToInt(def / (float)defPerCore);
-    public int CoresForSpd(int spd) => Mathf.CeilToInt(spd / (float)spdPerCore);
+    public int CoresForHp(int hp)   => hpPerCore  <= 0 ? 0 : Mathf.CeilToInt(hp  / (float)hpPerCore);
+    public int CoresForAtk(int atk) => atkPerCore <= 0 ? 0 : Mathf.CeilToInt(atk / (float)atkPerCore);
+    public int CoresForDef(int def) => defPerCore <= 0 ? 0 : Mathf.CeilToInt(def / (float)defPerCore);
+    public int CoresForSpd(int spd) => spdPerCore <= 0 ? 0 : Mathf.CeilToInt(spd / (float)spdPerCore);
 
     public static TokenEconomySO Load() => Resources.Load<TokenEconomySO>("TokenEconomy");
 }

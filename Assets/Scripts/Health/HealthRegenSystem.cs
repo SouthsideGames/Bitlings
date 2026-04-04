@@ -88,6 +88,14 @@ public class HealthRegenSystem : MonoBehaviour
             }
 
             long last = e.lastHPUnix > 0 ? e.lastHPUnix : SaveManager.Data.lastSavedUnix;
+
+            // If device clock moved backwards, clamp stored timestamp to prevent frozen regen.
+            if (last > nowUnix && deltaSecondsOverride == null)
+            {
+                updated.lastHPUnix = nowUnix;
+                last = nowUnix;
+            }
+
             long delta = deltaSecondsOverride ?? Math.Max(0, nowUnix - Math.Max(0, last));
             if (delta <= 0) return false;
 

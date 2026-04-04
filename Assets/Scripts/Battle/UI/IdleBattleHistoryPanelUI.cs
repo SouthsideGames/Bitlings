@@ -101,7 +101,6 @@ public class IdleBattleHistoryPanelUI : MonoBehaviour
 
         Canvas.ForceUpdateCanvases();
         scrollRect.verticalNormalizedPosition = 1f;
-        Canvas.ForceUpdateCanvases();
     }
 
     private bool IsUnlocked()

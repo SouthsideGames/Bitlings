@@ -677,16 +677,6 @@ public void ShowSection(SettingsSection section, bool instant = false)
         if (mgr != null) mgr.SetCustomSeed(text);
     }
 
-    void OnUseCustomSeedChanged_Legacy(bool on)
-    {
-        var mgr = SettingsManager.I;
-        if (mgr != null) mgr.SetUseCustomSeed(on);
-
-        SeedService.ClearSessionSeed();
-        SeedService.ApplyGlobalSeedForSession();
-        RefreshDailySeedUi();
-    }
-
     void OnClickApplyCustomSeed()
     {
         var fm = FeatureUnlockManager.I;

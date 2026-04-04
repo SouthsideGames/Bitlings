@@ -26,7 +26,11 @@ public class BattleTextBoxUI : MonoBehaviour
     [SerializeField] private int topCanvasSortingOrder = 5000;
 
     [Header("Debug")]
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
     [SerializeField] private bool debugTextTrace = true;
+#else
+    private const bool debugTextTrace = false;
+#endif
 
     public bool HasRenderableTarget => lineText != null;
 

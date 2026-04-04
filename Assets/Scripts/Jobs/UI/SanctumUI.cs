@@ -1,7 +1,6 @@
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
-using System.Linq;
 using System;
 using System.Collections.Generic;
 
@@ -34,6 +33,7 @@ public class SanctumUI : MonoBehaviour
     [SerializeField, Min(0.1f)] private float blessingDurationMinutes = 30f;
 
     private JobSiteSO[] _sites;
+    private float _timerAccum;
 
     void OnEnable()
     {
@@ -63,9 +63,10 @@ public class SanctumUI : MonoBehaviour
 
     void Update()
     {
+        _timerAccum += Time.unscaledDeltaTime;
+        if (_timerAccum < 1f) return;
+        _timerAccum = 0f;
         RefreshTimer();
-        RefreshButtonLabel();
-        RefreshUseButtonVisibility();
     }
 
     void OnResourcesChanged()
@@ -168,9 +169,9 @@ public class SanctumUI : MonoBehaviour
             return;
         }
 
-        var options = _sites
-            .Select(s => new TMP_Dropdown.OptionData(JobStrings.SiteName(s.jobType)))
-            .ToList();
+        var options = new List<TMP_Dropdown.OptionData>(_sites.Length);
+        for (int i = 0; i < _sites.Length; i++)
+            options.Add(new TMP_Dropdown.OptionData(JobStrings.SiteName(_sites[i].jobType)));
 
         siteDropdown.AddOptions(options);
         siteDropdown.value = 0;

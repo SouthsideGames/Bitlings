@@ -43,6 +43,7 @@ public sealed class WorldEventTickerUI : MonoBehaviour
     private CanvasGroup _barCanvasGroup;
     private Coroutine _loop;
     private int _messageIndex;
+    private bool _featureChecked;
 
     private void Awake()
     {
@@ -56,6 +57,9 @@ public sealed class WorldEventTickerUI : MonoBehaviour
         EnsureCanvasGroup();
         RefreshBarActive();
 
+        if (FeatureUnlockManager.I != null)
+            FeatureUnlockManager.I.OnFeatureUnlocked += HandleFeatureUnlocked;
+
         // Start/stop loop based on unlock state.
         if (IsFeatureUnlocked())
             StartLoopIfNeeded();
@@ -66,25 +70,27 @@ public sealed class WorldEventTickerUI : MonoBehaviour
     private void OnDisable()
     {
         StopLoop();
+        if (FeatureUnlockManager.I != null)
+            FeatureUnlockManager.I.OnFeatureUnlocked -= HandleFeatureUnlocked;
+    }
+
+    private void HandleFeatureUnlocked(FeatureId feature)
+    {
+        if (!IsFeatureUnlocked()) return;
+        if (worldEventBar && !worldEventBar.activeSelf)
+            worldEventBar.SetActive(true);
+        StartLoopIfNeeded();
     }
 
     private void Update()
     {
-        // Keep this simple and robust: enforce state continuously.
-        // If unlock state changes at runtime, the bar responds immediately.
-        bool unlocked = IsFeatureUnlocked();
-
-        if (!unlocked)
-        {
-            if (worldEventBar && worldEventBar.activeSelf)
-                StopLoopAndHide();
-            return;
-        }
-
-        // Unlocked
+        // Only needed for the one-time case where FeatureUnlockManager is not ready
+        // in OnEnable — once hooked, this early-outs immediately.
+        if (_featureChecked) return;
+        if (!IsFeatureUnlocked()) return;
+        _featureChecked = true;
         if (worldEventBar && !worldEventBar.activeSelf)
             worldEventBar.SetActive(true);
-
         StartLoopIfNeeded();
     }
 

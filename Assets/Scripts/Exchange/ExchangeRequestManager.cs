@@ -24,6 +24,7 @@ public sealed class ExchangeRequestManager : MonoBehaviour
 
     private ExchangeSaveData _save;
     private float _rotationTimer;
+    private readonly List<ActiveRequest> _matchResult = new List<ActiveRequest>();
 
     // ─────────── Lifecycle ───────────
 
@@ -81,11 +82,11 @@ public sealed class ExchangeRequestManager : MonoBehaviour
     /// </summary>
     public List<ActiveRequest> GetMatchingRequests(string speciesId)
     {
-        var result = new List<ActiveRequest>();
-        if (_save?.activeRequests == null || string.IsNullOrEmpty(speciesId)) return result;
+        _matchResult.Clear();
+        if (_save?.activeRequests == null || string.IsNullOrEmpty(speciesId)) return _matchResult;
 
         var def = MonsterCatalog.GetById(speciesId);
-        if (def == null) return result;
+        if (def == null) return _matchResult;
 
         long now = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
 
@@ -96,9 +97,9 @@ public sealed class ExchangeRequestManager : MonoBehaviour
             if (r.expiresUnix > 0 && r.expiresUnix <= now) continue;
 
             if (MatchesRequest(r, def))
-                result.Add(r);
+                _matchResult.Add(r);
         }
-        return result;
+        return _matchResult;
     }
 
     /// <summary>
@@ -123,19 +124,29 @@ public sealed class ExchangeRequestManager : MonoBehaviour
         var def = MonsterCatalog.GetById(speciesId);
         if (def == null || !MatchesRequest(match, def)) return 0;
 
-        match.fulfilled = true;
+        int credits = Mathf.Max(0, match.creditReward);
+        int bonusAmount = Mathf.Max(0, match.bonusResourceAmount);
 
-        // Grant rewards
-        int credits = match.creditReward;
-        if (credits > 0) ResourceBank.Add(ResourceType.Credits, credits);
-        if (match.bonusResourceAmount > 0)
-            ResourceBank.Add(match.bonusResourceType, match.bonusResourceAmount);
+        ResourceBank.BeginBatch();
+        try
+        {
+            match.fulfilled = true;
 
-        // Track stats
-        _save.totalRequestsFulfilled++;
+            // Grant rewards
+            if (credits > 0) ResourceBank.Add(ResourceType.Credits, credits);
+            if (bonusAmount > 0)
+                ResourceBank.Add(match.bonusResourceType, bonusAmount);
 
-        SaveManager.SetExchangeBlob(_save);
-        GameEvents.OnResourcesChanged?.Invoke();
+            // Track stats
+            _save.totalRequestsFulfilled++;
+
+            SaveManager.SetExchangeBlob(_save);
+        }
+        finally
+        {
+            ResourceBank.EndBatch();
+        }
+
         GameEvents.RequestFulfilled?.Invoke(requestId, speciesId);
 
         return credits;

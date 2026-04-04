@@ -35,8 +35,12 @@ public class StarterSelector : MonoBehaviour
     [SerializeField] private string homeTutorialKey = "tut_home_v1"; // must match TutorialOverlayPanel.tutorialKey
 
     [Header("Debug")]
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
     [Tooltip("Bypass the MonsterDetail panel entirely. Click chooses immediately.")]
     [SerializeField] private bool bypassDetailPanelForDebug = true;
+#else
+    private const bool bypassDetailPanelForDebug = false;
+#endif
 
     private MonsterDataSO[] _starters;
     private bool _locked;

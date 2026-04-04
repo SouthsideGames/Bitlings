@@ -275,6 +275,8 @@ public class UpgradesPanelUI : MonoBehaviour
             case FeatureId.IdleBattle_Basic:
             case FeatureId.IdleBattle_RewardBoost:
             case FeatureId.IdleBattle_OfflineCapture:
+            case FeatureId.IdleBattle_LogArchive:
+            case FeatureId.IdleBattle_SpeedControl:
                 return UpgradeSection.IdleBattle;
 
             case FeatureId.AutoGrowth_Basic:

@@ -1458,12 +1458,12 @@ if (_flatStartRemainingTurns.TryGetValue(monsterId, out int remTurns) && remTurn
             // ── Limit gate ──
             if (oet.triggerLimit == TriggerLimitKind.OncePerBattle && _onEventFiredBattle.Contains(limitKey))
             {
-                UnityEngine.Debug.Log($"[OnEventTrigger] {ownerName} — {titleName}: BLOCKED (once-per-battle already fired)");
+                DevLog.Log($"[OnEventTrigger] {ownerName} — {titleName}: BLOCKED (once-per-battle already fired)");
                 continue;
             }
             if (oet.triggerLimit == TriggerLimitKind.OncePerTurn && _onEventFiredTurn.Contains(limitKey))
             {
-                UnityEngine.Debug.Log($"[OnEventTrigger] {ownerName} — {titleName}: BLOCKED (once-per-turn already fired)");
+                DevLog.Log($"[OnEventTrigger] {ownerName} — {titleName}: BLOCKED (once-per-turn already fired)");
                 continue;
             }
 
@@ -1472,11 +1472,11 @@ if (_flatStartRemainingTurns.TryGetValue(monsterId, out int remTurns) && remTurn
             float chance = Mathf.Clamp(oet.chancePercent, 0f, 100f);
             if (roll >= chance)
             {
-                UnityEngine.Debug.Log($"[OnEventTrigger] {ownerName} — {titleName}: trigger={triggerKind} chance FAILED (rolled {roll:F1} >= {chance:F0}%)");
+                DevLog.Log($"[OnEventTrigger] {ownerName} — {titleName}: trigger={triggerKind} chance FAILED (rolled {roll:F1} >= {chance:F0}%)");
                 continue;
             }
 
-            UnityEngine.Debug.Log($"[OnEventTrigger] {ownerName} — {titleName}: trigger={triggerKind} chance PASSED (rolled {roll:F1} < {chance:F0}%)");
+            DevLog.Log($"[OnEventTrigger] {ownerName} — {titleName}: trigger={triggerKind} chance PASSED (rolled {roll:F1} < {chance:F0}%)");
 
             // ── Mark as fired for limit tracking ──
             if (oet.triggerLimit == TriggerLimitKind.OncePerBattle)
@@ -1545,7 +1545,7 @@ if (_flatStartRemainingTurns.TryGetValue(monsterId, out int remTurns) && remTurn
                     cmd.magnitude *= mult;
                     BattleLogger.LogTitleActivation(ownerName, titleName,
                         $"{cmd.sourceType} {cmd.tier} synergy power +{amp.value:F0}%");
-                    UnityEngine.Debug.Log($"[SynergyAmp] {titleName}: {cmd.sourceType} {cmd.tier} magnitude {baseMag:F3} → {cmd.magnitude:F3} (×{mult:F2}, +{amp.value:F0}%)");
+                    DevLog.Log($"[SynergyAmp] {titleName}: {cmd.sourceType} {cmd.tier} magnitude {baseMag:F3} → {cmd.magnitude:F3} (×{mult:F2}, +{amp.value:F0}%)");
                     break;
                 }
                 case SynergyAmpType.BonusTurns:
@@ -1556,7 +1556,7 @@ if (_flatStartRemainingTurns.TryGetValue(monsterId, out int remTurns) && remTurn
                     cmd.turns += bonus;
                     BattleLogger.LogTitleActivation(ownerName, titleName,
                         $"{cmd.sourceType} {cmd.tier} synergy +{bonus} turn(s)");
-                    UnityEngine.Debug.Log($"[SynergyAmp] {titleName}: {cmd.sourceType} {cmd.tier} turns {baseTurns} → {cmd.turns} (+{bonus})");
+                    DevLog.Log($"[SynergyAmp] {titleName}: {cmd.sourceType} {cmd.tier} turns {baseTurns} → {cmd.turns} (+{bonus})");
                     break;
                 }
                 case SynergyAmpType.BonusMagnitude:
@@ -1565,7 +1565,7 @@ if (_flatStartRemainingTurns.TryGetValue(monsterId, out int remTurns) && remTurn
                     cmd.magnitude += Mathf.Max(0f, amp.value);
                     BattleLogger.LogTitleActivation(ownerName, titleName,
                         $"{cmd.sourceType} {cmd.tier} synergy +{amp.value:F1} magnitude");
-                    UnityEngine.Debug.Log($"[SynergyAmp] {titleName}: {cmd.sourceType} {cmd.tier} magnitude {baseMag:F3} → {cmd.magnitude:F3} (+{amp.value:F3} flat)");
+                    DevLog.Log($"[SynergyAmp] {titleName}: {cmd.sourceType} {cmd.tier} magnitude {baseMag:F3} → {cmd.magnitude:F3} (+{amp.value:F3} flat)");
                     break;
                 }
             }
@@ -1621,11 +1621,11 @@ if (_flatStartRemainingTurns.TryGetValue(monsterId, out int remTurns) && remTurn
                 {
                     case AuraEffectKind.FlatBoost:
                         flatSum += aura.value;
-                        UnityEngine.Debug.Log($"[TeamAura] {srcName}'s \"{titleName}\" → +{aura.value:F0} flat {stat} to {(isSelf ? "self" : targetId)}");
+                        DevLog.Log($"[TeamAura] {srcName}'s \"{titleName}\" → +{aura.value:F0} flat {stat} to {(isSelf ? "self" : targetId)}");
                         break;
                     case AuraEffectKind.PercentBoost:
                         pctSum += aura.value / 100f;
-                        UnityEngine.Debug.Log($"[TeamAura] {srcName}'s \"{titleName}\" → +{aura.value:F0}% {stat} to {(isSelf ? "self" : targetId)}");
+                        DevLog.Log($"[TeamAura] {srcName}'s \"{titleName}\" → +{aura.value:F0}% {stat} to {(isSelf ? "self" : targetId)}");
                         break;
                 }
             }
@@ -1667,7 +1667,7 @@ if (_flatStartRemainingTurns.TryGetValue(monsterId, out int remTurns) && remTurn
 
                 string titleName = aura.DisplayOrId;
                 string srcName = srcDef != null ? srcDef.displayName : sourceId;
-                UnityEngine.Debug.Log($"[TeamAura] {srcName}'s \"{titleName}\" → −{aura.value:F0}% incoming damage to {(isSelf ? "self" : targetId)}");
+                DevLog.Log($"[TeamAura] {srcName}'s \"{titleName}\" → −{aura.value:F0}% incoming damage to {(isSelf ? "self" : targetId)}");
             }
         }
 
@@ -1728,7 +1728,7 @@ if (_flatStartRemainingTurns.TryGetValue(monsterId, out int remTurns) && remTurn
             string titleName = sit.DisplayOrId;
             BattleLogger.LogTitleActivation(ownerName, titleName,
                 $"+{Mathf.RoundToInt(gain)} shield from overheal ({Mathf.RoundToInt(overhealAmount)} excess × {sit.conversionPercent:F0}%)");
-            UnityEngine.Debug.Log($"[ShieldInteraction] {ownerName} — {titleName}: overheal {Mathf.RoundToInt(overhealAmount)} → +{Mathf.RoundToInt(gain)} shield");
+            DevLog.Log($"[ShieldInteraction] {ownerName} — {titleName}: overheal {Mathf.RoundToInt(overhealAmount)} → +{Mathf.RoundToInt(gain)} shield");
         }
 
         return totalShield;
@@ -1792,7 +1792,7 @@ if (_flatStartRemainingTurns.TryGetValue(monsterId, out int remTurns) && remTurn
 
             BattleLogger.LogTitleActivation(ownerName, titleName,
                 $"shield broke! Activated {sit.breakEffect}");
-            UnityEngine.Debug.Log($"[ShieldInteraction] {ownerName} — {titleName}: shield break → {sit.breakEffect} (value={sit.breakEffectValue:F1})");
+            DevLog.Log($"[ShieldInteraction] {ownerName} — {titleName}: shield break → {sit.breakEffect} (value={sit.breakEffectValue:F1})");
 
             TitlesAdapter.RequestTitleEffect(req);
         }
@@ -1828,12 +1828,12 @@ if (_flatStartRemainingTurns.TryGetValue(monsterId, out int remTurns) && remTurn
             // ── Limit gate ──
             if (sat.triggerLimit == TriggerLimitKind.OncePerBattle && _onEventFiredBattle.Contains(limitKey))
             {
-                UnityEngine.Debug.Log($"[StatusApplyTitle] {ownerName} — {titleName}: BLOCKED (once-per-battle already fired)");
+                DevLog.Log($"[StatusApplyTitle] {ownerName} — {titleName}: BLOCKED (once-per-battle already fired)");
                 continue;
             }
             if (sat.triggerLimit == TriggerLimitKind.OncePerTurn && _onEventFiredTurn.Contains(limitKey))
             {
-                UnityEngine.Debug.Log($"[StatusApplyTitle] {ownerName} — {titleName}: BLOCKED (once-per-turn already fired)");
+                DevLog.Log($"[StatusApplyTitle] {ownerName} — {titleName}: BLOCKED (once-per-turn already fired)");
                 continue;
             }
 
@@ -1842,11 +1842,11 @@ if (_flatStartRemainingTurns.TryGetValue(monsterId, out int remTurns) && remTurn
             float chance = Mathf.Clamp(sat.chancePercent, 0f, 100f);
             if (roll >= chance)
             {
-                UnityEngine.Debug.Log($"[StatusApplyTitle] {ownerName} — {titleName}: trigger={triggerKind} chance FAILED (rolled {roll:F1} >= {chance:F0}%)");
+                DevLog.Log($"[StatusApplyTitle] {ownerName} — {titleName}: trigger={triggerKind} chance FAILED (rolled {roll:F1} >= {chance:F0}%)");
                 continue;
             }
 
-            UnityEngine.Debug.Log($"[StatusApplyTitle] {ownerName} — {titleName}: trigger={triggerKind} chance PASSED → applying {sat.status} to {sat.target}");
+            DevLog.Log($"[StatusApplyTitle] {ownerName} — {titleName}: trigger={triggerKind} chance PASSED → applying {sat.status} to {sat.target}");
 
             // ── Mark as fired for limit tracking ──
             if (sat.triggerLimit == TriggerLimitKind.OncePerBattle)

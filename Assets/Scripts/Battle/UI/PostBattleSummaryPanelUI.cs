@@ -100,7 +100,6 @@ public class PostBattleSummaryPanelUI : MonoBehaviour
     {
         EncounterPanelUI.I?.ForceBlinderAlphaToOne();
 
-        // CLEANUP REQUEST:
         // If defeated, go to Home after continuing.
         if (_lastResult.HasValue && !_lastResult.Value.victory && !_lastResult.Value.escaped)
         {

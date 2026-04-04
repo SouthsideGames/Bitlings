@@ -241,6 +241,7 @@ public sealed class BattleBoosterController : MonoBehaviour
         int bonus = speedFlatBonus;
 
         speedDur = 0;
+        cdSpd = boosterCooldownTurns;
 
         GameEvents.OnBoostersChanged?.Invoke();
         GameEvents.RaiseBattleStatsChanged();

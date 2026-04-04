@@ -2079,6 +2079,8 @@ EndBattleRouted(false);
         if (benchBtn1) benchBtn1.interactable = false;
         if (benchBtn2) benchBtn2.interactable = false;
 
+        BattleTempBuffs.I?.ClearAll();
+
         var result = new BattleResult
         {
             victory = victory,

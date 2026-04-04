@@ -103,10 +103,14 @@ public sealed class ScrollContentAutoSizer : MonoBehaviour
 
     private void LateUpdate()
     {
+        // refreshEveryFrame is extremely expensive on mobile — force off.
+        // Callers should use Refresh(force:true) or the settle-frame system instead.
         if (refreshEveryFrame)
         {
-            Refresh(force: false);
-            return;
+            refreshEveryFrame = false;
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            Debug.LogWarning($"[ScrollContentAutoSizer] refreshEveryFrame was ON for \"{gameObject.name}\" — force-disabled for mobile perf.", this);
+#endif
         }
 
         // Lightweight child-count monitoring: detect additions/removals even when refreshEveryFrame is off.

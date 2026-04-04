@@ -68,6 +68,9 @@ public static class XPManager
         if (target == null || string.IsNullOrEmpty(target.monsterId))
             return false;
 
+        if (target.level >= LevelRules.MaxLevel)
+            return false;
+
         var rm = ResourceManager.I;
         if (rm == null) return false;
 

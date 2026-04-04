@@ -21,7 +21,7 @@ public static class IdleBattleStore
             if (TryReadContainer(FilePath, out var loaded) || TryReadContainer(BackupPath, out loaded))
                 _cache = loaded;
         }
-        catch { }
+        catch (Exception ex) { Debug.LogError($"IdleBattleStore.Load failed: {ex}"); }
         _cache ??= new Container { session = new IdleBattleSession() };
         _cache.session.log ??= new List<IdleEncounterLogEntry>();
         return _cache.session;
@@ -37,7 +37,7 @@ public static class IdleBattleStore
             TryCopy(FilePath, BackupPath);
             _cache = wrap;
         }
-        catch { }
+        catch (Exception ex) { Debug.LogError($"IdleBattleStore.Save failed: {ex}"); }
     }
 
     public static void ClearLog()
@@ -80,8 +80,9 @@ public static class IdleBattleStore
             if (File.Exists(path)) File.Delete(path);
             File.Move(tmp, path);
         }
-        catch
+        catch (Exception ex)
         {
+            Debug.LogError($"IdleBattleStore.AtomicWrite move failed: {ex}");
             try { if (!File.Exists(path)) File.Copy(tmp, path); } catch { }
             try { File.Delete(tmp); } catch { }
         }

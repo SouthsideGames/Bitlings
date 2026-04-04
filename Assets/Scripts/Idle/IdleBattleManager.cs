@@ -130,6 +130,11 @@ public class IdleBattleManager : MonoBehaviour
         }
     }
 
+    void OnDestroy()
+    {
+        if (I == this) I = null;
+    }
+
     void Start()
     {
         if (IsIdleBattleUnlocked())
@@ -181,7 +186,7 @@ public class IdleBattleManager : MonoBehaviour
     private bool IsIdleBattleUnlocked()
     {
         if (FeatureUnlockManager.I == null)
-            return true;
+            return false;
 
         return FeatureUnlockManager.I.IsUnlocked(FeatureId.IdleBattle_Basic);
     }
@@ -189,7 +194,7 @@ public class IdleBattleManager : MonoBehaviour
     private bool IsOfflineCaptureUnlocked()
     {
         if (FeatureUnlockManager.I == null)
-            return true;
+            return false;
         if (offlineCaptureFeatureId == FeatureId.None)
             return true;
         return FeatureUnlockManager.I.IsUnlocked(offlineCaptureFeatureId);
@@ -321,7 +326,8 @@ public class IdleBattleManager : MonoBehaviour
 if (elapsed <= 0.1f) return;
 
         float clamped = Mathf.Min(elapsed, config.maxOfflineHours * 3600f);
-        int timeEnc = Mathf.FloorToInt(clamped / config.secondsPerEncounter);
+        float safeSpe = Mathf.Max(0.25f, config.secondsPerEncounter);
+        int timeEnc = Mathf.FloorToInt(clamped / safeSpe);
         if (timeEnc <= 0) return;
 
         int baseCost = GetEncounterCostSafe();
@@ -381,7 +387,8 @@ if (elapsed <= 0.1f) return;
                 float dtRaw = Mathf.Max(0, now - s.lastTickUnix);
         // Clamp foreground backlog too (OnApplicationPause/Focus can create large dt when returning).
         float dt = Mathf.Min(dtRaw, config.maxOfflineHours * 3600f);
-int canRun = Mathf.FloorToInt(dt / config.secondsPerEncounter);
+        float safeSpe2 = Mathf.Max(0.25f, config.secondsPerEncounter);
+        int canRun = Mathf.FloorToInt(dt / safeSpe2);
         if (canRun <= 0) return;
 
         int curEnergy = GetEnergySafe();
@@ -432,6 +439,7 @@ int canRun = Mathf.FloorToInt(dt / config.secondsPerEncounter);
         // save-state guard effective.
 
         ResourceBank.BeginBatch();
+        bool batchCommitted = false;
 
         try
         {
@@ -593,7 +601,7 @@ int canRun = Mathf.FloorToInt(dt / config.secondsPerEncounter);
                         ? ResourceManager.I.AddCreditsWithTitles(p.creditsBase, leadIdForGrant, p.wildDef, p.wildLevel)
                         : 0;
                 }
-                catch { awarded = 0; }
+                catch (Exception ex) { awarded = 0; Debug.LogException(ex); }
             }
 
             AddToLogMerged(s.log, p.wildDef.id, awarded, p.premium);
@@ -602,7 +610,7 @@ int canRun = Mathf.FloorToInt(dt / config.secondsPerEncounter);
             {
                 bool applied = false;
                 try { applied = ApplyIdleCaptureToSave(p.wildDef, p.wildLevel, isPremium: p.premium); }
-                catch { applied = false; }
+                catch (Exception ex) { applied = false; Debug.LogException(ex); }
 
                 if (applied)
                 {
@@ -651,10 +659,14 @@ int canRun = Mathf.FloorToInt(dt / config.secondsPerEncounter);
 
             // Save-State Guard: batch committed successfully.
             IdleBattleSaveStateGuard.Complete(guardId);
+            batchCommitted = true;
         }
         finally
         {
-            try { ResourceBank.EndBatch(); } catch { }
+            if (batchCommitted)
+                try { ResourceBank.EndBatch(); } catch { }
+            else
+                ResourceBank.CancelBatch();
             _headlessBatchRunning = false;
         }
     }
@@ -831,8 +843,15 @@ int canRun = Mathf.FloorToInt(dt / config.secondsPerEncounter);
         if (team != null && team.Count > 0)
         {
             int sum = 0;
-            for (int i = 0; i < team.Count; i++) sum += team[i].level;
-            avg = Mathf.Max(1, Mathf.RoundToInt((float)sum / team.Count));
+            int valid = 0;
+            for (int i = 0; i < team.Count; i++)
+            {
+                if (team[i] == null) continue;
+                sum += team[i].level;
+                valid++;
+            }
+            if (valid > 0)
+                avg = Mathf.Max(1, Mathf.RoundToInt((float)sum / valid));
         }
         return Mathf.Clamp(avg + UnityEngine.Random.Range(-1, 2), 1, 99);
     }
@@ -997,7 +1016,12 @@ int canRun = Mathf.FloorToInt(dt / config.secondsPerEncounter);
     {
         if (log == null) return;
 
-        var e = log.Find(x => x.monsterId == monsterId);
+        IdleEncounterLogEntry e = null;
+        for (int i = 0; i < log.Count; i++)
+        {
+            if (log[i].monsterId == monsterId) { e = log[i]; break; }
+        }
+
         if (e == null)
         {
             e = new IdleEncounterLogEntry
@@ -1124,6 +1148,7 @@ int canRun = Mathf.FloorToInt(dt / config.secondsPerEncounter);
 
     private long NowUnix() => SaveManager.NowUnix();
 
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
     public void Dev_RunEncounters(int count)
     {
         RunBatchEncounters(count);
@@ -1141,6 +1166,7 @@ int canRun = Mathf.FloorToInt(dt / config.secondsPerEncounter);
 
     public void Dev_OpenSummary() => ForceOpenSummary();
     public void Dev_ClearIdleLog() => IdleBattleStore.ClearLog();
+#endif
 
     private struct DamageFilterView
     {

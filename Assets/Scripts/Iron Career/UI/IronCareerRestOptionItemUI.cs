@@ -38,7 +38,7 @@ public sealed class IronCareerRestOptionItemUI : MonoBehaviour
     public void Bind(IronCareerRestPanelUI.RestOption option, string title, string desc, string preview)
     {
         EnsureButtonHierarchyActive();
-        Debug.Log($"[RestOptionItem] Bind({option}) button={(button != null ? button.name : "NULL")} interactable={(button ? button.interactable : false)} gameObject.active={gameObject.activeSelf}");
+        DevLog.Log($"[RestOptionItem] Bind({option}) button={(button != null ? button.name : "NULL")} interactable={(button ? button.interactable : false)} gameObject.active={gameObject.activeSelf}");
 
         Option = option;
 
@@ -58,7 +58,7 @@ public sealed class IronCareerRestOptionItemUI : MonoBehaviour
             button.onClick.RemoveListener(HandleClick);
             button.onClick.AddListener(HandleClick);
             button.interactable = onClick != null;
-            Debug.Log($"[RestOptionItem] SetOnClick({Option}) button={button.name} interactable={button.interactable} listeners={button.onClick.GetPersistentEventCount()} btnActive={button.gameObject.activeSelf} btnEnabled={button.enabled}");
+            DevLog.Log($"[RestOptionItem] SetOnClick({Option}) button={button.name} interactable={button.interactable} listeners={button.onClick.GetPersistentEventCount()} btnActive={button.gameObject.activeSelf} btnEnabled={button.enabled}");
         }
         else
         {
@@ -68,7 +68,7 @@ public sealed class IronCareerRestOptionItemUI : MonoBehaviour
 
     public void SetSelected(bool selected)
     {
-        Debug.Log($"[RestOptionItem] SetSelected({selected}) option={Option} selectedFrame={(selectedFrame ? selectedFrame.name : "NULL")} background={(background ? "yes" : "NULL")}");
+        DevLog.Log($"[RestOptionItem] SetSelected({selected}) option={Option} selectedFrame={(selectedFrame ? selectedFrame.name : "NULL")} background={(background ? "yes" : "NULL")}");
         if (selectedFrame && selectedFrame != gameObject) selectedFrame.SetActive(selected);
         if (background) background.color = selected ? selectedTint : unselectedTint;
         if (!selected) EnsureButtonHierarchyActive();
@@ -82,10 +82,13 @@ public sealed class IronCareerRestOptionItemUI : MonoBehaviour
 
     private void OnEnable()
     {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
         // One-frame delayed diagnostic: log full button + CanvasGroup state after panel is shown.
         StartCoroutine(DiagnosticNextFrame());
+#endif
     }
 
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
     private System.Collections.IEnumerator DiagnosticNextFrame()
     {
         yield return null; // wait one frame so all panels finish showing
@@ -162,7 +165,9 @@ public sealed class IronCareerRestOptionItemUI : MonoBehaviour
                   $"\nActive sibling panels with blocksRaycasts:{siblingInfo}" +
                   $"\nAncestor Graphics with raycastTarget:{blockerInfo}");
     }
+#endif
 
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
     private void Update()
     {
         // Every-frame tap diagnostic: what does EventSystem actually hit?
@@ -182,7 +187,7 @@ public sealed class IronCareerRestOptionItemUI : MonoBehaviour
         var eventSystem = UnityEngine.EventSystems.EventSystem.current;
         if (eventSystem == null)
         {
-            Debug.LogWarning("[RestOptionItem TAP] EventSystem.current is NULL!");
+            DevLog.Log("[RestOptionItem TAP] EventSystem.current is NULL!");
             return;
         }
 
@@ -204,8 +209,9 @@ public sealed class IronCareerRestOptionItemUI : MonoBehaviour
         if (results.Count == 0)
             hitInfo = "\n    (nothing hit)";
 
-        Debug.Log($"[RestOptionItem TAP] pos={pos} hits={results.Count}{hitInfo}");
+        DevLog.Log($"[RestOptionItem TAP] pos={pos} hits={results.Count}{hitInfo}");
     }
+#endif
 
     private void EnsureButtonHierarchyActive()
     {
@@ -257,7 +263,7 @@ public sealed class IronCareerRestOptionItemUI : MonoBehaviour
 
     private void HandleClick()
     {
-        Debug.Log($"[RestOptionItem] HandleClick! option={Option} hasCallback={(_onClick != null)}");
+        DevLog.Log($"[RestOptionItem] HandleClick! option={Option} hasCallback={(_onClick != null)}");
         AudioManager.I?.PlayClick();
         _onClick?.Invoke();
     }

@@ -113,6 +113,7 @@ public class UIManager : MonoBehaviour
 
     private readonly Dictionary<PanelId, PanelEntry> _map = new();
     private readonly HashSet<PanelId> _open = new();
+    private readonly List<PanelId> _tempPanelList = new();
 
     private Coroutine _idleRewardCo;
 
@@ -167,8 +168,9 @@ public class UIManager : MonoBehaviour
 
     public void CloseAll()
     {
-        var list = new List<PanelId>(_open);
-        foreach (var id in list)
+        _tempPanelList.Clear();
+        _tempPanelList.AddRange(_open);
+        foreach (var id in _tempPanelList)
             SetImmediate(id, false, fireEvent: false);
 
         _open.Clear();
@@ -176,8 +178,9 @@ public class UIManager : MonoBehaviour
 
     public void CloseAllExcept(PanelId keep)
     {
-        var list = new List<PanelId>(_open);
-        foreach (var id in list)
+        _tempPanelList.Clear();
+        _tempPanelList.AddRange(_open);
+        foreach (var id in _tempPanelList)
             if (id != keep) SetActive(id, false);
     }
 
@@ -213,7 +216,7 @@ public class UIManager : MonoBehaviour
         if (SaveManager.IsTutorialComplete(TutorialAutoEncounterKey)) return;
 
         // Only show once idle battles have been unlocked
-        if (FeatureUnlockManager.I != null &&
+        if (FeatureUnlockManager.I == null ||
             !FeatureUnlockManager.I.IsUnlocked(FeatureId.IdleBattle_Basic))
             return;
 
@@ -356,8 +359,9 @@ public class UIManager : MonoBehaviour
     private void CloseAllMainPanelsExcept(PanelId keepMain)
     {
         var keepRoot = GetRoot(keepMain);
-        var list = new List<PanelId>(_open);
-        foreach (var id in list)
+        _tempPanelList.Clear();
+        _tempPanelList.AddRange(_open);
+        foreach (var id in _tempPanelList)
         {
             if (id == keepMain) continue;
             if (IsOverlayPanel(id)) continue;

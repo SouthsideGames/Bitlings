@@ -311,19 +311,7 @@ public class FeatureUnlockManager : MonoBehaviour
 
     private void EnableOfflineCaptures()
     {
-        var cfg = Resources.Load<IdleBattleConfigSO>("IdleBattleConfig");
-        if (cfg != null)
-        {
-            cfg.allowCapturesOffline = true;
-            #if UNITY_EDITOR || DEVELOPMENT_BUILD
-            DevLog.Log("[FeatureUnlockManager] Enabled Offline Captures (IdleBattle_OfflineCapture)");
-            #endif
-        }
-        else
-        {
-            #if UNITY_EDITOR || DEVELOPMENT_BUILD
-            Debug.LogWarning("[FeatureUnlockManager] IdleBattleConfigSO not found when enabling offline capture.");
-            #endif
-        }
+        // No-op: offline capture is gated by FeatureUnlockManager.IsUnlocked() at runtime.
+        // Previously this mutated the ScriptableObject asset directly, which is unsafe in builds.
     }
 }

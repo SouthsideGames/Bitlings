@@ -543,10 +543,7 @@ public partial class BattleManager : MonoBehaviour
 
         GameEvents.OnTeamChanged?.Invoke();
 
-        BattleTempBuffs.I?.ClearPlayerAtkBonus();
-        BattleTempBuffs.I?.ClearPlayerSpeedBonus();
-        BattleTempBuffs.I?.ClearPlayerHPBonus();
-        BattleTempBuffs.I?.ClearPlayerDefenseBonus();
+        BattleTempBuffs.I?.ClearAll();
 
         string outcomeLabel = escaped ? "Escaped" : (victory ? "Victory" : "Defeat");
         BattleLogger.Log($"Battle ends: {outcomeLabel} (+{finalcredits} credits).", LogScope.Battle);

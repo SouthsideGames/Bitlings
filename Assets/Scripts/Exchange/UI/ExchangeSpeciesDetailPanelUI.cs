@@ -239,6 +239,7 @@ public class ExchangeSpeciesDetailPanelUI : MonoBehaviour
     private void OnBullToken()
     {
         if (_def == null || ExchangeManager.I == null) return;
+        if (bullTokenButton != null) bullTokenButton.interactable = false;
         ExchangeManager.I.UseBullToken(_def.id);
         RefreshTokenCounts();
         AudioManager.I?.PlayClick();
@@ -247,6 +248,7 @@ public class ExchangeSpeciesDetailPanelUI : MonoBehaviour
     private void OnBearToken()
     {
         if (_def == null || ExchangeManager.I == null) return;
+        if (bearTokenButton != null) bearTokenButton.interactable = false;
         ExchangeManager.I.UseBearToken(_def.id);
         RefreshTokenCounts();
         AudioManager.I?.PlayClick();

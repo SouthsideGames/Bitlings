@@ -47,7 +47,11 @@ public static class IdleBattleForegroundLogger
     {
         if (log == null || string.IsNullOrEmpty(monsterId)) return;
 
-        var e = log.Find(x => x != null && x.monsterId == monsterId);
+        IdleEncounterLogEntry e = null;
+        for (int i = 0; i < log.Count; i++)
+        {
+            if (log[i] != null && log[i].monsterId == monsterId) { e = log[i]; break; }
+        }
         if (e == null)
         {
             e = new IdleEncounterLogEntry

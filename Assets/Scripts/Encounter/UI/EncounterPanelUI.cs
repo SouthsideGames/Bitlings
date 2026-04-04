@@ -110,7 +110,7 @@ public class EncounterPanelUI : MonoBehaviour
     [SerializeField] private string preferredLanguageCode = "";
     [SerializeField] private BlinderMessagePackSO overridePack;
     [SerializeField] private BlinderMessageLibrarySO blinderLibrary;
-    [SerializeField] private string hardFallbackLine = "I WONDER WHAT WE WILL ENCOUNTER";
+    [SerializeField] private string hardFallbackLine = "What will we encounter...";
 
     string _lastBlinderLine = null;
 

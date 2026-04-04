@@ -271,6 +271,7 @@ public sealed class BattleFeedbackManager : MonoBehaviour
 
     private void OnDestroy()
     {
+        Unsubscribe();
         CancelActiveSlowMo(forceNormalTime: true);
     }
 

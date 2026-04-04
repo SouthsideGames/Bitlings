@@ -135,7 +135,7 @@ public class PlayerDossierManager : MonoBehaviour
 {
     public static PlayerDossierManager I { get; private set; }
 
-    [Header("Debug")]
+    [Header("Behavior")]
     [SerializeField] private bool autoRefreshOnEnable = true;
 
     private PlayerDossierSnapshot _cachedSnapshot;

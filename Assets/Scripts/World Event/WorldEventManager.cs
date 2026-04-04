@@ -34,9 +34,16 @@ public sealed class WorldEventManager : MonoBehaviour
         if (I == this) I = null;
     }
 
+    private bool _deferringChanged;
+    private float _expiryTimer;
+
     private void Update()
     {
         if (_items.Count == 0) return;
+
+        _expiryTimer += Time.unscaledDeltaTime;
+        if (_expiryTimer < 1f) return;
+        _expiryTimer = 0f;
 
         long now = SaveManager.NowUnix();
         bool changed = false;
@@ -50,7 +57,12 @@ public sealed class WorldEventManager : MonoBehaviour
                 changed = true;
             }
         }
-        if (changed) Changed?.Invoke();
+        if (changed && !_deferringChanged)
+        {
+            _deferringChanged = true;
+            try { Changed?.Invoke(); }
+            finally { _deferringChanged = false; }
+        }
     }
 
     public string Add(string message, float ttlSeconds = 0f, bool hasEffect = false)

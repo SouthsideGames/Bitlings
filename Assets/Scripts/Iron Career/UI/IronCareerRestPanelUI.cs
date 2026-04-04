@@ -72,7 +72,7 @@ public sealed class IronCareerRestPanelUI : MonoBehaviour
         _party = party;
         if (!manager) manager = FindFirstObjectByType<IronCareerManager>();
 
-        Debug.Log($"[RestPanel] Bind called. gameObject.active={gameObject.activeSelf} confirmBtn={(confirmButton ? confirmButton.name : "NULL")} continueBtn={(continueButton ? continueButton.name : "NULL")} canvasGroup={(canvasGroup ? $"alpha={canvasGroup.alpha} inter={canvasGroup.interactable} blocks={canvasGroup.blocksRaycasts}" : "NULL")}");
+        DevLog.Log($"[RestPanel] Bind called. gameObject.active={gameObject.activeSelf} confirmBtn={(confirmButton ? confirmButton.name : "NULL")} continueBtn={(continueButton ? continueButton.name : "NULL")} canvasGroup={(canvasGroup ? $"alpha={canvasGroup.alpha} inter={canvasGroup.interactable} blocks={canvasGroup.blocksRaycasts}" : "NULL")}");
 
         // Ensure button listeners are bound even if Awake hasn't fired yet (panel may still be inactive).
         EnsureButtonListeners();
@@ -166,7 +166,7 @@ public sealed class IronCareerRestPanelUI : MonoBehaviour
 
     private void OnOptionClicked(RestOption option)
     {
-        Debug.Log($"[RestPanel] OnOptionClicked({option}) _applied={_applied}");
+        DevLog.Log($"[RestPanel] OnOptionClicked({option}) _applied={_applied}");
         if (_applied) return;
         SetSelected(option);
     }
@@ -174,7 +174,7 @@ public sealed class IronCareerRestPanelUI : MonoBehaviour
     private void SetSelected(RestOption option)
     {
         _selected = option;
-        Debug.Log($"[RestPanel] SetSelected({option}) confirmBtn={(confirmButton ? $"active={confirmButton.gameObject.activeSelf} inter={confirmButton.interactable}" : "NULL")}");
+        DevLog.Log($"[RestPanel] SetSelected({option}) confirmBtn={(confirmButton ? $"active={confirmButton.gameObject.activeSelf} inter={confirmButton.interactable}" : "NULL")}");
 
         for (int i = 0; i < _optionItems.Count; i++)
         {
@@ -183,7 +183,7 @@ public sealed class IronCareerRestPanelUI : MonoBehaviour
 
         EnsureButtonActive(confirmButton);
         if (confirmButton) confirmButton.interactable = option != RestOption.None;
-        Debug.Log($"[RestPanel] SetSelected done. confirmBtn interactable={(confirmButton ? confirmButton.interactable : false)}");
+        DevLog.Log($"[RestPanel] SetSelected done. confirmBtn interactable={(confirmButton ? confirmButton.interactable : false)}");
     }
 
     private void SetApplied(bool applied)
@@ -213,7 +213,7 @@ public sealed class IronCareerRestPanelUI : MonoBehaviour
 
     private void OnConfirm()
     {
-        Debug.Log($"[RestPanel] OnConfirm! _applied={_applied} _selected={_selected}");
+        DevLog.Log($"[RestPanel] OnConfirm! _applied={_applied} _selected={_selected}");
         AudioManager.I?.PlayClick();
         if (_applied) return;
         if (_selected == RestOption.None) return;

@@ -48,28 +48,20 @@ public sealed class TutorialOverlayPanel : MonoBehaviour
     private static readonly HashSet<string> _pendingOpen =
         new HashSet<string>(StringComparer.Ordinal);
 
+    // ── Static registry to avoid FindObjectsByType scene scans ──
+    private static readonly Dictionary<string, TutorialOverlayPanel> _registry =
+        new Dictionary<string, TutorialOverlayPanel>(StringComparer.Ordinal);
+
     public static void RequestOpen(string key)
     {
         if (string.IsNullOrWhiteSpace(key)) return;
 
         _pendingOpen.Add(key);
 
-        try
+        if (_registry.TryGetValue(key, out var panel) && panel != null)
         {
-            var all = FindObjectsByType<TutorialOverlayPanel>(FindObjectsInactive.Include, FindObjectsSortMode.None);
-            for (int i = 0; i < all.Length; i++)
-            {
-                var t = all[i];
-                if (!t) continue;
-
-                if (t.MatchesKey(key))
-                {
-                    t.TryOpen();
-                    break;
-                }
-            }
+            panel.TryOpen();
         }
-        catch { }
     }
 
     public static void ClearPendingRequests()
@@ -82,6 +74,9 @@ public sealed class TutorialOverlayPanel : MonoBehaviour
 
     private void Awake()
     {
+        if (!string.IsNullOrWhiteSpace(tutorialKey))
+            _registry[tutorialKey] = this;
+
         if (overlayRoot) overlayRoot.SetActive(false);
         if (dimmerImage) dimmerImage.raycastTarget = true;
 
@@ -113,6 +108,9 @@ public sealed class TutorialOverlayPanel : MonoBehaviour
     private void OnDestroy()
     {
         ShowOverlay(false);
+        if (!string.IsNullOrWhiteSpace(tutorialKey) &&
+            _registry.TryGetValue(tutorialKey, out var reg) && reg == this)
+            _registry.Remove(tutorialKey);
     }
 
     public void TryOpen()

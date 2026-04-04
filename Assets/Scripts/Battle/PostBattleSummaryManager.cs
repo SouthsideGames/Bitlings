@@ -10,6 +10,7 @@ public class PostBattleSummaryManager : MonoBehaviour
     [SerializeField] private PostBattleSummaryPanelUI postBattleSummaryPanelUI;
 
     readonly Queue<Queued> _pending = new Queue<Queued>();
+    const int MaxPendingQueue = 50;
     bool _panelOpen;
     bool _autoBattling;
     bool _battleInProgress;
@@ -20,6 +21,10 @@ public class PostBattleSummaryManager : MonoBehaviour
         I = this;
     }
 
+    void OnDestroy()
+    {
+        if (I == this) I = null;
+    }
 
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
     public int Debug_PendingCount => _pending.Count;
@@ -112,6 +117,9 @@ public class PostBattleSummaryManager : MonoBehaviour
             growthCoresTitleBonus = growthCoresTitleBonus,
             growthCoresDetailLines = growthCoresDetailLines
         });
+
+        // Prevent unbounded queue growth if panel gets stuck open
+        while (_pending.Count > MaxPendingQueue) _pending.Dequeue();
 
         TryShowNext();
     }

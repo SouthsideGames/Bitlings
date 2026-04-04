@@ -4,7 +4,6 @@ using TMPro;
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Linq;
 
 public class HarborUI : MonoBehaviour
 {
@@ -307,21 +306,37 @@ public class HarborUI : MonoBehaviour
     float ComputeTypeChance(MonsterType targetType, Dictionary<MonsterType, float> typeMult)
     {
         var lib = MonsterLibraryLocator.Lib;
-        var pool = lib?.monsters?.Where(m => m != null && !string.IsNullOrEmpty(m.id) && m.spawnWeight > 0).ToArray();
-        if (pool == null || pool.Length == 0)
+        var src = lib?.monsters;
+        if (src == null || src.Length == 0) return 0f;
+
+        // Build pool inline — spawnable monsters with spawnWeight > 0
+        int poolCount = 0;
+        for (int i = 0; i < src.Length; i++)
+            if (src[i] != null && !string.IsNullOrEmpty(src[i].id) && src[i].spawnWeight > 0) poolCount++;
+
+        if (poolCount == 0)
         {
-            var backup = lib?.monsters?.Where(m => m != null && !string.IsNullOrEmpty(m.id)).ToArray();
-            if (backup == null || backup.Length == 0) return 0f;
-            int countTarget = backup.Count(m => m.type == targetType);
-            return Mathf.Clamp01((float)countTarget / backup.Length);
+            // Fallback: count valid monsters
+            int validCount = 0;
+            int targetCount = 0;
+            for (int i = 0; i < src.Length; i++)
+            {
+                if (src[i] == null || string.IsNullOrEmpty(src[i].id)) continue;
+                validCount++;
+                if (src[i].type == targetType) targetCount++;
+            }
+            if (validCount == 0) return 0f;
+            return Mathf.Clamp01((float)targetCount / validCount);
         }
 
         float total = 0f;
         float totalTarget = 0f;
 
-        for (int i = 0; i < pool.Length; i++)
+        for (int i = 0; i < src.Length; i++)
         {
-            var m = pool[i];
+            var m = src[i];
+            if (m == null || string.IsNullOrEmpty(m.id) || m.spawnWeight <= 0) continue;
+
             float baseW = Mathf.Max(0, m.spawnWeight);
             float mult = 1f;
             if (typeMult != null && typeMult.TryGetValue(m.type, out var k))

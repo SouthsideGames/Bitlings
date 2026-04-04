@@ -12,7 +12,12 @@ public sealed class AchievementManager : MonoBehaviour
 
     [Header("Save Behavior")]
     [SerializeField] private bool saveOnEveryProgress = false;
+
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
     [SerializeField] private bool debugLogs = false;
+#else
+    private const bool debugLogs = false;
+#endif
 
     public event Action<AchievementEntrySO> OnUnlocked;
     public event Action<AchievementEntrySO, int, int> OnProgressed; // entry, newValue, goal
@@ -551,10 +556,10 @@ public sealed class AchievementManager : MonoBehaviour
         // Robust toast call: works even if toast object started disabled
         AchievementToastUI.EnqueueGuaranteed(e);
 
-        SaveManager.Save();
+        // Evaluate meta-achievements before saving so all mutations are captured in one write.
+        EvaluateMetaAchievements(allowSave: false);
 
-        // Re-evaluate meta-achievements (SecretAchievementsUnlocked, AchievementsUnlocked)
-        EvaluateMetaAchievements(allowSave: true);
+        SaveManager.Save();
     }
 
     private void FireProgress(AchievementEntrySO e, AchievementProgressData p) => OnProgressed?.Invoke(e, p.value, e.goal);

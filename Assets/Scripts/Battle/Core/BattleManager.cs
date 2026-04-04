@@ -207,6 +207,7 @@ public partial class BattleManager : MonoBehaviour
     [SerializeField] private SynergyLibrarySO synergyLibrary;
 
     [Header("Debug - Synergy/Status")]
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
     [Tooltip("For testing only: bypass unlocks/counts and force at least one synergy to apply so you can verify UI + logging.")]
     [SerializeField] private bool debugForceSynergyApply = false;
 
@@ -220,6 +221,13 @@ public partial class BattleManager : MonoBehaviour
 
     [Tooltip("Logs why synergies/statuses did (or did not) apply at battle start.")]
     [SerializeField] private bool debugSynergyLogs = true;
+#else
+    private const bool debugForceSynergyApply = false;
+    private const bool debugForceWildSynergyTier = false;
+    private const bool debugSynergyLogs = false;
+    private SynergyTier debugForcePlayerSynergyTier => SynergyTier.Tier2;
+    private SynergyTier debugWildSynergyTier => SynergyTier.Tier2;
+#endif
 
     public bool NarrationLocked => _narrationLock;
     private bool _narrationLock;
@@ -275,9 +283,15 @@ public partial class BattleManager : MonoBehaviour
     private float _cachedCreditMult = 1f;
 
     [Header("Debug - Titles")]
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
     [SerializeField] private bool debugTitles = false;
     [SerializeField] private bool debugTitlesEveryTurn = true;
     [SerializeField] private bool debugTitlesOnSwap = true;
+#else
+    private const bool debugTitles = false;
+    private const bool debugTitlesEveryTurn = false;
+    private const bool debugTitlesOnSwap = false;
+#endif
 
     private int _turnIndex = 0;
     private bool inBattle;
@@ -1067,6 +1081,12 @@ public partial class BattleManager : MonoBehaviour
 
     public void Begin(MonsterDataSO wild, int level, Action<BattleResult> onEnded, IBattleRosterProvider rosterProvider, IBattleContext battleContext)
     {
+        if (inBattle)
+        {
+            Debug.LogError("[BattleManager] Begin() called while already inBattle. Forcing previous battle to end.");
+            ForceEndBattleEarly(false);
+        }
+
         _rosterProvider = rosterProvider;
         _battleContext = battleContext;
         _rules = (battleContext != null) ? battleContext.Rules : BattleRules.Default;

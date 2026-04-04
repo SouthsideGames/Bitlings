@@ -44,7 +44,7 @@ public class MonsterPersonalitySO : ScriptableObject
     [Range(0f, 1f)] public float chaoticOverrideChance = 0.25f;
 
     [TextArea(2,4)] 
-    public string description = "Default personality description.";
+    public string description = "";
 
 
     public BattleAction ChooseAction(in PersonalityContext ctx, System.Random rng)

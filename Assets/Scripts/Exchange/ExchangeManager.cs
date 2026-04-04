@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using UnityEngine;
 
 // ─────────────────────────────────────────────────────────────
@@ -41,11 +40,14 @@ public sealed class ExchangeManager : MonoBehaviour
     private const float SCARCITY_PER_BROKER = 0.05f;    // +5% per broker this week
     private const float SCARCITY_MAX = 0.30f;            // cap at +30%
     private const int   HOT_TYPE_COUNT = 16;             // MonsterType values 1..16
+    private const float MAX_VALUE_MULTIPLIER = 12f;      // hard ceiling: final value ≤ base × 12
 
     private ExchangeSaveData _save;
     private Dictionary<string, MarketSpeciesState> _stateMap;
     private Dictionary<string, SpeciesBattleSentimentData> _sentimentMap;
     private readonly Dictionary<string, float> _workerHoursSampled = new Dictionary<string, float>(StringComparer.Ordinal);
+    private readonly List<string> _staleKeys = new List<string>();
+    private readonly HashSet<string> _activeKeysReuse = new HashSet<string>(StringComparer.Ordinal);
     private Dictionary<string, DemandOverride> _overrideMap;
     private Dictionary<string, int> _bullTokenUseMap;
     private Dictionary<string, int> _bearTokenUseMap;
@@ -113,6 +115,15 @@ public sealed class ExchangeManager : MonoBehaviour
         GameEvents.MonsterCaptured -= OnMonsterCaptured;
         GameEvents.MonsterBrokered -= OnMonsterBrokered;
         GameEvents.RequestFulfilled -= OnRequestFulfilled;
+    }
+
+    void OnApplicationPause(bool paused)
+    {
+        if (!paused)
+        {
+            CatchUpOffline();
+            RecalculateAll();
+        }
     }
 
     void Update()
@@ -198,7 +209,7 @@ public sealed class ExchangeManager : MonoBehaviour
         // Load catch-hype timestamps (prune expired entries)
         _save.catchHype ??= new List<CatchHypeEntry>();
         _catchHypeMap = new Dictionary<string, long>(StringComparer.Ordinal);
-        long nowUnix = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+        long nowUnix = SaveManager.NowUnix();
         for (int i = _save.catchHype.Count - 1; i >= 0; i--)
         {
             var ch = _save.catchHype[i];
@@ -274,7 +285,7 @@ public sealed class ExchangeManager : MonoBehaviour
         _save.catchHype.Clear();
         if (_catchHypeMap != null)
         {
-            long now = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+            long now = SaveManager.NowUnix();
             foreach (var kv in _catchHypeMap)
             {
                 if (now - kv.Value <= CATCH_HYPE_DURATION)
@@ -290,7 +301,7 @@ public sealed class ExchangeManager : MonoBehaviour
                 _save.brokerScarcity.Add(new BrokerScarcityEntry { speciesId = kv.Key, timesBrokered = kv.Value });
         }
 
-        _save.lastRecalcUnix = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+        _save.lastRecalcUnix = SaveManager.NowUnix();
 
         _save.surgeAlertSpeciesIds.Clear();
         if (_surgeAlertWatchlist != null)
@@ -311,7 +322,7 @@ public sealed class ExchangeManager : MonoBehaviour
     {
         if (_save == null || _stateMap == null) return;
 
-        long now = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+        long now = SaveManager.NowUnix();
         long lastRecalc = _save.lastRecalcUnix;
         if (lastRecalc <= 0) return; // first launch, nothing to catch up
 
@@ -586,7 +597,8 @@ public sealed class ExchangeManager : MonoBehaviour
             float final_ = baseVal * demandMul * rarityMul * supplyMod * flux * eventMul
                          * sentimentMul * laborMul * levelMul * catchHypeMul
                          * typeTrendMul * scarcityMul * monopolyMul;
-            state.currentValue = Mathf.Max(1, Mathf.RoundToInt(final_));
+            int hardCeiling = Mathf.Max(1, Mathf.RoundToInt(baseVal * MAX_VALUE_MULTIPLIER));
+            state.currentValue = Mathf.Clamp(Mathf.RoundToInt(final_), 1, hardCeiling);
 
             // trend
             if (state.currentValue > state.previousValue)
@@ -596,7 +608,7 @@ public sealed class ExchangeManager : MonoBehaviour
             else
                 state.trend = TrendDirection.Stable;
 
-            state.lastUpdateUnix = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+            state.lastUpdateUnix = SaveManager.NowUnix();
 
             // Surge alert (requires unlock)
             if (state.demandLevel == DemandLevel.Surge && newDay)
@@ -617,12 +629,13 @@ public sealed class ExchangeManager : MonoBehaviour
         {
             _save.lastDividendDayIndex = localToday;
 
-            if (DateTimeOffset.Now.DayOfWeek == DayOfWeek.Monday &&
+            if (DateTimeOffset.FromUnixTimeSeconds(SaveManager.NowUnix()).UtcDateTime.DayOfWeek == DayOfWeek.Monday &&
                 FeatureUnlockManager.I != null &&
                 FeatureUnlockManager.I.IsUnlocked(FeatureId.Exchange_DividendYield))
             {
                 int portfolioValue = GetTotalPortfolioValue();
-                int dividend = Mathf.Max(0, Mathf.RoundToInt(portfolioValue * DIVIDEND_RATE));
+                long rawDividend = (long)Mathf.Max(0f, (float)portfolioValue * DIVIDEND_RATE);
+                int dividend = (int)Mathf.Min(rawDividend, int.MaxValue);
                 if (dividend > 0)
                 {
                     ResourceBank.Add(ResourceType.Credits, dividend);
@@ -668,7 +681,7 @@ public sealed class ExchangeManager : MonoBehaviour
             else
                 state.trend = TrendDirection.Stable;
 
-            state.lastUpdateUnix = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+            state.lastUpdateUnix = SaveManager.NowUnix();
         }
 
         // Reset daily seed so flux doesn't carry over
@@ -728,7 +741,7 @@ public sealed class ExchangeManager : MonoBehaviour
         for (int i = 0; i < data.owned.Count; i++)
         {
             var o = data.owned[i];
-            if (string.IsNullOrEmpty(o.monsterId)) continue;
+            if (o == null || string.IsNullOrEmpty(o.monsterId)) continue;
             counts.TryGetValue(o.monsterId, out int c);
             counts[o.monsterId] = c + 1;
         }
@@ -765,7 +778,7 @@ public sealed class ExchangeManager : MonoBehaviour
 
     private static int DayIndex()
     {
-        return (int)(DateTimeOffset.UtcNow.ToUnixTimeSeconds() / SECONDS_PER_DAY);
+        return (int)(SaveManager.NowUnix() / SECONDS_PER_DAY);
     }
 
     private static int WeekIndex()
@@ -810,7 +823,7 @@ public sealed class ExchangeManager : MonoBehaviour
         if (_catchHypeMap == null || !_catchHypeMap.TryGetValue(speciesId, out long capturedUnix))
             return 1f;
 
-        long elapsed = DateTimeOffset.UtcNow.ToUnixTimeSeconds() - capturedUnix;
+        long elapsed = SaveManager.NowUnix() - capturedUnix;
         if (elapsed > CATCH_HYPE_DURATION)
         {
             _catchHypeMap.Remove(speciesId);
@@ -860,7 +873,7 @@ public sealed class ExchangeManager : MonoBehaviour
     {
         if (string.IsNullOrEmpty(speciesId)) return;
         _catchHypeMap ??= new Dictionary<string, long>(StringComparer.Ordinal);
-        _catchHypeMap[speciesId] = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+        _catchHypeMap[speciesId] = SaveManager.NowUnix();
         RecalculateAll();
     }
 
@@ -935,7 +948,7 @@ public sealed class ExchangeManager : MonoBehaviour
 
         EnsureMonthlyBattleSentimentWindow();
 
-        var activeKeys = new HashSet<string>(StringComparer.Ordinal);
+        _activeKeysReuse.Clear();
         bool addedHours = false;
 
         for (int i = 0; i < data.jobAssignments.Count; i++)
@@ -947,7 +960,7 @@ public sealed class ExchangeManager : MonoBehaviour
             {
                 string key = assignment.workerIds[j];
                 if (string.IsNullOrWhiteSpace(key)) continue;
-                activeKeys.Add(key);
+                _activeKeysReuse.Add(key);
 
                 if (!jm.TryGetWorkerAssignment(key, out _, out _, out float hoursAssigned)) continue;
                 hoursAssigned = Mathf.Max(0f, hoursAssigned);
@@ -973,9 +986,12 @@ public sealed class ExchangeManager : MonoBehaviour
 
         if (_workerHoursSampled.Count > 0)
         {
-            var stale = _workerHoursSampled.Keys.Where(k => !activeKeys.Contains(k)).ToList();
-            for (int i = 0; i < stale.Count; i++)
-                _workerHoursSampled.Remove(stale[i]);
+            // Remove stale keys without LINQ allocation
+            _staleKeys.Clear();
+            foreach (var kv in _workerHoursSampled)
+                if (!_activeKeysReuse.Contains(kv.Key)) _staleKeys.Add(kv.Key);
+            for (int i = 0; i < _staleKeys.Count; i++)
+                _workerHoursSampled.Remove(_staleKeys[i]);
         }
 
         if (addedHours)
@@ -1020,8 +1036,8 @@ public sealed class ExchangeManager : MonoBehaviour
 
     private static int MonthKeyUtc()
     {
-        var now = DateTimeOffset.UtcNow;
-        return now.Year * 100 + now.Month;
+        var dt = DateTimeOffset.FromUnixTimeSeconds(SaveManager.NowUnix()).UtcDateTime;
+        return dt.Year * 100 + dt.Month;
     }
 
     private static int HashDay(int day)
@@ -1103,6 +1119,8 @@ public sealed class ExchangeManager : MonoBehaviour
 
     private void ApplyDemandOverride(string speciesId, DemandLevel level)
     {
+        if (_save == null) return;
+
         _overrideMap ??= new Dictionary<string, DemandOverride>(StringComparer.Ordinal);
 
         var ov = new DemandOverride

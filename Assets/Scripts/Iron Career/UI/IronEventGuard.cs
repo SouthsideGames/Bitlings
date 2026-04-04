@@ -15,7 +15,7 @@ public sealed class IronEventGuard : MonoBehaviour
     [SerializeField] private bool forbidTeamChanged = true;
     [SerializeField] private bool forbidWinStreakChanged = true;
     [SerializeField] private bool forbidPromotions = true;
-    [SerializeField] private bool forbidBoosters = true;
+    [SerializeField] private bool forbidBoosters = true; // reserved — booster event intentionally allowed (see OnBoostersChanged)
     [SerializeField] private bool forbidEnergy = true;
     [SerializeField] private bool forbidOwnedDiscovery = true;
     [SerializeField] private bool forbidAutoBattle = true;
@@ -138,6 +138,7 @@ public sealed class IronEventGuard : MonoBehaviour
         // NOTE: Battle turn loop broadcasts this for HUD refresh.
         // It does not represent a persistent/meta booster change, so we allow it in Iron.
         // (We still guard real persistence via Save writes and other forbidden events.)
+        if (forbidBoosters) { /* intentionally allowed — see note above */ }
     }
 
     private void OnEnergyChanged()

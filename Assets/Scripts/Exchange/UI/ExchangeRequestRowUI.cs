@@ -117,6 +117,8 @@ public class ExchangeRequestRowUI : MonoBehaviour
 
     private bool CanPlayerFulfill(ActiveRequest request)
     {
+        if (request.expiresUnix > 0 && request.expiresUnix <= SaveManager.NowUnix())
+            return false;
         return FindOwnedMatchingOwned(request) != null;
     }
 

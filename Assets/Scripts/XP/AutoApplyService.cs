@@ -118,55 +118,60 @@ public partial class AutoApplyService : MonoBehaviour
         bool changed = false;
         int ops = 0;
 
-        for (int i = 0; i < count; i++)
+        try
         {
-            var m = selected[i];
-            int budget = budgets[i];
-
-            // targetLevel: 0/negative means no cap
-            int targetLevel = (m.autoApplyTargetLevel <= 0) ? int.MaxValue : m.autoApplyTargetLevel;
-
-            while (budget > 0 && m.level < targetLevel)
+            for (int i = 0; i < count; i++)
             {
-                if (ops++ > safetyLevelOps) break;
+                var m = selected[i];
+                int budget = budgets[i];
 
-                int cost = levelCostCurve.CoresToNextLevel(m.level);
-                if (cost <= 0) break;
+                // targetLevel: 0/negative means no cap
+                int targetLevel = (m.autoApplyTargetLevel <= 0) ? int.MaxValue : m.autoApplyTargetLevel;
 
-                if (budget < cost) break;
-
-                // Spend from the bank (batched, no spam)
-                if (!ResourceBank.TrySpend(ResourceType.GrowthCore, cost))
-                    break;
-
-                budget -= cost;
-
-                // Level + award points (THIS is what you were missing)
-                m.level = Mathf.Max(1, m.level + 1);
-                m.unspentStatPoints += Mathf.Max(0, pointsPerLevel);
-
-                // Auto-distribute new stat points based on personality
-                var statDelta = BuildPersonalityStatDelta(m, pointsPerLevel);
-                if (statDelta.hp != 0 || statDelta.atk != 0 || statDelta.def != 0 || statDelta.spd != 0)
+                while (budget > 0 && m.level < targetLevel)
                 {
-                    MonsterStatApplier.Apply(m, statDelta);
-                    m.unspentStatPoints = Mathf.Max(0, m.unspentStatPoints - pointsPerLevel);
+                    if (ops++ > safetyLevelOps) break;
+
+                    int cost = levelCostCurve.CoresToNextLevel(m.level);
+                    if (cost <= 0) break;
+
+                    if (budget < cost) break;
+
+                    // Spend from the bank (batched, no spam)
+                    if (!ResourceBank.TrySpend(ResourceType.GrowthCore, cost))
+                        break;
+
+                    budget -= cost;
+
+                    // Level + award points
+                    m.level = Mathf.Max(1, m.level + 1);
+                    m.unspentStatPoints += Mathf.Max(0, pointsPerLevel);
+
+                    // Auto-distribute new stat points based on personality
+                    var statDelta = BuildPersonalityStatDelta(m, pointsPerLevel);
+                    if (statDelta.hp != 0 || statDelta.atk != 0 || statDelta.def != 0 || statDelta.spd != 0)
+                    {
+                        MonsterStatApplier.Apply(m, statDelta);
+                        m.unspentStatPoints = Mathf.Max(0, m.unspentStatPoints - pointsPerLevel);
+                    }
+
+                    // Defensive: keep premium fields consistent (mirrors XPManager behavior)
+                    NormalizePremiumFields(m);
+
+                    // Clamp HP to new max (mirrors XPManager.TryManualLevelUp)
+                    ClampHpToNewMax(m);
+
+                    changed = true;
+
+                    // Signature: (string, int)
+                    GameEvents.MonsterLeveled?.Invoke(m.monsterId, m.level);
                 }
-
-                // Defensive: keep premium fields consistent (mirrors XPManager behavior)
-                NormalizePremiumFields(m);
-
-                // Clamp HP to new max (mirrors XPManager.TryManualLevelUp)
-                ClampHpToNewMax(m);
-
-                changed = true;
-
-                // Signature: (string, int)
-                GameEvents.MonsterLeveled?.Invoke(m.monsterId, m.level);
             }
         }
-
-        ResourceBank.EndBatch();
+        finally
+        {
+            ResourceBank.EndBatch();
+        }
 
         if (changed)
         {

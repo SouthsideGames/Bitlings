@@ -64,13 +64,25 @@ public class ForgePanelUI : MonoBehaviour
     // ---------- Internal ----------
     private void Clear()
     {
-        if (listRoot)
-        {
-            for (int i = listRoot.childCount - 1; i >= 0; i--)
-                Destroy(listRoot.GetChild(i).gameObject);
-        }
         _items.Clear();
         _pendingByJob.Clear();
+    }
+
+    private GameObject GetOrCreateChild(int index)
+    {
+        if (index < listRoot.childCount)
+        {
+            var existing = listRoot.GetChild(index).gameObject;
+            existing.SetActive(true);
+            return existing;
+        }
+        return Instantiate(jobItemPrefab, listRoot);
+    }
+
+    private void DeactivateUnusedChildren(int usedCount)
+    {
+        for (int i = usedCount; i < listRoot.childCount; i++)
+            listRoot.GetChild(i).gameObject.SetActive(false);
     }
 
     private void Build()
@@ -91,10 +103,10 @@ public class ForgePanelUI : MonoBehaviour
 
             _pendingByJob[s.config.jobType] = 0;
 
-            var go = Instantiate(jobItemPrefab, listRoot);
+            var go = GetOrCreateChild(spawned);
             if (!go.TryGetComponent<JobMaterialItemUI>(out var ui))
             {
-                Destroy(go);
+                go.SetActive(false);
                 continue;
             }
 
@@ -126,7 +138,9 @@ public class ForgePanelUI : MonoBehaviour
             );
         }
 
-        if (spawned == 0)
+        DeactivateUnusedChildren(spawned);
+
+        if (spawned == 0 && listRoot.childCount == 0)
         {
             var go = new GameObject("EmptyState", typeof(RectTransform));
             go.transform.SetParent(listRoot, false);
@@ -161,31 +175,36 @@ public class ForgePanelUI : MonoBehaviour
         int totalSpend = 0;
         int totalRefund = 0;
 
-        foreach (var s in _jobs.States)
+        try
         {
-            if (s == null || s.config == null) continue;
-            if (!_jobs.IsSiteUnlocked(s.config.jobType)) continue;
-
-            int delta = _pendingByJob.TryGetValue(s.config.jobType, out var d) ? d : 0;
-            if (delta == 0) continue;
-
-            if (delta > 0) totalSpend += delta;
-            else           totalRefund += -delta;
-
-            s.currentXP = Mathf.Clamp(s.currentXP + delta, 0, s.maxXPForLevel);
-
-            if (s.currentXP >= s.maxXPForLevel && s.level < JobLeveling.MaxLevel)
+            foreach (var s in _jobs.States)
             {
-                s.level++;
-                s.currentXP = 0;
-                s.maxXPForLevel = JobLeveling.MaxXpForLevel(s.config.jobType, s.level);
+                if (s == null || s.config == null) continue;
+                if (!_jobs.IsSiteUnlocked(s.config.jobType)) continue;
+
+                int delta = _pendingByJob.TryGetValue(s.config.jobType, out var d) ? d : 0;
+                if (delta == 0) continue;
+
+                if (delta > 0) totalSpend += delta;
+                else           totalRefund += -delta;
+
+                s.currentXP = Mathf.Clamp(s.currentXP + delta, 0, s.maxXPForLevel);
+
+                if (s.currentXP >= s.maxXPForLevel && s.level < JobLeveling.MaxLevel)
+                {
+                    s.level++;
+                    s.currentXP = 0;
+                    s.maxXPForLevel = JobLeveling.MaxXpForLevel(s.config.jobType, s.level);
+                }
             }
+
+            if (totalSpend > 0)  ResourceBank.TrySpend(ResourceType.Material, totalSpend);
+            if (totalRefund > 0) ResourceBank.Add(ResourceType.Material, totalRefund);
         }
-
-        if (totalSpend > 0)  ResourceBank.TrySpend(ResourceType.Material, totalSpend);
-        if (totalRefund > 0) ResourceBank.Add(ResourceType.Material, totalRefund);
-
-        ResourceBank.EndBatch();
+        finally
+        {
+            ResourceBank.EndBatch();
+        }
 
         JobManager.I?.SaveProgressToSave();
 

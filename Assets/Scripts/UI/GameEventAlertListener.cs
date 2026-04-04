@@ -47,8 +47,12 @@ public sealed class GameEventAlertListener : MonoBehaviour, IPointerClickHandler
     [SerializeField] private bool dismissOnPointerClick = true;
     [SerializeField] private Button dismissButton;
 
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
     [Header("Debug")]
     [SerializeField] private bool logEventTriggers;
+#else
+    private const bool logEventTriggers = false;
+#endif
 
     private void Reset()
     {

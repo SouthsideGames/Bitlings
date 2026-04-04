@@ -59,6 +59,7 @@ public partial class BattleManager
         for (int i = 0; i < teamStatus.Length; i++)
         {
             if (teamDefs != null && i < teamDefs.Length && teamDefs[i] == null) continue;
+            if (teamHP != null && i < teamHP.Length && teamHP[i] <= 0.01f) continue; // skip dead slots
 
             teamStatus[i] = st;
             if (i < teamStatusTurns.Length) teamStatusTurns[i] = turns;
@@ -680,6 +681,10 @@ private float GetWildPhantasmalSelfDmgPct()
             skippedBy = StatusType.Foresight;
             BattleLogger.Log($"[Status] {GetName(slot)} is stunned by Foresight backlash and skips its action.", LogScope.Battle);
         }
+
+        // Skip DOT on already-dead units
+        if (teamHP != null && slot < teamHP.Length && teamHP[slot] <= 0.01f)
+            return false;
 
         // Apply turn-start effect
         switch (st)

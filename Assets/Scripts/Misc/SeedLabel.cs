@@ -17,9 +17,11 @@ public class SeedLabel : MonoBehaviour, IPointerClickHandler
     [SerializeField] private string copiedMessage = "Seed copied.";
 
     private FeatureUnlockManager _subscribedTo;
+    private bool _subscribeChecked;
 
     void OnEnable()
     {
+        _subscribeChecked = false;
         TrySubscribe();
         Refresh();
     }
@@ -27,15 +29,16 @@ public class SeedLabel : MonoBehaviour, IPointerClickHandler
     void OnDisable()
     {
         Unsubscribe();
+        _subscribeChecked = false;
     }
 
     void Update()
     {
-        if (_subscribedTo == null && FeatureUnlockManager.I != null)
-        {
-            TrySubscribe();
-            Refresh();
-        }
+        if (_subscribeChecked) return;
+        if (FeatureUnlockManager.I == null) return;
+        _subscribeChecked = true;
+        TrySubscribe();
+        Refresh();
     }
 
     private void TrySubscribe()

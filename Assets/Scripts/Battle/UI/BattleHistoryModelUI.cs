@@ -16,6 +16,7 @@ public class BattleHistoryModelUI : MonoBehaviour
     [SerializeField] private int maxVisibleLines = 200;
 
     readonly List<TextMeshProUGUI> _spawned = new();
+    private Coroutine _scrollCo;
 
     void Awake()
     {
@@ -69,14 +70,15 @@ public class BattleHistoryModelUI : MonoBehaviour
         AddLine(line);
 
         // Trim
-        while (_spawned.Count > maxVisibleLines)
+        if (_spawned.Count > maxVisibleLines)
         {
-            var first = _spawned[0];
-            _spawned.RemoveAt(0);
-            if (first) Destroy(first.gameObject);
+            int excess = _spawned.Count - maxVisibleLines;
+            for (int i = 0; i < excess; i++)
+                if (_spawned[i]) Destroy(_spawned[i].gameObject);
+            _spawned.RemoveRange(0, excess);
         }
 
-        AutoScrollIfEnabled();
+        ScheduleAutoScroll();
     }
 
     void AddLine(string line)
@@ -87,13 +89,26 @@ public class BattleHistoryModelUI : MonoBehaviour
         _spawned.Add(t);
     }
 
-    void AutoScrollIfEnabled()
+    void ScheduleAutoScroll()
     {
+        if (_scrollCo != null) return;
         bool autoScroll = SettingsManager.I == null || SettingsManager.I.GetAutoScrollBattleLog();
         if (!autoScroll || scrollRect == null) return;
+        _scrollCo = StartCoroutine(CoDeferredScroll());
+    }
 
+    System.Collections.IEnumerator CoDeferredScroll()
+    {
+        yield return null;
         Canvas.ForceUpdateCanvases();
-        scrollRect.verticalNormalizedPosition = 0f;
+        if (scrollRect != null)
+            scrollRect.verticalNormalizedPosition = 0f;
+        _scrollCo = null;
+    }
+
+    void AutoScrollIfEnabled()
+    {
+        ScheduleAutoScroll();
     }
 
     void Clear()

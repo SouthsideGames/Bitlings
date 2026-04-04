@@ -163,9 +163,10 @@ public class NotificationManager : MonoBehaviour
     }
 
     // ─────────────────────────────────────────────────────────────
-    // DEBUG
+    // DEBUG (dev builds only)
     // ─────────────────────────────────────────────────────────────
 
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
     public void DebugScheduleTestNotifications()
     {
         CancelAllScheduled();
@@ -175,18 +176,15 @@ public class NotificationManager : MonoBehaviour
         ScheduleSeconds("dbg_2", "Debug: Ping 2", "Second test notification.", "Debug", 150);
         ScheduleSeconds("dbg_3", "Debug: Ping 3", "Third test notification.", "Debug", 240);
 
-#if UNITY_EDITOR
         DevLog.Log("[NotificationManager] Debug scheduled: 90s, 150s, 240s.");
-#endif
     }
 
     public void DebugClearScheduledNotifications()
     {
         CancelAllScheduled();
-#if UNITY_EDITOR
         DevLog.Log("[NotificationManager] Cleared scheduled notifications.");
-#endif
     }
+#endif
 
     // ─────────────────────────────────────────────────────────────
     // Platform wrapper

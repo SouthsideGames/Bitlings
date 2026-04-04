@@ -43,6 +43,15 @@ public static class EnergyRegenSystem
 
         long now = SaveManager.NowUnix();
         long last = SaveManager.Data.energyLastUnix > 0 ? SaveManager.Data.energyLastUnix : now;
+
+        // If device clock moved backwards (DST, timezone, manual change),
+        // clamp the stored timestamp to prevent frozen regen.
+        if (last > now)
+        {
+            SaveManager.Data.energyLastUnix = now;
+            last = now;
+        }
+
         long elapsed = now - last;
         if (elapsed <= 0) return 0;
 

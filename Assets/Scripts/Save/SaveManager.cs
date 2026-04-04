@@ -264,6 +264,21 @@ public static class SaveManager
 
         SaveFiles.EnsureFolder(SavePath);
 
+        // 0) Recover orphaned .tmp file left by a crash during AtomicWrite.
+        string tmpPath = SavePath + ".tmp";
+        try
+        {
+            if (File.Exists(tmpPath) && !File.Exists(SavePath))
+            {
+                File.Move(tmpPath, SavePath);
+                Debug.LogWarning("SaveManager: recovered save from .tmp file after interrupted write.");
+            }
+        }
+        catch (Exception e)
+        {
+            Debug.LogError($"SaveManager: .tmp recovery failed: {e}");
+        }
+
         // 1) Load combined save first.
         PlayerSaveRoot root = null;
         if (!TryLoad(SavePath, out root))
@@ -359,7 +374,11 @@ private static PlayerSaveRoot MigrateRootIfNeeded(PlayerSaveRoot root)
 
             // Build single-file root.
             var root = BuildRootForSave();
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
             string json = JsonUtility.ToJson(root, prettyPrint: true);
+#else
+            string json = JsonUtility.ToJson(root, prettyPrint: false);
+#endif
             SaveFiles.AtomicWriteUtf8(SavePath, json);
             SaveFiles.TryCopy(SavePath, BackupPath);
         }
@@ -382,9 +401,9 @@ private static PlayerSaveRoot MigrateRootIfNeeded(PlayerSaveRoot root)
             return;
         _lastOnResumeUnixMs = nowMs;
 
-        PruneExpiredCaptureBands(saveIfChanged: true);
-        PruneExpiredLures(saveIfChanged: true);
-        PruneExpiredLuckBoosts(saveIfChanged: true);
+        PruneExpiredCaptureBands(saveIfChanged: false);
+        PruneExpiredLures(saveIfChanged: false);
+        PruneExpiredLuckBoosts(saveIfChanged: false);
 
         // Offline reconciliation ordering (single pass):
         // 1) Jobs (production)
@@ -549,6 +568,10 @@ private static PlayerSaveRoot MigrateRootIfNeeded(PlayerSaveRoot root)
             Data = NewFreshPlayer();
             JobUnlockBridge.ResetAllJobUnlocks(alsoResetPurchasedFlags: true);
 
+            // Failsafe: directly wipe the feature-unlock PlayerPrefs key in case
+            // FeatureUnlockManager.I was already destroyed during the reset cascade.
+            try { PlayerPrefs.DeleteKey("FeatureUnlocks_JSON"); PlayerPrefs.Save(); } catch { }
+
             // IMPORTANT ORDER:
             // Ensure defaults/resources exist BEFORE ResourceBank touches anything.
             EnsureDefaults();
@@ -608,7 +631,11 @@ private static PlayerSaveRoot MigrateRootIfNeeded(PlayerSaveRoot root)
             Data.lastSavedUnix = Math.Max(Data.lastSavedUnix, now);
 
             var root = BuildRootForSave();
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
             string json = JsonUtility.ToJson(root, prettyPrint: true);
+#else
+            string json = JsonUtility.ToJson(root, prettyPrint: false);
+#endif
             SaveFiles.AtomicWriteUtf8(SavePath, json);
             SaveFiles.TryCopy(SavePath, BackupPath);
         }
@@ -1173,58 +1200,6 @@ private static PlayerSaveRoot MigrateRootIfNeeded(PlayerSaveRoot root)
     // ownedUID collision guards
     // ─────────────────────────────────────────────
 
-    /// <summary>
-    /// Ensures every entry in the list has a unique ownedUID.
-    /// If duplicates are found, the later duplicates are assigned a new GUID.
-    /// This prevents UI binding and team canonicalization from accidentally
-    /// pointing multiple monsters at the same underlying instance.
-    /// </summary>
-    private static void EnsureUniqueOwnedUIDs_Legacy(List<OwnedMonsterData> list, HashSet<string> seen)
-    {
-        if (list == null) return;
-        seen ??= new HashSet<string>(StringComparer.Ordinal);
-
-        for (int i = 0; i < list.Count; i++)
-        {
-            var om = list[i];
-            if (om == null) continue;
-
-            if (string.IsNullOrEmpty(om.ownedUID))
-                om.ownedUID = Guid.NewGuid().ToString("N");
-
-            // If ownedUID collides, re-key this entry.
-            if (seen.Contains(om.ownedUID))
-                om.ownedUID = Guid.NewGuid().ToString("N");
-
-            seen.Add(om.ownedUID);
-        }
-    }
-
-    /// <summary>
-    /// If a team entry's ownedUID points to an owned entry with a different monsterId,
-    /// clear the team ownedUID so later canonicalization prefers safer matching.
-    /// </summary>
-    private static void EnsureTeamOwnedUidMatchesMonsterId_Legacy(List<OwnedMonsterData> team, List<OwnedMonsterData> owned)
-    {
-        if (team == null || owned == null) return;
-
-        for (int i = 0; i < team.Count; i++)
-        {
-            var t = team[i];
-            if (t == null) continue;
-            if (string.IsNullOrEmpty(t.ownedUID) || string.IsNullOrEmpty(t.monsterId)) continue;
-
-            var match = owned.Find(o => o != null && o.ownedUID == t.ownedUID);
-            if (match == null) continue;
-
-            if (!string.Equals(match.monsterId, t.monsterId, StringComparison.Ordinal))
-            {
-                // Break the incorrect binding.
-                t.ownedUID = null;
-            }
-        }
-    }
-
     private static void EnsureTrainingDefaults()
     {
         if (Data?.owned == null) return;
@@ -1565,7 +1540,36 @@ private static bool ValidateAndRepairSave(bool saveIfChanged)
         return d.Year * 10000 + d.Month * 100 + d.Day;
     }
 
-    public static long NowUnix() => DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+    private static float _lastRealtimeCheck = -1f;
+    private static long  _lastWallUnix;
+
+    /// <summary>
+    /// Returns UTC epoch seconds with basic monotonic drift detection.
+    /// If the device clock jumps forward far more than real elapsed time
+    /// (e.g. user manually advanced the clock), the result is clamped.
+    /// </summary>
+    public static long NowUnix()
+    {
+        long wall = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+        float rt  = Time.realtimeSinceStartup;
+
+        if (_lastRealtimeCheck >= 0f && _lastWallUnix > 0)
+        {
+            long  wallDelta = wall - _lastWallUnix;
+            float rtDelta   = Mathf.Max(0f, rt - _lastRealtimeCheck);
+
+            // If wall clock jumped forward by more than 2× real elapsed
+            // and the jump exceeds 60 seconds, clamp to real elapsed.
+            if (wallDelta > 60 && wallDelta > (long)(rtDelta * 2f + 1f))
+            {
+                wall = _lastWallUnix + (long)Mathf.Max(1f, rtDelta);
+            }
+        }
+
+        _lastRealtimeCheck = rt;
+        _lastWallUnix      = wall;
+        return wall;
+    }
     public static int TodayDayIndexUTC() => (int)(NowUnix() / 86400L);
 
     // ─────────────────────────────────────────────

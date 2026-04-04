@@ -233,6 +233,7 @@ public class DuplicateResolutionPanelUI : MonoBehaviour
     private void OnTrain(OwnedMonsterData existing, MonsterDataSO def)
     {
         if (existing == null || def == null) return;
+        if (trainButton != null) trainButton.interactable = false;
 
         int before = existing.level;
         ApplyDuplicateCaptureLevelUp(existing, def, DUPLICATE_LEVELUP_STAT_POINTS);
@@ -264,6 +265,8 @@ public class DuplicateResolutionPanelUI : MonoBehaviour
 
     private void OnBroker(MonsterDataSO def, int payout)
     {
+        if (brokerButton != null) brokerButton.interactable = false;
+
         if (payout > 0)
             ResourceBank.Add(ResourceType.Credits, payout);
 
@@ -290,6 +293,7 @@ public class DuplicateResolutionPanelUI : MonoBehaviour
     private void OnFulfill(MonsterDataSO def)
     {
         if (_selectedRequest == null || ExchangeRequestManager.I == null) return;
+        if (fulfillButton != null) fulfillButton.interactable = false;
 
         int reward = ExchangeRequestManager.I.TryFulfillRequest(_selectedRequest.requestId, def.id);
         if (reward <= 0)
@@ -362,7 +366,10 @@ public class DuplicateResolutionPanelUI : MonoBehaviour
 
             PendingDuplicateCapture.Set(existing, def, Mathf.Max(1, p.encounterLevel), p.isPremium, p.isMaxLevel);
         }
-        catch { }
+        catch (System.Exception ex)
+        {
+            Debug.LogWarning($"[DuplicateResolution] TryRestorePendingDuplicate failed: {ex.Message}");
+        }
     }
 
     private static void ClearPersistedPendingDuplicate()
@@ -374,7 +381,10 @@ public class DuplicateResolutionPanelUI : MonoBehaviour
             save.pendingDuplicate = null;
             SaveManager.SetExchangeBlob(save);
         }
-        catch { }
+        catch (System.Exception ex)
+        {
+            Debug.LogWarning($"[DuplicateResolution] ClearPersistedPendingDuplicate failed: {ex.Message}");
+        }
     }
 
     // ─────────── Duplicate level-up (mirrors EncounterManager logic) ───────────

@@ -50,6 +50,18 @@ public static class ResourceBank
         }
     }
 
+    /// <summary>
+    /// Discard a batch without persisting. Resets depth and dirty flag
+    /// so that partial in-memory changes from a failed batch are not
+    /// flushed to disk by subsequent EndBatch or EmitChanged calls.
+    /// The caller is responsible for reloading authoritative state if needed.
+    /// </summary>
+    public static void CancelBatch()
+    {
+        _batchDepth = 0;
+        _dirty = false;
+    }
+
     static void EmitChanged()
     {
         if (_batchDepth > 0)

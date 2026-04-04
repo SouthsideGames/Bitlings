@@ -209,7 +209,6 @@ public class ExchangePanelUI : MonoBehaviour
     private void RefreshMarket()
     {
         if (marketGridParent == null || marketCellPrefab == null) return;
-        ClearChildren(marketGridParent);
 
         // Show ALL species in the catalog (base library + unlocked packs)
         var allMonsters = MonsterCatalog.All;
@@ -249,12 +248,11 @@ public class ExchangePanelUI : MonoBehaviour
                 break;
         }
 
-        // Build grid cells
+        // Build grid cells (pooled)
         for (int i = 0; i < entries.Count; i++)
         {
             var (def, state) = entries[i];
-            var go = Instantiate(marketCellPrefab, marketGridParent);
-            go.SetActive(true);
+            var go = GetOrCreateChild(marketGridParent, marketCellPrefab, i);
 
             var cell = go.GetComponent<ExchangeMarketCellUI>();
             if (cell != null)
@@ -268,6 +266,8 @@ public class ExchangePanelUI : MonoBehaviour
             var capturedDef = def;
             hold.SetCallbacks(null, () => OpenSpeciesDetail(capturedDef));
         }
+
+        DeactivateUnusedChildren(marketGridParent, entries.Count);
     }
 
     private void OpenSpeciesDetail(MonsterDataSO def)
@@ -283,13 +283,13 @@ public class ExchangePanelUI : MonoBehaviour
     private void RefreshPortfolio()
     {
         if (portfolioListParent == null) return;
-        ClearChildren(portfolioListParent);
 
         var data = SaveManager.Data;
 
         // Build unique species list from owned
         var seen = new HashSet<string>(StringComparer.Ordinal);
         int totalValue = 0;
+        int rowIndex = 0;
 
         if (data?.owned != null)
         {
@@ -308,8 +308,8 @@ public class ExchangePanelUI : MonoBehaviour
 
                 if (portfolioRowPrefab != null)
                 {
-                    var go = Instantiate(portfolioRowPrefab, portfolioListParent);
-                    go.SetActive(true);
+                    var go = GetOrCreateChild(portfolioListParent, portfolioRowPrefab, rowIndex);
+                    rowIndex++;
 
                     var row = go.GetComponent<ExchangeTrendRowUI>();
                     if (row != null)
@@ -320,6 +320,8 @@ public class ExchangePanelUI : MonoBehaviour
                 }
             }
         }
+
+        DeactivateUnusedChildren(portfolioListParent, rowIndex);
 
         if (totalRosterValueLabel != null) totalRosterValueLabel.text = $"Total Roster Value: {totalValue} Credits";
 
@@ -334,10 +336,10 @@ public class ExchangePanelUI : MonoBehaviour
     private void RefreshRequests()
     {
         if (requestsListParent == null) return;
-        ClearChildren(requestsListParent);
 
         if (ExchangeRequestManager.I == null)
         {
+            DeactivateUnusedChildren(requestsListParent, 0);
             if (noRequestsLabel != null) noRequestsLabel.gameObject.SetActive(true);
             return;
         }
@@ -345,6 +347,7 @@ public class ExchangePanelUI : MonoBehaviour
         var active = ExchangeRequestManager.I.ActiveRequests;
         if (active == null || active.Count == 0)
         {
+            DeactivateUnusedChildren(requestsListParent, 0);
             if (noRequestsLabel != null)
             {
                 noRequestsLabel.SetActive(true);
@@ -356,7 +359,7 @@ public class ExchangePanelUI : MonoBehaviour
             return;
         }
 
-        int shownRequests = 0;
+        int rowIndex = 0;
 
         for (int i = 0; i < active.Count; i++)
         {
@@ -366,18 +369,19 @@ public class ExchangePanelUI : MonoBehaviour
 
             if (requestRowPrefab != null)
             {
-                var go = Instantiate(requestRowPrefab, requestsListParent);
-                go.SetActive(true);
+                var go = GetOrCreateChild(requestsListParent, requestRowPrefab, rowIndex);
+                rowIndex++;
 
                 var row = go.GetComponent<ExchangeRequestRowUI>();
                 if (row != null) row.Populate(req);
-                shownRequests++;
             }
         }
 
+        DeactivateUnusedChildren(requestsListParent, rowIndex);
+
         if (noRequestsLabel != null)
         {
-            bool hasVisibleRequests = shownRequests > 0;
+            bool hasVisibleRequests = rowIndex > 0;
             noRequestsLabel.SetActive(!hasVisibleRequests);
 
             if (!hasVisibleRequests)
@@ -395,12 +399,19 @@ public class ExchangePanelUI : MonoBehaviour
     private void RefreshTrends()
     {
         if (trendsListParent == null) return;
-        ClearChildren(trendsListParent);
 
-        if (ExchangeManager.I == null) return;
+        if (ExchangeManager.I == null)
+        {
+            DeactivateUnusedChildren(trendsListParent, 0);
+            return;
+        }
 
         var allStates = ExchangeManager.I.AllStates;
-        if (allStates == null) return;
+        if (allStates == null)
+        {
+            DeactivateUnusedChildren(trendsListParent, 0);
+            return;
+        }
 
         // Build sorted lists: top risers and fallers
         var risers = new List<MarketSpeciesState>();
@@ -418,15 +429,23 @@ public class ExchangePanelUI : MonoBehaviour
         fallers.Sort((a, b) => (a.currentValue - a.previousValue).CompareTo(b.currentValue - b.previousValue));
 
         int showCount = 5;
+        int rowIndex = 0;
 
         // Risers
         for (int i = 0; i < Mathf.Min(showCount, risers.Count); i++)
-            SpawnTrendRow(risers[i], true);
+        {
+            SpawnTrendRow(risers[i], true, rowIndex);
+            rowIndex++;
+        }
 
         // Fallers
         for (int i = 0; i < Mathf.Min(showCount, fallers.Count); i++)
-            SpawnTrendRow(fallers[i], false);
+        {
+            SpawnTrendRow(fallers[i], false, rowIndex);
+            rowIndex++;
+        }
 
+        DeactivateUnusedChildren(trendsListParent, rowIndex);
     }
 
     // ─────────── Ticker (fade cycle) ───────────
@@ -510,15 +529,14 @@ public class ExchangePanelUI : MonoBehaviour
         }
     }
 
-    private void SpawnTrendRow(MarketSpeciesState state, bool isRiser)
+    private void SpawnTrendRow(MarketSpeciesState state, bool isRiser, int index)
     {
         if (trendRowPrefab == null || trendsListParent == null) return;
 
         var def = MonsterCatalog.GetById(state.speciesId);
         if (def == null) return;
 
-        var go = Instantiate(trendRowPrefab, trendsListParent);
-        go.SetActive(true);
+        var go = GetOrCreateChild(trendsListParent, trendRowPrefab, index);
 
         // Populate via row component or inline
         var row = go.GetComponent<ExchangeTrendRowUI>();
@@ -553,10 +571,27 @@ public class ExchangePanelUI : MonoBehaviour
         return count;
     }
 
-    private void ClearChildren(Transform parent)
+    /// <summary>
+    /// Return a pooled child or instantiate a new one under <paramref name="parent"/>.
+    /// Call <see cref="DeactivateUnusedChildren"/> after populating all rows.
+    /// </summary>
+    private GameObject GetOrCreateChild(Transform parent, GameObject prefab, int index)
     {
-        for (int i = parent.childCount - 1; i >= 0; i--)
-            Destroy(parent.GetChild(i).gameObject);
+        if (index < parent.childCount)
+        {
+            var existing = parent.GetChild(index).gameObject;
+            existing.SetActive(true);
+            return existing;
+        }
+        var go = Instantiate(prefab, parent);
+        go.SetActive(true);
+        return go;
+    }
+
+    private void DeactivateUnusedChildren(Transform parent, int usedCount)
+    {
+        for (int i = usedCount; i < parent.childCount; i++)
+            parent.GetChild(i).gameObject.SetActive(false);
     }
 
     private void Close()
@@ -574,6 +609,10 @@ public class ExchangePanelUI : MonoBehaviour
     public void ShowFulfillConfirmation(ActiveRequest request, OwnedMonsterData owned)
     {
         if (request == null || owned == null) return;
+
+        // Reject if the confirmation overlay is already visible to prevent
+        // overwriting the pending request/owned with a different pair.
+        if (confirmOverlayRoot != null && confirmOverlayRoot.activeSelf) return;
 
         _pendingRequest = request;
         _pendingOwned = owned;
@@ -601,6 +640,8 @@ public class ExchangePanelUI : MonoBehaviour
             SetConfirmVisible(false);
             return;
         }
+
+        if (confirmYesButton != null) confirmYesButton.interactable = false;
 
         string speciesId = _pendingOwned.monsterId;
         int reward = ExchangeRequestManager.I.TryFulfillRequestByConsumingOwned(
