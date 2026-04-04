@@ -1,0 +1,57 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 32ffc26ed7d444b02a9332ce4279b117, type: 3}
+  m_Name: Monster_Wisporn
+  m_EditorClassIdentifier: 
+  id: M-092
+  displayName: Wisporn
+  type: 13
+  typeIcon: {fileID: 21300000, guid: 00ff3f4c0d50247a8915bc882652db22, type: 3}
+  icon: {fileID: 21300000, guid: bcc3abf33cc89469a8ff537e32a33477, type: 3}
+  backIcon: {fileID: 21300000, guid: af846c98d34e7493cae6738da3567208, type: 3}
+  premiumIcon: {fileID: 21300000, guid: 34892ec235dbd41ecb4808fde23afc2e, type: 3}
+  premiumBackIcon: {fileID: 21300000, guid: b1da2a084693b4d10b6b99213552d272, type: 3}
+  rarity: 1
+  canBeStarter: 0
+  starterWeight: 1
+  maxLevel: 50
+  baseHP: 56
+  baseAttack: 48
+  baseDefense: 30
+  baseSpeed: 30
+  hpRegenPerHour: 7.2
+  fatigueRatePerHour: 0.095
+  fatigueCooldownHours: 8.8
+  evolutionStage: 1
+  evolutionLevel: 10
+  evolutionForm: {fileID: 0}
+  uncatchable: 0
+  isBoss: 0
+  bossJobDebuffs: []
+  bossWeight: 1
+  spawnWeight: 4.5
+  jobSkill: 1
+  titleTrack: {fileID: 11400000, guid: 12881520f9d744ee78e7f6034d6f1b70, type: 2}
+  defaultAlwaysOnTitles: []
+  ironTitles:
+  - {fileID: 11400000, guid: 71652094aed89c948ae2a0cb846cf011, type: 2}
+  - {fileID: 11400000, guid: fe67a4187cf7add4289106de72912f92, type: 2}
+  - {fileID: 11400000, guid: c2f0fdd5e9fcb25498ae79caf77583c0, type: 2}
+  - {fileID: 11400000, guid: a371bc492e827c94797e3461c1213414, type: 2}
+  Personality: {fileID: 11400000, guid: 48288e9e78c65453781f793c8df03e90, type: 2}
+  basicAttackName: Veil Tap
+  basicAttackPrefab: {fileID: 9101927626726485638, guid: 257dd9ab5e3cf0544a679d2e444f8d35, type: 3}
+  basicAttackPrefabLifetime: 1
+  spawnSfx: {fileID: 8300000, guid: 4b8fcfe18b1c081469b78b8e53218e53, type: 3}
+  baseMarketValue: 102
+  description: A drifting specter that flickers unpredictably draining foes with
+    soft but persistent ghostly strikes.

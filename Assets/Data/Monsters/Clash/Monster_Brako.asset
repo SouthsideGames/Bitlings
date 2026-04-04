@@ -1,0 +1,57 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 32ffc26ed7d444b02a9332ce4279b117, type: 3}
+  m_Name: Monster_Brako
+  m_EditorClassIdentifier: 
+  id: M-175
+  displayName: Brako
+  type: 6
+  typeIcon: {fileID: 21300000, guid: 08b8f2b54695d465cb15062c5b76b5a4, type: 3}
+  icon: {fileID: 21300000, guid: 76b5ebd97a33c4eaebea0cc1dde9f0c3, type: 3}
+  backIcon: {fileID: 21300000, guid: 6f82a716bb8364bee9c3f85e671edd50, type: 3}
+  premiumIcon: {fileID: 21300000, guid: f6556b03f9cf74f9880f7b650f4bc815, type: 3}
+  premiumBackIcon: {fileID: 21300000, guid: 8053ea17b0cda41ca804d15819220585, type: 3}
+  rarity: 0
+  canBeStarter: 0
+  starterWeight: 1
+  maxLevel: 50
+  baseHP: 48
+  baseAttack: 56
+  baseDefense: 28
+  baseSpeed: 18
+  hpRegenPerHour: 4.6
+  fatigueRatePerHour: 0.11
+  fatigueCooldownHours: 7.2
+  evolutionStage: 1
+  evolutionLevel: 8
+  evolutionForm: {fileID: 0}
+  uncatchable: 0
+  isBoss: 0
+  bossJobDebuffs: []
+  bossWeight: 1
+  spawnWeight: 8
+  jobSkill: 0.95
+  titleTrack: {fileID: 11400000, guid: b4ebc7f1d9c634860a5ec45627df0b75, type: 2}
+  defaultAlwaysOnTitles: []
+  ironTitles:
+  - {fileID: 11400000, guid: 3da4dd895f4bd4ff9b4690ab28dbdc42, type: 2}
+  - {fileID: 11400000, guid: 2897bcb545bf47f4c93cf253bec91032, type: 2}
+  - {fileID: 11400000, guid: 148ef35dc09e0df47bd36ee844bac36e, type: 2}
+  - {fileID: 11400000, guid: a54fbab895dd9804c9cacbb8e8ce854c, type: 2}
+  Personality: {fileID: 11400000, guid: a31b270cc22594368bd4541ee042d278, type: 2}
+  basicAttackName: Impact Slam
+  basicAttackPrefab: {fileID: 5406408022945852380, guid: a106796f95643465ab9883d4b5161f50, type: 3}
+  basicAttackPrefabLifetime: 1
+  spawnSfx: {fileID: 8300000, guid: 5e7ee1300af30e04cb8c83f658219c5b, type: 3}
+  baseMarketValue: 77
+  description: A compact clash fighter that charges headfirst and smashes foes with
+    raw force.

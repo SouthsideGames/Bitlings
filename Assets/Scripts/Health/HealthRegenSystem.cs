@@ -2,12 +2,7 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 
-/// <summary>
-/// Applies passive HP regeneration to owned + team monsters.
-/// - Uses MonsterDataSO.hpRegenPerHour if set; otherwise a default.
-/// - Works on resume (offline catch-up) and light online ticks.
-/// - KO stays KO until regen lifts HP above 0.
-/// </summary>
+
 [DefaultExecutionOrder(-275)]
 public class HealthRegenSystem : MonoBehaviour
 {
@@ -62,7 +57,80 @@ public class HealthRegenSystem : MonoBehaviour
 
         bool changed = false;
 
-        // Owned collection
+        // --- Regen core ---
+        // IMPORTANT:
+        // 1) Do NOT overwrite lastHPUnix every tick when no HP is gained.
+        //    If we do, UI countdowns never progress and monsters can appear "tied together".
+        // 2) When HP is gained, preserve fractional remainder time by advancing lastHPUnix
+        //    by only the time actually consumed.
+
+        bool TryApplyToEntry(OwnedMonsterData e, MonsterDataSO def, out OwnedMonsterData updated)
+        {
+            updated = e;
+            if (e == null || def == null) return false;
+
+            int lvl = Mathf.Max(1, e.level);
+            int maxHP = HealingService.CalcMaxHP(def, lvl);
+
+            // Normalize legacy/uninitialized HP (never negative).
+            // If it was negative, treat as full HP.
+            if (updated.currentHP < 0)
+            {
+                OwnedMonsterHP.Normalize(ref updated, nowUnix, OwnedMonsterHP.Reason.OfflineRegen);
+                return true;
+            }
+
+            // Nothing to do if already full.
+            if (e.currentHP >= maxHP)
+            {
+                // Keep lastHPUnix stable; don't churn timers/UI.
+                return false;
+            }
+
+            long last = e.lastHPUnix > 0 ? e.lastHPUnix : SaveManager.Data.lastSavedUnix;
+
+            // If device clock moved backwards, clamp stored timestamp to prevent frozen regen.
+            if (last > nowUnix && deltaSecondsOverride == null)
+            {
+                updated.lastHPUnix = nowUnix;
+                last = nowUnix;
+            }
+
+            long delta = deltaSecondsOverride ?? Math.Max(0, nowUnix - Math.Max(0, last));
+            if (delta <= 0) return false;
+
+            float perHour = def.hpRegenPerHour > 0f ? def.hpRegenPerHour : defaultRegenPerHour;
+            if (perHour <= 0.0001f) return false;
+
+            // Convert regen to "seconds per 1 HP" and award whole HP based on elapsed.
+            float secPerHpF = 3600f / perHour;
+            int gained = (int)Math.Floor(delta / secPerHpF);
+            if (gained <= 0)
+            {
+                // Do NOT update lastHPUnix here; we want elapsed time to accumulate.
+                return false;
+            }
+
+            int before = Mathf.Clamp(e.currentHP, 0, maxHP);
+            int after = Mathf.Clamp(before + gained, 0, maxHP);
+            int actualGained = after - before;
+            if (actualGained <= 0) return false;
+
+            // Preserve remainder time:
+            // move lastHPUnix forward by the time consumed for the HP we actually awarded.
+            long consumedSeconds = (long)Math.Round(actualGained * secPerHpF);
+            long newLast = Math.Min(nowUnix, last + Math.Max(0, consumedSeconds));
+            if (newLast < 0) newLast = nowUnix;
+
+            updated.currentHP = after;
+            updated.lastHPUnix = newLast;
+
+            // Final invariant safety.
+            if (updated.currentHP < 0) updated.currentHP = 0;
+            return true;
+        }
+
+        // Owned collection (source of truth)
         var owned = SaveManager.Data.owned ?? new List<OwnedMonsterData>();
         for (int i = 0; i < owned.Count; i++)
         {
@@ -72,50 +140,45 @@ public class HealthRegenSystem : MonoBehaviour
             var def = MonsterLibraryLocator.GetById(e.monsterId);
             if (def == null) continue;
 
-            int maxHP = HealingService.CalcMaxHP(def, Mathf.Max(1, e.level));
-            if (e.currentHP < 0) { e.currentHP = maxHP; e.lastHPUnix = nowUnix; owned[i] = e; changed = true; continue; }
-
-            long last = e.lastHPUnix > 0 ? e.lastHPUnix : SaveManager.Data.lastSavedUnix;
-            long delta = deltaSecondsOverride ?? Math.Max(0, nowUnix - Math.Max(0, last));
-            if (delta <= 0) continue;
-
-            float perHour = def.hpRegenPerHour > 0f ? def.hpRegenPerHour : defaultRegenPerHour;
-            int gain = Mathf.FloorToInt(perHour * (delta / 3600f));
-            if (gain <= 0) { e.lastHPUnix = nowUnix; owned[i] = e; continue; }
-
-            int before = e.currentHP;
-            e.currentHP = Mathf.Clamp(before + gain, 0, maxHP);
-            e.lastHPUnix = nowUnix;
-
-            if (e.currentHP != before) { owned[i] = e; changed = true; }
+            if (TryApplyToEntry(e, def, out var updated))
+            {
+                owned[i] = updated;
+                changed = true;
+            }
         }
 
-        // Team mirror
+        // Team mirror:
+        // Prefer mirroring from owned via ownedUID so a monster can't have two timers.
         var team = SaveManager.Data.team ?? new List<OwnedMonsterData>();
         for (int i = 0; i < team.Count; i++)
         {
             var t = team[i];
             if (t == null || string.IsNullOrEmpty(t.monsterId)) continue;
 
-            var def = MonsterLibraryLocator.GetById(t.monsterId);
-            if (def == null) continue;
+            if (!string.IsNullOrEmpty(t.ownedUID))
+            {
+                var ownedMatch = SaveManager.GetOwnedByUid(t.ownedUID);
+                if (ownedMatch != null && !string.IsNullOrEmpty(ownedMatch.monsterId))
+                {
+                    if (t.currentHP != ownedMatch.currentHP || t.lastHPUnix != ownedMatch.lastHPUnix)
+                    {
+                        t.currentHP = ownedMatch.currentHP;
+                        t.lastHPUnix = ownedMatch.lastHPUnix;
+                        team[i] = t;
+                        changed = true;
+                    }
+                    continue;
+                }
+            }
 
-            int maxHP = HealingService.CalcMaxHP(def, Mathf.Max(1, t.level));
-            if (t.currentHP < 0) { t.currentHP = maxHP; t.lastHPUnix = nowUnix; team[i] = t; changed = true; continue; }
+            var def2 = MonsterLibraryLocator.GetById(t.monsterId);
+            if (def2 == null) continue;
 
-            long last = t.lastHPUnix > 0 ? t.lastHPUnix : SaveManager.Data.lastSavedUnix;
-            long delta = deltaSecondsOverride ?? Math.Max(0, nowUnix - Math.Max(0, last));
-            if (delta <= 0) continue;
-
-            float perHour = def.hpRegenPerHour > 0f ? def.hpRegenPerHour : defaultRegenPerHour;
-            int gain = Mathf.FloorToInt(perHour * (delta / 3600f));
-            if (gain <= 0) { t.lastHPUnix = nowUnix; team[i] = t; continue; }
-
-            int before = t.currentHP;
-            t.currentHP = Mathf.Clamp(before + gain, 0, maxHP);
-            t.lastHPUnix = nowUnix;
-
-            if (t.currentHP != before) { team[i] = t; changed = true; }
+            if (TryApplyToEntry(t, def2, out var updatedT))
+            {
+                team[i] = updatedT;
+                changed = true;
+            }
         }
 
         if (changed)

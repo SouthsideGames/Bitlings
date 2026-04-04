@@ -903,9 +903,9 @@ MonoBehaviour:
   rootButton: {fileID: 8025244260317215701}
   healBtn: {fileID: 316128147589648810}
   partialHealPct: 0.25
-  healCostType: 3
-  partialHealCost: 1
-  fullHealCost: 3
+  healCostType: 1
+  creditHealCost: 1
+  fullCreditHealCost: 3
   medkitResourceType: 3
   partialHealMedkitCost: 1
   fullHealMedkitCost: 1

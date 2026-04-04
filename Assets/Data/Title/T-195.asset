@@ -1,0 +1,22 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7c6531a1653eb6d4ea5d44f8f8c54ecf, type: 3}
+  m_Name: T-195
+  m_EditorClassIdentifier: 
+  titleId: T-195
+  displayName: Detective
+  description: Adds +25 SPD at battle start. Lasts 4 turn(s).
+  icon: {fileID: 7617494016918777864, guid: 901668dd83f054253a0d4b283e24a25c, type: 3}
+  canRollOnWild: 1
+  stat: 2
+  flatAmount: 25
+  durationTurns: 4

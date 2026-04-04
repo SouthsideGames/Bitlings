@@ -1,0 +1,56 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 32ffc26ed7d444b02a9332ce4279b117, type: 3}
+  m_Name: Monster_Dustel
+  m_EditorClassIdentifier: 
+  id: M-112
+  displayName: Dustel
+  type: 8
+  typeIcon: {fileID: 21300000, guid: f0d6243fead4a41fcae07804c4d66233, type: 3}
+  icon: {fileID: 21300000, guid: 2f750be8714e340f7b7be7557ed9525e, type: 3}
+  backIcon: {fileID: 21300000, guid: d695a202d5d994b6b93c8790960e4d94, type: 3}
+  premiumIcon: {fileID: 21300000, guid: 215d586fe050e4b16b5196a903dd9db5, type: 3}
+  premiumBackIcon: {fileID: 21300000, guid: 966440e181bff4d26a8288df78007dd8, type: 3}
+  rarity: 0
+  canBeStarter: 0
+  starterWeight: 1
+  maxLevel: 50
+  baseHP: 58
+  baseAttack: 34
+  baseDefense: 40
+  baseSpeed: 18
+  hpRegenPerHour: 5.8
+  fatigueRatePerHour: 0.077
+  fatigueCooldownHours: 9.9
+  evolutionStage: 1
+  evolutionLevel: 18
+  evolutionForm: {fileID: 11400000, guid: cc532ce1116ca46bea75d2be04b47b5a, type: 2}
+  uncatchable: 0
+  isBoss: 0
+  bossJobDebuffs: []
+  bossWeight: 1
+  spawnWeight: 8
+  jobSkill: 0.95
+  titleTrack: {fileID: 11400000, guid: e7402bbf1f4cf4032b31a78b40b07b46, type: 2}
+  defaultAlwaysOnTitles: []
+  ironTitles:
+  - {fileID: 11400000, guid: f0e53950f2ecd1346ada80856c0f01df, type: 2}
+  - {fileID: 11400000, guid: 86f49b74b91be4fbe8ab5df7421a5405, type: 2}
+  - {fileID: 11400000, guid: f0a22c228659c304fb9369327478aab9, type: 2}
+  - {fileID: 11400000, guid: 014cd17980e502c418a7ed232b26e215, type: 2}
+  Personality: {fileID: 11400000, guid: 71fa3f6cb68214bca94496affd470944, type: 2}
+  basicAttackName: Grain Bash
+  basicAttackPrefab: {fileID: 8624645253036040332, guid: f03e702d7c9714bc2af48b5b17c93c88, type: 3}
+  basicAttackPrefabLifetime: 1
+  spawnSfx: {fileID: 8300000, guid: a130f952fc10cd44ab0cbb46273c0674, type: 3}
+  baseMarketValue: 77
+  description: A compact ground dweller that hardens loose soil into blunt

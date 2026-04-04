@@ -24,4 +24,7 @@ MonoBehaviour:
   badMatchDefendBonus: 1
   badMatchRunBonus: 1
   eachTurnAttackBonus: 0
-  description: Maximizes survive time; avoids risk.
+  eachTurnFocusPenalty: 0
+  lowHpFocusPenalty: 2
+  chaoticOverrideChance: 0.25
+  description: Prioritizes survivability by minimizing unnecessary risk.

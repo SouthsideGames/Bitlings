@@ -80,7 +80,9 @@ public static class EvolutionService
 
         SaveManager.Save();
 
-        Debug.Log($"[EvolutionService] Evolved {oldId} → {targetMonsterId} (UID: {ownedEntry.ownedUID})");
+        #if UNITY_EDITOR || DEVELOPMENT_BUILD
+        DevLog.Log($"[EvolutionService] Evolved {oldId} → {targetMonsterId} (UID: {ownedEntry.ownedUID})");
+        #endif
         return true;
     }
 

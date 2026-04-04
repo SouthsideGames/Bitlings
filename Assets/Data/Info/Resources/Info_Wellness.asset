@@ -16,6 +16,5 @@ MonoBehaviour:
   category: 1
   title: Wellness Voucher
   subtitle: Resource
-  body: 'Comes from: Observatory
-
-    Temporary HP increase during encounters'
+  body: "Provided by the Observatory to temporarily increase a Bitling\u2019s health
+    during Rift Operations."

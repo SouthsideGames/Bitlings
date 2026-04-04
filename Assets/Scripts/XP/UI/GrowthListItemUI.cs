@@ -9,19 +9,17 @@ public class GrowthListItemUI : MonoBehaviour
     [SerializeField] private Button openButton;
     [SerializeField] private TextMeshProUGUI nameText;
     [SerializeField] private TextMeshProUGUI levelText;
-    [SerializeField] private TextMeshProUGUI typeText;          // Type label
-    [SerializeField] private Image iconImage;                   // optional
-    [SerializeField] private Toggle autoToggle;                 // optional
+    [SerializeField] private TextMeshProUGUI typeText;
+    [SerializeField] private Image iconImage;
+    [SerializeField] private Toggle autoToggle;
+    [SerializeField] private TextMeshProUGUI autoStateText;
 
     private OwnedMonsterData _model;
     private Action<OwnedMonsterData> _onOpen;
-    private Func<bool> _canEnableAnotherAuto;   // returns true if enabling is allowed
-    private Action _onAutoChanged;              // callback to notify parent
+    private Func<bool> _canEnableAnotherAuto;
+    private Action _onAutoChanged;
     private bool _suppressToggle;
 
-    // -------------------------------------------------------------------------
-    // BIND
-    // -------------------------------------------------------------------------
     public void Bind(
         OwnedMonsterData model,
         string displayName,
@@ -36,20 +34,20 @@ public class GrowthListItemUI : MonoBehaviour
         _canEnableAnotherAuto = canEnableAnotherAuto;
         _onAutoChanged = onAutoChanged;
 
-        if (nameText)  nameText.text  = displayName ?? model.monsterId;
+        if (nameText) nameText.text = displayName ?? model.monsterId;
         if (levelText) levelText.text = $"Lv {Mathf.Max(1, model.level)}";
-        if (typeText)  typeText.text  = type.ToString().ToUpperInvariant();
+        if (typeText) typeText.text = type.ToString().ToUpperInvariant();
 
         if (iconImage)
         {
             iconImage.enabled = icon != null;
-            iconImage.sprite  = icon;
+            iconImage.sprite = icon;
         }
 
         if (autoToggle)
         {
             _suppressToggle = true;
-            autoToggle.SetIsOnWithoutNotify(_model.autoApply);
+            autoToggle.SetIsOnWithoutNotify(_model != null && _model.autoApply);
             _suppressToggle = false;
 
             autoToggle.onValueChanged.RemoveAllListeners();
@@ -58,6 +56,7 @@ public class GrowthListItemUI : MonoBehaviour
 
         RefreshAutoToggleFeatureGate();
         RefreshOpenInteractable();
+        RefreshAutoStateText();
 
         if (openButton)
         {
@@ -66,9 +65,6 @@ public class GrowthListItemUI : MonoBehaviour
         }
     }
 
-    // -------------------------------------------------------------------------
-    // LIFECYCLE – subscribe to team changes so level label updates when saved
-    // -------------------------------------------------------------------------
     private void OnEnable()
     {
         GameEvents.OnTeamChanged += HandleTeamChanged;
@@ -76,7 +72,12 @@ public class GrowthListItemUI : MonoBehaviour
         if (FeatureUnlockManager.I != null)
             FeatureUnlockManager.I.OnFeatureUnlocked += HandleFeatureUnlocked;
 
-        RefreshAutoToggleFeatureGate();
+        if (_model != null)
+        {
+            RefreshAutoToggleFeatureGate();
+            RefreshOpenInteractable();
+            RefreshAutoStateText();
+        }
     }
 
     private void OnDisable()
@@ -87,10 +88,20 @@ public class GrowthListItemUI : MonoBehaviour
             FeatureUnlockManager.I.OnFeatureUnlocked -= HandleFeatureUnlocked;
     }
 
+    private void RefreshAutoStateText()
+    {
+        if (!autoStateText) return;
+        bool on = _model != null && _model.autoApply;
+        autoStateText.text = on ? "ON" : "OFF";
+    }
+
     private void HandleFeatureUnlocked(FeatureId feature)
     {
         if (feature == FeatureId.AutoGrowth_Basic)
+        {
             RefreshAutoToggleFeatureGate();
+            RefreshAutoStateText();
+        }
     }
 
     private void HandleTeamChanged()
@@ -98,35 +109,53 @@ public class GrowthListItemUI : MonoBehaviour
         if (_model == null) return;
 
         var data = SaveManager.Data;
-        if (data == null || data.team == null) return;
+        if (data == null) return;
 
         OwnedMonsterData latest = null;
 
-        // Prefer matching by ownedUID if present (most robust if team order changes)
-        if (!string.IsNullOrEmpty(_model.ownedUID))
+        if (data.owned != null)
         {
-            for (int i = 0; i < data.team.Count; i++)
+            if (!string.IsNullOrEmpty(_model.ownedUID))
+                latest = data.owned.Find(o => o != null && o.ownedUID == _model.ownedUID);
+
+            if (latest == null && !string.IsNullOrEmpty(_model.monsterId))
             {
-                var m = data.team[i];
-                if (m != null && m.ownedUID == _model.ownedUID)
+                int count = 0;
+                OwnedMonsterData single = null;
+                for (int i = 0; i < data.owned.Count; i++)
                 {
-                    latest = m;
-                    break;
+                    var o = data.owned[i];
+                    if (o != null && o.monsterId == _model.monsterId)
+                    {
+                        count++;
+                        if (count == 1) single = o;
+                        else break;
+                    }
                 }
+                if (count == 1) latest = single;
             }
         }
 
-        // Fallback: match by monsterId if we didn’t find by ownedUID
-        if (latest == null && !string.IsNullOrEmpty(_model.monsterId))
+        if (latest == null && data.team != null)
         {
-            for (int i = 0; i < data.team.Count; i++)
+            if (!string.IsNullOrEmpty(_model.ownedUID))
+                latest = data.team.Find(t => t != null && t.ownedUID == _model.ownedUID);
+
+            if (latest == null && !string.IsNullOrEmpty(_model.monsterId))
             {
-                var m = data.team[i];
-                if (m != null && m.monsterId == _model.monsterId)
+                int count = 0;
+                OwnedMonsterData single = null;
+                for (int i = 0; i < data.team.Count; i++)
                 {
-                    latest = m;
-                    break;
+                    var t = data.team[i];
+                    if (t != null && t.monsterId == _model.monsterId)
+                    {
+                        count++;
+                        if (count == 1) single = t;
+                        else break;
+                    }
                 }
+                if (count == 1) latest = single;
             }
         }
 
@@ -134,12 +163,20 @@ public class GrowthListItemUI : MonoBehaviour
         {
             _model = latest;
             RefreshLevel(_model.level);
+
+            _suppressToggle = true;
+            if (autoToggle) autoToggle.SetIsOnWithoutNotify(_model.autoApply);
+            _suppressToggle = false;
+
+            RefreshAutoStateText();
+            RefreshOpenInteractable();
+        }
+        else
+        {
+            RefreshOpenInteractable();
+            RefreshAutoStateText();
         }
     }
-
-    // -------------------------------------------------------------------------
-    // CORE UI HELPERS
-    // -------------------------------------------------------------------------
 
     private bool IsAutoGrowthUnlocked()
     {
@@ -153,17 +190,19 @@ public class GrowthListItemUI : MonoBehaviour
 
         bool unlocked = IsAutoGrowthUnlocked();
         autoToggle.gameObject.SetActive(unlocked);
-
-        // If the feature is somehow locked but the data has autoApply = true,
-        // we leave the data as-is but hide the toggle.
     }
 
-    // Call this if cores change globally and you want to refresh rows.
     public void RefreshOpenInteractable()
     {
         if (!openButton) return;
-        int cores = ResourceManager.I ? ResourceManager.I.Get(ResourceType.GrowthCore) : 0;
-        openButton.interactable = cores > 0;
+
+        int cores =
+            ResourceManager.I ? ResourceManager.I.Get(ResourceType.GrowthCore)
+            : ResourceBank.Get(ResourceType.GrowthCore);
+
+        int unspent = _model != null ? Mathf.Max(0, _model.unspentStatPoints) : 0;
+
+        openButton.interactable = (cores > 0) || (unspent > 0);
     }
 
     private void OnAutoToggleChanged(bool isOn)
@@ -173,27 +212,33 @@ public class GrowthListItemUI : MonoBehaviour
 
         if (!IsAutoGrowthUnlocked())
         {
-            // Safety guard – should not happen because toggle is hidden when locked.
             _suppressToggle = true;
-            autoToggle.SetIsOnWithoutNotify(false);
+            if (autoToggle) autoToggle.SetIsOnWithoutNotify(false);
             _suppressToggle = false;
+
+            _model.autoApply = false;
+            SaveManager.Save();
+
+            RefreshAutoStateText();
             return;
         }
 
         if (isOn)
         {
-            // ask parent if we can enable (cap check)
             if (_canEnableAnotherAuto != null && !_canEnableAnotherAuto())
             {
                 _suppressToggle = true;
-                autoToggle.SetIsOnWithoutNotify(false);
+                if (autoToggle) autoToggle.SetIsOnWithoutNotify(false);
                 _suppressToggle = false;
+
+                RefreshAutoStateText();
                 return;
             }
 
             _model.autoApply = true;
-            if (_model.autoApplyTargetLevel < _model.level + 1)
-                _model.autoApplyTargetLevel = _model.level + 1;
+
+            // IMPORTANT: 0 means "no cap" so Apply will level as far as budget allows
+            _model.autoApplyTargetLevel = 0;
         }
         else
         {
@@ -201,6 +246,13 @@ public class GrowthListItemUI : MonoBehaviour
         }
 
         SaveManager.Save();
+
+        RefreshAutoStateText();
+        RefreshOpenInteractable();
+
+        GameEvents.OnTeamChanged?.Invoke();
+
+        // IMPORTANT: Do NOT auto-level on toggle. The Gym panel Apply button triggers leveling.
         _onAutoChanged?.Invoke();
     }
 
@@ -209,5 +261,5 @@ public class GrowthListItemUI : MonoBehaviour
         if (levelText) levelText.text = $"Lv {Mathf.Max(1, newLevel)}";
     }
 
-    public void ButtonClick() => AudioManager.I.PlayClick();
+    public void ButtonClick() => AudioManager.I?.PlayClick();
 }

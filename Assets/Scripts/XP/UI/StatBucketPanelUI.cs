@@ -43,23 +43,19 @@ public class StatBucketPanelUI : MonoBehaviour
     [Header("Config")]
     [SerializeField, Min(1)] private int pointsPerLevel = 3;
 
-    private TokenEconomySO   tokenEconomy;
-    private BucketLibrarySO  bucketLibrary;
+    private TokenEconomySO tokenEconomy;
     private LevelCostCurveSO levelCostCurve;
-
+    private bool _isConfirming;
     private OwnedMonsterData _m;
-    private LevelUpBucketSO _bucket;
 
+    // Display breakdown
+    private int _monHP, _monATK, _monDEF, _monSPD;
+    private int _trainHP, _trainATK, _trainDEF, _trainSPD;
     private int _baseHP, _baseATK, _baseDEF, _baseSPD;
-
     private int _allocHp, _allocAtk, _allocDef, _allocSpd;
-
     private int _points;
     private int _nextCostToLevel;
-
     const string GREEN = "#3CDE74";
-
-    // ─────────────────────────────────────────────────────────────
 
     private void Awake()
     {
@@ -103,11 +99,6 @@ public class StatBucketPanelUI : MonoBehaviour
                 if (all != null && all.Length > 0) tokenEconomy = all[0];
             }
         }
-        if (!bucketLibrary)
-        {
-            var all = Resources.LoadAll<BucketLibrarySO>("");
-            if (all != null && all.Length > 0) bucketLibrary = all[0];
-        }
         if (!levelCostCurve)
         {
             var all = Resources.LoadAll<LevelCostCurveSO>("");
@@ -117,8 +108,8 @@ public class StatBucketPanelUI : MonoBehaviour
 
     private void Wire()
     {
-        if (hpMinus)  hpMinus.onClick.AddListener(() => AddAlloc(ref _allocHp,  -1));
-        if (hpPlus)   hpPlus.onClick.AddListener(() => AddAlloc(ref _allocHp,  +1));
+        if (hpMinus)  hpMinus.onClick.AddListener(() => AddAlloc(ref _allocHp, -1));
+        if (hpPlus)   hpPlus.onClick.AddListener(() => AddAlloc(ref _allocHp, +1));
         if (atkMinus) atkMinus.onClick.AddListener(() => AddAlloc(ref _allocAtk, -1));
         if (atkPlus)  atkPlus.onClick.AddListener(() => AddAlloc(ref _allocAtk, +1));
         if (defMinus) defMinus.onClick.AddListener(() => AddAlloc(ref _allocDef, -1));
@@ -126,7 +117,6 @@ public class StatBucketPanelUI : MonoBehaviour
         if (spdMinus) spdMinus.onClick.AddListener(() => AddAlloc(ref _allocSpd, -1));
         if (spdPlus)  spdPlus.onClick.AddListener(() => AddAlloc(ref _allocSpd, +1));
 
-        // Preset buttons: set bucket + apply preset allocation
         if (offenseBtn) offenseBtn.onClick.AddListener(() => OnPresetClicked("Offense"));
         if (defenseBtn) defenseBtn.onClick.AddListener(() => OnPresetClicked("Defense"));
         if (utilityBtn) utilityBtn.onClick.AddListener(() => OnPresetClicked("Utility"));
@@ -167,12 +157,6 @@ public class StatBucketPanelUI : MonoBehaviour
         ComputeCurrentStats();
         ClearAlloc();
 
-        if (bucketLibrary)
-        {
-            _bucket = bucketLibrary.GetById(_m.lastBucketId, bucketLibrary.DefaultBucket());
-            if (!_bucket) _bucket = bucketLibrary.DefaultBucket();
-        }
-
         var def = MonsterLibraryLocator.GetById(_m.monsterId);
         if (nameText)
             nameText.text = def ? def.displayName : _m.monsterId;
@@ -184,28 +168,28 @@ public class StatBucketPanelUI : MonoBehaviour
 
     private void ComputeCurrentStats()
     {
-        _baseHP  = 0;
-        _baseATK = 0;
-        _baseDEF = 0;
-        _baseSPD = 0;
+        _monHP = _monATK = _monDEF = _monSPD = 0;
+        _trainHP = _trainATK = _trainDEF = _trainSPD = 0;
+        _baseHP = _baseATK = _baseDEF = _baseSPD = 0;
 
         if (_m == null || string.IsNullOrEmpty(_m.monsterId)) return;
 
-        var def = MonsterLibraryLocator.GetById(_m.monsterId);
-        int lvl = Mathf.Max(1, _m.level);
+        var stats = ProgressionStatCalc.Get(_m);
 
-        if (def)
-        {
-            _baseHP  = Mathf.RoundToInt(BattleCalc.CalcHP(def, lvl));
-            _baseATK = Mathf.RoundToInt(BattleCalc.CalcBaseAttack(def, lvl, 0, 0));
-            _baseDEF = BattleCalc.CalcDefense(def, lvl);
-            _baseSPD = BattleCalc.CalcSpeed(def,   lvl);
-        }
+        _monHP  = stats.basePlusLevelHP;
+        _monATK = stats.basePlusLevelATK;
+        _monDEF = stats.basePlusLevelDEF;
+        _monSPD = stats.basePlusLevelSPD;
 
-        _baseHP  += _m.trainingBonus.hp;
-        _baseATK += _m.trainingBonus.atk;
-        _baseDEF += _m.trainingBonus.def;
-        _baseSPD += _m.trainingBonus.spd;
+        _trainHP  = stats.trainingHP;
+        _trainATK = stats.trainingATK;
+        _trainDEF = stats.trainingDEF;
+        _trainSPD = stats.trainingSPD;
+
+        _baseHP  = _monHP  + _trainHP;
+        _baseATK = _monATK + _trainATK;
+        _baseDEF = _monDEF + _trainDEF;
+        _baseSPD = _monSPD + _trainSPD;
     }
 
     private void RefreshUI()
@@ -235,10 +219,10 @@ public class StatBucketPanelUI : MonoBehaviour
         int defDelta = _allocDef * (tokenEconomy ? tokenEconomy.defPerCore : 1);
         int spdDelta = _allocSpd * (tokenEconomy ? tokenEconomy.spdPerCore : 1);
 
-        SetStatLabel(hpVal,  _baseHP,  hpDelta);
-        SetStatLabel(atkVal, _baseATK, atkDelta);
-        SetStatLabel(defVal, _baseDEF, defDelta);
-        SetStatLabel(spdVal, _baseSPD, spdDelta);
+        SetStatLabelBreakdown(hpVal,  _monHP,  _trainHP,  hpDelta);
+        SetStatLabelBreakdown(atkVal, _monATK, _trainATK, atkDelta);
+        SetStatLabelBreakdown(defVal, _monDEF, _trainDEF, defDelta);
+        SetStatLabelBreakdown(spdVal, _monSPD, _trainSPD, spdDelta);
 
         bool hasPointsLeft = remaining > 0;
 
@@ -268,14 +252,15 @@ public class StatBucketPanelUI : MonoBehaviour
         }
     }
 
-    private void SetStatLabel(TextMeshProUGUI label, int baseVal, int allocDelta)
+    private void SetStatLabelBreakdown(TextMeshProUGUI label, int monsterBase, int trainingSaved, int allocDelta)
     {
         if (!label) return;
-        int total = baseVal + allocDelta;
-        if (allocDelta > 0)
-            label.text = $"{total} <color={GREEN}>(+{allocDelta})</color>";
-        else
-            label.text = $"{total}";
+
+        int baseVal = Mathf.Max(0, monsterBase);
+        int trainingVal = Mathf.Max(0, trainingSaved) + Mathf.Max(0, allocDelta);
+        int total = baseVal + trainingVal;
+
+        label.text = $"{total} ({baseVal} + <color={GREEN}>{trainingVal}</color>)";
     }
 
     private void AddAlloc(ref int field, int delta)
@@ -296,25 +281,13 @@ public class StatBucketPanelUI : MonoBehaviour
         RefreshUI();
     }
 
-    // Preset click: remember bucket + auto-allocate points
     private void OnPresetClicked(string bucketId)
     {
-        SetBucket(bucketId);
+        if (_m != null)
+            _m.lastBucketId = bucketId;
         ApplyPreset(bucketId);
     }
 
-    private void SetBucket(string bucketId)
-    {
-        if (!bucketLibrary) return;
-
-        var fallback = bucketLibrary.DefaultBucket();
-        _bucket = bucketLibrary.GetById(bucketId, fallback);
-
-        if (_m != null)
-            _m.lastBucketId = _bucket ? _bucket.bucketId : null;
-    }
-
-    // Apply up to 5 points according to the selected preset
     private void ApplyPreset(string bucketId)
     {
         if (_m == null) return;
@@ -325,46 +298,267 @@ public class StatBucketPanelUI : MonoBehaviour
 
         int toSpend = Mathf.Min(5, remaining);
 
+        // Get the monster's personality to influence preset distribution
+        var personality = GetMonsterPersonality();
+        
         switch (bucketId)
         {
             case "Offense":
-                for (int i = 0; i < toSpend; i++)
-                    AddAlloc(ref _allocAtk, +1);
+                ApplyOffensePresetWithPersonality(toSpend, personality);
                 break;
-
             case "Defense":
-                for (int i = 0; i < toSpend; i++)
-                    AddAlloc(ref _allocDef, +1);
+                ApplyDefensePresetWithPersonality(toSpend, personality);
                 break;
-
             case "Speed":
-                for (int i = 0; i < toSpend; i++)
-                    AddAlloc(ref _allocSpd, +1);
+                ApplySpeedPresetWithPersonality(toSpend, personality);
                 break;
-
             case "Balance":
-                for (int i = 0; i < toSpend; i++)
-                {
-                    int step = i % 3;
-                    if (step == 0)      AddAlloc(ref _allocHp,  +1);
-                    else if (step == 1) AddAlloc(ref _allocAtk, +1);
-                    else                AddAlloc(ref _allocDef, +1);
-                }
+                ApplyBalancePresetWithPersonality(toSpend, personality);
                 break;
-
             case "Utility":
-                for (int i = 0; i < toSpend; i++)
-                {
-                    if (i % 2 == 0) AddAlloc(ref _allocHp, +1);
-                    else            AddAlloc(ref _allocSpd, +1);
-                }
+                ApplyUtilityPresetWithPersonality(toSpend, personality);
                 break;
         }
     }
 
-    // ─────────────────────────────────────────────────────────────
-    // Level Up: spend Growth Cores → gain stat points
-    // ─────────────────────────────────────────────────────────────
+    private MonsterPersonalitySO GetMonsterPersonality()
+    {
+        if (_m == null || string.IsNullOrEmpty(_m.monsterId)) return null;
+        var def = MonsterLibraryLocator.GetById(_m.monsterId);
+        return def != null ? def.Personality : null;
+    }
+
+    private void ApplyOffensePresetWithPersonality(int toSpend, MonsterPersonalitySO personality)
+    {
+        // Offense preset: prioritizes ATK
+        // Personality modifiers:
+        // - Offensive: pure ATK (personality aligned)
+        // - Defensive: split to DEF slightly (opposite personality)
+        // - Evasive: add SPD boost (tactical adjustment)
+        // - Support: add HP slightly (tactical adjustment)
+        
+        if (personality != null && personality.group == MonsterPersonalitySO.PersonalityGroup.Defensive)
+        {
+            // Defensive monsters still attack, but they're more balanced
+            for (int i = 0; i < toSpend; i++)
+            {
+                if (i % 3 == 0) 
+                    AddAlloc(ref _allocDef, +1);  // 1/3 to defense
+                else 
+                    AddAlloc(ref _allocAtk, +1);  // 2/3 to attack
+            }
+        }
+        else if (personality != null && personality.group == MonsterPersonalitySO.PersonalityGroup.Evasive)
+        {
+            // Evasive monsters learn to be faster offenders
+            for (int i = 0; i < toSpend; i++)
+            {
+                if (i % 3 == 0)
+                    AddAlloc(ref _allocSpd, +1);  // 1/3 to speed
+                else
+                    AddAlloc(ref _allocAtk, +1);  // 2/3 to attack
+            }
+        }
+        else if (personality != null && personality.group == MonsterPersonalitySO.PersonalityGroup.Support)
+        {
+            // Support monsters gain balanced offense
+            for (int i = 0; i < toSpend; i++)
+            {
+                if (i % 3 == 0)
+                    AddAlloc(ref _allocHp, +1);   // 1/3 to HP
+                else
+                    AddAlloc(ref _allocAtk, +1);  // 2/3 to attack
+            }
+        }
+        else
+        {
+            // Offensive, Tactical, Reactive, Chaotic: pure offensive buildup
+            for (int i = 0; i < toSpend; i++) 
+                AddAlloc(ref _allocAtk, +1);
+        }
+    }
+
+    private void ApplyDefensePresetWithPersonality(int toSpend, MonsterPersonalitySO personality)
+    {
+        // Defense preset: prioritizes DEF
+        // Personality modifiers:
+        // - Defensive: pure DEF (personality aligned)
+        // - Offensive: add ATK boost (opposite personality)
+        // - Evasive: add SPD instead of pure DEF (tactical adjustment)
+        // - Support: pure DEF (personality aligned)
+        
+        if (personality != null && personality.group == MonsterPersonalitySO.PersonalityGroup.Offensive)
+        {
+            // Offensive monsters can't stay purely defensive
+            for (int i = 0; i < toSpend; i++)
+            {
+                if (i % 3 == 0)
+                    AddAlloc(ref _allocAtk, +1);  // 1/3 to attack
+                else
+                    AddAlloc(ref _allocDef, +1);  // 2/3 to defense
+            }
+        }
+        else if (personality != null && personality.group == MonsterPersonalitySO.PersonalityGroup.Evasive)
+        {
+            // Evasive monsters dodge instead of tank
+            for (int i = 0; i < toSpend; i++)
+            {
+                if (i % 2 == 0)
+                    AddAlloc(ref _allocSpd, +1);  // 1/2 to speed
+                else
+                    AddAlloc(ref _allocDef, +1);  // 1/2 to defense
+            }
+        }
+        else
+        {
+            // Defensive, Support, Tactical, Reactive, Chaotic: pure defensive buildup
+            for (int i = 0; i < toSpend; i++) 
+                AddAlloc(ref _allocDef, +1);
+        }
+    }
+
+    private void ApplySpeedPresetWithPersonality(int toSpend, MonsterPersonalitySO personality)
+    {
+        // Speed preset: prioritizes SPD
+        // Personality modifiers:
+        // - Evasive: pure SPD (personality aligned)
+        // - Offensive: add ATK (tactical adjustment, speed for quick strikes)
+        // - Defensive: add DEF (tactical adjustment for evasive defense)
+        // - Tactical/Reactive: benefit from speed
+        
+        if (personality != null && personality.group == MonsterPersonalitySO.PersonalityGroup.Offensive)
+        {
+            // Offensive monsters use speed for quick strikes
+            for (int i = 0; i < toSpend; i++)
+            {
+                if (i % 3 == 0)
+                    AddAlloc(ref _allocAtk, +1);  // 1/3 to attack
+                else
+                    AddAlloc(ref _allocSpd, +1);  // 2/3 to speed
+            }
+        }
+        else if (personality != null && personality.group == MonsterPersonalitySO.PersonalityGroup.Defensive)
+        {
+            // Defensive monsters use speed defensively
+            for (int i = 0; i < toSpend; i++)
+            {
+                if (i % 3 == 0)
+                    AddAlloc(ref _allocDef, +1);  // 1/3 to defense
+                else
+                    AddAlloc(ref _allocSpd, +1);  // 2/3 to speed
+            }
+        }
+        else
+        {
+            // Evasive, Tactical, Reactive, Support, Chaotic: pure speed buildup
+            for (int i = 0; i < toSpend; i++) 
+                AddAlloc(ref _allocSpd, +1);
+        }
+    }
+
+    private void ApplyBalancePresetWithPersonality(int toSpend, MonsterPersonalitySO personality)
+    {
+        // Balance preset: HP, ATK, DEF in equal parts
+        // Personality modifiers:
+        for (int i = 0; i < toSpend; i++)
+        {
+            int step = i % 3;
+            
+            if (personality != null && personality.group == MonsterPersonalitySO.PersonalityGroup.Offensive)
+            {
+                // Offensive: lean more toward attack (ATK x2, HP, DEF in rotation)
+                if (step == 0) 
+                    AddAlloc(ref _allocAtk, +1);
+                else if (step == 1) 
+                    AddAlloc(ref _allocAtk, +1);
+                else 
+                    AddAlloc(ref _allocHp, +1);
+            }
+            else if (personality != null && personality.group == MonsterPersonalitySO.PersonalityGroup.Defensive)
+            {
+                // Defensive: lean more toward defense (DEF x2, HP, ATK in rotation)
+                if (step == 0) 
+                    AddAlloc(ref _allocHp, +1);
+                else if (step == 1) 
+                    AddAlloc(ref _allocDef, +1);
+                else 
+                    AddAlloc(ref _allocDef, +1);
+            }
+            else if (personality != null && personality.group == MonsterPersonalitySO.PersonalityGroup.Evasive)
+            {
+                // Evasive: replace defense with speed in balance (HP, ATK, SPD)
+                if (step == 0) 
+                    AddAlloc(ref _allocHp, +1);
+                else if (step == 1) 
+                    AddAlloc(ref _allocAtk, +1);
+                else 
+                    AddAlloc(ref _allocSpd, +1);
+            }
+            else if (personality != null && personality.group == MonsterPersonalitySO.PersonalityGroup.Support)
+            {
+                // Support: HP emphasis (HP x2, ATK, DEF in rotation)
+                if (step == 0) 
+                    AddAlloc(ref _allocHp, +1);
+                else if (step == 1) 
+                    AddAlloc(ref _allocHp, +1);
+                else 
+                    AddAlloc(ref _allocDef, +1);
+            }
+            else
+            {
+                // Tactical, Reactive, Chaotic: standard balance (HP, ATK, DEF)
+                if (step == 0) 
+                    AddAlloc(ref _allocHp, +1);
+                else if (step == 1) 
+                    AddAlloc(ref _allocAtk, +1);
+                else 
+                    AddAlloc(ref _allocDef, +1);
+            }
+        }
+    }
+
+    private void ApplyUtilityPresetWithPersonality(int toSpend, MonsterPersonalitySO personality)
+    {
+        // Utility preset: HP and SPD alternating
+        // Personality modifiers:
+        for (int i = 0; i < toSpend; i++)
+        {
+            if (personality != null && personality.group == MonsterPersonalitySO.PersonalityGroup.Evasive)
+            {
+                // Evasive: pure speed utility (SPD x2, HP)
+                if (i % 3 == 2)
+                    AddAlloc(ref _allocHp, +1);
+                else
+                    AddAlloc(ref _allocSpd, +1);
+            }
+            else if (personality != null && personality.group == MonsterPersonalitySO.PersonalityGroup.Support)
+            {
+                // Support: pure HP utility (HP x2, SPD)
+                if (i % 3 == 2)
+                    AddAlloc(ref _allocSpd, +1);
+                else
+                    AddAlloc(ref _allocHp, +1);
+            }
+            else if (personality != null && personality.group == MonsterPersonalitySO.PersonalityGroup.Offensive)
+            {
+                // Offensive: speed utility over raw HP (SPD, ATK, HP in rotation)
+                if (i % 3 == 0) 
+                    AddAlloc(ref _allocSpd, +1);
+                else if (i % 3 == 1) 
+                    AddAlloc(ref _allocAtk, +1);
+                else 
+                    AddAlloc(ref _allocHp, +1);
+            }
+            else
+            {
+                // Standard utility: HP and SPD
+                if (i % 2 == 0) 
+                    AddAlloc(ref _allocHp, +1);
+                else 
+                    AddAlloc(ref _allocSpd, +1);
+            }
+        }
+    }
 
     private void OnClickLevelUp()
     {
@@ -381,82 +575,101 @@ public class StatBucketPanelUI : MonoBehaviour
             monsterLibrary: null
         );
 
-        if (!success)
-            return;
+        if (!success) return;
 
-        string key = !string.IsNullOrEmpty(_m.ownedUID)
-            ? _m.ownedUID
-            : _m.monsterId;
-
+        string key = !string.IsNullOrEmpty(_m.ownedUID) ? _m.ownedUID : _m.monsterId;
         GameEvents.MonsterLeveled?.Invoke(key, _m.level);
 
         ComputeCurrentStats();
         _nextCostToLevel = CalcNextCostForCurrentLevel();
         RefreshUI();
-        AudioManager.I.PlaySfx(SfxType.LevelUp);
+        AudioManager.I?.PlaySfx(SfxType.LevelUp);
     }
-
-    // ─────────────────────────────────────────────────────────────
-    // Confirm stat allocation: spend stat points, no cores
-    // ─────────────────────────────────────────────────────────────
 
     private void ConfirmSpend()
     {
-        if (_m == null || _points <= 0)
+        if (_isConfirming) return;
+        _isConfirming = true;
+
+        try
         {
-            gameObject.SetActive(false);
-            return;
-        }
-
-        _m = XPManager.Resolve(_m);
-        if (_m == null)
-        {
-            gameObject.SetActive(false);
-            return;
-        }
-
-        TrainingBonus delta = new TrainingBonus
-        {
-            hp  = _allocHp  * (tokenEconomy ? tokenEconomy.hpPerCore  : 1),
-            atk = _allocAtk * (tokenEconomy ? tokenEconomy.atkPerCore : 1),
-            def = _allocDef * (tokenEconomy ? tokenEconomy.defPerCore : 1),
-            spd = _allocSpd * (tokenEconomy ? tokenEconomy.spdPerCore : 1)
-        };
-
-        XPManager.ApplyTrainingAndSave(_m, delta);
-
-        var data = SaveManager.Data;
-        if (data != null && data.owned != null)
-        {
-            OwnedMonsterData match = null;
-
-            if (!string.IsNullOrEmpty(_m.ownedUID))
+            // Keep the panel open in ALL cases.
+            if (_m == null)
             {
-                match = data.owned.Find(o => o != null && o.ownedUID == _m.ownedUID);
-            }
-            else
-            {
-                match = data.owned.Find(o => o != null && o.monsterId == _m.monsterId);
+                if (confirmBtn) confirmBtn.interactable = true;
+                return;
             }
 
-            if (match != null)
+            if (_points <= 0)
             {
-                match.unspentStatPoints -= _points;
-                if (match.unspentStatPoints < 0) match.unspentStatPoints = 0;
-
-                _m.unspentStatPoints = match.unspentStatPoints;
-
-                SaveManager.Save();
+                // Nothing allocated — do not close, just inform.
+                GameEvents.RaiseToast("No points allocated");
+                if (confirmBtn) confirmBtn.interactable = true;
+                return;
             }
-        }
 
-        ComputeCurrentStats();
-        gameObject.SetActive(false);
+            if (confirmBtn) confirmBtn.interactable = false;
+
+            // Resolve to canonical save instance
+            _m = XPManager.Resolve(_m);
+            if (_m == null)
+            {
+                // Keep open; fail safely.
+                GameEvents.RaiseToast("Could not apply changes");
+                if (confirmBtn) confirmBtn.interactable = true;
+                return;
+            }
+
+            // Apply training bonus (EV-like)
+            TrainingBonus delta = new TrainingBonus
+            {
+                hp  = _allocHp  * (tokenEconomy ? tokenEconomy.hpPerCore  : 1),
+                atk = _allocAtk * (tokenEconomy ? tokenEconomy.atkPerCore : 1),
+                def = _allocDef * (tokenEconomy ? tokenEconomy.defPerCore : 1),
+                spd = _allocSpd * (tokenEconomy ? tokenEconomy.spdPerCore : 1)
+            };
+
+            // Preserve existing behavior: apply + save (may fire team changed internally).
+            XPManager.ApplyTrainingAndSave(_m, delta);
+
+            // Spend stat points on the canonical instance
+            _m.unspentStatPoints = Mathf.Max(0, _m.unspentStatPoints - _points);
+
+            // Ensure owned list entry matches canonical instance (extra safety)
+            var data = SaveManager.Data;
+            if (data != null && data.owned != null)
+            {
+                OwnedMonsterData match = null;
+
+                if (!string.IsNullOrEmpty(_m.ownedUID))
+                    match = data.owned.Find(o => o != null && o.ownedUID == _m.ownedUID);
+                else
+                    match = data.owned.Find(o => o != null && o.monsterId == _m.monsterId);
+
+                if (match != null)
+                    match.unspentStatPoints = _m.unspentStatPoints;
+            }
+
+            // Persist final state (including unspent points decrement)
+            SaveManager.Save();
+
+            // IMPORTANT: raise after BOTH training AND unspent points are correct
+            GameEvents.OnTeamChanged?.Invoke();
+
+            GameEvents.RaiseToast("STATS APPLIED");
+
+            // Refresh UI and leave panel open
+            ComputeCurrentStats();
+            ClearAlloc();   // also refreshes UI
+            RefreshUI();
+        }
+        finally
+        {
+            _isConfirming = false;
+            if (confirmBtn) confirmBtn.interactable = true;
+        }
     }
 
-    // ─────────────────────────────────────────────────────────────
-    // Feature gating – presets
-    // ─────────────────────────────────────────────────────────────
 
     private void HandleFeatureUnlocked(FeatureId feature)
     {

@@ -1,0 +1,618 @@
+fileFormatVersion: 2
+guid: 70c0ee514594db442bcbb05462dac3f6
+AssetOrigin:
+  serializedVersion: 1
+  productId: 351422
+  packageName: 280 Ultimate Pixel Backgrounds Collection
+  packageVersion: 1.2
+  assetPath: Assets/Ultimate Backgrounds Collection/PNG/Layers/NATURE/Ocean/Ocean_6/Layer_1.png
+  uploadId: 850090
+TextureImporter:
+  internalIDToNameTable:
+  - first:
+      213: 3495449598403498923
+    second: Ocean_6_L4_0
+  - first:
+      213: -5030440857433753141
+    second: Ocean_6_L4_1
+  - first:
+      213: -2301979284286721087
+    second: Ocean_6_L4_2
+  - first:
+      213: 7525934401539380080
+    second: Ocean_6_L4_3
+  - first:
+      213: -5070491255484455333
+    second: Ocean_6_L4_4
+  - first:
+      213: -5041614139988418543
+    second: Ocean_6_L4_5
+  - first:
+      213: -6605486969533123225
+    second: Ocean_6_L4_6
+  - first:
+      213: 1439780607021736378
+    second: Ocean_6_L4_7
+  - first:
+      213: 4385476720815874207
+    second: Ocean_6_L4_8
+  - first:
+      213: 2047393499615158228
+    second: Ocean_6_L4_9
+  - first:
+      213: 2207525514547090866
+    second: Ocean_6_L4_10
+  - first:
+      213: 6416599522498048503
+    second: Ocean_6_L4_11
+  - first:
+      213: 4511113195106799799
+    second: Ocean_6_L4_12
+  - first:
+      213: -1370534917750112984
+    second: Ocean_6_L4_13
+  - first:
+      213: -7547029353014235432
+    second: Ocean_6_L4_14
+  - first:
+      213: 4302047456179392790
+    second: Ocean_6_L4_15
+  - first:
+      213: -4306090207961757237
+    second: Ocean_6_L4_16
+  - first:
+      213: -8373821674963716163
+    second: Ocean_6_L4_17
+  externalObjects: {}
+  serializedVersion: 13
+  mipmaps:
+    mipMapMode: 0
+    enableMipMap: 0
+    sRGBTexture: 1
+    linearTexture: 0
+    fadeOut: 0
+    borderMipMap: 0
+    mipMapsPreserveCoverage: 0
+    alphaTestReferenceValue: 0.5
+    mipMapFadeDistanceStart: 1
+    mipMapFadeDistanceEnd: 3
+  bumpmap:
+    convertToNormalMap: 0
+    externalNormalMap: 0
+    heightScale: 0.25
+    normalMapFilter: 0
+    flipGreenChannel: 0
+  isReadable: 0
+  streamingMipmaps: 0
+  streamingMipmapsPriority: 0
+  vTOnly: 0
+  ignoreMipmapLimit: 0
+  grayScaleToAlpha: 0
+  generateCubemap: 6
+  cubemapConvolution: 0
+  seamlessCubemap: 0
+  textureFormat: 1
+  maxTextureSize: 2048
+  textureSettings:
+    serializedVersion: 2
+    filterMode: 0
+    aniso: 1
+    mipBias: 0
+    wrapU: 1
+    wrapV: 1
+    wrapW: 1
+  nPOTScale: 0
+  lightmap: 0
+  compressionQuality: 50
+  spriteMode: 1
+  spriteExtrude: 1
+  spriteMeshType: 1
+  alignment: 7
+  spritePivot: {x: 0.5, y: 0.5}
+  spritePixelsToUnits: 32
+  spriteBorder: {x: 0, y: 0, z: 0, w: 0}
+  spriteGenerateFallbackPhysicsShape: 1
+  alphaUsage: 1
+  alphaIsTransparency: 1
+  spriteTessellationDetail: -1
+  textureType: 8
+  textureShape: 1
+  singleChannelComponent: 0
+  flipbookRows: 1
+  flipbookColumns: 1
+  maxTextureSizeSet: 0
+  compressionQualitySet: 0
+  textureFormatSet: 0
+  ignorePngGamma: 0
+  applyGammaDecoding: 0
+  swizzle: 50462976
+  cookieLightType: 0
+  platformSettings:
+  - serializedVersion: 4
+    buildTarget: DefaultTexturePlatform
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 0
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: Standalone
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: WebGL
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 0
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: iOS
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 0
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  spriteSheet:
+    serializedVersion: 2
+    sprites:
+    - serializedVersion: 2
+      name: Ocean_6_L4_0
+      rect:
+        serializedVersion: 2
+        x: 261
+        y: 69
+        width: 89
+        height: 8
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: ba35f1bd3e4528030800000000000000
+      internalID: 3495449598403498923
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Ocean_6_L4_1
+      rect:
+        serializedVersion: 2
+        x: 837
+        y: 69
+        width: 89
+        height: 8
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: bc9bc0d41b8403ab0800000000000000
+      internalID: -5030440857433753141
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Ocean_6_L4_2
+      rect:
+        serializedVersion: 2
+        x: 1413
+        y: 69
+        width: 89
+        height: 8
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 1c338cf890abd00e0800000000000000
+      internalID: -2301979284286721087
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Ocean_6_L4_3
+      rect:
+        serializedVersion: 2
+        x: 248
+        y: 41
+        width: 119
+        height: 27
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 07395aec67d717860800000000000000
+      internalID: 7525934401539380080
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Ocean_6_L4_4
+      rect:
+        serializedVersion: 2
+        x: 352
+        y: 41
+        width: 44
+        height: 6
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: b56ef18511ff1a9b0800000000000000
+      internalID: -5070491255484455333
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Ocean_6_L4_5
+      rect:
+        serializedVersion: 2
+        x: 824
+        y: 41
+        width: 119
+        height: 27
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 110676bb6a6980ab0800000000000000
+      internalID: -5041614139988418543
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Ocean_6_L4_6
+      rect:
+        serializedVersion: 2
+        x: 928
+        y: 41
+        width: 44
+        height: 6
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 765b18c39989454a0800000000000000
+      internalID: -6605486969533123225
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Ocean_6_L4_7
+      rect:
+        serializedVersion: 2
+        x: 1400
+        y: 41
+        width: 119
+        height: 27
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: ab1e60475d02bf310800000000000000
+      internalID: 1439780607021736378
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Ocean_6_L4_8
+      rect:
+        serializedVersion: 2
+        x: 1504
+        y: 41
+        width: 44
+        height: 6
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: f90a9f2a7d75cdc30800000000000000
+      internalID: 4385476720815874207
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Ocean_6_L4_9
+      rect:
+        serializedVersion: 2
+        x: 224
+        y: 16
+        width: 54
+        height: 15
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 4df51045a8dc96c10800000000000000
+      internalID: 2047393499615158228
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Ocean_6_L4_10
+      rect:
+        serializedVersion: 2
+        x: 287
+        y: 23
+        width: 80
+        height: 16
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 2b5d03f62c4b2ae10800000000000000
+      internalID: 2207525514547090866
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Ocean_6_L4_11
+      rect:
+        serializedVersion: 2
+        x: 800
+        y: 16
+        width: 54
+        height: 15
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 7f1ff64e4475c0950800000000000000
+      internalID: 6416599522498048503
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Ocean_6_L4_12
+      rect:
+        serializedVersion: 2
+        x: 863
+        y: 23
+        width: 80
+        height: 16
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 7b01befcc81ba9e30800000000000000
+      internalID: 4511113195106799799
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Ocean_6_L4_13
+      rect:
+        serializedVersion: 2
+        x: 1376
+        y: 16
+        width: 54
+        height: 15
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 82d3c33f0c1eafce0800000000000000
+      internalID: -1370534917750112984
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Ocean_6_L4_14
+      rect:
+        serializedVersion: 2
+        x: 1439
+        y: 23
+        width: 80
+        height: 16
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 8dee3201ac0934790800000000000000
+      internalID: -7547029353014235432
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Ocean_6_L4_15
+      rect:
+        serializedVersion: 2
+        x: 260
+        y: 0
+        width: 106
+        height: 14
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 61112704e51f3bb30800000000000000
+      internalID: 4302047456179392790
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Ocean_6_L4_16
+      rect:
+        serializedVersion: 2
+        x: 836
+        y: 0
+        width: 106
+        height: 14
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: bc9c6af35c1bd34c0800000000000000
+      internalID: -4306090207961757237
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Ocean_6_L4_17
+      rect:
+        serializedVersion: 2
+        x: 1412
+        y: 0
+        width: 106
+        height: 14
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: db732539d853acb80800000000000000
+      internalID: -8373821674963716163
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    outline: []
+    customData: 
+    physicsShape: []
+    bones: []
+    spriteID: 5e97eb03825dee720800000000000000
+    internalID: 0
+    vertices: []
+    indices: 
+    edges: []
+    weights: []
+    secondaryTextures: []
+    spriteCustomMetadata:
+      entries: []
+    nameFileIdTable:
+      Ocean_6_L4_0: 3495449598403498923
+      Ocean_6_L4_1: -5030440857433753141
+      Ocean_6_L4_10: 2207525514547090866
+      Ocean_6_L4_11: 6416599522498048503
+      Ocean_6_L4_12: 4511113195106799799
+      Ocean_6_L4_13: -1370534917750112984
+      Ocean_6_L4_14: -7547029353014235432
+      Ocean_6_L4_15: 4302047456179392790
+      Ocean_6_L4_16: -4306090207961757237
+      Ocean_6_L4_17: -8373821674963716163
+      Ocean_6_L4_2: -2301979284286721087
+      Ocean_6_L4_3: 7525934401539380080
+      Ocean_6_L4_4: -5070491255484455333
+      Ocean_6_L4_5: -5041614139988418543
+      Ocean_6_L4_6: -6605486969533123225
+      Ocean_6_L4_7: 1439780607021736378
+      Ocean_6_L4_8: 4385476720815874207
+      Ocean_6_L4_9: 2047393499615158228
+  mipmapLimitGroupName: 
+  pSDRemoveMatte: 0
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 

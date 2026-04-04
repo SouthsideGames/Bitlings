@@ -1,0 +1,29 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f048558a82b7c2147ab6a4d2677278ea, type: 3}
+  m_Name: MonsterPack_ToxicHive
+  m_EditorClassIdentifier: 
+  id: MP-014
+  displayName: Toxic Hive
+  description: Bug and Corrupt Bitlings apply continuous pressure through persistent
+    damage, overwhelming opponents over time.
+  icon: {fileID: 21300000, guid: 0b3533a2d3be4844db1ae4b31ba64d30, type: 3}
+  rarityLabel: Rare
+  baseCost: 25
+  costType: 17
+  saleOff01: 0
+  unlockByDefault: 0
+  monsters:
+  - {fileID: 11400000, guid: bfc24a2a22d7947658423857be3ee4c4, type: 2}
+  - {fileID: 11400000, guid: 9a3fe2f6794ff4ccbae4aa6cdf4a276e, type: 2}
+  - {fileID: 11400000, guid: f0e0423bd67974fc2aadeeebff852dff, type: 2}
+  - {fileID: 11400000, guid: 7ff61bd4b17a54d43a46e047952960f7, type: 2}

@@ -1,0 +1,57 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 32ffc26ed7d444b02a9332ce4279b117, type: 3}
+  m_Name: Monster_Rotbud
+  m_EditorClassIdentifier: 
+  id: M-073
+  displayName: Rotbud
+  type: 7
+  typeIcon: {fileID: 21300000, guid: 10d50b4d1dee041cc8dcf349a9ce86a1, type: 3}
+  icon: {fileID: 21300000, guid: b3cfa6ac9f8524764a8c420a732e0648, type: 3}
+  backIcon: {fileID: 21300000, guid: 34be8dd0890404685b66aff342baf2d0, type: 3}
+  premiumIcon: {fileID: 21300000, guid: 263069d8564544cf6b4df7e6c32aa018, type: 3}
+  premiumBackIcon: {fileID: 21300000, guid: 3acbf20c2ebcc4a2e8da423952c9f6d7, type: 3}
+  rarity: 0
+  canBeStarter: 0
+  starterWeight: 1
+  maxLevel: 50
+  baseHP: 52
+  baseAttack: 52
+  baseDefense: 24
+  baseSpeed: 18
+  hpRegenPerHour: 6
+  fatigueRatePerHour: 0.11
+  fatigueCooldownHours: 9.2
+  evolutionStage: 1
+  evolutionLevel: 18
+  evolutionForm: {fileID: 11400000, guid: 9bd89c02d75934198b30077124b987d7, type: 2}
+  uncatchable: 0
+  isBoss: 0
+  bossJobDebuffs: []
+  bossWeight: 1
+  spawnWeight: 8
+  jobSkill: 0.95
+  titleTrack: {fileID: 11400000, guid: 3c9e6ae9ce9f84291b435305317ef5ee, type: 2}
+  defaultAlwaysOnTitles: []
+  ironTitles:
+  - {fileID: 11400000, guid: 574d61c30f1d5f14db9b8777e848d222, type: 2}
+  - {fileID: 11400000, guid: 09c74caed514bcd48a90735e9bb192d4, type: 2}
+  - {fileID: 11400000, guid: b4b91e64958e2c74e9518a6666d41da1, type: 2}
+  - {fileID: 11400000, guid: fc062370ec30fc948960aa9f57e28ca0, type: 2}
+  Personality: {fileID: 11400000, guid: 75a511658b2e544f4869d466b3f7ba5a, type: 2}
+  basicAttackName: Blight Jab
+  basicAttackPrefab: {fileID: 8046187082596486557, guid: 86fc56d41698d45bfbf27d043ca2944d, type: 3}
+  basicAttackPrefabLifetime: 1
+  spawnSfx: {fileID: 8300000, guid: 95147033a0e7c0a4e8216aafcffd1d22, type: 3}
+  baseMarketValue: 75
+  description: A corrupted growth that lurches unpredictably striking with unstable
+    and decaying energy.

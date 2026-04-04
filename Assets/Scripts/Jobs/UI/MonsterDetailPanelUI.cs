@@ -11,7 +11,8 @@ public enum MonsterDetailMode
 {
     StarterSelect,
     AssignToTeam,
-    CodexView
+    DirectoryView,
+    PackPreview
 }
 
 public class MonsterDetailPanelUI : MonoBehaviour
@@ -63,6 +64,9 @@ public class MonsterDetailPanelUI : MonoBehaviour
     [SerializeField] private GameObject slotButtonsHolder;
     [SerializeField] private GameObject teamHolder;
 
+    [Tooltip("Shown in PackPreview mode when the monster has not been hired yet.")]
+    [SerializeField] private GameObject notHiredRow;
+
     [Header("Slot Buttons")]
     [SerializeField] private Button closeButton;
     [SerializeField] private Button slot1Button;
@@ -78,9 +82,29 @@ public class MonsterDetailPanelUI : MonoBehaviour
     [SerializeField] private EvolutionPanelUI evolutionPanel;
 
     [Header("Favorites")]
-    [Tooltip("Shown when Codex_Favorites is unlocked. Toggles this monster as a favorite.")]
+    [Tooltip("Shown when Directory_Favorites is unlocked. Toggles this monster as a favorite.")]
     [SerializeField] private Button favoriteButton;
     [SerializeField] private GameObject favoriteOnIcon;
+
+    [Header("Premium Variant Toggle (Directory)")]
+    [Tooltip("Optional. If wired, shows a toggle in Directory detail view when you own BOTH the normal and premium variant.")]
+    [SerializeField] private GameObject premiumVariantRoot;
+
+    [Tooltip("Optional. Clicking toggles between Normal and Premium view (Directory only).")]
+    [SerializeField] private Button premiumVariantToggleButton;
+
+    [Tooltip("Optional. Label for the toggle button (e.g., 'View Premium' / 'View Normal').")]
+    [SerializeField] private TextMeshProUGUI premiumVariantToggleLabel;
+
+    [Header("Stats View Toggle")]
+    [Tooltip("Optional: button that toggles Base Stats vs Adjusted Stats.")]
+    [SerializeField] private Button statsViewToggleButton;
+
+    [Tooltip("Optional: label that shows current view (BASE / ADJ).")]
+    [SerializeField] private TextMeshProUGUI statsViewToggleLabel;
+
+    [Tooltip("If true, panel starts in Base stats view.")]
+    [SerializeField] private bool startInBaseStatsView = false;
 
     [Header("Build Safe Mode (Isolation)")]
     [SerializeField] private bool safeSkipStats = true;
@@ -90,8 +114,8 @@ public class MonsterDetailPanelUI : MonoBehaviour
     [SerializeField] private bool safeSkipMonsterIcon = true;
     [SerializeField] private bool buildVerboseLogging;
 
-    [Header("Swipe Browse (Codex / Starter)")]
-    [Tooltip("Enable swipe-to-browse in Codex and Starter detail views.")]
+    [Header("Swipe Browse (Directory / Starter)")]
+    [Tooltip("Enable swipe-to-browse in Directory and Starter detail views.")]
     [SerializeField] private bool enableSwipeBrowse = true;
 
     [Tooltip("Swipe distance in pixels before a browse triggers.")]
@@ -117,10 +141,22 @@ public class MonsterDetailPanelUI : MonoBehaviour
     private Action _onRemoved;
 
     private bool _visible;
+    private OwnedMonsterData _preferredOwned;
+    private OwnedMonsterData _otherVariantOwned;
 
-    // ─────────────────────────────────────────────────────────────
-    // Browse session (Codex/Starter swipe)
-    // ─────────────────────────────────────────────────────────────
+    
+
+    // Stats source should remain stable; premium is cosmetic-only.
+    private OwnedMonsterData _statsOwned;
+
+    // Cosmetic view flag (drives icon/name only)
+    private bool _viewPremiumCosmetic;
+// Directory premium/normal view state (variant toggle)
+    private bool _directoryHasNormal;
+    private bool _directoryHasPremium;
+    private bool _directoryViewingPremium;
+
+    // Browse session (Directory/Starter swipe)
     private IReadOnlyList<MonsterDataSO> _browseDefs;
     private int _browseIndex = -1;
     private bool _browseWrap = true;
@@ -129,25 +165,10 @@ public class MonsterDetailPanelUI : MonoBehaviour
     private Vector2 _swipeStartPos;
     private float _lastBrowseAt;
 
-    private static readonly Dictionary<MonsterType, Color> TYPE_COLORS = new Dictionary<MonsterType, Color>()
-    {
-        { MonsterType.Fire,     new Color32(230, 74,  25,255) },
-        { MonsterType.Water,    new Color32( 30,136, 229,255) },
-        { MonsterType.Grass,    new Color32( 56,142,  60,255) },
-        { MonsterType.Electric, new Color32(255,193,   7,255) },
-        { MonsterType.Ice,      new Color32( 79,195, 247,255) },
-        { MonsterType.Clash,    new Color32(121, 85,  72,255) },
-        { MonsterType.Corrupt,  new Color32(156, 39, 176,255) },
-        { MonsterType.Ground,   new Color32(141,110,  99,255) },
-        { MonsterType.Sky,      new Color32( 63, 81, 181,255) },
-        { MonsterType.Oracle,   new Color32(  0,150, 136,255) },
-        { MonsterType.Bug,      new Color32(104,159,  56,255) },
-        { MonsterType.Rock,     new Color32(120,144, 156,255) },
-        { MonsterType.Specter,  new Color32(103, 58, 183,255) },
-        { MonsterType.Wyrm,     new Color32(255,112,  67,255) },
-        { MonsterType.Umbral,   new Color32( 97, 97,  97,255) },
-        { MonsterType.Alloy,    new Color32(158,158, 158,255) },
-    };
+    private bool _showBaseStats;
+    private const string TRAINING_GREEN = "#3CDE74";
+
+
 
     private static readonly Dictionary<Rarity, Color> RARITY_COLORS = new Dictionary<Rarity, Color>()
     {
@@ -161,6 +182,8 @@ public class MonsterDetailPanelUI : MonoBehaviour
 
     private void Awake()
     {
+        _showBaseStats = startInBaseStatsView;
+
         if (confirmButton) { confirmButton.onClick.RemoveAllListeners(); confirmButton.onClick.AddListener(Confirm); }
         if (cancelButton) { cancelButton.onClick.RemoveAllListeners(); cancelButton.onClick.AddListener(Cancel); }
         if (closeButton) { closeButton.onClick.RemoveAllListeners(); closeButton.onClick.AddListener(Hide); }
@@ -187,6 +210,19 @@ public class MonsterDetailPanelUI : MonoBehaviour
             personalityInfoButton.onClick.AddListener(OpenPersonalityInfo);
         }
 
+        if (statsViewToggleButton)
+        {
+            statsViewToggleButton.onClick.RemoveAllListeners();
+            statsViewToggleButton.onClick.AddListener(ToggleStatsView);
+        }
+
+        if (premiumVariantToggleButton)
+        {
+            premiumVariantToggleButton.onClick.RemoveAllListeners();
+            premiumVariantToggleButton.onClick.AddListener(ToggleDirectoryPremiumVariant);
+        }
+
+        RefreshStatsViewToggleLabel();
         ResolveTitleButton();
 
         TitleAssignPanelUI.OnTitlesChanged -= HandleTitlesChanged;
@@ -212,9 +248,8 @@ public class MonsterDetailPanelUI : MonoBehaviour
         if (!_visible) return;
         if (!enableSwipeBrowse) return;
 
-        // Only allow swipe browsing in Codex view, or Starter select detail view (if a browse session was provided)
         bool canSwipe =
-            (_mode == MonsterDetailMode.CodexView) ||
+            (_mode == MonsterDetailMode.DirectoryView) ||
             (_mode == MonsterDetailMode.StarterSelect && _browseDefs != null && _browseDefs.Count > 1);
 
         if (!canSwipe) return;
@@ -223,13 +258,145 @@ public class MonsterDetailPanelUI : MonoBehaviour
     }
 
     // ─────────────────────────────────────────────────────────────
+    // Stats toggle
+    // ─────────────────────────────────────────────────────────────
+
+    private void ToggleStatsView()
+    {
+        _showBaseStats = !_showBaseStats;
+        RefreshStatsViewToggleLabel();
+        RenderStatsSection(); // instant refresh
+        AudioManager.I?.PlayClick();
+    }
+
+    private void RefreshStatsViewToggleLabel()
+    {
+        if (!statsViewToggleLabel) return;
+        statsViewToggleLabel.text = _showBaseStats ? "BASE" : "ADJ";
+    }
+
+    /// <summary>
+    /// Re-renders only the stat labels (HP/ATK/DEF/SPD/EVO).
+    /// </summary>
+    private void RenderStatsSection()
+    {
+        if (!_visible) return;
+        if (current == null) return;
+
+        int dispLvl = GetDisplayLevel();
+        if (lvlText) lvlText.text = $"LVL: {dispLvl}";
+
+        // BASE view
+        if (_showBaseStats)
+        {
+            int hpB = Mathf.RoundToInt(current.baseHP);
+            int atkB = Mathf.RoundToInt(current.baseAttack);
+            int defB = Mathf.RoundToInt(current.baseDefense);
+            float spdB = current.baseSpeed;
+
+            if (hpText) hpText.text = hpB > 0 ? $"HP: {hpB}" : "HP: —";
+            if (atkText) atkText.text = atkB > 0 ? $"ATK: {atkB}" : "ATK: —";
+            if (defText) defText.text = $"DEF: {defB}";
+            if (spdText) spdText.text = $"SPD: {spdB:0.##}";
+
+            if (evoText) evoText.text = (!safeSkipEvolution) ? BuildEvolutionLine(current) : "EVO: —";
+            return;
+        }
+
+        // ADJ view
+        int hpBaseAdj = 0;
+        int atkBaseAdj = 0;
+        int defBaseAdj = 0;
+        int spdBaseAdj = 0;
+
+        if (!safeSkipStats)
+        {
+            try { hpBaseAdj = Mathf.RoundToInt(BattleCalc.CalcHP(current, dispLvl)); }
+            catch { hpBaseAdj = Mathf.RoundToInt(current.baseHP); }
+
+            try { atkBaseAdj = Mathf.RoundToInt(BattleCalc.CalcBaseAttack(current, dispLvl, 0, 0)); }
+            catch { atkBaseAdj = Mathf.RoundToInt(current.baseAttack); }
+
+            try { defBaseAdj = BattleCalc.CalcDefense(current, dispLvl); }
+            catch { defBaseAdj = Mathf.RoundToInt(current.baseDefense); }
+
+            try { spdBaseAdj = BattleCalc.CalcSpeed(current, dispLvl); }
+            catch { spdBaseAdj = Mathf.Max(1, Mathf.RoundToInt(current.baseSpeed)); }
+        }
+        else
+        {
+            hpBaseAdj = Mathf.RoundToInt(current.baseHP);
+            atkBaseAdj = Mathf.RoundToInt(current.baseAttack);
+            defBaseAdj = Mathf.RoundToInt(current.baseDefense);
+            spdBaseAdj = Mathf.RoundToInt(current.baseSpeed);
+        }
+
+        int trainHp = 0, trainAtk = 0, trainDef = 0, trainSpd = 0;
+        int flatAtkBonus = 0;
+
+        var srcOwned = _statsOwned ?? _currentOwned;
+        bool hasOwnedInstance = (srcOwned != null) && !string.IsNullOrEmpty(srcOwned.monsterId);
+
+        if (hasOwnedInstance)
+        {
+            trainHp = Mathf.Max(0, srcOwned.trainingBonus.hp);
+            trainAtk = Mathf.Max(0, srcOwned.trainingBonus.atk);
+            trainDef = Mathf.Max(0, srcOwned.trainingBonus.def);
+            trainSpd = Mathf.Max(0, srcOwned.trainingBonus.spd);
+
+            flatAtkBonus = Mathf.Max(0, srcOwned.flatAtkBonus);
+        }
+
+        int hpAdj = Mathf.Max(1, hpBaseAdj + (hasOwnedInstance ? trainHp : 0));
+        int defAdj = Mathf.Max(0, defBaseAdj + (hasOwnedInstance ? trainDef : 0));
+        int spdAdj = Mathf.Max(1, spdBaseAdj + (hasOwnedInstance ? trainSpd : 0));
+
+        int atkTrainingPlusFlat = 0;
+        if (hasOwnedInstance)
+        {
+            atkTrainingPlusFlat = trainAtk + flatAtkBonus;
+
+            if (LooksLikeLegacyTrainingWasMirroredIntoFlat(flatAtkBonus, trainAtk))
+                atkTrainingPlusFlat = Mathf.Max(0, flatAtkBonus);
+        }
+
+        int atkAdj = Mathf.Max(1, atkBaseAdj + atkTrainingPlusFlat);
+
+        int curHP = hpAdj;
+        if (hasOwnedInstance)
+            curHP = Mathf.Clamp(srcOwned.currentHP, 0, hpAdj);
+
+        if (hpText)
+        {
+            if (hasOwnedInstance && hpAdj > 0)
+                hpText.text = curHP == 0 ? $"HP: 0 / {hpAdj}  (KO)" : $"HP: {curHP} / {hpAdj}";
+            else
+                hpText.text = hpAdj > 0 ? $"HP: {hpAdj}" : "HP: —";
+        }
+
+        if (hasOwnedInstance)
+        {
+            if (atkText) atkText.text = FormatAdjInt("ATK",
+                atkBaseAdj + (LooksLikeLegacyTrainingWasMirroredIntoFlat(flatAtkBonus, trainAtk) ? flatAtkBonus : flatAtkBonus),
+                LooksLikeLegacyTrainingWasMirroredIntoFlat(flatAtkBonus, trainAtk) ? 0 : trainAtk);
+
+            if (defText) defText.text = FormatAdjInt("DEF", defBaseAdj, trainDef);
+            if (spdText) spdText.text = FormatAdjInt("SPD", spdBaseAdj, trainSpd);
+        }
+        else
+        {
+            if (atkText) atkText.text = $"ATK: {atkAdj}";
+            if (defText) defText.text = $"DEF: {defAdj}";
+            if (spdText) spdText.text = $"SPD: {spdAdj}";
+        }
+
+        if (evoText) evoText.text = (!safeSkipEvolution) ? BuildEvolutionLine(current) : "EVO: —";
+    }
+
+    // ─────────────────────────────────────────────────────────────
     // Public Browse APIs
     // ─────────────────────────────────────────────────────────────
 
-    /// <summary>
-    /// General browse session used by Codex and Starter selector.
-    /// Provide the visible defs list and the currently opened def.
-    /// </summary>
     public void SetBrowseSession(IReadOnlyList<MonsterDataSO> defs, MonsterDataSO currentDef, bool wrap = true)
     {
         _browseDefs = defs;
@@ -238,9 +405,6 @@ public class MonsterDetailPanelUI : MonoBehaviour
         _swipeTracking = false;
     }
 
-    /// <summary>
-    /// Compatibility API for older callers: pass selected index.
-    /// </summary>
     public void SetStarterBrowseContext(IReadOnlyList<MonsterDataSO> starterDefs, int selectedIndex, bool wrap = true)
     {
         if (starterDefs == null || starterDefs.Count == 0)
@@ -253,9 +417,6 @@ public class MonsterDetailPanelUI : MonoBehaviour
         SetBrowseSession(starterDefs, starterDefs[selectedIndex], wrap);
     }
 
-    /// <summary>
-    /// Convenience API: pass current def.
-    /// </summary>
     public void SetStarterBrowseContext(IReadOnlyList<MonsterDataSO> starterDefs, MonsterDataSO currentDef, bool wrap = true)
     {
         SetBrowseSession(starterDefs, currentDef, wrap);
@@ -273,7 +434,6 @@ public class MonsterDetailPanelUI : MonoBehaviour
     {
         if (defs == null || defs.Count == 0 || currentDef == null) return -1;
 
-        // Prefer id match (stable) over reference match.
         string id = currentDef.id;
         if (!string.IsNullOrEmpty(id))
         {
@@ -296,6 +456,8 @@ public class MonsterDetailPanelUI : MonoBehaviour
 
     public void Show(MonsterDataSO monster, Action<MonsterDataSO> onConfirmCallback, Action onCancelCallback = null)
     {
+        ClearVariantState();
+
         _mode = MonsterDetailMode.StarterSelect;
         _currentOwned = null;
         _teamSlotIndex = -1;
@@ -307,6 +469,13 @@ public class MonsterDetailPanelUI : MonoBehaviour
 
         RefreshEvolveButton();
         SetupFavoriteButton();
+
+        ResolveVariantState(monster ? monster.id : null);
+        _viewPremiumCosmetic = (_preferredOwned != null)
+            ? (_preferredOwned.isPremium || _preferredOwned.premiumTier > 0)
+            : (_statsOwned != null && (_statsOwned.isPremium || _statsOwned.premiumTier > 0));
+        SetupPremiumVariantUI();
+        UpdatePremiumVariantToggleLabel(); // ✅ ensure label correct at open
         SafeOpen(monster);
     }
 
@@ -319,19 +488,38 @@ public class MonsterDetailPanelUI : MonoBehaviour
     {
         if (owned == null || string.IsNullOrEmpty(owned.monsterId)) return;
 
+        ClearVariantState();
+
         _mode = MonsterDetailMode.AssignToTeam;
         _teamSlotIndex = -1;
         _onRemoved = null;
 
         _currentOwned = owned;
 
-        current = MonsterLibraryLocator.GetById(_currentOwned.monsterId);
+        
+        _statsOwned = _currentOwned;
+
+        // Cosmetic-only: use global preferred variant if set, otherwise fall back to this instance.
+        var prefCos = MonsterVariantPreference.GetPreferredOwned(_currentOwned.monsterId);
+        _viewPremiumCosmetic = (prefCos != null)
+            ? (prefCos.isPremium || prefCos.premiumTier > 0)
+            : (_currentOwned.isPremium || _currentOwned.premiumTier > 0);
+current = MonsterLibraryLocator.GetById(_currentOwned.monsterId);
         onConfirm = null;
         onCancel = null;
 
         UpdateTitleButtonBinding();
         RefreshEvolveButton();
         SetupFavoriteButton();
+
+        ResolveVariantState(current ? current.id : null, _currentOwned);
+        // Sync cosmetic view to preferred after resolving.
+        if (_preferredOwned != null)
+            _viewPremiumCosmetic = (_preferredOwned.isPremium || _preferredOwned.premiumTier > 0);
+
+        SetupPremiumVariantUI();
+        UpdatePremiumVariantToggleLabel(); // ✅
+        ApplyVariantCosmeticImmediate();
         SafeOpen(current);
     }
 
@@ -339,25 +527,45 @@ public class MonsterDetailPanelUI : MonoBehaviour
     {
         if (member == null || string.IsNullOrEmpty(member.monsterId)) return;
 
+        ClearVariantState();
+
         _mode = MonsterDetailMode.AssignToTeam;
         _teamSlotIndex = Mathf.Clamp(slotIndex, 0, 2);
         _onRemoved = onRemoved;
 
         _currentOwned = member;
 
-        current = MonsterLibraryLocator.GetById(_currentOwned.monsterId);
+        _statsOwned = _currentOwned;
+
+        // Cosmetic-only: use global preferred variant if set, otherwise fall back to this instance.
+        var prefCos = MonsterVariantPreference.GetPreferredOwned(_currentOwned.monsterId);
+        _viewPremiumCosmetic = (prefCos != null)
+            ? (prefCos.isPremium || prefCos.premiumTier > 0)
+            : (_currentOwned.isPremium || _currentOwned.premiumTier > 0);
+current = MonsterLibraryLocator.GetById(_currentOwned.monsterId);
         onConfirm = null;
         onCancel = null;
 
         UpdateTitleButtonBinding();
         RefreshEvolveButton();
         SetupFavoriteButton();
+
+        ResolveVariantState(current ? current.id : null, _currentOwned);
+        // Sync cosmetic view to preferred after resolving.
+        if (_preferredOwned != null)
+            _viewPremiumCosmetic = (_preferredOwned.isPremium || _preferredOwned.premiumTier > 0);
+
+        SetupPremiumVariantUI();
+        UpdatePremiumVariantToggleLabel();
+        ApplyVariantCosmeticImmediate();
         SafeOpen(current);
     }
 
-    public void ShowCodex(MonsterDataSO monster)
+    public void ShowDirectory(MonsterDataSO monster)
     {
-        _mode = MonsterDetailMode.CodexView;
+        ClearVariantState();
+
+        _mode = MonsterDetailMode.DirectoryView;
         _currentOwned = null;
         _teamSlotIndex = -1;
         _onRemoved = null;
@@ -368,11 +576,86 @@ public class MonsterDetailPanelUI : MonoBehaviour
 
         RefreshEvolveButton();
         SetupFavoriteButton();
+
+        ResolveVariantState(monster ? monster.id : null);
+        _statsOwned = _preferredOwned;
+        _viewPremiumCosmetic = _directoryViewingPremium;
+        SetupPremiumVariantUI();
+        UpdatePremiumVariantToggleLabel(); 
+        SafeOpen(monster);
+    }
+
+    public void ShowDirectoryOwned(MonsterDataSO monster, OwnedMonsterData owned)
+    {
+        if (monster == null)
+            return;
+
+        ClearVariantState();
+
+        _mode = MonsterDetailMode.DirectoryView;
+        _teamSlotIndex = -1;
+        _onRemoved = null;
+
+        current = monster;
+        _currentOwned = owned;
+        _statsOwned = _currentOwned;
+
+        onConfirm = null;
+        onCancel = null;
+
+        UpdateTitleButtonBinding();
+        RefreshEvolveButton();
+        SetupFavoriteButton();
+
+        ResolveVariantState(monster ? monster.id : null, owned);
+
+        // Ensure the cosmetic view matches the instance we opened from.
+        // Without this, if the panel was previously opened from a premium team member,
+        // clicking a non-premium owned row could keep the "Premium" tab selected.
+        _viewPremiumCosmetic = _directoryViewingPremium;
+
+        // In Directory mode, stats are driven by the focused owned instance, but premium is cosmetic-only.
+        // Apply cosmetic immediately so icon + name are correct even if the panel was already open.
+        ApplyVariantCosmeticImmediate();
+        SetupPremiumVariantUI();
+        UpdatePremiumVariantToggleLabel();
+        SafeOpen(monster);
+    }
+    public void ShowPackPreview(MonsterDataSO monster)
+    {
+        ClearVariantState();
+
+        _mode = MonsterDetailMode.PackPreview;
+        _currentOwned = null;
+        _statsOwned = null;
+        _teamSlotIndex = -1;
+        _onRemoved = null;
+
+        current = monster;
+        onConfirm = null;
+        onCancel = null;
+
+        RefreshEvolveButton();
+        SetupFavoriteButton();
+
+        ResolveVariantState(monster ? monster.id : null);
+        _viewPremiumCosmetic = false;
+        SetupPremiumVariantUI();
+        UpdatePremiumVariantToggleLabel();
         SafeOpen(monster);
     }
 
     public void Hide()
     {
+        if (_stageCR != null)
+        {
+            StopCoroutine(_stageCR);
+            _stageCR = null;
+        }
+        _stage = RenderStage.None;
+
+        ClearVariantState();
+
         TryStep("Hide", () =>
         {
             if (canvasGroup)
@@ -403,7 +686,7 @@ public class MonsterDetailPanelUI : MonoBehaviour
             return;
 
         bool featureOn = FeatureUnlockManager.I &&
-                         FeatureUnlockManager.I.IsUnlocked(FeatureId.Codex_Favorites) &&
+                         FeatureUnlockManager.I.IsUnlocked(FeatureId.Directory_Favorites) &&
                          current != null;
 
         favoriteButton.gameObject.SetActive(featureOn);
@@ -437,6 +720,144 @@ public class MonsterDetailPanelUI : MonoBehaviour
     }
 
     // ─────────────────────────────────────────────────────────────
+    // Premium variant toggle UI + label
+    // ─────────────────────────────────────────────────────────────
+
+    private bool IsViewingPremiumNow()
+    {
+        // Premium is cosmetic-only. The active cosmetic flag drives icon/name.
+        if (_mode == MonsterDetailMode.AssignToTeam || _mode == MonsterDetailMode.DirectoryView)
+            return _viewPremiumCosmetic;
+
+        return false;
+    }
+
+    private void UpdatePremiumVariantToggleLabel()
+    {
+        if (!premiumVariantToggleLabel) return;
+        if (!premiumVariantRoot || !premiumVariantRoot.activeSelf) return;
+
+        bool viewingPremium = IsViewingPremiumNow();
+        premiumVariantToggleLabel.text = viewingPremium ? "Normal" : "Premium";
+    }
+
+    private void SetupPremiumVariantUI()
+    {
+        if (!premiumVariantRoot)
+            return;
+
+        // Show in Directory + Assign/Team. Never in StarterSelect.
+        if (_mode != MonsterDetailMode.DirectoryView && _mode != MonsterDetailMode.AssignToTeam)
+        {
+            premiumVariantRoot.SetActive(false);
+            return;
+        }
+
+        bool show = current != null
+                    && _directoryHasNormal
+                    && _directoryHasPremium
+                    && _preferredOwned != null
+                    && _otherVariantOwned != null;
+
+        premiumVariantRoot.SetActive(show);
+
+        if (!show)
+            return;
+
+        UpdatePremiumVariantToggleLabel(); 
+    }
+
+    private void ToggleDirectoryPremiumVariant()
+    {
+        if (current == null || string.IsNullOrEmpty(current.id))
+            return;
+
+        if (!MonsterVariantPreference.PlayerHasBothVariants(current.id, out var premium, out var non))
+            return;
+
+        if (premium == null || non == null)
+            return;
+
+        bool viewingPremium = IsViewingPremiumNow();
+
+        var next = viewingPremium ? non : premium;
+        var other = viewingPremium ? premium : non;
+
+        _preferredOwned = next;
+        _otherVariantOwned = other;
+
+        _directoryHasPremium = premium != null;
+        _directoryHasNormal = non != null;
+        _directoryViewingPremium = next != null && (next.isPremium || next.premiumTier > 0);
+
+        _viewPremiumCosmetic = (next != null && (next.isPremium || next.premiumTier > 0));
+
+        if (next != null && !string.IsNullOrEmpty(next.ownedUID))
+            MonsterVariantPreference.SetPreferred(current.id, next.ownedUID);
+
+        SetupPremiumVariantUI();
+        UpdatePremiumVariantToggleLabel();
+        ApplyVariantCosmeticImmediate();
+        SafeOpen(current);
+
+        GameEvents.OnTeamChanged?.Invoke();
+        GameEvents.OnJobsChanged?.Invoke();
+        GameEvents.FavoritesChanged?.Invoke();
+
+        AudioManager.I?.PlayClick();
+    }
+
+    
+private void ApplyVariantCosmeticImmediate()
+{
+    if (current == null) return;
+
+    // Force-refresh the cosmetic pieces immediately (independent of staged rendering / safe flags).
+    try
+    {
+        if (icon)
+        {
+            var spr = GetVariantIcon(current);
+            if (spr != null)
+            {
+                icon.sprite = spr;
+                icon.enabled = true;
+            }
+        }
+
+        if (nameText)
+            nameText.text = BuildVariantDisplayName(current);
+    }
+    catch { /* cosmetic-only; never break panel */ }
+}
+
+private Sprite GetVariantIcon(MonsterDataSO monster)
+    {
+        if (monster == null) return null;
+
+        bool premium = (_mode == MonsterDetailMode.AssignToTeam || _mode == MonsterDetailMode.DirectoryView) ? _viewPremiumCosmetic : false;
+
+        if (premium && monster.premiumIcon != null)
+            return monster.premiumIcon;
+
+        return monster.icon;
+    }
+
+    private string BuildVariantDisplayName(MonsterDataSO monster)
+    {
+        if (monster == null) return "-";
+
+        string baseName = string.IsNullOrEmpty(monster.displayName) ? monster.name : monster.displayName;
+
+        bool premium = (_mode == MonsterDetailMode.AssignToTeam || _mode == MonsterDetailMode.DirectoryView) ? _viewPremiumCosmetic : false;
+
+        if (!premium)
+            return baseName;
+
+        return $"{baseName} <color=#FFD54F>(Premium)</color>";
+    }
+
+    // ─────────────────────────────────────────────────────────────
     // Staged render
     // ─────────────────────────────────────────────────────────────
 
@@ -466,21 +887,20 @@ public class MonsterDetailPanelUI : MonoBehaviour
         {
             TryStep("Header & Static Fields", () =>
             {
-                if (!safeSkipMonsterIcon && icon) icon.sprite = monster ? monster.icon : null;
-
+                if (!safeSkipMonsterIcon && icon) icon.sprite = GetVariantIcon(monster);
                 if (idText) idText.text = monster ? $"ID: {monster.id}" : "ID: -";
-                if (nameText) nameText.text = monster ? (string.IsNullOrEmpty(monster.displayName) ? monster.name : monster.displayName) : "-";
+                if (nameText) nameText.text = BuildVariantDisplayName(monster);
 
                 if (typeText)
                 {
                     string typeName = monster ? monster.type.ToString() : "-";
                     string typeHex = "CCCCCC";
-                    if (monster != null && TYPE_COLORS.TryGetValue(monster.type, out var tc))
-                        typeHex = ColorUtility.ToHtmlStringRGB(tc);
+                    if (monster != null)
+                        typeHex = ColorUtility.ToHtmlStringRGB(TypeColorLibrary.Get(monster.type));
 
                     typeText.color = Color.white;
                     typeText.richText = true;
-                    typeText.text = $"<color=#FFFFFF>TYPE:</color> <color=#{typeHex}>{typeName}</color>";
+                    typeText.text = $"<color=#{typeHex}>{typeName}</color>";
                 }
 
                 if (rarityText)
@@ -497,22 +917,33 @@ public class MonsterDetailPanelUI : MonoBehaviour
                     }
                 }
 
-                bool isAssign = _mode == MonsterDetailMode.AssignToTeam;
+                bool isPackPreview = _mode == MonsterDetailMode.PackPreview;
                 bool isStarter = _mode == MonsterDetailMode.StarterSelect;
-                bool isCodex = _mode == MonsterDetailMode.CodexView;
+                bool isDirectory = _mode == MonsterDetailMode.DirectoryView;
+                bool isAssign = _mode == MonsterDetailMode.AssignToTeam;
+                bool isOwned = _currentOwned != null || _statsOwned != null;
 
                 if (starterButtonsHolder) starterButtonsHolder.SetActive(isStarter);
-                if (slotButtonsHolder)    slotButtonsHolder.SetActive(isAssign && _teamSlotIndex < 0);
-                if (teamHolder)           teamHolder.SetActive(isAssign && _teamSlotIndex >= 0);
+                if (slotButtonsHolder) slotButtonsHolder.SetActive(isDirectory && isOwned);
+                if (teamHolder) teamHolder.SetActive(isAssign && _teamSlotIndex >= 0);
+                if (notHiredRow) notHiredRow.SetActive(isPackPreview || (isDirectory && !isOwned));
 
-                // Codex should have a close button (same as Assign)
                 if (closeButton) closeButton.gameObject.SetActive(!isStarter);
-
-                if (lvlText) lvlText.text = $"LVL: {GetDisplayLevel()}";
 
                 RenderJobSites(monster);
                 UpdateTitleButtonBinding();
                 RefreshPersonalityUI(monster);
+
+                RefreshStatsViewToggleLabel();
+
+                // ✅ CRITICAL FIX:
+                // Preserve focused owned instance during staged refresh so Team/Assign doesn’t
+                // accidentally revert to global directory preference mid-render.
+                ResolveVariantState(monster ? monster.id : null);
+                SetupPremiumVariantUI();
+                UpdatePremiumVariantToggleLabel();
+
+                RenderStatsSection();
 
                 if (canvasGroup) LeanTween.alphaCanvas(canvasGroup, 1f, 0.12f);
             });
@@ -523,52 +954,7 @@ public class MonsterDetailPanelUI : MonoBehaviour
 
         if (_stage == RenderStage.StatsEvo)
         {
-            TryStep("Stats & Evo", () =>
-            {
-                int dispLvl = GetDisplayLevel();
-
-                int maxHP = 0;
-                int atkL = 0;
-                int defL = 0;
-                float spd = 0f;
-
-                if (!safeSkipStats && current != null)
-                {
-                    try { maxHP = Mathf.RoundToInt(BattleCalc.CalcHP(current, dispLvl)); } catch { maxHP = current != null ? Mathf.RoundToInt(current.baseHP) : 0; }
-                    try { atkL = Mathf.RoundToInt(BattleCalc.CalcBaseAttack(current, dispLvl, 0, 0)); } catch { atkL = current != null ? Mathf.RoundToInt(current.baseAttack) : 0; }
-                    defL = current != null ? Mathf.RoundToInt(current.baseDefense) : 0;
-                    spd = current != null ? current.baseSpeed : 0f;
-                }
-                else
-                {
-                    maxHP = current != null ? Mathf.RoundToInt(current.baseHP) : 0;
-                    atkL = current != null ? Mathf.RoundToInt(current.baseAttack) : 0;
-                    defL = current != null ? Mathf.RoundToInt(current.baseDefense) : 0;
-                    spd = current != null ? current.baseSpeed : 0f;
-                }
-
-                int curHP = maxHP;
-                if (_mode == MonsterDetailMode.AssignToTeam && _currentOwned != null && !string.IsNullOrEmpty(_currentOwned.monsterId))
-                    curHP = Mathf.Clamp(_currentOwned.currentHP < 0 ? maxHP : _currentOwned.currentHP, 0, maxHP);
-
-                if (hpText)
-                {
-                    if (_mode == MonsterDetailMode.AssignToTeam && maxHP > 0)
-                        hpText.text = curHP == 0 ? $"HP: 0 / {maxHP}  (KO)" : $"HP: {curHP} / {maxHP}";
-                    else if (maxHP > 0)
-                        hpText.text = $"HP: {maxHP}";
-                    else
-                        hpText.text = "HP: —";
-                }
-
-                if (atkText) atkText.text = atkL > 0 ? $"ATK: {atkL}" : "ATK: —";
-                if (defText) defText.text = current ? $"DEF: {defL}" : "DEF: —";
-                if (spdText) spdText.text = current ? $"SPD: {spd:0.##}" : "SPD: —";
-
-                if (evoText) evoText.text = (!safeSkipEvolution) ? BuildEvolutionLine(current) : "EVO: —";
-
-                RefreshEvolveButton();
-            });
+            TryStep("Stats & Evo", RenderStatsSection);
 
             _stage = RenderStage.Description;
             yield return null;
@@ -618,7 +1004,6 @@ public class MonsterDetailPanelUI : MonoBehaviour
     {
         if (_browseDefs == null || _browseDefs.Count <= 1) return;
 
-        // Read from Touchscreen (mobile) or Mouse (editor/desktop).
         bool pressed = false;
         bool released = false;
         Vector2 pos = Vector2.zero;
@@ -629,7 +1014,6 @@ public class MonsterDetailPanelUI : MonoBehaviour
             var touch = ts.primaryTouch;
             pressed = touch.press.wasPressedThisFrame;
             released = touch.press.wasReleasedThisFrame;
-            // When pressed/held, read position; on release, still read last position.
             pos = touch.position.ReadValue();
         }
         else
@@ -659,7 +1043,6 @@ public class MonsterDetailPanelUI : MonoBehaviour
 
             Vector2 delta = pos - _swipeStartPos;
 
-            // Horizontal swipe only (ignore big vertical drags)
             if (Mathf.Abs(delta.y) > swipeMaxVerticalPixels)
                 return;
 
@@ -668,7 +1051,6 @@ public class MonsterDetailPanelUI : MonoBehaviour
 
             _lastBrowseAt = Time.unscaledTime;
 
-            // Swipe left (delta.x negative) => Next; swipe right => Prev
             if (delta.x < 0f) BrowseNext();
             else BrowsePrev();
         }
@@ -717,9 +1099,6 @@ public class MonsterDetailPanelUI : MonoBehaviour
         if (def == null) return;
 
         _browseIndex = index;
-
-        // When browsing, always show as Codex (read-only) unless you explicitly want StarterSelect browsing.
-        // We keep the current mode as-is, but do NOT open assign/team screens from swipe.
         current = def;
 
         RefreshEvolveButton();
@@ -797,6 +1176,46 @@ public class MonsterDetailPanelUI : MonoBehaviour
 
     private void AssignToSlot(int slotIndex)
     {
+        slotIndex = Mathf.Clamp(slotIndex, 0, 2);
+
+        if (_mode == MonsterDetailMode.DirectoryView)
+        {
+            if (current == null || string.IsNullOrEmpty(current.id)) { Hide(); return; }
+
+            var data = SaveManager.Data;
+            if (data == null)
+            {
+                Debug.LogWarning("[MonsterDetailPanel] SaveManager.Data is null in AssignToSlot (DirectoryView). Attempting LoadOrCreate.");
+                SaveManager.LoadOrCreate();
+                data = SaveManager.Data;
+                if (data == null) { Hide(); return; }
+            }
+
+            var team = data.team ?? new List<OwnedMonsterData>();
+            TeamUtils.EnsureTeamSize(team, 3);
+
+            var preferred = MonsterVariantPreference.GetPreferredOwned(current.id);
+            if (preferred == null)
+            {
+                Debug.LogWarning("[MonsterDetailPanel] No owned instance found for this monster; cannot assign from Directory.");
+                Hide();
+                return;
+            }
+
+            var clone = XPManager.Resolve(preferred) ?? preferred;
+
+            // Enforce: one owned monster instance per team slot.
+            TeamUtils.RemoveDuplicatesForAssignment(team, clone, slotIndex);
+            team[slotIndex] = clone;
+
+            data.team = team;
+            SaveManager.Save();
+            GameEvents.OnTeamChanged?.Invoke();
+
+            Hide();
+            return;
+        }
+
         if (_mode != MonsterDetailMode.AssignToTeam
             || _currentOwned == null
             || string.IsNullOrEmpty(_currentOwned.monsterId))
@@ -805,28 +1224,32 @@ public class MonsterDetailPanelUI : MonoBehaviour
             return;
         }
 
-        if (_currentOwned.currentHP == 0)
+        // Allow assigning KO'd monsters back onto the team so the player can use team healing.
+        // Battle eligibility is enforced elsewhere (EligibilityRules / EncounterManager).
+
+        var data2 = SaveManager.Data;
+        if (data2 == null)
         {
-            Debug.LogWarning("[MonsterDetailPanel] Cannot assign a KO'd monster. Heal or wait for regen first.");
-            Hide();
-            return;
+            Debug.LogWarning("[MonsterDetailPanel] SaveManager.Data is null in AssignToSlot. Attempting LoadOrCreate.");
+            SaveManager.LoadOrCreate();
+            data2 = SaveManager.Data;
+            if (data2 == null)
+            {
+                Hide();
+                return;
+            }
         }
 
-        var data = SaveManager.Data;
-        if (data == null)
-        {
-            Debug.LogError("[MonsterDetailPanel] SaveManager.Data is null in AssignToSlot.");
-            Hide();
-            return;
-        }
-
-        var team = data.team ?? new List<OwnedMonsterData>();
-        while (team.Count < 3) team.Add(new OwnedMonsterData());
+        var team2 = data2.team ?? new List<OwnedMonsterData>();
+        TeamUtils.EnsureTeamSize(team2, 3);
 
         var canonical = XPManager.Resolve(_currentOwned) ?? _currentOwned;
-        team[slotIndex] = canonical;
 
-        data.team = team;
+        // Enforce: one owned monster instance per team slot.
+        TeamUtils.RemoveDuplicatesForAssignment(team2, canonical, slotIndex);
+        team2[slotIndex] = canonical;
+
+        data2.team = team2;
         SaveManager.Save();
         GameEvents.OnTeamChanged?.Invoke();
 
@@ -837,12 +1260,24 @@ public class MonsterDetailPanelUI : MonoBehaviour
     {
         if (_teamSlotIndex < 0) { Hide(); return; }
 
-        var team = SaveManager.Data.team ?? new List<OwnedMonsterData>();
+        var data = SaveManager.Data;
+        if (data == null)
+        {
+            SaveManager.LoadOrCreate();
+            data = SaveManager.Data;
+            if (data == null)
+            {
+                Hide();
+                return;
+            }
+        }
+
+        var team = data.team ?? new List<OwnedMonsterData>();
         while (team.Count < 3) team.Add(new OwnedMonsterData());
 
         team[_teamSlotIndex] = new OwnedMonsterData();
 
-        SaveManager.Data.team = team;
+        data.team = team;
         SaveManager.Save();
         GameEvents.OnTeamChanged?.Invoke();
 
@@ -885,8 +1320,31 @@ public class MonsterDetailPanelUI : MonoBehaviour
         backgroundImage.color = c;
     }
 
+    private void ClearVariantState()
+    {
+        _directoryHasNormal = false;
+        _directoryHasPremium = false;
+        _directoryViewingPremium = false;
+
+        _preferredOwned = null;
+        _otherVariantOwned = null;
+
+        
+        _statsOwned = null;
+        _viewPremiumCosmetic = false;
+if (premiumVariantRoot) premiumVariantRoot.SetActive(false);
+        if (premiumVariantToggleLabel) premiumVariantToggleLabel.text = string.Empty;
+    }
+
     private void ResetVisualsImmediate()
     {
+        if (_stageCR != null)
+        {
+            StopCoroutine(_stageCR);
+            _stageCR = null;
+        }
+        _stage = RenderStage.None;
+
         if (canvasGroup) canvasGroup.alpha = 0f;
 
         current = null;
@@ -924,7 +1382,8 @@ public class MonsterDetailPanelUI : MonoBehaviour
         if (favoriteButton) favoriteButton.gameObject.SetActive(false);
         if (favoriteOnIcon) favoriteOnIcon.SetActive(false);
 
-        // browse session reset (do not force-clear; callers can keep it if they want)
+        ClearVariantState();
+
         _swipeTracking = false;
     }
 
@@ -957,19 +1416,65 @@ public class MonsterDetailPanelUI : MonoBehaviour
         if (!m.evolutionForm || m.evolutionLevel <= 0)
             return "EVO: —";
 
-        string nextName = m.evolutionForm ? (string.IsNullOrEmpty(m.evolutionForm.displayName) ? m.evolutionForm.name : m.evolutionForm.displayName) : "???";
-        int lvl = Mathf.Max(1, m.evolutionLevel);
+        var nextDef = m.evolutionForm;
+        string nextName = nextDef
+            ? (string.IsNullOrEmpty(nextDef.displayName) ? nextDef.name : nextDef.displayName)
+            : "???";
 
-        int curHpAtEvo = Mathf.RoundToInt(BattleCalc.CalcHP(m, lvl));
-        int nxtHpAtEvo = Mathf.RoundToInt(BattleCalc.CalcHP(m.evolutionForm, lvl));
-        int curAtkAtEvo = Mathf.RoundToInt(BattleCalc.CalcBaseAttack(m, lvl, 0, 0));
-        int nxtAtkAtEvo = Mathf.RoundToInt(BattleCalc.CalcBaseAttack(m.evolutionForm, lvl, 0, 0));
+        int evoLvl = Mathf.Max(1, m.evolutionLevel);
 
-        int dHp = nxtHpAtEvo - curHpAtEvo;
-        int dAtk = nxtAtkAtEvo - curAtkAtEvo;
+        var srcOwned = _statsOwned ?? _currentOwned;
+        bool hasOwnedInstance = (srcOwned != null) && !string.IsNullOrEmpty(srcOwned.monsterId);
 
-        string deltas = $" (+{dHp} HP, +{dAtk} ATK)";
-        return $"EVO: Lv {lvl} → {nextName}{((dHp > 0 || dAtk > 0) ? deltas : "")}";
+        int trainHP = 0, trainATK = 0, trainDEF = 0, trainSPD = 0;
+        int flatAtkBonus = 0;
+
+        if (hasOwnedInstance)
+        {
+            trainHP = Mathf.Max(0, srcOwned.trainingBonus.hp);
+            trainATK = Mathf.Max(0, srcOwned.trainingBonus.atk);
+            trainDEF = Mathf.Max(0, srcOwned.trainingBonus.def);
+            trainSPD = Mathf.Max(0, srcOwned.trainingBonus.spd);
+            flatAtkBonus = Mathf.Max(0, srcOwned.flatAtkBonus);
+
+            if (LooksLikeLegacyTrainingWasMirroredIntoFlat(flatAtkBonus, trainATK))
+                trainATK = 0;
+        }
+
+        int curHP = Mathf.RoundToInt(BattleCalc.CalcHP(m, evoLvl));
+        int nxtHP = Mathf.RoundToInt(BattleCalc.CalcHP(nextDef, evoLvl));
+
+        int curATK = Mathf.RoundToInt(BattleCalc.CalcBaseAttack(m, evoLvl, 0, 0));
+        int nxtATK = Mathf.RoundToInt(BattleCalc.CalcBaseAttack(nextDef, evoLvl, 0, 0));
+
+        int curDEF = BattleCalc.CalcDefense(m, evoLvl);
+        int nxtDEF = BattleCalc.CalcDefense(nextDef, evoLvl);
+
+        int curSPD = BattleCalc.CalcSpeed(m, evoLvl);
+        int nxtSPD = BattleCalc.CalcSpeed(nextDef, evoLvl);
+
+        if (hasOwnedInstance)
+        {
+            curHP += trainHP; nxtHP += trainHP;
+            curATK += (trainATK + flatAtkBonus); nxtATK += (trainATK + flatAtkBonus);
+            curDEF += trainDEF; nxtDEF += trainDEF;
+            curSPD += trainSPD; nxtSPD += trainSPD;
+        }
+
+        int dHp = nxtHP - curHP;
+        int dAtk = nxtATK - curATK;
+        int dDef = nxtDEF - curDEF;
+        int dSpd = nxtSPD - curSPD;
+
+        List<string> parts = new List<string>(4);
+        if (dHp != 0) parts.Add($"{(dHp > 0 ? "+" : "")}{dHp} HP");
+        if (dAtk != 0) parts.Add($"{(dAtk > 0 ? "+" : "")}{dAtk} ATK");
+        if (dDef != 0) parts.Add($"{(dDef > 0 ? "+" : "")}{dDef} DEF");
+        if (dSpd != 0) parts.Add($"{(dSpd > 0 ? "+" : "")}{dSpd} SPD");
+
+        string deltas = parts.Count > 0 ? $" ({string.Join(", ", parts)})" : "";
+
+        return $"EVO: Lv {evoLvl} → {nextName}{deltas}";
     }
 
     private void TryStep(string label, Action step)
@@ -989,13 +1494,16 @@ public class MonsterDetailPanelUI : MonoBehaviour
     private void LogStep(string msg)
     {
         if (!buildVerboseLogging) return;
-        Debug.Log($"[MonsterDetailPanelUI] {msg} (monster={(current ? current.id : "null")})");
+        DevLog.Log($"[MonsterDetailPanelUI] {msg} (monster={(current ? current.id : "null")})");
     }
 
     private int GetDisplayLevel()
     {
-        if (_mode == MonsterDetailMode.AssignToTeam && _currentOwned != null && _currentOwned.level > 0)
-            return _currentOwned.level;
+        // Stats source is stable; premium is cosmetic-only.
+        var src = _statsOwned ?? _currentOwned;
+        if (src != null && src.level > 0)
+            return src.level;
+
         return 1;
     }
 
@@ -1004,8 +1512,10 @@ public class MonsterDetailPanelUI : MonoBehaviour
         if (!evolveButton)
             return;
 
-        // Evolution button only makes sense in Assign mode.
-        if (_mode != MonsterDetailMode.AssignToTeam || current == null)
+        var srcOwned = _statsOwned ?? _currentOwned;
+        bool hasOwned = (srcOwned != null) && !string.IsNullOrEmpty(srcOwned.monsterId);
+
+        if (!hasOwned || current == null)
         {
             evolveButton.gameObject.SetActive(false);
             return;
@@ -1019,9 +1529,8 @@ public class MonsterDetailPanelUI : MonoBehaviour
         evolveButton.gameObject.SetActive(meetsLevel);
 
         bool canActuallyEvolve = false;
-
-        if (meetsLevel && _currentOwned != null && !string.IsNullOrEmpty(_currentOwned.monsterId))
-            canActuallyEvolve = EvolutionHelper.CanEvolve(_currentOwned, current);
+        if (meetsLevel)
+            canActuallyEvolve = EvolutionHelper.CanEvolve(srcOwned, current);
 
         evolveButton.interactable = canActuallyEvolve;
     }
@@ -1038,8 +1547,10 @@ public class MonsterDetailPanelUI : MonoBehaviour
 
         string key = null;
 
-        if (_currentOwned != null && !string.IsNullOrEmpty(_currentOwned.monsterId))
-            key = _currentOwned.monsterId;
+        var srcOwned = _statsOwned ?? _currentOwned;
+
+        if (srcOwned != null && !string.IsNullOrEmpty(srcOwned.monsterId))
+            key = srcOwned.monsterId;
         else if (current != null && !string.IsNullOrEmpty(current.id))
             key = current.id;
 
@@ -1055,9 +1566,10 @@ public class MonsterDetailPanelUI : MonoBehaviour
 
     private void HandleTitlesChanged(string ownedId)
     {
-        if (_currentOwned != null
-            && !string.IsNullOrEmpty(_currentOwned.monsterId)
-            && _currentOwned.monsterId == ownedId)
+        var srcOwned = _statsOwned ?? _currentOwned;
+        if (srcOwned != null
+            && !string.IsNullOrEmpty(srcOwned.monsterId)
+            && srcOwned.monsterId == ownedId)
         {
             UpdateTitleButtonBinding();
         }
@@ -1095,22 +1607,26 @@ public class MonsterDetailPanelUI : MonoBehaviour
 
     private void HandleMonsterLeveled(string ownedIdOrDefId, int newLevel)
     {
-        if (_currentOwned == null || string.IsNullOrEmpty(_currentOwned.monsterId))
+        var srcOwned = _statsOwned ?? _currentOwned;
+        if (srcOwned == null || string.IsNullOrEmpty(srcOwned.monsterId))
             return;
 
-        string myKey = !string.IsNullOrEmpty(_currentOwned.ownedUID)
-            ? _currentOwned.ownedUID
-            : _currentOwned.monsterId;
+        string myKey = !string.IsNullOrEmpty(srcOwned.ownedUID)
+            ? srcOwned.ownedUID
+            : srcOwned.monsterId;
 
         if (myKey != ownedIdOrDefId)
             return;
 
-        _currentOwned.level = newLevel;
+        srcOwned.level = newLevel;
 
         if (lvlText)
             lvlText.text = $"LVL: {GetDisplayLevel()}";
 
         RefreshEvolveButton();
+
+        if (!_showBaseStats)
+            RenderStatsSection();
     }
 
     private void HandleMonsterEvolved(string newDefId)
@@ -1131,6 +1647,75 @@ public class MonsterDetailPanelUI : MonoBehaviour
         UpdateTitleButtonBinding();
         RefreshEvolveButton();
         SetupFavoriteButton();
+
         SafeOpen(current);
+    }
+
+    private string FormatAdjInt(string label, int baseVal, int trainingVal)
+    {
+        int total = baseVal + trainingVal;
+        return $"{label}: {total} ({baseVal} + <color={TRAINING_GREEN}>{trainingVal}</color>)";
+    }
+
+    private bool LooksLikeLegacyTrainingWasMirroredIntoFlat(int flatAtkBonus, int trainingAtk)
+    {
+        if (flatAtkBonus <= 0 || trainingAtk <= 0) return false;
+        return flatAtkBonus >= trainingAtk && flatAtkBonus >= 10;
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // Variant state resolution (unchanged API, improved usage)
+    // ─────────────────────────────────────────────────────────────
+
+    private void ResolveVariantState(string monsterId)
+    {
+        ResolveVariantState(monsterId, focusOwned: null);
+    }
+
+    // Overload: when opening from a specific owned instance (team card / owned list),
+    // we want the detail panel to start from THAT instance (not a saved global preference).
+    void ResolveVariantState(string monsterId, OwnedMonsterData focusOwned)
+    {
+        _directoryHasNormal = false;
+        _directoryHasPremium = false;
+        _directoryViewingPremium = false;
+
+        _preferredOwned = null;
+        _otherVariantOwned = null;
+
+        if (string.IsNullOrEmpty(monsterId) || SaveManager.Data == null)
+            return;
+
+        if (MonsterVariantPreference.PlayerHasBothVariants(monsterId, out var premium, out var non))
+        {
+            _directoryHasPremium = premium != null;
+            _directoryHasNormal = non != null;
+
+            if (focusOwned != null && focusOwned.monsterId == monsterId)
+                _preferredOwned = focusOwned;
+            else
+                _preferredOwned = MonsterVariantPreference.GetPreferredOwned(monsterId);
+
+            if (_preferredOwned == null)
+                _preferredOwned = non ?? premium;
+
+            _otherVariantOwned = MonsterVariantPreference.GetOtherVariant(monsterId, _preferredOwned);
+
+            _directoryViewingPremium = _preferredOwned != null && (_preferredOwned.isPremium || _preferredOwned.premiumTier > 0);
+            return;
+        }
+
+        var pref = (focusOwned != null && focusOwned.monsterId == monsterId)
+            ? focusOwned
+            : MonsterVariantPreference.GetPreferredOwned(monsterId);
+
+        if (pref != null)
+        {
+            bool s = pref.isPremium || pref.premiumTier > 0;
+            _directoryHasPremium = s;
+            _directoryHasNormal = !s;
+            _preferredOwned = pref;
+            _directoryViewingPremium = s;
+        }
     }
 }

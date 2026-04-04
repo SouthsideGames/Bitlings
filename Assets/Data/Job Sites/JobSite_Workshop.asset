@@ -14,9 +14,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   jobType: 6
   produces: 5
-  baseRatePerHour: 15
-  storageCap: 75
+  baseRatePerHour: 0.35
+  storageCap: 20
   maxWorkers: 3
   eligibleTypes: 10000000
-  icon: {fileID: 21300000, guid: 8d66395d3ecfb804f9e24316b5213e40, type: 3}
+  icon: {fileID: 21300000, guid: 02375c6316163de4384553b0d190dcc3, type: 3}
   displayName: Workshop

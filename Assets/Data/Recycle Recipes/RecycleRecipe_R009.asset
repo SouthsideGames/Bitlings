@@ -13,8 +13,8 @@ MonoBehaviour:
   m_Name: RecycleRecipe_R009
   m_EditorClassIdentifier: 
   recipeId: R-009
-  displayName: Health Fiber Extract
+  displayName: Wellness Blend
   fromType: 10
   fromAmount: 1
-  toType: 4
-  toAmount: 12
+  toType: 14
+  toAmount: 3

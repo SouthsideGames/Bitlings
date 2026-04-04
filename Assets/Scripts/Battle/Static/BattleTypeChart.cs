@@ -95,7 +95,6 @@ public static class BattleTypeChart
             [MonsterType.Sky] = 0.5f,
             [MonsterType.Fire] = 0.5f,
             [MonsterType.Rock] = 0.5f,
-            [MonsterType.Oracle] = 0.5f,
             [MonsterType.Clash] = 0.5f
         },
         [MonsterType.Specter] = new()

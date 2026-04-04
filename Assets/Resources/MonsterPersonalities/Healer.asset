@@ -24,4 +24,7 @@ MonoBehaviour:
   badMatchDefendBonus: 1
   badMatchRunBonus: 1
   eachTurnAttackBonus: 0
-  description: Conserves strength; builds with focus, avoids risky exchanges.
+  eachTurnFocusPenalty: 0
+  lowHpFocusPenalty: 2
+  chaoticOverrideChance: 0.25
+  description: Conserves strength through preparation, avoiding unnecessary risk.

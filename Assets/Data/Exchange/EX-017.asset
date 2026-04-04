@@ -1,0 +1,27 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3b3551d34f5488948a8cd10af9b64480, type: 3}
+  m_Name: EX-017
+  m_EditorClassIdentifier: Assembly-CSharp::ExchangeRequestSO
+  requestId: EX-017
+  displayName: Shadow Market Transfer
+  flavorText: A discreet transfer order requires an Umbral Bitling for a low-visibility
+    assignment.
+  requiredSpecies: {fileID: 0}
+  requiredRandomSpeciesType: 0
+  requiredType: 15
+  requiredMinRarity: 0
+  creditReward: 135
+  bonusResourceType: 0
+  bonusResourceAmount: 0
+  weight: 2
+  durationHours: 24

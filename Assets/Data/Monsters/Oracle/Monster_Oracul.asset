@@ -1,0 +1,56 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 32ffc26ed7d444b02a9332ce4279b117, type: 3}
+  m_Name: Monster_Oracul
+  m_EditorClassIdentifier: 
+  id: M-129
+  displayName: Oracul
+  type: 10
+  typeIcon: {fileID: 21300000, guid: fb4479ed54fe64621a9e7a735eeffad8, type: 3}
+  icon: {fileID: 21300000, guid: e587140cc69114f8a8ba05c2fb62282b, type: 3}
+  backIcon: {fileID: 21300000, guid: a88fe3030136e4e0f8926092d30a3daf, type: 3}
+  premiumIcon: {fileID: 21300000, guid: 2bf92cd939bb64a4a99bd6832a02ddf1, type: 3}
+  premiumBackIcon: {fileID: 21300000, guid: 0b06ecbb2a3954773bc774a58df0dc01, type: 3}
+  rarity: 1
+  canBeStarter: 0
+  starterWeight: 1
+  maxLevel: 50
+  baseHP: 62
+  baseAttack: 44
+  baseDefense: 40
+  baseSpeed: 22
+  hpRegenPerHour: 8.4
+  fatigueRatePerHour: 0.09
+  fatigueCooldownHours: 9.9
+  evolutionStage: 1
+  evolutionLevel: 10
+  evolutionForm: {fileID: 0}
+  uncatchable: 0
+  isBoss: 0
+  bossJobDebuffs: []
+  bossWeight: 1
+  spawnWeight: 4.5
+  jobSkill: 1
+  titleTrack: {fileID: 11400000, guid: 83dae8c1a7b884df0a100b435db13cd7, type: 2}
+  defaultAlwaysOnTitles: []
+  ironTitles:
+  - {fileID: 11400000, guid: 85f453e42f65049eb9a10b26e0d57f52, type: 2}
+  - {fileID: 11400000, guid: f81db28d7007ef941ac6cadc20602f1f, type: 2}
+  - {fileID: 11400000, guid: 68bbd476dbc9dea4485f609fc74327e0, type: 2}
+  - {fileID: 11400000, guid: bcd8786d1ce34b140bfe92358a0b2277, type: 2}
+  Personality: {fileID: 11400000, guid: 8fb41ae5d07a9422888bd80d80e2fbde, type: 2}
+  basicAttackName: Foresight Jab
+  basicAttackPrefab: {fileID: 7907104310462883121, guid: 37212b887c61ad84eacd87133a8a9e9d, type: 3}
+  basicAttackPrefabLifetime: 1
+  spawnSfx: {fileID: 8300000, guid: 48e12f5f452687641807b6e11b5b56ef, type: 3}
+  baseMarketValue: 104
+  description: A focused oracle watcher that reads subtle shifts

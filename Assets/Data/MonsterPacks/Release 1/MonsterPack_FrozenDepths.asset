@@ -1,0 +1,28 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f048558a82b7c2147ab6a4d2677278ea, type: 3}
+  m_Name: MonsterPack_FrozenDepths
+  m_EditorClassIdentifier: 
+  id: MP-010
+  displayName: Frozen Depths
+  description: Formed in extreme cold, these Ice and Water Bitlings focus on control
+    and durability. Their approach emphasizes steady defense and sustained performance.
+  icon: {fileID: 21300000, guid: 16d97f4bfe462694ab46e0bbdf057ab8, type: 3}
+  rarityLabel: Rare
+  baseCost: 21
+  costType: 17
+  saleOff01: 0
+  unlockByDefault: 0
+  monsters:
+  - {fileID: 11400000, guid: 6faad4cb114c52f4e9d3d2d9896de48d, type: 2}
+  - {fileID: 11400000, guid: fb8c56d1c75a3400ea49a2499cb0705b, type: 2}
+  - {fileID: 11400000, guid: dad671322a59b465a8964d09039e4914, type: 2}

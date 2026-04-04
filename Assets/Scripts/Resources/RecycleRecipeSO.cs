@@ -4,8 +4,8 @@ using UnityEngine;
 public class RecycleRecipeSO : ScriptableObject
 {
     [Header("Identity")]
-    public string recipeId;       // optional, for tracking/logs
-    public string displayName;    // shown in the prefab (e.g., "Junk to Juice")
+    public string recipeId;     
+    public string displayName;   
 
     [Header("Conversion")]
     public ResourceType fromType;

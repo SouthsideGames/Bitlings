@@ -3,9 +3,17 @@ using System.Collections.Generic;
 using System;
 using Random = UnityEngine.Random;
 
+// ─────────────────────────────────────────────────────────────
+// EncounterManager.FlyersCapture
+// Flyer/luck/premium modifiers, weighted wild selection, and capture flow.
+// ─────────────────────────────────────────────────────────────
+
 public partial class EncounterManager
 {
-    // ================= LURES / LUCK / SHINY / CAPTURE BAND =====================
+    // ================= LURES / LUCK / PREMIUM / CAPTURE BAND =====================
+    private const float MAX_PREMIUM_BOOST_MULT = 8f;
+
+    private const int DUPLICATE_LEVELUP_STAT_POINTS = 3;
 
     public IReadOnlyList<FlyerBiasData> ActiveLures => SaveManager.Data?.activeFlyers;
 
@@ -47,17 +55,17 @@ public partial class EncounterManager
 
     public MonsterDataSO PickWildConsideringFlyers()
     {
-        var lib = MonsterLibraryLocator.Lib;
-        if (lib == null || lib.monsters == null || lib.monsters.Length == 0)
+        var catalog = MonsterCatalog.All;
+        if (catalog == null || catalog.Count == 0)
             return null;
 
-        var pool = new List<MonsterDataSO>(lib.monsters.Length + 16);
+        var pool = new List<MonsterDataSO>(catalog.Count);
         var added = new HashSet<string>();
 
-        // 1) Base: anything in the library with spawnWeight > 0 is always eligible
-        for (int i = 0; i < lib.monsters.Length; i++)
+        // 1) Base: anything in the catalog with spawnWeight > 0 is eligible
+        for (int i = 0; i < catalog.Count; i++)
         {
-            var m = lib.monsters[i];
+            var m = catalog[i];
             if (m == null || string.IsNullOrEmpty(m.id)) continue;
             if (m.spawnWeight <= 0f) continue;
 
@@ -65,33 +73,14 @@ public partial class EncounterManager
                 pool.Add(m);
         }
 
-        // 2) Add discovered monsters (packs) to expand the pool (if they’re not already in it)
-        var data = SaveManager.Data;
-        if (data != null)
-        {
-            data.discoveredMonsterIds ??= new HashSet<string>();
-
-            foreach (var id in data.discoveredMonsterIds)
-            {
-                if (string.IsNullOrEmpty(id)) continue;
-                if (added.Contains(id)) continue;
-
-                var def = MonsterLibraryLocator.GetById(id);
-                if (def == null || string.IsNullOrEmpty(def.id)) continue;
-                if (def.spawnWeight <= 0f) continue;
-
-                if (added.Add(def.id))
-                    pool.Add(def);
-            }
-        }
-
         if (pool.Count == 0)
         {
-            for (int i = 0; i < lib.monsters.Length; i++)
+            for (int i = 0; i < catalog.Count; i++)
             {
-                var m = lib.monsters[i];
+                var m = catalog[i];
                 if (m == null || string.IsNullOrEmpty(m.id)) continue;
-                pool.Add(m);
+                if (added.Add(m.id))
+                    pool.Add(m);
             }
             if (pool.Count == 0) return null;
             return pool[Random.Range(0, pool.Count)];
@@ -132,10 +121,10 @@ public partial class EncounterManager
                 mult *= luckMult;
             }
 
-            // Shiny Orb: boost any shiny variants
-            float shinyMult = GetActiveShinyBoostMult();
-            if (shinyMult > 1f && IsShinyMonster(m))
-                mult *= shinyMult;
+            // Premium Orb: boost any premium variants
+            float premiumMult = GetActivePremiumBoostMult();
+            if (premiumMult > 1f && IsPremiumMonster(m))
+                mult *= premiumMult;
 
             float finalW = baseW * mult;
             if (float.IsNaN(finalW) || float.IsInfinity(finalW)) return 0f;
@@ -181,11 +170,11 @@ public partial class EncounterManager
         }
     }
 
-    private ShinyBoostData CurrentShinyBoost
+    private PremiumBoostData CurrentPremiumBoost
     {
         get
         {
-            var list = SaveManager.Data?.activeShinyBoosts;
+            var list = SaveManager.Data?.activePremiumBoosts;
             if (list == null || list.Count == 0) return null;
             var cur = list[0];
             if (cur != null && cur.expireUnix <= SaveManager.NowUnix())
@@ -224,11 +213,16 @@ public partial class EncounterManager
         return Mathf.Clamp01(cur.bonus);
     }
 
-    private float GetActiveShinyBoostMult()
+    public bool HasActivePremiumBoost()
     {
-        var cur = CurrentShinyBoost;
+        return CurrentPremiumBoost != null;
+    }
+
+    private float GetActivePremiumBoostMult()
+    {
+        var cur = CurrentPremiumBoost;
         if (cur == null) return 1f;
-        return Mathf.Max(1f, cur.bonus);
+        return Mathf.Clamp(cur.bonus, 1f, MAX_PREMIUM_BOOST_MULT);
     }
 
     private float GetActiveCaptureBonus01()
@@ -328,23 +322,152 @@ public partial class EncounterManager
         float roll = Random.value;
         bool success = roll <= finalChance;
 
-        bool isShiny = IsShinyMonster(def);
-        FieldOpsTracker.RecordCaptureAttempt(def, success, isShiny);
+        // ---------------------------------------------------------------------
+        // PREMIUM DETERMINATION (FIXED):
+        // If the encounter was presented as premium, the OwnedMonsterData must store isPremium=true,
+        // even if the species is not "premium-flagged" by definition.
+        // ---------------------------------------------------------------------
+
+        // Encounter-scoped premium presentation (either still active, or captured from battle end)
+        bool encounterWasPremium = _currentWildIsPremium || _lastWildWasPremium;
+
+        // Legacy/species premium flag OR encounter presented premium
+        bool isPremium = IsPremiumMonster(def) || encounterWasPremium;
+
+        // If no premium art exists, do not mark premium (prevents "premium" with normal visuals).
+        if (isPremium && def.premiumIcon == null)
+            isPremium = false;
+
+        // Premium cheat
+        if (SaveManager.Data != null && SaveManager.Data.forcePremiumCapturesRemaining > 0)
+        {
+            isPremium = true;
+
+            // still respect art availability
+            if (def.premiumIcon == null)
+                isPremium = false;
+        }
+
+        string captureName = MonsterNameFormatter.Format(def, isPremium);
+
+        FieldOpsTracker.RecordCaptureAttempt(def, success, isPremium);
 
         if (success)
         {
-            if (AudioManager.I)
-                AudioManager.I.PlaySfx(SfxType.CaptureSuccess);
+            AudioManager.I?.PlaySfx(SfxType.CaptureSuccess);
 
+            data.owned ??= new List<OwnedMonsterData>();
+
+            // Policy C: per-variant (premium vs non-premium) we keep ONE owned instance.
+            // If the variant already exists, level it up (unless max -> convert into Growth Cores).
+            OwnedMonsterData existing = FindBestOwnedVariant(data.owned, def.id, isPremium);
+            int maxLevel = GetMaxLevelFor(def);
+
+            if (existing != null)
+            {
+                // Consume premium cheat only on successful capture (existing behavior)
+                if (isPremium && SaveManager.Data != null && SaveManager.Data.forcePremiumCapturesRemaining > 0)
+                {
+                    SaveManager.Data.forcePremiumCapturesRemaining =
+                        Mathf.Max(0, SaveManager.Data.forcePremiumCapturesRemaining - 1);
+                }
+
+                // Consume sticky flag after use so it cannot leak.
+                _lastWildWasPremium = false;
+
+                bool isMax = existing.level >= maxLevel;
+
+                // In auto-mode, preserve original behavior (auto-train) to avoid
+                // interrupting idle play. Manual mode opens the resolution panel.
+                if (autoMode)
+                {
+                    // Auto-mode: apply level-up or convert to cores immediately
+                    if (!isMax)
+                    {
+                        int before = existing.level;
+                        ApplyDuplicateCaptureLevelUp(existing, def, DUPLICATE_LEVELUP_STAT_POINTS);
+                        SyncOwnedToTeam(existing);
+
+                        SaveManager.Save();
+                        GameEvents.OnResourcesChanged?.Invoke();
+                        GameEvents.MonsterCaptured?.Invoke(def.id, def.type);
+
+                        string key = !string.IsNullOrEmpty(existing.ownedUID) ? existing.ownedUID : existing.monsterId;
+                        GameEvents.MonsterLeveled?.Invoke(key, existing.level);
+
+                        BattleLogger.Log(
+                            $"🎉 Duplicate captured! {captureName} leveled up {before} → {existing.level}. [p={Mathf.RoundToInt(finalChance * 100f)}%]",
+                            LogScope.Encounter
+                        );
+                        EmitStatus($"Duplicate captured! {captureName} leveled up to Lv {existing.level}.", LogScope.Encounter);
+                    }
+                    else
+                    {
+                        int cores = CalcDuplicateConversionCores(def, level);
+                        if (cores > 0)
+                            ResourceManager.I?.Add(ResourceType.GrowthCore, cores);
+
+                        SaveManager.Save();
+                        GameEvents.OnResourcesChanged?.Invoke();
+                        GameEvents.MonsterCaptured?.Invoke(def.id, def.type);
+
+                        BattleLogger.Log(
+                            $"🎉 Duplicate captured, but {captureName} is already max level (Lv {maxLevel}). Converted to +{cores} Growth Cores. [p={Mathf.RoundToInt(finalChance * 100f)}%]",
+                            LogScope.Encounter
+                        );
+                        EmitStatus($"Duplicate converted: +{cores} Growth Cores (already Lv {maxLevel}).", LogScope.Encounter);
+                    }
+                }
+                else
+                {
+                    // Manual mode: open the Duplicate Resolution panel
+                    PendingDuplicateCapture.Set(existing, def, level, isPremium, isMax);
+                    PersistPendingDuplicateDecision(existing, def, level, isPremium, isMax);
+
+                    if (UIManager.I != null)
+                        UIManager.I.Show(PanelId.DuplicateResolution);
+
+                    BattleLogger.Log(
+                        $"🎉 Duplicate {captureName} captured! Awaiting placement decision. [p={Mathf.RoundToInt(finalChance * 100f)}%]",
+                        LogScope.Encounter
+                    );
+                    EmitStatus($"Duplicate captured! Choose how to place {captureName}.", LogScope.Encounter);
+                }
+
+                // Ensure collection tracking is up to date
+                data.ownedIds ??= new HashSet<string>(); data.ownedIds.Add(def.id);
+                data.seenTypes ??= new HashSet<MonsterType>(); data.seenTypes.Add(def.type);
+
+                return true;
+            }
+
+            // First time for this variant → add a new owned instance.
+            int startHP = 1;
+            if (def != null)
+                startHP = HealingService.CalcMaxHP(def, Mathf.Max(1, level), includeTraining: true, includeTitles: false);
             var om = new OwnedMonsterData
             {
                 monsterId = def.id,
                 level = Mathf.Max(1, level),
-                currentHP = -1,
+                currentHP = Mathf.Max(0, startHP),
                 currentXP = 0,
-                ownedUID = Guid.NewGuid().ToString("N")
+                ownedUID = Guid.NewGuid().ToString("N"),
+
+                isPremium = isPremium,
+                premiumTier = isPremium ? 1 : 0
             };
-            data.owned ??= new List<OwnedMonsterData>();
+
+            // Consume premium cheat only on successful capture (your existing behavior)
+            if (isPremium && SaveManager.Data != null && SaveManager.Data.forcePremiumCapturesRemaining > 0)
+            {
+                SaveManager.Data.forcePremiumCapturesRemaining =
+                    Mathf.Max(0, SaveManager.Data.forcePremiumCapturesRemaining - 1);
+            }
+
+            // IMPORTANT: consume the "last wild was premium" sticky flag after it is used for capture,
+            // so it cannot leak into later capture attempts.
+            _lastWildWasPremium = false;
+
             data.owned.Add(om);
 
             data.ownedIds ??= new HashSet<string>(); data.ownedIds.Add(def.id);
@@ -356,29 +479,174 @@ public partial class EncounterManager
             GameEvents.MonsterCaptured?.Invoke(def.id, def.type);
 
             BattleLogger.Log(
-                $"🎉 Capture success! {def.displayName} (Lv {level}) joined your roster. [p={Mathf.RoundToInt(finalChance * 100f)}%]",
+                $"🎉 Capture success! {captureName} (Lv {level}) joined your roster. [p={Mathf.RoundToInt(finalChance * 100f)}%]",
                 LogScope.Encounter
             );
-            EmitStatus($"Captured {def.displayName}! (Lv {level})", LogScope.Encounter);
-
+            EmitStatus($"Captured {captureName}! (Lv {level})", LogScope.Encounter);
         }
         else
         {
             BattleLogger.Log(
-                $"Capture failed on {def.displayName} (Lv {level}). [p={Mathf.RoundToInt(finalChance * 100f)}%, roll={Mathf.RoundToInt(roll * 100f)}%]",
+                $"Capture failed on {captureName} (Lv {level}). [p={Mathf.RoundToInt(finalChance * 100f)}%, roll={Mathf.RoundToInt(roll * 100f)}%]",
                 LogScope.Encounter
             );
-            EmitStatus($"Capture failed. {def.displayName} escaped.", LogScope.Encounter);
-
+            EmitStatus($"Capture failed. {captureName} escaped.", LogScope.Encounter);
         }
 
         return success;
     }
 
+    private static void PersistPendingDuplicateDecision(OwnedMonsterData existing, MonsterDataSO def, int level, bool isPremium, bool isMax)
+    {
+        try
+        {
+            var save = SaveManager.GetExchangeBlob() ?? new ExchangeSaveData();
+            save.pendingDuplicate = new PendingDuplicateCaptureSave
+            {
+                ownedUID = existing != null ? existing.ownedUID : null,
+                speciesId = def != null ? def.id : null,
+                encounterLevel = Mathf.Max(1, level),
+                isPremium = isPremium,
+                isMaxLevel = isMax
+            };
+            SaveManager.SetExchangeBlob(save);
+        }
+        catch { }
+    }
 
-    // ── Shiny / Unique helpers ─────────────────────────────────────────────────
+    // ── Duplicate capture helpers (Policy C) ───────────────────────────────────
 
-    private bool IsShinyMonster(MonsterDataSO m)
+    private static OwnedMonsterData FindBestOwnedVariant(List<OwnedMonsterData> owned, string monsterId, bool wantPremium)
+    {
+        if (owned == null || owned.Count == 0 || string.IsNullOrEmpty(monsterId)) return null;
+
+        OwnedMonsterData best = null;
+        for (int i = 0; i < owned.Count; i++)
+        {
+            var o = owned[i];
+            if (o == null) continue;
+            if (!string.Equals(o.monsterId, monsterId, StringComparison.Ordinal)) continue;
+            if (o.isPremium != wantPremium) continue;
+
+            if (best == null)
+            {
+                best = o;
+                continue;
+            }
+
+            // Prefer higher level; tie-break by premium tier then by stable UID.
+            if (o.level > best.level) best = o;
+            else if (o.level == best.level)
+            {
+                if (o.premiumTier > best.premiumTier) best = o;
+                else if (o.premiumTier == best.premiumTier)
+                {
+                    // Deterministic ordering (prevents flicker across sessions)
+                    string a = o.ownedUID ?? "";
+                    string b = best.ownedUID ?? "";
+                    if (string.CompareOrdinal(a, b) < 0) best = o;
+                }
+            }
+        }
+        return best;
+    }
+
+    private static int GetMaxLevelFor(MonsterDataSO def)
+    {
+        int byDef = def != null ? Mathf.Max(1, def.maxLevel) : LevelRules.MaxLevel;
+        return Mathf.Clamp(byDef, 1, LevelRules.MaxLevel);
+    }
+
+    private static void ApplyDuplicateCaptureLevelUp(OwnedMonsterData target, MonsterDataSO def, int pointsPerLevel)
+    {
+        if (target == null) return;
+
+        // Level up
+        target.level = Mathf.Max(1, target.level + 1);
+        target.unspentStatPoints += Mathf.Max(0, pointsPerLevel);
+
+        // Defensive: keep premium identity consistent
+        if (target.isPremium)
+            target.premiumTier = Mathf.Max(1, target.premiumTier);
+        else
+            target.premiumTier = 0;
+
+        // Clamp HP to new max (baseline HP grows with level).
+        if (def != null)
+        {
+            int totalMaxHP = HealingService.CalcMaxHP(def, target.level, includeTraining: true, includeTitles: false);
+            if (target.currentHP > totalMaxHP)
+                // Centralized HP contract: clamp without stamping timers.
+                SaveManager.SetMonsterHP(target, target.currentHP, stampLastHpUnix: false, save: false, fireEvents: false);
+        }
+    }
+
+    private static void SyncOwnedToTeam(OwnedMonsterData owned)
+    {
+        var data = SaveManager.Data;
+        if (data == null || owned == null) return;
+        if (data.team == null || data.team.Count == 0) return;
+
+        // Prefer ownedUID (canonical); fall back to monsterId when needed.
+        for (int i = 0; i < data.team.Count; i++)
+        {
+            var t = data.team[i];
+            if (t == null) continue;
+
+            bool match = false;
+            if (!string.IsNullOrEmpty(owned.ownedUID) && !string.IsNullOrEmpty(t.ownedUID))
+                match = string.Equals(t.ownedUID, owned.ownedUID, StringComparison.Ordinal);
+            else if (!string.IsNullOrEmpty(owned.monsterId))
+                match = string.Equals(t.monsterId, owned.monsterId, StringComparison.Ordinal) && t.isPremium == owned.isPremium;
+
+            if (!match) continue;
+
+            // Mirror key gameplay fields (keep this conservative)
+            t.level = owned.level;
+            t.currentXP = owned.currentXP;
+            // Centralized HP contract: mirror HP + timestamp (remainder-accurate)
+            SaveManager.SetTeamSlotHPExact(i, owned.currentHP, owned.lastHPUnix, save: false, fireEvents: false);
+            t.flatAtkBonus = owned.flatAtkBonus;
+            t.isTraining = owned.isTraining;
+            t.trainingLastUnix = owned.trainingLastUnix;
+            t.pendingLevels = owned.pendingLevels;
+            t.lastLevelClaimDay = owned.lastLevelClaimDay;
+            t.isPremium = owned.isPremium;
+            t.premiumTier = owned.premiumTier;
+            t.trainingBonus = owned.trainingBonus;
+            t.autoApply = owned.autoApply;
+            t.autoApplyTargetLevel = owned.autoApplyTargetLevel;
+            t.lastBucketId = owned.lastBucketId;
+            t.unspentStatPoints = owned.unspentStatPoints;
+        }
+    }
+
+    private static int CalcDuplicateConversionCores(MonsterDataSO def, int encounterLevel)
+    {
+        if (def == null) return 0;
+
+        // Conversion is a consolation reward (not a full "level cost" refund).
+        int baseCores = Mathf.Max(1, 2 + Mathf.Max(1, encounterLevel));
+
+        float rarityMul = 1f;
+        switch (def.rarity)
+        {
+            case Rarity.Common:    rarityMul = 1.00f; break;
+            case Rarity.Uncommon:  rarityMul = 1.10f; break;
+            case Rarity.Rare:      rarityMul = 1.25f; break;
+            case Rarity.Epic:      rarityMul = 1.40f; break;
+            case Rarity.Legendary: rarityMul = 1.60f; break;
+            case Rarity.Mythic:    rarityMul = 1.80f; break;
+            default:               rarityMul = 1.00f; break;
+        }
+
+        int cores = Mathf.RoundToInt(baseCores * rarityMul);
+        return Mathf.Clamp(cores, 1, 250);
+    }
+
+    // ── Premium / Unique helpers ─────────────────────────────────────────────────
+
+    private bool IsPremiumMonster(MonsterDataSO m)
     {
         if (!m) return false;
 
@@ -386,8 +654,7 @@ public partial class EncounterManager
         {
             var t = m.GetType();
 
-            // Try field "isShiny"
-            var f = t.GetField("isShiny",
+            var f = t.GetField("isPremium",
                 System.Reflection.BindingFlags.Public |
                 System.Reflection.BindingFlags.NonPublic |
                 System.Reflection.BindingFlags.Instance);
@@ -397,8 +664,7 @@ public partial class EncounterManager
                 if (val is bool b) return b;
             }
 
-            // Try property "isShiny"
-            var p = t.GetProperty("isShiny",
+            var p = t.GetProperty("isPremium",
                 System.Reflection.BindingFlags.Public |
                 System.Reflection.BindingFlags.NonPublic |
                 System.Reflection.BindingFlags.Instance);
@@ -453,7 +719,6 @@ public partial class EncounterManager
                 }
             }
 
-            // 2) Legacy booleans
             var fU = t.GetField("isUniqueEncounter",
                 System.Reflection.BindingFlags.Public |
                 System.Reflection.BindingFlags.NonPublic |

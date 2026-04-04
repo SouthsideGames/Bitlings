@@ -1,0 +1,155 @@
+using System;
+using System.Collections.Generic;
+
+// ─────────────────────────────────────────────────────────────
+// Exchange Data — runtime + persisted structs for the Bitling Exchange
+// ─────────────────────────────────────────────────────────────
+
+public enum DemandLevel { Low = 0, Medium = 1, High = 2, Surge = 3 }
+public enum TrendDirection { Falling = 0, Stable = 1, Rising = 2 }
+
+[Serializable]
+public class MarketSpeciesState
+{
+    public string speciesId;
+    public int currentValue;
+    public int previousValue;
+    public DemandLevel demandLevel = DemandLevel.Medium;
+    public TrendDirection trend = TrendDirection.Stable;
+    public long lastUpdateUnix;
+}
+
+[Serializable]
+public class ActiveRequest
+{
+    public string requestId;
+    public string requiredSpeciesId;     // specific species (null/empty = generic)
+    public MonsterType requiredType;     // for generic-type requests
+    public Rarity requiredMinRarity;     // for generic-rarity requests
+    public int creditReward;
+    public ResourceType bonusResourceType;
+    public int bonusResourceAmount;
+    public string flavorText;
+    public long expiresUnix;
+    public bool fulfilled;
+}
+
+[Serializable]
+public class SpeciesBattleSentimentData
+{
+    public string speciesId;
+    public int monthlyWinsAgainst;
+    public int monthlyLossesAgainst;
+    public int sentimentScore;
+    public float monthlyHoursWorked;
+}
+
+[Serializable]
+public class DemandOverride
+{
+    public string speciesId;
+    public DemandLevel forcedDemand;
+    public int expiresDay; // DayIndex when this override expires
+}
+
+[Serializable]
+public class SpeciesTokenUsage
+{
+    public string speciesId;
+    public int expiresDay; // DayIndex when this token usage expires for this species
+}
+
+[Serializable]
+public class ExchangeSaveData
+{
+    public List<MarketSpeciesState> speciesStates = new List<MarketSpeciesState>();
+    public List<SpeciesBattleSentimentData> monthlyBattleSentiments = new List<SpeciesBattleSentimentData>();
+    public List<ActiveRequest> activeRequests = new List<ActiveRequest>();
+    public List<DemandOverride> demandOverrides = new List<DemandOverride>();
+    public int totalBrokered;
+    public int totalCreditsBrokered;
+    public int totalRequestsFulfilled;
+    public int dailySeed;
+    public int lastDayIndex = -1;
+    public int lastRequestRotationDayIndex = -1;
+    public int battleSentimentMonthKey = -1;
+    public int lastDividendDayIndex = -1;
+    public int pendingDividendToastAmount;
+    public int pendingDividendToastDayIndex = -1;
+    public int lastWeekIndex = -1;
+    public long lastRecalcUnix;
+    public PendingDuplicateCaptureSave pendingDuplicate;
+    public List<SpeciesTokenUsage> bullTokenUsages = new List<SpeciesTokenUsage>();
+    public List<SpeciesTokenUsage> bearTokenUsages = new List<SpeciesTokenUsage>();
+
+    // Freshly-caught hype: speciesId → UTC unix timestamp of most recent capture
+    public List<CatchHypeEntry> catchHype = new List<CatchHypeEntry>();
+
+    // Scarcity from brokering: speciesId → number of times brokered this week
+    public List<BrokerScarcityEntry> brokerScarcity = new List<BrokerScarcityEntry>();
+
+    // Type Trends: which MonsterType is "hot" this week
+    public int hotTypeWeekIndex = -1;
+    public MonsterType hotType = MonsterType.None;
+
+    // Surge alert watchlist: only these species can produce surge toasts.
+    public List<string> surgeAlertSpeciesIds = new List<string>();
+}
+
+[Serializable]
+public class PendingDuplicateCaptureSave
+{
+    public string ownedUID;
+    public string speciesId;
+    public int encounterLevel;
+    public bool isPremium;
+    public bool isMaxLevel;
+}
+
+[Serializable]
+public class CatchHypeEntry
+{
+    public string speciesId;
+    public long capturedUnix;
+}
+
+[Serializable]
+public class BrokerScarcityEntry
+{
+    public string speciesId;
+    public int timesBrokered;
+}
+
+// ─────────────────────────────────────────────────────────────
+// Pending duplicate data — passed from capture flow to resolution panel
+// ─────────────────────────────────────────────────────────────
+
+public static class PendingDuplicateCapture
+{
+    public static bool HasPending { get; private set; }
+    public static OwnedMonsterData Existing { get; private set; }
+    public static MonsterDataSO Def { get; private set; }
+    public static int EncounterLevel { get; private set; }
+    public static bool IsPremium { get; private set; }
+    public static bool IsMaxLevel { get; private set; }
+
+    public static void Set(OwnedMonsterData existing, MonsterDataSO def, int encounterLevel, bool isPremium, bool isMaxLevel)
+    {
+        HasPending = true;
+        Existing = existing;
+        Def = def;
+        EncounterLevel = encounterLevel;
+        IsPremium = isPremium;
+        IsMaxLevel = isMaxLevel;
+    }
+
+    public static void Clear()
+    {
+        HasPending = false;
+        Existing = null;
+        Def = null;
+        EncounterLevel = 0;
+        IsPremium = false;
+        IsMaxLevel = false;
+    }
+}

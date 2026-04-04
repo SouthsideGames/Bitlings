@@ -1,0 +1,30 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: af7b65046e5bb554c808c8500b10fe7d, type: 3}
+  m_Name: TitleTrack_Kaskar
+  m_EditorClassIdentifier: 
+  tiers:
+  - levelRequired: 2
+    unlockChoices:
+    - {fileID: 11400000, guid: aa3a9062b65c14c769d9953d3303d0d2, type: 2}
+  - levelRequired: 5
+    unlockChoices:
+    - {fileID: 11400000, guid: bca8e639605063d4a8af26df057b4f4f, type: 2}
+  - levelRequired: 8
+    unlockChoices:
+    - {fileID: 11400000, guid: d1da25199bf00124cbc8e3984113060a, type: 2}
+  - levelRequired: 12
+    unlockChoices:
+    - {fileID: 11400000, guid: 6ad4157aacf2cb547878360fd54c3d1e, type: 2}
+  - levelRequired: 15
+    unlockChoices:
+    - {fileID: 11400000, guid: 87f6f94250ba66a45b453b2f078ce7a5, type: 2}

@@ -1,0 +1,57 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 32ffc26ed7d444b02a9332ce4279b117, type: 3}
+  m_Name: Monster_Sprigrax
+  m_EditorClassIdentifier: 
+  id: M-128
+  displayName: Sprigrax
+  type: 3
+  typeIcon: {fileID: 21300000, guid: 46bf3bbfcff674f17bd0ea06a23e1467, type: 3}
+  icon: {fileID: 21300000, guid: 46ce0bc3fd16f484ca08a24f802fb7ab, type: 3}
+  backIcon: {fileID: 21300000, guid: 9790d5c9d1bcf41b7a67f568fdfb751d, type: 3}
+  premiumIcon: {fileID: 21300000, guid: 0e2e6ec1ddcaf4e308f551aa2eed9715, type: 3}
+  premiumBackIcon: {fileID: 21300000, guid: 4ddce2400c13d4b04a9f3202761c08cc, type: 3}
+  rarity: 2
+  canBeStarter: 0
+  starterWeight: 1
+  maxLevel: 50
+  baseHP: 74
+  baseAttack: 46
+  baseDefense: 54
+  baseSpeed: 26
+  hpRegenPerHour: 9
+  fatigueRatePerHour: 0.065
+  fatigueCooldownHours: 8.6
+  evolutionStage: 3
+  evolutionLevel: 12
+  evolutionForm: {fileID: 0}
+  uncatchable: 0
+  isBoss: 0
+  bossJobDebuffs: []
+  bossWeight: 1
+  spawnWeight: 2
+  jobSkill: 1.08
+  titleTrack: {fileID: 11400000, guid: e1fd61dfd132f46358434e615a63cf19, type: 2}
+  defaultAlwaysOnTitles: []
+  ironTitles:
+  - {fileID: 11400000, guid: 9fdb8ede4e4c461459e738834978e6ed, type: 2}
+  - {fileID: 11400000, guid: a9d1c8c346b292e4f9745fb659bd956a, type: 2}
+  - {fileID: 11400000, guid: 8376b3915071cc448b1f948ff06b49c6, type: 2}
+  - {fileID: 11400000, guid: f0e53950f2ecd1346ada80856c0f01df, type: 2}
+  Personality: {fileID: 11400000, guid: d2d9ec6158abb40d2a7618ee71a9de06, type: 2}
+  basicAttackName: Verdant Bash
+  basicAttackPrefab: {fileID: 7147688047696861109, guid: 5287b95db783b4379b733d77af2cc458, type: 3}
+  basicAttackPrefabLifetime: 1
+  spawnSfx: {fileID: 8300000, guid: 5b93862f5bb2b3d458a0d90dcf24f8d6, type: 3}
+  baseMarketValue: 165
+  description: A mature grass guardian that bursts with steady growth, striking with
+    thick vines and resilient blooms.

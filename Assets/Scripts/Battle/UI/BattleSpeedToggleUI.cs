@@ -4,65 +4,116 @@ using TMPro;
 
 public class BattleSpeedToggleUI : MonoBehaviour
 {
-    [SerializeField] private BattleManager battle;
-    [SerializeField] private Button button;
-    [SerializeField] private TextMeshProUGUI label;
+    [Header("UI")]
+    [SerializeField] private Button speedButton;
+    [SerializeField] private TextMeshProUGUI speedLabel;
 
-    static readonly float[] OPTIONS = { 1f, 2f, 3f };
-    int idx = 0;
+    [Header("Bindings")]
+    [SerializeField] private BattleManager battleManager;
+
+    [Header("Behavior")]
+    [Tooltip("If enabled, speed cannot be changed during auto-battle.")]
+    [SerializeField] private bool disableDuringAuto = false;
+
+    // NEW: Feature gating
+    [Header("Unlock Gating")]
+    [SerializeField] private FeatureId speedControlFeatureId = FeatureId.IdleBattle_SpeedControl;
+
+    private bool _autoMode;
 
     void Awake()
     {
-        if (!battle) battle = FindFirstObjectByType<BattleManager>(FindObjectsInactive.Include);
+        if (speedButton != null)
+            speedButton.onClick.AddListener(OnSpeedClicked);
 
-        float saved = 1f;
-        if (SaveManager.Data != null && SaveManager.Data.settings != null)
-            saved = Mathf.Clamp(SaveManager.Data.settings.battleSpeed, 0.25f, 5f);
+        if (battleManager == null)
+            battleManager = FindFirstObjectByType<BattleManager>();
 
-        idx = ClosestIndex(saved);
-        Apply(OPTIONS[idx], save:false);
+        RefreshLabel();
+        
+    }
 
-        if (button) button.onClick.AddListener(OnClick);
+    void OnEnable()
+    {
+        GameEvents.OnEncounterAutoModeChanged += HandleAutoModeChanged;
+
+
+        GameEvents.FeatureUnlocked += HandleFeatureUnlocked;
+
+        HandleAutoModeChanged(); 
+        RefreshVisibility();       
+    }
+
+    void OnDisable()
+    {
+        GameEvents.OnEncounterAutoModeChanged -= HandleAutoModeChanged;
+        GameEvents.FeatureUnlocked -= HandleFeatureUnlocked;
+    }
+
+    private void HandleAutoModeChanged()
+    {
+        bool isAuto = (EncounterManager.I != null) && EncounterManager.I.IsAutoMode;
+        SetAutoMode(isAuto);
+
+        // NEW: auto mode impacts visibility too
+        RefreshVisibility();
+    }
+
+    // NEW
+    private void HandleFeatureUnlocked(FeatureId id)
+    {
+        if (id != speedControlFeatureId) return;
+        RefreshVisibility();
+    }
+
+    // NEW: Self-gating method
+    private void RefreshVisibility()
+    {
+        // Use the idle-battle store as the authoritative "are we actually idle battling" check.
+        // EncounterManager.IsAutoMode can be stale (e.g. still true when the encounter panel
+        // opens after idle battles ended), causing the button to flash before any battle starts.
+        // IdleBattleStore.autoBattling is updated by IdleBattleManager before
+        // OnEncounterAutoModeChanged fires, so this read is always current.
+        bool isIdleBattleRunning = IdleBattleStore.Load()?.autoBattling == true;
+
+        bool unlocked =
+            FeatureUnlockManager.I != null &&
+            FeatureUnlockManager.I.IsUnlocked(speedControlFeatureId);
+
+        bool shouldShow = unlocked && isIdleBattleRunning;
+
+        if (gameObject.activeSelf != shouldShow)
+            gameObject.SetActive(shouldShow);
+    }
+
+    public void SetAutoMode(bool isAuto)
+    {
+        _autoMode = isAuto;
+
+        if (speedButton != null)
+            speedButton.interactable = !(disableDuringAuto && _autoMode);
+
         RefreshLabel();
     }
 
-    void OnDestroy()
+    private void OnSpeedClicked()
     {
-        if (button) button.onClick.RemoveListener(OnClick);
-    }
+        if (battleManager == null) return;
+        if (disableDuringAuto && _autoMode) return;
 
-    void OnClick()
-    {
-        idx = (idx + 1) % OPTIONS.Length;
-        Apply(OPTIONS[idx], save:true);
+        battleManager.CycleBattleSpeed();
         RefreshLabel();
     }
 
-    void Apply(float speed, bool save)
+    private void RefreshLabel()
     {
-        if (battle) battle.SetBattleSpeed(speed);
-        if (save && SaveManager.Data != null && SaveManager.Data.settings != null)
-        {
-            SaveManager.Data.settings.battleSpeed = speed;
-            SaveManager.Save();
-        }
-    }
+        if (speedLabel == null || battleManager == null) return;
 
-    void RefreshLabel()
-    {
-        if (!label) return;
-        float s = (battle != null) ? battle.BattleSpeed : OPTIONS[idx];
-        label.text = $"x{s:0.#}";
-    }
+        float s = battleManager.BattleSpeed;
 
-    int ClosestIndex(float s)
-    {
-        int ci = 0; float best = Mathf.Infinity;
-        for (int i = 0; i < OPTIONS.Length; i++)
-        {
-            float d = Mathf.Abs(OPTIONS[i] - s);
-            if (d < best) { best = d; ci = i; }
-        }
-        return ci;
+        if (Mathf.Abs(s - 1f) < 0.01f) speedLabel.text = "1x";
+        else if (Mathf.Abs(s - 2f) < 0.01f) speedLabel.text = "2x";
+        else if (Mathf.Abs(s - 3f) < 0.01f) speedLabel.text = "3x";
+        else speedLabel.text = $"{s:0.##}x";
     }
 }

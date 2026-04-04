@@ -1,6 +1,16 @@
 using System;
 using System.Collections.Generic;
 
+[Serializable]
+public class AchievementProgressData
+{
+    public string id;
+    public int value;
+    public bool unlocked;
+    public long unlockedUnix;
+    public bool seen; 
+}
+
 
 [Serializable]
 public class OwnedMonsterData
@@ -8,7 +18,9 @@ public class OwnedMonsterData
     public string monsterId;
     public int level = 1;
     public int currentXP = 0;
-    public int currentHP = -1;
+    // HP invariant (authoritative): 0..MaxHP. 0 = KO.
+    // Legacy saves may contain negative values (treated as "uninitialized"); SaveManager normalizes those on load.
+    public int currentHP = 0;
     public long lastHPUnix = 0;
     public int flatAtkBonus = 0;
     public bool isTraining = false;
@@ -16,8 +28,8 @@ public class OwnedMonsterData
     public int pendingLevels = 0;
     public int lastLevelClaimDay = -1;
     public string ownedUID;
-    public bool isShiny = false;
-    public int shinyTier = 0;
+    public bool isPremium = false;
+    public int premiumTier = 0;
     public TrainingBonus trainingBonus = new TrainingBonus();
     public bool autoApply = false;
     public int autoApplyTargetLevel = 0;
@@ -65,7 +77,7 @@ public class JobStorageUpgrade
 }
 
 [Serializable]
-public class ShinyBoostData
+public class PremiumBoostData
 {
     public float bonus;
     public long expireUnix;
@@ -74,17 +86,24 @@ public class ShinyBoostData
 [Serializable]
 public class FieldOpsStats
 {
-    public int encountersInitiated;      // how many wild battles were started
-    public int captureAttempts;          // how many capture rolls happened
-    public int capturesSuccessful;       // how many succeeded
-    public int rareBitlingsFound;        // successful captures of Rare/Epic/Legendary/Mythic
-    public int shinyDiscoveries;         // shiny captures
-    public int riftStabilizations;       // boss defeats (or other rift events)
-    public int longestCaptureStreak;     // best streak of consecutive successes
-    public int currentCaptureStreak;     // current streak (resets on fail)
+    public int encountersInitiated;     
+    public int captureAttempts;       
+    public int capturesSuccessful;       
+    public int rareBitlingsFound;      
+    public int premiumDiscoveries;       
+    public int riftStabilizations;    
+    public int longestCaptureStreak;    
+    public int currentCaptureStreak;     
 
-    public System.Collections.Generic.List<string> recentHighlights =
-        new System.Collections.Generic.List<string>();
+    public List<string> recentHighlights =
+        new List<string>();
+}
+
+[Serializable]
+public class PreferredVariantKV
+{
+    public string monsterId;
+    public string preferredOwnedUid; 
 }
 
 [Serializable]
@@ -101,7 +120,8 @@ public class PlayerManager
     public List<JobGlobalMod> activeJobMods = new List<JobGlobalMod>();
     public List<LuckBoostData> activeFavorBoosts = new List<LuckBoostData>();
     public List<JobStorageUpgrade> jobStorageUpgrades = new List<JobStorageUpgrade>();
-    public List<ShinyBoostData> activeShinyBoosts = new List<ShinyBoostData>();
+    public List<PremiumBoostData> activePremiumBoosts = new List<PremiumBoostData>();
+    public List<PreferredVariantKV> preferredVariants = new();
     public FieldOpsStats fieldOps = new FieldOpsStats();
 
     public List<string> ownedIdsList = new List<string>();
@@ -113,9 +133,19 @@ public class PlayerManager
     public List<string> discoveredMonsterIdsList = new List<string>();
     [NonSerialized] public HashSet<string> discoveredMonsterIds = new HashSet<string>();
 
+    public List<AchievementProgressData> achievements = new List<AchievementProgressData>();
+    [NonSerialized] public Dictionary<string, AchievementProgressData> achievementMap
+        = new Dictionary<string, AchievementProgressData>(StringComparer.Ordinal);
+
+    // Auto-battle review (saved only when FeatureId.Battle_LogArchive is unlocked)
+    public List<AutoBattleLogEntry> autoBattleLogArchive = new List<AutoBattleLogEntry>();
+
     public int credits = 0;
+    public bool creditsMigratedToResourceBank = false;
     public List<int> resourceCounts = new List<int>();
+    public List<int> lifetimeResourceCollected = new List<int>();
     public List<string> unlockedPacks = new List<string>();
+    public List<string> unlockedFeatureIds = new List<string>();
 
     public int tapLevel = 0;
     public int idleLevel = 0;
@@ -127,17 +157,20 @@ public class PlayerManager
     public int winStreak;
     public int encounterPoints = 0;
     public int encounterMax = 50;
-    public int encounterCost = 5;
+    public int encounterCost = 1;
     public int lastEncounterResetYMD = 0;
-    public int dailyBonusDay = 1;            // 1-based day in the current cycle
+    public int dailyBonusDay = 1;         
     public int lastDailyClaimDayIndex = -1;
-
+    public int cheatInvalidAttempts;
+    public long cheatLockedUntilUnix;
+    public int forcePremiumCapturesRemaining = 0;
     public string trainingMonsterId = null;
     public int trainingMonsterLevel = 0;
     public int pendingIdleXP = 0;
     public bool hasSeenStory = false;
     public long lastClosedUnix = 0;
     public long lastSavedUnix = 0;
+    public long jobsOfflineLastUnix = 0;
     public long energyLastUnix;
     public float energyRemainderSecs;
 
@@ -145,10 +178,22 @@ public class PlayerManager
     public int bossEveryN = 10;        
     public string lastBossId = null;
     public SettingsState settings;
+
+    // ───────── Promotion (Ranks 1–20) ─────────
+    // NOTE: This is separate from any derived dossier labels.
+    public int promotionRank = 1;
+    public int promotionXP = 0;
+
+    public bool HasSynergyUnlocked => promotionRank >= 10;
+    public bool HasDifficultyUnlocked => promotionRank >= 15;
+    public bool HasIronCareerUnlocked => promotionRank >= 20;
+    // RNG seed state (daily seed persistence / reroll tracking)
+    public SeedState seedState = new SeedState();
     public List<JobAssignment> jobAssignments = new List<JobAssignment>();
     public List<JobProgress> jobProgress = new List<JobProgress>();
 
     public bool hasChosenStarter;
+    public bool diagnosticsUnlocked = false;
 
     public List<MonsterType> seenTypesList = new List<MonsterType>();
     [NonSerialized] public HashSet<MonsterType> seenTypes = new HashSet<MonsterType>();
@@ -164,6 +209,9 @@ public class PlayerManager
         discoveredMonsterIdsList ??= new List<string>();
         seenTypesList ??= new List<MonsterType>();
         unlockedJobSitesList ??= new List<JobType>();
+
+        // Ensure persisted archives exist
+        autoBattleLogArchive ??= new List<AutoBattleLogEntry>();
 
         // Ensure transient sets exist (runtime only)
         ownedIds ??= new HashSet<string>();
@@ -206,13 +254,16 @@ public class PlayerManager
         activeFlyers ??= new List<FlyerBiasData>();
         activeWorkOrders ??= new List<WorkOrderData>();
         activeFavorBoosts ??= new List<LuckBoostData>();
-        activeShinyBoosts ??= new List<ShinyBoostData>();
+        activePremiumBoosts ??= new List<PremiumBoostData>();
         jobStorageUpgrades ??= new List<JobStorageUpgrade>();
         team ??= new List<OwnedMonsterData>();
         owned ??= new List<OwnedMonsterData>();
         jobAssignments ??= new List<JobAssignment>();
         jobProgress ??= new List<JobProgress>();
         activeJobMods ??= new List<JobGlobalMod>();
+
+        lifetimeResourceCollected ??= new List<int>();
+        unlockedFeatureIds ??= new List<string>();
 
         fieldOps ??= new FieldOpsStats();
 
@@ -233,11 +284,11 @@ public class PlayerManager
                     team[i].ownedUID = Guid.NewGuid().ToString("N");
         }
 
-        // Expired shiny boosts cleanup (keeps existing behavior)
-        if (activeShinyBoosts.Count > 0 && activeShinyBoosts[0] != null &&
-            activeShinyBoosts[0].expireUnix <= SaveManager.NowUnix())
+        // Expired premium boosts cleanup (keeps existing behavior)
+        if (activePremiumBoosts.Count > 0 && activePremiumBoosts[0] != null &&
+            activePremiumBoosts[0].expireUnix <= SaveManager.NowUnix())
         {
-            activeShinyBoosts.Clear();
+            activePremiumBoosts.Clear();
         }
     }
 

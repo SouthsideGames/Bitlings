@@ -1,0 +1,57 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 32ffc26ed7d444b02a9332ce4279b117, type: 3}
+  m_Name: Monster_Cindren
+  m_EditorClassIdentifier: 
+  id: M-071
+  displayName: Cindren
+  type: 1
+  typeIcon: {fileID: 21300000, guid: d552cfb27992e494694a52b7e3578364, type: 3}
+  icon: {fileID: 21300000, guid: a0a649c35b15240b8b9140f345780712, type: 3}
+  backIcon: {fileID: 21300000, guid: 2f28dca6097624680b4a29c59423dbbb, type: 3}
+  premiumIcon: {fileID: 21300000, guid: 4873108b891a04ae28d9f1a3360893d5, type: 3}
+  premiumBackIcon: {fileID: 21300000, guid: cefc921d9b0ea4de49c1de0a6a5a9567, type: 3}
+  rarity: 1
+  canBeStarter: 0
+  starterWeight: 1
+  maxLevel: 50
+  baseHP: 58
+  baseAttack: 64
+  baseDefense: 26
+  baseSpeed: 26
+  hpRegenPerHour: 5.4
+  fatigueRatePerHour: 0.11
+  fatigueCooldownHours: 7.2
+  evolutionStage: 2
+  evolutionLevel: 22
+  evolutionForm: {fileID: 11400000, guid: e78c2a83bb75d4091bedb385110ec935, type: 2}
+  uncatchable: 0
+  isBoss: 0
+  bossJobDebuffs: []
+  bossWeight: 1
+  spawnWeight: 4.5
+  jobSkill: 1
+  titleTrack: {fileID: 11400000, guid: 335b8d00ee9e94118bdcfa8c871ccd48, type: 2}
+  defaultAlwaysOnTitles: []
+  ironTitles:
+  - {fileID: 11400000, guid: c19086f28684923428939e0227415d4d, type: 2}
+  - {fileID: 11400000, guid: 06d71b7f47579574088aa3edba194444, type: 2}
+  - {fileID: 11400000, guid: e1aa94e2540df9a4b9e2e90c84ec8c3f, type: 2}
+  - {fileID: 11400000, guid: 25b585674c120a4478246cf717f24c8f, type: 2}
+  Personality: {fileID: 11400000, guid: 1bd4805a0ba8f476b9f7b480b0cbb31d, type: 2}
+  basicAttackName: Flare Claw
+  basicAttackPrefab: {fileID: 126357351932672970, guid: 1a57510ee148f7c45b15333bcfd2596c, type: 3}
+  basicAttackPrefabLifetime: 1
+  spawnSfx: {fileID: 8300000, guid: 9b6fc6cc2a27d3848a4f9251ca081598, type: 3}
+  baseMarketValue: 108
+  description: Its flames burn brighter as it grows bolder chaining aggressive attacks
+    without letting up.

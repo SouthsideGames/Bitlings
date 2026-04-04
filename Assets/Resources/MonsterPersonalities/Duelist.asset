@@ -14,14 +14,17 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   group: 1
   attackWeight: 7
-  defendWeight: 2
+  defendWeight: 1
   focusWeight: 2
   runWeight: 0
   lowHpThreshold: 0.3
-  lowHpDefendBonus: 2
-  lowHpRunBonus: 1
+  lowHpDefendBonus: 1
+  lowHpRunBonus: 0
   superEffectiveAttackBonus: 3
   badMatchDefendBonus: 1
-  badMatchRunBonus: 1
-  eachTurnAttackBonus: 1
-  description: Picks clean strikes and keeps pressure high.
+  badMatchRunBonus: 0
+  eachTurnAttackBonus: 0
+  eachTurnFocusPenalty: 1
+  lowHpFocusPenalty: 2
+  chaoticOverrideChance: 0
+  description: Executes actions with precision, minimizing inefficiency.

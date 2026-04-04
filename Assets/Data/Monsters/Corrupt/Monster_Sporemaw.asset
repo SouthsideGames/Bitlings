@@ -1,0 +1,56 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 32ffc26ed7d444b02a9332ce4279b117, type: 3}
+  m_Name: Monster_Sporemaw
+  m_EditorClassIdentifier: 
+  id: M-137
+  displayName: Sporemaw
+  type: 7
+  typeIcon: {fileID: 21300000, guid: 10d50b4d1dee041cc8dcf349a9ce86a1, type: 3}
+  icon: {fileID: 21300000, guid: 8fe8c1819a0a644d583d24230d7a75e6, type: 3}
+  backIcon: {fileID: 21300000, guid: a964ccaf80206406e8cb0e0a610976ed, type: 3}
+  premiumIcon: {fileID: 21300000, guid: f124c4c1493c24fa3a2c9bcff1808743, type: 3}
+  premiumBackIcon: {fileID: 21300000, guid: b397992254e404f0ca92d91babe8d6d6, type: 3}
+  rarity: 2
+  canBeStarter: 0
+  starterWeight: 1
+  maxLevel: 50
+  baseHP: 72
+  baseAttack: 58
+  baseDefense: 38
+  baseSpeed: 32
+  hpRegenPerHour: 8.2
+  fatigueRatePerHour: 0.11
+  fatigueCooldownHours: 8.6
+  evolutionStage: 3
+  evolutionLevel: 12
+  evolutionForm: {fileID: 0}
+  uncatchable: 0
+  isBoss: 0
+  bossJobDebuffs: []
+  bossWeight: 1
+  spawnWeight: 2
+  jobSkill: 1.08
+  titleTrack: {fileID: 11400000, guid: 9fd26d4867fcc45a386545fedfe80dd8, type: 2}
+  defaultAlwaysOnTitles: []
+  ironTitles:
+  - {fileID: 11400000, guid: a54fbab895dd9804c9cacbb8e8ce854c, type: 2}
+  - {fileID: 11400000, guid: 0c4ec08db0e878f48a327f570d1e549f, type: 2}
+  - {fileID: 11400000, guid: 148ef35dc09e0df47bd36ee844bac36e, type: 2}
+  - {fileID: 11400000, guid: e1aa94e2540df9a4b9e2e90c84ec8c3f, type: 2}
+  Personality: {fileID: 11400000, guid: 1bd4805a0ba8f476b9f7b480b0cbb31d, type: 2}
+  basicAttackName: Ruin Feast
+  basicAttackPrefab: {fileID: 8046187082596486557, guid: 86fc56d41698d45bfbf27d043ca2944d, type: 3}
+  basicAttackPrefabLifetime: 1
+  spawnSfx: {fileID: 8300000, guid: 8cbcfc8eec7fdf34d847b528ca114831, type: 3}
+  baseMarketValue: 165
+  description: A fully warped corruption beast that lunges with grasping growths

@@ -1,7 +1,6 @@
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
-using System.Linq;
 using System;
 using System.Collections.Generic;
 
@@ -34,6 +33,7 @@ public class SanctumUI : MonoBehaviour
     [SerializeField, Min(0.1f)] private float blessingDurationMinutes = 30f;
 
     private JobSiteSO[] _sites;
+    private float _timerAccum;
 
     void OnEnable()
     {
@@ -46,6 +46,7 @@ public class SanctumUI : MonoBehaviour
         RefreshTimer();
         RefreshSiteIcon();
         RefreshButtonLabel();
+        RefreshUseButtonVisibility();
 
         GameEvents.OnResourcesChanged += OnResourcesChanged;
         GameEvents.OnJobsChanged += OnJobsChanged;
@@ -62,14 +63,17 @@ public class SanctumUI : MonoBehaviour
 
     void Update()
     {
+        _timerAccum += Time.unscaledDeltaTime;
+        if (_timerAccum < 1f) return;
+        _timerAccum = 0f;
         RefreshTimer();
-        RefreshButtonLabel();
     }
 
     void OnResourcesChanged()
     {
         RefreshShards();
         RefreshButtonLabel();
+        RefreshUseButtonVisibility();
     }
 
     void OnJobsChanged()
@@ -78,6 +82,7 @@ public class SanctumUI : MonoBehaviour
         RefreshTimer();
         RefreshButtonLabel();
         RefreshSiteIcon();
+        RefreshUseButtonVisibility();
     }
 
     void Hook()
@@ -100,6 +105,7 @@ public class SanctumUI : MonoBehaviour
                 RefreshTimer();
                 RefreshButtonLabel();
                 RefreshSiteIcon();
+                RefreshUseButtonVisibility();
             });
         }
     }
@@ -108,7 +114,27 @@ public class SanctumUI : MonoBehaviour
     {
         if (!useButtonLabel) return;
         bool active = GetBlessingSecondsRemainingForSelected() > 0.5f;
-        useButtonLabel.text = active ? "Replace Blessing" : "Use Blessing Scale";
+        useButtonLabel.text = active ? "Replace" : "Use";
+    }
+
+    /// <summary>
+    /// If we do not have any Blessing Scales, hide the entire Use button GameObject.
+    /// </summary>
+    void RefreshUseButtonVisibility()
+    {
+        if (!useButton) return;
+
+        if (SaveManager.Data == null)
+        {
+            useButton.gameObject.SetActive(false);
+            return;
+        }
+
+        int count = ResourceBank.Get(ResourceType.BlessingScale);
+        bool shouldShow = count > 0;
+
+        if (useButton.gameObject.activeSelf != shouldShow)
+            useButton.gameObject.SetActive(shouldShow);
     }
 
     float GetBlessingSecondsRemainingForSelected()
@@ -143,9 +169,9 @@ public class SanctumUI : MonoBehaviour
             return;
         }
 
-        var options = _sites
-            .Select(s => new TMP_Dropdown.OptionData(JobStrings.SiteName(s.jobType)))
-            .ToList();
+        var options = new List<TMP_Dropdown.OptionData>(_sites.Length);
+        for (int i = 0; i < _sites.Length; i++)
+            options.Add(new TMP_Dropdown.OptionData(JobStrings.SiteName(_sites[i].jobType)));
 
         siteDropdown.AddOptions(options);
         siteDropdown.value = 0;
@@ -182,7 +208,10 @@ public class SanctumUI : MonoBehaviour
     {
         int count = ResourceBank.Get(ResourceType.BlessingScale);
         if (ShardLabel) ShardLabel.text = $"Blessing Scales: {count}";
+
         if (useButton) useButton.interactable = count > 0;
+
+        RefreshUseButtonVisibility();
     }
 
     void RefreshPreview()
@@ -226,19 +255,31 @@ public class SanctumUI : MonoBehaviour
     {
         if (_sites == null || _sites.Length == 0) return;
 
+        // Save guard (match other UIs: no toast if save isn't ready)
+        if (SaveManager.Data == null)
+        {
+            RefreshShards();
+            RefreshButtonLabel();
+            RefreshUseButtonVisibility();
+            return;
+        }
+
         if (!ResourceBank.TrySpend(ResourceType.BlessingScale, 1))
         {
             RefreshShards();
             RefreshButtonLabel();
+            RefreshUseButtonVisibility();
             return;
         }
 
         var jm = JobManager.I;
         if (!jm)
         {
+            // Refund
             ResourceBank.Add(ResourceType.BlessingScale, 1);
             RefreshShards();
             RefreshButtonLabel();
+            RefreshUseButtonVisibility();
             return;
         }
 
@@ -250,9 +291,11 @@ public class SanctumUI : MonoBehaviour
             int usedTokens = activeExtra / Mathf.Max(1, flatPerToken);
             if (usedTokens >= maxTokensPerSite)
             {
+                // Refund
                 ResourceBank.Add(ResourceType.BlessingScale, 1);
                 RefreshShards();
                 RefreshButtonLabel();
+                RefreshUseButtonVisibility();
                 return;
             }
         }
@@ -265,7 +308,11 @@ public class SanctumUI : MonoBehaviour
         RefreshTimer();
         RefreshButtonLabel();
         RefreshSiteIcon();
+        RefreshUseButtonVisibility();
 
         GameEvents.OnJobsChanged?.Invoke();
+
+        GameEvents.RaiseToast("BLESSING ACTIVATED"); // or "BLESSING SCALE ACTIVATED"
     }
+
 }

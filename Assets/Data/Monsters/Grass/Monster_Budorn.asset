@@ -1,0 +1,56 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 32ffc26ed7d444b02a9332ce4279b117, type: 3}
+  m_Name: Monster_Budorn
+  m_EditorClassIdentifier: 
+  id: M-177
+  displayName: Budorn
+  type: 3
+  typeIcon: {fileID: 21300000, guid: 46bf3bbfcff674f17bd0ea06a23e1467, type: 3}
+  icon: {fileID: 21300000, guid: 461557377c7c84486ab3012a5da124c9, type: 3}
+  backIcon: {fileID: 21300000, guid: baff511aa92a1477c92bac9db732051a, type: 3}
+  premiumIcon: {fileID: 21300000, guid: aecb9213d62644dbd81b4cfcebbbf06a, type: 3}
+  premiumBackIcon: {fileID: 21300000, guid: c66cee0976fc3432486592bd16e09ad0, type: 3}
+  rarity: 2
+  canBeStarter: 0
+  starterWeight: 1
+  maxLevel: 50
+  baseHP: 68
+  baseAttack: 38
+  baseDefense: 58
+  baseSpeed: 36
+  hpRegenPerHour: 5.8
+  fatigueRatePerHour: 0.085
+  fatigueCooldownHours: 7.6
+  evolutionStage: 2
+  evolutionLevel: 12
+  evolutionForm: {fileID: 0}
+  uncatchable: 0
+  isBoss: 0
+  bossJobDebuffs: []
+  bossWeight: 1
+  spawnWeight: 2
+  jobSkill: 1.08
+  titleTrack: {fileID: 11400000, guid: f0f360b38ba7e42d4ba40dedea2455e8, type: 2}
+  defaultAlwaysOnTitles: []
+  ironTitles:
+  - {fileID: 11400000, guid: f0a22c228659c304fb9369327478aab9, type: 2}
+  - {fileID: 11400000, guid: a26029cf3b2e3496aaf1a285714c5dc1, type: 2}
+  - {fileID: 11400000, guid: c4ad4c8d61acdc54dac3f9f88f1891bf, type: 2}
+  - {fileID: 11400000, guid: 3eeae979ed207374383a76bdee55d3a9, type: 2}
+  Personality: {fileID: 11400000, guid: f6f72aa846632454b97832d01d1b5c0c, type: 2}
+  basicAttackName: Leaf Jab
+  basicAttackPrefab: {fileID: 7147688047696861109, guid: 5287b95db783b4379b733d77af2cc458, type: 3}
+  basicAttackPrefabLifetime: 1
+  spawnSfx: {fileID: 8300000, guid: dce3aa29d414abe40a98e854f87965f8, type: 3}
+  baseMarketValue: 165
+  description: Its growth thickens into sturdy vines

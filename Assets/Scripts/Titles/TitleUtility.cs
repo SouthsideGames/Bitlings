@@ -27,6 +27,9 @@ public static class TitleUtility
             case ConditionKind.AllyCountBelow:
                 return ctx.alliesAlive <= Mathf.Max(0, t.countN);
 
+            case ConditionKind.AllyCountAbove:   
+                return ctx.alliesAlive >= Mathf.Max(0, t.countN);
+
             case ConditionKind.WinStreakAbove:
                 return ctx.winStreak >= Mathf.Max(0, t.countN);
 
@@ -41,9 +44,9 @@ public static class TitleUtility
         {
             case ConditionKind.HealthBelowPercent:  return ctx.selfHp01 <= Mathf.Clamp01(threshold01);
             case ConditionKind.HealthAbovePercent:  return ctx.selfHp01 >= Mathf.Clamp01(threshold01);
-            case ConditionKind.AllyCountBelow:      return ctx.alliesAlive < Mathf.Max(0, countN);
-            case ConditionKind.WinStreakAbove:      // Use ≥ if you prefer “at least”
-                return ctx.winStreak > Mathf.Max(0, countN);
+            case ConditionKind.AllyCountBelow:      return ctx.alliesAlive <= Mathf.Max(0, countN);
+            case ConditionKind.AllyCountAbove:      return ctx.alliesAlive >= Mathf.Max(0, countN);
+            case ConditionKind.WinStreakAbove:      return ctx.winStreak >= Mathf.Max(0, countN);
             default: return false;
         }
     }

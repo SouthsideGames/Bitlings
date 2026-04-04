@@ -1,0 +1,56 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 32ffc26ed7d444b02a9332ce4279b117, type: 3}
+  m_Name: Monster_Aerel
+  m_EditorClassIdentifier: 
+  id: M-117
+  displayName: Aerel
+  type: 9
+  typeIcon: {fileID: 21300000, guid: 1ddb138c655b3471cad890ace56df64b, type: 3}
+  icon: {fileID: 21300000, guid: d589333525c604f668e0b33b022c0b78, type: 3}
+  backIcon: {fileID: 21300000, guid: f77bc742fb4f34e3b87d583d8afa24da, type: 3}
+  premiumIcon: {fileID: 21300000, guid: 9a3ed5401bab1422db6f90aba393b491, type: 3}
+  premiumBackIcon: {fileID: 21300000, guid: 4da9676887f0e47e1b4f8ccf3d866925, type: 3}
+  rarity: 1
+  canBeStarter: 0
+  starterWeight: 1
+  maxLevel: 50
+  baseHP: 52
+  baseAttack: 46
+  baseDefense: 28
+  baseSpeed: 36
+  hpRegenPerHour: 5.2
+  fatigueRatePerHour: 0.105
+  fatigueCooldownHours: 7.6
+  evolutionStage: 1
+  evolutionLevel: 10
+  evolutionForm: {fileID: 0}
+  uncatchable: 0
+  isBoss: 0
+  bossJobDebuffs: []
+  bossWeight: 1
+  spawnWeight: 4.5
+  jobSkill: 1
+  titleTrack: {fileID: 11400000, guid: d81e5cbc7c2834ec9ae901912aefe66e, type: 2}
+  defaultAlwaysOnTitles: []
+  ironTitles:
+  - {fileID: 11400000, guid: 85f453e42f65049eb9a10b26e0d57f52, type: 2}
+  - {fileID: 11400000, guid: f81db28d7007ef941ac6cadc20602f1f, type: 2}
+  - {fileID: 11400000, guid: a289ace2a61ca0e47b454f4b80ebec49, type: 2}
+  - {fileID: 11400000, guid: bcd8786d1ce34b140bfe92358a0b2277, type: 2}
+  Personality: {fileID: 11400000, guid: dc588633b46794883be5263b17376bf3, type: 2}
+  basicAttackName: Gale Peck
+  basicAttackPrefab: {fileID: 5988486418563103347, guid: 310c8d56e543d4cd4ae9c55fa6047252, type: 3}
+  basicAttackPrefabLifetime: 1
+  spawnSfx: {fileID: 8300000, guid: 0a1d027c6aef8044e8d86204843e9384, type: 3}
+  baseMarketValue: 100
+  description: A nimble sky flier that swoops rapidly

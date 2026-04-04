@@ -1,0 +1,57 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 32ffc26ed7d444b02a9332ce4279b117, type: 3}
+  m_Name: Monster_Pyraxis
+  m_EditorClassIdentifier: 
+  id: M-050
+  displayName: Pyraxis
+  type: 14
+  typeIcon: {fileID: 21300000, guid: 3934876669845455994cef6f6ee793af, type: 3}
+  icon: {fileID: 21300000, guid: 70b88ca745341204fb4697ad392b176e, type: 3}
+  backIcon: {fileID: 21300000, guid: 159f877747b45744787050a60c5563f4, type: 3}
+  premiumIcon: {fileID: 21300000, guid: 335dff3eab02f684387d5c9c93cf019b, type: 3}
+  premiumBackIcon: {fileID: 21300000, guid: 5462786f3b4b5bc43a9fe8ae2dd4c328, type: 3}
+  rarity: 4
+  canBeStarter: 0
+  starterWeight: 1
+  maxLevel: 50
+  baseHP: 102
+  baseAttack: 112
+  baseDefense: 44
+  baseSpeed: 36
+  hpRegenPerHour: 7.6
+  fatigueRatePerHour: 0.2
+  fatigueCooldownHours: 9.9
+  evolutionStage: 1
+  evolutionLevel: 18
+  evolutionForm: {fileID: 0}
+  uncatchable: 0
+  isBoss: 0
+  bossJobDebuffs: []
+  bossWeight: 1
+  spawnWeight: 0.25
+  jobSkill: 1.22
+  titleTrack: {fileID: 11400000, guid: e004035262d134338932f384378921de, type: 2}
+  defaultAlwaysOnTitles: []
+  ironTitles:
+  - {fileID: 11400000, guid: 5c56ea95bc0f6d84387cd5d1545e59e7, type: 2}
+  - {fileID: 11400000, guid: 9fe46c88564cbbf42982a61140647f9b, type: 2}
+  - {fileID: 11400000, guid: db8245ee0d70343259acea6e4eb79949, type: 2}
+  - {fileID: 11400000, guid: 19a10ce49a5973d4a82d9e772ce9db80, type: 2}
+  Personality: {fileID: 11400000, guid: 38ced003b48194272ab4cfa8cd9c5d01, type: 2}
+  basicAttackName: Cataclysm Bite
+  basicAttackPrefab: {fileID: 7446462880551948952, guid: 18696ea6ccccd974d902d9304c2b6b7e, type: 3}
+  basicAttackPrefabLifetime: 1
+  spawnSfx: {fileID: 8300000, guid: fe5e0e0f633e05f44840a89ac634cac9, type: 3}
+  baseMarketValue: 911
+  description: A legendary wyrm whose focused, devastating strikes leave scorched
+    ruin in their wake, ending battles in brutal, decisive blows.

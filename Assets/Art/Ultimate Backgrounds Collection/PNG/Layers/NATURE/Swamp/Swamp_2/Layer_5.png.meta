@@ -1,0 +1,670 @@
+fileFormatVersion: 2
+guid: df597ee20f085b045b8546809a2d32e8
+AssetOrigin:
+  serializedVersion: 1
+  productId: 351422
+  packageName: 280 Ultimate Pixel Backgrounds Collection
+  packageVersion: 1.2
+  assetPath: Assets/Ultimate Backgrounds Collection/PNG/Layers/NATURE/Swamp/Swamp_2/Layer_5.png
+  uploadId: 850090
+TextureImporter:
+  internalIDToNameTable:
+  - first:
+      213: 6698174048579083819
+    second: Swamp_2_L2_0
+  - first:
+      213: -3722399055350585017
+    second: Swamp_2_L2_1
+  - first:
+      213: -3476453744501954330
+    second: Swamp_2_L2_2
+  - first:
+      213: -5690552922817015001
+    second: Swamp_2_L2_3
+  - first:
+      213: 43527703433765710
+    second: Swamp_2_L2_4
+  - first:
+      213: 3061352861737285891
+    second: Swamp_2_L2_5
+  - first:
+      213: 476973036934579118
+    second: Swamp_2_L2_6
+  - first:
+      213: -55235973880098994
+    second: Swamp_2_L2_7
+  - first:
+      213: -4360880095197639558
+    second: Swamp_2_L2_8
+  - first:
+      213: 8586551217209048896
+    second: Swamp_2_L2_9
+  - first:
+      213: 1146333668648464548
+    second: Swamp_2_L2_10
+  - first:
+      213: 1599725161823913129
+    second: Swamp_2_L2_11
+  - first:
+      213: -5193107567107900939
+    second: Swamp_2_L2_12
+  - first:
+      213: 6832465322894489498
+    second: Swamp_2_L2_13
+  - first:
+      213: -608176155168921952
+    second: Swamp_2_L2_14
+  - first:
+      213: -3041267435558516405
+    second: Swamp_2_L2_15
+  - first:
+      213: 4249393455178821536
+    second: Swamp_2_L2_16
+  - first:
+      213: 289476440324510070
+    second: Swamp_2_L2_17
+  - first:
+      213: -6026581492387551820
+    second: Swamp_2_L2_18
+  - first:
+      213: 8354896682253734284
+    second: Swamp_2_L2_19
+  externalObjects: {}
+  serializedVersion: 13
+  mipmaps:
+    mipMapMode: 0
+    enableMipMap: 0
+    sRGBTexture: 1
+    linearTexture: 0
+    fadeOut: 0
+    borderMipMap: 0
+    mipMapsPreserveCoverage: 0
+    alphaTestReferenceValue: 0.5
+    mipMapFadeDistanceStart: 1
+    mipMapFadeDistanceEnd: 3
+  bumpmap:
+    convertToNormalMap: 0
+    externalNormalMap: 0
+    heightScale: 0.25
+    normalMapFilter: 0
+    flipGreenChannel: 0
+  isReadable: 0
+  streamingMipmaps: 0
+  streamingMipmapsPriority: 0
+  vTOnly: 0
+  ignoreMipmapLimit: 0
+  grayScaleToAlpha: 0
+  generateCubemap: 6
+  cubemapConvolution: 0
+  seamlessCubemap: 0
+  textureFormat: 1
+  maxTextureSize: 2048
+  textureSettings:
+    serializedVersion: 2
+    filterMode: 0
+    aniso: 1
+    mipBias: 0
+    wrapU: 1
+    wrapV: 1
+    wrapW: 1
+  nPOTScale: 0
+  lightmap: 0
+  compressionQuality: 50
+  spriteMode: 1
+  spriteExtrude: 1
+  spriteMeshType: 1
+  alignment: 7
+  spritePivot: {x: 0.5, y: 0.5}
+  spritePixelsToUnits: 32
+  spriteBorder: {x: 0, y: 0, z: 0, w: 0}
+  spriteGenerateFallbackPhysicsShape: 1
+  alphaUsage: 1
+  alphaIsTransparency: 1
+  spriteTessellationDetail: -1
+  textureType: 8
+  textureShape: 1
+  singleChannelComponent: 0
+  flipbookRows: 1
+  flipbookColumns: 1
+  maxTextureSizeSet: 0
+  compressionQualitySet: 0
+  textureFormatSet: 0
+  ignorePngGamma: 0
+  applyGammaDecoding: 0
+  swizzle: 50462976
+  cookieLightType: 0
+  platformSettings:
+  - serializedVersion: 4
+    buildTarget: DefaultTexturePlatform
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 0
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: Standalone
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: WebGL
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 0
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: iOS
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 0
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  spriteSheet:
+    serializedVersion: 2
+    sprites:
+    - serializedVersion: 2
+      name: Swamp_2_L2_0
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 194
+        width: 260
+        height: 130
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: b2edb490fc1b4fc50800000000000000
+      internalID: 6698174048579083819
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Swamp_2_L2_1
+      rect:
+        serializedVersion: 2
+        x: 242
+        y: 269
+        width: 20
+        height: 11
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 749249108c1675cc0800000000000000
+      internalID: -3722399055350585017
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Swamp_2_L2_2
+      rect:
+        serializedVersion: 2
+        x: 264
+        y: 266
+        width: 11
+        height: 11
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 6e862e80db721cfc0800000000000000
+      internalID: -3476453744501954330
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Swamp_2_L2_3
+      rect:
+        serializedVersion: 2
+        x: 276
+        y: 275
+        width: 9
+        height: 8
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 7235eeb34481701b0800000000000000
+      internalID: -5690552922817015001
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Swamp_2_L2_4
+      rect:
+        serializedVersion: 2
+        x: 311
+        y: 156
+        width: 525
+        height: 168
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: e43ee053734aa9000800000000000000
+      internalID: 43527703433765710
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Swamp_2_L2_5
+      rect:
+        serializedVersion: 2
+        x: 818
+        y: 269
+        width: 20
+        height: 11
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 309f9ff353c1c7a20800000000000000
+      internalID: 3061352861737285891
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Swamp_2_L2_6
+      rect:
+        serializedVersion: 2
+        x: 840
+        y: 266
+        width: 11
+        height: 11
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: ea3cce1337c8e9600800000000000000
+      internalID: 476973036934579118
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Swamp_2_L2_7
+      rect:
+        serializedVersion: 2
+        x: 852
+        y: 275
+        width: 9
+        height: 8
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: e4fcd06ac23cb3ff0800000000000000
+      internalID: -55235973880098994
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Swamp_2_L2_8
+      rect:
+        serializedVersion: 2
+        x: 887
+        y: 156
+        width: 525
+        height: 168
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: a7c4ca988aa0b73c0800000000000000
+      internalID: -4360880095197639558
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Swamp_2_L2_9
+      rect:
+        serializedVersion: 2
+        x: 1394
+        y: 269
+        width: 20
+        height: 11
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 04f717ba6de892770800000000000000
+      internalID: 8586551217209048896
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Swamp_2_L2_10
+      rect:
+        serializedVersion: 2
+        x: 1416
+        y: 266
+        width: 11
+        height: 11
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 4a0bcd9e56898ef00800000000000000
+      internalID: 1146333668648464548
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Swamp_2_L2_11
+      rect:
+        serializedVersion: 2
+        x: 1428
+        y: 275
+        width: 9
+        height: 8
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 9a4c4c81f8d533610800000000000000
+      internalID: 1599725161823913129
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Swamp_2_L2_12
+      rect:
+        serializedVersion: 2
+        x: 1463
+        y: 156
+        width: 265
+        height: 163
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 5f9f3269e206ee7b0800000000000000
+      internalID: -5193107567107900939
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Swamp_2_L2_13
+      rect:
+        serializedVersion: 2
+        x: 308
+        y: 221
+        width: 7
+        height: 12
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: a97fc4fd20bc1de50800000000000000
+      internalID: 6832465322894489498
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Swamp_2_L2_14
+      rect:
+        serializedVersion: 2
+        x: 884
+        y: 221
+        width: 7
+        height: 12
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 0a62b4652035f87f0800000000000000
+      internalID: -608176155168921952
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Swamp_2_L2_15
+      rect:
+        serializedVersion: 2
+        x: 1460
+        y: 221
+        width: 7
+        height: 12
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: b494294716f3bc5d0800000000000000
+      internalID: -3041267435558516405
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Swamp_2_L2_16
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 0
+        width: 232
+        height: 65
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 0afadce45d0e8fa30800000000000000
+      internalID: 4249393455178821536
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Swamp_2_L2_17
+      rect:
+        serializedVersion: 2
+        x: 304
+        y: 0
+        width: 504
+        height: 103
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 671136ce94d640400800000000000000
+      internalID: 289476440324510070
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Swamp_2_L2_18
+      rect:
+        serializedVersion: 2
+        x: 880
+        y: 0
+        width: 504
+        height: 103
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 4b5eb4810184d5ca0800000000000000
+      internalID: -6026581492387551820
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Swamp_2_L2_19
+      rect:
+        serializedVersion: 2
+        x: 1456
+        y: 0
+        width: 272
+        height: 103
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: c81d2d0344e82f370800000000000000
+      internalID: 8354896682253734284
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    outline: []
+    customData: 
+    physicsShape: []
+    bones: []
+    spriteID: 5e97eb03825dee720800000000000000
+    internalID: 0
+    vertices: []
+    indices: 
+    edges: []
+    weights: []
+    secondaryTextures: []
+    spriteCustomMetadata:
+      entries: []
+    nameFileIdTable:
+      Swamp_2_L2_0: 6698174048579083819
+      Swamp_2_L2_1: -3722399055350585017
+      Swamp_2_L2_10: 1146333668648464548
+      Swamp_2_L2_11: 1599725161823913129
+      Swamp_2_L2_12: -5193107567107900939
+      Swamp_2_L2_13: 6832465322894489498
+      Swamp_2_L2_14: -608176155168921952
+      Swamp_2_L2_15: -3041267435558516405
+      Swamp_2_L2_16: 4249393455178821536
+      Swamp_2_L2_17: 289476440324510070
+      Swamp_2_L2_18: -6026581492387551820
+      Swamp_2_L2_19: 8354896682253734284
+      Swamp_2_L2_2: -3476453744501954330
+      Swamp_2_L2_3: -5690552922817015001
+      Swamp_2_L2_4: 43527703433765710
+      Swamp_2_L2_5: 3061352861737285891
+      Swamp_2_L2_6: 476973036934579118
+      Swamp_2_L2_7: -55235973880098994
+      Swamp_2_L2_8: -4360880095197639558
+      Swamp_2_L2_9: 8586551217209048896
+  mipmapLimitGroupName: 
+  pSDRemoveMatte: 0
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 

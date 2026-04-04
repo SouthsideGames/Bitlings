@@ -12,6 +12,7 @@ GameObject:
   - component: {fileID: 3993889984555296736}
   - component: {fileID: 8849148887035680659}
   - component: {fileID: 8526242361507361485}
+  - component: {fileID: 5295203150372368142}
   m_Layer: 5
   m_Name: Grass
   m_TagString: Untagged
@@ -98,3 +99,22 @@ Animator:
   m_AllowConstantClipSamplingOptimization: 1
   m_KeepAnimatorStateOnDisable: 0
   m_WriteDefaultValuesOnDisable: 0
+--- !u!114 &5295203150372368142
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7147688047696861109}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fbfb77ed3355f4634a8c165181d69411, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PlaySfxOnSpawn
+  clip: {fileID: 8300000, guid: b6a29aaca7c3b4218a6036a10213f9ba, type: 3}
+  volumeMult: 0.5
+  randomizePitch: 0
+  pitch: 1
+  pitchMin: 0.95
+  pitchMax: 1.05
+  playOnEnable: 1

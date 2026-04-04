@@ -32,6 +32,22 @@ public class PostBattleSummaryPanelUI : MonoBehaviour
     [SerializeField] private TextMeshProUGUI firstHitLabel;
     [SerializeField] private TextMeshProUGUI timeLabel;
 
+    [Header("Promotion Rank XP")]
+    [Tooltip("Optional: root container for the rank XP section. If null, labels/sliders are still updated if assigned.")]
+    [SerializeField] private GameObject promotionSectionRoot;
+
+    [Tooltip("Optional: e.g., 'Rank 7'")]
+    [SerializeField] private TextMeshProUGUI promotionRankLabel;
+
+    [Tooltip("Optional: e.g., 'XP: 120 / 175 (to Rank 8)'")]
+    [SerializeField] private TextMeshProUGUI promotionProgressLabel;
+
+    [Tooltip("Optional: e.g., '+18 XP this battle'")]
+    [SerializeField] private TextMeshProUGUI promotionDeltaLabel;
+
+    [Tooltip("Optional: slider showing progress within current rank.")]
+    [SerializeField] private Slider promotionProgressSlider;
+
     [Header("Controls")]
     [SerializeField] private Button continueButton;
 
@@ -42,8 +58,14 @@ public class PostBattleSummaryPanelUI : MonoBehaviour
 
     const string GREEN = "#3CDE74";
 
+    [Header("Micro-Juice")]
+    [SerializeField] private float revealStartDelay = 0.05f;
+    [SerializeField] private float revealStepDelay = 0.08f;
+    [SerializeField] private float countUpDuration = 0.35f;
+
     private bool _hasClosed;
     private BattleResult? _lastResult;
+
 
     private static readonly Dictionary<Rarity, Color> RARITY_COLORS = new()
     {
@@ -55,25 +77,7 @@ public class PostBattleSummaryPanelUI : MonoBehaviour
         { Rarity.Mythic,    new Color32(255,235, 59,255) },
     };
 
-    private static readonly Dictionary<MonsterType, Color> TYPE_COLORS = new()
-    {
-        { MonsterType.Fire,     new Color32(230, 74,  25,255) },
-        { MonsterType.Water,    new Color32( 30,136, 229,255) },
-        { MonsterType.Grass,    new Color32( 56,142,  60,255) },
-        { MonsterType.Electric, new Color32(255,193,   7,255) },
-        { MonsterType.Ice,      new Color32( 79,195, 247,255) },
-        { MonsterType.Clash,    new Color32(121, 85,  72,255) },
-        { MonsterType.Corrupt,  new Color32(156, 39, 176,255) },
-        { MonsterType.Ground,   new Color32(141,110,  99,255) },
-        { MonsterType.Sky,      new Color32( 63, 81, 181,255) },
-        { MonsterType.Oracle,   new Color32(  0,150, 136,255) },
-        { MonsterType.Bug,      new Color32(104,159,  56,255) },
-        { MonsterType.Rock,     new Color32(120,144, 156,255) },
-        { MonsterType.Specter,  new Color32(103, 58, 183,255) },
-        { MonsterType.Wyrm,     new Color32(255,112,  67,255) },
-        { MonsterType.Umbral,   new Color32( 97, 97,  97,255) },
-        { MonsterType.Alloy,    new Color32(158,158, 158,255) },
-    };
+
 
     void Awake()
     {
@@ -95,12 +99,14 @@ public class PostBattleSummaryPanelUI : MonoBehaviour
     private void OnContinueClicked()
     {
         EncounterPanelUI.I?.ForceBlinderAlphaToOne();
-        
-        // CLEANUP REQUEST:
+
         // If defeated, go to Home after continuing.
         if (_lastResult.HasValue && !_lastResult.Value.victory && !_lastResult.Value.escaped)
         {
             UIManager.I?.Show(PanelId.Home);
+            // Also close the Encounter panel so the player isn't left in the encounter flow
+            // with a fully KO'd team.
+            UIManager.I?.Hide(PanelId.Encounter);
         }
 
         Close();
@@ -144,12 +150,87 @@ public class PostBattleSummaryPanelUI : MonoBehaviour
 
     private bool IsAutoBattleMode() => EncounterManager.I && EncounterManager.I.IsAutoMode;
 
+    private void CancelRowTweens(GameObject row)
+    {
+        if (!row) return;
+        LeanTween.cancel(row);
+        var rt = row.transform as RectTransform;
+        if (rt) rt.localScale = Vector3.one;
+    }
+
+    private void HideRow(TextMeshProUGUI label)
+    {
+        if (!label) return;
+        CancelRowTweens(label.gameObject);
+        label.gameObject.SetActive(false);
+    }
+
+    private void ShowRowDelayed(TextMeshProUGUI label, float delaySeconds)
+    {
+        if (!label) return;
+        CancelRowTweens(label.gameObject);
+        label.gameObject.SetActive(false);
+
+        LeanTween.delayedCall(label.gameObject, Mathf.Max(0f, delaySeconds), () =>
+        {
+            if (!label) return;
+            label.gameObject.SetActive(true);
+            // subtle appear pop
+            var rt = label.rectTransform;
+            rt.localScale = Vector3.one;
+            LeanTween.scale(rt, Vector3.one * 1.03f, 0.10f).setLoopPingPong(1).setEase(LeanTweenType.easeOutBack);
+        });
+    }
+
+    private void AnimateCountUp(TextMeshProUGUI label, int from, int to, float duration, Func<int, string> textBuilder)
+    {
+        if (!label) return;
+
+        from = Mathf.Max(0, from);
+        to = Mathf.Max(0, to);
+        duration = Mathf.Max(0.01f, duration);
+
+        // Ensure active before we animate.
+        label.gameObject.SetActive(true);
+
+        LeanTween.cancel(label.gameObject);
+        LeanTween.value(label.gameObject, from, to, duration)
+            .setEase(LeanTweenType.easeOutQuad)
+            .setOnUpdate((float v) =>
+            {
+                if (!label) return;
+                label.text = textBuilder(Mathf.RoundToInt(v));
+            })
+            .setOnComplete(() =>
+            {
+                if (!label) return;
+                label.text = textBuilder(to);
+            });
+    }
+
+    private void PunchIfBonus(TextMeshProUGUI label)
+    {
+        if (!label) return;
+        var rt = label.rectTransform;
+        LeanTween.cancel(rt.gameObject);
+        rt.localScale = Vector3.one;
+        LeanTween.scale(rt, Vector3.one * 1.08f, 0.12f).setLoopPingPong(1).setEase(LeanTweenType.easeOutBack);
+    }
+
     private string BuildRewardLine(string label, int baseValue, int titleBonus, int total)
     {
         if (titleBonus <= 0 || baseValue <= 0)
         {
             int display = Mathf.Max(baseValue, total);
             return $"{label}: {Mathf.Max(0, display)}";
+        }
+
+        // For currency (credits/coins) show total with an explicit +Bonus.
+        // Example: "Credits: 40 (+12 Bonus)".
+        if (string.Equals(label, "coins", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(label, "credits", StringComparison.OrdinalIgnoreCase))
+        {
+            return $"{label}: {Mathf.Max(0, total)} (<color={GREEN}>+{Mathf.Max(0, titleBonus)} Bonus</color>)";
         }
 
         float multiplier = total > 0 && baseValue > 0 ? (float)total / baseValue : 1f;
@@ -166,6 +247,9 @@ public class PostBattleSummaryPanelUI : MonoBehaviour
         return m > 0 ? $"{m}:{r:00}" : $"{r}s";
     }
 
+    // ─────────────────────────────────────────────
+    // UPDATED: capturedPremium added as 7th argument
+    // ─────────────────────────────────────────────
     public void Set(
         BattleResult result,
         int growthCoresGained = 0,
@@ -173,60 +257,148 @@ public class PostBattleSummaryPanelUI : MonoBehaviour
         bool captured = false,
         string capturedMonsterId = null,
         int capturedLevel = 0,
+        bool capturedPremium = false,                  // NEW
         List<string> levelUpSummaries = null,
         int creditsBase = 0,
         int creditsTitleBonus = 0,
         int growthCoresBase = 0,
         int growthCoresTitleBonus = 0,
-        List<string> growthCoresDetailLines = null
+        List<string> growthCoresDetailLines = null,
+        bool wildWasPremium = false
     )
     {
         _lastResult = result;
 
+        bool effectivePremium = capturedPremium || wildWasPremium;
+
         if (titleLabel)
             titleLabel.text = result.victory ? "Victory!" : "Defeat";
 
-        int creditsTotal = Mathf.Max(0, creditsBase + creditsTitleBonus);
-        if (creditsLabel)
-            creditsLabel.text = BuildRewardLine("credits", creditsBase, creditsTitleBonus, creditsTotal);
+        // ─────────────────────────────────────────────
+        // Rewards: hide empty lines + micro-juice (count-up + stagger)
+        // ─────────────────────────────────────────────
+        float delay = Mathf.Max(0f, revealStartDelay);
 
-        int coresTotal = Mathf.Max(0, growthCoresBase + growthCoresTitleBonus);
-        if (growthCoresLabel)
+        int creditsTotal = Mathf.Max(0, creditsBase + creditsTitleBonus);
+
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        DevLog.Log($"[PostBattleSummaryPanelUI] Credits: base={creditsBase}, bonus={creditsTitleBonus}, total={creditsTotal}");
+#endif
+
+        if (creditsLabel)
         {
-            if (growthCoresBase <= 0 && growthCoresTitleBonus <= 0 && growthCoresGained > 0)
-                growthCoresLabel.text = $"Growth Cores: {growthCoresGained}";
+            if (creditsTotal <= 0)
+            {
+                HideRow(creditsLabel);
+            }
             else
-                growthCoresLabel.text = BuildRewardLine("Growth Cores", growthCoresBase, growthCoresTitleBonus, coresTotal);
+            {
+                ShowRowDelayed(creditsLabel, delay);
+
+                int bonus = Mathf.Max(0, creditsTitleBonus);
+                Func<int, string> builder = (val) =>
+                    bonus > 0
+                        ? $"Credits: {val} (<color={GREEN}>+{bonus} Bonus</color>)"
+                        : $"Credits: {val}";
+
+                // Start at 0 for punchier feel.
+                LeanTween.delayedCall(creditsLabel.gameObject, delay, () =>
+                {
+                    AnimateCountUp(creditsLabel, 0, creditsTotal, countUpDuration, builder);
+                    if (bonus > 0) PunchIfBonus(creditsLabel);
+                });
+
+                delay += revealStepDelay;
+            }
         }
 
+        int coresTotal = Mathf.Max(0, growthCoresBase + growthCoresTitleBonus);
+        int coresDisplay = (growthCoresBase <= 0 && growthCoresTitleBonus <= 0 && growthCoresGained > 0)
+            ? Mathf.Max(0, growthCoresGained)
+            : coresTotal;
+
+        if (growthCoresLabel)
+        {
+            if (coresDisplay <= 0)
+            {
+                HideRow(growthCoresLabel);
+            }
+            else
+            {
+                ShowRowDelayed(growthCoresLabel, delay);
+
+                int bonus = Mathf.Max(0, growthCoresTitleBonus);
+                Func<int, string> builder = (val) =>
+                    bonus > 0
+                        ? $"Growth Cores: {val} (<color={GREEN}>+{bonus} Bonus</color>)"
+                        : $"Growth Cores: {val}";
+
+                LeanTween.delayedCall(growthCoresLabel.gameObject, delay, () =>
+                {
+                    AnimateCountUp(growthCoresLabel, 0, coresDisplay, countUpDuration, builder);
+                    if (bonus > 0) PunchIfBonus(growthCoresLabel);
+                });
+
+                delay += revealStepDelay;
+            }
+        }
+
+        // Capture line (UPDATED: wraps premium name in *)
         if (captureLabel)
         {
-            if (captured)
+            if (!captured)
             {
-                string name = !string.IsNullOrEmpty(capturedMonsterId)
-                    ? capturedMonsterId
-                    : (result.wildDef ? result.wildDef.id : "Unknown");
+                // QoL: hide the line entirely if no capture.
+                HideRow(captureLabel);
+            }
+            else
+            {
+                ShowRowDelayed(captureLabel, delay);
+
+                // Use display name, but still fall back safely if needed.
+                string baseName = (result.wildDef != null)
+                    ? MonsterNameFormatter.GetDisplayName(result.wildDef)
+                    : (!string.IsNullOrEmpty(capturedMonsterId) ? capturedMonsterId : "Unknown");
+
+                string name = MonsterNameFormatter.Format(baseName, effectivePremium);
 
                 int lvl = capturedLevel > 0 ? capturedLevel : Mathf.Max(1, result.wildLevel);
                 captureLabel.text = $"Captured: {name} (Lv {lvl})";
+
+                delay += revealStepDelay;
             }
-            else captureLabel.text = "No capture";
         }
+
 
         MonsterDataSO wildDef = result.wildDef;
 
         if (enemyPortraitImage)
         {
-            if (wildDef && wildDef.icon)
+            Sprite portrait = GetBestPortraitSprite(wildDef, effectivePremium);
+            if (portrait != null)
             {
                 enemyPortraitImage.enabled = true;
-                enemyPortraitImage.sprite = wildDef.icon;
+                enemyPortraitImage.sprite = portrait;
             }
-            else enemyPortraitImage.enabled = false;
+            else
+            {
+                enemyPortraitImage.enabled = false;
+                enemyPortraitImage.sprite = null;
+            }
         }
 
         if (enemyNameLabel)
-            enemyNameLabel.text = wildDef ? wildDef.displayName : "Unknown Foe";
+        {
+            if (wildDef)
+            {
+                string baseName = MonsterNameFormatter.GetDisplayName(wildDef);
+                enemyNameLabel.text = MonsterNameFormatter.Format(baseName, effectivePremium);
+            }
+            else
+            {
+                enemyNameLabel.text = "Unknown Foe";
+            }
+        }
 
         if (wildLevelLabel)
             wildLevelLabel.text = $"Lv {Mathf.Max(1, result.wildLevel)}";
@@ -251,7 +423,7 @@ public class PostBattleSummaryPanelUI : MonoBehaviour
             {
                 MonsterType type = wildDef.type;
                 typeLabel.text = type.ToString();
-                typeLabel.color = TYPE_COLORS.TryGetValue(type, out var col) ? col : Color.white;
+                typeLabel.color = TypeColorLibrary.Get(type);
             }
             else
             {
@@ -265,5 +437,95 @@ public class PostBattleSummaryPanelUI : MonoBehaviour
         if (critsLabel) critsLabel.text = $"Crits: {Mathf.Max(0, result.critCount)}";
         if (firstHitLabel) firstHitLabel.text = $"First Hit: {(result.gotFirstHit ? "Yes" : "No")}";
         if (timeLabel) timeLabel.text = $"Time: {FormatTime(result.secondsSurvived)}";
+
+        // ─────────────────────────────────────────────
+        // Promotion XP (Phase 5)
+        // Shows current rank + progress to next rank + XP gained from this battle.
+        // NOTE: PromotionManager should have already applied XP via GameEvents.BattleFinished.
+        // ─────────────────────────────────────────────
+        if (promotionSectionRoot != null)
+            promotionSectionRoot.SetActive(SaveManager.Data != null);
+
+        if (SaveManager.Data != null)
+        {
+            int maxRank = PromotionManager.I != null ? PromotionManager.I.GetMaxRank() : 20;
+            int rank = Mathf.Clamp(SaveManager.Data.promotionRank, 1, Mathf.Max(1, maxRank));
+            int totalXp = Mathf.Max(0, SaveManager.Data.promotionXP);
+            int delta = 0;
+
+            if (PromotionManager.I != null)
+                delta = Mathf.Max(0, PromotionManager.I.ComputeXpGain(result));
+
+            bool atMaxRank = rank >= maxRank;
+            if (atMaxRank)
+                delta = 0;
+
+            if (promotionRankLabel)
+                promotionRankLabel.text = $"Rank {rank}";
+
+            if (PromotionManager.I != null)
+            {
+                int curFloor = PromotionManager.I.GetTotalXpToReach(rank);
+                int nextFloor = atMaxRank ? curFloor : PromotionManager.I.GetTotalXpToReach(rank + 1);
+
+                int inRank = Mathf.Max(0, totalXp - curFloor);
+                int toNext = Mathf.Max(0, nextFloor - curFloor);
+
+                if (promotionProgressLabel)
+                {
+                    if (toNext <= 0)
+                        promotionProgressLabel.text = "Max Rank";
+                    else
+                        promotionProgressLabel.text = $"XP: {inRank} / {toNext} (to Rank {rank + 1})";
+                }
+
+                if (promotionProgressSlider)
+                {
+                    promotionProgressSlider.minValue = 0f;
+                    promotionProgressSlider.maxValue = Mathf.Max(1f, toNext);
+                    promotionProgressSlider.value = Mathf.Clamp(inRank, 0, Mathf.Max(1, toNext));
+                }
+            }
+            else
+            {
+                // Fallback if PromotionManager isn't in the scene yet.
+                if (promotionProgressLabel)
+                    promotionProgressLabel.text = $"XP: {totalXp}";
+                if (promotionProgressSlider)
+                {
+                    promotionProgressSlider.minValue = 0f;
+                    promotionProgressSlider.maxValue = 1f;
+                    promotionProgressSlider.value = 1f;
+                }
+            }
+
+            if (promotionDeltaLabel)
+                promotionDeltaLabel.text = delta > 0 ? $"<color={GREEN}>+{delta} XP</color>" : string.Empty;
+        }
+        else
+        {
+            if (promotionRankLabel) promotionRankLabel.text = string.Empty;
+            if (promotionProgressLabel) promotionProgressLabel.text = string.Empty;
+            if (promotionDeltaLabel) promotionDeltaLabel.text = string.Empty;
+            if (promotionProgressSlider)
+            {
+                promotionProgressSlider.minValue = 0f;
+                promotionProgressSlider.maxValue = 1f;
+                promotionProgressSlider.value = 0f;
+            }
+        }
+
+       
     }
+
+    private Sprite GetBestPortraitSprite(MonsterDataSO def, bool premium)
+    {
+        if (!def) return null;
+
+        if (premium && def.premiumIcon != null)
+            return def.premiumIcon;
+
+        return def.icon;
+    }
+
 }

@@ -15,6 +15,15 @@ public class FeatureUnlockManager : MonoBehaviour
     /// <summary>Fired whenever a feature is newly unlocked.</summary>
     public event Action<FeatureId> OnFeatureUnlocked;
 
+    // Internal persistence key
+    private const string PlayerPrefsKey = "FeatureUnlocks_JSON";
+
+    [Serializable]
+    private class FeatureUnlockSaveWrapper
+    {
+        public List<string> ids;
+    }
+
     void Awake()
     {
         if (I != null && I != this)
@@ -24,6 +33,8 @@ public class FeatureUnlockManager : MonoBehaviour
         }
 
         I = this;
+
+        SaveManager.LoadOrCreate();
 
         LoadFromPrefsOrDefaults();
     }
@@ -51,13 +62,78 @@ public class FeatureUnlockManager : MonoBehaviour
 
         _unlocked.Add(feature);
 
-        // Apply special side-effects (config toggles, expansions, etc.)
         ApplySideEffectsForFeature(feature);
-
         OnFeatureUnlocked?.Invoke(feature);
-        SaveToPrefs();
+        GameEvents.RaiseFeatureUnlocked(feature);
+        SaveToPersistence();
 
         return true;
+    }
+
+    /// <summary>
+    /// DEV/RESET SUPPORT (OPTION A)
+    /// Full wipe of purchased feature unlocks (PlayerPrefs),
+    /// restoring ONLY starting defaults.
+    ///
+    /// Use this for account reset / hard wipe flows.
+    /// </summary>
+    public void HardResetAllUnlocksToDefaults(bool fireEvents = false)
+    {
+        // Clear runtime state
+        _unlocked.Clear();
+
+        // Delete persisted purchased state
+        if (PlayerPrefs.HasKey(PlayerPrefsKey))
+            PlayerPrefs.DeleteKey(PlayerPrefsKey);
+
+        PlayerPrefs.Save();
+
+        // Re-apply defaults
+        ApplyStartingDefaults();
+
+        // Optional: broadcast unlock events for defaults (usually unnecessary during hard reset)
+        if (fireEvents)
+        {
+            foreach (var f in _unlocked)
+            {
+                OnFeatureUnlocked?.Invoke(f);
+                 GameEvents.RaiseFeatureUnlocked(f);
+            }
+        }
+
+        SaveToPersistence();
+    }
+
+    /// <summary>
+    /// Clears ONLY job-related purchased feature unlocks, keeping other upgrades intact.
+    /// Useful if you ever support a "reset jobs only" action.
+    /// </summary>
+    public void ClearJobUnlockFeaturesToDefaults(bool fireEvents = false)
+    {
+        // Remove job feature ids
+        foreach (JobType j in Enum.GetValues(typeof(JobType)))
+        {
+            if (j == JobType.None) continue;
+
+            if (FeatureIdJobs.TryGetJobFeature(j, out var feat) && feat != FeatureId.None)
+                _unlocked.Remove(feat);
+        }
+
+        // Ensure defaults still present
+        foreach (var f in startingUnlocked)
+            _unlocked.Add(f);
+
+        ApplySideEffectsForAllUnlocked();
+        SaveToPersistence();
+
+        if (fireEvents)
+        {
+            foreach (var f in _unlocked)
+            {
+                OnFeatureUnlocked?.Invoke(f);
+                GameEvents.RaiseFeatureUnlocked(f);
+            }
+        }
     }
 
     // Optional hooks for future SaveManager JSON integration:
@@ -93,21 +169,17 @@ public class FeatureUnlockManager : MonoBehaviour
     // Internal: PlayerPrefs persistence
     // ─────────────────────────────────────────────────────────────
 
-    private const string PlayerPrefsKey = "FeatureUnlocks_JSON";
-
-    [Serializable]
-    private class FeatureUnlockSaveWrapper
-    {
-        public List<string> ids;
-    }
-
     private void LoadFromPrefsOrDefaults()
     {
         _unlocked.Clear();
 
+        if (TryRestoreFromSaveMirror())
+            return;
+
         if (!PlayerPrefs.HasKey(PlayerPrefsKey))
         {
             ApplyStartingDefaults();
+            SaveToPersistence();
             return;
         }
 
@@ -115,6 +187,7 @@ public class FeatureUnlockManager : MonoBehaviour
         if (string.IsNullOrEmpty(json))
         {
             ApplyStartingDefaults();
+            SaveToPersistence();
             return;
         }
 
@@ -134,6 +207,8 @@ public class FeatureUnlockManager : MonoBehaviour
         {
             ApplyStartingDefaults();
         }
+
+        SaveToPersistence();
     }
 
     private void SaveToPrefs()
@@ -145,6 +220,38 @@ public class FeatureUnlockManager : MonoBehaviour
         string json = JsonUtility.ToJson(wrapper);
         PlayerPrefs.SetString(PlayerPrefsKey, json);
         PlayerPrefs.Save();
+    }
+
+    private bool TryRestoreFromSaveMirror()
+    {
+        var data = SaveManager.Data;
+        if (data == null) return false;
+
+        data.unlockedFeatureIds ??= new List<string>();
+        if (data.unlockedFeatureIds.Count <= 0) return false;
+
+        RestoreFromSavedIds(data.unlockedFeatureIds);
+        return true;
+    }
+
+    private void SaveToPersistence()
+    {
+        SaveToPrefs();
+
+        var data = SaveManager.Data;
+        if (data == null) return;
+
+        data.unlockedFeatureIds ??= new List<string>();
+        data.unlockedFeatureIds.Clear();
+
+        var ids = GetUnlockedIdsForSave();
+        for (int i = 0; i < ids.Count; i++)
+            data.unlockedFeatureIds.Add(ids[i]);
+
+        data.unlockedFeatureIds.Sort(StringComparer.Ordinal);
+
+        if (!SaveManager.IsHardWiping)
+            SaveManager.Save();
     }
 
     private void ApplyStartingDefaults()
@@ -185,24 +292,26 @@ public class FeatureUnlockManager : MonoBehaviour
                 // No-op here; used by SeedService + SettingsPanel.
                 break;
 
-            // Add more cases here when adding new feature unlocks:
-            // case FeatureId.Something:
-            //     DoSpecialThing();
-            //     break;
+            // ─────────────────────────────────────────────────────────────
+            // Jobs: when job feature is unlocked (purchased), unlock the site
+            // ─────────────────────────────────────────────────────────────
+            default:
+            {
+                // If this FeatureId represents a job unlock, unlock the job site.
+                if (FeatureIdJobs.TryGetJobFromFeature(feature, out var job) && job != JobType.None)
+                {
+                    // IMPORTANT: syncFeatureUnlock = false to avoid recursion.
+                    JobUnlockBridge.UnlockJob(job, syncFeatureUnlock: false);
+                }
+
+                break;
+            }
         }
     }
 
     private void EnableOfflineCaptures()
     {
-        var cfg = Resources.Load<IdleBattleConfigSO>("IdleBattleConfig");
-        if (cfg != null)
-        {
-            cfg.allowCapturesOffline = true;
-            Debug.Log("[FeatureUnlockManager] Enabled Offline Captures (IdleBattle_OfflineCapture)");
-        }
-        else
-        {
-            Debug.LogWarning("[FeatureUnlockManager] IdleBattleConfigSO not found when enabling offline capture.");
-        }
+        // No-op: offline capture is gated by FeatureUnlockManager.IsUnlocked() at runtime.
+        // Previously this mutated the ScriptableObject asset directly, which is unsafe in builds.
     }
 }

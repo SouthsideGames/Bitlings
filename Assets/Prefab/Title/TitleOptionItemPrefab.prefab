@@ -224,6 +224,7 @@ MonoBehaviour:
   m_VerticalAlignment: 512
   m_textAlignment: 65535
   m_characterSpacing: 0
+  m_characterHorizontalScale: 1
   m_wordSpacing: 0
   m_lineSpacing: 0
   m_lineSpacingMax: 0
@@ -360,6 +361,7 @@ MonoBehaviour:
   m_VerticalAlignment: 512
   m_textAlignment: 65535
   m_characterSpacing: 0
+  m_characterHorizontalScale: 1
   m_wordSpacing: 0
   m_lineSpacing: 0
   m_lineSpacingMax: 0
@@ -457,14 +459,14 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_Material: {fileID: 0}
-  m_Color: {r: 1, g: 1, b: 1, a: 1}
+  m_Color: {r: 0.10980392, g: 0.14901961, b: 0.18039216, a: 1}
   m_RaycastTarget: 1
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 21300000, guid: ccade1513cc914a939ebade0369e35bd, type: 3}
+  m_Sprite: {fileID: 21300000, guid: 6e2c5f48018dd4f0fa86305f81c60b24, type: 3}
   m_Type: 1
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -490,8 +492,8 @@ MonoBehaviour:
   nameText: {fileID: 4069457549346730424}
   unlockText: {fileID: 6141915702064361571}
   assignBtn: {fileID: 542741222556719219}
-  assignedActionSprite: {fileID: 21300000, guid: 71913e25e1cad4e49b920f6821c46a65, type: 3}
-  unassignedActionSprite: {fileID: 6286595657586805340, guid: e9c99360156b59542ac384210977e9f6, type: 3}
+  assignedActionSprite: {fileID: 21300000, guid: f74bbba66d0744084adb24b46b885722, type: 3}
+  unassignedActionSprite: {fileID: 21300000, guid: 8a52ccf8a9edf48c09826a43e605642e, type: 3}
   infoButton: {fileID: 8533499642078401527}
   infoId: 
 --- !u!1 &5816687844967236411
@@ -672,6 +674,7 @@ MonoBehaviour:
   m_VerticalAlignment: 512
   m_textAlignment: 65535
   m_characterSpacing: 0
+  m_characterHorizontalScale: 1
   m_wordSpacing: 0
   m_lineSpacing: 0
   m_lineSpacingMax: 0
@@ -854,6 +857,8 @@ MonoBehaviour:
   target: 22
   action: 0
   closeOthersFirst: 0
+  openHomeAfterClose: 0
+  homePanelId: 4
 --- !u!1 &7218840521831465068
 GameObject:
   m_ObjectHideFlags: 0

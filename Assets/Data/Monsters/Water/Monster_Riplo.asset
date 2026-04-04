@@ -1,0 +1,57 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 32ffc26ed7d444b02a9332ce4279b117, type: 3}
+  m_Name: Monster_Riplo
+  m_EditorClassIdentifier: 
+  id: M-011
+  displayName: Riplo
+  type: 2
+  typeIcon: {fileID: 21300000, guid: dd2adea89cda84ec4a589a6d1d5da1ae, type: 3}
+  icon: {fileID: 21300000, guid: c9c10012825cd9a4fbafeafd70608d19, type: 3}
+  backIcon: {fileID: 21300000, guid: 9468bc8f1ffed7141845a8487f8c388e, type: 3}
+  premiumIcon: {fileID: 21300000, guid: a893f43b90f32410087b9bddb723c040, type: 3}
+  premiumBackIcon: {fileID: 21300000, guid: 86f3064bf7d374a0781dfea0116ce1f6, type: 3}
+  rarity: 0
+  canBeStarter: 1
+  starterWeight: 10
+  maxLevel: 50
+  baseHP: 56
+  baseAttack: 42
+  baseDefense: 32
+  baseSpeed: 20
+  hpRegenPerHour: 6.2
+  fatigueRatePerHour: 0.077
+  fatigueCooldownHours: 8.2
+  evolutionStage: 1
+  evolutionLevel: 18
+  evolutionForm: {fileID: 11400000, guid: e5e30aa05d4e3449d8bd27e4f885678d, type: 2}
+  uncatchable: 0
+  isBoss: 0
+  bossJobDebuffs: []
+  bossWeight: 1
+  spawnWeight: 8
+  jobSkill: 0.95
+  titleTrack: {fileID: 11400000, guid: 1dff4c7537fd047ffacfef69ad4e9c53, type: 2}
+  defaultAlwaysOnTitles: []
+  ironTitles:
+  - {fileID: 11400000, guid: e80217aa5b172e648949cf787505f387, type: 2}
+  - {fileID: 11400000, guid: 13e0b9e8b7fc08847a05f89d3f7b6a17, type: 2}
+  - {fileID: 11400000, guid: 453f82ec19947bc4dbf0d8d862b87f1d, type: 2}
+  - {fileID: 11400000, guid: 62b6b5a1e43f2f84faa665fc5e390f5f, type: 2}
+  Personality: {fileID: 11400000, guid: db9c4a912e52a4c5298eec48842ba111, type: 2}
+  basicAttackName: Wave Nip
+  basicAttackPrefab: {fileID: 7604281169824035565, guid: 4065dc449fe6fd94eb31f0e575b94514, type: 3}
+  basicAttackPrefabLifetime: 1
+  spawnSfx: {fileID: 8300000, guid: 5a52c40bfdfefb64eaf52bafbe7add12, type: 3}
+  baseMarketValue: 77
+  description: A small aquatic crawler that snaps with watery bites and reacts quickly
+    to threats.

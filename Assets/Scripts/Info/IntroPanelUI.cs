@@ -92,7 +92,7 @@ public class IntroPanelUI : MonoBehaviour
             rootGroup.alpha = 0f;
             rootGroup.interactable = true;
             rootGroup.blocksRaycasts = true;
-            LeanTween.alphaCanvas(rootGroup, 1f, fadeDuration);
+            LeanTween.alphaCanvas(rootGroup, 1f, fadeDuration).setIgnoreTimeScale(true);
         }
 
         ApplySlideInstant();
@@ -148,11 +148,13 @@ public class IntroPanelUI : MonoBehaviour
 
         // Fade out, swap text, fade in
         LeanTween.alphaCanvas(rootGroup, 0f, fadeDuration)
+            .setIgnoreTimeScale(true)
             .setOnComplete(() =>
             {
                 ApplySlideInstant();
 
                 LeanTween.alphaCanvas(rootGroup, 1f, fadeDuration)
+                    .setIgnoreTimeScale(true)
                     .setOnComplete(() => _isAnimating = false);
             });
     }
@@ -169,6 +171,7 @@ public class IntroPanelUI : MonoBehaviour
         {
             _isAnimating = true;
             LeanTween.alphaCanvas(rootGroup, 0f, fadeDuration)
+                .setIgnoreTimeScale(true)
                 .setOnComplete(() =>
                 {
                     _isAnimating = false;

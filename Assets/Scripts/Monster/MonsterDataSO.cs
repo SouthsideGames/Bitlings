@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 
 public enum MonsterType { None = 0, Fire = 1, Water = 2, Grass = 3, Electric = 4, Ice = 5, Clash = 6, Corrupt = 7, Ground = 8, Sky = 9, Oracle = 10, Bug = 11, Rock = 12, Specter = 13, Wyrm = 14, Umbral = 15, Alloy = 16 }
-public enum Rarity { Common = 0, Uncommon = 1, Rare = 2, Epic = 3, Legendary = 4, Mythic = 5 }
+public enum Rarity { Common = 0, Uncommon = 1, Rare = 2, Epic = 3, Legendary = 4, Mythic = 5, Boss = 6 }
 
 [CreateAssetMenu(menuName = "Data/Monster/Monster", fileName = "Monster_")]
 public class MonsterDataSO : ScriptableObject
@@ -15,8 +15,8 @@ public class MonsterDataSO : ScriptableObject
     public Sprite typeIcon;
     public Sprite icon;
     public Sprite backIcon;
-    public Sprite shinyIcon;
-    public Sprite shinyBackIcon;
+    public Sprite premiumIcon;
+    public Sprite premiumBackIcon;
     public Rarity rarity = Rarity.Common;
     public bool canBeStarter = false;
     [Min(0)] public int starterWeight = 1;
@@ -67,6 +67,10 @@ public class MonsterDataSO : ScriptableObject
     public TitleTrackSO titleTrack;
     public TitleSO[] defaultAlwaysOnTitles;
 
+    [Header("Iron Career")]
+    [Tooltip("Optional curated titles used only in Iron Career title rolls.")]
+    public TitleSO[] ironTitles;
+
     [Header("Personality")]
     public MonsterPersonalitySO Personality;
 
@@ -78,8 +82,16 @@ public class MonsterDataSO : ScriptableObject
     public GameObject basicAttackPrefab;
 
     [Tooltip("Lifetime in seconds for spawned attack prefab. 0 = do not auto-destroy.")]
-    [Min(0f)] public float basicAttackPrefabLifetime = 1.25f;
+    [Min(0f)] public float basicAttackPrefabLifetime = 1f;
 
+    [Header("Battle Audio")]
+    [Tooltip("Optional one-shot SFX played when this monster is revealed at battle start.")]
+    public AudioClip spawnSfx;
+
+
+    [Header("Exchange")]
+    [Tooltip("Base market value in Credits on the Bitling Exchange. Scaled by rarity, demand, and world events at runtime.")]
+    [Min(0)] public int baseMarketValue = 10;
 
     [Header("Description")]
     [TextArea(3, 10)] public string description;

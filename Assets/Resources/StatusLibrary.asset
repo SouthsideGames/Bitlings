@@ -1,0 +1,128 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0adf01a0cb40c3f4dbce7c581e126d3a, type: 3}
+  m_Name: StatusLibrary
+  m_EditorClassIdentifier: 
+  entries:
+  - type: 1
+    icon: {fileID: -2725541328305594625, guid: 997111e7319b4492881dd5afedd95e43, type: 3}
+    descriptionText: Takes damage over time each turn.
+    defaultTurns: 3
+    persistent: 0
+    tier1Value: 0.05
+    tier2Value: 0.1
+  - type: 4
+    icon: {fileID: -6832312888051438786, guid: 0a1846de911694bdc8539f2231b2f260, type: 3}
+    descriptionText: 
+    defaultTurns: 3
+    persistent: 0
+    tier1Value: 0.07
+    tier2Value: 0.12
+  - type: 2
+    icon: {fileID: -2683793892901117139, guid: df6f49b29cb34425fa59ed875dca900f, type: 3}
+    descriptionText: May be unable to act on its turn.
+    defaultTurns: 2
+    persistent: 0
+    tier1Value: 0
+    tier2Value: 0
+  - type: 3
+    icon: {fileID: 8607699008840149923, guid: 489c34973596a4709b5f608ee5e8ec6d, type: 3}
+    descriptionText: 25% chance action fails at turn start.
+    defaultTurns: 2
+    persistent: 0
+    tier1Value: 0.25
+    tier2Value: 0.4
+  - type: 8
+    icon: {fileID: -6634598983339637147, guid: a14822c77964645beb07c92bb4d510fd, type: 3}
+    descriptionText: Cannot Defend or Run.
+    defaultTurns: 2
+    persistent: 0
+    tier1Value: 0
+    tier2Value: 0
+  - type: 15
+    icon: {fileID: -7778875931154189482, guid: 1c3a1f939720f444ba0e1df6b879b1c6, type: 3}
+    descriptionText: Cannot use Focus abilities.
+    defaultTurns: 2
+    persistent: 0
+    tier1Value: 0
+    tier2Value: 0
+  - type: 13
+    icon: {fileID: -9093595577323077952, guid: 24d368201a6264a5b8c3a12bc6df44f4, type: 3}
+    descriptionText: Immune to all damage for 1 turn.
+    defaultTurns: 2
+    persistent: 0
+    tier1Value: 0
+    tier2Value: 0
+  - type: 17
+    icon: {fileID: 1386069597375281332, guid: 30099bb37301c4441bb04663777aa723, type: 3}
+    descriptionText: Immune to status effects.
+    defaultTurns: 2
+    persistent: 0
+    tier1Value: 0
+    tier2Value: 0
+  - type: 11
+    icon: {fileID: -7702805047975256732, guid: 8db9ce8e34bb648f59f60992f29d197f, type: 3}
+    descriptionText: Speed reduced.
+    defaultTurns: 2
+    persistent: 0
+    tier1Value: 0.25
+    tier2Value: 0.4
+  - type: 6
+    icon: {fileID: 4557843346501441248, guid: fc0b14d3f7a8a4e529a6989ac3ac83f2, type: 3}
+    descriptionText: Heals at the start of turn.
+    defaultTurns: 3
+    persistent: 0
+    tier1Value: 0.08
+    tier2Value: 0.12
+  - type: 14
+    icon: {fileID: 4007906318594768556, guid: a6d62739367e04d42b3a18c7eb88c3d0, type: 3}
+    descriptionText: Lose HP when attacking.
+    defaultTurns: 3
+    persistent: 0
+    tier1Value: 0.06
+    tier2Value: 0.1
+  - type: 9
+    icon: {fileID: 4557843346501441248, guid: fc0b14d3f7a8a4e529a6989ac3ac83f2, type: 3}
+    descriptionText: Grants a temporary shield that absorbs damage.
+    defaultTurns: 3
+    persistent: 0
+    tier1Value: 0.15
+    tier2Value: 0.3
+  - type: 16
+    icon: {fileID: -8493280190407371231, guid: be134a723699a4ed586eb514d374ca4f, type: 3}
+    descriptionText: Allies gain a minor Attack boost.
+    defaultTurns: 2
+    persistent: 0
+    tier1Value: 0.1
+    tier2Value: 0.18
+  - type: 5
+    icon: {fileID: -1834722734249279119, guid: 0ce5e35f4a6b74de6b9a590de4628994, type: 3}
+    descriptionText: First attack during this effect deals bonus damage.
+    defaultTurns: 3
+    persistent: 0
+    tier1Value: 0.25
+    tier2Value: 0.4
+  - type: 12
+    icon: {fileID: -4323764531387730939, guid: c64951a7a11024c61ab626300edb8105, type: 3}
+    descriptionText: If the same action is used twice in a row, become stunned next
+      turn.
+    defaultTurns: 3
+    persistent: 0
+    tier1Value: 0
+    tier2Value: 0
+  - type: 10
+    icon: {fileID: -6979487358956731982, guid: a0c126f9a5b484e6ea822b15f4459c6a, type: 3}
+    descriptionText: Heal a portion of damage dealt.
+    defaultTurns: 3
+    persistent: 0
+    tier1Value: 0.15
+    tier2Value: 0.25

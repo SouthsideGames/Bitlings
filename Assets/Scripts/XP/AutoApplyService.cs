@@ -1,136 +1,288 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-public class AutoApplyService : MonoBehaviour
+public partial class AutoApplyService : MonoBehaviour
 {
-    public static AutoApplyService I { get; private set; }
+    [Header("Config")]
+    [SerializeField] private LevelCostCurveSO levelCostCurve;
 
-    [Header("Refs")]
-    [SerializeField] private PlayerManager playerManager;      // drag in
-    [SerializeField] private BucketLibrarySO bucketLibrary;    // drag in
-    [SerializeField] private TokenEconomySO tokenEconomy;      // drag in (or leave null to auto-load)
-    [SerializeField] private LevelCostCurveSO levelCostCurve;  // drag in
+    [Tooltip("Optional. If left empty, will use MonsterLibraryLocator.GetById.")]
+    [SerializeField] private MonsterLibrarySO monsterLibrary;
 
-    [Header("Options")]
-    [SerializeField, Min(0.05f)] private float pollSeconds = 0.5f;
+    [Tooltip("Optional. If left empty, will be auto-loaded from Resources.")]
+    [SerializeField] private TokenEconomySO tokenEconomy;
+
+    [Tooltip("How many unspent stat points are gained per level (matches StatBucketPanelUI default).")]
+    [SerializeField, Min(1)] private int pointsPerLevel = 3;
+
+    [Tooltip("Maximum monsters that can be auto-applied per press.")]
     [SerializeField] private int autoApplyCap = 3;
 
-    float _timer;
+    [Tooltip("Safety cap to prevent runaway loops if data is bad.")]
+    [SerializeField] private int safetyLevelOps = 2000;
 
-    void Awake()
+    void OnEnable()
     {
-        if (I != null && I != this)
-        {
-            Destroy(gameObject);
-            return;
-        }
-        I = this;
-
-        // Fallbacks
-        if (playerManager == null)
-            playerManager = SaveManager.Data;
-
-        if (tokenEconomy == null)
-            tokenEconomy = Resources.Load<TokenEconomySO>("TokenEconomy");
-
-        if (bucketLibrary == null)
-            bucketLibrary = Resources.Load<BucketLibrarySO>("BucketLibrary");
+        GameEvents.AutoApplyRequested += HandleAutoApplyRequested;
     }
 
-    void Update()
+    void OnDisable()
     {
-        _timer += Time.unscaledDeltaTime;
-        if (_timer >= pollSeconds)
-        {
-            _timer = 0f;
-            TickAutoApply();
-        }
+        GameEvents.AutoApplyRequested -= HandleAutoApplyRequested;
     }
 
-    void TickAutoApply()
+    private void HandleAutoApplyRequested()
     {
-        // Need data + curve
-        var data = playerManager ?? SaveManager.Data;
-        if (data == null || levelCostCurve == null)
-            return;
+        ApplyAllAutoSelectedEvenSplit();
+    }
 
-        var monsters = GetAllOwnedMonsters();
-        if (monsters == null || monsters.Count == 0)
-            return;
-
-        int processed = 0;
-
-        foreach (var m in monsters)
+    /// <summary>
+    /// Uses ALL available Growth Cores and applies them across up to autoApplyCap monsters
+    /// that have autoApply enabled. Cores are split evenly between selected monsters:
+    /// budgetPerMonster = totalCores / selectedCount, with remainder distributed 1-by-1.
+    ///
+    /// If autoApplyTargetLevel <= 0, it is treated as "no cap" (level as far as budget allows).
+    ///
+    /// IMPORTANT: This path also awards unspentStatPoints per level (pointsPerLevel),
+    /// matching normal leveling behavior.
+    /// </summary>
+    public void ApplyAllAutoSelectedEvenSplit()
+    {
+        var data = SaveManager.Data;
+        if (data == null)
         {
-            if (m == null || !m.autoApply) continue;
-            if (processed >= autoApplyCap) break;
+            #if UNITY_EDITOR || DEVELOPMENT_BUILD
+            Debug.LogWarning("[AutoApplyService] SaveManager.Data is null.");
+            #endif
+            return;
+        }
 
-            // guards
-            if (m.autoApplyTargetLevel <= 0 || m.level >= m.autoApplyTargetLevel) continue;
+        if (levelCostCurve == null)
+        {
+            #if UNITY_EDITOR || DEVELOPMENT_BUILD
+            Debug.LogWarning("[AutoApplyService] levelCostCurve is not assigned.");
+            #endif
+            return;
+        }
 
-            int cores = GetGrowthCores();
-            int need  = levelCostCurve.CoresToNextLevel(m.level);
-            if (cores < need) continue;
+        int totalCores = ResourceBank.Get(ResourceType.GrowthCore);
+        if (totalCores <= 0)
+        {
+            GameEvents.RaiseToast("No Growth Cores to apply.");
+            return;
+        }
 
-            // choose bucket (last used or default)
-            var bucket = bucketLibrary
-                ? bucketLibrary.GetById(m.lastBucketId, bucketLibrary.DefaultBucket())
-                : null;
+        // 1) Gather selected autos (cap at autoApplyCap)
+        var all = data.GetAllOwnedMonsters(includeTeam: true);
+        if (all == null || all.Count == 0)
+        {
+            GameEvents.RaiseToast("No monsters found.");
+            return;
+        }
 
-            if (bucket == null || tokenEconomy == null) continue;
+        List<OwnedMonsterData> selected = new List<OwnedMonsterData>(autoApplyCap);
+        for (int i = 0; i < all.Count; i++)
+        {
+            var m = all[i];
+            if (m == null) continue;
+            if (!m.autoApply) continue;
 
-            // Spend cores -> distribute 1 level worth of "points"
-            if (!TrySpendGrowthCores(need)) continue;
+            selected.Add(m);
+            if (selected.Count >= autoApplyCap) break;
+        }
 
-            // Distribute stats + level up
-            var delta = LevelUpCalculator.DistributeByWeights(need, bucket, tokenEconomy);
-            MonsterStatApplier.Apply(m, delta);
-            m.level = Mathf.Max(1, m.level + 1);
+        if (selected.Count == 0)
+        {
+            GameEvents.RaiseToast("No Auto Apply monsters selected.");
+            return;
+        }
 
-            var def = MonsterLibraryLocator.GetById(m.monsterId);
-            if (def != null)
+        // 2) Split budgets (even split)
+        int count = selected.Count;
+        int baseBudget = totalCores / count;
+        int remainder = totalCores % count;
+
+        if (baseBudget <= 0 && remainder <= 0)
+        {
+            GameEvents.RaiseToast("Not enough Growth Cores.");
+            return;
+        }
+
+        int[] budgets = new int[count];
+        for (int i = 0; i < count; i++)
+            budgets[i] = baseBudget + (i < remainder ? 1 : 0);
+
+        // 3) Spend + level within budget per monster (batched)
+        ResourceBank.BeginBatch();
+
+        bool changed = false;
+        int ops = 0;
+
+        try
+        {
+            for (int i = 0; i < count; i++)
             {
-                int newMaxHP  = Mathf.RoundToInt(BattleCalc.CalcHP(def, m.level));
-                m.currentHP   = Mathf.Clamp(m.currentHP, 0, newMaxHP);
-            }
+                var m = selected[i];
+                int budget = budgets[i];
 
-            processed++;
+                // targetLevel: 0/negative means no cap
+                int targetLevel = (m.autoApplyTargetLevel <= 0) ? int.MaxValue : m.autoApplyTargetLevel;
+
+                while (budget > 0 && m.level < targetLevel)
+                {
+                    if (ops++ > safetyLevelOps) break;
+
+                    int cost = levelCostCurve.CoresToNextLevel(m.level);
+                    if (cost <= 0) break;
+
+                    if (budget < cost) break;
+
+                    // Spend from the bank (batched, no spam)
+                    if (!ResourceBank.TrySpend(ResourceType.GrowthCore, cost))
+                        break;
+
+                    budget -= cost;
+
+                    // Level + award points
+                    m.level = Mathf.Max(1, m.level + 1);
+                    m.unspentStatPoints += Mathf.Max(0, pointsPerLevel);
+
+                    // Auto-distribute new stat points based on personality
+                    var statDelta = BuildPersonalityStatDelta(m, pointsPerLevel);
+                    if (statDelta.hp != 0 || statDelta.atk != 0 || statDelta.def != 0 || statDelta.spd != 0)
+                    {
+                        MonsterStatApplier.Apply(m, statDelta);
+                        m.unspentStatPoints = Mathf.Max(0, m.unspentStatPoints - pointsPerLevel);
+                    }
+
+                    // Defensive: keep premium fields consistent (mirrors XPManager behavior)
+                    NormalizePremiumFields(m);
+
+                    // Clamp HP to new max (mirrors XPManager.TryManualLevelUp)
+                    ClampHpToNewMax(m);
+
+                    changed = true;
+
+                    // Signature: (string, int)
+                    GameEvents.MonsterLeveled?.Invoke(m.monsterId, m.level);
+                }
+            }
+        }
+        finally
+        {
+            ResourceBank.EndBatch();
         }
 
-        // If we actually changed anything, SAVE it.
-        if (processed > 0)
+        if (changed)
         {
             SaveManager.Save();
+            GameEvents.OnOwnedMonstersChanged?.Invoke();
             GameEvents.OnTeamChanged?.Invoke();
+        }
+        else
+        {
+            GameEvents.RaiseToast("No eligible Auto Apply upgrades (need more Growth Cores).");
         }
     }
 
-    // --- Resource helpers (adjust if your ResourceManager API differs) ---
+    // ─────────────────────────────────────────────────────────────
+    // Helpers (mirrors XPManager behavior)
+    // ─────────────────────────────────────────────────────────────
 
-    int GetGrowthCores()
+    private void NormalizePremiumFields(OwnedMonsterData om)
     {
-        var rm = ResourceManager.I;
-        if (rm == null) return 0;
-        return rm.Get(ResourceType.GrowthCore);
+        if (om == null) return;
+        if (om.premiumTier > 0 && !om.isPremium) om.isPremium = true;
+        if (om.isPremium && om.premiumTier <= 0) om.premiumTier = 1;
+        if (!om.isPremium && om.premiumTier < 0) om.premiumTier = 0;
     }
 
-    bool TrySpendGrowthCores(int amount)
+    private TrainingBonus BuildPersonalityStatDelta(OwnedMonsterData m, int points)
     {
-        var rm = ResourceManager.I;
-        if (rm == null || amount <= 0) return false;
-        int have = rm.Get(ResourceType.GrowthCore);
-        if (have < amount) return false;
-        rm.Add(ResourceType.GrowthCore, -amount);
-        return true;
+        var econ = GetTokenEconomy();
+        if (econ == null) return new TrainingBonus();
+
+        var def = monsterLibrary != null
+            ? monsterLibrary.GetById(m.monsterId)
+            : MonsterLibraryLocator.GetById(m.monsterId);
+
+        var group = (def?.Personality != null)
+            ? def.Personality.group
+            : MonsterPersonalitySO.PersonalityGroup.None;
+
+        int allocHp = 0, allocAtk = 0, allocDef = 0, allocSpd = 0;
+
+        for (int i = 0; i < points; i++)
+        {
+            switch (group)
+            {
+                case MonsterPersonalitySO.PersonalityGroup.Offensive:
+                    // Pure attack focus
+                    allocAtk++;
+                    break;
+                case MonsterPersonalitySO.PersonalityGroup.Defensive:
+                    // Pure defense focus
+                    allocDef++;
+                    break;
+                case MonsterPersonalitySO.PersonalityGroup.Evasive:
+                    // Pure speed focus
+                    allocSpd++;
+                    break;
+                case MonsterPersonalitySO.PersonalityGroup.Support:
+                    // HP and defense
+                    if (i % 2 == 0) allocHp++; else allocDef++;
+                    break;
+                case MonsterPersonalitySO.PersonalityGroup.Tactical:
+                    // Even spread across atk, def, spd
+                    if (i % 3 == 0) allocAtk++;
+                    else if (i % 3 == 1) allocDef++;
+                    else allocSpd++;
+                    break;
+                case MonsterPersonalitySO.PersonalityGroup.Reactive:
+                    // Speed and attack
+                    if (i % 2 == 0) allocSpd++; else allocAtk++;
+                    break;
+                default:
+                    // None / Chaotic: balanced HP, ATK, DEF
+                    if (i % 3 == 0) allocHp++;
+                    else if (i % 3 == 1) allocAtk++;
+                    else allocDef++;
+                    break;
+            }
+        }
+
+        return new TrainingBonus
+        {
+            hp  = allocHp  * econ.hpPerCore,
+            atk = allocAtk * econ.atkPerCore,
+            def = allocDef * econ.defPerCore,
+            spd = allocSpd * econ.spdPerCore
+        };
     }
 
-    // --- Owned monsters source (real objects, no copies) ---
-
-    List<OwnedMonsterData> GetAllOwnedMonsters()
+    private TokenEconomySO GetTokenEconomy()
     {
-        var data = playerManager ?? SaveManager.Data;
-        if (data == null) return null;
+        if (tokenEconomy) return tokenEconomy;
+        var all = Resources.LoadAll<TokenEconomySO>("");
+        if (all != null && all.Length > 0) { tokenEconomy = all[0]; return tokenEconomy; }
+        return null;
+    }
 
-        return data.GetAllOwnedMonsters(includeTeam: true);
+    private void ClampHpToNewMax(OwnedMonsterData om)
+    {
+        if (om == null || string.IsNullOrEmpty(om.monsterId)) return;
+
+        MonsterDataSO def = null;
+        if (monsterLibrary != null)
+            def = monsterLibrary.GetById(om.monsterId);
+        else
+            def = MonsterLibraryLocator.GetById(om.monsterId);
+
+        if (!def) return;
+
+        int totalMaxHP = HealingService.CalcMaxHP(def, om.level, includeTraining: true, includeTitles: false);
+
+        if (om.currentHP > totalMaxHP)
+            SaveManager.SetMonsterHP(om, totalMaxHP, stampLastHpUnix: false, save: false, fireEvents: false);
     }
 }

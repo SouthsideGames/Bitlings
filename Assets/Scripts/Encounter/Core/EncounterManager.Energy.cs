@@ -1,6 +1,11 @@
 using UnityEngine;
 using System;
 
+// ─────────────────────────────────────────────────────────────
+// EncounterManager.Energy
+// Energy economy: costs, spend/add operations, online/offline regeneration.
+// ─────────────────────────────────────────────────────────────
+
 public partial class EncounterManager
 {
     [Header("Energy (Regen)")]
@@ -10,7 +15,9 @@ public partial class EncounterManager
     [SerializeField, Min(1)] private int fallbackEncounterCost = 1;
 
     [Tooltip("Seconds required to regenerate 1 energy point.")]
-    [SerializeField, Min(1f)] private float energySecondsPerPoint = 3600f;
+    // NOTE: Keep this in sync with EncounterPanelUI's ETA default.
+    // 1200s = 20 minutes per energy.
+    [SerializeField, Min(1f)] private float energySecondsPerPoint = 1200f;
 
     float _tickAccum;
 
@@ -26,9 +33,23 @@ public partial class EncounterManager
             : fallbackEncounterMax;
 
     public int GetEncounterCost() =>
-        (SaveManager.Data != null && SaveManager.Data.encounterCost > 0)
+        GetEncounterCost_Internal();
+
+    private int GetEncounterCost_Internal()
+    {
+        int baseCost = (SaveManager.Data != null && SaveManager.Data.encounterCost > 0)
             ? SaveManager.Data.encounterCost
             : fallbackEncounterCost;
+
+        float mul = (WorldEventSystem.I != null) ? WorldEventSystem.I.GetEncounterEnergyCostMultiplier() : 1f;
+        if (mul <= 0f) return 0;
+
+        int next = Mathf.RoundToInt(baseCost * mul);
+
+        // Preserve the “at least 1” semantics if baseCost is positive.
+        if (baseCost > 0) next = Mathf.Max(1, next);
+        return next;
+    }
 
     public bool HasEnergy() => GetEnergyPoints() >= GetEncounterCost();
 
@@ -48,7 +69,7 @@ public partial class EncounterManager
     {
         if (amount == 0) return;
 
-        int max    = GetEncounterMax();
+        int max = GetEncounterMax();
         int before = GetBankEnergy();
 
         int next = before + amount;
@@ -60,7 +81,7 @@ public partial class EncounterManager
         SetBankEnergy(next);
         ClampEnergyBank();
 
-        int after  = GetBankEnergy();
+        int after = GetBankEnergy();
         int gained = Mathf.Max(0, after - before);
 
         SetEnergyLastUnix(NowUnix());
@@ -136,7 +157,7 @@ public partial class EncounterManager
             return;
         }
 
-        long now  = NowUnix();
+        long now = NowUnix();
         long last = GetEnergyLastUnix();
         if (last <= 0) last = now;
 
@@ -260,4 +281,11 @@ public partial class EncounterManager
     }
 
     static long NowUnix() => DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+    
+    public void Cheat_ApplyOfflineEnergyRegen()
+    {
+        ApplyOfflineRegen();
+        OnStateChanged?.Invoke();
+    }
+
 }

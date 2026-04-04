@@ -13,8 +13,8 @@ MonoBehaviour:
   m_Name: RecycleRecipe_R015
   m_EditorClassIdentifier: 
   recipeId: R-015
-  displayName: Core Refine
-  fromType: 16
-  fromAmount: 20
-  toType: 17
-  toAmount: 5
+  displayName: Pack Compression
+  fromType: 17
+  fromAmount: 2
+  toType: 4
+  toAmount: 20

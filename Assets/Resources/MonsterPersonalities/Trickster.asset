@@ -24,4 +24,8 @@ MonoBehaviour:
   badMatchDefendBonus: 1
   badMatchRunBonus: 1
   eachTurnAttackBonus: 0
-  description: Harasses, repositions, rarely takes fair trades.
+  eachTurnFocusPenalty: 0
+  lowHpFocusPenalty: 2
+  chaoticOverrideChance: 0.25
+  description: Applies pressure through movement and positioning, avoiding direct
+    exchanges.

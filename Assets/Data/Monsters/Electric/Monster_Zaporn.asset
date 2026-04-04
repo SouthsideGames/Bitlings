@@ -1,0 +1,56 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 32ffc26ed7d444b02a9332ce4279b117, type: 3}
+  m_Name: Monster_Zaporn
+  m_EditorClassIdentifier: 
+  id: M-174
+  displayName: Zaporn
+  type: 4
+  typeIcon: {fileID: 21300000, guid: e57a940f3027d4a9f83f25cefbc6d738, type: 3}
+  icon: {fileID: 21300000, guid: d22dc88d8aafd4b25ab7b1b42422f5d7, type: 3}
+  backIcon: {fileID: 21300000, guid: 4420df68e43744848bd67c0dcc0b64eb, type: 3}
+  premiumIcon: {fileID: 21300000, guid: 17561aa66b4f74bb196e9694e828a10d, type: 3}
+  premiumBackIcon: {fileID: 21300000, guid: b1337cb4e685f4a76a67cf94d2a8ef0c, type: 3}
+  rarity: 3
+  canBeStarter: 0
+  starterWeight: 1
+  maxLevel: 50
+  baseHP: 61
+  baseAttack: 73
+  baseDefense: 33
+  baseSpeed: 67
+  hpRegenPerHour: 5
+  fatigueRatePerHour: 0.105
+  fatigueCooldownHours: 7.8
+  evolutionStage: 3
+  evolutionLevel: 15
+  evolutionForm: {fileID: 0}
+  uncatchable: 0
+  isBoss: 0
+  bossJobDebuffs: []
+  bossWeight: 1
+  spawnWeight: 0.7
+  jobSkill: 1.15
+  titleTrack: {fileID: 11400000, guid: 952e705c1fd144cb7b41019b14df30f9, type: 2}
+  defaultAlwaysOnTitles: []
+  ironTitles:
+  - {fileID: 11400000, guid: 3da4dd895f4bd4ff9b4690ab28dbdc42, type: 2}
+  - {fileID: 11400000, guid: 2897bcb545bf47f4c93cf253bec91032, type: 2}
+  - {fileID: 11400000, guid: 77fbf796892a13a479a8c1077e4829a0, type: 2}
+  - {fileID: 11400000, guid: 71652094aed89c948ae2a0cb846cf011, type: 2}
+  Personality: {fileID: 11400000, guid: dc588633b46794883be5263b17376bf3, type: 2}
+  basicAttackName: Volt Peck
+  basicAttackPrefab: {fileID: 4179996368917665753, guid: 77ce3f8bf17474b06ac473e26248a299, type: 3}
+  basicAttackPrefabLifetime: 1
+  spawnSfx: {fileID: 8300000, guid: 313c1890f6b8d0a4c8a8abc32a3e1131, type: 3}
+  baseMarketValue: 302
+  description: A fully charged striker that overwhelms foes with rapid

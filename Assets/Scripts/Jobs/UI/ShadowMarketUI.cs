@@ -9,7 +9,8 @@ public class ShadowMarketUI : MonoBehaviour
     [SerializeField] private Button useOrbBtn;
     [SerializeField] private TMP_Text useOrbBtnLabel;
     [SerializeField] private TextMeshProUGUI orbsLabel;
-    [SerializeField] private TextMeshProUGUI timerText;
+    [SerializeField] private TextMeshProUGUI orbsTimerText;
+    [SerializeField] private GameObject orbsActiveImage;
 
     [Header("Effect")]
     [SerializeField, Range(1f, 5f)] private float bonusMultiplier = 1.5f;
@@ -22,6 +23,9 @@ public class ShadowMarketUI : MonoBehaviour
         Wire();
         RefreshCounts();
         RefreshButtonLabel();
+        RefreshPremiumVisual();
+        RefreshUseButtonVisibility();
+
         StartTicker();
         GameEvents.OnResourcesChanged += OnResChanged;
     }
@@ -48,16 +52,42 @@ public class ShadowMarketUI : MonoBehaviour
     {
         RefreshCounts();
         RefreshButtonLabel();
+        RefreshPremiumVisual();
+        RefreshUseButtonVisibility();
     }
 
     void RefreshCounts()
     {
-        int have = ResourceBank.Get(ResourceType.ShinyOrb);
+        int have = ResourceBank.Get(ResourceType.PremiumOrb);
 
-        if (orbsLabel) orbsLabel.text = $"Shiny Orbs: {have}";
+        if (orbsLabel) orbsLabel.text = $"Premium Orbs: {have}";
 
         bool active = GetSecondsRemaining() > 0;
-        if (useOrbBtn) useOrbBtn.interactable = have > 0; // allow replace even while active, per current behavior
+        if (useOrbBtn)
+            useOrbBtn.interactable = (!active) && have > 0;
+
+        RefreshUseButtonVisibility();
+    }
+
+    /// <summary>
+    /// If we do not have any Premium Orbs, hide the entire Use button GameObject.
+    /// </summary>
+    void RefreshUseButtonVisibility()
+    {
+        if (!useOrbBtn) return;
+
+        // Safe default: if save isn't ready, hide.
+        if (SaveManager.Data == null)
+        {
+            useOrbBtn.gameObject.SetActive(false);
+            return;
+        }
+
+        int have = ResourceBank.Get(ResourceType.PremiumOrb);
+        bool shouldShow = have > 0;
+
+        if (useOrbBtn.gameObject.activeSelf != shouldShow)
+            useOrbBtn.gameObject.SetActive(shouldShow);
     }
 
     void RefreshButtonLabel()
@@ -65,40 +95,83 @@ public class ShadowMarketUI : MonoBehaviour
         if (!useOrbBtnLabel) return;
 
         bool active = GetSecondsRemaining() > 0;
-        useOrbBtnLabel.text = active ? "Replace Shiny Orb" : "Use Shiny Orb";
+        useOrbBtnLabel.text = active ? "Replace" : "Use";
+    }
+
+    void RefreshPremiumVisual()
+    {
+        if (!orbsActiveImage) return;
+
+        bool active = GetSecondsRemaining() > 0;
+        orbsActiveImage.SetActive(active);
     }
 
     void OnClickUseOrb()
     {
-        if (!ResourceBank.TrySpend(ResourceType.ShinyOrb, 1))
+        // Only toast if we successfully activate the premium boost:
+        // - Save exists
+        // - Spend succeeds
+        // - We actually write a new boost + save
+        if (SaveManager.Data == null)
         {
             RefreshCounts();
             RefreshButtonLabel();
+            RefreshPremiumVisual();
+            RefreshUseButtonVisibility();
+            return;
+        }
+
+        if (!ResourceBank.TrySpend(ResourceType.PremiumOrb, 1))
+        {
+            RefreshCounts();
+            RefreshButtonLabel();
+            RefreshPremiumVisual();
+            RefreshUseButtonVisibility();
             return;
         }
 
         long now = SaveManager.NowUnix();
         long expiry = now + Mathf.Max(1, durationMinutes) * 60L;
 
-        var list = SaveManager.Data.activeShinyBoosts;
+        var list = SaveManager.Data.activePremiumBoosts;
         if (list == null)
         {
-            SaveManager.Data.activeShinyBoosts = new System.Collections.Generic.List<ShinyBoostData>();
-            list = SaveManager.Data.activeShinyBoosts;
+            SaveManager.Data.activePremiumBoosts = new System.Collections.Generic.List<PremiumBoostData>();
+            list = SaveManager.Data.activePremiumBoosts;
         }
 
         list.Clear();
-        list.Add(new ShinyBoostData { bonus = Mathf.Max(1f, bonusMultiplier), expireUnix = expiry });
+        list.Add(new PremiumBoostData
+        {
+            bonus = Mathf.Max(1f, bonusMultiplier),
+            expireUnix = expiry
+        });
 
         SaveManager.Save();
         GameEvents.OnResourcesChanged?.Invoke();
 
+        GameEvents.RaiseToast("PREMIUM ORB ACTIVATED");
+
         RefreshCounts();
         RefreshButtonLabel();
+        RefreshPremiumVisual();
+        RefreshUseButtonVisibility();
     }
 
-    void StartTicker() { if (_ticker != null) StopCoroutine(_ticker); _ticker = StartCoroutine(Tick()); }
-    void StopTicker() { if (_ticker != null) { StopCoroutine(_ticker); _ticker = null; } }
+    void StartTicker()
+    {
+        if (_ticker != null) StopCoroutine(_ticker);
+        _ticker = StartCoroutine(Tick());
+    }
+
+    void StopTicker()
+    {
+        if (_ticker != null)
+        {
+            StopCoroutine(_ticker);
+            _ticker = null;
+        }
+    }
 
     IEnumerator Tick()
     {
@@ -107,10 +180,12 @@ public class ShadowMarketUI : MonoBehaviour
         {
             long rem = GetSecondsRemaining();
 
-            if (timerText)
-                timerText.text = rem > 0 ? FormatHMS(rem) : "No shiny boost";
+            if (orbsTimerText)
+                orbsTimerText.text = rem > 0 ? FormatHMS(rem) : "No premium boost";
 
             RefreshButtonLabel();
+            RefreshPremiumVisual();
+            RefreshUseButtonVisibility();
 
             yield return wait;
         }
@@ -118,7 +193,7 @@ public class ShadowMarketUI : MonoBehaviour
 
     long GetSecondsRemaining()
     {
-        var list = SaveManager.Data?.activeShinyBoosts;
+        var list = SaveManager.Data?.activePremiumBoosts;
         if (list == null || list.Count == 0) return -1;
 
         var cur = list[0];

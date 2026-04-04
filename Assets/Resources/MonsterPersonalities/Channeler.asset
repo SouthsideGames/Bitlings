@@ -13,15 +13,18 @@ MonoBehaviour:
   m_Name: Channeler
   m_EditorClassIdentifier: 
   group: 3
-  attackWeight: 4
+  attackWeight: 5
   defendWeight: 2
-  focusWeight: 6
+  focusWeight: 4
   runWeight: 0
   lowHpThreshold: 0.3
   lowHpDefendBonus: 2
-  lowHpRunBonus: 1
-  superEffectiveAttackBonus: 3
+  lowHpRunBonus: 0
+  superEffectiveAttackBonus: 2
   badMatchDefendBonus: 1
-  badMatchRunBonus: 1
-  eachTurnAttackBonus: 0
-  description: Channels strength via focus, then pivots to offense.
+  badMatchRunBonus: 0
+  eachTurnAttackBonus: 1
+  eachTurnFocusPenalty: 1
+  lowHpFocusPenalty: 3
+  chaoticOverrideChance: 0
+  description: Builds strength through preparation, then commits to decisive action.

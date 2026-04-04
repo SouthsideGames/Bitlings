@@ -1,20 +1,16 @@
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
-using System.Reflection;
 
 public class HPBooster : MonoBehaviour
 {
     [Header("UI")]
     [SerializeField] private Button boosterBtn;
-    [SerializeField] private Image boosterRadial;             // HP has no duration → stays 0
+    [SerializeField] private Image boosterRadial; // HP has no duration -> stays 0
     [SerializeField] private TextMeshProUGUI boosterCountLabel;
 
     [Header("Cost")]
     [SerializeField] private bool consumeItem = true;
-
-    private const float UI_REFRESH = 0.15f;
-    private float _nextRefresh;
 
     void OnEnable()
     {
@@ -27,25 +23,27 @@ public class HPBooster : MonoBehaviour
 
         if (boosterRadial) boosterRadial.fillAmount = 0f;
 
-        GameEvents.OnResourcesChanged += RefreshCounts;
-        RefreshCounts();
-        RefreshInteractability(true);
+        GameEvents.OnResourcesChanged += HandleRefresh;
+        GameEvents.OnBoostersChanged += HandleRefresh;
+
+        RefreshAll(hard: true);
     }
 
     void OnDisable()
     {
-        GameEvents.OnResourcesChanged -= RefreshCounts;
+        GameEvents.OnResourcesChanged -= HandleRefresh;
+        GameEvents.OnBoostersChanged -= HandleRefresh;
+
         if (boosterBtn) boosterBtn.onClick.RemoveAllListeners();
         if (boosterRadial) boosterRadial.fillAmount = 0f;
     }
 
-    void Update()
+    private void HandleRefresh() => RefreshAll(hard: false);
+
+    private void RefreshAll(bool hard)
     {
-        if (Time.unscaledTime >= _nextRefresh)
-        {
-            _nextRefresh = Time.unscaledTime + UI_REFRESH;
-            RefreshInteractability(false);
-        }
+        RefreshCounts();
+        RefreshInteractability();
     }
 
     private void RefreshCounts()
@@ -54,21 +52,15 @@ public class HPBooster : MonoBehaviour
         if (boosterCountLabel) boosterCountLabel.text = $"x{have}";
     }
 
-    private void RefreshInteractability(bool hard)
+    private void RefreshInteractability()
     {
         var ctrl = BattleBoosterController.I;
-        bool can = false;
 
-        if (ctrl)
-        {
-            can = ctrl.CanUse(BoosterType.Health, out _);
-
-            // HP booster has no active duration; keep ring empty
-            if (boosterRadial) boosterRadial.fillAmount = 0f;
-        }
-
+        bool can = ctrl && ctrl.CanUse(BoosterType.Health, out _);
         bool haveItem = !consumeItem || ResourceBank.Get(ResourceType.WellnessVoucher) > 0;
+
         if (boosterBtn) boosterBtn.interactable = can && haveItem;
+        if (boosterRadial) boosterRadial.fillAmount = 0f; // instant
     }
 
     private void OnPress()
@@ -80,40 +72,28 @@ public class HPBooster : MonoBehaviour
             return;
         }
 
-        // Pre-check ability to use
         if (!ctrl.CanUse(BoosterType.Health, out var why))
         {
             if (!string.IsNullOrEmpty(why))
                 BattleLogger.Log(why, LogScope.Battle);
-            RefreshInteractability(true);
+
+            RefreshAll(true);
             return;
         }
 
-        // Spend item if required
         bool spent = true;
         if (consumeItem)
         {
             spent = ResourceBank.TrySpend(ResourceType.WellnessVoucher, 1);
             if (!spent)
             {
-                RefreshCounts();
-                RefreshInteractability(true);
+                RefreshAll(true);
                 return;
             }
         }
 
-        // Attempt activation via controller (supports multiple method names)
-        bool used = false;
-        var t = ctrl.GetType();
-        var bm = Object.FindFirstObjectByType<BattleManager>(); // optional if controller accepts it
+        bool used = ctrl.TryUseFromUI(BoosterType.Health, out var msg);
 
-        used = TryInvokeBool(t, ctrl, "UseFromUI", new object[] { BoosterType.Health, bm }) ||
-               TryInvokeBool(t, ctrl, "UseFromUI", new object[] { BoosterType.Health })     ||
-               TryInvokeBool(t, ctrl, "Use",       new object[] { BoosterType.Health })     ||
-               TryInvokeBool(t, ctrl, "TryUse",    new object[] { BoosterType.Health })     ||
-               TryInvokeVoidThenTrue(t, ctrl, "Activate", new object[] { BoosterType.Health });
-
-        // Refund if it failed after spending
         if (!used && consumeItem && spent)
         {
             ResourceBank.Add(ResourceType.WellnessVoucher, 1);
@@ -121,27 +101,12 @@ public class HPBooster : MonoBehaviour
         }
         else if (used)
         {
+            if (!string.IsNullOrEmpty(msg))
+                BattleLogger.Log(msg, LogScope.Battle);
+
             GameEvents.OnResourcesChanged?.Invoke();
         }
 
-        RefreshCounts();
-        RefreshInteractability(true);
-    }
-
-    private bool TryInvokeBool(System.Type t, object instance, string method, object[] args)
-    {
-        var m = t.GetMethod(method, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
-        if (m == null) return false;
-        var ret = m.Invoke(instance, args);
-        if (ret is bool b) return b;
-        return true; // treat void/other returns as success
-    }
-
-    private bool TryInvokeVoidThenTrue(System.Type t, object instance, string method, object[] args)
-    {
-        var m = t.GetMethod(method, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
-        if (m == null) return false;
-        m.Invoke(instance, args);
-        return true;
+        RefreshAll(true);
     }
 }

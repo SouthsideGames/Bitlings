@@ -1,0 +1,57 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 32ffc26ed7d444b02a9332ce4279b117, type: 3}
+  m_Name: Monster_Cogon
+  m_EditorClassIdentifier: 
+  id: M-170
+  displayName: Cogon
+  type: 16
+  typeIcon: {fileID: 21300000, guid: c802d8c6dfd7c40329bae6fe5d96fc85, type: 3}
+  icon: {fileID: 21300000, guid: ecf502345e44c4315bb77bd2e0c8d5ce, type: 3}
+  backIcon: {fileID: 21300000, guid: 3d59d1271e53045ed8be0ba96725f1be, type: 3}
+  premiumIcon: {fileID: 21300000, guid: 78138660666f544b98ad6a9eadbff1e5, type: 3}
+  premiumBackIcon: {fileID: 21300000, guid: 030241d76e98a485aaa1156415695848, type: 3}
+  rarity: 2
+  canBeStarter: 0
+  starterWeight: 1
+  maxLevel: 50
+  baseHP: 74
+  baseAttack: 48
+  baseDefense: 62
+  baseSpeed: 16
+  hpRegenPerHour: 4.6
+  fatigueRatePerHour: 0.085
+  fatigueCooldownHours: 9.6
+  evolutionStage: 1
+  evolutionLevel: 28
+  evolutionForm: {fileID: 11400000, guid: ea05248c5d5eb45298d84a3578860aca, type: 2}
+  uncatchable: 0
+  isBoss: 0
+  bossJobDebuffs: []
+  bossWeight: 1
+  spawnWeight: 2
+  jobSkill: 1.08
+  titleTrack: {fileID: 11400000, guid: 16b6b71b4bf694368a8d25363017f2d3, type: 2}
+  defaultAlwaysOnTitles: []
+  ironTitles:
+  - {fileID: 11400000, guid: 71652094aed89c948ae2a0cb846cf011, type: 2}
+  - {fileID: 11400000, guid: 3da4dd895f4bd4ff9b4690ab28dbdc42, type: 2}
+  - {fileID: 11400000, guid: 77fbf796892a13a479a8c1077e4829a0, type: 2}
+  - {fileID: 11400000, guid: 2897bcb545bf47f4c93cf253bec91032, type: 2}
+  Personality: {fileID: 11400000, guid: d2d9ec6158abb40d2a7618ee71a9de06, type: 2}
+  basicAttackName: Metal Jab
+  basicAttackPrefab: {fileID: 5172629195496952374, guid: ad774bbb8084f42c29f12cd62581f796, type: 3}
+  basicAttackPrefabLifetime: 1
+  spawnSfx: {fileID: 8300000, guid: c76899eac1943d746b09e89030f44b29, type: 3}
+  baseMarketValue: 165
+  description: A sturdy alloy construct that advances slowly and strikes with heavy
+    mechanical force.

@@ -11,17 +11,16 @@ public class MonsterPackManager : MonoBehaviour
     [Tooltip("If set, this overrides all other ways of finding the pack library.")]
     [SerializeField] private MonsterPackLibrarySO packLibraryOverride;
 
-    private MonsterPackLibrarySO _packLibrary;  
-    private MonsterLibrarySO _monsterLibrary;   
+    private MonsterPackLibrarySO _packLibrary;
+    private MonsterLibrarySO _monsterLibrary;
 
     [Header("Pack Seasons (Optional)")]
     [Tooltip("If set, seasons are enabled and only active-season packs are shown/purchasable.")]
     [SerializeField] private MonsterPackSeasonRotationSO seasonRotationOverride;
 
-    
     [Header("Tuning")]
     [Tooltip("Global discount applied to all pack costs (0..1). 0.15 = 15% off.")]
-    [Range(0f, 1f)] [SerializeField] private float globalDiscount01 = 0f;
+    [Range(0f, 1f)][SerializeField] private float globalDiscount01 = 0f;
 
     private MonsterPackSeasonRotationSO _seasonRotation;
 
@@ -46,8 +45,15 @@ public class MonsterPackManager : MonoBehaviour
 
         if (!_packLibrary)
         {
-            Debug.LogError("[MonsterPackManager] Could not resolve MonsterPackLibrarySO. " +
-                           "Set it in the Inspector OR create Assets/Resources/MonsterPackLibrary.asset");
+            // Fail-soft: keep the manager instance alive so callers can safely query.
+            // Pack shop features will remain unavailable until the library is provided.
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            Debug.LogWarning(
+                "[MonsterPackManager] Could not resolve MonsterPackLibrarySO. " +
+                "Set it in the Inspector OR create Assets/Resources/MonsterPackLibrary.asset. " +
+                "Disabling MonsterPackManager.");
+#endif
+            enabled = false;
             return;
         }
 
@@ -56,8 +62,11 @@ public class MonsterPackManager : MonoBehaviour
         _monsterLibrary = MonsterLibraryLocator.Lib;
         if (!_monsterLibrary)
         {
-            Debug.LogWarning("[MonsterPackManager] MonsterLibraryLocator.Lib could not load. " +
-                             "Ensure Assets/Resources/MonsterLibrary.asset exists.");
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            Debug.LogWarning(
+                "[MonsterPackManager] MonsterLibraryLocator.Lib could not load. " +
+                "Ensure Assets/Resources/MonsterLibrary.asset exists.");
+#endif
         }
 
         // Seasons: Inspector override → Locator → none (seasons disabled)
@@ -76,16 +85,18 @@ public class MonsterPackManager : MonoBehaviour
         {
             if (!p) continue;
             if (p.costType != ResourceType.PackVoucher)
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
                 Debug.LogWarning($"[MonsterPackManager] '{p.name}' has costType={p.costType} but shop is shards-only.");
+#endif
         }
 #endif
 
         AutoUnlockDefaults();
     }
 
-    // ─────────────────────────────────────────────────────────────
+    // ─────────────────────────────────────────────
     // Seasons
-    // ─────────────────────────────────────────────────────────────
+    // ─────────────────────────────────────────────
 
     public bool SeasonsEnabled =>
         _seasonRotation != null &&
@@ -94,10 +105,9 @@ public class MonsterPackManager : MonoBehaviour
 
     private void RefreshActiveSeasonCache(bool force = false)
     {
-        _activeSeasonPackIds.Clear();
-
         if (!SeasonsEnabled)
         {
+            _activeSeasonPackIds.Clear();
             _cachedSeasonIndex = int.MinValue;
             return;
         }
@@ -105,8 +115,14 @@ public class MonsterPackManager : MonoBehaviour
         long now = SaveManager.NowUnix();
         int idx = _seasonRotation.GetSeasonIndex(now);
 
-        if (!force && idx == _cachedSeasonIndex) return;
+        // If same season and not forced, keep existing cache (DO NOT clear)
+        if (!force && idx == _cachedSeasonIndex)
+            return;
+
+        bool seasonChanged = _cachedSeasonIndex != int.MinValue && idx != _cachedSeasonIndex;
         _cachedSeasonIndex = idx;
+
+        _activeSeasonPackIds.Clear();
 
         var ids = _seasonRotation.GetActivePackIds(now);
         if (ids == null) return;
@@ -117,6 +133,9 @@ public class MonsterPackManager : MonoBehaviour
             if (!string.IsNullOrEmpty(id))
                 _activeSeasonPackIds.Add(id);
         }
+
+        if (seasonChanged)
+            GameEvents.PackSeasonChanged?.Invoke();
     }
 
     public int GetCurrentSeasonNumber1Based()
@@ -244,9 +263,9 @@ public class MonsterPackManager : MonoBehaviour
         return result;
     }
 
-    // ─────────────────────────────────────────────────────────────
+    // ─────────────────────────────────────────────
     // Queries
-    // ─────────────────────────────────────────────────────────────
+    // ─────────────────────────────────────────────
 
     public bool TryGetPack(string packId, out MonsterPackSO pack)
     {
@@ -271,7 +290,11 @@ public class MonsterPackManager : MonoBehaviour
 
         int baseCost = Mathf.Max(0, pack.baseCost);
         float combinedMul = (1f - Mathf.Clamp01(pack.saleOff01)) * (1f - Mathf.Clamp01(globalDiscount01));
-        finalCost = Mathf.CeilToInt(baseCost * Mathf.Clamp(combinedMul, 0f, 1f));
+        float worldMul = 1f;
+        if (WorldEventSystem.I != null)
+            worldMul = Mathf.Max(0f, WorldEventSystem.I.GetShopPriceMultiplier());
+
+        finalCost = Mathf.CeilToInt(baseCost * Mathf.Clamp(combinedMul, 0f, 1f) * worldMul);
         return true;
     }
 
@@ -306,9 +329,9 @@ public class MonsterPackManager : MonoBehaviour
         return true;
     }
 
-    // ─────────────────────────────────────────────────────────────
+    // ─────────────────────────────────────────────
     // Actions
-    // ─────────────────────────────────────────────────────────────
+    // ─────────────────────────────────────────────
 
     public bool Purchase(string packId)
     {
@@ -353,9 +376,9 @@ public class MonsterPackManager : MonoBehaviour
         RegisterUnlockedMonsters(packId);
     }
 
-    // ─────────────────────────────────────────────────────────────
+    // ─────────────────────────────────────────────
     // Helpers
-    // ─────────────────────────────────────────────────────────────
+    // ─────────────────────────────────────────────
 
     private void AutoUnlockDefaults()
     {
@@ -409,4 +432,42 @@ public class MonsterPackManager : MonoBehaviour
 
     // Optional tuning API
     public void SetGlobalDiscount01(float v) => globalDiscount01 = Mathf.Clamp01(v);
+
+    /// <summary>
+    /// Unlocks every pack in the pack library, then registers their monsters as discovered.
+    /// Saves once. Intended for cheats / QA.
+    /// Returns how many packs were newly unlocked.
+    /// </summary>
+    public int Cheat_UnlockAllPacks()
+    {
+        if (_packLibrary == null || SaveManager.Data == null) return 0;
+
+        var data = SaveManager.Data;
+        data.unlockedPacks ??= new System.Collections.Generic.List<string>();
+
+        int added = 0;
+
+        foreach (var p in _packLibrary.PacksReadOnly)
+        {
+            if (!p || string.IsNullOrEmpty(p.id)) continue;
+            if (data.unlockedPacks.Contains(p.id)) continue;
+
+            data.unlockedPacks.Add(p.id);
+            added++;
+
+            // Make contained monsters visible in Directory/draft pools
+            RegisterUnlockedMonsters(p.id);
+
+            try { OnPackUnlocked?.Invoke(p.id); } catch { /* ignore */ }
+        }
+
+        if (added > 0)
+        {
+            SaveManager.Save();
+            MonsterCatalog.Invalidate();
+            GameEvents.OnResourcesChanged?.Invoke();
+        }
+
+        return added;
+    }
 }

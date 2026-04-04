@@ -1,0 +1,644 @@
+fileFormatVersion: 2
+guid: 30ea7936af0de3a4589eaa275b95efea
+AssetOrigin:
+  serializedVersion: 1
+  productId: 351422
+  packageName: 280 Ultimate Pixel Backgrounds Collection
+  packageVersion: 1.2
+  assetPath: Assets/Ultimate Backgrounds Collection/PNG/Layers/CITY/Futuristic/Futuristic_2/Layer_7.png
+  uploadId: 850090
+TextureImporter:
+  internalIDToNameTable:
+  - first:
+      213: -6498205457596972194
+    second: Futur_2_L3_0
+  - first:
+      213: -5986921102960105041
+    second: Futur_2_L3_1
+  - first:
+      213: -50479019152964334
+    second: Futur_2_L3_2
+  - first:
+      213: -2617553483951993117
+    second: Futur_2_L3_3
+  - first:
+      213: 3330858819213934861
+    second: Futur_2_L3_4
+  - first:
+      213: 1229703504743998406
+    second: Futur_2_L3_5
+  - first:
+      213: 5366277526582571272
+    second: Futur_2_L3_6
+  - first:
+      213: 5746870788595890339
+    second: Futur_2_L3_7
+  - first:
+      213: 8327377997422795862
+    second: Futur_2_L3_8
+  - first:
+      213: 7721454208743844429
+    second: Futur_2_L3_9
+  - first:
+      213: 8815533822580003712
+    second: Futur_2_L3_10
+  - first:
+      213: -1115815116004717441
+    second: Futur_2_L3_11
+  - first:
+      213: 5724461886600697551
+    second: Futur_2_L3_12
+  - first:
+      213: 7671143927148521934
+    second: Futur_2_L3_13
+  - first:
+      213: 2665523013811542344
+    second: Futur_2_L3_14
+  - first:
+      213: -1944727606380026491
+    second: Futur_2_L3_15
+  - first:
+      213: -5710223341519311015
+    second: Futur_2_L3_16
+  - first:
+      213: 3999254054555883413
+    second: Futur_2_L3_17
+  - first:
+      213: 1058751435791565458
+    second: Futur_2_L3_18
+  externalObjects: {}
+  serializedVersion: 13
+  mipmaps:
+    mipMapMode: 0
+    enableMipMap: 0
+    sRGBTexture: 1
+    linearTexture: 0
+    fadeOut: 0
+    borderMipMap: 0
+    mipMapsPreserveCoverage: 0
+    alphaTestReferenceValue: 0.5
+    mipMapFadeDistanceStart: 1
+    mipMapFadeDistanceEnd: 3
+  bumpmap:
+    convertToNormalMap: 0
+    externalNormalMap: 0
+    heightScale: 0.25
+    normalMapFilter: 0
+    flipGreenChannel: 0
+  isReadable: 0
+  streamingMipmaps: 0
+  streamingMipmapsPriority: 0
+  vTOnly: 0
+  ignoreMipmapLimit: 0
+  grayScaleToAlpha: 0
+  generateCubemap: 6
+  cubemapConvolution: 0
+  seamlessCubemap: 0
+  textureFormat: 1
+  maxTextureSize: 2048
+  textureSettings:
+    serializedVersion: 2
+    filterMode: 0
+    aniso: 1
+    mipBias: 0
+    wrapU: 1
+    wrapV: 1
+    wrapW: 1
+  nPOTScale: 0
+  lightmap: 0
+  compressionQuality: 50
+  spriteMode: 1
+  spriteExtrude: 1
+  spriteMeshType: 1
+  alignment: 7
+  spritePivot: {x: 0.5, y: 0.5}
+  spritePixelsToUnits: 32
+  spriteBorder: {x: 0, y: 0, z: 0, w: 0}
+  spriteGenerateFallbackPhysicsShape: 1
+  alphaUsage: 1
+  alphaIsTransparency: 1
+  spriteTessellationDetail: -1
+  textureType: 8
+  textureShape: 1
+  singleChannelComponent: 0
+  flipbookRows: 1
+  flipbookColumns: 1
+  maxTextureSizeSet: 0
+  compressionQualitySet: 0
+  textureFormatSet: 0
+  ignorePngGamma: 0
+  applyGammaDecoding: 0
+  swizzle: 50462976
+  cookieLightType: 0
+  platformSettings:
+  - serializedVersion: 4
+    buildTarget: DefaultTexturePlatform
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 0
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: Standalone
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: WebGL
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: iOS
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 0
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  spriteSheet:
+    serializedVersion: 2
+    sprites:
+    - serializedVersion: 2
+      name: Futur_2_L3_0
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 281
+        width: 73
+        height: 32
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: e538d66b09cb1d5a0800000000000000
+      internalID: -6498205457596972194
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Futur_2_L3_1
+      rect:
+        serializedVersion: 2
+        x: 214
+        y: 295
+        width: 204
+        height: 29
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: fa9e5c71afe2aeca0800000000000000
+      internalID: -5986921102960105041
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Futur_2_L3_2
+      rect:
+        serializedVersion: 2
+        x: 464
+        y: 287
+        width: 17
+        height: 8
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 21507ca7999ac4ff0800000000000000
+      internalID: -50479019152964334
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Futur_2_L3_3
+      rect:
+        serializedVersion: 2
+        x: 482
+        y: 280
+        width: 167
+        height: 37
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 3ee847889f49cabd0800000000000000
+      internalID: -2617553483951993117
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Futur_2_L3_4
+      rect:
+        serializedVersion: 2
+        x: 790
+        y: 295
+        width: 204
+        height: 29
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: d01493cc276993e20800000000000000
+      internalID: 3330858819213934861
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Futur_2_L3_5
+      rect:
+        serializedVersion: 2
+        x: 1040
+        y: 287
+        width: 17
+        height: 8
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 6c3a15382d8c01110800000000000000
+      internalID: 1229703504743998406
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Futur_2_L3_6
+      rect:
+        serializedVersion: 2
+        x: 1058
+        y: 280
+        width: 167
+        height: 37
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 801bd1a8af8d87a40800000000000000
+      internalID: 5366277526582571272
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Futur_2_L3_7
+      rect:
+        serializedVersion: 2
+        x: 1366
+        y: 295
+        width: 204
+        height: 29
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 3a8b354b88cf0cf40800000000000000
+      internalID: 5746870788595890339
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Futur_2_L3_8
+      rect:
+        serializedVersion: 2
+        x: 1616
+        y: 287
+        width: 17
+        height: 8
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 65c1ac61b2ac09370800000000000000
+      internalID: 8327377997422795862
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Futur_2_L3_9
+      rect:
+        serializedVersion: 2
+        x: 1634
+        y: 280
+        width: 94
+        height: 37
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: d4a2f9d51bd182b60800000000000000
+      internalID: 7721454208743844429
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Futur_2_L3_10
+      rect:
+        serializedVersion: 2
+        x: 47
+        y: 239
+        width: 226
+        height: 49
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 08392501e41175a70800000000000000
+      internalID: 8815533822580003712
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Futur_2_L3_11
+      rect:
+        serializedVersion: 2
+        x: 337
+        y: 254
+        width: 101
+        height: 36
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: f7c07875014d380f0800000000000000
+      internalID: -1115815116004717441
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Futur_2_L3_12
+      rect:
+        serializedVersion: 2
+        x: 623
+        y: 239
+        width: 226
+        height: 49
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: fc6d811a1cf517f40800000000000000
+      internalID: 5724461886600697551
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Futur_2_L3_13
+      rect:
+        serializedVersion: 2
+        x: 913
+        y: 254
+        width: 101
+        height: 36
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: ec9259e12c0657a60800000000000000
+      internalID: 7671143927148521934
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Futur_2_L3_14
+      rect:
+        serializedVersion: 2
+        x: 1199
+        y: 239
+        width: 226
+        height: 49
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 8499ddafe07ddf420800000000000000
+      internalID: 2665523013811542344
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Futur_2_L3_15
+      rect:
+        serializedVersion: 2
+        x: 1489
+        y: 254
+        width: 101
+        height: 36
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 585a2dcab80f205e0800000000000000
+      internalID: -1944727606380026491
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Futur_2_L3_16
+      rect:
+        serializedVersion: 2
+        x: 33
+        y: 247
+        width: 14
+        height: 6
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 95fe89cff1631c0b0800000000000000
+      internalID: -5710223341519311015
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Futur_2_L3_17
+      rect:
+        serializedVersion: 2
+        x: 609
+        y: 247
+        width: 14
+        height: 6
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 5971858af54308730800000000000000
+      internalID: 3999254054555883413
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Futur_2_L3_18
+      rect:
+        serializedVersion: 2
+        x: 1185
+        y: 247
+        width: 14
+        height: 6
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 2928ac342d071be00800000000000000
+      internalID: 1058751435791565458
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    outline: []
+    customData: 
+    physicsShape: []
+    bones: []
+    spriteID: 5e97eb03825dee720800000000000000
+    internalID: 0
+    vertices: []
+    indices: 
+    edges: []
+    weights: []
+    secondaryTextures: []
+    spriteCustomMetadata:
+      entries: []
+    nameFileIdTable:
+      Futur_2_L3_0: -6498205457596972194
+      Futur_2_L3_1: -5986921102960105041
+      Futur_2_L3_10: 8815533822580003712
+      Futur_2_L3_11: -1115815116004717441
+      Futur_2_L3_12: 5724461886600697551
+      Futur_2_L3_13: 7671143927148521934
+      Futur_2_L3_14: 2665523013811542344
+      Futur_2_L3_15: -1944727606380026491
+      Futur_2_L3_16: -5710223341519311015
+      Futur_2_L3_17: 3999254054555883413
+      Futur_2_L3_18: 1058751435791565458
+      Futur_2_L3_2: -50479019152964334
+      Futur_2_L3_3: -2617553483951993117
+      Futur_2_L3_4: 3330858819213934861
+      Futur_2_L3_5: 1229703504743998406
+      Futur_2_L3_6: 5366277526582571272
+      Futur_2_L3_7: 5746870788595890339
+      Futur_2_L3_8: 8327377997422795862
+      Futur_2_L3_9: 7721454208743844429
+  mipmapLimitGroupName: 
+  pSDRemoveMatte: 0
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 

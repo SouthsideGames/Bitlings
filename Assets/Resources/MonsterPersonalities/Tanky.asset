@@ -24,4 +24,7 @@ MonoBehaviour:
   badMatchDefendBonus: 3
   badMatchRunBonus: 1
   eachTurnAttackBonus: 0
-  description: High durability; refuses to flee.
+  eachTurnFocusPenalty: 0
+  lowHpFocusPenalty: 2
+  chaoticOverrideChance: 0.25
+  description: Sustains high durability with consistent presence in the engagement.

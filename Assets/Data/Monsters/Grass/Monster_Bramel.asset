@@ -1,0 +1,56 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 32ffc26ed7d444b02a9332ce4279b117, type: 3}
+  m_Name: Monster_Bramel
+  m_EditorClassIdentifier: 
+  id: M-143
+  displayName: Bramel
+  type: 3
+  typeIcon: {fileID: 21300000, guid: 46bf3bbfcff674f17bd0ea06a23e1467, type: 3}
+  icon: {fileID: 21300000, guid: 407ebfeeb85654af9a2ef3acadc9350d, type: 3}
+  backIcon: {fileID: 21300000, guid: d930f9b122e204ee486c517b0dcfaa03, type: 3}
+  premiumIcon: {fileID: 21300000, guid: 541d62bfe96fa4e449daa6a41d481ad8, type: 3}
+  premiumBackIcon: {fileID: 21300000, guid: fa3598e408b3c4615a57d4c0351780a8, type: 3}
+  rarity: 1
+  canBeStarter: 0
+  starterWeight: 1
+  maxLevel: 50
+  baseHP: 66
+  baseAttack: 40
+  baseDefense: 48
+  baseSpeed: 24
+  hpRegenPerHour: 7.9
+  fatigueRatePerHour: 0.065
+  fatigueCooldownHours: 8.6
+  evolutionStage: 1
+  evolutionLevel: 10
+  evolutionForm: {fileID: 11400000, guid: 558e8ddf2fe5e42858fe50b7152272ae, type: 2}
+  uncatchable: 0
+  isBoss: 0
+  bossJobDebuffs: []
+  bossWeight: 1
+  spawnWeight: 4.5
+  jobSkill: 1
+  titleTrack: {fileID: 11400000, guid: c649384fafdfe40afb313b20a45d2610, type: 2}
+  defaultAlwaysOnTitles: []
+  ironTitles:
+  - {fileID: 11400000, guid: 6ad4157aacf2cb547878360fd54c3d1e, type: 2}
+  - {fileID: 11400000, guid: 8376b3915071cc448b1f948ff06b49c6, type: 2}
+  - {fileID: 11400000, guid: f0e53950f2ecd1346ada80856c0f01df, type: 2}
+  Personality: {fileID: 11400000, guid: d2d9ec6158abb40d2a7618ee71a9de06, type: 2}
+  basicAttackName: Vine Press
+  basicAttackPrefab: {fileID: 7147688047696861109, guid: 5287b95db783b4379b733d77af2cc458, type: 3}
+  basicAttackPrefabLifetime: 1
+  spawnSfx: {fileID: 8300000, guid: 708c224faa427ae46b81704508987350, type: 3}
+  baseMarketValue: 110
+  description: A leafy guardian that spreads broad fronds to shield itself while
+    pressing foes back with thick vines.

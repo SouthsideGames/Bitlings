@@ -22,4 +22,6 @@ public class IdleBattleConfigSO : ScriptableObject
 
     [Header("Feature Unlocks")]
     [Range(1f, 5f)] public float rewardBoostMultiplier = 1.5f;
+
+    
 }

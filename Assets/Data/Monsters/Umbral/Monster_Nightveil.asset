@@ -1,0 +1,57 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 32ffc26ed7d444b02a9332ce4279b117, type: 3}
+  m_Name: Monster_Nightveil
+  m_EditorClassIdentifier: 
+  id: M-061
+  displayName: Nightveil
+  type: 15
+  typeIcon: {fileID: 21300000, guid: a5efb49857c07455fa8503bc949b1aba, type: 3}
+  icon: {fileID: 21300000, guid: a618fa3d97dc1d748b13100ec48b1195, type: 3}
+  backIcon: {fileID: 21300000, guid: 8180f9b5f7875e14bb9e77baa1f263e2, type: 3}
+  premiumIcon: {fileID: 21300000, guid: f6787f5f0d9b53741a3d386a7dd12d0e, type: 3}
+  premiumBackIcon: {fileID: 21300000, guid: 5f5f6f1fa6d46bf4d82887c8d038b0e6, type: 3}
+  rarity: 6
+  canBeStarter: 0
+  starterWeight: 1
+  maxLevel: 50
+  baseHP: 160
+  baseAttack: 140
+  baseDefense: 70
+  baseSpeed: 30
+  hpRegenPerHour: 18.4
+  fatigueRatePerHour: 0.11
+  fatigueCooldownHours: 10.5
+  evolutionStage: 1
+  evolutionLevel: 12
+  evolutionForm: {fileID: 0}
+  uncatchable: 1
+  isBoss: 1
+  bossJobDebuffs: []
+  bossWeight: 1
+  spawnWeight: 0
+  jobSkill: 1
+  titleTrack: {fileID: 0}
+  defaultAlwaysOnTitles: []
+  ironTitles:
+  - {fileID: 11400000, guid: fe67a4187cf7add4289106de72912f92, type: 2}
+  - {fileID: 11400000, guid: a371bc492e827c94797e3461c1213414, type: 2}
+  - {fileID: 11400000, guid: fbfad8754c66b3b4b9d57fb2e132f975, type: 2}
+  - {fileID: 11400000, guid: 686cc9ea05cccd847bbcccd5ddd3472c, type: 2}
+  Personality: {fileID: 11400000, guid: 48288e9e78c65453781f793c8df03e90, type: 2}
+  basicAttackName: Veil Annihilation
+  basicAttackPrefab: {fileID: 1424259663161806981, guid: 649dec1e4858f634eac689cf6599ea92, type: 3}
+  basicAttackPrefabLifetime: 1
+  spawnSfx: {fileID: 8300000, guid: 15e1eb31022059341aa28d6c22459437, type: 3}
+  baseMarketValue: 826
+  description: A boss-class umbral entity that tears through reality itself, phasing
+    between shadows as it delivers devastating, unavoidable strikes.

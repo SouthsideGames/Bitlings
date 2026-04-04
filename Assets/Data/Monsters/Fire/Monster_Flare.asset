@@ -1,0 +1,56 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 32ffc26ed7d444b02a9332ce4279b117, type: 3}
+  m_Name: Monster_Flare
+  m_EditorClassIdentifier: 
+  id: M-168
+  displayName: Flare
+  type: 1
+  typeIcon: {fileID: 21300000, guid: d552cfb27992e494694a52b7e3578364, type: 3}
+  icon: {fileID: 21300000, guid: d84531071b55b4bd794e064eb6f5dd3a, type: 3}
+  backIcon: {fileID: 21300000, guid: b6a08b1dc617a44988f66e2c3f7c5044, type: 3}
+  premiumIcon: {fileID: 21300000, guid: 61327a0635d9d4c07a3a21cfd2f5b5e4, type: 3}
+  premiumBackIcon: {fileID: 21300000, guid: 7255a8424af5e469bb4147d197bf7338, type: 3}
+  rarity: 2
+  canBeStarter: 0
+  starterWeight: 1
+  maxLevel: 50
+  baseHP: 62
+  baseAttack: 78
+  baseDefense: 28
+  baseSpeed: 32
+  hpRegenPerHour: 4.8
+  fatigueRatePerHour: 0.11
+  fatigueCooldownHours: 7.2
+  evolutionStage: 1
+  evolutionLevel: 28
+  evolutionForm: {fileID: 11400000, guid: 1f6434f3d3f2541ee8f5b77d21d695b9, type: 2}
+  uncatchable: 0
+  isBoss: 0
+  bossJobDebuffs: []
+  bossWeight: 1
+  spawnWeight: 2
+  jobSkill: 1.08
+  titleTrack: {fileID: 11400000, guid: 9b8d12c766d1f4d3b83d16dc7696aee6, type: 2}
+  defaultAlwaysOnTitles: []
+  ironTitles:
+  - {fileID: 11400000, guid: b97581b09000e96408b9b750d19c518a, type: 2}
+  - {fileID: 11400000, guid: f2432a291c459974d91527dcf9838b2c, type: 2}
+  - {fileID: 11400000, guid: e1aa94e2540df9a4b9e2e90c84ec8c3f, type: 2}
+  - {fileID: 11400000, guid: c4ad4c8d61acdc54dac3f9f88f1891bf, type: 2}
+  Personality: {fileID: 11400000, guid: 3733616cf9f0f4dddb5bee9d6ba2952f, type: 2}
+  basicAttackName: Flare Slice
+  basicAttackPrefab: {fileID: 126357351932672970, guid: 9581774b44a93f24299791825657e6c2, type: 3}
+  basicAttackPrefabLifetime: 1
+  spawnSfx: {fileID: 8300000, guid: e2403e89466f44d46b9270523bf3ba5d, type: 3}
+  baseMarketValue: 165
+  description: A fierce fire hunter that lashes out with sweeping arcs of flame.

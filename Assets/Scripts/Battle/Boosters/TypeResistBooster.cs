@@ -1,20 +1,18 @@
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
-using System.Reflection;
 
 public class TypeResistBooster : MonoBehaviour
 {
     [Header("UI")]
     [SerializeField] private Button boosterBtn;
-    [SerializeField] private Image boosterRadial;             // shows ACTIVE duration
+    [SerializeField] private Image boosterRadial;
     [SerializeField] private TextMeshProUGUI boosterCountLabel;
 
     [Header("Cost")]
     [SerializeField] private bool consumeItem = true;
 
-    private const float UI_REFRESH = 0.15f;
-    private float _nextRefresh;
+    private Coroutine _activeLoop;
 
     void OnEnable()
     {
@@ -27,25 +25,34 @@ public class TypeResistBooster : MonoBehaviour
 
         if (boosterRadial) boosterRadial.fillAmount = 0f;
 
-        GameEvents.OnResourcesChanged += RefreshCounts;
-        RefreshCounts();
-        RefreshInteractability(true);
+        GameEvents.OnResourcesChanged += HandleRefresh;
+        GameEvents.OnBoostersChanged += HandleRefresh;
+
+        RefreshAll(hard: true);
+        EnsureActiveLoop();
     }
 
     void OnDisable()
     {
-        GameEvents.OnResourcesChanged -= RefreshCounts;
+        GameEvents.OnResourcesChanged -= HandleRefresh;
+        GameEvents.OnBoostersChanged -= HandleRefresh;
+
         if (boosterBtn) boosterBtn.onClick.RemoveAllListeners();
+
+        StopActiveLoop();
         if (boosterRadial) boosterRadial.fillAmount = 0f;
     }
 
-    void Update()
+    private void HandleRefresh()
     {
-        if (Time.unscaledTime >= _nextRefresh)
-        {
-            _nextRefresh = Time.unscaledTime + UI_REFRESH;
-            RefreshInteractability(false);
-        }
+        RefreshAll(hard: false);
+        EnsureActiveLoop();
+    }
+
+    private void RefreshAll(bool hard)
+    {
+        RefreshCounts();
+        RefreshInteractability();
     }
 
     private void RefreshCounts()
@@ -54,23 +61,71 @@ public class TypeResistBooster : MonoBehaviour
         if (boosterCountLabel) boosterCountLabel.text = $"{count}";
     }
 
-    private void RefreshInteractability(bool hard)
+    private void RefreshInteractability()
     {
         var ctrl = BattleBoosterController.I;
-        bool can = false;
 
-        if (ctrl)
+        bool can = ctrl && ctrl.CanUse(BoosterType.TypeResist, out _);
+        bool haveItem = !consumeItem || ResourceBank.Get(ResourceType.PPEPermit) > 0;
+
+        if (boosterBtn) boosterBtn.interactable = can && haveItem;
+
+        if (boosterRadial && ctrl != null)
         {
-            can = ctrl.CanUse(BoosterType.TypeResist, out _);
-
-            // Active duration on radial (remaining / max)
             var (rem, max) = ctrl.Active(BoosterType.TypeResist);
-            if (boosterRadial)
-                boosterRadial.fillAmount = (rem > 0 && max > 0) ? (float)rem / max : 0f;
+            boosterRadial.fillAmount = (rem > 0 && max > 0) ? (float)rem / max : 0f;
+        }
+        else if (boosterRadial)
+        {
+            boosterRadial.fillAmount = 0f;
+        }
+    }
+
+    private void EnsureActiveLoop()
+    {
+        var ctrl = BattleBoosterController.I;
+        if (ctrl == null)
+        {
+            StopActiveLoop();
+            return;
         }
 
-        bool haveItem = !consumeItem || ResourceBank.Get(ResourceType.PPEPermit) > 0;
-        if (boosterBtn) boosterBtn.interactable = can && haveItem;
+        var (rem, max) = ctrl.Active(BoosterType.TypeResist);
+        bool isActive = rem > 0 && max > 0;
+
+        if (isActive && _activeLoop == null)
+            _activeLoop = StartCoroutine(ActiveRadialLoop());
+        else if (!isActive && _activeLoop != null)
+            StopActiveLoop();
+    }
+
+    private System.Collections.IEnumerator ActiveRadialLoop()
+    {
+        while (true)
+        {
+            var ctrl = BattleBoosterController.I;
+            if (ctrl == null) break;
+
+            var (rem, max) = ctrl.Active(BoosterType.TypeResist);
+            if (rem <= 0 || max <= 0) break;
+
+            if (boosterRadial)
+                boosterRadial.fillAmount = (float)rem / max;
+
+            yield return new WaitForSecondsRealtime(0.10f);
+        }
+
+        _activeLoop = null;
+        RefreshInteractability();
+    }
+
+    private void StopActiveLoop()
+    {
+        if (_activeLoop != null)
+        {
+            StopCoroutine(_activeLoop);
+            _activeLoop = null;
+        }
     }
 
     private void OnPress()
@@ -82,67 +137,40 @@ public class TypeResistBooster : MonoBehaviour
             return;
         }
 
-        // Pre-check
         if (!ctrl.CanUse(BoosterType.TypeResist, out var why))
         {
             BattleLogger.Log(string.IsNullOrEmpty(why) ? "Cannot use Type Resist right now." : why, LogScope.Battle);
-            RefreshInteractability(true);
+            RefreshAll(true);
             return;
         }
 
-        // Spend Sigil if required
         bool spent = true;
         if (consumeItem)
         {
             spent = ResourceBank.TrySpend(ResourceType.PPEPermit, 1);
             if (!spent)
             {
-                RefreshCounts();
-                RefreshInteractability(true);
+                RefreshAll(true);
                 return;
             }
         }
 
-        // Try to activate (support multiple controller method names)
-        bool used = false;
-        var t = ctrl.GetType();
-        var bm = Object.FindFirstObjectByType<BattleManager>(); // optional if controller accepts it
+        bool used = ctrl.TryUseFromUI(BoosterType.TypeResist, out var msg);
 
-        used = TryInvokeBool(t, ctrl, "UseFromUI", new object[] { BoosterType.TypeResist, bm }) ||
-               TryInvokeBool(t, ctrl, "UseFromUI", new object[] { BoosterType.TypeResist })     ||
-               TryInvokeBool(t, ctrl, "Use",       new object[] { BoosterType.TypeResist })     ||
-               TryInvokeBool(t, ctrl, "TryUse",    new object[] { BoosterType.TypeResist })     ||
-               TryInvokeVoidThenTrue(t, ctrl, "Activate", new object[] { BoosterType.TypeResist });
-
-        // Refund if failed after spending
         if (!used && consumeItem && spent)
         {
             ResourceBank.Add(ResourceType.PPEPermit, 1);
-            BattleLogger.Log("Type Resist failed to activate; Sigil refunded.", LogScope.Battle);
+            BattleLogger.Log("Type Resist failed to activate; permit refunded.", LogScope.Battle);
         }
         else if (used)
         {
+            if (!string.IsNullOrEmpty(msg))
+                BattleLogger.Log(msg, LogScope.Battle);
+
             GameEvents.OnResourcesChanged?.Invoke();
         }
 
-        RefreshCounts();
-        RefreshInteractability(true);
-    }
-
-    private bool TryInvokeBool(System.Type t, object instance, string method, object[] args)
-    {
-        var m = t.GetMethod(method, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
-        if (m == null) return false;
-        var ret = m.Invoke(instance, args);
-        if (ret is bool b) return b;
-        return true; // treat void/other returns as success
-    }
-
-    private bool TryInvokeVoidThenTrue(System.Type t, object instance, string method, object[] args)
-    {
-        var m = t.GetMethod(method, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
-        if (m == null) return false;
-        m.Invoke(instance, args);
-        return true;
+        RefreshAll(true);
+        EnsureActiveLoop();
     }
 }

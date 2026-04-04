@@ -13,8 +13,8 @@ MonoBehaviour:
   m_Name: RecycleRecipe_R004
   m_EditorClassIdentifier: 
   recipeId: R-004
-  displayName: Sigil Grind
+  displayName: Permit Recycling
   fromType: 5
-  fromAmount: 3
-  toType: 8
-  toAmount: 5
+  fromAmount: 2
+  toType: 4
+  toAmount: 8

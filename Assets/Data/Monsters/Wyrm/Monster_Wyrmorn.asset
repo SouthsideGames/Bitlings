@@ -1,0 +1,57 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 32ffc26ed7d444b02a9332ce4279b117, type: 3}
+  m_Name: Monster_Wyrmorn
+  m_EditorClassIdentifier: 
+  id: M-104
+  displayName: Wyrmorn
+  type: 14
+  typeIcon: {fileID: 21300000, guid: 3934876669845455994cef6f6ee793af, type: 3}
+  icon: {fileID: 21300000, guid: db29581c0355c409ab4201b632cc8b82, type: 3}
+  backIcon: {fileID: 21300000, guid: 4577ea7120ef7409dba8aa0ffee0ef19, type: 3}
+  premiumIcon: {fileID: 21300000, guid: 1a68e4b95f67a4163ae5132c65dadf47, type: 3}
+  premiumBackIcon: {fileID: 21300000, guid: 73fdc3fb4af674bdfa837b691712993a, type: 3}
+  rarity: 2
+  canBeStarter: 0
+  starterWeight: 1
+  maxLevel: 50
+  baseHP: 70
+  baseAttack: 70
+  baseDefense: 34
+  baseSpeed: 28
+  hpRegenPerHour: 6.4
+  fatigueRatePerHour: 0.2
+  fatigueCooldownHours: 8.8
+  evolutionStage: 2
+  evolutionLevel: 12
+  evolutionForm: {fileID: 0}
+  uncatchable: 0
+  isBoss: 0
+  bossJobDebuffs: []
+  bossWeight: 1
+  spawnWeight: 2
+  jobSkill: 1.08
+  titleTrack: {fileID: 11400000, guid: 930ea729706a34baaae01a6cb2458cf1, type: 2}
+  defaultAlwaysOnTitles: []
+  ironTitles:
+  - {fileID: 11400000, guid: 06d71b7f47579574088aa3edba194444, type: 2}
+  - {fileID: 11400000, guid: 9fdb8ede4e4c461459e738834978e6ed, type: 2}
+  - {fileID: 11400000, guid: 686cc9ea05cccd847bbcccd5ddd3472c, type: 2}
+  - {fileID: 11400000, guid: efe87ef2f274d994e9a19e6cc1841073, type: 2}
+  Personality: {fileID: 11400000, guid: 1bd4805a0ba8f476b9f7b480b0cbb31d, type: 2}
+  basicAttackName: Inferno Dive
+  basicAttackPrefab: {fileID: 7446462880551948952, guid: 18696ea6ccccd974d902d9304c2b6b7e, type: 3}
+  basicAttackPrefabLifetime: 1
+  spawnSfx: {fileID: 8300000, guid: c69f3b426829d804d86c23bd0da73c39, type: 3}
+  baseMarketValue: 167
+  description: A hardened wyrm that crashes into foes with explosive force thriving
+    on chaos and sustained aggression.

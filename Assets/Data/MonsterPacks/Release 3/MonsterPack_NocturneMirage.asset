@@ -1,0 +1,28 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f048558a82b7c2147ab6a4d2677278ea, type: 3}
+  m_Name: MonsterPack_NocturneMirage
+  m_EditorClassIdentifier: 
+  id: MP-022
+  displayName: Nocturne Mirage
+  description: Specter Bitlings disrupt opposing actions through evasion and misdirection,
+    maintaining control through unpredictability.
+  icon: {fileID: 21300000, guid: 601fbbefce456f24cb86ac818be859fb, type: 3}
+  rarityLabel: Rare
+  baseCost: 27
+  costType: 17
+  saleOff01: 0
+  unlockByDefault: 0
+  monsters:
+  - {fileID: 11400000, guid: 076294aa8ea6647248c16a83d18b8c94, type: 2}
+  - {fileID: 11400000, guid: 0f5525106381e4d3db6cd0c9337d508f, type: 2}
+  - {fileID: 11400000, guid: 89a7bc4adb8ad4a1d86e78587f0ed41e, type: 2}

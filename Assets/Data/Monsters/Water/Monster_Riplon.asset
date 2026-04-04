@@ -1,0 +1,57 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 32ffc26ed7d444b02a9332ce4279b117, type: 3}
+  m_Name: Monster_Riplon
+  m_EditorClassIdentifier: 
+  id: M-012
+  displayName: Riplon
+  type: 2
+  typeIcon: {fileID: 21300000, guid: dd2adea89cda84ec4a589a6d1d5da1ae, type: 3}
+  icon: {fileID: 21300000, guid: 2e1f93dec3f297647b880d3da65be203, type: 3}
+  backIcon: {fileID: 21300000, guid: 086909d0a156fae44bb14fe83c5ecdca, type: 3}
+  premiumIcon: {fileID: 21300000, guid: ce695ca06beec48d09ed4dedce3beb9e, type: 3}
+  premiumBackIcon: {fileID: 21300000, guid: 3a8861b0a320f43d4b075989cff2ba9a, type: 3}
+  rarity: 1
+  canBeStarter: 0
+  starterWeight: 1
+  maxLevel: 50
+  baseHP: 64
+  baseAttack: 48
+  baseDefense: 36
+  baseSpeed: 22
+  hpRegenPerHour: 7
+  fatigueRatePerHour: 0.077
+  fatigueCooldownHours: 8.2
+  evolutionStage: 2
+  evolutionLevel: 22
+  evolutionForm: {fileID: 11400000, guid: 35cbbe44d809f8041b67c3feb3a0e32a, type: 2}
+  uncatchable: 0
+  isBoss: 0
+  bossJobDebuffs: []
+  bossWeight: 1
+  spawnWeight: 4.5
+  jobSkill: 1
+  titleTrack: {fileID: 11400000, guid: 4d1ba4f728cde43d19992149600440d0, type: 2}
+  defaultAlwaysOnTitles: []
+  ironTitles:
+  - {fileID: 11400000, guid: 8ea99f345957e9a43bda0b0ff311cd59, type: 2}
+  - {fileID: 11400000, guid: 3440dff927958f142ab795273ab27580, type: 2}
+  - {fileID: 11400000, guid: 13e0b9e8b7fc08847a05f89d3f7b6a17, type: 2}
+  - {fileID: 11400000, guid: e80217aa5b172e648949cf787505f387, type: 2}
+  Personality: {fileID: 11400000, guid: a31b270cc22594368bd4541ee042d278, type: 2}
+  basicAttackName: Current Bash
+  basicAttackPrefab: {fileID: 7604281169824035565, guid: 4065dc449fe6fd94eb31f0e575b94514, type: 3}
+  basicAttackPrefabLifetime: 1
+  spawnSfx: {fileID: 8300000, guid: 41d43b49d8cd9d8419d88cab506e97d4, type: 3}
+  baseMarketValue: 105
+  description: Its body hardens with flowing armor, striking back harder as battles
+    drag on.

@@ -1,0 +1,29 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f048558a82b7c2147ab6a4d2677278ea, type: 3}
+  m_Name: MonsterPack_FungalDominion
+  m_EditorClassIdentifier: 
+  id: MP-019
+  displayName: Fungal Dominion
+  description: Grass and Corrupt Bitlings spread steadily through regeneration and
+    corruption, applying consistent pressure over time.
+  icon: {fileID: 21300000, guid: 896719af956323147a689be43319f06a, type: 3}
+  rarityLabel: Uncommon
+  baseCost: 20
+  costType: 17
+  saleOff01: 0
+  unlockByDefault: 0
+  monsters:
+  - {fileID: 11400000, guid: b7bb19dc5bfc244e389087530412ccfd, type: 2}
+  - {fileID: 11400000, guid: 558e8ddf2fe5e42858fe50b7152272ae, type: 2}
+  - {fileID: 11400000, guid: 71b3165fa96174f08a82e7d673540db4, type: 2}
+  - {fileID: 11400000, guid: ac14a153ca8164a35a30d1530b2299a6, type: 2}

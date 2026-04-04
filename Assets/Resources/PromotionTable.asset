@@ -1,0 +1,118 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 94d11e197564b4b36aa6a2bf9c7b599e, type: 3}
+  m_Name: PromotionTable
+  m_EditorClassIdentifier: 
+  maxRank: 20
+  ranks:
+  - rank: 1
+    totalXpToReach: 0
+    displayName: BRN Intern
+    rewardSummary: 
+  - rank: 2
+    totalXpToReach: 50
+    displayName: Assistant
+    rewardSummary: "Credits +200 \u2022 Energy +10 \u2022 Material +15 \u2022 GrowthCore
+      +2"
+  - rank: 3
+    totalXpToReach: 120
+    displayName: Courier
+    rewardSummary: "Credits +250 \u2022 Energy +12 \u2022 Material +20 \u2022 Medkit
+      +2 \u2022 TrainingVoucher +1"
+  - rank: 4
+    totalXpToReach: 210
+    displayName: Operator
+    rewardSummary: "Credits +300 \u2022 Energy +14 \u2022 Material +25 \u2022 GrowthCore
+      +2 \u2022 PPEPermit +1"
+  - rank: 5
+    totalXpToReach: 320
+    displayName: Supervisor
+    rewardSummary: "Credits +350 \u2022 Energy +16 \u2022 Material +30 \u2022 Medkit
+      +3 \u2022 PackVoucher +25 "
+  - rank: 6
+    totalXpToReach: 450
+    displayName: Trainer
+    rewardSummary: "Credits +350 \u2022 Energy +16 \u2022 Material +30 \u2022 WorkOrder
+      +1"
+  - rank: 7
+    totalXpToReach: 600
+    displayName: Specialist
+    rewardSummary: "Credits +400 \u2022 Energy +18 \u2022 Material +35 \u2022 Flyer
+      +1"
+  - rank: 8
+    totalXpToReach: 770
+    displayName: Compliance Officer
+    rewardSummary: "Credits +450 \u2022 Energy +20 \u2022 Material +40 \u2022 TrainingVoucher
+      +1 \u2022 PPEPermit +1"
+  - rank: 9
+    totalXpToReach: 960
+    displayName: Operations Lead
+    rewardSummary: "Credits +500 \u2022 Energy +22 \u2022 Material +45 \u2022 WorkOrder
+      +1 \u2022 EfficiencyVoucher +1"
+  - rank: 10
+    totalXpToReach: 1170
+    displayName: Site Director
+    rewardSummary: "Credits +600 \u2022 Energy +26 \u2022 Material +55 \u2022 GrowthCore
+      +3 \u2022 Medkit +3 \u2022 WellnessVoucher +1 \u2022 Unlock Synergy\n"
+  - rank: 11
+    totalXpToReach: 1400
+    displayName: Project Lead
+    rewardSummary: "Credits +600 \u2022 Energy +26 \u2022 Material +55 \u2022 WorkOrder
+      +2 \u2022 Flyer +2"
+  - rank: 12
+    totalXpToReach: 1650
+    displayName: Program Lead
+    rewardSummary: "Credits +650 \u2022 Energy +28 \u2022 Material +60 \u2022 TrainingVoucher
+      +2 \u2022 PPEPermit +2"
+  - rank: 13
+    totalXpToReach: 1920
+    displayName: Department Head
+    rewardSummary: "Credits +700 \u2022 Energy +30 \u2022 Material +70 \u2022 WellnessVoucher
+      +2 \u2022 EfficiencyVoucher +1 \u2022 Favor +1"
+  - rank: 14
+    totalXpToReach: 2210
+    displayName: Regional Manager
+    rewardSummary: "Credits +750 \u2022 Energy +32 \u2022 Material +80 \u2022 GrowthCore
+      +4 \u2022 Medkit +4"
+  - rank: 15
+    totalXpToReach: 2520
+    displayName: Operations Director
+    rewardSummary: "Credits +900 \u2022 Energy +36 \u2022 Material +95 \u2022 TrainingVoucher
+      +3 \u2022 WorkOrder +2 \u2022 WellnessVoucher +2 \u2022 Favor +2 \u2022 Unlock
+      Difficulty"
+  - rank: 16
+    totalXpToReach: 2850
+    displayName: Senior Director
+    rewardSummary: "Credits +900 \u2022 Energy +36 \u2022 Material +95 \u2022 PPEPermit
+      +3 \u2022 Flyer +2 \u2022 EfficiencyVoucher +2"
+  - rank: 17
+    totalXpToReach: 3200
+    displayName: Operations Director
+    rewardSummary: "Credits +1000 \u2022 Energy +40 \u2022 Material +110 \u2022 GrowthCore
+      +5 \u2022 Medkit +5"
+  - rank: 18
+    totalXpToReach: 3570
+    displayName: Regional Director
+    rewardSummary: "Credits +1100 \u2022 Energy +44 \u2022 Material +125 \u2022 TrainingVoucher
+      +4 \u2022 WorkOrder +3 \u2022 WellnessVoucher +3"
+  - rank: 19
+    totalXpToReach: 3960
+    displayName: Executive Director
+    rewardSummary: "Credits +1200 \u2022 Energy +48 \u2022 Material +140 \u2022 PPEPermit
+      +4 \u2022 EfficiencyVoucher +3 \u2022 Favor +3"
+  - rank: 20
+    totalXpToReach: 4370
+    displayName: Chief Executive
+    rewardSummary: "Credits +1500 \u2022 Energy +60 \u2022 Material +180 \u2022 GrowthCore
+      +6 \u2022 Medkit +6 \u2022 TrainingVoucher +5 \u2022 PPEPermit +5 \u2022 WorkOrder
+      +4 \u2022 WellnessVoucher +4 \u2022 EfficiencyVoucher +4 \u2022 Favor +4 \u2022
+      Unlock Executive Trial"

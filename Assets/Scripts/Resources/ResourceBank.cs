@@ -6,16 +6,20 @@ public static class ResourceBank
 {
     static List<int> L => SaveManager.Data.resourceCounts;
 
+    // Energy may overcap encounter max, but never this absolute hard cap.
+    public const int EnergyHardCap = 5000;
+
     // ─────────────────────────────────────────────────────────────
-    // Booster/Sigil cap settings
+    // Booster cap settings (PER-RESOURCE, not shared)
     // ─────────────────────────────────────────────────────────────
-    public const int BoosterCapTotal = 50;          // Combined cap
-    public const int BoosterOverflowcreditValue = 1;  // Overflow → credits
+    // Each booster resource (PPEPermit, TrainingVoucher, WellnessVoucher, EfficiencyVoucher)
+    // caps independently at this value.
+    public const int BoosterCapPerType = 50;
 
     private static readonly ResourceType[] BoosterTypes = new[]
     {
         ResourceType.PPEPermit,
-        ResourceType.TrainingVoucher_ATK,
+        ResourceType.TrainingVoucher,
         ResourceType.WellnessVoucher,
         ResourceType.EfficiencyVoucher
     };
@@ -34,12 +38,28 @@ public static class ResourceBank
     public static void EndBatch()
     {
         _batchDepth = Mathf.Max(0, _batchDepth - 1);
-        if (_batchDepth == 0 && _dirty)
+        if (_batchDepth <= 0)
         {
-            _dirty = false;
-            SaveManager.Save();
-            GameEvents.OnResourcesChanged?.Invoke();
+            if (_dirty)
+            {
+                _dirty = false;
+                SaveManager.Save();
+                GameEvents.OnResourcesChanged?.Invoke();
+            }
+            _batchDepth = 0;  // Defensive clamp prevents anomalies
         }
+    }
+
+    /// <summary>
+    /// Discard a batch without persisting. Resets depth and dirty flag
+    /// so that partial in-memory changes from a failed batch are not
+    /// flushed to disk by subsequent EndBatch or EmitChanged calls.
+    /// The caller is responsible for reloading authoritative state if needed.
+    /// </summary>
+    public static void CancelBatch()
+    {
+        _batchDepth = 0;
+        _dirty = false;
     }
 
     static void EmitChanged()
@@ -57,7 +77,7 @@ public static class ResourceBank
     // ─────────────────────────────────────────────────────────────
     // Core methods
     // ─────────────────────────────────────────────────────────────
-   public static void EnsureSize()
+    public static void EnsureSize()
     {
         SaveManager.LoadOrCreate();
         if (SaveManager.Data.resourceCounts == null)
@@ -70,8 +90,10 @@ public static class ResourceBank
 
         while (SaveManager.Data.resourceCounts.Count < need)
             SaveManager.Data.resourceCounts.Add(0);
-    }
 
+        // Safety migration: if any legacy save has energy above hard cap, convert overflow to credits once.
+        NormalizeEnergyIfNeeded();
+    }
 
     static int Index(ResourceType t) => (int)t;
 
@@ -88,23 +110,51 @@ public static class ResourceBank
         EnsureSize();
         int i = Index(t);
         if (i < 0 || i >= L.Count) return;
+
         int v = Mathf.Max(0, value);
-        if (L[i] == v) return;
+        bool changedCredits = false;
+
+        if (t == ResourceType.Energy && v > EnergyHardCap)
+        {
+            int overflow = v - EnergyHardCap;
+            v = EnergyHardCap;
+            changedCredits = TryAddCreditsRaw(overflow);
+        }
+
+        // Enforce per-type cap for boosters on Set as well (prevents UI confusion / bad saves)
+        if (IsCappedType(t))
+            v = Mathf.Min(v, BoosterCapPerType);
+
+        if (L[i] == v)
+        {
+            if (changedCredits) EmitChanged();
+            return;
+        }
         L[i] = v;
         EmitChanged();
     }
 
     // ─────────────────────────────────────────────────────────────
-    // Add logic (with booster/sigil cap enforcement)
+    // Add logic (with booster cap enforcement)
     // ─────────────────────────────────────────────────────────────
     public static void Add(ResourceType t, int delta)
     {
         if (delta == 0) return;
+
+        // World Events: optional resource gain multipliers (e.g., Voucher Drives).
+        // Apply ONLY to positive gains.
+        if (delta > 0 && WorldEventSystem.I != null)
+        {
+            float mul = 1f;
+            try { mul = WorldEventSystem.I.GetResourceGainMultiplier(t); } catch { mul = 1f; }
+            if (!Mathf.Approximately(mul, 1f))
+                delta = Mathf.CeilToInt(delta * Mathf.Max(0f, mul));
+        }
         EnsureSize();
         int i = Index(t);
         if (i < 0 || i >= L.Count) return;
 
-        // Handle boosters/sigils with cap
+        // Handle boosters with per-type cap
         if (IsCappedType(t))
         {
             AddCappedResource(t, delta);
@@ -115,8 +165,20 @@ public static class ResourceBank
         if (next < 0) next = 0;
         if (next > int.MaxValue) next = int.MaxValue;
 
+        bool changedCredits = false;
+        if (t == ResourceType.Energy && next > EnergyHardCap)
+        {
+            int overflow = (int)(next - EnergyHardCap);
+            next = EnergyHardCap;
+            changedCredits = TryAddCreditsRaw(overflow);
+        }
+
         int newVal = (int)next;
-        if (newVal == L[i]) return;
+        if (newVal == L[i])
+        {
+            if (changedCredits) EmitChanged();
+            return;
+        }
         L[i] = newVal;
 
         EmitChanged();
@@ -137,7 +199,7 @@ public static class ResourceBank
     }
 
     // ─────────────────────────────────────────────────────────────
-    // Booster/Sigil helpers
+    // Booster helpers
     // ─────────────────────────────────────────────────────────────
     static bool IsCappedType(ResourceType t)
     {
@@ -147,7 +209,40 @@ public static class ResourceBank
         return false;
     }
 
-    static int GetCappedTotal()
+    static void AddCappedResource(ResourceType t, int delta)
+    {
+        EnsureSize();
+        int i = Index(t);
+        if (i < 0 || i >= L.Count) return;
+
+        int cur = Mathf.Max(0, L[i]);
+
+        // Per-resource clamp
+        long next = (long)cur + delta;
+        if (next < 0) next = 0;
+        if (next > BoosterCapPerType) next = BoosterCapPerType;
+
+        int newVal = (int)next;
+        if (newVal == cur) return;
+
+        L[i] = newVal;
+        EmitChanged();
+    }
+
+    /// <summary>
+    /// Returns remaining capacity for the given booster type.
+    /// For non-capped resources, returns int.MaxValue.
+    /// </summary>
+    public static int GetBoosterRoom(ResourceType t)
+    {
+        if (!IsCappedType(t)) return int.MaxValue;
+        return Mathf.Max(0, BoosterCapPerType - Get(t));
+    }
+
+    /// <summary>
+    /// Optional: total count across all booster types (no longer used for caps).
+    /// </summary>
+    public static int GetTotalBoosters()
     {
         int total = 0;
         for (int i = 0; i < BoosterTypes.Length; i++)
@@ -155,28 +250,49 @@ public static class ResourceBank
         return total;
     }
 
-    static void AddCappedResource(ResourceType t, int delta)
+    static bool NormalizeEnergyIfNeeded()
     {
-        if (delta <= 0) return;
+        int energyIdx = Index(ResourceType.Energy);
+        if (energyIdx < 0 || energyIdx >= L.Count) return false;
 
-        int currentTotal = GetCappedTotal();
-        int room = BoosterCapTotal - currentTotal;
-        if (room < 0) room = 0;
+        int cur = Mathf.Max(0, L[energyIdx]);
+        if (cur <= EnergyHardCap)
+        {
+            if (L[energyIdx] < 0)
+            {
+                L[energyIdx] = 0;
+                EmitChanged();
+                return true;
+            }
+            return false;
+        }
 
-        int toAdd = Mathf.Min(delta, room);
-        int overflow = Mathf.Max(0, delta - toAdd);
+        int overflow = cur - EnergyHardCap;
+        L[energyIdx] = EnergyHardCap;
+        bool changedCredits = TryAddCreditsRaw(overflow);
 
-        int i = Index(t);
-        if (i < 0 || i >= L.Count) return;
+        // Energy always changed in this path.
+        if (overflow > 0 || changedCredits)
+            EmitChanged();
 
-        // Add what fits
-        if (toAdd > 0)
-            L[i] = Mathf.Clamp(L[i] + toAdd, 0, int.MaxValue);
+        return true;
+    }
 
-        // Overflow becomes credits
-        if (overflow > 0 && BoosterOverflowcreditValue > 0)
-            Add(ResourceType.Credits, overflow * BoosterOverflowcreditValue);
+    static bool TryAddCreditsRaw(int amount)
+    {
+        if (amount <= 0) return false;
 
-        EmitChanged();
+        int creditsIdx = Index(ResourceType.Credits);
+        if (creditsIdx < 0 || creditsIdx >= L.Count) return false;
+
+        long cur = Mathf.Max(0, L[creditsIdx]);
+        long next = cur + amount;
+        if (next > int.MaxValue) next = int.MaxValue;
+
+        int newVal = (int)next;
+        if (newVal == L[creditsIdx]) return false;
+
+        L[creditsIdx] = newVal;
+        return true;
     }
 }

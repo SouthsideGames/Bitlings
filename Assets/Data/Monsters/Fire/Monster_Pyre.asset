@@ -1,0 +1,56 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 32ffc26ed7d444b02a9332ce4279b117, type: 3}
+  m_Name: Monster_Pyre
+  m_EditorClassIdentifier: 
+  id: M-183
+  displayName: Pyre
+  type: 1
+  typeIcon: {fileID: 21300000, guid: d552cfb27992e494694a52b7e3578364, type: 3}
+  icon: {fileID: 21300000, guid: cab5f9213be46c84581e9747e4e67459, type: 3}
+  backIcon: {fileID: 21300000, guid: 1c317034aa1a3594f860fab07aba9c75, type: 3}
+  premiumIcon: {fileID: 21300000, guid: 1e5816941e7c1436c8aaa3ec665730ed, type: 3}
+  premiumBackIcon: {fileID: 21300000, guid: 91bcb319ca49a4b1dabb6244d2f46cc6, type: 3}
+  rarity: 2
+  canBeStarter: 0
+  starterWeight: 1
+  maxLevel: 50
+  baseHP: 70
+  baseAttack: 84
+  baseDefense: 30
+  baseSpeed: 36
+  hpRegenPerHour: 4.8
+  fatigueRatePerHour: 0.11
+  fatigueCooldownHours: 7.2
+  evolutionStage: 1
+  evolutionLevel: 12
+  evolutionForm: {fileID: 0}
+  uncatchable: 0
+  isBoss: 0
+  bossJobDebuffs: []
+  bossWeight: 1
+  spawnWeight: 2
+  jobSkill: 1.08
+  titleTrack: {fileID: 11400000, guid: 56110f7ff29a8466fbe4abccaf722ab5, type: 2}
+  defaultAlwaysOnTitles: []
+  ironTitles:
+  - {fileID: 11400000, guid: b97581b09000e96408b9b750d19c518a, type: 2}
+  - {fileID: 11400000, guid: f2432a291c459974d91527dcf9838b2c, type: 2}
+  - {fileID: 11400000, guid: e1aa94e2540df9a4b9e2e90c84ec8c3f, type: 2}
+  - {fileID: 11400000, guid: c4ad4c8d61acdc54dac3f9f88f1891bf, type: 2}
+  Personality: {fileID: 11400000, guid: 1bd4805a0ba8f476b9f7b480b0cbb31d, type: 2}
+  basicAttackName: Flame Rend
+  basicAttackPrefab: {fileID: 126357351932672970, guid: 9581774b44a93f24299791825657e6c2, type: 3}
+  basicAttackPrefabLifetime: 1
+  spawnSfx: {fileID: 8300000, guid: a806d14f99e2e694a9e4fee87ecf66a1, type: 3}
+  baseMarketValue: 182
+  description: tearing through enemies with savage bursts of flame.

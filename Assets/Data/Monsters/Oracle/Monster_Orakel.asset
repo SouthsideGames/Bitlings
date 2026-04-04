@@ -1,0 +1,55 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 32ffc26ed7d444b02a9332ce4279b117, type: 3}
+  m_Name: Monster_Orakel
+  m_EditorClassIdentifier: 
+  id: M-167
+  displayName: Orakel
+  type: 10
+  typeIcon: {fileID: 21300000, guid: fb4479ed54fe64621a9e7a735eeffad8, type: 3}
+  icon: {fileID: 21300000, guid: 7c9dd2a892d1c4087904c4f8ca1a2cef, type: 3}
+  backIcon: {fileID: 21300000, guid: 43acff5e462924123a55c7a5a1d4f225, type: 3}
+  premiumIcon: {fileID: 21300000, guid: e6e5fff78c03245e6b2710daaa8d90e2, type: 3}
+  premiumBackIcon: {fileID: 21300000, guid: a3be8ae6100fc498382dd35946365fd9, type: 3}
+  rarity: 2
+  canBeStarter: 0
+  starterWeight: 1
+  maxLevel: 50
+  baseHP: 78
+  baseAttack: 46
+  baseDefense: 54
+  baseSpeed: 22
+  hpRegenPerHour: 6.2
+  fatigueRatePerHour: 0.1
+  fatigueCooldownHours: 8.8
+  evolutionStage: 1
+  evolutionLevel: 12
+  evolutionForm: {fileID: 0}
+  uncatchable: 0
+  isBoss: 0
+  bossJobDebuffs: []
+  bossWeight: 1
+  spawnWeight: 2
+  jobSkill: 1.08
+  titleTrack: {fileID: 11400000, guid: 8a555e5fb94674dc9be27b39ed48f481, type: 2}
+  defaultAlwaysOnTitles: []
+  ironTitles:
+  - {fileID: 11400000, guid: c4ad4c8d61acdc54dac3f9f88f1891bf, type: 2}
+  - {fileID: 11400000, guid: 0b6a2e89cd8f4a844b7172a2d678be74, type: 2}
+  - {fileID: 11400000, guid: 68bbd476dbc9dea4485f609fc74327e0, type: 2}
+  Personality: {fileID: 11400000, guid: 8a3e57b479f5246d38cd9b71c25a27a1, type: 2}
+  basicAttackName: Foreseen Blow
+  basicAttackPrefab: {fileID: 7907104310462883121, guid: 37212b887c61ad84eacd87133a8a9e9d, type: 3}
+  basicAttackPrefabLifetime: 1
+  spawnSfx: {fileID: 8300000, guid: 53638f4565a2b544092f9a91c43106b8, type: 3}
+  baseMarketValue: 165
+  description: striking only when outcomes are certain.

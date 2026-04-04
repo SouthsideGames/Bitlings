@@ -1,0 +1,30 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f048558a82b7c2147ab6a4d2677278ea, type: 3}
+  m_Name: MonsterPack_TidesofRebirth
+  m_EditorClassIdentifier: 
+  id: MP-003
+  displayName: Tides of Rebirth
+  description: Guided by deep currents and foresight, these Water and Oracle Bitlings
+    emphasize patience and sustained strength over time.
+  icon: {fileID: 21300000, guid: 454580818ac0d164abf8e44922bc120d, type: 3}
+  rarityLabel: Common
+  baseCost: 6
+  costType: 17
+  saleOff01: 0
+  unlockByDefault: 0
+  monsters:
+  - {fileID: 11400000, guid: 24fd65e11ac1647158e24760efc3aeae, type: 2}
+  - {fileID: 11400000, guid: e0dd62b461b7d48ad8ff52fd7ff07b3d, type: 2}
+  - {fileID: 11400000, guid: 3f8c026b7294e4a8a83ac3db54221f69, type: 2}
+  - {fileID: 11400000, guid: 1e6b91e4edbe648f6a2e81c86ee12a71, type: 2}
+  - {fileID: 11400000, guid: 18f679ec40b0240b6989cae744ee26e1, type: 2}

@@ -1,9 +1,43 @@
+using System;
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
+using UnityEngine.SceneManagement;
 
 public class SettingsPanel : MonoBehaviour
 {
+    public enum SettingsSection
+    {
+        Audio,
+        Gameplay,
+        Notifications,
+        Seeds
+    }
+
+    [Header("Section Buttons")]
+    [SerializeField] private Button audioTabButton;
+    [SerializeField] private Button gameplayTabButton;
+    [SerializeField] private Button notificationsTabButton;
+    [SerializeField] private Button seedsTabButton;
+
+    [Header("Section Roots (Each root should contain its section UI)")]
+    [SerializeField] private GameObject audioSectionRoot;
+    [SerializeField] private GameObject gameplaySectionRoot;
+    [SerializeField] private GameObject notificationsSectionRoot;
+    [SerializeField] private GameObject seedsSectionRoot;
+
+    [Header("Section Fade")]
+    [SerializeField, Range(0f, 1f)] private float hiddenAlpha = 0f;
+    [SerializeField, Min(0f)] private float fadeDuration = 0.15f;
+    [SerializeField] private bool disableHiddenSections = true;
+
+    [Header("Default Section On Open")]
+    [SerializeField] private SettingsSection defaultSection = SettingsSection.Audio;
+
+    private SettingsSection _activeSection;
+    private bool _sectionWired;
+    private CanvasGroup _audioCg, _gameplayCg, _notificationsCg, _seedsCg;
+
     [Header("Volume Sliders (0..1)")]
     [SerializeField] private Slider masterSlider;
     [SerializeField] private Slider musicSlider;
@@ -15,65 +49,96 @@ public class SettingsPanel : MonoBehaviour
     [SerializeField] private Toggle muteSfxToggle;
 
     [Header("Gameplay")]
-    [Tooltip("If ON: duplicates auto-convert into Training XP; if OFF: keep duplicates.")]
-    [SerializeField] private Toggle autoConvertDupesToggle;
-
-    [Tooltip("If ON: the Battle Log scrolls to latest entry automatically.")]
     [SerializeField] private Toggle autoScrollLogToggle;
 
-    [Header("Seeds / RNG")]
-    [Tooltip("If ON, systems can prefer the custom seed (when unlocked).")]
-    [SerializeField] private Toggle useCustomSeedToggle;
+    [Header("Difficulty")]
+    [SerializeField] private TMP_Dropdown difficultyDropdown;
+    [SerializeField] private TextMeshProUGUI difficultyLockLabel;
 
-    [Tooltip("Custom random seed string (unlocked via Seeds_CustomInput).")]
+    [Header("Notifications")]
+    [SerializeField] private Toggle notificationsEnabledToggle;
+    [SerializeField] private Toggle notifyJobStorageFullToggle;
+    [SerializeField] private Toggle notifyEnergyFullToggle;
+    [SerializeField] private Toggle notifyBoostExpiryToggle;
+    [SerializeField] private Toggle notifyFallback24hToggle;
+
+    [Header("Seeds / RNG")]
     [SerializeField] private TMP_InputField seedInputField;
+    [SerializeField] private Button applyCustomSeedButton;      
 
     [Header("Daily Seed UI")]
-    [Tooltip("Displays the current daily seed (if unlocked).")]
     [SerializeField] private TextMeshProUGUI dailySeedLabel;
-
-    [Tooltip("Button to reroll today's daily seed (if reroll feature unlocked).")]
     [SerializeField] private Button rerollDailySeedButton;
+    [SerializeField] private TMP_Text rerollDailySeedButtonLabel;
 
     [Header("Buttons")]
+    [SerializeField] private Button mainMenuButton;
     [SerializeField] private Button resetButton;
-
-    [Tooltip("Optional: plays a SFX so the player can hear the current volume.")]
     [SerializeField] private Button testSfxButton;
 
-    bool _wired;
+    [Header("Reset Confirmation (NEW)")]
+    [SerializeField] private GameObject resetConfirmRoot;
+    [SerializeField] private Button resetConfirmCloseButton;
+    [SerializeField] private Button resetConfirmAgreeButton;
+
+    private bool _wired;
+    private string _rerollDefaultLabelText;
 
     void Awake()
     {
         if (masterSlider) { masterSlider.minValue = 0f; masterSlider.maxValue = 1f; }
-        if (musicSlider)  { musicSlider.minValue  = 0f; musicSlider.maxValue  = 1f; }
-        if (sfxSlider)    { sfxSlider.minValue    = 0f; sfxSlider.maxValue    = 1f; }
+        if (musicSlider) { musicSlider.minValue = 0f; musicSlider.maxValue = 1f; }
+        if (sfxSlider) { sfxSlider.minValue = 0f; sfxSlider.maxValue = 1f; }
 
         if (resetButton) resetButton.onClick.RemoveAllListeners();
         if (testSfxButton) testSfxButton.onClick.RemoveAllListeners();
-
         if (rerollDailySeedButton) rerollDailySeedButton.onClick.RemoveAllListeners();
+        if (applyCustomSeedButton) applyCustomSeedButton.onClick.RemoveAllListeners();
+
+        if (resetConfirmCloseButton) resetConfirmCloseButton.onClick.RemoveAllListeners();
+        if (resetConfirmAgreeButton) resetConfirmAgreeButton.onClick.RemoveAllListeners();
+
+        if (rerollDailySeedButtonLabel == null && rerollDailySeedButton)
+            rerollDailySeedButtonLabel = rerollDailySeedButton.GetComponentInChildren<TMP_Text>(true);
+
+        if (rerollDailySeedButtonLabel)
+            _rerollDefaultLabelText = rerollDailySeedButtonLabel.text;
+
+        CacheSectionCanvasGroups();
+        SetResetConfirmVisible(false);
     }
 
     void Start()
     {
         SafeSubscribe();
+        EnsureDifficultyDropdownOptions();
         Refresh();
+
+        WireSectionTabs();
+
+        _activeSection = defaultSection;
+        RefreshTabVisibility();
+        ShowSection(_activeSection, instant: true);
+
+        SetResetConfirmVisible(false);
     }
 
     void OnEnable()
     {
         SafeSubscribe();
+        EnsureDifficultyDropdownOptions();
         Refresh();
 
         if (resetButton)
         {
             resetButton.onClick.RemoveAllListeners();
-            resetButton.onClick.AddListener(() =>
-            {
-                var mgr = SettingsManager.I;
-                if (mgr != null) mgr.OnReset();
-            });
+            resetButton.onClick.AddListener(OpenResetConfirm);
+        }
+
+        if (mainMenuButton)
+        {
+            mainMenuButton.onClick.RemoveAllListeners();
+            mainMenuButton.onClick.AddListener(ReturnToMainMenu);
         }
 
         if (testSfxButton)
@@ -82,7 +147,7 @@ public class SettingsPanel : MonoBehaviour
             testSfxButton.onClick.AddListener(() =>
             {
                 if (AudioManager.I != null)
-                    AudioManager.I.PreviewSfx(); // uses Click by default
+                    AudioManager.I.PreviewSfx();
             });
         }
 
@@ -92,14 +157,29 @@ public class SettingsPanel : MonoBehaviour
             rerollDailySeedButton.onClick.AddListener(OnClickRerollDailySeed);
         }
 
+        if (applyCustomSeedButton)
+        {
+            applyCustomSeedButton.onClick.RemoveAllListeners();
+            applyCustomSeedButton.onClick.AddListener(OnClickApplyCustomSeed);
+        }
+
+        WireResetConfirmation();
         WireEvents();
 
-        // Listen for feature unlocks so we can reveal seed UI when unlocked
         if (FeatureUnlockManager.I != null)
         {
             FeatureUnlockManager.I.OnFeatureUnlocked -= HandleFeatureUnlocked;
             FeatureUnlockManager.I.OnFeatureUnlocked += HandleFeatureUnlocked;
         }
+
+        CacheSectionCanvasGroups();
+        WireSectionTabs();
+
+        if (!IsSectionValid(_activeSection)) _activeSection = defaultSection;
+        RefreshTabVisibility();
+        ShowSection(_activeSection, instant: true);
+
+        SetResetConfirmVisible(false);
     }
 
     void OnDisable()
@@ -108,27 +188,239 @@ public class SettingsPanel : MonoBehaviour
 
         if (resetButton) resetButton.onClick.RemoveAllListeners();
         if (testSfxButton) testSfxButton.onClick.RemoveAllListeners();
-
-        if (autoScrollLogToggle)
-            autoScrollLogToggle.onValueChanged.RemoveListener(OnAutoScrollChanged);
-
-        if (rerollDailySeedButton)
-            rerollDailySeedButton.onClick.RemoveAllListeners();
+        if (rerollDailySeedButton) rerollDailySeedButton.onClick.RemoveAllListeners();
+        if (applyCustomSeedButton) applyCustomSeedButton.onClick.RemoveAllListeners();
+        if (mainMenuButton) mainMenuButton.onClick.RemoveAllListeners();
+        if (resetConfirmCloseButton) resetConfirmCloseButton.onClick.RemoveAllListeners();
+        if (resetConfirmAgreeButton) resetConfirmAgreeButton.onClick.RemoveAllListeners();
 
         UnwireEvents();
 
         if (FeatureUnlockManager.I != null)
             FeatureUnlockManager.I.OnFeatureUnlocked -= HandleFeatureUnlocked;
+
+        UnwireSectionTabs();
+
+        SetResetConfirmVisible(false);
     }
 
-    // ---------------- Core ----------------
+    void WireResetConfirmation()
+    {
+        if (resetConfirmCloseButton)
+        {
+            resetConfirmCloseButton.onClick.RemoveAllListeners();
+            resetConfirmCloseButton.onClick.AddListener(CloseResetConfirm);
+        }
+
+        if (resetConfirmAgreeButton)
+        {
+            resetConfirmAgreeButton.onClick.RemoveAllListeners();
+            resetConfirmAgreeButton.onClick.AddListener(ConfirmResetAndProceed);
+        }
+    }
+
+    void OpenResetConfirm() => SetResetConfirmVisible(true);
+    void CloseResetConfirm() => SetResetConfirmVisible(false);
+
+    void ConfirmResetAndProceed()
+    {
+        SetResetConfirmVisible(false);
+        var mgr = SettingsManager.I;
+        if (mgr != null) mgr.OnReset();
+    }
+
+    void SetResetConfirmVisible(bool on)
+    {
+        if (!resetConfirmRoot) return;
+        resetConfirmRoot.SetActive(on);
+    }
+
+    void CacheSectionCanvasGroups()
+    {
+        _audioCg = EnsureCanvasGroup(audioSectionRoot);
+        _gameplayCg = EnsureCanvasGroup(gameplaySectionRoot);
+        _notificationsCg = EnsureCanvasGroup(notificationsSectionRoot);
+        _seedsCg = EnsureCanvasGroup(seedsSectionRoot);
+    }
+
+    CanvasGroup EnsureCanvasGroup(GameObject root)
+    {
+        if (!root) return null;
+        var cg = root.GetComponent<CanvasGroup>();
+        if (!cg) cg = root.AddComponent<CanvasGroup>();
+        return cg;
+    }
+
+    void WireSectionTabs()
+    {
+        if (_sectionWired) return;
+
+        if (audioTabButton)
+        {
+            audioTabButton.onClick.RemoveAllListeners();
+            audioTabButton.onClick.AddListener(() => ShowSection(SettingsSection.Audio));
+        }
+
+        if (gameplayTabButton)
+        {
+            gameplayTabButton.onClick.RemoveAllListeners();
+            gameplayTabButton.onClick.AddListener(() => ShowSection(SettingsSection.Gameplay));
+        }
+
+        if (notificationsTabButton)
+        {
+            notificationsTabButton.onClick.RemoveAllListeners();
+            notificationsTabButton.onClick.AddListener(() => ShowSection(SettingsSection.Notifications));
+        }
+
+        if (seedsTabButton)
+        {
+            seedsTabButton.onClick.RemoveAllListeners();
+            seedsTabButton.onClick.AddListener(() => ShowSection(SettingsSection.Seeds));
+        }
+
+        _sectionWired = true;
+    }
+
+    void UnwireSectionTabs()
+    {
+        if (!_sectionWired) return;
+
+        if (audioTabButton) audioTabButton.onClick.RemoveAllListeners();
+        if (gameplayTabButton) gameplayTabButton.onClick.RemoveAllListeners();
+        if (notificationsTabButton) notificationsTabButton.onClick.RemoveAllListeners();
+        if (seedsTabButton) seedsTabButton.onClick.RemoveAllListeners();
+
+        _sectionWired = false;
+    }
+
+    bool IsSectionValid(SettingsSection section)
+    {
+        return section switch
+        {
+            SettingsSection.Audio => audioSectionRoot != null,
+            SettingsSection.Gameplay => gameplaySectionRoot != null,
+            SettingsSection.Notifications => notificationsSectionRoot != null,
+            SettingsSection.Seeds => seedsSectionRoot != null,
+            _ => false
+        };
+    }
+
+    bool IsSeedsTabUnlocked()
+    {
+        var fm = FeatureUnlockManager.I;
+        if (fm == null) return false;
+
+        return fm.IsUnlocked(FeatureId.Seeds_DailyBasic)
+            || fm.IsUnlocked(FeatureId.Seeds_CustomInput)
+            || fm.IsUnlocked(FeatureId.Seeds_RerollDailyOnce);
+    }
+
+    void RefreshTabVisibility()
+    {
+        bool seedsUnlocked = IsSeedsTabUnlocked();
+
+        if (seedsTabButton)
+            seedsTabButton.gameObject.SetActive(seedsUnlocked);
+
+        if (!seedsUnlocked && _activeSection == SettingsSection.Seeds)
+            _activeSection = SettingsSection.Audio;
+    }
+
+        void EnsureDifficultyDropdownOptions()
+    {
+        if (!difficultyDropdown) return;
+
+        // Build options once (safe to call repeatedly).
+        if (difficultyDropdown.options == null || difficultyDropdown.options.Count != 3)
+        {
+            difficultyDropdown.ClearOptions();
+            difficultyDropdown.AddOptions(new System.Collections.Generic.List<string>
+            {
+                "Normal",
+                "Hard",
+                "Insane"
+            });
+        }
+    }
+
+public void ShowSection(SettingsSection section, bool instant = false)
+    {
+        if (section == SettingsSection.Seeds && !IsSeedsTabUnlocked())
+            section = SettingsSection.Audio;
+
+        _activeSection = section;
+
+        bool doInstant = instant || fadeDuration <= 0f;
+
+        SetSectionVisible(_audioCg, section == SettingsSection.Audio, doInstant);
+        SetSectionVisible(_gameplayCg, section == SettingsSection.Gameplay, doInstant);
+        SetSectionVisible(_notificationsCg, section == SettingsSection.Notifications, doInstant);
+        SetSectionVisible(_seedsCg, section == SettingsSection.Seeds, doInstant);
+    }
+
+    void SetSectionVisible(CanvasGroup cg, bool visible, bool instant)
+    {
+        if (!cg) return;
+
+        var go = cg.gameObject;
+
+        if (visible)
+        {
+            if (disableHiddenSections && !go.activeSelf) go.SetActive(true);
+            cg.blocksRaycasts = true;
+            cg.interactable = true;
+
+            float target = 1f;
+            if (instant)
+            {
+                CancelTween(cg);
+                cg.alpha = target;
+            }
+            else
+            {
+                CancelTween(cg);
+                cg.alpha = Mathf.Clamp01(cg.alpha);
+                LeanTween.alphaCanvas(cg, target, fadeDuration).setIgnoreTimeScale(true);
+            }
+        }
+        else
+        {
+            cg.blocksRaycasts = false;
+            cg.interactable = false;
+
+            float target = hiddenAlpha;
+            if (instant)
+            {
+                CancelTween(cg);
+                cg.alpha = target;
+                if (disableHiddenSections) go.SetActive(false);
+            }
+            else
+            {
+                CancelTween(cg);
+                LeanTween.alphaCanvas(cg, target, fadeDuration)
+                    .setIgnoreTimeScale(true)
+                    .setOnComplete(() =>
+                    {
+                        if (disableHiddenSections) go.SetActive(false);
+                    });
+            }
+        }
+    }
+
+    void CancelTween(CanvasGroup cg)
+    {
+        if (!cg) return;
+        LeanTween.cancel(cg.gameObject);
+    }
 
     void SafeSubscribe()
     {
         var sm = SettingsManager.I;
         if (sm != null)
         {
-            sm.OnSettingsChanged -= Refresh; // de-dupe
+            sm.OnSettingsChanged -= Refresh;
             sm.OnSettingsChanged += Refresh;
         }
     }
@@ -141,31 +433,68 @@ public class SettingsPanel : MonoBehaviour
 
     void Refresh()
     {
-        // Audio
         if (AudioManager.I)
         {
             if (masterSlider) masterSlider.SetValueWithoutNotify(AudioManager.I.GetMasterVolume());
-            if (musicSlider)  musicSlider .SetValueWithoutNotify(AudioManager.I.GetMusicVolume());
-            if (sfxSlider)    sfxSlider   .SetValueWithoutNotify(AudioManager.I.GetSfxVolume());
+            if (musicSlider) musicSlider.SetValueWithoutNotify(AudioManager.I.GetMusicVolume());
+            if (sfxSlider) sfxSlider.SetValueWithoutNotify(AudioManager.I.GetSfxVolume());
         }
 
-        // Settings state
-        var s = SettingsManager.I ? SettingsManager.I.S : SaveManager.Data?.settings;
+        var s = SettingsManager.I ? SettingsManager.I.settingsState : SaveManager.Data?.settings;
         if (s != null)
         {
-            if (muteAllToggle)   muteAllToggle  .SetIsOnWithoutNotify(s.muteAll);
+            if (muteAllToggle) muteAllToggle.SetIsOnWithoutNotify(s.muteAll);
             if (muteMusicToggle) muteMusicToggle.SetIsOnWithoutNotify(s.muteMusic);
-            if (muteSfxToggle)   muteSfxToggle  .SetIsOnWithoutNotify(s.muteSfx);
-
-            if (autoConvertDupesToggle)
-                autoConvertDupesToggle.SetIsOnWithoutNotify(s.autoConvertDuplicates);
+            if (muteSfxToggle) muteSfxToggle.SetIsOnWithoutNotify(s.muteSfx);
 
             if (autoScrollLogToggle)
                 autoScrollLogToggle.SetIsOnWithoutNotify(s.autoScrollBattleLog);
+
+
+            // Difficulty
+            if (difficultyDropdown)
+            {
+                EnsureDifficultyDropdownOptions();
+
+                int mode = Mathf.Clamp(s.difficultyMode, 0, 2);
+                difficultyDropdown.SetValueWithoutNotify(mode);
+
+                bool unlocked = SaveManager.Data != null && SaveManager.Data.promotionRank >= 15;
+                difficultyDropdown.interactable = unlocked;
+
+                if (difficultyLockLabel)
+                {
+                    difficultyLockLabel.gameObject.SetActive(!unlocked);
+                    if (!unlocked) difficultyLockLabel.text = "Unlocks at Rank 15";
+                }
+            }
+
+            if (notificationsEnabledToggle)
+                notificationsEnabledToggle.SetIsOnWithoutNotify(s.notificationsEnabled);
+
+            if (notifyJobStorageFullToggle)
+                notifyJobStorageFullToggle.SetIsOnWithoutNotify(s.notifyJobStorageFull);
+
+            if (notifyEnergyFullToggle)
+                notifyEnergyFullToggle.SetIsOnWithoutNotify(s.notifyEnergyFull);
+
+            if (notifyBoostExpiryToggle)
+                notifyBoostExpiryToggle.SetIsOnWithoutNotify(s.notifyBoostExpiry);
+
+            if (notifyFallback24hToggle)
+                notifyFallback24hToggle.SetIsOnWithoutNotify(s.notifyFallback24h);
+
+            bool masterOn = s.notificationsEnabled;
+            if (notifyJobStorageFullToggle) notifyJobStorageFullToggle.interactable = masterOn;
+            if (notifyEnergyFullToggle) notifyEnergyFullToggle.interactable = masterOn;
+            if (notifyBoostExpiryToggle) notifyBoostExpiryToggle.interactable = masterOn;
+            if (notifyFallback24hToggle) notifyFallback24hToggle.interactable = masterOn;
         }
 
         RefreshSeedUi(s);
         RefreshDailySeedUi();
+        RefreshTabVisibility();
+        ShowSection(_activeSection, instant: true);
     }
 
     void WireEvents()
@@ -204,22 +533,46 @@ public class SettingsPanel : MonoBehaviour
             muteSfxToggle.onValueChanged.AddListener(OnMuteSfx);
         }
 
-        if (autoConvertDupesToggle)
-        {
-            autoConvertDupesToggle.onValueChanged.RemoveListener(OnAutoConvertDupesToggled);
-            autoConvertDupesToggle.onValueChanged.AddListener(OnAutoConvertDupesToggled);
-        }
-
         if (autoScrollLogToggle)
         {
             autoScrollLogToggle.onValueChanged.RemoveListener(OnAutoScrollChanged);
             autoScrollLogToggle.onValueChanged.AddListener(OnAutoScrollChanged);
         }
 
-        if (useCustomSeedToggle)
+        if (difficultyDropdown)
         {
-            useCustomSeedToggle.onValueChanged.RemoveListener(OnUseCustomSeedChanged);
-            useCustomSeedToggle.onValueChanged.AddListener(OnUseCustomSeedChanged);
+            difficultyDropdown.onValueChanged.RemoveListener(OnDifficultyChanged);
+            difficultyDropdown.onValueChanged.AddListener(OnDifficultyChanged);
+        }
+
+        if (notificationsEnabledToggle)
+        {
+            notificationsEnabledToggle.onValueChanged.RemoveListener(OnNotificationsEnabledChanged);
+            notificationsEnabledToggle.onValueChanged.AddListener(OnNotificationsEnabledChanged);
+        }
+
+        if (notifyJobStorageFullToggle)
+        {
+            notifyJobStorageFullToggle.onValueChanged.RemoveListener(OnNotifyJobStorageFullChanged);
+            notifyJobStorageFullToggle.onValueChanged.AddListener(OnNotifyJobStorageFullChanged);
+        }
+
+        if (notifyEnergyFullToggle)
+        {
+            notifyEnergyFullToggle.onValueChanged.RemoveListener(OnNotifyEnergyFullChanged);
+            notifyEnergyFullToggle.onValueChanged.AddListener(OnNotifyEnergyFullChanged);
+        }
+
+        if (notifyBoostExpiryToggle)
+        {
+            notifyBoostExpiryToggle.onValueChanged.RemoveListener(OnNotifyBoostExpiryChanged);
+            notifyBoostExpiryToggle.onValueChanged.AddListener(OnNotifyBoostExpiryChanged);
+        }
+
+        if (notifyFallback24hToggle)
+        {
+            notifyFallback24hToggle.onValueChanged.RemoveListener(OnNotifyFallback24hChanged);
+            notifyFallback24hToggle.onValueChanged.AddListener(OnNotifyFallback24hChanged);
         }
 
         if (seedInputField)
@@ -236,21 +589,29 @@ public class SettingsPanel : MonoBehaviour
         if (!_wired) return;
 
         if (masterSlider) masterSlider.onValueChanged.RemoveListener(OnMasterChanged);
-        if (musicSlider)  musicSlider.onValueChanged.RemoveListener(OnMusicChanged);
-        if (sfxSlider)    sfxSlider.onValueChanged.RemoveListener(OnSfxChanged);
+        if (musicSlider) musicSlider.onValueChanged.RemoveListener(OnMusicChanged);
+        if (sfxSlider) sfxSlider.onValueChanged.RemoveListener(OnSfxChanged);
 
-        if (muteAllToggle)   muteAllToggle.onValueChanged.RemoveListener(OnMuteAll);
+        if (muteAllToggle) muteAllToggle.onValueChanged.RemoveListener(OnMuteAll);
         if (muteMusicToggle) muteMusicToggle.onValueChanged.RemoveListener(OnMuteMusic);
-        if (muteSfxToggle)   muteSfxToggle.onValueChanged.RemoveListener(OnMuteSfx);
-
-        if (autoConvertDupesToggle)
-            autoConvertDupesToggle.onValueChanged.RemoveListener(OnAutoConvertDupesToggled);
+        if (muteSfxToggle) muteSfxToggle.onValueChanged.RemoveListener(OnMuteSfx);
 
         if (autoScrollLogToggle)
             autoScrollLogToggle.onValueChanged.RemoveListener(OnAutoScrollChanged);
 
-        if (useCustomSeedToggle)
-            useCustomSeedToggle.onValueChanged.RemoveListener(OnUseCustomSeedChanged);
+        if (difficultyDropdown)
+            difficultyDropdown.onValueChanged.RemoveListener(OnDifficultyChanged);
+
+        if (notificationsEnabledToggle)
+            notificationsEnabledToggle.onValueChanged.RemoveListener(OnNotificationsEnabledChanged);
+        if (notifyJobStorageFullToggle)
+            notifyJobStorageFullToggle.onValueChanged.RemoveListener(OnNotifyJobStorageFullChanged);
+        if (notifyEnergyFullToggle)
+            notifyEnergyFullToggle.onValueChanged.RemoveListener(OnNotifyEnergyFullChanged);
+        if (notifyBoostExpiryToggle)
+            notifyBoostExpiryToggle.onValueChanged.RemoveListener(OnNotifyBoostExpiryChanged);
+        if (notifyFallback24hToggle)
+            notifyFallback24hToggle.onValueChanged.RemoveListener(OnNotifyFallback24hChanged);
 
         if (seedInputField)
             seedInputField.onValueChanged.RemoveListener(OnSeedInputChanged);
@@ -258,43 +619,13 @@ public class SettingsPanel : MonoBehaviour
         _wired = false;
     }
 
-    // -------------- Handlers --------------
+    void OnMasterChanged(float v) { if (AudioManager.I) AudioManager.I.SetMasterVolume(v); }
+    void OnMusicChanged(float v) { if (AudioManager.I) AudioManager.I.SetMusicVolume(v); }
+    void OnSfxChanged(float v) { if (AudioManager.I) AudioManager.I.SetSfxVolume(v); }
 
-    void OnMasterChanged(float v)
-    {
-        if (AudioManager.I) AudioManager.I.SetMasterVolume(v);
-    }
-
-    void OnMusicChanged(float v)
-    {
-        if (AudioManager.I) AudioManager.I.SetMusicVolume(v);
-    }
-
-    void OnSfxChanged(float v)
-    {
-        if (AudioManager.I) AudioManager.I.SetSfxVolume(v);
-    }
-
-    void OnMuteAll(bool on)
-    {
-        if (AudioManager.I) AudioManager.I.OnMuteAllToggle(on);
-    }
-
-    void OnMuteMusic(bool on)
-    {
-        if (AudioManager.I) AudioManager.I.OnMuteMusicToggle(on);
-    }
-
-    void OnMuteSfx(bool on)
-    {
-        if (AudioManager.I) AudioManager.I.OnMuteSfxToggle(on);
-    }
-
-    void OnAutoConvertDupesToggled(bool on)
-    {
-        var mgr = SettingsManager.I;
-        if (mgr != null) mgr.SetAutoConvertDuplicates(on);
-    }
+    void OnMuteAll(bool on) { if (AudioManager.I) AudioManager.I.OnMuteAllToggle(on); }
+    void OnMuteMusic(bool on) { if (AudioManager.I) AudioManager.I.OnMuteMusicToggle(on); }
+    void OnMuteSfx(bool on) { if (AudioManager.I) AudioManager.I.OnMuteSfxToggle(on); }
 
     void OnAutoScrollChanged(bool on)
     {
@@ -302,10 +633,42 @@ public class SettingsPanel : MonoBehaviour
         if (mgr != null) mgr.SetAutoScrollBattleLog(on);
     }
 
-    void OnUseCustomSeedChanged(bool on)
+    void OnDifficultyChanged(int idx)
     {
         var mgr = SettingsManager.I;
-        if (mgr != null) mgr.SetUseCustomSeed(on);
+        if (mgr != null) mgr.SetDifficultyMode(idx);
+
+        Refresh();
+    }
+
+    void OnNotificationsEnabledChanged(bool on)
+    {
+        var mgr = SettingsManager.I;
+        if (mgr != null) mgr.SetNotificationsEnabled(on);
+    }
+
+    void OnNotifyJobStorageFullChanged(bool on)
+    {
+        var mgr = SettingsManager.I;
+        if (mgr != null) mgr.SetNotifyJobStorageFull(on);
+    }
+
+    void OnNotifyEnergyFullChanged(bool on)
+    {
+        var mgr = SettingsManager.I;
+        if (mgr != null) mgr.SetNotifyEnergyFull(on);
+    }
+
+    void OnNotifyBoostExpiryChanged(bool on)
+    {
+        var mgr = SettingsManager.I;
+        if (mgr != null) mgr.SetNotifyBoostExpiry(on);
+    }
+
+    void OnNotifyFallback24hChanged(bool on)
+    {
+        var mgr = SettingsManager.I;
+        if (mgr != null) mgr.SetNotifyFallback24h(on);
     }
 
     void OnSeedInputChanged(string text)
@@ -314,21 +677,60 @@ public class SettingsPanel : MonoBehaviour
         if (mgr != null) mgr.SetCustomSeed(text);
     }
 
+    void OnClickApplyCustomSeed()
+    {
+        var fm = FeatureUnlockManager.I;
+        if (fm == null || !fm.IsUnlocked(FeatureId.Seeds_CustomInput))
+        {
+            GameEvents.RaiseToast("Custom Seed is locked.");
+            return;
+        }
+
+        var mgr = SettingsManager.I;
+        if (mgr == null)
+            return;
+
+        string raw = (seedInputField != null) ? seedInputField.text : mgr.GetCustomSeed();
+        if (!SeedService.TryNormalizeAndValidateCustomSeed(raw, out string token, out string error))
+        {
+            GameEvents.RaiseToast(error);
+            return;
+        }
+
+        mgr.SetCustomSeed(token);
+        mgr.SetUseCustomSeed(true);
+
+        if (seedInputField)
+            seedInputField.SetTextWithoutNotify(token);
+
+        SeedService.ClearSessionSeed();
+        SeedService.ApplyGlobalSeedForSession();
+
+        ReturnToMainMenu();
+    }
+
     void OnClickRerollDailySeed()
     {
-        if (SeedService.TryRerollDailySeed(out var newSeed))
+        if (!SeedService.CanRerollDailySeedNow(out string reason))
         {
-            // Update label immediately
+            GameEvents.RaiseToast(string.IsNullOrWhiteSpace(reason) ? "Reroll unavailable." : reason);
             RefreshDailySeedUi();
-            Debug.Log($"[SettingsPanel] Rerolled daily seed: {newSeed}");
+            return;
+        }
+
+        if (SeedService.TryRerollDailySeed(out var _))
+        {
+            SeedService.ClearSessionSeed();
+            SeedService.ApplyGlobalSeedForSession();
+            RefreshDailySeedUi();
+            GameEvents.RaiseToast("Daily seed rerolled.");
         }
         else
         {
-            Debug.Log("[SettingsPanel] Could not reroll daily seed (locked or already used today).");
+            GameEvents.RaiseToast("Reroll unavailable.");
+            RefreshDailySeedUi();
         }
     }
-
-    // -------------- Seeds UI / Feature gating --------------
 
     void HandleFeatureUnlocked(FeatureId feature)
     {
@@ -346,28 +748,26 @@ public class SettingsPanel : MonoBehaviour
         bool customUnlocked = hasFeatureMgr &&
                               FeatureUnlockManager.I.IsUnlocked(FeatureId.Seeds_CustomInput);
 
-        if (useCustomSeedToggle)
-        {
-            useCustomSeedToggle.gameObject.SetActive(customUnlocked);
-            if (s != null)
-                useCustomSeedToggle.SetIsOnWithoutNotify(s.useCustomSeed);
-        }
-
+        bool usingButton = (applyCustomSeedButton != null);
+        
         if (seedInputField)
         {
             seedInputField.gameObject.SetActive(customUnlocked);
             if (s != null)
                 seedInputField.SetTextWithoutNotify(s.customSeed ?? string.Empty);
         }
+
+        if (applyCustomSeedButton)
+            applyCustomSeedButton.gameObject.SetActive(customUnlocked);
     }
 
     void RefreshDailySeedUi()
     {
-        bool hasFeatureMgr = FeatureUnlockManager.I != null;
-        bool dailyUnlocked = hasFeatureMgr &&
-                             FeatureUnlockManager.I.IsUnlocked(FeatureId.Seeds_DailyBasic);
-        bool rerollUnlocked = hasFeatureMgr &&
-                              FeatureUnlockManager.I.IsUnlocked(FeatureId.Seeds_RerollDailyOnce);
+        var fm = FeatureUnlockManager.I;
+        bool hasFeatureMgr = fm != null;
+
+        bool dailyUnlocked = hasFeatureMgr && fm.IsUnlocked(FeatureId.Seeds_DailyBasic);
+        bool rerollUnlocked = hasFeatureMgr && fm.IsUnlocked(FeatureId.Seeds_RerollDailyOnce);
 
         if (dailySeedLabel)
         {
@@ -375,16 +775,49 @@ public class SettingsPanel : MonoBehaviour
 
             if (dailyUnlocked)
             {
-                string seed = SeedService.GetCurrentDailySeedString();
-                dailySeedLabel.text = string.IsNullOrEmpty(seed)
-                    ? "Daily Seed: --"
-                    : $"Daily Seed: {seed}";
+                string token = SeedService.GetDailySeedTokenForToday();
+
+                dailySeedLabel.text = string.IsNullOrWhiteSpace(token)
+                    ? "----"
+                    : $"DAILY SEED: {token}";
             }
         }
 
         if (rerollDailySeedButton)
         {
-            rerollDailySeedButton.gameObject.SetActive(dailyUnlocked && rerollUnlocked);
+            bool visible = dailyUnlocked && rerollUnlocked;
+            rerollDailySeedButton.gameObject.SetActive(visible);
+
+            if (visible)
+            {
+                bool canReroll = SeedService.CanRerollDailySeedNow(out string reason);
+                rerollDailySeedButton.interactable = canReroll;
+                UpdateRerollButtonLabel(canReroll, reason);
+            }
+            else
+            {
+                UpdateRerollButtonLabel(true, string.Empty);
+            }
         }
+    }
+
+    void UpdateRerollButtonLabel(bool canReroll, string reason)
+    {
+        if (!rerollDailySeedButtonLabel) return;
+
+        string defaultText = string.IsNullOrWhiteSpace(_rerollDefaultLabelText)
+            ? "Reroll Daily Seed"
+            : _rerollDefaultLabelText;
+
+        bool alreadyUsed = !canReroll &&
+                           !string.IsNullOrWhiteSpace(reason) &&
+                           reason.IndexOf("already used", StringComparison.OrdinalIgnoreCase) >= 0;
+
+        rerollDailySeedButtonLabel.text = alreadyUsed ? "Already Used" : defaultText;
+    }
+
+    void ReturnToMainMenu()
+    {
+        SceneManager.LoadScene("Main");
     }
 }

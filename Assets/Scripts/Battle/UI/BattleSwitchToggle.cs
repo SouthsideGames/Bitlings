@@ -1,3 +1,4 @@
+
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -20,6 +21,10 @@ public class BattleSwitchToggle : MonoBehaviour
     [Header("Battle State Source")]
     [SerializeField] private BattleManager battle;
 
+    [Header("Auto Mode / Visibility")]
+    [Tooltip("If true, this entire toggle control hides during AUTO battles.")]
+    [SerializeField] private bool hideDuringAutoBattle = true;
+
     private bool _showingText;
 
     void Awake()
@@ -35,6 +40,17 @@ public class BattleSwitchToggle : MonoBehaviour
     {
         if (toggleButton != null)
             toggleButton.onClick.RemoveListener(Toggle);
+    }
+
+    void OnEnable()
+    {
+        GameEvents.OnEncounterAutoModeChanged += HandleAutoModeChanged;
+        HandleAutoModeChanged();
+    }
+
+    void OnDisable()
+    {
+        GameEvents.OnEncounterAutoModeChanged -= HandleAutoModeChanged;
     }
 
     public void Toggle()
@@ -91,4 +107,16 @@ public class BattleSwitchToggle : MonoBehaviour
         _showingText = true;
         ApplyState(immediate: true);
     }
+
+    private void HandleAutoModeChanged()
+    {
+        if (!hideDuringAutoBattle) return;
+
+        bool isAuto = (EncounterManager.I != null) && EncounterManager.I.IsAutoMode;
+
+        // Hide this switch toggle during auto mode if desired
+        if (gameObject.activeSelf == isAuto)
+            gameObject.SetActive(!isAuto);
+    }
+
 }

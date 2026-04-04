@@ -1,0 +1,57 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 32ffc26ed7d444b02a9332ce4279b117, type: 3}
+  m_Name: Monster_Aro
+  m_EditorClassIdentifier: 
+  id: M-154
+  displayName: Aro
+  type: 9
+  typeIcon: {fileID: 21300000, guid: 1ddb138c655b3471cad890ace56df64b, type: 3}
+  icon: {fileID: 21300000, guid: 2185e773c5f4544c9b79aafd0af0d488, type: 3}
+  backIcon: {fileID: 21300000, guid: 9b992dc067b40448b90a4008adb160d9, type: 3}
+  premiumIcon: {fileID: 21300000, guid: 2f63d7ed08c0a4913bae5fa88e23f3f4, type: 3}
+  premiumBackIcon: {fileID: 21300000, guid: 1a58cf82943a647c18b3ad4d46df06fb, type: 3}
+  rarity: 0
+  canBeStarter: 0
+  starterWeight: 1
+  maxLevel: 50
+  baseHP: 34
+  baseAttack: 38
+  baseDefense: 18
+  baseSpeed: 60
+  hpRegenPerHour: 5
+  fatigueRatePerHour: 0.105
+  fatigueCooldownHours: 7.6
+  evolutionStage: 1
+  evolutionLevel: 18
+  evolutionForm: {fileID: 11400000, guid: d730be198d954ef47afb4d85fbe9a19f, type: 2}
+  uncatchable: 0
+  isBoss: 0
+  bossJobDebuffs: []
+  bossWeight: 1
+  spawnWeight: 8
+  jobSkill: 0.95
+  titleTrack: {fileID: 11400000, guid: e7768b3f617f24a4881401c353140158, type: 2}
+  defaultAlwaysOnTitles: []
+  ironTitles:
+  - {fileID: 11400000, guid: c169f8806953a684a85f917d9746c60f, type: 2}
+  - {fileID: 11400000, guid: a289ace2a61ca0e47b454f4b80ebec49, type: 2}
+  - {fileID: 11400000, guid: fe67a4187cf7add4289106de72912f92, type: 2}
+  - {fileID: 11400000, guid: a1f2ec75ecd5b447bb439bb8619bfa03, type: 2}
+  Personality: {fileID: 11400000, guid: ab061081920b544089b918a9f1f3759b, type: 2}
+  basicAttackName: Gale Peck
+  basicAttackPrefab: {fileID: 5988486418563103347, guid: 310c8d56e543d4cd4ae9c55fa6047252, type: 3}
+  basicAttackPrefabLifetime: 1
+  spawnSfx: {fileID: 8300000, guid: 92d6c76990583cb49874edf879b7ea7f, type: 3}
+  baseMarketValue: 77
+  description: A light sky creature that darts in and strikes with swift pecking
+    blows.

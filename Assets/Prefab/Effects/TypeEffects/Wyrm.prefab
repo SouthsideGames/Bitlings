@@ -12,6 +12,7 @@ GameObject:
   - component: {fileID: 4720119231841389396}
   - component: {fileID: 2273841873097793144}
   - component: {fileID: 3023344104596554480}
+  - component: {fileID: 7887906256541632539}
   m_Layer: 5
   m_Name: Wyrm
   m_TagString: Untagged
@@ -36,7 +37,7 @@ RectTransform:
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
   m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 400, y: 400}
+  m_SizeDelta: {x: 500, y: 400}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &4720119231841389396
 CanvasRenderer:
@@ -66,7 +67,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 8020143640844766479, guid: 2d77e60cf734c97408d94371cadd6363, type: 3}
+  m_Sprite: {fileID: 21300000, guid: ad8d8272a55d68d4ba928ed2abb2611c, type: 3}
   m_Type: 0
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -98,3 +99,22 @@ Animator:
   m_AllowConstantClipSamplingOptimization: 1
   m_KeepAnimatorStateOnDisable: 0
   m_WriteDefaultValuesOnDisable: 0
+--- !u!114 &7887906256541632539
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7446462880551948952}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fbfb77ed3355f4634a8c165181d69411, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PlaySfxOnSpawn
+  clip: {fileID: 8300000, guid: 23c3d7347a855424492536444dc62313, type: 3}
+  volumeMult: 0.5
+  randomizePitch: 0
+  pitch: 1
+  pitchMin: 0.95
+  pitchMax: 1.05
+  playOnEnable: 1

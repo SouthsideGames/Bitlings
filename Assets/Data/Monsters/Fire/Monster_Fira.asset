@@ -1,0 +1,56 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 32ffc26ed7d444b02a9332ce4279b117, type: 3}
+  m_Name: Monster_Fira
+  m_EditorClassIdentifier: 
+  id: M-152
+  displayName: Fira
+  type: 1
+  typeIcon: {fileID: 21300000, guid: d552cfb27992e494694a52b7e3578364, type: 3}
+  icon: {fileID: 21300000, guid: 3c9075c14f6124abfbbe256711caba28, type: 3}
+  backIcon: {fileID: 21300000, guid: d5127f783c7194d759df7ba688ed7940, type: 3}
+  premiumIcon: {fileID: 21300000, guid: 1cd1a73b694d64f19967c48dc1830315, type: 3}
+  premiumBackIcon: {fileID: 21300000, guid: 462755a08b75d428e9a1cc1be67d87ca, type: 3}
+  rarity: 0
+  canBeStarter: 0
+  starterWeight: 1
+  maxLevel: 50
+  baseHP: 45
+  baseAttack: 58
+  baseDefense: 17
+  baseSpeed: 30
+  hpRegenPerHour: 4.8
+  fatigueRatePerHour: 0.11
+  fatigueCooldownHours: 7.2
+  evolutionStage: 1
+  evolutionLevel: 18
+  evolutionForm: {fileID: 11400000, guid: b4105969a9e6f4e1bbc5bd6dcd5eb844, type: 2}
+  uncatchable: 0
+  isBoss: 0
+  bossJobDebuffs: []
+  bossWeight: 1
+  spawnWeight: 8
+  jobSkill: 0.95
+  titleTrack: {fileID: 11400000, guid: df917a76cb416432abe12b36505640ab, type: 2}
+  defaultAlwaysOnTitles: []
+  ironTitles:
+  - {fileID: 11400000, guid: b97581b09000e96408b9b750d19c518a, type: 2}
+  - {fileID: 11400000, guid: f2432a291c459974d91527dcf9838b2c, type: 2}
+  - {fileID: 11400000, guid: a54fbab895dd9804c9cacbb8e8ce854c, type: 2}
+  - {fileID: 11400000, guid: e1aa94e2540df9a4b9e2e90c84ec8c3f, type: 2}
+  Personality: {fileID: 11400000, guid: 3733616cf9f0f4dddb5bee9d6ba2952f, type: 2}
+  basicAttackName: Flame Jab
+  basicAttackPrefab: {fileID: 126357351932672970, guid: a7524146891194bc4b7eb73ba1e38b46, type: 3}
+  basicAttackPrefabLifetime: 1
+  spawnSfx: {fileID: 8300000, guid: fcb32136c18eb4946badce4a29a5ba09, type: 3}
+  baseMarketValue: 77
+  description: A small fiery creature that lunges forward with quick burning strikes.

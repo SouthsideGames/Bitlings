@@ -13,15 +13,18 @@ MonoBehaviour:
   m_Name: Berserker
   m_EditorClassIdentifier: 
   group: 1
-  attackWeight: 9
+  attackWeight: 8
   defendWeight: 1
   focusWeight: 0
   runWeight: 0
   lowHpThreshold: 0.3
-  lowHpDefendBonus: 2
-  lowHpRunBonus: 1
+  lowHpDefendBonus: 0
+  lowHpRunBonus: 0
   superEffectiveAttackBonus: 3
-  badMatchDefendBonus: 1
-  badMatchRunBonus: 1
+  badMatchDefendBonus: 0
+  badMatchRunBonus: 0
   eachTurnAttackBonus: 2
-  description: All gas, no brakes; refuses to run.
+  eachTurnFocusPenalty: 0
+  lowHpFocusPenalty: 2
+  chaoticOverrideChance: 0
+  description: Gradually increases offensive pressure as the engagement progresses.

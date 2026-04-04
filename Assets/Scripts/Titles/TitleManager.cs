@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
-using System.Linq;
 
 public sealed class TitleManager : MonoBehaviour
 {
@@ -17,24 +16,213 @@ public sealed class TitleManager : MonoBehaviour
     // id -> TitleSO
     private readonly Dictionary<string, TitleSO> _idToTitle = new Dictionary<string, TitleSO>();
 
+    private string _activeBattleMonsterId;
+
+    // ─────────────────────────────────────────────────────────────────────
+    // Battle-scoped overrides (e.g., rolled wild titles)
+    // ─────────────────────────────────────────────────────────────────────
+    // Key: combatant id (owned id or synthetic id like "WILD::<...>")
+    // Value: list of titles to treat as equipped for the duration of the battle.
+    // Notes:
+    // - This intentionally bypasses TitleSaveStore equip selections.
+    // - EncounterManager injects rolled wild titles via TitlesAdapter.SetLocalTitles(...)
+    //   which forwards to these APIs.
+    private readonly Dictionary<string, List<TitleSO>> _battleOverrideTitles =
+        new Dictionary<string, List<TitleSO>>(System.StringComparer.Ordinal);
+
+    // Battle context for synthetic ids (so conditional titles can resolve def/level safely)
+    private readonly Dictionary<string, MonsterDataSO> _battleContextDef =
+        new Dictionary<string, MonsterDataSO>(System.StringComparer.Ordinal);
+    private readonly Dictionary<string, int> _battleContextLevel =
+        new Dictionary<string, int>(System.StringComparer.Ordinal);
+
+    // Battle sessions can include multiple combatants (e.g., player + wild).
+    // Most per-battle state is keyed by combatant id; we track participants so
+    // turn-based effects (TurnBooster) can apply to all relevant combatants.
+    private bool _battleSessionActive;
+    private readonly HashSet<string> _battleParticipants = new HashSet<string>(StringComparer.Ordinal);
+    private readonly List<string> _scratchParticipants = new List<string>(8);
+
     // ─────────────────────────────────────────────────────────────────────
     // Per-battle state (TurnBooster / EventStacks / BattleStart)
     // ─────────────────────────────────────────────────────────────────────
-    // NOTE: one-simple-bucket-per-monster; expand to keyed tuples if you add multiple variants per monster.
-    private readonly Dictionary<string, int>   _turnStacks          = new();   // grows on OnTurnAdvanced up to max (TurnBooster)
-    private readonly Dictionary<string, int>   _eventStacks         = new();   // grows on triggers (EventStacks)
-    private readonly Dictionary<string, int>   _eventMax            = new();   // cache max for UI/debug (optional)
-    private readonly Dictionary<string, int>   _eventDecayPerTurn   = new();   // how many stacks to decay each turn
-    private readonly Dictionary<string, int>   _flatStartUntilTurn  = new();   // inclusive last turn index where flat buff applies
-    private readonly Dictionary<string, int>   _flatStartAmountAtk  = new();   // flat ATK from BattleStartFlatTitleSO (expand if you add other stats)
-    private readonly Dictionary<string, float> _shieldRemaining     = new();   // BattleStartShieldTitleSO: remaining shield HP
+    private readonly Dictionary<string, int> _turnStacks = new();           // grows on OnTurnAdvanced up to max (TurnBooster)
+    private readonly Dictionary<string, int> _eventStacks = new();          // grows on triggers (EventStacks)
+    private readonly Dictionary<string, int> _eventMax = new();             // cache max for UI/debug (optional)
+    private readonly Dictionary<string, int> _eventDecayPerTurn = new();    // how many stacks to decay each turn
+    private readonly Dictionary<string, List<int>> _eventStackGainedTurns = new(); // per-stack gained turn index (for 1-turn grace decay)
+    private readonly Dictionary<string, bool> _eventCooldownActive = new(); // true once max reached; blocks gains until stacks return to 0
+    private readonly List<string> _scratchEventKeys = new List<string>(16);
+    private readonly Dictionary<string, int> _flatStartUntilTurn = new();   // inclusive last turn index where flat buff applies
+    private readonly Dictionary<string, int> _flatStartAmountAtk = new();   // flat ATK from BattleStartFlatTitleSO
+    private readonly Dictionary<string, int> _flatStartAmountDef = new();   // flat DEF from BattleStartFlatTitleSO
+    private readonly Dictionary<string, int> _flatStartAmountSpd = new();   // flat SPD from BattleStartFlatTitleSO
+    private readonly Dictionary<string, int> _flatStartAmountHp  = new();   // flat HP from BattleStartFlatTitleSO
+    private readonly Dictionary<string, int> _flatStartRemainingTurns = new(); // remaining OWNER turns for BattleStartFlatTitleSO
+    private readonly Dictionary<string, float> _shieldRemaining = new();    // BattleStartShieldTitleSO: remaining shield HP
     private int _turnIndex;
+
+    // ─────────────────────────────────────────────────────────────────────
+    // Per-battle state (OnEventTriggerTitleSO)
+    // ─────────────────────────────────────────────────────────────────────
+    // Keys are "combatantId::titleId" to allow multiple titles per monster.
+    private readonly HashSet<string> _onEventFiredBattle = new(StringComparer.Ordinal);
+    private readonly HashSet<string> _onEventFiredTurn   = new(StringComparer.Ordinal);
+
+    // ─────────────────────────────────────────────────────────────────────
+    // Active Title UI state (Status Bar / Info Button)
+    // ─────────────────────────────────────────────────────────────────────
+    public struct ActiveTitleUIState
+    {
+        public string titleId;
+        public string displayName;
+        public Sprite icon;
+        public int stacks;     // 0 if not applicable
+        public bool isActive;  // true = highlight (active), false = dim (inactive)
+    }
+
+    /// <summary>
+    /// Returns the SINGLE equipped title id for a monster (excluding always-on defaults).
+    /// If none equipped, returns "".
+    /// </summary>
+    public string GetEquippedTitleId(string ownedMonsterId)
+    {
+        if (string.IsNullOrEmpty(ownedMonsterId)) return "";
+
+        var def = MonsterLibraryLocator.GetById(ownedMonsterId);
+        if (!def || !def.titleTrack) return "";
+
+        var tiers = def.titleTrack.tiers;
+        if (tiers == null || tiers.Count == 0) return "";
+
+        var save = TitleSaveStore.GetOrCreateEquip(ownedMonsterId);
+        if (save == null || save.tierSelections == null) return "";
+
+        // Enforced as "only one total" by Equip(), but we still scan defensively.
+        for (int i = 0; i < save.tierSelections.Count; i++)
+        {
+            var tid = save.tierSelections[i];
+            if (!string.IsNullOrEmpty(tid))
+                return tid;
+        }
+
+        return "";
+    }
+
+    /// <summary>
+    /// UI helper (legacy): returns equipped titles for a monster with "active" flags + stacks based on current battle state.
+    /// With the one-title rule, this will typically return either:
+    /// - default always-on titles (if you use them), plus
+    /// - a single picked title (at most one)
+    /// </summary>
+    public List<ActiveTitleUIState> GetActiveTitleUIStates(string ownedMonsterId)
+    {
+        var res = new List<ActiveTitleUIState>();
+        if (string.IsNullOrEmpty(ownedMonsterId)) return res;
+
+        var def = MonsterLibraryLocator.GetById(ownedMonsterId);
+        int lvl = GetLevelOr1(ownedMonsterId);
+        var equipped = GetEquippedList(ownedMonsterId, def, lvl);
+        if (equipped == null) return res;
+
+        for (int i = 0; i < equipped.Count; i++)
+        {
+            var t = equipped[i];
+            if (!t) continue;
+
+            var s = new ActiveTitleUIState
+            {
+                titleId = t.titleId,
+                displayName = string.IsNullOrEmpty(t.displayName) ? t.titleId : t.displayName,
+                icon = TryReadSprite(t, out var icon) ? icon : null,
+                stacks = 0,
+                isActive = true
+            };
+
+            // If we are not in a battle, treat equipped titles as active for UI consistency.
+            bool inBattle = _turnStacks.Count > 0 || _eventStacks.Count > 0 || _shieldRemaining.Count > 0 || _flatStartUntilTurn.Count > 0;
+
+            if (inBattle)
+            {
+                if (t is TurnBoosterTitleSO tb)
+                {
+                    _turnStacks.TryGetValue(ownedMonsterId, out int st);
+                    s.stacks = st;
+                    s.isActive = st > 0;
+                }
+                else if (t is EventStacksTitleSO)
+                {
+                    _eventStacks.TryGetValue(ownedMonsterId, out int st);
+                    s.stacks = st;
+                    s.isActive = st > 0;
+                }
+                else if (t is BattleStartShieldTitleSO)
+                {
+                    _shieldRemaining.TryGetValue(ownedMonsterId, out float shield);
+                    s.isActive = shield > 0.01f;
+                }
+                else if (t is BattleStartFlatTitleSO)
+                {
+                    if (_flatStartRemainingTurns.TryGetValue(ownedMonsterId, out int rem))
+                        s.isActive = rem > 0;
+                }
+                else
+                {
+                    s.isActive = true;
+                }
+            }
+
+            res.Add(s);
+        }
+
+        return res;
+    }
+
+    private static bool TryReadSprite(object obj, out Sprite sprite)
+    {
+        sprite = null;
+        if (obj == null) return false;
+
+        try
+        {
+            var t = obj.GetType();
+
+            var f = t.GetField("icon");
+            if (f != null && f.FieldType == typeof(Sprite))
+            {
+                sprite = (Sprite)f.GetValue(obj);
+                return sprite != null;
+            }
+
+            var p = t.GetProperty("icon");
+            if (p != null && p.PropertyType == typeof(Sprite))
+            {
+                sprite = (Sprite)p.GetValue(obj, null);
+                return sprite != null;
+            }
+
+            var p2 = t.GetProperty("Icon");
+            if (p2 != null && p2.PropertyType == typeof(Sprite))
+            {
+                sprite = (Sprite)p2.GetValue(obj, null);
+                return sprite != null;
+            }
+        }
+        catch { }
+
+        return false;
+    }
 
     // ─────────────────────────────────────────────────────────────────────
     // Unity
     // ─────────────────────────────────────────────────────────────────────
     private void Awake()
     {
+        if (I != null && I != this)
+        {
+            Destroy(gameObject);
+            return;
+        }
         I = this;
         BuildIndex();
     }
@@ -43,27 +231,87 @@ public sealed class TitleManager : MonoBehaviour
     {
         _idToTitle.Clear();
 
-        // 1) Include any preloaded titles (drag & drop in inspector)
+        var allCandidates = new List<TitleSO>(64);
+
         if (preloadTitles != null)
         {
             for (int i = 0; i < preloadTitles.Count; i++)
             {
                 var t = preloadTitles[i];
                 if (!t || string.IsNullOrEmpty(t.titleId)) continue;
+                allCandidates.Add(t);
+
                 if (!_idToTitle.ContainsKey(t.titleId))
                     _idToTitle.Add(t.titleId, t);
             }
         }
 
-        // 2) Also scan Resources for TitleSO
         var all = Resources.LoadAll<TitleSO>("");
         for (int i = 0; i < all.Length; i++)
         {
             var t = all[i];
             if (!t || string.IsNullOrEmpty(t.titleId)) continue;
+            allCandidates.Add(t);
+
             if (!_idToTitle.ContainsKey(t.titleId))
                 _idToTitle.Add(t.titleId, t);
         }
+
+        // Duplicate titleId detection (non-LINQ, editor-friendly)
+        if (allCandidates.Count > 0)
+        {
+            var byId = new Dictionary<string, List<TitleSO>>(StringComparer.Ordinal);
+            for (int i = 0; i < allCandidates.Count; i++)
+            {
+                var t = allCandidates[i];
+                if (!t || string.IsNullOrEmpty(t.titleId)) continue;
+
+                if (!byId.TryGetValue(t.titleId, out var list))
+                {
+                    list = new List<TitleSO>(2);
+                    byId.Add(t.titleId, list);
+                }
+                list.Add(t);
+            }
+
+            foreach (var kv in byId)
+            {
+                var list = kv.Value;
+                if (list == null || list.Count <= 1) continue;
+                Debug.LogError(BuildDuplicateTitleIdLog(kv.Key, list));
+            }
+        }
+
+    }
+
+    private static string BuildDuplicateTitleIdLog(string titleId, IEnumerable<TitleSO> titles)
+    {
+        var sb = new System.Text.StringBuilder(256);
+        sb.Append("[Titles] Duplicate titleId detected: ").Append(titleId).Append("\n");
+        sb.Append("These are different TitleSO assets sharing the same titleId. This will break equip/UI state.\n");
+
+        int i = 0;
+        foreach (var t in titles)
+        {
+            if (!t) continue;
+
+            sb.Append("  • [").Append(i).Append("] ").Append(t.name).Append(" (").Append(t.GetType().Name).Append(")");
+
+#if UNITY_EDITOR
+            try
+            {
+                string path = UnityEditor.AssetDatabase.GetAssetPath(t);
+                if (!string.IsNullOrEmpty(path))
+                    sb.Append("  ->  ").Append(path);
+            }
+            catch { }
+#endif
+            sb.Append("\n");
+            i++;
+        }
+
+        sb.Append("Fix: ensure every TitleSO has a unique titleId, and remove/merge duplicates.");
+        return sb.ToString();
     }
 
     // ─────────────────────────────────────────────────────────────────────
@@ -90,7 +338,6 @@ public sealed class TitleManager : MonoBehaviour
 
     public int GetTierCount(MonsterDataSO def) => def && def.titleTrack ? def.titleTrack.tiers?.Count ?? 0 : 0;
 
-    // Convenience for UI
     public string GetEquippedTitleIdForTier(string monsterId, MonsterDataSO def, int tierIndex)
     {
         if (string.IsNullOrEmpty(monsterId) || !def || !def.titleTrack) return "";
@@ -98,6 +345,8 @@ public sealed class TitleManager : MonoBehaviour
         if (tiers == null || tierIndex < 0 || tierIndex >= tiers.Count) return "";
 
         var save = TitleSaveStore.GetOrCreateEquip(monsterId);
+        if (save == null || save.tierSelections == null) return "";
+
         if (tierIndex >= save.tierSelections.Count) return "";
         return save.tierSelections[tierIndex];
     }
@@ -107,7 +356,6 @@ public sealed class TitleManager : MonoBehaviour
     // (Fires JobGlobalModsChanged for UI/logic that depends on titles)
     // ─────────────────────────────────────────────────────────────────────
 
-    /// <summary>Equip a title in a specific tier. Enforces maxSelectable (currently 1 total).</summary>
     public bool Equip(string monsterId, MonsterDataSO def, int tierIndex, TitleSO choose)
     {
         if (string.IsNullOrEmpty(monsterId) || !def || !def.titleTrack) return false;
@@ -117,22 +365,31 @@ public sealed class TitleManager : MonoBehaviour
 
         // Must be among that tier's choices
         var tier = tiers[tierIndex];
-        if (tier.unlockChoices == null || !tier.unlockChoices.Contains(choose)) return false;
+        if (tier.unlockChoices == null) return false;
+
+        // Must be among that tier's choices (non-LINQ)
+        bool found = false;
+        for (int i = 0; i < tier.unlockChoices.Count; i++)
+        {
+            var t = tier.unlockChoices[i];
+            if (t && t.titleId == choose.titleId) { found = true; break; }
+        }
+        if (!found) return false;
 
         var save = TitleSaveStore.GetOrCreateEquip(monsterId);
+        if (save == null) return false;
 
-        // Only ONE active title total — clear prior picks
+        // Ensure list exists + correct size
+        if (save.tierSelections == null) save.tierSelections = new List<string>();
         save.tierSelections.Clear();
-
-        // Resize to tiers
         for (int i = 0; i < tiers.Count; i++) save.tierSelections.Add("");
 
-        // If already the same selection, no-op (but still ensure list length)
         bool changed = save.tierSelections[tierIndex] != choose.titleId;
         save.tierSelections[tierIndex] = choose.titleId;
 
         TitleSaveStore.Save();
         if (changed) RaiseTitleChange();
+        if (changed) GameEvents.TitleEquipped?.Invoke();
         return true;
     }
 
@@ -150,6 +407,9 @@ public sealed class TitleManager : MonoBehaviour
         if (tiers == null || tierIndex < 0 || tierIndex >= tiers.Count) return false;
 
         var save = TitleSaveStore.GetOrCreateEquip(monsterId);
+        if (save == null) return false;
+
+        if (save.tierSelections == null) save.tierSelections = new List<string>();
         while (save.tierSelections.Count < tiers.Count) save.tierSelections.Add("");
 
         bool changed = !string.IsNullOrEmpty(save.tierSelections[tierIndex]);
@@ -160,36 +420,46 @@ public sealed class TitleManager : MonoBehaviour
         return true;
     }
 
-    /// <summary>Returns always-on titles + equipped (per unlocked tier). Null for locked/no pick.</summary>
+    /// <summary>
+    /// Returns always-on titles + equipped (per unlocked tier). Null for locked/no pick.
+    /// Note: With the one-title rule, at most one tier will have a non-empty selection.
+    /// </summary>
     public List<TitleSO> GetEquippedList(string monsterId, MonsterDataSO def, int level)
     {
+        // 0) Battle-scoped override (e.g., rolled wild titles injected per encounter)
+        // If present, treat as the equipped list for the duration of the battle.
+        if (TryGetBattleOverrideTitles(monsterId, out var overrideTitles) && overrideTitles != null)
+            return new List<TitleSO>(overrideTitles);
+
         var res = new List<TitleSO>();
+
+        // Always-on defaults
+        if (def && def.defaultAlwaysOnTitles != null)
+            res.AddRange(def.defaultAlwaysOnTitles);
+
         if (string.IsNullOrEmpty(monsterId) || !def || !def.titleTrack)
-        {
-            if (def && def.defaultAlwaysOnTitles != null) res.AddRange(def.defaultAlwaysOnTitles);
             return res;
-        }
 
         var tiers = def.titleTrack.tiers;
-        if (tiers == null)
-        {
-            if (def.defaultAlwaysOnTitles != null) res.AddRange(def.defaultAlwaysOnTitles);
-            return res;
-        }
+        if (tiers == null) return res;
 
         var save = TitleSaveStore.GetOrCreateEquip(monsterId);
+        if (save == null) return res;
 
-        if (def.defaultAlwaysOnTitles != null) res.AddRange(def.defaultAlwaysOnTitles);
+        if (save.tierSelections == null) save.tierSelections = new List<string>();
 
         for (int i = 0; i < tiers.Count; i++)
         {
             var tier = tiers[i];
+
+            // Locked tier -> keep placeholder null for legacy callers that expect aligned list
             if (level < Mathf.Max(1, tier.levelRequired)) { res.Add(null); continue; }
 
             string tid = (i < save.tierSelections.Count) ? save.tierSelections[i] : "";
-            if (!string.IsNullOrEmpty(tid) && _idToTitle.TryGetValue(tid, out var t)) res.Add(t);
+            if (!string.IsNullOrEmpty(tid) && _idToTitle.TryGetValue(tid, out var t) && t) res.Add(t);
             else res.Add(null);
         }
+
         return res;
     }
 
@@ -200,16 +470,104 @@ public sealed class TitleManager : MonoBehaviour
     public List<TitleSO> GetTitlesForMonster(string monsterId)
     {
         if (string.IsNullOrEmpty(monsterId)) return new List<TitleSO>();
+
+        // If a battle override exists (e.g., wild synthetic id), return that.
+        if (TryGetBattleOverrideTitles(monsterId, out var overrideTitles) && overrideTitles != null)
+            return new List<TitleSO>(overrideTitles);
+
         var def = MonsterLibraryLocator.GetById(monsterId);
         int lvl = GetLevelOr1(monsterId);
         return GetEquippedList(monsterId, def, lvl);
+    }
+
+    public TitleSO GetTitleById(string titleId)
+    {
+        if (string.IsNullOrEmpty(titleId)) return null;
+        return _idToTitle.TryGetValue(titleId, out var so) ? so : null;
+    }
+
+    // ─────────────────────────────────────────────────────────────────────
+    // Battle override API (used for rolled wild titles)
+    // ─────────────────────────────────────────────────────────────────────
+    /// <summary>
+    /// Sets a battle-scoped override title list for a combatant id.
+    /// This is intended for synthetic ids (e.g., wild encounters) and temporary effects.
+    /// </summary>
+    public void SetBattleOverrideTitles(string combatantId, List<TitleSO> titles)
+    {
+        if (string.IsNullOrEmpty(combatantId)) return;
+        if (titles == null)
+        {
+            _battleOverrideTitles.Remove(combatantId);
+            return;
+        }
+
+        _battleOverrideTitles[combatantId] = titles;
+    }
+
+    public void ClearBattleOverrideTitles(string combatantId)
+    {
+        if (string.IsNullOrEmpty(combatantId)) return;
+        _battleOverrideTitles.Remove(combatantId);
+        _battleContextDef.Remove(combatantId);
+        _battleContextLevel.Remove(combatantId);
+    }
+
+    public void ClearAllBattleOverrideTitles()
+    {
+        _battleOverrideTitles.Clear();
+        _battleContextDef.Clear();
+        _battleContextLevel.Clear();
+    }
+
+    private bool TryGetBattleOverrideTitles(string combatantId, out List<TitleSO> titles)
+    {
+        if (!string.IsNullOrEmpty(combatantId) && _battleOverrideTitles.TryGetValue(combatantId, out titles) && titles != null)
+            return true;
+        titles = null;
+        return false;
+    }
+
+    private void RegisterBattleContext(string combatantId, MonsterDataSO def, int level)
+    {
+        if (string.IsNullOrEmpty(combatantId) || def == null) return;
+        _battleContextDef[combatantId] = def;
+        _battleContextLevel[combatantId] = Mathf.Max(1, level);
+    }
+
+    // Exposed for battle systems that use synthetic combatant ids (Iron Career, wilds, etc.).
+    public void RegisterBattleContextPublic(string combatantId, MonsterDataSO def, int level)
+    {
+        RegisterBattleContext(combatantId, def, level);
+    }
+
+
+    private bool TryResolveBattleContext(string combatantId, out MonsterDataSO def, out int level)
+    {
+        def = null;
+        level = 1;
+
+        if (!string.IsNullOrEmpty(combatantId))
+        {
+            if (_battleContextDef.TryGetValue(combatantId, out def) && def != null)
+            {
+                if (_battleContextLevel.TryGetValue(combatantId, out int lvl)) level = Mathf.Max(1, lvl);
+                return true;
+            }
+        }
+
+        // Fallback (owned monsters)
+        if (string.IsNullOrEmpty(combatantId)) return false;
+        def = MonsterLibraryLocator.GetById(combatantId);
+        level = GetLevelOr1(combatantId);
+        return def != null;
     }
 
     // ─────────────────────────────────────────────────────────────────────
     // Evaluation helpers
     // ─────────────────────────────────────────────────────────────────────
 
-    // Single/Conditional/Dual stat application + NEW boosters
+    // Single/Conditional/Dual stat application + boosters
     public float GetStatValue(string monsterId, MonsterDataSO def, int level, StatKind stat, in TitleContext ctx, float baseValue)
     {
         var titles = GetEquippedList(monsterId, def, level);
@@ -244,15 +602,17 @@ public sealed class TitleManager : MonoBehaviour
             }
         }
 
-        // ── NEW: BattleStartFlatTitleSO (ATK-only in this simple pass; expand as needed)
-        if (stat == StatKind.Attack && _flatStartAmountAtk.TryGetValue(monsterId, out int flat)
-            && _flatStartUntilTurn.TryGetValue(monsterId, out int untilTurn)
-            && _turnIndex <= untilTurn)
-        {
-            current += flat;
-        }
+        
+// ── BattleStartFlatTitleSO (temporary flat bonus at battle start; ticks down on OWNER turns)
+if (_flatStartRemainingTurns.TryGetValue(monsterId, out int remTurns) && remTurns > 0)
+{
+    if (stat == StatKind.Attack && _flatStartAmountAtk.TryGetValue(monsterId, out int fAtk)) current += fAtk;
+    else if (stat == StatKind.Defense && _flatStartAmountDef.TryGetValue(monsterId, out int fDef)) current += fDef;
+    else if (stat == StatKind.Speed && _flatStartAmountSpd.TryGetValue(monsterId, out int fSpd)) current += fSpd;
+    else if (stat == StatKind.HP && _flatStartAmountHp.TryGetValue(monsterId, out int fHp)) current += fHp;
+}
 
-        // ── NEW: TurnBoosterTitleSO (percent per turn up to max stacks)
+        // ── TurnBoosterTitleSO (percent per turn up to max stacks)
         var tb = GetFirstTitle<TurnBoosterTitleSO>(monsterId, def, level);
         if (tb != null && MatchesStat(stat, tb.stat) && _turnStacks.TryGetValue(monsterId, out int tStacks) && tStacks > 0)
         {
@@ -260,7 +620,7 @@ public sealed class TitleManager : MonoBehaviour
             current *= 1f + pct * Mathf.Min(tStacks, Mathf.Max(1, tb.maxStacks));
         }
 
-        // ── NEW: EventStacksTitleSO (percent per stack; grows on triggers; optional decay)
+        // ── EventStacksTitleSO (percent per stack; grows on triggers; optional decay)
         var es = GetFirstTitle<EventStacksTitleSO>(monsterId, def, level);
         if (es != null && MatchesStat(stat, es.stat) && _eventStacks.TryGetValue(monsterId, out int eStacks) && eStacks > 0)
         {
@@ -268,14 +628,21 @@ public sealed class TitleManager : MonoBehaviour
             current *= 1f + pct * Mathf.Min(eStacks, Mathf.Max(1, es.maxStacks));
         }
 
-        // ── NEW: ClutchBoosterTitleSO (threshold via ctx.hpPct)
+        // ── ClutchBoosterTitleSO (threshold via ctx.hpPct)
         var clutch = GetFirstTitle<ClutchBoosterTitleSO>(monsterId, def, level);
-        float hp01 = ReadHp01(ctx); // ← helper below
+        float hp01 = ReadHp01(ctx);
         if (clutch != null && hp01 <= Mathf.Clamp01(clutch.hpBelowThreshold01))
         {
-            if (stat == StatKind.Attack && clutch.atkPct > 0f)   current *= (1f + clutch.atkPct);
-            if (stat == StatKind.Defense && clutch.defPct > 0f)  current *= (1f + clutch.defPct);
-            if (stat == StatKind.Speed && clutch.spdPct > 0f)    current *= (1f + clutch.spdPct);
+            if (stat == StatKind.Attack && clutch.atkPct > 0f) current *= (1f + (clutch.atkPct / 100f));
+            if (stat == StatKind.Defense && clutch.defPct > 0f) current *= (1f + (clutch.defPct / 100f));
+            if (stat == StatKind.Speed && clutch.spdPct > 0f) current *= (1f + (clutch.spdPct / 100f));
+        }
+
+        // ── TeamAuraBattleTitleSO (passive auras from battle participants)
+        if (_battleSessionActive && ctx.isBattle)
+        {
+            GetTeamAuraStatBonus(monsterId, stat, in ctx, out float auraFlat, out float auraPct);
+            current = (current + auraFlat) * (1f + auraPct);
         }
 
         return current;
@@ -336,7 +703,6 @@ public sealed class TitleManager : MonoBehaviour
         // 1) Start with generic defensive multiplier (nullifiers, etc.)
         float mul = GetIncomingEffectivenessMultiplier(monsterId, def, level);
 
-        // If we don't know the incoming type, we’re done.
         if (incomingType == MonsterType.None)
             return Mathf.Max(0f, mul);
 
@@ -352,9 +718,8 @@ public sealed class TitleManager : MonoBehaviour
                     {
                         if (tr.resistTypes[k] == incomingType)
                         {
-                            // e.g. incomingMultiplier = 0.75f for 25% less damage.
                             mul *= Mathf.Max(0f, tr.incomingMultiplier);
-                            break; // don’t double-count same asset
+                            break;
                         }
                     }
                 }
@@ -363,7 +728,6 @@ public sealed class TitleManager : MonoBehaviour
 
         return Mathf.Max(0f, mul);
     }
-
 
     // Adapter expects fields: cannotBeCrit, percentReduce, flatReduce
     public struct TitleDamageFilter
@@ -383,7 +747,6 @@ public sealed class TitleManager : MonoBehaviour
             var t = titles[i] as DamageFilterTitleSO;
             if (!t) continue;
 
-            // Convert 1.0-baseline multiplier to a percent reduction amount.
             float reduceFromMult = Mathf.Clamp01(1f - Mathf.Max(0f, t.percentMultiplier));
             f.flatReduce += Mathf.Max(0, t.flatReduce);
             f.percentReduce = Mathf.Clamp01(f.percentReduce + reduceFromMult);
@@ -395,10 +758,8 @@ public sealed class TitleManager : MonoBehaviour
     public object GetDamageFilterBoxed(string monsterId, MonsterDataSO def, int level) => GetDamageFilter(monsterId, def, level);
 
     // --- Job boosters (while assigned) ---
-    // Updated to be site-aware when SO exposes target site or AppliesTo(site)
     public float GetJobFatigueMultiplier(string monsterId, MonsterDataSO def, int level)
     {
-        // Legacy callsite support (no site provided) — treat as neutral
         var titles = GetEquippedList(monsterId, def, level);
         float mul = 1f;
         for (int i = 0; i < titles.Count; i++)
@@ -419,19 +780,17 @@ public sealed class TitleManager : MonoBehaviour
             bool applies = false;
             try
             {
-                // Preferred: explicit helper on SO
                 var m = t.GetType().GetMethod("AppliesTo");
                 if (m != null) applies = (bool)m.Invoke(t, new object[] { site });
                 else
                 {
-                    // Fallback: match by field if present
                     var f = t.GetType().GetField("targetJobSite");
                     if (f != null)
                     {
                         var val = (JobType)f.GetValue(t);
                         applies = (val == JobType.None || val == site);
                     }
-                    else applies = true; // if no field, treat as global
+                    else applies = true;
                 }
             }
             catch { applies = true; }
@@ -468,7 +827,7 @@ public sealed class TitleManager : MonoBehaviour
             }
             catch { applies = true; }
 
-            if (applies) sum += Mathf.Max(0f, ja is JobAuraTitleSO ? ja.siteAuraPercent : 0f);
+            if (applies) sum += Mathf.Max(0f, ja.siteAuraPercent);
         }
         return sum;
     }
@@ -507,7 +866,6 @@ public sealed class TitleManager : MonoBehaviour
 
     public float GetJobRateMult(string monsterId, JobType site)
     {
-        // kept from your original (with site check for ConditionalJobRateBoosterTitleSO)
         var def = MonsterLibraryLocator.GetById(monsterId);
         int lvl = 1;
         var titles = GetEquippedList(monsterId, def, lvl);
@@ -518,30 +876,79 @@ public sealed class TitleManager : MonoBehaviour
             var t = titles[i];
             if (!t) continue;
 
-            if (t is ConditionalJobRateBoosterTitleSO jr)
+            // Job-rate modifiers are read generically via reflection and (optionally) respect a site restriction field.
+            if (TryReadFloat(t, out var v, "rateMultiplier", "jobRateMultiplier", "productionMultiplier", "jobProdMult"))
             {
-                if (jr.restrictTo == JobType.None || jr.restrictTo == site)
-                    mul *= Mathf.Max(0f, jr.rateMultiplier);
-            }
-            else if (TryReadFloat(t, out var v, "rateMultiplier", "jobRateMultiplier", "productionMultiplier", "jobProdMult"))
-            {
-                mul *= Mathf.Max(0f, v);
+                bool applies = true;
+                try
+                {
+                    // Prefer an AppliesTo(JobType) method if present.
+                    var m = t.GetType().GetMethod("AppliesTo");
+                    if (m != null)
+                    {
+                        applies = (bool)m.Invoke(t, new object[] { site });
+                    }
+                    else
+                    {
+                        // Common restriction field names used by job-related titles.
+                        var f = t.GetType().GetField("restrictTo") ?? t.GetType().GetField("targetJobSite");
+                        if (f != null && f.FieldType == typeof(JobType))
+                        {
+                            var val = (JobType)f.GetValue(t);
+                            applies = (val == JobType.None || val == site);
+                        }
+                    }
+                }
+                catch { applies = true; }
+
+                if (applies)
+                    mul *= Mathf.Max(0f, v);
             }
         }
         return Mathf.Max(0f, mul);
     }
 
-    // Router for adapter
     public float GetStatValueRouter(string monsterId, MonsterDataSO def, int level, string statKind, TitleContext ctx, float baseValue)
     {
-        var norm = NormalizeStatKey(statKind);
+        // Battle uses both "real stat" keys (HP/Attack/Defense/Speed) and "mod keys" (atkFlat/atkPct/etc).
+        if (string.IsNullOrEmpty(statKind))
+            return baseValue;
+
+        string key = statKind.Trim();
+
+        // Mod-key routing (BattleManager requests these with baseValue=0)
+        if (IsModKey(key))
+        {
+            var mods = GetBattleStatModsRuntime(monsterId, def, level, in ctx);
+            if (key.Equals("atkFlat", StringComparison.OrdinalIgnoreCase)) return mods.atkFlat;
+            if (key.Equals("defFlat", StringComparison.OrdinalIgnoreCase)) return mods.defFlat;
+            if (key.Equals("spdFlat", StringComparison.OrdinalIgnoreCase)) return mods.spdFlat;
+            if (key.Equals("atkPct", StringComparison.OrdinalIgnoreCase)) return mods.atkPct;
+            if (key.Equals("defPct", StringComparison.OrdinalIgnoreCase)) return mods.defPct;
+            if (key.Equals("spdPct", StringComparison.OrdinalIgnoreCase)) return mods.spdPct;
+            if (key.Equals("hpPct",  StringComparison.OrdinalIgnoreCase)) return mods.hpPct;
+            return baseValue;
+        }
+
+        // Normal stat routing (returns final stat value)
+        var norm = NormalizeStatKey(key);
         if (!Enum.TryParse<StatKind>(norm, ignoreCase: true, out var kind))
             return baseValue;
 
         return GetStatValue(monsterId, def, level, kind, in ctx, baseValue);
     }
 
-    // Small reflection helper (flexible field/property names)
+    private static bool IsModKey(string key)
+    {
+        return key.Equals("atkFlat", StringComparison.OrdinalIgnoreCase) ||
+               key.Equals("defFlat", StringComparison.OrdinalIgnoreCase) ||
+               key.Equals("spdFlat", StringComparison.OrdinalIgnoreCase) ||
+               key.Equals("atkPct",  StringComparison.OrdinalIgnoreCase) ||
+               key.Equals("defPct",  StringComparison.OrdinalIgnoreCase) ||
+               key.Equals("spdPct",  StringComparison.OrdinalIgnoreCase) ||
+               key.Equals("hpPct",   StringComparison.OrdinalIgnoreCase);
+    }
+
     private static bool TryReadFloat(object obj, out float value, params string[] names)
     {
         value = 0f;
@@ -572,28 +979,22 @@ public sealed class TitleManager : MonoBehaviour
         {
             var t = titles[i] as EffectivenessNullifyTitleSO;
             if (t)
-            {
-                // Stack multiplicatively (so multiple resistances combine)
                 mul *= Mathf.Max(0f, t.incomingEffectivenessMultiplier);
-            }
         }
         return mul;
     }
 
     // ─────────────────────────────────────────────────────────────────────
-    // UI-friendly wrappers that ALWAYS raise the event on change
+    // UI-friendly wrappers
     // ─────────────────────────────────────────────────────────────────────
-
     public bool AssignTitleToMonster(string monsterId, MonsterDataSO def, int tierIndex, TitleSO choose)
     {
-        bool ok = Equip(monsterId, def, tierIndex, choose); // Equip already calls RaiseTitleChange if changed
-        return ok;
+        return Equip(monsterId, def, tierIndex, choose);
     }
 
     public bool RemoveTitleFromMonster(string monsterId, MonsterDataSO def, int tierIndex)
     {
-        bool ok = Unequip(monsterId, def, tierIndex); // Unequip already calls RaiseTitleChange if changed
-        return ok;
+        return Unequip(monsterId, def, tierIndex);
     }
 
     public bool ToggleTitleOnMonster(string monsterId, MonsterDataSO def, int tierIndex, TitleSO choose)
@@ -609,7 +1010,7 @@ public sealed class TitleManager : MonoBehaviour
         if (string.IsNullOrEmpty(monsterId)) return;
 
         var save = TitleSaveStore.GetOrCreateEquip(monsterId);
-        if (save.tierSelections == null || save.tierSelections.Count == 0) return;
+        if (save == null || save.tierSelections == null || save.tierSelections.Count == 0) return;
 
         bool changed = false;
         for (int i = 0; i < save.tierSelections.Count; i++)
@@ -645,11 +1046,12 @@ public sealed class TitleManager : MonoBehaviour
             case "ATK": return "Attack";
             case "DEF": return "Defense";
             case "SPD": return "Speed";
-            case "HP":  return "HP";
-            default:    return key; // "Attack","Defense","Speed" already fine
+            case "HP": return "HP";
+            default: return key;
         }
     }
 
+    // Keep legacy spelling (if other code calls it)
     public float GetcreditMultOnVictory(string monsterId, MonsterDataSO wild, int wildLevel)
     {
         float mul = 1f;
@@ -663,17 +1065,62 @@ public sealed class TitleManager : MonoBehaviour
             var t = titles[i];
             if (!t) continue;
 
-            if (t is creditBonusOnVictoryTitleSO credit)
+            if (t is CreditBonusOnVictoryTitleSO credit)
             {
-                mul *= Mathf.Max(0f, credit.creditMultiplier);
+                if (TryReadFloat(credit, out var credVal, "CreditMultiplier", "creditMultiplier", "creditsMultiplier", "rewardcreditMult"))
+                {
+                    DevLog.Log($"[TitleManager] Credit title '{credit.titleId}' multiplier={credVal}");
+                    mul *= Mathf.Max(0f, credVal);
+                    BattleLogger.LogTitleActivation(
+                        def != null ? def.displayName : monsterId,
+                        credit.DisplayOrId,
+                        $"Credit bonus ×{credVal:F2}");
+                }
+                else
+                {
+                    DevLog.Log($"[TitleManager] Credit title '{credit.titleId}' has no readable multiplier field - dumping fields...");
+                    DumpTitleFields(credit);
+                }
                 continue;
             }
 
-            if (TryReadFloat(t, out var v, "creditMultiplier", "creditsMultiplier", "rewardcreditMult"))
+            if (TryReadFloat(t, out var v, "CreditMultiplier", "creditMultiplier", "creditsMultiplier", "rewardcreditMult"))
                 mul *= Mathf.Max(0f, v);
         }
 
         return Mathf.Max(0f, mul);
+    }
+
+    // Optional nicer alias (won’t break existing callers)
+    public float GetCreditMultOnVictory(string monsterId, MonsterDataSO wild, int wildLevel)
+        => GetcreditMultOnVictory(monsterId, wild, wildLevel);
+
+    private void DumpTitleFields(TitleSO t)
+    {
+        if (t == null)
+        {
+            DevLog.Log("[TitleManager] DumpTitleFields: title is null");
+            return;
+        }
+
+        var ty = t.GetType();
+        var fields = ty.GetFields();
+        string outStr = $"[TitleManager] Fields for {t.titleId} ({ty.Name}): ";
+        for (int i = 0; i < fields.Length; i++)
+        {
+            try { var val = fields[i].GetValue(t); outStr += $"{fields[i].Name}={val}, "; } catch { outStr += $"{fields[i].Name}=<err>, "; }
+        }
+        var props = ty.GetProperties();
+        if (props != null && props.Length > 0)
+        {
+            outStr += " | Props: ";
+            for (int i = 0; i < props.Length; i++)
+            {
+                try { var val = props[i].GetValue(t, null); outStr += $"{props[i].Name}={val}, "; } catch { outStr += $"{props[i].Name}=<err>, "; }
+            }
+        }
+
+        DevLog.Log(outStr);
     }
 
     public float GetGrowthCoreMultOnVictory(string monsterId, MonsterDataSO wild, int wildLevel)
@@ -692,6 +1139,10 @@ public sealed class TitleManager : MonoBehaviour
             if (t is GrowthCoreBonusOnVictoryTitleSO gc)
             {
                 mul *= Mathf.Max(0f, gc.growthCoreMultiplier);
+                BattleLogger.LogTitleActivation(
+                    def != null ? def.displayName : monsterId,
+                    gc.DisplayOrId,
+                    $"Growth Core bonus ×{gc.growthCoreMultiplier:F2}");
                 continue;
             }
 
@@ -705,60 +1156,729 @@ public sealed class TitleManager : MonoBehaviour
     // ─────────────────────────────────────────────────────────────────────
     // TitlesAdapter event relays (safe no-ops if unused)
     // ─────────────────────────────────────────────────────────────────────
-
-    // Called by TitlesAdapter.OnBattleStart(...)
     public void OnBattleStart(string activeMonsterId, MonsterDataSO wild, int wildLevel)
     {
-        _turnStacks.Clear();
-        _eventStacks.Clear();
-        _eventMax.Clear();
-        _eventDecayPerTurn.Clear();
-        _flatStartUntilTurn.Clear();
-        _flatStartAmountAtk.Clear();
-        _shieldRemaining.Clear();
-        _turnIndex = 0;
+        // BattleManager currently calls OnBattleStart for BOTH the player combatant
+        // and the wild combatant. Previously, each call cleared per-battle state,
+        // causing the second call to overwrite the first (and breaking player-side
+        // turn-based titles like TurnBooster).
+        //
+        // Fix: clear per-battle state ONLY once per battle session, then register
+        // each combatant as a participant.
+        if (!_battleSessionActive)
+        {
+            _turnStacks.Clear();
+            _eventStacks.Clear();
+            _eventMax.Clear();
+            _eventDecayPerTurn.Clear();
+            _eventStackGainedTurns.Clear();
+        _eventCooldownActive.Clear();
+            _flatStartUntilTurn.Clear();
+            _flatStartAmountAtk.Clear();
+            _flatStartAmountDef.Clear();
+            _flatStartAmountSpd.Clear();
+            _flatStartAmountHp.Clear();
+            _flatStartRemainingTurns.Clear();
+            _shieldRemaining.Clear();
+            _onEventFiredBattle.Clear();
+            _onEventFiredTurn.Clear();
 
-        // Pre-bake start buffs for active monster (expand to allies if you want)
+            // Clear per-battle context (but DO NOT clear _battleOverrideTitles here:
+            // EncounterManager injects rolled wild titles prior to battle start.)
+            _battleContextDef.Clear();
+            _battleContextLevel.Clear();
+
+            _battleParticipants.Clear();
+            _scratchParticipants.Clear();
+
+            _turnIndex = 0;
+            _battleSessionActive = true;
+        }
+
+        _activeBattleMonsterId = activeMonsterId; // legacy/diagnostics
+
         if (!string.IsNullOrEmpty(activeMonsterId))
+        {
+            _battleParticipants.Add(activeMonsterId);
+
+            // Register context for synthetic ids so conditional titles can resolve def/level safely.
+            if (activeMonsterId.StartsWith("WILD::", StringComparison.Ordinal) && wild != null)
+                RegisterBattleContext(activeMonsterId, wild, wildLevel);
+
             ApplyBattleStartBonuses(activeMonsterId);
+        }
     }
 
-    // Called by TitlesAdapter.OnBattleEnd(...)
     public void OnBattleEnd(string activeMonsterId, bool victory, MonsterDataSO wild, int wildLevel)
     {
+        // BattleManager may call OnBattleEnd for multiple combatants. We only
+        // fully clear per-battle state once all registered participants have
+        // ended the battle.
+        if (!string.IsNullOrEmpty(activeMonsterId))
+            _battleParticipants.Remove(activeMonsterId);
+
+        if (_battleParticipants.Count > 0)
+        {
+            // Keep session alive for remaining combatant(s).
+            _activeBattleMonsterId = activeMonsterId;
+            return;
+        }
+
         _turnStacks.Clear();
         _eventStacks.Clear();
         _eventMax.Clear();
         _eventDecayPerTurn.Clear();
+        _eventStackGainedTurns.Clear();
         _flatStartUntilTurn.Clear();
         _flatStartAmountAtk.Clear();
+        _flatStartAmountDef.Clear();
+        _flatStartAmountSpd.Clear();
+        _flatStartAmountHp.Clear();
+        _flatStartRemainingTurns.Clear();
         _shieldRemaining.Clear();
+        _onEventFiredBattle.Clear();
+        _onEventFiredTurn.Clear();
+
+        _battleParticipants.Clear();
+        _scratchParticipants.Clear();
+        _battleSessionActive = false;
+
+        // Clear battle-scoped title overrides + synthetic context.
+        ClearAllBattleOverrideTitles();
+
+        _activeBattleMonsterId = "";
         _turnIndex = 0;
     }
 
-    // Optional events you may fire from Encounter/Battle
-    public void OnMonsterLeveled(string monsterId, int newLevel) { }
-    public void OnMonsterCaptured(string monsterId, MonsterType type, int level, bool isShiny) { }
-    public void OnMonsterEvolved(string newMonsterId) { }
 
-    // Called by TitlesAdapter.OnTurnAdvanced(...)
     public void OnTurnAdvanced(int turnIndex)
     {
         _turnIndex = Mathf.Max(0, turnIndex);
 
-        var keys = _eventStacks.Keys.ToArray();
-        for (int i = 0; i < keys.Length; i++)
+        // OnEventTriggerTitleSO: reset per-turn limit tracking
+        _onEventFiredTurn.Clear();
+
+        // decay event stacks (1-turn grace: stacks gained this turn do not decay on the very next turn advance)
+        _scratchEventKeys.Clear();
+        foreach (var kv in _eventStacks)
+            _scratchEventKeys.Add(kv.Key);
+
+        for (int i = 0; i < _scratchEventKeys.Count; i++)
         {
-            var id = keys[i];
-            if (!_eventStacks.TryGetValue(id, out var cur)) continue;
+            var id = _scratchEventKeys[i];
+
+            if (!_eventStacks.TryGetValue(id, out var cur) || cur <= 0) continue;
+
+            if (!_eventCooldownActive.TryGetValue(id, out bool coolingDown) || !coolingDown)
+                continue; // No decay until max has been reached (cooldown phase)
+
+
             int decay = _eventDecayPerTurn.TryGetValue(id, out var d) ? d : 0;
-            if (decay > 0)
-                _eventStacks[id] = Mathf.Max(0, cur - decay);
+            if (decay <= 0) continue;
+
+            // If we have per-stack gained-turn data, decay only stacks that are at least 1 full turn old.
+            if (_eventStackGainedTurns.TryGetValue(id, out var gainedTurns) && gainedTurns != null && gainedTurns.Count > 0)
+            {
+                // Defensive sync (in case max changed or older data existed)
+                if (gainedTurns.Count != cur)
+                {
+                    // If counts disagree, rebuild as "old" stacks so decay remains sane.
+                    gainedTurns.Clear();
+                    for (int s = 0; s < cur; s++)
+                        gainedTurns.Add(_turnIndex - 2);
+                }
+
+                int removedStacks = 0;
+                // remove oldest eligible stacks first
+                for (int s = 0; s < gainedTurns.Count && removedStacks < decay; )
+                {
+                    // eligible only if gained at least 1 full turn ago
+                    if (gainedTurns[s] <= (_turnIndex - 2))
+                    {
+                        gainedTurns.RemoveAt(s);
+                        removedStacks++;
+                        continue;
+                    }
+                    s++;
+                }
+
+                _eventStacks[id] = gainedTurns.Count;
+                if (removedStacks > 0)
+                {
+                    int maxStacksValue = _eventMax.TryGetValue(id, out var mx) ? mx : Mathf.Max(gainedTurns.Count, 1);
+                    LogEventStackDecay(id, removedStacks, gainedTurns.Count, maxStacksValue);
+                }
+                continue;
+            }
+
+            // Fallback: old behavior (no grace) if gained-turn list doesn't exist for this id.
+            int beforeStacks = cur;
+            int afterStacks = Mathf.Max(0, cur - decay);
+            _eventStacks[id] = afterStacks;
+
+            int removedStacksFallback = beforeStacks - afterStacks;
+            if (removedStacksFallback > 0)
+            {
+                int maxStacksValue = _eventMax.TryGetValue(id, out var mx) ? mx : Mathf.Max(afterStacks, 1);
+                LogEventStackDecay(id, removedStacksFallback, afterStacks, maxStacksValue);
+
+                if (afterStacks <= 0)
+                    _eventCooldownActive[id] = false;
+            }
         }
 
+        // TurnBooster: apply stack growth to ALL battle participants that have a TurnBooster title.
+        // This ensures both player and wild combatants can use turn-based abilities.
+        if (_battleParticipants.Count <= 0) return;
+
+        // Copy keys defensively (HashSet cannot be safely iterated if mutated by other calls).
+        _scratchParticipants.Clear();
+        foreach (var id in _battleParticipants)
+            _scratchParticipants.Add(id);
+
+        for (int i = 0; i < _scratchParticipants.Count; i++)
+        {
+            var id = _scratchParticipants[i];
+            if (string.IsNullOrEmpty(id)) continue;
+
+            var def = MonsterLibraryLocator.GetById(id);
+            int lvl = GetLevelOr1(id);
+            var tb = GetFirstTitle<TurnBoosterTitleSO>(id, def, lvl);
+            if (tb == null) continue;
+
+            _turnStacks.TryGetValue(id, out int cur);
+            int max = Mathf.Max(1, tb.maxStacks);
+            int next = Mathf.Min(cur + 1, max);
+            _turnStacks[id] = next;
+
+            BattleLogger.LogTitleActivation(
+                ownerName: def != null ? def.displayName : id,
+                titleName: string.IsNullOrEmpty(tb.displayName) ? tb.titleId : tb.displayName,
+                summary: $"+1 stack ({next}/{max})"
+            );
+        }
+
+        // OnEventTriggerTitleSO: fire OnTurnStart for all participants
+        for (int i = 0; i < _scratchParticipants.Count; i++)
+        {
+            var id2 = _scratchParticipants[i];
+            if (!string.IsNullOrEmpty(id2))
+            {
+                ProcessOnEventTriggers(id2, OnEventTriggerKind.OnTurnStart);
+                ProcessStatusApplyTriggers(id2, OnEventTriggerKind.OnTurnStart);
+            }
+        }
     }
 
-    // Called by TitlesAdapter.OnAttackLanded(attackerId, wasCrit)
+    // ─────────────────────────────────────────────────────────────────────
+    // Battle logging helpers
+    // ─────────────────────────────────────────────────────────────────────
+    private void LogEventStackDecay(string combatantId, int removedStacks, int newStacks, int maxStacksValue)
+    {
+        if (removedStacks <= 0) return;
+
+        // Owner label: wild combatants use a dedicated id prefix in this project.
+        string ownerLabel = (!string.IsNullOrEmpty(combatantId) && combatantId.StartsWith("WILD", StringComparison.OrdinalIgnoreCase))
+            ? "Wild"
+            : "Player";
+
+        // Title name: resolve the active EventStacks title equipped on this combatant.
+        var def = MonsterLibraryLocator.GetById(combatantId);
+        int lvl = GetLevelOr1(combatantId);
+        var eso = GetFirstTitle<EventStacksTitleSO>(combatantId, def, lvl);
+        string titleName = (eso != null && !string.IsNullOrEmpty(eso.displayName))
+            ? eso.displayName
+            : (eso != null ? eso.titleId : "Event Stacks");
+
+        string msg = $"{ownerLabel} - {titleName} stacks decayed: -{removedStacks} ({newStacks}/{maxStacksValue})";
+        BattleLogger.Log(msg);
+    }
+
+    /// owner’s turns (not global rounds).
+    /// </summary>
+    public void OnCombatantTurnEnded(string combatantId)
+    {
+        if (string.IsNullOrEmpty(combatantId)) return;
+
+        if (_flatStartRemainingTurns.TryGetValue(combatantId, out int rem) && rem > 0)
+        {
+            rem = Mathf.Max(0, rem - 1);
+            if (rem <= 0)
+            {
+                _flatStartRemainingTurns.Remove(combatantId);
+            }
+            else
+            {
+                _flatStartRemainingTurns[combatantId] = rem;
+            }
+        }
+
+        // OnEventTriggerTitleSO: OnTurnEnd fires per-combatant
+        ProcessOnEventTriggers(combatantId, OnEventTriggerKind.OnTurnEnd);
+
+        // StatusApplyTitleSO: OnTurnEnd fires per-combatant
+        ProcessStatusApplyTriggers(combatantId, OnEventTriggerKind.OnTurnEnd);
+    }
+
+    /// <summary>Called when the player kills the wild monster.</summary>
+    public void OnKill(string killerId)
+    {
+        if (string.IsNullOrEmpty(killerId)) return;
+        ProcessOnEventTriggers(killerId, OnEventTriggerKind.OnKill);
+        ProcessStatusApplyTriggers(killerId, OnEventTriggerKind.OnKill);
+    }
+
+    // ─────────────────────────────────────────────────────────────────────
+    // OnEventTriggerTitleSO — generic event-driven title evaluation
+    // ─────────────────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Evaluate all OnEventTriggerTitleSO titles on a combatant for a given trigger.
+    /// Checks trigger match → limit gate → chance roll → fires effect request.
+    /// </summary>
+    private void ProcessOnEventTriggers(string combatantId, OnEventTriggerKind triggerKind)
+    {
+        if (string.IsNullOrEmpty(combatantId)) return;
+
+        var def = MonsterLibraryLocator.GetById(combatantId);
+        int lvl = GetLevelOr1(combatantId);
+        var titles = GetEquippedList(combatantId, def, lvl);
+        if (titles == null || titles.Count == 0) return;
+
+        string ownerName = (def != null) ? def.displayName : combatantId;
+
+        for (int i = 0; i < titles.Count; i++)
+        {
+            if (titles[i] is not OnEventTriggerTitleSO oet) continue;
+            if (oet.trigger != triggerKind) continue;
+
+            string titleName = oet.DisplayOrId;
+            string limitKey = $"{combatantId}::{oet.titleId}";
+
+            // ── Limit gate ──
+            if (oet.triggerLimit == TriggerLimitKind.OncePerBattle && _onEventFiredBattle.Contains(limitKey))
+            {
+                DevLog.Log($"[OnEventTrigger] {ownerName} — {titleName}: BLOCKED (once-per-battle already fired)");
+                continue;
+            }
+            if (oet.triggerLimit == TriggerLimitKind.OncePerTurn && _onEventFiredTurn.Contains(limitKey))
+            {
+                DevLog.Log($"[OnEventTrigger] {ownerName} — {titleName}: BLOCKED (once-per-turn already fired)");
+                continue;
+            }
+
+            // ── Chance roll ──
+            float roll = UnityEngine.Random.value * 100f;
+            float chance = Mathf.Clamp(oet.chancePercent, 0f, 100f);
+            if (roll >= chance)
+            {
+                DevLog.Log($"[OnEventTrigger] {ownerName} — {titleName}: trigger={triggerKind} chance FAILED (rolled {roll:F1} >= {chance:F0}%)");
+                continue;
+            }
+
+            DevLog.Log($"[OnEventTrigger] {ownerName} — {titleName}: trigger={triggerKind} chance PASSED (rolled {roll:F1} < {chance:F0}%)");
+
+            // ── Mark as fired for limit tracking ──
+            if (oet.triggerLimit == TriggerLimitKind.OncePerBattle)
+                _onEventFiredBattle.Add(limitKey);
+            if (oet.triggerLimit == TriggerLimitKind.OncePerTurn)
+                _onEventFiredTurn.Add(limitKey);
+
+            // ── Build and dispatch effect request ──
+            var req = new TitleEffectRequest
+            {
+                ownerId            = combatantId,
+                effect             = oet.effect,
+                value              = Mathf.Max(0f, oet.effectValue),
+                stat               = oet.buffStat,
+                buffDurationSeconds = Mathf.Max(0f, oet.buffDurationSeconds),
+                titleDisplayName   = titleName,
+                ownerDisplayName   = ownerName,
+            };
+
+            TitlesAdapter.RequestTitleEffect(req);
+        }
+    }
+
+    // ─────────────────────────────────────────────────────────────────────
+    // SynergyAmplifierTitleSO — modify resolved synergy commands
+    // ─────────────────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Mutates a resolved synergy ApplyCommand in-place based on all equipped
+    /// SynergyAmplifierTitleSO titles on the given combatant.
+    /// Call this AFTER SynergyResolver produces commands but BEFORE they are applied.
+    /// </summary>
+    public void AmplifySynergyCommand(string combatantId, SynergyResolver.ApplyCommand cmd)
+    {
+        if (string.IsNullOrEmpty(combatantId) || cmd == null) return;
+
+        var def = MonsterLibraryLocator.GetById(combatantId);
+        int lvl = GetLevelOr1(combatantId);
+        var titles = GetEquippedList(combatantId, def, lvl);
+        if (titles == null || titles.Count == 0) return;
+
+        string ownerName = (def != null) ? def.displayName : combatantId;
+
+        for (int i = 0; i < titles.Count; i++)
+        {
+            if (titles[i] is not SynergyAmplifierTitleSO amp) continue;
+
+            // ── Filter: MonsterType ──
+            if (amp.filter == SynergyAmpFilter.SpecificType && amp.filterType != cmd.sourceType)
+                continue;
+
+            // ── Filter: Tier ──
+            if (amp.tierFilter == SynergyAmpTierFilter.Tier1Only && cmd.tier != SynergyTier.Tier1)
+                continue;
+            if (amp.tierFilter == SynergyAmpTierFilter.Tier2Only && cmd.tier != SynergyTier.Tier2)
+                continue;
+
+            string titleName = amp.DisplayOrId;
+
+            switch (amp.ampType)
+            {
+                case SynergyAmpType.PowerMultiplier:
+                {
+                    float baseMag = cmd.magnitude;
+                    float mult = 1f + Mathf.Max(0f, amp.value) / 100f;
+                    cmd.magnitude *= mult;
+                    BattleLogger.LogTitleActivation(ownerName, titleName,
+                        $"{cmd.sourceType} {cmd.tier} synergy power +{amp.value:F0}%");
+                    DevLog.Log($"[SynergyAmp] {titleName}: {cmd.sourceType} {cmd.tier} magnitude {baseMag:F3} → {cmd.magnitude:F3} (×{mult:F2}, +{amp.value:F0}%)");
+                    break;
+                }
+                case SynergyAmpType.BonusTurns:
+                {
+                    if (cmd.persistent) break; // persistent statuses ignore turns
+                    int baseTurns = cmd.turns;
+                    int bonus = Mathf.Max(0, Mathf.RoundToInt(amp.value));
+                    cmd.turns += bonus;
+                    BattleLogger.LogTitleActivation(ownerName, titleName,
+                        $"{cmd.sourceType} {cmd.tier} synergy +{bonus} turn(s)");
+                    DevLog.Log($"[SynergyAmp] {titleName}: {cmd.sourceType} {cmd.tier} turns {baseTurns} → {cmd.turns} (+{bonus})");
+                    break;
+                }
+                case SynergyAmpType.BonusMagnitude:
+                {
+                    float baseMag = cmd.magnitude;
+                    cmd.magnitude += Mathf.Max(0f, amp.value);
+                    BattleLogger.LogTitleActivation(ownerName, titleName,
+                        $"{cmd.sourceType} {cmd.tier} synergy +{amp.value:F1} magnitude");
+                    DevLog.Log($"[SynergyAmp] {titleName}: {cmd.sourceType} {cmd.tier} magnitude {baseMag:F3} → {cmd.magnitude:F3} (+{amp.value:F3} flat)");
+                    break;
+                }
+            }
+        }
+    }
+
+    // ─────────────────────────────────────────────────────────────────────
+    // TeamAuraBattleTitleSO — passive team auras
+    // ─────────────────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Aggregate flat and percent aura bonuses for a target combatant and stat.
+    /// Scans ALL battle participants' titles for TeamAuraBattleTitleSO.
+    /// Returns (flatSum, pctSum) where pctSum is additive (e.g. 0.10 = +10%).
+    /// </summary>
+    public void GetTeamAuraStatBonus(string targetId, StatKind stat, in TitleContext targetCtx,
+        out float flatSum, out float pctSum)
+    {
+        flatSum = 0f;
+        pctSum = 0f;
+
+        if (!_battleSessionActive || _battleParticipants.Count == 0) return;
+
+        foreach (var sourceId in _battleParticipants)
+        {
+            if (string.IsNullOrEmpty(sourceId)) continue;
+
+            var srcDef = MonsterLibraryLocator.GetById(sourceId);
+            int srcLvl = GetLevelOr1(sourceId);
+            var titles = GetEquippedList(sourceId, srcDef, srcLvl);
+            if (titles == null) continue;
+
+            for (int i = 0; i < titles.Count; i++)
+            {
+                if (titles[i] is not TeamAuraBattleTitleSO aura) continue;
+
+                // Stat-based effects only (skip IncomingDamageReduction here)
+                if (aura.effect == AuraEffectKind.IncomingDamageReduction) continue;
+                if (aura.stat != stat) continue;
+
+                // Scope check
+                bool isSelf = string.Equals(sourceId, targetId, System.StringComparison.Ordinal);
+                if (aura.scope == AuraTargetScope.AlliesExceptSelf && isSelf) continue;
+                if (aura.scope == AuraTargetScope.SelfOnly && !isSelf) continue;
+
+                // Condition check
+                if (!CheckAuraCondition(aura, targetCtx)) continue;
+
+                string titleName = aura.DisplayOrId;
+                string srcName = srcDef != null ? srcDef.displayName : sourceId;
+
+                switch (aura.effect)
+                {
+                    case AuraEffectKind.FlatBoost:
+                        flatSum += aura.value;
+                        DevLog.Log($"[TeamAura] {srcName}'s \"{titleName}\" → +{aura.value:F0} flat {stat} to {(isSelf ? "self" : targetId)}");
+                        break;
+                    case AuraEffectKind.PercentBoost:
+                        pctSum += aura.value / 100f;
+                        DevLog.Log($"[TeamAura] {srcName}'s \"{titleName}\" → +{aura.value:F0}% {stat} to {(isSelf ? "self" : targetId)}");
+                        break;
+                }
+            }
+        }
+    }
+
+    /// <summary>
+    /// Aggregate incoming damage reduction % from team auras for a target combatant.
+    /// Returns value in 0..1 range (e.g. 0.15 = 15% reduction).
+    /// </summary>
+    public float GetTeamAuraDamageReduction(string targetId, in TitleContext targetCtx)
+    {
+        float total = 0f;
+
+        if (!_battleSessionActive || _battleParticipants.Count == 0) return 0f;
+
+        foreach (var sourceId in _battleParticipants)
+        {
+            if (string.IsNullOrEmpty(sourceId)) continue;
+
+            var srcDef = MonsterLibraryLocator.GetById(sourceId);
+            int srcLvl = GetLevelOr1(sourceId);
+            var titles = GetEquippedList(sourceId, srcDef, srcLvl);
+            if (titles == null) continue;
+
+            for (int i = 0; i < titles.Count; i++)
+            {
+                if (titles[i] is not TeamAuraBattleTitleSO aura) continue;
+                if (aura.effect != AuraEffectKind.IncomingDamageReduction) continue;
+
+                bool isSelf = string.Equals(sourceId, targetId, System.StringComparison.Ordinal);
+                if (aura.scope == AuraTargetScope.AlliesExceptSelf && isSelf) continue;
+                if (aura.scope == AuraTargetScope.SelfOnly && !isSelf) continue;
+
+                if (!CheckAuraCondition(aura, targetCtx)) continue;
+
+                float pct = Mathf.Clamp(aura.value, 0f, 100f) / 100f;
+                total += pct;
+
+                string titleName = aura.DisplayOrId;
+                string srcName = srcDef != null ? srcDef.displayName : sourceId;
+                DevLog.Log($"[TeamAura] {srcName}'s \"{titleName}\" → −{aura.value:F0}% incoming damage to {(isSelf ? "self" : targetId)}");
+            }
+        }
+
+        return Mathf.Clamp01(total);
+    }
+
+    private bool CheckAuraCondition(TeamAuraBattleTitleSO aura, in TitleContext ctx)
+    {
+        switch (aura.condition)
+        {
+            case AuraConditionKind.None:
+                return true;
+            case AuraConditionKind.TargetHPAbove:
+                return ctx.selfHp01 >= Mathf.Clamp01(aura.conditionThreshold);
+            case AuraConditionKind.TargetHPBelow:
+                return ctx.selfHp01 <= Mathf.Clamp01(aura.conditionThreshold);
+            case AuraConditionKind.FirstNTurns:
+                return _turnIndex < Mathf.Max(1, aura.conditionTurns);
+            default:
+                return false;
+        }
+    }
+
+    // ─────────────────────────────────────────────────────────────────────
+    // ShieldInteractionTitleSO — overheal→shield & shield-break effects
+    // ─────────────────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Returns how much shield should be gained from the given overheal amount,
+    /// based on any equipped ShieldInteractionTitleSO (ConvertOverhealToShield).
+    /// Called by BattleManager when TryAddHPToActive detects excess healing.
+    /// Also logs the title activation via BattleLogger.
+    /// </summary>
+    public float GetOverhealToShieldAmount(string combatantId, float overhealAmount)
+    {
+        if (string.IsNullOrEmpty(combatantId) || overhealAmount <= 0f) return 0f;
+
+        var def = MonsterLibraryLocator.GetById(combatantId);
+        int lvl = GetLevelOr1(combatantId);
+        var titles = GetEquippedList(combatantId, def, lvl);
+        if (titles == null || titles.Count == 0) return 0f;
+
+        string ownerName = (def != null) ? def.displayName : combatantId;
+        float totalShield = 0f;
+
+        for (int i = 0; i < titles.Count; i++)
+        {
+            if (titles[i] is not ShieldInteractionTitleSO sit) continue;
+            if (sit.kind != ShieldInteractionKind.ConvertOverhealToShield) continue;
+
+            float pct = Mathf.Clamp(sit.conversionPercent, 0f, 100f) / 100f;
+            float gain = overhealAmount * pct;
+            if (sit.maxShieldPerHeal > 0f) gain = Mathf.Min(gain, sit.maxShieldPerHeal);
+            if (gain <= 0f) continue;
+
+            totalShield += gain;
+
+            string titleName = sit.DisplayOrId;
+            BattleLogger.LogTitleActivation(ownerName, titleName,
+                $"+{Mathf.RoundToInt(gain)} shield from overheal ({Mathf.RoundToInt(overhealAmount)} excess × {sit.conversionPercent:F0}%)");
+            DevLog.Log($"[ShieldInteraction] {ownerName} — {titleName}: overheal {Mathf.RoundToInt(overhealAmount)} → +{Mathf.RoundToInt(gain)} shield");
+        }
+
+        return totalShield;
+    }
+
+    /// <summary>
+    /// Called when a combatant's total shield drops to 0 (was >0 before damage).
+    /// Scans for ShieldInteractionTitleSO (EffectOnShieldBreak) and dispatches effects.
+    /// </summary>
+    public void ProcessShieldBreak(string combatantId)
+    {
+        if (string.IsNullOrEmpty(combatantId)) return;
+
+        var def = MonsterLibraryLocator.GetById(combatantId);
+        int lvl = GetLevelOr1(combatantId);
+        var titles = GetEquippedList(combatantId, def, lvl);
+        if (titles == null || titles.Count == 0) return;
+
+        string ownerName = (def != null) ? def.displayName : combatantId;
+
+        for (int i = 0; i < titles.Count; i++)
+        {
+            if (titles[i] is not ShieldInteractionTitleSO sit) continue;
+            if (sit.kind != ShieldInteractionKind.EffectOnShieldBreak) continue;
+
+            string titleName = sit.DisplayOrId;
+            string limitKey = $"{combatantId}::sb::{sit.titleId}";
+
+            // ── Limit gate ──
+            if (sit.triggerLimit == TriggerLimitKind.OncePerBattle && _onEventFiredBattle.Contains(limitKey))
+                continue;
+            if (sit.triggerLimit == TriggerLimitKind.OncePerTurn && _onEventFiredTurn.Contains(limitKey))
+                continue;
+
+            // ── Mark as fired ──
+            if (sit.triggerLimit == TriggerLimitKind.OncePerBattle)
+                _onEventFiredBattle.Add(limitKey);
+            if (sit.triggerLimit == TriggerLimitKind.OncePerTurn)
+                _onEventFiredTurn.Add(limitKey);
+
+            // ── Map ShieldBreakEffectKind → TitleEffectKind ──
+            TitleEffectKind mappedEffect;
+            switch (sit.breakEffect)
+            {
+                case ShieldBreakEffectKind.GainFlatShield:  mappedEffect = TitleEffectKind.GainFlatShield;  break;
+                case ShieldBreakEffectKind.HealFlat:        mappedEffect = TitleEffectKind.HealFlat;        break;
+                case ShieldBreakEffectKind.GainTempStatBuff: mappedEffect = TitleEffectKind.GainTempStatBuff; break;
+                default: continue;
+            }
+
+            var req = new TitleEffectRequest
+            {
+                ownerId              = combatantId,
+                effect               = mappedEffect,
+                value                = Mathf.Max(0f, sit.breakEffectValue),
+                stat                 = sit.breakBuffStat,
+                buffDurationSeconds  = Mathf.Max(0.1f, sit.breakBuffDurationSeconds),
+                titleDisplayName     = titleName,
+                ownerDisplayName     = ownerName,
+            };
+
+            BattleLogger.LogTitleActivation(ownerName, titleName,
+                $"shield broke! Activated {sit.breakEffect}");
+            DevLog.Log($"[ShieldInteraction] {ownerName} — {titleName}: shield break → {sit.breakEffect} (value={sit.breakEffectValue:F1})");
+
+            TitlesAdapter.RequestTitleEffect(req);
+        }
+    }
+
+    // ─────────────────────────────────────────────────────────────────────
+    // StatusApplyTitleSO — event-driven status infliction
+    // ─────────────────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Evaluate all StatusApplyTitleSO titles on a combatant for a given trigger.
+    /// Checks trigger match → limit gate → chance roll → fires status request.
+    /// </summary>
+    private void ProcessStatusApplyTriggers(string combatantId, OnEventTriggerKind triggerKind)
+    {
+        if (string.IsNullOrEmpty(combatantId)) return;
+
+        var def = MonsterLibraryLocator.GetById(combatantId);
+        int lvl = GetLevelOr1(combatantId);
+        var titles = GetEquippedList(combatantId, def, lvl);
+        if (titles == null || titles.Count == 0) return;
+
+        string ownerName = (def != null) ? def.displayName : combatantId;
+
+        for (int i = 0; i < titles.Count; i++)
+        {
+            if (titles[i] is not StatusApplyTitleSO sat) continue;
+            if (sat.trigger != triggerKind) continue;
+
+            string titleName = sat.DisplayOrId;
+            string limitKey = $"{combatantId}::sa::{sat.titleId}";
+
+            // ── Limit gate ──
+            if (sat.triggerLimit == TriggerLimitKind.OncePerBattle && _onEventFiredBattle.Contains(limitKey))
+            {
+                DevLog.Log($"[StatusApplyTitle] {ownerName} — {titleName}: BLOCKED (once-per-battle already fired)");
+                continue;
+            }
+            if (sat.triggerLimit == TriggerLimitKind.OncePerTurn && _onEventFiredTurn.Contains(limitKey))
+            {
+                DevLog.Log($"[StatusApplyTitle] {ownerName} — {titleName}: BLOCKED (once-per-turn already fired)");
+                continue;
+            }
+
+            // ── Chance roll ──
+            float roll = UnityEngine.Random.value * 100f;
+            float chance = Mathf.Clamp(sat.chancePercent, 0f, 100f);
+            if (roll >= chance)
+            {
+                DevLog.Log($"[StatusApplyTitle] {ownerName} — {titleName}: trigger={triggerKind} chance FAILED (rolled {roll:F1} >= {chance:F0}%)");
+                continue;
+            }
+
+            DevLog.Log($"[StatusApplyTitle] {ownerName} — {titleName}: trigger={triggerKind} chance PASSED → applying {sat.status} to {sat.target}");
+
+            // ── Mark as fired for limit tracking ──
+            if (sat.triggerLimit == TriggerLimitKind.OncePerBattle)
+                _onEventFiredBattle.Add(limitKey);
+            if (sat.triggerLimit == TriggerLimitKind.OncePerTurn)
+                _onEventFiredTurn.Add(limitKey);
+
+            // ── Build and dispatch status request ──
+            var req = new TitleStatusRequest
+            {
+                status           = sat.status,
+                target           = sat.target,
+                turns            = Mathf.Max(0, sat.turns),
+                persistent       = sat.persistent,
+                magnitude        = sat.magnitude,
+                titleDisplayName = titleName,
+                ownerDisplayName = ownerName,
+            };
+
+            TitlesAdapter.RequestTitleStatus(req);
+        }
+    }
+
+    /// <summary> Remaining BattleStartShield HP for UI (0 if none). </summary>
+    public float GetBattleStartShieldRemaining(string monsterId)
+    {
+        if (string.IsNullOrEmpty(monsterId)) return 0f;
+        return _shieldRemaining.TryGetValue(monsterId, out var v) ? Mathf.Max(0f, v) : 0f;
+    }
+
+
+
     public void OnAttackLanded(string attackerId, bool wasCrit)
     {
         if (string.IsNullOrEmpty(attackerId)) return;
@@ -766,72 +1886,234 @@ public sealed class TitleManager : MonoBehaviour
         var def = MonsterLibraryLocator.GetById(attackerId);
         int lvl = GetLevelOr1(attackerId);
         var es = GetFirstTitle<EventStacksTitleSO>(attackerId, def, lvl);
-        if (es == null) return;
+        if (es != null)
+        {
+            bool trigger = (es.trigger == EventTriggerKind.OnAttack) || (wasCrit && es.trigger == EventTriggerKind.OnCrit);
+            if (trigger)
+                BumpEventStacks(attackerId, Mathf.Max(1, es.maxStacks), Mathf.Max(0, es.decayPerTurn));
+        }
 
-        bool trigger = (es.trigger == EventTriggerKind.OnAttack) || (wasCrit && es.trigger == EventTriggerKind.OnCrit);
-        if (!trigger) return;
+        // OnEventTriggerTitleSO processing
+        ProcessOnEventTriggers(attackerId, OnEventTriggerKind.OnAttackLanded);
+        if (wasCrit)
+            ProcessOnEventTriggers(attackerId, OnEventTriggerKind.OnCritLanded);
 
-        BumpEventStacks(attackerId, Mathf.Max(1, es.maxStacks), Mathf.Max(0, es.decayPerTurn));
+        // StatusApplyTitleSO processing
+        ProcessStatusApplyTriggers(attackerId, OnEventTriggerKind.OnAttackLanded);
+        if (wasCrit)
+            ProcessStatusApplyTriggers(attackerId, OnEventTriggerKind.OnCritLanded);
     }
 
-    // Called by TitlesAdapter.OnHitTaken(defenderId, damage, wasCrit)
     public void OnHitTaken(string defenderId, int damage, bool wasCrit)
     {
         if (string.IsNullOrEmpty(defenderId)) return;
 
-        // Shield consumption (if present) — call this from your damage pipeline if you prefer
-        if (_shieldRemaining.TryGetValue(defenderId, out float shield) && shield > 0f)
+        // Shield consumption (visual/log only here; actual damage reduction should occur in damage pipeline)
+        if (_shieldRemaining.TryGetValue(defenderId, out float shield) && shield > 0f && damage > 0)
         {
             float used = Mathf.Min(shield, damage);
-            shield -= used;
-            _shieldRemaining[defenderId] = Mathf.Max(0f, shield);
-            // If you want to actually reduce damage here, expose a helper that returns reduced value.
+            float next = Mathf.Max(0f, shield - used);
+            _shieldRemaining[defenderId] = next;
+
+            var def = MonsterLibraryLocator.GetById(defenderId);
+            int lvl = GetLevelOr1(defenderId);
+            var shieldTitle = GetFirstTitle<BattleStartShieldTitleSO>(defenderId, def, lvl);
+            if (shieldTitle != null)
+            {
+                BattleLogger.LogTitleActivation(
+                    ownerName: def != null ? def.displayName : defenderId,
+                    titleName: string.IsNullOrEmpty(shieldTitle.displayName) ? shieldTitle.titleId : shieldTitle.displayName,
+                    summary: $"absorbed {Mathf.RoundToInt(used)} (rem {Mathf.RoundToInt(next)})"
+                );
+            }
         }
 
-        var def = MonsterLibraryLocator.GetById(defenderId);
-        int lvl = GetLevelOr1(defenderId);
-        var es = GetFirstTitle<EventStacksTitleSO>(defenderId, def, lvl);
-        if (es == null) return;
+        var def2 = MonsterLibraryLocator.GetById(defenderId);
+        int lvl2 = GetLevelOr1(defenderId);
+        var es = GetFirstTitle<EventStacksTitleSO>(defenderId, def2, lvl2);
+        if (es != null)
+        {
+            bool trigger = (es.trigger == EventTriggerKind.OnHitTaken) || (wasCrit && es.trigger == EventTriggerKind.OnCrit);
+            if (trigger)
+                BumpEventStacks(defenderId, Mathf.Max(1, es.maxStacks), Mathf.Max(0, es.decayPerTurn));
+        }
 
-        bool trigger = (es.trigger == EventTriggerKind.OnHitTaken) || (wasCrit && es.trigger == EventTriggerKind.OnCrit);
-        if (!trigger) return;
+        // OnEventTriggerTitleSO processing
+        ProcessOnEventTriggers(defenderId, OnEventTriggerKind.OnDamageTaken);
 
-        BumpEventStacks(defenderId, Mathf.Max(1, es.maxStacks), Mathf.Max(0, es.decayPerTurn));
+        // StatusApplyTitleSO processing
+        ProcessStatusApplyTriggers(defenderId, OnEventTriggerKind.OnDamageTaken);
     }
 
     // ─────────────────────────────────────────────────────────────────────
     // Helpers
     // ─────────────────────────────────────────────────────────────────────
-
+    
     private void ApplyBattleStartBonuses(string id)
     {
         var def = MonsterLibraryLocator.GetById(id);
         int lvl = GetLevelOr1(id);
 
-        // Flat ATK start buff
+        // Flat start buff (ATK/DEF/SPD/HP)
         var flat = GetFirstTitle<BattleStartFlatTitleSO>(id, def, lvl);
         if (flat != null)
         {
-            _flatStartAmountAtk[id] = Mathf.Max(0, flat.flatAmount);
-            _flatStartUntilTurn[id] = Mathf.Max(1, flat.durationTurns <= 0 ? 1 : flat.durationTurns);
+            int amt = Mathf.Max(0, flat.flatAmount);
+            int dur = Mathf.Max(1, flat.durationTurns <= 0 ? 1 : flat.durationTurns);
+
+            // dur=1 => only turnIndex 0. dur=2 => turnIndex 0 and 1.
+            _flatStartUntilTurn[id] = _turnIndex + (dur - 1); // legacy round-index marker
+            _flatStartRemainingTurns[id] = dur; // owner-turn based duration
+
+            switch (flat.stat)
+            {
+                case BattleStatKind.ATK: _flatStartAmountAtk[id] = amt; break;
+                case BattleStatKind.DEF: _flatStartAmountDef[id] = amt; break;
+                case BattleStatKind.SPD: _flatStartAmountSpd[id] = amt; break;
+                case BattleStatKind.HP:  _flatStartAmountHp[id]  = amt; break;
+            }
+
+            BattleLogger.LogTitleActivation(
+                ownerName: def != null ? def.displayName : id,
+                titleName: string.IsNullOrEmpty(flat.displayName) ? flat.titleId : flat.displayName,
+                summary: $"+{amt} {flat.stat} for {dur} turn(s)"
+            );
         }
 
-        // Shield from MaxHP %
         var shield = GetFirstTitle<BattleStartShieldTitleSO>(id, def, lvl);
         if (shield != null)
         {
-            float maxHP = Mathf.Max(1f, BattleCalc.CalcHP(def, Mathf.Max(1, lvl)));
-            _shieldRemaining[id] = Mathf.Max(0f, maxHP * (Mathf.Max(0f, shield.shieldPct) / 100f));
+            float maxHP = 1f;
+
+            try
+            {
+                OwnedMonsterData owned = null;
+                var data = SaveManager.Data;
+                if (data != null)
+                {
+                    if (data.team != null)
+                    {
+                        for (int i = 0; i < data.team.Count; i++)
+                        {
+                            var om = data.team[i];
+                            if (om != null && om.monsterId == id) { owned = om; break; }
+                        }
+                    }
+                    if (owned == null && data.owned != null)
+                    {
+                        for (int i = 0; i < data.owned.Count; i++)
+                        {
+                            var om = data.owned[i];
+                            if (om != null && om.monsterId == id) { owned = om; break; }
+                        }
+                    }
+                }
+
+                if (owned != null)
+                    maxHP = Mathf.Max(1f, ProgressionStatCalc.GetTotalMaxHP(owned));
+                else
+                    maxHP = Mathf.Max(1f, BattleCalc.CalcHP(def, Mathf.Max(1, lvl)));
+            }
+            catch
+            {
+                maxHP = Mathf.Max(1f, BattleCalc.CalcHP(def, Mathf.Max(1, lvl)));
+            }
+
+            float shieldHP = Mathf.Max(0f, maxHP * (Mathf.Max(0f, shield.shieldPct) / 100f));
+            _shieldRemaining[id] = shieldHP;
+
+            BattleLogger.LogTitleActivation(
+                ownerName: def != null ? def.displayName : id,
+                titleName: string.IsNullOrEmpty(shield.displayName) ? shield.titleId : shield.displayName,
+                summary: $"+Shield {Mathf.RoundToInt(shieldHP)}"
+            );
+        }
+
+        // Log active team auras once at battle start
+        var allTitles = GetEquippedList(id, def, lvl);
+        if (allTitles != null)
+        {
+            string auraOwnerName = def != null ? def.displayName : id;
+            for (int t = 0; t < allTitles.Count; t++)
+            {
+                if (allTitles[t] is not TeamAuraBattleTitleSO aura) continue;
+                string auraName = aura.DisplayOrId;
+                string desc;
+                if (aura.effect == AuraEffectKind.IncomingDamageReduction)
+                    desc = $"\u2212{aura.value:F0}% incoming damage ({aura.scope})";
+                else
+                    desc = $"+{aura.value:F0}{(aura.effect == AuraEffectKind.PercentBoost ? "%" : "")} {aura.stat} ({aura.scope})";
+                BattleLogger.LogTitleActivation(auraOwnerName, auraName, $"Aura active: {desc}");
+            }
         }
     }
 
+
     private void BumpEventStacks(string id, int maxStacks, int decayPerTurn)
     {
+        if (string.IsNullOrEmpty(id)) return;
+
+        maxStacks = Mathf.Max(1, maxStacks);
+        decayPerTurn = Mathf.Max(0, decayPerTurn);
+
+        // If we've entered cooldown (max reached), we do NOT gain stacks again until stacks return to 0.
+        if (_eventCooldownActive.TryGetValue(id, out bool coolingDown) && coolingDown)
+            return;
+
+        // Maintain a per-stack gained-turn list so decay has a 1-turn grace period.
+        if (!_eventStackGainedTurns.TryGetValue(id, out var gainedTurns) || gainedTurns == null)
+        {
+            gainedTurns = new List<int>(maxStacks);
+            _eventStackGainedTurns[id] = gainedTurns;
+        }
+
+        // Defensive sync: if legacy _eventStacks count exists without gainedTurns, backfill as "old" stacks.
         _eventStacks.TryGetValue(id, out int cur);
-        int next = Mathf.Min(cur + 1, maxStacks);
+        if (cur > 0 && gainedTurns.Count != cur)
+        {
+            gainedTurns.Clear();
+            for (int s = 0; s < cur; s++)
+                gainedTurns.Add(_turnIndex - 2); // old enough to decay
+        }
+
+        // Add one stack (gained this turn index)
+        if (gainedTurns.Count < maxStacks)
+            gainedTurns.Add(_turnIndex);
+        else
+        {
+            // At cap: refresh the most recent stack's timestamp (keeps cap behavior consistent, avoids overgrowth).
+            // This also prevents "dead" stacks from instantly decaying if player keeps triggering.
+            gainedTurns[gainedTurns.Count - 1] = _turnIndex;
+        }
+
+        // Enforce cap (in case cap changed downward)
+        while (gainedTurns.Count > maxStacks)
+            gainedTurns.RemoveAt(0);
+
+        int next = gainedTurns.Count;
+
         _eventStacks[id] = next;
         _eventMax[id] = maxStacks;
-        _eventDecayPerTurn[id] = Mathf.Max(0, decayPerTurn);
+        _eventDecayPerTurn[id] = decayPerTurn;
+
+
+        // Enter cooldown once we reach max. While cooling down, triggers will not add stacks.
+        if (next >= maxStacks)
+            _eventCooldownActive[id] = true;
+        else
+            _eventCooldownActive[id] = false;
+
+        var def = MonsterLibraryLocator.GetById(id);
+        int lvl = GetLevelOr1(id);
+        var es = GetFirstTitle<EventStacksTitleSO>(id, def, lvl);
+        if (es != null && next != cur)
+        {
+            BattleLogger.LogTitleActivation(
+                ownerName: def != null ? def.displayName : id,
+                titleName: string.IsNullOrEmpty(es.displayName) ? es.titleId : es.displayName,
+                summary: $"+1 stack ({next}/{maxStacks})"
+            );
+        }
     }
 
     private static bool MatchesStat(StatKind stat, BattleStatKind bsk)
@@ -884,29 +2166,552 @@ public sealed class TitleManager : MonoBehaviour
     private static void TryBattleLog(string msg)
     {
         try { BattleLogger.Log(msg, LogScope.Battle); } catch { }
-        Debug.Log(msg);
+        DevLog.Log(msg);
     }
 
     private static float ReadHp01(TitleContext ctx)
+{
+    // Prefer the explicit field on TitleContext (no reflection).
+    // Gate to battle-only so conditionals never leak into menus.
+    if (!ctx.isBattle) return 1f;
+
+    // selfHp01 should already be current/max (0..1). Clamp defensively.
+    float v = Mathf.Clamp01(ctx.selfHp01);
+
+    // Legacy reflection fallback for older contexts (rare). Keep this safe.
+    #if TITLE_CONTEXT_REFLECTION_FALLBACK
+    try
     {
-        try
-        {
-            var t = ctx.GetType();
+        var t = ctx.GetType();
 
-            // Try common field names
-            var f = t.GetField("hpPct") ?? t.GetField("hp01") ?? t.GetField("hp") ?? t.GetField("health01");
-            if (f != null)
-                return Mathf.Clamp01(Convert.ToSingle(f.GetValue(ctx)));
+        var f = t.GetField("hpPct") ?? t.GetField("hp01") ?? t.GetField("hp") ?? t.GetField("health01");
+        if (f != null)
+            return Mathf.Clamp01(Convert.ToSingle(f.GetValue(ctx)));
 
-            // Try common property names
-            var p = t.GetProperty("hpPct") ?? t.GetProperty("hp01") ?? t.GetProperty("HP01") ?? t.GetProperty("Health01");
-            if (p != null)
-                return Mathf.Clamp01(Convert.ToSingle(p.GetValue(ctx, null)));
-        }
-        catch { /* fall through */ }
-
-        // Default to full health if unavailable to avoid accidental always-on clutch
-        return 1f;
+        var p = t.GetProperty("hpPct") ?? t.GetProperty("hp01") ?? t.GetProperty("HP01") ?? t.GetProperty("Health01");
+        if (p != null)
+            return Mathf.Clamp01(Convert.ToSingle(p.GetValue(ctx, null)));
     }
+    catch { }
+    #endif
+
+    return v;
+}
+
+    public Sprite TryGetIconByTitleName(string titleName)
+    {
+        if (string.IsNullOrEmpty(titleName)) return null;
+
+        foreach (var kv in _idToTitle)
+        {
+            var so = kv.Value;
+            if (!so) continue;
+            if (string.Equals(so.displayName, titleName, StringComparison.OrdinalIgnoreCase))
+                return so.icon;
+        }
+
+        if (_idToTitle.TryGetValue(titleName, out var byId) && byId)
+            return byId.icon;
+
+        return null;
+    }
+
+    // ─────────────────────────────────────────────────────────────────────
+    // Battle mods (flat + pct) including conditional + stateful battle titles
+    // ─────────────────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Returns complete battle stat mods for this combatant, including:
+    /// - StatBooster / DuoStatBooster
+    /// - ConditionalStatBooster / DuoConditionalStatBooster (evaluated against ctx)
+    /// - BattleStartFlat (while remaining turns > 0)
+    /// - TurnBooster stacks, EventStacks, ClutchBooster (multipliers)
+    /// </summary>
+    private TitleStatMods GetBattleStatModsRuntime(string monsterId, MonsterDataSO def, int level, in TitleContext ctx)
+    {
+        if (string.IsNullOrEmpty(monsterId))
+            return default;
+
+        if (!def)
+            def = MonsterLibraryLocator.GetById(monsterId);
+
+        if (!def)
+            return default;
+
+        // Resolve baseline stats so HP flat can be converted to pct correctly.
+        float baseHP, baseATK, baseDEF, baseSPD;
+
+        OwnedMonsterData ownedForBase = null;
+        var data = SaveManager.Data;
+        if (data != null)
+        {
+            if (data.team != null)
+            {
+                for (int i = 0; i < data.team.Count; i++)
+                {
+                    var om = data.team[i];
+                    if (om != null && om.monsterId == monsterId) { ownedForBase = om; break; }
+                }
+            }
+            if (ownedForBase == null && data.owned != null)
+            {
+                for (int i = 0; i < data.owned.Count; i++)
+                {
+                    var om = data.owned[i];
+                    if (om != null && om.monsterId == monsterId) { ownedForBase = om; break; }
+                }
+            }
+        }
+
+        if (ownedForBase != null)
+        {
+            var ps = ProgressionStatCalc.Get(ownedForBase);
+            baseHP  = Mathf.Max(1f, ps.totalHP);
+            baseATK = Mathf.Max(1f, ps.totalATK);
+            baseDEF = Mathf.Max(1f, ps.totalDEF);
+            baseSPD = Mathf.Max(1f, ps.totalSPD);
+        }
+        else
+        {
+            baseHP  = Mathf.Max(1f, BattleCalc.CalcHP(def, level));
+            baseATK = Mathf.Max(1f, BattleCalc.CalcBaseAttack(def, level, 0, 0));
+            baseDEF = Mathf.Max(1f, BattleCalc.CalcDefense(def, level));
+            baseSPD = Mathf.Max(1f, BattleCalc.CalcSpeed(def, level));
+        }
+
+        var titles = GetEquippedList(monsterId, def, level);
+
+        int atkFlat = 0, defFlat = 0, spdFlat = 0;
+        float hpMult = 1f, atkMult = 1f, defMult = 1f, spdMult = 1f;
+        float hpFlatAdd = 0f;
+
+        void ApplyOne(StatKind stat, OpKind op, float value)
+        {
+            float FactorFromOp()
+            {
+                if (op == OpKind.Multiply) return value;
+                if (op == OpKind.Divide)   return (Mathf.Approximately(value, 0f) ? 1f : 1f / value);
+                return 1f;
+            }
+
+            switch (stat)
+            {
+                case StatKind.HP:
+                    if (op == OpKind.Add) hpFlatAdd += value;
+                    else if (op == OpKind.Subtract) hpFlatAdd -= value;
+                    else hpMult *= Mathf.Max(0.01f, FactorFromOp());
+                    break;
+
+                case StatKind.Attack:
+                    if (op == OpKind.Add) atkFlat += Mathf.RoundToInt(value);
+                    else if (op == OpKind.Subtract) atkFlat -= Mathf.RoundToInt(value);
+                    else atkMult *= Mathf.Max(0.01f, FactorFromOp());
+                    break;
+
+                case StatKind.Defense:
+                    if (op == OpKind.Add) defFlat += Mathf.RoundToInt(value);
+                    else if (op == OpKind.Subtract) defFlat -= Mathf.RoundToInt(value);
+                    else defMult *= Mathf.Max(0.01f, FactorFromOp());
+                    break;
+
+                case StatKind.Speed:
+                    if (op == OpKind.Add) spdFlat += Mathf.RoundToInt(value);
+                    else if (op == OpKind.Subtract) spdFlat -= Mathf.RoundToInt(value);
+                    else spdMult *= Mathf.Max(0.01f, FactorFromOp());
+                    break;
+            }
+        }
+
+        // Static + conditional boosters
+        for (int i = 0; i < titles.Count; i++)
+        {
+            var t = titles[i];
+            if (!t) continue;
+
+            if (t is StatBoosterTitleSO sb)
+            {
+                ApplyOne(sb.stat, sb.operation, sb.value);
+            }
+            else if (t is ConditionalStatBoosterTitleSO cb)
+            {
+                bool ok = TitleUtility.CheckCondition(cb, ctx);
+                if (debugEffectiveness)
+                    DevLog.Log($"TitleManager: Conditional check for {cb.titleId} on {monsterId} -> {ok} (hp01={ctx.selfHp01:F2}, allies={ctx.alliesAlive}, winStreak={ctx.winStreak})");
+                if (ok) ApplyOne(cb.stat, cb.operation, cb.value);
+            }
+            else if (t is DuoStatBoosterTitleSO duo && duo.enabled)
+            {
+                ApplyOne(duo.statA, duo.opA, duo.valueA);
+                ApplyOne(duo.statB, duo.opB, duo.valueB);
+            }
+            else if (t is DuoConditionalStatBoosterTitleSO dcb)
+            {
+                bool ok = TitleUtility.CheckCondition(dcb.condition, dcb.threshold01, dcb.countN, in ctx);
+                if (debugEffectiveness)
+                    DevLog.Log($"TitleManager: DuoConditional check for {dcb.titleId} on {monsterId} -> {ok} (hp01={ctx.selfHp01:F2}, allies={ctx.alliesAlive}, winStreak={ctx.winStreak})");
+                if (ok)
+                {
+                    ApplyOne(dcb.statA, dcb.opA, dcb.valueA);
+                    ApplyOne(dcb.statB, dcb.opB, dcb.valueB);
+                }
+            }
+        }
+
+        // BattleStartFlat (owner-turn ticking)
+        if (_flatStartRemainingTurns.TryGetValue(ctx.ownedId, out int remTurns) && remTurns > 0)
+        {
+            if (_flatStartAmountAtk.TryGetValue(ctx.ownedId, out int fAtk)) atkFlat += fAtk;
+            if (_flatStartAmountDef.TryGetValue(ctx.ownedId, out int fDef)) defFlat += fDef;
+            if (_flatStartAmountSpd.TryGetValue(ctx.ownedId, out int fSpd)) spdFlat += fSpd;
+            if (_flatStartAmountHp.TryGetValue(ctx.ownedId, out int fHp)) hpFlatAdd += fHp;
+        }
+
+        // TurnBooster (percent per stack)
+        var tb = GetFirstTitle<TurnBoosterTitleSO>(ctx.ownedId, def, level);
+        if (tb != null && _turnStacks.TryGetValue(ctx.ownedId, out int tStacks) && tStacks > 0)
+        {
+            float pct = Mathf.Max(0f, tb.percentPerTurn) / 100f;
+            int stacks = Mathf.Min(tStacks, Mathf.Max(1, tb.maxStacks));
+            float factor = 1f + pct * stacks;
+
+            if (MatchesStat(StatKind.HP, tb.stat))  hpMult  *= factor;
+            if (MatchesStat(StatKind.Attack, tb.stat)) atkMult *= factor;
+            if (MatchesStat(StatKind.Defense, tb.stat)) defMult *= factor;
+            if (MatchesStat(StatKind.Speed, tb.stat)) spdMult *= factor;
+        }
+
+        // EventStacks (percent per stack)
+        var es = GetFirstTitle<EventStacksTitleSO>(monsterId, def, level);
+        if (es != null && _eventStacks.TryGetValue(monsterId, out int eStacks) && eStacks > 0)
+        {
+            float pct = Mathf.Max(0f, es.percentPerStack) / 100f;
+            int stacks = Mathf.Min(eStacks, Mathf.Max(1, es.maxStacks));
+            float factor = 1f + pct * stacks;
+
+            if (MatchesStat(StatKind.HP, es.stat))  hpMult  *= factor;
+            if (MatchesStat(StatKind.Attack, es.stat)) atkMult *= factor;
+            if (MatchesStat(StatKind.Defense, es.stat)) defMult *= factor;
+            if (MatchesStat(StatKind.Speed, es.stat)) spdMult *= factor;
+        }
+
+        // ClutchBooster (hp threshold)
+        var clutch = GetFirstTitle<ClutchBoosterTitleSO>(monsterId, def, level);
+        float hp01 = ReadHp01(ctx);
+        if (clutch != null && hp01 <= Mathf.Clamp01(clutch.hpBelowThreshold01))
+        {
+            if (clutch.atkPct > 0f) atkMult *= 1f + (clutch.atkPct / 100f);
+            if (clutch.defPct > 0f) defMult *= 1f + (clutch.defPct / 100f);
+            if (clutch.spdPct > 0f) spdMult *= 1f + (clutch.spdPct / 100f);
+        }
+
+        // Convert HP flat into pct factor relative to baseline HP.
+        if (!Mathf.Approximately(hpFlatAdd, 0f))
+        {
+            float hpFactorFromFlat = Mathf.Max(0.01f, (baseHP + hpFlatAdd) / baseHP);
+            hpMult *= hpFactorFromFlat;
+        }
+
+        TitleStatMods mods = default;
+        mods.atkFlat = atkFlat;
+        mods.defFlat = defFlat;
+        mods.spdFlat = spdFlat;
+
+        mods.hpPct  = hpMult  - 1f;
+        mods.atkPct = atkMult - 1f;
+        mods.defPct = defMult - 1f;
+        mods.spdPct = spdMult - 1f;
+
+        return mods;
+    }
+
+    /// <summary>
+    /// Adapter hook: returns ONLY conditional boosters as a TitleStatMods block.
+    /// </summary>
+    public TitleStatMods GetConditionalBattleMods(TitleContext ctx)
+    {
+        if (string.IsNullOrEmpty(ctx.ownedId))
+            return default;
+
+        // Resolve def/level safely for synthetic ids (e.g., wild combat ids)
+        if (!TryResolveBattleContext(ctx.ownedId, out var def, out int lvl) || def == null)
+            return default;
+
+        var titles = GetEquippedList(ctx.ownedId, def, lvl);
+
+        int atkFlat = 0, defFlat = 0, spdFlat = 0;
+        float hpMult = 1f, atkMult = 1f, defMult = 1f, spdMult = 1f;
+        float hpFlatAdd = 0f;
+
+        void ApplyOne(StatKind stat, OpKind op, float value)
+        {
+            float FactorFromOp()
+            {
+                if (op == OpKind.Multiply) return value;
+                if (op == OpKind.Divide)   return (Mathf.Approximately(value, 0f) ? 1f : 1f / value);
+                return 1f;
+            }
+
+            switch (stat)
+            {
+                case StatKind.HP:
+                    if (op == OpKind.Add) hpFlatAdd += value;
+                    else if (op == OpKind.Subtract) hpFlatAdd -= value;
+                    else hpMult *= Mathf.Max(0.01f, FactorFromOp());
+                    break;
+                case StatKind.Attack:
+                    if (op == OpKind.Add) atkFlat += Mathf.RoundToInt(value);
+                    else if (op == OpKind.Subtract) atkFlat -= Mathf.RoundToInt(value);
+                    else atkMult *= Mathf.Max(0.01f, FactorFromOp());
+                    break;
+                case StatKind.Defense:
+                    if (op == OpKind.Add) defFlat += Mathf.RoundToInt(value);
+                    else if (op == OpKind.Subtract) defFlat -= Mathf.RoundToInt(value);
+                    else defMult *= Mathf.Max(0.01f, FactorFromOp());
+                    break;
+                case StatKind.Speed:
+                    if (op == OpKind.Add) spdFlat += Mathf.RoundToInt(value);
+                    else if (op == OpKind.Subtract) spdFlat -= Mathf.RoundToInt(value);
+                    else spdMult *= Mathf.Max(0.01f, FactorFromOp());
+                    break;
+            }
+        }
+
+        float baseHP = Mathf.Max(1f, BattleCalc.CalcHP(def, lvl));
+
+        for (int i = 0; i < titles.Count; i++)
+        {
+            var t = titles[i];
+            if (!t) continue;
+
+            if (t is ConditionalStatBoosterTitleSO cb)
+            {
+                if (TitleUtility.CheckCondition(cb, ctx))
+                    ApplyOne(cb.stat, cb.operation, cb.value);
+            }
+            else if (t is DuoConditionalStatBoosterTitleSO dcb)
+            {
+                if (TitleUtility.CheckCondition(dcb.condition, dcb.threshold01, dcb.countN, in ctx))
+                {
+                    ApplyOne(dcb.statA, dcb.opA, dcb.valueA);
+                    ApplyOne(dcb.statB, dcb.opB, dcb.valueB);
+                }
+            }
+        }
+
+        // BattleStartFlat (owner-turn ticking)
+        if (_flatStartRemainingTurns.TryGetValue(ctx.ownedId, out int remTurns) && remTurns > 0)
+        {
+            if (_flatStartAmountAtk.TryGetValue(ctx.ownedId, out int fAtk)) atkFlat += fAtk;
+            if (_flatStartAmountDef.TryGetValue(ctx.ownedId, out int fDef)) defFlat += fDef;
+            if (_flatStartAmountSpd.TryGetValue(ctx.ownedId, out int fSpd)) spdFlat += fSpd;
+            if (_flatStartAmountHp.TryGetValue(ctx.ownedId, out int fHp)) hpFlatAdd += fHp;
+        }
+
+        if (!Mathf.Approximately(hpFlatAdd, 0f))
+        {
+            float hpFactorFromFlat = Mathf.Max(0.01f, (baseHP + hpFlatAdd) / baseHP);
+            hpMult *= hpFactorFromFlat;
+        }
+
+        TitleStatMods mods = default;
+        mods.atkFlat = atkFlat;
+        mods.defFlat = defFlat;
+        mods.spdFlat = spdFlat;
+        mods.hpPct  = hpMult  - 1f;
+        mods.atkPct = atkMult - 1f;
+        mods.defPct = defMult - 1f;
+        mods.spdPct = spdMult - 1f;
+        return mods;
+    }
+
+    public TitleStatMods GetBattleStatMods(string monsterId)
+    {
+        if (string.IsNullOrEmpty(monsterId))
+            return default;
+
+        var def = MonsterLibraryLocator.GetById(monsterId);
+        if (!def)
+            return default;
+
+        int level = 1;
+        var data = SaveManager.Data;
+        if (data != null)
+        {
+            OwnedMonsterData found = null;
+
+            if (data.team != null)
+                found = data.team.Find(m => m != null && m.monsterId == monsterId);
+
+            if (found == null && data.owned != null)
+                found = data.owned.Find(m => m != null && m.monsterId == monsterId);
+
+            if (found != null)
+                level = Mathf.Max(1, found.level);
+        }
+
+        var titles = GetEquippedList(monsterId, def, level);
+
+        
+    float baseHP;
+    float baseATK;
+    float baseDEF;
+    float baseSPD;
+
+    OwnedMonsterData ownedForBase = null;
+    var data2 = SaveManager.Data;
+    if (data2 != null)
+    {
+        if (data2.team != null)
+        {
+            for (int i = 0; i < data2.team.Count; i++)
+            {
+                var om = data2.team[i];
+                if (om != null && om.monsterId == monsterId) { ownedForBase = om; break; }
+            }
+        }
+        if (ownedForBase == null && data2.owned != null)
+        {
+            for (int i = 0; i < data2.owned.Count; i++)
+            {
+                var om = data2.owned[i];
+                if (om != null && om.monsterId == monsterId) { ownedForBase = om; break; }
+            }
+        }
+    }
+
+    if (ownedForBase != null)
+    {
+        var ps = ProgressionStatCalc.Get(ownedForBase);
+        baseHP  = Mathf.Max(1f, ps.totalHP);
+        baseATK = Mathf.Max(1f, ps.totalATK);
+        baseDEF = Mathf.Max(1f, ps.totalDEF);
+        baseSPD = Mathf.Max(1f, ps.totalSPD);
+    }
+    else
+    {
+        baseHP  = Mathf.Max(1f, BattleCalc.CalcHP(def, level));
+        baseATK = Mathf.Max(1f, BattleCalc.CalcBaseAttack(def, level, 0, 0));
+        baseDEF = Mathf.Max(1f, BattleCalc.CalcDefense(def, level));
+        baseSPD = Mathf.Max(1f, BattleCalc.CalcSpeed(def, level));
+    }
+
+        int atkFlat = 0;
+        int defFlat = 0;
+        int spdFlat = 0;
+
+        float hpMult = 1f;
+        float atkMult = 1f;
+        float defMult = 1f;
+        float spdMult = 1f;
+
+        float hpFlatAdd = 0f;
+
+        void ApplyOne(StatKind stat, OpKind op, float value)
+        {
+            float FactorFromOp()
+            {
+                if (op == OpKind.Multiply) return value;
+                if (op == OpKind.Divide)   return (Mathf.Approximately(value, 0f) ? 1f : 1f / value);
+                return 1f;
+            }
+
+            switch (stat)
+            {
+                case StatKind.HP:
+                {
+                    if (op == OpKind.Add) hpFlatAdd += value;
+                    else if (op == OpKind.Subtract) hpFlatAdd -= value;
+                    else hpMult *= Mathf.Max(0.01f, FactorFromOp());
+                    break;
+                }
+
+                case StatKind.Attack:
+                {
+                    if (op == OpKind.Add) atkFlat += Mathf.RoundToInt(value);
+                    else if (op == OpKind.Subtract) atkFlat -= Mathf.RoundToInt(value);
+                    else atkMult *= Mathf.Max(0.01f, FactorFromOp());
+                    break;
+                }
+
+                case StatKind.Defense:
+                {
+                    if (op == OpKind.Add) defFlat += Mathf.RoundToInt(value);
+                    else if (op == OpKind.Subtract) defFlat -= Mathf.RoundToInt(value);
+                    else defMult *= Mathf.Max(0.01f, FactorFromOp());
+                    break;
+                }
+
+                case StatKind.Speed:
+                {
+                    if (op == OpKind.Add) spdFlat += Mathf.RoundToInt(value);
+                    else if (op == OpKind.Subtract) spdFlat -= Mathf.RoundToInt(value);
+                    else spdMult *= Mathf.Max(0.01f, FactorFromOp());
+                    break;
+                }
+            }
+        }
+
+        for (int i = 0; i < titles.Count; i++)
+        {
+            var t = titles[i];
+            if (!t) continue;
+
+            if (t is StatBoosterTitleSO sb)
+            {
+                ApplyOne(sb.stat, sb.operation, sb.value);
+            }
+            else if (t is DuoStatBoosterTitleSO duo && duo.enabled)
+            {
+                ApplyOne(duo.statA, duo.opA, duo.valueA);
+                ApplyOne(duo.statB, duo.opB, duo.valueB);
+            }
+
+            // Intentionally ignored here:
+            // - ConditionalStatBoosterTitleSO / DuoConditionalStatBoosterTitleSO (requires ctx)
+            // - BattleStart/Turn/Event stack titles (stateful, applied elsewhere)
+            // - Damage filters / effectiveness mods (handled via existing adapter calls)
+        }
+
+        if (!Mathf.Approximately(hpFlatAdd, 0f))
+        {
+            float hpFactorFromFlat = Mathf.Max(0.01f, (baseHP + hpFlatAdd) / baseHP);
+            hpMult *= hpFactorFromFlat;
+        }
+
+        TitleStatMods mods = default;
+
+        mods.atkFlat = atkFlat;
+        mods.defFlat = defFlat;
+        mods.spdFlat = spdFlat;
+
+        mods.hpPct  = hpMult  - 1f;
+        mods.atkPct = atkMult - 1f;
+        mods.defPct = defMult - 1f;
+        mods.spdPct = spdMult - 1f;
+
+        return mods;
+    }
+
+    public void OnMonsterLeveled(string monsterId, int newLevel) { }
+    public void OnMonsterCaptured(string monsterId, MonsterType type, int level, bool isPremium) { }
+    public void OnMonsterEvolved(string newMonsterId) { }
+
+
+    // ─────────────────────────────────────────────────────────────────────
+    // Debug / UI helpers (used by TitlesAdapter in dev builds)
+    // ─────────────────────────────────────────────────────────────────────
+    public string ActiveBattleMonsterId => _activeBattleMonsterId;
+    public int CurrentTurnIndex => _turnIndex;
+
+    /// <summary>
+    /// Returns current TurnBooster stacks for a combatant id (0 if none).
+    /// </summary>
+    public int Debug_GetTurnBoosterStacks(string combatantId)
+    {
+        if (string.IsNullOrEmpty(combatantId)) return 0;
+        return _turnStacks.TryGetValue(combatantId, out int v) ? v : 0;
+    }
+
+    
 
 }

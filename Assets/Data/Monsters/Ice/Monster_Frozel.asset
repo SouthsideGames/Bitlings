@@ -1,0 +1,57 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 32ffc26ed7d444b02a9332ce4279b117, type: 3}
+  m_Name: Monster_Frozel
+  m_EditorClassIdentifier: 
+  id: M-021
+  displayName: Frozel
+  type: 5
+  typeIcon: {fileID: 21300000, guid: 7503da639a0af47adbd6514de1c118ba, type: 3}
+  icon: {fileID: 21300000, guid: 5feb912444feb4cdd98a545d32d2dfe8, type: 3}
+  backIcon: {fileID: 21300000, guid: 8867c22238ea8483ca0db8a725dd1274, type: 3}
+  premiumIcon: {fileID: 21300000, guid: 808b1547322d3c74dbcd28c871359e9a, type: 3}
+  premiumBackIcon: {fileID: 21300000, guid: 45ded08877762f142a1f1dc74a280216, type: 3}
+  rarity: 1
+  canBeStarter: 1
+  starterWeight: 7
+  maxLevel: 50
+  baseHP: 64
+  baseAttack: 42
+  baseDefense: 48
+  baseSpeed: 16
+  hpRegenPerHour: 6.7
+  fatigueRatePerHour: 0.09
+  fatigueCooldownHours: 9.9
+  evolutionStage: 1
+  evolutionLevel: 22
+  evolutionForm: {fileID: 11400000, guid: a4d1b58844b0846deb4d916e2d3df986, type: 2}
+  uncatchable: 0
+  isBoss: 0
+  bossJobDebuffs: []
+  bossWeight: 1
+  spawnWeight: 4.5
+  jobSkill: 1
+  titleTrack: {fileID: 11400000, guid: 8c12844650d0a40e99c1794ffdb092bb, type: 2}
+  defaultAlwaysOnTitles: []
+  ironTitles:
+  - {fileID: 11400000, guid: d25e8cdbc2970014b95392ff4ffb5f66, type: 2}
+  - {fileID: 11400000, guid: f0e53950f2ecd1346ada80856c0f01df, type: 2}
+  - {fileID: 11400000, guid: 9fe46c88564cbbf42982a61140647f9b, type: 2}
+  - {fileID: 11400000, guid: e1b2ea88c1633614a8a17b2abf5f5e7d, type: 2}
+  Personality: {fileID: 11400000, guid: db9c4a912e52a4c5298eec48842ba111, type: 2}
+  basicAttackName: Frost Jab
+  basicAttackPrefab: {fileID: 2650955928365913985, guid: f4836eb6d259942b9abe6e0a520af59f, type: 3}
+  basicAttackPrefabLifetime: 1
+  spawnSfx: {fileID: 8300000, guid: 22443fef099ca72489b30cf6b6ee7cf2, type: 3}
+  baseMarketValue: 105
+  description: A compact ice creature that braces itself behind thick frost plating
+    while striking cautiously.

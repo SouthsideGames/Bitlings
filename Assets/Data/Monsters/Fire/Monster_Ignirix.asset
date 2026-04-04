@@ -1,0 +1,57 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 32ffc26ed7d444b02a9332ce4279b117, type: 3}
+  m_Name: Monster_Ignirix
+  m_EditorClassIdentifier: 
+  id: M-001
+  displayName: Ignirix
+  type: 1
+  typeIcon: {fileID: 21300000, guid: d552cfb27992e494694a52b7e3578364, type: 3}
+  icon: {fileID: 21300000, guid: 1226e2155d87cc54bad061c817a6faa8, type: 3}
+  backIcon: {fileID: 21300000, guid: 04821365fb0f84d479662d5d54b3f8dd, type: 3}
+  premiumIcon: {fileID: 21300000, guid: f572bf755d8964f448047b5c96414851, type: 3}
+  premiumBackIcon: {fileID: 21300000, guid: 50acd1d026295a84b923ed2b00d79115, type: 3}
+  rarity: 2
+  canBeStarter: 0
+  starterWeight: 1
+  maxLevel: 50
+  baseHP: 60
+  baseAttack: 78
+  baseDefense: 22
+  baseSpeed: 40
+  hpRegenPerHour: 5.7
+  fatigueRatePerHour: 0.11
+  fatigueCooldownHours: 7.2
+  evolutionStage: 1
+  evolutionLevel: 12
+  evolutionForm: {fileID: 0}
+  uncatchable: 0
+  isBoss: 0
+  bossJobDebuffs: []
+  bossWeight: 1
+  spawnWeight: 2
+  jobSkill: 1.08
+  titleTrack: {fileID: 11400000, guid: 79936ff21507048bcaab651979784d4a, type: 2}
+  defaultAlwaysOnTitles: []
+  ironTitles:
+  - {fileID: 11400000, guid: c2f0fdd5e9fcb25498ae79caf77583c0, type: 2}
+  - {fileID: 11400000, guid: fe67a4187cf7add4289106de72912f92, type: 2}
+  - {fileID: 11400000, guid: d9ec0d8891fb1da4fb1bed5ba426f375, type: 2}
+  - {fileID: 11400000, guid: 71652094aed89c948ae2a0cb846cf011, type: 2}
+  Personality: {fileID: 11400000, guid: 3733616cf9f0f4dddb5bee9d6ba2952f, type: 2}
+  basicAttackName: Flame Bite
+  basicAttackPrefab: {fileID: 126357351932672970, guid: 9581774b44a93f24299791825657e6c2, type: 3}
+  basicAttackPrefabLifetime: 1
+  spawnSfx: {fileID: 8300000, guid: 8b9cee0c39033ad42b47e9e54b1001bd, type: 3}
+  baseMarketValue: 165
+  description: A volatile fire beast that lunges headfirst into battle, burning hot
+    and fast with little regard for defense.

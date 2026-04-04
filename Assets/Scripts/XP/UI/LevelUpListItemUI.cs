@@ -15,25 +15,31 @@ public class LevelUpListItemUI : MonoBehaviour
     OwnedMonsterData _data;
     Action<OwnedMonsterData> _onClick;
 
+    bool _suppressToggle;
+
     public void Bind(OwnedMonsterData data, Sprite iconSprite, string displayName, Action<OwnedMonsterData> onClick)
     {
         _data = data;
         _onClick = onClick;
+
         if (icon) icon.sprite = iconSprite;
         if (nameText) nameText.text = displayName;
         if (levelText) levelText.text = $"Lv {_data.level}";
+
         if (autoApplyToggle)
         {
-            autoApplyToggle.isOn = _data.autoApply;
+            // Feature gate
+            bool unlocked = IsAutoGrowthUnlocked();
+            autoApplyToggle.gameObject.SetActive(unlocked);
+
+            _suppressToggle = true;
+            autoApplyToggle.SetIsOnWithoutNotify(_data.autoApply);
+            _suppressToggle = false;
+
             autoApplyToggle.onValueChanged.RemoveAllListeners();
-            autoApplyToggle.onValueChanged.AddListener(v =>
-            {
-                _data.autoApply = v;
-                // If enabling and you want to set a default target, do it here
-                if (v && _data.autoApplyTargetLevel < _data.level + 1)
-                    _data.autoApplyTargetLevel = _data.level + 1;
-            });
+            autoApplyToggle.onValueChanged.AddListener(OnAutoToggleChanged);
         }
+
         if (button)
         {
             button.onClick.RemoveAllListeners();
@@ -41,5 +47,46 @@ public class LevelUpListItemUI : MonoBehaviour
         }
     }
 
-    public void RefreshLevel() { if (levelText && _data != null) levelText.text = $"Lv {_data.level}"; }
+    private bool IsAutoGrowthUnlocked()
+    {
+        return FeatureUnlockManager.I != null &&
+               FeatureUnlockManager.I.IsUnlocked(FeatureId.AutoGrowth_Basic);
+    }
+
+    private void OnAutoToggleChanged(bool v)
+    {
+        if (_suppressToggle) return;
+        if (_data == null) return;
+
+        if (!IsAutoGrowthUnlocked())
+        {
+            _suppressToggle = true;
+            if (autoApplyToggle) autoApplyToggle.SetIsOnWithoutNotify(false);
+            _suppressToggle = false;
+
+            _data.autoApply = false;
+            SaveManager.Save();
+            return;
+        }
+
+        _data.autoApply = v;
+
+        // If enabling, set a safe default target: at least +1 level
+        if (v && _data.autoApplyTargetLevel < _data.level + 1)
+            _data.autoApplyTargetLevel = _data.level + 1;
+
+        SaveManager.Save();
+
+        // Wake up listeners
+        GameEvents.OnTeamChanged?.Invoke();
+
+        // NEW: request auto-apply through the centralized GameEvent
+        GameEvents.RaiseAutoApplyRequested();
+    }
+
+    public void RefreshLevel()
+    {
+        if (levelText && _data != null)
+            levelText.text = $"Lv {_data.level}";
+    }
 }

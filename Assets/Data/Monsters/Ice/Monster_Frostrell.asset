@@ -1,0 +1,56 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 32ffc26ed7d444b02a9332ce4279b117, type: 3}
+  m_Name: Monster_Frostrell
+  m_EditorClassIdentifier: 
+  id: M-121
+  displayName: Frostrell
+  type: 5
+  typeIcon: {fileID: 21300000, guid: 7503da639a0af47adbd6514de1c118ba, type: 3}
+  icon: {fileID: 21300000, guid: 42d23387b27144120bebc324e889a3a9, type: 3}
+  backIcon: {fileID: 21300000, guid: a08d26161cf804da7b5fee87dc08e99d, type: 3}
+  premiumIcon: {fileID: 21300000, guid: 771bfb2b5b64a4c7f9cbe0a9e5b51eca, type: 3}
+  premiumBackIcon: {fileID: 21300000, guid: 077bf5409244e403b830c86ebbef23ce, type: 3}
+  rarity: 1
+  canBeStarter: 0
+  starterWeight: 1
+  maxLevel: 50
+  baseHP: 60
+  baseAttack: 42
+  baseDefense: 50
+  baseSpeed: 22
+  hpRegenPerHour: 6.3
+  fatigueRatePerHour: 0.073
+  fatigueCooldownHours: 10.6
+  evolutionStage: 1
+  evolutionLevel: 10
+  evolutionForm: {fileID: 0}
+  uncatchable: 0
+  isBoss: 0
+  bossJobDebuffs: []
+  bossWeight: 1
+  spawnWeight: 4.5
+  jobSkill: 1
+  titleTrack: {fileID: 11400000, guid: 031ded057ffe84da0b1513076ca88778, type: 2}
+  defaultAlwaysOnTitles: []
+  ironTitles:
+  - {fileID: 11400000, guid: 6ad4157aacf2cb547878360fd54c3d1e, type: 2}
+  - {fileID: 11400000, guid: 3da4dd895f4bd4ff9b4690ab28dbdc42, type: 2}
+  - {fileID: 11400000, guid: e1b2ea88c1633614a8a17b2abf5f5e7d, type: 2}
+  - {fileID: 11400000, guid: f0e53950f2ecd1346ada80856c0f01df, type: 2}
+  Personality: {fileID: 11400000, guid: 71fa3f6cb68214bca94496affd470944, type: 2}
+  basicAttackName: Chill Jab
+  basicAttackPrefab: {fileID: 2650955928365913985, guid: f4836eb6d259942b9abe6e0a520af59f, type: 3}
+  basicAttackPrefabLifetime: 1
+  spawnSfx: {fileID: 8300000, guid: 6d555d13cccde1149b533d99de3e534f, type: 3}
+  baseMarketValue: 108
+  description: A compact ice being that radiates cold

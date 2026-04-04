@@ -13,8 +13,8 @@ MonoBehaviour:
   m_Name: RecycleRecipe_R012
   m_EditorClassIdentifier: 
   recipeId: R-012
-  displayName: Blessing Purify
+  displayName: Scale Refine
   fromType: 13
   fromAmount: 1
   toType: 16
-  toAmount: 15
+  toAmount: 12

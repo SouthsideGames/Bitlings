@@ -1,0 +1,57 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 32ffc26ed7d444b02a9332ce4279b117, type: 3}
+  m_Name: Monster_Terrak
+  m_EditorClassIdentifier: 
+  id: M-149
+  displayName: Terrak
+  type: 8
+  typeIcon: {fileID: 21300000, guid: f0d6243fead4a41fcae07804c4d66233, type: 3}
+  icon: {fileID: 21300000, guid: 48f1d276aa9e645728582748f0d71689, type: 3}
+  backIcon: {fileID: 21300000, guid: 427d688828ed2432bbafa7fc3954ce3b, type: 3}
+  premiumIcon: {fileID: 21300000, guid: 248bcbb2470794b50bee4c4b11ad7b2d, type: 3}
+  premiumBackIcon: {fileID: 21300000, guid: 2e5018ca5ddc84fc7b8b33eb7cfec4fd, type: 3}
+  rarity: 2
+  canBeStarter: 0
+  starterWeight: 1
+  maxLevel: 50
+  baseHP: 74
+  baseAttack: 50
+  baseDefense: 64
+  baseSpeed: 22
+  hpRegenPerHour: 7.8
+  fatigueRatePerHour: 0.077
+  fatigueCooldownHours: 9.9
+  evolutionStage: 3
+  evolutionLevel: 12
+  evolutionForm: {fileID: 0}
+  uncatchable: 0
+  isBoss: 0
+  bossJobDebuffs: []
+  bossWeight: 1
+  spawnWeight: 2
+  jobSkill: 1.08
+  titleTrack: {fileID: 11400000, guid: a73827d5cbcbd490cacc06d7f298d4a6, type: 2}
+  defaultAlwaysOnTitles: []
+  ironTitles:
+  - {fileID: 11400000, guid: 9fdb8ede4e4c461459e738834978e6ed, type: 2}
+  - {fileID: 11400000, guid: a9d1c8c346b292e4f9745fb659bd956a, type: 2}
+  - {fileID: 11400000, guid: 6b544265ac67740279a102bb686f56c3, type: 2}
+  - {fileID: 11400000, guid: 76e4e9eb5eb3d374fafdce90c072396e, type: 2}
+  Personality: {fileID: 11400000, guid: a31b270cc22594368bd4541ee042d278, type: 2}
+  basicAttackName: Seismic Ram
+  basicAttackPrefab: {fileID: 8624645253036040332, guid: f03e702d7c9714bc2af48b5b17c93c88, type: 3}
+  basicAttackPrefabLifetime: 1
+  spawnSfx: {fileID: 8300000, guid: ad13e97a1803f584ebdc0d2cad61612c, type: 3}
+  baseMarketValue: 173
+  description: A fully hardened ground beast that charges forward shaking the earth
+    with devastating impacts.

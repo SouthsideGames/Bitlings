@@ -13,8 +13,8 @@ MonoBehaviour:
   m_Name: RecycleRecipe_R018
   m_EditorClassIdentifier: 
   recipeId: R-018
-  displayName: Mineral Burn
-  fromType: 4
-  fromAmount: 30
-  toType: 2
-  toAmount: 5
+  displayName: Core Pulse
+  fromType: 16
+  fromAmount: 10
+  toType: 13
+  toAmount: 1

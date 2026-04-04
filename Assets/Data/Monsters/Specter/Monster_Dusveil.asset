@@ -1,0 +1,57 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 32ffc26ed7d444b02a9332ce4279b117, type: 3}
+  m_Name: Monster_Dusveil
+  m_EditorClassIdentifier: 
+  id: M-187
+  displayName: Dusveil
+  type: 13
+  typeIcon: {fileID: 21300000, guid: 00ff3f4c0d50247a8915bc882652db22, type: 3}
+  icon: {fileID: 21300000, guid: 9ed259b23ec2040c18e05bc79c30bf5c, type: 3}
+  backIcon: {fileID: 21300000, guid: c89ca45bca4d849c18b129f7d186170e, type: 3}
+  premiumIcon: {fileID: 21300000, guid: 1a11d8a8c4a124e5aab0c92bbae0df8a, type: 3}
+  premiumBackIcon: {fileID: 21300000, guid: e4b63e9c9c79f43c6941468e89b9b204, type: 3}
+  rarity: 1
+  canBeStarter: 0
+  starterWeight: 1
+  maxLevel: 50
+  baseHP: 50
+  baseAttack: 46
+  baseDefense: 34
+  baseSpeed: 40
+  hpRegenPerHour: 6.9
+  fatigueRatePerHour: 0.095
+  fatigueCooldownHours: 8.8
+  evolutionStage: 1
+  evolutionLevel: 22
+  evolutionForm: {fileID: 11400000, guid: fe5b455a0b8104f3f9582437dfe78a24, type: 2}
+  uncatchable: 0
+  isBoss: 0
+  bossJobDebuffs: []
+  bossWeight: 1
+  spawnWeight: 4.5
+  jobSkill: 1
+  titleTrack: {fileID: 11400000, guid: 09d6bbf943a9e44d29efd8685aacaf58, type: 2}
+  defaultAlwaysOnTitles: []
+  ironTitles:
+  - {fileID: 11400000, guid: 13e0b9e8b7fc08847a05f89d3f7b6a17, type: 2}
+  - {fileID: 11400000, guid: e80217aa5b172e648949cf787505f387, type: 2}
+  - {fileID: 11400000, guid: fe67a4187cf7add4289106de72912f92, type: 2}
+  - {fileID: 11400000, guid: 856ade98156889f4fbf9ab09303d21e3, type: 2}
+  Personality: {fileID: 11400000, guid: 48288e9e78c65453781f793c8df03e90, type: 2}
+  basicAttackName: Veil Jab
+  basicAttackPrefab: {fileID: 9101927626726485638, guid: 257dd9ab5e3cf0544a679d2e444f8d35, type: 3}
+  basicAttackPrefabLifetime: 1
+  spawnSfx: {fileID: 8300000, guid: 162a1494345049a4a9f67ad16abcb70d, type: 3}
+  baseMarketValue: 105
+  description: A drifting specter that flickers at the edge of vision, striking softly
+    before fading back into the veil.

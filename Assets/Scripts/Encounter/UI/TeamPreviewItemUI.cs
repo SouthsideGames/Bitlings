@@ -92,10 +92,12 @@ public class TeamPreviewItemUI : MonoBehaviour
         // Lookup definition (icon + display name)
         string displayName = om.monsterId;
         Sprite sprite = null;
+        
+        MonsterDataSO def = null;
 
         try
         {
-            var def = MonsterLibraryLocator.GetById(om.monsterId);
+            def = MonsterLibraryLocator.GetById(om.monsterId);
             if (def != null)
             {
                 if (!string.IsNullOrEmpty(def.displayName))
@@ -106,13 +108,38 @@ public class TeamPreviewItemUI : MonoBehaviour
         catch { }
 
         if (icon)
-        {
-            icon.sprite = sprite;
-            icon.enabled = (sprite != null);
-        }
+                {
+                    if (def != null)
+                    {
+                        bool preferPremium = false;
+                        if (def != null && !string.IsNullOrEmpty(def.id))
+                            preferPremium = MonsterVariantPreference.IsPreferredPremium(def.id);
+                        else
+                            preferPremium = om != null && (om.isPremium || om.premiumTier > 0);
 
-        if (nameText)  nameText.text  = string.IsNullOrEmpty(displayName) ? "Unknown" : displayName;
-        if (levelText) levelText.text = $"Lv {Mathf.Max(1, om.level)}";
+                        var s = MonsterNameFormatter.GetIcon(def, preferPremium, backIcon: false);
+                        icon.enabled = s != null;
+                        icon.sprite = s;
+                        icon.color = Color.white;
+                    }
+                    else
+                    {
+                        icon.enabled = false;
+                        icon.sprite = null;
+                    }
+                }
+
+                // Name (premium-aware formatting)
+                if (nameText)
+                {
+                    if (def != null)
+                        nameText.text = MonsterNameFormatter.Format(def, om.isPremium);
+                    else
+                        nameText.text = om.monsterId;
+                }
+
+                if (levelText)
+                    levelText.text = $"Lv {Mathf.Max(1, om.level)}";
 
         // Make sure micro anim is running after (re)bind
         if (isActiveAndEnabled && enableMicroAnim)

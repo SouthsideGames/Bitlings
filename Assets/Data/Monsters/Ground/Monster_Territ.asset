@@ -1,0 +1,57 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 32ffc26ed7d444b02a9332ce4279b117, type: 3}
+  m_Name: Monster_Territ
+  m_EditorClassIdentifier: 
+  id: M-147
+  displayName: Territ
+  type: 8
+  typeIcon: {fileID: 21300000, guid: f0d6243fead4a41fcae07804c4d66233, type: 3}
+  icon: {fileID: 21300000, guid: 1da7dd328426c40cf891637735fd5af2, type: 3}
+  backIcon: {fileID: 21300000, guid: 390971e2b7924444686f9f2a20e07ec0, type: 3}
+  premiumIcon: {fileID: 21300000, guid: eb69c02e43bed4c1492296a5ac45e826, type: 3}
+  premiumBackIcon: {fileID: 21300000, guid: f60a70d4c60954441957617476a2260a, type: 3}
+  rarity: 0
+  canBeStarter: 0
+  starterWeight: 1
+  maxLevel: 50
+  baseHP: 56
+  baseAttack: 36
+  baseDefense: 40
+  baseSpeed: 18
+  hpRegenPerHour: 5.9
+  fatigueRatePerHour: 0.077
+  fatigueCooldownHours: 9.9
+  evolutionStage: 1
+  evolutionLevel: 18
+  evolutionForm: {fileID: 11400000, guid: 370d3946ae41f45ed9ba0daf471ecf41, type: 2}
+  uncatchable: 0
+  isBoss: 0
+  bossJobDebuffs: []
+  bossWeight: 1
+  spawnWeight: 8
+  jobSkill: 0.95
+  titleTrack: {fileID: 11400000, guid: 11dbb087ee68b40b1a3789b15b828150, type: 2}
+  defaultAlwaysOnTitles: []
+  ironTitles:
+  - {fileID: 11400000, guid: 014cd17980e502c418a7ed232b26e215, type: 2}
+  - {fileID: 11400000, guid: f0a22c228659c304fb9369327478aab9, type: 2}
+  - {fileID: 11400000, guid: 5c56ea95bc0f6d84387cd5d1545e59e7, type: 2}
+  - {fileID: 11400000, guid: 0b6a2e89cd8f4a844b7172a2d678be74, type: 2}
+  Personality: {fileID: 11400000, guid: 71fa3f6cb68214bca94496affd470944, type: 2}
+  basicAttackName: Mud Bash
+  basicAttackPrefab: {fileID: 8624645253036040332, guid: f03e702d7c9714bc2af48b5b17c93c88, type: 3}
+  basicAttackPrefabLifetime: 1
+  spawnSfx: {fileID: 8300000, guid: fd018e3576a1dd04c905d17fcdbc92da, type: 3}
+  baseMarketValue: 77
+  description: A squat ground creature that braces itself and slams foes with packed
+    earth.

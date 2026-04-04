@@ -9,20 +9,31 @@ using UnityEngine;
 public class PlayerDossierSnapshot
 {
     [Header("Identity")]
-    public string handlerName;
     public string rankName;
     public string operationId;
+
+    [Header("Promotions")]
+    public int promotionRank;
+    public int promotionXP;
+    public int promotionXpIntoRank;
+    public int promotionXpToNext;
+    [Range(0f, 1f)] public float promotionProgress01;
 
     [Header("Overview Stats")]
     public int totalOwnedBitlings;
     public int discoveredSpecies;
     public float averageLevel;
-    public int shinyOwned;
+    public int premiumOwned;
 
     [Header("Care Score")]
-    [Range(0f, 100f)]
-    public float careScorePercent;
+    [Range(0f, 100f)] public float careScorePercent;
     public string careScoreNote;
+
+    [Header("Care Score Breakdown")]
+    [Range(0f, 100f)] public float careDevelopmentPercent;
+    [Range(0f, 100f)] public float careBalancePercent;
+    [Range(0f, 100f)] public float careRecoveryPercent;
+    [Range(0f, 100f)] public float careAssignmentPercent;
 
     // ─────────────────────────────────────────────────────────────
     // PAGE 2 – JOB NETWORK
@@ -35,13 +46,16 @@ public class PlayerDossierSnapshot
     // ─────────────────────────────────────────────────────────────
     [Header("Field Operations")]
     public int encountersInitiated;
-    public int captureSuccessRate;      // 0–100
+    public int captureSuccessRate; // 0–100
     public int riftStabilizations;
     public int rareBitlingsFound;
-    public int shinyDiscoveries;
+    public int premiumDiscoveries;
     public int longestCaptureStreak;
     public string[] fieldOpsHighlights;
 
+    // ─────────────────────────────────────────────────────────────
+    // PAGE 4 – RESOURCES
+    // ─────────────────────────────────────────────────────────────
     [Header("Page 4 – Resources")]
     public int creditCount;
     public int energyCount;
@@ -54,7 +68,7 @@ public class PlayerDossierSnapshot
     public int atkBoosterCount;
     public int hpBoosterCount;
     public int speedBoosterCount;
-    public int shinyOrbCount;
+    public int premiumOrbCount;
     public int blessingScaleCount;
     public int restChargeCount;
     public int growthCoreCount;
@@ -62,11 +76,38 @@ public class PlayerDossierSnapshot
 
     public int conversionEfficiencyPercent;
 
+    // ─────────────────────────────────────────────────────────────
+    // PAGE 5 – BRN RÉSUMÉ
+    // ─────────────────────────────────────────────────────────────
     [Header("Page 5 – BRN Résumé")]
-    public string[] resumeLines;      // bullet lines for the page
-    public string brnResumeNote;      // short supervisor-style note
+    public string[] resumeLines;
+    public string brnResumeNote;
 
+    // ─────────────────────────────────────────────────────────────
+    // PAGE 6 – ACHIEVEMENTS
+    // ─────────────────────────────────────────────────────────────
+    [Header("Page 6 - Achievements")]
+    public int achievementsUnlocked;
+    public int achievementsTotal;
+    public AchievementRowSnapshot[] achievements;
 
+    // ─────────────────────────────────────────────────────────────
+    // PAGE 7 – RANKS (scroll list)
+    // (UI builds rows from PromotionTableSO; snapshot keeps the current totals.)
+    // ─────────────────────────────────────────────────────────────
+}
+
+[Serializable]
+public class AchievementRowSnapshot
+{
+    public string id;
+    public Sprite icon;
+    public string name;
+    public string description;
+    public bool unlocked;
+    public int value;
+    public int goal;
+    public bool isNew;
 }
 
 [Serializable]
@@ -76,14 +117,14 @@ public class JobSiteRowSnapshot
     public string displayName;
     public bool unlocked;
 
-    public int hoursSupervised;      // derived from Job XP
-    public int materialsProcessed;   // approx lifetime output
-    public int outputPerHour;        // current rate/hr (approx)
+    public int hoursSupervised;    // derived from Job XP
+    public int materialsProcessed; // approx lifetime output
+    public int outputPerHour;      // current rate/hr (approx)
 
     public int assignedWorkers;
 
-    public string topPerformerName;  // e.g. "FLAREBYTE"
-    public int topPerformerLevel;    // e.g. 14
+    public string topPerformerName; // e.g. "FLAREBYTE"
+    public int topPerformerLevel;   // e.g. 14
 }
 
 /// <summary>
@@ -94,7 +135,7 @@ public class PlayerDossierManager : MonoBehaviour
 {
     public static PlayerDossierManager I { get; private set; }
 
-    [Header("Debug")]
+    [Header("Behavior")]
     [SerializeField] private bool autoRefreshOnEnable = true;
 
     private PlayerDossierSnapshot _cachedSnapshot;
@@ -114,11 +155,8 @@ public class PlayerDossierManager : MonoBehaviour
 
     private void OnEnable()
     {
-        
         if (autoRefreshOnEnable)
-        {
             RefreshSnapshot();
-        }
     }
 
     /// <summary>
@@ -129,9 +167,7 @@ public class PlayerDossierManager : MonoBehaviour
         get
         {
             if (_cachedSnapshot == null)
-            {
                 RefreshSnapshot();
-            }
 
             return _cachedSnapshot;
         }
@@ -144,16 +180,10 @@ public class PlayerDossierManager : MonoBehaviour
     public void RefreshSnapshot()
     {
         if (SaveManager.Data == null)
-        {
             SaveManager.LoadOrCreate();
-        }
 
         _cachedSnapshot = BuildSnapshotFromSave();
     }
-
-    // ─────────────────────────────────────────────────────────────
-    // Internal: Build snapshot from SaveManager.Data
-    // ─────────────────────────────────────────────────────────────
 
     private PlayerDossierSnapshot BuildSnapshotFromSave()
     {
@@ -162,43 +192,66 @@ public class PlayerDossierManager : MonoBehaviour
         var data = SaveManager.Data;
         if (data == null)
         {
-            snapshot.handlerName        = "Handler: BRN Operator";
-            snapshot.rankName           = "Rank: Trainee";
-            snapshot.operationId        = "Operation ID: BRN-0000-XXXX";
+            snapshot.rankName = "Rank: Trainee";
+            snapshot.operationId = "Operation ID: BRN-0000-XXXX";
 
             snapshot.totalOwnedBitlings = 0;
-            snapshot.discoveredSpecies  = 0;
-            snapshot.averageLevel       = 0f;
-            snapshot.shinyOwned         = 0;
+            snapshot.discoveredSpecies = 0;
+            snapshot.averageLevel = 0f;
+            snapshot.premiumOwned = 0;
 
-            snapshot.careScorePercent   = 0f;
-            snapshot.careScoreNote      = "BRN notes: No data available.";
+            snapshot.careScorePercent = 0f;
+            snapshot.careScoreNote = "BRN notes: No data available.";
 
-            snapshot.jobSites           = Array.Empty<JobSiteRowSnapshot>();
+            snapshot.careDevelopmentPercent = 0f;
+            snapshot.careBalancePercent = 0f;
+            snapshot.careRecoveryPercent = 0f;
+            snapshot.careAssignmentPercent = 0f;
 
-            snapshot.encountersInitiated   = 0;
-            snapshot.captureSuccessRate    = 0;
-            snapshot.riftStabilizations    = 0;
-            snapshot.rareBitlingsFound     = 0;
-            snapshot.shinyDiscoveries      = 0;
-            snapshot.longestCaptureStreak  = 0;
-            snapshot.fieldOpsHighlights    = Array.Empty<string>();
+            snapshot.jobSites = Array.Empty<JobSiteRowSnapshot>();
+
+            snapshot.encountersInitiated = 0;
+            snapshot.captureSuccessRate = 0;
+            snapshot.riftStabilizations = 0;
+            snapshot.rareBitlingsFound = 0;
+            snapshot.premiumDiscoveries = 0;
+            snapshot.longestCaptureStreak = 0;
+            snapshot.fieldOpsHighlights = Array.Empty<string>();
+
+            snapshot.achievementsUnlocked = 0;
+            snapshot.achievementsTotal = 0;
+            snapshot.achievements = Array.Empty<AchievementRowSnapshot>();
 
             return snapshot;
         }
 
         data.EnsureTransientSets();
 
-        // Identity
-        string displayName = string.IsNullOrEmpty(data.playerName) ? "BRN Operator" : data.playerName;
-        snapshot.handlerName = $"Handler: {displayName}";
-        snapshot.rankName    = "Rank: Trainee"; // TODO: derive from progression later
+        // Page 1 shows the title/name of the player's current Promotion Rank (e.g., "Intern").
+        snapshot.rankName = $"Rank: {DeriveRankName(data)}";
         snapshot.operationId = $"Operation ID: {FormatOperationId(data.playerId)}";
+
+        // Promotions
+        snapshot.promotionRank = Mathf.Max(1, data.promotionRank);
+        snapshot.promotionXP = Mathf.Max(0, data.promotionXP);
+
+        int floor = (PromotionManager.I != null)
+            ? PromotionManager.I.GetTotalXpToReach(snapshot.promotionRank)
+            : GetTotalXpToReach_Fallback(snapshot.promotionRank);
+
+        int xpInto = Mathf.Max(0, snapshot.promotionXP - Mathf.Max(0, floor));
+        int xpToNext = (PromotionManager.I != null)
+            ? PromotionManager.I.GetXpToNext(snapshot.promotionRank, snapshot.promotionXP)
+            : GetXpToNext_Fallback(snapshot.promotionRank, snapshot.promotionXP);
+
+        snapshot.promotionXpIntoRank = xpInto;
+        snapshot.promotionXpToNext = xpToNext;
+        snapshot.promotionProgress01 = (xpToNext <= 0) ? 1f : Mathf.Clamp01((float)xpInto / (xpInto + xpToNext));
 
         // Owned monsters
         int totalOwned = 0;
-        int levelSum   = 0;
-        int shinyCount = 0;
+        int levelSum = 0;
+        int premiumCount = 0;
 
         if (data.owned != null)
         {
@@ -210,57 +263,126 @@ public class PlayerDossierManager : MonoBehaviour
                 totalOwned++;
                 levelSum += Mathf.Max(1, owned.level);
 
-                if (owned.isShiny)
-                    shinyCount++;
+                if (owned.isPremium)
+                    premiumCount++;
             }
         }
 
         snapshot.totalOwnedBitlings = totalOwned;
-        snapshot.shinyOwned         = shinyCount;
-        snapshot.averageLevel       = totalOwned > 0 ? (float)levelSum / totalOwned : 0f;
+        snapshot.premiumOwned = premiumCount;
+        snapshot.averageLevel = totalOwned > 0 ? (float)levelSum / totalOwned : 0f;
 
-        // Discovered species (prefer ownedIds mirror; fallback to seenTypes)
+        // Discovered species
         int discovered = 0;
         if (data.ownedIds != null && data.ownedIds.Count > 0)
-        {
             discovered = data.ownedIds.Count;
-        }
         else if (data.seenTypes != null && data.seenTypes.Count > 0)
-        {
             discovered = data.seenTypes.Count;
-        }
+
         snapshot.discoveredSpecies = discovered;
 
-        // Care score (simple composite of shinies + avg level)
-        float careScore = 0f;
-        if (totalOwned > 0)
-        {
-            float shinyFactor = Mathf.Clamp01(shinyCount / Mathf.Max(1f, totalOwned));
-            float levelFactor = Mathf.Clamp01(snapshot.averageLevel / 30f); // assume ~30 is “strong”
-
-            careScore = Mathf.Lerp(40f, 95f, (shinyFactor + levelFactor) * 0.5f);
-        }
-
-        snapshot.careScorePercent = careScore;
-        snapshot.careScoreNote    = "BRN notes: Bitling care is within stable parameters.";
-
-        // Page 2 – Job stats
+        // Page 2 – Jobs (also supports care "Assignment" score)
         BuildJobStats(data, snapshot);
 
-        // Page 3 – Field Ops stats
+        // Page 3 – Field Ops
         BuildFieldOps(data, snapshot);
 
-        // Page 4 – Resources
+        // Page 4 – Resources (also supports care "Recovery" score)
         BuildResourceSummary(data, snapshot);
 
-        // Page 5 – BRN Résumé
+        // Care score + breakdown (computed AFTER jobs/resources are available)
+        ComputeCareScore(data, snapshot);
+
+        // Page 5 – Resume
         BuildResumePage(data, snapshot);
+
+        // Page 6 – Achievements
+        BuildAchievementsPage(data, snapshot);
 
         return snapshot;
     }
 
     // ─────────────────────────────────────────────────────────────
-    // Job stats (Page 2)
+    // Care Score
+    // ─────────────────────────────────────────────────────────────
+
+    private void ComputeCareScore(PlayerManager data, PlayerDossierSnapshot snap)
+    {
+        if (data == null || snap == null)
+            return;
+
+        if (snap.totalOwnedBitlings <= 0)
+        {
+            snap.careDevelopmentPercent = 0f;
+            snap.careBalancePercent = 0f;
+            snap.careRecoveryPercent = 0f;
+            snap.careAssignmentPercent = 0f;
+
+            snap.careScorePercent = 0f;
+            snap.careScoreNote = "BRN notes: No data available.";
+            return;
+        }
+
+        // DEVELOPMENT (0–100): average level normalized to 30
+        float levelFactor = Mathf.Clamp01(snap.averageLevel / 30f);
+        float development = Mathf.Lerp(30f, 100f, levelFactor);
+
+        // BALANCE (0–100): % of roster within 50% of avg level
+        int balancedCount = 0;
+        float threshold = snap.averageLevel * 0.5f;
+
+        if (data.owned != null)
+        {
+            for (int i = 0; i < data.owned.Count; i++)
+            {
+                var om = data.owned[i];
+                if (om == null) continue;
+                if (Mathf.Max(1, om.level) >= threshold) balancedCount++;
+            }
+        }
+
+        float balanceRatio = balancedCount / Mathf.Max(1f, snap.totalOwnedBitlings);
+        float balance = Mathf.Lerp(25f, 100f, Mathf.Clamp01(balanceRatio));
+
+        // RECOVERY (0–100): based on available rest + medkits (simple, non-punitive proxy)
+        // Uses values already populated in BuildResourceSummary.
+        float restNorm = Mathf.Clamp01(snap.restChargeCount / 10f);
+        float medNorm = Mathf.Clamp01(snap.medkitCount / 10f);
+        float recovery = Mathf.Lerp(20f, 100f, (restNorm * 0.6f) + (medNorm * 0.4f));
+
+        // ASSIGNMENT (0–100): utilization = assigned workers / total owned
+        int assignedWorkers = 0;
+        if (data.jobAssignments != null)
+        {
+            for (int i = 0; i < data.jobAssignments.Count; i++)
+            {
+                var a = data.jobAssignments[i];
+                if (a?.workerIds == null) continue;
+                assignedWorkers += a.workerIds.Count;
+            }
+        }
+
+        float util = Mathf.Clamp01(assignedWorkers / Mathf.Max(1f, snap.totalOwnedBitlings));
+        float assignment = Mathf.Lerp(20f, 100f, util);
+
+        snap.careDevelopmentPercent = Mathf.Clamp(development, 0f, 100f);
+        snap.careBalancePercent = Mathf.Clamp(balance, 0f, 100f);
+        snap.careRecoveryPercent = Mathf.Clamp(recovery, 0f, 100f);
+        snap.careAssignmentPercent = Mathf.Clamp(assignment, 0f, 100f);
+
+        // Final headline care score (weighted average)
+        float combined =
+            (snap.careDevelopmentPercent * 0.40f) +
+            (snap.careBalancePercent * 0.20f) +
+            (snap.careRecoveryPercent * 0.20f) +
+            (snap.careAssignmentPercent * 0.20f);
+
+        snap.careScorePercent = Mathf.Clamp(combined, 0f, 100f);
+        snap.careScoreNote = "BRN notes: Bitling care is within stable parameters.";
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // Page 2 – Job stats
     // ─────────────────────────────────────────────────────────────
 
     private void BuildJobStats(PlayerManager data, PlayerDossierSnapshot snapshot)
@@ -269,38 +391,35 @@ public class PlayerDossierManager : MonoBehaviour
         var rows = new List<JobSiteRowSnapshot>();
 
         data.jobAssignments ??= new List<JobAssignment>();
-        data.jobProgress    ??= new List<JobProgress>();
+        data.jobProgress ??= new List<JobProgress>();
 
         foreach (var job in jobs)
         {
             if (job == JobType.None)
-                continue; // sentinel
+                continue;
 
             var row = new JobSiteRowSnapshot
             {
-                job         = job,
+                job = job,
                 displayName = JobStrings.SiteName(job)
             };
 
-            // Unlocked?
-            row.unlocked = data.unlockedJobSites != null && data.unlockedJobSites.Contains(job);
+            row.unlocked = JobUnlockBridge.IsJobUnlocked(job);
 
-            // Assigned workers
+            if (!row.unlocked)
+                continue;
+
             row.assignedWorkers = CountWorkersAssigned(data, job);
 
-            // Derived “hours supervised” from Job XP
             var prog = FindJobProgress(data, job);
             row.hoursSupervised = EstimateHoursFromProgress(job, prog);
 
-            // Production rate (per hour)
             float rateHr = GetCurrentRatePerHour(job, prog?.level ?? 1);
             row.outputPerHour = Mathf.Max(0, Mathf.RoundToInt(rateHr));
 
-            // Approx lifetime materials/output processed
             int mats = Mathf.RoundToInt(row.hoursSupervised * rateHr);
             row.materialsProcessed = Mathf.Max(0, mats);
 
-            // Top performer (highest-level worker assigned)
             var top = FindTopPerformerForJob(data, job);
             if (top != null)
             {
@@ -318,7 +437,7 @@ public class PlayerDossierManager : MonoBehaviour
             }
             else
             {
-                row.topPerformerName  = string.Empty;
+                row.topPerformerName = string.Empty;
                 row.topPerformerLevel = 0;
             }
 
@@ -365,13 +484,10 @@ public class PlayerDossierManager : MonoBehaviour
 
         int totalXp = 0;
 
-        // Add full XP of completed levels
         for (int lvl = 1; lvl < prog.level; lvl++)
             totalXp += JobLeveling.MaxXpForLevel(job, lvl);
 
-        // Add current level progress
-        int clampedXP = Mathf.Max(0, prog.currentXP);
-        totalXp += clampedXP;
+        totalXp += Mathf.Max(0, prog.currentXP);
 
         float hours = totalXp / JOB_XP_PER_HOUR;
         return Mathf.Max(0, Mathf.FloorToInt(hours));
@@ -379,7 +495,6 @@ public class PlayerDossierManager : MonoBehaviour
 
     private float GetCurrentRatePerHour(JobType job, int siteLevel)
     {
-        // Prefer live JobManager data if available
         var jm = JobManager.I;
         if (jm != null)
         {
@@ -389,19 +504,16 @@ public class PlayerDossierManager : MonoBehaviour
                 if (s?.config == null) continue;
                 if (s.config.jobType != job) continue;
 
-                // cachedRatePerHour is already post-modifiers & fatigue
                 return Mathf.Max(0f, s.cachedRatePerHour);
             }
         }
 
-        // Fallback: approximate from JobSiteSO baseRate + level
         JobSiteSO site = FindJobSiteConfig(job);
         if (site == null) return 0f;
 
         float baseRate = site.baseRatePerHour;
         int lvl = Mathf.Clamp(siteLevel, 1, JobLeveling.MaxLevel);
 
-        // Simple level bonus: 1, 1.25, 1.5 for levels 1–3
         float levelMult = lvl switch
         {
             1 => 1.0f,
@@ -414,7 +526,6 @@ public class PlayerDossierManager : MonoBehaviour
 
     private JobSiteSO FindJobSiteConfig(JobType job)
     {
-        // Use JobManager's config list if available
         var jm = JobManager.I;
         if (jm == null) return null;
 
@@ -455,7 +566,6 @@ public class PlayerDossierManager : MonoBehaviour
             string id = assignment.workerIds[i];
             if (string.IsNullOrEmpty(id)) continue;
 
-            // Try to resolve by ownedUID first, then by monsterId as a fallback
             OwnedMonsterData om = data.owned.Find(o =>
                 o != null &&
                 (o.ownedUID == id || o.monsterId == id));
@@ -470,108 +580,93 @@ public class PlayerDossierManager : MonoBehaviour
     }
 
     // ─────────────────────────────────────────────────────────────
-    // Field Ops (Page 3)
+    // Page 3 – Field Ops
     // ─────────────────────────────────────────────────────────────
 
     private void BuildFieldOps(PlayerManager data, PlayerDossierSnapshot snapshot)
     {
         var f = data.fieldOps ?? new FieldOpsStats();
 
-        snapshot.encountersInitiated  = Mathf.Max(0, f.encountersInitiated);
-        snapshot.riftStabilizations   = Mathf.Max(0, f.riftStabilizations);
-        snapshot.rareBitlingsFound    = Mathf.Max(0, f.rareBitlingsFound);
-        snapshot.shinyDiscoveries     = Mathf.Max(0, f.shinyDiscoveries);
+        snapshot.encountersInitiated = Mathf.Max(0, f.encountersInitiated);
+        snapshot.riftStabilizations = Mathf.Max(0, f.riftStabilizations);
+        snapshot.rareBitlingsFound = Mathf.Max(0, f.rareBitlingsFound);
+        snapshot.premiumDiscoveries = Mathf.Max(0, f.premiumDiscoveries);
         snapshot.longestCaptureStreak = Mathf.Max(0, f.longestCaptureStreak);
 
-        int attempts  = Mathf.Max(0, f.captureAttempts);
+        int attempts = Mathf.Max(0, f.captureAttempts);
         int successes = Mathf.Max(0, f.capturesSuccessful);
-        int ratePct   = 0;
+
+        int ratePct = 0;
         if (attempts > 0)
         {
             float ratio = successes / (float)attempts;
             ratePct = Mathf.Clamp(Mathf.RoundToInt(ratio * 100f), 0, 100);
         }
+
         snapshot.captureSuccessRate = ratePct;
 
-        if (f.recentHighlights != null && f.recentHighlights.Count > 0)
-            snapshot.fieldOpsHighlights = f.recentHighlights.ToArray();
-        else
-            snapshot.fieldOpsHighlights = Array.Empty<string>();
+        snapshot.fieldOpsHighlights = (f.recentHighlights != null && f.recentHighlights.Count > 0)
+            ? f.recentHighlights.ToArray()
+            : Array.Empty<string>();
     }
 
     // ─────────────────────────────────────────────────────────────
-    // Helpers
+    // Page 4 – Resources
     // ─────────────────────────────────────────────────────────────
-
-    private string FormatOperationId(string playerId)
-    {
-        if (string.IsNullOrEmpty(playerId))
-            return "BRN-0000-XXXX";
-
-        string trimmed = playerId.Replace("-", string.Empty).ToUpperInvariant();
-        if (trimmed.Length <= 8)
-            return $"BRN-{trimmed}";
-
-        string head = trimmed.Substring(0, 4);
-        string tail = trimmed.Substring(trimmed.Length - 4, 4);
-        return $"{head}-{tail}";
-    }
 
     private void BuildResourceSummary(PlayerManager data, PlayerDossierSnapshot s)
     {
         var bank = ResourceManager.I;
         if (bank == null)
         {
+            #if UNITY_EDITOR || DEVELOPMENT_BUILD
             Debug.LogWarning("ResourceManager not found for dossier Page 4.");
+            #endif
             return;
         }
 
-        // ─────────────────────────────────────────────────────────────
-        // Raw resource counts (live from ResourceManager)
-        // ─────────────────────────────────────────────────────────────
-        s.creditCount           = bank.Get(ResourceType.Credits);
-        s.energyCount         = bank.Get(ResourceType.Energy);
-        s.medkitCount         = bank.Get(ResourceType.Medkit);
-        s.materialCount       = bank.Get(ResourceType.Material);
-        s.typeResBoosterCount = bank.Get(ResourceType.PPEPermit);
-        s.lureCount           = bank.Get(ResourceType.Flyer);
-        s.captureBandCount    = bank.Get(ResourceType.WorkOrder);
-        s.luckCount           = bank.Get(ResourceType.Favor);
-        s.atkBoosterCount     = bank.Get(ResourceType.TrainingVoucher_ATK);
-        s.hpBoosterCount      = bank.Get(ResourceType.WellnessVoucher);
-        s.speedBoosterCount   = bank.Get(ResourceType.EfficiencyVoucher);
-        s.shinyOrbCount       = bank.Get(ResourceType.ShinyOrb);
-        s.blessingScaleCount  = bank.Get(ResourceType.BlessingScale);
-        s.restChargeCount     = bank.Get(ResourceType.Coffee);
-        s.growthCoreCount     = bank.Get(ResourceType.GrowthCore);
-        s.packVoucherCount      = bank.Get(ResourceType.PackVoucher);
+        s.creditCount = GetLifetimeCollected(data, ResourceType.Credits, bank.Get(ResourceType.Credits));
+        s.energyCount = GetLifetimeCollected(data, ResourceType.Energy, bank.Get(ResourceType.Energy));
+        s.medkitCount = GetLifetimeCollected(data, ResourceType.Medkit, bank.Get(ResourceType.Medkit));
+        s.materialCount = GetLifetimeCollected(data, ResourceType.Material, bank.Get(ResourceType.Material));
+        s.typeResBoosterCount = GetLifetimeCollected(data, ResourceType.PPEPermit, bank.Get(ResourceType.PPEPermit));
+        s.lureCount = GetLifetimeCollected(data, ResourceType.Flyer, bank.Get(ResourceType.Flyer));
+        s.captureBandCount = GetLifetimeCollected(data, ResourceType.WorkOrder, bank.Get(ResourceType.WorkOrder));
+        s.luckCount = GetLifetimeCollected(data, ResourceType.Favor, bank.Get(ResourceType.Favor));
+        s.atkBoosterCount = GetLifetimeCollected(data, ResourceType.TrainingVoucher, bank.Get(ResourceType.TrainingVoucher));
+        s.hpBoosterCount = GetLifetimeCollected(data, ResourceType.WellnessVoucher, bank.Get(ResourceType.WellnessVoucher));
+        s.speedBoosterCount = GetLifetimeCollected(data, ResourceType.EfficiencyVoucher, bank.Get(ResourceType.EfficiencyVoucher));
+        s.premiumOrbCount = GetLifetimeCollected(data, ResourceType.PremiumOrb, bank.Get(ResourceType.PremiumOrb));
+        s.blessingScaleCount = GetLifetimeCollected(data, ResourceType.BlessingScale, bank.Get(ResourceType.BlessingScale));
+        s.restChargeCount = GetLifetimeCollected(data, ResourceType.Coffee, bank.Get(ResourceType.Coffee));
+        s.growthCoreCount = GetLifetimeCollected(data, ResourceType.GrowthCore, bank.Get(ResourceType.GrowthCore));
+        s.packVoucherCount = GetLifetimeCollected(data, ResourceType.PackVoucher, bank.Get(ResourceType.PackVoucher));
 
-        // ─────────────────────────────────────────────────────────────
-        // BRN Composite Handler Efficiency Score (0–100)
-        // ─────────────────────────────────────────────────────────────
         s.conversionEfficiencyPercent = ComputeHandlerEfficiency(data, s);
     }
 
-    /// <summary>
-    /// Computes the BRN "Handler Efficiency" score as a composite of:
-    /// - Job stability (avg job level)
-    /// - Bitling care (careScorePercent)
-    /// - Field operations (captures, streaks, rares)
-    /// - Resource stewardship (progression items & credits)
-    /// Returns 0–100.
-    /// </summary>
+    private int GetLifetimeCollected(PlayerManager data, ResourceType type, int fallbackCurrent)
+    {
+        if (data == null || data.lifetimeResourceCollected == null)
+            return Mathf.Max(0, fallbackCurrent);
+
+        int idx = (int)type;
+        if (idx < 0 || idx >= data.lifetimeResourceCollected.Count)
+            return Mathf.Max(0, fallbackCurrent);
+
+        int lifetime = Mathf.Max(0, data.lifetimeResourceCollected[idx]);
+        return Mathf.Max(lifetime, Mathf.Max(0, fallbackCurrent));
+    }
+
     private int ComputeHandlerEfficiency(PlayerManager data, PlayerDossierSnapshot snap)
     {
         if (data == null) return 0;
 
-        // ─────────────────────────────────────────────────────────────
-        // 1) Job stability / management (0–1)
-        // ─────────────────────────────────────────────────────────────
         float jobLevelScore = 0f;
         if (data.jobProgress != null && data.jobProgress.Count > 0)
         {
             int levelSum = 0;
-            int count    = 0;
+            int count = 0;
 
             for (int i = 0; i < data.jobProgress.Count; i++)
             {
@@ -585,80 +680,57 @@ public class PlayerDossierManager : MonoBehaviour
             if (count > 0)
             {
                 float avgLevel = levelSum / (float)count;
-                jobLevelScore  = Mathf.Clamp01(avgLevel / JobLeveling.MaxLevel);
+                jobLevelScore = Mathf.Clamp01(avgLevel / JobLeveling.MaxLevel);
             }
         }
 
-        // ─────────────────────────────────────────────────────────────
-        // 2) Bitling care (0–1) – from Page 1 careScorePercent
-        // ─────────────────────────────────────────────────────────────
         float careScoreNorm = Mathf.Clamp01(snap.careScorePercent / 100f);
 
-        // ─────────────────────────────────────────────────────────────
-        // 3) Field operations skill (0–1)
-        //    Uses: success rate, streak, rare finds
-        // ─────────────────────────────────────────────────────────────
         var f = data.fieldOps ?? new FieldOpsStats();
 
         float successNorm = 0f;
         if (f.captureAttempts > 0)
             successNorm = Mathf.Clamp01(f.capturesSuccessful / Mathf.Max(1f, f.captureAttempts));
 
-        float streakNorm = Mathf.Clamp01(f.longestCaptureStreak / 20f);   // 20+ streak = capped
-        float rareNorm   = Mathf.Clamp01(f.rareBitlingsFound / 30f);      // 30+ rares = capped
+        float streakNorm = Mathf.Clamp01(f.longestCaptureStreak / 20f);
+        float rareNorm = Mathf.Clamp01(f.rareBitlingsFound / 30f);
 
-        float captureScore =
-            (successNorm * 0.5f) +
-            (streakNorm  * 0.3f) +
-            (rareNorm    * 0.2f);
+        float captureScore = (successNorm * 0.5f) + (streakNorm * 0.3f) + (rareNorm * 0.2f);
 
-        // ─────────────────────────────────────────────────────────────
-        // 4) Resource stewardship (0–1)
-        //    Progression items + credits
-        // ─────────────────────────────────────────────────────────────
         int progTotal =
-            snap.growthCoreCount      +
-            snap.blessingScaleCount   +
-            snap.packVoucherCount       +
-            snap.shinyOrbCount        +
-            snap.atkBoosterCount      +
-            snap.hpBoosterCount       +
-            snap.speedBoosterCount    +
-            snap.captureBandCount     +
-            snap.lureCount            +
+            snap.growthCoreCount +
+            snap.blessingScaleCount +
+            snap.packVoucherCount +
+            snap.premiumOrbCount +
+            snap.atkBoosterCount +
+            snap.hpBoosterCount +
+            snap.speedBoosterCount +
+            snap.captureBandCount +
+            snap.lureCount +
             snap.luckCount;
 
-        // 100+ total progression items is treated as "max utilization"
         float progNorm = Mathf.Clamp01(progTotal / 100f);
-
-        // 50,000+ credits is treated as "max economic readiness"
         float creditNorm = Mathf.Clamp01(snap.creditCount / 50000f);
 
-        float resourceUsageScore =
-            (progNorm * 0.6f) +
-            (creditNorm * 0.4f);
+        float resourceUsageScore = (progNorm * 0.6f) + (creditNorm * 0.4f);
 
-        // ─────────────────────────────────────────────────────────────
-        // 5) Combine into final BRN rating (0–1)
-        // ─────────────────────────────────────────────────────────────
         float efficiency =
-            (jobLevelScore       * 0.35f) +   // job management
-            (careScoreNorm       * 0.25f) +   // bitling care
-            (captureScore        * 0.25f) +   // field ops
-            (resourceUsageScore  * 0.15f);    // resources
+            (jobLevelScore * 0.35f) +
+            (careScoreNorm * 0.25f) +
+            (captureScore * 0.25f) +
+            (resourceUsageScore * 0.15f);
 
-        efficiency = Mathf.Clamp01(efficiency);
-
-        return Mathf.RoundToInt(efficiency * 100f);
+        return Mathf.RoundToInt(Mathf.Clamp01(efficiency) * 100f);
     }
+
+    // ─────────────────────────────────────────────────────────────
+    // Page 5 – Resume
+    // ─────────────────────────────────────────────────────────────
 
     private void BuildResumePage(PlayerManager data, PlayerDossierSnapshot snap)
     {
         var lines = new List<string>();
 
-        // ─────────────────────────────────────────────────────────────
-        // 1) First Bitling acquired
-        // ─────────────────────────────────────────────────────────────
         var firstOwned = GetFirstOwnedBitling(data);
         if (firstOwned != null)
         {
@@ -667,9 +739,6 @@ public class PlayerDossierManager : MonoBehaviour
                 lines.Add($"First Bitling acquired: {name}.");
         }
 
-        // ─────────────────────────────────────────────────────────────
-        // 2) Highest-level Bitling
-        // ─────────────────────────────────────────────────────────────
         var highest = GetHighestLevelBitling(data);
         if (highest != null)
         {
@@ -678,20 +747,14 @@ public class PlayerDossierManager : MonoBehaviour
                 lines.Add($"{name} reached level {Mathf.Max(1, highest.level)}, becoming a core team member.");
         }
 
-        // ─────────────────────────────────────────────────────────────
-        // 3) Shiny highlight
-        // ─────────────────────────────────────────────────────────────
-        var shiny = GetNotableShiny(data);
-        if (shiny != null)
+        var premium = GetNotablePremium(data);
+        if (premium != null)
         {
-            string name = GetMonsterDisplayName(shiny.monsterId);
+            string name = GetMonsterDisplayName(premium.monsterId);
             if (!string.IsNullOrEmpty(name))
-                lines.Add($"Shiny Bitling detected in field operations: {name}.");
+                lines.Add($"Premium Bitling detected in field operations: {name}.");
         }
 
-        // ─────────────────────────────────────────────────────────────
-        // 4) Job network highlight (most productive site)
-        // ─────────────────────────────────────────────────────────────
         if (snap.jobSites != null && snap.jobSites.Length > 0)
         {
             JobSiteRowSnapshot bestSite = null;
@@ -699,21 +762,17 @@ public class PlayerDossierManager : MonoBehaviour
             {
                 var js = snap.jobSites[i];
                 if (js == null) continue;
+
                 if (bestSite == null || js.materialsProcessed > bestSite.materialsProcessed)
                     bestSite = js;
             }
 
             if (bestSite != null && bestSite.materialsProcessed > 0)
             {
-                string siteName = bestSite.displayName;
-                string units    = bestSite.materialsProcessed.ToString("N0");
-                lines.Add($"Most productive job site: {siteName} ({units} units processed to date).");
+                lines.Add($"Most productive job site: {bestSite.displayName} ({bestSite.materialsProcessed:N0} units processed to date).");
             }
         }
 
-        // ─────────────────────────────────────────────────────────────
-        // 5) Field operations highlights (streaks, rares, rifts)
-        // ─────────────────────────────────────────────────────────────
         var f = data.fieldOps ?? new FieldOpsStats();
 
         if (f.longestCaptureStreak > 0)
@@ -728,25 +787,16 @@ public class PlayerDossierManager : MonoBehaviour
             lines.Add($"{rs} completed: {f.riftStabilizations}.");
         }
 
-        // ─────────────────────────────────────────────────────────────
-        // 6) Species & care overview
-        // ─────────────────────────────────────────────────────────────
         if (snap.discoveredSpecies > 0)
-        {
             lines.Add($"Discovered {snap.discoveredSpecies} Bitling species so far.");
-        }
 
-        // Keep list from getting too long
         const int MAX_LINES = 7;
         if (lines.Count > MAX_LINES)
             lines.RemoveRange(MAX_LINES, lines.Count - MAX_LINES);
 
         snap.resumeLines = lines.ToArray();
 
-        // ─────────────────────────────────────────────────────────────
-        // BRN résumé note – based on efficiency & care
-        // ─────────────────────────────────────────────────────────────
-        int eff  = Mathf.Clamp(snap.conversionEfficiencyPercent, 0, 100);
+        int eff = Mathf.Clamp(snap.conversionEfficiencyPercent, 0, 100);
         float careNorm = Mathf.Clamp01(snap.careScorePercent / 100f);
 
         if (eff >= 75 && careNorm >= 0.7f)
@@ -771,7 +821,6 @@ public class PlayerDossierManager : MonoBehaviour
         if (data?.owned == null || data.owned.Count == 0)
             return null;
 
-        // Best-effort: first non-null entry
         for (int i = 0; i < data.owned.Count; i++)
         {
             var om = data.owned[i];
@@ -796,24 +845,25 @@ public class PlayerDossierManager : MonoBehaviour
             if (best == null || om.level > best.level)
                 best = om;
         }
+
         return best;
     }
 
-    private OwnedMonsterData GetNotableShiny(PlayerManager data)
+    private OwnedMonsterData GetNotablePremium(PlayerManager data)
     {
         if (data?.owned == null || data.owned.Count == 0)
             return null;
 
-        // Prefer highest-level shiny
         OwnedMonsterData best = null;
         for (int i = 0; i < data.owned.Count; i++)
         {
             var om = data.owned[i];
-            if (om == null || !om.isShiny || string.IsNullOrEmpty(om.monsterId)) continue;
+            if (om == null || !om.isPremium || string.IsNullOrEmpty(om.monsterId)) continue;
 
             if (best == null || om.level > best.level)
                 best = om;
         }
+
         return best;
     }
 
@@ -833,6 +883,178 @@ public class PlayerDossierManager : MonoBehaviour
         return monsterId;
     }
 
+    // ─────────────────────────────────────────────────────────────
+    // Page 6 – Achievements
+    // ─────────────────────────────────────────────────────────────
 
+    private void BuildAchievementsPage(PlayerManager data, PlayerDossierSnapshot snap)
+    {
+        var am = AchievementManager.I;
+        if (am == null)
+        {
+            snap.achievementsUnlocked = 0;
+            snap.achievementsTotal = 0;
+            snap.achievements = Array.Empty<AchievementRowSnapshot>();
+            return;
+        }
 
+        var entries = am.GetAllEntries();
+        if (entries == null || entries.Count == 0)
+        {
+            snap.achievementsUnlocked = 0;
+            snap.achievementsTotal = 0;
+            snap.achievements = Array.Empty<AchievementRowSnapshot>();
+            return;
+        }
+
+        int total = 0;
+        int unlockedCount = 0;
+
+        var rows = new List<AchievementRowSnapshot>(entries.Count);
+
+        for (int i = 0; i < entries.Count; i++)
+        {
+            var e = entries[i];
+            if (e == null || string.IsNullOrEmpty(e.id)) continue;
+
+            total++;
+
+            var prog = am.GetProgress(e.id);
+            bool unlocked = prog != null && prog.unlocked;
+
+            if (unlocked) unlockedCount++;
+
+            int goal = Mathf.Max(1, e.goal);
+            int value = prog != null ? Mathf.Clamp(prog.value, 0, goal) : 0;
+
+            bool showSecret = e.secretUntilUnlocked && !unlocked;
+
+            rows.Add(new AchievementRowSnapshot
+            {
+                id = e.id,
+                icon = e.icon,
+                name = showSecret ? "???" : e.displayName,
+                description = showSecret ? "Unlock this achievement to reveal details." : e.description,
+                unlocked = unlocked,
+                value = value,
+                goal = goal,
+                isNew = unlocked && prog != null && !prog.seen
+            });
+        }
+
+        rows.Sort((a, b) =>
+        {
+            int unlockedCompare = b.unlocked.CompareTo(a.unlocked);
+            if (unlockedCompare != 0) return unlockedCompare;
+
+            if (!a.unlocked && !b.unlocked)
+            {
+                float pa = a.goal > 0 ? (a.value / (float)a.goal) : 0f;
+                float pb = b.goal > 0 ? (b.value / (float)b.goal) : 0f;
+
+                int progCompare = pb.CompareTo(pa);
+                if (progCompare != 0) return progCompare;
+            }
+
+            return string.CompareOrdinal(a.id, b.id);
+        });
+
+        snap.achievementsTotal = total;
+        snap.achievementsUnlocked = unlockedCount;
+        snap.achievements = rows.ToArray();
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // Rank derivation
+    // - Deterministic + safe for older saves.
+    // - Uses available progression signals; falls back gracefully.
+    // ─────────────────────────────────────────────────────────────
+    private static string DeriveRankName(PlayerManager data)
+    {
+        // Phase 5: Rank name is driven by Promotion Rank (1–20).
+        if (data == null) return "Intern";
+
+        int rank = 1;
+        try { rank = Mathf.Max(1, data.promotionRank); } catch { rank = 1; }
+
+        if (PromotionManager.I != null)
+            return PromotionManager.I.GetRankDisplayName(rank);
+
+        // Safe fallback if PromotionManager is not present in the scene.
+        switch (rank)
+        {
+            case 1: return "Intern";
+            case 2: return "Clerk";
+            case 3: return "Technician";
+            case 4: return "Coordinator";
+            case 5: return "Supervisor";
+            case 6: return "Auditor";
+            case 7: return "Recruiter";
+            case 8: return "Compliance Officer";
+            case 9: return "Operations Lead";
+            case 10: return "Manager";
+            case 11: return "Project Lead";
+            case 12: return "Department Head";
+            case 13: return "Program Lead";
+            case 14: return "Regional Manager";
+            case 15: return "Director";
+            case 16: return "Executive Manager";
+            case 17: return "Division Head";
+            case 18: return "Senior Director";
+            case 19: return "Executive Director";
+            case 20: return "Commissioner";
+            default: return $"Rank {rank}";
+        }
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // Helpers
+    // ─────────────────────────────────────────────────────────────
+
+    // Fallback promotion curve (must match PromotionManager's fallback so UI is consistent
+    // even if PromotionManager is not present in a scene).
+    private int GetTotalXpToReach_Fallback(int rank)
+    {
+        rank = Mathf.Max(1, rank);
+        if (rank == 1) return 0;
+
+        int total = 0;
+        for (int r = 2; r <= rank; r++)
+        {
+            // Rank 2 requires 50 XP, then +20 per subsequent rank step.
+            int reqForThisStep = 50 + 20 * (r - 2);
+            total += Mathf.Max(1, reqForThisStep);
+        }
+        return total;
+    }
+
+    private int GetXpToNext_Fallback(int currentRank, int totalXp)
+    {
+        currentRank = Mathf.Max(1, currentRank);
+        totalXp = Mathf.Max(0, totalXp);
+
+        const int maxRank = 20;
+        if (currentRank >= maxRank) return 0;
+
+        int curFloor = GetTotalXpToReach_Fallback(currentRank);
+        int nextReq = GetTotalXpToReach_Fallback(currentRank + 1);
+
+        int xpInto = Mathf.Max(0, totalXp - curFloor);
+        int xpNeededThisRank = Mathf.Max(1, nextReq - curFloor);
+        return Mathf.Max(0, xpNeededThisRank - xpInto);
+    }
+
+    private string FormatOperationId(string playerId)
+    {
+        if (string.IsNullOrEmpty(playerId))
+            return "BRN-0000-XXXX";
+
+        string trimmed = playerId.Replace("-", string.Empty).ToUpperInvariant();
+        if (trimmed.Length <= 8)
+            return $"BRN-{trimmed}";
+
+        string head = trimmed.Substring(0, 4);
+        string tail = trimmed.Substring(trimmed.Length - 4, 4);
+        return $"{head}-{tail}";
+    }
 }

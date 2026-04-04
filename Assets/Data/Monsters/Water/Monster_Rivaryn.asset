@@ -1,0 +1,56 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 32ffc26ed7d444b02a9332ce4279b117, type: 3}
+  m_Name: Monster_Rivaryn
+  m_EditorClassIdentifier: 
+  id: M-116
+  displayName: Rivaryn
+  type: 2
+  typeIcon: {fileID: 21300000, guid: dd2adea89cda84ec4a589a6d1d5da1ae, type: 3}
+  icon: {fileID: 21300000, guid: e6736011df7684a0eb92f2bfba5c673a, type: 3}
+  backIcon: {fileID: 21300000, guid: de8e053ebecc24c36a82305dd1f696db, type: 3}
+  premiumIcon: {fileID: 21300000, guid: 576a9defb21f74c1eb261959d1caa68f, type: 3}
+  premiumBackIcon: {fileID: 21300000, guid: 4f87644702add4e8ba641018b1130a7c, type: 3}
+  rarity: 2
+  canBeStarter: 0
+  starterWeight: 1
+  maxLevel: 50
+  baseHP: 74
+  baseAttack: 52
+  baseDefense: 46
+  baseSpeed: 26
+  hpRegenPerHour: 8.9
+  fatigueRatePerHour: 0.069
+  fatigueCooldownHours: 8.6
+  evolutionStage: 3
+  evolutionLevel: 12
+  evolutionForm: {fileID: 0}
+  uncatchable: 0
+  isBoss: 0
+  bossJobDebuffs: []
+  bossWeight: 1
+  spawnWeight: 2
+  jobSkill: 1.08
+  titleTrack: {fileID: 11400000, guid: 5248ea937d2054b27b69ff01be9bce0d, type: 2}
+  defaultAlwaysOnTitles: []
+  ironTitles:
+  - {fileID: 11400000, guid: 69d74352fe8a2fe478d59933c4926241, type: 2}
+  - {fileID: 11400000, guid: 0c4ec08db0e878f48a327f570d1e549f, type: 2}
+  - {fileID: 11400000, guid: e80217aa5b172e648949cf787505f387, type: 2}
+  - {fileID: 11400000, guid: 65e1df2c5d2acf749a429d77e1ea2c85, type: 2}
+  Personality: {fileID: 11400000, guid: 8fb41ae5d07a9422888bd80d80e2fbde, type: 2}
+  basicAttackName: Tide Rend
+  basicAttackPrefab: {fileID: 7604281169824035565, guid: 4065dc449fe6fd94eb31f0e575b94514, type: 3}
+  basicAttackPrefabLifetime: 1
+  spawnSfx: {fileID: 8300000, guid: d190197600974de40821499464d0042e, type: 3}
+  baseMarketValue: 164
+  description: A refined water predator that shapes flowing currents into powerful

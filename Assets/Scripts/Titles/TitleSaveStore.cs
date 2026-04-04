@@ -6,8 +6,8 @@ using UnityEngine;
 [Serializable]
 public class MonsterTitleEquip
 {
-    public string monsterId;                 // Owned ID (preferred) or base ID
-    public List<string> tierSelections = new List<string>(); // index = tier, value = TitleSO.titleId (or "")
+    public string monsterId;                
+    public List<string> tierSelections = new List<string>(); 
 }
 
 [Serializable]
@@ -19,25 +19,33 @@ public class TitleSaveData
 public static class TitleSaveStore
 {
     private static TitleSaveData _cache;
-    private const string FileName = "idle_titles.json";
-    public static string SavePath => Path.Combine(Application.persistentDataPath, FileName);
+    private const string LegacyFileName = "idle_titles.json";
+    public static string SavePath => Path.Combine(Application.persistentDataPath, LegacyFileName);
 
     public static TitleSaveData Load()
     {
         if (_cache != null) return _cache;
 
-        try
-        {
-            if (File.Exists(SavePath))
-            {
-                string json = File.ReadAllText(SavePath);
-                _cache = JsonUtility.FromJson<TitleSaveData>(json);
-            }
-        }
-        catch { /* swallow */ }
+        SaveManager.LoadOrCreate();
 
+        _cache = SaveManager.GetTitlesBlob();
         if (_cache == null) _cache = new TitleSaveData();
         return _cache;
+    }
+
+    public static TitleSaveData TryLoadLegacyDirect()
+    {
+        try
+        {
+            if (!File.Exists(SavePath)) return null;
+            string json = File.ReadAllText(SavePath);
+            if (string.IsNullOrWhiteSpace(json)) return null;
+            return JsonUtility.FromJson<TitleSaveData>(json);
+        }
+        catch
+        {
+            return null;
+        }
     }
 
     public static void Save()
@@ -45,8 +53,7 @@ public static class TitleSaveStore
         try
         {
             var data = _cache ?? new TitleSaveData();
-            string json = JsonUtility.ToJson(data, prettyPrint: true);
-            File.WriteAllText(SavePath, json);
+            SaveManager.SetTitlesBlob(data);
         }
         catch (Exception e)
         {
@@ -71,5 +78,17 @@ public static class TitleSaveStore
     {
         _cache = new TitleSaveData();
         Save();
+
+        // Also remove legacy file if present.
+        try
+        {
+            if (File.Exists(SavePath)) File.Delete(SavePath);
+        }
+        catch { /* swallow */ }
+    }
+
+    public static void InvalidateCache()
+    {
+        _cache = null;
     }
 }

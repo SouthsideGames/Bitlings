@@ -1,0 +1,57 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 32ffc26ed7d444b02a9332ce4279b117, type: 3}
+  m_Name: Monster_Budrel
+  m_EditorClassIdentifier: 
+  id: M-006
+  displayName: Budrel
+  type: 3
+  typeIcon: {fileID: 21300000, guid: 46bf3bbfcff674f17bd0ea06a23e1467, type: 3}
+  icon: {fileID: 21300000, guid: 345c50099b8d70d4393d1fc536f5643a, type: 3}
+  backIcon: {fileID: 21300000, guid: 51f92782a610dce418e49405bcb5f5b4, type: 3}
+  premiumIcon: {fileID: 21300000, guid: 257f0dc8b42d86c4cab683288ee2264d, type: 3}
+  premiumBackIcon: {fileID: 21300000, guid: 7f8831e86ff2a084dbc527ea9cca8ec6, type: 3}
+  rarity: 0
+  canBeStarter: 1
+  starterWeight: 10
+  maxLevel: 50
+  baseHP: 58
+  baseAttack: 40
+  baseDefense: 34
+  baseSpeed: 18
+  hpRegenPerHour: 6.4
+  fatigueRatePerHour: 0.085
+  fatigueCooldownHours: 7.9
+  evolutionStage: 1
+  evolutionLevel: 18
+  evolutionForm: {fileID: 11400000, guid: e24cdf0f361254948903fab289fa4020, type: 2}
+  uncatchable: 0
+  isBoss: 0
+  bossJobDebuffs: []
+  bossWeight: 1
+  spawnWeight: 8
+  jobSkill: 0.95
+  titleTrack: {fileID: 11400000, guid: ef117207033454887a7ed73339a94864, type: 2}
+  defaultAlwaysOnTitles: []
+  ironTitles:
+  - {fileID: 11400000, guid: 649d68a9f3cc259498a168b3628e9a2c, type: 2}
+  - {fileID: 11400000, guid: 09c74caed514bcd48a90735e9bb192d4, type: 2}
+  - {fileID: 11400000, guid: 8376b3915071cc448b1f948ff06b49c6, type: 2}
+  - {fileID: 11400000, guid: f0e53950f2ecd1346ada80856c0f01df, type: 2}
+  Personality: {fileID: 11400000, guid: f6f72aa846632454b97832d01d1b5c0c, type: 2}
+  basicAttackName: Leaf Peck
+  basicAttackPrefab: {fileID: 7147688047696861109, guid: 5287b95db783b4379b733d77af2cc458, type: 3}
+  basicAttackPrefabLifetime: 1
+  spawnSfx: {fileID: 8300000, guid: 15b95e78d2608684dae1a5ff2e954064, type: 3}
+  baseMarketValue: 77
+  description: A gentle sprout creature that supports allies while pecking foes with
+    hardened leaves.

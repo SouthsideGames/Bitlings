@@ -1,0 +1,26 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: edf2250ace8f26e44bd6c4683ace83be, type: 3}
+  m_Name: Achievement_A-067
+  m_EditorClassIdentifier: Assembly-CSharp::AchievementEntrySO
+  id: A-067
+  displayName: Pack Stockpile
+  description: Collect 25 Pack Vouchers.
+  icon: {fileID: -4192873577498990268, guid: 3488ad4b336d946b7abcb675644295f3, type: 3}
+  trigger: 13
+  goal: 25
+  useTypeFilter: 0
+  typeFilter: 0
+  useResourceFilter: 1
+  resourceFilter: 17
+  secretUntilUnlocked: 0
+  category: Economy

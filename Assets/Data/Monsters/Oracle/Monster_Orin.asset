@@ -1,0 +1,55 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 32ffc26ed7d444b02a9332ce4279b117, type: 3}
+  m_Name: Monster_Orin
+  m_EditorClassIdentifier: 
+  id: M-162
+  displayName: Orin
+  type: 10
+  typeIcon: {fileID: 21300000, guid: fb4479ed54fe64621a9e7a735eeffad8, type: 3}
+  icon: {fileID: 21300000, guid: 3b0d1e7990a9f46199d6c65871f72a6b, type: 3}
+  backIcon: {fileID: 21300000, guid: 151d5279af19a45be954e6851c6155c8, type: 3}
+  premiumIcon: {fileID: 21300000, guid: 91782864d688a4dbb8ab2fbdfbea0a15, type: 3}
+  premiumBackIcon: {fileID: 21300000, guid: 38e9e4464a58d4e05999e42a22144359, type: 3}
+  rarity: 0
+  canBeStarter: 0
+  starterWeight: 1
+  maxLevel: 50
+  baseHP: 48
+  baseAttack: 35
+  baseDefense: 42
+  baseSpeed: 25
+  hpRegenPerHour: 6
+  fatigueRatePerHour: 0.1
+  fatigueCooldownHours: 8.8
+  evolutionStage: 1
+  evolutionLevel: 18
+  evolutionForm: {fileID: 11400000, guid: 7147489ff6e5d491b8877fab576b9b4c, type: 2}
+  uncatchable: 0
+  isBoss: 0
+  bossJobDebuffs: []
+  bossWeight: 1
+  spawnWeight: 8
+  jobSkill: 0.95
+  titleTrack: {fileID: 11400000, guid: 97c531e9b4e544425b577d497709519b, type: 2}
+  defaultAlwaysOnTitles: []
+  ironTitles:
+  - {fileID: 11400000, guid: 68bbd476dbc9dea4485f609fc74327e0, type: 2}
+  - {fileID: 11400000, guid: 466493f7d714bee4884dcb9624f86659, type: 2}
+  - {fileID: 11400000, guid: 0b6a2e89cd8f4a844b7172a2d678be74, type: 2}
+  Personality: {fileID: 11400000, guid: 8fb41ae5d07a9422888bd80d80e2fbde, type: 2}
+  basicAttackName: Foretell Strike
+  basicAttackPrefab: {fileID: 7907104310462883121, guid: 37212b887c61ad84eacd87133a8a9e9d, type: 3}
+  basicAttackPrefabLifetime: 1
+  spawnSfx: {fileID: 8300000, guid: f3858906ad0015e45ae78ccdbcdd1965, type: 3}
+  baseMarketValue: 77
+  description: A watchful oracle creature that strikes only after reading its foe.

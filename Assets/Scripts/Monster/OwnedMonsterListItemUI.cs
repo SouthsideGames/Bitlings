@@ -14,11 +14,15 @@ public class OwnedMonsterListItemUI : MonoBehaviour
     [SerializeField] private Button rootButton;
     [SerializeField] private TextMeshProUGUI cooldownText;
 
+    [Header("Badge")]
+    [Tooltip("Small pill/label that shows CORE or the PackId (e.g., MP-001).")]
+    [SerializeField] private GameObject packBadgeRoot;
+
     [Header("Alerts")]
     [SerializeField] private GameObject evolveAlert;
     [SerializeField] private GameObject favoriteAlert;
 
-    [Header("Detail Panel (Assign Mode / Codex)")]
+    [Header("Detail Panel (Assign Mode / Directory)")]
     [SerializeField] private MonsterDetailPanelUI detailPanel;
 
     // data
@@ -30,9 +34,9 @@ public class OwnedMonsterListItemUI : MonoBehaviour
     private bool _allowDetail = true;
     private MonsterDetailPanelUI _detailPanelOverride;
 
-    // Codex browse context
-    private bool _isCodexRow;
-    private IReadOnlyList<MonsterDataSO> _codexBrowseDefs;
+    // Directory browse context
+    private bool _isDirectoryRow;
+    private IReadOnlyList<MonsterDataSO> _directoryBrowseDefs;
 
     void Awake()
     {
@@ -74,7 +78,7 @@ public class OwnedMonsterListItemUI : MonoBehaviour
     void Update()
     {
         if (!HasValidMonster(_data)) return;
-        if (IsUsable(_data)) return;
+        if (!IsKO(_data)) return;
 
         if (Time.unscaledTime >= _nextUiRefreshAt)
         {
@@ -95,8 +99,8 @@ public class OwnedMonsterListItemUI : MonoBehaviour
 
     public void Setup(OwnedMonsterData data, MonsterDataSO def)
     {
-        _isCodexRow = false;
-        _codexBrowseDefs = null;
+        _isDirectoryRow = false;
+        _directoryBrowseDefs = null;
 
         _allowDetail = true;
         _detailPanelOverride = null;
@@ -104,14 +108,25 @@ public class OwnedMonsterListItemUI : MonoBehaviour
         _data = data;
         _def = def;
 
+        bool isPremium = data != null && (data.isPremium || data.premiumTier > 0);
+
         // Icon
         if (icon)
         {
-            if (def && def.icon)
+            if (def)
             {
-                icon.enabled = true;
-                icon.sprite = def.icon;
-                icon.color = Color.white;
+                var s = MonsterNameFormatter.GetIcon(def, isPremium, backIcon: false);
+                if (s)
+                {
+                    icon.enabled = true;
+                    icon.sprite = s;
+                    icon.color = Color.white;
+                }
+                else
+                {
+                    icon.enabled = false;
+                    icon.sprite = null;
+                }
             }
             else
             {
@@ -124,7 +139,7 @@ public class OwnedMonsterListItemUI : MonoBehaviour
         if (nameText)
         {
             if (def)
-                nameText.text = string.IsNullOrEmpty(def.displayName) ? def.name : def.displayName;
+                nameText.text = MonsterNameFormatter.Format(def, isPremium);
             else
                 nameText.text = "Unknown";
         }
@@ -132,7 +147,9 @@ public class OwnedMonsterListItemUI : MonoBehaviour
         if (idText)
             idText.text = HasValidMonster(data) ? data.monsterId : "—";
 
-        // Favorites are only shown for Codex entries; hide here.
+        RefreshPackBadge(def);
+
+        // Favorites are only shown for Directory entries; hide here.
         if (favoriteAlert)
             favoriteAlert.SetActive(false);
 
@@ -145,14 +162,14 @@ public class OwnedMonsterListItemUI : MonoBehaviour
     }
 
     // ---------------------------------------------------------------------
-    // Codex-specific setup
+    // Directory-specific setup
     // ---------------------------------------------------------------------
 
     /// <summary>
-    /// Codex row setup. "captured" here means "revealed/known" in the Codex context.
+    /// Directory row setup. "captured" here means "revealed/known" in the Directory context.
     /// If not captured/revealed, row shows ??? and is not interactable.
     /// </summary>
-    public void SetupForCodex(
+    public void SetupForDirectory(
         MonsterDataSO def,
         OwnedMonsterData ownedData,
         bool captured,
@@ -160,8 +177,8 @@ public class OwnedMonsterListItemUI : MonoBehaviour
         bool allowDetail,
         MonsterDetailPanelUI detailPanelOverride)
     {
-        _isCodexRow = true;
-        _codexBrowseDefs = null; // set later by CodexPanelUI after it knows the final visible list
+        _isDirectoryRow = true;
+        _directoryBrowseDefs = null; // set later by DirectoryPanelUI after it knows the final visible list
 
         _detailPanelOverride = detailPanelOverride;
         _allowDetail = allowDetail && captured; // cannot open detail for unrevealed
@@ -169,16 +186,38 @@ public class OwnedMonsterListItemUI : MonoBehaviour
         _def = def;
         _data = captured ? ownedData : null; // unrevealed entries have no OwnedMonsterData
 
+        bool isPremium = captured && ownedData != null && (ownedData.isPremium || ownedData.premiumTier > 0);
+        bool isOwned = captured && ownedData != null;
+
         // Icon
         if (icon)
         {
-            if (def && def.icon)
+            if (def)
             {
-                icon.enabled = true;
-                icon.sprite = def.icon;
+                var s = MonsterNameFormatter.GetIcon(def, isPremium, backIcon: false);
+                if (s)
+                {
+                    icon.enabled = true;
+                    icon.sprite = s;
 
-                // Silhouette effect for unrevealed
-                icon.color = captured ? Color.white : Color.black;
+                    // Silhouette effect for unrevealed.
+                    // If revealed but NOT owned, reduce alpha so players can tell at a glance.
+                    if (!captured)
+                    {
+                        icon.color = Color.black;
+                    }
+                    else
+                    {
+                        var c = Color.white;
+                        if (!isOwned) c.a = 0.5f;
+                        icon.color = c;
+                    }
+                }
+                else
+                {
+                    icon.enabled = false;
+                    icon.sprite = null;
+                }
             }
             else
             {
@@ -191,7 +230,7 @@ public class OwnedMonsterListItemUI : MonoBehaviour
         if (nameText)
         {
             if (captured && def)
-                nameText.text = string.IsNullOrEmpty(def.displayName) ? def.name : def.displayName;
+                nameText.text = MonsterNameFormatter.Format(def, isPremium);
             else
                 nameText.text = "???";
         }
@@ -204,19 +243,25 @@ public class OwnedMonsterListItemUI : MonoBehaviour
                 idText.text = "???";
         }
 
+        // Pack badge shows for revealed entries (owned OR discovered).
+        if (captured && def)
+            RefreshPackBadge(def);
+        else
+            SetPackBadgeActive(false, null);
+
         // Favorites icon (only for captured + feature unlocked)
         if (favoriteAlert)
         {
             bool hasFeature = FeatureUnlockManager.I &&
-                              FeatureUnlockManager.I.IsUnlocked(FeatureId.Codex_Favorites);
+                              FeatureUnlockManager.I.IsUnlocked(FeatureId.Directory_Favorites);
             favoriteAlert.SetActive(hasFeature && captured && isFavorite);
         }
 
-        // KO / cooldown text only makes sense for owned monsters, not codex silhouettes.
+        // KO / cooldown text only makes sense for owned monsters, not directory silhouettes.
         if (cooldownText)
             cooldownText.gameObject.SetActive(false);
 
-        // Evolve alert makes no sense for codex grid rows.
+        // Evolve alert makes no sense for directory grid rows.
         if (evolveAlert)
             evolveAlert.SetActive(false);
 
@@ -228,13 +273,45 @@ public class OwnedMonsterListItemUI : MonoBehaviour
         RefreshEvolutionAlert();
     }
 
+    // ---------------------------------------------------------------------
+    // Pack badge
+    // ---------------------------------------------------------------------
+
+    private void RefreshPackBadge(MonsterDataSO def)
+    {
+        if (!packBadgeRoot) return;
+
+        if (!def || string.IsNullOrEmpty(def.id))
+        {
+            SetPackBadgeActive(false, null);
+            return;
+        }
+
+        var badge = MonsterPackTagCache.GetBadge(def.id);
+
+        bool isPackMonster = !string.IsNullOrEmpty(badge) && !badge.Equals("CORE", StringComparison.OrdinalIgnoreCase);
+
+        if (!isPackMonster)
+        {
+            SetPackBadgeActive(false, null);
+            return;
+        }
+
+        SetPackBadgeActive(true, badge); 
+    }
+
+    private void SetPackBadgeActive(bool active, string text)
+    {
+        if (packBadgeRoot) packBadgeRoot.SetActive(active);
+    }
+
     /// <summary>
-    /// Called by CodexPanelUI after it knows the final visible list of defs.
+    /// Called by DirectoryPanelUI after it knows the final visible list of defs.
     /// Enables swipe-browse context in MonsterDetailPanelUI.
     /// </summary>
-    public void SetCodexBrowseContext(IReadOnlyList<MonsterDataSO> visibleDefs)
+    public void SetDirectoryBrowseContext(IReadOnlyList<MonsterDataSO> visibleDefs)
     {
-        _codexBrowseDefs = visibleDefs;
+        _directoryBrowseDefs = visibleDefs;
     }
 
     // ---------------------------------------------------------------------
@@ -245,10 +322,11 @@ public class OwnedMonsterListItemUI : MonoBehaviour
     {
         if (rootButton)
         {
-            if (_isCodexRow)
+            if (_isDirectoryRow)
                 rootButton.interactable = on && _allowDetail && _def != null;
             else
-                rootButton.interactable = on && HasValidMonster(_data) && IsUsable(_data) && _allowDetail;
+                // Allow interacting with KO'd monsters so players can assign them to the team for healing.
+                rootButton.interactable = on && HasValidMonster(_data) && _allowDetail;
         }
 
         ApplyKOVisualsOnly();
@@ -262,24 +340,26 @@ public class OwnedMonsterListItemUI : MonoBehaviour
         var panel = _detailPanelOverride ? _detailPanelOverride : detailPanel;
         if (panel == null)
         {
+            #if UNITY_EDITOR || DEVELOPMENT_BUILD
             Debug.LogWarning("[OwnedMonsterListItemUI] MonsterDetailPanelUI not found in scene.");
+            #endif
             return;
         }
 
         AudioManager.I?.PlayClick();
 
-        // Codex behavior: open by def (not OwnedMonsterData) and set browse list for swipe
-        if (_isCodexRow)
+        // Directory behavior: open by def (not OwnedMonsterData) and set browse list for swipe
+        if (_isDirectoryRow)
         {
             if (_def == null) return;
 
             // Use the APIs that exist in MonsterDetailPanelUI
-            if (_codexBrowseDefs != null && _codexBrowseDefs.Count > 1)
+            if (_directoryBrowseDefs != null && _directoryBrowseDefs.Count > 1)
             {
                 int startIndex = 0;
-                for (int i = 0; i < _codexBrowseDefs.Count; i++)
+                for (int i = 0; i < _directoryBrowseDefs.Count; i++)
                 {
-                    var d = _codexBrowseDefs[i];
+                    var d = _directoryBrowseDefs[i];
                     if (d && (_def == d || (!string.IsNullOrEmpty(d.id) && d.id == _def.id)))
                     {
                         startIndex = i;
@@ -287,20 +367,22 @@ public class OwnedMonsterListItemUI : MonoBehaviour
                     }
                 }
 
-                panel.SetStarterBrowseContext(_codexBrowseDefs, startIndex);
+                panel.SetStarterBrowseContext(_directoryBrowseDefs, startIndex);
             }
             else
             {
                 panel.ClearStarterBrowseContext();
             }
 
-            panel.ShowCodex(_def);
+            if (HasValidMonster(_data))
+                panel.ShowDirectoryOwned(_def, _data);
+            else
+                panel.ShowDirectory(_def);
             return;
         }
 
         // Owned/team behavior
         if (!HasValidMonster(_data)) return;
-        if (!IsUsable(_data)) return;
 
         panel.ShowAssign(_data);
     }
@@ -309,10 +391,11 @@ public class OwnedMonsterListItemUI : MonoBehaviour
     {
         if (rootButton)
         {
-            if (_isCodexRow)
+            if (_isDirectoryRow)
                 rootButton.interactable = (_def != null) && _allowDetail;
             else
-                rootButton.interactable = HasValidMonster(_data) && IsUsable(_data) && _allowDetail;
+                // Allow interacting with KO'd monsters so players can assign them to the team for healing.
+                rootButton.interactable = HasValidMonster(_data) && _allowDetail;
         }
 
         ApplyKOVisualsOnly();
@@ -321,7 +404,7 @@ public class OwnedMonsterListItemUI : MonoBehaviour
 
     private void ApplyKOVisualsOnly()
     {
-        bool isKO = HasValidMonster(_data) && !IsUsable(_data);
+        bool isKO = IsKO(_data);
 
         if (cooldownText)
             cooldownText.gameObject.SetActive(isKO);
@@ -331,7 +414,7 @@ public class OwnedMonsterListItemUI : MonoBehaviour
     {
         if (!cooldownText) return;
         if (!HasValidMonster(_data)) { cooldownText.gameObject.SetActive(false); return; }
-        if (IsUsable(_data)) { cooldownText.gameObject.SetActive(false); return; }
+        if (!IsKO(_data)) { cooldownText.gameObject.SetActive(false); return; }
 
         var (ok, eta) = TryGetETAForNextHP(_data, _def);
         cooldownText.gameObject.SetActive(true);
@@ -367,7 +450,14 @@ public class OwnedMonsterListItemUI : MonoBehaviour
 
     private static bool IsUsable(OwnedMonsterData d)
     {
-        return HasValidMonster(d) && d.currentHP != 0;
+        // HP invariant: 0 = KO, >0 = usable.
+        return HasValidMonster(d) && d.currentHP > 0;
+    }
+
+    private static bool IsKO(OwnedMonsterData d)
+    {
+        // KO is 0 HP (defensive: treat <=0 as KO).
+        return HasValidMonster(d) && d.currentHP <= 0;
     }
 
     private static (bool ok, TimeSpan eta) TryGetETAForNextHP(OwnedMonsterData d, MonsterDataSO def)

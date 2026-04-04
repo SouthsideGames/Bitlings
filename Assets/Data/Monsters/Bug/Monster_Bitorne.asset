@@ -1,0 +1,57 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 32ffc26ed7d444b02a9332ce4279b117, type: 3}
+  m_Name: Monster_Bitorne
+  m_EditorClassIdentifier: 
+  id: M-179
+  displayName: Bitorne
+  type: 11
+  typeIcon: {fileID: 21300000, guid: 8e7ac2a8f10ec4ba5860e036443e3fc8, type: 3}
+  icon: {fileID: 21300000, guid: 07d1545b9860e4369a438ff86b37d1c3, type: 3}
+  backIcon: {fileID: 21300000, guid: 62f0231e9fb76447aa6dd5ad6f4dbeac, type: 3}
+  premiumIcon: {fileID: 21300000, guid: be212090cb60a46e5ae05166e4ba068e, type: 3}
+  premiumBackIcon: {fileID: 21300000, guid: 8b82b601764e140ea9ec6b94b1f4d4e2, type: 3}
+  rarity: 2
+  canBeStarter: 0
+  starterWeight: 1
+  maxLevel: 50
+  baseHP: 60
+  baseAttack: 52
+  baseDefense: 42
+  baseSpeed: 46
+  hpRegenPerHour: 5.6
+  fatigueRatePerHour: 0.085
+  fatigueCooldownHours: 8
+  evolutionStage: 2
+  evolutionLevel: 12
+  evolutionForm: {fileID: 0}
+  uncatchable: 0
+  isBoss: 0
+  bossJobDebuffs: []
+  bossWeight: 1
+  spawnWeight: 2
+  jobSkill: 1.08
+  titleTrack: {fileID: 11400000, guid: 5123657a6baf44061890106744beb7d4, type: 2}
+  defaultAlwaysOnTitles: []
+  ironTitles:
+  - {fileID: 11400000, guid: 3da4dd895f4bd4ff9b4690ab28dbdc42, type: 2}
+  - {fileID: 11400000, guid: 2897bcb545bf47f4c93cf253bec91032, type: 2}
+  - {fileID: 11400000, guid: 77fbf796892a13a479a8c1077e4829a0, type: 2}
+  - {fileID: 11400000, guid: 71652094aed89c948ae2a0cb846cf011, type: 2}
+  Personality: {fileID: 11400000, guid: dc588633b46794883be5263b17376bf3, type: 2}
+  basicAttackName: Sting Jab
+  basicAttackPrefab: {fileID: 6777048211968024641, guid: 36482d8bd89710b4983cb69ab5a8cceb, type: 3}
+  basicAttackPrefabLifetime: 1
+  spawnSfx: {fileID: 8300000, guid: c805ba95a4219134f82e9bafd9fb19a3, type: 3}
+  baseMarketValue: 165
+  description: Its hardened shell and longer limbs let it chain quick stinging attacks
+    with precision.

@@ -8,7 +8,8 @@ public enum ResourceType
 {
     None = 0, Credits = 1, Energy = 2, Medkit = 3, Material = 4,
     PPEPermit = 5, Flyer = 6, WorkOrder = 7, Favor = 8,
-    TrainingVoucher_ATK = 9, WellnessVoucher = 10, EfficiencyVoucher = 11, ShinyOrb = 12, BlessingScale = 13, Coffee = 14, GrowthCore = 16, PackVoucher = 17
+    TrainingVoucher = 9, WellnessVoucher = 10, EfficiencyVoucher = 11, PremiumOrb = 12, BlessingScale = 13, Coffee = 14, GrowthCore = 16, PackVoucher = 17,
+    BullToken = 18, BearToken = 19
 }
 
 public class ResourceManager : MonoBehaviour
@@ -61,8 +62,13 @@ public class ResourceManager : MonoBehaviour
     public void Add(ResourceType type, int amount)
     {
         if (amount == 0) return;
-
+        int before = ResourceBank.Get(type);
         ResourceBank.Add(type, amount);
+        int after = ResourceBank.Get(type);
+
+        int gained = Mathf.Max(0, after - before);
+        if (gained > 0)
+            TrackLifetimeGain(type, gained);
 
         GameEvents.OnResourcesChanged?.Invoke();
         GameEvents.ResourceAdded?.Invoke(type, amount);
@@ -93,12 +99,31 @@ public class ResourceManager : MonoBehaviour
     public void AddMany(IEnumerable<ResourceAmount> amounts)
     {
         bool any = false;
+        var gainedByType = new Dictionary<ResourceType, int>();
+
         foreach (var ra in amounts)
         {
             if (ra.amount == 0) continue;
+
+            int before = ResourceBank.Get(ra.type);
             ResourceBank.Add(ra.type, ra.amount);
+            int after = ResourceBank.Get(ra.type);
+
+            int gained = Mathf.Max(0, after - before);
+            if (gained > 0)
+            {
+                if (gainedByType.TryGetValue(ra.type, out int cur))
+                    gainedByType[ra.type] = cur + gained;
+                else
+                    gainedByType.Add(ra.type, gained);
+            }
+
             any = true;
         }
+
+        foreach (var kv in gainedByType)
+            TrackLifetimeGain(kv.Key, kv.Value);
+
         if (any)
         {
             GameEvents.OnResourcesChanged?.Invoke();
@@ -145,7 +170,7 @@ public class ResourceManager : MonoBehaviour
         int scaled = Mathf.Max(0, baseCredits);
         if (!string.IsNullOrEmpty(leadMonsterId))
         {
-            float cm = TitlesAdapter.GetcreditMultOnVictory(leadMonsterId, wild, wildLevel);
+            float cm = TitlesAdapter.GetCreditMultOnVictory(leadMonsterId, wild, wildLevel);
             if (cm > 0f) scaled = Mathf.RoundToInt(scaled * cm);
         }
         return AddCredits(scaled);
@@ -157,7 +182,7 @@ public class ResourceManager : MonoBehaviour
         int scaled = Mathf.Max(0, baseCredits);
         if (!string.IsNullOrEmpty(leadMonsterId))
         {
-            float cm = TitlesAdapter.GetcreditMultOnVictory(leadMonsterId, null, 0);
+            float cm = TitlesAdapter.GetCreditMultOnVictory(leadMonsterId, null, 0);
             if (cm > 0f) scaled = Mathf.RoundToInt(scaled * cm);
         }
         return AddCredits(scaled);
@@ -170,12 +195,32 @@ public class ResourceManager : MonoBehaviour
     private void TryMigrateLegacyCreditsOnce_WithJson()
     {
         var flags = LoadMigrationFlags();
+        var data = SaveManager.Data;
+
+        bool saveAlreadyMigrated = data != null && data.creditsMigratedToResourceBank;
+
+        if (saveAlreadyMigrated)
+        {
+            if (!flags.creditMigratedV2)
+            {
+                flags.creditMigratedV2 = true;
+                flags.savedAtUnix = NowUnix();
+                SaveMigrationFlags(flags);
+            }
+            return;
+        }
 
         if (flags.creditMigratedV2)
+        {
+            if (data != null && !data.creditsMigratedToResourceBank)
+            {
+                data.creditsMigratedToResourceBank = true;
+                SaveManager.Save();
+            }
             return;
+        }
 
         // Authoritative source for migration is the legacy field.
-        var data = SaveManager.Data;
         int legacyCredits = (data != null) ? Mathf.Max(0, data.credits) : 0;
         int bankCredits   = ResourceBank.Get(ResourceType.Credits);
 
@@ -192,6 +237,8 @@ public class ResourceManager : MonoBehaviour
             int finalCredits = ResourceBank.Get(ResourceType.Credits);
             if (data.credits != finalCredits)
                 data.credits = finalCredits;
+
+            data.creditsMigratedToResourceBank = true;
 
             SaveManager.Save();
         }
@@ -232,7 +279,10 @@ public class ResourceManager : MonoBehaviour
         }
         catch (Exception e)
         {
+            _ = e;
+            #if UNITY_EDITOR || DEVELOPMENT_BUILD
             Debug.LogWarning($"SaveMigrationFlags failed: {e.Message}");
+            #endif
         }
     }
 
@@ -255,6 +305,44 @@ public class ResourceManager : MonoBehaviour
 
     private static long NowUnix() => DateTimeOffset.UtcNow.ToUnixTimeSeconds();
 
+    private static void EnsureLifetimeLedgerSized()
+    {
+        SaveManager.LoadOrCreate();
+
+        if (SaveManager.Data == null)
+            return;
+
+        SaveManager.Data.lifetimeResourceCollected ??= new List<int>();
+
+        int need = 0;
+        foreach (ResourceType t in Enum.GetValues(typeof(ResourceType)))
+            need = Mathf.Max(need, (int)t + 1);
+
+        while (SaveManager.Data.lifetimeResourceCollected.Count < need)
+            SaveManager.Data.lifetimeResourceCollected.Add(0);
+    }
+
+    private static void TrackLifetimeGain(ResourceType type, int amount)
+    {
+        if (amount <= 0) return;
+
+        EnsureLifetimeLedgerSized();
+
+        var data = SaveManager.Data;
+        if (data == null || data.lifetimeResourceCollected == null)
+            return;
+
+        int idx = (int)type;
+        if (idx < 0 || idx >= data.lifetimeResourceCollected.Count)
+            return;
+
+        long next = (long)data.lifetimeResourceCollected[idx] + amount;
+        if (next > int.MaxValue) next = int.MaxValue;
+        if (next < 0) next = 0;
+
+        data.lifetimeResourceCollected[idx] = (int)next;
+    }
+
     public void InitializeNewAccountResources()
     {
         ResourceBank.EnsureSize();
@@ -269,6 +357,19 @@ public class ResourceManager : MonoBehaviour
         ResourceBank.Set(ResourceType.Credits, 0);
         ResourceBank.Set(ResourceType.Medkit, 0);
         ResourceBank.Set(ResourceType.PackVoucher, 0);
+        ResourceBank.Set(ResourceType.TrainingVoucher, 0);
+        ResourceBank.Set(ResourceType.WellnessVoucher, 0);
+        ResourceBank.Set(ResourceType.EfficiencyVoucher, 0);
+        ResourceBank.Set(ResourceType.PPEPermit, 0);
+        ResourceBank.Set(ResourceType.Flyer, 0);
+        ResourceBank.Set(ResourceType.WorkOrder, 0);
+        ResourceBank.Set(ResourceType.Favor, 0);
+        ResourceBank.Set(ResourceType.Material, 0);
+        ResourceBank.Set(ResourceType.PremiumOrb, 0);
+        ResourceBank.Set(ResourceType.BlessingScale, 0);
+        ResourceBank.Set(ResourceType.Coffee, 0);
+        ResourceBank.Set(ResourceType.GrowthCore, 0);
+
 
         SaveManager.Save();
         GameEvents.OnResourcesChanged?.Invoke();

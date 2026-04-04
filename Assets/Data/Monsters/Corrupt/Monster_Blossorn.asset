@@ -1,0 +1,56 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 32ffc26ed7d444b02a9332ce4279b117, type: 3}
+  m_Name: Monster_Blossorn
+  m_EditorClassIdentifier: 
+  id: M-074
+  displayName: Blossorn
+  type: 7
+  typeIcon: {fileID: 21300000, guid: 10d50b4d1dee041cc8dcf349a9ce86a1, type: 3}
+  icon: {fileID: 21300000, guid: fd5c91169d2834ebf9e19a1e7bfa0f9a, type: 3}
+  backIcon: {fileID: 21300000, guid: e6c97936f16b34643a350b5300860aa3, type: 3}
+  premiumIcon: {fileID: 21300000, guid: 01d410cc9b8b24cccb6ba7eb73cb6190, type: 3}
+  premiumBackIcon: {fileID: 21300000, guid: 4af91bb1498054750b59e7ce8f4fe20a, type: 3}
+  rarity: 1
+  canBeStarter: 0
+  starterWeight: 1
+  maxLevel: 50
+  baseHP: 60
+  baseAttack: 62
+  baseDefense: 28
+  baseSpeed: 20
+  hpRegenPerHour: 6.9
+  fatigueRatePerHour: 0.11
+  fatigueCooldownHours: 9.2
+  evolutionStage: 2
+  evolutionLevel: 10
+  evolutionForm: {fileID: 0}
+  uncatchable: 0
+  isBoss: 0
+  bossJobDebuffs: []
+  bossWeight: 1
+  spawnWeight: 4.5
+  jobSkill: 1
+  titleTrack: {fileID: 11400000, guid: 12ad1b4e4180944e5a6ec2ed5a24cbc5, type: 2}
+  defaultAlwaysOnTitles: []
+  ironTitles:
+  - {fileID: 11400000, guid: ff12e8c740a4a9347a02749d699d5ca9, type: 2}
+  - {fileID: 11400000, guid: 3440dff927958f142ab795273ab27580, type: 2}
+  - {fileID: 11400000, guid: b4b91e64958e2c74e9518a6666d41da1, type: 2}
+  - {fileID: 11400000, guid: e9beb77410c9b994793415fa9862de92, type: 2}
+  Personality: {fileID: 11400000, guid: 75a511658b2e544f4869d466b3f7ba5a, type: 2}
+  basicAttackName: Decay Crush
+  basicAttackPrefab: {fileID: 8046187082596486557, guid: 86fc56d41698d45bfbf27d043ca2944d, type: 3}
+  basicAttackPrefabLifetime: 1
+  spawnSfx: {fileID: 8300000, guid: 46ce87fa8f8e25044972b74bc484d5b5, type: 3}
+  baseMarketValue: 105
+  description: Its corruption fully blooms empowering heavy

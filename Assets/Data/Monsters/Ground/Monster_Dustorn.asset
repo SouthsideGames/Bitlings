@@ -1,0 +1,56 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 32ffc26ed7d444b02a9332ce4279b117, type: 3}
+  m_Name: Monster_Dustorn
+  m_EditorClassIdentifier: 
+  id: M-113
+  displayName: Dustorn
+  type: 8
+  typeIcon: {fileID: 21300000, guid: f0d6243fead4a41fcae07804c4d66233, type: 3}
+  icon: {fileID: 21300000, guid: bc578956b4df64a75b1e72c17dfc8d90, type: 3}
+  backIcon: {fileID: 21300000, guid: 43efefa49e3c340218e43317f50fa4ef, type: 3}
+  premiumIcon: {fileID: 21300000, guid: a9ba7c88f265c44bbbac027ffd85dee8, type: 3}
+  premiumBackIcon: {fileID: 21300000, guid: a27ebc4e4e64f4e81861dc980eec4f69, type: 3}
+  rarity: 1
+  canBeStarter: 0
+  starterWeight: 1
+  maxLevel: 50
+  baseHP: 66
+  baseAttack: 40
+  baseDefense: 50
+  baseSpeed: 20
+  hpRegenPerHour: 6.6
+  fatigueRatePerHour: 0.077
+  fatigueCooldownHours: 9.9
+  evolutionStage: 2
+  evolutionLevel: 22
+  evolutionForm: {fileID: 0}
+  uncatchable: 0
+  isBoss: 0
+  bossJobDebuffs: []
+  bossWeight: 1
+  spawnWeight: 4.5
+  jobSkill: 1
+  titleTrack: {fileID: 11400000, guid: 43da376a7f4ff4fd0a5fa214f7156c2f, type: 2}
+  defaultAlwaysOnTitles: []
+  ironTitles:
+  - {fileID: 11400000, guid: df9109033861016428656f21d2cad8ea, type: 2}
+  - {fileID: 11400000, guid: 01abdc10d1a4b41e2b6ebdce1f312988, type: 2}
+  - {fileID: 11400000, guid: f0a22c228659c304fb9369327478aab9, type: 2}
+  - {fileID: 11400000, guid: 014cd17980e502c418a7ed232b26e215, type: 2}
+  Personality: {fileID: 11400000, guid: d2d9ec6158abb40d2a7618ee71a9de06, type: 2}
+  basicAttackName: Earth Guard
+  basicAttackPrefab: {fileID: 8624645253036040332, guid: f03e702d7c9714bc2af48b5b17c93c88, type: 3}
+  basicAttackPrefabLifetime: 1
+  spawnSfx: {fileID: 8300000, guid: 44016960b73c7e64ca0a214ce0bbd2d9, type: 3}
+  baseMarketValue: 109
+  description: Its body compacts into denser layers

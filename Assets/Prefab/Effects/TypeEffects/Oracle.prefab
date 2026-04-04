@@ -12,6 +12,7 @@ GameObject:
   - component: {fileID: 3461837470427832779}
   - component: {fileID: 5811742106944904648}
   - component: {fileID: 7285288252162559169}
+  - component: {fileID: -2649705120877554298}
   m_Layer: 5
   m_Name: Oracle
   m_TagString: Untagged
@@ -36,7 +37,7 @@ RectTransform:
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
   m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 400, y: 400}
+  m_SizeDelta: {x: 600, y: 600}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &3461837470427832779
 CanvasRenderer:
@@ -98,3 +99,22 @@ Animator:
   m_AllowConstantClipSamplingOptimization: 1
   m_KeepAnimatorStateOnDisable: 0
   m_WriteDefaultValuesOnDisable: 0
+--- !u!114 &-2649705120877554298
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7907104310462883121}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fbfb77ed3355f4634a8c165181d69411, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PlaySfxOnSpawn
+  clip: {fileID: 8300000, guid: 02b3210aa8aea4a80b62eb1213654384, type: 3}
+  volumeMult: 0.5
+  randomizePitch: 0
+  pitch: 1
+  pitchMin: 0.95
+  pitchMax: 1.05
+  playOnEnable: 1

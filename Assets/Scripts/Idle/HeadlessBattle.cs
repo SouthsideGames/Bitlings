@@ -38,6 +38,7 @@ public static class HeadlessBattle
     {
         public bool victory;
         public int  credits;
+        public int  turnsSimulated;
     }
 
     public static Output Resolve(in Input i)
@@ -65,6 +66,15 @@ public static class HeadlessBattle
         var  rng = new System.Random(i.rngSeed);
         bool win = rng.NextDouble() < p;
 
+        float dominance = ((offMul + defMul) * 0.5f) - 1f;
+        dominance += Mathf.Clamp(diff * 0.05f, -0.6f, 0.6f);
+        dominance += Mathf.Clamp(i.earlyEdge * 2f, -0.4f, 0.4f);
+
+        float jitter = ((float)rng.NextDouble() * 1.2f) - 0.6f;
+        int turns = Mathf.RoundToInt(4f - (dominance * 2f) + jitter);
+        if (!win) turns += 1;
+        turns = Mathf.Clamp(turns, 2, 8);
+
         // Rewards
         int credits = 0;
         if (win)
@@ -74,7 +84,7 @@ public static class HeadlessBattle
             credits = Mathf.RoundToInt(basecredits);
         }
 
-        return new Output { victory = win, credits = credits };
+        return new Output { victory = win, credits = credits, turnsSimulated = turns };
     }
 
     /// <summary>Coerces invalid/zero multipliers to neutral (1f).</summary>

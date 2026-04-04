@@ -15,13 +15,16 @@ MonoBehaviour:
   group: 3
   attackWeight: 3
   defendWeight: 3
-  focusWeight: 6
-  runWeight: 1
+  focusWeight: 4
+  runWeight: 0
   lowHpThreshold: 0.35
-  lowHpDefendBonus: 2
+  lowHpDefendBonus: 3
   lowHpRunBonus: 1
   superEffectiveAttackBonus: 2
-  badMatchDefendBonus: 1
+  badMatchDefendBonus: 2
   badMatchRunBonus: 1
-  eachTurnAttackBonus: 0
-  description: Waits for clear advantage; heavy focus user.
+  eachTurnAttackBonus: 1
+  eachTurnFocusPenalty: 1
+  lowHpFocusPenalty: 3
+  chaoticOverrideChance: 0
+  description: Observes battlefield flow before committing to action.

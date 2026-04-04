@@ -1,0 +1,57 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 32ffc26ed7d444b02a9332ce4279b117, type: 3}
+  m_Name: Monster_Dreadveil
+  m_EditorClassIdentifier: 
+  id: M-046
+  displayName: Dreadveil
+  type: 15
+  typeIcon: {fileID: 21300000, guid: a5efb49857c07455fa8503bc949b1aba, type: 3}
+  icon: {fileID: 21300000, guid: b33afc29d172e954aa897586b2445f66, type: 3}
+  backIcon: {fileID: 21300000, guid: a01b422c048a2d64288c3548b6c006eb, type: 3}
+  premiumIcon: {fileID: 21300000, guid: 0e67d02d7d3a44635a3295f94ce5e2d9, type: 3}
+  premiumBackIcon: {fileID: 21300000, guid: 155cfff1e2cd0465ab519d85407c900f, type: 3}
+  rarity: 4
+  canBeStarter: 0
+  starterWeight: 1
+  maxLevel: 50
+  baseHP: 90
+  baseAttack: 96
+  baseDefense: 48
+  baseSpeed: 36
+  hpRegenPerHour: 10.4
+  fatigueRatePerHour: 0.11
+  fatigueCooldownHours: 9.6
+  evolutionStage: 2
+  evolutionLevel: 18
+  evolutionForm: {fileID: 0}
+  uncatchable: 0
+  isBoss: 0
+  bossJobDebuffs: []
+  bossWeight: 1
+  spawnWeight: 0.25
+  jobSkill: 1.22
+  titleTrack: {fileID: 11400000, guid: c87e81d68cfa441caa1b0bc3af9f6de7, type: 2}
+  defaultAlwaysOnTitles: []
+  ironTitles:
+  - {fileID: 11400000, guid: 0b6a2e89cd8f4a844b7172a2d678be74, type: 2}
+  - {fileID: 11400000, guid: 466493f7d714bee4884dcb9624f86659, type: 2}
+  - {fileID: 11400000, guid: a9d1c8c346b292e4f9745fb659bd956a, type: 2}
+  - {fileID: 11400000, guid: 9ec0810378a622c4188da6804c02c609, type: 2}
+  Personality: {fileID: 11400000, guid: 48288e9e78c65453781f793c8df03e90, type: 2}
+  basicAttackName: Veil Reap
+  basicAttackPrefab: {fileID: 1424259663161806981, guid: 649dec1e4858f634eac689cf6599ea92, type: 3}
+  basicAttackPrefabLifetime: 1
+  spawnSfx: {fileID: 8300000, guid: 220656764ed0fe64488efc917fad68f3, type: 3}
+  baseMarketValue: 836
+  description: A legendary shadow entity that phases through the veil itself, reappearing
+    to deliver devastating, silent blows.

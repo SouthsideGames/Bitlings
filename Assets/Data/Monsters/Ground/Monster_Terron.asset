@@ -1,0 +1,56 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 32ffc26ed7d444b02a9332ce4279b117, type: 3}
+  m_Name: Monster_Terron
+  m_EditorClassIdentifier: 
+  id: M-148
+  displayName: Terron
+  type: 8
+  typeIcon: {fileID: 21300000, guid: f0d6243fead4a41fcae07804c4d66233, type: 3}
+  icon: {fileID: 21300000, guid: 1c8da778489dd4bea9b31886c898936a, type: 3}
+  backIcon: {fileID: 21300000, guid: e8c6cb1dec13e4c548994eb76b77f988, type: 3}
+  premiumIcon: {fileID: 21300000, guid: d5ee25b9fe2bc4826a950e53065151e0, type: 3}
+  premiumBackIcon: {fileID: 21300000, guid: 7c8f239a1f8624b5cb180f5f6ce345c7, type: 3}
+  rarity: 1
+  canBeStarter: 0
+  starterWeight: 1
+  maxLevel: 50
+  baseHP: 64
+  baseAttack: 42
+  baseDefense: 50
+  baseSpeed: 20
+  hpRegenPerHour: 6.7
+  fatigueRatePerHour: 0.077
+  fatigueCooldownHours: 9.9
+  evolutionStage: 2
+  evolutionLevel: 22
+  evolutionForm: {fileID: 11400000, guid: f19a29996c66f4f198ac9e96032e8b3a, type: 2}
+  uncatchable: 0
+  isBoss: 0
+  bossJobDebuffs: []
+  bossWeight: 1
+  spawnWeight: 4.5
+  jobSkill: 1
+  titleTrack: {fileID: 11400000, guid: 24307fc265fd646dc81568b55db1a518, type: 2}
+  defaultAlwaysOnTitles: []
+  ironTitles:
+  - {fileID: 11400000, guid: 6ad4157aacf2cb547878360fd54c3d1e, type: 2}
+  - {fileID: 11400000, guid: f0a22c228659c304fb9369327478aab9, type: 2}
+  - {fileID: 11400000, guid: 014cd17980e502c418a7ed232b26e215, type: 2}
+  Personality: {fileID: 11400000, guid: d2d9ec6158abb40d2a7618ee71a9de06, type: 2}
+  basicAttackName: Earth Shove
+  basicAttackPrefab: {fileID: 8624645253036040332, guid: f03e702d7c9714bc2af48b5b17c93c88, type: 3}
+  basicAttackPrefabLifetime: 1
+  spawnSfx: {fileID: 8300000, guid: 83ad74c31d5c238459d671c493e60240, type: 3}
+  baseMarketValue: 109
+  description: Its body compacts into heavier soil layers allowing stronger defensive
+    pushes and crushing blows.

@@ -14,9 +14,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   jobType: 10
   produces: 11
-  baseRatePerHour: 50
-  storageCap: 300
+  baseRatePerHour: 0.3
+  storageCap: 15
   maxWorkers: 3
   eligibleTypes: 07000000
-  icon: {fileID: 21300000, guid: fd3a5d2a62e4b404fa201235e5a101b7, type: 3}
+  icon: {fileID: 21300000, guid: 92c53afb80dda7041a0fb2476a3f9572, type: 3}
   displayName: Containment

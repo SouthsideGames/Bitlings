@@ -1,5 +1,6 @@
 using UnityEngine;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 
 public enum PanelId
@@ -11,7 +12,7 @@ public enum PanelId
     Home = 4,
     Resources = 5,
     Upgrades = 6,
-    Codex = 7,
+    Directory = 7,
     JobAssign = 8,
     Harbor = 9,
     CryoLab = 10,
@@ -35,6 +36,18 @@ public enum PanelId
     Recycle = 29,
     Story = 30,
     PlayerDossier = 31,
+    ImagePreview = 32,
+    IdleBattleRewards = 33,
+
+    // Iron Career: ONLY the main container should be managed by UIManager
+    IronCareerEncounter = 34,
+
+    // Exchange
+    DuplicateResolution = 35,
+    Exchange = 36,
+    ExchangeSpeciesDetail = 37,
+    StatBreakdown = 38,
+    AutoBattleHistory = 39,
 }
 
 [Serializable]
@@ -54,13 +67,55 @@ public class UIManager : MonoBehaviour
 {
     public static UIManager I { get; private set; }
 
+    private const string TutorialIronCareerUnlockedKey = "tut_ironcareerunlocked_v1";
+    private const string TutorialAutoEncounterKey = "tut_autoencounter_v1";
+
     [Header("Panels")]
     [SerializeField] private List<PanelEntry> panels = new();
+
+    [Header("Navigation")]
+    [Tooltip("If enabled, opening a MAIN panel will automatically close any other MAIN panels (ex: Home won't stay open under Dictionary). Overlays/popups are not affected.")]
+    [SerializeField] private bool singleMainPanelMode = true;
+
+    [Tooltip("Panels treated as overlays/popups. They are allowed to stack and will NOT be auto-closed when opening a main panel.")]
+    [SerializeField] private List<PanelId> overlayPanels = new()
+    {
+        PanelId.JobAssign,
+        PanelId.RewardPopup,
+        PanelId.MonsterDetail,
+        PanelId.Evolution,
+        PanelId.TitleDetail,
+        PanelId.Info,
+        PanelId.Log,
+        PanelId.PostBattleSummary,
+        PanelId.Achievement,
+        PanelId.CheatCodes,
+        PanelId.PackDetails,
+        PanelId.ImagePreview,
+        PanelId.IdleBattleRewards,
+        PanelId.DuplicateResolution,
+        PanelId.ExchangeSpeciesDetail,
+        PanelId.StatBreakdown,
+        PanelId.AutoBattleHistory,
+
+        // NOTE:
+        // Iron overlays are intentionally NOT included here.
+        // They are controlled by IronCareerEncounterPanelUI (or equivalent),
+        // not by UIManager.
+    };
+
+    [Header("Animation")]
+    [SerializeField] private float openFadeDuration = 0.18f;
+    [SerializeField] private float closeFadeDuration = 0.16f;
+    [SerializeField] private float slideOffsetY = -30f;
 
     public event Action<PanelId, bool> OnPanelChanged;
 
     private readonly Dictionary<PanelId, PanelEntry> _map = new();
     private readonly HashSet<PanelId> _open = new();
+    private readonly List<PanelId> _tempPanelList = new();
+
+    private Coroutine _idleRewardCo;
 
     void Awake()
     {
@@ -71,8 +126,19 @@ public class UIManager : MonoBehaviour
         foreach (var p in panels)
         {
             if (p == null || p.root == null) continue;
-            if (!_map.ContainsKey(p.id)) _map.Add(p.id, p);
+
+            if (!_map.ContainsKey(p.id))
+                _map.Add(p.id, p);
+
             SetImmediate(p.id, p.root.activeSelf, fireEvent: false);
+
+            if (p.root.activeSelf && p.useFade)
+            {
+                var cg = EnsureCanvasGroup(p.root);
+                cg.alpha = 1f;
+                cg.interactable = true;
+                cg.blocksRaycasts = true;
+            }
         }
     }
 
@@ -88,52 +154,188 @@ public class UIManager : MonoBehaviour
 
     public bool Hide(PanelId id)
     {
-        if (!_map.TryGetValue(id, out var p) || p.root == null) return false;
+        if (!_map.TryGetValue(id, out var p) || p.root == null)
+        {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            DevLog.Log($"[UIManager] Hide ignored (panel not registered): {id}");
+#endif
+            return false;
+        }
+
         SetActive(id, false);
         return true;
     }
 
     public void CloseAll()
     {
-        var list = new List<PanelId>(_open);
-        foreach (var id in list) SetImmediate(id, false, fireEvent: false);
+        _tempPanelList.Clear();
+        _tempPanelList.AddRange(_open);
+        foreach (var id in _tempPanelList)
+            SetImmediate(id, false, fireEvent: false);
+
         _open.Clear();
     }
 
     public void CloseAllExcept(PanelId keep)
     {
-        var list = new List<PanelId>(_open);
-        foreach (var id in list) if (id != keep) SetActive(id, false);
+        _tempPanelList.Clear();
+        _tempPanelList.AddRange(_open);
+        foreach (var id in _tempPanelList)
+            if (id != keep) SetActive(id, false);
     }
 
     public GameObject GetRoot(PanelId id) => _map.TryGetValue(id, out var e) ? e.root : null;
 
+    void TryOpenIdleBattleRewardsNextFrame()
+    {
+        if (_idleRewardCo != null) StopCoroutine(_idleRewardCo);
+        _idleRewardCo = StartCoroutine(Co_TryOpenIdleBattleRewardsNextFrame());
+    }
+
+    void TryOpenIronCareerUnlockedTutorial()
+    {
+        var data = SaveManager.Data;
+        if (data == null) return;
+        if (!data.HasIronCareerUnlocked) return;
+
+        int maxRank = PromotionManager.I != null ? PromotionManager.I.GetMaxRank() : 20;
+        int rank = Mathf.Max(1, data.promotionRank);
+        if (rank < maxRank) return;
+
+        if (SaveManager.IsTutorialComplete(TutorialIronCareerUnlockedKey)) return;
+
+        // Avoid opening over the idle rewards popup; it will be requested again
+        // the next time Home is opened if still incomplete.
+        if (IsOpen(PanelId.IdleBattleRewards)) return;
+
+        TutorialOverlayPanel.RequestOpen(TutorialIronCareerUnlockedKey);
+    }
+
+    void TryOpenAutoEncounterTutorial()
+    {
+        if (SaveManager.IsTutorialComplete(TutorialAutoEncounterKey)) return;
+
+        // Only show once idle battles have been unlocked
+        if (FeatureUnlockManager.I == null ||
+            !FeatureUnlockManager.I.IsUnlocked(FeatureId.IdleBattle_Basic))
+            return;
+
+        TutorialOverlayPanel.RequestOpen(TutorialAutoEncounterKey);
+    }
+
+    IEnumerator Co_TryOpenIdleBattleRewardsNextFrame()
+    {
+        yield return null;
+        IdleBattleManager.I?.TryOpenSummaryIfNeeded();
+    }
+
     private void SetImmediate(PanelId id, bool on, bool fireEvent)
     {
-        if (!_map.TryGetValue(id, out var p) || p.root == null) return;
-        p.root.SetActive(on);
+        if (!_map.TryGetValue(id, out var p) || p.root == null)
+        {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            DevLog.Log($"[UIManager] SetImmediate ignored (panel not registered): {id}");
+#endif
+            return;
+        }
 
-        if (on) _open.Add(id);
-        else _open.Remove(id);
+        CancelTweens(p.root);
+
+        if (on)
+        {
+            p.root.SetActive(true);
+
+            if (p.useFade)
+            {
+                var cg = EnsureCanvasGroup(p.root);
+                cg.alpha = 1f;
+                cg.interactable = true;
+                cg.blocksRaycasts = true;
+            }
+
+            var rt = p.root.GetComponent<RectTransform>();
+            if (rt && p.useSlide)
+            {
+                var pos = rt.anchoredPosition;
+                rt.anchoredPosition = new Vector2(pos.x, 0f);
+            }
+
+            _open.Add(id);
+        }
+        else
+        {
+            if (p.useFade)
+            {
+                var cg = p.root.GetComponent<CanvasGroup>();
+                if (cg != null)
+                {
+                    cg.interactable = false;
+                    cg.blocksRaycasts = false;
+                    cg.alpha = 0f;
+                }
+            }
+
+            p.root.SetActive(false);
+            _open.Remove(id);
+        }
 
         if (fireEvent) OnPanelChanged?.Invoke(id, on);
     }
 
     private void SetActive(PanelId id, bool on, bool fireEvent = true)
     {
+        // IRON GUARD: prevent regular Encounter from being shown during active Iron runs
+        if (on && id == PanelId.Encounter && IronCareerRuntime.IsActive)
+        {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            Debug.LogWarning("[UIManager] Blocked opening regular Encounter panel while Iron Career is active.");
+#endif
+            return;
+        }
+
+        // IRON GUARD: if Iron panel is being shown, immediately hide regular Encounter if still open
+        if (on && id == PanelId.IronCareerEncounter && IronCareerRuntime.IsActive)
+        {
+            if (_open.Contains(PanelId.Encounter))
+            {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+                DevLog.Log("[UIManager] Iron Career panel opening; force-hiding regular Encounter panel.");
+#endif
+                SetImmediate(PanelId.Encounter, false, fireEvent: false);
+            }
+        }
 
         if (!_map.TryGetValue(id, out var p) || p.root == null)
         {
-            Debug.LogWarning($"[UIManager] No panel root for {id}");
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            Debug.LogWarning($"[UIManager] No panel root for {id} (call ignored)");
+#endif
             return;
         }
 
         if (on)
         {
+            if (singleMainPanelMode && !IsOverlayPanel(id))
+            {
+                CloseAllMainPanelsExcept(id);
+            }
+
             if (_open.Add(id))
             {
                 AnimateOpen(p);
                 if (fireEvent) OnPanelChanged?.Invoke(id, true);
+
+                if (id == PanelId.Home)
+                {
+                    TryOpenIdleBattleRewardsNextFrame();
+                    TryOpenIronCareerUnlockedTutorial();
+                    ExchangeManager.I?.TryShowPendingDividendHomeToast();
+                }
+
+                if (id == PanelId.Encounter)
+                {
+                    TryOpenAutoEncounterTutorial();
+                }
             }
         }
         else
@@ -149,56 +351,104 @@ public class UIManager : MonoBehaviour
         }
     }
 
+    private bool IsOverlayPanel(PanelId id)
+    {
+        return overlayPanels != null && overlayPanels.Contains(id);
+    }
+
+    private void CloseAllMainPanelsExcept(PanelId keepMain)
+    {
+        var keepRoot = GetRoot(keepMain);
+        _tempPanelList.Clear();
+        _tempPanelList.AddRange(_open);
+        foreach (var id in _tempPanelList)
+        {
+            if (id == keepMain) continue;
+            if (IsOverlayPanel(id)) continue;
+
+            // If the panel being opened is nested under an already-open main panel,
+            // keep that ancestor open (closing it would disable/hide the child panel).
+            var candidateRoot = GetRoot(id);
+            if (keepRoot != null && candidateRoot != null && keepRoot.transform.IsChildOf(candidateRoot.transform))
+                continue;
+
+            SetActive(id, false);
+        }
+    }
+
     private void AnimateOpen(PanelEntry p)
     {
         var root = p.root;
+        CancelTweens(root);
+
         root.SetActive(true);
 
         RectTransform rt = root.GetComponent<RectTransform>();
 
-        // Optional slide-in
         if (p.useSlide && rt)
         {
             var pos = rt.anchoredPosition;
-            rt.anchoredPosition = new Vector2(pos.x, -30f);
-            LeanTween.moveY(rt, 0f, 0.18f).setEaseOutCubic();
+            rt.anchoredPosition = new Vector2(pos.x, slideOffsetY);
+            LeanTween.moveY(rt, 0f, openFadeDuration).setEaseOutCubic().setIgnoreTimeScale(true);
         }
 
-        // Fade only if enabled
         if (p.useFade)
         {
-            CanvasGroup cg = root.GetComponent<CanvasGroup>();
-            if (cg == null) cg = root.AddComponent<CanvasGroup>();
+            CanvasGroup cg = EnsureCanvasGroup(root);
+            cg.interactable = true;
+            cg.blocksRaycasts = true;
+
             cg.alpha = 0f;
-            LeanTween.alphaCanvas(cg, 1f, 0.18f).setEaseOutCubic();
+            LeanTween.alphaCanvas(cg, 1f, openFadeDuration).setEaseOutCubic().setIgnoreTimeScale(true);
         }
     }
 
     private void AnimateClose(PanelEntry p, Action onComplete)
     {
         var root = p.root;
+        CancelTweens(root);
+
         RectTransform rt = root.GetComponent<RectTransform>();
 
-        float dur = 0.16f;
+        float dur = closeFadeDuration;
         bool anyTween = false;
-
-        if (p.useSlide && rt)
-        {
-            anyTween = true;
-            LeanTween.moveY(rt, -30f, dur).setEaseInCubic();
-        }
 
         if (p.useFade)
         {
             anyTween = true;
-            CanvasGroup cg = root.GetComponent<CanvasGroup>();
-            if (cg == null) cg = root.AddComponent<CanvasGroup>();
-            LeanTween.alphaCanvas(cg, 0f, dur).setEaseInCubic();
+
+            CanvasGroup cg = EnsureCanvasGroup(root);
+            cg.interactable = false;
+            cg.blocksRaycasts = false;
+
+            LeanTween.alphaCanvas(cg, 0f, dur).setEaseInCubic().setIgnoreTimeScale(true);
+        }
+
+        if (p.useSlide && rt)
+        {
+            anyTween = true;
+            LeanTween.moveY(rt, slideOffsetY, dur).setEaseInCubic().setIgnoreTimeScale(true);
         }
 
         if (anyTween)
-            LeanTween.delayedCall(root, dur, () => onComplete?.Invoke());
+            LeanTween.delayedCall(root, dur, () => onComplete?.Invoke()).setIgnoreTimeScale(true);
         else
             onComplete?.Invoke();
+    }
+
+    private static CanvasGroup EnsureCanvasGroup(GameObject root)
+    {
+        var cg = root.GetComponent<CanvasGroup>();
+        if (cg == null) cg = root.AddComponent<CanvasGroup>();
+        return cg;
+    }
+
+    private static void CancelTweens(GameObject root)
+    {
+        if (!root) return;
+        LeanTween.cancel(root);
+
+        var rt = root.GetComponent<RectTransform>();
+        if (rt) LeanTween.cancel(rt.gameObject);
     }
 }

@@ -1,0 +1,27 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: af7b65046e5bb554c808c8500b10fe7d, type: 3}
+  m_Name: TitleTrack_Ignirix
+  m_EditorClassIdentifier: 
+  tiers:
+  - levelRequired: 2
+    unlockChoices:
+    - {fileID: 11400000, guid: c2f0fdd5e9fcb25498ae79caf77583c0, type: 2}
+  - levelRequired: 6
+    unlockChoices:
+    - {fileID: 11400000, guid: fe67a4187cf7add4289106de72912f92, type: 2}
+  - levelRequired: 10
+    unlockChoices:
+    - {fileID: 11400000, guid: 71652094aed89c948ae2a0cb846cf011, type: 2}
+  - levelRequired: 14
+    unlockChoices:
+    - {fileID: 11400000, guid: d9ec0d8891fb1da4fb1bed5ba426f375, type: 2}

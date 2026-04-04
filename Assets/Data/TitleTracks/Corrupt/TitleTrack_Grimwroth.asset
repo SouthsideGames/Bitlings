@@ -21,4 +21,4 @@ MonoBehaviour:
     - {fileID: 11400000, guid: 76f433c56b2f94717983939f0d5b1ff9, type: 2}
   - levelRequired: 10
     unlockChoices:
-    - {fileID: 11400000, guid: 65cbe1e1c7c99744dac37f6bab34a631, type: 2}
+    - {fileID: 11400000, guid: d1ef3ffe8722d48c192a964c945b0f09, type: 2}

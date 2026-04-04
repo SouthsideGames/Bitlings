@@ -1,0 +1,57 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 32ffc26ed7d444b02a9332ce4279b117, type: 3}
+  m_Name: Monster_Voltfin
+  m_EditorClassIdentifier: 
+  id: M-141
+  displayName: Voltfin
+  type: 4
+  typeIcon: {fileID: 21300000, guid: e57a940f3027d4a9f83f25cefbc6d738, type: 3}
+  icon: {fileID: 21300000, guid: 2e9af85a8c1524d84b3cafb4623b31d9, type: 3}
+  backIcon: {fileID: 21300000, guid: 93a1c5cd7945a40ffa044583a37477e0, type: 3}
+  premiumIcon: {fileID: 21300000, guid: 7015d6cb46683465b9efa3039c56240b, type: 3}
+  premiumBackIcon: {fileID: 21300000, guid: 75e97137b44274d24b3cef3f0e0e0538, type: 3}
+  rarity: 0
+  canBeStarter: 0
+  starterWeight: 1
+  maxLevel: 50
+  baseHP: 46
+  baseAttack: 42
+  baseDefense: 24
+  baseSpeed: 34
+  hpRegenPerHour: 4.8
+  fatigueRatePerHour: 0.105
+  fatigueCooldownHours: 7.6
+  evolutionStage: 1
+  evolutionLevel: 22
+  evolutionForm: {fileID: 11400000, guid: 3d92335b954894336bb77aa822df0860, type: 2}
+  uncatchable: 0
+  isBoss: 0
+  bossJobDebuffs: []
+  bossWeight: 1
+  spawnWeight: 8
+  jobSkill: 0.95
+  titleTrack: {fileID: 11400000, guid: 4590f42e0b1864a98b29f9a2c9aa8f43, type: 2}
+  defaultAlwaysOnTitles: []
+  ironTitles:
+  - {fileID: 11400000, guid: a289ace2a61ca0e47b454f4b80ebec49, type: 2}
+  - {fileID: 11400000, guid: a1f2ec75ecd5b447bb439bb8619bfa03, type: 2}
+  - {fileID: 11400000, guid: 665e3ce08b7d386478b3de0bebb8e3ec, type: 2}
+  - {fileID: 11400000, guid: fe67a4187cf7add4289106de72912f92, type: 2}
+  Personality: {fileID: 11400000, guid: ab061081920b544089b918a9f1f3759b, type: 2}
+  basicAttackName: Spark Tap
+  basicAttackPrefab: {fileID: 4179996368917665753, guid: 77ce3f8bf17474b06ac473e26248a299, type: 3}
+  basicAttackPrefabLifetime: 1
+  spawnSfx: {fileID: 8300000, guid: b0cc65d8e0e46854986afbe0580be832, type: 3}
+  baseMarketValue: 75
+  description: A floating electric creature that crackles softly jabbing foes with
+    quick bursts of static energy.

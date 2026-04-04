@@ -26,10 +26,6 @@ public class RecyclePanelUI : MonoBehaviour
     [Header("Controls")]
     [SerializeField] private Button convertButton;
 
-    [Tooltip("Shown briefly after a successful conversion.")]
-    [SerializeField] private GameObject successBanner;
-    [SerializeField] private float successBannerDuration = 1.2f;
-
     private readonly List<RecycleRecipeItemUI> _items = new();
     private RecycleRecipeSO _selectedRecipe;
     private Coroutine _bannerCo;
@@ -38,9 +34,6 @@ public class RecyclePanelUI : MonoBehaviour
     {
         BuildRecipeList();
         SelectRecipe(null);
-
-        if (successBanner)
-            successBanner.SetActive(false);
 
         if (convertButton)
         {
@@ -183,21 +176,10 @@ public class RecyclePanelUI : MonoBehaviour
         // Let everyone know amounts changed
         GameEvents.OnResourcesChanged?.Invoke();
 
-        // Show "conversion complete" banner briefly
-        if (successBanner)
-        {
-            if (_bannerCo != null) StopCoroutine(_bannerCo);
-            _bannerCo = StartCoroutine(SuccessBannerRoutine());
-        }
+        GameEvents.RaiseToast($"CONVERSION COMPLETE {r.fromAmount} {r.fromType} → {r.toAmount} {r.toType}");
+
 
         // Update button state (in case we can't afford another conversion)
         RefreshConvertButton();
-    }
-
-    private IEnumerator SuccessBannerRoutine()
-    {
-        successBanner.SetActive(true);
-        yield return new WaitForSeconds(successBannerDuration);
-        successBanner.SetActive(false);
     }
 }

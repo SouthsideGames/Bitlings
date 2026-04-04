@@ -1,8 +1,8 @@
 using UnityEngine;
 using TMPro;
+using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Text;
 
 public class ExpeditionUI : MonoBehaviour
 {
@@ -13,26 +13,47 @@ public class ExpeditionUI : MonoBehaviour
 
     [Header("Refs - Header")]
     [SerializeField] private TextMeshProUGUI currencyHeader;
-    [SerializeField] private TextMeshProUGUI seasonLabelText;      
-    [SerializeField] private TextMeshProUGUI seasonCountdownText;  
+    [SerializeField] private TextMeshProUGUI seasonLabelText;
+    [SerializeField] private TextMeshProUGUI seasonCountdownText;
 
     [Header("Refs - Upcoming Teaser")]
-    [SerializeField] private TextMeshProUGUI upcomingHeaderText;    
-    [SerializeField] private TextMeshProUGUI upcomingPacksText;  
+    [SerializeField] private TextMeshProUGUI upcomingHeaderText;
+
+    [Header("Refs - Manager")]
+    [Tooltip("Assign the MonsterPackManager from the scene here (preferred).")]
+    [SerializeField] private MonsterPackManager packManager;
+
+    [Header("Countdown Warning")]
+    [SerializeField, Min(1)] private int warningDaysThreshold = 10;
 
     private Coroutine _countdownRoutine;
 
+    private Color _countdownBaseColor;
+    private bool _cachedCountdownColor;
+
+    private bool _loggedMissingMgrOnce;
+
     void OnEnable()
     {
+        CacheCountdownBaseColor();
+
         RefreshCurrencyHeader();
+
+        // Resolve manager before doing any season UI work
+        if (!EnsureManager())
+        {
+            LogMissingManagerOnce();
+            return;
+        }
+
         RefreshSeasonHeader();
         BuildCurrentSeasonList();
-        BuildUpcomingTeaserText();
 
         GameEvents.OnResourcesChanged += RefreshCurrencyHeader;
         MonsterPackManager.OnPackUnlocked += OnPackUnlocked;
 
-        _countdownRoutine = StartCoroutine(SeasonCountdownLoop());
+        if (_countdownRoutine == null)
+            _countdownRoutine = StartCoroutine(SeasonCountdownLoop());
     }
 
     void OnDisable()
@@ -47,12 +68,49 @@ public class ExpeditionUI : MonoBehaviour
         }
     }
 
+    private void CacheCountdownBaseColor()
+    {
+        if (_cachedCountdownColor) return;
+        if (seasonCountdownText == null) return;
+
+        _countdownBaseColor = seasonCountdownText.color;
+        _cachedCountdownColor = true;
+    }
+
+    private bool EnsureManager()
+    {
+        // Preferred: inspector reference
+        if (packManager != null)
+            return true;
+
+        packManager = MonsterPackManager.I;
+
+        return packManager != null;
+    }
+
+    private void LogMissingManagerOnce()
+    {
+        if (_loggedMissingMgrOnce) return;
+        _loggedMissingMgrOnce = true;
+
+        Debug.LogWarning(
+            "[ExpeditionUI] MonsterPackManager reference is missing.\n" +
+            "Fix: Assign the MonsterPackManager in the ExpeditionUI inspector (preferred).\n" +
+            "If you rely on MonsterPackManager.I, ensure it initializes before this UI enables."
+        );
+    }
+
     private void OnPackUnlocked(string _)
     {
+        if (!EnsureManager())
+        {
+            LogMissingManagerOnce();
+            return;
+        }
+
         RefreshCurrencyHeader();
         RefreshSeasonHeader();
         BuildCurrentSeasonList();
-        BuildUpcomingTeaserText();
     }
 
     private void RefreshCurrencyHeader()
@@ -64,14 +122,13 @@ public class ExpeditionUI : MonoBehaviour
 
     private void RefreshSeasonHeader()
     {
-        var mgr = MonsterPackManager.I;
-        if (mgr == null) return;
+        if (!EnsureManager()) return;
 
         // Season label (prefer name, fallback to number)
         if (seasonLabelText)
         {
-            string name = mgr.GetCurrentSeasonName();
-            int seasonNum = mgr.GetCurrentSeasonNumber1Based();
+            string name = packManager.GetCurrentSeasonName();
+            int seasonNum = packManager.GetCurrentSeasonNumber1Based();
 
             if (!string.IsNullOrEmpty(name))
                 seasonLabelText.text = $"Expedition Packs — {name}";
@@ -81,17 +138,17 @@ public class ExpeditionUI : MonoBehaviour
                 seasonLabelText.text = "Expedition Packs";
         }
 
-        // Upcoming header
+        // Upcoming header (keep if you still want a "Next Season" label)
         if (upcomingHeaderText)
         {
-            string nextName = mgr.GetNextSeasonName();
+            string nextName = packManager.GetNextSeasonName();
             upcomingHeaderText.text = string.IsNullOrEmpty(nextName) ? "Next Season" : $"Next Season — {nextName}";
         }
     }
 
     private IEnumerator SeasonCountdownLoop()
     {
-        var wait = new WaitForSeconds(1f);
+        var wait = new WaitForSecondsRealtime(1f);
 
         while (true)
         {
@@ -102,14 +159,14 @@ public class ExpeditionUI : MonoBehaviour
 
     private void UpdateCountdownText()
     {
-        var mgr = MonsterPackManager.I;
-        if (mgr == null || seasonCountdownText == null)
+        if (!EnsureManager() || seasonCountdownText == null)
             return;
 
-        long endUnix = mgr.GetCurrentSeasonEndUnix();
+        long endUnix = packManager.GetCurrentSeasonEndUnix();
         if (endUnix <= 0)
         {
             seasonCountdownText.text = "";
+            RestoreCountdownColor();
             return;
         }
 
@@ -119,48 +176,68 @@ public class ExpeditionUI : MonoBehaviour
         if (remaining <= 0)
         {
             seasonCountdownText.text = "Season ends soon";
+            seasonCountdownText.color = Color.red;
+
+            // If your manager rotates seasons on expiry, these refresh calls are fine.
             RefreshSeasonHeader();
             BuildCurrentSeasonList();
-            BuildUpcomingTeaserText();
             return;
         }
 
-        // "Season ends in 12d 4h" (minutes if under 1 day)
-        long days = remaining / 86400L;
-        long hours = (remaining % 86400L) / 3600L;
-        long mins = (remaining % 3600L) / 60L;
-
-        if (days > 0)
-            seasonCountdownText.text = $"Season ends in {days}d {hours}h";
+        // Warning color if < threshold days remaining
+        long warningSeconds = Mathf.Max(1, warningDaysThreshold) * 86400L;
+        if (remaining < warningSeconds)
+            seasonCountdownText.color = Color.red;
         else
-            seasonCountdownText.text = $"Season ends in {hours}h {mins}m";
+            RestoreCountdownColor();
+
+        // Tiered precision label via TimeSpan
+        // Guard against negative/overflow (remaining is already > 0 here, but keep it safe)
+        double safeSeconds = Math.Max(0, (double)remaining);
+        TimeSpan t = TimeSpan.FromSeconds(safeSeconds);
+
+        seasonCountdownText.text = $"Season ends in {FormatRemaining(t)}";
+    }
+
+    private string FormatRemaining(TimeSpan t)
+    {
+        if (t.TotalDays > 3)
+            return $"{(int)t.TotalDays}d {t.Hours}h";
+
+        if (t.TotalDays > 1)
+            return $"{(int)t.TotalDays}d {t.Hours}h {t.Minutes}m";
+
+        if (t.TotalHours >= 1)
+            return $"{t.Hours}h {t.Minutes}m {t.Seconds}s";
+
+        return $"{t.Minutes}m {t.Seconds}s";
+    }
+
+    private void RestoreCountdownColor()
+    {
+        if (!_cachedCountdownColor || seasonCountdownText == null) return;
+        seasonCountdownText.color = _countdownBaseColor;
     }
 
     private void BuildCurrentSeasonList()
     {
         if (!contentRoot || !packShopPrefab) return;
+        if (!EnsureManager()) { LogMissingManagerOnce(); return; }
 
         // Clear
         for (int i = contentRoot.childCount - 1; i >= 0; i--)
             Destroy(contentRoot.GetChild(i).gameObject);
 
-        var mgr = MonsterPackManager.I;
-        if (mgr == null)
-        {
-            Debug.LogError("[ExpeditionUI] MonsterPackManager not found.");
-            return;
-        }
-
         // REQUIRED: seasonal list
-        List<MonsterPackSO> packs = mgr.GetActiveSeasonPacks();
+        List<MonsterPackSO> packs = packManager.GetActiveSeasonPacks();
         if (packs == null || packs.Count == 0)
             return;
 
         // Locked packs first
         packs.Sort((a, b) =>
         {
-            bool aUnlocked = a != null && mgr.IsUnlocked(a.id);
-            bool bUnlocked = b != null && mgr.IsUnlocked(b.id);
+            bool aUnlocked = a != null && packManager.IsUnlocked(a.id);
+            bool bUnlocked = b != null && packManager.IsUnlocked(b.id);
             return aUnlocked.CompareTo(bUnlocked);
         });
 
@@ -171,37 +248,5 @@ public class ExpeditionUI : MonoBehaviour
             var row = Instantiate(packShopPrefab, contentRoot);
             row.Bind(pack, packDetailPanel);
         }
-    }
-
-    private void BuildUpcomingTeaserText()
-    {
-        if (upcomingPacksText == null) return;
-
-        var mgr = MonsterPackManager.I;
-        if (mgr == null) { upcomingPacksText.text = ""; return; }
-
-        var nextPacks = mgr.GetNextSeasonPacks();
-        if (nextPacks == null || nextPacks.Count == 0)
-        {
-            upcomingPacksText.text = "";
-            return;
-        }
-
-        // Text-only: "PackName — Rarity"
-        var sb = new StringBuilder(256);
-
-        for (int i = 0; i < nextPacks.Count; i++)
-        {
-            var pack = nextPacks[i];
-            if (!pack) continue;
-
-            string rarity = string.IsNullOrEmpty(pack.rarityLabel) ? "Unknown" : pack.rarityLabel;
-            sb.Append(pack.displayName).Append(" — ").Append(rarity);
-
-            if (i < nextPacks.Count - 1)
-                sb.AppendLine();
-        }
-
-        upcomingPacksText.text = sb.ToString();
     }
 }

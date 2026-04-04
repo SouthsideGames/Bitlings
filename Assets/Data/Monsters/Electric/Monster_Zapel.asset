@@ -1,0 +1,57 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 32ffc26ed7d444b02a9332ce4279b117, type: 3}
+  m_Name: Monster_Zapel
+  m_EditorClassIdentifier: 
+  id: M-016
+  displayName: Zapel
+  type: 4
+  typeIcon: {fileID: 21300000, guid: e57a940f3027d4a9f83f25cefbc6d738, type: 3}
+  icon: {fileID: 21300000, guid: b6ac4cd47c9dd433db3868d7fccaf473, type: 3}
+  backIcon: {fileID: 21300000, guid: 7e90f42e827784d21b29244635c656db, type: 3}
+  premiumIcon: {fileID: 21300000, guid: 286a484658da5bf42a65458b11bf5f4d, type: 3}
+  premiumBackIcon: {fileID: 21300000, guid: c3495849c93b2d649a85a689cb474adf, type: 3}
+  rarity: 0
+  canBeStarter: 1
+  starterWeight: 10
+  maxLevel: 50
+  baseHP: 46
+  baseAttack: 50
+  baseDefense: 20
+  baseSpeed: 34
+  hpRegenPerHour: 4.6
+  fatigueRatePerHour: 0.105
+  fatigueCooldownHours: 7.6
+  evolutionStage: 1
+  evolutionLevel: 18
+  evolutionForm: {fileID: 11400000, guid: 17383455d5bb34d4a97a0088c0e377b0, type: 2}
+  uncatchable: 0
+  isBoss: 0
+  bossJobDebuffs: []
+  bossWeight: 1
+  spawnWeight: 8
+  jobSkill: 0.95
+  titleTrack: {fileID: 11400000, guid: 6a3bd4e4bbc85409786b7ccb0e6d397d, type: 2}
+  defaultAlwaysOnTitles: []
+  ironTitles:
+  - {fileID: 11400000, guid: a289ace2a61ca0e47b454f4b80ebec49, type: 2}
+  - {fileID: 11400000, guid: 93527c27821b7b64794b814fd56e3d4b, type: 2}
+  - {fileID: 11400000, guid: fe67a4187cf7add4289106de72912f92, type: 2}
+  - {fileID: 11400000, guid: a1f2ec75ecd5b447bb439bb8619bfa03, type: 2}
+  Personality: {fileID: 11400000, guid: e8e5c9163905a4840aca1effe845621c, type: 2}
+  basicAttackName: Spark Jab
+  basicAttackPrefab: {fileID: 4179996368917665753, guid: 77ce3f8bf17474b06ac473e26248a299, type: 3}
+  basicAttackPrefabLifetime: 1
+  spawnSfx: {fileID: 8300000, guid: 22aa482fa16d76e428bbf2714d2590e7, type: 3}
+  baseMarketValue: 77
+  description: A jittery electric critter that darts forward to shock foes before
+    they can react.

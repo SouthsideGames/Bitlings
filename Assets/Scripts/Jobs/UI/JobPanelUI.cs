@@ -51,7 +51,7 @@ public class JobPanelUI : MonoBehaviour
         Refresh();
         GameEvents.OnJobsChanged += Refresh;
         GameEvents.OnResourcesChanged += Refresh;
-        GameEvents.JobGlobalModsChanged += Refresh; 
+        GameEvents.JobGlobalModsChanged += Refresh;
     }
 
     void OnDisable()
@@ -71,7 +71,10 @@ public class JobPanelUI : MonoBehaviour
             if (s == null || s.config == null) continue;
 
             // Title: "Quarry (2/3)"
-            if (t.title) t.title.text = $"{t.job} ({CountWorkers(s)}/{s.config.maxWorkers})";
+            if (t.title)
+            {
+                t.title.text = t.job.ToString().Replace("_", " ");
+            }
 
             // ─────────────────────────────────────────────────────────────
             // Capacity text with colored delta (titles vs. no titles)
@@ -95,19 +98,25 @@ public class JobPanelUI : MonoBehaviour
 
             int deltaCap = capWithTitles - capNoTitles;
 
-            int storedWhole = Mathf.FloorToInt(s.storedAmount);
+            // Stored is whole-units only (no fractional resources).
+            int storedWhole = s.storedUnits;
+            string storedShown = storedWhole.ToString();
+            int nextProgressPct = Mathf.Clamp(Mathf.FloorToInt(Mathf.Clamp01(s.storedRemainder) * 100f), 0, 99);
+            string progressSuffix = (storedWhole <= 0 && nextProgressPct > 0)
+                ? $" ({nextProgressPct}% to next)"
+                : string.Empty;
             if (t.stored)
             {
                 if (deltaCap == 0)
                 {
-                    t.stored.text = $"Stored: {storedWhole}/{capWithTitles}";
+                    t.stored.text = $"Stored: {storedShown}/{capWithTitles}{progressSuffix}";
                 }
                 else
                 {
                     var c = deltaCap > 0 ? capUpColor : capDownColor;
                     string hex = ColorUtility.ToHtmlStringRGB(c);
                     string sign = deltaCap > 0 ? "+" : ""; // negatives already have '-'
-                    t.stored.text = $"Stored: {storedWhole}/{capWithTitles} <color=#{hex}>({sign}{deltaCap})</color>";
+                    t.stored.text = $"Stored: {storedShown}/{capWithTitles} <color=#{hex}>({sign}{deltaCap})</color>{progressSuffix}";
                 }
             }
 
@@ -119,19 +128,41 @@ public class JobPanelUI : MonoBehaviour
                 float baseHr    = ComputeRatePerHour_NoTitles(s);
                 float boostedHr = ComputeRatePerHour_WithTitles(s);
 
-                // NEW: show decimals for low rates (Clinic/Sanctum/etc.)
-                string shownText = boostedHr < 10f
-                    ? boostedHr.ToString("0.##")
-                    : Mathf.FloorToInt(boostedHr).ToString();
+                // Whole-number display only.
+                // If production is < 1/hr, show time-per-1 instead of "0/hr".
+                string shownText;
+                int wholePerHour = Mathf.FloorToInt(boostedHr);
+                if (wholePerHour >= 1)
+                {
+                    shownText = $"{wholePerHour}/hr";
+                }
+                else if (boostedHr > 0.0001f)
+                {
+                    float secondsPerUnit = 3600f / boostedHr;
+                    int minutes = Mathf.Max(1, Mathf.RoundToInt(secondsPerUnit / 60f));
+                    int h = minutes / 60;
+                    int m = minutes % 60;
+
+                    if (h <= 0) shownText = $"1/{m}m";
+                    else if (m == 0) shownText = $"1/{h}h";
+                    else shownText = $"1/{h}h {m}m";
+                }
+                else
+                {
+                    shownText = "0/hr";
+                }
 
                 float deltaPct = 0f;
                 if (baseHr > 0.0001f)
                     deltaPct = (boostedHr / baseHr - 1f) * 100f;
 
+                string rateText;
                 if (Mathf.Abs(deltaPct) >= 0.5f)
-                    t.rate.text = $"{shownText}/hr  {(deltaPct >= 0 ? "+" : string.Empty)}{deltaPct:0}%";
+                    rateText = $"{shownText}  {(deltaPct >= 0 ? "+" : string.Empty)}{deltaPct:0}%";
                 else
-                    t.rate.text = $"{shownText}/hr";
+                    rateText = $"{shownText}";
+
+                t.rate.text = rateText;
 
                 if (deltaPct > 0.5f)       t.rate.color = rateUp;
                 else if (deltaPct < -0.5f) t.rate.color = rateDown;
@@ -146,7 +177,7 @@ public class JobPanelUI : MonoBehaviour
                 t.collectBtn.onClick.AddListener(() =>
                 {
                     int got = JobManager.I.Collect(t.job);
-                    AudioManager.I.PlaySfx(SfxType.Collect);
+                    AudioManager.I?.PlaySfx(SfxType.Collect);
                     PlayCollectFX(t);
                     Refresh();
                 });
@@ -157,6 +188,7 @@ public class JobPanelUI : MonoBehaviour
 
             // Slots
             int max = t.slots != null ? t.slots.Length : 0;
+            int cap = Mathf.Clamp(s.config.maxWorkers, 1, 3);
             for (int i = 0; i < max; i++)
             {
                 var ui = t.slots[i];
@@ -165,22 +197,36 @@ public class JobPanelUI : MonoBehaviour
                 ui.job = t.job;
                 ui.slotIndex = i;
 
+                // If the tile has more slot buttons than this site supports, show them as locked and prevent assignment.
+                if (i >= cap)
+                {
+                    ui.job = t.job;
+                    ui.slotIndex = i;
+                    ui.SetEmpty(emptySlotSprite, new Color(emptySlotColor.r, emptySlotColor.g, emptySlotColor.b, 0.15f));
+                    ui.SetInteractable(false);
+                    continue;
+                }
+
                 WorkerRef worker = (i < s.workers.Count) ? s.workers[i] : null;
                 if (worker != null && worker.def != null)
                 {
-                    var spr = worker.def.icon ? worker.def.icon : emptySlotSprite;
-                    ui.SetWorker(spr, filledSlotColor);
+                    // ✅ FIX: use premium-aware resolver + ensure the SLOT uses MonsterDataSO.premiumIcon (front)
+                    bool premium = ResolveWorkerPremium(worker);
+
+                    // IMPORTANT: Don't pass raw Sprite here (it can be stomped by other callers / refresh paths).
+                    // Let JobSlotUI resolve from def + premium so it always uses def.icon / def.premiumIcon (front).
+                    ui.SetWorker(worker.def, premium, filledSlotColor);
                 }
                 else
                 {
                     ui.SetEmpty(emptySlotSprite, emptySlotColor);
                 }
 
+                ui.SetInteractable(true);
                 ui.WireToPicker();
             }
         }
     }
-
 
     // ─────────────────────────────────────────────────────────────────────────────
     // Rate computation (base vs boosted)
@@ -209,13 +255,13 @@ public class JobPanelUI : MonoBehaviour
 
         perHour *= BossDebuffSystem.GetMultiplier(s.config.jobType, SaveManager.NowUnix());
 
-        float shinyAura = ShinySystems.SiteShinyAuraMult(s.workers);
-        int shinyCount  = CountShinies(s.workers);
-        float shinySet  = 1f + (shinyCount >= 3 ? 0.12f : (shinyCount == 2 ? 0.07f : (shinyCount == 1 ? 0.03f : 0f)));
+        float premiumAura = PremiumSystems.SitePremiumAuraMult(s.workers);
+        int premiumCount  = CountPremiums(s.workers);
+        float premiumSet  = 1f + (premiumCount >= 3 ? 0.12f : (premiumCount == 2 ? 0.07f : (premiumCount == 1 ? 0.03f : 0f)));
 
         float avgFatigue = AverageWorkingSlotFatigue(s);
 
-        return perHour * shinyAura * shinySet * (1f - Mathf.Clamp01(avgFatigue));
+        return perHour * premiumAura * premiumSet * (1f - Mathf.Clamp01(avgFatigue));
     }
 
     private float ComputeRatePerHour_WithTitles(JobSiteState s)
@@ -256,13 +302,13 @@ public class JobPanelUI : MonoBehaviour
         }
         catch { }
 
-        float shinyAura2 = ShinySystems.SiteShinyAuraMult(s.workers);
-        int shinyCount2  = CountShinies(s.workers);
-        float shinySet2  = 1f + (shinyCount2 >= 3 ? 0.12f : (shinyCount2 == 2 ? 0.07f : (shinyCount2 == 1 ? 0.03f : 0f)));
+        float premiumAura2 = PremiumSystems.SitePremiumAuraMult(s.workers);
+        int premiumCount2  = CountPremiums(s.workers);
+        float premiumSet2  = 1f + (premiumCount2 >= 3 ? 0.12f : (premiumCount2 == 2 ? 0.07f : (premiumCount2 == 1 ? 0.03f : 0f)));
 
         float avgFatigue2 = AverageWorkingSlotFatigue(s);
 
-        return perHour * shinyAura2 * shinySet2 * (1f - Mathf.Clamp01(avgFatigue2));
+        return perHour * premiumAura2 * premiumSet2 * (1f - Mathf.Clamp01(avgFatigue2));
     }
 
     private static float AverageWorkingSlotFatigue(JobSiteState s)
@@ -308,45 +354,94 @@ public class JobPanelUI : MonoBehaviour
         return w.def ? w.def.id : null;
     }
 
-    private static int CountShinies(List<WorkerRef> workers)
+    private static int CountPremiums(List<WorkerRef> workers)
     {
         if (workers == null || workers.Count == 0) return 0;
         int c = 0;
-        for (int i = 0; i < workers.Count; i++) if (IsWorkerShiny(workers[i])) c++;
+        for (int i = 0; i < workers.Count; i++) if (IsWorkerPremium(workers[i])) c++;
         return c;
     }
 
-    private static bool IsWorkerShiny(WorkerRef w)
+    private static bool IsWorkerPremium(WorkerRef w)
     {
         if (w == null) return false;
 
-        var ownedId = w.monsterId;
-        if (!string.IsNullOrEmpty(ownedId))
-        {
-            var ownedList = SaveManager.Data?.owned;
-            if (ownedList != null)
-            {
-                for (int i = 0; i < ownedList.Count; i++)
-                {
-                    var om = ownedList[i];
-                    if (om != null && om.monsterId == ownedId) return om.isShiny;
-                }
-            }
-        }
+        // Prefer ownedUID (exact owned instance) and support legacy monsterId-as-uid.
+        var owned = PremiumSystems.ResolveOwned(w);
+        if (owned != null)
+            return (owned.isPremium || owned.premiumTier > 0);
 
         var def = w.def;
         if (!def) return false;
         try
         {
-            var f = def.GetType().GetField("isShiny");
+            var f = def.GetType().GetField("isPremium");
             if (f != null && f.FieldType == typeof(bool)) return (bool)f.GetValue(def);
 
-            var p = def.GetType().GetProperty("IsShiny");
+            var p = def.GetType().GetProperty("IsPremium");
             if (p != null && p.PropertyType == typeof(bool)) return (bool)p.GetValue(def, null);
         }
         catch { }
 
         return false;
+    }
+
+    // ✅ NEW: icon-facing premium resolver (WorkerRef -> ownedUID -> monsterId fallback)
+    private static bool ResolveWorkerPremium(WorkerRef w)
+    {
+        if (w == null) return false;
+
+        // 1) Check using the IsWorkerPremium helper method.
+        if (IsWorkerPremium(w))
+            return true;
+
+        // 2) If we have a stable ownedUID, resolve the actual owned instance.
+        string uid = w.ownedUID;
+        if (!string.IsNullOrEmpty(uid))
+        {
+            var om = FindOwnedByUid(uid);
+            if (om != null)
+                return om.isPremium || om.premiumTier > 0;
+        }
+
+        // 3) Fallback by species id.
+        // IMPORTANT: If multiple copies exist (premium + non-premium), we must respect the user's saved preference,
+        // not "any premium exists".
+        string id = w.monsterId;
+        if (!string.IsNullOrEmpty(id))
+            return MonsterVariantPreference.IsPreferredPremium(id);
+
+        return false;
+    }
+
+    private static OwnedMonsterData FindOwnedByUid(string uid)
+    {
+        var data = SaveManager.Data;
+        if (data == null || string.IsNullOrEmpty(uid)) return null;
+
+        var owned = data.owned;
+        if (owned != null)
+        {
+            for (int i = 0; i < owned.Count; i++)
+            {
+                var om = owned[i];
+                if (om != null && !string.IsNullOrEmpty(om.ownedUID) && om.ownedUID == uid)
+                    return om;
+            }
+        }
+
+        var team = data.team;
+        if (team != null)
+        {
+            for (int i = 0; i < team.Count; i++)
+            {
+                var om = team[i];
+                if (om != null && !string.IsNullOrEmpty(om.ownedUID) && om.ownedUID == uid)
+                    return om;
+            }
+        }
+
+        return null;
     }
 
     // ─────────────────────────────────────────────────────────────

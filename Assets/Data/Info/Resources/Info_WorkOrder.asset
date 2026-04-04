@@ -16,9 +16,5 @@ MonoBehaviour:
   category: 1
   title: Work Order
   subtitle: Resource
-  body: 'Comes from: Cryo Lab
-
-    Improve capture odds in encounters during timer
-    duration
-
-'
+  body: Provided by the Cryo Lab to increase the chance of successfully capturing
+    Bitlings for a limited time.

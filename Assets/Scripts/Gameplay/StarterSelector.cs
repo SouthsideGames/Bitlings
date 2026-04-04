@@ -35,8 +35,12 @@ public class StarterSelector : MonoBehaviour
     [SerializeField] private string homeTutorialKey = "tut_home_v1"; // must match TutorialOverlayPanel.tutorialKey
 
     [Header("Debug")]
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
     [Tooltip("Bypass the MonsterDetail panel entirely. Click chooses immediately.")]
     [SerializeField] private bool bypassDetailPanelForDebug = true;
+#else
+    private const bool bypassDetailPanelForDebug = false;
+#endif
 
     private MonsterDataSO[] _starters;
     private bool _locked;
@@ -89,14 +93,18 @@ public class StarterSelector : MonoBehaviour
         var lib = MonsterLibraryLocator.Lib;
         if (!lib || starterButtons == null || starterButtons.Length == 0)
         {
+            #if UNITY_EDITOR || DEVELOPMENT_BUILD
             Debug.LogWarning("[StarterSelector] Missing library or no buttons wired.");
+            #endif
             return;
         }
 
         int count = Mathf.Min(maxNumberOfStarters, starterButtons.Length);
         if (count <= 0)
         {
+            #if UNITY_EDITOR || DEVELOPMENT_BUILD
             Debug.LogWarning("[StarterSelector] No starter buttons available.");
+            #endif
             return;
         }
 
@@ -125,7 +133,9 @@ public class StarterSelector : MonoBehaviour
 
                 if (defLocal == null || string.IsNullOrEmpty(defLocal.id))
                 {
+                    #if UNITY_EDITOR || DEVELOPMENT_BUILD
                     Debug.LogError($"[StarterSelector] Null or missing-id monster at index {i}");
+                    #endif
                     btn.gameObject.SetActive(false);
                     continue;
                 }
@@ -160,7 +170,9 @@ public class StarterSelector : MonoBehaviour
                         _locked = true;
                         SetButtonsInteractable(false);
 
-                        Debug.Log($"[StarterSelector][BYPASS] Choosing starter: {capturedDef.id}");
+                        #if UNITY_EDITOR || DEVELOPMENT_BUILD
+                        DevLog.Log($"[StarterSelector][BYPASS] Choosing starter: {capturedDef.id}");
+                        #endif
                         Choose(capturedDef);
                     });
                 }
@@ -203,7 +215,9 @@ public class StarterSelector : MonoBehaviour
 
         if (!detailPanel)
         {
+            #if UNITY_EDITOR || DEVELOPMENT_BUILD
             Debug.LogError("[StarterSelector] Detail panel reference is missing (bypass is off).");
+            #endif
             _locked = false;
             SetButtonsInteractable(true);
             yield break;
@@ -233,7 +247,10 @@ public class StarterSelector : MonoBehaviour
         }
         catch (Exception ex)
         {
+            _ = ex;
+            #if UNITY_EDITOR || DEVELOPMENT_BUILD
             Debug.LogError($"[StarterSelector] Exception opening detail panel for {defLocal?.id}: {ex}");
+            #endif
             _locked = false;
             SetButtonsInteractable(true);
         }
@@ -261,7 +278,9 @@ public class StarterSelector : MonoBehaviour
     {
         if (pick == null || string.IsNullOrEmpty(pick.id))
         {
+            #if UNITY_EDITOR || DEVELOPMENT_BUILD
             Debug.LogError("[StarterSelector] Invalid monster in Choose");
+            #endif
             _locked = false;
             SetButtonsInteractable(true);
             return;
@@ -269,7 +288,9 @@ public class StarterSelector : MonoBehaviour
 
         try
         {
-            Debug.Log($"[StarterSelector] GrantStarter -> {pick.id}");
+            #if UNITY_EDITOR || DEVELOPMENT_BUILD
+            DevLog.Log($"[StarterSelector] GrantStarter -> {pick.id}");
+            #endif
 
             // This already saves, and may raise StarterChosen (via SaveManager.GrantStarter).
             SaveManager.GrantStarter(pick.id, 1);
@@ -301,9 +322,8 @@ public class StarterSelector : MonoBehaviour
                             var def = lib.GetById(om.monsterId);
                             if (!def) continue;
 
-                            int maxHP = Mathf.RoundToInt(BattleCalc.CalcHP(def, Mathf.Max(1, om.level)));
-                            om.currentHP = Mathf.Max(1, maxHP);
-                            team[i] = om;
+                            int maxHP = HealingService.CalcMaxHP(def, Mathf.Max(1, om.level), includeTraining: true, includeTitles: false);
+                            SaveManager.SetTeamSlotHP(i, Mathf.Max(1, maxHP), stampLastHpUnix: true, nowUnix: SaveManager.NowUnix(), save: false, fireEvents: false);
                         }
                     }
                 }
@@ -330,7 +350,9 @@ public class StarterSelector : MonoBehaviour
         }
         catch (Exception ex)
         {
+            #if UNITY_EDITOR || DEVELOPMENT_BUILD
             Debug.LogError($"[StarterSelector] Exception during Choose: {ex}");
+            #endif
             _locked = false;
             SetButtonsInteractable(true);
         }

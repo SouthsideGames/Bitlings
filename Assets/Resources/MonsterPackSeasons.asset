@@ -19,80 +19,105 @@ MonoBehaviour:
   - seasonName: Roots of the Wild
     packIds:
     - MP-001
-    - MP-003
-    - MP-010
+    - MP-015
+    - MP-027
   - seasonName: Flame & Shadow
     packIds:
     - MP-002
     - MP-006
-    - MP-005
+    - MP-028
   - seasonName: Forged Futures
     packIds:
     - MP-007
-    - MP-008
-    - MP-012
+    - MP-016
+    - MP-029
   - seasonName: Cracks in the World
     packIds:
-    - MP-011
-    - MP-013
     - MP-004
+    - MP-017
+    - MP-021
   - seasonName: Toxic Bloom
     packIds:
-    - MP-014
-    - MP-015
-    - MP-001
+    - MP-009
+    - MP-019
+    - MP-027
   - seasonName: Decay Protocol
     packIds:
-    - MP-017
-    - MP-019
-    - MP-009
+    - MP-010
+    - MP-020
+    - MP-022
   - seasonName: Skyfall Surge
     packIds:
+    - MP-004
     - MP-018
-    - MP-021
-    - MP-025
+    - MP-026
   - seasonName: Echoes of Ice
     packIds:
+    - MP-005
+    - MP-013
     - MP-024
-    - MP-023
-    - MP-010
   - seasonName: Steel Reign
     packIds:
-    - MP-029
+    - MP-008
     - MP-016
-    - MP-031
+    - MP-029
   - seasonName: Dreambound
     packIds:
-    - MP-030
-    - MP-034
     - MP-003
+    - MP-011
+    - MP-030
   - seasonName: Wrath & Wyms
     packIds:
-    - MP-032
-    - MP-039
-    - MP-008
+    - MP-006
+    - MP-012
+    - MP-025
   - seasonName: Blight & Bloom
     packIds:
-    - MP-027
-    - MP-040
-    - MP-015
+    - MP-001
+    - MP-014
+    - MP-028
   - seasonName: Fracture Point
     packIds:
-    - MP-036
-    - MP-028
     - MP-009
+    - MP-017
+    - MP-021
   - seasonName: Velocity
     packIds:
+    - MP-004
+    - MP-018
     - MP-026
-    - MP-037
-    - MP-033
   - seasonName: Whispers of the Dead
     packIds:
-    - MP-044
-    - MP-022
     - MP-006
+    - MP-013
+    - MP-022
+  - seasonName: "Forgemaster\u2019s Call"
+    packIds:
+    - MP-002
+    - MP-016
+    - MP-025
   - seasonName: End of the Cycle
     packIds:
-    - MP-051
-    - MP-043
+    - MP-010
+    - MP-020
     - MP-030
+  - seasonName: Molten Awakening
+    packIds:
+    - MP-031
+    - MP-011
+    - MP-041
+  - seasonName: Wyrmfall Covenant
+    packIds:
+    - MP-032
+    - MP-008
+    - MP-039
+  - seasonName: Gales of Ascension
+    packIds:
+    - MP-033
+    - MP-021
+    - MP-041
+  - seasonName: Hallowed Divide
+    packIds:
+    - MP-034
+    - MP-022
+    - MP-046

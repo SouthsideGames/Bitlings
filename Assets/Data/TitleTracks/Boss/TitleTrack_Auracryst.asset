@@ -12,19 +12,4 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: af7b65046e5bb554c808c8500b10fe7d, type: 3}
   m_Name: TitleTrack_Auracryst
   m_EditorClassIdentifier: 
-  tiers:
-  - levelRequired: 1
-    unlockChoices:
-    - {fileID: 11400000, guid: 82a0c25b8e178324cb8b0deeb6583f9e, type: 2}
-  - levelRequired: 3
-    unlockChoices:
-    - {fileID: 11400000, guid: 88b68a7a7718acc4f989c71b9e1101ce, type: 2}
-  - levelRequired: 6
-    unlockChoices:
-    - {fileID: 11400000, guid: 617e8548474e7574686bf89ed118521f, type: 2}
-  - levelRequired: 9
-    unlockChoices:
-    - {fileID: 11400000, guid: 88651f50fad374a659a980c4fc9b2790, type: 2}
-  - levelRequired: 12
-    unlockChoices:
-    - {fileID: 11400000, guid: a5eca0f69d13b4e51ae8d4612d869eaa, type: 2}
+  tiers: []

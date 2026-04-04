@@ -110,6 +110,12 @@ public sealed class TitleButtonUI : MonoBehaviour
             return;
         }
 
+        if (TitleManager.I == null)
+        {
+            label.text = "UNEMPLOYED";
+            return;
+        }
+
         List<TitleSO> equipped = TitleManager.I.GetEquippedList(_ownedMonsterId, _monsterDef, _level);
 
         if (equipped != null)
@@ -177,7 +183,7 @@ public sealed class TitleButtonUI : MonoBehaviour
             // Optional little pop
             var t = newTitleBtn.transform;
             t.localScale = Vector3.one * 0.85f;
-            LeanTween.scale(t.gameObject, Vector3.one, 0.12f).setEaseOutBack();
+            LeanTween.scale(t.gameObject, Vector3.one, 0.12f).setEaseOutBack().setIgnoreTimeScale(true);
         }
         else if (!visible && newTitleBtn.gameObject.activeSelf)
         {

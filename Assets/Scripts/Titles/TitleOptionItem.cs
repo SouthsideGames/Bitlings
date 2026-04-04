@@ -73,11 +73,10 @@ public sealed class TitleOptionItem : MonoBehaviour
         _equippedInTier = equippedInTier;
         _onChanged      = onChanged;
 
-        // We no longer auto-generate infoId from the TitleSO.
-        // If you want a custom Info entry, set infoId in the inspector.
-
         if (nameText)   nameText.text   = option ? option.displayName : "(null)";
         if (unlockText) unlockText.text = (_level >= _levelRequired) ? "Unlocked" : $"Lvl ≥ {_levelRequired}";
+
+        SetIcon(option != null ? option.icon : null);
 
         if (assignBtn)
         {
@@ -91,7 +90,7 @@ public sealed class TitleOptionItem : MonoBehaviour
 
     void RefreshButtonVisuals()
     {
-        bool isThisEquipped = _equippedInTier != null && _equippedInTier == _option;
+        bool isThisEquipped = _equippedInTier != null && _option != null && !string.IsNullOrEmpty(_equippedInTier.titleId) && _equippedInTier.titleId == _option.titleId;
 
         if (_assignBtnLabel) _assignBtnLabel.text = isThisEquipped ? "Remove" : "Assign";
         if (_assignBtnImage)
@@ -102,7 +101,7 @@ public sealed class TitleOptionItem : MonoBehaviour
     {
         if (_option == null || _def == null) return;
 
-        bool isThisEquipped = _equippedInTier != null && _equippedInTier == _option;
+        bool isThisEquipped = _equippedInTier != null && _option != null && !string.IsNullOrEmpty(_equippedInTier.titleId) && _equippedInTier.titleId == _option.titleId;
 
         if (isThisEquipped)
         {
@@ -117,10 +116,13 @@ public sealed class TitleOptionItem : MonoBehaviour
 
         RefreshButtonVisuals();
 
-        AudioManager.I.PlayClick();
+        AudioManager.I?.PlayClick();
 
         TitleAssignPanelUI.OnTitlesChanged?.Invoke(_ownedId);
         _onChanged?.Invoke();
+
+        GameEvents.RaiseToast("TITLE ASSIGNED");
+
     }
 
     void OpenInfo()
@@ -128,7 +130,6 @@ public sealed class TitleOptionItem : MonoBehaviour
         if (_option == null)
             return;
 
-        // Allow override via inspector; otherwise use generic Title info entry.
         var id = string.IsNullOrWhiteSpace(infoId) ? "title.generic" : infoId;
 
         string fallbackTitle      = _option.displayName;
@@ -137,6 +138,6 @@ public sealed class TitleOptionItem : MonoBehaviour
 
         InfoRouter.Open(id, fallbackTitle, fallbackSubtitle, fallbackBody);
 
-        AudioManager.I.PlayClick();
+        AudioManager.I?.PlayClick();
     }
 }

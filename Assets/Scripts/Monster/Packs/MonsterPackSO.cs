@@ -2,7 +2,7 @@ using UnityEngine;
 using System.Collections.Generic;
 using UnityEngine.Serialization;
 
-[CreateAssetMenu(menuName = "Data/Monster/Monster Pack", fileName = "MonsterPack_")]
+[CreateAssetMenu(menuName = "Data/Monster Packs/Monster Pack", fileName = "MonsterPack_")]
 public class MonsterPackSO : ScriptableObject
 {
     [Header("Identity")]

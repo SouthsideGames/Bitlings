@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 using Random = UnityEngine.Random;
 
@@ -6,10 +7,30 @@ public struct DamageResult
     public int damage;
     public bool crit;
     public float effectiveness;
+    public float incomingTypeResistMul;
 }
 
 public static class BattleCalc
 {
+
+    private static Func<float> _rng01;
+
+    public static void SetRng(Func<float> rng01) => _rng01 = rng01;
+
+    public static void ResetRng() => _rng01 = null;
+
+    private static float Rng01()
+    {
+        try
+        {
+            if (_rng01 != null)
+                return Mathf.Clamp(_rng01(), 0f, 0.999999f);
+        }
+        catch { /* fall back to Unity RNG */ }
+
+        return Random.value;
+    }
+
     // ─────────────────────────────────────────────────────────────────────────────
     // Core stat curves (back-compat)
     // ─────────────────────────────────────────────────────────────────────────────
@@ -31,7 +52,9 @@ public static class BattleCalc
     public static int CalcSpeed(MonsterDataSO def, int level)
     {
         level = Mathf.Max(1, level);
-        int scaled = (def ? def.baseSpeed : 1) + Mathf.Max(0, (level - 1) / 5);
+        // Design rule: Speed increases every 3 levels (turn priority stat).
+        // +0 at L1–L2, +1 at L3–L5, +2 at L6–L8, etc.
+        int scaled = (def ? def.baseSpeed : 1) + Mathf.Max(0, level / 3);
         return Mathf.Max(1, scaled);
     }
 
@@ -39,7 +62,9 @@ public static class BattleCalc
     {
         level = Mathf.Max(1, level);
         int baseDef = def ? def.baseDefense : 0;
-        int scaled = baseDef + Mathf.Max(0, (level - 1) / 4);
+        // Design rule: Defense increases every 2 levels (damage mitigation stat).
+        // +0 at L1, +1 at L2–L3, +2 at L4–L5, etc.
+        int scaled = baseDef + Mathf.Max(0, level / 2);
         return Mathf.Max(0, scaled);
     }
 
@@ -95,7 +120,7 @@ public static class BattleCalc
     }
 
     // ─────────────────────────────────────────────────────────────────────────────
-    // Convenience: ID-less damage calc (unchanged)
+    // Convenience: ID-less damage calc (legacy, unchanged)
     // (No defender title hooks here; keep it simple for legacy callers)
     // ─────────────────────────────────────────────────────────────────────────────
 
@@ -118,7 +143,7 @@ public static class BattleCalc
         if (float.IsNaN(eff) || float.IsInfinity(eff)) eff = 1f;
 
         bool defenderIsRock = defDef && defDef.type == MonsterType.Rock;
-        bool crit = !defenderIsRock && (Random.value < critChance);
+        bool crit = !defenderIsRock && (Rng01() < critChance);
 
         float preMit = baseDamage * Mathf.Max(0.25f, eff) * (crit ? critMultiplier : 1f);
 
@@ -134,7 +159,8 @@ public static class BattleCalc
         {
             damage = dealt,
             crit = crit,
-            effectiveness = eff
+            effectiveness = eff,
+            incomingTypeResistMul = 1f
         };
     }
 
@@ -150,7 +176,9 @@ public static class BattleCalc
             attackerMonsterId: null, atkDef: atkDef, atkLevel: atkLevel,
             defenderMonsterId: null, defDef: defDef, defLevel: 1,
             baseDamage: baseDamage, critChance: critChance, critMultiplier: critMultiplier,
-            defenderFlatDefenseBonus: 0);
+            defenderFlatDefenseBonus: 0,
+            defenderEffectiveDefenseStat: null
+        );
     }
 
     public static DamageResult ResolveHit(
@@ -161,16 +189,28 @@ public static class BattleCalc
             attackerMonsterId: null, atkDef: atkDef, atkLevel: atkLevel,
             defenderMonsterId: null, defDef: defDef, defLevel: defLevel,
             baseDamage: baseDamage, critChance: critChance, critMultiplier: critMultiplier,
-            defenderFlatDefenseBonus: defenderFlatDefenseBonus);
+            defenderFlatDefenseBonus: defenderFlatDefenseBonus,
+            defenderEffectiveDefenseStat: null
+        );
     }
 
     // ─────────────────────────────────────────────────────────────────────────────
     // ID-aware Resolve with Titles integration
+    //
+    // NEW: defenderEffectiveDefenseStat
+    // If provided, this is treated as the defender's *effective defense STAT* for this hit
+    // (i.e., baseline totals + boosters + conditional flats already applied).
+    //
+    // Titles-based DEF mods are applied *on top* of this value via TitlesAdapter.GetStatValue(...).
+    // If you want a "final defense already includes titles" behavior, pass the fully titled value
+    // and set applyTitleDefenseMods=false (not exposed currently; see note below).
     // ─────────────────────────────────────────────────────────────────────────────
     public static DamageResult ResolveHit(
         string attackerMonsterId, MonsterDataSO atkDef, int atkLevel,
         string defenderMonsterId, MonsterDataSO defDef, int defLevel,
-        float baseDamage, float critChance, float critMultiplier, int defenderFlatDefenseBonus = 0)
+        float baseDamage, float critChance, float critMultiplier,
+        int defenderFlatDefenseBonus = 0,
+        int? defenderEffectiveDefenseStat = null)
     {
         atkLevel = Mathf.Max(1, atkLevel);
         defLevel = Mathf.Max(1, defLevel);
@@ -185,11 +225,16 @@ public static class BattleCalc
         float eff = BattleTypeChart.GetMultiplier(atkType, defType);
         if (float.IsNaN(eff) || float.IsInfinity(eff)) eff = 1f;
 
-        // Attacker-side title effectiveness multiplier
+        // Attacker-side title effectiveness add/multiplier
         if (!string.IsNullOrEmpty(attackerMonsterId))
         {
             try
             {
+                // Add is applied on top of the base chart BEFORE multipliers.
+                float add = TitlesAdapter.GetEffectivenessAdd(attackerMonsterId, atkDef, atkLevel);
+                if (!float.IsNaN(add) && !float.IsInfinity(add))
+                    eff = Mathf.Max(0f, eff + add);
+
                 float outMul = TitlesAdapter.GetEffectivenessMult(attackerMonsterId, atkDef, atkLevel);
                 if (!float.IsNaN(outMul) && !float.IsInfinity(outMul) && outMul > 0f) eff *= outMul;
             }
@@ -197,12 +242,18 @@ public static class BattleCalc
         }
 
         // Defender-side incoming effectiveness multiplier (e.g., nullify or weaken type)
+        float incomingMul = 1f;
         if (!string.IsNullOrEmpty(defenderMonsterId))
         {
             try
             {
-                float inMul = TitlesAdapter.GetIncomingEffectivenessMult(defenderMonsterId, defDef, defLevel);
-                if (!float.IsNaN(inMul) && !float.IsInfinity(inMul) && inMul >= 0f) eff *= inMul;
+                // Defender-side incoming effectiveness (Titles). Prefer type-aware path so TypeResist titles work.
+                float inMul = TitlesAdapter.GetIncomingEffectivenessMult(defenderMonsterId, defDef, defLevel, atkType);
+                if (!float.IsNaN(inMul) && !float.IsInfinity(inMul) && inMul >= 0f)
+                {
+                    incomingMul = inMul;
+                    eff *= inMul;
+                }
             }
             catch { /* default to 1f if not implemented */ }
         }
@@ -210,38 +261,74 @@ public static class BattleCalc
         // Read defender damage filter (cannotBeCrit / %DR / flat DR)
         bool blockCrit = false;
         float percentDR = 0f;
-        int   flatDR    = 0;
+        int flatDR = 0;
 
         if (!string.IsNullOrEmpty(defenderMonsterId))
         {
             try
             {
                 var df = TitlesAdapter.GetDamageFilter(defenderMonsterId, defDef, defLevel);
-                blockCrit   = df.cannotBeCrit;
-                percentDR   = Mathf.Clamp01(df.percentReduce);
-                flatDR      = Mathf.Max(0, df.flatReduce);
+                blockCrit = df.cannotBeCrit;
+                percentDR = Mathf.Clamp01(df.percentReduce);
+                flatDR = Mathf.Max(0, df.flatReduce);
             }
             catch { /* safe no-op */ }
         }
 
         bool defenderIsRock = defDef && defDef.type == MonsterType.Rock;
-        bool crit = !defenderIsRock && !blockCrit && (Random.value < critChance);
+        bool crit = !defenderIsRock && !blockCrit && (Rng01() < critChance);
 
         float preMit = baseDamage * Mathf.Max(0.25f, eff) * (crit ? critMultiplier : 1f);
 
-        // Title-aware defense if we have a defender ID
-        int defense = string.IsNullOrEmpty(defenderMonsterId)
-            ? CalcDefense(defDef, defLevel)
-            : CalcDefense(defDef, defLevel, defenderMonsterId);
+        // ─────────────────────────────────────────────────────────────────────
+        // Defense STAT
+        //
+        // If caller supplies defenderEffectiveDefenseStat: use it as the base defense stat.
+        // Otherwise derive from (MonsterDataSO + level), with title-aware defense if we have defenderMonsterId.
+        // Then add any extra "flat defense bonus" argument.
+        // ─────────────────────────────────────────────────────────────────────
+        int defenseStat;
 
-        defense += Mathf.Max(0, defenderFlatDefenseBonus);
+        if (defenderEffectiveDefenseStat.HasValue)
+        {
+            defenseStat = Mathf.Max(0, defenderEffectiveDefenseStat.Value);
+        }
+        else
+        {
+            defenseStat = string.IsNullOrEmpty(defenderMonsterId)
+                ? CalcDefense(defDef, defLevel)
+                : CalcDefense(defDef, defLevel, defenderMonsterId); // includes battle stat mods
+        }
 
-        float mitFactor = 100f / (100f + Mathf.Max(0, defense));
+        // Legacy extra flat defense bonus hook
+        if (defenderFlatDefenseBonus != 0)
+            defenseStat = Mathf.Max(0, defenseStat + Mathf.Max(0, defenderFlatDefenseBonus));
+
+        // Apply Titles/conditionals to defense stat, if we have defender ID AND the caller
+        // did not already supply a titled effective defense stat.
+        //
+        // If caller supplies defenderEffectiveDefenseStat we treat it as the FINAL defense stat
+        // for this hit (it may already include conditional title context like hp%).
+        if (!defenderEffectiveDefenseStat.HasValue && !string.IsNullOrEmpty(defenderMonsterId))
+        {
+            try
+            {
+                // Build a minimal context; if you have richer context in BattleManager, keep that there.
+                // Here we just pass empty to avoid recursion; most defense titles are static mods anyway.
+                var ctx = TitleContext.Empty;
+                float dFinalF = TitlesAdapter.GetStatValue(defenderMonsterId, defDef, defLevel, "Defense", ctx, defenseStat);
+                if (!float.IsNaN(dFinalF) && !float.IsInfinity(dFinalF))
+                    defenseStat = Mathf.Max(0, Mathf.RoundToInt(dFinalF));
+            }
+            catch { /* safe no-op */ }
+        }
+
+        float mitFactor = 100f / (100f + Mathf.Max(0, defenseStat));
         float afterDefense = preMit * mitFactor;
 
         // Apply defender title DR: percent first, then flat
         if (percentDR > 0f) afterDefense *= (1f - percentDR);
-        if (flatDR    > 0 ) afterDefense -= flatDR;
+        if (flatDR > 0) afterDefense -= flatDR;
 
         int dealt = Mathf.Max(1, Mathf.RoundToInt(afterDefense));
 
@@ -249,7 +336,8 @@ public static class BattleCalc
         {
             damage = dealt,
             crit = crit,
-            effectiveness = eff
+            effectiveness = eff,
+            incomingTypeResistMul = incomingMul
         };
     }
 }

@@ -1,0 +1,57 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 32ffc26ed7d444b02a9332ce4279b117, type: 3}
+  m_Name: Monster_Cogrel
+  m_EditorClassIdentifier: 
+  id: M-096
+  displayName: Cogrel
+  type: 16
+  typeIcon: {fileID: 21300000, guid: c802d8c6dfd7c40329bae6fe5d96fc85, type: 3}
+  icon: {fileID: 21300000, guid: 8ac6e2cae69f14f58800d572dc11124f, type: 3}
+  backIcon: {fileID: 21300000, guid: 1280c90f093a14b54bb61a6cb9c84d54, type: 3}
+  premiumIcon: {fileID: 21300000, guid: e4b310b1e5ef747de967207de447d962, type: 3}
+  premiumBackIcon: {fileID: 21300000, guid: 65320f102346b4aad82e9e3fa94839c8, type: 3}
+  rarity: 1
+  canBeStarter: 0
+  starterWeight: 1
+  maxLevel: 50
+  baseHP: 60
+  baseAttack: 46
+  baseDefense: 44
+  baseSpeed: 18
+  hpRegenPerHour: 5.6
+  fatigueRatePerHour: 0.08
+  fatigueCooldownHours: 11.4
+  evolutionStage: 1
+  evolutionLevel: 22
+  evolutionForm: {fileID: 11400000, guid: 2e44f32a9dad14e2f9ffc2daeeddb4ed, type: 2}
+  uncatchable: 0
+  isBoss: 0
+  bossJobDebuffs: []
+  bossWeight: 1
+  spawnWeight: 4.5
+  jobSkill: 1
+  titleTrack: {fileID: 11400000, guid: 36f2c854804de47cca4e9554133e6097, type: 2}
+  defaultAlwaysOnTitles: []
+  ironTitles:
+  - {fileID: 11400000, guid: df9109033861016428656f21d2cad8ea, type: 2}
+  - {fileID: 11400000, guid: 7462eeaadad43a448b68ec1fa708d2c1, type: 2}
+  - {fileID: 11400000, guid: 8ea99f345957e9a43bda0b0ff311cd59, type: 2}
+  - {fileID: 11400000, guid: 01abdc10d1a4b41e2b6ebdce1f312988, type: 2}
+  Personality: {fileID: 11400000, guid: 51b0055ca9f5a4ccbb97fd51ef39fae1, type: 2}
+  basicAttackName: Metal Tap
+  basicAttackPrefab: {fileID: 5172629195496952374, guid: ad774bbb8084f42c29f12cd62581f796, type: 3}
+  basicAttackPrefabLifetime: 1
+  spawnSfx: {fileID: 8300000, guid: f69519ca9a57aa64d8d3916d2c91c2bc, type: 3}
+  baseMarketValue: 104
+  description: A compact alloy worker that turns steadily striking with measured
+    mechanical precision while resisting damage.

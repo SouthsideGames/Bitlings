@@ -16,6 +16,4 @@ MonoBehaviour:
   category: 1
   title: Material
   subtitle: Resource
-  body: 'Comes from: Forge
-
-    Needed to upgrade job sites'
+  body: Provided by the Forge to support upgrades to job sites across BRN operations.

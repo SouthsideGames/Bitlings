@@ -1,0 +1,56 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 32ffc26ed7d444b02a9332ce4279b117, type: 3}
+  m_Name: Monster_Scuttyx
+  m_EditorClassIdentifier: 
+  id: M-124
+  displayName: Scuttyx
+  type: 11
+  typeIcon: {fileID: 21300000, guid: 8e7ac2a8f10ec4ba5860e036443e3fc8, type: 3}
+  icon: {fileID: 21300000, guid: 966ea67665f7143b6a8c684cde5c25d2, type: 3}
+  backIcon: {fileID: 21300000, guid: f7c8dcb295cc646b88acd2b401eeebd2, type: 3}
+  premiumIcon: {fileID: 21300000, guid: 8749e236277c14d6b87a6e1d8b50fa46, type: 3}
+  premiumBackIcon: {fileID: 21300000, guid: dd93ae2501a0445ccbacbee09dae84dc, type: 3}
+  rarity: 2
+  canBeStarter: 0
+  starterWeight: 1
+  maxLevel: 50
+  baseHP: 66
+  baseAttack: 54
+  baseDefense: 32
+  baseSpeed: 38
+  hpRegenPerHour: 7
+  fatigueRatePerHour: 0.069
+  fatigueCooldownHours: 8.6
+  evolutionStage: 3
+  evolutionLevel: 12
+  evolutionForm: {fileID: 0}
+  uncatchable: 0
+  isBoss: 0
+  bossJobDebuffs: []
+  bossWeight: 1
+  spawnWeight: 2
+  jobSkill: 1.08
+  titleTrack: {fileID: 11400000, guid: 2741f6659ac98435796bdf7239ffaa45, type: 2}
+  defaultAlwaysOnTitles: []
+  ironTitles:
+  - {fileID: 11400000, guid: a54fbab895dd9804c9cacbb8e8ce854c, type: 2}
+  - {fileID: 11400000, guid: 0c4ec08db0e878f48a327f570d1e549f, type: 2}
+  - {fileID: 11400000, guid: a1f2ec75ecd5b447bb439bb8619bfa03, type: 2}
+  - {fileID: 11400000, guid: a289ace2a61ca0e47b454f4b80ebec49, type: 2}
+  Personality: {fileID: 11400000, guid: dc588633b46794883be5263b17376bf3, type: 2}
+  basicAttackName: Razor Lunge
+  basicAttackPrefab: {fileID: 6777048211968024641, guid: 36482d8bd89710b4983cb69ab5a8cceb, type: 3}
+  basicAttackPrefabLifetime: 1
+  spawnSfx: {fileID: 8300000, guid: 34d5de37020810840bac1e05160f72f0, type: 3}
+  baseMarketValue: 157
+  description: A hardened insect predator that lunges explosively

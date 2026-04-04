@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: RecycleRecipe_R001
   m_EditorClassIdentifier: 
   recipeId: R-001
-  displayName: Coin Melt
+  displayName: Credit Melt
   fromType: 1
   fromAmount: 100
   toType: 4

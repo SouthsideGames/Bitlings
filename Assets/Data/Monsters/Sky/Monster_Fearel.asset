@@ -1,0 +1,57 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 32ffc26ed7d444b02a9332ce4279b117, type: 3}
+  m_Name: Monster_Fearel
+  m_EditorClassIdentifier: 
+  id: M-036
+  displayName: Fearel
+  type: 9
+  typeIcon: {fileID: 21300000, guid: 1ddb138c655b3471cad890ace56df64b, type: 3}
+  icon: {fileID: 21300000, guid: 0fa821f62be7e0a42ae3f39f5e2b10d3, type: 3}
+  backIcon: {fileID: 21300000, guid: 4d50d00f0abc9f449ae6f588d56beeeb, type: 3}
+  premiumIcon: {fileID: 21300000, guid: fa1e19c2614814de8aaf1780248c942d, type: 3}
+  premiumBackIcon: {fileID: 21300000, guid: 10fac0dd15aa94594bcb2bb2c943cbc9, type: 3}
+  rarity: 1
+  canBeStarter: 1
+  starterWeight: 7
+  maxLevel: 50
+  baseHP: 48
+  baseAttack: 52
+  baseDefense: 26
+  baseSpeed: 38
+  hpRegenPerHour: 5.2
+  fatigueRatePerHour: 0.095
+  fatigueCooldownHours: 7.1
+  evolutionStage: 1
+  evolutionLevel: 22
+  evolutionForm: {fileID: 11400000, guid: a3ed701b4ecb94abea7c0948fd92c46b, type: 2}
+  uncatchable: 0
+  isBoss: 0
+  bossJobDebuffs: []
+  bossWeight: 1
+  spawnWeight: 4.5
+  jobSkill: 1
+  titleTrack: {fileID: 11400000, guid: 85441e8d4bfc6448ea192b15db83786c, type: 2}
+  defaultAlwaysOnTitles: []
+  ironTitles:
+  - {fileID: 11400000, guid: 665e3ce08b7d386478b3de0bebb8e3ec, type: 2}
+  - {fileID: 11400000, guid: 90199fd5133383b42979b35902189fed, type: 2}
+  - {fileID: 11400000, guid: a1f2ec75ecd5b447bb439bb8619bfa03, type: 2}
+  - {fileID: 11400000, guid: a289ace2a61ca0e47b454f4b80ebec49, type: 2}
+  Personality: {fileID: 11400000, guid: e8e5c9163905a4840aca1effe845621c, type: 2}
+  basicAttackName: Air Jab
+  basicAttackPrefab: {fileID: 5988486418563103347, guid: 310c8d56e543d4cd4ae9c55fa6047252, type: 3}
+  basicAttackPrefabLifetime: 1
+  spawnSfx: {fileID: 8300000, guid: 84a4ee083d1e1da4f99288309ec7a467, type: 3}
+  baseMarketValue: 102
+  description: A sharp-eyed sky hunter that darts between air currents, striking
+    swiftly before retreating upward.

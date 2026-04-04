@@ -1,0 +1,26 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e37e7682e49c84857899bd5fd02da43e, type: 3}
+  m_Name: T-150
+  m_EditorClassIdentifier: 
+  titleId: T-150
+  displayName: Treasurer
+  description: Increases both ATK (25) and DEF (25).
+  icon: {fileID: 3524203170830039954, guid: 23a1fc70c608d4ef28fe21f3322255e2, type: 3}
+  canRollOnWild: 1
+  statA: 1
+  opA: 0
+  valueA: 25
+  statB: 2
+  opB: 0
+  valueB: 25
+  enabled: 1

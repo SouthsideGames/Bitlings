@@ -27,15 +27,18 @@ public enum SfxType
     KO = 12,
     Clutch = 13,
     Heal = 19,
-    
+
     // Progress
     LevelUp = 11,
+    AchievementUnlocked = 20,
 
     //Encounters
-    ShinyEncounter = 14,
+    PremiumEncounter = 14,
     BossEncounter = 15,
-    UnqiueEncounter = 16,
+    UniqueEncounter = 16,
 
+    // Battle countdown
+    CountdownBeep = 21,
 }
 
 [Serializable]
@@ -62,14 +65,52 @@ public class AudioManager : MonoBehaviour
     [SerializeField] private AudioSource musicA;
     [SerializeField] private AudioSource musicB;
 
-    [SerializeField] private AudioClip startingMusic;
+    [Tooltip("Starting/home music pool. One clip is selected randomly at startup. No fallback is used.")]
+    [SerializeField] private List<AudioClip> startingMusicPool = new();
+
+    [Header("Battle Music")]
+    [Tooltip("Optional legacy single battle clip (kept so existing inspector setups don't break).")]
     [SerializeField] private AudioClip battleMusic;
-    [SerializeField] private AudioClip victoryMusic;  // NEW
-    [SerializeField] private AudioClip defeatMusic;   // NEW
+    [Tooltip("Battle music pool. When a battle begins, one clip is selected randomly for that battle.")]
+    [SerializeField] private List<AudioClip> battleMusicPool = new();
+
+    [Header("Iron Career Battle Music")]
+    [Tooltip("Optional legacy single Iron Career battle clip.")]
+    [SerializeField] private AudioClip ironCareerBattleMusic;
+    [Tooltip("Iron Career battle music pool. One clip is selected when the player presses Start Run.")]
+    [SerializeField] private List<AudioClip> ironCareerBattleMusicPool = new();
+
+    [Header("Boss Music")]
+    [Tooltip("Optional legacy single boss clip (kept so existing inspector setups don't break).")]
+    [SerializeField] private AudioClip bossMusic;
+    [Tooltip("Boss music pool. When a boss becomes active, one clip is selected randomly for that boss.")]
+    [SerializeField] private List<AudioClip> bossMusicPool = new();
+
+    [Header("Results")]
+    [SerializeField] private AudioClip victoryMusic;
+    [SerializeField] private AudioClip defeatMusic;
     [SerializeField, Min(0f)] private float defaultCrossfade = 0.75f;
 
     private AudioSource _activeMusic;
     private Coroutine _xfadeCo;
+
+    private AudioClip _currentStartingMusic; // chosen at startup (NO fallback)
+    private AudioClip _currentBattleMusic;   // chosen when encounter button is pressed
+    private AudioClip _currentIronCareerBattleMusic; // chosen when Iron Career start is pressed
+    private AudioClip _currentBossMusic;     // chosen when boss starts
+
+    // Session cache so panel switches / manager reinstantiation do not reroll startup music.
+    private static AudioClip _sessionStartingMusic;
+    private static bool _sessionStartingMusicChosen;
+
+    // Boss state (set by your encounter/boss system)
+    private bool _bossActive = false;
+
+    // Transition tracking
+    private bool _prevBossActive = false;
+
+    // Dedicated RNG for music (isolated from UnityEngine.Random seeding)
+    private System.Random _musicRng;
 
     // ─────────────────────────────────────────────────────────────
     // SFX
@@ -107,6 +148,9 @@ public class AudioManager : MonoBehaviour
     // Toggle for automatic swapping based on UI/battle state
     public bool autoSwapForEncounter = true;
 
+    // Cached hook target to safely unsubscribe
+    private EncounterManager _hookedEncounter;
+
     // ─────────────────────────────────────────────────────────────
     // Unity Lifecycle
     // ─────────────────────────────────────────────────────────────
@@ -119,7 +163,13 @@ public class AudioManager : MonoBehaviour
         }
         I = this;
 
-        // Build map
+        unchecked
+        {
+            int seed = (int)DateTime.UtcNow.Ticks ^ GetInstanceID();
+            _musicRng = new System.Random(seed);
+        }
+
+        // Build SFX map
         _map.Clear();
         foreach (var e in catalog)
             if (!_map.ContainsKey(e.type))
@@ -133,16 +183,29 @@ public class AudioManager : MonoBehaviour
         // Setup music
         _activeMusic = musicA;
 
-        if (startingMusic != null)
-            PlayMusic(startingMusic, true, defaultCrossfade);
+        // Choose and cache session starting/home music (NO fallback) once per app session.
+        if (!_sessionStartingMusicChosen)
+        {
+            _sessionStartingMusic = PickFromPoolNoFallback(startingMusicPool);
+            _sessionStartingMusicChosen = true;
+        }
+
+        _currentStartingMusic = _sessionStartingMusic;
+
+        // If pool is misconfigured, we intentionally play nothing.
+        if (_currentStartingMusic != null)
+            PlayMusic(_currentStartingMusic, true, defaultCrossfade);
     }
 
     private void OnEnable()
     {
         TryHookUiEvents();
+        TryHookEncounterEvents();
 
-        // Listen for battle end to know victory vs defeat
         GameEvents.BattleFinished += OnBattleFinished;
+
+        if (autoSwapForEncounter)
+            RefreshMusicState();
     }
 
     private void OnDisable()
@@ -150,13 +213,19 @@ public class AudioManager : MonoBehaviour
         if (UIManager.I != null)
             UIManager.I.OnPanelChanged -= OnPanelChanged;
 
+        UnhookEncounterEvents();
+
         GameEvents.BattleFinished -= OnBattleFinished;
     }
 
     private void Start()
     {
-        // In case UIManager came up after AudioManager
+        // In case UIManager / EncounterManager came up after AudioManager
         TryHookUiEvents();
+        TryHookEncounterEvents();
+
+        if (autoSwapForEncounter)
+            RefreshMusicState();
     }
 
     private void TryHookUiEvents()
@@ -168,11 +237,154 @@ public class AudioManager : MonoBehaviour
         }
     }
 
+    private void TryHookEncounterEvents()
+    {
+        var em = EncounterManager.I;
+        if (em == null) return;
+
+        if (_hookedEncounter == em) return;
+
+        UnhookEncounterEvents();
+        _hookedEncounter = em;
+        _hookedEncounter.OnStateChanged += OnEncounterStateChanged;
+    }
+
+    private void UnhookEncounterEvents()
+    {
+        if (_hookedEncounter != null)
+        {
+            _hookedEncounter.OnStateChanged -= OnEncounterStateChanged;
+            _hookedEncounter = null;
+        }
+    }
+
+    private void OnEncounterStateChanged()
+    {
+        if (!autoSwapForEncounter) return;
+        UpdateMusicForCurrentState();
+    }
+
     private void OnBattleFinished(BattleResult result)
     {
         _hasLastBattleResult = true;
         _lastBattleVictory = result.victory;
-        // We don't force music swap here; it happens when the summary opens.
+
+        // End-of-battle: clear boss/battle selections so next encounter re-rolls cleanly
+        _bossActive = false;
+        _currentBossMusic = null;
+        _currentBattleMusic = null;
+
+        _prevBossActive = false;
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // Public API — Boss notifications
+    // ─────────────────────────────────────────────────────────────
+    public void NotifyBossStarted()
+    {
+        _bossActive = true;
+        _currentBossMusic = PickBossMusicForThisBoss();
+        RefreshMusicState();
+    }
+
+    public void NotifyBossEnded()
+    {
+        _bossActive = false;
+        _currentBossMusic = null;
+        RefreshMusicState();
+    }
+
+    public void SetBossActive(bool active)
+    {
+        if (active) NotifyBossStarted();
+        else NotifyBossEnded();
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // Music selection
+    // ─────────────────────────────────────────────────────────────
+    private AudioClip PickFromPoolNoFallback(List<AudioClip> pool)
+    {
+        if (pool == null || pool.Count == 0)
+            return null;
+
+        List<AudioClip> valid = null;
+
+        for (int i = 0; i < pool.Count; i++)
+        {
+            var c = pool[i];
+            if (c == null) continue;
+
+            valid ??= new List<AudioClip>();
+            valid.Add(c);
+        }
+
+        if (valid == null || valid.Count == 0)
+            return null;
+
+        int idx = _musicRng.Next(0, valid.Count);
+        return valid[idx];
+    }
+
+    private AudioClip PickBattleMusicForThisBattle()
+    {
+        var fromPool = PickFromPoolNoFallback(battleMusicPool);
+        if (fromPool != null) return fromPool;
+        return battleMusic;
+    }
+
+    private AudioClip PickIronCareerBattleMusicForRun()
+    {
+        var fromPool = PickFromPoolNoFallback(ironCareerBattleMusicPool);
+        if (fromPool != null) return fromPool;
+        return ironCareerBattleMusic;
+    }
+
+    private AudioClip PickBossMusicForThisBoss()
+    {
+        var fromPool = PickFromPoolNoFallback(bossMusicPool);
+        if (fromPool != null) return fromPool;
+        return bossMusic;
+    }
+
+    public void RerollStartingMusic(bool playImmediately = true)
+    {
+        _sessionStartingMusic = PickFromPoolNoFallback(startingMusicPool);
+        _sessionStartingMusicChosen = true;
+        _currentStartingMusic = _sessionStartingMusic;
+
+        if (playImmediately && _currentStartingMusic != null)
+            PlayMusic(_currentStartingMusic, true, defaultCrossfade);
+    }
+
+    public void RerollBattleMusic(bool playImmediately = false)
+    {
+        _currentBattleMusic = PickBattleMusicForThisBattle();
+        if (playImmediately && _currentBattleMusic != null)
+            PlayMusic(_currentBattleMusic, true, defaultCrossfade);
+    }
+
+    public void PickEncounterBattleMusicOnButtonPress(bool playImmediately = true)
+    {
+        _currentBattleMusic = PickBattleMusicForThisBattle();
+
+        if (playImmediately && _currentBattleMusic != null)
+            PlayMusic(_currentBattleMusic, true, defaultCrossfade);
+    }
+
+    public void PickIronCareerBattleMusicOnStartPress(bool playImmediately = true)
+    {
+        _currentIronCareerBattleMusic = PickIronCareerBattleMusicForRun();
+
+        if (playImmediately && _currentIronCareerBattleMusic != null)
+            PlayMusic(_currentIronCareerBattleMusic, true, defaultCrossfade);
+    }
+
+    public void RerollBossMusic(bool playImmediately = false)
+    {
+        _currentBossMusic = PickBossMusicForThisBoss();
+        if (playImmediately && _currentBossMusic != null)
+            PlayMusic(_currentBossMusic, true, defaultCrossfade);
     }
 
     // ─────────────────────────────────────────────────────────────
@@ -182,10 +394,15 @@ public class AudioManager : MonoBehaviour
     {
         if (!clip) return;
 
+        if (IsMusicAlreadyPlaying(clip))
+            return;
+
         if (crossfade < 0f)
             crossfade = defaultCrossfade;
 
         var next = (_activeMusic == musicA) ? musicB : musicA;
+        if (next == null) return;
+
         next.clip = clip;
         next.loop = loop;
         next.volume = 0f;
@@ -204,12 +421,23 @@ public class AudioManager : MonoBehaviour
         _xfadeCo = StartCoroutine(CO_FadeOut(_activeMusic, fadeOut));
     }
 
+    private bool IsMusicAlreadyPlaying(AudioClip clip)
+    {
+        if (clip == null) return false;
+
+        if (musicA != null && musicA.isPlaying && musicA.clip == clip) return true;
+        if (musicB != null && musicB.isPlaying && musicB.clip == clip) return true;
+
+        return false;
+    }
+
     // ─────────────────────────────────────────────────────────────
     // Public API — SFX
     // ─────────────────────────────────────────────────────────────
     public void PlaySfx(SfxType type)
     {
         if (type == SfxType.None) return;
+        if (GetSfxScale() <= 0f) return;
 
         if (!_map.TryGetValue(type, out var entry)) return;
         if (!PassCooldown(type, entry)) return;
@@ -220,7 +448,30 @@ public class AudioManager : MonoBehaviour
 
         src.pitch = UnityEngine.Random.Range(entry.pitchMin, entry.pitchMax);
 
-        float volume = entry.volume * GetSfxScale();
+        float volume = entry.volume;
+        src.PlayOneShot(clip, volume);
+    }
+
+    /// <summary>
+    /// Plays an SFX with an optional pitch & volume multiplier.
+    /// Additive API (keeps existing inspector-driven pitchMin/pitchMax ranges intact).
+    /// </summary>
+    public void PlaySfx(SfxType type, float pitchMult, float volumeMult = 1f)
+    {
+        if (type == SfxType.None) return;
+        if (GetSfxScale() <= 0f) return;
+
+        if (!_map.TryGetValue(type, out var entry)) return;
+        if (!PassCooldown(type, entry)) return;
+        if (entry.clips == null || entry.clips.Count == 0) return;
+
+        var clip = entry.clips[UnityEngine.Random.Range(0, entry.clips.Count)];
+        var src = NextSfxSource();
+
+        float basePitch = UnityEngine.Random.Range(entry.pitchMin, entry.pitchMax);
+        src.pitch = Mathf.Clamp(basePitch * Mathf.Max(0.01f, pitchMult), 0.1f, 3f);
+
+        float volume = entry.volume * Mathf.Clamp(volumeMult, 0f, 2f);
         src.PlayOneShot(clip, volume);
     }
 
@@ -230,6 +481,19 @@ public class AudioManager : MonoBehaviour
             type = SfxType.Click;
 
         PlaySfx(type);
+    }
+
+    public void PlayClipOneShot(AudioClip clip, float volumeMult = 1f, float pitch = 1f)
+    {
+        if (clip == null) return;
+
+        if (GetSfxScale() <= 0f) return;
+
+        var src = NextSfxSource();
+        src.pitch = Mathf.Clamp(pitch, 0.1f, 3f);
+
+        float volume = Mathf.Clamp(volumeMult, 0f, 2f);
+        src.PlayOneShot(clip, volume);
     }
 
     // ─────────────────────────────────────────────────────────────
@@ -299,6 +563,7 @@ public class AudioManager : MonoBehaviour
     private void ApplyVolumes()
     {
         float musicScale = GetMusicScale();
+        float sfxScale = GetSfxScale();
 
         if (_activeMusic == musicA)
         {
@@ -310,6 +575,17 @@ public class AudioManager : MonoBehaviour
             if (musicB != null) musicB.volume = musicScale;
             if (musicA != null) musicA.volume = 0f;
         }
+
+        // Keep SFX pool source volumes in sync with settings so every one-shot obeys sliders.
+        if (sfxPool != null)
+        {
+            for (int i = 0; i < sfxPool.Count; i++)
+            {
+                var src = sfxPool[i];
+                if (src == null) continue;
+                src.volume = sfxScale;
+            }
+        }
     }
 
     // ─────────────────────────────────────────────────────────────
@@ -319,15 +595,26 @@ public class AudioManager : MonoBehaviour
     {
         sfxPool.RemoveAll(x => x == null);
 
+        for (int i = 0; i < sfxPool.Count; i++)
+            ConfigureSfxSource(sfxPool[i]);
+
         while (sfxPool.Count < sfxPoolSize)
         {
             var go = new GameObject($"SFX_{sfxPool.Count}");
             go.transform.SetParent(transform);
             var src = go.AddComponent<AudioSource>();
-            src.playOnAwake = false;
-            src.loop = false;
+            ConfigureSfxSource(src);
             sfxPool.Add(src);
         }
+    }
+
+    private void ConfigureSfxSource(AudioSource src)
+    {
+        if (src == null) return;
+
+        src.playOnAwake = false;
+        src.loop = false;
+        src.spatialBlend = 0f;
     }
 
     private AudioSource NextSfxSource()
@@ -358,9 +645,9 @@ public class AudioManager : MonoBehaviour
         var s = SaveManager.Data?.settings;
         if (s == null) return;
 
-        _master01 = s.masterVolume;
-        _music01 = s.musicVolume;
-        _sfx01 = s.sfxVolume;
+        _master01 = Mathf.Clamp01(s.masterVolume);
+        _music01 = Mathf.Clamp01(s.musicVolume);
+        _sfx01 = Mathf.Clamp01(s.sfxVolume);
 
         _muteAll = s.muteAll;
         _muteMusic = s.muteMusic;
@@ -438,13 +725,12 @@ public class AudioManager : MonoBehaviour
     }
 
     // ─────────────────────────────────────────────────────────────
-    // UI / Battle-driven music switching
+    // UI-driven music switching
     // ─────────────────────────────────────────────────────────────
     private void OnPanelChanged(PanelId id, bool opened)
     {
         if (!autoSwapForEncounter) return;
 
-        // Whenever these panels change, re-evaluate the music state.
         if (id == PanelId.Encounter ||
             id == PanelId.PostBattleSummary ||
             id == PanelId.Home)
@@ -453,22 +739,38 @@ public class AudioManager : MonoBehaviour
         }
     }
 
-    // If you ever hook EncounterManager state events, call this.
-    private void OnEncounterStateChanged()
-    {
-        if (!autoSwapForEncounter) return;
-        UpdateMusicForCurrentState();
-    }
-
     private void UpdateMusicForCurrentState()
     {
         var ui = UIManager.I;
 
-        bool inBattle      = EncounterManager.I != null && EncounterManager.I.IsInBattle;
         bool encounterOpen = ui != null && ui.IsOpen(PanelId.Encounter);
-        bool summaryOpen   = ui != null && ui.IsOpen(PanelId.PostBattleSummary);
+        bool summaryOpen = ui != null && ui.IsOpen(PanelId.PostBattleSummary);
 
-        // 1) Post-battle summary → victory or defeat music
+        // Home can be shown while Encounter remains active in the hierarchy (or was closed
+        // outside of UIManager). If Home is open, we treat it as higher priority than Encounter
+        // for music purposes.
+        bool homeOpen = ui != null && ui.IsOpen(PanelId.Home);
+
+        // When a battle is actively running, music should stay on the battle/boss track even if
+        // the Encounter panel temporarily closes (e.g., dedicated battle view, blinder overlays,
+        // auto-battle UI swaps, etc.).
+        bool isInBattle = (EncounterManager.I != null) && EncounterManager.I.IsInBattle;
+        bool isIronCareerBattle = IronCareerRuntime.IsActive && isInBattle;
+
+        // "Encounter View" means the encounter panel is visible and we are NOT on the results screen.
+        // Additionally:
+        // - If Home is open, we consider Encounter "not the active view" unless a battle is running.
+        // - If a battle is running, we treat that as Encounter/Battle view for music.
+        bool encounterViewOpen = (encounterOpen && !summaryOpen && !homeOpen) || isInBattle;
+
+        // Boss re-roll once when boss becomes active.
+        if (_bossActive && !_prevBossActive)
+        {
+            _currentBossMusic = PickBossMusicForThisBoss();
+        }
+        _prevBossActive = _bossActive;
+
+        // 1) Post-battle summary → victory/defeat music
         if (summaryOpen)
         {
             AudioClip clip = null;
@@ -477,27 +779,51 @@ public class AudioManager : MonoBehaviour
                 clip = _lastBattleVictory ? victoryMusic : defeatMusic;
 
             if (clip != null)
-            {
                 PlayMusic(clip, true, defaultCrossfade);
-            }
-            else if (startingMusic != null)
-            {
-                PlayMusic(startingMusic, true, defaultCrossfade);
-            }
+            else if (_currentStartingMusic != null)
+                PlayMusic(_currentStartingMusic, true, defaultCrossfade);
 
             return;
         }
 
-        // 2) Battle music only when: encounter open, in battle, and no summary
-        if (inBattle && encounterOpen && battleMusic != null)
+        // 2) Encounter view: boss music if active, else battle music
+        if (encounterViewOpen)
         {
-            PlayMusic(battleMusic, true, defaultCrossfade);
-            return;
+            if (isIronCareerBattle)
+            {
+                if (_currentIronCareerBattleMusic == null)
+                    _currentIronCareerBattleMusic = PickIronCareerBattleMusicForRun();
+
+                if (_currentIronCareerBattleMusic != null)
+                {
+                    PlayMusic(_currentIronCareerBattleMusic, true, defaultCrossfade);
+                    return;
+                }
+            }
+
+            if (_bossActive && _currentBossMusic != null)
+            {
+                PlayMusic(_currentBossMusic, true, defaultCrossfade);
+                return;
+            }
+
+            if (_currentBattleMusic != null)
+            {
+                PlayMusic(_currentBattleMusic, true, defaultCrossfade);
+                return;
+            }
+
+            _currentBattleMusic = PickBattleMusicForThisBattle();
+            if (_currentBattleMusic != null)
+            {
+                PlayMusic(_currentBattleMusic, true, defaultCrossfade);
+                return;
+            }
         }
 
-        // 3) Everything else → starting/home music
-        if (startingMusic != null)
-            PlayMusic(startingMusic, true, defaultCrossfade);
+        // 3) Everything else → starting/home music (NO fallback)
+        if (_currentStartingMusic != null)
+            PlayMusic(_currentStartingMusic, true, defaultCrossfade);
     }
 
     public void RefreshMusicState()
@@ -505,6 +831,6 @@ public class AudioManager : MonoBehaviour
         UpdateMusicForCurrentState();
     }
 
+    public void PlayDenied() => PlaySfx(SfxType.Denied);
     public void PlayClick() => PlaySfx(SfxType.Click);
-
 }

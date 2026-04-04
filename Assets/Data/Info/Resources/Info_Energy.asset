@@ -16,6 +16,4 @@ MonoBehaviour:
   category: 1
   title: Energy
   subtitle: Resource
-  body: 'Comes from: Power Plant
-
-    Needed to start encounters'
+  body: Provided by the Power Plant and required to initiate Rift Operations.

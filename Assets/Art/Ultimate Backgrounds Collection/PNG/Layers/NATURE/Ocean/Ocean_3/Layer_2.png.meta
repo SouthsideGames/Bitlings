@@ -1,0 +1,618 @@
+fileFormatVersion: 2
+guid: 0e51755c6c876c6439a9d19111bc70eb
+AssetOrigin:
+  serializedVersion: 1
+  productId: 351422
+  packageName: 280 Ultimate Pixel Backgrounds Collection
+  packageVersion: 1.2
+  assetPath: Assets/Ultimate Backgrounds Collection/PNG/Layers/NATURE/Ocean/Ocean_3/Layer_2.png
+  uploadId: 850090
+TextureImporter:
+  internalIDToNameTable:
+  - first:
+      213: -2613609540172790772
+    second: Ocean_3_L3_0
+  - first:
+      213: 6778430023429957425
+    second: Ocean_3_L3_1
+  - first:
+      213: 6200320135800278477
+    second: Ocean_3_L3_2
+  - first:
+      213: -2591921369177598427
+    second: Ocean_3_L3_3
+  - first:
+      213: 7641402258167816743
+    second: Ocean_3_L3_4
+  - first:
+      213: 6314533728510552065
+    second: Ocean_3_L3_5
+  - first:
+      213: 3670214843270199557
+    second: Ocean_3_L3_6
+  - first:
+      213: 3804596258013711054
+    second: Ocean_3_L3_7
+  - first:
+      213: -4719427222694159669
+    second: Ocean_3_L3_8
+  - first:
+      213: 2356207401705525270
+    second: Ocean_3_L3_9
+  - first:
+      213: -5694291018770016708
+    second: Ocean_3_L3_10
+  - first:
+      213: -8323552269085854211
+    second: Ocean_3_L3_11
+  - first:
+      213: 5409146381641930459
+    second: Ocean_3_L3_12
+  - first:
+      213: -544897776794219329
+    second: Ocean_3_L3_13
+  - first:
+      213: 7729499098574591036
+    second: Ocean_3_L3_14
+  - first:
+      213: 4145957264390735276
+    second: Ocean_3_L3_15
+  - first:
+      213: -7446897667347710341
+    second: Ocean_3_L3_16
+  - first:
+      213: -8140837775740114791
+    second: Ocean_3_L3_17
+  externalObjects: {}
+  serializedVersion: 13
+  mipmaps:
+    mipMapMode: 0
+    enableMipMap: 0
+    sRGBTexture: 1
+    linearTexture: 0
+    fadeOut: 0
+    borderMipMap: 0
+    mipMapsPreserveCoverage: 0
+    alphaTestReferenceValue: 0.5
+    mipMapFadeDistanceStart: 1
+    mipMapFadeDistanceEnd: 3
+  bumpmap:
+    convertToNormalMap: 0
+    externalNormalMap: 0
+    heightScale: 0.25
+    normalMapFilter: 0
+    flipGreenChannel: 0
+  isReadable: 0
+  streamingMipmaps: 0
+  streamingMipmapsPriority: 0
+  vTOnly: 0
+  ignoreMipmapLimit: 0
+  grayScaleToAlpha: 0
+  generateCubemap: 6
+  cubemapConvolution: 0
+  seamlessCubemap: 0
+  textureFormat: 1
+  maxTextureSize: 2048
+  textureSettings:
+    serializedVersion: 2
+    filterMode: 0
+    aniso: 1
+    mipBias: 0
+    wrapU: 1
+    wrapV: 1
+    wrapW: 1
+  nPOTScale: 0
+  lightmap: 0
+  compressionQuality: 50
+  spriteMode: 1
+  spriteExtrude: 1
+  spriteMeshType: 1
+  alignment: 7
+  spritePivot: {x: 0.5, y: 0.5}
+  spritePixelsToUnits: 32
+  spriteBorder: {x: 0, y: 0, z: 0, w: 0}
+  spriteGenerateFallbackPhysicsShape: 1
+  alphaUsage: 1
+  alphaIsTransparency: 1
+  spriteTessellationDetail: -1
+  textureType: 8
+  textureShape: 1
+  singleChannelComponent: 0
+  flipbookRows: 1
+  flipbookColumns: 1
+  maxTextureSizeSet: 0
+  compressionQualitySet: 0
+  textureFormatSet: 0
+  ignorePngGamma: 0
+  applyGammaDecoding: 0
+  swizzle: 50462976
+  cookieLightType: 0
+  platformSettings:
+  - serializedVersion: 4
+    buildTarget: DefaultTexturePlatform
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 0
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: Standalone
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: WebGL
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 0
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: iOS
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 0
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  spriteSheet:
+    serializedVersion: 2
+    sprites:
+    - serializedVersion: 2
+      name: Ocean_3_L3_0
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 270
+        width: 133
+        height: 54
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: c04cd6088f79abbd0800000000000000
+      internalID: -2613609540172790772
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Ocean_3_L3_1
+      rect:
+        serializedVersion: 2
+        x: 227
+        y: 215
+        width: 482
+        height: 109
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 137a2615132d11e50800000000000000
+      internalID: 6778430023429957425
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Ocean_3_L3_2
+      rect:
+        serializedVersion: 2
+        x: 803
+        y: 215
+        width: 482
+        height: 109
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: dcdc3141056fb0650800000000000000
+      internalID: 6200320135800278477
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Ocean_3_L3_3
+      rect:
+        serializedVersion: 2
+        x: 1379
+        y: 215
+        width: 349
+        height: 109
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 526dc605f35a70cd0800000000000000
+      internalID: -2591921369177598427
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Ocean_3_L3_4
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 132
+        width: 309
+        height: 129
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 722e5ff2ed6bb0a60800000000000000
+      internalID: 7641402258167816743
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Ocean_3_L3_5
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 163
+        width: 31
+        height: 9
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 108281268fab1a750800000000000000
+      internalID: 6314533728510552065
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Ocean_3_L3_6
+      rect:
+        serializedVersion: 2
+        x: 291
+        y: 149
+        width: 56
+        height: 18
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 5097c7e44f83fe230800000000000000
+      internalID: 3670214843270199557
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Ocean_3_L3_7
+      rect:
+        serializedVersion: 2
+        x: 564
+        y: 162
+        width: 43
+        height: 10
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: eca00b89324acc430800000000000000
+      internalID: 3804596258013711054
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Ocean_3_L3_8
+      rect:
+        serializedVersion: 2
+        x: 576
+        y: 132
+        width: 309
+        height: 129
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: bca910012f9318eb0800000000000000
+      internalID: -4719427222694159669
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Ocean_3_L3_9
+      rect:
+        serializedVersion: 2
+        x: 867
+        y: 149
+        width: 56
+        height: 18
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 610ddcbe52ee2b020800000000000000
+      internalID: 2356207401705525270
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Ocean_3_L3_10
+      rect:
+        serializedVersion: 2
+        x: 1140
+        y: 162
+        width: 43
+        height: 10
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: c361482fc70d9f0b0800000000000000
+      internalID: -5694291018770016708
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Ocean_3_L3_11
+      rect:
+        serializedVersion: 2
+        x: 1152
+        y: 132
+        width: 309
+        height: 129
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: df5bdb3bf4dcc7c80800000000000000
+      internalID: -8323552269085854211
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Ocean_3_L3_12
+      rect:
+        serializedVersion: 2
+        x: 1443
+        y: 149
+        width: 56
+        height: 18
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: bd65bd7a9f5211b40800000000000000
+      internalID: 5409146381641930459
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Ocean_3_L3_13
+      rect:
+        serializedVersion: 2
+        x: 1716
+        y: 162
+        width: 12
+        height: 8
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: fbcc747eb522078f0800000000000000
+      internalID: -544897776794219329
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Ocean_3_L3_14
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 81
+        width: 203
+        height: 48
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: c349d3e3a72b44b60800000000000000
+      internalID: 7729499098574591036
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Ocean_3_L3_15
+      rect:
+        serializedVersion: 2
+        x: 451
+        y: 81
+        width: 328
+        height: 48
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: ca5c5fd6a26698930800000000000000
+      internalID: 4145957264390735276
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Ocean_3_L3_16
+      rect:
+        serializedVersion: 2
+        x: 1027
+        y: 81
+        width: 328
+        height: 48
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: b7efd03e60e47a890800000000000000
+      internalID: -7446897667347710341
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Ocean_3_L3_17
+      rect:
+        serializedVersion: 2
+        x: 1603
+        y: 81
+        width: 125
+        height: 41
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 998edeacc2fe50f80800000000000000
+      internalID: -8140837775740114791
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    outline: []
+    customData: 
+    physicsShape: []
+    bones: []
+    spriteID: 5e97eb03825dee720800000000000000
+    internalID: 0
+    vertices: []
+    indices: 
+    edges: []
+    weights: []
+    secondaryTextures: []
+    spriteCustomMetadata:
+      entries: []
+    nameFileIdTable:
+      Ocean_3_L3_0: -2613609540172790772
+      Ocean_3_L3_1: 6778430023429957425
+      Ocean_3_L3_10: -5694291018770016708
+      Ocean_3_L3_11: -8323552269085854211
+      Ocean_3_L3_12: 5409146381641930459
+      Ocean_3_L3_13: -544897776794219329
+      Ocean_3_L3_14: 7729499098574591036
+      Ocean_3_L3_15: 4145957264390735276
+      Ocean_3_L3_16: -7446897667347710341
+      Ocean_3_L3_17: -8140837775740114791
+      Ocean_3_L3_2: 6200320135800278477
+      Ocean_3_L3_3: -2591921369177598427
+      Ocean_3_L3_4: 7641402258167816743
+      Ocean_3_L3_5: 6314533728510552065
+      Ocean_3_L3_6: 3670214843270199557
+      Ocean_3_L3_7: 3804596258013711054
+      Ocean_3_L3_8: -4719427222694159669
+      Ocean_3_L3_9: 2356207401705525270
+  mipmapLimitGroupName: 
+  pSDRemoveMatte: 0
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 

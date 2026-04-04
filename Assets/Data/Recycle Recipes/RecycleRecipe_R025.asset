@@ -13,8 +13,8 @@ MonoBehaviour:
   m_Name: RecycleRecipe_R025
   m_EditorClassIdentifier: 
   recipeId: R-025
-  displayName: Orb Transmute
-  fromType: 12
-  fromAmount: 2
-  toType: 13
-  toAmount: 1
+  displayName: Favor Push
+  fromType: 8
+  fromAmount: 1
+  toType: 2
+  toAmount: 3

@@ -1,0 +1,57 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 32ffc26ed7d444b02a9332ce4279b117, type: 3}
+  m_Name: Monster_Pebros
+  m_EditorClassIdentifier: 
+  id: M-077
+  displayName: Pebros
+  type: 2
+  typeIcon: {fileID: 21300000, guid: dd2adea89cda84ec4a589a6d1d5da1ae, type: 3}
+  icon: {fileID: 21300000, guid: 22b096e7e5536421d936e23b929fcc64, type: 3}
+  backIcon: {fileID: 21300000, guid: a1f37c5341b2640c6aae8118fecda67c, type: 3}
+  premiumIcon: {fileID: 21300000, guid: 73476e90374544374b16755300335bce, type: 3}
+  premiumBackIcon: {fileID: 21300000, guid: 992aaf639b4bf486c9a4d71ce20e354c, type: 3}
+  rarity: 2
+  canBeStarter: 0
+  starterWeight: 1
+  maxLevel: 50
+  baseHP: 70
+  baseAttack: 56
+  baseDefense: 42
+  baseSpeed: 28
+  hpRegenPerHour: 8.3
+  fatigueRatePerHour: 0.077
+  fatigueCooldownHours: 8.2
+  evolutionStage: 3
+  evolutionLevel: 12
+  evolutionForm: {fileID: 0}
+  uncatchable: 0
+  isBoss: 0
+  bossJobDebuffs: []
+  bossWeight: 1
+  spawnWeight: 2
+  jobSkill: 1.08
+  titleTrack: {fileID: 11400000, guid: a975601af76cf4b5ab52f544bac1d73a, type: 2}
+  defaultAlwaysOnTitles: []
+  ironTitles:
+  - {fileID: 11400000, guid: 01abdc10d1a4b41e2b6ebdce1f312988, type: 2}
+  - {fileID: 11400000, guid: b5fd4f826ff32410ea68f2df6b48c2b3, type: 2}
+  - {fileID: 11400000, guid: 7bca5a0fde2cd8047b5ae0787d2f1967, type: 2}
+  - {fileID: 11400000, guid: 3019f6b17ea034ea38b251270b02dfac, type: 2}
+  Personality: {fileID: 11400000, guid: d2d9ec6158abb40d2a7618ee71a9de06, type: 2}
+  basicAttackName: Tide Crush
+  basicAttackPrefab: {fileID: 7604281169824035565, guid: 4065dc449fe6fd94eb31f0e575b94514, type: 3}
+  basicAttackPrefabLifetime: 1
+  spawnSfx: {fileID: 8300000, guid: ff14928421d8b024ca4a84f30ae6d052, type: 3}
+  baseMarketValue: 162
+  description: A fully matured water brute that balances offense and defense crashing
+    into enemies with steady tidal force.

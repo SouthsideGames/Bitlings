@@ -22,10 +22,9 @@ public class ResourcePanelUI : MonoBehaviour
     [Header("Catalog (order shown)")]
     [SerializeField] private List<ResourceCatalogEntry> catalog = new();
 
-    // NEW — Recycle button + target panel launcher
     [Header("Recycle Feature")]
     [SerializeField] private Button recycleButton;
-    [SerializeField] private PanelId recyclePanelId = PanelId.Recycle; // Make sure this exists in your enum
+    [SerializeField] private PanelId recyclePanelId = PanelId.Recycle; 
 
     private readonly List<ResourceRowUI> _rows = new();
 
@@ -33,8 +32,6 @@ public class ResourcePanelUI : MonoBehaviour
     {
         GameEvents.OnResourcesChanged += Refresh;
 
-
-        // Feature unlock listener
         if (FeatureUnlockManager.I != null)
             FeatureUnlockManager.I.OnFeatureUnlocked += HandleFeatureUnlocked;
 
@@ -56,6 +53,9 @@ public class ResourcePanelUI : MonoBehaviour
         if (listRoot.childCount > 0) return;
         _rows.Clear();
 
+        bool tokensUnlocked = FeatureUnlockManager.I != null &&
+                              FeatureUnlockManager.I.IsUnlocked(FeatureId.Exchange_BearBullTokens);
+
         foreach (var e in catalog)
         {
             var go = Instantiate(rowPrefab, listRoot);
@@ -64,6 +64,9 @@ public class ResourcePanelUI : MonoBehaviour
 
             row.BindStatic(e.displayName, e.icon, e.type, e.infoId);
             _rows.Add(row);
+
+            if (e.type == ResourceType.BullToken || e.type == ResourceType.BearToken)
+                go.SetActive(tokensUnlocked);
         }
     }
 
@@ -77,9 +80,6 @@ public class ResourcePanelUI : MonoBehaviour
     // RECYCLE FEATURE SUPPORT
     // ----------------------------------------------------------------------
 
-    /// <summary>
-    /// Show or hide the Recycle button based on feature unlock.
-    /// </summary>
     private void UpdateRecycleButtonVisibility()
     {
         if (!recycleButton) return;
@@ -105,11 +105,24 @@ public class ResourcePanelUI : MonoBehaviour
     {
         if (id == FeatureId.Recycle_Basic)
             UpdateRecycleButtonVisibility();
+
+        if (id == FeatureId.Exchange_BearBullTokens)
+            UpdateTokenRowVisibility();
     }
 
-    /// <summary>
-    /// Launch the recycle panel when the button is pressed.
-    /// </summary>
+    private void UpdateTokenRowVisibility()
+    {
+        bool unlocked = FeatureUnlockManager.I != null &&
+                        FeatureUnlockManager.I.IsUnlocked(FeatureId.Exchange_BearBullTokens);
+
+        for (int i = 0; i < catalog.Count && i < _rows.Count; i++)
+        {
+            var e = catalog[i];
+            if (e.type == ResourceType.BullToken || e.type == ResourceType.BearToken)
+                _rows[i].gameObject.SetActive(unlocked);
+        }
+    }
+
     private void OnClickRecycle()
     {
         if (UIManager.I != null)

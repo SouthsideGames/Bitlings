@@ -14,6 +14,16 @@ public class BattleTempBuffs : MonoBehaviour
         I = this;
     }
 
+    void OnDestroy()
+    {
+        if (I == this) I = null;
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // Hard cap to prevent unlimited bonus stacking across activations
+    // ─────────────────────────────────────────────────────────────
+    private const int MAX_BONUS = 500;
+
     // ─────────────────────────────────────────────────────────────
     // ATTACK CHANNEL
     // ─────────────────────────────────────────────────────────────
@@ -26,13 +36,13 @@ public class BattleTempBuffs : MonoBehaviour
         float now = Time.unscaledTime;
         if (IsAtkBonusActive())
         {
-            atkBonus += Mathf.Max(0, bonus);
+            atkBonus = Mathf.Min(atkBonus + Mathf.Max(0, bonus), MAX_BONUS);
             float remain = Mathf.Max(0f, atkEnd - now);
             atkEnd = now + remain + Mathf.Max(0.001f, durationSeconds);
         }
         else
         {
-            atkBonus = Mathf.Max(0, bonus);
+            atkBonus = Mathf.Min(Mathf.Max(0, bonus), MAX_BONUS);
             atkStart = now;
             atkEnd = now + Mathf.Max(0.001f, durationSeconds);
         }
@@ -63,13 +73,13 @@ public class BattleTempBuffs : MonoBehaviour
         float now = Time.unscaledTime;
         if (IsHPBonusActive())
         {
-            hpBonus += Mathf.Max(0, bonus);
+            hpBonus = Mathf.Min(hpBonus + Mathf.Max(0, bonus), MAX_BONUS);
             float remain = Mathf.Max(0f, hpEnd - now);
             hpEnd = now + remain + Mathf.Max(0.001f, durationSeconds);
         }
         else
         {
-            hpBonus = Mathf.Max(0, bonus);
+            hpBonus = Mathf.Min(Mathf.Max(0, bonus), MAX_BONUS);
             hpStart = now;
             hpEnd = now + Mathf.Max(0.001f, durationSeconds);
         }
@@ -100,13 +110,13 @@ public class BattleTempBuffs : MonoBehaviour
         float now = Time.unscaledTime;
         if (IsSpeedBonusActive())
         {
-            speedFlatBonus += Mathf.Max(0, flatBonus);
+            speedFlatBonus = Mathf.Min(speedFlatBonus + Mathf.Max(0, flatBonus), MAX_BONUS);
             float remain = Mathf.Max(0f, speedEnd - now);
             speedEnd = now + remain + Mathf.Max(0.001f, durationSeconds);
         }
         else
         {
-            speedFlatBonus = Mathf.Max(0, flatBonus);
+            speedFlatBonus = Mathf.Min(Mathf.Max(0, flatBonus), MAX_BONUS);
             speedStart = now;
             speedEnd = now + Mathf.Max(0.001f, durationSeconds);
         }
@@ -143,13 +153,13 @@ public class BattleTempBuffs : MonoBehaviour
         float now = Time.unscaledTime;
         if (IsDefenseBonusActive())
         {
-            defBonus += Mathf.Max(0, bonus);
+            defBonus = Mathf.Min(defBonus + Mathf.Max(0, bonus), MAX_BONUS);
             float remain = Mathf.Max(0f, defEnd - now);
             defEnd = now + remain + Mathf.Max(0.001f, durationSeconds);
         }
         else
         {
-            defBonus = Mathf.Max(0, bonus);
+            defBonus = Mathf.Min(Mathf.Max(0, bonus), MAX_BONUS);
             defStart = now;
             defEnd = now + Mathf.Max(0.001f, durationSeconds);
         }

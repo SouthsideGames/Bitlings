@@ -4,22 +4,30 @@ using System.Collections.Generic;
 
 public static class BattleRewards
 {
-    public static int creditsFor(bool victory, int wildLevel, float secondsSurvived)
+    public static int CreditsFor(bool victory, int wildLevel, float secondsSurvived)
     {
+        float globalMul = 1f;
+        if (GameBalance.TryGet(out var bal))
+            globalMul = Mathf.Max(0f, bal.creditGainMultiplier);
+
         if (victory)
         {
             int baseWin   = Mathf.RoundToInt(6 + wildLevel * 2.5f);
             int timeBonus = Mathf.RoundToInt(secondsSurvived * 0.75f);
-            return baseWin + timeBonus;
+            return Mathf.Max(0, Mathf.RoundToInt((baseWin + timeBonus) * globalMul));
         }
         else
         {
-            return Mathf.RoundToInt(secondsSurvived * 1.0f);
+            return Mathf.Max(0, Mathf.RoundToInt((secondsSurvived * 1.0f) * globalMul));
         }
     }
 
-    public static int CalccreditsForWin(int wildLevel, Rarity rarity)
+    public static int CalcCreditsForWin(int wildLevel, Rarity rarity)
     {
+        float globalMul = 1f;
+        if (GameBalance.TryGet(out var bal))
+            globalMul = Mathf.Max(0f, bal.creditGainMultiplier);
+
         float rarityMul = 1f;
         switch (rarity)
         {
@@ -33,7 +41,7 @@ public static class BattleRewards
         }
 
         int baseWin = Mathf.RoundToInt(6 + wildLevel * 2.5f);
-        int credits = Mathf.RoundToInt(baseWin * rarityMul);
+        int credits = Mathf.RoundToInt(baseWin * rarityMul * globalMul);
         return Mathf.Max(1, credits);
     }
 
@@ -45,7 +53,11 @@ public static class BattleRewards
     public static void GrantVictoryXPAndEvo(int activeIndex, int wildLevel, MonsterLibrarySO library, float xpMultiplier)
     {
         int baseCores = Mathf.Max(0, 5 + 2 * wildLevel);
-        int finalCores = Mathf.RoundToInt(baseCores * Mathf.Max(0f, xpMultiplier));
+        float globalMul = 1f;
+        if (GameBalance.TryGet(out var bal))
+            globalMul = Mathf.Max(0f, bal.xpGainMultiplier);
+
+        int finalCores = Mathf.RoundToInt(baseCores * Mathf.Max(0f, xpMultiplier) * globalMul);
 
         if (finalCores <= 0) return;
 

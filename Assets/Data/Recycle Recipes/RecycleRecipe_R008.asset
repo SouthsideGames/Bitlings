@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: RecycleRecipe_R008
   m_EditorClassIdentifier: 
   recipeId: R-008
-  displayName: Attack Chip Salvage
+  displayName: Training Scrap
   fromType: 9
   fromAmount: 1
   toType: 4

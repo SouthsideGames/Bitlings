@@ -11,8 +11,8 @@ public class PackDetailPanelUI : MonoBehaviour
     [SerializeField] private TextMeshProUGUI costText;
 
     [Header("Status / Messaging")]
-    [SerializeField] private TextMeshProUGUI statusText;            // NEW: reason like "Not available this season"
-    [SerializeField] private TextMeshProUGUI purchaseButtonLabel;   // Optional: the TMP on the button
+    [SerializeField] private TextMeshProUGUI statusText;        
+    [SerializeField] private TextMeshProUGUI purchaseButtonLabel;   
 
     [Header("Monster Icons")]
     [SerializeField] private Transform monsterIconRoot;
@@ -68,17 +68,11 @@ public class PackDetailPanelUI : MonoBehaviour
     public void PurchaseCurrentPack()
     {
         if (_currentPack == null)
-        {
-            Debug.LogError("[PackDetailPanelUI] Pack purchase failed: No current pack assigned.");
             return;
-        }
 
         var mgr = MonsterPackManager.I;
         if (mgr == null)
-        {
-            Debug.LogError("[PackDetailPanelUI] Pack purchase failed: MonsterPackManager not available.");
             return;
-        }
 
         if (!mgr.CanPurchase(_currentPack.id, out string reason))
         {
@@ -92,14 +86,22 @@ public class PackDetailPanelUI : MonoBehaviour
 
         if (success)
         {
-            Debug.Log($"[PackDetailPanelUI] Pack purchased: {_currentPack.displayName}");
+            var name = string.IsNullOrEmpty(_currentPack.displayName)
+            ? "UNKNOWN PACK"
+            : _currentPack.displayName.ToUpperInvariant();
+
+            GameEvents.RaiseToast($"PACK PURCHASED: {name}!");
+
             RefreshUI();
         }
         else
         {
-            Debug.LogError("[PackDetailPanelUI] Pack purchase failed inside MonsterPackManager.");
             RefreshUI();
         }
+
+        
+
+        
     }
 
     private void RefreshUI()
@@ -119,7 +121,7 @@ public class PackDetailPanelUI : MonoBehaviour
             int have = (ResourceManager.I != null) ? ResourceManager.I.Get(currency) : ResourceBank.Get(currency);
 
             if (costText)
-                costText.text = $"{have} / {cost} {CurrencyLabel(currency)}";
+                costText.text = $"{cost} {CurrencyLabel(currency)}";
         }
         else
         {

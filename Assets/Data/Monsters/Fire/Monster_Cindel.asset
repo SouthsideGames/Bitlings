@@ -1,0 +1,57 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 32ffc26ed7d444b02a9332ce4279b117, type: 3}
+  m_Name: Monster_Cindel
+  m_EditorClassIdentifier: 
+  id: M-070
+  displayName: Cindel
+  type: 1
+  typeIcon: {fileID: 21300000, guid: d552cfb27992e494694a52b7e3578364, type: 3}
+  icon: {fileID: 21300000, guid: 41901ed4175e94cf49b027a837dd84b4, type: 3}
+  backIcon: {fileID: 21300000, guid: 673046ecda0254cb690320a01431d94b, type: 3}
+  premiumIcon: {fileID: 21300000, guid: 838b6ebe823ad4cdbab4576d703c70c3, type: 3}
+  premiumBackIcon: {fileID: 21300000, guid: 91ad7ef2332d843cfa6388a63886b208, type: 3}
+  rarity: 0
+  canBeStarter: 0
+  starterWeight: 1
+  maxLevel: 50
+  baseHP: 50
+  baseAttack: 54
+  baseDefense: 22
+  baseSpeed: 24
+  hpRegenPerHour: 4.8
+  fatigueRatePerHour: 0.11
+  fatigueCooldownHours: 7.2
+  evolutionStage: 1
+  evolutionLevel: 18
+  evolutionForm: {fileID: 11400000, guid: 08911610b6da141b3bb8806ca1a45cc8, type: 2}
+  uncatchable: 0
+  isBoss: 0
+  bossJobDebuffs: []
+  bossWeight: 1
+  spawnWeight: 8
+  jobSkill: 0.95
+  titleTrack: {fileID: 11400000, guid: e447507c40c2d4131a2a5d7a6a31f284, type: 2}
+  defaultAlwaysOnTitles: []
+  ironTitles:
+  - {fileID: 11400000, guid: 66e978fde24853349a72c695292d630b, type: 2}
+  - {fileID: 11400000, guid: e1aa94e2540df9a4b9e2e90c84ec8c3f, type: 2}
+  - {fileID: 11400000, guid: 151d5269051bffb44a5357d26231c263, type: 2}
+  - {fileID: 11400000, guid: a54fbab895dd9804c9cacbb8e8ce854c, type: 2}
+  Personality: {fileID: 11400000, guid: 3733616cf9f0f4dddb5bee9d6ba2952f, type: 2}
+  basicAttackName: Ember Jab
+  basicAttackPrefab: {fileID: 126357351932672970, guid: a7524146891194bc4b7eb73ba1e38b46, type: 3}
+  basicAttackPrefabLifetime: 1
+  spawnSfx: {fileID: 8300000, guid: 75248d0b6561685468bc39aada3decdb, type: 3}
+  baseMarketValue: 77
+  description: A fiery cub-like monster that charges eagerly striking with small
+    but persistent bursts of flame.

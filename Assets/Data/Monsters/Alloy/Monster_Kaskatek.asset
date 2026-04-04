@@ -1,0 +1,57 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 32ffc26ed7d444b02a9332ce4279b117, type: 3}
+  m_Name: Monster_Kaskatek
+  m_EditorClassIdentifier: 
+  id: M-186
+  displayName: Kaskatek
+  type: 16
+  typeIcon: {fileID: 21300000, guid: c802d8c6dfd7c40329bae6fe5d96fc85, type: 3}
+  icon: {fileID: 21300000, guid: bd7a8e371d4034593a455a754d01d6ec, type: 3}
+  backIcon: {fileID: 21300000, guid: 8af14bb211aae44c0a150d83fc8ff62c, type: 3}
+  premiumIcon: {fileID: 21300000, guid: 5e3d5dd33a0bd4eca803a89aa2aca084, type: 3}
+  premiumBackIcon: {fileID: 21300000, guid: a969f7c6cd2184cf19b43fb4c9fb8eba, type: 3}
+  rarity: 4
+  canBeStarter: 0
+  starterWeight: 1
+  maxLevel: 50
+  baseHP: 113
+  baseAttack: 30
+  baseDefense: 113
+  baseSpeed: 14
+  hpRegenPerHour: 10.4
+  fatigueRatePerHour: 0.08
+  fatigueCooldownHours: 11.4
+  evolutionStage: 3
+  evolutionLevel: 18
+  evolutionForm: {fileID: 0}
+  uncatchable: 0
+  isBoss: 0
+  bossJobDebuffs: []
+  bossWeight: 1
+  spawnWeight: 0.25
+  jobSkill: 1.22
+  titleTrack: {fileID: 11400000, guid: 1423325a3964c4ca78106d5fc6db6a43, type: 2}
+  defaultAlwaysOnTitles: []
+  ironTitles:
+  - {fileID: 11400000, guid: a3cb55b0e86517d4b9fbeb158de99f80, type: 2}
+  - {fileID: 11400000, guid: a0dea9e89cde6f24c8504365ceca2da0, type: 2}
+  - {fileID: 11400000, guid: efe87ef2f274d994e9a19e6cc1841073, type: 2}
+  - {fileID: 11400000, guid: 7c437df4ccfbf884d9847ca8d79291d5, type: 2}
+  Personality: {fileID: 11400000, guid: 2e75af56469454f81aab48433f975b34, type: 2}
+  basicAttackName: Core Crush
+  basicAttackPrefab: {fileID: 5172629195496952374, guid: ad774bbb8084f42c29f12cd62581f796, type: 3}
+  basicAttackPrefabLifetime: 1
+  spawnSfx: {fileID: 8300000, guid: 0fc0f7b3ceb61f445abba51af2226af7, type: 3}
+  baseMarketValue: 836
+  description: A legendary alloy guardian whose living core drives relentless impacts
+    that grind enemies down with unstoppable force.

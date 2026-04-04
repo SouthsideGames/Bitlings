@@ -1,0 +1,57 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 32ffc26ed7d444b02a9332ce4279b117, type: 3}
+  m_Name: Monster_Pyroth
+  m_EditorClassIdentifier: 
+  id: M-064
+  displayName: Pyroth
+  type: 1
+  typeIcon: {fileID: 21300000, guid: d552cfb27992e494694a52b7e3578364, type: 3}
+  icon: {fileID: 21300000, guid: 1873dd3e07d3fd9429150720899a966d, type: 3}
+  backIcon: {fileID: 21300000, guid: e09a2731b33d54047adce1c97d1660e3, type: 3}
+  premiumIcon: {fileID: 21300000, guid: 36b26588093641f438d92b17eaf2be6e, type: 3}
+  premiumBackIcon: {fileID: 21300000, guid: f0aaf55ac06701541b4481605cd77f63, type: 3}
+  rarity: 6
+  canBeStarter: 0
+  starterWeight: 1
+  maxLevel: 50
+  baseHP: 150
+  baseAttack: 170
+  baseDefense: 50
+  baseSpeed: 30
+  hpRegenPerHour: 14.3
+  fatigueRatePerHour: 0.121
+  fatigueCooldownHours: 9
+  evolutionStage: 1
+  evolutionLevel: 12
+  evolutionForm: {fileID: 0}
+  uncatchable: 1
+  isBoss: 1
+  bossJobDebuffs: []
+  bossWeight: 1
+  spawnWeight: 0
+  jobSkill: 1
+  titleTrack: {fileID: 11400000, guid: 4895c73be63a3473b9047daee4b3c0f9, type: 2}
+  defaultAlwaysOnTitles: []
+  ironTitles:
+  - {fileID: 11400000, guid: e1aa94e2540df9a4b9e2e90c84ec8c3f, type: 2}
+  - {fileID: 11400000, guid: a54fbab895dd9804c9cacbb8e8ce854c, type: 2}
+  - {fileID: 11400000, guid: 09255326cbe449342be8cb661424d7a3, type: 2}
+  - {fileID: 11400000, guid: 151d5269051bffb44a5357d26231c263, type: 2}
+  Personality: {fileID: 11400000, guid: 1bd4805a0ba8f476b9f7b480b0cbb31d, type: 2}
+  basicAttackName: Worldburn
+  basicAttackPrefab: {fileID: 126357351932672970, guid: a4baedce08c467c47b8dcaa64debf041, type: 3}
+  basicAttackPrefabLifetime: 1
+  spawnSfx: {fileID: 8300000, guid: b821ae2223d65f548a6d76a9b780d831, type: 3}
+  baseMarketValue: 826
+  description: A raging inferno incarnate that floods the battlefield with relentless
+    flames, growing more destructive the longer it survives.
