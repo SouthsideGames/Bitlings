@@ -470,6 +470,8 @@ if (elapsed <= 0.1f) return;
             creditMulNeutral *= boost;
         }
 
+        creditMulNeutral *= WorldEventSystem.I != null ? WorldEventSystem.I.GetIdleRewardMultiplier() : 1f;
+
         int baseCost = GetEncounterCostSafe();
         int effectiveCost = Mathf.Max(1, Mathf.RoundToInt(baseCost * Mathf.Clamp(teamP.energyCostMul, 0.5f, 1f)));
 

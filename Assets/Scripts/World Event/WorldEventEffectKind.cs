@@ -22,4 +22,14 @@ public enum WorldEventEffectKind
     // Exchange
     ExchangeDemandMultiplier = 40,
     ExchangeValueMultiplier = 41,
+
+    // Idle
+    IdleRewardMultiplier = 50,
+
+    // Battle
+    BattleRewardMultiplier = 51,
+
+    // Monster type boost (pair these two effects on the same event)
+    BoostedMonsterType = 52,    // monsterType field = which type; no value needed
+    TypeDamageMultiplier = 53,  // value = damage multiplier for the boosted type
 }

@@ -10,15 +10,17 @@ public static class BattleRewards
         if (GameBalance.TryGet(out var bal))
             globalMul = Mathf.Max(0f, bal.creditGainMultiplier);
 
+        float eventMul = GetWorldEventBattleRewardMultiplier();
+
         if (victory)
         {
             int baseWin   = Mathf.RoundToInt(6 + wildLevel * 2.5f);
             int timeBonus = Mathf.RoundToInt(secondsSurvived * 0.75f);
-            return Mathf.Max(0, Mathf.RoundToInt((baseWin + timeBonus) * globalMul));
+            return Mathf.Max(0, Mathf.RoundToInt((baseWin + timeBonus) * globalMul * eventMul));
         }
         else
         {
-            return Mathf.Max(0, Mathf.RoundToInt((secondsSurvived * 1.0f) * globalMul));
+            return Mathf.Max(0, Mathf.RoundToInt((secondsSurvived * 1.0f) * globalMul * eventMul));
         }
     }
 
@@ -27,6 +29,8 @@ public static class BattleRewards
         float globalMul = 1f;
         if (GameBalance.TryGet(out var bal))
             globalMul = Mathf.Max(0f, bal.creditGainMultiplier);
+
+        float eventMul = GetWorldEventBattleRewardMultiplier();
 
         float rarityMul = 1f;
         switch (rarity)
@@ -41,7 +45,7 @@ public static class BattleRewards
         }
 
         int baseWin = Mathf.RoundToInt(6 + wildLevel * 2.5f);
-        int credits = Mathf.RoundToInt(baseWin * rarityMul * globalMul);
+        int credits = Mathf.RoundToInt(baseWin * rarityMul * globalMul * eventMul);
         return Mathf.Max(1, credits);
     }
 
@@ -62,5 +66,11 @@ public static class BattleRewards
         if (finalCores <= 0) return;
 
         ResourceManager.I?.Add(ResourceType.GrowthCore, finalCores);
+    }
+
+    private static float GetWorldEventBattleRewardMultiplier()
+    {
+        if (WorldEventSystem.I == null) return 1f;
+        return Mathf.Max(0f, WorldEventSystem.I.GetBattleRewardMultiplier());
     }
 }

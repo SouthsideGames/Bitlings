@@ -758,22 +758,7 @@ public sealed class ExchangeManager : MonoBehaviour
     private float GetWorldEventMultiplier()
     {
         if (WorldEventSystem.I == null) return 1f;
-        float mul = 1f;
-        var active = WorldEventSystem.I.ActiveEvents;
-        if (active == null) return 1f;
-
-        for (int i = 0; i < active.Count; i++)
-        {
-            var evt = active[i];
-            if (evt?.effects == null) continue;
-            for (int j = 0; j < evt.effects.Count; j++)
-            {
-                var e = evt.effects[j];
-                if (e.kind == WorldEventEffectKind.ExchangeValueMultiplier)
-                    mul *= Mathf.Max(0.01f, e.value);
-            }
-        }
-        return mul;
+        return WorldEventSystem.I.GetExchangeValueMultiplier();
     }
 
     private static int DayIndex()

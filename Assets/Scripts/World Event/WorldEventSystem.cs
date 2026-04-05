@@ -40,6 +40,16 @@ public sealed class WorldEventSystem : MonoBehaviour
     [Tooltip("How often to re-check for week rollover / scheduled windows.")]
     [SerializeField, Min(1f)] private float refreshCheckSeconds = 5f;
 
+    [Header("Deterministic Rotation")]
+    [Tooltip("When enabled the active event is chosen deterministically from the date, not by random roll. " +
+             "The event pool is all canRotate=true events (excluding scheduledOnly), ordered by list index. " +
+             "Week index = weeks elapsed since epoch date, modulo pool size.")]
+    [SerializeField] private bool useDeterministicRotation = false;
+
+    [Tooltip("ISO date (YYYY-MM-DD) of the Monday that acts as week 0 for deterministic rotation. " +
+             "Defaults to 2025-01-06 if left blank or invalid.")]
+    [SerializeField] private string deterministicEpochDate = "2025-01-06";
+
     [Header("Category Weights (must sum to 1.0 in your design, but we normalize anyway)")]
     [Range(0f, 1f)] public float weightJob = 0.20f;
     [Range(0f, 1f)] public float weightEncounter = 0.20f;
@@ -63,6 +73,14 @@ public sealed class WorldEventSystem : MonoBehaviour
 
     private float _shopPriceMul = 1f;
     private readonly Dictionary<ResourceType, float> _resourceGainMul = new();
+
+    private float _exchangeDemandMul = 1f;
+    private float _exchangeValueMul = 1f;
+
+    private float _idleRewardMul = 1f;
+    private float _battleRewardMul = 1f;
+    private MonsterType _boostedMonsterType = MonsterType.None;
+    private float _typeDamageMul = 1f;
 
     private float _accum;
 
@@ -226,6 +244,29 @@ public sealed class WorldEventSystem : MonoBehaviour
         return _resourceGainMul.TryGetValue(type, out var m) ? Mathf.Max(0f, m) : 1f;
     }
 
+    public float GetExchangeDemandMultiplier()
+        => IsFeatureActive() ? Mathf.Max(0f, _exchangeDemandMul) : 1f;
+
+    public float GetExchangeValueMultiplier()
+        => IsFeatureActive() ? Mathf.Max(0f, _exchangeValueMul) : 1f;
+
+    public float GetIdleRewardMultiplier()
+        => IsFeatureActive() ? Mathf.Max(0f, _idleRewardMul) : 1f;
+
+    public float GetBattleRewardMultiplier()
+        => IsFeatureActive() ? Mathf.Max(0f, _battleRewardMul) : 1f;
+
+    /// <summary>Returns the boosted monster type this week, or MonsterType.None if none.</summary>
+    public MonsterType GetBoostedMonsterType()
+        => IsFeatureActive() ? _boostedMonsterType : MonsterType.None;
+
+    /// <summary>
+    /// Damage multiplier that applies to the boosted monster type this week.
+    /// Returns 1f if no type boost is active.
+    /// </summary>
+    public float GetTypeDamageMultiplier()
+        => IsFeatureActive() && _boostedMonsterType != MonsterType.None ? Mathf.Max(0f, _typeDamageMul) : 1f;
+
     // ─────────────────────────────────────────────────────────────
     // Core refresh
     // ─────────────────────────────────────────────────────────────
@@ -258,40 +299,51 @@ public sealed class WorldEventSystem : MonoBehaviour
             if (e.IsActiveNow(nowUtc)) _active.Add(e);
         }
 
-        // 2) Weekly roll (exactly 1) — only if no scheduled events are active.
+        // 2) Weekly event (exactly 1) — only if no scheduled events are active.
         if (_active.Count == 0)
         {
-            var blob = SaveManager.GetWorldEventsBlob() ?? new WorldEventSaveData();
-
-            bool needsWeekRoll = string.IsNullOrEmpty(blob.weeklyActiveEventId)
-                                 || blob.weeklyWeekStartUnix != weekStartUnixLocal;
-
-            // IMPORTANT:
-            // We only want *one* rolled event per week.
-            // `forceRollIfNeeded` exists to cover startup / unlock timing (when systems init out of order),
-            // but it must NOT re-roll if we already have a valid event for the current week.
-            bool shouldRoll = needsWeekRoll
-                              || (forceRollIfNeeded && string.IsNullOrEmpty(blob.weeklyActiveEventId));
-
-            if (shouldRoll)
+            if (useDeterministicRotation)
             {
-                // First week after unlock must be Flavor.
-                bool forceFlavor = !blob.firstUnlockFlavorConsumed;
-
-                RollWeeklyEvent(blob, all, nowUtc, forceFlavor);
-
-                // Mark first-week flavor as consumed once we successfully pick one.
-                if (!string.IsNullOrEmpty(blob.weeklyActiveEventId))
-                    blob.firstUnlockFlavorConsumed = true;
-
-                blob.weeklyWeekStartUnix = weekStartUnixLocal;
-                SaveManager.SetWorldEventsBlob(blob);
+                // Deterministic path: event is derived from the current week index.
+                // No save-data mutation needed — the result is always computable from the date.
+                var det = GetDeterministicWeekEvent(all);
+                if (det) _active.Add(det);
             }
-
-            if (!string.IsNullOrEmpty(blob.weeklyActiveEventId))
+            else
             {
-                var e = FindById(all, blob.weeklyActiveEventId);
-                if (e) _active.Add(e);
+                // Random roll path (original behaviour).
+                var blob = SaveManager.GetWorldEventsBlob() ?? new WorldEventSaveData();
+
+                bool needsWeekRoll = string.IsNullOrEmpty(blob.weeklyActiveEventId)
+                                     || blob.weeklyWeekStartUnix != weekStartUnixLocal;
+
+                // IMPORTANT:
+                // We only want *one* rolled event per week.
+                // `forceRollIfNeeded` exists to cover startup / unlock timing (when systems init out of order),
+                // but it must NOT re-roll if we already have a valid event for the current week.
+                bool shouldRoll = needsWeekRoll
+                                  || (forceRollIfNeeded && string.IsNullOrEmpty(blob.weeklyActiveEventId));
+
+                if (shouldRoll)
+                {
+                    // First week after unlock must be Flavor.
+                    bool forceFlavor = !blob.firstUnlockFlavorConsumed;
+
+                    RollWeeklyEvent(blob, all, nowUtc, forceFlavor);
+
+                    // Mark first-week flavor as consumed once we successfully pick one.
+                    if (!string.IsNullOrEmpty(blob.weeklyActiveEventId))
+                        blob.firstUnlockFlavorConsumed = true;
+
+                    blob.weeklyWeekStartUnix = weekStartUnixLocal;
+                    SaveManager.SetWorldEventsBlob(blob);
+                }
+
+                if (!string.IsNullOrEmpty(blob.weeklyActiveEventId))
+                {
+                    var e = FindById(all, blob.weeklyActiveEventId);
+                    if (e) _active.Add(e);
+                }
             }
         }
 
@@ -300,6 +352,47 @@ public sealed class WorldEventSystem : MonoBehaviour
         PushTicker();
 
         FireWorldEventsChanged();
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // Deterministic rotation
+    // ─────────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Returns the event for the current week based purely on date math.
+    /// Pool = all canRotate=true, non-scheduledOnly events, in library list order.
+    /// weekIndex = floor((nowUnix - epochUnix) / 604800), clamped ≥ 0.
+    /// activeEvent = pool[weekIndex % pool.Count]
+    /// </summary>
+    private WorldEventSO GetDeterministicWeekEvent(List<WorldEventSO> all)
+    {
+        var pool = new List<WorldEventSO>(all.Count);
+        for (int i = 0; i < all.Count; i++)
+        {
+            var e = all[i];
+            if (!e || e.scheduledOnly || !e.canRotate) continue;
+            pool.Add(e);
+        }
+
+        if (pool.Count == 0) return null;
+
+        // Parse epoch. Fall back to 2025-01-06 (a known Monday) if blank / invalid.
+        DateTimeOffset epoch;
+        if (string.IsNullOrWhiteSpace(deterministicEpochDate) ||
+            !DateTimeOffset.TryParse(deterministicEpochDate, out epoch))
+        {
+            epoch = new DateTimeOffset(2025, 1, 6, 0, 0, 0, TimeSpan.Zero);
+        }
+
+        long epochUnix = epoch.ToUnixTimeSeconds();
+        long nowUnix = SaveManager.NowUnix();
+
+        long secondsSinceEpoch = nowUnix - epochUnix;
+        int weekIndex = secondsSinceEpoch >= 0
+            ? (int)(secondsSinceEpoch / 604800L)
+            : 0;
+
+        return pool[weekIndex % pool.Count];
     }
 
     private void RollWeeklyEvent(WorldEventSaveData blob, List<WorldEventSO> all, long nowUtc, bool forceFlavor)
@@ -430,6 +523,14 @@ public sealed class WorldEventSystem : MonoBehaviour
         _shopPriceMul = 1f;
         _resourceGainMul.Clear();
 
+        _exchangeDemandMul = 1f;
+        _exchangeValueMul = 1f;
+
+        _idleRewardMul = 1f;
+        _battleRewardMul = 1f;
+        _boostedMonsterType = MonsterType.None;
+        _typeDamageMul = 1f;
+
         for (int i = 0; i < _active.Count; i++)
         {
             var e = _active[i];
@@ -496,7 +597,52 @@ public sealed class WorldEventSystem : MonoBehaviour
                         if (fx.resource != ResourceType.None)
                             _resourceGainMul[fx.resource] = _resourceGainMul.TryGetValue(fx.resource, out var curRes) ? (curRes * v) : v;
                         break;
+
+                    // Exchange
+                    case WorldEventEffectKind.ExchangeDemandMultiplier:
+                        _exchangeDemandMul *= v;
+                        break;
+
+                    case WorldEventEffectKind.ExchangeValueMultiplier:
+                        _exchangeValueMul *= v;
+                        break;
+
+                    // Idle / Battle rewards
+                    case WorldEventEffectKind.IdleRewardMultiplier:
+                        _idleRewardMul *= v;
+                        break;
+
+                    case WorldEventEffectKind.BattleRewardMultiplier:
+                        _battleRewardMul *= v;
+                        break;
+
+                    // Monster type boost
+                    case WorldEventEffectKind.BoostedMonsterType:
+                        if (fx.monsterType != MonsterType.None)
+                            _boostedMonsterType = fx.monsterType;
+                        break;
+
+                    case WorldEventEffectKind.TypeDamageMultiplier:
+                        _typeDamageMul *= v;
+                        break;
                 }
+            }
+
+            // Flat modifier fields — compose with any matching effects above.
+            if (!Mathf.Approximately(e.idleRewardMultiplier, 1f))
+                _idleRewardMul *= Mathf.Max(0f, e.idleRewardMultiplier);
+
+            if (!Mathf.Approximately(e.battleRewardMultiplier, 1f))
+                _battleRewardMul *= Mathf.Max(0f, e.battleRewardMultiplier);
+
+            if (!Mathf.Approximately(e.exchangeValueMultiplier, 1f))
+                _exchangeValueMul *= Mathf.Max(0f, e.exchangeValueMultiplier);
+
+            if (e.boostedMonsterType != MonsterType.None)
+            {
+                _boostedMonsterType = e.boostedMonsterType;
+                if (!Mathf.Approximately(e.typeDamageMultiplier, 1f))
+                    _typeDamageMul *= Mathf.Max(0f, e.typeDamageMultiplier);
             }
         }
     }
@@ -518,8 +664,9 @@ public sealed class WorldEventSystem : MonoBehaviour
 
             if (string.IsNullOrWhiteSpace(msg)) continue;
 
-            bool hasEffect = e.effects != null && e.effects.Count > 0 &&
-                             e.effects.Exists(fx => fx.kind != WorldEventEffectKind.None);
+            bool hasEffect = e.HasAnyModifier ||
+                             (e.effects != null && e.effects.Count > 0 &&
+                              e.effects.Exists(fx => fx.kind != WorldEventEffectKind.None));
             WorldEventManager.I.Add(msg, hasEffect: hasEffect);
         }
     }

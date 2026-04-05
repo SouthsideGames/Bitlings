@@ -14,17 +14,8 @@ public static class WorldEventBuilder
     [MenuItem("Bitlings/World Events/Build From CSV...")]
     public static void BuildFromCsvMenu()
     {
-        string path = EditorUtility.OpenFilePanel("World Events CSV", Application.dataPath, "csv");
-        if (string.IsNullOrEmpty(path)) return;
-
-        try
-        {
-            BuildFromCsvPath(path);
-        }
-        catch (Exception ex)
-        {
-            Debug.LogError($"[WorldEventBuilder] Failed: {ex.Message}\n{ex.StackTrace}");
-        }
+        Debug.LogWarning("[WorldEventBuilder] Legacy builder is deprecated. Use Tools/World Events/Builder.");
+        WorldEventBuilderWindow.Open();
     }
 
     public static void BuildFromCsvPath(string csvPath)

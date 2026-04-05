@@ -280,6 +280,15 @@ public static class BattleCalc
 
         float preMit = baseDamage * Mathf.Max(0.25f, eff) * (crit ? critMultiplier : 1f);
 
+        // Weekly world event type bonus: if the attacker's type matches the boosted type,
+        // apply its damage multiplier. Defaults to 1f when no event is active.
+        if (WorldEventSystem.I != null && atkDef != null &&
+            atkDef.type != MonsterType.None &&
+            atkDef.type == WorldEventSystem.I.GetBoostedMonsterType())
+        {
+            preMit *= WorldEventSystem.I.GetTypeDamageMultiplier();
+        }
+
         // ─────────────────────────────────────────────────────────────────────
         // Defense STAT
         //

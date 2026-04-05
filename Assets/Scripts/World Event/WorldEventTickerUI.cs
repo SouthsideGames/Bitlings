@@ -1,6 +1,7 @@
 using System.Collections;
 using TMPro;
 using UnityEngine;
+using UnityEngine.UI;
 
 /// <summary>
 /// WorldEventTickerUI (Fade Mode)
@@ -26,6 +27,9 @@ public sealed class WorldEventTickerUI : MonoBehaviour
     [Tooltip("TMP text that displays the message.")]
     [SerializeField] private TextMeshProUGUI messageText;
 
+    [Tooltip("Optional icon image reference. Ticker is text-only, so this will be disabled when present.")]
+    [SerializeField] private Image tickerIcon;
+
     [Header("Timing")]
     [SerializeField, Min(0f)] private float fadeInSeconds = 0.35f;
     [SerializeField, Min(0f)] private float holdSeconds = 4.0f;
@@ -48,12 +52,14 @@ public sealed class WorldEventTickerUI : MonoBehaviour
     private void Awake()
     {
         if (!worldEventBar) worldEventBar = gameObject;
+        DisableTickerIconIfPresent();
         EnsureCanvasGroup();
         SetAlphaInstant(0f);
     }
 
     private void OnEnable()
     {
+        DisableTickerIconIfPresent();
         EnsureCanvasGroup();
         RefreshBarActive();
 
@@ -286,5 +292,12 @@ public sealed class WorldEventTickerUI : MonoBehaviour
             t += Time.unscaledDeltaTime;
             yield return null;
         }
+    }
+
+    private void DisableTickerIconIfPresent()
+    {
+        if (!tickerIcon) return;
+        tickerIcon.enabled = false;
+        tickerIcon.gameObject.SetActive(false);
     }
 }

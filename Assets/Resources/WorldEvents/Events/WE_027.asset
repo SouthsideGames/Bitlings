@@ -1,0 +1,38 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2f3afd814a60149de963f36c9dd5f633, type: 3}
+  m_Name: WE_027
+  m_EditorClassIdentifier: Assembly-CSharp::WorldEventSO
+  id: WE-027
+  displayName: Cryo Breakthrough
+  category: 0
+  isHoliday: 0
+  description: The Cryo Lab's output is increased by 30% during this world event.
+  tickerMessage: A Cryo Lab breakthrough improves production.
+  scheduledOnly: 0
+  startUnix: 0
+  endUnix: 0
+  canRotate: 1
+  weight: 10
+  minDaysBetween: 14
+  idleRewardMultiplier: 1
+  battleRewardMultiplier: 1
+  exchangeValueMultiplier: 1
+  boostedMonsterType: 0
+  typeDamageMultiplier: 1
+  effects:
+  - kind: 11
+    job: 8
+    resource: 0
+    monsterType: 0
+    value: 1.3
+    flag: 0

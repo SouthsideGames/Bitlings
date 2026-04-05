@@ -1,0 +1,32 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2f3afd814a60149de963f36c9dd5f633, type: 3}
+  m_Name: WE_333
+  m_EditorClassIdentifier: Assembly-CSharp::WorldEventSO
+  id: WE-333
+  displayName: Repair Completed
+  category: 3
+  isHoliday: 0
+  description: This is a flavor-only world event and does not change gameplay.
+  tickerMessage: 'City notice: multiple repairs completed ahead of schedule.'
+  scheduledOnly: 0
+  startUnix: 0
+  endUnix: 0
+  canRotate: 1
+  weight: 10
+  minDaysBetween: 7
+  idleRewardMultiplier: 1
+  battleRewardMultiplier: 1
+  exchangeValueMultiplier: 1
+  boostedMonsterType: 0
+  typeDamageMultiplier: 1
+  effects: []
