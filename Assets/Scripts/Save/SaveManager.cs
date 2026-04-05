@@ -71,112 +71,11 @@ public static class SaveManager
 {
     public static PlayerManager Data;
 
-    // Save schema versioning
-    // Increment CURRENT_SAVE_VERSION whenever the on-disk JSON layout/semantics change.
-    private const int CURRENT_SAVE_VERSION = 4;
+    public const int CURRENT_SAVE_VERSION = SaveMigrationManager.CURRENT_SAVE_VERSION;
 
     // Optional: last integrity/migration diagnostics. Useful for QA screenshots or a debug panel.
     private static string _lastValidationReport;
     public static string LastValidationReport => _lastValidationReport;
-
-    // Migration table scaffold (keeps future v3+ additions disciplined).
-    // NOTE: We still keep MigrateRootIfNeeded deterministic + additive.
-    private sealed class MigrationStep
-    {
-        public int from;
-        public int to;
-        public Action<PlayerSaveRoot> apply;
-    }
-
-    private static readonly MigrationStep[] _migrations = new MigrationStep[]
-    {
-        new MigrationStep
-        {
-            from = 1,
-            to = 2,
-            apply = (root) =>
-            {
-                root.jobRuntime ??= new JobRuntimeSave();
-                root.titles ??= new TitleSaveData();
-                root.worldEvents ??= new WorldEventSaveData();
-                root.exchange ??= new ExchangeSaveData();
-
-                // Ensure lists exist (JsonUtility can leave them null for empty lists).
-                root.tutorialCompleted ??= new List<string>();
-                root.jobRuntime.sites ??= new List<JobRuntimeSite>();
-                root.jobRuntime.cooldowns ??= new List<MonsterCooldownKV>();
-                root.worldEvents.cooldowns ??= new List<WorldEventRollCooldown>();
-            }
-        },
-        new MigrationStep
-        {
-            from = 2,
-            to = 3,
-            apply = (root) =>
-            {
-                // Promotion / Difficulty bootstrap
-                if (root.player != null)
-                {
-                    // Promotion fields default to Rank 1 if missing
-                    if (root.player.promotionRank <= 0) root.player.promotionRank = 1;
-                    if (root.player.promotionXP < 0) root.player.promotionXP = 0;
-
-                    // Settings now contains difficultyMode; ensure settings exists and is normalized
-                    root.player.settings ??= new SettingsState();
-                    root.player.settings.difficultyMode = Mathf.Clamp(root.player.settings.difficultyMode, 0, 2);
-
-                    // Difficulty is locked until Promotion Rank 15. If the save somehow contains a
-                    // non-Normal value before unlock (older dev saves / manual edits), force Normal.
-                    if (root.player.promotionRank < 15)
-                        root.player.settings.difficultyMode = 0;
-                }
-            }
-        },
-        new MigrationStep
-        {
-            from = 3,
-            to = 4,
-            apply = (root) =>
-            {
-                root.jobRuntime ??= new JobRuntimeSave();
-                root.jobRuntime.sites ??= new List<JobRuntimeSite>();
-                root.jobRuntime.cooldowns ??= new List<MonsterCooldownKV>();
-
-                // Ensure carry-over fields are valid for older saves that lacked these fields.
-                for (int i = 0; i < root.jobRuntime.sites.Count; i++)
-                {
-                    var site = root.jobRuntime.sites[i];
-                    if (site == null) continue;
-                    site.storedUnits = Mathf.Max(0, site.storedUnits);
-                    site.storedRemainder = Mathf.Max(0f, site.storedRemainder);
-                }
-            }
-        }
-    };
-
-
-    // ─────────────────────────────────────────────
-    // Combined Save Root (Option B)
-    // - PlayerManager (main state)
-    // - Tutorial flags
-    // - Job runtime sidecar
-    // - Titles (previously TitleSaveStore)
-    //
-    // NOTE: We keep existing SaveManager APIs (Data, tutorial helpers, job runtime helpers)
-    // so the rest of the project does not need refactors.
-    // ─────────────────────────────────────────────
-
-    [Serializable]
-    private sealed class PlayerSaveRoot
-    {
-        public int version = 1;
-        public PlayerManager player;
-        public List<string> tutorialCompleted = new List<string>();
-        public JobRuntimeSave jobRuntime;
-        public TitleSaveData titles;
-        public WorldEventSaveData worldEvents;
-        public ExchangeSaveData exchange;
-    }
 
     private static bool _loaded;
     private static bool _isSaving;
@@ -207,6 +106,7 @@ public static class SaveManager
     // NEW (authoritative)
     public static string SavePath => Path.Combine(Application.persistentDataPath, "PlayerSave.json");
     public static string BackupPath => Path.Combine(Application.persistentDataPath, "PlayerSave.bak");
+    private static string BackupStagingPath => BackupPath + ".stage";
 
     // Legacy (migration only)
     private static string LegacySavePath => Path.Combine(Application.persistentDataPath, "idle_mon_save.json");
@@ -279,28 +179,46 @@ public static class SaveManager
             Debug.LogError($"SaveManager: .tmp recovery failed: {e}");
         }
 
-        // 1) Load combined save first.
-        PlayerSaveRoot root = null;
-        if (!TryLoad(SavePath, out root))
+        SaveData root = null;
+        bool loadedFromBackup = false;
+        bool migrated = false;
+        string migrationReport = string.Empty;
+        string loadFailureReason = string.Empty;
+
+        if (!TryLoadCurrentRoot(SavePath, out root, out migrated, out migrationReport, out loadFailureReason))
         {
-            // 2) Fallback to combined backup.
-            if (!TryLoad(BackupPath, out root))
+            Debug.LogWarning($"[SaveManager] Main save load failed ({loadFailureReason}). Attempting backup fallback.");
+
+            if (TryLoadCurrentRoot(BackupPath, out root, out migrated, out migrationReport, out loadFailureReason))
             {
-                // 3) Migrate from legacy multi-file layout.
+                loadedFromBackup = true;
+                Debug.LogWarning("[SaveManager] Fallback to backup triggered.");
+                Debug.Log("[SaveManager] Backup load successful.");
+            }
+            else
+            {
+                Debug.LogWarning($"[SaveManager] Backup load failed ({loadFailureReason}). Creating new/default save data.");
                 root = MigrateFromLegacyOrCreateFresh();
+                migrated = true;
+                migrationReport = "Created current save root from legacy files or fresh defaults.";
+                Debug.Log("[SaveManager] New save created.");
             }
         }
 
-        root = MigrateRootIfNeeded(root);
+        root ??= new SaveData();
+        var structuralValidation = SaveValidator.ValidateAndRepair(root);
+        if (!string.IsNullOrEmpty(migrationReport))
+            Debug.Log($"[SaveManager] {migrationReport}");
+        if (!string.IsNullOrEmpty(structuralValidation.Summary))
+            Debug.Log($"[SaveManager] {structuralValidation.Summary}");
 
-        Data = root?.player ?? NewFreshPlayer();
+        Data = SaveDataMapper.ToPlayerManager(root) ?? NewFreshPlayer();
 
-        // Hydrate caches from root.
         LoadTutorialFromRoot(root);
-        _jobRuntimeCache = root?.jobRuntime;
-        _titlesCache = root?.titles;
-        _worldEventsCache = root?.worldEvents;
-        _exchangeCache = root?.exchange;
+        _jobRuntimeCache = SaveDataMapper.GetJobRuntime(root);
+        _titlesCache = SaveDataMapper.GetTitles(root);
+        _worldEventsCache = SaveDataMapper.GetWorldEvents(root);
+        _exchangeCache = SaveDataMapper.GetExchange(root);
 
         NormalizeAfterLoad();
 
@@ -308,50 +226,12 @@ public static class SaveManager
         // Safe to call multiple times; it advances Data.energyLastUnix.
         EnergyRegenSystem.TryApplyOfflineRegen();
 
-        if (!File.Exists(SavePath) && !IsHardWiping)
+        if ((!File.Exists(SavePath) || loadedFromBackup || migrated || structuralValidation.Repaired) && !IsHardWiping)
             Save();
 
+        Debug.Log($"[SaveManager] Save loaded successfully. version={CURRENT_SAVE_VERSION}");
         EndHardReset();
     }
-
-/// <summary>
-/// Lightweight schema migration framework for PlayerSave.json.
-/// Keep migrations:
-/// - deterministic
-/// - additive (do not delete fields)
-/// - safe for partially-authored/older saves
-/// </summary>
-private static PlayerSaveRoot MigrateRootIfNeeded(PlayerSaveRoot root)
-{
-    // Null root means we will create fresh downstream.
-    if (root == null) return null;
-
-    int v = root.version <= 0 ? 1 : root.version;
-    if (v >= CURRENT_SAVE_VERSION) return root;
-
-    // Apply ordered migration steps.
-    // Keep steps deterministic and additive; never delete fields.
-    for (int i = 0; i < _migrations.Length; i++)
-    {
-        var step = _migrations[i];
-        if (v != step.from) continue;
-        try
-        {
-            step.apply?.Invoke(root);
-            v = step.to;
-        }
-        catch (Exception e)
-        {
-            Debug.LogError($"SaveManager migration v{step.from}→v{step.to} failed: {e}");
-            break;
-        }
-    }
-
-    // Future migrations go here (v2 → v3, etc.)
-
-    root.version = v;
-    return root;
-}
 
 
     public static void Save()
@@ -379,8 +259,7 @@ private static PlayerSaveRoot MigrateRootIfNeeded(PlayerSaveRoot root)
 #else
             string json = JsonUtility.ToJson(root, prettyPrint: false);
 #endif
-            SaveFiles.AtomicWriteUtf8(SavePath, json);
-            SaveFiles.TryCopy(SavePath, BackupPath);
+            WriteSaveSafely(json, "Save");
         }
         catch (Exception e)
         {
@@ -390,6 +269,63 @@ private static PlayerSaveRoot MigrateRootIfNeeded(PlayerSaveRoot root)
         {
             _isSaving = false;
         }
+    }
+
+    public static SaveData CaptureSnapshot()
+    {
+        if (!_loaded) LoadOrCreate();
+        if (Data == null) Data = NewFreshPlayer();
+
+        NormalizeBeforeSave();
+        var root = BuildRootForSave();
+        var json = JsonUtility.ToJson(root, false);
+        return JsonUtility.FromJson<SaveData>(json);
+    }
+
+    public static void OverwriteSave(SaveData saveData)
+    {
+        if (IsHardWiping) return;
+
+        var incoming = saveData ?? new SaveData();
+        var validation = SaveValidator.ValidateAndRepair(incoming);
+
+        Data = SaveDataMapper.ToPlayerManager(incoming) ?? NewFreshPlayer();
+        LoadTutorialFromRoot(incoming);
+        _jobRuntimeCache = SaveDataMapper.GetJobRuntime(incoming);
+        _titlesCache = SaveDataMapper.GetTitles(incoming);
+        _worldEventsCache = SaveDataMapper.GetWorldEvents(incoming);
+        _exchangeCache = SaveDataMapper.GetExchange(incoming);
+
+        NormalizeAfterLoad();
+        Save();
+
+        Debug.Log($"[SaveManager] Save overwritten. {validation.Summary}");
+    }
+
+    public static void DeletePersistedSaveFiles(bool includeLegacyFiles = false)
+    {
+        SaveFiles.TryDelete(SavePath);
+        SaveFiles.TryDelete(BackupPath);
+        SaveFiles.TryDelete(SavePath + ".tmp");
+        SaveFiles.TryDelete(BackupPath + ".tmp");
+
+        if (includeLegacyFiles)
+        {
+            SaveFiles.TryDelete(LegacySavePath);
+            SaveFiles.TryDelete(LegacyBackupPath);
+            SaveFiles.TryDelete(LegacyJobRuntimePath);
+            SaveFiles.TryDelete(LegacyTutorialFlagsPath);
+            SaveFiles.TryDelete(TitleSaveStore.SavePath);
+            SaveFiles.TryDelete(IdleBattlePath);
+            SaveFiles.TryDelete(IdleBattleBackupPath);
+            SaveFiles.TryDelete(IdleBattleGuardPath);
+            SaveFiles.TryDelete(IdleBattleGuardBackupPath);
+            SaveFiles.TryDelete(IronCareerMetaPath);
+            SaveFiles.TryDelete(IronCareerStatsPath);
+            SaveFiles.TryDelete(MigrationsPath);
+        }
+
+        Debug.Log($"[SaveManager] Deleted persisted save files. includeLegacyFiles={includeLegacyFiles}");
     }
 
     public static void OnResume()
@@ -636,8 +572,7 @@ private static PlayerSaveRoot MigrateRootIfNeeded(PlayerSaveRoot root)
 #else
             string json = JsonUtility.ToJson(root, prettyPrint: false);
 #endif
-            SaveFiles.AtomicWriteUtf8(SavePath, json);
-            SaveFiles.TryCopy(SavePath, BackupPath);
+            WriteSaveSafely(json, "ForceWriteBaselineNow");
         }
         catch (Exception e)
         {
@@ -677,42 +612,37 @@ private static PlayerSaveRoot MigrateRootIfNeeded(PlayerSaveRoot root)
     // Combined save helpers
     // ─────────────────────────────────────────────
 
-    private static PlayerSaveRoot BuildRootForSave()
+    private static SaveData BuildRootForSave()
     {
-        var root = new PlayerSaveRoot();
-        root.version = CURRENT_SAVE_VERSION;
-        root.player = Data;
-
-        // Tutorial flags
         EnsureTutorialFlagsLoaded();
-        if (_tutorialSet != null)
-            root.tutorialCompleted = new List<string>(_tutorialSet);
-
-        // Job runtime + titles blobs
-        root.jobRuntime = _jobRuntimeCache;
-        root.titles = _titlesCache;
-        root.worldEvents = _worldEventsCache;
-        root.exchange = _exchangeCache;
-        return root;
+        return SaveDataMapper.FromRuntime(
+            Data,
+            _tutorialSet,
+            _jobRuntimeCache,
+            _titlesCache,
+            _worldEventsCache,
+            _exchangeCache);
     }
 
-    private static void LoadTutorialFromRoot(PlayerSaveRoot root)
+    private static void LoadTutorialFromRoot(SaveData root)
     {
         _tutorialLoaded = true;
         _tutorialData = new TutorialFlagsData();
         _tutorialSet = new HashSet<string>(StringComparer.Ordinal);
 
-        if (root?.tutorialCompleted == null) return;
-        for (int i = 0; i < root.tutorialCompleted.Count; i++)
+        var completed = SaveDataMapper.GetTutorialFlags(root);
+        if (completed == null) return;
+
+        for (int i = 0; i < completed.Count; i++)
         {
-            var k = root.tutorialCompleted[i];
+            var k = completed[i];
             if (!string.IsNullOrWhiteSpace(k)) _tutorialSet.Add(k);
         }
     }
 
-    private static PlayerSaveRoot MigrateFromLegacyOrCreateFresh()
+    private static SaveData MigrateFromLegacyOrCreateFresh()
     {
-        var root = new PlayerSaveRoot();
+        var root = new LegacyCombinedSaveRoot();
 
         // 1) PlayerManager
         PlayerManager legacyPlayer = null;
@@ -729,7 +659,7 @@ private static PlayerSaveRoot MigrateRootIfNeeded(PlayerSaveRoot root)
         // 4) Titles
         root.titles = TitleSaveStore.TryLoadLegacyDirect();
 
-        return root;
+        return SaveDataMapper.FromLegacyRoot(root);
     }
 
     private static List<string> ReadLegacyTutorialFlags()
@@ -1116,76 +1046,17 @@ private static PlayerSaveRoot MigrateRootIfNeeded(PlayerSaveRoot root)
 
     private static void EnsureResourceCountsSized()
     {
-        if (Data == null) return;
-        Data.resourceCounts ??= new List<int>();
-
-        int need = 0;
-        foreach (ResourceType t in Enum.GetValues(typeof(ResourceType)))
-            need = Mathf.Max(need, (int)t + 1);
-
-        while (Data.resourceCounts.Count < need)
-            Data.resourceCounts.Add(0);
+        SaveValidator.EnsureResourceCountsSized(Data);
     }
 
     private static void EnsureLifetimeResourceCountsSized()
     {
-        if (Data == null) return;
-
-        Data.lifetimeResourceCollected ??= new List<int>();
-
-        int need = 0;
-        foreach (ResourceType t in Enum.GetValues(typeof(ResourceType)))
-            need = Mathf.Max(need, (int)t + 1);
-
-        while (Data.lifetimeResourceCollected.Count < need)
-            Data.lifetimeResourceCollected.Add(0);
-
-        int max = Mathf.Min(Data.lifetimeResourceCollected.Count, Data.resourceCounts?.Count ?? 0);
-        for (int i = 0; i < max; i++)
-        {
-            if (Data.lifetimeResourceCollected[i] < Data.resourceCounts[i])
-                Data.lifetimeResourceCollected[i] = Mathf.Max(0, Data.resourceCounts[i]);
-        }
+        SaveValidator.EnsureLifetimeResourceCountsSized(Data);
     }
 
     private static void NormalizeOwnedEntries(List<OwnedMonsterData> list)
     {
-        if (list == null) return;
-
-        for (int i = 0; i < list.Count; i++)
-        {
-            var om = list[i];
-            if (om == null)
-            {
-                list[i] = new OwnedMonsterData();
-                om = list[i];
-            }
-
-	            if (om.level <= 0) om.level = 1;
-	            if (om.currentXP < 0) om.currentXP = 0;
-
-	            // HP invariant:
-	            // - currentHP should never be negative in persisted data.
-	            // - legacy saves used -1 to mean "uninitialized" (treat as full HP).
-	            // Normalize any negative HP to a sensible full-health value.
-	            if (om.currentHP < 0)
-	                om.currentHP = ResolveFullHPFor(om);
-
-	            // Absolute floor: never allow negative.
-	            if (om.currentHP < 0) om.currentHP = 0;
-
-            if (string.IsNullOrEmpty(om.ownedUID))
-                om.ownedUID = Guid.NewGuid().ToString("N");
-
-            // ✅ Premium normalization (supports legacy / partial saves)
-            // - premiumTier > 0 implies isPremium
-            // - isPremium implies at least premiumTier 1
-            if (om.premiumTier > 0 && !om.isPremium) om.isPremium = true;
-            if (om.isPremium && om.premiumTier <= 0) om.premiumTier = 1;
-
-            if (ReferenceEquals(list, Data.owned) && !string.IsNullOrEmpty(om.monsterId))
-                Data.ownedIds.Add(om.monsterId);
-        }
+	    SaveValidator.NormalizeOwnedEntries(Data, list, ResolveFullHPFor);
     }
 
 	    private static int ResolveFullHPFor(OwnedMonsterData om)
@@ -1206,24 +1077,7 @@ private static PlayerSaveRoot MigrateRootIfNeeded(PlayerSaveRoot root)
 
     private static void EnsureTrainingDefaults()
     {
-        if (Data?.owned == null) return;
-
-        long now = NowUnix();
-        foreach (var om in Data.owned)
-        {
-            if (om == null) continue;
-
-            if (om.level <= 0) om.level = 1;
-            if (om.currentXP < 0) om.currentXP = 0;
-            if (om.trainingLastUnix == 0) om.trainingLastUnix = now;
-
-            if (om.lastLevelClaimDay == 0) om.lastLevelClaimDay = -1;
-            if (om.pendingLevels < 0) om.pendingLevels = 0;
-
-            // ✅ Premium normalization here too (defensive)
-            if (om.premiumTier > 0 && !om.isPremium) om.isPremium = true;
-            if (om.isPremium && om.premiumTier <= 0) om.premiumTier = 1;
-        }
+        SaveValidator.EnsureTrainingDefaults(Data, NowUnix);
     }
 
     // ─────────────────────────────────────────────
@@ -1248,7 +1102,7 @@ private static PlayerSaveRoot MigrateRootIfNeeded(PlayerSaveRoot root)
         _tutorialData = new TutorialFlagsData();
         _tutorialSet = new HashSet<string>(StringComparer.Ordinal);
 
-        // Combined-save model: tutorial flags are hydrated from PlayerSaveRoot during LoadOrCreate().
+        // Combined-save model: tutorial flags are hydrated from SaveData during LoadOrCreate().
         // If EnsureTutorialFlagsLoaded is called before LoadOrCreate(), we simply start empty.
     }
 
@@ -1490,49 +1344,11 @@ private static bool ValidateAndRepairSave(bool saveIfChanged)
     if (IsHardWiping) return false;
     if (Data == null) return false;
 
-    bool changed = false;
-    int removedTeamEntries = 0;
-    bool fixedJobsOffline = false;
+    var result = SaveValidator.ValidateRuntimeAndRepair(Data, ResolveFullHPFor, NowUnix);
+    _lastValidationReport = result.Summary;
 
-    Data.owned ??= new List<OwnedMonsterData>();
-    Data.team ??= new List<OwnedMonsterData>();
-
-    // Remove null/empty team entries (empty slots should not be persisted as objects).
-    for (int i = Data.team.Count - 1; i >= 0; i--)
-    {
-        var t = Data.team[i];
-        if (t == null || string.IsNullOrEmpty(t.monsterId))
-        {
-            Data.team.RemoveAt(i);
-            changed = true;
-            removedTeamEntries++;
-        }
-    }
-
-    // Normalize HP invariants (no negative HP).
-    NormalizeOwnedEntries(Data.owned);
-    NormalizeOwnedEntries(Data.team);
-
-    // If older data serialized a negative offline marker, correct it.
-    if (Data.jobsOfflineLastUnix < 0)
-    {
-        Data.jobsOfflineLastUnix = NowUnix();
-        changed = true;
-        fixedJobsOffline = true;
-    }
-
-    // Cache a human-readable report for QA/debug panels.
-    if (changed)
-    {
-        _lastValidationReport = $"Repaired save: removedTeamEntries={removedTeamEntries}, fixedJobsOffline={fixedJobsOffline}";
-    }
-    else
-    {
-        _lastValidationReport = "Save integrity: no repairs needed.";
-    }
-
-    if (saveIfChanged && changed) Save();
-    return changed;
+    if (saveIfChanged && result.Repaired) Save();
+    return result.Repaired;
 }
     // ─────────────────────────────────────────────
     // Utilities
@@ -2020,22 +1836,133 @@ if (save) Save();
         }
     }
 
-    private static bool TryLoad(string path, out PlayerSaveRoot root)
+    private static bool TryLoadCurrentRoot(string path, out SaveData root, out bool migrated, out string migrationReport, out string failureReason)
     {
         root = null;
-        if (!SaveFiles.TryReadAllTextUtf8(path, out var json)) return false;
-        if (string.IsNullOrWhiteSpace(json)) return false;
+        migrated = false;
+        migrationReport = string.Empty;
+        failureReason = string.Empty;
+
+        if (!SaveFiles.TryReadAllTextUtf8(path, out var json))
+        {
+            failureReason = File.Exists(path) ? "read failed" : "file missing";
+            return false;
+        }
+
+        if (string.IsNullOrWhiteSpace(json))
+        {
+            failureReason = "empty file";
+            return false;
+        }
+
+        if (!SaveMigrationManager.TryMigrateToCurrent(json, out root, out migrationReport))
+        {
+            failureReason = "migration/parse failed";
+            return false;
+        }
+
+        migrated = !string.IsNullOrWhiteSpace(migrationReport) && !migrationReport.Contains("already at version", StringComparison.OrdinalIgnoreCase);
+        if (root == null)
+        {
+            failureReason = "root deserialized to null";
+            return false;
+        }
+
+        return true;
+    }
+
+    private static bool WriteSaveSafely(string json, string operationName)
+    {
+        bool hasExistingMain = false;
+        bool stagedBackup = false;
+        bool writeVerified = false;
 
         try
         {
-            root = JsonUtility.FromJson<PlayerSaveRoot>(json);
-            return root != null;
+            hasExistingMain = File.Exists(SavePath);
+            if (hasExistingMain)
+            {
+                stagedBackup = StageBackupFromCurrentSave();
+                if (!stagedBackup)
+                {
+                    Debug.LogError($"[SaveManager] {operationName} failed: could not stage backup snapshot.");
+                    return false;
+                }
+            }
+
+            if (!SaveFiles.TryAtomicWriteUtf8(SavePath, json))
+            {
+                Debug.LogError($"[SaveManager] {operationName} failed: write operation did not complete.");
+                return false;
+            }
+
+            if (!VerifyWrittenSave(SavePath))
+            {
+                Debug.LogError($"[SaveManager] {operationName} failed: post-write verification failed.");
+                return false;
+            }
+
+            if (hasExistingMain && stagedBackup)
+            {
+                if (SaveFiles.TryCopy(BackupStagingPath, BackupPath, overwrite: true))
+                    Debug.Log($"[SaveManager] Backup created at {BackupPath}");
+                else
+                    Debug.LogWarning("[SaveManager] Save succeeded, but backup refresh failed. Previous backup preserved when possible.");
+            }
+
+            writeVerified = true;
+            Debug.Log($"[SaveManager] Save successful at {SavePath}");
+            return true;
         }
-        catch
+        catch (Exception e)
         {
-            root = null;
+            Debug.LogError($"[SaveManager] {operationName} failed: {e}");
             return false;
         }
+        finally
+        {
+            if (!writeVerified && stagedBackup && File.Exists(BackupStagingPath))
+            {
+                if (SaveFiles.TryCopy(BackupStagingPath, SavePath, overwrite: true))
+                    Debug.LogWarning("[SaveManager] Restored main save from staged backup after failed save.");
+            }
+
+            SaveFiles.TryDelete(BackupStagingPath);
+        }
+    }
+
+    private static bool StageBackupFromCurrentSave()
+    {
+        try
+        {
+            if (!File.Exists(SavePath))
+                return true;
+
+            SaveFiles.TryDelete(BackupStagingPath);
+            if (!SaveFiles.TryCopy(SavePath, BackupStagingPath, overwrite: true))
+                return false;
+
+            Debug.Log($"[SaveManager] Backup staged from current save: {BackupStagingPath}");
+            return true;
+        }
+        catch (Exception e)
+        {
+            Debug.LogWarning($"[SaveManager] Failed to stage backup: {e}");
+            return false;
+        }
+    }
+
+    private static bool VerifyWrittenSave(string path)
+    {
+        if (!SaveFiles.TryReadAllTextUtf8(path, out var writtenJson) || string.IsNullOrWhiteSpace(writtenJson))
+            return false;
+
+        if (!TryLoadCurrentRoot(path, out var verifiedRoot, out _, out _, out _))
+            return false;
+
+        // Future improvement: persist a checksum and verify it here before accepting the write.
+        var validation = SaveValidator.ValidateAndRepair(verifiedRoot);
+        return verifiedRoot != null && !string.IsNullOrWhiteSpace(validation.Summary);
     }
 
     // ─────────────────────────────────────────────
@@ -2248,33 +2175,57 @@ if (save) Save();
             }
         }
 
-        public static void AtomicWriteUtf8(string path, string contents)
+        public static bool TryAtomicWriteUtf8(string path, string contents)
         {
             EnsureFolder(path);
 
             string tmp = path + ".tmp";
-            File.WriteAllText(tmp, contents ?? string.Empty, Encoding.UTF8);
+            try
+            {
+                File.WriteAllText(tmp, contents ?? string.Empty, Encoding.UTF8);
+            }
+            catch
+            {
+                return false;
+            }
 
             try
             {
                 if (File.Exists(path)) File.Delete(path);
                 File.Move(tmp, path);
+                return File.Exists(path);
             }
             catch
             {
-                try { if (!File.Exists(path)) File.Copy(tmp, path); } catch { }
+                bool copied = false;
+                try
+                {
+                    if (!File.Exists(path))
+                    {
+                        File.Copy(tmp, path);
+                        copied = true;
+                    }
+                }
+                catch { }
+
                 try { File.Delete(tmp); } catch { }
+                return copied && File.Exists(path);
             }
         }
 
-        public static void TryCopy(string src, string dst)
+        public static bool TryCopy(string src, string dst, bool overwrite)
         {
             try
             {
                 if (File.Exists(src))
-                    File.Copy(src, dst, overwrite: true);
+                {
+                    File.Copy(src, dst, overwrite);
+                    return true;
+                }
             }
             catch { }
+
+            return false;
         }
 
         public static void TryDelete(string path)
