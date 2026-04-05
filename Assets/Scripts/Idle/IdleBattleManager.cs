@@ -444,16 +444,16 @@ if (elapsed <= 0.1f) return;
         try
         {
             var rng = new System.Random(sessionSeed);
-            var teamP = JobIdlePassives.ComputeForActiveTeam();
+            var rosterForIdle = GetIdleBattleTeamRoster();
+            var teamP = JobIdlePassives.ComputeForTeam(rosterForIdle);
 
-        var team = SaveManager.Data?.team;
         var teamIds = new List<string>();
-        if (team != null)
+        if (rosterForIdle != null)
         {
-            int n = Mathf.Min(3, team.Count);
+            int n = Mathf.Min(3, rosterForIdle.Count);
             for (int i = 0; i < n; i++)
             {
-                var om = team[i];
+                var om = rosterForIdle[i];
                 if (om != null && !string.IsNullOrEmpty(om.monsterId))
                     teamIds.Add(om.monsterId);
             }
@@ -502,9 +502,8 @@ if (elapsed <= 0.1f) return;
             if (!string.IsNullOrEmpty(leadId))
             {
                 leadDef = MonsterLibraryLocator.GetById(leadId);
-                var roster = SaveManager.Data?.team;
-                if (roster != null && roster.Count > 0 && roster[0] != null && roster[0].monsterId == leadId)
-                    leadLevel = Mathf.Max(1, roster[0].level);
+                if (rosterForIdle != null && rosterForIdle.Count > 0 && rosterForIdle[0] != null && rosterForIdle[0].monsterId == leadId)
+                    leadLevel = Mathf.Max(1, rosterForIdle[0].level);
             }
 
             float titleOffMul = 1f;
@@ -821,7 +820,7 @@ if (elapsed <= 0.1f) return;
 
     private static bool HasAnyAliveTeamMember()
     {
-        var team = SaveManager.Data?.team;
+        var team = GetIdleBattleTeamRoster();
         if (team == null || team.Count == 0) return false;
 
         int n = Mathf.Min(3, team.Count);
@@ -840,7 +839,7 @@ if (elapsed <= 0.1f) return;
 
     private static int RollWildLevel()
     {
-        var team = SaveManager.Data?.team;
+        var team = GetIdleBattleTeamRoster();
         int avg = 1;
         if (team != null && team.Count > 0)
         {
@@ -879,12 +878,17 @@ if (elapsed <= 0.1f) return;
 
     private static int GetAverageTeamLevel()
     {
-        var team = SaveManager.Data?.team;
+        var team = GetIdleBattleTeamRoster();
         if (team == null || team.Count == 0) return 1;
         int sum = 0;
         int count = Mathf.Min(3, team.Count);
         for (int i = 0; i < count; i++) sum += Mathf.Max(1, team[i].level);
         return Mathf.Max(1, Mathf.RoundToInt(sum / Mathf.Max(1f, count)));
+    }
+
+    private static List<OwnedMonsterData> GetIdleBattleTeamRoster()
+    {
+        return IdleLoadoutManager.GetIdleBattleTeamWithFallback();
     }
 
     // ------------------------------------------------------------------------------------

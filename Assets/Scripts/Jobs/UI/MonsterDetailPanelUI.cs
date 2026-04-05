@@ -1177,6 +1177,7 @@ private Sprite GetVariantIcon(MonsterDataSO monster)
     private void AssignToSlot(int slotIndex)
     {
         slotIndex = Mathf.Clamp(slotIndex, 0, 2);
+        bool assignToIdleLoadout = IdleLoadoutManager.IsEditingIdleTeam;
 
         if (_mode == MonsterDetailMode.DirectoryView)
         {
@@ -1204,8 +1205,17 @@ private Sprite GetVariantIcon(MonsterDataSO monster)
 
             var clone = XPManager.Resolve(preferred) ?? preferred;
 
+            if (assignToIdleLoadout)
+            {
+                IdleLoadoutManager.AssignToIdleSlot(slotIndex, clone);
+                Hide();
+                return;
+            }
+
             // Enforce: one owned monster instance per team slot.
             TeamUtils.RemoveDuplicatesForAssignment(team, clone, slotIndex);
+            if (!string.IsNullOrEmpty(clone.ownedUID))
+                IdleLoadoutManager.RemoveFromIdleByOwnedUid(clone.ownedUID);
             team[slotIndex] = clone;
 
             data.team = team;
@@ -1245,8 +1255,17 @@ private Sprite GetVariantIcon(MonsterDataSO monster)
 
         var canonical = XPManager.Resolve(_currentOwned) ?? _currentOwned;
 
+        if (assignToIdleLoadout)
+        {
+            IdleLoadoutManager.AssignToIdleSlot(slotIndex, canonical);
+            Hide();
+            return;
+        }
+
         // Enforce: one owned monster instance per team slot.
         TeamUtils.RemoveDuplicatesForAssignment(team2, canonical, slotIndex);
+        if (!string.IsNullOrEmpty(canonical.ownedUID))
+            IdleLoadoutManager.RemoveFromIdleByOwnedUid(canonical.ownedUID);
         team2[slotIndex] = canonical;
 
         data2.team = team2;
@@ -1259,6 +1278,14 @@ private Sprite GetVariantIcon(MonsterDataSO monster)
     private void RemoveFromTeam()
     {
         if (_teamSlotIndex < 0) { Hide(); return; }
+
+        if (IdleLoadoutManager.IsEditingIdleTeam)
+        {
+            IdleLoadoutManager.RemoveFromIdleSlot(_teamSlotIndex);
+            _onRemoved?.Invoke();
+            Hide();
+            return;
+        }
 
         var data = SaveManager.Data;
         if (data == null)

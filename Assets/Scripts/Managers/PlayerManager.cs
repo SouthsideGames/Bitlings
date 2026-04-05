@@ -114,6 +114,8 @@ public class PlayerManager
 
 
     public List<OwnedMonsterData> team = new List<OwnedMonsterData>();
+    // Idle team stores ownedUID references so idle loadout remains separate from active team snapshots.
+    public List<string> idleTeamOwnedUIDs = new List<string>();
     public List<OwnedMonsterData> owned = new List<OwnedMonsterData>();
     public List<FlyerBiasData> activeFlyers = new List<FlyerBiasData>();
     public List<WorkOrderData> activeWorkOrders = new List<WorkOrderData>();
@@ -257,6 +259,7 @@ public class PlayerManager
         activePremiumBoosts ??= new List<PremiumBoostData>();
         jobStorageUpgrades ??= new List<JobStorageUpgrade>();
         team ??= new List<OwnedMonsterData>();
+        idleTeamOwnedUIDs ??= new List<string>();
         owned ??= new List<OwnedMonsterData>();
         jobAssignments ??= new List<JobAssignment>();
         jobProgress ??= new List<JobProgress>();
@@ -283,6 +286,9 @@ public class PlayerManager
                 if (team[i] != null && string.IsNullOrEmpty(team[i].ownedUID))
                     team[i].ownedUID = Guid.NewGuid().ToString("N");
         }
+
+        while (idleTeamOwnedUIDs.Count < 3) idleTeamOwnedUIDs.Add(null);
+        while (idleTeamOwnedUIDs.Count > 3) idleTeamOwnedUIDs.RemoveAt(idleTeamOwnedUIDs.Count - 1);
 
         // Expired premium boosts cleanup (keeps existing behavior)
         if (activePremiumBoosts.Count > 0 && activePremiumBoosts[0] != null &&

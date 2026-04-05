@@ -798,6 +798,7 @@ private static PlayerSaveRoot MigrateRootIfNeeded(PlayerSaveRoot root)
             discoveredMonsterIdsList = new List<string>(),
 
             team = new List<OwnedMonsterData>(),
+            idleTeamOwnedUIDs = new List<string>(),
             owned = new List<OwnedMonsterData>(),
 
             activeFlyers = new List<FlyerBiasData>(),
@@ -824,6 +825,7 @@ private static PlayerSaveRoot MigrateRootIfNeeded(PlayerSaveRoot root)
         // Lists
         Data.owned ??= new List<OwnedMonsterData>();
         Data.team ??= new List<OwnedMonsterData>();
+        Data.idleTeamOwnedUIDs ??= new List<string>();
         Data.activeFlyers ??= new List<FlyerBiasData>();
         Data.activeWorkOrders ??= new List<WorkOrderData>();
         Data.activeFavorBoosts ??= new List<LuckBoostData>();
@@ -1035,6 +1037,8 @@ private static PlayerSaveRoot MigrateRootIfNeeded(PlayerSaveRoot root)
             if (!string.IsNullOrEmpty(canonical.monsterId))
                 Data.ownedIds.Add(canonical.monsterId);
         }
+
+        IdleLoadoutManager.EnsureInitialized(Data);
 
         // Training pointer default
         if (string.IsNullOrEmpty(Data.trainingMonsterId) && Data.team.Count > 0)

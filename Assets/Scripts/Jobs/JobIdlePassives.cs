@@ -22,6 +22,11 @@ public static class JobIdlePassives
     public static TeamPassives ComputeForActiveTeam()
     {
         var team = SaveManager.Data?.team;
+        return ComputeForTeam(team);
+    }
+
+    public static TeamPassives ComputeForTeam(List<OwnedMonsterData> team)
+    {
         int count = (team == null) ? 0 : Mathf.Min(3, team.Count);
         if (count <= 0 || JobManager.I == null) return new TeamPassives { offenseMul = 1f, defenseMul = 1f, creditMul = 1f, energyCostMul = 1f };
 
