@@ -26,6 +26,8 @@ public enum DirectoryViewMode
 
 public class DirectoryPanelUI : MonoBehaviour
 {
+    private const string TutorialIdleBattlesKey = "tut_idlebattles_v1";
+
     [Header("Team")]
     [SerializeField] private RectTransform teamContent;
     [SerializeField] private GameObject teamCardPrefab;
@@ -78,6 +80,8 @@ public class DirectoryPanelUI : MonoBehaviour
         GameEvents.FavoritesChanged += HandleFavoritesChanged;
 
         GameEvents.DirectoryOpened?.Invoke();
+
+        TryOpenIdleBattlesTutorial();
 
         // ---------------------
         // SORT DROPDOWN
@@ -137,6 +141,15 @@ public class DirectoryPanelUI : MonoBehaviour
         SetLoadoutEditingMode(_showingIdleLoadout, animate: false);
 
         RefreshAll();
+    }
+
+    private void TryOpenIdleBattlesTutorial()
+    {
+        if (FeatureUnlockManager.I == null) return;
+        if (!FeatureUnlockManager.I.IsUnlocked(FeatureId.IdleBattle_Basic)) return;
+
+        // RequestOpen is safe to call repeatedly; TutorialOverlayPanel/SaveManager keep it one-time.
+        TutorialOverlayPanel.RequestOpen(TutorialIdleBattlesKey);
     }
 
     void OnDisable()
