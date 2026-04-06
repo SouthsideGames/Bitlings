@@ -1177,6 +1177,7 @@ private Sprite GetVariantIcon(MonsterDataSO monster)
     private void AssignToSlot(int slotIndex)
     {
         slotIndex = Mathf.Clamp(slotIndex, 0, 2);
+        bool assignToArenaLoadout = ArenaLoadoutManager.IsEditingArenaTeam;
         bool assignToIdleLoadout = IdleLoadoutManager.IsEditingIdleTeam;
 
         if (_mode == MonsterDetailMode.DirectoryView)
@@ -1204,6 +1205,14 @@ private Sprite GetVariantIcon(MonsterDataSO monster)
             }
 
             var clone = XPManager.Resolve(preferred) ?? preferred;
+
+            if (assignToArenaLoadout)
+            {
+                if (ArenaSaveHelper.IsBattleTeamLocked()) { Hide(); return; }
+                ArenaLoadoutManager.AssignToArenaSlot(slotIndex, clone);
+                Hide();
+                return;
+            }
 
             if (assignToIdleLoadout)
             {
@@ -1255,6 +1264,14 @@ private Sprite GetVariantIcon(MonsterDataSO monster)
 
         var canonical = XPManager.Resolve(_currentOwned) ?? _currentOwned;
 
+        if (assignToArenaLoadout)
+        {
+            if (ArenaSaveHelper.IsBattleTeamLocked()) { Hide(); return; }
+            ArenaLoadoutManager.AssignToArenaSlot(slotIndex, canonical);
+            Hide();
+            return;
+        }
+
         if (assignToIdleLoadout)
         {
             IdleLoadoutManager.AssignToIdleSlot(slotIndex, canonical);
@@ -1278,6 +1295,15 @@ private Sprite GetVariantIcon(MonsterDataSO monster)
     private void RemoveFromTeam()
     {
         if (_teamSlotIndex < 0) { Hide(); return; }
+
+        if (ArenaLoadoutManager.IsEditingArenaTeam)
+        {
+            if (ArenaSaveHelper.IsBattleTeamLocked()) { Hide(); return; }
+            ArenaLoadoutManager.RemoveFromArenaSlot(_teamSlotIndex);
+            _onRemoved?.Invoke();
+            Hide();
+            return;
+        }
 
         if (IdleLoadoutManager.IsEditingIdleTeam)
         {

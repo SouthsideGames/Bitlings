@@ -100,6 +100,11 @@ public static class GameEvents
     // ─────────────────────────────────────────────────────────
     public static Action PackSeasonChanged;
 
+    // ─────────────────────────────────────────────────────────
+    // Arena
+    // ─────────────────────────────────────────────────────────
+    public static Action ArenaDataChanged;
+
     public static event Action AutoApplyRequested;
     
 

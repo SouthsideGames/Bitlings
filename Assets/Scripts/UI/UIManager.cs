@@ -48,6 +48,11 @@ public enum PanelId
     ExchangeSpeciesDetail = 37,
     StatBreakdown = 38,
     AutoBattleHistory = 39,
+
+    // Arena
+    ArenaMain = 40,
+    ArenaTournamentDetail = 41,
+    ArenaMatchDetail = 42,
 }
 
 [Serializable]

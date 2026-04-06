@@ -113,6 +113,15 @@ public static class SaveValidator
         repairs += EnsureList(ref saveData.exchangeData.exchangeState.surgeAlertSpeciesIds, "exchangeData.exchangeState.surgeAlertSpeciesIds", notes);
         repairs += NormalizeExchangeData(saveData.exchangeData.exchangeState, notes);
 
+        // ── Arena ────────────────────────────────────────────
+        repairs += EnsureSection(ref saveData.arenaData, () => new ArenaSaveSection(), "arenaData", notes);
+        repairs += EnsureSection(ref saveData.arenaData.arena, () => new ArenaSaveData(), "arenaData.arena", notes);
+        repairs += EnsureSection(ref saveData.arenaData.arena.battleTeamData, () => new ArenaBattleTeamData(), "arenaData.arena.battleTeamData", notes);
+        repairs += EnsureSection(ref saveData.arenaData.arena.lifetimeStats, () => new ArenaLifetimeStats(), "arenaData.arena.lifetimeStats", notes);
+        repairs += EnsureSection(ref saveData.arenaData.arena.currentTournamentCache, () => new ArenaCurrentTournamentCache(), "arenaData.arena.currentTournamentCache", notes);
+        repairs += EnsureList(ref saveData.arenaData.arena.recentTournamentHistory, "arenaData.arena.recentTournamentHistory", notes);
+        repairs += NormalizeArenaData(saveData.arenaData.arena, notes);
+
         // Future validation rules should be added here by section so new systems stay isolated.
 
         string summary = repairs > 0
@@ -1037,6 +1046,74 @@ public static class SaveValidator
         value = create();
         notes.Add($"Initialized missing section: {path}.");
         return 1;
+    }
+
+    // ─────────────────────────────────────────────
+    // Arena validation
+    // ─────────────────────────────────────────────
+
+    private static int NormalizeArenaData(ArenaSaveData arena, List<string> notes)
+    {
+        if (arena == null) return 0;
+        int repairs = 0;
+
+        // Tickets must be within valid range.
+        if (arena.arenaTickets < 0)
+        {
+            arena.arenaTickets = 0;
+            repairs++;
+            notes.Add("Clamped negative arenaTickets to 0.");
+        }
+        if (arena.arenaTickets > ArenaConstants.MaxTickets)
+        {
+            arena.arenaTickets = ArenaConstants.MaxTickets;
+            repairs++;
+            notes.Add($"Clamped arenaTickets to max ({ArenaConstants.MaxTickets}).");
+        }
+
+        if (arena.weeklyTicketsPurchased < 0)
+        {
+            arena.weeklyTicketsPurchased = 0;
+            repairs++;
+        }
+
+        // Battle team strings must not be null.
+        arena.battleTeamData ??= new ArenaBattleTeamData();
+        arena.battleTeamData.slot1OwnedBitlingId ??= "";
+        arena.battleTeamData.slot2OwnedBitlingId ??= "";
+        arena.battleTeamData.slot3OwnedBitlingId ??= "";
+        arena.battleTeamData.lockedTournamentId ??= "";
+
+        // Lifetime stats must not have negatives.
+        arena.lifetimeStats ??= new ArenaLifetimeStats();
+        if (arena.lifetimeStats.tournamentsEntered < 0) { arena.lifetimeStats.tournamentsEntered = 0; repairs++; }
+        if (arena.lifetimeStats.championshipsWon < 0) { arena.lifetimeStats.championshipsWon = 0; repairs++; }
+        if (arena.lifetimeStats.podiumFinishes < 0) { arena.lifetimeStats.podiumFinishes = 0; repairs++; }
+        if (arena.lifetimeStats.bestPlacementAllTime < 0) { arena.lifetimeStats.bestPlacementAllTime = 0; repairs++; }
+
+        // Current tournament cache strings.
+        arena.currentTournamentCache ??= new ArenaCurrentTournamentCache();
+        arena.currentTournamentCache.tournamentId ??= "";
+        arena.currentTournamentCache.playerEntryId ??= "";
+        arena.currentTournamentCache.lastMatchId ??= "";
+
+        // Trim history to retention cap.
+        if (arena.recentTournamentHistory != null &&
+            arena.recentTournamentHistory.Count > ArenaConstants.TournamentHistoryRetention)
+        {
+            int excess = arena.recentTournamentHistory.Count - ArenaConstants.TournamentHistoryRetention;
+            arena.recentTournamentHistory.RemoveRange(
+                ArenaConstants.TournamentHistoryRetention,
+                excess);
+            repairs++;
+            notes.Add($"Trimmed {excess} excess arena history entries.");
+        }
+
+        // Identity strings — allow empty but not null.
+        arena.arenaPlayerId ??= "";
+        arena.arenaUsername ??= "";
+
+        return repairs;
     }
 
     private static int EnsureList<T>(ref List<T> list, string path, List<string> notes)

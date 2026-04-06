@@ -93,6 +93,10 @@ public class MonsterDataSO : ScriptableObject
     [Tooltip("Base market value in Credits on the Bitling Exchange. Scaled by rarity, demand, and world events at runtime.")]
     [Min(0)] public int baseMarketValue = 10;
 
+    [Header("Arena")]
+    [Tooltip("Base arena score contributed by this species when placed on an arena battle team. Higher = stronger bracket seeding.")]
+    [Min(0)] public int arenaScore = 10;
+
     [Header("Description")]
     [TextArea(3, 10)] public string description;
 

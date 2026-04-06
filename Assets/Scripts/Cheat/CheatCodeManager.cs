@@ -26,6 +26,12 @@ public enum CheatEffectKind
     MaxPromotionRank,
     RankUpBy1,
     RankUpBy5,
+
+    // Arena debug
+    ArenaForceUnlock,
+    ArenaGrantTickets,
+    ArenaInstantTournament,
+    ArenaFullReset,
 }
 
 [Serializable]
@@ -365,6 +371,29 @@ public class CheatCodeManager : MonoBehaviour
 
             case CheatEffectKind.RankUpBy5:
                 return ExecuteRankUp(5, out message);
+
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            case CheatEffectKind.ArenaForceUnlock:
+                ArenaDebugHelper.ForceUnlockArena();
+                message = "Arena force-unlocked.";
+                return true;
+
+            case CheatEffectKind.ArenaGrantTickets:
+                ArenaDebugHelper.GrantTickets(cd.amount > 0 ? cd.amount : 3);
+                message = $"Granted {(cd.amount > 0 ? cd.amount : 3)} arena ticket(s).";
+                return true;
+
+            case CheatEffectKind.ArenaInstantTournament:
+                var record = ArenaDebugHelper.CreateFakeTournament();
+                if (record != null) ArenaDebugHelper.InstantlyCompleteTournament(record);
+                message = record != null ? "Instant tournament complete." : "Failed to create tournament.";
+                return record != null;
+
+            case CheatEffectKind.ArenaFullReset:
+                ArenaDebugHelper.FullArenaReset();
+                message = "Arena fully reset.";
+                return true;
+#endif
 
             default:
                 message = "Cheat not configured.";

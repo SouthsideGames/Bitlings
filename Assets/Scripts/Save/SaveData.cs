@@ -18,6 +18,16 @@ public sealed class SaveData
     public TutorialSaveSection tutorialData = new TutorialSaveSection();
     public TitleSystemSaveSection titleData = new TitleSystemSaveSection();
     public JobRuntimeSystemSaveSection jobRuntimeData = new JobRuntimeSystemSaveSection();
+    public ArenaSaveSection arenaData = new ArenaSaveSection();
+}
+
+/// <summary>
+/// Save section for the BRN Arena system. Follows the same pattern as other save sections.
+/// </summary>
+[Serializable]
+public sealed class ArenaSaveSection
+{
+    public ArenaSaveData arena = new ArenaSaveData();
 }
 
 [Serializable]
@@ -406,5 +416,10 @@ public static class SaveDataMapper
     public static ExchangeSaveData GetExchange(SaveData saveData)
     {
         return saveData?.exchangeData?.exchangeState;
+    }
+
+    public static ArenaSaveData GetArena(SaveData saveData)
+    {
+        return saveData?.arenaData?.arena;
     }
 }

@@ -37,6 +37,8 @@ public class FeatureUnlockManager : MonoBehaviour
         SaveManager.LoadOrCreate();
 
         LoadFromPrefsOrDefaults();
+
+        ArenaTicketManager.StartListening();
     }
 
     // ─────────────────────────────────────────────────────────────

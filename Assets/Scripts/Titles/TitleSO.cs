@@ -20,4 +20,8 @@ public abstract class TitleSO : ScriptableObject
     public TitleRarity Rarity => rarity;
 
     public string DisplayOrId => !string.IsNullOrEmpty(displayName) ? displayName : titleId;
+
+    [Header("Arena")]
+    [Tooltip("Arena score contributed when this title is equipped on an arena battle team. Stacks with the species arenaScore.")]
+    [Min(0)] public int arenaScore;
 }

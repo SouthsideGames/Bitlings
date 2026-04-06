@@ -59,7 +59,10 @@ public enum FeatureId
     Job_ShadowMarket = 112,
     Job_Sanctum = 113,
     Job_Clinic = 114,
-    Job_Expedition = 115
+    Job_Expedition = 115,
+
+    // ───── Arena ─────
+    Arena_Basic = 200              // Unlocks BRN Arena feature + battle team editing in Directory
 }
 
 public static class FeatureIdJobs

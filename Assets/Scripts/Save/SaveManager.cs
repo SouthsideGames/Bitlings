@@ -86,6 +86,7 @@ public static class SaveManager
     private static TitleSaveData _titlesCache;
     private static WorldEventSaveData _worldEventsCache;
     private static ExchangeSaveData _exchangeCache;
+    private static ArenaSaveData _arenaSaveCache;
 
     // ─────────────────────────────────────────────
     // Hard reset guard (prevents sidecar/runtime re-saves during scene reload)
@@ -219,6 +220,10 @@ public static class SaveManager
         _titlesCache = SaveDataMapper.GetTitles(root);
         _worldEventsCache = SaveDataMapper.GetWorldEvents(root);
         _exchangeCache = SaveDataMapper.GetExchange(root);
+        _arenaSaveCache = SaveDataMapper.GetArena(root);
+
+        // Arena: ensure cache exists and all sub-objects are initialized (handles old saves).
+        ArenaSaveHelper.EnsureArenaDataInitialized(ref _arenaSaveCache);
 
         NormalizeAfterLoad();
 
@@ -295,6 +300,8 @@ public static class SaveManager
         _titlesCache = SaveDataMapper.GetTitles(incoming);
         _worldEventsCache = SaveDataMapper.GetWorldEvents(incoming);
         _exchangeCache = SaveDataMapper.GetExchange(incoming);
+        _arenaSaveCache = SaveDataMapper.GetArena(incoming);
+        ArenaSaveHelper.EnsureArenaDataInitialized(ref _arenaSaveCache);
 
         NormalizeAfterLoad();
         Save();
@@ -615,13 +622,32 @@ public static class SaveManager
     private static SaveData BuildRootForSave()
     {
         EnsureTutorialFlagsLoaded();
-        return SaveDataMapper.FromRuntime(
+
+        // Trim arena history before persisting (keeps save size bounded).
+        ArenaSaveHelper.TrimArenaHistory(ref _arenaSaveCache);
+
+        var root = SaveDataMapper.FromRuntime(
             Data,
             _tutorialSet,
             _jobRuntimeCache,
             _titlesCache,
             _worldEventsCache,
             _exchangeCache);
+
+        // Arena data is a sidecar — set it on the root after the mapper builds everything else.
+        root.arenaData = new ArenaSaveSection { arena = _arenaSaveCache ?? new ArenaSaveData() };
+        return root;
+    }
+
+    // ─────────────────────────────────────────────
+    // Arena save accessors
+    // ─────────────────────────────────────────────
+
+    /// <summary>Returns the cached arena save data (never null after LoadOrCreate).</summary>
+    public static ArenaSaveData GetArenaSaveData()
+    {
+        ArenaSaveHelper.EnsureArenaDataInitialized(ref _arenaSaveCache);
+        return _arenaSaveCache;
     }
 
     private static void LoadTutorialFromRoot(SaveData root)
