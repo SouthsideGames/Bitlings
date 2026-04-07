@@ -74,6 +74,13 @@ public class PlayerDossierSnapshot
     public int growthCoreCount;
     public int packVoucherCount;
 
+    public int bullTokenCount;
+    public int bearTokenCount;
+    public int arenaTicketCount;
+    public bool bullTokensUnlocked;
+    public bool bearTokensUnlocked;
+    public bool arenaTicketsUnlocked;
+
     public int conversionEfficiencyPercent;
 
     // ─────────────────────────────────────────────────────────────
@@ -641,6 +648,15 @@ public class PlayerDossierManager : MonoBehaviour
         s.restChargeCount = GetLifetimeCollected(data, ResourceType.Coffee, bank.Get(ResourceType.Coffee));
         s.growthCoreCount = GetLifetimeCollected(data, ResourceType.GrowthCore, bank.Get(ResourceType.GrowthCore));
         s.packVoucherCount = GetLifetimeCollected(data, ResourceType.PackVoucher, bank.Get(ResourceType.PackVoucher));
+
+        bool tokenFeature = FeatureUnlockManager.I != null && FeatureUnlockManager.I.IsUnlocked(FeatureId.Exchange_BearBullTokens);
+        s.bullTokensUnlocked = tokenFeature;
+        s.bearTokensUnlocked = tokenFeature;
+        s.bullTokenCount = tokenFeature ? GetLifetimeCollected(data, ResourceType.BullToken, bank.Get(ResourceType.BullToken)) : 0;
+        s.bearTokenCount = tokenFeature ? GetLifetimeCollected(data, ResourceType.BearToken, bank.Get(ResourceType.BearToken)) : 0;
+
+        s.arenaTicketsUnlocked = ArenaSaveHelper.IsArenaUnlocked();
+        s.arenaTicketCount = s.arenaTicketsUnlocked ? ArenaSaveHelper.GetArenaTicketCount() : 0;
 
         s.conversionEfficiencyPercent = ComputeHandlerEfficiency(data, s);
     }

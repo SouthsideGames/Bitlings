@@ -77,6 +77,13 @@ public class PlayerDossierPanelUI : MonoBehaviour
     [SerializeField] private TextMeshProUGUI growthCoreText;
     [SerializeField] private TextMeshProUGUI packVoucherText;
 
+    [SerializeField] private GameObject bullTokenRow;
+    [SerializeField] private TextMeshProUGUI bullTokenText;
+    [SerializeField] private GameObject bearTokenRow;
+    [SerializeField] private TextMeshProUGUI bearTokenText;
+    [SerializeField] private GameObject arenaTicketRow;
+    [SerializeField] private TextMeshProUGUI arenaTicketText;
+
     [SerializeField] private Image efficiencyFill;
     [SerializeField] private TextMeshProUGUI efficiencyPercentText;
     [SerializeField] private TextMeshProUGUI brnRatingText;
@@ -418,6 +425,15 @@ public class PlayerDossierPanelUI : MonoBehaviour
         if (efficiencyVoucherText) efficiencyVoucherText.text = $"Speed Boosters: {s.speedBoosterCount}";
         if (premiumOrbText) premiumOrbText.text = $"Premium Orbs: {s.premiumOrbCount}";
         if (coffeeText) coffeeText.text = $"Rest Charges: {s.restChargeCount}";
+
+        if (bullTokenRow) bullTokenRow.SetActive(s.bullTokensUnlocked);
+        if (bullTokenText && s.bullTokensUnlocked) bullTokenText.text = $"Bull Tokens: {s.bullTokenCount}";
+
+        if (bearTokenRow) bearTokenRow.SetActive(s.bearTokensUnlocked);
+        if (bearTokenText && s.bearTokensUnlocked) bearTokenText.text = $"Bear Tokens: {s.bearTokenCount}";
+
+        if (arenaTicketRow) arenaTicketRow.SetActive(s.arenaTicketsUnlocked);
+        if (arenaTicketText && s.arenaTicketsUnlocked) arenaTicketText.text = $"Arena Tickets: {s.arenaTicketCount}";
 
         float normalized = Mathf.Clamp01(s.conversionEfficiencyPercent / 100f);
 
