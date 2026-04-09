@@ -99,6 +99,10 @@ public static class ResourceBank
 
     public static int Get(ResourceType t)
     {
+        // Arena tickets live in ArenaSaveData, not resourceCounts.
+        if (t == ResourceType.ArenaTicket)
+            return ArenaSaveHelper.GetArenaTicketCount();
+
         EnsureSize();
         int i = Index(t);
         if (i < 0 || i >= L.Count) return 0;

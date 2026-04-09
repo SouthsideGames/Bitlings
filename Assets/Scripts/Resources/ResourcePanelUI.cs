@@ -55,6 +55,8 @@ public class ResourcePanelUI : MonoBehaviour
 
         bool tokensUnlocked = FeatureUnlockManager.I != null &&
                               FeatureUnlockManager.I.IsUnlocked(FeatureId.Exchange_BearBullTokens);
+        bool arenaUnlocked = FeatureUnlockManager.I != null &&
+                             FeatureUnlockManager.I.IsUnlocked(FeatureId.Arena_Basic);
 
         foreach (var e in catalog)
         {
@@ -67,6 +69,8 @@ public class ResourcePanelUI : MonoBehaviour
 
             if (e.type == ResourceType.BullToken || e.type == ResourceType.BearToken)
                 go.SetActive(tokensUnlocked);
+            else if (e.type == ResourceType.ArenaTicket)
+                go.SetActive(arenaUnlocked);
         }
     }
 
@@ -108,6 +112,9 @@ public class ResourcePanelUI : MonoBehaviour
 
         if (id == FeatureId.Exchange_BearBullTokens)
             UpdateTokenRowVisibility();
+
+        if (id == FeatureId.Arena_Basic)
+            UpdateArenaTicketRowVisibility();
     }
 
     private void UpdateTokenRowVisibility()
@@ -119,6 +126,18 @@ public class ResourcePanelUI : MonoBehaviour
         {
             var e = catalog[i];
             if (e.type == ResourceType.BullToken || e.type == ResourceType.BearToken)
+                _rows[i].gameObject.SetActive(unlocked);
+        }
+    }
+
+    private void UpdateArenaTicketRowVisibility()
+    {
+        bool unlocked = FeatureUnlockManager.I != null &&
+                        FeatureUnlockManager.I.IsUnlocked(FeatureId.Arena_Basic);
+
+        for (int i = 0; i < catalog.Count && i < _rows.Count; i++)
+        {
+            if (catalog[i].type == ResourceType.ArenaTicket)
                 _rows[i].gameObject.SetActive(unlocked);
         }
     }
