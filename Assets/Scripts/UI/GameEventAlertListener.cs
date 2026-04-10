@@ -34,6 +34,7 @@ public sealed class GameEventAlertListener : MonoBehaviour, IPointerClickHandler
         ToastRequested = 1 << 18,
         PackSeasonChanged = 1 << 19,
         ExchangeMarketReset = 1 << 20,
+        ArenaDataChanged = 1 << 21,
     }
 
     [Header("Alert")]
@@ -140,6 +141,7 @@ public sealed class GameEventAlertListener : MonoBehaviour, IPointerClickHandler
         Toggle(AlertGameEvent.ToastRequested, subscribe, AddToastRequested, RemoveToastRequested);
         Toggle(AlertGameEvent.PackSeasonChanged, subscribe, AddPackSeasonChanged, RemovePackSeasonChanged);
         Toggle(AlertGameEvent.ExchangeMarketReset, subscribe, AddExchangeMarketReset, RemoveExchangeMarketReset);
+        Toggle(AlertGameEvent.ArenaDataChanged, subscribe, AddArenaDataChanged, RemoveArenaDataChanged);
     }
 
     private void Toggle(AlertGameEvent flag, bool subscribe, Action add, Action remove)
@@ -232,4 +234,8 @@ public sealed class GameEventAlertListener : MonoBehaviour, IPointerClickHandler
     private void AddExchangeMarketReset() => GameEvents.ExchangeMarketReset += HandleExchangeMarketReset;
     private void RemoveExchangeMarketReset() => GameEvents.ExchangeMarketReset -= HandleExchangeMarketReset;
     private void HandleExchangeMarketReset() => TriggerAlert(nameof(GameEvents.ExchangeMarketReset));
+
+    private void AddArenaDataChanged() => GameEvents.ArenaDataChanged += HandleArenaDataChanged;
+    private void RemoveArenaDataChanged() => GameEvents.ArenaDataChanged -= HandleArenaDataChanged;
+    private void HandleArenaDataChanged() => TriggerAlert(nameof(GameEvents.ArenaDataChanged));
 }

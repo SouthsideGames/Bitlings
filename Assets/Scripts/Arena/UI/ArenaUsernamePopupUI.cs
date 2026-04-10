@@ -15,7 +15,7 @@ public class ArenaUsernamePopupUI : MonoBehaviour
     public static ArenaUsernamePopupUI I { get; private set; }
 
     [Header("UI Refs")]
-    [SerializeField] private GameObject popupRoot;
+    [SerializeField] private CanvasGroup popupCanvasGroup;
     [SerializeField] private TMP_InputField usernameInput;
     [SerializeField] private TextMeshProUGUI errorLabel;
     [SerializeField] private TextMeshProUGUI charCountLabel;
@@ -34,7 +34,7 @@ public class ArenaUsernamePopupUI : MonoBehaviour
         if (I != null && I != this) { Destroy(gameObject); return; }
         I = this;
 
-        if (popupRoot) popupRoot.SetActive(false);
+        SetCanvasGroupVisible(false);
     }
 
     void OnEnable()
@@ -66,7 +66,7 @@ public class ArenaUsernamePopupUI : MonoBehaviour
     /// <summary>Shows the username creation popup.</summary>
     public void Show()
     {
-        if (popupRoot) popupRoot.SetActive(true);
+        SetCanvasGroupVisible(true);
         if (usernameInput) usernameInput.text = "";
         if (errorLabel) errorLabel.text = "";
         UpdateCharCount("");
@@ -79,7 +79,15 @@ public class ArenaUsernamePopupUI : MonoBehaviour
     /// <summary>Hides the popup.</summary>
     public void Hide()
     {
-        if (popupRoot) popupRoot.SetActive(false);
+        SetCanvasGroupVisible(false);
+    }
+
+    private void SetCanvasGroupVisible(bool visible)
+    {
+        if (!popupCanvasGroup) return;
+        popupCanvasGroup.alpha = visible ? 1f : 0f;
+        popupCanvasGroup.interactable = visible;
+        popupCanvasGroup.blocksRaycasts = visible;
     }
 
     // ═════════════════════════════════════════════════════════════

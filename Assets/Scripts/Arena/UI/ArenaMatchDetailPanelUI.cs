@@ -1,7 +1,3 @@
-// Assets/Scripts/Arena/UI/ArenaMatchDetailPanelUI.cs
-// BRN Arena v1 — Match detail overlay showing summary, both teams, and scrollable battle log.
-// Respects opponent visibility mode: LimitedReveal hides species/title details.
-
 using System;
 using System.Collections.Generic;
 using TMPro;
@@ -43,7 +39,7 @@ public class ArenaMatchDetailPanelUI : MonoBehaviour
 
     [Header("Battle Log")]
     [SerializeField] private Transform logListRoot;
-    [SerializeField] private TextMeshProUGUI logEntryPrefab;
+    [SerializeField] private TextMeshProUGUI logEntry;
     [SerializeField] private ScrollRect logScrollRect;
 
     [Header("Colors")]
@@ -231,9 +227,9 @@ public class ArenaMatchDetailPanelUI : MonoBehaviour
             var evt = _match.battleLog[i];
             if (evt == null) continue;
 
-            if (logEntryPrefab == null || logListRoot == null) break;
+            if (logEntry == null || logListRoot == null) break;
 
-            var row = Instantiate(logEntryPrefab, logListRoot);
+            var row = Instantiate(logEntry, logListRoot);
             row.text = FormatLogEvent(evt);
             _logRows.Add(row.gameObject);
         }

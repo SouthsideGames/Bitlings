@@ -650,7 +650,7 @@ public class CheatCodeManager : MonoBehaviour
     {
         if (PromotionManager.I != null)
             return PromotionManager.I.GetMaxRank();
-        return 20;
+        return 25;
     }
 
     int GetPromotionTotalXpToReachForCheat(int rank)

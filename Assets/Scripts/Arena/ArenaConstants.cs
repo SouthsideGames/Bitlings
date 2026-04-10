@@ -28,7 +28,7 @@ public static class ArenaConstants
 
     // ── Unlock ───────────────────────────────────────────────
     /// <summary>Battle XP level required to unlock the arena feature.</summary>
-    public const int ArenaUnlockLevel = 30;
+    public const int ArenaUnlockLevel = 25;
 
     // ── Schedule (all times Eastern) ─────────────────────────
     /// <summary>Hour (ET 24h) when daily match results are published (Tue–Sat).</summary>

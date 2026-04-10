@@ -14,28 +14,27 @@ public class ArenaHistoryCardUI : MonoBehaviour
 {
     [SerializeField] private TextMeshProUGUI weekLabel;
     [SerializeField] private TextMeshProUGUI placementLabel;
-    [SerializeField] private TextMeshProUGUI scoreBandLabel;
     [SerializeField] private TextMeshProUGUI rewardLabel;
-    [SerializeField] private Button rootButton;
+    [SerializeField] private Button openButton;
 
     private ArenaTournamentHistoryEntry _data;
     private Action<ArenaTournamentHistoryEntry> _onClick;
 
     void Awake()
     {
-        if (rootButton == null)
-            rootButton = GetComponent<Button>();
+        if (openButton == null)
+            openButton = GetComponent<Button>();
 
-        if (rootButton)
+        if (openButton)
         {
-            rootButton.onClick.RemoveAllListeners();
-            rootButton.onClick.AddListener(HandleClick);
+            openButton.onClick.RemoveAllListeners();
+            openButton.onClick.AddListener(HandleClick);
         }
     }
 
     void OnDestroy()
     {
-        if (rootButton) rootButton.onClick.RemoveListener(HandleClick);
+        if (openButton) openButton.onClick.RemoveListener(HandleClick);
     }
 
     /// <summary>
@@ -50,7 +49,6 @@ public class ArenaHistoryCardUI : MonoBehaviour
         {
             if (weekLabel) weekLabel.text = "";
             if (placementLabel) placementLabel.text = "";
-            if (scoreBandLabel) scoreBandLabel.text = "";
             if (rewardLabel) rewardLabel.text = "";
             return;
         }
@@ -72,9 +70,6 @@ public class ArenaHistoryCardUI : MonoBehaviour
 
         if (placementLabel)
             placementLabel.text = entry.finalPlacement > 0 ? GetOrdinal(entry.finalPlacement) : "—";
-
-        if (scoreBandLabel)
-            scoreBandLabel.text = entry.scoreBand.ToString();
 
         if (rewardLabel)
         {

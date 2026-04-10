@@ -22,10 +22,10 @@ public class ArenaMainPanelUI : MonoBehaviour
     // ═════════════════════════════════════════════════════════════
 
     [Header("Header")]
+    [SerializeField] private TextMeshProUGUI usernameLabel;
     [SerializeField] private TextMeshProUGUI ticketCountLabel;
     [SerializeField] private TextMeshProUGUI ticketCostLabel;
     [SerializeField] private Button buyTicketButton;
-    [SerializeField] private Button closeButton;
 
     [Header("Player Stats")]
     [SerializeField] private TextMeshProUGUI tournamentsEnteredLabel;
@@ -70,7 +70,6 @@ public class ArenaMainPanelUI : MonoBehaviour
         GameEvents.ArenaDataChanged += RefreshAll;
 
         // ── Buttons ──
-        if (closeButton)           { closeButton.onClick.RemoveAllListeners();           closeButton.onClick.AddListener(HandleClose); }
         if (buyTicketButton)       { buyTicketButton.onClick.RemoveAllListeners();       buyTicketButton.onClick.AddListener(HandleBuyTicket); }
         if (editTeamButton)        { editTeamButton.onClick.RemoveAllListeners();        editTeamButton.onClick.AddListener(HandleEditTeam); }
         if (enterTournamentButton) { enterTournamentButton.onClick.RemoveAllListeners(); enterTournamentButton.onClick.AddListener(HandleEnterTournament); }
@@ -85,6 +84,12 @@ public class ArenaMainPanelUI : MonoBehaviour
         {
             ArenaOnboardingManager.TryAdvanceOnboarding();
         }
+        // Force username popup if the player still has no username,
+        // even if the normal onboarding flow was already completed.
+        else if (!ArenaSaveHelper.HasArenaUsername())
+        {
+            ForceShowUsernamePopup();
+        }
 
         RefreshAll();
     }
@@ -94,7 +99,6 @@ public class ArenaMainPanelUI : MonoBehaviour
         GameEvents.OnResourcesChanged -= RefreshAll;
         GameEvents.ArenaDataChanged -= RefreshAll;
 
-        if (closeButton)           closeButton.onClick.RemoveListener(HandleClose);
         if (buyTicketButton)       buyTicketButton.onClick.RemoveListener(HandleBuyTicket);
         if (editTeamButton)        editTeamButton.onClick.RemoveListener(HandleEditTeam);
         if (enterTournamentButton) enterTournamentButton.onClick.RemoveListener(HandleEnterTournament);
@@ -124,9 +128,19 @@ public class ArenaMainPanelUI : MonoBehaviour
 
     private void RefreshHeader()
     {
+        // Username
+        var arena = SaveManager.GetArenaSaveData();
+        if (usernameLabel)
+            usernameLabel.text = !string.IsNullOrEmpty(arena?.arenaUsername) ? arena.arenaUsername : "Set Username";
+
         int tickets = ArenaTicketManager.GetTicketCount();
-        if (ticketCountLabel) ticketCountLabel.text = $"Tickets: {tickets} / {ArenaConstants.MaxTickets}";
-        if (ticketCostLabel)  ticketCostLabel.text = $"Buy: {ArenaConstants.TicketCreditCost} Credits";
+        if (ticketCountLabel) ticketCountLabel.text = $"{tickets}/{ArenaConstants.MaxTickets}";
+
+        if (ticketCostLabel)
+        {
+            ticketCostLabel.text = $"{ArenaConstants.TicketCreditCost} Credits";
+            ticketCostLabel.gameObject.SetActive(true);
+        }
 
         if (buyTicketButton) buyTicketButton.interactable = ArenaTicketManager.CanBuyArenaTicket();
     }
@@ -331,6 +345,29 @@ public class ArenaMainPanelUI : MonoBehaviour
     // ═════════════════════════════════════════════════════════════
     //  Helpers
     // ═════════════════════════════════════════════════════════════
+
+    private void ForceShowUsernamePopup()
+    {
+        var popup = ArenaUsernamePopupUI.I;
+        if (popup == null)
+        {
+            // Singleton may be null if the popup GameObject was inactive (Awake never ran).
+            popup = FindAnyObjectByType<ArenaUsernamePopupUI>(FindObjectsInactive.Include);
+            if (popup != null)
+            {
+                popup.gameObject.SetActive(true);
+            }
+        }
+
+        if (popup != null)
+        {
+            popup.Show();
+        }
+        else
+        {
+            Debug.LogWarning("[ArenaMainPanelUI] ArenaUsernamePopupUI not found in scene.");
+        }
+    }
 
     private static string GetOrdinal(int n)
     {

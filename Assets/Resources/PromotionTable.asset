@@ -12,103 +12,310 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 94d11e197564b4b36aa6a2bf9c7b599e, type: 3}
   m_Name: PromotionTable
   m_EditorClassIdentifier: 
-  maxRank: 20
+  maxRank: 25
   ranks:
   - rank: 1
     totalXpToReach: 0
     displayName: BRN Intern
     rewardSummary: 
+    rewards: []
   - rank: 2
     totalXpToReach: 50
     displayName: Assistant
     rewardSummary: "Credits +200 \u2022 Energy +10 \u2022 Material +15 \u2022 GrowthCore
       +2"
+    rewards:
+    - type: 1
+      amount: 200
+    - type: 2
+      amount: 10
+    - type: 4
+      amount: 15
+    - type: 16
+      amount: 2
   - rank: 3
     totalXpToReach: 120
     displayName: Courier
     rewardSummary: "Credits +250 \u2022 Energy +12 \u2022 Material +20 \u2022 Medkit
       +2 \u2022 TrainingVoucher +1"
+    rewards:
+    - type: 1
+      amount: 250
+    - type: 2
+      amount: 12
+    - type: 4
+      amount: 20
+    - type: 3
+      amount: 2
+    - type: 9
+      amount: 1
   - rank: 4
     totalXpToReach: 210
     displayName: Operator
     rewardSummary: "Credits +300 \u2022 Energy +14 \u2022 Material +25 \u2022 GrowthCore
       +2 \u2022 PPEPermit +1"
+    rewards:
+    - type: 1
+      amount: 300
+    - type: 2
+      amount: 14
+    - type: 4
+      amount: 25
+    - type: 16
+      amount: 2
+    - type: 5
+      amount: 1
   - rank: 5
     totalXpToReach: 320
     displayName: Supervisor
     rewardSummary: "Credits +350 \u2022 Energy +16 \u2022 Material +30 \u2022 Medkit
       +3 \u2022 PackVoucher +25 "
+    rewards:
+    - type: 1
+      amount: 350
+    - type: 2
+      amount: 16
+    - type: 4
+      amount: 30
+    - type: 3
+      amount: 3
+    - type: 17
+      amount: 25
   - rank: 6
     totalXpToReach: 450
     displayName: Trainer
     rewardSummary: "Credits +350 \u2022 Energy +16 \u2022 Material +30 \u2022 WorkOrder
       +1"
+    rewards:
+    - type: 1
+      amount: 350
+    - type: 2
+      amount: 16
+    - type: 4
+      amount: 30
+    - type: 7
+      amount: 1
   - rank: 7
     totalXpToReach: 600
     displayName: Specialist
     rewardSummary: "Credits +400 \u2022 Energy +18 \u2022 Material +35 \u2022 Flyer
       +1"
+    rewards:
+    - type: 1
+      amount: 400
+    - type: 2
+      amount: 18
+    - type: 4
+      amount: 35
+    - type: 6
+      amount: 1
   - rank: 8
     totalXpToReach: 770
     displayName: Compliance Officer
     rewardSummary: "Credits +450 \u2022 Energy +20 \u2022 Material +40 \u2022 TrainingVoucher
       +1 \u2022 PPEPermit +1"
+    rewards:
+    - type: 1
+      amount: 450
+    - type: 2
+      amount: 20
+    - type: 4
+      amount: 40
+    - type: 9
+      amount: 1
+    - type: 5
+      amount: 1
   - rank: 9
     totalXpToReach: 960
     displayName: Operations Lead
     rewardSummary: "Credits +500 \u2022 Energy +22 \u2022 Material +45 \u2022 WorkOrder
       +1 \u2022 EfficiencyVoucher +1"
+    rewards:
+    - type: 1
+      amount: 500
+    - type: 2
+      amount: 22
+    - type: 4
+      amount: 45
+    - type: 7
+      amount: 1
+    - type: 11
+      amount: 1
   - rank: 10
     totalXpToReach: 1170
     displayName: Site Director
     rewardSummary: "Credits +600 \u2022 Energy +26 \u2022 Material +55 \u2022 GrowthCore
       +3 \u2022 Medkit +3 \u2022 WellnessVoucher +1 \u2022 Unlock Synergy\n"
+    rewards:
+    - type: 1
+      amount: 600
+    - type: 2
+      amount: 26
+    - type: 4
+      amount: 55
+    - type: 16
+      amount: 3
+    - type: 3
+      amount: 3
+    - type: 10
+      amount: 1
   - rank: 11
     totalXpToReach: 1400
     displayName: Project Lead
     rewardSummary: "Credits +600 \u2022 Energy +26 \u2022 Material +55 \u2022 WorkOrder
       +2 \u2022 Flyer +2"
+    rewards:
+    - type: 1
+      amount: 600
+    - type: 2
+      amount: 26
+    - type: 4
+      amount: 55
+    - type: 7
+      amount: 2
+    - type: 6
+      amount: 2
   - rank: 12
     totalXpToReach: 1650
     displayName: Program Lead
     rewardSummary: "Credits +650 \u2022 Energy +28 \u2022 Material +60 \u2022 TrainingVoucher
       +2 \u2022 PPEPermit +2"
+    rewards:
+    - type: 1
+      amount: 650
+    - type: 2
+      amount: 28
+    - type: 4
+      amount: 60
+    - type: 9
+      amount: 2
+    - type: 5
+      amount: 2
   - rank: 13
     totalXpToReach: 1920
     displayName: Department Head
     rewardSummary: "Credits +700 \u2022 Energy +30 \u2022 Material +70 \u2022 WellnessVoucher
       +2 \u2022 EfficiencyVoucher +1 \u2022 Favor +1"
+    rewards:
+    - type: 1
+      amount: 700
+    - type: 2
+      amount: 30
+    - type: 4
+      amount: 70
+    - type: 10
+      amount: 2
+    - type: 11
+      amount: 1
+    - type: 8
+      amount: 1
   - rank: 14
     totalXpToReach: 2210
     displayName: Regional Manager
     rewardSummary: "Credits +750 \u2022 Energy +32 \u2022 Material +80 \u2022 GrowthCore
       +4 \u2022 Medkit +4"
+    rewards:
+    - type: 1
+      amount: 750
+    - type: 2
+      amount: 32
+    - type: 4
+      amount: 80
+    - type: 16
+      amount: 4
+    - type: 3
+      amount: 4
   - rank: 15
     totalXpToReach: 2520
     displayName: Operations Director
     rewardSummary: "Credits +900 \u2022 Energy +36 \u2022 Material +95 \u2022 TrainingVoucher
       +3 \u2022 WorkOrder +2 \u2022 WellnessVoucher +2 \u2022 Favor +2 \u2022 Unlock
       Difficulty"
+    rewards:
+    - type: 1
+      amount: 900
+    - type: 2
+      amount: 36
+    - type: 4
+      amount: 95
+    - type: 9
+      amount: 3
+    - type: 7
+      amount: 2
+    - type: 10
+      amount: 2
+    - type: 8
+      amount: 2
   - rank: 16
     totalXpToReach: 2850
     displayName: Senior Director
     rewardSummary: "Credits +900 \u2022 Energy +36 \u2022 Material +95 \u2022 PPEPermit
       +3 \u2022 Flyer +2 \u2022 EfficiencyVoucher +2"
+    rewards:
+    - type: 1
+      amount: 900
+    - type: 2
+      amount: 36
+    - type: 4
+      amount: 95
+    - type: 5
+      amount: 3
+    - type: 6
+      amount: 2
+    - type: 11
+      amount: 2
   - rank: 17
     totalXpToReach: 3200
     displayName: Operations Director
     rewardSummary: "Credits +1000 \u2022 Energy +40 \u2022 Material +110 \u2022 GrowthCore
       +5 \u2022 Medkit +5"
+    rewards:
+    - type: 1
+      amount: 1000
+    - type: 2
+      amount: 40
+    - type: 4
+      amount: 110
+    - type: 16
+      amount: 5
+    - type: 3
+      amount: 5
   - rank: 18
     totalXpToReach: 3570
     displayName: Regional Director
     rewardSummary: "Credits +1100 \u2022 Energy +44 \u2022 Material +125 \u2022 TrainingVoucher
       +4 \u2022 WorkOrder +3 \u2022 WellnessVoucher +3"
+    rewards:
+    - type: 1
+      amount: 1100
+    - type: 2
+      amount: 44
+    - type: 7
+      amount: 3
+    - type: 4
+      amount: 125
+    - type: 9
+      amount: 4
+    - type: 10
+      amount: 3
   - rank: 19
     totalXpToReach: 3960
     displayName: Executive Director
     rewardSummary: "Credits +1200 \u2022 Energy +48 \u2022 Material +140 \u2022 PPEPermit
       +4 \u2022 EfficiencyVoucher +3 \u2022 Favor +3"
+    rewards:
+    - type: 1
+      amount: 1200
+    - type: 2
+      amount: 48
+    - type: 4
+      amount: 140
+    - type: 5
+      amount: 4
+    - type: 11
+      amount: 3
+    - type: 8
+      amount: 3
   - rank: 20
     totalXpToReach: 4370
     displayName: Chief Executive
@@ -116,3 +323,177 @@ MonoBehaviour:
       +6 \u2022 Medkit +6 \u2022 TrainingVoucher +5 \u2022 PPEPermit +5 \u2022 WorkOrder
       +4 \u2022 WellnessVoucher +4 \u2022 EfficiencyVoucher +4 \u2022 Favor +4 \u2022
       Unlock Executive Trial"
+    rewards:
+    - type: 1
+      amount: 1500
+    - type: 2
+      amount: 60
+    - type: 4
+      amount: 180
+    - type: 16
+      amount: 6
+    - type: 3
+      amount: 6
+    - type: 9
+      amount: 5
+    - type: 5
+      amount: 5
+    - type: 7
+      amount: 4
+    - type: 10
+      amount: 4
+    - type: 11
+      amount: 4
+    - type: 8
+      amount: 4
+  - rank: 21
+    totalXpToReach: 4800
+    displayName: Chief Commissioner
+    rewardSummary: "Credits +1800 \u2022 Energy +75 \u2022 Material +220 \u2022 GrowthCore
+      +8 \u2022 Medkit +7 \u2022 TrainingVoucher +6 \u2022 PPEPermit +6 \u2022 WorkOrder
+      +5 \u2022 WellnessVoucher +5 \u2022 EfficiencyVoucher +5 \u2022 Favor +5 "
+    rewards:
+    - type: 1
+      amount: 1800
+    - type: 2
+      amount: 75
+    - type: 4
+      amount: 220
+    - type: 16
+      amount: 8
+    - type: 3
+      amount: 7
+    - type: 9
+      amount: 6
+    - type: 5
+      amount: 6
+    - type: 7
+      amount: 5
+    - type: 10
+      amount: 5
+    - type: 11
+      amount: 5
+    - type: 8
+      amount: 5
+  - rank: 22
+    totalXpToReach: 5250
+    displayName: BRN Overseer
+    rewardSummary: "Credits +2200 \u2022 Energy +90 \u2022 Material +260 \u2022 GrowthCore
+      +10 \u2022 Medkit +8 \u2022 TrainingVoucher +7 \u2022 PPEPermit +7 \u2022 WorkOrder
+      +6 \u2022 WellnessVoucher +6 \u2022 EfficiencyVoucher +6 \u2022 PackVoucher
+      +6"
+    rewards:
+    - type: 1
+      amount: 2200
+    - type: 2
+      amount: 90
+    - type: 4
+      amount: 260
+    - type: 16
+      amount: 10
+    - type: 3
+      amount: 8
+    - type: 9
+      amount: 7
+    - type: 5
+      amount: 7
+    - type: 7
+      amount: 6
+    - type: 10
+      amount: 6
+    - type: 11
+      amount: 6
+    - type: 17
+      amount: 6
+  - rank: 23
+    totalXpToReach: 5720
+    displayName: Executive Overseer
+    rewardSummary: "Credits +2600 \u2022 Energy +110 \u2022 Material +300 \u2022
+      GrowthCore +12 \u2022 Medkit +9 \u2022 TrainingVoucher +8 \u2022 PackVoucher
+      +8 \u2022 WorkOrder +7 \u2022 WellnessVoucher +7 \u2022 EfficiencyVoucher +7
+      \u2022 PremiumOrb +7"
+    rewards:
+    - type: 1
+      amount: 2600
+    - type: 2
+      amount: 110
+    - type: 4
+      amount: 300
+    - type: 16
+      amount: 12
+    - type: 3
+      amount: 9
+    - type: 9
+      amount: 8
+    - type: 17
+      amount: 8
+    - type: 7
+      amount: 7
+    - type: 10
+      amount: 7
+    - type: 11
+      amount: 7
+    - type: 12
+      amount: 7
+  - rank: 24
+    totalXpToReach: 6210
+    displayName: BRN Director General
+    rewardSummary: "Credits +3000 \u2022 Energy +130 \u2022 Material +340 \u2022
+      GrowthCore +14 \u2022 Medkit +10 \u2022 TrainingVoucher +9 \u2022 BlessingScale
+      +2 \u2022 WorkOrder +8 \u2022 WellnessVoucher +8 \u2022 EfficiencyVoucher +8
+      \u2022 Favor +8"
+    rewards:
+    - type: 1
+      amount: 3000
+    - type: 2
+      amount: 130
+    - type: 4
+      amount: 340
+    - type: 16
+      amount: 14
+    - type: 3
+      amount: 10
+    - type: 9
+      amount: 9
+    - type: 7
+      amount: 8
+    - type: 10
+      amount: 8
+    - type: 11
+      amount: 8
+    - type: 8
+      amount: 8
+    - type: 13
+      amount: 2
+  - rank: 25
+    totalXpToReach: 6720
+    displayName: BRN Supreme Director
+    rewardSummary: "Credits +4000 \u2022 Energy +160 \u2022 Material +400 \u2022
+      GrowthCore +20 \u2022 Medkit +12 \u2022 TrainingVoucher +10 \u2022 PPEPermit
+      +10 \u2022 WorkOrder +10 \u2022 WellnessVoucher +10 \u2022 EfficiencyVoucher
+      +10 \u2022 Favor +10 \u2022 Arena Ticket +1 \u2022 Unlock Arena"
+    rewards:
+    - type: 1
+      amount: 4000
+    - type: 2
+      amount: 160
+    - type: 4
+      amount: 400
+    - type: 16
+      amount: 20
+    - type: 3
+      amount: 12
+    - type: 9
+      amount: 10
+    - type: 5
+      amount: 10
+    - type: 7
+      amount: 10
+    - type: 10
+      amount: 10
+    - type: 11
+      amount: 10
+    - type: 8
+      amount: 10
+    - type: 20
+      amount: 1

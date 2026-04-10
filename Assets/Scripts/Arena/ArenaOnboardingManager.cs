@@ -194,8 +194,17 @@ public static class ArenaOnboardingManager
 
     private static void RequestUsernamePopup()
     {
-        // Find or create the username popup.
         var popup = ArenaUsernamePopupUI.I;
+        if (popup == null)
+        {
+            // Singleton may be null if the popup GameObject was inactive (Awake never ran).
+            popup = UnityEngine.Object.FindAnyObjectByType<ArenaUsernamePopupUI>(FindObjectsInactive.Include);
+            if (popup != null)
+            {
+                popup.gameObject.SetActive(true);
+            }
+        }
+
         if (popup != null)
         {
             popup.Show();

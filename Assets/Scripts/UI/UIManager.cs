@@ -74,6 +74,7 @@ public class UIManager : MonoBehaviour
 
     private const string TutorialIronCareerUnlockedKey = "tut_ironcareerunlocked_v1";
     private const string TutorialAutoEncounterKey = "tut_autoencounter_v1";
+    private const string TutorialArenaUnlockedKey = "tut_arena_v1";
 
     [Header("Panels")]
     [SerializeField] private List<PanelEntry> panels = new();
@@ -203,7 +204,7 @@ public class UIManager : MonoBehaviour
         if (data == null) return;
         if (!data.HasIronCareerUnlocked) return;
 
-        int maxRank = PromotionManager.I != null ? PromotionManager.I.GetMaxRank() : 20;
+        int maxRank = PromotionManager.I != null ? PromotionManager.I.GetMaxRank() : 25;
         int rank = Mathf.Max(1, data.promotionRank);
         if (rank < maxRank) return;
 
@@ -214,6 +215,18 @@ public class UIManager : MonoBehaviour
         if (IsOpen(PanelId.IdleBattleRewards)) return;
 
         TutorialOverlayPanel.RequestOpen(TutorialIronCareerUnlockedKey);
+    }
+
+    void TryOpenArenaUnlockedTutorial()
+    {
+        if (SaveManager.IsTutorialComplete(TutorialArenaUnlockedKey)) return;
+
+        var arena = SaveManager.GetArenaSaveData();
+        if (arena == null || !arena.arenaUnlocked) return;
+
+        if (IsOpen(PanelId.IdleBattleRewards)) return;
+
+        TutorialOverlayPanel.RequestOpen(TutorialArenaUnlockedKey);
     }
 
     void TryOpenAutoEncounterTutorial()
@@ -334,6 +347,7 @@ public class UIManager : MonoBehaviour
                 {
                     TryOpenIdleBattleRewardsNextFrame();
                     TryOpenIronCareerUnlockedTutorial();
+                    TryOpenArenaUnlockedTutorial();
                     ExchangeManager.I?.TryShowPendingDividendHomeToast();
                 }
 

@@ -104,7 +104,10 @@ public sealed class PromotionManager : MonoBehaviour
         GameEvents.PromotionProgressChanged?.Invoke(pm.promotionRank, pm.promotionXP, xpThisRank, xpToNext);
 
         if (rankedUp)
+        {
+            GrantRankRewards(oldRank + 1, newRank);
             GameEvents.PromotionRankChanged?.Invoke(oldRank, newRank);
+        }
     }
 
     private bool TryProcessRankUps(out int newRank)
@@ -145,7 +148,7 @@ public sealed class PromotionManager : MonoBehaviour
 
     public int GetMaxRank()
     {
-        int maxRank = (promotionTable != null) ? promotionTable.MaxRank : 20;
+        int maxRank = (promotionTable != null) ? promotionTable.MaxRank : 25;
         return Mathf.Max(1, maxRank);
     }
 
@@ -189,7 +192,7 @@ public sealed class PromotionManager : MonoBehaviour
         currentRank = Mathf.Max(1, currentRank);
         totalXp = Mathf.Max(0, totalXp);
 
-        int maxRank = (promotionTable != null) ? promotionTable.MaxRank : 20;
+        int maxRank = (promotionTable != null) ? promotionTable.MaxRank : 25;
         maxRank = Mathf.Max(1, maxRank);
 
         if (currentRank >= maxRank) return 0;
@@ -201,6 +204,19 @@ public sealed class PromotionManager : MonoBehaviour
         int xpNeededThisRank = Mathf.Max(1, nextReq - curFloor);
         int remaining = Mathf.Max(0, xpNeededThisRank - xpThisRank);
         return remaining;
+    }
+
+    private void GrantRankRewards(int fromRank, int toRank)
+    {
+        if (promotionTable == null) return;
+
+        for (int r = fromRank; r <= toRank; r++)
+        {
+            var entry = promotionTable.Get(r);
+            if (entry == null || entry.rewards == null || entry.rewards.Count == 0) continue;
+
+            ResourceManager.I.AddMany(entry.rewards);
+        }
     }
 
     public string GetRankDisplayName(int rank)
@@ -237,6 +253,11 @@ public sealed class PromotionManager : MonoBehaviour
             case 18: return "Senior Director";
             case 19: return "Executive Director";
             case 20: return "Commissioner";
+            case 21: return "Chief Commissioner";
+            case 22: return "BRN Overseer";
+            case 23: return "Executive Overseer";
+            case 24: return "BRN Director General";
+            case 25: return "BRN Supreme Director";
             default: return $"Rank {rank}";
         }
     }

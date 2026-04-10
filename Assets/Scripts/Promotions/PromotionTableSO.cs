@@ -19,10 +19,13 @@ public sealed class PromotionTableSO : ScriptableObject
         [TextArea(1, 4)]
         [Tooltip("Optional short reward summary shown on the dossier rank list.")]
         public string rewardSummary;
+
+        [Header("Rank-Up Rewards")]
+        public List<ResourceManager.ResourceAmount> rewards = new();
     }
 
     [Header("Config")]
-    [SerializeField, Min(1)] private int maxRank = 20;
+    [SerializeField, Min(1)] private int maxRank = 25;
 
     [Header("Rank Entries")]
     [Tooltip("If empty, PromotionManager uses a fallback XP curve.")]

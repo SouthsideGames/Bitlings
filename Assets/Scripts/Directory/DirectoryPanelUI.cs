@@ -50,9 +50,9 @@ public class DirectoryPanelUI : MonoBehaviour
     [Header("Arena Loadout")]
     [SerializeField] private RectTransform arenaTeamContent;
     [SerializeField] private CanvasGroup arenaTeamRowGroup;
-    [SerializeField] private Button arenaVisibilityToggleButton;
-    [SerializeField] private TextMeshProUGUI arenaVisibilityLabel;
-    [SerializeField] private TextMeshProUGUI arenaLockedLabel;
+    [SerializeField] private Button arenaLoadoutToggleButton;
+    [SerializeField] private TextMeshProUGUI arenaLoadoutToggleText;
+    [SerializeField] private GameObject arenaLockedIndicator;
 
     [Header("Owned (Box)")]
     [SerializeField] private RectTransform ownedContent;
@@ -157,8 +157,8 @@ public class DirectoryPanelUI : MonoBehaviour
             _favoritesOnlyFilter = false;
 
         SetupIdleLoadoutToggle();
+        SetupArenaLoadoutToggle();
         SetLoadoutEditingMode(_showingIdleLoadout, animate: false);
-        SetupArenaVisibilityToggle();
 
         RefreshAll();
     }
@@ -191,8 +191,8 @@ public class DirectoryPanelUI : MonoBehaviour
         if (idleLoadoutToggleButton)
             idleLoadoutToggleButton.onClick.RemoveListener(OnToggleIdleLoadoutEditMode);
 
-        if (arenaVisibilityToggleButton)
-            arenaVisibilityToggleButton.onClick.RemoveListener(OnToggleArenaVisibility);
+        if (arenaLoadoutToggleButton)
+            arenaLoadoutToggleButton.onClick.RemoveListener(OnToggleArenaLoadoutEditMode);
 
         IdleLoadoutManager.SetEditingIdleTeam(false);
         ArenaLoadoutManager.SetEditingArenaTeam(false);
@@ -336,9 +336,36 @@ public class DirectoryPanelUI : MonoBehaviour
 
     private void OnToggleIdleLoadoutEditMode()
     {
-        // Cycle: if currently idle, go back to active. If currently active, go to idle.
-        // Arena mode has its own entry point.
-        SetLoadoutEditingMode(!_showingIdleLoadout, animate: true);
+        // If currently idle, go back to active. Otherwise go to idle.
+        var next = _loadoutMode == DirectoryLoadoutMode.Idle
+            ? DirectoryLoadoutMode.Active
+            : DirectoryLoadoutMode.Idle;
+        SetDirectoryLoadoutMode(next, animate: true);
+    }
+
+    private void SetupArenaLoadoutToggle()
+    {
+        if (!arenaLoadoutToggleButton) return;
+
+        bool arenaUnlocked = FeatureUnlockManager.I != null &&
+                             FeatureUnlockManager.I.IsUnlocked(FeatureId.Arena_Basic);
+
+        arenaLoadoutToggleButton.gameObject.SetActive(arenaUnlocked);
+        arenaLoadoutToggleButton.onClick.RemoveAllListeners();
+
+        if (arenaUnlocked)
+            arenaLoadoutToggleButton.onClick.AddListener(OnToggleArenaLoadoutEditMode);
+
+        UpdateArenaToggleLabel();
+    }
+
+    private void OnToggleArenaLoadoutEditMode()
+    {
+        // If currently arena, go back to active. Otherwise go to arena.
+        var next = _loadoutMode == DirectoryLoadoutMode.Arena
+            ? DirectoryLoadoutMode.Active
+            : DirectoryLoadoutMode.Arena;
+        SetDirectoryLoadoutMode(next, animate: true);
     }
 
     /// <summary>Opens the Directory directly in Arena loadout editing mode.</summary>
@@ -356,6 +383,7 @@ public class DirectoryPanelUI : MonoBehaviour
         ArenaLoadoutManager.SetEditingArenaTeam(mode == DirectoryLoadoutMode.Arena);
 
         UpdateIdleToggleLabel();
+        UpdateArenaToggleLabel();
 
         SetCanvasGroupVisible(activeTeamRowGroup, mode == DirectoryLoadoutMode.Active, animate);
         SetCanvasGroupVisible(idleTeamRowGroup, mode == DirectoryLoadoutMode.Idle, animate);
@@ -386,12 +414,13 @@ public class DirectoryPanelUI : MonoBehaviour
     private void UpdateIdleToggleLabel()
     {
         if (!idleLoadoutToggleText) return;
-        switch (_loadoutMode)
-        {
-            case DirectoryLoadoutMode.Idle:  idleLoadoutToggleText.text = "ACTIVE"; break;
-            case DirectoryLoadoutMode.Arena: idleLoadoutToggleText.text = "ACTIVE"; break;
-            default:                         idleLoadoutToggleText.text = "IDLE"; break;
-        }
+        idleLoadoutToggleText.text = _loadoutMode == DirectoryLoadoutMode.Idle ? "ACTIVE" : "IDLE";
+    }
+
+    private void UpdateArenaToggleLabel()
+    {
+        if (!arenaLoadoutToggleText) return;
+        arenaLoadoutToggleText.text = _loadoutMode == DirectoryLoadoutMode.Arena ? "ACTIVE" : "ARENA";
     }
 
     void BuildTeam(List<OwnedMonsterData> team)
@@ -650,41 +679,15 @@ public class DirectoryPanelUI : MonoBehaviour
             LeanTween.scale(_arenaTeamCardRoots[selectedArenaTeamIndex], Vector3.one * 1.05f, 0.08f).setLoopPingPong(1);
     }
 
-    private void SetupArenaVisibilityToggle()
-    {
-        if (arenaVisibilityToggleButton)
-        {
-            arenaVisibilityToggleButton.onClick.RemoveAllListeners();
-            arenaVisibilityToggleButton.onClick.AddListener(OnToggleArenaVisibility);
-        }
-
-        RefreshArenaVisibilityLabel();
-    }
-
-    private void OnToggleArenaVisibility()
-    {
-        if (ArenaSaveHelper.IsBattleTeamLocked()) return;
-
-        ArenaLoadoutManager.ToggleVisibilityMode();
-        RefreshArenaVisibilityLabel();
-    }
-
-    private void RefreshArenaVisibilityLabel()
-    {
-        if (!arenaVisibilityLabel) return;
-        var mode = ArenaLoadoutManager.GetVisibilityMode();
-        arenaVisibilityLabel.text = mode == ArenaVisibilityMode.FullReveal ? "FULL REVEAL" : "LIMITED REVEAL";
-    }
-
     private void RefreshArenaLockedState()
     {
         bool locked = ArenaSaveHelper.IsBattleTeamLocked();
 
-        if (arenaLockedLabel)
-            arenaLockedLabel.gameObject.SetActive(locked && _loadoutMode == DirectoryLoadoutMode.Arena);
+        if (arenaLockedIndicator)
+            arenaLockedIndicator.SetActive(locked && _loadoutMode == DirectoryLoadoutMode.Arena);
 
-        if (arenaVisibilityToggleButton)
-            arenaVisibilityToggleButton.interactable = !locked;
+        if (arenaLoadoutToggleButton)
+            arenaLoadoutToggleButton.interactable = !locked;
 
         if (arenaTeamRowGroup && _loadoutMode == DirectoryLoadoutMode.Arena)
             arenaTeamRowGroup.interactable = !locked;
