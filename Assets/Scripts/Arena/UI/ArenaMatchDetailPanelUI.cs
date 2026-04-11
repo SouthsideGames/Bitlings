@@ -4,11 +4,7 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
-/// <summary>
-/// Overlay panel showing full match detail: result summary, player team,
-/// opponent team (respecting visibility mode), and scrollable battle log.
-/// Opened from <see cref="ArenaTournamentDetailPanelUI"/> via <see cref="PanelId.ArenaMatchDetail"/>.
-/// </summary>
+
 public class ArenaMatchDetailPanelUI : MonoBehaviour
 {
     // ═════════════════════════════════════════════════════════════

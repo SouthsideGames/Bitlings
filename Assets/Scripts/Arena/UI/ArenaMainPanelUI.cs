@@ -1,17 +1,9 @@
-// Assets/Scripts/Arena/UI/ArenaMainPanelUI.cs
-// BRN Arena v1 — Main arena panel with header, player stats, current week card,
-// action buttons, and tournament history list.
-
 using System;
 using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
-/// <summary>
-/// Root MonoBehaviour for the Arena main panel.
-/// Wired to a PanelEntry with <see cref="PanelId.ArenaMain"/> in UIManager.
-/// </summary>
 public class ArenaMainPanelUI : MonoBehaviour
 {
     // ── Singleton (optional — mirrors other panels) ──
@@ -39,7 +31,6 @@ public class ArenaMainPanelUI : MonoBehaviour
     [SerializeField] private Button editTeamButton;
     [SerializeField] private Button enterTournamentButton;
     [SerializeField] private Button viewTournamentButton;
-    [SerializeField] private Button historyButton;
 
     [Header("History List")]
     [SerializeField] private Transform historyListRoot;
@@ -74,7 +65,6 @@ public class ArenaMainPanelUI : MonoBehaviour
         if (editTeamButton)        { editTeamButton.onClick.RemoveAllListeners();        editTeamButton.onClick.AddListener(HandleEditTeam); }
         if (enterTournamentButton) { enterTournamentButton.onClick.RemoveAllListeners(); enterTournamentButton.onClick.AddListener(HandleEnterTournament); }
         if (viewTournamentButton)  { viewTournamentButton.onClick.RemoveAllListeners();  viewTournamentButton.onClick.AddListener(HandleViewTournament); }
-        if (historyButton)         { historyButton.onClick.RemoveAllListeners();         historyButton.onClick.AddListener(HandleToggleHistory); }
 
         // ── Week card callbacks ──
         if (weekCard) weekCard.Bind(HandleEnterTournament, HandleViewTournament);
@@ -103,7 +93,6 @@ public class ArenaMainPanelUI : MonoBehaviour
         if (editTeamButton)        editTeamButton.onClick.RemoveListener(HandleEditTeam);
         if (enterTournamentButton) enterTournamentButton.onClick.RemoveListener(HandleEnterTournament);
         if (viewTournamentButton)  viewTournamentButton.onClick.RemoveListener(HandleViewTournament);
-        if (historyButton)         historyButton.onClick.RemoveListener(HandleToggleHistory);
     }
 
     void OnDestroy()
@@ -153,12 +142,12 @@ public class ArenaMainPanelUI : MonoBehaviour
         var stats = arena?.lifetimeStats;
 
         if (tournamentsEnteredLabel)
-            tournamentsEnteredLabel.text = stats != null ? stats.tournamentsEntered.ToString() : "0";
+            tournamentsEnteredLabel.text = $"TOURNAMENTS ENTERED: {(stats != null ? stats.tournamentsEntered : 0)}";
 
         if (highestRankMonthLabel)
         {
             int rank = stats != null ? stats.highestRankThisMonth : 0;
-            highestRankMonthLabel.text = rank > 0 ? GetOrdinal(rank) : "—";
+            highestRankMonthLabel.text = $"HIGHEST THIS MONTH: {(rank > 0 ? GetOrdinal(rank) : "—")}";
         }
 
         if (avgRankAllTimeLabel)
@@ -166,7 +155,7 @@ public class ArenaMainPanelUI : MonoBehaviour
             if (stats != null && stats.tournamentsEntered > 0)
             {
                 float avg = (float)stats.totalPlacementSum / stats.tournamentsEntered;
-                avgRankAllTimeLabel.text = avg.ToString("F1");
+                avgRankAllTimeLabel.text = $"AVERAGE ALL TIME: {avg.ToString("F1")}";
             }
             else
             {
@@ -208,9 +197,6 @@ public class ArenaMainPanelUI : MonoBehaviour
         if (viewTournamentButton)
             viewTournamentButton.gameObject.SetActive(hasActiveTournament);
 
-        // History — visible when we have any history
-        if (historyButton)
-            historyButton.interactable = ArenaSaveHelper.GetTournamentHistoryCount() > 0;
     }
 
     // ── History list ──
@@ -283,29 +269,13 @@ public class ArenaMainPanelUI : MonoBehaviour
 
     private void HandleEnterTournament()
     {
-        // Entry logic will be wired to the arena tournament entry service.
-        // For now, validate prerequisites and show a toast.
-        if (!ArenaTeamValidator.IsBattleTeamComplete())
+        if (!ArenaTournamentService.TryEnterTournament(out string error))
         {
-            GameEvents.RaiseToast("Complete your Battle Team first.");
-            return;
-        }
-
-        if (ArenaTicketManager.GetTicketCount() <= 0)
-        {
-            GameEvents.RaiseToast("You need an Arena Ticket to enter.");
-            return;
-        }
-
-        // Spend ticket.
-        if (!ArenaTicketManager.TrySpendTicket())
-        {
-            GameEvents.RaiseToast("Unable to spend ticket.");
+            GameEvents.RaiseToast(error ?? "Unable to enter tournament.");
             return;
         }
 
         GameEvents.RaiseToast("Entered this week's tournament!");
-        GameEvents.ArenaDataChanged?.Invoke();
         RefreshAll();
     }
 
@@ -317,15 +287,21 @@ public class ArenaMainPanelUI : MonoBehaviour
         if (root != null)
         {
             var detail = root.GetComponent<ArenaTournamentDetailPanelUI>();
-            if (detail != null) detail.ShowCurrent();
-        }
-    }
+            if (detail != null)
+            {
+                detail.ShowCurrent();
 
-    private void HandleToggleHistory()
-    {
-        // Scroll the history list into view or toggle visibility.
-        if (historyScrollRect != null)
-            historyScrollRect.normalizedPosition = Vector2.one; // scroll to top
+                // Inject full record for match history & standings
+                var record = ArenaTournamentService.GetActiveRecord();
+                var arena = SaveManager.GetArenaSaveData();
+                string playerEntryId = arena?.currentTournamentCache?.playerEntryId;
+                if (record != null && !string.IsNullOrEmpty(playerEntryId))
+                {
+                    detail.PopulateMatchesFromRecord(record, playerEntryId);
+                    detail.PopulateStandings(record, playerEntryId);
+                }
+            }
+        }
     }
 
     private void OnHistoryCardClicked(ArenaTournamentHistoryEntry entry)

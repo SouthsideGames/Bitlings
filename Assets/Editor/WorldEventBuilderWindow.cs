@@ -71,7 +71,7 @@ public class WorldEventBuilderWindow : EditorWindow
     private int warningCount;
     private int errorCount;
 
-    [MenuItem("Tools/World Events/Builder")]
+    [MenuItem("Bitlings/World Events/Builder")]
     public static void Open()
     {
         GetWindow<WorldEventBuilderWindow>("World Event Builder");

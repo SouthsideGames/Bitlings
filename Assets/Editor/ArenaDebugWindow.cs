@@ -114,6 +114,60 @@ public class ArenaDebugWindow : EditorWindow
     {
         EditorGUILayout.LabelField("Match Resolution", EditorStyles.boldLabel);
 
+        // ── Service-based (uses ArenaTournamentService) ──
+        bool hasServiceRecord = ArenaTournamentService.HasActiveRecord;
+
+        EditorGUILayout.LabelField("Service (live entry flow)", EditorStyles.miniLabel);
+        EditorGUILayout.BeginHorizontal();
+        GUI.enabled = hasServiceRecord;
+        if (GUILayout.Button("Resolve Next Round", GUILayout.Height(26)))
+        {
+            int r = ArenaTournamentService.ResolveNextRound();
+            if (r >= 0) Debug.Log($"Service resolved round {r}.");
+            _standingsText = "";
+            // Sync local reference
+            _activeTournament = ArenaTournamentService.GetActiveRecord();
+        }
+        if (GUILayout.Button("Resolve ALL Rounds", GUILayout.Height(26)))
+        {
+            ArenaTournamentService.ResolveAllRounds();
+            _standingsText = "";
+            _activeTournament = ArenaTournamentService.GetActiveRecord();
+        }
+        GUI.enabled = true;
+        EditorGUILayout.EndHorizontal();
+
+        if (!hasServiceRecord)
+            EditorGUILayout.HelpBox("Enter a tournament via the UI or \"Enter via Service\" below, then resolve here.", MessageType.Info);
+
+        EditorGUILayout.BeginHorizontal();
+        if (GUILayout.Button("Enter via Service", GUILayout.Height(22)))
+        {
+            if (ArenaTournamentService.TryEnterTournament(out string err))
+            {
+                _activeTournament = ArenaTournamentService.GetActiveRecord();
+                _standingsText = "";
+                Debug.Log("Entered tournament via service.");
+            }
+            else
+            {
+                Debug.LogWarning($"Entry failed: {err}");
+            }
+        }
+        GUI.enabled = hasServiceRecord;
+        if (GUILayout.Button("Discard Service Record", GUILayout.Height(22)))
+        {
+            ArenaTournamentService.DiscardActiveRecord();
+            _activeTournament = null;
+            _standingsText = "";
+        }
+        GUI.enabled = true;
+        EditorGUILayout.EndHorizontal();
+
+        EditorGUILayout.Space(6);
+
+        // ── Legacy manual (uses local _activeTournament from fake tournament) ──
+        EditorGUILayout.LabelField("Manual (fake tournament)", EditorStyles.miniLabel);
         bool hasTournament = _activeTournament != null;
         GUI.enabled = hasTournament;
 

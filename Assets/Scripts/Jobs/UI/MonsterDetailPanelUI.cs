@@ -1224,7 +1224,10 @@ private Sprite GetVariantIcon(MonsterDataSO monster)
             // Enforce: one owned monster instance per team slot.
             TeamUtils.RemoveDuplicatesForAssignment(team, clone, slotIndex);
             if (!string.IsNullOrEmpty(clone.ownedUID))
+            {
                 IdleLoadoutManager.RemoveFromIdleByOwnedUid(clone.ownedUID);
+                ArenaLoadoutManager.RemoveFromArenaByOwnedUid(clone.ownedUID);
+            }
             team[slotIndex] = clone;
 
             data.team = team;
@@ -1282,7 +1285,10 @@ private Sprite GetVariantIcon(MonsterDataSO monster)
         // Enforce: one owned monster instance per team slot.
         TeamUtils.RemoveDuplicatesForAssignment(team2, canonical, slotIndex);
         if (!string.IsNullOrEmpty(canonical.ownedUID))
+        {
             IdleLoadoutManager.RemoveFromIdleByOwnedUid(canonical.ownedUID);
+            ArenaLoadoutManager.RemoveFromArenaByOwnedUid(canonical.ownedUID);
+        }
         team2[slotIndex] = canonical;
 
         data2.team = team2;

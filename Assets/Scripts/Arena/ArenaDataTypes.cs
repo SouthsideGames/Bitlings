@@ -202,6 +202,12 @@ public sealed class ArenaMatchHistoryEntry
     public int turnCount;
     public long processedUtc;
 
+    /// <summary>Team snapshot for the player side (optional, for detail display).</summary>
+    public ArenaTeamSnapshot playerSnapshot;
+
+    /// <summary>Team snapshot for the opponent side (optional, for detail display).</summary>
+    public ArenaTeamSnapshot opponentSnapshot;
+
     /// <summary>Serialized battle log events for replay/summary.</summary>
     public List<ArenaBattleLogEvent> battleLog = new List<ArenaBattleLogEvent>();
 }

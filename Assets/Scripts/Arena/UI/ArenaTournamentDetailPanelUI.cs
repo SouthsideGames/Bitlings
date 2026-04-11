@@ -1,17 +1,9 @@
-// Assets/Scripts/Arena/UI/ArenaTournamentDetailPanelUI.cs
-// BRN Arena v1 — Tournament detail overlay showing bracket info, standings, and match history.
-
 using System;
 using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
-/// <summary>
-/// Overlay panel that displays tournament details: week range, player placement,
-/// final standings (after completion), and the player's match-by-match history.
-/// Opened from <see cref="ArenaMainPanelUI"/> by <see cref="PanelId.ArenaTournamentDetail"/>.
-/// </summary>
 public class ArenaTournamentDetailPanelUI : MonoBehaviour
 {
     // ═════════════════════════════════════════════════════════════
@@ -140,12 +132,20 @@ public class ArenaTournamentDetailPanelUI : MonoBehaviour
         // Standings — only shown when completed
         bool showStandings = status == ArenaPlayerTournamentStatus.Completed;
         if (standingsGroup) standingsGroup.SetActive(showStandings);
-        // Full standings population requires the tournament record (not in save data).
-        // Clear for now — will populate when record is available.
         ClearStandings();
 
-        // Match list — build from save data match history
-        BuildMatchListFromSave(arena, cache?.tournamentId);
+        // Try to load full record from the tournament service
+        var record = ArenaTournamentService.GetActiveRecord();
+        string playerEntryId = cache?.playerEntryId;
+        if (record != null && !string.IsNullOrEmpty(playerEntryId))
+        {
+            PopulateMatchesFromRecord(record, playerEntryId);
+            if (showStandings) PopulateStandings(record, playerEntryId);
+        }
+        else
+        {
+            BuildMatchListFromSave(arena, cache?.tournamentId);
+        }
     }
 
     private void PopulateHistory()
@@ -310,7 +310,7 @@ public class ArenaTournamentDetailPanelUI : MonoBehaviour
         if (root != null)
         {
             var detail = root.GetComponent<ArenaMatchDetailPanelUI>();
-            if (detail != null) detail.Show(entry);
+            if (detail != null) detail.Show(entry, entry.playerSnapshot, entry.opponentSnapshot);
         }
     }
 
@@ -367,6 +367,7 @@ public class ArenaTournamentDetailPanelUI : MonoBehaviour
     {
         string opponentEntryId = playerIsLeft ? match.rightEntryId : match.leftEntryId;
         var opponent = FindEntry(record, opponentEntryId);
+        var player = FindEntry(record, playerEntryId);
 
         return new ArenaMatchHistoryEntry
         {
@@ -379,6 +380,8 @@ public class ArenaTournamentDetailPanelUI : MonoBehaviour
             playerWon = string.Equals(match.winnerEntryId, playerEntryId, StringComparison.Ordinal),
             turnCount = match.turnCount,
             processedUtc = match.processedUtc,
+            playerSnapshot = player?.teamSnapshot,
+            opponentSnapshot = opponent?.teamSnapshot,
             battleLog = match.battleLog ?? new List<ArenaBattleLogEvent>()
         };
     }

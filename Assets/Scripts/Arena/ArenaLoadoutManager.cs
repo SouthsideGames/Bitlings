@@ -80,7 +80,7 @@ public static class ArenaLoadoutManager
     /// <summary>
     /// Assigns <paramref name="candidate"/> to the given arena slot.
     /// Removes <paramref name="candidate"/> from other arena slots if already present.
-    /// Does NOT remove from Active or Idle teams (arena allows reuse).
+    /// Removes from Active and Idle teams so no monster is on multiple teams.
     /// Returns false if the team is locked or data is unavailable.
     /// </summary>
     public static bool AssignToArenaSlot(int slotIndex, OwnedMonsterData candidate)
@@ -119,6 +119,10 @@ public static class ArenaLoadoutManager
 
         // Remove from other arena slots (no duplicate instance within arena team).
         ClearUidFromAllSlots(team, uid, exceptSlot: slotIndex);
+
+        // Remove from Active and Idle teams so the same monster isn't on multiple teams.
+        RemoveFromActiveByOwnedUid(uid);
+        IdleLoadoutManager.RemoveFromIdleByOwnedUid(uid);
 
         // Set the target slot.
         SetSlot(team, slotIndex, uid);
@@ -294,6 +298,21 @@ public static class ArenaLoadoutManager
         }
 
         return null;
+    }
+
+    private static void RemoveFromActiveByOwnedUid(string uid)
+    {
+        var data = SaveManager.Data;
+        if (data?.team == null || string.IsNullOrEmpty(uid)) return;
+
+        int n = Mathf.Min(TeamSize, data.team.Count);
+        for (int i = 0; i < n; i++)
+        {
+            var t = data.team[i];
+            if (t == null || string.IsNullOrEmpty(t.ownedUID)) continue;
+            if (!string.Equals(t.ownedUID, uid, StringComparison.Ordinal)) continue;
+            data.team[i] = new OwnedMonsterData();
+        }
     }
 
     private static OwnedMonsterData FindFirstOwnedByMonsterId(PlayerManager data, string monsterId)
