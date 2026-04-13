@@ -1,15 +1,7 @@
-// Assets/Scripts/Arena/UI/ArenaUsernamePopupUI.cs
-// BRN Arena v1 — Username creation popup shown during first-open onboarding.
-// Username becomes permanent once committed. No global uniqueness required in v1.
-
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
-/// <summary>
-/// Small modal popup for creating the player's arena display name.
-/// Shown by <see cref="ArenaOnboardingManager"/> during onboarding step 2.
-/// </summary>
 public class ArenaUsernamePopupUI : MonoBehaviour
 {
     public static ArenaUsernamePopupUI I { get; private set; }

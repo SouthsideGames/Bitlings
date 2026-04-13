@@ -52,8 +52,18 @@ public static class ArenaOnboardingManager
         // Step 1: Intro tutorial.
         if (!arena.introCompleted)
         {
-            TutorialOverlayPanel.RequestOpen(ArenaIntroTutorialKey);
-            return true;
+            // If the tutorial was already completed via SaveManager but CompleteIntro()
+            // was never called (no callback wired), sync the flag now so we can advance.
+            if (SaveManager.IsTutorialComplete(ArenaIntroTutorialKey))
+            {
+                arena.introCompleted = true;
+                SaveManager.Save();
+            }
+            else
+            {
+                TutorialOverlayPanel.RequestOpen(ArenaIntroTutorialKey);
+                return true;
+            }
         }
 
         // Step 2: Username creation.
