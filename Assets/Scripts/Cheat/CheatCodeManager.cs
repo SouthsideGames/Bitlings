@@ -636,6 +636,10 @@ public class CheatCodeManager : MonoBehaviour
 
         SaveManager.Save();
 
+        // Grant any rank-up rewards that were skipped by setting rank directly.
+        if (oldRank < targetRank && PromotionManager.I != null)
+            PromotionManager.I.GrantRankRewards(oldRank + 1, targetRank);
+
         ComputePromotionProgressForCheat(out int xpThisRank, out int xpToNext);
 
         GameEvents.PromotionProgressChanged?.Invoke(data.promotionRank, data.promotionXP, xpThisRank, xpToNext);
@@ -734,6 +738,10 @@ public class CheatCodeManager : MonoBehaviour
         data.promotionXP = Mathf.Max(targetXp, data.promotionXP);
 
         SaveManager.Save();
+
+        // Grant any rank-up rewards that were skipped by setting rank directly.
+        if (oldRank < targetRank && PromotionManager.I != null)
+            PromotionManager.I.GrantRankRewards(oldRank + 1, targetRank);
 
         ComputePromotionProgressForCheat(out int xpThisRank, out int xpToNext);
 

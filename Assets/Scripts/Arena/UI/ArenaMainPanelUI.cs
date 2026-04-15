@@ -38,6 +38,15 @@ public class ArenaMainPanelUI : MonoBehaviour
     [SerializeField] private ScrollRect historyScrollRect;
     [SerializeField] private GameObject historyEmptyLabel;
 
+    [Header("Leaderboard")]
+    [SerializeField] private Button leaderboardButton;
+    [SerializeField] private ArenaLeaderboardPanelUI leaderboardPanel;
+
+    [Header("Online")]
+    [SerializeField] private GameObject offlineOverlay;
+    [SerializeField] private TextMeshProUGUI offlineReasonLabel;
+    [SerializeField] private Button retryConnectionButton;
+
     // ═════════════════════════════════════════════════════════════
     //  State
     // ═════════════════════════════════════════════════════════════
@@ -59,40 +68,63 @@ public class ArenaMainPanelUI : MonoBehaviour
         // ── Events ──
         GameEvents.OnResourcesChanged += RefreshAll;
         GameEvents.ArenaDataChanged += RefreshAll;
+        TutorialOverlayPanel.OnCompleted += OnTutorialCompleted;
+        UGSInitializer.OnReady += OnUGSReady;
 
         // ── Buttons ──
         if (buyTicketButton)       { buyTicketButton.onClick.RemoveAllListeners();       buyTicketButton.onClick.AddListener(HandleBuyTicket); }
         if (editTeamButton)        { editTeamButton.onClick.RemoveAllListeners();        editTeamButton.onClick.AddListener(HandleEditTeam); }
         if (enterTournamentButton) { enterTournamentButton.onClick.RemoveAllListeners(); enterTournamentButton.onClick.AddListener(HandleEnterTournament); }
         if (viewTournamentButton)  { viewTournamentButton.onClick.RemoveAllListeners();  viewTournamentButton.onClick.AddListener(HandleViewTournament); }
+        if (retryConnectionButton) { retryConnectionButton.onClick.RemoveAllListeners(); retryConnectionButton.onClick.AddListener(HandleRetryConnection); }
+        if (leaderboardButton)      { leaderboardButton.onClick.RemoveAllListeners();      leaderboardButton.onClick.AddListener(HandleOpenLeaderboard); }
 
         // ── Week card callbacks ──
         if (weekCard) weekCard.Bind(HandleEnterTournament, HandleViewTournament);
+
+        // ── Online check ──
+        RefreshOfflineOverlay();
+
+        if (!ArenaNetworkGuard.IsOnline)
+        {
+            // Still show whatever local data we have, but the overlay blocks interaction.
+            RefreshAll();
+            return;
+        }
 
         // ── Onboarding ──
         if (ArenaOnboardingManager.NeedsOnboarding())
         {
             ArenaOnboardingManager.TryAdvanceOnboarding();
         }
-        // Force username popup if the player still has no username,
-        // even if the normal onboarding flow was already completed.
-        else if (!ArenaSaveHelper.HasArenaUsername())
+
+        // Always force the username popup if the player has no username,
+        // regardless of whether onboarding thinks it already ran.
+        // No one can use the arena without a username.
+        if (!ArenaSaveHelper.HasArenaUsername())
         {
             ForceShowUsernamePopup();
         }
 
         RefreshAll();
+
+        // If registered and brackets might be ready, sync in background.
+        TrySyncBracketOnOpen();
     }
 
     void OnDisable()
     {
         GameEvents.OnResourcesChanged -= RefreshAll;
         GameEvents.ArenaDataChanged -= RefreshAll;
+        TutorialOverlayPanel.OnCompleted -= OnTutorialCompleted;
+        UGSInitializer.OnReady -= OnUGSReady;
 
         if (buyTicketButton)       buyTicketButton.onClick.RemoveListener(HandleBuyTicket);
         if (editTeamButton)        editTeamButton.onClick.RemoveListener(HandleEditTeam);
         if (enterTournamentButton) enterTournamentButton.onClick.RemoveListener(HandleEnterTournament);
         if (viewTournamentButton)  viewTournamentButton.onClick.RemoveListener(HandleViewTournament);
+        if (retryConnectionButton) retryConnectionButton.onClick.RemoveListener(HandleRetryConnection);
+        if (leaderboardButton)      leaderboardButton.onClick.RemoveListener(HandleOpenLeaderboard);
     }
 
     void OnDestroy()
@@ -180,8 +212,10 @@ public class ArenaMainPanelUI : MonoBehaviour
         // Edit team — always available when arena is unlocked (locked team shows visual hint)
         if (editTeamButton) editTeamButton.interactable = ArenaSaveHelper.IsArenaUnlocked();
 
-        // Enter — only when registration is open and not already entered
+        // Enter — only when registration is open, not already entered, has a username, and is online
         bool canEnter = status == ArenaPlayerTournamentStatus.NotEntered
+                     && ArenaNetworkGuard.IsOnline
+                     && ArenaSaveHelper.HasArenaUsername()
                      && ArenaTeamValidator.IsBattleTeamComplete()
                      && ArenaTicketManager.GetTicketCount() > 0;
 
@@ -254,6 +288,11 @@ public class ArenaMainPanelUI : MonoBehaviour
         }
     }
 
+    private void HandleOpenLeaderboard()
+    {
+        if (leaderboardPanel) leaderboardPanel.gameObject.SetActive(true);
+    }
+
     private void HandleEditTeam()
     {
         // Open Directory in Arena loadout mode.
@@ -269,14 +308,68 @@ public class ArenaMainPanelUI : MonoBehaviour
 
     private void HandleEnterTournament()
     {
-        if (!ArenaTournamentService.TryEnterTournament(out string error))
+        // Block entry if offline.
+        if (!ArenaNetworkGuard.IsOnline)
         {
-            GameEvents.RaiseToast(error ?? "Unable to enter tournament.");
+            GameEvents.RaiseToast(ArenaNetworkGuard.GetOfflineReason() ?? "No connection.");
             return;
         }
 
-        GameEvents.RaiseToast("Entered this week's tournament!");
+        // Block entry and show username popup if the player hasn't set one.
+        if (!ArenaSaveHelper.HasArenaUsername())
+        {
+            ForceShowUsernamePopup();
+            return;
+        }
+
+        // Online path — register via Cloud Code.
+        EnterTournamentOnlineAsync();
+    }
+
+    private async void EnterTournamentOnlineAsync()
+    {
+        if (enterTournamentButton) enterTournamentButton.interactable = false;
+
+        var (success, error) = await ArenaTournamentService.TryEnterTournamentAsync();
+
+        if (success)
+        {
+            GameEvents.RaiseToast("Registered for this week's tournament!");
+        }
+        else
+        {
+            GameEvents.RaiseToast(error ?? "Unable to register.");
+        }
+
+        if (enterTournamentButton) enterTournamentButton.interactable = true;
         RefreshAll();
+    }
+
+    /// <summary>
+    /// If the player is in Registered state and brackets might be ready,
+    /// sync in the background and auto-resolve any available rounds.
+    /// </summary>
+    private async void TrySyncBracketOnOpen()
+    {
+        var arena = SaveManager.GetArenaSaveData();
+        var status = arena?.currentTournamentCache?.playerStatus ?? ArenaPlayerTournamentStatus.NotEntered;
+
+        if (status == ArenaPlayerTournamentStatus.Registered && ArenaNetworkGuard.IsOnline)
+        {
+            var (synced, _) = await ArenaTournamentService.SyncBracketAsync();
+            if (synced)
+            {
+                // Catch up on any available rounds
+                ArenaTournamentService.ResolveAvailableRounds();
+                RefreshAll();
+            }
+        }
+        else if (status == ArenaPlayerTournamentStatus.Entered || status == ArenaPlayerTournamentStatus.Active)
+        {
+            // Catch up on any rounds that became available since last open
+            int resolved = ArenaTournamentService.ResolveAvailableRounds();
+            if (resolved > 0) RefreshAll();
+        }
     }
 
     private void HandleViewTournament()
@@ -319,8 +412,50 @@ public class ArenaMainPanelUI : MonoBehaviour
     }
 
     // ═════════════════════════════════════════════════════════════
+    //  Tutorial callback
+    // ═════════════════════════════════════════════════════════════
+
+    private void OnTutorialCompleted(string key)
+    {
+        if (key != ArenaOnboardingManager.ArenaIntroTutorialKey) return;
+        ArenaOnboardingManager.CompleteIntro();
+    }
+
+    // ═════════════════════════════════════════════════════════════
     //  Helpers
     // ═════════════════════════════════════════════════════════════
+
+    private void RefreshOfflineOverlay()
+    {
+        bool online = ArenaNetworkGuard.IsOnline;
+        if (offlineOverlay) offlineOverlay.SetActive(!online);
+        if (offlineReasonLabel && !online)
+            offlineReasonLabel.text = ArenaNetworkGuard.GetOfflineReason() ?? "";
+    }
+
+    private void OnUGSReady()
+    {
+        // Services came online while the panel was visible — hide overlay and run normal flow.
+        RefreshOfflineOverlay();
+        if (ArenaNetworkGuard.IsOnline)
+        {
+            if (ArenaOnboardingManager.NeedsOnboarding())
+                ArenaOnboardingManager.TryAdvanceOnboarding();
+
+            if (!ArenaSaveHelper.HasArenaUsername())
+                ForceShowUsernamePopup();
+
+            RefreshAll();
+        }
+    }
+
+    private void HandleRetryConnection()
+    {
+        if (UGSInitializer.I != null && !UGSInitializer.I.IsReady)
+            UGSInitializer.I.Retry();
+
+        RefreshOfflineOverlay();
+    }
 
     private void ForceShowUsernamePopup()
     {

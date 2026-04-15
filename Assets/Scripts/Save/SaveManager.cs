@@ -265,6 +265,10 @@ public static class SaveManager
             string json = JsonUtility.ToJson(root, prettyPrint: false);
 #endif
             WriteSaveSafely(json, "Save");
+
+            // Push arena data to cloud if UGS is online (fire-and-forget).
+            if (CloudSaveSync.HasSynced)
+                _ = CloudSaveSync.PushArenaDataAsync();
         }
         catch (Exception e)
         {

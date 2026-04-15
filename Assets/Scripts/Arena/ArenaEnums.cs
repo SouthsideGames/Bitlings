@@ -25,7 +25,9 @@ public enum ArenaPlayerTournamentStatus
     /// <summary>Player lost their single-elimination match and is out.</summary>
     Eliminated = 3,
     /// <summary>Player survived the bracket — placed in the tournament.</summary>
-    Completed = 4
+    Completed = 4,
+    /// <summary>Registered for the tournament but brackets have not been assigned yet.</summary>
+    Registered = 5
 }
 
 /// <summary>

@@ -343,6 +343,9 @@ public sealed class ArenaTournamentRecord
     /// <summary>Score band this bracket was seeded into.</summary>
     public ArenaScoreBand scoreBand;
 
+    /// <summary>Deterministic seed used for bracket shuffling and bot generation.</summary>
+    public int bracketSeed;
+
     public List<ArenaTournamentEntry> entries = new List<ArenaTournamentEntry>();
     public List<ArenaTournamentMatch> matches = new List<ArenaTournamentMatch>();
 

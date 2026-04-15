@@ -5,6 +5,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Threading.Tasks;
 using UnityEngine;
 
 /// <summary>
@@ -38,12 +39,254 @@ public static class ArenaTournamentService
     public static bool HasActiveRecord => GetActiveRecord() != null;
 
     // ═════════════════════════════════════════════════════════════
-    //  Enter Tournament
+    //  Enter Tournament (Online — async Cloud Code)
     // ═════════════════════════════════════════════════════════════
 
     /// <summary>
-    /// Full entry flow: validate → spend ticket → freeze team → build bracket → persist.
-    /// Returns true on success.
+    /// Online entry flow: validate → spend ticket → freeze snapshot → register via Cloud Code.
+    /// Sets status to Registered. Bracket assignment happens later via <see cref="SyncBracketAsync"/>.
+    /// </summary>
+    public static async Task<(bool success, string error)> TryEnterTournamentAsync()
+    {
+        // ── Prerequisites ──
+        if (!ArenaNetworkGuard.IsOnline)
+            return (false, "No connection. Try again later.");
+
+        if (!ArenaSaveHelper.IsArenaUnlocked())
+            return (false, "Arena is not unlocked.");
+
+        if (!ArenaSaveHelper.HasArenaUsername())
+            return (false, "Set an Arena username first.");
+
+        if (!ArenaTeamValidator.IsBattleTeamComplete())
+            return (false, "Complete your Battle Team first.");
+
+        if (ArenaTicketManager.GetTicketCount() <= 0)
+            return (false, "You need an Arena Ticket to enter.");
+
+        if (!ArenaScheduleService.IsRegistrationOpen())
+            return (false, "Registration is currently closed.");
+
+        var arena = SaveManager.GetArenaSaveData();
+        var status = arena?.currentTournamentCache?.playerStatus ?? ArenaPlayerTournamentStatus.NotEntered;
+        if (status != ArenaPlayerTournamentStatus.NotEntered)
+            return (false, "Already entered a tournament this week.");
+
+        // ── Spend ticket ──
+        if (!ArenaTicketManager.TrySpendTicket())
+            return (false, "Unable to spend ticket.");
+
+        // ── Build player entry snapshot ──
+        string playerId = arena.arenaPlayerId ?? Guid.NewGuid().ToString();
+        string displayName = !string.IsNullOrEmpty(arena.arenaUsername) ? arena.arenaUsername : "Player";
+
+        var playerSnapshot = ArenaTournamentBuilder.CreateTournamentEntrySnapshot(playerId, displayName);
+        int playerScore = ArenaScoreCalculator.CalculateArenaTeamScore(playerSnapshot);
+        var band = ArenaScoreCalculator.GetBattleTeamScoreBand(playerScore);
+
+        string snapshotJson = JsonUtility.ToJson(playerSnapshot);
+        string weekId = ArenaScheduleService.GetCurrentWeekId();
+
+        // ── Register via Cloud Code ──
+        var result = await ArenaCloudCodeService.RegisterForTournamentAsync(
+            snapshotJson, playerScore, (int)band, displayName, weekId);
+
+        if (!result.success)
+        {
+            // Refund the ticket since registration failed
+            var refundArena = SaveManager.GetArenaSaveData();
+            if (refundArena != null)
+            {
+                refundArena.arenaTickets = Math.Min(refundArena.arenaTickets + 1, ArenaConstants.MaxTickets);
+                SaveManager.Save();
+            }
+            return (false, result.error ?? "Registration failed.");
+        }
+
+        // ── Update save data ──
+        long weekStart = ArenaScheduleService.GetCurrentWeekStartUtc();
+        long weekEnd = ArenaScheduleService.GetCurrentWeekEndUtc();
+
+        arena.currentTournamentCache = new ArenaCurrentTournamentCache
+        {
+            tournamentId = "", // Assigned later when bracket is built
+            weekStartUtc = weekStart,
+            weekEndUtc = weekEnd,
+            playerEntryId = "", // Assigned later
+            playerStatus = ArenaPlayerTournamentStatus.Registered,
+            currentRoundIndex = 0,
+            finalPlacement = 0,
+            resultsLastUpdatedUtc = DateTimeOffset.UtcNow.ToUnixTimeSeconds()
+        };
+
+        // Lock team
+        arena.battleTeamData ??= new ArenaBattleTeamData();
+        arena.battleTeamData.isLocked = true;
+        arena.battleTeamData.lockedTournamentId = $"pending_{weekId}";
+
+        // Lifetime stats
+        arena.lifetimeStats ??= new ArenaLifetimeStats();
+        arena.lifetimeStats.tournamentsEntered++;
+
+        SaveManager.Save();
+        GameEvents.ArenaDataChanged?.Invoke();
+
+        Debug.Log($"{TAG} Registered for tournament week {weekId} ({band} band, score {playerScore}).");
+        return (true, null);
+    }
+
+    // ═════════════════════════════════════════════════════════════
+    //  Bracket Sync (poll server for bracket assignment)
+    // ═════════════════════════════════════════════════════════════
+
+    /// <summary>
+    /// Polls the server for the player's bracket assignment.
+    /// If assigned, builds the full bracket locally (with deterministic bot backfill)
+    /// and transitions status from Registered → Entered.
+    /// Returns true if the bracket was newly synced.
+    /// </summary>
+    public static async Task<(bool synced, string message)> SyncBracketAsync()
+    {
+        if (!ArenaNetworkGuard.IsOnline)
+            return (false, "No connection.");
+
+        var arena = SaveManager.GetArenaSaveData();
+        var cache = arena?.currentTournamentCache;
+        if (cache == null || cache.playerStatus != ArenaPlayerTournamentStatus.Registered)
+            return (false, "Not in Registered state.");
+
+        string weekId = ArenaScheduleService.GetCurrentWeekId();
+        var result = await ArenaCloudCodeService.GetTournamentBracketAsync(weekId);
+
+        if (!result.assigned)
+            return (false, result.reason ?? "Brackets not ready yet.");
+
+        // ── Build full bracket locally ──
+        var bracket = result.bracket;
+        var record = BuildBracketFromServerData(bracket, result.entryId);
+
+        if (record == null)
+            return (false, "Failed to build bracket from server data.");
+
+        // ── Update save data ──
+        cache.tournamentId = record.tournamentId;
+        cache.playerEntryId = result.entryId;
+        cache.playerStatus = ArenaPlayerTournamentStatus.Entered;
+        cache.weekStartUtc = record.weekStartUtc;
+        cache.weekEndUtc = record.weekEndUtc;
+        cache.currentRoundIndex = 0;
+        cache.resultsLastUpdatedUtc = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+
+        arena.battleTeamData.lockedTournamentId = record.tournamentId;
+
+        _activeRecord = record;
+        SaveRecordToDisk(record);
+        SaveManager.Save();
+        GameEvents.ArenaDataChanged?.Invoke();
+
+        Debug.Log($"{TAG} Bracket synced: '{record.tournamentId}' ({record.entries.Count} entries, {bracket.realPlayerCount} real).");
+        return (true, null);
+    }
+
+    /// <summary>
+    /// Builds a full ArenaTournamentRecord from server bracket data.
+    /// Creates real player entries from server data, generates bot backfill deterministically,
+    /// shuffles all entries with the bracket seed, and creates round 1 match stubs.
+    /// </summary>
+    private static ArenaTournamentRecord BuildBracketFromServerData(
+        ArenaCloudCodeService.BracketData serverBracket, string playerEntryId)
+    {
+        try
+        {
+            var rng = new System.Random(serverBracket.bracketSeed);
+            var band = (ArenaScoreBand)serverBracket.scoreBand;
+
+            // Deserialize real player entries
+            var allEntries = new List<ArenaTournamentEntry>();
+            foreach (var re in serverBracket.realEntries)
+            {
+                var snapshot = JsonUtility.FromJson<ArenaTeamSnapshot>(re.teamSnapshotJson);
+                allEntries.Add(new ArenaTournamentEntry
+                {
+                    entryId = re.entryId,
+                    tournamentId = serverBracket.tournamentId,
+                    playerId = re.playerId,
+                    displayNameSnapshot = re.displayName,
+                    isBot = false,
+                    arenaScore = re.arenaScore,
+                    teamSnapshot = snapshot,
+                    eliminatedRoundIndex = -1,
+                    finalPlacement = 0
+                });
+            }
+
+            // Generate bot backfill deterministically
+            int botsNeeded = ArenaConstants.BracketSize - allEntries.Count;
+            if (botsNeeded > 0)
+            {
+                var botTemplates = ArenaBotTemplateLibrary.GetTemplatesForBand(band);
+                var bots = ArenaBotGenerator.GenerateBotEntries(
+                    botsNeeded, band, serverBracket.tournamentId, botTemplates, rng);
+                allEntries.AddRange(bots);
+            }
+
+            // Fisher-Yates shuffle with bracket seed
+            for (int i = allEntries.Count - 1; i > 0; i--)
+            {
+                int j = rng.Next(i + 1);
+                (allEntries[i], allEntries[j]) = (allEntries[j], allEntries[i]);
+            }
+
+            // Assign seed orders
+            for (int i = 0; i < allEntries.Count; i++)
+            {
+                allEntries[i].seedOrder = i + 1;
+                allEntries[i].tournamentId = serverBracket.tournamentId;
+            }
+
+            // Generate round 1 match stubs
+            var matches = new List<ArenaTournamentMatch>();
+            for (int i = 0; i < allEntries.Count; i += 2)
+            {
+                if (i + 1 >= allEntries.Count) break;
+                matches.Add(new ArenaTournamentMatch
+                {
+                    matchId = $"{serverBracket.tournamentId}_R0_M{i / 2}",
+                    tournamentId = serverBracket.tournamentId,
+                    roundIndex = 0,
+                    leftEntryId = allEntries[i].entryId,
+                    rightEntryId = allEntries[i + 1].entryId,
+                    matchSeed = rng.Next()
+                });
+            }
+
+            return new ArenaTournamentRecord
+            {
+                tournamentId = serverBracket.tournamentId,
+                weekStartUtc = serverBracket.weekStartUtc,
+                weekEndUtc = serverBracket.weekEndUtc,
+                state = ArenaTournamentState.Active,
+                bracketSize = ArenaConstants.BracketSize,
+                scoreBand = band,
+                bracketSeed = serverBracket.bracketSeed,
+                entries = allEntries,
+                matches = matches
+            };
+        }
+        catch (Exception ex)
+        {
+            Debug.LogError($"{TAG} BuildBracketFromServerData failed: {ex.Message}");
+            return null;
+        }
+    }
+
+    // ═════════════════════════════════════════════════════════════
+    //  Enter Tournament (Local / Offline — legacy)
+    // ═════════════════════════════════════════════════════════════
+
+    /// <summary>
+    /// Local-only entry flow: validate → spend ticket → freeze team → build bracket → persist.
+    /// Used for offline play or testing. Returns true on success.
     /// </summary>
     public static bool TryEnterTournament(out string errorMessage)
     {
@@ -53,6 +296,12 @@ public static class ArenaTournamentService
         if (!ArenaSaveHelper.IsArenaUnlocked())
         {
             errorMessage = "Arena is not unlocked.";
+            return false;
+        }
+
+        if (!ArenaSaveHelper.HasArenaUsername())
+        {
+            errorMessage = "Set an Arena username first.";
             return false;
         }
 
@@ -168,8 +417,10 @@ public static class ArenaTournamentService
 
     /// <summary>
     /// Resolves the next unresolved round. Returns the round index that was resolved, or -1 if none remain.
+    /// Online mode: obeys the daily schedule (rounds unlock Wed–Sun at BattleResolveHourET).
+    /// Local mode: resolves immediately.
     /// </summary>
-    public static int ResolveNextRound()
+    public static int ResolveNextRound(bool respectSchedule = true)
     {
         var record = GetActiveRecord();
         if (record == null)
@@ -185,6 +436,13 @@ public static class ArenaTournamentService
         if (roundIndex >= ArenaConstants.TotalRounds)
         {
             Debug.Log($"{TAG} All rounds already resolved.");
+            return -1;
+        }
+
+        // Online mode: only allow resolution when the schedule says this round is available.
+        if (respectSchedule && !ArenaScheduleService.IsRoundAvailable(roundIndex))
+        {
+            Debug.Log($"{TAG} Round {roundIndex} is not yet available per schedule.");
             return -1;
         }
 
@@ -230,8 +488,26 @@ public static class ArenaTournamentService
     public static void ResolveAllRounds()
     {
         int round;
-        do { round = ResolveNextRound(); }
+        do { round = ResolveNextRound(respectSchedule: false); }
         while (round >= 0);
+    }
+
+    /// <summary>
+    /// Resolves all rounds that are available per the schedule.
+    /// Called when the player opens the arena to catch up on missed rounds.
+    /// Returns the number of rounds resolved.
+    /// </summary>
+    public static int ResolveAvailableRounds()
+    {
+        int count = 0;
+        int round;
+        do
+        {
+            round = ResolveNextRound(respectSchedule: true);
+            if (round >= 0) count++;
+        }
+        while (round >= 0);
+        return count;
     }
 
     // ═════════════════════════════════════════════════════════════
@@ -306,7 +582,31 @@ public static class ArenaTournamentService
         arena.battleTeamData.isLocked = false;
         arena.battleTeamData.lockedTournamentId = "";
 
+        // Submit to leaderboards (fire-and-forget)
+        SubmitLeaderboardScores(placement, arena.lifetimeStats);
+
         Debug.Log($"{TAG} Tournament '{record.tournamentId}' completed. Player placed #{placement}.");
+    }
+
+    /// <summary>Fire-and-forget leaderboard score submission after tournament completion.</summary>
+    private static async void SubmitLeaderboardScores(int placement, ArenaLifetimeStats stats)
+    {
+        if (!ArenaNetworkGuard.IsOnline) return;
+
+        try
+        {
+            await ArenaLeaderboardService.SubmitWeeklyPlacementAsync(placement);
+
+            if (placement == 1 && stats != null)
+                await ArenaLeaderboardService.SubmitAllTimeChampionshipsAsync(stats.championshipsWon);
+
+            // Publish updated public profile
+            await ArenaPlayerProfileService.PublishProfileAsync();
+        }
+        catch (Exception ex)
+        {
+            Debug.LogWarning($"{TAG} Leaderboard/profile submission failed: {ex.Message}");
+        }
     }
 
     // ═════════════════════════════════════════════════════════════

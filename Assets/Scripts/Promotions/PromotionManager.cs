@@ -206,7 +206,7 @@ public sealed class PromotionManager : MonoBehaviour
         return remaining;
     }
 
-    private void GrantRankRewards(int fromRank, int toRank)
+    public void GrantRankRewards(int fromRank, int toRank)
     {
         if (promotionTable == null) return;
 

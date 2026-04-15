@@ -56,6 +56,13 @@ public static class ArenaConstants
     public const int ScoreBandHighThreshold = 100;
     public const int ScoreBandEliteThreshold = 175;
 
+    // ── Online Schedule ─────────────────────────────────────
+    /// <summary>Hour (ET 24h) when brackets lock on Wednesday. 0 = midnight.</summary>
+    public const int BracketLockHourET = 0;
+
+    /// <summary>Minimum real entrants per score band before merging into adjacent band.</summary>
+    public const int MinRealEntrantsForBandMerge = 8;
+
     // ── Rounds ───────────────────────────────────────────────
     /// <summary>Total rounds in a 32-player single-elimination bracket (log2 32 = 5).</summary>
     public const int TotalRounds = 5;

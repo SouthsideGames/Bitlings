@@ -17,6 +17,11 @@ public class ArenaUsernamePopupUI : MonoBehaviour
     [Header("Settings")]
     [SerializeField] private bool redirectToDirectoryAfterConfirm = true;
 
+    [Header("Loading")]
+    [SerializeField] private GameObject loadingSpinner;
+
+    private bool _isSubmitting;
+
     // ═════════════════════════════════════════════════════════════
     //  Lifecycle
     // ═════════════════════════════════════════════════════════════
@@ -58,9 +63,11 @@ public class ArenaUsernamePopupUI : MonoBehaviour
     /// <summary>Shows the username creation popup.</summary>
     public void Show()
     {
+        _isSubmitting = false;
         SetCanvasGroupVisible(true);
         if (usernameInput) usernameInput.text = "";
         if (errorLabel) errorLabel.text = "";
+        if (loadingSpinner) loadingSpinner.SetActive(false);
         UpdateCharCount("");
         UpdateConfirmButtonState("");
 
@@ -111,6 +118,7 @@ public class ArenaUsernamePopupUI : MonoBehaviour
 
     private void HandleConfirm()
     {
+        if (_isSubmitting) return;
         if (usernameInput == null) return;
 
         string value = usernameInput.text;
@@ -140,22 +148,48 @@ public class ArenaUsernamePopupUI : MonoBehaviour
             return;
         }
 
-        if (!ArenaOnboardingManager.TrySetUsername(trimmed))
+        // Use server-validated path when online, local fallback when offline.
+        if (ArenaNetworkGuard.IsOnline)
         {
-            ShowError("Unable to set name. It may already be set.");
+            SubmitUsernameAsync(trimmed);
+        }
+        else
+        {
+            if (!ArenaOnboardingManager.TrySetUsername(trimmed))
+            {
+                ShowError("Unable to set name. It may already be set.");
+                return;
+            }
+            OnUsernameAccepted(trimmed);
+        }
+    }
+
+    private async void SubmitUsernameAsync(string trimmed)
+    {
+        _isSubmitting = true;
+        if (confirmButton) confirmButton.interactable = false;
+        if (loadingSpinner) loadingSpinner.SetActive(true);
+        if (errorLabel) errorLabel.text = "";
+
+        var (success, error) = await ArenaOnboardingManager.TrySetUsernameAsync(trimmed);
+
+        _isSubmitting = false;
+        if (loadingSpinner) loadingSpinner.SetActive(false);
+
+        if (!success)
+        {
+            ShowError(error ?? "Unable to set name.");
+            UpdateConfirmButtonState(usernameInput != null ? usernameInput.text : "");
             return;
         }
 
-        // Success.
+        OnUsernameAccepted(trimmed);
+    }
+
+    private void OnUsernameAccepted(string trimmed)
+    {
         GameEvents.RaiseToast($"Arena name set: {trimmed}");
         Hide();
-
-        // Suggest Battle Team setup.
-        if (redirectToDirectoryAfterConfirm && !ArenaSaveHelper.IsBattleTeamComplete())
-        {
-            GameEvents.RaiseToast("Set up your Battle Team in the Directory!");
-            ArenaOnboardingManager.OpenDirectoryForTeamSetup();
-        }
     }
 
     private void ShowError(string msg)

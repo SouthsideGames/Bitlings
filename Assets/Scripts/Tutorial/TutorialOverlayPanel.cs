@@ -45,6 +45,9 @@ public sealed class TutorialOverlayPanel : MonoBehaviour
 
     public static bool IsAnyOverlayOpen => _visibleOverlayCount > 0;
 
+    /// <summary>Fired when a tutorial is marked complete (key passed as argument).</summary>
+    public static event Action<string> OnCompleted;
+
     private static readonly HashSet<string> _pendingOpen =
         new HashSet<string>(StringComparer.Ordinal);
 
@@ -145,7 +148,10 @@ public sealed class TutorialOverlayPanel : MonoBehaviour
         if (isLast)
         {
             if (completeOnlyOnLastSlide)
+            {
                 SaveManager.SetTutorialComplete(tutorialKey, true);
+                OnCompleted?.Invoke(tutorialKey);
+            }
 
             ShowOverlay(false);
             return;
@@ -167,6 +173,7 @@ public sealed class TutorialOverlayPanel : MonoBehaviour
         if (string.IsNullOrWhiteSpace(tutorialKey)) return;
 
         SaveManager.SetTutorialComplete(tutorialKey, true);
+        OnCompleted?.Invoke(tutorialKey);
         _pendingOpen.Remove(tutorialKey);
 
         _openedThisSession = true;

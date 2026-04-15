@@ -88,6 +88,10 @@ public class ArenaWeekCardUI : MonoBehaviour
                 ShowRegistrationOpen(cache);
                 break;
 
+            case ArenaPlayerTournamentStatus.Registered:
+                ShowWaitingForBracket();
+                break;
+
             case ArenaPlayerTournamentStatus.Entered:
                 ShowRegistered();
                 break;
@@ -114,12 +118,34 @@ public class ArenaWeekCardUI : MonoBehaviour
     {
         SetGroups(registration: true, active: false, completed: false);
 
-        if (statusLabel) statusLabel.text = "Registration Open";
-        if (registrationDeadlineLabel)
-            registrationDeadlineLabel.text = $"Closes Monday {ArenaConstants.RegistrationCloseHourET}:{ArenaConstants.RegistrationCloseMinuteET:D2} ET";
+        if (ArenaScheduleService.IsRegistrationOpen())
+        {
+            if (statusLabel) statusLabel.text = "Registration Open";
+            if (registrationDeadlineLabel)
+                registrationDeadlineLabel.text = $"Closes Tuesday {ArenaConstants.RegistrationCloseHourET}:{ArenaConstants.RegistrationCloseMinuteET:D2} ET";
 
-        SetButtonState(enter: true, view: false);
-        UpdateEnterButtonInteractable();
+            SetButtonState(enter: true, view: false);
+            UpdateEnterButtonInteractable();
+        }
+        else
+        {
+            if (statusLabel) statusLabel.text = "Registration Closed";
+            if (registrationDeadlineLabel)
+                registrationDeadlineLabel.text = "Opens next Monday.";
+
+            SetButtonState(enter: false, view: false);
+        }
+    }
+
+    private void ShowWaitingForBracket()
+    {
+        SetGroups(registration: true, active: false, completed: false);
+
+        if (statusLabel) statusLabel.text = "Registered \u2713";
+        if (registrationDeadlineLabel)
+            registrationDeadlineLabel.text = "Brackets assigned on Wednesday.";
+
+        SetButtonState(enter: false, view: false);
     }
 
     private void ShowRegistered()

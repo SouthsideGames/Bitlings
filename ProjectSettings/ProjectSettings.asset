@@ -927,10 +927,10 @@ PlayerSettings:
   captureStartupLogs: {}
   activeInputHandler: 1
   windowsGamepadBackendHint: 0
-  cloudProjectId: 54b68971-e5d0-4bac-b926-66d9f1b8b54f
+  cloudProjectId: 415c7c06-72ad-4ba5-a43c-575f6975c3e7
   framebufferDepthMemorylessMode: 0
   qualitySettingsNames: []
-  projectName: Idle Monster
+  projectName: Bitlings
   organizationId: kbutler215
   cloudEnabled: 0
   legacyClampBlendShapeWeights: 0
