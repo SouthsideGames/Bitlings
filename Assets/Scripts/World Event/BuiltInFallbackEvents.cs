@@ -37,13 +37,13 @@ public static class BuiltInFallbackEvents
 
             Make("WE-006", "Premium Surge",
                 ticker:      "✨ Premium surge reported — odd sparkles in the wild.",
-                description: "Unusual energy readings are amplifying rare traits in wild Bitlings. Premium encounter rates are doubled this week.",
+                description: "Unusual energy readings are amplifying rare traits in wild Bitlings. Premium rift rates are doubled this week.",
                 fx: new WorldEventEffect { kind = WorldEventEffectKind.WildPremiumChanceMultiplier, value = 2.0f }),
 
             Make("WE-007", "Citywide Curfew",
-                ticker:      "🚧 Citywide curfew — encounters temporarily suspended.",
-                description: "Authorities have issued a citywide curfew. Wild Bitling encounters are suspended until further notice.",
-                fx: new WorldEventEffect { kind = WorldEventEffectKind.DisableEncounters, value = 1f }),
+                ticker:      "🚧 Citywide curfew — rifts temporarily suspended.",
+                description: "Authorities have issued a citywide curfew. Wild Bitling rifts are suspended until further notice.",
+                fx: new WorldEventEffect { kind = WorldEventEffectKind.DisableRifts, value = 1f }),
 
             Make("WE-008", "Battle Frenzy",
                 ticker:      "⚔️ Battle Frenzy week — enhanced battle rewards.",

@@ -35,13 +35,13 @@ public static class DiagnosticsSnapshot
         sb.AppendLine();
 
         // ─────────────────────────────────────────────
-        // Encounter / Energy
+        // Rift / Energy
         // ─────────────────────────────────────────────
-        sb.AppendLine("— Encounter / Energy —");
-        sb.AppendLine($"Energy: {SafeRes(ResourceType.Energy)}/{data.encounterMax}  (cost: {data.encounterCost})");
+        sb.AppendLine("— Rift / Energy —");
+        sb.AppendLine($"Energy: {SafeRes(ResourceType.Energy)}/{data.riftMax}  (cost: {data.riftCost})");
         sb.AppendLine($"Energy Last Unix: {data.energyLastUnix}  ({UnixToIso(data.energyLastUnix)})");
         sb.AppendLine($"Energy Remainder Secs: {data.energyRemainderSecs:0.00}");
-        sb.AppendLine($"Encounters Since Boss: {data.encountersSinceBoss}  (bossEveryN: {data.bossEveryN})");
+        sb.AppendLine($"Rifts Since Boss: {data.riftsSinceBoss}  (bossEveryN: {data.bossEveryN})");
         sb.AppendLine($"Last Boss: {NullDash(data.lastBossId)}");
         sb.AppendLine();
 
@@ -122,7 +122,7 @@ public static class DiagnosticsSnapshot
         if (data.fieldOps != null)
         {
             sb.AppendLine("— Field Ops —");
-            sb.AppendLine($"Encounters Initiated: {data.fieldOps.encountersInitiated}");
+            sb.AppendLine($"Rifts Initiated: {data.fieldOps.riftsInitiated}");
             sb.AppendLine($"Capture Attempts: {data.fieldOps.captureAttempts}");
             sb.AppendLine($"Captures Successful: {data.fieldOps.capturesSuccessful}");
             sb.AppendLine($"Rare Found: {data.fieldOps.rareBitlingsFound}");

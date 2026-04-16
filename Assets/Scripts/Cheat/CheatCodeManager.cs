@@ -15,7 +15,7 @@ public enum CheatEffectKind
     ResetCooldowns,
     ClearAllJobFatigue,
     DiscoverAllMonsters,
-    StartEncounterWithMonsterId,
+    StartRiftWithMonsterId,
     ForcePremiumNextCapture,
     ReviveTeam,
     HealTeamFull,
@@ -58,11 +58,11 @@ public class CheatDefinition
     [Tooltip("How many hours to simulate for offline systems.")]
     [Min(1)] public int hours = 1;
 
-    [Header("StartEncounterWithMonsterId settings")]
-    [Tooltip("Monster ID to start an encounter with (e.g., M-001).")]
+    [Header("StartRiftWithMonsterId settings")]
+    [Tooltip("Monster ID to start an rift with (e.g., M-001).")]
     public string monsterId;
 
-    [Tooltip("If true, spend energy as if the player tapped Encounter.")]
+    [Tooltip("If true, spend energy as if the player tapped Rift.")]
     public bool spendEnergy = false;
 }
 
@@ -339,8 +339,8 @@ public class CheatCodeManager : MonoBehaviour
             case CheatEffectKind.DiscoverAllMonsters:
                 return ExecuteDiscoverAllMonsters(out message);
 
-            case CheatEffectKind.StartEncounterWithMonsterId:
-                return ExecuteStartEncounterWithMonsterId(cd.monsterId, cd.spendEnergy, out message);
+            case CheatEffectKind.StartRiftWithMonsterId:
+                return ExecuteStartRiftWithMonsterId(cd.monsterId, cd.spendEnergy, out message);
 
             case CheatEffectKind.ForcePremiumNextCapture:
                 return ExecuteForcePremiumNextCapture(out message);
@@ -762,15 +762,15 @@ public class CheatCodeManager : MonoBehaviour
             return false;
         }
 
-        if (EncounterManager.I == null)
+        if (RiftManager.I == null)
         {
-            message = "EncounterManager missing.";
+            message = "RiftManager missing.";
             return false;
         }
 
         ResourceBank.EnsureSize();
         int current = ResourceBank.Get(ResourceType.Energy);
-        int max = SaveManager.Data.encounterMax;
+        int max = SaveManager.Data.riftMax;
 
         int missing = max - current;
         if (missing <= 0)
@@ -779,7 +779,7 @@ public class CheatCodeManager : MonoBehaviour
             return false;
         }
 
-        EncounterManager.I.AddEnergy(missing, allowOvercap: false);
+        RiftManager.I.AddEnergy(missing, allowOvercap: false);
         message = $"Energy refilled to {max}.";
         return true;
     }
@@ -876,7 +876,7 @@ public class CheatCodeManager : MonoBehaviour
 
         if (JobManager.I != null) JobManager.I.ProcessOfflineAllSites();
         HealthRegenSystem.I?.TryApplyOfflineRegen();
-        if (EncounterManager.I != null) EncounterManager.I.Cheat_ApplyOfflineEnergyRegen();
+        if (RiftManager.I != null) RiftManager.I.Cheat_ApplyOfflineEnergyRegen();
 
         SaveManager.Save();
 
@@ -996,13 +996,13 @@ public class CheatCodeManager : MonoBehaviour
         return true;
     }
 
-    bool ExecuteStartEncounterWithMonsterId(string monsterId, bool spendEnergy, out string message)
+    bool ExecuteStartRiftWithMonsterId(string monsterId, bool spendEnergy, out string message)
     {
         message = string.Empty;
 
-        if (EncounterManager.I == null)
+        if (RiftManager.I == null)
         {
-            message = "EncounterManager missing.";
+            message = "RiftManager missing.";
             return false;
         }
 
@@ -1019,14 +1019,14 @@ public class CheatCodeManager : MonoBehaviour
             return false;
         }
 
-        bool ok = EncounterManager.I.RequestForcedEncounter(monsterId, spendEnergy: spendEnergy, out string reason);
+        bool ok = RiftManager.I.RequestForcedRift(monsterId, spendEnergy: spendEnergy, out string reason);
         if (!ok)
         {
-            message = string.IsNullOrEmpty(reason) ? "Could not start encounter." : reason;
+            message = string.IsNullOrEmpty(reason) ? "Could not start rift." : reason;
             return false;
         }
 
-        message = $"Forced encounter: {def.displayName} ({def.id}).";
+        message = $"Forced rift: {def.displayName} ({def.id}).";
         return true;
     }
 

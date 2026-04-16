@@ -172,7 +172,6 @@ public static class SaveManager
             if (File.Exists(tmpPath) && !File.Exists(SavePath))
             {
                 File.Move(tmpPath, SavePath);
-                Debug.LogWarning("SaveManager: recovered save from .tmp file after interrupted write.");
             }
         }
         catch (Exception e)
@@ -188,30 +187,20 @@ public static class SaveManager
 
         if (!TryLoadCurrentRoot(SavePath, out root, out migrated, out migrationReport, out loadFailureReason))
         {
-            Debug.LogWarning($"[SaveManager] Main save load failed ({loadFailureReason}). Attempting backup fallback.");
-
             if (TryLoadCurrentRoot(BackupPath, out root, out migrated, out migrationReport, out loadFailureReason))
             {
                 loadedFromBackup = true;
-                Debug.LogWarning("[SaveManager] Fallback to backup triggered.");
-                Debug.Log("[SaveManager] Backup load successful.");
             }
             else
             {
-                Debug.LogWarning($"[SaveManager] Backup load failed ({loadFailureReason}). Creating new/default save data.");
                 root = MigrateFromLegacyOrCreateFresh();
                 migrated = true;
                 migrationReport = "Created current save root from legacy files or fresh defaults.";
-                Debug.Log("[SaveManager] New save created.");
             }
         }
 
         root ??= new SaveData();
         var structuralValidation = SaveValidator.ValidateAndRepair(root);
-        if (!string.IsNullOrEmpty(migrationReport))
-            Debug.Log($"[SaveManager] {migrationReport}");
-        if (!string.IsNullOrEmpty(structuralValidation.Summary))
-            Debug.Log($"[SaveManager] {structuralValidation.Summary}");
 
         Data = SaveDataMapper.ToPlayerManager(root) ?? NewFreshPlayer();
 
@@ -227,14 +216,13 @@ public static class SaveManager
 
         NormalizeAfterLoad();
 
-        // Apply energy offline catch-up even if EncounterManager is not active yet (menu-first boot).
+        // Apply energy offline catch-up even if RiftManager is not active yet (menu-first boot).
         // Safe to call multiple times; it advances Data.energyLastUnix.
         EnergyRegenSystem.TryApplyOfflineRegen();
 
         if ((!File.Exists(SavePath) || loadedFromBackup || migrated || structuralValidation.Repaired) && !IsHardWiping)
             Save();
 
-        Debug.Log($"[SaveManager] Save loaded successfully. version={CURRENT_SAVE_VERSION}");
         EndHardReset();
     }
 
@@ -309,8 +297,6 @@ public static class SaveManager
 
         NormalizeAfterLoad();
         Save();
-
-        Debug.Log($"[SaveManager] Save overwritten. {validation.Summary}");
     }
 
     public static void DeletePersistedSaveFiles(bool includeLegacyFiles = false)
@@ -335,8 +321,6 @@ public static class SaveManager
             SaveFiles.TryDelete(IronCareerStatsPath);
             SaveFiles.TryDelete(MigrationsPath);
         }
-
-        Debug.Log($"[SaveManager] Deleted persisted save files. includeLegacyFiles={includeLegacyFiles}");
     }
 
     public static void OnResume()
@@ -416,9 +400,9 @@ public static class SaveManager
             ResourceBank.Set(ResourceType.Medkit, 0);
             ResourceBank.Set(ResourceType.PackVoucher, 0);
 
-            Data.encounterMax = 50;
-            Data.encounterCost = 1;
-            Data.lastEncounterResetYMD = 0;
+            Data.riftMax = 50;
+            Data.riftCost = 1;
+            Data.lastRiftResetYMD = 0;
             Data.energyLastUnix = NowUnix();
             Data.energyRemainderSecs = 0f;
 
@@ -443,7 +427,7 @@ public static class SaveManager
             JobManager.I.RefreshAllJobSiteViewsInScene();
         }
 
-        DevLog.Log($"[CLEAR ALL] New account created. Energy={ResourceBank.Get(ResourceType.Energy)}/{Data.encounterMax}");
+        DevLog.Log($"[CLEAR ALL] New account created. Energy={ResourceBank.Get(ResourceType.Energy)}/{Data.riftMax}");
     }
 
     // ─────────────────────────────────────────────
@@ -536,9 +520,9 @@ public static class SaveManager
             ResourceBank.Set(ResourceType.Medkit, 0);
             ResourceBank.Set(ResourceType.PackVoucher, 0);
 
-            Data.encounterMax = 50;
-            Data.encounterCost = 1;
-            Data.lastEncounterResetYMD = 0;
+            Data.riftMax = 50;
+            Data.riftCost = 1;
+            Data.lastRiftResetYMD = 0;
             Data.energyLastUnix = NowUnix();
             Data.energyRemainderSecs = 0f;
 
@@ -547,7 +531,7 @@ public static class SaveManager
             ForceWriteBaselineNow();
 
             // 7) If reloadFresh was requested, DO NOT set Data = null.
-            // Leaving Data non-null prevents EncounterManager/UI from null-refing mid-frame.
+            // Leaving Data non-null prevents RiftManager/UI from null-refing mid-frame.
             if (reloadFresh)
             {
                 // Optional: keep IO minimal and rely on scene reload.
@@ -735,9 +719,9 @@ public static class SaveManager
             playerId = Guid.NewGuid().ToString("N"),
             playerName = GeneratePlayerName(),
 
-            encounterMax = 50,
-            encounterCost = 1,
-            lastEncounterResetYMD = TodayYMD(),
+            riftMax = 50,
+            riftCost = 1,
+            lastRiftResetYMD = TodayYMD(),
             lastSavedUnix = NowUnix(),
 
             energyLastUnix = NowUnix(),
@@ -809,14 +793,14 @@ public static class SaveManager
         if (string.IsNullOrEmpty(Data.playerId)) Data.playerId = Guid.NewGuid().ToString("N");
         if (string.IsNullOrEmpty(Data.playerName)) Data.playerName = GeneratePlayerName();
 
-        // Encounter config
-        if (Data.encounterMax <= 0) Data.encounterMax = 50;
-        if (Data.encounterCost <= 0) Data.encounterCost = 1;
+        // Rift config
+        if (Data.riftMax <= 0) Data.riftMax = 50;
+        if (Data.riftCost <= 0) Data.riftCost = 1;
 
-        // Balance migration: Encounter cost is a tuning value (not player preference).
+        // Balance migration: Rift cost is a tuning value (not player preference).
         // If older saves have the previous default (5), migrate them to the new default (1).
-        if (Data.encounterCost == 5) Data.encounterCost = 1;
-        if (Data.lastEncounterResetYMD == 0) Data.lastEncounterResetYMD = TodayYMD();
+        if (Data.riftCost == 5) Data.riftCost = 1;
+        if (Data.lastRiftResetYMD == 0) Data.lastRiftResetYMD = TodayYMD();
 
         // Energy timing
         if (Data.energyLastUnix <= 0) Data.energyLastUnix = NowUnix();
@@ -1934,14 +1918,10 @@ if (save) Save();
 
             if (hasExistingMain && stagedBackup)
             {
-                if (SaveFiles.TryCopy(BackupStagingPath, BackupPath, overwrite: true))
-                    Debug.Log($"[SaveManager] Backup created at {BackupPath}");
-                else
-                    Debug.LogWarning("[SaveManager] Save succeeded, but backup refresh failed. Previous backup preserved when possible.");
+                SaveFiles.TryCopy(BackupStagingPath, BackupPath, overwrite: true);
             }
 
             writeVerified = true;
-            Debug.Log($"[SaveManager] Save successful at {SavePath}");
             return true;
         }
         catch (Exception e)
@@ -1953,8 +1933,7 @@ if (save) Save();
         {
             if (!writeVerified && stagedBackup && File.Exists(BackupStagingPath))
             {
-                if (SaveFiles.TryCopy(BackupStagingPath, SavePath, overwrite: true))
-                    Debug.LogWarning("[SaveManager] Restored main save from staged backup after failed save.");
+                SaveFiles.TryCopy(BackupStagingPath, SavePath, overwrite: true);
             }
 
             SaveFiles.TryDelete(BackupStagingPath);
@@ -1972,12 +1951,10 @@ if (save) Save();
             if (!SaveFiles.TryCopy(SavePath, BackupStagingPath, overwrite: true))
                 return false;
 
-            Debug.Log($"[SaveManager] Backup staged from current save: {BackupStagingPath}");
             return true;
         }
-        catch (Exception e)
+        catch
         {
-            Debug.LogWarning($"[SaveManager] Failed to stage backup: {e}");
             return false;
         }
     }

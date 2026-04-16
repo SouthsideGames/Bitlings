@@ -87,9 +87,18 @@ public static class ArenaTournamentService
         string snapshotJson = JsonUtility.ToJson(playerSnapshot);
         string weekId = ArenaScheduleService.GetCurrentWeekId();
 
+        // ── Gather ownership fingerprint ──
+        var allOwned = SaveManager.Data.GetAllOwnedMonsters();
+        var ownedUids = new List<string>();
+        foreach (var m in allOwned)
+        {
+            if (!string.IsNullOrEmpty(m.ownedUID))
+                ownedUids.Add(m.ownedUID);
+        }
+
         // ── Register via Cloud Code ──
         var result = await ArenaCloudCodeService.RegisterForTournamentAsync(
-            snapshotJson, playerScore, (int)band, displayName, weekId);
+            snapshotJson, playerScore, (int)band, displayName, weekId, ownedUids);
 
         if (!result.success)
         {

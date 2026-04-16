@@ -45,7 +45,7 @@ public class PlayerDossierSnapshot
     // PAGE 3 – FIELD OPERATIONS
     // ─────────────────────────────────────────────────────────────
     [Header("Field Operations")]
-    public int encountersInitiated;
+    public int riftsInitiated;
     public int captureSuccessRate; // 0–100
     public int riftStabilizations;
     public int rareBitlingsFound;
@@ -217,7 +217,7 @@ public class PlayerDossierManager : MonoBehaviour
 
             snapshot.jobSites = Array.Empty<JobSiteRowSnapshot>();
 
-            snapshot.encountersInitiated = 0;
+            snapshot.riftsInitiated = 0;
             snapshot.captureSuccessRate = 0;
             snapshot.riftStabilizations = 0;
             snapshot.rareBitlingsFound = 0;
@@ -594,7 +594,7 @@ public class PlayerDossierManager : MonoBehaviour
     {
         var f = data.fieldOps ?? new FieldOpsStats();
 
-        snapshot.encountersInitiated = Mathf.Max(0, f.encountersInitiated);
+        snapshot.riftsInitiated = Mathf.Max(0, f.riftsInitiated);
         snapshot.riftStabilizations = Mathf.Max(0, f.riftStabilizations);
         snapshot.rareBitlingsFound = Mathf.Max(0, f.rareBitlingsFound);
         snapshot.premiumDiscoveries = Mathf.Max(0, f.premiumDiscoveries);

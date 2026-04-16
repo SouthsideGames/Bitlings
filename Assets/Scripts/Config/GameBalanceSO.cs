@@ -3,8 +3,8 @@ using UnityEngine;
 [CreateAssetMenu(menuName = "Data/Config/Game Balance", fileName = "GameBalance")]
 public sealed class GameBalanceSO : ScriptableObject
 {
-    [Header("Encounter")]
-    [Min(0)] public int encounterEnergyCost = 1;
+    [Header("Rift")]
+    [Min(0)] public int riftEnergyCost = 1;
 
     [Header("Energy")]
     [Min(1)] public int energyMax = 20;

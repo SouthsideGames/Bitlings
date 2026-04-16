@@ -86,7 +86,7 @@ public class PremiumBoostData
 [Serializable]
 public class FieldOpsStats
 {
-    public int encountersInitiated;     
+    public int riftsInitiated;     
     public int captureAttempts;       
     public int capturesSuccessful;       
     public int rareBitlingsFound;      
@@ -157,10 +157,10 @@ public class PlayerManager
     public int creditGainLevel;
     public int offlineLevel;
     public int winStreak;
-    public int encounterPoints = 0;
-    public int encounterMax = 50;
-    public int encounterCost = 1;
-    public int lastEncounterResetYMD = 0;
+    public int riftPoints = 0;
+    public int riftMax = 50;
+    public int riftCost = 1;
+    public int lastRiftResetYMD = 0;
     public int dailyBonusDay = 1;         
     public int lastDailyClaimDayIndex = -1;
     public int cheatInvalidAttempts;
@@ -176,7 +176,7 @@ public class PlayerManager
     public long energyLastUnix;
     public float energyRemainderSecs;
 
-    public int encountersSinceBoss = 0;  
+    public int riftsSinceBoss = 0;  
     public int bossEveryN = 10;        
     public string lastBossId = null;
     public SettingsState settings;

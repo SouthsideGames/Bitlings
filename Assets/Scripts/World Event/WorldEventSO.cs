@@ -84,7 +84,7 @@ public class WorldEventSO : ScriptableObject
 public enum WorldEventCategory
 {
     Job = 0,
-    Encounter = 1,
+    Rift = 1,
     Meta = 2,
     Flavor = 3
 }

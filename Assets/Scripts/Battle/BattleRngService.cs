@@ -17,7 +17,7 @@ public sealed class BattleRngService
     public string BattleSeedLabel => _battleSeedLabel;
 
     /// <summary>
-    /// Optional: EncounterManager can set the battle seed before calling Begin(...).
+    /// Optional: RiftManager can set the battle seed before calling Begin(...).
     /// If not set, a deterministic seed will be derived from the active session/daily/custom seed.
     /// </summary>
     public void SetBattleSeed(int seed, string seedLabel = null)

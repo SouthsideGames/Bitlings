@@ -33,8 +33,8 @@ public sealed class ActionBarBinder : MonoBehaviour
     [Tooltip("If true, buttons auto-disable when it isn't the player's turn.")]
     [SerializeField] private bool autoDisableWhenNotPlayerTurn = true;
 
-    [Tooltip("If true, buttons also auto-disable when Encounter auto-mode is on (EncounterManager.I.IsAutoMode).")]
-    [SerializeField] private bool alsoDisableDuringEncounterAutoMode = true;
+    [Tooltip("If true, buttons also auto-disable when Rift auto-mode is on (RiftManager.I.IsAutoMode).")]
+    [SerializeField] private bool alsoDisableDuringRiftAutoMode = true;
 
     [Tooltip("If true, we re-wire button listeners in OnEnable (safer when refs are assigned late).")]
     [SerializeField] private bool rewireOnEnable = true;
@@ -67,7 +67,7 @@ public sealed class ActionBarBinder : MonoBehaviour
         CacheBaseColors();
 
         GameEvents.OnBattleStateChanged += Refresh;
-        GameEvents.OnEncounterAutoModeChanged += Refresh;
+        GameEvents.OnRiftAutoModeChanged += Refresh;
 
         if (rewireOnEnable)
             WireButtons();
@@ -78,7 +78,7 @@ public sealed class ActionBarBinder : MonoBehaviour
     void OnDisable()
     {
         GameEvents.OnBattleStateChanged -= Refresh;
-        GameEvents.OnEncounterAutoModeChanged -= Refresh;
+        GameEvents.OnRiftAutoModeChanged -= Refresh;
     }
 
     private void EnsureRefs()
@@ -299,13 +299,13 @@ public sealed class ActionBarBinder : MonoBehaviour
             }
         }
 
-        // Optionally also gate by Encounter auto-mode if present
-        if (enable && alsoDisableDuringEncounterAutoMode)
+        // Optionally also gate by Rift auto-mode if present
+        if (enable && alsoDisableDuringRiftAutoMode)
         {
             bool isAuto = false;
             try
             {
-                isAuto = (EncounterManager.I != null) && EncounterManager.I.IsAutoMode;
+                isAuto = (RiftManager.I != null) && RiftManager.I.IsAutoMode;
             }
             catch
             {

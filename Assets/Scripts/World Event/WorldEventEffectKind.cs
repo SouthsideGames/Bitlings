@@ -9,9 +9,9 @@ public enum WorldEventEffectKind
     JobCollectDisabled = 13,
     JobFatigueRateMultiplier = 14,
 
-    // Encounters
-    DisableEncounters = 20,
-    EncounterEnergyCostMultiplier = 21,
+    // Rifts
+    DisableRifts = 20,
+    RiftEnergyCostMultiplier = 21,
     WildPremiumChanceMultiplier = 22,
     BossCadenceMultiplier = 23,
 

@@ -44,13 +44,13 @@ public class BattleSwitchToggle : MonoBehaviour
 
     void OnEnable()
     {
-        GameEvents.OnEncounterAutoModeChanged += HandleAutoModeChanged;
+        GameEvents.OnRiftAutoModeChanged += HandleAutoModeChanged;
         HandleAutoModeChanged();
     }
 
     void OnDisable()
     {
-        GameEvents.OnEncounterAutoModeChanged -= HandleAutoModeChanged;
+        GameEvents.OnRiftAutoModeChanged -= HandleAutoModeChanged;
     }
 
     public void Toggle()
@@ -112,7 +112,7 @@ public class BattleSwitchToggle : MonoBehaviour
     {
         if (!hideDuringAutoBattle) return;
 
-        bool isAuto = (EncounterManager.I != null) && EncounterManager.I.IsAutoMode;
+        bool isAuto = (RiftManager.I != null) && RiftManager.I.IsAutoMode;
 
         // Hide this switch toggle during auto mode if desired
         if (gameObject.activeSelf == isAuto)

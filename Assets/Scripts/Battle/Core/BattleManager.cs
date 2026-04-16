@@ -180,8 +180,8 @@ public partial class BattleManager : MonoBehaviour
     private BattleTextBoxUI battleTextBox;
     private BattleSwitchToggle _bottomToggle;
 
-    [Header("Encounter Tuning")]
-    [SerializeField, Range(0.5f, 2.0f)] private float encounterThreatScalar = 1.0f;
+    [Header("Rift Tuning")]
+    [SerializeField, Range(0.5f, 2.0f)] private float riftThreatScalar = 1.0f;
 
     // Feedback (populated from HudRig at battle start)
     private BattleFeedbackManager feedback;
@@ -358,7 +358,7 @@ public partial class BattleManager : MonoBehaviour
     private int _uiBaseWildSpd;
     private int _uiBaseWildMaxHp;
 
-    // Wild Titles routing id (set from EncounterManager if available).
+    // Wild Titles routing id (set from RiftManager if available).
     private string _wildCombatIdForTitles;
 
     // ─────────────────────────────────────────────────────────────
@@ -648,7 +648,7 @@ public partial class BattleManager : MonoBehaviour
     public string BattleSeedLabel => _rng.BattleSeedLabel;
 
     /// <summary>
-    /// Optional: EncounterManager can set the battle seed before calling Begin(...).
+    /// Optional: RiftManager can set the battle seed before calling Begin(...).
     /// If not set, a deterministic seed will be derived from the active session/daily/custom seed.
     /// </summary>
     public void SetBattleSeed(int seed, string seedLabel = null) => _rng.SetBattleSeed(seed, seedLabel);
@@ -668,7 +668,7 @@ public partial class BattleManager : MonoBehaviour
     }
 
     /// <summary>
-    /// Called by EncounterManager at battle start.
+    /// Called by RiftManager at battle start.
     /// When true, the battle resolves in automatic mode (no manual input waits),
     /// and text/pace can be accelerated in UI scripts that query this flag.
     /// </summary>
@@ -1160,7 +1160,7 @@ public partial class BattleManager : MonoBehaviour
         }
 
         if (string.IsNullOrEmpty(_wildCombatIdForTitles))
-            _wildCombatIdForTitles = (EncounterManager.I != null) ? EncounterManager.I.WildCombatId : null;
+            _wildCombatIdForTitles = (RiftManager.I != null) ? RiftManager.I.WildCombatId : null;
 
         if (string.IsNullOrEmpty(_wildCombatIdForTitles) || !_wildCombatIdForTitles.StartsWith("WILD::", StringComparison.OrdinalIgnoreCase))
             _wildCombatIdForTitles = BuildFallbackWildCombatId(wildDef);
@@ -1168,8 +1168,8 @@ public partial class BattleManager : MonoBehaviour
         float wHpBase = BattleCalc.CalcHP(wildDef, wildLevel);
         float wAtkBase = BattleCalc.CalcBaseAttack(wildDef, wildLevel, 0, 0);
 
-        wildBaseMaxHP = Mathf.Max(1f, wHpBase * encounterThreatScalar);
-        wildBaseAttackPerTurn = Mathf.Max(1f, wAtkBase * encounterThreatScalar);
+        wildBaseMaxHP = Mathf.Max(1f, wHpBase * riftThreatScalar);
+        wildBaseAttackPerTurn = Mathf.Max(1f, wAtkBase * riftThreatScalar);
 
         wildMaxHP = wildBaseMaxHP;
         wildHP = wildMaxHP;
@@ -1184,9 +1184,9 @@ public partial class BattleManager : MonoBehaviour
         HardResetIconVisual(playerIcon);
         HardResetIconVisual(wildIcon);
 
-        bool premiumWild = (EncounterManager.I != null) && EncounterManager.I.CurrentWildIsPremium;
+        bool premiumWild = (RiftManager.I != null) && RiftManager.I.CurrentWildIsPremium;
 
-        bool isAuto = _rules.allowAutoBattle && (EncounterManager.I != null) && EncounterManager.I.IsAutoMode;
+        bool isAuto = _rules.allowAutoBattle && (RiftManager.I != null) && RiftManager.I.IsAutoMode;
 
         ConfigureForAuto(isAuto);
 

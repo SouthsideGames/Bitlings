@@ -49,7 +49,7 @@ public class WorldEventBuilderWindow : EditorWindow
         WorldEventEffectKind.JobRateMultiplier,
         WorldEventEffectKind.JobStorageCapMultiplier,
         WorldEventEffectKind.JobFatigueRateMultiplier,
-        WorldEventEffectKind.EncounterEnergyCostMultiplier,
+        WorldEventEffectKind.RiftEnergyCostMultiplier,
         WorldEventEffectKind.WildPremiumChanceMultiplier,
         WorldEventEffectKind.BossCadenceMultiplier,
         WorldEventEffectKind.ShopPriceMultiplier,

@@ -45,7 +45,7 @@ public sealed class PromotionManager : MonoBehaviour
         // NOTE: BattleResult is a struct (value type) in this project, so it cannot be null.
         if (SaveManager.Data == null) return;
 
-        // Only award promotion XP for real encounters (ignore null wildDef). If you want
+        // Only award promotion XP for real rifts (ignore null wildDef). If you want
         // training battles to grant XP later, remove this guard.
         if (result.wildDef == null) return;
 

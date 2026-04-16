@@ -138,8 +138,8 @@ public static class ArenaLeaderboardService
         }
         catch (Exception ex)
         {
-            // 404 = player has no score yet — expected
-            if (!ex.Message.Contains("404"))
+            // Player has no score yet — expected, not an error
+            if (!ex.Message.Contains("404") && !ex.Message.Contains("could not be found"))
                 Debug.LogWarning($"{TAG} Failed to fetch player {leaderboardId} entry: {ex.Message}");
             return null;
         }

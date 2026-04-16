@@ -142,8 +142,8 @@ public class HarborUI : MonoBehaviour
 
     long GetFlyerSecondsRemaining()
     {
-        if (!EncounterManager.I) return 0;
-        return EncounterManager.I.GetFlyerSecondsRemaining();
+        if (!RiftManager.I) return 0;
+        return RiftManager.I.GetFlyerSecondsRemaining();
     }
 
     void OnClickUseFlyer()
@@ -161,7 +161,7 @@ public class HarborUI : MonoBehaviour
         float clampedBonus = Mathf.Clamp(bonus, 0f, 2f);
         int hours = Mathf.Max(1, durationHours);
 
-        EncounterManager.I?.AddFlyer(type, clampedBonus, hours);
+        RiftManager.I?.AddFlyer(type, clampedBonus, hours);
 
         GameEvents.RaiseToast("FLYER ACTIVATED");
 
@@ -176,11 +176,11 @@ public class HarborUI : MonoBehaviour
     {
         if (!activeFlyerIcon) return;
 
-        var cur = EncounterManager.I?.CurrentFlyer;
+        var cur = RiftManager.I?.CurrentFlyer;
 
         if (cur != null)
         {
-            long secs = EncounterManager.I.GetFlyerSecondsRemaining();
+            long secs = RiftManager.I.GetFlyerSecondsRemaining();
             if (secs <= 0) cur = null;
         }
 
@@ -230,7 +230,7 @@ public class HarborUI : MonoBehaviour
         {
             if (flyerTimerText)
             {
-                long rem = EncounterManager.I ? EncounterManager.I.GetFlyerSecondsRemaining() : 0;
+                long rem = RiftManager.I ? RiftManager.I.GetFlyerSecondsRemaining() : 0;
                 flyerTimerText.text = rem > 0 ? FormatHMS(rem) : "No active flyers";
             }
 
@@ -256,11 +256,11 @@ public class HarborUI : MonoBehaviour
         var selected = (MonsterType)(typeDropdown ? typeDropdown.value : 0);
         var (curPct, afterPct) = EstimateCurrentAndAfter(selected, bonus);
 
-        var curFlyer = EncounterManager.I?.CurrentFlyer;
+        var curFlyer = RiftManager.I?.CurrentFlyer;
         string clock;
         if (curFlyer != null)
         {
-            long secs = EncounterManager.I.GetFlyerSecondsRemaining();
+            long secs = RiftManager.I.GetFlyerSecondsRemaining();
             if (secs <= 0) clock = "Active Flyer: (expired)";
             else clock = $"Active Flyer: {curFlyer.type} (+{Mathf.RoundToInt(curFlyer.bonus * 100)}%)";
         }
@@ -270,7 +270,7 @@ public class HarborUI : MonoBehaviour
         }
 
         chanceLabel.text =
-            $"Chance to encounter {selected}: ~{curPct:0.#}%\n" +
+            $"Chance to rift {selected}: ~{curPct:0.#}%\n" +
             $"After using flyer: ~{afterPct:0.#}% for {Mathf.Max(1, durationHours)}h\n" +
             $"{clock}\n" +
             $"(Using a new flyer replaces the current one.)";
@@ -295,7 +295,7 @@ public class HarborUI : MonoBehaviour
     Dictionary<MonsterType, float> BuildTypeMultipliersFromActiveFlyer()
     {
         var map = new Dictionary<MonsterType, float>();
-        var cur = EncounterManager.I?.CurrentFlyer;
+        var cur = RiftManager.I?.CurrentFlyer;
         if (cur == null) return map;
 
         float mult = Mathf.Clamp(1f + Mathf.Max(0f, cur.bonus), 1f, 3f);

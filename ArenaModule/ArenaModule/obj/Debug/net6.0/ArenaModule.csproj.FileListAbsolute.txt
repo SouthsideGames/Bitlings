@@ -1,0 +1,13 @@
+D:\Southside Games\Bitlings\ArenaModule\ArenaModule\bin\Debug\net6.0\ArenaModule.deps.json
+D:\Southside Games\Bitlings\ArenaModule\ArenaModule\bin\Debug\net6.0\ArenaModule.dll
+D:\Southside Games\Bitlings\ArenaModule\ArenaModule\bin\Debug\net6.0\ArenaModule.pdb
+D:\Southside Games\Bitlings\ArenaModule\ArenaModule\obj\Debug\net6.0\ArenaModule.csproj.AssemblyReference.cache
+D:\Southside Games\Bitlings\ArenaModule\ArenaModule\obj\Debug\net6.0\ArenaModule.GeneratedMSBuildEditorConfig.editorconfig
+D:\Southside Games\Bitlings\ArenaModule\ArenaModule\obj\Debug\net6.0\ArenaModule.AssemblyInfoInputs.cache
+D:\Southside Games\Bitlings\ArenaModule\ArenaModule\obj\Debug\net6.0\ArenaModule.AssemblyInfo.cs
+D:\Southside Games\Bitlings\ArenaModule\ArenaModule\obj\Debug\net6.0\ArenaModule.csproj.CoreCompileInputs.cache
+D:\Southside Games\Bitlings\ArenaModule\ArenaModule\obj\Debug\net6.0\ArenaModule.sourcelink.json
+D:\Southside Games\Bitlings\ArenaModule\ArenaModule\obj\Debug\net6.0\ArenaModule.dll
+D:\Southside Games\Bitlings\ArenaModule\ArenaModule\obj\Debug\net6.0\refint\ArenaModule.dll
+D:\Southside Games\Bitlings\ArenaModule\ArenaModule\obj\Debug\net6.0\ArenaModule.pdb
+D:\Southside Games\Bitlings\ArenaModule\ArenaModule\obj\Debug\net6.0\ref\ArenaModule.dll

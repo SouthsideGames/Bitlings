@@ -25,7 +25,7 @@ public sealed class IronCareerRunState
     public IronFieldStatusSnapshot carryStatus = IronFieldStatusSnapshot.None;
     public float[] carryShields = new float[3];
 
-    // Cache the last wild encounter rolled so battle + hire offer share the same outcome.
+    // Cache the last wild rift rolled so battle + hire offer share the same outcome.
     [NonSerialized] public IronMonster lastRolledWild;
 
     [Header("Run Summary")]

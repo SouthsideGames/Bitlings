@@ -1,0 +1,479 @@
+{
+    "entries": [
+        {
+            "attackerType": 1,
+            "defenderType": 2,
+            "multiplier": 0.5
+        },
+        {
+            "attackerType": 1,
+            "defenderType": 3,
+            "multiplier": 2.0
+        },
+        {
+            "attackerType": 1,
+            "defenderType": 5,
+            "multiplier": 2.0
+        },
+        {
+            "attackerType": 1,
+            "defenderType": 8,
+            "multiplier": 0.75
+        },
+        {
+            "attackerType": 1,
+            "defenderType": 11,
+            "multiplier": 2.0
+        },
+        {
+            "attackerType": 1,
+            "defenderType": 12,
+            "multiplier": 0.5
+        },
+        {
+            "attackerType": 2,
+            "defenderType": 1,
+            "multiplier": 2.0
+        },
+        {
+            "attackerType": 2,
+            "defenderType": 3,
+            "multiplier": 0.5
+        },
+        {
+            "attackerType": 2,
+            "defenderType": 4,
+            "multiplier": 0.5
+        },
+        {
+            "attackerType": 2,
+            "defenderType": 5,
+            "multiplier": 0.5
+        },
+        {
+            "attackerType": 2,
+            "defenderType": 7,
+            "multiplier": 0.5
+        },
+        {
+            "attackerType": 2,
+            "defenderType": 8,
+            "multiplier": 2.0
+        },
+        {
+            "attackerType": 2,
+            "defenderType": 12,
+            "multiplier": 2.0
+        },
+        {
+            "attackerType": 3,
+            "defenderType": 1,
+            "multiplier": 0.5
+        },
+        {
+            "attackerType": 3,
+            "defenderType": 2,
+            "multiplier": 2.0
+        },
+        {
+            "attackerType": 3,
+            "defenderType": 5,
+            "multiplier": 0.5
+        },
+        {
+            "attackerType": 3,
+            "defenderType": 8,
+            "multiplier": 2.0
+        },
+        {
+            "attackerType": 3,
+            "defenderType": 9,
+            "multiplier": 0.75
+        },
+        {
+            "attackerType": 3,
+            "defenderType": 11,
+            "multiplier": 0.5
+        },
+        {
+            "attackerType": 3,
+            "defenderType": 12,
+            "multiplier": 2.0
+        },
+        {
+            "attackerType": 4,
+            "defenderType": 2,
+            "multiplier": 2.0
+        },
+        {
+            "attackerType": 4,
+            "defenderType": 3,
+            "multiplier": 0.75
+        },
+        {
+            "attackerType": 4,
+            "defenderType": 8,
+            "multiplier": 0.5
+        },
+        {
+            "attackerType": 4,
+            "defenderType": 9,
+            "multiplier": 2.0
+        },
+        {
+            "attackerType": 4,
+            "defenderType": 12,
+            "multiplier": 0.5
+        },
+        {
+            "attackerType": 4,
+            "defenderType": 16,
+            "multiplier": 2.0
+        },
+        {
+            "attackerType": 5,
+            "defenderType": 1,
+            "multiplier": 0.5
+        },
+        {
+            "attackerType": 5,
+            "defenderType": 2,
+            "multiplier": 2.0
+        },
+        {
+            "attackerType": 5,
+            "defenderType": 3,
+            "multiplier": 2.0
+        },
+        {
+            "attackerType": 5,
+            "defenderType": 6,
+            "multiplier": 0.5
+        },
+        {
+            "attackerType": 5,
+            "defenderType": 8,
+            "multiplier": 1.5
+        },
+        {
+            "attackerType": 5,
+            "defenderType": 9,
+            "multiplier": 2.0
+        },
+        {
+            "attackerType": 5,
+            "defenderType": 12,
+            "multiplier": 0.75
+        },
+        {
+            "attackerType": 5,
+            "defenderType": 14,
+            "multiplier": 2.0
+        },
+        {
+            "attackerType": 5,
+            "defenderType": 16,
+            "multiplier": 0.5
+        },
+        {
+            "attackerType": 6,
+            "defenderType": 5,
+            "multiplier": 2.0
+        },
+        {
+            "attackerType": 6,
+            "defenderType": 11,
+            "multiplier": 2.0
+        },
+        {
+            "attackerType": 6,
+            "defenderType": 14,
+            "multiplier": 0.5
+        },
+        {
+            "attackerType": 6,
+            "defenderType": 16,
+            "multiplier": 0.5
+        },
+        {
+            "attackerType": 7,
+            "defenderType": 2,
+            "multiplier": 2.0
+        },
+        {
+            "attackerType": 7,
+            "defenderType": 8,
+            "multiplier": 0.5
+        },
+        {
+            "attackerType": 7,
+            "defenderType": 10,
+            "multiplier": 0.5
+        },
+        {
+            "attackerType": 7,
+            "defenderType": 16,
+            "multiplier": 2.0
+        },
+        {
+            "attackerType": 8,
+            "defenderType": 1,
+            "multiplier": 1.25
+        },
+        {
+            "attackerType": 8,
+            "defenderType": 2,
+            "multiplier": 0.5
+        },
+        {
+            "attackerType": 8,
+            "defenderType": 3,
+            "multiplier": 0.5
+        },
+        {
+            "attackerType": 8,
+            "defenderType": 4,
+            "multiplier": 2.0
+        },
+        {
+            "attackerType": 8,
+            "defenderType": 5,
+            "multiplier": 0.75
+        },
+        {
+            "attackerType": 8,
+            "defenderType": 7,
+            "multiplier": 2.0
+        },
+        {
+            "attackerType": 8,
+            "defenderType": 9,
+            "multiplier": 0.5
+        },
+        {
+            "attackerType": 8,
+            "defenderType": 12,
+            "multiplier": 1.5
+        },
+        {
+            "attackerType": 9,
+            "defenderType": 3,
+            "multiplier": 2.0
+        },
+        {
+            "attackerType": 9,
+            "defenderType": 4,
+            "multiplier": 0.5
+        },
+        {
+            "attackerType": 9,
+            "defenderType": 5,
+            "multiplier": 0.5
+        },
+        {
+            "attackerType": 9,
+            "defenderType": 11,
+            "multiplier": 2.0
+        },
+        {
+            "attackerType": 9,
+            "defenderType": 12,
+            "multiplier": 0.5
+        },
+        {
+            "attackerType": 9,
+            "defenderType": 14,
+            "multiplier": 0.5
+        },
+        {
+            "attackerType": 9,
+            "defenderType": 15,
+            "multiplier": 0.5
+        },
+        {
+            "attackerType": 10,
+            "defenderType": 7,
+            "multiplier": 2.0
+        },
+        {
+            "attackerType": 10,
+            "defenderType": 11,
+            "multiplier": 2.0
+        },
+        {
+            "attackerType": 10,
+            "defenderType": 13,
+            "multiplier": 0.5
+        },
+        {
+            "attackerType": 10,
+            "defenderType": 15,
+            "multiplier": 0.5
+        },
+        {
+            "attackerType": 11,
+            "defenderType": 1,
+            "multiplier": 0.5
+        },
+        {
+            "attackerType": 11,
+            "defenderType": 3,
+            "multiplier": 2.0
+        },
+        {
+            "attackerType": 11,
+            "defenderType": 6,
+            "multiplier": 0.5
+        },
+        {
+            "attackerType": 11,
+            "defenderType": 9,
+            "multiplier": 0.5
+        },
+        {
+            "attackerType": 11,
+            "defenderType": 10,
+            "multiplier": 2.0
+        },
+        {
+            "attackerType": 11,
+            "defenderType": 12,
+            "multiplier": 0.5
+        },
+        {
+            "attackerType": 11,
+            "defenderType": 15,
+            "multiplier": 2.0
+        },
+        {
+            "attackerType": 12,
+            "defenderType": 1,
+            "multiplier": 2.0
+        },
+        {
+            "attackerType": 12,
+            "defenderType": 2,
+            "multiplier": 0.5
+        },
+        {
+            "attackerType": 12,
+            "defenderType": 3,
+            "multiplier": 0.5
+        },
+        {
+            "attackerType": 12,
+            "defenderType": 4,
+            "multiplier": 2.0
+        },
+        {
+            "attackerType": 12,
+            "defenderType": 8,
+            "multiplier": 0.75
+        },
+        {
+            "attackerType": 12,
+            "defenderType": 9,
+            "multiplier": 2.0
+        },
+        {
+            "attackerType": 12,
+            "defenderType": 11,
+            "multiplier": 2.0
+        },
+        {
+            "attackerType": 12,
+            "defenderType": 13,
+            "multiplier": 2.0
+        },
+        {
+            "attackerType": 13,
+            "defenderType": 10,
+            "multiplier": 2.0
+        },
+        {
+            "attackerType": 13,
+            "defenderType": 12,
+            "multiplier": 0.5
+        },
+        {
+            "attackerType": 13,
+            "defenderType": 15,
+            "multiplier": 2.0
+        },
+        {
+            "attackerType": 13,
+            "defenderType": 16,
+            "multiplier": 0.5
+        },
+        {
+            "attackerType": 14,
+            "defenderType": 5,
+            "multiplier": 0.5
+        },
+        {
+            "attackerType": 14,
+            "defenderType": 6,
+            "multiplier": 2.0
+        },
+        {
+            "attackerType": 14,
+            "defenderType": 9,
+            "multiplier": 2.0
+        },
+        {
+            "attackerType": 14,
+            "defenderType": 12,
+            "multiplier": 0.75
+        },
+        {
+            "attackerType": 14,
+            "defenderType": 16,
+            "multiplier": 0.5
+        },
+        {
+            "attackerType": 15,
+            "defenderType": 9,
+            "multiplier": 2.0
+        },
+        {
+            "attackerType": 15,
+            "defenderType": 10,
+            "multiplier": 2.0
+        },
+        {
+            "attackerType": 15,
+            "defenderType": 11,
+            "multiplier": 0.5
+        },
+        {
+            "attackerType": 15,
+            "defenderType": 13,
+            "multiplier": 0.5
+        },
+        {
+            "attackerType": 16,
+            "defenderType": 4,
+            "multiplier": 0.5
+        },
+        {
+            "attackerType": 16,
+            "defenderType": 5,
+            "multiplier": 2.0
+        },
+        {
+            "attackerType": 16,
+            "defenderType": 7,
+            "multiplier": 0.5
+        },
+        {
+            "attackerType": 16,
+            "defenderType": 13,
+            "multiplier": 2.0
+        },
+        {
+            "attackerType": 16,
+            "defenderType": 14,
+            "multiplier": 2.0
+        }
+    ]
+}

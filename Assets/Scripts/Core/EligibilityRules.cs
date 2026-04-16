@@ -5,17 +5,17 @@ using System.Collections.Generic;
 public static class EligibilityRules
 {
     // ─────────────────────────────────────────────────────────────────────────────
-    // Encounter / Battle
+    // Rift / Battle
     // ─────────────────────────────────────────────────────────────────────────────
 
     /// <summary>
-    /// True if the Encounter action (start battle) should be available.
+    /// True if the Rift action (start battle) should be available.
     /// </summary>
-    public static bool CanStartEncounter(int minRequiredAliveTeamMembers, out string reason)
+    public static bool CanStartRift(int minRequiredAliveTeamMembers, out string reason)
     {
         reason = null;
 
-        bool inBattle = (EncounterManager.I != null) && EncounterManager.I.IsInBattle;
+        bool inBattle = (RiftManager.I != null) && RiftManager.I.IsInBattle;
         if (inBattle)
         {
             reason = "Already in battle.";
@@ -28,9 +28,9 @@ public static class EligibilityRules
             return false;
         }
 
-        if (WorldEventSystem.I != null && WorldEventSystem.I.AreEncountersDisabled())
+        if (WorldEventSystem.I != null && WorldEventSystem.I.AreRiftsDisabled())
         {
-            reason = "Encounters suspended.";
+            reason = "Rifts suspended.";
             return false;
         }
 
@@ -173,21 +173,21 @@ public static int CountBattleReady(int maxSlots = 3)
 
     public static bool HasRequiredEnergyOrFree(out int needed, out int current)
     {
-        // Free encounter bypasses the energy check.
-        if (EncounterManager.I != null && EncounterManager.I.NextEncounterIsFree)
+        // Free rift bypasses the energy check.
+        if (RiftManager.I != null && RiftManager.I.NextRiftIsFree)
         {
             needed = 0;
-            current = Mathf.Max(0, EncounterManager.I.GetEnergyPoints());
+            current = Mathf.Max(0, RiftManager.I.GetEnergyPoints());
             return true;
         }
 
         needed = 1;
         current = 0;
 
-        if (EncounterManager.I != null)
+        if (RiftManager.I != null)
         {
-            needed = Mathf.Max(1, EncounterManager.I.GetEncounterCost());
-            current = Mathf.Max(0, EncounterManager.I.GetEnergyPoints());
+            needed = Mathf.Max(1, RiftManager.I.GetRiftCost());
+            current = Mathf.Max(0, RiftManager.I.GetEnergyPoints());
         }
         else
         {

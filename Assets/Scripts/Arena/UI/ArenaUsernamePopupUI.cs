@@ -14,9 +14,6 @@ public class ArenaUsernamePopupUI : MonoBehaviour
     [SerializeField] private Button confirmButton;
     [SerializeField] private TextMeshProUGUI hintLabel;
 
-    [Header("Settings")]
-    [SerializeField] private bool redirectToDirectoryAfterConfirm = true;
-
     [Header("Loading")]
     [SerializeField] private GameObject loadingSpinner;
 

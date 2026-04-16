@@ -13,6 +13,7 @@
     "com.unity.services.cloudcode": "2.10.2",
     "com.unity.services.cloudsave": "3.4.0",
     "com.unity.services.core": "1.13.0",
+    "com.unity.services.deployment": "1.7.2",
     "com.unity.services.leaderboards": "2.3.4",
     "com.unity.test-framework": "1.6.0",
     "com.unity.timeline": "1.8.12",

@@ -34,32 +34,32 @@ public class BattleTextBoxUI : MonoBehaviour
 
     public bool HasRenderableTarget => lineText != null;
 
-    private EncounterManager _hookedEncounter;
+    private RiftManager _hookedRift;
 
     private void Awake()
     {
         AutoWireIfNeeded();
-        RefreshEncounterHook();
+        RefreshRiftHook();
         ApplyRegularBattleIdleVisibility();
     }
 
     private void OnEnable()
     {
         AutoWireIfNeeded();
-        RefreshEncounterHook();
+        RefreshRiftHook();
         ApplyRegularBattleIdleVisibility();
     }
 
     private void OnDisable()
     {
-        UnhookEncounterState();
+        UnhookRiftState();
     }
 
     private void LateUpdate()
     {
-        if (_hookedEncounter != EncounterManager.I)
+        if (_hookedRift != RiftManager.I)
         {
-            RefreshEncounterHook();
+            RefreshRiftHook();
             ApplyRegularBattleIdleVisibility();
         }
     }
@@ -75,27 +75,27 @@ public class BattleTextBoxUI : MonoBehaviour
         EnsureTopCanvasSorting();
     }
 
-    private void RefreshEncounterHook()
+    private void RefreshRiftHook()
     {
-        var em = EncounterManager.I;
-        if (_hookedEncounter == em) return;
+        var em = RiftManager.I;
+        if (_hookedRift == em) return;
 
-        UnhookEncounterState();
+        UnhookRiftState();
 
-        _hookedEncounter = em;
-        if (_hookedEncounter != null)
-            _hookedEncounter.OnStateChanged += HandleEncounterStateChanged;
+        _hookedRift = em;
+        if (_hookedRift != null)
+            _hookedRift.OnStateChanged += HandleRiftStateChanged;
     }
 
-    private void UnhookEncounterState()
+    private void UnhookRiftState()
     {
-        if (_hookedEncounter != null)
-            _hookedEncounter.OnStateChanged -= HandleEncounterStateChanged;
+        if (_hookedRift != null)
+            _hookedRift.OnStateChanged -= HandleRiftStateChanged;
 
-        _hookedEncounter = null;
+        _hookedRift = null;
     }
 
-    private void HandleEncounterStateChanged()
+    private void HandleRiftStateChanged()
     {
         ApplyRegularBattleIdleVisibility();
     }
@@ -104,14 +104,14 @@ public class BattleTextBoxUI : MonoBehaviour
     {
         if (canvasGroup == null) return;
 
-        // In Iron Career we always keep the battle text box visible and skip encounter-based visibility.
+        // In Iron Career we always keep the battle text box visible and skip rift-based visibility.
         if (IronCareerRuntime.IsActive)
         {
             canvasGroup.alpha = 1f;
             return;
         }
 
-        var em = EncounterManager.I;
+        var em = RiftManager.I;
         if (em == null) return;
     }
 
@@ -201,7 +201,7 @@ public class BattleTextBoxUI : MonoBehaviour
         lineText.text = full;
         lineText.maxVisibleCharacters = 0;
 
-        bool isAuto = (EncounterManager.I != null && EncounterManager.I.IsAutoMode);
+        bool isAuto = (RiftManager.I != null && RiftManager.I.IsAutoMode);
         bool compressAuto = isAuto && (SettingsManager.I == null || SettingsManager.I.GetCompressAutoBattleText());
 
         float cps = Mathf.Max(0.001f, typeSecondsPerChar);

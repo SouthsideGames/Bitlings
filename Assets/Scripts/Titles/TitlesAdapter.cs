@@ -26,7 +26,7 @@ public struct TitleDamageFilter
 /// <summary>
 /// Direct bridge between battle/gameplay code and TitleManager.
 /// No reflection; preserves the existing adapter API so BattleManager does not change.
-/// Also supports local, battle-scoped title injection (e.g., wild titles rolled per encounter)
+/// Also supports local, battle-scoped title injection (e.g., wild titles rolled per rift)
 /// without touching any save/equip pathways.
 /// </summary>
 public static class TitlesAdapter

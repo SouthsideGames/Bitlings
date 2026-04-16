@@ -9,10 +9,10 @@ using Random = UnityEngine.Random;
 /// Design goals:
 /// - Feature-gated (WorldEvents_Basic). If locked: no ticker, no effects.
 /// - Exactly 1 rolled event per week (unless you later enable scheduled overlays).
-/// - Weighted category distribution (Job/Encounter/Meta/Flavor).
+/// - Weighted category distribution (Job/Rift/Meta/Flavor).
 /// - First week after unlock is forced to Flavor.
 ///
-/// Provides a single query surface for Jobs/Encounters/Economy to consume effects.
+/// Provides a single query surface for Jobs/Rifts/Economy to consume effects.
 /// </summary>
 public sealed class WorldEventSystem : MonoBehaviour
 {
@@ -52,7 +52,7 @@ public sealed class WorldEventSystem : MonoBehaviour
 
     [Header("Category Weights (must sum to 1.0 in your design, but we normalize anyway)")]
     [Range(0f, 1f)] public float weightJob = 0.20f;
-    [Range(0f, 1f)] public float weightEncounter = 0.20f;
+    [Range(0f, 1f)] public float weightRift = 0.20f;
     [Range(0f, 1f)] public float weightMeta = 0.20f;
     [Range(0f, 1f)] public float weightFlavor = 0.40f;
 
@@ -66,8 +66,8 @@ public sealed class WorldEventSystem : MonoBehaviour
     private readonly HashSet<JobType> _jobCollectDisabled = new();
     private readonly Dictionary<JobType, float> _jobFatigueMul = new();
 
-    private bool _encountersDisabled;
-    private float _encounterEnergyCostMul = 1f;
+    private bool _riftsDisabled;
+    private float _riftEnergyCostMul = 1f;
     private float _wildPremiumMul = 1f;
     private float _bossCadenceMul = 1f;
 
@@ -197,7 +197,7 @@ public sealed class WorldEventSystem : MonoBehaviour
     }
 
     // ─────────────────────────────────────────────────────────────
-    // Public queries (Jobs / Encounters / Economy)
+    // Public queries (Jobs / Rifts / Economy)
     // ─────────────────────────────────────────────────────────────
 
     public bool IsJobSiteDisabled(JobType job)
@@ -224,10 +224,10 @@ public sealed class WorldEventSystem : MonoBehaviour
         return _jobFatigueMul.TryGetValue(job, out var m) ? Mathf.Max(0f, m) : 1f;
     }
 
-    public bool AreEncountersDisabled() => IsFeatureActive() && _encountersDisabled;
+    public bool AreRiftsDisabled() => IsFeatureActive() && _riftsDisabled;
 
-    public float GetEncounterEnergyCostMultiplier()
-        => IsFeatureActive() ? Mathf.Max(0f, _encounterEnergyCostMul) : 1f;
+    public float GetRiftEnergyCostMultiplier()
+        => IsFeatureActive() ? Mathf.Max(0f, _riftEnergyCostMul) : 1f;
 
     public float GetWildPremiumChanceMultiplier()
         => IsFeatureActive() ? Mathf.Max(0f, _wildPremiumMul) : 1f;
@@ -491,7 +491,7 @@ public sealed class WorldEventSystem : MonoBehaviour
     private WorldEventCategory RollCategory()
     {
         float j = Mathf.Max(0f, weightJob);
-        float e = Mathf.Max(0f, weightEncounter);
+        float e = Mathf.Max(0f, weightRift);
         float m = Mathf.Max(0f, weightMeta);
         float f = Mathf.Max(0f, weightFlavor);
 
@@ -501,7 +501,7 @@ public sealed class WorldEventSystem : MonoBehaviour
         float r = Random.value * sum;
         if (r < j) return WorldEventCategory.Job;
         r -= j;
-        if (r < e) return WorldEventCategory.Encounter;
+        if (r < e) return WorldEventCategory.Rift;
         r -= e;
         if (r < m) return WorldEventCategory.Meta;
         return WorldEventCategory.Flavor;
@@ -515,8 +515,8 @@ public sealed class WorldEventSystem : MonoBehaviour
         _jobCollectDisabled.Clear();
         _jobFatigueMul.Clear();
 
-        _encountersDisabled = false;
-        _encounterEnergyCostMul = 1f;
+        _riftsDisabled = false;
+        _riftEnergyCostMul = 1f;
         _wildPremiumMul = 1f;
         _bossCadenceMul = 1f;
 
@@ -571,13 +571,13 @@ public sealed class WorldEventSystem : MonoBehaviour
                             _jobFatigueMul[fx.job] = _jobFatigueMul.TryGetValue(fx.job, out var curFat) ? (curFat * v) : v;
                         break;
 
-                    // Encounters
-                    case WorldEventEffectKind.DisableEncounters:
-                        _encountersDisabled = true;
+                    // Rifts
+                    case WorldEventEffectKind.DisableRifts:
+                        _riftsDisabled = true;
                         break;
 
-                    case WorldEventEffectKind.EncounterEnergyCostMultiplier:
-                        _encounterEnergyCostMul *= v;
+                    case WorldEventEffectKind.RiftEnergyCostMultiplier:
+                        _riftEnergyCostMul *= v;
                         break;
 
                     case WorldEventEffectKind.WildPremiumChanceMultiplier:

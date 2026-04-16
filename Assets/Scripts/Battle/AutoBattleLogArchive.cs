@@ -42,7 +42,7 @@ public class AutoBattleLogEntry
             data.EnsureTransientSets();
             data.autoBattleLogArchive ??= new List<AutoBattleLogEntry>();
 
-            bool wildWasPremium = EncounterManager.I != null && EncounterManager.I.CurrentWildIsPremium;
+            bool wildWasPremium = RiftManager.I != null && RiftManager.I.CurrentWildIsPremium;
             string opponentName = result.wildDef
                 ? MonsterNameFormatter.Format(result.wildDef, wildWasPremium)
                 : "Unknown";

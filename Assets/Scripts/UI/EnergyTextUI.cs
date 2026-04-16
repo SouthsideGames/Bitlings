@@ -30,12 +30,12 @@ public class EnergyTextUI : MonoBehaviour
     {
         if (!energyLabel) return;
 
-        // Prefer EncounterPanelUI/EncounterManager when available (they know max/cost)
-        if (EncounterPanelUI.I != null)
+        // Prefer RiftPanelUI/RiftManager when available (they know max/cost)
+        if (RiftPanelUI.I != null)
         {
-            int cur = EncounterPanelUI.I.GetEnergyPoints();
-            int max = EncounterPanelUI.I.GetEncounterMax();
-            int cost = EncounterPanelUI.I.GetEncounterCost();
+            int cur = RiftPanelUI.I.GetEnergyPoints();
+            int max = RiftPanelUI.I.GetRiftMax();
+            int cost = RiftPanelUI.I.GetRiftCost();
 
             bool has = cur >= cost;
             energyLabel.text = $"{cur} / {max}";
@@ -43,11 +43,11 @@ public class EnergyTextUI : MonoBehaviour
             return;
         }
 
-        if (EncounterManager.I != null)
+        if (RiftManager.I != null)
         {
-            int cur = EncounterManager.I.GetEnergyPoints();
-            int max = EncounterManager.I.GetEncounterMax();
-            int cost = EncounterManager.I.GetEncounterCost();
+            int cur = RiftManager.I.GetEnergyPoints();
+            int max = RiftManager.I.GetRiftMax();
+            int cost = RiftManager.I.GetRiftCost();
 
             bool has = cur >= cost;
             energyLabel.text = $"{cur} / {max}";
@@ -55,7 +55,7 @@ public class EnergyTextUI : MonoBehaviour
             return;
         }
 
-        // Fallback: show stored energy even if EncounterManager isn't initialized yet
+        // Fallback: show stored energy even if RiftManager isn't initialized yet
         int stored = ResourceBank.Get(ResourceType.Energy);
         energyLabel.text = $"{stored}";
         energyLabel.color = Color.white;

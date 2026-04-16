@@ -96,7 +96,7 @@ public sealed class StatBreakdownHoldTrigger : MonoBehaviour, IPointerDownHandle
     private void ShowWildBreakdown(BattleManager bm, StatBreakdownPanelUI panel)
     {
         var wildDef = bm.WildDef;
-        bool wildPremium = EncounterManager.I != null && EncounterManager.I.CurrentWildIsPremium;
+        bool wildPremium = RiftManager.I != null && RiftManager.I.CurrentWildIsPremium;
         string name = wildDef != null ? MonsterNameFormatter.Format(wildDef, wildPremium) : "Wild";
 
         var baseStats = bm.Stats.GetAdjustedWild();

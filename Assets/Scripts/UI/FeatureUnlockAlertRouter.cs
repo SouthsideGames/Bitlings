@@ -3,9 +3,9 @@ using UnityEngine.UI;
 
 public sealed class FeatureUnlockAlertRouter : MonoBehaviour
 {
-    [Header("Encounter Alert")]
-    [SerializeField] private GameObject encounterAlert;
-    [SerializeField] private Button encounterButton;
+    [Header("Rift Alert")]
+    [SerializeField] private GameObject riftAlert;
+    [SerializeField] private Button riftButton;
 
     [Header("Settings Alert")]
     [SerializeField] private GameObject settingsAlert;
@@ -42,7 +42,7 @@ public sealed class FeatureUnlockAlertRouter : MonoBehaviour
         GameEvents.FeatureUnlocked += HandleFeatureUnlocked;
         GameEvents.PromotionRankChanged += HandlePromotionRankChanged;
 
-        AddDismiss(encounterButton, DismissEncounter);
+        AddDismiss(riftButton, DismissRift);
         AddDismiss(settingsButton, DismissSettings);
         AddDismiss(directoryButton, DismissDirectory);
         AddDismiss(gymButton, DismissGym);
@@ -55,7 +55,7 @@ public sealed class FeatureUnlockAlertRouter : MonoBehaviour
         GameEvents.FeatureUnlocked -= HandleFeatureUnlocked;
         GameEvents.PromotionRankChanged -= HandlePromotionRankChanged;
 
-        RemoveDismiss(encounterButton, DismissEncounter);
+        RemoveDismiss(riftButton, DismissRift);
         RemoveDismiss(settingsButton, DismissSettings);
         RemoveDismiss(directoryButton, DismissDirectory);
         RemoveDismiss(gymButton, DismissGym);
@@ -69,7 +69,7 @@ public sealed class FeatureUnlockAlertRouter : MonoBehaviour
         {
             case FeatureId.IdleBattle_Basic:
             case FeatureId.IdleBattle_SpeedControl:
-                SetAlert(encounterAlert, true);
+                SetAlert(riftAlert, true);
                 break;
 
             case FeatureId.Seeds_DailyBasic:
@@ -96,7 +96,7 @@ public sealed class FeatureUnlockAlertRouter : MonoBehaviour
     private void HandlePromotionRankChanged(int oldRank, int newRank)
     {
         if (oldRank < SynergyUnlockRank && newRank >= SynergyUnlockRank)
-            SetAlert(encounterAlert, true);
+            SetAlert(riftAlert, true);
 
         if (oldRank < DifficultyUnlockRank && newRank >= DifficultyUnlockRank)
             SetAlert(settingsAlert, true);
@@ -105,7 +105,7 @@ public sealed class FeatureUnlockAlertRouter : MonoBehaviour
             SetAlert(ironCareerAlert, true);
     }
 
-    private void DismissEncounter() => SetAlert(encounterAlert, false);
+    private void DismissRift() => SetAlert(riftAlert, false);
     private void DismissSettings() => SetAlert(settingsAlert, false);
     private void DismissDirectory() => SetAlert(directoryAlert, false);
     private void DismissGym() => SetAlert(gymAlert, false);
@@ -114,7 +114,7 @@ public sealed class FeatureUnlockAlertRouter : MonoBehaviour
 
     private void HideAllAlerts()
     {
-        SetAlert(encounterAlert, false);
+        SetAlert(riftAlert, false);
         SetAlert(settingsAlert, false);
         SetAlert(directoryAlert, false);
         SetAlert(gymAlert, false);

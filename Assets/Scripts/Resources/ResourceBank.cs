@@ -6,7 +6,7 @@ public static class ResourceBank
 {
     static List<int> L => SaveManager.Data.resourceCounts;
 
-    // Energy may overcap encounter max, but never this absolute hard cap.
+    // Energy may overcap rift max, but never this absolute hard cap.
     public const int EnergyHardCap = 5000;
 
     // ─────────────────────────────────────────────────────────────

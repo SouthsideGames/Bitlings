@@ -7,7 +7,7 @@ public class TitleScreenController : MonoBehaviour
 {
     [Header("Panel Routing")]
     [SerializeField] private PanelId selfPanelId    = PanelId.None;       
-    [SerializeField] private PanelId homePanelId    = PanelId.Encounter;  
+    [SerializeField] private PanelId homePanelId    = PanelId.Rift;  
     [SerializeField] private PanelId starterPanelId = PanelId.StarterPicker;      
 
     [Header("Refs")]

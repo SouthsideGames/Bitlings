@@ -27,14 +27,14 @@ public static class GameEvents
     public static Action OnOwnedMonstersChanged;
 
     // ─────────────────────────────────────────────────────────
-    // Boss / Encounters / Battle
+    // Boss / Rifts / Battle
     // ─────────────────────────────────────────────────────────
     public static Action<string, MonsterDataSO> BossSpawned;
     public static Action<string> BossDefeated;
     public static Action<string, string, int, int> ShowRewardPopup;
     public static Action<BattleResult> BattleFinished;
     public static Action OnBattleStateChanged;
-    public static Action OnEncounterAutoModeChanged;
+    public static Action OnRiftAutoModeChanged;
     public static Action<bool> AutoBattleModeChanged;
 
     // ─────────────────────────────────────────────────────────
@@ -129,7 +129,7 @@ public static class GameEvents
     {
         AutoBattleModeChanged?.Invoke(isAuto);
 
-        OnEncounterAutoModeChanged?.Invoke();
+        OnRiftAutoModeChanged?.Invoke();
     }
 
     public static void RaiseAutoApplyRequested()

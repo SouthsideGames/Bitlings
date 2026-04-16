@@ -6,8 +6,8 @@ using UnityEngine.UI;
 /// Binds the Iron Career button visibility to the unlock gate.
 ///
 /// Phase 3+ approach:
-/// - UIManager only shows the IronCareerEncounter container.
-/// - IronCareerEncounterPanelUI owns the overlay flow (Starter/Hire/Replace/etc).
+/// - UIManager only shows the IronCareerRift container.
+/// - IronCareerRiftPanelUI owns the overlay flow (Starter/Hire/Replace/etc).
 /// - We do NOT enter sealed runtime here by default; sealed runtime starts when a run starts.
 /// </summary>
 public sealed class IronCareerHomeButtonBinder : MonoBehaviour
@@ -61,10 +61,10 @@ public sealed class IronCareerHomeButtonBinder : MonoBehaviour
 
         if (ui)
         {
-            ui.Hide(PanelId.Encounter);
+            ui.Hide(PanelId.Rift);
             ui.Hide(PanelId.PostBattleSummary);
 
-            ui.Show(PanelId.IronCareerEncounter);
+            ui.Show(PanelId.IronCareerRift);
             ui.Hide(PanelId.Home);
         }
 
@@ -94,14 +94,14 @@ public sealed class IronCareerHomeButtonBinder : MonoBehaviour
         {
             yield return null; // wait so panel/container can finish enabling
 
-            var ironUI = IronCareerEncounterPanelUI.I;
+            var ironUI = IronCareerRiftPanelUI.I;
             if (!ironUI)
-                ironUI = FindFirstObjectByType<IronCareerEncounterPanelUI>(FindObjectsInactive.Include);
+                ironUI = FindFirstObjectByType<IronCareerRiftPanelUI>(FindObjectsInactive.Include);
 
             if (!ironUI)
                 continue;
 
-            var root = UIManager.I ? UIManager.I.GetRoot(PanelId.IronCareerEncounter) : null;
+            var root = UIManager.I ? UIManager.I.GetRoot(PanelId.IronCareerRift) : null;
             bool panelActive = root == null || root.activeInHierarchy;
             if (!panelActive)
                 continue;
@@ -110,6 +110,6 @@ public sealed class IronCareerHomeButtonBinder : MonoBehaviour
             yield break;
         }
 
-        Debug.LogWarning("[IronCareerHomeButtonBinder] Timed out waiting to show Starter (IronCareerEncounterPanelUI not ready/active).");
+        Debug.LogWarning("[IronCareerHomeButtonBinder] Timed out waiting to show Starter (IronCareerRiftPanelUI not ready/active).");
     }
 }

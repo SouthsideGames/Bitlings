@@ -7,9 +7,7 @@ using UnityEngine.UI;
 
 public class ArenaMatchDetailPanelUI : MonoBehaviour
 {
-    // ═════════════════════════════════════════════════════════════
-    //  Inspector references
-    // ═════════════════════════════════════════════════════════════
+
 
     [Header("Header")]
     [SerializeField] private TextMeshProUGUI matchTitleLabel;

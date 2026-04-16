@@ -98,15 +98,15 @@ public class PostBattleSummaryPanelUI : MonoBehaviour
 
     private void OnContinueClicked()
     {
-        EncounterPanelUI.I?.ForceBlinderAlphaToOne();
+        RiftPanelUI.I?.ForceBlinderAlphaToOne();
 
         // If defeated, go to Home after continuing.
         if (_lastResult.HasValue && !_lastResult.Value.victory && !_lastResult.Value.escaped)
         {
             UIManager.I?.Show(PanelId.Home);
-            // Also close the Encounter panel so the player isn't left in the encounter flow
+            // Also close the Rift panel so the player isn't left in the rift flow
             // with a fully KO'd team.
-            UIManager.I?.Hide(PanelId.Encounter);
+            UIManager.I?.Hide(PanelId.Rift);
         }
 
         Close();
@@ -148,7 +148,7 @@ public class PostBattleSummaryPanelUI : MonoBehaviour
         UIManager.I?.Hide(PanelId.PostBattleSummary);
     }
 
-    private bool IsAutoBattleMode() => EncounterManager.I && EncounterManager.I.IsAutoMode;
+    private bool IsAutoBattleMode() => RiftManager.I && RiftManager.I.IsAutoMode;
 
     private void CancelRowTweens(GameObject row)
     {

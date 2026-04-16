@@ -131,7 +131,7 @@ public class DuplicateResolutionPanelUI : MonoBehaviour
             trainButton.onClick.RemoveAllListeners();
             if (isMax)
             {
-                int cores = CalcConversionCores(def, PendingDuplicateCapture.EncounterLevel);
+                int cores = CalcConversionCores(def, PendingDuplicateCapture.RiftLevel);
                 if (trainLabel != null) trainLabel.text = $"Convert to Cores (+{cores})";
                 trainButton.onClick.AddListener(() => OnTrainMaxLevel(def, cores));
             }
@@ -316,9 +316,9 @@ public class DuplicateResolutionPanelUI : MonoBehaviour
         {
             UIManager.I.Hide(PanelId.DuplicateResolution);
 
-            // Reopen the Encounter panel so the player isn't left on a black screen.
-            if (!UIManager.I.IsOpen(PanelId.Encounter))
-                UIManager.I.Show(PanelId.Encounter);
+            // Reopen the Rift panel so the player isn't left on a black screen.
+            if (!UIManager.I.IsOpen(PanelId.Rift))
+                UIManager.I.Show(PanelId.Rift);
         }
     }
 
@@ -364,7 +364,7 @@ public class DuplicateResolutionPanelUI : MonoBehaviour
                 return;
             }
 
-            PendingDuplicateCapture.Set(existing, def, Mathf.Max(1, p.encounterLevel), p.isPremium, p.isMaxLevel);
+            PendingDuplicateCapture.Set(existing, def, Mathf.Max(1, p.riftLevel), p.isPremium, p.isMaxLevel);
         }
         catch (System.Exception ex)
         {
@@ -387,7 +387,7 @@ public class DuplicateResolutionPanelUI : MonoBehaviour
         }
     }
 
-    // ─────────── Duplicate level-up (mirrors EncounterManager logic) ───────────
+    // ─────────── Duplicate level-up (mirrors RiftManager logic) ───────────
 
     private static void ApplyDuplicateCaptureLevelUp(OwnedMonsterData target, MonsterDataSO def, int pointsPerLevel)
     {
@@ -446,10 +446,10 @@ public class DuplicateResolutionPanelUI : MonoBehaviour
         }
     }
 
-    private static int CalcConversionCores(MonsterDataSO def, int encounterLevel)
+    private static int CalcConversionCores(MonsterDataSO def, int riftLevel)
     {
         if (def == null) return 0;
-        int baseCores = Mathf.Max(1, 2 + Mathf.Max(1, encounterLevel));
+        int baseCores = Mathf.Max(1, 2 + Mathf.Max(1, riftLevel));
         float rarityMul;
         switch (def.rarity)
         {

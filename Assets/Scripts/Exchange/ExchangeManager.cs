@@ -1259,7 +1259,7 @@ public sealed class ExchangeManager : MonoBehaviour
 
     private static bool IsAnyBattleActive()
     {
-        if (EncounterManager.I != null && EncounterManager.I.IsInBattle)
+        if (RiftManager.I != null && RiftManager.I.IsInBattle)
             return true;
 
         var battle = UnityEngine.Object.FindFirstObjectByType<BattleManager>(FindObjectsInactive.Include);

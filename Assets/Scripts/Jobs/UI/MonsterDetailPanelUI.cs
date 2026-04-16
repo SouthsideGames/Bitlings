@@ -1247,7 +1247,7 @@ private Sprite GetVariantIcon(MonsterDataSO monster)
         }
 
         // Allow assigning KO'd monsters back onto the team so the player can use team healing.
-        // Battle eligibility is enforced elsewhere (EligibilityRules / EncounterManager).
+        // Battle eligibility is enforced elsewhere (EligibilityRules / RiftManager).
 
         var data2 = SaveManager.Data;
         if (data2 == null)

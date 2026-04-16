@@ -1,7 +1,3 @@
-// Assets/Scripts/Arena/UI/ArenaLeaderboardPanelUI.cs
-// BRN Arena v1 — Leaderboard sub-panel shown from ArenaMainPanelUI.
-// Displays two tabs: Weekly top placements and All-Time championships.
-
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using TMPro;
@@ -21,8 +17,7 @@ public class ArenaLeaderboardPanelUI : MonoBehaviour
     [Header("Tabs")]
     [SerializeField] private Button weeklyTabButton;
     [SerializeField] private Button allTimeTabButton;
-    [SerializeField] private Image weeklyTabHighlight;
-    [SerializeField] private Image allTimeTabHighlight;
+
 
     [Header("List")]
     [SerializeField] private Transform listRoot;
@@ -36,7 +31,6 @@ public class ArenaLeaderboardPanelUI : MonoBehaviour
 
     [Header("State")]
     [SerializeField] private GameObject loadingIndicator;
-    [SerializeField] private GameObject emptyLabel;
 
     [Header("Navigation")]
     [SerializeField] private Button closeButton;
@@ -85,9 +79,6 @@ public class ArenaLeaderboardPanelUI : MonoBehaviour
     {
         _activeTab = tab;
 
-        if (weeklyTabHighlight) weeklyTabHighlight.enabled = tab == Tab.Weekly;
-        if (allTimeTabHighlight) allTimeTabHighlight.enabled = tab == Tab.AllTime;
-
         RefreshAsync();
     }
 
@@ -128,13 +119,10 @@ public class ArenaLeaderboardPanelUI : MonoBehaviour
 
         if (entries == null || entries.Count == 0)
         {
-            if (emptyLabel) emptyLabel.SetActive(true);
             ShowPlayerEntry(null);
             _isLoading = false;
             return;
         }
-
-        if (emptyLabel) emptyLabel.SetActive(false);
 
         for (int i = 0; i < entries.Count; i++)
         {
@@ -169,7 +157,6 @@ public class ArenaLeaderboardPanelUI : MonoBehaviour
     private void SetLoading(bool loading)
     {
         if (loadingIndicator) loadingIndicator.SetActive(loading);
-        if (emptyLabel) emptyLabel.SetActive(false);
     }
 
     private void ShowPlayerEntry(LeaderboardEntry entry)

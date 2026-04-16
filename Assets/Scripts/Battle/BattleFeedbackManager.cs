@@ -1474,14 +1474,14 @@ public void SetGuard(BattleFeedbackSide side, bool on)
                 spawnRoot = wildAttackSpawnRoot;
         }
 
-        if (!spawnRoot && EncounterManager.I != null)
+        if (!spawnRoot && RiftManager.I != null)
         {
-            var encounterRoot = isPlayerSide
-                ? EncounterManager.I.EnemySpawnPoint
-                : EncounterManager.I.PlayerSpawnPoint;
+            var riftRoot = isPlayerSide
+                ? RiftManager.I.EnemySpawnPoint
+                : RiftManager.I.PlayerSpawnPoint;
 
-            if (encounterRoot && encounterRoot.gameObject.activeInHierarchy)
-                spawnRoot = encounterRoot;
+            if (riftRoot && riftRoot.gameObject.activeInHierarchy)
+                spawnRoot = riftRoot;
         }
 
         if (!spawnRoot)

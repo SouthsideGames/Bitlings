@@ -7,8 +7,8 @@ public class IdleBattleConfigSO : ScriptableObject
     [Min(0)] public int maxOfflineHours = 8;
 
     [Header("Pacing & Cost")]
-    [Min(0.25f)] public float secondsPerEncounter = 4f;
-    [Min(1)] public int energyPerEncounter = 1;
+    [Min(0.25f)] public float secondsPerRift = 4f;
+    [Min(1)] public int energyPerRift = 1;
 
     [Header("Rewards")]
     [Range(0.1f, 5f)] public float rewardMultiplier = 1f;
@@ -18,7 +18,7 @@ public class IdleBattleConfigSO : ScriptableObject
     public bool allowCapturesOffline = false; 
 
     [Header("Log")]
-    [Min(10)] public int encounterLogMaxEntries = 60;
+    [Min(10)] public int riftLogMaxEntries = 60;
 
     [Header("Feature Unlocks")]
     [Range(1f, 5f)] public float rewardBoostMultiplier = 1.5f;

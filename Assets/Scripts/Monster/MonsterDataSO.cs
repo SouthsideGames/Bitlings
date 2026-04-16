@@ -45,7 +45,7 @@ public class MonsterDataSO : ScriptableObject
     public int evolutionLevel = 0;
     public MonsterDataSO evolutionForm;
 
-    [Header("Boss / Encounter Flags")]
+    [Header("Boss / Rift Flags")]
     [Tooltip("If true, this Bitling can never be captured.")]
     public bool uncatchable = false;
 
@@ -56,8 +56,8 @@ public class MonsterDataSO : ScriptableObject
     [Tooltip("Relative chance to be picked as boss when multiple bosses exist. 1 = default.")]
     [Min(1)] public int bossWeight = 1;
 
-    [Header("Encounter Weights")]
-    [Tooltip("Relative chance to appear in wild encounters. 0 = never spawns. 1+ = higher weight = more common.")]
+    [Header("Rift Weights")]
+    [Tooltip("Relative chance to appear in wild rifts. 0 = never spawns. 1+ = higher weight = more common.")]
     [Min(0)] public float spawnWeight = 1;
 
     [Header("Collection & Jobs")]

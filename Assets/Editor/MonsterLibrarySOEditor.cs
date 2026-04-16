@@ -36,7 +36,7 @@ public class MonsterLibrarySOEditor : Editor
         EditorGUILayout.Space(10);
         using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
         {
-            EditorGUILayout.LabelField("Weighted Encounter Tools (float)", EditorStyles.boldLabel);
+            EditorGUILayout.LabelField("Weighted Rift Tools (float)", EditorStyles.boldLabel);
 
             using (new EditorGUILayout.HorizontalScope())
             {
@@ -135,7 +135,7 @@ public class MonsterLibrarySOEditor : Editor
         EditorGUILayout.EndScrollView();
 
         EditorGUILayout.Space(4);
-        EditorGUILayout.HelpBox("Tip: Set weight = 0 to exclude a monster from wild encounters.", MessageType.Info);
+        EditorGUILayout.HelpBox("Tip: Set weight = 0 to exclude a monster from wild rifts.", MessageType.Info);
     }
 
     // Gather filtered rows from object references (NOT FindPropertyRelative)

@@ -25,7 +25,7 @@ public sealed class TitleManager : MonoBehaviour
     // Value: list of titles to treat as equipped for the duration of the battle.
     // Notes:
     // - This intentionally bypasses TitleSaveStore equip selections.
-    // - EncounterManager injects rolled wild titles via TitlesAdapter.SetLocalTitles(...)
+    // - RiftManager injects rolled wild titles via TitlesAdapter.SetLocalTitles(...)
     //   which forwards to these APIs.
     private readonly Dictionary<string, List<TitleSO>> _battleOverrideTitles =
         new Dictionary<string, List<TitleSO>>(System.StringComparer.Ordinal);
@@ -426,7 +426,7 @@ public sealed class TitleManager : MonoBehaviour
     /// </summary>
     public List<TitleSO> GetEquippedList(string monsterId, MonsterDataSO def, int level)
     {
-        // 0) Battle-scoped override (e.g., rolled wild titles injected per encounter)
+        // 0) Battle-scoped override (e.g., rolled wild titles injected per rift)
         // If present, treat as the equipped list for the duration of the battle.
         if (TryGetBattleOverrideTitles(monsterId, out var overrideTitles) && overrideTitles != null)
             return new List<TitleSO>(overrideTitles);
@@ -491,7 +491,7 @@ public sealed class TitleManager : MonoBehaviour
     // ─────────────────────────────────────────────────────────────────────
     /// <summary>
     /// Sets a battle-scoped override title list for a combatant id.
-    /// This is intended for synthetic ids (e.g., wild encounters) and temporary effects.
+    /// This is intended for synthetic ids (e.g., wild rifts) and temporary effects.
     /// </summary>
     public void SetBattleOverrideTitles(string combatantId, List<TitleSO> titles)
     {
@@ -1184,7 +1184,7 @@ if (_flatStartRemainingTurns.TryGetValue(monsterId, out int remTurns) && remTurn
             _onEventFiredTurn.Clear();
 
             // Clear per-battle context (but DO NOT clear _battleOverrideTitles here:
-            // EncounterManager injects rolled wild titles prior to battle start.)
+            // RiftManager injects rolled wild titles prior to battle start.)
             _battleContextDef.Clear();
             _battleContextLevel.Clear();
 

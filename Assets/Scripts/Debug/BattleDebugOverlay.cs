@@ -63,17 +63,17 @@ public sealed class BattleDebugOverlay : MonoBehaviour
         sb.AppendLine("=== BATTLE DEBUG (DEV) ===");
         sb.AppendLine($"FPS: {_fpsSma:0}");
 
-        var em = EncounterManager.I;
+        var em = RiftManager.I;
         if (em != null)
         {
             sb.AppendLine("");
-            sb.AppendLine("[EncounterManager]");
+            sb.AppendLine("[RiftManager]");
             sb.AppendLine($"InBattle: {em.IsInBattle}");
             sb.AppendLine($"AutoMode: {em.IsAutoMode}");
-            sb.AppendLine($"NextEncounterFree: {em.NextEncounterIsFree}");
+            sb.AppendLine($"NextRiftFree: {em.NextRiftIsFree}");
             sb.AppendLine($"WinStreak: {em.CurrentWinStreak}");
         }
-        else sb.AppendLine("\n[EncounterManager] (null)");
+        else sb.AppendLine("\n[RiftManager] (null)");
 
         var pbs = PostBattleSummaryManager.I;
         if (pbs != null)

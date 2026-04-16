@@ -36,8 +36,8 @@ public static class ArenaCloudCodeService
         try
         {
             var args = new Dictionary<string, object> { { "username", username } };
-            var response = await CloudCodeService.Instance.CallEndpointAsync<UsernameResponse>(
-                "ValidateAndSetUsername", args);
+            var response = await CloudCodeService.Instance.CallModuleEndpointAsync<UsernameResponse>(
+                "ArenaModule", "ValidateAndSetUsername", args);
 
             return new UsernameResult
             {
@@ -83,7 +83,8 @@ public static class ArenaCloudCodeService
     /// Sends the frozen team snapshot to the server for bracket assignment.
     /// </summary>
     public static async Task<TournamentRegistrationResult> RegisterForTournamentAsync(
-        string teamSnapshotJson, int arenaScore, int scoreBand, string displayName, string weekId)
+        string teamSnapshotJson, int arenaScore, int scoreBand, string displayName, string weekId,
+        List<string> ownedInstanceIds)
     {
         if (!ArenaNetworkGuard.IsOnline)
             return new TournamentRegistrationResult { success = false, error = "No connection. Try again later." };
@@ -96,10 +97,11 @@ public static class ArenaCloudCodeService
                 { "arenaScore", arenaScore },
                 { "scoreBand", scoreBand },
                 { "displayName", displayName },
-                { "weekId", weekId }
+                { "weekId", weekId },
+                { "ownedInstanceIds", ownedInstanceIds }
             };
-            var response = await CloudCodeService.Instance.CallEndpointAsync<RegisterResponse>(
-                "RegisterForTournament", args);
+            var response = await CloudCodeService.Instance.CallModuleEndpointAsync<RegisterResponse>(
+                "ArenaModule", "RegisterForTournament", args);
 
             return new TournamentRegistrationResult
             {
@@ -176,8 +178,8 @@ public static class ArenaCloudCodeService
         try
         {
             var args = new Dictionary<string, object> { { "weekId", weekId } };
-            var response = await CloudCodeService.Instance.CallEndpointAsync<BracketResponse>(
-                "GetTournamentBracket", args);
+            var response = await CloudCodeService.Instance.CallModuleEndpointAsync<BracketResponse>(
+                "ArenaModule", "GetTournamentBracket", args);
 
             if (!response.assigned)
                 return new BracketResult { assigned = false, reason = response.reason };

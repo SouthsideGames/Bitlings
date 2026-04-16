@@ -15,8 +15,8 @@ public class NoteLogPanelUI : MonoBehaviour
     [Tooltip("If true, clears the panel whenever a new battle begins.")]
     [SerializeField] private bool clearOnBattleStart = false;
 
-    [Tooltip("If true, clears the panel whenever a new encounter begins.")]
-    [SerializeField] private bool clearOnEncounterStart = false;
+    [Tooltip("If true, clears the panel whenever a new rift begins.")]
+    [SerializeField] private bool clearOnRiftStart = false;
 
     private readonly List<NoteLogRowUI> _rows = new List<NoteLogRowUI>(256);
     private static int _openPanelCount;
@@ -34,7 +34,7 @@ public class NoteLogPanelUI : MonoBehaviour
 
         BattleLogger.OnLogAppended    += HandleAdded;
         BattleLogger.OnBattleBegan    += HandleBattleBegin;
-        BattleLogger.OnEncounterBegan += HandleEncounterBegin;
+        BattleLogger.OnRiftBegan += HandleRiftBegin;
         BattleLogger.OnLogCleared     += HandleLogCleared;
     }
 
@@ -43,7 +43,7 @@ public class NoteLogPanelUI : MonoBehaviour
         MarkOpen(false);
         BattleLogger.OnLogAppended    -= HandleAdded;
         BattleLogger.OnBattleBegan    -= HandleBattleBegin;
-        BattleLogger.OnEncounterBegan -= HandleEncounterBegin;
+        BattleLogger.OnRiftBegan -= HandleRiftBegin;
         BattleLogger.OnLogCleared     -= HandleLogCleared;
     }
 
@@ -73,10 +73,10 @@ public class NoteLogPanelUI : MonoBehaviour
         AddSystem($"— Battle started: {label} —");
     }
 
-    void HandleEncounterBegin(string label)
+    void HandleRiftBegin(string label)
     {
-        if (clearOnEncounterStart) ClearRows();
-        AddSystem($"— Encounter: {label} —");
+        if (clearOnRiftStart) ClearRows();
+        AddSystem($"— Rift: {label} —");
     }
 
     void HandleAdded(LogEntry e)

@@ -48,7 +48,7 @@ public class PlayerDossierPanelUI : MonoBehaviour
     // PAGE 3 – FIELD OPERATIONS
     // ─────────────────────────────────────────────────────────────
     [Header("Page 3 - Field Ops")]
-    [SerializeField] private TextMeshProUGUI encountersInitiatedText;
+    [SerializeField] private TextMeshProUGUI riftsInitiatedText;
     [SerializeField] private TextMeshProUGUI captureSuccessRateText;
     [SerializeField] private TextMeshProUGUI riftStabilizationsText;
     [SerializeField] private TextMeshProUGUI rareBitlingsFoundText;
@@ -378,7 +378,7 @@ public class PlayerDossierPanelUI : MonoBehaviour
     {
         if (stats == null)
         {
-            if (encountersInitiatedText != null) encountersInitiatedText.text = "Encounters Initiated:   0";
+            if (riftsInitiatedText != null) riftsInitiatedText.text = "Rifts Initiated:   0";
             if (captureSuccessRateText != null) captureSuccessRateText.text = "Capture Success Rate:   0%";
             if (riftStabilizationsText != null) riftStabilizationsText.text = "Boss Rifts Cleared:     0";
             if (rareBitlingsFoundText != null) rareBitlingsFoundText.text = "Rare Bitlings Found:    0";
@@ -388,7 +388,7 @@ public class PlayerDossierPanelUI : MonoBehaviour
             return;
         }
 
-        if (encountersInitiatedText != null) encountersInitiatedText.text = $"Encounters Initiated:   {stats.encountersInitiated}";
+        if (riftsInitiatedText != null) riftsInitiatedText.text = $"Rifts Initiated:   {stats.riftsInitiated}";
         if (captureSuccessRateText != null) captureSuccessRateText.text = $"Capture Success Rate:   {stats.captureSuccessRate}%";
         if (riftStabilizationsText != null) riftStabilizationsText.text = $"Boss Rifts Cleared:     {stats.riftStabilizations}";
         if (rareBitlingsFoundText != null) rareBitlingsFoundText.text = $"Rare Bitlings Found:    {stats.rareBitlingsFound}";
@@ -469,7 +469,7 @@ public class PlayerDossierPanelUI : MonoBehaviour
             {
                 resumeLinesText.text =
                     "• No significant events recorded yet.\n" +
-                    "• Continue operating job sites and handling field encounters.";
+                    "• Continue operating job sites and handling field rifts.";
             }
             else
             {

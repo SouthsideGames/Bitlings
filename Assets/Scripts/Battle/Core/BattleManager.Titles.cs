@@ -52,7 +52,7 @@ public partial class BattleManager : MonoBehaviour
         try
         {
             if (string.IsNullOrEmpty(_wildCombatIdForTitles) || !_wildCombatIdForTitles.StartsWith("WILD::", StringComparison.OrdinalIgnoreCase))
-                _wildCombatIdForTitles = (EncounterManager.I != null) ? EncounterManager.I.WildCombatId : null;
+                _wildCombatIdForTitles = (RiftManager.I != null) ? RiftManager.I.WildCombatId : null;
 
             if (string.IsNullOrEmpty(_wildCombatIdForTitles) || !_wildCombatIdForTitles.StartsWith("WILD::", StringComparison.OrdinalIgnoreCase))
                 _wildCombatIdForTitles = BuildFallbackWildCombatId(wildDef);
@@ -96,7 +96,7 @@ public partial class BattleManager : MonoBehaviour
         for (int i = 0; i < teamCount; i++)
             if (i != idx && teamHP != null && i < teamHP.Length && teamHP[i] > 0.01f) alliesAlive++;
 
-        int winStreak = (EncounterManager.I != null) ? EncounterManager.I.CurrentWinStreak : 0;
+        int winStreak = (RiftManager.I != null) ? RiftManager.I.CurrentWinStreak : 0;
 
         TitleContext ctx = TitleContext.Empty;
         ctx.selfHp01 = hp01;
@@ -164,7 +164,7 @@ public partial class BattleManager : MonoBehaviour
     {
         try
         {
-            var em = EncounterManager.I;
+            var em = RiftManager.I;
             if (em == null) return 0;
 
             var t = em.GetType();
