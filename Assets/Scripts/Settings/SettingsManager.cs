@@ -334,7 +334,7 @@ public class SettingsManager : MonoBehaviour
         if (playerManager == null) return 0;
 
         // Lock until Rank 15
-        if (playerManager.promotionRank < 15) return 0;
+        if (!playerManager.HasDifficultyUnlocked) return 0;
 
         playerManager.settings ??= new SettingsState();
         return Mathf.Clamp(playerManager.settings.difficultyMode, 0, 2);
@@ -345,7 +345,7 @@ public class SettingsManager : MonoBehaviour
         if (playerManager == null) return;
 
         // Lock until Rank 15
-        if (playerManager.promotionRank < 15)
+        if (!playerManager.HasDifficultyUnlocked)
             mode = 0;
 
         playerManager.settings ??= new SettingsState();

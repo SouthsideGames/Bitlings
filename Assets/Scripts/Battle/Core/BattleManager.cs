@@ -1651,12 +1651,17 @@ public partial class BattleManager : MonoBehaviour
 
     private IEnumerator Say(string line, BattleLineTag tags = BattleLineTag.None)
     {
+        // Never suppress lines that carry an icon tag — they must reach the UI.
+        const BattleLineTag iconMask = BattleLineTag.Crit | BattleLineTag.Shield
+                                     | BattleLineTag.SuperEffective | BattleLineTag.NotEffective;
+        bool hasIcon = (tags & iconMask) != 0;
+
         bool condensed = SettingsManager.I != null && SettingsManager.I.GetCondensedBattleText();
         bool autoCompress = SettingsManager.I != null && SettingsManager.I.GetCompressAutoBattleText();
 
         bool isAuto = AutoResolveActive || !manualTurns;
 
-        if (condensed && (tags & BattleLineTag.Result) == 0)
+        if (!hasIcon && condensed && (tags & BattleLineTag.Result) == 0)
         {
     #if UNITY_EDITOR
             DevLog.Log($"[IronTextTrace] Say suppressed by condensed text. tags={tags} line='{line}'");
@@ -1664,7 +1669,7 @@ public partial class BattleManager : MonoBehaviour
             yield break;
         }
 
-        if (isAuto && autoCompress && (tags & BattleLineTag.Flavor) != 0)
+        if (!hasIcon && isAuto && autoCompress && (tags & BattleLineTag.Flavor) != 0)
         {
     #if UNITY_EDITOR
             DevLog.Log($"[IronTextTrace] Say suppressed by auto-compress flavor filter. tags={tags} line='{line}'");

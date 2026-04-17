@@ -352,12 +352,9 @@ public class RiftPanelUI : MonoBehaviour
         StopPulse(ref _capturePulseTweenId, captureTimerLabel);
         StopPulse(ref _favorPulseTweenId, favorTimerLabel);
 
-        // Stop rift/battle music when panel closes during auto-battles.
-        // This prevents battle music from persisting after leaving the rift panel.
-        if (AudioManager.I != null && !IsInBattle())
-        {
-            AudioManager.I.StopMusic(fadeOut: 0.25f);
-        }
+        // Music transitions are handled by AudioManager.UpdateMusicForCurrentState()
+        // via OnPanelChanged. Calling StopMusic here races against the crossfade and
+        // can orphan the old music source, preventing home music from starting.
     }
 
     void Update()

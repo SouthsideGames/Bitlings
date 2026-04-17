@@ -760,8 +760,10 @@ public class AudioManager : MonoBehaviour
         // "Rift View" means the rift panel is visible and we are NOT on the results screen.
         // Additionally:
         // - If Home is open, we consider Rift "not the active view" unless a battle is running.
-        // - If a battle is running, we treat that as Rift/Battle view for music.
-        bool riftViewOpen = (riftOpen && !summaryOpen && !homeOpen) || isInBattle;
+        // - If a battle is running, we treat that as Rift/Battle view for music,
+        //   but Home and PostBattleSummary always take priority over isInBattle.
+        bool riftViewOpen = (riftOpen && !summaryOpen && !homeOpen)
+                         || (isInBattle && !homeOpen && !summaryOpen);
 
         // Boss re-roll once when boss becomes active.
         if (_bossActive && !_prevBossActive)
@@ -770,8 +772,8 @@ public class AudioManager : MonoBehaviour
         }
         _prevBossActive = _bossActive;
 
-        // 1) Post-battle summary → victory/defeat music
-        if (summaryOpen)
+        // 1) Post-battle summary → victory/defeat music (only if Home isn't open)
+        if (summaryOpen && !homeOpen)
         {
             AudioClip clip = null;
 

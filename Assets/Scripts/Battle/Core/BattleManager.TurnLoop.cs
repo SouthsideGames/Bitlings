@@ -2112,6 +2112,12 @@ EndBattleRouted(false);
 
     private bool ShouldSkipNarration(BattleLineTag tags)
     {
+        // Never suppress lines that carry an icon tag — they must reach the UI.
+        const BattleLineTag iconMask = BattleLineTag.Crit | BattleLineTag.Shield
+                                     | BattleLineTag.SuperEffective | BattleLineTag.NotEffective;
+        if ((tags & iconMask) != 0)
+            return false;
+
         bool condensed = SettingsManager.I != null && SettingsManager.I.GetCondensedBattleText();
         bool autoCompress = SettingsManager.I != null && SettingsManager.I.GetCompressAutoBattleText();
 
