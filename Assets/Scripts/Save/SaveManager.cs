@@ -600,7 +600,23 @@ public static class SaveManager
     private static void NormalizeBeforeSave()
     {
         EnsureDefaults();
+        StripBlankOwnedEntries();
         SyncListsFromSets();
+    }
+
+    /// <summary>
+    /// Remove null or blank-monsterId entries from Data.owned so they never reach disk.
+    /// Team slots are left alone (blank entries = empty slots).
+    /// </summary>
+    private static void StripBlankOwnedEntries()
+    {
+        if (Data?.owned == null) return;
+        for (int i = Data.owned.Count - 1; i >= 0; i--)
+        {
+            var m = Data.owned[i];
+            if (m == null || string.IsNullOrWhiteSpace(m.monsterId))
+                Data.owned.RemoveAt(i);
+        }
     }
 
     // ─────────────────────────────────────────────
@@ -1942,19 +1958,33 @@ if (save) Save();
 
     private static bool StageBackupFromCurrentSave()
     {
+        const int maxAttempts = 3;
+        const int retryDelayMs = 50;
+
         try
         {
             if (!File.Exists(SavePath))
                 return true;
 
-            SaveFiles.TryDelete(BackupStagingPath);
-            if (!SaveFiles.TryCopy(SavePath, BackupStagingPath, overwrite: true))
-                return false;
+            for (int attempt = 1; attempt <= maxAttempts; attempt++)
+            {
+                SaveFiles.TryDelete(BackupStagingPath);
+                if (SaveFiles.TryCopy(SavePath, BackupStagingPath, overwrite: true))
+                    return true;
 
-            return true;
+                if (attempt < maxAttempts)
+                {
+                    Debug.LogWarning($"[SaveManager] StageBackup attempt {attempt}/{maxAttempts} failed, retrying...");
+                    System.Threading.Thread.Sleep(retryDelayMs);
+                }
+            }
+
+            Debug.LogWarning($"[SaveManager] StageBackup failed after {maxAttempts} attempts.");
+            return false;
         }
-        catch
+        catch (Exception e)
         {
+            Debug.LogWarning($"[SaveManager] StageBackup exception: {e.GetType().Name} – {e.Message}");
             return false;
         }
     }
@@ -2224,15 +2254,21 @@ if (save) Save();
         {
             try
             {
-                if (File.Exists(src))
+                if (!File.Exists(src))
                 {
-                    File.Copy(src, dst, overwrite);
-                    return true;
+                    Debug.LogWarning($"[SaveFiles] TryCopy skipped: source does not exist – {src}");
+                    return false;
                 }
-            }
-            catch { }
 
-            return false;
+                EnsureFolder(dst);
+                File.Copy(src, dst, overwrite);
+                return true;
+            }
+            catch (Exception e)
+            {
+                Debug.LogWarning($"[SaveFiles] TryCopy failed ({src} → {dst}): {e.GetType().Name} – {e.Message}");
+                return false;
+            }
         }
 
         public static void TryDelete(string path)
