@@ -498,7 +498,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::UIDeviceAdaptiveSizer
   tabletAspectThreshold: 0.65
   useDpiCheck: 1
-  tabletMinInches: 7.6
+  tabletMinInches: 6.8
   phoneLayout:
     sizeDelta: {x: 915, y: 525}
     anchoredPosition: {x: 1.8479, y: -48.446}
@@ -4893,7 +4893,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::UIDeviceAdaptiveSizer
   tabletAspectThreshold: 0.65
   useDpiCheck: 1
-  tabletMinInches: 7.6
+  tabletMinInches: 6.8
   phoneLayout:
     sizeDelta: {x: 0, y: 150}
     anchoredPosition: {x: 0, y: 0}
@@ -6094,7 +6094,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::UIDeviceAdaptiveSizer
   tabletAspectThreshold: 0.65
   useDpiCheck: 1
-  tabletMinInches: 7.6
+  tabletMinInches: 6.8
   phoneLayout:
     sizeDelta: {x: 911.2853, y: 1212.486}
     anchoredPosition: {x: 0.00001242757, y: -606.2482}
@@ -12972,7 +12972,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::UIDeviceAdaptiveSizer
   tabletAspectThreshold: 0.65
   useDpiCheck: 1
-  tabletMinInches: 7.6
+  tabletMinInches: 6.8
   phoneLayout:
     sizeDelta: {x: 0, y: 552.7278}
     anchoredPosition: {x: 0, y: -279.6822}
@@ -16245,7 +16245,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::UIDeviceAdaptiveSizer
   tabletAspectThreshold: 0.65
   useDpiCheck: 1
-  tabletMinInches: 7.6
+  tabletMinInches: 6.8
   phoneLayout:
     sizeDelta: {x: 0, y: 338}
     anchoredPosition: {x: 0, y: 0}
@@ -17385,7 +17385,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::UIDeviceAdaptiveSizer
   tabletAspectThreshold: 0.65
   useDpiCheck: 1
-  tabletMinInches: 7.6
+  tabletMinInches: 6.8
   phoneLayout:
     sizeDelta: {x: 0, y: 1165.815}
     anchoredPosition: {x: 0, y: -48.19727}
@@ -17762,7 +17762,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: -0.75341797, y: -9.944824}
+  m_AnchoredPosition: {x: -0.75341797, y: -9.944809}
   m_SizeDelta: {x: -45.9737, y: -84.6813}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &175983144
@@ -21433,7 +21433,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::UIDeviceAdaptiveSizer
   tabletAspectThreshold: 0.65
   useDpiCheck: 1
-  tabletMinInches: 7.6
+  tabletMinInches: 6.8
   phoneLayout:
     sizeDelta: {x: 937.64, y: 472.65}
     anchoredPosition: {x: 1.3789, y: -49.212}
@@ -22987,7 +22987,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::UIDeviceAdaptiveSizer
   tabletAspectThreshold: 0.65
   useDpiCheck: 0
-  tabletMinInches: 7.6
+  tabletMinInches: 6.8
   phoneLayout:
     sizeDelta: {x: 433.94, y: 35}
     anchoredPosition: {x: 2.6874, y: 5.8408}
@@ -23798,13 +23798,6 @@ MonoBehaviour:
     pitchMin: 0.85
     pitchMax: 1.05
     cooldown: 0
-  - type: 22
-    clips:
-    - {fileID: 8300000, guid: cef8c108a3d924f12afeadc619f2b2e0, type: 3}
-    volume: 0.5
-    pitchMin: 0.85
-    pitchMax: 1.05
-    cooldown: 0.02
   autoSwapForRift: 1
 --- !u!1 &220253925
 GameObject:
@@ -24377,7 +24370,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::UIDeviceAdaptiveSizer
   tabletAspectThreshold: 0.65
   useDpiCheck: 1
-  tabletMinInches: 7.6
+  tabletMinInches: 6.8
   phoneLayout:
     sizeDelta: {x: 0, y: 649.9}
     anchoredPosition: {x: 0, y: 125.15}
@@ -28271,7 +28264,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::UIDeviceAdaptiveSizer
   tabletAspectThreshold: 0.65
   useDpiCheck: 1
-  tabletMinInches: 7.6
+  tabletMinInches: 6.8
   phoneLayout:
     sizeDelta: {x: 0, y: 310.6401}
     anchoredPosition: {x: 0, y: 508.27}
@@ -30110,7 +30103,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::UIDeviceAdaptiveSizer
   tabletAspectThreshold: 0.65
   useDpiCheck: 0
-  tabletMinInches: 7.6
+  tabletMinInches: 6.8
   phoneLayout:
     sizeDelta: {x: 433.8904, y: 35.6051}
     anchoredPosition: {x: 11.7107, y: 25.816}
@@ -37524,7 +37517,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::UIDeviceAdaptiveSizer
   tabletAspectThreshold: 0.65
   useDpiCheck: 0
-  tabletMinInches: 7.6
+  tabletMinInches: 6.8
   phoneLayout:
     sizeDelta: {x: -0.00004577637, y: 70.4559}
     anchoredPosition: {x: 0.00006103516, y: 0}
@@ -42772,7 +42765,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::UIDeviceAdaptiveSizer
   tabletAspectThreshold: 0.65
   useDpiCheck: 1
-  tabletMinInches: 7.6
+  tabletMinInches: 6.8
   phoneLayout:
     sizeDelta: {x: 0, y: 432.77}
     anchoredPosition: {x: 0, y: -0.0001220703}
@@ -43110,7 +43103,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::UIDeviceAdaptiveSizer
   tabletAspectThreshold: 0.65
   useDpiCheck: 1
-  tabletMinInches: 7.6
+  tabletMinInches: 6.8
   phoneLayout:
     sizeDelta: {x: 0, y: 48.1254}
     anchoredPosition: {x: 0, y: -70.45593}
@@ -43297,7 +43290,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::UIDeviceAdaptiveSizer
   tabletAspectThreshold: 0.65
   useDpiCheck: 1
-  tabletMinInches: 7.6
+  tabletMinInches: 6.8
   phoneLayout:
     sizeDelta: {x: -0.001464844, y: 326.8034}
     anchoredPosition: {x: 0.001464844, y: 327}
@@ -45661,7 +45654,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::UIDeviceAdaptiveSizer
   tabletAspectThreshold: 0.65
   useDpiCheck: 0
-  tabletMinInches: 7.6
+  tabletMinInches: 6.8
   phoneLayout:
     sizeDelta: {x: -0.009963989, y: 281.93}
     anchoredPosition: {x: 0.009963989, y: -137.13}
@@ -54387,7 +54380,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::UIDeviceAdaptiveSizer
   tabletAspectThreshold: 0.65
   useDpiCheck: 1
-  tabletMinInches: 7.6
+  tabletMinInches: 6.8
   phoneLayout:
     sizeDelta: {x: 0, y: 937.44}
     anchoredPosition: {x: 0, y: -0.0000076294}
@@ -54528,7 +54521,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::UIDeviceAdaptiveSizer
   tabletAspectThreshold: 0.65
   useDpiCheck: 1
-  tabletMinInches: 7.6
+  tabletMinInches: 6.8
   phoneLayout:
     sizeDelta: {x: 979, y: 1560.3}
     anchoredPosition: {x: 0.0021439, y: 19.852}
@@ -56315,7 +56308,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::UIDeviceAdaptiveSizer
   tabletAspectThreshold: 0.65
   useDpiCheck: 1
-  tabletMinInches: 7.6
+  tabletMinInches: 6.8
   phoneLayout:
     sizeDelta: {x: 469.98, y: 305.71}
     anchoredPosition: {x: 0.0010395, y: 168.37}
@@ -61686,7 +61679,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::UIDeviceAdaptiveSizer
   tabletAspectThreshold: 0.65
   useDpiCheck: 1
-  tabletMinInches: 7.6
+  tabletMinInches: 6.8
   phoneLayout:
     sizeDelta: {x: 925.1985, y: 609.9456}
     anchoredPosition: {x: 0.099365, y: 394}
@@ -64433,7 +64426,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::UIDeviceAdaptiveSizer
   tabletAspectThreshold: 0.65
   useDpiCheck: 1
-  tabletMinInches: 7.6
+  tabletMinInches: 6.8
   phoneLayout:
     sizeDelta: {x: 0, y: 273.8556}
     anchoredPosition: {x: 0, y: 0}
@@ -66870,7 +66863,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::UIDeviceAdaptiveSizer
   tabletAspectThreshold: 0.65
   useDpiCheck: 1
-  tabletMinInches: 7.6
+  tabletMinInches: 6.8
   phoneLayout:
     sizeDelta: {x: 957.1426, y: 203.79}
     anchoredPosition: {x: 10.9287, y: -35.537}
@@ -72627,7 +72620,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::UIDeviceAdaptiveSizer
   tabletAspectThreshold: 0.65
   useDpiCheck: 1
-  tabletMinInches: 7.6
+  tabletMinInches: 6.8
   phoneLayout:
     sizeDelta: {x: 915, y: 525}
     anchoredPosition: {x: 1.8479, y: -48.00003}
@@ -76021,7 +76014,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::UIDeviceAdaptiveSizer
   tabletAspectThreshold: 0.65
   useDpiCheck: 1
-  tabletMinInches: 7.6
+  tabletMinInches: 6.8
   phoneLayout:
     sizeDelta: {x: 978.75, y: 645.29}
     anchoredPosition: {x: -0.0020905, y: 0}
@@ -76572,7 +76565,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::UIDeviceAdaptiveSizer
   tabletAspectThreshold: 0.65
   useDpiCheck: 1
-  tabletMinInches: 7.6
+  tabletMinInches: 6.8
   phoneLayout:
     sizeDelta: {x: 925.1985, y: 609.9456}
     anchoredPosition: {x: 0.0993042, y: -398}
@@ -79245,7 +79238,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::UIDeviceAdaptiveSizer
   tabletAspectThreshold: 0.65
   useDpiCheck: 1
-  tabletMinInches: 7.6
+  tabletMinInches: 6.8
   phoneLayout:
     sizeDelta: {x: 0, y: 464.99}
     anchoredPosition: {x: 0, y: 232.5}
@@ -84264,7 +84257,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::UIDeviceAdaptiveSizer
   tabletAspectThreshold: 0.65
   useDpiCheck: 1
-  tabletMinInches: 7.6
+  tabletMinInches: 6.8
   phoneLayout:
     sizeDelta: {x: 978.99, y: 1560.3}
     anchoredPosition: {x: 0.0008316, y: 19.862}
@@ -85535,7 +85528,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::UIDeviceAdaptiveSizer
   tabletAspectThreshold: 0.65
   useDpiCheck: 1
-  tabletMinInches: 7.6
+  tabletMinInches: 6.8
   phoneLayout:
     sizeDelta: {x: 452.4585, y: 197.33}
     anchoredPosition: {x: 28, y: 0.5450211}
@@ -91047,7 +91040,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::UIDeviceAdaptiveSizer
   tabletAspectThreshold: 0.65
   useDpiCheck: 0
-  tabletMinInches: 7.6
+  tabletMinInches: 6.8
   phoneLayout:
     sizeDelta: {x: 433.94, y: 35}
     anchoredPosition: {x: 2.6874, y: 18.939}
@@ -91552,7 +91545,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::UIDeviceAdaptiveSizer
   tabletAspectThreshold: 0.65
   useDpiCheck: 1
-  tabletMinInches: 7.6
+  tabletMinInches: 6.8
   phoneLayout:
     sizeDelta: {x: 979, y: 1560.2}
     anchoredPosition: {x: -0.0021362, y: 19.865}
@@ -91749,7 +91742,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::UIDeviceAdaptiveSizer
   tabletAspectThreshold: 0.65
   useDpiCheck: 1
-  tabletMinInches: 7.6
+  tabletMinInches: 6.8
   phoneLayout:
     sizeDelta: {x: 0, y: 824.15}
     anchoredPosition: {x: 0, y: 0}
@@ -92444,7 +92437,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::UIDeviceAdaptiveSizer
   tabletAspectThreshold: 0.65
   useDpiCheck: 1
-  tabletMinInches: 7.6
+  tabletMinInches: 6.8
   phoneLayout:
     sizeDelta: {x: 0, y: 96}
     anchoredPosition: {x: 33.486, y: 0}
@@ -93621,7 +93614,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::UIDeviceAdaptiveSizer
   tabletAspectThreshold: 0.65
   useDpiCheck: 1
-  tabletMinInches: 7.6
+  tabletMinInches: 6.8
   phoneLayout:
     sizeDelta: {x: 469.98, y: 0.000141553}
     anchoredPosition: {x: 0, y: -0.000041553}
@@ -94430,7 +94423,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::UIDeviceAdaptiveSizer
   tabletAspectThreshold: 0.65
   useDpiCheck: 1
-  tabletMinInches: 7.6
+  tabletMinInches: 6.8
   phoneLayout:
     sizeDelta: {x: 0, y: 585}
     anchoredPosition: {x: 0, y: 0}
@@ -94492,7 +94485,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::UIDeviceAdaptiveSizer
   tabletAspectThreshold: 0.65
   useDpiCheck: 1
-  tabletMinInches: 7.6
+  tabletMinInches: 6.8
   phoneLayout:
     sizeDelta: {x: 0, y: 185.5827}
     anchoredPosition: {x: 0, y: 199.97}
@@ -96433,7 +96426,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::UIDeviceAdaptiveSizer
   tabletAspectThreshold: 0.65
   useDpiCheck: 1
-  tabletMinInches: 7.6
+  tabletMinInches: 6.8
   phoneLayout:
     sizeDelta: {x: 0, y: 1569.6}
     anchoredPosition: {x: 0, y: -35.858}
@@ -98348,7 +98341,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::UIDeviceAdaptiveSizer
   tabletAspectThreshold: 0.65
   useDpiCheck: 0
-  tabletMinInches: 7.6
+  tabletMinInches: 6.8
   phoneLayout:
     sizeDelta: {x: 0.008605957, y: 17.8884}
     anchoredPosition: {x: -0.00006103516, y: -1246}
@@ -98729,7 +98722,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::UIDeviceAdaptiveSizer
   tabletAspectThreshold: 0.65
   useDpiCheck: 0
-  tabletMinInches: 7.6
+  tabletMinInches: 6.8
   phoneLayout:
     sizeDelta: {x: 0, y: 96}
     anchoredPosition: {x: 33.486, y: 0}
@@ -100195,7 +100188,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::UIDeviceAdaptiveSizer
   tabletAspectThreshold: 0.65
   useDpiCheck: 1
-  tabletMinInches: 7.6
+  tabletMinInches: 6.8
   phoneLayout:
     sizeDelta: {x: 979.99, y: 1411.6}
     anchoredPosition: {x: 0.0008773804, y: -62.17}
@@ -102690,9 +102683,6 @@ MonoBehaviour:
   notEffectiveSprite: {fileID: 4035966463137935750, guid: 78c59f3b4cfb743dc88aed4bab6ffba5, type: 3}
   typeSecondsPerChar: 0.02
   lineHoldSeconds: 0.35
-  typewriterSfxCharInterval: 2
-  typewriterPitchMin: 0.92
-  typewriterPitchMax: 1.08
   forceTopCanvasSorting: 1
   topCanvasSortingOrder: 5000
   debugTextTrace: 1
@@ -104206,7 +104196,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::UIDeviceAdaptiveSizer
   tabletAspectThreshold: 0.65
   useDpiCheck: 1
-  tabletMinInches: 7.6
+  tabletMinInches: 6.8
   phoneLayout:
     sizeDelta: {x: 978.99, y: 1560.3}
     anchoredPosition: {x: 0.0008316, y: 19.862}
@@ -104940,7 +104930,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::UIDeviceAdaptiveSizer
   tabletAspectThreshold: 0.65
   useDpiCheck: 1
-  tabletMinInches: 7.6
+  tabletMinInches: 6.8
   phoneLayout:
     sizeDelta: {x: 979, y: 1527.1}
     anchoredPosition: {x: -0.002121, y: -51.568}
@@ -113667,7 +113657,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::UIDeviceAdaptiveSizer
   tabletAspectThreshold: 0.65
   useDpiCheck: 1
-  tabletMinInches: 7.6
+  tabletMinInches: 6.8
   phoneLayout:
     sizeDelta: {x: 150, y: 150}
     anchoredPosition: {x: 293, y: -129}
@@ -116657,7 +116647,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::UIDeviceAdaptiveSizer
   tabletAspectThreshold: 0.65
   useDpiCheck: 1
-  tabletMinInches: 7.6
+  tabletMinInches: 6.8
   phoneLayout:
     sizeDelta: {x: 0.00003051758, y: 334.7031}
     anchoredPosition: {x: -0.00003051758, y: 0}
@@ -117409,7 +117399,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::UIDeviceAdaptiveSizer
   tabletAspectThreshold: 0.65
   useDpiCheck: 1
-  tabletMinInches: 7.6
+  tabletMinInches: 6.8
   phoneLayout:
     sizeDelta: {x: 0, y: 668.3461}
     anchoredPosition: {x: 0, y: -741.8539}
@@ -118105,7 +118095,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::UIDeviceAdaptiveSizer
   tabletAspectThreshold: 0.65
   useDpiCheck: 1
-  tabletMinInches: 7.6
+  tabletMinInches: 6.8
   phoneLayout:
     sizeDelta: {x: 500, y: 500}
     anchoredPosition: {x: 0, y: 100}
@@ -120960,7 +120950,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::UIDeviceAdaptiveSizer
   tabletAspectThreshold: 0.65
   useDpiCheck: 1
-  tabletMinInches: 7.6
+  tabletMinInches: 6.8
   phoneLayout:
     sizeDelta: {x: 978.99, y: 1560.3}
     anchoredPosition: {x: 0.00034332, y: 19.854}
@@ -121023,7 +121013,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::UIDeviceAdaptiveSizer
   tabletAspectThreshold: 0.65
   useDpiCheck: 0
-  tabletMinInches: 7.6
+  tabletMinInches: 6.8
   phoneLayout:
     sizeDelta: {x: 433.94, y: 35}
     anchoredPosition: {x: 11.737, y: -0.03850174}
@@ -121322,7 +121312,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::UIDeviceAdaptiveSizer
   tabletAspectThreshold: 0.65
   useDpiCheck: 1
-  tabletMinInches: 7.6
+  tabletMinInches: 6.8
   phoneLayout:
     sizeDelta: {x: 498.73, y: 645.3}
     anchoredPosition: {x: 230, y: -322.6399}
@@ -122169,7 +122159,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::UIDeviceAdaptiveSizer
   tabletAspectThreshold: 0.65
   useDpiCheck: 0
-  tabletMinInches: 7.6
+  tabletMinInches: 6.8
   phoneLayout:
     sizeDelta: {x: 469.98, y: 625.45}
     anchoredPosition: {x: 0.00004577637, y: -312.73}
@@ -124232,7 +124222,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::UIDeviceAdaptiveSizer
   tabletAspectThreshold: 0.65
   useDpiCheck: 1
-  tabletMinInches: 7.6
+  tabletMinInches: 6.8
   phoneLayout:
     sizeDelta: {x: 0, y: 432.77}
     anchoredPosition: {x: 0, y: -0.0001220703}
@@ -129696,7 +129686,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::UIDeviceAdaptiveSizer
   tabletAspectThreshold: 0.65
   useDpiCheck: 1
-  tabletMinInches: 7.6
+  tabletMinInches: 6.8
   phoneLayout:
     sizeDelta: {x: 979, y: 1519.3}
     anchoredPosition: {x: 0.0040283, y: -21.812}
@@ -145570,7 +145560,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::UIDeviceAdaptiveSizer
   tabletAspectThreshold: 0.65
   useDpiCheck: 0
-  tabletMinInches: 7.6
+  tabletMinInches: 6.8
   phoneLayout:
     sizeDelta: {x: -0.00001525879, y: 89}
     anchoredPosition: {x: 0.00001525879, y: 0}
@@ -155157,7 +155147,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::UIDeviceAdaptiveSizer
   tabletAspectThreshold: 0.65
   useDpiCheck: 1
-  tabletMinInches: 7.6
+  tabletMinInches: 6.8
   phoneLayout:
     sizeDelta: {x: 0.00006103516, y: 596.5505}
     anchoredPosition: {x: -0.00006103516, y: 130.5718}
@@ -155559,7 +155549,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::UIDeviceAdaptiveSizer
   tabletAspectThreshold: 0.65
   useDpiCheck: 1
-  tabletMinInches: 7.6
+  tabletMinInches: 6.8
   phoneLayout:
     sizeDelta: {x: 978.99, y: 1519.3}
     anchoredPosition: {x: 0.0008316, y: -0.60297}
@@ -160852,7 +160842,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::UIDeviceAdaptiveSizer
   tabletAspectThreshold: 0.65
   useDpiCheck: 1
-  tabletMinInches: 7.6
+  tabletMinInches: 6.8
   phoneLayout:
     sizeDelta: {x: 954.2161, y: 261.92}
     anchoredPosition: {x: 12.392, y: -35.538}
@@ -162833,7 +162823,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::UIDeviceAdaptiveSizer
   tabletAspectThreshold: 0.65
   useDpiCheck: 1
-  tabletMinInches: 7.6
+  tabletMinInches: 6.8
   phoneLayout:
     sizeDelta: {x: 0, y: 173.8607}
     anchoredPosition: {x: 0, y: -174.7087}
@@ -164769,7 +164759,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::UIDeviceAdaptiveSizer
   tabletAspectThreshold: 0.65
   useDpiCheck: 1
-  tabletMinInches: 7.6
+  tabletMinInches: 6.8
   phoneLayout:
     sizeDelta: {x: 978.99, y: 356.04}
     anchoredPosition: {x: -0.0047512, y: -634.01}
@@ -167477,7 +167467,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::UIDeviceAdaptiveSizer
   tabletAspectThreshold: 0.65
   useDpiCheck: 1
-  tabletMinInches: 7.6
+  tabletMinInches: 6.8
   phoneLayout:
     sizeDelta: {x: -0.00001525879, y: 0}
     anchoredPosition: {x: 0.00001525879, y: 0}
@@ -173809,7 +173799,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::UIDeviceAdaptiveSizer
   tabletAspectThreshold: 0.65
   useDpiCheck: 1
-  tabletMinInches: 7.6
+  tabletMinInches: 6.8
   phoneLayout:
     sizeDelta: {x: -0.00001525879, y: 48.1254}
     anchoredPosition: {x: 0.00001525879, y: -89}
@@ -176180,7 +176170,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::UIDeviceAdaptiveSizer
   tabletAspectThreshold: 0.65
   useDpiCheck: 1
-  tabletMinInches: 7.6
+  tabletMinInches: 6.8
   phoneLayout:
     sizeDelta: {x: 0.5, y: 598.7419}
     anchoredPosition: {x: -1.5, y: -393}
@@ -177150,7 +177140,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::UIDeviceAdaptiveSizer
   tabletAspectThreshold: 0.65
   useDpiCheck: 1
-  tabletMinInches: 7.6
+  tabletMinInches: 6.8
   phoneLayout:
     sizeDelta: {x: 905.82, y: 596.4243}
     anchoredPosition: {x: 0.000011921, y: -58.5291}
@@ -183433,7 +183423,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::UIDeviceAdaptiveSizer
   tabletAspectThreshold: 0.65
   useDpiCheck: 1
-  tabletMinInches: 7.6
+  tabletMinInches: 6.8
   phoneLayout:
     sizeDelta: {x: 978.87, y: 1560.3}
     anchoredPosition: {x: -0.00002283347, y: 0.000091553}
@@ -184102,7 +184092,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::UIDeviceAdaptiveSizer
   tabletAspectThreshold: 0.65
   useDpiCheck: 1
-  tabletMinInches: 7.6
+  tabletMinInches: 6.8
   phoneLayout:
     sizeDelta: {x: 0, y: 600}
     anchoredPosition: {x: 0, y: -166.29}
@@ -188283,7 +188273,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::UIDeviceAdaptiveSizer
   tabletAspectThreshold: 0.65
   useDpiCheck: 1
-  tabletMinInches: 7.6
+  tabletMinInches: 6.8
   phoneLayout:
     sizeDelta: {x: 929.5485, y: 1560.3}
     anchoredPosition: {x: -0.000020504, y: -0.000061035}
@@ -189254,7 +189244,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: 0, y: -5.893982}
+  m_AnchoredPosition: {x: 0, y: -5.894043}
   m_SizeDelta: {x: 0, y: -11.7878}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!1 &1610762145
@@ -190157,7 +190147,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::UIDeviceAdaptiveSizer
   tabletAspectThreshold: 0.65
   useDpiCheck: 1
-  tabletMinInches: 7.6
+  tabletMinInches: 6.8
   phoneLayout:
     sizeDelta: {x: 979, y: 1560.3}
     anchoredPosition: {x: 0.0040283, y: -22.384}
@@ -193305,7 +193295,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::UIDeviceAdaptiveSizer
   tabletAspectThreshold: 0.65
   useDpiCheck: 1
-  tabletMinInches: 7.6
+  tabletMinInches: 6.8
   phoneLayout:
     sizeDelta: {x: 75, y: 75}
     anchoredPosition: {x: -21, y: 0}
@@ -197592,7 +197582,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::UIDeviceAdaptiveSizer
   tabletAspectThreshold: 0.65
   useDpiCheck: 1
-  tabletMinInches: 7.6
+  tabletMinInches: 6.8
   phoneLayout:
     sizeDelta: {x: 978.99, y: 744.4}
     anchoredPosition: {x: 0.0007629395, y: -33.04599}
@@ -197795,7 +197785,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::UIDeviceAdaptiveSizer
   tabletAspectThreshold: 0.65
   useDpiCheck: 1
-  tabletMinInches: 7.6
+  tabletMinInches: 6.8
   phoneLayout:
     sizeDelta: {x: -0.000453949, y: 190.49}
     anchoredPosition: {x: 30, y: 0}
@@ -205996,7 +205986,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::UIDeviceAdaptiveSizer
   tabletAspectThreshold: 0.65
   useDpiCheck: 1
-  tabletMinInches: 7.6
+  tabletMinInches: 6.8
   phoneLayout:
     sizeDelta: {x: -0.00003051758, y: 160.5397}
     anchoredPosition: {x: 30, y: -28.525}
@@ -208323,7 +208313,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::UIDeviceAdaptiveSizer
   tabletAspectThreshold: 0.65
   useDpiCheck: 1
-  tabletMinInches: 7.6
+  tabletMinInches: 6.8
   phoneLayout:
     sizeDelta: {x: 480.2, y: -0.0001220703}
     anchoredPosition: {x: 0, y: 0.0001220703}
@@ -211157,7 +211147,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::UIDeviceAdaptiveSizer
   tabletAspectThreshold: 0.65
   useDpiCheck: 1
-  tabletMinInches: 7.6
+  tabletMinInches: 6.8
   phoneLayout:
     sizeDelta: {x: 0, y: 1560.2}
     anchoredPosition: {x: 0, y: 0.00014534}
@@ -216451,7 +216441,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::UIDeviceAdaptiveSizer
   tabletAspectThreshold: 0.65
   useDpiCheck: 1
-  tabletMinInches: 7.6
+  tabletMinInches: 6.8
   phoneLayout:
     sizeDelta: {x: 916.08, y: 1561.6}
     anchoredPosition: {x: 0.002349854, y: -23.044}
@@ -221543,7 +221533,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::UIDeviceAdaptiveSizer
   tabletAspectThreshold: 0.65
   useDpiCheck: 1
-  tabletMinInches: 7.6
+  tabletMinInches: 6.8
   phoneLayout:
     sizeDelta: {x: 905, y: 575}
     anchoredPosition: {x: 0.000011921, y: 352}
@@ -223351,7 +223341,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::UIDeviceAdaptiveSizer
   tabletAspectThreshold: 0.65
   useDpiCheck: 1
-  tabletMinInches: 7.6
+  tabletMinInches: 6.8
   phoneLayout:
     sizeDelta: {x: 0, y: 595.85}
     anchoredPosition: {x: 0, y: 0}
@@ -227675,7 +227665,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::UIDeviceAdaptiveSizer
   tabletAspectThreshold: 0.65
   useDpiCheck: 0
-  tabletMinInches: 7.6
+  tabletMinInches: 6.8
   phoneLayout:
     sizeDelta: {x: -0.00001525879, y: 191.2157}
     anchoredPosition: {x: 0.00001525879, y: 0}
@@ -229255,7 +229245,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::UIDeviceAdaptiveSizer
   tabletAspectThreshold: 0.65
   useDpiCheck: 1
-  tabletMinInches: 7.6
+  tabletMinInches: 6.8
   phoneLayout:
     sizeDelta: {x: 979, y: 1874.9}
     anchoredPosition: {x: 0.0042814, y: -121.6}
@@ -232085,7 +232075,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::UIDeviceAdaptiveSizer
   tabletAspectThreshold: 0.65
   useDpiCheck: 0
-  tabletMinInches: 7.6
+  tabletMinInches: 6.8
   phoneLayout:
     sizeDelta: {x: 75, y: 75}
     anchoredPosition: {x: -35.412, y: -54}
@@ -233833,7 +233823,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::UIDeviceAdaptiveSizer
   tabletAspectThreshold: 0.65
   useDpiCheck: 1
-  tabletMinInches: 7.6
+  tabletMinInches: 6.8
   phoneLayout:
     sizeDelta: {x: 365.6, y: 54}
     anchoredPosition: {x: -9.449951, y: -33.99997}
@@ -235776,7 +235766,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::UIDeviceAdaptiveSizer
   tabletAspectThreshold: 0.65
   useDpiCheck: 1
-  tabletMinInches: 7.6
+  tabletMinInches: 6.8
   phoneLayout:
     sizeDelta: {x: 932.2973, y: 421.9496}
     anchoredPosition: {x: -0.00000448036, y: -34.819}
@@ -239297,7 +239287,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::UIDeviceAdaptiveSizer
   tabletAspectThreshold: 0.65
   useDpiCheck: 1
-  tabletMinInches: 7.6
+  tabletMinInches: 6.8
   phoneLayout:
     sizeDelta: {x: 469.98, y: 0.000141553}
     anchoredPosition: {x: 0, y: -0.000041553}
@@ -240824,7 +240814,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::UIDeviceAdaptiveSizer
   tabletAspectThreshold: 0.65
   useDpiCheck: 1
-  tabletMinInches: 7.6
+  tabletMinInches: 6.8
   phoneLayout:
     sizeDelta: {x: 0, y: 185.5827}
     anchoredPosition: {x: 0, y: 133.85}
@@ -241182,7 +241172,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::UIDeviceAdaptiveSizer
   tabletAspectThreshold: 0.65
   useDpiCheck: 1
-  tabletMinInches: 7.6
+  tabletMinInches: 6.8
   phoneLayout:
     sizeDelta: {x: 979, y: 1615.8}
     anchoredPosition: {x: 0.0042814, y: 7.962898}
@@ -241591,7 +241581,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::UIDeviceAdaptiveSizer
   tabletAspectThreshold: 0.65
   useDpiCheck: 1
-  tabletMinInches: 7.6
+  tabletMinInches: 6.8
   phoneLayout:
     sizeDelta: {x: 0, y: 368.77}
     anchoredPosition: {x: 0, y: 184.38}
@@ -245804,7 +245794,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::UIDeviceAdaptiveSizer
   tabletAspectThreshold: 0.65
   useDpiCheck: 1
-  tabletMinInches: 7.6
+  tabletMinInches: 6.8
   phoneLayout:
     sizeDelta: {x: 0, y: 714.85}
     anchoredPosition: {x: 0, y: -27}
@@ -249140,7 +249130,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::UIDeviceAdaptiveSizer
   tabletAspectThreshold: 0.65
   useDpiCheck: 1
-  tabletMinInches: 7.6
+  tabletMinInches: 6.8
   phoneLayout:
     sizeDelta: {x: 0, y: -226.7}
     anchoredPosition: {x: 0, y: -112.6}
@@ -249700,7 +249690,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::UIDeviceAdaptiveSizer
   tabletAspectThreshold: 0.65
   useDpiCheck: 1
-  tabletMinInches: 7.6
+  tabletMinInches: 6.8
   phoneLayout:
     sizeDelta: {x: -0.25, y: 645.29}
     anchoredPosition: {x: 0.25, y: -373.43}
@@ -250059,7 +250049,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::UIDeviceAdaptiveSizer
   tabletAspectThreshold: 0.65
   useDpiCheck: 1
-  tabletMinInches: 7.6
+  tabletMinInches: 6.8
   phoneLayout:
     sizeDelta: {x: 150, y: 150}
     anchoredPosition: {x: 90, y: -129}
@@ -258162,7 +258152,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::UIDeviceAdaptiveSizer
   tabletAspectThreshold: 0.65
   useDpiCheck: 1
-  tabletMinInches: 7.6
+  tabletMinInches: 6.8
   phoneLayout:
     sizeDelta: {x: 0, y: 464.99}
     anchoredPosition: {x: 0, y: 232.5}
@@ -261357,9 +261347,6 @@ MonoBehaviour:
   notEffectiveSprite: {fileID: 4035966463137935750, guid: 78c59f3b4cfb743dc88aed4bab6ffba5, type: 3}
   typeSecondsPerChar: 0.02
   lineHoldSeconds: 0.35
-  typewriterSfxCharInterval: 2
-  typewriterPitchMin: 0.92
-  typewriterPitchMax: 1.08
   forceTopCanvasSorting: 1
   topCanvasSortingOrder: 5000
   debugTextTrace: 1
@@ -261544,7 +261531,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::UIDeviceAdaptiveSizer
   tabletAspectThreshold: 0.65
   useDpiCheck: 0
-  tabletMinInches: 7.6
+  tabletMinInches: 6.8
   phoneLayout:
     sizeDelta: {x: 480.2, y: 625.47}
     anchoredPosition: {x: 0, y: -1.4553}
@@ -266112,7 +266099,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::UIDeviceAdaptiveSizer
   tabletAspectThreshold: 0.65
   useDpiCheck: 1
-  tabletMinInches: 7.6
+  tabletMinInches: 6.8
   phoneLayout:
     sizeDelta: {x: 500, y: 500}
     anchoredPosition: {x: 0, y: 100}
@@ -266267,7 +266254,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::UIDeviceAdaptiveSizer
   tabletAspectThreshold: 0.65
   useDpiCheck: 0
-  tabletMinInches: 7.6
+  tabletMinInches: 6.8
   phoneLayout:
     sizeDelta: {x: 0, y: 16.99209}
     anchoredPosition: {x: 0, y: -0.00009346008}
@@ -266379,7 +266366,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::UIDeviceAdaptiveSizer
   tabletAspectThreshold: 0.65
   useDpiCheck: 1
-  tabletMinInches: 7.6
+  tabletMinInches: 6.8
   phoneLayout:
     sizeDelta: {x: 452.4585, y: 197.33}
     anchoredPosition: {x: 28, y: 0.5450211}
@@ -269305,7 +269292,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::UIDeviceAdaptiveSizer
   tabletAspectThreshold: 0.65
   useDpiCheck: 1
-  tabletMinInches: 7.6
+  tabletMinInches: 6.8
   phoneLayout:
     sizeDelta: {x: 75, y: 75}
     anchoredPosition: {x: -14.557, y: -97}
@@ -270939,7 +270926,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::UIDeviceAdaptiveSizer
   tabletAspectThreshold: 0.65
   useDpiCheck: 1
-  tabletMinInches: 7.6
+  tabletMinInches: 6.8
   phoneLayout:
     sizeDelta: {x: 469.98, y: 254.17}
     anchoredPosition: {x: 0.0010395, y: 142.6}
@@ -272786,7 +272773,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::UIDeviceAdaptiveSizer
   tabletAspectThreshold: 0.65
   useDpiCheck: 0
-  tabletMinInches: 7.6
+  tabletMinInches: 6.8
   phoneLayout:
     sizeDelta: {x: -0.00001525879, y: 89}
     anchoredPosition: {x: 0.00001525879, y: 0}
@@ -274441,7 +274428,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::UIDeviceAdaptiveSizer
   tabletAspectThreshold: 0.65
   useDpiCheck: 0
-  tabletMinInches: 7.6
+  tabletMinInches: 6.8
   phoneLayout:
     sizeDelta: {x: -0.009963989, y: 281.93}
     anchoredPosition: {x: 0.009963989, y: -137.13}
@@ -275193,7 +275180,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::UIDeviceAdaptiveSizer
   tabletAspectThreshold: 0.65
   useDpiCheck: 0
-  tabletMinInches: 7.6
+  tabletMinInches: 6.8
   phoneLayout:
     sizeDelta: {x: 384.16, y: 380.62}
     anchoredPosition: {x: 47.711, y: -387.59}
@@ -275326,7 +275313,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::UIDeviceAdaptiveSizer
   tabletAspectThreshold: 0.65
   useDpiCheck: 1
-  tabletMinInches: 7.6
+  tabletMinInches: 6.8
   phoneLayout:
     sizeDelta: {x: -0.001414844, y: 440.63}
     anchoredPosition: {x: 0.001514844, y: -279.27}
@@ -275463,7 +275450,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::UIDeviceAdaptiveSizer
   tabletAspectThreshold: 0.65
   useDpiCheck: 1
-  tabletMinInches: 7.6
+  tabletMinInches: 6.8
   phoneLayout:
     sizeDelta: {x: -0.001068115, y: 166.1232}
     anchoredPosition: {x: 0.00100708, y: 0}
@@ -276194,7 +276181,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::UIDeviceAdaptiveSizer
   tabletAspectThreshold: 0.65
   useDpiCheck: 0
-  tabletMinInches: 7.6
+  tabletMinInches: 6.8
   phoneLayout:
     sizeDelta: {x: 0, y: 180.95}
     anchoredPosition: {x: 0, y: -196.24}
@@ -276530,7 +276517,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::UIDeviceAdaptiveSizer
   tabletAspectThreshold: 0.65
   useDpiCheck: 0
-  tabletMinInches: 7.6
+  tabletMinInches: 6.8
   phoneLayout:
     sizeDelta: {x: -0.00004577637, y: 70.4559}
     anchoredPosition: {x: 0.00006103516, y: 0}
@@ -276988,7 +276975,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::UIDeviceAdaptiveSizer
   tabletAspectThreshold: 0.65
   useDpiCheck: 0
-  tabletMinInches: 7.6
+  tabletMinInches: 6.8
   phoneLayout:
     sizeDelta: {x: 469.98, y: 625.45}
     anchoredPosition: {x: 0.00004577637, y: -312.73}
@@ -277457,7 +277444,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::UIDeviceAdaptiveSizer
   tabletAspectThreshold: 0.65
   useDpiCheck: 1
-  tabletMinInches: 7.6
+  tabletMinInches: 6.8
   phoneLayout:
     sizeDelta: {x: 0.000007629395, y: 169.69}
     anchoredPosition: {x: -0.00002288819, y: -42.24098}
@@ -279659,7 +279646,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::UIDeviceAdaptiveSizer
   tabletAspectThreshold: 0.65
   useDpiCheck: 1
-  tabletMinInches: 7.6
+  tabletMinInches: 6.8
   phoneLayout:
     sizeDelta: {x: -0.00001525879, y: 0}
     anchoredPosition: {x: 0.00001525879, y: 0}
@@ -279720,7 +279707,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::UIDeviceAdaptiveSizer
   tabletAspectThreshold: 0.65
   useDpiCheck: 1
-  tabletMinInches: 7.6
+  tabletMinInches: 6.8
   phoneLayout:
     sizeDelta: {x: 140, y: 140}
     anchoredPosition: {x: -315, y: -21.00006}
@@ -279879,7 +279866,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::UIDeviceAdaptiveSizer
   tabletAspectThreshold: 0.65
   useDpiCheck: 0
-  tabletMinInches: 7.6
+  tabletMinInches: 6.8
   phoneLayout:
     sizeDelta: {x: 433.94, y: 35}
     anchoredPosition: {x: 2.6874, y: 18.939}
@@ -281399,7 +281386,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::UIDeviceAdaptiveSizer
   tabletAspectThreshold: 0.65
   useDpiCheck: 0
-  tabletMinInches: 7.6
+  tabletMinInches: 6.8
   phoneLayout:
     sizeDelta: {x: 433.8904, y: 35.6051}
     anchoredPosition: {x: 11.7107, y: 25.816}
@@ -281672,7 +281659,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::UIDeviceAdaptiveSizer
   tabletAspectThreshold: 0.65
   useDpiCheck: 0
-  tabletMinInches: 7.6
+  tabletMinInches: 6.8
   phoneLayout:
     sizeDelta: {x: -0.00001525879, y: 191.2157}
     anchoredPosition: {x: 0.00001525879, y: 0}
@@ -281712,7 +281699,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::UIDeviceAdaptiveSizer
   tabletAspectThreshold: 0.65
   useDpiCheck: 0
-  tabletMinInches: 7.6
+  tabletMinInches: 6.8
   phoneLayout:
     sizeDelta: {x: 75, y: 75}
     anchoredPosition: {x: -35.412, y: -54}
@@ -281828,7 +281815,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::UIDeviceAdaptiveSizer
   tabletAspectThreshold: 0.65
   useDpiCheck: 0
-  tabletMinInches: 7.6
+  tabletMinInches: 6.8
   phoneLayout:
     sizeDelta: {x: 433.94, y: 35}
     anchoredPosition: {x: 2.6874, y: 5.8408}
@@ -281861,7 +281848,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::UIDeviceAdaptiveSizer
   tabletAspectThreshold: 0.65
   useDpiCheck: 1
-  tabletMinInches: 7.6
+  tabletMinInches: 6.8
   phoneLayout:
     sizeDelta: {x: 300, y: 140}
     anchoredPosition: {x: 0, y: -19}
@@ -282624,7 +282611,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::UIDeviceAdaptiveSizer
   tabletAspectThreshold: 0.65
   useDpiCheck: 0
-  tabletMinInches: 7.6
+  tabletMinInches: 6.8
   phoneLayout:
     sizeDelta: {x: 498.73, y: 625.46}
     anchoredPosition: {x: 230, y: -312.72}
@@ -282714,7 +282701,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::UIDeviceAdaptiveSizer
   tabletAspectThreshold: 0.65
   useDpiCheck: 0
-  tabletMinInches: 7.6
+  tabletMinInches: 6.8
   phoneLayout:
     sizeDelta: {x: 433.94, y: 35}
     anchoredPosition: {x: 11.737, y: -0.03850174}
@@ -283291,7 +283278,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::UIDeviceAdaptiveSizer
   tabletAspectThreshold: 0.65
   useDpiCheck: 1
-  tabletMinInches: 7.6
+  tabletMinInches: 6.8
   phoneLayout:
     sizeDelta: {x: 150, y: 150}
     anchoredPosition: {x: 293, y: -129}
@@ -283560,7 +283547,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::UIDeviceAdaptiveSizer
   tabletAspectThreshold: 0.65
   useDpiCheck: 1
-  tabletMinInches: 7.6
+  tabletMinInches: 6.8
   phoneLayout:
     sizeDelta: {x: 140, y: 140}
     anchoredPosition: {x: 315, y: -19}
@@ -283643,7 +283630,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::UIDeviceAdaptiveSizer
   tabletAspectThreshold: 0.65
   useDpiCheck: 1
-  tabletMinInches: 7.6
+  tabletMinInches: 6.8
   phoneLayout:
     sizeDelta: {x: 150, y: 150}
     anchoredPosition: {x: 90, y: -129}
@@ -283785,7 +283772,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::UIDeviceAdaptiveSizer
   tabletAspectThreshold: 0.65
   useDpiCheck: 0
-  tabletMinInches: 7.6
+  tabletMinInches: 6.8
   phoneLayout:
     sizeDelta: {x: -0.00001525879, y: 48.1254}
     anchoredPosition: {x: 0.00001525879, y: -89}
@@ -284258,7 +284245,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::UIDeviceAdaptiveSizer
   tabletAspectThreshold: 0.65
   useDpiCheck: 1
-  tabletMinInches: 7.6
+  tabletMinInches: 6.8
   phoneLayout:
     sizeDelta: {x: 0, y: 48.1254}
     anchoredPosition: {x: 0, y: -70.45593}

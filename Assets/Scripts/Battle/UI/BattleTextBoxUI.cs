@@ -21,6 +21,12 @@ public class BattleTextBoxUI : MonoBehaviour
     [SerializeField] private float typeSecondsPerChar = 0.02f;
     [SerializeField] private float lineHoldSeconds = 0.25f;
 
+    [Header("Typewriter SFX")]
+    [Tooltip("Play a sound tick every N visible characters (0 = disabled).")]
+    [SerializeField] private int typewriterSfxCharInterval = 2;
+    [SerializeField] private float typewriterPitchMin = 0.92f;
+    [SerializeField] private float typewriterPitchMax = 1.08f;
+
     [Header("Render Override")]
     [SerializeField] private bool forceTopCanvasSorting = true;
     [SerializeField] private int topCanvasSortingOrder = 5000;
@@ -238,6 +244,13 @@ public class BattleTextBoxUI : MonoBehaviour
                     yield return null;
 
                 lineText.maxVisibleCharacters = visible;
+
+                if (typewriterSfxCharInterval > 0 && visible % typewriterSfxCharInterval == 0)
+                {
+                    float pitch = Random.Range(typewriterPitchMin, typewriterPitchMax);
+                    AudioManager.I?.PlaySfx(SfxType.Typewriter, pitch, 1f);
+                }
+
                 next += perChar;
             }
         }

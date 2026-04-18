@@ -26,7 +26,7 @@ public class UIDeviceAdaptiveSizer : MonoBehaviour
     [SerializeField] private bool useDpiCheck = false;
 
     [Tooltip("Minimum estimated diagonal inches to count as tablet when DPI is available.")]
-    [SerializeField] private float tabletMinInches = 6.8f;
+    [SerializeField] private float tabletMinInches = 7.6f;
 
     [Header("Phone Layout")]
     [SerializeField] private LayoutSettings phoneLayout = new LayoutSettings();
@@ -100,8 +100,11 @@ public class UIDeviceAdaptiveSizer : MonoBehaviour
             float diagonalPixels = Mathf.Sqrt((width * width) + (height * height));
             float diagonalInches = diagonalPixels / Screen.dpi;
 
-            if (diagonalInches >= tabletMinInches)
-                return DeviceType.Tablet;
+            // Require both wide aspect ratio AND large screen to classify as tablet.
+            // Prevents large phones (tall, narrow screens) from being misdetected.
+            return (looksLikeTabletByAspect && diagonalInches >= tabletMinInches)
+                ? DeviceType.Tablet
+                : DeviceType.Phone;
         }
 
         return looksLikeTabletByAspect ? DeviceType.Tablet : DeviceType.Phone;

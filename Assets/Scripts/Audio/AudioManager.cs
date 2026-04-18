@@ -39,6 +39,9 @@ public enum SfxType
 
     // Battle countdown
     CountdownBeep = 21,
+
+    // Text
+    Typewriter = 22,
 }
 
 [Serializable]
