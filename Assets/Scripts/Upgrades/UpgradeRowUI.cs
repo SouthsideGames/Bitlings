@@ -208,6 +208,9 @@ public class UpgradeRowUI : MonoBehaviour
         if (!ResourceBank.TrySpend(ResourceType.Credits, _creditCost))
             return;
 
+        if (buyButton != null)
+            ResourceFlyAnimationUI.PlayFromHomeTo(ResourceType.Credits, _creditCost, buyButton.transform);
+
         // Unlock + persist
         FeatureUnlockManager.I.Unlock(_featureId);
         SaveManager.Save();

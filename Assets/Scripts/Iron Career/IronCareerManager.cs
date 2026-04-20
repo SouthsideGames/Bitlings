@@ -55,6 +55,13 @@ public sealed class IronCareerManager : MonoBehaviour, IronBattleBridge.IIronBat
 #if UNITY_EDITOR
     [Header("DEV ONLY")]
     [SerializeField] private bool devForceUnlockIron = false;
+
+    [Tooltip("Testing only. Converts normal Iron battle losses into wins so panel flow can be exercised end-to-end.")]
+    [SerializeField] private bool devAlwaysWinBattles = false;
+#elif DEVELOPMENT_BUILD
+    [Header("DEV ONLY")]
+    [Tooltip("Testing only. Converts normal Iron battle losses into wins so panel flow can be exercised end-to-end.")]
+    [SerializeField] private bool devAlwaysWinBattles = false;
 #endif
 
     private readonly IronCareerRunState _state = new IronCareerRunState();
@@ -181,6 +188,10 @@ public sealed class IronCareerManager : MonoBehaviour, IronBattleBridge.IIronBat
     {
         if (!_state.runActive) return;
 
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        NormalizeOutcomeForDevTesting(ref outcome);
+#endif
+
         _lastOutcome = outcome;
         _hasLastOutcome = true;
 
@@ -290,6 +301,53 @@ public sealed class IronCareerManager : MonoBehaviour, IronBattleBridge.IIronBat
         ShowHireOrReplace();
     }
 
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+    private void NormalizeOutcomeForDevTesting(ref IronBattleOutcome outcome)
+    {
+        if (!devAlwaysWinBattles) return;
+        if (outcome.victory || outcome.escaped || outcome.wildEscaped) return;
+        if (_state.party == null || _state.party.Count == 0) return;
+
+        int count = _state.party.Count;
+
+        if (outcome.teamHP == null || outcome.teamHP.Length < count)
+        {
+            var expandedTeamHp = new float[count];
+            if (outcome.teamHP != null)
+                Array.Copy(outcome.teamHP, expandedTeamHp, Mathf.Min(outcome.teamHP.Length, expandedTeamHp.Length));
+            outcome.teamHP = expandedTeamHp;
+        }
+
+        if (outcome.teamMaxHP == null || outcome.teamMaxHP.Length < count)
+        {
+            var expandedMaxHp = new float[count];
+            if (outcome.teamMaxHP != null)
+                Array.Copy(outcome.teamMaxHP, expandedMaxHp, Mathf.Min(outcome.teamMaxHP.Length, expandedMaxHp.Length));
+            outcome.teamMaxHP = expandedMaxHp;
+        }
+
+        for (int i = 0; i < count; i++)
+        {
+            var monster = _state.party[i];
+            if (monster == null || monster.def == null) continue;
+
+            float maxHp = Mathf.Max(1f, monster.maxHp);
+            outcome.teamMaxHP[i] = maxHp;
+
+            float resolvedHp = outcome.teamHP[i] > 0f ? outcome.teamHP[i] : monster.hp;
+            if (resolvedHp <= 0f)
+                resolvedHp = Mathf.Max(1f, maxHp * 0.25f);
+
+            outcome.teamHP[i] = Mathf.Clamp(resolvedHp, 1f, maxHp);
+        }
+
+        outcome.victory = true;
+        outcome.escaped = false;
+
+        DevLog.Log("[IronCareerManager] DEV override active: converted Iron battle loss into a win for panel-flow testing.");
+    }
+#endif
+
     private void Awake()
     {
         ResolveBattleRefsIfNeeded();
@@ -394,6 +452,34 @@ public sealed class IronCareerManager : MonoBehaviour, IronBattleBridge.IIronBat
 
     [ContextMenu("DEBUG/Begin Next Battle")]
     public void DebugBeginNextBattle() => BeginNextBattle();
+
+    [ContextMenu("DEBUG/Show Forced Evolution")]
+    public void DebugShowForcedEvolution()
+    {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        if (!_state.runActive)
+        {
+            Debug.LogWarning("[IronCareerManager] Cannot open forced evolution debug panel without an active Iron run.");
+            return;
+        }
+
+        if (_roster == null || _roster.IsPartyEmpty)
+        {
+            Debug.LogWarning("[IronCareerManager] Cannot open forced evolution debug panel with an empty roster.");
+            return;
+        }
+
+        if (!PrepareForcedEvolutionCandidateForDebug(out int preparedIndex))
+        {
+            Debug.LogWarning("[IronCareerManager] No party member has an evolution chain available for forced evolution panel testing.");
+            return;
+        }
+
+        DevLog.Log($"[IronCareerManager] Debug forced evolution prepared for slot {preparedIndex}.");
+        _pendingHire = null;
+        ShowForcedEvolveStep();
+#endif
+    }
 
     public void StartNewRun(Mode mode)
     {
@@ -706,6 +792,38 @@ public sealed class IronCareerManager : MonoBehaviour, IronBattleBridge.IIronBat
 
 
         forcedEvolvePanel?.Bind(_roster != null ? _roster.Party : null);
+    }
+
+    private bool PrepareForcedEvolutionCandidateForDebug(out int preparedIndex)
+    {
+        preparedIndex = -1;
+
+        if (_state.party == null || _state.party.Count == 0)
+            return false;
+
+        for (int i = 0; i < _state.party.Count; i++)
+        {
+            var monster = _state.party[i];
+            if (monster == null || monster.def == null || monster.IsDead)
+                continue;
+
+            var nextForm = monster.def.evolutionForm;
+            if (nextForm == null || ReferenceEquals(nextForm, monster.def))
+                continue;
+
+            int requiredLevel = monster.def.evolutionLevel > 0 ? monster.def.evolutionLevel : 1;
+            if (monster.level < requiredLevel)
+            {
+                monster.level = requiredLevel;
+                monster.RecomputeMaxHpPreservePct();
+                _state.party[i] = monster;
+            }
+
+            preparedIndex = i;
+            return true;
+        }
+
+        return false;
     }
 
     public void OnForcedEvolveContinue()

@@ -342,10 +342,21 @@ public sealed class BattleFeedbackManager : MonoBehaviour
         if (playerIcon && playerIcon.rectTransform)
         {
             var rt = playerIcon.rectTransform;
-            float z = rt.localScale.z;
 
-            _playerIconBaseScale = new Vector3(PlayerIconDefaultXYScale, PlayerIconDefaultXYScale, z);
-            rt.localScale = _playerIconBaseScale;
+            // If a UIDeviceAdaptiveSizer governs this icon, let it apply first so the
+            // device-correct scale (e.g. 1 on tablet) is set before we cache.
+            var sizer = playerIcon.GetComponentInParent<UIDeviceAdaptiveSizer>();
+            if (sizer != null)
+            {
+                sizer.ApplyLayout();
+                _playerIconBaseScale = rt.localScale;
+            }
+            else
+            {
+                float z = rt.localScale.z;
+                _playerIconBaseScale = new Vector3(PlayerIconDefaultXYScale, PlayerIconDefaultXYScale, z);
+                rt.localScale = _playerIconBaseScale;
+            }
         }
 
         if (wildIcon && wildIcon.rectTransform) _wildIconBaseScale = wildIcon.rectTransform.localScale;

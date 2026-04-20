@@ -38,6 +38,13 @@ public class TeamMonsterCardUI : MonoBehaviour
     private string _ownedUid;
 
     private bool _bound;
+    private int _breatheTweenId = -1;
+    private int _favoritePulseTweenId = -1;
+    private int _evolvePulseTweenId = -1;
+    private int _hpPunchTweenId = -1;
+    private int _rootPunchTweenId = -1;
+    private int _healPunchTweenId = -1;
+    private int _lastShownHp = -1;
 
     // NEW: Team-slot binding (hard source of truth)
     [SerializeField] private int _teamSlotIndex = -1;
@@ -118,12 +125,14 @@ public class TeamMonsterCardUI : MonoBehaviour
 
     private void OnClickRoot()
     {
+        PunchButton(rootButton, ref _rootPunchTweenId, 1.05f);
         _onClick?.Invoke(_data);
         AudioManager.I?.PlayClick();
     }
 
     private void OnClickHealPartial()
     {
+        PunchButton(healBtn, ref _healPunchTweenId, 1.1f);
         TryHeal(partial: true);
         AudioManager.I?.PlayClick();
     }
@@ -158,10 +167,47 @@ public class TeamMonsterCardUI : MonoBehaviour
         }
 
         Refresh();
+        StartBreatheAnimation();
+    }
+
+    private void StartBreatheAnimation()
+    {
+        if (!img) return;
+
+        StopBreatheAnimation();
+
+        img.rectTransform.localScale = Vector3.one;
+        _breatheTweenId = LeanTween.value(gameObject, 1f, 1.09f, 2.2f)
+            .setEase(LeanTweenType.easeInOutSine)
+            .setLoopPingPong()
+            .setOnUpdate((float v) =>
+            {
+                if (img) img.rectTransform.localScale = new Vector3(v, v, 1f);
+            })
+            .id;
+    }
+
+    private void StopBreatheAnimation()
+    {
+        if (_breatheTweenId != -1)
+        {
+            LeanTween.cancel(_breatheTweenId);
+            _breatheTweenId = -1;
+        }
+
+        if (img) img.rectTransform.localScale = Vector3.one;
     }
 
     private void OnDisable()
     {
+        StopBreatheAnimation();
+        StopFavoritePulse();
+        StopEvolvePulse();
+        StopHpTextPunch();
+        StopButtonPunch(rootButton, ref _rootPunchTweenId);
+        StopButtonPunch(healBtn, ref _healPunchTweenId);
+        _lastShownHp = -1;
+
         if (_bound)
         {
             GameEvents.OnTeamChanged -= Refresh;
@@ -229,11 +275,20 @@ public class TeamMonsterCardUI : MonoBehaviour
 
     private void UpdateHpText()
     {
-        if (!hpText || _def == null || _data == null) { if (hpText) hpText.text = ""; return; }
+        if (!hpText || _def == null || _data == null)
+        {
+            if (hpText) hpText.text = "";
+            _lastShownHp = -1;
+            return;
+        }
 
         int maxHP = HealingService.CalcMaxHP(_def, _data.level);
         int curHP = _data.currentHP >= 0 ? Mathf.Min(_data.currentHP, maxHP) : 0; // never auto-heal from negative HP
 
+        if (_lastShownHp >= 0 && _lastShownHp != curHP)
+            PunchHpText();
+
+        _lastShownHp = curHP;
         hpText.text = $"HP: {Mathf.Max(0, curHP)}/{maxHP}";
     }
 
@@ -246,6 +301,9 @@ public class TeamMonsterCardUI : MonoBehaviour
             show = EvolutionHelper.CanEvolve(_data, _def);
 
         evolveAlert.SetActive(show);
+
+        if (show) StartEvolvePulse();
+        else StopEvolvePulse();
     }
 
     // ----------------------------------------------------------
@@ -264,11 +322,134 @@ public class TeamMonsterCardUI : MonoBehaviour
         if (!hasFeature || !valid)
         {
             favoriteAlert.SetActive(false);
+            StopFavoritePulse();
             return;
         }
 
         bool isFav = FavoriteService.IsFavorite(_data.monsterId);
         favoriteAlert.SetActive(isFav);
+        if (isFav) StartFavoritePulse();
+        else StopFavoritePulse();
+    }
+
+    private void PunchHpText()
+    {
+        if (!hpText) return;
+
+        if (_hpPunchTweenId != -1)
+            LeanTween.cancel(_hpPunchTweenId);
+
+        hpText.rectTransform.localScale = Vector3.one;
+        _hpPunchTweenId = LeanTween.scale(hpText.rectTransform, Vector3.one * 1.09f, 0.08f)
+            .setEase(LeanTweenType.easeOutQuad)
+            .setLoopPingPong(1)
+            .id;
+    }
+
+    private void StopHpTextPunch()
+    {
+        if (_hpPunchTweenId != -1)
+        {
+            LeanTween.cancel(_hpPunchTweenId);
+            _hpPunchTweenId = -1;
+        }
+
+        if (hpText) hpText.rectTransform.localScale = Vector3.one;
+    }
+
+    private void StartFavoritePulse()
+    {
+        if (!favoriteAlert) return;
+
+        StopFavoritePulse();
+
+        var rt = favoriteAlert.transform as RectTransform;
+        if (!rt) return;
+
+        rt.localScale = Vector3.one;
+        _favoritePulseTweenId = LeanTween.scale(rt, Vector3.one * 1.08f, 0.38f)
+            .setEase(LeanTweenType.easeInOutSine)
+            .setLoopPingPong()
+            .id;
+    }
+
+    private void StopFavoritePulse()
+    {
+        if (_favoritePulseTweenId != -1)
+        {
+            LeanTween.cancel(_favoritePulseTweenId);
+            _favoritePulseTweenId = -1;
+        }
+
+        if (favoriteAlert)
+        {
+            var rt = favoriteAlert.transform as RectTransform;
+            if (rt) rt.localScale = Vector3.one;
+        }
+    }
+
+    private void StartEvolvePulse()
+    {
+        if (!evolveAlert) return;
+
+        StopEvolvePulse();
+
+        var rt = evolveAlert.transform as RectTransform;
+        if (!rt) return;
+
+        rt.localScale = Vector3.one;
+        _evolvePulseTweenId = LeanTween.scale(rt, Vector3.one * 1.08f, 0.42f)
+            .setEase(LeanTweenType.easeInOutSine)
+            .setLoopPingPong()
+            .id;
+    }
+
+    private void StopEvolvePulse()
+    {
+        if (_evolvePulseTweenId != -1)
+        {
+            LeanTween.cancel(_evolvePulseTweenId);
+            _evolvePulseTweenId = -1;
+        }
+
+        if (evolveAlert)
+        {
+            var rt = evolveAlert.transform as RectTransform;
+            if (rt) rt.localScale = Vector3.one;
+        }
+    }
+
+    private void PunchButton(Button btn, ref int tweenId, float peakScale)
+    {
+        if (!btn) return;
+        if (btn.transform == transform) return;
+
+        if (tweenId != -1)
+            LeanTween.cancel(tweenId);
+
+        var rt = btn.transform as RectTransform;
+        if (!rt) return;
+
+        rt.localScale = Vector3.one;
+        tweenId = LeanTween.scale(rt, Vector3.one * peakScale, 0.07f)
+            .setEase(LeanTweenType.easeOutQuad)
+            .setLoopPingPong(1)
+            .id;
+    }
+
+    private void StopButtonPunch(Button btn, ref int tweenId)
+    {
+        if (tweenId != -1)
+        {
+            LeanTween.cancel(tweenId);
+            tweenId = -1;
+        }
+
+        if (!btn) return;
+        if (btn.transform == transform) return;
+
+        var rt = btn.transform as RectTransform;
+        if (rt) rt.localScale = Vector3.one;
     }
 
     // ----------------------------------------------------------

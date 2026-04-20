@@ -82,10 +82,21 @@ public class PackDetailPanelUI : MonoBehaviour
             return;
         }
 
+        int spendAmount = 0;
+        ResourceType spendType = ResourceType.None;
+        if (mgr.TryGetEffectiveCost(_currentPack, out int cost, out ResourceType currency))
+        {
+            spendAmount = Mathf.Max(0, cost);
+            spendType = currency;
+        }
+
         bool success = mgr.Purchase(_currentPack.id);
 
         if (success)
         {
+            if (purchaseButton != null && spendAmount > 0 && spendType != ResourceType.None)
+                ResourceFlyAnimationUI.PlayFromHomeTo(spendType, spendAmount, purchaseButton.transform);
+
             var name = string.IsNullOrEmpty(_currentPack.displayName)
             ? "UNKNOWN PACK"
             : _currentPack.displayName.ToUpperInvariant();

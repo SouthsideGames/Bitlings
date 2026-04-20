@@ -565,6 +565,8 @@ public class StatBucketPanelUI : MonoBehaviour
         if (_m == null || levelCostCurve == null) return;
         if (_m.level >= LevelRules.MaxLevel) return;
 
+        int spendGrowthCores = Mathf.Max(0, _nextCostToLevel);
+
         _m = XPManager.Resolve(_m);
         if (_m == null) return;
 
@@ -576,6 +578,9 @@ public class StatBucketPanelUI : MonoBehaviour
         );
 
         if (!success) return;
+
+        if (levelUpBtn != null && spendGrowthCores > 0)
+            ResourceFlyAnimationUI.PlayFromHomeTo(ResourceType.GrowthCore, spendGrowthCores, levelUpBtn.transform);
 
         string key = !string.IsNullOrEmpty(_m.ownedUID) ? _m.ownedUID : _m.monsterId;
         GameEvents.MonsterLeveled?.Invoke(key, _m.level);

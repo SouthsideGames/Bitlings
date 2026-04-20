@@ -26,6 +26,8 @@ public class AppLifecycle : MonoBehaviour
             {
                 SaveManager.Data.lastClosedUnix = SaveManager.NowUnix();
                 SaveManager.Save();
+                // Force push to cloud before suspend
+                _ = CloudSaveSync.ForcePushArenaDataAsync();
             }
         }
         else
@@ -50,6 +52,8 @@ public class AppLifecycle : MonoBehaviour
         {
             SaveManager.Data.lastClosedUnix = SaveManager.NowUnix();
             SaveManager.Save();
+            // Force push to cloud before quit
+            _ = CloudSaveSync.ForcePushArenaDataAsync();
         }
     }
 

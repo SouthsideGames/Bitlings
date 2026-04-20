@@ -254,6 +254,7 @@ public class DirectoryPanelUI : MonoBehaviour
         if (mode == _lastSortMode) return;
 
         _lastSortMode = mode;
+        PunchTransform(sortDropdown != null ? sortDropdown.transform : null, 1.04f, 0.07f);
         SaveSortIndexToJson(value);
         RebuildOwnedOnly();
     }
@@ -406,9 +407,25 @@ public class DirectoryPanelUI : MonoBehaviour
         group.blocksRaycasts = visible;
 
         if (animate)
-            LeanTween.alphaCanvas(group, visible ? 1f : 0f, 0.18f);
+        {
+            LeanTween.alphaCanvas(group, visible ? 1f : 0f, 0.18f)
+                .setEase(LeanTweenType.easeInOutSine);
+
+            var rt = group.transform as RectTransform;
+            if (rt)
+            {
+                if (visible) rt.localScale = Vector3.one * 0.985f;
+                LeanTween.scale(rt, visible ? Vector3.one : Vector3.one * 0.985f, 0.18f)
+                    .setEase(LeanTweenType.easeOutQuad);
+            }
+        }
         else
+        {
             group.alpha = visible ? 1f : 0f;
+
+            var rt = group.transform as RectTransform;
+            if (rt) rt.localScale = visible ? Vector3.one : Vector3.one * 0.985f;
+        }
     }
 
     private void UpdateIdleToggleLabel()
@@ -586,7 +603,9 @@ public class DirectoryPanelUI : MonoBehaviour
             if (_teamCardRoots[i] != null) _teamCardRoots[i].localScale = Vector3.one;
 
         if (selectedTeamIndex < _teamCardRoots.Count && _teamCardRoots[selectedTeamIndex] != null)
-            LeanTween.scale(_teamCardRoots[selectedTeamIndex], Vector3.one * 1.05f, 0.08f).setLoopPingPong(1);
+            LeanTween.scale(_teamCardRoots[selectedTeamIndex], Vector3.one * 1.05f, 0.09f)
+                .setEase(LeanTweenType.easeOutBack)
+                .setLoopPingPong(1);
     }
 
     void SelectIdleTeamSlot(int idx)
@@ -599,7 +618,9 @@ public class DirectoryPanelUI : MonoBehaviour
             if (_idleTeamCardRoots[i] != null) _idleTeamCardRoots[i].localScale = Vector3.one;
 
         if (selectedIdleTeamIndex < _idleTeamCardRoots.Count && _idleTeamCardRoots[selectedIdleTeamIndex] != null)
-            LeanTween.scale(_idleTeamCardRoots[selectedIdleTeamIndex], Vector3.one * 1.05f, 0.08f).setLoopPingPong(1);
+            LeanTween.scale(_idleTeamCardRoots[selectedIdleTeamIndex], Vector3.one * 1.05f, 0.09f)
+                .setEase(LeanTweenType.easeOutBack)
+                .setLoopPingPong(1);
     }
 
     void BuildArenaTeam(PlayerManager data)
@@ -676,7 +697,9 @@ public class DirectoryPanelUI : MonoBehaviour
             if (_arenaTeamCardRoots[i] != null) _arenaTeamCardRoots[i].localScale = Vector3.one;
 
         if (selectedArenaTeamIndex < _arenaTeamCardRoots.Count && _arenaTeamCardRoots[selectedArenaTeamIndex] != null)
-            LeanTween.scale(_arenaTeamCardRoots[selectedArenaTeamIndex], Vector3.one * 1.05f, 0.08f).setLoopPingPong(1);
+            LeanTween.scale(_arenaTeamCardRoots[selectedArenaTeamIndex], Vector3.one * 1.05f, 0.09f)
+                .setEase(LeanTweenType.easeOutBack)
+                .setLoopPingPong(1);
     }
 
     private void RefreshArenaLockedState()
@@ -1091,6 +1114,7 @@ public class DirectoryPanelUI : MonoBehaviour
     private void OnToggleCapturedOnly()
     {
         _capturedOnlyFilter = !_capturedOnlyFilter;
+        PunchTransform(capturedOnlyButton != null ? capturedOnlyButton.transform : null, 1.06f, 0.07f);
 
         if (_capturedOnlyFilter) _favoritesOnlyFilter = false;
 
@@ -1100,10 +1124,24 @@ public class DirectoryPanelUI : MonoBehaviour
     private void OnToggleFavoritesOnly()
     {
         _favoritesOnlyFilter = !_favoritesOnlyFilter;
+        PunchTransform(favoritesOnlyButton != null ? favoritesOnlyButton.transform : null, 1.06f, 0.07f);
 
         if (_favoritesOnlyFilter) _capturedOnlyFilter = false;
 
         RebuildOwnedOnly();
+    }
+
+    private static void PunchTransform(Transform target, float peakScale, float duration)
+    {
+        if (!target) return;
+
+        var rt = target as RectTransform;
+        if (!rt) return;
+
+        rt.localScale = Vector3.one;
+        LeanTween.scale(rt, Vector3.one * Mathf.Max(1f, peakScale), Mathf.Max(0.04f, duration))
+            .setEase(LeanTweenType.easeOutQuad)
+            .setLoopPingPong(1);
     }
 
     // ─────────────────────────────────────────────

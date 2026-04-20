@@ -19,9 +19,13 @@ using UnityEngine;
 public static class CloudSaveSync
 {
     private const string ArenaDataKey = "arena_v1";
+    private const float PushThrottleSeconds = 5f; // Only push once per 5 seconds
 
     /// <summary>True after at least one successful pull+merge.</summary>
     public static bool HasSynced { get; private set; }
+
+    /// <summary>Timestamp of last successful push (in seconds, Time.realtimeSinceStartup).</summary>
+    private static float _lastPushTimeRealtimeSecs = -PushThrottleSeconds;
 
     // ═════════════════════════════════════════════════════════════
     //  Push (local → cloud)
@@ -29,11 +33,17 @@ public static class CloudSaveSync
 
     /// <summary>
     /// Serialises the current <see cref="ArenaSaveData"/> and writes it to Cloud Save.
+    /// Throttled to once per ~5 seconds to avoid hammering the server.
     /// Call this after <see cref="SaveManager.Save"/> when online.
     /// </summary>
     public static async Task PushArenaDataAsync()
     {
         if (!IsOnlineReady()) return;
+
+        // Throttle: skip if we pushed recently
+        float now = Time.realtimeSinceStartup;
+        if (now - _lastPushTimeRealtimeSecs < PushThrottleSeconds)
+            return;
 
         try
         {
@@ -44,6 +54,7 @@ public static class CloudSaveSync
             var data = new Dictionary<string, object> { { ArenaDataKey, json } };
             await CloudSaveService.Instance.Data.Player.SaveAsync(data);
 
+            _lastPushTimeRealtimeSecs = now;
             Debug.Log("[CloudSaveSync] Arena data pushed to cloud.");
         }
         catch (Exception ex)
@@ -200,5 +211,15 @@ public static class CloudSaveSync
             return false;
         }
         return true;
+    }
+
+    /// <summary>
+    /// Force an immediate push to cloud, bypassing throttle.
+    /// Use this on critical moments like app pause/quit.
+    /// </summary>
+    public static async Task ForcePushArenaDataAsync()
+    {
+        _lastPushTimeRealtimeSecs = -PushThrottleSeconds; // Reset throttle
+        await PushArenaDataAsync();
     }
 }

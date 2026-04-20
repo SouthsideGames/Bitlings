@@ -93,10 +93,6 @@ public class CheatCodeManager : MonoBehaviour
         }
         I = this;
 
-#if !UNITY_EDITOR && !DEVELOPMENT_BUILD
-        allowCheatsInReleaseBuilds = false;
-#endif
-
         // Normalize codes at startup (trim + upper)
         for (int i = 0; i < cheats.Count; i++)
         {
