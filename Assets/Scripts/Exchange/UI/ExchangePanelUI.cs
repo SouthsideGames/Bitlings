@@ -256,15 +256,11 @@ public class ExchangePanelUI : MonoBehaviour
 
             var cell = go.GetComponent<ExchangeMarketCellUI>();
             if (cell != null)
+            {
                 cell.Populate(def, state);
-
-            // Wire long-press to open species detail
-            var hold = go.GetComponent<HoldTapDetector>();
-            if (hold == null) hold = go.AddComponent<HoldTapDetector>();
-            hold.holdThreshold = 0.4f;
-            hold.triggerHoldOnThreshold = true;
-            var capturedDef = def;
-            hold.SetCallbacks(null, () => OpenSpeciesDetail(capturedDef));
+                var capturedDef = def;
+                cell.SetDetailCallback(() => OpenSpeciesDetail(capturedDef));
+            }
         }
 
         DeactivateUnusedChildren(marketGridParent, entries.Count);
@@ -694,6 +690,7 @@ public class ExchangePanelUI : MonoBehaviour
             if (overlayCg == null) overlayCg = confirmOverlayRoot.AddComponent<CanvasGroup>();
             overlayCg.interactable = true;
             overlayCg.blocksRaycasts = true;
+            overlayCg.ignoreParentGroups = true;
         }
 
         if (!on)

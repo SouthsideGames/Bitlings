@@ -27,6 +27,8 @@ public enum CheatEffectKind
     RankUpBy1,
     RankUpBy5,
 
+    FillAllJobSites,
+
     // Arena debug
     ArenaForceUnlock,
     ArenaGrantTickets,
@@ -368,6 +370,9 @@ public class CheatCodeManager : MonoBehaviour
             case CheatEffectKind.RankUpBy5:
                 return ExecuteRankUp(5, out message);
 
+            case CheatEffectKind.FillAllJobSites:
+                return ExecuteFillAllJobSites(out message);
+
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
             case CheatEffectKind.ArenaForceUnlock:
                 ArenaDebugHelper.ForceUnlockArena();
@@ -699,6 +704,51 @@ public class CheatCodeManager : MonoBehaviour
     // ─────────────────────────────────────────────────────────────
     // Everything below here is your original code (unchanged)
     // ─────────────────────────────────────────────────────────────
+
+    bool ExecuteFillAllJobSites(out string message)
+    {
+        message = string.Empty;
+
+        if (SaveManager.Data == null)
+        {
+            message = "Save data not loaded.";
+            return false;
+        }
+
+        if (JobManager.I == null)
+        {
+            message = "JobManager missing.";
+            return false;
+        }
+
+        int filled = 0;
+
+        foreach (var site in JobManager.I.States)
+        {
+            if (site?.config == null) continue;
+
+            int cap = JobManager.I.GetEffectiveStorageCap(site.config);
+            if (cap <= 0) continue;
+
+            if (site.storedUnits >= cap) continue;
+
+            site.storedUnits = cap;
+            site.storedRemainder = 0f;
+            filled++;
+        }
+
+        if (filled <= 0)
+        {
+            message = "All job sites already full.";
+            return false;
+        }
+
+        SaveManager.Save();
+        GameEvents.OnJobsChanged?.Invoke();
+
+        message = $"Maxed stored resources on {filled} job site(s).";
+        return true;
+    }
 
     bool ExecuteRankUp(int ranks, out string message)
     {

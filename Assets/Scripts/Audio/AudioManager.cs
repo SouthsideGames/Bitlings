@@ -42,6 +42,9 @@ public enum SfxType
 
     // Text
     Typewriter = 22,
+
+    // Fly Animation
+    Filling = 23,
 }
 
 [Serializable]

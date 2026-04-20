@@ -1482,58 +1482,7 @@ if (premiumVariantRoot) premiumVariantRoot.SetActive(false);
 
         int evoLvl = Mathf.Max(1, m.evolutionLevel);
 
-        var srcOwned = _statsOwned ?? _currentOwned;
-        bool hasOwnedInstance = (srcOwned != null) && !string.IsNullOrEmpty(srcOwned.monsterId);
-
-        int trainHP = 0, trainATK = 0, trainDEF = 0, trainSPD = 0;
-        int flatAtkBonus = 0;
-
-        if (hasOwnedInstance)
-        {
-            trainHP = Mathf.Max(0, srcOwned.trainingBonus.hp);
-            trainATK = Mathf.Max(0, srcOwned.trainingBonus.atk);
-            trainDEF = Mathf.Max(0, srcOwned.trainingBonus.def);
-            trainSPD = Mathf.Max(0, srcOwned.trainingBonus.spd);
-            flatAtkBonus = Mathf.Max(0, srcOwned.flatAtkBonus);
-
-            if (LooksLikeLegacyTrainingWasMirroredIntoFlat(flatAtkBonus, trainATK))
-                trainATK = 0;
-        }
-
-        int curHP = Mathf.RoundToInt(BattleCalc.CalcHP(m, evoLvl));
-        int nxtHP = Mathf.RoundToInt(BattleCalc.CalcHP(nextDef, evoLvl));
-
-        int curATK = Mathf.RoundToInt(BattleCalc.CalcBaseAttack(m, evoLvl, 0, 0));
-        int nxtATK = Mathf.RoundToInt(BattleCalc.CalcBaseAttack(nextDef, evoLvl, 0, 0));
-
-        int curDEF = BattleCalc.CalcDefense(m, evoLvl);
-        int nxtDEF = BattleCalc.CalcDefense(nextDef, evoLvl);
-
-        int curSPD = BattleCalc.CalcSpeed(m, evoLvl);
-        int nxtSPD = BattleCalc.CalcSpeed(nextDef, evoLvl);
-
-        if (hasOwnedInstance)
-        {
-            curHP += trainHP; nxtHP += trainHP;
-            curATK += (trainATK + flatAtkBonus); nxtATK += (trainATK + flatAtkBonus);
-            curDEF += trainDEF; nxtDEF += trainDEF;
-            curSPD += trainSPD; nxtSPD += trainSPD;
-        }
-
-        int dHp = nxtHP - curHP;
-        int dAtk = nxtATK - curATK;
-        int dDef = nxtDEF - curDEF;
-        int dSpd = nxtSPD - curSPD;
-
-        List<string> parts = new List<string>(4);
-        if (dHp != 0) parts.Add($"{(dHp > 0 ? "+" : "")}{dHp} HP");
-        if (dAtk != 0) parts.Add($"{(dAtk > 0 ? "+" : "")}{dAtk} ATK");
-        if (dDef != 0) parts.Add($"{(dDef > 0 ? "+" : "")}{dDef} DEF");
-        if (dSpd != 0) parts.Add($"{(dSpd > 0 ? "+" : "")}{dSpd} SPD");
-
-        string deltas = parts.Count > 0 ? $" ({string.Join(", ", parts)})" : "";
-
-        return $"EVO: Lv {evoLvl} → {nextName}{deltas}";
+        return $"EVO: Lv {evoLvl} → {nextName}";
     }
 
     private void TryStep(string label, Action step)

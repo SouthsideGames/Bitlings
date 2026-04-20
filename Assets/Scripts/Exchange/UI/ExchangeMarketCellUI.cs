@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
@@ -15,6 +16,7 @@ public class ExchangeMarketCellUI : MonoBehaviour
     [SerializeField] private TextMeshProUGUI forecastLabel;
     [SerializeField] private GameObject alertIcon;
     [SerializeField] private GameObject monopolyBonusIcon;
+    [SerializeField] private Button detailButton;
 
     private static readonly Color ColorUp   = new Color(0.2f, 0.85f, 0.3f);  // green
     private static readonly Color ColorDown = new Color(0.95f, 0.25f, 0.25f); // red
@@ -29,6 +31,20 @@ public class ExchangeMarketCellUI : MonoBehaviour
     public Rarity SpeciesRarity { get; private set; }
     public MonsterType SpeciesType { get; private set; }
     public TrendDirection Trend { get; private set; }
+
+    public void SetDetailCallback(Action onClick)
+    {
+        if (detailButton != null)
+        {
+            detailButton.onClick.RemoveAllListeners();
+            if (onClick != null)
+                detailButton.onClick.AddListener(() =>
+                {
+                    AudioManager.I?.PlayClick();
+                    onClick();
+                });
+        }
+    }
 
     public void Populate(MonsterDataSO def, MarketSpeciesState state)
     {

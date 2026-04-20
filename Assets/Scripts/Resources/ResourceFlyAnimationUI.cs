@@ -58,7 +58,7 @@ public class ResourceFlyAnimationUI : MonoBehaviour
 
     [Header("Impact SFX")]
     [SerializeField] private bool playImpactSfx = true;
-    [SerializeField] private SfxType impactSfxType = SfxType.Collect;
+    [SerializeField] private SfxType impactSfxType = SfxType.Filling;
     [SerializeField] private float impactSfxCooldown = 0.08f;
 
     [Header("Pooling")]
@@ -69,6 +69,7 @@ public class ResourceFlyAnimationUI : MonoBehaviour
     private readonly Stack<TokenView> _pool = new Stack<TokenView>(32);
     private readonly List<TokenView> _allPooled = new List<TokenView>(64);
     private readonly Dictionary<Transform, float> _lastPulseByTarget = new Dictionary<Transform, float>();
+    private readonly Dictionary<Transform, Vector3> _pulseBaseScale = new Dictionary<Transform, Vector3>();
     private readonly Dictionary<Transform, float> _lastSparkByTarget = new Dictionary<Transform, float>();
     private float _lastImpactSfxTime = -999f;
 
@@ -311,7 +312,14 @@ public class ResourceFlyAnimationUI : MonoBehaviour
 
         _lastPulseByTarget[destination] = now;
 
-        var baseScale = destination.localScale;
+        // Store the original scale before the first pulse so overlapping pulses
+        // always return to the true rest scale instead of a mid-animation value.
+        if (!_pulseBaseScale.TryGetValue(destination, out var baseScale))
+        {
+            baseScale = destination.localScale;
+            _pulseBaseScale[destination] = baseScale;
+        }
+
         var peak = baseScale * Mathf.Max(1.01f, pulseScale);
 
         LeanTween.cancel(destination.gameObject);
@@ -323,7 +331,11 @@ public class ResourceFlyAnimationUI : MonoBehaviour
                 if (!destination) return;
                 LeanTween.scale(destination.gameObject, baseScale, Mathf.Max(0.02f, pulseDownTime))
                     .setEase(LeanTweenType.easeInOutSine)
-                    .setIgnoreTimeScale(true);
+                    .setIgnoreTimeScale(true)
+                    .setOnComplete(() =>
+                    {
+                        _pulseBaseScale.Remove(destination);
+                    });
             });
     }
 
