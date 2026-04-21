@@ -94,14 +94,15 @@ public class PackDetailPanelUI : MonoBehaviour
 
         if (success)
         {
-            if (purchaseButton != null && spendAmount > 0 && spendType != ResourceType.None)
-                ResourceFlyAnimationUI.PlayFromHomeTo(spendType, spendAmount, purchaseButton.transform);
-
             var name = string.IsNullOrEmpty(_currentPack.displayName)
             ? "UNKNOWN PACK"
             : _currentPack.displayName.ToUpperInvariant();
 
-            GameEvents.RaiseToast($"PACK PURCHASED: {name}!");
+            if (purchaseButton != null && spendAmount > 0 && spendType != ResourceType.None)
+                ResourceFlyAnimationUI.PlayFromHomeTo(spendType, spendAmount, purchaseButton.transform,
+                    onComplete: () => GameEvents.RaiseToast($"PACK PURCHASED: {name}!"));
+            else
+                GameEvents.RaiseToast($"PACK PURCHASED: {name}!");
 
             RefreshUI();
         }

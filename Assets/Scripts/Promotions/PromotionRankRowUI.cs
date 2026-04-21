@@ -17,6 +17,7 @@ public sealed class PromotionRankRowUI : MonoBehaviour
     [SerializeField] private Sprite unlockedSprite;
     [SerializeField] private Sprite lockedSprite;
     [SerializeField] private Sprite currentSprite;
+    [SerializeField] private Image passedImage;
 
     public void Bind(int rank, bool isUnlocked, bool isCurrent, int totalXpToReach, string displayName, string rewardSummary)
     {
@@ -37,12 +38,15 @@ public sealed class PromotionRankRowUI : MonoBehaviour
 
         if (stateIcon)
         {
+            bool isPassed = isUnlocked && !isCurrent;
             if (isCurrent && currentSprite != null) stateIcon.sprite = currentSprite;
+            else if (isPassed && passedImage != null && passedImage.sprite != null) stateIcon.sprite = passedImage.sprite;
             else if (isUnlocked && unlockedSprite != null) stateIcon.sprite = unlockedSprite;
             else if (!isUnlocked && lockedSprite != null) stateIcon.sprite = lockedSprite;
 
-            // If sprites aren't assigned, still provide some visual hint by alpha.
-            stateIcon.color = new Color(stateIcon.color.r, stateIcon.color.g, stateIcon.color.b, isUnlocked ? 1f : 0.35f);
+            // Passed ranks dim to 0.3; locked to 0.35; current/unlocked full opacity.
+            float alpha = isPassed ? 0.3f : (isUnlocked ? 1f : 0.35f);
+            stateIcon.color = new Color(stateIcon.color.r, stateIcon.color.g, stateIcon.color.b, alpha);
         }
     }
 }

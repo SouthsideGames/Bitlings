@@ -17,8 +17,6 @@ public sealed class IronCareerRulesPopupUI : MonoBehaviour
 
     [Header("Body")]
     [SerializeField] private TextMeshProUGUI rulesTMP;
-    [SerializeField] private Toggle dontShowAgainToggle;
-    [SerializeField] private TextMeshProUGUI dontShowAgainLabelTMP;
 
     [Header("Buttons")]
     [SerializeField] private Button understandButton;
@@ -54,8 +52,6 @@ public sealed class IronCareerRulesPopupUI : MonoBehaviour
         if (understandButton) understandButton.onClick.AddListener(OnUnderstand);
         if (closeButton) closeButton.onClick.AddListener(OnClose);
 
-        if (dontShowAgainLabelTMP && string.IsNullOrWhiteSpace(dontShowAgainLabelTMP.text))
-            dontShowAgainLabelTMP.text = "Don't show again (this run)";
     }
 
     private void RefreshVisuals()
@@ -77,8 +73,6 @@ public sealed class IronCareerRulesPopupUI : MonoBehaviour
         if (rulesTMP)
             rulesTMP.text = BuildRulesBody(hardcore);
 
-        if (dontShowAgainToggle)
-            dontShowAgainToggle.isOn = manager != null && manager.SuppressRulesThisRun;
 
         if (understandLabelTMP) understandLabelTMP.text = "I UNDERSTAND";
         if (closeLabelTMP) closeLabelTMP.text = "CLOSE";
@@ -107,16 +101,9 @@ public sealed class IronCareerRulesPopupUI : MonoBehaviour
             modeLine;
     }
 
-    private void ApplyTogglePreference()
-    {
-        if (!manager || !dontShowAgainToggle) return;
-        manager.SetSuppressRulesThisRun(dontShowAgainToggle.isOn);
-    }
 
     private void OnUnderstand()
     {
-        ApplyTogglePreference();
-
         // If this popup was opened as a quit prompt, "I UNDERSTAND" confirms forfeit.
         if (manager != null && manager.IsQuitPromptActive)
         {
@@ -130,8 +117,6 @@ public sealed class IronCareerRulesPopupUI : MonoBehaviour
 
     private void OnClose()
     {
-        ApplyTogglePreference();
-
         // If this popup was opened as a quit prompt, close cancels quit.
         if (manager != null && manager.IsQuitPromptActive)
         {

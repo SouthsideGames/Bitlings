@@ -780,6 +780,11 @@ break;
                                             activeIndex < chargedNextAttack.Length)
                                         {
                                             chargedNextAttack[activeIndex] = true;
+
+                                            // Ensure charge icon updates immediately when focus succeeds.
+                                            Emit(BattleEvent.ChargeChanged(BattleSide.Player, true));
+                                            if (!HasBattleEventConsumers && feedback)
+                                                feedback.SetCharge(BattleFeedbackManager.BattleFeedbackSide.Player, true);
                                         }
 
                                         BattleLogger.Log($"{GetName(activeIndex)} is charging.", LogScope.Battle);
@@ -1034,7 +1039,14 @@ if (teamHP != null && activeIndex >= 0 && activeIndex < teamHP.Length && teamHP[
                 ClearPlayerGuardStateForActive(); // safety
 
                 if (chargedNextAttack != null && activeIndex >= 0 && activeIndex < chargedNextAttack.Length)
+                {
                     chargedNextAttack[activeIndex] = true;
+
+                    // Ensure charge icon updates immediately when focus succeeds.
+                    Emit(BattleEvent.ChargeChanged(BattleSide.Player, true));
+                    if (!HasBattleEventConsumers && feedback)
+                        feedback.SetCharge(BattleFeedbackManager.BattleFeedbackSide.Player, true);
+                }
 
                 BattleLogger.Log($"{GetName(activeIndex)} is charging.", LogScope.Battle);
                 BattleLogger.Log($"Their next attack will deal +{Mathf.RoundToInt(chargeBonusPct * 100f)}% damage.", LogScope.Battle);                                        Emit(BattleEvent.ActionQueued(BattleSide.Player, "Focus"));
@@ -1339,12 +1351,12 @@ float preventedByWildGuard = 0f;
             }
         }
 
-        if (preventedByWildGuard > 0f && guardConvertPct > 0f)
+        if (preventedByWildGuard > 0f && guardConvertPct > 0f && dr.crit)
         {
             float gain = preventedByWildGuard * guardConvertPct;
             wildPendingGuardShield += gain;
             if (!ShouldSkipNarration(BattleLineTag.Shield | BattleLineTag.Flavor))
-                yield return Say($"{foeName} stores {Mathf.RoundToInt(gain)} damage as a guard shield for the next round.", BattleLineTag.Shield | BattleLineTag.Flavor);
+            yield return Say($"{foeName} stores {Mathf.RoundToInt(gain)} damage as a guard shield for the next round (critical hit blocked)!", BattleLineTag.Shield | BattleLineTag.Flavor);
         }
 
         float preWildHP = wildHP;
@@ -1549,6 +1561,11 @@ if (!playerLandedFirstHitThisBattle && dr.damage > 0)
                 }
 
                 wildChargedNextAttack = true;
+
+                // Ensure charge icon updates immediately when focus succeeds.
+                Emit(BattleEvent.ChargeChanged(BattleSide.Wild, true));
+                if (!HasBattleEventConsumers && feedback)
+                    feedback.SetCharge(BattleFeedbackManager.BattleFeedbackSide.Wild, true);
 
                 if (!ShouldSkipNarration(BattleLineTag.Flavor))
                     yield return Say($"{name} is charging up.", BattleLineTag.Flavor);
@@ -1889,12 +1906,13 @@ int dmg_afterScalar = Mathf.Max(1, Mathf.RoundToInt(dr.damage * incomingScalar))
             pendingGuardShield != null &&
             activeIndex >= 0 &&
             activeIndex < pendingGuardShield.Length &&
-            guardConvertPct > 0f)
+            guardConvertPct > 0f &&
+            dr.crit && !df.cannotBeCrit)
         {
             float shieldGain = preventedByGuardRaw * guardConvertPct;
             pendingGuardShield[activeIndex] += shieldGain;
             if (!ShouldSkipNarration(BattleLineTag.Shield | BattleLineTag.Flavor))
-                yield return Say($"{GetName(activeIndex)} stores {Mathf.RoundToInt(shieldGain)} damage as a guard shield for the next round.", BattleLineTag.Shield | BattleLineTag.Flavor);
+                yield return Say($"{GetName(activeIndex)} stores {Mathf.RoundToInt(shieldGain)} damage as a guard shield for the next round (critical hit blocked)!", BattleLineTag.Shield | BattleLineTag.Flavor);
         }
 
         TitlesAdapter.OnHitTaken(teamTitleIds[activeIndex], dmg_incoming, dr.crit && !df.cannotBeCrit);

@@ -22,6 +22,7 @@ public static class ArenaOnboardingManager
     // ── Username constraints ──
     public const int UsernameMinLength = 2;
     public const int UsernameMaxLength = 16;
+    private const int UsernameRequestTimeoutMs = 15000;
 
     // ═════════════════════════════════════════════════════════════
     //  Public API
@@ -158,40 +159,52 @@ public static class ArenaOnboardingManager
     /// </summary>
     public static async Task<(bool success, string error)> TrySetUsernameAsync(string username)
     {
-        if (string.IsNullOrWhiteSpace(username))
-            return (false, "Please enter a name.");
-
-        string trimmed = username.Trim();
-
-        if (trimmed.Length < UsernameMinLength)
-            return (false, $"Name must be at least {UsernameMinLength} characters.");
-
-        if (trimmed.Length > UsernameMaxLength)
-            return (false, $"Name must be at most {UsernameMaxLength} characters.");
-
-        if (!IsUsernameSafe(trimmed))
-            return (false, "Name contains invalid characters.");
-
-        var arena = SaveManager.GetArenaSaveData();
-        if (arena != null && arena.usernameCreated && !string.IsNullOrEmpty(arena.arenaUsername))
-            return (false, "You already have a username.");
-
-        // Call server for uniqueness check + registration.
-        var result = await ArenaCloudCodeService.ValidateAndSetUsernameAsync(trimmed);
-
-        if (!result.success)
-            return (false, result.error ?? "Unable to set name.");
-
-        // Server confirmed — update local cache.
-        if (arena != null)
+        try
         {
-            arena.arenaUsername = trimmed;
-            arena.usernameCreated = true;
-            SaveManager.Save();
-        }
+            if (string.IsNullOrWhiteSpace(username))
+                return (false, "Please enter a name.");
 
-        GameEvents.ArenaDataChanged?.Invoke();
-        return (true, null);
+            string trimmed = username.Trim();
+
+            if (trimmed.Length < UsernameMinLength)
+                return (false, $"Name must be at least {UsernameMinLength} characters.");
+
+            if (trimmed.Length > UsernameMaxLength)
+                return (false, $"Name must be at most {UsernameMaxLength} characters.");
+
+            if (!IsUsernameSafe(trimmed))
+                return (false, "Name contains invalid characters.");
+
+            var arena = SaveManager.GetArenaSaveData();
+            if (arena != null && arena.usernameCreated && !string.IsNullOrEmpty(arena.arenaUsername))
+                return (false, "You already have a username.");
+
+            // Prevent UI deadlocks if Cloud Code hangs.
+            var requestTask = ArenaCloudCodeService.ValidateAndSetUsernameAsync(trimmed);
+            var completedTask = await Task.WhenAny(requestTask, Task.Delay(UsernameRequestTimeoutMs));
+            if (completedTask != requestTask)
+                return (false, "Request timed out. Please try again.");
+
+            var result = await requestTask;
+            if (!result.success)
+                return (false, result.error ?? "Unable to set name.");
+
+            // Server confirmed — update local cache.
+            if (arena != null)
+            {
+                arena.arenaUsername = trimmed;
+                arena.usernameCreated = true;
+                SaveManager.Save();
+            }
+
+            GameEvents.ArenaDataChanged?.Invoke();
+            return (true, null);
+        }
+        catch (Exception ex)
+        {
+            Debug.LogWarning($"[ArenaOnboardingManager] TrySetUsernameAsync failed: {ex.Message}");
+            return (false, "Unable to set name right now. Please try again.");
+        }
     }
 
     /// <summary>

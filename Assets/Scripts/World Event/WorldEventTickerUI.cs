@@ -1,4 +1,5 @@
 using System.Collections;
+using System.Text;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -30,6 +31,9 @@ public sealed class WorldEventTickerUI : MonoBehaviour
     [Tooltip("Optional icon image reference. Ticker is text-only, so this will be disabled when present.")]
     [SerializeField] private Image tickerIcon;
 
+    [Tooltip("Optional hold detector used to show world event details on long-press.")]
+    [SerializeField] private HoldTapDetector holdTapDetector;
+
     [Header("Timing")]
     [SerializeField, Min(0f)] private float fadeInSeconds = 0.35f;
     [SerializeField, Min(0f)] private float holdSeconds = 4.0f;
@@ -48,12 +52,14 @@ public sealed class WorldEventTickerUI : MonoBehaviour
     private Coroutine _loop;
     private int _messageIndex;
     private bool _featureChecked;
+    private WorldEventManager.Item _currentItem;
 
     private void Awake()
     {
         if (!worldEventBar) worldEventBar = gameObject;
         DisableTickerIconIfPresent();
         EnsureCanvasGroup();
+        EnsureHoldDetectorWiring();
         SetAlphaInstant(0f);
     }
 
@@ -61,6 +67,7 @@ public sealed class WorldEventTickerUI : MonoBehaviour
     {
         DisableTickerIconIfPresent();
         EnsureCanvasGroup();
+        EnsureHoldDetectorWiring();
         RefreshBarActive();
 
         if (FeatureUnlockManager.I != null)
@@ -113,6 +120,7 @@ public sealed class WorldEventTickerUI : MonoBehaviour
     private void StopLoopAndHide()
     {
         StopLoop();
+        _currentItem = null;
         if (worldEventBar) worldEventBar.SetActive(false);
         SetAlphaInstant(0f);
     }
@@ -147,10 +155,13 @@ public sealed class WorldEventTickerUI : MonoBehaviour
             var item = GetNextItemSafe();
             if (item == null || string.IsNullOrWhiteSpace(item.message))
             {
+                _currentItem = null;
                 SetAlphaInstant(0f);
                 yield return null;
                 continue;
             }
+
+            _currentItem = item;
 
             if (messageText)
             {
@@ -299,5 +310,143 @@ public sealed class WorldEventTickerUI : MonoBehaviour
         if (!tickerIcon) return;
         tickerIcon.enabled = false;
         tickerIcon.gameObject.SetActive(false);
+    }
+
+    private void EnsureHoldDetectorWiring()
+    {
+        if (holdTapDetector == null)
+        {
+            if (worldEventBar != null)
+                holdTapDetector = worldEventBar.GetComponent<HoldTapDetector>();
+
+            if (holdTapDetector == null)
+                holdTapDetector = GetComponent<HoldTapDetector>();
+        }
+
+        if (holdTapDetector != null)
+            holdTapDetector.SetCallbacks(onTap: HandleTickerTap, onHold: ShowCurrentEventTooltip);
+    }
+
+    private void HandleTickerTap()
+    {
+        if (TooltipUI.I == null) return;
+        TooltipUI.I.Hide();
+    }
+
+    private void ShowCurrentEventTooltip()
+    {
+        if (TooltipUI.I == null) return;
+
+        string tooltipText = BuildCurrentEventTooltipText();
+        if (string.IsNullOrWhiteSpace(tooltipText)) return;
+
+        TooltipUI.I.Show(tooltipText);
+    }
+
+    private string BuildCurrentEventTooltipText()
+    {
+        if (!IsFeatureUnlocked()) return null;
+
+        var evt = FindEventForCurrentItem();
+        if (evt == null)
+        {
+            if (WorldEventManager.I != null && WorldEventManager.I.TryGetWeeklyEventView(out var weeklyView))
+            {
+                var fallback = new StringBuilder();
+                fallback.Append("<b>").Append(weeklyView.displayName).Append("</b>");
+                if (!string.IsNullOrWhiteSpace(weeklyView.description))
+                    fallback.Append("\n").Append(weeklyView.description.Trim());
+                if (!string.IsNullOrWhiteSpace(weeklyView.countdownText))
+                    fallback.Append("\n\nEnds in: ").Append(weeklyView.countdownText);
+                return fallback.ToString();
+            }
+
+            return "No active world event details available.";
+        }
+
+        var sb = new StringBuilder();
+        string title = string.IsNullOrWhiteSpace(evt.displayName) ? evt.id : evt.displayName;
+        sb.Append("<b>").Append(title).Append("</b>");
+
+        if (!string.IsNullOrWhiteSpace(evt.description))
+            sb.Append("\n").Append(evt.description.Trim());
+
+        string effectSummary = BuildEffectSummary(evt);
+        if (!string.IsNullOrWhiteSpace(effectSummary))
+            sb.Append("\n\n").Append(effectSummary);
+
+        if (WorldEventManager.I != null && WorldEventManager.I.ActiveWeeklyEvent == evt)
+        {
+            string countdown = WorldEventManager.I.GetWeekCountdownText();
+            if (!string.IsNullOrWhiteSpace(countdown))
+                sb.Append("\n\nEnds in: ").Append(countdown);
+        }
+
+        return sb.ToString();
+    }
+
+    private WorldEventSO FindEventForCurrentItem()
+    {
+        var eventSystem = WorldEventSystem.I;
+        if (eventSystem == null || eventSystem.ActiveEvents == null || eventSystem.ActiveEvents.Count == 0)
+            return null;
+
+        string currentMessage = _currentItem?.message;
+        if (!string.IsNullOrWhiteSpace(currentMessage))
+        {
+            string needle = currentMessage.Trim();
+            for (int i = 0; i < eventSystem.ActiveEvents.Count; i++)
+            {
+                var evt = eventSystem.ActiveEvents[i];
+                if (!evt) continue;
+
+                string tickerMessage = !string.IsNullOrWhiteSpace(evt.tickerMessage)
+                    ? evt.tickerMessage.Trim()
+                    : (!string.IsNullOrWhiteSpace(evt.displayName) ? evt.displayName.Trim() : (evt.id ?? string.Empty).Trim());
+
+                if (string.Equals(tickerMessage, needle, System.StringComparison.Ordinal))
+                    return evt;
+            }
+        }
+
+        return eventSystem.ActiveEvents[0];
+    }
+
+    private static string BuildEffectSummary(WorldEventSO evt)
+    {
+        var sb = new StringBuilder();
+        bool any = false;
+
+        AppendMultiplierLine(sb, ref any, "Idle rewards", evt.idleRewardMultiplier);
+        AppendMultiplierLine(sb, ref any, "Battle rewards", evt.battleRewardMultiplier);
+        AppendMultiplierLine(sb, ref any, "Exchange value", evt.exchangeValueMultiplier);
+
+        if (evt.boostedMonsterType != MonsterType.None)
+        {
+            if (any) sb.Append("\n");
+            sb.Append("- ").Append(evt.boostedMonsterType).Append(" damage ").Append(FormatMultiplierChange(evt.typeDamageMultiplier));
+            any = true;
+        }
+
+        if (!any)
+            return "No gameplay modifiers. Flavor event only.";
+
+        return sb.ToString();
+    }
+
+    private static void AppendMultiplierLine(StringBuilder sb, ref bool any, string label, float multiplier)
+    {
+        if (Mathf.Approximately(multiplier, 1f)) return;
+
+        if (any) sb.Append("\n");
+        sb.Append("- ").Append(label).Append(" ").Append(FormatMultiplierChange(multiplier));
+        any = true;
+    }
+
+    private static string FormatMultiplierChange(float multiplier)
+    {
+        float deltaPercent = (multiplier - 1f) * 100f;
+        string sign = deltaPercent >= 0f ? "+" : string.Empty;
+        return $"{sign}{deltaPercent:0.#}%";
     }
 }

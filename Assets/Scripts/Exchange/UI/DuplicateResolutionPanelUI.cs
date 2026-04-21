@@ -247,6 +247,8 @@ public class DuplicateResolutionPanelUI : MonoBehaviour
         GameEvents.MonsterLeveled?.Invoke(key, existing.level);
         GameEvents.RaiseToast($"{def.displayName} trained! Lv {before} → {existing.level}");
 
+        RiftPanelUI.I?.SetHirePromptOverride($"{def.displayName} is now level {existing.level}.");
+
         Close();
     }
 
@@ -259,6 +261,8 @@ public class DuplicateResolutionPanelUI : MonoBehaviour
         GameEvents.OnResourcesChanged?.Invoke();
         GameEvents.MonsterCaptured?.Invoke(def.id, def.type);
         GameEvents.RaiseToast($"{def.displayName} (max level) converted to +{cores} Growth Cores");
+
+        RiftPanelUI.I?.SetHirePromptOverride($"{def.displayName} was already max level, so the duplicate was converted into {cores} Growth Cores.");
 
         Close();
     }
@@ -287,6 +291,8 @@ public class DuplicateResolutionPanelUI : MonoBehaviour
         GameEvents.MonsterBrokered?.Invoke(def.id, payout);
         GameEvents.RaiseToast($"{def.displayName} brokered for +{payout} Credits");
 
+        RiftPanelUI.I?.SetHirePromptOverride($"Sold the duplicate {def.displayName} for {payout} Credits.");
+
         Close();
     }
 
@@ -304,6 +310,8 @@ public class DuplicateResolutionPanelUI : MonoBehaviour
 
         GameEvents.MonsterCaptured?.Invoke(def.id, def.type);
         GameEvents.RaiseToast($"{def.displayName} placed! Request fulfilled for +{reward} Credits");
+
+        RiftPanelUI.I?.SetHirePromptOverride($"Placed the duplicate {def.displayName} into a request for {reward} Credits.");
 
         Close();
     }

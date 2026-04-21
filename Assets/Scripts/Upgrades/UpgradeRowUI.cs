@@ -209,14 +209,16 @@ public class UpgradeRowUI : MonoBehaviour
             return;
 
         if (buyButton != null)
-            ResourceFlyAnimationUI.PlayFromHomeTo(ResourceType.Credits, _creditCost, buyButton.transform);
+            ResourceFlyAnimationUI.PlayFromHomeTo(ResourceType.Credits, _creditCost, buyButton.transform,
+                onComplete: () => GameEvents.RaiseToast("FEATURE UNLOCKED!"));
+        else
+            GameEvents.RaiseToast("FEATURE UNLOCKED!");
 
         // Unlock + persist
         FeatureUnlockManager.I.Unlock(_featureId);
         SaveManager.Save();
 
         GameEvents.OnResourcesChanged?.Invoke();
-        GameEvents.RaiseToast("FEATURE UNLOCKED!");
 
         Refresh();
     }

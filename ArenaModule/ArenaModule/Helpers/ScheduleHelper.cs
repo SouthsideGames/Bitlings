@@ -7,8 +7,7 @@ namespace ArenaModule.Helpers;
 
 public static class ScheduleHelper
 {
-    private static readonly TimeZoneInfo EasternTz =
-        TimeZoneInfo.FindSystemTimeZoneById("America/New_York");
+    private static readonly Lazy<TimeZoneInfo> EasternTz = new Lazy<TimeZoneInfo>(ResolveEasternTimeZone);
 
     // ── Week ID ──────────────────────────────────────────────
 
@@ -23,7 +22,7 @@ public static class ScheduleHelper
 
     public static string GetWeekIdForUtc(DateTime utcNow)
     {
-        var et = TimeZoneInfo.ConvertTimeFromUtc(utcNow, EasternTz);
+        var et = TimeZoneInfo.ConvertTimeFromUtc(utcNow, EasternTz.Value);
         int dow = (int)et.DayOfWeek; // 0=Sun
         int mondayOffset = dow == 0 ? -6 : 1 - dow;
         var monday = et.Date.AddDays(mondayOffset);
@@ -37,7 +36,7 @@ public static class ScheduleHelper
     /// </summary>
     public static bool IsRegistrationOpen()
     {
-        var et = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, EasternTz);
+        var et = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, EasternTz.Value);
         return et.DayOfWeek == DayOfWeek.Monday || et.DayOfWeek == DayOfWeek.Tuesday;
     }
 
@@ -47,7 +46,7 @@ public static class ScheduleHelper
     /// </summary>
     public static bool IsPastLockTime()
     {
-        var et = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, EasternTz);
+        var et = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, EasternTz.Value);
         // Mon-based: Mon=0, Tue=1, Wed=2, Thu=3, Fri=4, Sat=5, Sun=6
         int monBased = et.DayOfWeek == DayOfWeek.Sunday ? 6 : (int)et.DayOfWeek - 1;
         return monBased >= 2;
@@ -61,12 +60,42 @@ public static class ScheduleHelper
     /// </summary>
     public static long WeekIdToEpoch(string weekId)
     {
-        var dateStr = weekId.AsSpan(1); // skip 'W'
-        int y = int.Parse(dateStr.Slice(0, 4));
-        int m = int.Parse(dateStr.Slice(4, 2));
-        int d = int.Parse(dateStr.Slice(6, 2));
-        var utc = new DateTime(y, m, d, 5, 0, 0, DateTimeKind.Utc); // 05:00 UTC ≈ 00:00 EST
+        if (string.IsNullOrWhiteSpace(weekId) || weekId.Length != 9 || weekId[0] != 'W')
+            throw new ArgumentException("Week ID must be in WyyyyMMdd format.", nameof(weekId));
+
+        var mondayEt = DateTime.ParseExact(
+            weekId[1..],
+            "yyyyMMdd",
+            CultureInfo.InvariantCulture,
+            DateTimeStyles.None);
+
+        var utc = TimeZoneInfo.ConvertTimeToUtc(
+            DateTime.SpecifyKind(mondayEt, DateTimeKind.Unspecified),
+            EasternTz.Value);
+
         return new DateTimeOffset(utc).ToUnixTimeSeconds();
+    }
+
+    private static TimeZoneInfo ResolveEasternTimeZone()
+    {
+        string[] candidateIds = new[] { "Eastern Standard Time", "America/New_York" };
+
+        foreach (var timeZoneId in candidateIds)
+        {
+            try
+            {
+                return TimeZoneInfo.FindSystemTimeZoneById(timeZoneId);
+            }
+            catch (TimeZoneNotFoundException)
+            {
+            }
+            catch (InvalidTimeZoneException)
+            {
+            }
+        }
+
+        throw new InvalidOperationException(
+            "Unable to resolve the Eastern time zone using either Windows or IANA identifiers.");
     }
 
     // ── Hashing ──────────────────────────────────────────────

@@ -95,7 +95,7 @@ public class ResourceFlyAnimationUI : MonoBehaviour
         PrewarmPoolIfNeeded();
     }
 
-    public static void PlayToHome(ResourceType type, int amount, Transform from)
+    public static void PlayToHome(ResourceType type, int amount, Transform from, System.Action onComplete = null)
     {
         var to = UIFlyTargetAnchor.Resolve(HomeResourcesTargetKey);
         if (!to)
@@ -103,10 +103,10 @@ public class ResourceFlyAnimationUI : MonoBehaviour
 
         if (!to) return;
 
-        Play(type, amount, from, to);
+        Play(type, amount, from, to, onComplete);
     }
 
-    public static void PlayFromHomeTo(ResourceType type, int amount, Transform to)
+    public static void PlayFromHomeTo(ResourceType type, int amount, Transform to, System.Action onComplete = null)
     {
         var from = UIFlyTargetAnchor.Resolve(HomeResourcesTargetKey);
         if (!from)
@@ -114,7 +114,7 @@ public class ResourceFlyAnimationUI : MonoBehaviour
 
         if (!from || !to) return;
 
-        Play(type, amount, from, to);
+        Play(type, amount, from, to, onComplete);
     }
 
     private static Transform TryResolveHomeResourcesFallback()
@@ -130,12 +130,12 @@ public class ResourceFlyAnimationUI : MonoBehaviour
         return null;
     }
 
-    public static void Play(ResourceType type, int amount, Transform from, Transform to)
+    public static void Play(ResourceType type, int amount, Transform from, Transform to, System.Action onComplete = null)
     {
-        I.PlayInternal(type, amount, from, to);
+        I.PlayInternal(type, amount, from, to, onComplete);
     }
 
-    public void PlayInternal(ResourceType type, int amount, Transform from, Transform to)
+    public void PlayInternal(ResourceType type, int amount, Transform from, Transform to, System.Action onComplete = null)
     {
         if (amount <= 0 || !from || !to) return;
 
@@ -151,8 +151,14 @@ public class ResourceFlyAnimationUI : MonoBehaviour
             return;
 
         int count = ComputeBurstCount(amount);
+        int remaining = count;
         for (int i = 0; i < count; i++)
-            SpawnAndAnimateToken(icon, startLocal, endLocal, i, to);
+            SpawnAndAnimateToken(icon, startLocal, endLocal, i, to, () =>
+            {
+                remaining--;
+                if (remaining <= 0)
+                    onComplete?.Invoke();
+            });
     }
 
     private int ComputeBurstCount(int amount)
@@ -164,7 +170,7 @@ public class ResourceFlyAnimationUI : MonoBehaviour
         return Mathf.Clamp(c, minBurstCount, maxBurstCount);
     }
 
-    private void SpawnAndAnimateToken(Sprite icon, Vector2 startLocal, Vector2 endLocal, int index, Transform destination)
+    private void SpawnAndAnimateToken(Sprite icon, Vector2 startLocal, Vector2 endLocal, int index, Transform destination, System.Action onLanded = null)
     {
         var token = AcquireToken();
         if (token == null || token.go == null || token.rt == null || token.cg == null || token.img == null)
@@ -225,6 +231,7 @@ public class ResourceFlyAnimationUI : MonoBehaviour
                         TryPlayImpactSfx();
                         ReleaseToken(token);
                     }
+                    onLanded?.Invoke();
                 });
         });
     }

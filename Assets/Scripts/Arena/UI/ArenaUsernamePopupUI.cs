@@ -168,19 +168,29 @@ public class ArenaUsernamePopupUI : MonoBehaviour
         if (loadingSpinner) loadingSpinner.SetActive(true);
         if (errorLabel) errorLabel.text = "";
 
-        var (success, error) = await ArenaOnboardingManager.TrySetUsernameAsync(trimmed);
-
-        _isSubmitting = false;
-        if (loadingSpinner) loadingSpinner.SetActive(false);
-
-        if (!success)
+        try
         {
-            ShowError(error ?? "Unable to set name.");
-            UpdateConfirmButtonState(usernameInput != null ? usernameInput.text : "");
-            return;
-        }
+            var (success, error) = await ArenaOnboardingManager.TrySetUsernameAsync(trimmed);
 
-        OnUsernameAccepted(trimmed);
+            if (!success)
+            {
+                ShowError(error ?? "Unable to set name.");
+                return;
+            }
+
+            OnUsernameAccepted(trimmed);
+        }
+        catch (System.Exception ex)
+        {
+            Debug.LogWarning($"[ArenaUsernamePopupUI] SubmitUsernameAsync failed: {ex.Message}");
+            ShowError("Unable to set name right now. Please try again.");
+        }
+        finally
+        {
+            _isSubmitting = false;
+            if (loadingSpinner) loadingSpinner.SetActive(false);
+            UpdateConfirmButtonState(usernameInput != null ? usernameInput.text : "");
+        }
     }
 
     private void OnUsernameAccepted(string trimmed)

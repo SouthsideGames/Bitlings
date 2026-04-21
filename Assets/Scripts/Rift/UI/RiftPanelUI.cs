@@ -1448,6 +1448,14 @@ if (target > 0.01f)
             : $"Hiring failed — {name} refused the offer.";
     }
 
+    public void SetHirePromptOverride(string message)
+    {
+        if (!hirePromptText || string.IsNullOrWhiteSpace(message))
+            return;
+
+        hirePromptText.text = message;
+    }
+
     void SpawnHireResult(bool success)
     {
         if (!hireResultSpawnPoint) return;

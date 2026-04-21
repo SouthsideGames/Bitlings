@@ -42,6 +42,9 @@ public class ArenaMainPanelUI : MonoBehaviour
     [SerializeField] private Button leaderboardButton;
     [SerializeField] private ArenaLeaderboardPanelUI leaderboardPanel;
 
+    [Header("Navigation")]
+    [SerializeField] private Button closeButton;
+
     [Header("Online")]
     [SerializeField] private GameObject offlineOverlay;
     [SerializeField] private TextMeshProUGUI offlineReasonLabel;
@@ -61,6 +64,8 @@ public class ArenaMainPanelUI : MonoBehaviour
     {
         if (I != null && I != this) { Destroy(gameObject); return; }
         I = this;
+
+        ResolveCloseButtonIfMissing();
     }
 
     void OnEnable()
@@ -78,6 +83,7 @@ public class ArenaMainPanelUI : MonoBehaviour
         if (viewTournamentButton)  { viewTournamentButton.onClick.RemoveAllListeners();  viewTournamentButton.onClick.AddListener(HandleViewTournament); }
         if (retryConnectionButton) { retryConnectionButton.onClick.RemoveAllListeners(); retryConnectionButton.onClick.AddListener(HandleRetryConnection); }
         if (leaderboardButton)      { leaderboardButton.onClick.RemoveAllListeners();      leaderboardButton.onClick.AddListener(HandleOpenLeaderboard); }
+        if (closeButton)           { closeButton.onClick.RemoveAllListeners();           closeButton.onClick.AddListener(HandleClose); }
 
         // ── Week card callbacks ──
         if (weekCard) weekCard.Bind(HandleEnterTournament, HandleViewTournament);
@@ -125,6 +131,7 @@ public class ArenaMainPanelUI : MonoBehaviour
         if (viewTournamentButton)  viewTournamentButton.onClick.RemoveListener(HandleViewTournament);
         if (retryConnectionButton) retryConnectionButton.onClick.RemoveListener(HandleRetryConnection);
         if (leaderboardButton)      leaderboardButton.onClick.RemoveListener(HandleOpenLeaderboard);
+        if (closeButton)           closeButton.onClick.RemoveListener(HandleClose);
     }
 
     void OnDestroy()
@@ -217,6 +224,7 @@ public class ArenaMainPanelUI : MonoBehaviour
                      && ArenaNetworkGuard.IsOnline
                      && ArenaSaveHelper.HasArenaUsername()
                      && ArenaTeamValidator.IsBattleTeamComplete()
+                     && ArenaScheduleService.IsRegistrationOpen()
                      && ArenaTicketManager.GetTicketCount() > 0;
 
         if (enterTournamentButton)
@@ -330,19 +338,29 @@ public class ArenaMainPanelUI : MonoBehaviour
     {
         if (enterTournamentButton) enterTournamentButton.interactable = false;
 
-        var (success, error) = await ArenaTournamentService.TryEnterTournamentAsync();
-
-        if (success)
+        try
         {
-            GameEvents.RaiseToast("Registered for this week's tournament!");
-        }
-        else
-        {
-            GameEvents.RaiseToast(error ?? "Unable to register.");
-        }
+            var (success, error) = await ArenaTournamentService.TryEnterTournamentAsync();
 
-        if (enterTournamentButton) enterTournamentButton.interactable = true;
-        RefreshAll();
+            if (success)
+            {
+                GameEvents.RaiseToast("Registered for this week's tournament!");
+            }
+            else
+            {
+                GameEvents.RaiseToast(error ?? "Unable to register.");
+            }
+        }
+        catch (Exception ex)
+        {
+            Debug.LogWarning($"[ArenaMainPanelUI] EnterTournamentOnlineAsync failed: {ex.Message}");
+            GameEvents.RaiseToast("Unable to register right now. Please try again.");
+        }
+        finally
+        {
+            if (enterTournamentButton) enterTournamentButton.interactable = true;
+            RefreshAll();
+        }
     }
 
     /// <summary>
@@ -477,6 +495,28 @@ public class ArenaMainPanelUI : MonoBehaviour
         else
         {
             Debug.LogWarning("[ArenaMainPanelUI] ArenaUsernamePopupUI not found in scene.");
+        }
+    }
+
+    private void ResolveCloseButtonIfMissing()
+    {
+        if (closeButton != null) return;
+
+        var buttons = GetComponentsInChildren<Button>(true);
+        for (int i = 0; i < buttons.Length; i++)
+        {
+            var button = buttons[i];
+            if (button == null) continue;
+
+            string n = button.name;
+            if (string.IsNullOrEmpty(n)) continue;
+
+            n = n.ToLowerInvariant();
+            if (n.Contains("close") || n.Contains("back"))
+            {
+                closeButton = button;
+                return;
+            }
         }
     }
 
