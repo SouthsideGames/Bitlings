@@ -16,6 +16,17 @@ public sealed class IronCareerStarterSlotUI : MonoBehaviour
 
     private MonsterDataSO _boundDef;
     public MonsterDataSO BoundDef => _boundDef;
+    private int _iconBreatheTweenId = -1;
+
+    private void OnEnable()
+    {
+        StartIconBreathing();
+    }
+
+    private void OnDisable()
+    {
+        StopIconBreathing();
+    }
 
     private void EnsureLibraryLoaded()
     {
@@ -47,6 +58,8 @@ public sealed class IronCareerStarterSlotUI : MonoBehaviour
             icon.sprite = def.icon;
         }
 
+        StartIconBreathing();
+
         // Name
         if (nameText)
             nameText.text = string.IsNullOrEmpty(def.displayName)
@@ -74,6 +87,8 @@ public sealed class IronCareerStarterSlotUI : MonoBehaviour
 
     private void Clear()
     {
+        StopIconBreathing();
+
         if (icon)
         {
             icon.enabled = false;
@@ -88,5 +103,39 @@ public sealed class IronCareerStarterSlotUI : MonoBehaviour
 
         if (nameText) nameText.text = "—";
         if (statsText) statsText.text = "";
+    }
+
+    private void StartIconBreathing()
+    {
+        if (!isActiveAndEnabled || !icon || !icon.enabled)
+            return;
+
+        StopIconBreathing();
+
+        var rt = icon.rectTransform;
+        if (!rt)
+            return;
+
+        rt.localScale = Vector3.one;
+        _iconBreatheTweenId = LeanTween.value(gameObject, 1f, 1.08f, 2.1f)
+            .setEase(LeanTweenType.easeInOutSine)
+            .setLoopPingPong()
+            .setOnUpdate((float v) =>
+            {
+                if (icon) icon.rectTransform.localScale = new Vector3(v, v, 1f);
+            })
+            .id;
+    }
+
+    private void StopIconBreathing()
+    {
+        if (_iconBreatheTweenId != -1)
+        {
+            LeanTween.cancel(_iconBreatheTweenId);
+            _iconBreatheTweenId = -1;
+        }
+
+        if (icon)
+            icon.rectTransform.localScale = Vector3.one;
     }
 }
