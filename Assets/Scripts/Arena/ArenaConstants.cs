@@ -68,13 +68,47 @@ public static class ArenaConstants
     public const int TotalRounds = 5;
 
     // ── Time ─────────────────────────────────────────────────
-    /// <summary>Eastern Time zone identifier for cross-platform .NET lookup.</summary>
+    /// <summary>Windows Eastern Time zone identifier.</summary>
     public const string EasternTimeZoneId = "Eastern Standard Time";
 
+    /// <summary>IANA Eastern Time zone identifier used by Linux/macOS.</summary>
+    public const string EasternTimeZoneIanaId = "America/New_York";
+
+    private static readonly TimeZoneInfo _easternTimeZone = ResolveEasternTimeZone();
+
     /// <summary>
-    /// Returns the IANA time-zone id on non-Windows platforms and the Windows id otherwise.
+    /// Cached Eastern timezone lookup that supports Windows and IANA IDs.
     /// Useful for <see cref="TimeZoneInfo.FindSystemTimeZoneById"/>.
     /// </summary>
-    public static TimeZoneInfo EasternTimeZone =>
-        TimeZoneInfo.FindSystemTimeZoneById(EasternTimeZoneId);
+    public static TimeZoneInfo EasternTimeZone => _easternTimeZone;
+
+    private static TimeZoneInfo ResolveEasternTimeZone()
+    {
+        // Try both Windows and IANA identifiers so this works on all target OSes.
+        string[] candidateIds =
+        {
+            EasternTimeZoneId,
+            EasternTimeZoneIanaId,
+            "US/Eastern"
+        };
+
+        for (int i = 0; i < candidateIds.Length; i++)
+        {
+            try
+            {
+                return TimeZoneInfo.FindSystemTimeZoneById(candidateIds[i]);
+            }
+            catch (TimeZoneNotFoundException)
+            {
+                // Try next ID.
+            }
+            catch (InvalidTimeZoneException)
+            {
+                // Try next ID.
+            }
+        }
+
+        // Last-resort fallback prevents hard crashes in runtime-critical flows.
+        return TimeZoneInfo.Utc;
+    }
 }

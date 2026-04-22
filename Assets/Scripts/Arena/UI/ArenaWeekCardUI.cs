@@ -141,7 +141,7 @@ public class ArenaWeekCardUI : MonoBehaviour
     {
         SetGroups(registration: true, active: false, completed: false);
 
-        if (statusLabel) statusLabel.text = "Registered \u2713";
+        if (statusLabel) statusLabel.text = "Registered";
         if (registrationDeadlineLabel)
             registrationDeadlineLabel.text = "Brackets assigned on Wednesday.";
 

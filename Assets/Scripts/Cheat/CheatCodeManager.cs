@@ -29,6 +29,8 @@ public enum CheatEffectKind
 
     FillAllJobSites,
 
+    OwnMonsterById,
+
     // Arena debug
     ArenaForceUnlock,
     ArenaGrantTickets,
@@ -372,6 +374,9 @@ public class CheatCodeManager : MonoBehaviour
 
             case CheatEffectKind.FillAllJobSites:
                 return ExecuteFillAllJobSites(out message);
+
+            case CheatEffectKind.OwnMonsterById:
+                return ExecuteOwnMonsterById(cd.monsterId, cd.amount, out message);
 
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
             case CheatEffectKind.ArenaForceUnlock:
@@ -747,6 +752,66 @@ public class CheatCodeManager : MonoBehaviour
         GameEvents.OnJobsChanged?.Invoke();
 
         message = $"Maxed stored resources on {filled} job site(s).";
+        return true;
+    }
+
+    bool ExecuteOwnMonsterById(string monsterId, int level, out string message)
+    {
+        message = string.Empty;
+
+        if (string.IsNullOrWhiteSpace(monsterId))
+        {
+            message = "No monster ID configured on this cheat.";
+            return false;
+        }
+
+        var data = SaveManager.Data;
+        if (data == null)
+        {
+            message = "Save data not loaded.";
+            return false;
+        }
+
+        var def = MonsterCatalog.GetById(monsterId);
+        if (def == null)
+            def = MonsterLibraryLocator.GetById(monsterId);
+
+        if (def == null)
+        {
+            message = $"No monster found with ID \"{monsterId}\".";
+            return false;
+        }
+
+        int spawnLevel = Mathf.Max(1, level);
+        int startHP = HealingService.CalcMaxHP(def, spawnLevel, includeTraining: true, includeTitles: false);
+
+        var om = new OwnedMonsterData
+        {
+            monsterId  = def.id,
+            level      = spawnLevel,
+            currentHP  = Mathf.Max(1, startHP),
+            currentXP  = 0,
+            ownedUID   = Guid.NewGuid().ToString("N"),
+        };
+
+        data.owned ??= new List<OwnedMonsterData>();
+        data.owned.Add(om);
+
+        data.ownedIds ??= new HashSet<string>();
+        data.ownedIds.Add(def.id);
+
+        data.discoveredMonsterIds ??= new HashSet<string>();
+        data.discoveredMonsterIds.Add(def.id);
+
+        data.seenTypes ??= new HashSet<MonsterType>();
+        data.seenTypes.Add(def.type);
+
+        SaveManager.Save();
+
+        GameEvents.MonsterCaptured?.Invoke(def.id, def.type);
+        GameEvents.OnResourcesChanged?.Invoke();
+
+        message = $"You now own {def.displayName} (ID: {def.id}) at level {spawnLevel}.";
         return true;
     }
 

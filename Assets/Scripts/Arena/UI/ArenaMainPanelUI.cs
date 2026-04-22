@@ -159,7 +159,7 @@ public class ArenaMainPanelUI : MonoBehaviour
         // Username
         var arena = SaveManager.GetArenaSaveData();
         if (usernameLabel)
-            usernameLabel.text = !string.IsNullOrEmpty(arena?.arenaUsername) ? arena.arenaUsername : "Set Username";
+            usernameLabel.text = $"USERNAME: {(!string.IsNullOrEmpty(arena?.arenaUsername) ? arena.arenaUsername : "Set Username")}";
 
         int tickets = ArenaTicketManager.GetTicketCount();
         if (ticketCountLabel) ticketCountLabel.text = $"{tickets}/{ArenaConstants.MaxTickets}";

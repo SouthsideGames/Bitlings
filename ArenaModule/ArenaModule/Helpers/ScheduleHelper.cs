@@ -78,7 +78,7 @@ public static class ScheduleHelper
 
     private static TimeZoneInfo ResolveEasternTimeZone()
     {
-        string[] candidateIds = new[] { "Eastern Standard Time", "America/New_York" };
+        string[] candidateIds = new[] { "Eastern Standard Time", "America/New_York", "US/Eastern" };
 
         foreach (var timeZoneId in candidateIds)
         {
@@ -94,8 +94,43 @@ public static class ScheduleHelper
             }
         }
 
-        throw new InvalidOperationException(
-            "Unable to resolve the Eastern time zone using either Windows or IANA identifiers.");
+        // Runtime fallback for minimal Linux containers that do not include tzdata.
+        return CreateUsEasternFallbackTimeZone();
+    }
+
+    private static TimeZoneInfo CreateUsEasternFallbackTimeZone()
+    {
+        var daylightDelta = TimeSpan.FromHours(1);
+
+        // US DST: starts 2:00 AM on second Sunday in March.
+        var dstStart = TimeZoneInfo.TransitionTime.CreateFloatingDateRule(
+            new DateTime(1, 1, 1, 2, 0, 0),
+            3,
+            2,
+            DayOfWeek.Sunday);
+
+        // US DST: ends 2:00 AM on first Sunday in November.
+        var dstEnd = TimeZoneInfo.TransitionTime.CreateFloatingDateRule(
+            new DateTime(1, 1, 1, 2, 0, 0),
+            11,
+            1,
+            DayOfWeek.Sunday);
+
+        var rule = TimeZoneInfo.AdjustmentRule.CreateAdjustmentRule(
+            DateTime.MinValue.Date,
+            DateTime.MaxValue.Date,
+            daylightDelta,
+            dstStart,
+            dstEnd);
+
+        return TimeZoneInfo.CreateCustomTimeZone(
+            id: "Custom/Eastern",
+            baseUtcOffset: TimeSpan.FromHours(-5),
+            displayName: "(UTC-05:00) Eastern Time",
+            standardDisplayName: "Eastern Standard Time",
+            daylightDisplayName: "Eastern Daylight Time",
+            adjustmentRules: new[] { rule },
+            disableDaylightSavingTime: false);
     }
 
     // ── Hashing ──────────────────────────────────────────────

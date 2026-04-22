@@ -1,0 +1,13 @@
+/var/folders/mg/dyxbtn512l97mbjzwd56t3k00000gn/T/ArenaModule/module-compilation/ArenaModule.dll
+/var/folders/mg/dyxbtn512l97mbjzwd56t3k00000gn/T/ArenaModule/module-compilation/ArenaModule.deps.json
+/var/folders/mg/dyxbtn512l97mbjzwd56t3k00000gn/T/ArenaModule/module-compilation/ArenaModule.pdb
+/var/folders/mg/dyxbtn512l97mbjzwd56t3k00000gn/T/ArenaModule/module-compilation/Unity.Services.CloudCode.Apis.dll
+/var/folders/mg/dyxbtn512l97mbjzwd56t3k00000gn/T/ArenaModule/module-compilation/Unity.Services.CloudCode.Core.dll
+/var/folders/mg/dyxbtn512l97mbjzwd56t3k00000gn/T/ArenaModule/module-compilation/Google.Protobuf.dll
+/var/folders/mg/dyxbtn512l97mbjzwd56t3k00000gn/T/ArenaModule/module-compilation/Grpc.Core.Api.dll
+/var/folders/mg/dyxbtn512l97mbjzwd56t3k00000gn/T/ArenaModule/module-compilation/Grpc.Net.Client.dll
+/var/folders/mg/dyxbtn512l97mbjzwd56t3k00000gn/T/ArenaModule/module-compilation/Grpc.Net.Common.dll
+/var/folders/mg/dyxbtn512l97mbjzwd56t3k00000gn/T/ArenaModule/module-compilation/JsonSubTypes.dll
+/var/folders/mg/dyxbtn512l97mbjzwd56t3k00000gn/T/ArenaModule/module-compilation/Microsoft.Extensions.DependencyInjection.Abstractions.dll
+/var/folders/mg/dyxbtn512l97mbjzwd56t3k00000gn/T/ArenaModule/module-compilation/Microsoft.Extensions.Logging.Abstractions.dll
+/var/folders/mg/dyxbtn512l97mbjzwd56t3k00000gn/T/ArenaModule/module-compilation/Newtonsoft.Json.dll

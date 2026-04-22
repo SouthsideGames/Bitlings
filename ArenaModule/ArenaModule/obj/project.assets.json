@@ -878,31 +878,29 @@
   },
   "projectFileDependencyGroups": {
     "net6.0": [
-      "com.Unity.Services.CloudCode.Apis >= *-*",
-      "com.Unity.Services.CloudCode.Core >= 0.0.*"
+      "Com.Unity.Services.CloudCode.Apis >= 1.0.2-alpha",
+      "Com.Unity.Services.CloudCode.Core >= 0.0.3"
     ]
   },
   "packageFolders": {
-    "C:\\Users\\Kareem Butler\\.nuget\\packages\\": {}
+    "/Users/kareem/.nuget/packages/": {}
   },
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "D:\\Southside Games\\Bitlings\\ArenaModule\\ArenaModule\\ArenaModule.csproj",
+      "projectUniqueName": "/Users/kareem/Desktop/Southside Games/Bitlings/ArenaModule/ArenaModule/ArenaModule.csproj",
       "projectName": "ArenaModule",
-      "projectPath": "D:\\Southside Games\\Bitlings\\ArenaModule\\ArenaModule\\ArenaModule.csproj",
-      "packagesPath": "C:\\Users\\Kareem Butler\\.nuget\\packages\\",
-      "outputPath": "D:\\Southside Games\\Bitlings\\ArenaModule\\ArenaModule\\obj\\",
+      "projectPath": "/Users/kareem/Desktop/Southside Games/Bitlings/ArenaModule/ArenaModule/ArenaModule.csproj",
+      "packagesPath": "/Users/kareem/.nuget/packages/",
+      "outputPath": "/Users/kareem/Desktop/Southside Games/Bitlings/ArenaModule/ArenaModule/obj/",
       "projectStyle": "PackageReference",
       "configFilePaths": [
-        "C:\\Users\\Kareem Butler\\AppData\\Roaming\\NuGet\\NuGet.Config",
-        "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
+        "/Users/kareem/.nuget/NuGet/NuGet.Config"
       ],
       "originalTargetFrameworks": [
         "net6.0"
       ],
       "sources": {
-        "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
         "https://api.nuget.org/v3/index.json": {}
       },
       "frameworks": {
@@ -927,13 +925,13 @@
       "net6.0": {
         "targetAlias": "net6.0",
         "dependencies": {
-          "com.Unity.Services.CloudCode.Apis": {
+          "Com.Unity.Services.CloudCode.Apis": {
             "target": "Package",
-            "version": "[*-*, )"
+            "version": "[1.0.2-alpha, )"
           },
-          "com.Unity.Services.CloudCode.Core": {
+          "Com.Unity.Services.CloudCode.Core": {
             "target": "Package",
-            "version": "[0.0.*, )"
+            "version": "[0.0.3, )"
           }
         },
         "imports": [
@@ -955,10 +953,6 @@
           {
             "name": "Microsoft.NETCore.App.Ref",
             "version": "[6.0.36, 6.0.36]"
-          },
-          {
-            "name": "Microsoft.WindowsDesktop.App.Ref",
-            "version": "[6.0.36, 6.0.36]"
           }
         ],
         "frameworkReferences": {
@@ -966,7 +960,7 @@
             "privateAssets": "all"
           }
         },
-        "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\9.0.306\\RuntimeIdentifierGraph.json"
+        "runtimeIdentifierGraphPath": "/usr/local/share/dotnet/sdk/9.0.303/RuntimeIdentifierGraph.json"
       }
     },
     "runtimes": {
