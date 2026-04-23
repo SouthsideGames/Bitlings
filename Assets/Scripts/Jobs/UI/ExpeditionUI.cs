@@ -117,7 +117,7 @@ public class ExpeditionUI : MonoBehaviour
     {
         int have = ResourceBank.Get(ResourceType.PackVoucher);
         if (currencyHeader)
-            currencyHeader.text = $"Pack Vouchers: {have}";
+            currencyHeader.text = $"{have}";
     }
 
     private void RefreshSeasonHeader()
