@@ -26,6 +26,10 @@ public class RecyclePanelUI : MonoBehaviour
     [Header("Controls")]
     [SerializeField] private Button convertButton;
 
+    [Header("Fly FX")]
+    [SerializeField] private bool playFlyFxOnConvert = true;
+    [SerializeField] private string resourceTargetKey = ResourceFlyAnimationUI.HomeResourcesTargetKey;
+
     private readonly List<RecycleRecipeItemUI> _items = new();
     private RecycleRecipeSO _selectedRecipe;
     private Coroutine _bannerCo;
@@ -112,6 +116,13 @@ public class RecyclePanelUI : MonoBehaviour
     {
         _selectedRecipe = item ? item.Recipe : null;
 
+        for (int i = 0; i < _items.Count; i++)
+        {
+            var row = _items[i];
+            if (!row) continue;
+            row.SetSelected(row == item);
+        }
+
 
         RefreshConvertButton();
     }
@@ -178,8 +189,32 @@ public class RecyclePanelUI : MonoBehaviour
 
         GameEvents.RaiseToast($"CONVERSION COMPLETE {r.fromAmount} {r.fromType} → {r.toAmount} {r.toType}");
 
+        if (playFlyFxOnConvert && convertButton)
+            PlayConvertFlyFx(r);
+
 
         // Update button state (in case we can't afford another conversion)
         RefreshConvertButton();
+    }
+
+    private void PlayConvertFlyFx(RecycleRecipeSO recipe)
+    {
+        if (recipe == null || !convertButton)
+            return;
+
+        var target = UIFlyTargetAnchor.Resolve(resourceTargetKey);
+        if (!target && !string.Equals(resourceTargetKey, ResourceFlyAnimationUI.HomeResourcesTargetKey, System.StringComparison.OrdinalIgnoreCase))
+            target = UIFlyTargetAnchor.Resolve(ResourceFlyAnimationUI.HomeResourcesTargetKey);
+
+        if (!target)
+            return;
+
+        // 1) Spend flies from target bucket to Convert.
+        // 2) Reward flies from Convert back to target bucket.
+        ResourceFlyAnimationUI.Play(recipe.fromType, recipe.fromAmount, target, convertButton.transform,
+            onComplete: () =>
+            {
+                ResourceFlyAnimationUI.Play(recipe.toType, recipe.toAmount, convertButton.transform, target);
+            });
     }
 }

@@ -30,7 +30,6 @@ public class ArenaMainPanelUI : MonoBehaviour
     [Header("Action Buttons")]
     [SerializeField] private Button editTeamButton;
     [SerializeField] private Button enterTournamentButton;
-    [SerializeField] private Button viewTournamentButton;
 
     [Header("History List")]
     [SerializeField] private Transform historyListRoot;
@@ -77,7 +76,6 @@ public class ArenaMainPanelUI : MonoBehaviour
         if (buyTicketButton)       { buyTicketButton.onClick.RemoveAllListeners();       buyTicketButton.onClick.AddListener(HandleBuyTicket); }
         if (editTeamButton)        { editTeamButton.onClick.RemoveAllListeners();        editTeamButton.onClick.AddListener(HandleEditTeam); }
         if (enterTournamentButton) { enterTournamentButton.onClick.RemoveAllListeners(); enterTournamentButton.onClick.AddListener(HandleEnterTournament); }
-        if (viewTournamentButton)  { viewTournamentButton.onClick.RemoveAllListeners();  viewTournamentButton.onClick.AddListener(HandleViewTournament); }
         if (retryConnectionButton) { retryConnectionButton.onClick.RemoveAllListeners(); retryConnectionButton.onClick.AddListener(HandleRetryConnection); }
         if (leaderboardButton)      { leaderboardButton.onClick.RemoveAllListeners();      leaderboardButton.onClick.AddListener(HandleOpenLeaderboard); }
 
@@ -128,7 +126,6 @@ public class ArenaMainPanelUI : MonoBehaviour
         if (buyTicketButton)       buyTicketButton.onClick.RemoveListener(HandleBuyTicket);
         if (editTeamButton)        editTeamButton.onClick.RemoveListener(HandleEditTeam);
         if (enterTournamentButton) enterTournamentButton.onClick.RemoveListener(HandleEnterTournament);
-        if (viewTournamentButton)  viewTournamentButton.onClick.RemoveListener(HandleViewTournament);
         if (retryConnectionButton) retryConnectionButton.onClick.RemoveListener(HandleRetryConnection);
         if (leaderboardButton)      leaderboardButton.onClick.RemoveListener(HandleOpenLeaderboard);
     }
@@ -232,11 +229,6 @@ public class ArenaMainPanelUI : MonoBehaviour
                 status == ArenaPlayerTournamentStatus.NotEntered);
             enterTournamentButton.interactable = canEnter;
         }
-
-        // View — visible when entered, active, eliminated, or completed
-        bool hasActiveTournament = status != ArenaPlayerTournamentStatus.NotEntered;
-        if (viewTournamentButton)
-            viewTournamentButton.gameObject.SetActive(hasActiveTournament);
 
     }
 

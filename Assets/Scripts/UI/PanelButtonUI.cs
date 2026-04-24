@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.Serialization;
 
 public class PanelButtonUI : MonoBehaviour
 {
@@ -11,12 +12,14 @@ public class PanelButtonUI : MonoBehaviour
     [Tooltip("If true, when opening this panel, the currently open panel will close first.")]
     public bool closeOthersFirst = false;
 
-    [Header("Close -> Open Home")]
-    [Tooltip("If enabled, after hiding/toggling OFF this target, UIManager will open Home.")]
-    public bool openHomeAfterClose = false;
+    [Header("Close -> Open Panel")]
+    [Tooltip("If enabled, after hiding/toggling OFF this target, UIManager will open the panel below.")]
+    [FormerlySerializedAs("openHomeAfterClose")]
+    public bool openPanelAfterClose = false;
 
-    [Tooltip("Which panel is considered 'Home' (defaults to PanelId.Home).")]
-    public PanelId homePanelId = PanelId.Home;
+    [Tooltip("Which panel to open after close (defaults to PanelId.Home).")]
+    [FormerlySerializedAs("homePanelId")]
+    public PanelId panelAfterCloseId = PanelId.Home;
 
     public void Execute()
     {
@@ -36,8 +39,8 @@ public class PanelButtonUI : MonoBehaviour
 
             case ActionType.Hide:
                 UIManager.I.Hide(target);
-                if (openHomeAfterClose)
-                    UIManager.I.Show(homePanelId);
+                if (openPanelAfterClose)
+                    UIManager.I.Show(panelAfterCloseId);
                 break;
 
             case ActionType.Toggle:
@@ -45,8 +48,8 @@ public class PanelButtonUI : MonoBehaviour
                 bool wasOpen = UIManager.I.IsOpen(target);
                 UIManager.I.Toggle(target);
 
-                if (openHomeAfterClose && wasOpen)
-                    UIManager.I.Show(homePanelId);
+                if (openPanelAfterClose && wasOpen)
+                    UIManager.I.Show(panelAfterCloseId);
                 break;
             }
         }

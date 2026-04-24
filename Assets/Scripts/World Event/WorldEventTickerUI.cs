@@ -1,4 +1,5 @@
 using System.Collections;
+using System.Collections.Generic;
 using System.Text;
 using TMPro;
 using UnityEngine;
@@ -417,6 +418,106 @@ public sealed class WorldEventTickerUI : MonoBehaviour
         var sb = new StringBuilder();
         bool any = false;
 
+        // ── structured effects list ─────────────────────────────────────────────
+        if (evt.effects != null && evt.effects.Count > 0)
+        {
+            // ResourceGainMultiplier — aggregate into a single line when all share the same value.
+            AppendResourceGainLines(sb, ref any, evt.effects);
+
+            // BoostedMonsterType / TypeDamageMultiplier from effects list — collect first type found.
+            MonsterType boostedFromEffects = MonsterType.None;
+            float typeDmgFromEffects = 1f;
+
+            for (int i = 0; i < evt.effects.Count; i++)
+            {
+                var fx = evt.effects[i];
+                switch (fx.kind)
+                {
+                    case WorldEventEffectKind.DisableJobSite:
+                        if (fx.job != JobType.None)
+                            AppendPlainLine(sb, ref any, "- " + FormatJobName(fx.job) + " job site disabled");
+                        break;
+
+                    case WorldEventEffectKind.JobRateMultiplier:
+                        if (fx.job != JobType.None)
+                            AppendMultiplierLine(sb, ref any, FormatJobName(fx.job) + " output", fx.value);
+                        break;
+
+                    case WorldEventEffectKind.JobStorageCapMultiplier:
+                        if (fx.job != JobType.None)
+                            AppendMultiplierLine(sb, ref any, FormatJobName(fx.job) + " storage cap", fx.value);
+                        break;
+
+                    case WorldEventEffectKind.JobCollectDisabled:
+                        if (fx.job != JobType.None && (fx.flag || fx.value > 0f))
+                            AppendPlainLine(sb, ref any, "- " + FormatJobName(fx.job) + " collection disabled");
+                        break;
+
+                    case WorldEventEffectKind.JobFatigueRateMultiplier:
+                        if (fx.job != JobType.None)
+                            AppendMultiplierLine(sb, ref any, FormatJobName(fx.job) + " fatigue rate", fx.value);
+                        break;
+
+                    case WorldEventEffectKind.DisableRifts:
+                        AppendPlainLine(sb, ref any, "- Rift Operations disabled");
+                        break;
+
+                    case WorldEventEffectKind.RiftEnergyCostMultiplier:
+                        AppendMultiplierLine(sb, ref any, "Rift Energy cost", fx.value);
+                        break;
+
+                    case WorldEventEffectKind.WildPremiumChanceMultiplier:
+                        AppendMultiplierLine(sb, ref any, "Premium encounter chance", fx.value);
+                        break;
+
+                    case WorldEventEffectKind.BossCadenceMultiplier:
+                        AppendMultiplierLine(sb, ref any, "Boss encounter cadence", fx.value);
+                        break;
+
+                    case WorldEventEffectKind.ShopPriceMultiplier:
+                        AppendMultiplierLine(sb, ref any, "Shop prices", fx.value);
+                        break;
+
+                    case WorldEventEffectKind.ExchangeDemandMultiplier:
+                        AppendMultiplierLine(sb, ref any, "Exchange demand", fx.value);
+                        break;
+
+                    case WorldEventEffectKind.ExchangeValueMultiplier:
+                        AppendMultiplierLine(sb, ref any, "Exchange value", fx.value);
+                        break;
+
+                    case WorldEventEffectKind.IdleRewardMultiplier:
+                        AppendMultiplierLine(sb, ref any, "Idle rewards", fx.value);
+                        break;
+
+                    case WorldEventEffectKind.BattleRewardMultiplier:
+                        AppendMultiplierLine(sb, ref any, "Battle rewards", fx.value);
+                        break;
+
+                    case WorldEventEffectKind.BoostedMonsterType:
+                        if (boostedFromEffects == MonsterType.None)
+                            boostedFromEffects = fx.monsterType;
+                        break;
+
+                    case WorldEventEffectKind.TypeDamageMultiplier:
+                        if (!Mathf.Approximately(fx.value, 1f))
+                            typeDmgFromEffects = fx.value;
+                        break;
+
+                    // ResourceGainMultiplier handled above by AppendResourceGainLines.
+                }
+            }
+
+            if (boostedFromEffects != MonsterType.None)
+            {
+                if (any) sb.Append("\n");
+                sb.Append("- ").Append(boostedFromEffects).Append(" damage ").Append(FormatMultiplierChange(typeDmgFromEffects));
+                any = true;
+            }
+        }
+
+        // ── flat modifier fields ────────────────────────────────────────────────
+        // Used by fallback (BuiltInFallbackEvents) and CSV flat columns.
         AppendMultiplierLine(sb, ref any, "Idle rewards", evt.idleRewardMultiplier);
         AppendMultiplierLine(sb, ref any, "Battle rewards", evt.battleRewardMultiplier);
         AppendMultiplierLine(sb, ref any, "Exchange value", evt.exchangeValueMultiplier);
@@ -434,6 +535,75 @@ public sealed class WorldEventTickerUI : MonoBehaviour
         return sb.ToString();
     }
 
+    /// <summary>
+    /// Aggregates all ResourceGainMultiplier entries. Shows a single grouped line when all entries
+    /// share the same multiplier value; otherwise shows one line per resource type.
+    /// </summary>
+    private static void AppendResourceGainLines(StringBuilder sb, ref bool any, List<WorldEventEffect> effects)
+    {
+        // Collect resource gain entries.
+        float groupValue = 0f;
+        bool first = true;
+        bool allSame = true;
+        int count = 0;
+        ResourceType singleResource = ResourceType.None;
+
+        for (int i = 0; i < effects.Count; i++)
+        {
+            var fx = effects[i];
+            if (fx.kind != WorldEventEffectKind.ResourceGainMultiplier) continue;
+
+            count++;
+            singleResource = fx.resource;
+
+            if (first)
+            {
+                groupValue = fx.value;
+                first = false;
+            }
+            else if (!Mathf.Approximately(fx.value, groupValue))
+            {
+                allSame = false;
+            }
+        }
+
+        if (count == 0) return;
+
+        if (count == 1)
+        {
+            string label = singleResource != ResourceType.None
+                ? singleResource.ToString().Replace("_", " ") + " gains"
+                : "Resource gains";
+            AppendMultiplierLine(sb, ref any, label, groupValue);
+            return;
+        }
+
+        if (allSame)
+        {
+            // Multiple resources all with the same multiplier — show a single grouped line.
+            AppendMultiplierLine(sb, ref any, "Resource gains", groupValue);
+            return;
+        }
+
+        // Different multipliers — show per-resource.
+        for (int i = 0; i < effects.Count; i++)
+        {
+            var fx = effects[i];
+            if (fx.kind != WorldEventEffectKind.ResourceGainMultiplier) continue;
+            string label = fx.resource != ResourceType.None
+                ? fx.resource.ToString().Replace("_", " ") + " gains"
+                : "Resource gains";
+            AppendMultiplierLine(sb, ref any, label, fx.value);
+        }
+    }
+
+    private static void AppendPlainLine(StringBuilder sb, ref bool any, string text)
+    {
+        if (any) sb.Append("\n");
+        sb.Append(text);
+        any = true;
+    }
+
     private static void AppendMultiplierLine(StringBuilder sb, ref bool any, string label, float multiplier)
     {
         if (Mathf.Approximately(multiplier, 1f)) return;
@@ -448,5 +618,10 @@ public sealed class WorldEventTickerUI : MonoBehaviour
         float deltaPercent = (multiplier - 1f) * 100f;
         string sign = deltaPercent >= 0f ? "+" : string.Empty;
         return $"{sign}{deltaPercent:0.#}%";
+    }
+
+    private static string FormatJobName(JobType job)
+    {
+        return job.ToString().Replace("_", " ");
     }
 }

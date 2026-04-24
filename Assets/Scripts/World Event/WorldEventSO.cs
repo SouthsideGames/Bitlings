@@ -69,7 +69,8 @@ public class WorldEventSO : ScriptableObject
     public bool AffectsTypeBonus => boostedMonsterType != MonsterType.None;
 
     /// <summary>True if any reward modifier on this event deviates from the neutral default.</summary>
-    public bool HasAnyModifier => AffectsIdle || AffectsBattle || AffectsExchange || AffectsTypeBonus;
+    public bool HasAnyModifier => AffectsIdle || AffectsBattle || AffectsExchange || AffectsTypeBonus
+        || (effects != null && effects.Count > 0 && effects.Exists(fx => fx.kind != WorldEventEffectKind.None));
 
     public bool IsActiveNow(long nowUnix)
     {

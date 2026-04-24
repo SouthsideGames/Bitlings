@@ -1181,6 +1181,20 @@ public class WorldEventBuilderWindow : EditorWindow
                 value = (TEnum)boxed;
                 return true;
             }
+
+            // Legacy name aliases: the enum was renamed from Encounter→Rift; support old CSV names.
+            if (normalized == "disableencounters")
+            {
+                object boxed = WorldEventEffectKind.DisableRifts;
+                value = (TEnum)boxed;
+                return true;
+            }
+            if (normalized == "encounterenergycostmultiplier")
+            {
+                object boxed = WorldEventEffectKind.RiftEnergyCostMultiplier;
+                value = (TEnum)boxed;
+                return true;
+            }
         }
 
         value = default;

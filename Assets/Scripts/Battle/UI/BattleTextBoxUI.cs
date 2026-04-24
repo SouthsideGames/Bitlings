@@ -176,24 +176,28 @@ public class BattleTextBoxUI : MonoBehaviour
 
         if (showIcons)
         {
-            if (critIcon)   critIcon.enabled   = (line.tags & BattleLineTag.Crit) != 0;
-            if (shieldIcon) shieldIcon.enabled = (line.tags & BattleLineTag.Shield) != 0;
+            bool showCrit = (line.tags & BattleLineTag.Crit) != 0;
+            bool showShield = (line.tags & BattleLineTag.Shield) != 0;
+            SetIconVisible(critIcon, showCrit);
+            SetIconVisible(shieldIcon, showShield);
 
             bool se  = (line.tags & BattleLineTag.SuperEffective) != 0;
             bool nve = (line.tags & BattleLineTag.NotEffective) != 0;
+            bool showEffect = se || nve;
 
             if (effectiveIcon)
             {
-                effectiveIcon.enabled = se || nve;
                 if (se && superEffectiveSprite) effectiveIcon.sprite = superEffectiveSprite;
                 else if (nve && notEffectiveSprite) effectiveIcon.sprite = notEffectiveSprite;
             }
+
+            SetIconVisible(effectiveIcon, showEffect);
         }
         else
         {
-            if (critIcon) critIcon.enabled = false;
-            if (shieldIcon) shieldIcon.enabled = false;
-            if (effectiveIcon) effectiveIcon.enabled = false;
+            SetIconVisible(critIcon, false);
+            SetIconVisible(shieldIcon, false);
+            SetIconVisible(effectiveIcon, false);
         }
 
         if (showIcons)
@@ -305,5 +309,23 @@ public class BattleTextBoxUI : MonoBehaviour
                     .setEaseOutQuad()
                     .setIgnoreTimeScale(true);
             });
+    }
+
+    private void SetIconVisible(Image icon, bool visible)
+    {
+        if (!icon) return;
+
+        if (icon.gameObject.activeSelf != visible)
+            icon.gameObject.SetActive(visible);
+
+        icon.enabled = visible;
+
+        if (visible)
+        {
+            var c = icon.color;
+            c.a = 1f;
+            icon.color = c;
+            icon.canvasRenderer.SetAlpha(1f);
+        }
     }
 }

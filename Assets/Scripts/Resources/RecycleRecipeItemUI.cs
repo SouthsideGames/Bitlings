@@ -15,8 +15,8 @@ public class RecycleRecipeItemUI : MonoBehaviour
     [SerializeField] private TextMeshProUGUI nameText;
 
     [Header("Colors")]
-    [SerializeField] private Color selectedColor = new Color32(0x8C, 0x90, 0x93, 0xFF);
-    [SerializeField] private Color unselectedColor = new Color32(0x1C, 0x26, 0x2E, 0xFF);
+    [SerializeField] private Color selectedColor;
+    [SerializeField] private Color unselectedColor;
 
     public RecycleRecipeSO Recipe { get; private set; }
 
