@@ -45,6 +45,8 @@ public static class ArenaSaveHelper
         data.currentTournamentCache.tournamentId ??= "";
         data.currentTournamentCache.playerEntryId ??= "";
         data.currentTournamentCache.lastMatchId ??= "";
+        if (data.currentTournamentCache.lastViewedRoundIndex < 0)
+            data.currentTournamentCache.lastViewedRoundIndex = 0;
 
         data.recentTournamentHistory ??= new List<ArenaTournamentHistoryEntry>();
 
@@ -138,5 +140,41 @@ public static class ArenaSaveHelper
     {
         var arena = SaveManager.GetArenaSaveData();
         return arena?.recentTournamentHistory?.Count ?? 0;
+    }
+
+    /// <summary>
+    /// True when a tournament is in progress and at least one newly resolved round
+    /// has not yet been acknowledged by opening Arena.
+    /// </summary>
+    public static bool ShouldShowArenaRoundAlert()
+    {
+        var cache = SaveManager.GetArenaSaveData()?.currentTournamentCache;
+        if (cache == null) return false;
+
+        bool tournamentActive = cache.playerStatus == ArenaPlayerTournamentStatus.Active
+                             || cache.playerStatus == ArenaPlayerTournamentStatus.Eliminated;
+        if (!tournamentActive) return false;
+
+        return cache.currentRoundIndex > cache.lastViewedRoundIndex;
+    }
+
+    /// <summary>
+    /// Marks all currently resolved rounds as viewed by the player.
+    /// Returns true if the viewed index changed.
+    /// </summary>
+    public static bool MarkArenaRoundResultsViewed(bool save = true)
+    {
+        var cache = SaveManager.GetArenaSaveData()?.currentTournamentCache;
+        if (cache == null) return false;
+
+        int viewed = Mathf.Max(cache.lastViewedRoundIndex, cache.currentRoundIndex);
+        if (viewed == cache.lastViewedRoundIndex) return false;
+
+        cache.lastViewedRoundIndex = viewed;
+
+        if (save)
+            SaveManager.Save();
+
+        return true;
     }
 }

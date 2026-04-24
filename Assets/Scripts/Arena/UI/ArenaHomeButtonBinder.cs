@@ -17,11 +17,14 @@ public sealed class ArenaHomeButtonBinder : MonoBehaviour
         if (!arenaButton) arenaButton = GetComponent<Button>();
 
         RefreshVisibility();
+
+        if (arenaButton) arenaButton.onClick.AddListener(HandleArenaButtonClicked);
         GameEvents.FeatureUnlocked += OnFeatureUnlocked;
     }
 
     void OnDisable()
     {
+        if (arenaButton) arenaButton.onClick.RemoveListener(HandleArenaButtonClicked);
         GameEvents.FeatureUnlocked -= OnFeatureUnlocked;
     }
 
@@ -38,5 +41,11 @@ public sealed class ArenaHomeButtonBinder : MonoBehaviour
 
         if (arenaButtonRoot != null)
             arenaButtonRoot.SetActive(unlocked);
+    }
+
+    private void HandleArenaButtonClicked()
+    {
+        if (ArenaSaveHelper.MarkArenaRoundResultsViewed(save: true))
+            GameEvents.ArenaDataChanged?.Invoke();
     }
 }

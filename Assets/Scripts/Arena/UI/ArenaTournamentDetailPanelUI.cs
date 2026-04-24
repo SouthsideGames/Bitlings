@@ -40,6 +40,7 @@ public class ArenaTournamentDetailPanelUI : MonoBehaviour
     private ArenaTournamentHistoryEntry _historyEntry;
     private readonly List<ArenaMatchCardUI> _matchCards = new List<ArenaMatchCardUI>();
     private readonly List<GameObject> _standingsRows = new List<GameObject>();
+    private static readonly Color TopThreeColor = new Color32(0xE1, 0x9C, 0x55, 0xFF);
 
     // ═════════════════════════════════════════════════════════════
     //  Lifecycle
@@ -109,6 +110,7 @@ public class ArenaTournamentDetailPanelUI : MonoBehaviour
             switch (status)
             {
                 case ArenaPlayerTournamentStatus.NotEntered:  statusLabel.text = "Not Entered"; break;
+                case ArenaPlayerTournamentStatus.Registered:  statusLabel.text = "Registered"; break;
                 case ArenaPlayerTournamentStatus.Entered:     statusLabel.text = "Registered"; break;
                 case ArenaPlayerTournamentStatus.Active:      statusLabel.text = "In Progress"; break;
                 case ArenaPlayerTournamentStatus.Eliminated:  statusLabel.text = "Eliminated"; break;
@@ -129,8 +131,9 @@ public class ArenaTournamentDetailPanelUI : MonoBehaviour
             rewardSummaryLabel.text = BuildRewardSummaryFromHistory(arena, tid);
         }
 
-        // Standings — only shown when completed
-        bool showStandings = status == ArenaPlayerTournamentStatus.Completed;
+        // Standings — shown for ongoing/finished tournaments, hidden only if not entered/registered.
+        bool showStandings = status != ArenaPlayerTournamentStatus.NotEntered
+                  && status != ArenaPlayerTournamentStatus.Registered;
         if (standingsGroup) standingsGroup.SetActive(showStandings);
         ClearStandings();
 
@@ -140,7 +143,13 @@ public class ArenaTournamentDetailPanelUI : MonoBehaviour
         if (record != null && !string.IsNullOrEmpty(playerEntryId))
         {
             PopulateMatchesFromRecord(record, playerEntryId);
-            if (showStandings) PopulateStandings(record, playerEntryId);
+            if (showStandings)
+            {
+                if (status == ArenaPlayerTournamentStatus.Completed)
+                    PopulateStandings(record, playerEntryId);
+                else
+                    PopulateLiveStandings(record, playerEntryId);
+            }
         }
         else
         {
@@ -273,6 +282,66 @@ public class ArenaTournamentDetailPanelUI : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Builds live standings for ongoing tournaments.
+    /// Entries still alive (eliminatedRoundIndex &lt; 0) appear at the top.
+    /// Eliminated entries are ordered by the round they reached, then arena score.
+    /// </summary>
+    private void PopulateLiveStandings(ArenaTournamentRecord record, string playerEntryId)
+    {
+        ClearStandings();
+        if (record == null || record.entries == null || record.entries.Count == 0)
+            return;
+
+        if (standingsGroup) standingsGroup.SetActive(true);
+
+        var sorted = new List<ArenaTournamentEntry>(record.entries);
+        sorted.Sort((a, b) =>
+        {
+            int aRound = a != null ? a.eliminatedRoundIndex : int.MinValue;
+            int bRound = b != null ? b.eliminatedRoundIndex : int.MinValue;
+
+            bool aAlive = aRound < 0;
+            bool bAlive = bRound < 0;
+            if (aAlive != bAlive)
+                return aAlive ? -1 : 1;
+
+            if (!aAlive && aRound != bRound)
+                return bRound.CompareTo(aRound); // Higher eliminated round ranks higher
+
+            int aScore = a != null ? a.arenaScore : 0;
+            int bScore = b != null ? b.arenaScore : 0;
+            int scoreCmp = bScore.CompareTo(aScore);
+            if (scoreCmp != 0) return scoreCmp;
+
+            string aName = a != null ? GetEntryDisplayName(a) : string.Empty;
+            string bName = b != null ? GetEntryDisplayName(b) : string.Empty;
+            return string.Compare(aName, bName, StringComparison.OrdinalIgnoreCase);
+        });
+
+        for (int i = 0; i < sorted.Count; i++)
+        {
+            var entry = sorted[i];
+            if (entry == null) continue;
+
+            bool isPlayer = string.Equals(entry.entryId, playerEntryId, StringComparison.Ordinal);
+            CreateStandingsRow(i + 1, GetEntryDisplayName(entry), entry.arenaScore, isPlayer);
+        }
+    }
+
+    private static string GetEntryDisplayName(ArenaTournamentEntry entry)
+    {
+        if (entry == null) return "Player";
+
+        if (entry.teamSnapshot != null && !string.IsNullOrEmpty(entry.teamSnapshot.ownerDisplayName))
+            return entry.teamSnapshot.ownerDisplayName;
+
+        if (!string.IsNullOrEmpty(entry.displayNameSnapshot))
+            return entry.displayNameSnapshot;
+
+        return entry.isBot ? "Bot" : "Player";
+    }
+
     private void CreateStandingsRow(int placement, string name, int score, bool highlight)
     {
         if (standingsEntryPrefabLabel == null || standingsListRoot == null) return;
@@ -280,8 +349,13 @@ public class ArenaTournamentDetailPanelUI : MonoBehaviour
         var label = Instantiate(standingsEntryPrefabLabel, standingsListRoot);
         label.text = $"{GetOrdinal(placement)}  {name}  ({score})";
 
-        if (highlight)
-            label.fontStyle = FontStyles.Bold;
+        if (placement <= 3)
+            label.color = TopThreeColor;
+
+        var style = FontStyles.Normal;
+        if (highlight || placement == 1)
+            style |= FontStyles.Bold;
+        label.fontStyle = style;
 
         _standingsRows.Add(label.gameObject);
     }

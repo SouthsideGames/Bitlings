@@ -153,6 +153,12 @@ public sealed class ArenaCurrentTournamentCache
 
     /// <summary>UTC epoch of the last time results were pulled / refreshed.</summary>
     public long resultsLastUpdatedUtc;
+
+    /// <summary>
+    /// Highest resolved round index the player has acknowledged by opening Arena.
+    /// Used for home-button alert badge state.
+    /// </summary>
+    public int lastViewedRoundIndex;
 }
 
 // ═══════════════════════════════════════════════════════════════════

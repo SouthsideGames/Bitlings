@@ -20,12 +20,14 @@ public static class CloudSaveSync
 {
     private const string ArenaDataKey = "arena_v1";
     private const float PushThrottleSeconds = 5f; // Only push once per 5 seconds
+    private const float NotReadyLogCooldownSeconds = 30f;
 
     /// <summary>True after at least one successful pull+merge.</summary>
     public static bool HasSynced { get; private set; }
 
     /// <summary>Timestamp of last successful push (in seconds, Time.realtimeSinceStartup).</summary>
     private static float _lastPushTimeRealtimeSecs = -PushThrottleSeconds;
+    private static float _lastNotReadyLogRealtimeSecs = -NotReadyLogCooldownSeconds;
 
     // ═════════════════════════════════════════════════════════════
     //  Push (local → cloud)
@@ -38,7 +40,8 @@ public static class CloudSaveSync
     /// </summary>
     public static async Task PushArenaDataAsync()
     {
-        if (!IsOnlineReady()) return;
+        // Save() can call this frequently; keep not-ready path silent to avoid log spam.
+        if (!IsOnlineReady(logIfNotReady: false)) return;
 
         // Throttle: skip if we pushed recently
         float now = Time.realtimeSinceStartup;
@@ -203,14 +206,38 @@ public static class CloudSaveSync
     //  Helpers
     // ═════════════════════════════════════════════════════════════
 
-    private static bool IsOnlineReady()
+    private static bool IsOnlineReady(bool logIfNotReady = true)
     {
-        if (UGSInitializer.I == null || !UGSInitializer.I.IsReady)
-        {
-            Debug.LogWarning("[CloudSaveSync] UGS not ready — skipping cloud operation.");
+        if (UGSInitializer.I != null && UGSInitializer.I.IsReady)
+            return true;
+
+        if (!logIfNotReady)
             return false;
+
+        // Rate-limit expected not-ready logs during startup/retry windows.
+        float now = Time.realtimeSinceStartup;
+        if (now - _lastNotReadyLogRealtimeSecs >= NotReadyLogCooldownSeconds)
+        {
+            _lastNotReadyLogRealtimeSecs = now;
+
+            string suffix = string.Empty;
+            if (UGSInitializer.I == null)
+            {
+                suffix = " (initializer missing).";
+            }
+            else if (UGSInitializer.I.IsInitializing)
+            {
+                suffix = " (initialization in progress).";
+            }
+            else if (!string.IsNullOrEmpty(UGSInitializer.I.LastError))
+            {
+                suffix = $" (last error: {UGSInitializer.I.LastError}).";
+            }
+
+            Debug.Log($"[CloudSaveSync] UGS not ready — skipping cloud operation{suffix}");
         }
-        return true;
+
+        return false;
     }
 
     /// <summary>

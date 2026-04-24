@@ -42,8 +42,6 @@ public class ArenaMainPanelUI : MonoBehaviour
     [SerializeField] private Button leaderboardButton;
     [SerializeField] private ArenaLeaderboardPanelUI leaderboardPanel;
 
-    [Header("Navigation")]
-    [SerializeField] private Button closeButton;
 
     [Header("Online")]
     [SerializeField] private GameObject offlineOverlay;
@@ -65,7 +63,6 @@ public class ArenaMainPanelUI : MonoBehaviour
         if (I != null && I != this) { Destroy(gameObject); return; }
         I = this;
 
-        ResolveCloseButtonIfMissing();
     }
 
     void OnEnable()
@@ -83,13 +80,16 @@ public class ArenaMainPanelUI : MonoBehaviour
         if (viewTournamentButton)  { viewTournamentButton.onClick.RemoveAllListeners();  viewTournamentButton.onClick.AddListener(HandleViewTournament); }
         if (retryConnectionButton) { retryConnectionButton.onClick.RemoveAllListeners(); retryConnectionButton.onClick.AddListener(HandleRetryConnection); }
         if (leaderboardButton)      { leaderboardButton.onClick.RemoveAllListeners();      leaderboardButton.onClick.AddListener(HandleOpenLeaderboard); }
-        if (closeButton)           { closeButton.onClick.RemoveAllListeners();           closeButton.onClick.AddListener(HandleClose); }
 
         // ── Week card callbacks ──
         if (weekCard) weekCard.Bind(HandleEnterTournament, HandleViewTournament);
 
         // ── Online check ──
         RefreshOfflineOverlay();
+
+        // Opening Arena acknowledges currently available round results.
+        if (ArenaSaveHelper.MarkArenaRoundResultsViewed(save: true))
+            GameEvents.ArenaDataChanged?.Invoke();
 
         if (!ArenaNetworkGuard.IsOnline)
         {
@@ -131,7 +131,6 @@ public class ArenaMainPanelUI : MonoBehaviour
         if (viewTournamentButton)  viewTournamentButton.onClick.RemoveListener(HandleViewTournament);
         if (retryConnectionButton) retryConnectionButton.onClick.RemoveListener(HandleRetryConnection);
         if (leaderboardButton)      leaderboardButton.onClick.RemoveListener(HandleOpenLeaderboard);
-        if (closeButton)           closeButton.onClick.RemoveListener(HandleClose);
     }
 
     void OnDestroy()
@@ -379,6 +378,7 @@ public class ArenaMainPanelUI : MonoBehaviour
             {
                 // Catch up on any available rounds
                 ArenaTournamentService.ResolveAvailableRounds();
+                ArenaSaveHelper.MarkArenaRoundResultsViewed(save: true);
                 RefreshAll();
             }
         }
@@ -386,11 +386,37 @@ public class ArenaMainPanelUI : MonoBehaviour
         {
             // Catch up on any rounds that became available since last open
             int resolved = ArenaTournamentService.ResolveAvailableRounds();
-            if (resolved > 0) RefreshAll();
+            if (resolved > 0)
+            {
+                ArenaSaveHelper.MarkArenaRoundResultsViewed(save: true);
+                RefreshAll();
+            }
         }
     }
 
     private void HandleViewTournament()
+    {
+        var arena = SaveManager.GetArenaSaveData();
+        var status = arena?.currentTournamentCache?.playerStatus ?? ArenaPlayerTournamentStatus.NotEntered;
+        if (status == ArenaPlayerTournamentStatus.Registered && ArenaNetworkGuard.IsOnline)
+        {
+            TryOpenTournamentDetailWithSync();
+            return;
+        }
+
+        OpenTournamentDetailPanel();
+    }
+
+    private async void TryOpenTournamentDetailWithSync()
+    {
+        var (synced, message) = await ArenaTournamentService.SyncBracketAsync();
+        if (!synced && !string.IsNullOrEmpty(message))
+            GameEvents.RaiseToast(message);
+
+        OpenTournamentDetailPanel();
+    }
+
+    private void OpenTournamentDetailPanel()
     {
         if (UIManager.I) UIManager.I.Show(PanelId.ArenaTournamentDetail);
 
@@ -401,16 +427,6 @@ public class ArenaMainPanelUI : MonoBehaviour
             if (detail != null)
             {
                 detail.ShowCurrent();
-
-                // Inject full record for match history & standings
-                var record = ArenaTournamentService.GetActiveRecord();
-                var arena = SaveManager.GetArenaSaveData();
-                string playerEntryId = arena?.currentTournamentCache?.playerEntryId;
-                if (record != null && !string.IsNullOrEmpty(playerEntryId))
-                {
-                    detail.PopulateMatchesFromRecord(record, playerEntryId);
-                    detail.PopulateStandings(record, playerEntryId);
-                }
             }
         }
     }
@@ -498,27 +514,6 @@ public class ArenaMainPanelUI : MonoBehaviour
         }
     }
 
-    private void ResolveCloseButtonIfMissing()
-    {
-        if (closeButton != null) return;
-
-        var buttons = GetComponentsInChildren<Button>(true);
-        for (int i = 0; i < buttons.Length; i++)
-        {
-            var button = buttons[i];
-            if (button == null) continue;
-
-            string n = button.name;
-            if (string.IsNullOrEmpty(n)) continue;
-
-            n = n.ToLowerInvariant();
-            if (n.Contains("close") || n.Contains("back"))
-            {
-                closeButton = button;
-                return;
-            }
-        }
-    }
 
     private static string GetOrdinal(int n)
     {

@@ -43,6 +43,7 @@ public sealed class GameEventAlertListener : MonoBehaviour, IPointerClickHandler
 
     [Header("Events")]
     [SerializeField] private AlertGameEvent listenFor = AlertGameEvent.FeatureUnlocked;
+    [SerializeField] private bool arenaDataOnlyWhenNewRoundReady;
 
     [Header("Dismiss")]
     [SerializeField] private bool dismissOnPointerClick = true;
@@ -72,6 +73,9 @@ public sealed class GameEventAlertListener : MonoBehaviour, IPointerClickHandler
     private void OnEnable()
     {
         ApplySubscriptions(true);
+
+        if ((listenFor & AlertGameEvent.ArenaDataChanged) != 0 && arenaDataOnlyWhenNewRoundReady)
+            SetAlertVisible(ArenaSaveHelper.ShouldShowArenaRoundAlert());
 
         if (dismissButton)
         {
@@ -237,5 +241,14 @@ public sealed class GameEventAlertListener : MonoBehaviour, IPointerClickHandler
 
     private void AddArenaDataChanged() => GameEvents.ArenaDataChanged += HandleArenaDataChanged;
     private void RemoveArenaDataChanged() => GameEvents.ArenaDataChanged -= HandleArenaDataChanged;
-    private void HandleArenaDataChanged() => TriggerAlert(nameof(GameEvents.ArenaDataChanged));
+    private void HandleArenaDataChanged()
+    {
+        if (arenaDataOnlyWhenNewRoundReady)
+        {
+            SetAlertVisible(ArenaSaveHelper.ShouldShowArenaRoundAlert());
+            return;
+        }
+
+        TriggerAlert(nameof(GameEvents.ArenaDataChanged));
+    }
 }

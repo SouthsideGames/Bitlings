@@ -273,7 +273,10 @@ public class ArenaMatchDetailPanelUI : MonoBehaviour
 
     private void HandleClose()
     {
-        if (UIManager.I) UIManager.I.Hide(PanelId.ArenaMatchDetail);
+        if (!UIManager.I) return;
+
+        UIManager.I.Hide(PanelId.ArenaMatchDetail);
+        UIManager.I.Show(PanelId.ArenaTournamentDetail);
     }
 
     private static string FormatTimestamp(long unixUtc)

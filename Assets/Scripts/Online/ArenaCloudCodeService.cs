@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Newtonsoft.Json.Linq;
 using Unity.Services.CloudCode;
 using UnityEngine;
 
@@ -169,6 +170,8 @@ public static class ArenaCloudCodeService
     /// <summary>
     /// Asks the server for the player's bracket assignment for the given week.
     /// If brackets haven't been built yet and it's past lock time, the server builds them lazily.
+    /// Uses JObject deserialization to bypass the UGS SDK GetAs&lt;T&gt;() string-roundtrip that
+    /// can throw a JsonReaderException for complex nested response types.
     /// </summary>
     public static async Task<BracketResult> GetTournamentBracketAsync(string weekId)
     {
@@ -178,18 +181,31 @@ public static class ArenaCloudCodeService
         try
         {
             var args = new Dictionary<string, object> { { "weekId", weekId } };
-            var response = await CloudCodeService.Instance.CallModuleEndpointAsync<BracketResponse>(
+
+            // Use JObject to bypass the UGS SDK's GetAs<T>() string-roundtrip, which can
+            // produce a JsonReaderException for complex nested response types.
+            var raw = await CloudCodeService.Instance.CallModuleEndpointAsync<JObject>(
                 "ArenaModule", "GetTournamentBracket", args);
 
-            if (!response.assigned)
-                return new BracketResult { assigned = false, reason = response.reason };
+            if (raw == null)
+                return new BracketResult { assigned = false, reason = "Empty response from server." };
 
-            return new BracketResult
-            {
-                assigned = true,
-                entryId = response.entryId,
-                bracket = response.bracket
-            };
+            bool assigned = raw.Value<bool>("assigned");
+            if (!assigned)
+                return new BracketResult { assigned = false, reason = raw.Value<string>("reason") };
+
+            string entryId = raw.Value<string>("entryId");
+            JToken bracketToken = raw["bracket"];
+
+            if (bracketToken == null || bracketToken.Type == JTokenType.Null)
+                return new BracketResult { assigned = false, reason = "No bracket data in response." };
+
+            // JToken.ToObject<T>() converts directly from the token without a string roundtrip.
+            var bracket = bracketToken.ToObject<BracketData>();
+            if (bracket == null)
+                return new BracketResult { assigned = false, reason = "Failed to parse bracket data." };
+
+            return new BracketResult { assigned = true, entryId = entryId, bracket = bracket };
         }
         catch (CloudCodeException ex)
         {
@@ -198,17 +214,8 @@ public static class ArenaCloudCodeService
         }
         catch (Exception ex)
         {
-            Debug.LogWarning($"[ArenaCloudCodeService] GetTournamentBracket unexpected: {ex.Message}");
+            Debug.LogWarning($"[ArenaCloudCodeService] GetTournamentBracket unexpected ({ex.GetType().Name}): {ex.Message}");
             return new BracketResult { assigned = false, reason = "Something went wrong." };
         }
-    }
-
-    [Serializable]
-    private class BracketResponse
-    {
-        public bool assigned;
-        public string reason;
-        public string entryId;
-        public BracketData bracket;
     }
 }

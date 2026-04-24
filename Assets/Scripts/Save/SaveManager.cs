@@ -254,8 +254,8 @@ public static class SaveManager
 #endif
             WriteSaveSafely(json, "Save");
 
-            // Push arena data to cloud if UGS is online (fire-and-forget).
-            if (CloudSaveSync.HasSynced)
+            // Push arena data to cloud only when UGS is ready (fire-and-forget).
+            if (CloudSaveSync.HasSynced && UGSInitializer.I != null && UGSInitializer.I.IsReady)
                 _ = CloudSaveSync.PushArenaDataAsync();
         }
         catch (Exception e)
