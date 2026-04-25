@@ -22,7 +22,7 @@ public struct TitleProcEvent
 // ─────────────────────────────────────────────────────────────
 // Shared types
 // ─────────────────────────────────────────────────────────────
-public enum LogScope { System, Encounter, Battle }
+public enum LogScope { System, Rift, Battle }
 
 [Serializable]
 public struct LogEntry
@@ -182,8 +182,8 @@ public static class BattleLogger
 
     public static event Action<string> OnBattleBegan;
     public static event Action<bool>   OnBattleEnded;
-    public static event Action<string> OnEncounterBegan;
-    public static event Action<bool>   OnEncounterEnded;
+    public static event Action<string> OnRiftBegan;
+    public static event Action<bool>   OnRiftEnded;
     public static event Action         OnLogCleared;
 
     // Fired whenever a Title proc happens (UI toast / side panel / etc.)
@@ -194,7 +194,7 @@ public static class BattleLogger
 
     static readonly List<LogEntry> _entries = new List<LogEntry>(512);
     static string _currentBattleLabel;
-    static string _currentEncounterLabel;
+    static string _currentRiftLabel;
     static readonly List<string> _playerCombatantNames = new List<string>(8);
     static readonly List<string> _enemyCombatantNames = new List<string>(8);
 
@@ -240,7 +240,7 @@ public static class BattleLogger
     // Global toggle (use for Manual vs Auto battle)
     public static bool Enabled { get; private set; } = true;
 
-    // Optional: cap stored lines to avoid unbounded growth across many encounters
+    // Optional: cap stored lines to avoid unbounded growth across many rifts
     public static int MaxEntries { get; private set; } = 800;
 
     // EXACT string you said you don't want shown unless Auto is unlocked
@@ -301,7 +301,7 @@ public static class BattleLogger
     }
 
     // ─────────────────────────────────────────────────────────
-    // Battle / Encounter lifecycle
+    // Battle / Rift lifecycle
     // ─────────────────────────────────────────────────────────
     public static void BeginBattle(string label)
     {
@@ -326,16 +326,16 @@ public static class BattleLogger
         // Keep seed values for diagnostics even after battle ends.
     }
 
-    public static void BeginEncounter(string label)
+    public static void BeginRift(string label)
     {
-        _currentEncounterLabel = string.IsNullOrEmpty(label) ? "Encounter" : label;
-        OnEncounterBegan?.Invoke(_currentEncounterLabel);
+        _currentRiftLabel = string.IsNullOrEmpty(label) ? "Rift" : label;
+        OnRiftBegan?.Invoke(_currentRiftLabel);
     }
 
-    public static void EndEncounter(bool victory)
+    public static void EndRift(bool victory)
     {
-        OnEncounterEnded?.Invoke(victory);
-        _currentEncounterLabel = null;
+        OnRiftEnded?.Invoke(victory);
+        _currentRiftLabel = null;
     }
 
     public static void SetCombatants(IReadOnlyList<string> playerNames, IReadOnlyList<string> enemyNames)
@@ -372,7 +372,7 @@ public static class BattleLogger
             unix        = NowUnix(),
             scope       = scope,
             text        = rendered,
-            battleLabel = _currentBattleLabel ?? _currentEncounterLabel
+            battleLabel = _currentBattleLabel ?? _currentRiftLabel
         };
 
         _entries.Add(e);
@@ -520,7 +520,7 @@ public static class BattleLogger
         string rolledTitleName,
         bool forced,
         bool didRoll,
-        LogScope scope = LogScope.Encounter)
+        LogScope scope = LogScope.Rift)
     {
         if (string.IsNullOrEmpty(ownerName)) ownerName = "Wild";
 
@@ -762,8 +762,8 @@ public static void LogTitleConditionChanged(string ownerName, string titleName, 
         if (type != LogType.Exception && type != LogType.Error && type != LogType.Assert)
             return;
 
-        // Only dump if a battle or encounter is active.
-        if (string.IsNullOrEmpty(_currentBattleLabel) && string.IsNullOrEmpty(_currentEncounterLabel))
+        // Only dump if a battle or rift is active.
+        if (string.IsNullOrEmpty(_currentBattleLabel) && string.IsNullOrEmpty(_currentRiftLabel))
             return;
 
         if (_dumping) return;
@@ -785,7 +785,7 @@ public static void LogTitleConditionChanged(string ownerName, string titleName, 
         sb.AppendLine("=== BITLINGS COMBAT SNAPSHOT ===");
         if (!string.IsNullOrEmpty(context)) sb.AppendLine($"Context: {context}");
         if (!string.IsNullOrEmpty(_currentBattleLabel)) sb.AppendLine($"Battle: {_currentBattleLabel}");
-        if (!string.IsNullOrEmpty(_currentEncounterLabel)) sb.AppendLine($"Encounter: {_currentEncounterLabel}");
+        if (!string.IsNullOrEmpty(_currentRiftLabel)) sb.AppendLine($"Rift: {_currentRiftLabel}");
         if (CurrentBattleSeed != 0)
         {
             sb.AppendLine($"BattleSeed: {CurrentBattleSeed}" + (string.IsNullOrEmpty(CurrentBattleSeedLabel) ? "" : $" ({CurrentBattleSeedLabel})"));

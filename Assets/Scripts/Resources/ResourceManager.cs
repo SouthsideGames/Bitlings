@@ -9,7 +9,7 @@ public enum ResourceType
     None = 0, Credits = 1, Energy = 2, Medkit = 3, Material = 4,
     PPEPermit = 5, Flyer = 6, WorkOrder = 7, Favor = 8,
     TrainingVoucher = 9, WellnessVoucher = 10, EfficiencyVoucher = 11, PremiumOrb = 12, BlessingScale = 13, Coffee = 14, GrowthCore = 16, PackVoucher = 17,
-    BullToken = 18, BearToken = 19
+    BullToken = 18, BearToken = 19, ArenaTicket = 20
 }
 
 public class ResourceManager : MonoBehaviour

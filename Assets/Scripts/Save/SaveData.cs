@@ -18,6 +18,16 @@ public sealed class SaveData
     public TutorialSaveSection tutorialData = new TutorialSaveSection();
     public TitleSystemSaveSection titleData = new TitleSystemSaveSection();
     public JobRuntimeSystemSaveSection jobRuntimeData = new JobRuntimeSystemSaveSection();
+    public ArenaSaveSection arenaData = new ArenaSaveSection();
+}
+
+/// <summary>
+/// Save section for the BRN Arena system. Follows the same pattern as other save sections.
+/// </summary>
+[Serializable]
+public sealed class ArenaSaveSection
+{
+    public ArenaSaveData arena = new ArenaSaveData();
 }
 
 [Serializable]
@@ -45,10 +55,10 @@ public sealed class PlayerSaveSection
     public int creditGainLevel;
     public int offlineLevel;
     public int winStreak;
-    public int encounterPoints;
-    public int encounterMax = 50;
-    public int encounterCost = 1;
-    public int lastEncounterResetYMD;
+    public int riftPoints;
+    public int riftMax = 50;
+    public int riftCost = 1;
+    public int lastRiftResetYMD;
     public int dailyBonusDay = 1;
     public int lastDailyClaimDayIndex = -1;
     public int cheatInvalidAttempts;
@@ -64,7 +74,7 @@ public sealed class PlayerSaveSection
     public long jobsOfflineLastUnix;
     public long energyLastUnix;
     public float energyRemainderSecs;
-    public int encountersSinceBoss;
+    public int riftsSinceBoss;
     public int bossEveryN = 10;
     public string lastBossId;
     public int promotionRank = 1;
@@ -193,10 +203,10 @@ public static class SaveDataMapper
                 creditGainLevel = data.creditGainLevel,
                 offlineLevel = data.offlineLevel,
                 winStreak = data.winStreak,
-                encounterPoints = data.encounterPoints,
-                encounterMax = data.encounterMax,
-                encounterCost = data.encounterCost,
-                lastEncounterResetYMD = data.lastEncounterResetYMD,
+                riftPoints = data.riftPoints,
+                riftMax = data.riftMax,
+                riftCost = data.riftCost,
+                lastRiftResetYMD = data.lastRiftResetYMD,
                 dailyBonusDay = data.dailyBonusDay,
                 lastDailyClaimDayIndex = data.lastDailyClaimDayIndex,
                 cheatInvalidAttempts = data.cheatInvalidAttempts,
@@ -212,7 +222,7 @@ public static class SaveDataMapper
                 jobsOfflineLastUnix = data.jobsOfflineLastUnix,
                 energyLastUnix = data.energyLastUnix,
                 energyRemainderSecs = data.energyRemainderSecs,
-                encountersSinceBoss = data.encountersSinceBoss,
+                riftsSinceBoss = data.riftsSinceBoss,
                 bossEveryN = data.bossEveryN,
                 lastBossId = data.lastBossId,
                 promotionRank = data.promotionRank,
@@ -327,10 +337,10 @@ public static class SaveDataMapper
             creditGainLevel = player.creditGainLevel,
             offlineLevel = player.offlineLevel,
             winStreak = player.winStreak,
-            encounterPoints = player.encounterPoints,
-            encounterMax = player.encounterMax,
-            encounterCost = player.encounterCost,
-            lastEncounterResetYMD = player.lastEncounterResetYMD,
+            riftPoints = player.riftPoints,
+            riftMax = player.riftMax,
+            riftCost = player.riftCost,
+            lastRiftResetYMD = player.lastRiftResetYMD,
             dailyBonusDay = player.dailyBonusDay,
             lastDailyClaimDayIndex = player.lastDailyClaimDayIndex,
             cheatInvalidAttempts = player.cheatInvalidAttempts,
@@ -346,7 +356,7 @@ public static class SaveDataMapper
             jobsOfflineLastUnix = player.jobsOfflineLastUnix,
             energyLastUnix = player.energyLastUnix,
             energyRemainderSecs = player.energyRemainderSecs,
-            encountersSinceBoss = player.encountersSinceBoss,
+            riftsSinceBoss = player.riftsSinceBoss,
             bossEveryN = player.bossEveryN,
             lastBossId = player.lastBossId,
             promotionRank = player.promotionRank,
@@ -406,5 +416,10 @@ public static class SaveDataMapper
     public static ExchangeSaveData GetExchange(SaveData saveData)
     {
         return saveData?.exchangeData?.exchangeState;
+    }
+
+    public static ArenaSaveData GetArena(SaveData saveData)
+    {
+        return saveData?.arenaData?.arena;
     }
 }

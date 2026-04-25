@@ -15,7 +15,7 @@ public class WyrmDenUI : MonoBehaviour
     [SerializeField] private TextMeshProUGUI favorTimerText;
 
     [Header("Effect")]
-    [Tooltip("0..1 where 0.25 = +25% increased encounter odds while active.")]
+    [Tooltip("0..1 where 0.25 = +25% increased rift odds while active.")]
     [SerializeField, Range(0f, 1f)] private float bonus = 0.25f;
     [SerializeField, Min(1)] private int durationHours = 2;
     [SerializeField] private bool consumeFavorItem = true;

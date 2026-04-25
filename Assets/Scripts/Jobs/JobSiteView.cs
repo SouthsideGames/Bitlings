@@ -19,6 +19,9 @@ public class JobSiteView : MonoBehaviour
     [Header("Controls")]
     [SerializeField] private Toggle allowReliefToggle;
 
+    [Header("Live Refresh")]
+    [SerializeField, Min(0.1f)] private float liveRefreshSeconds = 1f;
+
     [Header("Slot 1")]
     [SerializeField] private CanvasGroup slot1Group;
     [SerializeField] private TextMeshProUGUI slot1CDText;
@@ -34,6 +37,7 @@ public class JobSiteView : MonoBehaviour
     public JobType Site => site;
 
     private Coroutine _refreshCR;
+    private float _liveRefreshTimer;
 
     void Awake()
     {
@@ -57,12 +61,25 @@ public class JobSiteView : MonoBehaviour
 
     void OnEnable()
     {
+        _liveRefreshTimer = 0f;
+
         GameEvents.OnJobsChanged += Refresh;
         GameEvents.WorldEventsChanged += Refresh;
 
         // Boot-order safety: SaveManager/JobManager might not be ready on the same frame.
         if (_refreshCR != null) StopCoroutine(_refreshCR);
         _refreshCR = StartCoroutine(RefreshNextFrame());
+    }
+
+    void Update()
+    {
+        // Keep cooldown/ETA labels current even when no jobs event is fired.
+        _liveRefreshTimer += Time.unscaledDeltaTime;
+        if (_liveRefreshTimer < liveRefreshSeconds)
+            return;
+
+        _liveRefreshTimer = 0f;
+        Refresh();
     }
 
     void OnDisable()

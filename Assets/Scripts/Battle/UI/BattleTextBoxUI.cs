@@ -21,6 +21,12 @@ public class BattleTextBoxUI : MonoBehaviour
     [SerializeField] private float typeSecondsPerChar = 0.02f;
     [SerializeField] private float lineHoldSeconds = 0.25f;
 
+    [Header("Typewriter SFX")]
+    [Tooltip("Play a sound tick every N visible characters (0 = disabled).")]
+    [SerializeField] private int typewriterSfxCharInterval = 2;
+    [SerializeField] private float typewriterPitchMin = 0.92f;
+    [SerializeField] private float typewriterPitchMax = 1.08f;
+
     [Header("Render Override")]
     [SerializeField] private bool forceTopCanvasSorting = true;
     [SerializeField] private int topCanvasSortingOrder = 5000;
@@ -34,32 +40,32 @@ public class BattleTextBoxUI : MonoBehaviour
 
     public bool HasRenderableTarget => lineText != null;
 
-    private EncounterManager _hookedEncounter;
+    private RiftManager _hookedRift;
 
     private void Awake()
     {
         AutoWireIfNeeded();
-        RefreshEncounterHook();
+        RefreshRiftHook();
         ApplyRegularBattleIdleVisibility();
     }
 
     private void OnEnable()
     {
         AutoWireIfNeeded();
-        RefreshEncounterHook();
+        RefreshRiftHook();
         ApplyRegularBattleIdleVisibility();
     }
 
     private void OnDisable()
     {
-        UnhookEncounterState();
+        UnhookRiftState();
     }
 
     private void LateUpdate()
     {
-        if (_hookedEncounter != EncounterManager.I)
+        if (_hookedRift != RiftManager.I)
         {
-            RefreshEncounterHook();
+            RefreshRiftHook();
             ApplyRegularBattleIdleVisibility();
         }
     }
@@ -75,27 +81,27 @@ public class BattleTextBoxUI : MonoBehaviour
         EnsureTopCanvasSorting();
     }
 
-    private void RefreshEncounterHook()
+    private void RefreshRiftHook()
     {
-        var em = EncounterManager.I;
-        if (_hookedEncounter == em) return;
+        var em = RiftManager.I;
+        if (_hookedRift == em) return;
 
-        UnhookEncounterState();
+        UnhookRiftState();
 
-        _hookedEncounter = em;
-        if (_hookedEncounter != null)
-            _hookedEncounter.OnStateChanged += HandleEncounterStateChanged;
+        _hookedRift = em;
+        if (_hookedRift != null)
+            _hookedRift.OnStateChanged += HandleRiftStateChanged;
     }
 
-    private void UnhookEncounterState()
+    private void UnhookRiftState()
     {
-        if (_hookedEncounter != null)
-            _hookedEncounter.OnStateChanged -= HandleEncounterStateChanged;
+        if (_hookedRift != null)
+            _hookedRift.OnStateChanged -= HandleRiftStateChanged;
 
-        _hookedEncounter = null;
+        _hookedRift = null;
     }
 
-    private void HandleEncounterStateChanged()
+    private void HandleRiftStateChanged()
     {
         ApplyRegularBattleIdleVisibility();
     }
@@ -104,14 +110,14 @@ public class BattleTextBoxUI : MonoBehaviour
     {
         if (canvasGroup == null) return;
 
-        // In Iron Career we always keep the battle text box visible and skip encounter-based visibility.
+        // In Iron Career we always keep the battle text box visible and skip rift-based visibility.
         if (IronCareerRuntime.IsActive)
         {
             canvasGroup.alpha = 1f;
             return;
         }
 
-        var em = EncounterManager.I;
+        var em = RiftManager.I;
         if (em == null) return;
     }
 
@@ -170,24 +176,28 @@ public class BattleTextBoxUI : MonoBehaviour
 
         if (showIcons)
         {
-            if (critIcon)   critIcon.enabled   = (line.tags & BattleLineTag.Crit) != 0;
-            if (shieldIcon) shieldIcon.enabled = (line.tags & BattleLineTag.Shield) != 0;
+            bool showCrit = (line.tags & BattleLineTag.Crit) != 0;
+            bool showShield = (line.tags & BattleLineTag.Shield) != 0;
+            SetIconVisible(critIcon, showCrit);
+            SetIconVisible(shieldIcon, showShield);
 
             bool se  = (line.tags & BattleLineTag.SuperEffective) != 0;
             bool nve = (line.tags & BattleLineTag.NotEffective) != 0;
+            bool showEffect = se || nve;
 
             if (effectiveIcon)
             {
-                effectiveIcon.enabled = se || nve;
                 if (se && superEffectiveSprite) effectiveIcon.sprite = superEffectiveSprite;
                 else if (nve && notEffectiveSprite) effectiveIcon.sprite = notEffectiveSprite;
             }
+
+            SetIconVisible(effectiveIcon, showEffect);
         }
         else
         {
-            if (critIcon) critIcon.enabled = false;
-            if (shieldIcon) shieldIcon.enabled = false;
-            if (effectiveIcon) effectiveIcon.enabled = false;
+            SetIconVisible(critIcon, false);
+            SetIconVisible(shieldIcon, false);
+            SetIconVisible(effectiveIcon, false);
         }
 
         if (showIcons)
@@ -201,7 +211,7 @@ public class BattleTextBoxUI : MonoBehaviour
         lineText.text = full;
         lineText.maxVisibleCharacters = 0;
 
-        bool isAuto = (EncounterManager.I != null && EncounterManager.I.IsAutoMode);
+        bool isAuto = (RiftManager.I != null && RiftManager.I.IsAutoMode);
         bool compressAuto = isAuto && (SettingsManager.I == null || SettingsManager.I.GetCompressAutoBattleText());
 
         float cps = Mathf.Max(0.001f, typeSecondsPerChar);
@@ -238,6 +248,13 @@ public class BattleTextBoxUI : MonoBehaviour
                     yield return null;
 
                 lineText.maxVisibleCharacters = visible;
+
+                if (typewriterSfxCharInterval > 0 && visible % typewriterSfxCharInterval == 0)
+                {
+                    float pitch = Random.Range(typewriterPitchMin, typewriterPitchMax);
+                    AudioManager.I?.PlaySfx(SfxType.Typewriter, pitch, 1f);
+                }
+
                 next += perChar;
             }
         }
@@ -292,5 +309,23 @@ public class BattleTextBoxUI : MonoBehaviour
                     .setEaseOutQuad()
                     .setIgnoreTimeScale(true);
             });
+    }
+
+    private void SetIconVisible(Image icon, bool visible)
+    {
+        if (!icon) return;
+
+        if (icon.gameObject.activeSelf != visible)
+            icon.gameObject.SetActive(visible);
+
+        icon.enabled = visible;
+
+        if (visible)
+        {
+            var c = icon.color;
+            c.a = 1f;
+            icon.color = c;
+            icon.canvasRenderer.SetAlpha(1f);
+        }
     }
 }

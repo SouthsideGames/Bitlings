@@ -35,7 +35,7 @@ public class BattleSpeedToggleUI : MonoBehaviour
 
     void OnEnable()
     {
-        GameEvents.OnEncounterAutoModeChanged += HandleAutoModeChanged;
+        GameEvents.OnRiftAutoModeChanged += HandleAutoModeChanged;
 
 
         GameEvents.FeatureUnlocked += HandleFeatureUnlocked;
@@ -46,13 +46,13 @@ public class BattleSpeedToggleUI : MonoBehaviour
 
     void OnDisable()
     {
-        GameEvents.OnEncounterAutoModeChanged -= HandleAutoModeChanged;
+        GameEvents.OnRiftAutoModeChanged -= HandleAutoModeChanged;
         GameEvents.FeatureUnlocked -= HandleFeatureUnlocked;
     }
 
     private void HandleAutoModeChanged()
     {
-        bool isAuto = (EncounterManager.I != null) && EncounterManager.I.IsAutoMode;
+        bool isAuto = (RiftManager.I != null) && RiftManager.I.IsAutoMode;
         SetAutoMode(isAuto);
 
         // NEW: auto mode impacts visibility too
@@ -70,10 +70,10 @@ public class BattleSpeedToggleUI : MonoBehaviour
     private void RefreshVisibility()
     {
         // Use the idle-battle store as the authoritative "are we actually idle battling" check.
-        // EncounterManager.IsAutoMode can be stale (e.g. still true when the encounter panel
+        // RiftManager.IsAutoMode can be stale (e.g. still true when the rift panel
         // opens after idle battles ended), causing the button to flash before any battle starts.
         // IdleBattleStore.autoBattling is updated by IdleBattleManager before
-        // OnEncounterAutoModeChanged fires, so this read is always current.
+        // OnRiftAutoModeChanged fires, so this read is always current.
         bool isIdleBattleRunning = IdleBattleStore.Load()?.autoBattling == true;
 
         bool unlocked =

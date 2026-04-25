@@ -37,9 +37,9 @@ public static class IronNoBleedHarness
         public int promotionRank;
         public int promotionXP;
         public int winStreak;
-        public int encounterPoints;
-        public int encounterMax;
-        public int encounterCost;
+        public int riftPoints;
+        public int riftMax;
+        public int riftCost;
         public long energyLastUnix;
         public float energyRemainderSecs;
     }
@@ -125,9 +125,9 @@ public static class IronNoBleedHarness
                 promotionRank = 0,
                 promotionXP = 0,
                 winStreak = 0,
-                encounterPoints = 0,
-                encounterMax = 0,
-                encounterCost = 0,
+                riftPoints = 0,
+                riftMax = 0,
+                riftCost = 0,
                 energyLastUnix = 0,
                 energyRemainderSecs = 0f
             };
@@ -149,7 +149,7 @@ public static class IronNoBleedHarness
         int creditsCopy = 0;
 
         // promotionRank/XP also must not change during Iron; DO NOT normalize.
-        // encounter points and related fields should not change during Iron; DO NOT normalize.
+        // rift points and related fields should not change during Iron; DO NOT normalize.
 
         // Energy can legitimately tick on resume; choose whether to normalize.
         // If energy ticking during Iron is acceptable (common on mobile), normalize it.
@@ -167,9 +167,9 @@ public static class IronNoBleedHarness
             promotionRank = p.promotionRank,
             promotionXP = p.promotionXP,
             winStreak = p.winStreak,
-            encounterPoints = p.encounterPoints,
-            encounterMax = p.encounterMax,
-            encounterCost = p.encounterCost,
+            riftPoints = p.riftPoints,
+            riftMax = p.riftMax,
+            riftCost = p.riftCost,
 
             energyLastUnix = energyLastUnix,
             energyRemainderSecs = energyRemainderSecs,

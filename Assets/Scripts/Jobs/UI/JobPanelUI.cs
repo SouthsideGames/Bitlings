@@ -177,6 +177,11 @@ public class JobPanelUI : MonoBehaviour
                 t.collectBtn.onClick.AddListener(() =>
                 {
                     int got = JobManager.I.Collect(t.job);
+                    if (got > 0)
+                    {
+                        ResourceType outType = JobOutput.Output(t.job);
+                        ResourceFlyAnimationUI.PlayToHome(outType, got, t.collectBtn.transform);
+                    }
                     AudioManager.I?.PlaySfx(SfxType.Collect);
                     PlayCollectFX(t);
                     Refresh();

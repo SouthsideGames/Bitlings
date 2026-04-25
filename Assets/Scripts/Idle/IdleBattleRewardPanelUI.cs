@@ -97,7 +97,7 @@ public class IdleBattleRewardPanelUI : MonoBehaviour
             titleText.text = string.IsNullOrEmpty(titleOverride) ? "While You Were Away…" : titleOverride;
 
         if (totalBattlesText)
-            totalBattlesText.text = $"Bitlings Battled: {(summary != null ? summary.totalEncounters : 0)}";
+            totalBattlesText.text = $"Bitlings Battled: {(summary != null ? summary.totalRifts : 0)}";
 
         if (totalCreditsText)
             totalCreditsText.text = $"Credits: {(summary != null ? summary.totalcredits : 0):N0}";
@@ -185,7 +185,7 @@ public class IdleBattleRewardPanelUI : MonoBehaviour
         capturedSectionRoot.SetActive(captureUnlocked && hasCaptures);
     }
 
-    private void PopulateEncounteredList(List<IdleEncounterLogEntry> log)
+    private void PopulateEncounteredList(List<IdleRiftLogEntry> log)
     {
         if (log == null || log.Count == 0 || encounteredItemPrefab == null || encounteredListContent == null)
             return;
@@ -220,7 +220,7 @@ public class IdleBattleRewardPanelUI : MonoBehaviour
         if (encounteredScrollRect) encounteredScrollRect.verticalNormalizedPosition = 1f;
     }
 
-    private void PopulateCapturedList(List<IdleEncounterLogEntry> log)
+    private void PopulateCapturedList(List<IdleRiftLogEntry> log)
     {
         if (log == null || log.Count == 0 || capturedItemPrefab == null || capturedListContent == null)
             return;

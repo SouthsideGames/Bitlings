@@ -4,7 +4,7 @@ using UnityEngine.UI;
 
 // ─────────────────────────────────────────────────────────────
 // BattleManager.Backgrounds
-// Background assignment, transitions, and encounter-scene visuals.
+// Background assignment, transitions, and rift-scene visuals.
 // ─────────────────────────────────────────────────────────────
 
 public partial class BattleManager : MonoBehaviour

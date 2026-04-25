@@ -28,12 +28,12 @@ public sealed class IronCareerRecordsPanelUI : MonoBehaviour
     [Header("Buttons")]
     [SerializeField] private Button closeButton;
 
-    private IronCareerEncounterPanelUI _ironUI;
+    private IronCareerRiftPanelUI _ironUI;
 
     private void Awake()
     {
-        _ironUI = IronCareerEncounterPanelUI.I;
-        if (!_ironUI) _ironUI = FindFirstObjectByType<IronCareerEncounterPanelUI>(FindObjectsInactive.Include);
+        _ironUI = IronCareerRiftPanelUI.I;
+        if (!_ironUI) _ironUI = FindFirstObjectByType<IronCareerRiftPanelUI>(FindObjectsInactive.Include);
 
         if (closeButton) closeButton.onClick.AddListener(Close);
     }
@@ -111,8 +111,8 @@ public sealed class IronCareerRecordsPanelUI : MonoBehaviour
     {
         if (!_ironUI)
         {
-            _ironUI = IronCareerEncounterPanelUI.I;
-            if (!_ironUI) _ironUI = FindFirstObjectByType<IronCareerEncounterPanelUI>(FindObjectsInactive.Include);
+            _ironUI = IronCareerRiftPanelUI.I;
+            if (!_ironUI) _ironUI = FindFirstObjectByType<IronCareerRiftPanelUI>(FindObjectsInactive.Include);
         }
 
         if (_ironUI)

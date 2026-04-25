@@ -19,7 +19,7 @@ public struct TitleContext
     /// <summary>How many allies are alive (excluding self) for conditional checks.</summary>
     public int alliesAlive;
 
-    /// <summary>Current encounter win streak (0 if none/unknown).</summary>
+    /// <summary>Current rift win streak (0 if none/unknown).</summary>
     public int winStreak;
 
     /// <summary>

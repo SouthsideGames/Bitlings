@@ -14,7 +14,7 @@ public class AutoBattleUIStateBinder : MonoBehaviour
         GameEvents.AutoBattleModeChanged += HandleAutoModeChanged;
 
         // Initial sync (in case UI is enabled mid-state)
-        bool isAuto = (EncounterManager.I != null) && EncounterManager.I.IsAutoMode;
+        bool isAuto = (RiftManager.I != null) && RiftManager.I.IsAutoMode;
         Apply(isAuto);
     }
 

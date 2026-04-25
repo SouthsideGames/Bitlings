@@ -9,7 +9,7 @@ public class IdleBattleManager : MonoBehaviour
     public static IdleBattleManager I { get; private set; }
 
     [SerializeField] private IdleBattleRewardPanelUI rewardPanel;
-    [SerializeField] private EncounterManager encounterManager;
+    [SerializeField] private RiftManager riftManager;
 
     private IdleBattleConfigSO config;
 
@@ -45,7 +45,7 @@ public class IdleBattleManager : MonoBehaviour
     {
         if (!IsIdleBattleUnlocked()) return;
 
-        // Encounter auto toggle is the user's intent.
+        // Rift auto toggle is the user's intent.
         if (isAuto) EnableAuto();
         else DisableAuto();
     }
@@ -57,15 +57,15 @@ public class IdleBattleManager : MonoBehaviour
         if (!IsOfflineCaptureUnlocked()) return;
 
         // Only record captures during foreground auto (player chose AUTO).
-        if (!IsEncounterAutoModeActive()) return;
+        if (!IsRiftAutoModeActive()) return;
         if (string.IsNullOrEmpty(monsterId)) return;
 
         var s = IdleBattleStore.Load();
         if (s == null) return;
 
-        s.capturedLog ??= new List<IdleEncounterLogEntry>();
+        s.capturedLog ??= new List<IdleRiftLogEntry>();
         AddToLogMerged(s.capturedLog, monsterId, credits: 0, premium: false);
-        TrimLog(s.capturedLog, config != null ? config.encounterLogMaxEntries : 50);
+        TrimLog(s.capturedLog, config != null ? config.riftLogMaxEntries : 50);
 
         TrySetBoolFieldIfPresent(s, "hasPendingSummary", true);
         IdleBattleStore.Save(s);
@@ -80,12 +80,12 @@ public class IdleBattleManager : MonoBehaviour
         var s = IdleBattleStore.Load();
         if (s == null) return;
 
-        if (!IsEncounterAutoModeActive()) return;
+        if (!IsRiftAutoModeActive()) return;
 
         if (r.wildDef == null || string.IsNullOrEmpty(r.wildDef.id)) return;
 
         AddToLogMerged(s.log, r.wildDef.id, r.creditsGained, premium: false);
-        TrimLog(s.log, config != null ? config.encounterLogMaxEntries : 50);
+        TrimLog(s.log, config != null ? config.riftLogMaxEntries : 50);
 
         try
         {
@@ -99,11 +99,11 @@ public class IdleBattleManager : MonoBehaviour
         IdleBattleStore.Save(s);
     }
 
-    private bool IsEncounterAutoModeActive()
+    private bool IsRiftAutoModeActive()
     {
         try
         {
-            var em = encounterManager != null ? encounterManager : EncounterManager.I;
+            var em = riftManager != null ? riftManager : RiftManager.I;
             return em != null && em.IsAutoMode;
         }
         catch { }
@@ -158,7 +158,7 @@ public class IdleBattleManager : MonoBehaviour
 
             // Offline simulation should only run if the player left AUTO/idle battling ON.
             // If AUTO was turned off before closing the app, we must not consume energy
-            // or run encounters on next boot.
+            // or run rifts on next boot.
             var s = IdleBattleStore.Load();
             if (s != null && s.autoBattling)
                 ResolveOfflineIfAny();
@@ -326,18 +326,18 @@ public class IdleBattleManager : MonoBehaviour
 if (elapsed <= 0.1f) return;
 
         float clamped = Mathf.Min(elapsed, config.maxOfflineHours * 3600f);
-        float safeSpe = Mathf.Max(0.25f, config.secondsPerEncounter);
+        float safeSpe = Mathf.Max(0.25f, config.secondsPerRift);
         int timeEnc = Mathf.FloorToInt(clamped / safeSpe);
         if (timeEnc <= 0) return;
 
-        int baseCost = GetEncounterCostSafe();
+        int baseCost = GetRiftCostSafe();
         int curEnergy = GetEnergySafe();
         int byEnergy = (baseCost <= 0) ? timeEnc : (curEnergy / baseCost);
 
         int toRun = Mathf.Min(timeEnc, byEnergy);
         if (toRun <= 0) return;
 
-        RunBatchEncounters(toRun);
+        RunBatchRifts(toRun);
 
         // Stamp ledger after work completes so we can safely resume if a crash occurred mid-batch.
         var s2 = IdleBattleStore.Load();
@@ -358,7 +358,7 @@ if (elapsed <= 0.1f) return;
         var s = IdleBattleStore.Load();
         if (!s.autoBattling) return;
 
-        int baseCost = GetEncounterCostSafe();
+        int baseCost = GetRiftCostSafe();
 
         // Stop conditions (must match design):
         // - Player turned AUTO off (handled via AutoBattleModeChanged)
@@ -387,7 +387,7 @@ if (elapsed <= 0.1f) return;
                 float dtRaw = Mathf.Max(0, now - s.lastTickUnix);
         // Clamp foreground backlog too (OnApplicationPause/Focus can create large dt when returning).
         float dt = Mathf.Min(dtRaw, config.maxOfflineHours * 3600f);
-        float safeSpe2 = Mathf.Max(0.25f, config.secondsPerEncounter);
+        float safeSpe2 = Mathf.Max(0.25f, config.secondsPerRift);
         int canRun = Mathf.FloorToInt(dt / safeSpe2);
         if (canRun <= 0) return;
 
@@ -406,7 +406,7 @@ if (elapsed <= 0.1f) return;
             return;
         }
 
-        RunBatchEncounters(toRun);
+        RunBatchRifts(toRun);
 
         s.lastTickUnix = now;
         s.offlineLastResolvedUnix = now;
@@ -420,7 +420,7 @@ if (elapsed <= 0.1f) return;
         }
     }
 
-    private void RunBatchEncounters(int count)
+    private void RunBatchRifts(int count)
     {
         if (!IsIdleBattleUnlocked() || count <= 0) return;
         if (config == null) return;
@@ -472,13 +472,13 @@ if (elapsed <= 0.1f) return;
 
         creditMulNeutral *= WorldEventSystem.I != null ? WorldEventSystem.I.GetIdleRewardMultiplier() : 1f;
 
-        int baseCost = GetEncounterCostSafe();
+        int baseCost = GetRiftCostSafe();
         int effectiveCost = Mathf.Max(1, Mathf.RoundToInt(baseCost * Mathf.Clamp(teamP.energyCostMul, 0.5f, 1f)));
 
         int energyRemaining = GetEnergySafe();
         int totalSpentLocal = 0;
 
-        var pending = new List<PendingIdleEncounter>(Mathf.Clamp(count, 1, 256));
+        var pending = new List<PendingIdleRift>(Mathf.Clamp(count, 1, 256));
 
         for (int i = 0; i < count; i++)
         {
@@ -486,8 +486,8 @@ if (elapsed <= 0.1f) return;
             energyRemaining -= effectiveCost;
             totalSpentLocal += effectiveCost;
 
-            var wild = encounterManager != null
-                ? encounterManager.PickWildConsideringFlyers()
+            var wild = riftManager != null
+                ? riftManager.PickWildConsideringFlyers()
                 : null;
             if (wild == null) continue;
 
@@ -557,7 +557,7 @@ if (elapsed <= 0.1f) return;
                     captured = true;
             }
 
-            pending.Add(new PendingIdleEncounter
+            pending.Add(new PendingIdleRift
             {
                 wildDef = wild,
                 wildLevel = wildLevel,
@@ -615,9 +615,9 @@ if (elapsed <= 0.1f) return;
 
                 if (applied)
                 {
-                    s.capturedLog ??= new List<IdleEncounterLogEntry>();
+                    s.capturedLog ??= new List<IdleRiftLogEntry>();
                     AddToLogMerged(s.capturedLog, p.wildDef.id, credits: 0, premium: p.premium);
-                    TrimLog(s.capturedLog, config != null ? config.encounterLogMaxEntries : 50);
+                    TrimLog(s.capturedLog, config != null ? config.riftLogMaxEntries : 50);
                 }
             }
 
@@ -651,12 +651,12 @@ if (elapsed <= 0.1f) return;
             catch { }
         }
 
-        TrimLog(s.log, config.encounterLogMaxEntries);
+        TrimLog(s.log, config.riftLogMaxEntries);
         IdleBattleStore.Save(s);
 
         MarkSummaryPendingIfLogExists();
 
-        encounterManager?.RequestStateRefresh();
+        riftManager?.RequestStateRefresh();
 
             // Save-State Guard: batch committed successfully.
             IdleBattleSaveStateGuard.Complete(guardId);
@@ -673,7 +673,7 @@ if (elapsed <= 0.1f) return;
     }
 
     [Serializable]
-    private class PendingIdleEncounter
+    private class PendingIdleRift
     {
         public MonsterDataSO wildDef;
         public int wildLevel;
@@ -684,7 +684,7 @@ if (elapsed <= 0.1f) return;
         public int turns;
     }
 
-    private static IReadOnlyList<string> BuildHeadlessArchiveLines(PendingIdleEncounter p, int awardedCredits)
+    private static IReadOnlyList<string> BuildHeadlessArchiveLines(PendingIdleRift p, int awardedCredits)
     {
         int turns = Mathf.Clamp(p != null ? p.turns : 0, 1, 8);
         bool victory = p != null && p.victory;
@@ -781,19 +781,19 @@ if (elapsed <= 0.1f) return;
     }
 
     // ─────────────────────────────────────────────────────────────
-    // Bank-only energy spend (prefer EncounterManager for timer correctness)
+    // Bank-only energy spend (prefer RiftManager for timer correctness)
     // ─────────────────────────────────────────────────────────────
     private static bool SpendEnergy(int cost)
     {
         cost = Mathf.Max(1, cost);
 
-        if (EncounterManager.I != null)
+        if (RiftManager.I != null)
         {
             if (ResourceBank.Get(ResourceType.Energy) < cost) return false;
             if (!ResourceBank.TrySpend(ResourceType.Energy, cost)) return false;
 
             GameEvents.EnergyChanged?.Invoke();
-            EncounterManager.I.RequestStateRefresh();
+            RiftManager.I.RequestStateRefresh();
             return true;
         }
 
@@ -806,16 +806,16 @@ if (elapsed <= 0.1f) return;
 
     private int GetEnergySafe()
     {
-        if (encounterManager != null) return encounterManager.GetEnergyPoints();
-        if (EncounterManager.I != null) return EncounterManager.I.GetEnergyPoints();
+        if (riftManager != null) return riftManager.GetEnergyPoints();
+        if (RiftManager.I != null) return RiftManager.I.GetEnergyPoints();
         return ResourceBank.Get(ResourceType.Energy);
     }
 
-    private int GetEncounterCostSafe()
+    private int GetRiftCostSafe()
     {
-        if (encounterManager != null) return Mathf.Max(1, encounterManager.GetEncounterCost());
-        if (EncounterManager.I != null) return Mathf.Max(1, EncounterManager.I.GetEncounterCost());
-        return Mathf.Max(1, SaveManager.Data != null ? SaveManager.Data.encounterCost : 1);
+        if (riftManager != null) return Mathf.Max(1, riftManager.GetRiftCost());
+        if (RiftManager.I != null) return Mathf.Max(1, RiftManager.I.GetRiftCost());
+        return Mathf.Max(1, SaveManager.Data != null ? SaveManager.Data.riftCost : 1);
     }
 
     private static bool HasAnyAliveTeamMember()
@@ -899,7 +899,7 @@ if (elapsed <= 0.1f) return;
     {
         if (def == null) return 0f;
 
-        // Mirror the general intent of EncounterManager capture logic:
+        // Mirror the general intent of RiftManager capture logic:
         // common spawns are easier, rare spawns are harder, clamped to a sane range.
         float weight = Mathf.Max(0.0001f, def.spawnWeight);
 
@@ -1018,11 +1018,11 @@ if (elapsed <= 0.1f) return;
         return true;
     }
 
-    private static void AddToLogMerged(List<IdleEncounterLogEntry> log, string monsterId, int credits, bool premium)
+    private static void AddToLogMerged(List<IdleRiftLogEntry> log, string monsterId, int credits, bool premium)
     {
         if (log == null) return;
 
-        IdleEncounterLogEntry e = null;
+        IdleRiftLogEntry e = null;
         for (int i = 0; i < log.Count; i++)
         {
             if (log[i].monsterId == monsterId) { e = log[i]; break; }
@@ -1030,7 +1030,7 @@ if (elapsed <= 0.1f) return;
 
         if (e == null)
         {
-            e = new IdleEncounterLogEntry
+            e = new IdleRiftLogEntry
             {
                 monsterId = monsterId,
                 count = 0,
@@ -1045,7 +1045,7 @@ if (elapsed <= 0.1f) return;
         e.premiumSeen |= premium;
     }
 
-    private static void TrimLog(List<IdleEncounterLogEntry> log, int max)
+    private static void TrimLog(List<IdleRiftLogEntry> log, int max)
     {
         if (log == null || log.Count <= max) return;
         log.RemoveRange(0, log.Count - max);
@@ -1057,7 +1057,7 @@ if (elapsed <= 0.1f) return;
 
         var s = IdleBattleStore.Load();
         var sum = BuildSummary(s);
-        if (sum.totalEncounters <= 0 && sum.totalcredits <= 0) return;
+        if (sum.totalRifts <= 0 && sum.totalcredits <= 0) return;
 
         // runtime guard
         _summaryOpenedThisSession = true;
@@ -1098,9 +1098,9 @@ if (elapsed <= 0.1f) return;
         {
             foreach (var e in s.log)
             {
-                res.totalEncounters += e.count;
+                res.totalRifts += e.count;
                 res.totalcredits += e.credits;
-                res.mergedLog.Add(new IdleEncounterLogEntry
+                res.mergedLog.Add(new IdleRiftLogEntry
                 {
                     monsterId = e.monsterId,
                     count = e.count,
@@ -1114,7 +1114,7 @@ if (elapsed <= 0.1f) return;
         {
             foreach (var e in s.capturedLog)
             {
-                res.capturedLog.Add(new IdleEncounterLogEntry
+                res.capturedLog.Add(new IdleRiftLogEntry
                 {
                     monsterId = e.monsterId,
                     count = e.count,
@@ -1133,11 +1133,11 @@ if (elapsed <= 0.1f) return;
     {
         if (s?.log == null) return 0f;
 
-        int encounters = 0;
+        int rifts = 0;
         for (int i = 0; i < s.log.Count; i++)
-            encounters += s.log[i].count;
+            rifts += s.log[i].count;
 
-        return encounters * config.secondsPerEncounter;
+        return rifts * config.secondsPerRift;
     }
 
     private static int SeedForSession(IdleBattleSession s)
@@ -1155,9 +1155,9 @@ if (elapsed <= 0.1f) return;
     private long NowUnix() => SaveManager.NowUnix();
 
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
-    public void Dev_RunEncounters(int count)
+    public void Dev_RunRifts(int count)
     {
-        RunBatchEncounters(count);
+        RunBatchRifts(count);
 
         ForceOpenSummary();
     }

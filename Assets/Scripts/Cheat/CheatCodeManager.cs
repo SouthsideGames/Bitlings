@@ -15,7 +15,7 @@ public enum CheatEffectKind
     ResetCooldowns,
     ClearAllJobFatigue,
     DiscoverAllMonsters,
-    StartEncounterWithMonsterId,
+    StartRiftWithMonsterId,
     ForcePremiumNextCapture,
     ReviveTeam,
     HealTeamFull,
@@ -26,6 +26,16 @@ public enum CheatEffectKind
     MaxPromotionRank,
     RankUpBy1,
     RankUpBy5,
+
+    FillAllJobSites,
+
+    OwnMonsterById,
+
+    // Arena debug
+    ArenaForceUnlock,
+    ArenaGrantTickets,
+    ArenaInstantTournament,
+    ArenaFullReset,
 }
 
 [Serializable]
@@ -52,11 +62,11 @@ public class CheatDefinition
     [Tooltip("How many hours to simulate for offline systems.")]
     [Min(1)] public int hours = 1;
 
-    [Header("StartEncounterWithMonsterId settings")]
-    [Tooltip("Monster ID to start an encounter with (e.g., M-001).")]
+    [Header("StartRiftWithMonsterId settings")]
+    [Tooltip("Monster ID to start an rift with (e.g., M-001).")]
     public string monsterId;
 
-    [Tooltip("If true, spend energy as if the player tapped Encounter.")]
+    [Tooltip("If true, spend energy as if the player tapped Rift.")]
     public bool spendEnergy = false;
 }
 
@@ -86,10 +96,6 @@ public class CheatCodeManager : MonoBehaviour
             return;
         }
         I = this;
-
-#if !UNITY_EDITOR && !DEVELOPMENT_BUILD
-        allowCheatsInReleaseBuilds = false;
-#endif
 
         // Normalize codes at startup (trim + upper)
         for (int i = 0; i < cheats.Count; i++)
@@ -333,8 +339,8 @@ public class CheatCodeManager : MonoBehaviour
             case CheatEffectKind.DiscoverAllMonsters:
                 return ExecuteDiscoverAllMonsters(out message);
 
-            case CheatEffectKind.StartEncounterWithMonsterId:
-                return ExecuteStartEncounterWithMonsterId(cd.monsterId, cd.spendEnergy, out message);
+            case CheatEffectKind.StartRiftWithMonsterId:
+                return ExecuteStartRiftWithMonsterId(cd.monsterId, cd.spendEnergy, out message);
 
             case CheatEffectKind.ForcePremiumNextCapture:
                 return ExecuteForcePremiumNextCapture(out message);
@@ -365,6 +371,35 @@ public class CheatCodeManager : MonoBehaviour
 
             case CheatEffectKind.RankUpBy5:
                 return ExecuteRankUp(5, out message);
+
+            case CheatEffectKind.FillAllJobSites:
+                return ExecuteFillAllJobSites(out message);
+
+            case CheatEffectKind.OwnMonsterById:
+                return ExecuteOwnMonsterById(cd.monsterId, cd.amount, out message);
+
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            case CheatEffectKind.ArenaForceUnlock:
+                ArenaDebugHelper.ForceUnlockArena();
+                message = "Arena force-unlocked.";
+                return true;
+
+            case CheatEffectKind.ArenaGrantTickets:
+                ArenaDebugHelper.GrantTickets(cd.amount > 0 ? cd.amount : 3);
+                message = $"Granted {(cd.amount > 0 ? cd.amount : 3)} arena ticket(s).";
+                return true;
+
+            case CheatEffectKind.ArenaInstantTournament:
+                var record = ArenaDebugHelper.CreateFakeTournament();
+                if (record != null) ArenaDebugHelper.InstantlyCompleteTournament(record);
+                message = record != null ? "Instant tournament complete." : "Failed to create tournament.";
+                return record != null;
+
+            case CheatEffectKind.ArenaFullReset:
+                ArenaDebugHelper.FullArenaReset();
+                message = "Arena fully reset.";
+                return true;
+#endif
 
             default:
                 message = "Cheat not configured.";
@@ -607,6 +642,10 @@ public class CheatCodeManager : MonoBehaviour
 
         SaveManager.Save();
 
+        // Grant any rank-up rewards that were skipped by setting rank directly.
+        if (oldRank < targetRank && PromotionManager.I != null)
+            PromotionManager.I.GrantRankRewards(oldRank + 1, targetRank);
+
         ComputePromotionProgressForCheat(out int xpThisRank, out int xpToNext);
 
         GameEvents.PromotionProgressChanged?.Invoke(data.promotionRank, data.promotionXP, xpThisRank, xpToNext);
@@ -621,7 +660,7 @@ public class CheatCodeManager : MonoBehaviour
     {
         if (PromotionManager.I != null)
             return PromotionManager.I.GetMaxRank();
-        return 20;
+        return 25;
     }
 
     int GetPromotionTotalXpToReachForCheat(int rank)
@@ -671,6 +710,111 @@ public class CheatCodeManager : MonoBehaviour
     // Everything below here is your original code (unchanged)
     // ─────────────────────────────────────────────────────────────
 
+    bool ExecuteFillAllJobSites(out string message)
+    {
+        message = string.Empty;
+
+        if (SaveManager.Data == null)
+        {
+            message = "Save data not loaded.";
+            return false;
+        }
+
+        if (JobManager.I == null)
+        {
+            message = "JobManager missing.";
+            return false;
+        }
+
+        int filled = 0;
+
+        foreach (var site in JobManager.I.States)
+        {
+            if (site?.config == null) continue;
+
+            int cap = JobManager.I.GetEffectiveStorageCap(site.config);
+            if (cap <= 0) continue;
+
+            if (site.storedUnits >= cap) continue;
+
+            site.storedUnits = cap;
+            site.storedRemainder = 0f;
+            filled++;
+        }
+
+        if (filled <= 0)
+        {
+            message = "All job sites already full.";
+            return false;
+        }
+
+        SaveManager.Save();
+        GameEvents.OnJobsChanged?.Invoke();
+
+        message = $"Maxed stored resources on {filled} job site(s).";
+        return true;
+    }
+
+    bool ExecuteOwnMonsterById(string monsterId, int level, out string message)
+    {
+        message = string.Empty;
+
+        if (string.IsNullOrWhiteSpace(monsterId))
+        {
+            message = "No monster ID configured on this cheat.";
+            return false;
+        }
+
+        var data = SaveManager.Data;
+        if (data == null)
+        {
+            message = "Save data not loaded.";
+            return false;
+        }
+
+        var def = MonsterCatalog.GetById(monsterId);
+        if (def == null)
+            def = MonsterLibraryLocator.GetById(monsterId);
+
+        if (def == null)
+        {
+            message = $"No monster found with ID \"{monsterId}\".";
+            return false;
+        }
+
+        int spawnLevel = Mathf.Max(1, level);
+        int startHP = HealingService.CalcMaxHP(def, spawnLevel, includeTraining: true, includeTitles: false);
+
+        var om = new OwnedMonsterData
+        {
+            monsterId  = def.id,
+            level      = spawnLevel,
+            currentHP  = Mathf.Max(1, startHP),
+            currentXP  = 0,
+            ownedUID   = Guid.NewGuid().ToString("N"),
+        };
+
+        data.owned ??= new List<OwnedMonsterData>();
+        data.owned.Add(om);
+
+        data.ownedIds ??= new HashSet<string>();
+        data.ownedIds.Add(def.id);
+
+        data.discoveredMonsterIds ??= new HashSet<string>();
+        data.discoveredMonsterIds.Add(def.id);
+
+        data.seenTypes ??= new HashSet<MonsterType>();
+        data.seenTypes.Add(def.type);
+
+        SaveManager.Save();
+
+        GameEvents.MonsterCaptured?.Invoke(def.id, def.type);
+        GameEvents.OnResourcesChanged?.Invoke();
+
+        message = $"You now own {def.displayName} (ID: {def.id}) at level {spawnLevel}.";
+        return true;
+    }
+
     bool ExecuteRankUp(int ranks, out string message)
     {
         message = string.Empty;
@@ -706,6 +850,10 @@ public class CheatCodeManager : MonoBehaviour
 
         SaveManager.Save();
 
+        // Grant any rank-up rewards that were skipped by setting rank directly.
+        if (oldRank < targetRank && PromotionManager.I != null)
+            PromotionManager.I.GrantRankRewards(oldRank + 1, targetRank);
+
         ComputePromotionProgressForCheat(out int xpThisRank, out int xpToNext);
 
         GameEvents.PromotionProgressChanged?.Invoke(data.promotionRank, data.promotionXP, xpThisRank, xpToNext);
@@ -725,15 +873,15 @@ public class CheatCodeManager : MonoBehaviour
             return false;
         }
 
-        if (EncounterManager.I == null)
+        if (RiftManager.I == null)
         {
-            message = "EncounterManager missing.";
+            message = "RiftManager missing.";
             return false;
         }
 
         ResourceBank.EnsureSize();
         int current = ResourceBank.Get(ResourceType.Energy);
-        int max = SaveManager.Data.encounterMax;
+        int max = SaveManager.Data.riftMax;
 
         int missing = max - current;
         if (missing <= 0)
@@ -742,7 +890,7 @@ public class CheatCodeManager : MonoBehaviour
             return false;
         }
 
-        EncounterManager.I.AddEnergy(missing, allowOvercap: false);
+        RiftManager.I.AddEnergy(missing, allowOvercap: false);
         message = $"Energy refilled to {max}.";
         return true;
     }
@@ -839,7 +987,7 @@ public class CheatCodeManager : MonoBehaviour
 
         if (JobManager.I != null) JobManager.I.ProcessOfflineAllSites();
         HealthRegenSystem.I?.TryApplyOfflineRegen();
-        if (EncounterManager.I != null) EncounterManager.I.Cheat_ApplyOfflineEnergyRegen();
+        if (RiftManager.I != null) RiftManager.I.Cheat_ApplyOfflineEnergyRegen();
 
         SaveManager.Save();
 
@@ -959,13 +1107,13 @@ public class CheatCodeManager : MonoBehaviour
         return true;
     }
 
-    bool ExecuteStartEncounterWithMonsterId(string monsterId, bool spendEnergy, out string message)
+    bool ExecuteStartRiftWithMonsterId(string monsterId, bool spendEnergy, out string message)
     {
         message = string.Empty;
 
-        if (EncounterManager.I == null)
+        if (RiftManager.I == null)
         {
-            message = "EncounterManager missing.";
+            message = "RiftManager missing.";
             return false;
         }
 
@@ -982,14 +1130,14 @@ public class CheatCodeManager : MonoBehaviour
             return false;
         }
 
-        bool ok = EncounterManager.I.RequestForcedEncounter(monsterId, spendEnergy: spendEnergy, out string reason);
+        bool ok = RiftManager.I.RequestForcedRift(monsterId, spendEnergy: spendEnergy, out string reason);
         if (!ok)
         {
-            message = string.IsNullOrEmpty(reason) ? "Could not start encounter." : reason;
+            message = string.IsNullOrEmpty(reason) ? "Could not start rift." : reason;
             return false;
         }
 
-        message = $"Forced encounter: {def.displayName} ({def.id}).";
+        message = $"Forced rift: {def.displayName} ({def.id}).";
         return true;
     }
 

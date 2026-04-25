@@ -81,6 +81,10 @@ public sealed class BattleFeedbackManager : MonoBehaviour
     [SerializeField] private AudioClip chargeSfx;
     [SerializeField] private AudioClip defendSfx;
     [SerializeField] private AudioClip runSfx;
+
+    [Header("SFX Duration Limit")]
+    [SerializeField] private float maxSfxDuration = 1f;
+    [SerializeField, Range(0f, 1f)] private float sfxFadeOutDuration = 0.25f;
     
     [Header("Action Buttons (press feedback)")]
     [SerializeField] private Button attackBtn;
@@ -338,10 +342,21 @@ public sealed class BattleFeedbackManager : MonoBehaviour
         if (playerIcon && playerIcon.rectTransform)
         {
             var rt = playerIcon.rectTransform;
-            float z = rt.localScale.z;
 
-            _playerIconBaseScale = new Vector3(PlayerIconDefaultXYScale, PlayerIconDefaultXYScale, z);
-            rt.localScale = _playerIconBaseScale;
+            // If a UIDeviceAdaptiveSizer governs this icon, let it apply first so the
+            // device-correct scale (e.g. 1 on tablet) is set before we cache.
+            var sizer = playerIcon.GetComponentInParent<UIDeviceAdaptiveSizer>();
+            if (sizer != null)
+            {
+                sizer.ApplyLayout();
+                _playerIconBaseScale = rt.localScale;
+            }
+            else
+            {
+                float z = rt.localScale.z;
+                _playerIconBaseScale = new Vector3(PlayerIconDefaultXYScale, PlayerIconDefaultXYScale, z);
+                rt.localScale = _playerIconBaseScale;
+            }
         }
 
         if (wildIcon && wildIcon.rectTransform) _wildIconBaseScale = wildIcon.rectTransform.localScale;
@@ -1401,29 +1416,77 @@ public void SetGuard(BattleFeedbackSide side, bool on)
     private void PlayMonsterSpawnSfx(MonsterDataSO def)
     {
         if (def == null || def.spawnSfx == null) return;
-        if (AudioManager.I == null) return;
-        AudioManager.I.PlayClipOneShot(def.spawnSfx);
+        PlayClipWithLimit(def.spawnSfx);
     }
 
     public void PlayChargeSfx()
     {
         if (chargeSfx == null) return;
-        if (AudioManager.I == null) return;
-        AudioManager.I.PlayClipOneShot(chargeSfx);
+        PlayClipWithLimit(chargeSfx);
     }
 
     public void PlayDefendSfx()
     {
         if (defendSfx == null) return;
-        if (AudioManager.I == null) return;
-        AudioManager.I.PlayClipOneShot(defendSfx);
+        PlayClipWithLimit(defendSfx);
     }
 
     public void PlayRunSfx()
     {
         if (runSfx == null) return;
-        if (AudioManager.I == null) return;
-        AudioManager.I.PlayClipOneShot(runSfx);
+        PlayClipWithLimit(runSfx);
+    }
+
+    private void PlayClipWithLimit(AudioClip clip, float volumeMult = 1f, float pitch = 1f)
+    {
+        if (clip == null || AudioManager.I == null) return;
+
+        float effectiveDuration = clip.length / Mathf.Max(pitch, 0.1f);
+
+        if (effectiveDuration <= maxSfxDuration)
+        {
+            AudioManager.I.PlayClipOneShot(clip, volumeMult, pitch);
+            return;
+        }
+
+        StartCoroutine(Co_PlayClipWithFadeOut(clip, volumeMult, pitch));
+    }
+
+    private IEnumerator Co_PlayClipWithFadeOut(AudioClip clip, float volumeMult, float pitch)
+    {
+        var go = new GameObject("BattleSFX_FadeOut");
+        go.transform.SetParent(transform);
+        var src = go.AddComponent<AudioSource>();
+
+        float baseVolume = Mathf.Clamp(volumeMult, 0f, 2f);
+        if (AudioManager.I != null)
+            baseVolume *= AudioManager.I.GetMasterVolume() * AudioManager.I.GetSfxVolume();
+
+        src.clip = clip;
+        src.volume = baseVolume;
+        src.pitch = Mathf.Clamp(pitch, 0.1f, 3f);
+        src.spatialBlend = 0f;
+        src.playOnAwake = false;
+        src.Play();
+
+        float fadeStart = Mathf.Max(maxSfxDuration - sfxFadeOutDuration, 0f);
+        float elapsed = 0f;
+
+        while (elapsed < maxSfxDuration)
+        {
+            elapsed += Time.unscaledDeltaTime;
+
+            if (elapsed >= fadeStart)
+            {
+                float t = Mathf.Clamp01((elapsed - fadeStart) / sfxFadeOutDuration);
+                src.volume = Mathf.Lerp(baseVolume, 0f, t);
+            }
+
+            yield return null;
+        }
+
+        src.Stop();
+        Destroy(go);
     }
 
     private void PlayIconIntroFor(Graphic icon, float fadeTime)
@@ -1474,14 +1537,14 @@ public void SetGuard(BattleFeedbackSide side, bool on)
                 spawnRoot = wildAttackSpawnRoot;
         }
 
-        if (!spawnRoot && EncounterManager.I != null)
+        if (!spawnRoot && RiftManager.I != null)
         {
-            var encounterRoot = isPlayerSide
-                ? EncounterManager.I.EnemySpawnPoint
-                : EncounterManager.I.PlayerSpawnPoint;
+            var riftRoot = isPlayerSide
+                ? RiftManager.I.EnemySpawnPoint
+                : RiftManager.I.PlayerSpawnPoint;
 
-            if (encounterRoot && encounterRoot.gameObject.activeInHierarchy)
-                spawnRoot = encounterRoot;
+            if (riftRoot && riftRoot.gameObject.activeInHierarchy)
+                spawnRoot = riftRoot;
         }
 
         if (!spawnRoot)

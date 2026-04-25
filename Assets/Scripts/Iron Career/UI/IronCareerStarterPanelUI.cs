@@ -50,7 +50,7 @@ public sealed class IronCareerStarterPanelUI : MonoBehaviour
     [Tooltip("Extra delay between locking slot 1→2→3 (adds drama).")]
     [SerializeField] private float lockStepDelay = 0.10f;
 
-    private IronCareerEncounterPanelUI _ironUI;
+    private IronCareerRiftPanelUI _ironUI;
 
     private IronCareerMetaData _metaData;
 
@@ -70,8 +70,8 @@ public sealed class IronCareerStarterPanelUI : MonoBehaviour
     {
         if (!iron) iron = FindFirstObjectByType<IronCareerManager>(FindObjectsInactive.Include);
 
-        _ironUI = IronCareerEncounterPanelUI.I;
-        if (!_ironUI) _ironUI = FindFirstObjectByType<IronCareerEncounterPanelUI>(FindObjectsInactive.Include);
+        _ironUI = IronCareerRiftPanelUI.I;
+        if (!_ironUI) _ironUI = FindFirstObjectByType<IronCareerRiftPanelUI>(FindObjectsInactive.Include);
 
         if (rerollButton) rerollButton.onClick.AddListener(OnRerollClicked);
         if (startButton) startButton.onClick.AddListener(StartRun);
@@ -105,8 +105,8 @@ public sealed class IronCareerStarterPanelUI : MonoBehaviour
     {
         if (!_ironUI)
         {
-            _ironUI = IronCareerEncounterPanelUI.I;
-            if (!_ironUI) _ironUI = FindFirstObjectByType<IronCareerEncounterPanelUI>(FindObjectsInactive.Include);
+            _ironUI = IronCareerRiftPanelUI.I;
+            if (!_ironUI) _ironUI = FindFirstObjectByType<IronCareerRiftPanelUI>(FindObjectsInactive.Include);
         }
 
         LoadOrResetDailyRerollsAndOffer();
@@ -619,7 +619,7 @@ public sealed class IronCareerStarterPanelUI : MonoBehaviour
     private void BackToHome()
     {
         // UIManager only manages top-level containers.
-        UIManager.I?.Hide(PanelId.IronCareerEncounter);
+        UIManager.I?.Hide(PanelId.IronCareerRift);
         UIManager.I?.Show(PanelId.Home);
     }
 
@@ -627,27 +627,27 @@ public sealed class IronCareerStarterPanelUI : MonoBehaviour
     {
         if (!_ironUI)
         {
-            _ironUI = IronCareerEncounterPanelUI.I;
-            if (!_ironUI) _ironUI = FindFirstObjectByType<IronCareerEncounterPanelUI>(FindObjectsInactive.Include);
+            _ironUI = IronCareerRiftPanelUI.I;
+            if (!_ironUI) _ironUI = FindFirstObjectByType<IronCareerRiftPanelUI>(FindObjectsInactive.Include);
         }
 
         if (_ironUI)
             _ironUI.ShowRules(immediate: true);
         else
-            Debug.LogWarning("[IronCareerStarterPanelUI] OpenRules failed: missing IronCareerEncounterPanelUI.");
+            Debug.LogWarning("[IronCareerStarterPanelUI] OpenRules failed: missing IronCareerRiftPanelUI.");
     }
 
     public void OpenRecords()
     {
         if (!_ironUI)
         {
-            _ironUI = IronCareerEncounterPanelUI.I;
-            if (!_ironUI) _ironUI = FindFirstObjectByType<IronCareerEncounterPanelUI>(FindObjectsInactive.Include);
+            _ironUI = IronCareerRiftPanelUI.I;
+            if (!_ironUI) _ironUI = FindFirstObjectByType<IronCareerRiftPanelUI>(FindObjectsInactive.Include);
         }
 
         if (_ironUI)
             _ironUI.ShowRecords(immediate: true);
         else
-            Debug.LogWarning("[IronCareerStarterPanelUI] OpenRecords failed: missing IronCareerEncounterPanelUI.");
+            Debug.LogWarning("[IronCareerStarterPanelUI] OpenRecords failed: missing IronCareerRiftPanelUI.");
     }
 }

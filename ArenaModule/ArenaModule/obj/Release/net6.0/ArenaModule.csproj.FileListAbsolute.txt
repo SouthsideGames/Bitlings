@@ -1,0 +1,13 @@
+/Users/kareem/Desktop/Southside Games/Bitlings/ArenaModule/ArenaModule/bin/Release/net6.0/ArenaModule.deps.json
+/Users/kareem/Desktop/Southside Games/Bitlings/ArenaModule/ArenaModule/bin/Release/net6.0/ArenaModule.dll
+/Users/kareem/Desktop/Southside Games/Bitlings/ArenaModule/ArenaModule/bin/Release/net6.0/ArenaModule.pdb
+/Users/kareem/Desktop/Southside Games/Bitlings/ArenaModule/ArenaModule/obj/Release/net6.0/ArenaModule.csproj.AssemblyReference.cache
+/Users/kareem/Desktop/Southside Games/Bitlings/ArenaModule/ArenaModule/obj/Release/net6.0/ArenaModule.GeneratedMSBuildEditorConfig.editorconfig
+/Users/kareem/Desktop/Southside Games/Bitlings/ArenaModule/ArenaModule/obj/Release/net6.0/ArenaModule.AssemblyInfoInputs.cache
+/Users/kareem/Desktop/Southside Games/Bitlings/ArenaModule/ArenaModule/obj/Release/net6.0/ArenaModule.AssemblyInfo.cs
+/Users/kareem/Desktop/Southside Games/Bitlings/ArenaModule/ArenaModule/obj/Release/net6.0/ArenaModule.csproj.CoreCompileInputs.cache
+/Users/kareem/Desktop/Southside Games/Bitlings/ArenaModule/ArenaModule/obj/Release/net6.0/ArenaModule.sourcelink.json
+/Users/kareem/Desktop/Southside Games/Bitlings/ArenaModule/ArenaModule/obj/Release/net6.0/ArenaModule.dll
+/Users/kareem/Desktop/Southside Games/Bitlings/ArenaModule/ArenaModule/obj/Release/net6.0/refint/ArenaModule.dll
+/Users/kareem/Desktop/Southside Games/Bitlings/ArenaModule/ArenaModule/obj/Release/net6.0/ArenaModule.pdb
+/Users/kareem/Desktop/Southside Games/Bitlings/ArenaModule/ArenaModule/obj/Release/net6.0/ref/ArenaModule.dll

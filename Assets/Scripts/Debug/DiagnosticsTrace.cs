@@ -14,7 +14,7 @@ public static class DiagnosticsTrace
     static readonly List<string> _lines = new List<string>(MAX_LINES);
 
     // Typed "last" records (quick access in snapshot)
-    public struct EncounterStart
+    public struct RiftStart
     {
         public string monsterId;
         public int level;
@@ -42,11 +42,11 @@ public static class DiagnosticsTrace
         public long unix;
     }
 
-    static EncounterStart _lastEncounter;
+    static RiftStart _lastRift;
     static PremiumRoll _lastPremiumRoll;
     static HireDecision _lastHire;
 
-    public static EncounterStart LastEncounter => _lastEncounter;
+    public static RiftStart LastRift => _lastRift;
     public static PremiumRoll LastPremiumRoll => _lastPremiumRoll;
     public static HireDecision LastHire => _lastHire;
 
@@ -96,14 +96,14 @@ public static class DiagnosticsTrace
         return sb.ToString();
     }
 
-    public static void RecordEncounterStart(string monsterId, int level, bool isBoss, bool isPremium, string seedString)
+    public static void RecordRiftStart(string monsterId, int level, bool isBoss, bool isPremium, string seedString)
     {
         if (!IsEnabled()) return;
 
         long now = SaveManager.NowUnix();
         monsterId = string.IsNullOrWhiteSpace(monsterId) ? "?" : monsterId;
 
-        _lastEncounter = new EncounterStart
+        _lastRift = new RiftStart
         {
             monsterId = monsterId,
             level = level,
@@ -113,7 +113,7 @@ public static class DiagnosticsTrace
             unix = now
         };
 
-        Add("Encounter Start", $"{monsterId} L{level} | boss={isBoss} premium={isPremium} | seed={seedString}");
+        Add("Rift Start", $"{monsterId} L{level} | boss={isBoss} premium={isPremium} | seed={seedString}");
     }
 
     public static void RecordPremiumRoll(string monsterId, float chance, float roll, bool success)

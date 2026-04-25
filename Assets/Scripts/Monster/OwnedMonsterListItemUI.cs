@@ -33,6 +33,9 @@ public class OwnedMonsterListItemUI : MonoBehaviour
     private float _nextUiRefreshAt;
     private bool _allowDetail = true;
     private MonsterDetailPanelUI _detailPanelOverride;
+    private int _rowPunchTweenId = -1;
+    private int _favoritePulseTweenId = -1;
+    private int _evolvePulseTweenId = -1;
 
     // Directory browse context
     private bool _isDirectoryRow;
@@ -64,6 +67,7 @@ public class OwnedMonsterListItemUI : MonoBehaviour
     private void OnDestroy()
     {
         GameEvents.MonsterLeveled -= HandleMonsterLeveled;
+        StopAllTweens();
 
         if (rootButton)
             rootButton.onClick.RemoveListener(OnClickOpenDetails);
@@ -71,6 +75,7 @@ public class OwnedMonsterListItemUI : MonoBehaviour
 
     void OnDisable()
     {
+        StopAllTweens();
         _nextUiRefreshAt = 0f;
         if (cooldownText) cooldownText.gameObject.SetActive(false);
     }
@@ -254,7 +259,10 @@ public class OwnedMonsterListItemUI : MonoBehaviour
         {
             bool hasFeature = FeatureUnlockManager.I &&
                               FeatureUnlockManager.I.IsUnlocked(FeatureId.Directory_Favorites);
-            favoriteAlert.SetActive(hasFeature && captured && isFavorite);
+            bool showFav = hasFeature && captured && isFavorite;
+            favoriteAlert.SetActive(showFav);
+            if (showFav) StartFavoritePulse();
+            else StopFavoritePulse();
         }
 
         // KO / cooldown text only makes sense for owned monsters, not directory silhouettes.
@@ -336,6 +344,8 @@ public class OwnedMonsterListItemUI : MonoBehaviour
     {
         if (!_allowDetail)
             return;
+
+        PunchRow();
 
         var panel = _detailPanelOverride ? _detailPanelOverride : detailPanel;
         if (panel == null)
@@ -437,6 +447,103 @@ public class OwnedMonsterListItemUI : MonoBehaviour
             show = EvolutionHelper.CanEvolve(_data, def);
 
         evolveAlert.SetActive(show);
+        if (show) StartEvolvePulse();
+        else StopEvolvePulse();
+    }
+
+    private void PunchRow()
+    {
+        if (_rowPunchTweenId != -1)
+        {
+            LeanTween.cancel(_rowPunchTweenId);
+            _rowPunchTweenId = -1;
+        }
+
+        var rt = transform as RectTransform;
+        if (!rt) return;
+
+        rt.localScale = Vector3.one;
+        _rowPunchTweenId = LeanTween.scale(rt, Vector3.one * 1.04f, 0.07f)
+            .setEase(LeanTweenType.easeOutQuad)
+            .setLoopPingPong(1)
+            .id;
+    }
+
+    private void StartFavoritePulse()
+    {
+        if (!favoriteAlert) return;
+
+        StopFavoritePulse();
+
+        var rt = favoriteAlert.transform as RectTransform;
+        if (!rt) return;
+
+        rt.localScale = Vector3.one;
+        _favoritePulseTweenId = LeanTween.scale(rt, Vector3.one * 1.07f, 0.4f)
+            .setEase(LeanTweenType.easeInOutSine)
+            .setLoopPingPong()
+            .id;
+    }
+
+    private void StopFavoritePulse()
+    {
+        if (_favoritePulseTweenId != -1)
+        {
+            LeanTween.cancel(_favoritePulseTweenId);
+            _favoritePulseTweenId = -1;
+        }
+
+        if (favoriteAlert)
+        {
+            var rt = favoriteAlert.transform as RectTransform;
+            if (rt) rt.localScale = Vector3.one;
+        }
+    }
+
+    private void StartEvolvePulse()
+    {
+        if (!evolveAlert) return;
+
+        StopEvolvePulse();
+
+        var rt = evolveAlert.transform as RectTransform;
+        if (!rt) return;
+
+        rt.localScale = Vector3.one;
+        _evolvePulseTweenId = LeanTween.scale(rt, Vector3.one * 1.07f, 0.44f)
+            .setEase(LeanTweenType.easeInOutSine)
+            .setLoopPingPong()
+            .id;
+    }
+
+    private void StopEvolvePulse()
+    {
+        if (_evolvePulseTweenId != -1)
+        {
+            LeanTween.cancel(_evolvePulseTweenId);
+            _evolvePulseTweenId = -1;
+        }
+
+        if (evolveAlert)
+        {
+            var rt = evolveAlert.transform as RectTransform;
+            if (rt) rt.localScale = Vector3.one;
+        }
+    }
+
+    private void StopAllTweens()
+    {
+        if (_rowPunchTweenId != -1)
+        {
+            LeanTween.cancel(_rowPunchTweenId);
+            _rowPunchTweenId = -1;
+        }
+
+        StopFavoritePulse();
+        StopEvolvePulse();
+
+        var rt = transform as RectTransform;
+        if (rt) rt.localScale = Vector3.one;
     }
 
     // ---------------------------------------------------------------------

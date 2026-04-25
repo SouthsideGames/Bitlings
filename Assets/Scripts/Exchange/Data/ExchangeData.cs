@@ -101,7 +101,7 @@ public class PendingDuplicateCaptureSave
 {
     public string ownedUID;
     public string speciesId;
-    public int encounterLevel;
+    public int riftLevel;
     public bool isPremium;
     public bool isMaxLevel;
 }
@@ -129,16 +129,16 @@ public static class PendingDuplicateCapture
     public static bool HasPending { get; private set; }
     public static OwnedMonsterData Existing { get; private set; }
     public static MonsterDataSO Def { get; private set; }
-    public static int EncounterLevel { get; private set; }
+    public static int RiftLevel { get; private set; }
     public static bool IsPremium { get; private set; }
     public static bool IsMaxLevel { get; private set; }
 
-    public static void Set(OwnedMonsterData existing, MonsterDataSO def, int encounterLevel, bool isPremium, bool isMaxLevel)
+    public static void Set(OwnedMonsterData existing, MonsterDataSO def, int riftLevel, bool isPremium, bool isMaxLevel)
     {
         HasPending = true;
         Existing = existing;
         Def = def;
-        EncounterLevel = encounterLevel;
+        RiftLevel = riftLevel;
         IsPremium = isPremium;
         IsMaxLevel = isMaxLevel;
     }
@@ -148,7 +148,7 @@ public static class PendingDuplicateCapture
         HasPending = false;
         Existing = null;
         Def = null;
-        EncounterLevel = 0;
+        RiftLevel = 0;
         IsPremium = false;
         IsMaxLevel = false;
     }

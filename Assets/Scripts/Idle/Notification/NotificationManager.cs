@@ -129,7 +129,7 @@ public class NotificationManager : MonoBehaviour
             }
         }
 
-        // Energy full (EncounterManager has GetSecondsUntilFull in your project)
+        // Energy full (RiftManager has GetSecondsUntilFull in your project)
         if (s.notifyEnergyFull)
         {
             int secs = ComputeSecondsUntilEnergyFull();
@@ -213,8 +213,8 @@ public class NotificationManager : MonoBehaviour
     {
         try
         {
-            if (EncounterManager.I == null) return 0;
-            int secs = EncounterManager.I.GetSecondsUntilFull();
+            if (RiftManager.I == null) return 0;
+            int secs = RiftManager.I.GetSecondsUntilFull();
             return secs > 0 ? secs : 0;
         }
         catch { return 0; }

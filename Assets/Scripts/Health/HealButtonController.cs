@@ -98,7 +98,8 @@ public class HealButtonController : MonoBehaviour
         var owned = team[teamIndex];
         if (owned == null || string.IsNullOrEmpty(owned.monsterId)) return;
 
-        var def = (library != null) ? library.GetById(owned.monsterId) : null;
+        var def = MonsterCatalog.GetById(owned.monsterId);
+        if (def == null && library != null) def = library.GetById(owned.monsterId);
         if (def == null)
         {
             if (hpLabel != null) hpLabel.text = "HP: ?";
@@ -172,7 +173,8 @@ public class HealButtonController : MonoBehaviour
         var owned = team[teamIndex];
         if (owned == null || string.IsNullOrEmpty(owned.monsterId)) return;
 
-        var def = (library != null) ? library.GetById(owned.monsterId) : null;
+        var def = MonsterCatalog.GetById(owned.monsterId);
+        if (def == null && library != null) def = library.GetById(owned.monsterId);
         if (def == null) { Refresh(); return; }
         int maxHP = HealingService.CalcMaxHP(def, owned.level);
         // Enforce HP invariant.

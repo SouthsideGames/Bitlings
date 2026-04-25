@@ -93,7 +93,7 @@ public sealed class IronCareerReplacePanelUI : MonoBehaviour
         SetConfirmInteractable(false);
 
         if (warningLabel)
-            warningLabel.text = "\u26A0 Selected monster will be permanently dismissed. This cannot be undone.";
+            warningLabel.text = "Selected monster will be permanently dismissed. This cannot be undone.";
 
         // Destroy previous incoming card if any
         if (_spawnedIncomingCard)

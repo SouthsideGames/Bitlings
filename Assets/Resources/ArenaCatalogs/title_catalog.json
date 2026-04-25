@@ -1,0 +1,1274 @@
+{
+    "titles": [
+        {
+            "titleId": "T-001",
+            "displayName": "Apprentice",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-002",
+            "displayName": "Firefighter",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-003",
+            "displayName": "Mechanic",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-005",
+            "displayName": "Crew Worker",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-006",
+            "displayName": "Teacher",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-007",
+            "displayName": "Foreman",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-008",
+            "displayName": "Analyst",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-009",
+            "displayName": "Guard",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-012",
+            "displayName": "Planner",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-013",
+            "displayName": "Cook",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-014",
+            "displayName": "Trainer",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-017",
+            "displayName": "Librarian",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-018",
+            "displayName": "Supervisor",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-019",
+            "displayName": "Assistant",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-020",
+            "displayName": "Artisan",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-021",
+            "displayName": "Surveyor",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-022",
+            "displayName": "Pilot",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-023",
+            "displayName": "Captain",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-024",
+            "displayName": "T-024",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-025",
+            "displayName": "Commander",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-026",
+            "displayName": "Doctor",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-027",
+            "displayName": "Guard",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-028",
+            "displayName": "Judge",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-029",
+            "displayName": "Botanist",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-030",
+            "displayName": "Officer",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-031",
+            "displayName": "Coach",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-032",
+            "displayName": "Surgeon",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-033",
+            "displayName": "Cook",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-034",
+            "displayName": "Producer",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-040",
+            "displayName": "Shift Supervisor",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-041",
+            "displayName": "Process Manager",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-042",
+            "displayName": "Operations Chief",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-043",
+            "displayName": "Apex Operator",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-045",
+            "displayName": "Geologist",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-046",
+            "displayName": "Dispatcher",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-047",
+            "displayName": "Planner",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-048",
+            "displayName": "Pilot",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-050",
+            "displayName": "Researcher",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-051",
+            "displayName": "Broker",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-052",
+            "displayName": "Architect",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-053",
+            "displayName": "Electrician",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-054",
+            "displayName": "Manager",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-055",
+            "displayName": "Mechanic",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-056",
+            "displayName": "Biologist",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-057",
+            "displayName": "Driver",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-058",
+            "displayName": "Auditor",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-060",
+            "displayName": "Plumber",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-061",
+            "displayName": "Scientist",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-062",
+            "displayName": "Welder",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-063",
+            "displayName": "Contractor",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-064",
+            "displayName": "Paramedic",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-070",
+            "displayName": "Corporate Janitor",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-071",
+            "displayName": "Quality Designer",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-072",
+            "displayName": "Scientist",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-073",
+            "displayName": "Supply Surveyor",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-075",
+            "displayName": "Chemist",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-076",
+            "displayName": "Analyst",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-077",
+            "displayName": "Supervisor",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-078",
+            "displayName": "Technologist",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-079",
+            "displayName": "Librarian",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-080",
+            "displayName": "Supervisor",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-081",
+            "displayName": "Firefighter",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-082",
+            "displayName": "Biochemist",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-083",
+            "displayName": "Planner",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-084",
+            "displayName": "Machinist",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-086",
+            "displayName": "Manager",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-087",
+            "displayName": "Carpenter",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-088",
+            "displayName": "Nurse",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-089",
+            "displayName": "Consultant",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-115",
+            "displayName": "Carpenter",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-116",
+            "displayName": "Officer",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-117",
+            "displayName": "Senior Treasurer",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-118",
+            "displayName": "Lead Cook",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-119",
+            "displayName": "Plumber",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-120",
+            "displayName": "Chief Controller",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-121",
+            "displayName": "Safety Engineer",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-122",
+            "displayName": "Shift Photographer",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-123",
+            "displayName": "Supply Tailor",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-124",
+            "displayName": "Porter",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-125",
+            "displayName": "Sailor",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-126",
+            "displayName": "Safety Glazier",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-127",
+            "displayName": "Lead Welder",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-128",
+            "displayName": "Judge",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-129",
+            "displayName": "Surgeon",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-130",
+            "displayName": "Chief Carver",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-131",
+            "displayName": "Broker",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-132",
+            "displayName": "Steward",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-133",
+            "displayName": "Supply Dispatcher",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-134",
+            "displayName": "Training Treasurer",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-138",
+            "displayName": "Assistant Carver",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-139",
+            "displayName": "Production Judge",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-140",
+            "displayName": "Bookkeeper",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-141",
+            "displayName": "Senior Receptionist",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-142",
+            "displayName": "Operations Cashier",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-143",
+            "displayName": "Shift Accountant",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-144",
+            "displayName": "Training Therapist",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-145",
+            "displayName": "Field Host",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-146",
+            "displayName": "Head Locksmith",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-147",
+            "displayName": "Nurse",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-148",
+            "displayName": "Principal Plumber",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-149",
+            "displayName": "Cook",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-150",
+            "displayName": "Treasurer",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-151",
+            "displayName": "Blacksmith",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-152",
+            "displayName": "Development Nurse",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-153",
+            "displayName": "Quality Assembler",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-159",
+            "displayName": "Associate Officer",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-160",
+            "displayName": "Head Scientist",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-161",
+            "displayName": "Editor",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-162",
+            "displayName": "Supply Consultant",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-163",
+            "displayName": "Driver",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-164",
+            "displayName": "Plant Plumber",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-165",
+            "displayName": "Resident Dispatcher",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-166",
+            "displayName": "Quality Pilot",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-167",
+            "displayName": "Principal Chemist",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-168",
+            "displayName": "Laboratory Smith",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-169",
+            "displayName": "Development Designer",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-170",
+            "displayName": "Smith",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-171",
+            "displayName": "National Commander",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-172",
+            "displayName": "Corporate Contractor",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-173",
+            "displayName": "Lead Assembler",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-174",
+            "displayName": "Chief Guard",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-175",
+            "displayName": "Advisor",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-176",
+            "displayName": "National Therapist",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-177",
+            "displayName": "Operations Dispatcher",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-178",
+            "displayName": "Plant Accountant",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-179",
+            "displayName": "Supply Barista",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-180",
+            "displayName": "Senior Pilot",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-181",
+            "displayName": "Staff Inspector",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-182",
+            "displayName": "Corporate Lineman",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-183",
+            "displayName": "Logistics Biologist",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-184",
+            "displayName": "Technician",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-185",
+            "displayName": "Dispatcher",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-186",
+            "displayName": "Clerk",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-187",
+            "displayName": "Principal Supervisor",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-188",
+            "displayName": "Fitter",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-189",
+            "displayName": "Principal Designer",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-190",
+            "displayName": "Accountant",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-191",
+            "displayName": "Draftsman",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-192",
+            "displayName": "Field Clerk",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-193",
+            "displayName": "Workshop Modeler",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-194",
+            "displayName": "Principal Therapist",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-195",
+            "displayName": "Detective",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-196",
+            "displayName": "Field Carver",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-197",
+            "displayName": "Safety Teacher",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-198",
+            "displayName": "National Glazier",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-199",
+            "displayName": "Support Commander",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-200",
+            "displayName": "Staff Paramedic",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-201",
+            "displayName": "Lead Locksmith",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-202",
+            "displayName": "Head Doctor",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-203",
+            "displayName": "Controller",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-204",
+            "displayName": "Decorator",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-205",
+            "displayName": "Chief Porter",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-206",
+            "displayName": "Development Captain",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-207",
+            "displayName": "Assistant Sailor",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-208",
+            "displayName": "Training Lineman",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-209",
+            "displayName": "Quality Carpenter",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-210",
+            "displayName": "Captain",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-211",
+            "displayName": "Operations Navigator",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-212",
+            "displayName": "Assistant Grinder",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-213",
+            "displayName": "Laboratory Miner",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-214",
+            "displayName": "Paramedic",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-215",
+            "displayName": "Supply Steward",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-216",
+            "displayName": "National Judge",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-217",
+            "displayName": "Butcher",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-218",
+            "displayName": "Production Decorator",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-219",
+            "displayName": "Laboratory Attendant",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-220",
+            "displayName": "Modeler",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-221",
+            "displayName": "Junior Photographer",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-222",
+            "displayName": "Development Grinder",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-223",
+            "displayName": "Navigator",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-224",
+            "displayName": "Safety Inspector",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-225",
+            "displayName": "Guard Captain",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-226",
+            "displayName": "Senior Foreman",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-227",
+            "displayName": "Defense Architect",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-228",
+            "displayName": "Iron Marshal",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-229",
+            "displayName": "Courier",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-230",
+            "displayName": "Shift Runner",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-231",
+            "displayName": "Line Sprinter",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-232",
+            "displayName": "Speed Engineer",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-233",
+            "displayName": "Jet Forecaster",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-234",
+            "displayName": "Lead Electrician",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-235",
+            "displayName": "Maintenance Artisan",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-236",
+            "displayName": "Illustrator",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-237",
+            "displayName": "Contractor",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-238",
+            "displayName": "Development Botanist",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-239",
+            "displayName": "Principal Carpenter",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-240",
+            "displayName": "Plant Editor",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-241",
+            "displayName": "Farmer",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-242",
+            "displayName": "Principal Weaver",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-243",
+            "displayName": "Miner",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-268",
+            "displayName": "Lead Researcher",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-269",
+            "displayName": "Logistics Steward",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-286",
+            "displayName": "Workshop Commander",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-287",
+            "displayName": "Doctor",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-293",
+            "displayName": "Builder",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-300",
+            "displayName": "Quality Broker",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-301",
+            "displayName": "Corporate Builder",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-302",
+            "displayName": "Research Locksmith",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-303",
+            "displayName": "Principal Painter",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-304",
+            "displayName": "Laboratory Architect",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-305",
+            "displayName": "Welder",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-306",
+            "displayName": "Control Judge",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-307",
+            "displayName": "Programmer",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-308",
+            "displayName": "Attendant",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-309",
+            "displayName": "Chief Blacksmith",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-310",
+            "displayName": "Potter",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-311",
+            "displayName": "Associate Detective",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-312",
+            "displayName": "Assistant Driver",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-313",
+            "displayName": "Regional Paramedic",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-326",
+            "displayName": "Fitness Instructor",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-327",
+            "displayName": "Quarry Supervisor",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-328",
+            "displayName": "Pit Boss",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-329",
+            "displayName": "Power Engineer",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-330",
+            "displayName": "Groundskeeper",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-331",
+            "displayName": "Forge Master",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-332",
+            "displayName": "Workshop Manager",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-333",
+            "displayName": "Dockmaster",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-334",
+            "displayName": "Cryo Technician",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-335",
+            "displayName": "Stargazer",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-336",
+            "displayName": "Warden",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-337",
+            "displayName": "Beastmaster",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-338",
+            "displayName": "Market Broker",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-339",
+            "displayName": "High Priest",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-340",
+            "displayName": "Head Physician",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-341",
+            "displayName": "Expedition Leader",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-346",
+            "displayName": "Assistant Carpenter",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-347",
+            "displayName": "Chief Concierge",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-348",
+            "displayName": "Associate Weaver",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-349",
+            "displayName": "National Porter",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-350",
+            "displayName": "Laboratory Dispatcher",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-351",
+            "displayName": "Staff Planner",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-352",
+            "displayName": "Maintenance Therapist",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-353",
+            "displayName": "Chief Officer",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-356",
+            "displayName": "Lead Guard",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-357",
+            "displayName": "Logistics Miner",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-360",
+            "displayName": "Supervisor",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-361",
+            "displayName": "Sommelier",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-362",
+            "displayName": "Chief Steward",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-363",
+            "displayName": "Control Glazier",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-364",
+            "displayName": "Regional Grinder",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-365",
+            "displayName": "Lead Botanist",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-366",
+            "displayName": "Development Welder",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-367",
+            "displayName": "Research Welder",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-380",
+            "displayName": "Assembler",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-381",
+            "displayName": "Control Mechanic",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-382",
+            "displayName": "Locksmith",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-384",
+            "displayName": "Maintenance Rigger",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-385",
+            "displayName": "Therapist",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-386",
+            "displayName": "Shift Butcher",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-387",
+            "displayName": "Plant Seamstress",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-388",
+            "displayName": "Junior Nurse",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-389",
+            "displayName": "Development Fitter",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-390",
+            "displayName": "Rigger",
+            "arenaScore": 0
+        },
+        {
+            "titleId": "T-400",
+            "displayName": "Crisis Architect",
+            "arenaScore": 0
+        }
+    ]
+}

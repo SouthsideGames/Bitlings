@@ -172,6 +172,9 @@ public class SettingsPanel : MonoBehaviour
             FeatureUnlockManager.I.OnFeatureUnlocked += HandleFeatureUnlocked;
         }
 
+        GameEvents.PromotionRankChanged -= HandlePromotionRankChanged;
+        GameEvents.PromotionRankChanged += HandlePromotionRankChanged;
+
         CacheSectionCanvasGroups();
         WireSectionTabs();
 
@@ -198,6 +201,8 @@ public class SettingsPanel : MonoBehaviour
 
         if (FeatureUnlockManager.I != null)
             FeatureUnlockManager.I.OnFeatureUnlocked -= HandleFeatureUnlocked;
+
+        GameEvents.PromotionRankChanged -= HandlePromotionRankChanged;
 
         UnwireSectionTabs();
 
@@ -456,10 +461,12 @@ public void ShowSection(SettingsSection section, bool instant = false)
             {
                 EnsureDifficultyDropdownOptions();
 
-                int mode = Mathf.Clamp(s.difficultyMode, 0, 2);
+                int mode = SettingsManager.I != null
+                    ? SettingsManager.I.GetDifficultyMode()
+                    : Mathf.Clamp(s.difficultyMode, 0, 2);
                 difficultyDropdown.SetValueWithoutNotify(mode);
 
-                bool unlocked = SaveManager.Data != null && SaveManager.Data.promotionRank >= 15;
+                bool unlocked = SaveManager.Data != null && SaveManager.Data.HasDifficultyUnlocked;
                 difficultyDropdown.interactable = unlocked;
 
                 if (difficultyLockLabel)
@@ -740,6 +747,11 @@ public void ShowSection(SettingsSection section, bool instant = false)
         {
             Refresh();
         }
+    }
+
+    void HandlePromotionRankChanged(int oldRank, int newRank)
+    {
+        Refresh();
     }
 
     void RefreshSeedUi(SettingsState s)

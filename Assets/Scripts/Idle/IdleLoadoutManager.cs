@@ -152,6 +152,7 @@ public static class IdleLoadoutManager
 
         RemoveFromIdleByOwnedUid(uid, slotIndex);
         RemoveFromActiveByOwnedUid(data, uid);
+        ArenaLoadoutManager.RemoveFromArenaByOwnedUid(uid);
 
         data.idleTeamOwnedUIDs[slotIndex] = uid;
         SaveManager.Save();

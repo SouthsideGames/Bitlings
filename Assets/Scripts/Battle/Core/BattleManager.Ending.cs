@@ -582,7 +582,7 @@ public partial class BattleManager : MonoBehaviour
 
         if (!victory && !escaped && AutoResolveActive)
         {
-            EncounterManager.I?.NotifyAuto_TeamKO();
+            RiftManager.I?.NotifyAuto_TeamKO();
         }
 
         SetPostBattleWinnerVisible(victory, escaped);

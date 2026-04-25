@@ -45,7 +45,7 @@ public class PlayerDossierSnapshot
     // PAGE 3 – FIELD OPERATIONS
     // ─────────────────────────────────────────────────────────────
     [Header("Field Operations")]
-    public int encountersInitiated;
+    public int riftsInitiated;
     public int captureSuccessRate; // 0–100
     public int riftStabilizations;
     public int rareBitlingsFound;
@@ -73,6 +73,13 @@ public class PlayerDossierSnapshot
     public int restChargeCount;
     public int growthCoreCount;
     public int packVoucherCount;
+
+    public int bullTokenCount;
+    public int bearTokenCount;
+    public int arenaTicketCount;
+    public bool bullTokensUnlocked;
+    public bool bearTokensUnlocked;
+    public bool arenaTicketsUnlocked;
 
     public int conversionEfficiencyPercent;
 
@@ -210,7 +217,7 @@ public class PlayerDossierManager : MonoBehaviour
 
             snapshot.jobSites = Array.Empty<JobSiteRowSnapshot>();
 
-            snapshot.encountersInitiated = 0;
+            snapshot.riftsInitiated = 0;
             snapshot.captureSuccessRate = 0;
             snapshot.riftStabilizations = 0;
             snapshot.rareBitlingsFound = 0;
@@ -587,7 +594,7 @@ public class PlayerDossierManager : MonoBehaviour
     {
         var f = data.fieldOps ?? new FieldOpsStats();
 
-        snapshot.encountersInitiated = Mathf.Max(0, f.encountersInitiated);
+        snapshot.riftsInitiated = Mathf.Max(0, f.riftsInitiated);
         snapshot.riftStabilizations = Mathf.Max(0, f.riftStabilizations);
         snapshot.rareBitlingsFound = Mathf.Max(0, f.rareBitlingsFound);
         snapshot.premiumDiscoveries = Mathf.Max(0, f.premiumDiscoveries);
@@ -641,6 +648,15 @@ public class PlayerDossierManager : MonoBehaviour
         s.restChargeCount = GetLifetimeCollected(data, ResourceType.Coffee, bank.Get(ResourceType.Coffee));
         s.growthCoreCount = GetLifetimeCollected(data, ResourceType.GrowthCore, bank.Get(ResourceType.GrowthCore));
         s.packVoucherCount = GetLifetimeCollected(data, ResourceType.PackVoucher, bank.Get(ResourceType.PackVoucher));
+
+        bool tokenFeature = FeatureUnlockManager.I != null && FeatureUnlockManager.I.IsUnlocked(FeatureId.Exchange_BearBullTokens);
+        s.bullTokensUnlocked = tokenFeature;
+        s.bearTokensUnlocked = tokenFeature;
+        s.bullTokenCount = tokenFeature ? GetLifetimeCollected(data, ResourceType.BullToken, bank.Get(ResourceType.BullToken)) : 0;
+        s.bearTokenCount = tokenFeature ? GetLifetimeCollected(data, ResourceType.BearToken, bank.Get(ResourceType.BearToken)) : 0;
+
+        s.arenaTicketsUnlocked = ArenaSaveHelper.IsArenaUnlocked();
+        s.arenaTicketCount = s.arenaTicketsUnlocked ? ArenaSaveHelper.GetArenaTicketCount() : 0;
 
         s.conversionEfficiencyPercent = ComputeHandlerEfficiency(data, s);
     }

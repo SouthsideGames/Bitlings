@@ -888,7 +888,7 @@ private static float AverageWorkingSlotFatigue(JobSiteState s)
                 break;
 
             case ResourceType.Energy:
-                if (EncounterManager.I) EncounterManager.I.AddEnergy(whole);
+                if (RiftManager.I) RiftManager.I.AddEnergy(whole);
                 else ResourceBank.Add(ResourceType.Energy, whole);
                 break;
 

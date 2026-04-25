@@ -24,6 +24,14 @@ public enum DirectoryViewMode
     Captured = 2
 }
 
+/// <summary>Which team row is currently visible in the Directory.</summary>
+public enum DirectoryLoadoutMode
+{
+    Active = 0,
+    Idle = 1,
+    Arena = 2
+}
+
 public class DirectoryPanelUI : MonoBehaviour
 {
     private const string TutorialIdleBattlesKey = "tut_idlebattles_v1";
@@ -38,6 +46,13 @@ public class DirectoryPanelUI : MonoBehaviour
     [SerializeField] private TextMeshProUGUI idleLoadoutToggleText;
     [SerializeField] private CanvasGroup activeTeamRowGroup;
     [SerializeField] private CanvasGroup idleTeamRowGroup;
+
+    [Header("Arena Loadout")]
+    [SerializeField] private RectTransform arenaTeamContent;
+    [SerializeField] private CanvasGroup arenaTeamRowGroup;
+    [SerializeField] private Button arenaLoadoutToggleButton;
+    [SerializeField] private TextMeshProUGUI arenaLoadoutToggleText;
+    [SerializeField] private GameObject arenaLockedIndicator;
 
     [Header("Owned (Box)")]
     [SerializeField] private RectTransform ownedContent;
@@ -61,8 +76,12 @@ public class DirectoryPanelUI : MonoBehaviour
     private readonly List<int> _teamSlotIndexByVisible = new List<int>();
     private readonly List<RectTransform> _idleTeamCardRoots = new List<RectTransform>();
     private readonly List<int> _idleTeamSlotIndexByVisible = new List<int>();
+    private readonly List<RectTransform> _arenaTeamCardRoots = new List<RectTransform>();
+    private readonly List<int> _arenaTeamSlotIndexByVisible = new List<int>();
 
     private bool _showingIdleLoadout;
+    private DirectoryLoadoutMode _loadoutMode = DirectoryLoadoutMode.Active;
+    private int selectedArenaTeamIndex = 0;
 
     private bool _capturedOnlyFilter = false;
     private bool _favoritesOnlyFilter = false;
@@ -138,6 +157,7 @@ public class DirectoryPanelUI : MonoBehaviour
             _favoritesOnlyFilter = false;
 
         SetupIdleLoadoutToggle();
+        SetupArenaLoadoutToggle();
         SetLoadoutEditingMode(_showingIdleLoadout, animate: false);
 
         RefreshAll();
@@ -171,7 +191,11 @@ public class DirectoryPanelUI : MonoBehaviour
         if (idleLoadoutToggleButton)
             idleLoadoutToggleButton.onClick.RemoveListener(OnToggleIdleLoadoutEditMode);
 
+        if (arenaLoadoutToggleButton)
+            arenaLoadoutToggleButton.onClick.RemoveListener(OnToggleArenaLoadoutEditMode);
+
         IdleLoadoutManager.SetEditingIdleTeam(false);
+        ArenaLoadoutManager.SetEditingArenaTeam(false);
     }
 
     private void HandleMonsterCaptured(string monsterId, MonsterType type) => RebuildOwnedOnly();
@@ -230,6 +254,7 @@ public class DirectoryPanelUI : MonoBehaviour
         if (mode == _lastSortMode) return;
 
         _lastSortMode = mode;
+        PunchTransform(sortDropdown != null ? sortDropdown.transform : null, 1.04f, 0.07f);
         SaveSortIndexToJson(value);
         RebuildOwnedOnly();
     }
@@ -257,6 +282,7 @@ public class DirectoryPanelUI : MonoBehaviour
 
         BuildTeam(team);
         BuildIdleTeam(data);
+        BuildArenaTeam(data);
 
         var scroll = ownedContent ? ownedContent.GetComponentInParent<ScrollRect>() : null;
         float pos = scroll ? scroll.verticalNormalizedPosition : 1f;
@@ -311,17 +337,66 @@ public class DirectoryPanelUI : MonoBehaviour
 
     private void OnToggleIdleLoadoutEditMode()
     {
-        SetLoadoutEditingMode(!_showingIdleLoadout, animate: true);
+        // If currently idle, go back to active. Otherwise go to idle.
+        var next = _loadoutMode == DirectoryLoadoutMode.Idle
+            ? DirectoryLoadoutMode.Active
+            : DirectoryLoadoutMode.Idle;
+        SetDirectoryLoadoutMode(next, animate: true);
+    }
+
+    private void SetupArenaLoadoutToggle()
+    {
+        if (!arenaLoadoutToggleButton) return;
+
+        bool arenaUnlocked = FeatureUnlockManager.I != null &&
+                             FeatureUnlockManager.I.IsUnlocked(FeatureId.Arena_Basic);
+
+        arenaLoadoutToggleButton.gameObject.SetActive(arenaUnlocked);
+        arenaLoadoutToggleButton.onClick.RemoveAllListeners();
+
+        if (arenaUnlocked)
+            arenaLoadoutToggleButton.onClick.AddListener(OnToggleArenaLoadoutEditMode);
+
+        UpdateArenaToggleLabel();
+    }
+
+    private void OnToggleArenaLoadoutEditMode()
+    {
+        // If currently arena, go back to active. Otherwise go to arena.
+        var next = _loadoutMode == DirectoryLoadoutMode.Arena
+            ? DirectoryLoadoutMode.Active
+            : DirectoryLoadoutMode.Arena;
+        SetDirectoryLoadoutMode(next, animate: true);
+    }
+
+    /// <summary>Opens the Directory directly in Arena loadout editing mode.</summary>
+    public void OpenInArenaMode()
+    {
+        SetDirectoryLoadoutMode(DirectoryLoadoutMode.Arena, animate: false);
+    }
+
+    private void SetDirectoryLoadoutMode(DirectoryLoadoutMode mode, bool animate)
+    {
+        _loadoutMode = mode;
+        _showingIdleLoadout = mode == DirectoryLoadoutMode.Idle;
+
+        IdleLoadoutManager.SetEditingIdleTeam(mode == DirectoryLoadoutMode.Idle);
+        ArenaLoadoutManager.SetEditingArenaTeam(mode == DirectoryLoadoutMode.Arena);
+
+        UpdateIdleToggleLabel();
+        UpdateArenaToggleLabel();
+
+        SetCanvasGroupVisible(activeTeamRowGroup, mode == DirectoryLoadoutMode.Active, animate);
+        SetCanvasGroupVisible(idleTeamRowGroup, mode == DirectoryLoadoutMode.Idle, animate);
+        SetCanvasGroupVisible(arenaTeamRowGroup, mode == DirectoryLoadoutMode.Arena, animate);
+
+        RefreshArenaLockedState();
     }
 
     private void SetLoadoutEditingMode(bool showIdle, bool animate)
     {
-        _showingIdleLoadout = showIdle;
-        IdleLoadoutManager.SetEditingIdleTeam(_showingIdleLoadout);
-        UpdateIdleToggleLabel();
-
-        SetCanvasGroupVisible(activeTeamRowGroup, !_showingIdleLoadout, animate);
-        SetCanvasGroupVisible(idleTeamRowGroup, _showingIdleLoadout, animate);
+        var mode = showIdle ? DirectoryLoadoutMode.Idle : DirectoryLoadoutMode.Active;
+        SetDirectoryLoadoutMode(mode, animate);
     }
 
     private void SetCanvasGroupVisible(CanvasGroup group, bool visible, bool animate)
@@ -332,15 +407,37 @@ public class DirectoryPanelUI : MonoBehaviour
         group.blocksRaycasts = visible;
 
         if (animate)
-            LeanTween.alphaCanvas(group, visible ? 1f : 0f, 0.18f);
+        {
+            LeanTween.alphaCanvas(group, visible ? 1f : 0f, 0.18f)
+                .setEase(LeanTweenType.easeInOutSine);
+
+            var rt = group.transform as RectTransform;
+            if (rt)
+            {
+                if (visible) rt.localScale = Vector3.one * 0.985f;
+                LeanTween.scale(rt, visible ? Vector3.one : Vector3.one * 0.985f, 0.18f)
+                    .setEase(LeanTweenType.easeOutQuad);
+            }
+        }
         else
+        {
             group.alpha = visible ? 1f : 0f;
+
+            var rt = group.transform as RectTransform;
+            if (rt) rt.localScale = visible ? Vector3.one : Vector3.one * 0.985f;
+        }
     }
 
     private void UpdateIdleToggleLabel()
     {
         if (!idleLoadoutToggleText) return;
-        idleLoadoutToggleText.text = _showingIdleLoadout ? "ACTIVE" : "IDLE";
+        idleLoadoutToggleText.text = _loadoutMode == DirectoryLoadoutMode.Idle ? "ACTIVE" : "IDLE";
+    }
+
+    private void UpdateArenaToggleLabel()
+    {
+        if (!arenaLoadoutToggleText) return;
+        arenaLoadoutToggleText.text = _loadoutMode == DirectoryLoadoutMode.Arena ? "ACTIVE" : "ARENA";
     }
 
     void BuildTeam(List<OwnedMonsterData> team)
@@ -506,7 +603,9 @@ public class DirectoryPanelUI : MonoBehaviour
             if (_teamCardRoots[i] != null) _teamCardRoots[i].localScale = Vector3.one;
 
         if (selectedTeamIndex < _teamCardRoots.Count && _teamCardRoots[selectedTeamIndex] != null)
-            LeanTween.scale(_teamCardRoots[selectedTeamIndex], Vector3.one * 1.05f, 0.08f).setLoopPingPong(1);
+            LeanTween.scale(_teamCardRoots[selectedTeamIndex], Vector3.one * 1.05f, 0.09f)
+                .setEase(LeanTweenType.easeOutBack)
+                .setLoopPingPong(1);
     }
 
     void SelectIdleTeamSlot(int idx)
@@ -519,7 +618,102 @@ public class DirectoryPanelUI : MonoBehaviour
             if (_idleTeamCardRoots[i] != null) _idleTeamCardRoots[i].localScale = Vector3.one;
 
         if (selectedIdleTeamIndex < _idleTeamCardRoots.Count && _idleTeamCardRoots[selectedIdleTeamIndex] != null)
-            LeanTween.scale(_idleTeamCardRoots[selectedIdleTeamIndex], Vector3.one * 1.05f, 0.08f).setLoopPingPong(1);
+            LeanTween.scale(_idleTeamCardRoots[selectedIdleTeamIndex], Vector3.one * 1.05f, 0.09f)
+                .setEase(LeanTweenType.easeOutBack)
+                .setLoopPingPong(1);
+    }
+
+    void BuildArenaTeam(PlayerManager data)
+    {
+        ClearAllChildren(arenaTeamContent);
+        _arenaTeamCardRoots.Clear();
+        _arenaTeamSlotIndexByVisible.Clear();
+
+        if (data == null || arenaTeamContent == null)
+            return;
+
+        var arenaUids = ArenaLoadoutManager.GetArenaTeamOwnedUids();
+        if (arenaUids == null || arenaUids.Count == 0)
+            return;
+
+        bool locked = ArenaSaveHelper.IsBattleTeamLocked();
+
+        for (int arenaSlot = 0; arenaSlot < Mathf.Min(3, arenaUids.Count); arenaSlot++)
+        {
+            string uid = arenaUids[arenaSlot];
+            if (string.IsNullOrEmpty(uid))
+                continue;
+
+            var member = FindOwnedByUid(data, uid);
+            if (member == null || string.IsNullOrEmpty(member.monsterId))
+                continue;
+
+            var def = MonsterLibraryLocator.GetById(member.monsterId);
+            int arenaSlotLocal = arenaSlot;
+            var memberLocal = member;
+
+            var go = Instantiate(teamCardPrefab, arenaTeamContent);
+            var card = go.GetComponent<TeamMonsterCardUI>();
+            var rt = go.transform as RectTransform;
+            if (rt) _arenaTeamCardRoots.Add(rt);
+            _arenaTeamSlotIndexByVisible.Add(arenaSlotLocal);
+
+            SetTeamHpBarActive(go, active: false);
+
+            if (card)
+            {
+                int visibleIndex = _arenaTeamCardRoots.Count - 1;
+
+                card.Setup(
+                    data: memberLocal,
+                    def: def,
+                    onClick: locked ? (System.Action<OwnedMonsterData>)null : _ =>
+                    {
+                        ArenaLoadoutManager.SetEditingArenaTeam(true);
+                        SelectArenaTeamSlot(visibleIndex);
+                        OpenTeamDetail(arenaSlotLocal, memberLocal);
+                    },
+                    onAnyChanged: RefreshAll
+                );
+            }
+        }
+
+        if (_arenaTeamCardRoots.Count == 0)
+        {
+            selectedArenaTeamIndex = 0;
+            return;
+        }
+
+        SelectArenaTeamSlot(Mathf.Clamp(selectedArenaTeamIndex, 0, _arenaTeamCardRoots.Count - 1));
+    }
+
+    void SelectArenaTeamSlot(int idx)
+    {
+        if (_arenaTeamCardRoots.Count == 0) return;
+
+        selectedArenaTeamIndex = Mathf.Clamp(idx, 0, _arenaTeamCardRoots.Count - 1);
+
+        for (int i = 0; i < _arenaTeamCardRoots.Count; i++)
+            if (_arenaTeamCardRoots[i] != null) _arenaTeamCardRoots[i].localScale = Vector3.one;
+
+        if (selectedArenaTeamIndex < _arenaTeamCardRoots.Count && _arenaTeamCardRoots[selectedArenaTeamIndex] != null)
+            LeanTween.scale(_arenaTeamCardRoots[selectedArenaTeamIndex], Vector3.one * 1.05f, 0.09f)
+                .setEase(LeanTweenType.easeOutBack)
+                .setLoopPingPong(1);
+    }
+
+    private void RefreshArenaLockedState()
+    {
+        bool locked = ArenaSaveHelper.IsBattleTeamLocked();
+
+        if (arenaLockedIndicator)
+            arenaLockedIndicator.SetActive(locked && _loadoutMode == DirectoryLoadoutMode.Arena);
+
+        if (arenaLoadoutToggleButton)
+            arenaLoadoutToggleButton.interactable = !locked;
+
+        if (arenaTeamRowGroup && _loadoutMode == DirectoryLoadoutMode.Arena)
+            arenaTeamRowGroup.interactable = !locked;
     }
 
     private void OpenTeamDetail(int slotIndex, OwnedMonsterData member)
@@ -920,6 +1114,7 @@ public class DirectoryPanelUI : MonoBehaviour
     private void OnToggleCapturedOnly()
     {
         _capturedOnlyFilter = !_capturedOnlyFilter;
+        PunchTransform(capturedOnlyButton != null ? capturedOnlyButton.transform : null, 1.06f, 0.07f);
 
         if (_capturedOnlyFilter) _favoritesOnlyFilter = false;
 
@@ -929,10 +1124,24 @@ public class DirectoryPanelUI : MonoBehaviour
     private void OnToggleFavoritesOnly()
     {
         _favoritesOnlyFilter = !_favoritesOnlyFilter;
+        PunchTransform(favoritesOnlyButton != null ? favoritesOnlyButton.transform : null, 1.06f, 0.07f);
 
         if (_favoritesOnlyFilter) _capturedOnlyFilter = false;
 
         RebuildOwnedOnly();
+    }
+
+    private static void PunchTransform(Transform target, float peakScale, float duration)
+    {
+        if (!target) return;
+
+        var rt = target as RectTransform;
+        if (!rt) return;
+
+        rt.localScale = Vector3.one;
+        LeanTween.scale(rt, Vector3.one * Mathf.Max(1f, peakScale), Mathf.Max(0.04f, duration))
+            .setEase(LeanTweenType.easeOutQuad)
+            .setLoopPingPong(1);
     }
 
     // ─────────────────────────────────────────────

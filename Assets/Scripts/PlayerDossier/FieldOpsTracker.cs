@@ -20,12 +20,12 @@ public static class FieldOpsTracker
         }
     }
 
-    public static void RecordEncounter(MonsterDataSO wild)
+    public static void RecordRift(MonsterDataSO wild)
     {
         var stats = Stats;
         if (stats == null) return;
 
-        stats.encountersInitiated = Mathf.Max(0, stats.encountersInitiated + 1);
+        stats.riftsInitiated = Mathf.Max(0, stats.riftsInitiated + 1);
         SaveManager.Save();
     }
 

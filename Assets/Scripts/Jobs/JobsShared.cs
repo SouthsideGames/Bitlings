@@ -13,7 +13,7 @@ public enum JobType {
 
 public enum SiteEffectKind {
     None,
-    EncounterTypeWeight,
+    RiftTypeWeight,
     CaptureBonus,
     RarityBonus,
     PremiumOrb,
@@ -97,7 +97,7 @@ public static class JobOutput
     };
 
     public static SiteEffect? Effect(JobType site) => site switch {
-        JobType.Harbor       => new SiteEffect { kind = SiteEffectKind.EncounterTypeWeight, value = 0.30f, uses = 3, target = null },
+        JobType.Harbor       => new SiteEffect { kind = SiteEffectKind.RiftTypeWeight, value = 0.30f, uses = 3, target = null },
         JobType.Cryo_Lab      => new SiteEffect { kind = SiteEffectKind.CaptureBonus,        value = 0.10f, uses = 3, target = null },
         JobType.Wyrm_Den      => new SiteEffect { kind = SiteEffectKind.RarityBonus,         value = 0.05f, uses = 3, target = null },
         JobType.Containment  => new SiteEffect { kind = SiteEffectKind.StatBoostSpeed,      value = 0.15f, uses = 1,  target = null },

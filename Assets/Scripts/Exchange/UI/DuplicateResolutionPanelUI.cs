@@ -131,7 +131,7 @@ public class DuplicateResolutionPanelUI : MonoBehaviour
             trainButton.onClick.RemoveAllListeners();
             if (isMax)
             {
-                int cores = CalcConversionCores(def, PendingDuplicateCapture.EncounterLevel);
+                int cores = CalcConversionCores(def, PendingDuplicateCapture.RiftLevel);
                 if (trainLabel != null) trainLabel.text = $"Convert to Cores (+{cores})";
                 trainButton.onClick.AddListener(() => OnTrainMaxLevel(def, cores));
             }
@@ -247,6 +247,8 @@ public class DuplicateResolutionPanelUI : MonoBehaviour
         GameEvents.MonsterLeveled?.Invoke(key, existing.level);
         GameEvents.RaiseToast($"{def.displayName} trained! Lv {before} → {existing.level}");
 
+        RiftPanelUI.I?.SetHirePromptOverride($"{def.displayName} is now level {existing.level}.");
+
         Close();
     }
 
@@ -259,6 +261,8 @@ public class DuplicateResolutionPanelUI : MonoBehaviour
         GameEvents.OnResourcesChanged?.Invoke();
         GameEvents.MonsterCaptured?.Invoke(def.id, def.type);
         GameEvents.RaiseToast($"{def.displayName} (max level) converted to +{cores} Growth Cores");
+
+        RiftPanelUI.I?.SetHirePromptOverride($"{def.displayName} was already max level, so the duplicate was converted into {cores} Growth Cores.");
 
         Close();
     }
@@ -287,6 +291,8 @@ public class DuplicateResolutionPanelUI : MonoBehaviour
         GameEvents.MonsterBrokered?.Invoke(def.id, payout);
         GameEvents.RaiseToast($"{def.displayName} brokered for +{payout} Credits");
 
+        RiftPanelUI.I?.SetHirePromptOverride($"Sold the duplicate {def.displayName} for {payout} Credits.");
+
         Close();
     }
 
@@ -305,6 +311,8 @@ public class DuplicateResolutionPanelUI : MonoBehaviour
         GameEvents.MonsterCaptured?.Invoke(def.id, def.type);
         GameEvents.RaiseToast($"{def.displayName} placed! Request fulfilled for +{reward} Credits");
 
+        RiftPanelUI.I?.SetHirePromptOverride($"Placed the duplicate {def.displayName} into a request for {reward} Credits.");
+
         Close();
     }
 
@@ -316,9 +324,9 @@ public class DuplicateResolutionPanelUI : MonoBehaviour
         {
             UIManager.I.Hide(PanelId.DuplicateResolution);
 
-            // Reopen the Encounter panel so the player isn't left on a black screen.
-            if (!UIManager.I.IsOpen(PanelId.Encounter))
-                UIManager.I.Show(PanelId.Encounter);
+            // Reopen the Rift panel so the player isn't left on a black screen.
+            if (!UIManager.I.IsOpen(PanelId.Rift))
+                UIManager.I.Show(PanelId.Rift);
         }
     }
 
@@ -364,7 +372,7 @@ public class DuplicateResolutionPanelUI : MonoBehaviour
                 return;
             }
 
-            PendingDuplicateCapture.Set(existing, def, Mathf.Max(1, p.encounterLevel), p.isPremium, p.isMaxLevel);
+            PendingDuplicateCapture.Set(existing, def, Mathf.Max(1, p.riftLevel), p.isPremium, p.isMaxLevel);
         }
         catch (System.Exception ex)
         {
@@ -387,7 +395,7 @@ public class DuplicateResolutionPanelUI : MonoBehaviour
         }
     }
 
-    // ─────────── Duplicate level-up (mirrors EncounterManager logic) ───────────
+    // ─────────── Duplicate level-up (mirrors RiftManager logic) ───────────
 
     private static void ApplyDuplicateCaptureLevelUp(OwnedMonsterData target, MonsterDataSO def, int pointsPerLevel)
     {
@@ -446,10 +454,10 @@ public class DuplicateResolutionPanelUI : MonoBehaviour
         }
     }
 
-    private static int CalcConversionCores(MonsterDataSO def, int encounterLevel)
+    private static int CalcConversionCores(MonsterDataSO def, int riftLevel)
     {
         if (def == null) return 0;
-        int baseCores = Mathf.Max(1, 2 + Mathf.Max(1, encounterLevel));
+        int baseCores = Mathf.Max(1, 2 + Mathf.Max(1, riftLevel));
         float rarityMul;
         switch (def.rarity)
         {

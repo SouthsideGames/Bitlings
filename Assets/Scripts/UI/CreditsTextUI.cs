@@ -25,6 +25,6 @@ public class CreditsTextUI : MonoBehaviour
     {
         if (!_label) return;
         int credits = ResourceBank.Get(ResourceType.Credits);
-        _label.text = $"Credits: {credits}"; 
+        _label.text = $"{credits}"; 
     }
 }

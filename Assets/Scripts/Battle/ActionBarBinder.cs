@@ -33,8 +33,8 @@ public sealed class ActionBarBinder : MonoBehaviour
     [Tooltip("If true, buttons auto-disable when it isn't the player's turn.")]
     [SerializeField] private bool autoDisableWhenNotPlayerTurn = true;
 
-    [Tooltip("If true, buttons also auto-disable when Encounter auto-mode is on (EncounterManager.I.IsAutoMode).")]
-    [SerializeField] private bool alsoDisableDuringEncounterAutoMode = true;
+    [Tooltip("If true, buttons also auto-disable when Rift auto-mode is on (RiftManager.I.IsAutoMode).")]
+    [SerializeField] private bool alsoDisableDuringRiftAutoMode = true;
 
     [Tooltip("If true, we re-wire button listeners in OnEnable (safer when refs are assigned late).")]
     [SerializeField] private bool rewireOnEnable = true;
@@ -57,6 +57,7 @@ public sealed class ActionBarBinder : MonoBehaviour
 
     void Awake()
     {
+        EnsureRefs();
         CacheBaseColors();
         WireButtons();
     }
@@ -67,7 +68,7 @@ public sealed class ActionBarBinder : MonoBehaviour
         CacheBaseColors();
 
         GameEvents.OnBattleStateChanged += Refresh;
-        GameEvents.OnEncounterAutoModeChanged += Refresh;
+        GameEvents.OnRiftAutoModeChanged += Refresh;
 
         if (rewireOnEnable)
             WireButtons();
@@ -78,22 +79,37 @@ public sealed class ActionBarBinder : MonoBehaviour
     void OnDisable()
     {
         GameEvents.OnBattleStateChanged -= Refresh;
-        GameEvents.OnEncounterAutoModeChanged -= Refresh;
+        GameEvents.OnRiftAutoModeChanged -= Refresh;
     }
 
     private void EnsureRefs()
     {
-        if (!battle)
+        if (!battle || !battle.isActiveAndEnabled)
         {
             battle = GetComponentInParent<BattleManager>();
-            if (!battle) battle = FindFirstObjectByType<BattleManager>();
+            if (!battle) battle = FindFirstObjectByType<BattleManager>(FindObjectsInactive.Include);
         }
 
         if (!feedback)
         {
             feedback = GetComponentInParent<BattleFeedbackManager>();
-            if (!feedback) feedback = FindFirstObjectByType<BattleFeedbackManager>();
+            if (!feedback) feedback = FindFirstObjectByType<BattleFeedbackManager>(FindObjectsInactive.Include);
         }
+    }
+
+    public void BindTo(BattleManager targetBattle, BattleFeedbackManager targetFeedback = null)
+    {
+        battle = targetBattle;
+        if (targetFeedback)
+            feedback = targetFeedback;
+
+        _hasLast = false;
+
+        if (rewireOnEnable || isActiveAndEnabled)
+            WireButtons();
+
+        if (isActiveAndEnabled)
+            Refresh();
     }
 
 
@@ -152,6 +168,8 @@ public sealed class ActionBarBinder : MonoBehaviour
             attackBtn.onClick.RemoveAllListeners();
             attackBtn.onClick.AddListener(() =>
             {
+                EnsureRefs();
+
                 // Immediate tactile feedback
                 if (feedback)
                 {
@@ -172,6 +190,8 @@ public sealed class ActionBarBinder : MonoBehaviour
             defendBtn.onClick.RemoveAllListeners();
             defendBtn.onClick.AddListener(() =>
             {
+                EnsureRefs();
+
                 if (feedback)
                 {
                     feedback.PlayButtonPress(BattleFeedbackManager.BattleFeedbackAction.Defend);
@@ -189,6 +209,8 @@ public sealed class ActionBarBinder : MonoBehaviour
             focusBtn.onClick.RemoveAllListeners();
             focusBtn.onClick.AddListener(() =>
             {
+                EnsureRefs();
+
                 if (feedback)
                 {
                     feedback.PlayButtonPress(BattleFeedbackManager.BattleFeedbackAction.Focus);
@@ -206,6 +228,8 @@ public sealed class ActionBarBinder : MonoBehaviour
             runBtn.onClick.RemoveAllListeners();
             runBtn.onClick.AddListener(() =>
             {
+                EnsureRefs();
+
                 if (feedback)
                 {
                     feedback.PlayButtonPress(BattleFeedbackManager.BattleFeedbackAction.Run);
@@ -221,6 +245,8 @@ public sealed class ActionBarBinder : MonoBehaviour
 
     private void Refresh()
     {
+        EnsureRefs();
+
         if (!autoDisableWhenNotPlayerTurn)
         {
             ApplyInteractable(true);
@@ -280,6 +306,8 @@ public sealed class ActionBarBinder : MonoBehaviour
 
     private bool ComputeEnable()
     {
+        EnsureRefs();
+
         if (battle == null || !battle.isActiveAndEnabled)
             return false;
 
@@ -299,13 +327,13 @@ public sealed class ActionBarBinder : MonoBehaviour
             }
         }
 
-        // Optionally also gate by Encounter auto-mode if present
-        if (enable && alsoDisableDuringEncounterAutoMode)
+        // Optionally also gate by Rift auto-mode if present
+        if (enable && alsoDisableDuringRiftAutoMode)
         {
             bool isAuto = false;
             try
             {
-                isAuto = (EncounterManager.I != null) && EncounterManager.I.IsAutoMode;
+                isAuto = !IronCareerRuntime.IsActive && (RiftManager.I != null) && RiftManager.I.IsAutoMode;
             }
             catch
             {

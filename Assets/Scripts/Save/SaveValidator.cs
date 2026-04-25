@@ -113,6 +113,15 @@ public static class SaveValidator
         repairs += EnsureList(ref saveData.exchangeData.exchangeState.surgeAlertSpeciesIds, "exchangeData.exchangeState.surgeAlertSpeciesIds", notes);
         repairs += NormalizeExchangeData(saveData.exchangeData.exchangeState, notes);
 
+        // ── Arena ────────────────────────────────────────────
+        repairs += EnsureSection(ref saveData.arenaData, () => new ArenaSaveSection(), "arenaData", notes);
+        repairs += EnsureSection(ref saveData.arenaData.arena, () => new ArenaSaveData(), "arenaData.arena", notes);
+        repairs += EnsureSection(ref saveData.arenaData.arena.battleTeamData, () => new ArenaBattleTeamData(), "arenaData.arena.battleTeamData", notes);
+        repairs += EnsureSection(ref saveData.arenaData.arena.lifetimeStats, () => new ArenaLifetimeStats(), "arenaData.arena.lifetimeStats", notes);
+        repairs += EnsureSection(ref saveData.arenaData.arena.currentTournamentCache, () => new ArenaCurrentTournamentCache(), "arenaData.arena.currentTournamentCache", notes);
+        repairs += EnsureList(ref saveData.arenaData.arena.recentTournamentHistory, "arenaData.arena.recentTournamentHistory", notes);
+        repairs += NormalizeArenaData(saveData.arenaData.arena, notes);
+
         // Future validation rules should be added here by section so new systems stay isolated.
 
         string summary = repairs > 0
@@ -228,12 +237,12 @@ public static class SaveValidator
         NormalizeOwnedEntries(data, data.owned, resolveFullHp);
         NormalizeOwnedEntries(data, data.team, resolveFullHp);
 
-        clampedValues += ClampRuntime(ref data.encounterMax, 1);
-        clampedValues += ClampRuntime(ref data.encounterCost, 1);
+        clampedValues += ClampRuntime(ref data.riftMax, 1);
+        clampedValues += ClampRuntime(ref data.riftCost, 1);
         clampedValues += ClampRuntime(ref data.promotionRank, 1);
         clampedValues += ClampRuntime(ref data.promotionXP, 0);
         clampedValues += ClampRuntime(ref data.winStreak, 0);
-        clampedValues += ClampRuntime(ref data.encounterPoints, 0);
+        clampedValues += ClampRuntime(ref data.riftPoints, 0);
         clampedValues += ClampRuntime(ref data.cheatInvalidAttempts, 0);
         clampedValues += ClampRuntime(ref data.forcePremiumCapturesRemaining, 0);
         clampedValues += ClampRuntime(ref data.pendingIdleXP, 0);
@@ -292,18 +301,18 @@ public static class SaveValidator
         repairs += EnsureList(ref player.jobAssignments, "playerData.jobAssignments", notes);
         repairs += EnsureList(ref player.jobProgress, "playerData.jobProgress", notes);
         repairs += EnsureList(ref player.fieldOps.recentHighlights, "playerData.fieldOps.recentHighlights", notes);
-        repairs += ClampMin(ref player.encounterMax, 1, "playerData.encounterMax", notes);
-        repairs += ClampMin(ref player.encounterCost, 1, "playerData.encounterCost", notes);
+        repairs += ClampMin(ref player.riftMax, 1, "playerData.riftMax", notes);
+        repairs += ClampMin(ref player.riftCost, 1, "playerData.riftCost", notes);
         repairs += ClampMin(ref player.dailyBonusDay, 1, "playerData.dailyBonusDay", notes);
         repairs += ClampMin(ref player.promotionRank, 1, "playerData.promotionRank", notes);
         repairs += ClampMin(ref player.promotionXP, 0, "playerData.promotionXP", notes);
         repairs += ClampMin(ref player.winStreak, 0, "playerData.winStreak", notes);
-        repairs += ClampMin(ref player.encounterPoints, 0, "playerData.encounterPoints", notes);
+        repairs += ClampMin(ref player.riftPoints, 0, "playerData.riftPoints", notes);
         repairs += ClampMin(ref player.cheatInvalidAttempts, 0, "playerData.cheatInvalidAttempts", notes);
         repairs += ClampMin(ref player.forcePremiumCapturesRemaining, 0, "playerData.forcePremiumCapturesRemaining", notes);
         repairs += ClampMin(ref player.trainingMonsterLevel, 0, "playerData.trainingMonsterLevel", notes);
         repairs += ClampMin(ref player.pendingIdleXP, 0, "playerData.pendingIdleXP", notes);
-        repairs += ClampMin(ref player.encountersSinceBoss, 0, "playerData.encountersSinceBoss", notes);
+        repairs += ClampMin(ref player.riftsSinceBoss, 0, "playerData.riftsSinceBoss", notes);
         repairs += ClampMin(ref player.bossEveryN, 1, "playerData.bossEveryN", notes);
         repairs += ClampMin(ref player.lastClosedUnix, 0L, "playerData.lastClosedUnix", notes);
         repairs += ClampMin(ref player.lastSavedUnix, 0L, "playerData.lastSavedUnix", notes);
@@ -311,7 +320,7 @@ public static class SaveValidator
         repairs += ClampMin(ref player.energyLastUnix, 0L, "playerData.energyLastUnix", notes);
         repairs += ClampMin(ref player.cheatLockedUntilUnix, 0L, "playerData.cheatLockedUntilUnix", notes);
         repairs += ClampMin(ref player.energyRemainderSecs, 0f, "playerData.energyRemainderSecs", notes);
-        repairs += ClampMin(ref player.fieldOps.encountersInitiated, 0, "playerData.fieldOps.encountersInitiated", notes);
+        repairs += ClampMin(ref player.fieldOps.riftsInitiated, 0, "playerData.fieldOps.riftsInitiated", notes);
         repairs += ClampMin(ref player.fieldOps.captureAttempts, 0, "playerData.fieldOps.captureAttempts", notes);
         repairs += ClampMin(ref player.fieldOps.capturesSuccessful, 0, "playerData.fieldOps.capturesSuccessful", notes);
         repairs += ClampMin(ref player.fieldOps.rareBitlingsFound, 0, "playerData.fieldOps.rareBitlingsFound", notes);
@@ -1037,6 +1046,74 @@ public static class SaveValidator
         value = create();
         notes.Add($"Initialized missing section: {path}.");
         return 1;
+    }
+
+    // ─────────────────────────────────────────────
+    // Arena validation
+    // ─────────────────────────────────────────────
+
+    private static int NormalizeArenaData(ArenaSaveData arena, List<string> notes)
+    {
+        if (arena == null) return 0;
+        int repairs = 0;
+
+        // Tickets must be within valid range.
+        if (arena.arenaTickets < 0)
+        {
+            arena.arenaTickets = 0;
+            repairs++;
+            notes.Add("Clamped negative arenaTickets to 0.");
+        }
+        if (arena.arenaTickets > ArenaConstants.MaxTickets)
+        {
+            arena.arenaTickets = ArenaConstants.MaxTickets;
+            repairs++;
+            notes.Add($"Clamped arenaTickets to max ({ArenaConstants.MaxTickets}).");
+        }
+
+        if (arena.weeklyTicketsPurchased < 0)
+        {
+            arena.weeklyTicketsPurchased = 0;
+            repairs++;
+        }
+
+        // Battle team strings must not be null.
+        arena.battleTeamData ??= new ArenaBattleTeamData();
+        arena.battleTeamData.slot1OwnedBitlingId ??= "";
+        arena.battleTeamData.slot2OwnedBitlingId ??= "";
+        arena.battleTeamData.slot3OwnedBitlingId ??= "";
+        arena.battleTeamData.lockedTournamentId ??= "";
+
+        // Lifetime stats must not have negatives.
+        arena.lifetimeStats ??= new ArenaLifetimeStats();
+        if (arena.lifetimeStats.tournamentsEntered < 0) { arena.lifetimeStats.tournamentsEntered = 0; repairs++; }
+        if (arena.lifetimeStats.championshipsWon < 0) { arena.lifetimeStats.championshipsWon = 0; repairs++; }
+        if (arena.lifetimeStats.podiumFinishes < 0) { arena.lifetimeStats.podiumFinishes = 0; repairs++; }
+        if (arena.lifetimeStats.bestPlacementAllTime < 0) { arena.lifetimeStats.bestPlacementAllTime = 0; repairs++; }
+
+        // Current tournament cache strings.
+        arena.currentTournamentCache ??= new ArenaCurrentTournamentCache();
+        arena.currentTournamentCache.tournamentId ??= "";
+        arena.currentTournamentCache.playerEntryId ??= "";
+        arena.currentTournamentCache.lastMatchId ??= "";
+
+        // Trim history to retention cap.
+        if (arena.recentTournamentHistory != null &&
+            arena.recentTournamentHistory.Count > ArenaConstants.TournamentHistoryRetention)
+        {
+            int excess = arena.recentTournamentHistory.Count - ArenaConstants.TournamentHistoryRetention;
+            arena.recentTournamentHistory.RemoveRange(
+                ArenaConstants.TournamentHistoryRetention,
+                excess);
+            repairs++;
+            notes.Add($"Trimmed {excess} excess arena history entries.");
+        }
+
+        // Identity strings — allow empty but not null.
+        arena.arenaPlayerId ??= "";
+        arena.arenaUsername ??= "";
+
+        return repairs;
     }
 
     private static int EnsureList<T>(ref List<T> list, string path, List<string> notes)

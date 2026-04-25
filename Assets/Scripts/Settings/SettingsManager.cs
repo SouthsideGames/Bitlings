@@ -102,12 +102,12 @@ public class SettingsManager : MonoBehaviour
 
     public void OnReset()
     {
-        // Broadcast to any tick-driven systems (Encounter/UI/etc.) to early-out if they listen.
+        // Broadcast to any tick-driven systems (Rift/UI/etc.) to early-out if they listen.
         GameEvents.HardResetting?.Invoke(true);
 
-        // Disable EncounterManager immediately to prevent Update() ticks while save is being rebuilt.
-        if (EncounterManager.I != null)
-            EncounterManager.I.enabled = false;
+        // Disable RiftManager immediately to prevent Update() ticks while save is being rebuilt.
+        if (RiftManager.I != null)
+            RiftManager.I.enabled = false;
 
         // Hard wipe save + sidecars. SaveManager raises HardResetting internally too (safe if double).
         SaveManager.HardWipeAll(reloadFresh: true);
@@ -334,7 +334,7 @@ public class SettingsManager : MonoBehaviour
         if (playerManager == null) return 0;
 
         // Lock until Rank 15
-        if (playerManager.promotionRank < 15) return 0;
+        if (!playerManager.HasDifficultyUnlocked) return 0;
 
         playerManager.settings ??= new SettingsState();
         return Mathf.Clamp(playerManager.settings.difficultyMode, 0, 2);
@@ -345,7 +345,7 @@ public class SettingsManager : MonoBehaviour
         if (playerManager == null) return;
 
         // Lock until Rank 15
-        if (playerManager.promotionRank < 15)
+        if (!playerManager.HasDifficultyUnlocked)
             mode = 0;
 
         playerManager.settings ??= new SettingsState();

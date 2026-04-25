@@ -2,10 +2,10 @@ using System;
 using UnityEngine;
 
 /// <summary>
-/// Centralized energy (encounter points) regeneration.
+/// Centralized energy (rift points) regeneration.
 ///
 /// Why this exists:
-/// - EncounterManager already has regen logic, but that only runs if EncounterManager is active.
+/// - RiftManager already has regen logic, but that only runs if RiftManager is active.
 /// - On app resume (or launching into a menu scene), players still expect Energy to catch up.
 ///
 /// This system applies offline catch-up using SaveManager.Data.energyLastUnix + energyRemainderSecs
@@ -13,7 +13,7 @@ using UnityEngine;
 /// </summary>
 public static class EnergyRegenSystem
 {
-    // Keep this consistent with EncounterPanelUI + EncounterManager defaults.
+    // Keep this consistent with RiftPanelUI + RiftManager defaults.
     public const float DefaultSecondsPerPoint = 1200f; // 20 minutes
 
     /// <summary>
@@ -27,7 +27,7 @@ public static class EnergyRegenSystem
 
         ResourceBank.EnsureSize();
 
-        int max = Mathf.Max(1, SaveManager.Data.encounterMax > 0 ? SaveManager.Data.encounterMax : 50);
+        int max = Mathf.Max(1, SaveManager.Data.riftMax > 0 ? SaveManager.Data.riftMax : 50);
         int cur = ResourceBank.Get(ResourceType.Energy);
 
         // If already full, just ensure remainder is 0 (don’t advance lastUnix while full).

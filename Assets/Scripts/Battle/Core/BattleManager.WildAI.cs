@@ -31,7 +31,7 @@ public partial class BattleManager : MonoBehaviour
     private string GetWildDisplayName(string fallback = "Foe")
     {
         if (!wildDef) return fallback;
-        bool premiumWild = EncounterManager.I != null && EncounterManager.I.CurrentWildIsPremium;
+        bool premiumWild = RiftManager.I != null && RiftManager.I.CurrentWildIsPremium;
         return MonsterNameFormatter.Format(wildDef, premiumWild);
     }
 

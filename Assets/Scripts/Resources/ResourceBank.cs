@@ -6,7 +6,7 @@ public static class ResourceBank
 {
     static List<int> L => SaveManager.Data.resourceCounts;
 
-    // Energy may overcap encounter max, but never this absolute hard cap.
+    // Energy may overcap rift max, but never this absolute hard cap.
     public const int EnergyHardCap = 5000;
 
     // ─────────────────────────────────────────────────────────────
@@ -99,6 +99,10 @@ public static class ResourceBank
 
     public static int Get(ResourceType t)
     {
+        // Arena tickets live in ArenaSaveData, not resourceCounts.
+        if (t == ResourceType.ArenaTicket)
+            return ArenaSaveHelper.GetArenaTicketCount();
+
         EnsureSize();
         int i = Index(t);
         if (i < 0 || i >= L.Count) return 0;

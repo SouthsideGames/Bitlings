@@ -1,0 +1,13 @@
+C:\Users\Kareem Butler\AppData\Local\Temp\ArenaModule\module-compilation\ArenaModule.dll
+C:\Users\Kareem Butler\AppData\Local\Temp\ArenaModule\module-compilation\ArenaModule.deps.json
+C:\Users\Kareem Butler\AppData\Local\Temp\ArenaModule\module-compilation\ArenaModule.pdb
+C:\Users\Kareem Butler\AppData\Local\Temp\ArenaModule\module-compilation\Unity.Services.CloudCode.Apis.dll
+C:\Users\Kareem Butler\AppData\Local\Temp\ArenaModule\module-compilation\Unity.Services.CloudCode.Core.dll
+C:\Users\Kareem Butler\AppData\Local\Temp\ArenaModule\module-compilation\Google.Protobuf.dll
+C:\Users\Kareem Butler\AppData\Local\Temp\ArenaModule\module-compilation\Grpc.Core.Api.dll
+C:\Users\Kareem Butler\AppData\Local\Temp\ArenaModule\module-compilation\Grpc.Net.Client.dll
+C:\Users\Kareem Butler\AppData\Local\Temp\ArenaModule\module-compilation\Grpc.Net.Common.dll
+C:\Users\Kareem Butler\AppData\Local\Temp\ArenaModule\module-compilation\JsonSubTypes.dll
+C:\Users\Kareem Butler\AppData\Local\Temp\ArenaModule\module-compilation\Microsoft.Extensions.DependencyInjection.Abstractions.dll
+C:\Users\Kareem Butler\AppData\Local\Temp\ArenaModule\module-compilation\Microsoft.Extensions.Logging.Abstractions.dll
+C:\Users\Kareem Butler\AppData\Local\Temp\ArenaModule\module-compilation\Newtonsoft.Json.dll

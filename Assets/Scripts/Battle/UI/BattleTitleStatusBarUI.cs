@@ -86,7 +86,7 @@ public sealed class BattleTitleStatusBarUI : MonoBehaviour
 
         if (target == TargetKind.Wild)
         {
-            RefreshWild_FromEncounter();
+            RefreshWild_FromRift();
             return;
         }
 
@@ -109,9 +109,9 @@ public sealed class BattleTitleStatusBarUI : MonoBehaviour
     }
 
     // ---------------------------
-    // Wild display (Encounter-scoped)
+    // Wild display (Rift-scoped)
     // ---------------------------
-    private void RefreshWild_FromEncounter()
+    private void RefreshWild_FromRift()
     {
         if (battle != null && battle.InBattle && TitleManager.I != null)
         {
@@ -135,7 +135,7 @@ public sealed class BattleTitleStatusBarUI : MonoBehaviour
             }
         }
 
-        var em = EncounterManager.I;
+        var em = RiftManager.I;
         if (em == null)
         {
             // Wild bar should not disappear in battle, but if EM is missing, do something sensible.

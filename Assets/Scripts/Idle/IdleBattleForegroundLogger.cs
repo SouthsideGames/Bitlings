@@ -17,7 +17,7 @@ public static class IdleBattleForegroundLogger
         var s = IdleBattleStore.Load();
         if (s == null) return;
 
-        s.log ??= new List<IdleEncounterLogEntry>();
+        s.log ??= new List<IdleRiftLogEntry>();
 
         // Merge by monsterId.
         AddToLogMerged(s.log, result.wildDef.id, Mathf.Max(0, result.creditsGained), premium: false);
@@ -43,18 +43,18 @@ public static class IdleBattleForegroundLogger
         IdleBattleStore.Save(s);
     }
 
-    private static void AddToLogMerged(List<IdleEncounterLogEntry> log, string monsterId, int credits, bool premium)
+    private static void AddToLogMerged(List<IdleRiftLogEntry> log, string monsterId, int credits, bool premium)
     {
         if (log == null || string.IsNullOrEmpty(monsterId)) return;
 
-        IdleEncounterLogEntry e = null;
+        IdleRiftLogEntry e = null;
         for (int i = 0; i < log.Count; i++)
         {
             if (log[i] != null && log[i].monsterId == monsterId) { e = log[i]; break; }
         }
         if (e == null)
         {
-            e = new IdleEncounterLogEntry
+            e = new IdleRiftLogEntry
             {
                 monsterId = monsterId,
                 count = 0,

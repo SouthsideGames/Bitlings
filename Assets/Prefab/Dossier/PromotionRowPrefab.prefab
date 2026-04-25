@@ -175,6 +175,7 @@ MonoBehaviour:
   unlockedSprite: {fileID: -1397692819953580409, guid: 8845f146e599e44c690f8e71d16f6d94, type: 3}
   lockedSprite: {fileID: 9052594563367536271, guid: 52813fc74fa184ac6b2c788b043ad50c, type: 3}
   currentSprite: {fileID: 6658217417436824456, guid: 01d6a0d9dc0e046198259e2b36fdd92c, type: 3}
+  passedImage: {fileID: 4602928594609466227}
 --- !u!1 &4583493746335150392
 GameObject:
   m_ObjectHideFlags: 0

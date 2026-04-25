@@ -7,7 +7,7 @@ public enum PanelId
 {
     None = 0,
     Intro = 1,
-    Encounter = 2,
+    Rift = 2,
     Gym = 3,
     Home = 4,
     Resources = 5,
@@ -40,7 +40,7 @@ public enum PanelId
     IdleBattleRewards = 33,
 
     // Iron Career: ONLY the main container should be managed by UIManager
-    IronCareerEncounter = 34,
+    IronCareerRift = 34,
 
     // Exchange
     DuplicateResolution = 35,
@@ -48,6 +48,11 @@ public enum PanelId
     ExchangeSpeciesDetail = 37,
     StatBreakdown = 38,
     AutoBattleHistory = 39,
+
+    // Arena
+    ArenaMain = 40,
+    ArenaTournamentDetail = 41,
+    ArenaMatchDetail = 42,
 }
 
 [Serializable]
@@ -68,7 +73,8 @@ public class UIManager : MonoBehaviour
     public static UIManager I { get; private set; }
 
     private const string TutorialIronCareerUnlockedKey = "tut_ironcareerunlocked_v1";
-    private const string TutorialAutoEncounterKey = "tut_autoencounter_v1";
+    private const string TutorialAutoRiftKey = "tut_autorift_v1";
+    private const string TutorialArenaUnlockedKey = "tut_arena_v1";
 
     [Header("Panels")]
     [SerializeField] private List<PanelEntry> panels = new();
@@ -100,7 +106,7 @@ public class UIManager : MonoBehaviour
 
         // NOTE:
         // Iron overlays are intentionally NOT included here.
-        // They are controlled by IronCareerEncounterPanelUI (or equivalent),
+        // They are controlled by IronCareerRiftPanelUI (or equivalent),
         // not by UIManager.
     };
 
@@ -198,7 +204,7 @@ public class UIManager : MonoBehaviour
         if (data == null) return;
         if (!data.HasIronCareerUnlocked) return;
 
-        int maxRank = PromotionManager.I != null ? PromotionManager.I.GetMaxRank() : 20;
+        int maxRank = PromotionManager.I != null ? PromotionManager.I.GetMaxRank() : 25;
         int rank = Mathf.Max(1, data.promotionRank);
         if (rank < maxRank) return;
 
@@ -211,16 +217,28 @@ public class UIManager : MonoBehaviour
         TutorialOverlayPanel.RequestOpen(TutorialIronCareerUnlockedKey);
     }
 
-    void TryOpenAutoEncounterTutorial()
+    void TryOpenArenaUnlockedTutorial()
     {
-        if (SaveManager.IsTutorialComplete(TutorialAutoEncounterKey)) return;
+        if (SaveManager.IsTutorialComplete(TutorialArenaUnlockedKey)) return;
+
+        var arena = SaveManager.GetArenaSaveData();
+        if (arena == null || !arena.arenaUnlocked) return;
+
+        if (IsOpen(PanelId.IdleBattleRewards)) return;
+
+        TutorialOverlayPanel.RequestOpen(TutorialArenaUnlockedKey);
+    }
+
+    void TryOpenAutoRiftTutorial()
+    {
+        if (SaveManager.IsTutorialComplete(TutorialAutoRiftKey)) return;
 
         // Only show once idle battles have been unlocked
         if (FeatureUnlockManager.I == null ||
             !FeatureUnlockManager.I.IsUnlocked(FeatureId.IdleBattle_Basic))
             return;
 
-        TutorialOverlayPanel.RequestOpen(TutorialAutoEncounterKey);
+        TutorialOverlayPanel.RequestOpen(TutorialAutoRiftKey);
     }
 
     IEnumerator Co_TryOpenIdleBattleRewardsNextFrame()
@@ -284,24 +302,24 @@ public class UIManager : MonoBehaviour
 
     private void SetActive(PanelId id, bool on, bool fireEvent = true)
     {
-        // IRON GUARD: prevent regular Encounter from being shown during active Iron runs
-        if (on && id == PanelId.Encounter && IronCareerRuntime.IsActive)
+        // IRON GUARD: prevent regular Rift from being shown during active Iron runs
+        if (on && id == PanelId.Rift && IronCareerRuntime.IsActive)
         {
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
-            Debug.LogWarning("[UIManager] Blocked opening regular Encounter panel while Iron Career is active.");
+            Debug.LogWarning("[UIManager] Blocked opening regular Rift panel while Iron Career is active.");
 #endif
             return;
         }
 
-        // IRON GUARD: if Iron panel is being shown, immediately hide regular Encounter if still open
-        if (on && id == PanelId.IronCareerEncounter && IronCareerRuntime.IsActive)
+        // IRON GUARD: if Iron panel is being shown, immediately hide regular Rift if still open
+        if (on && id == PanelId.IronCareerRift && IronCareerRuntime.IsActive)
         {
-            if (_open.Contains(PanelId.Encounter))
+            if (_open.Contains(PanelId.Rift))
             {
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
-                DevLog.Log("[UIManager] Iron Career panel opening; force-hiding regular Encounter panel.");
+                DevLog.Log("[UIManager] Iron Career panel opening; force-hiding regular Rift panel.");
 #endif
-                SetImmediate(PanelId.Encounter, false, fireEvent: false);
+                SetImmediate(PanelId.Rift, false, fireEvent: false);
             }
         }
 
@@ -329,12 +347,13 @@ public class UIManager : MonoBehaviour
                 {
                     TryOpenIdleBattleRewardsNextFrame();
                     TryOpenIronCareerUnlockedTutorial();
+                    TryOpenArenaUnlockedTutorial();
                     ExchangeManager.I?.TryShowPendingDividendHomeToast();
                 }
 
-                if (id == PanelId.Encounter)
+                if (id == PanelId.Rift)
                 {
-                    TryOpenAutoEncounterTutorial();
+                    TryOpenAutoRiftTutorial();
                 }
             }
         }

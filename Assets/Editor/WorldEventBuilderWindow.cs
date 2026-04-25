@@ -49,7 +49,7 @@ public class WorldEventBuilderWindow : EditorWindow
         WorldEventEffectKind.JobRateMultiplier,
         WorldEventEffectKind.JobStorageCapMultiplier,
         WorldEventEffectKind.JobFatigueRateMultiplier,
-        WorldEventEffectKind.EncounterEnergyCostMultiplier,
+        WorldEventEffectKind.RiftEnergyCostMultiplier,
         WorldEventEffectKind.WildPremiumChanceMultiplier,
         WorldEventEffectKind.BossCadenceMultiplier,
         WorldEventEffectKind.ShopPriceMultiplier,
@@ -71,7 +71,7 @@ public class WorldEventBuilderWindow : EditorWindow
     private int warningCount;
     private int errorCount;
 
-    [MenuItem("Tools/World Events/Builder")]
+    [MenuItem("Bitlings/World Events/Builder")]
     public static void Open()
     {
         GetWindow<WorldEventBuilderWindow>("World Event Builder");
@@ -1178,6 +1178,20 @@ public class WorldEventBuilderWindow : EditorWindow
             if (normalized == "na" || normalized == "n/a" || normalized == "-")
             {
                 object boxed = WorldEventEffectKind.None;
+                value = (TEnum)boxed;
+                return true;
+            }
+
+            // Legacy name aliases: the enum was renamed from Encounter→Rift; support old CSV names.
+            if (normalized == "disableencounters")
+            {
+                object boxed = WorldEventEffectKind.DisableRifts;
+                value = (TEnum)boxed;
+                return true;
+            }
+            if (normalized == "encounterenergycostmultiplier")
+            {
+                object boxed = WorldEventEffectKind.RiftEnergyCostMultiplier;
                 value = (TEnum)boxed;
                 return true;
             }

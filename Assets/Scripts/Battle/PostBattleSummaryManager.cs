@@ -40,7 +40,7 @@ public class PostBattleSummaryManager : MonoBehaviour
 
     private bool IsForegroundAutoActive()
     {
-        var em = EncounterManager.I;
+        var em = RiftManager.I;
         return em != null && em.IsAutoMode;
     }
 

@@ -1177,6 +1177,7 @@ private Sprite GetVariantIcon(MonsterDataSO monster)
     private void AssignToSlot(int slotIndex)
     {
         slotIndex = Mathf.Clamp(slotIndex, 0, 2);
+        bool assignToArenaLoadout = ArenaLoadoutManager.IsEditingArenaTeam;
         bool assignToIdleLoadout = IdleLoadoutManager.IsEditingIdleTeam;
 
         if (_mode == MonsterDetailMode.DirectoryView)
@@ -1205,6 +1206,14 @@ private Sprite GetVariantIcon(MonsterDataSO monster)
 
             var clone = XPManager.Resolve(preferred) ?? preferred;
 
+            if (assignToArenaLoadout)
+            {
+                if (ArenaSaveHelper.IsBattleTeamLocked()) { Hide(); return; }
+                ArenaLoadoutManager.AssignToArenaSlot(slotIndex, clone);
+                Hide();
+                return;
+            }
+
             if (assignToIdleLoadout)
             {
                 IdleLoadoutManager.AssignToIdleSlot(slotIndex, clone);
@@ -1215,7 +1224,10 @@ private Sprite GetVariantIcon(MonsterDataSO monster)
             // Enforce: one owned monster instance per team slot.
             TeamUtils.RemoveDuplicatesForAssignment(team, clone, slotIndex);
             if (!string.IsNullOrEmpty(clone.ownedUID))
+            {
                 IdleLoadoutManager.RemoveFromIdleByOwnedUid(clone.ownedUID);
+                ArenaLoadoutManager.RemoveFromArenaByOwnedUid(clone.ownedUID);
+            }
             team[slotIndex] = clone;
 
             data.team = team;
@@ -1235,7 +1247,7 @@ private Sprite GetVariantIcon(MonsterDataSO monster)
         }
 
         // Allow assigning KO'd monsters back onto the team so the player can use team healing.
-        // Battle eligibility is enforced elsewhere (EligibilityRules / EncounterManager).
+        // Battle eligibility is enforced elsewhere (EligibilityRules / RiftManager).
 
         var data2 = SaveManager.Data;
         if (data2 == null)
@@ -1255,6 +1267,14 @@ private Sprite GetVariantIcon(MonsterDataSO monster)
 
         var canonical = XPManager.Resolve(_currentOwned) ?? _currentOwned;
 
+        if (assignToArenaLoadout)
+        {
+            if (ArenaSaveHelper.IsBattleTeamLocked()) { Hide(); return; }
+            ArenaLoadoutManager.AssignToArenaSlot(slotIndex, canonical);
+            Hide();
+            return;
+        }
+
         if (assignToIdleLoadout)
         {
             IdleLoadoutManager.AssignToIdleSlot(slotIndex, canonical);
@@ -1265,7 +1285,10 @@ private Sprite GetVariantIcon(MonsterDataSO monster)
         // Enforce: one owned monster instance per team slot.
         TeamUtils.RemoveDuplicatesForAssignment(team2, canonical, slotIndex);
         if (!string.IsNullOrEmpty(canonical.ownedUID))
+        {
             IdleLoadoutManager.RemoveFromIdleByOwnedUid(canonical.ownedUID);
+            ArenaLoadoutManager.RemoveFromArenaByOwnedUid(canonical.ownedUID);
+        }
         team2[slotIndex] = canonical;
 
         data2.team = team2;
@@ -1278,6 +1301,15 @@ private Sprite GetVariantIcon(MonsterDataSO monster)
     private void RemoveFromTeam()
     {
         if (_teamSlotIndex < 0) { Hide(); return; }
+
+        if (ArenaLoadoutManager.IsEditingArenaTeam)
+        {
+            if (ArenaSaveHelper.IsBattleTeamLocked()) { Hide(); return; }
+            ArenaLoadoutManager.RemoveFromArenaSlot(_teamSlotIndex);
+            _onRemoved?.Invoke();
+            Hide();
+            return;
+        }
 
         if (IdleLoadoutManager.IsEditingIdleTeam)
         {
@@ -1450,58 +1482,7 @@ if (premiumVariantRoot) premiumVariantRoot.SetActive(false);
 
         int evoLvl = Mathf.Max(1, m.evolutionLevel);
 
-        var srcOwned = _statsOwned ?? _currentOwned;
-        bool hasOwnedInstance = (srcOwned != null) && !string.IsNullOrEmpty(srcOwned.monsterId);
-
-        int trainHP = 0, trainATK = 0, trainDEF = 0, trainSPD = 0;
-        int flatAtkBonus = 0;
-
-        if (hasOwnedInstance)
-        {
-            trainHP = Mathf.Max(0, srcOwned.trainingBonus.hp);
-            trainATK = Mathf.Max(0, srcOwned.trainingBonus.atk);
-            trainDEF = Mathf.Max(0, srcOwned.trainingBonus.def);
-            trainSPD = Mathf.Max(0, srcOwned.trainingBonus.spd);
-            flatAtkBonus = Mathf.Max(0, srcOwned.flatAtkBonus);
-
-            if (LooksLikeLegacyTrainingWasMirroredIntoFlat(flatAtkBonus, trainATK))
-                trainATK = 0;
-        }
-
-        int curHP = Mathf.RoundToInt(BattleCalc.CalcHP(m, evoLvl));
-        int nxtHP = Mathf.RoundToInt(BattleCalc.CalcHP(nextDef, evoLvl));
-
-        int curATK = Mathf.RoundToInt(BattleCalc.CalcBaseAttack(m, evoLvl, 0, 0));
-        int nxtATK = Mathf.RoundToInt(BattleCalc.CalcBaseAttack(nextDef, evoLvl, 0, 0));
-
-        int curDEF = BattleCalc.CalcDefense(m, evoLvl);
-        int nxtDEF = BattleCalc.CalcDefense(nextDef, evoLvl);
-
-        int curSPD = BattleCalc.CalcSpeed(m, evoLvl);
-        int nxtSPD = BattleCalc.CalcSpeed(nextDef, evoLvl);
-
-        if (hasOwnedInstance)
-        {
-            curHP += trainHP; nxtHP += trainHP;
-            curATK += (trainATK + flatAtkBonus); nxtATK += (trainATK + flatAtkBonus);
-            curDEF += trainDEF; nxtDEF += trainDEF;
-            curSPD += trainSPD; nxtSPD += trainSPD;
-        }
-
-        int dHp = nxtHP - curHP;
-        int dAtk = nxtATK - curATK;
-        int dDef = nxtDEF - curDEF;
-        int dSpd = nxtSPD - curSPD;
-
-        List<string> parts = new List<string>(4);
-        if (dHp != 0) parts.Add($"{(dHp > 0 ? "+" : "")}{dHp} HP");
-        if (dAtk != 0) parts.Add($"{(dAtk > 0 ? "+" : "")}{dAtk} ATK");
-        if (dDef != 0) parts.Add($"{(dDef > 0 ? "+" : "")}{dDef} DEF");
-        if (dSpd != 0) parts.Add($"{(dSpd > 0 ? "+" : "")}{dSpd} SPD");
-
-        string deltas = parts.Count > 0 ? $" ({string.Join(", ", parts)})" : "";
-
-        return $"EVO: Lv {evoLvl} → {nextName}{deltas}";
+        return $"EVO: Lv {evoLvl} → {nextName}";
     }
 
     private void TryStep(string label, Action step)

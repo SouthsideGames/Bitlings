@@ -13,10 +13,10 @@ public sealed class IronCareerManager : MonoBehaviour, IronBattleBridge.IIronBat
     [SerializeField] private IronBattleBridge bridge;
 
     [Header("Iron Systems (Phase 3)")]
-    [Tooltip("Reference to the Iron encounter panel controller on Panel_IronCareerEncounter.")]
-    [SerializeField] private IronCareerEncounterPanelUI ironEncounterUI;
+    [Tooltip("Reference to the Iron rift panel controller on Panel_IronCareerRift.")]
+    [SerializeField] private IronCareerRiftPanelUI ironRiftUI;
 
-    [Tooltip("Reference to the Iron battle UI root (Panel_IronCareerEncounter/IronCareerBattle).")]
+    [Tooltip("Reference to the Iron battle UI root (Panel_IronCareerRift/IronCareerBattle).")]
     [SerializeField] private IronBattleUIRoot ironBattleUI;
 
     [Header("Iron Panels (Phase 3)")]
@@ -55,13 +55,20 @@ public sealed class IronCareerManager : MonoBehaviour, IronBattleBridge.IIronBat
 #if UNITY_EDITOR
     [Header("DEV ONLY")]
     [SerializeField] private bool devForceUnlockIron = false;
+
+    [Tooltip("Testing only. Converts normal Iron battle losses into wins so panel flow can be exercised end-to-end.")]
+    [SerializeField] private bool devAlwaysWinBattles = false;
+#elif DEVELOPMENT_BUILD
+    [Header("DEV ONLY")]
+    [Tooltip("Testing only. Converts normal Iron battle losses into wins so panel flow can be exercised end-to-end.")]
+    [SerializeField] private bool devAlwaysWinBattles = false;
 #endif
 
     private readonly IronCareerRunState _state = new IronCareerRunState();
     private IronRoster _roster;
     private IronRngStream _rng;
     private IronTitleRoller _titleRoller;
-    private IronEncounterService _encounters;
+    private IronRiftService _rifts;
     private IronBattleOutcome _lastOutcome;
     private IronMonster _pendingHire;
     private bool _ironWildIsPremium;
@@ -157,7 +164,7 @@ public sealed class IronCareerManager : MonoBehaviour, IronBattleBridge.IIronBat
     {
         if (!_state.runActive) return null;
 
-        var wild = _encounters != null ? _encounters.RollNextWild() : null;
+        var wild = _rifts != null ? _rifts.RollNextWild() : null;
         if (wild == null || wild.def == null) return null;
 
         _state.lastRolledWild = wild;
@@ -180,6 +187,10 @@ public sealed class IronCareerManager : MonoBehaviour, IronBattleBridge.IIronBat
     public void OnIronBattleResolved(IronBattleOutcome outcome)
     {
         if (!_state.runActive) return;
+
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        NormalizeOutcomeForDevTesting(ref outcome);
+#endif
 
         _lastOutcome = outcome;
         _hasLastOutcome = true;
@@ -247,9 +258,9 @@ public sealed class IronCareerManager : MonoBehaviour, IronBattleBridge.IIronBat
         {
             Debug.LogWarning("[IronCareerManager] Wild fled. Showing post-battle without win/rewards.");
             _pendingHire = null;
-            _encounters?.ClearWildCache();
+            _rifts?.ClearWildCache();
 
-            ironEncounterUI?.HideAll(immediate: true);
+            ironRiftUI?.HideAll(immediate: true);
             ShowPost();
             return;
         }
@@ -290,10 +301,57 @@ public sealed class IronCareerManager : MonoBehaviour, IronBattleBridge.IIronBat
         ShowHireOrReplace();
     }
 
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+    private void NormalizeOutcomeForDevTesting(ref IronBattleOutcome outcome)
+    {
+        if (!devAlwaysWinBattles) return;
+        if (outcome.victory || outcome.escaped || outcome.wildEscaped) return;
+        if (_state.party == null || _state.party.Count == 0) return;
+
+        int count = _state.party.Count;
+
+        if (outcome.teamHP == null || outcome.teamHP.Length < count)
+        {
+            var expandedTeamHp = new float[count];
+            if (outcome.teamHP != null)
+                Array.Copy(outcome.teamHP, expandedTeamHp, Mathf.Min(outcome.teamHP.Length, expandedTeamHp.Length));
+            outcome.teamHP = expandedTeamHp;
+        }
+
+        if (outcome.teamMaxHP == null || outcome.teamMaxHP.Length < count)
+        {
+            var expandedMaxHp = new float[count];
+            if (outcome.teamMaxHP != null)
+                Array.Copy(outcome.teamMaxHP, expandedMaxHp, Mathf.Min(outcome.teamMaxHP.Length, expandedMaxHp.Length));
+            outcome.teamMaxHP = expandedMaxHp;
+        }
+
+        for (int i = 0; i < count; i++)
+        {
+            var monster = _state.party[i];
+            if (monster == null || monster.def == null) continue;
+
+            float maxHp = Mathf.Max(1f, monster.maxHp);
+            outcome.teamMaxHP[i] = maxHp;
+
+            float resolvedHp = outcome.teamHP[i] > 0f ? outcome.teamHP[i] : monster.hp;
+            if (resolvedHp <= 0f)
+                resolvedHp = Mathf.Max(1f, maxHp * 0.25f);
+
+            outcome.teamHP[i] = Mathf.Clamp(resolvedHp, 1f, maxHp);
+        }
+
+        outcome.victory = true;
+        outcome.escaped = false;
+
+        DevLog.Log("[IronCareerManager] DEV override active: converted Iron battle loss into a win for panel-flow testing.");
+    }
+#endif
+
     private void Awake()
     {
         ResolveBattleRefsIfNeeded();
-        if (!ironEncounterUI) ironEncounterUI = FindFirstObjectByType<IronCareerEncounterPanelUI>(FindObjectsInactive.Include);
+        if (!ironRiftUI) ironRiftUI = FindFirstObjectByType<IronCareerRiftPanelUI>(FindObjectsInactive.Include);
         if (!ironBattleUI) ironBattleUI = FindFirstObjectByType<IronBattleUIRoot>(FindObjectsInactive.Include);
 
         if (!starterPanel) starterPanel = FindFirstObjectByType<IronCareerStarterPanelUI>(FindObjectsInactive.Include);
@@ -395,6 +453,34 @@ public sealed class IronCareerManager : MonoBehaviour, IronBattleBridge.IIronBat
     [ContextMenu("DEBUG/Begin Next Battle")]
     public void DebugBeginNextBattle() => BeginNextBattle();
 
+    [ContextMenu("DEBUG/Show Forced Evolution")]
+    public void DebugShowForcedEvolution()
+    {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        if (!_state.runActive)
+        {
+            Debug.LogWarning("[IronCareerManager] Cannot open forced evolution debug panel without an active Iron run.");
+            return;
+        }
+
+        if (_roster == null || _roster.IsPartyEmpty)
+        {
+            Debug.LogWarning("[IronCareerManager] Cannot open forced evolution debug panel with an empty roster.");
+            return;
+        }
+
+        if (!PrepareForcedEvolutionCandidateForDebug(out int preparedIndex))
+        {
+            Debug.LogWarning("[IronCareerManager] No party member has an evolution chain available for forced evolution panel testing.");
+            return;
+        }
+
+        DevLog.Log($"[IronCareerManager] Debug forced evolution prepared for slot {preparedIndex}.");
+        _pendingHire = null;
+        ShowForcedEvolveStep();
+#endif
+    }
+
     public void StartNewRun(Mode mode)
     {
         // If someone wires a button to this by mistake, we should still show Starter first.
@@ -410,8 +496,8 @@ public sealed class IronCareerManager : MonoBehaviour, IronBattleBridge.IIronBat
 
     private void StartNewRun_Internal(IronCareerRunState.IronCareerMode m, List<MonsterDataSO> starterDefs)
     {
-        // IRON GUARD: hard-stop any active regular encounter flows so they cannot resume post-Iron.
-        EncounterManager.I?.ForceStopForIron();
+        // IRON GUARD: hard-stop any active regular rift flows so they cannot resume post-Iron.
+        RiftManager.I?.ForceStopForIron();
 
         IronCareerRuntime.Enter();
         _finalizedRunStats = false;
@@ -434,17 +520,17 @@ public sealed class IronCareerManager : MonoBehaviour, IronBattleBridge.IIronBat
         _roster = new IronRoster(_state);
         _rng = new IronRngStream(runSeed);
         _titleRoller = new IronTitleRoller();
-        _encounters = new IronEncounterService(_state, _rng, _titleRoller);
+        _rifts = new IronRiftService(_state, _rng, _titleRoller);
 
         // Top-level screen routing only
-        UIManager.I?.Hide(PanelId.Encounter);
+        UIManager.I?.Hide(PanelId.Rift);
         
-        // IRON GUARD: explicitly disable Encounter panel GameObject to prevent overlap
-        var encounterPanelUI = FindFirstObjectByType<EncounterPanelUI>(FindObjectsInactive.Include);
-        if (encounterPanelUI && encounterPanelUI.gameObject.activeSelf)
-            encounterPanelUI.gameObject.SetActive(false);
+        // IRON GUARD: explicitly disable Rift panel GameObject to prevent overlap
+        var riftPanelUI = FindFirstObjectByType<RiftPanelUI>(FindObjectsInactive.Include);
+        if (riftPanelUI && riftPanelUI.gameObject.activeSelf)
+            riftPanelUI.gameObject.SetActive(false);
         
-        UIManager.I?.Show(PanelId.IronCareerEncounter);
+        UIManager.I?.Show(PanelId.IronCareerRift);
 
         BuildStarterParty(starterDefs);
 
@@ -472,7 +558,7 @@ public sealed class IronCareerManager : MonoBehaviour, IronBattleBridge.IIronBat
             Debug.LogError("[IronCareerManager] No starter party configured. Returning to starter selection.");
             _state.runActive = false;
             IronCareerRuntime.Exit();
-            ironEncounterUI?.ShowStarter(immediate: true);
+            ironRiftUI?.ShowStarter(immediate: true);
             return;
         }
 
@@ -548,7 +634,7 @@ public sealed class IronCareerManager : MonoBehaviour, IronBattleBridge.IIronBat
     private void ShowHire()
     {
             
-        ironEncounterUI?.ShowHire(immediate: true);
+        ironRiftUI?.ShowHire(immediate: true);
         if (hirePanel) hirePanel.Bind(_pendingHire, skipAllowed: !IsHardcore);
     }
 
@@ -571,7 +657,7 @@ public sealed class IronCareerManager : MonoBehaviour, IronBattleBridge.IIronBat
 
         if (_roster.IsFull)
         {
-            ironEncounterUI?.ShowReplace(immediate: true);
+            ironRiftUI?.ShowReplace(immediate: true);
             if (replacePanel)
             {
                 // Pass the offered hire so the replace screen can show the incoming recruit.
@@ -631,10 +717,10 @@ public sealed class IronCareerManager : MonoBehaviour, IronBattleBridge.IIronBat
 
     private void FinishHireStepAndContinue()
     {
-        _encounters?.ClearWildCache();
+        _rifts?.ClearWildCache();
         _pendingHire = null;
 
-        ironEncounterUI?.HideAll(immediate: true);
+        ironRiftUI?.HideAll(immediate: true);
         ShowPost();
     }
 
@@ -672,7 +758,7 @@ public sealed class IronCareerManager : MonoBehaviour, IronBattleBridge.IIronBat
         if (IsRestFloor(_state.wins))
         {
             restPanel?.Bind(_roster.Party, _state.wins, mode == Mode.Hardcore);
-            ironEncounterUI?.ShowRest(immediate: true);
+            ironRiftUI?.ShowRest(immediate: true);
             return;
         }
 
@@ -681,7 +767,7 @@ public sealed class IronCareerManager : MonoBehaviour, IronBattleBridge.IIronBat
 
     private void ShowPost()
     {
-        ironEncounterUI?.ShowPost(immediate: true);
+        ironRiftUI?.ShowPost(immediate: true);
         if (_hasLastOutcome)
             postPanel?.Bind(_roster.Party, _state.carryStatus, _state.wins, _lastOutcome);
         else
@@ -696,16 +782,48 @@ public sealed class IronCareerManager : MonoBehaviour, IronBattleBridge.IIronBat
             return;
         }
 
-        ironEncounterUI?.HideAll(immediate: true);
+        ironRiftUI?.HideAll(immediate: true);
         ContinueAfterHireAndReplacement();
     }
 
     private void ShowForcedEvolveStep()
     {
-        ironEncounterUI?.ShowForcedEvolve(immediate: true);
+        ironRiftUI?.ShowForcedEvolve(immediate: true);
 
 
         forcedEvolvePanel?.Bind(_roster != null ? _roster.Party : null);
+    }
+
+    private bool PrepareForcedEvolutionCandidateForDebug(out int preparedIndex)
+    {
+        preparedIndex = -1;
+
+        if (_state.party == null || _state.party.Count == 0)
+            return false;
+
+        for (int i = 0; i < _state.party.Count; i++)
+        {
+            var monster = _state.party[i];
+            if (monster == null || monster.def == null || monster.IsDead)
+                continue;
+
+            var nextForm = monster.def.evolutionForm;
+            if (nextForm == null || ReferenceEquals(nextForm, monster.def))
+                continue;
+
+            int requiredLevel = monster.def.evolutionLevel > 0 ? monster.def.evolutionLevel : 1;
+            if (monster.level < requiredLevel)
+            {
+                monster.level = requiredLevel;
+                monster.RecomputeMaxHpPreservePct();
+                _state.party[i] = monster;
+            }
+
+            preparedIndex = i;
+            return true;
+        }
+
+        return false;
     }
 
     public void OnForcedEvolveContinue()
@@ -814,8 +932,8 @@ public sealed class IronCareerManager : MonoBehaviour, IronBattleBridge.IIronBat
 
     private IEnumerator Co_BeginNextBattleAfterTransition()
     {
-        if (ironEncounterUI)
-            yield return ironEncounterUI.Co_ShowBattleOnlyThenReady();
+        if (ironRiftUI)
+            yield return ironRiftUI.Co_ShowBattleOnlyThenReady();
         else
             yield return null;
 
@@ -838,7 +956,7 @@ public sealed class IronCareerManager : MonoBehaviour, IronBattleBridge.IIronBat
         var wildPreview = GetWildForNextBattle();
         if (wildPreview == null || wildPreview.def == null)
         {
-            Debug.LogError("[IronCareerManager] Encounter generation failed (wild null). Ending run gracefully.");
+            Debug.LogError("[IronCareerManager] Rift generation failed (wild null). Ending run gracefully.");
             ShowGameOver(forfeit: false);
             return;
         }
@@ -860,9 +978,9 @@ public sealed class IronCareerManager : MonoBehaviour, IronBattleBridge.IIronBat
             return;
         }
 
-        UIManager.I?.Show(PanelId.IronCareerEncounter);
+        UIManager.I?.Show(PanelId.IronCareerRift);
 
-        ironEncounterUI?.ShowBattleOnly(immediate: true);
+        ironRiftUI?.ShowBattleOnly(immediate: true);
 
     #if UNITY_EDITOR
         DevLog.Log($"[IronTextTrace] BeginNextBattle: battle={(battle ? battle.name : "NULL")} bridge={(bridge ? bridge.name : "NULL")} ironBattleUI={(ironBattleUI ? ironBattleUI.name : "NULL")}");
@@ -920,7 +1038,7 @@ public sealed class IronCareerManager : MonoBehaviour, IronBattleBridge.IIronBat
     public void AcknowledgeRules()
     {
         _quitPromptActive = false;
-        ironEncounterUI?.HideRules(immediate: true);
+        ironRiftUI?.HideRules(immediate: true);
     }
 
     /// <summary>
@@ -929,28 +1047,28 @@ public sealed class IronCareerManager : MonoBehaviour, IronBattleBridge.IIronBat
     public void CloseRules()
     {
         _quitPromptActive = false;
-        ironEncounterUI?.HideRules(immediate: true);
+        ironRiftUI?.HideRules(immediate: true);
     }
 
     public void RequestQuit()
     {
         if (!_state.runActive) return;
         _quitPromptActive = true;
-        ironEncounterUI?.ShowRules(immediate: true);
+        ironRiftUI?.ShowRules(immediate: true);
     }
 
     public void ConfirmQuitForfeit()
     {
         if (!_state.runActive) return;
         _quitPromptActive = false;
-        ironEncounterUI?.HideRules(immediate: true);
+        ironRiftUI?.HideRules(immediate: true);
         Forfeit("Quit confirmed");
     }
 
     public void CancelQuit()
     {
         _quitPromptActive = false;
-        ironEncounterUI?.HideRules(immediate: true);
+        ironRiftUI?.HideRules(immediate: true);
     }
 
     private void Forfeit(string reason)
@@ -971,16 +1089,16 @@ public sealed class IronCareerManager : MonoBehaviour, IronBattleBridge.IIronBat
 
         GameEvents.IronRunCompleted?.Invoke(_state.wins, forfeit, _state.runSummary.totalDeaths);
 
-        UIManager.I?.Show(PanelId.IronCareerEncounter);
+        UIManager.I?.Show(PanelId.IronCareerRift);
 
-        ironEncounterUI?.ShowGameOver(immediate: true);
+        ironRiftUI?.ShowGameOver(immediate: true);
         gameOverPanel?.Bind(_state.mode, _state.wins, _state.runSummary, forfeited: forfeit, defeatCauseOverride: defeatCauseOverride);
 
-        // IRON GUARD: Explicitly disable regular Encounter panel BEFORE exiting Iron runtime.
-        // This prevents race condition where EncounterPanelUI.OnEnable() check fails after Exit() is called.
-        var encounterPanelUI = FindFirstObjectByType<EncounterPanelUI>(FindObjectsInactive.Include);
-        if (encounterPanelUI && encounterPanelUI.gameObject.activeSelf)
-            encounterPanelUI.gameObject.SetActive(false);
+        // IRON GUARD: Explicitly disable regular Rift panel BEFORE exiting Iron runtime.
+        // This prevents race condition where RiftPanelUI.OnEnable() check fails after Exit() is called.
+        var riftPanelUI = FindFirstObjectByType<RiftPanelUI>(FindObjectsInactive.Include);
+        if (riftPanelUI && riftPanelUI.gameObject.activeSelf)
+            riftPanelUI.gameObject.SetActive(false);
 
         IronCareerRuntime.Exit();
 
@@ -1032,12 +1150,12 @@ public sealed class IronCareerManager : MonoBehaviour, IronBattleBridge.IIronBat
 
     public void ReturnToMenuFromGameOver()
     {
-        // IRON GUARD: Force disable regular Encounter panel to prevent it from auto-starting battles
-        var encounterPanelUI = FindFirstObjectByType<EncounterPanelUI>(FindObjectsInactive.Include);
-        if (encounterPanelUI && encounterPanelUI.gameObject.activeSelf)
-            encounterPanelUI.gameObject.SetActive(false);
+        // IRON GUARD: Force disable regular Rift panel to prevent it from auto-starting battles
+        var riftPanelUI = FindFirstObjectByType<RiftPanelUI>(FindObjectsInactive.Include);
+        if (riftPanelUI && riftPanelUI.gameObject.activeSelf)
+            riftPanelUI.gameObject.SetActive(false);
 
-        UIManager.I?.Hide(PanelId.IronCareerEncounter);
+        UIManager.I?.Hide(PanelId.IronCareerRift);
         UIManager.I?.Show(PanelId.Home);
     }
 
@@ -1050,11 +1168,11 @@ public sealed class IronCareerManager : MonoBehaviour, IronBattleBridge.IIronBat
     public void OpenStarterFromHome()
     {
         // Only route UI. Do NOT enter runtime; do NOT start battle.
-        UIManager.I?.Hide(PanelId.Encounter);
+        UIManager.I?.Hide(PanelId.Rift);
         UIManager.I?.Hide(PanelId.PostBattleSummary);
-        UIManager.I?.Show(PanelId.IronCareerEncounter);
+        UIManager.I?.Show(PanelId.IronCareerRift);
         UIManager.I?.Hide(PanelId.Home);
 
-        ironEncounterUI?.ShowStarter(immediate: true);
+        ironRiftUI?.ShowStarter(immediate: true);
     }
 }

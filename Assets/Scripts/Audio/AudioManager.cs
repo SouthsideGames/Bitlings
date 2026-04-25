@@ -32,13 +32,19 @@ public enum SfxType
     LevelUp = 11,
     AchievementUnlocked = 20,
 
-    //Encounters
-    PremiumEncounter = 14,
-    BossEncounter = 15,
-    UniqueEncounter = 16,
+    //Rifts
+    PremiumRift = 14,
+    BossRift = 15,
+    UniqueRift = 16,
 
     // Battle countdown
     CountdownBeep = 21,
+
+    // Text
+    Typewriter = 22,
+
+    // Fly Animation
+    Filling = 23,
 }
 
 [Serializable]
@@ -95,7 +101,7 @@ public class AudioManager : MonoBehaviour
     private Coroutine _xfadeCo;
 
     private AudioClip _currentStartingMusic; // chosen at startup (NO fallback)
-    private AudioClip _currentBattleMusic;   // chosen when encounter button is pressed
+    private AudioClip _currentBattleMusic;   // chosen when rift button is pressed
     private AudioClip _currentIronCareerBattleMusic; // chosen when Iron Career start is pressed
     private AudioClip _currentBossMusic;     // chosen when boss starts
 
@@ -103,7 +109,7 @@ public class AudioManager : MonoBehaviour
     private static AudioClip _sessionStartingMusic;
     private static bool _sessionStartingMusicChosen;
 
-    // Boss state (set by your encounter/boss system)
+    // Boss state (set by your rift/boss system)
     private bool _bossActive = false;
 
     // Transition tracking
@@ -146,10 +152,10 @@ public class AudioManager : MonoBehaviour
     private bool _lastBattleVictory = false;
 
     // Toggle for automatic swapping based on UI/battle state
-    public bool autoSwapForEncounter = true;
+    public bool autoSwapForRift = true;
 
     // Cached hook target to safely unsubscribe
-    private EncounterManager _hookedEncounter;
+    private RiftManager _hookedRift;
 
     // ─────────────────────────────────────────────────────────────
     // Unity Lifecycle
@@ -200,11 +206,11 @@ public class AudioManager : MonoBehaviour
     private void OnEnable()
     {
         TryHookUiEvents();
-        TryHookEncounterEvents();
+        TryHookRiftEvents();
 
         GameEvents.BattleFinished += OnBattleFinished;
 
-        if (autoSwapForEncounter)
+        if (autoSwapForRift)
             RefreshMusicState();
     }
 
@@ -213,18 +219,18 @@ public class AudioManager : MonoBehaviour
         if (UIManager.I != null)
             UIManager.I.OnPanelChanged -= OnPanelChanged;
 
-        UnhookEncounterEvents();
+        UnhookRiftEvents();
 
         GameEvents.BattleFinished -= OnBattleFinished;
     }
 
     private void Start()
     {
-        // In case UIManager / EncounterManager came up after AudioManager
+        // In case UIManager / RiftManager came up after AudioManager
         TryHookUiEvents();
-        TryHookEncounterEvents();
+        TryHookRiftEvents();
 
-        if (autoSwapForEncounter)
+        if (autoSwapForRift)
             RefreshMusicState();
     }
 
@@ -237,30 +243,30 @@ public class AudioManager : MonoBehaviour
         }
     }
 
-    private void TryHookEncounterEvents()
+    private void TryHookRiftEvents()
     {
-        var em = EncounterManager.I;
+        var em = RiftManager.I;
         if (em == null) return;
 
-        if (_hookedEncounter == em) return;
+        if (_hookedRift == em) return;
 
-        UnhookEncounterEvents();
-        _hookedEncounter = em;
-        _hookedEncounter.OnStateChanged += OnEncounterStateChanged;
+        UnhookRiftEvents();
+        _hookedRift = em;
+        _hookedRift.OnStateChanged += OnRiftStateChanged;
     }
 
-    private void UnhookEncounterEvents()
+    private void UnhookRiftEvents()
     {
-        if (_hookedEncounter != null)
+        if (_hookedRift != null)
         {
-            _hookedEncounter.OnStateChanged -= OnEncounterStateChanged;
-            _hookedEncounter = null;
+            _hookedRift.OnStateChanged -= OnRiftStateChanged;
+            _hookedRift = null;
         }
     }
 
-    private void OnEncounterStateChanged()
+    private void OnRiftStateChanged()
     {
-        if (!autoSwapForEncounter) return;
+        if (!autoSwapForRift) return;
         UpdateMusicForCurrentState();
     }
 
@@ -269,7 +275,7 @@ public class AudioManager : MonoBehaviour
         _hasLastBattleResult = true;
         _lastBattleVictory = result.victory;
 
-        // End-of-battle: clear boss/battle selections so next encounter re-rolls cleanly
+        // End-of-battle: clear boss/battle selections so next rift re-rolls cleanly
         _bossActive = false;
         _currentBossMusic = null;
         _currentBattleMusic = null;
@@ -364,7 +370,7 @@ public class AudioManager : MonoBehaviour
             PlayMusic(_currentBattleMusic, true, defaultCrossfade);
     }
 
-    public void PickEncounterBattleMusicOnButtonPress(bool playImmediately = true)
+    public void PickRiftBattleMusicOnButtonPress(bool playImmediately = true)
     {
         _currentBattleMusic = PickBattleMusicForThisBattle();
 
@@ -729,9 +735,9 @@ public class AudioManager : MonoBehaviour
     // ─────────────────────────────────────────────────────────────
     private void OnPanelChanged(PanelId id, bool opened)
     {
-        if (!autoSwapForEncounter) return;
+        if (!autoSwapForRift) return;
 
-        if (id == PanelId.Encounter ||
+        if (id == PanelId.Rift ||
             id == PanelId.PostBattleSummary ||
             id == PanelId.Home)
         {
@@ -743,25 +749,27 @@ public class AudioManager : MonoBehaviour
     {
         var ui = UIManager.I;
 
-        bool encounterOpen = ui != null && ui.IsOpen(PanelId.Encounter);
+        bool riftOpen = ui != null && ui.IsOpen(PanelId.Rift);
         bool summaryOpen = ui != null && ui.IsOpen(PanelId.PostBattleSummary);
 
-        // Home can be shown while Encounter remains active in the hierarchy (or was closed
-        // outside of UIManager). If Home is open, we treat it as higher priority than Encounter
+        // Home can be shown while Rift remains active in the hierarchy (or was closed
+        // outside of UIManager). If Home is open, we treat it as higher priority than Rift
         // for music purposes.
         bool homeOpen = ui != null && ui.IsOpen(PanelId.Home);
 
         // When a battle is actively running, music should stay on the battle/boss track even if
-        // the Encounter panel temporarily closes (e.g., dedicated battle view, blinder overlays,
+        // the Rift panel temporarily closes (e.g., dedicated battle view, blinder overlays,
         // auto-battle UI swaps, etc.).
-        bool isInBattle = (EncounterManager.I != null) && EncounterManager.I.IsInBattle;
+        bool isInBattle = (RiftManager.I != null) && RiftManager.I.IsInBattle;
         bool isIronCareerBattle = IronCareerRuntime.IsActive && isInBattle;
 
-        // "Encounter View" means the encounter panel is visible and we are NOT on the results screen.
+        // "Rift View" means the rift panel is visible and we are NOT on the results screen.
         // Additionally:
-        // - If Home is open, we consider Encounter "not the active view" unless a battle is running.
-        // - If a battle is running, we treat that as Encounter/Battle view for music.
-        bool encounterViewOpen = (encounterOpen && !summaryOpen && !homeOpen) || isInBattle;
+        // - If Home is open, we consider Rift "not the active view" unless a battle is running.
+        // - If a battle is running, we treat that as Rift/Battle view for music,
+        //   but Home and PostBattleSummary always take priority over isInBattle.
+        bool riftViewOpen = (riftOpen && !summaryOpen && !homeOpen)
+                         || (isInBattle && !homeOpen && !summaryOpen);
 
         // Boss re-roll once when boss becomes active.
         if (_bossActive && !_prevBossActive)
@@ -770,8 +778,8 @@ public class AudioManager : MonoBehaviour
         }
         _prevBossActive = _bossActive;
 
-        // 1) Post-battle summary → victory/defeat music
-        if (summaryOpen)
+        // 1) Post-battle summary → victory/defeat music (only if Home isn't open)
+        if (summaryOpen && !homeOpen)
         {
             AudioClip clip = null;
 
@@ -786,8 +794,8 @@ public class AudioManager : MonoBehaviour
             return;
         }
 
-        // 2) Encounter view: boss music if active, else battle music
-        if (encounterViewOpen)
+        // 2) Rift view: boss music if active, else battle music
+        if (riftViewOpen)
         {
             if (isIronCareerBattle)
             {

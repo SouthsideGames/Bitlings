@@ -23,7 +23,7 @@ public static class IdleBattleStore
         }
         catch (Exception ex) { Debug.LogError($"IdleBattleStore.Load failed: {ex}"); }
         _cache ??= new Container { session = new IdleBattleSession() };
-        _cache.session.log ??= new List<IdleEncounterLogEntry>();
+        _cache.session.log ??= new List<IdleRiftLogEntry>();
         return _cache.session;
     }
 

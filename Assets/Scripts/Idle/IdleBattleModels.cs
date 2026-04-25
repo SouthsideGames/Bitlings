@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 
 [Serializable]
-public class IdleEncounterLogEntry
+public class IdleRiftLogEntry
 {
     public string monsterId;
     public int count;
@@ -31,23 +31,23 @@ public class IdleBattleSession
     // Apply-once ledger for offline simulation (prevents double-run if ResolveOfflineIfAny is invoked multiple times before store is saved).
     public long offlineLastResolvedUnix;
     // Encountered (fought)
-    public List<IdleEncounterLogEntry> log = new();
+    public List<IdleRiftLogEntry> log = new();
 
     // Captured (successfully captured)
-    public List<IdleEncounterLogEntry> capturedLog = new();
+    public List<IdleRiftLogEntry> capturedLog = new();
 }
 
 [Serializable]
 public class IdleBattleSummary
 {
-    public int totalEncounters;
+    public int totalRifts;
     public int totalEnergySpent;
     public int totalcredits;
     public float durationSeconds;
 
     // Encountered (fought)
-    public List<IdleEncounterLogEntry> mergedLog = new();
+    public List<IdleRiftLogEntry> mergedLog = new();
 
     // Captured (successfully captured)
-    public List<IdleEncounterLogEntry> capturedLog = new();
+    public List<IdleRiftLogEntry> capturedLog = new();
 }

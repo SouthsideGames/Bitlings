@@ -43,7 +43,7 @@ public sealed class IronEventGuard : MonoBehaviour
         GameEvents.EvolutionOffered += OnEvolutionOffered;
         GameEvents.StarterChosen += OnStarterChosen;
         GameEvents.AutoBattleModeChanged += OnAutoBattleModeChanged;
-        GameEvents.OnEncounterAutoModeChanged += OnEncounterAutoModeChanged;
+        GameEvents.OnRiftAutoModeChanged += OnRiftAutoModeChanged;
         GameEvents.ShowRewardPopup += OnShowRewardPopup;
         GameEvents.OnJobsChanged += OnJobsChanged;
         GameEvents.JobGlobalModsChanged += OnJobGlobalModsChanged;
@@ -67,7 +67,7 @@ public sealed class IronEventGuard : MonoBehaviour
         GameEvents.EvolutionOffered -= OnEvolutionOffered;
         GameEvents.StarterChosen -= OnStarterChosen;
         GameEvents.AutoBattleModeChanged -= OnAutoBattleModeChanged;
-        GameEvents.OnEncounterAutoModeChanged -= OnEncounterAutoModeChanged;
+        GameEvents.OnRiftAutoModeChanged -= OnRiftAutoModeChanged;
         GameEvents.ShowRewardPopup -= OnShowRewardPopup;
         GameEvents.OnJobsChanged -= OnJobsChanged;
         GameEvents.JobGlobalModsChanged -= OnJobGlobalModsChanged;
@@ -181,9 +181,9 @@ public sealed class IronEventGuard : MonoBehaviour
         if (forbidAutoBattle) Violation(nameof(GameEvents.AutoBattleModeChanged));
     }
 
-    private void OnEncounterAutoModeChanged()
+    private void OnRiftAutoModeChanged()
     {
-        if (forbidAutoBattle) Violation(nameof(GameEvents.OnEncounterAutoModeChanged));
+        if (forbidAutoBattle) Violation(nameof(GameEvents.OnRiftAutoModeChanged));
     }
 
     private void OnShowRewardPopup(string a, string b, int c, int d)

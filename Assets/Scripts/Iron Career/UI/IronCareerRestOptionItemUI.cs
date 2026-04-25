@@ -119,12 +119,12 @@ public sealed class IronCareerRestOptionItemUI : MonoBehaviour
         foreach (var cg in cgs)
             cgInfo += $"\n    CG={cg.name} active={cg.gameObject.activeInHierarchy} interactable={cg.interactable} blocksRaycasts={cg.blocksRaycasts} alpha={cg.alpha}";
 
-        // Check ALL sibling/cousin panels under encounter panel that might overlay with blocksRaycasts
+        // Check ALL sibling/cousin panels under rift panel that might overlay with blocksRaycasts
         string siblingInfo = "";
-        var encounterPanel = GetComponentInParent<IronCareerEncounterPanelUI>();
-        if (encounterPanel != null)
+        var riftPanel = GetComponentInParent<IronCareerRiftPanelUI>();
+        if (riftPanel != null)
         {
-            var allCGs = encounterPanel.GetComponentsInChildren<CanvasGroup>(true);
+            var allCGs = riftPanel.GetComponentsInChildren<CanvasGroup>(true);
             foreach (var cg in allCGs)
             {
                 if (cg.gameObject.activeInHierarchy && cg.blocksRaycasts && cg.alpha > 0f)

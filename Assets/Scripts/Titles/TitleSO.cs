@@ -12,12 +12,16 @@ public abstract class TitleSO : ScriptableObject
     [Header("UI")]
     public Sprite icon;
 
-    [Header("Wild Encounters")]
+    [Header("Wild Rifts")]
     public TitleRarity rarity = TitleRarity.Common;
-    [Tooltip("If true, this title is eligible to be rolled onto wild monsters per encounter (battle-only).")]
+    [Tooltip("If true, this title is eligible to be rolled onto wild monsters per rift (battle-only).")]
     public bool canRollOnWild = false;
 
     public TitleRarity Rarity => rarity;
 
     public string DisplayOrId => !string.IsNullOrEmpty(displayName) ? displayName : titleId;
+
+    [Header("Arena")]
+    [Tooltip("Arena score contributed when this title is equipped on an arena battle team. Stacks with the species arenaScore.")]
+    [Min(0)] public int arenaScore;
 }
