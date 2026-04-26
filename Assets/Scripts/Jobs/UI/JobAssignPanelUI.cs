@@ -352,9 +352,9 @@ public class JobAssignPanelUI : MonoBehaviour
             if (ui.scoreText)
             {
                 if (hasRatePreview)
-                    ui.scoreText.text = $"Δ {candidateDeltaPerHour:+0.##;-0.##;0}/hr";
+                    ui.scoreText.text = $"{candidateDeltaPerHour:+0.##;-0.##;0}/hr";
                 else
-                    ui.scoreText.text = "Δ ?/hr";
+                    ui.scoreText.text = "?/hr";
             }
             ui.SetFatigueInfo(e.def ? e.def.fatigueCooldownHours : 0f);
             if (ui.typeIcon) ui.typeIcon.sprite = e.def.typeIcon;

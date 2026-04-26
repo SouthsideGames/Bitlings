@@ -272,7 +272,11 @@ public class DuplicateResolutionPanelUI : MonoBehaviour
         if (brokerButton != null) brokerButton.interactable = false;
 
         if (payout > 0)
+        {
             ResourceBank.Add(ResourceType.Credits, payout);
+            if (brokerButton != null)
+                ResourceFlyAnimationUI.PlayToHome(ResourceType.Credits, payout, brokerButton.transform);
+        }
 
         // Track stats
         if (ExchangeManager.I != null)
