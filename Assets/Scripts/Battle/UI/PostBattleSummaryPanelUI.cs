@@ -272,7 +272,7 @@ public class PostBattleSummaryPanelUI : MonoBehaviour
         bool effectivePremium = capturedPremium || wildWasPremium;
 
         if (titleLabel)
-            titleLabel.text = result.victory ? "Victory!" : "Defeat";
+            titleLabel.text = result.victory ? "VICTORY!" : "DEFEAT";
 
         // ─────────────────────────────────────────────
         // Rewards: hide empty lines + micro-juice (count-up + stagger)
@@ -482,8 +482,16 @@ public class PostBattleSummaryPanelUI : MonoBehaviour
                 if (promotionProgressSlider)
                 {
                     promotionProgressSlider.minValue = 0f;
-                    promotionProgressSlider.maxValue = Mathf.Max(1f, toNext);
-                    promotionProgressSlider.value = Mathf.Clamp(inRank, 0, Mathf.Max(1, toNext));
+                    if (atMaxRank)
+                    {
+                        promotionProgressSlider.maxValue = 1f;
+                        promotionProgressSlider.value = 1f;
+                    }
+                    else
+                    {
+                        promotionProgressSlider.maxValue = Mathf.Max(1f, toNext);
+                        promotionProgressSlider.value = Mathf.Clamp(inRank, 0, Mathf.Max(1, toNext));
+                    }
                 }
             }
             else
