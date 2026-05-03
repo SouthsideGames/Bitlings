@@ -52,6 +52,7 @@ public class ArenaMainPanelUI : MonoBehaviour
     // ═════════════════════════════════════════════════════════════
 
     private readonly List<ArenaHistoryCardUI> _historyCards = new List<ArenaHistoryCardUI>();
+    private bool _runningOpenRepair;
 
     // ═════════════════════════════════════════════════════════════
     //  Lifecycle
@@ -92,6 +93,7 @@ public class ArenaMainPanelUI : MonoBehaviour
         if (!ArenaNetworkGuard.IsOnline)
         {
             // Still show whatever local data we have, but the overlay blocks interaction.
+            RunOpenArenaRepairPass();
             RefreshAll();
             return;
         }
@@ -110,6 +112,7 @@ public class ArenaMainPanelUI : MonoBehaviour
             ForceShowUsernamePopup();
         }
 
+        RunOpenArenaRepairPass();
         RefreshAll();
 
         // If registered and brackets might be ready, sync in background.
@@ -373,8 +376,10 @@ public class ArenaMainPanelUI : MonoBehaviour
                 ArenaSaveHelper.MarkArenaRoundResultsViewed(save: true);
                 RefreshAll();
             }
-        }
-        else if (status == ArenaPlayerTournamentStatus.Entered || status == ArenaPlayerTournamentStatus.Active)
+                }
+                else if (status == ArenaPlayerTournamentStatus.Entered
+              || status == ArenaPlayerTournamentStatus.Active
+              || status == ArenaPlayerTournamentStatus.Eliminated)
         {
             // Catch up on any rounds that became available since last open
             int resolved = ArenaTournamentService.ResolveAvailableRounds();
@@ -457,6 +462,22 @@ public class ArenaMainPanelUI : MonoBehaviour
         if (offlineOverlay) offlineOverlay.SetActive(!online);
         if (offlineReasonLabel && !online)
             offlineReasonLabel.text = ArenaNetworkGuard.GetOfflineReason() ?? "";
+    }
+
+    private void RunOpenArenaRepairPass()
+    {
+        if (_runningOpenRepair) return;
+
+        _runningOpenRepair = true;
+        try
+        {
+            ArenaTournamentService.TryBackfillMissingHistoryFromActiveRecord();
+            ArenaRewardService.TryReconcileHistoryRewards();
+        }
+        finally
+        {
+            _runningOpenRepair = false;
+        }
     }
 
     private void OnUGSReady()

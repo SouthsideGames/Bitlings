@@ -72,6 +72,20 @@ public sealed class BattleTitleStatusBarUI : MonoBehaviour
         BattleLogger.OnTitleConditionChanged -= HandleTitleConditionChanged;
 
         if (infoButton) infoButton.onClick.RemoveAllListeners();
+
+        ResetTweenState();
+    }
+
+    private void OnApplicationPause(bool paused)
+    {
+        if (paused)
+            ResetTweenState();
+    }
+
+    private void OnApplicationFocus(bool hasFocus)
+    {
+        if (!hasFocus)
+            ResetTweenState();
     }
 
     private void HandleExternalChanged() => ForceRefresh();
@@ -292,6 +306,17 @@ private void PopIcon()
                  LeanTween.scale(tr.gameObject, Vector3.one, 0.10f).setEaseInOutQuad();
              });
 }
+
+    private void ResetTweenState()
+    {
+        if (iconImage == null) return;
+        var tr = iconImage.transform;
+        if (!tr) return;
+
+        LeanTween.cancel(tr.gameObject);
+        tr.localScale = Vector3.one;
+    }
+
     private void OpenInfo()
     {
         if (_currentTitle == null) return;

@@ -39,6 +39,7 @@ public sealed class PlayerDossierAchievementRowUI : MonoBehaviour
 
         if (progressSlider)
         {
+            progressSlider.gameObject.SetActive(!row.unlocked);
             progressSlider.minValue = 0;
             progressSlider.maxValue = goal;
             progressSlider.value = value;

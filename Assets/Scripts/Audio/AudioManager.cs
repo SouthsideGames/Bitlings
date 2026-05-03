@@ -540,6 +540,7 @@ public class AudioManager : MonoBehaviour
     public void OnMuteMusicToggle(bool on)
     {
         _muteMusic = on;
+        if (_muteAll) _muteAll = false;
         SaveSettings();
         ApplyVolumes();
     }
@@ -547,6 +548,7 @@ public class AudioManager : MonoBehaviour
     public void OnMuteSfxToggle(bool on)
     {
         _muteSfx = on;
+        if (_muteAll) _muteAll = false;
         SaveSettings();
         ApplyVolumes();
     }

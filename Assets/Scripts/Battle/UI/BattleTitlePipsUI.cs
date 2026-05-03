@@ -93,6 +93,20 @@ public sealed class BattleTitlePipsUI : MonoBehaviour
 
         if (_battle != null)
             _battle.OnBattleEvent -= OnBattleEvent;
+
+        ResetTweenState();
+    }
+
+    private void OnApplicationPause(bool paused)
+    {
+        if (paused)
+            ResetTweenState();
+    }
+
+    private void OnApplicationFocus(bool hasFocus)
+    {
+        if (!hasFocus)
+            ResetTweenState();
     }
 
     private void OnBattleEvent(BattleEvent e)
@@ -380,5 +394,17 @@ public sealed class BattleTitlePipsUI : MonoBehaviour
                     .setEaseOutQuad()
                     .setIgnoreTimeScale(true);
             });
+    }
+
+    private void ResetTweenState()
+    {
+        for (int i = 0; i < _pips.Count; i++)
+        {
+            var p = _pips[i];
+            if (p == null || !p.go) continue;
+
+            LeanTween.cancel(p.go);
+            p.go.transform.localScale = Vector3.one;
+        }
     }
 }

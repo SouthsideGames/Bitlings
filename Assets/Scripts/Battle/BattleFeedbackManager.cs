@@ -1,5 +1,6 @@
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -8,6 +9,14 @@ using UnityEngine.UI;
 [DisallowMultipleComponent]
 public sealed class BattleFeedbackManager : MonoBehaviour
 {
+    private struct RectTransformSnapshot
+    {
+        public Vector2 anchoredPosition;
+        public Vector3 localPosition;
+        public Vector3 localScale;
+        public Quaternion localRotation;
+    }
+
     public enum BattleFeedbackSide { Player, Wild }
     public enum BattleFeedbackAction { Attack, Defend, Focus, Swap, Run }
 
@@ -238,6 +247,9 @@ public sealed class BattleFeedbackManager : MonoBehaviour
     private bool _slowMoActive;
     private float _slowMoPrevTimeScale = 1f;
     private float _slowMoPrevFixedDeltaTime = 0.02f;
+    private readonly Dictionary<RectTransform, RectTransformSnapshot> _rectSnapshots = new Dictionary<RectTransform, RectTransformSnapshot>();
+    private Transform _lastScreenShakeTarget;
+    private Vector3 _lastScreenShakeBaseLocalPos;
 
     private static readonly Color ResistHpTint = new Color32(0x41, 0xB4, 0x6A, 0xFF);
     private Color _playerHpValueDefaultColor = Color.white;
@@ -247,6 +259,7 @@ public sealed class BattleFeedbackManager : MonoBehaviour
     private void Awake()
     {
         CacheBaseScales();
+        CacheTweenResetSnapshots();
         WireOptionalButtonPresses();
 
         ResetStatusIcons();
@@ -259,9 +272,22 @@ public sealed class BattleFeedbackManager : MonoBehaviour
         Subscribe();
 
         CacheBaseScales();
+        CacheTweenResetSnapshots();
 
         ResetStatusIcons();
         ResetMicroJuiceOptionals();
+    }
+
+    private void OnApplicationPause(bool paused)
+    {
+        if (paused)
+            HandleAppSuspended();
+    }
+
+    private void OnApplicationFocus(bool hasFocus)
+    {
+        if (!hasFocus)
+            HandleAppSuspended();
     }
 
     private void OnDisable()
@@ -277,6 +303,80 @@ public sealed class BattleFeedbackManager : MonoBehaviour
     {
         Unsubscribe();
         CancelActiveSlowMo(forceNormalTime: true);
+    }
+
+    private void HandleAppSuspended()
+    {
+        CancelActiveSlowMo(forceNormalTime: true);
+
+        if (_wildIntentCR != null)
+        {
+            StopCoroutine(_wildIntentCR);
+            _wildIntentCR = null;
+        }
+
+        LeanTween.cancel(gameObject);
+
+        foreach (var kv in _rectSnapshots)
+        {
+            var rt = kv.Key;
+            if (!rt) continue;
+
+            LeanTween.cancel(rt.gameObject);
+            var snap = kv.Value;
+            rt.anchoredPosition = snap.anchoredPosition;
+            rt.localPosition = snap.localPosition;
+            rt.localScale = snap.localScale;
+            rt.localRotation = snap.localRotation;
+        }
+
+        if (_lastScreenShakeTarget)
+            _lastScreenShakeTarget.localPosition = _lastScreenShakeBaseLocalPos;
+
+        if (playerIcon) RestoreGraphicColor(playerIcon);
+        if (wildIcon) RestoreGraphicColor(wildIcon);
+    }
+
+    private void CacheTweenResetSnapshots()
+    {
+        CacheRectSnapshot(playerIcon ? playerIcon.rectTransform : null);
+        CacheRectSnapshot(wildIcon ? wildIcon.rectTransform : null);
+
+        CacheRectSnapshot(playerImpactRoot);
+        CacheRectSnapshot(wildImpactRoot);
+        CacheRectSnapshot(playerHPShakeRoot);
+        CacheRectSnapshot(wildHPShakeRoot);
+
+        CacheRectSnapshot(playerGuardIcon ? playerGuardIcon.rectTransform : null);
+        CacheRectSnapshot(wildGuardIcon ? wildGuardIcon.rectTransform : null);
+        CacheRectSnapshot(playerChargeIcon ? playerChargeIcon.rectTransform : null);
+        CacheRectSnapshot(wildChargeIcon ? wildChargeIcon.rectTransform : null);
+
+        CacheRectSnapshot(wildIntentIcon ? wildIntentIcon.rectTransform : null);
+
+        CacheRectSnapshot(playerCritTag ? playerCritTag.rectTransform : null);
+        CacheRectSnapshot(wildCritTag ? wildCritTag.rectTransform : null);
+
+        CacheRectSnapshot(playerHPValueText ? playerHPValueText.rectTransform : null);
+        CacheRectSnapshot(wildHPValueText ? wildHPValueText.rectTransform : null);
+
+        CacheRectSnapshot(attackBtn ? attackBtn.GetComponent<RectTransform>() : null);
+        CacheRectSnapshot(defendBtn ? defendBtn.GetComponent<RectTransform>() : null);
+        CacheRectSnapshot(focusBtn ? focusBtn.GetComponent<RectTransform>() : null);
+        CacheRectSnapshot(runBtn ? runBtn.GetComponent<RectTransform>() : null);
+    }
+
+    private void CacheRectSnapshot(RectTransform rt)
+    {
+        if (!rt) return;
+
+        _rectSnapshots[rt] = new RectTransformSnapshot
+        {
+            anchoredPosition = rt.anchoredPosition,
+            localPosition = rt.localPosition,
+            localScale = rt.localScale,
+            localRotation = rt.localRotation
+        };
     }
 
     private void CancelActiveSlowMo(bool forceNormalTime)
@@ -1593,6 +1693,9 @@ public void SetGuard(BattleFeedbackSide side, bool on)
         }
         if (!target) return;
 
+        _lastScreenShakeTarget = target;
+        _lastScreenShakeBaseLocalPos = target.localPosition;
+
         Vector3 original = target.localPosition;
 
         LeanTween.value(gameObject, 0f, magnitude, duration)
@@ -1705,7 +1808,7 @@ public void SetGuard(BattleFeedbackSide side, bool on)
 
         if (playerHPValueText)
         {
-            playerHPValueText.text = (pSh > 0) ? $"{pCur}/{pMax} (+{pSh})" : $"{pCur}/{pMax}";
+            playerHPValueText.text = (pSh > 0) ? $"{pCur}/{pMax} + {pSh} Shield" : $"{pCur}/{pMax}";
 
             bool resistOn = false;
             if (BattleBoosterController.I != null && BattleBoosterController.I.IsBoosterActive(BoosterType.TypeResist))
@@ -1720,7 +1823,7 @@ public void SetGuard(BattleFeedbackSide side, bool on)
 
         if (wildHPValueText)
         {
-            wildHPValueText.text = (wSh > 0) ? $"{wCur}/{wMax} (+{wSh})" : $"{wCur}/{wMax}";
+            wildHPValueText.text = (wSh > 0) ? $"{wCur}/{wMax} + {wSh} Shield" : $"{wCur}/{wMax}";
             if (hpTextPunchOnChange && wChanged) PunchTMP(wildHPValueText);
         }
     }

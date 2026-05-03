@@ -96,6 +96,23 @@ public class PostBattleSummaryPanelUI : MonoBehaviour
             continueButton.onClick.RemoveListener(OnContinueClicked);
     }
 
+    private void OnDisable()
+    {
+        ResetTweenState();
+    }
+
+    private void OnApplicationPause(bool paused)
+    {
+        if (paused)
+            ResetTweenState();
+    }
+
+    private void OnApplicationFocus(bool hasFocus)
+    {
+        if (!hasFocus)
+            ResetTweenState();
+    }
+
     private void OnContinueClicked()
     {
         RiftPanelUI.I?.ForceBlinderAlphaToOne();
@@ -149,6 +166,44 @@ public class PostBattleSummaryPanelUI : MonoBehaviour
     }
 
     private bool IsAutoBattleMode() => RiftManager.I && RiftManager.I.IsAutoMode;
+
+    private void ResetTweenState()
+    {
+        if (root)
+        {
+            LeanTween.cancel(root);
+            root.localScale = Vector3.one;
+        }
+
+        ResetLabelTween(titleLabel);
+        ResetLabelTween(creditsLabel);
+        ResetLabelTween(growthCoresLabel);
+        ResetLabelTween(captureLabel);
+
+        ResetLabelTween(enemyNameLabel);
+        ResetLabelTween(wildLevelLabel);
+        ResetLabelTween(rarityLabel);
+        ResetLabelTween(typeLabel);
+
+        ResetLabelTween(turnsTakenLabel);
+        ResetLabelTween(damageDealtLabel);
+        ResetLabelTween(damageTakenLabel);
+        ResetLabelTween(critsLabel);
+        ResetLabelTween(firstHitLabel);
+        ResetLabelTween(timeLabel);
+
+        ResetLabelTween(promotionRankLabel);
+        ResetLabelTween(promotionProgressLabel);
+        ResetLabelTween(promotionDeltaLabel);
+    }
+
+    private static void ResetLabelTween(TextMeshProUGUI label)
+    {
+        if (!label) return;
+
+        LeanTween.cancel(label.gameObject);
+        label.rectTransform.localScale = Vector3.one;
+    }
 
     private void CancelRowTweens(GameObject row)
     {

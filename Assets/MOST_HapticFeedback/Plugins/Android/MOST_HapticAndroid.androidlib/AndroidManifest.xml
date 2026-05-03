@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.yourcompany.hapticlib">
+
+    <!-- Essential Vibration Permission -->
+    <uses-permission android:name="android.permission.VIBRATE" />
+
+    <!-- Optional: Prevent Doze mode blocking -->
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+
+    <application android:allowBackup="true">
+        <!-- Your library components (if any) -->
+    </application>
+
+</manifest>

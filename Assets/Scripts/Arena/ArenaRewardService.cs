@@ -274,6 +274,68 @@ public static class ArenaRewardService
         return false;
     }
 
+    /// <summary>
+    /// Repairs missing or malformed reward payloads in saved tournament history
+    /// and grants any ungranted rewards that should already have been delivered.
+    /// Returns <c>true</c> when any history entry was repaired or granted.
+    /// </summary>
+    public static bool TryReconcileHistoryRewards()
+    {
+        var arena = SaveManager.GetArenaSaveData();
+        if (arena?.recentTournamentHistory == null || arena.recentTournamentHistory.Count == 0)
+            return false;
+
+        bool changed = false;
+        string stableEntryKey = !string.IsNullOrEmpty(arena.arenaPlayerId)
+            ? arena.arenaPlayerId
+            : "local_player";
+
+        for (int i = 0; i < arena.recentTournamentHistory.Count; i++)
+        {
+            var hist = arena.recentTournamentHistory[i];
+            if (hist == null) continue;
+            if (hist.finalPlacement <= 0 || hist.finalPlacement > ArenaConstants.BracketSize) continue;
+
+            var expectedTier = GetTierDef(hist.finalPlacement);
+            bool shouldHaveRewards = expectedTier.credits > 0
+                                     || expectedTier.featuredAmount > 0
+                                     || expectedTier.randomBundleCount > 0
+                                     || expectedTier.packVouchers > 0
+                                     || expectedTier.arenaTickets > 0;
+            if (!shouldHaveRewards) continue;
+
+            var rw = hist.rewardResult;
+            bool rewardMissing = rw == null;
+            bool rewardMalformed = rw != null && rw.wasGranted && !HasAnyRewardContent(rw);
+
+            if (rewardMissing || rewardMalformed)
+            {
+                // Rebuild deterministically from placement/tournament to recover from legacy or partial payloads.
+                hist.rewardResult = BuildRewardResult(hist.finalPlacement, hist.tournamentId, stableEntryKey + "_" + i);
+                rw = hist.rewardResult;
+                changed = true;
+            }
+
+            if (rw != null && !rw.wasGranted)
+            {
+                var tempEntry = new ArenaTournamentEntry
+                {
+                    isBot = false,
+                    finalPlacement = hist.finalPlacement,
+                    rewardResult = rw
+                };
+
+                if (TryGrantRewards(tempEntry))
+                    changed = true;
+            }
+        }
+
+        if (changed)
+            SaveManager.Save();
+
+        return changed;
+    }
+
     // ═════════════════════════════════════════════════════════════
     //  Helpers
     // ═════════════════════════════════════════════════════════════
@@ -292,5 +354,26 @@ public static class ArenaRewardService
                 hash = hash * 31 + s[i];
             return hash;
         }
+    }
+
+    private static bool HasAnyRewardContent(ArenaRewardResult reward)
+    {
+        if (reward == null) return false;
+        if (reward.creditsAwarded > 0) return true;
+        if (reward.featuredResourceAmount > 0 && reward.featuredResourceType != ResourceType.None) return true;
+        if (reward.packVoucherAmount > 0) return true;
+        if (reward.arenaTicketAmount > 0) return true;
+
+        if (reward.randomResourceRewards != null)
+        {
+            for (int i = 0; i < reward.randomResourceRewards.Count; i++)
+            {
+                var b = reward.randomResourceRewards[i];
+                if (b != null && b.amount > 0 && b.resourceType != ResourceType.None)
+                    return true;
+            }
+        }
+
+        return false;
     }
 }

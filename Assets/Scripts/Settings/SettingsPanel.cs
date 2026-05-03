@@ -631,8 +631,19 @@ public void ShowSection(SettingsSection section, bool instant = false)
     void OnSfxChanged(float v) { if (AudioManager.I) AudioManager.I.SetSfxVolume(v); }
 
     void OnMuteAll(bool on) { if (AudioManager.I) AudioManager.I.OnMuteAllToggle(on); }
-    void OnMuteMusic(bool on) { if (AudioManager.I) AudioManager.I.OnMuteMusicToggle(on); }
-    void OnMuteSfx(bool on) { if (AudioManager.I) AudioManager.I.OnMuteSfxToggle(on); }
+    void OnMuteMusic(bool on)
+    {
+        if (AudioManager.I) AudioManager.I.OnMuteMusicToggle(on);
+        if (muteAllToggle && muteAllToggle.isOn)
+            muteAllToggle.SetIsOnWithoutNotify(false);
+    }
+
+    void OnMuteSfx(bool on)
+    {
+        if (AudioManager.I) AudioManager.I.OnMuteSfxToggle(on);
+        if (muteAllToggle && muteAllToggle.isOn)
+            muteAllToggle.SetIsOnWithoutNotify(false);
+    }
 
     void OnAutoScrollChanged(bool on)
     {

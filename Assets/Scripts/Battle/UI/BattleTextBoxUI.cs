@@ -58,7 +58,20 @@ public class BattleTextBoxUI : MonoBehaviour
 
     private void OnDisable()
     {
+        ResetTweenState();
         UnhookRiftState();
+    }
+
+    private void OnApplicationPause(bool paused)
+    {
+        if (paused)
+            ResetTweenState();
+    }
+
+    private void OnApplicationFocus(bool hasFocus)
+    {
+        if (!hasFocus)
+            ResetTweenState();
     }
 
     private void LateUpdate()
@@ -327,5 +340,20 @@ public class BattleTextBoxUI : MonoBehaviour
             icon.color = c;
             icon.canvasRenderer.SetAlpha(1f);
         }
+    }
+
+    private void ResetTweenState()
+    {
+        ResetIconTween(critIcon);
+        ResetIconTween(shieldIcon);
+        ResetIconTween(effectiveIcon);
+    }
+
+    private static void ResetIconTween(Image icon)
+    {
+        if (!icon || !icon.gameObject) return;
+
+        LeanTween.cancel(icon.gameObject);
+        icon.transform.localScale = Vector3.one;
     }
 }

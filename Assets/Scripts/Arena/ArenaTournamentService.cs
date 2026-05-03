@@ -508,15 +508,77 @@ public static class ArenaTournamentService
     /// </summary>
     public static int ResolveAvailableRounds()
     {
+        var cache = SaveManager.GetArenaSaveData()?.currentTournamentCache;
+        bool weekEnded = cache != null
+                      && cache.weekEndUtc > 0
+                      && SaveManager.NowUnix() > cache.weekEndUtc;
+
         int count = 0;
         int round;
         do
         {
-            round = ResolveNextRound(respectSchedule: true);
+            round = ResolveNextRound(respectSchedule: !weekEnded);
             if (round >= 0) count++;
         }
         while (round >= 0);
         return count;
+    }
+
+    /// <summary>
+    /// Repairs a missing history row for a completed tournament using the active
+    /// tournament record and current cache values. Safe to call repeatedly.
+    /// Returns <c>true</c> when a row was inserted.
+    /// </summary>
+    public static bool TryBackfillMissingHistoryFromActiveRecord()
+    {
+        var arena = SaveManager.GetArenaSaveData();
+        var cache = arena?.currentTournamentCache;
+        if (arena == null || cache == null) return false;
+
+        string tournamentId = cache.tournamentId;
+        if (string.IsNullOrEmpty(tournamentId)) return false;
+
+        arena.recentTournamentHistory ??= new List<ArenaTournamentHistoryEntry>();
+        for (int i = 0; i < arena.recentTournamentHistory.Count; i++)
+        {
+            var hist = arena.recentTournamentHistory[i];
+            if (hist != null && string.Equals(hist.tournamentId, tournamentId, StringComparison.Ordinal))
+                return false;
+        }
+
+        var record = GetActiveRecord();
+        if (record == null) return false;
+        if (!string.Equals(record.tournamentId, tournamentId, StringComparison.Ordinal)) return false;
+
+        bool completed = record.state == ArenaTournamentState.Completed
+                      || cache.playerStatus == ArenaPlayerTournamentStatus.Completed;
+        if (!completed) return false;
+
+        var playerEntry = FindPlayerEntry(record, cache.playerEntryId);
+        int placement = cache.finalPlacement > 0
+            ? cache.finalPlacement
+            : (playerEntry?.finalPlacement ?? 0);
+        if (placement <= 0) return false;
+
+        ArenaRewardService.BuildAllRewards(record);
+
+        arena.recentTournamentHistory.Insert(0, new ArenaTournamentHistoryEntry
+        {
+            tournamentId = record.tournamentId,
+            weekStartUtc = record.weekStartUtc,
+            finalPlacement = placement,
+            totalEntrants = record.entries?.Count ?? ArenaConstants.BracketSize,
+            scoreBand = record.scoreBand,
+            teamSnapshot = playerEntry?.teamSnapshot,
+            rewardResult = playerEntry?.rewardResult
+        });
+
+        ArenaSaveHelper.TrimArenaHistory(ref arena);
+        SaveRecordToDisk(record);
+        SaveManager.Save();
+
+        Debug.Log($"{TAG} Backfilled missing history row for tournament '{record.tournamentId}'.");
+        return true;
     }
 
     // ═════════════════════════════════════════════════════════════
@@ -636,6 +698,30 @@ public static class ArenaTournamentService
 
     private static string RecordFilePath =>
         Path.Combine(Application.persistentDataPath, RecordFileName);
+
+    private static ArenaTournamentEntry FindPlayerEntry(ArenaTournamentRecord record, string playerEntryId)
+    {
+        if (record?.entries == null) return null;
+
+        if (!string.IsNullOrEmpty(playerEntryId))
+        {
+            for (int i = 0; i < record.entries.Count; i++)
+            {
+                var e = record.entries[i];
+                if (e != null && string.Equals(e.entryId, playerEntryId, StringComparison.Ordinal))
+                    return e;
+            }
+        }
+
+        for (int i = 0; i < record.entries.Count; i++)
+        {
+            var e = record.entries[i];
+            if (e != null && !e.isBot)
+                return e;
+        }
+
+        return null;
+    }
 
     private static void SaveRecordToDisk(ArenaTournamentRecord record)
     {

@@ -144,7 +144,7 @@ public partial class BattleManager : MonoBehaviour
         if (playerHPText)
         {
             playerHPText.text = (pShield > 0)
-                ? $"HP: {pCurI}/{pMaxI}  (+{pShield} Shield)"
+                ? $"HP: {pCurI}/{pMaxI} + {pShield} Shield"
                 : $"HP: {pCurI}/{pMaxI}";
             playerHPText.color = StatNeutral;
         }
@@ -152,7 +152,7 @@ public partial class BattleManager : MonoBehaviour
         if (wildHPText)
         {
             wildHPText.text = (wShield > 0)
-                ? $"HP: {wCurI}/{wMaxI}  (+{wShield} Shield)"
+                ? $"HP: {wCurI}/{wMaxI} + {wShield} Shield"
                 : $"HP: {wCurI}/{wMaxI}";
             wildHPText.color = StatNeutral;
         }
