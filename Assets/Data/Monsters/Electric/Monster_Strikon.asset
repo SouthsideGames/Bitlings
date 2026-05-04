@@ -48,10 +48,11 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 7316d61525a8543b9bd3f6f84fe72d11, type: 2}
   - {fileID: 11400000, guid: 3da4dd895f4bd4ff9b4690ab28dbdc42, type: 2}
   Personality: {fileID: 11400000, guid: 38ced003b48194272ab4cfa8cd9c5d01, type: 2}
-  basicAttackName: Thunder Cleave
+  basicAttackName: Killing Volt
   basicAttackPrefab: {fileID: 4179996368917665753, guid: 25354ab090a707a4c84fa0fdaa8bc718, type: 3}
   basicAttackPrefabLifetime: 1
   spawnSfx: {fileID: 8300000, guid: 7b0331c0ca565f84fbdf293257d689f6, type: 3}
   baseMarketValue: 319
+  arenaScore: 10
   description: An elite electric predator that waits for the perfect moment before
     unleashing devastating, high-voltage strikes.

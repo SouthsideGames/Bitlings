@@ -48,10 +48,11 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 686cc9ea05cccd847bbcccd5ddd3472c, type: 2}
   - {fileID: 11400000, guid: a238dfd3734e731409d7eeaa91bb424a, type: 2}
   Personality: {fileID: 11400000, guid: 1bd4805a0ba8f476b9f7b480b0cbb31d, type: 2}
-  basicAttackName: Sky Rend
+  basicAttackName: Savage Dive
   basicAttackPrefab: {fileID: 7446462880551948952, guid: 18696ea6ccccd974d902d9304c2b6b7e, type: 3}
   basicAttackPrefabLifetime: 1
   spawnSfx: {fileID: 8300000, guid: e949bc7c5ae6bae4f944521df8c3dd6f, type: 3}
   baseMarketValue: 329
+  arenaScore: 10
   description: A fearsome wyrm that tears through enemies with savage aerial assaults,
     favoring overwhelming offense over self-preservation.

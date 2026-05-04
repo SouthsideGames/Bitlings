@@ -171,6 +171,9 @@ public partial class BattleManager : MonoBehaviour
             wasManualBattle = !AutoResolveActive
         };
 
+        if (victory && finalcredits > 0)
+            Emit(BattleEvent.Reward(finalcredits));
+
         onEnd?.Invoke(result);
     }
 
@@ -577,6 +580,9 @@ public partial class BattleManager : MonoBehaviour
             isSoloBattle = ComputeIsSoloBattle(),
             wasManualBattle = !AutoResolveActive
         };
+
+        if (victory && finalcredits > 0)
+            Emit(BattleEvent.Reward(finalcredits));
 
         DevLog.Log($"[BattleManager] BattleResult: base={result.creditsBase}, bonus={result.creditsTitleBonus}, totalPreScale={result.creditsGained}, active={result.activeMonsterOwnedId}");
 

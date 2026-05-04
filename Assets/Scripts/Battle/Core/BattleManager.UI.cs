@@ -275,8 +275,8 @@ private void UpdateWildInfoUI()
         // "Base" here means the adjusted stat the battle is tuned to (level-scaled + rift threat).
         int baseHP  = (_uiBaseWildMaxHp > 0) ? _uiBaseWildMaxHp : Mathf.RoundToInt(Mathf.Max(1f, wildBaseMaxHP));
         int baseATK = (_uiBaseWildAtk > 0) ? _uiBaseWildAtk : Mathf.RoundToInt(Mathf.Max(1f, wildBaseAttackPerTurn));
-        int baseDEF = (_uiBaseWildDef >= 0) ? _uiBaseWildDef : BattleCalc.CalcDefense(wildDef, wildLevel);
-        int baseSPD = (_uiBaseWildSpd > 0) ? _uiBaseWildSpd : BattleCalc.CalcSpeed(wildDef, wildLevel);
+        int baseDEF = (_uiBaseWildDef >= 0) ? _uiBaseWildDef : Mathf.Max(0, wildBaseDefense);
+        int baseSPD = (_uiBaseWildSpd > 0) ? _uiBaseWildSpd : Mathf.Max(1, wildBaseSpeed);
 
         int effHP = Mathf.RoundToInt(Mathf.Max(1f, wildMaxHP));
         int effATK = Mathf.RoundToInt(Mathf.Max(1f, wildAttackPerTurn));

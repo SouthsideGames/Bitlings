@@ -48,10 +48,11 @@ MonoBehaviour:
   - {fileID: 11400000, guid: a5c2ba1de8fa05a4daeb2136ab3cf9df, type: 2}
   - {fileID: 11400000, guid: c2f2ffea479c42a4587f575f432bb379, type: 2}
   Personality: {fileID: 11400000, guid: 225b50a30ca2b4463828b97ab1e08247, type: 2}
-  basicAttackName: Ruin Burst
+  basicAttackName: Total Collapse
   basicAttackPrefab: {fileID: 8046187082596486557, guid: 86fc56d41698d45bfbf27d043ca2944d, type: 3}
   basicAttackPrefabLifetime: 1
   spawnSfx: {fileID: 8300000, guid: 26470d9760340c84f8c39a16272c12cf, type: 3}
   baseMarketValue: 1239
+  arenaScore: 10
   description: A mythic avatar of corruption that radiates unstable power, overwhelming
     foes with catastrophic strikes fueled by rampant decay.

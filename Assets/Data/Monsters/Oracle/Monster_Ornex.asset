@@ -47,10 +47,11 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 0b6a2e89cd8f4a844b7172a2d678be74, type: 2}
   - {fileID: 11400000, guid: 68bbd476dbc9dea4485f609fc74327e0, type: 2}
   Personality: {fileID: 11400000, guid: 8a3e57b479f5246d38cd9b71c25a27a1, type: 2}
-  basicAttackName: Foreseen Rend
+  basicAttackName: Inevitable Rend
   basicAttackPrefab: {fileID: 7907104310462883121, guid: 37212b887c61ad84eacd87133a8a9e9d, type: 3}
   basicAttackPrefabLifetime: 1
   spawnSfx: {fileID: 8300000, guid: 4751477a22577eb458badaf5584bc9e8, type: 3}
   baseMarketValue: 165
+  arenaScore: 10
   description: A calculating oracle beast that waits for certainty before striking,
     unleashing precise blows guided by unwavering foresight.

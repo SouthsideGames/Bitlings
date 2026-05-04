@@ -48,10 +48,11 @@ MonoBehaviour:
   - {fileID: 11400000, guid: efe87ef2f274d994e9a19e6cc1841073, type: 2}
   - {fileID: 11400000, guid: 7c437df4ccfbf884d9847ca8d79291d5, type: 2}
   Personality: {fileID: 11400000, guid: 2e75af56469454f81aab48433f975b34, type: 2}
-  basicAttackName: Anvil Break
+  basicAttackName: Unstoppable Force
   basicAttackPrefab: {fileID: 5172629195496952374, guid: ad774bbb8084f42c29f12cd62581f796, type: 3}
   basicAttackPrefabLifetime: 1
   spawnSfx: {fileID: 8300000, guid: ede75cb5bcad8a144b3ceddf58ede468, type: 3}
   baseMarketValue: 1322
+  arenaScore: 10
   description: A legendary alloy juggernaut forged around a living core, advancing
     relentlessly as its reinforced frame shrugs off all but the most powerful attacks.

@@ -48,10 +48,11 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 50e95df186132dd4d92e3c472f26e50e, type: 2}
   - {fileID: 11400000, guid: fc6807acc3c259743a6511849d396c40, type: 2}
   Personality: {fileID: 11400000, guid: 1bd4805a0ba8f476b9f7b480b0cbb31d, type: 2}
-  basicAttackName: Blaze Crush
+  basicAttackName: Crushing Inferno
   basicAttackPrefab: {fileID: 126357351932672970, guid: a7524146891194bc4b7eb73ba1e38b46, type: 3}
   basicAttackPrefabLifetime: 1
   spawnSfx: {fileID: 8300000, guid: b98a16ba150149f4cbd5560bac93baf9, type: 3}
   baseMarketValue: 303
+  arenaScore: 10
   description: A heavily armored fire brute that smashes through enemies with explosive
     force and relentless heat.

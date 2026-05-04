@@ -48,9 +48,10 @@ MonoBehaviour:
   - {fileID: 11400000, guid: e80217aa5b172e648949cf787505f387, type: 2}
   - {fileID: 11400000, guid: 65e1df2c5d2acf749a429d77e1ea2c85, type: 2}
   Personality: {fileID: 11400000, guid: 8fb41ae5d07a9422888bd80d80e2fbde, type: 2}
-  basicAttackName: Tide Rend
+  basicAttackName: Ripping Current
   basicAttackPrefab: {fileID: 7604281169824035565, guid: 4065dc449fe6fd94eb31f0e575b94514, type: 3}
   basicAttackPrefabLifetime: 1
   spawnSfx: {fileID: 8300000, guid: d190197600974de40821499464d0042e, type: 3}
   baseMarketValue: 164
+  arenaScore: 10
   description: A refined water predator that shapes flowing currents into powerful

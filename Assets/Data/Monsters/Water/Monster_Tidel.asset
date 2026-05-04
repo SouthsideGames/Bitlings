@@ -48,9 +48,10 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 13e0b9e8b7fc08847a05f89d3f7b6a17, type: 2}
   - {fileID: 11400000, guid: e80217aa5b172e648949cf787505f387, type: 2}
   Personality: {fileID: 11400000, guid: f6f72aa846632454b97832d01d1b5c0c, type: 2}
-  basicAttackName: Wave Nip
+  basicAttackName: Shell Nudge
   basicAttackPrefab: {fileID: 7604281169824035565, guid: 4065dc449fe6fd94eb31f0e575b94514, type: 3}
   basicAttackPrefabLifetime: 1
   spawnSfx: {fileID: 8300000, guid: ce153f006b2967c4d8b3a30197427f00, type: 3}
   baseMarketValue: 105
+  arenaScore: 10
   description: A calm tidebound creature that snaps with steady water bites.

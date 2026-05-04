@@ -48,10 +48,11 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 13e0b9e8b7fc08847a05f89d3f7b6a17, type: 2}
   - {fileID: 11400000, guid: e80217aa5b172e648949cf787505f387, type: 2}
   Personality: {fileID: 11400000, guid: 8fb41ae5d07a9422888bd80d80e2fbde, type: 2}
-  basicAttackName: Aqua Pierce
+  basicAttackName: Pressure Drill
   basicAttackPrefab: {fileID: 7604281169824035565, guid: 4065dc449fe6fd94eb31f0e575b94514, type: 3}
   basicAttackPrefabLifetime: 1
   spawnSfx: {fileID: 8300000, guid: 12504a1ddae25e44ba12d902a474c4e4, type: 3}
   baseMarketValue: 10
+  arenaScore: 10
   description: A focused water hunter that shapes pressurized streams into precise
     strikes balancing fluid movement with controlled power.

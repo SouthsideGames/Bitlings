@@ -48,9 +48,10 @@ MonoBehaviour:
   - {fileID: 11400000, guid: fc062370ec30fc948960aa9f57e28ca0, type: 2}
   - {fileID: 11400000, guid: 2897bcb545bf47f4c93cf253bec91032, type: 2}
   Personality: {fileID: 11400000, guid: 75a511658b2e544f4869d466b3f7ba5a, type: 2}
-  basicAttackName: Corrupt Lash
+  basicAttackName: Twisted Lash
   basicAttackPrefab: {fileID: 8046187082596486557, guid: 86fc56d41698d45bfbf27d043ca2944d, type: 3}
   basicAttackPrefabLifetime: 1
   spawnSfx: {fileID: 8300000, guid: c8a1c964fa2e5fd41a84f55209658795, type: 3}
   baseMarketValue: 105
+  arenaScore: 10
   description: A twisted creature that snaps with unstable corrupted energy.

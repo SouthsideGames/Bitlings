@@ -48,10 +48,11 @@ MonoBehaviour:
   - {fileID: 11400000, guid: f0e53950f2ecd1346ada80856c0f01df, type: 2}
   - {fileID: 11400000, guid: df34af77b87a680469fb23d13f8f138a, type: 2}
   Personality: {fileID: 11400000, guid: 2e75af56469454f81aab48433f975b34, type: 2}
-  basicAttackName: Crystal Break
+  basicAttackName: Shattering Drive
   basicAttackPrefab: {fileID: 2650955928365913985, guid: f4836eb6d259942b9abe6e0a520af59f, type: 3}
   basicAttackPrefabLifetime: 1
   spawnSfx: {fileID: 8300000, guid: 88348f14d7fde0c4eb83c1d249a33521, type: 3}
   baseMarketValue: 334
+  arenaScore: 10
   description: A towering ice colossus formed of dense crystal plates, advancing
     slowly while shattering foes with overwhelming frozen force.

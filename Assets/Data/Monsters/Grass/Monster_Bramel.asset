@@ -47,10 +47,11 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 8376b3915071cc448b1f948ff06b49c6, type: 2}
   - {fileID: 11400000, guid: f0e53950f2ecd1346ada80856c0f01df, type: 2}
   Personality: {fileID: 11400000, guid: d2d9ec6158abb40d2a7618ee71a9de06, type: 2}
-  basicAttackName: Vine Press
+  basicAttackName: Hard Press
   basicAttackPrefab: {fileID: 7147688047696861109, guid: 5287b95db783b4379b733d77af2cc458, type: 3}
   basicAttackPrefabLifetime: 1
   spawnSfx: {fileID: 8300000, guid: 708c224faa427ae46b81704508987350, type: 3}
   baseMarketValue: 110
+  arenaScore: 10
   description: A leafy guardian that spreads broad fronds to shield itself while
     pressing foes back with thick vines.

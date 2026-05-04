@@ -48,10 +48,11 @@ MonoBehaviour:
   - {fileID: 11400000, guid: fe67a4187cf7add4289106de72912f92, type: 2}
   - {fileID: 11400000, guid: a1f2ec75ecd5b447bb439bb8619bfa03, type: 2}
   Personality: {fileID: 11400000, guid: e8e5c9163905a4840aca1effe845621c, type: 2}
-  basicAttackName: Gale Peck
+  basicAttackName: Fast Peck
   basicAttackPrefab: {fileID: 5988486418563103347, guid: 310c8d56e543d4cd4ae9c55fa6047252, type: 3}
   basicAttackPrefabLifetime: 1
   spawnSfx: {fileID: 8300000, guid: b7aefcd0553263d45a6fc9af886eca5d, type: 3}
   baseMarketValue: 77
+  arenaScore: 10
   description: A nimble sky flier that swoops in with sharp pecks before darting
     away on swift wings.

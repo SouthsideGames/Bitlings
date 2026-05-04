@@ -36,7 +36,7 @@ public partial class BattleManager : MonoBehaviour
     private int GetWildEffectiveSpeedForRun()
     {
         if (!wildDef) return 1;
-        int spd = Mathf.Max(1, BattleCalc.CalcSpeed(wildDef, wildLevel));
+        int spd = Mathf.Max(1, wildBaseSpeed);
         // Status: Soaked reduces speed (run chance).
         spd = Mathf.Max(1, Mathf.RoundToInt(spd * Mathf.Max(0.1f, GetWildSoakedSpeedMultiplier())));
         return spd;

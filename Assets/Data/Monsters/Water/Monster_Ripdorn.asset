@@ -48,10 +48,11 @@ MonoBehaviour:
   - {fileID: 11400000, guid: e80217aa5b172e648949cf787505f387, type: 2}
   - {fileID: 11400000, guid: f4a0fda05a582ea44b10c63ce91157ef, type: 2}
   Personality: {fileID: 11400000, guid: ca09b5cdb2cde4bb7878385f2d34bf55, type: 2}
-  basicAttackName: Wave Nip
+  basicAttackName: Surge Slam
   basicAttackPrefab: {fileID: 7604281169824035565, guid: 4065dc449fe6fd94eb31f0e575b94514, type: 3}
   basicAttackPrefabLifetime: 1
   spawnSfx: {fileID: 8300000, guid: ce786542e8a0561419a6ff18811aa677, type: 3}
   baseMarketValue: 10
+  arenaScore: 10
   description: A powerful water beast that balances offense and defense, crashing
     into foes with tidal force.

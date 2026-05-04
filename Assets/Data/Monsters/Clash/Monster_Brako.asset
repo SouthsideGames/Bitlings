@@ -48,10 +48,11 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 148ef35dc09e0df47bd36ee844bac36e, type: 2}
   - {fileID: 11400000, guid: a54fbab895dd9804c9cacbb8e8ce854c, type: 2}
   Personality: {fileID: 11400000, guid: a31b270cc22594368bd4541ee042d278, type: 2}
-  basicAttackName: Impact Slam
+  basicAttackName: Bull Rush
   basicAttackPrefab: {fileID: 5406408022945852380, guid: a106796f95643465ab9883d4b5161f50, type: 3}
   basicAttackPrefabLifetime: 1
   spawnSfx: {fileID: 8300000, guid: 5e7ee1300af30e04cb8c83f658219c5b, type: 3}
   baseMarketValue: 77
+  arenaScore: 10
   description: A compact clash fighter that charges headfirst and smashes foes with
     raw force.

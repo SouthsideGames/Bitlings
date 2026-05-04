@@ -2,6 +2,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 using System.Collections;
+using System;
 
 public class BattleTextBoxUI : MonoBehaviour
 {
@@ -26,6 +27,11 @@ public class BattleTextBoxUI : MonoBehaviour
     [SerializeField] private int typewriterSfxCharInterval = 2;
     [SerializeField] private float typewriterPitchMin = 0.92f;
     [SerializeField] private float typewriterPitchMax = 1.08f;
+    [SerializeField, Range(0.7f, 1.4f)] private float typewriterResultPitchMult = 0.96f;
+    [SerializeField, Range(0.7f, 1.4f)] private float typewriterSuperEffectivePitchMult = 1.12f;
+    [SerializeField, Range(0.7f, 1.4f)] private float typewriterNotEffectivePitchMult = 0.90f;
+    [SerializeField, Range(0.8f, 1.8f)] private float typewriterDefeatCadenceMult = 1.2f;
+    [SerializeField, Range(0.7f, 1.4f)] private float typewriterDefeatPitchMult = 0.88f;
 
     [Header("Render Override")]
     [SerializeField] private bool forceTopCanvasSorting = true;
@@ -229,6 +235,9 @@ public class BattleTextBoxUI : MonoBehaviour
 
         float cps = Mathf.Max(0.001f, typeSecondsPerChar);
         float scaled = cps / Mathf.Max(0.25f, battleSpeed);
+        float linePitchMult = GetTypewriterPitchMult(line);
+        float lineCadenceMult = GetTypewriterCadenceMult(line);
+        scaled *= Mathf.Max(0.5f, lineCadenceMult);
 
         if (compressAuto)
         {
@@ -264,7 +273,8 @@ public class BattleTextBoxUI : MonoBehaviour
 
                 if (typewriterSfxCharInterval > 0 && visible % typewriterSfxCharInterval == 0)
                 {
-                    float pitch = Random.Range(typewriterPitchMin, typewriterPitchMax);
+                    float pitch = UnityEngine.Random.Range(typewriterPitchMin, typewriterPitchMax) * linePitchMult;
+                    pitch = Mathf.Clamp(pitch, 0.5f, 1.8f);
                     AudioManager.I?.PlaySfx(SfxType.Typewriter, pitch, 1f);
                 }
 
@@ -278,6 +288,42 @@ public class BattleTextBoxUI : MonoBehaviour
 
         float hold = Mathf.Max(0f, lineHoldSeconds / Mathf.Max(0.25f, battleSpeed));
         if (hold > 0f) yield return CoWaitUnscaled(hold);
+    }
+
+    private float GetTypewriterPitchMult(BattleLine line)
+    {
+        float mult = 1f;
+
+        if ((line.tags & BattleLineTag.Result) != 0)
+            mult *= typewriterResultPitchMult;
+        if ((line.tags & BattleLineTag.SuperEffective) != 0)
+            mult *= typewriterSuperEffectivePitchMult;
+        if ((line.tags & BattleLineTag.NotEffective) != 0)
+            mult *= typewriterNotEffectivePitchMult;
+
+        if (LooksLikeDefeatNarration(line.text))
+            mult *= typewriterDefeatPitchMult;
+
+        return Mathf.Clamp(mult, 0.6f, 1.6f);
+    }
+
+    private float GetTypewriterCadenceMult(BattleLine line)
+    {
+        if (LooksLikeDefeatNarration(line.text))
+            return typewriterDefeatCadenceMult;
+
+        return 1f;
+    }
+
+    private static bool LooksLikeDefeatNarration(string line)
+    {
+        if (string.IsNullOrEmpty(line)) return false;
+
+        return line.IndexOf("defeat", StringComparison.OrdinalIgnoreCase) >= 0
+            || line.IndexOf("fainted", StringComparison.OrdinalIgnoreCase) >= 0
+            || line.IndexOf("KO", StringComparison.OrdinalIgnoreCase) >= 0
+            || line.IndexOf("couldn't", StringComparison.OrdinalIgnoreCase) >= 0
+            || line.IndexOf("can't", StringComparison.OrdinalIgnoreCase) >= 0;
     }
 
     private void EnsureVisibleChain()

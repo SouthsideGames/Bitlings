@@ -360,7 +360,7 @@ public partial class BattleManager : MonoBehaviour
         if (_stats != null)
             wSpeed = Mathf.Max(1, _stats.GetEffectiveWild().spd);
         else
-            wSpeed = Mathf.Max(1, BattleCalc.CalcSpeed(wildDef, wildLevel));
+            wSpeed = Mathf.Max(1, wildBaseSpeed);
 
         return pSpeed >= wSpeed;
     }
@@ -401,6 +401,14 @@ public partial class BattleManager : MonoBehaviour
             BattleLogger.Log($"A wild {GetWildDisplayName("Foe")} (Lv {wildLevel}) appeared!", LogScope.Battle);
         else
             BattleLogger.Log("A wild foe appeared!", LogScope.Battle);
+
+        if (_battleDifficultyMode > 0)
+        {
+            BattleLogger.Log(
+                $"Difficulty: {DifficultyModeToLabel(_battleDifficultyMode)} (Wild HP x{_battleDifficultyHpMul:0.##}, ATK x{_battleDifficultyAtkMul:0.##}, DEF x{_battleDifficultyDefMul:0.##}, SPD x{_battleDifficultySpdMul:0.##})",
+                LogScope.Battle
+            );
+        }
 
         string personalityLabel = GetWildPersonalityLabel();
         if (!string.IsNullOrEmpty(personalityLabel) && wildDef && wildDef.Personality != null)
@@ -520,7 +528,7 @@ public partial class BattleManager : MonoBehaviour
             if (_stats != null)
                 wSpeed = Mathf.Max(1, _stats.GetEffectiveWild().spd);
             else
-                wSpeed = Mathf.Max(1, BattleCalc.CalcSpeed(wildDef, wildLevel));
+                wSpeed = Mathf.Max(1, wildBaseSpeed);
 
 
             // Status: Soaked reduces speed (initiative).
@@ -1191,7 +1199,7 @@ if (feedback)
         if (_stats != null)
             wildDefForResolve = Mathf.Max(0, _stats.GetEffectiveWild().def);
         else
-            wildDefForResolve = Mathf.Max(0, BattleCalc.CalcDefense(wildDef, wildLevel));
+            wildDefForResolve = Mathf.Max(0, wildBaseDefense);
 
         var dr = BattleCalc.ResolveHit(
             teamIds[activeIndex], teamDefs[activeIndex], teamLevels[activeIndex],
@@ -2016,6 +2024,8 @@ if (dr.crit && !df.cannotBeCrit)
                 ctx.attackBonusPct += ctx.surgeAtkBonusPct;
                 yield return Say($"{GetName(activeIndex)} becomes enraged (+{Mathf.RoundToInt(ctx.surgeAtkBonusPct * 100f)}% ATK)!", BattleLineTag.Result);
                 AudioManager.I?.PlaySfx(SfxType.Clutch);
+                if (feedback)
+                    feedback.PlayClutchMoment(BattleFeedbackManager.BattleFeedbackSide.Player);
             }
         }
 

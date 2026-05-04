@@ -48,10 +48,11 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 453f82ec19947bc4dbf0d8d862b87f1d, type: 2}
   - {fileID: 11400000, guid: 62b6b5a1e43f2f84faa665fc5e390f5f, type: 2}
   Personality: {fileID: 11400000, guid: db9c4a912e52a4c5298eec48842ba111, type: 2}
-  basicAttackName: Wave Nip
+  basicAttackName: Quick Nip
   basicAttackPrefab: {fileID: 7604281169824035565, guid: 4065dc449fe6fd94eb31f0e575b94514, type: 3}
   basicAttackPrefabLifetime: 1
   spawnSfx: {fileID: 8300000, guid: 5a52c40bfdfefb64eaf52bafbe7add12, type: 3}
   baseMarketValue: 77
+  arenaScore: 10
   description: A small aquatic crawler that snaps with watery bites and reacts quickly
     to threats.

@@ -47,10 +47,11 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 0b6a2e89cd8f4a844b7172a2d678be74, type: 2}
   - {fileID: 11400000, guid: 68bbd476dbc9dea4485f609fc74327e0, type: 2}
   Personality: {fileID: 11400000, guid: 8fb41ae5d07a9422888bd80d80e2fbde, type: 2}
-  basicAttackName: Insight Peck
+  basicAttackName: Careful Peck
   basicAttackPrefab: {fileID: 7907104310462883121, guid: 37212b887c61ad84eacd87133a8a9e9d, type: 3}
   basicAttackPrefabLifetime: 1
   spawnSfx: {fileID: 8300000, guid: 3a332860ba7d3bd41b49861fb62bd6cc, type: 3}
   baseMarketValue: 100
+  arenaScore: 10
   description: A cautious oracle creature that observes carefully before delivering
     measured foresight-guided strikes.

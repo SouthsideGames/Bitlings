@@ -67,94 +67,171 @@ public struct DamageMod
     }
 }
 
+// ─────────────────────────────────────────────────────────────
+// Math-first damage formatter
+//
+// The BattleTextBoxUI already handles narrative ("Super effective!",
+// "Critical hit!").  This formatter turns the battle LOG into a
+// damage-math breakdown the player can actually verify.
+//
+// Summary line (always):
+//   Flamox → Glaceon  Ember  18 × … = 81
+//
+// Sub-lines (one per active factor, indented with tree glyphs):
+//   ├ ×1.5  +9   atk↑    [buff]
+//   ├ ×2.0  +36  type    [super-eff]
+//   └ ×1.5  +20  crit    ★
+//
+// If there are no modifiers the sub-lines are omitted and the
+// summary collapses to just:  Flamox → Glaceon  Ember  18
+// ─────────────────────────────────────────────────────────────
 public static class DamageLogFormatter
 {
+    // Indent prefix for sub-lines (two non-breaking spaces)
+    const string Indent = "  ";
+
     public static string FormatDamageLine(
         string attackerName,
         string targetName,
         string moveName,
-        int totalDamage,
-        int baseDamage,
+        int    totalDamage,
+        int    baseDamage,
         IReadOnlyList<DamageMod> mods,
-        bool crit = false,
+        bool  crit          = false,
         float effectiveness = 1f
     )
     {
-        var sb = new StringBuilder(160);
+        // ── Collect active factors ─────────────────────────────────────
+        // Each factor: (multiplier, flat-delta, label, color, badge)
+        // We compute running totals so each multiplier reflects its real
+        // share of the final damage rather than just a raw ratio.
+        var factors = new System.Collections.Generic.List<(float mult, int delta, string label, string color, string badge)>(8);
 
-        if (!string.IsNullOrEmpty(attackerName))
-            sb.Append(attackerName).Append(" ");
-        if (!string.IsNullOrEmpty(moveName))
-            sb.Append("uses ").Append(moveName).Append(" ");
-        if (!string.IsNullOrEmpty(targetName))
-            sb.Append("on ").Append(targetName).Append(" ");
+        float running = baseDamage;
 
-        sb.Append("→ ");
-        sb.Append(totalDamage).Append(" dmg ");
-
-        sb.Append("(");
-        sb.Append(" <color=").Append(BattleLogColors.Base).Append(">")
-          .Append(baseDamage)
-          .Append("</color>");
-
-        bool hasBD = HasBuffOrDebuff(mods);
-        if (hasBD)
-        {
-            sb.Append(" (");
-            bool first = true;
-            for (int i = 0; i < (mods?.Count ?? 0); i++)
-            {
-                var m = mods[i];
-                if (m.kind == ModKind.Info) continue;
-
-                if (!first) sb.Append(" ");
-                first = false;
-
-                if (m.kind == ModKind.Buff)
-                {
-                    sb.Append("<color=").Append(BattleLogColors.Buff).Append(">");
-                    sb.Append("+").Append(Mathf.RoundToInt(m.amount));
-                    if (!string.IsNullOrEmpty(m.label)) sb.Append(" ").Append(m.label);
-                    sb.Append("</color>");
-                }
-                else if (m.kind == ModKind.Debuff)
-                {
-                    sb.Append("<color=").Append(BattleLogColors.Debuff).Append(">");
-                    sb.Append("-").Append(Mathf.RoundToInt(m.amount));
-                    if (!string.IsNullOrEmpty(m.label)) sb.Append(" ").Append(m.label);
-                    sb.Append("</color>");
-                }
-            }
-            sb.Append(")");
-        }
-
-        if (crit)
-            sb.Append(" <color=").Append(BattleLogColors.Crit).Append(">CRIT!</color>");
-
-        if (!Mathf.Approximately(effectiveness, 1f))
-        {
-            if (effectiveness > 1f)
-                sb.Append(" <color=").Append(BattleLogColors.Info).Append(">Super-effective</color>");
-            else
-                sb.Append(" <color=").Append(BattleLogColors.Info).Append(">Not very effective</color>");
-        }
-
+        // Flat buff/debuff mods
         if (mods != null)
         {
             for (int i = 0; i < mods.Count; i++)
             {
                 var m = mods[i];
-                if (m.kind != ModKind.Info) continue;
-                if (!string.IsNullOrEmpty(m.label))
-                {
-                    sb.Append(" <color=").Append(BattleLogColors.Info).Append(">")
-                      .Append(m.label)
-                      .Append("</color>");
-                }
+                if (m.kind == ModKind.Info) continue;
+                if (Mathf.Approximately(m.amount, 0f)) continue;
+
+                float sign   = m.kind == ModKind.Buff ? 1f : -1f;
+                float newVal = running + sign * m.amount;
+                float mult   = running > 0f ? newVal / running : 1f;
+                int   delta  = Mathf.RoundToInt(newVal) - Mathf.RoundToInt(running);
+                running = newVal;
+
+                string col   = m.kind == ModKind.Buff ? BattleLogColors.Buff : BattleLogColors.Debuff;
+                string tag   = m.kind == ModKind.Buff ? "[buff]" : "[debuff]";
+                factors.Add((mult, delta, m.label ?? "", col, tag));
             }
         }
 
-        sb.Append(" )");
+        // Type effectiveness
+        if (!Mathf.Approximately(effectiveness, 1f))
+        {
+            float newVal = running * effectiveness;
+            int   delta  = Mathf.RoundToInt(newVal) - Mathf.RoundToInt(running);
+            string col   = effectiveness > 1f ? BattleLogColors.Buff : BattleLogColors.Debuff;
+            string tag   = effectiveness > 1f ? "[super-eff]" : "[not-eff]";
+            factors.Add((effectiveness, delta, "type", col, tag));
+            running = newVal;
+        }
+
+        // Crit (standard 1.5×)
+        if (crit)
+        {
+            float newVal = running * 1.5f;
+            int   delta  = Mathf.RoundToInt(newVal) - Mathf.RoundToInt(running);
+            factors.Add((1.5f, delta, "crit", BattleLogColors.Crit, "★"));
+            running = newVal;
+        }
+
+        bool hasFactors = factors.Count > 0;
+
+        var sb = new StringBuilder(256);
+
+        // ── Summary line ───────────────────────────────────────────────
+        // Attacker → Target
+        bool hasAttacker = !string.IsNullOrEmpty(attackerName);
+        bool hasTarget   = !string.IsNullOrEmpty(targetName);
+
+        if (hasAttacker)
+            sb.Append("<color=").Append(BattleLogColors.Name).Append(">").Append(attackerName).Append("</color>");
+
+        if (hasAttacker && hasTarget)
+            sb.Append(" <color=").Append(BattleLogColors.Dim).Append(">→</color> ");
+
+        if (hasTarget)
+            sb.Append("<color=").Append(BattleLogColors.Name).Append(">").Append(targetName).Append("</color>");
+
+        // Move name
+        if (!string.IsNullOrEmpty(moveName))
+            sb.Append("  <color=").Append(BattleLogColors.Info).Append(">").Append(moveName).Append("</color>");
+
+        sb.Append("  ");
+
+        // Formula: base [× factor × factor …] = total
+        sb.Append("<color=").Append(BattleLogColors.Base).Append(">").Append(baseDamage).Append("</color>");
+
+        if (hasFactors)
+        {
+            foreach (var f in factors)
+            {
+                sb.Append(" <color=").Append(BattleLogColors.Dim).Append(">×</color>");
+                sb.Append("<color=").Append(f.color).Append(">").Append(f.mult.ToString("F2")).Append("</color>");
+            }
+
+            sb.Append("  <color=").Append(BattleLogColors.Dim).Append(">=</color>  ");
+            sb.Append("<color=").Append(BattleLogColors.Base).Append(">").Append(totalDamage).Append("</color>");
+        }
+
+        // ── Sub-lines: one per factor ──────────────────────────────────
+        if (hasFactors)
+        {
+            for (int i = 0; i < factors.Count; i++)
+            {
+                var f        = factors[i];
+                bool isLast  = i == factors.Count - 1;
+                string glyph = isLast ? "└" : "├";
+
+                sb.Append("\n").Append(Indent);
+                sb.Append("<color=").Append(BattleLogColors.Dim).Append(">").Append(glyph).Append("</color> ");
+
+                // Multiplier
+                sb.Append("<color=").Append(f.color).Append(">×").Append(f.mult.ToString("F2")).Append("</color>");
+
+                // Flat delta  (+27 or -9)
+                string sign = f.delta >= 0 ? "+" : "";
+                sb.Append("  <color=").Append(f.color).Append(">").Append(sign).Append(f.delta).Append("</color>");
+
+                // Label (e.g. "atk↑", "type", "crit")
+                if (!string.IsNullOrEmpty(f.label))
+                    sb.Append("  <color=").Append(BattleLogColors.Dim).Append(">").Append(f.label).Append("</color>");
+
+                // Badge / tag  ([buff], ★, etc.)
+                if (!string.IsNullOrEmpty(f.badge))
+                    sb.Append("  <color=").Append(f.color).Append(">").Append(f.badge).Append("</color>");
+            }
+        }
+
+        // ── Trailing Info-kind labels (e.g. "shield absorbed") ─────────
+        if (mods != null)
+        {
+            for (int i = 0; i < mods.Count; i++)
+            {
+                var m = mods[i];
+                if (m.kind != ModKind.Info || string.IsNullOrEmpty(m.label)) continue;
+                sb.Append("\n").Append(Indent)
+                  .Append("<color=").Append(BattleLogColors.Dim).Append(">└ ")
+                  .Append(m.label)
+                  .Append("</color>");
+            }
+        }
+
         return sb.ToString();
     }
 
@@ -162,10 +239,7 @@ public static class DamageLogFormatter
     {
         if (mods == null) return false;
         for (int i = 0; i < mods.Count; i++)
-        {
-            if (mods[i].kind == ModKind.Buff || mods[i].kind == ModKind.Debuff)
-                return true;
-        }
+            if (mods[i].kind == ModKind.Buff || mods[i].kind == ModKind.Debuff) return true;
         return false;
     }
 }

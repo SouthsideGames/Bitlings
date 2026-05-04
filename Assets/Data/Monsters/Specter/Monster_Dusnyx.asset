@@ -48,10 +48,11 @@ MonoBehaviour:
   - {fileID: 11400000, guid: fe67a4187cf7add4289106de72912f92, type: 2}
   - {fileID: 11400000, guid: 856ade98156889f4fbf9ab09303d21e3, type: 2}
   Personality: {fileID: 11400000, guid: 48288e9e78c65453781f793c8df03e90, type: 2}
-  basicAttackName: Shadow Claw
+  basicAttackName: Blind Slash
   basicAttackPrefab: {fileID: 9101927626726485638, guid: 257dd9ab5e3cf0544a679d2e444f8d35, type: 3}
   basicAttackPrefabLifetime: 1
   spawnSfx: {fileID: 8300000, guid: 2d77ef4753fe9c44e954acd7180c1c0e, type: 3}
   baseMarketValue: 105
+  arenaScore: 10
   description: A flickering specter that slashes from blind angles before fading
     out.

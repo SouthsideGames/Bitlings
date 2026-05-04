@@ -48,9 +48,10 @@ MonoBehaviour:
   - {fileID: 11400000, guid: c37c6fee2cd0cf6408476d58003a2be4, type: 2}
   - {fileID: 11400000, guid: 90199fd5133383b42979b35902189fed, type: 2}
   Personality: {fileID: 11400000, guid: 51b0055ca9f5a4ccbb97fd51ef39fae1, type: 2}
-  basicAttackName: Gear Bash
+  basicAttackName: Lock Bash
   basicAttackPrefab: {fileID: 5172629195496952374, guid: ad774bbb8084f42c29f12cd62581f796, type: 3}
   basicAttackPrefabLifetime: 1
   spawnSfx: {fileID: 8300000, guid: a3bbcd2437d1f43458efe9b56472ce40, type: 3}
   baseMarketValue: 108
+  arenaScore: 10
   description: Its joints lock into reinforced patterns

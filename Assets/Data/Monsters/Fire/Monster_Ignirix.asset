@@ -48,10 +48,11 @@ MonoBehaviour:
   - {fileID: 11400000, guid: d9ec0d8891fb1da4fb1bed5ba426f375, type: 2}
   - {fileID: 11400000, guid: 71652094aed89c948ae2a0cb846cf011, type: 2}
   Personality: {fileID: 11400000, guid: 3733616cf9f0f4dddb5bee9d6ba2952f, type: 2}
-  basicAttackName: Flame Bite
+  basicAttackName: Reckless Fang
   basicAttackPrefab: {fileID: 126357351932672970, guid: 9581774b44a93f24299791825657e6c2, type: 3}
   basicAttackPrefabLifetime: 1
   spawnSfx: {fileID: 8300000, guid: 8b9cee0c39033ad42b47e9e54b1001bd, type: 3}
   baseMarketValue: 165
+  arenaScore: 10
   description: A volatile fire beast that lunges headfirst into battle, burning hot
     and fast with little regard for defense.

@@ -100,8 +100,8 @@ public sealed class BattleStatsSystem
 
         int baseHP = Mathf.RoundToInt(Mathf.Max(1f, _bm.WildBaseMaxHP));
         int baseATK = Mathf.RoundToInt(Mathf.Max(1f, _bm.WildBaseAttackPerTurn));
-        int baseDEF = BattleCalc.CalcDefense(_bm.WildDef, _bm.WildLevel);
-        int baseSPD = BattleCalc.CalcSpeed(_bm.WildDef, _bm.WildLevel);
+        int baseDEF = Mathf.Max(0, _bm.WildBaseDefense);
+        int baseSPD = Mathf.Max(1, _bm.WildBaseSpeed);
 
         _wildAdjusted = new BattleStatBlock
         {

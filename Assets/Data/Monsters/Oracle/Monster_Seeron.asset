@@ -48,10 +48,11 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 0b6a2e89cd8f4a844b7172a2d678be74, type: 2}
   - {fileID: 11400000, guid: 68bbd476dbc9dea4485f609fc74327e0, type: 2}
   Personality: {fileID: 11400000, guid: 8fb41ae5d07a9422888bd80d80e2fbde, type: 2}
-  basicAttackName: Insight Tap
+  basicAttackName: Read Strike
   basicAttackPrefab: {fileID: 7907104310462883121, guid: 37212b887c61ad84eacd87133a8a9e9d, type: 3}
   basicAttackPrefabLifetime: 1
   spawnSfx: {fileID: 8300000, guid: df82cd4891a2d824888e8407475875ed, type: 3}
   baseMarketValue: 76
+  arenaScore: 10
   description: A young oracle watcher that studies the battlefield striking only
     after reading its opponent.

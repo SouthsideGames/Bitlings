@@ -48,10 +48,11 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 77fbf796892a13a479a8c1077e4829a0, type: 2}
   - {fileID: 11400000, guid: 2897bcb545bf47f4c93cf253bec91032, type: 2}
   Personality: {fileID: 11400000, guid: d2d9ec6158abb40d2a7618ee71a9de06, type: 2}
-  basicAttackName: Metal Jab
+  basicAttackName: Heavy Drive
   basicAttackPrefab: {fileID: 5172629195496952374, guid: ad774bbb8084f42c29f12cd62581f796, type: 3}
   basicAttackPrefabLifetime: 1
   spawnSfx: {fileID: 8300000, guid: c76899eac1943d746b09e89030f44b29, type: 3}
   baseMarketValue: 165
+  arenaScore: 10
   description: A sturdy alloy construct that advances slowly and strikes with heavy
     mechanical force.

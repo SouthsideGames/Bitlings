@@ -48,10 +48,11 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 98fe2dc7a9bfb82499dadbeeb4358491, type: 2}
   - {fileID: 11400000, guid: 50f86e8bcde244fe3be7152a29fd6ffb, type: 2}
   Personality: {fileID: 11400000, guid: 75a511658b2e544f4869d466b3f7ba5a, type: 2}
-  basicAttackName: Rot Jab
+  basicAttackName: Decay Dart
   basicAttackPrefab: {fileID: 8046187082596486557, guid: 86fc56d41698d45bfbf27d043ca2944d, type: 3}
   basicAttackPrefabLifetime: 1
   spawnSfx: {fileID: 8300000, guid: 30fbae210a737024ca3e6b69415b6715, type: 3}
   baseMarketValue: 76
+  arenaScore: 10
   description: A jittery corrupted hatchling that darts about erratically spreading
     decay through sharp

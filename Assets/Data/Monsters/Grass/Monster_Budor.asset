@@ -48,10 +48,11 @@ MonoBehaviour:
   - {fileID: 11400000, guid: f0e53950f2ecd1346ada80856c0f01df, type: 2}
   - {fileID: 11400000, guid: 3eeae979ed207374383a76bdee55d3a9, type: 2}
   Personality: {fileID: 11400000, guid: f6f72aa846632454b97832d01d1b5c0c, type: 2}
-  basicAttackName: Leaf Jab
+  basicAttackName: Whip Lash
   basicAttackPrefab: {fileID: 7147688047696861109, guid: 5287b95db783b4379b733d77af2cc458, type: 3}
   basicAttackPrefabLifetime: 1
   spawnSfx: {fileID: 8300000, guid: 184439bba93fd9943b2d4d38c26aa17a, type: 3}
   baseMarketValue: 105
+  arenaScore: 10
   description: A lively grass creature that darts about and strikes with quick leafy
     blows.

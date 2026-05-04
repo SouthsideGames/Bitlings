@@ -48,10 +48,11 @@ MonoBehaviour:
   - {fileID: 11400000, guid: a371bc492e827c94797e3461c1213414, type: 2}
   - {fileID: 11400000, guid: fe67a4187cf7add4289106de72912f92, type: 2}
   Personality: {fileID: 11400000, guid: 48288e9e78c65453781f793c8df03e90, type: 2}
-  basicAttackName: Veil Touch
+  basicAttackName: Cold Touch
   basicAttackPrefab: {fileID: 9101927626726485638, guid: 257dd9ab5e3cf0544a679d2e444f8d35, type: 3}
   basicAttackPrefabLifetime: 1
   spawnSfx: {fileID: 8300000, guid: 848827c67c4513143b43df64ff9a9606, type: 3}
   baseMarketValue: 77
+  arenaScore: 10
   description: A faint specter that flickers in and out of view, slipping through
     attacks while draining foes with chilling, ghostly strikes.

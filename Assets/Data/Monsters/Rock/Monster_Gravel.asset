@@ -53,4 +53,5 @@ MonoBehaviour:
   basicAttackPrefabLifetime: 1
   spawnSfx: {fileID: 8300000, guid: b2240fbfe5e4a054299d28fd41c570cf, type: 3}
   baseMarketValue: 109
+  arenaScore: 10
   description: A dense rock creature that advances slowly

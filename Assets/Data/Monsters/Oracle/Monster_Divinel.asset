@@ -48,10 +48,11 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 4cfe43fb08d53864c84698ddfc14bb9d, type: 2}
   - {fileID: 11400000, guid: 4444242f3b7ed42429cbf560b8357b27, type: 2}
   Personality: {fileID: 11400000, guid: 8fb41ae5d07a9422888bd80d80e2fbde, type: 2}
-  basicAttackName: Judgment Ray
+  basicAttackName: Final Judgment
   basicAttackPrefab: {fileID: 7907104310462883121, guid: 37212b887c61ad84eacd87133a8a9e9d, type: 3}
   basicAttackPrefabLifetime: 1
   spawnSfx: {fileID: 8300000, guid: 5a28f559be66b0d40a66035b8081b61e, type: 3}
   baseMarketValue: 1239
+  arenaScore: 10
   description: A mythic oracle being that peers far beyond the present moment, unleashing
     precise, inevitable strikes guided by absolute foresight.

@@ -48,9 +48,10 @@ MonoBehaviour:
   - {fileID: 11400000, guid: f0a22c228659c304fb9369327478aab9, type: 2}
   - {fileID: 11400000, guid: 014cd17980e502c418a7ed232b26e215, type: 2}
   Personality: {fileID: 11400000, guid: d2d9ec6158abb40d2a7618ee71a9de06, type: 2}
-  basicAttackName: Earth Guard
+  basicAttackName: Stone Wall
   basicAttackPrefab: {fileID: 8624645253036040332, guid: f03e702d7c9714bc2af48b5b17c93c88, type: 3}
   basicAttackPrefabLifetime: 1
   spawnSfx: {fileID: 8300000, guid: 44016960b73c7e64ca0a214ce0bbd2d9, type: 3}
   baseMarketValue: 109
+  arenaScore: 10
   description: Its body compacts into denser layers

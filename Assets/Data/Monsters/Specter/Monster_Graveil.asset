@@ -48,10 +48,11 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 6b544265ac67740279a102bb686f56c3, type: 2}
   - {fileID: 11400000, guid: fa80df6c0c44bf947807051c53585897, type: 2}
   Personality: {fileID: 11400000, guid: 48288e9e78c65453781f793c8df03e90, type: 2}
-  basicAttackName: Veil Rend
+  basicAttackName: Void Rend
   basicAttackPrefab: {fileID: 9101927626726485638, guid: 257dd9ab5e3cf0544a679d2e444f8d35, type: 3}
   basicAttackPrefabLifetime: 1
   spawnSfx: {fileID: 8300000, guid: 29e214cd74c98b34192f7bf837858a76, type: 3}
   baseMarketValue: 303
+  arenaScore: 10
   description: An elite specter that slips between moments, striking from shadowed
     angles before fading back into the veil.

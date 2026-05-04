@@ -48,9 +48,10 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 77fbf796892a13a479a8c1077e4829a0, type: 2}
   - {fileID: 11400000, guid: 2897bcb545bf47f4c93cf253bec91032, type: 2}
   Personality: {fileID: 11400000, guid: 75a511658b2e544f4869d466b3f7ba5a, type: 2}
-  basicAttackName: Corrupt Lash
+  basicAttackName: Rotting Fang
   basicAttackPrefab: {fileID: 8046187082596486557, guid: 86fc56d41698d45bfbf27d043ca2944d, type: 3}
   basicAttackPrefabLifetime: 1
   spawnSfx: {fileID: 8300000, guid: db389bc3d9912e642a19f6cb0bb2b870, type: 3}
   baseMarketValue: 165
+  arenaScore: 10
   description: Its corruption thickens

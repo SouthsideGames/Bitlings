@@ -48,10 +48,11 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 148ef35dc09e0df47bd36ee844bac36e, type: 2}
   - {fileID: 11400000, guid: a54fbab895dd9804c9cacbb8e8ce854c, type: 2}
   Personality: {fileID: 11400000, guid: 1bd4805a0ba8f476b9f7b480b0cbb31d, type: 2}
-  basicAttackName: Rend Impact
+  basicAttackName: Gore Drive
   basicAttackPrefab: {fileID: 5406408022945852380, guid: a106796f95643465ab9883d4b5161f50, type: 3}
   basicAttackPrefabLifetime: 1
   spawnSfx: {fileID: 8300000, guid: 866c11b6dd6e00c4e968af54401dff94, type: 3}
   baseMarketValue: 329
+  arenaScore: 10
   description: A brutal clash juggernaut that thrives in prolonged combat, tearing
     into enemies with escalating, bone-crushing force.

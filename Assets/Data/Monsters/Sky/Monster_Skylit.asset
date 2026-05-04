@@ -48,10 +48,11 @@ MonoBehaviour:
   - {fileID: 11400000, guid: a1f2ec75ecd5b447bb439bb8619bfa03, type: 2}
   - {fileID: 11400000, guid: a289ace2a61ca0e47b454f4b80ebec49, type: 2}
   Personality: {fileID: 11400000, guid: ab061081920b544089b918a9f1f3759b, type: 2}
-  basicAttackName: Breeze Peck
+  basicAttackName: Gliding Peck
   basicAttackPrefab: {fileID: 5988486418563103347, guid: 310c8d56e543d4cd4ae9c55fa6047252, type: 3}
   basicAttackPrefabLifetime: 1
   spawnSfx: {fileID: 8300000, guid: b374a5b4f2107d549a9c16eae99bf75f, type: 3}
   baseMarketValue: 75
+  arenaScore: 10
   description: A light-bodied sky creature that glides effortlessly striking with
     quick pecks before riding the wind away.

@@ -53,5 +53,6 @@ MonoBehaviour:
   basicAttackPrefabLifetime: 1
   spawnSfx: {fileID: 8300000, guid: 7076bdf3ac1c92542b9c6d028db0706a, type: 3}
   baseMarketValue: 173
+  arenaScore: 10
   description: A hulking stone guardian that stands immovable, crushing enemies beneath
     overwhelming rocky force.

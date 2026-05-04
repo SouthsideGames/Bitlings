@@ -48,10 +48,11 @@ MonoBehaviour:
   - {fileID: 11400000, guid: a5c2ba1de8fa05a4daeb2136ab3cf9df, type: 2}
   - {fileID: 11400000, guid: 148ef35dc09e0df47bd36ee844bac36e, type: 2}
   Personality: {fileID: 11400000, guid: 758625599ac8542bfa091e1bf5323fa2, type: 2}
-  basicAttackName: Rot Jab
+  basicAttackName: Sick Jab
   basicAttackPrefab: {fileID: 8046187082596486557, guid: 86fc56d41698d45bfbf27d043ca2944d, type: 3}
   basicAttackPrefabLifetime: 1
   spawnSfx: {fileID: 8300000, guid: d652f768ffb3acb4297cabb7e0b36d47, type: 3}
   baseMarketValue: 77
+  arenaScore: 10
   description: A warped sprout born of corruption, lurching forward with reckless
     strikes and unstable energy.

@@ -48,10 +48,11 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 665e3ce08b7d386478b3de0bebb8e3ec, type: 2}
   - {fileID: 11400000, guid: fe67a4187cf7add4289106de72912f92, type: 2}
   Personality: {fileID: 11400000, guid: ab061081920b544089b918a9f1f3759b, type: 2}
-  basicAttackName: Spark Jab
+  basicAttackName: Static Pop
   basicAttackPrefab: {fileID: 4179996368917665753, guid: 77ce3f8bf17474b06ac473e26248a299, type: 3}
   basicAttackPrefabLifetime: 1
   spawnSfx: {fileID: 8300000, guid: 789fafd430082064dbef580daa136a37, type: 3}
   baseMarketValue: 78
+  arenaScore: 10
   description: A jittery electric sprout that crackles with unstable energy darting
     in to shock foes before retreating.

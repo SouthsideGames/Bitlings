@@ -48,10 +48,11 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 6ad4157aacf2cb547878360fd54c3d1e, type: 2}
   - {fileID: 11400000, guid: d1da25199bf00124cbc8e3984113060a, type: 2}
   Personality: {fileID: 11400000, guid: 51b0055ca9f5a4ccbb97fd51ef39fae1, type: 2}
-  basicAttackName: Gear Crush
+  basicAttackName: Full Rotation
   basicAttackPrefab: {fileID: 5172629195496952374, guid: ad774bbb8084f42c29f12cd62581f796, type: 3}
   basicAttackPrefabLifetime: 1
   spawnSfx: {fileID: 8300000, guid: 3edb3264632709b408cf6cf44779ec29, type: 3}
   baseMarketValue: 329
+  arenaScore: 10
   description: A rotating alloy sentinel that locks into position, grinding enemies
     down with precise mechanical force and reinforced plating.

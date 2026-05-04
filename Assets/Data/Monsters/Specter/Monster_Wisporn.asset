@@ -48,10 +48,11 @@ MonoBehaviour:
   - {fileID: 11400000, guid: c2f0fdd5e9fcb25498ae79caf77583c0, type: 2}
   - {fileID: 11400000, guid: a371bc492e827c94797e3461c1213414, type: 2}
   Personality: {fileID: 11400000, guid: 48288e9e78c65453781f793c8df03e90, type: 2}
-  basicAttackName: Veil Tap
+  basicAttackName: Soft Haunt
   basicAttackPrefab: {fileID: 9101927626726485638, guid: 257dd9ab5e3cf0544a679d2e444f8d35, type: 3}
   basicAttackPrefabLifetime: 1
   spawnSfx: {fileID: 8300000, guid: 4b8fcfe18b1c081469b78b8e53218e53, type: 3}
   baseMarketValue: 102
+  arenaScore: 10
   description: A drifting specter that flickers unpredictably draining foes with
     soft but persistent ghostly strikes.

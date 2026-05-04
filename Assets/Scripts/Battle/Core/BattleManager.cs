@@ -183,6 +183,16 @@ public partial class BattleManager : MonoBehaviour
     [Header("Rift Tuning")]
     [SerializeField, Range(0.5f, 2.0f)] private float riftThreatScalar = 1.0f;
 
+    [Header("Difficulty Tuning")]
+    [SerializeField, Range(1f, 2f)] private float hardWildHpMultiplier = 1.10f;
+    [SerializeField, Range(1f, 2f)] private float hardWildAtkMultiplier = 1.08f;
+    [SerializeField, Range(1f, 2f)] private float hardWildDefMultiplier = 1.06f;
+    [SerializeField, Range(1f, 2f)] private float hardWildSpdMultiplier = 1.04f;
+    [SerializeField, Range(1f, 2f)] private float insaneWildHpMultiplier = 1.22f;
+    [SerializeField, Range(1f, 2f)] private float insaneWildAtkMultiplier = 1.16f;
+    [SerializeField, Range(1f, 2f)] private float insaneWildDefMultiplier = 1.12f;
+    [SerializeField, Range(1f, 2f)] private float insaneWildSpdMultiplier = 1.08f;
+
     // Feedback (populated from HudRig at battle start)
     private BattleFeedbackManager feedback;
     private bool _uiDefaultsCaptured;
@@ -241,6 +251,13 @@ public partial class BattleManager : MonoBehaviour
     private int wildLevel;
     private float wildBaseMaxHP;
     private float wildBaseAttackPerTurn;
+    private int wildBaseDefense;
+    private int wildBaseSpeed;
+    private int _battleDifficultyMode;
+    private float _battleDifficultyHpMul = 1f;
+    private float _battleDifficultyAtkMul = 1f;
+    private float _battleDifficultyDefMul = 1f;
+    private float _battleDifficultySpdMul = 1f;
     private float wildMaxHP, wildHP;
     private float wildAttackPerTurn;
 
@@ -466,7 +483,50 @@ public partial class BattleManager : MonoBehaviour
     public int ActiveIndex => activeIndex;
     public float WildBaseMaxHP => wildBaseMaxHP;
     public float WildBaseAttackPerTurn => wildBaseAttackPerTurn;
+    public int WildBaseDefense => wildBaseDefense;
+    public int WildBaseSpeed => wildBaseSpeed;
     public string WildCombatIdForTitles => _wildCombatIdForTitles;
+
+    private int GetBattleDifficultyMode()
+    {
+        var data = SaveManager.Data;
+        if (data == null || !data.HasDifficultyUnlocked || data.settings == null)
+            return 0;
+
+        return Mathf.Clamp(data.settings.difficultyMode, 0, 2);
+    }
+
+    private void GetWildDifficultyScalars(int mode, out float hpMul, out float atkMul, out float defMul, out float spdMul)
+    {
+        hpMul = 1f;
+        atkMul = 1f;
+        defMul = 1f;
+        spdMul = 1f;
+
+        if (mode == 1)
+        {
+            hpMul = Mathf.Max(1f, hardWildHpMultiplier);
+            atkMul = Mathf.Max(1f, hardWildAtkMultiplier);
+            defMul = Mathf.Max(1f, hardWildDefMultiplier);
+            spdMul = Mathf.Max(1f, hardWildSpdMultiplier);
+            return;
+        }
+
+        if (mode == 2)
+        {
+            hpMul = Mathf.Max(1f, insaneWildHpMultiplier);
+            atkMul = Mathf.Max(1f, insaneWildAtkMultiplier);
+            defMul = Mathf.Max(1f, insaneWildDefMultiplier);
+            spdMul = Mathf.Max(1f, insaneWildSpdMultiplier);
+        }
+    }
+
+    private static string DifficultyModeToLabel(int mode)
+    {
+        if (mode == 1) return "Hard";
+        if (mode == 2) return "Insane";
+        return "Normal";
+    }
 
     public MonsterDataSO GetTeamDefSafe(int idx)
         => (teamDefs != null && idx >= 0 && idx < teamDefs.Length) ? teamDefs[idx] : null;
@@ -1064,8 +1124,8 @@ public partial class BattleManager : MonoBehaviour
 
             _uiBaseWildMaxHp = Mathf.RoundToInt(Mathf.Max(1f, wildBaseMaxHP));
             _uiBaseWildAtk = Mathf.RoundToInt(Mathf.Max(1f, wildBaseAttackPerTurn));
-            _uiBaseWildDef = (wildDef != null) ? BattleCalc.CalcDefense(wildDef, wildLevel) : 0;
-            _uiBaseWildSpd = (wildDef != null) ? BattleCalc.CalcSpeed(wildDef, wildLevel) : 1;
+            _uiBaseWildDef = Mathf.Max(0, wildBaseDefense);
+            _uiBaseWildSpd = Mathf.Max(1, wildBaseSpeed);
         }
     }
 
@@ -1165,11 +1225,23 @@ public partial class BattleManager : MonoBehaviour
         if (string.IsNullOrEmpty(_wildCombatIdForTitles) || !_wildCombatIdForTitles.StartsWith("WILD::", StringComparison.OrdinalIgnoreCase))
             _wildCombatIdForTitles = BuildFallbackWildCombatId(wildDef);
 
+        int difficultyMode = GetBattleDifficultyMode();
+        GetWildDifficultyScalars(difficultyMode, out float diffHpMul, out float diffAtkMul, out float diffDefMul, out float diffSpdMul);
+        _battleDifficultyMode = difficultyMode;
+        _battleDifficultyHpMul = diffHpMul;
+        _battleDifficultyAtkMul = diffAtkMul;
+        _battleDifficultyDefMul = diffDefMul;
+        _battleDifficultySpdMul = diffSpdMul;
+
         float wHpBase = BattleCalc.CalcHP(wildDef, wildLevel);
         float wAtkBase = BattleCalc.CalcBaseAttack(wildDef, wildLevel, 0, 0);
+        int wDefBase = BattleCalc.CalcDefense(wildDef, wildLevel);
+        int wSpdBase = BattleCalc.CalcSpeed(wildDef, wildLevel);
 
-        wildBaseMaxHP = Mathf.Max(1f, wHpBase * riftThreatScalar);
-        wildBaseAttackPerTurn = Mathf.Max(1f, wAtkBase * riftThreatScalar);
+        wildBaseMaxHP = Mathf.Max(1f, wHpBase * riftThreatScalar * diffHpMul);
+        wildBaseAttackPerTurn = Mathf.Max(1f, wAtkBase * riftThreatScalar * diffAtkMul);
+        wildBaseDefense = Mathf.Max(0, Mathf.RoundToInt(wDefBase * diffDefMul));
+        wildBaseSpeed = Mathf.Max(1, Mathf.RoundToInt(wSpdBase * diffSpdMul));
 
         wildMaxHP = wildBaseMaxHP;
         wildHP = wildMaxHP;
@@ -1469,6 +1541,8 @@ public partial class BattleManager : MonoBehaviour
         int targetIndex = others[benchSlot];
         if (teamHP[targetIndex] <= 0f) yield break;
 
+        int fromIndex = activeIndex;
+
         if (feedback)
             feedback.SetIconAlphaImmediate(BattleFeedbackManager.BattleFeedbackSide.Player, 0f);
 
@@ -1497,6 +1571,7 @@ public partial class BattleManager : MonoBehaviour
 
         BattleLogger.Log($"Swapped to {GetName(activeIndex)}! (turn consumed)", LogScope.Battle);
         BattleLogger.AddKeyMoment($"SWAP: {GetName(activeIndex)}");
+        Emit(BattleEvent.Swap(BattleSide.Player, fromIndex, activeIndex));
         Emit(BattleEvent.ActionQueued(BattleSide.Player, "Swap"));
 
         if (!HasBattleEventConsumers && feedback)
@@ -1519,6 +1594,8 @@ public partial class BattleManager : MonoBehaviour
 
     private bool AutoSwapToAlive()
     {
+        int fromIndex = activeIndex;
+
         for (int i = 0; i < teamCount; i++)
         {
             if (i == activeIndex) continue;
@@ -1529,6 +1606,8 @@ public partial class BattleManager : MonoBehaviour
             ApplyActiveToUI();
             ClampAndPushActiveHP();
             RefreshBenchUI();
+
+            Emit(BattleEvent.Swap(BattleSide.Player, fromIndex, activeIndex));
 
             BattleLogger.AddKeyMoment($"SWAP: {GetName(activeIndex)}");
 

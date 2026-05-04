@@ -47,10 +47,11 @@ MonoBehaviour:
   - {fileID: 11400000, guid: a1f2ec75ecd5b447bb439bb8619bfa03, type: 2}
   - {fileID: 11400000, guid: a289ace2a61ca0e47b454f4b80ebec49, type: 2}
   Personality: {fileID: 11400000, guid: dc588633b46794883be5263b17376bf3, type: 2}
-  basicAttackName: Gale Dive
+  basicAttackName: Sharp Dive
   basicAttackPrefab: {fileID: 5988486418563103347, guid: 310c8d56e543d4cd4ae9c55fa6047252, type: 3}
   basicAttackPrefabLifetime: 1
   spawnSfx: {fileID: 8300000, guid: c4688d5db921ac343a4d4e525571a278, type: 3}
   baseMarketValue: 107
+  arenaScore: 10
   description: Its wings strengthen and sharpen allowing rapid aerial dives that
     punish exposed enemies.

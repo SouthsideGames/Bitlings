@@ -48,10 +48,11 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 151d5269051bffb44a5357d26231c263, type: 2}
   - {fileID: 11400000, guid: a54fbab895dd9804c9cacbb8e8ce854c, type: 2}
   Personality: {fileID: 11400000, guid: 3733616cf9f0f4dddb5bee9d6ba2952f, type: 2}
-  basicAttackName: Ember Jab
+  basicAttackName: Hot Dash
   basicAttackPrefab: {fileID: 126357351932672970, guid: a7524146891194bc4b7eb73ba1e38b46, type: 3}
   basicAttackPrefabLifetime: 1
   spawnSfx: {fileID: 8300000, guid: 75248d0b6561685468bc39aada3decdb, type: 3}
   baseMarketValue: 77
+  arenaScore: 10
   description: A fiery cub-like monster that charges eagerly striking with small
     but persistent bursts of flame.

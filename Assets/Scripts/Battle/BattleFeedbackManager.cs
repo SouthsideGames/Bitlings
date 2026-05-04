@@ -132,6 +132,17 @@ public sealed class BattleFeedbackManager : MonoBehaviour
     [SerializeField] private Color flashDefend = new Color(0.55f, 0.85f, 1f);
     [SerializeField] private Color flashFail = new Color(1f, 0.45f, 0.45f);
 
+    [Header("Effectiveness FX")]
+    [SerializeField, Range(1f, 2f)] private float superEffectiveThreshold = 1.25f;
+    [SerializeField, Range(0f, 1f)] private float notEffectiveThreshold = 0.85f;
+    [SerializeField] private Color flashSuperEffective = new Color(1f, 0.75f, 0.2f);
+    [SerializeField] private Color flashNotEffective = new Color(0.6f, 0.6f, 0.8f);
+
+    [Header("Swap / Reward FX")]
+    [SerializeField, Range(0.5f, 1f)] private float swapInStartScale = 0.7f;
+    [SerializeField, Min(0.01f)] private float swapInTime = 0.12f;
+    [SerializeField, Range(1.01f, 1.4f)] private float rewardPunchScale = 1.12f;
+
     [Header("Crit / Heavy Hit Extras")]
     [SerializeField, Range(1.0f, 2.0f)] private float critExtraShakeMult = 1.35f;
     [SerializeField, Range(0f, 1f)] private float heavyHitThreshold01 = 0.30f;
@@ -553,12 +564,11 @@ public sealed class BattleFeedbackManager : MonoBehaviour
                 break;
 
             case BattleEvent.Kind.StatusApplied:
-                if (e.statusId == "DefendShieldFX")
-                    PlayDefendShieldFX(isPlayer: e.source == BattleSide.Player);
+                PlayStatusAppliedFeedback(ToFeedbackSide(e.target), e.statusId);
                 break;
 
             case BattleEvent.Kind.Damage:
-                PlayHitReaction(ToFeedbackSide(e.target), e.crit, e.ratio01, wasGuarded: e.wasGuardedOrShielded);
+                PlayHitReaction(ToFeedbackSide(e.target), e.crit, e.ratio01, e.effectiveness, wasGuarded: e.wasGuardedOrShielded);
                 break;
 
             case BattleEvent.Kind.DefendResult:
@@ -571,6 +581,11 @@ public sealed class BattleFeedbackManager : MonoBehaviour
 
             case BattleEvent.Kind.Swap:
                 PlayButtonPress(BattleFeedbackAction.Swap);
+                PlaySwapIn(ToFeedbackSide(e.source));
+                break;
+
+            case BattleEvent.Kind.Reward:
+                PlayRewardFeedback();
                 break;
 
             case BattleEvent.Kind.GuardChanged:
@@ -1008,7 +1023,7 @@ public void SetGuard(BattleFeedbackSide side, bool on)
     
     public void PlayHitReaction(BattleFeedbackSide targetSide, bool crit, float damageRatio01 = -1f)
     {
-        PlayHitReaction(targetSide, crit, damageRatio01, wasGuarded: false);
+        PlayHitReaction(targetSide, crit, damageRatio01, effectiveness: 1f, wasGuarded: false);
     }
 
     /// <summary>
@@ -1016,11 +1031,18 @@ public void SetGuard(BattleFeedbackSide side, bool on)
     /// </summary>
     public void PlayHitReaction(BattleFeedbackSide targetSide, bool crit, float damageRatio01, bool wasGuarded)
     {
+        PlayHitReaction(targetSide, crit, damageRatio01, effectiveness: 1f, wasGuarded: wasGuarded);
+    }
+
+    public void PlayHitReaction(BattleFeedbackSide targetSide, bool crit, float damageRatio01, float effectiveness, bool wasGuarded)
+    {
         var icon = GetIcon(targetSide);
         if (!icon) return;
 
         float ratio01 = Mathf.Max(0f, damageRatio01);
         bool heavy = (damageRatio01 >= 0f && ratio01 >= heavyHitThreshold01);
+        bool superEffective = effectiveness > superEffectiveThreshold;
+        bool notEffective = effectiveness < notEffectiveThreshold;
 
         // Shake scaling: consistent across HP values
         float shakeT = (damageRatio01 < 0f) ? 0f : Mathf.Clamp01(ratio01 / Mathf.Max(0.01f, ratioForMaxShake));
@@ -1030,6 +1052,8 @@ public void SetGuard(BattleFeedbackSide side, bool on)
         if (crit) shakeMult *= critExtraShakeMult;
         if (heavy) shakeMult *= heavyExtraShakeMult;
         if (damageRatio01 >= 0f && ratio01 >= heavyHitThreshold01) shakeMult *= heavyExtraShakeMult;
+        if (superEffective) shakeMult *= 1.5f;
+        if (notEffective) shakeMult *= 0.85f;
 
         // Guarded hits feel "clanky" and less violent
         if (wasGuarded)
@@ -1038,7 +1062,29 @@ public void SetGuard(BattleFeedbackSide side, bool on)
             screenMag *= 0.55f;
         }
 
-        Flash(icon, crit ? flashCrit : (wasGuarded ? flashDefend : flashNormal), hitFlashTime);
+        Color hitFlash = flashNormal;
+        float flashDuration = hitFlashTime;
+        if (wasGuarded)
+        {
+            hitFlash = flashDefend;
+            flashDuration = hitFlashTime * 0.85f;
+        }
+        else if (superEffective)
+        {
+            hitFlash = flashSuperEffective;
+            flashDuration = hitFlashTime * 1.4f;
+        }
+        else if (notEffective)
+        {
+            hitFlash = flashNotEffective;
+            flashDuration = hitFlashTime * 0.8f;
+        }
+        else if (crit)
+        {
+            hitFlash = flashCrit;
+        }
+
+        Flash(icon, hitFlash, flashDuration);
         Shake(icon.rectTransform, hitShakePixels * shakeMult, hitShakeTime);
 
         // Optional: squash/recoil on the target portrait/visual root.
@@ -1053,7 +1099,13 @@ public void SetGuard(BattleFeedbackSide side, bool on)
             PunchScale(icon, 1.08f, Mathf.Min(0.08f, hitFlashTime));
 
         var hpRoot = (targetSide == BattleFeedbackSide.Player) ? playerHPShakeRoot : wildHPShakeRoot;
-        if (hpRoot) PlayHPShake(hpRoot);
+        if (hpRoot)
+        {
+            float hpShake = hpShakeStrength;
+            if (superEffective && !wasGuarded) hpShake *= 1.5f;
+            else if (wasGuarded || notEffective) hpShake *= 0.7f;
+            PlayHPShake(hpRoot, hpShake);
+        }
 
         if (damageRatio01 >= 0f)
         {
@@ -1070,19 +1122,41 @@ public void SetGuard(BattleFeedbackSide side, bool on)
                 HitStop(seconds);
         }
 
-        if (crit)
+        if (crit || superEffective)
         {
-            PlayCritTag(targetSide);
-            // Slightly higher pitch on crit for extra satisfaction.
-            AudioManager.I?.PlaySfx(SfxType.CritHit, 1.15f);
+            float pitch = crit && superEffective ? 1.2f : (crit ? 1.15f : 1.1f);
+            AudioManager.I?.PlaySfx(SfxType.CritHit, pitch, 0.90f);
         }
         else if (wasGuarded)
         {
-            // Distinct "clank"
-            AudioManager.I?.PlaySfx(SfxType.Defend, 0.95f);
+            // Distinct blocked-hit read
+            AudioManager.I?.PlaySfx(SfxType.Defend, 0.92f, 0.85f);
+        }
+        else
+        {
+            // Every non-crit hit should still read as an attack.
+            float pitch = notEffective ? 0.92f : 1f;
+            AudioManager.I?.PlaySfx(SfxType.Attack, pitch, 1f);
+        }
+
+        if (crit)
+        {
+            PlayCritTag(targetSide);
         }
 
         
+    }
+
+    public void PlayClutchMoment(BattleFeedbackSide side)
+    {
+        if (vignetteFlash)
+            FlashVignette();
+
+        var icon = GetIcon(side);
+        if (!icon) return;
+
+        Flash(icon, flashFail, hitFlashTime * 1.2f);
+        PunchScale(icon, 1.10f, pressPunchTime * 1.2f);
     }
 
     // ─────────────────────────────────────────────────────────────
@@ -1714,13 +1788,18 @@ public void SetGuard(BattleFeedbackSide side, bool on)
 
     public void PlayHPShake(RectTransform target)
     {
+        PlayHPShake(target, hpShakeStrength);
+    }
+
+    private void PlayHPShake(RectTransform target, float shakeStrength)
+    {
         if (!target) return;
 
         LeanTween.cancel(target.gameObject);
 
         Vector2 originalPos = target.anchoredPosition;
 
-        LeanTween.moveX(target, originalPos.x + UnityEngine.Random.Range(-hpShakeStrength, hpShakeStrength), hpShakeDuration)
+        LeanTween.moveX(target, originalPos.x + UnityEngine.Random.Range(-shakeStrength, shakeStrength), hpShakeDuration)
             .setEasePunch()
             .setIgnoreTimeScale(true)
             .setOnComplete(() =>
@@ -2034,6 +2113,122 @@ public void SetGuard(BattleFeedbackSide side, bool on)
                     .setEaseOutQuad()
                     .setIgnoreTimeScale(true);
             });
+    }
+
+    private void PlaySwapIn(BattleFeedbackSide side)
+    {
+        var icon = GetIcon(side);
+        if (!icon || !icon.rectTransform) return;
+
+        var rt = icon.rectTransform;
+        LeanTween.cancel(icon.gameObject);
+
+        var baseScale = GetBaseScale(rt, side);
+        rt.localScale = baseScale * Mathf.Max(0.5f, swapInStartScale);
+
+        float scaledTime = ScaleFeedbackDuration(swapInTime);
+        LeanTween.scale(rt, baseScale, scaledTime)
+            .setEaseOutBack()
+            .setIgnoreTimeScale(true);
+
+        float outward = side == BattleFeedbackSide.Player ? -12f : 12f;
+        Nudge(rt, outward, windupTime * 0.8f);
+    }
+
+    private void PlayRewardFeedback()
+    {
+        AudioManager.I?.PlaySfx(SfxType.Collect);
+
+        var player = GetIcon(BattleFeedbackSide.Player);
+        if (player)
+        {
+            PunchScale(player, rewardPunchScale, pressPunchTime * 1.4f);
+            Nudge(player.rectTransform, -16f, windupTime);
+        }
+
+        var wild = GetIcon(BattleFeedbackSide.Wild);
+        if (wild)
+        {
+            PunchScale(wild, rewardPunchScale, pressPunchTime * 1.4f);
+            Nudge(wild.rectTransform, 16f, windupTime);
+        }
+    }
+
+    private void PlayStatusAppliedFeedback(BattleFeedbackSide targetSide, string statusId)
+    {
+        if (string.IsNullOrEmpty(statusId)) return;
+
+        if (string.Equals(statusId, "DefendShieldFX", StringComparison.OrdinalIgnoreCase))
+        {
+            PlayDefendShieldFX(isPlayer: targetSide == BattleFeedbackSide.Player);
+            return;
+        }
+
+        var icon = GetIcon(targetSide);
+        if (!icon) return;
+
+        Color statusFlash;
+        if (!TryGetStatusFlashColor(statusId, out statusFlash))
+            statusFlash = new Color(0.9f, 0.9f, 1f);
+
+        Flash(icon, statusFlash, 0.18f);
+        PunchScale(icon, 1.05f, 0.08f);
+        AudioManager.I?.PlaySfx(SfxType.Attack, 0.95f, 0.75f);
+    }
+
+    private bool TryGetStatusFlashColor(string statusId, out Color flash)
+    {
+        flash = new Color(0.9f, 0.9f, 1f);
+
+        if (string.Equals(statusId, "Burn", StringComparison.OrdinalIgnoreCase))
+        {
+            flash = new Color(1f, 0.4f, 0f);
+            return true;
+        }
+        if (string.Equals(statusId, "Freeze", StringComparison.OrdinalIgnoreCase))
+        {
+            flash = new Color(0.5f, 0.9f, 1f);
+            return true;
+        }
+        if (string.Equals(statusId, "Shock", StringComparison.OrdinalIgnoreCase))
+        {
+            flash = new Color(1f, 1f, 0.3f);
+            return true;
+        }
+        if (string.Equals(statusId, "Phantasmal", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(statusId, "Phantom", StringComparison.OrdinalIgnoreCase))
+        {
+            flash = new Color(0.75f, 0.55f, 1f);
+            return true;
+        }
+        if (string.Equals(statusId, "Corrupt", StringComparison.OrdinalIgnoreCase))
+        {
+            flash = new Color(0.6f, 0.1f, 0.8f);
+            return true;
+        }
+        if (string.Equals(statusId, "Soaked", StringComparison.OrdinalIgnoreCase))
+        {
+            flash = new Color(0.35f, 0.7f, 1f);
+            return true;
+        }
+        if (string.Equals(statusId, "Rally", StringComparison.OrdinalIgnoreCase))
+        {
+            flash = new Color(1f, 0.78f, 0.28f);
+            return true;
+        }
+        if (string.Equals(statusId, "Tailwind", StringComparison.OrdinalIgnoreCase))
+        {
+            flash = new Color(0.7f, 1f, 1f);
+            return true;
+        }
+        if (string.Equals(statusId, "Shielded", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(statusId, "Reinforce", StringComparison.OrdinalIgnoreCase))
+        {
+            flash = flashDefend;
+            return true;
+        }
+
+        return false;
     }
 
     private void Nudge(RectTransform rt, float pixelsX, float time)

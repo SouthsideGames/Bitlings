@@ -48,10 +48,11 @@ MonoBehaviour:
   - {fileID: 11400000, guid: c169f8806953a684a85f917d9746c60f, type: 2}
   - {fileID: 11400000, guid: cea635417a0df0c40b1a726bacb200fc, type: 2}
   Personality: {fileID: 11400000, guid: e6aae7880a6944b05bc4da7d55e8fffd, type: 2}
-  basicAttackName: Arc Smash
+  basicAttackName: Charge Smash
   basicAttackPrefab: {fileID: 4179996368917665753, guid: 77ce3f8bf17474b06ac473e26248a299, type: 3}
   basicAttackPrefabLifetime: 1
   spawnSfx: {fileID: 8300000, guid: fd55b9c026ab23f4b8d738c96d019c85, type: 3}
   baseMarketValue: 165
+  arenaScore: 10
   description: A compact electric enforcer that channels stored charge into repeated,
     driving strikes without slowing down.

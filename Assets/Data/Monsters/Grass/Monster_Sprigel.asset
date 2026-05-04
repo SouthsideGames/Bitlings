@@ -48,9 +48,10 @@ MonoBehaviour:
   - {fileID: 11400000, guid: bcd8786d1ce34b140bfe92358a0b2277, type: 2}
   - {fileID: 11400000, guid: 0b6a2e89cd8f4a844b7172a2d678be74, type: 2}
   Personality: {fileID: 11400000, guid: f6f72aa846632454b97832d01d1b5c0c, type: 2}
-  basicAttackName: Vine Tap
+  basicAttackName: Root Tap
   basicAttackPrefab: {fileID: 7147688047696861109, guid: 5287b95db783b4379b733d77af2cc458, type: 3}
   basicAttackPrefabLifetime: 1
   spawnSfx: {fileID: 8300000, guid: 2a068357e29af15488225af034cc0895, type: 3}
   baseMarketValue: 77
+  arenaScore: 10
   description: A small plant creature that shuffles forward

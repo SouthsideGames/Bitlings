@@ -47,9 +47,10 @@ MonoBehaviour:
   - {fileID: 11400000, guid: b4b91e64958e2c74e9518a6666d41da1, type: 2}
   - {fileID: 11400000, guid: fc062370ec30fc948960aa9f57e28ca0, type: 2}
   Personality: {fileID: 11400000, guid: 75a511658b2e544f4869d466b3f7ba5a, type: 2}
-  basicAttackName: Blight Burst
+  basicAttackName: Fungal Pop
   basicAttackPrefab: {fileID: 8046187082596486557, guid: 86fc56d41698d45bfbf27d043ca2944d, type: 3}
   basicAttackPrefabLifetime: 1
   spawnSfx: {fileID: 8300000, guid: fbc34ba8f6d9da741952c74b642674c2, type: 3}
   baseMarketValue: 105
+  arenaScore: 10
   description: Its fungal mass expands and hardens
