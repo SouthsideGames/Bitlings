@@ -92,6 +92,10 @@ public static class BattleCalc
             if (t.atkFlat != 0) atk += t.atkFlat;
             if (t.atkPct  != 0f) atk *= (1f + t.atkPct);
         }
+
+        if (def != null)
+            atk *= HonorService.GetHonorAttackMultiplier(def.type);
+
         return Mathf.Max(1f, atk);
     }
 
@@ -116,6 +120,10 @@ public static class BattleCalc
             if (t.defFlat != 0) d += t.defFlat;
             if (t.defPct  != 0f) d = Mathf.RoundToInt(d * (1f + t.defPct));
         }
+
+        if (def != null)
+            d = Mathf.RoundToInt(d * HonorService.GetHonorDefenseMultiplier(def.type));
+
         return Mathf.Max(0, d);
     }
 

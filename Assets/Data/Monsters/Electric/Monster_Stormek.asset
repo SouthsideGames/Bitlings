@@ -49,9 +49,10 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 538374b3463384d4e9deeaec06551318, type: 2}
   Personality: {fileID: 11400000, guid: 38ced003b48194272ab4cfa8cd9c5d01, type: 2}
   basicAttackName: Catastorm
-  basicAttackPrefab: {fileID: 4179996368917665753, guid: f843598cd71708247a21c64cef2aa927, type: 3}
+  basicAttackPrefab: {fileID: 695609409913269495, guid: 41ce96bbf47ae4c98a6afc34a2c7d4a3, type: 3}
   basicAttackPrefabLifetime: 1
   spawnSfx: {fileID: 8300000, guid: 1a56802208fc15a489f72c3ddcbd6daa, type: 3}
   baseMarketValue: 826
+  arenaScore: 10
   description: A colossal electric tyrant that builds lethal charge before unleashing
     battlefield-clearing bursts of lightning.

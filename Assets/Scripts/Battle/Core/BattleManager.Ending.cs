@@ -94,7 +94,9 @@ public partial class BattleManager : MonoBehaviour
             if (GameBalance.TryGet(out var bal))
                 globalMul = Mathf.Max(0f, bal.xpGainMultiplier);
 
-            growthCoreTotal = Mathf.Max(0, Mathf.RoundToInt(growthCoreAfterTitles * globalMul));
+            float honorXpMul = XPManager.GetHonorXpMultiplierFor(m);
+
+            growthCoreTotal = Mathf.Max(0, Mathf.RoundToInt(growthCoreAfterTitles * globalMul * honorXpMul));
             growthCoreTitleBonus = Mathf.Max(0, growthCoreAfterTitles - growthCoreBaseAfterPremium);
         }
 
@@ -536,6 +538,11 @@ public partial class BattleManager : MonoBehaviour
             e.lastHPUnix = nowUnix;
             teamList[i] = e;
         }
+
+        string activeOwnedUid = (teamIds != null && activeIndex >= 0 && activeIndex < teamIds.Length)
+            ? teamIds[activeIndex]
+            : null;
+        SaveManager.RecordLifetimeBattle(activeOwnedUid, victory);
 
         if (data != null)
         {

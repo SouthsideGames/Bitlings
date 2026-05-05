@@ -105,6 +105,10 @@ public static class GameEvents
     // ─────────────────────────────────────────────────────────
     public static Action ArenaDataChanged;
 
+    // Legends / Honor
+    public static Action<string> MentorRetired;
+    public static Action<string> HonorApplied;
+
     public static event Action AutoApplyRequested;
     
 

@@ -88,6 +88,18 @@ public static class SaveManager
     private static ExchangeSaveData _exchangeCache;
     private static ArenaSaveData _arenaSaveCache;
 
+    private static readonly Dictionary<string, LifetimeMonsterStats> _lifetimeStatsCache = new Dictionary<string, LifetimeMonsterStats>(StringComparer.Ordinal);
+    private static readonly Dictionary<string, int> _sessionWinStreakByOwnedUid = new Dictionary<string, int>(StringComparer.Ordinal);
+    private static readonly List<MentorRecord> _mentorHallCache = new List<MentorRecord>();
+
+    private static HonorBonusState _activeHonorBonus;
+    private static string _currentWeekHonoredUID;
+    private static long _honorWeekResetUnix;
+    private static long _legendsLastOpenedUnix;
+
+    private static bool _lifetimeJobStatsDirty;
+    private static long _nextLifetimeJobSaveUnix;
+
     // ─────────────────────────────────────────────
     // Hard reset guard (prevents sidecar/runtime re-saves during scene reload)
     // ─────────────────────────────────────────────
@@ -210,6 +222,7 @@ public static class SaveManager
         _worldEventsCache = SaveDataMapper.GetWorldEvents(root);
         _exchangeCache = SaveDataMapper.GetExchange(root);
         _arenaSaveCache = SaveDataMapper.GetArena(root);
+        LoadLegendsAndHonorFromRoot(root);
 
         // Arena: ensure cache exists and all sub-objects are initialized (handles old saves).
         ArenaSaveHelper.EnsureArenaDataInitialized(ref _arenaSaveCache);
@@ -293,6 +306,7 @@ public static class SaveManager
         _worldEventsCache = SaveDataMapper.GetWorldEvents(incoming);
         _exchangeCache = SaveDataMapper.GetExchange(incoming);
         _arenaSaveCache = SaveDataMapper.GetArena(incoming);
+        LoadLegendsAndHonorFromRoot(incoming);
         ArenaSaveHelper.EnsureArenaDataInitialized(ref _arenaSaveCache);
 
         NormalizeAfterLoad();
@@ -592,6 +606,8 @@ public static class SaveManager
 
         RebuildTransientSetsFromLists();
 
+        PruneLifetimeStatsForReleasedMonsters(NowUnix());
+
         ValidateAndRepairSave(saveIfChanged: true);
 
         EnsureTutorialFlagsLoaded();
@@ -640,7 +656,315 @@ public static class SaveManager
 
         // Arena data is a sidecar — set it on the root after the mapper builds everything else.
         root.arenaData = new ArenaSaveSection { arena = _arenaSaveCache ?? new ArenaSaveData() };
+
+        root.mentorHall = new List<MentorRecord>(_mentorHallCache);
+        root.lifetimeStatsEntries = BuildLifetimeStatsEntries();
+        root.lifetimeStats = new Dictionary<string, LifetimeMonsterStats>(_lifetimeStatsCache);
+
+        root.activeHonorBonus = _activeHonorBonus;
+        root.currentWeekHonoredUID = _currentWeekHonoredUID;
+        root.honorWeekResetUnix = _honorWeekResetUnix;
+        root.legendsLastOpenedUnix = _legendsLastOpenedUnix;
+
         return root;
+    }
+
+    private static void LoadLegendsAndHonorFromRoot(SaveData root)
+    {
+        _lifetimeStatsCache.Clear();
+        _mentorHallCache.Clear();
+        _sessionWinStreakByOwnedUid.Clear();
+
+        if (root != null)
+        {
+            if (root.lifetimeStatsEntries != null)
+            {
+                for (int i = 0; i < root.lifetimeStatsEntries.Count; i++)
+                {
+                    var kv = root.lifetimeStatsEntries[i];
+                    if (kv == null || string.IsNullOrEmpty(kv.ownedUID)) continue;
+                    var stats = kv.stats ?? new LifetimeMonsterStats();
+                    stats.EnsureInitialized(NowUnix());
+                    _lifetimeStatsCache[kv.ownedUID] = stats;
+                }
+            }
+
+            if (root.lifetimeStats != null)
+            {
+                foreach (var kv in root.lifetimeStats)
+                {
+                    if (string.IsNullOrEmpty(kv.Key)) continue;
+                    var stats = kv.Value ?? new LifetimeMonsterStats();
+                    stats.EnsureInitialized(NowUnix());
+                    _lifetimeStatsCache[kv.Key] = stats;
+                }
+            }
+
+            if (root.mentorHall != null)
+                _mentorHallCache.AddRange(root.mentorHall);
+
+            _activeHonorBonus = root.activeHonorBonus;
+            _currentWeekHonoredUID = root.currentWeekHonoredUID;
+            _honorWeekResetUnix = root.honorWeekResetUnix;
+            _legendsLastOpenedUnix = root.legendsLastOpenedUnix;
+        }
+
+        _lifetimeJobStatsDirty = false;
+        _nextLifetimeJobSaveUnix = 0;
+    }
+
+    private static List<LifetimeMonsterStatsKV> BuildLifetimeStatsEntries()
+    {
+        var list = new List<LifetimeMonsterStatsKV>(_lifetimeStatsCache.Count);
+        foreach (var kv in _lifetimeStatsCache)
+        {
+            if (string.IsNullOrEmpty(kv.Key) || kv.Value == null) continue;
+            list.Add(new LifetimeMonsterStatsKV
+            {
+                ownedUID = kv.Key,
+                stats = kv.Value
+            });
+        }
+        return list;
+    }
+
+    private static void PruneLifetimeStatsForReleasedMonsters(long nowUnix)
+    {
+        if (_lifetimeStatsCache.Count == 0)
+            return;
+
+        var ownedUids = new HashSet<string>(StringComparer.Ordinal);
+        if (Data != null && Data.owned != null)
+        {
+            for (int i = 0; i < Data.owned.Count; i++)
+            {
+                var o = Data.owned[i];
+                if (o == null || string.IsNullOrEmpty(o.ownedUID)) continue;
+                ownedUids.Add(o.ownedUID);
+            }
+        }
+
+        long maxAge = 90L * 86400L;
+        var toRemove = new List<string>();
+        foreach (var kv in _lifetimeStatsCache)
+        {
+            var stats = kv.Value;
+            if (stats == null) continue;
+
+            if (stats.retiredAtUnix != 0)
+                continue;
+
+            if (ownedUids.Contains(kv.Key))
+                continue;
+
+            if (stats.firstCaptureUnix <= 0)
+                continue;
+
+            if ((nowUnix - stats.firstCaptureUnix) > maxAge)
+                toRemove.Add(kv.Key);
+        }
+
+        if (toRemove.Count == 0)
+            return;
+
+        for (int i = 0; i < toRemove.Count; i++)
+            _lifetimeStatsCache.Remove(toRemove[i]);
+    }
+
+    public static LifetimeMonsterStats GetOrCreateStats(string ownedUID)
+    {
+        if (string.IsNullOrEmpty(ownedUID))
+            return null;
+
+        if (!_loaded) LoadOrCreate();
+
+        if (!_lifetimeStatsCache.TryGetValue(ownedUID, out var stats) || stats == null)
+        {
+            stats = new LifetimeMonsterStats();
+            _lifetimeStatsCache[ownedUID] = stats;
+        }
+
+        stats.EnsureInitialized(NowUnix());
+        return stats;
+    }
+
+    public static bool TryGetStats(string ownedUID, out LifetimeMonsterStats stats)
+    {
+        if (!_loaded) LoadOrCreate();
+
+        if (string.IsNullOrEmpty(ownedUID))
+        {
+            stats = null;
+            return false;
+        }
+
+        return _lifetimeStatsCache.TryGetValue(ownedUID, out stats) && stats != null;
+    }
+
+    public static IReadOnlyDictionary<string, LifetimeMonsterStats> GetLifetimeStatsSnapshot()
+    {
+        if (!_loaded) LoadOrCreate();
+        return _lifetimeStatsCache;
+    }
+
+    public static void RecordLifetimeBattle(string ownedUID, bool victory)
+    {
+        var stats = GetOrCreateStats(ownedUID);
+        if (stats == null) return;
+
+        stats.lifetimeBattles++;
+        if (victory)
+        {
+            stats.lifetimeWins++;
+            int current = 0;
+            _sessionWinStreakByOwnedUid.TryGetValue(ownedUID, out current);
+            current++;
+            _sessionWinStreakByOwnedUid[ownedUID] = current;
+            if (current > stats.maxWinStreak)
+                stats.maxWinStreak = current;
+        }
+        else
+        {
+            _sessionWinStreakByOwnedUid[ownedUID] = 0;
+        }
+    }
+
+    public static void RecordLifetimeRiftClear(string ownedUID, bool wasBoss)
+    {
+        var stats = GetOrCreateStats(ownedUID);
+        if (stats == null) return;
+
+        stats.riftsCompleted++;
+        if (wasBoss) stats.bossesDefeated++;
+    }
+
+    public static void RecordIronCareerWinForOwnedUid(string ownedUID)
+    {
+        var stats = GetOrCreateStats(ownedUID);
+        if (stats == null) return;
+        stats.ironCareerWins++;
+    }
+
+    public static void AddLifetimeJobHours(string ownedUID, JobType jobType, float deltaSeconds)
+    {
+        if (deltaSeconds <= 0f) return;
+
+        var stats = GetOrCreateStats(ownedUID);
+        if (stats == null) return;
+
+        stats.AddJobHours(jobType, deltaSeconds / 3600f);
+        _lifetimeJobStatsDirty = true;
+
+        if (_nextLifetimeJobSaveUnix <= 0)
+            _nextLifetimeJobSaveUnix = NowUnix() + 300L;
+    }
+
+    public static void FlushLifetimeJobStatsIfNeeded()
+    {
+        if (!_lifetimeJobStatsDirty) return;
+
+        long now = NowUnix();
+        if (_nextLifetimeJobSaveUnix > now)
+            return;
+
+        _lifetimeJobStatsDirty = false;
+        _nextLifetimeJobSaveUnix = now + 300L;
+        Save();
+    }
+
+    public static List<MentorRecord> GetMentorHallMutable()
+    {
+        if (!_loaded) LoadOrCreate();
+        return _mentorHallCache;
+    }
+
+    public static IReadOnlyList<MentorRecord> GetMentorHallSnapshot()
+    {
+        if (!_loaded) LoadOrCreate();
+        return _mentorHallCache;
+    }
+
+    public static bool TryGetMentorRecord(string mentorUID, out MentorRecord record)
+    {
+        if (!_loaded) LoadOrCreate();
+
+        record = null;
+        if (string.IsNullOrEmpty(mentorUID)) return false;
+
+        for (int i = 0; i < _mentorHallCache.Count; i++)
+        {
+            var r = _mentorHallCache[i];
+            if (r == null) continue;
+            if (r.mentorUID == mentorUID)
+            {
+                record = r;
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    public static HonorBonusState GetActiveHonorBonusRaw()
+    {
+        if (!_loaded) LoadOrCreate();
+        return _activeHonorBonus;
+    }
+
+    public static void SetActiveHonorBonus(HonorBonusState bonus, string weekHonoredUid)
+    {
+        _activeHonorBonus = bonus;
+        _currentWeekHonoredUID = weekHonoredUid;
+    }
+
+    public static void ClearActiveHonorBonus()
+    {
+        _activeHonorBonus = null;
+    }
+
+    public static string GetCurrentWeekHonoredUID()
+    {
+        return _currentWeekHonoredUID;
+    }
+
+    public static void SetCurrentWeekHonoredUID(string uid)
+    {
+        _currentWeekHonoredUID = uid;
+    }
+
+    public static long GetHonorWeekResetUnix()
+    {
+        return _honorWeekResetUnix;
+    }
+
+    public static void SetHonorWeekResetUnix(long unix)
+    {
+        _honorWeekResetUnix = unix;
+    }
+
+    public static long GetLegendsLastOpenedUnix()
+    {
+        return _legendsLastOpenedUnix;
+    }
+
+    public static void MarkLegendsPageOpened()
+    {
+        _legendsLastOpenedUnix = NowUnix();
+        Save();
+    }
+
+    public static bool HasUnseenLegends()
+    {
+        if (_mentorHallCache.Count == 0) return false;
+        long marker = _legendsLastOpenedUnix;
+        for (int i = 0; i < _mentorHallCache.Count; i++)
+        {
+            var m = _mentorHallCache[i];
+            if (m == null) continue;
+            if (m.retiredAtUnix > marker)
+                return true;
+        }
+        return false;
     }
 
     // ─────────────────────────────────────────────

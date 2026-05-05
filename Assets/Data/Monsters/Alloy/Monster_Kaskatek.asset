@@ -53,5 +53,6 @@ MonoBehaviour:
   basicAttackPrefabLifetime: 1
   spawnSfx: {fileID: 8300000, guid: 0fc0f7b3ceb61f445abba51af2226af7, type: 3}
   baseMarketValue: 836
+  arenaScore: 10
   description: A legendary alloy guardian whose living core drives relentless impacts
     that grind enemies down with unstoppable force.

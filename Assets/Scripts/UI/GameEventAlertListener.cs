@@ -35,6 +35,8 @@ public sealed class GameEventAlertListener : MonoBehaviour, IPointerClickHandler
         PackSeasonChanged = 1 << 19,
         ExchangeMarketReset = 1 << 20,
         ArenaDataChanged = 1 << 21,
+        MentorRetired = 1 << 22,
+        HonorApplied = 1 << 23,
     }
 
     [Header("Alert")]
@@ -146,6 +148,8 @@ public sealed class GameEventAlertListener : MonoBehaviour, IPointerClickHandler
         Toggle(AlertGameEvent.PackSeasonChanged, subscribe, AddPackSeasonChanged, RemovePackSeasonChanged);
         Toggle(AlertGameEvent.ExchangeMarketReset, subscribe, AddExchangeMarketReset, RemoveExchangeMarketReset);
         Toggle(AlertGameEvent.ArenaDataChanged, subscribe, AddArenaDataChanged, RemoveArenaDataChanged);
+        Toggle(AlertGameEvent.MentorRetired, subscribe, AddMentorRetired, RemoveMentorRetired);
+        Toggle(AlertGameEvent.HonorApplied, subscribe, AddHonorApplied, RemoveHonorApplied);
     }
 
     private void Toggle(AlertGameEvent flag, bool subscribe, Action add, Action remove)
@@ -251,4 +255,12 @@ public sealed class GameEventAlertListener : MonoBehaviour, IPointerClickHandler
 
         TriggerAlert(nameof(GameEvents.ArenaDataChanged));
     }
+
+    private void AddMentorRetired() => GameEvents.MentorRetired += HandleMentorRetired;
+    private void RemoveMentorRetired() => GameEvents.MentorRetired -= HandleMentorRetired;
+    private void HandleMentorRetired(string _) => TriggerAlert(nameof(GameEvents.MentorRetired));
+
+    private void AddHonorApplied() => GameEvents.HonorApplied += HandleHonorApplied;
+    private void RemoveHonorApplied() => GameEvents.HonorApplied -= HandleHonorApplied;
+    private void HandleHonorApplied(string _) => TriggerAlert(nameof(GameEvents.HonorApplied));
 }

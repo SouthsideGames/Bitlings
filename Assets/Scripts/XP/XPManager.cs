@@ -54,6 +54,18 @@ public static class XPManager
         return canonical ?? source;
     }
 
+    public static float GetHonorXpMultiplierFor(OwnedMonsterData source)
+    {
+        if (source == null || string.IsNullOrEmpty(source.monsterId))
+            return 1f;
+
+        var def = MonsterLibraryLocator.GetById(source.monsterId);
+        if (def == null)
+            return 1f;
+
+        return HonorService.GetHonorXpMultiplier(def.type);
+    }
+
     public static bool TryManualLevelUp(
         OwnedMonsterData raw,
         int pointsPerLevel,

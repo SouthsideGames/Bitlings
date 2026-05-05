@@ -419,8 +419,11 @@ public sealed class JobManager : MonoBehaviour
 
                 float grossRateHr = ComputeRatePerHour(s) * Mathf.Max(0f, worldRateMul);
                 float eff = AverageWorkingSlotEfficiency(s);
-                float finalRateHr = grossRateHr * eff;
+                float honorMul = ComputeHonorJobMultiplier(s);
+                float finalRateHr = grossRateHr * eff * honorMul;
                 s.cachedRatePerHour = finalRateHr;
+
+                AccumulateLifetimeJobHours(s, dtSeconds);
 
                 int cap = GetEffectiveStorageCap(s.config);
 
@@ -472,6 +475,45 @@ public sealed class JobManager : MonoBehaviour
         if (autoReliefEnabled && !IronCareerRuntime.IsActive) ApplyClinicRelief(dtHours);
 
         SaveRuntimeToSave();
+        SaveManager.FlushLifetimeJobStatsIfNeeded();
+    }
+
+    private void AccumulateLifetimeJobHours(JobSiteState site, float dtSeconds)
+    {
+        if (site == null || site.workers == null || site.config == null) return;
+        if (dtSeconds <= 0f) return;
+
+        for (int i = 0; i < site.workers.Count; i++)
+        {
+            var worker = site.workers[i];
+            if (worker == null || worker.def == null || string.IsNullOrEmpty(worker.ownedUID)) continue;
+            SaveManager.AddLifetimeJobHours(worker.ownedUID, site.config.jobType, dtSeconds);
+        }
+    }
+
+    private float ComputeHonorJobMultiplier(JobSiteState site)
+    {
+        var bonus = HonorService.GetActiveBonus();
+        if (bonus == null || Mathf.Approximately(bonus.jobMul, 0f) || site == null || site.workers == null)
+            return 1f;
+
+        int activeWorkers = 0;
+        int matchingWorkers = 0;
+
+        for (int i = 0; i < site.workers.Count; i++)
+        {
+            var worker = site.workers[i];
+            if (worker == null || worker.def == null) continue;
+            activeWorkers++;
+            if (worker.def.type == bonus.honoredType)
+                matchingWorkers++;
+        }
+
+        if (activeWorkers <= 0 || matchingWorkers <= 0)
+            return 1f;
+
+        float t = (float)matchingWorkers / activeWorkers;
+        return Mathf.Lerp(1f, bonus.jobMul, t);
     }
 
     

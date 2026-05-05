@@ -49,8 +49,9 @@ MonoBehaviour:
   - {fileID: 11400000, guid: e9beb77410c9b994793415fa9862de92, type: 2}
   Personality: {fileID: 11400000, guid: 75a511658b2e544f4869d466b3f7ba5a, type: 2}
   basicAttackName: Decay Crush
-  basicAttackPrefab: {fileID: 8046187082596486557, guid: 86fc56d41698d45bfbf27d043ca2944d, type: 3}
+  basicAttackPrefab: {fileID: 533797760384977939, guid: 3dd7635aba9d943b4801ae3d454e8759, type: 3}
   basicAttackPrefabLifetime: 1
   spawnSfx: {fileID: 8300000, guid: 46ce87fa8f8e25044972b74bc484d5b5, type: 3}
   baseMarketValue: 105
+  arenaScore: 10
   description: Its corruption fully blooms empowering heavy

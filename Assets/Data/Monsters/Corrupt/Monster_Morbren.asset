@@ -49,9 +49,10 @@ MonoBehaviour:
   - {fileID: 11400000, guid: e1aa94e2540df9a4b9e2e90c84ec8c3f, type: 2}
   Personality: {fileID: 11400000, guid: 225b50a30ca2b4463828b97ab1e08247, type: 2}
   basicAttackName: Blight Smash
-  basicAttackPrefab: {fileID: 8046187082596486557, guid: 86fc56d41698d45bfbf27d043ca2944d, type: 3}
+  basicAttackPrefab: {fileID: 533797760384977939, guid: 3dd7635aba9d943b4801ae3d454e8759, type: 3}
   basicAttackPrefabLifetime: 1
   spawnSfx: {fileID: 8300000, guid: 82c83a95f7cf69d4587537bbd580278a, type: 3}
   baseMarketValue: 109
+  arenaScore: 10
   description: A fully corrupted brute that thrives on chaos, smashing enemies with
     volatile force that grows more dangerous the longer it fights.

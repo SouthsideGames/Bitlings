@@ -49,7 +49,7 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 50f86e8bcde244fe3be7152a29fd6ffb, type: 2}
   Personality: {fileID: 11400000, guid: 75a511658b2e544f4869d466b3f7ba5a, type: 2}
   basicAttackName: Spore Pop
-  basicAttackPrefab: {fileID: 8046187082596486557, guid: 86fc56d41698d45bfbf27d043ca2944d, type: 3}
+  basicAttackPrefab: {fileID: 6257137775796944178, guid: 7f128589372fe47afbc9f2d9ac1dd8f2, type: 3}
   basicAttackPrefabLifetime: 1
   spawnSfx: {fileID: 8300000, guid: 223210637c2093e41a657485a4b0ee6e, type: 3}
   baseMarketValue: 76

@@ -49,8 +49,9 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 71652094aed89c948ae2a0cb846cf011, type: 2}
   Personality: {fileID: 11400000, guid: dc588633b46794883be5263b17376bf3, type: 2}
   basicAttackName: Volt Peck
-  basicAttackPrefab: {fileID: 4179996368917665753, guid: 77ce3f8bf17474b06ac473e26248a299, type: 3}
+  basicAttackPrefab: {fileID: 9093068327492091900, guid: 9c71ae2748a9c4a7cb384a7b717cfef4, type: 3}
   basicAttackPrefabLifetime: 1
   spawnSfx: {fileID: 8300000, guid: 313c1890f6b8d0a4c8a8abc32a3e1131, type: 3}
   baseMarketValue: 302
+  arenaScore: 10
   description: A fully charged striker that overwhelms foes with rapid

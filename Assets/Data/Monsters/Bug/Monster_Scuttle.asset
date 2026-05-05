@@ -49,7 +49,7 @@ MonoBehaviour:
   - {fileID: 11400000, guid: a289ace2a61ca0e47b454f4b80ebec49, type: 2}
   Personality: {fileID: 11400000, guid: dc588633b46794883be5263b17376bf3, type: 2}
   basicAttackName: Quick Skitter
-  basicAttackPrefab: {fileID: 6777048211968024641, guid: 36482d8bd89710b4983cb69ab5a8cceb, type: 3}
+  basicAttackPrefab: {fileID: 495522032306973817, guid: 1aaab2fb9fa524f87917ae9928f1fbcd, type: 3}
   basicAttackPrefabLifetime: 1
   spawnSfx: {fileID: 8300000, guid: a76e5323680b6de4f94708f6ec9855df, type: 3}
   baseMarketValue: 76

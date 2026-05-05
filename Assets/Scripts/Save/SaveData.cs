@@ -19,6 +19,21 @@ public sealed class SaveData
     public TitleSystemSaveSection titleData = new TitleSystemSaveSection();
     public JobRuntimeSystemSaveSection jobRuntimeData = new JobRuntimeSystemSaveSection();
     public ArenaSaveSection arenaData = new ArenaSaveSection();
+
+    // Legends / Mentor Hall
+    public List<MentorRecord> mentorHall = new List<MentorRecord>();
+
+    // JsonUtility cannot persist dictionaries directly; this list is authoritative on disk.
+    public List<LifetimeMonsterStatsKV> lifetimeStatsEntries = new List<LifetimeMonsterStatsKV>();
+    public Dictionary<string, LifetimeMonsterStats> lifetimeStats = new Dictionary<string, LifetimeMonsterStats>();
+
+    // Weekly Honor
+    public HonorBonusState activeHonorBonus;
+    public string currentWeekHonoredUID;
+    public long honorWeekResetUnix;
+
+    // Legends page UX state
+    public long legendsLastOpenedUnix;
 }
 
 /// <summary>

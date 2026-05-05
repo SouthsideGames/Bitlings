@@ -49,7 +49,7 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 3da4dd895f4bd4ff9b4690ab28dbdc42, type: 2}
   Personality: {fileID: 11400000, guid: 38ced003b48194272ab4cfa8cd9c5d01, type: 2}
   basicAttackName: Killing Volt
-  basicAttackPrefab: {fileID: 4179996368917665753, guid: 25354ab090a707a4c84fa0fdaa8bc718, type: 3}
+  basicAttackPrefab: {fileID: 1133362793849217325, guid: 30ee68ff1f014412f9e236e8bb99256d, type: 3}
   basicAttackPrefabLifetime: 1
   spawnSfx: {fileID: 8300000, guid: 7b0331c0ca565f84fbdf293257d689f6, type: 3}
   baseMarketValue: 319

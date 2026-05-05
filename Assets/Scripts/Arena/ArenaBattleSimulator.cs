@@ -126,6 +126,7 @@ public static class ArenaBattleSimulator
         ArenaTeamSnapshot right,
         int matchSeed)
     {
+        ArenaBattleSimulationScope.Enter();
         var rng = new System.Random(matchSeed);
         var log = new List<ArenaBattleLogEvent>(64);
 
@@ -224,6 +225,7 @@ public static class ArenaBattleSimulator
             // ── Cleanup ──
             BattleCalc.ResetRng();
             TitlesAdapter.ClearAllLocalTitles();
+            ArenaBattleSimulationScope.Exit();
         }
     }
 

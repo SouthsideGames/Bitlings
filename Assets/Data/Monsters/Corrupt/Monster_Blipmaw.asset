@@ -49,9 +49,10 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 7316d61525a8543b9bd3f6f84fe72d11, type: 2}
   Personality: {fileID: 11400000, guid: 1bd4805a0ba8f476b9f7b480b0cbb31d, type: 2}
   basicAttackName: Blight Snap
-  basicAttackPrefab: {fileID: 8046187082596486557, guid: 86fc56d41698d45bfbf27d043ca2944d, type: 3}
+  basicAttackPrefab: {fileID: 6257137775796944178, guid: 7f128589372fe47afbc9f2d9ac1dd8f2, type: 3}
   basicAttackPrefabLifetime: 1
   spawnSfx: {fileID: 8300000, guid: 30d072d9a0764ea43a0c8a56c4c0299f, type: 3}
   baseMarketValue: 105
+  arenaScore: 10
   description: Its corruption deepens empowering vicious snapping attacks that grow
     more dangerous as rot spreads.

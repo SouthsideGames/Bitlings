@@ -275,6 +275,7 @@ public sealed class IronCareerManager : MonoBehaviour, IronBattleBridge.IIronBat
         GrantIronRunRewards(outcome);
 
         _state.wins++;
+        TryRecordIronCareerWinForActiveSpecies();
         ApplyPartyAutoLevelOnWin();
 
         GameEvents.IronBattleWon?.Invoke();
@@ -299,6 +300,31 @@ public sealed class IronCareerManager : MonoBehaviour, IronBattleBridge.IIronBat
         }
 
         ShowHireOrReplace();
+    }
+
+    private void TryRecordIronCareerWinForActiveSpecies()
+    {
+        if (_roster == null) return;
+
+        int idx = _roster.ActiveIndex;
+        var party = _state.party;
+        if (party == null || idx < 0 || idx >= party.Count) return;
+
+        var active = party[idx];
+        if (active == null || active.def == null || string.IsNullOrEmpty(active.def.id)) return;
+
+        var owned = SaveManager.Data?.owned;
+        if (owned == null || owned.Count == 0) return;
+
+        for (int i = 0; i < owned.Count; i++)
+        {
+            var o = owned[i];
+            if (o == null || string.IsNullOrEmpty(o.ownedUID) || string.IsNullOrEmpty(o.monsterId)) continue;
+            if (!string.Equals(o.monsterId, active.def.id, StringComparison.Ordinal)) continue;
+
+            SaveManager.RecordIronCareerWinForOwnedUid(o.ownedUID);
+            break;
+        }
     }
 
 #if UNITY_EDITOR || DEVELOPMENT_BUILD

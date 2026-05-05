@@ -49,7 +49,7 @@ MonoBehaviour:
   - {fileID: 11400000, guid: fe67a4187cf7add4289106de72912f92, type: 2}
   Personality: {fileID: 11400000, guid: ab061081920b544089b918a9f1f3759b, type: 2}
   basicAttackName: Buzz
-  basicAttackPrefab: {fileID: 4179996368917665753, guid: 77ce3f8bf17474b06ac473e26248a299, type: 3}
+  basicAttackPrefab: {fileID: 899136907608178963, guid: eaaa664a0ad32458eb65a1a1e29660fd, type: 3}
   basicAttackPrefabLifetime: 1
   spawnSfx: {fileID: 8300000, guid: b0cc65d8e0e46854986afbe0580be832, type: 3}
   baseMarketValue: 75

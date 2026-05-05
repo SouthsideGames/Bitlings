@@ -49,9 +49,10 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 90199fd5133383b42979b35902189fed, type: 2}
   Personality: {fileID: 11400000, guid: 51b0055ca9f5a4ccbb97fd51ef39fae1, type: 2}
   basicAttackName: Gear Jab
-  basicAttackPrefab: {fileID: 5172629195496952374, guid: ad774bbb8084f42c29f12cd62581f796, type: 3}
+  basicAttackPrefab: {fileID: 7727254495314352802, guid: a25174203f58e428e82bc96408094702, type: 3}
   basicAttackPrefabLifetime: 1
   spawnSfx: {fileID: 8300000, guid: dddd84165919be744811f516e5794f95, type: 3}
   baseMarketValue: 165
+  arenaScore: 10
   description: A disciplined alloy striker that locks its joints and counters with
     precise mechanical jabs.

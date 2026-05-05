@@ -43,6 +43,7 @@ public class AppLifecycle : MonoBehaviour
         {
             RestoreGlobalTimeScale();
             SaveManager.OnResume();
+            HonorService.CheckWeekReset();
         }
     }
 

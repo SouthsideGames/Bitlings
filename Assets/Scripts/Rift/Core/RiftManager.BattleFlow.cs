@@ -388,6 +388,9 @@ public partial class RiftManager
             FieldOpsTracker.RecordRiftStabilization(_currentBossUsed);
         }
 
+        if (victory)
+            SaveManager.RecordLifetimeRiftClear(result.activeMonsterOwnedId, _currentRiftIsBoss);
+
         if (SaveManager.Data != null)
         {
             AfterBattleCadenceUpdate(

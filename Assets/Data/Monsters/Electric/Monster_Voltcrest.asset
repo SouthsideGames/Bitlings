@@ -48,9 +48,10 @@ MonoBehaviour:
   - {fileID: 11400000, guid: a289ace2a61ca0e47b454f4b80ebec49, type: 2}
   Personality: {fileID: 11400000, guid: dc588633b46794883be5263b17376bf3, type: 2}
   basicAttackName: Arc Surge
-  basicAttackPrefab: {fileID: 4179996368917665753, guid: 77ce3f8bf17474b06ac473e26248a299, type: 3}
+  basicAttackPrefab: {fileID: 9093068327492091900, guid: 9c71ae2748a9c4a7cb384a7b717cfef4, type: 3}
   basicAttackPrefabLifetime: 1
   spawnSfx: {fileID: 8300000, guid: a838b13c05b01f24a96318dd2e802980, type: 3}
   baseMarketValue: 105
+  arenaScore: 10
   description: Its body stabilizes into a stronger charge core releasing sustained
     electric surges through rapid movement.

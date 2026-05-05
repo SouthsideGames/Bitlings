@@ -3,6 +3,7 @@ using System.Text;
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
+using UnityEngine.Serialization;
 
 public class PlayerDossierPanelUI : MonoBehaviour
 {
@@ -116,6 +117,10 @@ public class PlayerDossierPanelUI : MonoBehaviour
     [SerializeField] private RectTransform rankListContent;
     [SerializeField] private PromotionRankRowUI rankRowPrefab;
 
+    [Header("Page 8 - Retired")]
+    [FormerlySerializedAs("legendsPage")]
+    [SerializeField] private RetiredPageUI retiredPage;
+
     private readonly List<PromotionRankRowUI> _rankRows = new List<PromotionRankRowUI>();
 
     private int _currentPageIndex = 0;
@@ -196,6 +201,7 @@ public class PlayerDossierPanelUI : MonoBehaviour
             PopulatePage5Resume(snapshot);
             PopulatePage6Achievements(snapshot);
             PopulatePage7Ranks(snapshot);
+            retiredPage?.Refresh();
         }
         else
         {
@@ -209,6 +215,7 @@ public class PlayerDossierPanelUI : MonoBehaviour
             PopulatePage5Resume(null);
             PopulatePage6Achievements(null);
             PopulatePage7Ranks(null);
+            retiredPage?.Refresh();
         }
     }
 
