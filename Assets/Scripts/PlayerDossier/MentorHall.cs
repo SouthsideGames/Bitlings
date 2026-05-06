@@ -4,6 +4,32 @@ using UnityEngine;
 
 public static class MentorHall
 {
+    public static bool TryGetMentorRecord(string ownedUID, out MentorRecord record)
+    {
+        record = null;
+        if (string.IsNullOrEmpty(ownedUID))
+            return false;
+
+        var mentors = SaveManager.GetMentorHallSnapshot();
+        if (mentors == null)
+            return false;
+
+        for (int i = mentors.Count - 1; i >= 0; i--)
+        {
+            var mentor = mentors[i];
+            if (mentor == null)
+                continue;
+
+            if (string.Equals(mentor.ownedUID, ownedUID, StringComparison.Ordinal))
+            {
+                record = mentor;
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     public static bool RetireMonster(string ownedUID, string displayNameOverride = null)
     {
         if (string.IsNullOrEmpty(ownedUID))
@@ -75,9 +101,83 @@ public static class MentorHall
 
         mentors.Add(record);
 
+        RemoveOwnershipReferences(data, ownedUID, owned.monsterId);
+
         SaveManager.Save();
+        GameEvents.OnOwnedMonstersChanged?.Invoke();
+        GameEvents.OnTeamChanged?.Invoke();
         GameEvents.MentorRetired?.Invoke(record.mentorUID);
         return true;
+    }
+
+    private static void RemoveOwnershipReferences(PlayerManager data, string ownedUID, string monsterId)
+    {
+        if (data == null || string.IsNullOrEmpty(ownedUID))
+            return;
+
+        if (data.owned != null)
+        {
+            for (int i = data.owned.Count - 1; i >= 0; i--)
+            {
+                var o = data.owned[i];
+                if (o == null) continue;
+                if (!string.Equals(o.ownedUID, ownedUID, StringComparison.Ordinal)) continue;
+                data.owned.RemoveAt(i);
+            }
+        }
+
+        if (data.team != null)
+        {
+            for (int i = 0; i < data.team.Count; i++)
+            {
+                var t = data.team[i];
+                if (t == null) continue;
+                if (!string.Equals(t.ownedUID, ownedUID, StringComparison.Ordinal)) continue;
+                data.team[i] = new OwnedMonsterData();
+            }
+        }
+
+        IdleLoadoutManager.RemoveFromIdleByOwnedUid(ownedUID);
+        ArenaLoadoutManager.RemoveFromArenaByOwnedUid(ownedUID);
+
+        if (JobManager.I != null)
+            JobManager.I.RemoveFromAnyJob(ownedUID);
+
+        if (!string.IsNullOrEmpty(monsterId) && data.ownedIds != null)
+        {
+            bool speciesStillOwned = false;
+
+            if (data.owned != null)
+            {
+                for (int i = 0; i < data.owned.Count; i++)
+                {
+                    var o = data.owned[i];
+                    if (o == null || string.IsNullOrEmpty(o.monsterId)) continue;
+                    if (string.Equals(o.monsterId, monsterId, StringComparison.Ordinal))
+                    {
+                        speciesStillOwned = true;
+                        break;
+                    }
+                }
+            }
+
+            if (!speciesStillOwned && data.team != null)
+            {
+                for (int i = 0; i < data.team.Count; i++)
+                {
+                    var t = data.team[i];
+                    if (t == null || string.IsNullOrEmpty(t.monsterId)) continue;
+                    if (string.Equals(t.monsterId, monsterId, StringComparison.Ordinal))
+                    {
+                        speciesStillOwned = true;
+                        break;
+                    }
+                }
+            }
+
+            if (!speciesStillOwned)
+                data.ownedIds.Remove(monsterId);
+        }
     }
 
     private static bool TryGetDriftSnapshot(string ownedUID, out DriftArchetype archetype, out int tier)

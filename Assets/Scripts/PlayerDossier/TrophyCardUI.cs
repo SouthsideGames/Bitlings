@@ -21,14 +21,32 @@ public sealed class TrophyCardUI : MonoBehaviour
     [SerializeField] private Sprite candleOffSprite;
     [SerializeField] private Sprite candleLitSprite;
 
+    [Header("Effects")]
+    [SerializeField] private ParticleSystem candleParticles;
+    [SerializeField] private HonorCeremonyUI honorCeremony;
+
     [Header("Fallback")]
     [SerializeField] private GameObject emptyStateRoot;
 
     public event Action<string> OnCardTapped;
     public event Action<string> OnHonorRequested;
 
+    public string MentorUID => _mentorUid;
+    public ParticleSystem CandleParticles => candleParticles;
+
     private string _mentorUid;
     private Coroutine _pulseCo;
+    private bool _shouldPulseCandle;
+
+    private void OnEnable()
+    {
+        TryStartPulse();
+    }
+
+    private void OnDisable()
+    {
+        StopPulse();
+    }
 
     private void Awake()
     {
@@ -113,17 +131,30 @@ public sealed class TrophyCardUI : MonoBehaviour
         if (candleImage != null)
             candleImage.sprite = lit ? candleLitSprite : candleOffSprite;
 
-        if (_pulseCo != null)
-        {
-            StopCoroutine(_pulseCo);
-            _pulseCo = null;
-        }
+        _shouldPulseCandle = pulse && candleImage != null;
+        StopPulse();
 
         if (candleImage != null)
             candleImage.transform.localScale = Vector3.one;
 
-        if (pulse && candleImage != null)
-            _pulseCo = StartCoroutine(PulseCandle());
+        TryStartPulse();
+    }
+
+    private void TryStartPulse()
+    {
+        if (!_shouldPulseCandle || _pulseCo != null || !isActiveAndEnabled || candleImage == null)
+            return;
+
+        _pulseCo = StartCoroutine(PulseCandle());
+    }
+
+    private void StopPulse()
+    {
+        if (_pulseCo == null)
+            return;
+
+        StopCoroutine(_pulseCo);
+        _pulseCo = null;
     }
 
     private IEnumerator PulseCandle()
@@ -160,6 +191,12 @@ public sealed class TrophyCardUI : MonoBehaviour
     {
         if (string.IsNullOrEmpty(_mentorUid)) return;
         OnHonorRequested?.Invoke(_mentorUid);
+    }
+
+    public void PlayHonorCeremony(string bonusDescription)
+    {
+        if (honorCeremony != null)
+            honorCeremony.PlayHonorCeremony(bonusDescription);
     }
 
     private static Color Hex(string hex)

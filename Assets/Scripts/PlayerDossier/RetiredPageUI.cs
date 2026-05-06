@@ -1,9 +1,12 @@
+using System.Collections;
 using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
 
 public sealed class RetiredPageUI : MonoBehaviour
 {
+    private const int MaxSlots = 6;
+
     [Header("State")]
     [SerializeField] private GameObject emptyStatePanel;
     [SerializeField] private GameObject gridRoot;
@@ -38,7 +41,7 @@ public sealed class RetiredPageUI : MonoBehaviour
     public void Refresh()
     {
         var mentors = SaveManager.GetMentorHallSnapshot();
-        int count = mentors != null ? Mathf.Min(6, mentors.Count) : 0;
+        int count = mentors != null ? Mathf.Min(MaxSlots, mentors.Count) : 0;
 
         if (legendsCountText != null) legendsCountText.text = "Retired: " + count + "/6";
 
@@ -47,6 +50,23 @@ public sealed class RetiredPageUI : MonoBehaviour
         if (gridRoot != null) gridRoot.SetActive(hasAny);
 
         RebuildCards(mentors);
+    }
+
+    public TrophyCardUI GetNextEmptyTrophyCard()
+    {
+        var mentors = SaveManager.GetMentorHallSnapshot();
+        RebuildCards(mentors);
+
+        if (emptyStatePanel != null)
+            emptyStatePanel.SetActive(false);
+        if (gridRoot != null)
+            gridRoot.SetActive(true);
+
+        int occupied = mentors != null ? Mathf.Clamp(mentors.Count, 0, MaxSlots) : 0;
+        if (occupied < _cards.Count)
+            return _cards[occupied];
+
+        return _cards.Count > 0 ? _cards[_cards.Count - 1] : null;
     }
 
     private void RebuildCards(IReadOnlyList<MentorRecord> mentors)
@@ -58,7 +78,8 @@ public sealed class RetiredPageUI : MonoBehaviour
             if (_cards[i] != null) Destroy(_cards[i].gameObject);
         _cards.Clear();
 
-        int totalSlots = 6;
+        int filledSlots = mentors != null ? Mathf.Min(MaxSlots, mentors.Count) : 0;
+        int totalSlots = MaxSlots;
         string honoredUid = SaveManager.GetCurrentWeekHonoredUID();
         var activeBonus = HonorService.GetActiveBonus();
 
@@ -67,19 +88,11 @@ public sealed class RetiredPageUI : MonoBehaviour
             var card = Instantiate(cardPrefab, gridParent);
             _cards.Add(card);
 
-            MentorRecord mentor = (mentors != null && i < mentors.Count) ? mentors[i] : null;
+            MentorRecord mentor = i < filledSlots ? mentors[i] : null;
             bool isHonored = mentor != null && !string.IsNullOrEmpty(honoredUid) && honoredUid == mentor.mentorUID;
             bool isBonusLive = isHonored && activeBonus != null && activeBonus.expiresAtUnix > SaveManager.NowUnix();
 
-            if (mentor == null)
-            {
-                card.SetEmpty();
-            }
-            else
-            {
-                card.Bind(mentor, typeIconLibrary, isHonored, isBonusLive);
-            }
-
+            card.Bind(mentor, typeIconLibrary, isHonored, isBonusLive);
             card.OnCardTapped += OpenNarrative;
             card.OnHonorRequested += TryHonor;
         }
@@ -104,9 +117,64 @@ public sealed class RetiredPageUI : MonoBehaviour
 
         string error = HonorService.HonorLegend(mentorUID);
         if (!string.IsNullOrEmpty(error))
+        {
             GameEvents.RaiseToast(error);
+            return;
+        }
+
+        string bonusDescription = BuildHonorBonusDescription(HonorService.GetActiveBonus());
+        var card = FindCardByMentorUid(mentorUID);
+        if (card != null && card.gameObject.activeInHierarchy)
+        {
+            card.PlayHonorCeremony(bonusDescription);
+            StartCoroutine(RefreshAfterHonorCeremony());
+            return;
+        }
 
         Refresh();
+    }
+
+    private TrophyCardUI FindCardByMentorUid(string mentorUID)
+    {
+        if (string.IsNullOrEmpty(mentorUID))
+            return null;
+
+        for (int i = 0; i < _cards.Count; i++)
+        {
+            var card = _cards[i];
+            if (card == null)
+                continue;
+
+            if (card.MentorUID == mentorUID)
+                return card;
+        }
+
+        return null;
+    }
+
+    private IEnumerator RefreshAfterHonorCeremony()
+    {
+        yield return new WaitForSecondsRealtime(1.1f);
+        Refresh();
+    }
+
+    private static string BuildHonorBonusDescription(HonorBonusState bonus)
+    {
+        if (bonus == null)
+            return "Inspired";
+
+        var parts = new List<string>(4);
+
+        if (bonus.atkPct > 0f)
+            parts.Add("+" + Mathf.RoundToInt(bonus.atkPct * 100f) + "% ATK");
+        if (bonus.defPct > 0f)
+            parts.Add("+" + Mathf.RoundToInt(bonus.defPct * 100f) + "% DEF");
+        if (bonus.xpMul > 1f)
+            parts.Add("+" + Mathf.RoundToInt((bonus.xpMul - 1f) * 100f) + "% XP");
+        if (bonus.jobMul > 1f)
+            parts.Add("+" + Mathf.RoundToInt((bonus.jobMul - 1f) * 100f) + "% JOB");
+
+        return parts.Count > 0 ? string.Join(" / ", parts) : "Inspired";
     }
 
     private void HandleRefreshEvent(string _)

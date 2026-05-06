@@ -75,6 +75,11 @@ public class MonsterDetailPanelUI : MonoBehaviour
 
     [Header("Team Holder Buttons")]
     [SerializeField] private Button removeButton;
+    [SerializeField] private Button retireButton;
+
+    [Header("Ceremony")]
+    [SerializeField] private RetirementCeremonyUI retirementCeremonyUI;
+    [SerializeField] private RetiredPageUI retiredPageUI;
 
     [Header("Evolution")]
     [Tooltip("Shown in AssignToTeam mode when this owned monster can evolve.")]
@@ -191,6 +196,7 @@ public class MonsterDetailPanelUI : MonoBehaviour
         if (slot2Button) { slot2Button.onClick.RemoveAllListeners(); slot2Button.onClick.AddListener(() => AssignToSlot(1)); }
         if (slot3Button) { slot3Button.onClick.RemoveAllListeners(); slot3Button.onClick.AddListener(() => AssignToSlot(2)); }
         if (removeButton) { removeButton.onClick.RemoveAllListeners(); removeButton.onClick.AddListener(RemoveFromTeam); }
+        if (retireButton) { retireButton.onClick.RemoveAllListeners(); retireButton.onClick.AddListener(OnClickRetire); }
 
         if (evolveButton)
         {
@@ -1437,6 +1443,7 @@ if (premiumVariantRoot) premiumVariantRoot.SetActive(false);
         if (titleButton) titleButton.gameObject.SetActive(false);
 
         if (evolveButton) evolveButton.gameObject.SetActive(false);
+        if (retireButton) retireButton.gameObject.SetActive(false);
 
         if (favoriteButton) favoriteButton.gameObject.SetActive(false);
         if (favoriteOnIcon) favoriteOnIcon.SetActive(false);
@@ -1517,6 +1524,8 @@ if (premiumVariantRoot) premiumVariantRoot.SetActive(false);
 
     private void RefreshEvolveButton()
     {
+        RefreshRetireButton();
+
         if (!evolveButton)
             return;
 
@@ -1541,6 +1550,74 @@ if (premiumVariantRoot) premiumVariantRoot.SetActive(false);
             canActuallyEvolve = EvolutionHelper.CanEvolve(srcOwned, current);
 
         evolveButton.interactable = canActuallyEvolve;
+    }
+
+    private void RefreshRetireButton()
+    {
+        if (!retireButton)
+            return;
+
+        var srcOwned = _statsOwned ?? _currentOwned;
+        bool hasOwned = srcOwned != null
+                        && !string.IsNullOrEmpty(srcOwned.monsterId)
+                        && !string.IsNullOrEmpty(srcOwned.ownedUID);
+
+        retireButton.gameObject.SetActive(hasOwned);
+        if (!hasOwned)
+        {
+            retireButton.interactable = false;
+            return;
+        }
+
+        int level = Mathf.Max(1, srcOwned.level);
+        int maxLevel = GetCurrentMaxLevel();
+        retireButton.interactable = level >= maxLevel;
+    }
+
+    private int GetCurrentMaxLevel()
+    {
+        int byDef = current != null ? Mathf.Max(1, current.maxLevel) : LevelRules.MaxLevel;
+        return Mathf.Clamp(byDef, 1, LevelRules.MaxLevel);
+    }
+
+    private void OnClickRetire()
+    {
+        var srcOwned = _statsOwned ?? _currentOwned;
+        if (srcOwned == null || string.IsNullOrEmpty(srcOwned.ownedUID))
+            return;
+
+        int level = Mathf.Max(1, srcOwned.level);
+        int maxLevel = GetCurrentMaxLevel();
+        if (level < maxLevel)
+        {
+            GameEvents.RaiseToast("This monster must be max level before retirement.");
+            RefreshRetireButton();
+            return;
+        }
+
+        var retiredPage = retiredPageUI != null ? retiredPageUI : FindFirstObjectByType<RetiredPageUI>(FindObjectsInactive.Include);
+        TrophyCardUI targetCard = retiredPage != null ? retiredPage.GetNextEmptyTrophyCard() : null;
+
+        if (!MentorHall.RetireMonster(srcOwned.ownedUID))
+        {
+            GameEvents.RaiseToast("Could not retire this monster right now.");
+            return;
+        }
+
+        MentorHall.TryGetMentorRecord(srcOwned.ownedUID, out var mentorRecord);
+
+        _onRemoved?.Invoke();
+        Hide();
+
+        var ceremony = retirementCeremonyUI != null
+            ? retirementCeremonyUI
+            : FindFirstObjectByType<RetirementCeremonyUI>(FindObjectsInactive.Include);
+
+        if (ceremony != null && mentorRecord != null)
+        {
+            ceremony.Prepare(mentorRecord, targetCard);
+            ceremony.Play();
+        }
     }
 
     private void ResolveTitleButton()

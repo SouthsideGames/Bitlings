@@ -12,7 +12,6 @@ public sealed class CareerNarrativePanelUI : MonoBehaviour
     [SerializeField] private Image typeIcon;
     [SerializeField] private TextMeshProUGUI namePlate;
     [SerializeField] private TextMeshProUGUI narrativeText;
-    [SerializeField] private Button narrativeTapSkipButton;
     [SerializeField] private Button closeButton;
     [SerializeField] private Button honorButton;
 
@@ -22,6 +21,11 @@ public sealed class CareerNarrativePanelUI : MonoBehaviour
     [SerializeField] private StatChipUI jobHoursChip;
     [SerializeField] private StatChipUI riftsChip;
     [SerializeField] private StatChipUI daysChip;
+    [SerializeField] private Sprite battlesChipIcon;
+    [SerializeField] private Sprite winRateChipIcon;
+    [SerializeField] private Sprite jobHoursChipIcon;
+    [SerializeField] private Sprite riftsChipIcon;
+    [SerializeField] private Sprite daysChipIcon;
 
     [Header("Legacy")]
     [SerializeField] private GameObject legacyRowRoot;
@@ -29,6 +33,17 @@ public sealed class CareerNarrativePanelUI : MonoBehaviour
 
     [Header("Lookups")]
     [SerializeField] private TypeIconLibrary typeIconLibrary;
+
+    [Header("Animation")]
+    [SerializeField] private float openDuration = 0.3f;
+    [SerializeField] private float closeDuration = 0.25f;
+    [SerializeField] private float narrativeRevealDuration = 1.5f;
+    [SerializeField] private float panelAnchoredX = 0f;
+    [SerializeField] private float openAnchoredY = 0f;
+    [SerializeField] private bool useManualHiddenY;
+    [SerializeField] private float hiddenAnchoredY = -1200f;
+    [Tooltip("Extra distance added on top of the panel's rect height to push it fully off screen.")]
+    [SerializeField] private float slideOffscreenPadding = 0f;
 
     private string _mentorUid;
     private Coroutine _revealCo;
@@ -40,9 +55,6 @@ public sealed class CareerNarrativePanelUI : MonoBehaviour
 
         if (honorButton != null)
             honorButton.onClick.AddListener(ApplyHonor);
-
-        if (narrativeTapSkipButton != null)
-            narrativeTapSkipButton.onClick.AddListener(SkipReveal);
 
         gameObject.SetActive(false);
     }
@@ -132,17 +144,19 @@ public sealed class CareerNarrativePanelUI : MonoBehaviour
 
     private IEnumerator AnimateOpen()
     {
+        LayoutRebuilder.ForceRebuildLayoutImmediate(panelRoot);
+
         float t = 0f;
-        Vector2 target = Vector2.zero;
-        Vector2 start = new Vector2(0f, -Screen.height);
+        Vector2 target = new Vector2(panelAnchoredX, openAnchoredY);
+        Vector2 start = new Vector2(panelAnchoredX, ResolveHiddenAnchoredY());
 
         panelRoot.anchoredPosition = start;
         panelCanvasGroup.alpha = 0f;
 
-        while (t < 0.3f)
+        while (t < openDuration)
         {
             t += Time.unscaledDeltaTime;
-            float p = Mathf.SmoothStep(0f, 1f, t / 0.3f);
+            float p = Mathf.SmoothStep(0f, 1f, t / openDuration);
             panelRoot.anchoredPosition = Vector2.Lerp(start, target, p);
             panelCanvasGroup.alpha = p;
             yield return null;
@@ -162,12 +176,12 @@ public sealed class CareerNarrativePanelUI : MonoBehaviour
 
         float t = 0f;
         Vector2 start = panelRoot.anchoredPosition;
-        Vector2 target = new Vector2(0f, -Screen.height);
+    Vector2 target = new Vector2(panelAnchoredX, ResolveHiddenAnchoredY());
 
-        while (t < 0.25f)
+        while (t < closeDuration)
         {
             t += Time.unscaledDeltaTime;
-            float p = Mathf.SmoothStep(0f, 1f, t / 0.25f);
+            float p = Mathf.SmoothStep(0f, 1f, t / closeDuration);
             panelRoot.anchoredPosition = Vector2.Lerp(start, target, p);
             panelCanvasGroup.alpha = 1f - p;
             yield return null;
@@ -186,7 +200,7 @@ public sealed class CareerNarrativePanelUI : MonoBehaviour
         if (total <= 0)
             yield break;
 
-        float duration = 1.5f;
+        float duration = narrativeRevealDuration;
         float t = 0f;
 
         while (t < duration)
@@ -200,6 +214,15 @@ public sealed class CareerNarrativePanelUI : MonoBehaviour
         narrativeText.maxVisibleCharacters = total;
     }
 
+    private float ResolveHiddenAnchoredY()
+    {
+        if (useManualHiddenY)
+            return hiddenAnchoredY;
+
+        float slideDistance = panelRoot.rect.height + slideOffscreenPadding;
+        return openAnchoredY - slideDistance;
+    }
+
     private void BindChips(LifetimeMonsterStats stats)
     {
         stats ??= new LifetimeMonsterStats();
@@ -210,11 +233,11 @@ public sealed class CareerNarrativePanelUI : MonoBehaviour
         if (stats.firstCaptureUnix > 0 && stats.retiredAtUnix > 0)
             days = Mathf.Max(0, (int)((stats.retiredAtUnix - stats.firstCaptureUnix) / 86400L));
 
-        if (battlesChip != null) battlesChip.Bind(null, "Battles", battles.ToString("N0"));
-        if (winRateChip != null) winRateChip.Bind(null, "Win Rate", winPct + "%");
-        if (jobHoursChip != null) jobHoursChip.Bind(null, "Job Hours", Mathf.RoundToInt(stats.lifetimeJobHours).ToString("N0") + " hrs");
-        if (riftsChip != null) riftsChip.Bind(null, "Rifts", stats.riftsCompleted.ToString("N0"));
-        if (daysChip != null) daysChip.Bind(null, "Days", days.ToString("N0"));
+        if (battlesChip != null) battlesChip.Bind(battlesChipIcon, "Battles", battles.ToString("N0"));
+        if (winRateChip != null) winRateChip.Bind(winRateChipIcon, "Win Rate", winPct + "%");
+        if (jobHoursChip != null) jobHoursChip.Bind(jobHoursChipIcon, "Job Hours", Mathf.RoundToInt(stats.lifetimeJobHours).ToString("N0") + " hrs");
+        if (riftsChip != null) riftsChip.Bind(riftsChipIcon, "Rifts", stats.riftsCompleted.ToString("N0"));
+        if (daysChip != null) daysChip.Bind(daysChipIcon, "Days", days.ToString("N0"));
     }
 
     private void BindLegacy(LifetimeMonsterStats stats)

@@ -453,8 +453,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 1}
   m_AnchorMax: {x: 0.5, y: 1}
-  m_AnchoredPosition: {x: -0.0000038146973, y: -262.99997}
-  m_SizeDelta: {x: 250, y: 85}
+  m_AnchoredPosition: {x: 0.000093937, y: -262.99997}
+  m_SizeDelta: {x: 268.4, y: 77}
   m_Pivot: {x: 0.5, y: 1}
 --- !u!222 &924580399127488631
 CanvasRenderer:
@@ -780,7 +780,6 @@ GameObject:
   - component: {fileID: 8963367356420064766}
   - component: {fileID: 1699870484337080341}
   - component: {fileID: 2420628032182997607}
-  - component: {fileID: 7610752491329526695}
   m_Layer: 5
   m_Name: HonorButton
   m_TagString: Untagged
@@ -891,27 +890,6 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls: []
---- !u!114 &7610752491329526695
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 5922152558689950607}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: a7ee0972012934fdcafd3fe3dcfa7cac, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  teamIndex: 0
-  healButton: {fileID: 2420628032182997607}
-  costLabel: {fileID: 2734021785138191406}
-  hpLabel: {fileID: 0}
-  hpPerMedkit: 50
-  config: {fileID: 0}
-  library: {fileID: 0}
-  monsterLibraryResourcePath: MonsterLibrary
-  healingConfigResourcePath: HealingConfig
 --- !u!1 &8933323581983946348
 GameObject:
   m_ObjectHideFlags: 0
