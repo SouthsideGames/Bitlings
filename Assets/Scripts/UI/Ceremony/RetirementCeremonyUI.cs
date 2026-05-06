@@ -2,6 +2,7 @@ using System.Collections;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
+using UnityEngine.InputSystem;
 
 public sealed class RetirementCeremonyUI : MonoBehaviour
 {
@@ -18,8 +19,8 @@ public sealed class RetirementCeremonyUI : MonoBehaviour
     [Header("Embers Tuning")]
     [SerializeField] private bool applyEmbersTuningOnPrepare = true;
     [SerializeField] private Vector2 embersLifetime = new Vector2(1.3f, 2.4f);
-    [SerializeField] private Vector2 embersStartSpeed = new Vector2(8f, 22f);
-    [SerializeField] private Vector2 embersStartSize = new Vector2(1.2f, 3.2f);
+    [SerializeField] private Vector2 embersStartSpeed = new Vector2(2f, 6f);
+    [SerializeField] private Vector2 embersStartSize = new Vector2(0.3f, 0.8f);
     [SerializeField] private int embersBurstCount = 32;
     [SerializeField] private float embersGravity = -0.02f;
     [SerializeField] private Vector2 embersDriftX = new Vector2(-8f, 8f);
@@ -143,9 +144,25 @@ public sealed class RetirementCeremonyUI : MonoBehaviour
         if (!_isPlaying)
             return;
 
-        bool skipPressed = Input.GetMouseButtonDown(0);
-        if (!skipPressed && Input.touchCount > 0)
-            skipPressed = Input.GetTouch(0).phase == TouchPhase.Began;
+        bool skipPressed = false;
+
+        var mouse = Mouse.current;
+        if (mouse != null)
+            skipPressed = mouse.leftButton.wasPressedThisFrame;
+
+        if (!skipPressed)
+        {
+            var ts = Touchscreen.current;
+            if (ts != null && ts.primaryTouch != null)
+                skipPressed = ts.primaryTouch.press.wasPressedThisFrame;
+        }
+
+        if (!skipPressed)
+        {
+            var kb = Keyboard.current;
+            if (kb != null)
+                skipPressed = kb.anyKey.wasPressedThisFrame;
+        }
 
         if (skipPressed)
             _skipRequested = true;
@@ -177,7 +194,7 @@ public sealed class RetirementCeremonyUI : MonoBehaviour
 
         if (vignetteGroup != null)
         {
-            LeanTween.alphaCanvas(vignetteGroup, 0.65f, 0.6f)
+            LeanTween.alphaCanvas(vignetteGroup, 1f, 0.6f)
                 .setEase(GetCurveOrDefault(curves != null ? curves.vignetteIn : LeanTweenType.easeInQuad))
                 .setIgnoreTimeScale(true);
         }
@@ -189,9 +206,10 @@ public sealed class RetirementCeremonyUI : MonoBehaviour
             yield break;
         }
 
-        string fullName = ResolveDisplayName(_record);
+        string honoreeName = ResolveDisplayName(_record);
+        string ceremonyMessage = ResolveCeremonyMessage(honoreeName);
         if (nameLabel != null)
-            nameLabel.text = fullName;
+            nameLabel.text = ceremonyMessage;
 
         if (namePlateGroup != null)
             namePlateGroup.alpha = 1f;
@@ -213,7 +231,7 @@ public sealed class RetirementCeremonyUI : MonoBehaviour
         }
 
         if (nameLabel != null)
-            StartCoroutine(RevealText(nameLabel, fullName, 1.0f));
+            StartCoroutine(RevealText(nameLabel, ceremonyMessage, 1.0f));
 
         yield return new WaitForSecondsRealtime(1.3f);
         if (_skipRequested)
@@ -451,5 +469,11 @@ public sealed class RetirementCeremonyUI : MonoBehaviour
         string baseName = string.IsNullOrWhiteSpace(record.displayName) ? "Unknown" : record.displayName;
         bool hasEpithet = !string.IsNullOrWhiteSpace(record.epithet) && record.driftTier >= 1;
         return hasEpithet ? (baseName + " the " + record.epithet) : baseName;
+    }
+
+    private static string ResolveCeremonyMessage(string displayName)
+    {
+        string safeName = string.IsNullOrWhiteSpace(displayName) ? "Unknown" : displayName;
+        return "Thank you for your service " + safeName;
     }
 }

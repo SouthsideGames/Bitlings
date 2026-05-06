@@ -1562,16 +1562,15 @@ if (premiumVariantRoot) premiumVariantRoot.SetActive(false);
                         && !string.IsNullOrEmpty(srcOwned.monsterId)
                         && !string.IsNullOrEmpty(srcOwned.ownedUID);
 
-        retireButton.gameObject.SetActive(hasOwned);
-        if (!hasOwned)
+        bool showRetire = false;
+        if (hasOwned)
         {
-            retireButton.interactable = false;
-            return;
+            int level = Mathf.Max(1, srcOwned.level);
+            int maxLevel = GetCurrentMaxLevel();
+            showRetire = level >= maxLevel;
         }
 
-        int level = Mathf.Max(1, srcOwned.level);
-        int maxLevel = GetCurrentMaxLevel();
-        retireButton.interactable = level >= maxLevel;
+        retireButton.gameObject.SetActive(showRetire);
     }
 
     private int GetCurrentMaxLevel()
