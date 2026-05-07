@@ -1,5 +1,4 @@
 using System;
-using System.Collections;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -17,12 +16,8 @@ public sealed class TrophyCardUI : MonoBehaviour
 
     [Header("Honor Candle")]
     [SerializeField] private Button candleButton;
-    [SerializeField] private Image candleImage;
-    [SerializeField] private Sprite candleOffSprite;
-    [SerializeField] private Sprite candleLitSprite;
 
     [Header("Effects")]
-    [SerializeField] private ParticleSystem candleParticles;
     [SerializeField] private HonorCeremonyUI honorCeremony;
 
     [Header("Fallback")]
@@ -32,21 +27,9 @@ public sealed class TrophyCardUI : MonoBehaviour
     public event Action<string> OnHonorRequested;
 
     public string MentorUID => _mentorUid;
-    public ParticleSystem CandleParticles => candleParticles;
+    public ParticleSystem CandleParticles => honorCeremony != null ? honorCeremony.CandleFlameParticles : null;
 
     private string _mentorUid;
-    private Coroutine _pulseCo;
-    private bool _shouldPulseCandle;
-
-    private void OnEnable()
-    {
-        TryStartPulse();
-    }
-
-    private void OnDisable()
-    {
-        StopPulse();
-    }
 
     private void Awake()
     {
@@ -97,7 +80,7 @@ public sealed class TrophyCardUI : MonoBehaviour
         if (retirementDateText != null)
             retirementDateText.text = "Retired Day " + mentor.retiredDay.ToString("N0");
 
-        SetCandleState(honoredThisWeek, activeBonus);
+        honorCeremony?.SetCandleState(honoredThisWeek, activeBonus);
     }
 
     public void SetEmpty()
@@ -109,7 +92,7 @@ public sealed class TrophyCardUI : MonoBehaviour
         if (retirementDateText != null) retirementDateText.text = string.Empty;
         if (portrait != null) portrait.sprite = null;
         if (typeIcon != null) typeIcon.sprite = null;
-        SetCandleState(false, false);
+        honorCeremony?.SetCandleState(false, false);
     }
 
     private void SetTierColor(MentorQuality q)
@@ -124,61 +107,6 @@ public sealed class TrophyCardUI : MonoBehaviour
 
         if (background != null) background.color = c;
         if (borderGlow != null) borderGlow.color = new Color(c.r, c.g, c.b, 0.75f);
-    }
-
-    private void SetCandleState(bool lit, bool pulse)
-    {
-        if (candleImage != null)
-            candleImage.sprite = lit ? candleLitSprite : candleOffSprite;
-
-        _shouldPulseCandle = pulse && candleImage != null;
-        StopPulse();
-
-        if (candleImage != null)
-            candleImage.transform.localScale = Vector3.one;
-
-        TryStartPulse();
-    }
-
-    private void TryStartPulse()
-    {
-        if (!_shouldPulseCandle || _pulseCo != null || !isActiveAndEnabled || candleImage == null)
-            return;
-
-        _pulseCo = StartCoroutine(PulseCandle());
-    }
-
-    private void StopPulse()
-    {
-        if (_pulseCo == null)
-            return;
-
-        StopCoroutine(_pulseCo);
-        _pulseCo = null;
-    }
-
-    private IEnumerator PulseCandle()
-    {
-        while (true)
-        {
-            float t = 0f;
-            while (t < 1f)
-            {
-                t += Time.unscaledDeltaTime * 2f;
-                float s = Mathf.Lerp(1f, 1.15f, Mathf.SmoothStep(0f, 1f, t));
-                candleImage.transform.localScale = new Vector3(s, s, s);
-                yield return null;
-            }
-
-            t = 0f;
-            while (t < 1f)
-            {
-                t += Time.unscaledDeltaTime * 2f;
-                float s = Mathf.Lerp(1.15f, 1f, Mathf.SmoothStep(0f, 1f, t));
-                candleImage.transform.localScale = new Vector3(s, s, s);
-                yield return null;
-            }
-        }
     }
 
     private void HandleCardTapped()

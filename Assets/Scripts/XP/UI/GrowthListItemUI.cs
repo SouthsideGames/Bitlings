@@ -42,7 +42,6 @@ public class GrowthListItemUI : MonoBehaviour
         {
             iconImage.gameObject.SetActive(true);
             iconImage.sprite = icon;
-            iconImage.enabled = icon != null;
         }
 
         if (autoToggle)

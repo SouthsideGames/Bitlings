@@ -597,6 +597,18 @@ public sealed class ExchangeManager : MonoBehaviour
             float final_ = baseVal * demandMul * rarityMul * supplyMod * flux * eventMul
                          * sentimentMul * laborMul * levelMul * catchHypeMul
                          * typeTrendMul * scarcityMul * monopolyMul;
+
+            if (SupplyIndexSystem.I != null)
+            {
+                JobType job = GetJobForMonsterType(def.type);
+                if (job != JobType.None)
+                {
+                    ResourceType res = JobOutput.Output(job);
+                    float supplyMul = SupplyIndexSystem.I.GetPriceMultiplier(res);
+                    final_ = Mathf.RoundToInt(final_ * supplyMul);
+                }
+            }
+
             int hardCeiling = Mathf.Max(1, Mathf.RoundToInt(baseVal * MAX_VALUE_MULTIPLIER));
             state.currentValue = Mathf.Clamp(Mathf.RoundToInt(final_), 1, hardCeiling);
 
@@ -746,6 +758,18 @@ public sealed class ExchangeManager : MonoBehaviour
             counts[o.monsterId] = c + 1;
         }
         return counts;
+    }
+
+    private static JobType GetJobForMonsterType(MonsterType type)
+    {
+        foreach (JobType job in Enum.GetValues(typeof(JobType)))
+        {
+            if (job == JobType.None) continue;
+            if (JobBalance.TryGetAllowedTypes(job, out var set) && set != null && set.Contains(type))
+                return job;
+        }
+
+        return JobType.None;
     }
 
     private float DailyFlux(string speciesId, int daySeed)

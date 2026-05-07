@@ -419,6 +419,120 @@ public partial class BattleManager : MonoBehaviour
                 BattleLogger.Log($"Personality: {personalityLabel}.", LogScope.Battle);
         }
 
+        // Log battle-start buff summary for each team member with active bonuses
+        for (int i = 0; i < 3; i++)
+        {
+            var statLines = Stats.GetPlayerStatLines(i);
+            if (statLines == null || statLines.Count == 0)
+                continue;
+
+            string monsterName = GetName(i);
+            var jctx = GetJobCtxSafe(i);
+            string titleId = GetTeamTitleIdSafe(i);
+            
+            // Build source label: job name + "Title" if both present, otherwise whichever is active
+            string sourceLabel = null;
+            if (jctx != null && jctx.job != JobType.None && !string.IsNullOrEmpty(titleId))
+            {
+                sourceLabel = JobStrings.SiteName(jctx.job) + " Title";
+            }
+            else if (jctx != null && jctx.job != JobType.None)
+            {
+                sourceLabel = JobStrings.SiteName(jctx.job);
+            }
+            else if (!string.IsNullOrEmpty(titleId))
+            {
+                sourceLabel = "Title";
+            }
+
+            if (string.IsNullOrEmpty(sourceLabel))
+                continue;
+
+            // Get stat deltas: final vs adjusted
+            var stages = Stats.GetPlayerBreakdownStages(i);
+            int atkDelta = stages.final.atk - stages.adjusted.atk;
+            int defDelta = stages.final.def - stages.adjusted.def;
+            int spdDelta = stages.final.spd - stages.adjusted.spd;
+            float hpPctDelta = (stages.final.maxHP > 0 && stages.adjusted.maxHP > 0)
+                ? ((float)stages.final.maxHP / stages.adjusted.maxHP) - 1f
+                : 0f;
+
+            // Only log if at least one stat changed
+            if (atkDelta != 0 || defDelta != 0 || spdDelta != 0 || !Mathf.Approximately(hpPctDelta, 0f))
+            {
+                BattleLogger.LogTitleStatSummary(
+                    monsterName, sourceLabel,
+                    atkDelta, 0f,
+                    defDelta, 0f,
+                    spdDelta, 0f,
+                    hpPctDelta,
+                    LogScope.Battle
+                );
+            }
+        }
+
+        // Log mentor/honor bonuses at battle start (once per unique bonus)
+        if (HonorService.CanApplyCombatBonuses())
+        {
+            var bonus = HonorService.GetActiveBonus();
+            if (bonus != null && (bonus.atkPct > 0f || bonus.defPct > 0f))
+            {
+                // Try to find the mentor's display name
+                string mentorName = null;
+                var mentorList = SaveManager.GetMentorHallSnapshot();
+                if (mentorList != null)
+                {
+                    for (int mi = 0; mi < mentorList.Count; mi++)
+                    {
+                        var m = mentorList[mi];
+                        if (m != null && m.mentorUID == bonus.honoredUID)
+                        {
+                            mentorName = m.displayName;
+                            break;
+                        }
+                    }
+                }
+
+                if (string.IsNullOrEmpty(mentorName))
+                    mentorName = "A retired monster";
+
+                // Find a team member with matching type to show as the guided one
+                string guidedMonsterName = null;
+                for (int i = 0; i < 3; i++)
+                {
+                    var monsterDef = GetTeamDefSafe(i);
+                    if (monsterDef != null && monsterDef.type == bonus.honoredType)
+                    {
+                        guidedMonsterName = GetName(i);
+                        break; // Log only once
+                    }
+                }
+
+                if (!string.IsNullOrEmpty(guidedMonsterName))
+                {
+                    var sb = new System.Text.StringBuilder();
+                    sb.Append($"<color={BattleLogColors.Title}>[MENTOR]</color> ");
+                    sb.Append($"<color={BattleLogColors.Name}>{guidedMonsterName}</color> is guided by ");
+                    sb.Append($"<color={BattleLogColors.Name}>{mentorName}</color> → ");
+
+                    if (bonus.atkPct > 0f)
+                    {
+                        int atkPctI = Mathf.RoundToInt(bonus.atkPct * 100f);
+                        sb.Append($"<color={BattleLogColors.Buff}>ATK +{atkPctI}%</color>");
+                    }
+
+                    if (bonus.defPct > 0f)
+                    {
+                        if (bonus.atkPct > 0f) sb.Append("  ");
+                        int defPctI = Mathf.RoundToInt(bonus.defPct * 100f);
+                        sb.Append($"<color={BattleLogColors.Buff}>DEF +{defPctI}%</color>");
+                    }
+
+                    BattleLogger.Log(sb.ToString(), LogScope.Battle);
+                }
+            }
+        }
+
         PostBattleSummaryManager.I?.NotifyBattleStart();
         // BattleStart titles are applied once in Begin() via ApplyBattleStartTitles().
         Debug_LogActiveTitlesSnapshot("BattleStart");

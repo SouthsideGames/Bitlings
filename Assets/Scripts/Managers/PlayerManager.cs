@@ -193,6 +193,7 @@ public class PlayerManager
     public SeedState seedState = new SeedState();
     public List<JobAssignment> jobAssignments = new List<JobAssignment>();
     public List<JobProgress> jobProgress = new List<JobProgress>();
+    public Dictionary<int, float> supplyIndexMap = new Dictionary<int, float>();
 
     public bool hasChosenStarter;
     public bool diagnosticsUnlocked = false;

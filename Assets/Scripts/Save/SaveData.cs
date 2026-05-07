@@ -32,6 +32,9 @@ public sealed class SaveData
     public string currentWeekHonoredUID;
     public long honorWeekResetUnix;
 
+    // Labor economy
+    public Dictionary<int, float> supplyIndexMap = new Dictionary<int, float>();
+
     // Legends page UX state
     public long legendsLastOpenedUnix;
 }
@@ -312,7 +315,8 @@ public static class SaveDataMapper
             jobRuntimeData = new JobRuntimeSystemSaveSection
             {
                 jobRuntime = jobRuntime
-            }
+            },
+            supplyIndexMap = data.supplyIndexMap ?? new Dictionary<int, float>()
         };
     }
 
@@ -404,7 +408,8 @@ public static class SaveDataMapper
             settings = settings.settings,
             unlockedFeatureIds = settings.unlockedFeatureIds,
             unlockedJobSitesList = settings.unlockedJobSites,
-            diagnosticsUnlocked = settings.diagnosticsUnlocked
+            diagnosticsUnlocked = settings.diagnosticsUnlocked,
+            supplyIndexMap = saveData.supplyIndexMap ?? new Dictionary<int, float>()
         };
     }
 

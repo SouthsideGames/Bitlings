@@ -12,8 +12,14 @@ public sealed class StatBreakdownHoldTrigger : MonoBehaviour, IPointerDownHandle
     [Tooltip("Hold this long (in seconds) before showing the breakdown.")]
     [SerializeField] private float holdTime = 0.45f;
 
+    [SerializeField] private GameObject bonusIndicator;
+
     private bool _isPointerDown;
     private float _pointerDownTimer;
+
+    private BattleManager _cachedBattleManager;
+    private float _indicatorRefreshTimer;
+    private const float INDICATOR_REFRESH_INTERVAL = 1f;
 
     void Update()
     {
@@ -25,6 +31,62 @@ public sealed class StatBreakdownHoldTrigger : MonoBehaviour, IPointerDownHandle
             ShowBreakdown();
             Reset();
         }
+
+        RefreshIndicator();
+    }
+
+    void OnEnable()
+    {
+        BattleLogger.OnTitleConditionChanged += OnTitleConditionChanged;
+    }
+
+    void OnDisable()
+    {
+        BattleLogger.OnTitleConditionChanged -= OnTitleConditionChanged;
+    }
+
+    private void OnTitleConditionChanged(string ownerName, string titleName, bool isActive)
+    {
+        // Refresh indicator immediately when conditional title toggles
+        _indicatorRefreshTimer = INDICATOR_REFRESH_INTERVAL;
+        RefreshIndicator();
+    }
+
+    private void RefreshIndicator()
+    {
+        if (bonusIndicator == null) return;
+
+        _indicatorRefreshTimer -= Time.unscaledDeltaTime;
+        if (_indicatorRefreshTimer > 0f) return;
+
+        _indicatorRefreshTimer = INDICATOR_REFRESH_INTERVAL;
+
+        // Get or find BattleManager
+        if (_cachedBattleManager == null || !_cachedBattleManager.InBattle)
+        {
+            _cachedBattleManager = FindBattleManager();
+        }
+
+        if (_cachedBattleManager == null || _cachedBattleManager.Stats == null || !_cachedBattleManager.InBattle)
+        {
+            bonusIndicator.SetActive(false);
+            return;
+        }
+
+        // Check for active bonuses based on side
+        int bonusCount = 0;
+        if (side == Side.Player)
+        {
+            var statLines = _cachedBattleManager.Stats.GetPlayerStatLines(_cachedBattleManager.ActiveIndex);
+            bonusCount = statLines != null ? statLines.Count : 0;
+        }
+        else
+        {
+            var statLines = _cachedBattleManager.Stats.GetWildStatLines();
+            bonusCount = statLines != null ? statLines.Count : 0;
+        }
+
+        bonusIndicator.SetActive(bonusCount > 0);
     }
 
     public void OnPointerDown(PointerEventData eventData)

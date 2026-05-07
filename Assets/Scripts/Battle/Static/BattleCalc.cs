@@ -357,4 +357,71 @@ public static class BattleCalc
             incomingTypeResistMul = incomingMul
         };
     }
+
+    // ─────────────────────────────────────────────────────────────────────────────
+    // Damage Log helpers: Build properly sourced modifier labels for DamageMod entries
+    // (Used when constructing DamageMod lists for BattleLogger.LogDamage)
+    // ─────────────────────────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Build a DamageMod label for a Title bonus applied to attack.
+    /// Returns: "Title: {titleDisplayName} atk↑"
+    /// </summary>
+    public static string MakeTitleAttackModLabel(string titleDisplayName)
+    {
+        if (string.IsNullOrEmpty(titleDisplayName))
+            return "Title atk↑";
+        return $"Title: {titleDisplayName} atk↑";
+    }
+
+    /// <summary>
+    /// Build a DamageMod label for a Title bonus applied to defense.
+    /// Returns: "Title: {titleDisplayName} def↑"
+    /// </summary>
+    public static string MakeTitleDefenseModLabel(string titleDisplayName)
+    {
+        if (string.IsNullOrEmpty(titleDisplayName))
+            return "Title def↑";
+        return $"Title: {titleDisplayName} def↑";
+    }
+
+    /// <summary>
+    /// Build a DamageMod label for a Job passive bonus applied to attack.
+    /// Returns: "{JobStrings.SiteName(job)} atk↑"
+    /// </summary>
+    public static string MakeJobAttackModLabel(JobType job)
+    {
+        if (job == JobType.None)
+            return "atk↑";
+        return $"{JobStrings.SiteName(job)} atk↑";
+    }
+
+    /// <summary>
+    /// Build a DamageMod label for a Job passive bonus applied to defense.
+    /// Returns: "{JobStrings.SiteName(job)} def↑"
+    /// </summary>
+    public static string MakeJobDefenseModLabel(JobType job)
+    {
+        if (job == JobType.None)
+            return "def↑";
+        return $"{JobStrings.SiteName(job)} def↑";
+    }
+
+    /// <summary>
+    /// Build a DamageMod label for an Honor/Mentor bonus applied to attack.
+    /// Returns: "Mentor atk↑"
+    /// </summary>
+    public static string MakeMentorAttackModLabel()
+    {
+        return "Mentor atk↑";
+    }
+
+    /// <summary>
+    /// Build a DamageMod label for an Honor/Mentor bonus applied to defense.
+    /// Returns: "Mentor def↑"
+    /// </summary>
+    public static string MakeMentorDefenseModLabel()
+    {
+        return "Mentor def↑";
+    }
 }

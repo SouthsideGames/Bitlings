@@ -56,6 +56,8 @@ public sealed class GymPanelUI : MonoBehaviour
         if (SaveManager.Data == null)
             SaveManager.LoadOrCreate();
 
+        MonsterCatalog.Invalidate();
+
         if (!monsterLibrary && MonsterLibraryLocator.Lib)
             monsterLibrary = MonsterLibraryLocator.Lib;
 

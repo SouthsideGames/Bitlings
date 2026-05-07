@@ -17,7 +17,93 @@ public sealed class HonorCeremonyUI : MonoBehaviour
     [SerializeField] private AudioClip candleIgniteClip;
     [SerializeField] private RetirementCurves curves;
 
+    public ParticleSystem CandleFlameParticles => candleFlameParticles;
+
     private Coroutine _sequenceCo;
+    private Coroutine _pulseCo;
+    private bool _shouldPulseCandle;
+
+    private void OnEnable()
+    {
+        TryStartPulse();
+    }
+
+    private void OnDisable()
+    {
+        StopPulse();
+    }
+
+    public void SetCandleState(bool lit, bool pulse)
+    {
+        if (candleImage != null)
+            candleImage.sprite = lit ? candleLit : candleUnlit;
+
+        if (lit)
+            PlayCandleFlame();
+        else
+            StopCandleFlame();
+
+        _shouldPulseCandle = pulse && candleRect != null;
+        StopPulse();
+
+        if (candleRect != null)
+            candleRect.localScale = Vector3.one;
+
+        TryStartPulse();
+    }
+
+    public void PlayCandleFlame()
+    {
+        if (candleFlameParticles != null && !candleFlameParticles.isPlaying)
+            candleFlameParticles.Play();
+    }
+
+    public void StopCandleFlame()
+    {
+        if (candleFlameParticles != null && candleFlameParticles.isPlaying)
+            candleFlameParticles.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+    }
+
+    private void TryStartPulse()
+    {
+        if (!_shouldPulseCandle || _pulseCo != null || !isActiveAndEnabled || candleRect == null)
+            return;
+
+        _pulseCo = StartCoroutine(PulseCandle());
+    }
+
+    private void StopPulse()
+    {
+        if (_pulseCo == null)
+            return;
+
+        StopCoroutine(_pulseCo);
+        _pulseCo = null;
+    }
+
+    private IEnumerator PulseCandle()
+    {
+        while (true)
+        {
+            float t = 0f;
+            while (t < 1f)
+            {
+                t += Time.unscaledDeltaTime * 2f;
+                float s = Mathf.Lerp(1f, 1.15f, Mathf.SmoothStep(0f, 1f, t));
+                candleRect.localScale = new Vector3(s, s, s);
+                yield return null;
+            }
+
+            t = 0f;
+            while (t < 1f)
+            {
+                t += Time.unscaledDeltaTime * 2f;
+                float s = Mathf.Lerp(1.15f, 1f, Mathf.SmoothStep(0f, 1f, t));
+                candleRect.localScale = new Vector3(s, s, s);
+                yield return null;
+            }
+        }
+    }
 
     public void PlayHonorCeremony(string bonusDescription)
     {
@@ -26,6 +112,7 @@ public sealed class HonorCeremonyUI : MonoBehaviour
         if (_sequenceCo != null)
             StopCoroutine(_sequenceCo);
 
+        StopPulse();
         _sequenceCo = StartCoroutine(HonorSequence(bonusDescription));
     }
 
@@ -33,6 +120,8 @@ public sealed class HonorCeremonyUI : MonoBehaviour
     {
         if (candleImage != null)
             candleImage.sprite = candleUnlit;
+
+        StopCandleFlame();
 
         if (floatyGroup != null)
             floatyGroup.alpha = 0f;
@@ -61,8 +150,7 @@ public sealed class HonorCeremonyUI : MonoBehaviour
         if (honorAudioSource != null && candleIgniteClip != null)
             honorAudioSource.PlayOneShot(candleIgniteClip);
 
-        if (candleFlameParticles != null)
-            candleFlameParticles.Play();
+        PlayCandleFlame();
 
         if (candleImage != null)
             candleImage.sprite = candleLit;
@@ -107,5 +195,6 @@ public sealed class HonorCeremonyUI : MonoBehaviour
 
         yield return new WaitForSecondsRealtime(0.7f);
         _sequenceCo = null;
+        TryStartPulse();
     }
 }

@@ -220,6 +220,12 @@ public sealed class BattleFeedbackManager : MonoBehaviour
     [SerializeField, Range(0.75f, 0.99f)] private float impactSquashY = 0.90f;
     [SerializeField, Range(0f, 30f)] private float impactRecoilPixels = 10f;
 
+    [Header("Honor Boost VFX (Optional)")]
+    [Tooltip("Looping particles shown on the player icon while the active monster's type matches an active honor bonus.")]
+    [SerializeField] private ParticleSystem playerHonorBoostParticles;
+    [Tooltip("Looping particles shown on the wild icon while the wild monster's type matches an active honor bonus.")]
+    [SerializeField] private ParticleSystem wildHonorBoostParticles;
+
     private const float PlayerIconDefaultXYScale = 1.25f;
 
     private BattleManager _battleManager;
@@ -655,6 +661,33 @@ public sealed class BattleFeedbackManager : MonoBehaviour
         SetStatusIconVisible(wildChargeIcon, false);
         ClearPrimaryStatus(BattleFeedbackSide.Player);
         ClearPrimaryStatus(BattleFeedbackSide.Wild);
+        SetHonorBoostActive(BattleFeedbackSide.Player, false);
+        SetHonorBoostActive(BattleFeedbackSide.Wild, false);
+    }
+
+    /// <summary>
+    /// Shows or hides the looping honor-boost particles on a battle side.
+    /// Call when the active monster changes or at battle start/end.
+    /// </summary>
+    public void SetHonorBoostActive(BattleFeedbackSide side, bool on)
+    {
+        var ps = (side == BattleFeedbackSide.Player) ? playerHonorBoostParticles : wildHonorBoostParticles;
+        if (ps == null) return;
+
+        if (on)
+        {
+            if (!ps.isPlaying)
+            {
+                ps.gameObject.SetActive(true);
+                ps.Play(withChildren: true);
+            }
+        }
+        else
+        {
+            if (ps.isPlaying)
+                ps.Stop(withChildren: true, stopBehavior: ParticleSystemStopBehavior.StopEmittingAndClear);
+            ps.gameObject.SetActive(false);
+        }
     }
 
     public void SetCharge(BattleFeedbackSide side, bool on)

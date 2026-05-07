@@ -689,9 +689,8 @@ public static void LogTitleConditionChanged(string ownerName, string titleName, 
     string col = isActive ? BattleLogColors.Buff : BattleLogColors.Debuff;
 
     Log(
-        $"<color={BattleLogColors.Title}>[TITLE]</color> " +
-        $"<color={BattleLogColors.Name}>{ownerName}</color> — " +
-        $"<color={BattleLogColors.Title}>{titleName}</color> " +
+        $"<color={BattleLogColors.Title}>◆ [{titleName}]</color> " +
+        $"<color={BattleLogColors.Name}>{ownerName}</color>  " +
         $"<color={col}>{state}</color>",
         LogScope.Battle
     );

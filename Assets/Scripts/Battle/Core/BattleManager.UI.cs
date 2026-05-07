@@ -546,6 +546,15 @@ private void UpdateWildInfoUI()
         if (playerLevelText) playerLevelText.text = $"Lv {lvl}";
         UpdatePlayerInfoUI();
         UpdateHPTextUI();
+
+        // Honor boost particles: show on the player icon if the active monster's type is honored.
+        if (feedback != null)
+        {
+            var honorBonus = HonorService.GetActiveBonus();
+            bool playerHonored = honorBonus != null && def != null && def.type == honorBonus.honoredType
+                                 && HonorService.CanApplyCombatBonuses();
+            feedback.SetHonorBoostActive(BattleFeedbackManager.BattleFeedbackSide.Player, playerHonored);
+        }
     }
 
 

@@ -22,6 +22,9 @@ public class JobSiteView : MonoBehaviour
     [Header("Live Refresh")]
     [SerializeField, Min(0.1f)] private float liveRefreshSeconds = 1f;
 
+    [Header("Supply Indicator")]
+    [SerializeField] private SupplyIndicatorButtonUI supplyIndicator;
+
     [Header("Slot 1")]
     [SerializeField] private CanvasGroup slot1Group;
     [SerializeField] private TextMeshProUGUI slot1CDText;
@@ -181,6 +184,9 @@ public class JobSiteView : MonoBehaviour
         RenderAndAlpha(st, 0, slot1Group, slot1CDText);
         RenderAndAlpha(st, 1, slot2Group, slot2CDText);
         RenderAndAlpha(st, 2, slot3Group, slot3CDText);
+
+        if (supplyIndicator != null)
+            supplyIndicator.Init(site);
     }
 
     private JobSiteState GetRuntimeState(JobType job)
