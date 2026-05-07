@@ -55,10 +55,12 @@ public class MonsterPersonalitySO : ScriptableObject
         int r = runWeight;
 
         if (ctx.selfHpRatio <= lowHpThreshold) { d += lowHpDefendBonus; r += lowHpRunBonus; f = Mathf.Max(0, f - lowHpFocusPenalty); }
-        if (ctx.hasSuperEffectiveMove) a += superEffectiveAttackBonus;
+        int effectiveSuperEffectiveAttackBonus = superEffectiveAttackBonus + Mathf.Max(0, ctx.superEffectiveAttackBonus);
+        if (ctx.hasSuperEffectiveMove) a += effectiveSuperEffectiveAttackBonus;
         if (ctx.isBadlyMatched) { d += badMatchDefendBonus; r += badMatchRunBonus; }
 
-        a += eachTurnAttackBonus * Mathf.Max(0, ctx.turnNumber - 1);
+        int effectiveEachTurnAttackBonus = eachTurnAttackBonus + Mathf.Max(0, ctx.eachTurnAttackBonus);
+        a += effectiveEachTurnAttackBonus * Mathf.Max(0, ctx.turnNumber - 1);
         f = Mathf.Max(0, f - eachTurnFocusPenalty * Mathf.Max(0, ctx.turnNumber - 1));
 
         // Chaotic personalities occasionally throw out the weights entirely.
@@ -85,7 +87,10 @@ public class MonsterPersonalitySO : ScriptableObject
 public struct PersonalityContext
 {
     public float selfHpRatio;          // 0..1
+    public float enemyHpRatio;         // 0..1 — opposing side's HP ratio
     public bool hasSuperEffectiveMove; // based on type matchup or moves
     public bool isBadlyMatched;        // inverse of above
     public int turnNumber;             // 1-based
+    public int superEffectiveAttackBonus; // runtime difficulty injection
+    public int eachTurnAttackBonus;       // runtime difficulty injection
 }

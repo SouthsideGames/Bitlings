@@ -31,4 +31,5 @@ public struct BattleResult
     public bool hadTypeDisadvantage;
     public bool isSoloBattle;
     public bool wasManualBattle;
+    public string battleGrade;
 }

@@ -23,7 +23,7 @@ public static class ArenaConstants
     /// <summary>How many extra tickets a player may purchase per week.</summary>
     public const int WeeklyTicketPurchaseLimit = 1;
 
-    /// <summary>Credit cost to purchase one arena ticket (placeholder — balance later).</summary>
+    /// <summary>Credit cost to purchase one arena ticket.</summary> // UPGRADED
     public const int TicketCreditCost = 500;
 
     // ── Unlock ───────────────────────────────────────────────

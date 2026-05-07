@@ -5,7 +5,7 @@ public enum StatusType
     // Offensive
     Burn = 1,        // Fire
     Soaked = 11,     // Water — speed reduced
-    Regen = 6,       // Grass — heal at start of turn (no battle logic yet; do not assign to monsters)
+    Regen = 6,       // Grass - heals the afflicted monster at the start of each turn.
     Shock = 3,       // Electric
     Freeze = 2,      // Ice
     Rally = 16,      // Clash — allies gain minor Attack boost

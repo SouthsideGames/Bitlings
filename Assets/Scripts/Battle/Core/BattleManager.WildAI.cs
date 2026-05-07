@@ -103,12 +103,27 @@ public partial class BattleManager : MonoBehaviour
             var ctx = new PersonalityContext
             {
                 selfHpRatio = hpRatio,
+                enemyHpRatio = (teamHP != null && activeIndex >= 0 && activeIndex < teamHP.Length)
+                    ? Mathf.Clamp01(teamHP[activeIndex] / Mathf.Max(1f, (teamMaxHP != null && activeIndex < teamMaxHP.Length) ? teamMaxHP[activeIndex] : 1f))
+                    : 1f,
                 hasSuperEffectiveMove = typeMatchupMult > 1f,
                 isBadlyMatched = typeMatchupMult < 1f,
                 turnNumber = Mathf.Max(1, _turnIndex + 1)
             };
 
+            if (IsHardModePersonalityActive())
+            {
+                ctx.superEffectiveAttackBonus = Mathf.Max(0, hardModeSuperEffectiveBonus);
+                ctx.eachTurnAttackBonus       = Mathf.Max(0, hardModeAttackPressureBonus);
+            }
+
             action = wildDef.Personality.ChooseAction(in ctx, _rng.EnemyRng);
+
+            if (ctx.enemyHpRatio < 0.35f && action == BattleAction.Defend && Rng01() < 0.55f)
+            {
+                action = BattleAction.Attack;
+                BattleLogger.Log($"[AI] Wild senses a wounded opponent and presses the advantage (enemyHpRatio={ctx.enemyHpRatio:F2}): overrides Defend → Attack.", LogScope.Battle);
+            }
 
             if (_turnIndex > wildAIDefendDecayAfterTurn && action == BattleAction.Defend && Rng01() < 0.6f)
             {
@@ -264,7 +279,7 @@ public partial class BattleManager : MonoBehaviour
         if (ok)
         {
             wildDefendConsecutiveUses++;
-            float next = defendFirstUseSuccess * Mathf.Pow(wildDefendRepeatMultiplier, wildDefendConsecutiveUses); // UPGRADED: wild uses its own defend decay rate.
+            float next = defendFirstUseSuccess * Mathf.Pow(wildDefendRepeatMultiplier, wildDefendConsecutiveUses);
             wildDefendCurrentSuccess = Mathf.Max(defendMinSuccess, next);
         }
         else

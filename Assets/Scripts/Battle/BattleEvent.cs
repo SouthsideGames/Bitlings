@@ -2,6 +2,7 @@ using System;
 
 public enum BattleSide
 {
+    None = -1,
     Player = 0,
     Wild = 1
 }

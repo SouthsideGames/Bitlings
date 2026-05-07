@@ -444,17 +444,25 @@ private void FireOnEntryEffects(int slot)
             return;
         }
 
+        var prevStatus = teamStatus[slot];
+
         // One status per unit. No overwrite.
-        if (teamStatus[slot] != StatusType.None)
+        if (prevStatus != StatusType.None)
         {
+            if (prevStatus == StatusType.Corrupt && type == StatusType.Corrupt)
+                _corruptDefShredPlayer = 0;
+
             // Special case: Reinforce explicitly blocks new statuses (future-proof if overwrite rules change).
-            if (teamStatus[slot] == StatusType.Reinforce)
+            if (prevStatus == StatusType.Reinforce)
                 BattleLogger.Log($"[Status] Apply blocked (Reinforce): {GetName(slot)} is Reinforced and immune to {type}.", LogScope.Battle);
             else
-                BattleLogger.Log($"[Status] Apply blocked (already has {teamStatus[slot]}): {GetName(slot)} cannot receive {type}.", LogScope.Battle);
+                BattleLogger.Log($"[Status] Apply blocked (already has {prevStatus}): {GetName(slot)} cannot receive {type}.", LogScope.Battle);
 
             return;
         }
+
+        if (prevStatus == StatusType.Corrupt && type == StatusType.Corrupt)
+            _corruptDefShredPlayer = 0;
 
         teamStatus[slot] = type;
         teamStatusTurns[slot] = Mathf.Max(0, turns);
@@ -504,7 +512,7 @@ private void FireOnEntryEffects(int slot)
 
         Emit(BattleEvent.StatusApplied(sourceSide, BattleSide.Player, type.ToString(), stacks: persistent ? 0 : teamStatusTurns[slot], seconds: magnitude));
         BattleLogger.Log($"[Status] {GetName(slot)} gains {type}{FormatStatusDetail(persistent, teamStatusTurns[slot], magnitude)} (Synergy: {cmd.sourceType} {cmd.tier}).", LogScope.Battle);
-        RequestBattleStatRebuild(BattleStatRebuildReason.StatusChanged);
+        RequestBattleStatRebuild(BattleStatRebuildReason.ExternalEvent);
 
         RefreshPrimaryStatusUI();
         GameEvents.OnBattleStateChanged?.Invoke();
@@ -514,17 +522,25 @@ private void FireOnEntryEffects(int slot)
     {
         if (type == StatusType.None) return;
 
+        var prevStatus = wildStatus;
+
         // One status per unit. No overwrite.
-        if (wildStatus != StatusType.None)
+        if (prevStatus != StatusType.None)
         {
+            if (prevStatus == StatusType.Corrupt && type == StatusType.Corrupt)
+                _corruptDefShredWild = 0;
+
             // Special case: Reinforce explicitly blocks new statuses (future-proof if overwrite rules change).
-            if (wildStatus == StatusType.Reinforce)
+            if (prevStatus == StatusType.Reinforce)
                 BattleLogger.Log($"[Status] Apply blocked (Reinforce): Wild is Reinforced and immune to {type}.", LogScope.Battle);
             else
-                BattleLogger.Log($"[Status] Apply blocked (already has {wildStatus}): Wild cannot receive {type}.", LogScope.Battle);
+                BattleLogger.Log($"[Status] Apply blocked (already has {prevStatus}): Wild cannot receive {type}.", LogScope.Battle);
 
             return;
         }
+
+        if (prevStatus == StatusType.Corrupt && type == StatusType.Corrupt)
+            _corruptDefShredWild = 0;
 
         wildStatus = type;
         wildStatusTurns = Mathf.Max(0, turns);
@@ -547,7 +563,7 @@ private void FireOnEntryEffects(int slot)
 
         Emit(BattleEvent.StatusApplied(sourceSide, BattleSide.Wild, type.ToString(), stacks: persistent ? 0 : wildStatusTurns, seconds: magnitude));
         BattleLogger.Log($"[Status] Wild gains {type}{FormatStatusDetail(persistent, wildStatusTurns, magnitude)} (Synergy: {cmd.sourceType} {cmd.tier}).", LogScope.Battle);
-        RequestBattleStatRebuild(BattleStatRebuildReason.StatusChanged);
+        RequestBattleStatRebuild(BattleStatRebuildReason.ExternalEvent);
 
         RefreshPrimaryStatusUI();
         GameEvents.OnBattleStateChanged?.Invoke();
@@ -718,6 +734,17 @@ private void FireOnEntryEffects(int slot)
                     float post = teamHP != null && slot < teamHP.Length ? teamHP[slot] : 0f;
 
                     BattleLogger.Log($"[Status] {GetName(slot)} suffers {dmg} damage from {st}. ({Mathf.CeilToInt(pre)}→{Mathf.CeilToInt(post)})", LogScope.Battle);
+
+                    if (st == StatusType.Corrupt)
+                    {
+                        int shred = Mathf.Max(0, corruptDefShredPerTick);
+                        if (shred > 0)
+                        {
+                            _corruptDefShredPlayer += shred;
+                            BattleLogger.Log($"[Status] Corrupt shreds player DEF by +{shred} this tick (total {_corruptDefShredPlayer}).", LogScope.Battle);
+                        }
+                    }
+
                     if (slot == activeIndex) ClampAndPushActiveHP();
                     else PushHPBars();
                 }
@@ -825,6 +852,17 @@ private void FireOnEntryEffects(int slot)
                     float post = wildHP;
 
                     BattleLogger.Log($"[Status] Wild suffers {dmg} damage from {wildStatus}. ({Mathf.CeilToInt(pre)}→{Mathf.CeilToInt(post)})", LogScope.Battle);
+
+                    if (wildStatus == StatusType.Corrupt)
+                    {
+                        int shred = Mathf.Max(0, corruptDefShredPerTick);
+                        if (shred > 0)
+                        {
+                            _corruptDefShredWild += shred;
+                            BattleLogger.Log($"[Status] Corrupt shreds wild DEF by +{shred} this tick (total {_corruptDefShredWild}).", LogScope.Battle);
+                        }
+                    }
+
                     PushHPBars();
                 }
                 break;
@@ -926,7 +964,7 @@ private void FireOnEntryEffects(int slot)
             }
 
             BattleLogger.Log($"[Status] Player field {reason}: {prev}.", LogScope.Battle);
-            RequestBattleStatRebuild(BattleStatRebuildReason.StatusChanged);
+            RequestBattleStatRebuild(BattleStatRebuildReason.ExternalEvent);
             RefreshPrimaryStatusUI();
             GameEvents.OnBattleStateChanged?.Invoke();
             return;
@@ -967,12 +1005,17 @@ private void FireOnEntryEffects(int slot)
         }
 
         teamStatus[slot] = StatusType.None;
+        if (prev == StatusType.Corrupt)
+        {
+            _corruptDefShredPlayer = 0;
+            BattleLogger.Log("[Status] Corrupt cleared — player DEF shred reset.", LogScope.Battle);
+        }
         if (teamStatusTurns != null && slot < teamStatusTurns.Length) teamStatusTurns[slot] = 0;
         if (teamStatusMagnitude != null && slot < teamStatusMagnitude.Length) teamStatusMagnitude[slot] = 0f;
         if (teamStatusPersistent != null && slot < teamStatusPersistent.Length) teamStatusPersistent[slot] = false;
 
         BattleLogger.Log($"[Status] {GetName(slot)} {reason}: {prev}.", LogScope.Battle);
-        RequestBattleStatRebuild(BattleStatRebuildReason.StatusChanged);
+        RequestBattleStatRebuild(BattleStatRebuildReason.ExternalEvent);
 
         // Keep UI + action gating in sync (Freeze can re-enable input).
         RefreshPrimaryStatusUI();
@@ -1000,12 +1043,17 @@ private void FireOnEntryEffects(int slot)
 
 
         wildStatus = StatusType.None;
+        if (prev == StatusType.Corrupt)
+        {
+            _corruptDefShredWild = 0;
+            BattleLogger.Log("[Status] Corrupt cleared — wild DEF shred reset.", LogScope.Battle);
+        }
         wildStatusTurns = 0;
         wildStatusMagnitude = 0f;
         wildStatusPersistent = false;
 
         BattleLogger.Log($"[Status] Wild {reason}: {prev}.", LogScope.Battle);
-        RequestBattleStatRebuild(BattleStatRebuildReason.StatusChanged);
+        RequestBattleStatRebuild(BattleStatRebuildReason.ExternalEvent);
 
         RefreshPrimaryStatusUI();
         GameEvents.OnBattleStateChanged?.Invoke();

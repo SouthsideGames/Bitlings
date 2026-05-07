@@ -9,6 +9,23 @@ using UnityEngine;
 
 public partial class BattleManager : MonoBehaviour
 {
+    private static readonly HashSet<StatusType> _ironCarryBlocklist = new()
+    {
+        StatusType.WyrmFury,
+        StatusType.Foresight,
+        StatusType.ShadowVeil
+    };
+
+    private static string ComputeBattleGrade(bool victory, int turnsSurvived, int damageTaken)
+    {
+        if (!victory) return "F";
+        if (turnsSurvived <= 5 && damageTaken == 0) return "S";
+        if (turnsSurvived <= 8) return "A";
+        if (turnsSurvived <= 14) return "B";
+        if (turnsSurvived <= 20) return "C";
+        return "D";
+    }
+
     private void EndBattleRouted(bool victory, bool escaped = false)
     {
         if (IronCareerRuntime.IsActive)
@@ -138,6 +155,7 @@ public partial class BattleManager : MonoBehaviour
             growthCoresBase = growthCoreBaseAfterPremium,
             growthCoresTitleBonus = growthCoreTitleBonus,
             wildWasPremium = _battleContext?.IronWildIsPremium ?? false,
+            battleGrade = ComputeBattleGrade(victory, _turnIndex, _totalDamageTakenThisBattle),
             teamHP = (teamHP != null) ? (float[])teamHP.Clone() : null,
             teamMaxHP = (teamMaxHP != null) ? (float[])teamMaxHP.Clone() : null,
             shieldHP = carryShield,
@@ -170,8 +188,11 @@ public partial class BattleManager : MonoBehaviour
             hadTypeAdvantage = ComputeHadTypeAdvantage(),
             hadTypeDisadvantage = ComputeHadTypeDisadvantage(),
             isSoloBattle = ComputeIsSoloBattle(),
-            wasManualBattle = !AutoResolveActive
+            wasManualBattle = !AutoResolveActive,
+            battleGrade = ComputeBattleGrade(victory, _turnIndex, _totalDamageTakenThisBattle)
         };
+
+        BattleLogger.Log($"[Grade] Battle grade: {result.battleGrade} (turns={_turnIndex}, damageTaken={_totalDamageTakenThisBattle}, victory={victory}).", LogScope.Battle);
 
         if (victory && finalcredits > 0)
             Emit(BattleEvent.Reward(finalcredits));
@@ -199,6 +220,11 @@ public partial class BattleManager : MonoBehaviour
         {
             var t = teamStatus[i];
             if (t == StatusType.None) continue;
+            if (_ironCarryBlocklist.Contains(t))
+            {
+                BattleLogger.Log($"[IronCarry] {t} blocked from carry-over — unsafe between battles.", LogScope.Battle);
+                continue;
+            }
 
             int turns = (i < teamStatusTurns.Length) ? teamStatusTurns[i] : 0;
             if (turns > bestTurns)
@@ -585,8 +611,11 @@ public partial class BattleManager : MonoBehaviour
             hadTypeAdvantage = ComputeHadTypeAdvantage(),
             hadTypeDisadvantage = ComputeHadTypeDisadvantage(),
             isSoloBattle = ComputeIsSoloBattle(),
-            wasManualBattle = !AutoResolveActive
+            wasManualBattle = !AutoResolveActive,
+            battleGrade = ComputeBattleGrade(victory, _turnIndex, _totalDamageTakenThisBattle)
         };
+
+        BattleLogger.Log($"[Grade] Battle grade: {result.battleGrade} (turns={_turnIndex}, damageTaken={_totalDamageTakenThisBattle}, victory={victory}).", LogScope.Battle);
 
         if (victory && finalcredits > 0)
             Emit(BattleEvent.Reward(finalcredits));

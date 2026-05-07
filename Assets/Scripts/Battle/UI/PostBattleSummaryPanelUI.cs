@@ -32,6 +32,10 @@ public class PostBattleSummaryPanelUI : MonoBehaviour
     [SerializeField] private TextMeshProUGUI firstHitLabel;
     [SerializeField] private TextMeshProUGUI timeLabel;
 
+    [Header("Battle Grade")]
+    [SerializeField] private Transform gradeSpawnRoot;
+    [SerializeField] private GameObject[] gradePrefabs = new GameObject[6]; // 0=S, 1=A, 2=B, 3=C, 4=D, 5=F
+
     [Header("Promotion Rank XP")]
     [Tooltip("Optional: root container for the rank XP section. If null, labels/sliders are still updated if assigned.")]
     [SerializeField] private GameObject promotionSectionRoot;
@@ -329,6 +333,8 @@ public class PostBattleSummaryPanelUI : MonoBehaviour
         if (titleLabel)
             titleLabel.text = result.victory ? "VICTORY!" : "DEFEAT";
 
+        ApplyBattleGradeVisual(result);
+
         // ─────────────────────────────────────────────
         // Rewards: hide empty lines + micro-juice (count-up + stagger)
         // ─────────────────────────────────────────────
@@ -580,6 +586,46 @@ public class PostBattleSummaryPanelUI : MonoBehaviour
 
        
     }
+
+        private void ApplyBattleGradeVisual(BattleResult result)
+        {
+            if (gradeSpawnRoot == null) return;
+
+            ClearGradeSpawnRoot();
+
+            if (result.escaped) return;
+
+            int gradeIndex = BattleGradeToPrefabIndex(result.battleGrade);
+            if (gradeIndex < 0 || gradePrefabs == null || gradeIndex >= gradePrefabs.Length) return;
+
+            GameObject prefab = gradePrefabs[gradeIndex];
+            if (prefab == null) return;
+
+            var instance = Instantiate(prefab, gradeSpawnRoot);
+            instance.transform.localPosition = Vector3.zero;
+            instance.transform.localRotation = Quaternion.identity;
+        }
+
+        private void ClearGradeSpawnRoot()
+        {
+            for (int i = gradeSpawnRoot.childCount - 1; i >= 0; i--)
+                Destroy(gradeSpawnRoot.GetChild(i).gameObject);
+        }
+
+        private static int BattleGradeToPrefabIndex(string grade)
+        {
+            switch ((grade ?? string.Empty).Trim().ToUpperInvariant())
+            {
+                case "S": return 0;
+                case "A": return 1;
+                case "B": return 2;
+                case "C": return 3;
+                case "D": return 4;
+                case "F":
+                default:
+                    return 5;
+            }
+        }
 
     private Sprite GetBestPortraitSprite(MonsterDataSO def, bool premium)
     {

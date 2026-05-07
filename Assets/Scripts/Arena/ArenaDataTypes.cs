@@ -302,6 +302,12 @@ public sealed class ArenaBitlingSnapshot
 
     public string titleName = "";
 
+    // ── Frozen status state at snapshot time ──────────────────
+    public StatusType statusType = StatusType.None;
+    public int statusTurns = 0;
+    public float statusMagnitude = 0f;
+    public bool statusPersistent = false;
+
     // ── Scoring ──────────────────────────────────────────────
     /// <summary>Arena score contributed by the species definition.</summary>
     public int monsterArenaScore;

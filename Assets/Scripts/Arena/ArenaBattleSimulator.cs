@@ -66,6 +66,12 @@ public static class ArenaBattleSimulator
         public int defense;
         public int speed;
 
+        // Status parity with BattleManager
+        public StatusType statusType = StatusType.None;
+        public float statusMagnitude = 0f;
+        public int statusTurns = 0;
+        public int corruptDefShred = 0;
+
         public bool isKnockedOut => currentHp <= 0;
     }
 
@@ -145,6 +151,7 @@ public static class ArenaBattleSimulator
 
             // ── Turn loop ──
             int turn = 0;
+            int lastAggressor = -1; // -1 = none, 0 = left side, 1 = right side
             while (turn < MaxTurns)
             {
                 // Turn start
@@ -153,13 +160,18 @@ public static class ArenaBattleSimulator
 
                 TitlesAdapter.OnTurnAdvanced(turn);
 
+                // Process turn-start status effects (Regen heal, Corrupt DEF shred tick).
+                ProcessTurnStartStatus(leftTeam.Active, turn, log);
+                ProcessTurnStartStatus(rightTeam.Active, turn, log);
+
                 var first = leftTeam;
                 var second = rightTeam;
 
-                // Speed determines who attacks first; ties broken by seed.
+                // Speed determines who attacks first.
+                // On a tie, the side that attacked last yields priority to the other side.
                 int leftSpd = leftTeam.Active.speed;
                 int rightSpd = rightTeam.Active.speed;
-                if (rightSpd > leftSpd || (rightSpd == leftSpd && rng.Next(2) == 1))
+                if (rightSpd > leftSpd || (rightSpd == leftSpd && lastAggressor == 0))
                 {
                     first = rightTeam;
                     second = leftTeam;
@@ -167,8 +179,14 @@ public static class ArenaBattleSimulator
 
                 // ── First attacker's turn ──
                 ResolveAttack(first, second, turn, log, rng);
+                lastAggressor = first.side;
 
                 if (CheckTeamWipeout(second, first, turn, log))
+                {
+                    turn++;
+                    break;
+                }
+                if (CheckTeamWipeout(first, second, turn, log))
                 {
                     turn++;
                     break;
@@ -176,8 +194,14 @@ public static class ArenaBattleSimulator
 
                 // ── Second attacker's turn ──
                 ResolveAttack(second, first, turn, log, rng);
+                lastAggressor = second.side;
 
                 if (CheckTeamWipeout(first, second, turn, log))
+                {
+                    turn++;
+                    break;
+                }
+                if (CheckTeamWipeout(second, first, turn, log))
                 {
                     turn++;
                     break;
@@ -290,6 +314,13 @@ public static class ArenaBattleSimulator
                 defense = defStat,
                 speed = spd
             };
+
+            if (slot != null)
+            {
+                members[i].statusType = slot.statusType;
+                members[i].statusMagnitude = slot.statusMagnitude;
+                members[i].statusTurns = (slot.statusPersistent) ? int.MaxValue : (slot.statusTurns > 0 ? slot.statusTurns : (slot.statusType != StatusType.None ? 3 : 0));
+            }
         }
 
         return new TeamState
@@ -348,6 +379,14 @@ public static class ArenaBattleSimulator
                 0, atk.titleId));
         }
 
+        // ── Reinforce: defender gains +8 effective DEF ──
+        // ── Corrupt: defender loses corruptDefShred from effective DEF ──
+        int effectiveDef = defC.defense;
+        if (defC.statusType == StatusType.Reinforce)
+            effectiveDef += 8;
+        if (defC.corruptDefShred > 0)
+            effectiveDef = Mathf.Max(0, effectiveDef - defC.corruptDefShred);
+
         // ── Calculate damage via BattleCalc.ResolveHit (full title-aware path) ──
         float baseDamage = Mathf.Max(1f, atk.attack);
         var result = BattleCalc.ResolveHit(
@@ -361,10 +400,28 @@ public static class ArenaBattleSimulator
             critChance: CritChance,
             critMultiplier: CritMultiplier,
             defenderFlatDefenseBonus: 0,
-            defenderEffectiveDefenseStat: null
+            defenderEffectiveDefenseStat: effectiveDef
         );
 
         int damage = result.damage;
+
+        // ── ShadowVeil: defender immune to this hit ──
+        if (defC.statusType == StatusType.ShadowVeil)
+        {
+            log.Add(MakeEvent(ArenaBattleLogEventType.ActionUsed, turn, defender.side,
+                $"{defC.monsterName} is shrouded — damage nullified!", 0, defC.combatantId));
+            defC.statusType = StatusType.None; // UPGRADED
+            defC.statusMagnitude = 0f; // UPGRADED
+            defC.statusTurns = 0; // UPGRADED
+            defC.corruptDefShred = 0; // UPGRADED
+            TitlesAdapter.OnAttackLanded(atk.combatantId, result.crit);
+            TitlesAdapter.OnHitTaken(defC.combatantId, 0, result.crit);
+            return;
+        }
+
+        // ── WyrmFury: attacker deals +30% damage ──
+        if (atk.statusType == StatusType.WyrmFury)
+            damage = Mathf.Max(1, Mathf.RoundToInt(damage * 1.30f));
 
         // ── Apply shield (from BattleStartShieldTitleSO) ──
         float shieldHp = TitlesAdapter.GetBattleStartShieldRemaining(defC.combatantId);
@@ -392,6 +449,27 @@ public static class ArenaBattleSimulator
         // ── Title hooks ──
         TitlesAdapter.OnAttackLanded(atk.combatantId, result.crit);
         TitlesAdapter.OnHitTaken(defC.combatantId, damage, result.crit);
+
+        // ── WyrmFury: attacker recoil (5% of damage dealt) ──
+        if (atk.statusType == StatusType.WyrmFury)
+        {
+            int recoil = Mathf.Max(1, Mathf.RoundToInt(damage * 0.05f));
+            atk.currentHp = Mathf.Max(0, atk.currentHp - recoil);
+            log.Add(MakeEvent(ArenaBattleLogEventType.Damage, turn, attacker.side,
+                $"{atk.monsterName} takes {recoil} recoil from WyrmFury",
+                recoil, atk.combatantId));
+            if (atk.isKnockedOut)
+            {
+                log.Add(MakeEvent(ArenaBattleLogEventType.Knockout, turn, attacker.side,
+                    $"{atk.monsterName} is knocked out by WyrmFury recoil", 0, atk.combatantId));
+                if (attacker.SwapToNextAlive())
+                {
+                    var next = attacker.Active;
+                    log.Add(MakeEvent(ArenaBattleLogEventType.ActionUsed, turn, attacker.side,
+                        $"{attacker.ownerName} sends out {next.monsterName}", 0, next.combatantId));
+                }
+            }
+        }
 
         // ── Check knockout ──
         if (defC.isKnockedOut)
@@ -452,5 +530,54 @@ public static class ArenaBattleSimulator
     {
         if (title == null) return "";
         return !string.IsNullOrEmpty(title.displayName) ? title.displayName : title.titleId;
+    }
+
+    // ═════════════════════════════════════════════════════════════
+    //  Turn-start status processing
+    // ═════════════════════════════════════════════════════════════
+
+    /// <summary>
+    /// Applies turn-start status effects for a single combatant.
+    /// Regen: heals statusMagnitude * maxHp at the start of each turn.
+    /// Corrupt: increments corruptDefShred by 2 each turn.
+    /// </summary>
+    private static void ProcessTurnStartStatus(
+        Combatant c, int turn, List<ArenaBattleLogEvent> log)
+    {
+        switch (c.statusType)
+        {
+            case StatusType.Regen:
+            {
+                float mag = c.statusMagnitude > 0f ? c.statusMagnitude : 0.05f;
+                int heal = Mathf.Max(1, Mathf.RoundToInt(c.maxHp * mag));
+                c.currentHp = Mathf.Min(c.maxHp, c.currentHp + heal);
+                log.Add(MakeEvent(ArenaBattleLogEventType.ActionUsed, turn, -1,
+                    $"{c.monsterName} regenerates {heal} HP from Regen",
+                    heal, c.combatantId));
+                break;
+            }
+            case StatusType.Corrupt:
+            {
+                c.corruptDefShred += 2;
+                log.Add(MakeEvent(ArenaBattleLogEventType.ActionUsed, turn, -1,
+                    $"{c.monsterName} is Corrupted — DEF shred +2 (total: {c.corruptDefShred})",
+                    0, c.combatantId));
+                break;
+            }
+        }
+
+        if (c.statusType != StatusType.None && c.statusTurns != int.MaxValue) // UPGRADED
+        {
+            c.statusTurns -= 1; // UPGRADED
+            if (c.statusTurns <= 0) // UPGRADED
+            {
+                StatusType expiredStatus = c.statusType; // UPGRADED
+                c.statusType = StatusType.None; // UPGRADED
+                c.statusMagnitude = 0f; // UPGRADED
+                c.statusTurns = 0; // UPGRADED
+                c.corruptDefShred = 0; // UPGRADED
+                log.Add(MakeEvent(ArenaBattleLogEventType.ActionUsed, turn, -1, $"{c.monsterName}'s {expiredStatus} wore off.", 0, c.combatantId)); // UPGRADED
+            }
+        }
     }
 }

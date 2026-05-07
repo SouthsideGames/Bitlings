@@ -57,6 +57,14 @@ public partial class BattleManager : MonoBehaviour
     [SerializeField, Range(0f, 1f)] private float guardConvertPct = 1.0f;
     [SerializeField, Range(0f, 2f)] private float chargeBonusPct = 0.5f;
     [SerializeField, Min(0)] private int sunderedDefReduction = 5;
+    [SerializeField, Range(0f, 2f)] private float wyrmFuryDamageBonus = 0.30f;
+    [SerializeField, Range(0f, 1f)] private float wyrmFuryRecoilPct = 0.05f;
+    [SerializeField, Min(0)] private int reinforceDefBonus = 8;
+    [SerializeField, Min(0)] private int corruptDefShredPerTick = 2;
+
+    [Header("Difficulty — Personality Scaling")]
+    [SerializeField, Min(0)] private int hardModeSuperEffectiveBonus = 2;
+    [SerializeField, Min(0)] private int hardModeAttackPressureBonus = 1;
 
     [Header("Manual Turn Failsafe (Optional)")]
     [Tooltip("If enabled, auto-queues an Attack if the player doesn't pick an action within the timeout.")]
@@ -120,6 +128,7 @@ public partial class BattleManager : MonoBehaviour
     private PlayerAction pendingAction = PlayerAction.None;
     private int pendingSwapBenchSlot = -1;
     private bool defendActiveThisRound = false;
+    private bool _hotSwapFreeTurn = false;
 
     // Wild UI (populated from HudRig at battle start)
     private GameObject wildPanel;
@@ -164,6 +173,7 @@ public partial class BattleManager : MonoBehaviour
     [SerializeField, Min(0.05f)] private float beginRoundDelay = 0.15f;
     [SerializeField, Min(0.05f)] private float hitPause = 0.25f;
     [SerializeField, Min(0.05f)] private float endRoundDelay = 0.60f;
+    [SerializeField, Min(10)] private int maxBattleTurns = 50;
 
     [Header("Battle Start Pacing (unscaled)")]
     [Tooltip("Delay between the first and second monster reveal/spawn call at battle start.")]
@@ -355,6 +365,9 @@ public partial class BattleManager : MonoBehaviour
     private int _totalDamageTakenThisBattle = 0;
     private int _totalDamageDealtThisBattle = 0;
     private int _totalStatusesAppliedToWildThisBattle = 0;
+    private int _corruptDefShredPlayer = 0;
+    private int _corruptDefShredWild = 0;
+    private BattleSide _lastRoundAggressor = BattleSide.None;
 
     // One-charge crit bonuses granted when the opposing side fails a defend.
     private int _playerPendingFailDefendCritCharges = 0;
@@ -530,6 +543,12 @@ public partial class BattleManager : MonoBehaviour
         if (mode == 1) return "Hard";
         if (mode == 2) return "Insane";
         return "Normal";
+    }
+
+    private bool IsHardModePersonalityActive()
+    {
+        // Difficulty-driven behavior: active for Hard and above.
+        return _battleDifficultyMode >= 1;
     }
 
     public MonsterDataSO GetTeamDefSafe(int idx)
@@ -1187,6 +1206,11 @@ public partial class BattleManager : MonoBehaviour
         _totalStatusesAppliedToWildThisBattle = 0;
         _playerPendingFailDefendCritCharges = 0;
         _wildPendingFailDefendCritCharges = 0;
+        _hotSwapFreeTurn = false;
+        _entryTailwindActive = false;
+        _corruptDefShredPlayer = 0;
+        _corruptDefShredWild = 0;
+        _lastRoundAggressor = BattleSide.None;
 
         defendConsecutiveUses = 0;
         currentDefendSuccess = defendFirstUseSuccess;
@@ -1551,6 +1575,24 @@ public partial class BattleManager : MonoBehaviour
             feedback.SetIconAlphaImmediate(BattleFeedbackManager.BattleFeedbackSide.Player, 0f);
 
         activeIndex = targetIndex;
+
+        if (teamDefs != null && activeIndex >= 0 && activeIndex < teamDefs.Length &&
+            teamDefs[activeIndex] != null && wildDef != null)
+        {
+            float entryAdv = BattleTypeChart.GetMultiplier(teamDefs[activeIndex].type, wildDef.type);
+            if (entryAdv > 1f)
+            {
+                if (IsActivePlayerWyrmFury())
+                {
+                    BattleLogger.Log("[HotSwap] Type advantage noted but WyrmFury surge prevents free turn.", LogScope.Battle);
+                }
+                else
+                {
+                    _hotSwapFreeTurn = true;
+                    BattleLogger.Log("[HotSwap] Type advantage on entry — turn not consumed!", LogScope.Battle);
+                }
+            }
+        }
 
         ApplyActiveToUI();
         ClampAndPushActiveHP();

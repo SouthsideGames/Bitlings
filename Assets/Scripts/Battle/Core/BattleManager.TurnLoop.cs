@@ -400,7 +400,7 @@ public partial class BattleManager : MonoBehaviour
             if (teamDefs != null && i < teamDefs.Length && teamDefs[i] != null && teamHP != null && i < teamHP.Length && teamHP[i] > 0f)
                 livingCount++;
         }
-        BattleLogger.SetKeyMomentsCap(20 + (livingCount * 5)); // UPGRADED: cap scales with roster size.
+        BattleLogger.SetKeyMomentsCap(20 + (livingCount * 5));
         BattleLogger.ClearKeyMoments();
 
         if (wildDef)
@@ -424,6 +424,9 @@ public partial class BattleManager : MonoBehaviour
             else
                 BattleLogger.Log($"Personality: {personalityLabel}.", LogScope.Battle);
         }
+
+        if (IsHardModePersonalityActive())
+            BattleLogger.Log($"[Difficulty] Hard mode personality active: +{hardModeSuperEffectiveBonus} SE attack bonus, +{hardModeAttackPressureBonus} per-turn attack pressure.", LogScope.Battle);
 
         // Log battle-start buff summary for each team member with active bonuses
         for (int i = 0; i < 3; i++)
@@ -590,6 +593,12 @@ public partial class BattleManager : MonoBehaviour
             yield return CoWaitScaled(beginRoundDelay);
 
             _turnIndex++;
+            if (_turnIndex >= maxBattleTurns)
+            {
+                BattleLogger.Log($"[TurnLoop] Battle exceeded {maxBattleTurns} turns — forcing draw.", LogScope.Battle);
+                EndBattleRouted(false);
+                yield break;
+            }
 
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
             if (debugTitles && debugTitlesEveryTurn)
@@ -597,7 +606,7 @@ public partial class BattleManager : MonoBehaviour
 #endif
 
             TitlesAdapter.OnTurnAdvanced(_turnIndex);
-            // UPGRADED: dirty only on change, not every turn
+           
 
             // Conditional Titles: show brief feedback when conditional effects become active/inactive.
             // (We keep the detailed math in BattleLogger.)
@@ -664,11 +673,32 @@ public partial class BattleManager : MonoBehaviour
             bool playerFirst;
             if (pSpeed > wSpeed) playerFirst = true;
             else if (pSpeed < wSpeed) playerFirst = false;
-            else playerFirst = Rng01() < 0.5f;
+            else
+            {
+                if (_lastRoundAggressor == BattleSide.Player)
+                {
+                    playerFirst = false;
+                    BattleLogger.Log("[Initiative] Speed tie: defender rule gives Wild priority (last aggressor: Player).", LogScope.Battle);
+                }
+                else
+                {
+                    playerFirst = true;
+                    BattleLogger.Log("[Initiative] Speed tie: defender rule gives Player priority (last aggressor: Wild/None).", LogScope.Battle);
+                }
+            }
 
-            EnemyAction wildChoice = ChooseEnemyAction();
+            bool skipEnemyTurnThisRound = false;
+            if (_hotSwapFreeTurn)
+            {
+                skipEnemyTurnThisRound = true;
+                _hotSwapFreeTurn = false;
+                playerFirst = true;
+                BattleLogger.Log("[HotSwap] Free turn active - enemy turn skipped this round.", LogScope.Battle);
+            }
 
-            if (wildChoice != EnemyAction.None)
+            EnemyAction wildChoice = skipEnemyTurnThisRound ? EnemyAction.None : ChooseEnemyAction();
+
+            if (!skipEnemyTurnThisRound && wildChoice != EnemyAction.None)
                 yield return Co_TelegraphWildIntent(wildChoice);
             else
                 RefreshStatusIconsFromState();
@@ -700,7 +730,7 @@ public partial class BattleManager : MonoBehaviour
 
                 if (!IsWildKO() && !IsTeamKO())
                 {
-                    if (wildChoice != EnemyAction.Defend)
+                    if (wildChoice != EnemyAction.None && wildChoice != EnemyAction.Defend)
                     {
                         yield return EnemyTurn(wildChoice);
 
@@ -864,7 +894,7 @@ RefreshStatusIconsFromState();
                         ApplyWildDefendStance();
                         RefreshStatusIconsFromState();
                     }
-                    else
+                    else if (wildChoice != EnemyAction.None)
                     {
                         yield return EnemyTurn(wildChoice);
                     }
@@ -1328,6 +1358,19 @@ if (feedback)
         else
             wildDefForResolve = Mathf.Max(0, wildBaseDefense);
 
+        if (IsWildReinforced())
+        {
+            wildDefForResolve += Mathf.Max(0, reinforceDefBonus);
+            BattleLogger.Log($"[Status] Reinforce grants {foeName} +{Mathf.Max(0, reinforceDefBonus)} DEF ({wildDefForResolve - Mathf.Max(0, reinforceDefBonus)}->{wildDefForResolve}).", LogScope.Battle);
+        }
+
+        if (_corruptDefShredWild > 0)
+        {
+            int beforeDef = wildDefForResolve;
+            wildDefForResolve = Mathf.Max(0, wildDefForResolve - _corruptDefShredWild);
+            BattleLogger.Log($"[Status] Corrupt DEF shred reduces {foeName}'s DEF by {Mathf.Max(0, beforeDef - wildDefForResolve)} ({beforeDef}->{wildDefForResolve}).", LogScope.Battle);
+        }
+
         if (IsWildSundered())
         {
             int beforeDef = wildDefForResolve;
@@ -1416,6 +1459,13 @@ if (tailwindBonusPct > 0f || _entryTailwindActive)
     if (BattleLogger.Enabled)
         BattleLogger.Log($"[Status] Tailwind empowers {attacker}'s first strike: {before}→{dr.damage} (+{Mathf.RoundToInt(effectiveTailwindBonusPct * 100f)}%).", LogScope.Battle);
 }
+
+    if (IsActivePlayerWyrmFury())
+    {
+        int before = dr.damage;
+        dr.damage = Mathf.Max(1, Mathf.RoundToInt(dr.damage * (1f + Mathf.Max(0f, wyrmFuryDamageBonus))));
+        BattleLogger.Log($"[Status] WyrmFury boosts {attacker}'s damage: {before}->{dr.damage} (+{Mathf.RoundToInt(Mathf.Max(0f, wyrmFuryDamageBonus) * 100f)}%).", LogScope.Battle);
+    }
 
 float preventedByWildGuard = 0f;
         bool shadowVeilBlockedWild = false;
@@ -1507,6 +1557,24 @@ float preventedByWildGuard = 0f;
 
         float preWildHP = wildHP;
         wildHP = Mathf.Max(0f, wildHP - dmgToApply);
+
+        if (IsActivePlayerWyrmFury() && teamHP != null && activeIndex >= 0 && activeIndex < teamHP.Length)
+        {
+            float recoil = Mathf.Max(0f, dr.damage * Mathf.Max(0f, wyrmFuryRecoilPct));
+            if (recoil > 0f)
+            {
+                float pre = teamHP[activeIndex];
+                teamHP[activeIndex] = Mathf.Max(0f, teamHP[activeIndex] - recoil);
+                BattleLogger.Log($"[Status] WyrmFury recoil hits {GetName(activeIndex)} for {Mathf.RoundToInt(recoil)} ({Mathf.CeilToInt(pre)}→{Mathf.CeilToInt(teamHP[activeIndex])}).", LogScope.Battle);
+                ClampAndPushActiveHP();
+                if (IsTeamKO())
+                {
+                    EndBattleRouted(false);
+                    yield break;
+                }
+            }
+        }
+
         _totalDamageDealtThisBattle += Mathf.Max(0, dmgToApply);
         PushHPBars();
 
@@ -1562,6 +1630,7 @@ if (!playerLandedFirstHitThisBattle && dr.damage > 0)
 
         // Status: Foresight — check repeat action to schedule a stun next turn.
         NotifyPlayerActionResolved_ForForesight(activeIndex, PlayerAction.Attack);
+        _lastRoundAggressor = BattleSide.Player;
 
 
         if (dr.crit)
@@ -1800,6 +1869,20 @@ if (!playerLandedFirstHitThisBattle && dr.damage > 0)
             else
                 GetProgressionTotalsForIndex(activeIndex, out _, out _, out defenderEffectiveDefenseStat, out _, out _);
 
+            if (IsActivePlayerReinforced())
+            {
+                int beforeDef = defenderEffectiveDefenseStat;
+                defenderEffectiveDefenseStat += Mathf.Max(0, reinforceDefBonus);
+                BattleLogger.Log($"[Status] Reinforce grants {GetName(activeIndex)} +{Mathf.Max(0, reinforceDefBonus)} DEF ({beforeDef}->{defenderEffectiveDefenseStat}).", LogScope.Battle);
+            }
+
+            if (_corruptDefShredPlayer > 0)
+            {
+                int beforeDef = defenderEffectiveDefenseStat;
+                defenderEffectiveDefenseStat = Mathf.Max(0, defenderEffectiveDefenseStat - _corruptDefShredPlayer);
+                BattleLogger.Log($"[Status] Corrupt DEF shred reduces {GetName(activeIndex)}'s DEF by {Mathf.Max(0, beforeDef - defenderEffectiveDefenseStat)} ({beforeDef}->{defenderEffectiveDefenseStat}).", LogScope.Battle);
+            }
+
             if (IsActivePlayerSundered())
             {
                 int beforeDef = defenderEffectiveDefenseStat;
@@ -1870,6 +1953,13 @@ if (wildTailwindBonusPct > 0f)
     if (BattleLogger.Enabled)
         BattleLogger.Log($"[Status] Tailwind empowers Wild's first strike: {before}→{dr.damage} (+{Mathf.RoundToInt(wildTailwindBonusPct * 100f)}%).", LogScope.Battle);
 }
+
+            if (IsWildWyrmFury())
+            {
+                int before = dr.damage;
+                dr.damage = Mathf.Max(1, Mathf.RoundToInt(dr.damage * (1f + Mathf.Max(0f, wyrmFuryDamageBonus))));
+                BattleLogger.Log($"[Status] WyrmFury boosts Wild damage: {before}->{dr.damage} (+{Mathf.RoundToInt(Mathf.Max(0f, wyrmFuryDamageBonus) * 100f)}%).", LogScope.Battle);
+            }
 
             float incomingScalar = 1f;
 
@@ -2066,6 +2156,24 @@ int dmg_afterScalar = Mathf.Max(1, Mathf.RoundToInt(dr.damage * incomingScalar))
         teamHP[activeIndex] = Mathf.Max(0f, teamHP[activeIndex] - dmg_final);
         ClampAndPushActiveHP();
 
+        if (IsWildWyrmFury())
+        {
+            float recoil = Mathf.Max(0f, dr.damage * Mathf.Max(0f, wyrmFuryRecoilPct));
+            if (recoil > 0f)
+            {
+                float pre = wildHP;
+                wildHP = Mathf.Max(0f, wildHP - recoil);
+                BattleLogger.Log($"[Status] WyrmFury recoil hits Wild for {Mathf.RoundToInt(recoil)} ({Mathf.CeilToInt(pre)}→{Mathf.CeilToInt(wildHP)}).", LogScope.Battle);
+                PushHPBars();
+                if (IsWildKO())
+                {
+                    BattleLogger.Log("Wild fainted from WyrmFury recoil!", LogScope.Battle);
+                    EndBattleRouted(true);
+                    yield break;
+                }
+            }
+        }
+
         float maxHP = GetFinalMaxHPForIndex(activeIndex);
         float ratio = maxHP > 0.01f ? (float)dmg_final / maxHP : 0f;
         Emit(BattleEvent.Damage(BattleSide.Wild, BattleSide.Player, dmg_final, (dr.crit && !df.cannotBeCrit), dr.effectiveness, ratio, (preventedByGuardRaw > 0f) || (shieldAbsorbF > 0f) || (titleShieldAbsorbF > 0f)));
@@ -2122,6 +2230,7 @@ int dmg_afterScalar = Mathf.Max(1, Mathf.RoundToInt(dr.damage * incomingScalar))
 
         // Status: Foresight — check repeat action to schedule a stun next turn.
         NotifyWildActionResolved_ForForesight(EnemyAction.Attack);
+        _lastRoundAggressor = BattleSide.Wild;
         if (dr.crit && !df.cannotBeCrit)
             BattleLogger.AddKeyMoment($"CRIT: {attackerName} → {GetName(activeIndex)} ({dmg_final})");
 

@@ -103,6 +103,7 @@ public struct IronBattleOutcome
     public int growthCoresTitleBonus;
 
     public bool wildWasPremium;
+    public string battleGrade;
 
     public float[] teamHP;
     public float[] teamMaxHP;

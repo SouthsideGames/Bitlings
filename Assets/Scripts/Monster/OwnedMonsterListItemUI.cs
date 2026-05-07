@@ -30,12 +30,12 @@ public class OwnedMonsterListItemUI : MonoBehaviour
     private MonsterDataSO _def;
 
     // runtime
-    private float _nextUiRefreshAt;
     private bool _allowDetail = true;
     private MonsterDetailPanelUI _detailPanelOverride;
     private int _rowPunchTweenId = -1;
     private int _favoritePulseTweenId = -1;
     private int _evolvePulseTweenId = -1;
+    private Coroutine _koCountdownCoroutine; // UPGRADED
 
     // Directory browse context
     private bool _isDirectoryRow;
@@ -73,23 +73,47 @@ public class OwnedMonsterListItemUI : MonoBehaviour
             rootButton.onClick.RemoveListener(OnClickOpenDetails);
     }
 
+    void OnEnable() // UPGRADED
+    {
+        GameEvents.OnTeamChanged += RefreshKOCountdown; // UPGRADED
+        GameEvents.BattleFinished += OnBattleFinished; // UPGRADED
+    }
+
     void OnDisable()
     {
+        GameEvents.OnTeamChanged -= RefreshKOCountdown; // UPGRADED
+        GameEvents.BattleFinished -= OnBattleFinished; // UPGRADED
+        if (_koCountdownCoroutine != null) // UPGRADED
+        {
+            StopCoroutine(_koCountdownCoroutine); // UPGRADED
+            _koCountdownCoroutine = null; // UPGRADED
+        }
         StopAllTweens();
-        _nextUiRefreshAt = 0f;
         if (cooldownText) cooldownText.gameObject.SetActive(false);
     }
 
-    void Update()
+    // UPGRADED: event-driven KO countdown — replaces the old per-frame Update() poll.
+    private void RefreshKOCountdown() // UPGRADED
     {
-        if (!HasValidMonster(_data)) return;
-        if (!IsKO(_data)) return;
+        if (!HasValidMonster(_data) || !IsKO(_data)) return; // UPGRADED
+        if (_koCountdownCoroutine != null) StopCoroutine(_koCountdownCoroutine); // UPGRADED
+        _koCountdownCoroutine = StartCoroutine(Co_KOCountdown()); // UPGRADED
+    }
 
-        if (Time.unscaledTime >= _nextUiRefreshAt)
+    private void OnBattleFinished(BattleResult result) // UPGRADED
+    {
+        RefreshKOCountdown(); // UPGRADED
+    }
+
+    private System.Collections.IEnumerator Co_KOCountdown() // UPGRADED
+    {
+        while (HasValidMonster(_data) && IsKO(_data)) // UPGRADED
         {
-            _nextUiRefreshAt = Time.unscaledTime + 1f;
-            UpdateKOCountdown();
+            UpdateKOCountdown(); // UPGRADED
+            yield return new WaitForSecondsRealtime(1f); // UPGRADED
         }
+        UpdateKOCountdown(); // UPGRADED — final call clears the text when no longer KO
+        _koCountdownCoroutine = null; // UPGRADED
     }
 
     // ---------------------------------------------------------------------
@@ -160,8 +184,7 @@ public class OwnedMonsterListItemUI : MonoBehaviour
 
         ApplyState();
 
-        _nextUiRefreshAt = 0f;
-        if (!IsUsable(_data)) UpdateKOCountdown();
+        RefreshKOCountdown(); // UPGRADED
 
         RefreshEvolutionAlert();
     }
@@ -275,8 +298,7 @@ public class OwnedMonsterListItemUI : MonoBehaviour
 
         ApplyState();
 
-        _nextUiRefreshAt = 0f;
-        if (!IsUsable(_data)) UpdateKOCountdown();
+        RefreshKOCountdown(); // UPGRADED
 
         RefreshEvolutionAlert();
     }

@@ -393,6 +393,7 @@ public static class ArenaTournamentBuilder
             }
 
             int monsterScore = Mathf.Max(0, def.arenaScore);
+            ReadOwnedStatusSnapshot(m, out var statusType, out var statusTurns, out var statusMagnitude, out var statusPersistent);
 
             slots.Add(new ArenaBitlingSnapshot
             {
@@ -402,6 +403,10 @@ public static class ArenaTournamentBuilder
                 monsterType = def.type,
                 titleId = titleId,
                 titleName = titleName,
+                statusType = statusType,
+                statusTurns = statusTurns,
+                statusMagnitude = statusMagnitude,
+                statusPersistent = statusPersistent,
                 monsterArenaScore = monsterScore,
                 titleArenaScore = titleScore,
                 finalArenaContributionScore = monsterScore + titleScore
@@ -438,6 +443,61 @@ public static class ArenaTournamentBuilder
     private static string GenerateTournamentId(long weekStartUtc, ArenaScoreBand band, int bracketIndex)
     {
         return $"T{weekStartUtc}_{band}_{bracketIndex}";
+    }
+
+    private static void ReadOwnedStatusSnapshot(
+        OwnedMonsterData owned,
+        out StatusType statusType,
+        out int statusTurns,
+        out float statusMagnitude,
+        out bool statusPersistent)
+    {
+        statusType = ReadOwnedField(owned, "statusType", StatusType.None);
+        statusTurns = Mathf.Max(0, ReadOwnedField(owned, "statusTurns", 0));
+        statusMagnitude = ReadOwnedField(owned, "statusMagnitude", 0f);
+        statusPersistent = ReadOwnedField(owned, "statusPersistent", false);
+
+        if (statusType == StatusType.None)
+        {
+            statusTurns = 0;
+            statusMagnitude = 0f;
+            statusPersistent = false;
+        }
+    }
+
+    private static T ReadOwnedField<T>(OwnedMonsterData owned, string fieldName, T fallback)
+    {
+        if (owned == null || string.IsNullOrEmpty(fieldName))
+            return fallback;
+
+        var field = typeof(OwnedMonsterData).GetField(fieldName);
+        if (field == null)
+            return fallback;
+
+        object value = field.GetValue(owned);
+        if (value == null)
+            return fallback;
+
+        if (value is T typed)
+            return typed;
+
+        try
+        {
+            if (typeof(T).IsEnum)
+            {
+                if (value is string enumString)
+                    return (T)Enum.Parse(typeof(T), enumString, ignoreCase: true);
+
+                var asInt = Convert.ToInt32(value);
+                return (T)Enum.ToObject(typeof(T), asInt);
+            }
+
+            return (T)Convert.ChangeType(value, typeof(T));
+        }
+        catch
+        {
+            return fallback;
+        }
     }
 
     // ═════════════════════════════════════════════════════════════
