@@ -215,6 +215,21 @@ private float GetWildPhantasmalSelfDmgPct()
     float mag = wildStatusMagnitude;
     return (mag > 0f) ? mag : 0.05f;
 }
+
+private void FireOnEntryEffects(int slot)
+{
+    _entryTailwindActive = false;
+    if (!inBattle) return;
+    if (teamStatus == null || slot < 0 || slot >= teamStatus.Length) return;
+    if (teamStatus[slot] != StatusType.Tailwind) return;
+
+    bool persistent = (teamStatusPersistent != null && slot < teamStatusPersistent.Length) && teamStatusPersistent[slot];
+    int turns = (teamStatusTurns != null && slot < teamStatusTurns.Length) ? Mathf.Max(0, teamStatusTurns[slot]) : 0;
+    if (!persistent && turns <= 0) return;
+
+    _entryTailwindActive = true;
+    BattleLogger.Log($"{GetName(slot)} enters with Tailwind - first strike empowered!", LogScope.Battle);
+}
 // ─────────────────────────────────────────────────────────────
     // Synergy → Status (battle start only)
     // Phase 3: Apply-only + UI + logging. Phase 4 will add ticking.
@@ -489,6 +504,7 @@ private float GetWildPhantasmalSelfDmgPct()
 
         Emit(BattleEvent.StatusApplied(sourceSide, BattleSide.Player, type.ToString(), stacks: persistent ? 0 : teamStatusTurns[slot], seconds: magnitude));
         BattleLogger.Log($"[Status] {GetName(slot)} gains {type}{FormatStatusDetail(persistent, teamStatusTurns[slot], magnitude)} (Synergy: {cmd.sourceType} {cmd.tier}).", LogScope.Battle);
+        RequestBattleStatRebuild(BattleStatRebuildReason.StatusChanged);
 
         RefreshPrimaryStatusUI();
         GameEvents.OnBattleStateChanged?.Invoke();
@@ -531,6 +547,7 @@ private float GetWildPhantasmalSelfDmgPct()
 
         Emit(BattleEvent.StatusApplied(sourceSide, BattleSide.Wild, type.ToString(), stacks: persistent ? 0 : wildStatusTurns, seconds: magnitude));
         BattleLogger.Log($"[Status] Wild gains {type}{FormatStatusDetail(persistent, wildStatusTurns, magnitude)} (Synergy: {cmd.sourceType} {cmd.tier}).", LogScope.Battle);
+        RequestBattleStatRebuild(BattleStatRebuildReason.StatusChanged);
 
         RefreshPrimaryStatusUI();
         GameEvents.OnBattleStateChanged?.Invoke();
@@ -706,6 +723,25 @@ private float GetWildPhantasmalSelfDmgPct()
                 }
                 break;
 
+            case StatusType.Regen:
+                {
+                    float maxHp = GetFinalMaxHPForIndex(slot);
+                    int heal = Mathf.Max(1, Mathf.RoundToInt(maxHp * Mathf.Max(0f, mag)));
+                    float pre = teamHP != null && slot < teamHP.Length ? teamHP[slot] : 0f;
+                    if (teamHP != null && slot < teamHP.Length)
+                    {
+                        float slotMaxHp = Mathf.Max(1f, GetFinalMaxHPForIndex(slot));
+                        teamHP[slot] = Mathf.Clamp(teamHP[slot] + heal, 0f, slotMaxHp);
+                    }
+                    float post = teamHP != null && slot < teamHP.Length ? teamHP[slot] : 0f;
+                    int actualHeal = Mathf.Max(0, Mathf.CeilToInt(post - pre));
+
+                    BattleLogger.Log($"[Status] {GetName(slot)} restores {actualHeal} HP from {st}. ({Mathf.CeilToInt(pre)}→{Mathf.CeilToInt(post)})", LogScope.Battle);
+                    if (slot == activeIndex) ClampAndPushActiveHP();
+                    else PushHPBars();
+                }
+                break;
+
             case StatusType.Freeze:
                 {
                     // Skip the unit's action this turn.
@@ -793,6 +829,20 @@ private float GetWildPhantasmalSelfDmgPct()
                 }
                 break;
 
+            case StatusType.Regen:
+                {
+                    float maxHp = Mathf.Max(1f, wildMaxHP);
+                    int heal = Mathf.Max(1, Mathf.RoundToInt(maxHp * Mathf.Max(0f, mag)));
+                    float pre = wildHP;
+                    wildHP = Mathf.Clamp(wildHP + heal, 0f, maxHp);
+                    float post = wildHP;
+                    int actualHeal = Mathf.Max(0, Mathf.CeilToInt(post - pre));
+
+                    BattleLogger.Log($"[Status] Wild restores {actualHeal} HP from {wildStatus}. ({Mathf.CeilToInt(pre)}→{Mathf.CeilToInt(post)})", LogScope.Battle);
+                    PushHPBars();
+                }
+                break;
+
             case StatusType.Freeze:
                 skipAction = true;
                 skippedBy = StatusType.Freeze;
@@ -876,6 +926,7 @@ private float GetWildPhantasmalSelfDmgPct()
             }
 
             BattleLogger.Log($"[Status] Player field {reason}: {prev}.", LogScope.Battle);
+            RequestBattleStatRebuild(BattleStatRebuildReason.StatusChanged);
             RefreshPrimaryStatusUI();
             GameEvents.OnBattleStateChanged?.Invoke();
             return;
@@ -921,6 +972,7 @@ private float GetWildPhantasmalSelfDmgPct()
         if (teamStatusPersistent != null && slot < teamStatusPersistent.Length) teamStatusPersistent[slot] = false;
 
         BattleLogger.Log($"[Status] {GetName(slot)} {reason}: {prev}.", LogScope.Battle);
+        RequestBattleStatRebuild(BattleStatRebuildReason.StatusChanged);
 
         // Keep UI + action gating in sync (Freeze can re-enable input).
         RefreshPrimaryStatusUI();
@@ -953,6 +1005,7 @@ private float GetWildPhantasmalSelfDmgPct()
         wildStatusPersistent = false;
 
         BattleLogger.Log($"[Status] Wild {reason}: {prev}.", LogScope.Battle);
+        RequestBattleStatRebuild(BattleStatRebuildReason.StatusChanged);
 
         RefreshPrimaryStatusUI();
         GameEvents.OnBattleStateChanged?.Invoke();

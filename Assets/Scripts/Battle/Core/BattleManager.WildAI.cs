@@ -109,6 +109,12 @@ public partial class BattleManager : MonoBehaviour
             };
 
             action = wildDef.Personality.ChooseAction(in ctx, _rng.EnemyRng);
+
+            if (_turnIndex > wildAIDefendDecayAfterTurn && action == BattleAction.Defend && Rng01() < 0.6f)
+            {
+                action = BattleAction.Attack;
+                BattleLogger.Log("[AI] Wild grows desperate in a long fight and abandons Defend for Attack.", LogScope.Battle);
+            }
         }
 
         EnemyAction Fallback()
@@ -183,6 +189,12 @@ public partial class BattleManager : MonoBehaviour
 
         BattleAction action = activeDef.Personality.ChooseAction(in ctx, _rng.EnemyRng);
 
+        if (GetPlayerTeamRallyBonusPctSafe() > 0f && action != BattleAction.Attack)
+        {
+            action = BattleAction.Attack;
+            BattleLogger.Log("[AI] Failsafe override: Rally is active, auto-queueing Attack.", LogScope.Battle);
+        }
+
         // If the player already has a charge loaded, attack to cash it in.
         if (chargedNextAttack != null && activeIndex >= 0 && activeIndex < chargedNextAttack.Length && chargedNextAttack[activeIndex])
             action = BattleAction.Attack;
@@ -252,7 +264,7 @@ public partial class BattleManager : MonoBehaviour
         if (ok)
         {
             wildDefendConsecutiveUses++;
-            float next = defendFirstUseSuccess * Mathf.Pow(defendRepeatMultiplier, wildDefendConsecutiveUses);
+            float next = defendFirstUseSuccess * Mathf.Pow(wildDefendRepeatMultiplier, wildDefendConsecutiveUses); // UPGRADED: wild uses its own defend decay rate.
             wildDefendCurrentSuccess = Mathf.Max(defendMinSuccess, next);
         }
         else

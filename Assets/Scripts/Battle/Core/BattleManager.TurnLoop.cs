@@ -394,7 +394,13 @@ public partial class BattleManager : MonoBehaviour
         BattleLogger.SetCombatants(_combatantNameScratch, _enemyNameScratch);
 
         // Reset key moment snapshot for this battle.
-        BattleLogger.SetKeyMomentsCap(20);
+        int livingCount = 0;
+        for (int i = 0; i < teamCount; i++)
+        {
+            if (teamDefs != null && i < teamDefs.Length && teamDefs[i] != null && teamHP != null && i < teamHP.Length && teamHP[i] > 0f)
+                livingCount++;
+        }
+        BattleLogger.SetKeyMomentsCap(20 + (livingCount * 5)); // UPGRADED: cap scales with roster size.
         BattleLogger.ClearKeyMoments();
 
         if (wildDef)
@@ -591,12 +597,13 @@ public partial class BattleManager : MonoBehaviour
 #endif
 
             TitlesAdapter.OnTurnAdvanced(_turnIndex);
-            RequestBattleStatRebuild(BattleStatRebuildReason.TurnAdvanced);
+            // UPGRADED: dirty only on change, not every turn
 
             // Conditional Titles: show brief feedback when conditional effects become active/inactive.
             // (We keep the detailed math in BattleLogger.)
             if (TryConsumeConditionalTitleFeedback(out var _condMods, out var _condBattleLine, out var _condLogLine))
             {
+                RequestBattleStatRebuild(BattleStatRebuildReason.TurnAdvanced);
                 if (!string.IsNullOrEmpty(_condLogLine))
                     BattleLogger.LogTitleProc("Conditional Titles", _condLogLine);
 
@@ -611,6 +618,7 @@ public partial class BattleManager : MonoBehaviour
             {
                 ClampAndPushActiveHP();
                 ApplyActiveToUI();
+                FireOnEntryEffects(activeIndex);
                 RefreshBenchUI();
 
                 // Swap can change which slot has charge queued
@@ -633,7 +641,12 @@ public partial class BattleManager : MonoBehaviour
 
             // Speed boosters that are "spent" on initiative should apply here.
             if (_rules.allowBoosters && BattleBoosterController.I != null)
-                pSpeed = Mathf.Max(1, pSpeed + Mathf.Max(0, BattleBoosterController.I.ConsumeSpeedBonusForInitiative()));
+            {
+                int consumedSpeedBonus = Mathf.Max(0, BattleBoosterController.I.ConsumeSpeedBonusForInitiative());
+                if (consumedSpeedBonus > 0)
+                    RequestBattleStatRebuild(BattleStatRebuildReason.TurnAdvanced);
+                pSpeed = Mathf.Max(1, pSpeed + consumedSpeedBonus);
+            }
 
             // Status: Soaked reduces speed (initiative).
             pSpeed = Mathf.Max(1, Mathf.RoundToInt(pSpeed * Mathf.Max(0.1f, GetActivePlayerSoakedSpeedMultiplier())));
@@ -1315,6 +1328,13 @@ if (feedback)
         else
             wildDefForResolve = Mathf.Max(0, wildBaseDefense);
 
+        if (IsWildSundered())
+        {
+            int beforeDef = wildDefForResolve;
+            wildDefForResolve = Mathf.Max(0, wildDefForResolve - Mathf.Max(0, sunderedDefReduction));
+            BattleLogger.Log($"[Status] Sundering reduces {foeName}'s DEF by {Mathf.Max(0, beforeDef - wildDefForResolve)} ({beforeDef}->{wildDefForResolve}).", LogScope.Battle);
+        }
+
         var dr = BattleCalc.ResolveHit(
             teamIds[activeIndex], teamDefs[activeIndex], teamLevels[activeIndex],
             _wildCombatIdForTitles, wildDef, wildLevel,
@@ -1386,13 +1406,15 @@ if (rallyBonusPct > 0f)
 // Status: Tailwind (Sky) — first attack during effect deals bonus damage (consumed on use).
 float tailwindBonusPct = GetActivePlayerTailwindBonusPct();
 bool tailwindConsumed = false;
-if (tailwindBonusPct > 0f)
+if (tailwindBonusPct > 0f || _entryTailwindActive)
 {
+    float effectiveTailwindBonusPct = (tailwindBonusPct > 0f) ? tailwindBonusPct : 0.25f;
     int before = dr.damage;
-    dr.damage = Mathf.Max(1, Mathf.RoundToInt(dr.damage * (1f + tailwindBonusPct)));
+    dr.damage = Mathf.Max(1, Mathf.RoundToInt(dr.damage * (1f + effectiveTailwindBonusPct)));
     tailwindConsumed = true;
+    _entryTailwindActive = false;
     if (BattleLogger.Enabled)
-        BattleLogger.Log($"[Status] Tailwind empowers {attacker}'s first strike: {before}→{dr.damage} (+{Mathf.RoundToInt(tailwindBonusPct * 100f)}%).", LogScope.Battle);
+        BattleLogger.Log($"[Status] Tailwind empowers {attacker}'s first strike: {before}→{dr.damage} (+{Mathf.RoundToInt(effectiveTailwindBonusPct * 100f)}%).", LogScope.Battle);
 }
 
 float preventedByWildGuard = 0f;
@@ -1427,11 +1449,13 @@ float preventedByWildGuard = 0f;
         if (dmgToApply > 0 && IsWildShadowVeiled())
         {
             shadowVeilBlockedWild = true;
+            BattleLogger.Log($"{foeName} is shrouded - damage nullified!", LogScope.Battle);
             BattleLogger.AddKeyMoment($"Shadow Veil: {foeName} ignored damage.");
             if (!ShouldSkipNarration(BattleLineTag.Flavor))
                 yield return Say($"{foeName} fades into a Shadow Veil—no damage!", BattleLineTag.Flavor);
 
             dmgToApply = 0;
+            ClearWildStatus(reason: "absorbed a hit");
         }
 
         if (wildTitleShieldHP > 0f && dmgToApply > 0)
@@ -1776,6 +1800,13 @@ if (!playerLandedFirstHitThisBattle && dr.damage > 0)
             else
                 GetProgressionTotalsForIndex(activeIndex, out _, out _, out defenderEffectiveDefenseStat, out _, out _);
 
+            if (IsActivePlayerSundered())
+            {
+                int beforeDef = defenderEffectiveDefenseStat;
+                defenderEffectiveDefenseStat = Mathf.Max(0, defenderEffectiveDefenseStat - Mathf.Max(0, sunderedDefReduction));
+                BattleLogger.Log($"[Status] Sundering reduces {GetName(activeIndex)}'s DEF by {Mathf.Max(0, beforeDef - defenderEffectiveDefenseStat)} ({beforeDef}->{defenderEffectiveDefenseStat}).", LogScope.Battle);
+            }
+
             var dr = BattleCalc.ResolveHit(
                 _wildCombatIdForTitles, wildDef, wildLevel,
                 teamIds[activeIndex], teamDefs[activeIndex], teamLevels[activeIndex],
@@ -1783,6 +1814,20 @@ if (!playerLandedFirstHitThisBattle && dr.damage > 0)
                 defenderFlatDefenseBonus: 0,
                 defenderEffectiveDefenseStat: defenderEffectiveDefenseStat
             );
+
+            if (WorldEventSystem.I != null &&
+                teamDefs != null &&
+                activeIndex >= 0 &&
+                activeIndex < teamDefs.Length &&
+                teamDefs[activeIndex] != null &&
+                teamDefs[activeIndex].type == WorldEventSystem.I.GetBoostedMonsterType())
+            {
+                int before = dr.damage;
+                float defensiveFactor = 1f - (WorldEventSystem.I.GetTypeDamageMultiplier() * 0.5f);
+                dr.damage = Mathf.Max(1, Mathf.RoundToInt(dr.damage * defensiveFactor));
+                if (dr.damage < before)
+                    BattleLogger.Log($"World Event defense bonus: {GetName(activeIndex)} reduced incoming damage {before}->{dr.damage}.", LogScope.Battle);
+            }
 
             ConsumeFailedDefendCritBonusForAttacker(BattleSide.Wild);
 
@@ -1964,11 +2009,13 @@ int dmg_afterScalar = Mathf.Max(1, Mathf.RoundToInt(dr.damage * incomingScalar))
         if (dmg_final > 0 && IsActivePlayerShadowVeiled())
         {
             shadowVeilBlockedPlayer = true;
+            BattleLogger.Log($"{GetName(activeIndex)} is shrouded - damage nullified!", LogScope.Battle);
             BattleLogger.AddKeyMoment($"Shadow Veil: {GetName(activeIndex)} ignored damage.");
             if (!ShouldSkipNarration(BattleLineTag.Flavor))
                 yield return Say($"{GetName(activeIndex)} fades into a Shadow Veil—no damage!", BattleLineTag.Flavor);
 
             dmg_final = 0;
+            ClearTeamStatus(activeIndex, reason: "absorbed a hit");
         }
 
         if (titleShieldBefore > 0f && dmg_final > 0)

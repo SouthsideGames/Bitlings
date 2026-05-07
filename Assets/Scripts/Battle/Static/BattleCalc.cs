@@ -277,14 +277,15 @@ public static class BattleCalc
             {
                 var df = TitlesAdapter.GetDamageFilter(defenderMonsterId, defDef, defLevel);
                 blockCrit = df.cannotBeCrit;
+                if (defDef && defDef.type == MonsterType.Rock)
+                    blockCrit = true;
                 percentDR = Mathf.Clamp01(df.percentReduce);
                 flatDR = Mathf.Max(0, df.flatReduce);
             }
             catch { /* safe no-op */ }
         }
 
-        bool defenderIsRock = defDef && defDef.type == MonsterType.Rock;
-        bool crit = !defenderIsRock && !blockCrit && (Rng01() < critChance);
+        bool crit = !blockCrit && (Rng01() < critChance);
 
         float preMit = baseDamage * Mathf.Max(0.25f, eff) * (crit ? critMultiplier : 1f);
 

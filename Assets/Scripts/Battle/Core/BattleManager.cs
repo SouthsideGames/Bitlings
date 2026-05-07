@@ -49,12 +49,14 @@ public partial class BattleManager : MonoBehaviour
     [SerializeField] private string telegraphDefend = "Wild braces!";
     [SerializeField] private string telegraphFocus  = "Wild looks for an opening...";
     [SerializeField] private string telegraphRun    = "Wild tries to get away!";
+    [SerializeField, Min(0)] private int wildAIDefendDecayAfterTurn = 6;
 
     [Header("Manual Turn Settings")]
     [SerializeField] private bool manualTurns = true;
     [SerializeField, Range(0f, 1f)] private float defendReducePct = 0.50f;
     [SerializeField, Range(0f, 1f)] private float guardConvertPct = 1.0f;
     [SerializeField, Range(0f, 2f)] private float chargeBonusPct = 0.5f;
+    [SerializeField, Min(0)] private int sunderedDefReduction = 5;
 
     [Header("Manual Turn Failsafe (Optional)")]
     [Tooltip("If enabled, auto-queues an Attack if the player doesn't pick an action within the timeout.")]
@@ -97,6 +99,7 @@ public partial class BattleManager : MonoBehaviour
     [Header("Defend Reliability")]
     [SerializeField, Range(0f, 1f)] private float defendFirstUseSuccess = 1.0f;
     [SerializeField, Range(0f, 1f)] private float defendRepeatMultiplier = 0.5f;
+    [SerializeField, Range(0.1f, 1f)] private float wildDefendRepeatMultiplier = 0.85f;
     [SerializeField, Range(0f, 1f)] private float defendMinSuccess = 0.1f;
 
     [Header("Defend Fail Punish")]
@@ -113,6 +116,7 @@ public partial class BattleManager : MonoBehaviour
     public event Action<bool> OnPlayerTurnChanged;
 
     private bool isResolvingPlayerTurn = false;
+    private bool _entryTailwindActive = false;
     private PlayerAction pendingAction = PlayerAction.None;
     private int pendingSwapBenchSlot = -1;
     private bool defendActiveThisRound = false;
