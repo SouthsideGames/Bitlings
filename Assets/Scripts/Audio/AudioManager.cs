@@ -508,6 +508,7 @@ public class AudioManager : MonoBehaviour
     public float GetMasterVolume() => _master01;
     public float GetMusicVolume() => _music01;
     public float GetSfxVolume() => _sfx01;
+    public float GetEffectiveSfxScale() => GetSfxScale();
 
     public void SetMasterVolume(float v)
     {

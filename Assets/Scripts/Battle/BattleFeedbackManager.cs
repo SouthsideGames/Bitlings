@@ -1661,13 +1661,17 @@ public void SetGuard(BattleFeedbackSide side, bool on)
 
     private IEnumerator Co_PlayClipWithFadeOut(AudioClip clip, float volumeMult, float pitch)
     {
+        if (AudioManager.I == null) yield break;
+
+        float sfxScale = AudioManager.I.GetEffectiveSfxScale();
+        if (sfxScale <= 0f) yield break;
+
         var go = new GameObject("BattleSFX_FadeOut");
         go.transform.SetParent(transform);
         var src = go.AddComponent<AudioSource>();
 
         float baseVolume = Mathf.Clamp(volumeMult, 0f, 2f);
-        if (AudioManager.I != null)
-            baseVolume *= AudioManager.I.GetMasterVolume() * AudioManager.I.GetSfxVolume();
+        baseVolume *= sfxScale;
 
         src.clip = clip;
         src.volume = baseVolume;

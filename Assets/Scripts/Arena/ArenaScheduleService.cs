@@ -161,6 +161,23 @@ public static class ArenaScheduleService
     }
 
     // ═════════════════════════════════════════════════════════════
+    //  Tournament validation
+    // ═════════════════════════════════════════════════════════════
+
+    /// <summary>
+    /// Returns true if the given tournament cache belongs to the current week.
+    /// Used to detect and clear stale tournaments when a new week begins.
+    /// </summary>
+    public static bool IsTournamentForCurrentWeek(ArenaCurrentTournamentCache cache)
+    {
+        if (cache == null) return false;
+        if (cache.weekStartUtc <= 0) return false;
+
+        long currentWeekStart = GetCurrentWeekStartUtc();
+        return cache.weekStartUtc == currentWeekStart;
+    }
+
+    // ═════════════════════════════════════════════════════════════
     //  Internal helpers
     // ═════════════════════════════════════════════════════════════
 

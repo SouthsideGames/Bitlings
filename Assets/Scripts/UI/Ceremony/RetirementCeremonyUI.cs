@@ -242,8 +242,7 @@ public sealed class RetirementCeremonyUI : MonoBehaviour
         Handheld.Vibrate();
 #endif
 
-        if (ceremonyAudioSource != null && retirementToneClip != null)
-            ceremonyAudioSource.PlayOneShot(retirementToneClip);
+        PlayCeremonySfx(ceremonyAudioSource, retirementToneClip);
 
         yield return new WaitForSecondsRealtime(0.5f);
         if (_skipRequested)
@@ -400,5 +399,23 @@ public sealed class RetirementCeremonyUI : MonoBehaviour
     {
         string safeName = string.IsNullOrWhiteSpace(displayName) ? "Unknown" : displayName;
         return "Thank you for your service " + safeName;
+    }
+
+    private void PlayCeremonySfx(AudioSource source, AudioClip clip)
+    {
+        if (source == null || clip == null)
+            return;
+
+        if (AudioManager.I != null)
+        {
+            float sfxScale = AudioManager.I.GetEffectiveSfxScale();
+            if (sfxScale <= 0f)
+                return;
+
+            source.PlayOneShot(clip, sfxScale);
+            return;
+        }
+
+        source.PlayOneShot(clip);
     }
 }

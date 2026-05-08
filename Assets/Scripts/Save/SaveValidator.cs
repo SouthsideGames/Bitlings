@@ -1097,6 +1097,18 @@ public static class SaveValidator
         arena.currentTournamentCache.playerEntryId ??= "";
         arena.currentTournamentCache.lastMatchId ??= "";
 
+        // ── Clear stale tournaments from previous weeks ──
+        if (!ArenaScheduleService.IsTournamentForCurrentWeek(arena.currentTournamentCache))
+        {
+            // Tournament is from a previous week; reset to default state.
+            if (arena.currentTournamentCache.playerStatus != ArenaPlayerTournamentStatus.NotEntered)
+            {
+                arena.currentTournamentCache = new ArenaCurrentTournamentCache();
+                repairs++;
+                notes.Add("Cleared stale tournament from previous week.");
+            }
+        }
+
         // Trim history to retention cap.
         if (arena.recentTournamentHistory != null &&
             arena.recentTournamentHistory.Count > ArenaConstants.TournamentHistoryRetention)

@@ -147,8 +147,7 @@ public sealed class HonorCeremonyUI : MonoBehaviour
 
         yield return new WaitForSecondsRealtime(0.15f);
 
-        if (honorAudioSource != null && candleIgniteClip != null)
-            honorAudioSource.PlayOneShot(candleIgniteClip);
+        PlayCeremonySfx(honorAudioSource, candleIgniteClip);
 
         PlayCandleFlame();
 
@@ -196,5 +195,23 @@ public sealed class HonorCeremonyUI : MonoBehaviour
         yield return new WaitForSecondsRealtime(0.7f);
         _sequenceCo = null;
         TryStartPulse();
+    }
+
+    private void PlayCeremonySfx(AudioSource source, AudioClip clip)
+    {
+        if (source == null || clip == null)
+            return;
+
+        if (AudioManager.I != null)
+        {
+            float sfxScale = AudioManager.I.GetEffectiveSfxScale();
+            if (sfxScale <= 0f)
+                return;
+
+            source.PlayOneShot(clip, sfxScale);
+            return;
+        }
+
+        source.PlayOneShot(clip);
     }
 }
