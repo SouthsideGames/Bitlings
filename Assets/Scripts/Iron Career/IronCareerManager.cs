@@ -186,6 +186,8 @@ public sealed class IronCareerManager : MonoBehaviour, IronBattleBridge.IIronBat
 
     public void OnIronBattleResolved(IronBattleOutcome outcome)
     {
+        int winsBeforeBattle = _state.wins;
+
         if (!_state.runActive) return;
 
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
@@ -246,6 +248,21 @@ public sealed class IronCareerManager : MonoBehaviour, IronBattleBridge.IIronBat
 
         _state.carryStatus = outcome.playerFieldStatus;
         _state.carryShields = remappedShields;
+
+        _state.battleLog.Add(new IronBattleLogEntry
+        {
+            victory          = outcome.victory,
+            wildEscaped      = outcome.wildEscaped,
+            playerEscaped    = outcome.escaped,
+            wildId           = outcome.wildDef != null ? outcome.wildDef.id : string.Empty,
+            wildLevel        = Mathf.Max(1, outcome.wildLevel),
+            damageDealt      = Mathf.Max(0, outcome.damageDealt),
+            damageTaken      = Mathf.Max(0, outcome.damageTaken),
+            turnsSurvived    = Mathf.Max(0, outcome.turnsSurvived),
+            deathsThisBattle = deadCount,
+            winsBeforeBattle = winsBeforeBattle,
+            isForfeit        = false,
+        });
 
         if (_roster == null || _roster.IsPartyEmpty)
         {
@@ -1111,6 +1128,15 @@ public sealed class IronCareerManager : MonoBehaviour, IronBattleBridge.IIronBat
 
         FinalizeRunStats(forfeit);
 
+        if (forfeit)
+        {
+            _state.battleLog.Add(new IronBattleLogEntry
+            {
+                isForfeit        = true,
+                winsBeforeBattle = _state.wins,
+            });
+        }
+
         _state.runActive = false;
 
         GameEvents.IronRunCompleted?.Invoke(_state.wins, forfeit, _state.runSummary.totalDeaths);
@@ -1118,7 +1144,14 @@ public sealed class IronCareerManager : MonoBehaviour, IronBattleBridge.IIronBat
         UIManager.I?.Show(PanelId.IronCareerRift);
 
         ironRiftUI?.ShowGameOver(immediate: true);
-        gameOverPanel?.Bind(_state.mode, _state.wins, _state.runSummary, forfeited: forfeit, defeatCauseOverride: defeatCauseOverride);
+        gameOverPanel?.Bind(
+            _state.mode,
+            _state.wins,
+            _state.runSummary,
+            forfeited: forfeit,
+            defeatCauseOverride: defeatCauseOverride,
+            battleLog: _state.battleLog
+        );
 
         // IRON GUARD: Explicitly disable regular Rift panel BEFORE exiting Iron runtime.
         // This prevents race condition where RiftPanelUI.OnEnable() check fails after Exit() is called.

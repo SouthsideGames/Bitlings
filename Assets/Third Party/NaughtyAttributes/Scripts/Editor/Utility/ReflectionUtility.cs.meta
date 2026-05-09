@@ -15,6 +15,6 @@ AssetOrigin:
   serializedVersion: 1
   productId: 129996
   packageName: NaughtyAttributes
-  packageVersion: 2.1.4
-  assetPath: Assets/NaughtyAttributes/Scripts/Editor/Utility/ReflectionUtility.cs
-  uploadId: 480834
+  packageVersion: 2.1.5
+  assetPath: Assets/Third Party/NaughtyAttributes/Scripts/Editor/Utility/ReflectionUtility.cs
+  uploadId: 897264

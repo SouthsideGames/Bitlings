@@ -71,7 +71,7 @@ public sealed class SupplyIndicatorButtonUI : MonoBehaviour
 
         if (_currentState == SupplyState.Scarcity)
         {
-            LeanTween.scale(iconImage.rectTransform, Vector3.one * 1.18f, 0.55f)
+            LeanTween.scale(iconImage.rectTransform, Vector3.one * 1.1f, 0.55f)
                 .setEase(LeanTweenType.easeInOutSine)
                 .setLoopPingPong()
                 .setIgnoreTimeScale(true);

@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -27,6 +28,10 @@ public sealed class IronCareerGameOverPanelUI : MonoBehaviour
     [SerializeField] private TextMeshProUGUI statsTMP;
     [SerializeField] private GameObject tipSection;
     [SerializeField] private TextMeshProUGUI tipTMP;
+
+    [Header("Timeline")]
+    [SerializeField] private GameObject       timelineSection;
+    [SerializeField] private IronRunTimelineUI timelineUI;
 
     [Header("Bottom Bar")]
     [SerializeField] private Button returnHomeButton;
@@ -115,7 +120,7 @@ public sealed class IronCareerGameOverPanelUI : MonoBehaviour
         if (tipSection) tipSection.SetActive(true);
         if (tipTMP)
         {
-            tipTMP.text = "Iron Career is attrition. Protect HP — fainted monsters are gone forever.";
+            tipTMP.text = "If forced evolve exists → Continue opens evolve";
         }
 
         // Buttons
@@ -129,5 +134,23 @@ public sealed class IronCareerGameOverPanelUI : MonoBehaviour
         int mins = seconds / 60;
         int secs = seconds % 60;
         return $"{mins:00}:{secs:00}";
+    }
+
+    public void Bind(
+        IronCareerRunState.IronCareerMode mode,
+        int wins,
+        IronCareerRunSummary summary,
+        bool forfeited,
+        string defeatCauseOverride,
+        List<IronBattleLogEntry> battleLog)
+    {
+        // Delegate all existing behaviour unchanged
+        Bind(mode, wins, summary, forfeited, defeatCauseOverride);
+
+        // Timeline
+        bool hasLog = battleLog != null && battleLog.Count > 0;
+        if (timelineSection != null) timelineSection.SetActive(hasLog);
+        if (timelineUI != null && hasLog)
+            timelineUI.Bind(battleLog, forfeited, mode);
     }
 }

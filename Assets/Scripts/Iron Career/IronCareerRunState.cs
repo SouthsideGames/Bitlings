@@ -31,6 +31,9 @@ public sealed class IronCareerRunState
     [Header("Run Summary")]
     public IronCareerRunSummary runSummary;
 
+    [Header("Battle Log")]
+    public readonly List<IronBattleLogEntry> battleLog = new List<IronBattleLogEntry>();
+
     public void Reset(IronCareerMode newMode, int newSeed)
     {
         mode = newMode;
@@ -43,7 +46,24 @@ public sealed class IronCareerRunState
         carryShields = new float[3];
         lastRolledWild = null;
         runSummary = IronCareerRunSummary.Empty;
+        battleLog.Clear();
     }
+}
+
+[Serializable]
+public struct IronBattleLogEntry
+{
+    public bool   victory;
+    public bool   wildEscaped;
+    public bool   playerEscaped;
+    public string wildId;            // outcome.wildDef?.id — empty string if null
+    public int    wildLevel;         // Mathf.Max(1, outcome.wildLevel)
+    public int    damageDealt;
+    public int    damageTaken;
+    public int    turnsSurvived;
+    public int    deathsThisBattle;  // party members that died in this specific fight
+    public int    winsBeforeBattle;  // snapshot of _state.wins captured before routing/increment
+    public bool   isForfeit;         // true only for the synthetic terminal entry on forfeit
 }
 
 [Serializable]

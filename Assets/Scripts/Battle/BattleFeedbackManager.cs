@@ -1773,6 +1773,7 @@ public void SetGuard(BattleFeedbackSide side, bool on)
 
         var inst = Instantiate(def.basicAttackPrefab, pos, rot);
         if (spawnRoot) inst.transform.SetParent(spawnRoot, worldPositionStays: true);
+        inst.transform.localScale = new Vector3(0.75f, 0.75f, 0.75f);
 
         // Scale prefab animations to match battleSpeed so VFX don't lag behind the turn pace.
         float speed = (_battleManager != null) ? Mathf.Max(1f, _battleManager.BattleSpeed) : 1f;
