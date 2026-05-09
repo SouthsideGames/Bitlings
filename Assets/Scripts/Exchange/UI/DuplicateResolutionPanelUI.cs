@@ -35,6 +35,9 @@ public class DuplicateResolutionPanelUI : MonoBehaviour
     [SerializeField] private Transform requestListParent;
     [SerializeField] private GameObject requestEntryPrefab;
 
+    [Header("Ceremony")]
+    [SerializeField] private LevelUpCeremonyUI levelUpCeremonyUI;
+
     private const int DUPLICATE_LEVELUP_STAT_POINTS = 3;
     private const string TutDuplicate = "tut_exchange_duplicate_v1";
     private List<ActiveRequest> _matchingRequests = new List<ActiveRequest>();
@@ -248,6 +251,18 @@ public class DuplicateResolutionPanelUI : MonoBehaviour
         GameEvents.RaiseToast($"{def.displayName} trained! Lv {before} → {existing.level}");
 
         RiftPanelUI.I?.SetHirePromptOverride($"{def.displayName} is now level {existing.level}.");
+
+        // Play level-up ceremony
+        var ceremony = levelUpCeremonyUI != null
+            ? levelUpCeremonyUI
+            : FindFirstObjectByType<LevelUpCeremonyUI>(FindObjectsInactive.Include);
+
+        if (ceremony != null)
+        {
+            string statDeltaText = $"+{DUPLICATE_LEVELUP_STAT_POINTS} Stat Points";
+            ceremony.Prepare(def, existing.level, statDeltaText, existing.isPremium);
+            ceremony.Play();
+        }
 
         Close();
     }

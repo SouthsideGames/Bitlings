@@ -49,6 +49,12 @@ public sealed class WorldEventTickerUI : MonoBehaviour
     [Tooltip("Color used for flavor/no-effect ticker messages.")]
     [SerializeField] private Color defaultColor = Color.white;
 
+    [Header("New Event Arrival")]
+    [SerializeField] private CanvasGroup edgeFlashGroup;
+    [SerializeField] private float edgeFlashDuration = 0.4f;
+    [SerializeField] private float barShakeDistance = 6f;
+    [SerializeField] private int barShakeLoops = 4;
+
     private CanvasGroup _barCanvasGroup;
     private Coroutine _loop;
     private int _messageIndex;
@@ -74,6 +80,8 @@ public sealed class WorldEventTickerUI : MonoBehaviour
         if (FeatureUnlockManager.I != null)
             FeatureUnlockManager.I.OnFeatureUnlocked += HandleFeatureUnlocked;
 
+        GameEvents.WorldEventsChanged += HandleWorldEventsChanged;
+
         // Start/stop loop based on unlock state.
         if (IsFeatureUnlocked())
             StartLoopIfNeeded();
@@ -86,6 +94,69 @@ public sealed class WorldEventTickerUI : MonoBehaviour
         StopLoop();
         if (FeatureUnlockManager.I != null)
             FeatureUnlockManager.I.OnFeatureUnlocked -= HandleFeatureUnlocked;
+        GameEvents.WorldEventsChanged -= HandleWorldEventsChanged;
+    }
+
+    private void HandleWorldEventsChanged()
+    {
+        var mgr = WorldEventManager.I;
+        if (mgr == null || mgr.Items == null || mgr.Items.Count == 0) return;
+
+        var incoming = mgr.Items.Count > 0 ? mgr.Items[0] : null;
+        bool isNew = incoming != null && incoming != _currentItem;
+        if (!isNew) return;
+
+        PlayNewEventArrivalFeedback();
+
+        StopLoop();
+        _messageIndex = 0;
+        StartLoopIfNeeded();
+    }
+
+    private void PlayNewEventArrivalFeedback()
+    {
+        if (edgeFlashGroup != null)
+        {
+            LeanTween.cancel(edgeFlashGroup.gameObject);
+            edgeFlashGroup.alpha = 0.8f;
+            LeanTween.alphaCanvas(edgeFlashGroup, 0f, edgeFlashDuration)
+                .setEase(LeanTweenType.easeOutQuad)
+                .setIgnoreTimeScale(true);
+        }
+
+        if (worldEventBar != null)
+        {
+            LeanTween.cancel(worldEventBar);
+            LeanTween.moveLocalX(worldEventBar, barShakeDistance, 0.05f)
+                .setEase(LeanTweenType.easeShake)
+                .setLoopPingPong(barShakeLoops)
+                .setIgnoreTimeScale(true)
+                .setOnComplete(() =>
+                {
+                    var rt = worldEventBar.transform as RectTransform;
+                    if (rt != null)
+                    {
+                        var pos = rt.anchoredPosition;
+                        pos.x = 0f;
+                        rt.anchoredPosition = pos;
+                    }
+                });
+        }
+
+        if (messageText != null)
+        {
+            LeanTween.cancel(messageText.gameObject);
+            messageText.transform.localScale = Vector3.one;
+            LeanTween.scale(messageText.gameObject, Vector3.one * 1.1f, 0.1f)
+                .setEase(LeanTweenType.easeOutBack)
+                .setIgnoreTimeScale(true)
+                .setOnComplete(() =>
+                {
+                    LeanTween.scale(messageText.gameObject, Vector3.one, 0.1f)
+                        .setEase(LeanTweenType.easeOutQuad)
+                        .setIgnoreTimeScale(true);
+                });
+        }
     }
 
     private void HandleFeatureUnlocked(FeatureId feature)

@@ -35,6 +35,8 @@ public class OwnedMonsterData
     public int autoApplyTargetLevel = 0;
     public string lastBucketId = null;
     public int unspentStatPoints = 0;
+    public bool pendingEvolutionCeremony;
+    public string pendingEvolutionFromId;
     
 }
 

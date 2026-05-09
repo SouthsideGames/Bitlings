@@ -475,6 +475,7 @@ public static class ArenaTournamentService
         }
 
         cache.currentRoundIndex = roundIndex + 1;
+        GameEvents.ArenaDataChanged?.Invoke();
         cache.resultsLastUpdatedUtc = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
 
         // Check if this was the final round

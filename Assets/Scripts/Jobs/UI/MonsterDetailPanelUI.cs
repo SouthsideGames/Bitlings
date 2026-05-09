@@ -887,6 +887,24 @@ private Sprite GetVariantIcon(MonsterDataSO monster)
         _stageCR = StartCoroutine(CoRenderStaged(monster));
     }
 
+    private void CheckPendingEvolutionCeremony(OwnedMonsterData owned)
+    {
+        if (owned == null || !owned.pendingEvolutionCeremony) return;
+
+        string fromId = owned.pendingEvolutionFromId;
+
+        // Consume immediately so this never triggers twice.
+        owned.pendingEvolutionCeremony = false;
+        owned.pendingEvolutionFromId = null;
+        SaveManager.Save();
+
+        GameEvents.EvolutionCeremonyRequested?.Invoke(
+            fromId ?? owned.monsterId,
+            owned.monsterId,
+            owned.ownedUID
+        );
+    }
+
     private IEnumerator CoRenderStaged(MonsterDataSO monster)
     {
         if (_stage == RenderStage.Header)
@@ -1000,6 +1018,7 @@ private Sprite GetVariantIcon(MonsterDataSO monster)
 
         LogStep("END Show (staged)");
         _stageCR = null;
+        CheckPendingEvolutionCeremony(_currentOwned);
     }
 
     // ─────────────────────────────────────────────────────────────

@@ -120,8 +120,15 @@ public static class EvolutionService
 
         if (def.evolutionForm && def.evolutionLevel > 0 && owned.level >= def.evolutionLevel)
         {
-            // ✅ Allow duplicates now.
-            return EvolveOwnedInstance(owned, def.evolutionForm.id, allowDuplicateSpecies: true);
+            string fromId = owned.monsterId;
+            bool result = EvolveOwnedInstance(owned, def.evolutionForm.id, allowDuplicateSpecies: true);
+            if (result)
+            {
+                owned.pendingEvolutionCeremony = true;
+                owned.pendingEvolutionFromId = fromId;
+                SaveManager.Save();
+            }
+            return result;
         }
         return false;
     }

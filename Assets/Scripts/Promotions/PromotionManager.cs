@@ -7,6 +7,9 @@ public sealed class PromotionManager : MonoBehaviour
     [Header("Data")]
     [SerializeField] private PromotionTableSO promotionTable;
 
+    [Header("Promotion Ceremony")]
+    [SerializeField] private PromotionCeremonyUI promotionCeremonyUI;
+
     [Header("XP Award (Battle End)")]
     [Tooltip("Base Promotion XP gained on victory.")]
     [SerializeField] private int baseXpWin = 10;
@@ -107,7 +110,22 @@ public sealed class PromotionManager : MonoBehaviour
         {
             GrantRankRewards(oldRank + 1, newRank);
             GameEvents.PromotionRankChanged?.Invoke(oldRank, newRank);
+            TryPlayPromotionCeremony(newRank);
         }
+    }
+
+    private void TryPlayPromotionCeremony(int newRank)
+    {
+        var ceremony = promotionCeremonyUI != null
+            ? promotionCeremonyUI
+            : FindFirstObjectByType<PromotionCeremonyUI>(FindObjectsInactive.Include);
+
+        if (ceremony == null)
+            return;
+
+        string rankName = GetRankDisplayName(newRank);
+        ceremony.Prepare(null, rankName, null);
+        ceremony.Play();
     }
 
     private bool TryProcessRankUps(out int newRank)

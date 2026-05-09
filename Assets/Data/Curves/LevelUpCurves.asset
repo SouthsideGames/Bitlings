@@ -1,0 +1,21 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c0e8c321f81b724499c4ae6ab22de064, type: 3}
+  m_Name: LevelUpCurves
+  m_EditorClassIdentifier: Assembly-CSharp::LevelUpCurves
+  portraitScaleIn: 2
+  vignetteIn: 3
+  nameTextFloat: 6
+  namePunchIn: 27
+  fadeOut: 5
+  statLineStagger: 2
+  lightSweep: 2
