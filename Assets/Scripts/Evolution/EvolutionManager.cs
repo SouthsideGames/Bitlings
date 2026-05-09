@@ -17,6 +17,8 @@ public static class EvolutionManager
         bool changed = false;
         var team = SaveManager.Data.team;
         OwnedMonsterData teamRef = null;
+        string evolvedOwnedUID = null;
+        int evolvedLevel = 0;
 
         // ---- TEAM PASS ----
         if (team != null)
@@ -33,6 +35,8 @@ public static class EvolutionManager
 
                     team[i] = m;
                     teamRef = m;
+                    evolvedOwnedUID = m.ownedUID;
+                    evolvedLevel = m.level;
                     changed = true;
                     break;
                 }
@@ -66,6 +70,11 @@ public static class EvolutionManager
                 EvolutionHelper.FullHealToMax(o, defNew);
 
                 owned[ownedIdx] = o;
+                if (string.IsNullOrEmpty(evolvedOwnedUID) && !string.IsNullOrEmpty(o.ownedUID))
+                {
+                    evolvedOwnedUID = o.ownedUID;
+                    evolvedLevel = o.level;
+                }
                 changed = true;
             }
         }
@@ -80,6 +89,30 @@ public static class EvolutionManager
 
         // Ensure jobAssignments worker IDs don't hold stale references
         CleanupJobAssignmentsAfterEvolution();
+
+        // Stamp evolution snapshot
+        if (!string.IsNullOrEmpty(evolvedOwnedUID))
+        {
+            var stats = SaveManager.GetOrCreateStats(evolvedOwnedUID);
+            long now = SaveManager.NowUnix();
+            stats.evolvedAtUnix = now;
+            stats.evolvedFromMonsterId = monsterId;
+            stats.levelAtEvolution = evolvedLevel;
+
+            var equip = TitleSaveStore.GetOrCreateEquip(evolvedOwnedUID);
+            stats.titlesEquippedAtEvolution = new System.Collections.Generic.List<string>();
+            if (equip != null && equip.tierSelections != null)
+            {
+                for (int i = 0; i < equip.tierSelections.Count; i++)
+                {
+                    string id = equip.tierSelections[i];
+                    if (!string.IsNullOrWhiteSpace(id))
+                        stats.titlesEquippedAtEvolution.Add(id);
+                }
+            }
+
+            GameEvents.EvolutionCeremonyRequested?.Invoke(monsterId, newId, evolvedOwnedUID);
+        }
 
         SaveManager.Save();
 

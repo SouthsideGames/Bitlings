@@ -22,6 +22,9 @@ public class EvolutionPanelUI : MonoBehaviour
     [SerializeField] private Button confirmButton;
     [SerializeField] private Button cancelButton;
 
+    [Header("Ceremony")]
+    [SerializeField] private EvolutionCeremonyUI evolutionCeremonyUI;
+
     private OwnedMonsterData _source;
     private MonsterDataSO _currentDef;
     private MonsterDataSO _nextDef;
@@ -206,6 +209,9 @@ public class EvolutionPanelUI : MonoBehaviour
             return;
         }
 
+        var oldDef = _currentDef;
+        var nextDef = _nextDef;
+
         bool success = EvolutionService.EvolveOwnedInstance(_source, _nextDef.id, allowDuplicateSpecies: true);
         if (success)
         {
@@ -215,6 +221,19 @@ public class EvolutionPanelUI : MonoBehaviour
         }
 
         Hide();
+
+        if (success && oldDef != null && nextDef != null)
+        {
+            var ceremony = evolutionCeremonyUI != null
+                ? evolutionCeremonyUI
+                : FindFirstObjectByType<EvolutionCeremonyUI>(FindObjectsInactive.Include);
+
+            if (ceremony != null)
+            {
+                ceremony.Prepare(oldDef, nextDef);
+                ceremony.Play();
+            }
+        }
     }
 
     private void Hide()

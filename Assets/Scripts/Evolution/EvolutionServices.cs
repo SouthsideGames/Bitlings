@@ -78,6 +78,30 @@ public static class EvolutionService
         // 4) Sync any team slots that reference this exact instance
         SyncTeamSlotsForInstance(ownedEntry);
 
+        // Stamp evolution snapshot
+        if (!string.IsNullOrEmpty(ownedEntry.ownedUID))
+        {
+            var stats = SaveManager.GetOrCreateStats(ownedEntry.ownedUID);
+            long now = SaveManager.NowUnix();
+            stats.evolvedAtUnix = now;
+            stats.evolvedFromMonsterId = oldId;
+            stats.levelAtEvolution = ownedEntry.level;
+
+            var equip = TitleSaveStore.GetOrCreateEquip(ownedEntry.ownedUID);
+            stats.titlesEquippedAtEvolution = new List<string>();
+            if (equip != null && equip.tierSelections != null)
+            {
+                for (int i = 0; i < equip.tierSelections.Count; i++)
+                {
+                    string id = equip.tierSelections[i];
+                    if (!string.IsNullOrWhiteSpace(id))
+                        stats.titlesEquippedAtEvolution.Add(id);
+                }
+            }
+
+            GameEvents.EvolutionCeremonyRequested?.Invoke(oldId, targetMonsterId, ownedEntry.ownedUID);
+        }
+
         SaveManager.Save();
 
         #if UNITY_EDITOR || DEVELOPMENT_BUILD

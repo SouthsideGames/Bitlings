@@ -89,6 +89,10 @@ public sealed class LifetimeMonsterStats
     public List<string> titlesEquippedAtRetirement = new List<string>();
     public DriftArchetype driftArchetypeAtRetirement;
     public int driftTierAtRetirement;
+    public long evolvedAtUnix;
+    public string evolvedFromMonsterId;
+    public int levelAtEvolution;
+    public List<string> titlesEquippedAtEvolution = new List<string>();
     public string willRecipientUID;
     public string willRecipientName;
     public WillType willType;
@@ -102,6 +106,7 @@ public sealed class LifetimeMonsterStats
             firstCaptureUnix = nowUnix;
 
         titlesEquippedAtRetirement ??= new List<string>();
+        titlesEquippedAtEvolution ??= new List<string>();
         perJobHours ??= new List<LifetimeJobHoursEntry>();
     }
 
@@ -175,6 +180,10 @@ public sealed class LifetimeMonsterStats
             willType = willType,
             pronounSet = pronounSet,
             titlesEquippedAtRetirement = new List<string>(titlesEquippedAtRetirement ?? new List<string>()),
+            evolvedAtUnix = evolvedAtUnix,
+            evolvedFromMonsterId = evolvedFromMonsterId,
+            levelAtEvolution = levelAtEvolution,
+            titlesEquippedAtEvolution = new List<string>(titlesEquippedAtEvolution ?? new List<string>()),
             perJobHours = new List<LifetimeJobHoursEntry>()
         };
 

@@ -22,6 +22,7 @@ public static class GameEvents
     public static Action<string, int> MonsterLeveled;
     public static Action<string> EvolutionOffered;
     public static Action<string> MonsterEvolved;
+    public static Action<string, string, string> EvolutionCeremonyRequested; // (oldId, newId, ownedUID)
     public static Action<string, MonsterType> MonsterCaptured;
     public static Action<MonsterType> StarterChosen;
     public static Action OnOwnedMonstersChanged;

@@ -3,20 +3,12 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
-/// <summary>
-/// Retirement ceremony UI — honors a monster's service.
-/// Extends BaseCeremonyUI for shared skip-on-tap, audio, and text reveal plumbing.
-/// Methods moved to base: Update(), Play(), PlayCeremonySfx(), RevealText()
-/// </summary>
-public sealed class RetirementCeremonyUI : BaseCeremonyUI
+public sealed class PromotionCeremonyUI : BaseCeremonyUI
 {
-    [Header("Panel")]
-
     [Header("Portrait")]
     [SerializeField] private Image portraitImage;
     [SerializeField] private CanvasGroup portraitGroup;
     [SerializeField] private RectTransform portraitRect;
-    [SerializeField] private ParticleSystem embersParticles;
 
     [Header("Vignette")]
     [SerializeField] private CanvasGroup vignetteGroup;
@@ -26,27 +18,28 @@ public sealed class RetirementCeremonyUI : BaseCeremonyUI
     [SerializeField] private RectTransform namePlateRect;
     [SerializeField] private CanvasGroup namePlateGroup;
 
-    [Header("Light Sweep")]
-    [SerializeField] private GameObject lightSweep;
+    [Header("Badge")]
+    [SerializeField] private Image rankBadgeImage;
+    [SerializeField] private RectTransform rankBadgeRect;
+    [SerializeField] private CanvasGroup rankBadgeGroup;
+
+    [Header("Effects")]
+    [SerializeField] private ParticleSystem confettiParticles;
 
     [Header("Audio")]
     [SerializeField] private AudioSource ceremonyAudioSource;
-    [SerializeField] private AudioClip retirementToneClip;
+    [SerializeField] private AudioClip promotionToneClip;
 
     [Header("Config")]
-    [SerializeField] private RetirementCurves curves;
-    [SerializeField] private TrophyCardUI targetTrophyCard;
+    [SerializeField] private PromotionCurves curves;
 
-    [Header("Skip")]
-
-    private MentorRecord _record;
+    private string _rankName;
     private Vector2 _namePlateBasePos;
     private bool _namePlatePosCached;
 
-    public void Prepare(MentorRecord record, TrophyCardUI trophyCard)
+    public void Prepare(Sprite rankBadgeSprite, string rankName, Sprite monsterPortrait)
     {
-        _record = record;
-        targetTrophyCard = trophyCard;
+        _rankName = rankName ?? "Unknown";
 
         if (_sequenceCo != null)
         {
@@ -58,7 +51,6 @@ public sealed class RetirementCeremonyUI : BaseCeremonyUI
         _skipRequested = false;
 
         CancelAllTweens();
-        if (targetTrophyCard != null) LeanTween.cancel(targetTrophyCard.gameObject);
 
         if (ceremonyRootGroup != null)
             ceremonyRootGroup.alpha = 0f;
@@ -68,6 +60,9 @@ public sealed class RetirementCeremonyUI : BaseCeremonyUI
 
         if (namePlateGroup != null)
             namePlateGroup.alpha = 0f;
+
+        if (rankBadgeGroup != null)
+            rankBadgeGroup.alpha = 0f;
 
         if (nameLabel != null)
         {
@@ -81,19 +76,14 @@ public sealed class RetirementCeremonyUI : BaseCeremonyUI
         if (vignetteGroup != null)
             vignetteGroup.alpha = 0f;
 
-        if (lightSweep != null)
-            lightSweep.SetActive(false);
+        if (rankBadgeRect != null)
+            rankBadgeRect.localScale = Vector3.zero;
 
-        if (targetTrophyCard != null)
-            targetTrophyCard.gameObject.SetActive(false);
+        if (rankBadgeImage != null)
+            rankBadgeImage.sprite = rankBadgeSprite;
 
         if (portraitImage != null)
-        {
-            var def = record != null && !string.IsNullOrEmpty(record.monsterId)
-                ? MonsterLibraryLocator.GetById(record.monsterId)
-                : null;
-            portraitImage.sprite = def != null ? def.icon : null;
-        }
+            portraitImage.sprite = monsterPortrait;
 
         if (namePlateRect != null && !_namePlatePosCached)
         {
@@ -106,6 +96,23 @@ public sealed class RetirementCeremonyUI : BaseCeremonyUI
 
         if (ceremonyRoot != null)
             ceremonyRoot.anchoredPosition = Vector2.zero;
+
+        // Set default confetti particle settings if needed
+        if (confettiParticles != null)
+        {
+            var main = confettiParticles.main;
+            var emission = confettiParticles.emission;
+            var shape = confettiParticles.shape;
+
+            shape.shapeType = ParticleSystemShapeType.Box;
+            shape.scale = new Vector3(8f, 0.1f, 0f);
+
+            if (emission.burstCount == 0)
+                emission.SetBursts(new ParticleSystem.Burst[] { new ParticleSystem.Burst(0, 60) });
+
+            main.simulationSpace = ParticleSystemSimulationSpace.World;
+            main.gravityModifier = 0.3f;
+        }
     }
 
     protected override IEnumerator CeremonySequence()
@@ -125,6 +132,7 @@ public sealed class RetirementCeremonyUI : BaseCeremonyUI
             yield break;
         }
 
+        // Scale up portrait
         if (portraitRect != null)
         {
             LeanTween.scale(portraitRect, Vector3.one * 1.25f, 0.6f)
@@ -132,6 +140,7 @@ public sealed class RetirementCeremonyUI : BaseCeremonyUI
                 .setIgnoreTimeScale(true);
         }
 
+        // Fade in vignette
         if (vignetteGroup != null)
         {
             LeanTween.alphaCanvas(vignetteGroup, 1f, 0.6f)
@@ -146,18 +155,18 @@ public sealed class RetirementCeremonyUI : BaseCeremonyUI
             yield break;
         }
 
-        string honoreeName = ResolveDisplayName(_record);
-        string ceremonyMessage = ResolveCeremonyMessage(honoreeName);
+        // Reveal name
+        string ceremonyText = $"Promoted to {_rankName}!";
         if (nameLabel != null)
-            nameLabel.text = ceremonyMessage;
+            nameLabel.text = ceremonyText;
 
         if (namePlateGroup != null)
             namePlateGroup.alpha = 1f;
 
         if (namePlateRect != null)
         {
-            Vector2 nameStart = _namePlateBasePos + (Vector2.down * 10f);
-            Vector2 nameEnd = _namePlateBasePos + (Vector2.up * 10f);
+            Vector2 nameStart = _namePlateBasePos + (Vector2.down * 50f);
+            Vector2 nameEnd = _namePlateBasePos + (Vector2.up * 50f);
             namePlateRect.anchoredPosition = nameStart;
 
             LeanTween.value(namePlateRect.gameObject, nameStart, nameEnd, 0.8f)
@@ -170,37 +179,8 @@ public sealed class RetirementCeremonyUI : BaseCeremonyUI
                 });
         }
 
-            PlayLightSweep();
-
         if (nameLabel != null)
-            StartCoroutine(RevealText(nameLabel, ceremonyMessage, 1.0f));
-
-        yield return new WaitForSecondsRealtime(1.3f);
-        if (_skipRequested)
-        {
-            yield return StartCoroutine(SkipSequence());
-            yield break;
-        }
-
-        var mainCam = Camera.main;
-        if (mainCam != null)
-        {
-            Vector3 start = mainCam.transform.localPosition;
-            LeanTween.moveLocal(mainCam.gameObject, start + new Vector3(0.04f, 0.04f, 0f), 0.05f)
-                .setEasePunch()
-                .setIgnoreTimeScale(true)
-                .setOnComplete(() =>
-                {
-                    if (mainCam != null)
-                        mainCam.transform.localPosition = start;
-                });
-        }
-
-#if UNITY_IOS || UNITY_ANDROID
-        Handheld.Vibrate();
-#endif
-
-        PlayCeremonySfx(ceremonyAudioSource, retirementToneClip);
+            StartCoroutine(RevealText(nameLabel, ceremonyText, 0.7f));
 
         yield return new WaitForSecondsRealtime(0.5f);
         if (_skipRequested)
@@ -208,26 +188,45 @@ public sealed class RetirementCeremonyUI : BaseCeremonyUI
             yield return StartCoroutine(SkipSequence());
             yield break;
         }
-        yield return new WaitForSecondsRealtime(0.3f);
 
-        if (portraitGroup != null)
+        // Play sound
+        PlayCeremonySfx(ceremonyAudioSource, promotionToneClip);
+
+        // Play confetti
+        if (confettiParticles != null)
+            confettiParticles.Play();
+
+        yield return new WaitForSecondsRealtime(0.2f);
+        if (_skipRequested)
         {
-            LeanTween.alphaCanvas(portraitGroup, 0f, 1.2f)
-                .setEase(GetCurveOrDefault(curves != null ? curves.portraitFadeOut : LeanTweenType.easeInCubic))
+            yield return StartCoroutine(SkipSequence());
+            yield break;
+        }
+
+        // Fade out vignette
+        if (vignetteGroup != null)
+        {
+            LeanTween.alphaCanvas(vignetteGroup, 0f, 0.4f)
                 .setIgnoreTimeScale(true);
         }
 
-        if (namePlateGroup != null)
+        // Badge punch-in
+        if (rankBadgeGroup != null)
+            rankBadgeGroup.alpha = 1f;
+
+        if (rankBadgeRect != null)
         {
-            LeanTween.alphaCanvas(namePlateGroup, 0f, 0.8f)
-                .setEase(LeanTweenType.easeInQuad)
+            LeanTween.scale(rankBadgeRect, Vector3.one, 0.5f)
+                .setEase(GetCurveOrDefault(curves != null ? curves.badgePunchIn : LeanTweenType.easeOutBack))
                 .setIgnoreTimeScale(true);
         }
 
-        yield return new WaitForSecondsRealtime(1.5f);
-
-        yield return StartCoroutine(TrophyArrival());
         yield return new WaitForSecondsRealtime(0.8f);
+        if (_skipRequested)
+        {
+            yield return StartCoroutine(SkipSequence());
+            yield break;
+        }
 
         if (ceremonyRootGroup != null)
         {
@@ -244,42 +243,31 @@ public sealed class RetirementCeremonyUI : BaseCeremonyUI
         _sequenceCo = null;
     }
 
-
-    private IEnumerator TrophyArrival()
-    {
-        if (vignetteGroup != null)
-            LeanTween.alphaCanvas(vignetteGroup, 0f, 0.4f).setIgnoreTimeScale(true);
-
-        if (targetTrophyCard == null)
-            yield break;
-
-        targetTrophyCard.gameObject.SetActive(true);
-
-        RectTransform cardRect = targetTrophyCard.GetComponent<RectTransform>();
-        if (cardRect != null)
-        {
-            cardRect.localScale = Vector3.zero;
-            LeanTween.scale(cardRect, Vector3.one, 0.5f)
-                .setEase(GetCurveOrDefault(curves != null ? curves.trophyPunchIn : LeanTweenType.easeOutBack))
-                .setIgnoreTimeScale(true);
-        }
-
-        if (targetTrophyCard.CandleParticles != null)
-            targetTrophyCard.CandleParticles.Play();
-
-        yield return new WaitForSecondsRealtime(0.6f);
-    }
-
-    private void PlayLightSweep()
-    {
-        if (lightSweep != null)
-            lightSweep.SetActive(true);
-    }
-
     protected override IEnumerator SkipSequence()
     {
         CancelAllTweens();
         Time.timeScale = 1f;
+
+        string ceremonyText = $"Promoted to {_rankName}!";
+        if (nameLabel != null)
+        {
+            nameLabel.text = ceremonyText;
+            nameLabel.maxVisibleCharacters = int.MaxValue;
+        }
+
+        if (namePlateGroup != null)
+            namePlateGroup.alpha = 1f;
+
+        if (portraitGroup != null)
+            portraitGroup.alpha = 1f;
+
+        if (rankBadgeRect != null)
+            rankBadgeRect.localScale = Vector3.one;
+
+        if (rankBadgeGroup != null)
+            rankBadgeGroup.alpha = 1f;
+
+        yield return new WaitForSecondsRealtime(0.3f);
 
         if (vignetteGroup != null)
             LeanTween.alphaCanvas(vignetteGroup, 0f, 0.2f).setIgnoreTimeScale(true);
@@ -292,9 +280,6 @@ public sealed class RetirementCeremonyUI : BaseCeremonyUI
 
         yield return new WaitForSecondsRealtime(0.25f);
 
-        yield return StartCoroutine(TrophyArrival());
-        yield return new WaitForSecondsRealtime(0.8f);
-
         if (ceremonyRootGroup != null)
         {
             LeanTween.alphaCanvas(ceremonyRootGroup, 0f, 0.3f)
@@ -310,32 +295,16 @@ public sealed class RetirementCeremonyUI : BaseCeremonyUI
         _sequenceCo = null;
     }
 
-    private static LeanTweenType GetCurveOrDefault(LeanTweenType value)
-    {
-        return value;
-    }
-
     protected override void CancelAllTweens()
     {
         base.CancelAllTweens();
         if (portraitRect != null) LeanTween.cancel(portraitRect.gameObject);
         if (namePlateRect != null) LeanTween.cancel(namePlateRect.gameObject);
+        if (rankBadgeRect != null) LeanTween.cancel(rankBadgeRect.gameObject);
     }
 
-    private static string ResolveDisplayName(MentorRecord record)
+    private static LeanTweenType GetCurveOrDefault(LeanTweenType value)
     {
-        if (record == null)
-            return "Unknown";
-
-        string baseName = string.IsNullOrWhiteSpace(record.displayName) ? "Unknown" : record.displayName;
-        bool hasEpithet = !string.IsNullOrWhiteSpace(record.epithet) && record.driftTier >= 1;
-        return hasEpithet ? (baseName + " the " + record.epithet) : baseName;
+        return value;
     }
-
-    private static string ResolveCeremonyMessage(string displayName)
-    {
-        string safeName = string.IsNullOrWhiteSpace(displayName) ? "Unknown" : displayName;
-        return "Thank you for your service " + safeName;
-    }
-
 }
