@@ -65,7 +65,7 @@ public sealed class BattleBoosterController : MonoBehaviour
 
     public void OnTurnStart(bool isPlayer)
     {
-        if (IronCareerRuntime.IsActive)
+        if (ExecutiveTrialRuntime.IsActive)
             return;
 
         playersTurn = isPlayer;

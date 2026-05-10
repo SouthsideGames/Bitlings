@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::AchievementEntrySO
   id: A-091
   displayName: Iron Survivor
-  description: Win 5 Iron Career battles.
+  description: Win 5 Executive Trial battles.
   icon: {fileID: -4192873577498990268, guid: 3488ad4b336d946b7abcb675644295f3, type: 3}
   trigger: 26
   goal: 5
@@ -23,4 +23,4 @@ MonoBehaviour:
   useResourceFilter: 0
   resourceFilter: 0
   secretUntilUnlocked: 1
-  category: Iron Career
+  category: Executive Trial

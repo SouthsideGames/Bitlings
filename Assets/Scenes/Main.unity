@@ -222,7 +222,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6701561930922873064, guid: ab80eb41c875d5b4bbc986b774a0b078, type: 3}
       propertyPath: m_Name
-      value: IronCareerPostCardPrefab (2)
+      value: ExecutiveTrialPostCardPrefab (2)
       objectReference: {fileID: 0}
     - target: {fileID: 7345269202792881663, guid: ab80eb41c875d5b4bbc986b774a0b078, type: 3}
       propertyPath: m_AnchorMax.x
@@ -26295,7 +26295,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 8583079183853495688, guid: 5c8a35a99700e114599584b8db5573ad, type: 3}
       propertyPath: m_Name
-      value: IronCareerStarterPrefab
+      value: ExecutiveTrialStarterPrefab
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
@@ -36526,7 +36526,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6701561930922873064, guid: ab80eb41c875d5b4bbc986b774a0b078, type: 3}
       propertyPath: m_Name
-      value: IronCareerPostCardPrefab (1)
+      value: ExecutiveTrialPostCardPrefab (1)
       objectReference: {fileID: 0}
     - target: {fileID: 7345269202792881663, guid: ab80eb41c875d5b4bbc986b774a0b078, type: 3}
       propertyPath: m_AnchorMax.x
@@ -44766,7 +44766,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 8583079183853495688, guid: 5c8a35a99700e114599584b8db5573ad, type: 3}
       propertyPath: m_Name
-      value: IronCareerStarterPrefab (2)
+      value: ExecutiveTrialStarterPrefab (2)
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
@@ -51979,7 +51979,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 9c397dba854af4bfeaa927f74d430ddc, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::IronCareerEncounterPanelUI
+  m_EditorClassIdentifier: Assembly-CSharp::ExecutiveTrialEncounterPanelUI
   battleRoot: {fileID: 1042037336}
   starter: {fileID: 507721216}
   hire: {fileID: 1994147395}
@@ -55263,7 +55263,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6701561930922873064, guid: ab80eb41c875d5b4bbc986b774a0b078, type: 3}
       propertyPath: m_Name
-      value: IronCareerPostCardPrefab
+      value: ExecutiveTrialPostCardPrefab
       objectReference: {fileID: 0}
     - target: {fileID: 7345269202792881663, guid: ab80eb41c875d5b4bbc986b774a0b078, type: 3}
       propertyPath: m_AnchorMax.x
@@ -56910,7 +56910,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: IRON CAREER RULES
+  m_text: EXECUTIVE TRIAL RULES
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: ca247a3092b7b404dbaa6f4ab43e450c, type: 2}
   m_sharedMaterial: {fileID: -403277894513911722, guid: ca247a3092b7b404dbaa6f4ab43e450c, type: 2}
@@ -59198,7 +59198,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 6a6997484b449c74ca8b3978c83ab678, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::IronCareerHomeButtonBinder
+  m_EditorClassIdentifier: Assembly-CSharp::ExecutiveTrialHomeButtonBinder
   ironCareerButtonRoot: {fileID: 439183092}
   ironCareerButton: {fileID: 439183095}
   ironCareerManager: {fileID: 1570362941}
@@ -67859,7 +67859,7 @@ GameObject:
   - component: {fileID: 506324798}
   - component: {fileID: 506324797}
   m_Layer: 5
-  m_Name: IronCareerRulePopup
+  m_Name: ExecutiveTrialRulePopup
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -67876,7 +67876,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 10ba0e601ba12a746a2f5353830b33ae, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::IronCareerRulesPopupUI
+  m_EditorClassIdentifier: Assembly-CSharp::ExecutiveTrialRulesPopupUI
   manager: {fileID: 1570362941}
   canvasGroup: {fileID: 392151934}
   titleTMP: {fileID: 1867498654}
@@ -68070,7 +68070,7 @@ GameObject:
   - component: {fileID: 507721216}
   - component: {fileID: 507721217}
   m_Layer: 5
-  m_Name: IronCareerStarter
+  m_Name: ExecutiveTrialStarter
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -68124,7 +68124,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: ac0e12e6a279c6f4d854bec82800ea98, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::IronCareerStarterPanelUI
+  m_EditorClassIdentifier: Assembly-CSharp::ExecutiveTrialStarterPanelUI
   iron: {fileID: 1570362941}
   monsterLibrary: {fileID: 11400000, guid: f3afaa81c12bbc548b6de927f27ec0c6, type: 2}
   slot1: {fileID: 944280917}
@@ -75954,7 +75954,7 @@ MonoBehaviour:
           m_BoolArgument: 0
         m_CallState: 2
       - m_Target: {fileID: 507721217}
-        m_TargetAssemblyTypeName: IronCareerStarterPanelUI, Assembly-CSharp
+        m_TargetAssemblyTypeName: ExecutiveTrialStarterPanelUI, Assembly-CSharp
         m_MethodName: OpenRules
         m_Mode: 1
         m_Arguments:
@@ -80606,7 +80606,7 @@ GameObject:
   - component: {fileID: 602338988}
   - component: {fileID: 602338989}
   m_Layer: 5
-  m_Name: IronCareerReplace
+  m_Name: ExecutiveTrialReplace
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -80658,7 +80658,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 7fc0b258af4336b45883a225225230f0, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::IronCareerReplacePanelUI
+  m_EditorClassIdentifier: Assembly-CSharp::ExecutiveTrialReplacePanelUI
   manager: {fileID: 1570362941}
   panelGroup: {fileID: 602338988}
   incomingCardPrefab: {fileID: 3300260736004236624, guid: 85bb9c0335fcf4790afd3b0ca9fb17e6, type: 3}
@@ -94424,7 +94424,7 @@ GameObject:
   - component: {fileID: 729772411}
   - component: {fileID: 729772410}
   m_Layer: 5
-  m_Name: IronCareerForceEvolve
+  m_Name: ExecutiveTrialForceEvolve
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -94464,7 +94464,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: ec8eeb8a78b325d40bde69568736814c, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::IronCareerForcedEvolutionUI
+  m_EditorClassIdentifier: Assembly-CSharp::ExecutiveTrialForcedEvolutionUI
   manager: {fileID: 1570362941}
   canvasGroup: {fileID: 729772411}
   titleTMP: {fileID: 1281951107}
@@ -108442,7 +108442,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 7178327539474743040, guid: e2a738edca0ab1341b3614d8ebf7e6b6, type: 3}
       propertyPath: tutorialKey
-      value: tut_ironcareerunlocked_v1
+      value: tut_executivetrialunlocked_v1
       objectReference: {fileID: 0}
     - target: {fileID: 7178327539474743040, guid: e2a738edca0ab1341b3614d8ebf7e6b6, type: 3}
       propertyPath: pages.Array.size
@@ -117766,7 +117766,7 @@ GameObject:
   - component: {fileID: 907980530}
   - component: {fileID: 907980531}
   m_Layer: 5
-  m_Name: IronCareerPost
+  m_Name: ExecutiveTrialPost
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -117818,7 +117818,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: f6ad27b8944158a4dacb178648c2ad41, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::IronCareerPostScreenUI
+  m_EditorClassIdentifier: Assembly-CSharp::ExecutiveTrialPostScreenUI
   manager: {fileID: 1570362941}
   statusLibrary: {fileID: 11400000, guid: 96054fa09d6205043bbdb9895e224e89, type: 2}
   canvasGroup: {fileID: 907980530}
@@ -121394,7 +121394,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fe55ff114b4b0ad42bdc65d65a61eca1, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::IronCareerStarterSlotUI
+  m_EditorClassIdentifier: Assembly-CSharp::ExecutiveTrialStarterSlotUI
 --- !u!1 &945488307
 GameObject:
   m_ObjectHideFlags: 0
@@ -126427,7 +126427,7 @@ GameObject:
   - component: {fileID: 984709025}
   - component: {fileID: 984709024}
   m_Layer: 5
-  m_Name: IronCareerRecord
+  m_Name: ExecutiveTrialRecord
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -126467,7 +126467,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 006d685154b040f45a7db0d6b7387103, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::IronCareerRecordsPanelUI
+  m_EditorClassIdentifier: Assembly-CSharp::ExecutiveTrialRecordsPanelUI
   canvasGroup: {fileID: 984709025}
   titleTMP: {fileID: 424876848}
   allTimeSection: {fileID: 521476926}
@@ -133810,7 +133810,7 @@ GameObject:
   - component: {fileID: 1042037340}
   - component: {fileID: 1042037339}
   m_Layer: 5
-  m_Name: IronCareerBattle
+  m_Name: ExecutiveTrialBattle
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -148059,7 +148059,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: Evolution is permanent in Iron Career. HP carries forward. No healing is
+  m_text: Evolution is permanent in Executive Trial. HP carries forward. No healing is
     granted.
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: ca247a3092b7b404dbaa6f4ab43e450c, type: 2}
@@ -149329,7 +149329,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: aea490f53db83604eae9c1658210a5b5, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  tutorialKey: tut_ironcareer_v1
+  tutorialKey: tut_executivetrial_v1
   autoOpenOnEnable: 1
   pages:
   - icon: {fileID: 21300000, guid: 5b05ebb3f339e4f03b3026941ea99ecc, type: 3}
@@ -175274,7 +175274,7 @@ GameObject:
   - component: {fileID: 1368123470}
   - component: {fileID: 1368123471}
   m_Layer: 5
-  m_Name: IronCareerGameOver
+  m_Name: ExecutiveTrialGameOver
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -175326,7 +175326,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: c898deed05407b94caabfab23d079877, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::IronCareerGameOverPanelUI
+  m_EditorClassIdentifier: Assembly-CSharp::ExecutiveTrialGameOverPanelUI
   manager: {fileID: 1570362941}
   canvasGroup: {fileID: 1368123470}
   titleTMP: {fileID: 56654700}
@@ -198487,7 +198487,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 7707719899675729637, guid: 711a100c0e4614f22a77a53e09b19e83, type: 3}
       propertyPath: m_Name
-      value: IronCareerButton
+      value: ExecutiveTrialButton
       objectReference: {fileID: 0}
     - target: {fileID: 7707719899675729637, guid: 711a100c0e4614f22a77a53e09b19e83, type: 3}
       propertyPath: m_IsActive
@@ -202138,7 +202138,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fe55ff114b4b0ad42bdc65d65a61eca1, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::IronCareerStarterSlotUI
+  m_EditorClassIdentifier: Assembly-CSharp::ExecutiveTrialStarterSlotUI
 --- !u!1 &1559044900
 GameObject:
   m_ObjectHideFlags: 0
@@ -203191,7 +203191,7 @@ GameObject:
   - component: {fileID: 1570362945}
   - component: {fileID: 1570362944}
   m_Layer: 0
-  m_Name: IronCareerSystem
+  m_Name: ExecutiveTrialSystem
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -203223,7 +203223,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 48852f1e9e1876a4ab753f79a4171e47, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::IronBattleBridge
+  m_EditorClassIdentifier: Assembly-CSharp::ExecutiveTrailBattleBridge
   hostBehaviour: {fileID: 1570362941}
   useDebugFallbackIfNoHost: 0
   debugParty: []
@@ -203245,7 +203245,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: a0290f38160375e4e9d88d42411145a4, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::IronCareerManager
+  m_EditorClassIdentifier: Assembly-CSharp::ExecutiveTrialManager
   battle: {fileID: 350265117}
   bridge: {fileID: 1570362940}
   ironRiftUI: {fileID: 392151937}
@@ -212025,7 +212025,7 @@ MonoBehaviour:
           m_BoolArgument: 0
         m_CallState: 2
       - m_Target: {fileID: 507721217}
-        m_TargetAssemblyTypeName: IronCareerStarterPanelUI, Assembly-CSharp
+        m_TargetAssemblyTypeName: ExecutiveTrialStarterPanelUI, Assembly-CSharp
         m_MethodName: OpenRecords
         m_Mode: 1
         m_Arguments:
@@ -252919,7 +252919,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fe55ff114b4b0ad42bdc65d65a61eca1, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::IronCareerStarterSlotUI
+  m_EditorClassIdentifier: Assembly-CSharp::ExecutiveTrialStarterSlotUI
 --- !u!1 &1895418456
 GameObject:
   m_ObjectHideFlags: 0
@@ -263604,7 +263604,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 8583079183853495688, guid: 5c8a35a99700e114599584b8db5573ad, type: 3}
       propertyPath: m_Name
-      value: IronCareerStarterPrefab (1)
+      value: ExecutiveTrialStarterPrefab (1)
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
@@ -265047,7 +265047,7 @@ GameObject:
   - component: {fileID: 1994147395}
   - component: {fileID: 1994147394}
   m_Layer: 5
-  m_Name: IronCareerHire
+  m_Name: ExecutiveTrialHire
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -265087,7 +265087,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 7a5e7d2f300ad944ab24fb14f704274e, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::IronCareerHirePanelUI
+  m_EditorClassIdentifier: Assembly-CSharp::ExecutiveTrialHirePanelUI
   manager: {fileID: 1570362941}
   portrait: {fileID: 661503915}
   nameLabel: {fileID: 1742518085}
@@ -280087,7 +280087,7 @@ GameObject:
   - component: {fileID: 2117216221}
   - component: {fileID: 2117216222}
   m_Layer: 5
-  m_Name: IronCareerRest
+  m_Name: ExecutiveTrialRest
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -280139,7 +280139,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: c17a63b72cec64f4c974a0fa4b78350e, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::IronCareerRestPanelUI
+  m_EditorClassIdentifier: Assembly-CSharp::ExecutiveTrialRestPanelUI
   manager: {fileID: 1570362941}
   canvasGroup: {fileID: 2117216221}
   titleTMP: {fileID: 1544010575}

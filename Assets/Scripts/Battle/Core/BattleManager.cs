@@ -817,7 +817,7 @@ public partial class BattleManager : MonoBehaviour
     }
 
     /// <summary>
-    /// Overrides the BattleManager's UI targets at runtime (used by Iron Career).
+    /// Overrides the BattleManager's UI targets at runtime (used by Executive Trial).
     /// Additive only: does not remove any existing features.
     /// </summary>
     public BattleFeedbackManager DefaultFeedback => _defaultFeedback;
@@ -1174,9 +1174,9 @@ public partial class BattleManager : MonoBehaviour
         _battleContext = battleContext;
         _rules = (battleContext != null) ? battleContext.Rules : BattleRules.Default;
 
-        if (IronCareerRuntime.IsActive && rosterProvider == null)
+        if (ExecutiveTrialRuntime.IsActive && rosterProvider == null)
         {
-            Debug.LogError("[BattleManager] IronCareerRuntime.IsActive but Begin(...) was called without a rosterProvider. Forfeiting battle.");
+            Debug.LogError("[BattleManager] ExecutiveTrialRuntime.IsActive but Begin(...) was called without a rosterProvider. Forfeiting battle.");
             ForceEndBattleEarly(false);
             return;
         }
@@ -1904,7 +1904,7 @@ public partial class BattleManager : MonoBehaviour
             return om != null;
         }
 
-        if (IronCareerRuntime.IsActive) return false;
+        if (ExecutiveTrialRuntime.IsActive) return false;
 
         var roster = SaveManager.Data?.team;
         if (roster == null) return false;
@@ -2031,7 +2031,7 @@ public partial class BattleManager : MonoBehaviour
 
         // Apply hud-rig values as defaults directly — do NOT route through
         // SetUIOverride, which would clobber _runtimeOverrideTextBox and
-        // destroy any Iron Career override that was already registered.
+        // destroy any Executive Trial override that was already registered.
         if (_hudRigActive.feedback)
         {
             feedback = _hudRigActive.feedback;

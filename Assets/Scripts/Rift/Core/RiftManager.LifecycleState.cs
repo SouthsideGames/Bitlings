@@ -86,7 +86,7 @@ public partial class RiftManager
         coroutine = null;
     }
 
-    // Hard stop used when Iron Career takes over: cancel any pending rift flows
+    // Hard stop used when Executive Trial takes over: cancel any pending rift flows
     // without broadcasting auto-mode events (IronEventGuard forbids them during Iron).
     public void ForceStopForIron()
     {

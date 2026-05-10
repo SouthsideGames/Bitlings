@@ -28,7 +28,7 @@ public partial class BattleManager : MonoBehaviour
 
     private void EndBattleRouted(bool victory, bool escaped = false)
     {
-        if (IronCareerRuntime.IsActive)
+        if (ExecutiveTrialRuntime.IsActive)
             EndBattle_Iron(victory, escaped);
         else
             EndBattle(victory, escaped);
@@ -247,7 +247,7 @@ public partial class BattleManager : MonoBehaviour
 
     public void ApplyIronCarryToPlayerField(IronFieldStatusSnapshot snap, float[] shieldBySlot)
     {
-        if (!IronCareerRuntime.IsActive) return;
+        if (!ExecutiveTrialRuntime.IsActive) return;
 
         if (teamStatus != null && teamStatusTurns != null && teamStatusMagnitude != null && teamStatusPersistent != null)
         {

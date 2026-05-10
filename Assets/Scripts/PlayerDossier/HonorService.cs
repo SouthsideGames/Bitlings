@@ -74,7 +74,7 @@ public static class HonorService
 
     public static bool CanApplyCombatBonuses()
     {
-        if (IronCareerRuntime.IsActive)
+        if (ExecutiveTrialRuntime.IsActive)
             return false;
 
         if (ArenaBattleSimulationScope.IsActive)

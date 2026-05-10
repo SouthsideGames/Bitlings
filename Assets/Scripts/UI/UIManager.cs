@@ -39,8 +39,8 @@ public enum PanelId
     ImagePreview = 32,
     IdleBattleRewards = 33,
 
-    // Iron Career: ONLY the main container should be managed by UIManager
-    IronCareerRift = 34,
+    // Executive Trial: ONLY the main container should be managed by UIManager
+    ExecutiveTrialRift = 34,
 
     // Exchange
     DuplicateResolution = 35,
@@ -72,7 +72,7 @@ public class UIManager : MonoBehaviour
 {
     public static UIManager I { get; private set; }
 
-    private const string TutorialIronCareerUnlockedKey = "tut_ironcareerunlocked_v1";
+    private const string TutorialExecutiveTrialUnlockedKey = "tut_executivetrialunlocked_v1";
     private const string TutorialAutoRiftKey = "tut_autorift_v1";
     private const string TutorialArenaUnlockedKey = "tut_arena_v1";
 
@@ -106,7 +106,7 @@ public class UIManager : MonoBehaviour
 
         // NOTE:
         // Iron overlays are intentionally NOT included here.
-        // They are controlled by IronCareerRiftPanelUI (or equivalent),
+        // They are controlled by ExecutiveTrialRiftPanelUI (or equivalent),
         // not by UIManager.
     };
 
@@ -198,23 +198,23 @@ public class UIManager : MonoBehaviour
         _idleRewardCo = StartCoroutine(Co_TryOpenIdleBattleRewardsNextFrame());
     }
 
-    void TryOpenIronCareerUnlockedTutorial()
+    void TryOpenExecutiveTrialUnlockedTutorial()
     {
         var data = SaveManager.Data;
         if (data == null) return;
-        if (!data.HasIronCareerUnlocked) return;
+        if (!data.HasExecutiveTrialUnlocked) return;
 
         int maxRank = PromotionManager.I != null ? PromotionManager.I.GetMaxRank() : 25;
         int rank = Mathf.Max(1, data.promotionRank);
         if (rank < maxRank) return;
 
-        if (SaveManager.IsTutorialComplete(TutorialIronCareerUnlockedKey)) return;
+        if (SaveManager.IsTutorialComplete(TutorialExecutiveTrialUnlockedKey)) return;
 
         // Avoid opening over the idle rewards popup; it will be requested again
         // the next time Home is opened if still incomplete.
         if (IsOpen(PanelId.IdleBattleRewards)) return;
 
-        TutorialOverlayPanel.RequestOpen(TutorialIronCareerUnlockedKey);
+        TutorialOverlayPanel.RequestOpen(TutorialExecutiveTrialUnlockedKey);
     }
 
     void TryOpenArenaUnlockedTutorial()
@@ -303,21 +303,21 @@ public class UIManager : MonoBehaviour
     private void SetActive(PanelId id, bool on, bool fireEvent = true)
     {
         // IRON GUARD: prevent regular Rift from being shown during active Iron runs
-        if (on && id == PanelId.Rift && IronCareerRuntime.IsActive)
+        if (on && id == PanelId.Rift && ExecutiveTrialRuntime.IsActive)
         {
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
-            Debug.LogWarning("[UIManager] Blocked opening regular Rift panel while Iron Career is active.");
+            Debug.LogWarning("[UIManager] Blocked opening regular Rift panel while Executive Trial is active.");
 #endif
             return;
         }
 
         // IRON GUARD: if Iron panel is being shown, immediately hide regular Rift if still open
-        if (on && id == PanelId.IronCareerRift && IronCareerRuntime.IsActive)
+        if (on && id == PanelId.ExecutiveTrialRift && ExecutiveTrialRuntime.IsActive)
         {
             if (_open.Contains(PanelId.Rift))
             {
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
-                DevLog.Log("[UIManager] Iron Career panel opening; force-hiding regular Rift panel.");
+                DevLog.Log("[UIManager] Executive Trial panel opening; force-hiding regular Rift panel.");
 #endif
                 SetImmediate(PanelId.Rift, false, fireEvent: false);
             }
@@ -346,7 +346,7 @@ public class UIManager : MonoBehaviour
                 if (id == PanelId.Home)
                 {
                     TryOpenIdleBattleRewardsNextFrame();
-                    TryOpenIronCareerUnlockedTutorial();
+                    TryOpenExecutiveTrialUnlockedTutorial();
                     TryOpenArenaUnlockedTutorial();
                     ExchangeManager.I?.TryShowPendingDividendHomeToast();
                 }

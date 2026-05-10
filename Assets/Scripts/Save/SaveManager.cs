@@ -130,8 +130,8 @@ public static class SaveManager
     private static string IdleBattleBackupPath => Path.Combine(Application.persistentDataPath, "idle_battle.bak");
     private static string IdleBattleGuardPath => Path.Combine(Application.persistentDataPath, "idle_battle_guard.json");
     private static string IdleBattleGuardBackupPath => Path.Combine(Application.persistentDataPath, "idle_battle_guard.bak");
-    private static string IronCareerMetaPath => Path.Combine(Application.persistentDataPath, "IronCareerMetaSave.json");
-    private static string IronCareerStatsPath => Path.Combine(Application.persistentDataPath, "IronCareerStats.json");
+    private static string ExecutiveTrialMetaPath => Path.Combine(Application.persistentDataPath, "ExecutiveTrialMetaSave.json");
+    private static string ExecutiveTrialStatsPath => Path.Combine(Application.persistentDataPath, "ExecutiveTrialStats.json");
     private static string MigrationsPath => Path.Combine(Application.persistentDataPath, "idle_migrations.json");
 
     // ─────────────────────────────────────────────
@@ -331,8 +331,8 @@ public static class SaveManager
             SaveFiles.TryDelete(IdleBattleBackupPath);
             SaveFiles.TryDelete(IdleBattleGuardPath);
             SaveFiles.TryDelete(IdleBattleGuardBackupPath);
-            SaveFiles.TryDelete(IronCareerMetaPath);
-            SaveFiles.TryDelete(IronCareerStatsPath);
+            SaveFiles.TryDelete(ExecutiveTrialMetaPath);
+            SaveFiles.TryDelete(ExecutiveTrialStatsPath);
             SaveFiles.TryDelete(MigrationsPath);
         }
     }
@@ -377,7 +377,7 @@ public static class SaveManager
         {
             TitleSaveStore.InvalidateCache();
             IdleBattleStore.ClearCache();
-            IronCareerStats.ClearCache();
+            ExecutiveTrialStats.ClearCache();
             PendingDuplicateCapture.Clear();
 
             SaveFiles.TryDelete(SavePath);
@@ -392,8 +392,8 @@ public static class SaveManager
             SaveFiles.TryDelete(IdleBattleBackupPath);
             SaveFiles.TryDelete(IdleBattleGuardPath);
             SaveFiles.TryDelete(IdleBattleGuardBackupPath);
-            SaveFiles.TryDelete(IronCareerMetaPath);
-            SaveFiles.TryDelete(IronCareerStatsPath);
+            SaveFiles.TryDelete(ExecutiveTrialMetaPath);
+            SaveFiles.TryDelete(ExecutiveTrialStatsPath);
             SaveFiles.TryDelete(MigrationsPath);
 
             ClearTutorialFlags();
@@ -458,7 +458,7 @@ public static class SaveManager
         {
             TitleSaveStore.InvalidateCache();
             IdleBattleStore.ClearCache();
-            IronCareerStats.ClearCache();
+            ExecutiveTrialStats.ClearCache();
             PendingDuplicateCapture.Clear();
 
             // 1) Stop the "already loaded" guard so LoadOrCreate can run again this session.
@@ -482,8 +482,8 @@ public static class SaveManager
             SaveFiles.TryDelete(IdleBattleBackupPath);
             SaveFiles.TryDelete(IdleBattleGuardPath);
             SaveFiles.TryDelete(IdleBattleGuardBackupPath);
-            SaveFiles.TryDelete(IronCareerMetaPath);
-            SaveFiles.TryDelete(IronCareerStatsPath);
+            SaveFiles.TryDelete(ExecutiveTrialMetaPath);
+            SaveFiles.TryDelete(ExecutiveTrialStatsPath);
             SaveFiles.TryDelete(MigrationsPath);
 
             SaveFiles.TryDelete(SavePath + ".tmp");
@@ -497,11 +497,11 @@ public static class SaveManager
             SaveFiles.TryDelete(IdleBattleBackupPath + ".tmp");
             SaveFiles.TryDelete(IdleBattleGuardPath + ".tmp");
             SaveFiles.TryDelete(IdleBattleGuardBackupPath + ".tmp");
-            SaveFiles.TryDelete(IronCareerMetaPath + ".tmp");
-            SaveFiles.TryDelete(IronCareerStatsPath + ".tmp");
+            SaveFiles.TryDelete(ExecutiveTrialMetaPath + ".tmp");
+            SaveFiles.TryDelete(ExecutiveTrialStatsPath + ".tmp");
             SaveFiles.TryDelete(MigrationsPath + ".tmp");
-            SaveFiles.TryDelete(IronCareerMetaPath + ".bak");
-            SaveFiles.TryDelete(IronCareerStatsPath + ".bak");
+            SaveFiles.TryDelete(ExecutiveTrialMetaPath + ".bak");
+            SaveFiles.TryDelete(ExecutiveTrialStatsPath + ".bak");
             SaveFiles.TryDelete(MigrationsPath + ".bak");
             SaveFiles.TryDelete(IdleBattleGuardPath + ".bak");
 
@@ -838,7 +838,7 @@ public static class SaveManager
         if (wasBoss) stats.bossesDefeated++;
     }
 
-    public static void RecordIronCareerWinForOwnedUid(string ownedUID)
+    public static void RecordExecutiveTrialWinForOwnedUid(string ownedUID)
     {
         var stats = GetOrCreateStats(ownedUID);
         if (stats == null) return;

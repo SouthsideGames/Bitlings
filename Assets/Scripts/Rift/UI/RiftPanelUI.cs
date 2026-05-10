@@ -238,8 +238,8 @@ public class RiftPanelUI : MonoBehaviour
 
     void OnEnable()
     {
-        // IRON GUARD: if Iron Career is active, immediately disable this panel
-        if (IronCareerRuntime.IsActive)
+        // IRON GUARD: if Executive Trial is active, immediately disable this panel
+        if (ExecutiveTrialRuntime.IsActive)
         {
             gameObject.SetActive(false);
             return;

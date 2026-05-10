@@ -88,11 +88,11 @@ A-086,Promotion Track,Reach Player Rank 5.,PlayerRank,5,FALSE,,FALSE,,FALSE,,Pro
 A-087,Regional Lead,Reach Player Rank 10.,PlayerRank,10,FALSE,,FALSE,,FALSE,,Progression
 A-088,Iron Candidate,Reach Player Rank 20.,PlayerRank,20,FALSE,,FALSE,,FALSE,,Progression
 A-089,Agency Veteran,Reach Player Rank 30.,PlayerRank,30,FALSE,,FALSE,,TRUE,,Progression
-A-090,First Iron Run,Start Iron Career for the first time.,IronRunsStarted,1,FALSE,,FALSE,,FALSE,,Iron Career
-A-091,Iron Survivor,Win 5 Iron Career battles.,IronBattleWins,5,FALSE,,FALSE,,TRUE,,Iron Career
-A-092,Iron Record,Win 25 Iron Career battles.,IronBattleWins,25,FALSE,,FALSE,,TRUE,,Iron Career
-A-093,No Return,Complete an Iron run.,IronRunsCompleted,1,FALSE,,FALSE,,TRUE,,Iron Career
-A-094,Perfect Containment,Complete an Iron run with no deaths.,IronPerfectRuns,1,FALSE,,FALSE,,TRUE,,Iron Career
+A-090,First Iron Run,Start Executive Trial for the first time.,IronRunsStarted,1,FALSE,,FALSE,,FALSE,,Executive Trial
+A-091,Iron Survivor,Win 5 Executive Trial battles.,IronBattleWins,5,FALSE,,FALSE,,TRUE,,Executive Trial
+A-092,Iron Record,Win 25 Executive Trial battles.,IronBattleWins,25,FALSE,,FALSE,,TRUE,,Executive Trial
+A-093,No Return,Complete an Iron run.,IronRunsCompleted,1,FALSE,,FALSE,,TRUE,,Executive Trial
+A-094,Perfect Containment,Complete an Iron run with no deaths.,IronPerfectRuns,1,FALSE,,FALSE,,TRUE,,Executive Trial
 A-095,Quiet Professional,Watch 10 full battles without using skip.,BattlesWatched,10,FALSE,,FALSE,,FALSE,,Profile
 A-096,Public Profile,Open the Codex 25 times.,CodexOpened,25,FALSE,,FALSE,,FALSE,,Profile
 A-097,Archivist,Open the Codex 100 times.,CodexOpened,100,FALSE,,FALSE,,FALSE,,Profile

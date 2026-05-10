@@ -37,7 +37,7 @@ public sealed class SupplyIndexSystem : MonoBehaviour
     private void Update()
     {
         if (SaveManager.IsHardWiping) return;
-        if (IronCareerRuntime.IsActive) return;
+        if (ExecutiveTrialRuntime.IsActive) return;
 
         _accum += Time.unscaledDeltaTime;
         if (_accum >= tickSeconds)

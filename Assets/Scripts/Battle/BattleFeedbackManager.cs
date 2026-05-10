@@ -940,7 +940,7 @@ public void SetGuard(BattleFeedbackSide side, bool on)
     }
 
         /// <summary>Copies animation timing values from another BattleFeedbackManager.
-        /// Called by IronBattleUIRoot to ensure Iron Career uses identical timing to regular battles.</summary>
+        /// Called by IronBattleUIRoot to ensure Executive Trial uses identical timing to regular battles.</summary>
         public void CopyAnimationTimingsFrom(BattleFeedbackManager src)
         {
             if (src == null || src == this) return;

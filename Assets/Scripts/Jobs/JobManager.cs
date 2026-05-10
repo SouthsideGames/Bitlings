@@ -74,14 +74,14 @@ public sealed class JobManager : MonoBehaviour
     public static JobManager I;
 
     // -------------------------------------------------------------------------
-    // Iron Career safety
+    // Executive Trial safety
     // -------------------------------------------------------------------------
     // In Iron, we still allow offline/online job simulation to run so resources
     // accrue normally, but we must NOT broadcast global UI events that can wake
     // non-Iron panels/systems.
     private void FireJobsChanged()
     {
-        if (IronCareerRuntime.IsActive) return;
+        if (ExecutiveTrialRuntime.IsActive) return;
         GameEvents.OnJobsChanged?.Invoke();
     }
 
@@ -472,7 +472,7 @@ public sealed class JobManager : MonoBehaviour
             }
         }
 
-        if (autoReliefEnabled && !IronCareerRuntime.IsActive) ApplyClinicRelief(dtHours);
+        if (autoReliefEnabled && !ExecutiveTrialRuntime.IsActive) ApplyClinicRelief(dtHours);
 
         SaveRuntimeToSave();
         SaveManager.FlushLifetimeJobStatsIfNeeded();

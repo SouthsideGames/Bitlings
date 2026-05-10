@@ -8,12 +8,12 @@ namespace NaughtyAttributes.Test
     }
 
     [System.Serializable]
-    public class MyClass
+    public class _MyClass
     {
     }
 
     [System.Serializable]
-    public struct MyStruct
+    public struct _MyStruct
     {
     }
 }

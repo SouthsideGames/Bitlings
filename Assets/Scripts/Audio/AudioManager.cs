@@ -80,10 +80,10 @@ public class AudioManager : MonoBehaviour
     [Tooltip("Battle music pool. When a battle begins, one clip is selected randomly for that battle.")]
     [SerializeField] private List<AudioClip> battleMusicPool = new();
 
-    [Header("Iron Career Battle Music")]
-    [Tooltip("Optional legacy single Iron Career battle clip.")]
+    [Header("Executive Trial Battle Music")]
+    [Tooltip("Optional legacy single Executive Trial battle clip.")]
     [SerializeField] private AudioClip ironCareerBattleMusic;
-    [Tooltip("Iron Career battle music pool. One clip is selected when the player presses Start Run.")]
+    [Tooltip("Executive Trial battle music pool. One clip is selected when the player presses Start Run.")]
     [SerializeField] private List<AudioClip> ironCareerBattleMusicPool = new();
 
     [Header("Boss Music")]
@@ -102,7 +102,7 @@ public class AudioManager : MonoBehaviour
 
     private AudioClip _currentStartingMusic; // chosen at startup (NO fallback)
     private AudioClip _currentBattleMusic;   // chosen when rift button is pressed
-    private AudioClip _currentIronCareerBattleMusic; // chosen when Iron Career start is pressed
+    private AudioClip _currentExecutiveTrialBattleMusic; // chosen when Executive Trial start is pressed
     private AudioClip _currentBossMusic;     // chosen when boss starts
 
     // Session cache so panel switches / manager reinstantiation do not reroll startup music.
@@ -339,7 +339,7 @@ public class AudioManager : MonoBehaviour
         return battleMusic;
     }
 
-    private AudioClip PickIronCareerBattleMusicForRun()
+    private AudioClip PickExecutiveTrialBattleMusicForRun()
     {
         var fromPool = PickFromPoolNoFallback(ironCareerBattleMusicPool);
         if (fromPool != null) return fromPool;
@@ -378,12 +378,12 @@ public class AudioManager : MonoBehaviour
             PlayMusic(_currentBattleMusic, true, defaultCrossfade);
     }
 
-    public void PickIronCareerBattleMusicOnStartPress(bool playImmediately = true)
+    public void PickExecutiveTrialBattleMusicOnStartPress(bool playImmediately = true)
     {
-        _currentIronCareerBattleMusic = PickIronCareerBattleMusicForRun();
+        _currentExecutiveTrialBattleMusic = PickExecutiveTrialBattleMusicForRun();
 
-        if (playImmediately && _currentIronCareerBattleMusic != null)
-            PlayMusic(_currentIronCareerBattleMusic, true, defaultCrossfade);
+        if (playImmediately && _currentExecutiveTrialBattleMusic != null)
+            PlayMusic(_currentExecutiveTrialBattleMusic, true, defaultCrossfade);
     }
 
     public void RerollBossMusic(bool playImmediately = false)
@@ -764,7 +764,7 @@ public class AudioManager : MonoBehaviour
         // the Rift panel temporarily closes (e.g., dedicated battle view, blinder overlays,
         // auto-battle UI swaps, etc.).
         bool isInBattle = (RiftManager.I != null) && RiftManager.I.IsInBattle;
-        bool isIronCareerBattle = IronCareerRuntime.IsActive && isInBattle;
+        bool isExecutiveTrialBattle = ExecutiveTrialRuntime.IsActive && isInBattle;
 
         // "Rift View" means the rift panel is visible and we are NOT on the results screen.
         // Additionally:
@@ -800,14 +800,14 @@ public class AudioManager : MonoBehaviour
         // 2) Rift view: boss music if active, else battle music
         if (riftViewOpen)
         {
-            if (isIronCareerBattle)
+            if (isExecutiveTrialBattle)
             {
-                if (_currentIronCareerBattleMusic == null)
-                    _currentIronCareerBattleMusic = PickIronCareerBattleMusicForRun();
+                if (_currentExecutiveTrialBattleMusic == null)
+                    _currentExecutiveTrialBattleMusic = PickExecutiveTrialBattleMusicForRun();
 
-                if (_currentIronCareerBattleMusic != null)
+                if (_currentExecutiveTrialBattleMusic != null)
                 {
-                    PlayMusic(_currentIronCareerBattleMusic, true, defaultCrossfade);
+                    PlayMusic(_currentExecutiveTrialBattleMusic, true, defaultCrossfade);
                     return;
                 }
             }

@@ -926,7 +926,7 @@ private void FireOnEntryEffects(int slot)
                 for (int i = 0; i < teamStatus.Length; i++)
                 {
                     // Iron carry safety: never subtract imported shields on Shielded expiry.
-                    if (IronCareerRuntime.IsActive && _ironShieldCarrySlots != null && i >= 0 && i < _ironShieldCarrySlots.Length && _ironShieldCarrySlots[i])
+                    if (ExecutiveTrialRuntime.IsActive && _ironShieldCarrySlots != null && i >= 0 && i < _ironShieldCarrySlots.Length && _ironShieldCarrySlots[i])
                     {
                         if (_shieldedGrantTeam != null && i >= 0 && i < _shieldedGrantTeam.Length)
                             _shieldedGrantTeam[i] = 0f;
@@ -976,7 +976,7 @@ private void FireOnEntryEffects(int slot)
             EnsureShieldGrantPools();
 
             // Iron carry safety: never subtract imported shields on Shielded expiry.
-            if (IronCareerRuntime.IsActive && _ironShieldCarrySlots != null && slot >= 0 && slot < _ironShieldCarrySlots.Length && _ironShieldCarrySlots[slot])
+            if (ExecutiveTrialRuntime.IsActive && _ironShieldCarrySlots != null && slot >= 0 && slot < _ironShieldCarrySlots.Length && _ironShieldCarrySlots[slot])
             {
                 if (_shieldedGrantTeam != null && slot >= 0 && slot < _shieldedGrantTeam.Length)
                     _shieldedGrantTeam[slot] = 0f;

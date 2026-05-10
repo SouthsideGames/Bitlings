@@ -23,7 +23,7 @@ public sealed class FeatureUnlockAlertRouter : MonoBehaviour
     [SerializeField] private GameObject resourceAlert;
     [SerializeField] private Button resourceButton;
 
-    [Header("Iron Career Alert")]
+    [Header("Executive Trial Alert")]
     [SerializeField] private GameObject ironCareerAlert;
     [SerializeField] private Button ironCareerButton;
 
@@ -32,7 +32,7 @@ public sealed class FeatureUnlockAlertRouter : MonoBehaviour
 
     private const int SynergyUnlockRank = 10;
     private const int DifficultyUnlockRank = 15;
-    private const int IronCareerUnlockRank = 20;
+    private const int ExecutiveTrialUnlockRank = 20;
 
     private void OnEnable()
     {
@@ -47,7 +47,7 @@ public sealed class FeatureUnlockAlertRouter : MonoBehaviour
         AddDismiss(directoryButton, DismissDirectory);
         AddDismiss(gymButton, DismissGym);
         AddDismiss(resourceButton, DismissResource);
-        AddDismiss(ironCareerButton, DismissIronCareer);
+        AddDismiss(ironCareerButton, DismissExecutiveTrial);
     }
 
     private void OnDisable()
@@ -60,7 +60,7 @@ public sealed class FeatureUnlockAlertRouter : MonoBehaviour
         RemoveDismiss(directoryButton, DismissDirectory);
         RemoveDismiss(gymButton, DismissGym);
         RemoveDismiss(resourceButton, DismissResource);
-        RemoveDismiss(ironCareerButton, DismissIronCareer);
+        RemoveDismiss(ironCareerButton, DismissExecutiveTrial);
     }
 
     private void HandleFeatureUnlocked(FeatureId feature)
@@ -101,7 +101,7 @@ public sealed class FeatureUnlockAlertRouter : MonoBehaviour
         if (oldRank < DifficultyUnlockRank && newRank >= DifficultyUnlockRank)
             SetAlert(settingsAlert, true);
 
-        if (oldRank < IronCareerUnlockRank && newRank >= IronCareerUnlockRank)
+        if (oldRank < ExecutiveTrialUnlockRank && newRank >= ExecutiveTrialUnlockRank)
             SetAlert(ironCareerAlert, true);
     }
 
@@ -110,7 +110,7 @@ public sealed class FeatureUnlockAlertRouter : MonoBehaviour
     private void DismissDirectory() => SetAlert(directoryAlert, false);
     private void DismissGym() => SetAlert(gymAlert, false);
     private void DismissResource() => SetAlert(resourceAlert, false);
-    private void DismissIronCareer() => SetAlert(ironCareerAlert, false);
+    private void DismissExecutiveTrial() => SetAlert(ironCareerAlert, false);
 
     private void HideAllAlerts()
     {

@@ -535,7 +535,7 @@ public sealed class TitleManager : MonoBehaviour
         _battleContextLevel[combatantId] = Mathf.Max(1, level);
     }
 
-    // Exposed for battle systems that use synthetic combatant ids (Iron Career, wilds, etc.).
+    // Exposed for battle systems that use synthetic combatant ids (Executive Trial, wilds, etc.).
     public void RegisterBattleContextPublic(string combatantId, MonsterDataSO def, int level)
     {
         RegisterBattleContext(combatantId, def, level);

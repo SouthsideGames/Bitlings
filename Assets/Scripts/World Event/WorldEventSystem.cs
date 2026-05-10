@@ -19,13 +19,13 @@ public sealed class WorldEventSystem : MonoBehaviour
     public static WorldEventSystem I { get; private set; }
 
     // -------------------------------------------------------------------------
-    // Iron Career safety
+    // Executive Trial safety
     // -------------------------------------------------------------------------
-    // During Iron Career we allow world events to continue ticking internally,
+    // During Executive Trial we allow world events to continue ticking internally,
     // but we suppress global UI broadcasts that would wake non-Iron systems.
     private void FireWorldEventsChanged()
     {
-        if (IronCareerRuntime.IsActive) return;
+        if (ExecutiveTrialRuntime.IsActive) return;
         GameEvents.WorldEventsChanged?.Invoke();
     }
 

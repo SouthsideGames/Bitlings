@@ -58,7 +58,7 @@ public static class CareerNarrativeGenerator
         }
 
         if (stats.ironCareerWins > 0)
-            sentences.Add($"{Cap(pronouns.subject)} survived {stats.ironCareerWins.ToString("N0")} battles in Iron Career.");
+            sentences.Add($"{Cap(pronouns.subject)} survived {stats.ironCareerWins.ToString("N0")} battles in Executive Trial.");
 
         bool hasDriftLine = false;
         if (stats.driftTierAtRetirement >= 2)

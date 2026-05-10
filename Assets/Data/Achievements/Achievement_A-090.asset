@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::AchievementEntrySO
   id: A-090
   displayName: First Iron Run
-  description: Start Iron Career for the first time.
+  description: Start Executive Trial for the first time.
   icon: {fileID: -4192873577498990268, guid: 3488ad4b336d946b7abcb675644295f3, type: 3}
   trigger: 25
   goal: 1
@@ -23,4 +23,4 @@ MonoBehaviour:
   useResourceFilter: 0
   resourceFilter: 0
   secretUntilUnlocked: 0
-  category: Iron Career
+  category: Executive Trial

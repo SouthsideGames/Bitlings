@@ -190,7 +190,7 @@ public class PlayerManager
 
     public bool HasSynergyUnlocked => promotionRank >= 10;
     public bool HasDifficultyUnlocked => promotionRank >= 15;
-    public bool HasIronCareerUnlocked => promotionRank >= 20;
+    public bool HasExecutiveTrialUnlocked => promotionRank >= 20;
     // RNG seed state (daily seed persistence / reroll tracking)
     public SeedState seedState = new SeedState();
     public List<JobAssignment> jobAssignments = new List<JobAssignment>();

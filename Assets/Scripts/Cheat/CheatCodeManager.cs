@@ -624,9 +624,9 @@ public class CheatCodeManager : MonoBehaviour
         }
 
         // Prevent meta progression edits during an active Iron run; the guard will flag these events.
-        if (IronCareerRuntime.IsActive)
+        if (ExecutiveTrialRuntime.IsActive)
         {
-            message = "Promotion rank cheats are disabled during Iron Career runs.";
+            message = "Promotion rank cheats are disabled during Executive Trial runs.";
             return false;
         }
 
@@ -652,7 +652,7 @@ public class CheatCodeManager : MonoBehaviour
         if (oldRank != data.promotionRank)
             GameEvents.PromotionRankChanged?.Invoke(oldRank, data.promotionRank);
 
-        message = $"Promotion rank set to {data.promotionRank} (max). Synergy, difficulty, and Iron Career unlocked.";
+        message = $"Promotion rank set to {data.promotionRank} (max). Synergy, difficulty, and Executive Trial unlocked.";
         return true;
     }
 
@@ -826,9 +826,9 @@ public class CheatCodeManager : MonoBehaviour
             return false;
         }
 
-        if (IronCareerRuntime.IsActive)
+        if (ExecutiveTrialRuntime.IsActive)
         {
-            message = "Promotion rank cheats are disabled during Iron Career runs.";
+            message = "Promotion rank cheats are disabled during Executive Trial runs.";
             return false;
         }
 

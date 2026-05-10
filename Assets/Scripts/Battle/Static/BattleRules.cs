@@ -3,7 +3,7 @@ using UnityEngine;
 
 /// <summary>
 /// Flags that define which systems are allowed to participate in a battle.
-/// Normal mode uses Default. Iron Career uses Iron.
+/// Normal mode uses Default. Executive Trial uses Iron.
 /// </summary>
 [Serializable]
 public struct BattleRules

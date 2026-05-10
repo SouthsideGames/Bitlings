@@ -333,7 +333,7 @@ public sealed class ActionBarBinder : MonoBehaviour
             bool isAuto = false;
             try
             {
-                isAuto = !IronCareerRuntime.IsActive && (RiftManager.I != null) && RiftManager.I.IsAutoMode;
+                isAuto = !ExecutiveTrialRuntime.IsActive && (RiftManager.I != null) && RiftManager.I.IsAutoMode;
             }
             catch
             {

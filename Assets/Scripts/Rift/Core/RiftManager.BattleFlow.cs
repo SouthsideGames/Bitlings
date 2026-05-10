@@ -16,7 +16,7 @@ public partial class RiftManager
 
     public void RequestRiftTap()
     {
-        if (IronCareerRuntime.IsActive)
+        if (ExecutiveTrialRuntime.IsActive)
         {
             DevLog.Log("[RiftManager] Ignoring rift tap while Iron is active.");
             return;
@@ -130,7 +130,7 @@ public partial class RiftManager
 
     private void EnsureNonIronHudBindings()
     {
-        if (IronCareerRuntime.IsActive)
+        if (ExecutiveTrialRuntime.IsActive)
             return;
 
         var ironHud = FindFirstObjectByType<IronBattleUIRoot>(FindObjectsInactive.Include);
@@ -146,7 +146,7 @@ public partial class RiftManager
 
     void StartRift(bool spendEnergy)
     {
-        if (IronCareerRuntime.IsActive)
+        if (ExecutiveTrialRuntime.IsActive)
         {
             Debug.LogWarning("[RiftManager] StartRift blocked during Iron.");
             return;
@@ -252,7 +252,7 @@ public partial class RiftManager
 
         battleManager.ConfigureForAuto(_autoResolveSnapshot);
 
-        // Safety: if we are NOT in Iron Career, make sure any Iron HUD override is cleared
+        // Safety: if we are NOT in Executive Trial, make sure any Iron HUD override is cleared
         // so regular battles always bind to the regular (yellow) HUD.
         EnsureNonIronHudBindings();
 

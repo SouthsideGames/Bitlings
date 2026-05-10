@@ -115,7 +115,7 @@ public partial class BattleManager : MonoBehaviour
 
     /// <summary>
     /// Overrides all HUD bindings (wild/player/bench panels) at runtime.
-    /// Additive only: safe for normal mode, used by Iron Career.
+    /// Additive only: safe for normal mode, used by Executive Trial.
     /// </summary>
     public void SetUIBindingsOverride(BattleUIBindings o)
     {

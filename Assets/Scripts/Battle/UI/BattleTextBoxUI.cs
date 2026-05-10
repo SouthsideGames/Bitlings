@@ -129,8 +129,8 @@ public class BattleTextBoxUI : MonoBehaviour
     {
         if (canvasGroup == null) return;
 
-        // In Iron Career we always keep the battle text box visible and skip rift-based visibility.
-        if (IronCareerRuntime.IsActive)
+        // In Executive Trial we always keep the battle text box visible and skip rift-based visibility.
+        if (ExecutiveTrialRuntime.IsActive)
         {
             canvasGroup.alpha = 1f;
             return;

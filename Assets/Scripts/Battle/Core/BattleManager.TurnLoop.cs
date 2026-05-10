@@ -2404,7 +2404,7 @@ EndBattleRouted(false);
 
         onEnd?.Invoke(result);
 
-        if (!IronCareerRuntime.IsActive)
+        if (!ExecutiveTrialRuntime.IsActive)
             GameEvents.BattleFinished?.Invoke(result);
     }
 
