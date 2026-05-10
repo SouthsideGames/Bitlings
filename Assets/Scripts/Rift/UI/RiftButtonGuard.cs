@@ -74,6 +74,9 @@ public sealed class RiftButtonGuard : MonoBehaviour
 
     private void OnEnable()
     {
+        // Ensure hold UI never appears in a stale state when this view is enabled.
+        ResetPressState();
+
         RiftManager.OnEnergyGained += HandleEnergy;
         GameEvents.EnergyChanged += HandleEnergy;
         GameEvents.OnTeamChanged += HandleTeamChanged;
