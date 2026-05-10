@@ -1,20 +1,20 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using UnityEngine;
 
-// ─────────────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // BattleManager.Titles
 // Battle-start title application and runtime conditional title effects.
-// ─────────────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 public partial class BattleManager : MonoBehaviour
 {
-    // ─────────────────────────────────────────────────────────────
+    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     // Battle-start Titles application
-    // ─────────────────────────────────────────────────────────────
+    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     private void ApplyBattleStartTitles()
     {
-        // Subscribe to title effect requests (idempotent — won't double-subscribe)
+        // Subscribe to title effect requests (idempotent â€” won't double-subscribe)
         SubscribeTitleEffects();
 
         // Player (active slot)
@@ -90,11 +90,11 @@ public partial class BattleManager : MonoBehaviour
         float curMax = GetActiveMaxHP_NoConditionals(teamMaxHP[idx], idx);
 
         float curHp = (teamHP != null && idx >= 0 && idx < teamHP.Length) ? teamHP[idx] : curMax;
-        float hp01 = curMax > 0.01f ? Mathf.Clamp01(curHp / curMax) : 0f;
+        float hp01 = curMax > 0.01f ? Mathf.Clamp01(curHp / curMax) : 0f; // TODO: confirm this 0.01f is intentional
 
         int alliesAlive = 0;
         for (int i = 0; i < teamCount; i++)
-            if (i != idx && teamHP != null && i < teamHP.Length && teamHP[i] > 0.01f) alliesAlive++;
+            if (i != idx && teamHP != null && i < teamHP.Length && teamHP[i] > 0.01f) alliesAlive++; // TODO: confirm this 0.01f is intentional
 
         int winStreak = (RiftManager.I != null) ? RiftManager.I.CurrentWinStreak : 0;
 
@@ -156,7 +156,7 @@ public partial class BattleManager : MonoBehaviour
     {
         int alive = 0;
         for (int i = 0; i < teamCount; i++)
-            if (i != activeIndex && teamHP[i] > 0.01f) alive++;
+            if (i != activeIndex && teamHP[i] > 0.01f) alive++; // TODO: confirm this 0.01f is intentional
         return alive;
     }
 
@@ -178,9 +178,9 @@ public partial class BattleManager : MonoBehaviour
         return 0;
     }
 
-    // ─────────────────────────────────────────────────────────────────────────
+    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     // Conditional Title feedback (battle textbox + BattleLogger)
-    // ─────────────────────────────────────────────────────────────────────────
+    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     // Tracks the last conditional-mod snapshot so we only notify on changes.
     // We keep this in BattleManager so it survives across partials and avoids per-frame allocations.
@@ -228,17 +228,17 @@ public partial class BattleManager : MonoBehaviour
         bool anyUp = false;
         bool anyDown = false;
 
-        if (m.atkPct > 0f || m.atkFlat > 0) { Add("ATK↑"); anyUp = true; }
-        else if (m.atkPct < 0f || m.atkFlat < 0) { Add("ATK↓"); anyDown = true; }
+        if (m.atkPct > 0f || m.atkFlat > 0) { Add("ATKâ†‘"); anyUp = true; }
+        else if (m.atkPct < 0f || m.atkFlat < 0) { Add("ATKâ†“"); anyDown = true; }
 
-        if (m.defPct > 0f || m.defFlat > 0) { Add("DEF↑"); anyUp = true; }
-        else if (m.defPct < 0f || m.defFlat < 0) { Add("DEF↓"); anyDown = true; }
+        if (m.defPct > 0f || m.defFlat > 0) { Add("DEFâ†‘"); anyUp = true; }
+        else if (m.defPct < 0f || m.defFlat < 0) { Add("DEFâ†“"); anyDown = true; }
 
-        if (m.spdPct > 0f || m.spdFlat > 0) { Add("SPD↑"); anyUp = true; }
-        else if (m.spdPct < 0f || m.spdFlat < 0) { Add("SPD↓"); anyDown = true; }
+        if (m.spdPct > 0f || m.spdFlat > 0) { Add("SPDâ†‘"); anyUp = true; }
+        else if (m.spdPct < 0f || m.spdFlat < 0) { Add("SPDâ†“"); anyDown = true; }
 
-        if (m.hpPct > 0f) { Add("HP↑"); anyUp = true; }
-        else if (m.hpPct < 0f) { Add("HP↓"); anyDown = true; }
+        if (m.hpPct > 0f) { Add("HPâ†‘"); anyUp = true; }
+        else if (m.hpPct < 0f) { Add("HPâ†“"); anyDown = true; }
 
         if (parts == null || parts.Count == 0) return null;
 
@@ -320,7 +320,7 @@ public partial class BattleManager : MonoBehaviour
     private TitleContext BuildTitleContextForActive()
     {
         float curMax = GetFinalMaxHPForIndex(activeIndex);
-        float hpPct = curMax > 0.01f ? Mathf.Clamp01(teamHP[activeIndex] / curMax) : 0f;
+        float hpPct = curMax > 0.01f ? Mathf.Clamp01(teamHP[activeIndex] / curMax) : 0f; // TODO: confirm this 0.01f is intentional
         int alliesAlive = GetAlliesAliveNotIncludingActive();
         int streak = GetWinStreakSafe();
 
@@ -338,7 +338,7 @@ public partial class BattleManager : MonoBehaviour
     internal TitleContext BuildTitleContextForWild()
     {
         float max = Mathf.Max(1f, wildMaxHP);
-        float hp01 = max > 0.01f ? Mathf.Clamp01(wildHP / max) : 0f;
+        float hp01 = max > 0.01f ? Mathf.Clamp01(wildHP / max) : 0f; // TODO: confirm this 0.01f is intentional
 
         return new TitleContext
         {
@@ -369,7 +369,7 @@ public partial class BattleManager : MonoBehaviour
 
         // Fallback: legacy title evaluation (HP/ATK only). Kept for safety when _stats is unavailable.
         float prevMax = Mathf.Max(1f, wildMaxHP);
-        float hp01 = prevMax > 0.01f ? Mathf.Clamp01(wildHP / prevMax) : 0f;
+        float hp01 = prevMax > 0.01f ? Mathf.Clamp01(wildHP / prevMax) : 0f; // TODO: confirm this 0.01f is intentional
 
         var wCtx = BuildTitleContextForWild();
 
@@ -449,14 +449,14 @@ public partial class BattleManager : MonoBehaviour
                 if (t is BattleStartFlatTitleSO bsf)
                     extra = $" stat={bsf.stat} flatAmount={bsf.flatAmount} durationTurns={bsf.durationTurns}";
 
-                DevLog.Log($"  • [{i}] {id} {t.name} ({t.GetType().Name}){extra}");
+                DevLog.Log($"  â€¢ [{i}] {id} {t.name} ({t.GetType().Name}){extra}");
             }
         }
     }
 
-    // ─────────────────────────────────────────────────────────────
-    // OnEventTriggerTitleSO — effect handling
-    // ─────────────────────────────────────────────────────────────
+    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // OnEventTriggerTitleSO â€” effect handling
+    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     private bool _titleEffectSubscribed;
 
@@ -541,9 +541,9 @@ public partial class BattleManager : MonoBehaviour
         }
     }
 
-    // ─────────────────────────────────────────────────────────────
-    // StatusApplyTitleSO — status infliction handling
-    // ─────────────────────────────────────────────────────────────
+    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // StatusApplyTitleSO â€” status infliction handling
+    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     private void HandleTitleStatus(TitleStatusRequest req)
     {

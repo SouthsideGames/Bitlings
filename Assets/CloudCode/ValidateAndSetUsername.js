@@ -53,13 +53,35 @@ module.exports = async ({ params, context, logger }) => {
   // ── Single service-scoped client (handles both player and game data) ──
   const cloudSave = new DataApi(context);
 
-  // ── Check if this player already has a username ──
-
+  // ── Parallel read: fetch both player data AND username index in parallel ── // FIXED: parallelize I/O to cut latency
+  const nameKey = trimmed.toLowerCase();
   let existingData;
+  let indexResult;
+  let playerDataError;
+  let indexError;
+
   try {
-    existingData = await cloudSave.getItems(projectId, playerId, ["arena_v1"]);
+    // FIXED: fetch both independent datasets concurrently instead of sequentially
+    const [playerResult, index] = await Promise.all([
+      cloudSave.getItems(projectId, playerId, ["arena_v1"]).catch((err) => {
+        playerDataError = err;
+        return null;
+      }),
+      cloudSave.getPrivateCustomItems(projectId, CUSTOM_ID).catch((err) => {
+        indexError = err;
+        return null;
+      }),
+    ]);
+    existingData = playerResult;
+    indexResult = index;
   } catch (e) {
-    logger.error("Failed to read player data: " + e.message);
+    logger.error("Unexpected error in parallel read: " + e.message);
+    return { success: false, error: "Server error during validation." };
+  }
+
+  // ── Check player data (if fetch succeeded) ──
+  if (playerDataError) {
+    logger.error("Failed to read player data: " + playerDataError.message);
     return { success: false, error: "Server error reading player data." };
   }
 
@@ -84,44 +106,18 @@ module.exports = async ({ params, context, logger }) => {
   }
 
   // ── Check uniqueness via Game Data (private custom items) ──
-
-  const nameKey = trimmed.toLowerCase();
   let nameTaken = false;
   let oldNameKey = null; // Track if this player already owns a different name.
 
-  try {
-    const indexResult = await cloudSave.getPrivateCustomItems(
-      projectId,
-      CUSTOM_ID,
-    );
-    logger.info(
-      "Username index read OK. Results: " +
-        JSON.stringify(indexResult?.data?.results?.length ?? 0),
-    );
-
-    if (indexResult?.data?.results) {
-      for (const item of indexResult.data.results) {
-        // Check if this player owns a different name (from a previous reset).
-        if (item.value === playerId && item.key !== nameKey) {
-          oldNameKey = item.key;
-        }
-        if (item.key === nameKey) {
-          if (item.value && item.value !== playerId) {
-            nameTaken = true;
-          }
-          // If value === playerId, this player already owns it (crash retry).
-        }
-      }
-    }
-  } catch (e) {
+  if (indexError) {
     // 404 means the entity doesn't exist yet — name is available.
-    const status = e?.response?.status || e?.status;
+    const status = indexError?.response?.status || indexError?.status;
     if (status !== 404) {
       logger.error(
         "Failed to check username index: status=" +
           status +
           " message=" +
-          e.message,
+          indexError.message,
       );
       return {
         success: false,
@@ -129,6 +125,23 @@ module.exports = async ({ params, context, logger }) => {
       };
     }
     logger.info("Username index entity not found (404) — first username ever.");
+  } else if (indexResult?.data?.results) {
+    logger.info(
+      "Username index read OK. Results: " +
+        JSON.stringify(indexResult?.data?.results?.length ?? 0),
+    );
+    for (const item of indexResult.data.results) {
+      // Check if this player owns a different name (from a previous reset).
+      if (item.value === playerId && item.key !== nameKey) {
+        oldNameKey = item.key;
+      }
+      if (item.key === nameKey) {
+        if (item.value && item.value !== playerId) {
+          nameTaken = true;
+        }
+        // If value === playerId, this player already owns it (crash retry).
+      }
+    }
   }
 
   if (nameTaken) {

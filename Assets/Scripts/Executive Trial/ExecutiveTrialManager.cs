@@ -12,14 +12,14 @@ public sealed class ExecutiveTrialManager : MonoBehaviour, ExecutiveTrailBattleB
     [SerializeField] private BattleManager battle;
     [SerializeField] private ExecutiveTrailBattleBridge bridge;
 
-    [Header("Iron Systems (Phase 3)")]
-    [Tooltip("Reference to the Iron rift panel controller on Panel_ExecutiveTrialRift.")]
-    [SerializeField] private ExecutiveTrialRiftPanelUI ironRiftUI;
+    [Header("Executive Trial Systems (Phase 3)")]
+    [Tooltip("Reference to the Executive Trial rift panel controller on Panel_ExecutiveTrialRift.")]
+    [SerializeField] private ExecutiveTrialRiftPanelUI executiveTrialRiftUI;
 
-    [Tooltip("Reference to the Iron battle UI root (Panel_ExecutiveTrialRift/ExecutiveTrialBattle).")]
-    [SerializeField] private IronBattleUIRoot ironBattleUI;
+    [Tooltip("Reference to the Executive Trial battle UI root (Panel_ExecutiveTrialRift/ExecutiveTrialBattle).")]
+    [SerializeField] private ExecutiveTrialBattleUIRoot executiveTrialBattleUI;
 
-    [Header("Iron Panels (Phase 3)")]
+    [Header("Executive Trial Panels (Phase 3)")]
     [SerializeField] private ExecutiveTrialStarterPanelUI starterPanel;
     [SerializeField] private ExecutiveTrialHirePanelUI hirePanel;
     [SerializeField] private ExecutiveTrialReplacePanelUI replacePanel;
@@ -38,10 +38,9 @@ public sealed class ExecutiveTrialManager : MonoBehaviour, ExecutiveTrailBattleB
     [Tooltip("Grace period (seconds) before applying background forfeit. Gives players a moment to alt-tab without ending the run.")]
     [SerializeField] private float backgroundForfeitGraceSeconds = 0.5f;
 
-    [Header("Hire Rules")]
-    [Tooltip("Chance that a hire attempt succeeds when player chooses Yes. 1 = always succeeds.")]
-    [Range(0f, 1f)]
-    [SerializeField] private float hireSuccessChance = 1f;
+    // FIXED: hireSuccessChance was a dead knob (always 1.0). Locked to always-succeed
+    // until the hire-failure UX (probability display + failure animation) is implemented.
+    private const float HIRE_SUCCESS_CHANCE = 1f;
 
     [Header("Seed (runtime-only)")]
     [Tooltip("If true, uses the inspector seed value for deterministic debug runs. Keep off for normal random Iron runs.")]
@@ -264,6 +263,9 @@ public sealed class ExecutiveTrialManager : MonoBehaviour, ExecutiveTrailBattleB
             isForfeit        = false,
         });
 
+        _state.battleInProgress = false; // FIXED: cleared after clean outcome — crash between these two = recoverable loss
+        ExecutiveTrialMetaSave.Save(LoadMetaData());
+
         if (_roster == null || _roster.IsPartyEmpty)
         {
             ShowGameOver(forfeit: false, defeatCauseOverride: outcome.wildEscaped ? "Enemy Fled" : null);
@@ -277,7 +279,7 @@ public sealed class ExecutiveTrialManager : MonoBehaviour, ExecutiveTrailBattleB
             _pendingHire = null;
             _rifts?.ClearWildCache();
 
-            ironRiftUI?.HideAll(immediate: true);
+            executiveTrialRiftUI?.HideAll(immediate: true);
             ShowPost();
             return;
         }
@@ -295,7 +297,7 @@ public sealed class ExecutiveTrialManager : MonoBehaviour, ExecutiveTrailBattleB
         TryRecordExecutiveTrialWinForActiveSpecies();
         ApplyPartyAutoLevelOnWin();
 
-        GameEvents.IronBattleWon?.Invoke();
+        GameEvents.ExecutiveTrialBattleWon?.Invoke();
 
         // Rotate the active slot immediately after a win, before any hire/replace flow.
         // This keeps newly hired monsters from becoming the default starter next battle.
@@ -394,8 +396,8 @@ public sealed class ExecutiveTrialManager : MonoBehaviour, ExecutiveTrailBattleB
     private void Awake()
     {
         ResolveBattleRefsIfNeeded();
-        if (!ironRiftUI) ironRiftUI = FindFirstObjectByType<ExecutiveTrialRiftPanelUI>(FindObjectsInactive.Include);
-        if (!ironBattleUI) ironBattleUI = FindFirstObjectByType<IronBattleUIRoot>(FindObjectsInactive.Include);
+        if (!executiveTrialRiftUI) executiveTrialRiftUI = FindFirstObjectByType<ExecutiveTrialRiftPanelUI>(FindObjectsInactive.Include);
+        if (!executiveTrialBattleUI) executiveTrialBattleUI = FindFirstObjectByType<ExecutiveTrialBattleUIRoot>(FindObjectsInactive.Include);
 
         if (!starterPanel) starterPanel = FindFirstObjectByType<ExecutiveTrialStarterPanelUI>(FindObjectsInactive.Include);
         if (!hirePanel) hirePanel = FindFirstObjectByType<ExecutiveTrialHirePanelUI>(FindObjectsInactive.Include);
@@ -601,13 +603,13 @@ public sealed class ExecutiveTrialManager : MonoBehaviour, ExecutiveTrailBattleB
             Debug.LogError("[ExecutiveTrialManager] No starter party configured. Returning to starter selection.");
             _state.runActive = false;
             ExecutiveTrialRuntime.Exit();
-            ironRiftUI?.ShowStarter(immediate: true);
+            executiveTrialRiftUI?.ShowStarter(immediate: true);
             return;
         }
 
         QueueBeginNextBattleAfterTransition();
 
-        GameEvents.IronRunStarted?.Invoke();
+        GameEvents.ExecutiveTrialStarted?.Invoke();
     }
 
     private void BuildStarterParty(List<MonsterDataSO> starterDefs)
@@ -677,7 +679,7 @@ public sealed class ExecutiveTrialManager : MonoBehaviour, ExecutiveTrailBattleB
     private void ShowHire()
     {
             
-        ironRiftUI?.ShowHire(immediate: true);
+        executiveTrialRiftUI?.ShowHire(immediate: true);
         if (hirePanel) hirePanel.Bind(_pendingHire, skipAllowed: !IsHardcore);
     }
 
@@ -700,7 +702,7 @@ public sealed class ExecutiveTrialManager : MonoBehaviour, ExecutiveTrailBattleB
 
         if (_roster.IsFull)
         {
-            ironRiftUI?.ShowReplace(immediate: true);
+            executiveTrialRiftUI?.ShowReplace(immediate: true);
             if (replacePanel)
             {
                 // Pass the offered hire so the replace screen can show the incoming recruit.
@@ -763,7 +765,7 @@ public sealed class ExecutiveTrialManager : MonoBehaviour, ExecutiveTrailBattleB
         _rifts?.ClearWildCache();
         _pendingHire = null;
 
-        ironRiftUI?.HideAll(immediate: true);
+        executiveTrialRiftUI?.HideAll(immediate: true);
         ShowPost();
     }
 
@@ -772,7 +774,7 @@ public sealed class ExecutiveTrialManager : MonoBehaviour, ExecutiveTrailBattleB
         if (offer == null || offer.def == null) return false;
         if (offer.def.uncatchable) return false;
 
-        float chance = Mathf.Clamp01(hireSuccessChance);
+        float chance = Mathf.Clamp01(HIRE_SUCCESS_CHANCE);
         if (_rng == null) return chance >= 1f;
         return _rng.Chance(chance);
     }
@@ -801,7 +803,7 @@ public sealed class ExecutiveTrialManager : MonoBehaviour, ExecutiveTrailBattleB
         if (IsRestFloor(_state.wins))
         {
             restPanel?.Bind(_roster.Party, _state.wins, mode == Mode.Hardcore);
-            ironRiftUI?.ShowRest(immediate: true);
+            executiveTrialRiftUI?.ShowRest(immediate: true);
             return;
         }
 
@@ -810,7 +812,7 @@ public sealed class ExecutiveTrialManager : MonoBehaviour, ExecutiveTrailBattleB
 
     private void ShowPost()
     {
-        ironRiftUI?.ShowPost(immediate: true);
+        executiveTrialRiftUI?.ShowPost(immediate: true);
         if (_hasLastOutcome)
             postPanel?.Bind(_roster.Party, _state.carryStatus, _state.wins, _lastOutcome);
         else
@@ -825,13 +827,13 @@ public sealed class ExecutiveTrialManager : MonoBehaviour, ExecutiveTrailBattleB
             return;
         }
 
-        ironRiftUI?.HideAll(immediate: true);
+        executiveTrialRiftUI?.HideAll(immediate: true);
         ContinueAfterHireAndReplacement();
     }
 
     private void ShowForcedEvolveStep()
     {
-        ironRiftUI?.ShowForcedEvolve(immediate: true);
+        executiveTrialRiftUI?.ShowForcedEvolve(immediate: true);
 
 
         forcedEvolvePanel?.Bind(_roster != null ? _roster.Party : null);
@@ -975,8 +977,8 @@ public sealed class ExecutiveTrialManager : MonoBehaviour, ExecutiveTrailBattleB
 
     private IEnumerator Co_BeginNextBattleAfterTransition()
     {
-        if (ironRiftUI)
-            yield return ironRiftUI.Co_ShowBattleOnlyThenReady();
+        if (executiveTrialRiftUI)
+            yield return executiveTrialRiftUI.Co_ShowBattleOnlyThenReady();
         else
             yield return null;
 
@@ -988,6 +990,9 @@ public sealed class ExecutiveTrialManager : MonoBehaviour, ExecutiveTrailBattleB
     {
         if (!_state.runActive) return;
         if (_roster == null || _roster.IsPartyEmpty) { ShowGameOver(forfeit: false); return; }
+
+        _state.battleInProgress = true; // FIXED: checkpoint written before battle — detectable on crash recovery
+        ExecutiveTrialMetaSave.Save(LoadMetaData()); // persist state immediately
 
         if (!ExecutiveTrialRuntime.IsActive)
         {
@@ -1006,8 +1011,8 @@ public sealed class ExecutiveTrialManager : MonoBehaviour, ExecutiveTrailBattleB
 
         ResolveBattleRefsIfNeeded();
 
-        if (!ironBattleUI)
-            ironBattleUI = FindFirstObjectByType<IronBattleUIRoot>(FindObjectsInactive.Include);
+        if (!executiveTrialBattleUI)
+            executiveTrialBattleUI = FindFirstObjectByType<ExecutiveTrialBattleUIRoot>(FindObjectsInactive.Include);
 
         if (!battle || !bridge)
         {
@@ -1015,21 +1020,21 @@ public sealed class ExecutiveTrialManager : MonoBehaviour, ExecutiveTrailBattleB
             return;
         }
 
-        if (!ironBattleUI)
+        if (!executiveTrialBattleUI)
         {
-            Debug.LogError("[ExecutiveTrialManager] Missing IronBattleUIRoot. Iron battle textbox/UI bindings will not work.");
+            Debug.LogError("[ExecutiveTrialManager] Missing ExecutiveTrialBattleUIRoot. Executive Trial battle textbox/UI bindings will not work.");
             return;
         }
 
         UIManager.I?.Show(PanelId.ExecutiveTrialRift);
 
-        ironRiftUI?.ShowBattleOnly(immediate: true);
+        executiveTrialRiftUI?.ShowBattleOnly(immediate: true);
 
     #if UNITY_EDITOR
-        DevLog.Log($"[IronTextTrace] BeginNextBattle: battle={(battle ? battle.name : "NULL")} bridge={(bridge ? bridge.name : "NULL")} ironBattleUI={(ironBattleUI ? ironBattleUI.name : "NULL")}");
+        DevLog.Log($"[ExecutiveTrialManager] BeginNextBattle: battle={(battle ? battle.name : "NULL")} bridge={(bridge ? bridge.name : "NULL")} executiveTrialBattleUI={(executiveTrialBattleUI ? executiveTrialBattleUI.name : "NULL")}");
     #endif
 
-        ironBattleUI.ApplyTo(battle);
+        executiveTrialBattleUI.ApplyTo(battle);
 
         // DEBUG: prove what we are about to inject.
 #if UNITY_EDITOR
@@ -1054,6 +1059,13 @@ public sealed class ExecutiveTrialManager : MonoBehaviour, ExecutiveTrailBattleB
 
         bridge.SetWins(_state.wins);
         bridge.BeginIronBattle(battle, null);
+    }
+
+    private ExecutiveTrialMetaData LoadMetaData()
+    {
+        var meta = ExecutiveTrialMetaSave.Load() ?? new ExecutiveTrialMetaData();
+        meta.battleInProgress = _state.battleInProgress;
+        return meta;
     }
 
     // Quit/Forfeit + GameOver UI
@@ -1081,7 +1093,7 @@ public sealed class ExecutiveTrialManager : MonoBehaviour, ExecutiveTrailBattleB
     public void AcknowledgeRules()
     {
         _quitPromptActive = false;
-        ironRiftUI?.HideRules(immediate: true);
+        executiveTrialRiftUI?.HideRules(immediate: true);
     }
 
     /// <summary>
@@ -1090,28 +1102,28 @@ public sealed class ExecutiveTrialManager : MonoBehaviour, ExecutiveTrailBattleB
     public void CloseRules()
     {
         _quitPromptActive = false;
-        ironRiftUI?.HideRules(immediate: true);
+        executiveTrialRiftUI?.HideRules(immediate: true);
     }
 
     public void RequestQuit()
     {
         if (!_state.runActive) return;
         _quitPromptActive = true;
-        ironRiftUI?.ShowRules(immediate: true);
+        executiveTrialRiftUI?.ShowRules(immediate: true);
     }
 
     public void ConfirmQuitForfeit()
     {
         if (!_state.runActive) return;
         _quitPromptActive = false;
-        ironRiftUI?.HideRules(immediate: true);
+        executiveTrialRiftUI?.HideRules(immediate: true);
         Forfeit("Quit confirmed");
     }
 
     public void CancelQuit()
     {
         _quitPromptActive = false;
-        ironRiftUI?.HideRules(immediate: true);
+        executiveTrialRiftUI?.HideRules(immediate: true);
     }
 
     private void Forfeit(string reason)
@@ -1139,11 +1151,11 @@ public sealed class ExecutiveTrialManager : MonoBehaviour, ExecutiveTrailBattleB
 
         _state.runActive = false;
 
-        GameEvents.IronRunCompleted?.Invoke(_state.wins, forfeit, _state.runSummary.totalDeaths);
+        GameEvents.ExecutiveTrialCompleted?.Invoke(_state.wins, forfeit, _state.runSummary.totalDeaths);
 
         UIManager.I?.Show(PanelId.ExecutiveTrialRift);
 
-        ironRiftUI?.ShowGameOver(immediate: true);
+        executiveTrialRiftUI?.ShowGameOver(immediate: true);
         gameOverPanel?.Bind(
             _state.mode,
             _state.wins,
@@ -1153,7 +1165,7 @@ public sealed class ExecutiveTrialManager : MonoBehaviour, ExecutiveTrailBattleB
             battleLog: _state.battleLog
         );
 
-        // IRON GUARD: Explicitly disable regular Rift panel BEFORE exiting Iron runtime.
+        // EXECUTIVE TRIAL GUARD: Explicitly disable regular Rift panel BEFORE exiting Executive Trial runtime.
         // This prevents race condition where RiftPanelUI.OnEnable() check fails after Exit() is called.
         var riftPanelUI = FindFirstObjectByType<RiftPanelUI>(FindObjectsInactive.Include);
         if (riftPanelUI && riftPanelUI.gameObject.activeSelf)
@@ -1161,7 +1173,7 @@ public sealed class ExecutiveTrialManager : MonoBehaviour, ExecutiveTrailBattleB
 
         ExecutiveTrialRuntime.Exit();
 
-        ironBattleUI?.RestoreBattleManagerDefaults();
+        executiveTrialBattleUI?.RestoreBattleManagerDefaults();
     }
 
     private static void GrantIronRunRewards(IronBattleOutcome outcome)
@@ -1232,6 +1244,6 @@ public sealed class ExecutiveTrialManager : MonoBehaviour, ExecutiveTrailBattleB
         UIManager.I?.Show(PanelId.ExecutiveTrialRift);
         UIManager.I?.Hide(PanelId.Home);
 
-        ironRiftUI?.ShowStarter(immediate: true);
+        executiveTrialRiftUI?.ShowStarter(immediate: true);
     }
 }

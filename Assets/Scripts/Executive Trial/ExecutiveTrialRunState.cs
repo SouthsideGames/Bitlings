@@ -17,6 +17,9 @@ public sealed class ExecutiveTrialRunState
     public int seed = 0;
     public bool runActive = false;
 
+    [Header("Crash Recovery")]
+    public bool battleInProgress = false; // FIXED: written before battle starts, cleared after — detects hard-kill mid-battle
+
     [Header("Party")]
     public readonly List<ExecutiveTrailMonster> party = new List<ExecutiveTrailMonster>(3);
     public int activeIndex = 0;
@@ -40,6 +43,7 @@ public sealed class ExecutiveTrialRunState
         seed = newSeed;
         wins = 0;
         runActive = true;
+        battleInProgress = false;
         activeIndex = 0;
         party.Clear();
         carryStatus = IronFieldStatusSnapshot.None;

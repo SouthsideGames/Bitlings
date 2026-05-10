@@ -4,30 +4,32 @@ using UnityEngine;
 
 public static class HonorService
 {
-    public static bool CanHonor(string mentorUID)
+    public static bool CanHonor(string mentorUID) // FIXED: 48-hour per-mentor cooldown instead of one-per-week global lock
     {
-        if (string.IsNullOrEmpty(mentorUID))
-            return false;
-
+        if (string.IsNullOrEmpty(mentorUID)) return false;
         SaveManager.LoadOrCreate();
-        CheckWeekReset();
+        if (!SaveManager.TryGetMentorRecord(mentorUID, out _)) return false;
 
-        if (!string.IsNullOrEmpty(SaveManager.GetCurrentWeekHonoredUID()))
-            return false;
+        const long COOLDOWN_SECONDS = 48L * 3600L;
+        var arena = SaveManager.GetArenaSaveData();
+        if (arena?.mentorHonorCooldowns == null) return true;
 
-        return SaveManager.TryGetMentorRecord(mentorUID, out _);
+        var entry = arena.mentorHonorCooldowns.Find(c => c.mentorUID == mentorUID);
+        if (entry == null) return true;
+
+        return (SaveManager.NowUnix() - entry.lastHonoredUnix) >= COOLDOWN_SECONDS;
     }
 
-    public static bool CanHonorAny()
+    public static bool CanHonorAny() // FIXED: checks each mentor individually against 48h cooldown
     {
         SaveManager.LoadOrCreate();
-        CheckWeekReset();
-
-        if (!string.IsNullOrEmpty(SaveManager.GetCurrentWeekHonoredUID()))
-            return false;
-
         var mentors = SaveManager.GetMentorHallSnapshot();
-        return mentors != null && mentors.Count > 0;
+        if (mentors == null || mentors.Count == 0) return false;
+        foreach (var m in mentors)
+        {
+            if (!string.IsNullOrEmpty(m.ownedUID) && CanHonor(m.ownedUID)) return true;
+        }
+        return false;
     }
 
     public static string HonorLegend(string mentorUID)
@@ -42,7 +44,20 @@ public static class HonorService
         long now = SaveManager.NowUnix();
         bonus.expiresAtUnix = now + 86400L;
 
-        SaveManager.SetActiveHonorBonus(bonus, mentorUID);
+        SaveManager.SetActiveHonorBonus(bonus, null);
+
+        // FIXED: record per-mentor timestamp instead of single weekly flag
+        var arenaForHonor = SaveManager.GetArenaSaveData();
+        if (arenaForHonor != null)
+        {
+            arenaForHonor.mentorHonorCooldowns ??= new List<MentorHonorCooldown>();
+            var existing = arenaForHonor.mentorHonorCooldowns.Find(c => c.mentorUID == mentorUID);
+            if (existing != null)
+                existing.lastHonoredUnix = SaveManager.NowUnix();
+            else
+                arenaForHonor.mentorHonorCooldowns.Add(new MentorHonorCooldown { mentorUID = mentorUID, lastHonoredUnix = SaveManager.NowUnix() });
+        }
+
         SaveManager.Save();
 
         GameEvents.OnJobsChanged?.Invoke();

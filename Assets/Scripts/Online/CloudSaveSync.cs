@@ -122,6 +122,44 @@ public static class CloudSaveSync
 
         if (cloud != null)
         {
+            // FIXED: detect meaningful divergence instead of silently overwriting local progress
+            if (cloud != null && local != null)
+            {
+                int cloudWins = cloud.lifetimeStats != null ? cloud.lifetimeStats.championshipsWon : 0;
+                int localWins = local.lifetimeStats != null ? local.lifetimeStats.championshipsWon : 0;
+                bool cloudAhead = cloudWins > localWins;
+                bool localAhead = localWins > cloudWins;
+
+                if (cloudAhead && localAhead)
+                {
+                    Debug.LogWarning($"[CloudSaveSync] Save conflict detected - cloud: {cloudWins} wins, local: {localWins} wins. Showing resolution dialog."); // FIXED
+
+                    // Show the resolution dialog. The callbacks apply the chosen save and return.
+                    // Both paths call SaveManager.Save() internally after applying.
+                    bool resolved = false;
+
+                    UIManager.I?.ShowSaveConflictDialog( // FIXED: player chooses which save to keep instead of silent cloud-wins overwrite
+                        cloudWins: cloudWins,
+                        localWins: localWins,
+                        onKeepCloud: () =>
+                        {
+                            ApplyCloudData(cloud);
+                            resolved = true;
+                            Debug.Log("[CloudSaveSync] Player chose cloud save.");
+                        },
+                        onKeepLocal: () =>
+                        {
+                            _ = PushArenaDataAsync();
+                            resolved = true;
+                            Debug.Log("[CloudSaveSync] Player chose local save - pushing to cloud.");
+                        }
+                    );
+
+                    if (resolved) return; // dialog handled the merge - skip the default cloud-wins path below
+                    // If UIManager was null (e.g. during headless test), fall through to cloud-wins default.
+                }
+            }
+
             MergeCloudIntoLocal(cloud, local);
             SaveManager.Save();
             Debug.Log("[CloudSaveSync] Merged cloud data into local save.");
@@ -200,6 +238,14 @@ public static class CloudSaveSync
         {
             local.currentTournamentCache = cloud.currentTournamentCache;
         }
+    }
+
+    private static void ApplyCloudData(ArenaSaveData cloud) // FIXED: applies chosen cloud save path from conflict dialog
+    {
+        var local = SaveManager.GetArenaSaveData();
+        if (cloud == null || local == null) return;
+        MergeCloudIntoLocal(cloud, local);
+        SaveManager.Save();
     }
 
     // ═════════════════════════════════════════════════════════════

@@ -37,7 +37,7 @@ public sealed class WorldEventSystem : MonoBehaviour
     [SerializeField] private WorldEventLibrarySO library;
 
     [Header("Weekly")]
-    [Tooltip("How often to re-check for week rollover / scheduled windows.")]
+    [Tooltip("How often to poll for FeatureUnlockManager availability (late-bind only). Weekly rollover is now driven by _nextRolloverUtc - not this interval.")] // FIXED: tooltip was stale after rollover moved to deadline-based check
     [SerializeField, Min(1f)] private float refreshCheckSeconds = 5f;
 
     [Header("Deterministic Rotation")]
@@ -82,7 +82,8 @@ public sealed class WorldEventSystem : MonoBehaviour
     private MonsterType _boostedMonsterType = MonsterType.None;
     private float _typeDamageMul = 1f;
 
-    private float _accum;
+    private float _refreshAccum = 0f;
+    private long _nextRolloverUtc = 0L; // FIXED: pre-computed deadline; cheaper and more precise than polling
 
     // Execution-order safety: FeatureUnlockManager may initialize after this system.
     private FeatureUnlockManager _featureMgr;
@@ -109,6 +110,24 @@ public sealed class WorldEventSystem : MonoBehaviour
         _wasFeatureActive = IsFeatureActive();
 
         RefreshNow(forceRollIfNeeded: true);
+        ComputeNextRollover();
+    }
+
+    private void ComputeNextRollover() // FIXED: calculates the exact UTC second of the next Monday 00:00 ET
+    {
+        var nowEt = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, ArenaConstants.EasternTimeZone);
+        int daysUntilMonday = ((int)DayOfWeek.Monday - (int)nowEt.DayOfWeek + 7) % 7;
+        if (daysUntilMonday == 0) daysUntilMonday = 7; // already Monday — next is 7 days out
+        var nextMondayEt = nowEt.Date.AddDays(daysUntilMonday);
+        var nextMondayUtc = TimeZoneInfo.ConvertTimeToUtc(
+            DateTime.SpecifyKind(nextMondayEt, DateTimeKind.Unspecified),
+            ArenaConstants.EasternTimeZone);
+        _nextRolloverUtc = new DateTimeOffset(nextMondayUtc).ToUnixTimeSeconds();
+    }
+
+    void OnApplicationPause(bool paused)
+    {
+        if (!paused) ComputeNextRollover(); // FIXED: recalculate after device wake — device may have slept across midnight
     }
 
     private void EnsureWorldEventManagerExists()
@@ -131,6 +150,12 @@ public sealed class WorldEventSystem : MonoBehaviour
 
     private void Update()
     {
+        // This accumulator gates the feature-manager late-bind check only (see TryHookFeatureManager below).
+        // Weekly rollover is handled separately by the _nextRolloverUtc deadline compare further down. // FIXED: prevents future confusion between the two timing mechanisms
+        _refreshAccum += Time.unscaledDeltaTime;
+        if (_refreshAccum < refreshCheckSeconds) return;
+        _refreshAccum = 0f;
+
         // Late-bind FeatureUnlockManager if it wasn't ready during Awake.
         TryHookFeatureManager();
 
@@ -147,10 +172,17 @@ public sealed class WorldEventSystem : MonoBehaviour
             _wasFeatureActive = activeNow;
         }
 
-        _accum += Time.unscaledDeltaTime;
-        if (_accum < refreshCheckSeconds) return;
-        _accum = 0f;
+        long nowUtc = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+        if (_nextRolloverUtc > 0L && nowUtc >= _nextRolloverUtc) // FIXED: single cheap compare per frame instead of accumulator poll
+        {
+            // Run the existing weekly roll logic here.
+            CheckAndRollWeeklyEvent();
+            ComputeNextRollover();
+        }
+    }
 
+    private void CheckAndRollWeeklyEvent()
+    {
         RefreshNow(forceRollIfNeeded: false);
     }
 

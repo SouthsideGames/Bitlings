@@ -11,6 +11,23 @@ public class AppLifecycle : MonoBehaviour
         if (_instance != null && _instance != this) { Destroy(gameObject); return; }
         _instance = this;
         _defaultFixedDeltaTime = Time.fixedDeltaTime;
+
+        // Recover from a crash that occurred mid-battle during an Iron run
+        var ironState = ExecutiveTrialMetaSave.Load();
+        if (ironState != null && ironState.runActive && ironState.battleInProgress) // FIXED: runActive guard prevents spurious trigger on stale flag from a previous completed run
+        {
+            Debug.LogWarning("[ExecutiveTrial] Crash detected mid-battle - applying recovery loss.");
+
+            ironState.battleInProgress = false; // FIXED: clear the checkpoint flag
+
+            // Apply the loss: a crash mid-battle is treated as a defeat.
+            // ShowGameOver() cannot be called here (MonoBehaviour systems not yet ready),
+            // so we apply the terminal state directly to the persisted data.
+            ironState.runActive = false; // FIXED: one loss always ends a run - mirrors ShowGameOver() setting _state.runActive = false
+
+            ExecutiveTrialMetaSave.Save(ironState); // FIXED: persist the corrected state before any system initialises
+            Debug.LogWarning("[ExecutiveTrial] Recovery complete - run marked ended. Game-over panel will show on next Executive Trial open.");
+        }
     }
 
     void OnDestroy()

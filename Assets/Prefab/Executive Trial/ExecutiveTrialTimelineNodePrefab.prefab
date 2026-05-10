@@ -299,7 +299,6 @@ GameObject:
   - component: {fileID: 8126301752408976251}
   - component: {fileID: 6461078911369465334}
   - component: {fileID: 7068127896987550869}
-  - component: {fileID: 2716099756521714027}
   - component: {fileID: 5767915973801634812}
   m_Layer: 5
   m_Name: ExecutiveTrialTimelineNodePrefab
@@ -415,31 +414,6 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls: []
---- !u!114 &2716099756521714027
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 5209741717082177038}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 0472d5086b9d3894399e2b0b94edb97a, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::UIDeviceAdaptiveSizer
-  tabletAspectThreshold: 0.65
-  useDpiCheck: 1
-  tabletMinInches: 7.6
-  phoneLayout:
-    sizeDelta: {x: 907.1, y: 184.3}
-    anchoredPosition: {x: 0, y: 0}
-    localScale: {x: 1, y: 1, z: 1}
-  tabletLayout:
-    sizeDelta: {x: 1181.63, y: 209.59}
-    anchoredPosition: {x: 0, y: 0}
-    localScale: {x: 1, y: 1, z: 1}
-  applyOnEnable: 1
-  updateContinuouslyInEditor: 1
 --- !u!114 &5767915973801634812
 MonoBehaviour:
   m_ObjectHideFlags: 0

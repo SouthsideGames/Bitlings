@@ -132,7 +132,7 @@ public static class ArenaBattleSimulator
         ArenaTeamSnapshot right,
         int matchSeed)
     {
-        ArenaBattleSimulationScope.Enter();
+        using var arenaScope = ArenaBattleSimulationScope.Enter(); // FIXED: scope guard ensures cleanup even on exceptions
         var rng = new System.Random(matchSeed);
         var log = new List<ArenaBattleLogEvent>(64);
 
@@ -249,7 +249,6 @@ public static class ArenaBattleSimulator
             // ── Cleanup ──
             BattleCalc.ResetRng();
             TitlesAdapter.ClearAllLocalTitles();
-            ArenaBattleSimulationScope.Exit();
         }
     }
 

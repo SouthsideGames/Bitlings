@@ -53,6 +53,18 @@ public partial class RiftManager
         autoMode        = false;
         autoRunPaidEnergy = false;
 
+        // CHANGED: write autoBattling=false to disk immediately so EnergyChanged subscribers cannot re-enter with stale state.
+        try
+        {
+            var s = IdleBattleStore.Load();
+            if (s != null && s.autoBattling)
+            {
+                s.autoBattling = false;
+                IdleBattleStore.Save(s);
+            }
+        }
+        catch { }
+
         IdleBattleManager.I?.DisableAuto();
 
         if (autoLoopCo != null)
@@ -66,6 +78,8 @@ public partial class RiftManager
 
         // Foreground auto was stopped due to energy; do NOT show IdleBattleRewards.
 
+        GameEvents.RaiseToast("Out of energy - auto stopped."); // CHANGED: toast instead of silent stop
+
         GameEvents.RaiseAutoBattleModeChanged(false);
         EmitStatus("AUTO stopped: no energy.", LogScope.System);
         OnStateChanged?.Invoke();
@@ -78,6 +92,18 @@ public partial class RiftManager
 
         autoMode          = false;
         autoRunPaidEnergy = false;
+
+        // CHANGED: write autoBattling=false to disk immediately so EnergyChanged subscribers cannot re-enter with stale state.
+        try
+        {
+            var s = IdleBattleStore.Load();
+            if (s != null && s.autoBattling)
+            {
+                s.autoBattling = false;
+                IdleBattleStore.Save(s);
+            }
+        }
+        catch { }
 
         IdleBattleManager.I?.DisableAuto();
 

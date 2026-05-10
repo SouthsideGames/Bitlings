@@ -48,6 +48,16 @@ public class JobPanelUI : MonoBehaviour
     {
         JobManager.I?.ProcessOfflineAllSites();
 
+        if (JobManager.I != null)
+        {
+            var warnings = JobManager.I.ConsumeStorageWarnings();
+            foreach (var w in warnings)
+            {
+                // FIXED: player is told about units lost while storage was full offline
+                GameEvents.RaiseToast($"{w.job} storage was full while you were away - {w.unitsLost} units were lost. Consider upgrading capacity.");
+            }
+        }
+
         Refresh();
         GameEvents.OnJobsChanged += Refresh;
         GameEvents.OnResourcesChanged += Refresh;

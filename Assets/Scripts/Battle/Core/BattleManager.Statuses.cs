@@ -39,7 +39,7 @@ public partial class BattleManager
         for (int i = 0; i < teamStatus.Length; i++)
         {
             if (teamDefs != null && i < teamDefs.Length && teamDefs[i] == null) continue;
-            if (teamHP != null && i < teamHP.Length && teamHP[i] <= 0.01f) continue;
+            if (teamHP != null && i < teamHP.Length && teamHP[i] <= DEAD_HP_THRESHOLD) continue; // FIXED: centralised dead-HP threshold — no magic literals
             if (teamStatus[i] != StatusType.None) return true;
         }
         return false;
@@ -59,7 +59,7 @@ public partial class BattleManager
         for (int i = 0; i < teamStatus.Length; i++)
         {
             if (teamDefs != null && i < teamDefs.Length && teamDefs[i] == null) continue;
-            if (teamHP != null && i < teamHP.Length && teamHP[i] <= 0.01f) continue; // skip dead slots
+            if (teamHP != null && i < teamHP.Length && teamHP[i] <= DEAD_HP_THRESHOLD) continue; // FIXED: centralised dead-HP threshold — no magic literals
 
             teamStatus[i] = st;
             if (i < teamStatusTurns.Length) teamStatusTurns[i] = turns;
@@ -261,7 +261,7 @@ private void FireOnEntryEffects(int slot)
         for (int i = 0; i < teamCount; i++)
         {
             if (teamDefs[i] == null) continue;
-            if (teamHP != null && i < teamHP.Length && teamHP[i] <= 0.01f) continue;
+            if (teamHP != null && i < teamHP.Length && teamHP[i] <= DEAD_HP_THRESHOLD) continue; // FIXED: centralised dead-HP threshold — no magic literals
             teamTypes[teamTypesCount++] = teamDefs[i].type;
         }
 
@@ -407,7 +407,7 @@ private void FireOnEntryEffects(int slot)
                 for (int i = 0; i < teamCount; i++)
                 {
                     if (teamDefs[i] == null) continue;
-                    if (teamHP != null && i < teamHP.Length && teamHP[i] <= 0.01f) continue;
+                    if (teamHP != null && i < teamHP.Length && teamHP[i] <= DEAD_HP_THRESHOLD) continue; // FIXED: centralised dead-HP threshold — no magic literals
                     TryApplyStatusToTeamSlot(i, cmd.status, cmd.turns, cmd.persistent, cmd.magnitude, sourceSide, cmd);
                 }
             }
@@ -484,7 +484,7 @@ private void FireOnEntryEffects(int slot)
                 for (int i = 0; i < teamCount; i++)
                 {
                     if (teamDefs == null || i < 0 || i >= teamCount || teamDefs[i] == null) continue;
-                    if (teamHP != null && i < teamHP.Length && teamHP[i] <= 0.01f) continue;
+                    if (teamHP != null && i < teamHP.Length && teamHP[i] <= DEAD_HP_THRESHOLD) continue; // FIXED: centralised dead-HP threshold — no magic literals
 
                     float maxHp = GetFinalMaxHPForIndex(i);
                     int shieldAdd = Mathf.Max(1, Mathf.RoundToInt(maxHp * Mathf.Max(0f, magnitude)));
@@ -716,7 +716,7 @@ private void FireOnEntryEffects(int slot)
         }
 
         // Skip DOT on already-dead units
-        if (teamHP != null && slot < teamHP.Length && teamHP[slot] <= 0.01f)
+            if (teamHP != null && slot < teamHP.Length && teamHP[slot] <= DEAD_HP_THRESHOLD) // FIXED: centralised dead-HP threshold — no magic literals
             return false;
 
         // Apply turn-start effect

@@ -64,6 +64,8 @@ public static class ArenaTournamentService
         if (ArenaTicketManager.GetTicketCount() <= 0)
             return (false, "You need an Arena Ticket to enter.");
 
+        // UI-only gate — device clock can be manipulated. The authoritative check
+        // is enforced server-side in Cloud Code. Do not treat this as a security boundary. // FIXED: documents trust model
         if (!ArenaScheduleService.IsRegistrationOpen())
             return (false, "Registration is currently closed.");
 
@@ -72,9 +74,19 @@ public static class ArenaTournamentService
         if (status != ArenaPlayerTournamentStatus.NotEntered)
             return (false, "Already entered a tournament this week.");
 
-        // ── Spend ticket ──
+        // ── Mark pending BEFORE spending so a crash between here and registration is recoverable ──
+        var arenaForFlag = SaveManager.GetArenaSaveData();
+        if (arenaForFlag != null)
+        {
+            arenaForFlag.ticketSpentPendingRegistration = true; // FIXED: written to disk before ticket is spent
+            SaveManager.Save();
+        }
+
         if (!ArenaTicketManager.TrySpendTicket())
+        {
+            if (arenaForFlag != null) { arenaForFlag.ticketSpentPendingRegistration = false; SaveManager.Save(); }
             return (false, "Unable to spend ticket.");
+        }
 
         // ── Build player entry snapshot ──
         string playerId = arena.arenaPlayerId ?? Guid.NewGuid().ToString();
@@ -108,6 +120,14 @@ public static class ArenaTournamentService
             {
                 refundArena.arenaTickets = Math.Min(refundArena.arenaTickets + 1, ArenaConstants.MaxTickets);
                 SaveManager.Save();
+
+                // Clear the pending flag now that the outcome is known
+                var arenaForClear = SaveManager.GetArenaSaveData();
+                if (arenaForClear != null)
+                {
+                    arenaForClear.ticketSpentPendingRegistration = false; // FIXED: pending flag cleared on known outcome
+                    SaveManager.Save();
+                }
             }
             return (false, result.error ?? "Registration failed.");
         }
@@ -138,6 +158,15 @@ public static class ArenaTournamentService
         arena.lifetimeStats.tournamentsEntered++;
 
         SaveManager.Save();
+
+        // Clear the pending flag now that the outcome is known
+        var successArenaForClear = SaveManager.GetArenaSaveData();
+        if (successArenaForClear != null)
+        {
+            successArenaForClear.ticketSpentPendingRegistration = false; // FIXED: pending flag cleared on known outcome
+            SaveManager.Save();
+        }
+
         GameEvents.ArenaDataChanged?.Invoke();
 
         Debug.Log($"{TAG} Registered for tournament week {weekId} ({band} band, score {playerScore}).");

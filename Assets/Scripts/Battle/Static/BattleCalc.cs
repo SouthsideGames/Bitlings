@@ -28,6 +28,10 @@ public static class BattleCalc
         }
         catch { /* fall back to Unity RNG */ }
 
+    #if UNITY_EDITOR || DEVELOPMENT_BUILD
+        Debug.LogWarning("[BattleCalc] Falling back to Unity.Random — SetRng() was not called before battle. Seeded battle contexts will produce non-deterministic results."); // FIXED: makes unseeded fallback visible during development
+    #endif
+
         return Random.value;
     }
 

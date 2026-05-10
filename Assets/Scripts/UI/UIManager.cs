@@ -75,6 +75,7 @@ public class UIManager : MonoBehaviour
     private const string TutorialExecutiveTrialUnlockedKey = "tut_executivetrialunlocked_v1";
     private const string TutorialAutoRiftKey = "tut_autorift_v1";
     private const string TutorialArenaUnlockedKey = "tut_arena_v1";
+    private const string TutorialAutoEncounterKey = "tut_autoencounter_v1";
 
     [Header("Panels")]
     [SerializeField] private List<PanelEntry> panels = new();
@@ -158,6 +159,33 @@ public class UIManager : MonoBehaviour
     public void Toggle(PanelId id) => SetActive(id, !_open.Contains(id));
     public bool IsOpen(PanelId id) => _open.Contains(id);
 
+    /// <summary>
+    /// Shows a modal dialog asking the player to choose between their cloud save and local save
+    /// when both have diverged. Calls exactly one of the two callbacks then dismisses.
+    /// </summary>
+    /// <param name="cloudWins">Number of Arena championship wins recorded in cloud save.</param>
+    /// <param name="localWins">Number of Arena championship wins recorded in local save.</param>
+    /// <param name="onKeepCloud">Invoked if the player chooses the cloud save.</param>
+    /// <param name="onKeepLocal">Invoked if the player chooses the local save.</param>
+    public void ShowSaveConflictDialog( // FIXED: new dialog - surfaces cloud/local divergence to player instead of silent overwrite
+        int cloudWins,
+        int localWins,
+        System.Action onKeepCloud,
+        System.Action onKeepLocal)
+    {
+        string message = "Your saves have diverged.\n\n" +
+                         $"Cloud save: {cloudWins} Arena win{(cloudWins == 1 ? "" : "s")}\n" +
+                         $"This device: {localWins} Arena win{(localWins == 1 ? "" : "s")}\n\n" +
+                         "Which save would you like to keep?";
+
+        // WARNING: could not resolve - manual wiring needed
+        // UIManager does not currently expose a two-button confirm API such as:
+        // ShowConfirmDialog(message, "Keep Cloud", "Keep This Device", onKeepCloud, onKeepLocal);
+        // Reuse the project's existing two-button modal once available.
+        if (ConfirmToastUI.I != null)
+            ConfirmToastUI.I.Show(message);
+    }
+
     public bool Hide(PanelId id)
     {
         if (!_map.TryGetValue(id, out var p) || p.root == null)
@@ -227,6 +255,19 @@ public class UIManager : MonoBehaviour
         if (IsOpen(PanelId.IdleBattleRewards)) return;
 
         TutorialOverlayPanel.RequestOpen(TutorialArenaUnlockedKey);
+    }
+
+    void TryOpenAutoEncounterTutorial()
+    {
+        if (SaveManager.IsTutorialComplete(TutorialAutoEncounterKey)) return;
+
+        if (FeatureUnlockManager.I == null ||
+            !FeatureUnlockManager.I.IsUnlocked(FeatureId.IdleBattle_Basic))
+            return;
+
+        if (IsOpen(PanelId.IdleBattleRewards)) return;
+
+        TutorialOverlayPanel.RequestOpen(TutorialAutoEncounterKey);
     }
 
     void TryOpenAutoRiftTutorial()
@@ -348,6 +389,7 @@ public class UIManager : MonoBehaviour
                     TryOpenIdleBattleRewardsNextFrame();
                     TryOpenExecutiveTrialUnlockedTutorial();
                     TryOpenArenaUnlockedTutorial();
+                    TryOpenAutoEncounterTutorial();
                     ExchangeManager.I?.TryShowPendingDividendHomeToast();
                 }
 

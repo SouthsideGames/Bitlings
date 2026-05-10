@@ -16,7 +16,26 @@ public sealed class RiftButtonGuard : MonoBehaviour
     [SerializeField, Range(1f, 30f)] private float shakeMagnitude = 10f;
 
     [Header("Hold Action")]
-    [SerializeField, Min(0.1f)] private float holdToStopIdleSeconds = 0.5f;
+    [Tooltip("How long the player must hold to toggle auto-battle. Shown as a radial fill countdown.")]
+    [SerializeField, Min(0.1f)] private float holdToStopIdleSeconds = 3f; // CHANGED: 3-second hold with visible countdown
+
+    [Tooltip("Radial Image (fillAmount 0-1) that fills while the player holds. Assign in Inspector. Use Image Type = Filled, Fill Method = Radial 360.")]
+    [SerializeField] private UnityEngine.UI.Image holdProgressFill; // CHANGED: countdown ring fill
+
+    [Header("Auto-Battle Home Screen UI")]
+    [Tooltip("A ring/glow image around the Rift button that pulses while auto is running. Assign in Inspector.")]
+    [SerializeField] private GameObject autoPulseRingRoot;
+
+    [Tooltip("Label showing 'Xw - Y⚡' (wins - energy) while auto is running. Assign in Inspector.")]
+    [SerializeField] private TMPro.TextMeshProUGUI autoStatusLabel;
+
+    [Tooltip("Overlay panel shown when player taps the Rift button while auto is running. Assign in Inspector.")]
+    [SerializeField] private GameObject autoRunningOverlay;
+
+    [Tooltip("How often (seconds) the live counter refreshes while auto is running.")]
+    [SerializeField, Min(0.5f)] private float autoCounterRefreshSeconds = 2f;
+
+    private Coroutine _autoCounterCo; // CHANGED: new fields for home-screen auto-battle UX
 
     private Button _button;
     private Coroutine _shakeRoutine;
@@ -57,6 +76,7 @@ public sealed class RiftButtonGuard : MonoBehaviour
         GameEvents.OnTeamChanged += HandleTeamChanged;
         GameEvents.OnTeamHealthChanged += HandleTeamChanged;
         GameEvents.AutoBattleModeChanged += HandleAutoModeChanged;
+        GameEvents.BattleFinished += HandleBattleFinishedForCounter; // CHANGED: refresh counter on each battle finish
 
         _button.onClick.AddListener(OnButtonClicked);
 
@@ -64,6 +84,13 @@ public sealed class RiftButtonGuard : MonoBehaviour
 
         // Immediate + deferred refresh.
         Apply();
+
+        // CHANGED: sync pulse ring and counter on enable.
+        bool autoNow = (RiftManager.I != null && RiftManager.I.IsAutoMode) || IsIdleAutoRunning();
+        if (autoPulseRingRoot != null) autoPulseRingRoot.SetActive(autoNow);
+        if (autoRunningOverlay != null) autoRunningOverlay.SetActive(autoNow); // CHANGED: sync overlay on enable
+        if (autoNow) StartAutoCounter(); else StopAutoCounter();
+
         if (_deferredApply != null) StopCoroutine(_deferredApply);
         _deferredApply = StartCoroutine(Co_DeferredApply());
     }
@@ -75,6 +102,8 @@ public sealed class RiftButtonGuard : MonoBehaviour
         GameEvents.OnTeamChanged -= HandleTeamChanged;
         GameEvents.OnTeamHealthChanged -= HandleTeamChanged;
         GameEvents.AutoBattleModeChanged -= HandleAutoModeChanged;
+        GameEvents.BattleFinished -= HandleBattleFinishedForCounter; // CHANGED
+        StopAutoCounter(); // CHANGED
 
         UnhookRiftEvents();
 
@@ -85,6 +114,8 @@ public sealed class RiftButtonGuard : MonoBehaviour
         }
 
         _button.onClick.RemoveListener(OnButtonClicked);
+        if (autoRunningOverlay != null)
+            autoRunningOverlay.SetActive(false);
         ResetPressState();
     }
 
@@ -96,12 +127,30 @@ public sealed class RiftButtonGuard : MonoBehaviour
         if (_hookedRift != RiftManager.I)
             TryHookRiftEvents();
 
+        // CHANGED: 3-second hold countdown - matches HoldToPurchaseButton pattern
         if (!_pressed || _holdTriggered) return;
 
-        if (Time.unscaledTime - _pressedAt >= holdToStopIdleSeconds)
+        float heldFor = Time.unscaledTime - _pressedAt;
+        float t = Mathf.Clamp01(heldFor / holdToStopIdleSeconds);
+
+        // CHANGED: only show fill after a short dead zone so normal taps never see a flash
+        if (holdProgressFill != null)
+        {
+            const float FILL_DEAD_ZONE = 0.15f; // seconds before fill becomes visible
+            float visibleT = heldFor < FILL_DEAD_ZONE
+                ? 0f
+                : Mathf.Clamp01((heldFor - FILL_DEAD_ZONE) / (holdToStopIdleSeconds - FILL_DEAD_ZONE));
+            holdProgressFill.fillAmount = visibleT;
+        }
+
+        if (heldFor >= holdToStopIdleSeconds)
         {
             _holdTriggered = true;
             _pressed = false;
+
+            // Fill complete - snap to full before action fires.
+            if (holdProgressFill != null)
+                holdProgressFill.fillAmount = 1f;
 
             if (TryStopIdleAutoAndShowRewards())
             {
@@ -139,13 +188,31 @@ public sealed class RiftButtonGuard : MonoBehaviour
     private void HandleEnergy(int a, int b) => Apply();
     private void HandleEnergy() => Apply();
     private void HandleTeamChanged() => Apply();
-    private void HandleAutoModeChanged(bool _) => Apply();
+    private void HandleAutoModeChanged(bool isAuto) // CHANGED: driven by both RiftManager.ToggleAutoMode() and IdleBattleManager.EnableAuto/DisableAuto
+    {
+        Apply();
+
+        if (autoPulseRingRoot != null)
+            autoPulseRingRoot.SetActive(isAuto);
+
+        if (autoRunningOverlay != null)
+            autoRunningOverlay.SetActive(isAuto); // CHANGED: show overlay when auto starts, hide when it stops
+
+        if (isAuto)
+            StartAutoCounter();
+        else
+            StopAutoCounter();
+    }
 
     private void Apply()
     {
         if (_button == null) return;
 
         bool idleAutoRunning = IsIdleAutoRunning();
+        bool autoRunning = idleAutoRunning || (RiftManager.I != null && RiftManager.I.IsAutoMode);
+        // CHANGED: removed - overlay is driven by HandleAutoModeChanged and OnEnable sync
+
+        bool hasIdleTeam = HasIdleTeamConfigured();
         string reason = null;
         bool ok;
 
@@ -156,7 +223,12 @@ public sealed class RiftButtonGuard : MonoBehaviour
         }
         else
         {
-            ok = EligibilityRules.CanStartRift(minRequiredTeamMembers, out reason);
+            bool canStartRift = EligibilityRules.CanStartRift(minRequiredTeamMembers, out reason);
+            ok = canStartRift || hasIdleTeam;
+            if (ok && hasIdleTeam)
+                reason = null;
+            else if (!ok && !hasIdleTeam && reason == "No healthy team.")
+                reason = "No active or idle team.";
         }
 
         _button.interactable = ok;
@@ -181,8 +253,17 @@ public sealed class RiftButtonGuard : MonoBehaviour
             return;
         }
 
-        // If the button was force-enabled by some other script, still guard click feedback.
-        if (IsIdleAutoRunning() || !EligibilityRules.CanStartRift(minRequiredTeamMembers, out _))
+        // CHANGED: tap while auto is running shows overlay instead of opening battle scene.
+        if (IsIdleAutoRunning() || (RiftManager.I != null && RiftManager.I.IsAutoMode))
+        {
+            if (autoRunningOverlay != null)
+                autoRunningOverlay.SetActive(true);
+            else
+                GameEvents.RaiseToast("Auto-battle is running. Hold the button to stop.");
+            return;
+        }
+
+        if (!EligibilityRules.CanStartRift(minRequiredTeamMembers, out _))
         {
             StartShake();
             return;
@@ -211,6 +292,8 @@ public sealed class RiftButtonGuard : MonoBehaviour
         _pressed = false;
         _holdTriggered = false;
         _pressedAt = 0f;
+        if (holdProgressFill != null)
+            holdProgressFill.fillAmount = 0f; // CHANGED: clear countdown ring when hold is cancelled
     }
 
     private static bool IsIdleAutoRunning()
@@ -226,42 +309,119 @@ public sealed class RiftButtonGuard : MonoBehaviour
         }
     }
 
+    private static bool HasIdleTeamConfigured()
+    {
+        try
+        {
+            return !IdleLoadoutManager.IsIdleTeamEmpty();
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
     private bool TryStopIdleAutoAndShowRewards()
     {
-        bool stoppedAnyAuto = false;
+        bool autoRunning = IsIdleAutoRunning() || (RiftManager.I != null && RiftManager.I.IsAutoMode);
 
-        // Stop foreground rift AUTO loop first.
-        var em = RiftManager.I;
-        if (em != null && em.IsAutoMode)
+        if (autoRunning)
         {
-            em.ToggleAutoMode();
-            stoppedAnyAuto = true;
-        }
+            // CHANGED: auto is ON, so toggle it OFF
+            bool stoppedAnyAuto = false;
 
-        // Stop persisted idle-auto session flag.
-        if (IsIdleAutoRunning())
-        {
-            IdleBattleManager.I?.DisableAuto();
-            stoppedAnyAuto = true;
-
-            // Safety net in case IdleBattleManager singleton is not available in this scene.
-            try
+            // Stop foreground rift AUTO loop first.
+            var em = RiftManager.I;
+            if (em != null && em.IsAutoMode)
             {
-                var s = IdleBattleStore.Load();
-                if (s != null && s.autoBattling)
-                {
-                    s.autoBattling = false;
-                    IdleBattleStore.Save(s);
-                }
+                // CHANGED: ToggleAutoMode() exits AutoLoop after the current in-progress battle finishes.
+                em.ToggleAutoMode();
+                stoppedAnyAuto = true;
             }
-            catch { }
+
+            // Stop persisted idle-auto session flag.
+            if (IsIdleAutoRunning())
+            {
+                IdleBattleManager.I?.DisableAuto();
+                stoppedAnyAuto = true;
+
+                // Safety net in case IdleBattleManager singleton is not available in this scene.
+                try
+                {
+                    var s = IdleBattleStore.Load();
+                    if (s != null && s.autoBattling)
+                    {
+                        s.autoBattling = false;
+                        IdleBattleStore.Save(s);
+                    }
+                }
+                catch { }
+            }
+
+            if (stoppedAnyAuto)
+            {
+                IdleBattleManager.I?.TryOpenSummaryIfNeeded();
+            }
+
+            return stoppedAnyAuto;
+        }
+        else
+        {
+            // CHANGED: auto is OFF, so toggle it ON (start auto from home screen)
+            IdleBattleManager.I?.EnableAuto(); // CHANGED: EnableAuto() now fires RaiseAutoBattleModeChanged(true) internally - do not fire it again here
+            return true;
+        }
+    }
+
+    private void HandleBattleFinishedForCounter(BattleResult _) => RefreshAutoCounter(); // CHANGED
+
+    private void RefreshAutoCounter() // CHANGED: shows wins and losses instead of wins and energy
+    {
+        if (autoStatusLabel == null) return;
+
+        bool running = IsIdleAutoRunning() || (RiftManager.I != null && RiftManager.I.IsAutoMode);
+        if (!running)
+        {
+            autoStatusLabel.gameObject.SetActive(false);
+            return;
         }
 
-        if (!stoppedAnyAuto)
-            return false;
+        var s = IdleBattleStore.Load();
 
-        IdleBattleManager.I?.TryOpenSummaryIfNeeded();
-        return true;
+        int wins = 0;
+        if (s?.log != null)
+            foreach (var e in s.log) wins += e.count;
+
+        int losses = s?.totalLosses ?? 0; // CHANGED: read tracked loss count from session
+
+        autoStatusLabel.text = $"{wins}W · {losses}L";
+        autoStatusLabel.gameObject.SetActive(true);
+    }
+
+    private void StartAutoCounter() // CHANGED: starts periodic refresh
+    {
+        StopAutoCounter();
+        _autoCounterCo = StartCoroutine(Co_AutoCounter());
+    }
+
+    private void StopAutoCounter() // CHANGED
+    {
+        if (_autoCounterCo != null)
+        {
+            StopCoroutine(_autoCounterCo);
+            _autoCounterCo = null;
+        }
+        if (autoStatusLabel != null)
+            autoStatusLabel.gameObject.SetActive(false);
+    }
+
+    private IEnumerator Co_AutoCounter() // CHANGED: periodic live-counter refresh
+    {
+        while (true)
+        {
+            RefreshAutoCounter();
+            yield return new WaitForSeconds(autoCounterRefreshSeconds);
+        }
     }
 
     private void StartShake()

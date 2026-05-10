@@ -4,6 +4,47 @@ using UnityEngine;
 
 public sealed class TitleManager : MonoBehaviour
 {
+    private sealed class BattleSession
+    {
+        public readonly Dictionary<string, int> turnStacks = new(StringComparer.Ordinal);
+        public readonly Dictionary<string, int> eventStacks = new(StringComparer.Ordinal);
+        public readonly Dictionary<string, int> eventMax = new(StringComparer.Ordinal);
+        public readonly Dictionary<string, int> eventDecayPerTurn = new(StringComparer.Ordinal);
+        public readonly Dictionary<string, List<int>> eventStackGainedTurns = new(StringComparer.Ordinal);
+        public readonly Dictionary<string, bool> eventCooldownActive = new(StringComparer.Ordinal);
+        public readonly Dictionary<string, int> flatStartUntilTurn = new(StringComparer.Ordinal);
+        public readonly Dictionary<string, int> flatStartAmountAtk = new(StringComparer.Ordinal);
+        public readonly Dictionary<string, int> flatStartAmountDef = new(StringComparer.Ordinal);
+        public readonly Dictionary<string, int> flatStartAmountSpd = new(StringComparer.Ordinal);
+        public readonly Dictionary<string, int> flatStartAmountHp = new(StringComparer.Ordinal);
+        public readonly Dictionary<string, int> flatStartRemainingTurns = new(StringComparer.Ordinal);
+        public readonly Dictionary<string, float> shieldRemaining = new(StringComparer.Ordinal);
+        public readonly HashSet<string> onEventFiredBattle = new(StringComparer.Ordinal);
+        public readonly HashSet<string> onEventFiredTurn = new(StringComparer.Ordinal);
+        public int turnIndex;
+
+        /// <summary>Atomically resets all per-battle state. Add new fields here so they can never be forgotten.</summary>
+        public void Clear() // FIXED: single clear point - new session fields cannot be forgotten
+        {
+            turnStacks.Clear();
+            eventStacks.Clear();
+            eventMax.Clear();
+            eventDecayPerTurn.Clear();
+            eventStackGainedTurns.Clear();
+            eventCooldownActive.Clear();
+            flatStartUntilTurn.Clear();
+            flatStartAmountAtk.Clear();
+            flatStartAmountDef.Clear();
+            flatStartAmountSpd.Clear();
+            flatStartAmountHp.Clear();
+            flatStartRemainingTurns.Clear();
+            shieldRemaining.Clear();
+            onEventFiredBattle.Clear();
+            onEventFiredTurn.Clear();
+            turnIndex = 0;
+        }
+    }
+
     public static TitleManager I { get; private set; }
 
     [Header("Library / Lookup")]
@@ -18,9 +59,9 @@ public sealed class TitleManager : MonoBehaviour
 
     private string _activeBattleMonsterId;
 
-    // ─────────────────────────────────────────────────────────────────────
+    // ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     // Battle-scoped overrides (e.g., rolled wild titles)
-    // ─────────────────────────────────────────────────────────────────────
+    // ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     // Key: combatant id (owned id or synthetic id like "WILD::<...>")
     // Value: list of titles to treat as equipped for the duration of the battle.
     // Notes:
@@ -42,36 +83,12 @@ public sealed class TitleManager : MonoBehaviour
     private bool _battleSessionActive;
     private readonly HashSet<string> _battleParticipants = new HashSet<string>(StringComparer.Ordinal);
     private readonly List<string> _scratchParticipants = new List<string>(8);
+    private readonly BattleSession _session = new BattleSession();
 
-    // ─────────────────────────────────────────────────────────────────────
-    // Per-battle state (TurnBooster / EventStacks / BattleStart)
-    // ─────────────────────────────────────────────────────────────────────
-    private readonly Dictionary<string, int> _turnStacks = new();           // grows on OnTurnAdvanced up to max (TurnBooster)
-    private readonly Dictionary<string, int> _eventStacks = new();          // grows on triggers (EventStacks)
-    private readonly Dictionary<string, int> _eventMax = new();             // cache max for UI/debug (optional)
-    private readonly Dictionary<string, int> _eventDecayPerTurn = new();    // how many stacks to decay each turn
-    private readonly Dictionary<string, List<int>> _eventStackGainedTurns = new(); // per-stack gained turn index (for 1-turn grace decay)
-    private readonly Dictionary<string, bool> _eventCooldownActive = new(); // true once max reached; blocks gains until stacks return to 0
     private readonly List<string> _scratchEventKeys = new List<string>(16);
-    private readonly Dictionary<string, int> _flatStartUntilTurn = new();   // inclusive last turn index where flat buff applies
-    private readonly Dictionary<string, int> _flatStartAmountAtk = new();   // flat ATK from BattleStartFlatTitleSO
-    private readonly Dictionary<string, int> _flatStartAmountDef = new();   // flat DEF from BattleStartFlatTitleSO
-    private readonly Dictionary<string, int> _flatStartAmountSpd = new();   // flat SPD from BattleStartFlatTitleSO
-    private readonly Dictionary<string, int> _flatStartAmountHp  = new();   // flat HP from BattleStartFlatTitleSO
-    private readonly Dictionary<string, int> _flatStartRemainingTurns = new(); // remaining OWNER turns for BattleStartFlatTitleSO
-    private readonly Dictionary<string, float> _shieldRemaining = new();    // BattleStartShieldTitleSO: remaining shield HP
-    private int _turnIndex;
-
-    // ─────────────────────────────────────────────────────────────────────
-    // Per-battle state (OnEventTriggerTitleSO)
-    // ─────────────────────────────────────────────────────────────────────
-    // Keys are "combatantId::titleId" to allow multiple titles per monster.
-    private readonly HashSet<string> _onEventFiredBattle = new(StringComparer.Ordinal);
-    private readonly HashSet<string> _onEventFiredTurn   = new(StringComparer.Ordinal);
-
-    // ─────────────────────────────────────────────────────────────────────
+    // Per-battle state (TurnBooster / EventStacks / BattleStart / triggers) is centralized in _session. // FIXED: centralised battle session state
     // Active Title UI state (Status Bar / Info Button)
-    // ─────────────────────────────────────────────────────────────────────
+    // ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     public struct ActiveTitleUIState
     {
         public string titleId;
@@ -140,30 +157,30 @@ public sealed class TitleManager : MonoBehaviour
             };
 
             // If we are not in a battle, treat equipped titles as active for UI consistency.
-            bool inBattle = _turnStacks.Count > 0 || _eventStacks.Count > 0 || _shieldRemaining.Count > 0 || _flatStartUntilTurn.Count > 0;
+            bool inBattle = _session.turnStacks.Count > 0 || _session.eventStacks.Count > 0 || _session.shieldRemaining.Count > 0 || _session.flatStartUntilTurn.Count > 0;
 
             if (inBattle)
             {
                 if (t is TurnBoosterTitleSO tb)
                 {
-                    _turnStacks.TryGetValue(ownedMonsterId, out int st);
+                    _session.turnStacks.TryGetValue(ownedMonsterId, out int st);
                     s.stacks = st;
                     s.isActive = st > 0;
                 }
                 else if (t is EventStacksTitleSO)
                 {
-                    _eventStacks.TryGetValue(ownedMonsterId, out int st);
+                    _session.eventStacks.TryGetValue(ownedMonsterId, out int st);
                     s.stacks = st;
                     s.isActive = st > 0;
                 }
                 else if (t is BattleStartShieldTitleSO)
                 {
-                    _shieldRemaining.TryGetValue(ownedMonsterId, out float shield);
+                    _session.shieldRemaining.TryGetValue(ownedMonsterId, out float shield);
                     s.isActive = shield > 0.01f;
                 }
                 else if (t is BattleStartFlatTitleSO)
                 {
-                    if (_flatStartRemainingTurns.TryGetValue(ownedMonsterId, out int rem))
+                    if (_session.flatStartRemainingTurns.TryGetValue(ownedMonsterId, out int rem))
                         s.isActive = rem > 0;
                 }
                 else
@@ -213,9 +230,9 @@ public sealed class TitleManager : MonoBehaviour
         return false;
     }
 
-    // ─────────────────────────────────────────────────────────────────────
+    // ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     // Unity
-    // ─────────────────────────────────────────────────────────────────────
+    // ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     private void Awake()
     {
         if (I != null && I != this)
@@ -295,7 +312,7 @@ public sealed class TitleManager : MonoBehaviour
         {
             if (!t) continue;
 
-            sb.Append("  • [").Append(i).Append("] ").Append(t.name).Append(" (").Append(t.GetType().Name).Append(")");
+            sb.Append("  --- [").Append(i).Append("] ").Append(t.name).Append(" (").Append(t.GetType().Name).Append(")");
 
 #if UNITY_EDITOR
             try
@@ -314,9 +331,9 @@ public sealed class TitleManager : MonoBehaviour
         return sb.ToString();
     }
 
-    // ─────────────────────────────────────────────────────────────────────
+    // ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     // Public: Query available titles for a monster (by level & track)
-    // ─────────────────────────────────────────────────────────────────────
+    // ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     public List<List<TitleSO>> GetAvailableByTier(MonsterDataSO def, int level)
     {
         var result = new List<List<TitleSO>>();
@@ -351,10 +368,10 @@ public sealed class TitleManager : MonoBehaviour
         return save.tierSelections[tierIndex];
     }
 
-    // ─────────────────────────────────────────────────────────────────────
+    // ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     // Public: Equip / Get Equipped
     // (Fires JobGlobalModsChanged for UI/logic that depends on titles)
-    // ─────────────────────────────────────────────────────────────────────
+    // ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
     public bool Equip(string monsterId, MonsterDataSO def, int tierIndex, TitleSO choose)
     {
@@ -463,9 +480,9 @@ public sealed class TitleManager : MonoBehaviour
         return res;
     }
 
-    // ─────────────────────────────────────────────────────────────────────
-    // Adapter-visible: return monster’s equipped titles
-    // ─────────────────────────────────────────────────────────────────────
+    // ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    // Adapter-visible: return monster---s equipped titles
+    // ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     // Called by TitlesAdapter via reflection: GetTitlesForMonster(string)
     public List<TitleSO> GetTitlesForMonster(string monsterId)
     {
@@ -486,9 +503,9 @@ public sealed class TitleManager : MonoBehaviour
         return _idToTitle.TryGetValue(titleId, out var so) ? so : null;
     }
 
-    // ─────────────────────────────────────────────────────────────────────
+    // ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     // Battle override API (used for rolled wild titles)
-    // ─────────────────────────────────────────────────────────────────────
+    // ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     /// <summary>
     /// Sets a battle-scoped override title list for a combatant id.
     /// This is intended for synthetic ids (e.g., wild rifts) and temporary effects.
@@ -563,9 +580,9 @@ public sealed class TitleManager : MonoBehaviour
         return def != null;
     }
 
-    // ─────────────────────────────────────────────────────────────────────
+    // ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     // Evaluation helpers
-    // ─────────────────────────────────────────────────────────────────────
+    // ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
     // Single/Conditional/Dual stat application + boosters
     public float GetStatValue(string monsterId, MonsterDataSO def, int level, StatKind stat, in TitleContext ctx, float baseValue)
@@ -603,32 +620,32 @@ public sealed class TitleManager : MonoBehaviour
         }
 
         
-// ── BattleStartFlatTitleSO (temporary flat bonus at battle start; ticks down on OWNER turns)
-if (_flatStartRemainingTurns.TryGetValue(monsterId, out int remTurns) && remTurns > 0)
+// ------ BattleStartFlatTitleSO (temporary flat bonus at battle start; ticks down on OWNER turns)
+if (_session.flatStartRemainingTurns.TryGetValue(monsterId, out int remTurns) && remTurns > 0)
 {
-    if (stat == StatKind.Attack && _flatStartAmountAtk.TryGetValue(monsterId, out int fAtk)) current += fAtk;
-    else if (stat == StatKind.Defense && _flatStartAmountDef.TryGetValue(monsterId, out int fDef)) current += fDef;
-    else if (stat == StatKind.Speed && _flatStartAmountSpd.TryGetValue(monsterId, out int fSpd)) current += fSpd;
-    else if (stat == StatKind.HP && _flatStartAmountHp.TryGetValue(monsterId, out int fHp)) current += fHp;
+    if (stat == StatKind.Attack && _session.flatStartAmountAtk.TryGetValue(monsterId, out int fAtk)) current += fAtk;
+    else if (stat == StatKind.Defense && _session.flatStartAmountDef.TryGetValue(monsterId, out int fDef)) current += fDef;
+    else if (stat == StatKind.Speed && _session.flatStartAmountSpd.TryGetValue(monsterId, out int fSpd)) current += fSpd;
+    else if (stat == StatKind.HP && _session.flatStartAmountHp.TryGetValue(monsterId, out int fHp)) current += fHp;
 }
 
-        // ── TurnBoosterTitleSO (percent per turn up to max stacks)
+        // ------ TurnBoosterTitleSO (percent per turn up to max stacks)
         var tb = GetFirstTitle<TurnBoosterTitleSO>(monsterId, def, level);
-        if (tb != null && MatchesStat(stat, tb.stat) && _turnStacks.TryGetValue(monsterId, out int tStacks) && tStacks > 0)
+        if (tb != null && MatchesStat(stat, tb.stat) && _session.turnStacks.TryGetValue(monsterId, out int tStacks) && tStacks > 0)
         {
             float pct = Mathf.Max(0f, tb.percentPerTurn) / 100f;
             current *= 1f + pct * Mathf.Min(tStacks, Mathf.Max(1, tb.maxStacks));
         }
 
-        // ── EventStacksTitleSO (percent per stack; grows on triggers; optional decay)
+        // ------ EventStacksTitleSO (percent per stack; grows on triggers; optional decay)
         var es = GetFirstTitle<EventStacksTitleSO>(monsterId, def, level);
-        if (es != null && MatchesStat(stat, es.stat) && _eventStacks.TryGetValue(monsterId, out int eStacks) && eStacks > 0)
+        if (es != null && MatchesStat(stat, es.stat) && _session.eventStacks.TryGetValue(monsterId, out int eStacks) && eStacks > 0)
         {
             float pct = Mathf.Max(0f, es.percentPerStack) / 100f;
             current *= 1f + pct * Mathf.Min(eStacks, Mathf.Max(1, es.maxStacks));
         }
 
-        // ── ClutchBoosterTitleSO (threshold via ctx.hpPct)
+        // ------ ClutchBoosterTitleSO (threshold via ctx.hpPct)
         var clutch = GetFirstTitle<ClutchBoosterTitleSO>(monsterId, def, level);
         float hp01 = ReadHp01(ctx);
         if (clutch != null && hp01 <= Mathf.Clamp01(clutch.hpBelowThreshold01))
@@ -638,7 +655,7 @@ if (_flatStartRemainingTurns.TryGetValue(monsterId, out int remTurns) && remTurn
             if (stat == StatKind.Speed && clutch.spdPct > 0f) current *= (1f + (clutch.spdPct / 100f));
         }
 
-        // ── TeamAuraBattleTitleSO (passive auras from battle participants)
+        // ------ TeamAuraBattleTitleSO (passive auras from battle participants)
         if (_battleSessionActive && ctx.isBattle)
         {
             GetTeamAuraStatBonus(monsterId, stat, in ctx, out float auraFlat, out float auraPct);
@@ -663,7 +680,7 @@ if (_flatStartRemainingTurns.TryGetValue(monsterId, out int remTurns) && remTurn
 
             if (debugEffectiveness)
             {
-                string msg = $"[EffectivenessMod] {monsterId} MULT x{t.amount:0.00}: {before:0.00} → {mul:0.00}";
+                string msg = $"[EffectivenessMod] {monsterId} MULT x{t.amount:0.00}: {before:0.00} --- {mul:0.00}";
                 TryBattleLog(msg);
             }
         }
@@ -984,9 +1001,9 @@ if (_flatStartRemainingTurns.TryGetValue(monsterId, out int remTurns) && remTurn
         return mul;
     }
 
-    // ─────────────────────────────────────────────────────────────────────
+    // ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     // UI-friendly wrappers
-    // ─────────────────────────────────────────────────────────────────────
+    // ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     public bool AssignTitleToMonster(string monsterId, MonsterDataSO def, int tierIndex, TitleSO choose)
     {
         return Equip(monsterId, def, tierIndex, choose);
@@ -1029,9 +1046,9 @@ if (_flatStartRemainingTurns.TryGetValue(monsterId, out int remTurns) && remTurn
         }
     }
 
-    // ─────────────────────────────────────────────────────────────────────
+    // ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     // Events: notify the game that title-driven job math changed
-    // ─────────────────────────────────────────────────────────────────────
+    // ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     private void RaiseTitleChange()
     {
         GameEvents.JobGlobalModsChanged?.Invoke();
@@ -1074,7 +1091,7 @@ if (_flatStartRemainingTurns.TryGetValue(monsterId, out int remTurns) && remTurn
                     BattleLogger.LogTitleActivation(
                         def != null ? def.displayName : monsterId,
                         credit.DisplayOrId,
-                        $"Credit bonus ×{credVal:F2}");
+                        $"Credit bonus --{credVal:F2}");
                 }
                 else
                 {
@@ -1091,7 +1108,7 @@ if (_flatStartRemainingTurns.TryGetValue(monsterId, out int remTurns) && remTurn
         return Mathf.Max(0f, mul);
     }
 
-    // Optional nicer alias (won’t break existing callers)
+    // Optional nicer alias (won---t break existing callers)
     public float GetCreditMultOnVictory(string monsterId, MonsterDataSO wild, int wildLevel)
         => GetcreditMultOnVictory(monsterId, wild, wildLevel);
 
@@ -1142,7 +1159,7 @@ if (_flatStartRemainingTurns.TryGetValue(monsterId, out int remTurns) && remTurn
                 BattleLogger.LogTitleActivation(
                     def != null ? def.displayName : monsterId,
                     gc.DisplayOrId,
-                    $"Growth Core bonus ×{gc.growthCoreMultiplier:F2}");
+                    $"Growth Core bonus --{gc.growthCoreMultiplier:F2}");
                 continue;
             }
 
@@ -1153,9 +1170,9 @@ if (_flatStartRemainingTurns.TryGetValue(monsterId, out int remTurns) && remTurn
         return Mathf.Max(0f, mul);
     }
 
-    // ─────────────────────────────────────────────────────────────────────
+    // ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     // TitlesAdapter event relays (safe no-ops if unused)
-    // ─────────────────────────────────────────────────────────────────────
+    // ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     public void OnBattleStart(string activeMonsterId, MonsterDataSO wild, int wildLevel)
     {
         // BattleManager currently calls OnBattleStart for BOTH the player combatant
@@ -1167,21 +1184,7 @@ if (_flatStartRemainingTurns.TryGetValue(monsterId, out int remTurns) && remTurn
         // each combatant as a participant.
         if (!_battleSessionActive)
         {
-            _turnStacks.Clear();
-            _eventStacks.Clear();
-            _eventMax.Clear();
-            _eventDecayPerTurn.Clear();
-            _eventStackGainedTurns.Clear();
-        _eventCooldownActive.Clear();
-            _flatStartUntilTurn.Clear();
-            _flatStartAmountAtk.Clear();
-            _flatStartAmountDef.Clear();
-            _flatStartAmountSpd.Clear();
-            _flatStartAmountHp.Clear();
-            _flatStartRemainingTurns.Clear();
-            _shieldRemaining.Clear();
-            _onEventFiredBattle.Clear();
-            _onEventFiredTurn.Clear();
+            _session.Clear(); // FIXED: atomic clear via BattleSession - no per-field omissions possible
 
             // Clear per-battle context (but DO NOT clear _battleOverrideTitles here:
             // RiftManager injects rolled wild titles prior to battle start.)
@@ -1190,8 +1193,6 @@ if (_flatStartRemainingTurns.TryGetValue(monsterId, out int remTurns) && remTurn
 
             _battleParticipants.Clear();
             _scratchParticipants.Clear();
-
-            _turnIndex = 0;
             _battleSessionActive = true;
         }
 
@@ -1224,20 +1225,7 @@ if (_flatStartRemainingTurns.TryGetValue(monsterId, out int remTurns) && remTurn
             return;
         }
 
-        _turnStacks.Clear();
-        _eventStacks.Clear();
-        _eventMax.Clear();
-        _eventDecayPerTurn.Clear();
-        _eventStackGainedTurns.Clear();
-        _flatStartUntilTurn.Clear();
-        _flatStartAmountAtk.Clear();
-        _flatStartAmountDef.Clear();
-        _flatStartAmountSpd.Clear();
-        _flatStartAmountHp.Clear();
-        _flatStartRemainingTurns.Clear();
-        _shieldRemaining.Clear();
-        _onEventFiredBattle.Clear();
-        _onEventFiredTurn.Clear();
+        _session.Clear(); // FIXED: atomic clear via BattleSession - no per-field omissions possible
 
         _battleParticipants.Clear();
         _scratchParticipants.Clear();
@@ -1247,37 +1235,36 @@ if (_flatStartRemainingTurns.TryGetValue(monsterId, out int remTurns) && remTurn
         ClearAllBattleOverrideTitles();
 
         _activeBattleMonsterId = "";
-        _turnIndex = 0;
     }
 
 
     public void OnTurnAdvanced(int turnIndex)
     {
-        _turnIndex = Mathf.Max(0, turnIndex);
+        _session.turnIndex = Mathf.Max(0, turnIndex);
 
         // OnEventTriggerTitleSO: reset per-turn limit tracking
-        _onEventFiredTurn.Clear();
+        _session.onEventFiredTurn.Clear();
 
         // decay event stacks (1-turn grace: stacks gained this turn do not decay on the very next turn advance)
         _scratchEventKeys.Clear();
-        foreach (var kv in _eventStacks)
+        foreach (var kv in _session.eventStacks)
             _scratchEventKeys.Add(kv.Key);
 
         for (int i = 0; i < _scratchEventKeys.Count; i++)
         {
             var id = _scratchEventKeys[i];
 
-            if (!_eventStacks.TryGetValue(id, out var cur) || cur <= 0) continue;
+            if (!_session.eventStacks.TryGetValue(id, out var cur) || cur <= 0) continue;
 
-            if (!_eventCooldownActive.TryGetValue(id, out bool coolingDown) || !coolingDown)
+            if (!_session.eventCooldownActive.TryGetValue(id, out bool coolingDown) || !coolingDown)
                 continue; // No decay until max has been reached (cooldown phase)
 
 
-            int decay = _eventDecayPerTurn.TryGetValue(id, out var d) ? d : 0;
+            int decay = _session.eventDecayPerTurn.TryGetValue(id, out var d) ? d : 0;
             if (decay <= 0) continue;
 
             // If we have per-stack gained-turn data, decay only stacks that are at least 1 full turn old.
-            if (_eventStackGainedTurns.TryGetValue(id, out var gainedTurns) && gainedTurns != null && gainedTurns.Count > 0)
+            if (_session.eventStackGainedTurns.TryGetValue(id, out var gainedTurns) && gainedTurns != null && gainedTurns.Count > 0)
             {
                 // Defensive sync (in case max changed or older data existed)
                 if (gainedTurns.Count != cur)
@@ -1285,7 +1272,7 @@ if (_flatStartRemainingTurns.TryGetValue(monsterId, out int remTurns) && remTurn
                     // If counts disagree, rebuild as "old" stacks so decay remains sane.
                     gainedTurns.Clear();
                     for (int s = 0; s < cur; s++)
-                        gainedTurns.Add(_turnIndex - 2);
+                        gainedTurns.Add(_session.turnIndex - 2);
                 }
 
                 int removedStacks = 0;
@@ -1293,7 +1280,7 @@ if (_flatStartRemainingTurns.TryGetValue(monsterId, out int remTurns) && remTurn
                 for (int s = 0; s < gainedTurns.Count && removedStacks < decay; )
                 {
                     // eligible only if gained at least 1 full turn ago
-                    if (gainedTurns[s] <= (_turnIndex - 2))
+                    if (gainedTurns[s] <= (_session.turnIndex - 2))
                     {
                         gainedTurns.RemoveAt(s);
                         removedStacks++;
@@ -1302,10 +1289,10 @@ if (_flatStartRemainingTurns.TryGetValue(monsterId, out int remTurns) && remTurn
                     s++;
                 }
 
-                _eventStacks[id] = gainedTurns.Count;
+                _session.eventStacks[id] = gainedTurns.Count;
                 if (removedStacks > 0)
                 {
-                    int maxStacksValue = _eventMax.TryGetValue(id, out var mx) ? mx : Mathf.Max(gainedTurns.Count, 1);
+                    int maxStacksValue = _session.eventMax.TryGetValue(id, out var mx) ? mx : Mathf.Max(gainedTurns.Count, 1);
                     LogEventStackDecay(id, removedStacks, gainedTurns.Count, maxStacksValue);
                 }
                 continue;
@@ -1314,16 +1301,16 @@ if (_flatStartRemainingTurns.TryGetValue(monsterId, out int remTurns) && remTurn
             // Fallback: old behavior (no grace) if gained-turn list doesn't exist for this id.
             int beforeStacks = cur;
             int afterStacks = Mathf.Max(0, cur - decay);
-            _eventStacks[id] = afterStacks;
+            _session.eventStacks[id] = afterStacks;
 
             int removedStacksFallback = beforeStacks - afterStacks;
             if (removedStacksFallback > 0)
             {
-                int maxStacksValue = _eventMax.TryGetValue(id, out var mx) ? mx : Mathf.Max(afterStacks, 1);
+                int maxStacksValue = _session.eventMax.TryGetValue(id, out var mx) ? mx : Mathf.Max(afterStacks, 1);
                 LogEventStackDecay(id, removedStacksFallback, afterStacks, maxStacksValue);
 
                 if (afterStacks <= 0)
-                    _eventCooldownActive[id] = false;
+                    _session.eventCooldownActive[id] = false;
             }
         }
 
@@ -1346,10 +1333,10 @@ if (_flatStartRemainingTurns.TryGetValue(monsterId, out int remTurns) && remTurn
             var tb = GetFirstTitle<TurnBoosterTitleSO>(id, def, lvl);
             if (tb == null) continue;
 
-            _turnStacks.TryGetValue(id, out int cur);
+            _session.turnStacks.TryGetValue(id, out int cur);
             int max = Mathf.Max(1, tb.maxStacks);
             int next = Mathf.Min(cur + 1, max);
-            _turnStacks[id] = next;
+            _session.turnStacks[id] = next;
 
             BattleLogger.LogTitleActivation(
                 ownerName: def != null ? def.displayName : id,
@@ -1370,9 +1357,9 @@ if (_flatStartRemainingTurns.TryGetValue(monsterId, out int remTurns) && remTurn
         }
     }
 
-    // ─────────────────────────────────────────────────────────────────────
+    // ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     // Battle logging helpers
-    // ─────────────────────────────────────────────────────────────────────
+    // ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     private void LogEventStackDecay(string combatantId, int removedStacks, int newStacks, int maxStacksValue)
     {
         if (removedStacks <= 0) return;
@@ -1394,22 +1381,22 @@ if (_flatStartRemainingTurns.TryGetValue(monsterId, out int remTurns) && remTurn
         BattleLogger.Log(msg);
     }
 
-    /// owner’s turns (not global rounds).
+    /// owner---s turns (not global rounds).
     /// </summary>
     public void OnCombatantTurnEnded(string combatantId)
     {
         if (string.IsNullOrEmpty(combatantId)) return;
 
-        if (_flatStartRemainingTurns.TryGetValue(combatantId, out int rem) && rem > 0)
+        if (_session.flatStartRemainingTurns.TryGetValue(combatantId, out int rem) && rem > 0)
         {
             rem = Mathf.Max(0, rem - 1);
             if (rem <= 0)
             {
-                _flatStartRemainingTurns.Remove(combatantId);
+                _session.flatStartRemainingTurns.Remove(combatantId);
             }
             else
             {
-                _flatStartRemainingTurns[combatantId] = rem;
+                _session.flatStartRemainingTurns[combatantId] = rem;
             }
         }
 
@@ -1428,13 +1415,13 @@ if (_flatStartRemainingTurns.TryGetValue(monsterId, out int remTurns) && remTurn
         ProcessStatusApplyTriggers(killerId, OnEventTriggerKind.OnKill);
     }
 
-    // ─────────────────────────────────────────────────────────────────────
-    // OnEventTriggerTitleSO — generic event-driven title evaluation
-    // ─────────────────────────────────────────────────────────────────────
+    // ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    // OnEventTriggerTitleSO --- generic event-driven title evaluation
+    // ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
     /// <summary>
     /// Evaluate all OnEventTriggerTitleSO titles on a combatant for a given trigger.
-    /// Checks trigger match → limit gate → chance roll → fires effect request.
+    /// Checks trigger match --- limit gate --- chance roll --- fires effect request.
     /// </summary>
     private void ProcessOnEventTriggers(string combatantId, OnEventTriggerKind triggerKind)
     {
@@ -1455,36 +1442,36 @@ if (_flatStartRemainingTurns.TryGetValue(monsterId, out int remTurns) && remTurn
             string titleName = oet.DisplayOrId;
             string limitKey = $"{combatantId}::{oet.titleId}";
 
-            // ── Limit gate ──
-            if (oet.triggerLimit == TriggerLimitKind.OncePerBattle && _onEventFiredBattle.Contains(limitKey))
+            // ------ Limit gate ------
+            if (oet.triggerLimit == TriggerLimitKind.OncePerBattle && _session.onEventFiredBattle.Contains(limitKey))
             {
-                DevLog.Log($"[OnEventTrigger] {ownerName} — {titleName}: BLOCKED (once-per-battle already fired)");
+                DevLog.Log($"[OnEventTrigger] {ownerName} --- {titleName}: BLOCKED (once-per-battle already fired)");
                 continue;
             }
-            if (oet.triggerLimit == TriggerLimitKind.OncePerTurn && _onEventFiredTurn.Contains(limitKey))
+            if (oet.triggerLimit == TriggerLimitKind.OncePerTurn && _session.onEventFiredTurn.Contains(limitKey))
             {
-                DevLog.Log($"[OnEventTrigger] {ownerName} — {titleName}: BLOCKED (once-per-turn already fired)");
+                DevLog.Log($"[OnEventTrigger] {ownerName} --- {titleName}: BLOCKED (once-per-turn already fired)");
                 continue;
             }
 
-            // ── Chance roll ──
+            // ------ Chance roll ------
             float roll = UnityEngine.Random.value * 100f;
             float chance = Mathf.Clamp(oet.chancePercent, 0f, 100f);
             if (roll >= chance)
             {
-                DevLog.Log($"[OnEventTrigger] {ownerName} — {titleName}: trigger={triggerKind} chance FAILED (rolled {roll:F1} >= {chance:F0}%)");
+                DevLog.Log($"[OnEventTrigger] {ownerName} --- {titleName}: trigger={triggerKind} chance FAILED (rolled {roll:F1} >= {chance:F0}%)");
                 continue;
             }
 
-            DevLog.Log($"[OnEventTrigger] {ownerName} — {titleName}: trigger={triggerKind} chance PASSED (rolled {roll:F1} < {chance:F0}%)");
+            DevLog.Log($"[OnEventTrigger] {ownerName} --- {titleName}: trigger={triggerKind} chance PASSED (rolled {roll:F1} < {chance:F0}%)");
 
-            // ── Mark as fired for limit tracking ──
+            // ------ Mark as fired for limit tracking ------
             if (oet.triggerLimit == TriggerLimitKind.OncePerBattle)
-                _onEventFiredBattle.Add(limitKey);
+                _session.onEventFiredBattle.Add(limitKey);
             if (oet.triggerLimit == TriggerLimitKind.OncePerTurn)
-                _onEventFiredTurn.Add(limitKey);
+                _session.onEventFiredTurn.Add(limitKey);
 
-            // ── Build and dispatch effect request ──
+            // ------ Build and dispatch effect request ------
             var req = new TitleEffectRequest
             {
                 ownerId            = combatantId,
@@ -1500,9 +1487,9 @@ if (_flatStartRemainingTurns.TryGetValue(monsterId, out int remTurns) && remTurn
         }
     }
 
-    // ─────────────────────────────────────────────────────────────────────
-    // SynergyAmplifierTitleSO — modify resolved synergy commands
-    // ─────────────────────────────────────────────────────────────────────
+    // ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    // SynergyAmplifierTitleSO --- modify resolved synergy commands
+    // ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
     /// <summary>
     /// Mutates a resolved synergy ApplyCommand in-place based on all equipped
@@ -1524,11 +1511,11 @@ if (_flatStartRemainingTurns.TryGetValue(monsterId, out int remTurns) && remTurn
         {
             if (titles[i] is not SynergyAmplifierTitleSO amp) continue;
 
-            // ── Filter: MonsterType ──
+            // ------ Filter: MonsterType ------
             if (amp.filter == SynergyAmpFilter.SpecificType && amp.filterType != cmd.sourceType)
                 continue;
 
-            // ── Filter: Tier ──
+            // ------ Filter: Tier ------
             if (amp.tierFilter == SynergyAmpTierFilter.Tier1Only && cmd.tier != SynergyTier.Tier1)
                 continue;
             if (amp.tierFilter == SynergyAmpTierFilter.Tier2Only && cmd.tier != SynergyTier.Tier2)
@@ -1545,7 +1532,7 @@ if (_flatStartRemainingTurns.TryGetValue(monsterId, out int remTurns) && remTurn
                     cmd.magnitude *= mult;
                     BattleLogger.LogTitleActivation(ownerName, titleName,
                         $"{cmd.sourceType} {cmd.tier} synergy power +{amp.value:F0}%");
-                    DevLog.Log($"[SynergyAmp] {titleName}: {cmd.sourceType} {cmd.tier} magnitude {baseMag:F3} → {cmd.magnitude:F3} (×{mult:F2}, +{amp.value:F0}%)");
+                    DevLog.Log($"[SynergyAmp] {titleName}: {cmd.sourceType} {cmd.tier} magnitude {baseMag:F3} --- {cmd.magnitude:F3} (--{mult:F2}, +{amp.value:F0}%)");
                     break;
                 }
                 case SynergyAmpType.BonusTurns:
@@ -1556,7 +1543,7 @@ if (_flatStartRemainingTurns.TryGetValue(monsterId, out int remTurns) && remTurn
                     cmd.turns += bonus;
                     BattleLogger.LogTitleActivation(ownerName, titleName,
                         $"{cmd.sourceType} {cmd.tier} synergy +{bonus} turn(s)");
-                    DevLog.Log($"[SynergyAmp] {titleName}: {cmd.sourceType} {cmd.tier} turns {baseTurns} → {cmd.turns} (+{bonus})");
+                    DevLog.Log($"[SynergyAmp] {titleName}: {cmd.sourceType} {cmd.tier} turns {baseTurns} --- {cmd.turns} (+{bonus})");
                     break;
                 }
                 case SynergyAmpType.BonusMagnitude:
@@ -1565,16 +1552,16 @@ if (_flatStartRemainingTurns.TryGetValue(monsterId, out int remTurns) && remTurn
                     cmd.magnitude += Mathf.Max(0f, amp.value);
                     BattleLogger.LogTitleActivation(ownerName, titleName,
                         $"{cmd.sourceType} {cmd.tier} synergy +{amp.value:F1} magnitude");
-                    DevLog.Log($"[SynergyAmp] {titleName}: {cmd.sourceType} {cmd.tier} magnitude {baseMag:F3} → {cmd.magnitude:F3} (+{amp.value:F3} flat)");
+                    DevLog.Log($"[SynergyAmp] {titleName}: {cmd.sourceType} {cmd.tier} magnitude {baseMag:F3} --- {cmd.magnitude:F3} (+{amp.value:F3} flat)");
                     break;
                 }
             }
         }
     }
 
-    // ─────────────────────────────────────────────────────────────────────
-    // TeamAuraBattleTitleSO — passive team auras
-    // ─────────────────────────────────────────────────────────────────────
+    // ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    // TeamAuraBattleTitleSO --- passive team auras
+    // ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
     /// <summary>
     /// Aggregate flat and percent aura bonuses for a target combatant and stat.
@@ -1621,11 +1608,11 @@ if (_flatStartRemainingTurns.TryGetValue(monsterId, out int remTurns) && remTurn
                 {
                     case AuraEffectKind.FlatBoost:
                         flatSum += aura.value;
-                        DevLog.Log($"[TeamAura] {srcName}'s \"{titleName}\" → +{aura.value:F0} flat {stat} to {(isSelf ? "self" : targetId)}");
+                        DevLog.Log($"[TeamAura] {srcName}'s \"{titleName}\" --- +{aura.value:F0} flat {stat} to {(isSelf ? "self" : targetId)}");
                         break;
                     case AuraEffectKind.PercentBoost:
                         pctSum += aura.value / 100f;
-                        DevLog.Log($"[TeamAura] {srcName}'s \"{titleName}\" → +{aura.value:F0}% {stat} to {(isSelf ? "self" : targetId)}");
+                        DevLog.Log($"[TeamAura] {srcName}'s \"{titleName}\" --- +{aura.value:F0}% {stat} to {(isSelf ? "self" : targetId)}");
                         break;
                 }
             }
@@ -1667,7 +1654,7 @@ if (_flatStartRemainingTurns.TryGetValue(monsterId, out int remTurns) && remTurn
 
                 string titleName = aura.DisplayOrId;
                 string srcName = srcDef != null ? srcDef.displayName : sourceId;
-                DevLog.Log($"[TeamAura] {srcName}'s \"{titleName}\" → −{aura.value:F0}% incoming damage to {(isSelf ? "self" : targetId)}");
+                DevLog.Log($"[TeamAura] {srcName}'s \"{titleName}\" --- ---{aura.value:F0}% incoming damage to {(isSelf ? "self" : targetId)}");
             }
         }
 
@@ -1685,15 +1672,15 @@ if (_flatStartRemainingTurns.TryGetValue(monsterId, out int remTurns) && remTurn
             case AuraConditionKind.TargetHPBelow:
                 return ctx.selfHp01 <= Mathf.Clamp01(aura.conditionThreshold);
             case AuraConditionKind.FirstNTurns:
-                return _turnIndex < Mathf.Max(1, aura.conditionTurns);
+                return _session.turnIndex < Mathf.Max(1, aura.conditionTurns);
             default:
                 return false;
         }
     }
 
-    // ─────────────────────────────────────────────────────────────────────
-    // ShieldInteractionTitleSO — overheal→shield & shield-break effects
-    // ─────────────────────────────────────────────────────────────────────
+    // ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    // ShieldInteractionTitleSO --- overheal---shield & shield-break effects
+    // ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
     /// <summary>
     /// Returns how much shield should be gained from the given overheal amount,
@@ -1727,8 +1714,8 @@ if (_flatStartRemainingTurns.TryGetValue(monsterId, out int remTurns) && remTurn
 
             string titleName = sit.DisplayOrId;
             BattleLogger.LogTitleActivation(ownerName, titleName,
-                $"+{Mathf.RoundToInt(gain)} shield from overheal ({Mathf.RoundToInt(overhealAmount)} excess × {sit.conversionPercent:F0}%)");
-            DevLog.Log($"[ShieldInteraction] {ownerName} — {titleName}: overheal {Mathf.RoundToInt(overhealAmount)} → +{Mathf.RoundToInt(gain)} shield");
+                $"+{Mathf.RoundToInt(gain)} shield from overheal ({Mathf.RoundToInt(overhealAmount)} excess -- {sit.conversionPercent:F0}%)");
+            DevLog.Log($"[ShieldInteraction] {ownerName} --- {titleName}: overheal {Mathf.RoundToInt(overhealAmount)} --- +{Mathf.RoundToInt(gain)} shield");
         }
 
         return totalShield;
@@ -1757,19 +1744,19 @@ if (_flatStartRemainingTurns.TryGetValue(monsterId, out int remTurns) && remTurn
             string titleName = sit.DisplayOrId;
             string limitKey = $"{combatantId}::sb::{sit.titleId}";
 
-            // ── Limit gate ──
-            if (sit.triggerLimit == TriggerLimitKind.OncePerBattle && _onEventFiredBattle.Contains(limitKey))
+            // ------ Limit gate ------
+            if (sit.triggerLimit == TriggerLimitKind.OncePerBattle && _session.onEventFiredBattle.Contains(limitKey))
                 continue;
-            if (sit.triggerLimit == TriggerLimitKind.OncePerTurn && _onEventFiredTurn.Contains(limitKey))
+            if (sit.triggerLimit == TriggerLimitKind.OncePerTurn && _session.onEventFiredTurn.Contains(limitKey))
                 continue;
 
-            // ── Mark as fired ──
+            // ------ Mark as fired ------
             if (sit.triggerLimit == TriggerLimitKind.OncePerBattle)
-                _onEventFiredBattle.Add(limitKey);
+                _session.onEventFiredBattle.Add(limitKey);
             if (sit.triggerLimit == TriggerLimitKind.OncePerTurn)
-                _onEventFiredTurn.Add(limitKey);
+                _session.onEventFiredTurn.Add(limitKey);
 
-            // ── Map ShieldBreakEffectKind → TitleEffectKind ──
+            // ------ Map ShieldBreakEffectKind --- TitleEffectKind ------
             TitleEffectKind mappedEffect;
             switch (sit.breakEffect)
             {
@@ -1792,19 +1779,19 @@ if (_flatStartRemainingTurns.TryGetValue(monsterId, out int remTurns) && remTurn
 
             BattleLogger.LogTitleActivation(ownerName, titleName,
                 $"shield broke! Activated {sit.breakEffect}");
-            DevLog.Log($"[ShieldInteraction] {ownerName} — {titleName}: shield break → {sit.breakEffect} (value={sit.breakEffectValue:F1})");
+            DevLog.Log($"[ShieldInteraction] {ownerName} --- {titleName}: shield break --- {sit.breakEffect} (value={sit.breakEffectValue:F1})");
 
             TitlesAdapter.RequestTitleEffect(req);
         }
     }
 
-    // ─────────────────────────────────────────────────────────────────────
-    // StatusApplyTitleSO — event-driven status infliction
-    // ─────────────────────────────────────────────────────────────────────
+    // ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    // StatusApplyTitleSO --- event-driven status infliction
+    // ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
     /// <summary>
     /// Evaluate all StatusApplyTitleSO titles on a combatant for a given trigger.
-    /// Checks trigger match → limit gate → chance roll → fires status request.
+    /// Checks trigger match --- limit gate --- chance roll --- fires status request.
     /// </summary>
     private void ProcessStatusApplyTriggers(string combatantId, OnEventTriggerKind triggerKind)
     {
@@ -1825,36 +1812,36 @@ if (_flatStartRemainingTurns.TryGetValue(monsterId, out int remTurns) && remTurn
             string titleName = sat.DisplayOrId;
             string limitKey = $"{combatantId}::sa::{sat.titleId}";
 
-            // ── Limit gate ──
-            if (sat.triggerLimit == TriggerLimitKind.OncePerBattle && _onEventFiredBattle.Contains(limitKey))
+            // ------ Limit gate ------
+            if (sat.triggerLimit == TriggerLimitKind.OncePerBattle && _session.onEventFiredBattle.Contains(limitKey))
             {
-                DevLog.Log($"[StatusApplyTitle] {ownerName} — {titleName}: BLOCKED (once-per-battle already fired)");
+                DevLog.Log($"[StatusApplyTitle] {ownerName} --- {titleName}: BLOCKED (once-per-battle already fired)");
                 continue;
             }
-            if (sat.triggerLimit == TriggerLimitKind.OncePerTurn && _onEventFiredTurn.Contains(limitKey))
+            if (sat.triggerLimit == TriggerLimitKind.OncePerTurn && _session.onEventFiredTurn.Contains(limitKey))
             {
-                DevLog.Log($"[StatusApplyTitle] {ownerName} — {titleName}: BLOCKED (once-per-turn already fired)");
+                DevLog.Log($"[StatusApplyTitle] {ownerName} --- {titleName}: BLOCKED (once-per-turn already fired)");
                 continue;
             }
 
-            // ── Chance roll ──
+            // ------ Chance roll ------
             float roll = UnityEngine.Random.value * 100f;
             float chance = Mathf.Clamp(sat.chancePercent, 0f, 100f);
             if (roll >= chance)
             {
-                DevLog.Log($"[StatusApplyTitle] {ownerName} — {titleName}: trigger={triggerKind} chance FAILED (rolled {roll:F1} >= {chance:F0}%)");
+                DevLog.Log($"[StatusApplyTitle] {ownerName} --- {titleName}: trigger={triggerKind} chance FAILED (rolled {roll:F1} >= {chance:F0}%)");
                 continue;
             }
 
-            DevLog.Log($"[StatusApplyTitle] {ownerName} — {titleName}: trigger={triggerKind} chance PASSED → applying {sat.status} to {sat.target}");
+            DevLog.Log($"[StatusApplyTitle] {ownerName} --- {titleName}: trigger={triggerKind} chance PASSED --- applying {sat.status} to {sat.target}");
 
-            // ── Mark as fired for limit tracking ──
+            // ------ Mark as fired for limit tracking ------
             if (sat.triggerLimit == TriggerLimitKind.OncePerBattle)
-                _onEventFiredBattle.Add(limitKey);
+                _session.onEventFiredBattle.Add(limitKey);
             if (sat.triggerLimit == TriggerLimitKind.OncePerTurn)
-                _onEventFiredTurn.Add(limitKey);
+                _session.onEventFiredTurn.Add(limitKey);
 
-            // ── Build and dispatch status request ──
+            // ------ Build and dispatch status request ------
             var req = new TitleStatusRequest
             {
                 status           = sat.status,
@@ -1874,7 +1861,7 @@ if (_flatStartRemainingTurns.TryGetValue(monsterId, out int remTurns) && remTurn
     public float GetBattleStartShieldRemaining(string monsterId)
     {
         if (string.IsNullOrEmpty(monsterId)) return 0f;
-        return _shieldRemaining.TryGetValue(monsterId, out var v) ? Mathf.Max(0f, v) : 0f;
+        return _session.shieldRemaining.TryGetValue(monsterId, out var v) ? Mathf.Max(0f, v) : 0f;
     }
 
 
@@ -1909,11 +1896,11 @@ if (_flatStartRemainingTurns.TryGetValue(monsterId, out int remTurns) && remTurn
         if (string.IsNullOrEmpty(defenderId)) return;
 
         // Shield consumption (visual/log only here; actual damage reduction should occur in damage pipeline)
-        if (_shieldRemaining.TryGetValue(defenderId, out float shield) && shield > 0f && damage > 0)
+        if (_session.shieldRemaining.TryGetValue(defenderId, out float shield) && shield > 0f && damage > 0)
         {
             float used = Mathf.Min(shield, damage);
             float next = Mathf.Max(0f, shield - used);
-            _shieldRemaining[defenderId] = next;
+            _session.shieldRemaining[defenderId] = next;
 
             var def = MonsterLibraryLocator.GetById(defenderId);
             int lvl = GetLevelOr1(defenderId);
@@ -1945,9 +1932,9 @@ if (_flatStartRemainingTurns.TryGetValue(monsterId, out int remTurns) && remTurn
         ProcessStatusApplyTriggers(defenderId, OnEventTriggerKind.OnDamageTaken);
     }
 
-    // ─────────────────────────────────────────────────────────────────────
+    // ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     // Helpers
-    // ─────────────────────────────────────────────────────────────────────
+    // ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     
     private void ApplyBattleStartBonuses(string id)
     {
@@ -1962,15 +1949,15 @@ if (_flatStartRemainingTurns.TryGetValue(monsterId, out int remTurns) && remTurn
             int dur = Mathf.Max(1, flat.durationTurns <= 0 ? 1 : flat.durationTurns);
 
             // dur=1 => only turnIndex 0. dur=2 => turnIndex 0 and 1.
-            _flatStartUntilTurn[id] = _turnIndex + (dur - 1); // legacy round-index marker
-            _flatStartRemainingTurns[id] = dur; // owner-turn based duration
+            _session.flatStartUntilTurn[id] = _session.turnIndex + (dur - 1); // legacy round-index marker
+            _session.flatStartRemainingTurns[id] = dur; // owner-turn based duration
 
             switch (flat.stat)
             {
-                case BattleStatKind.ATK: _flatStartAmountAtk[id] = amt; break;
-                case BattleStatKind.DEF: _flatStartAmountDef[id] = amt; break;
-                case BattleStatKind.SPD: _flatStartAmountSpd[id] = amt; break;
-                case BattleStatKind.HP:  _flatStartAmountHp[id]  = amt; break;
+                case BattleStatKind.ATK: _session.flatStartAmountAtk[id] = amt; break;
+                case BattleStatKind.DEF: _session.flatStartAmountDef[id] = amt; break;
+                case BattleStatKind.SPD: _session.flatStartAmountSpd[id] = amt; break;
+                case BattleStatKind.HP:  _session.flatStartAmountHp[id]  = amt; break;
             }
 
             BattleLogger.LogTitleActivation(
@@ -2020,7 +2007,7 @@ if (_flatStartRemainingTurns.TryGetValue(monsterId, out int remTurns) && remTurn
             }
 
             float shieldHP = Mathf.Max(0f, maxHP * (Mathf.Max(0f, shield.shieldPct) / 100f));
-            _shieldRemaining[id] = shieldHP;
+            _session.shieldRemaining[id] = shieldHP;
 
             BattleLogger.LogTitleActivation(
                 ownerName: def != null ? def.displayName : id,
@@ -2057,33 +2044,33 @@ if (_flatStartRemainingTurns.TryGetValue(monsterId, out int remTurns) && remTurn
         decayPerTurn = Mathf.Max(0, decayPerTurn);
 
         // If we've entered cooldown (max reached), we do NOT gain stacks again until stacks return to 0.
-        if (_eventCooldownActive.TryGetValue(id, out bool coolingDown) && coolingDown)
+        if (_session.eventCooldownActive.TryGetValue(id, out bool coolingDown) && coolingDown)
             return;
 
         // Maintain a per-stack gained-turn list so decay has a 1-turn grace period.
-        if (!_eventStackGainedTurns.TryGetValue(id, out var gainedTurns) || gainedTurns == null)
+        if (!_session.eventStackGainedTurns.TryGetValue(id, out var gainedTurns) || gainedTurns == null)
         {
             gainedTurns = new List<int>(maxStacks);
-            _eventStackGainedTurns[id] = gainedTurns;
+            _session.eventStackGainedTurns[id] = gainedTurns;
         }
 
-        // Defensive sync: if legacy _eventStacks count exists without gainedTurns, backfill as "old" stacks.
-        _eventStacks.TryGetValue(id, out int cur);
+        // Defensive sync: if legacy _session.eventStacks count exists without gainedTurns, backfill as "old" stacks.
+        _session.eventStacks.TryGetValue(id, out int cur);
         if (cur > 0 && gainedTurns.Count != cur)
         {
             gainedTurns.Clear();
             for (int s = 0; s < cur; s++)
-                gainedTurns.Add(_turnIndex - 2); // old enough to decay
+                gainedTurns.Add(_session.turnIndex - 2); // old enough to decay
         }
 
         // Add one stack (gained this turn index)
         if (gainedTurns.Count < maxStacks)
-            gainedTurns.Add(_turnIndex);
+            gainedTurns.Add(_session.turnIndex);
         else
         {
             // At cap: refresh the most recent stack's timestamp (keeps cap behavior consistent, avoids overgrowth).
             // This also prevents "dead" stacks from instantly decaying if player keeps triggering.
-            gainedTurns[gainedTurns.Count - 1] = _turnIndex;
+            gainedTurns[gainedTurns.Count - 1] = _session.turnIndex;
         }
 
         // Enforce cap (in case cap changed downward)
@@ -2092,16 +2079,16 @@ if (_flatStartRemainingTurns.TryGetValue(monsterId, out int remTurns) && remTurn
 
         int next = gainedTurns.Count;
 
-        _eventStacks[id] = next;
-        _eventMax[id] = maxStacks;
-        _eventDecayPerTurn[id] = decayPerTurn;
+        _session.eventStacks[id] = next;
+        _session.eventMax[id] = maxStacks;
+        _session.eventDecayPerTurn[id] = decayPerTurn;
 
 
         // Enter cooldown once we reach max. While cooling down, triggers will not add stacks.
         if (next >= maxStacks)
-            _eventCooldownActive[id] = true;
+            _session.eventCooldownActive[id] = true;
         else
-            _eventCooldownActive[id] = false;
+            _session.eventCooldownActive[id] = false;
 
         var def = MonsterLibraryLocator.GetById(id);
         int lvl = GetLevelOr1(id);
@@ -2216,9 +2203,9 @@ if (_flatStartRemainingTurns.TryGetValue(monsterId, out int remTurns) && remTurn
         return null;
     }
 
-    // ─────────────────────────────────────────────────────────────────────
+    // ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     // Battle mods (flat + pct) including conditional + stateful battle titles
-    // ─────────────────────────────────────────────────────────────────────
+    // ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
     /// <summary>
     /// Returns complete battle stat mods for this combatant, including:
@@ -2358,17 +2345,17 @@ if (_flatStartRemainingTurns.TryGetValue(monsterId, out int remTurns) && remTurn
         }
 
         // BattleStartFlat (owner-turn ticking)
-        if (_flatStartRemainingTurns.TryGetValue(ctx.ownedId, out int remTurns) && remTurns > 0)
+        if (_session.flatStartRemainingTurns.TryGetValue(ctx.ownedId, out int remTurns) && remTurns > 0)
         {
-            if (_flatStartAmountAtk.TryGetValue(ctx.ownedId, out int fAtk)) atkFlat += fAtk;
-            if (_flatStartAmountDef.TryGetValue(ctx.ownedId, out int fDef)) defFlat += fDef;
-            if (_flatStartAmountSpd.TryGetValue(ctx.ownedId, out int fSpd)) spdFlat += fSpd;
-            if (_flatStartAmountHp.TryGetValue(ctx.ownedId, out int fHp)) hpFlatAdd += fHp;
+            if (_session.flatStartAmountAtk.TryGetValue(ctx.ownedId, out int fAtk)) atkFlat += fAtk;
+            if (_session.flatStartAmountDef.TryGetValue(ctx.ownedId, out int fDef)) defFlat += fDef;
+            if (_session.flatStartAmountSpd.TryGetValue(ctx.ownedId, out int fSpd)) spdFlat += fSpd;
+            if (_session.flatStartAmountHp.TryGetValue(ctx.ownedId, out int fHp)) hpFlatAdd += fHp;
         }
 
         // TurnBooster (percent per stack)
         var tb = GetFirstTitle<TurnBoosterTitleSO>(ctx.ownedId, def, level);
-        if (tb != null && _turnStacks.TryGetValue(ctx.ownedId, out int tStacks) && tStacks > 0)
+        if (tb != null && _session.turnStacks.TryGetValue(ctx.ownedId, out int tStacks) && tStacks > 0)
         {
             float pct = Mathf.Max(0f, tb.percentPerTurn) / 100f;
             int stacks = Mathf.Min(tStacks, Mathf.Max(1, tb.maxStacks));
@@ -2382,7 +2369,7 @@ if (_flatStartRemainingTurns.TryGetValue(monsterId, out int remTurns) && remTurn
 
         // EventStacks (percent per stack)
         var es = GetFirstTitle<EventStacksTitleSO>(monsterId, def, level);
-        if (es != null && _eventStacks.TryGetValue(monsterId, out int eStacks) && eStacks > 0)
+        if (es != null && _session.eventStacks.TryGetValue(monsterId, out int eStacks) && eStacks > 0)
         {
             float pct = Mathf.Max(0f, es.percentPerStack) / 100f;
             int stacks = Mathf.Min(eStacks, Mathf.Max(1, es.maxStacks));
@@ -2499,12 +2486,12 @@ if (_flatStartRemainingTurns.TryGetValue(monsterId, out int remTurns) && remTurn
         }
 
         // BattleStartFlat (owner-turn ticking)
-        if (_flatStartRemainingTurns.TryGetValue(ctx.ownedId, out int remTurns) && remTurns > 0)
+        if (_session.flatStartRemainingTurns.TryGetValue(ctx.ownedId, out int remTurns) && remTurns > 0)
         {
-            if (_flatStartAmountAtk.TryGetValue(ctx.ownedId, out int fAtk)) atkFlat += fAtk;
-            if (_flatStartAmountDef.TryGetValue(ctx.ownedId, out int fDef)) defFlat += fDef;
-            if (_flatStartAmountSpd.TryGetValue(ctx.ownedId, out int fSpd)) spdFlat += fSpd;
-            if (_flatStartAmountHp.TryGetValue(ctx.ownedId, out int fHp)) hpFlatAdd += fHp;
+            if (_session.flatStartAmountAtk.TryGetValue(ctx.ownedId, out int fAtk)) atkFlat += fAtk;
+            if (_session.flatStartAmountDef.TryGetValue(ctx.ownedId, out int fDef)) defFlat += fDef;
+            if (_session.flatStartAmountSpd.TryGetValue(ctx.ownedId, out int fSpd)) spdFlat += fSpd;
+            if (_session.flatStartAmountHp.TryGetValue(ctx.ownedId, out int fHp)) hpFlatAdd += fHp;
         }
 
         if (!Mathf.Approximately(hpFlatAdd, 0f))
@@ -2697,11 +2684,11 @@ if (_flatStartRemainingTurns.TryGetValue(monsterId, out int remTurns) && remTurn
     public void OnMonsterEvolved(string newMonsterId) { }
 
 
-    // ─────────────────────────────────────────────────────────────────────
+    // ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     // Debug / UI helpers (used by TitlesAdapter in dev builds)
-    // ─────────────────────────────────────────────────────────────────────
+    // ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     public string ActiveBattleMonsterId => _activeBattleMonsterId;
-    public int CurrentTurnIndex => _turnIndex;
+    public int CurrentTurnIndex => _session.turnIndex;
 
     /// <summary>
     /// Returns current TurnBooster stacks for a combatant id (0 if none).
@@ -2709,7 +2696,7 @@ if (_flatStartRemainingTurns.TryGetValue(monsterId, out int remTurns) && remTurn
     public int Debug_GetTurnBoosterStacks(string combatantId)
     {
         if (string.IsNullOrEmpty(combatantId)) return 0;
-        return _turnStacks.TryGetValue(combatantId, out int v) ? v : 0;
+        return _session.turnStacks.TryGetValue(combatantId, out int v) ? v : 0;
     }
 
     

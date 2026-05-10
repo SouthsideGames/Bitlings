@@ -36,6 +36,9 @@ public sealed class ArenaSaveData
 
     /// <summary>Current ticket balance (0–MaxTickets). Tickets are spent to enter a tournament.</summary>
     public int arenaTickets;
+    public bool ticketSpentPendingRegistration; // FIXED: crash-safe ticket recovery flag
+    // FIXED: per-mentor cooldown replaces the single weekly flag — players with large Mentor Halls can honor multiple legends
+    public List<MentorHonorCooldown> mentorHonorCooldowns = new List<MentorHonorCooldown>();
 
     /// <summary>Number of extra tickets purchased this week (reset each Monday).</summary>
     public int weeklyTicketsPurchased;

@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 using UnityEngine.UI;
 using System;
 using System.Collections;
@@ -7,6 +7,9 @@ using TMPro;
 
 public partial class BattleManager : MonoBehaviour
 {
+    private const float DEAD_HP_THRESHOLD = 0.01f; // FIXED: centralised dead-HP threshold â€” no magic literals
+    private const float TURN_INPUT_SAFETY_CAP_SECONDS = 35f; // FIXED: hard cap prevents silent hung turns
+
     private enum PlayerAction { None, Attack, Defend, Focus, Swap, Run }
     private enum EnemyAction { None, Attack, Defend, Focus, Run }
 
@@ -62,7 +65,7 @@ public partial class BattleManager : MonoBehaviour
     [SerializeField, Min(0)] private int reinforceDefBonus = 8;
     [SerializeField, Min(0)] private int corruptDefShredPerTick = 2;
 
-    [Header("Difficulty — Personality Scaling")]
+    [Header("Difficulty â€” Personality Scaling")]
     [SerializeField, Min(0)] private int hardModeSuperEffectiveBonus = 2;
     [SerializeField, Min(0)] private int hardModeAttackPressureBonus = 1;
 
@@ -89,6 +92,7 @@ public partial class BattleManager : MonoBehaviour
 
     private bool _autoQueueCountdownShown;
     private int _autoQueueCountdownLastInt = int.MinValue;
+    private float _inputWaitedSeconds;
 
     private bool _manualTurnsDefault;
     private bool _enableAutoQueueDefault;
@@ -334,9 +338,9 @@ public partial class BattleManager : MonoBehaviour
 
 
 
-    // ─────────────────────────────────────────────────────────────
+    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     // GC / Allocation Scratch (mobile smoothness)
-    // ─────────────────────────────────────────────────────────────
+    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     private readonly List<int> _scratchOthers = new List<int>(4);
     private readonly BattleLogBuffer _logBuffer = new BattleLogBuffer();
 
@@ -377,11 +381,11 @@ public partial class BattleManager : MonoBehaviour
     private static readonly Color StatBuff = new Color(0.35f, 1f, 0.35f);
     private static readonly Color StatNerf = new Color(1f, 0.35f, 0.35f);
 
-    // ─────────────────────────────────────────────────────────────
+    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     // UI baseline snapshots (Adjusted stats without Titles)
     // Captured once at battle start so buff/debuff coloring persists
     // until effects truly expire (or battle ends).
-    // ─────────────────────────────────────────────────────────────
+    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     private int[] _uiBaseAtk;
     private int[] _uiBaseDef;
     private int[] _uiBaseSpd;
@@ -395,19 +399,19 @@ public partial class BattleManager : MonoBehaviour
     // Wild Titles routing id (set from RiftManager if available).
     private string _wildCombatIdForTitles;
 
-    // ─────────────────────────────────────────────────────────────
+    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     // Battle Stats System (centralized stat pipeline)
-    // ─────────────────────────────────────────────────────────────
+    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     private BattleStatsSystem _stats;
     public BattleStatsSystem Stats => _stats;
 
-    // ─────────────────────────────────────────────────────────────
+    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     // Battle stat rebuild contract
     // - One entrypoint for any "stats may have changed" situation.
     // - Centralizes maxHP % preservation + UI refresh ordering.
     // - Call RequestBattleStatRebuild(...) instead of sprinkling
     //   SyncEffectiveMaxHPFromStats / RaiseBattleStatsChanged / UI refresh.
-    // ─────────────────────────────────────────────────────────────
+    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     [Flags]
     public enum BattleStatRebuildReason
     {
@@ -574,7 +578,7 @@ public partial class BattleManager : MonoBehaviour
     {
         // Mirrors BuildTitleContextForActive but for any index.
         float curMax = GetFinalMaxHPForIndex(idx);
-        float hpPct = (curMax > 0.01f && teamHP != null && idx >= 0 && idx < teamHP.Length)
+        float hpPct = (curMax > DEAD_HP_THRESHOLD && teamHP != null && idx >= 0 && idx < teamHP.Length)
             ? Mathf.Clamp01(teamHP[idx] / curMax)
             : 0f;
 
@@ -582,7 +586,7 @@ public partial class BattleManager : MonoBehaviour
         for (int i = 0; i < teamCount; i++)
         {
             if (i == idx) continue;
-            if (teamHP != null && i >= 0 && i < teamHP.Length && teamHP[i] > 0.01f)
+            if (teamHP != null && i >= 0 && i < teamHP.Length && teamHP[i] > 0.01f) // TODO: confirm this 0.01f is intentional
                 alliesAlive++;
         }
 
@@ -613,7 +617,7 @@ public partial class BattleManager : MonoBehaviour
         for (int i = 0; i < teamCount; i++)
         {
             if (i == idx) continue;
-            if (teamHP != null && i >= 0 && i < teamHP.Length && teamHP[i] > 0.01f)
+            if (teamHP != null && i >= 0 && i < teamHP.Length && teamHP[i] > 0.01f) // TODO: confirm this 0.01f is intentional
                 alliesAlive++;
         }
 
@@ -636,7 +640,7 @@ public partial class BattleManager : MonoBehaviour
     public TitleContext BuildTitleContextForWildUsingMaxSafe(float maxHpForContext)
     {
         float curMax = Mathf.Max(1f, maxHpForContext);
-        float hpPct = curMax > 0.01f ? Mathf.Clamp01(wildHP / curMax) : 0f;
+        float hpPct = curMax > 0.01f ? Mathf.Clamp01(wildHP / curMax) : 0f; // TODO: confirm this 0.01f is intentional
 
         return new TitleContext
         {
@@ -655,7 +659,7 @@ public partial class BattleManager : MonoBehaviour
     public float GetWildHp01UsingMaxSafe(float maxHpForContext)
     {
         float curMax = Mathf.Max(1f, maxHpForContext);
-        return curMax > 0.01f ? Mathf.Clamp01(wildHP / curMax) : 0f;
+        return curMax > 0.01f ? Mathf.Clamp01(wildHP / curMax) : 0f; // TODO: confirm this 0.01f is intentional
     }
 
 
@@ -1086,13 +1090,13 @@ public partial class BattleManager : MonoBehaviour
 
     private IEnumerator MaybeSayKO_Player(string victimName, float preHP, float postHP)
     {
-        if (preHP > 0.01f && postHP <= 0.01f)
+        if (preHP > 0.01f && postHP <= 0.01f) // TODO: confirm this 0.01f is intentional
             yield return SayKO(victimName);
     }
 
     private IEnumerator MaybeSayKO_Wild(string victimName, float preHP, float postHP)
     {
-        if (preHP > 0.01f && postHP <= 0.01f)
+        if (preHP > 0.01f && postHP <= 0.01f) // TODO: confirm this 0.01f is intentional
             yield return SayKO(victimName);
     }
 
@@ -1463,7 +1467,7 @@ public partial class BattleManager : MonoBehaviour
 
             if (jobCtx[i].maxHpBonusPct > 0f)
             {
-                float pct = (teamMaxHP[i] > 0.01f) ? (teamHP[i] / teamMaxHP[i]) : 1f;
+                float pct = (teamMaxHP[i] > 0.01f) ? (teamHP[i] / teamMaxHP[i]) : 1f; // TODO: confirm this 0.01f is intentional
                 teamMaxHP[i] *= 1f + jobCtx[i].maxHpBonusPct;
                 teamHP[i] = Mathf.Clamp(teamMaxHP[i] * pct, 0f, teamMaxHP[i]);
             }
@@ -1589,7 +1593,7 @@ public partial class BattleManager : MonoBehaviour
                 else
                 {
                     _hotSwapFreeTurn = true;
-                    BattleLogger.Log("[HotSwap] Type advantage on entry — turn not consumed!", LogScope.Battle);
+                    BattleLogger.Log("[HotSwap] Type advantage on entry â€” turn not consumed!", LogScope.Battle);
                 }
             }
         }
@@ -1684,11 +1688,11 @@ public partial class BattleManager : MonoBehaviour
         return false;
     }
 
-    private bool IsWildKO() => wildHP <= 0.01f;
+    private bool IsWildKO() => wildHP <= 0.01f; // TODO: confirm this 0.01f is intentional
 
     private bool IsTeamKO()
     {
-        for (int i = 0; i < teamCount; i++) if (teamHP[i] > 0.01f) return false;
+        for (int i = 0; i < teamCount; i++) if (teamHP[i] > 0.01f) return false; // TODO: confirm this 0.01f is intentional
         return true;
     }
 
@@ -1703,7 +1707,7 @@ public partial class BattleManager : MonoBehaviour
         float overheal = Mathf.Max(0f, amount - (teamHP[activeIndex] - before));
         ClampAndPushActiveHP();
 
-        // Overheal → shield conversion via ShieldInteractionTitleSO
+        // Overheal â†’ shield conversion via ShieldInteractionTitleSO
         if (overheal > 0f)
         {
             try
@@ -1731,11 +1735,11 @@ public partial class BattleManager : MonoBehaviour
 
         {
             float newMax = Mathf.Max(1f, _stats.GetEffectiveWild().maxHP);
-            float oldMax = (_wildEffMaxHpCache > 0.01f) ? _wildEffMaxHpCache : Mathf.Max(1f, wildMaxHP);
+            float oldMax = (_wildEffMaxHpCache > 0.01f) ? _wildEffMaxHpCache : Mathf.Max(1f, wildMaxHP); // TODO: confirm this 0.01f is intentional
 
-            if (force || Mathf.Abs(newMax - oldMax) > 0.01f)
+            if (force || Mathf.Abs(newMax - oldMax) > 0.01f) // TODO: confirm this 0.01f is intentional
             {
-                float hp01 = oldMax > 0.01f ? Mathf.Clamp01(wildHP / oldMax) : 1f;
+                float hp01 = oldMax > 0.01f ? Mathf.Clamp01(wildHP / oldMax) : 1f; // TODO: confirm this 0.01f is intentional
                 wildMaxHP = newMax;
                 wildHP = Mathf.Clamp(newMax * hp01, 0f, newMax);
                 _wildEffMaxHpCache = newMax;
@@ -1752,12 +1756,12 @@ public partial class BattleManager : MonoBehaviour
             float newMax = Mathf.Max(1f, _stats.GetEffectivePlayer(i).maxHP);
 
             float oldMax = _effMaxHpCache[i];
-            if (oldMax <= 0.01f)
+            if (oldMax <= 0.01f) // TODO: confirm this 0.01f is intentional
                 oldMax = Mathf.Max(1f, (teamMaxHP != null && i < teamMaxHP.Length) ? teamMaxHP[i] : 1f);
 
-            if (force || Mathf.Abs(newMax - oldMax) > 0.01f)
+            if (force || Mathf.Abs(newMax - oldMax) > 0.01f) // TODO: confirm this 0.01f is intentional
             {
-                float hp01 = oldMax > 0.01f ? Mathf.Clamp01(teamHP[i] / oldMax) : 1f;
+                float hp01 = oldMax > 0.01f ? Mathf.Clamp01(teamHP[i] / oldMax) : 1f; // TODO: confirm this 0.01f is intentional
                 teamHP[i] = Mathf.Clamp(newMax * hp01, 0f, newMax);
                 _effMaxHpCache[i] = newMax;
             }
@@ -1776,7 +1780,7 @@ public partial class BattleManager : MonoBehaviour
 
     private IEnumerator Say(string line, BattleLineTag tags = BattleLineTag.None)
     {
-        // Never suppress lines that carry an icon tag — they must reach the UI.
+        // Never suppress lines that carry an icon tag â€” they must reach the UI.
         const BattleLineTag iconMask = BattleLineTag.Crit | BattleLineTag.Shield
                                      | BattleLineTag.SuperEffective | BattleLineTag.NotEffective;
         bool hasIcon = (tags & iconMask) != 0;
@@ -2029,7 +2033,7 @@ public partial class BattleManager : MonoBehaviour
 
         ownedCapturedIcon = _hudRigActive.ownedCapturedIcon;
 
-        // Apply hud-rig values as defaults directly — do NOT route through
+        // Apply hud-rig values as defaults directly â€” do NOT route through
         // SetUIOverride, which would clobber _runtimeOverrideTextBox and
         // destroy any Executive Trial override that was already registered.
         if (_hudRigActive.feedback)

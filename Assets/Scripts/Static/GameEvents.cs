@@ -61,9 +61,9 @@ public static class GameEvents
     public static Action TitleEquipped;
     public static Action DirectoryOpened;
     public static Action<StatusType> StatusAppliedToWild;
-    public static Action IronRunStarted;
-    public static Action IronBattleWon;
-    public static Action<int, bool, int> IronRunCompleted; // (wins, forfeited, totalDeaths)
+    public static Action ExecutiveTrialStarted;
+    public static Action ExecutiveTrialBattleWon;
+    public static Action<int, bool, int> ExecutiveTrialCompleted; // (wins, forfeited, totalDeaths)
 
     // ─────────────────────────────────────────────────────────
     // Promotions (Ranks)

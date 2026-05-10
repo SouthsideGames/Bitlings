@@ -3,19 +3,19 @@ using UnityEngine.UI;
 
 /// <summary>
 /// Routes Executive Trial battle UI bindings into BattleManager.
-/// Iron mode does not support party switching.
+/// Executive Trial mode does not support party switching.
 /// Only handles binding overrides.
 /// </summary>
-public class IronBattleUIRoot : MonoBehaviour
+public class ExecutiveTrialBattleUIRoot : MonoBehaviour
 {
-    [Header("Iron UI Bindings")]
-    [SerializeField] private BattleManager.BattleUIBindings ironBindings;
+    [Header("Executive Trial UI Bindings")]
+    [SerializeField] private BattleManager.BattleUIBindings executiveTrialBindings;
 
-    [Header("Optional Iron Components (auto-find if null)")]
-    [SerializeField] private BattleFeedbackManager ironFeedback;
-    [SerializeField] private BattleTextBoxUI ironBattleTextBox;
-    [SerializeField] private Image ironPlayerBackground;
-    [SerializeField] private Image ironWildBackground;
+    [Header("Optional Executive Trial Components (auto-find if null)")]
+    [SerializeField] private BattleFeedbackManager executiveTrialFeedback;
+    [SerializeField] private BattleTextBoxUI executiveTrialBattleTextBox;
+    [SerializeField] private Image executiveTrialPlayerBackground;
+    [SerializeField] private Image executiveTrialWildBackground;
 
     [SerializeField] private bool autoFindInChildren = true;
 
@@ -28,34 +28,34 @@ public class IronBattleUIRoot : MonoBehaviour
     {
         if (!autoFindInChildren) return;
 
-        if (!ironFeedback)
-            ironFeedback = GetComponentInChildren<BattleFeedbackManager>(true);
+        if (!executiveTrialFeedback)
+            executiveTrialFeedback = GetComponentInChildren<BattleFeedbackManager>(true);
 
-        if (!ironBattleTextBox)
+        if (!executiveTrialBattleTextBox)
         {
             var allTextBoxes = GetComponentsInChildren<BattleTextBoxUI>(true);
-            DevLog.Log($"[IronBattleUIRoot] Found {allTextBoxes.Length} BattleTextBoxUI components");
+            DevLog.Log($"[ExecutiveTrialBattleUIRoot] Found {allTextBoxes.Length} BattleTextBoxUI components");
             for (int i = 0; i < allTextBoxes.Length; i++)
             {
                 var tb = allTextBoxes[i];
                 if (!tb) continue;
-                DevLog.Log($"[IronBattleUIRoot]   [{i}] {tb.name} hasRenderable={tb.HasRenderableTarget} active={tb.gameObject.activeSelf}");
+                DevLog.Log($"[ExecutiveTrialBattleUIRoot]   [{i}] {tb.name} hasRenderable={tb.HasRenderableTarget} active={tb.gameObject.activeSelf}");
                 if (tb.HasRenderableTarget)
                 {
-                    ironBattleTextBox = tb;
-                    DevLog.Log($"[IronBattleUIRoot] Assigned textbox (by HasRenderableTarget): {tb.name}");
+                    executiveTrialBattleTextBox = tb;
+                    DevLog.Log($"[ExecutiveTrialBattleUIRoot] Assigned textbox (by HasRenderableTarget): {tb.name}");
                     break;
                 }
             }
 
-            if (!ironBattleTextBox && allTextBoxes.Length > 0)
+            if (!executiveTrialBattleTextBox && allTextBoxes.Length > 0)
             {
-                ironBattleTextBox = allTextBoxes[0];
-                DevLog.Log($"[IronBattleUIRoot] Assigned textbox (fallback first): {allTextBoxes[0].name}");
+                executiveTrialBattleTextBox = allTextBoxes[0];
+                DevLog.Log($"[ExecutiveTrialBattleUIRoot] Assigned textbox (fallback first): {allTextBoxes[0].name}");
             }
         }
 
-        if (!ironPlayerBackground)
+        if (!executiveTrialPlayerBackground)
         {
             var allImages = GetComponentsInChildren<Image>(true);
             for (int i = 0; i < allImages.Length; i++)
@@ -66,13 +66,13 @@ public class IronBattleUIRoot : MonoBehaviour
                 if (n.IndexOf("player", System.StringComparison.OrdinalIgnoreCase) >= 0
                     && n.IndexOf("background", System.StringComparison.OrdinalIgnoreCase) >= 0)
                 {
-                    ironPlayerBackground = img;
+                    executiveTrialPlayerBackground = img;
                     break;
                 }
             }
         }
 
-        if (!ironWildBackground)
+        if (!executiveTrialWildBackground)
         {
             var allImages = GetComponentsInChildren<Image>(true);
             for (int i = 0; i < allImages.Length; i++)
@@ -83,7 +83,7 @@ public class IronBattleUIRoot : MonoBehaviour
                 if (n.IndexOf("wild", System.StringComparison.OrdinalIgnoreCase) >= 0
                     && n.IndexOf("background", System.StringComparison.OrdinalIgnoreCase) >= 0)
                 {
-                    ironWildBackground = img;
+                    executiveTrialWildBackground = img;
                     break;
                 }
             }
@@ -100,50 +100,50 @@ public class IronBattleUIRoot : MonoBehaviour
 
         ResolveOptionalRefs();
 
-        DevLog.Log($"[IronBattleUIRoot] ApplyTo called: textbox={(ironBattleTextBox ? ironBattleTextBox.name : "NULL")} active={(ironBattleTextBox ? ironBattleTextBox.gameObject.activeSelf : false)}");
+        DevLog.Log($"[ExecutiveTrialBattleUIRoot] ApplyTo called: textbox={(executiveTrialBattleTextBox ? executiveTrialBattleTextBox.name : "NULL")} active={(executiveTrialBattleTextBox ? executiveTrialBattleTextBox.gameObject.activeSelf : false)}");
 
-        battle.SetUIBindingsOverride(ironBindings);
+        battle.SetUIBindingsOverride(executiveTrialBindings);
 
-        // No bottom toggle override — Iron does not allow switching
+        // No bottom toggle override — Executive Trial does not allow switching
         battle.SetUIOverride(
-            ironFeedback,
-            ironBattleTextBox,
+            executiveTrialFeedback,
+            executiveTrialBattleTextBox,
             null
         );
 
-        // Ensure we spawn attack prefabs in Iron runs just like regular battles.
-        if (ironFeedback)
-            ironFeedback.SetSpawnAttackPrefabs(true);
+        // Ensure we spawn attack prefabs in Executive Trial runs just like regular battles.
+        if (executiveTrialFeedback)
+            executiveTrialFeedback.SetSpawnAttackPrefabs(true);
 
         // Copy timing from the regular feedback so Executive Trial animations feel the same speed.
-        if (ironFeedback && battle.DefaultFeedback && battle.DefaultFeedback != ironFeedback)
-            ironFeedback.CopyAnimationTimingsFrom(battle.DefaultFeedback);
+        if (executiveTrialFeedback && battle.DefaultFeedback && battle.DefaultFeedback != executiveTrialFeedback)
+            executiveTrialFeedback.CopyAnimationTimingsFrom(battle.DefaultFeedback);
 
         var actionBars = GetComponentsInChildren<ActionBarBinder>(true);
         for (int i = 0; i < actionBars.Length; i++)
         {
             var binder = actionBars[i];
             if (!binder) continue;
-            binder.BindTo(battle, ironFeedback);
+            binder.BindTo(battle, executiveTrialFeedback);
         }
 
         // Ensure text box is active before battle starts
-        if (ironBattleTextBox && !ironBattleTextBox.gameObject.activeSelf)
+        if (executiveTrialBattleTextBox && !executiveTrialBattleTextBox.gameObject.activeSelf)
         {
-            ironBattleTextBox.gameObject.SetActive(true);
-            DevLog.Log($"[IronBattleUIRoot] Activated textbox: {ironBattleTextBox.name}");
+            executiveTrialBattleTextBox.gameObject.SetActive(true);
+            DevLog.Log($"[ExecutiveTrialBattleUIRoot] Activated textbox: {executiveTrialBattleTextBox.name}");
         }
 
 #if UNITY_EDITOR
-        DevLog.Log($"[IronTextTrace] ApplyTo: battle={battle.name} textbox={(ironBattleTextBox ? ironBattleTextBox.name : "NULL")} hasTarget={(ironBattleTextBox ? ironBattleTextBox.HasRenderableTarget : false)} active={(ironBattleTextBox ? ironBattleTextBox.gameObject.activeInHierarchy : false)}");
+        DevLog.Log($"[ExecutiveTrialTextTrace] ApplyTo: battle={battle.name} textbox={(executiveTrialBattleTextBox ? executiveTrialBattleTextBox.name : "NULL")} hasTarget={(executiveTrialBattleTextBox ? executiveTrialBattleTextBox.HasRenderableTarget : false)} active={(executiveTrialBattleTextBox ? executiveTrialBattleTextBox.gameObject.activeInHierarchy : false)}");
 #endif
 
-        if (!ironBattleTextBox)
-            Debug.LogWarning("[IronBattleUIRoot] No BattleTextBoxUI found in Iron battle UI root. Battle text will not display.");
-        else if (!ironBattleTextBox.gameObject.activeInHierarchy)
-            Debug.LogWarning($"[IronBattleUIRoot] BattleTextBoxUI '{ironBattleTextBox.name}' is assigned but not active in hierarchy.");
+        if (!executiveTrialBattleTextBox)
+            Debug.LogWarning("[ExecutiveTrialBattleUIRoot] No BattleTextBoxUI found in Executive Trial battle UI root. Battle text will not display.");
+        else if (!executiveTrialBattleTextBox.gameObject.activeInHierarchy)
+            Debug.LogWarning($"[ExecutiveTrialBattleUIRoot] BattleTextBoxUI '{executiveTrialBattleTextBox.name}' is assigned but not active in hierarchy.");
 
-        battle.SetBattleBackgroundOverride(ironPlayerBackground, ironWildBackground);
+        battle.SetBattleBackgroundOverride(executiveTrialPlayerBackground, executiveTrialWildBackground);
     }
 
     public void RestoreBattleManagerDefaults()

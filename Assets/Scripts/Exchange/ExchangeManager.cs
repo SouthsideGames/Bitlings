@@ -56,6 +56,7 @@ public sealed class ExchangeManager : MonoBehaviour
     private HashSet<string> _surgeAlertWatchlist;
     private float _recalcTimer;
     private float _laborSampleTimer;
+    private long _lastCatchUpRunUnix = 0L; // FIXED: prevents double-apply when OnApplicationPause and Start() both fire
 
     // ─────────── Demand multipliers ───────────
     private static float DemandMul(DemandLevel d)
@@ -320,6 +321,10 @@ public sealed class ExchangeManager : MonoBehaviour
 
     private void CatchUpOffline()
     {
+        long nowUnix = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+        if (nowUnix - _lastCatchUpRunUnix < 60L) return; // guard: don't run twice within the same minute // FIXED
+        _lastCatchUpRunUnix = nowUnix;
+
         if (_save == null || _stateMap == null) return;
 
         long now = SaveManager.NowUnix();
@@ -405,6 +410,7 @@ public sealed class ExchangeManager : MonoBehaviour
         _save.lastDayIndex = dayNow;
 
         Persist();
+        _lastCatchUpRunUnix = DateTimeOffset.UtcNow.ToUnixTimeSeconds(); // FIXED: update after apply so next session won't re-apply the same period
     }
 
     // ─────────── Public API ───────────

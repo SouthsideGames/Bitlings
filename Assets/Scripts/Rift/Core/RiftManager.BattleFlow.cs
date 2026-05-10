@@ -133,7 +133,7 @@ public partial class RiftManager
         if (ExecutiveTrialRuntime.IsActive)
             return;
 
-        var ironHud = FindFirstObjectByType<IronBattleUIRoot>(FindObjectsInactive.Include);
+        var ironHud = FindFirstObjectByType<ExecutiveTrialBattleUIRoot>(FindObjectsInactive.Include);
         if (ironHud != null)
         {
             ironHud.RestoreBattleManagerDefaults();
@@ -618,9 +618,12 @@ public partial class RiftManager
         {
             if (!inBattle)
             {
+                // CHANGED: this check also prevents re-enabling after energy regen - player must explicitly hold again to restart auto.
                 if (!HasEnergy())
                 {
-                    EmitStatus("Out of energy!", LogScope.System);
+                    int needed = GetRiftCost();
+                    int current = GetEnergyPoints();
+                    EmitStatus($"Out of energy! Need {needed}, have {current}.", LogScope.System);
                     autoMode = false;
                     GameEvents.RaiseAutoBattleModeChanged(autoMode);
                     return;

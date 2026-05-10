@@ -152,5 +152,12 @@ public sealed class ExecutiveTrialGameOverPanelUI : MonoBehaviour
         if (timelineSection != null) timelineSection.SetActive(hasLog);
         if (timelineUI != null && hasLog)
             timelineUI.Bind(battleLog, forfeited, mode);
+
+        if (runResultTMP != null)
+        {
+            var allTimeStats = ExecutiveTrialStats.Load();
+            runResultTMP.text = IronRunNarrativeGenerator.Generate(
+                summary, wins, forfeited, mode == ExecutiveTrialRunState.ExecutiveTrialMode.Hardcore, allTimeStats);
+        }
     }
 }

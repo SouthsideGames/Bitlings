@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
@@ -36,7 +36,7 @@ public sealed class BattleTitlePipsUI : MonoBehaviour
     [SerializeField] private bool punchOnActivate = true;
 
     [SerializeField, Range(1.01f, 1.35f)] private float punchScale = 1.15f;
-    [SerializeField, Min(0.01f)] private float punchTime = 0.10f;
+    [SerializeField, Min(0.01f)] private float punchTime = 0.10f; // TODO: confirm this 0.01f is intentional
 
     private readonly List<Pip> _pips = new List<Pip>(8);
     private string _lastKey;

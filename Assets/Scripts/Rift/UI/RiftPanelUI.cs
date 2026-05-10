@@ -948,11 +948,12 @@ if (blinderBackground)
 
         bool busy = _isFading || IsHireDecisionOpen || pendingRecovery;
         bool hasAliveTeam = HasAliveTeamMember();
+        bool hasIdleTeam = HasIdleTeamMemberConfigured();
         bool hasEnergyOrFree = NextRiftIsFree() || HasEnergy() || HasFallbackEnergy();
 
         bool allowDuringBattleForAutoToggle = inBattle && RiftManager.I != null && RiftManager.I.IsAutoMode;
 
-        riftBtn.interactable = !busy && hasAliveTeam && hasEnergyOrFree && (!inBattle || allowDuringBattleForAutoToggle);
+        riftBtn.interactable = !busy && (hasAliveTeam || hasIdleTeam) && hasEnergyOrFree && (!inBattle || allowDuringBattleForAutoToggle);
     }
 
     bool HasAliveTeamMember()
@@ -968,6 +969,18 @@ if (blinderBackground)
         }
 
         return false;
+    }
+
+    bool HasIdleTeamMemberConfigured()
+    {
+        try
+        {
+            return !IdleLoadoutManager.IsIdleTeamEmpty();
+        }
+        catch
+        {
+            return false;
+        }
     }
 
     bool HasFallbackEnergy()

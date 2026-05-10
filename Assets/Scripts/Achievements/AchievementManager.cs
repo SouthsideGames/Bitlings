@@ -130,9 +130,9 @@ public sealed class AchievementManager : MonoBehaviour
         GameEvents.DirectoryOpened += OnDirectoryOpened;
         GameEvents.StatusAppliedToWild += OnStatusAppliedToWild;
         GameEvents.PromotionRankChanged += OnPromotionRankChanged;
-        GameEvents.IronRunStarted += OnIronRunStarted;
-        GameEvents.IronBattleWon += OnIronBattleWon;
-        GameEvents.IronRunCompleted += OnIronRunCompleted;
+        GameEvents.ExecutiveTrialStarted += OnExecutiveTrialRunStarted;
+        GameEvents.ExecutiveTrialBattleWon += OnExecutiveTrialBattleWon;
+        GameEvents.ExecutiveTrialCompleted += OnExecutiveTrialRunCompleted;
     }
 
     private void UnhookEvents()
@@ -151,9 +151,9 @@ public sealed class AchievementManager : MonoBehaviour
         GameEvents.DirectoryOpened -= OnDirectoryOpened;
         GameEvents.StatusAppliedToWild -= OnStatusAppliedToWild;
         GameEvents.PromotionRankChanged -= OnPromotionRankChanged;
-        GameEvents.IronRunStarted -= OnIronRunStarted;
-        GameEvents.IronBattleWon -= OnIronBattleWon;
-        GameEvents.IronRunCompleted -= OnIronRunCompleted;
+        GameEvents.ExecutiveTrialStarted -= OnExecutiveTrialRunStarted;
+        GameEvents.ExecutiveTrialBattleWon -= OnExecutiveTrialBattleWon;
+        GameEvents.ExecutiveTrialCompleted -= OnExecutiveTrialRunCompleted;
     }
 
     // ─────────────────────────────────────────────────────────────
@@ -321,24 +321,24 @@ public sealed class AchievementManager : MonoBehaviour
         SetMaxProgress(AchievementTrigger.PlayerRank, newRank);
     }
 
-    private void OnIronRunStarted()
+    private void OnExecutiveTrialRunStarted()
     {
-        ProgressAll(AchievementTrigger.IronRunsStarted, 1);
+        ProgressAll(AchievementTrigger.ExecutiveTrialRunsStarted, 1);
     }
 
-    private void OnIronBattleWon()
+    private void OnExecutiveTrialBattleWon()
     {
-        ProgressAll(AchievementTrigger.IronBattleWins, 1);
+        ProgressAll(AchievementTrigger.ExecutiveTrialBattleWins, 1);
     }
 
-    private void OnIronRunCompleted(int wins, bool forfeited, int totalDeaths)
+    private void OnExecutiveTrialRunCompleted(int wins, bool forfeited, int totalDeaths)
     {
         if (!forfeited)
         {
-            ProgressAll(AchievementTrigger.IronRunsCompleted, 1);
+            ProgressAll(AchievementTrigger.ExecutiveTrialRunsCompleted, 1);
 
             if (totalDeaths == 0)
-                ProgressAll(AchievementTrigger.IronPerfectRuns, 1);
+                ProgressAll(AchievementTrigger.ExecutiveTrialPerfectRuns, 1);
         }
     }
 

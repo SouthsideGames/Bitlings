@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 using System;
@@ -247,7 +247,7 @@ public class PostBattleSummaryPanelUI : MonoBehaviour
 
         from = Mathf.Max(0, from);
         to = Mathf.Max(0, to);
-        duration = Mathf.Max(0.01f, duration);
+        duration = Mathf.Max(0.01f, duration); // TODO: confirm this 0.01f is intentional
 
         // Ensure active before we animate.
         label.gameObject.SetActive(true);
@@ -306,9 +306,9 @@ public class PostBattleSummaryPanelUI : MonoBehaviour
         return m > 0 ? $"{m}:{r:00}" : $"{r}s";
     }
 
-    // ─────────────────────────────────────────────
+    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     // UPDATED: capturedPremium added as 7th argument
-    // ─────────────────────────────────────────────
+    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     public void Set(
         BattleResult result,
         int growthCoresGained = 0,
@@ -335,9 +335,9 @@ public class PostBattleSummaryPanelUI : MonoBehaviour
 
         ApplyBattleGradeVisual(result);
 
-        // ─────────────────────────────────────────────
+        // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         // Rewards: hide empty lines + micro-juice (count-up + stagger)
-        // ─────────────────────────────────────────────
+        // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         float delay = Mathf.Max(0f, revealStartDelay);
 
         int creditsTotal = Mathf.Max(0, creditsBase + creditsTitleBonus);
@@ -499,11 +499,11 @@ public class PostBattleSummaryPanelUI : MonoBehaviour
         if (firstHitLabel) firstHitLabel.text = $"First Hit: {(result.gotFirstHit ? "Yes" : "No")}";
         if (timeLabel) timeLabel.text = $"Time: {FormatTime(result.secondsSurvived)}";
 
-        // ─────────────────────────────────────────────
+        // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         // Promotion XP (Phase 5)
         // Shows current rank + progress to next rank + XP gained from this battle.
         // NOTE: PromotionManager should have already applied XP via GameEvents.BattleFinished.
-        // ─────────────────────────────────────────────
+        // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         if (promotionSectionRoot != null)
             promotionSectionRoot.SetActive(SaveManager.Data != null);
 

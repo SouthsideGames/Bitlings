@@ -6,17 +6,17 @@ public static class CareerNarrativeGenerator
 {
     public static readonly Dictionary<string, string[]> ClosingLinePool = new Dictionary<string, string[]>
     {
-        { "Warrior", new[] { "The roster misses the fire. The numbers remember the fighter." } },
-        { "Guardian", new[] { "Some monsters don't win the most battles. They win the ones that matter." } },
-        { "Scholar", new[] { "Quiet dedication leaves the loudest echoes." } },
-        { "Laborer", new[] { "The harvest doesn't remember who planted the seed. But you do." } },
-        { "Wanderer", new[] { "They went everywhere. They changed everything." } },
-        { "Broker", new[] { "Every credit in this treasury passed through their hands at least once." } },
-        { "HighWinRate", new[] { "The numbers remember everything." } },
-        { "HighBattles", new[] { "Some careers are built in moments. This one was built in battles." } },
-        { "IronVet", new[] { "Iron doesn't break what it forges." } },
-        { "ShortCareer", new[] { "Not every retired monster needs a long chapter to matter." } },
-        { "Default", new[] { "The roster is quieter now." } }
+        { "Warrior",     new[] { "Recommendation: retire with distinction. Field performance record speaks without comment." } },
+        { "Guardian",    new[] { "Recommendation: retire with distinction. Some metrics resist quantification. This is noted." } },
+        { "Scholar",     new[] { "Recommendation: retire with distinction. Quiet records often outperform loud ones." } },
+        { "Laborer",     new[] { "Recommendation: retire with distinction. Consistent output maintained across the full assessment period." } },
+        { "Wanderer",    new[] { "Recommendation: retire with distinction. Broad operational footprint. Contributions distributed." } },
+        { "Broker",      new[] { "Recommendation: retire with distinction. Economic throughput above baseline. Treasury impact: noted." } },
+        { "HighWinRate", new[] { "Recommendation: retire with distinction. Win rate above threshold. No further annotation required." } },
+        { "HighBattles", new[] { "Recommendation: retire with distinction. Volume of service noted in permanent file." } },
+        { "IronVet",     new[] { "Recommendation: retire with distinction. Iron Career performance entered into permanent record." } },
+        { "ShortCareer", new[] { "Recommendation: retire. Assessment period brief. Contribution acknowledged and filed." } },
+        { "Default",     new[] { "Recommendation: retire. File closed." } }
     };
 
     public static string GenerateNarrative(MentorRecord record, LifetimeMonsterStats stats)
@@ -36,7 +36,7 @@ public static class CareerNarrativeGenerator
 
         var sentences = new List<string>(8)
         {
-            $"{name} served for {days.ToString("N0")} days."
+            $"Performance review: {name}. Assessment period: {days:N0} days."
         };
 
         int winPct = 0;
@@ -45,44 +45,44 @@ public static class CareerNarrativeGenerator
         {
             winPct = (stats.lifetimeWins * 100) / Mathf.Max(1, stats.lifetimeBattles);
             sentences.Add(
-                $"In that time, {pronouns.subject} fought {stats.lifetimeBattles.ToString("N0")} battles, winning {winPct}% of them.");
+                $"Battle record: {stats.lifetimeBattles:N0} engagements, {winPct}% success rate. {RatingFor(winPct)} field expectations.");
         }
 
         if (stats.maxWinStreak >= 5)
-            sentences.Add($"{Cap(pronouns.possessive)} longest win streak was {stats.maxWinStreak.ToString("N0")} consecutive victories.");
+            sentences.Add($"Notable: {stats.maxWinStreak:N0} consecutive victories logged. Performance spike on record.");
 
         if (stats.riftsCompleted >= 10)
         {
             sentences.Add(
-                $"{Cap(pronouns.subject)} completed {stats.riftsCompleted.ToString("N0")} Rifts, including {stats.bossesDefeated.ToString("N0")} boss encounters.");
+                $"Rift clearance: {stats.riftsCompleted:N0} completed, {stats.bossesDefeated:N0} boss encounters. Hazard rating: satisfactory.");
         }
 
         if (stats.ironCareerWins > 0)
-            sentences.Add($"{Cap(pronouns.subject)} survived {stats.ironCareerWins.ToString("N0")} battles in Executive Trial.");
+            sentences.Add($"Iron Career file: {stats.ironCareerWins:N0} floors cleared. Hardship clause acknowledged.");
 
         bool hasDriftLine = false;
         if (stats.driftTierAtRetirement >= 2)
         {
             string activity = ActivityFor(stats.driftArchetypeAtRetirement);
             string archetype = stats.driftArchetypeAtRetirement.ToString();
-            sentences.Add($"A career of {activity} shaped {pronouns.@object} into a true {archetype}.");
+            sentences.Add($"Drift classification: {stats.driftArchetypeAtRetirement} (Tier {stats.driftTierAtRetirement}). Archetype consistent with activity log.");
             hasDriftLine = true;
         }
 
         if (stats.lifetimeJobHours >= 20f)
         {
             int roundedHours = Mathf.RoundToInt(stats.lifetimeJobHours);
-            sentences.Add($"{Cap(pronouns.subject)} spent {roundedHours.ToString("N0")} hrs at the {stats.topJobType}." );
+            sentences.Add($"Primary assignment: {stats.topJobType}. {roundedHours:N0} hours logged. Output: satisfactory.");
         }
 
         if (!string.IsNullOrEmpty(stats.willRecipientUID))
         {
             string heir = string.IsNullOrWhiteSpace(stats.willRecipientName) ? "an heir" : stats.willRecipientName;
-            sentences.Add($"{Cap(pronouns.subject)} chose {heir} as {pronouns.possessive} heir, passing on {stats.willType}." );
+            sentences.Add($"Legacy directive filed. Beneficiary: {heir}. Transfer type: {stats.willType}. Directive valid.");
         }
         else
         {
-            sentences.Add($"{Cap(pronouns.subject)} left no heir - some legacies burn alone.");
+            sentences.Add("Legacy directive: none filed. File closed without succession.");
         }
 
         if (sentences.Count < 4)
@@ -90,14 +90,14 @@ public static class CareerNarrativeGenerator
             if (!hasBattleRecord)
             {
                 sentences.Add(
-                    $"In that time, {pronouns.subject} fought {stats.lifetimeBattles.ToString("N0")} battles, winning {winPct}% of them.");
+                    $"Battle record: {stats.lifetimeBattles:N0} engagements, {winPct}% success rate. {RatingFor(winPct)} field expectations.");
             }
 
             if (!hasDriftLine)
             {
                 string activity = ActivityFor(stats.driftArchetypeAtRetirement);
                 string archetype = stats.driftArchetypeAtRetirement == DriftArchetype.None ? "Wanderer" : stats.driftArchetypeAtRetirement.ToString();
-                sentences.Add($"A career of {activity} shaped {pronouns.@object} into a true {archetype}.");
+                sentences.Add($"Drift classification: {stats.driftArchetypeAtRetirement} (Tier {stats.driftTierAtRetirement}). Archetype consistent with activity log.");
             }
         }
 
@@ -109,6 +109,14 @@ public static class CareerNarrativeGenerator
             sentences = sentences.GetRange(0, 6);
 
         return string.Join(" ", sentences);
+    }
+
+    private static string RatingFor(int winPct)
+    {
+        if (winPct >= 80) return "Exceeds";
+        if (winPct >= 55) return "Meets";
+        if (winPct >= 35) return "Approaches";
+        return "Below";
     }
 
     private static string ActivityFor(DriftArchetype archetype)

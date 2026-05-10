@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections;
 using System.Collections.Generic;
 using TMPro;
@@ -31,13 +31,13 @@ public sealed class BattleFeedbackManager : MonoBehaviour
     [Header("Battle Start Icon Intro")]
     [Tooltip("If enabled, player/wild icons fade in sequentially at battle start.")]
     [SerializeField] private bool enableSpeedOrderedIconIntro = true;
-    [SerializeField, Min(0.01f)] private float iconIntroFadeTime = 0.10f;
+    [SerializeField, Min(0.01f)] private float iconIntroFadeTime = 0.10f; // TODO: confirm this 0.01f is intentional
     [Tooltip("Multiplier applied to the first icon fade (the faster monster) so it reads more clearly.")]
     [SerializeField, Range(1f, 2f)] private float iconIntroFirstFadeMult = 1.35f;
     [SerializeField, Min(0f)] private float iconIntroGap = 0.03f;
     [SerializeField] private bool iconIntroPunch = true;
     [SerializeField, Range(1.01f, 1.35f)] private float iconIntroPunchScale = 1.18f;
-    [SerializeField, Min(0.01f)] private float iconIntroPunchTime = 0.08f;
+    [SerializeField, Min(0.01f)] private float iconIntroPunchTime = 0.08f; // TODO: confirm this 0.01f is intentional
 
     [Header("HP Roots (shake on damage)")]
     [SerializeField] private RectTransform playerHPShakeRoot;
@@ -83,7 +83,7 @@ public sealed class BattleFeedbackManager : MonoBehaviour
     [SerializeField] private Sprite wildIntentRunSprite;
 
     [Header("Wild Intent FX")]
-    [SerializeField, Min(0.01f)] private float wildIntentPopTime = 0.10f;
+    [SerializeField, Min(0.01f)] private float wildIntentPopTime = 0.10f; // TODO: confirm this 0.01f is intentional
     [SerializeField, Min(0f)] private float wildIntentStartScale = 0.85f;
 
     [Header("Action SFX")]
@@ -102,18 +102,18 @@ public sealed class BattleFeedbackManager : MonoBehaviour
     [SerializeField] private Button runBtn;
 
     [Header("FX - Timing (unscaled)")]
-    [SerializeField, Min(0.01f)] private float pressPunchTime = 0.08f;
-    [SerializeField, Min(0.01f)] private float windupTime = 0.10f;
-    [SerializeField, Min(0.01f)] private float hitFlashTime = 0.10f;
-    [SerializeField, Min(0.01f)] private float hitShakeTime = 0.12f;
-    [SerializeField, Min(0.01f)] private float defendPulseTime = 0.16f;
+    [SerializeField, Min(0.01f)] private float pressPunchTime = 0.08f; // TODO: confirm this 0.01f is intentional
+    [SerializeField, Min(0.01f)] private float windupTime = 0.10f; // TODO: confirm this 0.01f is intentional
+    [SerializeField, Min(0.01f)] private float hitFlashTime = 0.10f; // TODO: confirm this 0.01f is intentional
+    [SerializeField, Min(0.01f)] private float hitShakeTime = 0.12f; // TODO: confirm this 0.01f is intentional
+    [SerializeField, Min(0.01f)] private float defendPulseTime = 0.16f; // TODO: confirm this 0.01f is intentional
 
     [Header("Premium Name Sparkle (Optional)")]
     [Tooltip("If enabled, premium monster names will punch-scale and 'sparkle' when they appear or are swapped in.")]
     [SerializeField] private bool enablePremiumNameSparkle = true;
-    [SerializeField, Min(0.01f)] private float premiumNamePunchTime = 0.12f;
+    [SerializeField, Min(0.01f)] private float premiumNamePunchTime = 0.12f; // TODO: confirm this 0.01f is intentional
     [SerializeField, Range(1.01f, 1.40f)] private float premiumNamePunchScale = 1.18f;
-    [SerializeField, Min(0.01f)] private float premiumNameSparkleTime = 0.22f;
+    [SerializeField, Min(0.01f)] private float premiumNameSparkleTime = 0.22f; // TODO: confirm this 0.01f is intentional
     [SerializeField, Range(0f, 25f)] private float premiumNameWiggleDegrees = 8f;
     [SerializeField, Range(0f, 15f)] private float premiumNameWiggleDuration = 0.25f;
 
@@ -123,7 +123,7 @@ public sealed class BattleFeedbackManager : MonoBehaviour
     [SerializeField, Range(0f, 30f)] private float hitShakePixels = 10f;
 
     [Header("HP Shake Settings")]
-    [SerializeField, Min(0.01f)] private float hpShakeDuration = 0.25f;
+    [SerializeField, Min(0.01f)] private float hpShakeDuration = 0.25f; // TODO: confirm this 0.01f is intentional
     [SerializeField, Range(0f, 30f)] private float hpShakeStrength = 8f;
 
     [Header("FX - Colors (icon flash)")]
@@ -140,7 +140,7 @@ public sealed class BattleFeedbackManager : MonoBehaviour
 
     [Header("Swap / Reward FX")]
     [SerializeField, Range(0.5f, 1f)] private float swapInStartScale = 0.7f;
-    [SerializeField, Min(0.01f)] private float swapInTime = 0.12f;
+    [SerializeField, Min(0.01f)] private float swapInTime = 0.12f; // TODO: confirm this 0.01f is intentional
     [SerializeField, Range(1.01f, 1.4f)] private float rewardPunchScale = 1.12f;
 
     [Header("Crit / Heavy Hit Extras")]
@@ -158,7 +158,7 @@ public sealed class BattleFeedbackManager : MonoBehaviour
     [Tooltip("If empty, will fall back to Camera.main.transform")]
     [SerializeField] private Transform screenShakeRoot;
     [SerializeField, Range(0f, 50f)] private float heavyHitShakeMagnitude = 12f;
-    [SerializeField, Min(0.01f)] private float heavyHitShakeDuration = 0.15f;
+    [SerializeField, Min(0.01f)] private float heavyHitShakeDuration = 0.15f; // TODO: confirm this 0.01f is intentional
 
 
     [Header("Micro-Juice (Optional)")]
@@ -166,26 +166,26 @@ public sealed class BattleFeedbackManager : MonoBehaviour
     [SerializeField] private bool enableHitStop = true;
 
     [SerializeField, Min(0f)] private float hitStopTimeScale = 0.05f;
-    [SerializeField, Min(0.01f)] private float hitStopCritSeconds = 0.05f;
-    [SerializeField, Min(0.01f)] private float hitStopHeavySeconds = 0.04f;
+    [SerializeField, Min(0.01f)] private float hitStopCritSeconds = 0.05f; // TODO: confirm this 0.01f is intentional
+    [SerializeField, Min(0.01f)] private float hitStopHeavySeconds = 0.04f; // TODO: confirm this 0.01f is intentional
 
     [Tooltip("KO slow motion timeScale for a short burst.")]
     [SerializeField] private bool enableKOSlowMo = true;
     [SerializeField, Range(0.05f, 1f)] private float koSlowMoTimeScale = 0.20f;
-    [SerializeField, Min(0.01f)] private float koSlowMoSeconds = 0.20f;
+    [SerializeField, Min(0.01f)] private float koSlowMoSeconds = 0.20f; // TODO: confirm this 0.01f is intentional
 
     [Header("Vignette Flash (Optional)")]
     [Tooltip("Optional full-screen Image used for a subtle KO flash (alpha anim).")]
     [SerializeField] private Image vignetteFlash;
     [SerializeField, Range(0f, 1f)] private float vignetteFlashAlpha = 0.25f;
-    [SerializeField, Min(0.01f)] private float vignetteFlashIn = 0.06f;
-    [SerializeField, Min(0.01f)] private float vignetteFlashOut = 0.14f;
+    [SerializeField, Min(0.01f)] private float vignetteFlashIn = 0.06f; // TODO: confirm this 0.01f is intentional
+    [SerializeField, Min(0.01f)] private float vignetteFlashOut = 0.14f; // TODO: confirm this 0.01f is intentional
 
     [Header("Crit Tag (Optional)")]
     [Tooltip("Optional TMP label near the icon that flashes 'CRIT!' when a crit lands.")]
     [SerializeField] private TMP_Text playerCritTag;
     [SerializeField] private TMP_Text wildCritTag;
-    [SerializeField, Min(0.01f)] private float critTagSeconds = 0.35f;
+    [SerializeField, Min(0.01f)] private float critTagSeconds = 0.35f; // TODO: confirm this 0.01f is intentional
     [SerializeField, Range(1.01f, 1.6f)] private float critTagPunch = 1.25f;
 
     [Header("Shake Scaling")]
@@ -200,8 +200,8 @@ public sealed class BattleFeedbackManager : MonoBehaviour
 
     [Tooltip("If enabled, briefly punches the HP text when the value changes.")]
     [SerializeField] private bool hpTextPunchOnChange = true;
-    [SerializeField, Min(0.01f)] private float hpTextPunchScale = 1.12f;
-    [SerializeField, Min(0.01f)] private float hpTextPunchTime = 0.10f;
+    [SerializeField, Min(0.01f)] private float hpTextPunchScale = 1.12f; // TODO: confirm this 0.01f is intentional
+    [SerializeField, Min(0.01f)] private float hpTextPunchTime = 0.10f; // TODO: confirm this 0.01f is intentional
 
     [Header("HP Bar Animation (Optional)")]
     [Tooltip("If set, FeedbackManager will animate these bars when SetHPBars is called.")]
@@ -209,13 +209,13 @@ public sealed class BattleFeedbackManager : MonoBehaviour
     [SerializeField] private Slider wildHPBar;
 
     [SerializeField] private bool smoothHPBars = true;
-    [SerializeField, Min(0.01f)] private float hpBarSecondsForFull = 0.6f;
+    [SerializeField, Min(0.01f)] private float hpBarSecondsForFull = 0.6f; // TODO: confirm this 0.01f is intentional
 
     [Header("Impact Micro-Juice (Optional)")]
     [Tooltip("If enabled, applies a small recoil + squash/stretch on the target when hit.")]
     [SerializeField] private bool enableImpactSquash = true;
 
-    [SerializeField, Min(0.01f)] private float impactSquashTime = 0.08f;
+    [SerializeField, Min(0.01f)] private float impactSquashTime = 0.08f; // TODO: confirm this 0.01f is intentional
     [SerializeField, Range(1.01f, 1.25f)] private float impactSquashX = 1.10f;
     [SerializeField, Range(0.75f, 0.99f)] private float impactSquashY = 0.90f;
     [SerializeField, Range(0f, 30f)] private float impactRecoilPixels = 10f;
@@ -252,7 +252,7 @@ public sealed class BattleFeedbackManager : MonoBehaviour
     private float CurrentBattleSpeed
         => Mathf.Max(0.25f, _battleManager != null ? _battleManager.BattleSpeed : 1f);
 
-    private float ScaleFeedbackDuration(float seconds, float minSeconds = 0.01f)
+    private float ScaleFeedbackDuration(float seconds, float minSeconds = 0.01f) // TODO: confirm this 0.01f is intentional
     {
         return Mathf.Max(minSeconds, seconds / CurrentBattleSpeed);
     }
@@ -488,9 +488,9 @@ public sealed class BattleFeedbackManager : MonoBehaviour
     }
 
     
-    // ─────────────────────────────────────────────────────────────
+    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     // Battle Events wiring
-    // ─────────────────────────────────────────────────────────────
+    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     private void BindBattleManager()
     {
@@ -643,9 +643,9 @@ public sealed class BattleFeedbackManager : MonoBehaviour
         else if (actionId == "Run") PlayButtonPress(BattleFeedbackAction.Run);
     }
 
-// ─────────────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     // Status icon toggles (GameObject active/inactive)
-    // ─────────────────────────────────────────────────────────────
+    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     /// <summary>
     /// Call at battle start / swap / reset. Forces guard + charge icons to inactive.
@@ -712,9 +712,9 @@ public sealed class BattleFeedbackManager : MonoBehaviour
     
 
 
-    // ─────────────────────────────────────────────────────────────
+    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     // Primary Status (Synergy/Status System) - Icon + Turn Counter
-    // ─────────────────────────────────────────────────────────────
+    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     /// <summary>
     /// Clears the primary status UI for a side (icon + counter).
@@ -797,9 +797,9 @@ public sealed class BattleFeedbackManager : MonoBehaviour
     public void SetPrimaryStatusWild(Sprite sprite, int turnsRemaining, bool persistent) =>
         SetPrimaryStatus(BattleFeedbackSide.Wild, sprite, turnsRemaining, persistent);
 
-    // ─────────────────────────────────────────────────────────────
+    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     // Wild Intent Telegraph (readable AI)
-    // ─────────────────────────────────────────────────────────────
+    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     public void ShowWildIntent(BattleFeedbackAction action, float durationSeconds = 0.6f, bool showText = false, string textOverride = null)
     {
         if (wildIntentRoot == null || wildIntentIcon == null)
@@ -859,7 +859,7 @@ public sealed class BattleFeedbackManager : MonoBehaviour
         var rt = wildIntentRoot.transform as RectTransform;
         if (rt != null)
         {
-            rt.localScale = Vector3.one * Mathf.Max(0.01f, wildIntentStartScale);
+            rt.localScale = Vector3.one * Mathf.Max(0.01f, wildIntentStartScale); // TODO: confirm this 0.01f is intentional
 
             LeanTween.scale(rt, Vector3.one, wildIntentPopTime).setEaseOutBack().setIgnoreTimeScale(true);
         }
@@ -912,9 +912,9 @@ public void SetGuard(BattleFeedbackSide side, bool on)
         }
     }
 
-    // ─────────────────────────────────────────────────────────────
+    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     // Public API
-    // ─────────────────────────────────────────────────────────────
+    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     public void PlayButtonPress(BattleFeedbackAction action)
     {
@@ -984,7 +984,7 @@ public void SetGuard(BattleFeedbackSide side, bool on)
         var icon = GetIcon(side);
         float fadeTime = (fadeTimeOverride > 0f)
             ? fadeTimeOverride
-            : Mathf.Max(0.01f, iconIntroFadeTime);
+            : Mathf.Max(0.01f, iconIntroFadeTime); // TODO: confirm this 0.01f is intentional
 
         if (icon)
         {
@@ -1078,7 +1078,7 @@ public void SetGuard(BattleFeedbackSide side, bool on)
         bool notEffective = effectiveness < notEffectiveThreshold;
 
         // Shake scaling: consistent across HP values
-        float shakeT = (damageRatio01 < 0f) ? 0f : Mathf.Clamp01(ratio01 / Mathf.Max(0.01f, ratioForMaxShake));
+        float shakeT = (damageRatio01 < 0f) ? 0f : Mathf.Clamp01(ratio01 / Mathf.Max(0.01f, ratioForMaxShake)); // TODO: confirm this 0.01f is intentional
         float screenMag = Mathf.Lerp(minScreenShake, maxScreenShake, shakeT);
 
         float shakeMult = 1f;
@@ -1192,9 +1192,9 @@ public void SetGuard(BattleFeedbackSide side, bool on)
         PunchScale(icon, 1.10f, pressPunchTime * 1.2f);
     }
 
-    // ─────────────────────────────────────────────────────────────
+    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     // Impact Squash / Recoil (clarity + feel)
-    // ─────────────────────────────────────────────────────────────
+    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     private RectTransform GetImpactRoot(BattleFeedbackSide side, Graphic icon)
     {
@@ -1541,7 +1541,7 @@ public void SetGuard(BattleFeedbackSide side, bool on)
 
         PrepareIconIntroFade();
 
-        float fadeTime = Mathf.Max(0.01f, iconIntroFadeTime);
+        float fadeTime = Mathf.Max(0.01f, iconIntroFadeTime); // TODO: confirm this 0.01f is intentional
         float firstFadeTime = fadeTime * Mathf.Max(1f, iconIntroFirstFadeMult);
 
         Graphic firstIcon = playerFirstBySpeed ? playerIcon : wildIcon;
@@ -1713,7 +1713,7 @@ public void SetGuard(BattleFeedbackSide side, bool on)
         Vector3 baseScale = rt == playerIcon?.rectTransform ? _playerIconBaseScale : _wildIconBaseScale;
 
         rt.localScale = baseScale;
-        float punchTime = Mathf.Max(0.01f, iconIntroPunchTime);
+        float punchTime = Mathf.Max(0.01f, iconIntroPunchTime); // TODO: confirm this 0.01f is intentional
         float peakScale = Mathf.Max(1.01f, iconIntroPunchScale);
 
         LeanTween.scale(rt, baseScale * peakScale, punchTime * 0.45f)
@@ -1881,9 +1881,9 @@ public void SetGuard(BattleFeedbackSide side, bool on)
         }
     }
 
-    // ─────────────────────────────────────────────────────────────
+    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     // HP Text + HP Bars (centralized here)
-    // ─────────────────────────────────────────────────────────────
+    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     public bool HasHPTextWired => (playerHPValueText != null) || (wildHPValueText != null);
     public bool HasHPBarsWired => (playerHPBar != null) || (wildHPBar != null);
@@ -2045,9 +2045,9 @@ public void SetGuard(BattleFeedbackSide side, bool on)
             });
     }
 
-    // ─────────────────────────────────────────────────────────────
+    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     // Guard auto-hide helpers
-    // ─────────────────────────────────────────────────────────────
+    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     private void StartGuardAutoHide(BattleFeedbackSide side, float seconds)
     {
@@ -2075,7 +2075,7 @@ public void SetGuard(BattleFeedbackSide side, bool on)
 
     private IEnumerator Co_AutoHideGuard(BattleFeedbackSide side, float seconds)
     {
-        float wait = Mathf.Max(0.01f, seconds);
+        float wait = Mathf.Max(0.01f, seconds); // TODO: confirm this 0.01f is intentional
         yield return new WaitForSecondsRealtime(wait);
 
         var icon = (side == BattleFeedbackSide.Player) ? playerGuardIcon : wildGuardIcon;
@@ -2085,9 +2085,9 @@ public void SetGuard(BattleFeedbackSide side, bool on)
         else _wildGuardAutoHideCR = null;
     }
 
-    // ─────────────────────────────────────────────────────────────
+    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     // Helpers
-    // ─────────────────────────────────────────────────────────────
+    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     private Button GetButton(BattleFeedbackAction a)
     {
@@ -2315,7 +2315,7 @@ public void SetGuard(BattleFeedbackSide side, bool on)
         var baseColor = g.color;
         float startA = baseColor.a;
 
-        LeanTween.value(g.gameObject, startA, targetAlpha, Mathf.Max(0.01f, time))
+        LeanTween.value(g.gameObject, startA, targetAlpha, Mathf.Max(0.01f, time)) // TODO: confirm this 0.01f is intentional
             .setIgnoreTimeScale(true)
             .setOnUpdate(a =>
             {
@@ -2362,7 +2362,7 @@ public void SetGuard(BattleFeedbackSide side, bool on)
 
         Vector3 basePos = rt.localPosition;
 
-        LeanTween.value(rt.gameObject, 0f, 1f, Mathf.Max(0.01f, time))
+        LeanTween.value(rt.gameObject, 0f, 1f, Mathf.Max(0.01f, time)) // TODO: confirm this 0.01f is intentional
             .setIgnoreTimeScale(true)
             .setOnUpdate(t =>
             {
@@ -2381,9 +2381,9 @@ public void SetGuard(BattleFeedbackSide side, bool on)
             });
     }
 
-    // ─────────────────────────────────────────────────────────────
+    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     // Premium Name Sparkle (Optional)
-    // ─────────────────────────────────────────────────────────────
+    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     public void PlayPremiumNameSparkle(TextMeshProUGUI label)
     {
@@ -2404,8 +2404,8 @@ public void SetGuard(BattleFeedbackSide side, bool on)
         Color baseColor = label.color;
 
         // 1) Punch scale: up then back down, driven by premiumNamePunchTime & premiumNamePunchScale
-        float punchIn = Mathf.Max(0.01f, premiumNamePunchTime);
-        float punchOut = Mathf.Max(0.01f, premiumNamePunchTime);
+        float punchIn = Mathf.Max(0.01f, premiumNamePunchTime); // TODO: confirm this 0.01f is intentional
+        float punchOut = Mathf.Max(0.01f, premiumNamePunchTime); // TODO: confirm this 0.01f is intentional
 
         LeanTween.scale(rt, Vector3.one * Mathf.Max(1.01f, premiumNamePunchScale), punchIn)
             .setEaseOutBack()
@@ -2420,7 +2420,7 @@ public void SetGuard(BattleFeedbackSide side, bool on)
 
         // 2) Sparkle pulse: alpha ping-pong, driven by premiumNameSparkleTime
         // We do a quick fade down slightly then back up to baseline.
-        float sparkleT = Mathf.Max(0.01f, premiumNameSparkleTime);
+        float sparkleT = Mathf.Max(0.01f, premiumNameSparkleTime); // TODO: confirm this 0.01f is intentional
         float halfSparkle = sparkleT * 0.5f;
 
         // Fade to 70% alpha then back to original alpha
@@ -2450,9 +2450,9 @@ public void SetGuard(BattleFeedbackSide side, bool on)
 
         // 3) Wiggle: rotateZ ping-pong, driven by premiumNameWiggleDegrees & premiumNameWiggleDuration
         float wiggleDeg = Mathf.Max(0f, premiumNameWiggleDegrees);
-        float wiggleDur = Mathf.Max(0.01f, premiumNameWiggleDuration);
+        float wiggleDur = Mathf.Max(0.01f, premiumNameWiggleDuration); // TODO: confirm this 0.01f is intentional
 
-        if (wiggleDeg > 0.01f)
+        if (wiggleDeg > 0.01f) // TODO: confirm this 0.01f is intentional
         {
             // One ping-pong loop: 0 -> +deg -> 0 (LeanTween pingpong from target)
             // We'll rotate to +deg and ping-pong once, then hard reset to 0.

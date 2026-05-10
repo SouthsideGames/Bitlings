@@ -125,8 +125,9 @@ public class IdleBattleManager : MonoBehaviour
 
         if (config == null)
         {
-            Debug.LogError("[IdleBattleManager] Missing Resources/IdleBattleConfig. Idle battles will be disabled.", this);
-            enabled = false;
+            // CHANGED: fallback config keeps idle auto functional when the asset is not present.
+            config = ScriptableObject.CreateInstance<IdleBattleConfigSO>();
+            Debug.LogWarning("[IdleBattleManager] Missing Resources/IdleBattleConfig. Using runtime fallback defaults.", this);
         }
     }
 
@@ -182,6 +183,15 @@ public class IdleBattleManager : MonoBehaviour
         }
     }
 
+    public void PumpFromExternalUI()
+    {
+        // CHANGED: if this component is active, its own Update already ticks.
+        if (isActiveAndEnabled) return;
+        if (!IsIdleBattleUnlocked()) return;
+
+        TickForegroundAuto();
+    }
+
     // Feature unlock helper
     private bool IsIdleBattleUnlocked()
     {
@@ -214,7 +224,13 @@ public class IdleBattleManager : MonoBehaviour
             s.autoBattling = true;
             s.hasPendingRecovery = false;
             s.sessionStartUnix = NowUnix();
-            s.lastTickUnix = s.sessionStartUnix;
+
+            // CHANGED: seed lastTickUnix to the past so first frame has guaranteed dt >= secondsPerRift
+            // Otherwise dt = 0 and canRun = 0, preventing any battles on first tick.
+            long now = s.sessionStartUnix;
+            long seedDt = Mathf.Max(1, config != null ? Mathf.RoundToInt(config.secondsPerRift) : 5);
+            s.lastTickUnix = now - seedDt;
+            
             s.offlineLastResolvedUnix = s.lastTickUnix;
 
             s.energyAtStart = ResourceBank.Get(ResourceType.Energy);
@@ -222,14 +238,20 @@ public class IdleBattleManager : MonoBehaviour
             s.biomeId = biomeId;
 
             _summaryOpenedThisSession = false;
+            s.rewardPanelShownThisSession = false; // CHANGED: reset persistent show-once flag when a new session starts
 
             // Clear old battles from previous sessions to start fresh.
             // This ensures idle battle reward counters only show the current session.
             s.log?.Clear();
             s.capturedLog?.Clear();
             s.hasPendingSummary = false;
+            s.totalLosses = 0; // CHANGED: reset loss counter at the start of each auto session
 
             IdleBattleStore.Save(s);
+            GameEvents.RaiseAutoBattleModeChanged(true); // CHANGED: notify UI (pulse ring, counter) that auto has started
+            
+            // CHANGED: log when auto is enabled so we can verify the system is working
+            DevLog.Log($"[IdleBattle] Auto enabled. Energy: {s.energyAtStart}, starting tick at {s.sessionStartUnix}");
         }
     }
 
@@ -240,6 +262,7 @@ public class IdleBattleManager : MonoBehaviour
         {
             s.autoBattling = false;
             IdleBattleStore.Save(s);
+            GameEvents.RaiseAutoBattleModeChanged(false); // CHANGED: notify UI that auto has stopped
         }
     }
 
@@ -384,7 +407,7 @@ if (elapsed <= 0.1f) return;
         }
 
         long now = NowUnix();
-                float dtRaw = Mathf.Max(0, now - s.lastTickUnix);
+        float dtRaw = Mathf.Max(0, now - s.lastTickUnix);
         // Clamp foreground backlog too (OnApplicationPause/Focus can create large dt when returning).
         float dt = Mathf.Min(dtRaw, config.maxOfflineHours * 3600f);
         float safeSpe2 = Mathf.Max(0.25f, config.secondsPerRift);
@@ -405,6 +428,9 @@ if (elapsed <= 0.1f) return;
             }
             return;
         }
+
+        // CHANGED: log when running idle battles so user can verify they're working
+        DevLog.Log($"[IdleBattle] Running {toRun} foreground battles (time: {dt}s, cost: {baseCost} each, energy: {curEnergy})");
 
         RunBatchRifts(toRun);
 
@@ -592,6 +618,9 @@ if (elapsed <= 0.1f) return;
         {
             var p = pending[i];
             if (p == null || p.wildDef == null) continue;
+
+            if (!p.victory)
+                s.totalLosses++; // CHANGED: count defeats for the live counter and summary
 
             int awarded = 0;
             if (p.victory && p.creditsBase > 0)
@@ -1062,6 +1091,14 @@ if (elapsed <= 0.1f) return;
         // runtime guard
         _summaryOpenedThisSession = true;
 
+        // CHANGED: mirror into persistent store so resume/reload also respects shown state.
+        var sForFlag = IdleBattleStore.Load();
+        if (sForFlag != null)
+        {
+            sForFlag.rewardPanelShownThisSession = true;
+            IdleBattleStore.Save(sForFlag);
+        }
+
         UIManager.I?.Show(PanelId.IdleBattleRewards);
 
         rewardPanel.Open(sum, onCollected: () =>
@@ -1078,16 +1115,22 @@ if (elapsed <= 0.1f) return;
 
     public void TryOpenSummaryIfNeeded()
     {
-        if (_summaryOpenedThisSession) return;
-
+        // CHANGED: use persistent flag instead of runtime-only bool.
         var s = IdleBattleStore.Load();
+        if (s == null) return;
+        if (s.rewardPanelShownThisSession) return; // CHANGED: already shown this session.
         if (!HasPendingSummary(s)) return;
 
         ForceOpenSummary();
 
+        // CHANGED: mark shown immediately after opening so re-entry is blocked.
         var ss = IdleBattleStore.Load();
-        ClearPendingSummaryFlag(ss);
-        IdleBattleStore.Save(ss);
+        if (ss != null)
+        {
+            ss.rewardPanelShownThisSession = true; // CHANGED: persistent show-once guard.
+            ClearPendingSummaryFlag(ss);
+            IdleBattleStore.Save(ss);
+        }
     }
 
     private IdleBattleSummary BuildSummary(IdleBattleSession s)
@@ -1125,6 +1168,7 @@ if (elapsed <= 0.1f) return;
         }
 
         res.totalEnergySpent = s.totalEnergySpent;
+        res.totalLosses = s.totalLosses; // CHANGED: pass through to summary panel
         res.durationSeconds = EstimateDurationSecondsFromLog(s);
         return res;
     }

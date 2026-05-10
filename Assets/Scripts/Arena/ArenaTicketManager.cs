@@ -24,6 +24,29 @@ public static class ArenaTicketManager
         if (_listening) return;
         _listening = true;
         GameEvents.PromotionRankChanged += OnPromotionRankChanged;
+        RecoverPendingTicket();
+    }
+
+    /// <summary>
+    /// Called at startup. If the last registration attempt was interrupted (crash between
+    /// ticket-spend and cloud-code confirmation), refunds the ticket.
+    /// </summary>
+    public static void RecoverPendingTicket() // FIXED: recovers tickets lost to mid-registration crashes
+    {
+        var arena = SaveManager.GetArenaSaveData();
+        if (arena == null || !arena.ticketSpentPendingRegistration) return;
+
+        var status = arena.currentTournamentCache?.playerStatus
+                     ?? ArenaPlayerTournamentStatus.NotEntered;
+
+        if (status == ArenaPlayerTournamentStatus.NotEntered)
+        {
+            arena.arenaTickets = Math.Min(arena.arenaTickets + 1, ArenaConstants.MaxTickets);
+            Debug.Log("[ArenaTicketManager] Refunded ticket from interrupted registration."); // FIXED
+        }
+
+        arena.ticketSpentPendingRegistration = false;
+        SaveManager.Save();
     }
 
     /// <summary>Unsubscribes from promotion events. Call on teardown if needed.</summary>

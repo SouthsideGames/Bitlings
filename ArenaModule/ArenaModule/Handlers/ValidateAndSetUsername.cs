@@ -49,15 +49,28 @@ public class ValidateAndSetUsername
         if (!IsUsernameSafe(trimmed))
             return Fail("Name contains invalid characters.");
 
-        // ── Check if this player already has a username ──
-
+        // ── Parallel read: fetch both player data AND username index concurrently ── // FIXED: parallelize I/O to cut latency
+        var nameKey = trimmed.ToLowerInvariant();
         ArenaSaveDataServer? arenaData = null;
+        bool nameTaken = false;
+        string? oldNameKey = null;
+
         try
         {
-            var playerItems = await api.CloudSaveData.GetItemsAsync(
+            // FIXED: fetch both independent datasets concurrently instead of sequentially
+            var playerTask = api.CloudSaveData.GetItemsAsync(
                 ctx, ctx.AccessToken, ctx.ProjectId, ctx.PlayerId,
                 new List<string> { ArenaDataKey });
 
+            var indexTask = api.CloudSaveData.GetCustomItemsAsync(
+                ctx, ctx.ServiceToken, ctx.ProjectId, CustomEntityId);
+
+            await Task.WhenAll(playerTask, indexTask);
+
+            var playerItems = playerTask.Result;
+            var indexResult = indexTask.Result;
+
+            // ── Process player data ──
             if (playerItems?.Data?.Results != null)
             {
                 foreach (var item in playerItems.Data.Results)
@@ -70,27 +83,11 @@ public class ValidateAndSetUsername
                     }
                 }
             }
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError("Failed to read player data: {Error}", ex.Message);
-            return Fail("Server error reading player data.");
-        }
 
-        if (arenaData is { UsernameCreated: true, ArenaUsername: not null })
-            return Fail("You already have a username.");
+            if (arenaData is { UsernameCreated: true, ArenaUsername: not null })
+                return Fail("You already have a username.");
 
-        // ── Check uniqueness via Custom Data ──
-
-        var nameKey = trimmed.ToLowerInvariant();
-        bool nameTaken = false;
-        string? oldNameKey = null;
-
-        try
-        {
-            var indexResult = await api.CloudSaveData.GetCustomItemsAsync(
-                ctx, ctx.ServiceToken, ctx.ProjectId, CustomEntityId);
-
+            // ── Process username index ──
             if (indexResult?.Data?.Results != null)
             {
                 foreach (var item in indexResult.Data.Results)
@@ -115,8 +112,8 @@ public class ValidateAndSetUsername
         }
         catch (Exception ex)
         {
-            _logger.LogError("Failed to check username index: {Error}", ex.Message);
-            return Fail("Server error checking name availability.");
+            _logger.LogError("Failed during parallel read: {Error}", ex.Message);
+            return Fail("Server error during validation.");
         }
 
         if (nameTaken)

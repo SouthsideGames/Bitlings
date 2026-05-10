@@ -71,7 +71,14 @@ public float cachedRatePerHour;
 
 public sealed class JobManager : MonoBehaviour
 {
+    public sealed class StorageCapWarning
+    {
+        public JobType job;
+        public int unitsLost;
+    }
+
     public static JobManager I;
+    private readonly List<StorageCapWarning> _pendingStorageWarnings = new List<StorageCapWarning>(); // FIXED: collects full-storage loss events for player notification
 
     // -------------------------------------------------------------------------
     // Executive Trial safety
@@ -441,11 +448,21 @@ public sealed class JobManager : MonoBehaviour
                         {
                             int space = cap - s.storedUnits;
                             int toAdd = Mathf.Clamp(wholeToAdd, 0, Mathf.Max(0, space));
+                            int lostWholeUnits = Mathf.Max(0, wholeToAdd - toAdd);
 
                             if (toAdd > 0)
                             {
                                 s.storedUnits += toAdd;
                                 s.storedRemainder -= toAdd; // subtract only what we actually stored
+                            }
+
+                            if (lostWholeUnits >= 1)
+                            {
+                                _pendingStorageWarnings.Add(new StorageCapWarning
+                                {
+                                    job = s.config != null ? s.config.jobType : default,
+                                    unitsLost = lostWholeUnits
+                                }); // FIXED: detect and record units lost to storage cap during offline period
                             }
 
                             // If we're full, stop accumulating remainder.
@@ -1411,6 +1428,14 @@ private static float AverageWorkingSlotFatigue(JobSiteState s)
         ResolveOfflineIfAny();
         RefreshAllJobSiteViewsInScene();
         FireJobsChanged();
+    }
+
+    /// <summary>Returns any storage-cap loss warnings accumulated since last call, then clears them.</summary>
+    public List<StorageCapWarning> ConsumeStorageWarnings() // FIXED: UI can surface these as a non-blocking toast
+    {
+        var copy = new List<StorageCapWarning>(_pendingStorageWarnings);
+        _pendingStorageWarnings.Clear();
+        return copy;
     }
 
     private void ResolveOfflineIfAny()

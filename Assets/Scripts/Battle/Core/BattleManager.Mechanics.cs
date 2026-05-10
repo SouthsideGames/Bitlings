@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 using UnityEngine.UI;
 using System;
 using System.Collections;
@@ -72,7 +72,7 @@ public partial class BattleManager : MonoBehaviour
         if (activeIndex < 0 || activeIndex >= pendingGuardShield.Length) return;
 
         float gain = pendingGuardShield[activeIndex];
-        if (gain <= 0.01f) return;
+        if (gain <= 0.01f) return; // TODO: confirm this 0.01f is intentional
 
         shieldHP[activeIndex] += gain;
         pendingGuardShield[activeIndex] = 0f;

@@ -7,9 +7,11 @@ public sealed class ExecutiveTrialMetaData
 {
     public string lastRerollDate;
     public int rerollsRemaining;
+    public bool runActive; // FIXED: persisted run-state flag used by crash recovery guard in AppLifecycle
 
     // Persist the daily offer so players can't spam open/close
     public string[] starterOfferIds;
+    public bool battleInProgress; // FIXED: crash recovery checkpoint
 }
 
 public static class ExecutiveTrialMetaSave
@@ -22,7 +24,8 @@ public static class ExecutiveTrialMetaSave
         {
             lastRerollDate = string.Empty,
             rerollsRemaining = 0,
-            starterOfferIds = null
+            starterOfferIds = null,
+            battleInProgress = false
         };
     }
 

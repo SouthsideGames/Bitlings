@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 using UnityEngine.UI;
 using System;
 using System.Collections;
@@ -13,7 +13,7 @@ public partial class BattleManager : MonoBehaviour
         bool playerFirstBySpeed = GetPlayerActsFirstBySpeed();
         MonsterDataSO playerDef = GetTeamDefSafe(activeIndex);
         float spawnDelay = Mathf.Max(0f, spawnDelayBetweenMonsters);
-        float fallbackFadeTime = Mathf.Max(0.01f, duration * 0.5f);
+        float fallbackFadeTime = Mathf.Max(0.01f, duration * 0.5f); // TODO: confirm this 0.01f is intentional
 
         PrepareBattleStartInfoFade();
 
@@ -420,7 +420,7 @@ public partial class BattleManager : MonoBehaviour
         if (!string.IsNullOrEmpty(personalityLabel) && wildDef && wildDef.Personality != null)
         {
             if (!string.IsNullOrEmpty(wildDef.Personality.description))
-                BattleLogger.Log($"Personality: {personalityLabel} – {wildDef.Personality.description}", LogScope.Battle);
+                BattleLogger.Log($"Personality: {personalityLabel} â€“ {wildDef.Personality.description}", LogScope.Battle);
             else
                 BattleLogger.Log($"Personality: {personalityLabel}.", LogScope.Battle);
         }
@@ -522,7 +522,7 @@ public partial class BattleManager : MonoBehaviour
                     var sb = new System.Text.StringBuilder();
                     sb.Append($"<color={BattleLogColors.Title}>[MENTOR]</color> ");
                     sb.Append($"<color={BattleLogColors.Name}>{guidedMonsterName}</color> is guided by ");
-                    sb.Append($"<color={BattleLogColors.Name}>{mentorName}</color> → ");
+                    sb.Append($"<color={BattleLogColors.Name}>{mentorName}</color> â†’ ");
 
                     if (bonus.atkPct > 0f)
                     {
@@ -566,7 +566,7 @@ public partial class BattleManager : MonoBehaviour
         {
             bool swappedFromKO = false;
 
-            if (teamHP[activeIndex] <= 0.01f)
+            if (teamHP[activeIndex] <= 0.01f) // TODO: confirm this 0.01f is intentional
             {
                 if (!AutoSwapToAlive())
                 {
@@ -595,7 +595,7 @@ public partial class BattleManager : MonoBehaviour
             _turnIndex++;
             if (_turnIndex >= maxBattleTurns)
             {
-                BattleLogger.Log($"[TurnLoop] Battle exceeded {maxBattleTurns} turns — forcing draw.", LogScope.Battle);
+                BattleLogger.Log($"[TurnLoop] Battle exceeded {maxBattleTurns} turns â€” forcing draw.", LogScope.Battle);
                 EndBattleRouted(false);
                 yield break;
             }
@@ -721,7 +721,7 @@ public partial class BattleManager : MonoBehaviour
                     if (CheckEnd()) break;
                     yield return CoWaitScaled(hitPause);
 
-                    if (!IsTeamKO() && teamHP[activeIndex] <= 0.01f)
+                    if (!IsTeamKO() && teamHP[activeIndex] <= 0.01f) // TODO: confirm this 0.01f is intentional
                     {
                         AutoSwapToAlive();
                         RefreshStatusIconsFromState();
@@ -777,6 +777,7 @@ public partial class BattleManager : MonoBehaviour
                             float choiceStart = Time.unscaledTime;
                             float pausedAccum = 0f;
                             float pauseStartedAt = -1f;
+                            _inputWaitedSeconds = 0f; // FIXED: reset wait timer at the start of each turn input wait
 
                             while (inBattle && pendingAction == PlayerAction.None)
                         {
@@ -791,6 +792,7 @@ public partial class BattleManager : MonoBehaviour
                                 }
 
                                 float elapsed = Mathf.Max(0f, (Time.unscaledTime - choiceStart) - pausedAccum);
+                                _inputWaitedSeconds = elapsed;
                                 // Countdown UI: only becomes active for the last N seconds.
                                 float remaining = autoQueueAttackAfterSeconds - elapsed;
                                 bool showCountdown = (autoQueueCountdownShowAtSeconds > 0f) && (remaining <= autoQueueCountdownShowAtSeconds) && (remaining > 0f);
@@ -814,6 +816,13 @@ public partial class BattleManager : MonoBehaviour
                                 EmitAutoQueueCountdown(0f, false);
                             }
 
+                            if (_inputWaitedSeconds >= TURN_INPUT_SAFETY_CAP_SECONDS)
+                            {
+                                Debug.LogWarning("[BattleManager] Turn safety cap hit â€” forcing Attack to unblock battle."); // FIXED: safety net for broken countdown path
+                                pendingAction = PlayerAction.Attack;
+                                break;
+                            }
+
                             yield return null;
                         }
                         }
@@ -835,7 +844,7 @@ public partial class BattleManager : MonoBehaviour
 
                             if (!success)
                             {
-                                // ✅ Critical fix: failure must not leave guard state on.
+                                // âœ… Critical fix: failure must not leave guard state on.
                                 ClearPlayerGuardStateForActive();
                             }
 
@@ -858,24 +867,24 @@ RefreshStatusIconsFromState();
                         else
                         {
                             ResetDefendStreak();
-                            ClearPlayerGuardStateForActive(); // ✅ consistent: no guard unless defend succeeded
+                            ClearPlayerGuardStateForActive(); // âœ… consistent: no guard unless defend succeeded
                             RefreshStatusIconsFromState();
                         }
 
                     }
 
-                    // ─────────────────────────────────────────────────────────
+                    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
                     // Swap priority (Pokemon-style):
                     // If the player queued a Swap during the enemy-first branch,
                     // resolve the swap BEFORE the wild executes its action so the
                     // incoming hit targets the swapped-in monster.
                     // (Swap consumes the player's action for the round.)
-                    // ─────────────────────────────────────────────────────────
+                    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
                     if (manualTurns && queuedChoice == PlayerAction.Swap)
                     {
                         // If the current active was KO'ed somehow before swap resolution,
                         // the queued action is lost (handled below after enemy turn).
-                        if (teamHP[activeIndex] > 0.01f)
+                        if (teamHP[activeIndex] > 0.01f) // TODO: confirm this 0.01f is intentional
                         {
                             ResetDefendStreak();
                             yield return ResolveQueuedSwap();
@@ -906,9 +915,9 @@ RefreshStatusIconsFromState();
                     yield return CoWaitScaled(hitPause);
 
                     // If the wild KO'ed our active slot, we must auto-swap (if possible) and the queued action is lost.
-                if (!IsTeamKO() && teamHP[activeIndex] <= 0.01f)
+                if (!IsTeamKO() && teamHP[activeIndex] <= 0.01f) // TODO: confirm this 0.01f is intentional
                     {
-                        // ✅ Guard was tied to the KO'd monster; never carry to the swapped-in one.
+                        // âœ… Guard was tied to the KO'd monster; never carry to the swapped-in one.
                         ClearPlayerGuardStateForActive();
 
                         AutoSwapToAlive();
@@ -924,7 +933,7 @@ RefreshStatusIconsFromState();
                             {
                                 case PlayerAction.Attack:
                                     // If the active slot was KO'ed by the wild acting first, the player's queued action is lost.
-                                    if (teamHP[activeIndex] > 0.01f)
+                                    if (teamHP[activeIndex] > 0.01f) // TODO: confirm this 0.01f is intentional
                                         yield return PlayerTurn();
                                     RefreshStatusIconsFromState();
                                     break;
@@ -932,7 +941,7 @@ RefreshStatusIconsFromState();
                                 case PlayerAction.Focus:
                                     {
                                         // If the active slot was KO'ed by the wild acting first, the player's queued action is lost.
-                                        if (teamHP[activeIndex] <= 0.01f)
+                                        if (teamHP[activeIndex] <= 0.01f) // TODO: confirm this 0.01f is intentional
                                         {
                                             RefreshStatusIconsFromState();
 break;
@@ -966,7 +975,7 @@ break;
                                 case PlayerAction.Swap:
                                     {
                                         // If the active slot was KO'ed by the wild acting first, the player's queued action is lost.
-                                        if (teamHP[activeIndex] <= 0.01f)
+                                        if (teamHP[activeIndex] <= 0.01f) // TODO: confirm this 0.01f is intentional
                                         {
                                             RefreshStatusIconsFromState();
                                             break;
@@ -982,7 +991,7 @@ break;
                                 case PlayerAction.Run:
                                     {
                                         // If the active slot was KO'ed by the wild acting first, the player's queued action is lost.
-                                        if (teamHP[activeIndex] <= 0.01f)
+                                        if (teamHP[activeIndex] <= 0.01f) // TODO: confirm this 0.01f is intentional
                                         {
                                             RefreshStatusIconsFromState();
 break;
@@ -1089,14 +1098,14 @@ if (TryProcessTurnStartStatus_PlayerActive_OncePerRound(out var skipBy))
     }
 
     // If the tick caused a KO, handle it the same way as any other KO would be handled later.
-    if (teamHP != null && activeIndex >= 0 && activeIndex < teamHP.Length && teamHP[activeIndex] <= 0.01f)
+    if (teamHP != null && activeIndex >= 0 && activeIndex < teamHP.Length && teamHP[activeIndex] <= 0.01f) // TODO: confirm this 0.01f is intentional
         yield return MaybeSayKO_Player(GetName(activeIndex), 1f, 0f);
 
     yield break;
 }
 
 // If a DOT tick KO'd the active monster, stop here (battle loop will detect KO and swap/end).
-if (teamHP != null && activeIndex >= 0 && activeIndex < teamHP.Length && teamHP[activeIndex] <= 0.01f)
+if (teamHP != null && activeIndex >= 0 && activeIndex < teamHP.Length && teamHP[activeIndex] <= 0.01f) // TODO: confirm this 0.01f is intentional
 {
     SetIsPlayerTurn(false);
     pendingAction = PlayerAction.None;
@@ -1108,6 +1117,7 @@ if (teamHP != null && activeIndex >= 0 && activeIndex < teamHP.Length && teamHP[
         float choiceStart = Time.unscaledTime;
         float pausedAccum = 0f;
         float pauseStartedAt = -1f;
+        _inputWaitedSeconds = 0f; // FIXED: reset wait timer at the start of each turn input wait
 
         while (inBattle && pendingAction == PlayerAction.None)
         {
@@ -1122,6 +1132,7 @@ if (teamHP != null && activeIndex >= 0 && activeIndex < teamHP.Length && teamHP[
                 }
 
                 float elapsed = Mathf.Max(0f, (Time.unscaledTime - choiceStart) - pausedAccum);
+                _inputWaitedSeconds = elapsed;
                 // Countdown UI: only becomes active for the last N seconds.
                 float remaining = autoQueueAttackAfterSeconds - elapsed;
                 bool showCountdown = (autoQueueCountdownShowAtSeconds > 0f) && (remaining <= autoQueueCountdownShowAtSeconds) && (remaining > 0f);
@@ -1143,6 +1154,13 @@ if (teamHP != null && activeIndex >= 0 && activeIndex < teamHP.Length && teamHP[
                     pauseStartedAt = Time.unscaledTime;
 
                 EmitAutoQueueCountdown(0f, false);
+            }
+
+            if (_inputWaitedSeconds >= TURN_INPUT_SAFETY_CAP_SECONDS)
+            {
+                Debug.LogWarning("[BattleManager] Turn safety cap hit â€” forcing Attack to unblock battle."); // FIXED: safety net for broken countdown path
+                pendingAction = PlayerAction.Attack;
+                break;
             }
 
             yield return null;
@@ -1172,7 +1190,7 @@ if (teamHP != null && activeIndex >= 0 && activeIndex < teamHP.Length && teamHP[
 
                 if (!success)
                 {
-                    // ✅ Critical fix: failed defend must never leave guard state enabled.
+                    // âœ… Critical fix: failed defend must never leave guard state enabled.
                     ClearPlayerGuardStateForActive();
                 }
 
@@ -1227,7 +1245,7 @@ if (teamHP != null && activeIndex >= 0 && activeIndex < teamHP.Length && teamHP[
             case PlayerAction.Swap:
             {
                 ResetDefendStreak();
-                ClearPlayerGuardStateForActive(); // ✅ guard must never carry to a swapped-in monster
+                ClearPlayerGuardStateForActive(); // âœ… guard must never carry to a swapped-in monster
                 yield return ResolveQueuedSwap();
                 NotifyPlayerActionResolved_ForForesight(activeIndex, PlayerAction.Swap);
                 RefreshStatusIconsFromState();
@@ -1298,7 +1316,7 @@ if (teamHP != null && activeIndex >= 0 && activeIndex < teamHP.Length && teamHP[
             }
 
             // If a DOT tick KO'd the active monster, stop here (battle loop will detect KO and swap/end).
-            if (teamHP != null && activeIndex >= 0 && activeIndex < teamHP.Length && teamHP[activeIndex] <= 0.01f)
+            if (teamHP != null && activeIndex >= 0 && activeIndex < teamHP.Length && teamHP[activeIndex] <= 0.01f) // TODO: confirm this 0.01f is intentional
             {
                 isResolvingPlayerTurn = false;
                 yield break;
@@ -1309,7 +1327,7 @@ if (teamHP != null && activeIndex >= 0 && activeIndex < teamHP.Length && teamHP[
 
         try
         {
-            if (teamHP[activeIndex] <= 0.01f && !AutoSwapToAlive())
+            if (teamHP[activeIndex] <= 0.01f && !AutoSwapToAlive()) // TODO: confirm this 0.01f is intentional
             {
             isResolvingPlayerTurn = false;
             yield break;
@@ -1436,7 +1454,7 @@ if (feedback)
         }
 
         
-// Status: Rally (Clash) — allies gain minor Attack boost.
+// Status: Rally (Clash) â€” allies gain minor Attack boost.
 // Applies to outgoing damage while any living ally has Rally.
 float rallyBonusPct = GetPlayerTeamRallyBonusPct();
 if (rallyBonusPct > 0f)
@@ -1444,9 +1462,9 @@ if (rallyBonusPct > 0f)
     int before = dr.damage;
     dr.damage = Mathf.Max(1, Mathf.RoundToInt(dr.damage * (1f + rallyBonusPct)));
     if (BattleLogger.Enabled)
-        BattleLogger.Log($"[Status] Rally boosts {attacker}'s damage: {before}→{dr.damage} (+{Mathf.RoundToInt(rallyBonusPct * 100f)}%).", LogScope.Battle);
+        BattleLogger.Log($"[Status] Rally boosts {attacker}'s damage: {before}â†’{dr.damage} (+{Mathf.RoundToInt(rallyBonusPct * 100f)}%).", LogScope.Battle);
 }
-// Status: Tailwind (Sky) — first attack during effect deals bonus damage (consumed on use).
+// Status: Tailwind (Sky) â€” first attack during effect deals bonus damage (consumed on use).
 float tailwindBonusPct = GetActivePlayerTailwindBonusPct();
 bool tailwindConsumed = false;
 if (tailwindBonusPct > 0f || _entryTailwindActive)
@@ -1457,7 +1475,7 @@ if (tailwindBonusPct > 0f || _entryTailwindActive)
     tailwindConsumed = true;
     _entryTailwindActive = false;
     if (BattleLogger.Enabled)
-        BattleLogger.Log($"[Status] Tailwind empowers {attacker}'s first strike: {before}→{dr.damage} (+{Mathf.RoundToInt(effectiveTailwindBonusPct * 100f)}%).", LogScope.Battle);
+        BattleLogger.Log($"[Status] Tailwind empowers {attacker}'s first strike: {before}â†’{dr.damage} (+{Mathf.RoundToInt(effectiveTailwindBonusPct * 100f)}%).", LogScope.Battle);
 }
 
     if (IsActivePlayerWyrmFury())
@@ -1502,7 +1520,7 @@ float preventedByWildGuard = 0f;
             BattleLogger.Log($"{foeName} is shrouded - damage nullified!", LogScope.Battle);
             BattleLogger.AddKeyMoment($"Shadow Veil: {foeName} ignored damage.");
             if (!ShouldSkipNarration(BattleLineTag.Flavor))
-                yield return Say($"{foeName} fades into a Shadow Veil—no damage!", BattleLineTag.Flavor);
+                yield return Say($"{foeName} fades into a Shadow Veilâ€”no damage!", BattleLineTag.Flavor);
 
             dmgToApply = 0;
             ClearWildStatus(reason: "absorbed a hit");
@@ -1536,7 +1554,7 @@ float preventedByWildGuard = 0f;
                     yield return Say($"{foeName}'s shield absorbed {Mathf.RoundToInt(absorb)}!", BattleLineTag.Shield | BattleLineTag.Flavor);
         }
 
-        // ── Wild shield-break detection: if total shield went from >0 to 0, fire title hook ──
+        // â”€â”€ Wild shield-break detection: if total shield went from >0 to 0, fire title hook â”€â”€
         if ((absorbedByWildTitleShield + absorbedByWildShield) > 0f)
         {
             float wildTotalShieldAfter = wildTitleShieldHP + wildShieldHP;
@@ -1565,7 +1583,7 @@ float preventedByWildGuard = 0f;
             {
                 float pre = teamHP[activeIndex];
                 teamHP[activeIndex] = Mathf.Max(0f, teamHP[activeIndex] - recoil);
-                BattleLogger.Log($"[Status] WyrmFury recoil hits {GetName(activeIndex)} for {Mathf.RoundToInt(recoil)} ({Mathf.CeilToInt(pre)}→{Mathf.CeilToInt(teamHP[activeIndex])}).", LogScope.Battle);
+                BattleLogger.Log($"[Status] WyrmFury recoil hits {GetName(activeIndex)} for {Mathf.RoundToInt(recoil)} ({Mathf.CeilToInt(pre)}â†’{Mathf.CeilToInt(teamHP[activeIndex])}).", LogScope.Battle);
                 ClampAndPushActiveHP();
                 if (IsTeamKO())
                 {
@@ -1589,7 +1607,7 @@ float preventedByWildGuard = 0f;
         UpdateWildInfoUI();
 
 
-        float wRatio = wildMaxHP > 0.01f ? (float)dmgToApply / wildMaxHP : 0f;
+        float wRatio = wildMaxHP > 0.01f ? (float)dmgToApply / wildMaxHP : 0f; // TODO: confirm this 0.01f is intentional
         Emit(BattleEvent.Damage(BattleSide.Player, BattleSide.Wild, dmgToApply, dr.crit, dr.effectiveness, wRatio, (preventedByWildGuard > 0f) || (absorbedByWildShield > 0f) || (absorbedByWildTitleShield > 0f)));
         if (!HasBattleEventConsumers && feedback) feedback.PlayHitReaction(BattleFeedbackManager.BattleFeedbackSide.Wild, dr.crit, wRatio, wasGuarded: (preventedByWildGuard > 0f) || (absorbedByWildShield > 0f) || (absorbedByWildTitleShield > 0f));
 if (!playerLandedFirstHitThisBattle && dr.damage > 0)
@@ -1609,10 +1627,10 @@ if (!playerLandedFirstHitThisBattle && dr.damage > 0)
         if (tailwindConsumed && activeIndex >= 0 && teamStatus != null && activeIndex < teamStatus.Length && teamStatus[activeIndex] == StatusType.Tailwind)
             ClearTeamStatus(activeIndex, reason: "spent");
 
-        // Status: Leeching (Bug) — heal a portion of damage dealt.
+        // Status: Leeching (Bug) â€” heal a portion of damage dealt.
         ApplyLeechHeal(BattleSide.Player, dmgToApply);
 
-        // Status: Phantasmal (Specter) — lose HP when attacking.
+        // Status: Phantasmal (Specter) â€” lose HP when attacking.
         float phantasmalPct = GetActivePlayerPhantasmalSelfDmgPct();
         if (phantasmalPct > 0f && activeIndex >= 0 && teamHP != null && activeIndex < teamHP.Length)
         {
@@ -1622,19 +1640,19 @@ if (!playerLandedFirstHitThisBattle && dr.damage > 0)
             PushHPBars();
 
             if (BattleLogger.Enabled)
-                BattleLogger.Log($"[Status] {GetName(activeIndex)} loses {selfDmg} HP from Phantasmal backlash. ({Mathf.CeilToInt(pre)}→{Mathf.CeilToInt(teamHP[activeIndex])})", LogScope.Battle);
+                BattleLogger.Log($"[Status] {GetName(activeIndex)} loses {selfDmg} HP from Phantasmal backlash. ({Mathf.CeilToInt(pre)}â†’{Mathf.CeilToInt(teamHP[activeIndex])})", LogScope.Battle);
 
             if (!ShouldSkipNarration(BattleLineTag.Flavor))
                 yield return Say($"{GetName(activeIndex)} is hurt by Phantasmal backlash (-{selfDmg})!", BattleLineTag.Flavor);
         }
 
-        // Status: Foresight — check repeat action to schedule a stun next turn.
+        // Status: Foresight â€” check repeat action to schedule a stun next turn.
         NotifyPlayerActionResolved_ForForesight(activeIndex, PlayerAction.Attack);
         _lastRoundAggressor = BattleSide.Player;
 
 
         if (dr.crit)
-            BattleLogger.AddKeyMoment($"CRIT: {attacker} → {foeName} ({dmgToApply})");
+            BattleLogger.AddKeyMoment($"CRIT: {attacker} â†’ {foeName} ({dmgToApply})");
 
         if (showEffectivenessText)
         {
@@ -1655,7 +1673,7 @@ if (!playerLandedFirstHitThisBattle && dr.damage > 0)
                 yield return Say("Critical hit!", BattleLineTag.Crit | BattleLineTag.Flavor);
         }
 
-        // Centralized KO messaging (fires only on HP crossing >0 → 0)
+        // Centralized KO messaging (fires only on HP crossing >0 â†’ 0)
         yield return MaybeSayKO_Wild(foeName, preWildHP, wildHP);
 
         if (jctx != null && jctx.endTurnHealPct > 0f)
@@ -1695,7 +1713,7 @@ if (!playerLandedFirstHitThisBattle && dr.damage > 0)
 
         try
         {
-        if (teamHP[activeIndex] <= 0.01f && !AutoSwapToAlive())
+        if (teamHP[activeIndex] <= 0.01f && !AutoSwapToAlive()) // TODO: confirm this 0.01f is intentional
             yield break;
     // Status tick at start of the wild's turn (Phase 4)
     // If an action-skip status triggers (Freeze/Shock), skip action entirely this turn.
@@ -1708,14 +1726,14 @@ if (!playerLandedFirstHitThisBattle && dr.damage > 0)
             yield return Say($"{who} is Frozen and can't act!", BattleLineTag.Result);
 
         // If the tick caused a KO, stop here (battle loop will detect KO and end).
-        if (wildHP <= 0.01f)
+        if (wildHP <= 0.01f) // TODO: confirm this 0.01f is intentional
             yield break;
 
         yield break;
     }
 
     // If a DOT tick KO'd the wild, stop here.
-    if (wildHP <= 0.01f)
+    if (wildHP <= 0.01f) // TODO: confirm this 0.01f is intentional
         yield break;
 
             // If the wild's AI returned no action (usually due to a status), do nothing.
@@ -1820,7 +1838,7 @@ if (!playerLandedFirstHitThisBattle && dr.damage > 0)
                 }
             }
 
-            if (teamHP[activeIndex] <= 0.01f && !AutoSwapToAlive())
+            if (teamHP[activeIndex] <= 0.01f && !AutoSwapToAlive()) // TODO: confirm this 0.01f is intentional
                 yield break;
 
             string attackerName = GetWildDisplayName("Foe");
@@ -1931,18 +1949,18 @@ if (!playerLandedFirstHitThisBattle && dr.damage > 0)
                     yield return Say($"{attackerName} unleashes a charged attack (+{Mathf.RoundToInt(chargeBonusPct * 100f)}% dmg)!", BattleLineTag.Flavor);
             }
 
-// Status: Rally (Clash) — allies gain minor Attack boost.
+// Status: Rally (Clash) â€” allies gain minor Attack boost.
 float wildRallyBonusPct = GetWildRallyBonusPct();
 if (wildRallyBonusPct > 0f)
 {
     int before = dr.damage;
     dr.damage = Mathf.Max(1, Mathf.RoundToInt(dr.damage * (1f + wildRallyBonusPct)));
     if (BattleLogger.Enabled)
-        BattleLogger.Log($"[Status] Rally boosts Wild damage: {before}→{dr.damage} (+{Mathf.RoundToInt(wildRallyBonusPct * 100f)}%).", LogScope.Battle);
+        BattleLogger.Log($"[Status] Rally boosts Wild damage: {before}â†’{dr.damage} (+{Mathf.RoundToInt(wildRallyBonusPct * 100f)}%).", LogScope.Battle);
 }
 
 
-// Status: Tailwind (Sky) — first attack during effect deals bonus damage (consumed on use).
+// Status: Tailwind (Sky) â€” first attack during effect deals bonus damage (consumed on use).
 float wildTailwindBonusPct = GetWildTailwindBonusPct();
 bool wildTailwindConsumed = false;
 if (wildTailwindBonusPct > 0f)
@@ -1951,7 +1969,7 @@ if (wildTailwindBonusPct > 0f)
     dr.damage = Mathf.Max(1, Mathf.RoundToInt(dr.damage * (1f + wildTailwindBonusPct)));
     wildTailwindConsumed = true;
     if (BattleLogger.Enabled)
-        BattleLogger.Log($"[Status] Tailwind empowers Wild's first strike: {before}→{dr.damage} (+{Mathf.RoundToInt(wildTailwindBonusPct * 100f)}%).", LogScope.Battle);
+        BattleLogger.Log($"[Status] Tailwind empowers Wild's first strike: {before}â†’{dr.damage} (+{Mathf.RoundToInt(wildTailwindBonusPct * 100f)}%).", LogScope.Battle);
 }
 
             if (IsWildWyrmFury())
@@ -2054,7 +2072,7 @@ if (wildTailwindBonusPct > 0f)
                 if (afterBoosterResist < beforeBoosterResist)
                 {
                     int reducedBy = beforeBoosterResist - afterBoosterResist;
-                    BattleLogger.Log($"Type Resist triggered: incoming super-effective damage reduced by {reducedBy} ({beforeBoosterResist}→{afterBoosterResist}).", LogScope.Battle);
+                    BattleLogger.Log($"Type Resist triggered: incoming super-effective damage reduced by {reducedBy} ({beforeBoosterResist}â†’{afterBoosterResist}).", LogScope.Battle);
                 }
             }
         }
@@ -2083,7 +2101,7 @@ int dmg_afterScalar = Mathf.Max(1, Mathf.RoundToInt(dr.damage * incomingScalar))
         if (BattleLogger.Enabled && (title_reducedByTypeResist > 0 || title_reducedByDmgFilterPct > 0 || title_reducedByDmgFilterFlat > 0))
         {
             int titleTotalReduced = title_reducedByTypeResist + title_reducedByDmgFilterPct + title_reducedByDmgFilterFlat;
-            BattleLogger.Log($"Title defenses triggered: incoming damage reduced by {titleTotalReduced} ({title_dmg_pre}→{dmg_afterScalar}). [eff x{title_typeResistMul:0.##}:-{title_reducedByTypeResist}, pct:-{title_reducedByDmgFilterPct}, flat:-{title_reducedByDmgFilterFlat}]", LogScope.Battle);
+            BattleLogger.Log($"Title defenses triggered: incoming damage reduced by {titleTotalReduced} ({title_dmg_pre}â†’{dmg_afterScalar}). [eff x{title_typeResistMul:0.##}:-{title_reducedByTypeResist}, pct:-{title_reducedByDmgFilterPct}, flat:-{title_reducedByDmgFilterFlat}]", LogScope.Battle);
         }
 
 
@@ -2102,7 +2120,7 @@ int dmg_afterScalar = Mathf.Max(1, Mathf.RoundToInt(dr.damage * incomingScalar))
             BattleLogger.Log($"{GetName(activeIndex)} is shrouded - damage nullified!", LogScope.Battle);
             BattleLogger.AddKeyMoment($"Shadow Veil: {GetName(activeIndex)} ignored damage.");
             if (!ShouldSkipNarration(BattleLineTag.Flavor))
-                yield return Say($"{GetName(activeIndex)} fades into a Shadow Veil—no damage!", BattleLineTag.Flavor);
+                yield return Say($"{GetName(activeIndex)} fades into a Shadow Veilâ€”no damage!", BattleLineTag.Flavor);
 
             dmg_final = 0;
             ClearTeamStatus(activeIndex, reason: "absorbed a hit");
@@ -2139,7 +2157,7 @@ int dmg_afterScalar = Mathf.Max(1, Mathf.RoundToInt(dr.damage * incomingScalar))
                     yield return Say($"{GetName(activeIndex)}'s shield absorbed {Mathf.RoundToInt(shieldAbsorbF)}!", BattleLineTag.Shield | BattleLineTag.Flavor);
         }
 
-        // ── Shield-break detection: if total shield went from >0 to 0, fire title hook ──
+        // â”€â”€ Shield-break detection: if total shield went from >0 to 0, fire title hook â”€â”€
         if ((titleShieldBefore + shieldBefore) > 0f)
         {
             float totalShieldAfter = ((titleShieldHP != null && activeIndex >= 0 && activeIndex < titleShieldHP.Length) ? titleShieldHP[activeIndex] : 0f)
@@ -2163,7 +2181,7 @@ int dmg_afterScalar = Mathf.Max(1, Mathf.RoundToInt(dr.damage * incomingScalar))
             {
                 float pre = wildHP;
                 wildHP = Mathf.Max(0f, wildHP - recoil);
-                BattleLogger.Log($"[Status] WyrmFury recoil hits Wild for {Mathf.RoundToInt(recoil)} ({Mathf.CeilToInt(pre)}→{Mathf.CeilToInt(wildHP)}).", LogScope.Battle);
+                BattleLogger.Log($"[Status] WyrmFury recoil hits Wild for {Mathf.RoundToInt(recoil)} ({Mathf.CeilToInt(pre)}â†’{Mathf.CeilToInt(wildHP)}).", LogScope.Battle);
                 PushHPBars();
                 if (IsWildKO())
                 {
@@ -2175,7 +2193,7 @@ int dmg_afterScalar = Mathf.Max(1, Mathf.RoundToInt(dr.damage * incomingScalar))
         }
 
         float maxHP = GetFinalMaxHPForIndex(activeIndex);
-        float ratio = maxHP > 0.01f ? (float)dmg_final / maxHP : 0f;
+        float ratio = maxHP > 0.01f ? (float)dmg_final / maxHP : 0f; // TODO: confirm this 0.01f is intentional
         Emit(BattleEvent.Damage(BattleSide.Wild, BattleSide.Player, dmg_final, (dr.crit && !df.cannotBeCrit), dr.effectiveness, ratio, (preventedByGuardRaw > 0f) || (shieldAbsorbF > 0f) || (titleShieldAbsorbF > 0f)));
         if (!HasBattleEventConsumers && feedback) feedback.PlayHitReaction(BattleFeedbackManager.BattleFeedbackSide.Player, dr.crit && !df.cannotBeCrit, ratio, wasGuarded: (preventedByGuardRaw > 0f) || (shieldAbsorbF > 0f) || (titleShieldAbsorbF > 0f));
 
@@ -2209,10 +2227,10 @@ int dmg_afterScalar = Mathf.Max(1, Mathf.RoundToInt(dr.damage * incomingScalar))
         if (wildTailwindConsumed && wildStatus == StatusType.Tailwind)
             ClearWildStatus(reason: "spent");
 
-        // Status: Leeching (Bug) — heal a portion of damage dealt.
+        // Status: Leeching (Bug) â€” heal a portion of damage dealt.
         ApplyLeechHeal(BattleSide.Wild, dmg_final);
 
-        // Status: Phantasmal (Specter) — lose HP when attacking.
+        // Status: Phantasmal (Specter) â€” lose HP when attacking.
         float wildPhantasmalPct = GetWildPhantasmalSelfDmgPct();
         if (wildPhantasmalPct > 0f)
         {
@@ -2222,17 +2240,17 @@ int dmg_afterScalar = Mathf.Max(1, Mathf.RoundToInt(dr.damage * incomingScalar))
             PushHPBars();
 
             if (BattleLogger.Enabled)
-                BattleLogger.Log($"[Status] Wild loses {selfDmg} HP from Phantasmal backlash. ({Mathf.CeilToInt(pre)}→{Mathf.CeilToInt(wildHP)})", LogScope.Battle);
+                BattleLogger.Log($"[Status] Wild loses {selfDmg} HP from Phantasmal backlash. ({Mathf.CeilToInt(pre)}â†’{Mathf.CeilToInt(wildHP)})", LogScope.Battle);
 
             if (!ShouldSkipNarration(BattleLineTag.Flavor))
                 yield return Say($"Wild is hurt by Phantasmal backlash (-{selfDmg})!", BattleLineTag.Flavor);
         }
 
-        // Status: Foresight — check repeat action to schedule a stun next turn.
+        // Status: Foresight â€” check repeat action to schedule a stun next turn.
         NotifyWildActionResolved_ForForesight(EnemyAction.Attack);
         _lastRoundAggressor = BattleSide.Wild;
         if (dr.crit && !df.cannotBeCrit)
-            BattleLogger.AddKeyMoment($"CRIT: {attackerName} → {GetName(activeIndex)} ({dmg_final})");
+            BattleLogger.AddKeyMoment($"CRIT: {attackerName} â†’ {GetName(activeIndex)} ({dmg_final})");
 
         if (showEffectivenessText)
         {
@@ -2263,7 +2281,7 @@ if (dr.crit && !df.cannotBeCrit)
             _totalCritsThisBattle++;
         }
 
-        // Centralized KO messaging (fires only on HP crossing >0 → 0)
+        // Centralized KO messaging (fires only on HP crossing >0 â†’ 0)
         yield return MaybeSayKO_Player(victimName, prePlayerHP, teamHP[activeIndex]);
 
         _totalDamageTakenThisBattle += dmg_final;
@@ -2410,7 +2428,7 @@ EndBattleRouted(false);
 
     private bool ShouldSkipNarration(BattleLineTag tags)
     {
-        // Never suppress lines that carry an icon tag — they must reach the UI.
+        // Never suppress lines that carry an icon tag â€” they must reach the UI.
         const BattleLineTag iconMask = BattleLineTag.Crit | BattleLineTag.Shield
                                      | BattleLineTag.SuperEffective | BattleLineTag.NotEffective;
         if ((tags & iconMask) != 0)
@@ -2432,13 +2450,13 @@ EndBattleRouted(false);
 
     private WaitForSecondsRealtime Wait(float t)
     {
-        float scaled = Mathf.Max(0.01f, t / Mathf.Max(0.01f, battleSpeed));
+        float scaled = Mathf.Max(0.01f, t / Mathf.Max(0.01f, battleSpeed)); // TODO: confirm this 0.01f is intentional
         return new WaitForSecondsRealtime(scaled);
     }
 
     private IEnumerator CoWaitScaled(float t)
     {
-        float scaled = Mathf.Max(0.01f, t / Mathf.Max(0.01f, battleSpeed));
+        float scaled = Mathf.Max(0.01f, t / Mathf.Max(0.01f, battleSpeed)); // TODO: confirm this 0.01f is intentional
         float end = Time.unscaledTime + scaled;
         while (Time.unscaledTime < end)
             yield return null;

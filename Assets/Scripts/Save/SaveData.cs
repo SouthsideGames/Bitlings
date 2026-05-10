@@ -30,6 +30,8 @@ public sealed class SaveData
     // Weekly Honor
     public HonorBonusState activeHonorBonus;
     public string currentWeekHonoredUID;
+    // FIXED: per-mentor cooldown replaces the single weekly flag — players with large Mentor Halls can honor multiple legends
+    public List<MentorHonorCooldown> mentorHonorCooldowns = new List<MentorHonorCooldown>();
     public long honorWeekResetUnix;
 
     // Labor economy
@@ -46,6 +48,13 @@ public sealed class SaveData
 public sealed class ArenaSaveSection
 {
     public ArenaSaveData arena = new ArenaSaveData();
+}
+
+[Serializable]
+public sealed class MentorHonorCooldown
+{
+    public string mentorUID;
+    public long lastHonoredUnix;
 }
 
 [Serializable]

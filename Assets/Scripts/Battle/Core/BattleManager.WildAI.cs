@@ -1,14 +1,14 @@
-using UnityEngine;
+﻿using UnityEngine;
 using UnityEngine.UI;
 using System;
 using System.Collections;
 using System.Collections.Generic;
 using TMPro;
 
-// ─────────────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // BattleManager.WildAI
 // Wild action selection, telegraphing, and AI decision helpers.
-// ─────────────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 public partial class BattleManager : MonoBehaviour
 {
@@ -83,7 +83,7 @@ public partial class BattleManager : MonoBehaviour
 
     private EnemyAction ChooseEnemyAction()
     {
-        if (!wildDef || wildMaxHP <= 0.01f)
+        if (!wildDef || wildMaxHP <= 0.01f) // TODO: confirm this 0.01f is intentional
             return EnemyAction.Attack;
 
         if (IsWildFrozen())
@@ -122,7 +122,7 @@ public partial class BattleManager : MonoBehaviour
             if (ctx.enemyHpRatio < 0.35f && action == BattleAction.Defend && Rng01() < 0.55f)
             {
                 action = BattleAction.Attack;
-                BattleLogger.Log($"[AI] Wild senses a wounded opponent and presses the advantage (enemyHpRatio={ctx.enemyHpRatio:F2}): overrides Defend → Attack.", LogScope.Battle);
+                BattleLogger.Log($"[AI] Wild senses a wounded opponent and presses the advantage (enemyHpRatio={ctx.enemyHpRatio:F2}): overrides Defend â†’ Attack.", LogScope.Battle);
             }
 
             if (_turnIndex > wildAIDefendDecayAfterTurn && action == BattleAction.Defend && Rng01() < 0.6f)
@@ -186,7 +186,7 @@ public partial class BattleManager : MonoBehaviour
             return PlayerAction.Attack;
 
         float maxHp = GetFinalMaxHPForIndex(activeIndex);
-        float hpRatio = (maxHp > 0.01f && teamHP != null && activeIndex >= 0 && activeIndex < teamHP.Length)
+        float hpRatio = (maxHp > 0.01f && teamHP != null && activeIndex >= 0 && activeIndex < teamHP.Length) // TODO: confirm this 0.01f is intentional
             ? Mathf.Clamp01(teamHP[activeIndex] / maxHp)
             : 1f;
 
@@ -226,7 +226,7 @@ public partial class BattleManager : MonoBehaviour
 
     private float ComputeEnemyRunChance()
     {
-        if (!wildDef || wildMaxHP <= 0.01f)
+        if (!wildDef || wildMaxHP <= 0.01f) // TODO: confirm this 0.01f is intentional
             return 0f;
 
         float hpLost01 = 1f - Mathf.Clamp01(wildHP / wildMaxHP);
@@ -249,7 +249,7 @@ public partial class BattleManager : MonoBehaviour
 
     private void ApplyPendingGuardShieldForWild()
     {
-        if (wildPendingGuardShield <= 0.01f) return;
+        if (wildPendingGuardShield <= 0.01f) return; // TODO: confirm this 0.01f is intentional
 
         string name = GetWildDisplayName("Foe");
         float gain = wildPendingGuardShield;
