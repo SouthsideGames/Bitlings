@@ -19,6 +19,9 @@ public sealed class RiftButtonGuard : MonoBehaviour
     [Tooltip("How long the player must hold to toggle auto-battle. Shown as a radial fill countdown.")]
     [SerializeField, Min(0.1f)] private float holdToStopIdleSeconds = 3f; // CHANGED: 3-second hold with visible countdown
 
+    [Tooltip("Parent container for the hold progress fill. Shown when hold begins, hidden when hold ends.")]
+    [SerializeField] private GameObject autoFillContainer;
+
     [Tooltip("Radial Image (fillAmount 0-1) that fills while the player holds. Assign in Inspector. Use Image Type = Filled, Fill Method = Radial 360.")]
     [SerializeField] private UnityEngine.UI.Image holdProgressFill; // CHANGED: countdown ring fill
 
@@ -275,6 +278,7 @@ public sealed class RiftButtonGuard : MonoBehaviour
         _pressed = true;
         _holdTriggered = false;
         _pressedAt = Time.unscaledTime;
+        if (autoFillContainer != null) autoFillContainer.SetActive(true);
     }
 
     public void OnPointerUp(PointerEventData eventData)
@@ -294,6 +298,7 @@ public sealed class RiftButtonGuard : MonoBehaviour
         _pressedAt = 0f;
         if (holdProgressFill != null)
             holdProgressFill.fillAmount = 0f; // CHANGED: clear countdown ring when hold is cancelled
+        if (autoFillContainer != null) autoFillContainer.SetActive(false);
     }
 
     private static bool IsIdleAutoRunning()
