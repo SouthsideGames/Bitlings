@@ -227,6 +227,7 @@ public sealed class BattleFeedbackManager : MonoBehaviour
     [SerializeField] private ParticleSystem wildHonorBoostParticles;
 
     private const float PlayerIconDefaultXYScale = 1.25f;
+    private const float WildIconDefaultXYScale = 0.75f;
 
     private BattleManager _battleManager;
 
@@ -476,7 +477,22 @@ public sealed class BattleFeedbackManager : MonoBehaviour
             }
         }
 
-        if (wildIcon && wildIcon.rectTransform) _wildIconBaseScale = wildIcon.rectTransform.localScale;
+        if (wildIcon && wildIcon.rectTransform)
+        {
+            var rt = wildIcon.rectTransform;
+            var sizer = wildIcon.GetComponentInParent<UIDeviceAdaptiveSizer>();
+            if (sizer != null)
+            {
+                sizer.ApplyLayout();
+                _wildIconBaseScale = rt.localScale;
+            }
+            else
+            {
+                float z = rt.localScale.z;
+                _wildIconBaseScale = new Vector3(WildIconDefaultXYScale, WildIconDefaultXYScale, z);
+                rt.localScale = _wildIconBaseScale;
+            }
+        }
     }
 
     private void WireOptionalButtonPresses()
