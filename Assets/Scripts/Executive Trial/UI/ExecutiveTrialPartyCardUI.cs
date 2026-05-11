@@ -28,6 +28,8 @@ public sealed class ExecutiveTrialPartyCardUI : MonoBehaviour
     [Header("Selection")]
     [Tooltip("Shown when this card is selected for dismissal.")]
     [SerializeField] private GameObject selectedFrame;
+    [SerializeField] private Color selectedColor = new Color(0.4f, 0.8f, 1f, 1f);
+    [SerializeField] private Color normalColor   = Color.white;
 
     private Action _onClick;
 
@@ -98,6 +100,7 @@ public sealed class ExecutiveTrialPartyCardUI : MonoBehaviour
     public void SetSelected(bool selected)
     {
         if (selectedFrame && selectedFrame != gameObject) selectedFrame.SetActive(selected);
+        if (icon) icon.color = selected ? selectedColor : normalColor;
         if (!selected) EnsureButtonHierarchyActive();
     }
 
