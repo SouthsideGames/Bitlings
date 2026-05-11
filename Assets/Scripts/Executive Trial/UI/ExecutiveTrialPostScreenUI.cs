@@ -36,14 +36,6 @@ public sealed class ExecutiveTrialPostScreenUI : MonoBehaviour
     [SerializeField] private Sprite noStatusIcon;
     [SerializeField] private TextMeshProUGUI statusName;
 
-    [Header("ChecksSection")]
-    [SerializeField] private GameObject checksSection;
-    [SerializeField] private TextMeshProUGUI checksTMP;
-
-    [Header("MilestoneSection")]
-    [SerializeField] private GameObject milestoneSection;
-    [SerializeField] private TextMeshProUGUI milestoneTMP;
-
     [Header("BottomBar")]
     [SerializeField] private Button continueButton;
     [SerializeField] private Button quitButton;
@@ -199,27 +191,6 @@ public sealed class ExecutiveTrialPostScreenUI : MonoBehaviour
                     Debug.LogWarning("[ExecutiveTrialPostScreenUI] StatusLibrarySO is not assigned. Carry status name/icon fallback is being used.");
 #endif
             }
-        }
-
-        // Checks + Milestones
-        if (checksSection) checksSection.SetActive(true);
-        if (checksTMP)
-        {
-            bool partyReady = party != null && party.Count > 0;
-            bool hasEvolve = manager != null && manager.HasForcedEvolutionAvailable();
-            checksTMP.text =
-                $"{(partyReady ? "✅" : "❌")} Party Ready\n" +
-                $"{(hasEvolve ? "⚠" : "✅")} Forced Evolution {(hasEvolve ? "Available" : "None")}";
-        }
-
-        if (milestoneSection) milestoneSection.SetActive(true);
-        if (milestoneTMP)
-        {
-            int mod = safeWins % 3;
-            if (mod == 0)
-                milestoneTMP.text = "Milestone: Rest Node available now.";
-            else
-                milestoneTMP.text = $"Milestone: Rest Node in {3 - mod} win(s).";
         }
 
     }

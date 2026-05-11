@@ -19,13 +19,10 @@ public sealed class IronRunTimelineNodeUI : MonoBehaviour
     [SerializeField] private Color forfeitColor = new Color(1.00f, 1.00f, 1.00f, 1f);
 
     private IronBattleLogEntry _entry;
-    private bool               _isFinalNode;
-    private int                _pulseTweenId = -1;
 
     public void Bind(IronBattleLogEntry entry, bool isFinalNode)
     {
         _entry = entry;
-        _isFinalNode = isFinalNode;
 
         // Set circle color
         if (entry.isForfeit)
@@ -51,7 +48,7 @@ public sealed class IronRunTimelineNodeUI : MonoBehaviour
 
         // Final node size
         if (isFinalNode && !entry.isForfeit)
-            transform.localScale = Vector3.one * 1.2f;
+            transform.localScale = Vector3.one * 0.85f;
 
         // Wire button
         if (tapButton)
@@ -85,30 +82,6 @@ public sealed class IronRunTimelineNodeUI : MonoBehaviour
             text += $"\nDeaths: {_entry.deathsThisBattle}";
 
         TooltipUI.I.Show(text);
-    }
-
-    public void PlayEntryAnimation(float delay)
-    {
-        LeanTween.cancel(gameObject);
-
-        float targetScale = (_isFinalNode && !_entry.isForfeit) ? 1.2f : 1.0f;
-
-        LeanTween.scale(gameObject, Vector3.zero, 0f);
-        LeanTween.scale(gameObject, Vector3.one * targetScale, 0.18f)
-            .setDelay(delay)
-            .setEase(LeanTweenType.easeOutBack)
-            .setIgnoreTimeScale(true)
-            .setOnComplete(() =>
-            {
-                if (_isFinalNode && !_entry.isForfeit)
-                {
-                    _pulseTweenId = LeanTween.scale(gameObject, transform.localScale * 1.1f, 0.55f)
-                        .setEase(LeanTweenType.easeInOutSine)
-                        .setLoopPingPong()
-                        .setIgnoreTimeScale(true)
-                        .id;
-                }
-            });
     }
 
     private void OnDestroy()

@@ -71,12 +71,7 @@ public sealed class IronRunTimelineUI : MonoBehaviour
         Canvas.ForceUpdateCanvases();
         LayoutRebuilder.ForceRebuildLayoutImmediate(contentParent);
 
-        // Staggered entry animations
-        for (int i = 0; i < _nodes.Count; i++)
-        {
-            _nodes[i].PlayEntryAnimation(i * 0.06f);
-        }
-
+    
         StartCoroutine(ScrollToEnd());
 
         // Personal best check
