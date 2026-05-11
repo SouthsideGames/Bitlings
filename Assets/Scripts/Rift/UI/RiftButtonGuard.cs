@@ -145,6 +145,10 @@ public sealed class RiftButtonGuard : MonoBehaviour
         float heldFor = Time.unscaledTime - _pressedAt;
         float t = Mathf.Clamp01(heldFor / holdToStopIdleSeconds);
 
+        const float CONTAINER_SHOW_DELAY = 0.5f;
+        if (autoFillContainer != null)
+            autoFillContainer.SetActive(heldFor >= CONTAINER_SHOW_DELAY);
+
         // CHANGED: only show fill after a short dead zone so normal taps never see a flash
         if (holdProgressFill != null)
         {
@@ -287,7 +291,6 @@ public sealed class RiftButtonGuard : MonoBehaviour
         _pressed = true;
         _holdTriggered = false;
         _pressedAt = Time.unscaledTime;
-        if (autoFillContainer != null) autoFillContainer.SetActive(true);
     }
 
     public void OnPointerUp(PointerEventData eventData)
