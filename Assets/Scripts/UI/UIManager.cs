@@ -261,6 +261,10 @@ public class UIManager : MonoBehaviour
     {
         if (SaveManager.IsTutorialComplete(TutorialAutoEncounterKey)) return;
 
+        // Only open from Home's foreground context. Home can remain open as an
+        // ancestor while other main panels (e.g. Exchange) are shown.
+        if (!IsHomeForegroundContext()) return;
+
         if (FeatureUnlockManager.I == null ||
             !FeatureUnlockManager.I.IsUnlocked(FeatureId.IdleBattle_Basic))
             return;
@@ -268,6 +272,22 @@ public class UIManager : MonoBehaviour
         if (IsOpen(PanelId.IdleBattleRewards)) return;
 
         TutorialOverlayPanel.RequestOpen(TutorialAutoEncounterKey);
+    }
+
+    private bool IsHomeForegroundContext()
+    {
+        if (!IsOpen(PanelId.Home)) return false;
+
+        foreach (var id in _open)
+        {
+            if (id == PanelId.Home) continue;
+            if (IsOverlayPanel(id)) continue;
+
+            // Any other main panel means Home is not the active context.
+            return false;
+        }
+
+        return true;
     }
 
     void TryOpenAutoRiftTutorial()

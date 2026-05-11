@@ -13,6 +13,15 @@ public partial class RiftManager
     {
         while (autoMode)
         {
+            // Safety check: stop auto if feature becomes unlocked
+            if (FeatureUnlockManager.I == null || !FeatureUnlockManager.I.IsUnlocked(FeatureId.IdleBattle_Basic))
+            {
+                autoMode = false;
+                EmitStatus("AUTO stopped: feature no longer unlocked.", LogScope.System);
+                GameEvents.RaiseAutoBattleModeChanged(false);
+                yield break;
+            }
+
             if (!inBattle)
             {
                 if (!HasHealthyMonsters())

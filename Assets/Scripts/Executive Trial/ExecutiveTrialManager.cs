@@ -856,7 +856,7 @@ public sealed class ExecutiveTrialManager : MonoBehaviour, ExecutiveTrailBattleB
             if (nextForm == null || ReferenceEquals(nextForm, monster.def))
                 continue;
 
-            int requiredLevel = monster.def.evolutionLevel > 0 ? monster.def.evolutionLevel : 1;
+            int requiredLevel = monster.def.evolutionLevel > 0 ? monster.def.evolutionLevel : 5;
             if (monster.level < requiredLevel)
             {
                 monster.level = requiredLevel;

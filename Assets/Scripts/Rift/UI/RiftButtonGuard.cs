@@ -135,6 +135,12 @@ public sealed class RiftButtonGuard : MonoBehaviour
 
         // CHANGED: 3-second hold countdown - matches HoldToPurchaseButton pattern
         if (!_pressed || _holdTriggered) return;
+        if (!IsIdleBattleUnlocked())
+        {
+            if (holdProgressFill != null)
+                holdProgressFill.fillAmount = 0f; // CHANGED: keep fill hidden for locked players
+            return; // CHANGED: holding does nothing until idle battles are unlocked
+        }
 
         float heldFor = Time.unscaledTime - _pressedAt;
         float t = Mathf.Clamp01(heldFor / holdToStopIdleSeconds);
@@ -315,6 +321,12 @@ public sealed class RiftButtonGuard : MonoBehaviour
         {
             return false;
         }
+    }
+
+    private static bool IsIdleBattleUnlocked() // CHANGED: mirrors AutoBattleButton.IsIdleBattleUnlocked
+    {
+        try { return FeatureUnlockManager.I != null && FeatureUnlockManager.I.IsUnlocked(FeatureId.IdleBattle_Basic); }
+        catch { return false; }
     }
 
     private static bool HasIdleTeamConfigured()

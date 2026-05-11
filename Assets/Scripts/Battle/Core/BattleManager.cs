@@ -671,6 +671,9 @@ public partial class BattleManager : MonoBehaviour
             battleSpeed = Mathf.Clamp(SaveManager.Data.settings.battleSpeed, 0.25f, 5f);
 
         if (!feedback) feedback = GetComponentInParent<BattleFeedbackManager>() ?? FindFirstObjectByType<BattleFeedbackManager>();
+
+        if (!inBattle)
+            SetBattleRevealObjectsInactive();
     }
 
     void OnEnable()
@@ -1081,6 +1084,22 @@ public partial class BattleManager : MonoBehaviour
         if (cg) cg.alpha = 1f;
     }
 
+    private void SetBattleRevealObjectsInactive()
+    {
+        if (wildPanel) wildPanel.SetActive(false);
+        if (playerPanel) playerPanel.SetActive(false);
+
+        if (feedback != null)
+        {
+            feedback.SetIconActive(BattleFeedbackManager.BattleFeedbackSide.Player, false);
+            feedback.SetIconActive(BattleFeedbackManager.BattleFeedbackSide.Wild, false);
+            return;
+        }
+
+        if (playerIcon) playerIcon.gameObject.SetActive(false);
+        if (wildIcon) wildIcon.gameObject.SetActive(false);
+    }
+
     private IEnumerator SayKO(string displayName)
     {
         if (string.IsNullOrWhiteSpace(displayName)) yield break;
@@ -1235,8 +1254,9 @@ public partial class BattleManager : MonoBehaviour
         wildLevel = Mathf.Max(1, level);
 
         ApplyHudRigForThisBattle();
+        SetBattleRevealObjectsInactive();
 
-        TryApplyBattleBackgroundFromWild();
+        TryApplyBattleBackgroundFromWild(); // called before reveal objects are activated
 
         _wildCombatIdForTitles = null;
 
@@ -1526,10 +1546,11 @@ public partial class BattleManager : MonoBehaviour
                 }
             });
         }
-
-
-        if (wildPanel) wildPanel.SetActive(true);
-        if (playerPanel) playerPanel.SetActive(true);
+        if (feedback != null)
+        {
+            feedback.SetIconActive(BattleFeedbackManager.BattleFeedbackSide.Player, false);
+            feedback.SetIconActive(BattleFeedbackManager.BattleFeedbackSide.Wild, false);
+        }
 
         CanvasGroup wildCG = null;
         CanvasGroup playerCG = null;
@@ -1539,18 +1560,14 @@ public partial class BattleManager : MonoBehaviour
             wildCG = wildPanel.GetComponent<CanvasGroup>();
             if (wildCG)
                 wildCG.alpha = 0f;
+            wildPanel.SetActive(true);
         }
         if (playerPanel)
         {
             playerCG = playerPanel.GetComponent<CanvasGroup>();
             if (playerCG)
                 playerCG.alpha = 0f;
-        }
-
-        if (feedback != null)
-        {
-            feedback.SetIconAlphaImmediate(BattleFeedbackManager.BattleFeedbackSide.Player, 0f);
-            feedback.SetIconAlphaImmediate(BattleFeedbackManager.BattleFeedbackSide.Wild, 0f);
+            playerPanel.SetActive(true);
         }
 
         if (turnCR != null) StopCoroutine(turnCR);

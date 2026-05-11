@@ -73,20 +73,22 @@ public sealed class StatBreakdownHoldTrigger : MonoBehaviour, IPointerDownHandle
             return;
         }
 
-        // Check for active bonuses based on side
-        int bonusCount = 0;
+        // Check if stats are being adjusted by comparing base vs effective stats
+        bool statsAdjusted = false;
         if (side == Side.Player)
         {
-            var statLines = _cachedBattleManager.Stats.GetPlayerStatLines(_cachedBattleManager.ActiveIndex);
-            bonusCount = statLines != null ? statLines.Count : 0;
+            var baseStats = _cachedBattleManager.Stats.GetAdjustedPlayer(_cachedBattleManager.ActiveIndex);
+            var effectiveStats = _cachedBattleManager.Stats.GetEffectivePlayer(_cachedBattleManager.ActiveIndex);
+            statsAdjusted = !baseStats.Equals(effectiveStats);
         }
         else
         {
-            var statLines = _cachedBattleManager.Stats.GetWildStatLines();
-            bonusCount = statLines != null ? statLines.Count : 0;
+            var baseStats = _cachedBattleManager.Stats.GetAdjustedWild();
+            var effectiveStats = _cachedBattleManager.Stats.GetEffectiveWild();
+            statsAdjusted = !baseStats.Equals(effectiveStats);
         }
 
-        bonusIndicator.SetActive(bonusCount > 0);
+        bonusIndicator.SetActive(statsAdjusted);
     }
 
     public void OnPointerDown(PointerEventData eventData)

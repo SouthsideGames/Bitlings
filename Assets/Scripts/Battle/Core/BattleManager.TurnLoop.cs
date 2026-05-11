@@ -2373,6 +2373,7 @@ EndBattleRouted(false);
     public void ForceEndBattleEarly(bool victory, bool escaped = false)
     {
         inBattle = false;
+        SetBattleRevealObjectsInactive();
         BattleCalc.ResetRng();
         _rng.ClearAll();
         ConfigureForAuto(false);

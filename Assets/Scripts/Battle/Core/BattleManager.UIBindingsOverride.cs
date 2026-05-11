@@ -162,7 +162,7 @@ public partial class BattleManager : MonoBehaviour
 
         _uiBindingsCurrent = o;
         _uiBindingsHasCurrent = true;
-        ActivatePanelRoots(_uiBindingsCurrent);
+        ActivatePanelRoots(_uiBindingsCurrent, inBattle);
         RebindBenchButtons();
     }
 
@@ -211,15 +211,15 @@ public partial class BattleManager : MonoBehaviour
 
         _uiBindingsCurrent = _uiBindingsDefaults;
         _uiBindingsHasCurrent = true;
-        ActivatePanelRoots(_uiBindingsCurrent);
+        ActivatePanelRoots(_uiBindingsCurrent, inBattle);
         RebindBenchButtons();
     }
 
-    private static void ActivatePanelRoots(BattleUIBindings b)
+    private static void ActivatePanelRoots(BattleUIBindings b, bool active)
     {
         if (b == null) return;
-        if (b.wildPanel) b.wildPanel.SetActive(true);
-        if (b.playerPanel) b.playerPanel.SetActive(true);
+        if (b.wildPanel) b.wildPanel.SetActive(active);
+        if (b.playerPanel) b.playerPanel.SetActive(active);
     }
 
     private static void DeactivatePanelRoots(BattleUIBindings prev, BattleUIBindings next)

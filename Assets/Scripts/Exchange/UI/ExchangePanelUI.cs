@@ -450,7 +450,7 @@ public class ExchangePanelUI : MonoBehaviour
     {
         if (worldEventTickerLabel == null) return;
 
-        _tickerLines.Clear();
+        var newLines = new List<string>();
 
         var allStates = ExchangeManager.I?.AllStates;
         if (allStates != null && allStates.Count > 0)
@@ -467,18 +467,26 @@ public class ExchangePanelUI : MonoBehaviour
 
                 string color = delta > 0 ? "#00CC00" : "#FF3333";
                 string arrow = delta > 0 ? "▲" : "▼";
-                _tickerLines.Add($"{def.displayName} <color={color}>{arrow} {Mathf.Abs(delta)}</color>    {s.currentValue} Credits");
+                newLines.Add($"{def.displayName} <color={color}>{arrow} {Mathf.Abs(delta)}</color>    {s.currentValue} Credits");
             }
         }
 
-        if (_tickerLines.Count == 0)
-            _tickerLines.Add("Markets are steady \u2014 no movement.");
+        if (newLines.Count == 0)
+            newLines.Add("Markets are steady \u2014 no movement.");
 
-        _tickerIndex = 0;
+        bool wasRunning = _tickerCoroutine != null;
+
+        _tickerLines = newLines;
+
+        if (_tickerIndex >= _tickerLines.Count)
+            _tickerIndex = 0;
+
         worldEventTickerLabel.gameObject.SetActive(true);
 
-        StopTickerCycle();
-        _tickerCoroutine = StartCoroutine(TickerFadeCycle());
+        if (!wasRunning)
+        {
+            _tickerCoroutine = StartCoroutine(TickerFadeCycle());
+        }
     }
 
     private IEnumerator TickerFadeCycle()

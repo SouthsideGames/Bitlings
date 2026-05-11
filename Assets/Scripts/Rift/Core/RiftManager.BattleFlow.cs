@@ -616,6 +616,15 @@ public partial class RiftManager
 
         if (autoMode)
         {
+            // Check if auto battle feature is unlocked
+            if (FeatureUnlockManager.I == null || !FeatureUnlockManager.I.IsUnlocked(FeatureId.IdleBattle_Basic))
+            {
+                EmitStatus("Auto Rift is locked. Unlock it to enable auto battles.", LogScope.System);
+                autoMode = false;
+                GameEvents.RaiseAutoBattleModeChanged(autoMode);
+                return;
+            }
+
             if (!inBattle)
             {
                 // CHANGED: this check also prevents re-enabling after energy regen - player must explicitly hold again to restart auto.

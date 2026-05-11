@@ -40,6 +40,7 @@ public partial class BattleManager : MonoBehaviour
 
         inBattle = false;
         SetIsPlayerTurn(false);
+        SetBattleRevealObjectsInactive();
 
         ConfigureForAuto(false);
 
@@ -296,6 +297,7 @@ public partial class BattleManager : MonoBehaviour
 
         inBattle = false;
         SetIsPlayerTurn(false);
+        SetBattleRevealObjectsInactive();
         GameEvents.OnBattleStateChanged?.Invoke();
 
         ConfigureForAuto(false);

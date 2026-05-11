@@ -975,6 +975,17 @@ public void SetGuard(BattleFeedbackSide side, bool on)
         SetGraphicAlpha(GetIcon(side), alpha);
     }
 
+    /// <summary>
+    /// Shows or hides the icon GameObject entirely (SetActive).
+    /// Use this before the blinder fades to ensure no placeholder is visible.
+    /// </summary>
+    public void SetIconActive(BattleFeedbackSide side, bool active)
+    {
+        var icon = GetIcon(side);
+        if (icon != null && icon.gameObject.activeSelf != active)
+            icon.gameObject.SetActive(active);
+    }
+
     public IEnumerator Co_FadeInIcon(
         BattleFeedbackSide side,
         MonsterDataSO def,
@@ -1530,6 +1541,9 @@ public void SetGuard(BattleFeedbackSide side, bool on)
             if (wildCG) LeanTween.alphaCanvas(wildCG, 1f, dur).setIgnoreTimeScale(true);
             if (playerCG) LeanTween.alphaCanvas(playerCG, 1f, dur).setIgnoreTimeScale(true);
 
+            if (playerIcon != null) { playerIcon.gameObject.SetActive(true); SetGraphicAlpha(playerIcon, 0f); }
+            if (wildIcon != null) { wildIcon.gameObject.SetActive(true); SetGraphicAlpha(wildIcon, 0f); }
+
             FadeGraphicAlpha(playerIcon, 1f, dur);
             FadeGraphicAlpha(wildIcon, 1f, dur);
 
@@ -1576,7 +1590,11 @@ public void SetGuard(BattleFeedbackSide side, bool on)
             LeanTween.alphaCanvas(panel, 1f, revealTime).setIgnoreTimeScale(true);
 
         if (icon)
+        {
+            icon.gameObject.SetActive(true);
+            SetGraphicAlpha(icon, 0f);
             PlayIconIntroFor(icon, revealTime);
+        }
 
         if (revealTime > 0f)
             yield return new WaitForSecondsRealtime(revealTime);
@@ -1593,8 +1611,8 @@ public void SetGuard(BattleFeedbackSide side, bool on)
 
     private void PrepareIconIntroFade()
     {
-        SetGraphicAlpha(playerIcon, 0f);
-        SetGraphicAlpha(wildIcon, 0f);
+        if (playerIcon != null) playerIcon.gameObject.SetActive(false);
+        if (wildIcon != null) wildIcon.gameObject.SetActive(false);
     }
 
     private void FadeGraphicAlpha(Graphic g, float targetAlpha, float duration)
