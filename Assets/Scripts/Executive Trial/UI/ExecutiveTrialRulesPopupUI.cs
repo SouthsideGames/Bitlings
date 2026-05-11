@@ -87,13 +87,15 @@ public sealed class ExecutiveTrialRulesPopupUI : MonoBehaviour
         return
             "<b><u>CORE RULES</u></b>\n" +
             "• Permadeath: HP 0 = removed\n" +
-            "• No healing between battles\n" +
             "• HP carries forward each fight\n" +
-            "• Party size cap: 3\n\n" +
+            "• No healing between battles\n" +
+            "• Party size cap: 3\n" +
+            "• Every win: all members gain +1 level\n\n" +
             "<b><u>RUN FLOW</u></b>\n" +
             "• Win -> Hire/Replace -> Post\n" +
             "• Forced Evolution blocks progress\n" +
-            "• Rest nodes every 3 wins\n\n" +
+            "• Rest nodes every 3 wins\n" +
+            "• Rest: heal 25% HP or level up a random member\n\n" +
             "<b><u>QUIT = FORFEIT</u></b>\n" +
             "• Quitting ends the run as a loss\n" +
             "• No rewards are granted\n\n" +
