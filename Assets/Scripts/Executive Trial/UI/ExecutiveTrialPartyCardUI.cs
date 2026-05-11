@@ -100,7 +100,7 @@ public sealed class ExecutiveTrialPartyCardUI : MonoBehaviour
     public void SetSelected(bool selected)
     {
         if (selectedFrame && selectedFrame != gameObject) selectedFrame.SetActive(selected);
-        if (icon) icon.color = selected ? selectedColor : normalColor;
+        if (selectedFrame) selectedFrame.GetComponent<Image>().color = selected ? selectedColor : normalColor;
         if (!selected) EnsureButtonHierarchyActive();
     }
 
