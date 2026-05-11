@@ -75,6 +75,24 @@ public static class CareerNarrativeGenerator
             sentences.Add($"Primary assignment: {stats.topJobType}. {roundedHours:N0} hours logged. Output: satisfactory.");
         }
 
+        var trialStats = ExecutiveTrialStats.Load();
+        if (trialStats.totalRuns > 0)
+        {
+            string bestStr = trialStats.bestHardcoreWins > 0
+                ? $"Best: {trialStats.bestStandardWins} standard, {trialStats.bestHardcoreWins} hardcore."
+                : $"Best: {trialStats.bestStandardWins} standard.";
+            sentences.Add($"Executive Trial record (all-time): {trialStats.totalRuns:N0} runs, {trialStats.totalWinsAcrossRuns:N0} wins. {bestStr}");
+        }
+
+        var monthRecord = ExecutiveTrialStats.GetCurrentMonthRecord();
+        if (monthRecord.runs > 0)
+        {
+            string monthBestStr = monthRecord.bestHardcoreWins > 0
+                ? $"Best: {monthRecord.bestStandardWins} standard, {monthRecord.bestHardcoreWins} hardcore."
+                : $"Best: {monthRecord.bestStandardWins} standard.";
+            sentences.Add($"Trial activity this period: {monthRecord.runs:N0} runs, {monthRecord.wins:N0} wins. {monthBestStr}");
+        }
+
         if (!string.IsNullOrEmpty(stats.willRecipientUID))
         {
             string heir = string.IsNullOrWhiteSpace(stats.willRecipientName) ? "an heir" : stats.willRecipientName;
@@ -104,9 +122,8 @@ public static class CareerNarrativeGenerator
         string closing = PickClosing(stats, winPct);
         sentences.Add(closing);
 
-        // Keep it concise and in target 4-6 sentence range.
-        if (sentences.Count > 6)
-            sentences = sentences.GetRange(0, 6);
+        if (sentences.Count > 8)
+            sentences = sentences.GetRange(0, 8);
 
         return string.Join(" ", sentences);
     }
