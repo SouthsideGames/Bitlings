@@ -10,6 +10,8 @@ public partial class BattleManager : MonoBehaviour
 
     private IEnumerator Co_RevealPanelsThenStart(CanvasGroup wildCG, CanvasGroup playerCG, float duration)
     {
+        if (battleTextBox != null) battleTextBox.gameObject.SetActive(true);
+
         bool playerFirstBySpeed = GetPlayerActsFirstBySpeed();
         MonsterDataSO playerDef = GetTeamDefSafe(activeIndex);
         float spawnDelay = Mathf.Max(0f, spawnDelayBetweenMonsters);

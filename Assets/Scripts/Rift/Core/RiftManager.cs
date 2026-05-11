@@ -59,6 +59,8 @@ public partial class RiftManager : MonoBehaviour
 
     public int BossLevelBonusPreviewValue() => BossLevelBonusPreview;
 
+    public void PrepareBattleHide() => battleManager?.SetBattleRevealObjectsInactive();
+
     [Header("Wild Titles (Rift-only)")]
     [SerializeField, Range(0f, 1f)] private float wildTitleRollChance = 0.35f;
     [SerializeField] private string unemployedLabel = "Unemployed";

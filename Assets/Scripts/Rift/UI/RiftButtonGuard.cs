@@ -287,8 +287,9 @@ public sealed class RiftButtonGuard : MonoBehaviour
         _pressed = true;
         _holdTriggered = false;
         _pressedAt = Time.unscaledTime;
-        if (autoFillContainer != null) autoFillContainer.SetActive(true);
+        if (autoFillContainer != null) autoFillContainer.SetActive(IsIdleBattleUnlocked());
     }
+
 
     public void OnPointerUp(PointerEventData eventData)
     {

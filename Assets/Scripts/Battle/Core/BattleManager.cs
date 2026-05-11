@@ -1084,20 +1084,43 @@ public partial class BattleManager : MonoBehaviour
         if (cg) cg.alpha = 1f;
     }
 
-    private void SetBattleRevealObjectsInactive()
+    public void SetBattleRevealObjectsInactive()
     {
-        if (wildPanel) wildPanel.SetActive(false);
-        if (playerPanel) playerPanel.SetActive(false);
+        // Fall back to default rig when called before the first Begin() (fields are null until ApplyHudRigForThisBattle runs)
+        var rig = _hudRigActive ?? defaultHudRig;
 
-        if (feedback != null)
+        var wPanel = wildPanel != null ? wildPanel : rig?.wildPanel;
+        var pPanel = playerPanel != null ? playerPanel : rig?.playerPanel;
+        if (wPanel) wPanel.SetActive(false);
+        if (pPanel) pPanel.SetActive(false);
+
+        var bImg1 = benchImg1 != null ? benchImg1 : rig?.benchImg1;
+        var bImg2 = benchImg2 != null ? benchImg2 : rig?.benchImg2;
+        var bHP1  = benchHPText1 != null ? benchHPText1 : rig?.benchHPText1;
+        var bHP2  = benchHPText2 != null ? benchHPText2 : rig?.benchHPText2;
+        if (bImg1) bImg1.enabled = false;
+        if (bImg2) bImg2.enabled = false;
+        if (bHP1) bHP1.gameObject.SetActive(false);
+        if (bHP2) bHP2.gameObject.SetActive(false);
+
+        var owned = ownedCapturedIcon != null ? ownedCapturedIcon : rig?.ownedCapturedIcon;
+        if (owned) owned.SetActive(false);
+
+        var tb = battleTextBox != null ? battleTextBox : rig?.battleTextBox;
+        if (tb) tb.gameObject.SetActive(false);
+
+        var feedbackToUse = feedback != null ? feedback : rig?.feedback;
+        if (feedbackToUse != null)
         {
-            feedback.SetIconActive(BattleFeedbackManager.BattleFeedbackSide.Player, false);
-            feedback.SetIconActive(BattleFeedbackManager.BattleFeedbackSide.Wild, false);
+            feedbackToUse.SetIconActive(BattleFeedbackManager.BattleFeedbackSide.Player, false);
+            feedbackToUse.SetIconActive(BattleFeedbackManager.BattleFeedbackSide.Wild, false);
             return;
         }
 
-        if (playerIcon) playerIcon.gameObject.SetActive(false);
-        if (wildIcon) wildIcon.gameObject.SetActive(false);
+        var wIcon = wildIcon != null ? wildIcon : rig?.wildIcon;
+        var pIcon = playerIcon != null ? playerIcon : rig?.playerIcon;
+        if (pIcon) pIcon.gameObject.SetActive(false);
+        if (wIcon) wIcon.gameObject.SetActive(false);
     }
 
     private IEnumerator SayKO(string displayName)

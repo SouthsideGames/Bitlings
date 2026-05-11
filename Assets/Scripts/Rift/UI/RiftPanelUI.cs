@@ -1112,6 +1112,8 @@ if (blinderBackground)
             _typewriterCo = null;
         }
 
+        RiftManager.I?.PrepareBattleHide();
+
         yield return new WaitForSecondsRealtime(Mathf.Max(0.05f, preFadeDelay));
 
         if (blinderGroup)
