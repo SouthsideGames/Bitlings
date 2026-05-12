@@ -60,7 +60,7 @@ public sealed class ExecutiveTrialRecordsPanelUI : MonoBehaviour
             canvasGroup.blocksRaycasts = true;
         }
 
-        if (titleTMP) titleTMP.text = "EXECUTIVE TRIAL RECORDS";
+        if (titleTMP) titleTMP.text = "TRIAL RECORDS";
 
         // ── All-Time ──
         if (allTimeSection) allTimeSection.SetActive(true);

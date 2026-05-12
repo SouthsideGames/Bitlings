@@ -67,7 +67,7 @@ public sealed class ExecutiveTrialRulesPopupUI : MonoBehaviour
         bool isQuitConfirm = manager != null && manager.IsQuitPromptActive;
         bool hardcore = manager != null && manager.IsHardcoreMode;
 
-        if (titleTMP) titleTMP.text = "EXECUTIVE TRIAL RULES";
+        if (titleTMP) titleTMP.text = "TRIAL HANDBOOK";
         if (subtitleTMP) subtitleTMP.text = isQuitConfirm ? "Quit = forfeit. Confirm you understand." : "Read before starting your run";
 
         if (rulesTMP)
