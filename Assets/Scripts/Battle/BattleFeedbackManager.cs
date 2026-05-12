@@ -484,7 +484,9 @@ public sealed class BattleFeedbackManager : MonoBehaviour
             if (sizer != null)
             {
                 sizer.ApplyLayout();
-                _wildIconBaseScale = rt.localScale;
+                float z = rt.localScale.z;
+                _wildIconBaseScale = new Vector3(WildIconDefaultXYScale, WildIconDefaultXYScale, z);
+                rt.localScale = _wildIconBaseScale;
             }
             else
             {
@@ -2173,7 +2175,7 @@ public void SetGuard(BattleFeedbackSide side, bool on)
         var rt = g.rectTransform;
         LeanTween.cancel(g.gameObject);
 
-        var baseScale = rt.localScale;
+        var baseScale = GetGraphicBaseScale(g);
         float scaledTime = ScaleFeedbackDuration(time);
         LeanTween.scale(rt, baseScale * scaleMult, scaledTime)
             .setEaseOutBack()
@@ -2185,6 +2187,20 @@ public void SetGuard(BattleFeedbackSide side, bool on)
                     .setEaseOutQuad()
                     .setIgnoreTimeScale(true);
             });
+    }
+
+    private Vector3 GetGraphicBaseScale(Graphic g)
+    {
+        if (!g || !g.rectTransform)
+            return Vector3.one;
+
+        if (playerIcon && g == playerIcon)
+            return _playerIconBaseScale;
+
+        if (wildIcon && g == wildIcon)
+            return _wildIconBaseScale;
+
+        return g.rectTransform.localScale;
     }
 
     private void PlaySwapIn(BattleFeedbackSide side)

@@ -6,6 +6,11 @@ using System.Collections.Generic;
 
 public sealed class ExecutiveTrialRestPanelUI : MonoBehaviour
 {
+    private const int HEAL_MIN_PERCENT = 25;
+    private const int HEAL_MAX_PERCENT = 50;
+    private const int LEVEL_GAIN_MIN = 1;
+    private const int LEVEL_GAIN_MAX = 5;
+
     public enum RestOption
     {
         None = 0,
@@ -49,6 +54,11 @@ public sealed class ExecutiveTrialRestPanelUI : MonoBehaviour
     private IReadOnlyList<ExecutiveTrailMonster> _party;
     private RestOption _selected = RestOption.None;
     private bool _applied;
+
+    private static string GetHealOptionTitle() => $"HEAL PARTY ({HEAL_MIN_PERCENT}% - {HEAL_MAX_PERCENT}%)";
+    private static string GetHealOptionDescription() => $"Heal all living monsters by a random {HEAL_MIN_PERCENT}% to {HEAL_MAX_PERCENT}% of max HP. No revives.";
+    private static string GetTrainOptionTitle() => $"TRAINING (+{LEVEL_GAIN_MIN} to +{LEVEL_GAIN_MAX} Levels)";
+    private static string GetTrainOptionDescription() => $"Random living monster gains +{LEVEL_GAIN_MIN} to +{LEVEL_GAIN_MAX} levels. HP% is preserved.";
 
     private void Awake()
     {
@@ -137,14 +147,14 @@ public sealed class ExecutiveTrialRestPanelUI : MonoBehaviour
 
         if (!optionListParent || !restOptionPrefab) return;
 
-        // Option A: Heal 25%
+        // Option A: Heal random percent
         var heal = Instantiate(restOptionPrefab, optionListParent);
         heal.gameObject.SetActive(true);
         heal.Bind(
             option: RestOption.Heal25,
-            title: "HEAL PARTY (25%)",
-            desc: "Heal all living monsters by 25% of their max HP. No revives.",
-            preview: "Reliable attrition relief."
+            title: GetHealOptionTitle(),
+            desc: GetHealOptionDescription(),
+            preview: "Reliable with upside."
         );
         heal.SetSelected(false);
         heal.SetOnClick(() => OnOptionClicked(RestOption.Heal25));
@@ -155,8 +165,8 @@ public sealed class ExecutiveTrialRestPanelUI : MonoBehaviour
         train.gameObject.SetActive(true);
         train.Bind(
             option: RestOption.RandomLevelUp,
-            title: "TRAINING (+1 Level)",
-            desc: "Random living monster gains +1 level. HP% is preserved.",
+            title: GetTrainOptionTitle(),
+            desc: GetTrainOptionDescription(),
             preview: "High variance. Long-term scaling."
         );
         train.SetSelected(false);
@@ -227,13 +237,25 @@ public sealed class ExecutiveTrialRestPanelUI : MonoBehaviour
         switch (_selected)
         {
             case RestOption.Heal25:
-                manager.OnRestHeal();
-                if (resultTMP) resultTMP.text = "Healed party by 25% (living only).";
+                int healPercent = manager.OnRestHealRandomPercent(HEAL_MIN_PERCENT, HEAL_MAX_PERCENT);
+                if (resultTMP) resultTMP.text = $"Healed party by {healPercent}% (living only).";
                 break;
 
             case RestOption.RandomLevelUp:
-                string who = manager.OnRestRandomLevelUp();
-                if (resultTMP) resultTMP.text = string.IsNullOrEmpty(who) ? "Training applied." : $"Training: {who} gained +1 level.";
+                var levelResult = manager.OnRestRandomLevelUpRandom(LEVEL_GAIN_MIN, LEVEL_GAIN_MAX);
+                if (resultTMP)
+                {
+                    if (string.IsNullOrEmpty(levelResult.monsterName))
+                    {
+                        resultTMP.text = "Training applied.";
+                    }
+                    else
+                    {
+                        resultTMP.text = levelResult.levelsGained > 0
+                            ? $"Training: {levelResult.monsterName} gained +{levelResult.levelsGained} levels."
+                            : $"Training: {levelResult.monsterName} is already at max level.";
+                    }
+                }
                 break;
         }
 

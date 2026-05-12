@@ -876,29 +876,66 @@ public sealed class ExecutiveTrialManager : MonoBehaviour, ExecutiveTrailBattleB
         ContinueAfterHireAndReplacement();
     }
 
-    public void OnRestHeal()
+    public struct RestLevelUpResult
     {
-        if (_roster == null) return;
+        public string monsterName;
+        public int levelsGained;
+    }
+
+    private int RollIntInclusive(int minInclusive, int maxInclusive)
+    {
+        if (maxInclusive < minInclusive)
+        {
+            int tmp = minInclusive;
+            minInclusive = maxInclusive;
+            maxInclusive = tmp;
+        }
+
+        if (_rng != null)
+            return _rng.NextInt(minInclusive, maxInclusive + 1);
+
+        return UnityEngine.Random.Range(minInclusive, maxInclusive + 1);
+    }
+
+    public int OnRestHealRandomPercent(int minPercentInclusive, int maxPercentInclusive)
+    {
+        int rolledPercent = RollIntInclusive(minPercentInclusive, maxPercentInclusive);
+        float healPct = Mathf.Clamp01(rolledPercent * 0.01f);
+
+        if (_roster == null) return rolledPercent;
 
         for (int i = 0; i < _state.party.Count; i++)
         {
             var m = _state.party[i];
             if (m == null || m.def == null || m.IsDead) continue;
 
-            float add = 0.25f * Mathf.Max(1f, m.maxHp);
+            float add = healPct * Mathf.Max(1f, m.maxHp);
             m.hp = Mathf.Min(m.maxHp, m.hp + add);
             _state.party[i] = m;
         }
+
+        return rolledPercent;
+    }
+
+    public void OnRestHeal()
+    {
+        OnRestHealRandomPercent(25, 25);
     }
 
     /// <summary>
-    /// Rest Option B: +1 level to a random living party member. Returns the monster name (for UI feedback).
+    /// Rest Option B: random level gain to a random living party member.
     /// "Fair" randomness: chooses uniformly among living members only.
     /// HP% is preserved when max HP changes due to level.
     /// </summary>
-    public string OnRestRandomLevelUp()
+    public RestLevelUpResult OnRestRandomLevelUpRandom(int minLevelsInclusive, int maxLevelsInclusive)
     {
-        if (_roster == null || _roster.IsPartyEmpty) return string.Empty;
+        var result = new RestLevelUpResult
+        {
+            monsterName = string.Empty,
+            levelsGained = 0
+        };
+
+        if (_roster == null || _roster.IsPartyEmpty) return result;
 
         // Gather living indices
         _tmpLivingIndices.Clear();
@@ -909,20 +946,29 @@ public sealed class ExecutiveTrialManager : MonoBehaviour, ExecutiveTrailBattleB
             _tmpLivingIndices.Add(i);
         }
 
-        if (_tmpLivingIndices.Count == 0) return string.Empty;
+        if (_tmpLivingIndices.Count == 0) return result;
 
         int pick = (_rng != null) ? _rng.NextInt(0, _tmpLivingIndices.Count) : UnityEngine.Random.Range(0, _tmpLivingIndices.Count);
         int targetIndex = _tmpLivingIndices[pick];
 
         var target = _state.party[targetIndex];
-        if (target == null || target.def == null) return string.Empty;
+        if (target == null || target.def == null) return result;
 
+        int levelGain = Mathf.Max(1, RollIntInclusive(minLevelsInclusive, maxLevelsInclusive));
+        int oldLevel = target.level;
         int cap = target.def.maxLevel > 0 ? target.def.maxLevel : 99;
-        target.level = Mathf.Min(cap, Mathf.Max(1, target.level + 1));
+        target.level = Mathf.Min(cap, Mathf.Max(1, target.level + levelGain));
         target.RecomputeMaxHpPreservePct();
 
         _state.party[targetIndex] = target;
-        return target.def != null ? target.def.name : string.Empty;
+        result.monsterName = target.def != null ? target.def.name : string.Empty;
+        result.levelsGained = Mathf.Max(0, target.level - oldLevel);
+        return result;
+    }
+
+    public string OnRestRandomLevelUp()
+    {
+        return OnRestRandomLevelUpRandom(1, 1).monsterName;
     }
 
     /// <summary>

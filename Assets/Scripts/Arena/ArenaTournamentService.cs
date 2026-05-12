@@ -6,6 +6,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
+using Unity.Services.Authentication;
 using UnityEngine;
 
 /// <summary>
@@ -74,6 +75,18 @@ public static class ArenaTournamentService
         if (status != ArenaPlayerTournamentStatus.NotEntered)
             return (false, "Already entered a tournament this week.");
 
+        // Online snapshot ownership must match Cloud Code's authenticated player.
+        string authenticatedPlayerId = ResolveAuthenticatedPlayerId();
+        if (string.IsNullOrEmpty(authenticatedPlayerId))
+            return (false, "Online session is still initializing. Please try again.");
+
+        // Keep arena identity synced so local systems and cloud validation agree.
+        if (arena != null && arena.arenaPlayerId != authenticatedPlayerId)
+        {
+            arena.arenaPlayerId = authenticatedPlayerId;
+            SaveManager.Save();
+        }
+
         // ── Mark pending BEFORE spending so a crash between here and registration is recoverable ──
         var arenaForFlag = SaveManager.GetArenaSaveData();
         if (arenaForFlag != null)
@@ -89,7 +102,7 @@ public static class ArenaTournamentService
         }
 
         // ── Build player entry snapshot ──
-        string playerId = arena.arenaPlayerId ?? Guid.NewGuid().ToString();
+        string playerId = authenticatedPlayerId;
         string displayName = !string.IsNullOrEmpty(arena.arenaUsername) ? arena.arenaUsername : "Player";
 
         var playerSnapshot = ArenaTournamentBuilder.CreateTournamentEntrySnapshot(playerId, displayName);
@@ -171,6 +184,25 @@ public static class ArenaTournamentService
 
         Debug.Log($"{TAG} Registered for tournament week {weekId} ({band} band, score {playerScore}).");
         return (true, null);
+    }
+
+    private static string ResolveAuthenticatedPlayerId()
+    {
+        try
+        {
+            if (AuthenticationService.Instance != null &&
+                AuthenticationService.Instance.IsSignedIn &&
+                !string.IsNullOrEmpty(AuthenticationService.Instance.PlayerId))
+            {
+                return AuthenticationService.Instance.PlayerId;
+            }
+        }
+        catch
+        {
+            // UGS may not be initialized yet; fall back to initializer cache.
+        }
+
+        return UGSInitializer.I != null ? UGSInitializer.I.PlayerId : null;
     }
 
     // ═════════════════════════════════════════════════════════════
@@ -371,7 +403,9 @@ public static class ArenaTournamentService
         }
 
         // ── Build player entry ──
-        string playerId = arena.arenaPlayerId ?? Guid.NewGuid().ToString();
+        string playerId = !string.IsNullOrEmpty(arena.arenaPlayerId)
+            ? arena.arenaPlayerId
+            : Guid.NewGuid().ToString("N");
         string displayName = !string.IsNullOrEmpty(arena.arenaUsername) ? arena.arenaUsername : "Player";
 
         var playerSnapshot = ArenaTournamentBuilder.CreateTournamentEntrySnapshot(playerId, displayName);
