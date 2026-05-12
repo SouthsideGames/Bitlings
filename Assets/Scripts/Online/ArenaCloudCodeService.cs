@@ -84,8 +84,7 @@ public static class ArenaCloudCodeService
     /// Sends the frozen team snapshot to the server for bracket assignment.
     /// </summary>
     public static async Task<TournamentRegistrationResult> RegisterForTournamentAsync(
-        string teamSnapshotJson, int arenaScore, int scoreBand, string displayName, string weekId,
-        List<string> ownedInstanceIds)
+        string teamSnapshotJson, int arenaScore, int scoreBand, string displayName, string weekId)
     {
         if (!ArenaNetworkGuard.IsOnline)
             return new TournamentRegistrationResult { success = false, error = "No connection. Try again later." };
@@ -98,8 +97,7 @@ public static class ArenaCloudCodeService
                 { "arenaScore", arenaScore },
                 { "scoreBand", scoreBand },
                 { "displayName", displayName },
-                { "weekId", weekId },
-                { "ownedInstanceIds", ownedInstanceIds }
+                { "weekId", weekId }
             };
             var response = await CloudCodeService.Instance.CallModuleEndpointAsync<RegisterResponse>(
                 "ArenaModule", "RegisterForTournament", args);

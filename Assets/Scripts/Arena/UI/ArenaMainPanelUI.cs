@@ -330,7 +330,9 @@ public class ArenaMainPanelUI : MonoBehaviour
 
     private async void EnterTournamentOnlineAsync()
     {
-        if (enterTournamentButton) enterTournamentButton.interactable = false;
+        // Disable all interactive buttons during registration to prevent user actions
+        // like editing team, buying tickets, etc. while we're waiting for the server
+        SetAllButtonsInteractable(false);
 
         try
         {
@@ -352,9 +354,22 @@ public class ArenaMainPanelUI : MonoBehaviour
         }
         finally
         {
-            if (enterTournamentButton) enterTournamentButton.interactable = true;
+            SetAllButtonsInteractable(true);
             RefreshAll();
         }
+    }
+
+    /// <summary>
+    /// Enables or disables all interactive buttons in the Arena panel.
+    /// Used to prevent user interaction while registration is in progress.
+    /// </summary>
+    private void SetAllButtonsInteractable(bool interactable)
+    {
+        if (enterTournamentButton) enterTournamentButton.interactable = interactable;
+        if (buyTicketButton) buyTicketButton.interactable = interactable;
+        if (editTeamButton) editTeamButton.interactable = interactable;
+        if (leaderboardButton) leaderboardButton.interactable = interactable;
+        if (retryConnectionButton) retryConnectionButton.interactable = interactable;
     }
 
     /// <summary>
