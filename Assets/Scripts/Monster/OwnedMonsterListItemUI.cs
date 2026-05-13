@@ -22,6 +22,10 @@ public class OwnedMonsterListItemUI : MonoBehaviour
     [SerializeField] private GameObject evolveAlert;
     [SerializeField] private GameObject favoriteAlert;
 
+    [Header("Team Status")]
+    [SerializeField] private GameObject idleTeamAlert;
+    [SerializeField] private GameObject arenaTeamAlert;
+
     [Header("Detail Panel (Assign Mode / Directory)")]
     [SerializeField] private MonsterDetailPanelUI detailPanel;
 
@@ -178,9 +182,12 @@ public class OwnedMonsterListItemUI : MonoBehaviour
 
         RefreshPackBadge(def);
 
-        // Favorites are only shown for Directory entries; hide here.
+        // Favorites and team alerts are only shown for Directory entries; hide here.
         if (favoriteAlert)
             favoriteAlert.SetActive(false);
+
+        if (idleTeamAlert) idleTeamAlert.SetActive(false);
+        if (arenaTeamAlert) arenaTeamAlert.SetActive(false);
 
         ApplyState();
 
@@ -203,7 +210,9 @@ public class OwnedMonsterListItemUI : MonoBehaviour
         bool captured,
         bool isFavorite,
         bool allowDetail,
-        MonsterDetailPanelUI detailPanelOverride)
+        MonsterDetailPanelUI detailPanelOverride,
+        bool isOnIdleTeam = false,
+        bool isOnArenaTeam = false)
     {
         _isDirectoryRow = true;
         _directoryBrowseDefs = null; // set later by DirectoryPanelUI after it knows the final visible list
@@ -287,6 +296,17 @@ public class OwnedMonsterListItemUI : MonoBehaviour
             if (showFav) StartFavoritePulse();
             else StopFavoritePulse();
         }
+
+        // Idle / arena team status badges
+        if (idleTeamAlert)
+            idleTeamAlert.SetActive(isOnIdleTeam && isOwned);
+
+        if (arenaTeamAlert)
+            arenaTeamAlert.SetActive(isOnArenaTeam && isOwned);
+
+        // Arena monsters are committed — block interaction in directory.
+        if (isOnArenaTeam && isOwned)
+            _allowDetail = false;
 
         // KO / cooldown text only makes sense for owned monsters, not directory silhouettes.
         if (cooldownText)

@@ -848,6 +848,14 @@ public class DirectoryPanelUI : MonoBehaviour
 
         var sortedDefs = SortDefs(defs, sortMode, ownedById, premiumById);
 
+        var idleUids = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var uid in IdleLoadoutManager.GetIdleTeamOwnedUids())
+            if (!string.IsNullOrEmpty(uid)) idleUids.Add(uid);
+
+        var arenaUids = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var uid in ArenaLoadoutManager.GetArenaTeamOwnedUids())
+            if (!string.IsNullOrEmpty(uid)) arenaUids.Add(uid);
+
         var spawnedItems = new List<OwnedMonsterListItemUI>();
 
         foreach (var def in sortedDefs)
@@ -921,6 +929,9 @@ public class DirectoryPanelUI : MonoBehaviour
 
             _lastVisibleDirectoryDefs.Add(def);
 
+            bool isOnIdleTeam  = displayOwned != null && !string.IsNullOrEmpty(displayOwned.ownedUID) && idleUids.Contains(displayOwned.ownedUID);
+            bool isOnArenaTeam = displayOwned != null && !string.IsNullOrEmpty(displayOwned.ownedUID) && arenaUids.Contains(displayOwned.ownedUID);
+
             var go = Instantiate(ownedListItemPrefab, ownedContent);
             var item = go.GetComponent<OwnedMonsterListItemUI>();
             if (item)
@@ -933,7 +944,9 @@ public class DirectoryPanelUI : MonoBehaviour
                     captured: discovered,
                     isFavorite: isFavorite,
                     allowDetail: discovered,
-                    detailPanelOverride: detailPanel
+                    detailPanelOverride: detailPanel,
+                    isOnIdleTeam: isOnIdleTeam,
+                    isOnArenaTeam: isOnArenaTeam
                 );
             }
         }
