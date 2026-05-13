@@ -30,6 +30,7 @@ public class ArenaMainPanelUI : MonoBehaviour
     [Header("Action Buttons")]
     [SerializeField] private Button editTeamButton;
     [SerializeField] private Button enterTournamentButton;
+    [SerializeField] private Button viewBracketButton;
 
     [Header("History List")]
     [SerializeField] private Transform historyListRoot;
@@ -77,6 +78,7 @@ public class ArenaMainPanelUI : MonoBehaviour
         if (buyTicketButton)       { buyTicketButton.onClick.RemoveAllListeners();       buyTicketButton.onClick.AddListener(HandleBuyTicket); }
         if (editTeamButton)        { editTeamButton.onClick.RemoveAllListeners();        editTeamButton.onClick.AddListener(HandleEditTeam); }
         if (enterTournamentButton) { enterTournamentButton.onClick.RemoveAllListeners(); enterTournamentButton.onClick.AddListener(HandleEnterTournament); }
+        if (viewBracketButton)     { viewBracketButton.onClick.RemoveAllListeners();     viewBracketButton.onClick.AddListener(HandleViewBracket); }
         if (retryConnectionButton) { retryConnectionButton.onClick.RemoveAllListeners(); retryConnectionButton.onClick.AddListener(HandleRetryConnection); }
         if (leaderboardButton)      { leaderboardButton.onClick.RemoveAllListeners();      leaderboardButton.onClick.AddListener(HandleOpenLeaderboard); }
 
@@ -129,6 +131,7 @@ public class ArenaMainPanelUI : MonoBehaviour
         if (buyTicketButton)       buyTicketButton.onClick.RemoveListener(HandleBuyTicket);
         if (editTeamButton)        editTeamButton.onClick.RemoveListener(HandleEditTeam);
         if (enterTournamentButton) enterTournamentButton.onClick.RemoveListener(HandleEnterTournament);
+        if (viewBracketButton)     viewBracketButton.onClick.RemoveListener(HandleViewBracket);
         if (retryConnectionButton) retryConnectionButton.onClick.RemoveListener(HandleRetryConnection);
         if (leaderboardButton)      leaderboardButton.onClick.RemoveListener(HandleOpenLeaderboard);
     }
@@ -213,12 +216,15 @@ public class ArenaMainPanelUI : MonoBehaviour
 
     private void RefreshActionButtons()
     {
+        var arena  = SaveManager.GetArenaSaveData();
         var status = ArenaSaveHelper.GetPlayerTournamentStatus();
+        bool teamLocked = arena?.battleTeamData?.isLocked ?? false;
 
-        // Edit team — always available when arena is unlocked (locked team shows visual hint)
-        if (editTeamButton) editTeamButton.interactable = ArenaSaveHelper.IsArenaUnlocked();
+        // Edit team — disabled while the player is in an active tournament.
+        if (editTeamButton)
+            editTeamButton.interactable = ArenaSaveHelper.IsArenaUnlocked() && !teamLocked;
 
-        // Enter — only when registration is open, not already entered, has a username, and is online
+        // Enter — only when registration is open, not already entered, has a username, and is online.
         bool canEnter = status == ArenaPlayerTournamentStatus.NotEntered
                      && ArenaNetworkGuard.IsOnline
                      && ArenaSaveHelper.HasArenaUsername()
@@ -233,6 +239,13 @@ public class ArenaMainPanelUI : MonoBehaviour
             enterTournamentButton.interactable = canEnter;
         }
 
+        // View bracket — shown whenever the player has a bracket assigned.
+        bool hasBracket = status == ArenaPlayerTournamentStatus.Entered
+                       || status == ArenaPlayerTournamentStatus.Active
+                       || status == ArenaPlayerTournamentStatus.Eliminated
+                       || status == ArenaPlayerTournamentStatus.Completed;
+
+        if (viewBracketButton) viewBracketButton.gameObject.SetActive(hasBracket);
     }
 
     // ── History list ──
@@ -368,6 +381,7 @@ public class ArenaMainPanelUI : MonoBehaviour
         if (enterTournamentButton) enterTournamentButton.interactable = interactable;
         if (buyTicketButton) buyTicketButton.interactable = interactable;
         if (editTeamButton) editTeamButton.interactable = interactable;
+        if (viewBracketButton) viewBracketButton.interactable = interactable;
         if (leaderboardButton) leaderboardButton.interactable = interactable;
         if (retryConnectionButton) retryConnectionButton.interactable = interactable;
     }
@@ -435,6 +449,8 @@ public class ArenaMainPanelUI : MonoBehaviour
         var root = UIManager.I != null ? UIManager.I.GetRoot(PanelId.ArenaBracket) : null;
         root?.GetComponent<ArenaBracketPanelUI>()?.ShowCurrent();
     }
+
+    private void HandleViewBracket() => OpenTournamentDetailPanel();
 
     private void OnHistoryCardClicked(ArenaTournamentHistoryEntry entry)
     {
