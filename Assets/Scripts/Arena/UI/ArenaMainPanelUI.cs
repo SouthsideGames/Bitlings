@@ -430,17 +430,10 @@ public class ArenaMainPanelUI : MonoBehaviour
 
     private void OpenTournamentDetailPanel()
     {
-        if (UIManager.I) UIManager.I.Show(PanelId.ArenaTournamentDetail);
+        if (UIManager.I) UIManager.I.Show(PanelId.ArenaBracket);
 
-        var root = UIManager.I != null ? UIManager.I.GetRoot(PanelId.ArenaTournamentDetail) : null;
-        if (root != null)
-        {
-            var detail = root.GetComponent<ArenaTournamentDetailPanelUI>();
-            if (detail != null)
-            {
-                detail.ShowCurrent();
-            }
-        }
+        var root = UIManager.I != null ? UIManager.I.GetRoot(PanelId.ArenaBracket) : null;
+        root?.GetComponent<ArenaBracketPanelUI>()?.ShowCurrent();
     }
 
     private void OnHistoryCardClicked(ArenaTournamentHistoryEntry entry)

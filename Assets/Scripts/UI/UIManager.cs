@@ -53,6 +53,7 @@ public enum PanelId
     ArenaMain = 40,
     ArenaTournamentDetail = 41,
     ArenaMatchDetail = 42,
+    ArenaBracket = 43,
 }
 
 [Serializable]

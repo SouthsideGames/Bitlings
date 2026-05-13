@@ -47,6 +47,7 @@ public class ArenaMatchDetailPanelUI : MonoBehaviour
     private ArenaMatchHistoryEntry _match;
     private ArenaTeamSnapshot _playerSnapshot;
     private ArenaTeamSnapshot _opponentSnapshot;
+    private PanelId _returnToPanelId = PanelId.ArenaTournamentDetail;
     private readonly List<GameObject> _logRows = new List<GameObject>();
 
     // ═════════════════════════════════════════════════════════════
@@ -73,11 +74,13 @@ public class ArenaMatchDetailPanelUI : MonoBehaviour
     /// </summary>
     public void Show(ArenaMatchHistoryEntry match,
                      ArenaTeamSnapshot playerSnapshot = null,
-                     ArenaTeamSnapshot opponentSnapshot = null)
+                     ArenaTeamSnapshot opponentSnapshot = null,
+                     PanelId returnToPanel = PanelId.ArenaTournamentDetail)
     {
         _match = match;
         _playerSnapshot = playerSnapshot;
         _opponentSnapshot = opponentSnapshot;
+        _returnToPanelId = returnToPanel;
 
         Populate();
     }
@@ -276,7 +279,7 @@ public class ArenaMatchDetailPanelUI : MonoBehaviour
         if (!UIManager.I) return;
 
         UIManager.I.Hide(PanelId.ArenaMatchDetail);
-        UIManager.I.Show(PanelId.ArenaTournamentDetail);
+        UIManager.I.Show(_returnToPanelId);
     }
 
     private static string FormatTimestamp(long unixUtc)
