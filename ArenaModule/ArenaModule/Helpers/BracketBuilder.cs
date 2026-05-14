@@ -6,6 +6,9 @@
 // skip duplicate builds. Because the PRNG seed is deterministic (weekId + band),
 // any concurrent builds that do race produce identical output — Cloud Save upserts
 // are idempotent, so the data is always consistent.
+//
+// All Cloud Save writes (bracket data + player maps) are fired in parallel via
+// Task.WhenAll — no sequential round-trips for independent writes.
 
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
@@ -37,13 +40,11 @@ public static class BracketBuilder
         if (registrations.Count == 0)
             return new BuildResult(true, 0, 0);
 
-        // ── Group by score band ──
+        // ── Phase 1: pure in-memory computation (no I/O) ──
 
         var pools = new List<List<RegistrationData>> { new(), new(), new(), new() };
         foreach (var reg in registrations)
             pools[System.Math.Clamp(reg.ScoreBand, 0, 3)].Add(reg);
-
-        // ── Merge small bands ──
 
         for (int band = 0; band <= 3; band++)
         {
@@ -61,12 +62,14 @@ public static class BracketBuilder
             }
         }
 
-        // ── Build and write brackets ──
-
         var bracketsEntity = $"tournament_brackets_{weekId}";
         var playerMapEntity = $"tournament_player_map_{weekId}";
         long weekStartUtc = ScheduleHelper.WeekIdToEpoch(weekId);
         long weekEndUtc = weekStartUtc + 7 * 24 * 60 * 60 - 1;
+
+        // Build all bracket data and player mappings in memory before touching the network.
+        var builtBrackets = new List<BracketData>();
+        var builtMappings = new List<(string playerId, PlayerMapping mapping)>();
         int totalBrackets = 0;
 
         for (int band = 0; band <= 3; band++)
@@ -74,16 +77,11 @@ public static class BracketBuilder
             var pool = pools[band];
             if (pool.Count == 0) continue;
 
-            // Deterministic shuffle — same weekId+band always produces same ordering.
             new Prng(ScheduleHelper.HashCode($"{weekId}_{band}")).Shuffle(pool);
 
-            // Even distribution: 33 players → [17, 16], not [32, 1].
-            var chunks = BracketHelper.SplitEvenly(pool, BracketHelper.BracketSize);
-
-            foreach (var chunk in chunks)
+            foreach (var chunk in BracketHelper.SplitEvenly(pool, BracketHelper.BracketSize))
             {
                 string tournamentId = $"T{weekId}_{BracketHelper.BandNames[band]}_{totalBrackets}";
-                int bracketSeed = ScheduleHelper.HashCode($"{tournamentId}_seed");
 
                 var realEntries = new List<BracketEntry>(chunk.Count);
                 for (int idx = 0; idx < chunk.Count; idx++)
@@ -100,49 +98,25 @@ public static class BracketBuilder
                     });
                 }
 
-                var bracketData = new BracketData
+                builtBrackets.Add(new BracketData
                 {
                     TournamentId = tournamentId,
                     WeekStartUtc = weekStartUtc,
                     WeekEndUtc = weekEndUtc,
                     ScoreBand = band,
-                    BracketSeed = bracketSeed,
+                    BracketSeed = ScheduleHelper.HashCode($"{tournamentId}_seed"),
                     RealEntries = realEntries,
                     RealPlayerCount = realEntries.Count,
                     BotsNeeded = BracketHelper.BracketSize - realEntries.Count
-                };
-
-                try
-                {
-                    await api.CloudSaveData.SetCustomItemAsync(
-                        ctx, ctx.ServiceToken, ctx.ProjectId, bracketsEntity,
-                        new SetItemBody(tournamentId, JsonSerializer.Serialize(bracketData)));
-                }
-                catch (Exception ex)
-                {
-                    logger.LogError("Failed to write bracket {TournamentId}: {Error}", tournamentId, ex.Message);
-                    return new BuildResult(false, 0, 0, "Server error writing bracket data.");
-                }
+                });
 
                 foreach (var entry in realEntries)
-                {
-                    try
+                    builtMappings.Add((entry.PlayerId, new PlayerMapping
                     {
-                        await api.CloudSaveData.SetCustomItemAsync(
-                            ctx, ctx.ServiceToken, ctx.ProjectId, playerMapEntity,
-                            new SetItemBody(entry.PlayerId, JsonSerializer.Serialize(new PlayerMapping
-                            {
-                                TournamentId = tournamentId,
-                                EntryId = entry.EntryId,
-                                ScoreBand = band
-                            })));
-                    }
-                    catch (Exception ex)
-                    {
-                        logger.LogError("Failed to map player {PlayerId} → {TournamentId}: {Error}",
-                            entry.PlayerId, tournamentId, ex.Message);
-                    }
-                }
+                        TournamentId = tournamentId,
+                        EntryId = entry.EntryId,
+                        ScoreBand = band
+                    }));
 
                 logger.LogInformation(
                     "Bracket {TournamentId}: {RealCount} real + {BotCount} bots",
@@ -152,7 +126,59 @@ public static class BracketBuilder
             }
         }
 
+        // ── Phase 2: fire all writes in parallel ──
+
+        // Bracket writes: any failure is fatal — we need bracket data to exist before
+        // players can read it, so collect and surface the first error.
+        var bracketTasks = builtBrackets.Select(b => WriteBracketAsync(api, ctx, bracketsEntity, b));
+        var bracketErrors = await Task.WhenAll(bracketTasks);
+        var firstBracketError = bracketErrors.FirstOrDefault(e => e != null);
+        if (firstBracketError != null)
+        {
+            logger.LogError("Bracket write failed: {Error}", firstBracketError);
+            return new BuildResult(false, 0, 0, "Server error writing bracket data.");
+        }
+
+        // Player map writes: best-effort — a missed mapping means that player won't see
+        // their bracket, but it doesn't corrupt other players' data.
+        var mappingTasks = builtMappings.Select(m =>
+            WriteMappingAsync(api, ctx, playerMapEntity, m.playerId, m.mapping, logger));
+        await Task.WhenAll(mappingTasks);
+
         return new BuildResult(true, totalBrackets, registrations.Count);
+    }
+
+    private static async Task<string?> WriteBracketAsync(
+        IGameApiClient api, IExecutionContext ctx, string entity, BracketData bracket)
+    {
+        try
+        {
+            await api.CloudSaveData.SetCustomItemAsync(
+                ctx, ctx.ServiceToken, ctx.ProjectId, entity,
+                new SetItemBody(bracket.TournamentId, JsonSerializer.Serialize(bracket)));
+            return null;
+        }
+        catch (Exception ex)
+        {
+            return ex.Message;
+        }
+    }
+
+    private static async Task WriteMappingAsync(
+        IGameApiClient api, IExecutionContext ctx, string entity,
+        string playerId, PlayerMapping mapping, ILogger logger)
+    {
+        try
+        {
+            await api.CloudSaveData.SetCustomItemAsync(
+                ctx, ctx.ServiceToken, ctx.ProjectId, entity,
+                new SetItemBody(playerId, JsonSerializer.Serialize(mapping)));
+        }
+        catch (Exception ex)
+        {
+            logger.LogError("Failed to map player {PlayerId} → {TournamentId}: {Error}",
+                playerId, mapping.TournamentId, ex.Message);
+        }
     }
 
     internal static async Task WriteLock(IGameApiClient api, IExecutionContext ctx, string lockEntity)
