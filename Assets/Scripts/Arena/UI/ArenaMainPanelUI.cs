@@ -30,7 +30,6 @@ public class ArenaMainPanelUI : MonoBehaviour
     [Header("Action Buttons")]
     [SerializeField] private Button editTeamButton;
     [SerializeField] private Button enterTournamentButton;
-    [SerializeField] private Button viewBracketButton;
 
     [Header("History List")]
     [SerializeField] private Transform historyListRoot;
@@ -78,12 +77,11 @@ public class ArenaMainPanelUI : MonoBehaviour
         if (buyTicketButton)       { buyTicketButton.onClick.RemoveAllListeners();       buyTicketButton.onClick.AddListener(HandleBuyTicket); }
         if (editTeamButton)        { editTeamButton.onClick.RemoveAllListeners();        editTeamButton.onClick.AddListener(HandleEditTeam); }
         if (enterTournamentButton) { enterTournamentButton.onClick.RemoveAllListeners(); enterTournamentButton.onClick.AddListener(HandleEnterTournament); }
-        if (viewBracketButton)     { viewBracketButton.onClick.RemoveAllListeners();     viewBracketButton.onClick.AddListener(HandleViewBracket); }
         if (retryConnectionButton) { retryConnectionButton.onClick.RemoveAllListeners(); retryConnectionButton.onClick.AddListener(HandleRetryConnection); }
         if (leaderboardButton)      { leaderboardButton.onClick.RemoveAllListeners();      leaderboardButton.onClick.AddListener(HandleOpenLeaderboard); }
 
         // ── Week card callbacks ──
-        if (weekCard) weekCard.Bind(HandleEnterTournament, HandleViewTournament);
+        if (weekCard) weekCard.Bind(HandleEnterTournament, HandleViewBracket);
 
         // ── Online check ──
         RefreshOfflineOverlay();
@@ -131,7 +129,6 @@ public class ArenaMainPanelUI : MonoBehaviour
         if (buyTicketButton)       buyTicketButton.onClick.RemoveListener(HandleBuyTicket);
         if (editTeamButton)        editTeamButton.onClick.RemoveListener(HandleEditTeam);
         if (enterTournamentButton) enterTournamentButton.onClick.RemoveListener(HandleEnterTournament);
-        if (viewBracketButton)     viewBracketButton.onClick.RemoveListener(HandleViewBracket);
         if (retryConnectionButton) retryConnectionButton.onClick.RemoveListener(HandleRetryConnection);
         if (leaderboardButton)      leaderboardButton.onClick.RemoveListener(HandleOpenLeaderboard);
     }
@@ -239,13 +236,6 @@ public class ArenaMainPanelUI : MonoBehaviour
             enterTournamentButton.interactable = canEnter;
         }
 
-        // View bracket — shown whenever the player has a bracket assigned.
-        bool hasBracket = status == ArenaPlayerTournamentStatus.Entered
-                       || status == ArenaPlayerTournamentStatus.Active
-                       || status == ArenaPlayerTournamentStatus.Eliminated
-                       || status == ArenaPlayerTournamentStatus.Completed;
-
-        if (viewBracketButton) viewBracketButton.gameObject.SetActive(hasBracket);
     }
 
     // ── History list ──
@@ -381,7 +371,6 @@ public class ArenaMainPanelUI : MonoBehaviour
         if (enterTournamentButton) enterTournamentButton.interactable = interactable;
         if (buyTicketButton) buyTicketButton.interactable = interactable;
         if (editTeamButton) editTeamButton.interactable = interactable;
-        if (viewBracketButton) viewBracketButton.interactable = interactable;
         if (leaderboardButton) leaderboardButton.interactable = interactable;
         if (retryConnectionButton) retryConnectionButton.interactable = interactable;
     }
@@ -418,28 +407,6 @@ public class ArenaMainPanelUI : MonoBehaviour
                 RefreshAll();
             }
         }
-    }
-
-    private void HandleViewTournament()
-    {
-        var arena = SaveManager.GetArenaSaveData();
-        var status = arena?.currentTournamentCache?.playerStatus ?? ArenaPlayerTournamentStatus.NotEntered;
-        if (status == ArenaPlayerTournamentStatus.Registered && ArenaNetworkGuard.IsOnline)
-        {
-            TryOpenTournamentDetailWithSync();
-            return;
-        }
-
-        OpenTournamentDetailPanel();
-    }
-
-    private async void TryOpenTournamentDetailWithSync()
-    {
-        var (synced, message) = await ArenaTournamentService.SyncBracketAsync();
-        if (!synced && !string.IsNullOrEmpty(message))
-            GameEvents.RaiseToast(message);
-
-        OpenTournamentDetailPanel();
     }
 
     private void OpenTournamentDetailPanel()

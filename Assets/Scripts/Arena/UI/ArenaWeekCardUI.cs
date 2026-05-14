@@ -124,7 +124,7 @@ public class ArenaWeekCardUI : MonoBehaviour
             if (registrationDeadlineLabel)
                 registrationDeadlineLabel.text = $"Closes Tuesday {ArenaConstants.RegistrationCloseHourET}:{ArenaConstants.RegistrationCloseMinuteET:D2} ET";
 
-            SetButtonState(enter: true, view: false);
+            SetButtonState(enter: true);
             UpdateEnterButtonInteractable();
         }
         else
@@ -133,7 +133,7 @@ public class ArenaWeekCardUI : MonoBehaviour
             if (registrationDeadlineLabel)
                 registrationDeadlineLabel.text = "Opens next Monday.";
 
-            SetButtonState(enter: false, view: false);
+            SetButtonState(enter: false);
         }
     }
 
@@ -145,7 +145,7 @@ public class ArenaWeekCardUI : MonoBehaviour
         if (registrationDeadlineLabel)
             registrationDeadlineLabel.text = "Brackets assigned on Wednesday.";
 
-        SetButtonState(enter: false, view: false);
+        SetButtonState(enter: false, view: true);
     }
 
     private void ShowRegistered()
@@ -155,7 +155,7 @@ public class ArenaWeekCardUI : MonoBehaviour
         if (statusLabel) statusLabel.text = "Registered";
         if (registrationDeadlineLabel) registrationDeadlineLabel.text = "Waiting for tournament to begin...";
 
-        SetButtonState(enter: false, view: false);
+        SetButtonState(enter: false, view: true);
     }
 
     private void ShowActive(ArenaCurrentTournamentCache cache)
@@ -255,10 +255,10 @@ public class ArenaWeekCardUI : MonoBehaviour
         if (weekRangeLabel) weekRangeLabel.text = "";
     }
 
-    private void SetButtonState(bool enter, bool view)
+    private void SetButtonState(bool enter, bool view = false)
     {
         if (enterButton) enterButton.gameObject.SetActive(enter);
-        if (viewButton)  viewButton.gameObject.SetActive(view);
+        if (viewButton) viewButton.gameObject.SetActive(view);
     }
 
     private string BuildRewardSummary(ArenaSaveData arena, ArenaCurrentTournamentCache cache)

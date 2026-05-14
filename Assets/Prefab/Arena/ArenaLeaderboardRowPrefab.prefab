@@ -150,7 +150,7 @@ GameObject:
   - component: {fileID: 928001784556786262}
   - component: {fileID: 142061162356518033}
   m_Layer: 5
-  m_Name: ArenaLeaderboardRow
+  m_Name: ArenaLeaderboardRowPrefab
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
