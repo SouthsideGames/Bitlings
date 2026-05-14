@@ -76,154 +76,27 @@ public class LockAndAssignBrackets
 
         _logger.LogInformation("Found {Count} registration(s) for {WeekId}.", registrations.Count, weekId);
 
-        if (registrations.Count == 0)
-        {
-            await WriteLock(api, ctx, lockEntity);
-            return new LockResult { Success = true, BracketCount = 0, PlayerCount = 0 };
-        }
+        // ── Build brackets (writes lock first, then brackets) ──
 
-        // ── Group by score band ──
+        var result = await BracketBuilder.BuildAndWriteAsync(api, ctx, weekId, registrations, _logger);
 
-        var pools = new List<List<RegistrationData>> { new(), new(), new(), new() };
-        foreach (var reg in registrations)
-        {
-            int band = System.Math.Clamp(reg.ScoreBand, 0, 3);
-            pools[band].Add(reg);
-        }
-
-        // ── Merge small bands ──
-
-        for (int band = 0; band <= 3; band++)
-        {
-            if (pools[band].Count > 0 && pools[band].Count < BracketHelper.MinRealForMerge)
-            {
-                int target = BracketHelper.FindMergeTarget(pools, band);
-                if (target != -1 && target != band)
-                {
-                    _logger.LogInformation(
-                        "Merging {SrcBand} ({SrcCount}) into {DstBand}",
-                        BracketHelper.BandNames[band], pools[band].Count, BracketHelper.BandNames[target]);
-                    pools[target].AddRange(pools[band]);
-                    pools[band].Clear();
-                }
-            }
-        }
-
-        // ── Create brackets ──
-
-        var bracketsEntity = $"tournament_brackets_{weekId}";
-        var playerMapEntity = $"tournament_player_map_{weekId}";
-        long weekStartUtc = ScheduleHelper.WeekIdToEpoch(weekId);
-        long weekEndUtc = weekStartUtc + 7 * 24 * 60 * 60 - 1;
-        int totalBrackets = 0;
-
-        for (int band = 0; band <= 3; band++)
-        {
-            var pool = pools[band];
-            if (pool.Count == 0) continue;
-
-            // Shuffle deterministically
-            int poolSeed = ScheduleHelper.HashCode($"{weekId}_{band}");
-            new Prng(poolSeed).Shuffle(pool);
-
-            // Split into 32-player bracket chunks
-            for (int i = 0; i < pool.Count; i += BracketHelper.BracketSize)
-            {
-                var chunk = pool.GetRange(i, System.Math.Min(BracketHelper.BracketSize, pool.Count - i));
-                int bracketIndex = totalBrackets;
-                string tournamentId = $"T{weekId}_{BracketHelper.BandNames[band]}_{bracketIndex}";
-                int bracketSeed = ScheduleHelper.HashCode($"{tournamentId}_seed");
-
-                // Build real entry objects
-                var realEntries = new List<BracketEntry>();
-                for (int idx = 0; idx < chunk.Count; idx++)
-                {
-                    var reg = chunk[idx];
-                    realEntries.Add(new BracketEntry
-                    {
-                        EntryId = $"{tournamentId}_E_{idx}",
-                        PlayerId = reg.PlayerId,
-                        DisplayName = reg.DisplayName,
-                        TeamSnapshotJson = reg.TeamSnapshotJson,
-                        ArenaScore = reg.ArenaScore,
-                        IsBot = false
-                    });
-                }
-
-                var bracketData = new BracketData
-                {
-                    TournamentId = tournamentId,
-                    WeekStartUtc = weekStartUtc,
-                    WeekEndUtc = weekEndUtc,
-                    ScoreBand = band,
-                    BracketSeed = bracketSeed,
-                    RealEntries = realEntries,
-                    RealPlayerCount = realEntries.Count,
-                    BotsNeeded = BracketHelper.BracketSize - realEntries.Count
-                };
-
-                // Write bracket data
-                try
-                {
-                    var json = JsonSerializer.Serialize(bracketData);
-                    await api.CloudSaveData.SetCustomItemAsync(
-                        ctx, ctx.ServiceToken, ctx.ProjectId, bracketsEntity,
-                        new SetItemBody(tournamentId, json));
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError("Failed to write bracket {TournamentId}: {Error}", tournamentId, ex.Message);
-                    return Fail("Server error writing bracket data.");
-                }
-
-                // Write player → bracket mapping for each real player
-                foreach (var entry in realEntries)
-                {
-                    try
-                    {
-                        var mapping = new PlayerMapping
-                        {
-                            TournamentId = tournamentId,
-                            EntryId = entry.EntryId,
-                            ScoreBand = band
-                        };
-                        var mapJson = JsonSerializer.Serialize(mapping);
-                        await api.CloudSaveData.SetCustomItemAsync(
-                            ctx, ctx.ServiceToken, ctx.ProjectId, playerMapEntity,
-                            new SetItemBody(entry.PlayerId, mapJson));
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.LogError("Failed to map player {PlayerId} → {TournamentId}: {Error}",
-                            entry.PlayerId, tournamentId, ex.Message);
-                    }
-                }
-
-                totalBrackets++;
-                _logger.LogInformation(
-                    "Bracket {TournamentId}: {RealCount} real + {BotCount} bots",
-                    tournamentId, realEntries.Count, BracketHelper.BracketSize - realEntries.Count);
-            }
-        }
-
-        // ── Mark week as locked ──
-
-        await WriteLock(api, ctx, lockEntity);
+        if (!result.Success)
+            return Fail(result.Error ?? "Server error building brackets.");
 
         _logger.LogInformation(
             "Week {WeekId} locked: {BracketCount} bracket(s), {PlayerCount} player(s).",
-            weekId, totalBrackets, registrations.Count);
+            weekId, result.BracketCount, result.PlayerCount);
 
         return new LockResult
         {
             Success = true,
-            BracketCount = totalBrackets,
-            PlayerCount = registrations.Count
+            BracketCount = result.BracketCount,
+            PlayerCount = result.PlayerCount
         };
     }
 
     // ═══════════════════════════════════════════════════════════
-    //  Internal helpers (also used by GetTournamentBracket lazy lock)
+    //  Internal helpers (also used by GetTournamentBracket and BracketBuilder)
     // ═══════════════════════════════════════════════════════════
 
     internal static async Task<List<RegistrationData>?> ReadRegistrations(
@@ -234,11 +107,20 @@ public class LockAndAssignBrackets
 
         try
         {
+            // NOTE: SDK limitation — GetCustomItemsAsync fetches ALL registrations in one call.
+            // Cloud Save may paginate large result sets; if Results.Count == 1000 some entries
+            // may have been truncated. Monitor registration counts if the game grows large.
             var regResult = await api.CloudSaveData.GetCustomItemsAsync(
                 ctx, ctx.ServiceToken, ctx.ProjectId, regEntity);
 
             if (regResult?.Data?.Results != null)
             {
+                if (regResult.Data.Results.Count >= 1000)
+                {
+                    // Log so we know pagination may be silently truncating results.
+                    // TODO: implement pagination when the Cloud Save SDK supports it.
+                }
+
                 foreach (var item in regResult.Data.Results)
                 {
                     try
@@ -266,16 +148,8 @@ public class LockAndAssignBrackets
         return registrations;
     }
 
-    internal static async Task WriteLock(IGameApiClient api, IExecutionContext ctx, string lockEntity)
-    {
-        try
-        {
-            await api.CloudSaveData.SetCustomItemAsync(
-                ctx, ctx.ServiceToken, ctx.ProjectId, lockEntity,
-                new SetItemBody("status", "done"));
-        }
-        catch { /* best-effort */ }
-    }
+    internal static Task WriteLock(IGameApiClient api, IExecutionContext ctx, string lockEntity)
+        => BracketBuilder.WriteLock(api, ctx, lockEntity);
 
     private static LockResult Fail(string error)
         => new() { Success = false, Error = error };
