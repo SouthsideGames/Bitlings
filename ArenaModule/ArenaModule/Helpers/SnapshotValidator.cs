@@ -15,6 +15,7 @@ using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using Unity.Services.CloudCode.Apis;
 using Unity.Services.CloudCode.Core;
+using Unity.Services.CloudCode.Shared;
 
 namespace ArenaModule.Helpers;
 
@@ -57,18 +58,14 @@ public class SnapshotValidator
                 return "Empty instance ID in team slot.";
         }
 
-        // ── 2. No duplicate monsters ──
+        // ── 2. No duplicate instances ──
 
-        var monsterIds = new HashSet<string>();
         var instanceIds = new HashSet<string>();
 
         foreach (var slot in snapshot.SlotSnapshots)
         {
             if (!instanceIds.Add(slot.InstanceId))
                 return $"Duplicate instance ID: {slot.InstanceId}";
-
-            // Note: same species in different slots IS allowed (different instances)
-            // but same instanceId is not
         }
 
         // ── 3. Owner verification ──
@@ -86,6 +83,8 @@ public class SnapshotValidator
 
         try
         {
+            // NOTE: SDK limitation — GetCustomItemsAsync fetches all items in the entity.
+            // The catalog entity only has 2 keys ("monsters", "titles") so this is fine.
             var catalogResult = await api.CloudSaveData.GetCustomItemsAsync(
                 ctx, ctx.ServiceToken, ctx.ProjectId, CatalogEntity);
 
@@ -119,17 +118,24 @@ public class SnapshotValidator
                 }
             }
         }
-        catch (Exception ex)
+        catch (ApiException ex) when (ex.Response?.StatusCode == System.Net.HttpStatusCode.NotFound)
         {
-            _logger.LogWarning("Could not load catalogs for validation: {Error}. Skipping score checks.", ex.Message);
-            // Catalogs not uploaded yet — skip score validation but allow registration
+            // Catalog entity doesn't exist yet — graceful degradation for initial deployment.
+            _logger.LogWarning("Catalog entity not found in Cloud Save. Score validation skipped.");
             return null;
         }
+        catch (Exception ex)
+        {
+            // Any other error (network, serialization, etc.) — reject registration rather
+            // than silently allowing unvalidated scores through.
+            _logger.LogError("Failed to load catalogs for validation: {Error}", ex.Message);
+            return "Server error loading catalogs. Please try again.";
+        }
 
-        // If catalogs not present, skip score validation (graceful degradation)
+        // If catalog entity exists but keys are missing, skip score validation with a warning.
         if (monsterLookup == null || titleLookup == null)
         {
-            _logger.LogWarning("Catalogs not found in Cloud Save. Score validation skipped.");
+            _logger.LogWarning("Catalog keys missing from Cloud Save entity. Score validation skipped.");
             return null;
         }
 

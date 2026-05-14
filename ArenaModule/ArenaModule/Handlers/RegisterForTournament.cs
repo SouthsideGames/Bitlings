@@ -29,7 +29,7 @@ public class RegisterForTournament
         IGameApiClient api,
         string teamSnapshotJson,
         double arenaScore,
-        int scoreBand,
+        int scoreBand,       // accepted for API compat but overridden server-side below
         string displayName,
         string weekId,
         string[]? ownedInstanceIds = null)
@@ -41,9 +41,6 @@ public class RegisterForTournament
 
         if (arenaScore < 0)
             return Fail("Invalid arena score.");
-
-        if (scoreBand < 0 || scoreBand > 3)
-            return Fail("Invalid score band.");
 
         if (string.IsNullOrWhiteSpace(displayName))
             return Fail("Display name is required.");
@@ -102,6 +99,12 @@ public class RegisterForTournament
             }
         }
 
+        // ── Compute score band server-side (ignores client-supplied scoreBand) ──
+        // This prevents players from registering with a valid high score but a
+        // fake low band to get easier matchups.
+
+        int serverScoreBand = BracketHelper.ScoreToBand((int)arenaScore);
+
         // ── Store registration ──
 
         var regEntity = $"tournament_reg_{weekId}";
@@ -112,7 +115,7 @@ public class RegisterForTournament
             DisplayName = displayName.Trim(),
             TeamSnapshotJson = teamSnapshotJson,
             ArenaScore = arenaScore,
-            ScoreBand = scoreBand,
+            ScoreBand = serverScoreBand,
             RegisteredUtc = DateTimeOffset.UtcNow.ToUnixTimeSeconds()
         };
 
@@ -125,7 +128,7 @@ public class RegisterForTournament
 
             _logger.LogInformation(
                 "Player {PlayerId} registered for {WeekId} (band={Band}, score={Score})",
-                ctx.PlayerId, weekId, scoreBand, arenaScore);
+                ctx.PlayerId, weekId, serverScoreBand, arenaScore);
         }
         catch (Exception ex)
         {
