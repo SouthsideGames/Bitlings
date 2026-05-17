@@ -1105,8 +1105,14 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::ArenaBracketMatchRowUI
   leftNameLabel: {fileID: 4590109317125324203}
   leftResultBadge: {fileID: 2820599977387506510}
+  leftSlot1Icon: {fileID: 5086022413993367434}
+  leftSlot2Icon: {fileID: 2778818700763932540}
+  leftSlot3Icon: {fileID: 8591332840912841145}
   rightNameLabel: {fileID: 867483502016713028}
   rightResultBadge: {fileID: 4175056393863116191}
+  rightSlot1Icon: {fileID: 4698874918224794430}
+  rightSlot2Icon: {fileID: 5301607703729266972}
+  rightSlot3Icon: {fileID: 2359127120827314458}
   vsLabel: {fileID: 6935486541726044284}
   rowButton: {fileID: 6591862979267513820}
 --- !u!1 &8843870665305723331
