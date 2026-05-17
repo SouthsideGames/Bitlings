@@ -94,15 +94,16 @@ public class ArenaBracketPanelUI : MonoBehaviour
         var record = ArenaTournamentService.GetActiveRecord();
         var cache = SaveManager.GetArenaSaveData()?.currentTournamentCache;
         string playerEntryId = cache?.playerEntryId ?? "";
+        int currentRoundIndex = cache?.currentRoundIndex ?? 0;
 
-        Populate(record, playerEntryId);
+        Populate(record, playerEntryId, currentRoundIndex);
     }
 
     // ═════════════════════════════════════════════════════════════════
     //  Population
     // ═════════════════════════════════════════════════════════════════
 
-    private void Populate(ArenaTournamentRecord record, string playerEntryId)
+    private void Populate(ArenaTournamentRecord record, string playerEntryId, int currentRoundIndex)
     {
         if (titleLabel) titleLabel.text = "Tournament Bracket";
 
@@ -126,10 +127,12 @@ public class ArenaBracketPanelUI : MonoBehaviour
         }
 
         // Configure round tabs.
+        // A round is interactable only if it has started (r <= currentRoundIndex) and has matches.
         for (int r = 0; r < roundTabButtons.Length && r < ArenaConstants.TotalRounds; r++)
         {
+            bool hasStarted = r <= currentRoundIndex;
             bool hasMatches = matchesByRound[r].Count > 0;
-            if (roundTabButtons[r]) roundTabButtons[r].interactable = hasMatches;
+            if (roundTabButtons[r]) roundTabButtons[r].interactable = hasStarted && hasMatches;
             if (r < roundTabLabels.Length && roundTabLabels[r])
                 roundTabLabels[r].text = r < RoundTabNames.Length ? RoundTabNames[r] : $"Round {r + 1}";
         }
@@ -237,8 +240,9 @@ public class ArenaBracketPanelUI : MonoBehaviour
         var record = ArenaTournamentService.GetActiveRecord();
         var cache = SaveManager.GetArenaSaveData()?.currentTournamentCache;
         string playerEntryId = cache?.playerEntryId ?? "";
+        int currentRoundIndex = cache?.currentRoundIndex ?? 0;
 
-        Populate(record, playerEntryId);
+        Populate(record, playerEntryId, currentRoundIndex);
     }
 
     // ═════════════════════════════════════════════════════════════════
