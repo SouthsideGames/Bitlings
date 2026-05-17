@@ -16,10 +16,16 @@ public class ArenaBracketMatchRowUI : MonoBehaviour
     [Header("Left Side")]
     [SerializeField] private TextMeshProUGUI leftNameLabel;
     [SerializeField] private Image leftResultBadge;
+    [SerializeField] private Image leftSlot1Icon;
+    [SerializeField] private Image leftSlot2Icon;
+    [SerializeField] private Image leftSlot3Icon;
 
     [Header("Right Side")]
     [SerializeField] private TextMeshProUGUI rightNameLabel;
     [SerializeField] private Image rightResultBadge;
+    [SerializeField] private Image rightSlot1Icon;
+    [SerializeField] private Image rightSlot2Icon;
+    [SerializeField] private Image rightSlot3Icon;
 
     [Header("Centre")]
     [SerializeField] private TextMeshProUGUI vsLabel;
@@ -70,6 +76,12 @@ public class ArenaBracketMatchRowUI : MonoBehaviour
             rightNameLabel.color = playerIsRight ? PlayerHighlight : Color.white;
             rightNameLabel.fontStyle = playerIsRight ? FontStyles.Bold : FontStyles.Normal;
         }
+
+        // Team icons
+        var leftEntry  = FindEntry(record, match.leftEntryId);
+        var rightEntry = FindEntry(record, match.rightEntryId);
+        FillTeamIcons(leftEntry?.teamSnapshot,  leftSlot1Icon,  leftSlot2Icon,  leftSlot3Icon);
+        FillTeamIcons(rightEntry?.teamSnapshot, rightSlot1Icon, rightSlot2Icon, rightSlot3Icon);
 
         // Centre label
         if (vsLabel) vsLabel.text = "vs";
@@ -163,5 +175,31 @@ public class ArenaBracketMatchRowUI : MonoBehaviour
                 return record.entries[i];
         }
         return null;
+    }
+
+    private static void FillTeamIcons(ArenaTeamSnapshot snapshot, Image slot1, Image slot2, Image slot3)
+    {
+        var icons = new[] { slot1, slot2, slot3 };
+        for (int i = 0; i < icons.Length; i++)
+        {
+            if (icons[i] == null) continue;
+
+            var bitling = snapshot?.slotSnapshots != null && i < snapshot.slotSnapshots.Count
+                ? snapshot.slotSnapshots[i]
+                : null;
+
+            if (bitling != null && !string.IsNullOrEmpty(bitling.monsterId))
+            {
+                var def = MonsterLibraryLocator.GetById(bitling.monsterId);
+                if (def != null)
+                {
+                    icons[i].sprite = MonsterNameFormatter.GetIcon(def, isPremium: false, backIcon: false);
+                    icons[i].enabled = true;
+                    continue;
+                }
+            }
+
+            icons[i].enabled = false;
+        }
     }
 }
