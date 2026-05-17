@@ -464,6 +464,7 @@ public class ArenaMainPanelUI : MonoBehaviour
         {
             ArenaTournamentService.TryBackfillMissingHistoryFromActiveRecord();
             ArenaRewardService.TryReconcileHistoryRewards();
+            ArenaLoadoutManager.TryRepairStaleTeamLock();
         }
         finally
         {

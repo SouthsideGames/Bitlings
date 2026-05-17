@@ -229,6 +229,24 @@ public static class ArenaLoadoutManager
         SaveManager.Save();
     }
 
+    /// <summary>
+    /// Called on arena open to fix any players whose team is locked but who are no longer
+    /// in an active tournament (e.g. updated from an older build that lacked unlock-on-eliminate).
+    /// </summary>
+    public static void TryRepairStaleTeamLock()
+    {
+        var arena = SaveManager.GetArenaSaveData();
+        if (arena?.battleTeamData == null || !arena.battleTeamData.isLocked) return;
+
+        var status = arena.currentTournamentCache?.playerStatus ?? ArenaPlayerTournamentStatus.NotEntered;
+        bool activeInTournament = status == ArenaPlayerTournamentStatus.Registered
+                               || status == ArenaPlayerTournamentStatus.Entered
+                               || status == ArenaPlayerTournamentStatus.Active;
+
+        if (!activeInTournament)
+            UnlockTeam();
+    }
+
     // ─────────────────────────────────────────────
     // Internal helpers
     // ─────────────────────────────────────────────

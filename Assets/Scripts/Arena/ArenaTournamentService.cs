@@ -520,6 +520,7 @@ public static class ArenaTournamentService
             if (playerEntry != null && playerEntry.eliminatedRoundIndex == roundIndex)
             {
                 cache.playerStatus = ArenaPlayerTournamentStatus.Eliminated;
+                ArenaLoadoutManager.UnlockTeam();
                 Debug.Log($"{TAG} Player eliminated in round {roundIndex}.");
             }
             else if (cache.playerStatus == ArenaPlayerTournamentStatus.Entered)
