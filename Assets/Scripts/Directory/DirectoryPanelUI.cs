@@ -853,8 +853,9 @@ public class DirectoryPanelUI : MonoBehaviour
             if (!string.IsNullOrEmpty(uid)) idleUids.Add(uid);
 
         var arenaUids = new HashSet<string>(StringComparer.Ordinal);
-        foreach (var uid in ArenaLoadoutManager.GetArenaTeamOwnedUids())
-            if (!string.IsNullOrEmpty(uid)) arenaUids.Add(uid);
+        if (ArenaTeamValidator.IsBattleTeamLocked())
+            foreach (var uid in ArenaLoadoutManager.GetArenaTeamOwnedUids())
+                if (!string.IsNullOrEmpty(uid)) arenaUids.Add(uid);
 
         var spawnedItems = new List<OwnedMonsterListItemUI>();
 
