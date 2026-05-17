@@ -247,7 +247,9 @@ public class ArenaBracketPanelUI : MonoBehaviour
 
     private void HandleClose()
     {
-        if (UIManager.I) UIManager.I.Hide(PanelId.ArenaBracket);
+        if (!UIManager.I) return;
+        UIManager.I.Hide(PanelId.ArenaBracket);
+        UIManager.I.Show(PanelId.ArenaMain);
     }
 
     private void HighlightSelectedTab(int selected)
@@ -255,9 +257,7 @@ public class ArenaBracketPanelUI : MonoBehaviour
         for (int i = 0; i < roundTabButtons.Length; i++)
         {
             if (roundTabButtons[i] == null) continue;
-            // Use interactable state to distinguish selected tab: selected tab is non-interactable
-            // only when it has matches (toggled off to show it's active).
-            // A simpler visual approach is to tint: selected = white, others = grey.
+
             var colors = roundTabButtons[i].colors;
             bool isSelected = i == selected;
             colors.normalColor      = isSelected ? Color.white    : new Color(0.7f, 0.7f, 0.7f);

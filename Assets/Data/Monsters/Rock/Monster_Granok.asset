@@ -16,10 +16,10 @@ MonoBehaviour:
   displayName: Granok
   type: 12
   typeIcon: {fileID: 21300000, guid: 5c631c9f2f98b441caa0de9f7de0cfcd, type: 3}
-  icon: {fileID: 21300000, guid: 965c787a3d76739419a742d722592206, type: 3}
-  backIcon: {fileID: 21300000, guid: 4ef0ec67af12df341bbba8f0434a37e2, type: 3}
-  premiumIcon: {fileID: 21300000, guid: a6f473f7e44533b428f530307f891db9, type: 3}
-  premiumBackIcon: {fileID: 21300000, guid: 308177abdabae3749a32447c82368c95, type: 3}
+  icon: {fileID: 21300000, guid: 2f2f461510b7a654ca6501e7a35c160d, type: 3}
+  backIcon: {fileID: 21300000, guid: 67f5c70f5974e0240950a6d8cd624f33, type: 3}
+  premiumIcon: {fileID: 21300000, guid: b27d1fa7c7625c544b2094eae22f5eca, type: 3}
+  premiumBackIcon: {fileID: 21300000, guid: c25d6da11e9827d4cbd1d62a127284f3, type: 3}
   rarity: 1
   canBeStarter: 1
   starterWeight: 7
