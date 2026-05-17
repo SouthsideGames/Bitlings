@@ -99,15 +99,18 @@ public class ArenaBracketMatchRowUI : MonoBehaviour
             SetBadge(rightResultBadge, TbdColor);
         }
 
-        // Button — only active when the player was in this match and it's resolved
+        // Button — active for any resolved match so all battles can be inspected
         if (rowButton)
         {
-            rowButton.interactable = playerInvolved && resolved;
+            rowButton.interactable = resolved;
             rowButton.onClick.RemoveAllListeners();
 
-            if (playerInvolved && resolved && onClicked != null)
+            if (resolved && onClicked != null)
             {
-                var histEntry = BuildHistoryEntry(match, record, playerEntryId, playerIsLeft);
+                // For matches the player isn't in, treat left side as the "player" perspective.
+                bool viewerIsLeft = playerInvolved ? playerIsLeft : true;
+                string viewerEntryId = playerInvolved ? playerEntryId : match.leftEntryId;
+                var histEntry = BuildHistoryEntry(match, record, viewerEntryId, viewerIsLeft);
                 rowButton.onClick.AddListener(() => onClicked(histEntry));
             }
         }
