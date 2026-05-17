@@ -1,6 +1,6 @@
 // Assets/Scripts/Arena/ArenaTournamentService.cs
 // BRN Arena v1 — Runtime orchestration service that ties together tournament
-// creation, entry, round resolution, rewards, and record persistence.
+// creation, entry, round resolution, rewards, and record persisteAnce.
 
 using System;
 using System.Collections.Generic;
