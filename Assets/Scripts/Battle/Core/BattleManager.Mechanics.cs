@@ -72,8 +72,7 @@ public partial class BattleManager : MonoBehaviour
         if (activeIndex < 0 || activeIndex >= pendingGuardShield.Length) return;
 
         float gain = pendingGuardShield[activeIndex];
-        if (gain <= 0.01f) return; // TODO: confirm this 0.01f is intentional
-
+        if (gain <= 0.01f) return;
         shieldHP[activeIndex] += gain;
         pendingGuardShield[activeIndex] = 0f;
 

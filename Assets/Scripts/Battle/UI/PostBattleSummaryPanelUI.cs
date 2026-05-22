@@ -247,8 +247,7 @@ public class PostBattleSummaryPanelUI : MonoBehaviour
 
         from = Mathf.Max(0, from);
         to = Mathf.Max(0, to);
-        duration = Mathf.Max(0.01f, duration); // TODO: confirm this 0.01f is intentional
-
+        duration = Mathf.Max(0.01f, duration);
         // Ensure active before we animate.
         label.gameObject.SetActive(true);
 

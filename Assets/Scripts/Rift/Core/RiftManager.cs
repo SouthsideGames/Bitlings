@@ -53,9 +53,17 @@ public partial class RiftManager : MonoBehaviour
 
     /// <summary>
     /// UI-only helper for previewing how many bonus levels a boss rift receives.
-    /// Mirrors the runtime application (see StartRift -> wildLevel adjustment).
+    /// Mirrors the runtime application (see CalculateWildLevel): at least bossLevelBonus,
+    /// or 5% of the current team level — whichever is larger.
     /// </summary>
-    public int BossLevelBonusPreview => Mathf.Max(0, bossLevelBonus);
+    public int BossLevelBonusPreview
+    {
+        get
+        {
+            int teamLevel = CalculateAverageTeamLevel();
+            return Mathf.Max(bossLevelBonus, Mathf.RoundToInt(teamLevel * 0.05f));
+        }
+    }
 
     public int BossLevelBonusPreviewValue() => BossLevelBonusPreview;
 

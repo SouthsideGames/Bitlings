@@ -111,9 +111,6 @@ public class BattleSpeedToggleUI : MonoBehaviour
 
         float s = battleManager.BattleSpeed;
 
-        if (Mathf.Abs(s - 1f) < 0.01f) speedLabel.text = "1x"; // TODO: confirm this 0.01f is intentional
-        else if (Mathf.Abs(s - 2f) < 0.01f) speedLabel.text = "2x"; // TODO: confirm this 0.01f is intentional
-        else if (Mathf.Abs(s - 3f) < 0.01f) speedLabel.text = "3x"; // TODO: confirm this 0.01f is intentional
-        else speedLabel.text = $"{s:0.##}x";
+        if (Mathf.Abs(s - 1f) < 0.01f) speedLabel.text = "1x";        else if (Mathf.Abs(s - 2f) < 0.01f) speedLabel.text = "2x";        else if (Mathf.Abs(s - 3f) < 0.01f) speedLabel.text = "3x";        else speedLabel.text = $"{s:0.##}x";
     }
 }

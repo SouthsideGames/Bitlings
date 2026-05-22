@@ -24,6 +24,9 @@ public static class ResourceBank
         ResourceType.EfficiencyVoucher
     };
 
+    // Fired when a resource hits its cap during an Add() call. UI can subscribe to show a toast.
+    public static event Action<ResourceType> OnResourceCapped;
+
     // ─────────────────────────────────────────────────────────────
     // Batching system (from your original)
     // ─────────────────────────────────────────────────────────────
@@ -170,11 +173,13 @@ public static class ResourceBank
         if (next > int.MaxValue) next = int.MaxValue;
 
         bool changedCredits = false;
+        bool hitEnergyCap = false;
         if (t == ResourceType.Energy && next > EnergyHardCap)
         {
             int overflow = (int)(next - EnergyHardCap);
             next = EnergyHardCap;
             changedCredits = TryAddCreditsRaw(overflow);
+            hitEnergyCap = (L[i] < EnergyHardCap); // only notify if we just reached the cap
         }
 
         int newVal = (int)next;
@@ -185,6 +190,7 @@ public static class ResourceBank
         }
         L[i] = newVal;
 
+        if (hitEnergyCap) OnResourceCapped?.Invoke(ResourceType.Energy);
         EmitChanged();
     }
 
@@ -224,12 +230,14 @@ public static class ResourceBank
         // Per-resource clamp
         long next = (long)cur + delta;
         if (next < 0) next = 0;
+        bool hitCap = next > BoosterCapPerType && cur < BoosterCapPerType;
         if (next > BoosterCapPerType) next = BoosterCapPerType;
 
         int newVal = (int)next;
         if (newVal == cur) return;
 
         L[i] = newVal;
+        if (hitCap) OnResourceCapped?.Invoke(t);
         EmitChanged();
     }
 

@@ -90,12 +90,10 @@ public partial class BattleManager : MonoBehaviour
         float curMax = GetActiveMaxHP_NoConditionals(teamMaxHP[idx], idx);
 
         float curHp = (teamHP != null && idx >= 0 && idx < teamHP.Length) ? teamHP[idx] : curMax;
-        float hp01 = curMax > 0.01f ? Mathf.Clamp01(curHp / curMax) : 0f; // TODO: confirm this 0.01f is intentional
-
+        float hp01 = curMax > 0.01f ? Mathf.Clamp01(curHp / curMax) : 0f;
         int alliesAlive = 0;
         for (int i = 0; i < teamCount; i++)
-            if (i != idx && teamHP != null && i < teamHP.Length && teamHP[i] > 0.01f) alliesAlive++; // TODO: confirm this 0.01f is intentional
-
+            if (i != idx && teamHP != null && i < teamHP.Length && teamHP[i] > 0.01f) alliesAlive++;
         int winStreak = (RiftManager.I != null) ? RiftManager.I.CurrentWinStreak : 0;
 
         TitleContext ctx = TitleContext.Empty;
@@ -156,8 +154,7 @@ public partial class BattleManager : MonoBehaviour
     {
         int alive = 0;
         for (int i = 0; i < teamCount; i++)
-            if (i != activeIndex && teamHP[i] > 0.01f) alive++; // TODO: confirm this 0.01f is intentional
-        return alive;
+            if (i != activeIndex && teamHP[i] > 0.01f) alive++;        return alive;
     }
 
     private int GetWinStreakSafe()
@@ -320,8 +317,7 @@ public partial class BattleManager : MonoBehaviour
     private TitleContext BuildTitleContextForActive()
     {
         float curMax = GetFinalMaxHPForIndex(activeIndex);
-        float hpPct = curMax > 0.01f ? Mathf.Clamp01(teamHP[activeIndex] / curMax) : 0f; // TODO: confirm this 0.01f is intentional
-        int alliesAlive = GetAlliesAliveNotIncludingActive();
+        float hpPct = curMax > 0.01f ? Mathf.Clamp01(teamHP[activeIndex] / curMax) : 0f;        int alliesAlive = GetAlliesAliveNotIncludingActive();
         int streak = GetWinStreakSafe();
 
         var ctx = new TitleContext
@@ -338,8 +334,7 @@ public partial class BattleManager : MonoBehaviour
     internal TitleContext BuildTitleContextForWild()
     {
         float max = Mathf.Max(1f, wildMaxHP);
-        float hp01 = max > 0.01f ? Mathf.Clamp01(wildHP / max) : 0f; // TODO: confirm this 0.01f is intentional
-
+        float hp01 = max > 0.01f ? Mathf.Clamp01(wildHP / max) : 0f;
         return new TitleContext
         {
             selfHp01 = hp01,
@@ -369,8 +364,7 @@ public partial class BattleManager : MonoBehaviour
 
         // Fallback: legacy title evaluation (HP/ATK only). Kept for safety when _stats is unavailable.
         float prevMax = Mathf.Max(1f, wildMaxHP);
-        float hp01 = prevMax > 0.01f ? Mathf.Clamp01(wildHP / prevMax) : 0f; // TODO: confirm this 0.01f is intentional
-
+        float hp01 = prevMax > 0.01f ? Mathf.Clamp01(wildHP / prevMax) : 0f;
         var wCtx = BuildTitleContextForWild();
 
         float wMaxF = TitlesAdapter.GetStatValue(_wildCombatIdForTitles, wildDef, wildLevel, "HP", wCtx, wildBaseMaxHP);

@@ -586,8 +586,7 @@ public partial class BattleManager : MonoBehaviour
         for (int i = 0; i < teamCount; i++)
         {
             if (i == idx) continue;
-            if (teamHP != null && i >= 0 && i < teamHP.Length && teamHP[i] > 0.01f) // TODO: confirm this 0.01f is intentional
-                alliesAlive++;
+            if (teamHP != null && i >= 0 && i < teamHP.Length && teamHP[i] > 0.01f)                alliesAlive++;
         }
 
         int streak = GetWinStreakSafe();
@@ -617,8 +616,7 @@ public partial class BattleManager : MonoBehaviour
         for (int i = 0; i < teamCount; i++)
         {
             if (i == idx) continue;
-            if (teamHP != null && i >= 0 && i < teamHP.Length && teamHP[i] > 0.01f) // TODO: confirm this 0.01f is intentional
-                alliesAlive++;
+            if (teamHP != null && i >= 0 && i < teamHP.Length && teamHP[i] > 0.01f)                alliesAlive++;
         }
 
         int streak = GetWinStreakSafe();
@@ -640,8 +638,7 @@ public partial class BattleManager : MonoBehaviour
     public TitleContext BuildTitleContextForWildUsingMaxSafe(float maxHpForContext)
     {
         float curMax = Mathf.Max(1f, maxHpForContext);
-        float hpPct = curMax > 0.01f ? Mathf.Clamp01(wildHP / curMax) : 0f; // TODO: confirm this 0.01f is intentional
-
+        float hpPct = curMax > 0.01f ? Mathf.Clamp01(wildHP / curMax) : 0f;
         return new TitleContext
         {
             selfHp01 = hpPct,
@@ -659,8 +656,7 @@ public partial class BattleManager : MonoBehaviour
     public float GetWildHp01UsingMaxSafe(float maxHpForContext)
     {
         float curMax = Mathf.Max(1f, maxHpForContext);
-        return curMax > 0.01f ? Mathf.Clamp01(wildHP / curMax) : 0f; // TODO: confirm this 0.01f is intentional
-    }
+        return curMax > 0.01f ? Mathf.Clamp01(wildHP / curMax) : 0f;    }
 
 
     void Start()
@@ -1132,14 +1128,12 @@ public partial class BattleManager : MonoBehaviour
 
     private IEnumerator MaybeSayKO_Player(string victimName, float preHP, float postHP)
     {
-        if (preHP > 0.01f && postHP <= 0.01f) // TODO: confirm this 0.01f is intentional
-            yield return SayKO(victimName);
+        if (preHP > 0.01f && postHP <= 0.01f)            yield return SayKO(victimName);
     }
 
     private IEnumerator MaybeSayKO_Wild(string victimName, float preHP, float postHP)
     {
-        if (preHP > 0.01f && postHP <= 0.01f) // TODO: confirm this 0.01f is intentional
-            yield return SayKO(victimName);
+        if (preHP > 0.01f && postHP <= 0.01f)            yield return SayKO(victimName);
     }
 
     private void CaptureUiBaselines_NoTitles()
@@ -1510,8 +1504,7 @@ public partial class BattleManager : MonoBehaviour
 
             if (jobCtx[i].maxHpBonusPct > 0f)
             {
-                float pct = (teamMaxHP[i] > 0.01f) ? (teamHP[i] / teamMaxHP[i]) : 1f; // TODO: confirm this 0.01f is intentional
-                teamMaxHP[i] *= 1f + jobCtx[i].maxHpBonusPct;
+                float pct = (teamMaxHP[i] > 0.01f) ? (teamHP[i] / teamMaxHP[i]) : 1f;                teamMaxHP[i] *= 1f + jobCtx[i].maxHpBonusPct;
                 teamHP[i] = Mathf.Clamp(teamMaxHP[i] * pct, 0f, teamMaxHP[i]);
             }
 
@@ -1728,12 +1721,10 @@ public partial class BattleManager : MonoBehaviour
         return false;
     }
 
-    private bool IsWildKO() => wildHP <= 0.01f; // TODO: confirm this 0.01f is intentional
-
+    private bool IsWildKO() => wildHP <= 0.01f;
     private bool IsTeamKO()
     {
-        for (int i = 0; i < teamCount; i++) if (teamHP[i] > 0.01f) return false; // TODO: confirm this 0.01f is intentional
-        return true;
+        for (int i = 0; i < teamCount; i++) if (teamHP[i] > 0.01f) return false;        return true;
     }
 
     private string GetName(int idx)
@@ -1775,12 +1766,9 @@ public partial class BattleManager : MonoBehaviour
 
         {
             float newMax = Mathf.Max(1f, _stats.GetEffectiveWild().maxHP);
-            float oldMax = (_wildEffMaxHpCache > 0.01f) ? _wildEffMaxHpCache : Mathf.Max(1f, wildMaxHP); // TODO: confirm this 0.01f is intentional
-
-            if (force || Mathf.Abs(newMax - oldMax) > 0.01f) // TODO: confirm this 0.01f is intentional
-            {
-                float hp01 = oldMax > 0.01f ? Mathf.Clamp01(wildHP / oldMax) : 1f; // TODO: confirm this 0.01f is intentional
-                wildMaxHP = newMax;
+            float oldMax = (_wildEffMaxHpCache > 0.01f) ? _wildEffMaxHpCache : Mathf.Max(1f, wildMaxHP);
+            if (force || Mathf.Abs(newMax - oldMax) > 0.01f)            {
+                float hp01 = oldMax > 0.01f ? Mathf.Clamp01(wildHP / oldMax) : 1f;                wildMaxHP = newMax;
                 wildHP = Mathf.Clamp(newMax * hp01, 0f, newMax);
                 _wildEffMaxHpCache = newMax;
             }
@@ -1796,13 +1784,10 @@ public partial class BattleManager : MonoBehaviour
             float newMax = Mathf.Max(1f, _stats.GetEffectivePlayer(i).maxHP);
 
             float oldMax = _effMaxHpCache[i];
-            if (oldMax <= 0.01f) // TODO: confirm this 0.01f is intentional
-                oldMax = Mathf.Max(1f, (teamMaxHP != null && i < teamMaxHP.Length) ? teamMaxHP[i] : 1f);
+            if (oldMax <= 0.01f)                oldMax = Mathf.Max(1f, (teamMaxHP != null && i < teamMaxHP.Length) ? teamMaxHP[i] : 1f);
 
-            if (force || Mathf.Abs(newMax - oldMax) > 0.01f) // TODO: confirm this 0.01f is intentional
-            {
-                float hp01 = oldMax > 0.01f ? Mathf.Clamp01(teamHP[i] / oldMax) : 1f; // TODO: confirm this 0.01f is intentional
-                teamHP[i] = Mathf.Clamp(newMax * hp01, 0f, newMax);
+            if (force || Mathf.Abs(newMax - oldMax) > 0.01f)            {
+                float hp01 = oldMax > 0.01f ? Mathf.Clamp01(teamHP[i] / oldMax) : 1f;                teamHP[i] = Mathf.Clamp(newMax * hp01, 0f, newMax);
                 _effMaxHpCache[i] = newMax;
             }
         }
