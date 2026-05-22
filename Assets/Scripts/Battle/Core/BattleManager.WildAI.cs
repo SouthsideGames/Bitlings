@@ -83,8 +83,7 @@ public partial class BattleManager : MonoBehaviour
 
     private EnemyAction ChooseEnemyAction()
     {
-        if (!wildDef || wildMaxHP <= 0.01f) // TODO: confirm this 0.01f is intentional
-            return EnemyAction.Attack;
+        if (!wildDef || wildMaxHP <= 0.01f)            return EnemyAction.Attack;
 
         if (IsWildFrozen())
             return EnemyAction.None;
@@ -186,8 +185,7 @@ public partial class BattleManager : MonoBehaviour
             return PlayerAction.Attack;
 
         float maxHp = GetFinalMaxHPForIndex(activeIndex);
-        float hpRatio = (maxHp > 0.01f && teamHP != null && activeIndex >= 0 && activeIndex < teamHP.Length) // TODO: confirm this 0.01f is intentional
-            ? Mathf.Clamp01(teamHP[activeIndex] / maxHp)
+        float hpRatio = (maxHp > 0.01f && teamHP != null && activeIndex >= 0 && activeIndex < teamHP.Length)            ? Mathf.Clamp01(teamHP[activeIndex] / maxHp)
             : 1f;
 
         float typeMatchupMult = wildDef != null
@@ -226,8 +224,7 @@ public partial class BattleManager : MonoBehaviour
 
     private float ComputeEnemyRunChance()
     {
-        if (!wildDef || wildMaxHP <= 0.01f) // TODO: confirm this 0.01f is intentional
-            return 0f;
+        if (!wildDef || wildMaxHP <= 0.01f)            return 0f;
 
         float hpLost01 = 1f - Mathf.Clamp01(wildHP / wildMaxHP);
         float baseChance = 0.05f;
@@ -249,8 +246,7 @@ public partial class BattleManager : MonoBehaviour
 
     private void ApplyPendingGuardShieldForWild()
     {
-        if (wildPendingGuardShield <= 0.01f) return; // TODO: confirm this 0.01f is intentional
-
+        if (wildPendingGuardShield <= 0.01f) return;
         string name = GetWildDisplayName("Foe");
         float gain = wildPendingGuardShield;
         wildShieldHP += gain;

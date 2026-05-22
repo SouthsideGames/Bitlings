@@ -38,9 +38,29 @@ public sealed class ExecutiveTrialManager : MonoBehaviour, ExecutiveTrailBattleB
     [Tooltip("Grace period (seconds) before applying background forfeit. Gives players a moment to alt-tab without ending the run.")]
     [SerializeField] private float backgroundForfeitGraceSeconds = 0.5f;
 
-    // FIXED: hireSuccessChance was a dead knob (always 1.0). Locked to always-succeed
-    // until the hire-failure UX (probability display + failure animation) is implemented.
-    private const float HIRE_SUCCESS_CHANCE = 1f;
+    // Hire success is rarity-gated: rarer monsters are harder to recruit.
+    // The hireDenyPrefab animation is shown to the player on failure.
+    private static float GetHireChanceForRarity(MonsterRarity rarity)
+    {
+        return rarity switch
+        {
+            MonsterRarity.Common    => 1.00f,
+            MonsterRarity.Uncommon  => 0.90f,
+            MonsterRarity.Rare      => 0.80f,
+            MonsterRarity.Epic      => 0.70f,
+            MonsterRarity.Legendary => 0.55f,
+            MonsterRarity.Mythic    => 0.40f,
+            MonsterRarity.Boss      => 0.30f,
+            _                       => 0.85f,
+        };
+    }
+
+    public float GetHireSuccessChance(ExecutiveTrailMonster offer)
+    {
+        if (offer == null || offer.def == null) return 0f;
+        if (offer.def.uncatchable) return 0f;
+        return GetHireChanceForRarity(offer.def.rarity);
+    }
 
     [Header("Seed (runtime-only)")]
     [Tooltip("If true, uses the inspector seed value for deterministic debug runs. Keep off for normal random Iron runs.")]
@@ -774,7 +794,7 @@ public sealed class ExecutiveTrialManager : MonoBehaviour, ExecutiveTrailBattleB
         if (offer == null || offer.def == null) return false;
         if (offer.def.uncatchable) return false;
 
-        float chance = Mathf.Clamp01(HIRE_SUCCESS_CHANCE);
+        float chance = Mathf.Clamp01(GetHireChanceForRarity(offer.def.rarity));
         if (_rng == null) return chance >= 1f;
         return _rng.Chance(chance);
     }

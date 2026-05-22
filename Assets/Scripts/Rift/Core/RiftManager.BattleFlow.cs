@@ -119,7 +119,12 @@ public partial class RiftManager
     {
         int wildLevel = Mathf.Clamp(CalculateAverageTeamLevel() + UnityEngine.Random.Range(-1, 2), 1, 99);
         if (isBoss)
-            wildLevel = Mathf.Max(1, wildLevel + bossLevelBonus);
+        {
+            // Scale boss bonus with team level so high-level bosses remain threatening.
+            // Minimum of bossLevelBonus (inspector) or 5% of current wild level, whichever is greater.
+            int scaledBonus = Mathf.Max(bossLevelBonus, Mathf.RoundToInt(wildLevel * 0.05f));
+            wildLevel = Mathf.Max(1, wildLevel + scaledBonus);
+        }
 
         int difficultyMode = GetDifficultyMode();
         if (difficultyMode == 1) wildLevel += 2;

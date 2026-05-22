@@ -157,12 +157,14 @@ public static class BattleCalc
         bool defenderIsRock = defDef && defDef.type == MonsterType.Rock;
         bool crit = !defenderIsRock && (Rng01() < critChance);
 
-        float preMit = baseDamage * Mathf.Max(0.25f, eff) * (crit ? critMultiplier : 1f);
+        float preMit = baseDamage * Mathf.Max(0.10f, eff) * (crit ? critMultiplier : 1f);
 
         int defense = CalcDefense(defDef, defLevel) + Mathf.Max(0, defenderFlatDefenseBonus);
         defense = Mathf.Max(0, defense - Mathf.Max(0, defenseIgnoreFlat));
 
-        float mitFactor = 100f / (100f + Mathf.Max(0, defense));
+        // Defense curve: K/(K+defense) where K=65. At defense=0 → 100% through; at defense=65 → 50% mitigated.
+        // Lower K vs the old 100 makes each defense point roughly 50% more impactful.
+        float mitFactor = 65f / (65f + Mathf.Max(0, defense));
         float afterDefense = preMit * mitFactor;
 
         int dealt = Mathf.Max(1, Mathf.RoundToInt(afterDefense));
@@ -291,7 +293,7 @@ public static class BattleCalc
 
         bool crit = !blockCrit && (Rng01() < critChance);
 
-        float preMit = baseDamage * Mathf.Max(0.25f, eff) * (crit ? critMultiplier : 1f);
+        float preMit = baseDamage * Mathf.Max(0.10f, eff) * (crit ? critMultiplier : 1f);
 
         // Weekly world event type bonus: if the attacker's type matches the boosted type,
         // apply its damage multiplier. Defaults to 1f when no event is active.
@@ -345,7 +347,7 @@ public static class BattleCalc
             catch { /* safe no-op */ }
         }
 
-        float mitFactor = 100f / (100f + Mathf.Max(0, defenseStat));
+        float mitFactor = 65f / (65f + Mathf.Max(0, defenseStat));
         float afterDefense = preMit * mitFactor;
 
         // Apply defender title DR: percent first, then flat

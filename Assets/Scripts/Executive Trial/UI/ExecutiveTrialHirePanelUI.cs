@@ -56,7 +56,9 @@ public sealed class ExecutiveTrialHirePanelUI : MonoBehaviour
                 int def = BattleCalc.CalcDefense(offer.def, Mathf.Max(1, offer.level));
                 int spd = BattleCalc.CalcSpeed(offer.def, Mathf.Max(1, offer.level));
 
-                statLabel.text = $"HP {Mathf.RoundToInt(hp)}   ATK {Mathf.RoundToInt(atk)}   DEF {def}   SPD {spd}";
+                float hireChance = manager != null ? manager.GetHireSuccessChance(offer) : 1f;
+                int hirePct = Mathf.RoundToInt(hireChance * 100f);
+                statLabel.text = $"HP {Mathf.RoundToInt(hp)}   ATK {Mathf.RoundToInt(atk)}   DEF {def}   SPD {spd}\nHire Chance: {hirePct}%";
             }
             else
             {

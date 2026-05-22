@@ -15,8 +15,7 @@ public partial class BattleManager : MonoBehaviour
         bool playerFirstBySpeed = GetPlayerActsFirstBySpeed();
         MonsterDataSO playerDef = GetTeamDefSafe(activeIndex);
         float spawnDelay = Mathf.Max(0f, spawnDelayBetweenMonsters);
-        float fallbackFadeTime = Mathf.Max(0.01f, duration * 0.5f); // TODO: confirm this 0.01f is intentional
-
+        float fallbackFadeTime = Mathf.Max(0.01f, duration * 0.5f);
         PrepareBattleStartInfoFade();
 
         if (feedback != null)
@@ -568,8 +567,7 @@ public partial class BattleManager : MonoBehaviour
         {
             bool swappedFromKO = false;
 
-            if (teamHP[activeIndex] <= 0.01f) // TODO: confirm this 0.01f is intentional
-            {
+            if (teamHP[activeIndex] <= 0.01f)            {
                 if (!AutoSwapToAlive())
                 {
                     BattleLogger.Log("Your team is unable to battle!", LogScope.Battle);
@@ -723,8 +721,7 @@ public partial class BattleManager : MonoBehaviour
                     if (CheckEnd()) break;
                     yield return CoWaitScaled(hitPause);
 
-                    if (!IsTeamKO() && teamHP[activeIndex] <= 0.01f) // TODO: confirm this 0.01f is intentional
-                    {
+                    if (!IsTeamKO() && teamHP[activeIndex] <= 0.01f)                    {
                         AutoSwapToAlive();
                         RefreshStatusIconsFromState();
                     }
@@ -886,8 +883,7 @@ RefreshStatusIconsFromState();
                     {
                         // If the current active was KO'ed somehow before swap resolution,
                         // the queued action is lost (handled below after enemy turn).
-                        if (teamHP[activeIndex] > 0.01f) // TODO: confirm this 0.01f is intentional
-                        {
+                        if (teamHP[activeIndex] > 0.01f)                        {
                             ResetDefendStreak();
                             yield return ResolveQueuedSwap();
                             RefreshStatusIconsFromState();
@@ -917,8 +913,7 @@ RefreshStatusIconsFromState();
                     yield return CoWaitScaled(hitPause);
 
                     // If the wild KO'ed our active slot, we must auto-swap (if possible) and the queued action is lost.
-                if (!IsTeamKO() && teamHP[activeIndex] <= 0.01f) // TODO: confirm this 0.01f is intentional
-                    {
+                if (!IsTeamKO() && teamHP[activeIndex] <= 0.01f)                    {
                         // âœ… Guard was tied to the KO'd monster; never carry to the swapped-in one.
                         ClearPlayerGuardStateForActive();
 
@@ -935,16 +930,14 @@ RefreshStatusIconsFromState();
                             {
                                 case PlayerAction.Attack:
                                     // If the active slot was KO'ed by the wild acting first, the player's queued action is lost.
-                                    if (teamHP[activeIndex] > 0.01f) // TODO: confirm this 0.01f is intentional
-                                        yield return PlayerTurn();
+                                    if (teamHP[activeIndex] > 0.01f)                                        yield return PlayerTurn();
                                     RefreshStatusIconsFromState();
                                     break;
 
                                 case PlayerAction.Focus:
                                     {
                                         // If the active slot was KO'ed by the wild acting first, the player's queued action is lost.
-                                        if (teamHP[activeIndex] <= 0.01f) // TODO: confirm this 0.01f is intentional
-                                        {
+                                        if (teamHP[activeIndex] <= 0.01f)                                        {
                                             RefreshStatusIconsFromState();
 break;
                                         }
@@ -977,8 +970,7 @@ break;
                                 case PlayerAction.Swap:
                                     {
                                         // If the active slot was KO'ed by the wild acting first, the player's queued action is lost.
-                                        if (teamHP[activeIndex] <= 0.01f) // TODO: confirm this 0.01f is intentional
-                                        {
+                                        if (teamHP[activeIndex] <= 0.01f)                                        {
                                             RefreshStatusIconsFromState();
                                             break;
                                         }
@@ -993,8 +985,7 @@ break;
                                 case PlayerAction.Run:
                                     {
                                         // If the active slot was KO'ed by the wild acting first, the player's queued action is lost.
-                                        if (teamHP[activeIndex] <= 0.01f) // TODO: confirm this 0.01f is intentional
-                                        {
+                                        if (teamHP[activeIndex] <= 0.01f)                                        {
                                             RefreshStatusIconsFromState();
 break;
                                         }
@@ -1100,15 +1091,13 @@ if (TryProcessTurnStartStatus_PlayerActive_OncePerRound(out var skipBy))
     }
 
     // If the tick caused a KO, handle it the same way as any other KO would be handled later.
-    if (teamHP != null && activeIndex >= 0 && activeIndex < teamHP.Length && teamHP[activeIndex] <= 0.01f) // TODO: confirm this 0.01f is intentional
-        yield return MaybeSayKO_Player(GetName(activeIndex), 1f, 0f);
+    if (teamHP != null && activeIndex >= 0 && activeIndex < teamHP.Length && teamHP[activeIndex] <= 0.01f)        yield return MaybeSayKO_Player(GetName(activeIndex), 1f, 0f);
 
     yield break;
 }
 
 // If a DOT tick KO'd the active monster, stop here (battle loop will detect KO and swap/end).
-if (teamHP != null && activeIndex >= 0 && activeIndex < teamHP.Length && teamHP[activeIndex] <= 0.01f) // TODO: confirm this 0.01f is intentional
-{
+if (teamHP != null && activeIndex >= 0 && activeIndex < teamHP.Length && teamHP[activeIndex] <= 0.01f){
     SetIsPlayerTurn(false);
     pendingAction = PlayerAction.None;
     GameEvents.OnBattleStateChanged?.Invoke();
@@ -1318,8 +1307,7 @@ if (teamHP != null && activeIndex >= 0 && activeIndex < teamHP.Length && teamHP[
             }
 
             // If a DOT tick KO'd the active monster, stop here (battle loop will detect KO and swap/end).
-            if (teamHP != null && activeIndex >= 0 && activeIndex < teamHP.Length && teamHP[activeIndex] <= 0.01f) // TODO: confirm this 0.01f is intentional
-            {
+            if (teamHP != null && activeIndex >= 0 && activeIndex < teamHP.Length && teamHP[activeIndex] <= 0.01f)            {
                 isResolvingPlayerTurn = false;
                 yield break;
             }
@@ -1329,8 +1317,7 @@ if (teamHP != null && activeIndex >= 0 && activeIndex < teamHP.Length && teamHP[
 
         try
         {
-            if (teamHP[activeIndex] <= 0.01f && !AutoSwapToAlive()) // TODO: confirm this 0.01f is intentional
-            {
+            if (teamHP[activeIndex] <= 0.01f && !AutoSwapToAlive())            {
             isResolvingPlayerTurn = false;
             yield break;
         }
@@ -1609,8 +1596,7 @@ float preventedByWildGuard = 0f;
         UpdateWildInfoUI();
 
 
-        float wRatio = wildMaxHP > 0.01f ? (float)dmgToApply / wildMaxHP : 0f; // TODO: confirm this 0.01f is intentional
-        Emit(BattleEvent.Damage(BattleSide.Player, BattleSide.Wild, dmgToApply, dr.crit, dr.effectiveness, wRatio, (preventedByWildGuard > 0f) || (absorbedByWildShield > 0f) || (absorbedByWildTitleShield > 0f)));
+        float wRatio = wildMaxHP > 0.01f ? (float)dmgToApply / wildMaxHP : 0f;        Emit(BattleEvent.Damage(BattleSide.Player, BattleSide.Wild, dmgToApply, dr.crit, dr.effectiveness, wRatio, (preventedByWildGuard > 0f) || (absorbedByWildShield > 0f) || (absorbedByWildTitleShield > 0f)));
         if (!HasBattleEventConsumers && feedback) feedback.PlayHitReaction(BattleFeedbackManager.BattleFeedbackSide.Wild, dr.crit, wRatio, wasGuarded: (preventedByWildGuard > 0f) || (absorbedByWildShield > 0f) || (absorbedByWildTitleShield > 0f));
 if (!playerLandedFirstHitThisBattle && dr.damage > 0)
             playerLandedFirstHitThisBattle = true;
@@ -1715,8 +1701,7 @@ if (!playerLandedFirstHitThisBattle && dr.damage > 0)
 
         try
         {
-        if (teamHP[activeIndex] <= 0.01f && !AutoSwapToAlive()) // TODO: confirm this 0.01f is intentional
-            yield break;
+        if (teamHP[activeIndex] <= 0.01f && !AutoSwapToAlive())            yield break;
     // Status tick at start of the wild's turn (Phase 4)
     // If an action-skip status triggers (Freeze/Shock), skip action entirely this turn.
     if (TryProcessTurnStartStatus_Wild_OncePerRound(out var skipBy))
@@ -1728,15 +1713,13 @@ if (!playerLandedFirstHitThisBattle && dr.damage > 0)
             yield return Say($"{who} is Frozen and can't act!", BattleLineTag.Result);
 
         // If the tick caused a KO, stop here (battle loop will detect KO and end).
-        if (wildHP <= 0.01f) // TODO: confirm this 0.01f is intentional
-            yield break;
+        if (wildHP <= 0.01f)            yield break;
 
         yield break;
     }
 
     // If a DOT tick KO'd the wild, stop here.
-    if (wildHP <= 0.01f) // TODO: confirm this 0.01f is intentional
-        yield break;
+    if (wildHP <= 0.01f)        yield break;
 
             // If the wild's AI returned no action (usually due to a status), do nothing.
             if (choice == EnemyAction.None)
@@ -1840,8 +1823,7 @@ if (!playerLandedFirstHitThisBattle && dr.damage > 0)
                 }
             }
 
-            if (teamHP[activeIndex] <= 0.01f && !AutoSwapToAlive()) // TODO: confirm this 0.01f is intentional
-                yield break;
+            if (teamHP[activeIndex] <= 0.01f && !AutoSwapToAlive())                yield break;
 
             string attackerName = GetWildDisplayName("Foe");
             string move = GetBasicMoveName(wildDef);
@@ -2195,8 +2177,7 @@ int dmg_afterScalar = Mathf.Max(1, Mathf.RoundToInt(dr.damage * incomingScalar))
         }
 
         float maxHP = GetFinalMaxHPForIndex(activeIndex);
-        float ratio = maxHP > 0.01f ? (float)dmg_final / maxHP : 0f; // TODO: confirm this 0.01f is intentional
-        Emit(BattleEvent.Damage(BattleSide.Wild, BattleSide.Player, dmg_final, (dr.crit && !df.cannotBeCrit), dr.effectiveness, ratio, (preventedByGuardRaw > 0f) || (shieldAbsorbF > 0f) || (titleShieldAbsorbF > 0f)));
+        float ratio = maxHP > 0.01f ? (float)dmg_final / maxHP : 0f;        Emit(BattleEvent.Damage(BattleSide.Wild, BattleSide.Player, dmg_final, (dr.crit && !df.cannotBeCrit), dr.effectiveness, ratio, (preventedByGuardRaw > 0f) || (shieldAbsorbF > 0f) || (titleShieldAbsorbF > 0f)));
         if (!HasBattleEventConsumers && feedback) feedback.PlayHitReaction(BattleFeedbackManager.BattleFeedbackSide.Player, dr.crit && !df.cannotBeCrit, ratio, wasGuarded: (preventedByGuardRaw > 0f) || (shieldAbsorbF > 0f) || (titleShieldAbsorbF > 0f));
 
         if (preventedByGuardRaw > 0f &&
@@ -2453,14 +2434,12 @@ EndBattleRouted(false);
 
     private WaitForSecondsRealtime Wait(float t)
     {
-        float scaled = Mathf.Max(0.01f, t / Mathf.Max(0.01f, battleSpeed)); // TODO: confirm this 0.01f is intentional
-        return new WaitForSecondsRealtime(scaled);
+        float scaled = Mathf.Max(0.01f, t / Mathf.Max(0.01f, battleSpeed));        return new WaitForSecondsRealtime(scaled);
     }
 
     private IEnumerator CoWaitScaled(float t)
     {
-        float scaled = Mathf.Max(0.01f, t / Mathf.Max(0.01f, battleSpeed)); // TODO: confirm this 0.01f is intentional
-        float end = Time.unscaledTime + scaled;
+        float scaled = Mathf.Max(0.01f, t / Mathf.Max(0.01f, battleSpeed));        float end = Time.unscaledTime + scaled;
         while (Time.unscaledTime < end)
             yield return null;
     }
