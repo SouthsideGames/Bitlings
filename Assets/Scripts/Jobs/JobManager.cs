@@ -819,6 +819,15 @@ private static float AverageWorkingSlotFatigue(JobSiteState s)
 
         EnsureWorkerListSize(s, cap);
 
+        // Warn if the monster being assigned is heavily fatigued (> 70%).
+        // UI systems can subscribe to JobAssignFatigueWarning to surface a visual cue.
+        float slotFatigue = (slotIndex < s.slotFatigue01.Length) ? s.slotFatigue01[slotIndex] : 0f;
+        if (slotFatigue > 0.70f)
+        {
+            GameEvents.JobAssignFatigueWarning?.Invoke(key, slotFatigue);
+            GameEvents.RaiseToast($"{monster.displayName} is very tired! Output will be reduced.");
+        }
+
         // Populate both ownedUID and monsterId for robustness:
         // - If key is an ownedUID, store it in ownedUID and also store current monster.id as monsterId.
         // - If key is species id, store it in monsterId only.
@@ -831,6 +840,54 @@ private static float AverageWorkingSlotFatigue(JobSiteState s)
         FireJobsChanged();
         GameEvents.JobAssigned?.Invoke();
         return true;
+    }
+
+    /// <summary>
+    /// Returns the unassigned owned monster with the highest jobSkill for this job type,
+    /// or null if no eligible candidates exist. Used by the job panel to surface suggestions.
+    /// </summary>
+    public MonsterDataSO GetBestFitForSite(JobType job)
+    {
+        var s = FindState(job);
+        if (s == null || SaveManager.Data?.owned == null) return null;
+
+        // Collect ownedUIDs currently assigned to any job site.
+        var assignedKeys = new System.Collections.Generic.HashSet<string>(System.StringComparer.Ordinal);
+        foreach (var state in States)
+        {
+            if (state?.workers == null) continue;
+            foreach (var w in state.workers)
+            {
+                if (w == null) continue;
+                var k = GetWorkerKey(w);
+                if (!string.IsNullOrEmpty(k)) assignedKeys.Add(k);
+            }
+        }
+
+        MonsterDataSO best = null;
+        float bestSkill = float.MinValue;
+
+        foreach (var owned in SaveManager.Data.owned)
+        {
+            if (owned == null || string.IsNullOrEmpty(owned.monsterId)) continue;
+
+            // Skip if already assigned somewhere.
+            string ownedKey = !string.IsNullOrEmpty(owned.ownedUID) ? owned.ownedUID : owned.monsterId;
+            if (assignedKeys.Contains(ownedKey)) continue;
+
+            var def = MonsterCatalog.Get(owned.monsterId);
+            if (def == null) continue;
+            if (!IsTypeEligibleFor(job, def.type)) continue;
+            if (IsOnCooldown(ownedKey)) continue;
+
+            if (def.jobSkill > bestSkill)
+            {
+                bestSkill = def.jobSkill;
+                best = def;
+            }
+        }
+
+        return best;
     }
 
     public bool TryAssignWorker(JobType job, MonsterDataSO monster, string ownedId = null)

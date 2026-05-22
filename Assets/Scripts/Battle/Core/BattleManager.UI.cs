@@ -258,7 +258,16 @@ private void UpdateWildInfoUI()
 
             if (wildIdText) wildIdText.text = $"ID: {wildDef.id}";
             if (wildTypeText) wildTypeText.text = $"TYPE: {wildDef.type}";
-            if (wildRarityText) wildRarityText.text = $"RARITY: {wildDef.rarity}";
+            if (wildRarityText)
+            {
+                string catchStr = "";
+                if (!ExecutiveTrialRuntime.IsActive && RiftManager.I != null)
+                {
+                    float catchPct = RiftManager.I.GetEstimatedCatchChance(wildDef) * 100f;
+                    catchStr = $" · ~{catchPct:0}% catch";
+                }
+                wildRarityText.text = $"RARITY: {wildDef.rarity}{catchStr}";
+            }
             if (wildLevelText) wildLevelText.text = $"LVL: {wildLevel}";
 
             if (wildHPText) SetStatRowColorAndText(wildHPText, "HP", baseB.maxHP, effB.maxHP, minFinal: 1);
@@ -295,7 +304,16 @@ private void UpdateWildInfoUI()
 
         if (wildIdText) wildIdText.text = $"ID: {wildDef.id}";
         if (wildTypeText) wildTypeText.text = $"TYPE: {wildDef.type}";
-        if (wildRarityText) wildRarityText.text = $"RARITY: {wildDef.rarity}";
+        if (wildRarityText)
+        {
+            string catchStr = "";
+            if (!ExecutiveTrialRuntime.IsActive && RiftManager.I != null)
+            {
+                float catchPct = RiftManager.I.GetEstimatedCatchChance(wildDef) * 100f;
+                catchStr = $" · ~{catchPct:0}% catch";
+            }
+            wildRarityText.text = $"RARITY: {wildDef.rarity}{catchStr}";
+        }
         if (wildLevelText) wildLevelText.text = $"LVL: {wildLevel}";
 
         if (wildHPText) SetStatRowColorAndText(wildHPText, "HP", baseHP, effHP, minFinal: 1);

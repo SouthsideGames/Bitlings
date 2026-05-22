@@ -58,6 +58,7 @@ public static class GameEvents
     // Achievement-relevant
     // ─────────────────────────────────────────────────────────
     public static Action JobAssigned;
+    public static Action<string, float> JobAssignFatigueWarning; // (monsterId, fatigue01) — fired when assigning a tired monster
     public static Action TitleEquipped;
     public static Action DirectoryOpened;
     public static Action<StatusType> StatusAppliedToWild;

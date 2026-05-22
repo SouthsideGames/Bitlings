@@ -167,10 +167,14 @@ public class JobSiteView : MonoBehaviour
             try { maxLvl = JobLeveling.MaxLevel; }
             catch { maxLvl = 0; }
 
-            if (maxLvl > 0 && st.level >= maxLvl)
-                levelText.text = "Level MAX";
-            else
-                levelText.text = $"Level {Mathf.Max(1, st.level)}";
+            string lvlStr = (maxLvl > 0 && st.level >= maxLvl)
+                ? "Level MAX"
+                : $"Level {Mathf.Max(1, st.level)}";
+
+            // Append live income projection so players know how productive the site is.
+            float rph = st.cachedRatePerHour;
+            string rateStr = (rph > 0f) ? $" · ≈{rph:0.#}/hr" : "";
+            levelText.text = lvlStr + rateStr;
         }
 
         if (allowReliefToggle)

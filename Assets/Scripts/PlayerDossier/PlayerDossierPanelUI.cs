@@ -307,7 +307,7 @@ public class PlayerDossierPanelUI : MonoBehaviour
         if (stats == null)
         {
             if (rankText != null) rankText.text = "Rank: Trainee";
-            if (operationIdText != null) operationIdText.text = "Operation ID: BRN-0000-XXXX";
+            if (operationIdText != null) operationIdText.text = "Operation ID: BRN-????-????"; // Loading...
 
             if (totalBitlingsText != null) totalBitlingsText.text = "Total Bitlings Managed:   0";
             if (discoveredSpeciesText != null) discoveredSpeciesText.text = "Discovered Species:       0";

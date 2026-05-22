@@ -266,6 +266,45 @@ public partial class RiftManager
     }
 
     // ====== Capture logic ======
+
+    /// <summary>
+    /// Returns the estimated catch chance [0..1] for the given monster without performing a roll.
+    /// Mirrors TryCatchWithResult's formula. Used for pre-battle catch rate preview display.
+    /// </summary>
+    public float GetEstimatedCatchChance(MonsterDataSO def)
+    {
+        if (!def || def.uncatchable) return 0f;
+        var lib = MonsterLibraryLocator.Lib;
+        if (!lib) return 0f;
+
+        float minW = float.MaxValue, maxW = 0f;
+        for (int i = 0; i < lib.monsters.Length; i++)
+        {
+            var m = lib.monsters[i];
+            if (!m) continue;
+            float w = Mathf.Max(0f, m.spawnWeight);
+            if (w < minW) minW = w;
+            if (w > maxW) maxW = w;
+        }
+        if (minW == float.MaxValue || maxW <= 0f || minW >= maxW) { minW = 0f; maxW = 1f; }
+
+        float t = Mathf.Clamp01(
+            (Mathf.Max(0f, def.spawnWeight) - minW) /
+            Mathf.Max(0.0001f, (maxW - minW))
+        );
+        float baseChance = Mathf.Lerp(0.15f, 0.65f, t);
+        float bandBonus  = GetActiveCaptureBonus01() * 0.25f;
+        float scarcity01 = 1f - t;
+        float luckBonus  = GetActiveFlyerBonus01() * 0.20f * Mathf.Clamp01(scarcity01 * 1.25f);
+        float lureBonus  = 0f;
+        var   lure       = CurrentFlyer;
+        if (lure != null && lure.type == def.type)
+            lureBonus = Mathf.Clamp01(lure.bonus) * 0.10f;
+        float streakBonus = Mathf.Clamp01(CurrentWinStreak / 20f) * 0.05f;
+
+        return Mathf.Clamp01(baseChance + bandBonus + luckBonus + lureBonus + streakBonus);
+    }
+
     void TryCatch(MonsterDataSO def, int level) => TryCatchWithResult(def, level, out _);
 
     /// <summary>
