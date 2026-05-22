@@ -40,17 +40,17 @@ public sealed class ExecutiveTrialManager : MonoBehaviour, ExecutiveTrailBattleB
 
     // Hire success is rarity-gated: rarer monsters are harder to recruit.
     // The hireDenyPrefab animation is shown to the player on failure.
-    private static float GetHireChanceForRarity(MonsterRarity rarity)
+    private static float GetHireChanceForRarity(Rarity rarity)
     {
         return rarity switch
         {
-            MonsterRarity.Common    => 1.00f,
-            MonsterRarity.Uncommon  => 0.90f,
-            MonsterRarity.Rare      => 0.80f,
-            MonsterRarity.Epic      => 0.70f,
-            MonsterRarity.Legendary => 0.55f,
-            MonsterRarity.Mythic    => 0.40f,
-            MonsterRarity.Boss      => 0.30f,
+            Rarity.Common    => 1.00f,
+            Rarity.Uncommon  => 0.90f,
+            Rarity.Rare      => 0.80f,
+            Rarity.Epic      => 0.70f,
+            Rarity.Legendary => 0.55f,
+            Rarity.Mythic    => 0.40f,
+            Rarity.Boss      => 0.30f,
             _                       => 0.85f,
         };
     }

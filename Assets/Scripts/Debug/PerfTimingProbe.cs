@@ -7,21 +7,11 @@ public sealed class PerfTimingProbe : MonoBehaviour
 {
     [SerializeField, Min(0.5f)] private float logEverySeconds = 5f;
     [SerializeField, Range(10f, 120f)] private float lowFpsThreshold = 40f;
+    [SerializeField] private bool logHealthySnapshots;
 
     private float _emaFps;
     private float _accum;
     private bool _warnedSlowTimeScale;
-
-    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
-    private static void Bootstrap()
-    {
-        if (FindFirstObjectByType<PerfTimingProbe>() != null)
-            return;
-
-        var go = new GameObject("PerfTimingProbe");
-        DontDestroyOnLoad(go);
-        go.AddComponent<PerfTimingProbe>();
-    }
 
     private void Awake()
     {
@@ -75,6 +65,8 @@ public sealed class PerfTimingProbe : MonoBehaviour
         int vSync = QualitySettings.vSyncCount;
 
         string perfTag = fps > 0f && fps < lowFpsThreshold ? "LOW_FPS" : "OK";
+        if (perfTag == "OK" && !logHealthySnapshots)
+            return;
 
         DevLog.Log(
             $"[PerfTimingProbe][{perfTag}] scene={scene} fps={fps:0.0} frameMs={ms:0.0} " +
