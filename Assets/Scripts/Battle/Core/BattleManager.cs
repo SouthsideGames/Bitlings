@@ -1679,12 +1679,29 @@ public partial class BattleManager : MonoBehaviour
     {
         int fromIndex = activeIndex;
 
+        // Pick the living team member with the best type advantage against the wild.
+        // Falls back to index order if type data is unavailable (safe, non-breaking).
+        int bestIndex = -1;
+        float bestScore = float.MinValue;
         for (int i = 0; i < teamCount; i++)
         {
             if (i == activeIndex) continue;
             if (teamHP[i] <= 0f) continue;
 
-            activeIndex = i;
+            float score = 1f; // neutral default
+            if (teamDefs != null && i < teamDefs.Length && teamDefs[i] != null && wildDef != null)
+                score = BattleTypeChart.GetMultiplier(teamDefs[i].type, wildDef.type);
+
+            if (score > bestScore)
+            {
+                bestScore = score;
+                bestIndex = i;
+            }
+        }
+
+        if (bestIndex < 0) return false;
+
+        activeIndex = bestIndex;
 
             ApplyActiveToUI();
             ClampAndPushActiveHP();

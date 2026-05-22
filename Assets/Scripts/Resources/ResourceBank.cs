@@ -190,7 +190,11 @@ public static class ResourceBank
         }
         L[i] = newVal;
 
-        if (hitEnergyCap) OnResourceCapped?.Invoke(ResourceType.Energy);
+        if (hitEnergyCap)
+        {
+            OnResourceCapped?.Invoke(ResourceType.Energy);
+            GameEvents.RaiseToast("Energy is full! Extras convert to Credits.");
+        }
         EmitChanged();
     }
 
@@ -237,9 +241,23 @@ public static class ResourceBank
         if (newVal == cur) return;
 
         L[i] = newVal;
-        if (hitCap) OnResourceCapped?.Invoke(t);
+        if (hitCap)
+        {
+            OnResourceCapped?.Invoke(t);
+            GameEvents.RaiseToast($"{ResourceLabel(t)} is full! You've reached the limit.");
+        }
         EmitChanged();
     }
+
+    private static string ResourceLabel(ResourceType t) => t switch
+    {
+        ResourceType.Energy          => "Energy",
+        ResourceType.PPEPermit       => "PPE Permits",
+        ResourceType.TrainingVoucher => "Training Vouchers",
+        ResourceType.WellnessVoucher => "Wellness Vouchers",
+        ResourceType.EfficiencyVoucher => "Efficiency Vouchers",
+        _                            => t.ToString()
+    };
 
     /// <summary>
     /// Returns remaining capacity for the given booster type.

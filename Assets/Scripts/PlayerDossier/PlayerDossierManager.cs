@@ -1062,8 +1062,20 @@ public class PlayerDossierManager : MonoBehaviour
 
     private string FormatOperationId(string playerId)
     {
+        // When there's no playerId yet (first session before UGS assigns one),
+        // derive a deterministic-looking ID from the save-creation timestamp
+        // so the dossier never shows an obvious placeholder.
         if (string.IsNullOrEmpty(playerId))
-            return "BRN-0000-XXXX";
+        {
+            // Derive a deterministic-looking ID from the earliest available timestamp
+            // so the dossier never shows a raw placeholder.
+            long seed = SaveManager.Data?.lastSavedUnix ?? 0L;
+            if (seed <= 0L) seed = (long)(Time.realtimeSinceStartup * 1000f);
+            uint h = (uint)(seed ^ (seed >> 16));
+            h ^= h >> 16; h *= 0x45d9f3b; h ^= h >> 16;
+            string fallback = h.ToString("X8");
+            return $"BRN-{fallback.Substring(0, 4)}-{fallback.Substring(4, 4)}";
+        }
 
         string trimmed = playerId.Replace("-", string.Empty).ToUpperInvariant();
         if (trimmed.Length <= 8)
@@ -1071,6 +1083,6 @@ public class PlayerDossierManager : MonoBehaviour
 
         string head = trimmed.Substring(0, 4);
         string tail = trimmed.Substring(trimmed.Length - 4, 4);
-        return $"{head}-{tail}";
+        return $"BRN-{head}-{tail}";
     }
 }

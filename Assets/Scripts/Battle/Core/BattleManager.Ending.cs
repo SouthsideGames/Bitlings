@@ -379,6 +379,19 @@ public partial class BattleManager : MonoBehaviour
 
             growthCoreTitleBonus = Mathf.Max(0, growthCoreAfterTitles - growthCoreBaseAfterPremium);
 
+            // Win streak bonus: +5% Growth Core yield per consecutive win, capped at +30%.
+            int streak = (RiftManager.I != null) ? RiftManager.I.CurrentWinStreak : 0;
+            if (streak > 1)
+            {
+                float streakBonus = Mathf.Clamp(0.05f * (streak - 1), 0f, 0.30f);
+                int streakExtra = Mathf.Max(0, Mathf.RoundToInt(growthCoreTotal * streakBonus));
+                if (streakExtra > 0)
+                {
+                    BattleLogger.Log($"[Streak] Win streak x{streak}: +{streakExtra} bonus Growth Cores ({Mathf.RoundToInt(streakBonus * 100f)}%).", LogScope.Battle);
+                    growthCoreTotal += streakExtra;
+                }
+            }
+
             if (growthCoreTotal > 0)
                 ResourceManager.I?.Add(ResourceType.GrowthCore, growthCoreTotal);
 
@@ -650,6 +663,16 @@ public partial class BattleManager : MonoBehaviour
         catch (Exception ex)
         {
             BattleLogger.Log($"[Titles] OnBattleEnd exception: {ex.Message}", LogScope.Battle);
+        }
+
+        // Post-battle type report: passively teaches type mechanics through play.
+        // Only shown in manual battles to avoid toast spam during auto runs.
+        if (!AutoResolveActive && victory && wildDef != null)
+        {
+            if (result.hadTypeAdvantage && !result.hadTypeDisadvantage)
+                BattleLogger.Log("[TypeReport] Type advantage played in your favour this battle.", LogScope.Battle);
+            else if (result.hadTypeDisadvantage)
+                BattleLogger.Log("[TypeReport] You overcame a type disadvantage this battle.", LogScope.Battle);
         }
 
         onEnd?.Invoke(result);
