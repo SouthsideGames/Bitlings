@@ -1703,39 +1703,37 @@ public partial class BattleManager : MonoBehaviour
 
         activeIndex = bestIndex;
 
-            ApplyActiveToUI();
-            ClampAndPushActiveHP();
-            RefreshBenchUI();
+        ApplyActiveToUI();
+        ClampAndPushActiveHP();
+        RefreshBenchUI();
 
-            Emit(BattleEvent.Swap(BattleSide.Player, fromIndex, activeIndex));
+        Emit(BattleEvent.Swap(BattleSide.Player, fromIndex, activeIndex));
 
-            BattleLogger.AddKeyMoment($"SWAP: {GetName(activeIndex)}");
+        BattleLogger.AddKeyMoment($"SWAP: {GetName(activeIndex)}");
 
-            if (teamPendingBuffPct != null && teamPendingBuffTurns != null &&
-                slotDamageBuffPct != null && slotDamageBuffTurns != null &&
-                activeIndex >= 0 && activeIndex < teamPendingBuffPct.Length)
+        if (teamPendingBuffPct != null && teamPendingBuffTurns != null &&
+            slotDamageBuffPct != null && slotDamageBuffTurns != null &&
+            activeIndex >= 0 && activeIndex < teamPendingBuffPct.Length)
+        {
+            if (teamPendingBuffPct[activeIndex] > 0f)
             {
-                if (teamPendingBuffPct[activeIndex] > 0f)
-                {
-                    slotDamageBuffPct[activeIndex] += teamPendingBuffPct[activeIndex];
-                    slotDamageBuffTurns[activeIndex] =
-                        Mathf.Max(slotDamageBuffTurns[activeIndex], teamPendingBuffTurns[activeIndex]);
+                slotDamageBuffPct[activeIndex] += teamPendingBuffPct[activeIndex];
+                slotDamageBuffTurns[activeIndex] =
+                    Mathf.Max(slotDamageBuffTurns[activeIndex], teamPendingBuffTurns[activeIndex]);
 
-                    BattleLogger.Log($"{GetName(activeIndex)} carries over +{Mathf.RoundToInt(teamPendingBuffPct[activeIndex] * 100f)}% damage from bench.", LogScope.Battle);
+                BattleLogger.Log($"{GetName(activeIndex)} carries over +{Mathf.RoundToInt(teamPendingBuffPct[activeIndex] * 100f)}% damage from bench.", LogScope.Battle);
 
-                    teamPendingBuffPct[activeIndex] = 0f;
-                    teamPendingBuffTurns[activeIndex] = 0;
-                }
+                teamPendingBuffPct[activeIndex] = 0f;
+                teamPendingBuffTurns[activeIndex] = 0;
             }
-
-            BattleLogger.Log($"Auto-swapped to {GetName(activeIndex)}!", LogScope.Battle);
-            return true;
         }
+
+        BattleLogger.Log($"Auto-swapped to {GetName(activeIndex)}!", LogScope.Battle);
 
         if (debugTitles && debugTitlesOnSwap)
             Debug_LogActiveTitlesSnapshot("Swap");
 
-        return false;
+        return true;
     }
 
     private bool IsWildKO() => wildHP <= 0.01f;
@@ -2098,7 +2096,7 @@ public partial class BattleManager : MonoBehaviour
 
         RebindBenchButtons();
 
-        ReapplyRuntimeUIBindingsOverrideIfAny();
+        ReapplyRuntimeUIOverrideIfAny();
         ReapplyRuntimeUIOverrideIfAny();
     }
 }

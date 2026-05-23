@@ -128,7 +128,8 @@ public static class SaveValidator
             ? $"SaveValidator repaired {repairs} issue(s). {string.Join(" ", notes.Take(10))}".Trim()
             : "SaveValidator found no structural repairs.";
 
-        Debug.Log($"[SaveValidator] {summary}");
+        if (repairs > 0)
+            Debug.Log($"[SaveValidator] {summary}");
         return new SaveValidationResult(repairs > 0, summary);
     }
 

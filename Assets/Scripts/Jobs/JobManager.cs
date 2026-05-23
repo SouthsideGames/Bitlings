@@ -875,7 +875,7 @@ private static float AverageWorkingSlotFatigue(JobSiteState s)
             string ownedKey = !string.IsNullOrEmpty(owned.ownedUID) ? owned.ownedUID : owned.monsterId;
             if (assignedKeys.Contains(ownedKey)) continue;
 
-            var def = MonsterCatalog.Get(owned.monsterId);
+            var def = MonsterLibraryLocator.GetById(owned.monsterId);
             if (def == null) continue;
             if (!IsTypeEligibleFor(job, def.type)) continue;
             if (IsOnCooldown(ownedKey)) continue;
