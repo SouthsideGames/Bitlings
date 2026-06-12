@@ -483,7 +483,7 @@ public partial class BattleManager : MonoBehaviour
                     shieldHP[activeIndex] += add;
                     BattleLogger.LogTitleActivation(req.ownerDisplayName, req.titleDisplayName, $"+{Mathf.RoundToInt(add)} shield");
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
-                    Debug.Log($"[OnEventTrigger] EFFECT: {req.ownerDisplayName} gained {Mathf.RoundToInt(add)} flat shield (total {Mathf.RoundToInt(shieldHP[activeIndex])})");
+                    DevLog.Log($"[OnEventTrigger] EFFECT: {req.ownerDisplayName} gained {Mathf.RoundToInt(add)} flat shield (total {Mathf.RoundToInt(shieldHP[activeIndex])})");
 #endif
                     ClampAndPushActiveHP();
                     break;
@@ -494,7 +494,7 @@ public partial class BattleManager : MonoBehaviour
                     TryAddHPToActive(heal);
                     BattleLogger.LogTitleActivation(req.ownerDisplayName, req.titleDisplayName, $"+{Mathf.RoundToInt(heal)} HP");
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
-                    Debug.Log($"[OnEventTrigger] EFFECT: {req.ownerDisplayName} healed {Mathf.RoundToInt(heal)} flat HP");
+                    DevLog.Log($"[OnEventTrigger] EFFECT: {req.ownerDisplayName} healed {Mathf.RoundToInt(heal)} flat HP");
 #endif
                     break;
                 }
@@ -505,7 +505,7 @@ public partial class BattleManager : MonoBehaviour
                     TryAddHPToActive(heal);
                     BattleLogger.LogTitleActivation(req.ownerDisplayName, req.titleDisplayName, $"+{Mathf.RoundToInt(heal)} HP ({req.value:F0}% maxHP)");
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
-                    Debug.Log($"[OnEventTrigger] EFFECT: {req.ownerDisplayName} healed {Mathf.RoundToInt(heal)} HP ({req.value:F0}% of {Mathf.RoundToInt(maxHp)} maxHP)");
+                    DevLog.Log($"[OnEventTrigger] EFFECT: {req.ownerDisplayName} healed {Mathf.RoundToInt(heal)} HP ({req.value:F0}% of {Mathf.RoundToInt(maxHp)} maxHP)");
 #endif
                     break;
                 }
@@ -523,7 +523,7 @@ public partial class BattleManager : MonoBehaviour
                     }
                     BattleLogger.LogTitleActivation(req.ownerDisplayName, req.titleDisplayName, $"+{bonus} {req.stat} for {dur:F1}s");
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
-                    Debug.Log($"[OnEventTrigger] EFFECT: {req.ownerDisplayName} gained +{bonus} {req.stat} temp buff for {dur:F1}s");
+                    DevLog.Log($"[OnEventTrigger] EFFECT: {req.ownerDisplayName} gained +{bonus} {req.stat} temp buff for {dur:F1}s");
 #endif
                     break;
                 }
@@ -556,7 +556,7 @@ public partial class BattleManager : MonoBehaviour
             BattleLogger.LogTitleActivation(req.ownerDisplayName, req.titleDisplayName,
                 $"inflicted {req.status} on {req.target}");
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
-            Debug.Log($"[StatusApplyTitle] EFFECT: {req.ownerDisplayName}'s title applied {req.status} to {req.target}");
+            DevLog.Log($"[StatusApplyTitle] EFFECT: {req.ownerDisplayName}'s title applied {req.status} to {req.target}");
 #endif
         }
         catch (Exception ex)

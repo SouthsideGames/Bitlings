@@ -113,6 +113,11 @@ public sealed class JobManager : MonoBehaviour
     [SerializeField] private bool simulateOfflineOnLoad = true;
     [SerializeField, Min(0f)] private float offlineSimMultiplier = 1f;
     [SerializeField, Min(60f)] private float offlineChunkSeconds = 1200f;
+    // Defensive cap on simulated offline duration. Real payouts are already bounded by
+    // per-site storage caps, so a legitimate player never reaches this. It exists only so
+    // a corrupt/zeroed save time field can't spin the chunked Produce() loop for billions
+    // of seconds and freeze the game on resume. 30 days is far beyond any storage fill time.
+    private const float MaxOfflineSimSeconds = 30f * 24f * 3600f;
 
     [Header("Collection")]
     [SerializeField] private bool enableAutoCollect = false;
@@ -1513,7 +1518,7 @@ private static float AverageWorkingSlotFatigue(JobSiteState s)
             last = Math.Max(SaveManager.Data.lastClosedUnix, SaveManager.Data.lastSavedUnix);
 
         long now = SaveManager.NowUnix();
-        float elapsed = Mathf.Max(0f, now - last);
+        float elapsed = Mathf.Min(Mathf.Max(0f, now - last), MaxOfflineSimSeconds);
         if (elapsed < 1f) return;
 
         float totalSim = elapsed * Mathf.Max(0f, offlineSimMultiplier);

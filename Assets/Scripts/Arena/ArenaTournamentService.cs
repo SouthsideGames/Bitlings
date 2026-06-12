@@ -173,7 +173,7 @@ public static class ArenaTournamentService
 
         GameEvents.ArenaDataChanged?.Invoke();
 
-        Debug.Log($"{TAG} Registered for tournament week {weekId} ({band} band, score {playerScore}).");
+        DevLog.Log($"{TAG} Registered for tournament week {weekId} ({band} band, score {playerScore}).");
         return (true, null);
     }
 
@@ -245,7 +245,7 @@ public static class ArenaTournamentService
         SaveManager.Save();
         GameEvents.ArenaDataChanged?.Invoke();
 
-        Debug.Log($"{TAG} Bracket synced: '{record.tournamentId}' ({record.entries.Count} entries, {bracket.realPlayerCount} real).");
+        DevLog.Log($"{TAG} Bracket synced: '{record.tournamentId}' ({record.entries.Count} entries, {bracket.realPlayerCount} real).");
         return (true, null);
     }
 
@@ -470,7 +470,7 @@ public static class ArenaTournamentService
         SaveManager.Save();
         GameEvents.ArenaDataChanged?.Invoke();
 
-        Debug.Log($"{TAG} Entered tournament '{record.tournamentId}' ({band} band, {record.entries.Count} entries). PlayerEntry={entryId}");
+        DevLog.Log($"{TAG} Entered tournament '{record.tournamentId}' ({band} band, {record.entries.Count} entries). PlayerEntry={entryId}");
         return true;
     }
 
@@ -498,14 +498,14 @@ public static class ArenaTournamentService
 
         if (roundIndex >= ArenaConstants.TotalRounds)
         {
-            Debug.Log($"{TAG} All rounds already resolved.");
+            DevLog.Log($"{TAG} All rounds already resolved.");
             return -1;
         }
 
         // Online mode: only allow resolution when the schedule says this round is available.
         if (respectSchedule && !ArenaScheduleService.IsRoundAvailable(roundIndex))
         {
-            Debug.Log($"{TAG} Round {roundIndex} is not yet available per schedule.");
+            DevLog.Log($"{TAG} Round {roundIndex} is not yet available per schedule.");
             return -1;
         }
 
@@ -521,7 +521,7 @@ public static class ArenaTournamentService
             {
                 cache.playerStatus = ArenaPlayerTournamentStatus.Eliminated;
                 ArenaLoadoutManager.UnlockTeam();
-                Debug.Log($"{TAG} Player eliminated in round {roundIndex}.");
+                DevLog.Log($"{TAG} Player eliminated in round {roundIndex}.");
             }
             else if (cache.playerStatus == ArenaPlayerTournamentStatus.Entered)
             {
@@ -543,7 +543,7 @@ public static class ArenaTournamentService
         SaveManager.Save();
         GameEvents.ArenaDataChanged?.Invoke();
 
-        Debug.Log($"{TAG} Resolved round {roundIndex} → {resolved} match(es). Next round: {roundIndex + 1}");
+        DevLog.Log($"{TAG} Resolved round {roundIndex} → {resolved} match(es). Next round: {roundIndex + 1}");
         return roundIndex;
     }
 
@@ -633,7 +633,7 @@ public static class ArenaTournamentService
         SaveRecordToDisk(record);
         SaveManager.Save();
 
-        Debug.Log($"{TAG} Backfilled missing history row for tournament '{record.tournamentId}'.");
+        DevLog.Log($"{TAG} Backfilled missing history row for tournament '{record.tournamentId}'.");
         return true;
     }
 
@@ -712,7 +712,7 @@ public static class ArenaTournamentService
         // Submit to leaderboards (fire-and-forget)
         SubmitLeaderboardScores(placement, arena.lifetimeStats);
 
-        Debug.Log($"{TAG} Tournament '{record.tournamentId}' completed. Player placed #{placement}.");
+        DevLog.Log($"{TAG} Tournament '{record.tournamentId}' completed. Player placed #{placement}.");
     }
 
     /// <summary>Fire-and-forget leaderboard score submission after tournament completion.</summary>
@@ -745,7 +745,7 @@ public static class ArenaTournamentService
     {
         _activeRecord = null;
         DeleteRecordFromDisk();
-        Debug.Log($"{TAG} Active tournament record discarded.");
+        DevLog.Log($"{TAG} Active tournament record discarded.");
     }
 
     // ═════════════════════════════════════════════════════════════
@@ -810,7 +810,7 @@ public static class ArenaTournamentService
             if (cache == null || string.IsNullOrEmpty(cache.tournamentId)) return null;
             if (!string.Equals(record?.tournamentId, cache.tournamentId, StringComparison.Ordinal))
             {
-                Debug.Log($"{TAG} Stale tournament record on disk — discarding.");
+                DevLog.Log($"{TAG} Stale tournament record on disk — discarding.");
                 DeleteRecordFromDisk();
                 return null;
             }

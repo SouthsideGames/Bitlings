@@ -58,7 +58,7 @@ public static class CloudSaveSync
             await CloudSaveService.Instance.Data.Player.SaveAsync(data);
 
             _lastPushTimeRealtimeSecs = now;
-            Debug.Log("[CloudSaveSync] Arena data pushed to cloud.");
+            DevLog.Log("[CloudSaveSync] Arena data pushed to cloud.");
         }
         catch (Exception ex)
         {
@@ -94,7 +94,7 @@ public static class CloudSaveSync
                 }
             }
 
-            Debug.Log("[CloudSaveSync] No arena data found in cloud (new player or first sync).");
+            DevLog.Log("[CloudSaveSync] No arena data found in cloud (new player or first sync).");
             return null;
         }
         catch (Exception ex)
@@ -145,13 +145,13 @@ public static class CloudSaveSync
                         {
                             ApplyCloudData(cloud);
                             resolved = true;
-                            Debug.Log("[CloudSaveSync] Player chose cloud save.");
+                            DevLog.Log("[CloudSaveSync] Player chose cloud save.");
                         },
                         onKeepLocal: () =>
                         {
                             _ = PushArenaDataAsync();
                             resolved = true;
-                            Debug.Log("[CloudSaveSync] Player chose local save - pushing to cloud.");
+                            DevLog.Log("[CloudSaveSync] Player chose local save - pushing to cloud.");
                         }
                     );
 
@@ -162,14 +162,14 @@ public static class CloudSaveSync
 
             MergeCloudIntoLocal(cloud, local);
             SaveManager.Save();
-            Debug.Log("[CloudSaveSync] Merged cloud data into local save.");
+            DevLog.Log("[CloudSaveSync] Merged cloud data into local save.");
         }
 
         // Push the (possibly updated) local data so cloud is always up-to-date.
         await PushArenaDataAsync();
         HasSynced = true;
 
-        Debug.Log("[CloudSaveSync] Login sync complete.");
+        DevLog.Log("[CloudSaveSync] Login sync complete.");
     }
 
     // ═════════════════════════════════════════════════════════════
@@ -280,7 +280,7 @@ public static class CloudSaveSync
                 suffix = $" (last error: {UGSInitializer.I.LastError}).";
             }
 
-            Debug.Log($"[CloudSaveSync] UGS not ready — skipping cloud operation{suffix}");
+            DevLog.Log($"[CloudSaveSync] UGS not ready — skipping cloud operation{suffix}");
         }
 
         return false;
