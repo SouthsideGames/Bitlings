@@ -102,6 +102,8 @@ public class AudioManager : MonoBehaviour
 
     private AudioClip _currentStartingMusic; // chosen at startup (NO fallback)
     private AudioClip _currentBattleMusic;   // chosen when rift button is pressed
+    private bool _battleEngaged;             // latched on rift-button press; keeps battle music through the
+                                             // spawn window (before IsInBattle flips) until summary/home take over
     private AudioClip _currentExecutiveTrialBattleMusic; // chosen when Executive Trial start is pressed
     private AudioClip _currentBossMusic;     // chosen when boss starts
 
@@ -372,6 +374,7 @@ public class AudioManager : MonoBehaviour
 
     public void PickRiftBattleMusicOnButtonPress(bool playImmediately = true)
     {
+        _battleEngaged = true; // hold battle music through spawn-in until the battle ends
         _currentBattleMusic = PickBattleMusicForThisBattle();
 
         if (playImmediately && _currentBattleMusic != null)
@@ -752,7 +755,6 @@ public class AudioManager : MonoBehaviour
     {
         var ui = UIManager.I;
 
-        bool riftOpen = ui != null && ui.IsOpen(PanelId.Rift);
         bool summaryOpen = ui != null && ui.IsOpen(PanelId.PostBattleSummary);
 
         // Home can be shown while Rift remains active in the hierarchy (or was closed
@@ -766,13 +768,12 @@ public class AudioManager : MonoBehaviour
         bool isInBattle = (RiftManager.I != null) && RiftManager.I.IsInBattle;
         bool isExecutiveTrialBattle = ExecutiveTrialRuntime.IsActive && isInBattle;
 
-        // "Rift View" means the rift panel is visible and we are NOT on the results screen.
-        // Additionally:
-        // - If Home is open, we consider Rift "not the active view" unless a battle is running.
-        // - If a battle is running, we treat that as Rift/Battle view for music,
-        //   but Home and PostBattleSummary always take priority over isInBattle.
-        bool riftViewOpen = (riftOpen && !summaryOpen && !homeOpen)
-                         || (isInBattle && !homeOpen && !summaryOpen);
+        // "Battle View" for music purposes = a battle is running OR the player has committed to one
+        // by pressing the rift button (_battleEngaged), which covers the spawn-in window before
+        // IsInBattle flips true. Merely opening the Rift/encounter panel must NOT switch to battle
+        // music — only the button press latches _battleEngaged.
+        // Home and PostBattleSummary always take priority and clear the latch (battle context ended).
+        bool riftViewOpen = (isInBattle || _battleEngaged) && !homeOpen && !summaryOpen;
 
         // Boss re-roll once when boss becomes active.
         if (_bossActive && !_prevBossActive)
@@ -784,6 +785,8 @@ public class AudioManager : MonoBehaviour
         // 1) Post-battle summary → victory/defeat music (only if Home isn't open)
         if (summaryOpen && !homeOpen)
         {
+            _battleEngaged = false; // battle context ended; drop the latch
+
             AudioClip clip = null;
 
             if (_hasLastBattleResult)
@@ -832,7 +835,8 @@ public class AudioManager : MonoBehaviour
             }
         }
 
-        // 3) Everything else → starting/home music (NO fallback)
+        // 3) Everything else (home / menu, not in a battle) → starting/home music (NO fallback)
+        _battleEngaged = false; // left the battle context; drop the latch
         if (_currentStartingMusic != null)
             PlayMusic(_currentStartingMusic, true, defaultCrossfade);
     }
