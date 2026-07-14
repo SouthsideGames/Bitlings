@@ -166,7 +166,7 @@ public class SubmitTournamentResult
         }
 
         int realPlayerCount = await GetBracketRealPlayerCount(api, ctx, weekId, tournamentId);
-        int effectiveQuorum = Math.Min(ConsensusQuorum, Math.Max(1, realPlayerCount));
+        int effectiveQuorum = System.Math.Min(ConsensusQuorum, System.Math.Max(1, realPlayerCount));
 
         bool consensusReached = bestHash == standingsHash && matchingVotes >= effectiveQuorum;
 
@@ -251,7 +251,7 @@ public class SubmitTournamentResult
             Guid.Parse(ctx.ProjectId),
             leaderboardId,
             playerId,
-            new LeaderboardScore(score));
+            new AddLeaderboardScore(score));
     }
 
     // ═══════════════════════════════════════════════════════════
