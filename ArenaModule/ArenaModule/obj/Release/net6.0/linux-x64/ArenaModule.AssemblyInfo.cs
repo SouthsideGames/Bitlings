@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("ArenaModule")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Release")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+90147ea01f1212ae19e8f2e702625a8d63641205")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+2ad89a91d75a11380d8e1be9442f21cf6386b0ac")]
 [assembly: System.Reflection.AssemblyProductAttribute("ArenaModule")]
 [assembly: System.Reflection.AssemblyTitleAttribute("ArenaModule")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
