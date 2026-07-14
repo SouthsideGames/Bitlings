@@ -28,7 +28,7 @@ public class UploadCatalogs
     // SETUP: replace the value below with your own random string, and paste the
     // SAME string into ArenaDataExporter.CatalogUploadSecret. Keep them in sync.
     // (If your GitHub repo is public, treat this like any secret and rotate it.)
-    private const string ExpectedSecret = "CHANGE-ME-arena-catalog-upload-secret";
+    private const string ExpectedSecret = "bl-arena-46d8962840c6ee61bbe6c22180920a3d";
 
     private readonly ILogger<UploadCatalogs> _logger;
 

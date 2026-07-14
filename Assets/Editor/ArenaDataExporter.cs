@@ -19,7 +19,7 @@ public static class ArenaDataExporter
 
     // Must match ArenaModule UploadCatalogs.ExpectedSecret. This file is
     // Editor-only (#if UNITY_EDITOR) so the secret never ships in a player build.
-    private const string CatalogUploadSecret = "CHANGE-ME-arena-catalog-upload-secret";
+    private const string CatalogUploadSecret = "bl-arena-46d8962840c6ee61bbe6c22180920a3d";
 
     [MenuItem("Tools/Arena/Export Reference Data")]
     public static void ExportAll()
