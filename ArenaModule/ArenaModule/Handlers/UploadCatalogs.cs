@@ -17,6 +17,21 @@ public class UploadCatalogs
 {
     private const string CatalogEntity = "arena_catalogs";
 
+    // ADMIN GATE: only these UGS player IDs may upload catalogs. This is an
+    // in-code alternative to a UGS Access Control policy, so no dashboard/CLI
+    // setup is required to keep players from overwriting the trusted catalogs.
+    //
+    // To find your own player ID: run the editor "Upload Catalogs to Cloud" tool
+    // once — this handler logs "UploadCatalogs called by <playerId>" (visible in
+    // the UGS dashboard Cloud Code logs). Copy that ID into the array below and
+    // redeploy the module. While the array is EMPTY, uploads are allowed from any
+    // authenticated caller (convenient for first-time setup) but a warning is
+    // logged — lock it down before launch.
+    private static readonly string[] AdminPlayerIds =
+    {
+        // "add-your-ugs-player-id-here",
+    };
+
     private readonly ILogger<UploadCatalogs> _logger;
 
     public UploadCatalogs(ILogger<UploadCatalogs> logger)
@@ -35,6 +50,20 @@ public class UploadCatalogs
         string monsterCatalogJson,
         string titleCatalogJson)
     {
+        // ── Admin gate ──
+        _logger.LogInformation("UploadCatalogs called by {PlayerId}", ctx.PlayerId);
+        if (AdminPlayerIds.Length == 0)
+        {
+            _logger.LogWarning(
+                "UploadCatalogs has no admin allow-list configured — allowing this call. " +
+                "Add your player ID to AdminPlayerIds and redeploy before launch.");
+        }
+        else if (Array.IndexOf(AdminPlayerIds, ctx.PlayerId) < 0)
+        {
+            _logger.LogWarning("UploadCatalogs denied for non-admin player {PlayerId}.", ctx.PlayerId);
+            return new UploadCatalogsResult { Success = false, Error = "Not authorized." };
+        }
+
         if (string.IsNullOrWhiteSpace(monsterCatalogJson))
             return new UploadCatalogsResult { Success = false, Error = "Monster catalog is required." };
 
