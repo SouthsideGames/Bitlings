@@ -70,6 +70,13 @@ public class GetTournamentBracket
 
         if (!bracketsBuilt)
         {
+            // SECURITY: only the CURRENT week may be lazily locked. Without this a
+            // client could send a FUTURE weekId on a Wednesday+, build that week with
+            // zero registrations, and the idempotent "done" lock would then block the
+            // real bracket build when that week actually arrives.
+            if (weekId != ScheduleHelper.GetCurrentWeekId())
+                return NotAssigned("Brackets are not available for that week.");
+
             if (!ScheduleHelper.IsPastLockTime())
                 return NotAssigned("Brackets haven't been assigned yet. Check back Wednesday.");
 

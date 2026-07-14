@@ -35,13 +35,6 @@ module.exports = async ({ params, context, logger }) => {
     return { success: false, error: "weekId is required." };
   }
 
-  // SECURITY: only the CURRENT week may be locked. Locking an arbitrary future
-  // weekId with zero registrations would permanently no-op the real lock for
-  // that week (the "done" status is idempotent), breaking the arena for everyone.
-  if (weekId !== getCurrentWeekId()) {
-    return { success: false, error: "Week mismatch: only the current week can be locked." };
-  }
-
   const cloudSave = new DataApi(context);
 
   // ── Check if already locked ──
@@ -247,41 +240,6 @@ async function writeLock(cloudSave, projectId, lockEntity, logger) {
   } catch (e) {
     logger.error("Failed to write lock: " + e.message);
   }
-}
-
-function getCurrentWeekId() {
-  const et = getETComponents();
-  const year = parseInt(et.year);
-  const month = parseInt(et.month) - 1;
-  const day = parseInt(et.day);
-  const dow = { Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6, Sun: 0 }[
-    et.weekday
-  ];
-  // Monday-based offset (same logic as RegisterForTournament.js)
-  const mondayOffset = dow === 0 ? -6 : 1 - dow;
-  const mondayDate = new Date(year, month, day + mondayOffset);
-  const y = mondayDate.getFullYear();
-  const m = String(mondayDate.getMonth() + 1).padStart(2, "0");
-  const d = String(mondayDate.getDate()).padStart(2, "0");
-  return `W${y}${m}${d}`;
-}
-
-function getETComponents() {
-  const now = new Date();
-  const parts = {};
-  for (const p of new Intl.DateTimeFormat("en-US", {
-    timeZone: "America/New_York",
-    weekday: "short",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-  }).formatToParts(now)) {
-    parts[p.type] = p.value;
-  }
-  return parts;
 }
 
 function findMergeTarget(pools, sourceBand) {

@@ -195,12 +195,6 @@ public static class ArenaDataExporter
         string monsterJson = File.ReadAllText(monsterPath);
         string titleJson = File.ReadAllText(titlePath);
 
-        // Type chart is needed server-side for synergy scoring; upload it too if present.
-        string typeChartPath = Path.Combine(OutputFolder, "type_chart.json");
-        string typeChartJson = File.Exists(typeChartPath) ? File.ReadAllText(typeChartPath) : null;
-        if (string.IsNullOrEmpty(typeChartJson))
-            Debug.LogWarning("[ArenaDataExporter] type_chart.json missing — server synergy scoring will be skipped. Run 'Export Reference Data' first.");
-
         if (UGSInitializer.I == null || !UGSInitializer.I.IsReady)
         {
             Debug.LogError("[ArenaDataExporter] UGS not initialized. Enter Play Mode first to authenticate, then try again.");
@@ -214,8 +208,6 @@ public static class ArenaDataExporter
                 { "monsterCatalogJson", monsterJson },
                 { "titleCatalogJson", titleJson }
             };
-            if (!string.IsNullOrEmpty(typeChartJson))
-                args["typeChartJson"] = typeChartJson;
 
             var result = await CloudCodeService.Instance.CallModuleEndpointAsync<UploadCatalogsResponse>(
                 "ArenaModule", "UploadCatalogs", args);

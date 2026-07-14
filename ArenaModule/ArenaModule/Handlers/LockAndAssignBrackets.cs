@@ -37,6 +37,12 @@ public class LockAndAssignBrackets
         if (string.IsNullOrWhiteSpace(weekId))
             return Fail("weekId is required.");
 
+        // SECURITY: only the current week may be locked. Locking an arbitrary future
+        // week with zero registrations would permanently no-op the real lock for that
+        // week (the "done" status is idempotent), breaking the arena for everyone.
+        if (weekId != ScheduleHelper.GetCurrentWeekId())
+            return Fail("Only the current week can be locked.");
+
         var lockEntity = $"tournament_lock_{weekId}";
 
         // ── Check if already locked ──
