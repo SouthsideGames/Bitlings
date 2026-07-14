@@ -31,6 +31,14 @@ module.exports = async ({ params, context, logger }) => {
     return { assigned: false, reason: "Invalid week ID." };
   }
 
+  // SECURITY: only the CURRENT week may be (lazily) locked or read. Without this
+  // check, any client could send a FUTURE weekId on a Wednesday+, lazy-lock that
+  // week with zero registrations, and the idempotent "done" lock would then stop
+  // real brackets from ever being built when that week arrives.
+  if (weekId !== getCurrentWeekId()) {
+    return { assigned: false, reason: "Week mismatch. Please refresh." };
+  }
+
   const cloudSave = new DataApi(context);
 
   // ── Check if brackets are built ──
@@ -290,6 +298,23 @@ function isPastLockTime() {
   // Mon-based: Mon=0, Tue=1, Wed=2, Thu=3, Fri=4, Sat=5, Sun=6
   const monBased = dow === 0 ? 6 : dow - 1;
   return monBased >= 2;
+}
+
+function getCurrentWeekId() {
+  const et = getETComponents();
+  const year = parseInt(et.year);
+  const month = parseInt(et.month) - 1;
+  const day = parseInt(et.day);
+  const dow = { Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6, Sun: 0 }[
+    et.weekday
+  ];
+  // Monday-based offset (same logic as RegisterForTournament.js)
+  const mondayOffset = dow === 0 ? -6 : 1 - dow;
+  const mondayDate = new Date(year, month, day + mondayOffset);
+  const y = mondayDate.getFullYear();
+  const m = String(mondayDate.getMonth() + 1).padStart(2, "0");
+  const d = String(mondayDate.getDate()).padStart(2, "0");
+  return `W${y}${m}${d}`;
 }
 
 function getETComponents() {

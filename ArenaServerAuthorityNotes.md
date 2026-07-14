@@ -60,6 +60,20 @@ cheater can deflate those too without weakening the team.
    inflated-stat snapshots are rejected at registration rather than poisoning
    opponents' battles.
 
+## Gap 3 — Future-week lock griefing (FIXED in repo, needs redeploy)
+
+`GetTournamentBracket.js` lazy-locked whatever `weekId` the client sent, checking
+only that it was Wednesday-or-later. Any client could therefore pre-lock FUTURE
+weeks with zero registrations; the idempotent `tournament_lock_{weekId} = done`
+status then made the real lock a no-op when that week arrived — no brackets for
+anyone, every week, until the Game Data entities were manually deleted.
+
+**Fixed in this repo** (both `GetTournamentBracket.js` and
+`LockAndAssignBrackets.js` now reject any `weekId` other than the server-computed
+current week), but the fix only takes effect once you **redeploy both scripts to
+the UGS dashboard**. If you suspect this was ever exploited, check Cloud Save
+Game Data for `tournament_lock_*` entities dated in the future and delete them.
+
 ## What was already fixed client-side (this branch)
 
 - Speed-tie initiative bias in `ArenaBattleSimulator` (left slot always struck
