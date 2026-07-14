@@ -384,6 +384,14 @@ public class ArenaMainPanelUI : MonoBehaviour
         var arena = SaveManager.GetArenaSaveData();
         var status = arena?.currentTournamentCache?.playerStatus ?? ArenaPlayerTournamentStatus.NotEntered;
 
+        // Retry any tournament result awaiting server consensus (persisted across
+        // restarts). Runs regardless of current tournament status.
+        if (arena?.pendingResultSubmission != null && ArenaNetworkGuard.IsOnline)
+        {
+            try { await ArenaTournamentService.TrySubmitPendingResultAsync(); }
+            catch { /* non-fatal; retried next open */ }
+        }
+
         if (status == ArenaPlayerTournamentStatus.Registered && ArenaNetworkGuard.IsOnline)
         {
             var (synced, _) = await ArenaTournamentService.SyncBracketAsync();

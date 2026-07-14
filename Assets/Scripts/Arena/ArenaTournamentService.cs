@@ -709,31 +709,113 @@ public static class ArenaTournamentService
         arena.battleTeamData.isLocked = false;
         arena.battleTeamData.lockedTournamentId = "";
 
-        // Submit to leaderboards (fire-and-forget)
-        SubmitLeaderboardScores(placement, arena.lifetimeStats);
+        // Queue the result for SERVER-AUTHORITATIVE scoring. The client no longer
+        // writes leaderboards directly; it submits its computed standings and the
+        // server verifies them against other real players before writing the score.
+        if (!string.IsNullOrEmpty(playerEntryId))
+        {
+            arena.pendingResultSubmission = BuildPendingSubmission(record, playerEntryId, placement);
+            SubmitPendingResultFireAndForget();
+        }
 
         DevLog.Log($"{TAG} Tournament '{record.tournamentId}' completed. Player placed #{placement}.");
     }
 
-    /// <summary>Fire-and-forget leaderboard score submission after tournament completion.</summary>
-    private static async void SubmitLeaderboardScores(int placement, ArenaLifetimeStats stats)
+    /// <summary>
+    /// Builds the server-submission payload from the completed record: the ordered
+    /// standings (entryIds, champion first), the player's entry, and the weekId
+    /// (parsed from the tournamentId so it matches exactly what the server keyed on).
+    /// </summary>
+    private static ArenaPendingResultSubmission BuildPendingSubmission(
+        ArenaTournamentRecord record, string playerEntryId, int placement)
     {
-        if (!ArenaNetworkGuard.IsOnline) return;
-
-        try
+        List<string> order = record.standings?.placementOrder;
+        if (order == null || order.Count == 0)
         {
-            await ArenaLeaderboardService.SubmitWeeklyPlacementAsync(placement);
-
-            if (placement == 1 && stats != null)
-                await ArenaLeaderboardService.SubmitAllTimeChampionshipsAsync(stats.championshipsWon);
-
-            // Publish updated public profile
-            await ArenaPlayerProfileService.PublishProfileAsync();
+            // Fallback: derive ordering from finalPlacement if standings weren't built.
+            var sorted = new List<ArenaTournamentEntry>(record.entries);
+            sorted.Sort((a, b) => a.finalPlacement.CompareTo(b.finalPlacement));
+            order = new List<string>(sorted.Count);
+            for (int i = 0; i < sorted.Count; i++) order.Add(sorted[i].entryId);
         }
-        catch (Exception ex)
+
+        return new ArenaPendingResultSubmission
         {
-            Debug.LogWarning($"{TAG} Leaderboard/profile submission failed: {ex.Message}");
+            weekId = WeekIdFromTournamentId(record.tournamentId),
+            tournamentId = record.tournamentId,
+            entryId = playerEntryId,
+            placement = placement,
+            standingsJson = Newtonsoft.Json.JsonConvert.SerializeObject(order),
+            lastAttemptUtc = 0
+        };
+    }
+
+    /// <summary>
+    /// tournamentId is "T{weekId}_{Band}_{index}" (see LockAndAssignBrackets.js).
+    /// Extract the weekId ("W........") so submissions key on the same value the
+    /// server used, independent of the current clock.
+    /// </summary>
+    private static string WeekIdFromTournamentId(string tournamentId)
+    {
+        if (string.IsNullOrEmpty(tournamentId) || tournamentId.Length < 2)
+            return ArenaScheduleService.GetCurrentWeekId();
+
+        // Strip leading 'T', take up to the first '_'.
+        int underscore = tournamentId.IndexOf('_', 1);
+        string weekId = underscore > 1
+            ? tournamentId.Substring(1, underscore - 1)
+            : tournamentId.Substring(1);
+
+        return weekId.StartsWith("W") ? weekId : ArenaScheduleService.GetCurrentWeekId();
+    }
+
+    /// <summary>
+    /// Attempts to submit the pending tournament result to the server. Safe to call
+    /// repeatedly (on arena open / app resume): clears the pending record on a
+    /// terminal server response, leaves it in place to retry on "pending" or a
+    /// transport failure. Returns true if a terminal state was reached.
+    /// </summary>
+    public static async Task<bool> TrySubmitPendingResultAsync()
+    {
+        var arena = SaveManager.GetArenaSaveData();
+        var pending = arena?.pendingResultSubmission;
+        if (pending == null || string.IsNullOrEmpty(pending.tournamentId))
+            return false;
+
+        if (!ArenaNetworkGuard.IsOnline)
+            return false;
+
+        pending.lastAttemptUtc = SaveManager.NowUnix();
+
+        var outcome = await ArenaCloudCodeService.SubmitTournamentResultAsync(
+            pending.weekId, pending.tournamentId, pending.entryId, pending.placement, pending.standingsJson);
+
+        if (outcome.IsTerminal)
+        {
+            if (outcome.status == "rejected")
+                Debug.LogWarning($"{TAG} Result submission rejected by server: {pending.tournamentId} — {outcome.reason}");
+            else
+                DevLog.Log($"{TAG} Result scored by server: {pending.tournamentId} (status={outcome.status}).");
+
+            arena.pendingResultSubmission = null;
+            SaveManager.Save();
+
+            // Refresh the public profile now that the authoritative score is in.
+            try { await ArenaPlayerProfileService.PublishProfileAsync(); } catch { }
+            return true;
         }
+
+        // "pending" (awaiting consensus) or transport failure: keep it and retry later.
+        if (outcome.IsPending)
+            DevLog.Log($"{TAG} Result pending consensus: {pending.tournamentId}.");
+        SaveManager.Save();
+        return false;
+    }
+
+    private static async void SubmitPendingResultFireAndForget()
+    {
+        try { await TrySubmitPendingResultAsync(); }
+        catch (Exception ex) { Debug.LogWarning($"{TAG} Pending result submit failed: {ex.Message}"); }
     }
 
     // ═════════════════════════════════════════════════════════════

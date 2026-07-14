@@ -253,3 +253,45 @@ public class GetBracketResult
     [JsonPropertyName("bracket")]
     public BracketData? Bracket { get; set; }
 }
+
+// ═══════════════════════════════════════════════════════════════
+//  TOURNAMENT RESULT SUBMISSION (server-authoritative scoring)
+// ═══════════════════════════════════════════════════════════════
+
+/// <summary>
+/// Result of a SubmitTournamentResult call. status is one of:
+/// "scored", "pending", "already_scored", "rejected".
+/// </summary>
+public class SubmitResultOutcome
+{
+    [JsonPropertyName("status")]
+    public string Status { get; set; } = "";
+
+    [JsonPropertyName("placement")]
+    public int Placement { get; set; }
+
+    [JsonPropertyName("score")]
+    public int Score { get; set; }
+
+    [JsonPropertyName("reason")]
+    public string? Reason { get; set; }
+}
+
+/// <summary>A single stored result submission (keyed by playerId).</summary>
+public class StoredResult
+{
+    [JsonPropertyName("tournamentId")]
+    public string TournamentId { get; set; } = "";
+
+    [JsonPropertyName("standingsHash")]
+    public int StandingsHash { get; set; }
+
+    [JsonPropertyName("placement")]
+    public int Placement { get; set; }
+
+    [JsonPropertyName("entryId")]
+    public string EntryId { get; set; } = "";
+
+    [JsonPropertyName("submittedUtc")]
+    public long SubmittedUtc { get; set; }
+}

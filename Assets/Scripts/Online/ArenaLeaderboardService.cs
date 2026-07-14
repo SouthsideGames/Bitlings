@@ -29,10 +29,14 @@ public static class ArenaLeaderboardService
     // ═════════════════════════════════════════════════════════════
 
     /// <summary>
-    /// Submits the player's weekly tournament placement.
-    /// Score is inverted (33 - placement) so that 1st place = highest score (32).
-    /// UGS Leaderboards sort descending by default.
+    /// DEPRECATED — do not call. Direct client leaderboard writes are forgeable and
+    /// have been replaced by server-authoritative scoring via the
+    /// SubmitTournamentResult Cloud Code endpoint (see
+    /// ArenaTournamentService.TrySubmitPendingResultAsync). Once the dashboard
+    /// Access-Control policy denies player-token writes to arena_weekly, this call
+    /// fails anyway. Kept only so older references compile during rollout.
     /// </summary>
+    [Obsolete("Leaderboard writes are now server-authoritative via SubmitTournamentResult. Do not call from the client.")]
     public static async Task SubmitWeeklyPlacementAsync(int placement, int bracketSize = ArenaConstants.BracketSize)
     {
         if (!ArenaNetworkGuard.IsOnline) return;
@@ -51,9 +55,11 @@ public static class ArenaLeaderboardService
     }
 
     /// <summary>
-    /// Submits the player's all-time championship count.
-    /// Called after each tournament completion when the player won 1st place.
+    /// DEPRECATED — do not call. All-time championships are now maintained
+    /// server-side (authoritative counter in SubmitTournamentResult). Kept only so
+    /// older references compile during rollout.
     /// </summary>
+    [Obsolete("All-time championships are now server-authoritative via SubmitTournamentResult. Do not call from the client.")]
     public static async Task SubmitAllTimeChampionshipsAsync(int championshipCount)
     {
         if (!ArenaNetworkGuard.IsOnline) return;

@@ -60,6 +60,32 @@ public sealed class ArenaSaveData
     /// Oldest entries are pruned when count exceeds <see cref="ArenaConstants.TournamentHistoryRetention"/>.
     /// </summary>
     public List<ArenaTournamentHistoryEntry> recentTournamentHistory = new List<ArenaTournamentHistoryEntry>();
+
+    /// <summary>
+    /// A result submission that the server accepted but has not yet scored (it is
+    /// awaiting corroboration from other real players in the bracket). Retried on
+    /// arena open / app resume until the server returns a terminal status. Null
+    /// when there is nothing to retry.
+    /// </summary>
+    public ArenaPendingResultSubmission pendingResultSubmission;
+}
+
+/// <summary>
+/// A tournament result the client has computed and is trying to get the server
+/// to verify + score. Persisted so a "pending" (awaiting-consensus) submission
+/// survives app restarts and is retried later.
+/// </summary>
+[Serializable]
+public sealed class ArenaPendingResultSubmission
+{
+    public string weekId = "";
+    public string tournamentId = "";
+    public string entryId = "";
+    public int placement;
+    public string standingsJson = "";
+
+    /// <summary>UTC epoch of the last submit attempt (for backoff / staleness pruning).</summary>
+    public long lastAttemptUtc;
 }
 
 // ═══════════════════════════════════════════════════════════════════
