@@ -782,7 +782,7 @@ private void FireOnEntryEffects(int slot)
                 {
                     // 25% chance the unit's action fails this turn.
                     // Caller is responsible for actually consuming the turn when skipAction is true.
-                    if (UnityEngine.Random.value < 0.25f)
+                    if (Rng01() < 0.25f)
                     {
                         skipAction = true;
                         skippedBy = StatusType.Shock;
@@ -889,7 +889,7 @@ private void FireOnEntryEffects(int slot)
 
             case StatusType.Shock:
                 // 25% chance the wild's action fails this turn.
-                if (UnityEngine.Random.value < 0.25f)
+                if (Rng01() < 0.25f)
                 {
                     skipAction = true;
                     skippedBy = StatusType.Shock;

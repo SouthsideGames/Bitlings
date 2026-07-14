@@ -263,15 +263,21 @@ public sealed class TitleManager : MonoBehaviour
             }
         }
 
-        var all = Resources.LoadAll<TitleSO>("");
-        for (int i = 0; i < all.Length; i++)
+        // Fallback only: title assets live in Assets/Data/Title (outside Resources),
+        // so when preloadTitles is wired this whole-tree Resources scan finds nothing
+        // and just adds boot-time cost that grows with the Resources folder.
+        if (_idToTitle.Count == 0)
         {
-            var t = all[i];
-            if (!t || string.IsNullOrEmpty(t.titleId)) continue;
-            allCandidates.Add(t);
+            var all = Resources.LoadAll<TitleSO>("");
+            for (int i = 0; i < all.Length; i++)
+            {
+                var t = all[i];
+                if (!t || string.IsNullOrEmpty(t.titleId)) continue;
+                allCandidates.Add(t);
 
-            if (!_idToTitle.ContainsKey(t.titleId))
-                _idToTitle.Add(t.titleId, t);
+                if (!_idToTitle.ContainsKey(t.titleId))
+                    _idToTitle.Add(t.titleId, t);
+            }
         }
 
         // Duplicate titleId detection (non-LINQ, editor-friendly)

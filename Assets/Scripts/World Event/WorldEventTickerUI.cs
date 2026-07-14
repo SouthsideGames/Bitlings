@@ -239,7 +239,10 @@ public sealed class WorldEventTickerUI : MonoBehaviour
             {
                 messageText.text = item.message;
                 messageText.color = item.hasEffect ? effectColor : defaultColor;
-                Canvas.ForceUpdateCanvases();
+                // Setting .text already dirties this text's own layout; a full
+                // Canvas.ForceUpdateCanvases() here rebuilt EVERY canvas in the
+                // scene each rotation and caused a visible micro-stutter.
+                messageText.ForceMeshUpdate();
             }
 
             // Fade in

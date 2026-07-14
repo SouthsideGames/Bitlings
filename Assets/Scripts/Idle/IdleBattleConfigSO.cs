@@ -23,5 +23,9 @@ public class IdleBattleConfigSO : ScriptableObject
     [Header("Feature Unlocks")]
     [Range(1f, 5f)] public float rewardBoostMultiplier = 1.5f;
 
-    
+    [Header("Premium Pity")]
+    [Tooltip("Bad-luck protection for premium rolls in idle rifts. After this many " +
+             "consecutive premium-eligible rifts without a premium, the next roll is " +
+             "guaranteed. 0 = disabled (pure 1/512 memoryless odds, the pre-pity behavior).")]
+    [Min(0)] public int premiumPityThreshold = 0;
 }

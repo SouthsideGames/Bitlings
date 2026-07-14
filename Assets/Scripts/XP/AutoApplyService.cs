@@ -263,6 +263,12 @@ public partial class AutoApplyService : MonoBehaviour
     private TokenEconomySO GetTokenEconomy()
     {
         if (tokenEconomy) return tokenEconomy;
+
+        // Direct load by known path (Assets/Resources/TokenEconomy.asset) — the
+        // empty-path LoadAll scanned the entire Resources tree on the main thread.
+        tokenEconomy = Resources.Load<TokenEconomySO>("TokenEconomy");
+        if (tokenEconomy) return tokenEconomy;
+
         var all = Resources.LoadAll<TokenEconomySO>("");
         if (all != null && all.Length > 0) { tokenEconomy = all[0]; return tokenEconomy; }
         return null;

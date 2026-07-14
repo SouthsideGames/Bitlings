@@ -77,7 +77,7 @@ public sealed class JobManager : MonoBehaviour
         public int unitsLost;
     }
 
-    public static JobManager I;
+    public static JobManager I { get; private set; }
     private readonly List<StorageCapWarning> _pendingStorageWarnings = new List<StorageCapWarning>(); // FIXED: collects full-storage loss events for player notification
 
     // -------------------------------------------------------------------------
@@ -1001,6 +1001,13 @@ private static float AverageWorkingSlotFatigue(JobSiteState s)
         // Keep legacy mirror (avoid stale values in any older code paths).
         s.storedAmount = 0f;
 
+        // Persist the emptied storage BEFORE granting: each grant path below triggers
+        // its own synchronous save, and if the app is killed between the grant save and
+        // a later runtime save, the on-disk state would contain both the granted
+        // resources and the still-full storage — a repeatable duplication exploit.
+        SaveAssignmentsToSave();
+        SaveRuntimeToSave();
+
         var res = JobOutput.Output(job);
         switch (res)
         {
@@ -1022,8 +1029,6 @@ private static float AverageWorkingSlotFatigue(JobSiteState s)
                 break;
         }
 
-        SaveAssignmentsToSave();
-        SaveRuntimeToSave();
         FireJobsChanged();
         return whole;
     }

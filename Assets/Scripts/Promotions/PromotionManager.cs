@@ -98,6 +98,25 @@ public sealed class PromotionManager : MonoBehaviour
 
         bool rankedUp = TryProcessRankUps(out int newRank);
 
+        if (rankedUp)
+        {
+            // Grant rewards BEFORE the persist below, batched so the reward
+            // resources, the new rank, and the paid-rewards watermark all land in
+            // the same save. (Previously the rank was saved first and rewards
+            // granted after — a crash in between lost the rewards forever.)
+            EnsureRewardWatermarkSeeded(pm);
+            ResourceBank.BeginBatch();
+            try
+            {
+                GrantRankRewards(pm.promotionLastRewardedRank + 1, newRank);
+                pm.promotionLastRewardedRank = newRank;
+            }
+            finally
+            {
+                ResourceBank.EndBatch();
+            }
+        }
+
         // Persist
         SaveManager.Save();
 
@@ -108,10 +127,58 @@ public sealed class PromotionManager : MonoBehaviour
 
         if (rankedUp)
         {
-            GrantRankRewards(oldRank + 1, newRank);
             GameEvents.PromotionRankChanged?.Invoke(oldRank, newRank);
             TryPlayPromotionCeremony(newRank);
         }
+    }
+
+    private void Start()
+    {
+        ReconcileUnpaidRankRewards();
+    }
+
+    /// <summary>
+    /// Legacy saves predate the watermark; seed it to the current rank so they
+    /// are not retroactively paid for every rank they already passed.
+    /// </summary>
+    private static void EnsureRewardWatermarkSeeded(PlayerManager pm)
+    {
+        if (pm.promotionLastRewardedRank <= 0)
+            pm.promotionLastRewardedRank = Mathf.Max(1, pm.promotionRank);
+    }
+
+    /// <summary>
+    /// Pays out any rank-up rewards recorded as earned but not yet granted
+    /// (i.e. the app died between persisting the rank and granting rewards).
+    /// </summary>
+    private void ReconcileUnpaidRankRewards()
+    {
+        var pm = SaveManager.Data;
+        if (pm == null) return;
+
+        if (pm.promotionLastRewardedRank <= 0)
+        {
+            // Legacy save: seed and persist the watermark, no retroactive grants.
+            EnsureRewardWatermarkSeeded(pm);
+            SaveManager.Save();
+            return;
+        }
+
+        if (pm.promotionLastRewardedRank >= pm.promotionRank) return;
+        if (ResourceManager.I == null) return; // try again next launch
+
+        DevLog.Log($"[PromotionManager] Reconciling unpaid rank rewards {pm.promotionLastRewardedRank + 1}..{pm.promotionRank}.");
+        ResourceBank.BeginBatch();
+        try
+        {
+            GrantRankRewards(pm.promotionLastRewardedRank + 1, pm.promotionRank);
+            pm.promotionLastRewardedRank = pm.promotionRank;
+        }
+        finally
+        {
+            ResourceBank.EndBatch();
+        }
+        SaveManager.Save();
     }
 
     private void TryPlayPromotionCeremony(int newRank)
@@ -233,7 +300,17 @@ public sealed class PromotionManager : MonoBehaviour
             var entry = promotionTable.Get(r);
             if (entry == null || entry.rewards == null || entry.rewards.Count == 0) continue;
 
-            ResourceManager.I.AddMany(entry.rewards);
+            if (ResourceManager.I != null)
+            {
+                ResourceManager.I.AddMany(entry.rewards);
+            }
+            else
+            {
+                // Menu-first boot: ResourceManager may not be active yet.
+                foreach (var reward in entry.rewards)
+                    if (reward.amount > 0)
+                        ResourceBank.Add(reward.type, reward.amount);
+            }
         }
     }
 

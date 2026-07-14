@@ -75,6 +75,14 @@ public static class IdleBattleStore
     {
         string tmp = path + ".tmp";
         File.WriteAllText(tmp, contents ?? string.Empty);
+
+        // Prefer File.Replace: no window where the destination is missing.
+        if (File.Exists(path))
+        {
+            try { File.Replace(tmp, path, null); return; }
+            catch { /* unsupported on some platforms; fall through */ }
+        }
+
         try
         {
             if (File.Exists(path)) File.Delete(path);
@@ -83,7 +91,8 @@ public static class IdleBattleStore
         catch (Exception ex)
         {
             Debug.LogError($"IdleBattleStore.AtomicWrite move failed: {ex}");
-            try { if (!File.Exists(path)) File.Copy(tmp, path); } catch { }
+            try { if (!File.Exists(path)) File.Copy(tmp, path); }
+            catch (Exception ex2) { Debug.LogError($"IdleBattleStore.AtomicWrite fallback copy failed: {ex2.Message}"); }
             try { File.Delete(tmp); } catch { }
         }
     }

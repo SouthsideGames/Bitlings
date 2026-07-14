@@ -89,11 +89,19 @@ public class HealthRegenSystem : MonoBehaviour
 
             long last = e.lastHPUnix > 0 ? e.lastHPUnix : SaveManager.Data.lastSavedUnix;
 
-            // If device clock moved backwards, clamp stored timestamp to prevent frozen regen.
+            // Ledger in the future (device clock rolled back): freeze regen until real
+            // time catches up instead of forgiving — resetting the timestamp made
+            // clock-forward→roll-back cycling a free instant-heal exploit. The freeze
+            // is bounded so a wildly-wrong clock can't stall regen forever.
             if (last > nowUnix && deltaSecondsOverride == null)
             {
-                updated.lastHPUnix = nowUnix;
-                last = nowUnix;
+                long freezeCap = nowUnix + SaveManager.MaxRollbackFreezeSeconds;
+                if (last > freezeCap)
+                {
+                    updated.lastHPUnix = freezeCap;
+                    return true;
+                }
+                return false;
             }
 
             long delta = deltaSecondsOverride ?? Math.Max(0, nowUnix - Math.Max(0, last));

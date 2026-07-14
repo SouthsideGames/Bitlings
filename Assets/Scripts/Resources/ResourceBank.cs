@@ -80,6 +80,9 @@ public static class ResourceBank
     // ─────────────────────────────────────────────────────────────
     // Core methods
     // ─────────────────────────────────────────────────────────────
+    // Computed once: Enum.GetValues allocates, and EnsureSize runs on every Get/Add.
+    private static int _neededSize = -1;
+
     public static void EnsureSize()
     {
         SaveManager.LoadOrCreate();
@@ -87,9 +90,14 @@ public static class ResourceBank
             SaveManager.Data.resourceCounts = new List<int>();
 
         // IMPORTANT: size by max enum value + 1 (NOT Enum.GetValues().Length)
-        int need = 0;
-        foreach (ResourceType t in Enum.GetValues(typeof(ResourceType)))
-            need = Mathf.Max(need, (int)t + 1);
+        if (_neededSize < 0)
+        {
+            int max = 0;
+            foreach (ResourceType t in Enum.GetValues(typeof(ResourceType)))
+                max = Mathf.Max(max, (int)t + 1);
+            _neededSize = max;
+        }
+        int need = _neededSize;
 
         while (SaveManager.Data.resourceCounts.Count < need)
             SaveManager.Data.resourceCounts.Add(0);
@@ -112,8 +120,31 @@ public static class ResourceBank
         return Mathf.Max(0, L[i]);
     }
 
+    // Arena tickets live in ArenaSaveData (see Get above). Without this routing,
+    // Add/Set/TrySpend wrote to resourceCounts[(int)ArenaTicket] — a slot Get never
+    // reads — so any designer-configured reward granting ArenaTicket was silently lost.
+    static void SetArenaTicketsClamped(long value)
+    {
+        var arena = SaveManager.GetArenaSaveData();
+        if (arena == null) return;
+
+        long v = value;
+        if (v < 0) v = 0;
+        if (v > ArenaConstants.MaxTickets) v = ArenaConstants.MaxTickets;
+
+        if (arena.arenaTickets == (int)v) return;
+        arena.arenaTickets = (int)v;
+        EmitChanged();
+    }
+
     public static void Set(ResourceType t, int value)
     {
+        if (t == ResourceType.ArenaTicket)
+        {
+            SetArenaTicketsClamped(value);
+            return;
+        }
+
         EnsureSize();
         int i = Index(t);
         if (i < 0 || i >= L.Count) return;
@@ -147,6 +178,14 @@ public static class ResourceBank
     public static void Add(ResourceType t, int delta)
     {
         if (delta == 0) return;
+
+        // Arena tickets: route to their real store (and skip event multipliers —
+        // tickets are a capped competitive currency, not a farmable resource).
+        if (t == ResourceType.ArenaTicket)
+        {
+            SetArenaTicketsClamped((long)ArenaSaveHelper.GetArenaTicketCount() + delta);
+            return;
+        }
 
         // World Events: optional resource gain multipliers (e.g., Voucher Drives).
         // Apply ONLY to positive gains.
@@ -201,6 +240,16 @@ public static class ResourceBank
     public static bool TrySpend(ResourceType t, int amount)
     {
         if (amount <= 0) return true;
+
+        if (t == ResourceType.ArenaTicket)
+        {
+            var arena = SaveManager.GetArenaSaveData();
+            if (arena == null || arena.arenaTickets < amount) return false;
+            arena.arenaTickets -= amount;
+            EmitChanged();
+            return true;
+        }
+
         EnsureSize();
         int i = Index(t);
         if (i < 0 || i >= L.Count) return false;

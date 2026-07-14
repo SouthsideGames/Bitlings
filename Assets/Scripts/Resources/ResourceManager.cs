@@ -291,14 +291,30 @@ public class ResourceManager : MonoBehaviour
         string tmp = path + ".tmp";
         File.WriteAllText(tmp, contents, Encoding.UTF8);
 
+        // Prefer File.Replace: no window where the destination is missing.
+        if (File.Exists(path))
+        {
+            try
+            {
+                File.Replace(tmp, path, null);
+                return;
+            }
+            catch
+            {
+                // Unsupported on some platforms/filesystems; fall through.
+            }
+        }
+
         try
         {
             if (File.Exists(path)) File.Delete(path);
             File.Move(tmp, path);
         }
-        catch
+        catch (Exception e)
         {
-            try { if (!File.Exists(path)) File.Copy(tmp, path); } catch { }
+            Debug.LogError($"[ResourceManager] AtomicWrite failed for '{path}': {e.GetType().Name} – {e.Message}");
+            try { if (!File.Exists(path)) File.Copy(tmp, path); }
+            catch (Exception e2) { Debug.LogError($"[ResourceManager] AtomicWrite fallback copy failed: {e2.Message}"); }
             try { File.Delete(tmp); } catch { }
         }
     }

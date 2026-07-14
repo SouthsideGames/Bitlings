@@ -187,6 +187,15 @@ public class PlayerManager
     // NOTE: This is separate from any derived dossier labels.
     public int promotionRank = 1;
     public int promotionXP = 0;
+    // Highest rank whose rank-up rewards have actually been granted. 0 = legacy
+    // save (seeded to promotionRank on first reconcile, no retroactive windfall).
+    // If a crash lands between rank persist and reward grant, load-time
+    // reconciliation pays out the missing ranks.
+    public int promotionLastRewardedRank = 0;
+
+    // Consecutive premium-eligible idle rifts without a premium spawn.
+    // Only used when IdleBattleConfigSO.premiumPityThreshold > 0.
+    public int premiumPityCounter = 0;
 
     public bool HasSynergyUnlocked => promotionRank >= 10;
     public bool HasDifficultyUnlocked => promotionRank >= 15;

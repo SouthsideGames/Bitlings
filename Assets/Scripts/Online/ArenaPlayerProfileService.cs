@@ -68,7 +68,7 @@ public static class ArenaPlayerProfileService
             var data = new Dictionary<string, object> { { ProfileKey, json } };
             await CloudSaveService.Instance.Data.Player.SaveAsync(data);
 
-            Debug.Log($"{TAG} Public profile published.");
+            DevLog.Log($"{TAG} Public profile published.");
         }
         catch (Exception ex)
         {

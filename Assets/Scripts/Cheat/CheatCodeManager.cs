@@ -309,6 +309,15 @@ public class CheatCodeManager : MonoBehaviour
 
         switch (cd.effect)
         {
+            // Intentionally release-safe: one-way diagnostics unlock, no economy impact.
+            case CheatEffectKind.ToggleDiagnosticsPanel:
+                return ExecuteToggleDiagnosticsPanel(out message);
+
+            // Every other effect mutates the economy/progression, so the execution
+            // code is compile-stripped from release builds. The runtime
+            // CheatsAllowed() gate remains as a second layer for dev builds, but a
+            // patched bool can no longer reach code that doesn't exist.
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
             case CheatEffectKind.AddResource:
                 return ExecuteAddResource(cd, out message);
 
@@ -360,9 +369,6 @@ public class CheatCodeManager : MonoBehaviour
             case CheatEffectKind.Add5000ToAllResources:
                 return ExecuteAdd5000ToAllResources(out message);
 
-            case CheatEffectKind.ToggleDiagnosticsPanel:
-                return ExecuteToggleDiagnosticsPanel(out message);
-
             case CheatEffectKind.MaxPromotionRank:
                 return ExecuteMaxPromotionRank(out message);
 
@@ -378,7 +384,6 @@ public class CheatCodeManager : MonoBehaviour
             case CheatEffectKind.OwnMonsterById:
                 return ExecuteOwnMonsterById(cd.monsterId, cd.amount, out message);
 
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
             case CheatEffectKind.ArenaForceUnlock:
                 ArenaDebugHelper.ForceUnlockArena();
                 message = "Arena force-unlocked.";
@@ -407,6 +412,11 @@ public class CheatCodeManager : MonoBehaviour
         }
     }
 
+    // ─────────────────────────────────────────────────────────────
+    // Cheat effect implementations — compile-stripped from release builds.
+    // Only ExecuteToggleDiagnosticsPanel (below the #endif) ships.
+    // ─────────────────────────────────────────────────────────────
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
     // ─────────────────────────────────────────────────────────────
     // Booster helper (per-type capped)
     // ─────────────────────────────────────────────────────────────
@@ -644,7 +654,11 @@ public class CheatCodeManager : MonoBehaviour
 
         // Grant any rank-up rewards that were skipped by setting rank directly.
         if (oldRank < targetRank && PromotionManager.I != null)
-            PromotionManager.I.GrantRankRewards(oldRank + 1, targetRank);
+        {
+            PromotionManager.I.GrantRankRewards(Mathf.Max(oldRank, data.promotionLastRewardedRank) + 1, targetRank);
+            data.promotionLastRewardedRank = targetRank;
+            SaveManager.Save();
+        }
 
         ComputePromotionProgressForCheat(out int xpThisRank, out int xpToNext);
 
@@ -852,7 +866,11 @@ public class CheatCodeManager : MonoBehaviour
 
         // Grant any rank-up rewards that were skipped by setting rank directly.
         if (oldRank < targetRank && PromotionManager.I != null)
-            PromotionManager.I.GrantRankRewards(oldRank + 1, targetRank);
+        {
+            PromotionManager.I.GrantRankRewards(Mathf.Max(oldRank, data.promotionLastRewardedRank) + 1, targetRank);
+            data.promotionLastRewardedRank = targetRank;
+            SaveManager.Save();
+        }
 
         ComputePromotionProgressForCheat(out int xpThisRank, out int xpToNext);
 
@@ -1280,19 +1298,22 @@ public class CheatCodeManager : MonoBehaviour
         message = added > 0 ? $"Unlocked {added} pack(s)." : "All packs already unlocked.";
         return true;
     }
+#endif // UNITY_EDITOR || DEVELOPMENT_BUILD — end of stripped cheat implementations
 
+    // Kept compiled (may be wired to inspector events), but the economy mutation
+    // itself only exists in editor/development builds.
     public void Cheat_AddPackVouchers(int amount)
     {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
         amount = Mathf.Max(0, amount);
 
         ResourceBank.EnsureSize(); // important if enum changed recently
         ResourceBank.Add(ResourceType.PackVoucher, amount);
 
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
         DevLog.Log($"[CHEAT] PackVoucher now = {ResourceBank.Get(ResourceType.PackVoucher)} (+{amount})");
-#endif
 
         GameEvents.OnResourcesChanged?.Invoke();
+#endif
     }
 
     bool ExecuteToggleDiagnosticsPanel(out string message)

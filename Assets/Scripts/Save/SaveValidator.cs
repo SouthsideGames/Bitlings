@@ -129,7 +129,7 @@ public static class SaveValidator
             : "SaveValidator found no structural repairs.";
 
         if (repairs > 0)
-            Debug.Log($"[SaveValidator] {summary}");
+            DevLog.Log($"[SaveValidator] {summary}");
         return new SaveValidationResult(repairs > 0, summary);
     }
 
@@ -281,7 +281,7 @@ public static class SaveValidator
             : "Save integrity: no repairs needed.";
 
         if (changed)
-            Debug.Log($"[SaveValidator] {summary}");
+            DevLog.Log($"[SaveValidator] {summary}");
 
         return new SaveValidationResult(changed, summary);
     }

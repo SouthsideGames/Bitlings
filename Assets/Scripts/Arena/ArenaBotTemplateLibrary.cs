@@ -261,7 +261,7 @@ public static class ArenaBotTemplateLibrary
             }
         }
 
-        Debug.Log($"[ArenaBotTemplateLibrary] Built {_allTemplates.Count} bot templates " +
+        DevLog.Log($"[ArenaBotTemplateLibrary] Built {_allTemplates.Count} bot templates " +
                   $"({Blueprints.Length} blueprints × {bands.Length} bands).");
     }
 

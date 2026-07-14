@@ -152,6 +152,9 @@ public partial class RiftManager
 
         if (cur >= max)
         {
+            // Advance the timestamp so time spent at cap is never banked and
+            // credited back as an instant refill after spending.
+            SetEnergyLastUnix(NowUnix());
             SetEnergyRemainderSecs(0f);
             SaveEnergyStateToJson();
             return;
@@ -160,6 +163,19 @@ public partial class RiftManager
         long now = NowUnix();
         long last = GetEnergyLastUnix();
         if (last <= 0) last = now;
+
+        // Ledger in the future (clock rolled back): freeze regen until real time
+        // catches up rather than forgiving, bounded to the shared freeze horizon.
+        if (last > now)
+        {
+            long cap = now + SaveManager.MaxRollbackFreezeSeconds;
+            if (last > cap)
+            {
+                SetEnergyLastUnix(cap);
+                SaveEnergyStateToJson();
+            }
+            return;
+        }
 
         long elapsed = now - last;
         if (elapsed <= 0) return;
@@ -189,7 +205,16 @@ public partial class RiftManager
     {
         int max = GetRiftMax();
         int cur = GetBankEnergy();
-        if (cur >= max) return;
+        if (cur >= max)
+        {
+            // Keep the timestamp current while at cap so no regen time is banked.
+            if (GetEnergyLastUnix() < NowUnix())
+            {
+                SetEnergyLastUnix(NowUnix());
+                SetEnergyRemainderSecs(0f);
+            }
+            return;
+        }
 
         _tickAccum += Time.unscaledDeltaTime;
         if (_tickAccum < 1f) return;
@@ -280,7 +305,8 @@ public partial class RiftManager
         SaveManager.Save();
     }
 
-    static long NowUnix() => DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+    // Use the canonical time source so the clock-manipulation guards apply here too.
+    static long NowUnix() => SaveManager.NowUnix();
     
     public void Cheat_ApplyOfflineEnergyRegen()
     {

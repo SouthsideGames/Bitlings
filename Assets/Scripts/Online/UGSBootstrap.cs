@@ -46,6 +46,6 @@ public static class UGSBootstrap
         await CloudSaveSync.SyncOnLoginAsync();
 
         GameEvents.ArenaDataChanged?.Invoke();
-        Debug.Log("[UGSBootstrap] Post-auth sync complete.");
+        DevLog.Log("[UGSBootstrap] Post-auth sync complete.");
     }
 }

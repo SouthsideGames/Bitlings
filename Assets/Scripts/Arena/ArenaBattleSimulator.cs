@@ -151,7 +151,7 @@ public static class ArenaBattleSimulator
 
             // ── Turn loop ──
             int turn = 0;
-            int lastAggressor = -1; // -1 = none, 0 = left side, 1 = right side
+            int lastTieFirstSide = -1; // side that struck first in the most recent speed-tie round (-1 = none yet)
             while (turn < MaxTurns)
             {
                 // Turn start
@@ -168,18 +168,27 @@ public static class ArenaBattleSimulator
                 var second = rightTeam;
 
                 // Speed determines who attacks first.
-                // On a tie, the side that attacked last yields priority to the other side.
+                // On a tie, alternate: the side that struck first in the previous tie
+                // round yields. The very first tie is decided by the seeded RNG so
+                // neither bracket slot is systematically favored. (The old
+                // "lastAggressor == 0" check compared against whoever acted LAST in
+                // the round — always the second attacker — so sustained ties let the
+                // left slot strike first every single round.)
                 int leftSpd = leftTeam.Active.speed;
                 int rightSpd = rightTeam.Active.speed;
-                if (rightSpd > leftSpd || (rightSpd == leftSpd && lastAggressor == 0))
+                bool speedTie = rightSpd == leftSpd;
+                if (rightSpd > leftSpd
+                    || (speedTie && lastTieFirstSide == -1 && rng.Next(2) == 1)
+                    || (speedTie && lastTieFirstSide == 0))
                 {
                     first = rightTeam;
                     second = leftTeam;
                 }
+                if (speedTie)
+                    lastTieFirstSide = first.side;
 
                 // ── First attacker's turn ──
                 ResolveAttack(first, second, turn, log, rng);
-                lastAggressor = first.side;
 
                 if (CheckTeamWipeout(second, first, turn, log))
                 {
@@ -194,7 +203,6 @@ public static class ArenaBattleSimulator
 
                 // ── Second attacker's turn ──
                 ResolveAttack(second, first, turn, log, rng);
-                lastAggressor = second.side;
 
                 if (CheckTeamWipeout(first, second, turn, log))
                 {

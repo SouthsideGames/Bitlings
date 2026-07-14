@@ -53,7 +53,10 @@ public partial class RiftManager
         return map;
     }
 
-    public MonsterDataSO PickWildConsideringFlyers()
+    /// <param name="rng">Optional deterministic RNG. Idle batches pass their session-seeded
+    /// stream so an interrupted batch resumes with identical picks; live rifts pass null
+    /// and use UnityEngine.Random as before.</param>
+    public MonsterDataSO PickWildConsideringFlyers(System.Random rng = null)
     {
         var catalog = MonsterCatalog.All;
         if (catalog == null || catalog.Count == 0)
@@ -83,7 +86,7 @@ public partial class RiftManager
                     pool.Add(m);
             }
             if (pool.Count == 0) return null;
-            return pool[Random.Range(0, pool.Count)];
+            return pool[rng != null ? rng.Next(pool.Count) : Random.Range(0, pool.Count)];
         }
 
         var typeMult = BuildFlyerTypeMultipliers();
@@ -131,7 +134,7 @@ public partial class RiftManager
             return Mathf.Max(0f, finalW);
         }
 
-        return PickByWeight(pool, GetFinalWeight);
+        return PickByWeight(pool, GetFinalWeight, rng);
     }
 
     public FlyerBiasData CurrentFlyer
@@ -241,7 +244,7 @@ public partial class RiftManager
         return Math.Max(0L, rem);
     }
 
-    private static T PickByWeight<T>(IList<T> items, System.Func<T, float> getWeight)
+    private static T PickByWeight<T>(IList<T> items, System.Func<T, float> getWeight, System.Random rng = null)
     {
         float total = 0f;
         for (int i = 0; i < items.Count; i++)
@@ -251,9 +254,9 @@ public partial class RiftManager
         }
 
         if (total <= 0f)
-            return items.Count > 0 ? items[Random.Range(0, items.Count)] : default;
+            return items.Count > 0 ? items[rng != null ? rng.Next(items.Count) : Random.Range(0, items.Count)] : default;
 
-        float roll = Random.Range(0f, total);
+        float roll = rng != null ? (float)(rng.NextDouble() * total) : Random.Range(0f, total);
         float acc = 0f;
         for (int i = 0; i < items.Count; i++)
         {
