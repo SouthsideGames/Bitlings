@@ -381,6 +381,19 @@ if (elapsed <= 0.1f) return;
         var s = IdleBattleStore.Load();
         if (!s.autoBattling) return;
 
+        // Time-gate FIRST: this runs every frame while auto-battle is active, and
+        // the stop-condition checks below allocate (team roster list) and linearly
+        // scan the owned-monster collection. Doing them only on frames that will
+        // actually resolve a rift removes sustained per-frame GC pressure during
+        // the game's main idle state.
+        long now = NowUnix();
+        float dtRaw = Mathf.Max(0, now - s.lastTickUnix);
+        // Clamp foreground backlog too (OnApplicationPause/Focus can create large dt when returning).
+        float dt = Mathf.Min(dtRaw, config.maxOfflineHours * 3600f);
+        float safeSpe2 = Mathf.Max(0.25f, config.secondsPerRift);
+        int canRun = Mathf.FloorToInt(dt / safeSpe2);
+        if (canRun <= 0) return;
+
         int baseCost = GetRiftCostSafe();
 
         // Stop conditions (must match design):
@@ -405,14 +418,6 @@ if (elapsed <= 0.1f) return;
             TryOpenSummaryIfNeeded();
             return;
         }
-
-        long now = NowUnix();
-        float dtRaw = Mathf.Max(0, now - s.lastTickUnix);
-        // Clamp foreground backlog too (OnApplicationPause/Focus can create large dt when returning).
-        float dt = Mathf.Min(dtRaw, config.maxOfflineHours * 3600f);
-        float safeSpe2 = Mathf.Max(0.25f, config.secondsPerRift);
-        int canRun = Mathf.FloorToInt(dt / safeSpe2);
-        if (canRun <= 0) return;
 
         int curEnergy = GetEnergySafe();
         int byEnergy = (baseCost <= 0) ? canRun : (curEnergy / baseCost);
@@ -490,10 +495,9 @@ if (elapsed <= 0.1f) return;
         if (FeatureUnlockManager.I != null &&
             FeatureUnlockManager.I.IsUnlocked(FeatureId.IdleBattle_RewardBoost))
         {
-            float boost = 1.5f; 
-            boost = Mathf.Max(1f, config.rewardBoostMultiplier);
-
-            creditMulNeutral *= boost;
+            // The boost value comes entirely from config (a misleading dead 1.5f
+            // literal used to sit here).
+            creditMulNeutral *= Mathf.Max(1f, config.rewardBoostMultiplier);
         }
 
         creditMulNeutral *= WorldEventSystem.I != null ? WorldEventSystem.I.GetIdleRewardMultiplier() : 1f;
@@ -512,12 +516,14 @@ if (elapsed <= 0.1f) return;
             energyRemaining -= effectiveCost;
             totalSpentLocal += effectiveCost;
 
+            // Pass the session-seeded rng so the whole batch is a pure function of
+            // sessionSeed — the save-state guard's crash-resume replay depends on it.
             var wild = riftManager != null
-                ? riftManager.PickWildConsideringFlyers()
+                ? riftManager.PickWildConsideringFlyers(rng)
                 : null;
             if (wild == null) continue;
 
-            int wildLevel = RollWildLevel();
+            int wildLevel = RollWildLevel(rng);
             bool premium = RollPremium(wild, rng);
             int avgLv = GetAverageTeamLevel();
 
@@ -866,7 +872,7 @@ if (elapsed <= 0.1f) return;
         return false;
     }
 
-    private static int RollWildLevel()
+    private static int RollWildLevel(System.Random rng)
     {
         var team = GetIdleBattleTeamRoster();
         int avg = 1;
@@ -883,7 +889,9 @@ if (elapsed <= 0.1f) return;
             if (valid > 0)
                 avg = Mathf.Max(1, Mathf.RoundToInt((float)sum / valid));
         }
-        return Mathf.Clamp(avg + UnityEngine.Random.Range(-1, 2), 1, 99);
+        // Seeded rng keeps batch replays deterministic (crash-resume relies on it).
+        int jitter = rng != null ? rng.Next(-1, 2) : UnityEngine.Random.Range(-1, 2);
+        return Mathf.Clamp(avg + jitter, 1, 99);
     }
 
     private static bool RollPremium(MonsterDataSO wild, System.Random rng)
@@ -902,7 +910,20 @@ if (elapsed <= 0.1f) return;
         }
 
         int threshold = Mathf.Max(1, Mathf.FloorToInt(baseOdds / mult));
-        return rng.Next(threshold) == 0;
+        bool hit = rng.Next(threshold) == 0;
+
+        // Soft pity (bad-luck protection), config-gated: with premiumPityThreshold = 0
+        // (the default on existing config assets) this block never changes the roll.
+        var data = SaveManager.Data;
+        int pityThreshold = (I != null && I.config != null) ? I.config.premiumPityThreshold : 0;
+        if (data != null && pityThreshold > 0)
+        {
+            if (!hit && data.premiumPityCounter + 1 >= pityThreshold)
+                hit = true; // guaranteed premium after a long dry streak
+            data.premiumPityCounter = hit ? 0 : data.premiumPityCounter + 1;
+        }
+
+        return hit;
     }
 
     private static int GetAverageTeamLevel()

@@ -117,6 +117,7 @@ public sealed class PlayerSaveSection
     public int promotionRank = 1;
     public int promotionXP;
     public int promotionLastRewardedRank;
+    public int premiumPityCounter;
     public FieldOpsStats fieldOps = new FieldOpsStats();
     public SeedState seedState = new SeedState();
     public List<FlyerBiasData> activeFlyers = new List<FlyerBiasData>();
@@ -266,6 +267,7 @@ public static class SaveDataMapper
                 promotionRank = data.promotionRank,
                 promotionXP = data.promotionXP,
                 promotionLastRewardedRank = data.promotionLastRewardedRank,
+                premiumPityCounter = data.premiumPityCounter,
                 fieldOps = data.fieldOps,
                 seedState = data.seedState,
                 activeFlyers = data.activeFlyers,
@@ -434,6 +436,7 @@ public static class SaveDataMapper
             promotionRank = player.promotionRank,
             promotionXP = player.promotionXP,
             promotionLastRewardedRank = player.promotionLastRewardedRank,
+            premiumPityCounter = player.premiumPityCounter,
             fieldOps = player.fieldOps,
             seedState = player.seedState,
             activeFlyers = player.activeFlyers,

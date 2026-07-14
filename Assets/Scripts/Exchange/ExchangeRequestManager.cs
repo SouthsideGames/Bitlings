@@ -124,6 +124,16 @@ public sealed class ExchangeRequestManager : MonoBehaviour
         var def = MonsterCatalog.GetById(speciesId);
         if (def == null || !MatchesRequest(match, def)) return 0;
 
+        // This overload trades a JUST-CAPTURED duplicate (held only by the
+        // duplicate-resolution panel, never added to the roster), so the specimen
+        // itself cannot be consumed here. The invariant we CAN check: a duplicate
+        // capture implies the player already owns at least one copy of the species.
+        // Without this, any future caller could mint credits for an arbitrary
+        // speciesId. Inventory-based fulfillment must use
+        // TryFulfillRequestByConsumingOwned instead.
+        var owned = SaveManager.Data?.ownedIds;
+        if (owned == null || !owned.Contains(speciesId)) return 0;
+
         int credits = Mathf.Max(0, match.creditReward);
         int bonusAmount = Mathf.Max(0, match.bonusResourceAmount);
 

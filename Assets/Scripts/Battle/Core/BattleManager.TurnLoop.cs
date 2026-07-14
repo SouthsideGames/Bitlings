@@ -675,15 +675,19 @@ public partial class BattleManager : MonoBehaviour
             else if (pSpeed < wSpeed) playerFirst = false;
             else
             {
+                // Defender rule: on a tie, whoever struck FIRST last round yields.
+                // (_lastRoundAggressor is recorded at initiative time below; the old
+                // version stamped it in attack resolution, where the second attacker
+                // always overwrote it, so sustained ties never alternated.)
                 if (_lastRoundAggressor == BattleSide.Player)
                 {
                     playerFirst = false;
-                    BattleLogger.Log("[Initiative] Speed tie: defender rule gives Wild priority (last aggressor: Player).", LogScope.Battle);
+                    BattleLogger.Log("[Initiative] Speed tie: defender rule gives Wild priority (Player struck first last round).", LogScope.Battle);
                 }
                 else
                 {
                     playerFirst = true;
-                    BattleLogger.Log("[Initiative] Speed tie: defender rule gives Player priority (last aggressor: Wild/None).", LogScope.Battle);
+                    BattleLogger.Log("[Initiative] Speed tie: defender rule gives Player priority (Wild/None struck first last round).", LogScope.Battle);
                 }
             }
 
@@ -695,6 +699,9 @@ public partial class BattleManager : MonoBehaviour
                 playerFirst = true;
                 BattleLogger.Log("[HotSwap] Free turn active - enemy turn skipped this round.", LogScope.Battle);
             }
+
+            // Record who strikes first this round for next round's tie-break.
+            _lastRoundAggressor = playerFirst ? BattleSide.Player : BattleSide.Wild;
 
             EnemyAction wildChoice = skipEnemyTurnThisRound ? EnemyAction.None : ChooseEnemyAction();
 
@@ -1636,7 +1643,6 @@ if (!playerLandedFirstHitThisBattle && dr.damage > 0)
 
         // Status: Foresight â€” check repeat action to schedule a stun next turn.
         NotifyPlayerActionResolved_ForForesight(activeIndex, PlayerAction.Attack);
-        _lastRoundAggressor = BattleSide.Player;
 
 
         if (dr.crit)
@@ -2231,7 +2237,6 @@ int dmg_afterScalar = Mathf.Max(1, Mathf.RoundToInt(dr.damage * incomingScalar))
 
         // Status: Foresight â€” check repeat action to schedule a stun next turn.
         NotifyWildActionResolved_ForForesight(EnemyAction.Attack);
-        _lastRoundAggressor = BattleSide.Wild;
         if (dr.crit && !df.cannotBeCrit)
             BattleLogger.AddKeyMoment($"CRIT: {attackerName} â†’ {GetName(activeIndex)} ({dmg_final})");
 

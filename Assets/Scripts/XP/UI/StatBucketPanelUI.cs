@@ -101,8 +101,13 @@ public class StatBucketPanelUI : MonoBehaviour
         }
         if (!levelCostCurve)
         {
-            var all = Resources.LoadAll<LevelCostCurveSO>("");
-            if (all != null && all.Length > 0) levelCostCurve = all[0];
+            var direct = Resources.Load<LevelCostCurveSO>("LevelCostCurve");
+            if (direct) levelCostCurve = direct;
+            else
+            {
+                var all = Resources.LoadAll<LevelCostCurveSO>("");
+                if (all != null && all.Length > 0) levelCostCurve = all[0];
+            }
         }
     }
 

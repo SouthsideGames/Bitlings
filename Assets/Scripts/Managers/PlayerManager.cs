@@ -193,6 +193,10 @@ public class PlayerManager
     // reconciliation pays out the missing ranks.
     public int promotionLastRewardedRank = 0;
 
+    // Consecutive premium-eligible idle rifts without a premium spawn.
+    // Only used when IdleBattleConfigSO.premiumPityThreshold > 0.
+    public int premiumPityCounter = 0;
+
     public bool HasSynergyUnlocked => promotionRank >= 10;
     public bool HasDifficultyUnlocked => promotionRank >= 15;
     public bool HasExecutiveTrialUnlocked => promotionRank >= 20;
