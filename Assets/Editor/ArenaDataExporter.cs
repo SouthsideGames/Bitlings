@@ -17,6 +17,10 @@ public static class ArenaDataExporter
 {
     private const string OutputFolder = "Assets/Resources/ArenaCatalogs";
 
+    // Must match ArenaModule UploadCatalogs.ExpectedSecret. This file is
+    // Editor-only (#if UNITY_EDITOR) so the secret never ships in a player build.
+    private const string CatalogUploadSecret = "CHANGE-ME-arena-catalog-upload-secret";
+
     [MenuItem("Tools/Arena/Export Reference Data")]
     public static void ExportAll()
     {
@@ -206,7 +210,8 @@ public static class ArenaDataExporter
             var args = new Dictionary<string, object>
             {
                 { "monsterCatalogJson", monsterJson },
-                { "titleCatalogJson", titleJson }
+                { "titleCatalogJson", titleJson },
+                { "adminSecret", CatalogUploadSecret }
             };
 
             var result = await CloudCodeService.Instance.CallModuleEndpointAsync<UploadCatalogsResponse>(

@@ -17,20 +17,18 @@ public class UploadCatalogs
 {
     private const string CatalogEntity = "arena_catalogs";
 
-    // ADMIN GATE: only these UGS player IDs may upload catalogs. This is an
-    // in-code alternative to a UGS Access Control policy, so no dashboard/CLI
-    // setup is required to keep players from overwriting the trusted catalogs.
+    // ADMIN GATE (shared secret). Only callers that present this exact secret may
+    // overwrite the trusted catalogs. This is an in-code alternative to a UGS
+    // Access Control policy — no dashboard/CLI setup needed.
     //
-    // To find your own player ID: run the editor "Upload Catalogs to Cloud" tool
-    // once — this handler logs "UploadCatalogs called by <playerId>" (visible in
-    // the UGS dashboard Cloud Code logs). Copy that ID into the array below and
-    // redeploy the module. While the array is EMPTY, uploads are allowed from any
-    // authenticated caller (convenient for first-time setup) but a warning is
-    // logged — lock it down before launch.
-    private static readonly string[] AdminPlayerIds =
-    {
-        // "add-your-ugs-player-id-here",
-    };
+    // It is secure because the ONLY caller is the Unity Editor tool
+    // (ArenaDataExporter, wrapped in #if UNITY_EDITOR), which never ships in a
+    // player build — so the secret is not extractable from the game client.
+    //
+    // SETUP: replace the value below with your own random string, and paste the
+    // SAME string into ArenaDataExporter.CatalogUploadSecret. Keep them in sync.
+    // (If your GitHub repo is public, treat this like any secret and rotate it.)
+    private const string ExpectedSecret = "CHANGE-ME-arena-catalog-upload-secret";
 
     private readonly ILogger<UploadCatalogs> _logger;
 
@@ -48,19 +46,13 @@ public class UploadCatalogs
         IExecutionContext ctx,
         IGameApiClient api,
         string monsterCatalogJson,
-        string titleCatalogJson)
+        string titleCatalogJson,
+        string adminSecret = "")
     {
         // ── Admin gate ──
-        _logger.LogInformation("UploadCatalogs called by {PlayerId}", ctx.PlayerId);
-        if (AdminPlayerIds.Length == 0)
+        if (adminSecret != ExpectedSecret)
         {
-            _logger.LogWarning(
-                "UploadCatalogs has no admin allow-list configured — allowing this call. " +
-                "Add your player ID to AdminPlayerIds and redeploy before launch.");
-        }
-        else if (Array.IndexOf(AdminPlayerIds, ctx.PlayerId) < 0)
-        {
-            _logger.LogWarning("UploadCatalogs denied for non-admin player {PlayerId}.", ctx.PlayerId);
+            _logger.LogWarning("UploadCatalogs denied (bad or missing secret) for {PlayerId}.", ctx.PlayerId);
             return new UploadCatalogsResult { Success = false, Error = "Not authorized." };
         }
 
