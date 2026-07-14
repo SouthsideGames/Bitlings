@@ -1,84 +1,96 @@
-# Arena Server Authority — Known Gaps & Deployment Plan
+# Arena Server Authority — Deployment Runbook
 
-Status: **open**. These issues cannot be fixed from the repo alone — they need new
-Cloud Code endpoints deployed on the UGS dashboard and a coordinated client update
-(old clients must keep working against currently-deployed scripts during rollout).
+This branch makes arena scoring server-authoritative. The code is written; the
+remaining work is **deploying the Cloud Code scripts and setting one dashboard
+policy**. Follow the steps in order — each is safe to ship on its own, and old
+clients keep working throughout.
 
-## Gap 1 — Leaderboard scores are client-written (forgeable)
+## What changed in this repo
 
-The entire tournament is resolved on-device (`ArenaMatchResolver.ResolveRound`), and
-the client then writes its own results straight to the global boards:
+**Client (`Assets/Scripts/`)**
+- The client no longer writes leaderboards directly. On tournament completion it
+  builds the full final standings and queues them (`ArenaSaveData.pendingResultSubmission`),
+  then submits to the new `SubmitTournamentResult` endpoint
+  (`ArenaTournamentService.BuildPendingSubmission` / `TrySubmitPendingResultAsync`).
+  Submission is retried on every arena open until the server returns a terminal
+  status, so a result awaiting consensus survives app restarts.
+- `ArenaLeaderboardService.SubmitWeeklyPlacementAsync` /
+  `SubmitAllTimeChampionshipsAsync` are marked `[Obsolete]` — the read methods stay.
 
-- `ArenaTournamentService` (submission after local resolution) calls
-  `ArenaLeaderboardService.SubmitWeeklyPlacementAsync(placement)` and
-  `SubmitAllTimeChampionshipsAsync(...)`.
-- `ArenaLeaderboardService` calls `LeaderboardsService.Instance.AddPlayerScoreAsync`
-  directly from the device.
+**Cloud Code (`Assets/CloudCode/`)**
+- `SubmitTournamentResult.js` (new) — verifies a player's claimed placement against
+  the standings other real players in the same bracket independently computed
+  (consensus), then writes the weekly score and maintains an authoritative all-time
+  championship counter. The server is the only leaderboard writer.
+- `UploadCatalogs.js` (new) — stores the monster/title/type-chart catalogs the
+  editor tool exports, so registration can score teams server-side.
+- `RegisterForTournament.js` — now recomputes each team's arena score + band from
+  the trusted catalog (ignoring the client's claimed numbers). Falls back to the
+  client value only if the catalog hasn't been uploaded yet (logged).
+- `GetTournamentBracket.js` / `LockAndAssignBrackets.js` — reject any weekId that
+  isn't the current server week (fixes the future-week lock-griefing hole).
 
-A modified client (or a runtime hook) can submit `placement = 1` every week and an
-arbitrary championship count. **The leaderboards are only as honest as the least
-honest client.**
+**Editor (`Assets/Editor/ArenaDataExporter.cs`)**
+- "Upload Catalogs to Cloud" now also uploads the type chart (needed for server
+  synergy scoring).
 
-### Fix (server-side)
+## Deployment steps
 
-1. Add a Cloud Code endpoint (e.g. `SubmitTournamentResult.js`) that:
-   - loads the locked bracket for the week (`LockAndAssignBrackets` already stores
-     bracket state in Game Data),
-   - re-resolves the bracket server-side from the frozen team snapshots using the
-     same deterministic seed (the simulator is already seed-deterministic — port
-     `ArenaBattleSimulator`'s resolution or just re-derive placement from the
-     server-resolved bracket),
-   - writes the score to `arena_weekly` / `arena_alltime` itself via the
-     Leaderboards service API.
-2. In the UGS dashboard, set both leaderboards to **server-authoritative writes
-   only** so `AddPlayerScoreAsync` from clients is rejected.
-3. Update `ArenaLeaderboardService` to call the endpoint instead of writing
-   directly. Keep the direct write as fallback only while old scripts are live.
+### Step 1 — redeploy the two hardened bracket scripts (do first, no client release needed)
+Deploy `GetTournamentBracket.js` and `LockAndAssignBrackets.js` to your Cloud Code
+module. Then check Cloud Save Game Data for any `tournament_lock_*` entities dated
+in a **future** week and delete them (leftovers from the griefing bug would block
+real brackets).
 
-## Gap 2 — Bracket banding trusts client-computed score (sandbagging)
+### Step 2 — upload the catalogs and deploy registration scoring
+1. In the Unity editor: **Tools → Arena → Export Reference Data**, then enter Play
+   Mode (to authenticate UGS) and **Tools → Arena → Upload Catalogs to Cloud**.
+2. Deploy `UploadCatalogs.js` and the updated `RegisterForTournament.js`.
+3. Lock down `UploadCatalogs` so only you can call it — either add your admin
+   playerId to `ADMIN_PLAYER_IDS` in the script, or deny player-token access to it
+   in dashboard Access Control. (It writes trusted game data.)
 
-`RegisterForTournament.js` stores client-sent `arenaScore` / `scoreBand` verbatim.
-A client can deflate its score to be seeded into a weaker bracket while its actual
-snapshot stats stay strong.
+After this, bracket banding is computed from server-trusted scores; sandbagging by
+sending a deflated score no longer works.
 
-Recomputing the score inside the endpoint from `teamSnapshotJson` is **not**
-sufficient: the per-slot `monsterArenaScore` / `titleArenaScore` inside the
-snapshot are also client-supplied, and they do not affect battle stats — so a
-cheater can deflate those too without weakening the team.
+### Step 3 — deploy result scoring + ship the client, then lock the leaderboards
+1. Deploy `SubmitTournamentResult.js`.
+2. **Verify the leaderboard-write call** in that script against your installed SDK.
+   It uses `@unity-services/leaderboards-1.4`:
+   `new LeaderboardsApi(context).addLeaderboardPlayerScore(projectId, leaderboardId, playerId, { score })`.
+   If your project pins a different Leaderboards SDK major version, adjust the
+   single `writeLeaderboardScore()` function — that is the only place it writes.
+3. Release the client build from this branch. New clients submit via the endpoint;
+   until it's deployed they just keep the result pending and retry (no lost data).
+4. Once your analytics show old clients have mostly upgraded, set a dashboard
+   **Access Control** policy that DENIES player tokens the leaderboard submit-score
+   action for `arena_weekly` and `arena_alltime`. Cloud Code (service context) is
+   unaffected, so `SubmitTournamentResult` remains the only writer. Check the
+   current UGS docs for the exact resource identifier syntax — it has changed
+   across versions, so I'm deliberately not hard-coding it here.
 
-### Fix (server-side)
+At the end of Step 3, forged leaderboard scores are impossible: the client cannot
+write, and the endpoint only accepts a placement corroborated by the bracket's
+other real players.
 
-1. Export a minimal server-side catalog (monsterId → arenaScore, type;
-   titleId → arenaScore) as a Cloud Code module or Remote Config JSON. The source
-   of truth is `Assets/CSV/Bitling Monsters.csv` + the title assets.
-2. In `RegisterForTournament.js`, resolve each snapshot slot's `monsterId` /
-   `titleId` against that catalog, recompute the team score (port
-   `ArenaScoreCalculator.CalculateTypeSynergyBonus` — pure logic, no Unity deps)
-   and derive the band server-side. Ignore the client-sent values (keep accepting
-   them for old clients, but overwrite with server-computed ones).
-3. While at it, validate snapshot stat totals against the catalog stat budgets so
-   inflated-stat snapshots are rejected at registration rather than poisoning
-   opponents' battles.
+## Known limitation of consensus scoring (documented, acceptable for v1)
 
-## Gap 3 — Future-week lock griefing (FIXED in repo, needs redeploy)
+`SubmitTournamentResult` trusts a placement once `CONSENSUS_QUORUM` (2) real
+players in the bracket submit identical standings. Residual gaps:
+- **Tiny brackets**: a bracket with only 1 real player (31 bots) can't reach
+  quorum, so that player is scored on their own submission (logged). They beat 31
+  bots to place, so the risk is low, but a lone player could over-claim placement.
+- **Collusion**: if a group of modified clients equal to or larger than the honest
+  player count in one 32-bracket submit identical forged standings, they can reach
+  quorum. This needs multiple coordinated modified clients landing in the same
+  bracket — high effort for a weekly placement score.
 
-`GetTournamentBracket.js` lazy-locked whatever `weekId` the client sent, checking
-only that it was Wednesday-or-later. Any client could therefore pre-lock FUTURE
-weeks with zero registrations; the idempotent `tournament_lock_{weekId} = done`
-status then made the real lock a no-op when that week arrived — no brackets for
-anyone, every week, until the Game Data entities were manually deleted.
-
-**Fixed in this repo** (both `GetTournamentBracket.js` and
-`LockAndAssignBrackets.js` now reject any `weekId` other than the server-computed
-current week), but the fix only takes effect once you **redeploy both scripts to
-the UGS dashboard**. If you suspect this was ever exploited, check Cloud Save
-Game Data for `tournament_lock_*` entities dated in the future and delete them.
-
-## What was already fixed client-side (this branch)
-
-- Speed-tie initiative bias in `ArenaBattleSimulator` (left slot always struck
-  first on sustained ties) — ties now alternate, first tie decided by seeded RNG.
-- `ResourceBank.Add/Set/TrySpend` now route `ArenaTicket` to its real store in
-  `ArenaSaveData` instead of a dead `resourceCounts` slot.
-
-These do not close Gaps 1–2; they are fairness/correctness fixes only.
+Closing both fully requires the server to *reproduce* the bracket result itself.
+That means porting `ArenaBotGenerator` + `ArenaMatchResolver` + `ArenaBattleSimulator`
+to run server-side with **bit-identical** output to the C# client. The blocker is
+float determinism: the simulator uses `float` damage math and `System.Random`, which
+don't reproduce identically in JS without a careful port of `System.Random`'s
+algorithm and float32 handling, verified against golden vectors generated in Unity.
+It's a real project (days, mostly determinism testing), not wired up here. If you
+want it, the clean path is to make the simulator integer-deterministic first, then
+the JS port becomes exact and consensus can be dropped entirely.

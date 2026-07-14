@@ -130,6 +130,80 @@ public static class ArenaCloudCodeService
     }
 
     // ═════════════════════════════════════════════════════════════
+    //  Tournament result submission (server-authoritative scoring)
+    // ═════════════════════════════════════════════════════════════
+
+    /// <summary>Outcome of a server-side tournament result submission.</summary>
+    public struct SubmitResultOutcome
+    {
+        /// <summary>Server status: "scored", "pending", "already_scored", "rejected", or "" on transport failure.</summary>
+        public string status;
+        public int placement;
+        public int score;
+        public string reason;
+
+        /// <summary>True once the server has finished with this submission (no retry needed).</summary>
+        public bool IsTerminal =>
+            status == "scored" || status == "already_scored" || status == "rejected";
+
+        /// <summary>True when the server accepted the submission but is awaiting corroboration.</summary>
+        public bool IsPending => status == "pending";
+    }
+
+    /// <summary>
+    /// Submits the player's computed final standings to the server, which verifies
+    /// them against other real players in the bracket and — on consensus — writes
+    /// the leaderboard score itself. Replaces direct client leaderboard writes.
+    /// </summary>
+    public static async Task<SubmitResultOutcome> SubmitTournamentResultAsync(
+        string weekId, string tournamentId, string entryId, int placement, string standingsJson)
+    {
+        if (!ArenaNetworkGuard.IsOnline)
+            return new SubmitResultOutcome { status = "", reason = "No connection." };
+
+        try
+        {
+            var args = new Dictionary<string, object>
+            {
+                { "weekId", weekId },
+                { "tournamentId", tournamentId },
+                { "entryId", entryId },
+                { "placement", placement },
+                { "standingsJson", standingsJson }
+            };
+            var response = await CloudCodeService.Instance.CallModuleEndpointAsync<SubmitResultResponse>(
+                "ArenaModule", "SubmitTournamentResult", args);
+
+            return new SubmitResultOutcome
+            {
+                status = response.status,
+                placement = response.placement,
+                score = response.score,
+                reason = response.reason
+            };
+        }
+        catch (CloudCodeException ex)
+        {
+            Debug.LogWarning($"[ArenaCloudCodeService] SubmitTournamentResult failed: {ex.Message}");
+            return new SubmitResultOutcome { status = "", reason = "Server error." };
+        }
+        catch (Exception ex)
+        {
+            Debug.LogWarning($"[ArenaCloudCodeService] SubmitTournamentResult unexpected ({ex.GetType().Name}): {ex.Message}");
+            return new SubmitResultOutcome { status = "", reason = "Something went wrong." };
+        }
+    }
+
+    [Serializable]
+    private class SubmitResultResponse
+    {
+        public string status;
+        public int placement;
+        public int score;
+        public string reason;
+    }
+
+    // ═════════════════════════════════════════════════════════════
     //  Bracket retrieval
     // ═════════════════════════════════════════════════════════════
 
