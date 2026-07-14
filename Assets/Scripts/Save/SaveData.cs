@@ -35,7 +35,10 @@ public sealed class SaveData
     public long honorWeekResetUnix;
 
     // Labor economy
-    public Dictionary<int, float> supplyIndexMap = new Dictionary<int, float>();
+    // JsonUtility cannot persist dictionaries; this list is authoritative on disk
+    // (same pattern as lifetimeStatsEntries above). The dictionary is a runtime mirror.
+    public List<SupplyIndexKV> supplyIndexEntries = new List<SupplyIndexKV>();
+    [NonSerialized] public Dictionary<int, float> supplyIndexMap = new Dictionary<int, float>();
 
     // Legends page UX state
     public long legendsLastOpenedUnix;
@@ -55,6 +58,13 @@ public sealed class MentorHonorCooldown
 {
     public string mentorUID;
     public long lastHonoredUnix;
+}
+
+[Serializable]
+public sealed class SupplyIndexKV
+{
+    public int key;
+    public float value;
 }
 
 [Serializable]
@@ -106,6 +116,7 @@ public sealed class PlayerSaveSection
     public string lastBossId;
     public int promotionRank = 1;
     public int promotionXP;
+    public int promotionLastRewardedRank;
     public FieldOpsStats fieldOps = new FieldOpsStats();
     public SeedState seedState = new SeedState();
     public List<FlyerBiasData> activeFlyers = new List<FlyerBiasData>();
@@ -254,6 +265,7 @@ public static class SaveDataMapper
                 lastBossId = data.lastBossId,
                 promotionRank = data.promotionRank,
                 promotionXP = data.promotionXP,
+                promotionLastRewardedRank = data.promotionLastRewardedRank,
                 fieldOps = data.fieldOps,
                 seedState = data.seedState,
                 activeFlyers = data.activeFlyers,
@@ -325,8 +337,40 @@ public static class SaveDataMapper
             {
                 jobRuntime = jobRuntime
             },
-            supplyIndexMap = data.supplyIndexMap ?? new Dictionary<int, float>()
+            supplyIndexMap = data.supplyIndexMap ?? new Dictionary<int, float>(),
+            supplyIndexEntries = BuildSupplyIndexEntries(data.supplyIndexMap)
         };
+    }
+
+    private static List<SupplyIndexKV> BuildSupplyIndexEntries(Dictionary<int, float> map)
+    {
+        var list = new List<SupplyIndexKV>();
+        if (map != null)
+            foreach (var kv in map)
+                list.Add(new SupplyIndexKV { key = kv.Key, value = kv.Value });
+        return list;
+    }
+
+    private static Dictionary<int, float> RebuildSupplyIndexMap(SaveData saveData)
+    {
+        var map = new Dictionary<int, float>();
+
+        var entries = saveData?.supplyIndexEntries;
+        if (entries != null)
+        {
+            for (int i = 0; i < entries.Count; i++)
+            {
+                var kv = entries[i];
+                if (kv != null) map[kv.key] = kv.value;
+            }
+        }
+
+        // In-memory round-trips (no JSON involved) may still carry the dictionary.
+        if (map.Count == 0 && saveData?.supplyIndexMap != null)
+            foreach (var kv in saveData.supplyIndexMap)
+                map[kv.Key] = kv.Value;
+
+        return map;
     }
 
     internal static SaveData FromLegacyRoot(LegacyCombinedSaveRoot legacy)
@@ -389,6 +433,7 @@ public static class SaveDataMapper
             lastBossId = player.lastBossId,
             promotionRank = player.promotionRank,
             promotionXP = player.promotionXP,
+            promotionLastRewardedRank = player.promotionLastRewardedRank,
             fieldOps = player.fieldOps,
             seedState = player.seedState,
             activeFlyers = player.activeFlyers,
@@ -418,7 +463,7 @@ public static class SaveDataMapper
             unlockedFeatureIds = settings.unlockedFeatureIds,
             unlockedJobSitesList = settings.unlockedJobSites,
             diagnosticsUnlocked = settings.diagnosticsUnlocked,
-            supplyIndexMap = saveData.supplyIndexMap ?? new Dictionary<int, float>()
+            supplyIndexMap = RebuildSupplyIndexMap(saveData)
         };
     }
 

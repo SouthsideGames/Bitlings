@@ -35,7 +35,7 @@ public static class SaveMigrationManager
 
         while (version < CURRENT_SAVE_VERSION)
         {
-            Debug.Log($"[SaveMigrationManager] Running migration v{version} -> v{version + 1}.");
+            DevLog.Log($"[SaveMigrationManager] Running migration v{version} -> v{version + 1}.");
             switch (version)
             {
                 case 1:
@@ -74,7 +74,7 @@ public static class SaveMigrationManager
             : $"Save already at version {CURRENT_SAVE_VERSION}.";
 
         if (completedSteps.Count > 0)
-            Debug.Log($"[SaveMigrationManager] {migrationReport}");
+            DevLog.Log($"[SaveMigrationManager] {migrationReport}");
 
         return true;
     }
@@ -144,8 +144,11 @@ public static class SaveMigrationManager
                     return probe.version;
             }
         }
-        catch
+        catch (Exception e)
         {
+            // A save whose version probe throws is suspect; the heuristics below
+            // decide its fate, so make sure the failure is diagnosable in the field.
+            Debug.LogWarning($"[SaveMigrationManager] Version probe failed ({e.GetType().Name}: {e.Message}); falling back to heuristics.");
         }
 
         if (rawJson.Contains("\"player\"", StringComparison.Ordinal))

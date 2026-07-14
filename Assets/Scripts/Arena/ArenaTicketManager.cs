@@ -42,7 +42,7 @@ public static class ArenaTicketManager
         if (status == ArenaPlayerTournamentStatus.NotEntered)
         {
             arena.arenaTickets = Math.Min(arena.arenaTickets + 1, ArenaConstants.MaxTickets);
-            Debug.Log("[ArenaTicketManager] Refunded ticket from interrupted registration."); // FIXED
+            DevLog.Log("[ArenaTicketManager] Refunded ticket from interrupted registration."); // FIXED
         }
 
         arena.ticketSpentPendingRegistration = false;

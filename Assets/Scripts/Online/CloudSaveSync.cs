@@ -122,43 +122,21 @@ public static class CloudSaveSync
 
         if (cloud != null)
         {
-            // FIXED: detect meaningful divergence instead of silently overwriting local progress
-            if (cloud != null && local != null)
-            {
-                int cloudWins = cloud.lifetimeStats != null ? cloud.lifetimeStats.championshipsWon : 0;
-                int localWins = local.lifetimeStats != null ? local.lifetimeStats.championshipsWon : 0;
-                bool cloudAhead = cloudWins > localWins;
-                bool localAhead = localWins > cloudWins;
-
-                if (cloudAhead && localAhead)
-                {
-                    Debug.LogWarning($"[CloudSaveSync] Save conflict detected - cloud: {cloudWins} wins, local: {localWins} wins. Showing resolution dialog."); // FIXED
-
-                    // Show the resolution dialog. The callbacks apply the chosen save and return.
-                    // Both paths call SaveManager.Save() internally after applying.
-                    bool resolved = false;
-
-                    UIManager.I?.ShowSaveConflictDialog( // FIXED: player chooses which save to keep instead of silent cloud-wins overwrite
-                        cloudWins: cloudWins,
-                        localWins: localWins,
-                        onKeepCloud: () =>
-                        {
-                            ApplyCloudData(cloud);
-                            resolved = true;
-                            DevLog.Log("[CloudSaveSync] Player chose cloud save.");
-                        },
-                        onKeepLocal: () =>
-                        {
-                            _ = PushArenaDataAsync();
-                            resolved = true;
-                            DevLog.Log("[CloudSaveSync] Player chose local save - pushing to cloud.");
-                        }
-                    );
-
-                    if (resolved) return; // dialog handled the merge - skip the default cloud-wins path below
-                    // If UIManager was null (e.g. during headless test), fall through to cloud-wins default.
-                }
-            }
+            // NOTE: an earlier revision tried to show a "keep cloud / keep local"
+            // dialog here, but (a) its trigger condition (cloudAhead && localAhead)
+            // was a logical contradiction that could never fire, and (b) no
+            // two-button modal exists in the project, so the callbacks never ran
+            // and the code always fell through to the merge below anyway.
+            //
+            // The merge is max-wins for lifetime stats (no progress lost in either
+            // direction). Tickets and tournament history stay cloud-authoritative
+            // on purpose: restoring locally-spent tickets from an older cloud copy
+            // would be a duplication exploit. Divergence is logged so support
+            // reports remain diagnosable.
+            int cloudWins = cloud.lifetimeStats != null ? cloud.lifetimeStats.championshipsWon : 0;
+            int localWins = local.lifetimeStats != null ? local.lifetimeStats.championshipsWon : 0;
+            if (cloudWins != localWins)
+                Debug.LogWarning($"[CloudSaveSync] Save divergence detected (cloud: {cloudWins} wins, local: {localWins} wins). Applying max-wins merge.");
 
             MergeCloudIntoLocal(cloud, local);
             SaveManager.Save();
@@ -238,14 +216,6 @@ public static class CloudSaveSync
         {
             local.currentTournamentCache = cloud.currentTournamentCache;
         }
-    }
-
-    private static void ApplyCloudData(ArenaSaveData cloud) // FIXED: applies chosen cloud save path from conflict dialog
-    {
-        var local = SaveManager.GetArenaSaveData();
-        if (cloud == null || local == null) return;
-        MergeCloudIntoLocal(cloud, local);
-        SaveManager.Save();
     }
 
     // ═════════════════════════════════════════════════════════════

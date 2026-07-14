@@ -42,7 +42,7 @@ public static class ArenaLeaderboardService
             // Invert: 1st → 32, 2nd → 31, … 32nd → 1
             double score = (bracketSize + 1) - placement;
             await LeaderboardsService.Instance.AddPlayerScoreAsync(WeeklyLeaderboardId, score);
-            Debug.Log($"{TAG} Weekly placement submitted: placement={placement}, score={score}");
+            DevLog.Log($"{TAG} Weekly placement submitted: placement={placement}, score={score}");
         }
         catch (Exception ex)
         {
@@ -61,7 +61,7 @@ public static class ArenaLeaderboardService
         try
         {
             await LeaderboardsService.Instance.AddPlayerScoreAsync(AllTimeLeaderboardId, championshipCount);
-            Debug.Log($"{TAG} All-time championships submitted: {championshipCount}");
+            DevLog.Log($"{TAG} All-time championships submitted: {championshipCount}");
         }
         catch (Exception ex)
         {

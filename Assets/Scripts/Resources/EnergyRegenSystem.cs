@@ -30,12 +30,15 @@ public static class EnergyRegenSystem
         int max = Mathf.Max(1, SaveManager.Data.riftMax > 0 ? SaveManager.Data.riftMax : 50);
         int cur = ResourceBank.Get(ResourceType.Energy);
 
-        // If already full, just ensure remainder is 0 (don’t advance lastUnix while full).
+        // If already full, advance lastUnix so time spent at cap is never banked
+        // and credited back as an instant refill after spending.
         if (cur >= max)
         {
-            if (SaveManager.Data.energyRemainderSecs != 0f)
+            long nowFull = SaveManager.NowUnix();
+            if (SaveManager.Data.energyRemainderSecs != 0f || SaveManager.Data.energyLastUnix != nowFull)
             {
                 SaveManager.Data.energyRemainderSecs = 0f;
+                SaveManager.Data.energyLastUnix = nowFull;
                 SaveManager.Save();
             }
             return 0;
@@ -44,12 +47,19 @@ public static class EnergyRegenSystem
         long now = SaveManager.NowUnix();
         long last = SaveManager.Data.energyLastUnix > 0 ? SaveManager.Data.energyLastUnix : now;
 
-        // If device clock moved backwards (DST, timezone, manual change),
-        // clamp the stored timestamp to prevent frozen regen.
+        // Device clock moved backwards (the ledger is in the future). Do NOT forgive
+        // by resetting the ledger to now — that made clock-forward→collect→roll-back
+        // cycling an infinite energy exploit. Freeze regen until real time catches up,
+        // bounded so a wildly-wrong clock can't freeze regen forever.
         if (last > now)
         {
-            SaveManager.Data.energyLastUnix = now;
-            last = now;
+            long cap = now + SaveManager.MaxRollbackFreezeSeconds;
+            if (last > cap)
+            {
+                SaveManager.Data.energyLastUnix = cap;
+                SaveManager.Save();
+            }
+            return 0;
         }
 
         long elapsed = now - last;

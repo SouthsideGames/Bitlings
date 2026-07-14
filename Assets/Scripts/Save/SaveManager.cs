@@ -1714,6 +1714,15 @@ private static bool ValidateAndRepairSave(bool saveIfChanged)
         return d.Year * 10000 + d.Month * 100 + d.Day;
     }
 
+    /// <summary>
+    /// When a persisted regen/offline ledger is found in the future (device clock was
+    /// rolled back), systems freeze gains until real time catches up instead of
+    /// resetting the ledger — resetting made clock-forward→collect→roll-back cycling an
+    /// infinite resource exploit. The freeze is bounded to this horizon so a device
+    /// whose clock was wildly wrong (e.g. years ahead) can't brick regen forever.
+    /// </summary>
+    public const long MaxRollbackFreezeSeconds = 30L * 86400L;
+
     private static float _lastRealtimeCheck = -1f;
     private static long  _lastWallUnix;
 
@@ -2250,7 +2259,7 @@ if (save) Save();
                 return false;
             }
 
-            if (!VerifyWrittenSave(SavePath))
+            if (!VerifyWrittenSave(SavePath, json))
             {
                 Debug.LogError($"[SaveManager] {operationName} failed: post-write verification failed.");
                 return false;
@@ -2313,17 +2322,20 @@ if (save) Save();
         }
     }
 
-    private static bool VerifyWrittenSave(string path)
+    private static bool VerifyWrittenSave(string path, string expectedJson)
     {
         if (!SaveFiles.TryReadAllTextUtf8(path, out var writtenJson) || string.IsNullOrWhiteSpace(writtenJson))
             return false;
 
-        if (!TryLoadCurrentRoot(path, out var verifiedRoot, out _, out _, out _))
+        // Strongest check: the bytes on disk are exactly what we serialized.
+        // (The previous version only checked that the file parsed, and its
+        // validator call always produced a non-empty summary, so it accepted
+        // any parseable file — effectively a no-op.)
+        if (!string.Equals(writtenJson, expectedJson, StringComparison.Ordinal))
             return false;
 
-        // Future improvement: persist a checksum and verify it here before accepting the write.
-        var validation = SaveValidator.ValidateAndRepair(verifiedRoot);
-        return verifiedRoot != null && !string.IsNullOrWhiteSpace(validation.Summary);
+        // And the content round-trips into a usable save root.
+        return TryLoadCurrentRoot(path, out var verifiedRoot, out _, out _, out _) && verifiedRoot != null;
     }
 
     // ─────────────────────────────────────────────
@@ -2545,9 +2557,28 @@ if (save) Save();
             {
                 File.WriteAllText(tmp, contents ?? string.Empty, Encoding.UTF8);
             }
-            catch
+            catch (Exception e)
             {
+                Debug.LogError($"[SaveFiles] Failed to write temp save file '{tmp}': {e.GetType().Name} – {e.Message}");
                 return false;
+            }
+
+            // Prefer File.Replace: it swaps tmp into place without a window where the
+            // destination is missing (the old Delete-then-Move left the primary save
+            // absent if the app died between the two calls).
+            if (File.Exists(path))
+            {
+                try
+                {
+                    File.Replace(tmp, path, null);
+                    return File.Exists(path);
+                }
+                catch (Exception e)
+                {
+                    // Replace can be unsupported on some platforms/filesystems;
+                    // fall through to the legacy delete+move path below.
+                    DevLog.Log($"[SaveFiles] File.Replace unavailable ({e.GetType().Name}); falling back to delete+move.");
+                }
             }
 
             try
@@ -2556,8 +2587,9 @@ if (save) Save();
                 File.Move(tmp, path);
                 return File.Exists(path);
             }
-            catch
+            catch (Exception e)
             {
+                Debug.LogError($"[SaveFiles] Atomic move failed for '{path}': {e.GetType().Name} – {e.Message}");
                 bool copied = false;
                 try
                 {
@@ -2567,7 +2599,10 @@ if (save) Save();
                         copied = true;
                     }
                 }
-                catch { }
+                catch (Exception e2)
+                {
+                    Debug.LogError($"[SaveFiles] Fallback copy failed for '{path}': {e2.GetType().Name} – {e2.Message}");
+                }
 
                 try { File.Delete(tmp); } catch { }
                 return copied && File.Exists(path);

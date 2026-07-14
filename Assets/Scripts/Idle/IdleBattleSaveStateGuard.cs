@@ -158,14 +158,24 @@ public static class IdleBattleSaveStateGuard
     {
         string tmp = path + ".tmp";
         File.WriteAllText(tmp, contents ?? string.Empty);
+
+        // Prefer File.Replace: no window where the destination is missing.
+        if (File.Exists(path))
+        {
+            try { File.Replace(tmp, path, null); return; }
+            catch { /* unsupported on some platforms; fall through */ }
+        }
+
         try
         {
             if (File.Exists(path)) File.Delete(path);
             File.Move(tmp, path);
         }
-        catch
+        catch (Exception e)
         {
-            try { if (!File.Exists(path)) File.Copy(tmp, path); } catch { }
+            Debug.LogError($"[IdleBattleSaveStateGuard] AtomicWrite failed for '{path}': {e.GetType().Name} – {e.Message}");
+            try { if (!File.Exists(path)) File.Copy(tmp, path); }
+            catch (Exception e2) { Debug.LogError($"[IdleBattleSaveStateGuard] AtomicWrite fallback copy failed: {e2.Message}"); }
             try { File.Delete(tmp); } catch { }
         }
     }

@@ -87,7 +87,7 @@ public sealed class UGSInitializer : MonoBehaviour
             PlayerId = AuthenticationService.Instance.PlayerId;
             IsReady = true;
 
-            Debug.Log($"[UGSInitializer] Ready. PlayerId={PlayerId}");
+            DevLog.Log($"[UGSInitializer] Ready. PlayerId={PlayerId}");
             OnReady?.Invoke();
         }
         catch (AuthenticationException ex)

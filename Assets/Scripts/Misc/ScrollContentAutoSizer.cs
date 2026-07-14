@@ -89,7 +89,7 @@ public sealed class ScrollContentAutoSizer : MonoBehaviour
             var fitter = content.GetComponent<ContentSizeFitter>();
             if (fitter != null && fitter.enabled)
             {
-                Debug.Log($"[ScrollContentAutoSizer] Disabled ContentSizeFitter on \"{content.name}\" — auto-sizer will manage sizing.", content);
+                DevLog.Log($"[ScrollContentAutoSizer] Disabled ContentSizeFitter on \"{content.name}\" — auto-sizer will manage sizing.", content);
                 fitter.enabled = false;
             }
         }

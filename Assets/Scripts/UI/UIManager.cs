@@ -160,32 +160,12 @@ public class UIManager : MonoBehaviour
     public void Toggle(PanelId id) => SetActive(id, !_open.Contains(id));
     public bool IsOpen(PanelId id) => _open.Contains(id);
 
-    /// <summary>
-    /// Shows a modal dialog asking the player to choose between their cloud save and local save
-    /// when both have diverged. Calls exactly one of the two callbacks then dismisses.
-    /// </summary>
-    /// <param name="cloudWins">Number of Arena championship wins recorded in cloud save.</param>
-    /// <param name="localWins">Number of Arena championship wins recorded in local save.</param>
-    /// <param name="onKeepCloud">Invoked if the player chooses the cloud save.</param>
-    /// <param name="onKeepLocal">Invoked if the player chooses the local save.</param>
-    public void ShowSaveConflictDialog( // FIXED: new dialog - surfaces cloud/local divergence to player instead of silent overwrite
-        int cloudWins,
-        int localWins,
-        System.Action onKeepCloud,
-        System.Action onKeepLocal)
-    {
-        string message = "Your saves have diverged.\n\n" +
-                         $"Cloud save: {cloudWins} Arena win{(cloudWins == 1 ? "" : "s")}\n" +
-                         $"This device: {localWins} Arena win{(localWins == 1 ? "" : "s")}\n\n" +
-                         "Which save would you like to keep?";
-
-        // WARNING: could not resolve - manual wiring needed
-        // UIManager does not currently expose a two-button confirm API such as:
-        // ShowConfirmDialog(message, "Keep Cloud", "Keep This Device", onKeepCloud, onKeepLocal);
-        // Reuse the project's existing two-button modal once available.
-        if (ConfirmToastUI.I != null)
-            ConfirmToastUI.I.Show(message);
-    }
+    // NOTE: a ShowSaveConflictDialog(cloudWins, localWins, onKeepCloud, onKeepLocal)
+    // stub used to live here, but no two-button modal exists in the project so the
+    // callbacks were never invoked — it silently showed a toast and dropped the
+    // player's "choice". CloudSaveSync now performs a non-lossy max-wins merge
+    // instead. If a real choice dialog is ever wanted, build a two-button modal
+    // first and have it await the player's selection.
 
     public bool Hide(PanelId id)
     {
