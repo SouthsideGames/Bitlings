@@ -1231,6 +1231,10 @@ public sealed class ExecutiveTrialManager : MonoBehaviour, ExecutiveTrailBattleB
             battleLog: _state.battleLog
         );
 
+        // Silence background/notification SFX (achievement toasts, etc.) while the
+        // game-over screen is up. Cleared on Return Home / Try Again.
+        if (AudioManager.I != null) AudioManager.I.SetEndScreenSfxSuppressed(true);
+
         // EXECUTIVE TRIAL GUARD: Explicitly disable regular Rift panel BEFORE exiting Executive Trial runtime.
         // This prevents race condition where RiftPanelUI.OnEnable() check fails after Exit() is called.
         var riftPanelUI = FindFirstObjectByType<RiftPanelUI>(FindObjectsInactive.Include);
@@ -1287,6 +1291,8 @@ public sealed class ExecutiveTrialManager : MonoBehaviour, ExecutiveTrailBattleB
 
     public void ReturnToMenuFromGameOver()
     {
+        if (AudioManager.I != null) AudioManager.I.SetEndScreenSfxSuppressed(false);
+
         // IRON GUARD: Force disable regular Rift panel to prevent it from auto-starting battles
         var riftPanelUI = FindFirstObjectByType<RiftPanelUI>(FindObjectsInactive.Include);
         if (riftPanelUI && riftPanelUI.gameObject.activeSelf)
@@ -1298,6 +1304,8 @@ public sealed class ExecutiveTrialManager : MonoBehaviour, ExecutiveTrailBattleB
 
     public void RestartIronFromGameOver()
     {
+        if (AudioManager.I != null) AudioManager.I.SetEndScreenSfxSuppressed(false);
+
         // Route back to starter selection. Runtime is already exited in ShowGameOver().
         OpenStarterFromHome();
     }
