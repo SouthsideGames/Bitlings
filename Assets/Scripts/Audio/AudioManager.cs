@@ -148,6 +148,29 @@ public class AudioManager : MonoBehaviour
     private bool _muteSfx = false;
 
     // ─────────────────────────────────────────────────────────────
+    // End-screen SFX suppression
+    // While an end screen (post-battle summary / Executive Trial game over) is up,
+    // gameplay & notification SFX — achievement toasts, background idle-battle
+    // sounds, etc. — are silenced so they don't bleed through onto the results
+    // screen. UI feedback (Click/Denied) still plays so on-screen buttons stay
+    // responsive. Neither end screen plays its own SFX, so nothing intended is lost.
+    // ─────────────────────────────────────────────────────────────
+    // Set by end screens that UIManager doesn't track (Executive Trial game over).
+    private bool _endScreenSfxSuppressed;
+
+    /// <summary>Turns end-screen SFX suppression on/off for screens UIManager doesn't track.</summary>
+    public void SetEndScreenSfxSuppressed(bool on) => _endScreenSfxSuppressed = on;
+
+    private bool AreGameplaySfxSuppressed()
+    {
+        if (_endScreenSfxSuppressed) return true;
+        var ui = UIManager.I;
+        return ui != null && ui.IsOpen(PanelId.PostBattleSummary);
+    }
+
+    private static bool IsUiFeedbackSfx(SfxType t) => t == SfxType.Click || t == SfxType.Denied;
+
+    // ─────────────────────────────────────────────────────────────
     // Battle result tracking (for victory/defeat music)
     // ─────────────────────────────────────────────────────────────
     private bool _hasLastBattleResult = false;
@@ -446,6 +469,7 @@ public class AudioManager : MonoBehaviour
     public void PlaySfx(SfxType type)
     {
         if (type == SfxType.None) return;
+        if (AreGameplaySfxSuppressed() && !IsUiFeedbackSfx(type)) return;
         if (GetSfxScale() <= 0f) return;
 
         if (!_map.TryGetValue(type, out var entry)) return;
@@ -468,6 +492,7 @@ public class AudioManager : MonoBehaviour
     public void PlaySfx(SfxType type, float pitchMult, float volumeMult = 1f)
     {
         if (type == SfxType.None) return;
+        if (AreGameplaySfxSuppressed() && !IsUiFeedbackSfx(type)) return;
         if (GetSfxScale() <= 0f) return;
 
         if (!_map.TryGetValue(type, out var entry)) return;
@@ -495,6 +520,9 @@ public class AudioManager : MonoBehaviour
     public void PlayClipOneShot(AudioClip clip, float volumeMult = 1f, float pitch = 1f)
     {
         if (clip == null) return;
+
+        // One-shots are gameplay/notification audio; suppress on end screens too.
+        if (AreGameplaySfxSuppressed()) return;
 
         if (GetSfxScale() <= 0f) return;
 
@@ -741,6 +769,11 @@ public class AudioManager : MonoBehaviour
     // ─────────────────────────────────────────────────────────────
     private void OnPanelChanged(PanelId id, bool opened)
     {
+        // Safety net: returning Home always lifts any manual end-screen suppression
+        // (covers the Executive Trial game-over → Home path).
+        if (opened && id == PanelId.Home)
+            _endScreenSfxSuppressed = false;
+
         if (!autoSwapForRift) return;
 
         if (id == PanelId.Rift ||
